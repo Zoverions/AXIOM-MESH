@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    environment:
+      - GATEWAY_REST_PORT=3000
+      - GATEWAY_WS_PORT=3001
+      - HYPERVISOR_URL=http://hypervisor:8000
+    depends_on:
+      - hypervisor
+
+  hypervisor:
+    build:
+      context: ./hypervisor
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - HYPERVISOR_PORT=8000
+      - SANDBOX_URL=http://sandbox:4000/execute
+      - GRID_URL=http://grid:5000/skills
+
+  sandbox:
+    build:
+      context: ./sandbox
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      - SANDBOX_PORT=4000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  grid:
+    build:
+      context: ./grid
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - GRID_PORT=5000
