@@ -3,11 +3,12 @@ import uuid
 from pydantic import BaseModel
 from typing import Dict, Any
 import requests
+import os
 
-# Assuming paths are properly resolved
 from src.models.intent import IntentObject, IntentResponse
 from src.engine.context import ContextEngine
 from src.pulse.pulse import EntropyMonitor
+from src.pulse.arena import VerificationArena
 from src.llm.provider import LLMProvider
 from src.cortex.dialectic import DialecticOrchestrator
 from src.evolution.skill_rl import EvolutionEngine
@@ -16,12 +17,13 @@ from src.evolution.network_sync import NetworkSync
 app = FastAPI()
 context_engine = ContextEngine()
 pulse = EntropyMonitor()
+arena = VerificationArena()
 llm = LLMProvider()
 dialectic = DialecticOrchestrator()
 evolution = EvolutionEngine()
 network_sync = NetworkSync()
 
-SANDBOX_URL = "http://localhost:4000/execute"
+SANDBOX_URL = os.environ.get("SANDBOX_URL", "http://localhost:4000/execute")
 
 @app.post("/process", response_model=IntentResponse)
 async def process_intent(intent: IntentObject):
@@ -36,6 +38,9 @@ async def process_intent(intent: IntentObject):
         # Handle special Code Execution command
         if content.startswith("/exec"):
             code = content[len("/exec"):].strip()
+            # The Arena validation
+            if not arena.verify(action_intent="execute code", proposed_execution=code):
+                return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Arena Security Halt: Action lacks absolute confidence or exhibits guessing.", status="error")
             try:
                 sandbox_res = requests.post(SANDBOX_URL, json={"language": "python", "code": code})
                 response_text = f"Execution result:\n{sandbox_res.json()}"
@@ -48,12 +53,20 @@ async def process_intent(intent: IntentObject):
             skills = network_sync.sync_skills()
             return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Synced skills: {skills}", status="success")
 
-        # Standard LLM handling
+        # Standard LLM handling with Tier 1 and Tier 3 memory
         context = context_engine.get_context(content)
         raw_response = llm.process(context)
 
+        # The Pulse Check
         if pulse.measure(raw_response):
-            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="System Halt: Thermodynamic anomaly detected.", status="error")
+            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="System Halt: Thermodynamic anomaly detected. Suspected hallucination/guessing loop.", status="error")
+
+        # The Arena Validation before returning text
+        if not arena.verify(action_intent=content, proposed_execution=raw_response):
+            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Arena Security Halt: The LLM output failed verification (Autoregressive Hallucination Floor crossed).", status="error")
+
+        # Automatically store new interactions in Deep Archive
+        context_engine.deep_archive.add(content)
 
         return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=raw_response, status="success")
     except Exception as e:
