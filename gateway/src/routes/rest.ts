@@ -15,7 +15,28 @@ const ENV_PATH = fs.existsSync('/app/.env') ? '/app/.env' : path.resolve(__dirna
 
 const router = Router();
 
-router.post('/api/v1/intent/process', async (req: Request, res: Response) => {
+// Middleware to authenticate REST requests
+const authMiddleware = (req: Request, res: Response, next: Function) => {
+    const apiKey = process.env.GATEWAY_API_KEY;
+
+    if (!apiKey) {
+        return res.status(500).json({ error: 'Server configuration error: GATEWAY_API_KEY is not set' });
+    }
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized: Missing or invalid Authorization header' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    if (token !== apiKey) {
+        return res.status(403).json({ error: 'Forbidden: Invalid API Key' });
+    }
+
+    next();
+};
+
+router.post('/api/v1/intent/process', authMiddleware, async (req: Request, res: Response) => {
     try {
         const { channel, content, metadata } = req.body;
         if (!content) {
@@ -111,10 +132,6 @@ router.get('/api/v1/logs', async (req: Request, res: Response) => {
         }
 
         res.json({ logs: fullLogs });
-router.get('/api/v1/logs', (req: Request, res: Response) => {
-    try {
-        const logs = getLogsBuffer();
-        res.json({ logs: logs || "No logs available yet." });
     } catch (error: any) {
         res.status(500).json({ error: 'Failed to fetch logs', details: error.message });
     }
@@ -133,7 +150,6 @@ const localOnly = (req: Request, res: Response, next: Function) => {
 };
 
 router.get('/api/v1/config', localOnly, (req: Request, res: Response) => {
-router.get('/api/v1/config', (req: Request, res: Response) => {
     try {
         if (!fs.existsSync(ENV_PATH)) {
             return res.json({});
@@ -163,7 +179,6 @@ router.get('/api/v1/config', (req: Request, res: Response) => {
 });
 
 router.post('/api/v1/config', localOnly, (req: Request, res: Response) => {
-router.post('/api/v1/config', (req: Request, res: Response) => {
     try {
         const updates: Record<string, string> = req.body;
         let envLines: string[] = [];
