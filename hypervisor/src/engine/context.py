@@ -12,13 +12,13 @@ class ContextEngine:
         self.expert_vectors = {} # Tier 2
         self.deep_archive = DeepArchive() # Tier 3
 
-    def get_context(self, intent_content: str) -> str:
+    async def get_context(self, intent_content: str) -> str:
         # Tier 3 Retrieval
         retrieved_data = self.deep_archive.search(intent_content)
         archive_context = "\n".join([item["content"] for item in retrieved_data])
 
         # Node Context Protocol (NCP) External Retrieval
-        ncp_context = self.ncp_client.fetch_context(intent_content)
+        ncp_context = await self.ncp_client.fetch_context(intent_content)
 
         context_str = (
             f"--- TIER 1: SYSTEM AXIOMS ---\n{self.axioms}\n\n"
