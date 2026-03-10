@@ -6,6 +6,8 @@ import dotenv from 'dotenv';
 import restRoutes from './routes/rest';
 import { normalizeInput } from './utils/normalizer';
 import { sendToHypervisor } from './services/hypervisorClient';
+import { getChannelFactory, getRegisteredChannelNames, Channel } from './channels/registry';
+import './channels'; // Initialize channel registrations
 
 dotenv.config();
 
@@ -48,3 +50,39 @@ wss.on('connection', (ws: WebSocket) => {
 });
 
 console.log(`Omni-Gateway WebSocket server running on port ${WS_PORT}`);
+
+// Initialize Channels
+const activeChannels: Record<string, Channel> = {};
+
+async function startChannels() {
+    console.log('Initializing available channels...');
+    const channelNames = getRegisteredChannelNames();
+
+    for (const name of channelNames) {
+        const factory = getChannelFactory(name);
+        if (factory) {
+            const channel = factory({
+                onMessage: async (channelName, chatId, content, sender) => {
+                    const intent = normalizeInput(channelName, content, { chatId, sender });
+                    console.log(`[${channelName}] Received message from ${sender} (chat: ${chatId}): ${content}`);
+
+                    const response = await sendToHypervisor(intent);
+                    if (response.response) {
+                        const targetChannel = activeChannels[channelName];
+                        if (targetChannel) {
+                            await targetChannel.sendMessage(chatId, response.response);
+                        }
+                    }
+                }
+            });
+
+            if (channel) {
+                activeChannels[name] = channel;
+                await channel.connect();
+                console.log(`Started channel: ${name}`);
+            }
+        }
+    }
+}
+
+startChannels().catch(console.error);
