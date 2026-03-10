@@ -4,6 +4,9 @@ import uuid
 import re
 from typing import List, Dict
 
+_STOPWORDS = frozenset({"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "with", "is", "are", "was", "were", "it", "this", "that", "of", "by", "as"})
+_NON_WORD_PATTERN = re.compile(r'[^\w\s]')
+
 class DeepArchive:
     def __init__(self, storage_path="data/archive.json"):
         self.storage_path = storage_path
@@ -54,10 +57,8 @@ class DeepArchive:
                     json.dump({"nodes": {}, "edges": []}, f)
 
     def _extract_keywords(self, text: str) -> List[str]:
-        text = re.sub(r'[^\w\s]', '', text.lower())
-        words = text.split()
-        stopwords = {"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "with", "is", "are", "was", "were", "it", "this", "that", "of", "by", "as"}
-        return list(set([w for w in words if w not in stopwords and len(w) > 2]))
+        text = _NON_WORD_PATTERN.sub('', text.lower())
+        return list({w for w in text.split() if w not in _STOPWORDS and len(w) > 2})
 
     def search(self, query: str) -> List[Dict]:
         with open(self.storage_path, "r") as f:
