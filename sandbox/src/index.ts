@@ -9,7 +9,7 @@ dotenv.config();
 const PORT = process.env.SANDBOX_PORT || 4000;
 
 const app = express();
-app.use(cors());
+app.use(cors({ origin: ['http://localhost:3000', 'http://localhost:8000', 'http://localhost:5000'] }));
 app.use(bodyParser.json());
 app.use('/', executeRoutes);
 
