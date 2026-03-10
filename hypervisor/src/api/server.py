@@ -66,7 +66,7 @@ async def process_intent(intent: IntentObject):
 
         # Sync Skills command
         if content.startswith("/sync_skills"):
-            skills = network_sync.sync_skills()
+            skills = await network_sync.sync_skills()
             return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Synced skills: {skills}", status="success")
 
         # Standard LLM handling with Tier 1 and Tier 3 memory

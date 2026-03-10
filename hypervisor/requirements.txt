@@ -2,6 +2,7 @@ fastapi
 uvicorn
 pydantic
 requests
+httpx
 openai-whisper
 ffmpeg-python
 python-multipart
