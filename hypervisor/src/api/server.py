@@ -3,6 +3,7 @@ import uuid
 from typing import Dict, Any
 import requests
 import os
+import httpx
 
 from src.models.intent import IntentObject, IntentResponse
 from src.engine.context import ContextEngine
@@ -57,8 +58,9 @@ async def process_intent(intent: IntentObject):
             if not arena.verify(action_intent="execute code", proposed_execution=code):
                 return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Arena Security Halt: Action lacks absolute confidence or exhibits guessing.", status="error")
             try:
-                sandbox_res = requests.post(SANDBOX_URL, json={"language": "python", "code": code})
-                response_text = f"Execution result:\n{sandbox_res.json()}"
+                async with httpx.AsyncClient() as client:
+                    sandbox_res = await client.post(SANDBOX_URL, json={"language": "python", "code": code})
+                    response_text = f"Execution result:\n{sandbox_res.json()}"
             except Exception as e:
                 response_text = f"Sandbox execution failed: {e}"
             return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=response_text, status="success")
