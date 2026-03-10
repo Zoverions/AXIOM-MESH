@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 import uuid
-from pydantic import BaseModel
 from typing import Dict, Any
 import requests
 import os
