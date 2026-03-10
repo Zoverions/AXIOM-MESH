@@ -21,7 +21,24 @@ const WS_PORT = process.env.GATEWAY_WS_PORT || 3001;
 
 // REST Server
 const app = express();
-app.use(cors());
+
+const allowedOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',')
+    : [`http://localhost:${REST_PORT}`, `http://127.0.0.1:${REST_PORT}`];
+
+app.use(cors({
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    }
+}));
+
 app.use(bodyParser.json());
 
 // Serve static frontend dashboard
