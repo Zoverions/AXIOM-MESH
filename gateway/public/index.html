@@ -58,8 +58,19 @@
                 <h2>Configuration Settings</h2>
                 <form id="config-form">
                     <div class="form-group">
-                        <label for="LLM_PROVIDER">LLM Provider (openai, anthropic, local)</label>
+                        <label for="ALLOW_CLOUD_LLM">Allow Cloud APIs (Cost-Savings Toggle)</label>
+                        <select id="ALLOW_CLOUD_LLM" name="ALLOW_CLOUD_LLM">
+                            <option value="false">Local Only (Free)</option>
+                            <option value="true">Use Cloud Models (Paid)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="LLM_PROVIDER">LLM Provider Preference (openai, anthropic, local)</label>
                         <input type="text" id="LLM_PROVIDER" name="LLM_PROVIDER">
+                    </div>
+                    <div class="form-group">
+                        <label for="LOCAL_MODEL_FALLBACK">Local Fallback Model Name</label>
+                        <input type="text" id="LOCAL_MODEL_FALLBACK" name="LOCAL_MODEL_FALLBACK">
                     </div>
                     <div class="form-group">
                         <label for="OPENAI_API_KEY">OpenAI API Key</label>

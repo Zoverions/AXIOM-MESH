@@ -1,13 +1,10 @@
 import { Router, Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
+import axios from 'axios';
 import { normalizeInput } from '../utils/normalizer';
 import { sendToHypervisor } from '../services/hypervisorClient';
-import { exec } from 'child_process';
-import util from 'util';
-import { getLogsBuffer } from '../utils/logger'; // We will create this
-
-const execPromise = util.promisify(exec);
+import { getLogsBuffer } from '../utils/logger';
 
 // Determine .env path based on whether we are in Docker or local dev
 const ENV_PATH = fs.existsSync('/app/.env') ? '/app/.env' : path.resolve(__dirname, '../../../.env');
@@ -35,8 +32,6 @@ router.get('/health', (req: Request, res: Response) => {
     res.json({ status: 'ok', component: 'omni-gateway' });
 });
 
-
-import axios from 'axios';
 
 // --- Status API ---
 router.get('/api/v1/status', async (req: Request, res: Response) => {
@@ -139,6 +134,9 @@ router.post('/api/v1/config', (req: Request, res: Response) => {
         }
 
         // Re-write .env file
+        // To preserve comments, we could rewrite line-by-line, but for simplicity
+        // and consistency with the Map updates, we will rebuild it.
+        // A robust solution would parse and replace inline.
         const newLines = Array.from(configMap.entries()).map(([k, v]) => `${k}=${v}`);
         fs.writeFileSync(ENV_PATH, newLines.join('\n') + '\n', 'utf-8');
 

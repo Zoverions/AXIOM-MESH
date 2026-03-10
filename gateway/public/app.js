@@ -113,7 +113,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const res = await fetch('/api/v1/config');
             const data = await res.json();
 
+            document.getElementById('ALLOW_CLOUD_LLM').value = data.ALLOW_CLOUD_LLM || 'false';
             document.getElementById('LLM_PROVIDER').value = data.LLM_PROVIDER || '';
+            document.getElementById('LOCAL_MODEL_FALLBACK').value = data.LOCAL_MODEL_FALLBACK || '';
             document.getElementById('OPENAI_API_KEY').value = data.OPENAI_API_KEY || '';
             document.getElementById('DISCORD_TOKEN').value = data.DISCORD_TOKEN || '';
             document.getElementById('WHATSAPP_SESSION').value = data.WHATSAPP_SESSION || '';
@@ -130,7 +132,9 @@ document.addEventListener("DOMContentLoaded", () => {
         msgEl.textContent = 'Saving...';
 
         const updates = {
+            ALLOW_CLOUD_LLM: document.getElementById('ALLOW_CLOUD_LLM').value,
             LLM_PROVIDER: document.getElementById('LLM_PROVIDER').value,
+            LOCAL_MODEL_FALLBACK: document.getElementById('LOCAL_MODEL_FALLBACK').value,
             OPENAI_API_KEY: document.getElementById('OPENAI_API_KEY').value,
             DISCORD_TOKEN: document.getElementById('DISCORD_TOKEN').value,
             WHATSAPP_SESSION: document.getElementById('WHATSAPP_SESSION').value,

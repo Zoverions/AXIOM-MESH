@@ -206,7 +206,8 @@ h2 {
     color: #aaa;
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
     width: 100%;
     max-width: 500px;
     padding: 10px;
