@@ -3,13 +3,18 @@ import { WebSocketServer, WebSocket } from 'ws';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
+import path from 'path';
 import restRoutes from './routes/rest';
 import { normalizeInput } from './utils/normalizer';
 import { sendToHypervisor } from './services/hypervisorClient';
 import { getChannelFactory, getRegisteredChannelNames, Channel } from './channels/registry';
+import { initLogger } from './utils/logger';
 import './channels'; // Initialize channel registrations
 
 dotenv.config();
+
+// Initialize the log buffer to capture terminal output safely
+initLogger();
 
 const REST_PORT = process.env.GATEWAY_REST_PORT || 3000;
 const WS_PORT = process.env.GATEWAY_WS_PORT || 3001;
@@ -18,6 +23,10 @@ const WS_PORT = process.env.GATEWAY_WS_PORT || 3001;
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
+
+// Serve static frontend dashboard
+app.use(express.static(path.join(__dirname, '../public')));
+
 app.use('/', restRoutes);
 
 app.listen(REST_PORT, () => {
