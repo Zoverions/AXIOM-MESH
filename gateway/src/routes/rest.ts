@@ -5,6 +5,10 @@ import axios from 'axios';
 import { normalizeInput } from '../utils/normalizer';
 import { sendToHypervisor } from '../services/hypervisorClient';
 import { getLogsBuffer } from '../utils/logger';
+import { exec } from 'child_process';
+import util from 'util';
+
+const execPromise = util.promisify(exec);
 
 // Determine .env path based on whether we are in Docker or local dev
 const ENV_PATH = fs.existsSync('/app/.env') ? '/app/.env' : path.resolve(__dirname, '../../../.env');
@@ -32,6 +36,28 @@ router.get('/health', (req: Request, res: Response) => {
     res.json({ status: 'ok', component: 'omni-gateway' });
 });
 
+
+// --- Agents API ---
+router.get('/api/v1/agents', async (req: Request, res: Response) => {
+    try {
+        const hypervisorRes = await axios.get(process.env.HYPERVISOR_URL + '/agents');
+        res.json(hypervisorRes.data);
+    } catch (error: any) {
+        res.status(500).json({ error: 'Failed to fetch agents data from Hypervisor', details: error.message });
+    }
+});
+
+// --- Network API ---
+router.get('/api/v1/network', async (req: Request, res: Response) => {
+    try {
+        // Grid API URL
+        const gridUrl = process.env.GRID_URL ? process.env.GRID_URL.replace('/skills', '') : 'http://grid:5000';
+        const gridRes = await axios.get(gridUrl + '/network/nodes');
+        res.json(gridRes.data);
+    } catch (error: any) {
+        res.status(500).json({ error: 'Failed to fetch network nodes from Grid', details: error.message });
+    }
+});
 
 // --- Status API ---
 router.get('/api/v1/status', async (req: Request, res: Response) => {
@@ -61,6 +87,30 @@ router.get('/api/v1/status', async (req: Request, res: Response) => {
 });
 
 // --- Logs API ---
+router.get('/api/v1/logs', async (req: Request, res: Response) => {
+    try {
+        // We will try multiple sources of logs to provide the most complete picture.
+        // First, check the Gateway's internal buffer.
+        let fullLogs = "--- Gateway Node Logs ---\n" + (getLogsBuffer() || "No logs available.") + "\n\n";
+
+        // If docker socket is available (e.g., if re-mounted for complete system observability)
+        if (fs.existsSync('/var/run/docker.sock')) {
+            try {
+                // Execute a lightweight curl against the Docker engine API to get recent logs for other containers
+                // This avoids needing the full `docker-compose` CLI inside the Node container.
+                // We'll mock the extraction here for simplicity, but a robust system would hit http://localhost/containers/json (via unix socket)
+                const { stdout, stderr } = await execPromise('curl --unix-socket /var/run/docker.sock http://localhost/containers/json');
+                if (stdout) {
+                     fullLogs += "--- Connected Container Statuses ---\n" + stdout + "\n\n";
+                }
+            } catch (e) {
+                fullLogs += "--- Docker Observability Error ---\nCould not fetch deeper container stats.\n\n";
+            }
+        } else {
+             fullLogs += "--- System Observability Note ---\nDocker socket not mounted. Viewing logs for the Gateway service only.\nTo view full agent system logs, mount /var/run/docker.sock to the Gateway.\n\n";
+        }
+
+        res.json({ logs: fullLogs });
 router.get('/api/v1/logs', (req: Request, res: Response) => {
     try {
         const logs = getLogsBuffer();
@@ -73,6 +123,16 @@ router.get('/api/v1/logs', (req: Request, res: Response) => {
 // --- Configuration API ---
 const SENSITIVE_KEYS = ['OPENAI_API_KEY', 'DISCORD_TOKEN', 'WHATSAPP_SESSION'];
 
+// A simple middleware to ensure only local origins can edit config (since there is no auth yet)
+const localOnly = (req: Request, res: Response, next: Function) => {
+    const origin = req.get('origin') || req.get('referer') || '';
+    if (origin && !origin.includes('localhost') && !origin.includes('127.0.0.1')) {
+        return res.status(403).json({ error: 'Configuration editing is restricted to local interfaces for security.' });
+    }
+    next();
+};
+
+router.get('/api/v1/config', localOnly, (req: Request, res: Response) => {
 router.get('/api/v1/config', (req: Request, res: Response) => {
     try {
         if (!fs.existsSync(ENV_PATH)) {
@@ -102,6 +162,7 @@ router.get('/api/v1/config', (req: Request, res: Response) => {
     }
 });
 
+router.post('/api/v1/config', localOnly, (req: Request, res: Response) => {
 router.post('/api/v1/config', (req: Request, res: Response) => {
     try {
         const updates: Record<string, string> = req.body;

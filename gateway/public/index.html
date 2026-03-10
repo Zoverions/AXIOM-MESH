@@ -13,6 +13,8 @@
             <nav>
                 <button class="nav-btn active" data-target="chat">Chat Interface</button>
                 <button class="nav-btn" data-target="status">System Status</button>
+                <button class="nav-btn" data-target="agents">Active Agents</button>
+                <button class="nav-btn" data-target="network">Grid Mesh Nodes</button>
                 <button class="nav-btn" data-target="settings">Settings / Config</button>
                 <button class="nav-btn" data-target="logs">Logs & Troubleshooting</button>
             </nav>
@@ -50,6 +52,22 @@
                         <h3>Grid</h3>
                         <p id="status-grid-node">Loading...</p>
                     </div>
+                </div>
+            </section>
+
+            <!-- Agents Tab -->
+            <section id="agents" class="tab-content">
+                <h2>Active Agents & Processes</h2>
+                <div id="agents-grid" class="agents-grid">
+                    <p>Loading agent states...</p>
+                </div>
+            </section>
+
+            <!-- Network Tab -->
+            <section id="network" class="tab-content">
+                <h2>Connected Grid Nodes</h2>
+                <div id="network-grid" class="agents-grid">
+                    <p>Loading connected mesh nodes...</p>
                 </div>
             </section>
 

@@ -15,6 +15,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Auto-refresh logic on tab load
             if (targetId === 'status') fetchStatus();
+            if (targetId === 'agents') fetchAgents();
+            if (targetId === 'network') fetchNetwork();
             if (targetId === 'settings') fetchConfig();
             if (targetId === 'logs') fetchLogs();
         });
@@ -91,6 +93,67 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.key === "Enter") sendMessage();
     });
 });
+
+    // --- Agents Logic ---
+    async function fetchAgents() {
+        const grid = document.getElementById('agents-grid');
+        grid.innerHTML = '<p>Loading agent states...</p>';
+        try {
+            const res = await fetch('/api/v1/agents');
+            const data = await res.json();
+
+            if (data.agents && data.agents.length > 0) {
+                grid.innerHTML = '';
+                data.agents.forEach(agent => {
+                    const card = document.createElement('div');
+                    card.className = 'agent-card';
+                    card.innerHTML = `
+                        <h3>${agent.name}</h3>
+                        <p><strong>State:</strong> <span class="status">${agent.status}</span></p>
+                        <p><strong>Current Task:</strong> ${agent.current_task}</p>
+                        <p><strong>Next Plan:</strong> ${agent.next_plan}</p>
+                    `;
+                    grid.appendChild(card);
+                });
+            } else {
+                grid.innerHTML = '<p>No active agents found.</p>';
+            }
+        } catch (error) {
+            console.error('Failed to fetch agents:', error);
+            grid.innerHTML = '<p>Failed to load agent states. Is the hypervisor offline?</p>';
+        }
+    }
+
+    // --- Network / Grid Logic ---
+    async function fetchNetwork() {
+        const grid = document.getElementById('network-grid');
+        grid.innerHTML = '<p>Loading connected mesh nodes...</p>';
+        try {
+            const res = await fetch('/api/v1/network');
+            const data = await res.json();
+
+            if (data.nodes && data.nodes.length > 0) {
+                grid.innerHTML = '';
+                data.nodes.forEach(node => {
+                    const card = document.createElement('div');
+                    card.className = 'agent-card';
+                    card.innerHTML = `
+                        <h3>${node.id}</h3>
+                        <p><strong>Status:</strong> <span class="status">${node.status}</span></p>
+                        <p><strong>IP:</strong> ${node.ip}</p>
+                        <p><strong>Latency:</strong> ${node.latency}</p>
+                        <p><strong>Role:</strong> ${node.role}</p>
+                    `;
+                    grid.appendChild(card);
+                });
+            } else {
+                grid.innerHTML = '<p>No connected nodes found.</p>';
+            }
+        } catch (error) {
+            console.error('Failed to fetch network:', error);
+            grid.innerHTML = '<p>Failed to load connected nodes. Is the grid service offline?</p>';
+        }
+    }
 
     // --- System Status Logic ---
     async function fetchStatus() {
