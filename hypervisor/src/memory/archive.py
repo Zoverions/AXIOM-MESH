@@ -65,11 +65,11 @@ class DeepArchive:
 
         query_keywords = set(self._extract_keywords(query))
 
-        entry_nodes = []
+        entry_nodes = set()
         for node_id, node in data["nodes"].items():
             node_keywords = set(node.get("keywords", []))
             if query_keywords.intersection(node_keywords) or query.lower() in node.get("content", "").lower():
-                entry_nodes.append(node_id)
+                entry_nodes.add(node_id)
 
         traversed_nodes = set(entry_nodes)
         for edge in data["edges"]:
