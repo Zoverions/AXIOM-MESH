@@ -1,6 +1,17 @@
 import requests
+import os
 
 GATEWAY_REST_URL = "http://localhost:3000/api/v1/intent/process"
+GATEWAY_API_KEY = os.environ.get("GATEWAY_API_KEY")
+
+# Attempt to load from .env file if available and python-dotenv is installed
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+    if not GATEWAY_API_KEY:
+        GATEWAY_API_KEY = os.environ.get("GATEWAY_API_KEY")
+except ImportError:
+    pass
 
 def send_intent(content: str):
     payload = {
@@ -9,8 +20,12 @@ def send_intent(content: str):
         "metadata": {}
     }
     print(f"Sending: {content}")
+    headers = {}
+    if GATEWAY_API_KEY:
+        headers["Authorization"] = f"Bearer {GATEWAY_API_KEY}"
+
     try:
-        response = requests.post(GATEWAY_REST_URL, json=payload)
+        response = requests.post(GATEWAY_REST_URL, json=payload, headers=headers)
         response.raise_for_status()
         data = response.json()
         print(f"Response: {data.get('response', data)}")

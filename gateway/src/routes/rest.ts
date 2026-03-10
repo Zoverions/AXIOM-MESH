@@ -15,7 +15,28 @@ const ENV_PATH = fs.existsSync('/app/.env') ? '/app/.env' : path.resolve(__dirna
 
 const router = Router();
 
-router.post('/api/v1/intent/process', async (req: Request, res: Response) => {
+// Middleware to authenticate REST requests
+const authMiddleware = (req: Request, res: Response, next: Function) => {
+    const apiKey = process.env.GATEWAY_API_KEY;
+
+    if (!apiKey) {
+        return res.status(500).json({ error: 'Server configuration error: GATEWAY_API_KEY is not set' });
+    }
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized: Missing or invalid Authorization header' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    if (token !== apiKey) {
+        return res.status(403).json({ error: 'Forbidden: Invalid API Key' });
+    }
+
+    next();
+};
+
+router.post('/api/v1/intent/process', authMiddleware, async (req: Request, res: Response) => {
     try {
         const { channel, content, metadata } = req.body;
         if (!content) {
