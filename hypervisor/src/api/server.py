@@ -15,8 +15,10 @@ from src.evolution.skill_rl import EvolutionEngine
 from src.evolution.network_sync import NetworkSync
 from src.cortex.autoresearch import AutoResearchDaemon
 from src.evolution.auto_training import AutoTrainingLoop
+from src.api.audio import router as audio_router
 
 app = FastAPI()
+app.include_router(audio_router)
 context_engine = ContextEngine()
 autoresearch_daemon = AutoResearchDaemon(archive=context_engine.deep_archive)
 auto_training_loop = AutoTrainingLoop()
