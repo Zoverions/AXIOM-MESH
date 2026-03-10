@@ -5,3 +5,4 @@ requests
 openai-whisper
 ffmpeg-python
 python-multipart
+httpx
