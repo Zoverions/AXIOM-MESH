@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AxiomMesh Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <aside class="sidebar">
+            <h2>AxiomMesh</h2>
+            <nav>
+                <button class="nav-btn active" data-target="chat">Chat Interface</button>
+                <button class="nav-btn" data-target="status">System Status</button>
+                <button class="nav-btn" data-target="agents">Active Agents</button>
+                <button class="nav-btn" data-target="network">Grid Mesh Nodes</button>
+                <button class="nav-btn" data-target="settings">Settings / Config</button>
+                <button class="nav-btn" data-target="logs">Logs & Troubleshooting</button>
+            </nav>
+        </aside>
+
+        <main class="content">
+            <!-- Chat Tab -->
+            <section id="chat" class="tab-content active">
+                <div class="chat-container">
+                    <div id="chat-messages" class="messages"></div>
+                    <div class="input-area">
+                        <input type="text" id="chat-input" placeholder="Enter intent or command (e.g., /dialectic AGI)">
+                        <button id="chat-send">Send</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Status Tab -->
+            <section id="status" class="tab-content">
+                <h2>System Health Status</h2>
+                <div class="status-grid" id="status-grid">
+                    <div class="card">
+                        <h3>Gateway</h3>
+                        <p id="status-gateway">Loading...</p>
+                    </div>
+                    <div class="card">
+                        <h3>Hypervisor</h3>
+                        <p id="status-hypervisor">Loading...</p>
+                    </div>
+                    <div class="card">
+                        <h3>Sandbox</h3>
+                        <p id="status-sandbox">Loading...</p>
+                    </div>
+                    <div class="card">
+                        <h3>Grid</h3>
+                        <p id="status-grid-node">Loading...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Agents Tab -->
+            <section id="agents" class="tab-content">
+                <h2>Active Agents & Processes</h2>
+                <div id="agents-grid" class="agents-grid">
+                    <p>Loading agent states...</p>
+                </div>
+            </section>
+
+            <!-- Network Tab -->
+            <section id="network" class="tab-content">
+                <h2>Connected Grid Nodes</h2>
+                <div id="network-grid" class="agents-grid">
+                    <p>Loading connected mesh nodes...</p>
+                </div>
+            </section>
+
+            <!-- Settings Tab -->
+            <section id="settings" class="tab-content">
+                <h2>Configuration Settings</h2>
+                <form id="config-form">
+                    <div class="form-group">
+                        <label for="ALLOW_CLOUD_LLM">Allow Cloud APIs (Cost-Savings Toggle)</label>
+                        <select id="ALLOW_CLOUD_LLM" name="ALLOW_CLOUD_LLM">
+                            <option value="false">Local Only (Free)</option>
+                            <option value="true">Use Cloud Models (Paid)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="LLM_PROVIDER">LLM Provider Preference (openai, anthropic, local)</label>
+                        <input type="text" id="LLM_PROVIDER" name="LLM_PROVIDER">
+                    </div>
+                    <div class="form-group">
+                        <label for="LOCAL_MODEL_FALLBACK">Local Fallback Model Name</label>
+                        <input type="text" id="LOCAL_MODEL_FALLBACK" name="LOCAL_MODEL_FALLBACK">
+                    </div>
+                    <div class="form-group">
+                        <label for="OPENAI_API_KEY">OpenAI API Key</label>
+                        <input type="password" id="OPENAI_API_KEY" name="OPENAI_API_KEY">
+                    </div>
+                    <div class="form-group">
+                        <label for="DISCORD_TOKEN">Discord Bot Token</label>
+                        <input type="password" id="DISCORD_TOKEN" name="DISCORD_TOKEN">
+                    </div>
+                    <div class="form-group">
+                        <label for="WHATSAPP_SESSION">WhatsApp Session ID/Path</label>
+                        <input type="text" id="WHATSAPP_SESSION" name="WHATSAPP_SESSION">
+                    </div>
+                    <div class="form-group">
+                        <label for="NCP_SERVERS">NCP Servers (comma-separated)</label>
+                        <input type="text" id="NCP_SERVERS" name="NCP_SERVERS" placeholder="http://localhost:8080">
+                    </div>
+                    <button type="submit" id="save-config">Save Configuration</button>
+                    <p id="config-msg"></p>
+                </form>
+            </section>
+
+            <!-- Logs Tab -->
+            <section id="logs" class="tab-content">
+                <h2>Recent System Logs</h2>
+                <button id="refresh-logs">Refresh Logs</button>
+                <div class="log-viewer">
+                    <pre id="log-output">Loading logs...</pre>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

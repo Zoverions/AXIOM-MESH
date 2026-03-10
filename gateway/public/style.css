@@ -1,0 +1,283 @@
+/* Basic Styling for AxiomMesh Dashboard */
+:root {
+    --bg-color: #121212;
+    --sidebar-bg: #1e1e1e;
+    --card-bg: #2d2d2d;
+    --text-main: #e0e0e0;
+    --accent: #bb86fc;
+    --border: #333;
+}
+
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#app {
+    display: flex;
+    width: 100%;
+}
+
+.sidebar {
+    width: 250px;
+    background-color: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar h2 {
+    text-align: center;
+    margin-top: 0;
+    color: var(--accent);
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.sidebar nav {
+    display: flex;
+    flex-direction: column;
+}
+
+.nav-btn {
+    background: none;
+    border: none;
+    color: var(--text-main);
+    padding: 15px 20px;
+    text-align: left;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.nav-btn:hover {
+    background-color: var(--card-bg);
+}
+
+.nav-btn.active {
+    background-color: var(--card-bg);
+    border-left: 4px solid var(--accent);
+    color: var(--accent);
+    font-weight: bold;
+}
+
+.content {
+    flex-grow: 1;
+    padding: 30px;
+    overflow-y: auto;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+/* Chat Tab */
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 100px);
+    background-color: var(--sidebar-bg);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+
+.messages {
+    flex-grow: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.message {
+    max-width: 80%;
+    padding: 10px 15px;
+    border-radius: 8px;
+    word-wrap: break-word;
+}
+
+.message pre {
+    margin: 0;
+    white-space: pre-wrap;
+    font-family: inherit;
+}
+
+.user-message {
+    background-color: var(--accent);
+    color: #000;
+    align-self: flex-end;
+    border-bottom-right-radius: 0;
+}
+
+.agent-message {
+    background-color: var(--card-bg);
+    align-self: flex-start;
+    border-bottom-left-radius: 0;
+}
+
+.system-message {
+    background-color: transparent;
+    color: #888;
+    align-self: center;
+    font-size: 0.9em;
+    font-style: italic;
+}
+
+.input-area {
+    display: flex;
+    padding: 15px;
+    background-color: var(--card-bg);
+    border-top: 1px solid var(--border);
+}
+
+.input-area input {
+    flex-grow: 1;
+    padding: 10px 15px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    font-size: 16px;
+}
+
+.input-area button {
+    margin-left: 10px;
+    padding: 10px 20px;
+    background-color: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* Status Grid */
+.status-grid, .agents-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.agent-card {
+    background-color: var(--card-bg);
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.agent-card h3 {
+    margin-top: 0;
+    color: var(--accent);
+    margin-bottom: 5px;
+}
+
+.agent-card p {
+    font-size: 14px;
+    color: #e0e0e0;
+    margin: 10px 0;
+}
+
+.agent-card .status {
+    font-weight: bold;
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background-color: #333;
+}
+
+.card {
+    background-color: var(--card-bg);
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    text-align: center;
+}
+
+.card h3 {
+    margin-top: 0;
+    color: #aaa;
+}
+
+.card p {
+    font-size: 24px;
+    font-weight: bold;
+    margin: 10px 0 0;
+    color: var(--accent);
+}
+
+/* Config Form */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #aaa;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    max-width: 500px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background-color: var(--sidebar-bg);
+    color: var(--text-main);
+}
+
+#save-config {
+    padding: 10px 20px;
+    background-color: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* Logs */
+.log-viewer {
+    background-color: #000;
+    padding: 20px;
+    border-radius: 8px;
+    height: calc(100vh - 200px);
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    margin-top: 15px;
+}
+
+.log-viewer pre {
+    margin: 0;
+    font-family: monospace;
+    color: #0f0;
+    font-size: 14px;
+    white-space: pre-wrap;
+}
+
+#refresh-logs {
+    padding: 8px 15px;
+    background-color: var(--card-bg);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+}

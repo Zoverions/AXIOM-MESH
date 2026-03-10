@@ -91,3 +91,29 @@ async def process_intent(intent: IntentObject):
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "component": "hypervisor"}
+
+@app.get("/agents")
+async def agents_status():
+    """Returns the current state and plans of all active background daemons and agents."""
+    return {
+        "agents": [
+            {
+                "name": "AutoResearch Daemon",
+                "status": "Active (Idle/Foraging)" if autoresearch_daemon.running else "Stopped",
+                "current_task": "Epistemic foraging from unstructured data",
+                "next_plan": "Compile new findings into the Tier 3 Knowledge Graph when node is idle."
+            },
+            {
+                "name": "AutoTraining Loop",
+                "status": "Active (Mutating)" if auto_training_loop.running else "Stopped",
+                "current_task": "Autonomously mutating code in the Execution Sandbox",
+                "next_plan": "Evaluate metrics against validation set and retain code with lower loss."
+            },
+            {
+                "name": "Dialectic Orchestrator",
+                "status": "Standby",
+                "current_task": "Awaiting dialectic topics",
+                "next_plan": "Synthesize thesis and antithesis upon command."
+            }
+        ]
+    }
