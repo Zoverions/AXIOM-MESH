@@ -111,10 +111,6 @@ router.get('/api/v1/logs', async (req: Request, res: Response) => {
         }
 
         res.json({ logs: fullLogs });
-router.get('/api/v1/logs', (req: Request, res: Response) => {
-    try {
-        const logs = getLogsBuffer();
-        res.json({ logs: logs || "No logs available yet." });
     } catch (error: any) {
         res.status(500).json({ error: 'Failed to fetch logs', details: error.message });
     }
@@ -133,7 +129,6 @@ const localOnly = (req: Request, res: Response, next: Function) => {
 };
 
 router.get('/api/v1/config', localOnly, (req: Request, res: Response) => {
-router.get('/api/v1/config', (req: Request, res: Response) => {
     try {
         if (!fs.existsSync(ENV_PATH)) {
             return res.json({});
@@ -163,7 +158,6 @@ router.get('/api/v1/config', (req: Request, res: Response) => {
 });
 
 router.post('/api/v1/config', localOnly, (req: Request, res: Response) => {
-router.post('/api/v1/config', (req: Request, res: Response) => {
     try {
         const updates: Record<string, string> = req.body;
         let envLines: string[] = [];

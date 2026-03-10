@@ -25,6 +25,8 @@ auto_training_loop = AutoTrainingLoop()
 
 @app.on_event("startup")
 async def startup_event():
+    # Phase 1 Initialization Acknowledged
+    print("AxiomMesh Phase 1 Cognitive Hypervisor Started")
     autoresearch_daemon.start()
     auto_training_loop.start()
 
