@@ -1,6 +1,4 @@
 import requests
-import json
-import uuid
 
 GATEWAY_REST_URL = "http://localhost:3000/api/v1/intent/process"
 
