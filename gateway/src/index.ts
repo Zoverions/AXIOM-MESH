@@ -77,7 +77,7 @@ wss.on('connection', (ws: WebSocket) => {
 
 console.log(`Omni-Gateway WebSocket server running on port ${WS_PORT}`);
 
-// Initialize Channels
+// Initialize Channels (Phase 1)
 const activeChannels: Record<string, Channel> = {};
 
 async function startChannels() {
