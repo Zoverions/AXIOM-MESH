@@ -14,18 +14,22 @@ from src.cortex.dialectic import DialecticOrchestrator
 from src.evolution.skill_rl import EvolutionEngine
 from src.evolution.network_sync import NetworkSync
 from src.cortex.autoresearch import AutoResearchDaemon
+from src.evolution.auto_training import AutoTrainingLoop
 
 app = FastAPI()
 context_engine = ContextEngine()
 autoresearch_daemon = AutoResearchDaemon(archive=context_engine.deep_archive)
+auto_training_loop = AutoTrainingLoop()
 
 @app.on_event("startup")
 async def startup_event():
     autoresearch_daemon.start()
+    auto_training_loop.start()
 
 @app.on_event("shutdown")
 async def shutdown_event():
     autoresearch_daemon.stop()
+    auto_training_loop.stop()
 pulse = EntropyMonitor()
 arena = VerificationArena()
 llm = LLMProvider()
