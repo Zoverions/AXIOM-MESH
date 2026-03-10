@@ -7,3 +7,5 @@ openai-whisper
 ffmpeg-python
 python-multipart
 httpx
+fastapi
+uvicorn

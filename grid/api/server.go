@@ -25,10 +25,31 @@ func (s *Server) Start(addr string) error {
 		if r.Method == "GET" {
 			json.NewEncoder(w).Encode(s.ledger.GetSkills())
 		} else if r.Method == "POST" {
-			var skill types.SkillVector
-			if err := json.NewDecoder(r.Body).Decode(&skill); err == nil {
-				s.ledger.AddSkill(skill)
-				json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+			var rawBody map[string]interface{}
+			if err := json.NewDecoder(r.Body).Decode(&rawBody); err == nil {
+				var skill types.SkillVector
+				var poerHash string
+
+				// Check if payload has a nested "skill" object
+				if s, ok := rawBody["skill"].(map[string]interface{}); ok {
+					skillBytes, _ := json.Marshal(s)
+					json.Unmarshal(skillBytes, &skill)
+					if ph, ok := rawBody["poerHash"].(string); ok {
+						poerHash = ph
+					}
+				} else {
+					// Otherwise, assume the whole body is the skill vector
+					skillBytes, _ := json.Marshal(rawBody)
+					json.Unmarshal(skillBytes, &skill)
+					// Fallback hash
+					poerHash = "legacy-hash"
+				}
+
+				if err := s.ledger.AddSkill(skill, poerHash); err != nil {
+					http.Error(w, err.Error(), http.StatusNotAcceptable)
+				} else {
+					json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+				}
 			} else {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 			}

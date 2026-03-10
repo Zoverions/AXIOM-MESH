@@ -17,6 +17,11 @@ from src.cortex.autoresearch import AutoResearchDaemon
 from src.evolution.auto_training import AutoTrainingLoop
 from src.api.audio import router as audio_router
 
+# Phase 3 & Phase 5 additions
+from src.cortex.riker import RikerDecouplingModule
+from src.cortex.divergence import DivergenceEngine
+from src.engine.action_engine import ActionEngineCompiler
+
 app = FastAPI()
 app.include_router(audio_router)
 context_engine = ContextEngine()
@@ -41,6 +46,10 @@ dialectic = DialecticOrchestrator()
 evolution = EvolutionEngine()
 network_sync = NetworkSync()
 
+riker_decoupling = RikerDecouplingModule()
+divergence_engine = DivergenceEngine()
+action_compiler = ActionEngineCompiler()
+
 SANDBOX_URL = os.environ.get("SANDBOX_URL", "http://localhost:4000/execute")
 
 @app.post("/process", response_model=IntentResponse)
@@ -52,6 +61,16 @@ async def process_intent(intent: IntentObject):
         if content.startswith("/dialectic"):
             synthesis = dialectic.synthesize(content[len("/dialectic"):].strip())
             return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=synthesis, status="success")
+
+        # Handle special Web Automate command (ActionEngine)
+        if content.startswith("/automate"):
+            # format: /automate [target_url] [goal...]
+            parts = content[len("/automate"):].strip().split(' ', 1)
+            target = parts[0] if len(parts) > 0 else "unknown"
+            goal = parts[1] if len(parts) > 1 else "default action"
+
+            script = action_compiler.compile_automation_script(target, goal)
+            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Compiled Action:\n```python\n{script}\n```", status="success")
 
         # Handle special Code Execution command
         if content.startswith("/exec"):
@@ -72,9 +91,20 @@ async def process_intent(intent: IntentObject):
             skills = network_sync.sync_skills()
             return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Synced skills: {skills}", status="success")
 
+        # RIKER Decoupling: Cognitive Pass 1 (Fact Retrieval / Grounding)
+        extracted_facts = riker_decoupling.extract_data(content, "")
+
+        # Determine Divergence (Anti-Hivemind) parameters if query is open-ended
+        is_open_ended = "?" in content or len(content.split()) > 10
+        div_params = divergence_engine.get_divergent_parameters(content, is_open_ended)
+
         # Standard LLM handling with Tier 1 and Tier 3 memory
-        context = context_engine.get_context(content)
-        raw_response = llm.process(context)
+        context = await context_engine.get_context(content)
+        raw_response = llm.process(context, **div_params)
+
+        # RIKER Decoupling: Cognitive Pass 2 (Anti-Fabrication Verification)
+        if not riker_decoupling.verify_data(extracted_facts, raw_response):
+            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="System Halt: RIKER verification failed. Suspected hallucination.", status="error")
 
         # The Pulse Check
         if pulse.measure(raw_response):

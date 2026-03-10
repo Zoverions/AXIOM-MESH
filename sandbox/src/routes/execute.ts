@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { runCode } from '../services/dockerRunner';
+import { runWasmCode } from '../services/wasmRunner';
 
 const router = Router();
 
@@ -11,7 +12,12 @@ router.post('/execute', async (req: Request, res: Response) => {
             return;
         }
 
-        const result = await runCode(language, code);
+        let result;
+        if (language === 'wasm') {
+            result = await runWasmCode(code);
+        } else {
+            result = await runCode(language, code);
+        }
         res.json({ result });
     } catch (error: any) {
         res.status(500).json({ error: error.message });

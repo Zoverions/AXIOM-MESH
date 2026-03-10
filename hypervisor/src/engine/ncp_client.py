@@ -1,5 +1,5 @@
 import os
-import requests
+import httpx
 from typing import List, Dict, Any
 
 class NCPClient:
@@ -12,7 +12,7 @@ class NCPClient:
         ncp_env = os.environ.get("NCP_SERVERS", "")
         self.servers = [s.strip() for s in ncp_env.split(",") if s.strip()]
 
-    def fetch_context(self, intent_content: str) -> str:
+    async def fetch_context(self, intent_content: str) -> str:
         """
         Queries all configured NCP servers for additional context related to the user's intent.
         Returns a formatted string of aggregated responses.
@@ -26,19 +26,20 @@ class NCPClient:
             "metadata": {"source": "axiom_hypervisor"}
         }
 
-        for server in self.servers:
-            try:
-                # Assuming NCP servers expect a POST /context or standard generic query
-                endpoint = f"{server}/context" if not server.endswith("/context") else server
-                # Timeout kept low to prevent halting the main execution pipeline
-                res = requests.post(endpoint, json=payload, timeout=2.0)
-                if res.status_code == 200:
-                    data = res.json()
-                    # Expecting a standard 'context' or 'data' field
-                    server_response = data.get("context", data.get("data", str(data)))
-                    aggregated_context.append(f"[NCP Server {server}]: {server_response}")
-            except Exception as e:
-                aggregated_context.append(f"[NCP Server {server}]: Offline or Unreachable ({str(e)})")
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            for server in self.servers:
+                try:
+                    # Assuming NCP servers expect a POST /context or standard generic query
+                    endpoint = f"{server}/context" if not server.endswith("/context") else server
+                    # Timeout kept low to prevent halting the main execution pipeline
+                    res = await client.post(endpoint, json=payload)
+                    if res.status_code == 200:
+                        data = res.json()
+                        # Expecting a standard 'context' or 'data' field
+                        server_response = data.get("context", data.get("data", str(data)))
+                        aggregated_context.append(f"[NCP Server {server}]: {server_response}")
+                except Exception as e:
+                    aggregated_context.append(f"[NCP Server {server}]: Offline or Unreachable ({str(e)})")
 
         if not aggregated_context:
             return ""

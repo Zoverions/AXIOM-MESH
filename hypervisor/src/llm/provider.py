@@ -14,7 +14,7 @@ class LLMProvider:
         self.local_model = os.environ.get("LOCAL_MODEL_FALLBACK", "llama3:8b")
         self.provider_preference = os.environ.get("LLM_PROVIDER", "local").lower()
 
-    def process(self, context: str) -> str:
+    def process(self, context: str, **kwargs) -> str:
         """
         Process the intent context. It dynamically routes to the most efficient model.
         Local models are prioritized by default to save API credits, unless ALLOW_CLOUD_LLM is true
@@ -25,25 +25,25 @@ class LLMProvider:
         # Simple heuristic: if context is extremely large, we might *need* cloud,
         # but only if we have funds (ALLOW_CLOUD_LLM).
         if len(context) > 10000 and self.allow_cloud and self.openai_key:
-            return self._call_openai(context, model="gpt-4-turbo")
+            return self._call_openai(context, model="gpt-4-turbo", **kwargs)
 
         if use_cloud:
             if self.provider_preference == "openai" and self.openai_key:
-                return self._call_openai(context)
+                return self._call_openai(context, **kwargs)
             elif self.provider_preference == "anthropic" and self.anthropic_key:
-                return self._call_anthropic(context)
+                return self._call_anthropic(context, **kwargs)
 
         # Default back to Local LLM (Ollama/Llama.cpp style)
-        return self._call_local(context)
+        return self._call_local(context, **kwargs)
 
-    def _call_local(self, context: str) -> str:
+    def _call_local(self, context: str, **kwargs) -> str:
         # Standard local Ollama fallback endpoint logic
         # For simulation, we return a mock acknowledging the local model
         return f"[Local {self.local_model}] Processed intelligently: [{context[:100]}...] - Reduced entropy locally."
 
-    def _call_openai(self, context: str, model: str = "gpt-4o-mini") -> str:
+    def _call_openai(self, context: str, model: str = "gpt-4o-mini", **kwargs) -> str:
         # Simulated OpenAI processing to manage cloud resources efficiently
         return f"[Cloud {model}] Processed intelligently using OpenAI: [{context[:100]}...] - Reduced entropy via Cloud."
 
-    def _call_anthropic(self, context: str) -> str:
+    def _call_anthropic(self, context: str, **kwargs) -> str:
         return f"[Cloud Claude-3] Processed intelligently using Anthropic: [{context[:100]}...] - Reduced entropy via Cloud."
