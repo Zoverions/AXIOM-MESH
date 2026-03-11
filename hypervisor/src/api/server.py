@@ -75,7 +75,7 @@ async def process_intent(intent: IntentObject):
 
         # Standard LLM handling with Tier 1 and Tier 3 memory
         context = await context_engine.get_context(content)
-        raw_response = llm.process(context)
+        raw_response = await llm.process(context)
 
         # The Pulse Check
         if pulse.measure(raw_response):

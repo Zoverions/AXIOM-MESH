@@ -4,8 +4,18 @@ import random
 import requests
 import json
 import os
+import ast
 
 SANDBOX_URL = os.environ.get("SANDBOX_URL", "http://localhost:4000/execute")
+
+class CodeMutator(ast.NodeTransformer):
+    def visit_Constant(self, node):
+        # Mutate numeric constants slightly
+        if isinstance(node.value, (int, float)):
+            mutation = random.uniform(0.1, 1.5)
+            # Create a new Constant node with the mutated value
+            return ast.Constant(value=mutation)
+        return node
 
 class AutoTrainingLoop:
     def __init__(self):
@@ -36,17 +46,15 @@ print(f"loss={train()}")
             self._experiment()
 
     def _mutate_code(self, code):
-        # In a real system, the LLM would intelligently mutate this code
-        # Here we mock it by returning slightly different code with random loss
-        mock_loss = random.uniform(0.1, 1.5)
-        new_code = f"""
-def train():
-    # Mutated code
-    loss = {mock_loss:.4f}
-    return loss
-print(f"loss={{train()}}")
-"""
-        return new_code
+        try:
+            tree = ast.parse(code)
+            mutator = CodeMutator()
+            mutated_tree = mutator.visit(tree)
+            ast.fix_missing_locations(mutated_tree)
+            return ast.unparse(mutated_tree)
+        except Exception as e:
+            print(f"[AutoTraining] AST mutation failed: {e}")
+            return code
 
     def _experiment(self):
         print(f"[AutoTraining] Starting new experiment. Current best loss: {self.best_loss}")
