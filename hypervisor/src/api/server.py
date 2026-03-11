@@ -11,7 +11,7 @@ from src.pulse.pulse import EntropyMonitor
 from src.pulse.arena import VerificationArena
 from src.llm.provider import LLMProvider
 from src.cortex.dialectic import DialecticOrchestrator
-from src.evolution.skill_rl import EvolutionEngine
+from src.evolution.skill_rl import EvolutionEngine, ActionEngine
 from src.evolution.network_sync import NetworkSync
 from src.cortex.autoresearch import AutoResearchDaemon
 from src.evolution.auto_training import AutoTrainingLoop
@@ -40,6 +40,7 @@ llm = LLMProvider()
 dialectic = DialecticOrchestrator()
 evolution = EvolutionEngine()
 network_sync = NetworkSync()
+action_engine = ActionEngine()
 
 SANDBOX_URL = os.environ.get("SANDBOX_URL", "http://localhost:4000/execute")
 
