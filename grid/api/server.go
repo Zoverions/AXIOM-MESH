@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/axiom-mesh/grid/blockchain"
+	"github.com/axiom-mesh/grid/consensus"
 	"github.com/axiom-mesh/grid/types"
 )
 
@@ -27,6 +28,10 @@ func (s *Server) Start(addr string) error {
 		} else if r.Method == "POST" {
 			var skill types.SkillVector
 			if err := json.NewDecoder(r.Body).Decode(&skill); err == nil {
+				if !consensus.VerifyEntropyReduction(skill.Task, skill.PoERHash) {
+					http.Error(w, "PoER verification failed", http.StatusForbidden)
+					return
+				}
 				s.ledger.AddSkill(skill)
 				json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 			} else {

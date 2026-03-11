@@ -7,7 +7,8 @@ type Task struct {
 }
 
 type SkillVector struct {
-	ID     string    `json:"id"`
-	Vector []float64 `json:"vector"`
-	Task   string    `json:"task"`
+	ID       string    `json:"id"`
+	Vector   []float64 `json:"vector"`
+	Task     string    `json:"task"`
+	PoERHash string    `json:"poerHash"`
 }

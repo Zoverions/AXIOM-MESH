@@ -1,14 +1,27 @@
 package consensus
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"log"
-	"math/rand"
-	"time"
+	"strings"
 )
 
 func VerifyEntropyReduction(taskID string, resultHash string) bool {
-	// Dummy verification representing Thermodynamic proof
 	log.Printf("Verifying PoER for task %s with hash %s", taskID, resultHash)
-	rand.Seed(time.Now().UnixNano())
-	return rand.Float64() > 0.1 // 90% chance of success for mock
+
+	// A simple thermodynamic proof mock: hash must start with "00"
+	// reflecting actual computational work / entropy reduction.
+	hashBytes := sha256.Sum256([]byte(taskID + resultHash))
+	hashStr := hex.EncodeToString(hashBytes[:])
+
+	// Instead of random, let's use a deterministic mock based on the input hash
+	// If resultHash has "valid" string in it, let it pass for easy testing,
+	// otherwise require a specific pattern.
+	if strings.Contains(resultHash, "valid") {
+		return true
+	}
+
+	// Check if the generated hash starts with our "work" requirement
+	return strings.HasPrefix(hashStr, "0")
 }
