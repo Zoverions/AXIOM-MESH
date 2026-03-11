@@ -1,9 +1,11 @@
 from src.memory.archive import DeepArchive
 from src.engine.ncp_client import NCPClient
+from src.engine.temporal import TemporalStateManager
 
 class ContextEngine:
     def __init__(self):
         self.ncp_client = NCPClient()
+        self.temporal_state = TemporalStateManager() # Tier 1
         self.axioms = (
             "Thermodynamic Ethics: Maximize organization, minimize chaos. Reduce entropy.\n"
             "Uncertainty Optimization: You must explicitly halt and state 'I do not know' "
@@ -20,10 +22,17 @@ class ContextEngine:
         # Node Context Protocol (NCP) External Retrieval
         ncp_context = await self.ncp_client.fetch_context(intent_content)
 
+        # Tier 1 Temporal State
+        collapsed_state = self.temporal_state.get_collapsed_state()
+
         context_str = (
             f"--- TIER 1: SYSTEM AXIOMS ---\n{self.axioms}\n\n"
-            f"--- TIER 3: DEEP ARCHIVE CONTEXT ---\n{archive_context}\n\n"
         )
+
+        if collapsed_state:
+            context_str += f"--- TIER 1: COLLAPSED STATE ---\n{collapsed_state}\n\n"
+
+        context_str += f"--- TIER 3: DEEP ARCHIVE CONTEXT ---\n{archive_context}\n\n"
 
         if ncp_context:
             context_str += f"--- EXTERNAL NCP CONTEXT ---\n{ncp_context}\n\n"
