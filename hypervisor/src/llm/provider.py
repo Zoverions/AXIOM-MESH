@@ -1,7 +1,7 @@
 import uuid
 import time
 import os
-import requests
+import httpx
 from src.models.intent import IntentObject, IntentResponse
 
 class LLMProvider:
@@ -14,7 +14,7 @@ class LLMProvider:
         self.local_model = os.environ.get("LOCAL_MODEL_FALLBACK", "llama3:8b")
         self.provider_preference = os.environ.get("LLM_PROVIDER", "local").lower()
 
-    def process(self, context: str) -> str:
+    async def process(self, context: str) -> str:
         """
         Process the intent context. It dynamically routes to the most efficient model.
         Local models are prioritized by default to save API credits, unless ALLOW_CLOUD_LLM is true
@@ -25,25 +25,67 @@ class LLMProvider:
         # Simple heuristic: if context is extremely large, we might *need* cloud,
         # but only if we have funds (ALLOW_CLOUD_LLM).
         if len(context) > 10000 and self.allow_cloud and self.openai_key:
-            return self._call_openai(context, model="gpt-4-turbo")
+            return await self._call_openai(context, model="gpt-4-turbo")
 
         if use_cloud:
             if self.provider_preference == "openai" and self.openai_key:
-                return self._call_openai(context)
+                return await self._call_openai(context)
             elif self.provider_preference == "anthropic" and self.anthropic_key:
-                return self._call_anthropic(context)
+                return await self._call_anthropic(context)
 
         # Default back to Local LLM (Ollama/Llama.cpp style)
-        return self._call_local(context)
+        return await self._call_local(context)
 
-    def _call_local(self, context: str) -> str:
+    async def _call_local(self, context: str) -> str:
         # Standard local Ollama fallback endpoint logic
-        # For simulation, we return a mock acknowledging the local model
-        return f"[Local {self.local_model}] Processed intelligently: [{context[:100]}...] - Reduced entropy locally."
+        url = "http://localhost:11434/api/generate"
+        payload = {
+            "model": self.local_model,
+            "prompt": context,
+            "stream": False
+        }
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(url, json=payload, timeout=30.0)
+                response.raise_for_status()
+                return response.json().get("response", "")
+        except Exception as e:
+            return f"[Local {self.local_model} Error] Failed to process intelligently: {e}"
 
-    def _call_openai(self, context: str, model: str = "gpt-4o-mini") -> str:
-        # Simulated OpenAI processing to manage cloud resources efficiently
-        return f"[Cloud {model}] Processed intelligently using OpenAI: [{context[:100]}...] - Reduced entropy via Cloud."
+    async def _call_openai(self, context: str, model: str = "gpt-4o-mini") -> str:
+        url = "https://api.openai.com/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self.openai_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": context}]
+        }
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(url, headers=headers, json=payload, timeout=30.0)
+                response.raise_for_status()
+                return response.json()["choices"][0]["message"]["content"]
+        except Exception as e:
+            return f"[Cloud {model} Error] Failed to process intelligently using OpenAI: {e}"
 
-    def _call_anthropic(self, context: str) -> str:
-        return f"[Cloud Claude-3] Processed intelligently using Anthropic: [{context[:100]}...] - Reduced entropy via Cloud."
+    async def _call_anthropic(self, context: str) -> str:
+        url = "https://api.anthropic.com/v1/messages"
+        headers = {
+            "x-api-key": self.anthropic_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json"
+        }
+        payload = {
+            "model": "claude-3-haiku-20240307",
+            "max_tokens": 1024,
+            "messages": [{"role": "user", "content": context}]
+        }
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(url, headers=headers, json=payload, timeout=30.0)
+                response.raise_for_status()
+                return response.json()["content"][0]["text"]
+        except Exception as e:
+            return f"[Cloud Claude-3 Error] Failed to process intelligently using Anthropic: {e}"

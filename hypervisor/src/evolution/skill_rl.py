@@ -1,10 +1,27 @@
 import json
-import re
+from html.parser import HTMLParser
+
+class ActionEngineParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.links = []
+        self.text_content = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag == 'a':
+            for attr in attrs:
+                if attr[0] == 'href':
+                    self.links.append(attr[1])
+
+    def handle_data(self, data):
+        text = data.strip()
+        if text:
+            self.text_content.append(text)
 
 class ActionEngine:
     """
     ActionEngine Web Compiler (State-Machine Web Memory).
-    Simulates compilation of offline web states into traversable graphs.
+    Compiles offline web states into traversable graphs.
     """
     def __init__(self):
         self.web_memory_graph = {}
@@ -12,15 +29,16 @@ class ActionEngine:
     def compile_web_memory(self, url: str, html_content: str) -> dict:
         """
         Compiles raw HTML or text from a web page into a state-machine node.
-        Extracts links and text into a structured JSON state.
+        Extracts links and text into a structured JSON state via a robust HTML parser.
         """
-        # Very basic mock compilation of a web page
-        links = re.findall(r'href=[\'"]?([^\'" >]+)', html_content)
-        clean_text = re.sub(r'<[^>]+>', '', html_content).strip()
+        parser = ActionEngineParser()
+        parser.feed(html_content)
+
+        clean_text = " ".join(parser.text_content)
         state_node = {
             "url": url,
             "text_length": len(clean_text),
-            "outbound_links": links,
+            "outbound_links": parser.links,
             "compiled_state": "ACTIVE"
         }
         self.web_memory_graph[url] = state_node

@@ -15,13 +15,7 @@ func VerifyEntropyReduction(taskID string, resultHash string) bool {
 	hashBytes := sha256.Sum256([]byte(taskID + resultHash))
 	hashStr := hex.EncodeToString(hashBytes[:])
 
-	// Instead of random, let's use a deterministic mock based on the input hash
-	// If resultHash has "valid" string in it, let it pass for easy testing,
-	// otherwise require a specific pattern.
-	if strings.Contains(resultHash, "valid") {
-		return true
-	}
-
 	// Check if the generated hash starts with our "work" requirement
-	return strings.HasPrefix(hashStr, "0")
+	// The thermodynamic proof requires the SHA256 hash of taskID + poerHash to start with '00'
+	return strings.HasPrefix(hashStr, "00")
 }

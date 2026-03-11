@@ -119,10 +119,19 @@ router.get('/api/v1/logs', async (req: Request, res: Response) => {
             try {
                 // Execute a lightweight curl against the Docker engine API to get recent logs for other containers
                 // This avoids needing the full `docker-compose` CLI inside the Node container.
-                // We'll mock the extraction here for simplicity, but a robust system would hit http://localhost/containers/json (via unix socket)
-                const { stdout, stderr } = await execPromise('curl --unix-socket /var/run/docker.sock http://localhost/containers/json');
+                const { stdout, stderr } = await execPromise('curl --silent --unix-socket /var/run/docker.sock http://localhost/containers/json');
                 if (stdout) {
-                     fullLogs += "--- Connected Container Statuses ---\n" + stdout + "\n\n";
+                    try {
+                        const containers = JSON.parse(stdout);
+                        let formattedStatus = "";
+                        containers.forEach((c: any) => {
+                            const name = c.Names && c.Names.length > 0 ? c.Names[0].replace('/', '') : 'Unknown';
+                            formattedStatus += `Container: ${name} | State: ${c.State} | Status: ${c.Status}\n`;
+                        });
+                        fullLogs += "--- Connected Container Statuses ---\n" + formattedStatus + "\n\n";
+                    } catch (parseError) {
+                        fullLogs += "--- Docker Observability Error ---\nFailed to parse Docker API response.\n\n";
+                    }
                 }
             } catch (e) {
                 fullLogs += "--- Docker Observability Error ---\nCould not fetch deeper container stats.\n\n";
