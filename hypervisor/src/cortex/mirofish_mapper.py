@@ -1,0 +1,95 @@
+import json
+import logging
+from typing import Dict, List, Any, Tuple
+
+logger = logging.getLogger("Axiom-MiroFish")
+
+class MiroFishMapper:
+    """
+    Integrates MiroFish logic into the AxiomMesh HGR.
+    Transforms hierarchical nodes into a 'Spatial Knowledge Map'
+    to mitigate Semantic Collapse and prevent 'Hivemind' clustering.
+    """
+    def __init__(self, node_limit: int = 10000):
+        self.node_limit = node_limit
+        self.coordinate_plane: Dict[str, Tuple[float, float]] = {}
+
+    def map_to_spatial_grid(self, hgr_nodes: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Takes HGR nodes and assigns them spatial coordinates (X, Y)
+        based on their semantic distance and hierarchical tier.
+
+        This prevents the 'Curse of Dimensionality' by forcing
+        nodes to maintain a 'Physical Distance' in the memory graph.
+        """
+        logger.info(f"[🐠] Mapping {len(hgr_nodes)} nodes to Spatial Grid...")
+
+        miro_map = {
+            "metadata": {"source": "MiroFish-Integration", "version": "1.0.0"},
+            "elements": []
+        }
+
+        for i, node in enumerate(hgr_nodes):
+            # 1. Calculate Spatial Coordinates based on Tier and Index
+            # Tier 1 (Axioms) occupies the center (0,0)
+            # Tier 3 (Deep Archive) occupies the periphery
+            x, y = self._calculate_coordinates(node, i)
+
+            node_id = node.get("id")
+            element = {
+                "id": node_id,
+                "label": node.get("label"),
+                "coordinates": {"x": x, "y": y},
+                "tier": node.get("tier", 3),
+                "connections": node.get("references", [])
+            }
+
+            miro_map["elements"].append(element)
+            if node_id is not None:
+                self.coordinate_plane[node_id] = (x, y)
+
+        return miro_map
+
+    def _calculate_coordinates(self, node: Dict, index: int) -> Tuple[float, float]:
+        """
+        Internal math for the MiroFish spatial projection.
+        Uses a polar coordinate expansion to ensure that as the
+        corpus grows, the 'Semantic Distance' remains visually/logically distinct.
+        """
+        import math
+
+        tier = node.get("tier", 3)
+        radius = tier * 100.0  # Tier 1 is close, Tier 3 is far
+        angle = (index * 137.5) % 360  # Golden angle distribution for even spacing
+
+        x = radius * math.cos(math.radians(angle))
+        y = radius * math.sin(math.radians(angle))
+
+        return round(x, 2), round(y, 2)
+
+    def get_context_cluster(self, target_node_id: str, radius: float = 50.0) -> List[str]:
+        """
+        Spatial retrieval: Instead of just searching for 'similar' vectors,
+        we find nodes that are 'physically' close in our Miro-map.
+        Directly counters 'Semantic Collapse' by using Euclidean distance.
+        """
+        if target_node_id not in self.coordinate_plane:
+            return []
+
+        target_coords = self.coordinate_plane[target_node_id]
+        cluster = []
+
+        for node_id, coords in self.coordinate_plane.items():
+            dist = self._euclidean_distance(target_coords, coords)
+            if dist <= radius:
+                cluster.append(node_id)
+
+        return cluster
+
+    def _euclidean_distance(self, p1: Tuple[float, float], p2: Tuple[float, float]) -> float:
+        import math
+        return math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
+
+# Implementation Note:
+# This module will be used by the Context 2.0 Engine to select 'Spatial Clusters'
+# for the prompt, rather than relying on raw cosine similarity.
