@@ -196,6 +196,9 @@ class DistributedDeepArchive(DeepArchive):
         Generates a Non-Interactive Zero-Knowledge Proof (NIZK) of a discrete logarithm.
         This proves the node knows its secret without revealing it, using the Fiat-Shamir heuristic.
         """
+        if not hasattr(self, '_secret_x'):
+            self._secret_x = int.from_bytes(os.urandom(32), 'big') % self.Q
+            self._public_y = pow(self.G, self._secret_x, self.P)
         # Random v
         v = int.from_bytes(os.urandom(32), 'big') % self.Q
         t = pow(self.G, v, self.P)
