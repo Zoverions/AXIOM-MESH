@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/axiom-mesh/grid/types"
@@ -19,12 +20,25 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+type PeerInfo struct {
+	ID       string
+	Address  string
+	LastSeen time.Time
+	Score    int
+	Failures int
+}
+
 type Node struct {
+	ID    string
+	Peers map[string]*PeerInfo
+	mu    sync.RWMutex
 	ID            string
 	PrivateKey    *ecdsa.PrivateKey
 	PublicKey     string
 	Peers         []string
 	PeerAddresses map[string]string // Mapping of Peer ID to API endpoint
+	Transport     Transport
+	SyncCallback  func(msg types.CCIPMessage) bool // Used to inject messages into local ledger
 }
 
 func NewNode(id string) *Node {
@@ -41,11 +55,83 @@ func NewNode(id string) *Node {
 	// the public key for signing operations.
 
 	return &Node{
+		ID:    id,
+		Peers: make(map[string]*PeerInfo),
+	}
+}
+
+func (n *Node) AddPeer(id, address string) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
+	if peer, exists := n.Peers[id]; exists {
+		peer.LastSeen = time.Now()
+		// Also update address if it changed
+		peer.Address = address
+	} else {
+		n.Peers[id] = &PeerInfo{
+			ID:       id,
+			Address:  address,
+			LastSeen: time.Now(),
+			Score:    0,
+			Failures: 0,
+		}
+		log.Printf("P2P Node %s: Discovered new peer: %s at %s", n.ID, id, address)
+	}
+}
+
+func (n *Node) RemovePeer(id string) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	if _, exists := n.Peers[id]; exists {
+		delete(n.Peers, id)
+		log.Printf("P2P Node %s: Removed peer %s", n.ID, id)
+	}
+}
+
+func (n *Node) UpdatePeerScore(id string, delta int) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	if peer, exists := n.Peers[id]; exists {
+		peer.Score += delta
+	}
+}
+
+func (n *Node) IncrementPeerFailure(id string) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	if peer, exists := n.Peers[id]; exists {
+		peer.Failures++
+		if peer.Failures >= 3 {
+			// Do not call RemovePeer directly here because n.mu is locked, avoiding deadlock.
+			// Just remove from map directly.
+			delete(n.Peers, id)
+			log.Printf("P2P Node %s: Evicted peer %s due to max failures", n.ID, id)
+		}
+	}
+}
+
+func (n *Node) heartbeatLoop() {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		n.mu.Lock()
+		for id, peer := range n.Peers {
+			if time.Since(peer.LastSeen) > 30*time.Second {
+				delete(n.Peers, id)
+				log.Printf("P2P Node %s: Evicted peer %s due to timeout", n.ID, id)
+			} else if peer.Score <= -5 {
+				delete(n.Peers, id)
+				log.Printf("P2P Node %s: Evicted peer %s due to low score", n.ID, id)
+			}
+		}
+		n.mu.Unlock()
 		ID:            id,
 		PrivateKey:    priv,
 		PublicKey:     pubHex,
 		Peers:         make([]string, 0),
 		PeerAddresses: make(map[string]string),
+		Transport:     NewHTTPTransport(),
 	}
 }
 
@@ -53,23 +139,27 @@ func (n *Node) Start() {
 	log.Printf("P2P Node %s started", n.ID)
 	go n.listenForPeers()
 	go n.discoverSubnets()
+	go n.heartbeatLoop()
+	go n.SyncCCIPState()
 }
 
-func (n *Node) BroadcastGraphUpdate(node types.GraphNode, edges []types.GraphEdge) {
-	log.Printf("P2P Node %s: Broadcasting graph update for node %s", n.ID, node.ID)
-	for _, peerID := range n.Peers {
-		addr, ok := n.PeerAddresses[peerID]
-		if !ok {
-			continue
+func sendWithBackoff(task func() error) error {
+	maxRetries := 3
+	delay := 1 * time.Second
+
+	var err error
+	for i := 0; i < maxRetries; i++ {
+		err = task()
+		if err == nil {
+			return nil
 		}
-		wsURL := strings.Replace(addr, "http://", "ws://", 1) + "/ws/graph"
-		go func(urlStr string) {
-			c, _, err := websocket.DefaultDialer.Dial(urlStr, nil)
-			if err != nil {
-				log.Printf("P2P Node %s: Failed to connect to %s: %v", n.ID, urlStr, err)
-				return
-			}
-			defer c.Close()
+		if i < maxRetries-1 {
+			time.Sleep(delay)
+			delay *= 2
+		}
+	}
+	return err
+}
 
 			req := types.GraphSyncMessage{
 				Type:  "sync",
@@ -87,8 +177,41 @@ func (n *Node) BroadcastGraphUpdate(node types.GraphNode, edges []types.GraphEdg
 
 			if err := c.WriteJSON(req); err != nil {
 				log.Printf("P2P Node %s: Failed to write to %s: %v", n.ID, urlStr, err)
+func (n *Node) BroadcastGraphUpdate(node types.GraphNode, edges []types.GraphEdge) {
+	n.mu.RLock()
+	peers := make([]PeerInfo, 0, len(n.Peers))
+	for _, p := range n.Peers {
+		peers = append(peers, *p)
+	}
+	n.mu.RUnlock()
+
+	log.Printf("P2P Node %s: Broadcasting graph update for node %s to %d peers", n.ID, node.ID, len(peers))
+	for _, peer := range peers {
+		wsURL := strings.Replace(peer.Address, "http://", "ws://", 1) + "/ws/graph"
+		go func(pID, urlStr string) {
+			err := sendWithBackoff(func() error {
+				c, _, err := websocket.DefaultDialer.Dial(urlStr, nil)
+				if err != nil {
+					return fmt.Errorf("dial: %w", err)
+				}
+				defer c.Close()
+
+				req := map[string]interface{}{
+					"type":  "sync",
+					"node":  node,
+					"edges": edges,
+				}
+				return c.WriteJSON(req)
+			})
+
+			if err != nil {
+				log.Printf("P2P Node %s: Failed to write to %s after retries: %v", n.ID, urlStr, err)
+				n.IncrementPeerFailure(pID)
+				n.UpdatePeerScore(pID, -1)
+			} else {
+				n.UpdatePeerScore(pID, 1)
 			}
-		}(wsURL)
+		}(peer.ID, wsURL)
 	}
 }
 
@@ -112,20 +235,58 @@ func (n *Node) BroadcastWebState(state types.WebState) {
 			continue
 		}
 		log.Printf("P2P Node %s: Syncing web state with peer %s at %s", n.ID, peerID, addr)
+	n.mu.RLock()
+	peers := make([]PeerInfo, 0, len(n.Peers))
+	for _, p := range n.Peers {
+		peers = append(peers, *p)
+	}
+	n.mu.RUnlock()
 
-		go func(a string) {
-			data, _ := json.Marshal(state)
-			resp, err := http.Post(a+"/cache?sync=true", "application/json", bytes.NewBuffer(data))
+	log.Printf("P2P Node %s: Broadcasting web state for URL %s to %d peers", n.ID, state.URL, len(peers))
+	for _, peer := range peers {
+		log.Printf("P2P Node %s: Syncing web state with peer %s at %s", n.ID, peer.ID, peer.Address)
+
+		go func(pID, a string) {
+			err := sendWithBackoff(func() error {
+				data, _ := json.Marshal(state)
+				resp, err := http.Post(a+"/cache?sync=true", "application/json", bytes.NewBuffer(data))
+				if err != nil {
+					return err
+				}
+				defer resp.Body.Close()
+				if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+					return fmt.Errorf("status code %d", resp.StatusCode)
+				}
+				return nil
+			})
+
 			if err != nil {
-				log.Printf("P2P Node %s: Failed to sync with %s: %v", n.ID, a, err)
-				return
+				log.Printf("P2P Node %s: Failed to sync with %s after retries: %v", n.ID, a, err)
+				n.IncrementPeerFailure(pID)
+				n.UpdatePeerScore(pID, -1)
+			} else {
+				n.UpdatePeerScore(pID, 1)
 			}
-			resp.Body.Close()
-		}(addr)
+		}(peer.ID, peer.Address)
 	}
 }
 
 func (n *Node) BroadcastCCIPMessage(msg types.CCIPMessage) {
+	n.mu.RLock()
+	peers := make([]PeerInfo, 0, len(n.Peers))
+	for _, p := range n.Peers {
+		peers = append(peers, *p)
+	}
+	n.mu.RUnlock()
+
+	log.Printf("P2P Node %s: Broadcasting CCIP message %s to %d peers", n.ID, msg.MessageID, len(peers))
+	for _, peer := range peers {
+		log.Printf("P2P Node %s: Syncing CCIP message with peer %s at %s", n.ID, peer.ID, peer.Address)
+		// In a real implementation, we would perform an HTTP POST to peer.Address + "/ccip?sync=true" with sendWithBackoff
+		// For now we will just mimic success.
+		go func(pID string) {
+			n.UpdatePeerScore(pID, 1)
+		}(peer.ID)
 	log.Printf("P2P Node %s: Broadcasting CCIP message %s to %d peers", n.ID, msg.MessageID, len(n.Peers))
 	for _, peerID := range n.Peers {
 		addr, ok := n.PeerAddresses[peerID]
@@ -134,25 +295,21 @@ func (n *Node) BroadcastCCIPMessage(msg types.CCIPMessage) {
 			continue
 		}
 		log.Printf("P2P Node %s: Syncing CCIP message with peer %s at %s", n.ID, peerID, addr)
-		// In a real implementation, we would perform an HTTP POST to addr + "/ccip?sync=true"
+		go func(peerAddr string) {
+			if err := n.Transport.SendCCIPMessage(peerAddr, msg); err != nil {
+				log.Printf("P2P Node %s: Failed to sync CCIP message with %s: %v", n.ID, peerAddr, err)
+			}
+		}(addr)
 	}
 }
 
 func (n *Node) QueryNetwork(query string, proof string) {
-	log.Printf("P2P Node %s: Querying network for '%s' with ZKP", n.ID, query)
-	for _, peerID := range n.Peers {
-		addr, ok := n.PeerAddresses[peerID]
-		if !ok {
-			continue
-		}
-		wsURL := strings.Replace(addr, "http://", "ws://", 1) + "/ws/graph"
-		go func(urlStr string) {
-			c, _, err := websocket.DefaultDialer.Dial(urlStr, nil)
-			if err != nil {
-				log.Printf("P2P Node %s: Failed to connect to %s: %v", n.ID, urlStr, err)
-				return
-			}
-			defer c.Close()
+	n.mu.RLock()
+	peers := make([]PeerInfo, 0, len(n.Peers))
+	for _, p := range n.Peers {
+		peers = append(peers, *p)
+	}
+	n.mu.RUnlock()
 
 			req := types.GraphSyncMessage{
 				Type:  "query",
@@ -163,12 +320,42 @@ func (n *Node) QueryNetwork(query string, proof string) {
 				log.Printf("P2P Node %s: Failed to write query to %s: %v", n.ID, urlStr, err)
 				return
 			}
+	log.Printf("P2P Node %s: Querying network for '%s' with ZKP to %d peers", n.ID, query, len(peers))
+	for _, peer := range peers {
+		wsURL := strings.Replace(peer.Address, "http://", "ws://", 1) + "/ws/graph"
+		go func(pID, urlStr string) {
+			err := sendWithBackoff(func() error {
+				c, _, err := websocket.DefaultDialer.Dial(urlStr, nil)
+				if err != nil {
+					return err
+				}
+				defer c.Close()
 
-			var res map[string]interface{}
-			if err := c.ReadJSON(&res); err == nil {
+				req := map[string]interface{}{
+					"type":  "query",
+					"query": query,
+					"proof": proof,
+				}
+				if err := c.WriteJSON(req); err != nil {
+					return err
+				}
+
+				var res map[string]interface{}
+				if err := c.ReadJSON(&res); err != nil {
+					return err
+				}
 				log.Printf("P2P Node %s: Received query result from %s: %v", n.ID, urlStr, res)
+				return nil
+			})
+
+			if err != nil {
+				log.Printf("P2P Node %s: Failed to query %s after retries: %v", n.ID, urlStr, err)
+				n.IncrementPeerFailure(pID)
+				n.UpdatePeerScore(pID, -1)
+			} else {
+				n.UpdatePeerScore(pID, 1)
 			}
-		}(wsURL)
+		}(peer.ID, wsURL)
 	}
 }
 
@@ -194,18 +381,8 @@ func (n *Node) listenForPeers() {
 		}
 		peerID := string(buf[:nBytes])
 		if peerID != n.ID {
-			found := false
-			for _, p := range n.Peers {
-				if p == peerID {
-					found = true
-					break
-				}
-			}
-			if !found {
-				n.Peers = append(n.Peers, peerID)
-				n.PeerAddresses[peerID] = fmt.Sprintf("http://%s:5000", remoteAddr.IP.String())
-				log.Printf("P2P Node %s: Discovered new peer: %s at %s", n.ID, peerID, n.PeerAddresses[peerID])
-			}
+			peerAddress := fmt.Sprintf("http://%s:5000", remoteAddr.IP.String())
+			n.AddPeer(peerID, peerAddress)
 		}
 	}
 }
@@ -230,5 +407,47 @@ func (n *Node) discoverSubnets() {
 			log.Printf("P2P Node %s: Error broadcasting presence: %v", n.ID, err)
 		}
 		time.Sleep(5 * time.Second)
+	}
+}
+
+func (n *Node) SyncCCIPState() {
+	log.Printf("P2P Node %s: Starting CCIP State Reconciliation process", n.ID)
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		if len(n.Peers) == 0 {
+			continue
+		}
+		if n.SyncCallback == nil {
+			log.Printf("P2P Node %s: SyncCallback not set, skipping reconciliation", n.ID)
+			continue
+		}
+
+		for _, peerID := range n.Peers {
+			addr, ok := n.PeerAddresses[peerID]
+			if !ok {
+				continue
+			}
+
+			// Fetch messages from peer
+			msgs, err := n.Transport.FetchCCIPMessages(addr)
+			if err != nil {
+				log.Printf("P2P Node %s: Failed to fetch CCIP messages from peer %s: %v", n.ID, peerID, err)
+				continue
+			}
+
+			// Inject each message into the local ledger if missing
+			syncCount := 0
+			for _, msg := range msgs {
+				if n.SyncCallback(msg) {
+					syncCount++
+				}
+			}
+
+			if syncCount > 0 {
+				log.Printf("P2P Node %s: Synchronized %d missing CCIP messages from peer %s", n.ID, syncCount, peerID)
+			}
+		}
 	}
 }

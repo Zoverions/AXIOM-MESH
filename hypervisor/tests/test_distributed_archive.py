@@ -77,17 +77,26 @@ async def test_sync_to_grid_mocked(distributed_archive):
 
     mock_response_arweave = MagicMock()
     mock_response_arweave.status_code = 200
+    mock_response_arweave.json.return_value = {"id": "mock-real-arweave-tx-id"}
+    mock_response_arweave.text = '{"id": "mock-real-arweave-tx-id"}'
 
     async def mock_post(url, *args, **kwargs):
         if "ipfs" in url or "5001" in url:
             return mock_response_ipfs
-        elif "arweave" in url:
+        elif "1984" in url or "arweave" in url or "ardrive" in url:
             return mock_response_arweave
         return MagicMock(status_code=404)
 
     with patch("websockets.connect", return_value=MockAsyncContextManager(mock_ws)):
         with patch("httpx.AsyncClient.post", side_effect=mock_post):
-            await distributed_archive.sync_to_grid(content)
+            import os
+            orig_get = os.environ.get
+            with patch("os.environ.get", side_effect=lambda k, d=None: "dummy_path" if k == "ARWEAVE_WALLET_PATH" else orig_get(k, d)):
+                with patch("os.path.exists", return_value=True):
+                    with patch("arweave.Wallet"):
+                        with patch("arweave.Transaction") as mock_tx:
+                            mock_tx.return_value.id = "real-tx-id"
+                            await distributed_archive.sync_to_grid(content)
 
             # Verify ws.send was called with the correct payload structure
             args, _ = mock_ws.send.call_args
@@ -95,4 +104,13 @@ async def test_sync_to_grid_mocked(distributed_archive):
             assert payload["type"] == "sync"
             assert payload["node"]["content"] == content
             assert payload["node"]["metadata"]["ipfs_cid"] == "QmTest123"
-            assert payload["node"]["metadata"]["arweave_tx"] == "mock-arweave-tx"
+
+            # We must determine what was actually passed to `persist_to_arweave`
+            # In archive.py, payload was constructed as:
+            # { "node": node, "edges": edges }
+            # But the node had empty metadata (or whatever metadata it started with)
+            import hashlib
+
+            assert "arweave_tx" in payload["node"]["metadata"]
+            assert payload["node"]["metadata"]["arweave_tx"] == "mock-real-arweave-tx-id"
+            assert payload["node"]["metadata"]["arweave_tx"] == "real-tx-id"

@@ -10,3 +10,8 @@ httpx
 fastapi
 uvicorn
 ecdsa
+
+# Test dependencies
+pytest
+pytest-asyncio
+pytest-mock

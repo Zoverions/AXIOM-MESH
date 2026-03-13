@@ -164,40 +164,155 @@ class DistributedDeepArchive(DeepArchive):
 
     async def persist_to_ipfs(self, payload: dict) -> str:
         """
-        Persists the given payload to IPFS and returns the CID.
-        Uses a public gateway or local node, falls back to a mock CID if it fails.
+        Persists the given payload to an IPFS node and returns the CID.
+        Uses a configurable local or remote IPFS node via IPFS_API_URL.
+        Implements exponential backoff retries for resilience.
         """
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    "http://127.0.0.1:5001/api/v0/add",
-                    files={"file": json.dumps(payload).encode()},
-                    timeout=2.0
-                )
-                if response.status_code == 200:
-                    return response.json().get("Hash", "mock-ipfs-cid")
-        except Exception:
-            pass
-        return "mock-ipfs-cid"
+        ipfs_url = os.environ.get("IPFS_API_URL", "http://127.0.0.1:5001/api/v0/add")
+        ipfs_api_key = os.environ.get("IPFS_API_KEY", "")
+
+        headers = {}
+        if ipfs_api_key:
+            # Common pattern for Infura or other authenticated IPFS services
+            headers["Authorization"] = f"Basic {ipfs_api_key}"
+
+        max_retries = 3
+        base_delay = 1.0
+
+        async with httpx.AsyncClient() as client:
+            for attempt in range(max_retries):
+                try:
+                    response = await client.post(
+                        ipfs_url,
+                        files={"file": json.dumps(payload).encode()},
+                        headers=headers,
+        Persists the given payload to IPFS and returns the CID.
+        Uses a local node, with retries on failure. Raises ConnectionError if all retries fail.
+        """
+        for attempt in range(3):
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        "http://127.0.0.1:5001/api/v0/add",
+                        files={"file": json.dumps(payload).encode()},
+                        timeout=5.0
+                    )
+                    if response.status_code == 200:
+                        cid = response.json().get("Hash")
+                        if cid:
+                            return cid
+
+                    # Log or handle specific HTTP errors if needed
+                    if response.status_code in (401, 403):
+                        raise RuntimeError(f"IPFS authentication failed (Status {response.status_code})")
+
+                except httpx.RequestError:
+                    pass
+
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(base_delay * (2 ** attempt))
+
+        raise RuntimeError(f"Failed to persist to IPFS at {ipfs_url} after {max_retries} attempts.")
 
     async def persist_to_arweave(self, payload: dict) -> str:
         """
         Persists the given payload to Arweave and returns the Transaction ID.
-        Uses a public gateway or local node, falls back to a mock TX if it fails.
+        Uses a configured Arweave bundler or pinning service via API keys.
+        Raises an error on failure, avoiding mock fallbacks.
         """
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    "https://arweave.net/tx",
-                    json={"data": json.dumps(payload)},
-                    timeout=2.0
-                )
-                if response.status_code in (200, 202):
-                    # In a real app we'd sign and get the txid properly
-                    return "mock-arweave-tx"
-        except Exception:
-            pass
-        return "mock-arweave-tx"
+        arweave_url = os.environ.get("ARWEAVE_API_URL", "https://upload.ardrive.io/v1/tx")
+        arweave_api_key = os.environ.get("ARWEAVE_API_KEY", "")
+
+        headers = {
+            "Content-Type": "application/json"
+        }
+        if arweave_api_key:
+            headers["Authorization"] = f"Bearer {arweave_api_key}"
+
+        payload_json = json.dumps(payload)
+
+        max_retries = 3
+        base_delay = 1.0
+
+        async with httpx.AsyncClient() as client:
+            for attempt in range(max_retries):
+                try:
+                    # Posting data directly to a pinning service or bundler
+                    # For example, turbo.ardrive.io accepts raw data uploads with API keys
+                    response = await client.post(
+                        arweave_url,
+                        content=payload_json,
+                        headers=headers,
+                        timeout=5.0
+                    )
+
+                    if response.status_code in (200, 201, 202, 208):
+                        resp_data = response.json() if response.text else {}
+                        tx_id = resp_data.get("id") or resp_data.get("tx_id")
+
+                        if tx_id:
+                            return tx_id
+                        else:
+                            raise RuntimeError(f"Arweave gateway returned success but no transaction ID: {response.text}")
+
+                    if response.status_code in (401, 403):
+                        raise RuntimeError(f"Arweave authentication failed (Status {response.status_code}). Please provide a valid ARWEAVE_API_KEY.")
+
+                except httpx.RequestError:
+                    pass
+
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(base_delay * (2 ** attempt))
+
+        raise RuntimeError(f"Failed to persist to Arweave at {arweave_url} after {max_retries} attempts.")
+            except Exception:
+                pass
+            await asyncio.sleep(2 ** attempt)
+        raise ConnectionError("Failed to persist to IPFS across all retries")
+
+    async def persist_to_arweave(self, payload: dict) -> str:
+        """
+        Persists the given payload to Arweave. Requires a valid Arweave wallet JWK
+        configured via the ARWEAVE_WALLET_PATH environment variable.
+        Constructs a signed Arweave transaction and submits it to the network via retries.
+        Raises RuntimeError if the wallet is not configured.
+        Raises ConnectionError if all network retries fail.
+        """
+        import arweave
+
+        wallet_path = os.environ.get("ARWEAVE_WALLET_PATH")
+        if not wallet_path or not os.path.exists(wallet_path):
+            raise RuntimeError("ARWEAVE_WALLET_PATH environment variable is not set or wallet file does not exist")
+
+        wallet = arweave.Wallet(wallet_path)
+        payload_json = json.dumps(payload)
+
+        # Run synchronous cryptography operations in a separate thread to prevent blocking the async event loop
+        def create_and_sign_tx():
+            tx = arweave.Transaction(wallet, data=payload_json.encode())
+            tx.add_tag('Content-Type', 'application/json')
+            tx.sign()
+            return tx
+
+        tx = await asyncio.to_thread(create_and_sign_tx)
+        tx_data = tx.to_dict()
+        tx_id = tx.id
+
+        for attempt in range(3):
+            try:
+                async with httpx.AsyncClient() as client:
+                    res = await client.post(
+                        "https://arweave.net/tx",
+                        json=tx_data,
+                        timeout=5.0
+                    )
+                    if res.status_code in (200, 202):
+                        return tx_id
+            except Exception:
+                pass
+            await asyncio.sleep(2 ** attempt)
+
+        raise ConnectionError("Failed to persist to Arweave across all retries")
 
     def _generate_mock_zkp(self, query: str) -> str:
         # Ephemeral private key for the node
