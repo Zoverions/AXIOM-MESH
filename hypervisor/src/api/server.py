@@ -27,10 +27,10 @@ context_engine = ContextEngine()
 pulse = EntropyMonitor()
 arena = VerificationArena()
 llm = LLMProvider()
-dialectic = DialecticOrchestrator()
+dialectic = DialecticOrchestrator(llm=llm)
 evolution = EvolutionEngine()
 network_sync = NetworkSync()
-action_engine = ActionEngine()
+action_engine = ActionEngine(network_sync=network_sync)
 signal_extractor = SignalExtractor()
 opd = OnPolicyDistillation()
 
@@ -53,15 +53,6 @@ async def startup_event():
 async def shutdown_event():
     autoresearch_daemon.stop()
     auto_training_loop.stop()
-pulse = EntropyMonitor()
-arena = VerificationArena()
-llm = LLMProvider()
-dialectic = DialecticOrchestrator(llm=llm)
-evolution = EvolutionEngine()
-network_sync = NetworkSync()
-action_engine = ActionEngine(network_sync=network_sync)
-signal_extractor = SignalExtractor()
-opd = OnPolicyDistillation()
 
 SANDBOX_URL = os.environ.get("SANDBOX_URL", "http://localhost:4000/execute")
 
