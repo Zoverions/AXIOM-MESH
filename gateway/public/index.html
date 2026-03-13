@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AxiomMesh Dashboard</title>
     <link rel="stylesheet" href="style.css">
+    <!-- React & Babel for Intentionality Tester -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body>
     <div id="app">
@@ -14,6 +18,7 @@
                 <button class="nav-btn active" data-target="chat">Chat Interface</button>
                 <button class="nav-btn" data-target="status">System Status</button>
                 <button class="nav-btn" data-target="agents">Active Agents</button>
+                <button class="nav-btn" data-target="tester">Intentionality Tester</button>
                 <button class="nav-btn" data-target="network">Grid Mesh Nodes</button>
                 <button class="nav-btn" data-target="settings">Settings / Config</button>
                 <button class="nav-btn" data-target="logs">Logs & Troubleshooting</button>
@@ -61,6 +66,12 @@
                 <div id="agents-grid" class="agents-grid">
                     <p>Loading agent states...</p>
                 </div>
+            </section>
+
+            <!-- Intentionality Tester Tab -->
+            <section id="tester" class="tab-content">
+                <h2>Intentionality Tester (GDSP Strategy)</h2>
+                <div id="tester-root"></div>
             </section>
 
             <!-- Network Tab -->
@@ -121,6 +132,7 @@
             </section>
         </main>
     </div>
+    <script type="text/babel" src="tester.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
