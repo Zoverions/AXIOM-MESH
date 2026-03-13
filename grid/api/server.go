@@ -33,11 +33,23 @@ func (s *Server) Start(addr string) error {
 	})
 
 	http.HandleFunc("/skills", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		if r.Method == "GET" {
 			json.NewEncoder(w).Encode(s.ledger.GetSkills())
 		} else if r.Method == "POST" {
 			var skill types.SkillVector
 			if err := json.NewDecoder(r.Body).Decode(&skill); err == nil {
+				if skill.NodeID == "" {
+					http.Error(w, "NodeID is required for PoER skill submission", http.StatusBadRequest)
+					return
+				}
+
+				bond, ok := s.ledger.GetBond(skill.NodeID)
+				if !ok || bond.Status != "active" {
+					http.Error(w, "Node does not have an active compute bond", http.StatusForbidden)
+					return
+				}
+
 				if !consensus.VerifyEntropyReduction(skill.Task, skill.PoERHash) {
 					http.Error(w, "PoER verification failed", http.StatusForbidden)
 					return
@@ -50,7 +62,28 @@ func (s *Server) Start(addr string) error {
 		}
 	})
 
+	http.HandleFunc("/stake", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "POST" {
+			var bond types.ComputeBond
+			if err := json.NewDecoder(r.Body).Decode(&bond); err == nil {
+				if bond.Amount < 100 {
+					http.Error(w, "Minimum stake amount is 100", http.StatusBadRequest)
+					return
+				}
+				bond.Status = "active"
+				s.ledger.Stake(bond)
+				json.NewEncoder(w).Encode(map[string]string{"status": "success", "nodeId": bond.NodeID})
+			} else {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			}
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
 	http.HandleFunc("/cache", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		if r.Method == "GET" {
 			url := r.URL.Query().Get("url")
 			if url == "" {

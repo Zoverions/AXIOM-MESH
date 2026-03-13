@@ -11,6 +11,13 @@ type SkillVector struct {
 	Vector   []float64 `json:"vector"`
 	Task     string    `json:"task"`
 	PoERHash string    `json:"poerHash"`
+	NodeID   string    `json:"nodeId"`
+}
+
+type ComputeBond struct {
+	NodeID string `json:"nodeId"`
+	Amount int    `json:"amount"`
+	Status string `json:"status"`
 }
 
 type WebState struct {
