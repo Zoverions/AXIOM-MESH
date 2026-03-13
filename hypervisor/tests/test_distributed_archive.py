@@ -87,7 +87,14 @@ async def test_sync_to_grid_mocked(distributed_archive):
 
     with patch("websockets.connect", return_value=MockAsyncContextManager(mock_ws)):
         with patch("httpx.AsyncClient.post", side_effect=mock_post):
-            await distributed_archive.sync_to_grid(content)
+            import os
+            orig_get = os.environ.get
+            with patch("os.environ.get", side_effect=lambda k, d=None: "dummy_path" if k == "ARWEAVE_WALLET_PATH" else orig_get(k, d)):
+                with patch("os.path.exists", return_value=True):
+                    with patch("arweave.Wallet"):
+                        with patch("arweave.Transaction") as mock_tx:
+                            mock_tx.return_value.id = "real-tx-id"
+                            await distributed_archive.sync_to_grid(content)
 
             # Verify ws.send was called with the correct payload structure
             args, _ = mock_ws.send.call_args
@@ -95,4 +102,4 @@ async def test_sync_to_grid_mocked(distributed_archive):
             assert payload["type"] == "sync"
             assert payload["node"]["content"] == content
             assert payload["node"]["metadata"]["ipfs_cid"] == "QmTest123"
-            assert payload["node"]["metadata"]["arweave_tx"] == "mock-arweave-tx"
+            assert payload["node"]["metadata"]["arweave_tx"] == "real-tx-id"

@@ -152,39 +152,68 @@ class DistributedDeepArchive(DeepArchive):
     async def persist_to_ipfs(self, payload: dict) -> str:
         """
         Persists the given payload to IPFS and returns the CID.
-        Uses a public gateway or local node, falls back to a mock CID if it fails.
+        Uses a local node, with retries on failure. Raises ConnectionError if all retries fail.
         """
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    "http://127.0.0.1:5001/api/v0/add",
-                    files={"file": json.dumps(payload).encode()},
-                    timeout=2.0
-                )
-                if response.status_code == 200:
-                    return response.json().get("Hash", "mock-ipfs-cid")
-        except Exception:
-            pass
-        return "mock-ipfs-cid"
+        for attempt in range(3):
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        "http://127.0.0.1:5001/api/v0/add",
+                        files={"file": json.dumps(payload).encode()},
+                        timeout=5.0
+                    )
+                    if response.status_code == 200:
+                        cid = response.json().get("Hash")
+                        if cid:
+                            return cid
+            except Exception:
+                pass
+            await asyncio.sleep(2 ** attempt)
+        raise ConnectionError("Failed to persist to IPFS across all retries")
 
     async def persist_to_arweave(self, payload: dict) -> str:
         """
-        Persists the given payload to Arweave and returns the Transaction ID.
-        Uses a public gateway or local node, falls back to a mock TX if it fails.
+        Persists the given payload to Arweave. Requires a valid Arweave wallet JWK
+        configured via the ARWEAVE_WALLET_PATH environment variable.
+        Constructs a signed Arweave transaction and submits it to the network via retries.
+        Raises RuntimeError if the wallet is not configured.
+        Raises ConnectionError if all network retries fail.
         """
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    "https://arweave.net/tx",
-                    json={"data": json.dumps(payload)},
-                    timeout=2.0
-                )
-                if response.status_code in (200, 202):
-                    # In a real app we'd sign and get the txid properly
-                    return "mock-arweave-tx"
-        except Exception:
-            pass
-        return "mock-arweave-tx"
+        import arweave
+
+        wallet_path = os.environ.get("ARWEAVE_WALLET_PATH")
+        if not wallet_path or not os.path.exists(wallet_path):
+            raise RuntimeError("ARWEAVE_WALLET_PATH environment variable is not set or wallet file does not exist")
+
+        wallet = arweave.Wallet(wallet_path)
+        payload_json = json.dumps(payload)
+
+        # Run synchronous cryptography operations in a separate thread to prevent blocking the async event loop
+        def create_and_sign_tx():
+            tx = arweave.Transaction(wallet, data=payload_json.encode())
+            tx.add_tag('Content-Type', 'application/json')
+            tx.sign()
+            return tx
+
+        tx = await asyncio.to_thread(create_and_sign_tx)
+        tx_data = tx.to_dict()
+        tx_id = tx.id
+
+        for attempt in range(3):
+            try:
+                async with httpx.AsyncClient() as client:
+                    res = await client.post(
+                        "https://arweave.net/tx",
+                        json=tx_data,
+                        timeout=5.0
+                    )
+                    if res.status_code in (200, 202):
+                        return tx_id
+            except Exception:
+                pass
+            await asyncio.sleep(2 ** attempt)
+
+        raise ConnectionError("Failed to persist to Arweave across all retries")
 
     def _generate_mock_zkp(self, query: str) -> str:
         # Ephemeral private key for the node
