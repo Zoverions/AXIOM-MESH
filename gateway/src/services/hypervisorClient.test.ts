@@ -43,6 +43,7 @@ describe('hypervisorClient', () => {
             const result = await sendToHypervisor(mockIntent);
 
             expect(mockedAxios.post).toHaveBeenCalledTimes(1);
+            expect(mockedAxios.post).toHaveBeenCalledWith('http://localhost:8000/process', mockIntent, { headers: { Authorization: "Bearer " } });
             expect(mockedAxios.post).toHaveBeenCalledWith('http://localhost:8000/process', mockIntent, {
                 headers: {
                     'Authorization': `Bearer ${process.env.HYPERVISOR_API_KEY || ''}`
@@ -60,6 +61,7 @@ describe('hypervisorClient', () => {
             const result = await sendToHypervisor(mockIntent);
 
             expect(mockedAxios.post).toHaveBeenCalledTimes(1);
+            expect(mockedAxios.post).toHaveBeenCalledWith('http://localhost:8000/process', mockIntent, { headers: { Authorization: "Bearer " } });
             expect(mockedAxios.post).toHaveBeenCalledWith('http://localhost:8000/process', mockIntent, {
                 headers: {
                     'Authorization': `Bearer ${process.env.HYPERVISOR_API_KEY || ''}`
@@ -94,6 +96,7 @@ describe('hypervisorClient', () => {
 
             await customSendToHypervisor(mockIntent);
 
+            expect(axiosMock.post).toHaveBeenCalledWith('http://custom-hypervisor:9000/process', mockIntent, { headers: { Authorization: "Bearer " } });
             expect(axiosMock.post).toHaveBeenCalledWith('http://custom-hypervisor:9000/process', mockIntent, {
                 headers: {
                     'Authorization': `Bearer ${process.env.HYPERVISOR_API_KEY || ''}`

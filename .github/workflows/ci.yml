@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        language: [go, python, node-gateway, node-sandbox]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    # GO
+    - name: Set up Go
+      if: matrix.language == 'go'
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+    - name: Go Lint & Test
+      if: matrix.language == 'go'
+      run: |
+        cd grid
+        go mod tidy
+        go vet ./...
+        go test ./...
+
+    # PYTHON
+    - name: Set up Python
+      if: matrix.language == 'python'
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    - name: Python Lint & Test
+      if: matrix.language == 'python'
+      run: |
+        cd hypervisor
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-asyncio websockets httpx flake8
+        flake8 src tests || true
+        PYTHONPATH=.:src python -m pytest tests/
+
+    # NODE - GATEWAY
+    - name: Set up Node.js
+      if: matrix.language == 'node-gateway'
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    - name: Node Gateway Lint & Test
+      if: matrix.language == 'node-gateway'
+      run: |
+        cd gateway
+        npm install
+        npx tsc --noEmit
+        npm test
+
+    # NODE - SANDBOX
+    - name: Set up Node.js
+      if: matrix.language == 'node-sandbox'
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    - name: Node Sandbox Lint & Test
+      if: matrix.language == 'node-sandbox'
+      run: |
+        cd sandbox
+        npm install
+        npx tsc --noEmit
+        npm test
