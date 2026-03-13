@@ -77,11 +77,13 @@ async def test_sync_to_grid_mocked(distributed_archive):
 
     mock_response_arweave = MagicMock()
     mock_response_arweave.status_code = 200
+    mock_response_arweave.json.return_value = {"id": "mock-real-arweave-tx-id"}
+    mock_response_arweave.text = '{"id": "mock-real-arweave-tx-id"}'
 
     async def mock_post(url, *args, **kwargs):
         if "ipfs" in url or "5001" in url:
             return mock_response_ipfs
-        elif "arweave" in url:
+        elif "1984" in url or "arweave" in url or "ardrive" in url:
             return mock_response_arweave
         return MagicMock(status_code=404)
 
@@ -102,4 +104,13 @@ async def test_sync_to_grid_mocked(distributed_archive):
             assert payload["type"] == "sync"
             assert payload["node"]["content"] == content
             assert payload["node"]["metadata"]["ipfs_cid"] == "QmTest123"
+
+            # We must determine what was actually passed to `persist_to_arweave`
+            # In archive.py, payload was constructed as:
+            # { "node": node, "edges": edges }
+            # But the node had empty metadata (or whatever metadata it started with)
+            import hashlib
+
+            assert "arweave_tx" in payload["node"]["metadata"]
+            assert payload["node"]["metadata"]["arweave_tx"] == "mock-real-arweave-tx-id"
             assert payload["node"]["metadata"]["arweave_tx"] == "real-tx-id"
