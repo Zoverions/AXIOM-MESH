@@ -60,3 +60,28 @@ func TestLedger_AddSkill_And_GetSkills(t *testing.T) {
 		t.Errorf("Expected skill2 at index 1 %v, got %v", skill2, skills[1])
 	}
 }
+
+func TestLedger_Stake_And_GetBond(t *testing.T) {
+	l := NewLedger()
+	nodeID := "node-1"
+	bond := types.ComputeBond{
+		NodeID: nodeID,
+		Amount: 500,
+		Status: "active",
+	}
+
+	l.Stake(bond)
+
+	retrievedBond, ok := l.GetBond(nodeID)
+	if !ok {
+		t.Fatalf("Bond for node %s not found", nodeID)
+	}
+	if !reflect.DeepEqual(retrievedBond, bond) {
+		t.Errorf("Expected bond %v, got %v", bond, retrievedBond)
+	}
+
+	_, ok = l.GetBond("non-existent-node")
+	if ok {
+		t.Error("Expected no bond for non-existent-node")
+	}
+}

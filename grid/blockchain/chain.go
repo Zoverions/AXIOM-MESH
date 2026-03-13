@@ -11,6 +11,7 @@ type Ledger struct {
 	Skills   []types.SkillVector
 	WebCache map[string]types.WebState
 	Graph    types.DistributedGraph
+	Bonds    map[string]types.ComputeBond
 }
 
 func NewLedger() *Ledger {
@@ -21,6 +22,7 @@ func NewLedger() *Ledger {
 			Nodes: make(map[string]types.GraphNode),
 			Edges: make([]types.GraphEdge, 0),
 		},
+		Bonds: make(map[string]types.ComputeBond),
 	}
 }
 
@@ -28,6 +30,19 @@ func (l *Ledger) AddSkill(skill types.SkillVector) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.Skills = append(l.Skills, skill)
+}
+
+func (l *Ledger) Stake(bond types.ComputeBond) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.Bonds[bond.NodeID] = bond
+}
+
+func (l *Ledger) GetBond(nodeID string) (types.ComputeBond, bool) {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	bond, ok := l.Bonds[nodeID]
+	return bond, ok
 }
 
 func (l *Ledger) GetSkills() []types.SkillVector {
