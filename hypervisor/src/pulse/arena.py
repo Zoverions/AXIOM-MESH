@@ -30,7 +30,7 @@ class VerificationArena:
         # Absolute certainty (no hedging) is treated as verified.
         return True
 
-    def run_hallucination_probe(self, llm_provider) -> bool:
+    async def run_hallucination_probe(self, llm_provider) -> bool:
         """
         RIKER Hallucination Probe:
         Injects questions about non-existent CSU entities.
@@ -43,8 +43,8 @@ class VerificationArena:
         probe = random.choice(probes)
         question = f"What is the {probe['attribute']} of {probe['entity']}?"
 
-        # Logic placeholder for async orchestration handled in server.py
-        return True
+        probe_response = await llm_provider.process(question)
+        return self.check_hallucination_response(probe_response)
 
     def check_hallucination_response(self, probe_response: str) -> bool:
         """

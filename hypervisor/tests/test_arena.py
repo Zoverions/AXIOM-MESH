@@ -1,6 +1,7 @@
 import pytest
 import sys
 import os
+from unittest.mock import AsyncMock, MagicMock
 
 # Add hypervisor/src to sys.path
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -42,3 +43,11 @@ def test_verify_precedence():
     arena = VerificationArena()
     # 'i do not know' is checked before 'guess'
     assert arena.verify("test intent", "I do not know, but I can guess.") is True
+
+@pytest.mark.asyncio
+async def test_run_hallucination_probe():
+    arena = VerificationArena()
+    mock_llm = MagicMock()
+    mock_llm.process = AsyncMock(return_value="I do not know")
+    result = await arena.run_hallucination_probe(mock_llm)
+    assert result is True
