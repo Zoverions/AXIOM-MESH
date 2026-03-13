@@ -46,6 +46,11 @@ type DistributedGraph struct {
 	Edges []GraphEdge          `json:"edges"`
 }
 
+type ZKMLPayload struct {
+	ModelCommitment string    `json:"model_commitment"`
+	Input           []float64 `json:"input"`
+	Output          []float64 `json:"output"`
+	Proof           string    `json:"proof"`
 type CCIPMessage struct {
 	MessageID   string `json:"message_id"`
 	SourceChain string `json:"source_chain"`
@@ -54,6 +59,8 @@ type CCIPMessage struct {
 	Receiver    string `json:"receiver"`
 	Payload     string `json:"payload"`
 	Status      string `json:"status"`
+}
+
 type Swarm struct {
 	ID     string   `json:"id"`
 	TaskID string   `json:"taskId"`

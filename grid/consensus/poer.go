@@ -3,7 +3,6 @@ package consensus
 import (
 	"crypto/sha256"
 	"fmt"
-	"log"
 	"math/bits"
 )
 
@@ -24,12 +23,6 @@ func CalculateWork(taskID string, nonce string) int {
 		}
 	}
 	return leadingZeros
-}
-
-// VerifyEntropyReduction checks if the given nonce satisfies the Difficulty for the taskID.
-func VerifyEntropyReduction(taskID string, resultHash string) bool {
-	log.Printf("Verifying PoER for task %s with hash %s", taskID, resultHash)
-	return CalculateWork(taskID, resultHash) >= Difficulty
 }
 
 // MineEntropyReduction finds a nonce that satisfies the Difficulty for a given taskID.

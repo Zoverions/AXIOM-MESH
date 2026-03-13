@@ -53,7 +53,7 @@ func (s *Server) Start(addr string) error {
 					return
 				}
 
-				if !consensus.VerifyEntropyReduction(skill.Task, skill.PoERHash) {
+				if consensus.CalculateWork(skill.Task, skill.PoERHash) < consensus.Difficulty {
 					http.Error(w, "PoER verification failed", http.StatusForbidden)
 					return
 				}
@@ -189,6 +189,24 @@ func (s *Server) Start(addr string) error {
 			} else {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 			}
+		}
+	})
+
+	http.HandleFunc("/zkml/verify", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "POST" {
+			var payload types.ZKMLPayload
+			if err := json.NewDecoder(r.Body).Decode(&payload); err == nil {
+				if consensus.VerifyZKMLInference(payload.ModelCommitment, payload.Input, payload.Output, payload.Proof) {
+					json.NewEncoder(w).Encode(map[string]string{"status": "verified"})
+				} else {
+					http.Error(w, "zkML verification failed", http.StatusForbidden)
+				}
+			} else {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			}
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
 

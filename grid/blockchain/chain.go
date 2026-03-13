@@ -13,12 +13,7 @@ type Ledger struct {
 	Graph        types.DistributedGraph
 	Bonds        map[string]types.ComputeBond
 	CCIPMessages map[string]types.CCIPMessage
-	mu       sync.RWMutex
-	Skills   []types.SkillVector
-	WebCache map[string]types.WebState
-	Graph    types.DistributedGraph
-	Bonds    map[string]types.ComputeBond
-	Swarms   map[string]types.Swarm
+	Swarms       map[string]types.Swarm
 }
 
 func NewLedger() *Ledger {
@@ -31,8 +26,7 @@ func NewLedger() *Ledger {
 		},
 		Bonds:        make(map[string]types.ComputeBond),
 		CCIPMessages: make(map[string]types.CCIPMessage),
-		Bonds:  make(map[string]types.ComputeBond),
-		Swarms: make(map[string]types.Swarm),
+		Swarms:       make(map[string]types.Swarm),
 	}
 }
 
