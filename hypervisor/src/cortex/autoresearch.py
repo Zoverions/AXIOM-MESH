@@ -5,6 +5,7 @@ import asyncio
 import httpx
 import urllib.parse
 import xml.etree.ElementTree as ET
+import hashlib
 
 class AutoResearchDaemon:
     def __init__(self, archive, llm=None, action_engine=None, ncp_client=None):
@@ -87,25 +88,47 @@ class AutoResearchDaemon:
 
         # External fetching via Wikipedia as fallback
         wikipedia_data = ""
-        if not arxiv_data and not ncp_info:
-            try:
-                wiki_url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(topic)}"
-                headers = {"User-Agent": "AxiomMesh-AutoResearch/1.0 (contact@axiommesh.local)"}
-                async with httpx.AsyncClient() as client:
-                    res = await client.get(wiki_url, headers=headers, timeout=5.0, follow_redirects=True)
-                    if res.status_code == 200:
-                        extract = res.json().get('extract')
-                        if extract:
-                            wikipedia_data = f"Wikipedia Summary: {extract}"
-            except Exception as e:
-                print(f"[AutoResearch Daemon] Wikipedia fetch failed: {e}")
+        try:
+            wiki_url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(topic)}"
+            headers = {"User-Agent": "AxiomMesh-AutoResearch/1.0 (contact@axiommesh.local)"}
+            async with httpx.AsyncClient() as client:
+                res = await client.get(wiki_url, headers=headers, timeout=5.0, follow_redirects=True)
+                if res.status_code == 200:
+                    extract = res.json().get('extract')
+                    if extract:
+                        wikipedia_data = f"Wikipedia Summary: {extract}"
+        except Exception as e:
+            print(f"[AutoResearch Daemon] Wikipedia fetch failed: {e}")
 
-        # Combine data
-        combined_raw = f"Topic: {topic}\n{ncp_info}\n{arxiv_data}\n{wikipedia_data}".strip()
+        sources = []
+        if ncp_info:
+            sources.append({"name": "NCP", "content": ncp_info, "score": 0.8})
+        if arxiv_data:
+            sources.append({"name": "ArXiv", "content": arxiv_data, "score": 0.9})
+        if wikipedia_data:
+            sources.append({"name": "Wikipedia", "content": wikipedia_data, "score": 0.5})
 
-        if not arxiv_data and not ncp_info and not wikipedia_data:
+        if not sources:
             print(f"[AutoResearch Daemon] All external sources failed for topic: {topic}")
             return
+
+        # Deduplication
+        unique_sources = []
+        seen_hashes = set()
+        for source in sources:
+            content_hash = hashlib.md5(source["content"].encode('utf-8')).hexdigest()
+            if content_hash not in seen_hashes:
+                seen_hashes.add(content_hash)
+                unique_sources.append(source)
+
+        # Source Ranking
+        unique_sources.sort(key=lambda x: x["score"], reverse=True)
+
+        # Combine data
+        combined_raw = f"Topic: {topic}\n\nSources:\n"
+        for i, source in enumerate(unique_sources):
+            combined_raw += f"[{i+1}] {source['name']} (Score: {source['score']}):\n{source['content']}\n\n"
+        combined_raw = combined_raw.strip()
 
         # ActionEngine "compilation"
         if self.action_engine:
@@ -117,7 +140,8 @@ class AutoResearchDaemon:
             synthesis_prompt = (
                 f"Axiom: Reduce entropy. Synthesize the following research into verifiable logic for AxiomMesh.\n"
                 f"Data: {combined_raw}\n"
-                f"Output a structured summary including: Objective, Rationalization, and Commitment."
+                f"Output a structured summary including: Objective, Rationalization, Commitment, and Claim Extraction.\n"
+                f"For Claim Extraction, extract verifiable claims from the ranked text and construct a citation graph that links each claim to its corresponding source index (e.g., [1], [2])."
             )
             synthesis = await self.llm.process(synthesis_prompt)
             if synthesis and "Error" not in synthesis:
