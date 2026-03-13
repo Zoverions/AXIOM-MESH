@@ -43,7 +43,11 @@ describe('hypervisorClient', () => {
             const result = await sendToHypervisor(mockIntent);
 
             expect(mockedAxios.post).toHaveBeenCalledTimes(1);
-            expect(mockedAxios.post).toHaveBeenCalledWith('http://localhost:8000/process', mockIntent);
+            expect(mockedAxios.post).toHaveBeenCalledWith('http://localhost:8000/process', mockIntent, {
+                headers: {
+                    'Authorization': `Bearer ${process.env.HYPERVISOR_API_KEY || ''}`
+                }
+            });
             expect(result).toEqual(mockResponseData);
         });
 
@@ -56,7 +60,11 @@ describe('hypervisorClient', () => {
             const result = await sendToHypervisor(mockIntent);
 
             expect(mockedAxios.post).toHaveBeenCalledTimes(1);
-            expect(mockedAxios.post).toHaveBeenCalledWith('http://localhost:8000/process', mockIntent);
+            expect(mockedAxios.post).toHaveBeenCalledWith('http://localhost:8000/process', mockIntent, {
+                headers: {
+                    'Authorization': `Bearer ${process.env.HYPERVISOR_API_KEY || ''}`
+                }
+            });
             expect(consoleSpy).toHaveBeenCalledWith('Error sending to Hypervisor:', errorMessage);
 
             expect(result).toEqual({
@@ -86,7 +94,11 @@ describe('hypervisorClient', () => {
 
             await customSendToHypervisor(mockIntent);
 
-            expect(axiosMock.post).toHaveBeenCalledWith('http://custom-hypervisor:9000/process', mockIntent);
+            expect(axiosMock.post).toHaveBeenCalledWith('http://custom-hypervisor:9000/process', mockIntent, {
+                headers: {
+                    'Authorization': `Bearer ${process.env.HYPERVISOR_API_KEY || ''}`
+                }
+            });
 
             // Restore original env
             if (originalEnv === undefined) {
