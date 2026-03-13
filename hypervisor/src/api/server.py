@@ -12,6 +12,7 @@ from src.pulse.arena import VerificationArena
 from src.llm.provider import LLMProvider
 from src.cortex.dialectic import DialecticOrchestrator
 from src.evolution.skill_rl import EvolutionEngine, ActionEngine
+from src.evolution.openclaw import SignalExtractor, OnPolicyDistillation
 from src.evolution.network_sync import NetworkSync
 from src.cortex.autoresearch import AutoResearchDaemon
 from src.evolution.auto_training import AutoTrainingLoop
@@ -41,6 +42,8 @@ dialectic = DialecticOrchestrator()
 evolution = EvolutionEngine()
 network_sync = NetworkSync()
 action_engine = ActionEngine()
+signal_extractor = SignalExtractor()
+opd = OnPolicyDistillation()
 
 SANDBOX_URL = os.environ.get("SANDBOX_URL", "http://localhost:4000/execute")
 
@@ -48,6 +51,31 @@ SANDBOX_URL = os.environ.get("SANDBOX_URL", "http://localhost:4000/execute")
 async def process_intent(intent: IntentObject):
     try:
         content = intent.content
+        sender = intent.metadata.get("sender", "unknown")
+
+        # OpenClaw-RL: Next-State Signal Recovery
+        if context_engine.interaction_history:
+            last_interaction = context_engine.interaction_history[-1]
+            last_response = last_interaction.get("response", "")
+
+            # Extract signals from current intent based on last response
+            signals = signal_extractor.extract_signals(content, last_response)
+
+            if signals["reward"] != 0 or signals["is_directive"]:
+                # Judge rollout via MiroFish PRM
+                miro_score = context_engine.deep_archive.miro_mapper.judge_rollout(
+                    action=last_interaction.get("intent_content", ""),
+                    feedback_signal=signals
+                )
+                # Update reward with PRM Judge's score
+                signals["reward"] = miro_score
+
+                # Store rollout in Evolution Engine
+                evolution.store_rollout(last_interaction.get("intent_content", ""), signals, sender)
+
+                # If it's a directive signal, attempt On-Policy Distillation
+                if signals["is_directive"]:
+                    opd.distill(last_interaction.get("intent_content", ""), signals, sender)
 
         # Handle special Dialectic command
         if content.startswith("/dialectic"):
@@ -87,6 +115,14 @@ async def process_intent(intent: IntentObject):
 
         # Automatically store new interactions in Deep Archive
         context_engine.deep_archive.add(content)
+
+        # Update interaction history for next-state signal recovery
+        context_engine.interaction_history.append({
+            "intent_id": intent.id,
+            "intent_content": content,
+            "response": raw_response,
+            "sender": sender
+        })
 
         return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=raw_response, status="success")
     except Exception as e:
