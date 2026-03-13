@@ -5,6 +5,7 @@ import random
 import requests
 import os
 import httpx
+import ast
 
 from src.models.intent import IntentObject, IntentResponse
 from src.engine.context import ContextEngine
@@ -64,6 +65,28 @@ opd = OnPolicyDistillation()
 
 SANDBOX_URL = os.environ.get("SANDBOX_URL", "http://localhost:4000/execute")
 
+# Security: Basic AST-based sanitization
+def is_safe_code(code_str: str) -> bool:
+    try:
+        tree = ast.parse(code_str)
+    except SyntaxError:
+        return False
+
+    forbidden_modules = {"os", "sys", "subprocess", "shlex", "pty", "socket"}
+    forbidden_funcs = {"__import__", "eval", "exec", "open"}
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name.split(".")[0] in forbidden_modules:
+                    return False
+        elif isinstance(node, ast.ImportFrom):
+            if node.module and node.module.split(".")[0] in forbidden_modules:
+                return False
+        elif isinstance(node, ast.Call):
+            if isinstance(node.func, ast.Name) and node.func.id in forbidden_funcs:
+                return False
+    return True
 security = HTTPBearer()
 
 def verify_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -118,6 +141,10 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api
         # Handle special Code Execution command
         if content.startswith("/exec"):
             code = content[len("/exec"):].strip()
+
+            if not is_safe_code(code):
+                return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Security Halt: Code execution contains forbidden operations (e.g., os, sys, eval, open).", status="error")
+
             # MiroFish Spatial Security Check
             # Assuming 'user_node' is the origin for standard /exec commands
             if not context_engine.miro_mapper.is_operation_allowed("user_node", "shell_execution"):
