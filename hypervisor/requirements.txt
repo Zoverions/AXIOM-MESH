@@ -9,3 +9,8 @@ python-multipart
 httpx
 fastapi
 uvicorn
+
+# Test dependencies
+pytest
+pytest-asyncio
+pytest-mock

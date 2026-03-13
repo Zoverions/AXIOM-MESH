@@ -20,9 +20,8 @@ from src.cortex.autoresearch import AutoResearchDaemon
 from src.evolution.auto_training import AutoTrainingLoop
 from src.api.audio import router as audio_router
 from src.zkml.prover import EdgeZKMLProver
+from contextlib import asynccontextmanager
 
-app = FastAPI()
-app.include_router(audio_router)
 context_engine = ContextEngine()
 pulse = EntropyMonitor()
 arena = VerificationArena()
@@ -42,17 +41,18 @@ autoresearch_daemon = AutoResearchDaemon(
 )
 auto_training_loop = AutoTrainingLoop()
 
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     # Phase 1 Initialization Acknowledged
     print("AxiomMesh Phase 1 Cognitive Hypervisor Started")
     autoresearch_daemon.start()
     auto_training_loop.start()
-
-@app.on_event("shutdown")
-async def shutdown_event():
+    yield
     autoresearch_daemon.stop()
     auto_training_loop.stop()
+
+app = FastAPI(lifespan=lifespan)
+app.include_router(audio_router)
 
 SANDBOX_URL = os.environ.get("SANDBOX_URL", "http://localhost:4000/execute")
 
@@ -156,8 +156,6 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api
 
         # Standard LLM handling with Tier 1 and Tier 3 memory
         context = await context_engine.get_context(intent)
-        raw_response = await llm.process(context)
-        context = await context_engine.get_context(content)
 
         # Divergence Engine sampling perturbations
         sampling_params = context_engine.divergence_engine.apply_sampling_perturbation({})
