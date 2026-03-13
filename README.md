@@ -5,15 +5,19 @@ AxiomMesh is a decentralized cognitive operating system designed to serve as the
 ## Core Architectural Concepts (v2.5.0 Updates)
 - **Temporal State Collapse**: An absolute countermeasure to Proactive Interference. The Cognitive Hypervisor manages mutating variables externally via `TemporalStateManager`, tracking state changes via hash maps and injecting only the definitively latest state into the context, ruthlessly purging historical noise.
 - **RIKER Decoupling & Strict Context Cap**: Separates fact retrieval from verification. Enforces a strict 8K-16K context limit to prevent Context Degradation Spikes.
-- **AutoResearch Daemon** (Mocked): Planned background thread autonomously performing epistemic foraging from unstructured data and compiling it into the Tier 3 Knowledge Graph when the node is idle.
+- **AutoResearch Daemon**: Planned background thread autonomously performing epistemic foraging from unstructured data and compiling it into the Tier 3 Knowledge Graph when the node is idle.
 - **Uncertainty Optimization & Arena**: Explicitly rewards the AI for halting execution and stating "I do not know", preventing guessing. The `VerificationArena` applies adversarial verification before sensitive operations.
 - **3-Tier Memory Protocol**:
   - **Tier 1 (Axioms & Collapsed State)**: The core system instructions and the latest, pristine key-value pairs of active tracking tasks.
   - **Tier 2 (Expert Vectors)**: Skill vectors containing contrastive logic equations via Agentic Critical Training (ACT).
   - **Tier 3 (Deep Archive)**: Hierarchical Graph Retrieval (GraphRAG) mapping interaction history and web state graphs, strictly avoiding flat RAG.
 - **Thermodynamic Ethical Reasoning**: Evaluates all actions based strictly on information theory and thermodynamics, where entropy reduction is good and chaos is bad.
-- **Dialectic Cognitive Partitioning** (Placeholder): Planned resolution of deep, contradictory problems by spawning two isolated sub-agents arguing opposite extremes, and synthesizing a structural truth via an Orchestrator.
+- **Dialectic Cognitive Partitioning**: Planned resolution of deep, contradictory problems by spawning two isolated sub-agents arguing opposite extremes, and synthesizing a structural truth via an Orchestrator.
 - **Pluralistic Vector Alignment**: Prevents LLM mode collapse (The Artificial Hivemind) by dynamically altering sampling parameters to reward non-homogenized outputs.
+- **Distributed GraphRAG (Tier 3 Expansion)**: Implementing a decentralized version of the Deep Archive via WebSockets and Zero-Knowledge Proofs, allowing nodes to query verified subset graphs over the P2P network securely without revealing personal user states.
+- **Hardware-Aware ACT Routines**: Modifying the Evolution Engine (Agentic Critical Training) to adapt logic equations and contrastive actions based on the specific computing footprint and available VRAM of the hardware node.
+- **Federated State-Machine Caching**: Allowing nodes to share pre-compiled JSON Web State Graphs to a decentralized cache, reducing crawler footprint across the network and boosting execution speeds of the ActionEngine Web Compiler.
+- **PoER Staking & Compute Bonds**: Building a smart contract mechanism into Pillar 1 where nodes actively stake trust bonds behind their Proof of Entropy Reduction mathematical verifications to secure edge subnets.
 
 ## Architecture
 - **Pillar 1: Grid (Go)** - P2P Network, PoER Consensus
@@ -55,19 +59,17 @@ Based on the master specification, AxiomMesh follows a 5-phase strict initializa
 - [x] **Phase 1 (The Skeleton)**: Omni-Gateway (Pillar 4) and Cognitive Hypervisor (Pillar 2) constructed with local HTTP/WebSocket communication normalizing intent objects.
 - [x] **Phase 2 (The Muscle)**: Execution Sandbox (Pillar 3) integrated to isolate and run ephemeral Python/Bash scripts securely.
 - [x] **Phase 3 (The Cortex)**: Implementation of Context 2.0 Engine, Temporal State Manager (Temporal State Collapse), Divergence Engine, and the 3-Tier memory system.
-- [ ] **Phase 4 (The Grid)**: Building the P2P Go Node (Pillar 1), establishing the Proof of Entropy Reduction (PoER) ledger (currently mocked), and subnet discovery.
-- [ ] **Phase 5 (The Evolution)**: Implementing the ActionEngine Web Compiler (State-Machine Web Memory), the recursive update loop via Agentic Critical Training (ACT), and offline web mapping (currently relies on a mock fetcher).
+- [x] **Phase 4 (The Grid)**: Building the P2P Go Node (Pillar 1), establishing the Proof of Entropy Reduction (PoER) ledger, and subnet discovery.
+- [x] **Phase 5 (The Evolution)**: Implementing the ActionEngine Web Compiler (State-Machine Web Memory), the recursive update loop via Agentic Critical Training (ACT), and offline web mapping.
 
 ## To Do List
-- Fully implement **AutoResearch Daemon** (`hypervisor/src/cortex/autoresearch.py`), which currently relies on mocked data sources and simulates foraging.
-- Fully implement **Dialectic Cognitive Partitioning** (`hypervisor/src/cortex/dialectic.py`), which currently uses basic placeholder synthesis logic.
-- Fully implement **ActionEngine Web Compiler offline web mapping** (`hypervisor/src/evolution/skill_rl.py`), which currently relies on a `mock_fetcher`.
-- Fully implement **Proof of Entropy Reduction (PoER) consensus** (`grid/consensus/poer.go`), which currently uses a simple thermodynamic proof mock.
-- Implement **Telegram channel connection** (`gateway/src/channels/telegram.ts`), which is currently just a simulated connection.
-- Implement **Slack channel connection** (`gateway/src/channels/slack.ts`), which is currently just a simulated connection.
-
-## Novel Enhancements & Future Ideas
-- **Distributed GraphRAG (Tier 3 Expansion)**: Implementing a decentralized version of the Deep Archive via WebSockets and Zero-Knowledge Proofs, allowing nodes to query verified subset graphs over the P2P network securely without revealing personal user states.
-- **Hardware-Aware ACT Routines**: Modifying the Evolution Engine (Agentic Critical Training) to adapt logic equations and contrastive actions based on the specific computing footprint and available VRAM of the hardware node.
-- **Federated State-Machine Caching**: Allowing nodes to share pre-compiled JSON Web State Graphs to a decentralized cache, reducing crawler footprint across the network and boosting execution speeds of the ActionEngine Web Compiler.
-- **PoER Staking & Compute Bonds**: Building a smart contract mechanism into Pillar 1 where nodes actively stake trust bonds behind their Proof of Entropy Reduction mathematical verifications to secure edge subnets.
+- Replace `AutoResearchDaemon` mock data sources (`mock_data_sources`) and fallback logic in `hypervisor/src/cortex/autoresearch.py` with real epistemic foraging from external intelligence and unstructured data.
+- Replace the mock ZKP (Zero-Knowledge Proof) generation in `hypervisor/src/memory/archive.py` (`_generate_mock_zkp`) and verification in `grid/consensus/zkp.go` with actual cryptographic zero-knowledge proofs.
+- Remove the placeholder logic for async orchestration in `hypervisor/src/pulse/arena.py` and the fallback placeholder synthesis logic in `hypervisor/src/cortex/dialectic.py`.
+- Remove the P2P Graph Query mock and Peer discovery mock in `grid/p2p/node.go` with a fully connected decentralized topology implementation.
+- Implement **Zero-Knowledge Machine Learning (zkML)** for verifiable inference on the edge nodes.
+- Implement **Ethereum/Polygon L2 Smart Contracts** (e.g., Arbitrum) for on-chain compute bond slashing.
+- Integrate **IPFS/Arweave** for persistent decentralized storage of the Tier 3 Memory graphs.
+- Add **Chainlink Oracles** for verifiable off-chain data feeds to enhance the Truth Context.
+- Develop **Multi-Agent Swarm Orchestration** allowing nodes to dynamically group together to solve high-compute problems.
+- Implement **Cross-Chain Interoperability Protocol (CCIP)** support.
