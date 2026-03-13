@@ -45,3 +45,10 @@ type DistributedGraph struct {
 	Nodes map[string]GraphNode `json:"nodes"`
 	Edges []GraphEdge          `json:"edges"`
 }
+
+type ZKMLPayload struct {
+	ModelCommitment string    `json:"model_commitment"`
+	Input           []float64 `json:"input"`
+	Output          []float64 `json:"output"`
+	Proof           string    `json:"proof"`
+}

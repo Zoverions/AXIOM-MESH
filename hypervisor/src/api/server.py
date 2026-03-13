@@ -18,6 +18,7 @@ from src.evolution.network_sync import NetworkSync
 from src.cortex.autoresearch import AutoResearchDaemon
 from src.evolution.auto_training import AutoTrainingLoop
 from src.api.audio import router as audio_router
+from src.zkml.prover import EdgeZKMLProver
 
 app = FastAPI()
 app.include_router(audio_router)
@@ -171,6 +172,38 @@ async def process_intent(intent: IntentObject):
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "component": "hypervisor"}
+
+@app.post("/zkml/infer")
+async def zkml_infer(input_data: dict):
+    """
+    Executes an inference pass on the edge node and submits the zkML proof
+    to the Grid network for consensus verification.
+    """
+    input_vector = input_data.get("input", [])
+    if not input_vector:
+        return {"status": "error", "message": "Input vector required"}
+
+    # Initialize the Prover (could be a pre-trained Skill Vector in the future)
+    prover = EdgeZKMLProver(weights=[0.5, -0.2, 0.8, 1.2])
+
+    # 1. Edge Compute + Proof Generation
+    result = prover.infer_and_prove(input_vector)
+
+    # 2. Submit to Grid Consensus
+    try:
+        grid_url = "http://localhost:5000/zkml/verify"
+        async with httpx.AsyncClient() as client:
+            response = await client.post(grid_url, json=result, timeout=10.0)
+            if response.status_code == 200:
+                result["consensus"] = "verified"
+            else:
+                result["consensus"] = "failed"
+                result["grid_error"] = response.text
+    except Exception as e:
+        result["consensus"] = "network_error"
+        result["grid_error"] = str(e)
+
+    return result
 
 @app.get("/agents")
 async def agents_status():
