@@ -36,6 +36,25 @@ const authMiddleware = (req: Request, res: Response, next: Function) => {
     next();
 };
 
+router.post('/api/v1/intent/process/public', async (req: Request, res: Response) => {
+    try {
+        const { channel, content, metadata } = req.body;
+        if (!content) {
+            res.status(400).json({ error: 'Content is required' });
+            return;
+        }
+
+        // Only allow process from public if it's for comparison/testing
+        // and doesn't contain sensitive data
+        const intent = normalizeInput(channel || 'tester', content, metadata);
+        const response = await sendToHypervisor(intent);
+
+        res.json(response);
+    } catch (error) {
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 router.post('/api/v1/intent/process', authMiddleware, async (req: Request, res: Response) => {
     try {
         const { channel, content, metadata } = req.body;
@@ -157,6 +176,35 @@ const localOnly = (req: Request, res: Response, next: Function) => {
     }
     next();
 };
+
+// --- Metrics API ---
+router.post('/api/v1/metrics/cooperation', async (req: Request, res: Response) => {
+    const { style, type, prompt } = req.body;
+    const metricsPath = path.join(process.cwd(), 'data/cooperation_metrics.json');
+
+    try {
+        let metrics = [];
+        if (fs.existsSync(metricsPath)) {
+            metrics = JSON.parse(fs.readFileSync(metricsPath, 'utf-8'));
+        }
+
+        metrics.push({
+            timestamp: new Date().toISOString(),
+            style,
+            type,
+            prompt
+        });
+
+        if (!fs.existsSync(path.dirname(metricsPath))) {
+            fs.mkdirSync(path.dirname(metricsPath), { recursive: true });
+        }
+
+        fs.writeFileSync(metricsPath, JSON.stringify(metrics, null, 2));
+        res.json({ status: 'success' });
+    } catch (error: any) {
+        res.status(500).json({ error: 'Failed to save metrics', details: error.message });
+    }
+});
 
 router.get('/api/v1/config', localOnly, (req: Request, res: Response) => {
     try {

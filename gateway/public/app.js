@@ -16,6 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // Auto-refresh logic on tab load
             if (targetId === 'status') fetchStatus();
             if (targetId === 'agents') fetchAgents();
+            if (targetId === 'tester' && window.initTester) window.initTester();
             if (targetId === 'network') fetchNetwork();
             if (targetId === 'settings') fetchConfig();
             if (targetId === 'logs') fetchLogs();

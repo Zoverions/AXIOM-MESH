@@ -108,6 +108,8 @@ async def process_intent(intent: IntentObject):
             return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Synced skills: {skills}", status="success")
 
         # Standard LLM handling with Tier 1 and Tier 3 memory
+        context = await context_engine.get_context(intent)
+        raw_response = await llm.process(context)
         context = await context_engine.get_context(content)
 
         # Divergence Engine sampling perturbations
