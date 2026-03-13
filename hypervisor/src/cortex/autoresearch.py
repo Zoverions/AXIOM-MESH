@@ -3,6 +3,7 @@ import time
 import random
 import asyncio
 import httpx
+import urllib.parse
 import xml.etree.ElementTree as ET
 
 class AutoResearchDaemon:
@@ -13,13 +14,6 @@ class AutoResearchDaemon:
         self.ncp_client = ncp_client
         self.running = False
         self.thread = None
-        self.mock_data_sources = [
-            "arXiv: Quantum entanglement efficiency in decentralized networks.",
-            "GitHub: Optimizing Go goroutines for P2P message passing.",
-            "Web: New consensus algorithms reducing entropy by 40%.",
-            "arXiv: Semantic collapse in flat vector databases mathematically proven.",
-            "GitHub: Rust implementation of WASM sandboxing for edge nodes."
-        ]
 
     def start(self):
         if not self.running:
@@ -48,10 +42,7 @@ class AutoResearchDaemon:
                 loop.close()
         except Exception as e:
             print(f"[AutoResearch Daemon] Sync forage wrapper error: {e}")
-            # Fallback to mock data if async fails
-            data = random.choice(self.mock_data_sources)
-            metadata = {"source": "autoresearch_daemon_mock", "timestamp": time.time()}
-            self.archive.add(content=data, metadata=metadata)
+            return
 
     async def _async_forage(self):
         """
@@ -94,14 +85,26 @@ class AutoResearchDaemon:
         except Exception as e:
             print(f"[AutoResearch Daemon] ArXiv fetch failed: {e}")
 
-        # Combine data
-        combined_raw = f"Topic: {topic}\n{ncp_info}\n{arxiv_data}"
-
+        # External fetching via Wikipedia as fallback
+        wikipedia_data = ""
         if not arxiv_data and not ncp_info:
-            # Fallback to mock
-            data = random.choice(self.mock_data_sources)
-            metadata = {"source": "autoresearch_daemon_mock", "timestamp": time.time()}
-            self.archive.add(content=data, metadata=metadata)
+            try:
+                wiki_url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(topic)}"
+                headers = {"User-Agent": "AxiomMesh-AutoResearch/1.0 (contact@axiommesh.local)"}
+                async with httpx.AsyncClient() as client:
+                    res = await client.get(wiki_url, headers=headers, timeout=5.0, follow_redirects=True)
+                    if res.status_code == 200:
+                        extract = res.json().get('extract')
+                        if extract:
+                            wikipedia_data = f"Wikipedia Summary: {extract}"
+            except Exception as e:
+                print(f"[AutoResearch Daemon] Wikipedia fetch failed: {e}")
+
+        # Combine data
+        combined_raw = f"Topic: {topic}\n{ncp_info}\n{arxiv_data}\n{wikipedia_data}".strip()
+
+        if not arxiv_data and not ncp_info and not wikipedia_data:
+            print(f"[AutoResearch Daemon] All external sources failed for topic: {topic}")
             return
 
         # ActionEngine "compilation"

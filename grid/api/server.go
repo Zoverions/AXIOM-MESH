@@ -85,6 +85,74 @@ func (s *Server) Start(addr string) error {
 		}
 	})
 
+	http.HandleFunc("/swarm", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "GET" {
+			json.NewEncoder(w).Encode(s.ledger.GetSwarms())
+		} else if r.Method == "POST" {
+			var swarm types.Swarm
+			if err := json.NewDecoder(r.Body).Decode(&swarm); err == nil {
+				if swarm.ID == "" || swarm.TaskID == "" {
+					http.Error(w, "ID and TaskID are required", http.StatusBadRequest)
+					return
+				}
+				if len(swarm.Nodes) == 0 {
+					http.Error(w, "At least one node is required to initialize a swarm", http.StatusBadRequest)
+					return
+				}
+
+				// Verify the node creating the swarm has a compute bond
+				creatorID := swarm.Nodes[0]
+				bond, ok := s.ledger.GetBond(creatorID)
+				if !ok || bond.Status != "active" {
+					http.Error(w, "Creator node does not have an active compute bond", http.StatusForbidden)
+					return
+				}
+
+				swarm.Status = "active"
+				s.ledger.CreateSwarm(swarm)
+				json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+			} else {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			}
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	http.HandleFunc("/swarm/join", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "POST" {
+			var req struct {
+				SwarmID string `json:"swarmId"`
+				NodeID  string `json:"nodeId"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&req); err == nil {
+				if req.SwarmID == "" || req.NodeID == "" {
+					http.Error(w, "swarmId and nodeId are required", http.StatusBadRequest)
+					return
+				}
+
+				// Verify joining node has compute bond
+				bond, ok := s.ledger.GetBond(req.NodeID)
+				if !ok || bond.Status != "active" {
+					http.Error(w, "Joining node does not have an active compute bond", http.StatusForbidden)
+					return
+				}
+
+				if ok := s.ledger.JoinSwarm(req.SwarmID, req.NodeID); ok {
+					json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+				} else {
+					http.Error(w, "Swarm not found", http.StatusNotFound)
+				}
+			} else {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			}
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
 	http.HandleFunc("/cache", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == "GET" {
@@ -143,6 +211,54 @@ func (s *Server) Start(addr string) error {
 	})
 
 	http.HandleFunc("/ws/graph", s.handleGraphWebSocket)
+
+	http.HandleFunc("/ccip", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "GET" {
+			messageID := r.URL.Query().Get("messageId")
+			if messageID == "" {
+				http.Error(w, "messageId parameter required", http.StatusBadRequest)
+				return
+			}
+			msg, ok := s.ledger.GetCCIPMessage(messageID)
+			if !ok {
+				http.Error(w, "Message not found", http.StatusNotFound)
+				return
+			}
+			json.NewEncoder(w).Encode(msg)
+		} else if r.Method == "POST" {
+			var msg types.CCIPMessage
+			isSync := r.URL.Query().Get("sync") == "true"
+
+			if err := json.NewDecoder(r.Body).Decode(&msg); err == nil {
+				if msg.MessageID == "" {
+					http.Error(w, "message_id is required", http.StatusBadRequest)
+					return
+				}
+
+				if _, exists := s.ledger.GetCCIPMessage(msg.MessageID); exists && isSync {
+					json.NewEncoder(w).Encode(map[string]string{"status": "already_synced"})
+					return
+				}
+
+				if msg.Status == "" {
+					msg.Status = "received"
+				}
+
+				s.ledger.AddCCIPMessage(msg)
+
+				if !isSync && s.p2pNode != nil {
+					s.p2pNode.BroadcastCCIPMessage(msg)
+				}
+
+				json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+			} else {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			}
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
 
 	return http.ListenAndServe(addr, nil)
 }

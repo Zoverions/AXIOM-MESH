@@ -6,11 +6,7 @@ class DialecticOrchestrator:
 
     async def synthesize(self, prompt: str) -> str:
         if not self.llm:
-            # Fallback placeholder logic
-            affirmative = f"Affirmative view on '{prompt}': It is absolutely essential for progress."
-            negative = f"Negative view on '{prompt}': It presents catastrophic risks."
-            synthesis = f"Dialectic Synthesis for '{prompt}':\n[1] {affirmative}\n[2] {negative}\n-> Conclusion: A balanced approach is necessary."
-            return synthesis
+            raise ValueError("LLM provider is required for dialectic synthesis.")
 
         # 1. Thesis (Affirmative)
         thesis_prompt = f"Topic: {prompt}\nTask: Provide the strongest possible argument IN FAVOR of this topic. Be concise but compelling."
