@@ -18,6 +18,37 @@ class HardwareScanner:
 
         return footprint
 
+    def recommend_models(self, footprint: dict) -> dict:
+        """
+        Recommends task-specific local models based on the hardware footprint.
+        """
+        if footprint["has_gpu"] and footprint["vram_mb"] >= 16000:
+            return {
+                "default": "llama3:8b",
+                "coding": "codellama:7b",
+                "reasoning": "mistral:7b"
+            }
+        elif footprint["has_gpu"] and footprint["vram_mb"] >= 8000:
+            return {
+                "default": "llama3:8b",
+                "coding": "qwen2.5-coder:7b",
+                "reasoning": "mistral:7b"
+            }
+        elif footprint["total_ram_gb"] >= 16:
+            # CPU only but enough RAM for small task specific models
+            return {
+                "default": "llama3:8b",
+                "coding": "codellama:7b",
+                "reasoning": "mistral:7b"
+            }
+        else:
+            # Limited hardware, use a single small model for all tasks
+            return {
+                "default": "llama3:1b",
+                "coding": "llama3:1b",
+                "reasoning": "llama3:1b"
+            }
+
     def _get_cpu_cores(self) -> int:
         try:
             return int(subprocess.check_output(["nproc"]).decode().strip())
@@ -53,4 +84,16 @@ class HardwareScanner:
             ]).decode().strip()
             return int(output.split('\n')[0])
         except Exception:
-            return 0
+            pass
+
+        # Fallback to Apple Silicon unified memory
+        try:
+            cpu_brand = subprocess.check_output(["sysctl", "-n", "machdep.cpu.brand_string"]).decode().strip()
+            if "Apple" in cpu_brand:
+                # On Apple Silicon, we can estimate VRAM from unified memory.
+                # Let's allocate roughly 75% of total RAM as available VRAM.
+                total_ram_gb = self._get_total_ram_gb()
+                return int(total_ram_gb * 1024 * 0.75)
+        except Exception:
+            pass
+        return 0
