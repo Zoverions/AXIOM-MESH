@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import httpx
 from typing import List, Dict, Optional
+from ecdsa import SigningKey, NIST256p
 
 _STOPWORDS = frozenset({"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "with", "is", "are", "was", "were", "it", "this", "that", "of", "by", "as"})
 _NON_WORD_PATTERN = re.compile(r'[^\w\s]')
@@ -148,6 +149,18 @@ class DistributedDeepArchive(DeepArchive):
     def __init__(self, storage_path="data/archive.json", grid_ws_url="ws://localhost:5000/ws/graph"):
         super().__init__(storage_path)
         self.grid_ws_url = grid_ws_url
+
+        # Cryptographic Identity
+        key_path = "data/node_key.pem"
+        os.makedirs("data", exist_ok=True)
+        if os.path.exists(key_path):
+            with open(key_path, "rb") as f:
+                self.private_key = SigningKey.from_pem(f.read())
+        else:
+            self.private_key = SigningKey.generate(curve=NIST256p)
+            with open(key_path, "wb") as f:
+                f.write(self.private_key.to_pem())
+        self.public_key_hex = self.private_key.get_verifying_key().to_string("uncompressed").hex()
 
     async def persist_to_ipfs(self, payload: dict) -> str:
         """
@@ -422,10 +435,20 @@ class DistributedDeepArchive(DeepArchive):
         try:
             import websockets
             async with websockets.connect(self.grid_ws_url) as ws:
+                # Sign payload: node.ID + number of edges
+                node_id_str = node.get("id", "")
+                edges_len = len(edges)
+                payload_str = f"{node_id_str}:{edges_len}"
+
+                hash_val = hashlib.sha256(payload_str.encode()).digest()
+                sig = self.private_key.sign_digest(hash_val).hex()
+
                 sync_payload = {
                     "type": "sync",
                     "node": node,
-                    "edges": edges
+                    "edges": edges,
+                    "node_id": self.public_key_hex,
+                    "signature": sig
                 }
                 await ws.send(json.dumps(sync_payload))
                 await ws.recv() # Await status

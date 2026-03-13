@@ -25,6 +25,8 @@ type WebState struct {
 	TextLength    int      `json:"text_length"`
 	OutboundLinks []string `json:"outbound_links"`
 	CompiledState string   `json:"compiled_state"`
+	NodeID        string   `json:"node_id,omitempty"`
+	Signature     string   `json:"signature,omitempty"`
 }
 
 type GraphNode struct {
@@ -68,4 +70,15 @@ type Swarm struct {
 	TaskID string   `json:"taskId"`
 	Nodes  []string `json:"nodes"`
 	Status string   `json:"status"`
+}
+
+type GraphSyncMessage struct {
+	Type      string                 `json:"type"`
+	Query     string                 `json:"query,omitempty"`
+	Proof     string                 `json:"proof,omitempty"`
+	Node      GraphNode              `json:"node,omitempty"`
+	Edges     []GraphEdge            `json:"edges,omitempty"`
+	Payload   map[string]interface{} `json:"payload,omitempty"`
+	NodeID    string                 `json:"node_id,omitempty"`
+	Signature string                 `json:"signature,omitempty"`
 }

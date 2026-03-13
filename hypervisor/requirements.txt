@@ -9,6 +9,7 @@ python-multipart
 httpx
 fastapi
 uvicorn
+ecdsa
 
 # Test dependencies
 pytest

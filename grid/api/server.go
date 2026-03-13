@@ -8,6 +8,7 @@ import (
 	"github.com/axiom-mesh/grid/blockchain"
 	"github.com/axiom-mesh/grid/p2p"
 	"strings"
+	"fmt"
 
 	"github.com/axiom-mesh/grid/consensus"
 	"github.com/axiom-mesh/grid/types"
@@ -188,6 +189,18 @@ func (s *Server) Start(addr string) error {
 					return
 				}
 
+				if isSync {
+					if state.NodeID == "" || state.Signature == "" {
+						http.Error(w, "Missing NodeID or Signature for sync request", http.StatusBadRequest)
+						return
+					}
+					payloadStr := fmt.Sprintf("%s:%d", state.URL, state.TextLength)
+					if !consensus.VerifySignature(state.NodeID, []byte(payloadStr), state.Signature) {
+						http.Error(w, "Invalid signature", http.StatusForbidden)
+						return
+					}
+				}
+
 				s.ledger.AddWebState(state)
 
 				// 2. Only broadcast if it's NOT a sync request from another node
@@ -290,14 +303,7 @@ func (s *Server) handleGraphWebSocket(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		var req struct {
-			Type    string                 `json:"type"`
-			Query   string                 `json:"query"`
-			Proof   string                 `json:"proof"`
-			Node    types.GraphNode        `json:"node"`
-			Edges   []types.GraphEdge      `json:"edges"`
-			Payload map[string]interface{} `json:"payload"`
-		}
+		var req types.GraphSyncMessage
 
 		if err := json.Unmarshal(message, &req); err != nil {
 			log.Printf("Unmarshal error: %v", err)
@@ -321,6 +327,17 @@ func (s *Server) handleGraphWebSocket(w http.ResponseWriter, r *http.Request) {
 			conn.WriteJSON(map[string]interface{}{"type": "results", "nodes": results})
 
 		case "sync":
+			if req.NodeID == "" || req.Signature == "" {
+				conn.WriteJSON(map[string]string{"error": "Missing NodeID or Signature"})
+				continue
+			}
+
+			payloadStr := fmt.Sprintf("%s:%d", req.Node.ID, len(req.Edges))
+			if !consensus.VerifySignature(req.NodeID, []byte(payloadStr), req.Signature) {
+				conn.WriteJSON(map[string]string{"error": "Invalid signature"})
+				continue
+			}
+
 			s.ledger.UpdateGraph(req.Node, req.Edges)
 			conn.WriteJSON(map[string]string{"status": "synced"})
 

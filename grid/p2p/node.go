@@ -2,6 +2,10 @@ package p2p
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -12,6 +16,7 @@ import (
 	"time"
 
 	"github.com/axiom-mesh/grid/types"
+	"github.com/axiom-mesh/grid/consensus"
 	"github.com/gorilla/websocket"
 )
 
@@ -28,6 +33,8 @@ type Node struct {
 	Peers map[string]*PeerInfo
 	mu    sync.RWMutex
 	ID            string
+	PrivateKey    *ecdsa.PrivateKey
+	PublicKey     string
 	Peers         []string
 	PeerAddresses map[string]string // Mapping of Peer ID to API endpoint
 	Transport     Transport
@@ -35,6 +42,18 @@ type Node struct {
 }
 
 func NewNode(id string) *Node {
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		log.Fatalf("Failed to generate ECDSA key for node: %v", err)
+	}
+	pubBytes := elliptic.Marshal(elliptic.P256(), priv.PublicKey.X, priv.PublicKey.Y)
+	pubHex := hex.EncodeToString(pubBytes)
+
+	// If id is provided, we might still want to use it as an alias, but for cryptographic identity
+	// we use the public key as the true NodeID in signatures. For backwards compatibility with
+	// tests and network discovery, we'll keep the provided ID for network presence, but we'll use
+	// the public key for signing operations.
+
 	return &Node{
 		ID:    id,
 		Peers: make(map[string]*PeerInfo),
@@ -108,6 +127,8 @@ func (n *Node) heartbeatLoop() {
 		}
 		n.mu.Unlock()
 		ID:            id,
+		PrivateKey:    priv,
+		PublicKey:     pubHex,
 		Peers:         make([]string, 0),
 		PeerAddresses: make(map[string]string),
 		Transport:     NewHTTPTransport(),
@@ -140,6 +161,22 @@ func sendWithBackoff(task func() error) error {
 	return err
 }
 
+			req := types.GraphSyncMessage{
+				Type:  "sync",
+				Node:  node,
+				Edges: edges,
+				NodeID: n.PublicKey,
+			}
+
+			// Sign the node content + edges length as a simple deterministic payload
+			payloadStr := fmt.Sprintf("%s:%d", node.ID, len(edges))
+			sig, err := consensus.SignData(n.PrivateKey, []byte(payloadStr))
+			if err == nil {
+				req.Signature = sig
+			}
+
+			if err := c.WriteJSON(req); err != nil {
+				log.Printf("P2P Node %s: Failed to write to %s: %v", n.ID, urlStr, err)
 func (n *Node) BroadcastGraphUpdate(node types.GraphNode, edges []types.GraphEdge) {
 	n.mu.RLock()
 	peers := make([]PeerInfo, 0, len(n.Peers))
@@ -179,6 +216,25 @@ func (n *Node) BroadcastGraphUpdate(node types.GraphNode, edges []types.GraphEdg
 }
 
 func (n *Node) BroadcastWebState(state types.WebState) {
+	log.Printf("P2P Node %s: Broadcasting web state for URL %s to %d peers", n.ID, state.URL, len(n.Peers))
+
+	// Add signature if not present
+	if state.Signature == "" {
+		state.NodeID = n.PublicKey
+		payloadStr := fmt.Sprintf("%s:%d", state.URL, state.TextLength)
+		sig, err := consensus.SignData(n.PrivateKey, []byte(payloadStr))
+		if err == nil {
+			state.Signature = sig
+		}
+	}
+
+	for _, peerID := range n.Peers {
+		addr, ok := n.PeerAddresses[peerID]
+		if !ok {
+			log.Printf("P2P Node %s: No address found for peer %s, skipping sync", n.ID, peerID)
+			continue
+		}
+		log.Printf("P2P Node %s: Syncing web state with peer %s at %s", n.ID, peerID, addr)
 	n.mu.RLock()
 	peers := make([]PeerInfo, 0, len(n.Peers))
 	for _, p := range n.Peers {
@@ -255,6 +311,15 @@ func (n *Node) QueryNetwork(query string, proof string) {
 	}
 	n.mu.RUnlock()
 
+			req := types.GraphSyncMessage{
+				Type:  "query",
+				Query: query,
+				Proof: proof,
+			}
+			if err := c.WriteJSON(req); err != nil {
+				log.Printf("P2P Node %s: Failed to write query to %s: %v", n.ID, urlStr, err)
+				return
+			}
 	log.Printf("P2P Node %s: Querying network for '%s' with ZKP to %d peers", n.ID, query, len(peers))
 	for _, peer := range peers {
 		wsURL := strings.Replace(peer.Address, "http://", "ws://", 1) + "/ws/graph"
