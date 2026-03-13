@@ -51,6 +51,8 @@ type ZKMLPayload struct {
 	Input           []float64 `json:"input"`
 	Output          []float64 `json:"output"`
 	Proof           string    `json:"proof"`
+}
+
 type CCIPMessage struct {
 	MessageID   string `json:"message_id"`
 	SourceChain string `json:"source_chain"`

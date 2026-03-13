@@ -148,3 +148,13 @@ func (l *Ledger) GetCCIPMessage(messageID string) (types.CCIPMessage, bool) {
 	msg, ok := l.CCIPMessages[messageID]
 	return msg, ok
 }
+
+func (l *Ledger) GetAllCCIPMessages() []types.CCIPMessage {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	msgs := make([]types.CCIPMessage, 0, len(l.CCIPMessages))
+	for _, msg := range l.CCIPMessages {
+		msgs = append(msgs, msg)
+	}
+	return msgs
+}

@@ -21,6 +21,16 @@ type Server struct {
 }
 
 func NewServer(ledger *blockchain.Ledger, p2pNode *p2p.Node) *Server {
+	if p2pNode != nil {
+		p2pNode.SyncCallback = func(msg types.CCIPMessage) bool {
+			if _, exists := ledger.GetCCIPMessage(msg.MessageID); !exists {
+				ledger.AddCCIPMessage(msg)
+				return true
+			}
+			return false
+		}
+	}
+
 	return &Server{
 		ledger:  ledger,
 		p2pNode: p2pNode,
@@ -217,7 +227,9 @@ func (s *Server) Start(addr string) error {
 		if r.Method == "GET" {
 			messageID := r.URL.Query().Get("messageId")
 			if messageID == "" {
-				http.Error(w, "messageId parameter required", http.StatusBadRequest)
+				// Return all messages for syncing if no messageId is specified
+				msgs := s.ledger.GetAllCCIPMessages()
+				json.NewEncoder(w).Encode(msgs)
 				return
 			}
 			msg, ok := s.ledger.GetCCIPMessage(messageID)
