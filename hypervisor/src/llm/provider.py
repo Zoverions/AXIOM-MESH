@@ -1,4 +1,3 @@
-import uuid
 import time
 import os
 import httpx
