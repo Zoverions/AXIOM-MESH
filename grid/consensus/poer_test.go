@@ -23,24 +23,6 @@ func TestCalculateWork(t *testing.T) {
 	}
 }
 
-func TestVerifyEntropyReduction(t *testing.T) {
-	taskID := "test-task"
-	validNonce := MineEntropyReduction(taskID)
-
-	if !VerifyEntropyReduction(taskID, validNonce) {
-		t.Errorf("VerifyEntropyReduction failed for valid nonce %s", validNonce)
-	}
-
-	invalidNonce := "invalid-nonce"
-	// It's possible "invalid-nonce" actually works by luck, but very unlikely for Difficulty 8.
-	// We'll check its work first.
-	if CalculateWork(taskID, invalidNonce) < Difficulty {
-		if VerifyEntropyReduction(taskID, invalidNonce) {
-			t.Errorf("VerifyEntropyReduction passed for invalid nonce %s", invalidNonce)
-		}
-	}
-}
-
 func TestMineEntropyReduction(t *testing.T) {
 	taskID := "mine-test"
 	nonce := MineEntropyReduction(taskID)
@@ -48,7 +30,7 @@ func TestMineEntropyReduction(t *testing.T) {
 		t.Fatal("MineEntropyReduction returned empty nonce")
 	}
 
-	if !VerifyEntropyReduction(taskID, nonce) {
+	if CalculateWork(taskID, nonce) < Difficulty {
 		t.Errorf("MineEntropyReduction produced invalid nonce %s", nonce)
 	}
 }

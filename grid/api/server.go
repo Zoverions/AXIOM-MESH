@@ -53,7 +53,7 @@ func (s *Server) Start(addr string) error {
 					return
 				}
 
-				if !consensus.VerifyEntropyReduction(skill.Task, skill.PoERHash) {
+				if consensus.CalculateWork(skill.Task, skill.PoERHash) < consensus.Difficulty {
 					http.Error(w, "PoER verification failed", http.StatusForbidden)
 					return
 				}

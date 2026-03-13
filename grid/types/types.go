@@ -54,6 +54,8 @@ type CCIPMessage struct {
 	Receiver    string `json:"receiver"`
 	Payload     string `json:"payload"`
 	Status      string `json:"status"`
+}
+
 type Swarm struct {
 	ID     string   `json:"id"`
 	TaskID string   `json:"taskId"`
