@@ -18,6 +18,8 @@ type Node struct {
 	ID            string
 	Peers         []string
 	PeerAddresses map[string]string // Mapping of Peer ID to API endpoint
+	Transport     Transport
+	SyncCallback  func(msg types.CCIPMessage) bool // Used to inject messages into local ledger
 }
 
 func NewNode(id string) *Node {
@@ -25,6 +27,7 @@ func NewNode(id string) *Node {
 		ID:            id,
 		Peers:         make([]string, 0),
 		PeerAddresses: make(map[string]string),
+		Transport:     NewHTTPTransport(),
 	}
 }
 
@@ -32,6 +35,7 @@ func (n *Node) Start() {
 	log.Printf("P2P Node %s started", n.ID)
 	go n.listenForPeers()
 	go n.discoverSubnets()
+	go n.SyncCCIPState()
 }
 
 func (n *Node) BroadcastGraphUpdate(node types.GraphNode, edges []types.GraphEdge) {
@@ -93,7 +97,11 @@ func (n *Node) BroadcastCCIPMessage(msg types.CCIPMessage) {
 			continue
 		}
 		log.Printf("P2P Node %s: Syncing CCIP message with peer %s at %s", n.ID, peerID, addr)
-		// In a real implementation, we would perform an HTTP POST to addr + "/ccip?sync=true"
+		go func(peerAddr string) {
+			if err := n.Transport.SendCCIPMessage(peerAddr, msg); err != nil {
+				log.Printf("P2P Node %s: Failed to sync CCIP message with %s: %v", n.ID, peerAddr, err)
+			}
+		}(addr)
 	}
 }
 
@@ -189,5 +197,47 @@ func (n *Node) discoverSubnets() {
 			log.Printf("P2P Node %s: Error broadcasting presence: %v", n.ID, err)
 		}
 		time.Sleep(5 * time.Second)
+	}
+}
+
+func (n *Node) SyncCCIPState() {
+	log.Printf("P2P Node %s: Starting CCIP State Reconciliation process", n.ID)
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		if len(n.Peers) == 0 {
+			continue
+		}
+		if n.SyncCallback == nil {
+			log.Printf("P2P Node %s: SyncCallback not set, skipping reconciliation", n.ID)
+			continue
+		}
+
+		for _, peerID := range n.Peers {
+			addr, ok := n.PeerAddresses[peerID]
+			if !ok {
+				continue
+			}
+
+			// Fetch messages from peer
+			msgs, err := n.Transport.FetchCCIPMessages(addr)
+			if err != nil {
+				log.Printf("P2P Node %s: Failed to fetch CCIP messages from peer %s: %v", n.ID, peerID, err)
+				continue
+			}
+
+			// Inject each message into the local ledger if missing
+			syncCount := 0
+			for _, msg := range msgs {
+				if n.SyncCallback(msg) {
+					syncCount++
+				}
+			}
+
+			if syncCount > 0 {
+				log.Printf("P2P Node %s: Synchronized %d missing CCIP messages from peer %s", n.ID, syncCount, peerID)
+			}
+		}
 	}
 }

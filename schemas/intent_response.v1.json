@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://axiommesh.io/schemas/intent_response.v1.json",
+  "title": "IntentResponse",
+  "description": "Represents the response sent from the Hypervisor back to the Gateway.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the response."
+    },
+    "intent_id": {
+      "type": "string",
+      "description": "The unique identifier of the original intent."
+    },
+    "response": {
+      "type": "string",
+      "description": "The textual response from the Hypervisor."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["success", "error", "pending"],
+      "description": "The processing status."
+    }
+  },
+  "required": ["id", "intent_id", "response", "status"],
+  "additionalProperties": false
+}
