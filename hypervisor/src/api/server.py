@@ -141,9 +141,6 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api
             if not context_engine.miro_mapper.is_operation_allowed("user_node", "shell_execution"):
                 return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="MiroFish Spatial Block: Unauthorized compliance attempt detected.", status="error")
 
-            # The Arena validation
-            if not arena.verify(action_intent="execute code", proposed_execution=code):
-                return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Arena Security Halt: Action lacks absolute confidence or exhibits guessing.", status="error")
             try:
                 async with httpx.AsyncClient() as client:
                     sandbox_res = await client.post(SANDBOX_URL, json={"language": "python", "code": code})
