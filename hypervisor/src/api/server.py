@@ -39,7 +39,7 @@ async def shutdown_event():
 pulse = EntropyMonitor()
 arena = VerificationArena()
 llm = LLMProvider()
-dialectic = DialecticOrchestrator()
+dialectic = DialecticOrchestrator(llm=llm)
 evolution = EvolutionEngine()
 network_sync = NetworkSync()
 action_engine = ActionEngine()
@@ -80,7 +80,7 @@ async def process_intent(intent: IntentObject):
 
         # Handle special Dialectic command
         if content.startswith("/dialectic"):
-            synthesis = dialectic.synthesize(content[len("/dialectic"):].strip())
+            synthesis = await dialectic.synthesize(content[len("/dialectic"):].strip())
             return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=synthesis, status="success")
 
         # Handle special Code Execution command
