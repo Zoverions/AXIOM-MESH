@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import uuid
 import random
 from typing import Dict, Any
@@ -63,8 +64,24 @@ opd = OnPolicyDistillation()
 
 SANDBOX_URL = os.environ.get("SANDBOX_URL", "http://localhost:4000/execute")
 
+security = HTTPBearer()
+
+def verify_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    expected_api_key = os.environ.get("HYPERVISOR_API_KEY")
+    if not expected_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Server configuration error: HYPERVISOR_API_KEY is not set",
+        )
+    if credentials.credentials != expected_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid API Key",
+        )
+    return credentials.credentials
+
 @app.post("/process", response_model=IntentResponse)
-async def process_intent(intent: IntentObject):
+async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api_key)):
     try:
         content = intent.content
         sender = intent.metadata.get("sender", "unknown")
