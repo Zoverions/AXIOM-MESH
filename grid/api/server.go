@@ -126,6 +126,54 @@ func (s *Server) Start(addr string) error {
 
 	http.HandleFunc("/ws/graph", s.handleGraphWebSocket)
 
+	http.HandleFunc("/ccip", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "GET" {
+			messageID := r.URL.Query().Get("messageId")
+			if messageID == "" {
+				http.Error(w, "messageId parameter required", http.StatusBadRequest)
+				return
+			}
+			msg, ok := s.ledger.GetCCIPMessage(messageID)
+			if !ok {
+				http.Error(w, "Message not found", http.StatusNotFound)
+				return
+			}
+			json.NewEncoder(w).Encode(msg)
+		} else if r.Method == "POST" {
+			var msg types.CCIPMessage
+			isSync := r.URL.Query().Get("sync") == "true"
+
+			if err := json.NewDecoder(r.Body).Decode(&msg); err == nil {
+				if msg.MessageID == "" {
+					http.Error(w, "message_id is required", http.StatusBadRequest)
+					return
+				}
+
+				if _, exists := s.ledger.GetCCIPMessage(msg.MessageID); exists && isSync {
+					json.NewEncoder(w).Encode(map[string]string{"status": "already_synced"})
+					return
+				}
+
+				if msg.Status == "" {
+					msg.Status = "received"
+				}
+
+				s.ledger.AddCCIPMessage(msg)
+
+				if !isSync && s.p2pNode != nil {
+					s.p2pNode.BroadcastCCIPMessage(msg)
+				}
+
+				json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+			} else {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			}
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
 	return http.ListenAndServe(addr, nil)
 }
 

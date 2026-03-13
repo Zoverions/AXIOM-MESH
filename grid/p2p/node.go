@@ -51,6 +51,19 @@ func (n *Node) BroadcastWebState(state types.WebState) {
 	}
 }
 
+func (n *Node) BroadcastCCIPMessage(msg types.CCIPMessage) {
+	log.Printf("P2P Node %s: Broadcasting CCIP message %s to %d peers", n.ID, msg.MessageID, len(n.Peers))
+	for _, peerID := range n.Peers {
+		addr, ok := n.PeerAddresses[peerID]
+		if !ok {
+			log.Printf("P2P Node %s: No address found for peer %s, skipping CCIP sync", n.ID, peerID)
+			continue
+		}
+		log.Printf("P2P Node %s: Syncing CCIP message with peer %s at %s", n.ID, peerID, addr)
+		// In a real implementation, we would perform an HTTP POST to addr + "/ccip?sync=true"
+	}
+}
+
 func (n *Node) QueryNetwork(query string, proof string) {
 	log.Printf("P2P Node %s: Querying network for '%s' with ZKP", n.ID, query)
 	// Mock implementation of network-wide graph query via WebSockets
