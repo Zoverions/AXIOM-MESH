@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 import uuid
+import random
 from typing import Dict, Any
 import requests
 import os
@@ -85,6 +86,11 @@ async def process_intent(intent: IntentObject):
         # Handle special Code Execution command
         if content.startswith("/exec"):
             code = content[len("/exec"):].strip()
+            # MiroFish Spatial Security Check
+            # Assuming 'user_node' is the origin for standard /exec commands
+            if not context_engine.miro_mapper.is_operation_allowed("user_node", "shell_execution"):
+                return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="MiroFish Spatial Block: Unauthorized compliance attempt detected.", status="error")
+
             # The Arena validation
             if not arena.verify(action_intent="execute code", proposed_execution=code):
                 return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Arena Security Halt: Action lacks absolute confidence or exhibits guessing.", status="error")
@@ -103,7 +109,24 @@ async def process_intent(intent: IntentObject):
 
         # Standard LLM handling with Tier 1 and Tier 3 memory
         context = await context_engine.get_context(content)
-        raw_response = await llm.process(context)
+
+        # Divergence Engine sampling perturbations
+        sampling_params = context_engine.divergence_engine.apply_sampling_perturbation({})
+        freq_penalty = sampling_params.get("frequency_penalty", 0.0)
+        pres_penalty = sampling_params.get("presence_penalty", 0.0)
+
+        # Periodic RIKER Hallucination Probe
+        if random.random() < 0.1: # 10% chance to inject probe
+            probes = arena.riker.get_hallucination_probes()
+            if probes:
+                probe = random.choice(probes)
+                probe_q = f"What is the {probe['attribute']} of {probe['entity']}?"
+                # Hallucination probe always uses base params to avoid confounding factors
+                probe_res = await llm.process(f"Axiom: {context_engine.axioms}\n\nQuestion: {probe_q}")
+                if not arena.check_hallucination_response(probe_res):
+                    return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="System Halt: RIKER Hallucination Probe failure. LLM fabricated data for non-existent CSU entity.", status="error")
+
+        raw_response = await llm.process(context, frequency_penalty=freq_penalty, presence_penalty=pres_penalty)
 
         # The Pulse Check
         if pulse.measure(raw_response):
