@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/axiom-mesh/grid/blockchain"
+	"github.com/axiom-mesh/grid/p2p"
 	"strings"
 
 	"github.com/axiom-mesh/grid/consensus"
@@ -15,12 +16,14 @@ import (
 
 type Server struct {
 	ledger   *blockchain.Ledger
+	p2pNode  *p2p.Node
 	upgrader websocket.Upgrader
 }
 
-func NewServer(ledger *blockchain.Ledger) *Server {
+func NewServer(ledger *blockchain.Ledger, p2pNode *p2p.Node) *Server {
 	return &Server{
-		ledger: ledger,
+		ledger:  ledger,
+		p2pNode: p2pNode,
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool { return true },
 		},
@@ -65,8 +68,22 @@ func (s *Server) Start(addr string) error {
 			json.NewEncoder(w).Encode(state)
 		} else if r.Method == "POST" {
 			var state types.WebState
+			isSync := r.URL.Query().Get("sync") == "true"
+
 			if err := json.NewDecoder(r.Body).Decode(&state); err == nil {
+				// 1. Check if already in ledger to avoid redundant processing
+				if _, exists := s.ledger.GetWebState(state.URL); exists && isSync {
+					json.NewEncoder(w).Encode(map[string]string{"status": "already_synced"})
+					return
+				}
+
 				s.ledger.AddWebState(state)
+
+				// 2. Only broadcast if it's NOT a sync request from another node
+				if !isSync && s.p2pNode != nil {
+					s.p2pNode.BroadcastWebState(state)
+				}
+
 				json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 			} else {
 				http.Error(w, err.Error(), http.StatusBadRequest)
