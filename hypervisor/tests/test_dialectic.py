@@ -32,11 +32,8 @@ async def test_synthesize_normal_prompt():
 async def test_synthesize_no_llm_fallback():
     orchestrator = DialecticOrchestrator(llm=None)
     prompt = "AI safety"
-    result = await orchestrator.synthesize(prompt)
-
-    assert f"Affirmative view on '{prompt}':" in result
-    assert f"Negative view on '{prompt}':" in result
-    assert "-> Conclusion: A balanced approach is necessary." in result
+    with pytest.raises(ValueError, match="LLM provider is required for dialectic synthesis."):
+        await orchestrator.synthesize(prompt)
 
 @pytest.mark.asyncio
 async def test_synthesize_empty_prompt():

@@ -1,11 +1,17 @@
 package p2p
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"log"
 	"net"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/axiom-mesh/grid/types"
+	"github.com/gorilla/websocket"
 )
 
 type Node struct {
@@ -30,11 +36,29 @@ func (n *Node) Start() {
 
 func (n *Node) BroadcastGraphUpdate(node types.GraphNode, edges []types.GraphEdge) {
 	log.Printf("P2P Node %s: Broadcasting graph update for node %s", n.ID, node.ID)
-	for _, peer := range n.Peers {
-		// In a real P2P system, we'd have a mapping of peer IDs to their API addresses.
-		// For this mock, we assume peers are reachable on localhost with a specific naming convention or discovery.
-		// Since we only have one node in this environment, we just log it.
-		log.Printf("P2P Node %s: Syncing graph with peer %s (mocked)", n.ID, peer)
+	for _, peerID := range n.Peers {
+		addr, ok := n.PeerAddresses[peerID]
+		if !ok {
+			continue
+		}
+		wsURL := strings.Replace(addr, "http://", "ws://", 1) + "/ws/graph"
+		go func(urlStr string) {
+			c, _, err := websocket.DefaultDialer.Dial(urlStr, nil)
+			if err != nil {
+				log.Printf("P2P Node %s: Failed to connect to %s: %v", n.ID, urlStr, err)
+				return
+			}
+			defer c.Close()
+
+			req := map[string]interface{}{
+				"type":  "sync",
+				"node":  node,
+				"edges": edges,
+			}
+			if err := c.WriteJSON(req); err != nil {
+				log.Printf("P2P Node %s: Failed to write to %s: %v", n.ID, urlStr, err)
+			}
+		}(wsURL)
 	}
 }
 
@@ -47,7 +71,16 @@ func (n *Node) BroadcastWebState(state types.WebState) {
 			continue
 		}
 		log.Printf("P2P Node %s: Syncing web state with peer %s at %s", n.ID, peerID, addr)
-		// In a real implementation, we would perform an HTTP POST to addr + "/cache?sync=true"
+
+		go func(a string) {
+			data, _ := json.Marshal(state)
+			resp, err := http.Post(a+"/cache?sync=true", "application/json", bytes.NewBuffer(data))
+			if err != nil {
+				log.Printf("P2P Node %s: Failed to sync with %s: %v", n.ID, a, err)
+				return
+			}
+			resp.Body.Close()
+		}(addr)
 	}
 }
 
@@ -66,7 +99,36 @@ func (n *Node) BroadcastCCIPMessage(msg types.CCIPMessage) {
 
 func (n *Node) QueryNetwork(query string, proof string) {
 	log.Printf("P2P Node %s: Querying network for '%s' with ZKP", n.ID, query)
-	// Mock implementation of network-wide graph query via WebSockets
+	for _, peerID := range n.Peers {
+		addr, ok := n.PeerAddresses[peerID]
+		if !ok {
+			continue
+		}
+		wsURL := strings.Replace(addr, "http://", "ws://", 1) + "/ws/graph"
+		go func(urlStr string) {
+			c, _, err := websocket.DefaultDialer.Dial(urlStr, nil)
+			if err != nil {
+				log.Printf("P2P Node %s: Failed to connect to %s: %v", n.ID, urlStr, err)
+				return
+			}
+			defer c.Close()
+
+			req := map[string]interface{}{
+				"type":  "query",
+				"query": query,
+				"proof": proof,
+			}
+			if err := c.WriteJSON(req); err != nil {
+				log.Printf("P2P Node %s: Failed to write query to %s: %v", n.ID, urlStr, err)
+				return
+			}
+
+			var res map[string]interface{}
+			if err := c.ReadJSON(&res); err == nil {
+				log.Printf("P2P Node %s: Received query result from %s: %v", n.ID, urlStr, res)
+			}
+		}(wsURL)
+	}
 }
 
 func (n *Node) listenForPeers() {
@@ -84,7 +146,7 @@ func (n *Node) listenForPeers() {
 
 	buf := make([]byte, 1024)
 	for {
-		nBytes, _, err := conn.ReadFromUDP(buf)
+		nBytes, remoteAddr, err := conn.ReadFromUDP(buf)
 		if err != nil {
 			log.Printf("P2P Node %s: Error reading UDP: %v", n.ID, err)
 			continue
@@ -100,7 +162,8 @@ func (n *Node) listenForPeers() {
 			}
 			if !found {
 				n.Peers = append(n.Peers, peerID)
-				log.Printf("P2P Node %s: Discovered new peer: %s", n.ID, peerID)
+				n.PeerAddresses[peerID] = fmt.Sprintf("http://%s:5000", remoteAddr.IP.String())
+				log.Printf("P2P Node %s: Discovered new peer: %s at %s", n.ID, peerID, n.PeerAddresses[peerID])
 			}
 		}
 	}

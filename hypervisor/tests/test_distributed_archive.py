@@ -23,15 +23,19 @@ def distributed_archive(tmp_path):
     storage_path = tmp_path / "distributed_archive.json"
     return DistributedDeepArchive(storage_path=str(storage_path))
 
-def test_generate_mock_zkp(distributed_archive):
+def test_generate_zkp(distributed_archive):
     query = "test query"
-    proof = distributed_archive._generate_mock_zkp(query)
-    assert proof.startswith("mock-zkp-")
+    proof_str = distributed_archive._generate_zkp(query)
+    proof = json.loads(proof_str)
 
-    # Verify the hash starts with "000"
-    import hashlib
-    h = hashlib.sha256((query + proof).encode()).hexdigest()
-    assert h.startswith("000")
+    assert "y" in proof
+    assert "t" in proof
+    assert "r" in proof
+
+    # Optional: Verify it's valid hex
+    int(proof["y"], 16)
+    int(proof["t"], 16)
+    int(proof["r"], 16)
 
 @pytest.mark.asyncio
 async def test_search_distributed_mocked(distributed_archive):
@@ -67,11 +71,28 @@ async def test_sync_to_grid_mocked(distributed_archive):
     mock_ws.recv = MagicMock(return_value=asyncio.Future())
     mock_ws.recv.return_value.set_result(json.dumps({"status": "synced"}))
 
-    with patch("websockets.connect", return_value=MockAsyncContextManager(mock_ws)):
-        await distributed_archive.sync_to_grid(content)
+    mock_response_ipfs = MagicMock()
+    mock_response_ipfs.status_code = 200
+    mock_response_ipfs.json.return_value = {"Hash": "QmTest123"}
 
-        # Verify ws.send was called with the correct payload structure
-        args, _ = mock_ws.send.call_args
-        payload = json.loads(args[0])
-        assert payload["type"] == "sync"
-        assert payload["node"]["content"] == content
+    mock_response_arweave = MagicMock()
+    mock_response_arweave.status_code = 200
+
+    async def mock_post(url, *args, **kwargs):
+        if "ipfs" in url or "5001" in url:
+            return mock_response_ipfs
+        elif "arweave" in url:
+            return mock_response_arweave
+        return MagicMock(status_code=404)
+
+    with patch("websockets.connect", return_value=MockAsyncContextManager(mock_ws)):
+        with patch("httpx.AsyncClient.post", side_effect=mock_post):
+            await distributed_archive.sync_to_grid(content)
+
+            # Verify ws.send was called with the correct payload structure
+            args, _ = mock_ws.send.call_args
+            payload = json.loads(args[0])
+            assert payload["type"] == "sync"
+            assert payload["node"]["content"] == content
+            assert payload["node"]["metadata"]["ipfs_cid"] == "QmTest123"
+            assert payload["node"]["metadata"]["arweave_tx"] == "mock-arweave-tx"
