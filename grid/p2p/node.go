@@ -4,6 +4,8 @@ import (
 	"log"
 	"net"
 	"time"
+
+	"github.com/axiom-mesh/grid/types"
 )
 
 type Node struct {
@@ -22,6 +24,21 @@ func (n *Node) Start() {
 	log.Printf("P2P Node %s started", n.ID)
 	go n.listenForPeers()
 	go n.discoverSubnets()
+}
+
+func (n *Node) BroadcastGraphUpdate(node types.GraphNode, edges []types.GraphEdge) {
+	log.Printf("P2P Node %s: Broadcasting graph update for node %s", n.ID, node.ID)
+	for _, peer := range n.Peers {
+		// In a real P2P system, we'd have a mapping of peer IDs to their API addresses.
+		// For this mock, we assume peers are reachable on localhost with a specific naming convention or discovery.
+		// Since we only have one node in this environment, we just log it.
+		log.Printf("P2P Node %s: Syncing graph with peer %s (mocked)", n.ID, peer)
+	}
+}
+
+func (n *Node) QueryNetwork(query string, proof string) {
+	log.Printf("P2P Node %s: Querying network for '%s' with ZKP", n.ID, query)
+	// Mock implementation of network-wide graph query via WebSockets
 }
 
 func (n *Node) listenForPeers() {
