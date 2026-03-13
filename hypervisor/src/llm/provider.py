@@ -1,5 +1,6 @@
 import os
 import httpx
+from src.evolution.hardware import HardwareScanner
 
 class LLMProvider:
     def __init__(self):
@@ -8,8 +9,14 @@ class LLMProvider:
         self.anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
         # By default, use local unless explicitly allowed
         self.allow_cloud = os.environ.get("ALLOW_CLOUD_LLM", "false").lower() == "true"
-        self.local_model = os.environ.get("LOCAL_MODEL_FALLBACK", "llama3:8b")
         self.provider_preference = os.environ.get("LLM_PROVIDER", "local").lower()
+
+        self.hardware_scanner = HardwareScanner()
+        self.footprint = self.hardware_scanner.scan()
+        self.recommended_models = self.hardware_scanner.recommend_models(self.footprint)
+
+        # Override with environment variable if provided, otherwise use hardware recommendation
+        self.local_model = os.environ.get("LOCAL_MODEL_FALLBACK", self.recommended_models["default"])
 
     async def process(self, context: str, frequency_penalty: float = 0.0, presence_penalty: float = 0.0) -> str:
         """
@@ -45,10 +52,19 @@ class LLMProvider:
         return await self._call_local(context, temperature=temperature)
 
     async def _call_local(self, context: str, temperature: float = 0.7) -> str:
+        # Infer task from context to select optimal local model
+        ctx_lower = context.lower()
+        if "code" in ctx_lower or "python" in ctx_lower or "def " in ctx_lower or "function" in ctx_lower:
+            model = self.recommended_models.get("coding", self.local_model)
+        elif "reason" in ctx_lower or "explain" in ctx_lower or "why" in ctx_lower or "analyze" in ctx_lower:
+            model = self.recommended_models.get("reasoning", self.local_model)
+        else:
+            model = self.local_model
+
         # Standard local Ollama fallback endpoint logic
         url = "http://localhost:11434/api/generate"
         payload = {
-            "model": self.local_model,
+            "model": model,
             "prompt": context,
             "stream": False,
             "options": {
@@ -61,7 +77,7 @@ class LLMProvider:
                 response.raise_for_status()
                 return response.json().get("response", "")
         except Exception as e:
-            return f"[Local {self.local_model} Error] Failed to process intelligently: {e}"
+            return f"[Local {model} Error] Failed to process intelligently: {e}"
 
     async def _call_openai(self, context: str, model: str = "gpt-4o-mini", temperature: float = 0.7, frequency_penalty: float = 0.0, presence_penalty: float = 0.0) -> str:
         url = "https://api.openai.com/v1/chat/completions"
