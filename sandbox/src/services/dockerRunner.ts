@@ -28,18 +28,20 @@ export async function runCode(language: string, code: string): Promise<{ stdout:
             stderr += data.toString();
         });
 
+        // Add a timeout to kill long-running processes (10 seconds)
+        const timer = setTimeout(() => {
+            proc.kill();
+            resolve({ stdout, stderr: stderr + '\nExecution timed out' });
+        }, 10000);
+
         proc.on('close', (code) => {
+            clearTimeout(timer);
             resolve({ stdout, stderr });
         });
 
         proc.on('error', (error) => {
+            clearTimeout(timer);
             resolve({ stdout: '', stderr: error.message || 'Execution failed' });
         });
-
-        // Add a timeout to kill long-running processes (10 seconds)
-        setTimeout(() => {
-            proc.kill();
-            resolve({ stdout, stderr: stderr + '\nExecution timed out' });
-        }, 10000);
     });
 }
