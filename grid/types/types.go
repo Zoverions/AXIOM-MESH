@@ -46,6 +46,14 @@ type DistributedGraph struct {
 	Edges []GraphEdge          `json:"edges"`
 }
 
+type CCIPMessage struct {
+	MessageID   string `json:"message_id"`
+	SourceChain string `json:"source_chain"`
+	TargetChain string `json:"target_chain"`
+	Sender      string `json:"sender"`
+	Receiver    string `json:"receiver"`
+	Payload     string `json:"payload"`
+	Status      string `json:"status"`
 type Swarm struct {
 	ID     string   `json:"id"`
 	TaskID string   `json:"taskId"`

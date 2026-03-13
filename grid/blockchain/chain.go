@@ -7,6 +7,12 @@ import (
 )
 
 type Ledger struct {
+	mu           sync.RWMutex
+	Skills       []types.SkillVector
+	WebCache     map[string]types.WebState
+	Graph        types.DistributedGraph
+	Bonds        map[string]types.ComputeBond
+	CCIPMessages map[string]types.CCIPMessage
 	mu       sync.RWMutex
 	Skills   []types.SkillVector
 	WebCache map[string]types.WebState
@@ -23,6 +29,8 @@ func NewLedger() *Ledger {
 			Nodes: make(map[string]types.GraphNode),
 			Edges: make([]types.GraphEdge, 0),
 		},
+		Bonds:        make(map[string]types.ComputeBond),
+		CCIPMessages: make(map[string]types.CCIPMessage),
 		Bonds:  make(map[string]types.ComputeBond),
 		Swarms: make(map[string]types.Swarm),
 	}
@@ -132,4 +140,17 @@ func (l *Ledger) GetGraph() types.DistributedGraph {
 		Nodes: nodesCopy,
 		Edges: edgesCopy,
 	}
+}
+
+func (l *Ledger) AddCCIPMessage(msg types.CCIPMessage) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.CCIPMessages[msg.MessageID] = msg
+}
+
+func (l *Ledger) GetCCIPMessage(messageID string) (types.CCIPMessage, bool) {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	msg, ok := l.CCIPMessages[messageID]
+	return msg, ok
 }
