@@ -51,6 +51,15 @@ async def startup_event():
 async def shutdown_event():
     autoresearch_daemon.stop()
     auto_training_loop.stop()
+pulse = EntropyMonitor()
+arena = VerificationArena()
+llm = LLMProvider()
+dialectic = DialecticOrchestrator(llm=llm)
+evolution = EvolutionEngine()
+network_sync = NetworkSync()
+action_engine = ActionEngine()
+signal_extractor = SignalExtractor()
+opd = OnPolicyDistillation()
 
 SANDBOX_URL = os.environ.get("SANDBOX_URL", "http://localhost:4000/execute")
 
@@ -86,7 +95,7 @@ async def process_intent(intent: IntentObject):
 
         # Handle special Dialectic command
         if content.startswith("/dialectic"):
-            synthesis = dialectic.synthesize(content[len("/dialectic"):].strip())
+            synthesis = await dialectic.synthesize(content[len("/dialectic"):].strip())
             return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=synthesis, status="success")
 
         # Handle special Code Execution command
