@@ -2,7 +2,9 @@ import json
 import os
 import uuid
 import re
-from typing import List, Dict
+import asyncio
+import hashlib
+from typing import List, Dict, Optional
 
 _STOPWORDS = frozenset({"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "with", "is", "are", "was", "were", "it", "this", "that", "of", "by", "as"})
 _NON_WORD_PATTERN = re.compile(r'[^\w\s]')
@@ -128,3 +130,102 @@ class DeepArchive:
 
         with open(self.storage_path, "w") as f:
             json.dump(data, f, indent=2)
+
+class DistributedDeepArchive(DeepArchive):
+    """
+    Extends DeepArchive to support decentralized graph queries over the Grid network
+    using WebSockets and Zero-Knowledge Proofs.
+    """
+    def __init__(self, storage_path="data/archive.json", grid_ws_url="ws://localhost:5000/ws/graph"):
+        super().__init__(storage_path)
+        self.grid_ws_url = grid_ws_url
+
+    def _generate_mock_zkp(self, query: str) -> str:
+        """
+        Generates a mock ZKP proof that starts with "000" when hashed with the query.
+        This is a computationally simple brute-force for the mock.
+        """
+        nonce = 0
+        while True:
+            proof = f"mock-zkp-{nonce}"
+            h = hashlib.sha256((query + proof).encode()).hexdigest()
+            if h.startswith("000"):
+                return proof
+            nonce += 1
+
+    async def search_distributed(self, query: str) -> List[Dict]:
+        """
+        Searches both the local archive and the distributed Grid network.
+        """
+        # Local search
+        local_results = self.search(query)
+
+        # Distributed search via Grid
+        try:
+            import websockets
+            async with websockets.connect(self.grid_ws_url) as ws:
+                proof = self._generate_mock_zkp(query)
+                payload = {
+                    "type": "query",
+                    "query": query,
+                    "proof": proof
+                }
+                await ws.send(json.dumps(payload))
+
+                response = await ws.recv()
+                grid_data = json.loads(response)
+
+                if "nodes" in grid_data:
+                    for node in grid_data["nodes"]:
+                        local_results.append({
+                            "content": node["content"],
+                            "metadata": {**(node.get("metadata") or {}), "source": "grid_p2p"}
+                        })
+        except Exception as e:
+            print(f"Distributed search error: {e}")
+
+        return local_results
+
+    async def sync_to_grid(self, content: str, metadata: Dict = None):
+        """
+        Adds to local archive and syncs to the Grid network.
+        """
+        # Find all current node IDs to identify the new one after add()
+        with open(self.storage_path, "r") as f:
+            data = json.load(f)
+        old_nodes = set(data.get("nodes", {}).keys())
+
+        self.add(content, metadata)
+
+        # Sync to Grid
+        try:
+            import websockets
+            async with websockets.connect(self.grid_ws_url) as ws:
+                with open(self.storage_path, "r") as f:
+                    data = json.load(f)
+
+                new_nodes = set(data.get("nodes", {}).keys()) - old_nodes
+                if not new_nodes:
+                    # In case of duplicates or other issues, fall back to last node if it exists
+                    if data.get("nodes"):
+                        node_id = list(data["nodes"].keys())[-1]
+                    else:
+                        print("Sync error: No nodes found in archive.")
+                        return
+                else:
+                    node_id = list(new_nodes)[0]
+
+                node = data["nodes"][node_id]
+
+                # Find related edges
+                edges = [e for e in data["edges"] if e["source"] == node_id or e["target"] == node_id]
+
+                payload = {
+                    "type": "sync",
+                    "node": node,
+                    "edges": edges
+                }
+                await ws.send(json.dumps(payload))
+                await ws.recv() # Await status
+        except Exception as e:
+            print(f"Grid sync error: {e}")
