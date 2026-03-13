@@ -2,6 +2,7 @@ import json
 import httpx
 from html.parser import HTMLParser
 from urllib.parse import urljoin, urlparse
+from src.evolution.hardware import HardwareScanner
 
 class ActionEngineParser(HTMLParser):
     def __init__(self, base_url):
@@ -99,9 +100,11 @@ class ActionEngine:
             print(f"[ActionEngine] Failed to fetch {url}: {e}")
 
 class EvolutionEngine:
-    def __init__(self):
+    def __init__(self, hardware_scanner=None):
         self.skills = {}
         self.rollout_buffer = []
+        self.hardware_scanner = hardware_scanner or HardwareScanner()
+        self.footprint = self.hardware_scanner.scan()
 
     def store_rollout(self, action: str, signal: dict, sender_identity: str):
         """
@@ -117,12 +120,29 @@ class EvolutionEngine:
         """
         Recursive update loop via Agentic Critical Training (ACT).
         Extracts contrastive logic equations by comparing baseline vs mutated performance.
+        Hardware-Aware: Adjusts the contrastive vector based on the computing footprint.
         """
         improvement = baseline_loss - mutated_loss
         if improvement > 0:
             # The mutation improved the loss (reduced entropy)
-            # We calculate a contrastive vector mimicking the delta
-            contrastive_vector = f"v_contrastive(delta_loss={improvement:.4f}, task='{task}')"
+            # We calculate a contrastive vector mimicking the delta, scaled by hardware
+
+            # Determine optimization tag based on footprint
+            if self.footprint.get("vram_mb", 0) >= 12000:
+                hardware_tag = "high_fidelity"
+                scaling = 1.0
+            elif self.footprint.get("total_ram_gb", 0) >= 16:
+                hardware_tag = "balanced"
+                scaling = 0.8
+            else:
+                hardware_tag = "low_footprint_optimized"
+                scaling = 0.5
+
+            contrastive_vector = (
+                f"v_contrastive(delta_loss={improvement:.4f}, task='{task}', "
+                f"hardware='{hardware_tag}', scaling={scaling})"
+            )
+
             skill_name = self.extract_skill(task, mutated_code, vector_repr=contrastive_vector)
             return skill_name
 
@@ -133,7 +153,8 @@ class EvolutionEngine:
         self.skills[skill_name] = {
             "task": task_description,
             "code_ref": hash(successful_execution),
-            "vector": vector_repr
+            "vector": vector_repr,
+            "hardware_footprint": self.footprint
         }
         return skill_name
 
