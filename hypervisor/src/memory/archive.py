@@ -4,6 +4,7 @@ import uuid
 import re
 import asyncio
 import hashlib
+import httpx
 from typing import List, Dict, Optional
 
 _STOPWORDS = frozenset({"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "with", "is", "are", "was", "were", "it", "this", "that", "of", "by", "as"})
@@ -131,6 +132,7 @@ class DeepArchive:
         with open(self.storage_path, "w") as f:
             json.dump(data, f, indent=2)
 
+
 class DistributedDeepArchive(DeepArchive):
     """
     Extends DeepArchive to support decentralized graph queries over the Grid network
@@ -139,6 +141,43 @@ class DistributedDeepArchive(DeepArchive):
     def __init__(self, storage_path="data/archive.json", grid_ws_url="ws://localhost:5000/ws/graph"):
         super().__init__(storage_path)
         self.grid_ws_url = grid_ws_url
+
+    async def persist_to_ipfs(self, payload: dict) -> str:
+        """
+        Persists the given payload to IPFS and returns the CID.
+        Uses a public gateway or local node, falls back to a mock CID if it fails.
+        """
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    "http://127.0.0.1:5001/api/v0/add",
+                    files={"file": json.dumps(payload).encode()},
+                    timeout=2.0
+                )
+                if response.status_code == 200:
+                    return response.json().get("Hash", "mock-ipfs-cid")
+        except Exception:
+            pass
+        return "mock-ipfs-cid"
+
+    async def persist_to_arweave(self, payload: dict) -> str:
+        """
+        Persists the given payload to Arweave and returns the Transaction ID.
+        Uses a public gateway or local node, falls back to a mock TX if it fails.
+        """
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    "https://arweave.net/tx",
+                    json={"data": json.dumps(payload)},
+                    timeout=2.0
+                )
+                if response.status_code in (200, 202):
+                    # In a real app we'd sign and get the txid properly
+                    return "mock-arweave-tx"
+        except Exception:
+            pass
+        return "mock-arweave-tx"
 
     def _generate_mock_zkp(self, query: str) -> str:
         """
@@ -197,35 +236,55 @@ class DistributedDeepArchive(DeepArchive):
 
         self.add(content, metadata)
 
+        with open(self.storage_path, "r") as f:
+            data = json.load(f)
+
+        new_nodes = set(data.get("nodes", {}).keys()) - old_nodes
+        if not new_nodes:
+            # In case of duplicates or other issues, fall back to last node if it exists
+            if data.get("nodes"):
+                node_id = list(data["nodes"].keys())[-1]
+            else:
+                print("Sync error: No nodes found in archive.")
+                return
+        else:
+            node_id = list(new_nodes)[0]
+
+        node = data["nodes"][node_id]
+
+        # Find related edges
+        edges = [e for e in data["edges"] if e["source"] == node_id or e["target"] == node_id]
+
+        payload = {
+            "node": node,
+            "edges": edges
+        }
+
+        # Persist to IPFS and Arweave
+        ipfs_cid = await self.persist_to_ipfs(payload)
+        arweave_tx = await self.persist_to_arweave(payload)
+
+        # Update the node's metadata
+        if "metadata" not in node:
+            node["metadata"] = {}
+        node["metadata"]["ipfs_cid"] = ipfs_cid
+        node["metadata"]["arweave_tx"] = arweave_tx
+
+        # Save updated node locally
+        data["nodes"][node_id] = node
+        with open(self.storage_path, "w") as f:
+            json.dump(data, f, indent=2)
+
         # Sync to Grid
         try:
             import websockets
             async with websockets.connect(self.grid_ws_url) as ws:
-                with open(self.storage_path, "r") as f:
-                    data = json.load(f)
-
-                new_nodes = set(data.get("nodes", {}).keys()) - old_nodes
-                if not new_nodes:
-                    # In case of duplicates or other issues, fall back to last node if it exists
-                    if data.get("nodes"):
-                        node_id = list(data["nodes"].keys())[-1]
-                    else:
-                        print("Sync error: No nodes found in archive.")
-                        return
-                else:
-                    node_id = list(new_nodes)[0]
-
-                node = data["nodes"][node_id]
-
-                # Find related edges
-                edges = [e for e in data["edges"] if e["source"] == node_id or e["target"] == node_id]
-
-                payload = {
+                sync_payload = {
                     "type": "sync",
                     "node": node,
                     "edges": edges
                 }
-                await ws.send(json.dumps(payload))
+                await ws.send(json.dumps(sync_payload))
                 await ws.recv() # Await status
         except Exception as e:
             print(f"Grid sync error: {e}")

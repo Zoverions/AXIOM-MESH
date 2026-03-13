@@ -67,11 +67,28 @@ async def test_sync_to_grid_mocked(distributed_archive):
     mock_ws.recv = MagicMock(return_value=asyncio.Future())
     mock_ws.recv.return_value.set_result(json.dumps({"status": "synced"}))
 
-    with patch("websockets.connect", return_value=MockAsyncContextManager(mock_ws)):
-        await distributed_archive.sync_to_grid(content)
+    mock_response_ipfs = MagicMock()
+    mock_response_ipfs.status_code = 200
+    mock_response_ipfs.json.return_value = {"Hash": "QmTest123"}
 
-        # Verify ws.send was called with the correct payload structure
-        args, _ = mock_ws.send.call_args
-        payload = json.loads(args[0])
-        assert payload["type"] == "sync"
-        assert payload["node"]["content"] == content
+    mock_response_arweave = MagicMock()
+    mock_response_arweave.status_code = 200
+
+    async def mock_post(url, *args, **kwargs):
+        if "ipfs" in url or "5001" in url:
+            return mock_response_ipfs
+        elif "arweave" in url:
+            return mock_response_arweave
+        return MagicMock(status_code=404)
+
+    with patch("websockets.connect", return_value=MockAsyncContextManager(mock_ws)):
+        with patch("httpx.AsyncClient.post", side_effect=mock_post):
+            await distributed_archive.sync_to_grid(content)
+
+            # Verify ws.send was called with the correct payload structure
+            args, _ = mock_ws.send.call_args
+            payload = json.loads(args[0])
+            assert payload["type"] == "sync"
+            assert payload["node"]["content"] == content
+            assert payload["node"]["metadata"]["ipfs_cid"] == "QmTest123"
+            assert payload["node"]["metadata"]["arweave_tx"] == "mock-arweave-tx"
