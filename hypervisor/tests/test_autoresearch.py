@@ -20,17 +20,29 @@ def test_autoresearch_daemon_mock_flow():
     assert not daemon.running
 
     # Test manual forage (to avoid waiting 10s in thread)
-    # It should fallback to mock because llm/ncp are missing
-    daemon._forage()
+    # The topic is random from a list (e.g., 'decentralized consensus').
+    # Without ncp/llm, it uses the hardcoded topics and hits real API.
+    # To mock the exception case, we can monkeypatch httpx.AsyncClient.
+    import httpx
 
-    # Verify something was added to the archive
-    assert mock_archive.add.called
-    args, kwargs = mock_archive.add.call_args
-    assert "content" in kwargs
-    assert kwargs["content"] in daemon.mock_data_sources
-    assert "metadata" in kwargs
-    # It falls back to mock metadata when real forage fails or has no data
-    assert kwargs["metadata"]["source"] == "autoresearch_daemon_mock"
+    class FakeExceptionClient:
+        async def __aenter__(self):
+            return self
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+        async def get(self, *args, **kwargs):
+            raise Exception("Network Error")
+
+    original_client = httpx.AsyncClient
+    httpx.AsyncClient = FakeExceptionClient
+    try:
+        daemon._forage()
+    finally:
+        httpx.AsyncClient = original_client
+
+    # Verify that archive.add was NOT called, because it handles exceptions
+    # by logging and returning, instead of inserting mock data.
+    assert not mock_archive.add.called
 
 @pytest.mark.anyio
 async def test_autoresearch_daemon_real_forage_mocked():
