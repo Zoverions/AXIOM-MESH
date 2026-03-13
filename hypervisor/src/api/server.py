@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 import uuid
+import random
 from typing import Dict, Any
 import requests
 import os
@@ -12,6 +13,7 @@ from src.pulse.arena import VerificationArena
 from src.llm.provider import LLMProvider
 from src.cortex.dialectic import DialecticOrchestrator
 from src.evolution.skill_rl import EvolutionEngine, ActionEngine
+from src.evolution.openclaw import SignalExtractor, OnPolicyDistillation
 from src.evolution.network_sync import NetworkSync
 from src.cortex.autoresearch import AutoResearchDaemon
 from src.evolution.auto_training import AutoTrainingLoop
@@ -41,6 +43,8 @@ dialectic = DialecticOrchestrator()
 evolution = EvolutionEngine()
 network_sync = NetworkSync()
 action_engine = ActionEngine()
+signal_extractor = SignalExtractor()
+opd = OnPolicyDistillation()
 
 SANDBOX_URL = os.environ.get("SANDBOX_URL", "http://localhost:4000/execute")
 
@@ -48,6 +52,31 @@ SANDBOX_URL = os.environ.get("SANDBOX_URL", "http://localhost:4000/execute")
 async def process_intent(intent: IntentObject):
     try:
         content = intent.content
+        sender = intent.metadata.get("sender", "unknown")
+
+        # OpenClaw-RL: Next-State Signal Recovery
+        if context_engine.interaction_history:
+            last_interaction = context_engine.interaction_history[-1]
+            last_response = last_interaction.get("response", "")
+
+            # Extract signals from current intent based on last response
+            signals = signal_extractor.extract_signals(content, last_response)
+
+            if signals["reward"] != 0 or signals["is_directive"]:
+                # Judge rollout via MiroFish PRM
+                miro_score = context_engine.deep_archive.miro_mapper.judge_rollout(
+                    action=last_interaction.get("intent_content", ""),
+                    feedback_signal=signals
+                )
+                # Update reward with PRM Judge's score
+                signals["reward"] = miro_score
+
+                # Store rollout in Evolution Engine
+                evolution.store_rollout(last_interaction.get("intent_content", ""), signals, sender)
+
+                # If it's a directive signal, attempt On-Policy Distillation
+                if signals["is_directive"]:
+                    opd.distill(last_interaction.get("intent_content", ""), signals, sender)
 
         # Handle special Dialectic command
         if content.startswith("/dialectic"):
@@ -57,6 +86,11 @@ async def process_intent(intent: IntentObject):
         # Handle special Code Execution command
         if content.startswith("/exec"):
             code = content[len("/exec"):].strip()
+            # MiroFish Spatial Security Check
+            # Assuming 'user_node' is the origin for standard /exec commands
+            if not context_engine.miro_mapper.is_operation_allowed("user_node", "shell_execution"):
+                return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="MiroFish Spatial Block: Unauthorized compliance attempt detected.", status="error")
+
             # The Arena validation
             if not arena.verify(action_intent="execute code", proposed_execution=code):
                 return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Arena Security Halt: Action lacks absolute confidence or exhibits guessing.", status="error")
@@ -76,6 +110,25 @@ async def process_intent(intent: IntentObject):
         # Standard LLM handling with Tier 1 and Tier 3 memory
         context = await context_engine.get_context(intent)
         raw_response = await llm.process(context)
+        context = await context_engine.get_context(content)
+
+        # Divergence Engine sampling perturbations
+        sampling_params = context_engine.divergence_engine.apply_sampling_perturbation({})
+        freq_penalty = sampling_params.get("frequency_penalty", 0.0)
+        pres_penalty = sampling_params.get("presence_penalty", 0.0)
+
+        # Periodic RIKER Hallucination Probe
+        if random.random() < 0.1: # 10% chance to inject probe
+            probes = arena.riker.get_hallucination_probes()
+            if probes:
+                probe = random.choice(probes)
+                probe_q = f"What is the {probe['attribute']} of {probe['entity']}?"
+                # Hallucination probe always uses base params to avoid confounding factors
+                probe_res = await llm.process(f"Axiom: {context_engine.axioms}\n\nQuestion: {probe_q}")
+                if not arena.check_hallucination_response(probe_res):
+                    return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="System Halt: RIKER Hallucination Probe failure. LLM fabricated data for non-existent CSU entity.", status="error")
+
+        raw_response = await llm.process(context, frequency_penalty=freq_penalty, presence_penalty=pres_penalty)
 
         # The Pulse Check
         if pulse.measure(raw_response):
@@ -87,6 +140,14 @@ async def process_intent(intent: IntentObject):
 
         # Automatically store new interactions in Deep Archive
         context_engine.deep_archive.add(content)
+
+        # Update interaction history for next-state signal recovery
+        context_engine.interaction_history.append({
+            "intent_id": intent.id,
+            "intent_content": content,
+            "response": raw_response,
+            "sender": sender
+        })
 
         return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=raw_response, status="success")
     except Exception as e:

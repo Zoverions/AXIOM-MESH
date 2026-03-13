@@ -14,7 +14,7 @@ class LLMProvider:
         self.local_model = os.environ.get("LOCAL_MODEL_FALLBACK", "llama3:8b")
         self.provider_preference = os.environ.get("LLM_PROVIDER", "local").lower()
 
-    async def process(self, context: str) -> str:
+    async def process(self, context: str, frequency_penalty: float = 0.0, presence_penalty: float = 0.0) -> str:
         """
         Process the intent context. It dynamically routes to the most efficient model.
         Local models are prioritized by default to save API credits, unless ALLOW_CLOUD_LLM is true
@@ -22,27 +22,41 @@ class LLMProvider:
         """
         use_cloud = self.allow_cloud and (self.provider_preference in ["openai", "anthropic"])
 
+        # Temperature Guard: Dynamic scaling based on context length
+        # Prevent 10x fabrication spikes as context exceeds 128K.
+        context_len = len(context)
+        temperature = 0.7 # default
+        if context_len > 128000:
+            temperature = 0.0
+        elif context_len > 64000:
+            temperature = 0.2
+        elif context_len > 32000:
+            temperature = 0.4
+
         # Simple heuristic: if context is extremely large, we might *need* cloud,
         # but only if we have funds (ALLOW_CLOUD_LLM).
-        if len(context) > 10000 and self.allow_cloud and self.openai_key:
-            return await self._call_openai(context, model="gpt-4-turbo")
+        if context_len > 10000 and self.allow_cloud and self.openai_key:
+            return await self._call_openai(context, model="gpt-4-turbo", temperature=temperature, frequency_penalty=frequency_penalty, presence_penalty=presence_penalty)
 
         if use_cloud:
             if self.provider_preference == "openai" and self.openai_key:
-                return await self._call_openai(context)
+                return await self._call_openai(context, temperature=temperature, frequency_penalty=frequency_penalty, presence_penalty=presence_penalty)
             elif self.provider_preference == "anthropic" and self.anthropic_key:
-                return await self._call_anthropic(context)
+                return await self._call_anthropic(context, temperature=temperature)
 
         # Default back to Local LLM (Ollama/Llama.cpp style)
-        return await self._call_local(context)
+        return await self._call_local(context, temperature=temperature)
 
-    async def _call_local(self, context: str) -> str:
+    async def _call_local(self, context: str, temperature: float = 0.7) -> str:
         # Standard local Ollama fallback endpoint logic
         url = "http://localhost:11434/api/generate"
         payload = {
             "model": self.local_model,
             "prompt": context,
-            "stream": False
+            "stream": False,
+            "options": {
+                "temperature": temperature
+            }
         }
         try:
             async with httpx.AsyncClient() as client:
@@ -52,7 +66,7 @@ class LLMProvider:
         except Exception as e:
             return f"[Local {self.local_model} Error] Failed to process intelligently: {e}"
 
-    async def _call_openai(self, context: str, model: str = "gpt-4o-mini") -> str:
+    async def _call_openai(self, context: str, model: str = "gpt-4o-mini", temperature: float = 0.7, frequency_penalty: float = 0.0, presence_penalty: float = 0.0) -> str:
         url = "https://api.openai.com/v1/chat/completions"
         headers = {
             "Authorization": f"Bearer {self.openai_key}",
@@ -60,17 +74,22 @@ class LLMProvider:
         }
         payload = {
             "model": model,
-            "messages": [{"role": "user", "content": context}]
+            "messages": [{"role": "user", "content": context}],
+            "temperature": temperature,
+            "frequency_penalty": frequency_penalty,
+            "presence_penalty": presence_penalty
         }
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.post(url, headers=headers, json=payload, timeout=30.0)
+                # Filter out default 0.0 to avoid cluttering payload if supported
+                actual_payload = {k: v for k, v in payload.items() if v != 0.0 or k in ["model", "messages", "temperature"]}
+                response = await client.post(url, headers=headers, json=actual_payload, timeout=30.0)
                 response.raise_for_status()
                 return response.json()["choices"][0]["message"]["content"]
         except Exception as e:
             return f"[Cloud {model} Error] Failed to process intelligently using OpenAI: {e}"
 
-    async def _call_anthropic(self, context: str) -> str:
+    async def _call_anthropic(self, context: str, temperature: float = 0.7) -> str:
         url = "https://api.anthropic.com/v1/messages"
         headers = {
             "x-api-key": self.anthropic_key,
@@ -80,7 +99,8 @@ class LLMProvider:
         payload = {
             "model": "claude-3-haiku-20240307",
             "max_tokens": 1024,
-            "messages": [{"role": "user", "content": context}]
+            "messages": [{"role": "user", "content": context}],
+            "temperature": temperature
         }
         try:
             async with httpx.AsyncClient() as client:
