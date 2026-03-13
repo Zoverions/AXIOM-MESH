@@ -9,7 +9,12 @@ const types_1 = require("../types");
 const HYPERVISOR_URL = process.env.HYPERVISOR_URL || 'http://localhost:8000';
 async function sendToHypervisor(intent) {
     try {
-        const response = await axios_1.default.post(`${HYPERVISOR_URL}/process`, intent);
+        const apiKey = process.env.HYPERVISOR_API_KEY || '';
+        const response = await axios_1.default.post(`${HYPERVISOR_URL}/process`, intent, {
+            headers: {
+                Authorization: `Bearer ${apiKey}`
+            }
+        });
         return response.data;
     }
     catch (error) {
