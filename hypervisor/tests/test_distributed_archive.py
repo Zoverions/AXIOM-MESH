@@ -23,15 +23,19 @@ def distributed_archive(tmp_path):
     storage_path = tmp_path / "distributed_archive.json"
     return DistributedDeepArchive(storage_path=str(storage_path))
 
-def test_generate_mock_zkp(distributed_archive):
+def test_generate_zkp(distributed_archive):
     query = "test query"
-    proof = distributed_archive._generate_mock_zkp(query)
-    assert proof.startswith("mock-zkp-")
+    proof_str = distributed_archive._generate_zkp(query)
+    proof = json.loads(proof_str)
 
-    # Verify the hash starts with "000"
-    import hashlib
-    h = hashlib.sha256((query + proof).encode()).hexdigest()
-    assert h.startswith("000")
+    assert "y" in proof
+    assert "t" in proof
+    assert "r" in proof
+
+    # Optional: Verify it's valid hex
+    int(proof["y"], 16)
+    int(proof["t"], 16)
+    int(proof["r"], 16)
 
 @pytest.mark.asyncio
 async def test_search_distributed_mocked(distributed_archive):
