@@ -8,6 +8,7 @@ class ContextEngine:
     def __init__(self):
         self.ncp_client = NCPClient()
         self.temporal_state = TemporalStateManager() # Tier 1
+        self.interaction_history = []
         self.axioms = (
             "Thermodynamic Ethics: Maximize organization, minimize chaos. Reduce entropy.\n"
             "Uncertainty Optimization: You must explicitly halt and state 'I do not know' "

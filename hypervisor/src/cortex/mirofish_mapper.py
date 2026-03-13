@@ -95,3 +95,24 @@ class MiroFishMapper:
     def _euclidean_distance(self, p1: Tuple[float, float], p2: Tuple[float, float]) -> float:
         import math
         return math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
+
+    def judge_rollout(self, action: str, feedback_signal: Dict[str, Any]) -> float:
+        """
+        OpenClaw-RL PRM Judge.
+        Scores a 'rollout' (action-feedback pair) using spatial density.
+        Lower density quadrants (novel exploration) are rewarded if feedback is positive.
+        """
+        reward = feedback_signal.get("reward", 0.0)
+
+        # Calculate 'Spatial Novelty' - if we are in a low density area, we boost learning
+        density = len(self.coordinate_plane) / 1000.0 # Simple heuristic
+        novelty_boost = 1.0 / (density + 1.0)
+
+        final_score = reward * (1.0 + novelty_boost)
+        logger.info(f"[🐠] MiroFish PRM Judge scored rollout: {final_score:.4f} (Novelty Boost: {novelty_boost:.2f})")
+
+        return final_score
+
+# Implementation Note:
+# This module will be used by the Context 2.0 Engine to select 'Spatial Clusters'
+# for the prompt, rather than relying on raw cosine similarity.

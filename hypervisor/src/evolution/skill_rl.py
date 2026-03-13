@@ -58,6 +58,17 @@ class ActionEngine:
 class EvolutionEngine:
     def __init__(self):
         self.skills = {}
+        self.rollout_buffer = []
+
+    def store_rollout(self, action: str, signal: dict, sender_identity: str):
+        """
+        Stores (Action, Signal) pairs for the OpenClaw-RL rollout collection loop.
+        """
+        self.rollout_buffer.append({
+            "action": action,
+            "signal": signal,
+            "sender": sender_identity
+        })
 
     def agentic_critical_training(self, task: str, baseline_code: str, mutated_code: str, baseline_loss: float, mutated_loss: float) -> str:
         """
