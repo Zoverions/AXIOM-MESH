@@ -15,7 +15,7 @@ export class WhatsAppChannel implements Channel {
     }
 
     async connect(): Promise<void> {
-        console.log(`Connecting to WhatsApp...`);
+        console.log(`[WhatsApp] Connecting...`);
 
         const authDir = path.join(process.cwd(), 'whatsapp_auth');
         if (!fs.existsSync(authDir)) fs.mkdirSync(authDir, { recursive: true });
@@ -38,14 +38,14 @@ export class WhatsAppChannel implements Channel {
             const { connection, lastDisconnect } = update;
             if (connection === 'close') {
                 const shouldReconnect = (lastDisconnect?.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
-                console.log('WhatsApp connection closed due to ', lastDisconnect?.error, ', reconnecting ', shouldReconnect);
+                console.log('[WhatsApp] Connection closed. Reconnecting:', shouldReconnect, lastDisconnect?.error);
                 if (shouldReconnect) {
                     this.connect();
                 } else {
-                    console.log('WhatsApp connection closed permanently.');
+                    console.log('[WhatsApp] Connection closed permanently.');
                 }
             } else if (connection === 'open') {
-                console.log('WhatsApp connection opened');
+                console.log('[WhatsApp] Connection opened successfully');
             }
         });
 
@@ -53,7 +53,11 @@ export class WhatsAppChannel implements Channel {
             const msg = m.messages[0];
             if (!msg.message || msg.key.fromMe) return;
 
-            const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
+            const text = msg.message.conversation ||
+                         msg.message.extendedTextMessage?.text ||
+                         msg.message.imageMessage?.caption ||
+                         msg.message.videoMessage?.caption;
+
             if (text) {
                 const jid = msg.key.remoteJid;
                 const sender = msg.pushName || jid;
@@ -63,11 +67,15 @@ export class WhatsAppChannel implements Channel {
     }
 
     async sendMessage(chatId: string, text: string): Promise<void> {
-        if (!this.sock) return;
+        if (!this.sock) {
+            console.error('[WhatsApp] Cannot send message: socket not connected');
+            return;
+        }
         try {
             await this.sock.sendMessage(chatId, { text });
+            console.log(`[WhatsApp] Message sent to ${chatId}`);
         } catch (error) {
-            console.error('Failed to send WhatsApp message:', error);
+            console.error('[WhatsApp] Failed to send message:', error);
         }
     }
 
@@ -75,6 +83,7 @@ export class WhatsAppChannel implements Channel {
         if (this.sock) {
             this.sock.end(undefined);
             this.sock = null;
+            console.log('[WhatsApp] Disconnected');
         }
     }
 }

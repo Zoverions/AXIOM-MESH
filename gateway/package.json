@@ -11,6 +11,8 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@hapi/boom": "^10.0.1",
+    "@slack/bolt": "^4.6.0",
     "@whiskeysockets/baileys": "^7.0.0-rc.9",
     "axios": "^1.13.6",
     "body-parser": "^2.2.2",
@@ -21,6 +23,7 @@
     "node-cache": "^5.1.2",
     "pino": "^10.3.1",
     "qrcode-terminal": "^0.12.0",
+    "telegraf": "^4.16.3",
     "uuid": "^13.0.0",
     "ws": "^8.19.0"
   },
