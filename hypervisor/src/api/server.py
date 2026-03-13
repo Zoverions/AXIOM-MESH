@@ -57,7 +57,7 @@ llm = LLMProvider()
 dialectic = DialecticOrchestrator(llm=llm)
 evolution = EvolutionEngine()
 network_sync = NetworkSync()
-action_engine = ActionEngine()
+action_engine = ActionEngine(network_sync=network_sync)
 signal_extractor = SignalExtractor()
 opd = OnPolicyDistillation()
 
