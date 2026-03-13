@@ -3,14 +3,20 @@ package consensus
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"log"
-	"strings"
+	"math/big"
 )
 
-// VerifyGraphQueryProof simulates a Zero-Knowledge Proof verification.
-// In a real implementation, this would verify a cryptographic proof that
-// the query was performed correctly over the encrypted/subset graph
-// without revealing the full state or personal data.
+type ZKProof struct {
+	Y string `json:"y"`
+	T string `json:"t"`
+	R string `json:"r"`
+}
+
+// VerifyGraphQueryProof verifies a Non-Interactive Zero-Knowledge Proof (NIZK) of a discrete logarithm.
+// This proves the sender holds a secret associated with their public key, using the Fiat-Shamir heuristic,
+// over the RFC 3526 1536-bit MODP Group safe prime.
 func VerifyGraphQueryProof(query string, proof string) bool {
 	log.Printf("Verifying ZKP for query: %s", query)
 
@@ -18,13 +24,58 @@ func VerifyGraphQueryProof(query string, proof string) bool {
 		return false
 	}
 
-	// Mock ZKP: The proof must be a SHA256 hash of the query that starts with "zkp"
-	// or in this simplified mock, just a specific format.
-	// For our purposes, we'll say a valid mock proof must start with "000"
-	// when hashed with the query to simulate computational verification.
+	var p ZKProof
+	if err := json.Unmarshal([]byte(proof), &p); err != nil {
+		log.Printf("ZKP verification failed: invalid JSON proof")
+		return false
+	}
 
-	hashBytes := sha256.Sum256([]byte(query + proof))
-	hashStr := hex.EncodeToString(hashBytes[:])
+	// Remove 0x prefixes if present
+	yHex := p.Y
+	tHex := p.T
+	rHex := p.R
+	if len(yHex) >= 2 && yHex[:2] == "0x" { yHex = yHex[2:] }
+	if len(tHex) >= 2 && tHex[:2] == "0x" { tHex = tHex[2:] }
+	if len(rHex) >= 2 && rHex[:2] == "0x" { rHex = rHex[2:] }
 
-	return strings.HasPrefix(hashStr, "000")
+	y, okY := new(big.Int).SetString(yHex, 16)
+	t, okT := new(big.Int).SetString(tHex, 16)
+	r, okR := new(big.Int).SetString(rHex, 16)
+
+	if !okY || !okT || !okR {
+		log.Printf("ZKP verification failed: invalid hex values")
+		return false
+	}
+
+	// Safe Prime P (RFC 3526 1536-bit MODP Group)
+	pHex := "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA18217C32905E462E36CE3BE39E772C180E86039B2783A2EC07A28FB5C55DF06F4C52C9DE2BCBF6955817183995497CEA956AE515D2261898FA051015728E5A8AACAA68FFFFFFFFFFFFFFFF"
+	P, _ := new(big.Int).SetString(pHex, 16)
+	Q := new(big.Int).Sub(P, big.NewInt(1))
+	Q.Div(Q, big.NewInt(2))
+	G := big.NewInt(2)
+
+	// Compute challenge c = Hash(y || t || query) mod Q
+	hasher := sha256.New()
+	hasher.Write([]byte(y.String()))
+	hasher.Write([]byte(t.String()))
+	hasher.Write([]byte(query))
+
+	hashBytes := hasher.Sum(nil)
+	hashHex := hex.EncodeToString(hashBytes)
+
+	c, _ := new(big.Int).SetString(hashHex, 16)
+	c.Mod(c, Q)
+
+	// Verify t == (G^r * y^c) mod P
+	left := new(big.Int).Exp(G, r, P)
+	right := new(big.Int).Exp(y, c, P)
+	left.Mul(left, right)
+	left.Mod(left, P)
+
+	valid := left.Cmp(t) == 0
+	if !valid {
+		log.Printf("ZKP verification failed: invalid proof components")
+	}
+
+	return valid
 }

@@ -136,22 +136,46 @@ class DistributedDeepArchive(DeepArchive):
     Extends DeepArchive to support decentralized graph queries over the Grid network
     using WebSockets and Zero-Knowledge Proofs.
     """
+
+    # RFC 3526 1536-bit MODP Group prime (Safe Prime P)
+    P_HEX = "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA18217C32905E462E36CE3BE39E772C180E86039B2783A2EC07A28FB5C55DF06F4C52C9DE2BCBF6955817183995497CEA956AE515D2261898FA051015728E5A8AACAA68FFFFFFFFFFFFFFFF"
+    P = int(P_HEX, 16)
+    Q = (P - 1) // 2
+    G = 2
+
     def __init__(self, storage_path="data/archive.json", grid_ws_url="ws://localhost:5000/ws/graph"):
         super().__init__(storage_path)
         self.grid_ws_url = grid_ws_url
 
-    def _generate_mock_zkp(self, query: str) -> str:
+        # Ephemeral private key for the node
+        self._secret_x = int.from_bytes(os.urandom(32), 'big') % self.Q
+        self._public_y = pow(self.G, self._secret_x, self.P)
+
+    def _generate_zkp(self, query: str) -> str:
         """
-        Generates a mock ZKP proof that starts with "000" when hashed with the query.
-        This is a computationally simple brute-force for the mock.
+        Generates a Non-Interactive Zero-Knowledge Proof (NIZK) of a discrete logarithm.
+        This proves the node knows its secret without revealing it, using the Fiat-Shamir heuristic.
         """
-        nonce = 0
-        while True:
-            proof = f"mock-zkp-{nonce}"
-            h = hashlib.sha256((query + proof).encode()).hexdigest()
-            if h.startswith("000"):
-                return proof
-            nonce += 1
+        # Random v
+        v = int.from_bytes(os.urandom(32), 'big') % self.Q
+        t = pow(self.G, v, self.P)
+
+        # Challenge c = Hash(y || t || query)
+        hasher = hashlib.sha256()
+        hasher.update(str(self._public_y).encode())
+        hasher.update(str(t).encode())
+        hasher.update(query.encode())
+        c = int(hasher.hexdigest(), 16) % self.Q
+
+        # Response r = v - c * x (mod Q)
+        r = (v - c * self._secret_x) % self.Q
+
+        proof_data = {
+            "y": hex(self._public_y),
+            "t": hex(t),
+            "r": hex(r)
+        }
+        return json.dumps(proof_data)
 
     async def search_distributed(self, query: str) -> List[Dict]:
         """
@@ -164,7 +188,7 @@ class DistributedDeepArchive(DeepArchive):
         try:
             import websockets
             async with websockets.connect(self.grid_ws_url) as ws:
-                proof = self._generate_mock_zkp(query)
+                proof = self._generate_zkp(query)
                 payload = {
                     "type": "query",
                     "query": query,
