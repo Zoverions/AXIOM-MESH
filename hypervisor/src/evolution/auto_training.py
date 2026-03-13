@@ -8,6 +8,42 @@ import ast
 
 SANDBOX_URL = os.environ.get("SANDBOX_URL", "http://localhost:4000/execute")
 
+class ModificationPolicy:
+    """
+    Governs rules for allowed self-mutations during AutoTraining.
+    """
+    def __init__(self):
+        self.forbidden_modules = {"os", "sys", "subprocess", "shlex", "pty", "socket"}
+        self.forbidden_funcs = {"__import__", "eval", "exec", "open"}
+        self.max_lines = 100
+
+    def evaluate(self, code_str: str) -> bool:
+        """
+        Evaluates the proposed code against safety and policy rules.
+        """
+        lines = code_str.strip().split('\n')
+        if len(lines) > self.max_lines:
+            return False
+
+        try:
+            tree = ast.parse(code_str)
+        except SyntaxError:
+            return False
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.name.split(".")[0] in self.forbidden_modules:
+                        return False
+            elif isinstance(node, ast.ImportFrom):
+                if node.module and node.module.split(".")[0] in self.forbidden_modules:
+                    return False
+            elif isinstance(node, ast.Call):
+                if isinstance(node.func, ast.Name) and node.func.id in self.forbidden_funcs:
+                    return False
+        return True
+
+
 class CodeMutator(ast.NodeTransformer):
     def visit_Constant(self, node):
         # Mutate numeric constants slightly
@@ -18,10 +54,12 @@ class CodeMutator(ast.NodeTransformer):
         return node
 
 class AutoTrainingLoop:
-    def __init__(self):
+    def __init__(self, human_approval_required: bool = False):
         self.running = False
         self.thread = None
         self.best_loss = float('inf')
+        self.policy = ModificationPolicy()
+        self.human_approval_required = human_approval_required
         self.best_code = """
 def train():
     loss = 1.0
@@ -56,9 +94,34 @@ print(f"loss={train()}")
             print(f"[AutoTraining] AST mutation failed: {e}")
             return code
 
+    def _request_approval(self, proposed_code: str, loss: float) -> bool:
+        """
+        Human or automatic gate for self-modification.
+        """
+        if not self.human_approval_required:
+            # Automatic gate
+            print(f"[AutoTraining Gate] Automatic approval granted for loss {loss:.4f}.")
+            return True
+        else:
+            # Simulated human gate
+            print(f"[AutoTraining Gate] Human approval required for loss {loss:.4f}.")
+            print(f"Proposed Code:\n{proposed_code}")
+            # Real implementation would block/wait for external input.
+            approval = os.environ.get("AUTO_TRAINING_APPROVAL", "auto")
+            if approval.lower() in ("yes", "true", "1", "auto"):
+                print("[AutoTraining Gate] Approval granted.")
+                return True
+            else:
+                print("[AutoTraining Gate] Approval denied.")
+                return False
+
     def _experiment(self):
         print(f"[AutoTraining] Starting new experiment. Current best loss: {self.best_loss}")
         proposed_code = self._mutate_code(self.best_code)
+
+        if not self.policy.evaluate(proposed_code):
+            print(f"[AutoTraining] Proposed code failed policy evaluation. Discarded.")
+            return
 
         try:
             # Execute in the secure Node.js Sandbox container
@@ -78,9 +141,13 @@ print(f"loss={train()}")
             if loss is not None:
                 print(f"[AutoTraining] Experiment finished. Loss: {loss:.4f}")
                 if loss < self.best_loss:
-                    print(f"[AutoTraining] Improved! Updating best code.")
-                    self.best_loss = loss
-                    self.best_code = proposed_code
+                    print(f"[AutoTraining] Improved!")
+                    if self._request_approval(proposed_code, loss):
+                        print(f"[AutoTraining] Updating best code.")
+                        self.best_loss = loss
+                        self.best_code = proposed_code
+                    else:
+                        print(f"[AutoTraining] Update rejected by gate.")
                 else:
                     print(f"[AutoTraining] Discarded.")
             else:
