@@ -12,6 +12,7 @@ type Ledger struct {
 	WebCache map[string]types.WebState
 	Graph    types.DistributedGraph
 	Bonds    map[string]types.ComputeBond
+	Swarms   map[string]types.Swarm
 }
 
 func NewLedger() *Ledger {
@@ -22,7 +23,8 @@ func NewLedger() *Ledger {
 			Nodes: make(map[string]types.GraphNode),
 			Edges: make([]types.GraphEdge, 0),
 		},
-		Bonds: make(map[string]types.ComputeBond),
+		Bonds:  make(map[string]types.ComputeBond),
+		Swarms: make(map[string]types.Swarm),
 	}
 }
 
@@ -49,6 +51,49 @@ func (l *Ledger) GetSkills() []types.SkillVector {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 	return l.Skills
+}
+
+func (l *Ledger) CreateSwarm(swarm types.Swarm) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.Swarms[swarm.ID] = swarm
+}
+
+func (l *Ledger) GetSwarm(swarmID string) (types.Swarm, bool) {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	swarm, ok := l.Swarms[swarmID]
+	return swarm, ok
+}
+
+func (l *Ledger) JoinSwarm(swarmID string, nodeID string) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	swarm, ok := l.Swarms[swarmID]
+	if !ok {
+		return false
+	}
+
+	// Check if already in swarm
+	for _, n := range swarm.Nodes {
+		if n == nodeID {
+			return true
+		}
+	}
+
+	swarm.Nodes = append(swarm.Nodes, nodeID)
+	l.Swarms[swarmID] = swarm
+	return true
+}
+
+func (l *Ledger) GetSwarms() []types.Swarm {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	swarms := make([]types.Swarm, 0, len(l.Swarms))
+	for _, s := range l.Swarms {
+		swarms = append(swarms, s)
+	}
+	return swarms
 }
 
 func (l *Ledger) AddWebState(state types.WebState) {

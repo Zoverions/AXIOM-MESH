@@ -45,3 +45,10 @@ type DistributedGraph struct {
 	Nodes map[string]GraphNode `json:"nodes"`
 	Edges []GraphEdge          `json:"edges"`
 }
+
+type Swarm struct {
+	ID     string   `json:"id"`
+	TaskID string   `json:"taskId"`
+	Nodes  []string `json:"nodes"`
+	Status string   `json:"status"`
+}
