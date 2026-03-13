@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 import uuid
 import random
-from typing import Dict, Any
 import requests
 import os
 import httpx
