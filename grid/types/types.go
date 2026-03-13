@@ -12,3 +12,10 @@ type SkillVector struct {
 	Task     string    `json:"task"`
 	PoERHash string    `json:"poerHash"`
 }
+
+type WebState struct {
+	URL           string   `json:"url"`
+	TextLength    int      `json:"text_length"`
+	OutboundLinks []string `json:"outbound_links"`
+	CompiledState string   `json:"compiled_state"`
+}

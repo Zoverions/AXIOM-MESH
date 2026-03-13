@@ -40,5 +40,29 @@ func (s *Server) Start(addr string) error {
 		}
 	})
 
+	http.HandleFunc("/cache", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" {
+			url := r.URL.Query().Get("url")
+			if url == "" {
+				http.Error(w, "URL parameter required", http.StatusBadRequest)
+				return
+			}
+			state, ok := s.ledger.GetWebState(url)
+			if !ok {
+				http.Error(w, "State not found", http.StatusNotFound)
+				return
+			}
+			json.NewEncoder(w).Encode(state)
+		} else if r.Method == "POST" {
+			var state types.WebState
+			if err := json.NewDecoder(r.Body).Decode(&state); err == nil {
+				s.ledger.AddWebState(state)
+				json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+			} else {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			}
+		}
+	})
+
 	return http.ListenAndServe(addr, nil)
 }
