@@ -16,7 +16,7 @@ func main() {
 	p2pNode := p2p.NewNode("node-0")
 	go p2pNode.Start()
 
-	server := api.NewServer(ledger)
+	server := api.NewServer(ledger, p2pNode)
 
 	port := os.Getenv("GRID_PORT")
 	if port == "" {

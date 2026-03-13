@@ -9,14 +9,16 @@ import (
 )
 
 type Node struct {
-	ID    string
-	Peers []string
+	ID            string
+	Peers         []string
+	PeerAddresses map[string]string // Mapping of Peer ID to API endpoint
 }
 
 func NewNode(id string) *Node {
 	return &Node{
-		ID:    id,
-		Peers: make([]string, 0),
+		ID:            id,
+		Peers:         make([]string, 0),
+		PeerAddresses: make(map[string]string),
 	}
 }
 
@@ -33,6 +35,19 @@ func (n *Node) BroadcastGraphUpdate(node types.GraphNode, edges []types.GraphEdg
 		// For this mock, we assume peers are reachable on localhost with a specific naming convention or discovery.
 		// Since we only have one node in this environment, we just log it.
 		log.Printf("P2P Node %s: Syncing graph with peer %s (mocked)", n.ID, peer)
+	}
+}
+
+func (n *Node) BroadcastWebState(state types.WebState) {
+	log.Printf("P2P Node %s: Broadcasting web state for URL %s to %d peers", n.ID, state.URL, len(n.Peers))
+	for _, peerID := range n.Peers {
+		addr, ok := n.PeerAddresses[peerID]
+		if !ok {
+			log.Printf("P2P Node %s: No address found for peer %s, skipping sync", n.ID, peerID)
+			continue
+		}
+		log.Printf("P2P Node %s: Syncing web state with peer %s at %s", n.ID, peerID, addr)
+		// In a real implementation, we would perform an HTTP POST to addr + "/cache?sync=true"
 	}
 }
 
