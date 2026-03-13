@@ -22,7 +22,22 @@ from src.api.audio import router as audio_router
 app = FastAPI()
 app.include_router(audio_router)
 context_engine = ContextEngine()
-autoresearch_daemon = AutoResearchDaemon(archive=context_engine.deep_archive)
+pulse = EntropyMonitor()
+arena = VerificationArena()
+llm = LLMProvider()
+dialectic = DialecticOrchestrator()
+evolution = EvolutionEngine()
+network_sync = NetworkSync()
+action_engine = ActionEngine()
+signal_extractor = SignalExtractor()
+opd = OnPolicyDistillation()
+
+autoresearch_daemon = AutoResearchDaemon(
+    archive=context_engine.deep_archive,
+    llm=llm,
+    action_engine=action_engine,
+    ncp_client=context_engine.ncp_client
+)
 auto_training_loop = AutoTrainingLoop()
 
 @app.on_event("startup")
