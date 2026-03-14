@@ -226,6 +226,11 @@ class AutoResearchDaemon:
             "timestamp": time.time(),
             "provenance_confidence": provenance_confidence
         }
-        await self.archive.sync_to_grid(content=final_content, metadata=metadata)
-        self.archive.add(content=final_content, metadata=metadata)
+
+        # Determine if archive is async (like DistributedDeepArchive.sync_to_grid)
+        if hasattr(self.archive, "sync_to_grid") and asyncio.iscoroutinefunction(self.archive.sync_to_grid):
+            await self.archive.sync_to_grid(content=final_content, metadata=metadata)
+        else:
+            self.archive.add(content=final_content, metadata=metadata)
+
         print(f"[AutoResearch Daemon] Foraged and compiled research on: {topic} (Confidence: {provenance_confidence})")
