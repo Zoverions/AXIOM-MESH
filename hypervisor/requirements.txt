@@ -10,6 +10,7 @@ httpx
 fastapi
 uvicorn
 ecdsa
+mcp
 
 # zkML dependencies
 ezkl

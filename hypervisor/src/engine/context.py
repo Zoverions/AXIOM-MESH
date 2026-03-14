@@ -1,5 +1,6 @@
 from src.memory.archive import DistributedDeepArchive
 from src.engine.ncp_client import NCPClient
+from src.engine.mcp_client import MCPClient
 from src.engine.temporal import TemporalStateManager
 from src.engine.oracle import ChainlinkOracle
 from src.models.intent import IntentObject
@@ -9,6 +10,7 @@ from src.cortex.divergence import DivergenceEngine
 class ContextEngine:
     def __init__(self):
         self.ncp_client = NCPClient()
+        self.mcp_client = MCPClient()
         self.oracle = ChainlinkOracle()
         self.temporal_state = TemporalStateManager() # Tier 1
         self.interaction_history = []
@@ -76,6 +78,9 @@ class ContextEngine:
         # Node Context Protocol (NCP) External Retrieval
         ncp_context = await self.ncp_client.fetch_context(intent_content)
 
+        # Model Context Protocol (MCP) External Retrieval
+        mcp_context = await self.mcp_client.fetch_context(intent_content)
+
         # Chainlink Oracle Off-chain Verifiable Data Feed
         oracle_context = await self.oracle.fetch_data_feed(intent_content)
 
@@ -96,6 +101,9 @@ class ContextEngine:
 
         if ncp_context:
             context_str += f"--- EXTERNAL NCP CONTEXT ---\n{ncp_context}\n\n"
+
+        if mcp_context:
+            context_str += f"--- EXTERNAL MCP CONTEXT ---\n{mcp_context}\n\n"
 
         if oracle_context:
             context_str += f"--- TRUTH CONTEXT (VERIFIABLE OFF-CHAIN FEEDS) ---\n{oracle_context}\n\n"
