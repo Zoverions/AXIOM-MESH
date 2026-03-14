@@ -94,6 +94,7 @@ prompt_env "OPENAI_API_KEY" "" "Enter OpenAI API Key (leave blank if local)"
 prompt_env "DISCORD_TOKEN" "" "Enter Discord Bot Token (leave blank to skip)"
 prompt_env "WHATSAPP_SESSION" "" "Enter WhatsApp Session ID or Path (leave blank to skip)"
 prompt_env "NCP_SERVERS" "http://localhost:8080" "Enter comma-separated NCP server URLs"
+prompt_env "MCP_SERVERS" "" "Enter comma-separated MCP server SSE URLs"
 
 # Save the recommended model as fallback
 if ! grep -q "^LOCAL_MODEL_FALLBACK=" "$ENV_FILE"; then
