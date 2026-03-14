@@ -29,13 +29,6 @@ type PeerInfo struct {
 }
 
 type Node struct {
-	ID           string
-	PrivateKey   *ecdsa.PrivateKey
-	PublicKey    string
-	Peers        map[string]*PeerInfo
-	Transport    Transport
-	SyncCallback func(msg types.CCIPMessage) bool
-	mu           sync.RWMutex
 	ID            string
 	PrivateKey    *ecdsa.PrivateKey
 	PublicKey     string
@@ -54,14 +47,9 @@ func NewNode(id string) *Node {
 	pubBytes := elliptic.Marshal(elliptic.P256(), priv.PublicKey.X, priv.PublicKey.Y)
 
 	return &Node{
-		ID:         id,
-		PrivateKey: priv,
-		PublicKey:  hex.EncodeToString(pubBytes),
-		Peers:      make(map[string]*PeerInfo),
-		Transport:  NewHTTPTransport(),
 		ID:            id,
 		PrivateKey:    priv,
-		PublicKey:     pubHex,
+		PublicKey:     hex.EncodeToString(pubBytes),
 		Peers:         make(map[string]*PeerInfo),
 		PeerAddresses: make(map[string]string),
 		Transport:     NewHTTPTransport(),
@@ -152,7 +140,6 @@ func sendWithBackoff(task func() error) error {
 }
 
 func (n *Node) snapshotPeers() []PeerInfo {
-func (n *Node) BroadcastGraphUpdate(node types.GraphNode, edges []types.GraphEdge) {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 	peers := make([]PeerInfo, 0, len(n.Peers))
@@ -174,11 +161,6 @@ func (n *Node) BroadcastGraphUpdate(node types.GraphNode, edges []types.GraphEdg
 				}
 				defer c.Close()
 
-				req := types.GraphSyncMessage{Type: "sync", Node: node, Edges: edges, NodeID: n.PublicKey}
-				payloadStr := fmt.Sprintf("%s:%d", node.ID, len(edges))
-				sig, err := consensus.SignData(n.PrivateKey, []byte(payloadStr))
-				if err == nil {
-					req.Signature = sig
 				req := types.GraphSyncMessage{
 					Type:   "sync",
 					Node:   node,
@@ -217,13 +199,6 @@ func (n *Node) BroadcastWebState(state types.WebState) {
 		}
 	}
 
-	n.mu.RLock()
-	peers := make([]PeerInfo, 0, len(n.Peers))
-	for _, p := range n.Peers {
-		peers = append(peers, *p)
-	}
-	n.mu.RUnlock()
-
 	log.Printf("P2P Node %s: Broadcasting web state for URL %s to %d peers", n.ID, state.URL, len(peers))
 	for _, peer := range peers {
 		go func(pID, addr string) {
@@ -251,17 +226,6 @@ func (n *Node) BroadcastWebState(state types.WebState) {
 }
 
 func (n *Node) BroadcastCCIPMessage(msg types.CCIPMessage) {
-	peers := n.snapshotPeers()
-	for _, peer := range peers {
-		go func(pID, addr string) {
-			err := sendWithBackoff(func() error {
-				return n.Transport.SendCCIPMessage(addr, msg)
-			})
-			if err != nil {
-				n.IncrementPeerFailure(pID)
-				n.UpdatePeerScore(pID, -1)
-			} else {
-				n.UpdatePeerScore(pID, 1)
 	n.mu.RLock()
 	peers := make([]PeerInfo, 0, len(n.Peers))
 	for _, p := range n.Peers {
@@ -270,29 +234,23 @@ func (n *Node) BroadcastCCIPMessage(msg types.CCIPMessage) {
 	n.mu.RUnlock()
 
 	log.Printf("P2P Node %s: Broadcasting CCIP message %s to %d peers", n.ID, msg.MessageID, len(n.Peers))
-	for pID, _ := range n.Peers {
+	for pID, peerInfo := range n.Peers {
 		addr, ok := n.PeerAddresses[pID]
 		if !ok {
 			log.Printf("P2P Node %s: No address found for peer %s, skipping CCIP sync", n.ID, pID)
 			continue
 		}
 		log.Printf("P2P Node %s: Syncing CCIP message with peer %s at %s", n.ID, pID, addr)
-		go func(peerAddr string) {
+		go func(pID string, peerAddr string) {
 			if err := n.Transport.SendCCIPMessage(peerAddr, msg); err != nil {
 				log.Printf("P2P Node %s: Failed to sync CCIP message with %s: %v", n.ID, peerAddr, err)
 			}
-		}(peer.ID, peer.Address)
+		}(peerInfo.ID, peerInfo.Address)
 	}
 }
 
 func (n *Node) QueryNetwork(query string, proof string) {
 	peers := n.snapshotPeers()
-	n.mu.RLock()
-	peers := make([]PeerInfo, 0, len(n.Peers))
-	for _, p := range n.Peers {
-		peers = append(peers, *p)
-	}
-	n.mu.RUnlock()
 
 	log.Printf("P2P Node %s: Querying network for '%s' with ZKP to %d peers", n.ID, query, len(peers))
 	for _, peer := range peers {
@@ -379,10 +337,7 @@ func (n *Node) SyncCCIPState() {
 		if n.SyncCallback == nil {
 			continue
 		}
-		peers := n.snapshotPeers()
-		for _, peer := range peers {
-			msgs, err := n.Transport.FetchCCIPMessages(peer.Address)
-			if err != nil {
+		syncCount := 0
 
 		for pID, _ := range n.Peers {
 			addr, ok := n.PeerAddresses[pID]
@@ -397,7 +352,6 @@ func (n *Node) SyncCCIPState() {
 				continue
 			}
 			for _, msg := range msgs {
-				n.SyncCallback(msg)
 				if n.SyncCallback(msg) {
 					syncCount++
 				}
