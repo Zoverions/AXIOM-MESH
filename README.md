@@ -86,6 +86,10 @@ Based on the master specification, AxiomMesh follows a 5-phase strict initializa
 - Build an interface to specify what resources, data, or model structures are allowed to be shared.
 - Upgrade current lightweight ZKP protocol flow to production-grade cryptographic proof systems and verifiers.
 - Expand Verification Arena and dialectic orchestration with stronger adversarial test suites and structured evaluator feedback loops.
+- [x] Remove the P2P Graph Query mock and Peer discovery mock in `grid/p2p/node.go` with a fully connected decentralized topology implementation.
+- [x] Implement **Zero-Knowledge Machine Learning (zkML)** for verifiable inference on the edge nodes.
+- [x] Implement **Ethereum/Polygon L2 Smart Contracts** (e.g., Arbitrum) for on-chain compute bond slashing.
+- [x] Integrate **IPFS/Arweave** for persistent decentralized storage of the Tier 3 Memory graphs.
 - Remove the P2P Graph Query mock and Peer discovery mock in `grid/p2p/node.go` with a fully connected decentralized topology implementation.
 - [x] Implement **Zero-Knowledge Machine Learning (zkML)** for verifiable inference on the edge nodes.
 - [x] Implement **Ethereum/Polygon L2 Smart Contracts** (e.g., Arbitrum) for on-chain compute bond slashing.
