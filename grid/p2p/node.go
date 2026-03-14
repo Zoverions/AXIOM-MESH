@@ -17,6 +17,7 @@ import (
 
 	"github.com/axiom-mesh/grid/consensus"
 	"github.com/axiom-mesh/grid/types"
+
 	"github.com/gorilla/websocket"
 )
 
@@ -36,6 +37,14 @@ type Node struct {
 	Transport    Transport
 	SyncCallback func(msg types.CCIPMessage) bool
 	mu           sync.RWMutex
+	ID            string
+	PrivateKey    *ecdsa.PrivateKey
+	PublicKey     string
+	Peers         map[string]*PeerInfo
+	PeerAddresses map[string]string
+	Transport     Transport
+	SyncCallback  func(msg types.CCIPMessage) bool
+	mu            sync.RWMutex
 }
 
 func NewNode(id string) *Node {
@@ -51,6 +60,12 @@ func NewNode(id string) *Node {
 		PublicKey:  hex.EncodeToString(pubBytes),
 		Peers:      make(map[string]*PeerInfo),
 		Transport:  NewHTTPTransport(),
+		ID:            id,
+		PrivateKey:    priv,
+		PublicKey:     hex.EncodeToString(pubBytes),
+		Peers:         make(map[string]*PeerInfo),
+		PeerAddresses: make(map[string]string),
+		Transport:     NewHTTPTransport(),
 	}
 }
 
@@ -160,6 +175,12 @@ func (n *Node) BroadcastGraphUpdate(node types.GraphNode, edges []types.GraphEdg
 				defer c.Close()
 
 				req := types.GraphSyncMessage{Type: "sync", Node: node, Edges: edges, NodeID: n.PublicKey}
+				req := types.GraphSyncMessage{
+					Type:   "sync",
+					Node:   node,
+					Edges:  edges,
+					NodeID: n.PublicKey,
+				}
 				payloadStr := fmt.Sprintf("%s:%d", node.ID, len(edges))
 				sig, err := consensus.SignData(n.PrivateKey, []byte(payloadStr))
 				if err == nil {
