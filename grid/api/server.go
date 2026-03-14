@@ -30,6 +30,13 @@ func NewServer(ledger *blockchain.Ledger, p2pNode *p2p.Node) *Server {
 			}
 			return false
 		}
+		p2pNode.SyncSwarmCallback = func(msg types.Swarm) bool {
+			if _, exists := ledger.GetSwarm(msg.ID); !exists {
+				ledger.CreateSwarm(msg)
+				return true
+			}
+			return false
+		}
 	}
 
 	return &Server{
@@ -102,6 +109,8 @@ func (s *Server) Start(addr string) error {
 			json.NewEncoder(w).Encode(s.ledger.GetSwarms())
 		} else if r.Method == "POST" {
 			var swarm types.Swarm
+				isSync := r.URL.Query().Get("sync") == "true"
+
 			if err := json.NewDecoder(r.Body).Decode(&swarm); err == nil {
 				if swarm.ID == "" || swarm.TaskID == "" {
 					http.Error(w, "ID and TaskID are required", http.StatusBadRequest)
@@ -120,8 +129,18 @@ func (s *Server) Start(addr string) error {
 					return
 				}
 
+					if _, exists := s.ledger.GetSwarm(swarm.ID); exists && isSync {
+						json.NewEncoder(w).Encode(map[string]string{"status": "already_synced"})
+						return
+					}
+
 				swarm.Status = "active"
 				s.ledger.CreateSwarm(swarm)
+
+					if !isSync && s.p2pNode != nil {
+						s.p2pNode.BroadcastSwarm(swarm)
+					}
+
 				json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 			} else {
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -151,7 +170,13 @@ func (s *Server) Start(addr string) error {
 					return
 				}
 
+				isSync := r.URL.Query().Get("sync") == "true"
+
 				if ok := s.ledger.JoinSwarm(req.SwarmID, req.NodeID); ok {
+					if !isSync && s.p2pNode != nil {
+						swarm, _ := s.ledger.GetSwarm(req.SwarmID)
+						s.p2pNode.BroadcastSwarm(swarm)
+					}
 					json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 				} else {
 					http.Error(w, "Swarm not found", http.StatusNotFound)
@@ -220,7 +245,7 @@ func (s *Server) Start(addr string) error {
 		if r.Method == "POST" {
 			var payload types.ZKMLPayload
 			if err := json.NewDecoder(r.Body).Decode(&payload); err == nil {
-				if consensus.VerifyZKMLInference(payload.ModelCommitment, payload.Input, payload.Output, payload.Proof) {
+				if consensus.VerifyZKMLInference(payload.ModelCommitment, payload.Input, payload.Output, payload.Proof, payload.VK, payload.Settings) {
 					json.NewEncoder(w).Encode(map[string]string{"status": "verified"})
 				} else {
 					http.Error(w, "zkML verification failed", http.StatusForbidden)

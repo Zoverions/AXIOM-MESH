@@ -184,7 +184,7 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api
             return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Arena Security Halt: The LLM output failed verification (Autoregressive Hallucination Floor crossed).", status="error")
 
         # Automatically store new interactions in Deep Archive
-        context_engine.deep_archive.add(content)
+        await context_engine.deep_archive.sync_to_grid(content)
 
         # Update interaction history for next-state signal recovery
         context_engine.interaction_history.append({

@@ -133,8 +133,10 @@ class DistributedDeepArchive(DeepArchive):
     Q = (P - 1) // 2
     G = 2
 
-    def __init__(self, storage_path: str = "data/archive.json", grid_ws_url: str = "ws://localhost:5000/ws/graph"):
+    def __init__(self, storage_path: str = "data/archive.json", grid_ws_url: str = None):
         super().__init__(storage_path)
+        if grid_ws_url is None:
+            grid_ws_url = os.environ.get("GRID_WS_URL", "ws://localhost:5000/ws/graph")
         self.grid_ws_url = grid_ws_url
 
         key_path = "data/node_key.pem"
@@ -169,6 +171,7 @@ class DistributedDeepArchive(DeepArchive):
                         files={"file": json.dumps(payload).encode()},
                         headers=headers,
                         timeout=5.0,
+                        timeout=5.0
                     )
                     if response.status_code == 200:
                         cid = response.json().get("Hash")

@@ -17,6 +17,16 @@ contract ComputeBond is Ownable {
     // Track total slashed funds that can be withdrawn by owner
     uint256 public totalSlashed;
 
+    // Custom errors for gas efficiency on L2 networks (Arbitrum, Polygon)
+    error InvalidNodeId();
+    error InvalidStakeAmount();
+    error UnauthorizedStaker(address caller, address originalStaker);
+    error BondNotActive();
+    error SlashExceedsBond();
+    error WithdrawExceedsBond();
+    error InsufficientSlashedFunds();
+    error TransferFailed();
+
     event BondStaked(string indexed nodeId, address indexed staker, uint256 amount);
     event BondSlashed(string indexed nodeId, uint256 amount, uint256 newAmount);
     event BondWithdrawn(string indexed nodeId, address indexed staker, uint256 amount);
@@ -28,14 +38,16 @@ contract ComputeBond is Ownable {
      * @param nodeId The unique identifier of the node.
      */
     function stake(string memory nodeId) external payable {
-        require(bytes(nodeId).length > 0, "Node ID cannot be empty");
-        require(msg.value > 0, "Stake amount must be greater than 0");
+        if (bytes(nodeId).length == 0) revert InvalidNodeId();
+        if (msg.value == 0) revert InvalidStakeAmount();
 
         Bond storage bond = bonds[nodeId];
 
         // If a bond already exists, ensure the staker is the same, or handle it differently
         if (bond.isActive) {
-            require(bond.staker == msg.sender, "Caller is not the original staker for this node");
+            if (bond.staker != msg.sender) {
+                revert UnauthorizedStaker(msg.sender, bond.staker);
+            }
         } else {
             bond.staker = msg.sender;
             bond.isActive = true;
@@ -54,8 +66,8 @@ contract ComputeBond is Ownable {
      */
     function slash(string memory nodeId, uint256 amount) external onlyOwner {
         Bond storage bond = bonds[nodeId];
-        require(bond.isActive, "Node does not have an active bond");
-        require(bond.amount >= amount, "Slash amount exceeds bond");
+        if (!bond.isActive) revert BondNotActive();
+        if (bond.amount < amount) revert SlashExceedsBond();
 
         bond.amount -= amount;
         totalSlashed += amount; // Track the slashed amount
@@ -70,9 +82,9 @@ contract ComputeBond is Ownable {
      */
     function withdraw(string memory nodeId, uint256 amount) external {
         Bond storage bond = bonds[nodeId];
-        require(bond.isActive, "Node does not have an active bond");
-        require(bond.staker == msg.sender, "Caller is not the staker for this node");
-        require(bond.amount >= amount, "Withdraw amount exceeds bond");
+        if (!bond.isActive) revert BondNotActive();
+        if (bond.staker != msg.sender) revert UnauthorizedStaker(msg.sender, bond.staker);
+        if (bond.amount < amount) revert WithdrawExceedsBond();
 
         bond.amount -= amount;
 
@@ -81,7 +93,7 @@ contract ComputeBond is Ownable {
         }
 
         (bool success, ) = payable(msg.sender).call{value: amount}("");
-        require(success, "Transfer failed");
+        if (!success) revert TransferFailed();
 
         emit BondWithdrawn(nodeId, msg.sender, amount);
     }
@@ -92,11 +104,11 @@ contract ComputeBond is Ownable {
      * @param amount The amount to withdraw from the contract's slashed balance.
      */
     function withdrawSlashedFunds(uint256 amount) external onlyOwner {
-        require(totalSlashed >= amount, "Insufficient slashed funds");
+        if (totalSlashed < amount) revert InsufficientSlashedFunds();
 
         totalSlashed -= amount;
 
         (bool success, ) = payable(owner()).call{value: amount}("");
-        require(success, "Transfer failed");
+        if (!success) revert TransferFailed();
     }
 }

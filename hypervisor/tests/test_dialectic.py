@@ -47,3 +47,79 @@ async def test_synthesize_empty_prompt():
     assert "--- Dialectic Cognitive Partitioning:  ---" in result
     assert "[THESIS]" in result
     assert "Empty prompt response" in result
+
+@pytest.mark.asyncio
+async def test_evaluate_synthesis():
+    mock_llm = MagicMock()
+    # Mock LLM to return a score
+    mock_llm.process = AsyncMock(return_value="Good synthesis. Score: 8.5")
+
+    orchestrator = DialecticOrchestrator(llm=mock_llm)
+    score, feedback = await orchestrator.evaluate_synthesis("Pro", "Con", "Synthesis result")
+
+    assert score == 8.5
+    assert "Score: 8.5" in feedback
+
+@pytest.mark.asyncio
+async def test_synthesize_with_feedback_loop():
+    mock_llm = MagicMock()
+
+    # We will simulate the first attempt getting a low score,
+    # and the second attempt getting a passing score
+    async def mock_process(prompt, **kwargs):
+        if "You are an expert logician" in prompt:
+            # First eval gets 5.0, second gets 9.0
+            if "Attempt 1" in prompt:
+                return "Score: 5.0"
+            else:
+                return "Score: 9.0"
+        elif "IN FAVOR" in prompt:
+            return "Thesis"
+        elif "AGAINST" in prompt:
+            return "Antithesis"
+        else:
+            # For synthesis result
+            return "Synthesis result (Attempt 1)" if mock_process.call_count <= 4 else "Synthesis result (Attempt 2)"
+
+    # We will track calls using a counter hack for the side effect
+    call_tracker = {"count": 0}
+    async def track_calls(prompt, **kwargs):
+        call_tracker["count"] += 1
+        if "You are an expert logician" in prompt:
+            if call_tracker["count"] <= 4:
+                return "Score: 5.0"
+            else:
+                return "Score: 9.0"
+        return "Generic response"
+
+    mock_llm.process = AsyncMock(side_effect=track_calls)
+
+    orchestrator = DialecticOrchestrator(llm=mock_llm)
+    result = await orchestrator.synthesize_with_feedback_loop("Test prompt", max_retries=3)
+
+    # Ensure it ran multiple times (Thesis, Antithesis, Synthesis, Eval) * 2
+    assert call_tracker["count"] > 4
+    assert "[EVALUATION SCORE]: 9.0" in result
+
+@pytest.mark.asyncio
+async def test_run_adversarial_suite():
+    mock_llm = MagicMock()
+
+    # Mock behavior for paradox and dilemma
+    async def mock_process(prompt, **kwargs):
+        if "This statement is false" in prompt:
+            return "This is a self-referential paradox." # Pass
+        elif "Trolley Problem" in prompt:
+            return "A classic dilemma of utilitarianism vs other moral frameworks." # Pass
+        return "Generic synthesis"
+
+    mock_llm.process = AsyncMock(side_effect=mock_process)
+
+    orchestrator = DialecticOrchestrator(llm=mock_llm)
+    result = await orchestrator.run_adversarial_suite()
+
+    assert result["overall_robustness_score"] == 100.0
+    assert result["passed_tests"] == 2
+    assert result["total_tests"] == 2
+    assert result["details"]["paradox_test"] is True
+    assert result["details"]["dilemma_test"] is True
