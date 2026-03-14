@@ -8,4 +8,6 @@ import (
 type Transport interface {
 	SendCCIPMessage(addr string, msg types.CCIPMessage) error
 	FetchCCIPMessages(addr string) ([]types.CCIPMessage, error)
+	SendSwarm(addr string, msg types.Swarm) error
+	FetchSwarms(addr string) ([]types.Swarm, error)
 }
