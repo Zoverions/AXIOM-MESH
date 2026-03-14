@@ -11,6 +11,11 @@ fastapi
 uvicorn
 ecdsa
 
+# zkML dependencies
+ezkl
+torch
+onnxscript
+
 # Test dependencies
 pytest
 pytest-asyncio

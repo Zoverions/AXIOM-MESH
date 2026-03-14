@@ -1,44 +1,80 @@
 package consensus
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-	"fmt"
+	"encoding/base64"
 	"log"
-	"strings"
+	"os"
+	"os/exec"
+	"path/filepath"
 )
 
-// VerifyZKMLInference simulates a zkML verification process.
-// In a production environment, this would integrate with a library
-// like gnark or ezkl to verify cryptographic STARK/SNARK proofs.
-// This ensures that the edge node correctly executed a specific ML model
-// (identified by modelCommitment) on the given inputs to produce the outputs.
-func VerifyZKMLInference(commitment string, input []float64, output []float64, proof string) bool {
+// VerifyZKMLInference delegates the verification of a zkML proof to the ezkl library.
+// It uses a Python script to call ezkl.verify on the provided proof, settings, and vk.
+func VerifyZKMLInference(commitment string, input []float64, output []float64, proof string, vk string, settings string) bool {
 	log.Printf("Verifying zkML inference proof for model commitment: %s", commitment)
 
-	if proof == "" || commitment == "" {
+	if proof == "" || commitment == "" || vk == "" || settings == "" {
 		return false
 	}
 
-	// We simulate the zero-knowledge verification by ensuring the proof
-	// mathematically binds the model commitment, inputs, and outputs.
-	// We'll enforce that the hash(commitment + inputs + outputs + proof)
-	// has a specific property (e.g., starts with "zkml") to prove computational work.
-
-	var builder strings.Builder
-	builder.WriteString(commitment)
-	for _, val := range input {
-		builder.WriteString(fmt.Sprintf("%f", val))
+	tempDir, err := os.MkdirTemp("", "zkml_verify_*")
+	if err != nil {
+		log.Printf("Failed to create temp directory for zkML verification: %v", err)
+		return false
 	}
-	for _, val := range output {
-		builder.WriteString(fmt.Sprintf("%f", val))
+	defer os.RemoveAll(tempDir)
+
+	proofPath := filepath.Join(tempDir, "proof.json")
+	settingsPath := filepath.Join(tempDir, "settings.json")
+	vkPath := filepath.Join(tempDir, "vk.key")
+
+	if err := os.WriteFile(proofPath, []byte(proof), 0644); err != nil {
+		log.Printf("Failed to write proof file: %v", err)
+		return false
 	}
-	builder.WriteString(proof)
+	if err := os.WriteFile(settingsPath, []byte(settings), 0644); err != nil {
+		log.Printf("Failed to write settings file: %v", err)
+		return false
+	}
 
-	hashBytes := sha256.Sum256([]byte(builder.String()))
-	hashStr := hex.EncodeToString(hashBytes[:])
+	vkBytes, err := base64.StdEncoding.DecodeString(vk)
+	if err != nil {
+		log.Printf("Failed to decode vk base64: %v", err)
+		return false
+	}
+	if err := os.WriteFile(vkPath, vkBytes, 0644); err != nil {
+		log.Printf("Failed to write vk file: %v", err)
+		return false
+	}
 
-	// In a real zkML system, the proof validation wouldn't just be a hash prefix check,
-	// but an evaluation of a polynomial commitment scheme over the execution trace.
-	return strings.HasPrefix(hashStr, "0000")
+	pyScript := `import ezkl
+import sys
+
+proof_path = sys.argv[1]
+settings_path = sys.argv[2]
+vk_path = sys.argv[3]
+
+try:
+    if ezkl.verify(proof_path, settings_path, vk_path):
+        sys.exit(0)
+    else:
+        sys.exit(1)
+except Exception as e:
+    sys.exit(1)
+`
+
+	scriptPath := filepath.Join(tempDir, "verify.py")
+	if err := os.WriteFile(scriptPath, []byte(pyScript), 0644); err != nil {
+		log.Printf("Failed to write verification script: %v", err)
+		return false
+	}
+
+	cmd := exec.Command("python3", scriptPath, proofPath, settingsPath, vkPath)
+	err = cmd.Run()
+	if err != nil {
+		log.Printf("zkML verification failed: %v", err)
+		return false
+	}
+
+	return true
 }

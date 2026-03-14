@@ -1,66 +1,106 @@
 import hashlib
 import json
 import numpy as np
+import base64
+import os
+import tempfile
+import torch
+import ezkl
+from torch import nn
+
+class SimpleModel(nn.Module):
+    def __init__(self, weights, bias):
+        super(SimpleModel, self).__init__()
+        self.linear = nn.Linear(len(weights), 1)
+        with torch.no_grad():
+            self.linear.weight.copy_(torch.tensor([weights]))
+            self.linear.bias.copy_(torch.tensor([bias]))
+
+    def forward(self, x):
+        return self.linear(x)
 
 class EdgeZKMLProver:
     """
-    Simulates the zero-knowledge proof generation of a machine learning inference
-    pass at the edge. A real implementation would use Ezkl, Cairo, or RISC Zero
-    to generate an actual cryptographic SNARK/STARK proof that proves the edge
-    node ran the specific model weights on the specific input.
+    Generates an actual zero-knowledge proof of a machine learning inference
+    pass at the edge using ezkl.
     """
     def __init__(self, weights: list[float] = None, bias: float = 0.0):
-        # We use a simple linear/perceptron model for the mock.
-        self.weights = np.array(weights if weights is not None else [0.5, -0.2, 0.8])
+        self.weights = weights if weights is not None else [0.5, -0.2, 0.8]
         self.bias = bias
         self.model_commitment = self._generate_commitment()
 
     def _generate_commitment(self) -> str:
-        # A cryptographic commitment to the model parameters (weights, bias)
-        # Allows verifiers to ensure the exact model was executed without seeing the weights.
-        model_data = json.dumps({"weights": self.weights.tolist(), "bias": self.bias})
+        model_data = json.dumps({"weights": self.weights, "bias": self.bias})
         return hashlib.sha256(model_data.encode()).hexdigest()
 
     def infer_and_prove(self, input_vector: list[float]) -> dict:
         """
         Executes the forward pass and generates the accompanying zk-proof.
         """
-        x = np.array(input_vector)
+        x_np = np.array(input_vector)
 
-        # Ensure input dimensions match model
-        if len(x) != len(self.weights):
-            # Pad with 0s or truncate to fit the model to avoid throwing errors during edge inference.
-            if len(x) < len(self.weights):
-                x = np.pad(x, (0, len(self.weights) - len(x)))
+        if len(x_np) != len(self.weights):
+            if len(x_np) < len(self.weights):
+                x_np = np.pad(x_np, (0, len(self.weights) - len(x_np)))
             else:
-                x = x[:len(self.weights)]
+                x_np = x_np[:len(self.weights)]
 
-        # 1. Edge Compute (The Inference)
-        # Simple dot product + bias
-        y = np.dot(x, self.weights) + self.bias
-        output_vector = [float(y)]
+        # Prepare PyTorch model
+        model = SimpleModel(self.weights, self.bias)
+        model.eval()
 
-        # 2. zk-Proof Generation
-        # We need a proof that hash(commitment + input + output + proof) starts with "0000"
-        # as expected by the Grid consensus (grid/consensus/zkml.go).
-        base_str = self.model_commitment
-        for val in input_vector:
-            base_str += f"{val:f}"
-        for val in output_vector:
-            base_str += f"{val:f}"
+        x = torch.tensor([x_np], dtype=torch.float32)
+        y = model(x)
+        output_vector = y.detach().numpy()[0].tolist()
 
-        nonce = 0
-        while True:
-            proof_candidate = f"zkml-proof-{nonce}"
-            h = hashlib.sha256((base_str + proof_candidate).encode()).hexdigest()
-            if h.startswith("0000"):
-                proof = proof_candidate
-                break
-            nonce += 1
+        with tempfile.TemporaryDirectory() as tempdir:
+            onnx_path = os.path.join(tempdir, "network.onnx")
+            input_path = os.path.join(tempdir, "input.json")
+            settings_path = os.path.join(tempdir, "settings.json")
+            compiled_model_path = os.path.join(tempdir, "network.ezkl")
+            vk_path = os.path.join(tempdir, "vk.key")
+            pk_path = os.path.join(tempdir, "pk.key")
+            proof_path = os.path.join(tempdir, "proof.json")
+
+            # Export ONNX
+            torch.onnx.export(
+                model,
+                x,
+                onnx_path,
+                export_params=True,
+                opset_version=14,
+                do_constant_folding=True,
+                input_names=["input"],
+                output_names=["output"],
+                dynamic_axes={"input": {0: "batch_size"}, "output": {0: "batch_size"}}
+            )
+
+            # Dump input
+            data = dict(input_data=[x.tolist()], output_data=[y.tolist()])
+            with open(input_path, "w") as f:
+                json.dump(data, f)
+
+            # EZKL flow
+            ezkl.gen_settings(onnx_path, settings_path)
+            ezkl.calibrate_settings(input_path, onnx_path, settings_path, "resources")
+            ezkl.compile_circuit(onnx_path, compiled_model_path, settings_path)
+            ezkl.get_srs(settings_path)
+            ezkl.setup(compiled_model_path, vk_path, pk_path)
+            ezkl.prove(input_path, compiled_model_path, pk_path, proof_path, settings_path)
+
+            # Read generated assets
+            with open(proof_path, "r") as f:
+                proof_data = f.read()
+            with open(settings_path, "r") as f:
+                settings_data = f.read()
+            with open(vk_path, "rb") as f:
+                vk_data = base64.b64encode(f.read()).decode('utf-8')
 
         return {
             "model_commitment": self.model_commitment,
-            "input": input_vector,
+            "input": x_np.tolist(),
             "output": output_vector,
-            "proof": proof
+            "proof": proof_data,
+            "vk": vk_data,
+            "settings": settings_data
         }
