@@ -127,6 +127,35 @@ class AutoResearchDaemon:
         except Exception as e:
             print(f"[AutoResearch Daemon] Crossref fetch failed: {e}")
 
+
+        # External fetching via Grokipedia
+        grokipedia_data = ""
+        try:
+            def fetch_grokipedia():
+                import grokipedia_api
+                client = grokipedia_api.GrokipediaClient()
+                try:
+                    results = client.search_pages(topic, limit=1)
+                    if results:
+                        slug = results[0]['slug']
+                        page_data = client.get_page(slug)
+                        if page_data and page_data.get('found'):
+                            title = page_data['page'].get('title', 'Unknown')
+                            text_content = page_data['page'].get('content', '')
+                            # Truncate content to avoid blowing up context
+                            if len(text_content) > 1500:
+                                text_content = text_content[:1500] + "..."
+                            return f"Grokipedia Title: {title}\nContent: {text_content}"
+                finally:
+                    client.close()
+                return ""
+
+            grok_result = await asyncio.to_thread(fetch_grokipedia)
+            if grok_result:
+                grokipedia_data = grok_result
+        except Exception as e:
+            print(f"[AutoResearch Daemon] Grokipedia fetch failed: {e}")
+
         sources = []
         if ncp_info:
             sources.append({"name": "NCP", "content": ncp_info, "score": 0.8})
@@ -136,6 +165,8 @@ class AutoResearchDaemon:
             sources.append({"name": "Wikipedia", "content": wikipedia_data, "score": 0.5})
         if crossref_data:
             sources.append({"name": "Crossref", "content": crossref_data, "score": 0.85})
+        if grokipedia_data:
+            sources.append({"name": "Grokipedia", "content": grokipedia_data, "score": 0.9})
 
         if not sources:
             print(f"[AutoResearch Daemon] All external sources failed for topic: {topic}. Attempting offline fallback.")

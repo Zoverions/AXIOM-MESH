@@ -5,7 +5,7 @@ AxiomMesh is a decentralized cognitive operating system designed to serve as the
 ## Core Architectural Concepts (v2.5.0 Updates)
 - **Temporal State Collapse**: An absolute countermeasure to Proactive Interference. The Cognitive Hypervisor manages mutating variables externally via `TemporalStateManager`, tracking state changes via hash maps and injecting only the definitively latest state into the context, ruthlessly purging historical noise.
 - **RIKER Decoupling & Strict Context Cap**: Separates fact retrieval from verification. Enforces a strict 8K-16K context limit to prevent Context Degradation Spikes.
-- **AutoResearch Daemon**: Background thread that performs epistemic foraging via external sources (NCP/ArXiv/Wikipedia), then compiles/ranks findings into Tier 3 archive entries.
+- **AutoResearch Daemon**: Background thread that performs epistemic foraging via external sources (NCP/ArXiv/Wikipedia/Grokipedia), then compiles/ranks findings into Tier 3 archive entries.
 - **Uncertainty Optimization & Arena**: Explicitly rewards the AI for halting execution and stating "I do not know", preventing guessing. The `VerificationArena` applies adversarial verification before sensitive operations.
 - **3-Tier Memory Protocol**:
   - **Tier 1 (Axioms & Collapsed State)**: The core system instructions and the latest, pristine key-value pairs of active tracking tasks.
@@ -81,6 +81,9 @@ Based on the master specification, AxiomMesh follows a 5-phase strict initializa
 
 ## To Do List
 - Harden AutoResearch resiliency (source diversity, retry policy, provenance confidence metrics, and better offline behavior).
+- Implement self-improvement and domain-specific improvement protocols.
+- Add ability to assign resources and localized computing to the decentralized network to enable task-specific engagement, reasoning, and distributed computing.
+- Build an interface to specify what resources, data, or model structures are allowed to be shared.
 - Upgrade current lightweight ZKP protocol flow to production-grade cryptographic proof systems and verifiers.
 - Expand Verification Arena and dialectic orchestration with stronger adversarial test suites and structured evaluator feedback loops.
 - Remove the P2P Graph Query mock and Peer discovery mock in `grid/p2p/node.go` with a fully connected decentralized topology implementation.
