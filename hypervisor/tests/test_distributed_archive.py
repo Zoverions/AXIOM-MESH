@@ -113,4 +113,3 @@ async def test_sync_to_grid_mocked(distributed_archive):
 
             assert "arweave_tx" in payload["node"]["metadata"]
             assert payload["node"]["metadata"]["arweave_tx"] == "mock-real-arweave-tx-id"
-            assert payload["node"]["metadata"]["arweave_tx"] == "real-tx-id"

@@ -29,14 +29,12 @@ type PeerInfo struct {
 }
 
 type Node struct {
-	ID    string
-	Peers map[string]*PeerInfo
-	mu    sync.RWMutex
 	ID            string
 	PrivateKey    *ecdsa.PrivateKey
 	PublicKey     string
-	Peers         []string
+	Peers         map[string]*PeerInfo
 	PeerAddresses map[string]string // Mapping of Peer ID to API endpoint
+	mu            sync.RWMutex
 	Transport     Transport
 	SyncCallback  func(msg types.CCIPMessage) bool // Used to inject messages into local ledger
 }
@@ -55,8 +53,12 @@ func NewNode(id string) *Node {
 	// the public key for signing operations.
 
 	return &Node{
-		ID:    id,
-		Peers: make(map[string]*PeerInfo),
+		ID:            id,
+		PrivateKey:    priv,
+		PublicKey:     pubHex,
+		Peers:         make(map[string]*PeerInfo),
+		PeerAddresses: make(map[string]string),
+		Transport:     NewHTTPTransport(),
 	}
 }
 
@@ -126,12 +128,6 @@ func (n *Node) heartbeatLoop() {
 			}
 		}
 		n.mu.Unlock()
-		ID:            id,
-		PrivateKey:    priv,
-		PublicKey:     pubHex,
-		Peers:         make([]string, 0),
-		PeerAddresses: make(map[string]string),
-		Transport:     NewHTTPTransport(),
 	}
 }
 
@@ -161,22 +157,6 @@ func sendWithBackoff(task func() error) error {
 	return err
 }
 
-			req := types.GraphSyncMessage{
-				Type:  "sync",
-				Node:  node,
-				Edges: edges,
-				NodeID: n.PublicKey,
-			}
-
-			// Sign the node content + edges length as a simple deterministic payload
-			payloadStr := fmt.Sprintf("%s:%d", node.ID, len(edges))
-			sig, err := consensus.SignData(n.PrivateKey, []byte(payloadStr))
-			if err == nil {
-				req.Signature = sig
-			}
-
-			if err := c.WriteJSON(req); err != nil {
-				log.Printf("P2P Node %s: Failed to write to %s: %v", n.ID, urlStr, err)
 func (n *Node) BroadcastGraphUpdate(node types.GraphNode, edges []types.GraphEdge) {
 	n.mu.RLock()
 	peers := make([]PeerInfo, 0, len(n.Peers))
@@ -196,11 +176,20 @@ func (n *Node) BroadcastGraphUpdate(node types.GraphNode, edges []types.GraphEdg
 				}
 				defer c.Close()
 
-				req := map[string]interface{}{
-					"type":  "sync",
-					"node":  node,
-					"edges": edges,
+				req := types.GraphSyncMessage{
+					Type:   "sync",
+					Node:   node,
+					Edges:  edges,
+					NodeID: n.PublicKey,
 				}
+
+				// Sign the node content + edges length as a simple deterministic payload
+				payloadStr := fmt.Sprintf("%s:%d", node.ID, len(edges))
+				sig, err := consensus.SignData(n.PrivateKey, []byte(payloadStr))
+				if err == nil {
+					req.Signature = sig
+				}
+
 				return c.WriteJSON(req)
 			})
 
@@ -228,13 +217,6 @@ func (n *Node) BroadcastWebState(state types.WebState) {
 		}
 	}
 
-	for _, peerID := range n.Peers {
-		addr, ok := n.PeerAddresses[peerID]
-		if !ok {
-			log.Printf("P2P Node %s: No address found for peer %s, skipping sync", n.ID, peerID)
-			continue
-		}
-		log.Printf("P2P Node %s: Syncing web state with peer %s at %s", n.ID, peerID, addr)
 	n.mu.RLock()
 	peers := make([]PeerInfo, 0, len(n.Peers))
 	for _, p := range n.Peers {
@@ -279,22 +261,14 @@ func (n *Node) BroadcastCCIPMessage(msg types.CCIPMessage) {
 	}
 	n.mu.RUnlock()
 
-	log.Printf("P2P Node %s: Broadcasting CCIP message %s to %d peers", n.ID, msg.MessageID, len(peers))
-	for _, peer := range peers {
-		log.Printf("P2P Node %s: Syncing CCIP message with peer %s at %s", n.ID, peer.ID, peer.Address)
-		// In a real implementation, we would perform an HTTP POST to peer.Address + "/ccip?sync=true" with sendWithBackoff
-		// For now we will just mimic success.
-		go func(pID string) {
-			n.UpdatePeerScore(pID, 1)
-		}(peer.ID)
 	log.Printf("P2P Node %s: Broadcasting CCIP message %s to %d peers", n.ID, msg.MessageID, len(n.Peers))
-	for _, peerID := range n.Peers {
-		addr, ok := n.PeerAddresses[peerID]
+	for pID, _ := range n.Peers {
+		addr, ok := n.PeerAddresses[pID]
 		if !ok {
-			log.Printf("P2P Node %s: No address found for peer %s, skipping CCIP sync", n.ID, peerID)
+			log.Printf("P2P Node %s: No address found for peer %s, skipping CCIP sync", n.ID, pID)
 			continue
 		}
-		log.Printf("P2P Node %s: Syncing CCIP message with peer %s at %s", n.ID, peerID, addr)
+		log.Printf("P2P Node %s: Syncing CCIP message with peer %s at %s", n.ID, pID, addr)
 		go func(peerAddr string) {
 			if err := n.Transport.SendCCIPMessage(peerAddr, msg); err != nil {
 				log.Printf("P2P Node %s: Failed to sync CCIP message with %s: %v", n.ID, peerAddr, err)
@@ -311,15 +285,6 @@ func (n *Node) QueryNetwork(query string, proof string) {
 	}
 	n.mu.RUnlock()
 
-			req := types.GraphSyncMessage{
-				Type:  "query",
-				Query: query,
-				Proof: proof,
-			}
-			if err := c.WriteJSON(req); err != nil {
-				log.Printf("P2P Node %s: Failed to write query to %s: %v", n.ID, urlStr, err)
-				return
-			}
 	log.Printf("P2P Node %s: Querying network for '%s' with ZKP to %d peers", n.ID, query, len(peers))
 	for _, peer := range peers {
 		wsURL := strings.Replace(peer.Address, "http://", "ws://", 1) + "/ws/graph"
@@ -424,8 +389,8 @@ func (n *Node) SyncCCIPState() {
 			continue
 		}
 
-		for _, peerID := range n.Peers {
-			addr, ok := n.PeerAddresses[peerID]
+		for pID, _ := range n.Peers {
+			addr, ok := n.PeerAddresses[pID]
 			if !ok {
 				continue
 			}
@@ -433,7 +398,7 @@ func (n *Node) SyncCCIPState() {
 			// Fetch messages from peer
 			msgs, err := n.Transport.FetchCCIPMessages(addr)
 			if err != nil {
-				log.Printf("P2P Node %s: Failed to fetch CCIP messages from peer %s: %v", n.ID, peerID, err)
+				log.Printf("P2P Node %s: Failed to fetch CCIP messages from peer %s: %v", n.ID, pID, err)
 				continue
 			}
 
@@ -446,7 +411,7 @@ func (n *Node) SyncCCIPState() {
 			}
 
 			if syncCount > 0 {
-				log.Printf("P2P Node %s: Synchronized %d missing CCIP messages from peer %s", n.ID, syncCount, peerID)
+				log.Printf("P2P Node %s: Synchronized %d missing CCIP messages from peer %s", n.ID, syncCount, pID)
 			}
 		}
 	}
