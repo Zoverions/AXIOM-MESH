@@ -1,67 +1,72 @@
-import json
-import os
-import uuid
-import re
 import asyncio
 import hashlib
-import httpx
-from typing import List, Dict, Optional
-from ecdsa import SigningKey, NIST256p
+import json
+import os
+import re
+import uuid
+from typing import Dict, List
 
-_STOPWORDS = frozenset({"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "with", "is", "are", "was", "were", "it", "this", "that", "of", "by", "as"})
-_NON_WORD_PATTERN = re.compile(r'[^\w\s]')
+import httpx
+from ecdsa import NIST256p, SigningKey
+
+_STOPWORDS = frozenset(
+    {
+        "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "with",
+        "is", "are", "was", "were", "it", "this", "that", "of", "by", "as",
+    }
+)
+_NON_WORD_PATTERN = re.compile(r"[^\w\s]")
+
 
 class DeepArchive:
-    def __init__(self, storage_path="data/archive.json"):
+    def __init__(self, storage_path: str = "data/archive.json"):
         self.storage_path = storage_path
         self._ensure_storage()
 
-    def _ensure_storage(self):
+    def _ensure_storage(self) -> None:
         os.makedirs(os.path.dirname(self.storage_path), exist_ok=True)
         if not os.path.exists(self.storage_path) or os.path.getsize(self.storage_path) == 0:
             with open(self.storage_path, "w") as f:
                 json.dump({"nodes": {}, "edges": []}, f)
-        else:
-            # Migration logic
-            try:
-                with open(self.storage_path, "r") as f:
-                    data = json.load(f)
+            return
 
-                # If it's a list, it's the old flat format
-                if isinstance(data, list):
-                    new_data = {"nodes": {}, "edges": []}
-                    previous_node_id = None
-                    for item in data:
-                        content = item.get("content", "")
-                        metadata = item.get("metadata", {})
+        # Migration logic from old flat list format.
+        try:
+            with open(self.storage_path, "r") as f:
+                data = json.load(f)
 
-                        node_id = str(uuid.uuid4())
-                        keywords = self._extract_keywords(content)
-                        new_data["nodes"][node_id] = {
-                            "id": node_id,
-                            "content": content,
-                            "metadata": metadata,
-                            "keywords": keywords
-                        }
-
-                        if previous_node_id is not None:
-                            new_data["edges"].append({
+            if isinstance(data, list):
+                new_data = {"nodes": {}, "edges": []}
+                previous_node_id = None
+                for item in data:
+                    node_id = str(uuid.uuid4())
+                    content = item.get("content", "")
+                    metadata = item.get("metadata", {})
+                    new_data["nodes"][node_id] = {
+                        "id": node_id,
+                        "content": content,
+                        "metadata": metadata,
+                        "keywords": self._extract_keywords(content),
+                    }
+                    if previous_node_id is not None:
+                        new_data["edges"].append(
+                            {
                                 "source": previous_node_id,
                                 "target": node_id,
                                 "relationship": "sequential",
-                                "weight": 1
-                            })
-                        previous_node_id = node_id
+                                "weight": 1,
+                            }
+                        )
+                    previous_node_id = node_id
 
-                    with open(self.storage_path, "w") as f:
-                        json.dump(new_data, f, indent=2)
-            except Exception as e:
-                # In case of corruption, re-initialize
                 with open(self.storage_path, "w") as f:
-                    json.dump({"nodes": {}, "edges": []}, f)
+                    json.dump(new_data, f, indent=2)
+        except Exception:
+            with open(self.storage_path, "w") as f:
+                json.dump({"nodes": {}, "edges": []}, f)
 
     def _extract_keywords(self, text: str) -> List[str]:
-        text = _NON_WORD_PATTERN.sub('', text.lower())
+        text = _NON_WORD_PATTERN.sub("", text.lower())
         return list({w for w in text.split() if w not in _STOPWORDS and len(w) > 2})
 
     def search(self, query: str) -> List[Dict]:
@@ -69,7 +74,6 @@ class DeepArchive:
             data = json.load(f)
 
         query_keywords = set(self._extract_keywords(query))
-
         entry_nodes = set()
         for node_id, node in data["nodes"].items():
             node_keywords = set(node.get("keywords", []))
@@ -83,74 +87,56 @@ class DeepArchive:
             elif edge["target"] in entry_nodes:
                 traversed_nodes.add(edge["source"])
 
-        results = []
-        for node_id in traversed_nodes:
-            results.append({
-                "content": data["nodes"][node_id]["content"],
-                "metadata": data["nodes"][node_id].get("metadata", {})
-            })
+        return [
+            {"content": data["nodes"][node_id]["content"], "metadata": data["nodes"][node_id].get("metadata", {})}
+            for node_id in traversed_nodes
+        ]
 
-        return results
-
-    def add(self, content: str, metadata: Dict = None):
+    def add(self, content: str, metadata: Dict = None) -> None:
         with open(self.storage_path, "r") as f:
             data = json.load(f)
 
         node_id = str(uuid.uuid4())
         keywords = self._extract_keywords(content)
-
-        new_node = {
-            "id": node_id,
-            "content": content,
-            "metadata": metadata or {},
-            "keywords": keywords
-        }
+        new_node = {"id": node_id, "content": content, "metadata": metadata or {}, "keywords": keywords}
 
         edges_added = 0
         for existing_id, existing_node in data["nodes"].items():
-            existing_keywords = existing_node.get("keywords", [])
-            shared = set(keywords).intersection(set(existing_keywords))
+            shared = set(keywords).intersection(set(existing_node.get("keywords", [])))
             if shared:
-                data["edges"].append({
-                    "source": node_id,
-                    "target": existing_id,
-                    "relationship": "shares_keywords",
-                    "weight": len(shared)
-                })
+                data["edges"].append(
+                    {
+                        "source": node_id,
+                        "target": existing_id,
+                        "relationship": "shares_keywords",
+                        "weight": len(shared),
+                    }
+                )
                 edges_added += 1
 
         if edges_added == 0 and data["nodes"]:
             last_node_id = list(data["nodes"].keys())[-1]
-            data["edges"].append({
-                "source": node_id,
-                "target": last_node_id,
-                "relationship": "sequential",
-                "weight": 1
-            })
+            data["edges"].append(
+                {"source": node_id, "target": last_node_id, "relationship": "sequential", "weight": 1}
+            )
 
         data["nodes"][node_id] = new_node
-
         with open(self.storage_path, "w") as f:
             json.dump(data, f, indent=2)
 
 
 class DistributedDeepArchive(DeepArchive):
-    """
-    Extends DeepArchive to support decentralized graph queries over the Grid network
-    using WebSockets and Zero-Knowledge Proofs.
-    """
+    """DeepArchive with Grid sync/query and deterministic non-interactive ZKP generation."""
 
-    # RFC 3526 1536-bit MODP Group prime (Safe Prime P)
     P_HEX = "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA18217C32905E462E36CE3BE39E772C180E86039B2783A2EC07A28FB5C55DF06F4C52C9DE2BCBF6955817183995497CEA956AE515D2261898FA051015728E5A8AACAA68FFFFFFFFFFFFFFFF"
     P = int(P_HEX, 16)
     Q = (P - 1) // 2
     G = 2
 
-    def __init__(self, storage_path="data/archive.json", grid_ws_url="ws://localhost:5000/ws/graph"):
+    def __init__(self, storage_path: str = "data/archive.json", grid_ws_url: str = "ws://localhost:5000/ws/graph"):
         super().__init__(storage_path)
         self.grid_ws_url = grid_ws_url
 
-        # Cryptographic Identity
         key_path = "data/node_key.pem"
         os.makedirs("data", exist_ok=True)
         if os.path.exists(key_path):
@@ -160,25 +146,21 @@ class DistributedDeepArchive(DeepArchive):
             self.private_key = SigningKey.generate(curve=NIST256p)
             with open(key_path, "wb") as f:
                 f.write(self.private_key.to_pem())
+
         self.public_key_hex = self.private_key.get_verifying_key().to_string("uncompressed").hex()
+        self._secret_x = int.from_bytes(os.urandom(32), "big") % self.Q
+        self._public_y = pow(self.G, self._secret_x, self.P)
 
     async def persist_to_ipfs(self, payload: dict) -> str:
-        """
-        Persists the given payload to an IPFS node and returns the CID.
-        Uses a configurable local or remote IPFS node via IPFS_API_URL.
-        Implements exponential backoff retries for resilience.
-        """
         ipfs_url = os.environ.get("IPFS_API_URL", "http://127.0.0.1:5001/api/v0/add")
         ipfs_api_key = os.environ.get("IPFS_API_KEY", "")
 
         headers = {}
         if ipfs_api_key:
-            # Common pattern for Infura or other authenticated IPFS services
             headers["Authorization"] = f"Basic {ipfs_api_key}"
 
         max_retries = 3
         base_delay = 1.0
-
         async with httpx.AsyncClient() as client:
             for attempt in range(max_retries):
                 try:
@@ -186,206 +168,100 @@ class DistributedDeepArchive(DeepArchive):
                         ipfs_url,
                         files={"file": json.dumps(payload).encode()},
                         headers=headers,
-        Persists the given payload to IPFS and returns the CID.
-        Uses a local node, with retries on failure. Raises ConnectionError if all retries fail.
-        """
-        for attempt in range(3):
-            try:
-                async with httpx.AsyncClient() as client:
-                    response = await client.post(
-                        "http://127.0.0.1:5001/api/v0/add",
-                        files={"file": json.dumps(payload).encode()},
-                        timeout=5.0
+                        timeout=5.0,
                     )
                     if response.status_code == 200:
                         cid = response.json().get("Hash")
                         if cid:
                             return cid
-
-                    # Log or handle specific HTTP errors if needed
                     if response.status_code in (401, 403):
                         raise RuntimeError(f"IPFS authentication failed (Status {response.status_code})")
-
                 except httpx.RequestError:
                     pass
 
                 if attempt < max_retries - 1:
-                    await asyncio.sleep(base_delay * (2 ** attempt))
+                    await asyncio.sleep(base_delay * (2**attempt))
 
         raise RuntimeError(f"Failed to persist to IPFS at {ipfs_url} after {max_retries} attempts.")
 
     async def persist_to_arweave(self, payload: dict) -> str:
-        """
-        Persists the given payload to Arweave and returns the Transaction ID.
-        Uses a configured Arweave bundler or pinning service via API keys.
-        Raises an error on failure, avoiding mock fallbacks.
-        """
         arweave_url = os.environ.get("ARWEAVE_API_URL", "https://upload.ardrive.io/v1/tx")
         arweave_api_key = os.environ.get("ARWEAVE_API_KEY", "")
 
-        headers = {
-            "Content-Type": "application/json"
-        }
+        headers = {"Content-Type": "application/json"}
         if arweave_api_key:
             headers["Authorization"] = f"Bearer {arweave_api_key}"
 
-        payload_json = json.dumps(payload)
-
         max_retries = 3
         base_delay = 1.0
-
         async with httpx.AsyncClient() as client:
             for attempt in range(max_retries):
                 try:
-                    # Posting data directly to a pinning service or bundler
-                    # For example, turbo.ardrive.io accepts raw data uploads with API keys
                     response = await client.post(
                         arweave_url,
-                        content=payload_json,
+                        content=json.dumps(payload),
                         headers=headers,
-                        timeout=5.0
+                        timeout=5.0,
                     )
-
                     if response.status_code in (200, 201, 202, 208):
                         resp_data = response.json() if response.text else {}
                         tx_id = resp_data.get("id") or resp_data.get("tx_id")
-
                         if tx_id:
                             return tx_id
-                        else:
-                            raise RuntimeError(f"Arweave gateway returned success but no transaction ID: {response.text}")
-
+                        raise RuntimeError(f"Arweave gateway returned success but no transaction ID: {response.text}")
                     if response.status_code in (401, 403):
-                        raise RuntimeError(f"Arweave authentication failed (Status {response.status_code}). Please provide a valid ARWEAVE_API_KEY.")
-
+                        raise RuntimeError(
+                            f"Arweave authentication failed (Status {response.status_code}). Please provide a valid ARWEAVE_API_KEY."
+                        )
                 except httpx.RequestError:
                     pass
 
                 if attempt < max_retries - 1:
-                    await asyncio.sleep(base_delay * (2 ** attempt))
+                    await asyncio.sleep(base_delay * (2**attempt))
 
         raise RuntimeError(f"Failed to persist to Arweave at {arweave_url} after {max_retries} attempts.")
-            except Exception:
-                pass
-            await asyncio.sleep(2 ** attempt)
-        raise ConnectionError("Failed to persist to IPFS across all retries")
-
-    async def persist_to_arweave(self, payload: dict) -> str:
-        """
-        Persists the given payload to Arweave. Requires a valid Arweave wallet JWK
-        configured via the ARWEAVE_WALLET_PATH environment variable.
-        Constructs a signed Arweave transaction and submits it to the network via retries.
-        Raises RuntimeError if the wallet is not configured.
-        Raises ConnectionError if all network retries fail.
-        """
-        import arweave
-
-        wallet_path = os.environ.get("ARWEAVE_WALLET_PATH")
-        if not wallet_path or not os.path.exists(wallet_path):
-            raise RuntimeError("ARWEAVE_WALLET_PATH environment variable is not set or wallet file does not exist")
-
-        wallet = arweave.Wallet(wallet_path)
-        payload_json = json.dumps(payload)
-
-        # Run synchronous cryptography operations in a separate thread to prevent blocking the async event loop
-        def create_and_sign_tx():
-            tx = arweave.Transaction(wallet, data=payload_json.encode())
-            tx.add_tag('Content-Type', 'application/json')
-            tx.sign()
-            return tx
-
-        tx = await asyncio.to_thread(create_and_sign_tx)
-        tx_data = tx.to_dict()
-        tx_id = tx.id
-
-        for attempt in range(3):
-            try:
-                async with httpx.AsyncClient() as client:
-                    res = await client.post(
-                        "https://arweave.net/tx",
-                        json=tx_data,
-                        timeout=5.0
-                    )
-                    if res.status_code in (200, 202):
-                        return tx_id
-            except Exception:
-                pass
-            await asyncio.sleep(2 ** attempt)
-
-        raise ConnectionError("Failed to persist to Arweave across all retries")
 
     def _generate_mock_zkp(self, query: str) -> str:
-        # Ephemeral private key for the node
-        self._secret_x = int.from_bytes(os.urandom(32), 'big') % self.Q
-        self._public_y = pow(self.G, self._secret_x, self.P)
+        # Backward-compatible alias; now backed by real NIZK generation.
+        return self._generate_zkp(query)
 
     def _generate_zkp(self, query: str) -> str:
-        """
-        Generates a Non-Interactive Zero-Knowledge Proof (NIZK) of a discrete logarithm.
-        This proves the node knows its secret without revealing it, using the Fiat-Shamir heuristic.
-        """
-        if not hasattr(self, '_secret_x'):
-            self._secret_x = int.from_bytes(os.urandom(32), 'big') % self.Q
-            self._public_y = pow(self.G, self._secret_x, self.P)
-        # Random v
-        v = int.from_bytes(os.urandom(32), 'big') % self.Q
+        v = int.from_bytes(os.urandom(32), "big") % self.Q
         t = pow(self.G, v, self.P)
 
-        # Challenge c = Hash(y || t || query)
         hasher = hashlib.sha256()
         hasher.update(str(self._public_y).encode())
         hasher.update(str(t).encode())
         hasher.update(query.encode())
         c = int(hasher.hexdigest(), 16) % self.Q
 
-        # Response r = v - c * x (mod Q)
         r = (v - c * self._secret_x) % self.Q
-
-        proof_data = {
-            "y": hex(self._public_y),
-            "t": hex(t),
-            "r": hex(r)
-        }
-        return json.dumps(proof_data)
+        return json.dumps({"y": hex(self._public_y), "t": hex(t), "r": hex(r)})
 
     async def search_distributed(self, query: str) -> List[Dict]:
-        """
-        Searches both the local archive and the distributed Grid network.
-        """
-        # Local search
         local_results = self.search(query)
 
-        # Distributed search via Grid
         try:
             import websockets
-            async with websockets.connect(self.grid_ws_url) as ws:
-                proof = self._generate_zkp(query)
-                payload = {
-                    "type": "query",
-                    "query": query,
-                    "proof": proof
-                }
-                await ws.send(json.dumps(payload))
 
-                response = await ws.recv()
-                grid_data = json.loads(response)
+            async with websockets.connect(self.grid_ws_url) as ws:
+                await ws.send(json.dumps({"type": "query", "query": query, "proof": self._generate_zkp(query)}))
+                grid_data = json.loads(await ws.recv())
 
                 if "nodes" in grid_data:
                     for node in grid_data["nodes"]:
-                        local_results.append({
-                            "content": node["content"],
-                            "metadata": {**(node.get("metadata") or {}), "source": "grid_p2p"}
-                        })
+                        local_results.append(
+                            {
+                                "content": node["content"],
+                                "metadata": {**(node.get("metadata") or {}), "source": "grid_p2p"},
+                            }
+                        )
         except Exception as e:
             print(f"Distributed search error: {e}")
 
         return local_results
 
-    async def sync_to_grid(self, content: str, metadata: Dict = None):
-        """
-        Adds to local archive and syncs to the Grid network.
-        """
-        # Find all current node IDs to identify the new one after add()
+    async def sync_to_grid(self, content: str, metadata: Dict = None) -> None:
         with open(self.storage_path, "r") as f:
             data = json.load(f)
         old_nodes = set(data.get("nodes", {}).keys())
@@ -397,60 +273,43 @@ class DistributedDeepArchive(DeepArchive):
 
         new_nodes = set(data.get("nodes", {}).keys()) - old_nodes
         if not new_nodes:
-            # In case of duplicates or other issues, fall back to last node if it exists
-            if data.get("nodes"):
-                node_id = list(data["nodes"].keys())[-1]
-            else:
+            if not data.get("nodes"):
                 print("Sync error: No nodes found in archive.")
                 return
+            node_id = list(data["nodes"].keys())[-1]
         else:
             node_id = list(new_nodes)[0]
 
         node = data["nodes"][node_id]
-
-        # Find related edges
         edges = [e for e in data["edges"] if e["source"] == node_id or e["target"] == node_id]
 
-        payload = {
-            "node": node,
-            "edges": edges
-        }
+        persist_payload = {"node": node, "edges": edges}
+        node.setdefault("metadata", {})["ipfs_cid"] = await self.persist_to_ipfs(persist_payload)
+        node["metadata"]["arweave_tx"] = await self.persist_to_arweave(persist_payload)
 
-        # Persist to IPFS and Arweave
-        ipfs_cid = await self.persist_to_ipfs(payload)
-        arweave_tx = await self.persist_to_arweave(payload)
-
-        # Update the node's metadata
-        if "metadata" not in node:
-            node["metadata"] = {}
-        node["metadata"]["ipfs_cid"] = ipfs_cid
-        node["metadata"]["arweave_tx"] = arweave_tx
-
-        # Save updated node locally
         data["nodes"][node_id] = node
         with open(self.storage_path, "w") as f:
             json.dump(data, f, indent=2)
 
-        # Sync to Grid
         try:
             import websockets
+
             async with websockets.connect(self.grid_ws_url) as ws:
-                # Sign payload: node.ID + number of edges
-                node_id_str = node.get("id", "")
-                edges_len = len(edges)
-                payload_str = f"{node_id_str}:{edges_len}"
-
+                payload_str = f"{node.get('id', '')}:{len(edges)}"
                 hash_val = hashlib.sha256(payload_str.encode()).digest()
-                sig = self.private_key.sign_digest(hash_val).hex()
+                signature = self.private_key.sign_digest(hash_val).hex()
 
-                sync_payload = {
-                    "type": "sync",
-                    "node": node,
-                    "edges": edges,
-                    "node_id": self.public_key_hex,
-                    "signature": sig
-                }
-                await ws.send(json.dumps(sync_payload))
-                await ws.recv() # Await status
+                await ws.send(
+                    json.dumps(
+                        {
+                            "type": "sync",
+                            "node": node,
+                            "edges": edges,
+                            "node_id": self.public_key_hex,
+                            "signature": signature,
+                        }
+                    )
+                )
+                await ws.recv()
         except Exception as e:
             print(f"Grid sync error: {e}")

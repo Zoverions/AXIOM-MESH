@@ -1,7 +1,10 @@
 import re
 import random
 from typing import List, Dict, Any
-from src.cortex.riker import RIKERGenerator
+try:
+    from src.cortex.riker import RIKERGenerator
+except ModuleNotFoundError:
+    from cortex.riker import RIKERGenerator
 
 class VerificationArena:
     def __init__(self):
