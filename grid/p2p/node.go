@@ -30,13 +30,6 @@ type PeerInfo struct {
 }
 
 type Node struct {
-	ID           string
-	PrivateKey   *ecdsa.PrivateKey
-	PublicKey    string
-	Peers        map[string]*PeerInfo
-	Transport    Transport
-	SyncCallback func(msg types.CCIPMessage) bool
-	mu           sync.RWMutex
 	ID            string
 	PrivateKey    *ecdsa.PrivateKey
 	PublicKey     string
@@ -58,13 +51,9 @@ func NewNode(id string) *Node {
 		log.Fatalf("Failed to generate ECDSA key for node: %v", err)
 	}
 	pubBytes := elliptic.Marshal(elliptic.P256(), priv.PublicKey.X, priv.PublicKey.Y)
+	pubHex := hex.EncodeToString(pubBytes)
 
 	return &Node{
-		ID:         id,
-		PrivateKey: priv,
-		PublicKey:  hex.EncodeToString(pubBytes),
-		Peers:      make(map[string]*PeerInfo),
-		Transport:  NewHTTPTransport(),
 		ID:            id,
 		PrivateKey:    priv,
 		PublicKey:     hex.EncodeToString(pubBytes),
@@ -249,6 +238,12 @@ func (n *Node) BroadcastWebState(state types.WebState) {
 		}
 	}
 
+	n.mu.RLock()
+	peers = make([]PeerInfo, 0, len(n.Peers))
+	for _, p := range n.Peers {
+		peers = append(peers, *p)
+	}
+	n.mu.RUnlock()
 	peers := n.snapshotPeers()
 
 	log.Printf("P2P Node %s: Broadcasting web state for URL %s to %d peers", n.ID, state.URL, len(peers))
@@ -318,6 +313,12 @@ func (n *Node) BroadcastCCIPMessage(msg types.CCIPMessage) {
 
 func (n *Node) QueryNetwork(query string, proof string) {
 	peers := n.snapshotPeers()
+	n.mu.RLock()
+	peers = make([]PeerInfo, 0, len(n.Peers))
+	for _, p := range n.Peers {
+		peers = append(peers, *p)
+	}
+	n.mu.RUnlock()
 
 	log.Printf("P2P Node %s: Querying network for '%s' with ZKP to %d peers", n.ID, query, len(peers))
 	for _, peer := range peers {
@@ -405,6 +406,11 @@ func (n *Node) SyncCCIPState() {
 			continue
 		}
 
+		syncCount := 0
+		n.mu.RLock()
+		for pID, _ := range n.Peers {
+			addr, ok := n.PeerAddresses[pID]
+			if !ok {
 		peers := n.snapshotPeers()
 		for _, peer := range peers {
 			syncCount := 0
@@ -426,5 +432,6 @@ func (n *Node) SyncCCIPState() {
 				log.Printf("P2P Node %s: Synchronized %d missing CCIP messages from peer %s", n.ID, syncCount, peer.ID)
 			}
 		}
+		n.mu.RUnlock()
 	}
 }
