@@ -30,6 +30,13 @@ type PeerInfo struct {
 }
 
 type Node struct {
+	ID           string
+	PrivateKey   *ecdsa.PrivateKey
+	PublicKey    string
+	Peers        map[string]*PeerInfo
+	Transport    Transport
+	SyncCallback func(msg types.CCIPMessage) bool
+	mu           sync.RWMutex
 	ID            string
 	PrivateKey    *ecdsa.PrivateKey
 	PublicKey     string
@@ -48,6 +55,11 @@ func NewNode(id string) *Node {
 	pubBytes := elliptic.Marshal(elliptic.P256(), priv.PublicKey.X, priv.PublicKey.Y)
 
 	return &Node{
+		ID:         id,
+		PrivateKey: priv,
+		PublicKey:  hex.EncodeToString(pubBytes),
+		Peers:      make(map[string]*PeerInfo),
+		Transport:  NewHTTPTransport(),
 		ID:            id,
 		PrivateKey:    priv,
 		PublicKey:     hex.EncodeToString(pubBytes),
@@ -162,6 +174,7 @@ func (n *Node) BroadcastGraphUpdate(node types.GraphNode, edges []types.GraphEdg
 				}
 				defer c.Close()
 
+				req := types.GraphSyncMessage{Type: "sync", Node: node, Edges: edges, NodeID: n.PublicKey}
 				req := types.GraphSyncMessage{
 					Type:   "sync",
 					Node:   node,
@@ -244,6 +257,7 @@ func (n *Node) BroadcastCCIPMessage(msg types.CCIPMessage) {
 
 func (n *Node) QueryNetwork(query string, proof string) {
 	peers := n.snapshotPeers()
+
 	log.Printf("P2P Node %s: Querying network for '%s' with ZKP to %d peers", n.ID, query, len(peers))
 	for _, peer := range peers {
 		wsURL := strings.Replace(peer.Address, "http://", "ws://", 1) + "/ws/graph"
@@ -336,6 +350,7 @@ func (n *Node) SyncCCIPState() {
 				log.Printf("P2P Node %s: Failed to fetch CCIP messages from peer %s: %v", n.ID, peer.ID, err)
 				continue
 			}
+
 			syncCount := 0
 			for _, msg := range msgs {
 				if n.SyncCallback(msg) {
