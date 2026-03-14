@@ -109,7 +109,5 @@ async def test_sync_to_grid_mocked(distributed_archive):
             # In archive.py, payload was constructed as:
             # { "node": node, "edges": edges }
             # But the node had empty metadata (or whatever metadata it started with)
-            import hashlib
-
             assert "arweave_tx" in payload["node"]["metadata"]
             assert payload["node"]["metadata"]["arweave_tx"] == "mock-real-arweave-tx-id"

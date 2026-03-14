@@ -5,14 +5,14 @@ AxiomMesh is a decentralized cognitive operating system designed to serve as the
 ## Core Architectural Concepts (v2.5.0 Updates)
 - **Temporal State Collapse**: An absolute countermeasure to Proactive Interference. The Cognitive Hypervisor manages mutating variables externally via `TemporalStateManager`, tracking state changes via hash maps and injecting only the definitively latest state into the context, ruthlessly purging historical noise.
 - **RIKER Decoupling & Strict Context Cap**: Separates fact retrieval from verification. Enforces a strict 8K-16K context limit to prevent Context Degradation Spikes.
-- **AutoResearch Daemon**: Planned background thread autonomously performing epistemic foraging from unstructured data and compiling it into the Tier 3 Knowledge Graph when the node is idle.
+- **AutoResearch Daemon**: Background thread that performs epistemic foraging via external sources (NCP/ArXiv/Wikipedia), then compiles/ranks findings into Tier 3 archive entries.
 - **Uncertainty Optimization & Arena**: Explicitly rewards the AI for halting execution and stating "I do not know", preventing guessing. The `VerificationArena` applies adversarial verification before sensitive operations.
 - **3-Tier Memory Protocol**:
   - **Tier 1 (Axioms & Collapsed State)**: The core system instructions and the latest, pristine key-value pairs of active tracking tasks.
   - **Tier 2 (Expert Vectors)**: Skill vectors containing contrastive logic equations via Agentic Critical Training (ACT).
   - **Tier 3 (Deep Archive)**: Hierarchical Graph Retrieval (GraphRAG) mapping interaction history and web state graphs, strictly avoiding flat RAG.
 - **Thermodynamic Ethical Reasoning**: Evaluates all actions based strictly on information theory and thermodynamics, where entropy reduction is good and chaos is bad.
-- **Dialectic Cognitive Partitioning**: Planned resolution of deep, contradictory problems by spawning two isolated sub-agents arguing opposite extremes, and synthesizing a structural truth via an Orchestrator.
+- **Dialectic Cognitive Partitioning**: Implemented orchestrator flow that generates thesis/antithesis and synthesizes a structural truth response.
 - **Pluralistic Vector Alignment**: Prevents LLM mode collapse (The Artificial Hivemind) by dynamically altering sampling parameters to reward non-homogenized outputs.
 - **Distributed GraphRAG (Tier 3 Expansion)**: Implementing a decentralized version of the Deep Archive via WebSockets and Zero-Knowledge Proofs, allowing nodes to query verified subset graphs over the P2P network securely without revealing personal user states.
 - **Hardware-Aware ACT Routines**: Modifying the Evolution Engine (Agentic Critical Training) to adapt logic equations and contrastive actions based on the specific computing footprint and available VRAM of the hardware node.
@@ -52,6 +52,24 @@ AxiomMesh can now natively connect to external intelligence via NCP servers.
 - `/exec <code>`: Executes Python code in an ephemeral sandbox.
 - `/sync_skills`: Syncs skills with the Grid network.
 
+
+## Current Implementation Status (March 2026)
+
+The repository is actively evolving and not all roadmap features are production-complete yet.
+
+### What is currently working
+- Core multi-service architecture exists and is runnable via Docker Compose (`gateway`, `hypervisor`, `sandbox`, `grid`).
+- Hypervisor memory/archive pipeline supports local graph storage plus distributed sync/query scaffolding (IPFS/Arweave endpoints + Grid WS hooks).
+- AutoResearch daemon performs real external fetch attempts (NCP, ArXiv, Wikipedia) and ranks/deduplicates sources before archiving.
+- Verification Arena and dialectic synthesis paths are implemented and callable from the API layer.
+- Grid P2P node supports peer tracking, scoring, eviction logic, graph broadcast/query, and CCIP transport reconciliation loops.
+
+### What is still partial / in-progress
+- Zero-knowledge proof paths are currently lightweight protocol proofs (not production-grade zk-SNARK/zk-STARK systems).
+- zkML prover is still a simulated flow intended for interface validation, not a cryptographic proof backend.
+- Several distributed/network features are best-effort and may require environment-specific services (IPFS node, Arweave gateway, reachable peers) for full behavior.
+- Smart-contract-backed staking/slashing, full multi-agent swarm orchestration, and CCIP-grade cross-chain interoperability remain roadmap work.
+
 ## Development Roadmap & Status
 
 Based on the master specification, AxiomMesh follows a 5-phase strict initialization sequence:
@@ -63,9 +81,9 @@ Based on the master specification, AxiomMesh follows a 5-phase strict initializa
 - [x] **Phase 5 (The Evolution)**: Implementing the ActionEngine Web Compiler (State-Machine Web Memory), the recursive update loop via Agentic Critical Training (ACT), and offline web mapping.
 
 ## To Do List
-- Replace `AutoResearchDaemon` mock data sources (`mock_data_sources`) and fallback logic in `hypervisor/src/cortex/autoresearch.py` with real epistemic foraging from external intelligence and unstructured data.
-- Replace the mock ZKP (Zero-Knowledge Proof) generation in `hypervisor/src/memory/archive.py` (`_generate_mock_zkp`) and verification in `grid/consensus/zkp.go` with actual cryptographic zero-knowledge proofs.
-- Remove the placeholder logic for async orchestration in `hypervisor/src/pulse/arena.py` and the fallback placeholder synthesis logic in `hypervisor/src/cortex/dialectic.py`.
+- Harden AutoResearch resiliency (source diversity, retry policy, provenance confidence metrics, and better offline behavior).
+- Upgrade current lightweight ZKP protocol flow to production-grade cryptographic proof systems and verifiers.
+- Expand Verification Arena and dialectic orchestration with stronger adversarial test suites and structured evaluator feedback loops.
 - Remove the P2P Graph Query mock and Peer discovery mock in `grid/p2p/node.go` with a fully connected decentralized topology implementation.
 - Implement **Zero-Knowledge Machine Learning (zkML)** for verifiable inference on the edge nodes.
 - Implement **Ethereum/Polygon L2 Smart Contracts** (e.g., Arbitrum) for on-chain compute bond slashing.
