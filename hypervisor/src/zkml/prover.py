@@ -1,6 +1,28 @@
 import hashlib
 import json
 import numpy as np
+import base64
+import os
+import tempfile
+import torch
+import ezkl
+from torch import nn
+
+class SimpleModel(nn.Module):
+    def __init__(self, weights, bias):
+        super(SimpleModel, self).__init__()
+        self.linear = nn.Linear(len(weights), 1)
+        with torch.no_grad():
+            self.linear.weight.copy_(torch.tensor([weights]))
+            self.linear.bias.copy_(torch.tensor([bias]))
+
+    def forward(self, x):
+        return self.linear(x)
+
+class EdgeZKMLProver:
+    """
+    Generates an actual zero-knowledge proof of a machine learning inference
+    pass at the edge using ezkl.
 import os
 
 class EdgeZKMLProver:
@@ -25,6 +47,9 @@ class EdgeZKMLProver:
         self.weights = weights if weights is not None else [0.5, -0.2, 0.8]
         self.bias = bias
 
+    def _generate_commitment(self) -> str:
+        model_data = json.dumps({"weights": self.weights, "bias": self.bias})
+        return hashlib.sha256(model_data.encode()).hexdigest()
         # Scale to integer field representation
         self.w_int = [int(w * self.SCALE) for w in self.weights]
         self.b_int = int(self.bias * self.SCALE)
@@ -46,6 +71,64 @@ class EdgeZKMLProver:
         """
         Executes the forward pass and generates the accompanying zk-proof.
         """
+        x_np = np.array(input_vector)
+
+        if len(x_np) != len(self.weights):
+            if len(x_np) < len(self.weights):
+                x_np = np.pad(x_np, (0, len(self.weights) - len(x_np)))
+            else:
+                x_np = x_np[:len(self.weights)]
+
+        # Prepare PyTorch model
+        model = SimpleModel(self.weights, self.bias)
+        model.eval()
+
+        x = torch.tensor([x_np], dtype=torch.float32)
+        y = model(x)
+        output_vector = y.detach().numpy()[0].tolist()
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            onnx_path = os.path.join(tempdir, "network.onnx")
+            input_path = os.path.join(tempdir, "input.json")
+            settings_path = os.path.join(tempdir, "settings.json")
+            compiled_model_path = os.path.join(tempdir, "network.ezkl")
+            vk_path = os.path.join(tempdir, "vk.key")
+            pk_path = os.path.join(tempdir, "pk.key")
+            proof_path = os.path.join(tempdir, "proof.json")
+
+            # Export ONNX
+            torch.onnx.export(
+                model,
+                x,
+                onnx_path,
+                export_params=True,
+                opset_version=14,
+                do_constant_folding=True,
+                input_names=["input"],
+                output_names=["output"],
+                dynamic_axes={"input": {0: "batch_size"}, "output": {0: "batch_size"}}
+            )
+
+            # Dump input
+            data = dict(input_data=[x.tolist()], output_data=[y.tolist()])
+            with open(input_path, "w") as f:
+                json.dump(data, f)
+
+            # EZKL flow
+            ezkl.gen_settings(onnx_path, settings_path)
+            ezkl.calibrate_settings(input_path, onnx_path, settings_path, "resources")
+            ezkl.compile_circuit(onnx_path, compiled_model_path, settings_path)
+            ezkl.get_srs(settings_path)
+            ezkl.setup(compiled_model_path, vk_path, pk_path)
+            ezkl.prove(input_path, compiled_model_path, pk_path, proof_path, settings_path)
+
+            # Read generated assets
+            with open(proof_path, "r") as f:
+                proof_data = f.read()
+            with open(settings_path, "r") as f:
+                settings_data = f.read()
+            with open(vk_path, "rb") as f:
+                vk_data = base64.b64encode(f.read()).decode('utf-8')
         # Ensure input dimensions match model perfectly
         if len(input_vector) != len(self.weights):
             if len(input_vector) < len(self.weights):
@@ -63,7 +146,10 @@ class EdgeZKMLProver:
 
         return {
             "model_commitment": self.model_commitment,
-            "input": input_vector,
+            "input": x_np.tolist(),
             "output": output_vector,
+            "proof": proof_data,
+            "vk": vk_data,
+            "settings": settings_data
             "proof": self.proof_payload
         }

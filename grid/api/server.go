@@ -245,7 +245,7 @@ func (s *Server) Start(addr string) error {
 		if r.Method == "POST" {
 			var payload types.ZKMLPayload
 			if err := json.NewDecoder(r.Body).Decode(&payload); err == nil {
-				if consensus.VerifyZKMLInference(payload.ModelCommitment, payload.Input, payload.Output, payload.Proof) {
+				if consensus.VerifyZKMLInference(payload.ModelCommitment, payload.Input, payload.Output, payload.Proof, payload.VK, payload.Settings) {
 					json.NewEncoder(w).Encode(map[string]string{"status": "verified"})
 				} else {
 					http.Error(w, "zkML verification failed", http.StatusForbidden)

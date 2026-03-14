@@ -240,7 +240,6 @@ func (n *Node) BroadcastGraphUpdate(node types.GraphNode, edges []types.GraphEdg
 }
 
 func (n *Node) BroadcastWebState(state types.WebState) {
-	peers := n.snapshotPeers()
 	if state.Signature == "" {
 		state.NodeID = n.PublicKey
 		payloadStr := fmt.Sprintf("%s:%d", state.URL, state.TextLength)
@@ -249,6 +248,8 @@ func (n *Node) BroadcastWebState(state types.WebState) {
 			state.Signature = sig
 		}
 	}
+
+	peers := n.snapshotPeers()
 
 	log.Printf("P2P Node %s: Broadcasting web state for URL %s to %d peers", n.ID, state.URL, len(peers))
 	for _, peer := range peers {
