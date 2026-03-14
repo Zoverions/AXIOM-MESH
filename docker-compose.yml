@@ -27,6 +27,9 @@ services:
       - HYPERVISOR_PORT=8000
       - SANDBOX_URL=http://sandbox:4000/execute
       - GRID_URL=http://grid:5000/skills
+      - IPFS_API_URL=http://ipfs:5001/api/v0/add
+      - ARWEAVE_API_URL=https://upload.ardrive.io/v1/tx
+      - GRID_WS_URL=ws://grid:5000/ws/graph
 
   sandbox:
     build:
@@ -47,3 +50,15 @@ services:
       - "5000:5000"
     environment:
       - GRID_PORT=5000
+
+  ipfs:
+    image: ipfs/go-ipfs:latest
+    ports:
+      - "4001:4001"
+      - "5001:5001"
+      - "8080:8080"
+    volumes:
+      - ipfs_data:/data/ipfs
+
+volumes:
+  ipfs_data:

@@ -1,10 +1,10 @@
 .PHONY: up down cli test
 
 up:
-	docker-compose up -d --build
+	docker compose up -d --build
 
 down:
-	docker-compose down
+	docker compose down
 
 cli:
 	python3 cli/axiom_cli.py
