@@ -30,19 +30,15 @@ type PeerInfo struct {
 }
 
 type Node struct {
-	ID            string
-	PrivateKey    *ecdsa.PrivateKey
-	PublicKey     string
-	Peers         map[string]*PeerInfo
-	PeerAddresses map[string]string // Mapping of Peer ID to API endpoint
+	ID                string
+	PrivateKey        *ecdsa.PrivateKey
+	PublicKey         string
+	Peers             map[string]*PeerInfo
+	PeerAddresses     map[string]string // Mapping of Peer ID to API endpoint
 	Transport         Transport
 	SyncCallback      func(msg types.CCIPMessage) bool // Used to inject messages into local ledger
 	SyncSwarmCallback func(msg types.Swarm) bool       // Used to inject swarms into local ledger
 	mu                sync.RWMutex
-	PeerAddresses map[string]string
-	Transport     Transport
-	SyncCallback  func(msg types.CCIPMessage) bool
-	mu            sync.RWMutex
 }
 
 func NewNode(id string) *Node {
@@ -56,7 +52,7 @@ func NewNode(id string) *Node {
 	return &Node{
 		ID:            id,
 		PrivateKey:    priv,
-		PublicKey:     hex.EncodeToString(pubBytes),
+		PublicKey:     pubHex,
 		Peers:         make(map[string]*PeerInfo),
 		PeerAddresses: make(map[string]string),
 		Transport:     NewHTTPTransport(),
@@ -200,8 +196,6 @@ func (n *Node) BroadcastGraphUpdate(node types.GraphNode, edges []types.GraphEdg
 				}
 				defer c.Close()
 
-				req := types.GraphSyncMessage{Type: "sync", Node: node, Edges: edges, NodeID: n.PublicKey}
-
 				// Sign the node content + edges length as a simple deterministic payload
 				req := types.GraphSyncMessage{
 					Type:   "sync",
@@ -238,12 +232,6 @@ func (n *Node) BroadcastWebState(state types.WebState) {
 		}
 	}
 
-	n.mu.RLock()
-	peers = make([]PeerInfo, 0, len(n.Peers))
-	for _, p := range n.Peers {
-		peers = append(peers, *p)
-	}
-	n.mu.RUnlock()
 	peers := n.snapshotPeers()
 
 	log.Printf("P2P Node %s: Broadcasting web state for URL %s to %d peers", n.ID, state.URL, len(peers))
@@ -272,20 +260,33 @@ func (n *Node) BroadcastWebState(state types.WebState) {
 	}
 }
 
-func (n *Node) BroadcastCCIPMessage(msg types.CCIPMessage) {
-	n.mu.RLock()
-	peers := make([]PeerInfo, 0, len(n.Peers))
-	for _, p := range n.Peers {
-		peers = append(peers, *p)
 func (n *Node) BroadcastSwarm(msg types.Swarm) {
 	peers := n.snapshotPeers()
 
 	log.Printf("P2P Node %s: Broadcasting swarm message %s to %d peers", n.ID, msg.ID, len(peers))
-	log.Printf("P2P Node %s: Broadcasting CCIP message %s to %d peers", n.ID, msg.MessageID, len(peers))
 	for _, peer := range peers {
 		go func(pID, addr string) {
 			err := sendWithBackoff(func() error {
 				return n.Transport.SendSwarm(addr, msg)
+			})
+			if err != nil {
+				log.Printf("P2P Node %s: Failed to sync swarm message with %s: %v", n.ID, addr, err)
+				n.IncrementPeerFailure(pID)
+				n.UpdatePeerScore(pID, -1)
+			} else {
+				n.UpdatePeerScore(pID, 1)
+			}
+		}(peer.ID, peer.Address)
+	}
+}
+
+func (n *Node) BroadcastCCIPMessage(msg types.CCIPMessage) {
+	peers := n.snapshotPeers()
+	log.Printf("P2P Node %s: Broadcasting CCIP message %s to %d peers", n.ID, msg.MessageID, len(peers))
+	for _, peer := range peers {
+		go func(pID, addr string) {
+			err := sendWithBackoff(func() error {
+				return n.Transport.SendCCIPMessage(addr, msg)
 			})
 			if err != nil {
 				log.Printf("P2P Node %s: Failed to sync CCIP message with %s: %v", n.ID, addr, err)
@@ -298,43 +299,8 @@ func (n *Node) BroadcastSwarm(msg types.Swarm) {
 	}
 }
 
-	log.Printf("P2P Node %s: Broadcasting CCIP message %s to %d peers", n.ID, msg.MessageID, len(n.Peers))
-	for pID, peerInfo := range n.Peers {
-		addr, ok := n.PeerAddresses[pID]
-		if !ok {
-			log.Printf("P2P Node %s: No address found for peer %s, skipping CCIP sync", n.ID, pID)
-			continue
-		}
-		log.Printf("P2P Node %s: Syncing CCIP message with peer %s at %s", n.ID, pID, addr)
-		go func(pID string, peerAddr string) {
-			if err := n.Transport.SendCCIPMessage(peerAddr, msg); err != nil {
-				log.Printf("P2P Node %s: Failed to sync CCIP message with %s: %v", n.ID, peerAddr, err)
-func (n *Node) BroadcastCCIPMessage(msg types.CCIPMessage) {
-	peers := n.snapshotPeers()
-	log.Printf("P2P Node %s: Broadcasting CCIP message %s to %d peers", n.ID, msg.MessageID, len(peers))
-	for _, peer := range peers {
-		go func(pID, addr string) {
-			err := sendWithBackoff(func() error {
-				return n.Transport.SendCCIPMessage(addr, msg)
-			})
-			if err != nil {
-				n.IncrementPeerFailure(pID)
-				n.UpdatePeerScore(pID, -1)
-			} else {
-				n.UpdatePeerScore(pID, 1)
-			}
-		}(peerInfo.ID, peerInfo.Address)
-	}
-}
-
 func (n *Node) QueryNetwork(query string, proof string) {
 	peers := n.snapshotPeers()
-	n.mu.RLock()
-	peers = make([]PeerInfo, 0, len(n.Peers))
-	for _, p := range n.Peers {
-		peers = append(peers, *p)
-	}
-	n.mu.RUnlock()
 
 	log.Printf("P2P Node %s: Querying network for '%s' with ZKP to %d peers", n.ID, query, len(peers))
 	for _, peer := range peers {
@@ -421,13 +387,7 @@ func (n *Node) SyncCCIPState() {
 		if n.SyncCallback == nil {
 			continue
 		}
-		syncCount := 0
 
-		syncCount := 0
-		n.mu.RLock()
-		for pID, _ := range n.Peers {
-			addr, ok := n.PeerAddresses[pID]
-			if !ok {
 		peers := n.snapshotPeers()
 		for _, peer := range peers {
 			syncCount := 0
@@ -438,7 +398,6 @@ func (n *Node) SyncCCIPState() {
 				continue
 			}
 
-			syncCount := 0
 			for _, msg := range msgs {
 				if n.SyncCallback(msg) {
 					syncCount++
@@ -449,6 +408,5 @@ func (n *Node) SyncCCIPState() {
 				log.Printf("P2P Node %s: Synchronized %d missing CCIP messages from peer %s", n.ID, syncCount, peer.ID)
 			}
 		}
-		n.mu.RUnlock()
 	}
 }
