@@ -30,6 +30,13 @@ type PeerInfo struct {
 }
 
 type Node struct {
+	ID           string
+	PrivateKey   *ecdsa.PrivateKey
+	PublicKey    string
+	Peers        map[string]*PeerInfo
+	Transport    Transport
+	SyncCallback func(msg types.CCIPMessage) bool
+	mu           sync.RWMutex
 	ID            string
 	PrivateKey    *ecdsa.PrivateKey
 	PublicKey     string
@@ -53,6 +60,11 @@ func NewNode(id string) *Node {
 	pubBytes := elliptic.Marshal(elliptic.P256(), priv.PublicKey.X, priv.PublicKey.Y)
 
 	return &Node{
+		ID:         id,
+		PrivateKey: priv,
+		PublicKey:  hex.EncodeToString(pubBytes),
+		Peers:      make(map[string]*PeerInfo),
+		Transport:  NewHTTPTransport(),
 		ID:            id,
 		PrivateKey:    priv,
 		PublicKey:     hex.EncodeToString(pubBytes),
@@ -200,6 +212,8 @@ func (n *Node) BroadcastGraphUpdate(node types.GraphNode, edges []types.GraphEdg
 				defer c.Close()
 
 				req := types.GraphSyncMessage{Type: "sync", Node: node, Edges: edges, NodeID: n.PublicKey}
+
+				// Sign the node content + edges length as a simple deterministic payload
 				req := types.GraphSyncMessage{
 					Type:   "sync",
 					Node:   node,
@@ -264,6 +278,7 @@ func (n *Node) BroadcastWebState(state types.WebState) {
 
 func (n *Node) BroadcastSwarm(msg types.Swarm) {
 	peers := n.snapshotPeers()
+
 	log.Printf("P2P Node %s: Broadcasting swarm message %s to %d peers", n.ID, msg.ID, len(peers))
 	log.Printf("P2P Node %s: Broadcasting CCIP message %s to %d peers", n.ID, msg.MessageID, len(peers))
 	for _, peer := range peers {
@@ -272,6 +287,7 @@ func (n *Node) BroadcastSwarm(msg types.Swarm) {
 				return n.Transport.SendSwarm(addr, msg)
 			})
 			if err != nil {
+				log.Printf("P2P Node %s: Failed to sync CCIP message with %s: %v", n.ID, addr, err)
 				n.IncrementPeerFailure(pID)
 				n.UpdatePeerScore(pID, -1)
 			} else {
