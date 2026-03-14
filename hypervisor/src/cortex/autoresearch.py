@@ -148,5 +148,5 @@ class AutoResearchDaemon:
                 final_content = synthesis
 
         metadata = {"source": "autoresearch_daemon", "topic": topic, "timestamp": time.time()}
-        self.archive.add(content=final_content, metadata=metadata)
+        await self.archive.sync_to_grid(content=final_content, metadata=metadata)
         print(f"[AutoResearch Daemon] Foraged and compiled research on: {topic}")
