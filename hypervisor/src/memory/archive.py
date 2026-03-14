@@ -186,15 +186,6 @@ class DistributedDeepArchive(DeepArchive):
                         ipfs_url,
                         files={"file": json.dumps(payload).encode()},
                         headers=headers,
-        Persists the given payload to IPFS and returns the CID.
-        Uses a local node, with retries on failure. Raises ConnectionError if all retries fail.
-        """
-        for attempt in range(3):
-            try:
-                async with httpx.AsyncClient() as client:
-                    response = await client.post(
-                        "http://127.0.0.1:5001/api/v0/add",
-                        files={"file": json.dumps(payload).encode()},
                         timeout=5.0
                     )
                     if response.status_code == 200:
@@ -265,59 +256,6 @@ class DistributedDeepArchive(DeepArchive):
                     await asyncio.sleep(base_delay * (2 ** attempt))
 
         raise RuntimeError(f"Failed to persist to Arweave at {arweave_url} after {max_retries} attempts.")
-            except Exception:
-                pass
-            await asyncio.sleep(2 ** attempt)
-        raise ConnectionError("Failed to persist to IPFS across all retries")
-
-    async def persist_to_arweave(self, payload: dict) -> str:
-        """
-        Persists the given payload to Arweave. Requires a valid Arweave wallet JWK
-        configured via the ARWEAVE_WALLET_PATH environment variable.
-        Constructs a signed Arweave transaction and submits it to the network via retries.
-        Raises RuntimeError if the wallet is not configured.
-        Raises ConnectionError if all network retries fail.
-        """
-        import arweave
-
-        wallet_path = os.environ.get("ARWEAVE_WALLET_PATH")
-        if not wallet_path or not os.path.exists(wallet_path):
-            raise RuntimeError("ARWEAVE_WALLET_PATH environment variable is not set or wallet file does not exist")
-
-        wallet = arweave.Wallet(wallet_path)
-        payload_json = json.dumps(payload)
-
-        # Run synchronous cryptography operations in a separate thread to prevent blocking the async event loop
-        def create_and_sign_tx():
-            tx = arweave.Transaction(wallet, data=payload_json.encode())
-            tx.add_tag('Content-Type', 'application/json')
-            tx.sign()
-            return tx
-
-        tx = await asyncio.to_thread(create_and_sign_tx)
-        tx_data = tx.to_dict()
-        tx_id = tx.id
-
-        for attempt in range(3):
-            try:
-                async with httpx.AsyncClient() as client:
-                    res = await client.post(
-                        "https://arweave.net/tx",
-                        json=tx_data,
-                        timeout=5.0
-                    )
-                    if res.status_code in (200, 202):
-                        return tx_id
-            except Exception:
-                pass
-            await asyncio.sleep(2 ** attempt)
-
-        raise ConnectionError("Failed to persist to Arweave across all retries")
-
-    def _generate_mock_zkp(self, query: str) -> str:
-        # Ephemeral private key for the node
-        self._secret_x = int.from_bytes(os.urandom(32), 'big') % self.Q
-        self._public_y = pow(self.G, self._secret_x, self.P)
 
     def _generate_zkp(self, query: str) -> str:
         """
