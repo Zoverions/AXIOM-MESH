@@ -8,6 +8,29 @@ echo ""
 # Hardware Scan
 echo "-> Scanning Hardware..."
 
+# OS
+OS_TYPE=$(uname -s 2>/dev/null || echo "Unknown")
+case "$OS_TYPE" in
+    Linux*)
+        if [ -f /etc/os-release ]; then
+            OS_PRETTY_NAME=$(grep ^PRETTY_NAME= /etc/os-release | cut -d '=' -f 2 | tr -d '"')
+            if [ -z "$OS_PRETTY_NAME" ]; then
+                OS_NAME="Linux"
+            else
+                OS_NAME="Linux ($OS_PRETTY_NAME)"
+            fi
+        elif [ -n "$(uname -o 2>/dev/null | grep -i android)" ]; then
+            OS_NAME="Android"
+        else
+            OS_NAME="Linux"
+        fi
+        ;;
+    Darwin*)    OS_NAME="macOS" ;;
+    CYGWIN*|MINGW32*|MSYS*|MINGW*) OS_NAME="Windows" ;;
+    *)          OS_NAME="$OS_TYPE" ;;
+esac
+echo "  - Operating System: $OS_NAME"
+
 # CPU
 CPU_CORES=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo "Unknown")
 echo "  - CPU Cores: $CPU_CORES"
