@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/app/grid/contracts/contracts/ComputeBond.sol": {
-      "lastModificationDate": 1773429073233,
-      "contentHash": "50d37dd0b5c0c29199316d388033d1d7",
+      "lastModificationDate": 1773508633668,
+      "contentHash": "49c22dd0b5ce78781d35d725aa9bb44e",
       "sourceName": "contracts/ComputeBond.sol",
       "solcConfig": {
         "version": "0.8.20",

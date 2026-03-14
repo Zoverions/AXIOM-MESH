@@ -31,13 +31,13 @@ describe("ComputeBond", function () {
     it("Should not allow staking with empty node ID", async function () {
       await expect(
         computeBond.connect(node1).stake("", { value: STAKE_AMOUNT })
-      ).to.be.revertedWith("Node ID cannot be empty");
+      ).to.be.revertedWithCustomError(computeBond, "InvalidNodeId");
     });
 
     it("Should not allow staking with zero value", async function () {
       await expect(
         computeBond.connect(node1).stake(NODE_ID, { value: 0 })
-      ).to.be.revertedWith("Stake amount must be greater than 0");
+      ).to.be.revertedWithCustomError(computeBond, "InvalidStakeAmount");
     });
 
     it("Should allow top-up staking by the same staker", async function () {
@@ -52,7 +52,7 @@ describe("ComputeBond", function () {
       await computeBond.connect(node1).stake(NODE_ID, { value: STAKE_AMOUNT });
       await expect(
         computeBond.connect(node2).stake(NODE_ID, { value: STAKE_AMOUNT })
-      ).to.be.revertedWith("Caller is not the original staker for this node");
+      ).to.be.revertedWithCustomError(computeBond, "UnauthorizedStaker").withArgs(node2.address, node1.address);
     });
   });
 
@@ -88,13 +88,13 @@ describe("ComputeBond", function () {
       const slashAmount = hre.ethers.parseEther("2.0");
       await expect(
         computeBond.connect(owner).slash(NODE_ID, slashAmount)
-      ).to.be.revertedWith("Slash amount exceeds bond");
+      ).to.be.revertedWithCustomError(computeBond, "SlashExceedsBond");
     });
 
     it("Should revert if slashing a non-existent or inactive bond", async function () {
       await expect(
         computeBond.connect(owner).slash("non-existent-node", hre.ethers.parseEther("0.5"))
-      ).to.be.revertedWith("Node does not have an active bond");
+      ).to.be.revertedWithCustomError(computeBond, "BondNotActive");
     });
   });
 
@@ -132,13 +132,13 @@ describe("ComputeBond", function () {
     it("Should revert if non-staker tries to withdraw", async function () {
       await expect(
         computeBond.connect(node2).withdraw(NODE_ID, hre.ethers.parseEther("0.1"))
-      ).to.be.revertedWith("Caller is not the staker for this node");
+      ).to.be.revertedWithCustomError(computeBond, "UnauthorizedStaker").withArgs(node2.address, node1.address);
     });
 
     it("Should revert if withdraw amount exceeds bond", async function () {
       await expect(
         computeBond.connect(node1).withdraw(NODE_ID, STAKE_AMOUNT + 1n)
-      ).to.be.revertedWith("Withdraw amount exceeds bond");
+      ).to.be.revertedWithCustomError(computeBond, "WithdrawExceedsBond");
     });
   });
 
@@ -171,7 +171,7 @@ describe("ComputeBond", function () {
 
       await expect(
         computeBond.connect(owner).withdrawSlashedFunds(withdrawAmount)
-      ).to.be.revertedWith("Insufficient slashed funds");
+      ).to.be.revertedWithCustomError(computeBond, "InsufficientSlashedFunds");
     });
   });
 });
