@@ -1,4 +1,4 @@
-from src.memory.archive import DeepArchive
+from src.memory.archive import DistributedDeepArchive
 from src.engine.ncp_client import NCPClient
 from src.engine.temporal import TemporalStateManager
 from src.engine.oracle import ChainlinkOracle
@@ -27,7 +27,7 @@ class ContextEngine:
             "- The Commitment: 'I will prioritize data integrity over raw speed unless you specify otherwise.'"
         )
         self.expert_vectors = {} # Tier 2
-        self.deep_archive = DeepArchive() # Tier 3
+        self.deep_archive = DistributedDeepArchive() # Tier 3
         self.miro_mapper = MiroFishMapper()
         self.divergence_engine = DivergenceEngine(self.miro_mapper)
 

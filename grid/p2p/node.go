@@ -17,6 +17,7 @@ import (
 
 	"github.com/axiom-mesh/grid/consensus"
 	"github.com/axiom-mesh/grid/types"
+
 	"github.com/gorilla/websocket"
 )
 
@@ -38,6 +39,10 @@ type Node struct {
 	SyncCallback      func(msg types.CCIPMessage) bool // Used to inject messages into local ledger
 	SyncSwarmCallback func(msg types.Swarm) bool       // Used to inject swarms into local ledger
 	mu                sync.RWMutex
+	PeerAddresses map[string]string
+	Transport     Transport
+	SyncCallback  func(msg types.CCIPMessage) bool
+	mu            sync.RWMutex
 }
 
 func NewNode(id string) *Node {
@@ -194,14 +199,13 @@ func (n *Node) BroadcastGraphUpdate(node types.GraphNode, edges []types.GraphEdg
 				}
 				defer c.Close()
 
+				req := types.GraphSyncMessage{Type: "sync", Node: node, Edges: edges, NodeID: n.PublicKey}
 				req := types.GraphSyncMessage{
 					Type:   "sync",
 					Node:   node,
 					Edges:  edges,
 					NodeID: n.PublicKey,
 				}
-
-				// Sign the node content + edges length as a simple deterministic payload
 				payloadStr := fmt.Sprintf("%s:%d", node.ID, len(edges))
 				sig, err := consensus.SignData(n.PrivateKey, []byte(payloadStr))
 				if err == nil {
@@ -261,6 +265,7 @@ func (n *Node) BroadcastWebState(state types.WebState) {
 func (n *Node) BroadcastSwarm(msg types.Swarm) {
 	peers := n.snapshotPeers()
 	log.Printf("P2P Node %s: Broadcasting swarm message %s to %d peers", n.ID, msg.ID, len(peers))
+	log.Printf("P2P Node %s: Broadcasting CCIP message %s to %d peers", n.ID, msg.MessageID, len(peers))
 	for _, peer := range peers {
 		go func(pID, addr string) {
 			err := sendWithBackoff(func() error {
@@ -392,6 +397,8 @@ func (n *Node) SyncCCIPState() {
 				log.Printf("P2P Node %s: Failed to fetch CCIP messages from peer %s: %v", n.ID, peer.ID, err)
 				continue
 			}
+
+			syncCount := 0
 			for _, msg := range msgs {
 				if n.SyncCallback(msg) {
 					syncCount++
