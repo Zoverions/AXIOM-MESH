@@ -54,7 +54,7 @@ def test_autoresearch_daemon_mock_flow():
 
 @pytest.mark.anyio
 async def test_autoresearch_daemon_real_forage_mocked():
-    mock_archive = MagicMock()
+    mock_archive = AsyncMock()
     mock_llm = AsyncMock()
     mock_llm.process.side_effect = ["quantum entanglement", "Structured logic summary"]
     mock_ncp = AsyncMock()
@@ -73,8 +73,8 @@ async def test_autoresearch_daemon_real_forage_mocked():
     finally:
         asyncio.sleep = original_sleep
 
-    assert mock_archive.add.called
-    args, kwargs = mock_archive.add.call_args
+    assert mock_archive.sync_to_grid.called
+    args, kwargs = mock_archive.sync_to_grid.call_args
     assert kwargs["metadata"]["source"] == "autoresearch_daemon"
     assert "topic" in kwargs["metadata"]
     assert "provenance_confidence" in kwargs["metadata"]

@@ -189,6 +189,9 @@ class AutoResearchDaemon:
             if synthesis and "Error" not in synthesis:
                 final_content = synthesis
 
+        metadata = {"source": "autoresearch_daemon", "topic": topic, "timestamp": time.time()}
+        await self.archive.sync_to_grid(content=final_content, metadata=metadata)
+        print(f"[AutoResearch Daemon] Foraged and compiled research on: {topic}")
         metadata = {
             "source": "autoresearch_daemon",
             "topic": topic,
