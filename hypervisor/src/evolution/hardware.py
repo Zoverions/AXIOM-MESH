@@ -1,5 +1,6 @@
 import subprocess
 import os
+import platform
 
 class HardwareScanner:
     """
@@ -8,6 +9,7 @@ class HardwareScanner:
     """
     def scan(self) -> dict:
         footprint = {
+            "os_name": self._get_os_name(),
             "cpu_cores": self._get_cpu_cores(),
             "total_ram_gb": self._get_total_ram_gb(),
             "vram_mb": self._get_vram_mb(),
@@ -17,6 +19,24 @@ class HardwareScanner:
             footprint["has_gpu"] = True
 
         return footprint
+
+    def _get_os_name(self) -> str:
+        sys_name = platform.system()
+        if sys_name == "Linux":
+            try:
+                # Try to get more specific Linux distro info if possible
+                with open("/etc/os-release") as f:
+                    for line in f:
+                        if line.startswith("PRETTY_NAME="):
+                            return f"Linux ({line.split('=')[1].strip().strip('\"')})"
+            except Exception:
+                pass
+            return "Linux"
+        elif sys_name == "Darwin":
+            return f"macOS {platform.mac_ver()[0]}"
+        elif sys_name == "Windows":
+            return f"Windows {platform.release()}"
+        return sys_name
 
     def recommend_models(self, footprint: dict) -> dict:
         """
