@@ -32,6 +32,21 @@ class AutoResearchDaemon:
             time.sleep(10) # Simulate idle time/waiting for idle compute
             self._forage()
 
+    async def _fetch_with_retry(self, url, headers=None, follow_redirects=False):
+        max_retries = 3
+        base_delay = 1.0
+        async with httpx.AsyncClient() as client:
+            for attempt in range(max_retries):
+                try:
+                    res = await client.get(url, headers=headers, timeout=5.0, follow_redirects=follow_redirects)
+                    if res.status_code == 200:
+                        return res
+                except Exception as e:
+                    if attempt == max_retries - 1:
+                        raise e
+                    await asyncio.sleep(base_delay * (2 ** attempt))
+        raise Exception(f"Failed to fetch {url} after {max_retries} attempts.")
+
     def _forage(self):
         # Synchronous wrapper for backward compatibility or thread-based execution
         try:
@@ -71,18 +86,16 @@ class AutoResearchDaemon:
         arxiv_data = ""
         try:
             query_url = f"http://export.arxiv.org/api/query?search_query=all:{topic.replace(' ', '+')}&start=0&max_results=1"
-            async with httpx.AsyncClient() as client:
-                res = await client.get(query_url, timeout=5.0)
-                if res.status_code == 200:
-                    root = ET.fromstring(res.text)
-                    ns = {'atom': 'http://www.w3.org/2005/Atom'}
-                    entry = root.find('atom:entry', ns)
-                    if entry is not None:
-                        title_elem = entry.find('atom:title', ns)
-                        summary_elem = entry.find('atom:summary', ns)
-                        title = title_elem.text.strip() if title_elem is not None else "Unknown"
-                        summary = summary_elem.text.strip() if summary_elem is not None else "No summary available."
-                        arxiv_data = f"ArXiv Title: {title}\nSummary: {summary}"
+            res = await self._fetch_with_retry(query_url)
+            root = ET.fromstring(res.text)
+            ns = {'atom': 'http://www.w3.org/2005/Atom'}
+            entry = root.find('atom:entry', ns)
+            if entry is not None:
+                title_elem = entry.find('atom:title', ns)
+                summary_elem = entry.find('atom:summary', ns)
+                title = title_elem.text.strip() if title_elem is not None else "Unknown"
+                summary = summary_elem.text.strip() if summary_elem is not None else "No summary available."
+                arxiv_data = f"ArXiv Title: {title}\nSummary: {summary}"
         except Exception as e:
             print(f"[AutoResearch Daemon] ArXiv fetch failed: {e}")
 
@@ -91,14 +104,28 @@ class AutoResearchDaemon:
         try:
             wiki_url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(topic)}"
             headers = {"User-Agent": "AxiomMesh-AutoResearch/1.0 (contact@axiommesh.local)"}
-            async with httpx.AsyncClient() as client:
-                res = await client.get(wiki_url, headers=headers, timeout=5.0, follow_redirects=True)
-                if res.status_code == 200:
-                    extract = res.json().get('extract')
-                    if extract:
-                        wikipedia_data = f"Wikipedia Summary: {extract}"
+            res = await self._fetch_with_retry(wiki_url, headers=headers, follow_redirects=True)
+            extract = res.json().get('extract')
+            if extract:
+                wikipedia_data = f"Wikipedia Summary: {extract}"
         except Exception as e:
             print(f"[AutoResearch Daemon] Wikipedia fetch failed: {e}")
+
+        # External fetching via Crossref
+        crossref_data = ""
+        try:
+            crossref_url = f"https://api.crossref.org/works?query={urllib.parse.quote(topic)}&select=title,abstract&rows=1"
+            headers = {"User-Agent": "AxiomMesh-AutoResearch/1.0 (mailto:contact@axiommesh.local)"}
+            res = await self._fetch_with_retry(crossref_url, headers=headers, follow_redirects=True)
+            items = res.json().get('message', {}).get('items', [])
+            if items:
+                title = items[0].get('title', ['Unknown'])[0]
+                abstract = items[0].get('abstract', 'No abstract available.')
+                # Basic cleanup for JATS XML tags often found in Crossref abstracts
+                abstract = abstract.replace('<jats:p>', '').replace('</jats:p>', '').replace('<jats:sec>', '').replace('</jats:sec>', '').replace('<jats:title>', '').replace('</jats:title>', '')
+                crossref_data = f"Crossref Title: {title}\nAbstract: {abstract}"
+        except Exception as e:
+            print(f"[AutoResearch Daemon] Crossref fetch failed: {e}")
 
         sources = []
         if ncp_info:
@@ -107,10 +134,20 @@ class AutoResearchDaemon:
             sources.append({"name": "ArXiv", "content": arxiv_data, "score": 0.9})
         if wikipedia_data:
             sources.append({"name": "Wikipedia", "content": wikipedia_data, "score": 0.5})
+        if crossref_data:
+            sources.append({"name": "Crossref", "content": crossref_data, "score": 0.85})
 
         if not sources:
-            print(f"[AutoResearch Daemon] All external sources failed for topic: {topic}")
-            return
+            print(f"[AutoResearch Daemon] All external sources failed for topic: {topic}. Attempting offline fallback.")
+            if self.llm:
+                prompt = f"Objective: Provide a comprehensive, structured summary on the topic of '{topic}'. Include verifiable claims and conceptual relationships. This will be used as a primary offline source."
+                fallback_summary = await self.llm.process(prompt)
+                if fallback_summary and "Error" not in fallback_summary:
+                    sources.append({"name": "OfflineLLM", "content": fallback_summary, "score": 0.3})
+
+            if not sources:
+                print(f"[AutoResearch Daemon] Offline fallback failed for topic: {topic}")
+                return
 
         # Deduplication
         unique_sources = []
@@ -123,6 +160,11 @@ class AutoResearchDaemon:
 
         # Source Ranking
         unique_sources.sort(key=lambda x: x["score"], reverse=True)
+
+        # Provenance Confidence Calculation
+        base_confidence = sum(source['score'] for source in unique_sources) / len(unique_sources) if unique_sources else 0.0
+        diversity_bonus = min(0.2, len(unique_sources) * 0.05)
+        provenance_confidence = round(min(1.0, base_confidence + diversity_bonus), 3)
 
         # Combine data
         combined_raw = f"Topic: {topic}\n\nSources:\n"
@@ -150,3 +192,11 @@ class AutoResearchDaemon:
         metadata = {"source": "autoresearch_daemon", "topic": topic, "timestamp": time.time()}
         await self.archive.sync_to_grid(content=final_content, metadata=metadata)
         print(f"[AutoResearch Daemon] Foraged and compiled research on: {topic}")
+        metadata = {
+            "source": "autoresearch_daemon",
+            "topic": topic,
+            "timestamp": time.time(),
+            "provenance_confidence": provenance_confidence
+        }
+        self.archive.add(content=final_content, metadata=metadata)
+        print(f"[AutoResearch Daemon] Foraged and compiled research on: {topic} (Confidence: {provenance_confidence})")
