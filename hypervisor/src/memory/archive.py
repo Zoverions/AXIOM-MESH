@@ -170,6 +170,7 @@ class DistributedDeepArchive(DeepArchive):
                         ipfs_url,
                         files={"file": json.dumps(payload).encode()},
                         headers=headers,
+                        timeout=5.0,
                         timeout=5.0
                     )
                     if response.status_code == 200:

@@ -68,7 +68,6 @@ The repository is actively evolving and not all roadmap features are production-
 - Zero-knowledge proof paths are currently lightweight protocol proofs (not production-grade zk-SNARK/zk-STARK systems).
 - zkML prover is still a simulated flow intended for interface validation, not a cryptographic proof backend.
 - Several distributed/network features are best-effort and may require environment-specific services (IPFS node, Arweave gateway, reachable peers) for full behavior.
-- Smart-contract-backed staking/slashing, full multi-agent swarm orchestration, and CCIP-grade cross-chain interoperability remain roadmap work.
 
 ## Development Roadmap & Status
 
@@ -89,5 +88,5 @@ Based on the master specification, AxiomMesh follows a 5-phase strict initializa
 - [x] Implement **Ethereum/Polygon L2 Smart Contracts** (e.g., Arbitrum) for on-chain compute bond slashing.
 - Integrate **IPFS/Arweave** for persistent decentralized storage of the Tier 3 Memory graphs.
 - [x] Add **Chainlink Oracles** for verifiable off-chain data feeds to enhance the Truth Context.
-- Develop **Multi-Agent Swarm Orchestration** allowing nodes to dynamically group together to solve high-compute problems.
-- Implement **Cross-Chain Interoperability Protocol (CCIP)** support.
+- [x] Develop **Multi-Agent Swarm Orchestration** allowing nodes to dynamically group together to solve high-compute problems.
+- [x] Implement **Cross-Chain Interoperability Protocol (CCIP)** support.
