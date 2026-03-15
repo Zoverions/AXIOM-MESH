@@ -16,10 +16,16 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+type ZKMLJob struct {
+	Payload types.ZKMLPayload
+	Result  chan bool
+}
+
 type Server struct {
 	ledger   *blockchain.Ledger
 	p2pNode  *p2p.Node
 	upgrader websocket.Upgrader
+	zkmlQueue chan ZKMLJob
 }
 
 func NewServer(ledger *blockchain.Ledger, p2pNode *p2p.Node) *Server {
@@ -40,12 +46,34 @@ func NewServer(ledger *blockchain.Ledger, p2pNode *p2p.Node) *Server {
 		}
 	}
 
-	return &Server{
+	server := &Server{
 		ledger:  ledger,
 		p2pNode: p2pNode,
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool { return true },
 		},
+		zkmlQueue: make(chan ZKMLJob, 100), // Buffered queue for deterministic workers
+	}
+
+	// Start a deterministic worker pool for zkML verifications (concurrency limited to 2 for deterministic compute)
+	for i := 0; i < 2; i++ {
+		go server.startZKMLWorker()
+	}
+
+	return server
+}
+
+// startZKMLWorker runs a deterministic worker pool for zkML verifications
+func (s *Server) startZKMLWorker() {
+	for job := range s.zkmlQueue {
+		log.Printf("Worker processing zkML verification for %s", job.Payload.ModelCommitment)
+		valid := consensus.VerifyZKMLInference(job.Payload.ModelCommitment, job.Payload.Input, job.Payload.Output, job.Payload.Proof, job.Payload.VK, job.Payload.Settings)
+		if valid {
+			log.Printf("Worker verified zkML for %s", job.Payload.ModelCommitment)
+		} else {
+			log.Printf("Worker failed zkML verification for %s", job.Payload.ModelCommitment)
+		}
+		job.Result <- valid
 	}
 }
 
@@ -290,10 +318,24 @@ func (s *Server) Start(addr string) error {
 		if r.Method == "POST" {
 			var payload types.ZKMLPayload
 			if err := json.NewDecoder(r.Body).Decode(&payload); err == nil {
-				if consensus.VerifyZKMLInference(payload.ModelCommitment, payload.Input, payload.Output, payload.Proof, payload.VK, payload.Settings) {
-					json.NewEncoder(w).Encode(map[string]string{"status": "verified"})
-				} else {
-					http.Error(w, "zkML verification failed", http.StatusForbidden)
+				// Deterministic Worker Pipeline
+				// Submit the job to the deterministic worker queue, limiting concurrency,
+				// and await the verification synchronously to fulfill the client contract.
+				job := ZKMLJob{
+					Payload: payload,
+					Result:  make(chan bool, 1),
+				}
+
+				select {
+				case s.zkmlQueue <- job:
+					valid := <-job.Result
+					if valid {
+						json.NewEncoder(w).Encode(map[string]string{"status": "verified"})
+					} else {
+						http.Error(w, "zkML verification failed", http.StatusForbidden)
+					}
+				default:
+					http.Error(w, "zkML verification queue is full", http.StatusServiceUnavailable)
 				}
 			} else {
 				http.Error(w, err.Error(), http.StatusBadRequest)
