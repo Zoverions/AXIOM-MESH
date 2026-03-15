@@ -243,23 +243,30 @@ class DistributedDeepArchive(DeepArchive):
     async def search_distributed(self, query: str) -> List[Dict]:
         local_results = self.search(query)
 
-        try:
-            import websockets
+        max_retries = 3
+        base_delay = 1.0
+        import websockets
 
-            async with websockets.connect(self.grid_ws_url) as ws:
-                await ws.send(json.dumps({"type": "query", "query": query, "proof": self._generate_zkp(query)}))
-                grid_data = json.loads(await ws.recv())
+        for attempt in range(max_retries):
+            try:
+                async with websockets.connect(self.grid_ws_url) as ws:
+                    await ws.send(json.dumps({"type": "query", "query": query, "proof": self._generate_zkp(query)}))
+                    grid_data = json.loads(await ws.recv())
 
-                if "nodes" in grid_data:
-                    for node in grid_data["nodes"]:
-                        local_results.append(
-                            {
-                                "content": node["content"],
-                                "metadata": {**(node.get("metadata") or {}), "source": "grid_p2p"},
-                            }
-                        )
-        except Exception as e:
-            print(f"Distributed search error: {e}")
+                    if "nodes" in grid_data:
+                        for node in grid_data["nodes"]:
+                            local_results.append(
+                                {
+                                    "content": node["content"],
+                                    "metadata": {**(node.get("metadata") or {}), "source": "grid_p2p"},
+                                }
+                            )
+                    break
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(base_delay * (2 ** attempt))
+                else:
+                    print(f"[Degraded Mode] Grid search failed after {max_retries} attempts: {e}. Returning local results only.")
 
         return local_results
 
@@ -286,32 +293,48 @@ class DistributedDeepArchive(DeepArchive):
         edges = [e for e in data["edges"] if e["source"] == node_id or e["target"] == node_id]
 
         persist_payload = {"node": node, "edges": edges}
-        node.setdefault("metadata", {})["ipfs_cid"] = await self.persist_to_ipfs(persist_payload)
-        node["metadata"]["arweave_tx"] = await self.persist_to_arweave(persist_payload)
+
+        try:
+            node.setdefault("metadata", {})["ipfs_cid"] = await self.persist_to_ipfs(persist_payload)
+        except Exception as e:
+            print(f"[Degraded Mode] Failed to persist to IPFS: {e}")
+            node.setdefault("metadata", {})["ipfs_cid"] = None
+
+        try:
+            node["metadata"]["arweave_tx"] = await self.persist_to_arweave(persist_payload)
+        except Exception as e:
+            print(f"[Degraded Mode] Failed to persist to Arweave: {e}")
+            node.setdefault("metadata", {})["arweave_tx"] = None
 
         data["nodes"][node_id] = node
         with open(self.storage_path, "w") as f:
             json.dump(data, f, indent=2)
 
-        try:
-            import websockets
+        max_retries = 3
+        base_delay = 1.0
+        import websockets
+        for attempt in range(max_retries):
+            try:
+                async with websockets.connect(self.grid_ws_url) as ws:
+                    payload_str = f"{node.get('id', '')}:{len(edges)}"
+                    hash_val = hashlib.sha256(payload_str.encode()).digest()
+                    signature = self.private_key.sign_digest(hash_val).hex()
 
-            async with websockets.connect(self.grid_ws_url) as ws:
-                payload_str = f"{node.get('id', '')}:{len(edges)}"
-                hash_val = hashlib.sha256(payload_str.encode()).digest()
-                signature = self.private_key.sign_digest(hash_val).hex()
-
-                await ws.send(
-                    json.dumps(
-                        {
-                            "type": "sync",
-                            "node": node,
-                            "edges": edges,
-                            "node_id": self.public_key_hex,
-                            "signature": signature,
-                        }
+                    await ws.send(
+                        json.dumps(
+                            {
+                                "type": "sync",
+                                "node": node,
+                                "edges": edges,
+                                "node_id": self.public_key_hex,
+                                "signature": signature,
+                            }
+                        )
                     )
-                )
-                await ws.recv()
-        except Exception as e:
-            print(f"Grid sync error: {e}")
+                    await ws.recv()
+                    break
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(base_delay * (2 ** attempt))
+                else:
+                    print(f"[Degraded Mode] Grid sync failed after {max_retries} attempts: {e}")
