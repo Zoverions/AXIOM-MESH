@@ -1,27 +1,17 @@
 import { Request, Response, NextFunction } from 'express';
+import { extractApiKeyToken, validateGatewayApiKey } from './auth_utils';
 
 export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
-    const apiKey = process.env.GATEWAY_API_KEY;
+    const token = extractApiKeyToken({
+        queryApiKey: typeof req.query.apiKey === 'string' ? req.query.apiKey : undefined,
+        authorizationHeader: req.headers.authorization,
+        xApiKeyHeader: typeof req.headers['x-api-key'] === 'string' ? req.headers['x-api-key'] : undefined
+    });
 
-    if (!apiKey) {
-        return res.status(500).json({ error: 'Server configuration error: GATEWAY_API_KEY is not set' });
-    }
+    const validation = validateGatewayApiKey(token, process.env.GATEWAY_API_KEY);
 
-    let token = req.query.apiKey as string;
-
-    if (!token) {
-        const authHeader = req.headers.authorization;
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            token = authHeader.split(' ')[1];
-        }
-    }
-
-    if (!token) {
-        return res.status(401).json({ error: 'Unauthorized: Missing or invalid Authorization header or apiKey parameter' });
-    }
-
-    if (token !== apiKey) {
-        return res.status(403).json({ error: 'Forbidden: Invalid API Key' });
+    if (!validation.ok) {
+        return res.status(validation.code).json({ error: validation.error });
     }
 
     next();

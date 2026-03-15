@@ -18,6 +18,12 @@ const router = Router();
 
 const gatewayMetrics = { requests: 0, errors: 0 };
 
+
+function getGridBaseUrl(): string {
+    return process.env.GRID_URL ? process.env.GRID_URL.replace('/skills', '') : 'http://grid:5000';
+}
+
+
 router.post('/api/v1/intent/process/public', authMiddleware, async (req: Request, res: Response) => {
     gatewayMetrics.requests++;
     try {
@@ -78,7 +84,7 @@ router.get('/api/v1/agents', authMiddleware, async (req: Request, res: Response)
 // --- Swarms API ---
 router.get('/api/v1/swarms', authMiddleware, async (req: Request, res: Response) => {
     try {
-        const gridUrl = process.env.GRID_URL ? process.env.GRID_URL.replace('/skills', '') : 'http://grid:5000';
+        const gridUrl = getGridBaseUrl();
         const gridRes = await axios.get(gridUrl + '/swarm');
         res.json(gridRes.data);
     } catch (error: any) {
@@ -88,7 +94,7 @@ router.get('/api/v1/swarms', authMiddleware, async (req: Request, res: Response)
 
 router.post('/api/v1/swarms', authMiddleware, async (req: Request, res: Response) => {
     try {
-        const gridUrl = process.env.GRID_URL ? process.env.GRID_URL.replace('/skills', '') : 'http://grid:5000';
+        const gridUrl = getGridBaseUrl();
         const gridRes = await axios.post(gridUrl + '/swarm', req.body);
         res.json(gridRes.data);
     } catch (error: any) {
@@ -99,7 +105,7 @@ router.post('/api/v1/swarms', authMiddleware, async (req: Request, res: Response
 
 router.post('/api/v1/swarms/join', authMiddleware, async (req: Request, res: Response) => {
     try {
-        const gridUrl = process.env.GRID_URL ? process.env.GRID_URL.replace('/skills', '') : 'http://grid:5000';
+        const gridUrl = getGridBaseUrl();
         const gridRes = await axios.post(gridUrl + '/swarm/join', req.body);
         res.json(gridRes.data);
     } catch (error: any) {
@@ -112,7 +118,7 @@ router.post('/api/v1/swarms/join', authMiddleware, async (req: Request, res: Res
 router.get('/api/v1/network', authMiddleware, async (req: Request, res: Response) => {
     try {
         // Grid API URL
-        const gridUrl = process.env.GRID_URL ? process.env.GRID_URL.replace('/skills', '') : 'http://grid:5000';
+        const gridUrl = getGridBaseUrl();
         const gridRes = await axios.get(gridUrl + '/network/nodes');
         res.json(gridRes.data);
     } catch (error: any) {
@@ -140,7 +146,7 @@ router.get('/api/v1/status', authMiddleware, async (req: Request, res: Response)
     } catch {}
 
     try {
-        const gridRes = await axios.get('http://grid:5000/health').catch(() => null);
+        const gridRes = await axios.get(getGridBaseUrl() + '/health').catch(() => null);
         if (gridRes && gridRes.data) statuses.grid = gridRes.data;
     } catch {}
 

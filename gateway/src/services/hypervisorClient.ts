@@ -9,7 +9,8 @@ export async function sendToHypervisor(intent: IntentObject): Promise<IntentResp
         const response = await axios.post(`${HYPERVISOR_URL}/process`, intent, {
             headers: {
                 Authorization: `Bearer ${apiKey}`
-            }
+            },
+            proxy: false
         });
         return response.data;
     } catch (error: any) {

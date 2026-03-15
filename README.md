@@ -108,12 +108,14 @@ This section reflects the current codebase behavior and replaces earlier duplica
 2. **Hypervisor runtime/reliability bugfixes** are in place: `asyncio` is imported in the API server, and AutoTraining now parses sandbox output from `result.stdout`.
 3. **End-to-end integration test coverage (baseline)** exists for Gateway → Hypervisor → Sandbox (stub) intent processing.
 4. **Dashboard runtime integrity fixes** are in place: `gateway/public/app.js` now parses cleanly and uses a single schema-compatible WebSocket message send path.
+5. **Gateway auth model hardening is in place**: REST middleware, WebSocket handshake, and dashboard static routes now share the same API key validation semantics.
+6. **Gateway integration coverage now includes Grid stubs + stricter API contract checks** (auth, status/network, and WS handshake/flow).
 
 ### Still to do
 
 ### P0 (Critical)
-1. **Unify auth model** across REST/WS/dashboard endpoints and remove accidental insecure defaults.
-2. **Expand integration tests to include Grid stubs and stricter contract checks** (to move from baseline coverage to robust multi-service coverage).
+1. ✅ **Unify auth model across REST/WS/dashboard endpoints** and remove insecure dashboard default behavior.
+2. ✅ **Expanded integration tests with Grid stubs and stricter contract checks** for auth consistency and cross-service API behavior.
 
 ### P1 (High)
 3. **Strengthen interaction layer (human ↔ digital entity):**
