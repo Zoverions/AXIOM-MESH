@@ -219,7 +219,7 @@ router.get('/api/v1/logs', authMiddleware, async (req: Request, res: Response) =
 });
 
 // --- Configuration API ---
-const SENSITIVE_KEYS = ['OPENAI_API_KEY', 'DISCORD_TOKEN', 'WHATSAPP_SESSION'];
+const SENSITIVE_KEYWORDS = ['KEY', 'TOKEN', 'SECRET', 'PASSWORD', 'SESSION', 'PRIV'];
 
 // --- Metrics API ---
 router.get('/api/v1/metrics/system', authMiddleware, (req: Request, res: Response) => {
@@ -270,7 +270,8 @@ router.get('/api/v1/config', authMiddleware, (req: Request, res: Response) => {
                     let value = trimmed.substring(idx + 1).trim();
 
                     // Mask sensitive keys
-                    if (SENSITIVE_KEYS.includes(key) && value.length > 0) {
+                    const isSensitive = SENSITIVE_KEYWORDS.some(kw => key.toUpperCase().includes(kw));
+                    if (isSensitive && value.length > 0) {
                         value = value.substring(0, 3) + '********' + value.substring(value.length - 3);
                     }
                     config[key] = value;
