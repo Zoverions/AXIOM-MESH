@@ -1,4 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi.concurrency import run_in_threadpool
 import whisper
 import os
 import tempfile
@@ -18,15 +19,27 @@ def get_model():
 async def transcribe_audio(file: UploadFile = File(...)):
     temp_path = None
     try:
-        # Create a temporary file to store the uploaded audio
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".ogg") as temp_audio:
-            content = await file.read()
-            temp_audio.write(content)
-            temp_path = temp_audio.name
+        # Read file content asynchronously
+        content = await file.read()
 
-        # Transcribe using local whisper model
-        model = get_model()
-        result = model.transcribe(temp_path)
+        def perform_transcription(audio_content):
+            # Create a temporary file to store the uploaded audio
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".ogg") as temp_audio:
+                temp_audio.write(audio_content)
+                t_path = temp_audio.name
+
+            try:
+                # Transcribe using local whisper model
+                model = get_model()
+                res = model.transcribe(t_path)
+                return res, t_path
+            except Exception:
+                if os.path.exists(t_path):
+                    os.remove(t_path)
+                raise
+
+        # Offload blocking I/O and computation to a threadpool
+        result, temp_path = await run_in_threadpool(perform_transcription, content)
 
         return {"text": result["text"]}
     except Exception as e:
