@@ -112,7 +112,12 @@ async function startChannels() {
                         response.response = filterACS(response.response);
                         const targetChannel = activeChannels[channelName];
                         if (targetChannel) {
-                            await targetChannel.sendMessage(chatId, response.response);
+                            const receipt = await targetChannel.sendMessage(chatId, response.response);
+                            if (receipt.success) {
+                                console.log(`[${channelName}] Message delivered successfully (ID: ${receipt.messageId})`);
+                            } else {
+                                console.error(`[${channelName}] Message delivery failed: ${receipt.error}`);
+                            }
                         }
                     }
                 }
