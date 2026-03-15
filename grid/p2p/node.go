@@ -3,8 +3,6 @@ package p2p
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -18,6 +16,7 @@ import (
 	"github.com/axiom-mesh/grid/consensus"
 	"github.com/axiom-mesh/grid/types"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gorilla/websocket"
 )
 
@@ -41,12 +40,8 @@ type Node struct {
 	mu                sync.RWMutex
 }
 
-func NewNode(id string) *Node {
-	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		log.Fatalf("Failed to generate ECDSA key for node: %v", err)
-	}
-	pubBytes := elliptic.Marshal(elliptic.P256(), priv.PublicKey.X, priv.PublicKey.Y)
+func NewNode(id string, priv *ecdsa.PrivateKey) *Node {
+	pubBytes := crypto.FromECDSAPub(&priv.PublicKey)
 	pubHex := hex.EncodeToString(pubBytes)
 
 	return &Node{

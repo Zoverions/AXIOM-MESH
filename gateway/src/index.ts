@@ -7,6 +7,8 @@ import path from 'path';
 import restRoutes from './routes/rest';
 import { normalizeInput } from './utils/normalizer';
 import { sendToHypervisor } from './services/hypervisorClient';
+import { parseAndSanitizeIntent } from './middleware/intent_parser';
+import { filterACS } from './middleware/referent_filter';
 import { getChannelFactory, getRegisteredChannelNames, Channel } from './channels/registry';
 import { initLogger } from './utils/logger';
 import './channels'; // Initialize channel registrations
@@ -58,18 +60,22 @@ wss.on('connection', (ws: WebSocket) => {
 
     ws.on('message', async (message: Buffer) => {
         try {
-            const data = JSON.parse(message.toString());
-            const intent = normalizeInput('websocket', data.content || '', data.metadata || {});
+            const data = parseAndSanitizeIntent(message.toString());
+            const intent = normalizeInput('websocket', data.input, { identity_hash: data.identity_hash });
 
             // Send pending acknowledgment
             ws.send(JSON.stringify({ status: 'pending', intent_id: intent.id }));
 
             // Process with Hypervisor
             const response = await sendToHypervisor(intent);
+            if (response.response) {
+                response.response = filterACS(response.response);
+            }
 
             // Send final response
             ws.send(JSON.stringify(response));
         } catch (error) {
+            console.error(error);
             ws.send(JSON.stringify({ error: 'Invalid message format' }));
         }
     });
@@ -94,6 +100,7 @@ async function startChannels() {
 
                     const response = await sendToHypervisor(intent);
                     if (response.response) {
+                        response.response = filterACS(response.response);
                         const targetChannel = activeChannels[channelName];
                         if (targetChannel) {
                             await targetChannel.sendMessage(chatId, response.response);
