@@ -13,3 +13,4 @@ class IntentResponse(BaseModel):
     intent_id: str
     response: str
     status: str
+    audit_trail: Dict[str, Any] = {}

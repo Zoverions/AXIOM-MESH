@@ -47,6 +47,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
+    // --- Operator Cockpit History Array ---
+    const auditHistory = [];
+
     // --- Chat WebSocket Logic ---
     const chatMessages = document.getElementById("chat-messages");
     const chatInput = document.getElementById("chat-input");
@@ -61,6 +64,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
         ws = new WebSocket(wsUrl);
 
+            if (data.error) {
+                appendMessage('system', `Error: ${data.error}`);
+            } else if (data.response) {
+                appendMessage('agent', data.response);
+                if (data.audit_trail) {
+                    auditHistory.push({
+                        intent_id: data.intent_id,
+                        audit_trail: data.audit_trail,
+                        timestamp: new Date().toLocaleTimeString()
+                    });
+                    renderCockpitList();
+                }
+            } else {
+                appendMessage('system', JSON.stringify(data));
         ws.onopen = () => {
             appendMessage('system', 'Connected to AxiomMesh Gateway.');
         };
@@ -126,6 +143,73 @@ document.addEventListener("DOMContentLoaded", () => {
     chatInput.addEventListener("keypress", (e) => {
         if (e.key === "Enter") sendMessage();
     });
+
+    // --- Operator Cockpit Render Logic ---
+    function renderCockpitList() {
+        const listContainer = document.getElementById('cockpit-intent-list');
+        if (!listContainer) return;
+
+        listContainer.innerHTML = '';
+        if (auditHistory.length === 0) {
+            listContainer.innerHTML = '<p style="color: #666;">No interactions recorded yet.</p>';
+            return;
+        }
+
+        auditHistory.slice().reverse().forEach((entry, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'nav-btn';
+            btn.style.width = '100%';
+            btn.style.marginBottom = '5px';
+            btn.style.backgroundColor = 'var(--card-bg)';
+            btn.style.border = '1px solid var(--border)';
+            btn.textContent = `[${entry.timestamp}] ${entry.audit_trail.intent_replay.content.substring(0, 20)}...`;
+
+            btn.addEventListener('click', () => {
+                showCockpitDetails(entry);
+                // Highlight active button
+                Array.from(listContainer.children).forEach(c => c.style.borderLeft = 'none');
+                btn.style.borderLeft = '3px solid var(--accent)';
+            });
+
+            listContainer.appendChild(btn);
+        });
+    }
+
+    function showCockpitDetails(entry) {
+        document.getElementById('cockpit-details').style.display = 'block';
+        const trail = entry.audit_trail;
+
+        // Intent Replay
+        document.getElementById('cockpit-replay-content').textContent = trail.intent_replay.content;
+        document.getElementById('cockpit-replay-channel').textContent = trail.intent_replay.channel;
+        document.getElementById('cockpit-replay-sender').textContent = trail.intent_replay.sender;
+
+        // Safety Decisions
+        const safetyList = document.getElementById('cockpit-safety-list');
+        safetyList.innerHTML = '';
+        for (const [key, value] of Object.entries(trail.safety_decisions)) {
+            const li = document.createElement('li');
+            li.style.marginBottom = '8px';
+            li.style.fontFamily = 'monospace';
+
+            let color = '#ccc';
+            if (value === 'Passed' || value === false || value === 'Allowed') color = '#4caf50'; // Green
+            if (value === 'Failed' || value === true || value === 'Blocked') color = '#f44336'; // Red
+
+            li.innerHTML = `<strong>${key}:</strong> <span style="color: ${color};">${value}</span>`;
+            safetyList.appendChild(li);
+        }
+
+        // Why this answer
+        const whyList = document.getElementById('cockpit-why-list');
+        whyList.innerHTML = '';
+        for (const [key, value] of Object.entries(trail.why_this_answer)) {
+            const li = document.createElement('li');
+            li.style.marginBottom = '8px';
+            li.innerHTML = `<strong>${key.replace(/_/g, ' ')}:</strong> ${value}`;
+            whyList.appendChild(li);
+        }
+    }
 });
 
     // --- Agents Logic ---
