@@ -48,6 +48,39 @@ router.get('/api/v1/agents', authMiddleware, async (req: Request, res: Response)
     }
 });
 
+// --- Swarms API ---
+router.get('/api/v1/swarms', async (req: Request, res: Response) => {
+    try {
+        const gridUrl = process.env.GRID_URL ? process.env.GRID_URL.replace('/skills', '') : 'http://grid:5000';
+        const gridRes = await axios.get(gridUrl + '/swarm');
+        res.json(gridRes.data);
+    } catch (error: any) {
+        res.status(500).json({ error: 'Failed to fetch swarms from Grid', details: error.message });
+    }
+});
+
+router.post('/api/v1/swarms', async (req: Request, res: Response) => {
+    try {
+        const gridUrl = process.env.GRID_URL ? process.env.GRID_URL.replace('/skills', '') : 'http://grid:5000';
+        const gridRes = await axios.post(gridUrl + '/swarm', req.body);
+        res.json(gridRes.data);
+    } catch (error: any) {
+        const msg = error.response && error.response.data ? error.response.data : error.message;
+        res.status(500).json({ error: 'Failed to create swarm on Grid', details: msg });
+    }
+});
+
+router.post('/api/v1/swarms/join', async (req: Request, res: Response) => {
+    try {
+        const gridUrl = process.env.GRID_URL ? process.env.GRID_URL.replace('/skills', '') : 'http://grid:5000';
+        const gridRes = await axios.post(gridUrl + '/swarm/join', req.body);
+        res.json(gridRes.data);
+    } catch (error: any) {
+        const msg = error.response && error.response.data ? error.response.data : error.message;
+        res.status(500).json({ error: 'Failed to join swarm on Grid', details: msg });
+    }
+});
+
 // --- Network API ---
 router.get('/api/v1/network', authMiddleware, async (req: Request, res: Response) => {
     try {
