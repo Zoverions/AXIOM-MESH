@@ -1,12 +1,19 @@
 import { Telegraf } from 'telegraf';
-import { Channel, ChannelOpts, registerChannel } from './registry';
+import { ChannelOpts, ReliabilityPolicy, registerChannel } from './registry';
+import { BaseChannel } from './base';
 
-export class TelegramChannel implements Channel {
+export class TelegramChannel extends BaseChannel {
     name = 'telegram';
+    reliabilityPolicy: ReliabilityPolicy = {
+        maxRetries: 3,
+        retryDelayMs: 2000,
+        rateLimitMs: 1000 // typical telegram bot rate limit ~30 msgs/sec
+    };
     private bot: Telegraf;
     private onMessage: (channelName: string, chatId: string, content: string, sender: string) => void;
 
     constructor(token: string, opts: ChannelOpts) {
+        super();
         this.bot = new Telegraf(token);
         this.onMessage = opts.onMessage;
 
@@ -35,13 +42,9 @@ export class TelegramChannel implements Channel {
         }
     }
 
-    async sendMessage(chatId: string, content: string): Promise<void> {
-        try {
-            await this.bot.telegram.sendMessage(chatId, content);
-            console.log(`[Telegram] Message sent to ${chatId}`);
-        } catch (err) {
-            console.error(`[Telegram] Failed to send message to ${chatId}:`, err);
-        }
+    protected async doSendMessage(chatId: string, content: string): Promise<string | undefined> {
+        const msg = await this.bot.telegram.sendMessage(chatId, content);
+        return msg.message_id.toString();
     }
 
     async disconnect(): Promise<void> {

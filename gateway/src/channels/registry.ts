@@ -1,7 +1,21 @@
+export interface DeliveryReceipt {
+    success: boolean;
+    messageId?: string;
+    error?: string;
+    timestamp: number;
+}
+
+export interface ReliabilityPolicy {
+    maxRetries: number;
+    retryDelayMs: number;
+    rateLimitMs: number;
+}
+
 export interface Channel {
     name: string;
+    reliabilityPolicy: ReliabilityPolicy;
     connect(): Promise<void>;
-    sendMessage(chatId: string, text: string): Promise<void>;
+    sendMessage(chatId: string, text: string): Promise<DeliveryReceipt>;
     disconnect(): Promise<void>;
 }
 

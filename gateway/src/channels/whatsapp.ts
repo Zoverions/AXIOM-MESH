@@ -1,16 +1,23 @@
 import { makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers, fetchLatestWaWebVersion } from '@whiskeysockets/baileys';
-import { Channel, ChannelOpts, registerChannel } from './registry';
+import { ChannelOpts, ReliabilityPolicy, registerChannel } from './registry';
+import { BaseChannel } from './base';
 import pino from 'pino';
 import fs from 'fs';
 import path from 'path';
 import { Boom } from '@hapi/boom';
 
-export class WhatsAppChannel implements Channel {
+export class WhatsAppChannel extends BaseChannel {
     name = 'whatsapp';
+    reliabilityPolicy: ReliabilityPolicy = {
+        maxRetries: 5,
+        retryDelayMs: 2000,
+        rateLimitMs: 2000 // WhatsApp usually strict on automated messages
+    };
     private sock: any = null;
     private opts: ChannelOpts;
 
     constructor(opts: ChannelOpts) {
+        super();
         this.opts = opts;
     }
 
@@ -66,17 +73,12 @@ export class WhatsAppChannel implements Channel {
         });
     }
 
-    async sendMessage(chatId: string, text: string): Promise<void> {
+    protected async doSendMessage(chatId: string, text: string): Promise<string | undefined> {
         if (!this.sock) {
-            console.error('[WhatsApp] Cannot send message: socket not connected');
-            return;
+            throw new Error('[WhatsApp] Cannot send message: socket not connected');
         }
-        try {
-            await this.sock.sendMessage(chatId, { text });
-            console.log(`[WhatsApp] Message sent to ${chatId}`);
-        } catch (error) {
-            console.error('[WhatsApp] Failed to send message:', error);
-        }
+        const res = await this.sock.sendMessage(chatId, { text });
+        return res?.key?.id;
     }
 
     async disconnect(): Promise<void> {
