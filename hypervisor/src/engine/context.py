@@ -1,4 +1,7 @@
 from src.memory.archive import DistributedDeepArchive
+import os
+import json
+
 from src.engine.ncp_client import NCPClient
 from src.engine.mcp_client import MCPClient
 from src.engine.temporal import TemporalStateManager
@@ -33,10 +36,27 @@ class ContextEngine:
         self.miro_mapper = MiroFishMapper()
         self.divergence_engine = DivergenceEngine(self.miro_mapper)
 
+        # Adaptive interaction policies
+        self.preferences_path = "data/preferences.json"
+        self.user_preferences = {}
+        os.makedirs("data", exist_ok=True)
+        if os.path.exists(self.preferences_path):
+            with open(self.preferences_path, "r") as f:
+                try:
+                    self.user_preferences = json.load(f)
+                except json.JSONDecodeError:
+                    self.user_preferences = {}
+
+    def set_user_mode(self, sender: str, mode: str):
+        self.user_preferences[sender] = mode
+        with open(self.preferences_path, "w") as f:
+            json.dump(self.user_preferences, f, indent=2)
+
     async def get_context(self, intent: IntentObject) -> str:
         intent_content = intent.content
         metadata = intent.metadata or {}
         session_id = intent.session_id
+        sender = metadata.get("sender", "unknown")
 
         # Tier 3 Retrieval
         retrieved_data = self.deep_archive.search(intent_content)
@@ -101,6 +121,17 @@ class ContextEngine:
             style_instruction = "Response Style: Use the Socratic method. Guide the user with questions rather than just providing the answer."
         else:
             style_instruction = "Response Style: Standard AxiomMesh protocol."
+
+        # Apply Adaptive interaction policies
+        mode = self.user_preferences.get(sender)
+        if mode == "concise":
+            axioms += "\nMode Instruction: Be extremely concise. Provide only the essential answer without elaboration."
+        elif mode == "analytical":
+            axioms += "\nMode Instruction: Be highly analytical. Break down the problem logically, provide step-by-step reasoning, and consider multiple angles."
+        elif mode == "socratic":
+            axioms += "\nMode Instruction: Use the Socratic method. Guide the user to the answer by asking probing questions instead of just giving the solution directly."
+        elif mode == "executive":
+            axioms += "\nMode Instruction: Use an executive summary style. Provide a high-level overview, key takeaways, and actionable bullet points."
 
         context_str = (
             f"--- TIER 1: SYSTEM AXIOMS ---\n{axioms}\n\n"

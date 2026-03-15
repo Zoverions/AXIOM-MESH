@@ -16,3 +16,4 @@ class IntentResponse(BaseModel):
     status: str
     confidence: float = 1.0
     provenance: list = []
+    audit_trail: Dict[str, Any] = {}

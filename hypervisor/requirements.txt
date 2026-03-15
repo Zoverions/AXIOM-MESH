@@ -22,3 +22,4 @@ pytest
 pytest-asyncio
 pytest-mock
 grokipedia-api
+cryptography

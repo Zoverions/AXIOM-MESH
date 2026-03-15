@@ -18,6 +18,7 @@ type ComputeBond struct {
 	NodeID string `json:"nodeId"`
 	Amount int    `json:"amount"`
 	Status string `json:"status"`
+	TxHash string `json:"txHash,omitempty"`
 }
 
 type WebState struct {

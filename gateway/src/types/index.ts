@@ -14,4 +14,5 @@ export interface IntentResponse {
     status: 'success' | 'error' | 'pending';
     confidence?: number;
     provenance?: string[];
+    audit_trail?: Record<string, any>;
 }

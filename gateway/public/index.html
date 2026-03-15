@@ -16,13 +16,19 @@
     <div id="app">
         <aside class="sidebar">
             <h2>AxiomMesh</h2>
+            <div class="auth-box" style="padding: 10px; margin-bottom: 10px;">
+                <label for="dashboard-api-key" style="display: block; font-size: 0.8rem; margin-bottom: 5px;">Gateway API Key:</label>
+                <input type="password" id="dashboard-api-key" placeholder="Enter API Key" style="width: 100%; padding: 5px; box-sizing: border-box; font-size: 0.8rem;">
+            </div>
             <nav>
                 <button class="nav-btn active" data-target="chat">Chat Interface</button>
                 <button class="nav-btn" data-target="memory">Memory Controls</button>
                 <button class="nav-btn" data-target="status">System Status</button>
                 <button class="nav-btn" data-target="agents">Active Agents</button>
+                <button class="nav-btn" data-target="swarms">Swarm Orchestration</button>
                 <button class="nav-btn" data-target="tester">Intentionality Tester</button>
                 <button class="nav-btn" data-target="network">Grid Mesh Nodes</button>
+                <button class="nav-btn" data-target="cockpit">Operator Cockpit</button>
                 <button class="nav-btn" data-target="settings">Settings / Config</button>
                 <button class="nav-btn" data-target="logs">Logs & Troubleshooting</button>
             </nav>
@@ -94,6 +100,28 @@
                 </div>
             </section>
 
+            <!-- Swarms Tab -->
+            <section id="swarms" class="tab-content">
+                <h2>Swarm Orchestration</h2>
+
+                <div class="card" style="text-align: left; margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 10px;">Create New Swarm</h3>
+                    <div class="form-group">
+                        <label for="swarm-task-id">Task ID</label>
+                        <input type="text" id="swarm-task-id" placeholder="Enter Task ID (e.g., task-123)">
+                    </div>
+                    <div class="form-group">
+                        <label for="swarm-node-id">Creator Node ID (Requires Compute Bond)</label>
+                        <input type="text" id="swarm-node-id" placeholder="Enter Node ID">
+                    </div>
+                    <button id="create-swarm-btn" style="padding: 10px 20px; background-color: var(--accent); color: #000; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">Create Swarm</button>
+                </div>
+
+                <div id="swarms-grid" class="agents-grid">
+                    <p>Loading active swarms...</p>
+                </div>
+            </section>
+
             <!-- Intentionality Tester Tab -->
             <section id="tester" class="tab-content">
                 <h2>Intentionality Tester (GDSP Strategy)</h2>
@@ -105,6 +133,40 @@
                 <h2>Connected Grid Nodes</h2>
                 <div id="network-grid" class="agents-grid">
                     <p>Loading connected mesh nodes...</p>
+                </div>
+            </section>
+
+            <!-- Operator Cockpit Tab -->
+            <section id="cockpit" class="tab-content">
+                <h2>Operator Cockpit - Intent Replay & Trust Audit</h2>
+                <div class="cockpit-container">
+                    <p class="description">Select a recent interaction to view its full execution trace, safety audit, and rationale breakdown.</p>
+                    <div style="display: flex; gap: 20px;">
+                        <div id="cockpit-intent-list" style="width: 30%; border-right: 1px solid var(--border); padding-right: 10px; max-height: 60vh; overflow-y: auto;">
+                            <!-- List of intents will go here -->
+                        </div>
+                        <div id="cockpit-details" style="width: 70%; padding-left: 10px; display: none;">
+                            <div class="card" style="text-align: left;">
+                                <h3 style="color: var(--accent);">Intent Replay</h3>
+                                <pre id="cockpit-replay-content" style="background: #111; padding: 10px; border-radius: 4px; white-space: pre-wrap;"></pre>
+                                <p style="font-size: 12px; color: #888;">Channel: <span id="cockpit-replay-channel"></span> | Sender: <span id="cockpit-replay-sender"></span></p>
+                            </div>
+
+                            <div class="card" style="text-align: left; margin-top: 15px;">
+                                <h3 style="color: var(--accent);">Safety Decision Audit</h3>
+                                <ul id="cockpit-safety-list" style="list-style: none; padding-left: 0;">
+                                    <!-- Safety checks here -->
+                                </ul>
+                            </div>
+
+                            <div class="card" style="text-align: left; margin-top: 15px;">
+                                <h3 style="color: var(--accent);">"Why this answer?" (Context Decomposition)</h3>
+                                <ul id="cockpit-why-list" style="list-style: none; padding-left: 0;">
+                                    <!-- Why answers here -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
