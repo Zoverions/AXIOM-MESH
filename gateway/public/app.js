@@ -133,7 +133,14 @@ document.addEventListener("DOMContentLoaded", () => {
         chatInput.value = '';
 
         if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ content: text }));
+            const payload = {
+                id: crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now(),
+                identity_hash: 'web-user-hash',
+                modality: 'text',
+                input: text,
+                timestamp: Date.now()
+            };
+            ws.send(JSON.stringify(payload));
         } else {
             appendMessage('system', 'Cannot send: WebSocket offline.');
         }
