@@ -172,3 +172,46 @@ func TestLedger_AddCCIPMessage_And_GetCCIPMessage(t *testing.T) {
 		t.Error("Expected no CCIP message for non-existent-msg")
 	}
 }
+
+func TestLedger_SearchGraphRanked(t *testing.T) {
+	l := NewLedger()
+	l.UpdateGraph(types.GraphNode{ID: "n1", Content: "Distributed graph retrieval", Keywords: []string{"graph", "retrieval"}}, nil)
+	l.UpdateGraph(types.GraphNode{ID: "n2", Content: "Channel delivery policy", Keywords: []string{"channel"}}, nil)
+
+	results := l.SearchGraphRanked("graph retrieval")
+	if len(results) == 0 {
+		t.Fatalf("expected ranked results")
+	}
+	if results[0].Node.ID != "n1" {
+		t.Fatalf("expected n1 as best ranked node, got %s", results[0].Node.ID)
+	}
+}
+
+func TestLedger_ApplyBondChainEvent_And_Reconcile(t *testing.T) {
+	l := NewLedger()
+	evtStake := types.BondChainEvent{Type: "stake", NodeID: "node-1", Amount: 200, TxHash: "0x1", BlockNumber: 10, Finalized: false}
+	if err := l.ApplyBondChainEvent(evtStake); err != nil {
+		t.Fatalf("stake chain event failed: %v", err)
+	}
+
+	bond, ok := l.GetBond("node-1")
+	if !ok || bond.Amount != 200 || bond.PendingFinalityTx != "0x1" {
+		t.Fatalf("unexpected bond after stake event: %+v", bond)
+	}
+
+	evtSlash := types.BondChainEvent{Type: "slash", NodeID: "node-1", Amount: 50, TxHash: "0x2", BlockNumber: 12, Finalized: true}
+	if err := l.ApplyBondChainEvent(evtSlash); err != nil {
+		t.Fatalf("slash chain event failed: %v", err)
+	}
+
+	bond, _ = l.GetBond("node-1")
+	if bond.Amount != 150 || bond.FinalizedBlock != 12 {
+		t.Fatalf("unexpected bond after slash event: %+v", bond)
+	}
+
+	l.ReconcileBondFromChain("node-1", types.ComputeBond{Amount: 175, Status: "active", TxHash: "0xcanon"}, 20)
+	bond, _ = l.GetBond("node-1")
+	if bond.Amount != 175 || bond.FinalizedBlock != 20 || bond.PendingFinalityTx != "" {
+		t.Fatalf("unexpected reconciled bond: %+v", bond)
+	}
+}

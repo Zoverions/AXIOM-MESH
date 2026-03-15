@@ -11,7 +11,9 @@ export class WhatsAppChannel extends BaseChannel {
     reliabilityPolicy: ReliabilityPolicy = {
         maxRetries: 5,
         retryDelayMs: 2000,
-        rateLimitMs: 2000 // WhatsApp usually strict on automated messages
+        rateLimitMs: 2000, // WhatsApp usually strict on automated messages
+        enforceDeliveryReceipt: true,
+        classifyRateLimitError: (err: unknown) => /429|rate limit|too many requests/i.test(String((err as any)?.message || err))
     };
     private sock: any = null;
     private opts: ChannelOpts;

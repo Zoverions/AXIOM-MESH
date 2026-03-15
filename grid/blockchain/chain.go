@@ -269,6 +269,148 @@ func (l *Ledger) GetCCIPMessage(messageID string) (types.CCIPMessage, bool) {
 	return msg, ok
 }
 
+type SearchResult struct {
+	Node  types.GraphNode
+	Score int
+}
+
+func normalizeToken(t string) string {
+	t = strings.ToLower(strings.TrimSpace(t))
+	return strings.Trim(t, ".,;!?\"'")
+}
+
+func scoreGraphNode(node types.GraphNode, queryTokens []string) int {
+	score := 0
+	contentLower := strings.ToLower(node.Content)
+	keywordSet := make(map[string]struct{}, len(node.Keywords))
+	for _, kw := range node.Keywords {
+		keywordSet[normalizeToken(kw)] = struct{}{}
+	}
+
+	for _, token := range queryTokens {
+		if token == "" {
+			continue
+		}
+		if strings.Contains(contentLower, token) {
+			score += 2
+		}
+		if _, ok := keywordSet[token]; ok {
+			score += 3
+		}
+	}
+
+	if score == 0 {
+		score = 1
+	}
+	return score
+}
+
+func (l *Ledger) SearchGraphRanked(query string) []SearchResult {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	query = strings.ToLower(strings.TrimSpace(query))
+	nodes := make([]types.GraphNode, 0)
+	if query == "" {
+		for _, node := range l.Graph.Nodes {
+			nodes = append(nodes, node)
+		}
+		results := make([]SearchResult, 0, len(nodes))
+		for _, node := range nodes {
+			results = append(results, SearchResult{Node: node, Score: 1})
+		}
+		return results
+	}
+
+	queryTokens := strings.Fields(query)
+	if len(queryTokens) == 0 {
+		return nil
+	}
+	for i := range queryTokens {
+		queryTokens[i] = normalizeToken(queryTokens[i])
+	}
+
+	candidate := make(map[string]struct{})
+	for _, token := range queryTokens {
+		if token == "" {
+			continue
+		}
+		for indexToken, ids := range l.GraphIndex {
+			if strings.Contains(indexToken, token) {
+				for _, id := range ids {
+					candidate[id] = struct{}{}
+				}
+			}
+		}
+	}
+
+	if len(candidate) == 0 {
+		return nil
+	}
+
+	results := make([]SearchResult, 0, len(candidate))
+	for id := range candidate {
+		if node, ok := l.Graph.Nodes[id]; ok {
+			results = append(results, SearchResult{Node: node, Score: scoreGraphNode(node, queryTokens)})
+		}
+	}
+
+	return results
+}
+
+func (l *Ledger) ApplyBondChainEvent(evt types.BondChainEvent) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if evt.NodeID == "" || evt.Type == "" || evt.Amount < 0 {
+		return fmt.Errorf("invalid chain event payload")
+	}
+
+	bond := l.Bonds[evt.NodeID]
+	bond.NodeID = evt.NodeID
+	bond.TxHash = evt.TxHash
+	bond.LastUpdatedBlock = evt.BlockNumber
+	bond.LastEvent = evt.Type
+	if evt.Finalized {
+		bond.FinalizedBlock = evt.BlockNumber
+		bond.PendingFinalityTx = ""
+	} else {
+		bond.PendingFinalityTx = evt.TxHash
+	}
+
+	switch evt.Type {
+	case "stake":
+		bond.Amount += evt.Amount
+		bond.Status = "active"
+	case "slash":
+		if bond.Status != "active" {
+			return fmt.Errorf("bond not active or does not exist")
+		}
+		if bond.Amount < evt.Amount {
+			return fmt.Errorf("slash amount exceeds bond amount")
+		}
+		bond.Amount -= evt.Amount
+		if bond.Amount == 0 {
+			bond.Status = "inactive"
+		}
+	default:
+		return fmt.Errorf("unsupported chain event type: %s", evt.Type)
+	}
+
+	l.Bonds[evt.NodeID] = bond
+	return nil
+}
+
+func (l *Ledger) ReconcileBondFromChain(nodeID string, canonical types.ComputeBond, finalizedBlock uint64) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	canonical.NodeID = nodeID
+	canonical.FinalizedBlock = finalizedBlock
+	canonical.PendingFinalityTx = ""
+	canonical.LastEvent = "reconcile"
+	l.Bonds[nodeID] = canonical
+}
 func (l *Ledger) GetAllCCIPMessages() []types.CCIPMessage {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
