@@ -396,6 +396,40 @@ func (s *Server) Start(addr string) error {
 
 	http.HandleFunc("/ws/graph", s.handleGraphWebSocket)
 
+	http.HandleFunc("/proposals", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "GET" {
+			json.NewEncoder(w).Encode(s.ledger.GetProposals())
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	http.HandleFunc("/proposals/events", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method != "POST" {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var evt types.ProposalChainEvent
+		if err := json.NewDecoder(r.Body).Decode(&evt); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if err := s.ledger.ApplyProposalChainEvent(evt); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":     "applied",
+			"proposalId": evt.ProposalID,
+			"type":       evt.Type,
+		})
+	})
+
 	http.HandleFunc("/ccip", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == "GET" {

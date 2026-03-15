@@ -215,3 +215,102 @@ func TestLedger_ApplyBondChainEvent_And_Reconcile(t *testing.T) {
 		t.Fatalf("unexpected reconciled bond: %+v", bond)
 	}
 }
+
+func TestApplyProposalChainEvent(t *testing.T) {
+	l := NewLedger()
+
+	// 1. Create a proposal
+	createEvt := types.ProposalChainEvent{
+		Type:        "Created",
+		ProposalID:  "prop-1",
+		Description: "A test proposal",
+		Impact:      types.ImpactVectorAnthropic,
+		EndTime:     1000,
+	}
+	err := l.ApplyProposalChainEvent(createEvt)
+	if err != nil {
+		t.Fatalf("Failed to create proposal: %v", err)
+	}
+
+	prop, exists := l.GetProposal("prop-1")
+	if !exists {
+		t.Fatalf("Proposal should exist")
+	}
+	if prop.State != types.ProposalStateActive || prop.Impact != types.ImpactVectorAnthropic {
+		t.Fatalf("Proposal state/impact mismatch")
+	}
+
+	// 2. Vote on proposal
+	voteEvtHuman := types.ProposalChainEvent{
+		Type:       "Voted",
+		ProposalID: "prop-1",
+		Support:    true,
+		Weight:     10,
+		VoterType:  "Human",
+	}
+	err = l.ApplyProposalChainEvent(voteEvtHuman)
+	if err != nil {
+		t.Fatalf("Failed to vote: %v", err)
+	}
+
+	voteEvtAgent := types.ProposalChainEvent{
+		Type:       "Voted",
+		ProposalID: "prop-1",
+		Support:    false,
+		Weight:     5,
+		VoterType:  "Agent",
+	}
+	err = l.ApplyProposalChainEvent(voteEvtAgent)
+	if err != nil {
+		t.Fatalf("Failed to vote: %v", err)
+	}
+
+	prop, _ = l.GetProposal("prop-1")
+	if prop.HumanForVotes != 10 || prop.AgentAgainstVotes != 5 {
+		t.Fatalf("Vote counts incorrect: %+v", prop)
+	}
+
+	// 3. Deadlock detected
+	deadlockEvt := types.ProposalChainEvent{
+		Type:       "DeadlockDetected",
+		ProposalID: "prop-1",
+	}
+	err = l.ApplyProposalChainEvent(deadlockEvt)
+	if err != nil {
+		t.Fatalf("Failed to apply deadlock: %v", err)
+	}
+	prop, _ = l.GetProposal("prop-1")
+	if prop.State != types.ProposalStateAwaitingSynthesis {
+		t.Fatalf("Proposal should be awaiting synthesis")
+	}
+
+	// 4. Synthesis submitted
+	synthEvt := types.ProposalChainEvent{
+		Type:            "SynthesisSubmitted",
+		ProposalID:      "prop-1",
+		SynthesisResult: "Qmcid...",
+		EndTime:         2000,
+	}
+	err = l.ApplyProposalChainEvent(synthEvt)
+	if err != nil {
+		t.Fatalf("Failed to submit synthesis: %v", err)
+	}
+	prop, _ = l.GetProposal("prop-1")
+	if prop.State != types.ProposalStateActive || prop.SynthesisResult != "Qmcid..." || prop.Round != 1 {
+		t.Fatalf("Proposal state after synthesis incorrect: %+v", prop)
+	}
+
+	// 5. Resolved
+	resolveEvt := types.ProposalChainEvent{
+		Type:       "Resolved",
+		ProposalID: "prop-1",
+	}
+	err = l.ApplyProposalChainEvent(resolveEvt)
+	if err != nil {
+		t.Fatalf("Failed to resolve: %v", err)
+	}
+	prop, _ = l.GetProposal("prop-1")
+	if prop.State != types.ProposalStateResolved {
+		t.Fatalf("Proposal should be resolved")
+	}
+}

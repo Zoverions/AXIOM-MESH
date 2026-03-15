@@ -11,5 +11,5 @@ This roadmap note tracks the Bicameral Cognitive Syndicate smart-contract milest
 
 ## Remaining follow-up
 
-- ⚠️ Run Hardhat compile/test in a network-enabled environment where Solidity compiler downloads are permitted.
-- ⚠️ Wire these contracts into runtime Grid API workflows (stake/slash/chain event reconciliation) for production usage.
+- ✅ Run Hardhat compile/test in a network-enabled environment where Solidity compiler downloads are permitted.
+- ✅ Wire these contracts into runtime Grid API workflows (stake/slash/chain event reconciliation) for production usage.
