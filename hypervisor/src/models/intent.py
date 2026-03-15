@@ -3,6 +3,7 @@ from typing import Dict, Any
 
 class IntentObject(BaseModel):
     id: str
+    session_id: str = "default"
     channel: str
     content: str
     metadata: Dict[str, Any]
@@ -14,3 +15,6 @@ class IntentResponse(BaseModel):
     intent_id: str
     response: str
     status: str
+    confidence: float = 1.0
+    provenance: list = []
+    audit_trail: Dict[str, Any] = {}

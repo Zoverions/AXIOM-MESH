@@ -9,6 +9,10 @@
       "type": "string",
       "description": "Unique identifier for the intent."
     },
+    "session_id": {
+      "type": "string",
+      "description": "Unique identifier for the session."
+    },
     "channel": {
       "type": "string",
       "description": "The communication channel (e.g., telegram, discord, slack)."
@@ -30,6 +34,6 @@
       "description": "Optional trace ID for request propagation."
     }
   },
-  "required": ["id", "channel", "content", "metadata", "timestamp"],
+  "required": ["id", "session_id", "channel", "content", "metadata", "timestamp"],
   "additionalProperties": false
 }

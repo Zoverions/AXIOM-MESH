@@ -4,7 +4,9 @@ import json
 import os
 import re
 import uuid
-from typing import Dict, List
+import time
+from typing import Dict, List, Optional
+from cryptography.fernet import Fernet
 
 import httpx
 from ecdsa import NIST256p, SigningKey
@@ -21,67 +23,145 @@ _NON_WORD_PATTERN = re.compile(r"[^\w\s]")
 class DeepArchive:
     def __init__(self, storage_path: str = "data/archive.json"):
         self.storage_path = storage_path
+
+        self.encryption_key = os.environ.get("MEMORY_ENCRYPTION_KEY")
+        self._fernet = Fernet(self.encryption_key.encode()) if self.encryption_key else None
+
+        ttl = os.environ.get("MEMORY_TTL_DAYS")
+        self.ttl_days = float(ttl) if ttl else None
+
         self._ensure_storage()
+        self.cleanup_expired()
+
+    def _load_data(self) -> dict:
+        if not os.path.exists(self.storage_path) or os.path.getsize(self.storage_path) == 0:
+            return {"nodes": {}, "edges": []}
+
+        with open(self.storage_path, "rb") as f:
+            raw_data = f.read()
+
+        if self._fernet:
+            try:
+                raw_data = self._fernet.decrypt(raw_data)
+            except Exception as e:
+                try:
+                    # Fallback test: is it actually valid unencrypted JSON?
+                    json.loads(raw_data.decode("utf-8"))
+                except Exception:
+                    # It's not valid JSON, and we failed to decrypt it. Data loss imminent if we proceed.
+                    raise ValueError("Failed to decrypt archive. Invalid MEMORY_ENCRYPTION_KEY or corrupt data.") from e
+
+        try:
+            return json.loads(raw_data.decode("utf-8"))
+        except json.JSONDecodeError as e:
+            # If we don't have fernet configured but the data isn't valid JSON, it might be encrypted
+            raise ValueError("Archive data is not valid JSON. If it is encrypted, provide the correct MEMORY_ENCRYPTION_KEY.") from e
+
+    def _save_data(self, data: dict) -> None:
+        raw_data = json.dumps(data, indent=2).encode("utf-8")
+        if self._fernet:
+            raw_data = self._fernet.encrypt(raw_data)
+
+        with open(self.storage_path, "wb") as f:
+            f.write(raw_data)
 
     def _ensure_storage(self) -> None:
         os.makedirs(os.path.dirname(self.storage_path), exist_ok=True)
         if not os.path.exists(self.storage_path) or os.path.getsize(self.storage_path) == 0:
-            with open(self.storage_path, "w") as f:
-                json.dump({"nodes": {}, "edges": []}, f)
+            self._save_data({"nodes": {}, "edges": []})
             return
 
         # Migration logic from old flat list format.
-        try:
-            with open(self.storage_path, "r") as f:
-                data = json.load(f)
+        data = self._load_data()
 
-            if isinstance(data, list):
-                new_data = {"nodes": {}, "edges": []}
-                previous_node_id = None
-                for item in data:
-                    node_id = str(uuid.uuid4())
-                    content = item.get("content", "")
-                    metadata = item.get("metadata", {})
-                    new_data["nodes"][node_id] = {
-                        "id": node_id,
-                        "content": content,
-                        "metadata": metadata,
-                        "keywords": self._extract_keywords(content),
-                    }
-                    if previous_node_id is not None:
-                        new_data["edges"].append(
-                            {
-                                "source": previous_node_id,
-                                "target": node_id,
-                                "relationship": "sequential",
-                                "weight": 1,
-                            }
-                        )
-                    previous_node_id = node_id
+        if isinstance(data, list):
+            new_data = {"nodes": {}, "edges": []}
+            previous_node_id = None
+            for item in data:
+                node_id = str(uuid.uuid4())
+                content = item.get("content", "")
+                metadata = item.get("metadata", {})
+                new_data["nodes"][node_id] = {
+                    "id": node_id,
+                    "content": content,
+                    "metadata": metadata,
+                    "keywords": self._extract_keywords(content),
+                    "timestamp": time.time(),
+                }
+                if previous_node_id is not None:
+                    new_data["edges"].append(
+                        {
+                            "source": previous_node_id,
+                            "target": node_id,
+                            "relationship": "sequential",
+                            "weight": 1,
+                        }
+                    )
+                previous_node_id = node_id
 
-                with open(self.storage_path, "w") as f:
-                    json.dump(new_data, f, indent=2)
-        except Exception:
-            with open(self.storage_path, "w") as f:
-                json.dump({"nodes": {}, "edges": []}, f)
+            self._save_data(new_data)
 
     def _extract_keywords(self, text: str) -> List[str]:
         text = _NON_WORD_PATTERN.sub("", text.lower())
         return list({w for w in text.split() if w not in _STOPWORDS and len(w) > 2})
 
+    def cleanup_expired(self) -> int:
+        if self.ttl_days is None:
+            return 0
+
+        data = self._load_data()
+        now = time.time()
+        expired_nodes = []
+
+        for node_id, node in data.get("nodes", {}).items():
+            node_ts = node.get("timestamp", now)
+            if (now - node_ts) > (self.ttl_days * 86400):
+                expired_nodes.append(node_id)
+
+        if not expired_nodes:
+            return 0
+
+        for node_id in expired_nodes:
+            del data["nodes"][node_id]
+
+        data["edges"] = [e for e in data.get("edges", []) if e["source"] not in expired_nodes and e["target"] not in expired_nodes]
+
+        self._save_data(data)
+        return len(expired_nodes)
+
+    def export_data(self, format: str = "json") -> str:
+        data = self._load_data()
+        if format == "json":
+            return json.dumps(data, indent=2)
+        else:
+            raise ValueError(f"Unsupported format: {format}")
+
+    def delete_node(self, node_id: str) -> bool:
+        data = self._load_data()
+        if node_id not in data.get("nodes", {}):
+            return False
+
+        del data["nodes"][node_id]
+        data["edges"] = [e for e in data.get("edges", []) if e["source"] != node_id and e["target"] != node_id]
+
+        self._save_data(data)
+        return True
+
+    def clear(self) -> None:
+        self._save_data({"nodes": {}, "edges": []})
+
     def search(self, query: str) -> List[Dict]:
-        with open(self.storage_path, "r") as f:
-            data = json.load(f)
+        data = self._load_data()
 
         query_keywords = set(self._extract_keywords(query))
         entry_nodes = set()
-        for node_id, node in data["nodes"].items():
+        for node_id, node in data.get("nodes", {}).items():
             node_keywords = set(node.get("keywords", []))
             if query_keywords.intersection(node_keywords) or query.lower() in node.get("content", "").lower():
                 entry_nodes.add(node_id)
 
         traversed_nodes = set(entry_nodes)
-        for edge in data["edges"]:
+        for edge in data.get("edges", []):
             if edge["source"] in entry_nodes:
                 traversed_nodes.add(edge["target"])
             elif edge["target"] in entry_nodes:
@@ -92,19 +172,64 @@ class DeepArchive:
             for node_id in traversed_nodes
         ]
 
-    def add(self, content: str, metadata: Dict = None) -> None:
+    def get_all(self, session_id: str = None) -> List[Dict]:
         with open(self.storage_path, "r") as f:
             data = json.load(f)
 
+        results = []
+        for node_id, node in data.get("nodes", {}).items():
+            metadata = node.get("metadata", {})
+            if session_id is None or metadata.get("session_id") == session_id:
+                results.append({"id": node_id, "content": node["content"], "metadata": metadata})
+        return results
+
+    def delete(self, node_id: str) -> bool:
+        with open(self.storage_path, "r") as f:
+            data = json.load(f)
+
+        if node_id in data.get("nodes", {}):
+            del data["nodes"][node_id]
+            data["edges"] = [e for e in data.get("edges", []) if e["source"] != node_id and e["target"] != node_id]
+            with open(self.storage_path, "w") as f:
+                json.dump(data, f, indent=2)
+            return True
+        return False
+
+    def edit(self, node_id: str, new_content: str = None, metadata_updates: Dict = None) -> bool:
+        with open(self.storage_path, "r") as f:
+            data = json.load(f)
+
+        if node_id in data.get("nodes", {}):
+            if new_content is not None:
+                data["nodes"][node_id]["content"] = new_content
+            if metadata_updates is not None:
+                if "metadata" not in data["nodes"][node_id]:
+                    data["nodes"][node_id]["metadata"] = {}
+                data["nodes"][node_id]["metadata"].update(metadata_updates)
+
+            with open(self.storage_path, "w") as f:
+                json.dump(data, f, indent=2)
+            return True
+        return False
+
+    def add(self, content: str, metadata: Dict = None) -> None:
+        data = self._load_data()
+
         node_id = str(uuid.uuid4())
         keywords = self._extract_keywords(content)
-        new_node = {"id": node_id, "content": content, "metadata": metadata or {}, "keywords": keywords}
+        new_node = {
+            "id": node_id,
+            "content": content,
+            "metadata": metadata or {},
+            "keywords": keywords,
+            "timestamp": time.time()
+        }
 
         edges_added = 0
-        for existing_id, existing_node in data["nodes"].items():
+        for existing_id, existing_node in data.get("nodes", {}).items():
             shared = set(keywords).intersection(set(existing_node.get("keywords", [])))
             if shared:
-                data["edges"].append(
+                data.setdefault("edges", []).append(
                     {
                         "source": node_id,
                         "target": existing_id,
@@ -114,15 +239,14 @@ class DeepArchive:
                 )
                 edges_added += 1
 
-        if edges_added == 0 and data["nodes"]:
+        if edges_added == 0 and data.get("nodes"):
             last_node_id = list(data["nodes"].keys())[-1]
-            data["edges"].append(
+            data.setdefault("edges", []).append(
                 {"source": node_id, "target": last_node_id, "relationship": "sequential", "weight": 1}
             )
 
-        data["nodes"][node_id] = new_node
-        with open(self.storage_path, "w") as f:
-            json.dump(data, f, indent=2)
+        data.setdefault("nodes", {})[node_id] = new_node
+        self._save_data(data)
 
 
 class DistributedDeepArchive(DeepArchive):
@@ -243,35 +367,40 @@ class DistributedDeepArchive(DeepArchive):
     async def search_distributed(self, query: str) -> List[Dict]:
         local_results = self.search(query)
 
-        try:
-            import websockets
+        max_retries = 3
+        base_delay = 1.0
+        import websockets
 
-            async with websockets.connect(self.grid_ws_url) as ws:
-                await ws.send(json.dumps({"type": "query", "query": query, "proof": self._generate_zkp(query)}))
-                grid_data = json.loads(await ws.recv())
+        for attempt in range(max_retries):
+            try:
+                async with websockets.connect(self.grid_ws_url) as ws:
+                    await ws.send(json.dumps({"type": "query", "query": query, "proof": self._generate_zkp(query)}))
+                    grid_data = json.loads(await ws.recv())
 
-                if "nodes" in grid_data:
-                    for node in grid_data["nodes"]:
-                        local_results.append(
-                            {
-                                "content": node["content"],
-                                "metadata": {**(node.get("metadata") or {}), "source": "grid_p2p"},
-                            }
-                        )
-        except Exception as e:
-            print(f"Distributed search error: {e}")
+                    if "nodes" in grid_data:
+                        for node in grid_data["nodes"]:
+                            local_results.append(
+                                {
+                                    "content": node["content"],
+                                    "metadata": {**(node.get("metadata") or {}), "source": "grid_p2p"},
+                                }
+                            )
+                    break
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(base_delay * (2 ** attempt))
+                else:
+                    print(f"[Degraded Mode] Grid search failed after {max_retries} attempts: {e}. Returning local results only.")
 
         return local_results
 
     async def sync_to_grid(self, content: str, metadata: Dict = None) -> None:
-        with open(self.storage_path, "r") as f:
-            data = json.load(f)
+        data = self._load_data()
         old_nodes = set(data.get("nodes", {}).keys())
 
         self.add(content, metadata)
 
-        with open(self.storage_path, "r") as f:
-            data = json.load(f)
+        data = self._load_data()
 
         new_nodes = set(data.get("nodes", {}).keys()) - old_nodes
         if not new_nodes:
@@ -283,35 +412,54 @@ class DistributedDeepArchive(DeepArchive):
             node_id = list(new_nodes)[0]
 
         node = data["nodes"][node_id]
-        edges = [e for e in data["edges"] if e["source"] == node_id or e["target"] == node_id]
+        edges = [e for e in data.get("edges", []) if e["source"] == node_id or e["target"] == node_id]
 
         persist_payload = {"node": node, "edges": edges}
-        node.setdefault("metadata", {})["ipfs_cid"] = await self.persist_to_ipfs(persist_payload)
-        node["metadata"]["arweave_tx"] = await self.persist_to_arweave(persist_payload)
-
-        data["nodes"][node_id] = node
-        with open(self.storage_path, "w") as f:
-            json.dump(data, f, indent=2)
 
         try:
-            import websockets
+            node.setdefault("metadata", {})["ipfs_cid"] = await self.persist_to_ipfs(persist_payload)
+        except Exception as e:
+            print(f"[Degraded Mode] Failed to persist to IPFS: {e}")
+            node.setdefault("metadata", {})["ipfs_cid"] = None
 
-            async with websockets.connect(self.grid_ws_url) as ws:
-                payload_str = f"{node.get('id', '')}:{len(edges)}"
-                hash_val = hashlib.sha256(payload_str.encode()).digest()
-                signature = self.private_key.sign_digest(hash_val).hex()
+        try:
+            node["metadata"]["arweave_tx"] = await self.persist_to_arweave(persist_payload)
+        except Exception as e:
+            print(f"[Degraded Mode] Failed to persist to Arweave: {e}")
+            node.setdefault("metadata", {})["arweave_tx"] = None
 
-                await ws.send(
-                    json.dumps(
-                        {
-                            "type": "sync",
-                            "node": node,
-                            "edges": edges,
-                            "node_id": self.public_key_hex,
-                            "signature": signature,
-                        }
+        data.setdefault("nodes", {})[node_id] = node
+        self._save_data(data)
+
+        max_retries = 3
+        base_delay = 1.0
+        import websockets
+        for attempt in range(max_retries):
+            try:
+                async with websockets.connect(self.grid_ws_url) as ws:
+                    payload_str = f"{node.get('id', '')}:{len(edges)}"
+                    hash_val = hashlib.sha256(payload_str.encode()).digest()
+                    signature = self.private_key.sign_digest(hash_val).hex()
+
+                    await ws.send(
+                        json.dumps(
+                            {
+                                "type": "sync",
+                                "node": node,
+                                "edges": edges,
+                                "node_id": self.public_key_hex,
+                                "signature": signature,
+                            }
+                        )
                     )
                 )
                 await ws.recv()
         except Exception as e:
             print(f"Grid sync error: {e}")
+                    await ws.recv()
+                    break
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(base_delay * (2 ** attempt))
+                else:
+                    print(f"[Degraded Mode] Grid sync failed after {max_retries} attempts: {e}")

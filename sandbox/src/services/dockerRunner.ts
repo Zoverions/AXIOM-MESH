@@ -7,10 +7,10 @@ export async function runCode(language: string, code: string): Promise<{ stdout:
 
         if (language === 'python' || language === 'python3') {
             command = 'docker';
-            args = ['run', '--rm', '--memory=256m', 'python:3.9-slim', 'python', '-c', code];
+            args = ['run', '--rm', '--network=none', '--memory=256m', '--cpus=0.5', '--pids-limit=50', '--cap-drop=ALL', '--security-opt=no-new-privileges', '--read-only', '--tmpfs=/tmp', 'python:3.9-slim', 'python', '-c', code];
         } else if (language === 'javascript' || language === 'node') {
             command = 'docker';
-            args = ['run', '--rm', '--memory=256m', 'node:18-alpine', 'node', '-e', code];
+            args = ['run', '--rm', '--network=none', '--memory=256m', '--cpus=0.5', '--pids-limit=50', '--cap-drop=ALL', '--security-opt=no-new-privileges', '--read-only', '--tmpfs=/tmp', 'node:18-alpine', 'node', '-e', code];
         } else {
             return reject(new Error(`Unsupported language: ${language}`));
         }

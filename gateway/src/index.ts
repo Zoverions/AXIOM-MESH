@@ -55,13 +55,24 @@ app.listen(REST_PORT, () => {
 // WebSocket Server
 const wss = new WebSocketServer({ port: Number(WS_PORT) });
 
-wss.on('connection', (ws: WebSocket) => {
+wss.on('connection', (ws: WebSocket, req: any) => {
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const apiKey = url.searchParams.get('apiKey');
+
+    if (!process.env.GATEWAY_API_KEY || apiKey !== process.env.GATEWAY_API_KEY) {
+        console.log('WebSocket connection rejected: Invalid or missing API Key');
+        ws.close(1008, 'Unauthorized: Invalid API Key');
+        return;
+    }
+
     console.log('New WebSocket connection');
 
     ws.on('message', async (message: Buffer) => {
         try {
             const data = parseAndSanitizeIntent(message.toString());
-            const intent = normalizeInput('websocket', data.input, { identity_hash: data.identity_hash });
+            const session_id = data.session_id || 'default_ws_session';
+            const metadata = { identity_hash: data.identity_hash, response_style: data.modality || 'standard' };
+            const intent = normalizeInput(session_id, 'websocket', data.input, metadata);
 
             // Send pending acknowledgment
             ws.send(JSON.stringify({ status: 'pending', intent_id: intent.id }));
@@ -95,7 +106,8 @@ async function startChannels() {
         if (factory) {
             const channel = factory({
                 onMessage: async (channelName, chatId, content, sender) => {
-                    const intent = normalizeInput(channelName, content, { chatId, sender });
+                    const session_id = chatId || 'default';
+                    const intent = normalizeInput(session_id, channelName, content, { chatId, sender });
                     console.log(`[${channelName}] Received message from ${sender} (chat: ${chatId}): ${content}`);
 
                     const response = await sendToHypervisor(intent);
@@ -103,7 +115,12 @@ async function startChannels() {
                         response.response = filterACS(response.response);
                         const targetChannel = activeChannels[channelName];
                         if (targetChannel) {
-                            await targetChannel.sendMessage(chatId, response.response);
+                            const receipt = await targetChannel.sendMessage(chatId, response.response);
+                            if (receipt.success) {
+                                console.log(`[${channelName}] Message delivered successfully (ID: ${receipt.messageId})`);
+                            } else {
+                                console.error(`[${channelName}] Message delivery failed: ${receipt.error}`);
+                            }
                         }
                     }
                 }

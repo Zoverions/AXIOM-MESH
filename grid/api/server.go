@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"sort"
 
 	"github.com/axiom-mesh/grid/blockchain"
 	"github.com/axiom-mesh/grid/p2p"
@@ -103,9 +104,42 @@ func (s *Server) Start(addr string) error {
 					bond.Amount += existingBond.Amount
 				}
 
-				bond.Status = "active"
+				if bond.Status == "" {
+					bond.Status = "active"
+				}
+
 				s.ledger.Stake(bond)
 				json.NewEncoder(w).Encode(map[string]string{"status": "success", "nodeId": bond.NodeID})
+			} else {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			}
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	http.HandleFunc("/slash", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "POST" {
+			var payload struct {
+				NodeID string `json:"nodeId"`
+				Amount int    `json:"amount"`
+				TxHash string `json:"txHash,omitempty"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&payload); err == nil {
+				if payload.NodeID == "" || payload.Amount <= 0 {
+					http.Error(w, "Invalid nodeId or amount", http.StatusBadRequest)
+					return
+				}
+
+				if err := s.ledger.Slash(payload.NodeID, payload.Amount, payload.TxHash); err != nil {
+					http.Error(w, err.Error(), http.StatusBadRequest)
+					return
+				}
+
+				// Depending on the network requirements, we could also broadcast this slash event,
+				// but since slash events originated from chain, we mostly care about updating local state.
+				json.NewEncoder(w).Encode(map[string]string{"status": "success", "nodeId": payload.NodeID})
 			} else {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 			}
@@ -352,14 +386,54 @@ func (s *Server) handleGraphWebSocket(w http.ResponseWriter, r *http.Request) {
 				conn.WriteJSON(map[string]string{"error": "ZKP verification failed"})
 				continue
 			}
-			// Simulate search in local graph
-			graph := s.ledger.GetGraph()
-			results := []types.GraphNode{}
-			for _, node := range graph.Nodes {
-				if req.Query == "" || strings.Contains(strings.ToLower(node.Content), strings.ToLower(req.Query)) {
-					results = append(results, node)
+
+			localResults := s.ledger.SearchGraph(req.Query)
+
+			var peerResults []types.GraphNode
+			if s.p2pNode != nil {
+				peerResults = s.p2pNode.QueryNetwork(req.Query, req.Proof)
+			}
+
+			nodeMap := make(map[string]types.GraphNode)
+			nodeScores := make(map[string]int)
+
+			queryTokens := strings.Fields(strings.ToLower(req.Query))
+
+			for _, node := range localResults {
+				nodeMap[node.ID] = node
+				nodeScores[node.ID] += 1 // base score for returning it
+
+				contentLower := strings.ToLower(node.Content)
+				for _, token := range queryTokens {
+					if strings.Contains(contentLower, token) {
+						nodeScores[node.ID] += 1
+					}
 				}
 			}
+
+			for _, node := range peerResults {
+				if _, exists := nodeMap[node.ID]; !exists {
+					nodeMap[node.ID] = node
+
+					contentLower := strings.ToLower(node.Content)
+					for _, token := range queryTokens {
+						if strings.Contains(contentLower, token) {
+							nodeScores[node.ID] += 1
+						}
+					}
+				}
+				nodeScores[node.ID] += 1 // Bonus score for each peer returning this node
+			}
+
+			results := make([]types.GraphNode, 0, len(nodeMap))
+			for _, node := range nodeMap {
+				results = append(results, node)
+			}
+
+			sort.Slice(results, func(i, j int) bool {
+				return nodeScores[results[i].ID] > nodeScores[results[j].ID]
+			})
+
 			conn.WriteJSON(map[string]interface{}{"type": "results", "nodes": results})
 
 		case "sync":

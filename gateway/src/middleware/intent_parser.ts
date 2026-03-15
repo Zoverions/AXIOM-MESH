@@ -1,11 +1,12 @@
 import { z } from 'zod';
 
 const intentSchema = z.object({
-    id: z.string(),
-    identity_hash: z.string(),
-    modality: z.string(),
+    id: z.string().optional(),
+    session_id: z.string().optional(),
+    identity_hash: z.string().optional(),
+    modality: z.string().optional(),
     input: z.string(),
-    timestamp: z.number(),
+    timestamp: z.number().optional(),
 });
 
 export type ParsedIntent = z.infer<typeof intentSchema>;
