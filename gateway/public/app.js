@@ -1,4 +1,27 @@
 document.addEventListener("DOMContentLoaded", () => {
+    // --- Authentication ---
+    const apiKeyInput = document.getElementById('dashboard-api-key');
+    const savedKey = localStorage.getItem('GATEWAY_API_KEY');
+    if (savedKey) {
+        apiKeyInput.value = savedKey;
+    }
+
+    apiKeyInput.addEventListener('change', (e) => {
+        localStorage.setItem('GATEWAY_API_KEY', e.target.value);
+        // Reconnect WebSocket if key changes
+        if (ws && ws.readyState !== WebSocket.CLOSED) {
+            ws.close();
+        }
+        connectWebSocket();
+    });
+
+    function getAuthHeaders() {
+        return {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('GATEWAY_API_KEY') || ''}`
+        };
+    }
+
     // --- Navigation Tabs ---
     const navButtons = document.querySelectorAll(".nav-btn");
     const tabs = document.querySelectorAll(".tab-content");
@@ -28,39 +51,48 @@ document.addEventListener("DOMContentLoaded", () => {
     const chatInput = document.getElementById("chat-input");
     const chatSendBtn = document.getElementById("chat-send");
 
-    // Connect to Gateway WebSocket
-    const wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
-    const ws = new WebSocket(`${wsProtocol}://${location.hostname}:3001`);
+    let ws = null;
 
-    ws.onopen = () => {
-        appendMessage('system', 'Connected to AxiomMesh Gateway.');
-    };
+    function connectWebSocket() {
+        const apiKey = localStorage.getItem('GATEWAY_API_KEY') || '';
+        const wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
+        const wsUrl = `${wsProtocol}://${location.hostname}:3001?apiKey=${encodeURIComponent(apiKey)}`;
 
-    ws.onmessage = (event) => {
-        try {
-            const data = JSON.parse(event.data);
-            if (data.status === 'pending') return; // Ignore pending
+        ws = new WebSocket(wsUrl);
 
-            if (data.error) {
-                appendMessage('system', `Error: ${data.error}`);
-            } else if (data.response) {
-                appendMessage('agent', data.response);
-            } else {
-                appendMessage('system', JSON.stringify(data));
+        ws.onopen = () => {
+            appendMessage('system', 'Connected to AxiomMesh Gateway.');
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.status === 'pending') return; // Ignore pending
+
+                if (data.error) {
+                    appendMessage('system', `Error: ${data.error}`);
+                } else if (data.response) {
+                    appendMessage('agent', data.response);
+                } else {
+                    appendMessage('system', JSON.stringify(data));
+                }
+            } catch (e) {
+                appendMessage('system', `Received: ${event.data}`);
             }
-        } catch (e) {
-            appendMessage('system', `Received: ${event.data}`);
-        }
-    };
+        };
 
-    ws.onerror = (error) => {
-        appendMessage('system', 'WebSocket Error. See console.');
-        console.error('WebSocket Error: ', error);
-    };
+        ws.onerror = (error) => {
+            appendMessage('system', 'WebSocket Error. Please check your API Key and connection.');
+            console.error('WebSocket Error: ', error);
+        };
 
-    ws.onclose = () => {
-        appendMessage('system', 'Disconnected from Gateway.');
-    };
+        ws.onclose = () => {
+            appendMessage('system', 'Disconnected from Gateway.');
+        };
+    }
+
+    // Initial connection
+    connectWebSocket();
 
     function appendMessage(sender, text) {
         const msgDiv = document.createElement("div");
@@ -100,7 +132,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const grid = document.getElementById('agents-grid');
         grid.innerHTML = '<p>Loading agent states...</p>';
         try {
-            const res = await fetch('/api/v1/agents');
+            const res = await fetch('/api/v1/agents', { headers: getAuthHeaders() });
             const data = await res.json();
 
             if (data.agents && data.agents.length > 0) {
@@ -130,7 +162,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const grid = document.getElementById('network-grid');
         grid.innerHTML = '<p>Loading connected mesh nodes...</p>';
         try {
-            const res = await fetch('/api/v1/network');
+            const res = await fetch('/api/v1/network', { headers: getAuthHeaders() });
             const data = await res.json();
 
             if (data.nodes && data.nodes.length > 0) {
@@ -159,7 +191,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- System Status Logic ---
     async function fetchStatus() {
         try {
-            const res = await fetch('/api/v1/status');
+            const res = await fetch('/api/v1/status', { headers: getAuthHeaders() });
             const data = await res.json();
 
             document.getElementById('status-gateway').textContent = data.gateway || 'unknown';
@@ -174,7 +206,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Configuration Logic ---
     async function fetchConfig() {
         try {
-            const res = await fetch('/api/v1/config');
+            const res = await fetch('/api/v1/config', { headers: getAuthHeaders() });
             const data = await res.json();
 
             document.getElementById('ALLOW_CLOUD_LLM').value = data.ALLOW_CLOUD_LLM || 'false';
@@ -208,7 +240,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const res = await fetch('/api/v1/config', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders(),
                 body: JSON.stringify(updates)
             });
             const result = await res.json();
@@ -233,7 +265,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const logOutput = document.getElementById('log-output');
         logOutput.textContent = 'Loading logs...';
         try {
-            const res = await fetch('/api/v1/logs');
+            const res = await fetch('/api/v1/logs', { headers: getAuthHeaders() });
             const data = await res.json();
             if (data.logs) {
                 logOutput.textContent = data.logs;
