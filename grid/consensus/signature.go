@@ -18,7 +18,12 @@ func SignData(priv *ecdsa.PrivateKey, data []byte) (string, error) {
 	}
 	rBytes := r.Bytes()
 	sBytes := s.Bytes()
-	sigBytes := append(rBytes, sBytes...)
+
+	// Ensure r and s are 32 bytes each (pad with leading zeros if necessary)
+	sigBytes := make([]byte, 64)
+	copy(sigBytes[32-len(rBytes):32], rBytes)
+	copy(sigBytes[64-len(sBytes):64], sBytes)
+
 	return hex.EncodeToString(sigBytes), nil
 }
 
