@@ -6,6 +6,7 @@ import requests
 import os
 import httpx
 import ast
+import asyncio
 
 from src.models.intent import IntentObject, IntentResponse
 from src.engine.context import ContextEngine

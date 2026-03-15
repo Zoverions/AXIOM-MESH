@@ -43,7 +43,7 @@ describe('dockerRunner', () => {
         const result = await runPromise;
 
         expect(mockSpawn).toHaveBeenCalledWith('docker', [
-            'run', '--rm', '--memory=256m', 'python:3.9-slim', 'python', '-c', code
+            'run', '--rm', '--network=none', '--memory=256m', '--cpus=0.5', '--pids-limit=50', '--cap-drop=ALL', '--security-opt=no-new-privileges', '--read-only', '--tmpfs=/tmp', 'python:3.9-slim', 'python', '-c', code
         ]);
         expect(result).toEqual({ stdout: 'hello world\n', stderr: '' });
     });
@@ -58,7 +58,7 @@ describe('dockerRunner', () => {
         const result = await runPromise;
 
         expect(mockSpawn).toHaveBeenCalledWith('docker', [
-            'run', '--rm', '--memory=256m', 'node:18-alpine', 'node', '-e', code
+            'run', '--rm', '--network=none', '--memory=256m', '--cpus=0.5', '--pids-limit=50', '--cap-drop=ALL', '--security-opt=no-new-privileges', '--read-only', '--tmpfs=/tmp', 'node:18-alpine', 'node', '-e', code
         ]);
         expect(result).toEqual({ stdout: 'hello world\n', stderr: '' });
     });

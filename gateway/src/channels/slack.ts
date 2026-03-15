@@ -1,12 +1,19 @@
 import { App } from '@slack/bolt';
-import { Channel, ChannelOpts, registerChannel } from './registry';
+import { ChannelOpts, ReliabilityPolicy, registerChannel } from './registry';
+import { BaseChannel } from './base';
 
-export class SlackChannel implements Channel {
+export class SlackChannel extends BaseChannel {
     name = 'slack';
+    reliabilityPolicy: ReliabilityPolicy = {
+        maxRetries: 3,
+        retryDelayMs: 1500,
+        rateLimitMs: 1000 // Slack rate limits ~1 msg/sec
+    };
     private app: App;
     private onMessage: (channelName: string, chatId: string, content: string, sender: string) => void;
 
     constructor(token: string, appToken: string, opts: ChannelOpts) {
+        super();
         this.onMessage = opts.onMessage;
         this.app = new App({
             token: token,
@@ -43,16 +50,12 @@ export class SlackChannel implements Channel {
         }
     }
 
-    async sendMessage(chatId: string, content: string): Promise<void> {
-        try {
-            await this.app.client.chat.postMessage({
-                channel: chatId,
-                text: content,
-            });
-            console.log(`[Slack] Message sent to ${chatId}`);
-        } catch (err: any) {
-            console.error(`[Slack] Failed to send message to ${chatId}:`, err.message || err);
-        }
+    protected async doSendMessage(chatId: string, content: string): Promise<string | undefined> {
+        const res = await this.app.client.chat.postMessage({
+            channel: chatId,
+            text: content,
+        });
+        return res.ts;
     }
 
     async disconnect(): Promise<void> {

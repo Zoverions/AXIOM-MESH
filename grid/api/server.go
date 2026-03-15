@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"sort"
 
 	"github.com/axiom-mesh/grid/blockchain"
 	"github.com/axiom-mesh/grid/p2p"
@@ -379,14 +380,54 @@ func (s *Server) handleGraphWebSocket(w http.ResponseWriter, r *http.Request) {
 				conn.WriteJSON(map[string]string{"error": "ZKP verification failed"})
 				continue
 			}
-			// Simulate search in local graph
-			graph := s.ledger.GetGraph()
-			results := []types.GraphNode{}
-			for _, node := range graph.Nodes {
-				if req.Query == "" || strings.Contains(strings.ToLower(node.Content), strings.ToLower(req.Query)) {
-					results = append(results, node)
+
+			localResults := s.ledger.SearchGraph(req.Query)
+
+			var peerResults []types.GraphNode
+			if s.p2pNode != nil {
+				peerResults = s.p2pNode.QueryNetwork(req.Query, req.Proof)
+			}
+
+			nodeMap := make(map[string]types.GraphNode)
+			nodeScores := make(map[string]int)
+
+			queryTokens := strings.Fields(strings.ToLower(req.Query))
+
+			for _, node := range localResults {
+				nodeMap[node.ID] = node
+				nodeScores[node.ID] += 1 // base score for returning it
+
+				contentLower := strings.ToLower(node.Content)
+				for _, token := range queryTokens {
+					if strings.Contains(contentLower, token) {
+						nodeScores[node.ID] += 1
+					}
 				}
 			}
+
+			for _, node := range peerResults {
+				if _, exists := nodeMap[node.ID]; !exists {
+					nodeMap[node.ID] = node
+
+					contentLower := strings.ToLower(node.Content)
+					for _, token := range queryTokens {
+						if strings.Contains(contentLower, token) {
+							nodeScores[node.ID] += 1
+						}
+					}
+				}
+				nodeScores[node.ID] += 1 // Bonus score for each peer returning this node
+			}
+
+			results := make([]types.GraphNode, 0, len(nodeMap))
+			for _, node := range nodeMap {
+				results = append(results, node)
+			}
+
+			sort.Slice(results, func(i, j int) bool {
+				return nodeScores[results[i].ID] > nodeScores[results[j].ID]
+			})
+
 			conn.WriteJSON(map[string]interface{}{"type": "results", "nodes": results})
 
 		case "sync":
