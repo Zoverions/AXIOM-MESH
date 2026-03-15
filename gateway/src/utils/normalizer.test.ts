@@ -33,13 +33,19 @@ describe('normalizeInput', () => {
     expect(result).toEqual({
       id: mockUuid,
       session_id: 'session-1',
+      conversation_id: 'session-1',
+      actor_id: 'anonymous_actor',
       channel,
       content,
-      metadata: {},
-      timestamp: FIXED_TIMESTAMP
+      metadata: {
+        conversation_id: 'session-1',
+        actor_id: 'anonymous_actor'
+      },
+      timestamp: FIXED_TIMESTAMP,
+      trace_id: `trace_${mockUuid}`
     });
 
-    expect(uuidv4).toHaveBeenCalledTimes(1);
+    expect(uuidv4).toHaveBeenCalledTimes(2);
   });
 
   it('should include provided metadata', () => {
@@ -55,10 +61,17 @@ describe('normalizeInput', () => {
     expect(result).toEqual({
       id: mockUuid,
       session_id: 'session-2',
+      conversation_id: 'session-2',
+      actor_id: 'anonymous_actor',
       channel,
       content,
-      metadata,
-      timestamp: FIXED_TIMESTAMP
+      metadata: {
+        ...metadata,
+        conversation_id: 'session-2',
+        actor_id: 'anonymous_actor'
+      },
+      timestamp: FIXED_TIMESTAMP,
+      trace_id: `trace_${mockUuid}`
     });
   });
 });

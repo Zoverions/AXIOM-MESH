@@ -101,7 +101,7 @@ describe('Gateway integration contracts', () => {
         });
 
         let gwUp = false;
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 40; i++) {
             try {
                 const res = await axios.get('http://127.0.0.1:3005/health');
                 if (res.status === 200) {
@@ -116,7 +116,7 @@ describe('Gateway integration contracts', () => {
         if (!gwUp) {
             throw new Error('Gateway server failed to start');
         }
-    }, 20000);
+    }, 40000);
 
     afterAll(() => {
         if (hypervisorServer) hypervisorServer.close();

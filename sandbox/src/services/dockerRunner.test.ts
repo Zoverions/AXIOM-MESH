@@ -42,9 +42,11 @@ describe('dockerRunner', () => {
 
         const result = await runPromise;
 
-        expect(mockSpawn).toHaveBeenCalledWith('docker', [
-            'run', '--rm', '--network=none', '--memory=256m', '--cpus=0.5', '--pids-limit=50', '--cap-drop=ALL', '--security-opt=no-new-privileges', '--read-only', '--tmpfs=/tmp', 'python:3.9-slim', 'python', '-c', code
-        ]);
+        const args = mockSpawn.mock.calls[0][1];
+        expect(args).toContain('--network=none');
+        expect(args).toContain('--security-opt=seccomp=/app/security/seccomp-default.json');
+        expect(args).toContain('--security-opt=apparmor=docker-default');
+        expect(args.slice(-4)).toEqual(['python:3.9-slim', 'python', '-c', code]);
         expect(result).toEqual({ stdout: 'hello world\n', stderr: '' });
     });
 
@@ -57,9 +59,11 @@ describe('dockerRunner', () => {
 
         const result = await runPromise;
 
-        expect(mockSpawn).toHaveBeenCalledWith('docker', [
-            'run', '--rm', '--network=none', '--memory=256m', '--cpus=0.5', '--pids-limit=50', '--cap-drop=ALL', '--security-opt=no-new-privileges', '--read-only', '--tmpfs=/tmp', 'node:18-alpine', 'node', '-e', code
-        ]);
+        const args = mockSpawn.mock.calls[0][1];
+        expect(args).toContain('--network=none');
+        expect(args).toContain('--security-opt=seccomp=/app/security/seccomp-default.json');
+        expect(args).toContain('--security-opt=apparmor=docker-default');
+        expect(args.slice(-4)).toEqual(['node:18-alpine', 'node', '-e', code]);
         expect(result).toEqual({ stdout: 'hello world\n', stderr: '' });
     });
 

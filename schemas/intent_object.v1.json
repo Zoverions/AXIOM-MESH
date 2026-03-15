@@ -13,6 +13,14 @@
       "type": "string",
       "description": "Unique identifier for the session."
     },
+    "conversation_id": {
+      "type": "string",
+      "description": "Cross-channel conversation identifier for entity continuity."
+    },
+    "actor_id": {
+      "type": "string",
+      "description": "Stable sender identity within a conversation/session."
+    },
     "channel": {
       "type": "string",
       "description": "The communication channel (e.g., telegram, discord, slack)."

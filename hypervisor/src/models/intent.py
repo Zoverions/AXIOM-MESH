@@ -4,6 +4,8 @@ from typing import Dict, Any
 class IntentObject(BaseModel):
     id: str
     session_id: str = "default"
+    conversation_id: str = "default"
+    actor_id: str = "anonymous_actor"
     channel: str
     content: str
     metadata: Dict[str, Any]
@@ -17,4 +19,5 @@ class IntentResponse(BaseModel):
     status: str
     confidence: float = 1.0
     provenance: list = []
+    trace_id: str = None
     audit_trail: Dict[str, Any] = {}

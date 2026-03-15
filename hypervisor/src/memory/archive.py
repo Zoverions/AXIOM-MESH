@@ -276,6 +276,8 @@ class DistributedDeepArchive(DeepArchive):
         self.public_key_hex = self.private_key.get_verifying_key().to_string("uncompressed").hex()
         self._secret_x = int.from_bytes(os.urandom(32), "big") % self.Q
         self._public_y = pow(self.G, self._secret_x, self.P)
+        self.degraded_counters = {"ipfs": 0, "arweave": 0, "grid": 0}
+        self.max_sync_queue = int(os.environ.get("ARCHIVE_SYNC_BACKPRESSURE_LIMIT", "200"))
 
     async def persist_to_ipfs(self, payload: dict) -> str:
         ipfs_url = os.environ.get("IPFS_API_URL", "http://127.0.0.1:5001/api/v0/add")
@@ -395,6 +397,12 @@ class DistributedDeepArchive(DeepArchive):
         return local_results
 
     async def sync_to_grid(self, content: str, metadata: Dict = None) -> None:
+        if len(self._load_data().get("nodes", {})) >= self.max_sync_queue:
+            print("[Degraded Mode] Archive backpressure active: sync queue limit reached. Skipping distributed sync.")
+            self.degraded_counters["grid"] += 1
+            self.add(content, {**(metadata or {}), "sync_mode": "local_only_backpressure"})
+            return
+
         data = self._load_data()
         old_nodes = set(data.get("nodes", {}).keys())
 
@@ -421,12 +429,14 @@ class DistributedDeepArchive(DeepArchive):
         except Exception as e:
             print(f"[Degraded Mode] Failed to persist to IPFS: {e}")
             node.setdefault("metadata", {})["ipfs_cid"] = None
+            self.degraded_counters["ipfs"] += 1
 
         try:
             node["metadata"]["arweave_tx"] = await self.persist_to_arweave(persist_payload)
         except Exception as e:
             print(f"[Degraded Mode] Failed to persist to Arweave: {e}")
             node.setdefault("metadata", {})["arweave_tx"] = None
+            self.degraded_counters["arweave"] += 1
 
         data.setdefault("nodes", {})[node_id] = node
         self._save_data(data)
@@ -459,3 +469,4 @@ class DistributedDeepArchive(DeepArchive):
                     await asyncio.sleep(base_delay * (2 ** attempt))
                 else:
                     print(f"[Degraded Mode] Grid sync failed after {max_retries} attempts: {e}")
+                    self.degraded_counters["grid"] += 1

@@ -82,11 +82,19 @@ wss.on('connection', (ws: WebSocket, req: any) => {
         try {
             const data = parseAndSanitizeIntent(message.toString());
             const session_id = data.session_id || 'default_ws_session';
-            const metadata = { identity_hash: data.identity_hash, response_style: data.modality || 'standard' };
+            const metadata = {
+                identity_hash: data.identity_hash,
+                response_style: data.modality || 'standard',
+                conversation_id: data.conversation_id || session_id,
+                actor_id: data.actor_id || data.identity_hash || 'websocket_user',
+                consent_scope: data.consent_scope || 'allowed'
+            };
             const intent = normalizeInput(session_id, 'websocket', data.input, metadata);
+            if (data.conversation_id) intent.conversation_id = data.conversation_id;
+            if (data.actor_id) intent.actor_id = data.actor_id;
 
             // Send pending acknowledgment
-            ws.send(JSON.stringify({ status: 'pending', intent_id: intent.id }));
+            ws.send(JSON.stringify({ status: 'pending', intent_id: intent.id, trace_id: intent.trace_id }));
 
             // Process with Hypervisor
             const response = await sendToHypervisor(intent);
@@ -118,7 +126,13 @@ async function startChannels() {
             const channel = factory({
                 onMessage: async (channelName, chatId, content, sender) => {
                     const session_id = chatId || 'default';
-                    const intent = normalizeInput(session_id, channelName, content, { chatId, sender });
+                    const intent = normalizeInput(session_id, channelName, content, {
+                        chatId,
+                        sender,
+                        conversation_id: chatId,
+                        actor_id: sender,
+                        consent_scope: 'allowed'
+                    });
                     console.log(`[${channelName}] Received message from ${sender} (chat: ${chatId}): ${content}`);
 
                     const response = await sendToHypervisor(intent);

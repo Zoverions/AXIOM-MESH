@@ -56,6 +56,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const chatInput = document.getElementById("chat-input");
     const chatSendBtn = document.getElementById("chat-send");
     const responseStyleSelect = document.getElementById("response-style");
+    const consentScopeSelect = document.getElementById("consent-scope");
 
     // --- Session ID Management ---
     let sessionId = localStorage.getItem('axiom_session_id');
@@ -85,7 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (data.error) {
                     appendMessage('system', `Error: ${data.error}`);
                 } else if (data.response) {
-                    appendMessage('agent', data.response, data.confidence, data.provenance);
+                    appendMessage('agent', data.response, data.confidence, data.provenance, data.trace_id);
                     if (data.audit_trail) {
                         auditHistory.push({
                             intent_id: data.intent_id,
@@ -115,7 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Initial connection
     connectWebSocket();
 
-    function appendMessage(sender, text, confidence, provenance) {
+    function appendMessage(sender, text, confidence, provenance, traceId) {
         const msgDiv = document.createElement("div");
         msgDiv.className = `message ${sender}-message`;
 
@@ -140,6 +141,9 @@ document.addEventListener("DOMContentLoaded", () => {
             if (provenance?.length > 0) {
                 metaHtml += ` | <span>Sources: ${provenance.join(', ')}</span>`;
             }
+            if (traceId) {
+                metaHtml += ` | <span>Trace: ${traceId}</span>`;
+            }
             metaDiv.innerHTML = metaHtml;
             msgDiv.appendChild(metaDiv);
         }
@@ -156,6 +160,7 @@ document.addEventListener("DOMContentLoaded", () => {
         chatInput.value = '';
 
         const style = responseStyleSelect ? responseStyleSelect.value : 'standard';
+        const consentScope = consentScopeSelect ? consentScopeSelect.value : 'allowed';
 
         // Using REST for chat temporarily if WebSocket structure expects only input/session_id
         // Or inject style into the message if supported. Let's send via WebSocket metadata if available.
@@ -165,6 +170,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 id: crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now(),
                 identity_hash: sessionId,
                 modality: style || 'text',
+                session_id: sessionId,
+                conversation_id: sessionId,
+                actor_id: sessionId,
+                consent_scope: consentScope,
                 input: text,
                 timestamp: Date.now()
             };
@@ -326,6 +335,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const showAllMemoryCb = document.getElementById('show-all-memory');
     if (showAllMemoryCb) {
         showAllMemoryCb.addEventListener('change', fetchMemory);
+    }
+    const forgetSessionMemoryBtn = document.getElementById('forget-session-memory');
+    if (forgetSessionMemoryBtn) {
+        forgetSessionMemoryBtn.addEventListener('click', async () => {
+            const res = await fetch(`/api/v1/memory?session_id=${sessionId}`, { headers: getAuthHeaders() });
+            const data = await res.json();
+            const memories = data.memories || [];
+            await Promise.all(memories.map((mem) => fetch(`/api/v1/memory/${mem.id}`, { method: 'DELETE', headers: getAuthHeaders() })));
+            fetchMemory();
+        });
     }
 
     // --- Agents Logic ---

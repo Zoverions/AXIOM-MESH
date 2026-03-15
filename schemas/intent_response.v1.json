@@ -21,6 +21,19 @@
       "type": "string",
       "enum": ["success", "error", "pending"],
       "description": "The processing status."
+    },
+    "confidence": {
+      "type": "number",
+      "description": "Model confidence score for the response."
+    },
+    "provenance": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Data/model provenance sources used for this response."
+    },
+    "trace_id": {
+      "type": "string",
+      "description": "Trace identifier for end-to-end observability."
     }
   },
   "required": ["id", "intent_id", "response", "status"],

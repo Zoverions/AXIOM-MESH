@@ -1,6 +1,8 @@
 export interface IntentObject {
     id: string;
     session_id: string;
+    conversation_id?: string;
+    actor_id?: string;
     channel: string;
     content: string;
     metadata: Record<string, any>;
@@ -15,5 +17,6 @@ export interface IntentResponse {
     status: 'success' | 'error' | 'pending';
     confidence?: number;
     provenance?: string[];
+    trace_id?: string;
     audit_trail?: Record<string, any>;
 }

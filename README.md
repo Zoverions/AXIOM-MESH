@@ -118,13 +118,13 @@ This section reflects the current codebase behavior and replaces earlier duplica
 2. ✅ **Expanded integration tests with Grid stubs and stricter contract checks** for auth consistency and cross-service API behavior.
 
 ### P1 (High)
-3. **Strengthen interaction layer (human ↔ digital entity):**
-   - Add explicit conversation/session identity model across channels.
-   - Add memory controls in UI (view/edit/forget/consent scopes).
-   - Add response style controls and confidence/provenance display in chat.
-4. **Harden sandbox execution security** (seccomp/apparmor, network policy, restricted mounts, stricter runtime profiles).
-5. **Improve observability**: structured logs, trace IDs per intent, service-level metrics, and dashboard health with dependency details.
-6. **Formalize distributed failure handling** for IPFS/Arweave/Grid outages with retries, backpressure, and clear degraded modes.
+3. ✅ **Strengthened interaction layer (human ↔ digital entity):**
+   - Added explicit `conversation_id` + `actor_id` identity model across REST/WS/channel intents.
+   - Expanded memory controls in UI/API (view/edit/forget per-node, forget current session, consent scopes).
+   - Added response style controls including executive mode and surfaced confidence/provenance + trace ID in chat.
+4. ✅ **Hardened sandbox execution security** with stricter runtime profile (seccomp/apparmor, no network, read-only FS, tmpfs-only writable mounts, constrained memory/pids/cpu).
+5. ✅ **Improved observability**: structured logs, propagated trace IDs per intent, enriched service-level metrics, and status dashboard dependency/latency health details.
+6. ✅ **Formalized distributed failure handling** for IPFS/Arweave/Grid with retries, degraded counters, and archive sync backpressure mode.
 
 ### P2 (Medium)
 7. **Replace simulated graph query path** with real indexed graph retrieval and ranked multi-peer merge.
@@ -155,4 +155,3 @@ This section reflects the current codebase behavior and replaces earlier duplica
 ## Notes
 - This README intentionally distinguishes **implemented**, **partial**, and **simulated** behavior.
 - If you are planning production deployment, prioritize the P0/P1 items before scaling network participation.
-

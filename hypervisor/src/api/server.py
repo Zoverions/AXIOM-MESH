@@ -69,6 +69,7 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(audio_router)
 
 hypervisor_metrics = {"requests": 0, "errors": 0}
+intent_metrics = {"success": 0, "error": 0, "degraded": 0}
 
 SANDBOX_URL = os.environ.get("SANDBOX_URL", "http://localhost:4000/execute")
 
@@ -112,6 +113,8 @@ def verify_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)
 
 @app.post("/process", response_model=IntentResponse)
 async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api_key)):
+    trace_id = intent.trace_id or f"trace-{uuid.uuid4()}"
+    intent.trace_id = trace_id
     hypervisor_metrics["requests"] += 1
     audit_trail = {
         "intent_replay": {
@@ -134,7 +137,7 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api
     }
 
     try:
-        log_event("info", f"Processing intent from sender: {intent.metadata.get('sender', 'unknown')}", getattr(intent, 'trace_id', None))
+        log_event("info", f"Processing intent from sender: {intent.metadata.get('sender', 'unknown')}", trace_id)
         content = intent.content
         sender = intent.metadata.get("sender", "unknown")
 
@@ -179,7 +182,8 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api
         # Handle special Dialectic command
         if content.startswith("/dialectic"):
             synthesis = await dialectic.synthesize(content[len("/dialectic"):].strip())
-            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=synthesis, status="success", audit_trail=audit_trail)
+            intent_metrics["success"] += 1
+            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=synthesis, status="success", trace_id=trace_id, audit_trail=audit_trail)
 
         # Handle special Code Execution command
         if content.startswith("/exec"):
@@ -187,14 +191,16 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api
 
             if not is_safe_code(code):
                 audit_trail["safety_decisions"]["ast_sanitization"] = "Failed"
-                return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Security Halt: Code execution contains forbidden operations (e.g., os, sys, eval, open).", status="error", audit_trail=audit_trail)
+                intent_metrics["error"] += 1
+                return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Security Halt: Code execution contains forbidden operations (e.g., os, sys, eval, open).", status="error", trace_id=trace_id, audit_trail=audit_trail)
             audit_trail["safety_decisions"]["ast_sanitization"] = "Passed"
 
             # MiroFish Spatial Security Check
             # Assuming 'user_node' is the origin for standard /exec commands
             if not context_engine.miro_mapper.is_operation_allowed("user_node", "shell_execution"):
                 audit_trail["safety_decisions"]["mirofish_spatial_block"] = "Blocked"
-                return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="MiroFish Spatial Block: Unauthorized compliance attempt detected.", status="error", audit_trail=audit_trail)
+                intent_metrics["error"] += 1
+                return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="MiroFish Spatial Block: Unauthorized compliance attempt detected.", status="error", trace_id=trace_id, audit_trail=audit_trail)
             audit_trail["safety_decisions"]["mirofish_spatial_block"] = "Allowed"
 
             try:
@@ -203,12 +209,14 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api
                     response_text = f"Execution result:\n{sandbox_res.json()}"
             except Exception as e:
                 response_text = f"Sandbox execution failed: {e}"
-            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=response_text, status="success", audit_trail=audit_trail)
+            intent_metrics["success"] += 1
+            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=response_text, status="success", trace_id=trace_id, audit_trail=audit_trail)
 
         # Sync Skills command
         if content.startswith("/sync_skills"):
             skills = network_sync.sync_skills()
-            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Synced skills: {skills}", status="success", audit_trail=audit_trail)
+            intent_metrics["success"] += 1
+            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Synced skills: {skills}", status="success", trace_id=trace_id, audit_trail=audit_trail)
 
         # Standard LLM handling with Tier 1 and Tier 3 memory
         context = await context_engine.get_context(intent)
@@ -232,7 +240,8 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api
                 probe_res = await llm.process(f"Axiom: {context_engine.axioms}\n\nQuestion: {probe_q}")
                 if not arena.check_hallucination_response(probe_res):
                     audit_trail["safety_decisions"]["riker_probe_result"] = "Failed"
-                    return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="System Halt: RIKER Hallucination Probe failure. LLM fabricated data for non-existent CSU entity.", status="error", audit_trail=audit_trail)
+                    intent_metrics["error"] += 1
+                    return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="System Halt: RIKER Hallucination Probe failure. LLM fabricated data for non-existent CSU entity.", status="error", trace_id=trace_id, audit_trail=audit_trail)
                 audit_trail["safety_decisions"]["riker_probe_result"] = "Passed"
 
         raw_response = await llm.process(context, frequency_penalty=freq_penalty, presence_penalty=pres_penalty)
@@ -240,19 +249,31 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api
         # The Pulse Check
         if pulse.measure(raw_response):
             audit_trail["safety_decisions"]["pulse_anomaly"] = True
-            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="System Halt: Thermodynamic anomaly detected. Suspected hallucination/guessing loop.", status="error", audit_trail=audit_trail)
+            intent_metrics["error"] += 1
+            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="System Halt: Thermodynamic anomaly detected. Suspected hallucination/guessing loop.", status="error", trace_id=trace_id, audit_trail=audit_trail)
         audit_trail["safety_decisions"]["pulse_anomaly"] = False
 
         # The Arena Validation before returning text
         if not arena.verify(action_intent=content, proposed_execution=raw_response):
             audit_trail["safety_decisions"]["arena_verification"] = "Failed"
-            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Arena Security Halt: The LLM output failed verification (Autoregressive Hallucination Floor crossed).", status="error", audit_trail=audit_trail)
+            intent_metrics["error"] += 1
+            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Arena Security Halt: The LLM output failed verification (Autoregressive Hallucination Floor crossed).", status="error", trace_id=trace_id, audit_trail=audit_trail)
         audit_trail["safety_decisions"]["arena_verification"] = "Passed"
 
         # Automatically store new interactions in Deep Archive
-        metadata_to_store = {"session_id": intent.session_id}
+        metadata_to_store = {
+            "session_id": intent.session_id,
+            "conversation_id": intent.conversation_id,
+            "actor_id": intent.actor_id,
+            "consent": (intent.metadata or {}).get("consent_scope", "allowed")
+        }
         if hasattr(context_engine.deep_archive, "sync_to_grid") and asyncio.iscoroutinefunction(context_engine.deep_archive.sync_to_grid):
-            await context_engine.deep_archive.sync_to_grid(content, metadata_to_store)
+            try:
+                await context_engine.deep_archive.sync_to_grid(content, metadata_to_store)
+            except Exception:
+                intent_metrics["degraded"] += 1
+                metadata_to_store["sync_mode"] = "local_fallback"
+                context_engine.deep_archive.add(content=content, metadata=metadata_to_store)
         else:
             context_engine.deep_archive.add(content=content, metadata=metadata_to_store)
 
@@ -276,34 +297,54 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api
         if not provenance:
             provenance.append("Base Model")
 
+        style = (intent.metadata or {}).get("response_style", "standard")
+        styled_response = raw_response
+        if style == "concise":
+            styled_response = raw_response.split("\n")[0][:400]
+        elif style == "analytical":
+            styled_response = f"Analysis:\n{raw_response}"
+        elif style == "socratic":
+            styled_response = f"Before finalizing, consider: {raw_response}"
+        elif style == "executive":
+            styled_response = f"Executive summary: {raw_response}"
+
+        intent_metrics["success"] += 1
         return IntentResponse(
             id=str(uuid.uuid4()),
             intent_id=intent.id,
-            response=raw_response,
+            response=styled_response,
             status="success",
             confidence=confidence,
-            provenance=provenance
+            provenance=provenance,
+            trace_id=trace_id,
+            audit_trail=audit_trail
         )
-        return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=raw_response, status="success", audit_trail=audit_trail)
     except Exception as e:
         hypervisor_metrics["errors"] += 1
-        log_event("error", f"Hypervisor error: {str(e)}", getattr(intent, 'trace_id', None))
-        return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Hypervisor error: {str(e)}", status="error")
+        intent_metrics["error"] += 1
+        log_event("error", f"Hypervisor error: {str(e)}", trace_id)
+        return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Hypervisor error: {str(e)}", status="error", trace_id=trace_id)
 
 @app.get("/metrics")
 async def get_metrics():
-    return hypervisor_metrics
+    return {**hypervisor_metrics, "intents": intent_metrics}
 
 @app.get("/health")
 async def health_check():
     log_event("info", "Health check requested")
+    distributed_degraded = getattr(context_engine.deep_archive, "degraded_counters", {})
+    total_degraded = sum(distributed_degraded.values()) if distributed_degraded else 0
+    degraded = intent_metrics["degraded"] > 0 or total_degraded > 0
     return {
-        "status": "ok",
+        "status": "degraded" if degraded else "ok",
         "component": "hypervisor",
         "dependencies": {
-            "grid": "ok",
+            "grid": "degraded" if distributed_degraded.get("grid", 0) > 0 else "ok",
+            "ipfs": "degraded" if distributed_degraded.get("ipfs", 0) > 0 else "ok",
+            "arweave": "degraded" if distributed_degraded.get("arweave", 0) > 0 else "ok",
             "sandbox": "ok"
-        }
+        },
+        "metrics": {**intent_metrics, "distributed": distributed_degraded}
     }
 
 @app.get("/memory")

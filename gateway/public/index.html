@@ -45,6 +45,13 @@
                             <option value="concise">Concise</option>
                             <option value="analytical">Analytical</option>
                             <option value="socratic">Socratic</option>
+                            <option value="executive">Executive</option>
+                        </select>
+                        <label for="consent-scope" style="color: #ccc;">Consent Scope:</label>
+                        <select id="consent-scope" style="padding: 5px; border-radius: 4px; border: 1px solid #444; background: #333; color: white;">
+                            <option value="allowed">Train + Context</option>
+                            <option value="context_only">Context only</option>
+                            <option value="revoked">Revoked</option>
                         </select>
                     </div>
                     <div id="chat-messages" class="messages"></div>
@@ -60,6 +67,7 @@
                 <h2>Memory Controls</h2>
                 <div class="actions" style="margin-bottom: 1rem;">
                     <button id="refresh-memory">Refresh Memory</button>
+                    <button id="forget-session-memory" style="background-color: #d9534f;">Forget Current Session</button>
                     <label>
                         <input type="checkbox" id="show-all-memory"> Show All Users (Admin)
                     </label>
