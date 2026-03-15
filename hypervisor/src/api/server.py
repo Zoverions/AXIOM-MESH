@@ -96,6 +96,26 @@ def verify_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)
 
 @app.post("/process", response_model=IntentResponse)
 async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api_key)):
+    audit_trail = {
+        "intent_replay": {
+            "content": intent.content,
+            "channel": intent.channel,
+            "sender": intent.metadata.get("sender", "unknown")
+        },
+        "safety_decisions": {
+            "ast_sanitization": "N/A",
+            "mirofish_spatial_block": "N/A",
+            "riker_probe_injected": False,
+            "pulse_anomaly": False,
+            "arena_verification": "N/A"
+        },
+        "why_this_answer": {
+            "context_tier_1_temporal": bool(context_engine.temporal_state.get_collapsed_state()),
+            "context_tier_3_archive": True,
+            "sampling_perturbation": False
+        }
+    }
+
     try:
         content = intent.content
         sender = intent.metadata.get("sender", "unknown")
@@ -127,19 +147,23 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api
         # Handle special Dialectic command
         if content.startswith("/dialectic"):
             synthesis = await dialectic.synthesize(content[len("/dialectic"):].strip())
-            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=synthesis, status="success")
+            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=synthesis, status="success", audit_trail=audit_trail)
 
         # Handle special Code Execution command
         if content.startswith("/exec"):
             code = content[len("/exec"):].strip()
 
             if not is_safe_code(code):
-                return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Security Halt: Code execution contains forbidden operations (e.g., os, sys, eval, open).", status="error")
+                audit_trail["safety_decisions"]["ast_sanitization"] = "Failed"
+                return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Security Halt: Code execution contains forbidden operations (e.g., os, sys, eval, open).", status="error", audit_trail=audit_trail)
+            audit_trail["safety_decisions"]["ast_sanitization"] = "Passed"
 
             # MiroFish Spatial Security Check
             # Assuming 'user_node' is the origin for standard /exec commands
             if not context_engine.miro_mapper.is_operation_allowed("user_node", "shell_execution"):
-                return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="MiroFish Spatial Block: Unauthorized compliance attempt detected.", status="error")
+                audit_trail["safety_decisions"]["mirofish_spatial_block"] = "Blocked"
+                return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="MiroFish Spatial Block: Unauthorized compliance attempt detected.", status="error", audit_trail=audit_trail)
+            audit_trail["safety_decisions"]["mirofish_spatial_block"] = "Allowed"
 
             try:
                 async with httpx.AsyncClient() as client:
@@ -147,12 +171,12 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api
                     response_text = f"Execution result:\n{sandbox_res.json()}"
             except Exception as e:
                 response_text = f"Sandbox execution failed: {e}"
-            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=response_text, status="success")
+            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=response_text, status="success", audit_trail=audit_trail)
 
         # Sync Skills command
         if content.startswith("/sync_skills"):
             skills = network_sync.sync_skills()
-            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Synced skills: {skills}", status="success")
+            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Synced skills: {skills}", status="success", audit_trail=audit_trail)
 
         # Standard LLM handling with Tier 1 and Tier 3 memory
         context = await context_engine.get_context(intent)
@@ -162,26 +186,36 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api
         freq_penalty = sampling_params.get("frequency_penalty", 0.0)
         pres_penalty = sampling_params.get("presence_penalty", 0.0)
 
+        if freq_penalty > 0.0 or pres_penalty > 0.0:
+            audit_trail["why_this_answer"]["sampling_perturbation"] = True
+
         # Periodic RIKER Hallucination Probe
         if random.random() < 0.1: # 10% chance to inject probe
             probes = arena.riker.get_hallucination_probes()
             if probes:
+                audit_trail["safety_decisions"]["riker_probe_injected"] = True
                 probe = random.choice(probes)
                 probe_q = f"What is the {probe['attribute']} of {probe['entity']}?"
                 # Hallucination probe always uses base params to avoid confounding factors
                 probe_res = await llm.process(f"Axiom: {context_engine.axioms}\n\nQuestion: {probe_q}")
                 if not arena.check_hallucination_response(probe_res):
-                    return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="System Halt: RIKER Hallucination Probe failure. LLM fabricated data for non-existent CSU entity.", status="error")
+                    audit_trail["safety_decisions"]["riker_probe_result"] = "Failed"
+                    return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="System Halt: RIKER Hallucination Probe failure. LLM fabricated data for non-existent CSU entity.", status="error", audit_trail=audit_trail)
+                audit_trail["safety_decisions"]["riker_probe_result"] = "Passed"
 
         raw_response = await llm.process(context, frequency_penalty=freq_penalty, presence_penalty=pres_penalty)
 
         # The Pulse Check
         if pulse.measure(raw_response):
-            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="System Halt: Thermodynamic anomaly detected. Suspected hallucination/guessing loop.", status="error")
+            audit_trail["safety_decisions"]["pulse_anomaly"] = True
+            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="System Halt: Thermodynamic anomaly detected. Suspected hallucination/guessing loop.", status="error", audit_trail=audit_trail)
+        audit_trail["safety_decisions"]["pulse_anomaly"] = False
 
         # The Arena Validation before returning text
         if not arena.verify(action_intent=content, proposed_execution=raw_response):
-            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Arena Security Halt: The LLM output failed verification (Autoregressive Hallucination Floor crossed).", status="error")
+            audit_trail["safety_decisions"]["arena_verification"] = "Failed"
+            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Arena Security Halt: The LLM output failed verification (Autoregressive Hallucination Floor crossed).", status="error", audit_trail=audit_trail)
+        audit_trail["safety_decisions"]["arena_verification"] = "Passed"
 
         # Automatically store new interactions in Deep Archive
         if hasattr(context_engine.deep_archive, "sync_to_grid") and asyncio.iscoroutinefunction(context_engine.deep_archive.sync_to_grid):
@@ -197,7 +231,7 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api
             "sender": sender
         })
 
-        return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=raw_response, status="success")
+        return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=raw_response, status="success", audit_trail=audit_trail)
     except Exception as e:
         return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Hypervisor error: {str(e)}", status="error")
 

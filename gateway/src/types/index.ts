@@ -11,4 +11,5 @@ export interface IntentResponse {
     intent_id: string;
     response: string;
     status: 'success' | 'error' | 'pending';
+    audit_trail?: Record<string, any>;
 }
