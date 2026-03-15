@@ -452,10 +452,6 @@ class DistributedDeepArchive(DeepArchive):
                             }
                         )
                     )
-                )
-                await ws.recv()
-        except Exception as e:
-            print(f"Grid sync error: {e}")
                     await ws.recv()
                     break
             except Exception as e:

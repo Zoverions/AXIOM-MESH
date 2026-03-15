@@ -1,19 +1,28 @@
-1. **Implement `DualLedgerIdentity.sol` in `grid/contracts/contracts/`**
-   - Stores node registrations with two distinct types: Human (Proof of Personhood) and Agent (Proof of Compute).
-   - Use custom errors like `NodeAlreadyRegistered()`, `InvalidIdentityType()`, etc.
+# Detailed Contract Worklog (Completed)
 
-2. **Implement `WeightOracle.sol` in `grid/contracts/contracts/`**
-   - Maintains PoER (Agent compute score) and PoSig (Human signal score) balances.
-   - Calculates moving average or just store the 30-day verified compute/signals. We can store raw values and increment them via an authorized oracle/owner.
+## Completed implementation checklist
 
-3. **Implement `DialecticArbitration.sol` in `grid/contracts/contracts/`**
-   - Needs to track proposals that can have votes from both Human and Agent domains.
-   - Contains a mechanism to detect a deadlock (e.g. votes from Anthropic chamber contradict votes from Algorithmic chamber on overlapping domain).
-   - "Intercepts" the deadlock and sets state to `AwaitingSynthesis`.
-   - Has a function for the Hypervisor (or authorized oracle) to submit the `Geometric Synthesis` and trigger a re-vote.
+1. ✅ Implemented `grid/contracts/contracts/DualLedgerIdentity.sol`
+   - Owner-controlled identity registration and deregistration.
+   - Distinct Human/Agent identity types.
+   - Custom error-based revert model.
 
-4. **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.**
-   - Run linter/compiler for smart contracts using hardhat (`npx hardhat compile` inside `grid/contracts`).
-   - Add simple unit tests in `grid/contracts/test` for these 3 contracts to ensure they compile and work as expected.
+2. ✅ Implemented `grid/contracts/contracts/WeightOracle.sol`
+   - Stores per-node voting weights.
+   - Supports single and batch updates.
+   - Restricts updates to owner and validates node registration.
 
-5. **Submit**
+3. ✅ Implemented `grid/contracts/contracts/DialecticArbitration.sol`
+   - Tracks proposals and bicameral votes.
+   - Detects deadlock state and transitions to `AwaitingSynthesis`.
+   - Allows Hypervisor/owner synthesis submission and re-vote reset.
+
+4. ✅ Added contract tests under `grid/contracts/test/`
+   - `DualLedgerIdentity.cjs`
+   - `WeightOracle.cjs`
+   - `DialecticArbitration.cjs`
+
+## Validation notes
+
+- The repository contains the full source + test scaffolding.
+- Hardhat compile in this environment is blocked by compiler download restrictions (proxy/403), so full contract execution validation must be rerun where downloads are allowed.

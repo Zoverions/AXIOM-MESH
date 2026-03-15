@@ -28,7 +28,8 @@ class HardwareScanner:
                 with open("/etc/os-release") as f:
                     for line in f:
                         if line.startswith("PRETTY_NAME="):
-                            return f"Linux ({line.split('=')[1].strip().strip('\"')})"
+                            pretty_name = line.split('=', 1)[1].strip().strip('\"')
+                            return f"Linux ({pretty_name})"
             except Exception:
                 pass
             return "Linux"

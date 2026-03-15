@@ -1,7 +1,15 @@
-The goal is to implement three smart contracts for the AxiomMesh P2P Grid as requested in the "Bicameral Cognitive Syndicate" RFC:
+# Roadmap Status Snapshot (Audit-Verified)
 
-1. **DualLedgerIdentity.sol**: A registry that separates Proof of Personhood (Human Keys) from Proof of Compute (Agent Keys).
-2. **WeightOracle.sol**: Calculates voting weights based on PoER (Proof of Entropy Reduction - Algorithmic) or PoSig (Proof of Signal - Anthropic).
-3. **DialecticArbitration.sol**: A specialized smart contract that handles deadlocked overlapping votes, routes them to a "Hypervisor" for synthesis, and triggers a re-vote.
+This roadmap note tracks the Bicameral Cognitive Syndicate smart-contract milestone and is now audit-updated.
 
-All contracts must use custom errors for gas efficiency.
+## Milestone: Bicameral Governance Contracts
+
+- ✅ `DualLedgerIdentity.sol` implemented (human/agent identity registry with custom errors).
+- ✅ `WeightOracle.sol` implemented (owner-managed weight updates for registered identities).
+- ✅ `DialecticArbitration.sol` implemented (deadlock detection, synthesis state, revote flow).
+- ✅ Contract test suites are present in `grid/contracts/test/` for all three contracts.
+
+## Remaining follow-up
+
+- ⚠️ Run Hardhat compile/test in a network-enabled environment where Solidity compiler downloads are permitted.
+- ⚠️ Wire these contracts into runtime Grid API workflows (stake/slash/chain event reconciliation) for production usage.

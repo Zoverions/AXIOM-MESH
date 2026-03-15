@@ -73,21 +73,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         ws = new WebSocket(wsUrl);
 
-            if (data.error) {
-                appendMessage('system', `Error: ${data.error}`);
-            } else if (data.response) {
-                appendMessage('agent', data.response, data.confidence, data.provenance);
-                appendMessage('agent', data.response);
-                if (data.audit_trail) {
-                    auditHistory.push({
-                        intent_id: data.intent_id,
-                        audit_trail: data.audit_trail,
-                        timestamp: new Date().toLocaleTimeString()
-                    });
-                    renderCockpitList();
-                }
-            } else {
-                appendMessage('system', JSON.stringify(data));
         ws.onopen = () => {
             appendMessage('system', 'Connected to AxiomMesh Gateway.');
         };
@@ -95,12 +80,20 @@ document.addEventListener("DOMContentLoaded", () => {
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                if (data.status === 'pending') return; // Ignore pending
+                if (data.status === 'pending') return;
 
                 if (data.error) {
                     appendMessage('system', `Error: ${data.error}`);
                 } else if (data.response) {
-                    appendMessage('agent', data.response);
+                    appendMessage('agent', data.response, data.confidence, data.provenance);
+                    if (data.audit_trail) {
+                        auditHistory.push({
+                            intent_id: data.intent_id,
+                            audit_trail: data.audit_trail,
+                            timestamp: new Date().toLocaleTimeString()
+                        });
+                        renderCockpitList();
+                    }
                 } else {
                     appendMessage('system', JSON.stringify(data));
                 }
@@ -168,11 +161,10 @@ document.addEventListener("DOMContentLoaded", () => {
         // Or inject style into the message if supported. Let's send via WebSocket metadata if available.
         // Actually, intent_parser is strict. We'll update the websocket payload slightly.
         if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ input: text, session_id: sessionId, modality: style }));
             const payload = {
                 id: crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now(),
-                identity_hash: 'web-user-hash',
-                modality: 'text',
+                identity_hash: sessionId,
+                modality: style || 'text',
                 input: text,
                 timestamp: Date.now()
             };
@@ -253,7 +245,6 @@ document.addEventListener("DOMContentLoaded", () => {
             whyList.appendChild(li);
         }
     }
-});
 
     // --- Memory Logic ---
     async function fetchMemory() {
@@ -629,3 +620,5 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     document.getElementById('refresh-logs').addEventListener('click', fetchLogs);
+
+});
