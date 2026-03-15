@@ -127,7 +127,7 @@ print(f"loss={train()}")
             # Execute in the secure Node.js Sandbox container
             res = requests.post(SANDBOX_URL, json={"language": "python", "code": proposed_code})
             result_data = res.json()
-            stdout = result_data.get("stdout", "")
+            stdout = result_data.get("result", {}).get("stdout", "")
 
             # Parse the loss from stdout (e.g., looking for 'loss=0.842')
             loss = None
