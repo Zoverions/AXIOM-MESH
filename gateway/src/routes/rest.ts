@@ -128,27 +128,59 @@ router.get('/api/v1/network', authMiddleware, async (req: Request, res: Response
 
 // --- Status API ---
 router.get('/api/v1/status', authMiddleware, async (req: Request, res: Response) => {
-    const statuses: Record<string, string> = {
-        gateway: 'ok',
-        hypervisor: 'offline',
-        sandbox: 'offline',
-        grid: 'offline'
+    const statuses: Record<string, any> = {
+        gateway: {
+            status: 'ok',
+            component: 'gateway',
+            dependencies: {
+                hypervisor: 'unknown',
+                sandbox: 'unknown',
+                grid: 'unknown'
+            }
+        },
+        hypervisor: { status: 'offline' },
+        sandbox: { status: 'offline' },
+        grid: { status: 'offline' }
     };
 
+    async function timedHealthcheck(name: string, url: string) {
+        const started = Date.now();
+        try {
+            const response = await axios.get(url, { timeout: 4000 });
+            return {
+                ...response.data,
+                latency_ms: Date.now() - started,
+                degraded: false
+            };
+        } catch (error: any) {
+            return {
+                status: 'offline',
+                degraded: true,
+                latency_ms: Date.now() - started,
+                error: error.message,
+                component: name
+            };
+        }
+    }
+
     try {
-        const hypervisorRes = await axios.get(process.env.HYPERVISOR_URL + '/health').catch(() => null);
-        if (hypervisorRes && hypervisorRes.data) statuses.hypervisor = hypervisorRes.data;
+        statuses.hypervisor = await timedHealthcheck('hypervisor', process.env.HYPERVISOR_URL + '/health');
     } catch {}
 
     try {
-        const sandboxRes = await axios.get('http://sandbox:4000/health').catch(() => null);
-        if (sandboxRes && sandboxRes.data) statuses.sandbox = sandboxRes.data;
+        statuses.sandbox = await timedHealthcheck('sandbox', 'http://sandbox:4000/health');
     } catch {}
 
     try {
-        const gridRes = await axios.get(getGridBaseUrl() + '/health').catch(() => null);
-        if (gridRes && gridRes.data) statuses.grid = gridRes.data;
+        statuses.grid = await timedHealthcheck('grid', getGridBaseUrl() + '/health');
     } catch {}
+
+    statuses.gateway.dependencies = {
+        hypervisor: statuses.hypervisor.status,
+        sandbox: statuses.sandbox.status,
+        grid: statuses.grid.status
+    };
+    statuses.gateway.metrics = gatewayMetrics;
 
     res.json(statuses);
 });

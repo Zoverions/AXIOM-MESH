@@ -3,8 +3,11 @@ import { z } from 'zod';
 const intentSchema = z.object({
     id: z.string().optional(),
     session_id: z.string().optional(),
+    conversation_id: z.string().optional(),
+    actor_id: z.string().optional(),
     identity_hash: z.string().optional(),
     modality: z.string().optional(),
+    consent_scope: z.enum(['allowed', 'context_only', 'revoked']).optional(),
     input: z.string(),
     timestamp: z.number().optional(),
 });

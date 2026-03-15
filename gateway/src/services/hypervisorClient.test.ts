@@ -19,6 +19,7 @@ describe('hypervisorClient', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        process.env.HYPERVISOR_RETRIES = '1';
     });
 
     describe('sendToHypervisor', () => {
@@ -48,6 +49,7 @@ describe('hypervisorClient', () => {
                 headers: {
                     'Authorization': `Bearer ${process.env.HYPERVISOR_API_KEY || ''}`
                 },
+                timeout: 15000,
                 proxy: false
             });
             expect(result).toEqual(mockResponseData);
@@ -66,6 +68,7 @@ describe('hypervisorClient', () => {
                 headers: {
                     'Authorization': `Bearer ${process.env.HYPERVISOR_API_KEY || ''}`
                 },
+                timeout: 15000,
                 proxy: false
             });
             expect(consoleSpy).toHaveBeenCalledWith('Error sending to Hypervisor:', errorMessage);
@@ -74,7 +77,9 @@ describe('hypervisorClient', () => {
                 id: `err-${FIXED_TIMESTAMP}`,
                 intent_id: mockIntent.id,
                 response: `Hypervisor error: ${errorMessage}`,
-                status: 'error'
+                status: 'error',
+                trace_id: undefined,
+                provenance: ['hypervisor_unavailable']
             });
 
             consoleSpy.mockRestore();
@@ -101,6 +106,7 @@ describe('hypervisorClient', () => {
                 headers: {
                     'Authorization': `Bearer ${process.env.HYPERVISOR_API_KEY || ''}`
                 },
+                timeout: 15000,
                 proxy: false
             });
 
