@@ -1,4 +1,3 @@
-import math
 from typing import List, Dict, Any, Tuple
 from src.cortex.mirofish_mapper import MiroFishMapper
 
