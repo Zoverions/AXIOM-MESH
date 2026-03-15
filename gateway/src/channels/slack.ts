@@ -7,7 +7,9 @@ export class SlackChannel extends BaseChannel {
     reliabilityPolicy: ReliabilityPolicy = {
         maxRetries: 3,
         retryDelayMs: 1500,
-        rateLimitMs: 1000 // Slack rate limits ~1 msg/sec
+        rateLimitMs: 1000, // Slack rate limits ~1 msg/sec
+        enforceDeliveryReceipt: true,
+        classifyRateLimitError: (err: unknown) => /rate[_ ]?limited|429|too many requests/i.test(String((err as any)?.message || err))
     };
     private app: App;
     private onMessage: (channelName: string, chatId: string, content: string, sender: string) => void;

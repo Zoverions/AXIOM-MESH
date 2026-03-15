@@ -3,12 +3,18 @@ export interface DeliveryReceipt {
     messageId?: string;
     error?: string;
     timestamp: number;
+    attempts?: number;
+    provider?: string;
+    acknowledged?: boolean;
+    rateLimited?: boolean;
 }
 
 export interface ReliabilityPolicy {
     maxRetries: number;
     retryDelayMs: number;
     rateLimitMs: number;
+    enforceDeliveryReceipt: boolean;
+    classifyRateLimitError?: (err: unknown) => boolean;
 }
 
 export interface Channel {

@@ -7,7 +7,9 @@ export class DiscordChannel extends BaseChannel {
     reliabilityPolicy: ReliabilityPolicy = {
         maxRetries: 3,
         retryDelayMs: 1000,
-        rateLimitMs: 500 // Discord typical rate limit
+        rateLimitMs: 500, // Discord typical rate limit
+        enforceDeliveryReceipt: true,
+        classifyRateLimitError: (err: unknown) => /429|rate limit|you are being rate limited/i.test(String((err as any)?.message || err))
     };
     private client: Client;
     private opts: ChannelOpts;

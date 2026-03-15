@@ -59,13 +59,21 @@ export abstract class BaseChannel implements Channel {
                     success: true,
                     messageId,
                     timestamp: Date.now(),
+                    attempts: attempts + 1,
+                    provider: this.name,
+                    acknowledged: this.reliabilityPolicy.enforceDeliveryReceipt ? Boolean(messageId) : true,
                 };
             } catch (err: any) {
                 lastError = err;
                 attempts++;
 
+                const isRateLimited = this.reliabilityPolicy.classifyRateLimitError
+                    ? this.reliabilityPolicy.classifyRateLimitError(err)
+                    : this.defaultRateLimitClassifier(err);
+
                 if (attempts <= this.reliabilityPolicy.maxRetries) {
-                    const delayMs = this.reliabilityPolicy.retryDelayMs * Math.pow(2, attempts - 1);
+                    const baseDelay = this.reliabilityPolicy.retryDelayMs * Math.pow(2, attempts - 1);
+                    const delayMs = isRateLimited ? Math.max(baseDelay, this.reliabilityPolicy.rateLimitMs) : baseDelay;
                     console.warn(`[${this.name}] Send failed to ${chatId}. Retrying in ${delayMs}ms (Attempt ${attempts}/${this.reliabilityPolicy.maxRetries}). Error: ${err.message || err}`);
                     await this.delay(delayMs);
                 }
@@ -75,11 +83,24 @@ export abstract class BaseChannel implements Channel {
         const errorMessage = lastError instanceof Error ? lastError.message : String(lastError);
         console.error(`[${this.name}] Failed to send message to ${chatId} after ${this.reliabilityPolicy.maxRetries} retries. Final error: ${errorMessage}`);
 
+        const isRateLimited = this.reliabilityPolicy.classifyRateLimitError
+            ? this.reliabilityPolicy.classifyRateLimitError(lastError)
+            : this.defaultRateLimitClassifier(lastError);
+
         return {
             success: false,
             error: errorMessage,
             timestamp: Date.now(),
+            attempts,
+            provider: this.name,
+            acknowledged: false,
+            rateLimited: isRateLimited,
         };
+    }
+
+    private defaultRateLimitClassifier(err: unknown): boolean {
+        const raw = err instanceof Error ? err.message : String(err);
+        return /rate\s*limit|too many requests|429/i.test(raw);
     }
 
     private delay(ms: number): Promise<void> {

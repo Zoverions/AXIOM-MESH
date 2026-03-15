@@ -15,10 +15,24 @@ type SkillVector struct {
 }
 
 type ComputeBond struct {
-	NodeID string `json:"nodeId"`
-	Amount int    `json:"amount"`
-	Status string `json:"status"`
-	TxHash string `json:"txHash,omitempty"`
+	NodeID            string `json:"nodeId"`
+	Amount            int    `json:"amount"`
+	Status            string `json:"status"`
+	TxHash            string `json:"txHash,omitempty"`
+	LastEvent         string `json:"lastEvent,omitempty"`
+	LastUpdatedBlock  uint64 `json:"lastUpdatedBlock,omitempty"`
+	FinalizedBlock    uint64 `json:"finalizedBlock,omitempty"`
+	PendingFinalityTx string `json:"pendingFinalityTx,omitempty"`
+}
+
+type BondChainEvent struct {
+	Type            string `json:"type"`
+	NodeID          string `json:"nodeId"`
+	Amount          int    `json:"amount"`
+	TxHash          string `json:"txHash"`
+	BlockNumber     uint64 `json:"blockNumber"`
+	Finalized       bool   `json:"finalized"`
+	RequiredConfirm uint64 `json:"requiredConfirmations,omitempty"`
 }
 
 type WebState struct {

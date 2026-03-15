@@ -294,21 +294,29 @@ func (n *Node) BroadcastCCIPMessage(msg types.CCIPMessage) {
 	}
 }
 
-func (n *Node) QueryNetwork(query string, proof string) []types.GraphNode {
+type PeerQueryResult struct {
+	NodeID      string
+	Node        types.GraphNode
+	Score       int
+	SourcePeer  string
+	SourceScore int
+}
+
+func (n *Node) QueryNetwork(query string, proof string) []PeerQueryResult {
 	peers := n.snapshotPeers()
 
 	log.Printf("P2P Node %s: Querying network for '%s' with ZKP to %d peers", n.ID, query, len(peers))
 
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	var allNodes []types.GraphNode
+	var allNodes []PeerQueryResult
 
 	for _, peer := range peers {
 		wg.Add(1)
 		wsURL := strings.Replace(peer.Address, "http://", "ws://", 1) + "/ws/graph"
 		go func(pID, urlStr string) {
 			defer wg.Done()
-			var peerNodes []types.GraphNode
+			var peerNodes []PeerQueryResult
 			err := sendWithBackoff(func() error {
 				c, _, err := websocket.DefaultDialer.Dial(urlStr, nil)
 				if err != nil {
@@ -322,9 +330,12 @@ func (n *Node) QueryNetwork(query string, proof string) []types.GraphNode {
 				}
 
 				var res struct {
-					Type  string            `json:"type"`
-					Nodes []types.GraphNode `json:"nodes"`
-					Error string            `json:"error,omitempty"`
+					Type  string `json:"type"`
+					Nodes []struct {
+						Node  types.GraphNode `json:"node"`
+						Score int             `json:"score"`
+					} `json:"nodes"`
+					Error string `json:"error,omitempty"`
 				}
 				if err := c.ReadJSON(&res); err != nil {
 					return err
@@ -334,7 +345,9 @@ func (n *Node) QueryNetwork(query string, proof string) []types.GraphNode {
 					return fmt.Errorf("peer returned error: %s", res.Error)
 				}
 
-				peerNodes = res.Nodes
+				for _, scored := range res.Nodes {
+					peerNodes = append(peerNodes, PeerQueryResult{NodeID: scored.Node.ID, Node: scored.Node, Score: scored.Score, SourcePeer: pID, SourceScore: 1})
+				}
 				return nil
 			})
 			if err != nil {

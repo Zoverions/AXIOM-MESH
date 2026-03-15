@@ -7,7 +7,9 @@ export class TelegramChannel extends BaseChannel {
     reliabilityPolicy: ReliabilityPolicy = {
         maxRetries: 3,
         retryDelayMs: 2000,
-        rateLimitMs: 1000 // typical telegram bot rate limit ~30 msgs/sec
+        rateLimitMs: 1000, // typical telegram bot rate limit ~30 msgs/sec
+        enforceDeliveryReceipt: true,
+        classifyRateLimitError: (err: unknown) => /429|retry after|too many requests/i.test(String((err as any)?.message || err))
     };
     private bot: Telegraf;
     private onMessage: (channelName: string, chatId: string, content: string, sender: string) => void;

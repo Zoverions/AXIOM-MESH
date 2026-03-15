@@ -6,10 +6,9 @@ import (
 	"net/http"
 	"sort"
 
+	"fmt"
 	"github.com/axiom-mesh/grid/blockchain"
 	"github.com/axiom-mesh/grid/p2p"
-	"strings"
-	"fmt"
 
 	"github.com/axiom-mesh/grid/consensus"
 	"github.com/axiom-mesh/grid/types"
@@ -22,9 +21,9 @@ type ZKMLJob struct {
 }
 
 type Server struct {
-	ledger   *blockchain.Ledger
-	p2pNode  *p2p.Node
-	upgrader websocket.Upgrader
+	ledger    *blockchain.Ledger
+	p2pNode   *p2p.Node
+	upgrader  websocket.Upgrader
 	zkmlQueue chan ZKMLJob
 }
 
@@ -80,7 +79,7 @@ func (s *Server) startZKMLWorker() {
 func (s *Server) Start(addr string) error {
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "ok",
+			"status":    "ok",
 			"component": "grid",
 			"dependencies": map[string]string{
 				"p2p": "ok",
@@ -176,13 +175,63 @@ func (s *Server) Start(addr string) error {
 		}
 	})
 
+	http.HandleFunc("/bond/events", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method != "POST" {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var evt types.BondChainEvent
+		if err := json.NewDecoder(r.Body).Decode(&evt); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if evt.RequiredConfirm > 0 && !evt.Finalized {
+			json.NewEncoder(w).Encode(map[string]interface{}{"status": "pending_finality", "nodeId": evt.NodeID, "requiredConfirmations": evt.RequiredConfirm})
+			return
+		}
+
+		if err := s.ledger.ApplyBondChainEvent(evt); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		json.NewEncoder(w).Encode(map[string]interface{}{"status": "applied", "nodeId": evt.NodeID, "txHash": evt.TxHash, "finalized": evt.Finalized})
+	})
+
+	http.HandleFunc("/bond/reconcile", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method != "POST" {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var payload struct {
+			NodeID         string            `json:"nodeId"`
+			CanonicalBond  types.ComputeBond `json:"canonicalBond"`
+			FinalizedBlock uint64            `json:"finalizedBlock"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if payload.NodeID == "" {
+			http.Error(w, "nodeId is required", http.StatusBadRequest)
+			return
+		}
+
+		s.ledger.ReconcileBondFromChain(payload.NodeID, payload.CanonicalBond, payload.FinalizedBlock)
+		json.NewEncoder(w).Encode(map[string]interface{}{"status": "reconciled", "nodeId": payload.NodeID, "finalizedBlock": payload.FinalizedBlock})
+	})
 	http.HandleFunc("/swarm", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == "GET" {
 			json.NewEncoder(w).Encode(s.ledger.GetSwarms())
 		} else if r.Method == "POST" {
 			var swarm types.Swarm
-				isSync := r.URL.Query().Get("sync") == "true"
+			isSync := r.URL.Query().Get("sync") == "true"
 
 			if err := json.NewDecoder(r.Body).Decode(&swarm); err == nil {
 				if swarm.ID == "" || swarm.TaskID == "" {
@@ -202,17 +251,17 @@ func (s *Server) Start(addr string) error {
 					return
 				}
 
-					if _, exists := s.ledger.GetSwarm(swarm.ID); exists && isSync {
-						json.NewEncoder(w).Encode(map[string]string{"status": "already_synced"})
-						return
-					}
+				if _, exists := s.ledger.GetSwarm(swarm.ID); exists && isSync {
+					json.NewEncoder(w).Encode(map[string]string{"status": "already_synced"})
+					return
+				}
 
 				swarm.Status = "active"
 				s.ledger.CreateSwarm(swarm)
 
-					if !isSync && s.p2pNode != nil {
-						s.p2pNode.BroadcastSwarm(swarm)
-					}
+				if !isSync && s.p2pNode != nil {
+					s.p2pNode.BroadcastSwarm(swarm)
+				}
 
 				json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 			} else {
@@ -429,51 +478,47 @@ func (s *Server) handleGraphWebSocket(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 
-			localResults := s.ledger.SearchGraph(req.Query)
-
-			var peerResults []types.GraphNode
+			localResults := s.ledger.SearchGraphRanked(req.Query)
+			var peerResults []p2p.PeerQueryResult
 			if s.p2pNode != nil {
 				peerResults = s.p2pNode.QueryNetwork(req.Query, req.Proof)
 			}
 
 			nodeMap := make(map[string]types.GraphNode)
 			nodeScores := make(map[string]int)
+			peerVotes := make(map[string]int)
 
-			queryTokens := strings.Fields(strings.ToLower(req.Query))
-
-			for _, node := range localResults {
-				nodeMap[node.ID] = node
-				nodeScores[node.ID] += 1 // base score for returning it
-
-				contentLower := strings.ToLower(node.Content)
-				for _, token := range queryTokens {
-					if strings.Contains(contentLower, token) {
-						nodeScores[node.ID] += 1
-					}
-				}
+			for _, result := range localResults {
+				nodeMap[result.Node.ID] = result.Node
+				nodeScores[result.Node.ID] += result.Score + 2
 			}
 
-			for _, node := range peerResults {
-				if _, exists := nodeMap[node.ID]; !exists {
-					nodeMap[node.ID] = node
-
-					contentLower := strings.ToLower(node.Content)
-					for _, token := range queryTokens {
-						if strings.Contains(contentLower, token) {
-							nodeScores[node.ID] += 1
-						}
-					}
+			for _, peerRes := range peerResults {
+				if _, exists := nodeMap[peerRes.NodeID]; !exists {
+					nodeMap[peerRes.NodeID] = peerRes.Node
 				}
-				nodeScores[node.ID] += 1 // Bonus score for each peer returning this node
+				nodeScores[peerRes.NodeID] += peerRes.Score + peerRes.SourceScore
+				peerVotes[peerRes.NodeID]++
 			}
 
-			results := make([]types.GraphNode, 0, len(nodeMap))
-			for _, node := range nodeMap {
-				results = append(results, node)
+			results := make([]struct {
+				Node      types.GraphNode `json:"node"`
+				Score     int             `json:"score"`
+				PeerVotes int             `json:"peerVotes"`
+			}, 0, len(nodeMap))
+			for nodeID, node := range nodeMap {
+				results = append(results, struct {
+					Node      types.GraphNode `json:"node"`
+					Score     int             `json:"score"`
+					PeerVotes int             `json:"peerVotes"`
+				}{Node: node, Score: nodeScores[nodeID], PeerVotes: peerVotes[nodeID]})
 			}
 
 			sort.Slice(results, func(i, j int) bool {
-				return nodeScores[results[i].ID] > nodeScores[results[j].ID]
+				if results[i].Score == results[j].Score {
+					return results[i].PeerVotes > results[j].PeerVotes
+				}
+				return results[i].Score > results[j].Score
 			})
 
 			conn.WriteJSON(map[string]interface{}{"type": "results", "nodes": results})
