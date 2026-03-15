@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 
@@ -50,6 +51,32 @@ func (l *Ledger) GetBond(nodeID string) (types.ComputeBond, bool) {
 	defer l.mu.RUnlock()
 	bond, ok := l.Bonds[nodeID]
 	return bond, ok
+}
+
+func (l *Ledger) Slash(nodeID string, amount int, txHash string) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	bond, ok := l.Bonds[nodeID]
+	if !ok || bond.Status != "active" {
+		return fmt.Errorf("bond not active or does not exist")
+	}
+
+	if bond.Amount < amount {
+		return fmt.Errorf("slash amount exceeds bond amount")
+	}
+
+	bond.Amount -= amount
+	if bond.Amount == 0 {
+		bond.Status = "inactive"
+	}
+
+	if txHash != "" {
+		bond.TxHash = txHash
+	}
+
+	l.Bonds[nodeID] = bond
+	return nil
 }
 
 func (l *Ledger) GetSkills() []types.SkillVector {

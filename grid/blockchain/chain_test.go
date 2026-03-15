@@ -89,6 +89,61 @@ func TestLedger_Stake_And_GetBond(t *testing.T) {
 	}
 }
 
+func TestLedger_Slash(t *testing.T) {
+	l := NewLedger()
+	nodeID := "node-slash"
+
+	// Try to slash non-existent bond
+	err := l.Slash(nodeID, 100, "")
+	if err == nil || err.Error() != "bond not active or does not exist" {
+		t.Errorf("Expected error for non-existent bond, got %v", err)
+	}
+
+	// Stake bond
+	l.Stake(types.ComputeBond{
+		NodeID: nodeID,
+		Amount: 500,
+		Status: "active",
+	})
+
+	// Slash more than bond amount
+	err = l.Slash(nodeID, 600, "")
+	if err == nil || err.Error() != "slash amount exceeds bond amount" {
+		t.Errorf("Expected error for slashing more than bond amount, got %v", err)
+	}
+
+	// Successful partial slash
+	err = l.Slash(nodeID, 200, "0xabc")
+	if err != nil {
+		t.Errorf("Unexpected error during partial slash: %v", err)
+	}
+
+	bond, _ := l.GetBond(nodeID)
+	if bond.Amount != 300 {
+		t.Errorf("Expected bond amount 300, got %d", bond.Amount)
+	}
+	if bond.Status != "active" {
+		t.Errorf("Expected bond status active, got %s", bond.Status)
+	}
+	if bond.TxHash != "0xabc" {
+		t.Errorf("Expected txHash 0xabc, got %s", bond.TxHash)
+	}
+
+	// Successful full slash
+	err = l.Slash(nodeID, 300, "0xdef")
+	if err != nil {
+		t.Errorf("Unexpected error during full slash: %v", err)
+	}
+
+	bond, _ = l.GetBond(nodeID)
+	if bond.Amount != 0 {
+		t.Errorf("Expected bond amount 0, got %d", bond.Amount)
+	}
+	if bond.Status != "inactive" {
+		t.Errorf("Expected bond status inactive, got %s", bond.Status)
+	}
+}
+
 func TestLedger_AddCCIPMessage_And_GetCCIPMessage(t *testing.T) {
 	l := NewLedger()
 	msgID := "msg-123"

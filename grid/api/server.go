@@ -98,9 +98,42 @@ func (s *Server) Start(addr string) error {
 					bond.Amount += existingBond.Amount
 				}
 
-				bond.Status = "active"
+				if bond.Status == "" {
+					bond.Status = "active"
+				}
+
 				s.ledger.Stake(bond)
 				json.NewEncoder(w).Encode(map[string]string{"status": "success", "nodeId": bond.NodeID})
+			} else {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			}
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	http.HandleFunc("/slash", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "POST" {
+			var payload struct {
+				NodeID string `json:"nodeId"`
+				Amount int    `json:"amount"`
+				TxHash string `json:"txHash,omitempty"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&payload); err == nil {
+				if payload.NodeID == "" || payload.Amount <= 0 {
+					http.Error(w, "Invalid nodeId or amount", http.StatusBadRequest)
+					return
+				}
+
+				if err := s.ledger.Slash(payload.NodeID, payload.Amount, payload.TxHash); err != nil {
+					http.Error(w, err.Error(), http.StatusBadRequest)
+					return
+				}
+
+				// Depending on the network requirements, we could also broadcast this slash event,
+				// but since slash events originated from chain, we mostly care about updating local state.
+				json.NewEncoder(w).Encode(map[string]string{"status": "success", "nodeId": payload.NodeID})
 			} else {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 			}
