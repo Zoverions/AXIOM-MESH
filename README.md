@@ -103,32 +103,37 @@ This section reflects the current codebase behavior and replaces earlier duplica
 
 ## Prioritized To-Do List
 
+### Verified as completed
+1. **Gateway WebSocket contract mismatch fix (baseline)** is in place: dashboard chat now sends schema-compatible `input` payloads for the WebSocket intent parser.
+2. **Hypervisor runtime/reliability bugfixes** are in place: `asyncio` is imported in the API server, and AutoTraining now parses sandbox output from `result.stdout`.
+3. **End-to-end integration test coverage (baseline)** exists for Gateway → Hypervisor → Sandbox (stub) intent processing.
+
+### Still to do
+
 ### P0 (Critical)
-1. **Fix Gateway WebSocket contract mismatch** so dashboard chat actually works end-to-end without schema errors.
-2. **Fix Hypervisor runtime bug (`asyncio` import) and AutoTraining result parsing bug** to stabilize core processing loops.
-3. **Unify auth model** across REST/WS/dashboard endpoints and remove accidental insecure defaults.
-4. **Add robust integration tests** that run full intent path: Gateway → Hypervisor → Sandbox/Grid stubs.
+1. **Unify auth model** across REST/WS/dashboard endpoints and remove accidental insecure defaults.
+2. **Expand integration tests to include Grid stubs and stricter contract checks** (to move from baseline coverage to robust multi-service coverage).
 
 ### P1 (High)
-5. **Strengthen interaction layer (human ↔ digital entity):**
+3. **Strengthen interaction layer (human ↔ digital entity):**
    - Add explicit conversation/session identity model across channels.
    - Add memory controls in UI (view/edit/forget/consent scopes).
    - Add response style controls and confidence/provenance display in chat.
-6. **Harden sandbox execution security** (seccomp/apparmor, network policy, restricted mounts, stricter runtime profiles).
-7. **Improve observability**: structured logs, trace IDs per intent, service-level metrics, and dashboard health with dependency details.
-8. **Formalize distributed failure handling** for IPFS/Arweave/Grid outages with retries, backpressure, and clear degraded modes.
+4. **Harden sandbox execution security** (seccomp/apparmor, network policy, restricted mounts, stricter runtime profiles).
+5. **Improve observability**: structured logs, trace IDs per intent, service-level metrics, and dashboard health with dependency details.
+6. **Formalize distributed failure handling** for IPFS/Arweave/Grid outages with retries, backpressure, and clear degraded modes.
 
 ### P2 (Medium)
-9. **Replace simulated graph query path** with real indexed graph retrieval and ranked multi-peer merge.
-10. **Promote zk/zkML flows from interface-level proof checks to production-grade validation pipelines** (artifact lifecycle, key management, deterministic verification workers).
-11. **Wire ComputeBond on-chain lifecycle into Grid APIs** (stake/slash events, reconciliation, chain finality handling).
-12. **Improve channel adapters** with delivery receipts, rate-limit handling, and per-channel reliability policies.
+7. **Replace simulated graph query path** with real indexed graph retrieval and ranked multi-peer merge.
+8. **Promote zk/zkML flows from interface-level proof checks to production-grade validation pipelines** (artifact lifecycle, key management, deterministic verification workers).
+9. **Wire ComputeBond on-chain lifecycle into Grid APIs** (stake/slash events, reconciliation, chain finality handling).
+10. **Improve channel adapters** with delivery receipts, rate-limit handling, and per-channel reliability policies.
 
 ### P3 (Opportunistic / Novel improvements)
-13. **Adaptive interaction policies**: let user select mode (concise/analytical/socratic/executive) and persist preference.
-14. **Operator cockpit**: add intent replay, safety decision audit, and "why this answer" decomposition for trust.
-15. **Collaborative swarm UX**: expose swarm task planning UI and human approval checkpoints for high-impact actions.
-16. **Policy-driven memory governance**: configurable retention TTLs, encryption-at-rest options, and export/delete controls.
+11. **Adaptive interaction policies**: let user select mode (concise/analytical/socratic/executive) and persist preference.
+12. **Operator cockpit**: add intent replay, safety decision audit, and "why this answer" decomposition for trust.
+13. **Collaborative swarm UX**: expose swarm task planning UI and human approval checkpoints for high-impact actions.
+14. **Policy-driven memory governance**: configurable retention TTLs, encryption-at-rest options, and export/delete controls.
 
 ---
 
