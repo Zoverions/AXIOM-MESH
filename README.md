@@ -5,7 +5,7 @@ AxiomMesh is a multi-service AI systems stack with four runtime pillars plus sup
 - **Gateway (TypeScript/Node)**: authenticated ingress (REST + WebSocket), dashboard/static UI, and channel adapters.
 - **Hypervisor (Python/FastAPI)**: context synthesis, memory/archive orchestration, response shaping, and agent loops.
 - **Sandbox (TypeScript/Node + Docker runtime)**: constrained ephemeral code execution.
-- **Grid (Go)**: peer-aware ledger APIs, cache/graph sync, PoER checks, and zk/zkML verification endpoints.
+- **Grid (Go)**: peer-aware ledger APIs, cache/graph sync, PoER checks, zk/zkML verification endpoints, and bicameral governance synchronization.
 
 This README is a **code-accurate rewrite** intended to clearly separate what is implemented now vs what is still prototype-grade or expected next.
 
@@ -132,7 +132,7 @@ So: baseline egress isolation is active in execution containers, and a deeper na
   - graph websocket endpoint
   - CCIP sync endpoints
   - zkML verification endpoint path used by Hypervisor.
-- **In-memory ledger** for skills, bonds, web cache, graph/index, swarms, CCIP messages.
+- **In-memory ledger** for skills, bonds, web cache, graph/index, swarms, CCIP messages, and governance proposals.
 - **PoER gate** on skill submissions tied to active compute bond + PoER score threshold.
 - **P2P/transport loops** for discovery, peer score/failure tracking, sync/broadcast with retry/backoff.
 - **Graph query proof checks** using discrete-log-style NIZK verification helper.
@@ -141,7 +141,7 @@ So: baseline egress isolation is active in execution containers, and a deeper na
 ### Important caveats
 - Current ledger is in-memory (not persistent durable chain state).
 - Graph retrieval is token/index based and lightweight; not a full distributed ranked retrieval engine.
-- Smart contracts are present in `grid/contracts`, but live chain lifecycle reconciliation is still partial.
+- Smart contracts are present in `grid/contracts`, but live chain lifecycle reconciliation is still partial (though Bicameral Governance events are wired to the API).
 
 ---
 
@@ -170,7 +170,7 @@ So: baseline egress isolation is active in execution containers, and a deeper na
 - Multi-service runtime with health endpoints and dashboard/static UI serving.
 - Authenticated Gateway-to-Hypervisor intent path with trace IDs and basic provenance/audit metadata.
 - Constrained sandbox execution with active network disablement and container hardening args.
-- Grid API with staking/slashing/skills/swarms/cache/graph/zkml primitives.
+- Grid API with staking/slashing/skills/swarms/cache/graph/zkml primitives and bicameral governance synchronization.
 - External context hooks (NCP/MCP/oracle) and distributed archive sync attempts with degraded counters.
 
 ## Implemented but Experimental / Prototype-grade
@@ -221,7 +221,7 @@ So: baseline egress isolation is active in execution containers, and a deeper na
 ## Grid (`:5000`)
 - `GET /health`
 - skills/stake/slash/bond-events
-- swarm/cache/ccip/graph/ws/zkml routes (see `grid/api/server.go` for exact handlers)
+- swarm/cache/ccip/graph/ws/zkml/proposals routes (see `grid/api/server.go` for exact handlers)
 
 ---
 

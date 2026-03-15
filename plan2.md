@@ -25,4 +25,5 @@
 ## Validation notes
 
 - The repository contains the full source + test scaffolding.
-- Hardhat compile in this environment is blocked by compiler download restrictions (proxy/403), so full contract execution validation must be rerun where downloads are allowed.
+- Hardhat compile and tests have been successfully run in a network-enabled environment.
+- The contracts are now wired into the runtime Grid API workflows (`/proposals` and `/proposals/events`).

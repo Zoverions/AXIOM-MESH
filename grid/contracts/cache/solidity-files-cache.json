@@ -113,46 +113,8 @@
         "Context"
       ]
     },
-    "/app/grid/contracts/contracts/DualLedgerIdentity.sol": {
-      "lastModificationDate": 1773543171524,
-      "contentHash": "9c3c7cec87476fca136a51d05b093380",
-      "sourceName": "contracts/DualLedgerIdentity.sol",
-      "solcConfig": {
-        "version": "0.8.20",
-        "settings": {
-          "evmVersion": "paris",
-          "optimizer": {
-            "enabled": false,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "@openzeppelin/contracts/access/Ownable.sol"
-      ],
-      "versionPragmas": [
-        "^0.8.20"
-      ],
-      "artifacts": [
-        "DualLedgerIdentity"
-      ]
-    },
     "/app/grid/contracts/contracts/WeightOracle.sol": {
-      "lastModificationDate": 1773543220348,
+      "lastModificationDate": 1773594581791,
       "contentHash": "5d388da8243cebe25d071053047e20fa",
       "sourceName": "contracts/WeightOracle.sol",
       "solcConfig": {
@@ -190,9 +152,47 @@
         "WeightOracle"
       ]
     },
+    "/app/grid/contracts/contracts/DualLedgerIdentity.sol": {
+      "lastModificationDate": 1773594581791,
+      "contentHash": "9c3c7cec87476fca136a51d05b093380",
+      "sourceName": "contracts/DualLedgerIdentity.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/access/Ownable.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "DualLedgerIdentity"
+      ]
+    },
     "/app/grid/contracts/contracts/DialecticArbitration.sol": {
-      "lastModificationDate": 1773543369396,
-      "contentHash": "cf2589692a6318ce22923abf8ea9889e",
+      "lastModificationDate": 1773594581791,
+      "contentHash": "af1ffec55234617c883e40fc3f446b6b",
       "sourceName": "contracts/DialecticArbitration.sol",
       "solcConfig": {
         "version": "0.8.20",

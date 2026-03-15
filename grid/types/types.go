@@ -99,3 +99,49 @@ type GraphSyncMessage struct {
 	NodeID    string                 `json:"node_id,omitempty"`
 	Signature string                 `json:"signature,omitempty"`
 }
+
+type ProposalState string
+
+const (
+	ProposalStateActive            ProposalState = "Active"
+	ProposalStateAwaitingSynthesis ProposalState = "AwaitingSynthesis"
+	ProposalStateResolved          ProposalState = "Resolved"
+)
+
+type ImpactVector string
+
+const (
+	ImpactVectorAnthropic     ImpactVector = "Anthropic"
+	ImpactVectorThermodynamic ImpactVector = "Thermodynamic"
+	ImpactVectorNeutral       ImpactVector = "Neutral"
+)
+
+type Proposal struct {
+	ID                string        `json:"id"`
+	Description       string        `json:"description"`
+	Impact            ImpactVector  `json:"impact"`
+	State             ProposalState `json:"state"`
+	SynthesisResult   string        `json:"synthesisResult,omitempty"`
+	HumanForVotes     int           `json:"humanForVotes"`
+	HumanAgainstVotes int           `json:"humanAgainstVotes"`
+	AgentForVotes     int           `json:"agentForVotes"`
+	AgentAgainstVotes int           `json:"agentAgainstVotes"`
+	EndTime           uint64        `json:"endTime"`
+	Round             uint64        `json:"round"`
+}
+
+type ProposalChainEvent struct {
+	Type            string       `json:"type"` // "Created", "Voted", "DeadlockDetected", "SynthesisSubmitted", "Resolved"
+	ProposalID      string       `json:"proposalId"`
+	Description     string       `json:"description,omitempty"`
+	Impact          ImpactVector `json:"impact,omitempty"`
+	EndTime         uint64       `json:"endTime,omitempty"`
+	Voter           string       `json:"voter,omitempty"`
+	Support         bool         `json:"support,omitempty"`
+	Weight          int          `json:"weight,omitempty"`
+	SynthesisResult string       `json:"synthesisResult,omitempty"`
+	Passed          bool         `json:"passed,omitempty"`
+	VoterType       string       `json:"voterType,omitempty"` // "Human" or "Agent"
+	TxHash          string       `json:"txHash,omitempty"`
+	BlockNumber     uint64       `json:"blockNumber,omitempty"`
+}

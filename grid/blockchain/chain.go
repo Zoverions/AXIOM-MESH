@@ -17,6 +17,7 @@ type Ledger struct {
 	Bonds        map[string]types.ComputeBond
 	CCIPMessages map[string]types.CCIPMessage
 	Swarms       map[string]types.Swarm
+	Proposals    map[string]types.Proposal
 }
 
 func NewLedger() *Ledger {
@@ -31,6 +32,7 @@ func NewLedger() *Ledger {
 		Bonds:        make(map[string]types.ComputeBond),
 		CCIPMessages: make(map[string]types.CCIPMessage),
 		Swarms:       make(map[string]types.Swarm),
+		Proposals:    make(map[string]types.Proposal),
 	}
 }
 
@@ -419,4 +421,98 @@ func (l *Ledger) GetAllCCIPMessages() []types.CCIPMessage {
 		msgs = append(msgs, msg)
 	}
 	return msgs
+}
+
+func (l *Ledger) ApplyProposalChainEvent(evt types.ProposalChainEvent) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if evt.ProposalID == "" {
+		return fmt.Errorf("proposalId is required")
+	}
+
+	proposal, exists := l.Proposals[evt.ProposalID]
+
+	switch evt.Type {
+	case "Created":
+		if exists {
+			return fmt.Errorf("proposal already exists")
+		}
+		l.Proposals[evt.ProposalID] = types.Proposal{
+			ID:          evt.ProposalID,
+			Description: evt.Description,
+			Impact:      evt.Impact,
+			State:       types.ProposalStateActive,
+			EndTime:     evt.EndTime,
+			Round:       0,
+		}
+	case "Voted":
+		if !exists {
+			return fmt.Errorf("proposal does not exist")
+		}
+		if evt.VoterType == "Agent" {
+			if evt.Support {
+				proposal.AgentForVotes += evt.Weight
+			} else {
+				proposal.AgentAgainstVotes += evt.Weight
+			}
+		} else {
+			if evt.Support {
+				proposal.HumanForVotes += evt.Weight
+			} else {
+				proposal.HumanAgainstVotes += evt.Weight
+			}
+		}
+		l.Proposals[evt.ProposalID] = proposal
+
+	case "DeadlockDetected":
+		if !exists {
+			return fmt.Errorf("proposal does not exist")
+		}
+		proposal.State = types.ProposalStateAwaitingSynthesis
+		l.Proposals[evt.ProposalID] = proposal
+
+	case "SynthesisSubmitted":
+		if !exists {
+			return fmt.Errorf("proposal does not exist")
+		}
+		proposal.SynthesisResult = evt.SynthesisResult
+		proposal.State = types.ProposalStateActive
+		proposal.HumanForVotes = 0
+		proposal.HumanAgainstVotes = 0
+		proposal.AgentForVotes = 0
+		proposal.AgentAgainstVotes = 0
+		proposal.Round += 1
+		proposal.EndTime = evt.EndTime
+		l.Proposals[evt.ProposalID] = proposal
+
+	case "Resolved":
+		if !exists {
+			return fmt.Errorf("proposal does not exist")
+		}
+		proposal.State = types.ProposalStateResolved
+		l.Proposals[evt.ProposalID] = proposal
+
+	default:
+		return fmt.Errorf("unsupported proposal event type: %s", evt.Type)
+	}
+
+	return nil
+}
+
+func (l *Ledger) GetProposals() []types.Proposal {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	proposals := make([]types.Proposal, 0, len(l.Proposals))
+	for _, p := range l.Proposals {
+		proposals = append(proposals, p)
+	}
+	return proposals
+}
+
+func (l *Ledger) GetProposal(id string) (types.Proposal, bool) {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	proposal, ok := l.Proposals[id]
+	return proposal, ok
 }
