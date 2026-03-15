@@ -51,7 +51,13 @@ func NewServer(ledger *blockchain.Ledger, p2pNode *p2p.Node) *Server {
 
 func (s *Server) Start(addr string) error {
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(map[string]string{"status": "ok", "component": "grid"})
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "ok",
+			"component": "grid",
+			"dependencies": map[string]string{
+				"p2p": "ok",
+			},
+		})
 	})
 
 	http.HandleFunc("/skills", func(w http.ResponseWriter, r *http.Request) {

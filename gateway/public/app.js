@@ -523,10 +523,31 @@ document.addEventListener("DOMContentLoaded", () => {
             const res = await fetch('/api/v1/status', { headers: getAuthHeaders() });
             const data = await res.json();
 
-            document.getElementById('status-gateway').textContent = data.gateway || 'unknown';
-            document.getElementById('status-hypervisor').textContent = data.hypervisor || 'unknown';
-            document.getElementById('status-sandbox').textContent = data.sandbox || 'unknown';
-            document.getElementById('status-grid-node').textContent = data.grid || 'unknown';
+            document.getElementById('status-gateway').textContent = data.gateway?.status || 'unknown';
+
+            document.getElementById('status-hypervisor').textContent = data.hypervisor?.status || 'unknown';
+            if (data.hypervisor?.dependencies) {
+                document.getElementById('deps-hypervisor').textContent = 'Deps: ' + JSON.stringify(data.hypervisor.dependencies);
+            }
+
+            document.getElementById('status-sandbox').textContent = data.sandbox?.status || 'unknown';
+            if (data.sandbox?.dependencies) {
+                document.getElementById('deps-sandbox').textContent = 'Deps: ' + JSON.stringify(data.sandbox.dependencies);
+            }
+
+            document.getElementById('status-grid-node').textContent = data.grid?.status || 'unknown';
+            if (data.grid?.dependencies) {
+                document.getElementById('deps-grid').textContent = 'Deps: ' + JSON.stringify(data.grid.dependencies);
+            }
+
+            // Also fetch metrics
+            const metricsRes = await fetch('/api/v1/metrics/system');
+            const metricsData = await metricsRes.json();
+            const metricsEl = document.getElementById('metrics-gateway');
+            if (metricsEl) {
+                metricsEl.textContent = `Requests: ${metricsData.requests} | Errors: ${metricsData.errors}`;
+            }
+
         } catch (error) {
             console.error('Failed to fetch status:', error);
         }

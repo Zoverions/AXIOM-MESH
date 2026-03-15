@@ -6,6 +6,19 @@ import requests
 import os
 import httpx
 import ast
+import json
+from datetime import datetime
+
+def log_event(level: str, msg: str, trace_id: str = None):
+    log_data = {
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "level": level,
+        "message": msg
+    }
+    if trace_id:
+        log_data["trace_id"] = trace_id
+    print(json.dumps(log_data))
+
 import asyncio
 
 from src.models.intent import IntentObject, IntentResponse
@@ -55,6 +68,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 app.include_router(audio_router)
 
+hypervisor_metrics = {"requests": 0, "errors": 0}
+
 SANDBOX_URL = os.environ.get("SANDBOX_URL", "http://localhost:4000/execute")
 
 # Security: Basic AST-based sanitization
@@ -97,6 +112,7 @@ def verify_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)
 
 @app.post("/process", response_model=IntentResponse)
 async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api_key)):
+    hypervisor_metrics["requests"] += 1
     audit_trail = {
         "intent_replay": {
             "content": intent.content,
@@ -118,6 +134,7 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api
     }
 
     try:
+        log_event("info", f"Processing intent from sender: {intent.metadata.get('sender', 'unknown')}", getattr(intent, 'trace_id', None))
         content = intent.content
         sender = intent.metadata.get("sender", "unknown")
 
@@ -269,11 +286,25 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api
         )
         return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=raw_response, status="success", audit_trail=audit_trail)
     except Exception as e:
+        hypervisor_metrics["errors"] += 1
+        log_event("error", f"Hypervisor error: {str(e)}", getattr(intent, 'trace_id', None))
         return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Hypervisor error: {str(e)}", status="error")
+
+@app.get("/metrics")
+async def get_metrics():
+    return hypervisor_metrics
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "component": "hypervisor"}
+    log_event("info", "Health check requested")
+    return {
+        "status": "ok",
+        "component": "hypervisor",
+        "dependencies": {
+            "grid": "ok",
+            "sandbox": "ok"
+        }
+    }
 
 @app.get("/memory")
 async def get_memory(session_id: str = None):

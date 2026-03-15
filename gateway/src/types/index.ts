@@ -5,6 +5,7 @@ export interface IntentObject {
     content: string;
     metadata: Record<string, any>;
     timestamp: number;
+    trace_id?: string;
 }
 
 export interface IntentResponse {
