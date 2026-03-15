@@ -64,41 +64,21 @@ async def test_evaluate_synthesis():
 async def test_synthesize_with_feedback_loop():
     mock_llm = MagicMock()
 
-    # We will simulate the first attempt getting a low score,
-    # and the second attempt getting a passing score
-    async def mock_process(prompt, **kwargs):
+    async def side_effect(prompt, **kwargs):
         if "You are an expert logician" in prompt:
-            # First eval gets 5.0, second gets 9.0
-            if "Attempt 1" in prompt:
-                return "Score: 5.0"
-            else:
-                return "Score: 9.0"
-        elif "IN FAVOR" in prompt:
-            return "Thesis"
-        elif "AGAINST" in prompt:
-            return "Antithesis"
-        else:
-            # For synthesis result
-            return "Synthesis result (Attempt 1)" if mock_process.call_count <= 4 else "Synthesis result (Attempt 2)"
-
-    # We will track calls using a counter hack for the side effect
-    call_tracker = {"count": 0}
-    async def track_calls(prompt, **kwargs):
-        call_tracker["count"] += 1
-        if "You are an expert logician" in prompt:
-            if call_tracker["count"] <= 4:
+            if mock_llm.process.call_count <= 4:
                 return "Score: 5.0"
             else:
                 return "Score: 9.0"
         return "Generic response"
 
-    mock_llm.process = AsyncMock(side_effect=track_calls)
+    mock_llm.process = AsyncMock(side_effect=side_effect)
 
     orchestrator = DialecticOrchestrator(llm=mock_llm)
     result = await orchestrator.synthesize_with_feedback_loop("Test prompt", max_retries=3)
 
     # Ensure it ran multiple times (Thesis, Antithesis, Synthesis, Eval) * 2
-    assert call_tracker["count"] > 4
+    assert mock_llm.process.call_count > 4
     assert "[EVALUATION SCORE]: 9.0" in result
 
 @pytest.mark.asyncio
