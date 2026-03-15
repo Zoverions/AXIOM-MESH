@@ -4,6 +4,8 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
 import path from 'path';
+import { authMiddleware } from './middleware/auth';
+import { extractApiKeyFromHeaders, validateGatewayApiKey } from './middleware/auth_utils';
 import restRoutes from './routes/rest';
 import { normalizeInput } from './utils/normalizer';
 import { sendToHypervisor } from './services/hypervisorClient';
@@ -43,7 +45,14 @@ app.use(cors({
 
 app.use(bodyParser.json());
 
-// Serve static frontend dashboard
+// Serve static frontend dashboard with the same auth model as REST/WS
+app.use((req, res, next) => {
+    if (req.path.startsWith('/api') || req.path === '/health') {
+        next();
+        return;
+    }
+    authMiddleware(req, res, next);
+});
 app.use(express.static(path.join(__dirname, '../public')));
 
 app.use('/', restRoutes);
@@ -57,21 +66,13 @@ const wss = new WebSocketServer({ port: Number(WS_PORT) });
 
 wss.on('connection', (ws: WebSocket, req: any) => {
     const url = new URL(req.url, `http://${req.headers.host}`);
-    let token = url.searchParams.get('apiKey');
+    const token = extractApiKeyFromHeaders(req.headers, url.searchParams.get('apiKey'));
+    const validation = validateGatewayApiKey(token, process.env.GATEWAY_API_KEY);
 
-    if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
-        token = req.headers.authorization.split(' ')[1];
-    }
-
-    if (!process.env.GATEWAY_API_KEY) {
-        console.log('WebSocket connection rejected: GATEWAY_API_KEY is not set in environment');
-        ws.close(1011, 'Server configuration error');
-        return;
-    }
-
-    if (!token || token !== process.env.GATEWAY_API_KEY) {
-        console.log('WebSocket connection rejected: Invalid or missing API Key');
-        ws.close(1008, 'Unauthorized: Invalid API Key');
+    if (!validation.ok) {
+        const reason = validation.code === 500 ? 'Server configuration error' : 'Unauthorized: Invalid API Key';
+        console.log(`WebSocket connection rejected: ${validation.error}`);
+        ws.close(validation.code === 500 ? 1011 : 1008, reason);
         return;
     }
 

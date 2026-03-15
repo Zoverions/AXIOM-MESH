@@ -3,50 +3,96 @@ import { spawn } from 'child_process';
 import express from 'express';
 import http from 'http';
 import path from 'path';
-
-// We will start a stub sandbox
-const startStubSandbox = async (): Promise<http.Server> => {
-    return new Promise((resolve) => {
-        const app = express();
-        app.use(express.json());
-        app.post('/execute', (req, res) => {
-            res.json({ status: 'success', output: 'Integration Sandbox Stub Response\n' });
-        });
-        app.get('/health', (req, res) => {
-            res.json({ status: 'ok' });
-        });
-        const server = app.listen(4005, () => resolve(server));
-    });
-};
+import { WebSocket } from 'ws';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-describe('Full Intent Path Integration', () => {
-    let sandboxServer: http.Server;
-    let hypervisorProcess: any;
+type CapturedIntent = {
+    id: string;
+    session_id: string;
+    channel: string;
+    content: string;
+    metadata?: Record<string, unknown>;
+    timestamp: number;
+};
+
+const startStubHypervisor = async (): Promise<{ server: http.Server; captured: CapturedIntent[] }> => {
+    const captured: CapturedIntent[] = [];
+
+    return new Promise((resolve) => {
+        const app = express();
+        app.use(express.json());
+
+        app.get('/health', (_req, res) => {
+            res.json({ status: 'ok', component: 'hypervisor', dependencies: { sandbox: 'ok' } });
+        });
+
+        app.get('/agents', (_req, res) => {
+            res.json({ agents: [{ id: 'agent-1', status: 'ready' }] });
+        });
+
+        app.post('/process', (req, res) => {
+            captured.push(req.body);
+            res.json({
+                status: 'success',
+                intent_id: req.body.id,
+                response: `stub-response:${req.body.content}`,
+                confidence: 0.9,
+                provenance: ['stub-hypervisor']
+            });
+        });
+
+        const server = app.listen(8005, () => resolve({ server, captured }));
+    });
+};
+
+const startStubGrid = async (): Promise<http.Server> => {
+    return new Promise((resolve) => {
+        const app = express();
+        app.use(express.json());
+
+        app.get('/health', (_req, res) => {
+            res.json({ status: 'ok', component: 'grid', dependencies: { p2p: 'ok' } });
+        });
+
+        app.get('/network/nodes', (_req, res) => {
+            res.json({ nodes: [{ id: 'node-1', reliability: 'high' }] });
+        });
+
+        app.get('/swarm', (_req, res) => {
+            res.json({ swarms: [{ id: 'swarm-1', peers: 3 }] });
+        });
+
+        const server = app.listen(5000, () => resolve(server));
+    });
+};
+
+describe('Gateway integration contracts', () => {
+    let hypervisorServer: http.Server;
+    let gridServer: http.Server;
+    let capturedIntents: CapturedIntent[] = [];
     let gatewayProcess: any;
 
     beforeAll(async () => {
-        sandboxServer = await startStubSandbox();
+        const hypervisor = await startStubHypervisor();
+        hypervisorServer = hypervisor.server;
+        capturedIntents = hypervisor.captured;
+        gridServer = await startStubGrid();
 
-        // Start Hypervisor using the absolute paths to python, uvicorn and npx.
-        // We ensure PYTHONPATH is the hypervisor directory.
-        const hvEnv = { ...process.env, HYPERVISOR_API_KEY: 'test_key', SANDBOX_URL: 'http://localhost:4005/execute', PYTHONPATH: path.resolve(__dirname, '../../../../hypervisor') };
-
-        const venvPython = path.resolve(__dirname, '../../../../hypervisor/venv/bin/python');
-
-        hypervisorProcess = spawn(venvPython, ['-m', 'uvicorn', 'src.api.server:app', '--port', '8005'], {
-            cwd: path.resolve(__dirname, '../../../../hypervisor'),
-            env: hvEnv,
-            stdio: 'ignore' // set to 'inherit' to debug but ignore cleans up logs
-        });
-
-        hypervisorProcess.on('error', (err: Error) => {
-            console.error('Hypervisor spawn error', err);
-        });
-
-        // Start Gateway
-        const gwEnv = { ...process.env, GATEWAY_REST_PORT: '3005', GATEWAY_API_KEY: 'gw_key', HYPERVISOR_URL: 'http://localhost:8005', HYPERVISOR_API_KEY: 'test_key' };
+        const gwEnv = {
+            ...process.env,
+            GATEWAY_REST_PORT: '3005',
+            GATEWAY_WS_PORT: '3006',
+            GATEWAY_API_KEY: 'gw_key',
+            HYPERVISOR_URL: 'http://127.0.0.1:8005',
+            HYPERVISOR_API_KEY: 'test_key',
+            GRID_URL: 'http://127.0.0.1:5000/skills',
+            NO_PROXY: 'localhost,127.0.0.1',
+            no_proxy: 'localhost,127.0.0.1',
+            HTTP_PROXY: '',
+            HTTPS_PROXY: '',
+            ALL_PROXY: ''
+        };
 
         gatewayProcess = spawn('node', ['-r', 'ts-node/register', 'src/index.ts'], {
             cwd: path.resolve(__dirname, '../../../'),
@@ -54,65 +100,133 @@ describe('Full Intent Path Integration', () => {
             stdio: 'ignore'
         });
 
-        gatewayProcess.on('error', (err: Error) => {
-            console.error('Gateway spawn error', err);
-        });
-
-        // Wait for servers to be up
-        let hvUp = false;
-        for (let i = 0; i < 20; i++) {
-            try {
-                const res = await axios.get('http://localhost:8005/health');
-                if (res.status === 200) {
-                    hvUp = true;
-                    break;
-                }
-            } catch (e) {
-                await delay(1000);
-            }
-        }
-
         let gwUp = false;
         for (let i = 0; i < 20; i++) {
             try {
-                const res = await axios.get('http://localhost:3005/health');
+                const res = await axios.get('http://127.0.0.1:3005/health');
                 if (res.status === 200) {
                     gwUp = true;
                     break;
                 }
-            } catch (e) {
-                await delay(1000);
+            } catch {
+                await delay(500);
             }
         }
 
-        if (!hvUp || !gwUp) {
-            throw new Error(`Servers failed to start: hvUp=${hvUp}, gwUp=${gwUp}`);
+        if (!gwUp) {
+            throw new Error('Gateway server failed to start');
         }
-    }, 30000);
+    }, 20000);
 
     afterAll(() => {
-        if (sandboxServer) sandboxServer.close();
-        if (hypervisorProcess) {
-            hypervisorProcess.kill('SIGTERM');
-        }
-        if (gatewayProcess) {
-            gatewayProcess.kill('SIGTERM');
-        }
+        if (hypervisorServer) hypervisorServer.close();
+        if (gridServer) gridServer.close();
+        if (gatewayProcess) gatewayProcess.kill('SIGTERM');
     });
 
-    it('should process an intent from Gateway -> Hypervisor -> Sandbox stub', async () => {
-        const intentPayload = {
+    it('enforces auth consistently for dashboard and REST', async () => {
+        await expect(axios.get('http://127.0.0.1:3005/')).rejects.toMatchObject({
+            response: { status: 401 }
+        });
+
+        const dashboardRes = await axios.get('http://127.0.0.1:3005/?apiKey=gw_key');
+        expect(dashboardRes.status).toBe(200);
+
+        await expect(axios.get('http://127.0.0.1:3005/api/v1/agents')).rejects.toMatchObject({
+            response: { status: 401 }
+        });
+
+        const agentsRes = await axios.get('http://127.0.0.1:3005/api/v1/agents', {
+            headers: { 'x-api-key': 'gw_key' }
+        });
+        expect(agentsRes.status).toBe(200);
+        expect(agentsRes.data.agents).toHaveLength(1);
+    });
+
+    it('processes intent with strict contract shape through hypervisor stub', async () => {
+        const missingContent = await axios.post('http://127.0.0.1:3005/api/v1/intent/process', { channel: 'test' }, {
+            headers: { Authorization: 'Bearer gw_key' },
+            validateStatus: () => true
+        });
+        expect(missingContent.status).toBe(400);
+        expect(missingContent.data.error).toBe('Content is required');
+
+        const payload = {
+            session_id: 'sess-contract-1',
             channel: 'test',
-            content: '/exec print("Hello World")',
-            metadata: { sender: 'integration_tester' }
+            content: '/exec print("Hello")',
+            metadata: { sender: 'integration_tester', response_style: 'analytical' }
         };
 
-        const response = await axios.post('http://localhost:3005/api/v1/intent/process', intentPayload, {
+        const response = await axios.post('http://127.0.0.1:3005/api/v1/intent/process', payload, {
             headers: { Authorization: 'Bearer gw_key' }
         });
 
         expect(response.status).toBe(200);
-        expect(response.data.status).toBe('success');
-        expect(response.data.response).toContain('Integration Sandbox Stub Response');
-    }, 15000);
+        expect(response.data).toMatchObject({
+            status: 'success',
+            intent_id: expect.any(String),
+            response: expect.stringContaining('stub-response:/exec print("Hello")')
+        });
+
+        const captured = capturedIntents[capturedIntents.length - 1];
+        expect(captured).toMatchObject({
+            session_id: 'sess-contract-1',
+            channel: 'test',
+            content: '/exec print("Hello")',
+            metadata: { sender: 'integration_tester', response_style: 'analytical' }
+        });
+    });
+
+    it('uses grid stubs for status and network APIs', async () => {
+        const statusRes = await axios.get('http://127.0.0.1:3005/api/v1/status', {
+            headers: { Authorization: 'Bearer gw_key' }
+        });
+        expect(statusRes.status).toBe(200);
+        expect(statusRes.data.grid).toMatchObject({ status: 'ok', component: 'grid' });
+
+        const networkRes = await axios.get('http://127.0.0.1:3005/api/v1/network', {
+            headers: { Authorization: 'Bearer gw_key' }
+        });
+        expect(networkRes.status).toBe(200);
+        expect(networkRes.data.nodes[0].id).toBe('node-1');
+    });
+
+    it('enforces websocket auth and supports valid authenticated flow', async () => {
+        await new Promise<void>((resolve) => {
+            const unauthorizedWs = new WebSocket('ws://127.0.0.1:3006');
+            unauthorizedWs.on('close', (code) => {
+                expect(code).toBe(1008);
+                resolve();
+            });
+        });
+
+        await new Promise<void>((resolve, reject) => {
+            const ws = new WebSocket('ws://127.0.0.1:3006?apiKey=gw_key');
+
+            ws.on('open', () => {
+                ws.send(JSON.stringify({ session_id: 'ws-contract-session', input: 'hello over ws' }));
+            });
+
+            ws.on('message', (message) => {
+                const parsed = JSON.parse(message.toString());
+                if (parsed.status === 'pending') {
+                    return;
+                }
+
+                try {
+                    expect(parsed).toMatchObject({
+                        status: 'success',
+                        response: expect.stringContaining('stub-response:hello over ws')
+                    });
+                    ws.close();
+                    resolve();
+                } catch (error) {
+                    reject(error);
+                }
+            });
+
+            ws.on('error', reject);
+        });
+    });
 });
