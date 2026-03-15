@@ -24,6 +24,10 @@
     "timestamp": {
       "type": "integer",
       "description": "Unix timestamp of the intent creation."
+    },
+    "trace_id": {
+      "type": "string",
+      "description": "Optional trace ID for request propagation."
     }
   },
   "required": ["id", "channel", "content", "metadata", "timestamp"],

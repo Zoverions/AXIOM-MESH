@@ -7,6 +7,7 @@ export function normalizeInput(channel: string, content: string, metadata: Recor
         channel,
         content,
         metadata,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        trace_id: uuidv4()
     };
 }

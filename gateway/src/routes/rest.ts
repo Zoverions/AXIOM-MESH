@@ -15,6 +15,8 @@ const ENV_PATH = fs.existsSync('/app/.env') ? '/app/.env' : path.resolve(__dirna
 
 const router = Router();
 
+const gatewayMetrics = { requests: 0, errors: 0 };
+
 // Middleware to authenticate REST requests
 const authMiddleware = (req: Request, res: Response, next: Function) => {
     const apiKey = process.env.GATEWAY_API_KEY;
@@ -37,6 +39,7 @@ const authMiddleware = (req: Request, res: Response, next: Function) => {
 };
 
 router.post('/api/v1/intent/process/public', async (req: Request, res: Response) => {
+    gatewayMetrics.requests++;
     try {
         const { channel, content, metadata } = req.body;
         if (!content) {
@@ -51,11 +54,13 @@ router.post('/api/v1/intent/process/public', async (req: Request, res: Response)
 
         res.json(response);
     } catch (error) {
+        gatewayMetrics.errors++;
         res.status(500).json({ error: 'Internal server error' });
     }
 });
 
 router.post('/api/v1/intent/process', authMiddleware, async (req: Request, res: Response) => {
+    gatewayMetrics.requests++;
     try {
         const { channel, content, metadata } = req.body;
         if (!content) {
@@ -68,6 +73,7 @@ router.post('/api/v1/intent/process', authMiddleware, async (req: Request, res: 
 
         res.json(response);
     } catch (error) {
+        gatewayMetrics.errors++;
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -101,26 +107,26 @@ router.get('/api/v1/network', async (req: Request, res: Response) => {
 
 // --- Status API ---
 router.get('/api/v1/status', async (req: Request, res: Response) => {
-    const statuses: Record<string, string> = {
-        gateway: 'ok',
-        hypervisor: 'offline',
-        sandbox: 'offline',
-        grid: 'offline'
+    const statuses: Record<string, any> = {
+        gateway: { status: 'ok' },
+        hypervisor: { status: 'offline' },
+        sandbox: { status: 'offline' },
+        grid: { status: 'offline' }
     };
 
     try {
         const hypervisorRes = await axios.get(process.env.HYPERVISOR_URL + '/health').catch(() => null);
-        if (hypervisorRes && hypervisorRes.data.status === 'ok') statuses.hypervisor = 'ok';
+        if (hypervisorRes && hypervisorRes.data) statuses.hypervisor = hypervisorRes.data;
     } catch {}
 
     try {
         const sandboxRes = await axios.get('http://sandbox:4000/health').catch(() => null);
-        if (sandboxRes && sandboxRes.data.status === 'ok') statuses.sandbox = 'ok';
+        if (sandboxRes && sandboxRes.data) statuses.sandbox = sandboxRes.data;
     } catch {}
 
     try {
         const gridRes = await axios.get('http://grid:5000/health').catch(() => null);
-        if (gridRes && gridRes.data.status === 'ok') statuses.grid = 'ok';
+        if (gridRes && gridRes.data) statuses.grid = gridRes.data;
     } catch {}
 
     res.json(statuses);
@@ -178,6 +184,10 @@ const localOnly = (req: Request, res: Response, next: Function) => {
 };
 
 // --- Metrics API ---
+router.get('/api/v1/metrics/system', (req: Request, res: Response) => {
+    res.json(gatewayMetrics);
+});
+
 router.post('/api/v1/metrics/cooperation', async (req: Request, res: Response) => {
     const { style, type, prompt } = req.body;
     const metricsPath = path.join(process.cwd(), 'data/cooperation_metrics.json');

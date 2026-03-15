@@ -17,14 +17,22 @@ export function initLogger() {
     }
 
     console.log = (...args) => {
-        const msg = `[INFO] ${new Date().toISOString()} - ${args.join(' ')}`;
-        addLog(msg);
-        originalLog(...args);
+        const jsonMsg = JSON.stringify({
+            timestamp: new Date().toISOString(),
+            level: 'info',
+            message: args.join(' ')
+        });
+        addLog(jsonMsg);
+        originalLog(jsonMsg);
     };
 
     console.error = (...args) => {
-        const msg = `[ERROR] ${new Date().toISOString()} - ${args.join(' ')}`;
-        addLog(msg);
-        originalError(...args);
+        const jsonMsg = JSON.stringify({
+            timestamp: new Date().toISOString(),
+            level: 'error',
+            message: args.join(' ')
+        });
+        addLog(jsonMsg);
+        originalError(jsonMsg);
     };
 }

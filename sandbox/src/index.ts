@@ -6,6 +6,26 @@ import executeRoutes from './routes/execute';
 
 dotenv.config();
 
+// Structured logging setup
+const originalLog = console.log;
+const originalError = console.error;
+
+console.log = (...args) => {
+    originalLog(JSON.stringify({
+        timestamp: new Date().toISOString(),
+        level: 'info',
+        message: args.join(' ')
+    }));
+};
+
+console.error = (...args) => {
+    originalError(JSON.stringify({
+        timestamp: new Date().toISOString(),
+        level: 'error',
+        message: args.join(' ')
+    }));
+};
+
 const PORT = process.env.SANDBOX_PORT || 4000;
 
 const app = express();

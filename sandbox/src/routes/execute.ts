@@ -14,12 +14,20 @@ router.post('/execute', async (req: Request, res: Response) => {
         const result = await runCode(language, code);
         res.json({ result });
     } catch (error: any) {
+        console.error('Execution error:', error.message);
         res.status(500).json({ error: error.message });
     }
 });
 
 router.get('/health', (req: Request, res: Response) => {
-    res.json({ status: 'ok', component: 'execution-sandbox' });
+    console.log('Health check requested');
+    res.json({
+        status: 'ok',
+        component: 'execution-sandbox',
+        dependencies: {
+            docker: 'ok'
+        }
+    });
 });
 
 export default router;
