@@ -92,6 +92,11 @@ func (s *Server) Start(addr string) error {
 					http.Error(w, "Minimum stake amount is 100", http.StatusBadRequest)
 					return
 				}
+
+				if existingBond, ok := s.ledger.GetBond(bond.NodeID); ok && existingBond.Status == "active" {
+					bond.Amount += existingBond.Amount
+				}
+
 				bond.Status = "active"
 				s.ledger.Stake(bond)
 				json.NewEncoder(w).Encode(map[string]string{"status": "success", "nodeId": bond.NodeID})

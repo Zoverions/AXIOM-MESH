@@ -5,3 +5,5 @@ coverage
 coverage.json
 typechain
 typechain-types
+grid/contracts/artifacts/
+grid/contracts/cache/

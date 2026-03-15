@@ -72,6 +72,10 @@ contract ComputeBond is Ownable {
         bond.amount -= amount;
         totalSlashed += amount; // Track the slashed amount
 
+        if (bond.amount == 0) {
+            bond.isActive = false;
+        }
+
         emit BondSlashed(nodeId, amount, bond.amount);
     }
 
