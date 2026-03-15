@@ -262,7 +262,7 @@ document.addEventListener("DOMContentLoaded", () => {
         grid.innerHTML = '<p>Loading memory states...</p>';
         try {
             const url = showAll ? '/api/v1/memory' : `/api/v1/memory?session_id=${sessionId}`;
-            const res = await fetch(url);
+            const res = await fetch(url, { headers: getAuthHeaders() });
             const data = await res.json();
 
             if (data.memories && data.memories.length > 0) {
@@ -292,7 +292,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.querySelectorAll('.delete-memory-btn').forEach(btn => {
                     btn.addEventListener('click', async (e) => {
                         const id = e.target.getAttribute('data-id');
-                        await fetch(`/api/v1/memory/${id}`, { method: 'DELETE' });
+                        await fetch(`/api/v1/memory/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
                         fetchMemory();
                     });
                 });
@@ -308,7 +308,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                         await fetch(`/api/v1/memory/${id}`, {
                             method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                             body: JSON.stringify({
                                 content: newContent,
                                 metadata: { consent: newConsent }
@@ -372,7 +372,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const grid = document.getElementById('swarms-grid');
         grid.innerHTML = '<p>Loading active swarms...</p>';
         try {
-            const res = await fetch('/api/v1/swarms');
+            const res = await fetch('/api/v1/swarms', { headers: getAuthHeaders() });
             const swarms = await res.json();
 
             if (swarms && swarms.length > 0) {
@@ -426,7 +426,7 @@ document.addEventListener("DOMContentLoaded", () => {
             try {
                 const res = await fetch('/api/v1/swarms', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                     body: JSON.stringify({
                         id: swarmId,
                         taskId: taskId,
@@ -466,7 +466,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const res = await fetch('/api/v1/swarms/join', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                 body: JSON.stringify({
                     swarmId: swarmId,
                     nodeId: nodeId
@@ -541,7 +541,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             // Also fetch metrics
-            const metricsRes = await fetch('/api/v1/metrics/system');
+            const metricsRes = await fetch('/api/v1/metrics/system', { headers: getAuthHeaders() });
             const metricsData = await metricsRes.json();
             const metricsEl = document.getElementById('metrics-gateway');
             if (metricsEl) {

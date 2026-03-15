@@ -18,28 +18,7 @@ const router = Router();
 
 const gatewayMetrics = { requests: 0, errors: 0 };
 
-// Middleware to authenticate REST requests
-const authMiddleware = (req: Request, res: Response, next: Function) => {
-    const apiKey = process.env.GATEWAY_API_KEY;
-
-    if (!apiKey) {
-        return res.status(500).json({ error: 'Server configuration error: GATEWAY_API_KEY is not set' });
-    }
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Unauthorized: Missing or invalid Authorization header' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    if (token !== apiKey) {
-        return res.status(403).json({ error: 'Forbidden: Invalid API Key' });
-    }
-
-    next();
-};
-
-router.post('/api/v1/intent/process/public', async (req: Request, res: Response) => {
+router.post('/api/v1/intent/process/public', authMiddleware, async (req: Request, res: Response) => {
     gatewayMetrics.requests++;
     try {
         const { channel, content, metadata } = req.body;
@@ -97,7 +76,7 @@ router.get('/api/v1/agents', authMiddleware, async (req: Request, res: Response)
 });
 
 // --- Swarms API ---
-router.get('/api/v1/swarms', async (req: Request, res: Response) => {
+router.get('/api/v1/swarms', authMiddleware, async (req: Request, res: Response) => {
     try {
         const gridUrl = process.env.GRID_URL ? process.env.GRID_URL.replace('/skills', '') : 'http://grid:5000';
         const gridRes = await axios.get(gridUrl + '/swarm');
@@ -107,7 +86,7 @@ router.get('/api/v1/swarms', async (req: Request, res: Response) => {
     }
 });
 
-router.post('/api/v1/swarms', async (req: Request, res: Response) => {
+router.post('/api/v1/swarms', authMiddleware, async (req: Request, res: Response) => {
     try {
         const gridUrl = process.env.GRID_URL ? process.env.GRID_URL.replace('/skills', '') : 'http://grid:5000';
         const gridRes = await axios.post(gridUrl + '/swarm', req.body);
@@ -118,7 +97,7 @@ router.post('/api/v1/swarms', async (req: Request, res: Response) => {
     }
 });
 
-router.post('/api/v1/swarms/join', async (req: Request, res: Response) => {
+router.post('/api/v1/swarms/join', authMiddleware, async (req: Request, res: Response) => {
     try {
         const gridUrl = process.env.GRID_URL ? process.env.GRID_URL.replace('/skills', '') : 'http://grid:5000';
         const gridRes = await axios.post(gridUrl + '/swarm/join', req.body);
@@ -142,12 +121,6 @@ router.get('/api/v1/network', authMiddleware, async (req: Request, res: Response
 });
 
 // --- Status API ---
-router.get('/api/v1/status', async (req: Request, res: Response) => {
-    const statuses: Record<string, any> = {
-        gateway: { status: 'ok' },
-        hypervisor: { status: 'offline' },
-        sandbox: { status: 'offline' },
-        grid: { status: 'offline' }
 router.get('/api/v1/status', authMiddleware, async (req: Request, res: Response) => {
     const statuses: Record<string, string> = {
         gateway: 'ok',
@@ -175,7 +148,7 @@ router.get('/api/v1/status', authMiddleware, async (req: Request, res: Response)
 });
 
 // --- Memory API ---
-router.get('/api/v1/memory', async (req: Request, res: Response) => {
+router.get('/api/v1/memory', authMiddleware, async (req: Request, res: Response) => {
     try {
         const sessionId = req.query.session_id as string | undefined;
         const url = process.env.HYPERVISOR_URL + '/memory' + (sessionId ? `?session_id=${sessionId}` : '');
@@ -186,7 +159,7 @@ router.get('/api/v1/memory', async (req: Request, res: Response) => {
     }
 });
 
-router.delete('/api/v1/memory/:nodeId', async (req: Request, res: Response) => {
+router.delete('/api/v1/memory/:nodeId', authMiddleware, async (req: Request, res: Response) => {
     try {
         const { nodeId } = req.params;
         const hypervisorRes = await axios.delete(process.env.HYPERVISOR_URL + `/memory/${nodeId}`);
@@ -196,7 +169,7 @@ router.delete('/api/v1/memory/:nodeId', async (req: Request, res: Response) => {
     }
 });
 
-router.put('/api/v1/memory/:nodeId', async (req: Request, res: Response) => {
+router.put('/api/v1/memory/:nodeId', authMiddleware, async (req: Request, res: Response) => {
     try {
         const { nodeId } = req.params;
         const hypervisorRes = await axios.put(process.env.HYPERVISOR_URL + `/memory/${nodeId}`, req.body);
@@ -249,11 +222,10 @@ router.get('/api/v1/logs', authMiddleware, async (req: Request, res: Response) =
 const SENSITIVE_KEYS = ['OPENAI_API_KEY', 'DISCORD_TOKEN', 'WHATSAPP_SESSION'];
 
 // --- Metrics API ---
-router.get('/api/v1/metrics/system', (req: Request, res: Response) => {
+router.get('/api/v1/metrics/system', authMiddleware, (req: Request, res: Response) => {
     res.json(gatewayMetrics);
 });
 
-router.post('/api/v1/metrics/cooperation', async (req: Request, res: Response) => {
 router.post('/api/v1/metrics/cooperation', authMiddleware, async (req: Request, res: Response) => {
     const { style, type, prompt } = req.body;
     const metricsPath = path.join(process.cwd(), 'data/cooperation_metrics.json');

@@ -57,9 +57,19 @@ const wss = new WebSocketServer({ port: Number(WS_PORT) });
 
 wss.on('connection', (ws: WebSocket, req: any) => {
     const url = new URL(req.url, `http://${req.headers.host}`);
-    const apiKey = url.searchParams.get('apiKey');
+    let token = url.searchParams.get('apiKey');
 
-    if (!process.env.GATEWAY_API_KEY || apiKey !== process.env.GATEWAY_API_KEY) {
+    if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+        token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (!process.env.GATEWAY_API_KEY) {
+        console.log('WebSocket connection rejected: GATEWAY_API_KEY is not set in environment');
+        ws.close(1011, 'Server configuration error');
+        return;
+    }
+
+    if (!token || token !== process.env.GATEWAY_API_KEY) {
         console.log('WebSocket connection rejected: Invalid or missing API Key');
         ws.close(1008, 'Unauthorized: Invalid API Key');
         return;
