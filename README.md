@@ -36,7 +36,7 @@ This section reflects the current codebase behavior and replaces earlier duplica
 - Channel registry and concrete adapters for Discord/Slack/Telegram/WhatsApp.
 
 **Partial / caveats**
-- WebSocket message contract mismatch: server expects a strict schema (`id`, `identity_hash`, `modality`, `input`, `timestamp`) while dashboard chat sends `{ content }`, causing invalid-message errors in normal use.
+- Dashboard WebSocket payload now follows the strict parser schema (`id`, `identity_hash`, `modality`, `input`, `timestamp`); request identity/session handling still needs stronger server-side validation semantics.
 - Logs endpoint only has full multi-container visibility when Docker socket is mounted in Gateway.
 - Auth posture is mixed: protected production intent endpoint exists, but public endpoint is intentionally open for testing.
 
@@ -107,6 +107,7 @@ This section reflects the current codebase behavior and replaces earlier duplica
 1. **Gateway WebSocket contract mismatch fix (baseline)** is in place: dashboard chat now sends schema-compatible `input` payloads for the WebSocket intent parser.
 2. **Hypervisor runtime/reliability bugfixes** are in place: `asyncio` is imported in the API server, and AutoTraining now parses sandbox output from `result.stdout`.
 3. **End-to-end integration test coverage (baseline)** exists for Gateway → Hypervisor → Sandbox (stub) intent processing.
+4. **Dashboard runtime integrity fixes** are in place: `gateway/public/app.js` now parses cleanly and uses a single schema-compatible WebSocket message send path.
 
 ### Still to do
 
@@ -152,3 +153,4 @@ This section reflects the current codebase behavior and replaces earlier duplica
 ## Notes
 - This README intentionally distinguishes **implemented**, **partial**, and **simulated** behavior.
 - If you are planning production deployment, prioritize the P0/P1 items before scaling network participation.
+
