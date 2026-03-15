@@ -5,6 +5,7 @@ import axios from 'axios';
 import { normalizeInput } from '../utils/normalizer';
 import { sendToHypervisor } from '../services/hypervisorClient';
 import { getLogsBuffer } from '../utils/logger';
+import { authMiddleware } from '../middleware/auth';
 import { exec } from 'child_process';
 import util from 'util';
 
@@ -14,46 +15,6 @@ const execPromise = util.promisify(exec);
 const ENV_PATH = fs.existsSync('/app/.env') ? '/app/.env' : path.resolve(__dirname, '../../../.env');
 
 const router = Router();
-
-// Middleware to authenticate REST requests
-const authMiddleware = (req: Request, res: Response, next: Function) => {
-    const apiKey = process.env.GATEWAY_API_KEY;
-
-    if (!apiKey) {
-        return res.status(500).json({ error: 'Server configuration error: GATEWAY_API_KEY is not set' });
-    }
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Unauthorized: Missing or invalid Authorization header' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    if (token !== apiKey) {
-        return res.status(403).json({ error: 'Forbidden: Invalid API Key' });
-    }
-
-    next();
-};
-
-router.post('/api/v1/intent/process/public', async (req: Request, res: Response) => {
-    try {
-        const { channel, content, metadata } = req.body;
-        if (!content) {
-            res.status(400).json({ error: 'Content is required' });
-            return;
-        }
-
-        // Only allow process from public if it's for comparison/testing
-        // and doesn't contain sensitive data
-        const intent = normalizeInput(channel || 'tester', content, metadata);
-        const response = await sendToHypervisor(intent);
-
-        res.json(response);
-    } catch (error) {
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
 
 router.post('/api/v1/intent/process', authMiddleware, async (req: Request, res: Response) => {
     try {
@@ -78,7 +39,7 @@ router.get('/health', (req: Request, res: Response) => {
 
 
 // --- Agents API ---
-router.get('/api/v1/agents', async (req: Request, res: Response) => {
+router.get('/api/v1/agents', authMiddleware, async (req: Request, res: Response) => {
     try {
         const hypervisorRes = await axios.get(process.env.HYPERVISOR_URL + '/agents');
         res.json(hypervisorRes.data);
@@ -87,8 +48,41 @@ router.get('/api/v1/agents', async (req: Request, res: Response) => {
     }
 });
 
+// --- Swarms API ---
+router.get('/api/v1/swarms', async (req: Request, res: Response) => {
+    try {
+        const gridUrl = process.env.GRID_URL ? process.env.GRID_URL.replace('/skills', '') : 'http://grid:5000';
+        const gridRes = await axios.get(gridUrl + '/swarm');
+        res.json(gridRes.data);
+    } catch (error: any) {
+        res.status(500).json({ error: 'Failed to fetch swarms from Grid', details: error.message });
+    }
+});
+
+router.post('/api/v1/swarms', async (req: Request, res: Response) => {
+    try {
+        const gridUrl = process.env.GRID_URL ? process.env.GRID_URL.replace('/skills', '') : 'http://grid:5000';
+        const gridRes = await axios.post(gridUrl + '/swarm', req.body);
+        res.json(gridRes.data);
+    } catch (error: any) {
+        const msg = error.response && error.response.data ? error.response.data : error.message;
+        res.status(500).json({ error: 'Failed to create swarm on Grid', details: msg });
+    }
+});
+
+router.post('/api/v1/swarms/join', async (req: Request, res: Response) => {
+    try {
+        const gridUrl = process.env.GRID_URL ? process.env.GRID_URL.replace('/skills', '') : 'http://grid:5000';
+        const gridRes = await axios.post(gridUrl + '/swarm/join', req.body);
+        res.json(gridRes.data);
+    } catch (error: any) {
+        const msg = error.response && error.response.data ? error.response.data : error.message;
+        res.status(500).json({ error: 'Failed to join swarm on Grid', details: msg });
+    }
+});
+
 // --- Network API ---
-router.get('/api/v1/network', async (req: Request, res: Response) => {
+router.get('/api/v1/network', authMiddleware, async (req: Request, res: Response) => {
     try {
         // Grid API URL
         const gridUrl = process.env.GRID_URL ? process.env.GRID_URL.replace('/skills', '') : 'http://grid:5000';
@@ -100,7 +94,7 @@ router.get('/api/v1/network', async (req: Request, res: Response) => {
 });
 
 // --- Status API ---
-router.get('/api/v1/status', async (req: Request, res: Response) => {
+router.get('/api/v1/status', authMiddleware, async (req: Request, res: Response) => {
     const statuses: Record<string, string> = {
         gateway: 'ok',
         hypervisor: 'offline',
@@ -127,7 +121,7 @@ router.get('/api/v1/status', async (req: Request, res: Response) => {
 });
 
 // --- Logs API ---
-router.get('/api/v1/logs', async (req: Request, res: Response) => {
+router.get('/api/v1/logs', authMiddleware, async (req: Request, res: Response) => {
     try {
         // We will try multiple sources of logs to provide the most complete picture.
         // First, check the Gateway's internal buffer.
@@ -168,17 +162,8 @@ router.get('/api/v1/logs', async (req: Request, res: Response) => {
 // --- Configuration API ---
 const SENSITIVE_KEYS = ['OPENAI_API_KEY', 'DISCORD_TOKEN', 'WHATSAPP_SESSION'];
 
-// A simple middleware to ensure only local origins can edit config (since there is no auth yet)
-const localOnly = (req: Request, res: Response, next: Function) => {
-    const origin = req.get('origin') || req.get('referer') || '';
-    if (origin && !origin.includes('localhost') && !origin.includes('127.0.0.1')) {
-        return res.status(403).json({ error: 'Configuration editing is restricted to local interfaces for security.' });
-    }
-    next();
-};
-
 // --- Metrics API ---
-router.post('/api/v1/metrics/cooperation', async (req: Request, res: Response) => {
+router.post('/api/v1/metrics/cooperation', authMiddleware, async (req: Request, res: Response) => {
     const { style, type, prompt } = req.body;
     const metricsPath = path.join(process.cwd(), 'data/cooperation_metrics.json');
 
@@ -206,7 +191,7 @@ router.post('/api/v1/metrics/cooperation', async (req: Request, res: Response) =
     }
 });
 
-router.get('/api/v1/config', localOnly, (req: Request, res: Response) => {
+router.get('/api/v1/config', authMiddleware, (req: Request, res: Response) => {
     try {
         if (!fs.existsSync(ENV_PATH)) {
             return res.json({});
@@ -235,7 +220,7 @@ router.get('/api/v1/config', localOnly, (req: Request, res: Response) => {
     }
 });
 
-router.post('/api/v1/config', localOnly, (req: Request, res: Response) => {
+router.post('/api/v1/config', authMiddleware, (req: Request, res: Response) => {
     try {
         const updates: Record<string, string> = req.body;
         let envLines: string[] = [];
