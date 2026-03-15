@@ -1,4 +1,27 @@
 document.addEventListener("DOMContentLoaded", () => {
+    // --- Authentication ---
+    const apiKeyInput = document.getElementById('dashboard-api-key');
+    const savedKey = localStorage.getItem('GATEWAY_API_KEY');
+    if (savedKey) {
+        apiKeyInput.value = savedKey;
+    }
+
+    apiKeyInput.addEventListener('change', (e) => {
+        localStorage.setItem('GATEWAY_API_KEY', e.target.value);
+        // Reconnect WebSocket if key changes
+        if (ws && ws.readyState !== WebSocket.CLOSED) {
+            ws.close();
+        }
+        connectWebSocket();
+    });
+
+    function getAuthHeaders() {
+        return {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('GATEWAY_API_KEY') || ''}`
+        };
+    }
+
     // --- Navigation Tabs ---
     const navButtons = document.querySelectorAll(".nav-btn");
     const tabs = document.querySelectorAll(".tab-content");
@@ -16,6 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // Auto-refresh logic on tab load
             if (targetId === 'status') fetchStatus();
             if (targetId === 'agents') fetchAgents();
+            if (targetId === 'swarms') fetchSwarms();
             if (targetId === 'tester' && window.initTester) window.initTester();
             if (targetId === 'network') fetchNetwork();
             if (targetId === 'settings') fetchConfig();
@@ -31,18 +55,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const chatInput = document.getElementById("chat-input");
     const chatSendBtn = document.getElementById("chat-send");
 
-    // Connect to Gateway WebSocket
-    const wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
-    const ws = new WebSocket(`${wsProtocol}://${location.hostname}:3001`);
+    let ws = null;
 
-    ws.onopen = () => {
-        appendMessage('system', 'Connected to AxiomMesh Gateway.');
-    };
+    function connectWebSocket() {
+        const apiKey = localStorage.getItem('GATEWAY_API_KEY') || '';
+        const wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
+        const wsUrl = `${wsProtocol}://${location.hostname}:3001?apiKey=${encodeURIComponent(apiKey)}`;
 
-    ws.onmessage = (event) => {
-        try {
-            const data = JSON.parse(event.data);
-            if (data.status === 'pending') return; // Ignore pending
+        ws = new WebSocket(wsUrl);
 
             if (data.error) {
                 appendMessage('system', `Error: ${data.error}`);
@@ -58,20 +78,39 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             } else {
                 appendMessage('system', JSON.stringify(data));
+        ws.onopen = () => {
+            appendMessage('system', 'Connected to AxiomMesh Gateway.');
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.status === 'pending') return; // Ignore pending
+
+                if (data.error) {
+                    appendMessage('system', `Error: ${data.error}`);
+                } else if (data.response) {
+                    appendMessage('agent', data.response);
+                } else {
+                    appendMessage('system', JSON.stringify(data));
+                }
+            } catch (e) {
+                appendMessage('system', `Received: ${event.data}`);
             }
-        } catch (e) {
-            appendMessage('system', `Received: ${event.data}`);
-        }
-    };
+        };
 
-    ws.onerror = (error) => {
-        appendMessage('system', 'WebSocket Error. See console.');
-        console.error('WebSocket Error: ', error);
-    };
+        ws.onerror = (error) => {
+            appendMessage('system', 'WebSocket Error. Please check your API Key and connection.');
+            console.error('WebSocket Error: ', error);
+        };
 
-    ws.onclose = () => {
-        appendMessage('system', 'Disconnected from Gateway.');
-    };
+        ws.onclose = () => {
+            appendMessage('system', 'Disconnected from Gateway.');
+        };
+    }
+
+    // Initial connection
+    connectWebSocket();
 
     function appendMessage(sender, text) {
         const msgDiv = document.createElement("div");
@@ -178,7 +217,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const grid = document.getElementById('agents-grid');
         grid.innerHTML = '<p>Loading agent states...</p>';
         try {
-            const res = await fetch('/api/v1/agents');
+            const res = await fetch('/api/v1/agents', { headers: getAuthHeaders() });
             const data = await res.json();
 
             if (data.agents && data.agents.length > 0) {
@@ -203,12 +242,131 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // --- Swarm / Orchestration Logic ---
+    async function fetchSwarms() {
+        const grid = document.getElementById('swarms-grid');
+        grid.innerHTML = '<p>Loading active swarms...</p>';
+        try {
+            const res = await fetch('/api/v1/swarms');
+            const swarms = await res.json();
+
+            if (swarms && swarms.length > 0) {
+                grid.innerHTML = '';
+                swarms.forEach(swarm => {
+                    const card = document.createElement('div');
+                    card.className = 'agent-card';
+                    card.innerHTML = `
+                        <h3>Swarm ID: <span style="font-size: 0.8em; font-weight: normal;">${swarm.id}</span></h3>
+                        <p><strong>Task ID:</strong> ${swarm.taskId}</p>
+                        <p><strong>Status:</strong> <span class="status">${swarm.status}</span></p>
+                        <p><strong>Nodes:</strong> ${swarm.nodes.length}</p>
+                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border);">
+                            <h4 style="margin: 0 0 10px 0; font-size: 0.9em; color: #aaa;">Join this Swarm</h4>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" id="join-node-id-${swarm.id}" placeholder="Your Node ID" style="flex-grow: 1; padding: 5px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-color); color: var(--text-main);">
+                                <button onclick="joinSwarm('${swarm.id}')" style="padding: 5px 10px; background-color: var(--card-bg); color: var(--text-main); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">Join</button>
+                            </div>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            } else {
+                grid.innerHTML = '<p>No active swarms found.</p>';
+            }
+        } catch (error) {
+            console.error('Failed to fetch swarms:', error);
+            grid.innerHTML = '<p>Failed to load swarms. Is the grid service offline?</p>';
+        }
+    }
+
+    const createSwarmBtn = document.getElementById('create-swarm-btn');
+    if (createSwarmBtn) {
+        createSwarmBtn.addEventListener('click', async () => {
+            const taskId = document.getElementById('swarm-task-id').value.trim();
+            const nodeId = document.getElementById('swarm-node-id').value.trim();
+
+            if (!taskId || !nodeId) {
+                alert('Please enter both Task ID and Creator Node ID.');
+                return;
+            }
+
+            // Human approval checkpoint
+            const approved = window.confirm(`[HUMAN APPROVAL REQUIRED]\n\nAre you sure you want to create a new swarm for task "${taskId}" using node "${nodeId}"? This is a high-impact action.`);
+            if (!approved) return;
+
+            // Optional: require ID generator if we didn't have UUID logic on client
+            // Actually, we can generate a UUID locally or let the server/backend do it. The Go server expects an ID. Let's create one.
+            const swarmId = crypto.randomUUID ? crypto.randomUUID() : 'swarm-' + Date.now();
+
+            try {
+                const res = await fetch('/api/v1/swarms', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: swarmId,
+                        taskId: taskId,
+                        nodes: [nodeId]
+                    })
+                });
+
+                const result = await res.json();
+                if (res.ok && result.status !== 'error') {
+                    document.getElementById('swarm-task-id').value = '';
+                    document.getElementById('swarm-node-id').value = '';
+                    fetchSwarms();
+                } else {
+                    alert('Failed to create swarm: ' + (result.error || result.message || JSON.stringify(result)));
+                }
+            } catch (error) {
+                alert('Network error when creating swarm.');
+                console.error(error);
+            }
+        });
+    }
+
+    // Expose to window for inline onclick handler in cards
+    window.joinSwarm = async function(swarmId) {
+        const nodeIdInput = document.getElementById(`join-node-id-${swarmId}`);
+        const nodeId = nodeIdInput ? nodeIdInput.value.trim() : '';
+
+        if (!nodeId) {
+            alert('Please enter your Node ID to join the swarm.');
+            return;
+        }
+
+        // Human approval checkpoint
+        const approved = window.confirm(`[HUMAN APPROVAL REQUIRED]\n\nAre you sure you want node "${nodeId}" to join swarm "${swarmId}"? This is a high-impact action.`);
+        if (!approved) return;
+
+        try {
+            const res = await fetch('/api/v1/swarms/join', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    swarmId: swarmId,
+                    nodeId: nodeId
+                })
+            });
+
+            const result = await res.json();
+            if (res.ok && result.status !== 'error') {
+                if (nodeIdInput) nodeIdInput.value = '';
+                fetchSwarms();
+            } else {
+                alert('Failed to join swarm: ' + (result.error || result.message || JSON.stringify(result)));
+            }
+        } catch (error) {
+            alert('Network error when joining swarm.');
+            console.error(error);
+        }
+    };
+
     // --- Network / Grid Logic ---
     async function fetchNetwork() {
         const grid = document.getElementById('network-grid');
         grid.innerHTML = '<p>Loading connected mesh nodes...</p>';
         try {
-            const res = await fetch('/api/v1/network');
+            const res = await fetch('/api/v1/network', { headers: getAuthHeaders() });
             const data = await res.json();
 
             if (data.nodes && data.nodes.length > 0) {
@@ -237,7 +395,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- System Status Logic ---
     async function fetchStatus() {
         try {
-            const res = await fetch('/api/v1/status');
+            const res = await fetch('/api/v1/status', { headers: getAuthHeaders() });
             const data = await res.json();
 
             document.getElementById('status-gateway').textContent = data.gateway || 'unknown';
@@ -252,7 +410,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Configuration Logic ---
     async function fetchConfig() {
         try {
-            const res = await fetch('/api/v1/config');
+            const res = await fetch('/api/v1/config', { headers: getAuthHeaders() });
             const data = await res.json();
 
             document.getElementById('ALLOW_CLOUD_LLM').value = data.ALLOW_CLOUD_LLM || 'false';
@@ -286,7 +444,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const res = await fetch('/api/v1/config', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders(),
                 body: JSON.stringify(updates)
             });
             const result = await res.json();
@@ -311,7 +469,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const logOutput = document.getElementById('log-output');
         logOutput.textContent = 'Loading logs...';
         try {
-            const res = await fetch('/api/v1/logs');
+            const res = await fetch('/api/v1/logs', { headers: getAuthHeaders() });
             const data = await res.json();
             if (data.logs) {
                 logOutput.textContent = data.logs;

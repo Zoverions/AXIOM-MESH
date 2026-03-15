@@ -55,7 +55,16 @@ app.listen(REST_PORT, () => {
 // WebSocket Server
 const wss = new WebSocketServer({ port: Number(WS_PORT) });
 
-wss.on('connection', (ws: WebSocket) => {
+wss.on('connection', (ws: WebSocket, req: any) => {
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const apiKey = url.searchParams.get('apiKey');
+
+    if (!process.env.GATEWAY_API_KEY || apiKey !== process.env.GATEWAY_API_KEY) {
+        console.log('WebSocket connection rejected: Invalid or missing API Key');
+        ws.close(1008, 'Unauthorized: Invalid API Key');
+        return;
+    }
+
     console.log('New WebSocket connection');
 
     ws.on('message', async (message: Buffer) => {
@@ -103,7 +112,12 @@ async function startChannels() {
                         response.response = filterACS(response.response);
                         const targetChannel = activeChannels[channelName];
                         if (targetChannel) {
-                            await targetChannel.sendMessage(chatId, response.response);
+                            const receipt = await targetChannel.sendMessage(chatId, response.response);
+                            if (receipt.success) {
+                                console.log(`[${channelName}] Message delivered successfully (ID: ${receipt.messageId})`);
+                            } else {
+                                console.error(`[${channelName}] Message delivery failed: ${receipt.error}`);
+                            }
                         }
                     }
                 }

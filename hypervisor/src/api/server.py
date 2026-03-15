@@ -6,6 +6,7 @@ import requests
 import os
 import httpx
 import ast
+import asyncio
 
 from src.models.intent import IntentObject, IntentResponse
 from src.engine.context import ContextEngine
@@ -143,6 +144,20 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api
                 # If it's a directive signal, attempt On-Policy Distillation
                 if signals["is_directive"]:
                     opd.distill(last_interaction.get("intent_content", ""), signals, sender)
+
+        # Handle special Mode command
+        if content.startswith("/mode"):
+            parts = content.split(" ", 1)
+            if len(parts) > 1:
+                mode = parts[1].strip().lower()
+                allowed_modes = ["concise", "analytical", "socratic", "executive"]
+                if mode in allowed_modes:
+                    context_engine.set_user_mode(sender, mode)
+                    return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Mode set to {mode} successfully.", status="success")
+                else:
+                    return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Invalid mode. Allowed modes are: {', '.join(allowed_modes)}.", status="error")
+            else:
+                return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Please specify a mode. Allowed modes are: concise, analytical, socratic, executive.", status="error")
 
         # Handle special Dialectic command
         if content.startswith("/dialectic"):

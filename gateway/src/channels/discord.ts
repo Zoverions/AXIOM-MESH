@@ -1,12 +1,19 @@
 import { Client, GatewayIntentBits, TextChannel, DMChannel, NewsChannel } from 'discord.js';
-import { Channel, ChannelOpts, registerChannel } from './registry';
+import { ChannelOpts, ReliabilityPolicy, registerChannel } from './registry';
+import { BaseChannel } from './base';
 
-export class DiscordChannel implements Channel {
+export class DiscordChannel extends BaseChannel {
     name = 'discord';
+    reliabilityPolicy: ReliabilityPolicy = {
+        maxRetries: 3,
+        retryDelayMs: 1000,
+        rateLimitMs: 500 // Discord typical rate limit
+    };
     private client: Client;
     private opts: ChannelOpts;
 
     constructor(private botToken: string, opts: ChannelOpts) {
+        super();
         this.opts = opts;
         this.client = new Client({
             intents: [
@@ -40,20 +47,16 @@ export class DiscordChannel implements Channel {
         }
     }
 
-    async sendMessage(chatId: string, text: string): Promise<void> {
-        try {
-            const channel = await this.client.channels.fetch(chatId);
-            if (channel && (channel instanceof TextChannel || channel instanceof DMChannel || channel instanceof NewsChannel)) {
-                await channel.send(text);
-                console.log(`[Discord] Message sent to ${chatId}`);
-            } else if (channel?.isTextBased()) {
-                await (channel as any).send(text);
-                console.log(`[Discord] Message sent to text-based channel ${chatId}`);
-            } else {
-                console.warn(`[Discord] Channel ${chatId} is not text-based or not found`);
-            }
-        } catch (error) {
-            console.error('[Discord] Failed to send message:', error);
+    protected async doSendMessage(chatId: string, text: string): Promise<string | undefined> {
+        const channel = await this.client.channels.fetch(chatId);
+        if (channel && (channel instanceof TextChannel || channel instanceof DMChannel || channel instanceof NewsChannel)) {
+            const msg = await channel.send(text);
+            return msg.id;
+        } else if (channel?.isTextBased()) {
+            const msg = await (channel as any).send(text);
+            return msg?.id;
+        } else {
+            throw new Error(`[Discord] Channel ${chatId} is not text-based or not found`);
         }
     }
 
