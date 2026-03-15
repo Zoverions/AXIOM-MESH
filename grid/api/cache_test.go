@@ -2,6 +2,9 @@ package api
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -14,7 +17,8 @@ import (
 
 func TestCacheAPI_Integration(t *testing.T) {
 	ledger := blockchain.NewLedger()
-	p2pNode := p2p.NewNode("test-node")
+	priv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	p2pNode := p2p.NewNode("test-node", priv)
 	_ = NewServer(ledger, p2pNode)
 
 	// Create a test server with our actual API routes

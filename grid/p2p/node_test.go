@@ -1,13 +1,17 @@
 package p2p
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"errors"
 	"testing"
 	"time"
 )
 
 func TestPeerManagement(t *testing.T) {
-	node := NewNode("node1")
+	priv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	node := NewNode("node1", priv)
 
 	// Test AddPeer
 	node.AddPeer("peer1", "http://127.0.0.1:5000")
@@ -49,7 +53,8 @@ func TestPeerManagement(t *testing.T) {
 }
 
 func TestIncrementPeerFailureAndEviction(t *testing.T) {
-	node := NewNode("node1")
+	priv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	node := NewNode("node1", priv)
 	node.AddPeer("peer1", "http://127.0.0.1:5000")
 
 	// Fail 1
@@ -70,7 +75,8 @@ func TestIncrementPeerFailureAndEviction(t *testing.T) {
 }
 
 func TestHeartbeatEvictionTimeout(t *testing.T) {
-	node := NewNode("node1")
+	priv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	node := NewNode("node1", priv)
 	node.AddPeer("peer1", "http://127.0.0.1:5000")
 
 	// manually set LastSeen to older than 30s
@@ -95,7 +101,8 @@ func TestHeartbeatEvictionTimeout(t *testing.T) {
 }
 
 func TestHeartbeatEvictionLowScore(t *testing.T) {
-	node := NewNode("node1")
+	priv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	node := NewNode("node1", priv)
 	node.AddPeer("peer1", "http://127.0.0.1:5000")
 
 	node.UpdatePeerScore("peer1", -5)
