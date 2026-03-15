@@ -20,6 +20,7 @@
                 <button class="nav-btn active" data-target="chat">Chat Interface</button>
                 <button class="nav-btn" data-target="status">System Status</button>
                 <button class="nav-btn" data-target="agents">Active Agents</button>
+                <button class="nav-btn" data-target="swarms">Swarm Orchestration</button>
                 <button class="nav-btn" data-target="tester">Intentionality Tester</button>
                 <button class="nav-btn" data-target="network">Grid Mesh Nodes</button>
                 <button class="nav-btn" data-target="settings">Settings / Config</button>
@@ -67,6 +68,28 @@
                 <h2>Active Agents & Processes</h2>
                 <div id="agents-grid" class="agents-grid">
                     <p>Loading agent states...</p>
+                </div>
+            </section>
+
+            <!-- Swarms Tab -->
+            <section id="swarms" class="tab-content">
+                <h2>Swarm Orchestration</h2>
+
+                <div class="card" style="text-align: left; margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 10px;">Create New Swarm</h3>
+                    <div class="form-group">
+                        <label for="swarm-task-id">Task ID</label>
+                        <input type="text" id="swarm-task-id" placeholder="Enter Task ID (e.g., task-123)">
+                    </div>
+                    <div class="form-group">
+                        <label for="swarm-node-id">Creator Node ID (Requires Compute Bond)</label>
+                        <input type="text" id="swarm-node-id" placeholder="Enter Node ID">
+                    </div>
+                    <button id="create-swarm-btn" style="padding: 10px 20px; background-color: var(--accent); color: #000; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">Create Swarm</button>
+                </div>
+
+                <div id="swarms-grid" class="agents-grid">
+                    <p>Loading active swarms...</p>
                 </div>
             </section>
 
