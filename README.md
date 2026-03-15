@@ -1,157 +1,248 @@
-# AxiomMesh v2.5.0
+# AxiomMesh (Repository Reality Guide)
 
-AxiomMesh is a multi-service platform for running an AI interaction stack across four services:
-- **Gateway (TypeScript/Node):** REST + WebSocket ingress, dashboard, channel adapters.
-- **Hypervisor (Python/FastAPI):** context assembly, memory/archive, safety gates, orchestration.
-- **Sandbox (TypeScript/Node):** ephemeral code execution through Docker.
-- **Grid (Go):** peer networking, cache/graph sync, PoER/zk verification endpoints.
+AxiomMesh is a multi-service AI systems stack with four runtime pillars plus supporting contracts, schemas, and tooling:
 
----
+- **Gateway (TypeScript/Node)**: authenticated ingress (REST + WebSocket), dashboard/static UI, and channel adapters.
+- **Hypervisor (Python/FastAPI)**: context synthesis, memory/archive orchestration, response shaping, and agent loops.
+- **Sandbox (TypeScript/Node + Docker runtime)**: constrained ephemeral code execution.
+- **Grid (Go)**: peer-aware ledger APIs, cache/graph sync, PoER checks, and zk/zkML verification endpoints.
 
-## Architecture
-- **Pillar 1: Grid (Go)** — P2P node, signatures, cache, graph sync, consensus helpers.
-- **Pillar 2: Hypervisor (Python)** — Context engine, archive, AutoResearch, arena/pulse guards, zkML edge proving endpoint.
-- **Pillar 3: Sandbox (Node.js)** — Docker-based Python/Node code execution endpoint.
-- **Pillar 4: Gateway (TypeScript)** — REST + WS APIs, static dashboard, channel integrations (Discord/Slack/Telegram/WhatsApp).
+This README is a **code-accurate rewrite** intended to clearly separate what is implemented now vs what is still prototype-grade or expected next.
 
 ---
 
-## Current Deployment Reality (Code Audit)
+## 1) System Topology
 
-This section reflects the current codebase behavior and replaces earlier duplicate/overstated roadmap entries.
+### Services in `docker-compose`
+`docker-compose.yml` defines:
+- `gateway` on `3000` (REST/UI) and `3001` (WebSocket)
+- `hypervisor` on `8000`
+- `sandbox` on `4000`
+- `grid` on `5000`
+- `ipfs` on `4001/5001/8080`
 
-### 1) Running services and baseline health
-- `docker-compose.yml` starts `gateway`, `hypervisor`, `sandbox`, `grid`, and `ipfs`.
-- Gateway aggregates status checks for Hypervisor/Sandbox/Grid and serves a static dashboard UI.
-- Hypervisor, Sandbox, and Grid each expose `/health` endpoints.
-
-### 2) Feature audit by pillar
-
-#### Gateway (Pillar 4)
-**Implemented and usable**
-- REST intent processing (`/api/v1/intent/process`) with API-key middleware.
-- Public test endpoint (`/api/v1/intent/process/public`).
-- Web dashboard tabs (chat/status/agents/network/settings/logs/tester).
-- Config read/write endpoints for `.env` and local-only guard.
-- Channel registry and concrete adapters for Discord/Slack/Telegram/WhatsApp.
-
-**Partial / caveats**
-- Dashboard WebSocket payload now follows the strict parser schema (`id`, `identity_hash`, `modality`, `input`, `timestamp`); request identity/session handling still needs stronger server-side validation semantics.
-- Logs endpoint only has full multi-container visibility when Docker socket is mounted in Gateway.
-- Auth posture is mixed: protected production intent endpoint exists, but public endpoint is intentionally open for testing.
-
-#### Hypervisor (Pillar 2)
-**Implemented and usable**
-- Context assembly merges axioms, temporal state, archive search, NCP/MCP context, and optional oracle data.
-- Deep archive with graph-like node/edge storage, keyword-based retrieval, and distributed sync/query hooks.
-- Dialectic command (`/dialectic`), sandbox execution command (`/exec`), and skill sync command (`/sync_skills`).
-- Arena + pulse checks applied before returning responses.
-- AutoResearch daemon fetches from multiple real external sources (NCP/ArXiv/Wikipedia/Crossref/Grokipedia) with retry, dedupe, and confidence scoring.
-
-**Partial / caveats**
-- `/process` route depends on `HYPERVISOR_API_KEY`; if absent, service returns server configuration errors.
-- `process_intent` references `asyncio` without importing it, which can trigger runtime errors on archive sync path.
-- AutoTraining loop parses sandbox output incorrectly (expects `stdout` at top-level rather than nested under `result`), so mutation scoring flow is not reliably effective.
-- Chainlink oracle integration is endpoint-based and heuristic (feed mapping by query keywords), not an on-chain verified oracle consumer implementation.
-
-#### Sandbox (Pillar 3)
-**Implemented and usable**
-- `/execute` for Python/Node snippets via `docker run` with memory limits and timeout.
-- `/health` endpoint.
-
-**Partial / caveats**
-- Security isolation is minimal (container limits + timeout), but no seccomp profile, filesystem policy, or network egress control is enforced in runner arguments.
-
-#### Grid (Pillar 1)
-**Implemented and usable**
-- HTTP APIs: health, skills, stake, swarm/join, cache, zkml/verify, ccip.
-- UDP peer discovery, heartbeat/eviction, peer scoring/failure tracking.
-- Broadcast and sync loops for CCIP messages, swarms, web cache, graph updates.
-- Graph websocket supports query/sync with signature checks and NIZK proof verification helper.
-
-**Partial / caveats**
-- Graph query handler still performs local substring search in memory and is explicitly marked as simulated search behavior.
-- Proof systems are lightweight protocol implementations; they are not a complete production trust layer on their own.
-- Smart contract code exists (ComputeBond), but no live chain deployment or runtime integration path is wired into Grid API execution.
-
-### 3) Mock/synthetic/simulated areas still present
-- **Simulated graph query behavior** in Grid websocket handler comment/path.
-- **AutoTraining "human approval" gate** is environment-variable simulated rather than true human-in-the-loop workflow.
-- **OpenClaw distillation** enforces a hardcoded sender identity check (`Owner`), which is a placeholder identity/auth model.
-- **Distributed/consensus workflows** depend heavily on local networking assumptions and external infra availability (IPFS, Arweave, peers, oracle endpoint, MCP/NCP servers).
+The standard request path is:
+`Client -> Gateway -> Hypervisor -> (optional Sandbox/Grid/IPFS/Arweave/NCP/MCP)`.
 
 ---
 
-## Updated Roadmap Progression (Reality-Based)
+## 2) Capabilities by Pillar
 
-### Phase 1 — Foundation services and API wiring
-**Status: Completed (with hardening needed).**
+## Gateway (Pillar 4)
 
-### Phase 2 — Secure execution layer
-**Status: Functionally complete, security hardening pending.**
+### What it does today
+- **Unified API-key auth model** for REST routes, static dashboard routes, and WebSocket handshake validation.
+- **Intent ingress** through:
+  - `POST /api/v1/intent/process`
+  - `POST /api/v1/intent/process/public` (still API-key protected in current code)
+- **WebSocket intent pipeline**:
+  - Zod parsing/sanitization of incoming payload.
+  - Normalization into canonical intent object (`conversation_id`, `actor_id`, `trace_id` etc.).
+  - Pending ack then final response relay.
+- **Input/response shaping**:
+  - schema validation + basic sanitization in parser.
+  - stylistic sludge/filler removal via referent filter.
+- **Cross-service status + metrics endpoints**:
+  - dependency health aggregation (`gateway/hypervisor/sandbox/grid`) with latency/degraded flags.
+  - local metrics and cooperation metrics persistence.
+- **Memory passthrough APIs** to Hypervisor (`get/edit/delete`).
+- **Channel adapters** (Discord/Slack/Telegram/WhatsApp) with retry + backoff + rate-limit-aware delivery receipts.
+- **Backpressure-aware Hypervisor client** with retry logic and queue cap guard.
 
-### Phase 3 — Context + memory + cognition orchestration
-**Status: Mostly complete, with reliability gaps.**
-
-### Phase 4 — Decentralized Grid and sync fabric
-**Status: Implemented core loops and APIs; production decentralization maturity pending.**
-
-### Phase 5 — Evolution/ACT/zk-enabled verifiability
-**Status: Experimental/partial.** Components exist, but several parts remain prototype-grade or not fully integrated into production operations.
-
----
-
-## Prioritized To-Do List
-
-### Verified as completed
-1. **Gateway WebSocket contract mismatch fix (baseline)** is in place: dashboard chat now sends schema-compatible `input` payloads for the WebSocket intent parser.
-2. **Hypervisor runtime/reliability bugfixes** are in place: `asyncio` is imported in the API server, and AutoTraining now parses sandbox output from `result.stdout`.
-3. **End-to-end integration test coverage (baseline)** exists for Gateway → Hypervisor → Sandbox (stub) intent processing.
-4. **Dashboard runtime integrity fixes** are in place: `gateway/public/app.js` now parses cleanly and uses a single schema-compatible WebSocket message send path.
-5. **Gateway auth model hardening is in place**: REST middleware, WebSocket handshake, and dashboard static routes now share the same API key validation semantics.
-6. **Gateway integration coverage now includes Grid stubs + stricter API contract checks** (auth, status/network, and WS handshake/flow).
-
-### Still to do
-
-### P0 (Critical)
-1. ✅ **Unify auth model across REST/WS/dashboard endpoints** and remove insecure dashboard default behavior.
-2. ✅ **Expanded integration tests with Grid stubs and stricter contract checks** for auth consistency and cross-service API behavior.
-
-### P1 (High)
-3. ✅ **Strengthened interaction layer (human ↔ digital entity):**
-   - Added explicit `conversation_id` + `actor_id` identity model across REST/WS/channel intents.
-   - Expanded memory controls in UI/API (view/edit/forget per-node, forget current session, consent scopes).
-   - Added response style controls including executive mode and surfaced confidence/provenance + trace ID in chat.
-4. ✅ **Hardened sandbox execution security** with stricter runtime profile (seccomp/apparmor, no network, read-only FS, tmpfs-only writable mounts, constrained memory/pids/cpu).
-5. ✅ **Improved observability**: structured logs, propagated trace IDs per intent, enriched service-level metrics, and status dashboard dependency/latency health details.
-6. ✅ **Formalized distributed failure handling** for IPFS/Arweave/Grid with retries, degraded counters, and archive sync backpressure mode.
-
-### P2 (Medium)
-7. **Replace simulated graph query path** with real indexed graph retrieval and ranked multi-peer merge.
-8. **Promote zk/zkML flows from interface-level proof checks to production-grade validation pipelines** (artifact lifecycle, key management, deterministic verification workers).
-9. **Wire ComputeBond on-chain lifecycle into Grid APIs** (stake/slash events, reconciliation, chain finality handling).
-10. **Improve channel adapters** with delivery receipts, rate-limit handling, and per-channel reliability policies.
-
-### P3 (Opportunistic / Novel improvements)
-11. **Adaptive interaction policies**: let user select mode (concise/analytical/socratic/executive) and persist preference.
-12. **Operator cockpit**: add intent replay, safety decision audit, and "why this answer" decomposition for trust.
-13. **Collaborative swarm UX**: expose swarm task planning UI and human approval checkpoints for high-impact actions.
-14. **Policy-driven memory governance**: configurable retention TTLs, encryption-at-rest options, and export/delete controls.
+### Important caveats
+- Gateway sanitization is intentionally basic and should not be treated as full application firewalling.
+- `/api/v1/intent/process/public` exists as a separate route name, but is not anonymous in current implementation.
 
 ---
 
-## Quick Start
-1. Copy or create `.env` (set `GATEWAY_API_KEY`, `HYPERVISOR_API_KEY`, model/provider settings, optional channel tokens).
-2. Run `make up` (or `docker compose up --build`).
-3. Open dashboard at `http://localhost:3000`.
-4. Verify health:
-   - Gateway: `GET /health`
-   - Hypervisor: `GET http://localhost:8000/health`
-   - Sandbox: `GET http://localhost:4000/health`
-   - Grid: `GET http://localhost:5000/health`
+## Hypervisor (Pillar 2)
+
+### What it does today
+- **Authenticated `/process` execution path** (Bearer API key required).
+- **Context assembly pipeline** that combines:
+  - system axioms and temporal state,
+  - local/deep archive retrieval,
+  - optional external NCP context,
+  - optional external MCP context,
+  - optional Chainlink-oracle endpoint context.
+- **Adaptive response style controls** (`concise`, `analytical`, `socratic`, `executive`) from metadata and user preference persistence.
+- **Intent output metadata**:
+  - `confidence` heuristic,
+  - `provenance` labels,
+  - `trace_id` propagation,
+  - `audit_trail` payload.
+- **Memory management APIs**:
+  - `GET /memory`
+  - `PUT /memory/{node_id}`
+  - `DELETE /memory/{node_id}`
+- **Agent loops started at app lifespan**:
+  - AutoResearch daemon,
+  - AutoTraining loop.
+- **Additional service endpoints**:
+  - `/agents`, `/metrics`, `/health`, `/zkml/infer`.
+
+### Chain-of-thought auditor status (requested topic)
+A dedicated “raw chain-of-thought exposure” feature is **not** implemented (and should generally not be exposed). What currently exists is an **audit-trail style explainability scaffold** attached to intent responses:
+- `audit_trail.intent_replay`
+- `audit_trail.safety_decisions`
+- `audit_trail.why_this_answer`
+
+So the current state is: **structured decision/audit metadata exists**, but it is not a full formal reasoning-auditor subsystem with policy engine, immutable log sinks, and operator tooling.
+
+### Important caveats
+- Several safety/reasoning fields are scaffolded placeholders rather than externally attested guarantees.
+- Oracle integration is endpoint-driven context enrichment, not an on-chain trust-finalized oracle consumer workflow.
 
 ---
 
-## Notes
-- This README intentionally distinguishes **implemented**, **partial**, and **simulated** behavior.
-- If you are planning production deployment, prioritize the P0/P1 items before scaling network participation.
+## Sandbox (Pillar 3)
+
+### What it does today
+- **Code execution API**: `POST /execute` for Python and Node snippets using Docker child containers.
+- **Health API**: `GET /health`.
+- **Hardened container execution defaults** include:
+  - `--network=none`
+  - memory/cpu/pid limits
+  - `--cap-drop=ALL`
+  - `--security-opt=no-new-privileges`
+  - seccomp profile
+  - apparmor profile
+  - read-only root fs
+  - tmpfs-only writable mounts
+  - timeout kill path
+
+### Egress air-gapping status (requested topic)
+AxiomMesh currently has **two relevant layers**:
+1. **Active runtime egress restriction in the Node sandbox runner** via `docker run --network=none` (implemented and used).
+2. **Additional Rust `airgap.rs` utility** that can apply per-PID netns iptables lockdown/restore through a UDS control socket. This exists in-repo but is **not currently wired into the default Node sandbox runtime path**.
+
+So: baseline egress isolation is active in execution containers, and a deeper namespace-level helper exists but is not fully integrated into service orchestration.
+
+---
+
+## Grid (Pillar 1)
+
+### What it does today
+- **Go API server** with endpoints including:
+  - `GET /health`
+  - `GET/POST /skills`
+  - `POST /stake`, `POST /slash`, `POST /bond/events`
+  - swarm endpoints
+  - web cache endpoints
+  - graph websocket endpoint
+  - CCIP sync endpoints
+  - zkML verification endpoint path used by Hypervisor.
+- **In-memory ledger** for skills, bonds, web cache, graph/index, swarms, CCIP messages.
+- **PoER gate** on skill submissions tied to active compute bond + PoER score threshold.
+- **P2P/transport loops** for discovery, peer score/failure tracking, sync/broadcast with retry/backoff.
+- **Graph query proof checks** using discrete-log-style NIZK verification helper.
+- **Deterministic-ish zkML verification workers** and artifact lifecycle caching for vk/settings/proof jobs.
+
+### Important caveats
+- Current ledger is in-memory (not persistent durable chain state).
+- Graph retrieval is token/index based and lightweight; not a full distributed ranked retrieval engine.
+- Smart contracts are present in `grid/contracts`, but live chain lifecycle reconciliation is still partial.
+
+---
+
+## 3) Cross-Cutting Features & Components (Beyond Main Pillars)
+
+- **Smart contracts (Hardhat)**:
+  - `DualLedgerIdentity.sol`
+  - `WeightOracle.sol`
+  - `DialecticArbitration.sol`
+  - `ComputeBond.sol`
+  with corresponding tests in `grid/contracts/test`.
+- **Schemas (`schemas/`)**:
+  versioned JSON schemas for `intent_object`, `intent_response`, `skill_vector`, `zkml_payload` contracts.
+- **CLI (`cli/axiom_cli.py`)**:
+  local terminal client that sends intents to Gateway.
+- **Install/bootstrap tooling**:
+  `install.sh` hardware scan + env prompt + startup flow.
+- **Make targets**:
+  convenience wrappers for up/down/cli/basic health checks.
+
+---
+
+## 4) What is Completed vs Expected
+
+## Completed / Operational
+- Multi-service runtime with health endpoints and dashboard/static UI serving.
+- Authenticated Gateway-to-Hypervisor intent path with trace IDs and basic provenance/audit metadata.
+- Constrained sandbox execution with active network disablement and container hardening args.
+- Grid API with staking/slashing/skills/swarms/cache/graph/zkml primitives.
+- External context hooks (NCP/MCP/oracle) and distributed archive sync attempts with degraded counters.
+
+## Implemented but Experimental / Prototype-grade
+- zkML verification flow and proof plumbing (works as implementation path, not yet full production trust ops).
+- AutoResearch/AutoTraining autonomous loops.
+- Explainability/audit metadata and policy hooks (currently scaffold + heuristic).
+- Distributed retrieval/sync behavior under network degradation.
+
+## Expected / Not fully realized yet
+- Production-grade, end-to-end chain-integrated bond lifecycle reconciliation and event finality operations.
+- Fully integrated advanced air-gap control plane (Rust UDS netns controller wired into sandbox orchestration).
+- Formalized operator-grade reasoning/safety auditor with immutable eventing and richer review UX.
+- More robust distributed graph search/ranking across peers and stronger persistence guarantees.
+
+---
+
+## 5) API Surface Quick Reference
+
+## Gateway (`:3000` REST, `:3001` WS)
+- `GET /health`
+- `POST /api/v1/intent/process`
+- `POST /api/v1/intent/process/public`
+- `GET /api/v1/status`
+- `GET /api/v1/metrics/system`
+- `POST /api/v1/metrics/cooperation`
+- `GET /api/v1/memory`
+- `PUT /api/v1/memory/:nodeId`
+- `DELETE /api/v1/memory/:nodeId`
+- `GET /api/v1/agents`
+- `GET/POST /api/v1/swarms`
+- `GET /api/v1/logs`
+- plus config/tester endpoints in routes file.
+
+## Hypervisor (`:8000`)
+- `POST /process`
+- `GET /health`
+- `GET /metrics`
+- `GET /agents`
+- `GET /memory`
+- `PUT /memory/{node_id}`
+- `DELETE /memory/{node_id}`
+- `POST /zkml/infer`
+
+## Sandbox (`:4000`)
+- `GET /health`
+- `POST /execute`
+
+## Grid (`:5000`)
+- `GET /health`
+- skills/stake/slash/bond-events
+- swarm/cache/ccip/graph/ws/zkml routes (see `grid/api/server.go` for exact handlers)
+
+---
+
+## 6) Runbook
+
+1. Create `.env` with at least:
+   - `GATEWAY_API_KEY`
+   - `HYPERVISOR_API_KEY`
+   - provider keys/config as needed.
+2. Start stack:
+   - `make up`
+3. Open dashboard:
+   - `http://localhost:3000` (API key required by current middleware model)
+4. Baseline checks:
+   - `curl http://localhost:3000/health`
+   - `curl http://localhost:8000/health`
+   - `curl http://localhost:4000/health`
+   - `curl http://localhost:5000/health`
+
+---
+
+## 7) Accuracy Notes
+
+This README intentionally avoids “aspirational as implemented” claims. If you are planning production use, treat the “Expected / Not fully realized yet” section as engineering backlog, not delivered guarantees.
