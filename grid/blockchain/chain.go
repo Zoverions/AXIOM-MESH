@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"strings"
 	"sync"
 
 	"github.com/axiom-mesh/grid/types"
@@ -11,6 +12,7 @@ type Ledger struct {
 	Skills       []types.SkillVector
 	WebCache     map[string]types.WebState
 	Graph        types.DistributedGraph
+	GraphIndex   map[string][]string // Token -> []NodeIDs
 	Bonds        map[string]types.ComputeBond
 	CCIPMessages map[string]types.CCIPMessage
 	Swarms       map[string]types.Swarm
@@ -24,6 +26,7 @@ func NewLedger() *Ledger {
 			Nodes: make(map[string]types.GraphNode),
 			Edges: make([]types.GraphEdge, 0),
 		},
+		GraphIndex:   make(map[string][]string),
 		Bonds:        make(map[string]types.ComputeBond),
 		CCIPMessages: make(map[string]types.CCIPMessage),
 		Swarms:       make(map[string]types.Swarm),
@@ -116,6 +119,96 @@ func (l *Ledger) UpdateGraph(node types.GraphNode, edges []types.GraphEdge) {
 	defer l.mu.Unlock()
 	l.Graph.Nodes[node.ID] = node
 	l.Graph.Edges = append(l.Graph.Edges, edges...)
+
+	// Update index
+	tokens := strings.Fields(strings.ToLower(node.Content))
+	for _, kw := range node.Keywords {
+		tokens = append(tokens, strings.ToLower(kw))
+	}
+
+	seenTokens := make(map[string]bool)
+	for _, t := range tokens {
+		t = strings.Trim(t, ".,;!?\"'")
+		if t != "" && !seenTokens[t] {
+			l.GraphIndex[t] = append(l.GraphIndex[t], node.ID)
+			seenTokens[t] = true
+		}
+	}
+}
+
+func (l *Ledger) SearchGraph(query string) []types.GraphNode {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	query = strings.ToLower(strings.TrimSpace(query))
+	if query == "" {
+		// If empty query, return all nodes
+		nodes := make([]types.GraphNode, 0, len(l.Graph.Nodes))
+		for _, node := range l.Graph.Nodes {
+			nodes = append(nodes, node)
+		}
+		return nodes
+	}
+
+	queryTokens := strings.Fields(query)
+	if len(queryTokens) == 0 {
+		return nil
+	}
+
+	// Simple AND logic for tokens
+	// Start with the set of nodes for the first token
+	var currentNodes []string
+	firstToken := strings.Trim(queryTokens[0], ".,;!?\"'")
+
+	// Check exact token matches first, then partial matches
+	matchedNodesMap := make(map[string]bool)
+
+	for token, nodeIDs := range l.GraphIndex {
+		if strings.Contains(token, firstToken) {
+			for _, id := range nodeIDs {
+				matchedNodesMap[id] = true
+			}
+		}
+	}
+
+	for id := range matchedNodesMap {
+		currentNodes = append(currentNodes, id)
+	}
+
+	for i := 1; i < len(queryTokens); i++ {
+		token := strings.Trim(queryTokens[i], ".,;!?\"'")
+		if token == "" {
+			continue
+		}
+
+		nextTokenMatchedNodesMap := make(map[string]bool)
+		for indexToken, nodeIDs := range l.GraphIndex {
+			if strings.Contains(indexToken, token) {
+				for _, id := range nodeIDs {
+					nextTokenMatchedNodesMap[id] = true
+				}
+			}
+		}
+
+		var nextCurrentNodes []string
+		for _, id := range currentNodes {
+			if nextTokenMatchedNodesMap[id] {
+				nextCurrentNodes = append(nextCurrentNodes, id)
+			}
+		}
+		currentNodes = nextCurrentNodes
+		if len(currentNodes) == 0 {
+			break
+		}
+	}
+
+	results := make([]types.GraphNode, 0, len(currentNodes))
+	for _, id := range currentNodes {
+		if node, ok := l.Graph.Nodes[id]; ok {
+			results = append(results, node)
+		}
+	}
+	return results
 }
 
 func (l *Ledger) GetGraph() types.DistributedGraph {
