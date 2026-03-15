@@ -233,10 +233,11 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api
         audit_trail["safety_decisions"]["arena_verification"] = "Passed"
 
         # Automatically store new interactions in Deep Archive
+        metadata_to_store = {"session_id": intent.session_id}
         if hasattr(context_engine.deep_archive, "sync_to_grid") and asyncio.iscoroutinefunction(context_engine.deep_archive.sync_to_grid):
-            await context_engine.deep_archive.sync_to_grid(content)
+            await context_engine.deep_archive.sync_to_grid(content, metadata_to_store)
         else:
-            context_engine.deep_archive.add(content=content)
+            context_engine.deep_archive.add(content=content, metadata=metadata_to_store)
 
         # Update interaction history for next-state signal recovery
         context_engine.interaction_history.append({
@@ -246,6 +247,26 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api
             "sender": sender
         })
 
+        # Mock confidence and provenance based on context presence
+        confidence = 0.95 if "DEEP ARCHIVE CONTEXT" in context and len(context) > 2000 else 0.75
+        provenance = []
+        if "EXTERNAL NCP CONTEXT" in context:
+            provenance.append("NCP")
+        if "EXTERNAL MCP CONTEXT" in context:
+            provenance.append("MCP")
+        if "TRUTH CONTEXT" in context:
+            provenance.append("Chainlink Oracle")
+        if not provenance:
+            provenance.append("Base Model")
+
+        return IntentResponse(
+            id=str(uuid.uuid4()),
+            intent_id=intent.id,
+            response=raw_response,
+            status="success",
+            confidence=confidence,
+            provenance=provenance
+        )
         return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=raw_response, status="success", audit_trail=audit_trail)
     except Exception as e:
         return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Hypervisor error: {str(e)}", status="error")
@@ -253,6 +274,27 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "component": "hypervisor"}
+
+@app.get("/memory")
+async def get_memory(session_id: str = None):
+    memories = context_engine.deep_archive.get_all(session_id)
+    return {"status": "success", "memories": memories}
+
+@app.delete("/memory/{node_id}")
+async def delete_memory(node_id: str):
+    success = context_engine.deep_archive.delete(node_id)
+    if success:
+        return {"status": "success"}
+    return {"status": "error", "message": "Memory node not found"}
+
+@app.put("/memory/{node_id}")
+async def edit_memory(node_id: str, update_data: dict):
+    new_content = update_data.get("content")
+    metadata_updates = update_data.get("metadata", {})
+    success = context_engine.deep_archive.edit(node_id, new_content, metadata_updates)
+    if success:
+        return {"status": "success"}
+    return {"status": "error", "message": "Memory node not found"}
 
 @app.post("/zkml/infer")
 async def zkml_infer(input_data: dict):

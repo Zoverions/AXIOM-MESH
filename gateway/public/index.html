@@ -22,6 +22,7 @@
             </div>
             <nav>
                 <button class="nav-btn active" data-target="chat">Chat Interface</button>
+                <button class="nav-btn" data-target="memory">Memory Controls</button>
                 <button class="nav-btn" data-target="status">System Status</button>
                 <button class="nav-btn" data-target="agents">Active Agents</button>
                 <button class="nav-btn" data-target="swarms">Swarm Orchestration</button>
@@ -37,11 +38,34 @@
             <!-- Chat Tab -->
             <section id="chat" class="tab-content active">
                 <div class="chat-container">
+                    <div class="chat-controls" style="padding: 10px; background: #2a2a2a; display: flex; gap: 10px; align-items: center;">
+                        <label for="response-style" style="color: #ccc;">Response Style:</label>
+                        <select id="response-style" style="padding: 5px; border-radius: 4px; border: 1px solid #444; background: #333; color: white;">
+                            <option value="standard">Standard</option>
+                            <option value="concise">Concise</option>
+                            <option value="analytical">Analytical</option>
+                            <option value="socratic">Socratic</option>
+                        </select>
+                    </div>
                     <div id="chat-messages" class="messages"></div>
                     <div class="input-area">
                         <input type="text" id="chat-input" placeholder="Enter intent or command (e.g., /dialectic AGI)">
                         <button id="chat-send">Send</button>
                     </div>
+                </div>
+            </section>
+
+            <!-- Memory Tab -->
+            <section id="memory" class="tab-content">
+                <h2>Memory Controls</h2>
+                <div class="actions" style="margin-bottom: 1rem;">
+                    <button id="refresh-memory">Refresh Memory</button>
+                    <label>
+                        <input type="checkbox" id="show-all-memory"> Show All Users (Admin)
+                    </label>
+                </div>
+                <div id="memory-grid" class="agents-grid">
+                    <p>Loading memory states...</p>
                 </div>
             </section>
 

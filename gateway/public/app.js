@@ -37,6 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById(targetId).classList.add("active");
 
             // Auto-refresh logic on tab load
+            if (targetId === 'memory') fetchMemory();
             if (targetId === 'status') fetchStatus();
             if (targetId === 'agents') fetchAgents();
             if (targetId === 'swarms') fetchSwarms();
@@ -54,6 +55,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const chatMessages = document.getElementById("chat-messages");
     const chatInput = document.getElementById("chat-input");
     const chatSendBtn = document.getElementById("chat-send");
+    const responseStyleSelect = document.getElementById("response-style");
+
+    // --- Session ID Management ---
+    let sessionId = localStorage.getItem('axiom_session_id');
+    if (!sessionId) {
+        sessionId = 'sess_' + Math.random().toString(36).substring(2, 15);
+        localStorage.setItem('axiom_session_id', sessionId);
+    }
 
     let ws = null;
 
@@ -67,6 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (data.error) {
                 appendMessage('system', `Error: ${data.error}`);
             } else if (data.response) {
+                appendMessage('agent', data.response, data.confidence, data.provenance);
                 appendMessage('agent', data.response);
                 if (data.audit_trail) {
                     auditHistory.push({
@@ -112,7 +122,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Initial connection
     connectWebSocket();
 
-    function appendMessage(sender, text) {
+    function appendMessage(sender, text, confidence, provenance) {
         const msgDiv = document.createElement("div");
         msgDiv.className = `message ${sender}-message`;
 
@@ -120,6 +130,26 @@ document.addEventListener("DOMContentLoaded", () => {
         const pre = document.createElement("pre");
         pre.textContent = text;
         msgDiv.appendChild(pre);
+
+        if (sender === 'agent' && (confidence !== undefined || provenance?.length > 0)) {
+            const metaDiv = document.createElement("div");
+            metaDiv.className = "message-meta";
+            metaDiv.style.fontSize = "0.8em";
+            metaDiv.style.color = "#888";
+            metaDiv.style.marginTop = "5px";
+
+            let metaHtml = "";
+            if (confidence !== undefined) {
+                const confPercent = (confidence * 100).toFixed(1);
+                const confColor = confidence > 0.8 ? '#4caf50' : (confidence > 0.5 ? '#ffeb3b' : '#f44336');
+                metaHtml += `<span style="color: ${confColor}; font-weight: bold;">Confidence: ${confPercent}%</span>`;
+            }
+            if (provenance?.length > 0) {
+                metaHtml += ` | <span>Sources: ${provenance.join(', ')}</span>`;
+            }
+            metaDiv.innerHTML = metaHtml;
+            msgDiv.appendChild(metaDiv);
+        }
 
         chatMessages.appendChild(msgDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -132,7 +162,13 @@ document.addEventListener("DOMContentLoaded", () => {
         appendMessage('user', text);
         chatInput.value = '';
 
+        const style = responseStyleSelect ? responseStyleSelect.value : 'standard';
+
+        // Using REST for chat temporarily if WebSocket structure expects only input/session_id
+        // Or inject style into the message if supported. Let's send via WebSocket metadata if available.
+        // Actually, intent_parser is strict. We'll update the websocket payload slightly.
         if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ input: text, session_id: sessionId, modality: style }));
             const payload = {
                 id: crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now(),
                 identity_hash: 'web-user-hash',
@@ -218,6 +254,88 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 });
+
+    // --- Memory Logic ---
+    async function fetchMemory() {
+        const grid = document.getElementById('memory-grid');
+        const showAll = document.getElementById('show-all-memory').checked;
+        grid.innerHTML = '<p>Loading memory states...</p>';
+        try {
+            const url = showAll ? '/api/v1/memory' : `/api/v1/memory?session_id=${sessionId}`;
+            const res = await fetch(url);
+            const data = await res.json();
+
+            if (data.memories && data.memories.length > 0) {
+                grid.innerHTML = '';
+                data.memories.forEach(mem => {
+                    const card = document.createElement('div');
+                    card.className = 'agent-card';
+                    card.style.position = 'relative';
+                    const consent = mem.metadata?.consent || 'allowed';
+                    card.innerHTML = `
+                        <h3>ID: ${mem.id.substring(0, 8)}...</h3>
+                        <p><strong>Content:</strong> <textarea class="edit-memory-content" data-id="${mem.id}" style="width: 100%; min-height: 60px; background: #333; color: white; border: 1px solid #555; padding: 5px;">${mem.content}</textarea></p>
+                        <p><strong>Session:</strong> ${mem.metadata?.session_id || 'Unknown'}</p>
+                        <p><strong>Consent Scope:</strong>
+                            <select class="edit-memory-consent" data-id="${mem.id}" style="padding: 5px; border-radius: 4px; border: 1px solid #444; background: #333; color: white;">
+                                <option value="allowed" ${consent === 'allowed' ? 'selected' : ''}>Allowed for Training & Context</option>
+                                <option value="context_only" ${consent === 'context_only' ? 'selected' : ''}>Context Only (Do Not Train)</option>
+                                <option value="revoked" ${consent === 'revoked' ? 'selected' : ''}>Revoked (Do Not Use)</option>
+                            </select>
+                        </p>
+                        <button class="save-memory-btn" data-id="${mem.id}" style="margin-top: 10px; background-color: #4caf50;">Save</button>
+                        <button class="delete-memory-btn" data-id="${mem.id}" style="margin-top: 10px; background-color: #d9534f;">Forget</button>
+                    `;
+                    grid.appendChild(card);
+                });
+
+                document.querySelectorAll('.delete-memory-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const id = e.target.getAttribute('data-id');
+                        await fetch(`/api/v1/memory/${id}`, { method: 'DELETE' });
+                        fetchMemory();
+                    });
+                });
+
+                document.querySelectorAll('.save-memory-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const id = e.target.getAttribute('data-id');
+                        const contentEl = document.querySelector(`.edit-memory-content[data-id="${id}"]`);
+                        const consentEl = document.querySelector(`.edit-memory-consent[data-id="${id}"]`);
+
+                        const newContent = contentEl.value;
+                        const newConsent = consentEl.value;
+
+                        await fetch(`/api/v1/memory/${id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                content: newContent,
+                                metadata: { consent: newConsent }
+                            })
+                        });
+
+                        btn.textContent = 'Saved!';
+                        setTimeout(() => { btn.textContent = 'Save'; }, 2000);
+                    });
+                });
+            } else {
+                grid.innerHTML = '<p>No memories found.</p>';
+            }
+        } catch (error) {
+            console.error('Failed to fetch memory:', error);
+            grid.innerHTML = '<p>Failed to load memory states. Is the hypervisor offline?</p>';
+        }
+    }
+
+    const refreshMemoryBtn = document.getElementById('refresh-memory');
+    if (refreshMemoryBtn) {
+        refreshMemoryBtn.addEventListener('click', fetchMemory);
+    }
+    const showAllMemoryCb = document.getElementById('show-all-memory');
+    if (showAllMemoryCb) {
+        showAllMemoryCb.addEventListener('change', fetchMemory);
+    }
 
     // --- Agents Logic ---
     async function fetchAgents() {

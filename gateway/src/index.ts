@@ -70,7 +70,9 @@ wss.on('connection', (ws: WebSocket, req: any) => {
     ws.on('message', async (message: Buffer) => {
         try {
             const data = parseAndSanitizeIntent(message.toString());
-            const intent = normalizeInput('websocket', data.input, { identity_hash: data.identity_hash });
+            const session_id = data.session_id || 'default_ws_session';
+            const metadata = { identity_hash: data.identity_hash, response_style: data.modality || 'standard' };
+            const intent = normalizeInput(session_id, 'websocket', data.input, metadata);
 
             // Send pending acknowledgment
             ws.send(JSON.stringify({ status: 'pending', intent_id: intent.id }));
@@ -104,7 +106,8 @@ async function startChannels() {
         if (factory) {
             const channel = factory({
                 onMessage: async (channelName, chatId, content, sender) => {
-                    const intent = normalizeInput(channelName, content, { chatId, sender });
+                    const session_id = chatId || 'default';
+                    const intent = normalizeInput(session_id, channelName, content, { chatId, sender });
                     console.log(`[${channelName}] Received message from ${sender} (chat: ${chatId}): ${content}`);
 
                     const response = await sendToHypervisor(intent);

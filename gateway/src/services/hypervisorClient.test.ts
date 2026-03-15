@@ -24,6 +24,7 @@ describe('hypervisorClient', () => {
     describe('sendToHypervisor', () => {
         const mockIntent: IntentObject = {
             id: 'intent-123',
+            session_id: 'session-123',
             channel: 'test-channel',
             content: 'test content',
             metadata: {},

@@ -55,6 +55,7 @@ class ContextEngine:
     async def get_context(self, intent: IntentObject) -> str:
         intent_content = intent.content
         metadata = intent.metadata or {}
+        session_id = intent.session_id
         sender = metadata.get("sender", "unknown")
 
         # Tier 3 Retrieval
@@ -109,6 +110,17 @@ class ContextEngine:
 
         # Axioms (allowing for metadata override for testing/comparison)
         axioms = metadata.get("axioms_override", self.axioms)
+        response_style = metadata.get("response_style", "standard")
+
+        style_instruction = ""
+        if response_style == "concise":
+            style_instruction = "Response Style: Be extremely concise, brief, and direct. Skip pleasantries."
+        elif response_style == "analytical":
+            style_instruction = "Response Style: Be highly analytical. Break down the problem logically with deep reasoning."
+        elif response_style == "socratic":
+            style_instruction = "Response Style: Use the Socratic method. Guide the user with questions rather than just providing the answer."
+        else:
+            style_instruction = "Response Style: Standard AxiomMesh protocol."
 
         # Apply Adaptive interaction policies
         mode = self.user_preferences.get(sender)
@@ -123,6 +135,7 @@ class ContextEngine:
 
         context_str = (
             f"--- TIER 1: SYSTEM AXIOMS ---\n{axioms}\n\n"
+            f"--- TIER 1: RESPONSE STYLE ---\n{style_instruction}\n\n"
         )
 
         if collapsed_state:

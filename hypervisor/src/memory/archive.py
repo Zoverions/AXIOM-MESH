@@ -172,6 +172,46 @@ class DeepArchive:
             for node_id in traversed_nodes
         ]
 
+    def get_all(self, session_id: str = None) -> List[Dict]:
+        with open(self.storage_path, "r") as f:
+            data = json.load(f)
+
+        results = []
+        for node_id, node in data.get("nodes", {}).items():
+            metadata = node.get("metadata", {})
+            if session_id is None or metadata.get("session_id") == session_id:
+                results.append({"id": node_id, "content": node["content"], "metadata": metadata})
+        return results
+
+    def delete(self, node_id: str) -> bool:
+        with open(self.storage_path, "r") as f:
+            data = json.load(f)
+
+        if node_id in data.get("nodes", {}):
+            del data["nodes"][node_id]
+            data["edges"] = [e for e in data.get("edges", []) if e["source"] != node_id and e["target"] != node_id]
+            with open(self.storage_path, "w") as f:
+                json.dump(data, f, indent=2)
+            return True
+        return False
+
+    def edit(self, node_id: str, new_content: str = None, metadata_updates: Dict = None) -> bool:
+        with open(self.storage_path, "r") as f:
+            data = json.load(f)
+
+        if node_id in data.get("nodes", {}):
+            if new_content is not None:
+                data["nodes"][node_id]["content"] = new_content
+            if metadata_updates is not None:
+                if "metadata" not in data["nodes"][node_id]:
+                    data["nodes"][node_id]["metadata"] = {}
+                data["nodes"][node_id]["metadata"].update(metadata_updates)
+
+            with open(self.storage_path, "w") as f:
+                json.dump(data, f, indent=2)
+            return True
+        return False
+
     def add(self, content: str, metadata: Dict = None) -> None:
         data = self._load_data()
 

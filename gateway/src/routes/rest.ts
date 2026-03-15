@@ -16,7 +16,28 @@ const ENV_PATH = fs.existsSync('/app/.env') ? '/app/.env' : path.resolve(__dirna
 
 const router = Router();
 
-router.post('/api/v1/intent/process', authMiddleware, async (req: Request, res: Response) => {
+// Middleware to authenticate REST requests
+const authMiddleware = (req: Request, res: Response, next: Function) => {
+    const apiKey = process.env.GATEWAY_API_KEY;
+
+    if (!apiKey) {
+        return res.status(500).json({ error: 'Server configuration error: GATEWAY_API_KEY is not set' });
+    }
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized: Missing or invalid Authorization header' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    if (token !== apiKey) {
+        return res.status(403).json({ error: 'Forbidden: Invalid API Key' });
+    }
+
+    next();
+};
+
+router.post('/api/v1/intent/process/public', async (req: Request, res: Response) => {
     try {
         const { channel, content, metadata } = req.body;
         if (!content) {
@@ -24,7 +45,28 @@ router.post('/api/v1/intent/process', authMiddleware, async (req: Request, res: 
             return;
         }
 
-        const intent = normalizeInput(channel || 'api', content, metadata);
+        // Only allow process from public if it's for comparison/testing
+        // and doesn't contain sensitive data
+        const session_id = req.body.session_id || 'public_test_session';
+        const intent = normalizeInput(session_id, channel || 'tester', content, metadata);
+        const response = await sendToHypervisor(intent);
+
+        res.json(response);
+    } catch (error) {
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+router.post('/api/v1/intent/process', authMiddleware, async (req: Request, res: Response) => {
+    try {
+        const { session_id, channel, content, metadata } = req.body;
+        if (!content) {
+            res.status(400).json({ error: 'Content is required' });
+            return;
+        }
+
+        const sid = session_id || 'api_session';
+        const intent = normalizeInput(sid, channel || 'api', content, metadata);
         const response = await sendToHypervisor(intent);
 
         res.json(response);
@@ -118,6 +160,38 @@ router.get('/api/v1/status', authMiddleware, async (req: Request, res: Response)
     } catch {}
 
     res.json(statuses);
+});
+
+// --- Memory API ---
+router.get('/api/v1/memory', async (req: Request, res: Response) => {
+    try {
+        const sessionId = req.query.session_id as string | undefined;
+        const url = process.env.HYPERVISOR_URL + '/memory' + (sessionId ? `?session_id=${sessionId}` : '');
+        const hypervisorRes = await axios.get(url);
+        res.json(hypervisorRes.data);
+    } catch (error: any) {
+        res.status(500).json({ error: 'Failed to fetch memory from Hypervisor', details: error.message });
+    }
+});
+
+router.delete('/api/v1/memory/:nodeId', async (req: Request, res: Response) => {
+    try {
+        const { nodeId } = req.params;
+        const hypervisorRes = await axios.delete(process.env.HYPERVISOR_URL + `/memory/${nodeId}`);
+        res.json(hypervisorRes.data);
+    } catch (error: any) {
+        res.status(500).json({ error: 'Failed to delete memory', details: error.message });
+    }
+});
+
+router.put('/api/v1/memory/:nodeId', async (req: Request, res: Response) => {
+    try {
+        const { nodeId } = req.params;
+        const hypervisorRes = await axios.put(process.env.HYPERVISOR_URL + `/memory/${nodeId}`, req.body);
+        res.json(hypervisorRes.data);
+    } catch (error: any) {
+        res.status(500).json({ error: 'Failed to edit memory', details: error.message });
+    }
 });
 
 // --- Logs API ---

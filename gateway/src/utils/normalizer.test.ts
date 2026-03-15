@@ -28,10 +28,11 @@ describe('normalizeInput', () => {
     const channel = 'discord';
     const content = 'Hello world';
 
-    const result = normalizeInput(channel, content);
+    const result = normalizeInput('session-1', channel, content);
 
     expect(result).toEqual({
       id: mockUuid,
+      session_id: 'session-1',
       channel,
       content,
       metadata: {},
@@ -49,10 +50,11 @@ describe('normalizeInput', () => {
     const content = 'Test message';
     const metadata = { userId: 'user-123', isCommand: true };
 
-    const result = normalizeInput(channel, content, metadata);
+    const result = normalizeInput('session-2', channel, content, metadata);
 
     expect(result).toEqual({
       id: mockUuid,
+      session_id: 'session-2',
       channel,
       content,
       metadata,
