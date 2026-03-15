@@ -1,100 +1,149 @@
 # AxiomMesh v2.5.0
 
-AxiomMesh is a decentralized cognitive operating system designed to serve as the foundational infrastructure for the next generation of autonomous intelligence. Every installation is a Node acting as a private, multi-channel AI assistant and a distributed compute/memory block for the peer-to-peer network.
+AxiomMesh is a multi-service platform for running an AI interaction stack across four services:
+- **Gateway (TypeScript/Node):** REST + WebSocket ingress, dashboard, channel adapters.
+- **Hypervisor (Python/FastAPI):** context assembly, memory/archive, safety gates, orchestration.
+- **Sandbox (TypeScript/Node):** ephemeral code execution through Docker.
+- **Grid (Go):** peer networking, cache/graph sync, PoER/zk verification endpoints.
 
-## Core Architectural Concepts (v2.5.0 Updates)
-- **Temporal State Collapse**: An absolute countermeasure to Proactive Interference. The Cognitive Hypervisor manages mutating variables externally via `TemporalStateManager`, tracking state changes via hash maps and injecting only the definitively latest state into the context, ruthlessly purging historical noise.
-- **RIKER Decoupling & Strict Context Cap**: Separates fact retrieval from verification. Enforces a strict 8K-16K context limit to prevent Context Degradation Spikes.
-- **AutoResearch Daemon**: Background thread that performs epistemic foraging via external sources (NCP/ArXiv/Wikipedia/Grokipedia), then compiles/ranks findings into Tier 3 archive entries.
-- **Uncertainty Optimization & Arena**: Explicitly rewards the AI for halting execution and stating "I do not know", preventing guessing. The `VerificationArena` applies adversarial verification before sensitive operations.
-- **3-Tier Memory Protocol**:
-  - **Tier 1 (Axioms & Collapsed State)**: The core system instructions and the latest, pristine key-value pairs of active tracking tasks.
-  - **Tier 2 (Expert Vectors)**: Skill vectors containing contrastive logic equations via Agentic Critical Training (ACT).
-  - **Tier 3 (Deep Archive)**: Hierarchical Graph Retrieval (GraphRAG) mapping interaction history and web state graphs, strictly avoiding flat RAG.
-- **Thermodynamic Ethical Reasoning**: Evaluates all actions based strictly on information theory and thermodynamics, where entropy reduction is good and chaos is bad.
-- **Dialectic Cognitive Partitioning**: Implemented orchestrator flow that generates thesis/antithesis and synthesizes a structural truth response.
-- **Pluralistic Vector Alignment**: Prevents LLM mode collapse (The Artificial Hivemind) by dynamically altering sampling parameters to reward non-homogenized outputs.
-- **Distributed GraphRAG (Tier 3 Expansion)**: Implementing a decentralized version of the Deep Archive via WebSockets and Zero-Knowledge Proofs, allowing nodes to query verified subset graphs over the P2P network securely without revealing personal user states.
-- **Hardware-Aware ACT Routines**: Modifying the Evolution Engine (Agentic Critical Training) to adapt logic equations and contrastive actions based on the specific computing footprint and available VRAM of the hardware node.
-- **Federated State-Machine Caching**: Allowing nodes to share pre-compiled JSON Web State Graphs to a decentralized cache, reducing crawler footprint across the network and boosting execution speeds of the ActionEngine Web Compiler.
-- **PoER Staking & Compute Bonds**: Building a smart contract mechanism into Pillar 1 where nodes actively stake trust bonds behind their Proof of Entropy Reduction mathematical verifications to secure edge subnets.
+---
 
 ## Architecture
-- **Pillar 1: Grid (Go)** - P2P Network, PoER Consensus
-- **Pillar 2: Hypervisor (Python)** - Context 2.0 Engine, The Pulse, Evolution, Temporal State Manager
-- **Pillar 3: Sandbox (Node.js)** - Ephemeral Code Execution (WASM/Docker)
-- **Pillar 4: Gateway (TypeScript)** - REST & WS Intent Normalization
+- **Pillar 1: Grid (Go)** — P2P node, signatures, cache, graph sync, consensus helpers.
+- **Pillar 2: Hypervisor (Python)** — Context engine, archive, AutoResearch, arena/pulse guards, zkML edge proving endpoint.
+- **Pillar 3: Sandbox (Node.js)** — Docker-based Python/Node code execution endpoint.
+- **Pillar 4: Gateway (TypeScript)** — REST + WS APIs, static dashboard, channel integrations (Discord/Slack/Telegram/WhatsApp).
 
-## Automated Installation (New!)
-AxiomMesh now includes a fully automated interactive installer and hardware scanner to determine the best local LLM configurations.
+---
 
-1. Run `./install.sh` from the root directory.
-   - The script will scan your CPU, RAM, and GPU (NVIDIA or Apple Silicon) to recommend a fallback model.
-   - It will prompt you to interactively configure your `.env` (API Keys, Discord Token, WhatsApp Session, and NCP Servers).
-   - Once configured, it will automatically build and start the docker container environment via `make up`.
+## Current Deployment Reality (Code Audit)
 
-2. Access the new Web Dashboard at [http://localhost:3000](http://localhost:3000)
+This section reflects the current codebase behavior and replaces earlier duplicate/overstated roadmap entries.
 
-## The Web Dashboard
-The system now serves a comprehensive web interface directly from the Omni-Gateway.
-- **Chat Interface:** Directly interact with the agent using text via WebSocket.
-- **System Status:** View the live health of the Gateway, Hypervisor, Sandbox, and Grid nodes.
-- **Settings / Config:** Reconfigure API keys, switch providers, and edit external channel connections dynamically without restarting manually.
-- **Logs & Troubleshooting:** View live docker-compose output to monitor running agent threads.
+### 1) Running services and baseline health
+- `docker-compose.yml` starts `gateway`, `hypervisor`, `sandbox`, `grid`, and `ipfs`.
+- Gateway aggregates status checks for Hypervisor/Sandbox/Grid and serves a static dashboard UI.
+- Hypervisor, Sandbox, and Grid each expose `/health` endpoints.
 
-## NCP (Node Context Protocol) Integration
-AxiomMesh can now natively connect to external intelligence via NCP servers.
-- When an intent is processed, the Python Hypervisor (`NCPClient`) queries configured servers (defined as a comma-separated list in `.env` under `NCP_SERVERS`).
-- It fetches extra context and appends it to the LLM context prompt, bridging external networks dynamically.
+### 2) Feature audit by pillar
 
-## Interactive Commands
-- `/dialectic <topic>`: Generates a dialectic synthesis for a topic.
-- `/exec <code>`: Executes Python code in an ephemeral sandbox.
-- `/sync_skills`: Syncs skills with the Grid network.
+#### Gateway (Pillar 4)
+**Implemented and usable**
+- REST intent processing (`/api/v1/intent/process`) with API-key middleware.
+- Public test endpoint (`/api/v1/intent/process/public`).
+- Web dashboard tabs (chat/status/agents/network/settings/logs/tester).
+- Config read/write endpoints for `.env` and local-only guard.
+- Channel registry and concrete adapters for Discord/Slack/Telegram/WhatsApp.
 
+**Partial / caveats**
+- WebSocket message contract mismatch: server expects a strict schema (`id`, `identity_hash`, `modality`, `input`, `timestamp`) while dashboard chat sends `{ content }`, causing invalid-message errors in normal use.
+- Logs endpoint only has full multi-container visibility when Docker socket is mounted in Gateway.
+- Auth posture is mixed: protected production intent endpoint exists, but public endpoint is intentionally open for testing.
 
-## Current Implementation Status (March 2026)
+#### Hypervisor (Pillar 2)
+**Implemented and usable**
+- Context assembly merges axioms, temporal state, archive search, NCP/MCP context, and optional oracle data.
+- Deep archive with graph-like node/edge storage, keyword-based retrieval, and distributed sync/query hooks.
+- Dialectic command (`/dialectic`), sandbox execution command (`/exec`), and skill sync command (`/sync_skills`).
+- Arena + pulse checks applied before returning responses.
+- AutoResearch daemon fetches from multiple real external sources (NCP/ArXiv/Wikipedia/Crossref/Grokipedia) with retry, dedupe, and confidence scoring.
 
-The repository is actively evolving and not all roadmap features are production-complete yet.
+**Partial / caveats**
+- `/process` route depends on `HYPERVISOR_API_KEY`; if absent, service returns server configuration errors.
+- `process_intent` references `asyncio` without importing it, which can trigger runtime errors on archive sync path.
+- AutoTraining loop parses sandbox output incorrectly (expects `stdout` at top-level rather than nested under `result`), so mutation scoring flow is not reliably effective.
+- Chainlink oracle integration is endpoint-based and heuristic (feed mapping by query keywords), not an on-chain verified oracle consumer implementation.
 
-### What is currently working
-- Core multi-service architecture exists and is runnable via Docker Compose (`gateway`, `hypervisor`, `sandbox`, `grid`).
-- Hypervisor memory/archive pipeline supports local graph storage plus distributed sync/query scaffolding (IPFS/Arweave endpoints + Grid WS hooks).
-- AutoResearch daemon performs real external fetch attempts (NCP, ArXiv, Wikipedia) and ranks/deduplicates sources before archiving.
-- Verification Arena and dialectic synthesis paths are implemented and callable from the API layer.
-- Grid P2P node supports peer tracking, scoring, eviction logic, graph broadcast/query, and CCIP transport reconciliation loops.
+#### Sandbox (Pillar 3)
+**Implemented and usable**
+- `/execute` for Python/Node snippets via `docker run` with memory limits and timeout.
+- `/health` endpoint.
 
-### What is still partial / in-progress
-- Zero-knowledge proof paths are currently lightweight protocol proofs (not production-grade zk-SNARK/zk-STARK systems).
-- zkML prover is still a simulated flow intended for interface validation, not a cryptographic proof backend.
-- Several distributed/network features are best-effort and may require environment-specific services (IPFS node, Arweave gateway, reachable peers) for full behavior.
+**Partial / caveats**
+- Security isolation is minimal (container limits + timeout), but no seccomp profile, filesystem policy, or network egress control is enforced in runner arguments.
 
-## Development Roadmap & Status
+#### Grid (Pillar 1)
+**Implemented and usable**
+- HTTP APIs: health, skills, stake, swarm/join, cache, zkml/verify, ccip.
+- UDP peer discovery, heartbeat/eviction, peer scoring/failure tracking.
+- Broadcast and sync loops for CCIP messages, swarms, web cache, graph updates.
+- Graph websocket supports query/sync with signature checks and NIZK proof verification helper.
 
-Based on the master specification, AxiomMesh follows a 5-phase strict initialization sequence:
+**Partial / caveats**
+- Graph query handler still performs local substring search in memory and is explicitly marked as simulated search behavior.
+- Proof systems are lightweight protocol implementations; they are not a complete production trust layer on their own.
+- Smart contract code exists (ComputeBond), but no live chain deployment or runtime integration path is wired into Grid API execution.
 
-- [x] **Phase 1 (The Skeleton)**: Omni-Gateway (Pillar 4) and Cognitive Hypervisor (Pillar 2) constructed with local HTTP/WebSocket communication normalizing intent objects.
-- [x] **Phase 2 (The Muscle)**: Execution Sandbox (Pillar 3) integrated to isolate and run ephemeral Python/Bash scripts securely.
-- [x] **Phase 3 (The Cortex)**: Implementation of Context 2.0 Engine, Temporal State Manager (Temporal State Collapse), Divergence Engine, and the 3-Tier memory system.
-- [x] **Phase 4 (The Grid)**: Building the P2P Go Node (Pillar 1), establishing the Proof of Entropy Reduction (PoER) ledger, and subnet discovery.
-- [x] **Phase 5 (The Evolution)**: Implementing the ActionEngine Web Compiler (State-Machine Web Memory), the recursive update loop via Agentic Critical Training (ACT), and offline web mapping.
+### 3) Mock/synthetic/simulated areas still present
+- **Simulated graph query behavior** in Grid websocket handler comment/path.
+- **AutoTraining "human approval" gate** is environment-variable simulated rather than true human-in-the-loop workflow.
+- **OpenClaw distillation** enforces a hardcoded sender identity check (`Owner`), which is a placeholder identity/auth model.
+- **Distributed/consensus workflows** depend heavily on local networking assumptions and external infra availability (IPFS, Arweave, peers, oracle endpoint, MCP/NCP servers).
 
-## To Do List
-- Harden AutoResearch resiliency (source diversity, retry policy, provenance confidence metrics, and better offline behavior).
-- Implement self-improvement and domain-specific improvement protocols.
-- Add ability to assign resources and localized computing to the decentralized network to enable task-specific engagement, reasoning, and distributed computing.
-- Build an interface to specify what resources, data, or model structures are allowed to be shared.
-- Upgrade current lightweight ZKP protocol flow to production-grade cryptographic proof systems and verifiers.
-- Expand Verification Arena and dialectic orchestration with stronger adversarial test suites and structured evaluator feedback loops.
-- [x] Remove the P2P Graph Query mock and Peer discovery mock in `grid/p2p/node.go` with a fully connected decentralized topology implementation.
-- [x] Implement **Zero-Knowledge Machine Learning (zkML)** for verifiable inference on the edge nodes.
-- [x] Implement **Ethereum/Polygon L2 Smart Contracts** (e.g., Arbitrum) for on-chain compute bond slashing.
-- [x] Integrate **IPFS/Arweave** for persistent decentralized storage of the Tier 3 Memory graphs.
-- Remove the P2P Graph Query mock and Peer discovery mock in `grid/p2p/node.go` with a fully connected decentralized topology implementation.
-- [x] Implement **Zero-Knowledge Machine Learning (zkML)** for verifiable inference on the edge nodes.
-- [x] Implement **Ethereum/Polygon L2 Smart Contracts** (e.g., Arbitrum) for on-chain compute bond slashing.
-- [x] Integrate **IPFS/Arweave** for persistent decentralized storage of the Tier 3 Memory graphs.
-- Fix asyncio RuntimeWarnings related to un-awaited mocked functions.
-- [x] Add **Chainlink Oracles** for verifiable off-chain data feeds to enhance the Truth Context.
-- [x] Develop **Multi-Agent Swarm Orchestration** allowing nodes to dynamically group together to solve high-compute problems.
-- [x] Implement **Cross-Chain Interoperability Protocol (CCIP)** support.
+---
+
+## Updated Roadmap Progression (Reality-Based)
+
+### Phase 1 — Foundation services and API wiring
+**Status: Completed (with hardening needed).**
+
+### Phase 2 — Secure execution layer
+**Status: Functionally complete, security hardening pending.**
+
+### Phase 3 — Context + memory + cognition orchestration
+**Status: Mostly complete, with reliability gaps.**
+
+### Phase 4 — Decentralized Grid and sync fabric
+**Status: Implemented core loops and APIs; production decentralization maturity pending.**
+
+### Phase 5 — Evolution/ACT/zk-enabled verifiability
+**Status: Experimental/partial.** Components exist, but several parts remain prototype-grade or not fully integrated into production operations.
+
+---
+
+## Prioritized To-Do List
+
+### P0 (Critical)
+1. **Fix Gateway WebSocket contract mismatch** so dashboard chat actually works end-to-end without schema errors.
+2. **Fix Hypervisor runtime bug (`asyncio` import) and AutoTraining result parsing bug** to stabilize core processing loops.
+3. **Unify auth model** across REST/WS/dashboard endpoints and remove accidental insecure defaults.
+4. **Add robust integration tests** that run full intent path: Gateway → Hypervisor → Sandbox/Grid stubs.
+
+### P1 (High)
+5. **Strengthen interaction layer (human ↔ digital entity):**
+   - Add explicit conversation/session identity model across channels.
+   - Add memory controls in UI (view/edit/forget/consent scopes).
+   - Add response style controls and confidence/provenance display in chat.
+6. **Harden sandbox execution security** (seccomp/apparmor, network policy, restricted mounts, stricter runtime profiles).
+7. **Improve observability**: structured logs, trace IDs per intent, service-level metrics, and dashboard health with dependency details.
+8. **Formalize distributed failure handling** for IPFS/Arweave/Grid outages with retries, backpressure, and clear degraded modes.
+
+### P2 (Medium)
+9. **Replace simulated graph query path** with real indexed graph retrieval and ranked multi-peer merge.
+10. **Promote zk/zkML flows from interface-level proof checks to production-grade validation pipelines** (artifact lifecycle, key management, deterministic verification workers).
+11. **Wire ComputeBond on-chain lifecycle into Grid APIs** (stake/slash events, reconciliation, chain finality handling).
+12. **Improve channel adapters** with delivery receipts, rate-limit handling, and per-channel reliability policies.
+
+### P3 (Opportunistic / Novel improvements)
+13. **Adaptive interaction policies**: let user select mode (concise/analytical/socratic/executive) and persist preference.
+14. **Operator cockpit**: add intent replay, safety decision audit, and "why this answer" decomposition for trust.
+15. **Collaborative swarm UX**: expose swarm task planning UI and human approval checkpoints for high-impact actions.
+16. **Policy-driven memory governance**: configurable retention TTLs, encryption-at-rest options, and export/delete controls.
+
+---
+
+## Quick Start
+1. Copy or create `.env` (set `GATEWAY_API_KEY`, `HYPERVISOR_API_KEY`, model/provider settings, optional channel tokens).
+2. Run `make up` (or `docker compose up --build`).
+3. Open dashboard at `http://localhost:3000`.
+4. Verify health:
+   - Gateway: `GET /health`
+   - Hypervisor: `GET http://localhost:8000/health`
+   - Sandbox: `GET http://localhost:4000/health`
+   - Grid: `GET http://localhost:5000/health`
+
+---
+
+## Notes
+- This README intentionally distinguishes **implemented**, **partial**, and **simulated** behavior.
+- If you are planning production deployment, prioritize the P0/P1 items before scaling network participation.
