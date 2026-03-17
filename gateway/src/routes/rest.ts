@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
 import { normalizeInput } from '../utils/normalizer';
+import { sanitizeContent, sanitizeMetadata } from '../utils/sanitize';
 import { sendToHypervisor } from '../services/hypervisorClient';
 import { getLogsBuffer } from '../utils/logger';
 import { authMiddleware } from '../middleware/auth';
@@ -24,11 +25,12 @@ function getGridBaseUrl(): string {
 }
 
 
-router.post('/api/v1/intent/process/public', authMiddleware, async (req: Request, res: Response) => {
+router.post('/api/v1/intent/process/public', async (req: Request, res: Response) => {
     gatewayMetrics.requests++;
     try {
         const { channel, content, metadata } = req.body;
-        if (!content) {
+        const sanitizedContent = sanitizeContent(content);
+        if (!sanitizedContent) {
             res.status(400).json({ error: 'Content is required' });
             return;
         }
@@ -36,7 +38,7 @@ router.post('/api/v1/intent/process/public', authMiddleware, async (req: Request
         // Only allow process from public if it's for comparison/testing
         // and doesn't contain sensitive data
         const session_id = req.body.session_id || 'public_test_session';
-        const intent = normalizeInput(session_id, channel || 'tester', content, metadata);
+        const intent = normalizeInput(session_id, channel || 'tester', sanitizedContent, sanitizeMetadata(metadata));
         const response = await sendToHypervisor(intent);
 
         res.json(response);
@@ -50,13 +52,14 @@ router.post('/api/v1/intent/process', authMiddleware, async (req: Request, res: 
     gatewayMetrics.requests++;
     try {
         const { session_id, channel, content, metadata } = req.body;
-        if (!content) {
+        const sanitizedContent = sanitizeContent(content);
+        if (!sanitizedContent) {
             res.status(400).json({ error: 'Content is required' });
             return;
         }
 
         const sid = session_id || 'api_session';
-        const intent = normalizeInput(sid, channel || 'api', content, metadata);
+        const intent = normalizeInput(sid, channel || 'api', sanitizedContent, sanitizeMetadata(metadata));
         const response = await sendToHypervisor(intent);
 
         res.json(response);
