@@ -91,7 +91,7 @@ The standard request path is:
 - **Unified API-key auth model** for REST routes, static dashboard routes, and WebSocket handshake validation.
 - **Intent ingress** through:
   - `POST /api/v1/intent/process`
-  - `POST /api/v1/intent/process/public` (still API-key protected in current code)
+  - `POST /api/v1/intent/process/public` (unauthenticated; low-trust ingress by design)
 - **WebSocket intent pipeline**:
   - Zod parsing/sanitization of incoming payload.
   - Normalization into canonical intent object (`conversation_id`, `actor_id`, `trace_id` etc.).
