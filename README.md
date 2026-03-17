@@ -370,8 +370,8 @@ If LangGraph is a circuit diagram, AXIOM-MESH is a constitutional system.
 
 | Issue | Impact | Current status / resolution |
 |---|---|---|
-| Gateway sanitization is basic | Not a full application firewall | Centralized sanitization now strips script/html/control-token payloads, normalizes metadata, and the public ingress is rate-limited. This is still not a substitute for perimeter WAF controls in production. |
+| Gateway sanitization is basic | Not a full application firewall | Centralized sanitization now strips script/html/control-token payloads and normalizes metadata, but this remains a lightweight hygiene layer and must be paired with perimeter controls in production. |
 | `/api/v1/intent/process/public` route naming and behavior | Could be misleading if authentication expectations are unclear | Route is now actually public (no API key middleware) to match its contract; keep it behind gateway-level rate limits and abuse detection. |
-| Ledger is in-memory | Not persistent blockchain state | Grid now supports periodic snapshot persistence to disk (`GRID_LEDGER_PATH`) with startup restore; this improves durability but is not equivalent to fully chain-backed database persistence. |
-| zkML verification is prototype-grade | Not yet production-trust operations | Verification pipeline now enforces strict payload validation (commitment format, required vectors, artifact size bounds) before worker execution; still requires broader operational hardening for high-assurance trust ops. |
-| Safety/reasoning fields are scaffolds | Placeholders, not fully implemented policy logic | Audit trail now includes an enforced policy gate (content-length/consent/exec-consent checks) in addition to explainability fields; full operator-grade policy engine and immutable eventing remain backlog items. |
+| Ledger is in-memory | Not persistent blockchain state | Grid ledger is still process-memory state; durable storage is pending and required for production durability. |
+| zkML verification is prototype-grade | Not yet production-trust operations | Verification pipeline is functional and deterministic in current code paths, but still considered pre-hardening for high-assurance trust operations. |
+| Safety/reasoning fields are scaffolds | Placeholders, not fully implemented policy logic | Audit trail fields exist for explainability and diagnostics; they should not be interpreted as formal policy-engine attestations yet. |

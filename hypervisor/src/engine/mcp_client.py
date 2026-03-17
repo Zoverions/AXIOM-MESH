@@ -1,7 +1,7 @@
 import os
 import json
 import asyncio
-from typing import List, Dict, Any, Optional
+from typing import Dict, Any, Optional
 from mcp.client.sse import sse_client
 from mcp.client.session import ClientSession
 from contextlib import AsyncExitStack
@@ -122,7 +122,8 @@ class MCPClient:
                                 desc = prompt.description or "No description"
                                 server_info.append(f"  - {prompt.name}: {desc}")
                     except Exception as e:
-                        pass # Prompts might not be supported
+                        import logging
+                        logging.getLogger(__name__).warning(f"[MCP Server {server}] Could not fetch prompts: {e}")
 
                     aggregated_context.append("\n".join(server_info))
 
