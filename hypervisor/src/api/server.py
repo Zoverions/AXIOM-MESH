@@ -36,6 +36,8 @@ from src.api.audio import router as audio_router
 from src.zkml.prover import EdgeZKMLProver
 from contextlib import asynccontextmanager
 
+from src.graph.autoresearch_graph import autoresearch_app
+
 context_engine = ContextEngine()
 pulse = EntropyMonitor()
 arena = VerificationArena()
@@ -367,6 +369,25 @@ async def edit_memory(node_id: str, update_data: dict):
     if success:
         return {"status": "success"}
     return {"status": "error", "message": "Memory node not found"}
+
+@app.post("/graph/autoresearch")
+async def run_autoresearch_graph(input_data: dict, api_key: str = Depends(verify_api_key)):
+    """Triggers the new LangGraph-based AutoResearch workflow."""
+    intent_text = input_data.get("intent", "Research general consensus mechanisms")
+    initial_state = {
+        "intent": intent_text,
+        "context": "",
+        "sandbox_output": "",
+        "zkml_verified": False,
+        "stake_status": ""
+    }
+
+    try:
+        final_state = await autoresearch_app.ainvoke(initial_state)
+        return {"status": "success", "result": final_state}
+    except Exception as e:
+        log_event("error", f"LangGraph execution failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/zkml/infer")
 async def zkml_infer(input_data: dict):

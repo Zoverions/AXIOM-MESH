@@ -18,6 +18,13 @@ ezkl
 torch
 onnxscript
 
+# New Agent Frameworks (Phase 1)
+langgraph
+langsmith
+crewai
+guardrails-ai
+llama-index
+
 # Test dependencies
 pytest
 pytest-asyncio
