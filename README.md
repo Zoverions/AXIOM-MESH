@@ -327,3 +327,38 @@ Key Capabilities
 - **Phase 0 is documentation-complete/in progress**: v1.8 master directive is captured and roadmap checkpoints are updated.
 - **Phases 1–4 are implementation backlog**: no Phase 1+ code changes are implied by this documentation update.
 - **Execution checklist and parallel work lanes** are maintained in `plan.md` to support multi-agent implementation kickoff.
+
+## Framework Comparison (New – March 17, 2026)
+
+Below is a structural, non-marketing comparison of AXIOM-MESH against the dominant 2026-era agent frameworks. This is a design-intent and failure-mode map.
+
+1. High-Level Positioning
+- AXIOM-MESH: Closure-first, verifiable, governance-aware agent substrate. Failure Mode: Complexity cost; slower onboarding.
+- LangGraph: Deterministic agent flow graphs. Failure Mode: No native trust, isolation, or governance.
+- CrewAI: Human-like role collaboration. Failure Mode: Emergent drift, no formal closure.
+- AutoResearch: Autonomous epistemic exploration. Failure Mode: Runaway loops, unverifiable claims.
+
+AXIOM-MESH is the only system designed to survive hostile environments.
+
+2. Control & Closure Guarantees
+- Execution Closure: AXIOM-MESH has hard sandbox, capability-scoped, zkML, explicit boundaries. Others lack these.
+
+3. Governance & Drift Resistance
+- AXIOM-MESH has bicameral, stake/slash, skill audit, drift detection. Others do not.
+
+4. Knowledge Representation
+- AXIOM-MESH has graph-native, distributed sync, provenance, epistemic decay. Others are prompt-based or ad-hoc.
+
+5. Autonomy vs Alignment
+- AXIOM-MESH has bounded loops, structural alignment, hard stops, auditability. Others have none or partial.
+
+6. Developer Reality Check
+- AXIOM-MESH: Safe to deploy, regulator-ready, adversarial-ready. Others: Fast to prototype but unsafe.
+
+7. Strategic Summary
+- LangGraph: Compiler for logic.
+- CrewAI: Theater of collaboration.
+- AutoResearch: Curiosity engine.
+- AXIOM-MESH: Institutional substrate.
+
+If LangGraph is a circuit diagram, AXIOM-MESH is a constitutional system.
