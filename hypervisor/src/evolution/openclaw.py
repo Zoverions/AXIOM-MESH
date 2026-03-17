@@ -1,6 +1,6 @@
 import re
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, Optional
 
 logger = logging.getLogger("Axiom-OpenClaw")
 
