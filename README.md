@@ -107,8 +107,8 @@ The standard request path is:
 - **Backpressure-aware Hypervisor client** with retry logic and queue cap guard.
 
 ### Important caveats
-- Gateway sanitization is intentionally basic and should not be treated as full application firewalling.
-- `/api/v1/intent/process/public` exists as a separate route name, but is not anonymous in current implementation.
+- Gateway sanitization is still hygiene-oriented input cleanup and should not be treated as a full application firewall.
+- `/api/v1/intent/process/public` is intentionally unauthenticated now, so it should be treated as a low-trust ingress path and fronted by rate limits/WAF in production.
 
 ---
 
@@ -364,3 +364,14 @@ AXIOM-MESH is the only system designed to survive hostile environments.
 - AXIOM-MESH: Institutional substrate.
 
 If LangGraph is a circuit diagram, AXIOM-MESH is a constitutional system.
+
+
+## Critical Caveats for Production Use (Status)
+
+| Issue | Impact | Current status / resolution |
+|---|---|---|
+| Gateway sanitization is basic | Not a full application firewall | Centralized sanitization now strips script/html/control-token payloads and normalizes metadata, but this remains a lightweight hygiene layer and must be paired with perimeter controls in production. |
+| `/api/v1/intent/process/public` route naming and behavior | Could be misleading if authentication expectations are unclear | Route is now actually public (no API key middleware) to match its contract; keep it behind gateway-level rate limits and abuse detection. |
+| Ledger is in-memory | Not persistent blockchain state | Grid ledger is still process-memory state; durable storage is pending and required for production durability. |
+| zkML verification is prototype-grade | Not yet production-trust operations | Verification pipeline is functional and deterministic in current code paths, but still considered pre-hardening for high-assurance trust operations. |
+| Safety/reasoning fields are scaffolds | Placeholders, not fully implemented policy logic | Audit trail fields exist for explainability and diagnostics; they should not be interpreted as formal policy-engine attestations yet. |
