@@ -145,6 +145,63 @@ func (s *Server) Start(addr string) error {
 		}
 	})
 
+	http.HandleFunc("/bond/sever", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "POST" {
+			var payload struct {
+				NodeID  string `json:"nodeId"`
+				ZKProof string `json:"zkProof,omitempty"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&payload); err == nil {
+				if payload.NodeID == "" {
+					http.Error(w, "Invalid nodeId", http.StatusBadRequest)
+					return
+				}
+
+				if bond, ok := s.ledger.GetBond(payload.NodeID); ok {
+					bond.Status = "severed"
+					// Agent memory must be zeroized by hypervisor locally. Here we update state.
+					s.ledger.Stake(bond) // Update bond status
+					json.NewEncoder(w).Encode(map[string]string{"status": "success", "nodeId": payload.NodeID})
+				} else {
+					http.Error(w, "Bond not found", http.StatusNotFound)
+				}
+			} else {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			}
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	http.HandleFunc("/bond/delegate", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "POST" {
+			var payload struct {
+				NodeID       string `json:"nodeId"`
+				ParentNodeID string `json:"parentNodeId"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&payload); err == nil {
+				if payload.NodeID == "" || payload.ParentNodeID == "" {
+					http.Error(w, "Invalid nodeId or parentNodeId", http.StatusBadRequest)
+					return
+				}
+
+				if bond, ok := s.ledger.GetBond(payload.NodeID); ok {
+					bond.ParentNodeID = payload.ParentNodeID
+					s.ledger.Stake(bond) // Update bond
+					json.NewEncoder(w).Encode(map[string]string{"status": "success", "nodeId": payload.NodeID, "parentNodeId": payload.ParentNodeID})
+				} else {
+					http.Error(w, "Bond not found", http.StatusNotFound)
+				}
+			} else {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			}
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
 	http.HandleFunc("/slash", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == "POST" {

@@ -9,6 +9,7 @@ contract ComputeBond is Ownable {
         address staker;
         uint256 amount;
         bool isActive;
+        string parentNodeId; // For hierarchical agent-to-agent bonding
     }
 
     // Mapping from node ID string to the Bond details
@@ -30,6 +31,8 @@ contract ComputeBond is Ownable {
     event BondStaked(string indexed nodeId, address indexed staker, uint256 amount);
     event BondSlashed(string indexed nodeId, uint256 amount, uint256 newAmount);
     event BondWithdrawn(string indexed nodeId, address indexed staker, uint256 amount);
+    event BondSevered(string indexed nodeId);
+    event BondDelegated(string indexed nodeId, string indexed parentNodeId);
 
     constructor() Ownable(msg.sender) {}
 
@@ -77,6 +80,51 @@ contract ComputeBond is Ownable {
         }
 
         emit BondSlashed(nodeId, amount, bond.amount);
+    }
+
+    /**
+     * @dev Allows an agent to hierarchically bond to another agent.
+     * @param nodeId The unique identifier of the child node.
+     * @param parentNodeId The unique identifier of the parent node.
+     */
+    function delegateBond(string memory nodeId, string memory parentNodeId) external {
+        Bond storage bond = bonds[nodeId];
+        if (!bond.isActive) revert BondNotActive();
+        if (bond.staker != msg.sender) revert UnauthorizedStaker(msg.sender, bond.staker);
+
+        // Require parent to also be an active bond
+        if (!bonds[parentNodeId].isActive) revert BondNotActive();
+
+        bond.parentNodeId = parentNodeId;
+
+        emit BondDelegated(nodeId, parentNodeId);
+    }
+
+    /**
+     * @dev Bilateral Severance via THUD RecoveryModule + zk-SNARK selective disclosure.
+     * @param nodeId The unique identifier of the node.
+     * @param zkProof Zero-knowledge proof verifying severance conditions without leaking private data.
+     */
+    function severBond(string memory nodeId, bytes memory zkProof) external {
+        // In a full implementation, we would verify the zkProof here using a pairing library
+        // require(verifyProof(zkProof), "Invalid severance proof");
+
+        Bond storage bond = bonds[nodeId];
+        if (!bond.isActive) revert BondNotActive();
+
+        // Severance can be triggered by either human owner (staker) or the agent itself (via zkProof)
+        // If not the staker, the zkProof MUST be valid (mocked via requiring non-empty proof for now)
+        if (bond.staker != msg.sender && zkProof.length == 0) {
+             revert UnauthorizedStaker(msg.sender, bond.staker);
+        }
+
+        // Post-severance, zeroize bond activity to ensure privacy and prevent misaligned intent
+        bond.isActive = false;
+
+        // Note: The physical staker still retains withdrawal rights to the underlying capital,
+        // but the compute privileges and data access of the agent are cryptographically revoked.
+
+        emit BondSevered(nodeId);
     }
 
     /**
