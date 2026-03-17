@@ -145,3 +145,35 @@ type ProposalChainEvent struct {
 	TxHash          string       `json:"txHash,omitempty"`
 	BlockNumber     uint64       `json:"blockNumber,omitempty"`
 }
+
+type TreasurySplitConfig struct {
+	NetworkSecurityFund  uint `json:"networkSecurityFund"`  // e.g., 70
+	WealthGenerationPool uint `json:"wealthGenerationPool"` // e.g., 30
+}
+
+type GuildPowerOracle struct {
+	// Represents the oracle configuring power and distribution
+	NodeID      string `json:"nodeId"`
+	PowerWeight int    `json:"powerWeight"`
+}
+
+type DistributionManager struct {
+	TreasurySplit TreasurySplitConfig `json:"treasurySplit"`
+}
+
+// GPPEvent models an ERC-20 compatible mint/burn/transfer event
+type GPPEvent struct {
+	Type   string `json:"type"`   // "Mint", "Burn", "Transfer"
+	From   string `json:"from"`   // 0x0 for Mint
+	To     string `json:"to"`     // 0x0 for Burn
+	Amount uint64 `json:"amount"` // The amount of GPP tokens
+}
+
+// RelayerSettlement represents L1 piggyback settlement queue item
+type RelayerSettlement struct {
+	ID        string `json:"id"`
+	Recipient string `json:"recipient"`
+	Amount    uint64 `json:"amount"`
+	Token     string `json:"token"` // e.g., "GPP"
+	Status    string `json:"status"` // "Queued", "Processing", "Settled"
+}

@@ -446,3 +446,32 @@ async def agents_status():
             }
         ]
     }
+
+@app.post("/priority-tag")
+async def update_priority_tag(input_data: dict, api_key: str = Depends(verify_api_key)):
+    """
+    Updates a priority tag in the Alignment Profile.
+    Respects bicameral governance hooks.
+    """
+    tag = input_data.get("tag")
+    weight = input_data.get("weight")
+    bicameral_approval = input_data.get("bicameral_approval", False)
+
+    if not tag or weight is None:
+        raise HTTPException(status_code=400, detail="Missing tag or weight")
+
+    try:
+        from fastapi.concurrency import run_in_threadpool
+        from src.engine.alignment import AlignmentProfile
+
+        def _update_tag():
+            profile = AlignmentProfile()
+            return profile.update_priority_tag(tag, float(weight), bicameral_approval)
+
+        new_tags = await run_in_threadpool(_update_tag)
+        return {"status": "success", "priority_tags": new_tags}
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except Exception as e:
+        log_event("error", f"Priority tag update failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

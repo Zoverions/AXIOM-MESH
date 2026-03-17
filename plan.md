@@ -1,13 +1,13 @@
 # AXIOM-MESH Roadmap – Master 2026 Edition (Updated March 2026)
 
 ## Q1 2026 – Complete System Fusion & Resource Orchestration (In Progress)
-- [x] Phase 0: Documentation consolidation (v1.7 directive reflected in README/plan/docs)
+- [ ] Phase 0: Documentation consolidation (this v1.8 directive)
 - [ ] Phase 1: ResourceBalancer node + priority allocation
 - [ ] Phase 2: GPP incentives + treasury splits (Network Security + Wealth Generation) + ERC-20 compatibility
 - [ ] Phase 3: Alignment Profile init + spectrum security profiles + MCP interoperability + firewall + hierarchical bonding + governance
 - [ ] Phase 4: Hardware profiles + offline resource awareness
 
-All prior fusions now unified under one self-regulating, risk-tolerant, firewall-protected layer.
+All prior fusions now unified under one self-regulating, risk-tolerant, firewall-protected, layer.
 
 ## Priority Implementation Checklist (High → Low)
 
