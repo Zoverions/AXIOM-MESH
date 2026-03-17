@@ -1,54 +1,77 @@
 # AXIOM-MESH Roadmap – Master 2026 Edition (Updated March 2026)
 
 ## Q1 2026 – Complete System Fusion & Resource Orchestration (In Progress)
-- [ ] Phase 0: Documentation consolidation (this directive)
+- [x] Phase 0: Documentation consolidation (v1.7 directive reflected in README/plan/docs)
 - [ ] Phase 1: ResourceBalancer node + priority allocation
-- [ ] Phase 2: GPP incentives + fair distribution + automated treasury splits (Network Security Fund + Wealth Generation Pool) + ERC-20 compatibility
-- [ ] Phase 3: Full governance (AIGovernor + bicameral) for dynamic treasury percentages
+- [ ] Phase 2: GPP incentives + treasury splits (Network Security + Wealth Generation) + ERC-20 compatibility
+- [ ] Phase 3: Alignment Profile init + spectrum security profiles + MCP interoperability + firewall + hierarchical bonding + governance
 - [ ] Phase 4: Hardware profiles + offline resource awareness
 
-All prior fusions (OntarioEdAI, THUD, AA bonding, resilience) now unified under one self-regulating, treasury-split, ERC-20-native layer.
+All prior fusions now unified under one self-regulating, risk-tolerant, firewall-protected layer.
 
-# Roadmap Status Snapshot (Audit-Verified)
+## Priority Implementation Checklist (High → Low)
 
-This roadmap note tracks the Bicameral Cognitive Syndicate smart-contract milestone and is now audit-updated.
+### P0 — Decision Gate (Do First)
+- [ ] **Repository boundary decision**: choose either:
+  - **Option A (recommended): AXIOM-MESH as source-of-truth monorepo** for contracts + gateway + hypervisor + sandbox + grid (+ vendored adapters for external references), or
+  - **Option B: polyrepo orchestration** with strict version pins and CI contract compatibility checks.
+- [ ] Approve governance rule: any contract/API tweak required by AXIOM-MESH priorities lands here first, then is mirrored outward.
+- [ ] Freeze an Interface Control Document (ICD) for Gateway ↔ Hypervisor ↔ Sandbox ↔ Grid ↔ Contracts.
 
-## Milestone: Bicameral Governance Contracts
+### P1 — Security & Identity Foundations
+- [ ] Add Alignment Profile spec (goals, traits, characteristics, risk tolerance, priority tags).
+- [ ] Bind profile lifecycle to DID/VC + CRDT storage model.
+- [ ] Define bilateral severance protocol (human or agent initiated), including zero-knowledge selective disclosure requirements.
+- [ ] Define agent-as-firewall enforcement points for all external interaction paths.
 
-- ✅ `DualLedgerIdentity.sol` implemented (human/agent identity registry with custom errors).
-- ✅ `WeightOracle.sol` implemented (owner-managed weight updates for registered identities).
-- ✅ `DialecticArbitration.sol` implemented (deadlock detection, synthesis state, revote flow).
-- ✅ Contract test suites are present in `grid/contracts/test/` for all three contracts.
+### P2 — Interoperability & Compatibility Controls
+- [ ] Create MCP compatibility matrix schema (minimum security/risk thresholds per peer class).
+- [ ] Define spectrum security profiles (legacy locked device → full zkML node).
+- [ ] Specify hierarchical agent-to-agent bonding policy (nested trust, inheritance, revocation).
+- [ ] Map governance controls (guild + bicameral + AIGovernor) to compatibility policy updates.
 
-## Remaining follow-up
+### P3 — Resource/Treasury Mechanics
+- [ ] Specify ResourceBalancer decisions (local vs peer vs Grid vs L1 path).
+- [ ] Specify treasury split mechanics (Network Security Fund + Wealth Generation Pool) and reporting.
+- [ ] Define ERC-20 compatibility envelope for rewards/currencies.
+- [ ] Add zk-anonymized telemetry requirements for fairness proofs and anti-overload controls.
 
-- ✅ Run Hardhat compile/test in a network-enabled environment where Solidity compiler downloads are permitted.
-- ✅ Wire these contracts into runtime Grid API workflows (stake/slash/chain event reconciliation) for production usage.
+### P4 — Delivery, Operations, and Rollout
+- [ ] Build phased migration plan for legacy hardware/offline cohorts.
+- [ ] Define validation harness for success metrics (alignment choice integrity, compatibility enforcement, severance privacy, firewall routing, hierarchical bond behavior).
+- [ ] Add release gating checklist and rollback criteria for each phase.
 
-## Detailed Contract Worklog (Completed)
+## Parallel Work Lanes (Assign to Agents)
 
-1. ✅ Implemented `grid/contracts/contracts/DualLedgerIdentity.sol`
-   - Owner-controlled identity registration and deregistration.
-   - Distinct Human/Agent identity types.
-   - Custom error-based revert model.
+### Lane A — Identity/Alignment (can run now)
+- Alignment Profile schema drafts
+- DID/VC + CRDT persistence model
+- Severance and memory-zeroization requirements
 
-2. ✅ Implemented `grid/contracts/contracts/WeightOracle.sol`
-   - Stores per-node voting weights.
-   - Supports single and batch updates.
-   - Restricts updates to owner and validates node registration.
+### Lane B — Interop/Governance (can run now)
+- MCP compatibility matrix draft
+- Security profile taxonomy
+- Governance control map for interoperability knobs
 
-3. ✅ Implemented `grid/contracts/contracts/DialecticArbitration.sol`
-   - Tracks proposals and bicameral votes.
-   - Detects deadlock state and transitions to `AwaitingSynthesis`.
-   - Allows Hypervisor/owner synthesis submission and re-vote reset.
+### Lane C — Resource/Treasury (can run now)
+- ResourceBalancer policy draft
+- Treasury split accounting model
+- ERC-20 compatibility and token-flow diagrams
 
-4. ✅ Added contract tests under `grid/contracts/test/`
-   - `DualLedgerIdentity.cjs`
-   - `WeightOracle.cjs`
-   - `DialecticArbitration.cjs`
+### Lane D — Platform/Ops (can run now)
+- Hardware profile matrix
+- Offline-first sync and degraded-mode playbooks
+- Test strategy + CI acceptance gates
 
-## Validation notes
+## Dependencies Between Lanes
+- Lane A outputs feed Lane B policy constraints.
+- Lane B and Lane C must agree on enforceable thresholds before implementation starts.
+- Lane D finalizes rollout only after A/B/C define acceptance tests.
 
-- The repository contains the full source + test scaffolding.
-- Hardhat compile and tests have been successfully run in a network-enabled environment.
-- The contracts are now wired into the runtime Grid API workflows (`/proposals` and `/proposals/events`).
+## Success Metrics (Must Pass Before Phase PR Approval)
+- [ ] Alignment Profile creation preserves user/agent risk choice boundaries.
+- [ ] MCP discovery and handshakes reject peers below required security/risk profile.
+- [ ] Bond severance is bilateral, private, and cryptographically enforceable.
+- [ ] Firewall routing prevents direct unmediated external actions.
+- [ ] Hierarchical bonding follows inherited policy + independent revocation rights.
+- [ ] Prior fusion guarantees (treasury, ERC-20, offline resilience) remain intact.
