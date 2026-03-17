@@ -4,6 +4,19 @@ import httpx
 import os
 import json
 import uuid
+from kernel.pulse_monitor import CoTAuditor, CognitiveSubversionError
+
+async def _audit_text(text: str) -> str:
+    async def _stream():
+        # Chunk text to simulate token streaming for the auditor
+        for i in range(0, len(text), 4):
+            yield text[i:i+4]
+
+    auditor = CoTAuditor(_stream())
+    out = []
+    async for token in auditor.stream():
+        out.append(token)
+    return "".join(out)
 
 # Define State for the LangGraph
 class GraphState(TypedDict):
@@ -18,6 +31,13 @@ class GraphState(TypedDict):
 async def context_assembly(state: GraphState):
     """Gathers context for the current intent."""
     intent = state.get("intent", "")
+
+    # CoT auditor kill-switch enforcement
+    try:
+        await _audit_text(intent)
+    except CognitiveSubversionError as e:
+        return {"context": f"Blocked: {e}"}
+
     # Placeholder for actual context engine logic.
     context = f"Context derived for: {intent}"
     return {"context": context}
@@ -26,6 +46,12 @@ async def sandbox_exec(state: GraphState):
     """Executes code via the external sandbox service."""
     intent = state.get("intent", "")
     context = state.get("context", "")
+
+    # CoT auditor kill-switch enforcement
+    try:
+        await _audit_text(intent + " " + context)
+    except CognitiveSubversionError as e:
+        return {"sandbox_output": f"Blocked: {e}"}
 
     # Normally we would formulate the exact Python or Node code based on intent and context.
     # We will simulate the execution logic.
