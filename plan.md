@@ -1,5 +1,14 @@
 # AXIOM-MESH Roadmap – Master 2026 Edition (Updated March 2026)
 
+
+## Phase 5: NFT Credentialing, Hardware Scan, Refined Rewards (New – In Progress)
+- [ ] Track G: NFT Credential & Personality Tokenization
+- [ ] Track H: Hardware Scan & Dedicated OS Optimization
+- [ ] Track I: Refined Reward Multipliers
+
+Next: Formalize failure-mode proofs; map participatory closure to agent economics; LangGraph-inside-AXIOM-MESH adapter.
+
+
 ## Q1 2026 – Complete System Fusion & Resource Orchestration (In Progress)
 - [ ] Phase 0: Documentation consolidation (this v1.8 directive)
 - [ ] Phase 1: ResourceBalancer node + priority allocation
