@@ -1,5 +1,4 @@
 import json
-import random
 import numpy as np
 import base64
 import os
