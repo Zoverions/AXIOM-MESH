@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"regexp"
 	"sort"
 
 	"fmt"
@@ -74,6 +75,26 @@ func (s *Server) startZKMLWorker() {
 		}
 		job.Result <- valid
 	}
+}
+
+func validateZKMLPayload(payload types.ZKMLPayload) (bool, string) {
+	if payload.ModelCommitment == "" || payload.Proof == "" || payload.VK == "" || payload.Settings == "" {
+		return false, "missing required zkML payload fields"
+	}
+	match, _ := regexp.MatchString("^[a-fA-F0-9]{64}$", payload.ModelCommitment)
+	if !match {
+		return false, "invalid model_commitment format"
+	}
+	if len(payload.Input) == 0 || len(payload.Output) == 0 {
+		return false, "input and output vectors are required"
+	}
+	if len(payload.Proof) > 2_000_000 || len(payload.VK) > 2_000_000 || len(payload.Settings) > 2_000_000 {
+		return false, "zkML artifact payload too large"
+	}
+	if len(payload.Input) > 4096 || len(payload.Output) > 4096 {
+		return false, "zkML vector payload too large"
+	}
+	return true, ""
 }
 
 func (s *Server) Start(addr string) error {
@@ -435,12 +456,12 @@ func (s *Server) Start(addr string) error {
 
 			// Add zero-knowledge/anonymized reporting metrics
 			stats := map[string]interface{}{
-				"active_bonded_nodes": activeNodesCount,
-				"total_staked_amount": totalBondedAmount,
-				"skills_registered":   len(s.ledger.GetSkills()),
-				"proposals_count":     len(s.ledger.GetProposals()),
-				"swarms_active":       len(s.ledger.GetSwarms()),
-				"zkml_queue_size":     len(s.zkmlQueue),
+				"active_bonded_nodes":  activeNodesCount,
+				"total_staked_amount":  totalBondedAmount,
+				"skills_registered":    len(s.ledger.GetSkills()),
+				"proposals_count":      len(s.ledger.GetProposals()),
+				"swarms_active":        len(s.ledger.GetSwarms()),
+				"zkml_queue_size":      len(s.zkmlQueue),
 				"anonymized_telemetry": true,
 			}
 			json.NewEncoder(w).Encode(stats)
@@ -454,6 +475,10 @@ func (s *Server) Start(addr string) error {
 		if r.Method == "POST" {
 			var payload types.ZKMLPayload
 			if err := json.NewDecoder(r.Body).Decode(&payload); err == nil {
+				if valid, msg := validateZKMLPayload(payload); !valid {
+					http.Error(w, msg, http.StatusBadRequest)
+					return
+				}
 				// Deterministic Worker Pipeline
 				// Submit the job to the deterministic worker queue, limiting concurrency,
 				// and await the verification synchronously to fulfill the client contract.

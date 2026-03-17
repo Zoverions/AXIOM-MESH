@@ -66,7 +66,7 @@ curl http://localhost:5000/health
 - Gateway sanitization is intentionally basic and not a full application firewall.
 - `/api/v1/intent/process/public` is intentionally unauthenticated; treat as low-trust ingress and front with rate limiting/WAF.
 - Grid ledger behavior is currently in-memory for key paths, not full persistent chain state.
-- Some safety/reasoning and verification components are scaffolds that require additional hardening.
+- Safety/reasoning and zkML verification now include baseline policy/payload gates, but still require operator-grade hardening for full production trust.
 
 ## Related Documentation
 

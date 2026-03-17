@@ -1,12 +1,33 @@
 package blockchain
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
 	"github.com/axiom-mesh/grid/types"
 )
+
+type LedgerSnapshot struct {
+	Skills           []types.SkillVector          `json:"skills"`
+	WebCache         map[string]types.WebState    `json:"web_cache"`
+	Graph            types.DistributedGraph       `json:"graph"`
+	GraphIndex       map[string][]string          `json:"graph_index"`
+	Bonds            map[string]types.ComputeBond `json:"bonds"`
+	CCIPMessages     map[string]types.CCIPMessage `json:"ccip_messages"`
+	Swarms           map[string]types.Swarm       `json:"swarms"`
+	Proposals        map[string]types.Proposal    `json:"proposals"`
+	TreasurySplit    types.TreasurySplitConfig    `json:"treasury_split"`
+	GPPBalances      map[string]uint64            `json:"gpp_balances"`
+	NetworkSecPool   uint64                       `json:"network_sec_pool"`
+	WealthGenPool    uint64                       `json:"wealth_gen_pool"`
+	GPPEvents        []types.GPPEvent             `json:"gpp_events"`
+	RelayerQueue     []types.RelayerSettlement    `json:"relayer_queue"`
+	SettlementNextID uint64                       `json:"settlement_next_id"`
+}
 
 type Ledger struct {
 	mu           sync.RWMutex
@@ -621,4 +642,100 @@ func (l *Ledger) GetProposal(id string) (types.Proposal, bool) {
 	defer l.mu.RUnlock()
 	proposal, ok := l.Proposals[id]
 	return proposal, ok
+}
+
+func (l *Ledger) Snapshot() LedgerSnapshot {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	return LedgerSnapshot{
+		Skills:           append([]types.SkillVector(nil), l.Skills...),
+		WebCache:         l.WebCache,
+		Graph:            l.Graph,
+		GraphIndex:       l.GraphIndex,
+		Bonds:            l.Bonds,
+		CCIPMessages:     l.CCIPMessages,
+		Swarms:           l.Swarms,
+		Proposals:        l.Proposals,
+		TreasurySplit:    l.TreasurySplit,
+		GPPBalances:      l.GPPBalances,
+		NetworkSecPool:   l.NetworkSecPool,
+		WealthGenPool:    l.WealthGenPool,
+		GPPEvents:        append([]types.GPPEvent(nil), l.GPPEvents...),
+		RelayerQueue:     append([]types.RelayerSettlement(nil), l.RelayerQueue...),
+		SettlementNextID: l.settlementNextID,
+	}
+}
+
+func (l *Ledger) SaveToFile(path string) error {
+	snap := l.Snapshot()
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+	b, err := json.MarshalIndent(snap, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, b, 0644)
+}
+
+func (l *Ledger) LoadFromFile(path string) error {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	var snap LedgerSnapshot
+	if err := json.Unmarshal(b, &snap); err != nil {
+		return err
+	}
+
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.Skills = snap.Skills
+	l.WebCache = snap.WebCache
+	l.Graph = snap.Graph
+	l.GraphIndex = snap.GraphIndex
+	l.Bonds = snap.Bonds
+	l.CCIPMessages = snap.CCIPMessages
+	l.Swarms = snap.Swarms
+	l.Proposals = snap.Proposals
+	l.TreasurySplit = snap.TreasurySplit
+	l.GPPBalances = snap.GPPBalances
+	l.NetworkSecPool = snap.NetworkSecPool
+	l.WealthGenPool = snap.WealthGenPool
+	l.GPPEvents = snap.GPPEvents
+	l.RelayerQueue = snap.RelayerQueue
+	l.settlementNextID = snap.SettlementNextID
+
+	if l.WebCache == nil {
+		l.WebCache = make(map[string]types.WebState)
+	}
+	if l.Graph.Nodes == nil {
+		l.Graph.Nodes = make(map[string]types.GraphNode)
+	}
+	if l.GraphIndex == nil {
+		l.GraphIndex = make(map[string][]string)
+	}
+	if l.Bonds == nil {
+		l.Bonds = make(map[string]types.ComputeBond)
+	}
+	if l.CCIPMessages == nil {
+		l.CCIPMessages = make(map[string]types.CCIPMessage)
+	}
+	if l.Swarms == nil {
+		l.Swarms = make(map[string]types.Swarm)
+	}
+	if l.Proposals == nil {
+		l.Proposals = make(map[string]types.Proposal)
+	}
+	if l.GPPBalances == nil {
+		l.GPPBalances = make(map[string]uint64)
+	}
+	if l.GPPEvents == nil {
+		l.GPPEvents = make([]types.GPPEvent, 0)
+	}
+	if l.RelayerQueue == nil {
+		l.RelayerQueue = make([]types.RelayerSettlement, 0)
+	}
+
+	return nil
 }
