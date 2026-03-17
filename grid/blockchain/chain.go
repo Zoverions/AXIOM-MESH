@@ -18,6 +18,15 @@ type Ledger struct {
 	CCIPMessages map[string]types.CCIPMessage
 	Swarms       map[string]types.Swarm
 	Proposals    map[string]types.Proposal
+
+	// Treasury and Distribution
+	TreasurySplit    types.TreasurySplitConfig
+	GPPBalances      map[string]uint64
+	NetworkSecPool   uint64
+	WealthGenPool    uint64
+	GPPEvents        []types.GPPEvent
+	RelayerQueue     []types.RelayerSettlement
+	settlementNextID uint64
 }
 
 func NewLedger() *Ledger {
@@ -33,7 +42,94 @@ func NewLedger() *Ledger {
 		CCIPMessages: make(map[string]types.CCIPMessage),
 		Swarms:       make(map[string]types.Swarm),
 		Proposals:    make(map[string]types.Proposal),
+
+		// Default split configuration
+		TreasurySplit: types.TreasurySplitConfig{
+			NetworkSecurityFund:  50,
+			WealthGenerationPool: 50,
+		},
+		GPPBalances:  make(map[string]uint64),
+		GPPEvents:    make([]types.GPPEvent, 0),
+		RelayerQueue: make([]types.RelayerSettlement, 0),
 	}
+}
+
+// UpdateTreasurySplit configures the X% Network Security Fund, Y% Wealth Generation Pool (bicameral proposal simulation)
+func (l *Ledger) UpdateTreasurySplit(networkSec, wealthGen uint) error {
+	if networkSec+wealthGen != 100 {
+		return fmt.Errorf("split must equal 100%%")
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.TreasurySplit.NetworkSecurityFund = networkSec
+	l.TreasurySplit.WealthGenerationPool = wealthGen
+	return nil
+}
+
+// MintGPP mints new GPP tokens, simulating ERC-20 compatible Mint event
+func (l *Ledger) MintGPP(to string, amount uint64) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	l.GPPBalances[to] += amount
+
+	l.GPPEvents = append(l.GPPEvents, types.GPPEvent{
+		Type:   "Mint",
+		From:   "0x0000000000000000000000000000000000000000",
+		To:     to,
+		Amount: amount,
+	})
+}
+
+// BurnGPP burns GPP tokens from a user, simulating ERC-20 compatible Burn event
+func (l *Ledger) BurnGPP(from string, amount uint64) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if l.GPPBalances[from] < amount {
+		return fmt.Errorf("insufficient GPP balance to burn")
+	}
+
+	l.GPPBalances[from] -= amount
+
+	l.GPPEvents = append(l.GPPEvents, types.GPPEvent{
+		Type:   "Burn",
+		From:   from,
+		To:     "0x0000000000000000000000000000000000000000",
+		Amount: amount,
+	})
+	return nil
+}
+
+// DistributeRewards distributes a total reward amount between Network Sec and Wealth Gen pools
+func (l *Ledger) DistributeRewards(totalAmount uint64) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	netSecAmount := (totalAmount * uint64(l.TreasurySplit.NetworkSecurityFund)) / 100
+	wealthGenAmount := totalAmount - netSecAmount // The remainder goes to wealth gen
+
+	l.NetworkSecPool += netSecAmount
+	l.WealthGenPool += wealthGenAmount
+}
+
+// QueueL1Settlement adds a settlement item for L1 piggyback settlement (RelayerWallet pattern)
+func (l *Ledger) QueueL1Settlement(recipient string, amount uint64, token string) string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	l.settlementNextID++
+	id := fmt.Sprintf("settlement-%d", l.settlementNextID)
+
+	l.RelayerQueue = append(l.RelayerQueue, types.RelayerSettlement{
+		ID:        id,
+		Recipient: recipient,
+		Amount:    amount,
+		Token:     token,
+		Status:    "Queued",
+	})
+
+	return id
 }
 
 func (l *Ledger) AddSkill(skill types.SkillVector) {
