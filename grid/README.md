@@ -53,7 +53,7 @@ grid/
 ### API Server (`api/server.go`)
 - **REST Endpoints:**
   - `GET /health` – Service status
-  - `POST /bonds` – Stake compute bonds
+  - `POST /stake` – Stake compute bonds (submit bond for execution)
   - `GET /bonds/:nodeID` – Retrieve bond information
   - `POST /slash` – Slash (penalize) a bond
   - `POST /proposals` – Submit governance proposals
@@ -157,7 +157,7 @@ npm run deploy
 
 ### Submit a Bond
 ```bash
-curl -X POST http://localhost:5000/bonds \
+curl -X POST http://localhost:5000/stake \
   -H "Content-Type: application/json" \
   -d '{
     "node_id": "node-1",
