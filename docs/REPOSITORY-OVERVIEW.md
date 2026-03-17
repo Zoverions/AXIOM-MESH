@@ -64,7 +64,7 @@ curl http://localhost:5000/health
 ## Important Caveats
 
 - Gateway sanitization is intentionally basic and not a full application firewall.
-- `/api/v1/intent/process/public` is still API-key protected in current implementation.
+- `/api/v1/intent/process/public` is intentionally unauthenticated; treat as low-trust ingress and front with rate limiting/WAF.
 - Grid ledger behavior is currently in-memory for key paths, not full persistent chain state.
 - Some safety/reasoning and verification components are scaffolds that require additional hardening.
 
