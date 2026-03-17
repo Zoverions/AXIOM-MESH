@@ -5,7 +5,7 @@ import os
 import re
 import uuid
 import time
-from typing import Dict, List, Optional
+from typing import Dict, List
 from cryptography.fernet import Fernet
 
 import httpx
