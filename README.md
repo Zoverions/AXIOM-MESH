@@ -290,18 +290,6 @@ Key Capabilities
 - Governance steering that adjusts interoperability policy without breaking user risk preferences
 
 ### Stage Accuracy (Documentation-Only Current State)
-- **Phase 0 is documentation-complete/in progress**: v1.8 master directive is captured and roadmap checkpoints are updated.
+- **Phase 0 is documentation-complete/in progress**: v1.7 master directive is captured and roadmap checkpoints are updated.
 - **Phases 1–4 are implementation backlog**: no Phase 1+ code changes are implied by this documentation update.
 - **Execution checklist and parallel work lanes** are maintained in `plan.md` to support multi-agent implementation kickoff.
-## Architectural Philosophy (New – March 2026)
-
-AXIOM-MESH is a decentralized cognitive substrate, not a typical agent framework.
-It is protocol-oriented and built from scratch around four non-negotiable pillars:
-- Graph-Native Cognition
-- Bicameral Governance (hard constraint)
-- Deterministic zkML Verification
-- Identity/Memory/Observability as Security Surfaces
-
-The system optimizes for closure, auditability, failure containment, and substrate independence. All integrations (OntarioEdAI, THUD, Resource Orchestration, Alignment Profiles, treasury splits, MCP interoperability, hierarchical bonding) serve these core properties rather than override them.
-
-See `docs/MASTER-INTEGRATION.md` v1.8 for the complete unified vision.

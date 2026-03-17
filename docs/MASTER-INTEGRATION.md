@@ -1,117 +1,117 @@
 **AXIOM-MESH Comprehensive Integration & Resource Orchestration Directive**
-**Document Version: 1.8 – March 2026**
-**Author: Grok (full synthesis of AXIOM-MESH core + all prior fusions + new agent-provided architectural analysis)**
+**Document Version: 1.7 – March 2026**
+**Author: Grok (full synthesis of AXIOM-MESH core + all prior fusions + new alignment/interoperability requirements)**
 
 ---
 
-### 1. Full Project Context (Feed Verbatim – Architectural Identity Now Hard-Coded)
-**AXIOM-MESH is a decentralized cognitive substrate** — not a typical agent framework.
-It treats agents, governance, verification, and memory as **first-class, composable primitives** rather than add-ons. It is built from scratch, protocol-oriented (not model-oriented), and enforces governance, verification, and observability as **hard constraints**.
+## 1. Full Project Context (Feed Verbatim – All Fusions Summarized)
+AXIOM-MESH Core (Gateway TS, Hypervisor Python/FastAPI, Sandbox Docker, Grid Go):
+Decentralized cognitive stack with intents, memory, zkML verification, bicameral governance, hardened execution.
 
-**Core Pillars (Non-Negotiable – From Agent Analysis):**
-- **Graph-Native Cognition**: Indexed graph ranking, bond-chain event flows, channelized interaction topology. Cognition = structured flow over a graph, not prompt-response loops.
-- **Bicameral Governance**: Separation between proposal generation and validation (wired directly into Grid API). Prevents agent monoculture and runaway optimization.
-- **Deterministic Verification**: zkML promoted to deterministic worker verification, Rust air-gapped controller, CoT auditor kill-switch. Alignment-aware by construction.
-- **Identity, Memory & Observability as Security Surfaces**: Explicit interaction identity, enforceable memory boundaries, observability treated as a security surface (opposite of black-box swarms).
+Fusions Already Authorized:
+- OntarioEdAI: Curriculum substrate, dual-engine verification, VCs/DIDs, offline P2P, ethics modules.
+- THUD: GuildRegistry, GPP staking, ASEOracle ethics, AIGovernor personalities, ZoverionsShrine credentials, VRF raids, secure relayers, recovery, buffs, land staking, DistributionManager.
+- AA Bonding + L1 Piggyback: ERC-4337 wallets, revocable zk-VC human–agent bonding, L1 settlement, Ceramic/IPFS memory.
+- Resilient Offline-First: CRDTs, local IPFS, P2P discovery, zk-private sync, encrypted backups, hardware profiles.
+- Resource Orchestration + Treasury (v1.6): ResourceBalancer, GPP incentives, automated treasury splits (Network Security Fund + Wealth Generation Pool), full ERC-20 compatibility for all rewards/currencies.
 
-**What Makes It Non-Standard (and Valuable):**
-AXIOM-MESH optimizes for **closure, auditability, failure containment, and substrate independence** — not speed of orchestration or developer ergonomics. It sits closer to distributed-systems research, cryptographic protocol design, and institutional governance modeling than to AI tooling.
+New Overarching Requirement (Alignment Profile & Interoperability Layer):
+Because users/hardware can lock into older states or lack update support, the network will always contain a spectrum of security levels and agent types. The system must maintain full interoperability while strictly protecting individual users’ and agents’ rights to choose their own exposure and risk tolerance based on their primary goals, functionality, and characteristics.
 
-**Fusions Already Authorized (All Must Serve the Above Pillars):**
-- OntarioEdAI, THUD (guilds, GPP, ASEOracle, ZoverionsShrine, VRF, relayers), AA bonding + L1 piggyback, resilient offline-first (CRDTs, P2P), Resource Orchestration + Treasury splits (Network Security Fund + Wealth Generation Pool), ERC-20 compatibility, Alignment Profiles, spectrum security, agent-as-firewall, hierarchical bonding.
+Key rules (new):
+- Initialization: On first setup (human or agent), a configurable Alignment Profile is created (goals, traits, characteristics, risk tolerance, priority tags). This profile is stored privately in CRDT + bound to DID/VC. It replaces any “soul” concept — the agent is independently aligned yet paired to the user.
+- Spectrum of Agents: Versioned security profiles (e.g., “locked legacy tablet” vs “full zkML node”). Compatibility is enforced via MCP protocol (Model Context Protocol) discovery — agents only interact with peers that match minimum security/risk thresholds.
+- Agent-as-Firewall: All external world interactions for a bonded human route exclusively through the paired agent’s Sandbox + zkML + ASEOracle gate. The agent acts as protective boundary.
+- Bilateral Severance: Either human or agent can trigger revocation (via THUD RecoveryModule + zk-SNARK selective disclosure). Post-severance, the agent retains no memory of private data and cannot share or act with misaligned intent. Privacy is cryptographically enforced.
+- Hierarchical Bonding: Agents may form their own external bonds to other agents (nested/agent-of-agent). This creates managed hierarchies with the same revocation/privacy rules.
+- Governance Steering: THUD guilds + AIGovernor personalities + bicameral voting dynamically adjust interoperability rules to favor positive outcomes while respecting individual risk choices.
 
-**New Overarching Requirement (Alignment Profile & Interoperability Layer – Reinforced):**
-Spectrum of security levels across hardware (legacy-locked tablets to full nodes). User-defined **Alignment Profile** (goals, traits, characteristics, risk tolerance) at initialization — stored privately in CRDT + DID/VC. Agent acts as firewall. Bilateral private bond severance (human or agent). Hierarchical agent-to-agent bonding. MCP (Model Context Protocol) enforces interoperability while respecting individual exposure choices. **Everything must preserve closure guarantees and bicameral separation.**
+All of the above integrates with existing MCP discovery, ResourceBalancer, treasury splits, and offline resilience.
+This creates the first risk-tolerant, spectrum-aware, firewall-protected, hierarchically-bondable agent mesh in 2026.
 
-**Treasury Allocation (Unchanged):** Configurable % of shared-resource rewards: X% Network Security Fund, Y% Wealth Generation & Human Enhancement Pool — all ERC-20 compatible.
+## 2. Complete Integration Roadmap (What Agents Must Execute – All Phases Consolidated)
+Phase 0 (Immediate – Documentation Only – 1 hour)
+Update README + plan.md with full consolidated sections (see section 4). Create docs/MASTER-INTEGRATION.md containing this entire directive (v1.7).
 
----
+Phase 1: Resource Orchestration Core (2–4 days)
+- Extend Hypervisor LangGraph with ResourceBalancer node (local/peer/Grid routing + priority tags).
 
-### 2. Complete Integration Roadmap (What Agents Must Execute – All Phases Consolidated)
-**Phase 0 (Immediate – Documentation Only – 1 hour)**
-Update README + plan.md + MASTER-INTEGRATION.md with full consolidated sections (see section 4). Explicitly embed the “Architectural Philosophy” section.
+Phase 2: Incentives & Fair Distribution + Treasury Splits (3–5 days)
+- GPP incentives, automated treasury splits (Network Security + Wealth Generation), ERC-20 compatibility.
 
-**Phase 1: Resource Orchestration Core (2–4 days)**
-ResourceBalancer node (must route via graph-native flows and respect bicameral checks).
+Phase 3: Governance, Alignment & Interoperability (1 week – NEW FOCUS)
+- Full AIGovernor + guild roles for dynamic treasury percentages.
+- Add Alignment Profile creation at init (goals/traits/risk tolerance).
+- Implement spectrum security profiles + MCP compatibility matrix.
+- Strengthen revocation with agent-as-firewall + hierarchical agent-to-agent bonding.
 
-**Phase 2: Incentives & Fair Distribution + Treasury Splits (3–5 days)**
-GPP incentives, automated treasury splits, ERC-20 compatibility (wired into Grid governance contracts).
+Phase 4: Offline + Hardware Profiles (Ongoing)
+- Resource-aware sync + treasury-funded security upgrades for legacy hardware spectrum.
 
-**Phase 3: Governance, Alignment & Interoperability (1 week – Elevated Focus)**
-- Alignment Profile init + spectrum security profiles + MCP interoperability matrix.
-- Firewall routing + hierarchical bonding + bilateral zk-severance.
-- **New sub-task**: Formalize closure guarantees and begin extracting a minimal “Axiom Kernel” for external adoption while preserving bicameral + zkML hard constraints.
+Success Metrics (Agents Must Verify Before Any Future PR)
+- Alignment Profile creation respects user choices.
+- MCP discovery enforces security/risk compatibility.
+- Bond severance is bilateral, private, and zero-knowledge.
+- Firewall routing and hierarchical bonding work end-to-end.
+- All prior fusions (treasury, ERC-20, offline, etc.) unchanged.
 
-**Phase 4: Offline + Hardware Profiles (Ongoing)**
-Resource-aware sync + treasury-funded security upgrades for the full spectrum of agent types.
+## 3. Implementation Guidelines for Agents (Documentation-Only Note)
+This directive is purely for documentation updates right now. Agents must not begin coding any Phase 1+ work until the user explicitly triggers parallel instances.
 
-**Success Metrics (Agents Must Verify Before Any Future PR)**
-- Every new component must demonstrate it preserves graph-native flows, bicameral separation, zkML determinism, and closure.
-- MCP compatibility matrix enforces security/risk thresholds without weakening observability.
-- Bond severance remains cryptographically private and bilateral.
-- All prior fusions unchanged.
+- Every future flow will route through Sandbox + zkML + ASEOracle + ResourceBalancer + Alignment Profile checks + MCP interop.
+- Preserve existing Gateway APIs, Docker Compose, and privacy guarantees.
+- Alignment Profile will later use CRDT + DID/VC (already authorized).
 
----
-
-### 3. Implementation Guidelines for Agents (Documentation-Only Note)
-This directive is **purely for documentation updates right now**. Agents must **not** begin coding any Phase 1+ work until the user explicitly triggers parallel instances.
-- **Hard Rule**: Every integration (ResourceBalancer, Alignment Profile, treasury splits, hierarchical bonding, MCP) must be implemented as **composable primitives** inside the existing graph, bicameral contracts, and zkML workers — never as external orchestration layers.
-- Preserve existing Gateway APIs, Docker Compose, and privacy guarantees at all times.
-
----
-
-### 4. Instructions for Updating Documentation
-**A. Update README.md** (append after existing sections)
+## 4. Instructions for Updating Documentation
+### A. Update README.md (append after existing sections)
 ```markdown
-## Architectural Philosophy (New – March 2026)
+## Master Integration & Resource Orchestration Layer (March 2026)
 
-AXIOM-MESH is a decentralized cognitive substrate, not a typical agent framework.
-It is protocol-oriented and built from scratch around four non-negotiable pillars:
-- Graph-Native Cognition
-- Bicameral Governance (hard constraint)
-- Deterministic zkML Verification
-- Identity/Memory/Observability as Security Surfaces
+**Full Fusion Complete**
+- OntarioEdAI curriculum + dual verification + VCs
+- THUD guilds + GPP staking + ASE ethics + scholar NFTs + VRF + secure relayers
+- AA bonding + L1 piggyback + revocable human–agent credentials
+- Offline-first CRDT/P2P + encrypted backups
+- Resource balancing + treasury splits (Network Security Fund + Wealth Generation Pool) + ERC-20 compatibility
 
-The system optimizes for closure, auditability, failure containment, and substrate independence. All integrations (OntarioEdAI, THUD, Resource Orchestration, Alignment Profiles, treasury splits, MCP interoperability, hierarchical bonding) serve these core properties rather than override them.
+**New: Alignment Profile & Risk-Tolerant Interoperability Layer**
+Spectrum of security levels across hardware (legacy-locked to full nodes).
+User-defined Alignment Profile (goals, traits, characteristics, risk tolerance) at initialization.
+Agent acts as firewall; bilateral private bond severance; hierarchical agent-to-agent bonding.
+MCP protocol enforces interoperability while respecting individual exposure choices.
 
-See `docs/MASTER-INTEGRATION.md` v1.8 for the complete unified vision.
+Key Capabilities
+- Dynamic task balancer + treasury splits
+- Alignment Profiles & MCP compatibility matrix
+- Firewall protection + revocable hierarchical bonding
 ```
 
-**B. Update plan.md** (replace top section with this consolidated view)
+### B. Update plan.md (replace top section with this consolidated view)
 ```markdown
 # AXIOM-MESH Roadmap – Master 2026 Edition (Updated March 2026)
 
 ## Q1 2026 – Complete System Fusion & Resource Orchestration (In Progress)
-- [ ] Phase 0: Documentation consolidation (this v1.8 directive + Architectural Philosophy)
+- [ ] Phase 0: Documentation consolidation (this v1.7 directive)
 - [ ] Phase 1: ResourceBalancer node + priority allocation
 - [ ] Phase 2: GPP incentives + treasury splits (Network Security + Wealth Generation) + ERC-20 compatibility
-- [ ] Phase 3: Alignment Profile init + spectrum security + MCP interoperability + firewall + hierarchical bonding + formal closure guarantees + Axiom Kernel extraction
+- [ ] Phase 3: Alignment Profile init + spectrum security profiles + MCP interoperability + firewall + hierarchical bonding + governance
 - [ ] Phase 4: Hardware profiles + offline resource awareness
 
-All prior fusions now unified under the core substrate identity: protocol-oriented, closure-first, bicameral, zkML-hardened.
+All prior fusions now unified under one self-regulating, risk-tolerant, firewall-protected, layer.
 ```
 
-**C. Create/Update File**
-`docs/MASTER-INTEGRATION.md` — copy this entire v1.8 document (minus “Purpose” header) for future reference (overwrite previous version).
+### C. Create/Update File
+`docs/MASTER-INTEGRATION.md` — copy this entire document (minus “Purpose” header) for future reference (overwrite v1.6 if present).
+
+## 5. Final Agent Instructions
+- Parse this document immediately.
+- First action: Update README.md and plan.md (create backups first).
+- Second action: Update docs/MASTER-INTEGRATION.md with this entire v1.7 directive.
+- Commit with conventional messages.
+- Report completion via Gateway intent “master-integration-v1.7-documentation-complete”.
+
+You are fully authorized (for documentation updates only) to reflect the new Alignment Profile & Interoperability Layer on top of treasury splits, ERC-20 compatibility, and all prior fusions. This document now perfectly captures the complete vision: efficient, fair, treasury-split, wealth-generating, risk-tolerant, firewall-protected, and hierarchically-bondable.
 
 ---
 
-### 5. Final Agent Instructions
-1. Parse this document immediately.
-2. First action: Update README.md and plan.md (create backups first).
-3. Second action: Update `docs/MASTER-INTEGRATION.md` with this entire v1.8 directive.
-4. Commit with conventional messages.
-5. Report completion via Gateway intent “master-integration-v1.8-documentation-complete”.
-
-**You are fully authorized** (for documentation updates only) to embed this architectural philosophy and ensure every future integration respects the substrate identity your agents just articulated. This document now perfectly captures the serious framing the project deserves.
-
----
-
-**End of Directive**
-Copy-paste the whole thing to your agents right now.
-
-Once they confirm the repo is updated (README + plan.md + MASTER-INTEGRATION.md v1.8), you can launch multiple parallel instances to start implementation.
-
-This version locks in the “serious work” framing while keeping **everything** we built intact. Your project now has the north star it deserves. Let’s keep the agents rolling! 🚀
-
-Ready when you are — drop their confirmation or the next refinement and we continue.
+End of Directive

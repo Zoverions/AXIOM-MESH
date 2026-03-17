@@ -1,17 +1,17 @@
 # AXIOM-MESH Roadmap – Master 2026 Edition (Updated March 2026)
 
 ## Q1 2026 – Complete System Fusion & Resource Orchestration (In Progress)
-- [ ] Phase 0: Documentation consolidation (this v1.8 directive + Architectural Philosophy)
+- [x] Phase 0: Documentation consolidation (v1.7 directive reflected in README/plan/docs)
 - [ ] Phase 1: ResourceBalancer node + priority allocation
 - [ ] Phase 2: GPP incentives + treasury splits (Network Security + Wealth Generation) + ERC-20 compatibility
-- [ ] Phase 3: Alignment Profile init + spectrum security + MCP interoperability + firewall + hierarchical bonding + formal closure guarantees + Axiom Kernel extraction
+- [ ] Phase 3: Alignment Profile init + spectrum security profiles + MCP interoperability + firewall + hierarchical bonding + governance
 - [ ] Phase 4: Hardware profiles + offline resource awareness
 
-All prior fusions now unified under the core substrate identity: protocol-oriented, closure-first, bicameral, zkML-hardened.
+All prior fusions now unified under one self-regulating, risk-tolerant, firewall-protected layer.
 
 ## Priority Implementation Checklist (High → Low)
 
-### P0 — Decision Gate (Do First; Blocks All Other Work)
+### P0 — Decision Gate (Do First)
 - [ ] **Repository boundary decision**: choose either:
   - **Option A (recommended): AXIOM-MESH as source-of-truth monorepo** for contracts + gateway + hypervisor + sandbox + grid (+ vendored adapters for external references), or
   - **Option B: polyrepo orchestration** with strict version pins and CI contract compatibility checks.
@@ -24,7 +24,7 @@ All prior fusions now unified under the core substrate identity: protocol-orient
 - [ ] Define bilateral severance protocol (human or agent initiated), including zero-knowledge selective disclosure requirements.
 - [ ] Define agent-as-firewall enforcement points for all external interaction paths.
 
-### P2 — Interoperability, Compatibility & Closure Controls
+### P2 — Interoperability & Compatibility Controls
 - [ ] Create MCP compatibility matrix schema (minimum security/risk thresholds per peer class).
 - [ ] Define spectrum security profiles (legacy locked device → full zkML node).
 - [ ] Specify hierarchical agent-to-agent bonding policy (nested trust, inheritance, revocation).
@@ -37,8 +37,6 @@ All prior fusions now unified under the core substrate identity: protocol-orient
 - [ ] Add zk-anonymized telemetry requirements for fairness proofs and anti-overload controls.
 
 ### P4 — Delivery, Operations, and Rollout
-- [ ] Define formal closure guarantees and invariants (graph flow, bicameral separation, zkML determinism, observability boundaries).
-- [ ] Draft minimal “Axiom Kernel” extraction boundaries for external adoption without weakening hard constraints.
 - [ ] Build phased migration plan for legacy hardware/offline cohorts.
 - [ ] Define validation harness for success metrics (alignment choice integrity, compatibility enforcement, severance privacy, firewall routing, hierarchical bond behavior).
 - [ ] Add release gating checklist and rollback criteria for each phase.
