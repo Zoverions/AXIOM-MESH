@@ -12,34 +12,34 @@ All prior fusions now unified under one self-regulating, risk-tolerant, firewall
 ## Priority Implementation Checklist (High → Low)
 
 ### P0 — Decision Gate (Do First)
-- [ ] **Repository boundary decision**: choose either:
+- [x] **Repository boundary decision**: choose either:
   - **Option A (recommended): AXIOM-MESH as source-of-truth monorepo** for contracts + gateway + hypervisor + sandbox + grid (+ vendored adapters for external references), or
   - **Option B: polyrepo orchestration** with strict version pins and CI contract compatibility checks.
-- [ ] Approve governance rule: any contract/API tweak required by AXIOM-MESH priorities lands here first, then is mirrored outward.
-- [ ] Freeze an Interface Control Document (ICD) for Gateway ↔ Hypervisor ↔ Sandbox ↔ Grid ↔ Contracts.
+- [x] Approve governance rule: any contract/API tweak required by AXIOM-MESH priorities lands here first, then is mirrored outward.
+- [x] Freeze an Interface Control Document (ICD) for Gateway ↔ Hypervisor ↔ Sandbox ↔ Grid ↔ Contracts.
 
 ### P1 — Security & Identity Foundations
-- [ ] Add Alignment Profile spec (goals, traits, characteristics, risk tolerance, priority tags).
+- [x] Add Alignment Profile spec (goals, traits, characteristics, risk tolerance, priority tags).
 - [ ] Bind profile lifecycle to DID/VC + CRDT storage model.
 - [ ] Define bilateral severance protocol (human or agent initiated), including zero-knowledge selective disclosure requirements.
 - [ ] Define agent-as-firewall enforcement points for all external interaction paths.
 
 ### P2 — Interoperability & Compatibility Controls
-- [ ] Create MCP compatibility matrix schema (minimum security/risk thresholds per peer class).
-- [ ] Define spectrum security profiles (legacy locked device → full zkML node).
-- [ ] Specify hierarchical agent-to-agent bonding policy (nested trust, inheritance, revocation).
+- [x] Create MCP compatibility matrix schema (minimum security/risk thresholds per peer class).
+- [x] Define spectrum security profiles (legacy locked device → full zkML node).
+- [x] Specify hierarchical agent-to-agent bonding policy (nested trust, inheritance, revocation).
 - [ ] Map governance controls (guild + bicameral + AIGovernor) to compatibility policy updates.
 
 ### P3 — Resource/Treasury Mechanics
-- [ ] Specify ResourceBalancer decisions (local vs peer vs Grid vs L1 path).
-- [ ] Specify treasury split mechanics (Network Security Fund + Wealth Generation Pool) and reporting.
-- [ ] Define ERC-20 compatibility envelope for rewards/currencies.
-- [ ] Add zk-anonymized telemetry requirements for fairness proofs and anti-overload controls.
+- [x] Specify ResourceBalancer decisions (local vs peer vs Grid vs L1 path).
+- [x] Specify treasury split mechanics (Network Security Fund + Wealth Generation Pool) and reporting.
+- [x] Define ERC-20 compatibility envelope for rewards/currencies.
+- [x] Add zk-anonymized telemetry requirements for fairness proofs and anti-overload controls.
 
 ### P4 — Delivery, Operations, and Rollout
 - [ ] Build phased migration plan for legacy hardware/offline cohorts.
-- [ ] Define validation harness for success metrics (alignment choice integrity, compatibility enforcement, severance privacy, firewall routing, hierarchical bond behavior).
-- [ ] Add release gating checklist and rollback criteria for each phase.
+- [x] Define validation harness for success metrics (alignment choice integrity, compatibility enforcement, severance privacy, firewall routing, hierarchical bond behavior).
+- [x] Add release gating checklist and rollback criteria for each phase.
 
 ## Parallel Work Lanes (Assign to Agents)
 
