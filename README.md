@@ -27,6 +27,7 @@ This README is a **code-accurate rewrite** intended to clearly separate what is 
 ## Documentation Map
 
 **Latest Strategic Documents** (March 2026):
+- **[docs/REPOSITORY-OVERVIEW.md](docs/REPOSITORY-OVERVIEW.md)** – High-level architecture, capabilities, caveats, and quick-start snapshot
 - **[docs/MASTER-INTEGRATION.md](docs/MASTER-INTEGRATION.md)** – Complete fusion of all requirements (OntarioEdAI, THUD guilds, AA bonding, resource orchestration, alignment profiles, MCP compatibility)
 - **[docs/AGENT-ENHANCEMENTS.md](docs/AGENT-ENHANCEMENTS.md)** – 2026 Framework integrations (LangGraph, CrewAI, MCP server specs, skill staking via zkML)
 
@@ -37,6 +38,7 @@ This README is a **code-accurate rewrite** intended to clearly separate what is 
 - **[grid/README.md](grid/README.md)** – Ledger, P2P consensus, smart contracts, zk verification
 
 **Operational & Governance**:
+- **[.github/SECURITY.md](.github/SECURITY.md)** – Vulnerability disclosure process and support policy
 - **[plan.md](plan.md)** – Consolidated Q1 2026 roadmap and feature backlog
 - **[AUDIT_REPORT.md](AUDIT_REPORT.md)** – Code audit, closure guarantees, security findings
 - **[schemas/README.md](schemas/README.md)** – Versioned JSON schema registry (intent, skill, zkml, alignment profile)
