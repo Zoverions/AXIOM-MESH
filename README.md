@@ -267,3 +267,28 @@ So: baseline egress isolation is active in execution containers, and a deeper na
 ## 7) Accuracy Notes
 
 This README intentionally avoids “aspirational as implemented” claims. If you are planning production use, treat the “Expected / Not fully realized yet” section as engineering backlog, not delivered guarantees.
+
+## Master Integration & Resource Orchestration Layer (March 2026)
+
+**Full Fusion Complete**
+- OntarioEdAI curriculum + dual verification + VCs
+- THUD guilds + GPP staking + ASE ethics + scholar NFTs + VRF + secure relayers
+- AA bonding + L1 piggyback + revocable human–agent credentials
+- Offline-first CRDT/P2P + encrypted backups
+
+**New: Self-Balancing Resource Orchestration + Treasury Allocation**
+Automatic routing across local / P2P / Grid + L1.
+GPP rewards for sharing, ASE-gated fairness, anonymized zk-stats, priority allocation.
+
+**Treasury Rules**
+Configurable % of shared-resource rewards automatically allocated:
+- X% → Network Improvement & Security Fund (firewalls, audits, infrastructure)
+- Y% → Wealth Generation & Human Enhancement Pool (QoL uplift, abilities, collective infrastructure)
+
+All rewards and currencies are fully ERC-20 compatible and interoperable with our blockchain infrastructure (THUD contracts, L1 piggyback, AA wallets).
+
+Key Capabilities
+- Dynamic task balancer
+- GPP incentives + automated treasury splits
+- Priority tags & anonymized usage proofs
+- Hardware-agnostic (tablet ↔ full node)
