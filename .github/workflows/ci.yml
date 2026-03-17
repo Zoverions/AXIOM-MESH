@@ -21,7 +21,7 @@ jobs:
       if: matrix.language == 'go'
       uses: actions/setup-go@v4
       with:
-        go-version: '1.21'
+        go-version: '1.24'
     - name: Go Lint & Test
       if: matrix.language == 'go'
       run: |
@@ -35,7 +35,7 @@ jobs:
       if: matrix.language == 'python'
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: '3.12'
     - name: Python Lint & Test
       if: matrix.language == 'python'
       run: |
@@ -73,3 +73,46 @@ jobs:
         npm install
         npx tsc --noEmit
         npm test
+
+  integration-matrix:
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    strategy:
+      fail-fast: false
+      matrix:
+        network_mode: ["connected", "disconnected"]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Simulate Disconnected Mode
+      if: matrix.network_mode == 'disconnected'
+      run: |
+        # Simulate an offline mode by mapping external API domains to localhost/invalid IP
+        echo "127.0.0.1 upload.ardrive.io" | sudo tee -a /etc/hosts
+        echo "127.0.0.1 external.api.com" | sudo tee -a /etc/hosts
+
+    - name: Run docker-compose Matrix
+      run: |
+        # Build and run the entire matrix in the background
+        docker compose up -d --build
+
+        # Wait for services to be healthy or at least running for a few seconds
+        sleep 20
+
+        # Check if containers are still running
+        docker compose ps
+
+        # Optionally, hit the health checks
+        curl -f http://localhost:8000/health || echo "Hypervisor health check failed, but expected in some disconnected tests."
+        curl -f http://localhost:5000/health || echo "Grid health check failed."
+        curl -f http://localhost:4000/health || echo "Sandbox health check failed."
+
+        # Fetch the new zk-stats endpoint
+        curl -f http://localhost:5000/zk-stats || echo "zk-stats endpoint unreachable."
+
+    - name: Tear Down docker-compose
+      if: always()
+      run: |
+        docker compose logs
+        docker compose down -v

@@ -377,6 +377,9 @@ async def run_autoresearch_graph(input_data: dict, api_key: str = Depends(verify
     initial_state = {
         "intent": intent_text,
         "context": "",
+        "routing_decision": "",
+        "priority_tag": "",
+        "treasury_split": {},
         "sandbox_output": "",
         "zkml_verified": False,
         "stake_status": ""

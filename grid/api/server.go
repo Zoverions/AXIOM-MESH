@@ -419,6 +419,36 @@ func (s *Server) Start(addr string) error {
 		}
 	})
 
+	http.HandleFunc("/zk-stats", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "GET" {
+			// Calculate anonymized metrics for fairness proofs and anti-overload controls
+			bonds := s.ledger.GetBonds()
+			totalBondedAmount := 0
+			activeNodesCount := 0
+			for _, b := range bonds {
+				if b.Status == "active" {
+					activeNodesCount++
+					totalBondedAmount += b.Amount
+				}
+			}
+
+			// Add zero-knowledge/anonymized reporting metrics
+			stats := map[string]interface{}{
+				"active_bonded_nodes": activeNodesCount,
+				"total_staked_amount": totalBondedAmount,
+				"skills_registered":   len(s.ledger.GetSkills()),
+				"proposals_count":     len(s.ledger.GetProposals()),
+				"swarms_active":       len(s.ledger.GetSwarms()),
+				"zkml_queue_size":     len(s.zkmlQueue),
+				"anonymized_telemetry": true,
+			}
+			json.NewEncoder(w).Encode(stats)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
 	http.HandleFunc("/zkml/verify", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == "POST" {
