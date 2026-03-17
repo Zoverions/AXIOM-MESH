@@ -6,3 +6,4 @@ build/
 data/
 .env
 venv/
+secure_audit.log

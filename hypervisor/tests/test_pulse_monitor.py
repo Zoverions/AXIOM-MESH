@@ -3,7 +3,7 @@ import tempfile
 
 import pytest
 
-from core.pulse_monitor import CoTAuditor, CognitiveSubversionError
+from kernel.pulse_monitor import CoTAuditor, CognitiveSubversionError
 
 
 async def _stream_tokens(chunks):
