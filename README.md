@@ -275,20 +275,33 @@ This README intentionally avoids “aspirational as implemented” claims. If yo
 - THUD guilds + GPP staking + ASE ethics + scholar NFTs + VRF + secure relayers
 - AA bonding + L1 piggyback + revocable human–agent credentials
 - Offline-first CRDT/P2P + encrypted backups
+- Resource balancing + treasury splits (Network Security Fund + Wealth Generation Pool) + ERC-20 compatibility
 
-**New: Self-Balancing Resource Orchestration + Treasury Allocation**
-Automatic routing across local / P2P / Grid + L1.
-GPP rewards for sharing, ASE-gated fairness, anonymized zk-stats, priority allocation.
-
-**Treasury Rules**
-Configurable % of shared-resource rewards automatically allocated:
-- X% → Network Improvement & Security Fund (firewalls, audits, infrastructure)
-- Y% → Wealth Generation & Human Enhancement Pool (QoL uplift, abilities, collective infrastructure)
-
-All rewards and currencies are fully ERC-20 compatible and interoperable with our blockchain infrastructure (THUD contracts, L1 piggyback, AA wallets).
+**New: Alignment Profile & Risk-Tolerant Interoperability Layer**
+Spectrum of security levels across hardware (legacy-locked to full nodes).
+User-defined Alignment Profile (goals, traits, characteristics, risk tolerance) at initialization.
+Agent acts as firewall; bilateral private bond severance; hierarchical agent-to-agent bonding.
+MCP protocol enforces interoperability while respecting individual exposure choices.
 
 Key Capabilities
-- Dynamic task balancer
-- GPP incentives + automated treasury splits
-- Priority tags & anonymized usage proofs
-- Hardware-agnostic (tablet ↔ full node)
+- Dynamic task balancer + treasury splits
+- Alignment Profiles & MCP compatibility matrix
+- Firewall protection + revocable hierarchical bonding
+- Governance steering that adjusts interoperability policy without breaking user risk preferences
+
+### Stage Accuracy (Documentation-Only Current State)
+- **Phase 0 is documentation-complete/in progress**: v1.8 master directive is captured and roadmap checkpoints are updated.
+- **Phases 1–4 are implementation backlog**: no Phase 1+ code changes are implied by this documentation update.
+- **Execution checklist and parallel work lanes** are maintained in `plan.md` to support multi-agent implementation kickoff.
+## Architectural Philosophy (New – March 2026)
+
+AXIOM-MESH is a decentralized cognitive substrate, not a typical agent framework.
+It is protocol-oriented and built from scratch around four non-negotiable pillars:
+- Graph-Native Cognition
+- Bicameral Governance (hard constraint)
+- Deterministic zkML Verification
+- Identity/Memory/Observability as Security Surfaces
+
+The system optimizes for closure, auditability, failure containment, and substrate independence. All integrations (OntarioEdAI, THUD, Resource Orchestration, Alignment Profiles, treasury splits, MCP interoperability, hierarchical bonding) serve these core properties rather than override them.
+
+See `docs/MASTER-INTEGRATION.md` v1.8 for the complete unified vision.
