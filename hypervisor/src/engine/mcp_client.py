@@ -1,7 +1,7 @@
 import os
 import json
 import asyncio
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Optional
 from mcp.client.sse import sse_client
 from mcp.client.session import ClientSession
 from contextlib import AsyncExitStack
