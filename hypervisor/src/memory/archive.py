@@ -226,8 +226,9 @@ class DeepArchive:
         }
 
         edges_added = 0
+        keywords_set = set(keywords)
         for existing_id, existing_node in data.get("nodes", {}).items():
-            shared = set(keywords).intersection(set(existing_node.get("keywords", [])))
+            shared = keywords_set.intersection(existing_node.get("keywords", []))
             if shared:
                 data.setdefault("edges", []).append(
                     {
