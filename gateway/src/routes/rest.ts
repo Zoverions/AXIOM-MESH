@@ -7,6 +7,7 @@ import { sanitizeContent, sanitizeMetadata } from '../utils/sanitize';
 import { sendToHypervisor } from '../services/hypervisorClient';
 import { getLogsBuffer } from '../utils/logger';
 import { authMiddleware } from '../middleware/auth';
+import { publicIntentRateLimit } from '../middleware/public_rate_limit';
 import { exec } from 'child_process';
 import util from 'util';
 
