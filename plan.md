@@ -1,21 +1,13 @@
-# AXIOM-MESH Roadmap – 2026 Edition (Updated March 2026)
+# AXIOM-MESH Roadmap – Master 2026 Edition (Updated March 2026)
 
-## Q1 2026 – Agent Orchestration Layer (In Progress)
-- [ ] LangGraph integration in Hypervisor (checkpointed workflows)
-- [ ] MCP + A2A servers (interoperability)
-- [ ] Dynamic skill registry (AgentZero/OpenClaw style)
-- [ ] AutoResearch v2 with zkML quality gate
+## Q1 2026 – Complete System Fusion & Resource Orchestration (In Progress)
+- [ ] Phase 0: Documentation consolidation (this directive)
+- [ ] Phase 1: ResourceBalancer node + priority allocation
+- [ ] Phase 2: GPP incentives + fair distribution + automated treasury splits (Network Security Fund + Wealth Generation Pool) + ERC-20 compatibility
+- [ ] Phase 3: Full governance (AIGovernor + bicameral) for dynamic treasury percentages
+- [ ] Phase 4: Hardware profiles + offline resource awareness
 
-## Q2 2026 – Production Readiness
-- [ ] CrewAI + Guardrails safety layer
-- [ ] Full LangSmith observability + Grid audit sync
-- [ ] LlamaIndex long-term memory
-- [ ] Gateway UI enhancements (OpenClaw-style dashboard)
-
-## Q3 2026 – Decentralized Scaling
-- [ ] Multi-peer Grid skill staking with A2A
-- [ ] Self-improving autonomous loops
-- [ ] Public MCP registry for community skills
+All prior fusions (OntarioEdAI, THUD, AA bonding, resilience) now unified under one self-regulating, treasury-split, ERC-20-native layer.
 
 # Roadmap Status Snapshot (Audit-Verified)
 
