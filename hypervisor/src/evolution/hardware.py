@@ -20,6 +20,16 @@ class HardwareScanner:
 
         return footprint
 
+    def get_hardware_profile(self, footprint: dict = None) -> str:
+        if footprint is None:
+            footprint = self.scan()
+        if footprint["total_ram_gb"] >= 16 and footprint["vram_mb"] >= 8000:
+            return "full_node"
+        elif footprint["total_ram_gb"] >= 8:
+            return "edge"
+        else:
+            return "tablet"
+
     def _get_os_name(self) -> str:
         sys_name = platform.system()
         if sys_name == "Linux":

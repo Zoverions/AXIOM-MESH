@@ -10,10 +10,32 @@ class MCPClient:
     Client for interacting with Model Context Protocol (MCP) servers
     to expose available tools and prompts to the hypervisor context.
     """
-    def __init__(self):
+    # Security Profile Taxonomy
+    S0_LEGACY_LOCKED = "S0_LEGACY_LOCKED"
+    S1_BASELINE = "S1_BASELINE"
+    S2_HARDENED = "S2_HARDENED"
+    S3_ZKML_FULL_NODE = "S3_ZKML_FULL_NODE"
+
+    mcp_compatibility_matrix = {
+        S0_LEGACY_LOCKED: [S0_LEGACY_LOCKED],
+        S1_BASELINE: [S0_LEGACY_LOCKED, S1_BASELINE, S2_HARDENED, S3_ZKML_FULL_NODE],
+        S2_HARDENED: [S2_HARDENED, S3_ZKML_FULL_NODE],
+        S3_ZKML_FULL_NODE: [S3_ZKML_FULL_NODE]
+    }
+
+    def __init__(self, node_security_profile=S1_BASELINE):
+        self.node_security_profile = node_security_profile
         # Allow multiple servers via comma-separated list of SSE URLs
         mcp_env = os.environ.get("MCP_SERVERS", "")
         self.servers = [s.strip() for s in mcp_env.split(",") if s.strip()]
+
+    def check_compatibility(self, peer_profile: str) -> bool:
+        """
+        Checks if the given peer_profile matches the minimum required profile
+        based on our node's security profile and the compatibility matrix.
+        """
+        allowed_profiles = self.mcp_compatibility_matrix.get(self.node_security_profile, [])
+        return peer_profile in allowed_profiles
 
     async def fetch_context(self, intent_content: str) -> str:
         """
@@ -26,6 +48,18 @@ class MCPClient:
         aggregated_context = []
 
         for server in self.servers:
+            # We assume URLs might contain a #profile=S1_BASELINE hash to identify their profile for testing.
+            # E.g. http://localhost:8000#profile=S2_HARDENED
+            peer_profile = self.S1_BASELINE
+            if "#profile=" in server:
+                server_url, profile_str = server.split("#profile=", 1)
+                peer_profile = profile_str
+                server = server_url
+
+            if not self.check_compatibility(peer_profile):
+                aggregated_context.append(f"[MCP Server {server}]: Connection blocked by Security Compatibility Matrix (Peer Profile: {peer_profile})")
+                continue
+
             try:
                 # We connect to each server using SSE transport
                 async with AsyncExitStack() as stack:
