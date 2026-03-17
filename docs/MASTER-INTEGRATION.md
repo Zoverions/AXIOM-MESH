@@ -18,6 +18,7 @@ It treats agents, governance, verification, and memory as **first-class, composa
 
 **Fusions Already Authorized (All Serve the Pillars):**
 - OntarioEdAI, THUD (guilds, GPP, ASEOracle, ZoverionsShrine, VRF, relayers), AA bonding + L1 piggyback, resilient offline-first (CRDTs, P2P), Resource Orchestration + Treasury splits (Network Security Fund + Wealth Generation Pool), ERC-20 compatibility, Alignment Profiles, spectrum security, agent-as-firewall, hierarchical bonding.
+- **Performance Optimizations (v2.0 Spec):** Python jemalloc for memory fragmentation reduction, Node.js Worker Threads for non-blocking crypto operations, and BadgerDB persistent storage for Grid ledger with WAL.
 
 **New Structural Comparison (Feed Verbatim to Agents – From Your Input):**
 This positions AXIOM-MESH against 2026-era frameworks as an "institutional substrate" that survives hostile environments. Embed the full comparison in docs (see section 4). Key insight: AXIOM-MESH optimizes for closure and drift resistance, while others (LangGraph, CrewAI, AutoResearch) assume good behavior.

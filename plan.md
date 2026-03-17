@@ -8,6 +8,12 @@
 
 Next: Formalize failure-mode proofs; map participatory closure to agent economics; LangGraph-inside-AXIOM-MESH adapter.
 
+## 8-Week Implementation Roadmap (Technical Spec v2.0)
+- [ ] Phase 1 (Weeks 1-2): Security Hardening (MCP Firewall, Sandbox Airgap, Secret Scanning)
+- [ ] Phase 2 (Weeks 3-4): Performance Optimization (Python jemalloc, Node.js Workers, Go Persistence)
+- [ ] Phase 3 (Weeks 5-6): Architectural Enhancement (Circuit Breakers, zkML Caching, Governance Automation)
+- [ ] Phase 4 (Weeks 7-8): Observability & Polish (OpenTelemetry, Health Checks, Load Testing)
+
 
 ## Q1 2026 – Complete System Fusion & Resource Orchestration (In Progress)
 - [ ] Phase 0: Documentation consolidation (this v1.8 directive)
