@@ -1,5 +1,5 @@
 **AXIOM-MESH Comprehensive Integration & Resource Orchestration Directive**
-**Document Version: 1.7 – March 2026**
+**Document Version: 1.8 – March 2026**
 **Author: Grok (full synthesis of AXIOM-MESH core + all prior fusions + new alignment/interoperability requirements)**
 
 ---
@@ -31,7 +31,7 @@ This creates the first risk-tolerant, spectrum-aware, firewall-protected, hierar
 
 ## 2. Complete Integration Roadmap (What Agents Must Execute – All Phases Consolidated)
 Phase 0 (Immediate – Documentation Only – 1 hour)
-Update README + plan.md with full consolidated sections (see section 4). Create docs/MASTER-INTEGRATION.md containing this entire directive (v1.7).
+Update README + plan.md with full consolidated sections (see section 4). Create docs/MASTER-INTEGRATION.md containing this entire directive (v1.8).
 
 Phase 1: Resource Orchestration Core (2–4 days)
 - Extend Hypervisor LangGraph with ResourceBalancer node (local/peer/Grid routing + priority tags).
@@ -65,6 +65,13 @@ This directive is purely for documentation updates right now. Agents must not be
 ## 4. Instructions for Updating Documentation
 ### A. Update README.md (append after existing sections)
 ```markdown
+## Architectural Philosophy
+Our architecture is built on four core principles:
+- **graph-native**: Knowledge and context are structured as traversable, distributed graphs.
+- **bicameral**: Governance splits control across dual independent layers ensuring balanced system evolution.
+- **zkML-hardened**: Inference runs locally with verifiable zero-knowledge proofs submitted on-chain.
+- **closure-first**: Encapsulated state execution with strict boundary controls prioritizing closure.
+
 ## Master Integration & Resource Orchestration Layer (March 2026)
 
 **Full Fusion Complete**
@@ -91,7 +98,7 @@ Key Capabilities
 # AXIOM-MESH Roadmap – Master 2026 Edition (Updated March 2026)
 
 ## Q1 2026 – Complete System Fusion & Resource Orchestration (In Progress)
-- [ ] Phase 0: Documentation consolidation (this v1.7 directive)
+- [ ] Phase 0: Documentation consolidation (this v1.8 directive)
 - [ ] Phase 1: ResourceBalancer node + priority allocation
 - [ ] Phase 2: GPP incentives + treasury splits (Network Security + Wealth Generation) + ERC-20 compatibility
 - [ ] Phase 3: Alignment Profile init + spectrum security profiles + MCP interoperability + firewall + hierarchical bonding + governance
@@ -101,14 +108,14 @@ All prior fusions now unified under one self-regulating, risk-tolerant, firewall
 ```
 
 ### C. Create/Update File
-`docs/MASTER-INTEGRATION.md` — copy this entire document (minus “Purpose” header) for future reference (overwrite v1.6 if present).
+`docs/MASTER-INTEGRATION.md` — copy this entire document (minus “Purpose” header) for future reference (overwrite v1.7 if present).
 
 ## 5. Final Agent Instructions
 - Parse this document immediately.
 - First action: Update README.md and plan.md (create backups first).
-- Second action: Update docs/MASTER-INTEGRATION.md with this entire v1.7 directive.
+- Second action: Update docs/MASTER-INTEGRATION.md with this entire v1.8 directive.
 - Commit with conventional messages.
-- Report completion via Gateway intent “master-integration-v1.7-documentation-complete”.
+- Report completion via Gateway intent “master-integration-v1.8-documentation-complete”.
 
 You are fully authorized (for documentation updates only) to reflect the new Alignment Profile & Interoperability Layer on top of treasury splits, ERC-20 compatibility, and all prior fusions. This document now perfectly captures the complete vision: efficient, fair, treasury-split, wealth-generating, risk-tolerant, firewall-protected, and hierarchically-bondable.
 

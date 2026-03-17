@@ -1,6 +1,10 @@
 # AxiomMesh (Repository Reality Guide)
 
 ![Agent Frameworks](https://img.shields.io/badge/Agent%20Stack-LangGraph%20%2B%20MCP-00C300)
+![Resource Orchestration](https://img.shields.io/badge/Resource-Orchestration-blue)
+![Alignment Profile](https://img.shields.io/badge/Alignment-Profile-orange)
+![Treasury Split](https://img.shields.io/badge/Treasury-Split-gold)
+![Spectrum Security](https://img.shields.io/badge/Spectrum-Security-red)
 
 AxiomMesh is a multi-service AI systems stack with four runtime pillars plus supporting contracts, schemas, and tooling:
 
@@ -8,6 +12,13 @@ AxiomMesh is a multi-service AI systems stack with four runtime pillars plus sup
 - **Hypervisor (Python/FastAPI)**: context synthesis, memory/archive orchestration, response shaping, and agent loops.
 - **Sandbox (TypeScript/Node + Docker runtime)**: constrained ephemeral code execution.
 - **Grid (Go)**: peer-aware ledger APIs, cache/graph sync, PoER checks, zk/zkML verification endpoints, and bicameral governance synchronization.
+
+## Architectural Philosophy
+Our architecture is built on four core principles:
+- **graph-native**: Knowledge and context are structured as traversable, distributed graphs.
+- **bicameral**: Governance splits control across dual independent layers ensuring balanced system evolution.
+- **zkML-hardened**: Inference runs locally with verifiable zero-knowledge proofs submitted on-chain.
+- **closure-first**: Encapsulated state execution with strict boundary controls prioritizing closure.
 
 This README is a **code-accurate rewrite** intended to clearly separate what is implemented now vs what is still prototype-grade or expected next.
 
@@ -290,6 +301,6 @@ Key Capabilities
 - Governance steering that adjusts interoperability policy without breaking user risk preferences
 
 ### Stage Accuracy (Documentation-Only Current State)
-- **Phase 0 is documentation-complete/in progress**: v1.7 master directive is captured and roadmap checkpoints are updated.
+- **Phase 0 is documentation-complete/in progress**: v1.8 master directive is captured and roadmap checkpoints are updated.
 - **Phases 1–4 are implementation backlog**: no Phase 1+ code changes are implied by this documentation update.
 - **Execution checklist and parallel work lanes** are maintained in `plan.md` to support multi-agent implementation kickoff.
