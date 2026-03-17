@@ -1,3 +1,5 @@
+import httpx
+import asyncio
 import requests
 import os
 import hashlib
@@ -51,23 +53,24 @@ class NetworkSync:
                 else:
                     print(f"[Degraded Mode] Failed to publish skill after {max_retries} attempts: {e}")
 
-    def fetch_web_cache(self, url: str):
+    async def fetch_web_cache(self, url: str):
         """Fetches a pre-compiled web state from the decentralized Grid cache."""
-        import time
+        import asyncio
         max_retries = 3
         base_delay = 1.0
-        for attempt in range(max_retries):
-            try:
-                res = requests.get(CACHE_URL, params={"url": url}, timeout=5)
-                if res.status_code == 200:
-                    return res.json()
-                return None
-            except Exception as e:
-                if attempt < max_retries - 1:
-                    time.sleep(base_delay * (2 ** attempt))
-                else:
-                    print(f"[Degraded Mode] Failed to fetch from Grid cache after {max_retries} attempts: {e}")
+        async with httpx.AsyncClient() as client:
+            for attempt in range(max_retries):
+                try:
+                    res = await client.get(CACHE_URL, params={"url": url}, timeout=5.0)
+                    if res.status_code == 200:
+                        return res.json()
                     return None
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(base_delay * (2 ** attempt))
+                    else:
+                        print(f"[Degraded Mode] Failed to fetch from Grid cache after {max_retries} attempts: {e}")
+                        return None
 
     def publish_web_state(self, state_data: dict):
         """Publishes a compiled web state to the decentralized Grid cache."""
