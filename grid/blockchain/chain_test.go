@@ -209,6 +209,17 @@ func TestLedger_ApplyBondChainEvent_And_Reconcile(t *testing.T) {
 		t.Fatalf("unexpected bond after slash event: %+v", bond)
 	}
 
+	// Test bond severance via full slash to inactive
+	evtSeverance := types.BondChainEvent{Type: "slash", NodeID: "node-1", Amount: 150, TxHash: "0x3", BlockNumber: 13, Finalized: true}
+	if err := l.ApplyBondChainEvent(evtSeverance); err != nil {
+		t.Fatalf("bond severance event failed: %v", err)
+	}
+
+	bond, _ = l.GetBond("node-1")
+	if bond.Amount != 0 || bond.Status != "inactive" {
+		t.Fatalf("unexpected bond after severance: %+v", bond)
+	}
+
 	l.ReconcileBondFromChain("node-1", types.ComputeBond{Amount: 175, Status: "active", TxHash: "0xcanon"}, 20)
 	bond, _ = l.GetBond("node-1")
 	if bond.Amount != 175 || bond.FinalizedBlock != 20 || bond.PendingFinalityTx != "" {

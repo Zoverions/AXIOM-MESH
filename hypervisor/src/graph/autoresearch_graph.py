@@ -9,6 +9,9 @@ import uuid
 class GraphState(TypedDict):
     intent: str
     context: str
+    routing_decision: str
+    priority_tag: str
+    treasury_split: dict
     sandbox_output: str
     zkml_verified: bool
     stake_status: str
@@ -21,6 +24,40 @@ async def context_assembly(state: GraphState):
     # Placeholder for actual context engine logic.
     context = f"Context derived for: {intent}"
     return {"context": context}
+
+async def resource_balancer(state: GraphState):
+    """
+    Evaluates the intent and context to determine the best routing path
+    (local, peer, Grid, or L1) and computes treasury splits for rewards.
+    Also tags priorities based on task complexity.
+    """
+    intent = state.get("intent", "")
+
+    # Simple heuristics to simulate ResourceBalancer decisions
+    routing_decision = "local"
+    priority_tag = "normal"
+    if "consensus" in intent.lower() or "grid" in intent.lower():
+        routing_decision = "grid"
+        priority_tag = "high"
+    elif "settle" in intent.lower() or "l1" in intent.lower():
+        routing_decision = "l1"
+        priority_tag = "critical"
+    elif "peer" in intent.lower() or "offload" in intent.lower():
+        routing_decision = "peer"
+        priority_tag = "low"
+
+    # Treasury Split Calculation (Network Security Fund vs Wealth Generation Pool)
+    treasury_split = {
+        "network_security_fund": 0.60,
+        "wealth_generation_pool": 0.40,
+        "security_upgrades_applied": ["firewalls", "rate_limits", "audits"] if routing_decision in ["grid", "l1"] else []
+    }
+
+    return {
+        "routing_decision": routing_decision,
+        "priority_tag": priority_tag,
+        "treasury_split": treasury_split
+    }
 
 async def sandbox_exec(state: GraphState):
     """Executes code via the external sandbox service."""
@@ -106,12 +143,14 @@ async def grid_stake(state: GraphState):
 workflow = StateGraph(GraphState)
 
 workflow.add_node("context_assembly", context_assembly)
+workflow.add_node("resource_balancer", resource_balancer)
 workflow.add_node("sandbox_exec", sandbox_exec)
 workflow.add_node("zkml_verify", zkml_verify)
 workflow.add_node("grid_stake", grid_stake)
 
 workflow.add_edge(START, "context_assembly")
-workflow.add_edge("context_assembly", "sandbox_exec")
+workflow.add_edge("context_assembly", "resource_balancer")
+workflow.add_edge("resource_balancer", "sandbox_exec")
 workflow.add_edge("sandbox_exec", "zkml_verify")
 workflow.add_edge("zkml_verify", "grid_stake")
 workflow.add_edge("grid_stake", END)

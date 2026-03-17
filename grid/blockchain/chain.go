@@ -55,6 +55,16 @@ func (l *Ledger) GetBond(nodeID string) (types.ComputeBond, bool) {
 	return bond, ok
 }
 
+func (l *Ledger) GetBonds() []types.ComputeBond {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	bonds := make([]types.ComputeBond, 0, len(l.Bonds))
+	for _, b := range l.Bonds {
+		bonds = append(bonds, b)
+	}
+	return bonds
+}
+
 func (l *Ledger) Slash(nodeID string, amount int, txHash string) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
