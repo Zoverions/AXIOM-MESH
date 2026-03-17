@@ -23,6 +23,7 @@ type ComputeBond struct {
 	LastUpdatedBlock  uint64 `json:"lastUpdatedBlock,omitempty"`
 	FinalizedBlock    uint64 `json:"finalizedBlock,omitempty"`
 	PendingFinalityTx string `json:"pendingFinalityTx,omitempty"`
+	ParentNodeID      string `json:"parentNodeId,omitempty"`
 }
 
 type BondChainEvent struct {

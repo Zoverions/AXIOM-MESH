@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/app/grid/contracts/contracts/ComputeBond.sol": {
-      "lastModificationDate": 1773543047524,
-      "contentHash": "9a6791deed423e9cf71c94de7646ce8d",
+      "lastModificationDate": 1773765907174,
+      "contentHash": "b19628cee50ff625389cf4f3023af43b",
       "sourceName": "contracts/ComputeBond.sol",
       "solcConfig": {
         "version": "0.8.20",
@@ -114,7 +114,7 @@
       ]
     },
     "/app/grid/contracts/contracts/WeightOracle.sol": {
-      "lastModificationDate": 1773594581791,
+      "lastModificationDate": 1773762899622,
       "contentHash": "5d388da8243cebe25d071053047e20fa",
       "sourceName": "contracts/WeightOracle.sol",
       "solcConfig": {
@@ -153,7 +153,7 @@
       ]
     },
     "/app/grid/contracts/contracts/DualLedgerIdentity.sol": {
-      "lastModificationDate": 1773594581791,
+      "lastModificationDate": 1773762899622,
       "contentHash": "9c3c7cec87476fca136a51d05b093380",
       "sourceName": "contracts/DualLedgerIdentity.sol",
       "solcConfig": {
@@ -191,7 +191,7 @@
       ]
     },
     "/app/grid/contracts/contracts/DialecticArbitration.sol": {
-      "lastModificationDate": 1773594581791,
+      "lastModificationDate": 1773762899622,
       "contentHash": "af1ffec55234617c883e40fc3f446b6b",
       "sourceName": "contracts/DialecticArbitration.sol",
       "solcConfig": {
