@@ -24,6 +24,29 @@ This README is a **code-accurate rewrite** intended to clearly separate what is 
 
 ---
 
+## Documentation Map
+
+**Latest Strategic Documents** (March 2026):
+- **[docs/MASTER-INTEGRATION.md](docs/MASTER-INTEGRATION.md)** – Complete fusion of all requirements (OntarioEdAI, THUD guilds, AA bonding, resource orchestration, alignment profiles, MCP compatibility)
+- **[docs/AGENT-ENHANCEMENTS.md](docs/AGENT-ENHANCEMENTS.md)** – 2026 Framework integrations (LangGraph, CrewAI, MCP server specs, skill staking via zkML)
+
+**Service Documentation** (Quick Reference):
+- **[gateway/README.md](gateway/README.md)** – User-facing API, WebSocket, channel adapters
+- **[hypervisor/README.md](hypervisor/README.md)** – AI orchestration, LangGraph workflows, autonomous loops
+- **[sandbox/README.md](sandbox/README.md)** – Isolated execution, security policies, resource limits
+- **[grid/README.md](grid/README.md)** – Ledger, P2P consensus, smart contracts, zk verification
+
+**Operational & Governance**:
+- **[plan.md](plan.md)** – Consolidated Q1 2026 roadmap and feature backlog
+- **[AUDIT_REPORT.md](AUDIT_REPORT.md)** – Code audit, closure guarantees, security findings
+- **[schemas/README.md](schemas/README.md)** – Versioned JSON schema registry (intent, skill, zkml, alignment profile)
+- **[docs/INTERFACE-CONTROL-DOCUMENT.md](docs/INTERFACE-CONTROL-DOCUMENT.md)** – Formal pillar contracts and API specifications
+
+**Quick Start**:
+- **This file** – Overview, architecture philosophy, what's implemented vs prototype
+
+---
+
 ## 2026 AI Agent Framework Integrations (New Section)
 
 AXIOM-MESH now leverages the best 2026 agent frameworks while preserving its zkML + decentralized core:

@@ -7,3 +7,25 @@ data/
 .env
 venv/
 secure_audit.log
+
+# Development/Debug log files
+*.log
+dev_out.log
+gateway/dev_out.log
+
+# Generated files
+*.d.ts.map
+*.js.map
+*.d.ts
+
+# IDE Files
+.vscode/settings.json
+.idea/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Package Manager lockfiles (optional - uncomment if desired)
+# package-lock.json
+# yarn.lock

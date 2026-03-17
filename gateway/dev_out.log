@@ -1,5 +1,0 @@
-[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
-{"timestamp":"2026-03-15T02:45:55.900Z","level":"info","message":"Omni-Gateway WebSocket server running on port 3001"}
-{"timestamp":"2026-03-15T02:45:55.901Z","level":"info","message":"Initializing available channels..."}
-{"timestamp":"2026-03-15T02:45:55.902Z","level":"error","message":"(node:9430) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.\n(Use `node --trace-deprecation ...` to show where the warning was created)"}
-{"timestamp":"2026-03-15T02:45:55.902Z","level":"info","message":"Omni-Gateway REST API running on port 3000"}
