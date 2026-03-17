@@ -52,6 +52,13 @@ Prioritize in this order inside Hypervisor and Grid:
 
 6. **Cross-Cutting Standards (Mandatory)**
    - **MCP (Model Context Protocol)** + **A2A (Google Agent-to-Agent)**: Implement MCP servers (JSON-RPC tool/context discovery). Makes your mesh instantly compatible with AgentZero, OpenClaw, Google ADK, etc.
+     - **MCP Security Requirements (CRITICAL):**
+       - Implement tool call validation with AST analysis (schema strictness, max tool description length, prohibited patterns).
+       - Enforce confused deputy prevention using identity chains (RFC 8693 token exchange, workload identity, session binding).
+       - Deploy prompt injection defense (input sanitization, delimiter enforcement, instruction boundary markers).
+       - Require explicit human-in-the-loop approval for high-risk operations (e.g., Risk > 0.7 explicit confirmation, Risk > 0.9 2FA).
+       - Mandatory code signing verification for all MCP servers.
+       - Deploy gVisor or Kata Containers for MCP server isolation.
    - Memory: Add LlamaIndex or Mem0 alongside your IPFS archives.
    - Safety/Observability: Guardrails AI + LangSmith.
 
