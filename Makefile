@@ -14,3 +14,12 @@ test:
 	curl http://localhost:8000/health
 	curl http://localhost:4000/health
 	curl http://localhost:5000/health
+
+contracts-compile:
+	cd grid/contracts && npm run compile
+
+contracts-test:
+	cd grid/contracts && npm test
+
+contracts-deploy:
+	cd grid/contracts && npm run deploy:localhost

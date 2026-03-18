@@ -9,6 +9,7 @@ import (
 
 	"fmt"
 	"github.com/axiom-mesh/grid/blockchain"
+	chainclient "github.com/axiom-mesh/grid/chain"
 	"github.com/axiom-mesh/grid/p2p"
 
 	"github.com/axiom-mesh/grid/consensus"
@@ -22,10 +23,11 @@ type ZKMLJob struct {
 }
 
 type Server struct {
-	ledger    *blockchain.Ledger
-	p2pNode   *p2p.Node
-	upgrader  websocket.Upgrader
-	zkmlQueue chan ZKMLJob
+	ledger             *blockchain.Ledger
+	p2pNode            *p2p.Node
+	upgrader           websocket.Upgrader
+	zkmlQueue          chan ZKMLJob
+	computeBondOnChain *chainclient.ComputeBondClient
 }
 
 func NewServer(ledger *blockchain.Ledger, p2pNode *p2p.Node) *Server {
@@ -61,6 +63,10 @@ func NewServer(ledger *blockchain.Ledger, p2pNode *p2p.Node) *Server {
 	}
 
 	return server
+}
+
+func (s *Server) SetComputeBondClient(client *chainclient.ComputeBondClient) {
+	s.computeBondOnChain = client
 }
 
 // startZKMLWorker runs a deterministic worker pool for zkML verifications
@@ -156,8 +162,23 @@ func (s *Server) Start(addr string) error {
 					bond.Status = "active"
 				}
 
+				var txHash string
+				if s.computeBondOnChain != nil {
+					hash, err := s.computeBondOnChain.Stake(bond.NodeID, int64(bond.Amount))
+					if err != nil {
+						http.Error(w, "on-chain stake failed: "+err.Error(), http.StatusBadGateway)
+						return
+					}
+					txHash = hash.Hex()
+					bond.TxHash = txHash
+				}
+
 				s.ledger.Stake(bond)
-				json.NewEncoder(w).Encode(map[string]string{"status": "success", "nodeId": bond.NodeID})
+				resp := map[string]string{"status": "success", "nodeId": bond.NodeID}
+				if txHash != "" {
+					resp["txHash"] = txHash
+				}
+				json.NewEncoder(w).Encode(resp)
 			} else {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 			}
@@ -237,6 +258,15 @@ func (s *Server) Start(addr string) error {
 					return
 				}
 
+				if s.computeBondOnChain != nil {
+					hash, err := s.computeBondOnChain.Slash(payload.NodeID, int64(payload.Amount))
+					if err != nil {
+						http.Error(w, "on-chain slash failed: "+err.Error(), http.StatusBadGateway)
+						return
+					}
+					payload.TxHash = hash.Hex()
+				}
+
 				if err := s.ledger.Slash(payload.NodeID, payload.Amount, payload.TxHash); err != nil {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
@@ -244,7 +274,11 @@ func (s *Server) Start(addr string) error {
 
 				// Depending on the network requirements, we could also broadcast this slash event,
 				// but since slash events originated from chain, we mostly care about updating local state.
-				json.NewEncoder(w).Encode(map[string]string{"status": "success", "nodeId": payload.NodeID})
+				resp := map[string]string{"status": "success", "nodeId": payload.NodeID}
+				if payload.TxHash != "" {
+					resp["txHash"] = payload.TxHash
+				}
+				json.NewEncoder(w).Encode(resp)
 			} else {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 			}

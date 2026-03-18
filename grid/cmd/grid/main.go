@@ -9,6 +9,7 @@ import (
 
 	"github.com/axiom-mesh/grid/api"
 	"github.com/axiom-mesh/grid/blockchain"
+	chainclient "github.com/axiom-mesh/grid/chain"
 	localcrypto "github.com/axiom-mesh/grid/crypto"
 	"github.com/axiom-mesh/grid/p2p"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -93,6 +94,14 @@ func main() {
 	go p2pNode.Start()
 
 	server := api.NewServer(ledger, p2pNode)
+	if c, enabled, err := chainclient.NewComputeBondClientFromEnv(); err != nil {
+		log.Printf("ComputeBond client init warning: %v", err)
+	} else if enabled {
+		server.SetComputeBondClient(c)
+		log.Printf("ComputeBond on-chain integration enabled")
+	} else {
+		log.Printf("ComputeBond on-chain integration disabled (missing GRID_ETH_* env vars)")
+	}
 
 	port := os.Getenv("GRID_PORT")
 	if port == "" {

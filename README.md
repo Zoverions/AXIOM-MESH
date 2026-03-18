@@ -198,7 +198,7 @@ So: baseline egress isolation is active in execution containers, and a deeper na
 ### Important caveats
 - Current ledger is in-memory (not persistent durable chain state).
 - Graph retrieval is token/index based and lightweight; not a full distributed ranked retrieval engine.
-- Smart contracts are present in `grid/contracts`, but live chain lifecycle reconciliation is still partial (though Bicameral Governance events are wired to the API).
+- Smart contracts are present in `grid/contracts`, and Grid can now optionally mirror stake/slash operations on-chain via ComputeBond (`GRID_ETH_*` + `GRID_COMPUTE_BOND_ADDRESS`), while full lifecycle reconciliation remains an active hardening track.
 
 ---
 
