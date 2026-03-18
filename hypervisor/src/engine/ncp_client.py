@@ -1,6 +1,6 @@
 import os
 import httpx
-from typing import List, Dict, Any
+from typing import List, Any
 
 class NCPClient:
     """
