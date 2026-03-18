@@ -1,13 +1,16 @@
 package blockchain
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/axiom-mesh/grid/internal/ledger"
 	"github.com/axiom-mesh/grid/types"
 )
@@ -51,6 +54,10 @@ type Ledger struct {
 	settlementNextID uint64
 
 	Persistent *ledger.PersistentLedger
+
+	// Callbacks for decoupled blockchain execution
+	OnSwarmJoined func(nodeID [32]byte, capacity uint64, cidRoot [32]byte)
+	ExternalChainFallback bool
 }
 
 func NewLedger() *Ledger {
@@ -82,8 +89,9 @@ func NewLedger() *Ledger {
 		},
 		GPPBalances:  make(map[string]uint64),
 		GPPEvents:    make([]types.GPPEvent, 0),
-		RelayerQueue: make([]types.RelayerSettlement, 0),
-		Persistent:   pl,
+		RelayerQueue:          make([]types.RelayerSettlement, 0),
+		Persistent:            pl,
+		ExternalChainFallback: true, // Default to true until swarm grows
 	}
 }
 
@@ -259,6 +267,21 @@ func (l *Ledger) JoinSwarm(swarmID string, nodeID string) bool {
 
 	swarm.Nodes = append(swarm.Nodes, nodeID)
 	l.Swarms[swarmID] = swarm
+
+	// Release lock temporarily if needed, but since we're just emitting/calculating, it's fine.
+	// But to avoid potential deadlocks, let's call it async or be mindful.
+	// For Priority 1, we simulate the storage offer immediately:
+	go func() {
+		var capacity uint64 = 50 // default fallback
+		if profileQuota := os.Getenv("MESHSTORE_QUOTA_GB"); profileQuota != "" {
+			fmt.Sscanf(profileQuota, "%d", &capacity)
+		}
+		var parsedNodeID [32]byte
+		copy(parsedNodeID[:], []byte(nodeID))
+		l.OfferStorageToSwarm(parsedNodeID, capacity)
+		l.CheckSelfSustaining()
+	}()
+
 	return true
 }
 
@@ -416,6 +439,42 @@ func (l *Ledger) RollbackGPPBalances(checkpointBlockHash string) error {
 	l.GPPBalances = make(map[string]uint64)
 
 	return nil
+}
+
+// MeshStore integration — called after JoinSwarm
+func (l *Ledger) OfferStorageToSwarm(nodeID [32]byte, capacity uint64) {
+    cidRoot := crypto.Keccak256([]byte("meshstore-root-" + hex.EncodeToString(nodeID[:])))
+	var cidRootArr [32]byte
+	copy(cidRootArr[:], cidRoot)
+
+	l.emitStorageEvent(nodeID, capacity, cidRoot)
+
+	// Delegate execution upstream to decoupled network component (e.g. Server)
+	if l.OnSwarmJoined != nil {
+		l.OnSwarmJoined(nodeID, capacity, cidRootArr)
+	}
+}
+
+func (l *Ledger) emitStorageEvent(nodeID [32]byte, capacity uint64, cidRoot []byte) {
+	log.Printf("📦 StorageOffered: Agent %x offered %d GB. CID Root: %x\n", nodeID, capacity, cidRoot)
+}
+
+// Self-sustaining check (runs on every join)
+func (l *Ledger) CheckSelfSustaining() {
+    if l.swarmSize() >= 100 {
+        l.ExternalChainFallback = false
+        log.Println("🌐 MeshStore now self-sustaining — external chains disabled")
+    }
+}
+
+func (l *Ledger) swarmSize() int {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	size := 0
+	for _, swarm := range l.Swarms {
+		size += len(swarm.Nodes)
+	}
+	return size
 }
 
 func (l *Ledger) GetCCIPMessage(messageID string) (types.CCIPMessage, bool) {

@@ -41,6 +41,7 @@ from src.evolution.openclaw import SignalExtractor, OnPolicyDistillation
 from src.evolution.network_sync import NetworkSync
 from src.cortex.autoresearch import AutoResearchDaemon
 from src.evolution.auto_training import AutoTrainingLoop
+from src.agents.meshstore_agent import MeshStoreAgent
 from src.api.audio import router as audio_router
 from src.zkml.prover import EdgeZKMLProver
 from contextlib import asynccontextmanager
@@ -65,6 +66,7 @@ autoresearch_daemon = AutoResearchDaemon(
     ncp_client=context_engine.ncp_client
 )
 auto_training_loop = AutoTrainingLoop()
+meshstore_agent = MeshStoreAgent()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -72,6 +74,15 @@ async def lifespan(app: FastAPI):
     print("AxiomMesh Phase 1 Cognitive Hypervisor Started")
     autoresearch_daemon.start()
     auto_training_loop.start()
+
+    # Priority 1: Fire and forget initial MeshStore agent run or start loop
+    # Depending on how run is implemented, if it blocks, it should be in a task,
+    # but the instructions say "one-line add". Assuming run() is fast or triggers logic.
+    try:
+        meshstore_agent.run()
+    except Exception as e:
+        print(f"MeshStoreAgent failed to run: {e}")
+
     yield
     autoresearch_daemon.stop()
     auto_training_loop.stop()

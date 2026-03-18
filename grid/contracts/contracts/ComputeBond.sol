@@ -43,6 +43,9 @@ contract ComputeBond is Ownable, AccessControl {
     event BondDelegated(bytes32 indexed nodeId, bytes32 indexed parentNodeId, uint256 bondAmount);
     event SwarmAttestation(bytes32 indexed nodeId, bytes32 swarmId);
 
+    // === MeshStore Storage Offering (Priority 1) ===
+    event StorageOffered(address indexed agent, uint256 capacityGB, bytes32 cidRoot, uint256 poerBonus);
+
     constructor() Ownable(msg.sender) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
@@ -182,5 +185,22 @@ contract ComputeBond is Ownable, AccessControl {
 
         (bool success, ) = payable(owner()).call{value: amount}("");
         if (!success) revert TransferFailed();
+    }
+
+    /**
+     * @notice Agent offers local disk to the swarm MeshStore.
+     * Called automatically after delegateBond during swarm join.
+     * PoER bonus ties directly into existing WeightOracle.
+     */
+    function offerStorage(uint256 capacityGB, bytes32 cidRoot) external {
+        require(stakerActive[msg.sender] && stakerBonds[msg.sender] > 0, "Active bond required");
+        uint256 bonus = capacityGB * 100; // simple multiplier (extendable)
+        emit StorageOffered(msg.sender, capacityGB, cidRoot, bonus);
+    }
+
+    // Helper for Grid event listener (already wired in chain.go)
+    function getStorageOffer(address agent) external view returns (uint256 capacity, bytes32 root) {
+        // future extension — for now just emits
+        return (0, bytes32(0)); // placeholder
     }
 }

@@ -55,6 +55,17 @@ def setup_node():
         f.write(f"\nNODE_PRIMARY_GOAL={goal}\n")
     print(f"Goal saved to profile and .env")
 
+    # MeshStore question (Priority 1)
+    quota = input("💾 MeshStore contribution (GB, default 50)? ") or "50"
+    with open(".env", "a") as f:
+        f.write(f"MESHSTORE_QUOTA_GB={quota}\n")
+
+    # Basic recovery prompt (keeps 2FA in To-Do List)
+    enable_recovery = input("🔐 Enable recovery bundle to MeshStore? (y/n) [y] ") or "y"
+    if enable_recovery.lower() == "y":
+        with open(".env", "a") as f:
+            f.write("RECOVERY_ENABLED=true\n")
+
     if LLMProvider:
         print("Pulling models via provider...")
         provider = LLMProvider()

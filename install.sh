@@ -98,6 +98,17 @@ EOF
 echo "-> Hardware profile saved to hardware_profile.json"
 echo ""
 
+# MeshStore storage allocation
+FREE_DISK=$(df -h / | awk 'NR==2 {print $4}' | sed 's/G//')
+echo "💾 Detected free disk: ${FREE_DISK}G"
+read -p "How much storage for MeshStore (GB, default 50)? " QUOTA
+MESHSTORE_QUOTA_GB=${QUOTA:-50}
+echo "export MESHSTORE_QUOTA_GB=$MESHSTORE_QUOTA_GB" >> .env
+
+# Append to profile JSON (already generated)
+tmp=$(mktemp)
+jq --arg quota "$MESHSTORE_QUOTA_GB" '. + {storageOffer: {capacityGB: ($quota | tonumber), type: "ipfs-meshstore"}}' hardware_profile.json > "$tmp" && mv "$tmp" hardware_profile.json
+
 echo "=========================================================="
 echo "   Environment Configuration (Interactive Setup) "
 echo "=========================================================="
