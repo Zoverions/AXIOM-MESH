@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"regexp"
 	"sort"
 
 	"fmt"
 	"github.com/axiom-mesh/grid/blockchain"
+	chainclient "github.com/axiom-mesh/grid/chain"
 	"github.com/axiom-mesh/grid/p2p"
 
 	"github.com/axiom-mesh/grid/consensus"
@@ -21,10 +23,11 @@ type ZKMLJob struct {
 }
 
 type Server struct {
-	ledger    *blockchain.Ledger
-	p2pNode   *p2p.Node
-	upgrader  websocket.Upgrader
-	zkmlQueue chan ZKMLJob
+	ledger             *blockchain.Ledger
+	p2pNode            *p2p.Node
+	upgrader           websocket.Upgrader
+	zkmlQueue          chan ZKMLJob
+	computeBondOnChain *chainclient.ComputeBondClient
 }
 
 func NewServer(ledger *blockchain.Ledger, p2pNode *p2p.Node) *Server {
@@ -62,6 +65,10 @@ func NewServer(ledger *blockchain.Ledger, p2pNode *p2p.Node) *Server {
 	return server
 }
 
+func (s *Server) SetComputeBondClient(client *chainclient.ComputeBondClient) {
+	s.computeBondOnChain = client
+}
+
 // startZKMLWorker runs a deterministic worker pool for zkML verifications
 func (s *Server) startZKMLWorker() {
 	for job := range s.zkmlQueue {
@@ -74,6 +81,26 @@ func (s *Server) startZKMLWorker() {
 		}
 		job.Result <- valid
 	}
+}
+
+func validateZKMLPayload(payload types.ZKMLPayload) (bool, string) {
+	if payload.ModelCommitment == "" || payload.Proof == "" || payload.VK == "" || payload.Settings == "" {
+		return false, "missing required zkML payload fields"
+	}
+	match, _ := regexp.MatchString("^[a-fA-F0-9]{64}$", payload.ModelCommitment)
+	if !match {
+		return false, "invalid model_commitment format"
+	}
+	if len(payload.Input) == 0 || len(payload.Output) == 0 {
+		return false, "input and output vectors are required"
+	}
+	if len(payload.Proof) > 2_000_000 || len(payload.VK) > 2_000_000 || len(payload.Settings) > 2_000_000 {
+		return false, "zkML artifact payload too large"
+	}
+	if len(payload.Input) > 4096 || len(payload.Output) > 4096 {
+		return false, "zkML vector payload too large"
+	}
+	return true, ""
 }
 
 func (s *Server) Start(addr string) error {
@@ -135,8 +162,23 @@ func (s *Server) Start(addr string) error {
 					bond.Status = "active"
 				}
 
+				var txHash string
+				if s.computeBondOnChain != nil {
+					hash, err := s.computeBondOnChain.Stake(bond.NodeID, int64(bond.Amount))
+					if err != nil {
+						http.Error(w, "on-chain stake failed: "+err.Error(), http.StatusBadGateway)
+						return
+					}
+					txHash = hash.Hex()
+					bond.TxHash = txHash
+				}
+
 				s.ledger.Stake(bond)
-				json.NewEncoder(w).Encode(map[string]string{"status": "success", "nodeId": bond.NodeID})
+				resp := map[string]string{"status": "success", "nodeId": bond.NodeID}
+				if txHash != "" {
+					resp["txHash"] = txHash
+				}
+				json.NewEncoder(w).Encode(resp)
 			} else {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 			}
@@ -216,6 +258,15 @@ func (s *Server) Start(addr string) error {
 					return
 				}
 
+				if s.computeBondOnChain != nil {
+					hash, err := s.computeBondOnChain.Slash(payload.NodeID, int64(payload.Amount))
+					if err != nil {
+						http.Error(w, "on-chain slash failed: "+err.Error(), http.StatusBadGateway)
+						return
+					}
+					payload.TxHash = hash.Hex()
+				}
+
 				if err := s.ledger.Slash(payload.NodeID, payload.Amount, payload.TxHash); err != nil {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
@@ -223,7 +274,11 @@ func (s *Server) Start(addr string) error {
 
 				// Depending on the network requirements, we could also broadcast this slash event,
 				// but since slash events originated from chain, we mostly care about updating local state.
-				json.NewEncoder(w).Encode(map[string]string{"status": "success", "nodeId": payload.NodeID})
+				resp := map[string]string{"status": "success", "nodeId": payload.NodeID}
+				if payload.TxHash != "" {
+					resp["txHash"] = payload.TxHash
+				}
+				json.NewEncoder(w).Encode(resp)
 			} else {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 			}
@@ -435,12 +490,12 @@ func (s *Server) Start(addr string) error {
 
 			// Add zero-knowledge/anonymized reporting metrics
 			stats := map[string]interface{}{
-				"active_bonded_nodes": activeNodesCount,
-				"total_staked_amount": totalBondedAmount,
-				"skills_registered":   len(s.ledger.GetSkills()),
-				"proposals_count":     len(s.ledger.GetProposals()),
-				"swarms_active":       len(s.ledger.GetSwarms()),
-				"zkml_queue_size":     len(s.zkmlQueue),
+				"active_bonded_nodes":  activeNodesCount,
+				"total_staked_amount":  totalBondedAmount,
+				"skills_registered":    len(s.ledger.GetSkills()),
+				"proposals_count":      len(s.ledger.GetProposals()),
+				"swarms_active":        len(s.ledger.GetSwarms()),
+				"zkml_queue_size":      len(s.zkmlQueue),
 				"anonymized_telemetry": true,
 			}
 			json.NewEncoder(w).Encode(stats)
@@ -454,6 +509,10 @@ func (s *Server) Start(addr string) error {
 		if r.Method == "POST" {
 			var payload types.ZKMLPayload
 			if err := json.NewDecoder(r.Body).Decode(&payload); err == nil {
+				if valid, msg := validateZKMLPayload(payload); !valid {
+					http.Error(w, msg, http.StatusBadRequest)
+					return
+				}
 				// Deterministic Worker Pipeline
 				// Submit the job to the deterministic worker queue, limiting concurrency,
 				// and await the verification synchronously to fulfill the client contract.

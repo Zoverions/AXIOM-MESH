@@ -2,18 +2,21 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"os"
+	"time"
 
 	"github.com/axiom-mesh/grid/api"
 	"github.com/axiom-mesh/grid/blockchain"
+	chainclient "github.com/axiom-mesh/grid/chain"
 	localcrypto "github.com/axiom-mesh/grid/crypto"
 	"github.com/axiom-mesh/grid/p2p"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p/core/peer"
-	p2pcrypto "github.com/libp2p/go-libp2p/core/crypto"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
+	p2pcrypto "github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
 )
 
@@ -67,10 +70,38 @@ func main() {
 
 	// 6. Start Grid Node and Server
 	ledger := blockchain.NewLedger()
+	ledgerPath := os.Getenv("GRID_LEDGER_PATH")
+	if ledgerPath == "" {
+		ledgerPath = "./data/ledger_snapshot.json"
+	}
+	if err := ledger.LoadFromFile(ledgerPath); err == nil {
+		log.Printf("Loaded ledger snapshot from %s", ledgerPath)
+	} else if !errors.Is(err, os.ErrNotExist) {
+		log.Printf("Ledger snapshot load warning: %v", err)
+	}
+
+	go func() {
+		ticker := time.NewTicker(15 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			if err := ledger.SaveToFile(ledgerPath); err != nil {
+				log.Printf("Failed to persist ledger snapshot: %v", err)
+			}
+		}
+	}()
+
 	p2pNode := p2p.NewNode(host.ID().String(), priv)
 	go p2pNode.Start()
 
 	server := api.NewServer(ledger, p2pNode)
+	if c, enabled, err := chainclient.NewComputeBondClientFromEnv(); err != nil {
+		log.Printf("ComputeBond client init warning: %v", err)
+	} else if enabled {
+		server.SetComputeBondClient(c)
+		log.Printf("ComputeBond on-chain integration enabled")
+	} else {
+		log.Printf("ComputeBond on-chain integration disabled (missing GRID_ETH_* env vars)")
+	}
 
 	port := os.Getenv("GRID_PORT")
 	if port == "" {
@@ -79,6 +110,7 @@ func main() {
 
 	log.Printf("Grid API Server listening on port %s", port)
 	if err := server.Start(":" + port); err != nil {
+		_ = ledger.SaveToFile(ledgerPath)
 		log.Fatal("Server failed: ", err)
 	}
 }

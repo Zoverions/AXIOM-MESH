@@ -91,7 +91,7 @@ The standard request path is:
 - **Unified API-key auth model** for REST routes, static dashboard routes, and WebSocket handshake validation.
 - **Intent ingress** through:
   - `POST /api/v1/intent/process`
-  - `POST /api/v1/intent/process/public` (still API-key protected in current code)
+  - `POST /api/v1/intent/process/public` (unauthenticated; low-trust ingress by design)
 - **WebSocket intent pipeline**:
   - Zod parsing/sanitization of incoming payload.
   - Normalization into canonical intent object (`conversation_id`, `actor_id`, `trace_id` etc.).
@@ -107,8 +107,8 @@ The standard request path is:
 - **Backpressure-aware Hypervisor client** with retry logic and queue cap guard.
 
 ### Important caveats
-- Gateway sanitization is intentionally basic and should not be treated as full application firewalling.
-- `/api/v1/intent/process/public` exists as a separate route name, but is not anonymous in current implementation.
+- Gateway sanitization is still hygiene-oriented input cleanup and should not be treated as a full application firewall.
+- `/api/v1/intent/process/public` is intentionally unauthenticated now, so it should be treated as a low-trust ingress path and fronted by rate limits/WAF in production.
 
 ---
 
@@ -198,7 +198,7 @@ So: baseline egress isolation is active in execution containers, and a deeper na
 ### Important caveats
 - Current ledger is in-memory (not persistent durable chain state).
 - Graph retrieval is token/index based and lightweight; not a full distributed ranked retrieval engine.
-- Smart contracts are present in `grid/contracts`, but live chain lifecycle reconciliation is still partial (though Bicameral Governance events are wired to the API).
+- Smart contracts are present in `grid/contracts`, and Grid can now optionally mirror stake/slash operations on-chain via ComputeBond (`GRID_ETH_*` + `GRID_COMPUTE_BOND_ADDRESS`), while full lifecycle reconciliation remains an active hardening track.
 
 ---
 
@@ -364,3 +364,14 @@ AXIOM-MESH is the only system designed to survive hostile environments.
 - AXIOM-MESH: Institutional substrate.
 
 If LangGraph is a circuit diagram, AXIOM-MESH is a constitutional system.
+
+
+## Critical Caveats for Production Use (Status)
+
+| Issue | Impact | Current status / resolution |
+|---|---|---|
+| Gateway sanitization is basic | Not a full application firewall | Centralized sanitization now strips script/html/control-token payloads, normalizes metadata, and the public ingress is rate-limited. This is still not a substitute for perimeter WAF controls in production. |
+| `/api/v1/intent/process/public` route naming and behavior | Could be misleading if authentication expectations are unclear | Route is now actually public (no API key middleware) to match its contract; keep it behind gateway-level rate limits and abuse detection. |
+| Ledger is in-memory | Not persistent blockchain state | Grid now supports periodic snapshot persistence to disk (`GRID_LEDGER_PATH`) with startup restore; this improves durability but is not equivalent to fully chain-backed database persistence. |
+| zkML verification is prototype-grade | Not yet production-trust operations | Verification pipeline now enforces strict payload validation (commitment format, required vectors, artifact size bounds) before worker execution; still requires broader operational hardening for high-assurance trust ops. |
+| Safety/reasoning fields are scaffolds | Placeholders, not fully implemented policy logic | Audit trail now includes an enforced policy gate (content-length/consent/exec-consent checks) in addition to explainability fields; full operator-grade policy engine and immutable eventing remain backlog items. |

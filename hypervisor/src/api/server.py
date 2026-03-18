@@ -99,6 +99,29 @@ def is_safe_code(code_str: str) -> bool:
     return True
 security = HTTPBearer()
 
+
+def evaluate_policy_gate(intent: IntentObject):
+    max_len = int(os.environ.get("HYPERVISOR_MAX_CONTENT_LENGTH", "4000"))
+    content = intent.content or ""
+    metadata = intent.metadata or {}
+    consent_scope = metadata.get("consent_scope", "allowed")
+
+    decisions = {
+        "content_length_ok": len(content) <= max_len,
+        "consent_scope_valid": consent_scope in {"allowed", "context_only", "revoked"},
+        "exec_requires_allowed_consent": (not content.startswith("/exec")) or consent_scope == "allowed"
+    }
+
+    if not decisions["content_length_ok"]:
+        return False, decisions, f"Input too long (max {max_len} chars)"
+    if not decisions["consent_scope_valid"]:
+        return False, decisions, "Invalid consent_scope value"
+    if not decisions["exec_requires_allowed_consent"]:
+        return False, decisions, "Code execution requires consent_scope=allowed"
+
+    return True, decisions, "ok"
+
+
 def verify_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)):
     expected_api_key = os.environ.get("HYPERVISOR_API_KEY")
     if not expected_api_key:
@@ -129,7 +152,8 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api
             "mirofish_spatial_block": "N/A",
             "riker_probe_injected": False,
             "pulse_anomaly": False,
-            "arena_verification": "N/A"
+            "arena_verification": "N/A",
+            "policy_gate": "N/A"
         },
         "why_this_answer": {
             "context_tier_1_temporal": bool(context_engine.temporal_state.get_collapsed_state()),
@@ -142,6 +166,14 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api
         log_event("info", f"Processing intent from sender: {intent.metadata.get('sender', 'unknown')}", trace_id)
         content = intent.content
         sender = intent.metadata.get("sender", "unknown")
+
+        allowed, policy_decisions, policy_reason = evaluate_policy_gate(intent)
+        audit_trail["safety_decisions"]["policy_gate"] = "Passed" if allowed else "Failed"
+        audit_trail["safety_decisions"]["policy_checks"] = policy_decisions
+        if not allowed:
+            intent_metrics["error"] += 1
+            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Policy Halt: {policy_reason}", status="error", trace_id=trace_id, audit_trail=audit_trail)
+
 
         # OpenClaw-RL: Next-State Signal Recovery
         if context_engine.interaction_history:
