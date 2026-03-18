@@ -1,5 +1,4 @@
 import asyncio
-import json
 import httpx
 from html.parser import HTMLParser
 from urllib.parse import urljoin, urlparse
