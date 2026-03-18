@@ -1,3 +1,4 @@
+import asyncio
 import json
 import httpx
 from html.parser import HTMLParser
@@ -65,8 +66,9 @@ class ActionEngine:
         Uses httpx for real fetching and integrates with the Grid cache.
         """
         async with httpx.AsyncClient() as client:
-            for url in urls:
-                await self._recursive_map(url, client, depth=0, max_depth=max_depth)
+            tasks = [self._recursive_map(url, client, depth=0, max_depth=max_depth) for url in urls]
+            if tasks:
+                await asyncio.gather(*tasks)
         return self.web_memory_graph
 
     async def _recursive_map(self, url: str, client: httpx.AsyncClient, depth: int, max_depth: int):
@@ -79,12 +81,13 @@ class ActionEngine:
 
         # 2. Check Grid's decentralized cache
         if self.network_sync:
-            cached_state = self.network_sync.fetch_web_cache(url)
+            cached_state = await self.network_sync.fetch_web_cache(url)
             if cached_state:
                 self.web_memory_graph[url] = cached_state
                 # Recurse on links from cached state
-                for link in cached_state.get("outbound_links", []):
-                    await self._recursive_map(link, client, depth + 1, max_depth)
+                tasks = [self._recursive_map(link, client, depth + 1, max_depth) for link in cached_state.get("outbound_links", [])]
+                if tasks:
+                    await asyncio.gather(*tasks)
                 return
 
         # 3. Real Fetch
@@ -94,8 +97,9 @@ class ActionEngine:
             if response.status_code == 200:
                 state_node = self.compile_web_memory(url, response.text)
                 # Recurse
-                for link in state_node["outbound_links"]:
-                    await self._recursive_map(link, client, depth + 1, max_depth)
+                tasks = [self._recursive_map(link, client, depth + 1, max_depth) for link in state_node["outbound_links"]]
+                if tasks:
+                    await asyncio.gather(*tasks)
         except Exception as e:
             print(f"[ActionEngine] Failed to fetch {url}: {e}")
 
