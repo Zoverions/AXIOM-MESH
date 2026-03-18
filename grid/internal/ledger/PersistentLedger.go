@@ -89,6 +89,51 @@ func NewPersistentLedger(dataDir string) (*PersistentLedger, error) {
 	}, nil
 }
 
+func (pl *PersistentLedger) CacheZKMLProof(proofHash string, valid bool) error {
+	// Async write to Badger
+	go func() {
+		err := pl.db.Update(func(txn *badger.Txn) error {
+			val := "1"
+			if !valid {
+				val = "0"
+			}
+			return txn.Set([]byte("zkml_proof:"+proofHash), []byte(val))
+		})
+		if err != nil {
+			fmt.Printf("Error caching zkML proof in badger: %v\n", err)
+		}
+	}()
+	return nil
+}
+
+func (pl *PersistentLedger) GetZKMLProof(proofHash string) (bool, bool) {
+	var valid bool
+	var found bool
+
+	err := pl.db.View(func(txn *badger.Txn) error {
+		item, err := txn.Get([]byte("zkml_proof:"+proofHash))
+		if err != nil {
+			return err
+		}
+
+		return item.Value(func(val []byte) error {
+			found = true
+			if string(val) == "1" {
+				valid = true
+			} else {
+				valid = false
+			}
+			return nil
+		})
+	})
+
+	if err != nil {
+		return false, false
+	}
+
+	return valid, found
+}
+
 func (pl *PersistentLedger) SetSkill(skill types.SkillVector) error {
 	// 1. Write to WAL first (durability)
 	if err := pl.wal.Append(skill); err != nil {

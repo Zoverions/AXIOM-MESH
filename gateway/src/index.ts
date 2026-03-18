@@ -80,7 +80,7 @@ wss.on('connection', (ws: WebSocket, req: any) => {
 
     ws.on('message', async (message: Buffer) => {
         try {
-            const data = parseAndSanitizeIntent(message.toString());
+            const data = await parseAndSanitizeIntent(message.toString());
             const session_id = data.session_id || 'default_ws_session';
             const metadata = {
                 identity_hash: data.identity_hash,

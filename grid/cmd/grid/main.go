@@ -93,6 +93,20 @@ func main() {
 	p2pNode := p2p.NewNode(host.ID().String(), priv)
 	go p2pNode.Start()
 
+	// 6a. Initialize and start ChainListener if RPC URL is available
+	rpcURL := os.Getenv("GRID_ETH_RPC_URL")
+	if rpcURL != "" {
+		chainListener, err := chainclient.NewChainListener(rpcURL, ledger)
+		if err != nil {
+			log.Printf("Failed to initialize ChainListener: %v", err)
+		} else {
+			log.Println("Starting ChainListener for L1 event syncing and reorg handling...")
+			chainListener.Start(15 * time.Second) // Poll every 15 seconds
+		}
+	} else {
+		log.Println("GRID_ETH_RPC_URL not set; skipping ChainListener initialization.")
+	}
+
 	server := api.NewServer(ledger, p2pNode)
 	if c, enabled, err := chainclient.NewComputeBondClientFromEnv(); err != nil {
 		log.Printf("ComputeBond client init warning: %v", err)

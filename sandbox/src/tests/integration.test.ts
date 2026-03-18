@@ -29,6 +29,9 @@ describe('Sandbox Integration Endpoint', () => {
     });
 
     it('should successfully stub python code execution', async () => {
+        const originalKey = process.env.SANDBOX_API_KEY;
+        process.env.SANDBOX_API_KEY = 'test-sandbox-key';
+
         const res = await request(app)
             .post('/execute')
             .set('Authorization', 'Bearer test-sandbox-key')
@@ -36,6 +39,8 @@ describe('Sandbox Integration Endpoint', () => {
 
         expect(res.status).toBe(200);
         expect(res.body.result.stdout).toContain('Integration Sandbox Stub Response');
+
+        process.env.SANDBOX_API_KEY = originalKey;
     });
 
     it('should fail with 401 when Authorization header is missing', async () => {

@@ -8,27 +8,35 @@ import { z } from 'zod';
 export const asyncRandomBytes = promisify(randomBytes);
 
 export interface CryptoTask {
-  type: 'hash';
+  id: string;
+  type: 'hash' | 'validate';
   data: any;
 }
 
 export class CryptoWorkerPool {
   private workers: Worker[];
-  private queue: Array<{ task: CryptoTask; resolve: Function; reject: Function }> = [];
+  private callbacks: Map<string, { resolve: Function; reject: Function }> = new Map();
   private currentWorker = 0;
 
   constructor(poolSize: number = 4) {
     this.workers = Array(poolSize).fill(null).map(() => {
-      // In TS/Node, the worker file could be JS or TS (using ts-node), we use JS for simplicity
       const worker = new Worker(path.join(__dirname, 'crypto-worker.js'));
       worker.on('message', (result) => {
+        const item = this.callbacks.get(result.id);
+        if (!item) return;
+
+        this.callbacks.delete(result.id);
+
         if (result.error) {
-           // We would typically map tasks to an ID, but for this prototype we'll shift the first task
-           const item = this.queue.shift();
-           if (item) item.reject(new Error(result.error));
+           item.reject(new Error(result.error));
         } else {
-           const item = this.queue.shift();
-           if (item) item.resolve(result.hash);
+           if (result.hash) {
+             item.resolve(result.hash);
+           } else if (result.parsed) {
+             item.resolve(result.parsed);
+           } else {
+             item.resolve(result);
+           }
         }
       });
       return worker;
@@ -37,8 +45,21 @@ export class CryptoWorkerPool {
 
   async hashIntent(intent: any): Promise<string> {
     return new Promise((resolve, reject) => {
-      const task: CryptoTask = { type: 'hash', data: intent };
-      this.queue.push({ task, resolve, reject });
+      const taskId = randomBytes(16).toString('hex');
+      const task: CryptoTask = { id: taskId, type: 'hash', data: intent };
+      this.callbacks.set(taskId, { resolve, reject });
+
+      const worker = this.workers[this.currentWorker];
+      worker.postMessage(task);
+      this.currentWorker = (this.currentWorker + 1) % this.workers.length;
+    });
+  }
+
+  async validateAndParse(rawJson: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const taskId = randomBytes(16).toString('hex');
+      const task: CryptoTask = { id: taskId, type: 'validate', data: rawJson };
+      this.callbacks.set(taskId, { resolve, reject });
 
       const worker = this.workers[this.currentWorker];
       worker.postMessage(task);

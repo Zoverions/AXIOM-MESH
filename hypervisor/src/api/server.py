@@ -7,17 +7,26 @@ import os
 import httpx
 import ast
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 def log_event(level: str, msg: str, trace_id: str = None):
     log_data = {
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "level": level,
         "message": msg
     }
     if trace_id:
         log_data["trace_id"] = trace_id
-    print(json.dumps(log_data))
+
+    log_json = json.dumps(log_data)
+    print(log_json)
+
+    # WORM Event Sink (Append-only file)
+    log_dir = os.path.join(os.getcwd(), "data")
+    os.makedirs(log_dir, exist_ok=True)
+    audit_file = os.path.join(log_dir, "audit.log")
+    with open(audit_file, "a", encoding="utf-8") as f:
+        f.write(log_json + "\n")
 
 import asyncio
 
@@ -122,7 +131,11 @@ def evaluate_policy_gate(intent: IntentObject):
     return True, decisions, "ok"
 
 
-def verify_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)):
+from fastapi import Request
+import hmac
+import hashlib
+
+def verify_api_key(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)):
     expected_api_key = os.environ.get("HYPERVISOR_API_KEY")
     if not expected_api_key:
         raise HTTPException(
@@ -134,10 +147,37 @@ def verify_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid API Key",
         )
+
     return credentials.credentials
 
+async def verify_signature(request: Request, api_key: str = Depends(verify_api_key)):
+    timestamp = request.headers.get("X-Axiom-Timestamp")
+    nonce = request.headers.get("X-Axiom-Nonce")
+    signature = request.headers.get("X-Axiom-Signature")
+
+    if not timestamp or not nonce or not signature:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing required signature headers")
+
+    try:
+        ts_val = int(timestamp)
+        from datetime import timezone
+        now = int(datetime.now(timezone.utc).timestamp() * 1000)
+        if abs(now - ts_val) > 300000:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Request signature expired")
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid timestamp format")
+
+    body = await request.body()
+    payload = f"{timestamp}:{nonce}:{body.decode('utf-8')}"
+    expected_mac = hmac.new(api_key.encode('utf-8'), payload.encode('utf-8'), hashlib.sha256).hexdigest()
+
+    if not hmac.compare_digest(expected_mac, signature):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid request signature")
+
+    return api_key
+
 @app.post("/process", response_model=IntentResponse)
-async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api_key)):
+async def process_intent(intent: IntentObject, api_key: str = Depends(verify_signature)):
     trace_id = intent.trace_id or f"trace-{uuid.uuid4()}"
     intent.trace_id = trace_id
     hypervisor_metrics["requests"] += 1
@@ -238,10 +278,14 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api
             audit_trail["safety_decisions"]["mirofish_spatial_block"] = "Allowed"
 
             try:
-                sandbox_api_key = os.environ.get("SANDBOX_API_KEY", "")
-                headers = {"Authorization": f"Bearer {sandbox_api_key}"} if sandbox_api_key else {}
+                sandbox_api_key = os.environ.get("SANDBOX_API_KEY")
+                if not sandbox_api_key:
+                    raise Exception("SANDBOX_API_KEY is not configured")
+                headers = {"Authorization": f"Bearer {sandbox_api_key}"}
                 async with httpx.AsyncClient() as client:
                     sandbox_res = await client.post(SANDBOX_URL, json={"language": "python", "code": code}, headers=headers)
+                    if sandbox_res.status_code != 200:
+                        raise Exception(f"Sandbox returned status {sandbox_res.status_code}: {sandbox_res.text}")
                     response_text = f"Execution result:\n{sandbox_res.json()}"
             except Exception as e:
                 response_text = f"Sandbox execution failed: {e}"
