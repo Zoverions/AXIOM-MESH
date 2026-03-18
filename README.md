@@ -91,7 +91,7 @@ The standard request path is:
 - **Unified API-key auth model** for REST routes, static dashboard routes, and WebSocket handshake validation.
 - **Intent ingress** through:
   - `POST /api/v1/intent/process`
-  - `POST /api/v1/intent/process/public` (still API-key protected in current code)
+  - `POST /api/v1/intent/process/public` (unauthenticated; low-trust ingress by design)
 - **WebSocket intent pipeline**:
   - Zod parsing/sanitization of incoming payload.
   - Normalization into canonical intent object (`conversation_id`, `actor_id`, `trace_id` etc.).
@@ -107,8 +107,8 @@ The standard request path is:
 - **Backpressure-aware Hypervisor client** with retry logic and queue cap guard.
 
 ### Important caveats
-- Gateway sanitization is intentionally basic and should not be treated as full application firewalling.
-- `/api/v1/intent/process/public` exists as a separate route name, but is not anonymous in current implementation.
+- Gateway sanitization is still hygiene-oriented input cleanup and should not be treated as a full application firewall.
+- `/api/v1/intent/process/public` is intentionally unauthenticated now, so it should be treated as a low-trust ingress path and fronted by rate limits/WAF in production.
 
 ---
 
@@ -198,7 +198,7 @@ So: baseline egress isolation is active in execution containers, and a deeper na
 ### Important caveats
 - Current ledger is in-memory (not persistent durable chain state).
 - Graph retrieval is token/index based and lightweight; not a full distributed ranked retrieval engine.
-- Smart contracts are present in `grid/contracts`, but live chain lifecycle reconciliation is still partial (though Bicameral Governance events are wired to the API).
+- Smart contracts are present in `grid/contracts`, and Grid can now optionally mirror stake/slash operations on-chain via ComputeBond (`GRID_ETH_*` + `GRID_COMPUTE_BOND_ADDRESS`), while full lifecycle reconciliation remains an active hardening track.
 
 ---
 
@@ -306,29 +306,30 @@ This README intentionally avoids “aspirational as implemented” claims. If yo
 
 ## Master Integration & Resource Orchestration Layer (March 2026)
 
-**Full Fusion Complete**
+### Scope (what this layer targets)
 - OntarioEdAI curriculum + dual verification + VCs
 - THUD guilds + GPP staking + ASE ethics + scholar NFTs + VRF + secure relayers
 - AA bonding + L1 piggyback + revocable human–agent credentials
 - Offline-first CRDT/P2P + encrypted backups
 - Resource balancing + treasury splits (Network Security Fund + Wealth Generation Pool) + ERC-20 compatibility
 
-**New: Alignment Profile & Risk-Tolerant Interoperability Layer**
-Spectrum of security levels across hardware (legacy-locked to full nodes).
-User-defined Alignment Profile (goals, traits, characteristics, risk tolerance) at initialization.
-Agent acts as firewall; bilateral private bond severance; hierarchical agent-to-agent bonding.
-MCP protocol enforces interoperability while respecting individual exposure choices.
+### Current implementation status
+The repository now contains **partial implementation + partial documentation** for this layer, not full delivery:
+- Gateway public ingress hardening is improved (sanitization + route rate limiting).
+- Grid adds snapshot durability and optional ComputeBond on-chain stake/slash mirroring.
+- Hypervisor now enforces baseline policy gate checks and records them in `audit_trail`.
+- Full operator-grade controls (immutable audit sink, chain-finalized lifecycle reconciliation, formal policy engine) remain backlog.
 
-Key Capabilities
-- Dynamic task balancer + treasury splits
-- Alignment Profiles & MCP compatibility matrix
-- Firewall protection + revocable hierarchical bonding
-- Governance steering that adjusts interoperability policy without breaking user risk preferences
+### Key capabilities (implemented and planned)
+- Dynamic task balancer + treasury splits (partial implemented path)
+- Alignment Profiles & MCP compatibility matrix (spec-first + partial plumbing)
+- Firewall protection + revocable hierarchical bonding (partial implemented path)
+- Governance steering for interoperability/risk controls (spec-first + incremental implementation)
 
-### Stage Accuracy (Documentation-Only Current State)
-- **Phase 0 is documentation-complete/in progress**: v1.8 master directive is captured and roadmap checkpoints are updated.
-- **Phases 1–4 are implementation backlog**: no Phase 1+ code changes are implied by this documentation update.
-- **Execution checklist and parallel work lanes** are maintained in `plan.md` to support multi-agent implementation kickoff.
+### Stage Accuracy
+- **Phase 0**: documentation-complete/in progress (`plan.md`, integration docs, caveat mapping).
+- **Phases 1–4**: implementation backlog with incremental landed work; do not treat as fully delivered.
+- **Execution checklist and parallel work lanes** are maintained in `plan.md` for implementation sequencing.
 
 ## Framework Comparison (New – March 17, 2026)
 
@@ -340,22 +341,22 @@ Below is a structural, non-marketing comparison of AXIOM-MESH against the domina
 - CrewAI: Human-like role collaboration. Failure Mode: Emergent drift, no formal closure.
 - AutoResearch: Autonomous epistemic exploration. Failure Mode: Runaway loops, unverifiable claims.
 
-AXIOM-MESH is the only system designed to survive hostile environments.
+AXIOM-MESH is designed for hostile-environment resilience, but production assurance depends on completing hardening backlog items listed below.
 
 2. Control & Closure Guarantees
-- Execution Closure: AXIOM-MESH has hard sandbox, capability-scoped, zkML, explicit boundaries. Others lack these.
+- AXIOM-MESH has stronger built-in closure controls (sandbox boundaries, capability-scoped execution, zk/zkML paths), but these are still maturing to operator-grade deployment standards.
 
 3. Governance & Drift Resistance
-- AXIOM-MESH has bicameral, stake/slash, skill audit, drift detection. Others do not.
+- AXIOM-MESH includes bicameral governance and stake/slash concepts with partial implementation; end-to-end chain-finalized governance lifecycle is still in progress.
 
 4. Knowledge Representation
-- AXIOM-MESH has graph-native, distributed sync, provenance, epistemic decay. Others are prompt-based or ad-hoc.
+- AXIOM-MESH is graph-native with distributed sync primitives; advanced distributed ranking/retrieval remains backlog.
 
 5. Autonomy vs Alignment
-- AXIOM-MESH has bounded loops, structural alignment, hard stops, auditability. Others have none or partial.
+- AXIOM-MESH includes bounded loops and explicit policy checks; formalized reasoning auditor/event immutability remains backlog.
 
 6. Developer Reality Check
-- AXIOM-MESH: Safe to deploy, regulator-ready, adversarial-ready. Others: Fast to prototype but unsafe.
+- AXIOM-MESH is **safer-by-design than most prototyping stacks**, but should still be treated as a hardening-in-progress system for production.
 
 7. Strategic Summary
 - LangGraph: Compiler for logic.
@@ -364,3 +365,28 @@ AXIOM-MESH is the only system designed to survive hostile environments.
 - AXIOM-MESH: Institutional substrate.
 
 If LangGraph is a circuit diagram, AXIOM-MESH is a constitutional system.
+
+
+
+## Production Hardening Backlog (Priority)
+
+1. **Perimeter security controls**
+   - Add gateway WAF, abuse detection, and distributed rate-limit backend.
+2. **Durable ledger backend**
+   - Promote snapshot durability to database-backed + chain-finalized reconciliation.
+3. **zkML trust hardening**
+   - Add verifier artifact integrity attestation, resource quotas, and operational SLOs.
+4. **Reasoning/safety auditor completion**
+   - Add formal policy engine + immutable event sink + operator review UX.
+5. **Contract lifecycle automation**
+   - Add event listeners + reorg/finality handling + automated reconciliation workflows.
+
+## Critical Caveats for Production Use (Status)
+
+| Issue | Impact | Current status / resolution |
+|---|---|---|
+| Gateway sanitization is basic | Not a full application firewall | Centralized sanitization now strips script/html/control-token payloads, normalizes metadata, and the public ingress is rate-limited. This is still not a substitute for perimeter WAF controls in production. |
+| `/api/v1/intent/process/public` route naming and behavior | Could be misleading if authentication expectations are unclear | Route is now actually public (no API key middleware) to match its contract; keep it behind gateway-level rate limits and abuse detection. |
+| Ledger is in-memory | Not persistent blockchain state | Grid now supports periodic snapshot persistence to disk (`GRID_LEDGER_PATH`) with startup restore; this improves durability but is not equivalent to fully chain-backed database persistence. |
+| zkML verification is prototype-grade | Not yet production-trust operations | Verification pipeline now enforces strict payload validation (commitment format, required vectors, artifact size bounds) before worker execution; still requires broader operational hardening for high-assurance trust ops. |
+| Safety/reasoning fields are scaffolds | Placeholders, not fully implemented policy logic | Audit trail now includes an enforced policy gate (content-length/consent/exec-consent checks) in addition to explainability fields; full operator-grade policy engine and immutable eventing remain backlog items. |
