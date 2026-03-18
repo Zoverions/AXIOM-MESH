@@ -9,7 +9,7 @@ The system decays founder control over time. Formula:
 # AXIOM-MESH Governance Control Map for Interoperability Knobs
 
 **Version:** 1.0
-**Status:** Approved for implementation
+**Status:** Implemented and Integrated
 
 This document maps the governance controls (Guilds, Bicameral Chambers, and AIGovernor) to the interoperability policy updates, specifically focusing on the `MCPCompatibilityMatrix` and other interoperability knobs. It defines how changes to security profiles, risk tiers, and capabilities are proposed, evaluated, and enacted across the AXIOM-MESH network.
 
