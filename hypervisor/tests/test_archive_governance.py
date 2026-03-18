@@ -86,3 +86,35 @@ def test_export_and_delete(tmp_path):
     export_str_empty = archive.export_data()
     export_json_empty = json.loads(export_str_empty)
     assert len(export_json_empty["nodes"]) == 0
+
+@pytest.mark.asyncio
+async def test_bilateral_severance_zeroization(tmp_path):
+    os.environ.pop("MEMORY_ENCRYPTION_KEY", None)
+    os.environ.pop("MEMORY_TTL_DAYS", None)
+
+    storage_path = tmp_path / "severance_archive.json"
+
+    from memory.archive import DistributedDeepArchive
+    archive = DistributedDeepArchive(storage_path=str(storage_path))
+
+    # Add shared memory
+    archive.add("Shared secret between peers")
+
+    assert len(archive.search("Shared")) == 1
+
+    # Try invalid severances
+    with pytest.raises(ValueError):
+        await archive.sever_bond("peer123", "short_invalid_proof")
+
+    # Build a valid mock proof string (just needs to be >= 64 chars)
+    valid_mock_proof = "a" * 65
+
+    # Ensure memory is zeroized on severance
+    assert await archive.sever_bond("peer123", valid_mock_proof) is True
+
+    assert len(archive.search("Shared")) == 0
+    assert os.path.exists(str(storage_path))
+
+    # Reload and ensure data is gone
+    archive2 = DistributedDeepArchive(storage_path=str(storage_path))
+    assert len(archive2.search("Shared")) == 0
