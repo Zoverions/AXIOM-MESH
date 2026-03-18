@@ -11,6 +11,7 @@ contract ComputeBond is Ownable, AccessControl {
         uint256 amount;
         bool isActive;
         string parentNodeId; // For hierarchical agent-to-agent bonding
+        uint256 poerScore;   // Proof of Enterprise/Compute weight score
     }
 
     // Mapping from node ID string to the Bond details
@@ -19,6 +20,7 @@ contract ComputeBond is Ownable, AccessControl {
     // Mapping from staker address to total bond amount (for delegate lookup)
     mapping(address => uint256) public stakerBonds;
     mapping(address => bool) public stakerActive;
+    mapping(address => uint256) public stakerPoerScores;
 
     // Track total slashed funds that can be withdrawn by owner
     uint256 public totalSlashed;
@@ -46,8 +48,90 @@ contract ComputeBond is Ownable, AccessControl {
     // === MeshStore Storage Offering (Priority 1) ===
     event StorageOffered(address indexed agent, uint256 capacityGB, bytes32 cidRoot, uint256 poerBonus);
 
-    constructor() Ownable(msg.sender) {
+    // === ZKML Enterprise & FDBA ===
+    event ZKMLProofSubmitted(address indexed agent, bytes32 proofHash, uint256 poerBoost);
+
+    // ZKMLVerifier Interface
+    address public zkmlVerifier;
+
+    // WeightOracle reference for PoER boosts
+    address public weightOracleContract;
+
+    // FDBA: Founder Decaying Bootstrap Allocation
+    address public founderAddress;
+    uint256 public initialSwarmSize; // captured at genesis for reference if needed
+
+    // Simple state variable to track total active nodes for decay math
+    uint256 public gridSwarmSize;
+
+    constructor(address _founderAddress) Ownable(msg.sender) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        founderAddress = _founderAddress;
+    }
+
+    function setZKMLVerifier(address _verifier) external onlyOwner {
+        zkmlVerifier = _verifier;
+    }
+
+    function setWeightOracle(address _oracle) external onlyOwner {
+        weightOracleContract = _oracle;
+    }
+
+    /**
+     * @dev Enterprise zkML Proof Verification (Groth16) + PoER Boost
+     */
+    function submitZKMLProof(
+        bytes32 proofHash,
+        uint256[2] calldata a,
+        uint256[2][2] calldata b,
+        uint256[2] calldata c
+    ) external {
+        require(zkmlVerifier != address(0), "Verifier not set");
+
+        // Staticcall the ZKMLVerifier to verify Groth16 proof
+        (bool success, bytes memory data) = zkmlVerifier.call(
+            abi.encodeWithSignature("verifyProof(bytes32,uint256[2],uint256[2][2],uint256[2])", proofHash, a, b, c)
+        );
+
+        if (success && abi.decode(data, (bool))) {
+            // PoER Boost for valid enterprise proofs
+            stakerPoerScores[msg.sender] += 300;
+            if (weightOracleContract != address(0)) {
+                // Ignore return data or failure, fire and forget to Oracle
+                weightOracleContract.call(abi.encodeWithSignature("addPoERBonus(address,uint256)", msg.sender, 300));
+            }
+            emit ZKMLProofSubmitted(msg.sender, proofHash, 300);
+        } else {
+            // Automatic slash for invalid proof
+            stakerPoerScores[msg.sender] = 0;
+            if (weightOracleContract != address(0)) {
+                weightOracleContract.call(abi.encodeWithSignature("slashPoERBonus(address)", msg.sender));
+            }
+            revert("Invalid zkML proof");
+        }
+    }
+
+    /**
+     * @dev Fully integrated FDBA (Founder Decaying Bootstrap Allocation)
+     * Exactly 5.00% starting share, decaying to 0% at 10k nodes.
+     */
+    function getCurrentFounderShare() external view returns (uint256) {
+        uint256 s = gridSwarmSize;
+        if (s >= 10000) return 0;
+
+        // 500 = 5.00%
+        uint256 share = 500 - (s * 500 / 10000);
+        return share < 50 ? 0 : share;
+    }
+
+    /**
+     * @dev Test method to increment swarm size (In production this ties to node registration)
+     */
+    function _incrementSwarmSize() internal {
+        gridSwarmSize++;
+    }
+    function _decrementSwarmSize() internal {
+        if (gridSwarmSize > 0) gridSwarmSize--;
     }
 
     function grantDelegator(address account) external onlyOwner {
@@ -78,6 +162,11 @@ contract ComputeBond is Ownable, AccessControl {
         bond.amount += msg.value;
         stakerBonds[msg.sender] += msg.value;
 
+        // If it was newly created/activated this turn, increment
+        if (msg.value == bond.amount) {
+            _incrementSwarmSize();
+        }
+
         emit BondStaked(nodeId, msg.sender, msg.value);
     }
 
@@ -97,6 +186,9 @@ contract ComputeBond is Ownable, AccessControl {
         totalSlashed += amount; // Track the slashed amount
 
         if (bond.amount == 0) {
+            if (bond.isActive) {
+                _decrementSwarmSize();
+            }
             bond.isActive = false;
             stakerActive[bond.staker] = false;
         }
@@ -163,6 +255,9 @@ contract ComputeBond is Ownable, AccessControl {
         stakerBonds[msg.sender] -= amount;
 
         if (bond.amount == 0) {
+            if (bond.isActive) {
+                _decrementSwarmSize();
+            }
             bond.isActive = false;
             stakerActive[msg.sender] = false;
         }
@@ -195,6 +290,10 @@ contract ComputeBond is Ownable, AccessControl {
     function offerStorage(uint256 capacityGB, bytes32 cidRoot) external {
         require(stakerActive[msg.sender] && stakerBonds[msg.sender] > 0, "Active bond required");
         uint256 bonus = capacityGB * 100; // simple multiplier (extendable)
+        stakerPoerScores[msg.sender] += bonus;
+        if (weightOracleContract != address(0)) {
+            weightOracleContract.call(abi.encodeWithSignature("addPoERBonus(address,uint256)", msg.sender, bonus));
+        }
         emit StorageOffered(msg.sender, capacityGB, cidRoot, bonus);
     }
 

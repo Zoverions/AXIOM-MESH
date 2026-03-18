@@ -154,6 +154,7 @@ prompt_env "DISCORD_TOKEN" "" "Enter Discord Bot Token (leave blank to skip)"
 prompt_env "WHATSAPP_SESSION" "" "Enter WhatsApp Session ID or Path (leave blank to skip)"
 prompt_env "NCP_SERVERS" "http://localhost:8080" "Enter comma-separated NCP server URLs"
 prompt_env "MCP_SERVERS" "" "Enter comma-separated MCP server SSE URLs"
+prompt_env "FDBA_FOUNDER_ADDRESS" "0x8943c7bac1914c9a7aba750bf2b6b09fd21037e0" "Enter FDBA Founder Address (Exactly 5% starting control)"
 
 # Save the recommended model as fallback
 if ! grep -q "^LOCAL_MODEL_FALLBACK=" "$ENV_FILE"; then

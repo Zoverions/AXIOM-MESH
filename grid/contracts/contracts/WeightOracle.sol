@@ -23,8 +23,51 @@ contract WeightOracle is Ownable {
     event WeightUpdated(address indexed node, uint256 oldWeight, uint256 newWeight);
     event IdentityContractUpdated(address indexed newContract);
 
+    // Track PoER bonuses from zkML / MeshStore contributions
+    mapping(address => uint256) public poerBonuses;
+
+    // Address of the ComputeBond contract allowed to add bonuses
+    address public computeBondContract;
+
     constructor(address _identityContract) Ownable(msg.sender) {
         identityContract = DualLedgerIdentity(_identityContract);
+    }
+
+    function setComputeBondContract(address _computeBondContract) external onlyOwner {
+        computeBondContract = _computeBondContract;
+    }
+
+    /**
+     * @dev Adds a Proof of Enterprise/Compute (PoER) bonus to a node's weight score.
+     * Can only be called by the ComputeBond contract.
+     * @param node The address of the node.
+     * @param bonusAmount The amount of bonus weight to add.
+     */
+    function addPoERBonus(address node, uint256 bonusAmount) external {
+        require(msg.sender == computeBondContract, "Unauthorized: Only ComputeBond can add PoER bonus");
+        if (!identityContract.isNodeRegistered(node)) revert NodeNotRegistered(node);
+
+        uint256 oldWeight = nodeWeights[node] + poerBonuses[node];
+        poerBonuses[node] += bonusAmount;
+        uint256 newWeight = nodeWeights[node] + poerBonuses[node];
+
+        emit WeightUpdated(node, oldWeight, newWeight);
+    }
+
+    /**
+     * @dev Slashes a Proof of Enterprise/Compute (PoER) bonus from a node's weight score.
+     * Can only be called by the ComputeBond contract.
+     * @param node The address of the node.
+     */
+    function slashPoERBonus(address node) external {
+        require(msg.sender == computeBondContract, "Unauthorized: Only ComputeBond can slash PoER bonus");
+        if (!identityContract.isNodeRegistered(node)) revert NodeNotRegistered(node);
+
+        uint256 oldWeight = nodeWeights[node] + poerBonuses[node];
+        poerBonuses[node] = 0; // Automatic slash for invalid proof
+        uint256 newWeight = nodeWeights[node];
+
+        emit WeightUpdated(node, oldWeight, newWeight);
     }
 
     /**
@@ -68,7 +111,7 @@ contract WeightOracle is Ownable {
      */
     function getWeight(address node) external view returns (uint256) {
         if (!identityContract.isNodeRegistered(node)) revert NodeNotRegistered(node);
-        return nodeWeights[node];
+        return nodeWeights[node] + poerBonuses[node];
     }
 
     /**

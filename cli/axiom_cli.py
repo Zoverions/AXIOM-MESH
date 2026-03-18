@@ -55,6 +55,11 @@ def setup_node():
         f.write(f"\nNODE_PRIMARY_GOAL={goal}\n")
     print(f"Goal saved to profile and .env")
 
+    # FDBA configuration
+    fdba_address = input("🔑 Enter FDBA Founder Address (default: 0x8943c7bac1914c9a7aba750bf2b6b09fd21037e0): ") or "0x8943c7bac1914c9a7aba750bf2b6b09fd21037e0"
+    with open(".env", "a") as f:
+        f.write(f"FDBA_FOUNDER_ADDRESS={fdba_address}\n")
+
     # MeshStore question (Priority 1)
     quota = input("💾 MeshStore contribution (GB, default 50)? ") or "50"
     with open(".env", "a") as f:
