@@ -43,6 +43,7 @@ services:
       - IPFS_API_URL=http://ipfs:5001/api/v0/add
       - ARWEAVE_API_URL=https://upload.ardrive.io/v1/tx
       - GRID_WS_URL=ws://grid:5000/ws/graph
+      - SANDBOX_API_KEY=${SANDBOX_API_KEY:-}
 
   sandbox:
     build:
@@ -52,6 +53,7 @@ services:
       - "4000:4000"
     environment:
       - SANDBOX_PORT=4000
+      - SANDBOX_API_KEY=${SANDBOX_API_KEY:-}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 
