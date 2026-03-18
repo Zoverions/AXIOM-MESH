@@ -3,8 +3,14 @@ from langgraph.graph import StateGraph, START, END
 import httpx
 import os
 import json
+
 import uuid
 from kernel.pulse_monitor import CoTAuditor, CognitiveSubversionError
+
+# Optional LangSmith Tracing
+if os.environ.get("LANGSMITH_TRACING_ENABLED", "").lower() in ["true", "1", "yes"]:
+    os.environ["LANGCHAIN_TRACING_V2"] = "true"
+    os.environ["LANGCHAIN_PROJECT"] = os.environ.get("LANGCHAIN_PROJECT", "axiom-mesh")
 
 async def _audit_text(text: str) -> str:
     async def _stream():
