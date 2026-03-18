@@ -6,7 +6,10 @@ const router = Router();
 
 function isAuthorizedServiceCall(req: Request): boolean {
     const expected = process.env.SANDBOX_API_KEY;
-    if (!expected) return true;
+    if (!expected) {
+        console.error('CRITICAL: SANDBOX_API_KEY is not configured. Rejecting execution request.');
+        return false;
+    }
 
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return false;

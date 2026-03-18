@@ -9,12 +9,40 @@ import (
 	"path/filepath"
 	"regexp"
 	"time"
+	"crypto/sha256"
+	"encoding/hex"
+
+	lru "github.com/hashicorp/golang-lru"
 )
+
+var zkmlCache *lru.Cache
+
+func init() {
+	var err error
+	zkmlCache, err = lru.New(1000) // L1 In-Memory Cache
+	if err != nil {
+		log.Fatalf("Failed to initialize zkML LRU cache: %v", err)
+	}
+}
+
+// GenerateProofHash creates a deterministic hash of the verification payload to use as a cache key
+func GenerateProofHash(commitment, proof string) string {
+	hasher := sha256.New()
+	hasher.Write([]byte(commitment))
+	hasher.Write([]byte(proof))
+	return hex.EncodeToString(hasher.Sum(nil))
+}
 
 // VerifyZKMLInference delegates the verification of a zkML proof to the ezkl library.
 // It uses an artifact lifecycle cache for models and a deterministic Python worker for jobs.
 func VerifyZKMLInference(commitment string, input []float64, output []float64, proof string, vk string, settings string) bool {
 	log.Printf("Verifying zkML inference proof for model commitment: %s", commitment)
+
+	proofHash := GenerateProofHash(commitment, proof)
+	if val, ok := zkmlCache.Get(proofHash); ok {
+		log.Printf("zkML proof verification found in L1 LRU cache for %s", commitment)
+		return val.(bool)
+	}
 
 	if proof == "" || commitment == "" || vk == "" || settings == "" {
 		return false
@@ -125,8 +153,10 @@ except Exception as e:
 	}
 	if err != nil {
 		log.Printf("zkML verification failed: %v", err)
+		zkmlCache.Add(proofHash, false)
 		return false
 	}
 
+	zkmlCache.Add(proofHash, true)
 	return true
 }

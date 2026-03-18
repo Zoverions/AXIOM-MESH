@@ -1,4 +1,5 @@
 import axios from 'axios';
+import * as crypto from 'crypto';
 import { IntentObject, IntentResponse } from '../types';
 
 const HYPERVISOR_URL = process.env.HYPERVISOR_URL || 'http://localhost:8000';
@@ -34,9 +35,18 @@ export async function sendToHypervisor(intent: IntentObject): Promise<IntentResp
         const maxRetries = getMaxRetries();
         for (let attempt = 0; attempt < maxRetries; attempt++) {
             try {
+                const timestamp = Date.now().toString();
+                const nonce = crypto.randomBytes(16).toString('hex');
+                const payloadStr = JSON.stringify(intent);
+                const signaturePayload = `${timestamp}:${nonce}:${payloadStr}`;
+                const signature = crypto.createHmac('sha256', apiKey).update(signaturePayload).digest('hex');
+
                 const response = await axios.post(`${HYPERVISOR_URL}/process`, intent, {
                     headers: {
-                        Authorization: `Bearer ${apiKey}`
+                        Authorization: `Bearer ${apiKey}`,
+                        'X-Axiom-Timestamp': timestamp,
+                        'X-Axiom-Nonce': nonce,
+                        'X-Axiom-Signature': signature
                     },
                     timeout: 15000,
                     proxy: false

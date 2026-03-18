@@ -45,13 +45,20 @@ describe('hypervisorClient', () => {
             const result = await sendToHypervisor(mockIntent);
 
             expect(mockedAxios.post).toHaveBeenCalledTimes(1);
-            expect(mockedAxios.post).toHaveBeenCalledWith('http://localhost:8000/process', mockIntent, {
-                headers: {
-                    'Authorization': `Bearer ${process.env.HYPERVISOR_API_KEY || ''}`
-                },
-                timeout: 15000,
-                proxy: false
-            });
+            expect(mockedAxios.post).toHaveBeenCalledWith(
+                'http://localhost:8000/process',
+                mockIntent,
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        'Authorization': `Bearer ${process.env.HYPERVISOR_API_KEY || ''}`,
+                        'X-Axiom-Timestamp': expect.any(String),
+                        'X-Axiom-Nonce': expect.any(String),
+                        'X-Axiom-Signature': expect.any(String)
+                    }),
+                    timeout: 15000,
+                    proxy: false
+                })
+            );
             expect(result).toEqual(mockResponseData);
         });
 
@@ -64,13 +71,20 @@ describe('hypervisorClient', () => {
             const result = await sendToHypervisor(mockIntent);
 
             expect(mockedAxios.post).toHaveBeenCalledTimes(1);
-            expect(mockedAxios.post).toHaveBeenCalledWith('http://localhost:8000/process', mockIntent, {
-                headers: {
-                    'Authorization': `Bearer ${process.env.HYPERVISOR_API_KEY || ''}`
-                },
-                timeout: 15000,
-                proxy: false
-            });
+            expect(mockedAxios.post).toHaveBeenCalledWith(
+                'http://localhost:8000/process',
+                mockIntent,
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        'Authorization': `Bearer ${process.env.HYPERVISOR_API_KEY || ''}`,
+                        'X-Axiom-Timestamp': expect.any(String),
+                        'X-Axiom-Nonce': expect.any(String),
+                        'X-Axiom-Signature': expect.any(String)
+                    }),
+                    timeout: 15000,
+                    proxy: false
+                })
+            );
             expect(consoleSpy).toHaveBeenCalledWith('Error sending to Hypervisor:', errorMessage);
 
             expect(result).toEqual({
@@ -102,13 +116,20 @@ describe('hypervisorClient', () => {
 
             await customSendToHypervisor(mockIntent);
 
-            expect(axiosMock.post).toHaveBeenCalledWith('http://custom-hypervisor:9000/process', mockIntent, {
-                headers: {
-                    'Authorization': `Bearer ${process.env.HYPERVISOR_API_KEY || ''}`
-                },
-                timeout: 15000,
-                proxy: false
-            });
+            expect(axiosMock.post).toHaveBeenCalledWith(
+                'http://custom-hypervisor:9000/process',
+                mockIntent,
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        'Authorization': `Bearer ${process.env.HYPERVISOR_API_KEY || ''}`,
+                        'X-Axiom-Timestamp': expect.any(String),
+                        'X-Axiom-Nonce': expect.any(String),
+                        'X-Axiom-Signature': expect.any(String)
+                    }),
+                    timeout: 15000,
+                    proxy: false
+                })
+            );
 
             // Restore original env
             if (originalEnv === undefined) {

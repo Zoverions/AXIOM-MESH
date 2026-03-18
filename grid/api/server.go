@@ -1,22 +1,85 @@
 package api
 
 import (
+	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"log"
+	"math"
 	"net/http"
+	"os"
 	"regexp"
 	"sort"
+	"strconv"
 	"time"
 
-	"fmt"
 	"github.com/axiom-mesh/grid/blockchain"
 	chainclient "github.com/axiom-mesh/grid/chain"
-	"github.com/axiom-mesh/grid/p2p"
-
 	"github.com/axiom-mesh/grid/consensus"
+	"github.com/axiom-mesh/grid/p2p"
 	"github.com/axiom-mesh/grid/types"
 	"github.com/gorilla/websocket"
 )
+
+func verifySignatureMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" || r.Method == "OPTIONS" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		apiKey := os.Getenv("HYPERVISOR_API_KEY")
+		if apiKey == "" {
+			http.Error(w, "Server configuration error: HYPERVISOR_API_KEY not set", http.StatusInternalServerError)
+			return
+		}
+
+		timestampStr := r.Header.Get("X-Axiom-Timestamp")
+		nonce := r.Header.Get("X-Axiom-Nonce")
+		signature := r.Header.Get("X-Axiom-Signature")
+
+		if timestampStr == "" || nonce == "" || signature == "" {
+			http.Error(w, "Missing required signature headers", http.StatusForbidden)
+			return
+		}
+
+		timestamp, err := strconv.ParseInt(timestampStr, 10, 64)
+		if err != nil {
+			http.Error(w, "Invalid timestamp format", http.StatusBadRequest)
+			return
+		}
+
+		now := time.Now().UnixNano() / int64(time.Millisecond)
+		if math.Abs(float64(now)-float64(timestamp)) > 300000 {
+			http.Error(w, "Request signature expired", http.StatusForbidden)
+			return
+		}
+
+		bodyBytes, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Failed to read request body", http.StatusInternalServerError)
+			return
+		}
+		// Restore the body for the next handler
+		r.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+
+		payload := fmt.Sprintf("%s:%s:%s", timestampStr, nonce, string(bodyBytes))
+		mac := hmac.New(sha256.New, []byte(apiKey))
+		mac.Write([]byte(payload))
+		expectedMac := hex.EncodeToString(mac.Sum(nil))
+
+		if !hmac.Equal([]byte(expectedMac), []byte(signature)) {
+			http.Error(w, "Invalid request signature", http.StatusForbidden)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	}
+}
 
 type ZKMLJob struct {
 	Payload types.ZKMLPayload
@@ -74,7 +137,28 @@ func (s *Server) SetComputeBondClient(client *chainclient.ComputeBondClient) {
 func (s *Server) startZKMLWorker() {
 	for job := range s.zkmlQueue {
 		log.Printf("Worker processing zkML verification for %s", job.Payload.ModelCommitment)
-		valid := consensus.VerifyZKMLInference(job.Payload.ModelCommitment, job.Payload.Input, job.Payload.Output, job.Payload.Proof, job.Payload.VK, job.Payload.Settings)
+
+		var valid bool
+		proofHash := consensus.GenerateProofHash(job.Payload.ModelCommitment, job.Payload.Proof)
+
+		// Try L3 Cache (BadgerDB) if available
+		var l3Found bool
+		if s.ledger.Persistent != nil {
+			valid, l3Found = s.ledger.Persistent.GetZKMLProof(proofHash)
+		}
+
+		if l3Found {
+			log.Printf("zkML proof verification found in L3 BadgerDB cache for %s", job.Payload.ModelCommitment)
+		} else {
+			// Not in L3 cache, run verification (which also hits L1 LRU internal to consensus package)
+			valid = consensus.VerifyZKMLInference(job.Payload.ModelCommitment, job.Payload.Input, job.Payload.Output, job.Payload.Proof, job.Payload.VK, job.Payload.Settings)
+
+			// Cache result in L3 if we ran it
+			if s.ledger.Persistent != nil {
+				s.ledger.Persistent.CacheZKMLProof(proofHash, valid)
+			}
+		}
+
 		if valid {
 			log.Printf("Worker verified zkML for %s", job.Payload.ModelCommitment)
 		} else {
@@ -105,7 +189,9 @@ func validateZKMLPayload(payload types.ZKMLPayload) (bool, string) {
 }
 
 func (s *Server) Start(addr string) error {
-	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/health", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":    "ok",
 			"component": "grid",
@@ -113,9 +199,9 @@ func (s *Server) Start(addr string) error {
 				"p2p": "ok",
 			},
 		})
-	})
+	}))
 
-	http.HandleFunc("/skills", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/skills", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == "GET" {
 			json.NewEncoder(w).Encode(s.ledger.GetSkills())
@@ -143,9 +229,9 @@ func (s *Server) Start(addr string) error {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 			}
 		}
-	})
+	}))
 
-	http.HandleFunc("/stake", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/stake", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == "POST" {
 			var bond types.ComputeBond
@@ -186,9 +272,9 @@ func (s *Server) Start(addr string) error {
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
-	})
+	}))
 
-	http.HandleFunc("/bond/sever", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/bond/sever", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == "POST" {
 			var payload struct {
@@ -215,9 +301,9 @@ func (s *Server) Start(addr string) error {
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
-	})
+	}))
 
-	http.HandleFunc("/bond/delegate", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/bond/delegate", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == "POST" {
 			var payload struct {
@@ -243,9 +329,9 @@ func (s *Server) Start(addr string) error {
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
-	})
+	}))
 
-	http.HandleFunc("/slash", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/slash", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == "POST" {
 			var payload struct {
@@ -286,9 +372,9 @@ func (s *Server) Start(addr string) error {
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
-	})
+	}))
 
-	http.HandleFunc("/bond/events", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/bond/events", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method != "POST" {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -312,9 +398,9 @@ func (s *Server) Start(addr string) error {
 		}
 
 		json.NewEncoder(w).Encode(map[string]interface{}{"status": "applied", "nodeId": evt.NodeID, "txHash": evt.TxHash, "finalized": evt.Finalized})
-	})
+	}))
 
-	http.HandleFunc("/bond/reconcile", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/bond/reconcile", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method != "POST" {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -337,8 +423,8 @@ func (s *Server) Start(addr string) error {
 
 		s.ledger.ReconcileBondFromChain(payload.NodeID, payload.CanonicalBond, payload.FinalizedBlock)
 		json.NewEncoder(w).Encode(map[string]interface{}{"status": "reconciled", "nodeId": payload.NodeID, "finalizedBlock": payload.FinalizedBlock})
-	})
-	http.HandleFunc("/swarm", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("/swarm", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == "GET" {
 			json.NewEncoder(w).Encode(s.ledger.GetSwarms())
@@ -383,9 +469,9 @@ func (s *Server) Start(addr string) error {
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
-	})
+	}))
 
-	http.HandleFunc("/swarm/join", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/swarm/join", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == "POST" {
 			var req struct {
@@ -422,9 +508,9 @@ func (s *Server) Start(addr string) error {
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
-	})
+	}))
 
-	http.HandleFunc("/cache", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/cache", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == "GET" {
 			url := r.URL.Query().Get("url")
@@ -473,9 +559,9 @@ func (s *Server) Start(addr string) error {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 			}
 		}
-	})
+	}))
 
-	http.HandleFunc("/zk-stats", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/zk-stats", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == "GET" {
 			// Calculate anonymized metrics for fairness proofs and anti-overload controls
@@ -503,9 +589,9 @@ func (s *Server) Start(addr string) error {
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
-	})
+	}))
 
-	http.HandleFunc("/zkml/verify", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/zkml/verify", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == "POST" {
 			var payload types.ZKMLPayload
@@ -543,20 +629,20 @@ func (s *Server) Start(addr string) error {
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
-	})
+	}))
 
-	http.HandleFunc("/ws/graph", s.handleGraphWebSocket)
+	mux.HandleFunc("/ws/graph", s.handleGraphWebSocket)
 
-	http.HandleFunc("/proposals", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/proposals", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == "GET" {
 			json.NewEncoder(w).Encode(s.ledger.GetProposals())
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
-	})
+	}))
 
-	http.HandleFunc("/proposals/events", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/proposals/events", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method != "POST" {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -579,9 +665,9 @@ func (s *Server) Start(addr string) error {
 			"proposalId": evt.ProposalID,
 			"type":       evt.Type,
 		})
-	})
+	}))
 
-	http.HandleFunc("/ccip", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/ccip", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == "GET" {
 			messageID := r.URL.Query().Get("messageId")
@@ -629,9 +715,9 @@ func (s *Server) Start(addr string) error {
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
-	})
+	}))
 
-	return http.ListenAndServe(addr, nil)
+	return http.ListenAndServe(addr, mux)
 }
 
 func (s *Server) handleGraphWebSocket(w http.ResponseWriter, r *http.Request) {
