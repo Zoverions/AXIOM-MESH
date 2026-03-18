@@ -84,6 +84,20 @@ echo "-> Recommended Local Model based on scan: $RECOMMENDED_MODEL"
 echo "   (This will be used for local inference fallbacks)"
 echo ""
 
+# Generate standardized Hardware Profile JSON
+cat <<EOF > hardware_profile.json
+{
+  "os": "$OS_NAME",
+  "cpu_cores": "$CPU_CORES",
+  "ram": "$RAM_TOTAL",
+  "gpu_name": "${GPU_NAME:-$APPLE_GPU}",
+  "gpu_vram": "${GPU_VRAM:-Unknown}",
+  "recommended_model": "$RECOMMENDED_MODEL"
+}
+EOF
+echo "-> Hardware profile saved to hardware_profile.json"
+echo ""
+
 echo "=========================================================="
 echo "   Environment Configuration (Interactive Setup) "
 echo "=========================================================="

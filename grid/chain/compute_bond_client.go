@@ -125,6 +125,19 @@ func (c *ComputeBondClient) Slash(nodeID string, amountWei int64) (common.Hash, 
 	return tx.Hash(), nil
 }
 
+func (c *ComputeBondClient) DelegateBond(nodeID [32]byte, parentID [32]byte) (common.Hash, error) {
+	opts, err := bind.NewKeyedTransactorWithChainID(c.signer, c.chainID)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	opts.Context = context.Background()
+	tx, err := c.contract.Transact(opts, "delegateBond", nodeID, parentID)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return tx.Hash(), nil
+}
+
 func (c *ComputeBondClient) ReadBond(nodeID string) (amount int64, active bool, parentNodeID string, err error) {
 	var out []interface{}
 	err = c.contract.Call(&bind.CallOpts{Context: context.Background()}, &out, "bonds", nodeID)

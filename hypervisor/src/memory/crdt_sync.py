@@ -78,3 +78,14 @@ class CRDTState:
                 self.state[key] = incoming_entry
 
         return True
+
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) >= 4 and sys.argv[1] == "--sync":
+        node_id = sys.argv[2]
+        swarm_id = sys.argv[3]
+        print(f"CRDT Sync initiated for Node: {node_id} on Swarm: {swarm_id}")
+        state = CRDTState(node_id)
+        state.update("swarm_attestation", swarm_id)
+        delta = state.generate_delta()
+        print(f"Generated Sync Delta: {json.dumps(delta)[:100]}...")
