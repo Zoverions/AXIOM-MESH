@@ -39,8 +39,9 @@ This README is a **code-accurate rewrite** intended to clearly separate what is 
 
 **Operational & Governance**:
 - **[.github/SECURITY.md](.github/SECURITY.md)** – Vulnerability disclosure process and support policy
-- **[plan.md](plan.md)** – Consolidated Q1 2026 roadmap and feature backlog
-- **[AUDIT_REPORT.md](AUDIT_REPORT.md)** – Code audit, closure guarantees, security findings
+- **[plan.md](plan.md)** – Canonical roadmap and feature backlog
+- **[AUDIT_REPORT.md](AUDIT_REPORT.md)** – Canonical code audit and security findings
+- **[docs/PROJECT-STATUS-2026.md](docs/PROJECT-STATUS-2026.md)** – Current implementation status + cleanup consolidation log
 - **[schemas/README.md](schemas/README.md)** – Versioned JSON schema registry (intent, skill, zkml, alignment profile)
 - **[docs/INTERFACE-CONTROL-DOCUMENT.md](docs/INTERFACE-CONTROL-DOCUMENT.md)** – Formal pillar contracts and API specifications
 - **[docs/SECURITY-REALITY-2026.md](docs/SECURITY-REALITY-2026.md)** – Implementation-accurate production security posture and readiness gate
