@@ -54,8 +54,16 @@ services:
     environment:
       - SANDBOX_PORT=4000
       - SANDBOX_API_KEY=${SANDBOX_API_KEY}
+      - NEMOCLAW_POLICY_CID=${DEFAULT_POLICY_CID}
+      - AIRGAP_ENFORCED=true
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./meshstore:/meshstore:ro   # policies live here
+      - ./sandbox/policies:/policies:ro
+    security_opt:
+      - apparmor:unconfined
+      - seccomp:unconfined
+    command: ["./airgap", "--policy", "/policies/default.yaml"]
 
   grid:
     build:

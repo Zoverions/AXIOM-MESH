@@ -29,3 +29,6 @@ Thumbs.db
 # Package Manager lockfiles (optional - uncomment if desired)
 # package-lock.json
 # yarn.lock
+sandbox/target/
+sandbox/Cargo.lock
+sandbox/airgap

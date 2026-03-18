@@ -147,6 +147,10 @@ def recover_from_meshstore(node_id, totp_code):
 
 if __name__ == "__main__":
     import sys
+
+    if "nemo" in sys.argv:
+        print("🔒 NemoClaw OpenShell active — Privacy Router + YAML policies enforced")
+
     # New subcommand support
     if len(sys.argv) > 1 and sys.argv[1] == "recover":
         node_id = input("Node ID to recover: ")
