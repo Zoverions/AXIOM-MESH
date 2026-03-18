@@ -173,6 +173,55 @@ func TestLedger_AddCCIPMessage_And_GetCCIPMessage(t *testing.T) {
 	}
 }
 
+func TestLedger_UpdateGraph_And_SearchGraph(t *testing.T) {
+	l := NewLedger()
+	node1 := types.GraphNode{ID: "n1", Content: "First node content", Keywords: []string{"first", "test"}}
+	node2 := types.GraphNode{ID: "n2", Content: "Second node data", Keywords: []string{"second", "data", "test"}}
+	edge1 := types.GraphEdge{Source: "n1", Target: "n2", Relationship: "links", Weight: 1}
+
+	// Test UpdateGraph
+	l.UpdateGraph(node1, []types.GraphEdge{edge1})
+	l.UpdateGraph(node2, nil)
+
+	graph := l.GetGraph()
+	if len(graph.Nodes) != 2 {
+		t.Fatalf("expected 2 nodes, got %d", len(graph.Nodes))
+	}
+	if len(graph.Edges) != 1 {
+		t.Fatalf("expected 1 edge, got %d", len(graph.Edges))
+	}
+
+	// Test SearchGraph with empty query (should return all nodes)
+	resEmpty := l.SearchGraph("")
+	if len(resEmpty) != 2 {
+		t.Fatalf("expected 2 nodes for empty query, got %d", len(resEmpty))
+	}
+
+	// Test SearchGraph with exact token match
+	resExact := l.SearchGraph("first")
+	if len(resExact) != 1 || resExact[0].ID != "n1" {
+		t.Fatalf("expected 1 node (n1) for 'first', got %v", resExact)
+	}
+
+	// Test SearchGraph with multiple tokens (AND logic)
+	resAnd := l.SearchGraph("second data")
+	if len(resAnd) != 1 || resAnd[0].ID != "n2" {
+		t.Fatalf("expected 1 node (n2) for 'second data', got %v", resAnd)
+	}
+
+	// Test SearchGraph with a token matching multiple nodes
+	resMulti := l.SearchGraph("test")
+	if len(resMulti) != 2 {
+		t.Fatalf("expected 2 nodes for 'test', got %d", len(resMulti))
+	}
+
+	// Test SearchGraph with non-existent token
+	resNone := l.SearchGraph("nonexistent")
+	if len(resNone) != 0 {
+		t.Fatalf("expected 0 nodes for 'nonexistent', got %d", len(resNone))
+	}
+}
+
 func TestLedger_SearchGraphRanked(t *testing.T) {
 	l := NewLedger()
 	l.UpdateGraph(types.GraphNode{ID: "n1", Content: "Distributed graph retrieval", Keywords: []string{"graph", "retrieval"}}, nil)
