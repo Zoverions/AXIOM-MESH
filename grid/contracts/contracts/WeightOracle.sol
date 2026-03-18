@@ -25,6 +25,7 @@ contract WeightOracle is Ownable {
 
     // Track PoER bonuses from zkML / MeshStore contributions
     mapping(address => uint256) public poerBonuses;
+    mapping(address => uint256) public verifiedSkillPoints;
 
     // Address of the ComputeBond contract allowed to add bonuses
     address public computeBondContract;
@@ -52,6 +53,14 @@ contract WeightOracle is Ownable {
         uint256 newWeight = nodeWeights[node] + poerBonuses[node];
 
         emit WeightUpdated(node, oldWeight, newWeight);
+    }
+
+    /**
+     * @dev Add verified skill points for an address. Only allowed by consensus/poer.
+     */
+    function addVerifiedSkillPoints(address user, uint256 points) external onlyOwner {
+        verifiedSkillPoints[user] += points;
+        // Weight calculation requires base weight + log(points) calculation (to be done off chain or simulated on chain)
     }
 
     /**
@@ -112,6 +121,17 @@ contract WeightOracle is Ownable {
     function getWeight(address node) external view returns (uint256) {
         if (!identityContract.isNodeRegistered(node)) revert NodeNotRegistered(node);
         return nodeWeights[node] + poerBonuses[node];
+    }
+
+    /**
+     * @dev Calculates Merit Weight based on VerifiedSkillPoints
+     */
+    function calculateMeritWeight(address user) external view returns (uint256) {
+        uint256 base = nodeWeights[user] + poerBonuses[user];
+        uint256 pts = verifiedSkillPoints[user];
+        uint256 logPts = 0;
+        while (pts > 1) { pts >>= 1; logPts++; }
+        return base + logPts;
     }
 
     /**

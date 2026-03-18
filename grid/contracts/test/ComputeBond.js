@@ -71,7 +71,10 @@ describe("ComputeBond", function () {
 
       const bond = await computeBond.bonds(NODE_ID);
       expect(bond.amount).to.equal(expectedNewAmount);
-      expect(await computeBond.totalSlashed()).to.equal(slashAmount);
+
+      const collectiveInvestmentRate = (slashAmount * 15n) / 100n;
+      const expectedSlashedAmount = slashAmount - collectiveInvestmentRate;
+      expect(await computeBond.totalSlashed()).to.equal(expectedSlashedAmount);
     });
 
     it("Should not allow non-owner to slash a bond", async function () {
@@ -105,6 +108,8 @@ describe("ComputeBond", function () {
 
     it("Should allow the staker to withdraw their bond partially", async function () {
       const withdrawAmount = hre.ethers.parseEther("0.4");
+      const collectiveInvestmentRate = (withdrawAmount * 15n) / 100n;
+      const expectedWithdrawAmount = withdrawAmount - collectiveInvestmentRate;
       const initialBalance = await hre.ethers.provider.getBalance(node1.address);
 
       const tx = await computeBond.connect(node1).withdraw(NODE_ID, withdrawAmount);
@@ -116,7 +121,7 @@ describe("ComputeBond", function () {
       expect(bond.isActive).to.be.true;
 
       const finalBalance = await hre.ethers.provider.getBalance(node1.address);
-      expect(finalBalance).to.equal(initialBalance + withdrawAmount - gasUsed);
+      expect(finalBalance).to.equal(initialBalance + expectedWithdrawAmount - gasUsed);
     });
 
     it("Should allow the staker to withdraw fully and deactivate bond", async function () {
@@ -151,14 +156,17 @@ describe("ComputeBond", function () {
       const slashAmount = hre.ethers.parseEther("0.5");
       await computeBond.connect(owner).slash(NODE_ID, slashAmount);
 
+      const collectiveInvestmentRate = (slashAmount * 15n) / 100n;
+      const expectedSlashedAmount = slashAmount - collectiveInvestmentRate;
+
       const initialOwnerBalance = await hre.ethers.provider.getBalance(owner.address);
 
-      const tx = await computeBond.connect(owner).withdrawSlashedFunds(slashAmount);
+      const tx = await computeBond.connect(owner).withdrawSlashedFunds(expectedSlashedAmount);
       const receipt = await tx.wait();
       const gasUsed = receipt.gasUsed * receipt.gasPrice;
 
       const finalOwnerBalance = await hre.ethers.provider.getBalance(owner.address);
-      expect(finalOwnerBalance).to.equal(initialOwnerBalance + slashAmount - gasUsed);
+      expect(finalOwnerBalance).to.equal(initialOwnerBalance + expectedSlashedAmount - gasUsed);
       expect(await computeBond.totalSlashed()).to.equal(0n);
     });
 
@@ -172,6 +180,36 @@ describe("ComputeBond", function () {
       await expect(
         computeBond.connect(owner).withdrawSlashedFunds(withdrawAmount)
       ).to.be.revertedWithCustomError(computeBond, "InsufficientSlashedFunds");
+    });
+
+    it("Should allow the owner to withdraw the collective investment pool", async function () {
+      const withdrawAmount = hre.ethers.parseEther("0.5");
+      await computeBond.connect(node1).withdraw(NODE_ID, withdrawAmount);
+
+      const collectiveInvestmentRate = (withdrawAmount * 15n) / 100n;
+      expect(await computeBond.collectiveInvestmentPool()).to.equal(collectiveInvestmentRate);
+
+      const initialOwnerBalance = await hre.ethers.provider.getBalance(owner.address);
+
+      const tx = await computeBond.connect(owner).withdrawCollectiveInvestmentPool(collectiveInvestmentRate);
+      const receipt = await tx.wait();
+      const gasUsed = receipt.gasUsed * receipt.gasPrice;
+
+      const finalOwnerBalance = await hre.ethers.provider.getBalance(owner.address);
+      expect(finalOwnerBalance).to.equal(initialOwnerBalance + collectiveInvestmentRate - gasUsed);
+      expect(await computeBond.collectiveInvestmentPool()).to.equal(0n);
+    });
+
+    it("Should prevent non-owner from withdrawing the collective investment pool", async function () {
+      const withdrawAmount = hre.ethers.parseEther("0.5");
+      await computeBond.connect(node1).withdraw(NODE_ID, withdrawAmount);
+
+      const collectiveInvestmentRate = (withdrawAmount * 15n) / 100n;
+
+      await expect(
+        computeBond.connect(node2).withdrawCollectiveInvestmentPool(collectiveInvestmentRate)
+      ).to.be.revertedWithCustomError(computeBond, "OwnableUnauthorizedAccount")
+       .withArgs(node2.address);
     });
   });
 });

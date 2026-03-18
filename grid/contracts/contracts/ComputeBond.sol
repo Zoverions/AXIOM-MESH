@@ -25,6 +25,8 @@ contract ComputeBond is Ownable, AccessControl {
     // Track total slashed funds that can be withdrawn by owner
     uint256 public totalSlashed;
 
+    uint256 public collectiveInvestmentPool;
+
     // Custom errors for gas efficiency on L2 networks (Arbitrum, Polygon)
     error InvalidNodeId();
     error InvalidStakeAmount();
@@ -75,6 +77,19 @@ contract ComputeBond is Ownable, AccessControl {
 
     function setWeightOracle(address _oracle) external onlyOwner {
         weightOracleContract = _oracle;
+    }
+
+    /**
+     * @dev Allows the owner or treasury to withdraw from the collective investment pool.
+     * @param amount The amount to withdraw.
+     */
+    function withdrawCollectiveInvestmentPool(uint256 amount) external onlyOwner {
+        require(collectiveInvestmentPool >= amount, "Insufficient funds in collective pool");
+
+        collectiveInvestmentPool -= amount;
+
+        (bool success, ) = payable(owner()).call{value: amount}("");
+        if (!success) revert TransferFailed();
     }
 
     /**
@@ -181,9 +196,13 @@ contract ComputeBond is Ownable, AccessControl {
         if (!bond.isActive) revert BondNotActive();
         if (bond.amount < amount) revert SlashExceedsBond();
 
+        uint256 collectiveInvestmentRate = (amount * 15) / 100;
+        uint256 remainingSlash = amount - collectiveInvestmentRate;
+
         bond.amount -= amount;
         stakerBonds[bond.staker] -= amount;
-        totalSlashed += amount; // Track the slashed amount
+        totalSlashed += remainingSlash; // Track the slashed amount
+        collectiveInvestmentPool += collectiveInvestmentRate;
 
         if (bond.amount == 0) {
             if (bond.isActive) {
@@ -251,8 +270,12 @@ contract ComputeBond is Ownable, AccessControl {
         if (bond.staker != msg.sender) revert UnauthorizedStaker(msg.sender, bond.staker);
         if (bond.amount < amount) revert WithdrawExceedsBond();
 
+        uint256 collectiveInvestmentRate = (amount * 15) / 100;
+        uint256 withdrawalAmount = amount - collectiveInvestmentRate;
+
         bond.amount -= amount;
         stakerBonds[msg.sender] -= amount;
+        collectiveInvestmentPool += collectiveInvestmentRate;
 
         if (bond.amount == 0) {
             if (bond.isActive) {
@@ -262,7 +285,7 @@ contract ComputeBond is Ownable, AccessControl {
             stakerActive[msg.sender] = false;
         }
 
-        (bool success, ) = payable(msg.sender).call{value: amount}("");
+        (bool success, ) = payable(msg.sender).call{value: withdrawalAmount}("");
         if (!success) revert TransferFailed();
 
         emit BondWithdrawn(nodeId, msg.sender, amount);
