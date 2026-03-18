@@ -30,6 +30,7 @@ This README is a **code-accurate rewrite** intended to clearly separate what is 
 - **[docs/REPOSITORY-OVERVIEW.md](docs/REPOSITORY-OVERVIEW.md)** – High-level architecture, capabilities, caveats, and quick-start snapshot
 - **[docs/MASTER-INTEGRATION.md](docs/MASTER-INTEGRATION.md)** – Complete fusion of all requirements (OntarioEdAI, THUD guilds, AA bonding, resource orchestration, alignment profiles, MCP compatibility)
 - **[docs/AGENT-ENHANCEMENTS.md](docs/AGENT-ENHANCEMENTS.md)** – 2026 Framework integrations (LangGraph, CrewAI, MCP server specs, skill staking via zkML)
+- **[docs/SKILL-CAPSULE-SPEC.md](docs/SKILL-CAPSULE-SPEC.md)** – End-to-end Mesh-native skill capsule lifecycle (ingest→verify→compile→sign→execute→revoke)
 
 **Service Documentation** (Quick Reference):
 - **[gateway/README.md](gateway/README.md)** – User-facing API, WebSocket, channel adapters

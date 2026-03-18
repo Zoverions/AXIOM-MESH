@@ -1,0 +1,86 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "id": "skill_capsule_manifest.v1",
+  "title": "SkillCapsuleManifest",
+  "type": "object",
+  "required": [
+    "capsule_id",
+    "name",
+    "version",
+    "issuer",
+    "capabilities",
+    "constraints",
+    "runtime",
+    "token_policy"
+  ],
+  "properties": {
+    "capsule_id": { "type": "string", "minLength": 3 },
+    "name": { "type": "string", "minLength": 1 },
+    "version": { "type": "string", "minLength": 1 },
+    "issuer": {
+      "type": "object",
+      "required": ["mesh_issuer", "key_id"],
+      "properties": {
+        "mesh_issuer": { "type": "string" },
+        "key_id": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" }
+    },
+    "constraints": {
+      "type": "object",
+      "required": ["proof_carrying_intents", "intent_canonicalization"],
+      "properties": {
+        "proof_carrying_intents": { "type": "boolean" },
+        "intent_canonicalization": { "type": "boolean" },
+        "max_risk_score": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "runtime": {
+      "type": "object",
+      "required": ["cpu_limit", "memory_limit_mb", "timeout_ms"],
+      "properties": {
+        "cpu_limit": { "type": "number", "exclusiveMinimum": 0 },
+        "memory_limit_mb": { "type": "integer", "minimum": 64 },
+        "timeout_ms": { "type": "integer", "minimum": 1000 }
+      },
+      "additionalProperties": false
+    },
+    "token_policy": {
+      "type": "object",
+      "required": ["scope", "ttl_seconds", "revocation_handle_required"],
+      "properties": {
+        "scope": {
+          "type": "object",
+          "required": ["tools", "data"],
+          "properties": {
+            "tools": { "type": "array", "items": { "type": "string" } },
+            "data": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        },
+        "ttl_seconds": { "type": "integer", "minimum": 60 },
+        "revocation_handle_required": { "type": "boolean" },
+        "proof_strictness": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "strict"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "personality": {
+      "type": "object",
+      "properties": {
+        "style": { "type": "string" },
+        "heuristics": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
