@@ -26,7 +26,7 @@ function getGridBaseUrl(): string {
 }
 
 
-router.post('/api/v1/intent/process/public', async (req: Request, res: Response) => {
+router.post('/api/v1/intent/process/public', publicIntentRateLimit, async (req: Request, res: Response) => {
     gatewayMetrics.requests++;
     try {
         const { channel, content, metadata } = req.body;
