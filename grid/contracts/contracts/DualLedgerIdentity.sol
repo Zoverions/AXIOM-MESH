@@ -26,6 +26,7 @@ contract DualLedgerIdentity is Ownable {
     mapping(bytes32 => bytes32) public totpCommitments;      // hash only
     mapping(bytes32 => bytes32) public passkeyCommitments;   // public-key hash
     mapping(bytes32 => bytes32) public recoveryBundleCID;    // MeshStore IPFS link
+    mapping(address => string) public anonymizedVotingDID;   // Public address to anonymized DID
 
     // Interface for ComputeBond access control
     address public computeBondAddress;
@@ -60,6 +61,15 @@ contract DualLedgerIdentity is Ownable {
         });
 
         emit NodeRegistered(node, idType);
+    }
+
+    /**
+     * @dev Link a public Ethereum address to an anonymized voting DID
+     * @param did The decentralized identifier string
+     */
+    function linkAnonymizedDID(string calldata did) external {
+        require(identities[msg.sender].isRegistered, "NodeNotRegistered");
+        anonymizedVotingDID[msg.sender] = did;
     }
 
     /**

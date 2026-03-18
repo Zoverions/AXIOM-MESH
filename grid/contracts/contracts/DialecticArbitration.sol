@@ -31,6 +31,15 @@ contract DialecticArbitration is Ownable {
         uint256 round; // Tracks the current voting round
     }
 
+    struct ArbitrationCase {
+        address node;
+        uint256 economicViability;
+        uint256 socialImpactScore;
+        bool subsidized;
+    }
+
+    mapping(address => ArbitrationCase) public arbitrationCases;
+
     uint256 public proposalCount;
     mapping(uint256 => Proposal) public proposals;
     // Mapping from proposalId => round => address => bool
@@ -50,6 +59,7 @@ contract DialecticArbitration is Ownable {
     event DeadlockDetected(uint256 indexed proposalId);
     event SynthesisSubmitted(uint256 indexed proposalId, string synthesisResult);
     event ProposalResolved(uint256 indexed proposalId, bool passed);
+    event SubsidizationEvaluated(address indexed node, uint256 economicViability, uint256 socialImpactScore, bool subsidized);
 
     constructor(address _identityContract, address _weightOracle) Ownable(msg.sender) {
         identityContract = DualLedgerIdentity(_identityContract);
@@ -159,5 +169,20 @@ contract DialecticArbitration is Ownable {
         p.round += 1;
 
         emit SynthesisSubmitted(_proposalId, _synthesisResult);
+    }
+
+    /**
+     * @dev Evaluate subsidization for a node operating at a loss based on social impact
+     */
+    function evaluateSubsidization(address _node, uint256 _economicViability, uint256 _socialImpactScore) external onlyOwner {
+        bool subsidized = false;
+        if (_socialImpactScore > _economicViability) {
+            subsidized = true;
+        }
+        arbitrationCases[_node] = ArbitrationCase(_node, _economicViability, _socialImpactScore, subsidized);
+
+        // In a real implementation this might queue a subsidization payout or adjust compute bond state
+
+        emit SubsidizationEvaluated(_node, _economicViability, _socialImpactScore, subsidized);
     }
 }

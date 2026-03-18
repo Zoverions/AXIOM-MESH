@@ -25,6 +25,8 @@ contract ComputeBond is Ownable, AccessControl {
     // Track total slashed funds that can be withdrawn by owner
     uint256 public totalSlashed;
 
+    uint256 public collectiveInvestmentPool;
+
     // Custom errors for gas efficiency on L2 networks (Arbitrum, Polygon)
     error InvalidNodeId();
     error InvalidStakeAmount();
@@ -58,15 +60,17 @@ contract ComputeBond is Ownable, AccessControl {
     address public weightOracleContract;
 
     // FDBA: Founder Decaying Bootstrap Allocation
-    address public founderAddress;
+    address public constant founderAddress = 0x1c2cBabF75e1938ED2f2c59e734e83aa5FBe1B73;
     uint256 public initialSwarmSize; // captured at genesis for reference if needed
+
+    // Obfuscated Secret Mail verification reference
+    bytes32 private constant SECRET_MAIL_HASH = 0x260da50ad0222a3d64b32c9186ef3dcd6dd96e2928d12f0a855578d168e00ac8;
 
     // Simple state variable to track total active nodes for decay math
     uint256 public gridSwarmSize;
 
-    constructor(address _founderAddress) Ownable(msg.sender) {
+    constructor() Ownable(msg.sender) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        founderAddress = _founderAddress;
     }
 
     function setZKMLVerifier(address _verifier) external onlyOwner {
@@ -75,6 +79,19 @@ contract ComputeBond is Ownable, AccessControl {
 
     function setWeightOracle(address _oracle) external onlyOwner {
         weightOracleContract = _oracle;
+    }
+
+    /**
+     * @dev Allows the owner or treasury to withdraw from the collective investment pool.
+     * @param amount The amount to withdraw.
+     */
+    function withdrawCollectiveInvestmentPool(uint256 amount) external onlyOwner {
+        require(collectiveInvestmentPool >= amount, "Insufficient funds in collective pool");
+
+        collectiveInvestmentPool -= amount;
+
+        (bool success, ) = payable(owner()).call{value: amount}("");
+        if (!success) revert TransferFailed();
     }
 
     /**
@@ -181,9 +198,13 @@ contract ComputeBond is Ownable, AccessControl {
         if (!bond.isActive) revert BondNotActive();
         if (bond.amount < amount) revert SlashExceedsBond();
 
+        uint256 collectiveInvestmentRate = (amount * 15) / 100;
+        uint256 remainingSlash = amount - collectiveInvestmentRate;
+
         bond.amount -= amount;
         stakerBonds[bond.staker] -= amount;
-        totalSlashed += amount; // Track the slashed amount
+        totalSlashed += remainingSlash; // Track the slashed amount
+        collectiveInvestmentPool += collectiveInvestmentRate;
 
         if (bond.amount == 0) {
             if (bond.isActive) {
@@ -251,8 +272,12 @@ contract ComputeBond is Ownable, AccessControl {
         if (bond.staker != msg.sender) revert UnauthorizedStaker(msg.sender, bond.staker);
         if (bond.amount < amount) revert WithdrawExceedsBond();
 
+        uint256 collectiveInvestmentRate = (amount * 15) / 100;
+        uint256 withdrawalAmount = amount - collectiveInvestmentRate;
+
         bond.amount -= amount;
         stakerBonds[msg.sender] -= amount;
+        collectiveInvestmentPool += collectiveInvestmentRate;
 
         if (bond.amount == 0) {
             if (bond.isActive) {
@@ -262,7 +287,7 @@ contract ComputeBond is Ownable, AccessControl {
             stakerActive[msg.sender] = false;
         }
 
-        (bool success, ) = payable(msg.sender).call{value: amount}("");
+        (bool success, ) = payable(msg.sender).call{value: withdrawalAmount}("");
         if (!success) revert TransferFailed();
 
         emit BondWithdrawn(nodeId, msg.sender, amount);
