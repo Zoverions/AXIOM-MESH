@@ -368,35 +368,12 @@ AXIOM-MESH is designed for hostile-environment resilience, but production assura
 If LangGraph is a circuit diagram, AXIOM-MESH is a constitutional system.
 
 
-
-## Security Audit Corrections (Implementation Reality)
-
-Recent audit drafts may reference outdated repository states. Current code now includes:
-- public ingress rate limiting + payload sanitization in Gateway,
-- Hypervisor policy gate enforcement + audit trail recording,
-- Grid snapshot durability + zkML payload validation + optional on-chain stake/slash mirroring.
-
-For a strict reality checklist, see `docs/SECURITY-REALITY-2026.md`.
-
-## Production Hardening Backlog (Priority)
-
-1. **Perimeter security controls**
-   - Add gateway WAF, abuse detection, and distributed rate-limit backend.
-2. **Durable ledger backend**
-   - Promote snapshot durability to database-backed + chain-finalized reconciliation.
-3. **zkML trust hardening**
-   - Add verifier artifact integrity attestation, resource quotas, and operational SLOs.
-4. **Reasoning/safety auditor completion**
-   - Add formal policy engine + immutable event sink + operator review UX.
-5. **Contract lifecycle automation**
-   - Add event listeners + reorg/finality handling + automated reconciliation workflows.
-
 ## Critical Caveats for Production Use (Status)
 
 | Issue | Impact | Current status / resolution |
 |---|---|---|
-| Gateway sanitization is basic | Not a full application firewall | Centralized sanitization now strips script/html/control-token payloads, normalizes metadata, and the public ingress is rate-limited. This is still not a substitute for perimeter WAF controls in production. |
+| Gateway sanitization is basic | Not a full application firewall | Centralized sanitization now strips script/html/control-token payloads and normalizes metadata, but this remains a lightweight hygiene layer and must be paired with perimeter controls in production. |
 | `/api/v1/intent/process/public` route naming and behavior | Could be misleading if authentication expectations are unclear | Route is now actually public (no API key middleware) to match its contract; keep it behind gateway-level rate limits and abuse detection. |
-| Ledger is in-memory | Not persistent blockchain state | Grid now supports periodic snapshot persistence to disk (`GRID_LEDGER_PATH`) with startup restore; this improves durability but is not equivalent to fully chain-backed database persistence. |
-| zkML verification is prototype-grade | Not yet production-trust operations | Verification pipeline now enforces strict payload validation (commitment format, required vectors, artifact size bounds) before worker execution; still requires broader operational hardening for high-assurance trust ops. |
-| Safety/reasoning fields are scaffolds | Placeholders, not fully implemented policy logic | Audit trail now includes an enforced policy gate (content-length/consent/exec-consent checks) in addition to explainability fields; full operator-grade policy engine and immutable eventing remain backlog items. |
+| Ledger is in-memory | Not persistent blockchain state | Grid ledger is still process-memory state; durable storage is pending and required for production durability. |
+| zkML verification is prototype-grade | Not yet production-trust operations | Verification pipeline is functional and deterministic in current code paths, but still considered pre-hardening for high-assurance trust operations. |
+| Safety/reasoning fields are scaffolds | Placeholders, not fully implemented policy logic | Audit trail fields exist for explainability and diagnostics; they should not be interpreted as formal policy-engine attestations yet. |
