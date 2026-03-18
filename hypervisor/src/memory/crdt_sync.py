@@ -89,3 +89,13 @@ if __name__ == "__main__":
         state.update("swarm_attestation", swarm_id)
         delta = state.generate_delta()
         print(f"Generated Sync Delta: {json.dumps(delta)[:100]}...")
+
+def pin_to_meshstore(data: bytes) -> str:
+    """Mock implementation of pinning data to MeshStore (IPFS)"""
+    import hashlib
+    cid = "Qm" + hashlib.sha256(data).hexdigest()[:44]
+    return cid
+
+def sync_storage_manifest(manifest: dict) -> bool:
+    """Mock implementation of syncing storage manifest"""
+    return True

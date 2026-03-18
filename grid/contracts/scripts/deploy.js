@@ -11,7 +11,7 @@ async function main() {
   await dualLedgerIdentity.waitForDeployment();
 
   const WeightOracle = await hre.ethers.getContractFactory("WeightOracle");
-  const weightOracle = await WeightOracle.deploy();
+  const weightOracle = await WeightOracle.deploy(await dualLedgerIdentity.getAddress());
   await weightOracle.waitForDeployment();
 
   const DialecticArbitration = await hre.ethers.getContractFactory("DialecticArbitration");
@@ -24,6 +24,8 @@ async function main() {
   const ComputeBond = await hre.ethers.getContractFactory("ComputeBond");
   const computeBond = await ComputeBond.deploy();
   await computeBond.waitForDeployment();
+
+  await dualLedgerIdentity.setComputeBondAddress(await computeBond.getAddress());
 
   const output = {
     network: hre.network.name,

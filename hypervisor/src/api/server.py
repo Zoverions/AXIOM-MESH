@@ -47,6 +47,7 @@ from src.zkml.prover import EdgeZKMLProver
 from contextlib import asynccontextmanager
 
 from src.graph.autoresearch_graph import autoresearch_app
+from src.recovery.bundle_manager import RecoveryBundleManager
 
 context_engine = ContextEngine()
 pulse = EntropyMonitor()
@@ -82,6 +83,13 @@ async def lifespan(app: FastAPI):
         meshstore_agent.run()
     except Exception as e:
         print(f"MeshStoreAgent failed to run: {e}")
+
+    if os.getenv("RECOVERY_2FA_ENABLED") == "true" and os.getenv("RECOVERY_KEY"):
+        try:
+            cid = RecoveryBundleManager().create_bundle(os.getenv("NODE_ID", "local_node"))
+            print(f"Recovery Bundle Pinned to MeshStore: {cid}")
+        except Exception as e:
+            print(f"Failed to create recovery bundle: {e}")
 
     yield
     autoresearch_daemon.stop()

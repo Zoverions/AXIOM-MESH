@@ -60,11 +60,14 @@ def setup_node():
     with open(".env", "a") as f:
         f.write(f"MESHSTORE_QUOTA_GB={quota}\n")
 
-    # Basic recovery prompt (keeps 2FA in To-Do List)
-    enable_recovery = input("🔐 Enable recovery bundle to MeshStore? (y/n) [y] ") or "y"
-    if enable_recovery.lower() == "y":
+    # Phase 2: 2FA + Recovery (MeshStore bundle)
+    enable_2fa = input("🔐 Enable 2FA (TOTP + Passkey) for recovery? (y/n) [y]: ") or "y"
+    if enable_2fa.lower() == "y":
         with open(".env", "a") as f:
-            f.write("RECOVERY_ENABLED=true\n")
+            f.write("RECOVERY_2FA_ENABLED=true\n")
+        print("📱 Scan the QR for Google/Microsoft Authenticator (TOTP)")
+        # Calls Gateway /auth/2fa/setup (new endpoint)
+        setup_2fa()
 
     if LLMProvider:
         print("Pulling models via provider...")
@@ -107,7 +110,51 @@ def setup_node():
             print(e)
 
 
+def setup_2fa():
+    try:
+        headers = {}
+        if GATEWAY_API_KEY:
+            headers["Authorization"] = f"Bearer {GATEWAY_API_KEY}"
+        node_id = input("Enter your Node ID for 2FA setup: ")
+        res = requests.post(
+            "http://localhost:3000/api/v1/auth/2fa/setup",
+            json={"nodeId": node_id},
+            headers=headers
+        )
+        res.raise_for_status()
+        data = res.json()
+        print(f"TOTP Setup Success. Secret: {data['data']['secret']}")
+        print(f"QR Code URL: {data['data']['qr']}")
+    except Exception as e:
+        print(f"Error setting up 2FA: {e}")
+
+def recover_from_meshstore(node_id, totp_code):
+    print(f"Recovering node {node_id} using TOTP {totp_code} via MeshStore...")
+    try:
+        headers = {}
+        if GATEWAY_API_KEY:
+            headers["Authorization"] = f"Bearer {GATEWAY_API_KEY}"
+        res = requests.post(
+            "http://localhost:3000/api/v1/auth/2fa/recover",
+            json={"nodeId": node_id, "totpCode": totp_code},
+            headers=headers
+        )
+        res.raise_for_status()
+        data = res.json()
+        print(f"Recovery Response: {data}")
+    except Exception as e:
+        print(f"Error recovering node: {e}")
+
 if __name__ == "__main__":
+    import sys
+    # New subcommand support
+    if len(sys.argv) > 1 and sys.argv[1] == "recover":
+        node_id = input("Node ID to recover: ")
+        totp_code = input("Enter TOTP code: ")
+        # Passkey handled in browser if needed
+        recover_from_meshstore(node_id, totp_code)
+        sys.exit(0)
+
     setup_node()
     print("AxiomMesh CLI - Interactive Mode")
     print("Type 'exit' to quit.")

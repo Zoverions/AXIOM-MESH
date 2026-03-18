@@ -370,4 +370,29 @@ router.post('/api/v1/config', authMiddleware, (req: Request, res: Response) => {
     }
 });
 
+// --- Recovery & 2FA API ---
+import { setupTOTP, setupPasskey, recoverMesh } from '../auth/2fa';
+
+router.post('/api/v1/auth/2fa/setup', authMiddleware, async (req: Request, res: Response) => {
+    try {
+        const { nodeId } = req.body;
+        if (!nodeId) return res.status(400).json({ error: 'nodeId required' });
+        const totpData = await setupTOTP(nodeId);
+        res.json({ status: 'success', data: totpData });
+    } catch (error: any) {
+        res.status(500).json({ error: 'Failed to setup 2FA', details: error.message });
+    }
+});
+
+router.post('/api/v1/auth/2fa/recover', authMiddleware, async (req: Request, res: Response) => {
+    try {
+        const { nodeId, totpCode } = req.body;
+        if (!nodeId || !totpCode) return res.status(400).json({ error: 'nodeId and totpCode required' });
+        await recoverMesh(nodeId, totpCode, null);
+        res.json({ status: 'success', message: 'Recovery initiated successfully' });
+    } catch (error: any) {
+        res.status(500).json({ error: 'Failed to recover mesh', details: error.message });
+    }
+});
+
 export default router;
