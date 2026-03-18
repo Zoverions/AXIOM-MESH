@@ -12,6 +12,7 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"os/exec"
 	"regexp"
 	"sort"
 	"strconv"
@@ -316,6 +317,16 @@ func (s *Server) Start(addr string) error {
 					return
 				}
 
+				if s.computeBondOnChain != nil {
+					nodeHash := sha256.Sum256([]byte(payload.NodeID))
+					parentHash := sha256.Sum256([]byte(payload.ParentNodeID))
+					_, err := s.computeBondOnChain.DelegateBond(nodeHash, parentHash)
+					if err != nil {
+						http.Error(w, "on-chain delegate failed: "+err.Error(), http.StatusBadGateway)
+						return
+					}
+				}
+
 				if bond, ok := s.ledger.GetBond(payload.NodeID); ok {
 					bond.ParentNodeID = payload.ParentNodeID
 					s.ledger.Stake(bond) // Update bond
@@ -395,6 +406,27 @@ func (s *Server) Start(addr string) error {
 		if err := s.ledger.ApplyBondChainEvent(evt); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
+		}
+
+		// Optionally auto-join swarm for delegate events to enable localized clustering
+		if evt.Type == "delegate" && evt.ParentNodeID != "" {
+			hashBytes := sha256.Sum256([]byte(evt.NodeID + evt.ParentNodeID))
+			swarmID := fmt.Sprintf("%x", hashBytes)
+			s.ledger.JoinSwarm(swarmID, evt.NodeID)
+
+			// Trigger local CRDT sync logic
+			go func() {
+				importPath := "hypervisor/src/memory/crdt_sync.py"
+				if _, err := os.Stat(importPath); err == nil {
+					cmd := exec.Command("python3", importPath, "--sync", evt.NodeID, swarmID)
+					err := cmd.Run()
+					if err != nil {
+						log.Printf("Failed to trigger CRDT sync for node %s: %v", evt.NodeID, err)
+					} else {
+						log.Printf("CRDT sync triggered successfully for node %s", evt.NodeID)
+					}
+				}
+			}()
 		}
 
 		json.NewEncoder(w).Encode(map[string]interface{}{"status": "applied", "nodeId": evt.NodeID, "txHash": evt.TxHash, "finalized": evt.Finalized})

@@ -11,8 +11,9 @@ from src.cortex.mirofish_mapper import MiroFishMapper
 from src.cortex.divergence import DivergenceEngine
 
 class ContextEngine:
-    def __init__(self):
-        self.ncp_client = NCPClient()
+    def __init__(self, llm=None):
+        self.llm = llm
+        self.ncp_client = NCPClient(llm=self.llm)
         self.mcp_client = MCPClient()
         self.oracle = ChainlinkOracle()
         self.temporal_state = TemporalStateManager() # Tier 1

@@ -518,8 +518,11 @@ func (l *Ledger) ApplyBondChainEvent(evt types.BondChainEvent) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	if evt.NodeID == "" || evt.Type == "" || evt.Amount < 0 {
+	if evt.NodeID == "" || evt.Type == "" {
 		return fmt.Errorf("invalid chain event payload")
+	}
+	if evt.Type != "delegate" && evt.Amount < 0 {
+		return fmt.Errorf("invalid chain event payload amount")
 	}
 
 	bond := l.Bonds[evt.NodeID]
@@ -549,6 +552,11 @@ func (l *Ledger) ApplyBondChainEvent(evt types.BondChainEvent) error {
 		if bond.Amount == 0 {
 			bond.Status = "inactive"
 		}
+	case "delegate":
+		if bond.Status != "active" {
+			return fmt.Errorf("bond not active or does not exist")
+		}
+		bond.ParentNodeID = evt.ParentNodeID
 	default:
 		return fmt.Errorf("unsupported chain event type: %s", evt.Type)
 	}

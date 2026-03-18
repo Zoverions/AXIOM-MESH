@@ -27,8 +27,9 @@ type ComputeBond struct {
 }
 
 type BondChainEvent struct {
-	Type            string `json:"type"`
+	Type            string `json:"type"` // "stake", "slash", "delegate"
 	NodeID          string `json:"nodeId"`
+	ParentNodeID    string `json:"parentNodeId,omitempty"`
 	Amount          int    `json:"amount"`
 	TxHash          string `json:"txHash"`
 	BlockNumber     uint64 `json:"blockNumber"`

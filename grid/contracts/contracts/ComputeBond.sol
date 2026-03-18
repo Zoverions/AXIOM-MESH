@@ -2,8 +2,9 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract ComputeBond is Ownable {
+contract ComputeBond is Ownable, AccessControl {
 
     struct Bond {
         address staker;
@@ -14,6 +15,10 @@ contract ComputeBond is Ownable {
 
     // Mapping from node ID string to the Bond details
     mapping(string => Bond) public bonds;
+
+    // Mapping from staker address to total bond amount (for delegate lookup)
+    mapping(address => uint256) public stakerBonds;
+    mapping(address => bool) public stakerActive;
 
     // Track total slashed funds that can be withdrawn by owner
     uint256 public totalSlashed;
@@ -27,14 +32,24 @@ contract ComputeBond is Ownable {
     error WithdrawExceedsBond();
     error InsufficientSlashedFunds();
     error TransferFailed();
+    error UnauthorizedDelegate();
+
+    bytes32 public constant DELEGATOR_ROLE = keccak256("DELEGATOR_ROLE");
 
     event BondStaked(string indexed nodeId, address indexed staker, uint256 amount);
     event BondSlashed(string indexed nodeId, uint256 amount, uint256 newAmount);
     event BondWithdrawn(string indexed nodeId, address indexed staker, uint256 amount);
     event BondSevered(string indexed nodeId);
-    event BondDelegated(string indexed nodeId, string indexed parentNodeId);
+    event BondDelegated(bytes32 indexed nodeId, bytes32 indexed parentNodeId, uint256 bondAmount);
+    event SwarmAttestation(bytes32 indexed nodeId, bytes32 swarmId);
 
-    constructor() Ownable(msg.sender) {}
+    constructor() Ownable(msg.sender) {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
+
+    function grantDelegator(address account) external onlyOwner {
+        _grantRole(DELEGATOR_ROLE, account);
+    }
 
     /**
      * @dev Allows a node to stake native tokens (ETH/MATIC) as a compute bond.
@@ -54,9 +69,11 @@ contract ComputeBond is Ownable {
         } else {
             bond.staker = msg.sender;
             bond.isActive = true;
+            stakerActive[msg.sender] = true;
         }
 
         bond.amount += msg.value;
+        stakerBonds[msg.sender] += msg.value;
 
         emit BondStaked(nodeId, msg.sender, msg.value);
     }
@@ -73,10 +90,12 @@ contract ComputeBond is Ownable {
         if (bond.amount < amount) revert SlashExceedsBond();
 
         bond.amount -= amount;
+        stakerBonds[bond.staker] -= amount;
         totalSlashed += amount; // Track the slashed amount
 
         if (bond.amount == 0) {
             bond.isActive = false;
+            stakerActive[bond.staker] = false;
         }
 
         emit BondSlashed(nodeId, amount, bond.amount);
@@ -87,17 +106,16 @@ contract ComputeBond is Ownable {
      * @param nodeId The unique identifier of the child node.
      * @param parentNodeId The unique identifier of the parent node.
      */
-    function delegateBond(string memory nodeId, string memory parentNodeId) external {
-        Bond storage bond = bonds[nodeId];
-        if (!bond.isActive) revert BondNotActive();
-        if (bond.staker != msg.sender) revert UnauthorizedStaker(msg.sender, bond.staker);
+    function delegateBond(bytes32 nodeId, bytes32 parentNodeId) external {
+        require(stakerActive[msg.sender] && stakerBonds[msg.sender] > 0, "Active bond required");
+        require(hasRole(DELEGATOR_ROLE, msg.sender) || owner() == msg.sender, "Unauthorized delegate");
 
-        // Require parent to also be an active bond
-        if (!bonds[parentNodeId].isActive) revert BondNotActive();
+        // Link via existing DualLedgerIdentity pattern
+        // (call external if needed, or store locally)
+        emit BondDelegated(nodeId, parentNodeId, stakerBonds[msg.sender]);
 
-        bond.parentNodeId = parentNodeId;
-
-        emit BondDelegated(nodeId, parentNodeId);
+        // Optional: trigger swarm attestation
+        emit SwarmAttestation(nodeId, keccak256(abi.encodePacked(nodeId, parentNodeId)));
     }
 
     /**
@@ -139,9 +157,11 @@ contract ComputeBond is Ownable {
         if (bond.amount < amount) revert WithdrawExceedsBond();
 
         bond.amount -= amount;
+        stakerBonds[msg.sender] -= amount;
 
         if (bond.amount == 0) {
             bond.isActive = false;
+            stakerActive[msg.sender] = false;
         }
 
         (bool success, ) = payable(msg.sender).call{value: amount}("");
