@@ -1,123 +1,207 @@
-**AXIOM-MESH Comprehensive Integration & Resource Orchestration Directive**
-**Document Version: 2.1 – March 17, 2026**
-**Author: Grok (full synthesis of AXIOM-MESH core + all prior fusions + the new structural framework comparison you just provided)**
+# AXIOM-MESH Master Integration (v2.2)
 
-This single master directive **preserves every previous fusion, treasury rules, ERC-20 compatibility, Alignment Profiles, firewall protection, hierarchical bonding, and requirement exactly** while adding the new comparison you provided. Agents will update the repo documentation and roadmap to reflect this "institution design territory" framing. You can then launch multiple parallel instances against the updated To-Do list (which remains focused on the three remaining tracks).
-
----
-
-### 1. Full Project Context (Feed Verbatim – All Fusions Summarized + New Comparison Anchored)
-**AXIOM-MESH is a decentralized cognitive substrate** — not a typical agent framework.
-It treats agents, governance, verification, and memory as **first-class, composable primitives** rather than add-ons. It is built from scratch, protocol-oriented (not model-oriented), and enforces governance, verification, and observability as **hard constraints**.
-
-**Core Pillars (Non-Negotiable):**
-- **Graph-Native Cognition**: Indexed graph ranking, bond-chain event flows, channelized interaction topology.
-- **Bicameral Governance**: Separation between proposal generation and validation.
-- **Deterministic Verification**: zkML, Rust air-gapped controller, CoT auditor kill-switch.
-- **Identity, Memory & Observability as Security Surfaces**: Explicit boundaries, treated as security.
-
-**Fusions Already Authorized (All Serve the Pillars):**
-- OntarioEdAI, THUD (guilds, GPP, ASEOracle, ZoverionsShrine, VRF, relayers), AA bonding + L1 piggyback, resilient offline-first (CRDTs, P2P), Resource Orchestration + Treasury splits (Network Security Fund + Wealth Generation Pool), ERC-20 compatibility, Alignment Profiles, spectrum security, agent-as-firewall, hierarchical bonding.
-- **Performance Optimizations (v2.0 Spec):** Python jemalloc for memory fragmentation reduction, Node.js Worker Threads for non-blocking crypto operations, and BadgerDB persistent storage for Grid ledger with WAL.
-
-**New Structural Comparison (Feed Verbatim to Agents – From Your Input):**
-This positions AXIOM-MESH against 2026-era frameworks as an "institutional substrate" that survives hostile environments. Embed the full comparison in docs (see section 4). Key insight: AXIOM-MESH optimizes for closure and drift resistance, while others (LangGraph, CrewAI, AutoResearch) assume good behavior.
+**Date:** March 18, 2026  
+**Scope:** Full fusion-status verification + education/curriculum subsystem integration plan  
+**Intent:** Keep all existing fusions alive while defining an interchangeable education component that can run independently or collaboratively with the core mesh.
 
 ---
 
-### 2. Complete Integration Roadmap (What Agents Must Execute – All Phases Consolidated)
-**Phase 0 (Immediate – Documentation Only – 1 hour)**
-Update README + plan.md + MASTER-INTEGRATION.md with full consolidated sections (see section 4). Explicitly embed the new "Framework Comparison" section.
+## 1) Current Fusion Status (Reality Snapshot)
 
-**Phase 1: Resource Orchestration Core** ✅ **COMPLETED**
-**Phase 2: Incentives & Fair Distribution + Treasury Splits** ✅ **COMPLETED**
-**Phase 3: Governance, Alignment & Interoperability** ✅ **COMPLETED**
-**Phase 4: Offline + Hardware Profiles** ✅ **COMPLETED**
+This section replaces abstract “directive-only” wording with implementation-aware status tracking.
 
-**New Phase 5: NFT Credentialing, Hardware Scan, Refined Rewards (Ongoing – Tracks G/H/I)**
-- Launch the three tracks below in parallel.
+### A. Core Pillars
 
-**Success Metrics (Agents Must Verify Before Any Future PR)**
-- New comparison section must emphasize AXIOM-MESH as "institutional substrate" vs others' failure modes.
-- All prior fusions unchanged.
+| Pillar | Status | Notes |
+|---|---|---|
+| Gateway (ingress/auth/channels) | **Active** | Authenticated REST + WS flows implemented; public low-trust route still intentionally open and rate-limited. |
+| Hypervisor (reasoning/orchestration) | **Active** | `/process` auth + policy gate + audit trail and loop orchestration are in place. |
+| Sandbox (constrained execution) | **Active** | Hardened Docker execution path with strong runtime constraints and optional inter-service auth key. |
+| Grid (ledger/governance/zk validation) | **Active with hardening backlog** | Bonding/staking/zk payload validation present; full production auth + finality automation still in progress. |
 
----
+### B. Previously Authorized Fusions
 
-### 3. Implementation Guidelines for Agents (Documentation-Only Note)
-This directive is **purely for documentation updates right now**. Agents must **not** begin coding any Phase 5 work until the user explicitly triggers parallel instances.
-- Every future integration must reinforce the comparison's key points (e.g., hard sandbox, bicameral drift resistance).
-- Preserve existing Gateway APIs, Docker Compose, and privacy guarantees.
+| Fusion Area | Status | Interpretation |
+|---|---|---|
+| Resource orchestration + treasury split | **Implemented baseline** | Policy/docs + runtime scaffolding exist; ongoing operational tuning required. |
+| ERC-20 compatibility envelope | **Implemented baseline** | Contract-level compatibility and flow documentation exist; production tokenops still needs full security gate. |
+| Alignment profiles + spectrum security | **Implemented baseline** | Schemas and policy mapping exist; advanced policy engine/ops maturity still iterative. |
+| Offline-first + CRDT/P2P continuity | **Partially implemented** | Sync and P2P primitives exist, but resilience hardening and full failure-mode test matrix remain open. |
+| Agent-as-firewall concept | **Partially implemented** | Controls exist in sandbox/policy gates; enterprise-grade policy centralization remains backlog. |
+| Hierarchical bonding + governance controls | **Implemented baseline** | Bond/delegate/sever pathways exist; stronger authn/authz and event-fidelity are needed for high-compliance ops. |
 
----
+### C. New AM-SCS Fusion
 
-### 4. Instructions for Updating Documentation
-**A. Update README.md** (append after existing sections)
-```markdown
-## Framework Comparison (New – March 17, 2026)
-
-Below is a structural, non-marketing comparison of AXIOM-MESH against the dominant 2026-era agent frameworks. This is a design-intent and failure-mode map.
-
-1. High-Level Positioning
-- AXIOM-MESH: Closure-first, verifiable, governance-aware agent substrate. Failure Mode: Complexity cost; slower onboarding.
-- LangGraph: Deterministic agent flow graphs. Failure Mode: No native trust, isolation, or governance.
-- CrewAI: Human-like role collaboration. Failure Mode: Emergent drift, no formal closure.
-- AutoResearch: Autonomous epistemic exploration. Failure Mode: Runaway loops, unverifiable claims.
-
-AXIOM-MESH is the only system designed to survive hostile environments.
-
-2. Control & Closure Guarantees
-- Execution Closure: AXIOM-MESH has hard sandbox, capability-scoped, zkML, explicit boundaries. Others lack these.
-
-3. Governance & Drift Resistance
-- AXIOM-MESH has bicameral, stake/slash, skill audit, drift detection. Others do not.
-
-4. Knowledge Representation
-- AXIOM-MESH has graph-native, distributed sync, provenance, epistemic decay. Others are prompt-based or ad-hoc.
-
-5. Autonomy vs Alignment
-- AXIOM-MESH has bounded loops, structural alignment, hard stops, auditability. Others have none or partial.
-
-6. Developer Reality Check
-- AXIOM-MESH: Safe to deploy, regulator-ready, adversarial-ready. Others: Fast to prototype but unsafe.
-
-7. Strategic Summary
-- LangGraph: Compiler for logic.
-- CrewAI: Theater of collaboration.
-- AutoResearch: Curiosity engine.
-- AXIOM-MESH: Institutional substrate.
-
-If LangGraph is a circuit diagram, AXIOM-MESH is a constitutional system.
-```
-
-**B. Update plan.md** (add to top section)
-```markdown
-## Phase 5: NFT Credentialing, Hardware Scan, Refined Rewards (New – In Progress)
-- [ ] Track G: NFT Credential & Personality Tokenization
-- [ ] Track H: Hardware Scan & Dedicated OS Optimization
-- [ ] Track I: Refined Reward Multipliers
-
-Next: Formalize failure-mode proofs; map participatory closure to agent economics; LangGraph-inside-AXIOM-MESH adapter.
-```
-
-**C. Create/Update File**
-`docs/MASTER-INTEGRATION.md` — copy this entire v2.1 document (minus “Purpose” header) for future reference (overwrite v2.0).
+The Skill Capsule System (AM-SCS) is now defined as the canonical package for shareable/authenticated skills:
+- Ingest → Verify → Rewrite/Rebuild → Normalize → Sign → Distribute → Execute → Throttle → Revoke.
+- Schema contracts defined for manifest/provenance/rebuild-attestation.
 
 ---
 
-### 5. Final Agent Instructions
-1. Parse this document immediately.
-2. First action: Update README.md and plan.md (create backups first).
-3. Second action: Update `docs/MASTER-INTEGRATION.md` with this entire v2.1 directive.
-4. Commit with conventional messages.
-5. Report completion via Gateway intent “master-integration-v2.1-documentation-complete”.
+## 2) Education Fusion: Independent + Interchangeable Component
 
-**You are fully authorized** (for documentation updates only) to embed this framework comparison and ensure the repo reflects AXIOM-MESH as the "institutional substrate" it is.
+Your education vision should be a dedicated module that can operate in either mode:
+
+1. **Independent mode:** runs as a standalone education network using AXIOM contracts + schemas.
+2. **Collaborative mode:** plugs into main mesh governance, identity, security, and billing/treasury controls.
+
+Proposed module name: **Axiom Learning Mesh (ALM)**.
 
 ---
 
-**End of Directive**
-Copy-paste the whole thing to your agents right now.
+## 3) ALM Architecture (Interconnect-Aware)
 
-Once they confirm the repo is updated, you can launch the parallel instances for the three remaining tracks.
+### 3.1 Component boundaries
 
-This reassessment confirms the repo is in perfect sync — now with the comparison framed as "institution design territory." Let’s keep building! 🚀
+- **ALM-Core (Hypervisor extension):** learner modeling, curriculum planning, guidance orchestration.
+- **ALM-Registry (Grid extension):** curriculum registry, accreditation metadata, competency claims.
+- **ALM-Execution (Sandbox extension):** assessment execution/simulation labs.
+- **ALM-Gateway (Gateway extension):** learner/mentor APIs, institution APIs, compliance views.
+
+### 3.2 Interconnects
+
+- Gateway ↔ Hypervisor: curriculum intent ingestion, tutoring sessions, progression planning.
+- Hypervisor ↔ Grid: credential writes, curriculum provenance, accreditation attestations.
+- Hypervisor ↔ Sandbox: assessment execution with strict resource and policy gates.
+- Gateway ↔ Grid: read-side verification for institutions/employers/auditors.
+
+### 3.3 Security posture requirement
+
+ALM must inherit Mesh security rules by default:
+- capability-scoped tokens,
+- proof-carrying educational intents,
+- revocable credentials,
+- immutable learning audit trail for accreditation events.
+
+---
+
+## 4) Additional Smart Contracts for Education
+
+These contracts should be introduced as an **optional contract pack** so education can be activated without forcing non-education deployments.
+
+### Contract pack: `education-contracts/`
+
+1. **CurriculumRegistry.sol**
+   - Registers curriculum providers, versions, provenance digest, update cadence.
+   - Includes freshness/staleness fields to prevent dead-program drift.
+
+2. **CredentialBond.sol**
+   - Stake-backed credential assertions from institutions/assessors.
+   - Slashing for fraudulent or low-integrity credential issuance.
+
+3. **CompetencyOracle.sol**
+   - Anchors skill/assessment outcomes to competency standards.
+   - Enables cross-curriculum equivalency mapping.
+
+4. **AccreditationAttestor.sol**
+   - Allows authorized accreditation bodies to attest/renew/revoke program status.
+   - Adds expiry windows and revocation reasons.
+
+5. **GuidancePolicy.sol**
+   - Encodes learner guidance boundaries (non-discriminatory, age/risk constraints, intervention routing).
+   - Keeps guidance policy distinct from model personality.
+
+This pack can be deployed independently and federated into Grid via compatibility policy.
+
+---
+
+## 5) Global Curriculum Ingestion (Avoid Dead Programs)
+
+### 5.1 Source classes
+
+- Accredited institution catalogs
+- Open education repositories (OER)
+- Industry certification tracks
+- Vocational/continuing education catalogs
+- Regional ministry/state standard documents
+
+### 5.2 Ingestion quality gates
+
+Every curriculum artifact receives:
+- provenance signature/digest,
+- last-updated timestamp,
+- syllabus completeness score,
+- assessment transparency score,
+- placement/relevance confidence score,
+- staleness risk score.
+
+### 5.3 Dead-program prevention policy
+
+A curriculum is automatically flagged if any are true:
+- no verified updates beyond policy threshold,
+- low completion + low placement outcomes,
+- accreditation expiry/revocation,
+- unresolved contradiction with current competency maps.
+
+Flagged programs remain visible but are marked **degraded** or **archived**, not silently deleted.
+
+---
+
+## 6) Accrediting + Monitoring + Guidance Layer
+
+To support holistic learner outcomes at scale, ALM should bundle three tracks:
+
+1. **Accreditation Integrity Track**
+   - Provider trust scoring,
+   - evidence-backed approvals,
+   - transparent revocation and appeals.
+
+2. **Learning Outcome Monitoring Track**
+   - competency progression,
+   - retention and transferability,
+   - fairness and drift monitoring by region/cohort.
+
+3. **Guidance & Support Track**
+   - personalized planning (academic, vocational, life-navigation support),
+   - non-discriminatory policy-by-design,
+   - escalation paths for human mentors/counselors when risk signals rise.
+
+> Design principle: guidance is inclusive and person-centered, not segmented by binary identity assumptions.
+
+---
+
+## 7) Implementation Roadmap (Education Fusion)
+
+### Phase E0 — Specification (Immediate)
+- Finalize ALM schema set and interface contracts.
+- Define legal/policy boundaries per jurisdiction profile.
+
+### Phase E1 — Contract Pack + Registry
+- Implement `CurriculumRegistry`, `CredentialBond`, `AccreditationAttestor` MVP.
+- Add read APIs for credential and program verification.
+
+### Phase E2 — Learning Graph + Guidance Engine
+- Build learner-competency graph and recommendation engine.
+- Add policy-guarded guidance flows and mentor escalation.
+
+### Phase E3 — Cross-Provider Interoperability
+- Curriculum equivalency mapping and transfer credit logic.
+- Multi-provider credential wallet and revocation syncing.
+
+### Phase E4 — Production Hardening
+- mTLS and signed inter-service events for all education writes.
+- Immutable audit export for institutional/regulatory review.
+- Red-team testing for manipulation/fraud scenarios.
+
+---
+
+## 8) Definition of “Fully Integrated Learning Platform”
+
+The platform is considered fully integrated when all are true:
+
+- Learners can import pathways from multiple providers globally.
+- Competencies and credentials are verifiable and revocable in real time.
+- Guidance remains policy-safe, inclusive, and human-escalatable.
+- Institutions can audit outcomes and accreditation changes transparently.
+- Curriculum freshness and dead-program risk are continuously evaluated.
+
+---
+
+## 9) Practical Next Step
+
+Treat ALM as a first-class but optional subsystem:
+- keep it deployable as an independent mesh,
+- keep it composable with AXIOM-MESH core,
+- keep policy/security/governance inherited by default.
+
+This gives you a path to build the broad integrated learning + accrediting + monitoring + guidance ecosystem without forcing unrelated deployments to carry education-specific complexity.
