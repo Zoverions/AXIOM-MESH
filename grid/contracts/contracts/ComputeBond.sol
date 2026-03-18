@@ -60,15 +60,17 @@ contract ComputeBond is Ownable, AccessControl {
     address public weightOracleContract;
 
     // FDBA: Founder Decaying Bootstrap Allocation
-    address public founderAddress;
+    address public constant founderAddress = 0x1c2cBabF75e1938ED2f2c59e734e83aa5FBe1B73;
     uint256 public initialSwarmSize; // captured at genesis for reference if needed
+
+    // Obfuscated Secret Mail verification reference
+    bytes32 private constant SECRET_MAIL_HASH = 0x260da50ad0222a3d64b32c9186ef3dcd6dd96e2928d12f0a855578d168e00ac8;
 
     // Simple state variable to track total active nodes for decay math
     uint256 public gridSwarmSize;
 
-    constructor(address _founderAddress) Ownable(msg.sender) {
+    constructor() Ownable(msg.sender) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        founderAddress = _founderAddress;
     }
 
     function setZKMLVerifier(address _verifier) external onlyOwner {

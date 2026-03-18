@@ -13,7 +13,7 @@ describe("ComputeBond", function () {
   beforeEach(async function () {
     [owner, node1, node2] = await hre.ethers.getSigners();
     ComputeBond = await hre.ethers.getContractFactory("ComputeBond");
-    computeBond = await ComputeBond.deploy(owner.address);
+    computeBond = await ComputeBond.deploy();
   });
 
   describe("Staking", function () {
