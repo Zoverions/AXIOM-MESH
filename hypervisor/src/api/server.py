@@ -238,8 +238,10 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_api
             audit_trail["safety_decisions"]["mirofish_spatial_block"] = "Allowed"
 
             try:
+                sandbox_api_key = os.environ.get("SANDBOX_API_KEY", "")
+                headers = {"Authorization": f"Bearer {sandbox_api_key}"} if sandbox_api_key else {}
                 async with httpx.AsyncClient() as client:
-                    sandbox_res = await client.post(SANDBOX_URL, json={"language": "python", "code": code})
+                    sandbox_res = await client.post(SANDBOX_URL, json={"language": "python", "code": code}, headers=headers)
                     response_text = f"Execution result:\n{sandbox_res.json()}"
             except Exception as e:
                 response_text = f"Sandbox execution failed: {e}"

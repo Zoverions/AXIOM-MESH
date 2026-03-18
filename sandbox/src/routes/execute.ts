@@ -3,8 +3,24 @@ import { runCode } from '../services/dockerRunner';
 
 const router = Router();
 
+
+function isAuthorizedServiceCall(req: Request): boolean {
+    const expected = process.env.SANDBOX_API_KEY;
+    if (!expected) return true;
+
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return false;
+    const token = auth.slice('Bearer '.length);
+    return token === expected;
+}
+
 router.post('/execute', async (req: Request, res: Response) => {
     try {
+        if (!isAuthorizedServiceCall(req)) {
+            res.status(401).json({ error: 'Unauthorized service call' });
+            return;
+        }
+
         const { language, code, ase_proof, zk_proof } = req.body;
         if (!language || !code) {
             res.status(400).json({ error: 'Language and code are required' });
