@@ -2,12 +2,13 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 /**
  * @title DualLedgerIdentity
  * @dev A registry separating Proof of Personhood (Human Keys) from Proof of Compute (Agent Keys).
  */
-contract DualLedgerIdentity is Ownable {
+contract DualLedgerIdentity is Ownable, ERC721 {
     enum IdentityType {
         None,
         Human, // Anthropic Chamber
@@ -31,6 +32,8 @@ contract DualLedgerIdentity is Ownable {
     // Interface for ComputeBond access control
     address public computeBondAddress;
 
+    uint256 private tokenIdCounter;
+
     // Custom errors for gas efficiency
     error NodeAlreadyRegistered(address node);
     error NodeNotRegistered(address node);
@@ -43,8 +46,9 @@ contract DualLedgerIdentity is Ownable {
 
     event NodeRegistered(address indexed node, IdentityType idType);
     event NodeDeregistered(address indexed node);
+    event AuthorizationNFTMinted(uint256 indexed tokenId, address indexed holder, bytes32 dataCID, string clarityLevel);
 
-    constructor() Ownable(msg.sender) {}
+    constructor() Ownable(msg.sender) ERC721("AuthorizationNFT", "ANFT") {}
 
     /**
      * @dev Register a node as either Human or Agent. Only callable by the owner (or an authorized registrar).
@@ -123,5 +127,16 @@ contract DualLedgerIdentity is Ownable {
 
     function getRecoveryBundleCID(bytes32 nodeId) external view returns (bytes32) {
         return recoveryBundleCID[nodeId];
+    }
+
+    function mintAuthorizationNFT(address holder, bytes32 dataCID, string calldata clarityLevel) external {
+        require(computeBondAddress != address(0), "ComputeBond not set");
+        (bool success, bytes memory data) = computeBondAddress.staticcall(
+            abi.encodeWithSignature("stakerActive(address)", msg.sender)
+        );
+        require(success && abi.decode(data, (bool)), "Active bond required");
+        // Mint ERC-721 (reuse OpenZeppelin ERC721 already imported in repo)
+        _mint(holder, ++tokenIdCounter);
+        emit AuthorizationNFTMinted(tokenIdCounter, holder, dataCID, clarityLevel);
     }
 }
