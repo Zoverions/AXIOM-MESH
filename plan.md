@@ -6,6 +6,9 @@
 - [ ] Track H: Hardware Scan & Dedicated OS Optimization
 - [ ] Track I: Refined Reward Multipliers
 - [ ] Track J: AM-SCS (Skill Capsule ingest→verify→compile→sign→revoke)
+- [ ] Full OntarioEdAI + THUD guilds integration
+- [ ] AA (Account Abstraction) bonding with L1 piggyback
+- [ ] Complete MCP compatibility matrix with Alignment Profiles
 
 Next: Formalize failure-mode proofs; map participatory closure to agent economics; LangGraph-inside-AXIOM-MESH adapter.
 
