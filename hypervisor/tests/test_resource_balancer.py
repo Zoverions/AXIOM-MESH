@@ -37,10 +37,11 @@ def test_alignment_profile_init_and_update(tmp_path):
         os.remove(storage_path)
     profile = AlignmentProfile(storage_path=storage_path)
 
-    assert "did" in profile.profile
-    assert profile.profile["did"].startswith("did:axiom:")
-    assert "goals" in profile.profile
-    assert profile.profile["risk_tolerance"] == 0.5
+    prof_data = profile.get_profile()
+    assert "subject_did" in prof_data
+    assert prof_data["subject_did"].startswith("did:axiom:")
+    assert "goals" in prof_data
+    assert prof_data["risk_tolerance"] == "balanced"
 
     # Test priority tag update without bicameral approval
     with pytest.raises(PermissionError):
