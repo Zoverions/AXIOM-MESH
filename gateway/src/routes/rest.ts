@@ -10,6 +10,7 @@ import { authMiddleware } from '../middleware/auth';
 import { publicIntentRateLimit } from '../middleware/public_rate_limit';
 import { exec } from 'child_process';
 import util from 'util';
+import { ethers } from 'ethers';
 
 const execPromise = util.promisify(exec);
 
@@ -46,6 +47,67 @@ router.post('/api/v1/intent/process/public', publicIntentRateLimit, async (req: 
     } catch (error) {
         gatewayMetrics.errors++;
         res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+router.post('/api/v1/nft/mint', authMiddleware, async (req: Request, res: Response) => {
+    try {
+        const { targetDataSet, clarityLevel, recipientAddress } = req.body;
+
+        // 1. Generate zkML proof + apply obfuscation rules via NemoClaw (mocked for Gateway level as it delegates to Privacy Router / Grid usually)
+        // Here we simulate uploading the processed data to IPFS to get a CID
+        const dataCID = ethers.keccak256(ethers.toUtf8Bytes(targetDataSet || "default_data"));
+
+        // 2. Mint the NFT on-chain
+        const provider = new ethers.JsonRpcProvider(process.env.LOCAL_RPC_URL || "http://127.0.0.1:8545");
+        const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", provider);
+
+        // Use the deployed DualLedgerIdentity contract
+        // In a real scenario we'd dynamically load the ABI and address
+        const contractAddress = process.env.DUAL_LEDGER_ADDRESS || "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707";
+        const abi = [
+            "function mintAuthorizationNFT(address holder, bytes32 dataCID, string calldata clarityLevel) external"
+        ];
+
+        const contract = new ethers.Contract(contractAddress, abi, wallet);
+
+        // Send transaction
+        const tx = await contract.mintAuthorizationNFT(recipientAddress, dataCID, clarityLevel);
+        const receipt = await tx.wait();
+
+        res.json({
+            status: 'success',
+            message: 'Authorization NFT minted',
+            txHash: receipt.hash,
+            dataCID: dataCID,
+            clarityLevel
+        });
+    } catch (error: any) {
+        console.error("Error minting NFT:", error);
+        res.status(500).json({ error: 'Failed to mint NFT', details: error.message });
+    }
+});
+
+router.get('/api/v1/data/query', authMiddleware, async (req: Request, res: Response) => {
+    try {
+        const { tokenId } = req.query;
+        if (!tokenId) {
+            return res.status(400).json({ error: 'tokenId is required' });
+        }
+
+        // 1. Send the query intent through the Privacy Router
+        const intent = normalizeInput("data_query_session", "api", "query data", { tokenId: tokenId.toString() });
+        const hypervisorRes = await sendToHypervisor(intent);
+
+        // Simulate reading from MeshStore and applying ZKMLVerifier check
+        res.json({
+            status: 'success',
+            message: `Data queried with token ${tokenId}`,
+            data: hypervisorRes.response || { averageHeartRate: 75 }
+        });
+    } catch (error: any) {
+        console.error("Error querying data:", error);
+        res.status(500).json({ error: 'Failed to query data', details: error.message });
     }
 });
 

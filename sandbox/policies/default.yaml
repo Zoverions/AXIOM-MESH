@@ -1,0 +1,4 @@
+sandbox:
+  privacy:
+    level: dynamic
+    nft-clarity: "obfuscated|partial|full"
