@@ -32,3 +32,4 @@ pytest-mock
 grokipedia-api
 cryptography
 mcp
+pyyaml

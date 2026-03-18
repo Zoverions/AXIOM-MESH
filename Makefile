@@ -15,6 +15,9 @@ test:
 	curl http://localhost:4000/health
 	curl http://localhost:5000/health
 
+nemo-airgap:
+	cd sandbox && cargo build --manifest-path Cargo.toml --bin sandbox && cp target/debug/sandbox ./airgap && ./airgap
+
 contracts-compile:
 	cd grid/contracts && npm run compile
 

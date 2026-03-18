@@ -109,6 +109,17 @@ echo "export MESHSTORE_QUOTA_GB=$MESHSTORE_QUOTA_GB" >> .env
 tmp=$(mktemp)
 jq --arg quota "$MESHSTORE_QUOTA_GB" '. + {storageOffer: {capacityGB: ($quota | tonumber), type: "ipfs-meshstore"}}' hardware_profile.json > "$tmp" && mv "$tmp" hardware_profile.json
 
+echo "📜 Generating default NemoClaw policy..."
+mkdir -p sandbox/policies
+cat > sandbox/policies/default.yaml <<EOF
+sandbox:
+  filesystem: ["/meshstore/**"]
+  network: ["ncp-servers"]
+  privacy:
+    level: local-only
+EOF
+CID=$(ipfs add -q sandbox/policies/default.yaml) && echo "export DEFAULT_POLICY_CID=$CID" >> .env
+
 echo "=========================================================="
 echo "   Environment Configuration (Interactive Setup) "
 echo "=========================================================="
