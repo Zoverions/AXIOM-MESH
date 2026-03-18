@@ -78,6 +78,9 @@ All prior fusions now unified under one self-regulating, risk-tolerant, firewall
 - Offline-first sync and degraded-mode playbooks
 - Test strategy + CI acceptance gates
 
+## Program Execution Companion
+- Detailed in-parallel delivery, merge, and release gates: `docs/PARALLEL-DELIVERY-PLAN-2026.md`
+
 ## Dependencies Between Lanes
 - Lane A outputs feed Lane B policy constraints.
 - Lane B and Lane C must agree on enforceable thresholds before implementation starts.

@@ -64,9 +64,10 @@ curl http://localhost:5000/health
 ## Important Caveats
 
 - Gateway sanitization is intentionally basic and not a full application firewall.
-- `/api/v1/intent/process/public` is still API-key protected in current implementation.
-- Grid ledger behavior is currently in-memory for key paths, not full persistent chain state.
-- Some safety/reasoning and verification components are scaffolds that require additional hardening.
+- `/api/v1/intent/process/public` is intentionally unauthenticated; treat as low-trust ingress and front with rate limiting/WAF.
+- Grid supports optional ComputeBond on-chain mirroring for stake/slash when `GRID_ETH_*` + contract address env vars are configured.
+- Grid now supports periodic snapshot persistence + startup restore; this improves durability but is not a full chain-finalized persistent state backend.
+- Safety/reasoning and zkML verification now include baseline policy/payload gates; operator-grade hardening (immutable eventing, policy engine completeness, operational trust controls) remains backlog.
 
 ## Related Documentation
 
@@ -75,3 +76,4 @@ curl http://localhost:5000/health
 - [docs/AGENT-ENHANCEMENTS.md](./AGENT-ENHANCEMENTS.md)
 - [AUDIT_REPORT.md](../AUDIT_REPORT.md)
 - [plan.md](../plan.md)
+- [docs/PARALLEL-DELIVERY-PLAN-2026.md](./PARALLEL-DELIVERY-PLAN-2026.md)
