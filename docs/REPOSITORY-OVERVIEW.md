@@ -75,3 +75,4 @@ curl http://localhost:5000/health
 - [docs/AGENT-ENHANCEMENTS.md](./AGENT-ENHANCEMENTS.md)
 - [AUDIT_REPORT.md](../AUDIT_REPORT.md)
 - [plan.md](../plan.md)
+- [docs/PARALLEL-DELIVERY-PLAN-2026.md](./PARALLEL-DELIVERY-PLAN-2026.md)
