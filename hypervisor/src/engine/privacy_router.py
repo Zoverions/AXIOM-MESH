@@ -22,12 +22,15 @@ class PrivacyRouter:
         reduced = reduce_to_first_principles(intent["content"])
 
         # Step 2: NemoClaw-style sensitivity check
-        if any(pii in reduced.lower() for pii in ["personal", "key", "seed", "recovery"]):
+        # Added zkml thresholds for Enterprise
+        if any(pii in reduced.lower() for pii in ["personal", "key", "seed", "recovery", "zkml-critical", "founder-claim", "governance"]):
             policy_cid = os.getenv("DEFAULT_POLICY_CID", "")  # stored in MeshStore
             policy = load_policy_from_meshstore(policy_cid)
-            if policy.get("sandbox", {}).get("privacy", {}).get("level", "local-only") == "local-only":
-                return "local-hypervisor"  # stay inside Sandbox + MeshStore
-            return "ncp-external"  # with strict YAML allowlist
+            privacy_level = policy.get("sandbox", {}).get("privacy", {}).get("level", "local-only")
+
+            if privacy_level == "local-only":
+                return "zkml-local"  # route to Sandbox proof gen
+            return "zkml-external"  # strict YAML allowlist with zkML checks
 
         # Default: safe external via NCP
         return "ncp-external"
