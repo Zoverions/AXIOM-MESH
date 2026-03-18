@@ -69,9 +69,9 @@ All prior fusions now unified under one self-regulating, risk-tolerant, firewall
 - Governance control map for interoperability knobs
 
 ### Lane C — Resource/Treasury (can run now)
-- ResourceBalancer policy draft
-- Treasury split accounting model
-- ERC-20 compatibility and token-flow diagrams
+- [x] ResourceBalancer policy draft
+- [x] Treasury split accounting model
+- [x] ERC-20 compatibility and token-flow diagrams
 
 ### Lane D — Platform/Ops (can run now)
 - [x] Hardware profile matrix
