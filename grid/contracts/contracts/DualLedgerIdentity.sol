@@ -21,11 +21,24 @@ contract DualLedgerIdentity is Ownable {
 
     mapping(address => Identity) public identities;
 
+    mapping(address => bytes32) public onChainHash;
+    mapping(address => string) public offChainCID;
+    mapping(bytes32 => bytes32) public totpCommitments;      // hash only
+    mapping(bytes32 => bytes32) public passkeyCommitments;   // public-key hash
+    mapping(bytes32 => bytes32) public recoveryBundleCID;    // MeshStore IPFS link
+
+    // Interface for ComputeBond access control
+    address public computeBondAddress;
+
     // Custom errors for gas efficiency
     error NodeAlreadyRegistered(address node);
     error NodeNotRegistered(address node);
     error InvalidIdentityType();
     error UnauthorizedCaller();
+
+    event IdentityLinked(address indexed agent, bytes32 onChainHash, string offChainCID);
+    event RecoveryRegistered(bytes32 indexed nodeId, bytes32 totpCommitment, bytes32 passkeyCommitment);
+    event RecoveryUsed(bytes32 indexed nodeId, address reconnector);
 
     event NodeRegistered(address indexed node, IdentityType idType);
     event NodeDeregistered(address indexed node);
@@ -78,5 +91,27 @@ contract DualLedgerIdentity is Ownable {
     function getIdentityType(address node) external view returns (IdentityType) {
         if (!identities[node].isRegistered) revert NodeNotRegistered(node);
         return identities[node].idType;
+    }
+
+    function setComputeBondAddress(address _computeBond) external onlyOwner {
+        computeBondAddress = _computeBond;
+    }
+
+    // Called after 2FA setup in CLI/Gateway
+    function registerRecovery(bytes32 nodeId, bytes32 totpCommitment, bytes32 passkeyCommitment, bytes32 bundleCID) external {
+        require(computeBondAddress != address(0), "ComputeBond not set");
+        (bool success, bytes memory data) = computeBondAddress.staticcall(
+            abi.encodeWithSignature("stakerActive(address)", msg.sender)
+        );
+        require(success && abi.decode(data, (bool)), "Active bond required");
+
+        totpCommitments[nodeId] = totpCommitment;
+        passkeyCommitments[nodeId] = passkeyCommitment;
+        recoveryBundleCID[nodeId] = bundleCID;
+        emit RecoveryRegistered(nodeId, totpCommitment, passkeyCommitment);
+    }
+
+    function getRecoveryBundleCID(bytes32 nodeId) external view returns (bytes32) {
+        return recoveryBundleCID[nodeId];
     }
 }

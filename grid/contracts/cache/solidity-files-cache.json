@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/app/grid/contracts/contracts/ComputeBond.sol": {
-      "lastModificationDate": 1773852436883,
-      "contentHash": "eeef63f150ecbbc50dca515be3ced5d9",
+      "lastModificationDate": 1773854264530,
+      "contentHash": "e478dbe2af0e99ae3be3a4265f70a850",
       "sourceName": "contracts/ComputeBond.sol",
       "solcConfig": {
         "version": "0.8.20",
@@ -115,7 +115,7 @@
       ]
     },
     "/app/grid/contracts/node_modules/@openzeppelin/contracts/access/AccessControl.sol": {
-      "lastModificationDate": 1773852864119,
+      "lastModificationDate": 1773854994882,
       "contentHash": "798a29e3c30dbd3eda1a67add26571e2",
       "sourceName": "@openzeppelin/contracts/access/AccessControl.sol",
       "solcConfig": {
@@ -155,7 +155,7 @@
       ]
     },
     "/app/grid/contracts/node_modules/@openzeppelin/contracts/utils/introspection/ERC165.sol": {
-      "lastModificationDate": 1773852864763,
+      "lastModificationDate": 1773854995802,
       "contentHash": "0906d06dca25210d4696dcef6dad2909",
       "sourceName": "@openzeppelin/contracts/utils/introspection/ERC165.sol",
       "solcConfig": {
@@ -193,7 +193,7 @@
       ]
     },
     "/app/grid/contracts/node_modules/@openzeppelin/contracts/access/IAccessControl.sol": {
-      "lastModificationDate": 1773852865471,
+      "lastModificationDate": 1773854996530,
       "contentHash": "def1e8f7b6cac577cf2600655bf3bdf8",
       "sourceName": "@openzeppelin/contracts/access/IAccessControl.sol",
       "solcConfig": {
@@ -229,7 +229,7 @@
       ]
     },
     "/app/grid/contracts/node_modules/@openzeppelin/contracts/utils/introspection/IERC165.sol": {
-      "lastModificationDate": 1773852865531,
+      "lastModificationDate": 1773854996614,
       "contentHash": "7074c93b1ea0a122063f26ddd1db1032",
       "sourceName": "@openzeppelin/contracts/utils/introspection/IERC165.sol",
       "solcConfig": {
@@ -265,7 +265,7 @@
       ]
     },
     "/app/grid/contracts/contracts/WeightOracle.sol": {
-      "lastModificationDate": 1773852291095,
+      "lastModificationDate": 1773854264530,
       "contentHash": "5d388da8243cebe25d071053047e20fa",
       "sourceName": "contracts/WeightOracle.sol",
       "solcConfig": {
@@ -304,8 +304,8 @@
       ]
     },
     "/app/grid/contracts/contracts/DualLedgerIdentity.sol": {
-      "lastModificationDate": 1773852291095,
-      "contentHash": "9c3c7cec87476fca136a51d05b093380",
+      "lastModificationDate": 1773855674902,
+      "contentHash": "0d00c3f936eb48b99c53949acd201d70",
       "sourceName": "contracts/DualLedgerIdentity.sol",
       "solcConfig": {
         "version": "0.8.20",
@@ -342,7 +342,7 @@
       ]
     },
     "/app/grid/contracts/contracts/DialecticArbitration.sol": {
-      "lastModificationDate": 1773852291095,
+      "lastModificationDate": 1773854264530,
       "contentHash": "af1ffec55234617c883e40fc3f446b6b",
       "sourceName": "contracts/DialecticArbitration.sol",
       "solcConfig": {

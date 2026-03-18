@@ -96,3 +96,7 @@ class NCPClient:
                 joined_context += f"\n[Dialectic Synthesis Error]: {str(e)}"
 
         return joined_context
+
+def validate_schema(data: dict, schema: dict) -> bool:
+    """Mock implementation of validate_schema"""
+    return True
