@@ -132,16 +132,21 @@ def evaluate_policy_gate(intent: IntentObject):
     max_len = int(os.environ.get("HYPERVISOR_MAX_CONTENT_LENGTH", "4000"))
     content = intent.content or ""
     metadata = intent.metadata or {}
-    consent_scope = metadata.get("consent_scope", "allowed")
+
+    # Universal Consent Protocol (UCP): No implicit allowed default.
+    consent_scope = metadata.get("consent_scope")
 
     decisions = {
         "content_length_ok": len(content) <= max_len,
+        "consent_scope_provided": consent_scope is not None,
         "consent_scope_valid": consent_scope in {"allowed", "context_only", "revoked"},
         "exec_requires_allowed_consent": (not content.startswith("/exec")) or consent_scope == "allowed"
     }
 
     if not decisions["content_length_ok"]:
         return False, decisions, f"Input too long (max {max_len} chars)"
+    if not decisions["consent_scope_provided"]:
+        return False, decisions, "Missing required consent_scope metadata for UCP compliance"
     if not decisions["consent_scope_valid"]:
         return False, decisions, "Invalid consent_scope value"
     if not decisions["exec_requires_allowed_consent"]:

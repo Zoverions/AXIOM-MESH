@@ -1,5 +1,12 @@
 package types
 
+type AgentManifest struct {
+	NodeID          string    `json:"nodeId"`
+	CognitiveVector []float64 `json:"cognitiveVector"`
+	Signature       string    `json:"signature"`
+	Timestamp       int64     `json:"timestamp"`
+}
+
 type Task struct {
 	ID          string `json:"id"`
 	Description string `json:"description"`

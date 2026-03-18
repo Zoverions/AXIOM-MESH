@@ -216,6 +216,40 @@ func (s *Server) Start(addr string) error {
 		})
 	}))
 
+	mux.HandleFunc("/manifest", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "GET" {
+			nodeID := r.URL.Query().Get("nodeId")
+			if nodeID == "" {
+				json.NewEncoder(w).Encode(s.ledger.GetAgentManifests())
+			} else {
+				manifest, ok := s.ledger.GetAgentManifest(nodeID)
+				if !ok {
+					http.Error(w, "Manifest not found", http.StatusNotFound)
+					return
+				}
+				json.NewEncoder(w).Encode(manifest)
+			}
+		} else if r.Method == "POST" {
+			var manifest types.AgentManifest
+			if err := json.NewDecoder(r.Body).Decode(&manifest); err == nil {
+				if manifest.NodeID == "" || manifest.Signature == "" {
+					http.Error(w, "NodeID and Signature are required", http.StatusBadRequest)
+					return
+				}
+				if err := s.ledger.RegisterAgentManifest(manifest); err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				json.NewEncoder(w).Encode(map[string]interface{}{"status": "registered", "nodeId": manifest.NodeID})
+			} else {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			}
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}))
+
 	mux.HandleFunc("/skills", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == "GET" {
@@ -604,6 +638,44 @@ func (s *Server) Start(addr string) error {
 			} else {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 			}
+		}
+	}))
+
+	mux.HandleFunc("/dem", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "GET" {
+			// Dynamic Equilibrium Monitor (DEM) and Meta-Sentience Calculus (MSC)
+			snap := s.ledger.Snapshot()
+
+			activeNodes := 0
+			for _, b := range snap.Bonds {
+				if b.Status == "active" {
+					activeNodes++
+				}
+			}
+
+			// MSC calculation based on thermodynamics and collective health rather than arbitrary metrics
+			graphDensity := 0.0
+			if len(snap.Graph.Nodes) > 0 {
+				graphDensity = float64(len(snap.Graph.Edges)) / float64(len(snap.Graph.Nodes))
+			}
+
+			// Non-linear thermodynamic health score calculation
+			thermodynamicScore := float64(activeNodes) * 1.5 + float64(snap.NetworkSecPool)*0.01 + float64(snap.WealthGenPool)*0.01
+			mscScore := graphDensity * 100.0 + thermodynamicScore
+
+			demStats := map[string]interface{}{
+				"thermodynamic_health":   thermodynamicScore,
+				"meta_sentience_score":   mscScore,
+				"active_nodes":           activeNodes,
+				"network_sec_pool":       snap.NetworkSecPool,
+				"wealth_gen_pool":        snap.WealthGenPool,
+				"graph_density":          graphDensity,
+				"equilibrium_status":     "stable",
+			}
+			json.NewEncoder(w).Encode(demStats)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	}))
 
