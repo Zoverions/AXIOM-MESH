@@ -40,6 +40,7 @@ class MCPClient:
             with open(matrix_path, "r") as f:
                 return json.load(f)
         except Exception as e:
+            logger.warning(f"Could not load mcp_compatibility_matrix.v1.json: {e}")
             # Fallback if matrix is not found
             logger.warning(f"Could not load mcp_compatibility_matrix: {e}")
             return {}
@@ -115,6 +116,7 @@ class MCPClient:
                                 desc = tool.description or "No description"
                                 server_info.append(f"  - {tool.name}: {desc}")
                     except Exception as e:
+                        logger.warning(f"[MCP Server {server}] Could not fetch tools: {e}")
                         server_info.append(f"Could not fetch tools: {e}")
 
                     # Try to list prompts
