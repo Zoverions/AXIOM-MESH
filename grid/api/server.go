@@ -132,6 +132,20 @@ func NewServer(ledger *blockchain.Ledger, p2pNode *p2p.Node) *Server {
 
 func (s *Server) SetComputeBondClient(client *chainclient.ComputeBondClient) {
 	s.computeBondOnChain = client
+
+	// Hook ledger events to smart contract execution
+	if s.ledger != nil {
+		s.ledger.OnSwarmJoined = func(nodeID [32]byte, capacity uint64, cidRoot [32]byte) {
+			if s.computeBondOnChain != nil {
+				_, err := s.computeBondOnChain.OfferStorage(capacity, cidRoot)
+				if err != nil {
+					log.Printf("❌ Failed to push StorageOffer on-chain for %x: %v\n", nodeID, err)
+				} else {
+					log.Printf("✅ StorageOffer pushed on-chain for %x\n", nodeID)
+				}
+			}
+		}
+	}
 }
 
 // startZKMLWorker runs a deterministic worker pool for zkML verifications

@@ -19,7 +19,8 @@ import (
 const computeBondABI = `[
   {"inputs":[{"internalType":"string","name":"nodeId","type":"string"}],"name":"stake","outputs":[],"stateMutability":"payable","type":"function"},
   {"inputs":[{"internalType":"string","name":"nodeId","type":"string"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"slash","outputs":[],"stateMutability":"nonpayable","type":"function"},
-  {"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"bonds","outputs":[{"internalType":"address","name":"staker","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"bool","name":"isActive","type":"bool"},{"internalType":"string","name":"parentNodeId","type":"string"}],"stateMutability":"view","type":"function"}
+  {"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"bonds","outputs":[{"internalType":"address","name":"staker","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"bool","name":"isActive","type":"bool"},{"internalType":"string","name":"parentNodeId","type":"string"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"capacityGB","type":"uint256"},{"internalType":"bytes32","name":"cidRoot","type":"bytes32"}],"name":"offerStorage","outputs":[],"stateMutability":"nonpayable","type":"function"}
 ]`
 
 type ComputeBondConfig struct {
@@ -132,6 +133,20 @@ func (c *ComputeBondClient) DelegateBond(nodeID [32]byte, parentID [32]byte) (co
 	}
 	opts.Context = context.Background()
 	tx, err := c.contract.Transact(opts, "delegateBond", nodeID, parentID)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return tx.Hash(), nil
+}
+
+func (c *ComputeBondClient) OfferStorage(capacityGB uint64, cidRoot [32]byte) (common.Hash, error) {
+	opts, err := bind.NewKeyedTransactorWithChainID(c.signer, c.chainID)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	opts.Context = context.Background()
+
+	tx, err := c.contract.Transact(opts, "offerStorage", big.NewInt(int64(capacityGB)), cidRoot)
 	if err != nil {
 		return common.Hash{}, err
 	}
