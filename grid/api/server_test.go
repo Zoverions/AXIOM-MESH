@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/axiom-mesh/grid/blockchain"
 	"github.com/axiom-mesh/grid/types"
@@ -211,11 +212,15 @@ func TestZKMLQueueFull(t *testing.T) {
 
 				select {
 				case zkmlQueue <- job:
-					valid := <-job.Result
-					if valid {
-						json.NewEncoder(w).Encode(map[string]string{"status": "verified"})
-					} else {
-						http.Error(w, "zkML verification failed", http.StatusForbidden)
+					select {
+					case valid := <-job.Result:
+						if valid {
+							json.NewEncoder(w).Encode(map[string]string{"status": "verified"})
+						} else {
+							http.Error(w, "zkML verification failed", http.StatusForbidden)
+						}
+					case <-time.After(30 * time.Second):
+						http.Error(w, "zkML verification timeout", http.StatusGatewayTimeout)
 					}
 				default:
 					http.Error(w, "zkML verification queue is full", http.StatusServiceUnavailable)
@@ -248,6 +253,65 @@ func TestZKMLQueueFull(t *testing.T) {
 	}
 
 	if rr.Body.String() != "zkML verification queue is full\n" {
+		t.Errorf("Unexpected response body: %v", rr.Body.String())
+	}
+}
+
+func TestZKMLQueueTimeout(t *testing.T) {
+	// Setup queue with space for 1 item
+	zkmlQueue := make(chan ZKMLJob, 1)
+
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/zkml/verify", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "POST" {
+			var payload types.ZKMLPayload
+			if err := json.NewDecoder(r.Body).Decode(&payload); err == nil {
+				job := ZKMLJob{
+					Payload: payload,
+					Result:  make(chan bool, 1),
+				}
+
+				select {
+				case zkmlQueue <- job:
+					select {
+					case valid := <-job.Result:
+						if valid {
+							json.NewEncoder(w).Encode(map[string]string{"status": "verified"})
+						} else {
+							http.Error(w, "zkML verification failed", http.StatusForbidden)
+						}
+					// Use a short timeout for the test to avoid waiting 30 seconds
+					case <-time.After(10 * time.Millisecond):
+						http.Error(w, "zkML verification timeout", http.StatusGatewayTimeout)
+					}
+				default:
+					http.Error(w, "zkML verification queue is full", http.StatusServiceUnavailable)
+				}
+			}
+		}
+	})
+
+	payload := types.ZKMLPayload{
+		ModelCommitment: "test-model-timeout",
+	}
+
+	body, _ := json.Marshal(payload)
+	req, err := http.NewRequest("POST", "/zkml/verify", bytes.NewBuffer(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	mux.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusGatewayTimeout {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusGatewayTimeout)
+	}
+
+	if rr.Body.String() != "zkML verification timeout\n" {
 		t.Errorf("Unexpected response body: %v", rr.Body.String())
 	}
 }
