@@ -31,10 +31,12 @@ This runbook outlines operational procedures and chaos engineering scenarios for
   - Gateway gracefully returns local/fallback responses to the user.
   - Circuit breaker enters `HALF_OPEN` state after recovery timeout to test service restoration.
 
-### 4. Database Partition / Disconnect
-**Objective:** Validate the persistent ledger's write-ahead log (WAL) and cache durability.
+### 4. Ledger Snapshot Persistence Disruption
+**Objective:** Validate Grid snapshot durability and startup restore behavior.
 **Testing Procedure:**
-- Terminate the BadgerDB process or sever the connection to the persistent volume.
+- Corrupt or remove `GRID_LEDGER_PATH` snapshot file, then restart Grid.
+- Simulate write failures to the snapshot directory (permission/volume fault).
 - **Verification Criteria:**
-  - Active transactions wait or fail gracefully instead of corrupting state.
-  - Upon reconnection, WAL replay correctly restores the last known state.
+  - Grid starts with explicit warning logs (no silent corruption).
+  - Fresh in-memory ledger initializes safely if snapshot load fails.
+  - Periodic snapshot saves resume once storage is restored.
