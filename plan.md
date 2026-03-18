@@ -43,7 +43,7 @@ All prior fusions now unified under one self-regulating, risk-tolerant, firewall
 - [x] Create MCP compatibility matrix schema (minimum security/risk thresholds per peer class).
 - [x] Define spectrum security profiles (legacy locked device → full zkML node).
 - [x] Specify hierarchical agent-to-agent bonding policy (nested trust, inheritance, revocation).
-- [ ] Map governance controls (guild + bicameral + AIGovernor) to compatibility policy updates.
+- [x] Map governance controls (guild + bicameral + AIGovernor) to compatibility policy updates.
 
 ### P3 — Resource/Treasury Mechanics
 - [x] Specify ResourceBalancer decisions (local vs peer vs Grid vs L1 path).
