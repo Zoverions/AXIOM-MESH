@@ -5,6 +5,7 @@
 - [ ] Track G: NFT Credential & Personality Tokenization
 - [ ] Track H: Hardware Scan & Dedicated OS Optimization
 - [ ] Track I: Refined Reward Multipliers
+- [ ] Track J: AM-SCS (Skill Capsule ingest→verify→compile→sign→revoke)
 
 Next: Formalize failure-mode proofs; map participatory closure to agent economics; LangGraph-inside-AXIOM-MESH adapter.
 

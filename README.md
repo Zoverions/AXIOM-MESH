@@ -30,6 +30,7 @@ This README is a **code-accurate rewrite** intended to clearly separate what is 
 - **[docs/REPOSITORY-OVERVIEW.md](docs/REPOSITORY-OVERVIEW.md)** – High-level architecture, capabilities, caveats, and quick-start snapshot
 - **[docs/MASTER-INTEGRATION.md](docs/MASTER-INTEGRATION.md)** – Complete fusion of all requirements (OntarioEdAI, THUD guilds, AA bonding, resource orchestration, alignment profiles, MCP compatibility)
 - **[docs/AGENT-ENHANCEMENTS.md](docs/AGENT-ENHANCEMENTS.md)** – 2026 Framework integrations (LangGraph, CrewAI, MCP server specs, skill staking via zkML)
+- **[docs/SKILL-CAPSULE-SPEC.md](docs/SKILL-CAPSULE-SPEC.md)** – End-to-end Mesh-native skill capsule lifecycle (ingest→verify→compile→sign→execute→revoke)
 
 **Service Documentation** (Quick Reference):
 - **[gateway/README.md](gateway/README.md)** – User-facing API, WebSocket, channel adapters
@@ -39,8 +40,9 @@ This README is a **code-accurate rewrite** intended to clearly separate what is 
 
 **Operational & Governance**:
 - **[.github/SECURITY.md](.github/SECURITY.md)** – Vulnerability disclosure process and support policy
-- **[plan.md](plan.md)** – Consolidated Q1 2026 roadmap and feature backlog
-- **[AUDIT_REPORT.md](AUDIT_REPORT.md)** – Code audit, closure guarantees, security findings
+- **[plan.md](plan.md)** – Canonical roadmap and feature backlog
+- **[AUDIT_REPORT.md](AUDIT_REPORT.md)** – Canonical code audit and security findings
+- **[docs/PROJECT-STATUS-2026.md](docs/PROJECT-STATUS-2026.md)** – Current implementation status + cleanup consolidation log
 - **[schemas/README.md](schemas/README.md)** – Versioned JSON schema registry (intent, skill, zkml, alignment profile)
 - **[docs/INTERFACE-CONTROL-DOCUMENT.md](docs/INTERFACE-CONTROL-DOCUMENT.md)** – Formal pillar contracts and API specifications
 - **[docs/SECURITY-REALITY-2026.md](docs/SECURITY-REALITY-2026.md)** – Implementation-accurate production security posture and readiness gate
