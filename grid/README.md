@@ -213,3 +213,26 @@ curl -X POST http://localhost:5000/zkml/verify \
 - **Hypervisor** – Submits bonds, stakes results, reads ledger state
 - **Sandbox** – Provides execution results that get recorded
 - **Gateway** – Routes user intents, checks user treasury balance
+
+
+### Optional on-chain ComputeBond integration
+
+Grid can mirror `POST /stake` and `POST /slash` to Solidity `ComputeBond` when configured:
+
+- `GRID_ETH_RPC_URL`
+- `GRID_ETH_CHAIN_ID`
+- `GRID_ETH_PRIVATE_KEY`
+- `GRID_COMPUTE_BOND_ADDRESS`
+
+When enabled, API responses include `txHash` and ledger records persist that hash for reconciliation.
+
+#### Contract toolchain
+
+```bash
+cd grid/contracts
+npm run compile
+npm test
+npm run deploy:localhost
+```
+
+Deployment manifests are written to `grid/contracts/deployments/<network>.json`.

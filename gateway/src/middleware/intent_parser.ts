@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { sanitizeContent } from '../utils/sanitize';
 
 const intentSchema = z.object({
     id: z.string().optional(),
@@ -18,11 +19,8 @@ export function parseAndSanitizeIntent(rawJson: string): ParsedIntent {
     const data = JSON.parse(rawJson);
     const parsed = intentSchema.parse(data);
 
-    // Basic sanitization: strip dangerous HTML/script tags and obvious SQLi patterns
-    parsed.input = parsed.input
-        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-        .replace(/<[^>]*>?/gm, '') // Strip basic HTML tags
-        .replace(/(--|;|\/\*|\*\/)/g, ''); // Strip basic SQL injection characters like --, ;, /*, */
+    // NOTE: This is payload hygiene, not a full application firewall.
+    parsed.input = sanitizeContent(parsed.input);
 
     return parsed;
 }
