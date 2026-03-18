@@ -74,9 +74,9 @@ All prior fusions now unified under one self-regulating, risk-tolerant, firewall
 - ERC-20 compatibility and token-flow diagrams
 
 ### Lane D — Platform/Ops (can run now)
-- Hardware profile matrix
-- Offline-first sync and degraded-mode playbooks
-- Test strategy + CI acceptance gates
+- [x] Hardware profile matrix
+- [x] Offline-first sync and degraded-mode playbooks
+- [x] Test strategy + CI acceptance gates
 
 ## Program Execution Companion
 - Detailed in-parallel delivery, merge, and release gates: `docs/PARALLEL-DELIVERY-PLAN-2026.md`
