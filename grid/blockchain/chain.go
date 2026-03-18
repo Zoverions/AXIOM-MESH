@@ -31,18 +31,20 @@ type LedgerSnapshot struct {
 	GPPEvents        []types.GPPEvent             `json:"gpp_events"`
 	RelayerQueue     []types.RelayerSettlement    `json:"relayer_queue"`
 	SettlementNextID uint64                       `json:"settlement_next_id"`
+	AgentManifests   map[string]types.AgentManifest `json:"agent_manifests"`
 }
 
 type Ledger struct {
-	mu           sync.RWMutex
-	Skills       []types.SkillVector
-	WebCache     map[string]types.WebState
-	Graph        types.DistributedGraph
-	GraphIndex   map[string][]string // Token -> []NodeIDs
-	Bonds        map[string]types.ComputeBond
-	CCIPMessages map[string]types.CCIPMessage
-	Swarms       map[string]types.Swarm
-	Proposals    map[string]types.Proposal
+	mu             sync.RWMutex
+	Skills         []types.SkillVector
+	WebCache       map[string]types.WebState
+	Graph          types.DistributedGraph
+	GraphIndex     map[string][]string // Token -> []NodeIDs
+	Bonds          map[string]types.ComputeBond
+	CCIPMessages   map[string]types.CCIPMessage
+	Swarms         map[string]types.Swarm
+	Proposals      map[string]types.Proposal
+	AgentManifests map[string]types.AgentManifest
 
 	// Treasury and Distribution
 	TreasurySplit    types.TreasurySplitConfig
@@ -77,10 +79,11 @@ func NewLedger() *Ledger {
 			Edges: make([]types.GraphEdge, 0),
 		},
 		GraphIndex:   make(map[string][]string),
-		Bonds:        make(map[string]types.ComputeBond),
-		CCIPMessages: make(map[string]types.CCIPMessage),
-		Swarms:       make(map[string]types.Swarm),
-		Proposals:    make(map[string]types.Proposal),
+		Bonds:          make(map[string]types.ComputeBond),
+		CCIPMessages:   make(map[string]types.CCIPMessage),
+		Swarms:         make(map[string]types.Swarm),
+		Proposals:      make(map[string]types.Proposal),
+		AgentManifests: make(map[string]types.AgentManifest),
 
 		// Default split configuration
 		TreasurySplit: types.TreasurySplitConfig{
@@ -741,6 +744,12 @@ func (l *Ledger) GetProposal(id string) (types.Proposal, bool) {
 func (l *Ledger) Snapshot() LedgerSnapshot {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
+
+	agentManifestsCopy := make(map[string]types.AgentManifest, len(l.AgentManifests))
+	for k, v := range l.AgentManifests {
+		agentManifestsCopy[k] = v
+	}
+
 	return LedgerSnapshot{
 		Skills:           append([]types.SkillVector(nil), l.Skills...),
 		WebCache:         l.WebCache,
@@ -757,7 +766,43 @@ func (l *Ledger) Snapshot() LedgerSnapshot {
 		GPPEvents:        append([]types.GPPEvent(nil), l.GPPEvents...),
 		RelayerQueue:     append([]types.RelayerSettlement(nil), l.RelayerQueue...),
 		SettlementNextID: l.settlementNextID,
+		AgentManifests:   agentManifestsCopy,
 	}
+}
+
+// RegisterAgentManifest adds or updates an Agent Manifest in the ledger.
+func (l *Ledger) RegisterAgentManifest(manifest types.AgentManifest) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if manifest.NodeID == "" {
+		return fmt.Errorf("nodeID is required")
+	}
+
+	l.AgentManifests[manifest.NodeID] = manifest
+	log.Printf("📝 Registered Agent Manifest for node %s", manifest.NodeID)
+	return nil
+}
+
+// GetAgentManifest retrieves a specific Agent Manifest.
+func (l *Ledger) GetAgentManifest(nodeID string) (types.AgentManifest, bool) {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	manifest, ok := l.AgentManifests[nodeID]
+	return manifest, ok
+}
+
+// GetAgentManifests retrieves all Agent Manifests.
+func (l *Ledger) GetAgentManifests() map[string]types.AgentManifest {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	// Create a copy to prevent concurrent map read/write during iteration outside lock
+	result := make(map[string]types.AgentManifest, len(l.AgentManifests))
+	for k, v := range l.AgentManifests {
+		result[k] = v
+	}
+	return result
 }
 
 func (l *Ledger) SaveToFile(path string) error {
@@ -799,6 +844,7 @@ func (l *Ledger) LoadFromFile(path string) error {
 	l.GPPEvents = snap.GPPEvents
 	l.RelayerQueue = snap.RelayerQueue
 	l.settlementNextID = snap.SettlementNextID
+	l.AgentManifests = snap.AgentManifests
 
 	if l.WebCache == nil {
 		l.WebCache = make(map[string]types.WebState)
@@ -820,6 +866,9 @@ func (l *Ledger) LoadFromFile(path string) error {
 	}
 	if l.Proposals == nil {
 		l.Proposals = make(map[string]types.Proposal)
+	}
+	if l.AgentManifests == nil {
+		l.AgentManifests = make(map[string]types.AgentManifest)
 	}
 	if l.GPPBalances == nil {
 		l.GPPBalances = make(map[string]uint64)
