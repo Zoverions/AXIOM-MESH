@@ -4,7 +4,7 @@ import random
 import asyncio
 import httpx
 import urllib.parse
-import xml.etree.ElementTree as ET
+from xml.etree.ElementTree import fromstring
 import hashlib
 
 class AutoResearchDaemon:
@@ -87,7 +87,7 @@ class AutoResearchDaemon:
         try:
             query_url = f"http://export.arxiv.org/api/query?search_query=all:{topic.replace(' ', '+')}&start=0&max_results=1"
             res = await self._fetch_with_retry(query_url)
-            root = ET.fromstring(res.text)
+            root = fromstring(res.text)
             ns = {'atom': 'http://www.w3.org/2005/Atom'}
             entry = root.find('atom:entry', ns)
             if entry is not None:
