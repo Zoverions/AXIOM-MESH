@@ -1,10 +1,13 @@
 import os
 import json
 import asyncio
+import logging
 from typing import Dict, Any, Optional
 from mcp.client.sse import sse_client
 from mcp.client.session import ClientSession
 from contextlib import AsyncExitStack
+
+logger = logging.getLogger(__name__)
 
 class MCPClient:
     """
@@ -37,7 +40,9 @@ class MCPClient:
             with open(matrix_path, "r") as f:
                 return json.load(f)
         except Exception as e:
+            logger.warning(f"Could not load mcp_compatibility_matrix.v1.json: {e}")
             # Fallback if matrix is not found
+            logger.warning(f"Could not load mcp_compatibility_matrix: {e}")
             return {}
 
     def verify_peer_compatibility(self, server_url: str) -> bool:
@@ -111,6 +116,7 @@ class MCPClient:
                                 desc = tool.description or "No description"
                                 server_info.append(f"  - {tool.name}: {desc}")
                     except Exception as e:
+                        logger.warning(f"[MCP Server {server}] Could not fetch tools: {e}")
                         server_info.append(f"Could not fetch tools: {e}")
 
                     # Try to list prompts
@@ -122,8 +128,7 @@ class MCPClient:
                                 desc = prompt.description or "No description"
                                 server_info.append(f"  - {prompt.name}: {desc}")
                     except Exception as e:
-                        import logging
-                        logging.getLogger(__name__).warning(f"[MCP Server {server}] Could not fetch prompts: {e}")
+                        logger.warning(f"[MCP Server {server}] Could not fetch prompts: {e}")
 
                     aggregated_context.append("\n".join(server_info))
 

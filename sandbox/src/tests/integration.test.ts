@@ -20,6 +20,14 @@ jest.mock('child_process', () => {
 });
 
 describe('Sandbox Integration Endpoint', () => {
+    beforeAll(() => {
+        process.env.SANDBOX_API_KEY = 'test-sandbox-key';
+    });
+
+    afterAll(() => {
+        delete process.env.SANDBOX_API_KEY;
+    });
+
     it('should successfully stub python code execution', async () => {
         const originalKey = process.env.SANDBOX_API_KEY;
         process.env.SANDBOX_API_KEY = 'test-sandbox-key';
@@ -33,5 +41,39 @@ describe('Sandbox Integration Endpoint', () => {
         expect(res.body.result.stdout).toContain('Integration Sandbox Stub Response');
 
         process.env.SANDBOX_API_KEY = originalKey;
+    });
+
+    it('should fail with 401 when Authorization header is missing', async () => {
+        const res = await request(app)
+            .post('/execute')
+            .send({ language: 'python', code: 'print("Hello")' });
+
+        expect(res.status).toBe(401);
+        expect(res.body.error).toContain('Unauthorized: Missing or invalid Authorization header');
+    });
+
+    it('should fail with 403 when Authorization header is invalid', async () => {
+        const res = await request(app)
+            .post('/execute')
+            .set('Authorization', 'Bearer wrong-key')
+            .send({ language: 'python', code: 'print("Hello")' });
+
+        expect(res.status).toBe(403);
+        expect(res.body.error).toContain('Forbidden: Invalid API Key');
+    });
+
+    it('should fail with 500 when SANDBOX_API_KEY is not configured', async () => {
+        delete process.env.SANDBOX_API_KEY;
+
+        const res = await request(app)
+            .post('/execute')
+            .set('Authorization', 'Bearer anything')
+            .send({ language: 'python', code: 'print("Hello")' });
+
+        expect(res.status).toBe(500);
+        expect(res.body.error).toContain('Server configuration error: SANDBOX_API_KEY is not set');
+
+        // Restore for other tests just in case
+        process.env.SANDBOX_API_KEY = 'test-sandbox-key';
     });
 });

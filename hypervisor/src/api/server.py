@@ -294,7 +294,7 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_sig
 
         # Sync Skills command
         if content.startswith("/sync_skills"):
-            skills = network_sync.sync_skills()
+            skills = await network_sync.sync_skills()
             intent_metrics["success"] += 1
             return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Synced skills: {skills}", status="success", trace_id=trace_id, audit_trail=audit_trail)
 

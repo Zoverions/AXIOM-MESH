@@ -1,5 +1,4 @@
 import asyncio
-import json
 import httpx
 from html.parser import HTMLParser
 from urllib.parse import urljoin, urlparse
@@ -37,7 +36,7 @@ class ActionEngine:
         self.web_memory_graph = {}
         self.network_sync = network_sync
 
-    def compile_web_memory(self, url: str, html_content: str) -> dict:
+    async def compile_web_memory(self, url: str, html_content: str) -> dict:
         """
         Compiles raw HTML or text from a web page into a state-machine node.
         Extracts links and text into a structured JSON state via a robust HTML parser.
@@ -56,7 +55,7 @@ class ActionEngine:
 
         # Publish to decentralized cache if network_sync is available
         if self.network_sync:
-            self.network_sync.publish_web_state(state_node)
+            await self.network_sync.publish_web_state(state_node)
 
         return state_node
 
@@ -95,7 +94,7 @@ class ActionEngine:
             print(f"[ActionEngine] Fetching: {url} (depth={depth})")
             response = await client.get(url, timeout=10.0)
             if response.status_code == 200:
-                state_node = self.compile_web_memory(url, response.text)
+                state_node = await self.compile_web_memory(url, response.text)
                 # Recurse
                 tasks = [self._recursive_map(link, client, depth + 1, max_depth) for link in state_node["outbound_links"]]
                 if tasks:

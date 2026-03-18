@@ -24,34 +24,38 @@ class NetworkSync:
 
         self.public_key_hex = self.private_key.get_verifying_key().to_string("uncompressed").hex()
 
-    def sync_skills(self):
-        import time
+    async def sync_skills(self):
+        import asyncio
+        import httpx
         max_retries = 3
         base_delay = 1.0
-        for attempt in range(max_retries):
-            try:
-                res = requests.get(GRID_URL, timeout=5)
-                return res.json()
-            except Exception as e:
-                if attempt < max_retries - 1:
-                    time.sleep(base_delay * (2 ** attempt))
-                else:
-                    print(f"[Degraded Mode] Failed to sync skills after {max_retries} attempts: {e}")
-                    return {"error": str(e)}
+        async with httpx.AsyncClient() as client:
+            for attempt in range(max_retries):
+                try:
+                    res = await client.get(GRID_URL, timeout=5.0)
+                    return res.json()
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(base_delay * (2 ** attempt))
+                    else:
+                        print(f"[Degraded Mode] Failed to sync skills after {max_retries} attempts: {e}")
+                        return {"error": str(e)}
 
-    def publish_skill(self, skill_data):
-        import time
+    async def publish_skill(self, skill_data):
+        import asyncio
+        import httpx
         max_retries = 3
         base_delay = 1.0
-        for attempt in range(max_retries):
-            try:
-                requests.post(GRID_URL, json=skill_data, timeout=5)
-                return
-            except Exception as e:
-                if attempt < max_retries - 1:
-                    time.sleep(base_delay * (2 ** attempt))
-                else:
-                    print(f"[Degraded Mode] Failed to publish skill after {max_retries} attempts: {e}")
+        async with httpx.AsyncClient() as client:
+            for attempt in range(max_retries):
+                try:
+                    await client.post(GRID_URL, json=skill_data, timeout=5.0)
+                    return
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(base_delay * (2 ** attempt))
+                    else:
+                        print(f"[Degraded Mode] Failed to publish skill after {max_retries} attempts: {e}")
 
     async def fetch_web_cache(self, url: str):
         """Fetches a pre-compiled web state from the decentralized Grid cache."""
@@ -72,28 +76,30 @@ class NetworkSync:
                         print(f"[Degraded Mode] Failed to fetch from Grid cache after {max_retries} attempts: {e}")
                         return None
 
-    def publish_web_state(self, state_data: dict):
+    async def publish_web_state(self, state_data: dict):
         """Publishes a compiled web state to the decentralized Grid cache."""
-        import time
+        import asyncio
+        import httpx
         max_retries = 3
         base_delay = 1.0
-        for attempt in range(max_retries):
-            try:
-                # Sign the payload
-                url = state_data.get("url", "")
-                text_len = state_data.get("text_length", 0)
-                payload_str = f"{url}:{text_len}"
+        async with httpx.AsyncClient() as client:
+            for attempt in range(max_retries):
+                try:
+                    # Sign the payload
+                    url = state_data.get("url", "")
+                    text_len = state_data.get("text_length", 0)
+                    payload_str = f"{url}:{text_len}"
 
-                hash_val = hashlib.sha256(payload_str.encode()).digest()
-                sig = self.private_key.sign_digest(hash_val)
+                    hash_val = hashlib.sha256(payload_str.encode()).digest()
+                    sig = self.private_key.sign_digest(hash_val)
 
-                state_data["node_id"] = self.public_key_hex
-                state_data["signature"] = sig.hex()
+                    state_data["node_id"] = self.public_key_hex
+                    state_data["signature"] = sig.hex()
 
-                requests.post(CACHE_URL + "?sync=true", json=state_data, timeout=5)
-                return
-            except Exception as e:
-                if attempt < max_retries - 1:
-                    time.sleep(base_delay * (2 ** attempt))
-                else:
-                    print(f"[Degraded Mode] Failed to publish to Grid cache after {max_retries} attempts: {e}")
+                    await client.post(CACHE_URL + "?sync=true", json=state_data, timeout=5.0)
+                    return
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(base_delay * (2 ** attempt))
+                    else:
+                        print(f"[Degraded Mode] Failed to publish to Grid cache after {max_retries} attempts: {e}")

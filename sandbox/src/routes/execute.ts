@@ -4,23 +4,30 @@ import { runCode } from '../services/dockerRunner';
 const router = Router();
 
 
-function isAuthorizedServiceCall(req: Request): boolean {
+function validateSandboxApiKey(req: Request): { ok: boolean; code: number; error?: string } {
     const expected = process.env.SANDBOX_API_KEY;
     if (!expected) {
-        console.error('CRITICAL: SANDBOX_API_KEY is not configured. Rejecting execution request.');
-        return false;
+        return { ok: false, code: 500, error: 'Server configuration error: SANDBOX_API_KEY is not set' };
     }
 
     const auth = req.headers.authorization || '';
-    if (!auth.startsWith('Bearer ')) return false;
-    const token = auth.slice('Bearer '.length);
-    return token === expected;
+    if (!auth.startsWith('Bearer ')) {
+        return { ok: false, code: 401, error: 'Unauthorized: Missing or invalid Authorization header' };
+    }
+
+    const token = auth.slice('Bearer '.length).trim();
+    if (token !== expected) {
+        return { ok: false, code: 403, error: 'Forbidden: Invalid API Key' };
+    }
+
+    return { ok: true, code: 200 };
 }
 
 router.post('/execute', async (req: Request, res: Response) => {
     try {
-        if (!isAuthorizedServiceCall(req)) {
-            res.status(401).json({ error: 'Unauthorized service call' });
+        const authResult = validateSandboxApiKey(req);
+        if (!authResult.ok) {
+            res.status(authResult.code).json({ error: authResult.error });
             return;
         }
 
