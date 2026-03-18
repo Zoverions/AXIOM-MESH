@@ -6,6 +6,7 @@ import tempfile
 import torch
 import ezkl
 import hashlib
+import asyncio
 from torch import nn
 
 class SimpleModel(nn.Module):
@@ -78,7 +79,7 @@ class EdgeZKMLProver:
             )
 
             # Dump input
-            data = dict(input_data=[x.tolist()], output_data=[y.tolist()])
+            data = dict(input_data=[[x.item() for x in x.flatten()]], output_data=[[y.item() for y in y.flatten()]])
             with open(input_path, "w") as f:
                 json.dump(data, f)
 
@@ -86,9 +87,36 @@ class EdgeZKMLProver:
             ezkl.gen_settings(onnx_path, settings_path)
             ezkl.calibrate_settings(input_path, onnx_path, settings_path, "resources")
             ezkl.compile_circuit(onnx_path, compiled_model_path, settings_path)
-            ezkl.get_srs(settings_path)
-            ezkl.setup(compiled_model_path, vk_path, pk_path)
-            ezkl.prove(input_path, compiled_model_path, pk_path, proof_path, settings_path)
+
+            witness_path = os.path.join(tempdir, "witness.json")
+            srs_path = os.path.join(tempdir, "kzg.srs")
+            async def run_ezkl_commands():
+                await ezkl.get_srs(settings_path, None, srs_path)
+                ezkl.setup(compiled_model_path, vk_path, pk_path, srs_path)
+                ezkl.gen_witness(input_path, compiled_model_path, witness_path, vk_path, srs_path)
+                ezkl.prove(witness_path, compiled_model_path, pk_path, proof_path, srs_path)
+
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_closed():
+                    raise RuntimeError
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+            if loop.is_running():
+                # For cases where we are already running inside an event loop (e.g. pytest-asyncio)
+                import threading
+                def run_in_thread():
+                    new_loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(new_loop)
+                    new_loop.run_until_complete(run_ezkl_commands())
+                    new_loop.close()
+                thread = threading.Thread(target=run_in_thread)
+                thread.start()
+                thread.join()
+            else:
+                loop.run_until_complete(run_ezkl_commands())
 
             # Read generated assets
             with open(proof_path, "r") as f:

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"regexp"
 	"sort"
+	"time"
 
 	"fmt"
 	"github.com/axiom-mesh/grid/blockchain"
@@ -523,11 +524,15 @@ func (s *Server) Start(addr string) error {
 
 				select {
 				case s.zkmlQueue <- job:
-					valid := <-job.Result
-					if valid {
-						json.NewEncoder(w).Encode(map[string]string{"status": "verified"})
-					} else {
-						http.Error(w, "zkML verification failed", http.StatusForbidden)
+					select {
+					case valid := <-job.Result:
+						if valid {
+							json.NewEncoder(w).Encode(map[string]string{"status": "verified"})
+						} else {
+							http.Error(w, "zkML verification failed", http.StatusForbidden)
+						}
+					case <-time.After(30 * time.Second):
+						http.Error(w, "zkML verification timeout", http.StatusGatewayTimeout)
 					}
 				default:
 					http.Error(w, "zkML verification queue is full", http.StatusServiceUnavailable)

@@ -1,12 +1,14 @@
 package consensus
 
 import (
+	"context"
 	"encoding/base64"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"time"
 )
 
 // VerifyZKMLInference delegates the verification of a zkML proof to the ezkl library.
@@ -111,8 +113,16 @@ except Exception as e:
 		return false
 	}
 
-	cmd := exec.Command("python3", scriptPath, proofPath, settingsPath, vkPath)
+	// Apply execution timeout (10 seconds) to prevent hanging deterministic worker
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "python3", scriptPath, proofPath, settingsPath, vkPath)
 	err = cmd.Run()
+	if ctx.Err() == context.DeadlineExceeded {
+		log.Printf("zkML verification timed out for model commitment: %s", commitment)
+		return false
+	}
 	if err != nil {
 		log.Printf("zkML verification failed: %v", err)
 		return false
