@@ -13,7 +13,14 @@ services:
       - GATEWAY_WS_PORT=3001
       - HYPERVISOR_URL=http://hypervisor:8000
     depends_on:
-      - hypervisor
+      hypervisor:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     volumes:
       - ./.env:/app/.env
 
@@ -23,6 +30,12 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     environment:
       - HYPERVISOR_PORT=8000
       - SANDBOX_URL=http://sandbox:4000/execute
