@@ -3,6 +3,7 @@ from langgraph.graph import StateGraph, START, END
 import httpx
 import os
 import json
+import hashlib
 
 import uuid
 from kernel.pulse_monitor import CoTAuditor, CognitiveSubversionError
@@ -24,6 +25,9 @@ async def _audit_text(text: str) -> str:
         out.append(token)
     return "".join(out)
 
+# Cache for context assembly
+_CONTEXT_CACHE = {}
+
 # Define State for the LangGraph
 class GraphState(TypedDict):
     intent: str
@@ -41,6 +45,11 @@ async def context_assembly(state: GraphState):
     """Gathers context for the current intent."""
     intent = state.get("intent", "")
 
+    # Check cache first
+    intent_hash = hashlib.sha256(intent.encode('utf-8')).hexdigest()
+    if intent_hash in _CONTEXT_CACHE:
+        return {"context": _CONTEXT_CACHE[intent_hash]}
+
     # CoT auditor kill-switch enforcement
     try:
         await _audit_text(intent)
@@ -49,6 +58,15 @@ async def context_assembly(state: GraphState):
 
     # Placeholder for actual context engine logic.
     context = f"Context derived for: {intent}"
+
+    # Cache result
+    _CONTEXT_CACHE[intent_hash] = context
+
+    # Implement rudimentary LRU/Bounded behavior by cleaning up if it gets too large
+    if len(_CONTEXT_CACHE) > 1000:
+        # Remove arbitrary element to keep bounded (or popitem in python 3.7+ keeps insertion order)
+        _CONTEXT_CACHE.pop(next(iter(_CONTEXT_CACHE)))
+
     return {"context": context}
 
 async def resource_balancer(state: GraphState):
