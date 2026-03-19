@@ -35,7 +35,9 @@ class InferenceOrchestrator:
             result = await self._external_provider_infer(intent)
 
         # Always cache + zkML wrap where possible
-        cid = pin_to_meshstore({"result": result, "tier": best_tier})
+        import asyncio
+        from fastapi.concurrency import run_in_threadpool
+        cid = await run_in_threadpool(pin_to_meshstore, {"result": result, "tier": best_tier})
         result["meshstore_cid"] = cid
         result["tier_used"] = best_tier
         result["zkml_verified"] = best_tier in ["local", "zkml"]
@@ -64,8 +66,7 @@ class InferenceOrchestrator:
         pres_penalty = intent.get("pres_penalty", 0.0)
 
         prover = EdgeZKMLProver(weights=[0.5, -0.2, 0.8, 1.2])
-        # We mock input vector for local proof for demonstration based on intent size
-        input_vector = [1.0, len(context) % 10, 0.5]
+        input_vector = [1.0, float(len(context) % 100), 0.5]
         proof_res = prover.infer_and_prove(input_vector)
         proof = proof_res.get("proof", "groth16-placeholder")
 
@@ -77,7 +78,9 @@ class InferenceOrchestrator:
     async def _swarm_distributed_infer(self, intent):
         # Shard via CRDT + MeshStore and invoke swarm nodes
         # In a fully deployed environment we would broadcast the intent CID over CRDT sync
-        cid = pin_to_meshstore({"intent": intent.get("content", ""), "type": "swarm-shard"})
+        import asyncio
+        from fastapi.concurrency import run_in_threadpool
+        cid = await run_in_threadpool(pin_to_meshstore, {"intent": intent.get("content", ""), "type": "swarm-shard"})
         context = intent.get("context", "")
 
         # Simulating external distributed inference for now but caching it via MeshStore CID
@@ -115,8 +118,11 @@ class InferenceOrchestrator:
         context = intent.get("context", "")
 
         if provider == "mcp-infer":
-            # Using external tools, mock mcp-infer behavior
-            output = f"Result from MCP external provider tier."
+            from hypervisor.src.engine.mcp_client import MCPClient
+            mcp_client = MCPClient()
+            output = await mcp_client.fetch_context(intent.get("content", ""))
+            if not output:
+                output = "Result from MCP external provider tier (no tools found)."
         else:
             if hasattr(self, "llm"):
                 output = await self.llm.process(context + f"\n[External Provider {provider} Processed]")

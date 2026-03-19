@@ -498,20 +498,20 @@ class DistributedDeepArchive(DeepArchive):
         If valid, it triggers zeroization of local data associated with that bond,
         or entirely zeroizes the memory if no bond-specific scope is given.
         """
-        # A simple simulated ZKP verification for the proof of severance right
-        # In the real system, this would call grid/zkml/verify or consensus logic.
-
-        # Here we mock the ZK proof verification by checking basic format/length
-        if not zk_proof or len(zk_proof) < 64:
+        if not zk_proof:
             raise ValueError(f"Invalid or insufficient zero-knowledge proof for severance of bond {peer_id}")
 
-        # Try verifying with our own mock generation if it's a mock test proof
         try:
             proof_data = json.loads(zk_proof)
-            if "y" not in proof_data or "t" not in proof_data or "r" not in proof_data:
-                raise ValueError("Malformed ZKP payload")
         except json.JSONDecodeError:
-            pass # Not json, assume it's a raw mock string that passes the len check
+            raise ValueError("Malformed ZKP payload: must be valid JSON")
+
+        # Verify against Grid API
+        grid_url = os.environ.get("GRID_API_URL", "http://localhost:5000") + "/zkml/verify"
+        async with httpx.AsyncClient() as client:
+            res = await client.post(grid_url, json=proof_data, timeout=10.0)
+            if res.status_code != 200:
+                raise ValueError(f"ZKP verification failed: {res.text}")
 
         # For this scope, the bilateral severance rule states we must trigger zeroize
         # upon successful severance to ensure complete memory privacy.

@@ -4,7 +4,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"encoding/json"
 
+	"github.com/axiom-mesh/grid/consensus"
 )
 
 type ZKProof struct {
@@ -76,9 +78,26 @@ func (v *Verifier) VerifyWithCache(proof ZKProof) (VerificationResult, error) {
 	}
 
 	// 3. Verify only if cache miss
-	// Note: in a real implementation this would invoke EZKL or similar prover library
-	// For production readiness, we simulate a successful verification
-	isValid := len(proof.Content) > 0
+	// Assuming proof.Content is JSON representing types.ZKMLPayload shape
+	var payload struct {
+		ModelCommitment string    `json:"model_commitment"`
+		Input           []float64 `json:"input"`
+		Output          []float64 `json:"output"`
+		Proof           string    `json:"proof"`
+		VK              string    `json:"vk"`
+		Settings        string    `json:"settings"`
+	}
+	isValid := false
+	if err := json.Unmarshal(proof.Content, &payload); err == nil {
+		isValid = consensus.VerifyZKMLInference(
+			payload.ModelCommitment,
+			payload.Input,
+			payload.Output,
+			payload.Proof,
+			payload.VK,
+			payload.Settings,
+		)
+	}
 
 	// 4. Store with TTL based on proof type (skills vs inference)
 	res := VerificationResult{Valid: isValid}
@@ -100,11 +119,25 @@ func (v *Verifier) AggregateProofs(proofs []ZKProof) (AggregatedProof, error) {
 	}
 
 	hasher := sha256.New()
-	for _, p := range proofs {
+	allValid := true
+	for i, p := range proofs {
+		res, err := v.VerifyWithCache(p)
+		if err != nil || !res.Valid {
+			allValid = false
+			break
+		}
+		if proofs[i].Hash == "" {
+			proofs[i].Hash = hashProof(p.Content)
+			p.Hash = proofs[i].Hash
+		}
 		hasher.Write([]byte(p.Hash))
 	}
+
 	aggregatedHash := hex.EncodeToString(hasher.Sum(nil))
 
-	// Assuming all proofs are valid for this dummy implementation of the aggregation
+	if !allValid {
+		return AggregatedProof{Hash: aggregatedHash, Valid: false}, errors.New("one or more proofs are invalid")
+	}
+
 	return AggregatedProof{Hash: aggregatedHash, Valid: true}, nil
 }

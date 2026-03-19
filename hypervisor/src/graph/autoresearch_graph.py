@@ -137,18 +137,21 @@ async def zkml_verify(state: GraphState):
     """Verifies output via zkML process."""
     sandbox_output = state.get("sandbox_output", "")
 
-    # We simulate a zkML inference and verification step.
-    # Using the local Grid endpoint or internal Prover logic.
     GRID_ZKML_URL = os.environ.get("GRID_ZKML_URL", "http://localhost:5000/zkml/verify")
 
-    # Create dummy proof payload for illustration
+    from hypervisor.src.zkml.prover import EdgeZKMLProver
+    prover = EdgeZKMLProver(weights=[0.5, -0.2, 0.8, 1.2])
+
+    input_vector = [1.0, float(len(sandbox_output) % 100), 0.5]
+    result = prover.infer_and_prove(input_vector)
+
     payload = {
-        "model_commitment": "a" * 64,
-        "input": [1, 2, 3],
-        "output": [4, 5, 6],
-        "proof": "dummy_proof_data",
-        "vk": "dummy_vk",
-        "settings": "dummy_settings"
+        "model_commitment": result.get("model_commitment", "a" * 64),
+        "input": input_vector,
+        "output": result.get("output", [0.0]),
+        "proof": result.get("proof", "groth16-placeholder"),
+        "vk": result.get("vk", "dummy_vk"),
+        "settings": result.get("settings", "dummy_settings")
     }
 
     verified = False
@@ -158,7 +161,6 @@ async def zkml_verify(state: GraphState):
             if res.status_code == 200:
                 verified = True
     except Exception as e:
-        # We might default to False or True during testing depending on environment setup.
         pass
 
     return {"zkml_verified": verified}
