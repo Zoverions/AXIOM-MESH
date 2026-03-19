@@ -1,12 +1,14 @@
 package ledger
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"sync"
-	"time"
 
 	"github.com/axiom-mesh/grid/types"
 	"github.com/dgraph-io/badger/v4"
@@ -82,11 +84,37 @@ func NewPersistentLedger(dataDir string) (*PersistentLedger, error) {
 		return nil, err
 	}
 
-	return &PersistentLedger{
+	pl := &PersistentLedger{
 		cache: make(map[string]types.SkillVector),
 		db:    db,
 		wal:   wal,
-	}, nil
+	}
+
+	// Load cache from BadgerDB on startup
+	pl.db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchSize = 100
+		it := txn.NewIterator(opts)
+		defer it.Close()
+		prefix := []byte("skill:")
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+			item := it.Item()
+			key := string(item.Key()[len(prefix):])
+			err := item.Value(func(val []byte) error {
+				var skill types.SkillVector
+				if err := json.Unmarshal(val, &skill); err == nil {
+					pl.cache[key] = skill
+				}
+				return nil
+			})
+			if err != nil {
+				continue
+			}
+		}
+		return nil
+	})
+
+	return pl, nil
 }
 
 func (pl *PersistentLedger) CacheZKMLProof(proofHash string, valid bool) error {
@@ -134,6 +162,25 @@ func (pl *PersistentLedger) GetZKMLProof(proofHash string) (bool, bool) {
 	return valid, found
 }
 
+// GetSkill retrieves a skill from the cache
+func (pl *PersistentLedger) GetSkill(id string) (types.SkillVector, bool) {
+	pl.mu.RLock()
+	defer pl.mu.RUnlock()
+	skill, ok := pl.cache[id]
+	return skill, ok
+}
+
+// GetAllSkills returns all skills from the cache
+func (pl *PersistentLedger) GetAllSkills() []types.SkillVector {
+	pl.mu.RLock()
+	defer pl.mu.RUnlock()
+	skills := make([]types.SkillVector, 0, len(pl.cache))
+	for _, s := range pl.cache {
+		skills = append(skills, s)
+	}
+	return skills
+}
+
 func (pl *PersistentLedger) SetSkill(skill types.SkillVector) error {
 	// 1. Write to WAL first (durability)
 	if err := pl.wal.Append(skill); err != nil {
@@ -171,11 +218,28 @@ func (pl *PersistentLedger) Close() {
 
 // ComputeStateRoot computes a simple Merkle root (or state hash) of all skills.
 func (pl *PersistentLedger) ComputeStateRoot() (string, error) {
-	// Not fully implemented for production; placeholders to demonstrate the concept requested in AXIOM-MESH v2
 	pl.mu.RLock()
 	defer pl.mu.RUnlock()
 
-	// A real implementation would hash the cache deterministically
-	hash := fmt.Sprintf("state_root_%d", time.Now().UnixNano())
-	return hash, nil
+	// Get all keys and sort them for deterministic order
+	var keys []string
+	for k := range pl.cache {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	// Hash each skill and build the sequential hash (Merkle root simplification)
+	hasher := sha256.New()
+	for _, k := range keys {
+		skill := pl.cache[k]
+		data, err := json.Marshal(skill)
+		if err != nil {
+			return "", err
+		}
+		skillHash := sha256.Sum256(data)
+		hasher.Write(skillHash[:])
+	}
+
+	rootHash := hex.EncodeToString(hasher.Sum(nil))
+	return rootHash, nil
 }

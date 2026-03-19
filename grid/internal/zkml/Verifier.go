@@ -1,12 +1,18 @@
 package zkml
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"encoding/json"
+	"errors"
+	"log"
+	"time"
 
 	"github.com/axiom-mesh/grid/consensus"
+	"github.com/axiom-mesh/grid/internal/ledger"
+	lru "github.com/hashicorp/golang-lru/v2"
+	"github.com/redis/go-redis/v9"
 )
 
 type ZKProof struct {
@@ -26,9 +32,9 @@ type AggregatedProof struct {
 type ZKMLVerificationPipeline struct {
 	// Multi-level caching strategy
 	Cache struct {
-		L1InMemory map[string]VerificationResult // Hot proofs
-		// L2Distributed RedisCluster // Cross-node sharing
-		// L3Persistent BadgerDB // Disk-backed for recovery
+		L1InMemory    *lru.Cache[string, VerificationResult] // Hot proofs
+		L2Distributed *redis.Client                          // Cross-node sharing
+		L3Persistent  *ledger.PersistentLedger               // Disk-backed for recovery
 	}
 
 	// Proof aggregation for batch verification
@@ -50,9 +56,22 @@ type Verifier struct {
 	Pipeline ZKMLVerificationPipeline
 }
 
-func NewVerifier() *Verifier {
+func NewVerifier(redisAddr string, pl *ledger.PersistentLedger) *Verifier {
 	v := &Verifier{}
-	v.Pipeline.Cache.L1InMemory = make(map[string]VerificationResult)
+	cache, err := lru.New[string, VerificationResult](1000)
+	if err != nil {
+		log.Fatalf("Failed to initialize L1 LRU: %v", err)
+	}
+	v.Pipeline.Cache.L1InMemory = cache
+
+	if redisAddr != "" {
+		v.Pipeline.Cache.L2Distributed = redis.NewClient(&redis.Options{
+			Addr: redisAddr,
+		})
+	}
+
+	v.Pipeline.Cache.L3Persistent = pl
+
 	return v
 }
 
@@ -62,8 +81,10 @@ func hashProof(content []byte) string {
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
-// VerifyWithCache implements proof caching with TTL-based invalidation logic outline
+// VerifyWithCache implements multi-level proof caching with TTL-based invalidation logic
 func (v *Verifier) VerifyWithCache(proof ZKProof) (VerificationResult, error) {
+	ctx := context.Background()
+
 	// 1. Generate cache key from proof hash (not content for privacy)
 	if proof.Hash == "" {
 		if len(proof.Content) == 0 {
@@ -73,8 +94,40 @@ func (v *Verifier) VerifyWithCache(proof ZKProof) (VerificationResult, error) {
 	}
 
 	// 2. Check L1 -> L2 -> L3 cache hierarchy
-	if res, ok := v.Pipeline.Cache.L1InMemory[proof.Hash]; ok {
+
+	// Check L1 In-Memory LRU
+	if res, ok := v.Pipeline.Cache.L1InMemory.Get(proof.Hash); ok {
 		return res, nil
+	}
+
+	// Check L2 Redis
+	if v.Pipeline.Cache.L2Distributed != nil {
+		val, err := v.Pipeline.Cache.L2Distributed.Get(ctx, "zkml:"+proof.Hash).Result()
+		if err == nil {
+			valid := val == "1"
+			res := VerificationResult{Valid: valid}
+			// Backfill L1
+			v.Pipeline.Cache.L1InMemory.Add(proof.Hash, res)
+			return res, nil
+		}
+	}
+
+	// Check L3 BadgerDB
+	if v.Pipeline.Cache.L3Persistent != nil {
+		valid, found := v.Pipeline.Cache.L3Persistent.GetZKMLProof(proof.Hash)
+		if found {
+			res := VerificationResult{Valid: valid}
+			// Backfill L1 and L2
+			v.Pipeline.Cache.L1InMemory.Add(proof.Hash, res)
+			if v.Pipeline.Cache.L2Distributed != nil {
+				val := "0"
+				if valid {
+					val = "1"
+				}
+				v.Pipeline.Cache.L2Distributed.Set(ctx, "zkml:"+proof.Hash, val, 24*time.Hour)
+			}
+			return res, nil
+		}
 	}
 
 	// 3. Verify only if cache miss
@@ -101,7 +154,21 @@ func (v *Verifier) VerifyWithCache(proof ZKProof) (VerificationResult, error) {
 
 	// 4. Store with TTL based on proof type (skills vs inference)
 	res := VerificationResult{Valid: isValid}
-	v.Pipeline.Cache.L1InMemory[proof.Hash] = res
+
+	// Update all cache levels
+	v.Pipeline.Cache.L1InMemory.Add(proof.Hash, res)
+
+	if v.Pipeline.Cache.L2Distributed != nil {
+		val := "0"
+		if isValid {
+			val = "1"
+		}
+		v.Pipeline.Cache.L2Distributed.Set(ctx, "zkml:"+proof.Hash, val, 24*time.Hour)
+	}
+
+	if v.Pipeline.Cache.L3Persistent != nil {
+		v.Pipeline.Cache.L3Persistent.CacheZKMLProof(proof.Hash, isValid)
+	}
 
 	return res, nil
 }
