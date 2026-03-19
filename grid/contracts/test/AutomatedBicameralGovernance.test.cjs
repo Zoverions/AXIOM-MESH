@@ -11,8 +11,11 @@ describe("AutomatedBicameralGovernance", function () {
         id = await DualLedgerIdentity.deploy();
         const WeightOracle = await ethers.getContractFactory("WeightOracle");
         oracle = await WeightOracle.deploy(id.target);
+        const CredentialBond = await ethers.getContractFactory("CredentialBond");
+        const credBond = await CredentialBond.deploy();
+
         const DialecticArbitration = await ethers.getContractFactory("DialecticArbitration");
-        dialArbitration = await DialecticArbitration.deploy(id.target, oracle.target);
+        dialArbitration = await DialecticArbitration.deploy(id.target, oracle.target, credBond.target);
 
         const AutomatedBicameralGovernance = await ethers.getContractFactory("AutomatedBicameralGovernance");
         gov = await AutomatedBicameralGovernance.deploy(dialArbitration.target);
@@ -77,7 +80,7 @@ describe("AutomatedBicameralGovernance", function () {
 
     it("should synthesize deadlock", async function () {
 
-        await dialArbitration.createProposal("Test proposal", 0, 100);
+        await dialArbitration.createProposal("Test proposal", 0, 0, ethers.ZeroHash, 100);
 
         // Advance time and resolve as deadlock (we skip voting to let human 0 vs agent 0, which doesn't deadlock, so we actually have to vote)
         await id.registerNode(owner.address, 1); // Human
