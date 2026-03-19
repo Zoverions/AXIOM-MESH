@@ -7,6 +7,7 @@ from contextlib import AsyncExitStack
 
 logger = logging.getLogger(__name__)
 
+
 class MCPClient:
     """
     Client for interacting with Model Context Protocol (MCP) servers
