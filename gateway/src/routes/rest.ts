@@ -14,10 +14,76 @@ import { ethers } from 'ethers';
 
 const execPromise = util.promisify(exec);
 
+import { MCPFirewall, MCPSecurityPolicy } from '../security/MCPFirewall';
+
+const mcpPolicy: MCPSecurityPolicy = {
+  toolValidation: {
+    schemaStrictness: 'strict',
+    maxToolDescriptionLength: 1000,
+    prohibitedPatterns: [/<script>/i, /eval\(/i],
+    requiredAnnotations: []
+  },
+  identityChain: {
+    userTokenExchange: true,
+    workloadIdentity: 'mTLS',
+    sessionBinding: true
+  },
+  inputSanitization: {
+    maxPromptLength: 8192,
+    delimiterEnforcement: true,
+    instructionBoundaryMarkers: [],
+    semanticAnalysis: false
+  }
+};
+const mcpFirewall = new MCPFirewall(mcpPolicy, ['sandbox_execute', 'register_grid_skill']);
+
+// Registry storage for MCP Servers (in-memory, typically backed by Grid/DB)
+const registeredMCPServers = new Map<string, any>();
+
 // Determine .env path based on whether we are in Docker or local dev
 const ENV_PATH = fs.existsSync('/app/.env') ? '/app/.env' : path.resolve(__dirname, '../../../.env');
 
 const router = Router();
+
+router.post('/api/v1/mcp/register', authMiddleware, async (req: Request, res: Response) => {
+    try {
+        const { did, signature, payload } = req.body;
+        if (!did || !signature || !payload) {
+             res.status(400).json({ status: 'error', message: 'Missing required fields: did, signature, payload' });
+             return;
+        }
+
+        const isValid = mcpFirewall.validateMCPServerRegistration(did, signature, payload);
+        if (!isValid) {
+             res.status(403).json({ status: 'error', message: 'MCP server registration failed code-signing verification' });
+             return;
+        }
+
+        // Store the validated MCP server registration
+        registeredMCPServers.set(did, {
+            payload,
+            signature,
+            registeredAt: Date.now(),
+            status: 'active'
+        });
+
+        res.status(200).json({ status: 'success', message: 'MCP server successfully registered', server: registeredMCPServers.get(did) });
+    } catch (error: any) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
+});
+
+router.get('/api/v1/mcp/servers', authMiddleware, async (req: Request, res: Response) => {
+    try {
+        const servers = Array.from(registeredMCPServers.entries()).map(([did, data]) => ({
+            did,
+            ...data
+        }));
+        res.status(200).json({ status: 'success', servers });
+    } catch (error: any) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
+});
 
 const gatewayMetrics = { requests: 0, errors: 0 };
 
