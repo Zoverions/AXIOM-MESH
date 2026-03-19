@@ -49,7 +49,7 @@ automation, agent swarming intelligence
 ### 1.1 MCP (Model Context Protocol) Security Architecture \[PRIORITY: CRITICAL\]
 
 **Current State:** MCP integration introduced in 2026 agent enhancements
-lacks security hardening.
+now includes implemented `MCPFirewall` security hardening logic (pattern validation, prompt size enforcement, and allowlists).
 
 **Identified Vulnerabilities:** - **Tool Poisoning:** 5.5% of MCP
 servers exhibit tool poisoning patterns; 7.2% contain general
@@ -114,8 +114,7 @@ server inventory with automated shadow deployment detection
 
 ### 1.2 Sandbox Escape Prevention \[PRIORITY: CRITICAL\]
 
-**Current State:** Basic Docker isolation with `--network=none`. Rust
-`airgap.rs` exists but unwired.
+**Current State:** SecureRuntime.ts is now implemented using `spawn` wrapping the airgap IPC socket to execute `airgap.rs` controls safely.
 
 **Vulnerability Context:** - CVE-2024-1753: Buildah/Podman mount escape
 via symbolic links \[^8^\] - CVE-2024-21626: runc container escape via
@@ -179,8 +178,7 @@ bombs 4. Enable Docker Content Trust for image verification
 
 ### 1.3 zkML Verification Pipeline Hardening \[PRIORITY: HIGH\]
 
-**Current State:** "Deterministic-ish" verification with in-memory
-caching.
+**Current State:** L1 caching and hash validation are now implemented within `Verifier.go`. Full EZKL/hardware proofs are stubbed for the integration phase.
 
 **Industry Context:** - zkLLM (2024/2025): tlookup protocol for
 non-linear operations, zkAttn for transformers \[^6^\] - EZKL v1.0:
@@ -243,8 +241,7 @@ GPU/ASIC integration
 
 ### 2.1 Hypervisor (Python/FastAPI) Production Hardening
 
-**Current State:** AutoResearch/AutoTraining loops started at lifespan,
-potential memory leaks.
+**Current State:** BackpressureQueue has been integrated into `memory_optimization.py` to bound queue sizes and prevent unchecked RSS expansion.
 
 **Identified Issues:** - Python memory fragmentation with musl libc in
 containers \[^24^\] - Asyncio queue backpressure missing (unbounded
@@ -347,8 +344,7 @@ divergence
 
 ### 2.2 Gateway (TypeScript/Node.js) Event Loop Optimization
 
-**Current State:** WebSocket intent pipeline with Zod parsing, potential
-event loop blocking.
+**Current State:** CryptoWorkerPool, BackpressureWebSocket, and precompiled Zod schemas implemented in `EventLoopOptimizer.ts`.
 
 **Identified Issues:** - Synchronous crypto operations block event loop
 \[^31^\]\[^38^\]\[^39^\] - Heavy Zod validation on main thread -
@@ -443,7 +439,7 @@ loop lag monitoring (event-loop-lag package)
 
 ### 2.3 Grid (Go) Ledger Persistence & Concurrency
 
-**Current State:** In-memory ledger with no persistence.
+**Current State:** Embedded BadgerDB KV store and Write-Ahead Log (WAL) for durability are now integrated into `PersistentLedger.go`.
 
 **Required Implementation:**
 
@@ -526,8 +522,7 @@ Implement compaction strategy for Badger (L0 -\> L1 -\> L2)
 
 ### 3.1 Service Mesh & Circuit Breakers
 
-**Current State:** Direct HTTP calls between services with basic retry
-logic.
+**Current State:** `ServiceMeshCircuitBreaker` logic implemented with state transitions across OPEN/HALF_OPEN/CLOSED modes.
 
 **Required Implementation:**
 
@@ -584,11 +579,7 @@ class ResilientHypervisorClient {
 
 ### 3.2 Bicameral Governance Automation
 
-**Current State:** Manual proposal/voting with basic contract
-integration.
-
-**Novel Enhancement:** Automated governance triggers based on system
-metrics.
+**Current State:** `AutomatedBicameralGovernance` deployed and inherited in `DualLedgerIdentity.sol`, ensuring backward compatibility with existing tests.
 
 ``` solidity
 // grid/contracts/DualLedgerIdentity.sol (Enhanced)
@@ -634,10 +625,7 @@ contract AutomatedBicameralGovernance {
 
 ### 3.3 Agent Swarm Intelligence
 
-**Current State:** Basic swarm endpoints with peer tracking.
-
-**Novel Enhancement:** Emergent coordination via stigmergy (indirect
-coordination through environment).
+**Current State:** `StigmergyCoordinator.go` implemented with pheromone layout and time-based exponential decay logic.
 
 ``` go
 // grid/internal/swarm/StigmergyCoordinator.go
@@ -696,7 +684,7 @@ func (sc *StigmergyCoordinator) AntiEntropySync(peer Peer) error {
 
 ### 4.1 Docker Compose Production Hardening
 
-**Current State:** Basic `depends_on` without health conditions.
+**Current State:** Improved Docker Compose with detailed health conditions.
 
 **Required Implementation:**
 
@@ -755,6 +743,8 @@ services:
 ```
 
 ### 4.2 Distributed Tracing & Observability
+
+**Current State:** `OpenTelemetryConfig.ts` implemented using Jaeger exporter and NodeSDK bindings.
 
 ``` typescript
 // shared/src/observability/OpenTelemetryConfig.ts

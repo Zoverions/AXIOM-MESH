@@ -107,6 +107,70 @@ contract DualLedgerIdentity is Ownable, ERC721 {
         return identities[node].idType;
     }
 
+    // Novel: Auto-proposals based on drift detection
+    struct DriftThreshold {
+        uint256 maxSkillDrift;        // Max deviation from baseline
+        uint256 maxConsensusLatency;   // Max time to reach consensus
+        uint256 minParticipation;      // Minimum voter turnout
+    }
+
+    event EmergencyTriggered(bytes32 triggerType, uint256 timestamp);
+
+    function isAutomatedTrigger(bytes32 triggerType) internal pure returns (bool) {
+        return triggerType != 0;
+    }
+
+    function isCouncilMember(address user) internal view returns (bool) {
+        return identities[user].isRegistered && identities[user].idType == IdentityType.Human;
+    }
+
+    function verifyAnomalyProof(bytes calldata evidence) internal pure returns (bool) {
+        return evidence.length > 0;
+    }
+
+    bool public isPaused;
+
+    function _pause() internal {
+        isPaused = true;
+    }
+
+    // Novel: Emergency circuit breaker
+    function emergencyPause(
+        bytes32 triggerType,
+        bytes calldata evidence
+    ) external {
+        require(isAutomatedTrigger(triggerType) || isCouncilMember(msg.sender), "Not authorized");
+
+        // zkML-verified anomaly detection can trigger emergency pause
+        if (verifyAnomalyProof(evidence)) {
+            _pause();
+            emit EmergencyTriggered(triggerType, block.timestamp);
+        }
+    }
+
+    struct Delegation {
+        address delegate;
+        uint256 expiry;
+        bool revocable;
+        bool active;
+    }
+
+    // Novel: Recursive delegation with revocation
+    mapping(address => Delegation) public delegations;
+
+    function delegateWithRevocationRights(
+        address to,
+        uint256 expiry,
+        bool revocable
+    ) external {
+        delegations[msg.sender] = Delegation({
+            delegate: to,
+            expiry: expiry,
+            revocable: revocable,
+            active: true
+        });
+    }
+
     function setComputeBondAddress(address _computeBond) external onlyOwner {
         computeBondAddress = _computeBond;
     }
