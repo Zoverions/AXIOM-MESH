@@ -14,18 +14,38 @@ async function main() {
   const weightOracle = await WeightOracle.deploy(await dualLedgerIdentity.getAddress());
   await weightOracle.waitForDeployment();
 
+  // Education Contracts Pack
+  const CurriculumRegistry = await hre.ethers.getContractFactory("CurriculumRegistry");
+  const curriculumRegistry = await CurriculumRegistry.deploy();
+  await curriculumRegistry.waitForDeployment();
+
+  const CredentialBond = await hre.ethers.getContractFactory("CredentialBond");
+  const credentialBond = await CredentialBond.deploy();
+  await credentialBond.waitForDeployment();
+
   const DialecticArbitration = await hre.ethers.getContractFactory("DialecticArbitration");
   const dialecticArbitration = await DialecticArbitration.deploy(
     await dualLedgerIdentity.getAddress(),
-    await weightOracle.getAddress()
+    await weightOracle.getAddress(),
+    await credentialBond.getAddress()
   );
   await dialecticArbitration.waitForDeployment();
+
+  const AutomatedBicameralGovernance = await hre.ethers.getContractFactory("AutomatedBicameralGovernance");
+  const automatedBicameralGovernance = await AutomatedBicameralGovernance.deploy(
+    await dialecticArbitration.getAddress()
+  );
+  await automatedBicameralGovernance.waitForDeployment();
 
   const ComputeBond = await hre.ethers.getContractFactory("ComputeBond");
   const computeBond = await ComputeBond.deploy();
   await computeBond.waitForDeployment();
 
   await dualLedgerIdentity.setComputeBondAddress(await computeBond.getAddress());
+
+  // Transfer ownership of the education contracts to the automated governance (Gateway security rules via bicameral DAO)
+  await curriculumRegistry.transferOwnership(await automatedBicameralGovernance.getAddress());
+  await credentialBond.transferOwnership(await automatedBicameralGovernance.getAddress());
 
   const output = {
     network: hre.network.name,
@@ -36,7 +56,10 @@ async function main() {
       DualLedgerIdentity: await dualLedgerIdentity.getAddress(),
       WeightOracle: await weightOracle.getAddress(),
       DialecticArbitration: await dialecticArbitration.getAddress(),
-      ComputeBond: await computeBond.getAddress()
+      AutomatedBicameralGovernance: await automatedBicameralGovernance.getAddress(),
+      ComputeBond: await computeBond.getAddress(),
+      CurriculumRegistry: await curriculumRegistry.getAddress(),
+      CredentialBond: await credentialBond.getAddress()
     }
   };
 

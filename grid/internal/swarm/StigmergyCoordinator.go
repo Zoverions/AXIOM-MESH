@@ -42,21 +42,41 @@ func NewStigmergyCoordinator() *StigmergyCoordinator {
 	}
 }
 
-// Lay pheromone when agent discovers high-value skill
+// Lay pheromone when agent discovers high-value skill or encounters something notable
 func (sc *StigmergyCoordinator) LayPheromone(p Pheromone) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 
-	p.Timestamp = time.Now()
-	sc.pheromones[p.Location] = append(sc.pheromones[p.Location], p)
+	if p.Timestamp.IsZero() {
+		p.Timestamp = time.Now()
+	}
 
-	// Async decay
-	go sc.decayPheromones(p.Location)
+	// Update existing pheromone of same type or append new one
+	found := false
+	for i, existing := range sc.pheromones[p.Location] {
+		if existing.Type == p.Type {
+			// Reinforce existing pheromone
+			sc.pheromones[p.Location][i].Intensity += p.Intensity
+			sc.pheromones[p.Location][i].Timestamp = p.Timestamp
+			sc.pheromones[p.Location][i].TTL = p.TTL
+			sc.pheromones[p.Location][i].Payload = p.Payload
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		sc.pheromones[p.Location] = append(sc.pheromones[p.Location], p)
+		// Async decay per location when first created
+		if len(sc.pheromones[p.Location]) == 1 {
+			go sc.decayPheromones(p.Location)
+		}
+	}
 }
 
 func (sc *StigmergyCoordinator) decayPheromones(location string) {
 	// A rudimentary decay system simulating entropy over time
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(1 * time.Second) // Check more frequently to be responsive in tests
 	defer ticker.Stop()
 
 	for range ticker.C {
@@ -69,8 +89,11 @@ func (sc *StigmergyCoordinator) decayPheromones(location string) {
 
 		var activePheromones []Pheromone
 		for _, p := range phList {
-			if time.Since(p.Timestamp) < p.TTL {
-				p.Intensity = p.Intensity * 0.9 // exponential decay
+			timePassed := time.Since(p.Timestamp)
+			if timePassed < p.TTL {
+				// decay formula: reduce intensity by roughly 10% per second
+				decayFactor := 0.9
+				p.Intensity = p.Intensity * decayFactor
 				if p.Intensity > 0.1 {
 					activePheromones = append(activePheromones, p)
 				}
@@ -79,16 +102,26 @@ func (sc *StigmergyCoordinator) decayPheromones(location string) {
 
 		if len(activePheromones) == 0 {
 			delete(sc.pheromones, location)
+			sc.mu.Unlock()
+			return // stop goroutine when empty
 		} else {
 			sc.pheromones[location] = activePheromones
 		}
 
 		sc.mu.Unlock()
-
-		if len(activePheromones) == 0 {
-			break
-		}
 	}
+}
+
+// GetPheromones returns all pheromones at a location regardless of agent type
+func (sc *StigmergyCoordinator) GetPheromones(location string) []Pheromone {
+	sc.mu.RLock()
+	defer sc.mu.RUnlock()
+
+	pheromones := sc.pheromones[location]
+	// Return a copy to avoid concurrent slice mutation issues
+	result := make([]Pheromone, len(pheromones))
+	copy(result, pheromones)
+	return sortByIntensity(result)
 }
 
 func filterByType(pheromones []Pheromone, agentType AgentType) []Pheromone {
