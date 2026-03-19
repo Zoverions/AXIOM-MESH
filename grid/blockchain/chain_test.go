@@ -374,3 +374,94 @@ func TestApplyProposalChainEvent(t *testing.T) {
 		t.Fatalf("Proposal should be resolved")
 	}
 }
+
+func TestLedger_SwarmManagement(t *testing.T) {
+	l := NewLedger()
+
+	swarmID := "swarm-1"
+	swarm := types.Swarm{
+		ID:     swarmID,
+		TaskID: "task-1",
+		Nodes:  []string{"node-1"},
+		Status: "active",
+	}
+
+	// 1. Get non-existent swarm
+	_, ok := l.GetSwarm(swarmID)
+	if ok {
+		t.Fatalf("Expected no swarm to exist initially")
+	}
+
+	// 2. Create and Get swarm
+	l.CreateSwarm(swarm)
+	retrievedSwarm, ok := l.GetSwarm(swarmID)
+	if !ok {
+		t.Fatalf("Expected swarm to exist after creation")
+	}
+	if retrievedSwarm.ID != swarmID {
+		t.Errorf("Expected swarm ID %s, got %s", swarmID, retrievedSwarm.ID)
+	}
+	if len(retrievedSwarm.Nodes) != 1 {
+		t.Errorf("Expected 1 node in swarm, got %d", len(retrievedSwarm.Nodes))
+	}
+
+	// 3. Join swarm (new node)
+	nodeID := "node-2"
+	joined := l.JoinSwarm(swarmID, nodeID)
+	if !joined {
+		t.Fatalf("Expected joining swarm to be successful")
+	}
+
+	retrievedSwarm, _ = l.GetSwarm(swarmID)
+	if len(retrievedSwarm.Nodes) != 2 {
+		t.Errorf("Expected 2 nodes in swarm, got %d", len(retrievedSwarm.Nodes))
+	}
+	if retrievedSwarm.Nodes[1] != nodeID {
+		t.Errorf("Expected second node to be %s, got %s", nodeID, retrievedSwarm.Nodes[1])
+	}
+
+	// 4. Join swarm (existing node, idempotent)
+	joinedAgain := l.JoinSwarm(swarmID, nodeID)
+	if !joinedAgain {
+		t.Fatalf("Expected joining swarm again to return true")
+	}
+	retrievedSwarm, _ = l.GetSwarm(swarmID)
+	if len(retrievedSwarm.Nodes) != 2 {
+		t.Errorf("Expected still 2 nodes in swarm after redundant join, got %d", len(retrievedSwarm.Nodes))
+	}
+
+	// 5. Join non-existent swarm
+	joinedNonExistent := l.JoinSwarm("non-existent-swarm", "node-3")
+	if joinedNonExistent {
+		t.Fatalf("Expected joining non-existent swarm to fail")
+	}
+
+	// 6. Get all swarms
+	swarm2 := types.Swarm{
+		ID:     "swarm-2",
+		TaskID: "task-2",
+		Nodes:  []string{"node-4"},
+		Status: "active",
+	}
+	l.CreateSwarm(swarm2)
+
+	swarms := l.GetSwarms()
+	if len(swarms) != 2 {
+		t.Fatalf("Expected 2 swarms total, got %d", len(swarms))
+	}
+
+	found1 := false
+	found2 := false
+	for _, s := range swarms {
+		if s.ID == swarmID {
+			found1 = true
+		}
+		if s.ID == "swarm-2" {
+			found2 = true
+		}
+	}
+
+	if !found1 || !found2 {
+		t.Errorf("Expected both swarms to be present in GetSwarms result")
+	}
+}
