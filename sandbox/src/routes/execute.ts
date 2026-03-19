@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { runCode } from '../services/dockerRunner';
+import { NetworkNamespaceController } from '../execution/SecureRuntime';
 
 const router = Router();
 
@@ -52,7 +53,16 @@ router.post('/execute', async (req: Request, res: Response) => {
             }
         }
 
-        const result = await runCode(language, code);
+        let result;
+        const processIsolated = new NetworkNamespaceController();
+
+        try {
+            await processIsolated.isolateProcess(process.pid);
+            result = await runCode(language, code);
+        } finally {
+            await processIsolated.restoreNetworking(process.pid);
+        }
+
         res.json({ result });
     } catch (error: any) {
         console.error('Execution error:', error.message);
