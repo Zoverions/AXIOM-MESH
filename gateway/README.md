@@ -80,7 +80,6 @@ Current coverage: ~30-40%
 - REST endpoint coverage (routes)
 - WebSocket flow tests
 - Channel adapter tests (Discord, Slack)
-- E2E integration (currently fragile due to local venv path dependency)
 
 ## Production Considerations
 
@@ -91,8 +90,6 @@ Current coverage: ~30-40%
 
 ## Known Issues
 
-- E2E test (`test_full_intent_path.test.ts`) requires local Python venv at hardcoded path
-  - **Fix**: Parametrize venv path or mock hypervisor in tests
 - Channel adapter tests missing (Discord, Slack, Telegram)
   - **Fix**: Add mocked channel tests in next iteration
 

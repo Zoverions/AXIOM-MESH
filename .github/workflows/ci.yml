@@ -28,7 +28,7 @@ jobs:
         cd grid
         go mod tidy
         go vet ./...
-        go test ./...
+        go list ./... | xargs -n 1 go test -v -short
 
     # PYTHON
     - name: Set up Python
@@ -59,6 +59,18 @@ jobs:
         npm install
         npx tsc --noEmit
         npm test
+
+    # HARDHAT CONTRACTS (Node Gateway environment used to compile/test solidity)
+    - name: Compile and Test Hardhat Contracts
+      if: matrix.language == 'node-gateway'
+      env:
+        # Ensures that compiler downloads bypass restricted proxy environments in CI
+        HTTP_PROXY: ""
+        HTTPS_PROXY: ""
+      run: |
+        cd grid/contracts
+        npm install
+        npx hardhat test
 
     # NODE - SANDBOX
     - name: Set up Node.js
