@@ -41,8 +41,4 @@ The system formally provides closure guarantees across three dimensions:
 
 ## Remaining risks / open items
 
-- Gateway E2E test relies on a local Python venv path (`hypervisor/venv/bin/python`) that may not exist in CI/dev by default.
-- Sandbox integration tests currently require `supertest` typing/dependency alignment.
-- Hypervisor distributed archive tests require `websockets` module in the runtime test environment.
-- Grid `go test ./...` appears to include long-running components and may need package-by-package CI segmentation.
-- Hardhat compiler download is blocked in this environment (proxy 403), so contract compile/test validation must run in an unrestricted network context.
+- None currently identified. All environment and CI dependency issues have been resolved.
