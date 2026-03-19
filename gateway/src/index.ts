@@ -13,6 +13,7 @@ import { parseAndSanitizeIntent } from './middleware/intent_parser';
 import { filterACS } from './middleware/referent_filter';
 import { getChannelFactory, getRegisteredChannelNames, Channel } from './channels/registry';
 import { initLogger } from './utils/logger';
+import { BackpressureWebSocket } from './performance/EventLoopOptimizer';
 import './channels'; // Initialize channel registrations
 
 dotenv.config();
@@ -77,6 +78,7 @@ wss.on('connection', (ws: WebSocket, req: any) => {
     }
 
     console.log('New WebSocket connection');
+    const backpressureWs = new BackpressureWebSocket(ws);
 
     ws.on('message', async (message: Buffer) => {
         try {
@@ -94,7 +96,7 @@ wss.on('connection', (ws: WebSocket, req: any) => {
             if (data.actor_id) intent.actor_id = data.actor_id;
 
             // Send pending acknowledgment
-            ws.send(JSON.stringify({ status: 'pending', intent_id: intent.id, trace_id: intent.trace_id }));
+            backpressureWs.send(JSON.stringify({ status: 'pending', intent_id: intent.id, trace_id: intent.trace_id }));
 
             // Process with Hypervisor
             const response = await sendToHypervisor(intent);
@@ -103,10 +105,10 @@ wss.on('connection', (ws: WebSocket, req: any) => {
             }
 
             // Send final response
-            ws.send(JSON.stringify(response));
+            backpressureWs.send(JSON.stringify(response));
         } catch (error) {
             console.error(error);
-            ws.send(JSON.stringify({ error: 'Invalid message format' }));
+            backpressureWs.send(JSON.stringify({ error: 'Invalid message format' }));
         }
     });
 });

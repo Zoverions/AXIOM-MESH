@@ -9,7 +9,7 @@ export const asyncRandomBytes = promisify(randomBytes);
 
 export interface CryptoTask {
   id: string;
-  type: 'hash' | 'validate';
+  type: 'hash' | 'validate' | 'hmac';
   data: any;
 }
 
@@ -43,6 +43,18 @@ export class CryptoWorkerPool {
     });
   }
 
+  async hmacSignature(key: string, payload: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const taskId = randomBytes(16).toString('hex');
+      const task: CryptoTask = { id: taskId, type: 'hmac', data: { key, payload } };
+      this.callbacks.set(taskId, { resolve, reject });
+
+      const worker = this.workers[this.currentWorker];
+      worker.postMessage(task);
+      this.currentWorker = (this.currentWorker + 1) % this.workers.length;
+    });
+  }
+
   async hashIntent(intent: any): Promise<string> {
     return new Promise((resolve, reject) => {
       const taskId = randomBytes(16).toString('hex');
@@ -71,21 +83,31 @@ export class CryptoWorkerPool {
 export class BackpressureWebSocket {
   private bufferSize: number = 0;
   private readonly MAX_BUFFER_SIZE: number = 1024 * 1024; // 1MB
+  private isPaused: boolean = false;
 
   constructor(private ws: WebSocket) {}
 
   send(data: string): boolean {
-    if (this.bufferSize >= this.MAX_BUFFER_SIZE) {
+    const dataLength = Buffer.byteLength(data);
+    this.bufferSize += dataLength;
+
+    if (this.bufferSize >= this.MAX_BUFFER_SIZE && !this.isPaused) {
       this.ws.pause();
-      return false;
+      this.isPaused = true;
     }
 
     const result = this.ws.send(data, (err) => {
-      if (!err) this.bufferSize -= Buffer.byteLength(data);
+      if (!err) {
+        this.bufferSize -= dataLength;
+        if (this.bufferSize < this.MAX_BUFFER_SIZE && this.isPaused) {
+          this.ws.resume();
+          this.isPaused = false;
+        }
+      }
     });
 
-    this.bufferSize += Buffer.byteLength(data);
-    return result as unknown as boolean;
+    // If buffer is over limit, backpressure is active
+    return this.bufferSize < this.MAX_BUFFER_SIZE;
   }
 }
 
