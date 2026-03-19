@@ -49,6 +49,7 @@ from contextlib import asynccontextmanager
 from src.graph.autoresearch_graph import autoresearch_app
 from src.recovery.bundle_manager import RecoveryBundleManager
 from src.api.mcp_server import mcp_server
+from src.engine.inference_orchestrator import InferenceOrchestrator
 
 context_engine = ContextEngine()
 pulse = EntropyMonitor()
@@ -352,7 +353,25 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_sig
                     return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="System Halt: RIKER Hallucination Probe failure. LLM fabricated data for non-existent CSU entity.", status="error", trace_id=trace_id, audit_trail=audit_trail)
                 audit_trail["safety_decisions"]["riker_probe_result"] = "Passed"
 
-        raw_response = await llm.process(context, frequency_penalty=freq_penalty, presence_penalty=pres_penalty)
+        # Inference Orchestration multi-tier routing integration
+        orchestrator = InferenceOrchestrator()
+
+        intent_dict = intent.dict()
+        intent_dict["context"] = context
+        intent_dict["freq_penalty"] = freq_penalty
+        intent_dict["pres_penalty"] = pres_penalty
+
+        # Pass the async LLM to the orchestrator to perform actual inference
+        orchestrator.llm = llm
+
+        # Route and execute inference. Since we made LLM async, we must await `route` if it performs async inference
+        routed_result = await orchestrator.route(intent_dict)
+
+        raw_response = routed_result.get("output", "")
+
+        audit_trail["tier_used"] = routed_result.get("tier_used")
+        audit_trail["zkml_verified"] = routed_result.get("zkml_verified")
+        audit_trail["meshstore_cid"] = routed_result.get("meshstore_cid")
 
         # The Pulse Check
         if pulse.measure(raw_response):
