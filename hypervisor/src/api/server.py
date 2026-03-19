@@ -29,6 +29,7 @@ def log_event(level: str, msg: str, trace_id: str = None):
         f.write(log_json + "\n")
 
 import asyncio
+from fastapi.concurrency import run_in_threadpool
 
 from src.models.intent import IntentObject, IntentResponse
 from src.engine.context import ContextEngine
@@ -236,7 +237,7 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_sig
         content = intent.content
         sender = intent.metadata.get("sender", "unknown")
 
-        allowed, policy_decisions, policy_reason = evaluate_policy_gate(intent)
+        allowed, policy_decisions, policy_reason = await run_in_threadpool(evaluate_policy_gate, intent)
         audit_trail["safety_decisions"]["policy_gate"] = "Passed" if allowed else "Failed"
         audit_trail["safety_decisions"]["policy_checks"] = policy_decisions
         if not allowed:
@@ -250,11 +251,12 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_sig
             last_response = last_interaction.get("response", "")
 
             # Extract signals from current intent based on last response
-            signals = signal_extractor.extract_signals(content, last_response)
+            signals = await run_in_threadpool(signal_extractor.extract_signals, content, last_response)
 
             if signals["reward"] != 0 or signals["is_directive"]:
                 # Judge rollout via MiroFish PRM
-                miro_score = context_engine.deep_archive.miro_mapper.judge_rollout(
+                miro_score = await run_in_threadpool(
+                    context_engine.deep_archive.miro_mapper.judge_rollout,
                     action=last_interaction.get("intent_content", ""),
                     feedback_signal=signals
                 )
@@ -262,11 +264,17 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_sig
                 signals["reward"] = miro_score
 
                 # Store rollout in Evolution Engine
-                evolution.store_rollout(last_interaction.get("intent_content", ""), signals, sender)
+                await run_in_threadpool(
+                    evolution.store_rollout,
+                    last_interaction.get("intent_content", ""), signals, sender
+                )
 
                 # If it's a directive signal, attempt On-Policy Distillation
                 if signals["is_directive"]:
-                    opd.distill(last_interaction.get("intent_content", ""), signals, sender)
+                    await run_in_threadpool(
+                        opd.distill,
+                        last_interaction.get("intent_content", ""), signals, sender
+                    )
 
         # Handle special Mode command
         if content.startswith("/mode"):
@@ -292,7 +300,8 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_sig
         if content.startswith("/exec"):
             code = content[len("/exec"):].strip()
 
-            if not is_safe_code(code):
+            is_safe = await run_in_threadpool(is_safe_code, code)
+            if not is_safe:
                 audit_trail["safety_decisions"]["ast_sanitization"] = "Failed"
                 intent_metrics["error"] += 1
                 return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Security Halt: Code execution contains forbidden operations (e.g., os, sys, eval, open).", status="error", trace_id=trace_id, audit_trail=audit_trail)
@@ -300,7 +309,8 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_sig
 
             # MiroFish Spatial Security Check
             # Assuming 'user_node' is the origin for standard /exec commands
-            if not context_engine.miro_mapper.is_operation_allowed("user_node", "shell_execution"):
+            is_allowed = await run_in_threadpool(context_engine.miro_mapper.is_operation_allowed, "user_node", "shell_execution")
+            if not is_allowed:
                 audit_trail["safety_decisions"]["mirofish_spatial_block"] = "Blocked"
                 intent_metrics["error"] += 1
                 return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="MiroFish Spatial Block: Unauthorized compliance attempt detected.", status="error", trace_id=trace_id, audit_trail=audit_trail)
@@ -331,7 +341,7 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_sig
         context = await context_engine.get_context(intent)
 
         # Divergence Engine sampling perturbations
-        sampling_params = context_engine.divergence_engine.apply_sampling_perturbation({})
+        sampling_params = await run_in_threadpool(context_engine.divergence_engine.apply_sampling_perturbation, {})
         freq_penalty = sampling_params.get("frequency_penalty", 0.0)
         pres_penalty = sampling_params.get("presence_penalty", 0.0)
 
@@ -374,14 +384,16 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_sig
         audit_trail["meshstore_cid"] = routed_result.get("meshstore_cid")
 
         # The Pulse Check
-        if pulse.measure(raw_response):
+        is_anomaly = await run_in_threadpool(pulse.measure, raw_response)
+        if is_anomaly:
             audit_trail["safety_decisions"]["pulse_anomaly"] = True
             intent_metrics["error"] += 1
             return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="System Halt: Thermodynamic anomaly detected. Suspected hallucination/guessing loop.", status="error", trace_id=trace_id, audit_trail=audit_trail)
         audit_trail["safety_decisions"]["pulse_anomaly"] = False
 
         # The Arena Validation before returning text
-        if not arena.verify(action_intent=content, proposed_execution=raw_response):
+        is_verified = await run_in_threadpool(arena.verify, action_intent=content, proposed_execution=raw_response)
+        if not is_verified:
             audit_trail["safety_decisions"]["arena_verification"] = "Failed"
             intent_metrics["error"] += 1
             return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Arena Security Halt: The LLM output failed verification (Autoregressive Hallucination Floor crossed).", status="error", trace_id=trace_id, audit_trail=audit_trail)
@@ -400,9 +412,9 @@ async def process_intent(intent: IntentObject, api_key: str = Depends(verify_sig
             except Exception:
                 intent_metrics["degraded"] += 1
                 metadata_to_store["sync_mode"] = "local_fallback"
-                context_engine.deep_archive.add(content=content, metadata=metadata_to_store)
+                await run_in_threadpool(context_engine.deep_archive.add, content, metadata_to_store)
         else:
-            context_engine.deep_archive.add(content=content, metadata=metadata_to_store)
+            await run_in_threadpool(context_engine.deep_archive.add, content, metadata_to_store)
 
         # Update interaction history for next-state signal recovery
         context_engine.interaction_history.append({
@@ -476,12 +488,12 @@ async def health_check():
 
 @app.get("/memory")
 async def get_memory(session_id: str = None):
-    memories = context_engine.deep_archive.get_all(session_id)
+    memories = await run_in_threadpool(context_engine.deep_archive.get_all, session_id)
     return {"status": "success", "memories": memories}
 
 @app.delete("/memory/{node_id}")
 async def delete_memory(node_id: str):
-    success = context_engine.deep_archive.delete(node_id)
+    success = await run_in_threadpool(context_engine.deep_archive.delete, node_id)
     if success:
         return {"status": "success"}
     return {"status": "error", "message": "Memory node not found"}
@@ -490,7 +502,7 @@ async def delete_memory(node_id: str):
 async def edit_memory(node_id: str, update_data: dict):
     new_content = update_data.get("content")
     metadata_updates = update_data.get("metadata", {})
-    success = context_engine.deep_archive.edit(node_id, new_content, metadata_updates)
+    success = await run_in_threadpool(context_engine.deep_archive.edit, node_id, new_content, metadata_updates)
     if success:
         return {"status": "success"}
     return {"status": "error", "message": "Memory node not found"}

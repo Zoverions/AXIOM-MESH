@@ -5,6 +5,14 @@ services:
     build:
       context: ./gateway
       dockerfile: Dockerfile
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
     ports:
       - "3000:3000"
       - "3001:3001"
@@ -28,6 +36,14 @@ services:
     build:
       context: ./hypervisor
       dockerfile: Dockerfile
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
     ports:
       - "8000:8000"
     healthcheck:
@@ -49,6 +65,14 @@ services:
     build:
       context: ./sandbox
       dockerfile: Dockerfile
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     ports:
       - "4000:4000"
     environment:
@@ -69,6 +93,14 @@ services:
     build:
       context: ./grid
       dockerfile: Dockerfile
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     ports:
       - "5000:5000"
     environment:
@@ -76,6 +108,14 @@ services:
 
   ipfs:
     image: ipfs/go-ipfs:latest
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
     ports:
       - "4001:4001"   # swarm transport
       - "5001:5001"   # API
