@@ -99,12 +99,36 @@ func TestLedger_Slash(t *testing.T) {
 		t.Errorf("Expected error for non-existent bond, got %v", err)
 	}
 
+	// Stake an inactive bond and try to slash it
+	inactiveNodeID := "node-inactive"
+	l.Stake(types.ComputeBond{
+		NodeID: inactiveNodeID,
+		Amount: 500,
+		Status: "inactive",
+	})
+	err = l.Slash(inactiveNodeID, 100, "")
+	if err == nil || err.Error() != "bond not active or does not exist" {
+		t.Errorf("Expected error for inactive bond, got %v", err)
+	}
+
 	// Stake bond
 	l.Stake(types.ComputeBond{
 		NodeID: nodeID,
 		Amount: 500,
 		Status: "active",
 	})
+
+	// Try to slash with an invalid (negative) amount
+	err = l.Slash(nodeID, -100, "")
+	if err == nil || err.Error() != "invalid slash amount" {
+		t.Errorf("Expected error for invalid slash amount, got %v", err)
+	}
+
+	// Try to slash with zero amount
+	err = l.Slash(nodeID, 0, "")
+	if err == nil || err.Error() != "invalid slash amount" {
+		t.Errorf("Expected error for zero slash amount, got %v", err)
+	}
 
 	// Slash more than bond amount
 	err = l.Slash(nodeID, 600, "")
