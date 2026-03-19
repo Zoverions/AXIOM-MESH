@@ -148,3 +148,7 @@ class DialecticOrchestrator:
             "total_tests": total_tests,
             "details": results
         }
+
+def reduce_to_first_principles(text: str) -> str:
+    """Fallback implementation."""
+    return text

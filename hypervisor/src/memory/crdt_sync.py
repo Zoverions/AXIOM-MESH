@@ -99,3 +99,7 @@ def pin_to_meshstore(data: bytes) -> str:
 def sync_storage_manifest(manifest: dict) -> bool:
     """Mock implementation of syncing storage manifest"""
     return True
+
+def sync_swarm_manifest(swarm_id: str) -> dict:
+    """Fallback implementation."""
+    return {"swarm_id": swarm_id, "status": "synced"}
