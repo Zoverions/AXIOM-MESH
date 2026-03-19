@@ -56,7 +56,7 @@ def setup_node():
     print(f"Goal saved to profile and .env")
 
     # FDBA configuration
-    fdba_address = input("🔑 Enter FDBA Founder Address (default: 0x8943c7bac1914c9a7aba750bf2b6b09fd21037e0): ") or "0x8943c7bac1914c9a7aba750bf2b6b09fd21037e0"
+    fdba_address = input("🔑 Enter FDBA Founder Address (default: 0x1c2cbabf75e1938ed2f2c59e734e83aa5fbe1b73): ") or "0x1c2cbabf75e1938ed2f2c59e734e83aa5fbe1b73"
     with open(".env", "a") as f:
         f.write(f"FDBA_FOUNDER_ADDRESS={fdba_address}\n")
 
