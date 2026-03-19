@@ -212,6 +212,10 @@ func (l *Ledger) Slash(nodeID string, amount int, txHash string) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
+	if amount <= 0 {
+		return fmt.Errorf("invalid slash amount")
+	}
+
 	bond, ok := l.Bonds[nodeID]
 	if !ok || bond.Status != "active" {
 		return fmt.Errorf("bond not active or does not exist")
