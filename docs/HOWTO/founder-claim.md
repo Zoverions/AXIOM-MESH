@@ -4,7 +4,7 @@
 This document outlines the procedure to view or use the Founder Decaying Bootstrap Allocation (FDBA).
 
 ## Description
-The AXIOM-MESH starts with exactly 5.00% initial control allocation for the founder address (`0x8943c7bac1914c9a7aba750bf2b6b09fd21037e0`). This linearly decays to 0% at 10,000 active nodes.
+The AXIOM-MESH starts with exactly 5.00% initial control allocation for the founder address (`0x1c2cbabf75e1938ed2f2c59e734e83aa5fbe1b73`). This linearly decays to 0% at 10,000 active nodes.
 
 ## Architecture
 ```mermaid
