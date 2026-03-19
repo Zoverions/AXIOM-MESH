@@ -24,4 +24,5 @@ sequenceDiagram
 4. If a recovery is needed, execute the CLI using `python3 cli/axiom_cli.py recover` and provide the Node ID and TOTP code.
 
 ## Version History
+- **v16.0.0-Lockdown**: Validated bundle integration with IPFS pinning natively in `lifespan`.
 - **v15.5.1-Lockdown**: Standardized procedure.

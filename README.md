@@ -130,7 +130,10 @@ The standard request path is:
 - **Unified API-key auth model** for REST routes, static dashboard routes, and WebSocket handshake validation.
 - **Intent ingress** through:
   - `POST /api/v1/intent/process`
-  - `POST /api/v1/intent/process/public` (unauthenticated; low-trust ingress by design)
+  - `POST /api/v1/intent/process/public` (unauthenticated; low-trust ingress by design, governed by local rate limit)
+- **NFT & Query integrations**:
+  - `POST /api/v1/nft/mint` with mock MemoClaw routing and ZKML integration.
+  - `GET /api/v1/data/query` interacting with MeshStore schemas.
 - **WebSocket intent pipeline**:
   - Zod parsing/sanitization of incoming payload.
   - Normalization into canonical intent object (`conversation_id`, `actor_id`, `trace_id` etc.).
@@ -147,41 +150,45 @@ The standard request path is:
 
 ### Important caveats
 - Gateway sanitization is still hygiene-oriented input cleanup and should not be treated as a full application firewall.
-- `/api/v1/intent/process/public` is intentionally unauthenticated now, so it should be treated as a low-trust ingress path and fronted by rate limits/WAF in production.
+- `/api/v1/intent/process/public` is intentionally unauthenticated now, governed by a basic rate limiter middleware, so it should be fronted by a mature WAF in production.
 
 ---
 
 ## Hypervisor (Pillar 2)
 
 ### What it does today
-- **Authenticated `/process` execution path** (Bearer API key required).
+- **Authenticated `/process` execution path** (Bearer API key required via signature verification).
+- **Universal Consent Protocol (UCP)**: Strict enforcement within the policy gate requiring explicit `consent_scope` to execute.
 - **Context assembly pipeline** that combines:
   - system axioms and temporal state,
   - local/deep archive retrieval,
   - optional external NCP context,
   - optional external MCP context,
   - optional Chainlink-oracle endpoint context.
+- **Multi-Tier Inference Orchestrator**: routes AI intents across local (zkML), personal swarm (CRDT), decentralized zkML (Grid), and external providers.
+- **MCP Integration**: Fully mounted FastMCP server serving `sandbox_execute` and `register_grid_skill` natively through the FastAPI ASGI server over `/mcp`.
 - **Adaptive response style controls** (`concise`, `analytical`, `socratic`, `executive`) from metadata and user preference persistence.
 - **Intent output metadata**:
   - `confidence` heuristic,
   - `provenance` labels,
   - `trace_id` propagation,
-  - `audit_trail` payload.
+  - `audit_trail` payload (logged via a WORM Event Sink).
 - **Memory management APIs**:
   - `GET /memory`
   - `PUT /memory/{node_id}`
   - `DELETE /memory/{node_id}`
 - **Agent loops started at app lifespan**:
-  - AutoResearch daemon,
+  - AutoResearch daemon (powered by LangGraph via `/graph/autoresearch`),
   - AutoTraining loop.
 - **Additional service endpoints**:
-  - `/agents`, `/metrics`, `/health`, `/zkml/infer`.
+  - `/agents`, `/metrics`, `/health`, `/zkml/infer`, `/priority-tag`.
 
 ### Chain-of-thought auditor status (requested topic)
-A dedicated “raw chain-of-thought exposure” feature is **not** implemented (and should generally not be exposed). What currently exists is an **audit-trail style explainability scaffold** attached to intent responses:
+A dedicated “raw chain-of-thought exposure” feature is **not** fully operator-grade. What currently exists is an **audit-trail style explainability scaffold** attached to intent responses:
 - `audit_trail.intent_replay`
 - `audit_trail.safety_decisions`
 - `audit_trail.why_this_answer`
+- A WORM Event Sink (Append-only `audit.log`)
 
 So the current state is: **structured decision/audit metadata exists**, but it is not a full formal reasoning-auditor subsystem with policy engine, immutable log sinks, and operator tooling.
 
@@ -194,7 +201,7 @@ So the current state is: **structured decision/audit metadata exists**, but it i
 ## Sandbox (Pillar 3)
 
 ### What it does today
-- **Code execution API**: `POST /execute` for Python and Node snippets using Docker child containers.
+- **Code execution API**: `POST /execute` for Python and Node snippets using Docker child containers. Now strictly enforces authentication via `SANDBOX_API_KEY`.
 - **Health API**: `GET /health`.
 - **Hardened container execution defaults** include:
   - `--network=none`
@@ -210,7 +217,7 @@ So the current state is: **structured decision/audit metadata exists**, but it i
 ### Egress air-gapping status (requested topic)
 AxiomMesh currently has **two relevant layers**:
 1. **Active runtime egress restriction in the Node sandbox runner** via `docker run --network=none` (implemented and used).
-2. **Additional Rust `airgap.rs` utility** that can apply per-PID netns iptables lockdown/restore through a UDS control socket. This exists in-repo but is **not currently wired into the default Node sandbox runtime path**.
+2. **Additional Rust `airgap.rs` utility** that can apply per-PID netns iptables lockdown/restore through a UDS control socket. Sandbox execution now integrates `spawn` logic pointing to the airgap IPC socket.
 
 So: baseline egress isolation is active in execution containers, and a deeper namespace-level helper exists but is not fully integrated into service orchestration.
 
@@ -228,14 +235,15 @@ So: baseline egress isolation is active in execution containers, and a deeper na
   - graph websocket endpoint
   - CCIP sync endpoints
   - zkML verification endpoint path used by Hypervisor.
-- **In-memory ledger** for skills, bonds, web cache, graph/index, swarms, CCIP messages, and governance proposals.
+  - DEM (Dynamic Equilibrium Monitor) / MSC calculus endpoints
+- **Ledger Persistence** `PersistentLedger.go` provides embedded BadgerDB KV store with Write-Ahead Log (WAL) mapping data to durable memory, though some queries still rely on hot memory maps.
 - **PoER gate** on skill submissions tied to active compute bond + PoER score threshold.
 - **P2P/transport loops** for discovery, peer score/failure tracking, sync/broadcast with retry/backoff.
 - **Graph query proof checks** using discrete-log-style NIZK verification helper.
 - **Deterministic-ish zkML verification workers** and artifact lifecycle caching for vk/settings/proof jobs.
 
 ### Important caveats
-- Current ledger is in-memory (not persistent durable chain state).
+- While the ledger now implements BadgerDB for `PersistentLedger` capabilities, fully distributed, Byzantine-fault-tolerant, persistent chain state synchronization across many adversarial nodes remains an evolving target.
 - Graph retrieval is token/index based and lightweight; not a full distributed ranked retrieval engine.
 - Smart contracts are present in `grid/contracts`, and Grid can now optionally mirror stake/slash operations on-chain via ComputeBond (`GRID_ETH_*` + `GRID_COMPUTE_BOND_ADDRESS`), while full lifecycle reconciliation remains an active hardening track.
 
@@ -379,6 +387,6 @@ The repository now contains **partial implementation + partial documentation** f
 |---|---|---|
 | Gateway sanitization is basic | Not a full application firewall | Centralized sanitization now strips script/html/control-token payloads and normalizes metadata, but this remains a lightweight hygiene layer and must be paired with perimeter controls in production. |
 | `/api/v1/intent/process/public` route naming and behavior | Could be misleading if authentication expectations are unclear | Route is now actually public (no API key middleware) to match its contract; keep it behind gateway-level rate limits and abuse detection. |
-| Ledger is in-memory | Not persistent blockchain state | Grid ledger is still process-memory state; durable storage is pending and required for production durability. |
+| Ledger is mostly in-memory | Partial persistence | Grid ledger is moving towards durable storage with the newly introduced `PersistentLedger` component via BadgerDB, but comprehensive synchronization and failure recoveries are still maturing. |
 | zkML verification is prototype-grade | Not yet production-trust operations | Verification pipeline is functional and deterministic in current code paths, but still considered pre-hardening for high-assurance trust operations. |
 | Safety/reasoning fields are scaffolds | Placeholders, not fully implemented policy logic | Audit trail fields exist for explainability and diagnostics; they should not be interpreted as formal policy-engine attestations yet. |

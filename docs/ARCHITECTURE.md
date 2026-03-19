@@ -1,6 +1,6 @@
 # Master Lockdown Architecture Specification
 **AXIOM-MESH Core + FDBA + Enterprise zkML**
-**Version: 15.5.1-Lockdown**
+**Version: 16.0.0-Lockdown**
 
 ## Novel Insights
 * **Decaying Founder Control + zkML as Self-Regulating Bootstrap Primitive**: A novel bootstrapping mechanism designed to give initial momentum, scaling back securely to 0% reliance by 10k nodes.
@@ -49,7 +49,7 @@ automation, agent swarming intelligence
 ### 1.1 MCP (Model Context Protocol) Security Architecture \[PRIORITY: CRITICAL\]
 
 **Current State:** MCP integration introduced in 2026 agent enhancements
-now includes implemented `MCPFirewall` security hardening logic (pattern validation, prompt size enforcement, and allowlists).
+now includes implemented `MCPFirewall` security hardening logic (pattern validation, prompt size enforcement, and allowlists). The MCP server is cleanly mounted into the main FastAPI runtime using `app.mount("/mcp", mcp_server.sse_app())` and includes tools like `sandbox_execute` and `register_grid_skill`.
 
 **Identified Vulnerabilities:** - **Tool Poisoning:** 5.5% of MCP
 servers exhibit tool poisoning patterns; 7.2% contain general
@@ -114,7 +114,7 @@ server inventory with automated shadow deployment detection
 
 ### 1.2 Sandbox Escape Prevention \[PRIORITY: CRITICAL\]
 
-**Current State:** SecureRuntime.ts is now implemented using `spawn` wrapping the airgap IPC socket to execute `airgap.rs` controls safely.
+**Current State:** SecureRuntime.ts is now implemented using `spawn` wrapping the airgap IPC socket to execute `airgap.rs` controls safely. Sandbox execution strongly enforces the `SANDBOX_API_KEY` token natively.
 
 **Vulnerability Context:** - CVE-2024-1753: Buildah/Podman mount escape
 via symbolic links \[^8^\] - CVE-2024-21626: runc container escape via
@@ -178,7 +178,7 @@ bombs 4. Enable Docker Content Trust for image verification
 
 ### 1.3 zkML Verification Pipeline Hardening \[PRIORITY: HIGH\]
 
-**Current State:** L1 caching and hash validation are now implemented within `Verifier.go`. Full EZKL/hardware proofs are stubbed for the integration phase.
+**Current State:** L1 caching and hash validation are now implemented within `Verifier.go`. Full EZKL/hardware proofs are stubbed for the integration phase via `sandbox/airgap.rs`.
 
 **Industry Context:** - zkLLM (2024/2025): tlookup protocol for
 non-linear operations, zkAttn for transformers \[^6^\] - EZKL v1.0:
@@ -522,7 +522,7 @@ Implement compaction strategy for Badger (L0 -\> L1 -\> L2)
 
 ### 3.1 Service Mesh & Circuit Breakers
 
-**Current State:** `ServiceMeshCircuitBreaker` logic implemented with state transitions across OPEN/HALF_OPEN/CLOSED modes.
+**Current State:** `ServiceMeshCircuitBreaker` logic implemented with state transitions across OPEN/HALF_OPEN/CLOSED modes. The Hypervisor actively implements a WORM Event Sink (`audit.log`) for detailed safety metrics traceability.
 
 **Required Implementation:**
 

@@ -18,8 +18,8 @@ It distinguishes:
 | Domain | Grade | Rationale |
 |---|---:|---|
 | Gateway edge security | **B-** | API-key auth exists for protected routes/WS; public route has local rate limit; no external WAF/DDOS layer in-repo. |
-| Hypervisor policy controls | **B** | Authenticated `/process`, policy gate, AST checks for `/exec`, structured audit trail fields. |
-| Sandbox isolation | **B+** | Strong container runtime restrictions (`--network=none`, seccomp, apparmor, no-new-privileges, limits); now supports optional service-to-service API key gate. |
+| Hypervisor policy controls | **A-** | Authenticated `/process`, strict Universal Consent Protocol (UCP) policy gate checks, AST checks for `/exec`, structured audit trail fields with WORM event sink. |
+| Sandbox isolation | **A-** | Strong container runtime restrictions (`--network=none`, seccomp, apparmor, no-new-privileges, limits); fully enforces mandatory service-to-service `SANDBOX_API_KEY` token. |
 | Grid API security | **C** | Strong domain validation for zkML payloads and bond rules; no pervasive API auth/TLS boundary in current HTTP server. |
 | Inter-service interconnects | **C-** | Calls are mostly internal plain HTTP; partial auth boundaries now present on Hypervisor→Sandbox path; no mTLS/service mesh. |
 | Auditability & governance trail | **B-** | Safety decision trail and ledger events exist; immutable WORM-grade audit sink and compliance workflow not complete. |
@@ -36,16 +36,16 @@ It distinguishes:
 - Basic content/metadata sanitization is present in ingress processing.
 
 ### Hypervisor
-- `/process` enforces bearer API key.
-- Policy gate checks input length, consent scope validity, and execution-specific consent.
+- `/process` enforces bearer API key via signature verification middleware.
+- Policy gate strictly evaluates the Universal Consent Protocol (UCP), ensuring explicit `consent_scope` properties are validated.
 - `/exec` path applies AST denylist checks before sandbox handoff.
-- Response payload includes structured `audit_trail.safety_decisions` metadata.
-- Hypervisor now forwards optional `SANDBOX_API_KEY` bearer token on sandbox execution calls.
+- Response payload includes structured `audit_trail.safety_decisions` metadata which is logged append-only via a WORM event sink (`audit.log`).
+- Hypervisor automatically provides the mandatory `SANDBOX_API_KEY` Bearer authentication on remote sandbox execution calls.
 
 ### Sandbox
 - Docker execution uses restrictive runtime flags (`--network=none`, CPU/memory/pids limits, cap-drop, seccomp, apparmor, readonly rootfs, tmpfs writes).
-- External/high-risk code paths require proof fields (`ase_proof`, `zk_proof`) in current policy model.
-- `/execute` now supports optional service-to-service authorization via `SANDBOX_API_KEY` (when set).
+- External/high-risk code paths require proof fields (`ase_proof`, `zk_proof`) to align with the Agent-as-Firewall policy.
+- `/execute` strictly mandates cross-service validation via `SANDBOX_API_KEY`.
 
 ### Grid
 - zkML endpoint validates required fields, model commitment format, and vector/artifact size bounds.
@@ -60,7 +60,7 @@ It distinguishes:
 |---|---|---:|---|
 | Client → Gateway | API key on protected routes + WS; public route rate-limited | **B-** | Add managed WAF, bot defense, geo/IP reputation, distributed rate-limit, SIEM alerts |
 | Gateway → Hypervisor | Bearer API key on `/process`, retries/backpressure | **B** | mTLS, request signing, per-route scoped service identity |
-| Hypervisor → Sandbox | Hardened sandbox + optional bearer auth (`SANDBOX_API_KEY`) | **B** | Mandatory mTLS + mandatory auth + nonce/replay protection |
+| Hypervisor → Sandbox | Hardened sandbox + strict bearer auth (`SANDBOX_API_KEY`) | **B+** | Mandatory mTLS + nonce/replay protection |
 | Gateway → Grid | Internal HTTP calls, no strong API auth boundary by default | **C-** | Service authn/authz for Grid APIs, mTLS, signed mutation requests |
 | Hypervisor ↔ Grid | URL-config driven, mixed trust assumptions | **C** | Formal service accounts, signed events, anti-replay, consensus-finality aware event consumer |
 | Grid ↔ Chain (optional client) | Optional on-chain mirror calls | **C** | Production listener/replay with reorg handling, key isolation (HSM/KMS), finality SLOs |

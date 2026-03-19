@@ -24,4 +24,5 @@ sequenceDiagram
 4. If swarm size < 10k, the share will reflect a value proportional to `500 - (s * 500 / 10000)`. When it hits 10k, the share hits 0.
 
 ## Version History
+- **v16.0.0-Lockdown**: Validated FDBA behavior alongside robust execution closures.
 - **v15.5.1-Lockdown**: Fully Integrated FDBA.
