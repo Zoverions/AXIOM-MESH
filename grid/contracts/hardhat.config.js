@@ -3,10 +3,6 @@ import * as dotenv from "dotenv";
 
 dotenv.config();
 
-// Workaround for restricted environments (e.g., proxy 403 blocks during compiler download)
-// Hardhat uses HTTP proxies automatically if HTTP_PROXY or HTTPS_PROXY are set in the env.
-// For offline capabilities or air-gapped systems, the solc binary path can be forced.
-
 /** @type import('hardhat/config').HardhatUserConfig */
 export default {
   solidity: {
@@ -15,6 +11,7 @@ export default {
         version: "0.8.24",
         settings: {
           evmVersion: "cancun",
+          viaIR: true,
           optimizer: {
             enabled: true,
             runs: 200

@@ -50,6 +50,7 @@ from src.graph.autoresearch_graph import autoresearch_app
 from src.recovery.bundle_manager import RecoveryBundleManager
 from src.api.mcp_server import mcp_server
 from src.engine.inference_orchestrator import InferenceOrchestrator
+from src.api.routers.capsules import router as capsules_router
 
 context_engine = ContextEngine()
 pulse = EntropyMonitor()
@@ -112,6 +113,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(audio_router)
+app.include_router(capsules_router)
 
 # Mount MCP Server SSE and Messages endpoints
 app.mount("/mcp", mcp_server.sse_app())
