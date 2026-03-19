@@ -24,7 +24,8 @@ describe("DialecticArbitration", function () {
     const DialecticArbitration = await ethers.getContractFactory("DialecticArbitration");
     dialecticArbitration = await DialecticArbitration.deploy(
       dualLedgerIdentity.target,
-      weightOracle.target
+      weightOracle.target,
+      ethers.ZeroAddress
     );
   });
 
@@ -37,9 +38,9 @@ describe("DialecticArbitration", function () {
     const duration = 3600;
     const blockTime = await time.latest();
 
-    await expect(dialecticArbitration.createProposal("CID123", 0, duration))
+    await expect(dialecticArbitration.createProposal("CID123", 0, 0, ethers.ZeroHash, duration))
       .to.emit(dialecticArbitration, "ProposalCreated")
-      .withArgs(0, "CID123", 0, blockTime + duration + 1);
+      .withArgs(0, "CID123", 0, 0, ethers.ZeroHash, blockTime + duration + 1);
 
     const proposal = await dialecticArbitration.proposals(0);
     expect(proposal.id).to.equal(0);
@@ -48,7 +49,7 @@ describe("DialecticArbitration", function () {
   });
 
   it("should allow an agent and a human to vote, applying veto multipliers correctly", async function () {
-    await dialecticArbitration.createProposal("CID_Anthropic", 0, 3600); // Anthropic vector (enum index 0)
+    await dialecticArbitration.createProposal("CID_Anthropic", 0, 0, ethers.ZeroHash, 3600); // Anthropic vector (enum index 0)
 
     // Human votes FOR. Since it's Anthropic vector, human gets 2.5x multiplier.
     await expect(dialecticArbitration.connect(humanNode).vote(0, true))
@@ -66,7 +67,7 @@ describe("DialecticArbitration", function () {
   });
 
   it("should detect a deadlock and set state to AwaitingSynthesis", async function () {
-    await dialecticArbitration.createProposal("CID123", 2, 3600); // Neutral vector
+    await dialecticArbitration.createProposal("CID123", 2, 0, ethers.ZeroHash, 3600); // Neutral vector
 
     // Human passes, Agent rejects -> deadlock
     await dialecticArbitration.connect(humanNode).vote(0, true);
@@ -83,7 +84,7 @@ describe("DialecticArbitration", function () {
   });
 
   it("should resolve the proposal if both chambers agree", async function () {
-    await dialecticArbitration.createProposal("CID123", 2, 3600); // Neutral vector
+    await dialecticArbitration.createProposal("CID123", 2, 0, ethers.ZeroHash, 3600); // Neutral vector
 
     // Both pass
     await dialecticArbitration.connect(humanNode).vote(0, true);
@@ -100,7 +101,7 @@ describe("DialecticArbitration", function () {
   });
 
   it("should allow the Hypervisor (owner) to submit a synthesis and reset the proposal", async function () {
-    await dialecticArbitration.createProposal("CID123", 2, 3600);
+    await dialecticArbitration.createProposal("CID123", 2, 0, ethers.ZeroHash, 3600);
 
     await dialecticArbitration.connect(humanNode).vote(0, true);
     await dialecticArbitration.connect(agentNode).vote(0, false);
@@ -145,28 +146,124 @@ describe("DialecticArbitration", function () {
   });
 
   it("should revert if an unregistered node tries to vote", async function () {
-    await dialecticArbitration.createProposal("CID123", 2, 3600);
+    await dialecticArbitration.createProposal("CID123", 2, 0, ethers.ZeroHash, 3600);
     await expect(dialecticArbitration.connect(unregisteredNode).vote(0, true))
       .to.be.revertedWithCustomError(dialecticArbitration, "NodeNotRegistered");
   });
 
   it("should revert if voting twice", async function () {
-    await dialecticArbitration.createProposal("CID123", 2, 3600);
+    await dialecticArbitration.createProposal("CID123", 2, 0, ethers.ZeroHash, 3600);
     await dialecticArbitration.connect(humanNode).vote(0, true);
     await expect(dialecticArbitration.connect(humanNode).vote(0, false))
       .to.be.revertedWithCustomError(dialecticArbitration, "AlreadyVoted");
   });
 
   it("should revert if voting after the period ends", async function () {
-    await dialecticArbitration.createProposal("CID123", 2, 3600);
+    await dialecticArbitration.createProposal("CID123", 2, 0, ethers.ZeroHash, 3600);
     await time.increase(3601);
     await expect(dialecticArbitration.connect(humanNode).vote(0, true))
       .to.be.revertedWithCustomError(dialecticArbitration, "VotingPeriodEnded");
   });
 
   it("should revert if resolving before the period ends", async function () {
-    await dialecticArbitration.createProposal("CID123", 2, 3600);
+    await dialecticArbitration.createProposal("CID123", 2, 0, ethers.ZeroHash, 3600);
     await expect(dialecticArbitration.resolveProposal(0))
       .to.be.revertedWithCustomError(dialecticArbitration, "VotingPeriodNotEnded");
+  });
+
+  describe("Targeted Groups and Credentials", function () {
+    it("should allow only Humans to vote on Human targeted proposals", async function () {
+      await dialecticArbitration.createProposal("TargetHuman", 2, 1, ethers.ZeroHash, 3600); // TargetGroup.Human = 1
+
+      await expect(dialecticArbitration.connect(agentNode).vote(0, true))
+        .to.be.revertedWithCustomError(dialecticArbitration, "UnauthorizedGroup");
+
+      await expect(dialecticArbitration.connect(humanNode).vote(0, true))
+        .to.emit(dialecticArbitration, "Voted");
+
+      await time.increase(3601);
+      await expect(dialecticArbitration.resolveProposal(0))
+        .to.emit(dialecticArbitration, "ProposalResolved")
+        .withArgs(0, true);
+
+      const proposal = await dialecticArbitration.proposals(0);
+      expect(proposal.state).to.equal(2); // Resolved
+    });
+
+    it("should allow only Agents to vote on Agent targeted proposals", async function () {
+      await dialecticArbitration.createProposal("TargetAgent", 2, 2, ethers.ZeroHash, 3600); // TargetGroup.Agent = 2
+
+      await expect(dialecticArbitration.connect(humanNode).vote(0, true))
+        .to.be.revertedWithCustomError(dialecticArbitration, "UnauthorizedGroup");
+
+      await expect(dialecticArbitration.connect(agentNode).vote(0, true))
+        .to.emit(dialecticArbitration, "Voted");
+
+      await time.increase(3601);
+      await expect(dialecticArbitration.resolveProposal(0))
+        .to.emit(dialecticArbitration, "ProposalResolved")
+        .withArgs(0, true);
+    });
+
+    it("should require a specific credential if requiredCurriculum is set", async function () {
+      const requiredCurriculumId = ethers.id("curr123");
+      const credentialId = ethers.id("cert123");
+      await dialecticArbitration.createProposal("CredentialReq", 2, 0, requiredCurriculumId, 3600);
+
+      // Should fail since it requires a credential and we use the normal vote
+      await expect(dialecticArbitration.connect(humanNode).vote(0, true))
+        .to.be.revertedWithCustomError(dialecticArbitration, "MissingRequiredCredential");
+
+      // Should fail since no credentialBond is set, even with voteWithCredential
+      await expect(dialecticArbitration.connect(humanNode).voteWithCredential(0, true, credentialId))
+        .to.be.revertedWithCustomError(dialecticArbitration, "MissingRequiredCredential");
+
+      // Mock ICredentialBond using a simple dummy contract logic in tests
+      const DummyCredentialBond = await ethers.getContractFactory("CredentialBond");
+      const dummyBond = await DummyCredentialBond.deploy();
+
+      await dummyBond.connect(owner).stake({ value: ethers.parseEther("1.0") });
+      await dummyBond.connect(owner).issueCredential(credentialId, humanNode.address, requiredCurriculumId);
+
+      await dialecticArbitration.setCredentialBond(dummyBond.target);
+
+      await expect(dialecticArbitration.connect(humanNode).voteWithCredential(0, true, credentialId))
+        .to.emit(dialecticArbitration, "Voted");
+
+      // Should fail if a user tries to use someone else's credential or a wrong credential
+      const wrongCredentialId = ethers.id("cert999");
+      await dummyBond.connect(owner).issueCredential(wrongCredentialId, agentNode.address, ethers.id("wrongCurr"));
+      await expect(dialecticArbitration.connect(agentNode).voteWithCredential(0, true, wrongCredentialId))
+        .to.be.revertedWithCustomError(dialecticArbitration, "MissingRequiredCredential");
+    });
+  });
+
+  describe("Financial Audits", function () {
+    it("should create a financial audit proposal and resolve it", async function () {
+      const blockTime = await time.latest();
+      await expect(dialecticArbitration.createFinancialAuditProposal(
+        "FinancialAudit2026",
+        0, // TargetGroup.All
+        ethers.ZeroHash,
+        3600,
+        1000, // Slashed
+        500   // Subsidized
+      )).to.emit(dialecticArbitration, "FinancialAuditSubmitted")
+        .withArgs(0, 1000, 500);
+
+      const audit = await dialecticArbitration.financialAudits(0);
+      expect(audit.totalSlashedFunds).to.equal(1000);
+      expect(audit.totalSubsidizedFunds).to.equal(500);
+      expect(audit.isFair).to.be.false;
+
+      await dialecticArbitration.connect(humanNode).vote(0, true);
+      await dialecticArbitration.connect(agentNode).vote(0, true);
+
+      await time.increase(3601);
+      await dialecticArbitration.resolveProposal(0);
+
+      const resolvedAudit = await dialecticArbitration.financialAudits(0);
+      expect(resolvedAudit.isFair).to.be.true;
+    });
   });
 });
