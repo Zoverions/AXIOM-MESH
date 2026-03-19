@@ -281,15 +281,17 @@ This document details the progress made towards implementing the enhancements sp
 
 ## Blockers & Next Steps
 
-**The primary blocker is integrating the `mcp_server` (FastMCP) into the existing FastAPI application (`hypervisor/src/api/server.py`).**
+**The primary blocker is integrating the `mcp_server` (FastMCP) into the existing FastAPI application (`hypervisor/src/api/server.py`).** (Resolved)
 
-### Issues Encountered:
+### Issues Encountered & Resolved:
 1.  **FastMCP Native APIs:** The `FastMCP` class does not reliably expose an `sse_app` property or a direct mounting method (like `to_fastapi_app()`) that works universally out-of-the-box across all `mcp` SDK versions without generating an `AttributeError`.
+    *   *Resolution:* Used the latest MCP SDK (`1.26.0+`) where `sse_app()` correctly returns a complete Starlette app which can be mounted natively.
 2.  **SseServerTransport Wrapping:** Attempting to manually create SSE endpoints (e.g., `/mcp/sse` and `/mcp/messages`) and wrapping the transport logic inside `sse_starlette.EventSourceResponse` caused hanging connections. The ASGI protocol logic inside `mcp_transport.connect_sse` requires raw ASGI streams (`scope`, `receive`, `send`), which clash with FastAPI's standard response handling.
+    *   *Resolution:* Avoided manual transport wrapping by directly calling `app.mount("/mcp", mcp_server.sse_app())`, allowing the underlying ASGI logic to handle SSE cleanly.
 3.  **FastAPI Routing Overwrites:** Attempting to mount the raw ASGI transport handlers directly to `app.routes.append(Route(...))` inexplicably caused existing FastAPI routes (like `/health`) to return 404s during test initialization (`test_server_startup.py`).
+    *   *Resolution:* FastAPI's `app.mount()` proved robust for appending Starlette sub-apps. It correctly segregated the MCP server transport routes under the `/mcp` prefix (`/mcp/sse`, `/mcp/messages`) without overwriting core endpoints.
 
-### Instructions for Next Agents:
-*   Review `hypervisor/src/api/mcp_server.py`. The tool logic and security requirements (identity chains, prompt injection defense, etc.) are implemented there but should be tested once mounted.
-*   Find the canonical, stable method to mount an `mcp` (or `FastMCP`) server inside an existing `FastAPI` application (running on uvicorn) using SSE transport.
-*   Modify `hypervisor/src/api/server.py` to import `mcp_server` and mount its endpoints without breaking the core application routes.
-*   Once mounted, verify the functionality using an external MCP client (like AgentZero or an MCP Inspector).
+### Integration Complete
+*   `mcp_server.sse_app()` is successfully mounted inside `hypervisor/src/api/server.py` using `app.mount("/mcp", ...)`.
+*   Tests in `test_server_startup.py` execute normally without 404 overwrites.
+*   The MCP API is available at `/mcp/sse` and `/mcp/messages` to external clients.
