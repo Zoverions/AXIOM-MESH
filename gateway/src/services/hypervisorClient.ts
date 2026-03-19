@@ -1,8 +1,9 @@
 import axios from 'axios';
-import * as crypto from 'crypto';
 import { IntentObject, IntentResponse } from '../types';
+import { asyncRandomBytes, CryptoWorkerPool } from '../performance/EventLoopOptimizer';
 
 const HYPERVISOR_URL = process.env.HYPERVISOR_URL || 'http://localhost:8000';
+const cryptoWorkerPool = new CryptoWorkerPool(2);
 function getMaxRetries(): number {
     return Number(process.env.HYPERVISOR_RETRIES || 3);
 }
@@ -36,10 +37,11 @@ export async function sendToHypervisor(intent: IntentObject): Promise<IntentResp
         for (let attempt = 0; attempt < maxRetries; attempt++) {
             try {
                 const timestamp = Date.now().toString();
-                const nonce = crypto.randomBytes(16).toString('hex');
+                const nonceBuf = await asyncRandomBytes(16);
+                const nonce = nonceBuf.toString('hex');
                 const payloadStr = JSON.stringify(intent);
                 const signaturePayload = `${timestamp}:${nonce}:${payloadStr}`;
-                const signature = crypto.createHmac('sha256', apiKey).update(signaturePayload).digest('hex');
+                const signature = await cryptoWorkerPool.hmacSignature(apiKey, signaturePayload);
 
                 const response = await axios.post(`${HYPERVISOR_URL}/process`, intent, {
                     headers: {
