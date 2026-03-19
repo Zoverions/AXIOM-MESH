@@ -177,6 +177,26 @@ from fastapi import Request
 import hmac
 import hashlib
 
+request_queue = None
+
+async def check_backpressure():
+    global request_queue
+    if request_queue is None:
+        request_queue = asyncio.Queue(maxsize=100)
+    try:
+        request_queue.put_nowait(1)
+    except asyncio.QueueFull:
+        raise HTTPException(status_code=429, detail="Too Many Requests")
+
+async def release_backpressure():
+    global request_queue
+    if request_queue is not None:
+        try:
+            request_queue.get_nowait()
+            request_queue.task_done()
+        except asyncio.QueueEmpty:
+            pass
+
 def verify_api_key(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)):
     expected_api_key = os.environ.get("HYPERVISOR_API_KEY")
     if not expected_api_key:
@@ -220,6 +240,13 @@ async def verify_signature(request: Request, api_key: str = Depends(verify_api_k
 
 @app.post("/process", response_model=IntentResponse)
 async def process_intent(intent: IntentObject, api_key: str = Depends(verify_signature)):
+    await check_backpressure()
+    try:
+        return await _process_intent_core(intent, api_key)
+    finally:
+        await release_backpressure()
+
+async def _process_intent_core(intent: IntentObject, api_key: str):
     trace_id = intent.trace_id or f"trace-{uuid.uuid4()}"
     intent.trace_id = trace_id
     hypervisor_metrics["requests"] += 1

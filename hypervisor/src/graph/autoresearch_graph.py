@@ -41,6 +41,78 @@ class GraphState(TypedDict):
 
 # Node Functions
 
+from crewai import Agent, Task, Crew, Process
+
+async def crewai_collaboration(state: GraphState):
+    """Executes a multi-agent collaborative intent using CrewAI."""
+    intent = state.get("intent", "")
+    context = state.get("context", "")
+
+    # We define three agents: Researcher, Coder, Verifier
+    researcher = Agent(
+        role='Senior Researcher',
+        goal='Analyze the intent and context to gather comprehensive insights.',
+        backstory='An expert analyst who uncovers deep, meaningful insights from complex inputs.',
+        verbose=False,
+        allow_delegation=False,
+        llm=os.environ.get("OPENAI_API_KEY", "dummy") # Note: crewai requires llm, we assume it's set or use a dummy for testing
+    )
+
+    coder = Agent(
+        role='Lead Developer',
+        goal='Draft technical execution steps or code based on research.',
+        backstory='A meticulous coder who turns concepts into structured logic.',
+        verbose=False,
+        allow_delegation=False,
+        llm=os.environ.get("OPENAI_API_KEY", "dummy")
+    )
+
+    verifier = Agent(
+        role='Security & Quality Verifier',
+        goal='Ensure the technical steps are secure and align with the original intent.',
+        backstory='A strict verifier who double-checks everything against compliance standards.',
+        verbose=False,
+        allow_delegation=False,
+        llm=os.environ.get("OPENAI_API_KEY", "dummy")
+    )
+
+    task1 = Task(
+        description=f'Analyze intent: {intent}\nContext: {context}',
+        expected_output='A detailed research summary.',
+        agent=researcher
+    )
+
+    task2 = Task(
+        description='Based on the research, formulate a technical action plan.',
+        expected_output='A step-by-step technical plan or code outline.',
+        agent=coder
+    )
+
+    task3 = Task(
+        description='Review the action plan for security risks and finalize the context output.',
+        expected_output='Final verified execution summary.',
+        agent=verifier
+    )
+
+    crew = Crew(
+        agents=[researcher, coder, verifier],
+        tasks=[task1, task2, task3],
+        process=Process.sequential,
+        verbose=False
+    )
+
+    # Run the crew (synchronously in our async node for now, or wrap in thread)
+    # Since crewai's kickoff is synchronous, we use asyncio.to_thread
+    import asyncio
+    try:
+        result = await asyncio.to_thread(crew.kickoff)
+        crew_result = str(result)
+    except Exception as e:
+        crew_result = f"CrewAI Error: {e}"
+
+    new_context = context + f"\n\n[CrewAI Multi-Agent Synthesis]\n{crew_result}"
+    return {"context": new_context}
+
 async def intent_node(state: GraphState):
     """Initializes the intent state."""
     intent = state.get("intent", "Research general consensus mechanisms")
@@ -201,6 +273,7 @@ workflow = StateGraph(GraphState)
 
 workflow.add_node("intent", intent_node)
 workflow.add_node("context_assembly", context_assembly)
+workflow.add_node("crewai_collaboration", crewai_collaboration)
 workflow.add_node("resource_balancer", resource_balancer)
 workflow.add_node("sandbox_exec", sandbox_exec)
 workflow.add_node("zkml_verify", zkml_verify)
@@ -208,7 +281,8 @@ workflow.add_node("grid_stake", grid_stake)
 
 workflow.add_edge(START, "intent")
 workflow.add_edge("intent", "context_assembly")
-workflow.add_edge("context_assembly", "resource_balancer")
+workflow.add_edge("context_assembly", "crewai_collaboration")
+workflow.add_edge("crewai_collaboration", "resource_balancer")
 workflow.add_edge("resource_balancer", "sandbox_exec")
 workflow.add_edge("sandbox_exec", "zkml_verify")
 workflow.add_edge("zkml_verify", "grid_stake")
