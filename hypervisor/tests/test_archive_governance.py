@@ -106,11 +106,16 @@ async def test_bilateral_severance_zeroization(tmp_path):
     with pytest.raises(ValueError):
         await archive.sever_bond("peer123", "short_invalid_proof")
 
+    import json
+    from unittest.mock import patch
+
     # Build a valid mock proof string (just needs to be >= 64 chars)
-    valid_mock_proof = "a" * 65
+    valid_mock_proof = json.dumps({"proof": "valid_mock_proof_string_a_a_a_a_a_a_a_a_a_a_a_a_a_a_a_a_a_a_a_a_a_a_a_a_a"})
 
     # Ensure memory is zeroized on severance
-    assert await archive.sever_bond("peer123", valid_mock_proof) is True
+    with patch('httpx.AsyncClient.post') as mock_post:
+        mock_post.return_value.status_code = 200
+        assert await archive.sever_bond("peer123", valid_mock_proof) is True
 
     assert len(archive.search("Shared")) == 0
     assert os.path.exists(str(storage_path))

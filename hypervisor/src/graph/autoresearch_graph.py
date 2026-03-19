@@ -41,6 +41,11 @@ class GraphState(TypedDict):
 
 # Node Functions
 
+async def intent_node(state: GraphState):
+    """Initializes the intent state."""
+    intent = state.get("intent", "Research general consensus mechanisms")
+    return {"intent": intent}
+
 async def context_assembly(state: GraphState):
     """Gathers context for the current intent."""
     intent = state.get("intent", "")
@@ -194,13 +199,15 @@ async def grid_stake(state: GraphState):
 
 workflow = StateGraph(GraphState)
 
+workflow.add_node("intent", intent_node)
 workflow.add_node("context_assembly", context_assembly)
 workflow.add_node("resource_balancer", resource_balancer)
 workflow.add_node("sandbox_exec", sandbox_exec)
 workflow.add_node("zkml_verify", zkml_verify)
 workflow.add_node("grid_stake", grid_stake)
 
-workflow.add_edge(START, "context_assembly")
+workflow.add_edge(START, "intent")
+workflow.add_edge("intent", "context_assembly")
 workflow.add_edge("context_assembly", "resource_balancer")
 workflow.add_edge("resource_balancer", "sandbox_exec")
 workflow.add_edge("sandbox_exec", "zkml_verify")

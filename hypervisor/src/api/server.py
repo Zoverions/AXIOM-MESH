@@ -40,7 +40,6 @@ from src.cortex.dialectic import DialecticOrchestrator
 from src.evolution.skill_rl import EvolutionEngine, ActionEngine
 from src.evolution.openclaw import SignalExtractor, OnPolicyDistillation
 from src.evolution.network_sync import NetworkSync
-from src.cortex.autoresearch import AutoResearchDaemon
 from src.evolution.auto_training import AutoTrainingLoop
 from src.agents.meshstore_agent import MeshStoreAgent
 from src.api.audio import router as audio_router
@@ -63,20 +62,33 @@ action_engine = ActionEngine(network_sync=network_sync)
 signal_extractor = SignalExtractor()
 opd = OnPolicyDistillation()
 
-autoresearch_daemon = AutoResearchDaemon(
-    archive=context_engine.deep_archive,
-    llm=llm,
-    action_engine=action_engine,
-    ncp_client=context_engine.ncp_client
-)
 auto_training_loop = AutoTrainingLoop()
 meshstore_agent = MeshStoreAgent()
+
+async def autoresearch_task_loop():
+    while True:
+        try:
+            initial_state = {
+                "intent": "Research general consensus mechanisms",
+                "context": "",
+                "routing_decision": "",
+                "priority_tag": "",
+                "treasury_split": {},
+                "sandbox_output": "",
+                "zkml_verified": False,
+                "stake_status": ""
+            }
+            await autoresearch_app.ainvoke(initial_state)
+        except Exception as e:
+            print(f"[AutoResearch Graph] Task failed: {e}")
+        await asyncio.sleep(60)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Phase 1 Initialization Acknowledged
     print("AxiomMesh Phase 1 Cognitive Hypervisor Started")
-    autoresearch_daemon.start()
+
+    autoresearch_task = asyncio.create_task(autoresearch_task_loop())
     auto_training_loop.start()
 
     # Priority 1: Fire and forget initial MeshStore agent run or start loop
@@ -95,7 +107,7 @@ async def lifespan(app: FastAPI):
             print(f"Failed to create recovery bundle: {e}")
 
     yield
-    autoresearch_daemon.stop()
+    autoresearch_task.cancel()
     auto_training_loop.stop()
 
 app = FastAPI(lifespan=lifespan)

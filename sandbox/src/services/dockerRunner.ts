@@ -1,5 +1,6 @@
 import { spawn } from 'child_process';
 import * as net from 'net';
+import { NetworkNamespaceController } from '../execution/SecureRuntime';
 
 async function invokeAirgap(command: string, pid: number): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -69,6 +70,24 @@ export async function runCode(language: string, code: string): Promise<{ stdout:
             // container's internal PID or wait for it to be created, but for
             // demonstration we pass the docker run process PID.
             invokeAirgap('lockdown', proc.pid).catch(err => console.error(err));
+
+            const nnc = new NetworkNamespaceController();
+
+            // Implement cgroup v2 limits via UDS
+            nnc.applyCgroupLimits(proc.pid, {
+                cpuQuota: "100000/1000000",
+                memoryMax: "512M",
+                pidsMax: 64,
+                ioWeight: 100
+            }).catch(err => console.error(err));
+
+            // Implement custom seccomp-bpf profile to drop execve, ptrace, and mount via UDS
+            nnc.applySeccompProfile(proc.pid, {
+                defaultAction: "SCMP_ACT_ALLOW",
+                syscalls: [
+                    { names: ["execve", "ptrace", "mount"], action: "SCMP_ACT_ERRNO" }
+                ]
+            }).catch(err => console.error(err));
         }
 
         let stdout = '';

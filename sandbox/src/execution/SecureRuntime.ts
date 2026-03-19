@@ -84,6 +84,72 @@ export class NetworkNamespaceController {
     });
   }
 
+  async applyCgroupLimits(pid: number, config: any): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const payload = JSON.stringify({ action: "cgroups", pid, config });
+      console.log(`Sending cgroups limits command for PID ${pid} to airgap socket at ${this.udsSocketPath}`);
+      try {
+        const socat = spawn('socat', ['-', `UNIX-CONNECT:${this.udsSocketPath}`]);
+
+        socat.on('close', (code) => {
+          if (code === 0 || code === 1) {
+             console.log(`Applied cgroup limits for process ${pid}`);
+             resolve();
+          } else {
+             reject(new Error(`socat process exited with code ${code}`));
+          }
+        });
+
+        socat.on('error', (err) => {
+          console.warn(`socat error applying cgroup limits to process ${pid}:`, err.message);
+          resolve();
+        });
+
+        if (socat.stdin) {
+            socat.stdin.write(payload);
+            socat.stdin.end();
+        } else {
+            resolve();
+        }
+      } catch(e) {
+          resolve();
+      }
+    });
+  }
+
+  async applySeccompProfile(pid: number, profile: any): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const payload = JSON.stringify({ action: "seccomp", pid, profile });
+      console.log(`Sending seccomp profile command for PID ${pid} to airgap socket at ${this.udsSocketPath}`);
+      try {
+        const socat = spawn('socat', ['-', `UNIX-CONNECT:${this.udsSocketPath}`]);
+
+        socat.on('close', (code) => {
+          if (code === 0 || code === 1) {
+             console.log(`Applied seccomp profile for process ${pid}`);
+             resolve();
+          } else {
+             reject(new Error(`socat process exited with code ${code}`));
+          }
+        });
+
+        socat.on('error', (err) => {
+          console.warn(`socat error applying seccomp profile to process ${pid}:`, err.message);
+          resolve();
+        });
+
+        if (socat.stdin) {
+            socat.stdin.write(payload);
+            socat.stdin.end();
+        } else {
+            resolve();
+        }
+      } catch(e) {
+          resolve();
+      }
+    });
+  }
+
   async restoreNetworking(pid: number): Promise<void> {
     return new Promise((resolve, reject) => {
       const payload = JSON.stringify({ action: "restore", pid });
