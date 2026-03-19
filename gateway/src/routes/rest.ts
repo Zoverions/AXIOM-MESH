@@ -53,10 +53,33 @@ router.post('/api/v1/intent/process/public', publicIntentRateLimit, async (req: 
 router.post('/api/v1/nft/mint', authMiddleware, async (req: Request, res: Response) => {
     try {
         const { targetDataSet, clarityLevel, recipientAddress } = req.body;
+        const { spawn } = require('child_process');
 
         // 1. Generate zkML proof + apply obfuscation rules via NemoClaw (mocked for Gateway level as it delegates to Privacy Router / Grid usually)
-        // Here we simulate uploading the processed data to IPFS to get a CID
-        const dataCID = ethers.keccak256(ethers.toUtf8Bytes(targetDataSet || "default_data"));
+        // Actually pin the data to IPFS to get a CID
+        const dataToUpload = targetDataSet || "default_data";
+        let ipfsCidStr = "";
+
+        try {
+            ipfsCidStr = await new Promise((resolve, reject) => {
+                const child = spawn('ipfs', ['add', '-q']);
+                let out = '';
+                child.stdout.on('data', (data: Buffer) => { out += data.toString(); });
+                child.on('error', reject);
+                child.on('close', (code: number) => {
+                    if (code === 0) resolve(out.trim());
+                    else reject(new Error(`IPFS CLI exited with code ${code}`));
+                });
+                child.stdin.write(dataToUpload);
+                child.stdin.end();
+            });
+        } catch (err) {
+            console.error("IPFS upload failed, falling back to keccak256 hash:", err);
+            ipfsCidStr = dataToUpload; // fallback to hashing the data itself
+        }
+
+        // Ensure dataCID fits into bytes32 for the contract
+        const dataCID = ethers.keccak256(ethers.toUtf8Bytes(ipfsCidStr));
 
         // 2. Mint the NFT on-chain
         const provider = new ethers.JsonRpcProvider(process.env.LOCAL_RPC_URL || "http://127.0.0.1:8545");

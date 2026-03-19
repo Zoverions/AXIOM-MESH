@@ -44,22 +44,31 @@ class MCPClient:
             logger.warning(f"Could not load mcp_compatibility_matrix: {e}")
             return {}
 
-    def verify_peer_compatibility(self, server_url: str) -> bool:
-        # In a real environment, the server_url would provide its peer_class and security_profile via a handshake.
-        # Here we mock the behavior by checking if the server URL enforces a policy against our compatibility matrix.
+    async def verify_peer_compatibility(self, server_url: str) -> bool:
         if not self.compatibility_matrix:
             return True # Allow all if no matrix is found
 
         peer_classes = self.compatibility_matrix.get("peer_classes", [])
 
-        # Example validation: if a server is known as 'legacy', block it based on matrix
-        # For demonstration purposes, we assume 'legacy' in url implies S0_LEGACY_LOCKED which might be denied
-        if "legacy" in server_url.lower():
-            for pc in peer_classes:
-                if pc.get("min_security_profile") == "S0_LEGACY_LOCKED" and pc.get("policy") == "deny":
-                    return False
+        import httpx
+        # We try to fetch the server's manifest or profile via a GET request
+        try:
+            profile_url = server_url.replace("/mcp", "/manifest") if "/mcp" in server_url else server_url + "/manifest"
+            async with httpx.AsyncClient() as client:
+                res = await client.get(profile_url, timeout=2.0)
+                if res.status_code == 200:
+                    data = res.json()
+                    peer_profile = data.get("security_profile", "S0_LEGACY_LOCKED")
+                    if not self.check_compatibility(peer_profile):
+                        return False
+        except Exception as e:
+            # If server doesn't respond to manifest or request fails, default to a strict baseline
+            logger.warning(f"Could not fetch peer profile from {server_url}: {e}")
+            if "legacy" in server_url.lower():
+                for pc in peer_classes:
+                    if pc.get("min_security_profile") == "S0_LEGACY_LOCKED" and pc.get("policy") == "deny":
+                        return False
 
-        # We assume baseline allows connection
         return True
 
     def check_compatibility(self, peer_profile: str) -> bool:
@@ -88,6 +97,10 @@ class MCPClient:
                 server_url, profile_str = server.split("#profile=", 1)
                 peer_profile = profile_str
                 server = server_url
+
+            if not await self.verify_peer_compatibility(server):
+                aggregated_context.append(f"[MCP Server {server}]: Connection blocked by Security Compatibility Matrix via dynamic check.")
+                continue
 
             if not self.check_compatibility(peer_profile):
                 aggregated_context.append(f"[MCP Server {server}]: Connection blocked by Security Compatibility Matrix (Peer Profile: {peer_profile})")

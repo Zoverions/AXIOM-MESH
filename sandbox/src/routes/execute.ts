@@ -40,7 +40,6 @@ router.post('/execute', async (req: Request, res: Response) => {
 
         // Agent-as-Firewall Enforcement:
         // All external interactions MUST route through Sandbox + ASEOracle + zkML checks.
-        // We mock the ASEOracle / zkML check here by requiring the proofs for external flows.
         // In a fully integrated environment, this verifies against an on-chain or side-channel oracle.
         const isExternalOrHighRisk = code.includes('http') || code.includes('fetch') || code.includes('net') || code.includes('requests');
 
@@ -49,6 +48,28 @@ router.post('/execute', async (req: Request, res: Response) => {
                 res.status(403).json({
                     error: 'Firewall Blocked: External interactions require ASEOracle ethics and zkML verification proofs (Agent-as-Firewall policy)'
                 });
+                return;
+            }
+
+            // Verify zk_proof against Grid endpoint
+            try {
+                const fetchModule = await import('node-fetch');
+                const fetch = fetchModule.default;
+                const gridUrl = process.env.GRID_API_URL || 'http://grid:5000';
+                const verifyRes = await fetch(`${gridUrl}/zkml/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(zk_proof)
+                });
+
+                if (!verifyRes.ok) {
+                    res.status(403).json({
+                        error: `Firewall Blocked: Invalid zkML proof - ${verifyRes.statusText}`
+                    });
+                    return;
+                }
+            } catch (err: any) {
+                res.status(500).json({ error: 'Failed to reach Grid oracle for zkML verification' });
                 return;
             }
         }
