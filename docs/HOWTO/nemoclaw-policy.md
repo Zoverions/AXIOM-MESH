@@ -31,4 +31,5 @@ sequenceDiagram
 5. The PrivacyRouter in `hypervisor/src/engine/privacy_router.py` will pull this configuration to dynamically route sensitive data.
 
 ## Version History
+- **v16.0.0-Lockdown**: Updated with `airgap.rs` and execution network isolation standards.
 - **v15.5.1-Lockdown**: Introduced `zkml-local` and `zkml-external` routing constraints.

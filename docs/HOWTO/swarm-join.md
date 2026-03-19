@@ -31,4 +31,5 @@ sequenceDiagram
 4. The CLI will interact with the grid API (`http://localhost:8080/swarm/join`) and output a success response.
 
 ## Version History
+- **v16.0.0-Lockdown**: Corrected CRDT sync execution hook integration in Grid Server.
 - **v15.5.1-Lockdown**: Initial formalization.

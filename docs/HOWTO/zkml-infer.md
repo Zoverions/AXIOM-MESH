@@ -25,4 +25,5 @@ sequenceDiagram
 4. On-chain validation can be explicitly checked via `submitZKMLProof` in `ComputeBond.sol` to gain the +300% PoER boost.
 
 ## Version History
+- **v16.0.0-Lockdown**: Validated worker caching via `PersistentLedger` and BadgerDB integration.
 - **v15.5.1-Lockdown**: Fully realized enterprise zkML implementation.

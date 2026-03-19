@@ -26,4 +26,6 @@ sequenceDiagram
 3. During the Grid's background syncing loop or through the CLI directly, a call to `offerStorage` is made on `ComputeBond.sol` using the agent's pinned CID root.
 
 ## Version History
+- **v16.0.0-Lockdown**: Verified integration with `OnSwarmJoined` hook in Grid `chain.go`.
+- **v16.0.0-Lockdown**: Updated with `airgap.rs` and execution network isolation standards.
 - **v15.5.1-Lockdown**: Initial formalization.
