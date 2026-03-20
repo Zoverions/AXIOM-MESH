@@ -35,9 +35,11 @@ type Node struct {
 	Peers             map[string]*PeerInfo
 	PeerAddresses     map[string]string // Mapping of Peer ID to API endpoint
 	Transport         Transport
-	SyncCallback      func(msg types.CCIPMessage) bool // Used to inject messages into local ledger
-	SyncSwarmCallback func(msg types.Swarm) bool       // Used to inject swarms into local ledger
-	mu                sync.RWMutex
+	SyncCallback            func(msg types.CCIPMessage) bool // Used to inject messages into local ledger
+	SyncSwarmCallback       func(msg types.Swarm) bool       // Used to inject swarms into local ledger
+	SyncCRDTShardCallback   func(shard types.CRDTShard) bool
+	SyncDriftReportCallback func(report types.DriftReport) bool
+	mu                      sync.RWMutex
 }
 
 func NewNode(id string, priv *ecdsa.PrivateKey) *Node {
@@ -149,6 +151,77 @@ func (n *Node) Start() {
 	go n.heartbeatLoop()
 	go n.SyncCCIPState()
 	go n.SyncSwarmState()
+	go n.SyncCRDTState()
+	go n.SyncDriftState()
+}
+
+func (n *Node) SyncCRDTState() {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	var lastSync uint64 = 0
+
+	for range ticker.C {
+		if n.SyncCRDTShardCallback == nil {
+			continue
+		}
+
+		currentSyncTime := uint64(time.Now().Unix())
+		peers := n.snapshotPeers()
+		for _, peer := range peers {
+			syncCount := 0
+			shards, err := n.Transport.FetchCRDTShards(peer.Address, lastSync)
+			if err != nil {
+				log.Printf("P2P Node %s: Failed to fetch crdt shards from peer %s: %v", n.ID, peer.ID, err)
+				continue
+			}
+			for _, shard := range shards {
+				if n.SyncCRDTShardCallback(shard) {
+					syncCount++
+				}
+			}
+
+			if syncCount > 0 {
+				log.Printf("P2P Node %s: Synchronized %d crdt shards from peer %s", n.ID, syncCount, peer.ID)
+			}
+		}
+		lastSync = currentSyncTime
+	}
+}
+
+func (n *Node) SyncDriftState() {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	var lastSync uint64 = 0
+
+	for range ticker.C {
+		if n.SyncDriftReportCallback == nil {
+			continue
+		}
+
+		currentSyncTime := uint64(time.Now().Unix())
+		peers := n.snapshotPeers()
+		for _, peer := range peers {
+			syncCount := 0
+			reports, err := n.Transport.FetchDriftReports(peer.Address, lastSync)
+			if err != nil {
+				log.Printf("P2P Node %s: Failed to fetch drift reports from peer %s: %v", n.ID, peer.ID, err)
+				continue
+			}
+
+			for _, report := range reports {
+				if n.SyncDriftReportCallback(report) {
+					syncCount++
+				}
+			}
+
+			if syncCount > 0 {
+				log.Printf("P2P Node %s: Synchronized %d drift reports from peer %s", n.ID, syncCount, peer.ID)
+			}
+		}
+		lastSync = currentSyncTime
+	}
 }
 
 func sendWithBackoff(task func() error) error {
@@ -246,6 +319,44 @@ func (n *Node) BroadcastWebState(state types.WebState) {
 			})
 
 			if err != nil {
+				n.IncrementPeerFailure(pID)
+				n.UpdatePeerScore(pID, -1)
+			} else {
+				n.UpdatePeerScore(pID, 1)
+			}
+		}(peer.ID, peer.Address)
+	}
+}
+
+func (n *Node) BroadcastCRDTShard(shard types.CRDTShard) {
+	peers := n.snapshotPeers()
+	log.Printf("P2P Node %s: Broadcasting CRDT Shard %s to %d peers", n.ID, shard.ShardID, len(peers))
+	for _, peer := range peers {
+		go func(pID, addr string) {
+			err := sendWithBackoff(func() error {
+				return n.Transport.SendCRDTShard(addr, shard)
+			})
+			if err != nil {
+				log.Printf("P2P Node %s: Failed to sync CRDT Shard with %s: %v", n.ID, addr, err)
+				n.IncrementPeerFailure(pID)
+				n.UpdatePeerScore(pID, -1)
+			} else {
+				n.UpdatePeerScore(pID, 1)
+			}
+		}(peer.ID, peer.Address)
+	}
+}
+
+func (n *Node) BroadcastDriftReport(report types.DriftReport) {
+	peers := n.snapshotPeers()
+	log.Printf("P2P Node %s: Broadcasting Drift Report for node %s to %d peers", n.ID, report.NodeID, len(peers))
+	for _, peer := range peers {
+		go func(pID, addr string) {
+			err := sendWithBackoff(func() error {
+				return n.Transport.SendDriftReport(addr, report)
+			})
+			if err != nil {
+				log.Printf("P2P Node %s: Failed to sync Drift Report with %s: %v", n.ID, addr, err)
 				n.IncrementPeerFailure(pID)
 				n.UpdatePeerScore(pID, -1)
 			} else {

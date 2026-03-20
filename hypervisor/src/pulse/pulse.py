@@ -67,4 +67,55 @@ class BehavioralDriftDetector:
             self.history.pop(0)
 
         # If runaway score gets too high, we're stuck in a loop
-        return self.runaway_score > 2.0
+        is_drifting = self.runaway_score > 2.0
+
+        if is_drifting:
+            self._gossip_drift(similarity)
+
+        return is_drifting
+
+    def _gossip_drift(self, drift_score: float):
+        import time
+        import os
+        import json
+        import urllib.request
+        from urllib.error import URLError
+
+        # We need a stable node ID representing this instance
+        from hypervisor.src.engine.alignment import AlignmentProfile
+        profile = AlignmentProfile()
+        node_id = profile.crdt.node_id if hasattr(profile, 'crdt') else os.getenv("NODE_ID", f"local-{int(time.time())}")
+
+        report = {
+            "nodeId": node_id,
+            "skillDrift": float(drift_score),
+            "consensusLatency": float(self.runaway_score * 100), # Synthetic metric for demo
+            "repetitiveLoops": int(self.runaway_score),
+            "timestamp": int(time.time()),
+            "signature": "" # Mock signature
+        }
+
+        try:
+            import hmac
+            import uuid
+            import hashlib
+
+            api_key = os.getenv("HYPERVISOR_API_KEY", "dummy")
+            payload_str = json.dumps(report)
+            req_timestamp = str(int(time.time() * 1000))
+            nonce = str(uuid.uuid4())
+
+            mac = hmac.new(api_key.encode("utf-8"), f"{req_timestamp}:{nonce}:{payload_str}".encode("utf-8"), hashlib.sha256)
+            signature = mac.hexdigest()
+
+            req = urllib.request.Request("http://localhost:8080/drift/report", method="POST")
+            req.add_header("Content-Type", "application/json")
+            req.add_header("X-Axiom-Timestamp", req_timestamp)
+            req.add_header("X-Axiom-Nonce", nonce)
+            req.add_header("X-Axiom-Signature", signature)
+
+            urllib.request.urlopen(req, payload_str.encode("utf-8"), timeout=2.0)
+        except URLError:
+            pass # Grid offline or unreachable
+        except Exception as e:
+            print(f"Failed to gossip drift report: {e}")

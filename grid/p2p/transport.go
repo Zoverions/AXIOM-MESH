@@ -10,4 +10,8 @@ type Transport interface {
 	FetchCCIPMessages(addr string) ([]types.CCIPMessage, error)
 	SendSwarm(addr string, msg types.Swarm) error
 	FetchSwarms(addr string) ([]types.Swarm, error)
+	SendCRDTShard(addr string, shard types.CRDTShard) error
+	FetchCRDTShards(addr string, since uint64) ([]types.CRDTShard, error)
+	SendDriftReport(addr string, report types.DriftReport) error
+	FetchDriftReports(addr string, since uint64) ([]types.DriftReport, error)
 }

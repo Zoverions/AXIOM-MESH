@@ -44,12 +44,53 @@ class CRDTState:
 
         signature = self.private_key.sign_digest(state_hash)
 
-        return {
+        delta_payload = {
             "node_id": self.node_id,
             "public_key": self.public_key_hex,
             "state": self.state,
             "signature": signature.hex()
         }
+        self._gossip_shard(delta_payload, state_hash.hex())
+        return delta_payload
+
+    def _gossip_shard(self, payload: dict, root_hash: str):
+        import os
+        import urllib.request
+        from urllib.error import URLError
+
+        # Convert to CRDTShard struct matching Grid Go backend
+        shard = {
+            "shardId": f"shard-{self.node_id}-{int(time.time())}",
+            "rootHash": root_hash,
+            "nodeId": self.node_id,
+            "data": payload.get("state", {}),
+            "timestamp": int(time.time()),
+            "signature": payload.get("signature", "")
+        }
+
+        try:
+            import hmac
+            import uuid
+
+            api_key = os.getenv("HYPERVISOR_API_KEY", "dummy")
+            payload_str = json.dumps(shard)
+            timestamp = str(int(time.time() * 1000))
+            nonce = str(uuid.uuid4())
+
+            mac = hmac.new(api_key.encode("utf-8"), f"{timestamp}:{nonce}:{payload_str}".encode("utf-8"), hashlib.sha256)
+            signature = mac.hexdigest()
+
+            req = urllib.request.Request("http://localhost:8080/crdt/shard", method="POST")
+            req.add_header("Content-Type", "application/json")
+            req.add_header("X-Axiom-Timestamp", timestamp)
+            req.add_header("X-Axiom-Nonce", nonce)
+            req.add_header("X-Axiom-Signature", signature)
+
+            urllib.request.urlopen(req, payload_str.encode("utf-8"), timeout=2.0)
+        except URLError:
+            pass # Grid offline or unreachable, silently fail as CRDT is offline-first
+        except Exception as e:
+            print(f"Failed to gossip CRDT shard: {e}")
 
     def verify_and_merge(self, delta: dict) -> bool:
         """
