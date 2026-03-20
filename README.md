@@ -149,7 +149,7 @@ The standard request path is:
 - **Unified API-key auth model** for REST routes, static dashboard routes, and WebSocket handshake validation.
 - **Intent ingress** through:
   - `POST /api/v1/intent/process`
-  - `POST /api/v1/intent/process/public` (unauthenticated; low-trust ingress by design, governed by local rate limit)
+  - `POST /api/v1/intent/process/public` (authenticated in production, unauthenticated low-trust ingress in development; governed by local rate limit)
 - **NFT & Query integrations**:
   - `POST /api/v1/nft/mint` with mock MemoClaw routing and ZKML integration.
   - `GET /api/v1/data/query` interacting with MeshStore schemas.
@@ -169,7 +169,7 @@ The standard request path is:
 
 ### Important caveats
 - Gateway sanitization is still hygiene-oriented input cleanup and should not be treated as a full application firewall.
-- `/api/v1/intent/process/public` is intentionally unauthenticated now, governed by a basic rate limiter middleware, so it should be fronted by a mature WAF in production.
+- `/api/v1/intent/process/public` requires authentication in production, but is intentionally unauthenticated in development. It is governed by a basic rate limiter middleware and should be fronted by a mature WAF in production.
 
 ---
 
@@ -402,7 +402,7 @@ The repository now contains **partial implementation + partial documentation** f
 | Issue | Impact | Current status / resolution |
 |---|---|---|
 | Gateway sanitization is basic | Not a full application firewall | Centralized sanitization now strips script/html/control-token payloads and normalizes metadata, but this remains a lightweight hygiene layer and must be paired with perimeter controls in production. |
-| `/api/v1/intent/process/public` route naming and behavior | Could be misleading if authentication expectations are unclear | Route is now actually public (no API key middleware) to match its contract; keep it behind gateway-level rate limits and abuse detection. |
+| `/api/v1/intent/process/public` route naming and behavior | Could be misleading if authentication expectations are unclear | Route explicitly requires authentication (`authMiddleware`) in production, but is unauthenticated in development. Keep it behind gateway-level rate limits. |
 | Ledger is mostly in-memory | Partial persistence | Grid ledger is moving towards durable storage with the newly introduced `PersistentLedger` component via BadgerDB, but comprehensive synchronization and failure recoveries are still maturing. |
 | zkML verification is prototype-grade | Not yet production-trust operations | Verification pipeline is functional and deterministic in current code paths, but still considered pre-hardening for high-assurance trust operations. |
 | Safety/reasoning fields are scaffolds | Placeholders, not fully implemented policy logic | Audit trail fields exist for explainability and diagnostics; they should not be interpreted as formal policy-engine attestations yet. |
