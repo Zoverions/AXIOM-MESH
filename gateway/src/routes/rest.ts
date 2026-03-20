@@ -97,7 +97,7 @@ const publicIntentMiddlewares = process.env.NODE_ENV === 'production'
     ? [authMiddleware, publicIntentRateLimit]
     : [publicIntentRateLimit];
 
-router.post('/api/v1/intent/process/public', ...publicIntentMiddlewares, async (req: Request, res: Response) => {
+router.post('/api/v1/intent/process/dev-public', ...publicIntentMiddlewares, async (req: Request, res: Response) => {
     gatewayMetrics.requests++;
     try {
         const { channel, content, metadata } = req.body;

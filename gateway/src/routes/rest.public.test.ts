@@ -83,7 +83,7 @@ describe('REST public intent route', () => {
     jest.resetModules();
 
     const { default: router } = await import('./rest');
-    const handlers = getRouteLayers(router, 'post', '/api/v1/intent/process/public');
+    const handlers = getRouteLayers(router, 'post', '/api/v1/intent/process/dev-public');
 
     expect(handlers.length).toBeGreaterThanOrEqual(2);
     // first middleware is public rate limiter, second is route handler
@@ -99,7 +99,7 @@ describe('REST public intent route', () => {
     jest.resetModules();
 
     const { default: router } = await import('./rest');
-    const handlers = getRouteLayers(router, 'post', '/api/v1/intent/process/public');
+    const handlers = getRouteLayers(router, 'post', '/api/v1/intent/process/dev-public');
 
     expect(handlers.length).toBeGreaterThanOrEqual(3);
     expect(handlers[0].name).toBe('authMiddleware');
@@ -115,7 +115,7 @@ describe('REST public intent route', () => {
     jest.resetModules();
 
     const { default: router } = await import('./rest');
-    const handlers = getRouteLayers(router, 'post', '/api/v1/intent/process/public');
+    const handlers = getRouteLayers(router, 'post', '/api/v1/intent/process/dev-public');
     const req: any = { headers: {}, ip: '127.0.0.1', body: { channel: 'web' }, query: {} };
     const res = createMockRes();
 
@@ -136,7 +136,7 @@ describe('REST public intent route', () => {
     freshSendToHypervisor.mockResolvedValue({ status: 'success', response: 'ok' });
 
     const { default: router } = await import('./rest');
-    const handlers = getRouteLayers(router, 'post', '/api/v1/intent/process/public');
+    const handlers = getRouteLayers(router, 'post', '/api/v1/intent/process/dev-public');
     const req: any = {
       headers: { 'x-forwarded-for': '203.0.113.8' },
       ip: '127.0.0.1',

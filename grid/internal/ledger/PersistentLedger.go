@@ -3,6 +3,7 @@ package ledger
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -46,6 +47,33 @@ func (w *WAL) Append(entry interface{}) error {
 	}
 	// fsync for durability
 	return w.file.Sync()
+}
+
+func (w *WAL) Recover(process func(entry []byte) error) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	if _, err := w.file.Seek(0, 0); err != nil {
+		return err
+	}
+
+	scanner := bufio.NewScanner(w.file)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
+		}
+		if err := process(line); err != nil {
+			return err
+		}
+	}
+
+	// Reset file pointer to end for future appends
+	if _, err := w.file.Seek(0, 2); err != nil {
+		return err
+	}
+
+	return scanner.Err()
 }
 
 func (w *WAL) Close() error {
@@ -113,6 +141,29 @@ func NewPersistentLedger(dataDir string) (*PersistentLedger, error) {
 		}
 		return nil
 	})
+
+	// Recover from WAL to ensure no states are lost during crash
+	err = pl.wal.Recover(func(entry []byte) error {
+		var skill types.SkillVector
+		if err := json.Unmarshal(entry, &skill); err != nil {
+			return err
+		}
+		key := skill.NodeID + ":" + skill.Task
+
+		pl.mu.Lock()
+		pl.cache[key] = skill
+		pl.mu.Unlock()
+
+		// Async badger update to sync state
+		go pl.db.Update(func(txn *badger.Txn) error {
+			data, _ := json.Marshal(skill)
+			return txn.Set([]byte("skill:"+key), data)
+		})
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("WAL recovery failed: %v", err)
+	}
 
 	return pl, nil
 }

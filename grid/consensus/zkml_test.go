@@ -9,13 +9,19 @@ import (
 // setupMockPython creates a temporary directory with a mock python3 executable that
 // simply exits with the code specified in the MOCK_PYTHON_EXIT_CODE environment variable.
 // It prepends this directory to the PATH for the duration of the test.
-func setupMockPython(t *testing.T) {
+func setupMockPython(t *testing.T) string {
 	tempDir := t.TempDir()
 	mockPythonPath := filepath.Join(tempDir, "python3")
 
 	// Create a mock python3 executable (shell script)
+	// Make sure it reads the env variable even if Env is cleared by passing it or writing it to a file
+	// Since cmd.Env = []string{} clears all env vars, we can't use MOCK_PYTHON_EXIT_CODE
+	// Instead, let's read from a file in the temp dir
 	mockPythonScript := `#!/bin/sh
-exit ${MOCK_PYTHON_EXIT_CODE:-0}
+if [ -f "` + tempDir + `/exit_code" ]; then
+    exit $(cat "` + tempDir + `/exit_code")
+fi
+exit 0
 `
 	err := os.WriteFile(mockPythonPath, []byte(mockPythonScript), 0755)
 	if err != nil {
@@ -26,6 +32,7 @@ exit ${MOCK_PYTHON_EXIT_CODE:-0}
 	originalPath := os.Getenv("PATH")
 	newPath := tempDir + string(os.PathListSeparator) + originalPath
 	t.Setenv("PATH", newPath)
+	return tempDir
 }
 
 func TestVerifyZKMLInference_EmptyInputs(t *testing.T) {
@@ -85,10 +92,10 @@ func TestVerifyZKMLInference_InvalidCommitment(t *testing.T) {
 }
 
 func TestVerifyZKMLInference_Success(t *testing.T) {
-	setupMockPython(t)
+	tempDir := setupMockPython(t)
 
 	// Ensure our mock Python exits with 0 (success)
-	t.Setenv("MOCK_PYTHON_EXIT_CODE", "0")
+	os.WriteFile(filepath.Join(tempDir, "exit_code"), []byte("0"), 0644)
 
 	// 64-character valid hex commitment
 	commitment := "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
@@ -110,7 +117,7 @@ func TestVerifyZKMLInference_Success(t *testing.T) {
 	}
 
 	// Verify Cache Hit: If we change the mock python to fail but don't change inputs, it should still return true
-	t.Setenv("MOCK_PYTHON_EXIT_CODE", "1")
+	os.WriteFile(filepath.Join(tempDir, "exit_code"), []byte("1"), 0644)
 	cachedResult := VerifyZKMLInference(commitment, []float64{1.0}, []float64{2.0}, proof, vk, settings)
 	if cachedResult != true {
 		t.Errorf("Expected VerifyZKMLInference to return true from cache on subsequent call, got false")
@@ -118,10 +125,10 @@ func TestVerifyZKMLInference_Success(t *testing.T) {
 }
 
 func TestVerifyZKMLInference_PythonFails(t *testing.T) {
-	setupMockPython(t)
+	tempDir := setupMockPython(t)
 
 	// Ensure our mock Python exits with 1 (failure)
-	t.Setenv("MOCK_PYTHON_EXIT_CODE", "1")
+	os.WriteFile(filepath.Join(tempDir, "exit_code"), []byte("1"), 0644)
 
 	// 64-character valid hex commitment
 	commitment := "f1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"

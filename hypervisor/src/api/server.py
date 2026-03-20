@@ -297,7 +297,7 @@ async def _process_intent_core(intent: IntentObject, api_key: str):
                         parsed_addr = urllib.parse.urlparse(peer_addr)
                         host = parsed_addr.hostname or peer_addr
                         # The Hypervisor runs on 8081 by default
-                        forward_url = f"http://{host}:8081/api/v1/intent/process/public"
+                        forward_url = f"http://{host}:8081/api/v1/intent/process/dev-public"
                         headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
                         res = await client.post(forward_url, json=intent.model_dump(), headers=headers, timeout=30.0)
                         res.raise_for_status()
@@ -522,6 +522,15 @@ async def _process_intent_core(intent: IntentObject, api_key: str):
             styled_response = f"Executive summary: {raw_response}"
 
         intent_metrics["success"] += 1
+
+        hypervisor_secret = os.environ.get("HYPERVISOR_SECRET", "default_secret").encode()
+        audit_trail.pop("policy_attestation_signature", None)
+        audit_trail["policy_attestation_signature"] = hmac.new(
+            hypervisor_secret,
+            json.dumps(audit_trail, sort_keys=True).encode(),
+            hashlib.sha256
+        ).hexdigest()
+
         return IntentResponse(
             id=str(uuid.uuid4()),
             intent_id=intent.id,
