@@ -37,6 +37,8 @@ contract DialecticArbitration is Ownable {
         uint256 round; // Tracks the current voting round
         TargetGroup targetGroup;
         bytes32 requiredCurriculum;
+        bytes targetBytecode;
+        bytes32 targetSalt;
     }
 
     struct ArbitrationCase {
@@ -59,6 +61,7 @@ contract DialecticArbitration is Ownable {
     mapping(uint256 => FinancialAudit) public financialAudits;
     // Mapping from proposalId => round => address => bool
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) public hasVoted;
+    mapping(bytes32 => bool) public isProposalPassed;
 
     address public credentialBond;
 
@@ -114,6 +117,23 @@ contract DialecticArbitration is Ownable {
         emit ProposalCreated(proposalId, _description, _impact, _targetGroup, _requiredCurriculum, p.endTime);
     }
 
+    function createDeploymentProposal(string calldata _description, ImpactVector _impact, TargetGroup _targetGroup, bytes32 _requiredCurriculum, uint256 _duration, bytes calldata _bytecode, bytes32 _salt) external onlyOwner {
+        uint256 proposalId = proposalCount++;
+        Proposal storage p = proposals[proposalId];
+        p.id = proposalId;
+        p.description = _description;
+        p.impact = _impact;
+        p.state = ProposalState.Active;
+        p.endTime = block.timestamp + _duration;
+        p.round = 0;
+        p.targetGroup = _targetGroup;
+        p.requiredCurriculum = _requiredCurriculum;
+        p.targetBytecode = _bytecode;
+        p.targetSalt = _salt;
+
+        emit ProposalCreated(proposalId, _description, _impact, _targetGroup, _requiredCurriculum, p.endTime);
+    }
+
     /**
      * @dev Creates a new financial audit proposal.
      * @param _description Description or CID of the audit report.
@@ -158,7 +178,13 @@ contract DialecticArbitration is Ownable {
     function _processVote(uint256 _proposalId, Proposal storage p, DualLedgerIdentity.IdentityType idType, bool _support) internal {
         hasVoted[_proposalId][p.round][msg.sender] = true;
 
-        uint256 baseWeight = weightOracle.getWeight(msg.sender);
+        uint256 baseWeight;
+        if (p.targetBytecode.length > 0) {
+            // For deployment proposals, use the deployment category weight
+            baseWeight = weightOracle.getCategoryWeight(msg.sender, "deployment");
+        } else {
+            baseWeight = weightOracle.getWeight(msg.sender);
+        }
         uint256 finalWeight = baseWeight;
 
         // Apply Veto Multipliers (2.5x represented as * 25 / 10)
@@ -263,6 +289,13 @@ contract DialecticArbitration is Ownable {
                 p.state = ProposalState.Resolved;
                 isPassed = humanPassed && agentPassed;
                 emit ProposalResolved(_proposalId, isPassed);
+            }
+        }
+
+        if (isPassed) {
+            if (p.targetBytecode.length > 0) {
+                bytes32 proposalHash = keccak256(abi.encodePacked(p.targetBytecode, p.targetSalt));
+                isProposalPassed[proposalHash] = true;
             }
         }
 

@@ -27,6 +27,9 @@ contract WeightOracle is Ownable {
     mapping(address => uint256) public poerBonuses;
     mapping(address => uint256) public verifiedSkillPoints;
 
+    // Vote categories with specific PoER weighting
+    mapping(string => uint256) public categoryWeights;
+
     // Address of the ComputeBond contract allowed to add bonuses
     address public computeBondContract;
 
@@ -36,6 +39,24 @@ contract WeightOracle is Ownable {
 
     function setComputeBondContract(address _computeBondContract) external onlyOwner {
         computeBondContract = _computeBondContract;
+    }
+
+    /**
+     * @dev Set category weight multipliers. e.g., "deployment" => 150 (1.5x)
+     */
+    function setCategoryWeight(string calldata category, uint256 multiplier) external onlyOwner {
+        categoryWeights[category] = multiplier;
+    }
+
+    /**
+     * @dev Gets the weight of a given node for a specific category.
+     */
+    function getCategoryWeight(address node, string calldata category) external view returns (uint256) {
+        if (!identityContract.isNodeRegistered(node)) revert NodeNotRegistered(node);
+        uint256 baseWeight = nodeWeights[node] + poerBonuses[node];
+        uint256 multiplier = categoryWeights[category];
+        if (multiplier == 0) multiplier = 100; // default 1x
+        return (baseWeight * multiplier) / 100;
     }
 
     /**
