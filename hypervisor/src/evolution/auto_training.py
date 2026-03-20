@@ -13,7 +13,7 @@ class ModificationPolicy:
     Governs rules for allowed self-mutations during AutoTraining.
     """
     def __init__(self):
-        self.forbidden_modules = {"os", "sys", "subprocess", "shlex", "pty", "socket", "builtins", "importlib"}
+        self.allowed_modules = {"math", "random", "datetime", "typing", "collections", "itertools"}
         self.forbidden_names = {
             "__import__", "eval", "exec", "open", "compile",
             "globals", "locals", "vars", "dir",
@@ -37,10 +37,10 @@ class ModificationPolicy:
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 for alias in node.names:
-                    if alias.name.split(".")[0] in self.forbidden_modules:
+                    if alias.name.split(".")[0] not in self.allowed_modules:
                         return False
             elif isinstance(node, ast.ImportFrom):
-                if node.module and node.module.split(".")[0] in self.forbidden_modules:
+                if not node.module or node.module.split(".")[0] not in self.allowed_modules:
                     return False
             elif isinstance(node, ast.Name):
                 # Block known dangerous built-ins and all double-underscore variables/attributes
@@ -49,6 +49,10 @@ class ModificationPolicy:
             elif isinstance(node, ast.Attribute):
                 # Block accessing any double-underscore attributes (e.g., __class__, __dict__, __globals__)
                 if node.attr in self.forbidden_names or node.attr.startswith("__"):
+                    return False
+            elif isinstance(node, ast.Constant):
+                # Block any string literal containing "__" to prevent dynamic bypasses
+                if isinstance(node.value, str) and "__" in node.value:
                     return False
         return True
 
