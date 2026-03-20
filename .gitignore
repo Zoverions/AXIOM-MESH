@@ -32,3 +32,4 @@ Thumbs.db
 sandbox/target/
 sandbox/Cargo.lock
 sandbox/airgap
+*.pem

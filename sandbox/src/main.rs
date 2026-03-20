@@ -46,6 +46,13 @@ pub fn run_risc_zero_prover(elf_path: &str, input_data: &str) -> Result<String> 
     Ok("0xZKMLPROOF_RISC0".to_string())
 }
 
+pub fn run_tee_enclave(app_path: &str, _input_data: &str) -> Result<String> {
+    // TEE shim using Rust sgx-sdk or eBPF integration stub
+    println!("Running TEE shim (SGX/SEV) for payload {}", app_path);
+    // In a real TEE execution, the agent logic would be decrypted inside the enclave
+    Ok("0xTEE_ATTESTATION".to_string())
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let default_policy = String::from("/policies/default.yaml");
@@ -68,5 +75,7 @@ fn main() {
         let _ = run_ezkl_prover("model.onnx", "input.json");
     } else if args.contains(&"--prove-risc0".to_string()) {
         let _ = run_risc_zero_prover("method.elf", "input.json");
+    } else if args.contains(&"--run-tee".to_string()) {
+        let _ = run_tee_enclave("payload.bin", "input.json");
     }
 }

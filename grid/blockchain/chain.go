@@ -35,6 +35,9 @@ type LedgerSnapshot struct {
 	AgentManifests   map[string]types.AgentManifest `json:"agent_manifests"`
 	CRDTShards       map[string]types.CRDTShard     `json:"crdt_shards"`
 	DriftReports     map[string]types.DriftReport   `json:"drift_reports"`
+	SettlementNextID uint64                                   `json:"settlement_next_id"`
+	AgentManifests   map[string]types.AgentManifest           `json:"agent_manifests"`
+	NodeProfiles     map[string]types.NodeCapabilityProfile   `json:"node_profiles"`
 }
 
 type Ledger struct {
@@ -53,6 +56,7 @@ type Ledger struct {
 
 	// Progressive CRDT Sharding Config
 	IsEdgeNode bool
+	NodeProfiles   map[string]types.NodeCapabilityProfile
 
 	// Treasury and Distribution
 	TreasurySplit    types.TreasurySplitConfig
@@ -96,6 +100,7 @@ func NewLedger() *Ledger {
 		DriftReports:   make(map[string]types.DriftReport),
 
 		IsEdgeNode:     os.Getenv("AXIOM_EDGE_NODE") == "true",
+		NodeProfiles:   make(map[string]types.NodeCapabilityProfile),
 
 		// Default split configuration
 		TreasurySplit: types.TreasurySplitConfig{
@@ -766,6 +771,11 @@ func (l *Ledger) Snapshot() LedgerSnapshot {
 		agentManifestsCopy[k] = v
 	}
 
+	nodeProfilesCopy := make(map[string]types.NodeCapabilityProfile, len(l.NodeProfiles))
+	for k, v := range l.NodeProfiles {
+		nodeProfilesCopy[k] = v
+	}
+
 	return LedgerSnapshot{
 		Skills:           append([]types.SkillVector(nil), l.Skills...),
 		WebCache:         l.WebCache,
@@ -783,6 +793,7 @@ func (l *Ledger) Snapshot() LedgerSnapshot {
 		RelayerQueue:     append([]types.RelayerSettlement(nil), l.RelayerQueue...),
 		SettlementNextID: l.settlementNextID,
 		AgentManifests:   agentManifestsCopy,
+		NodeProfiles:     nodeProfilesCopy,
 	}
 }
 
@@ -905,6 +916,38 @@ func (l *Ledger) GetDriftReportsSince(since uint64) []types.DriftReport {
 		}
 	}
 	return reports
+// RegisterNodeProfile adds or updates a Node Capability Profile in the ledger.
+func (l *Ledger) RegisterNodeProfile(profile types.NodeCapabilityProfile) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if profile.NodeID == "" {
+		return fmt.Errorf("nodeID is required")
+	}
+
+	l.NodeProfiles[profile.NodeID] = profile
+	log.Printf("📝 Registered Node Capability Profile for node %s", profile.NodeID)
+	return nil
+}
+
+// GetNodeProfile retrieves a specific Node Capability Profile.
+func (l *Ledger) GetNodeProfile(nodeID string) (types.NodeCapabilityProfile, bool) {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	profile, ok := l.NodeProfiles[nodeID]
+	return profile, ok
+}
+
+// GetNodeProfiles retrieves all Node Capability Profiles.
+func (l *Ledger) GetNodeProfiles() map[string]types.NodeCapabilityProfile {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	result := make(map[string]types.NodeCapabilityProfile, len(l.NodeProfiles))
+	for k, v := range l.NodeProfiles {
+		result[k] = v
+	}
+	return result
 }
 
 func (l *Ledger) SaveToFile(path string) error {
@@ -947,6 +990,7 @@ func (l *Ledger) LoadFromFile(path string) error {
 	l.RelayerQueue = snap.RelayerQueue
 	l.settlementNextID = snap.SettlementNextID
 	l.AgentManifests = snap.AgentManifests
+	l.NodeProfiles = snap.NodeProfiles
 
 	if l.WebCache == nil {
 		l.WebCache = make(map[string]types.WebState)
@@ -971,6 +1015,9 @@ func (l *Ledger) LoadFromFile(path string) error {
 	}
 	if l.AgentManifests == nil {
 		l.AgentManifests = make(map[string]types.AgentManifest)
+	}
+	if l.NodeProfiles == nil {
+		l.NodeProfiles = make(map[string]types.NodeCapabilityProfile)
 	}
 	if l.GPPBalances == nil {
 		l.GPPBalances = make(map[string]uint64)
