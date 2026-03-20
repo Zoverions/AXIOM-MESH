@@ -1,7 +1,25 @@
 import re
 import asyncio
+import statistics
+from collections import deque
 from typing import Dict, List, Optional
 from dataclasses import dataclass
+
+class LogitVarianceTracker:
+    def __init__(self, window_size: int = 20):
+        self.window_size = window_size
+        self.probs = deque(maxlen=window_size)
+
+    def add_logit(self, logit_probs: List[float]):
+        if logit_probs:
+            self.probs.append(max(logit_probs))
+
+    def is_in_attractor_trap(self) -> bool:
+        if len(self.probs) < self.window_size:
+            return False
+        variance = statistics.variance(self.probs) if len(self.probs) > 1 else 0.0
+        mean_prob = statistics.mean(self.probs)
+        return variance < 1e-4 and mean_prob >= 0.99
 
 class CognitiveThrashingError(Exception):
     """Raised when LLM shows high confusion/thrashing that can be rescued with more context."""
@@ -34,6 +52,8 @@ class CoTAuditor:
             "confusion_markers": 0,
             "arrogance_detected": False
         }
+
+        self.logit_tracker = LogitVarianceTracker(window_size=20)
 
         # Confusion indicators (high entropy - thrashing)
         self.confusion_phrases = [
@@ -87,8 +107,14 @@ class CoTAuditor:
 
         return AuditResult(True, "CoT appears safe and epistemically balanced", self.epistemic_state)
 
-    async def monitor_cot(self, cot_stream: str, max_iterations: int = 50) -> AuditResult:
+    async def monitor_cot(self, cot_stream: str, max_iterations: int = 50, logits: Optional[List[List[float]]] = None) -> AuditResult:
         """Main monitoring loop with rescue mechanism."""
+        if logits:
+            for logit_probs in logits:
+                self.logit_tracker.add_logit(logit_probs)
+                if self.logit_tracker.is_in_attractor_trap():
+                    raise CognitiveThrashingError("ATTRACTOR_TRAP", confusion_score=1.0, state=self.epistemic_state)
+
         iteration = 0
         while iteration < max_iterations:
             iteration += 1
