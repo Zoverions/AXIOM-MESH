@@ -31,21 +31,43 @@ This README is a **code-accurate rewrite** intended to clearly separate what is 
 - **[docs/MASTER-INTEGRATION.md](docs/MASTER-INTEGRATION.md)** – Complete fusion of all requirements (OntarioEdAI, THUD guilds, AA bonding, resource orchestration, alignment profiles, MCP compatibility)
 - **[docs/AGENT-ENHANCEMENTS.md](docs/AGENT-ENHANCEMENTS.md)** – 2026 Framework integrations (LangGraph, CrewAI, MCP server specs, skill staking via zkML)
 - **[docs/SKILL-CAPSULE-SPEC.md](docs/SKILL-CAPSULE-SPEC.md)** – End-to-end Mesh-native skill capsule lifecycle (ingest→verify→compile→sign→execute→revoke)
+- **[docs/PROJECT-STATUS-2026.md](docs/PROJECT-STATUS-2026.md)** – Current implementation status + cleanup consolidation log
+- **[docs/INTERFACE-CONTROL-DOCUMENT.md](docs/INTERFACE-CONTROL-DOCUMENT.md)** – Formal pillar contracts and API specifications
+- **[docs/SECURITY-REALITY-2026.md](docs/SECURITY-REALITY-2026.md)** – Implementation-accurate production security posture and readiness gate
+- **[docs/PARALLEL-DELIVERY-PLAN-2026.md](docs/PARALLEL-DELIVERY-PLAN-2026.md)** – Concrete implementation program with merge/release discipline.
+- **[docs/ROADMAP-v2026.md](docs/ROADMAP-v2026.md)** – Roadmap 2026
+
+**Architecture & Specifications**:
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** – Master Lockdown Architecture Specification
+- **[docs/TECHNICAL-SPECIFICATION.md](docs/TECHNICAL-SPECIFICATION.md)** – Actionable technical specifications for optimizing, securing, and extending the AI stack.
+- **[docs/HARDWARE-PROFILE-MATRIX.md](docs/HARDWARE-PROFILE-MATRIX.md)** – Defines hardware profiles and constraints.
+- **[docs/RESOURCE-BALANCER-POLICY.md](docs/RESOURCE-BALANCER-POLICY.md)** – Defines the ResourceBalancer dynamic routing execution environment.
+
+**Governance & Operations**:
+- **[docs/GOVERNANCE.md](docs/GOVERNANCE.md)** – Bicameral + FDBA decay + zkML PoER
+- **[docs/GOVERNANCE-CONTROL-MAP.md](docs/GOVERNANCE-CONTROL-MAP.md)** – Control Map for Interoperability Knobs.
+- **[docs/TREASURY-SPLIT.md](docs/TREASURY-SPLIT.md)** – Treasury Split Accounting Model.
+- **[docs/ERC20-COMPATIBILITY.md](docs/ERC20-COMPATIBILITY.md)** – Details the ERC-20 compatible token flow model.
+- **[docs/OPERATIONS.md](docs/OPERATIONS.md)** – Operations & Chaos Engineering Runbook.
+- **[docs/TEST-STRATEGY.md](docs/TEST-STRATEGY.md)** – Test Strategy & CI Acceptance Gates.
+
+**Security**:
+- **[docs/PRODUCTION-GRADE.md](docs/PRODUCTION-GRADE.md)** – Production Grade Security model
+- **[docs/SECURITY-HARDENING.md](docs/SECURITY-HARDENING.md)** – Security Hardening Guide
+- **[.github/SECURITY.md](.github/SECURITY.md)** – Vulnerability disclosure process and support policy
+- **[AUDIT_REPORT.md](AUDIT_REPORT.md)** – Canonical code audit and security findings
 
 **Service Documentation** (Quick Reference):
 - **[gateway/README.md](gateway/README.md)** – User-facing API, WebSocket, channel adapters
 - **[hypervisor/README.md](hypervisor/README.md)** – AI orchestration, LangGraph workflows, autonomous loops
 - **[sandbox/README.md](sandbox/README.md)** – Isolated execution, security policies, resource limits
 - **[grid/README.md](grid/README.md)** – Ledger, P2P consensus, smart contracts, zk verification
+- **[docs/MCP-INTEGRATION.md](docs/MCP-INTEGRATION.md)** – Model Context Protocol implementation details.
+- **[docs/DEGRADED-MODE-PLAYBOOK.md](docs/DEGRADED-MODE-PLAYBOOK.md)** – Offline-first Sync and Degraded-Mode.
 
-**Operational & Governance**:
-- **[.github/SECURITY.md](.github/SECURITY.md)** – Vulnerability disclosure process and support policy
+**Other**:
 - **[plan.md](plan.md)** – Canonical roadmap and feature backlog
-- **[AUDIT_REPORT.md](AUDIT_REPORT.md)** – Canonical code audit and security findings
-- **[docs/PROJECT-STATUS-2026.md](docs/PROJECT-STATUS-2026.md)** – Current implementation status + cleanup consolidation log
 - **[schemas/README.md](schemas/README.md)** – Versioned JSON schema registry (intent, skill, zkml, alignment profile)
-- **[docs/INTERFACE-CONTROL-DOCUMENT.md](docs/INTERFACE-CONTROL-DOCUMENT.md)** – Formal pillar contracts and API specifications
-- **[docs/SECURITY-REALITY-2026.md](docs/SECURITY-REALITY-2026.md)** – Implementation-accurate production security posture and readiness gate
 
 **Quick Start**:
 - **This file** – Overview, architecture philosophy, what's implemented vs prototype
@@ -103,9 +125,6 @@ AXIOM-MESH is the only system designed to survive hostile environments.
 - AXIOM-MESH: Institutional substrate.
 
 If LangGraph is a circuit diagram, AXIOM-MESH is a constitutional system.
-
-## Architecture Diagram (Update Existing Diagram)
-[Add new Mermaid diagram showing LangGraph nodes + MCP servers + zkML verification step]
 
 ## 1) System Topology
 
@@ -377,9 +396,6 @@ The repository now contains **partial implementation + partial documentation** f
 - **Phase 0**: documentation-complete/in progress (`plan.md`, integration docs, caveat mapping).
 - **Phases 1–4**: implementation backlog with incremental landed work; do not treat as fully delivered.
 - **Execution checklist and parallel work lanes** are maintained in `plan.md` for implementation sequencing.
-
-
-
 
 ## Critical Caveats for Production Use (Status)
 
