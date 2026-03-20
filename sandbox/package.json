@@ -11,12 +11,14 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.1013.0",
     "@types/node-fetch": "^2.6.13",
     "body-parser": "^2.2.2",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^3.3.2",
+    "node-vault": "^0.11.1"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

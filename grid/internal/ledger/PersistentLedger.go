@@ -216,6 +216,38 @@ func (pl *PersistentLedger) Close() {
 	}
 }
 
+// Backup creates a full backup of the BadgerDB into the given directory
+func (pl *PersistentLedger) Backup(backupDir string) error {
+	if err := os.MkdirAll(backupDir, 0755); err != nil {
+		return err
+	}
+	f, err := os.Create(filepath.Join(backupDir, "badger.bak"))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	pl.mu.RLock()
+	defer pl.mu.RUnlock()
+
+	_, err = pl.db.Backup(f, 0)
+	return err
+}
+
+// Restore loads a full backup from the given directory into BadgerDB
+func (pl *PersistentLedger) Restore(backupDir string) error {
+	f, err := os.Open(filepath.Join(backupDir, "badger.bak"))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	pl.mu.Lock()
+	defer pl.mu.Unlock()
+
+	return pl.db.Load(f, 16)
+}
+
 // ComputeStateRoot computes a simple Merkle root (or state hash) of all skills.
 func (pl *PersistentLedger) ComputeStateRoot() (string, error) {
 	pl.mu.RLock()

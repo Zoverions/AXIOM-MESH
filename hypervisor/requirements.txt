@@ -33,3 +33,5 @@ grokipedia-api
 cryptography
 mcp
 pyyaml
+boto3
+hvac

@@ -2,6 +2,8 @@ import express from 'express';
 import { WebSocketServer, WebSocket } from 'ws';
 import cors from 'cors';
 import bodyParser from 'body-parser';
+import https from 'https';
+import fs from 'fs';
 import dotenv from 'dotenv';
 import path from 'path';
 import { authMiddleware } from './middleware/auth';
@@ -64,7 +66,23 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 app.use('/', restRoutes);
 
-app.listen(REST_PORT, () => {
+const certsDir = process.env.CERTS_DIR || '../certs';
+let server;
+try {
+    const mTLSConfig = {
+        key: fs.readFileSync(`${certsDir}/gateway.key`),
+        cert: fs.readFileSync(`${certsDir}/gateway.crt`),
+        ca: [fs.readFileSync(`${certsDir}/ca.crt`)],
+        requestCert: true,
+        rejectUnauthorized: true,
+    };
+    server = https.createServer(mTLSConfig, app);
+} catch (e) {
+    console.warn("mTLS certs not found, falling back to HTTP for testing.");
+    server = app;
+}
+
+server.listen(REST_PORT, () => {
     console.log(`Omni-Gateway REST API running on port ${REST_PORT}`);
 });
 

@@ -1,6 +1,9 @@
 import axios from 'axios';
+import https from 'https';
+import fs from 'fs';
 import { IntentObject, IntentResponse } from '../types';
 import { asyncRandomBytes, CryptoWorkerPool } from '../performance/EventLoopOptimizer';
+import { SecretManager } from '../utils/secrets';
 
 const HYPERVISOR_URL = process.env.HYPERVISOR_URL || 'http://localhost:8000';
 const cryptoWorkerPool = new CryptoWorkerPool(2);
@@ -32,7 +35,7 @@ export async function sendToHypervisor(intent: IntentObject): Promise<IntentResp
 
     inflightRequests += 1;
     try {
-        const apiKey = process.env.HYPERVISOR_API_KEY || '';
+        const apiKey = await SecretManager.getSecret('HYPERVISOR_API_KEY');
         const maxRetries = getMaxRetries();
         for (let attempt = 0; attempt < maxRetries; attempt++) {
             try {
@@ -43,6 +46,19 @@ export async function sendToHypervisor(intent: IntentObject): Promise<IntentResp
                 const signaturePayload = `${timestamp}:${nonce}:${payloadStr}`;
                 const signature = await cryptoWorkerPool.hmacSignature(apiKey, signaturePayload);
 
+                const certsDir = process.env.CERTS_DIR || '../certs';
+                let httpsAgent;
+                try {
+                    httpsAgent = new https.Agent({
+                        cert: fs.readFileSync(`${certsDir}/gateway.crt`),
+                        key: fs.readFileSync(`${certsDir}/gateway.key`),
+                        ca: fs.readFileSync(`${certsDir}/ca.crt`),
+                        rejectUnauthorized: true
+                    });
+                } catch (e) {
+                    console.warn("mTLS certs not found, client skipping mTLS.");
+                }
+
                 const response = await axios.post(`${HYPERVISOR_URL}/process`, intent, {
                     headers: {
                         Authorization: `Bearer ${apiKey}`,
@@ -51,7 +67,8 @@ export async function sendToHypervisor(intent: IntentObject): Promise<IntentResp
                         'X-Axiom-Signature': signature
                     },
                     timeout: 15000,
-                    proxy: false
+                    proxy: false,
+                    httpsAgent
                 });
                 return response.data;
             } catch (error: any) {

@@ -51,6 +51,7 @@ from src.recovery.bundle_manager import RecoveryBundleManager
 from src.api.mcp_server import mcp_server
 from src.engine.inference_orchestrator import InferenceOrchestrator
 from src.api.routers.capsules import router as capsules_router
+from src.core.secrets import SecretManager
 
 context_engine = ContextEngine()
 pulse = EntropyMonitor()
@@ -148,31 +149,11 @@ def is_safe_code(code_str: str) -> bool:
 security = HTTPBearer()
 
 
+from src.core.policy_engine import PolicyEngine
+policy_engine = PolicyEngine()
+
 def evaluate_policy_gate(intent: IntentObject):
-    max_len = int(os.environ.get("HYPERVISOR_MAX_CONTENT_LENGTH", "4000"))
-    content = intent.content or ""
-    metadata = intent.metadata or {}
-
-    # Universal Consent Protocol (UCP): No implicit allowed default.
-    consent_scope = metadata.get("consent_scope")
-
-    decisions = {
-        "content_length_ok": len(content) <= max_len,
-        "consent_scope_provided": consent_scope is not None,
-        "consent_scope_valid": consent_scope in {"allowed", "context_only", "revoked"},
-        "exec_requires_allowed_consent": (not content.startswith("/exec")) or consent_scope == "allowed"
-    }
-
-    if not decisions["content_length_ok"]:
-        return False, decisions, f"Input too long (max {max_len} chars)"
-    if not decisions["consent_scope_provided"]:
-        return False, decisions, "Missing required consent_scope metadata for UCP compliance"
-    if not decisions["consent_scope_valid"]:
-        return False, decisions, "Invalid consent_scope value"
-    if not decisions["exec_requires_allowed_consent"]:
-        return False, decisions, "Code execution requires consent_scope=allowed"
-
-    return True, decisions, "ok"
+    return policy_engine.evaluate(intent)
 
 
 from fastapi import Request
@@ -200,7 +181,7 @@ async def release_backpressure():
             pass
 
 def _get_expected_api_key():
-    expected_api_key = os.environ.get("HYPERVISOR_API_KEY")
+    expected_api_key = SecretManager.get_secret("HYPERVISOR_API_KEY")
     if not expected_api_key:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
