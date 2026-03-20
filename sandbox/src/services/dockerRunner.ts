@@ -82,10 +82,11 @@ export async function runCode(language: string, code: string): Promise<{ stdout:
             }).catch(err => console.error(err));
 
             // Implement custom seccomp-bpf profile to drop execve, ptrace, and mount via UDS
+            // Includes namespace manipulation syscalls (unshare, setns, clone)
             nnc.applySeccompProfile(proc.pid, {
                 defaultAction: "SCMP_ACT_ALLOW",
                 syscalls: [
-                    { names: ["execve", "ptrace", "mount"], action: "SCMP_ACT_ERRNO" }
+                    { names: ["execve", "ptrace", "mount", "unshare", "setns", "clone"], action: "SCMP_ACT_ERRNO" }
                 ]
             }).catch(err => console.error(err));
         }
