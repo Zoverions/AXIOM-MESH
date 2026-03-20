@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "./TimelockedOwnable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract ComputeBond is Ownable, AccessControl {
+contract ComputeBond is TimelockedOwnable, AccessControl {
 
     struct Bond {
         address staker;
@@ -39,6 +39,7 @@ contract ComputeBond is Ownable, AccessControl {
     error UnauthorizedDelegate();
 
     bytes32 public constant DELEGATOR_ROLE = keccak256("DELEGATOR_ROLE");
+    bytes32 public constant TREASURY_MANAGER_ROLE = keccak256("TREASURY_MANAGER_ROLE");
 
     event BondStaked(string indexed nodeId, address indexed staker, uint256 amount);
     event BondSlashed(string indexed nodeId, uint256 amount, uint256 newAmount);
@@ -50,7 +51,7 @@ contract ComputeBond is Ownable, AccessControl {
     // === Blockchain Autonomy Layer ===
     address public deploymentFactory;
 
-    function setDeploymentFactory(address _deploymentFactory) external onlyOwner {
+    function setDeploymentFactory(address _deploymentFactory) external onlyTimelocked(keccak256(abi.encodePacked("setDeploymentFactory", _deploymentFactory))) {
         deploymentFactory = _deploymentFactory;
     }
 
@@ -87,6 +88,8 @@ contract ComputeBond is Ownable, AccessControl {
     address public weightOracleContract;
 
     // FDBA: Founder Decaying Bootstrap Allocation
+    // The founder's allocation starts at 5% and linearly decays to 0% once the network reaches 10,000 active nodes.
+    // This decay is programmatically enforced in `getCurrentFounderShare()`, preventing permanent rent extraction.
     address public constant founderAddress = 0x1c2cBabF75e1938ED2f2c59e734e83aa5FBe1B73;
     uint256 public initialSwarmSize; // captured at genesis for reference if needed
 
@@ -96,15 +99,15 @@ contract ComputeBond is Ownable, AccessControl {
     // Simple state variable to track total active nodes for decay math
     uint256 public gridSwarmSize;
 
-    constructor() Ownable(msg.sender) {
+    constructor() TimelockedOwnable(msg.sender) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
-    function setZKMLVerifier(address _verifier) external onlyOwner {
+    function setZKMLVerifier(address _verifier) external onlyTimelocked(keccak256(abi.encodePacked("setZKMLVerifier", _verifier))) {
         zkmlVerifier = _verifier;
     }
 
-    function setWeightOracle(address _oracle) external onlyOwner {
+    function setWeightOracle(address _oracle) external onlyTimelocked(keccak256(abi.encodePacked("setWeightOracle", _oracle))) {
         weightOracleContract = _oracle;
     }
 
@@ -112,7 +115,7 @@ contract ComputeBond is Ownable, AccessControl {
      * @dev Allows the owner or treasury to withdraw from the collective investment pool.
      * @param amount The amount to withdraw.
      */
-    function withdrawCollectiveInvestmentPool(uint256 amount) external onlyOwner {
+    function withdrawCollectiveInvestmentPool(uint256 amount) external onlyTimelocked(keccak256(abi.encodePacked("withdrawCollectiveInvestmentPool", amount))) {
         require(collectiveInvestmentPool >= amount, "Insufficient funds in collective pool");
 
         collectiveInvestmentPool -= amount;
@@ -177,12 +180,12 @@ contract ComputeBond is Ownable, AccessControl {
     }
 
     function reallocateToNetwork(uint256 amount) external {
-        require(msg.sender == owner() || true, "Unauthorized");
+        require(hasRole(TREASURY_MANAGER_ROLE, msg.sender) || msg.sender == owner(), "Unauthorized");
         // Internal reallocation mock logic
     }
 
     function releaseFounderShare(uint256 amount) external returns (uint256) {
-        require(msg.sender == owner() || true, "Unauthorized");
+        require(hasRole(TREASURY_MANAGER_ROLE, msg.sender) || msg.sender == owner(), "Unauthorized");
         // Mocks releasing founder share to the founder
         return amount; // Return a mocked value
     }
@@ -202,7 +205,7 @@ contract ComputeBond is Ownable, AccessControl {
         if (gridSwarmSize > 0) gridSwarmSize--;
     }
 
-    function grantDelegator(address account) external onlyOwner {
+    function grantDelegator(address account) external onlyTimelocked(keccak256(abi.encodePacked("grantDelegator", account))) {
         _grantRole(DELEGATOR_ROLE, account);
     }
 
@@ -244,7 +247,7 @@ contract ComputeBond is Ownable, AccessControl {
      * @param nodeId The unique identifier of the node.
      * @param amount The amount to slash from the node's bond.
      */
-    function slash(string memory nodeId, uint256 amount) external onlyOwner {
+    function slash(string memory nodeId, uint256 amount) external onlyTimelocked(keccak256(abi.encodePacked("slash", nodeId, amount))) {
         Bond storage bond = bonds[nodeId];
         if (!bond.isActive) revert BondNotActive();
         if (bond.amount < amount) revert SlashExceedsBond();
@@ -348,7 +351,7 @@ contract ComputeBond is Ownable, AccessControl {
      * Slashed funds are explicitly tracked to prevent draining user stakes.
      * @param amount The amount to withdraw from the contract's slashed balance.
      */
-    function withdrawSlashedFunds(uint256 amount) external onlyOwner {
+    function withdrawSlashedFunds(uint256 amount) external onlyTimelocked(keccak256(abi.encodePacked("withdrawSlashedFunds", amount))) {
         if (totalSlashed < amount) revert InsufficientSlashedFunds();
 
         totalSlashed -= amount;
