@@ -33,8 +33,25 @@ router.post('/execute', async (req: Request, res: Response) => {
         }
 
         const { language, code, ase_proof, zk_proof } = req.body;
-        if (!language || !code) {
-            res.status(400).json({ error: 'Language and code are required' });
+        if (!language || typeof language !== 'string' || !code || typeof code !== 'string') {
+            res.status(400).json({ error: 'Language and code must be non-empty strings' });
+            return;
+        }
+
+        // Validate language matches expected regex
+        if (!/^[a-zA-Z0-9_-]+$/.test(language)) {
+            res.status(400).json({ error: 'Invalid language format' });
+            return;
+        }
+
+        // Imposing reasonable length limits
+        if (language.length > 50) {
+            res.status(400).json({ error: 'Language parameter exceeds maximum length' });
+            return;
+        }
+
+        if (code.length > 100000) {
+            res.status(400).json({ error: 'Code parameter exceeds maximum length limit' });
             return;
         }
 
