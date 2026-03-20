@@ -74,6 +74,47 @@ def test_zkml_prover_inference(mock_prove, mock_gen_witness, mock_setup, mock_ge
     assert "proof" in res_custom
     assert res_custom["proof"] == '{"mock": "proof"}'
 
+def test_zkml_prover_full_flow():
+    """
+    Unmocked integration test that actually runs the full prover flow
+    including ONNX export and ezkl proof generation.
+    """
+    import json
+    # Use a small set of weights to keep proof generation fast
+    prover = EdgeZKMLProver(weights=[0.5, -0.2], bias=0.1)
+
+    # Run the full, unmocked infer_and_prove pipeline
+    res = prover.infer_and_prove([1.0, 2.0])
+
+    # Assert all expected keys are present in the response
+    assert "model_commitment" in res
+    assert "input" in res
+    assert "output" in res
+    assert "proof" in res
+    assert "vk" in res
+    assert "settings" in res
+
+    # Validate the input matches what we passed (padded/truncated appropriately)
+    assert res["input"] == [1.0, 2.0]
+
+    # Verify the output is a list of floats (even if it's just 1 float returned as list)
+    assert isinstance(res["output"], list)
+    assert len(res["output"]) == 1
+    assert isinstance(res["output"][0], float)
+
+    # The proof should be valid JSON
+    proof_dict = json.loads(res["proof"])
+    assert isinstance(proof_dict, dict)
+
+    # The settings should be valid JSON
+    settings_dict = json.loads(res["settings"])
+    assert isinstance(settings_dict, dict)
+    assert "run_args" in settings_dict
+
+    # The vk should be a base64 encoded string
+    assert isinstance(res["vk"], str)
+    assert len(res["vk"]) > 0
+
 @pytest.mark.asyncio
 async def test_cot_auditor():
     state = {"intent": "tell me a joke"}
