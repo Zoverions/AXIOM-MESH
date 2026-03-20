@@ -10,6 +10,10 @@ def test_hardware_profile():
     assert scanner.get_hardware_profile({"total_ram_gb": 8, "vram_mb": 0}) == "edge"
     assert scanner.get_hardware_profile({"total_ram_gb": 4, "vram_mb": 0}) == "tablet"
 
+    # Test fallback when footprint is None
+    with patch.object(scanner, 'scan', return_value={"total_ram_gb": 16, "vram_mb": 8000}):
+        assert scanner.get_hardware_profile(None) == "full_node"
+
 def test_recommend_models():
     scanner = HardwareScanner()
 
@@ -56,6 +60,12 @@ def test_get_os_name_windows(mock_release, mock_system):
     scanner = HardwareScanner()
     assert scanner._get_os_name() == "Windows 11"
 
+@patch('platform.system')
+def test_get_os_name_unknown(mock_system):
+    mock_system.return_value = "FreeBSD"
+    scanner = HardwareScanner()
+    assert scanner._get_os_name() == "FreeBSD"
+
 @patch('subprocess.check_output')
 @patch('os.cpu_count')
 def test_get_cpu_cores(mock_cpu_count, mock_check_output):
@@ -100,8 +110,13 @@ def test_get_total_ram_gb(mock_check_output):
     mock_check_output.side_effect = check_output_side_effect
     assert scanner._get_total_ram_gb() == 16.0
 
-    # Test fallback
+    # Test fallback inside the exception handler (e.g., sysctl raises an exception)
     mock_check_output.side_effect = Exception("All failed")
+    assert scanner._get_total_ram_gb() == 8.0
+
+    # Test final fallback (e.g., Linux free doesn't find Mem: line)
+    mock_check_output.side_effect = None
+    mock_check_output.return_value = b"              total        used        free\nSwap:             0           0           0\n"
     assert scanner._get_total_ram_gb() == 8.0
 
 @patch('subprocess.check_output')
