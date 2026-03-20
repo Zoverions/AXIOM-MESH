@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/axiom-mesh/grid/consensus"
 	"github.com/axiom-mesh/grid/internal/ledger"
 	"github.com/axiom-mesh/grid/types"
 )
@@ -30,6 +31,10 @@ type LedgerSnapshot struct {
 	WealthGenPool    uint64                       `json:"wealth_gen_pool"`
 	GPPEvents        []types.GPPEvent             `json:"gpp_events"`
 	RelayerQueue     []types.RelayerSettlement    `json:"relayer_queue"`
+	SettlementNextID uint64                         `json:"settlement_next_id"`
+	AgentManifests   map[string]types.AgentManifest `json:"agent_manifests"`
+	CRDTShards       map[string]types.CRDTShard     `json:"crdt_shards"`
+	DriftReports     map[string]types.DriftReport   `json:"drift_reports"`
 	SettlementNextID uint64                                   `json:"settlement_next_id"`
 	AgentManifests   map[string]types.AgentManifest           `json:"agent_manifests"`
 	NodeProfiles     map[string]types.NodeCapabilityProfile   `json:"node_profiles"`
@@ -46,6 +51,11 @@ type Ledger struct {
 	Swarms         map[string]types.Swarm
 	Proposals      map[string]types.Proposal
 	AgentManifests map[string]types.AgentManifest
+	CRDTShards     map[string]types.CRDTShard
+	DriftReports   map[string]types.DriftReport
+
+	// Progressive CRDT Sharding Config
+	IsEdgeNode bool
 	NodeProfiles   map[string]types.NodeCapabilityProfile
 
 	// Treasury and Distribution
@@ -60,7 +70,7 @@ type Ledger struct {
 	Persistent *ledger.PersistentLedger
 
 	// Callbacks for decoupled blockchain execution
-	OnSwarmJoined func(nodeID [32]byte, capacity uint64, cidRoot [32]byte)
+	OnSwarmJoined         func(nodeID [32]byte, capacity uint64, cidRoot [32]byte)
 	ExternalChainFallback bool
 }
 
@@ -86,6 +96,10 @@ func NewLedger() *Ledger {
 		Swarms:         make(map[string]types.Swarm),
 		Proposals:      make(map[string]types.Proposal),
 		AgentManifests: make(map[string]types.AgentManifest),
+		CRDTShards:     make(map[string]types.CRDTShard),
+		DriftReports:   make(map[string]types.DriftReport),
+
+		IsEdgeNode:     os.Getenv("AXIOM_EDGE_NODE") == "true",
 		NodeProfiles:   make(map[string]types.NodeCapabilityProfile),
 
 		// Default split configuration
@@ -818,6 +832,90 @@ func (l *Ledger) GetAgentManifests() map[string]types.AgentManifest {
 	return result
 }
 
+// Progressive CRDT Sharding Additions
+func (l *Ledger) AddCRDTShard(shard types.CRDTShard) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	// For an edge node, we only keep shards relevant to our NodeID or Swarm
+	if l.IsEdgeNode {
+		localNodeID := os.Getenv("AXIOM_NODE_ID")
+		// Progress CRDT Sharding: Edge node only retains its own CRDT leaf shards
+		if shard.NodeID != localNodeID {
+			return // Discard extraneous shards not relevant to this edge
+		}
+	}
+
+	l.CRDTShards[shard.ShardID] = shard
+}
+
+func (l *Ledger) GetCRDTShard(shardID string) (types.CRDTShard, bool) {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	shard, ok := l.CRDTShards[shardID]
+	return shard, ok
+}
+
+func (l *Ledger) GetCRDTShardsSince(since uint64) []types.CRDTShard {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	shards := make([]types.CRDTShard, 0)
+	for _, shard := range l.CRDTShards {
+		if shard.Timestamp > since {
+			shards = append(shards, shard)
+		}
+	}
+	return shards
+}
+
+// Skill Drift Detection
+func (l *Ledger) AddDriftReport(report types.DriftReport) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if report.NodeID == "" {
+		return fmt.Errorf("nodeID is required for drift report")
+	}
+
+	if report.Signature != "" {
+		payloadStr := fmt.Sprintf("%s:%f:%f:%d", report.NodeID, report.SkillDrift, report.ConsensusLatency, report.Timestamp)
+		if !consensus.VerifySignature(report.NodeID, []byte(payloadStr), report.Signature) {
+			return fmt.Errorf("invalid drift report signature for node %s", report.NodeID)
+		}
+	}
+
+	l.DriftReports[report.NodeID] = report
+
+	// Light governance check - if drift exceeds some absolute max bound locally, sever bond
+	bond, ok := l.Bonds[report.NodeID]
+	if ok && bond.Status == "active" {
+		if report.SkillDrift > 0.8 || report.ConsensusLatency > 5000 {
+			log.Printf("⚠️ High drift detected for node %s. SkillDrift: %f, Latency: %f. Severing bond.", report.NodeID, report.SkillDrift, report.ConsensusLatency)
+			bond.Status = "severed"
+			l.Bonds[report.NodeID] = bond
+		}
+	}
+
+	return nil
+}
+
+func (l *Ledger) GetDriftReport(nodeID string) (types.DriftReport, bool) {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	report, ok := l.DriftReports[nodeID]
+	return report, ok
+}
+
+func (l *Ledger) GetDriftReportsSince(since uint64) []types.DriftReport {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	reports := make([]types.DriftReport, 0)
+	for _, r := range l.DriftReports {
+		if r.Timestamp > since {
+			reports = append(reports, r)
+		}
+	}
+	return reports
 // RegisterNodeProfile adds or updates a Node Capability Profile in the ledger.
 func (l *Ledger) RegisterNodeProfile(profile types.NodeCapabilityProfile) error {
 	l.mu.Lock()

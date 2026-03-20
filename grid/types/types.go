@@ -203,3 +203,23 @@ type RelayerSettlement struct {
 	Token     string `json:"token"` // e.g., "GPP"
 	Status    string `json:"status"` // "Queued", "Processing", "Settled"
 }
+
+// CRDTShard represents a fragmented Last-Write-Wins map piece for edge scaling
+type CRDTShard struct {
+	ShardID   string                 `json:"shardId"`
+	RootHash  string                 `json:"rootHash"`
+	NodeID    string                 `json:"nodeId"`
+	Data      map[string]interface{} `json:"data"`
+	Timestamp uint64                 `json:"timestamp"`
+	Signature string                 `json:"signature"`
+}
+
+// DriftReport represents an automated behavioral drift assessment
+type DriftReport struct {
+	NodeID           string  `json:"nodeId"`
+	SkillDrift       float64 `json:"skillDrift"`
+	ConsensusLatency float64 `json:"consensusLatency"`
+	RepetitiveLoops  int     `json:"repetitiveLoops,omitempty"`
+	Timestamp        uint64  `json:"timestamp"`
+	Signature        string  `json:"signature"`
+}

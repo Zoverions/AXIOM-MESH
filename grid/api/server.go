@@ -116,6 +116,20 @@ func NewServer(ledger *blockchain.Ledger, p2pNode *p2p.Node) *Server {
 			}
 			return false
 		}
+		p2pNode.SyncCRDTShardCallback = func(shard types.CRDTShard) bool {
+			if _, exists := ledger.GetCRDTShard(shard.ShardID); !exists {
+				ledger.AddCRDTShard(shard)
+				return true
+			}
+			return false
+		}
+		p2pNode.SyncDriftReportCallback = func(report types.DriftReport) bool {
+			if _, exists := ledger.GetDriftReport(report.NodeID); !exists {
+				ledger.AddDriftReport(report)
+				return true
+			}
+			return false
+		}
 	}
 
 	server := &Server{
@@ -965,6 +979,103 @@ func (s *Server) SetupRouter() *http.ServeMux {
 			"proposalId": evt.ProposalID,
 			"type":       evt.Type,
 		})
+	}))
+
+	mux.HandleFunc("/crdt/shard", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "GET" {
+			shardID := r.URL.Query().Get("shardId")
+			if shardID == "" {
+				sinceStr := r.URL.Query().Get("since")
+				since, _ := strconv.ParseUint(sinceStr, 10, 64)
+				shards := s.ledger.GetCRDTShardsSince(since)
+				json.NewEncoder(w).Encode(shards)
+				return
+			}
+			shard, ok := s.ledger.GetCRDTShard(shardID)
+			if !ok {
+				http.Error(w, "CRDT shard not found", http.StatusNotFound)
+				return
+			}
+			json.NewEncoder(w).Encode(shard)
+		} else if r.Method == "POST" {
+			var shard types.CRDTShard
+			isSync := r.URL.Query().Get("sync") == "true"
+
+			if err := json.NewDecoder(r.Body).Decode(&shard); err == nil {
+				if shard.ShardID == "" {
+					http.Error(w, "shardId is required", http.StatusBadRequest)
+					return
+				}
+
+				if _, exists := s.ledger.GetCRDTShard(shard.ShardID); exists && isSync {
+					json.NewEncoder(w).Encode(map[string]string{"status": "already_synced"})
+					return
+				}
+
+				s.ledger.AddCRDTShard(shard)
+
+				if !isSync && s.p2pNode != nil {
+					s.p2pNode.BroadcastCRDTShard(shard)
+				}
+
+				json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+			} else {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			}
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}))
+
+	mux.HandleFunc("/drift/report", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "GET" {
+			nodeID := r.URL.Query().Get("nodeId")
+			if nodeID == "" {
+				sinceStr := r.URL.Query().Get("since")
+				since, _ := strconv.ParseUint(sinceStr, 10, 64)
+				reports := s.ledger.GetDriftReportsSince(since)
+				json.NewEncoder(w).Encode(reports)
+				return
+			}
+			report, ok := s.ledger.GetDriftReport(nodeID)
+			if !ok {
+				http.Error(w, "Drift report not found", http.StatusNotFound)
+				return
+			}
+			json.NewEncoder(w).Encode(report)
+		} else if r.Method == "POST" {
+			var report types.DriftReport
+			isSync := r.URL.Query().Get("sync") == "true"
+
+			if err := json.NewDecoder(r.Body).Decode(&report); err == nil {
+				if report.NodeID == "" {
+					http.Error(w, "nodeId is required", http.StatusBadRequest)
+					return
+				}
+
+				if _, exists := s.ledger.GetDriftReport(report.NodeID); exists && isSync {
+					json.NewEncoder(w).Encode(map[string]string{"status": "already_synced"})
+					return
+				}
+
+				if err := s.ledger.AddDriftReport(report); err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				if !isSync && s.p2pNode != nil {
+					s.p2pNode.BroadcastDriftReport(report)
+				}
+
+				json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+			} else {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			}
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
 	}))
 
 	mux.HandleFunc("/ccip", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
