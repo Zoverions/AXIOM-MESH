@@ -31,7 +31,7 @@
 - [ ] Generate + commit SBOM (`syft . -o spdx-json > sbom.json`)
 
 ### Sandbox & Ingress Hardening (Gateway + Sandbox Agents)
-- [ ] Enforce `SANDBOX_API_KEY` on **every** east-west and sandbox endpoint
+- [x] Enforce `SANDBOX_API_KEY` on **every** east-west and sandbox endpoint (March 20, 2026 - Extracted validateSandboxApiKey to utils/auth.ts and applied to all capsule routes)
 - [ ] Add strict rate-limiting + improved sanitization on public route `/intent/process/public`
 - [ ] Front public endpoints with WAF (Cloudflare or equivalent) – config in `gateway/`
 
