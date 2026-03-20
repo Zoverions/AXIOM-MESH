@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Dark Compute Contribution Intent",
+  "type": "object",
+  "properties": {
+    "intentType": { "enum": ["DARK_COMPUTE_CONTRIBUTE"] },
+    "computeUnits": { "type": "integer" },
+    "zkProofHash": { "type": "string" },
+    "phantomDIDHash": { "type": "string" }
+  },
+  "required": ["intentType", "computeUnits", "zkProofHash"]
+}

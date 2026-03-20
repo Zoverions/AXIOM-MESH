@@ -4,7 +4,7 @@ from typing import Dict, Optional
 from src.core.secrets import SecretManager
 
 # Use the actual Privacy Router for encryption
-from src.memory.memory import PrivacyRouter
+from hypervisor.src.engine.privacy_router import PrivacyRouter
 
 class PrivateVault:
     def __init__(self, context_engine):

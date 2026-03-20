@@ -8,6 +8,17 @@ export default {
   solidity: {
     compilers: [
       {
+        version: "0.8.28",
+        settings: {
+          evmVersion: "cancun",
+          viaIR: true,
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
+      },
+      {
         version: "0.8.24",
         settings: {
           evmVersion: "cancun",
