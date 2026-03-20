@@ -1,0 +1,132 @@
+package scheduler
+
+import (
+	"fmt"
+	"math/rand"
+	"testing"
+	"time"
+
+	"github.com/axiom-mesh/grid/types"
+)
+
+func TestSchedulerAdvanced(t *testing.T) {
+	s := NewScheduler()
+
+	// Add 200 dummy nodes with mixed attributes
+	for i := 0; i < 200; i++ {
+		nodeID := fmt.Sprintf("node-%d", i)
+		score := 50.0 + rand.Float64()*50.0 // 50 to 100
+		latency := 10 + rand.Intn(90)     // 10 to 100 ms
+		cost := 1 + rand.Intn(9)          // 1 to 10 units
+
+		tier := TierLow
+		if score > 75.0 {
+			tier = TierMedium
+		}
+		if score > 90.0 {
+			tier = TierHigh
+		}
+
+		services := []string{"compute"}
+		if i%2 == 0 {
+			services = append(services, "storage")
+		}
+		if i%5 == 0 {
+			services = append(services, "gpu")
+		}
+
+		manifest := &types.AgentManifest{
+			NodeID: nodeID,
+		}
+
+		s.RegisterNode(nodeID, manifest, score, latency, cost, tier, services)
+	}
+
+	policy := RoutingPolicy{
+		MaxLatencyMs:           80,
+		MaxCost:                8,
+		MinTrustScore:          60.0,
+		RequiredHardwareTier:   TierMedium,
+		RequiredServiceClasses: []string{"compute", "storage"},
+	}
+
+	budget := 8
+	successCount := 0
+	totalLatencyMs := 0
+
+	for i := 0; i < 1000; i++ {
+		capsuleID := fmt.Sprintf("capsule-%d", i)
+		token := fmt.Sprintf("token-%d", i)
+
+		nodeID, ticket, err := s.Schedule(capsuleID, token, policy, budget)
+		if err == nil {
+			successCount++
+
+			metrics := s.nodeMetrics[nodeID]
+
+			// Verification
+			if metrics.LatencyMs > policy.MaxLatencyMs {
+				t.Errorf("Latency constraint violated: %d > %d", metrics.LatencyMs, policy.MaxLatencyMs)
+			}
+			if metrics.Score < policy.MinTrustScore {
+				t.Errorf("Trust constraint violated: %f < %f", metrics.Score, policy.MinTrustScore)
+			}
+			if metrics.Cost > budget {
+				t.Errorf("Cost constraint violated: %d > %d", metrics.Cost, budget)
+			}
+			if metrics.HardwareTier < policy.RequiredHardwareTier {
+				t.Errorf("HardwareTier constraint violated")
+			}
+			if !metrics.ServiceClasses["storage"] {
+				t.Errorf("Missing required service class 'storage'")
+			}
+
+			if ticket.ID == "" {
+				t.Errorf("Invalid ticket ID")
+			}
+			if ticket.ExpiresAt <= time.Now().Unix() {
+				t.Errorf("Token TTL is invalid")
+			}
+
+			totalLatencyMs += metrics.LatencyMs
+		}
+	}
+
+	fmt.Printf("Scheduled %d/1000 tasks successfully\n", successCount)
+	if successCount == 0 {
+		t.Errorf("Failed to schedule any tasks")
+	} else {
+		fmt.Printf("Average Latency: %d ms\n", totalLatencyMs/successCount)
+	}
+
+	// Test Failover
+	if successCount > 0 {
+		// Schedule a task specifically for failover test
+		initialNodeID, failoverTicket, err := s.Schedule("failover-capsule", "token", policy, budget)
+		if err != nil {
+			t.Fatalf("Failed to schedule task for failover test: %v", err)
+		}
+
+		// Reassign via Failover
+		// Ensure we don't hit "no alternative nodes" by adding a candidate
+		s.RegisterNode("failover-node-2", &types.AgentManifest{NodeID: "failover-node-2"}, 99.0, 10, 1, TierMedium, []string{"compute", "storage"})
+
+		newNodeID, err := s.Failover(failoverTicket.ID)
+		if err != nil {
+			t.Errorf("Failover failed: %v", err)
+		}
+		if newNodeID == initialNodeID {
+			t.Errorf("Failover reassigned to the same node")
+		}
+
+		// Wait for TTL expiration
+		s.mu.Lock()
+		s.tasks[failoverTicket.ID].ExpiresAt = time.Now().Unix() - 1 // artificially expire it
+		s.mu.Unlock()
+
+		_, err = s.Failover(failoverTicket.ID)
+		if err == nil {
+			t.Errorf("Failover succeeded but token TTL should have expired")
+		}
+	}
+}
