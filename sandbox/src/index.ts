@@ -5,6 +5,7 @@ import https from 'https';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import executeRoutes from './routes/execute';
+import capsuleRoutes from './routes/capsule';
 
 dotenv.config();
 
@@ -34,6 +35,7 @@ export const app = express();
 app.use(cors({ origin: ['http://localhost:3000', 'http://localhost:8000', 'http://localhost:5000'] }));
 app.use(bodyParser.json());
 app.use('/', executeRoutes);
+app.use('/', capsuleRoutes);
 
 if (process.env.NODE_ENV !== 'test') {
     const certsDir = process.env.CERTS_DIR || '../certs';
