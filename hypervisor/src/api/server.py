@@ -293,7 +293,8 @@ async def _process_intent_core(intent: IntentObject, api_key: str):
                 intent.metadata["_delegated_already"] = True
 
                 async with httpx.AsyncClient() as client:
-                    try:                        import urllib.parse
+                    try:
+                        import urllib.parse
                         parsed_addr = urllib.parse.urlparse(peer_addr)
                         host = parsed_addr.hostname or peer_addr
                         # The Hypervisor runs on 8081 by default
