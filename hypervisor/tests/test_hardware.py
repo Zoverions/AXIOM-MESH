@@ -10,6 +10,10 @@ def test_hardware_profile():
     assert scanner.get_hardware_profile({"total_ram_gb": 8, "vram_mb": 0}) == "edge"
     assert scanner.get_hardware_profile({"total_ram_gb": 4, "vram_mb": 0}) == "tablet"
 
+    # Test fallback when footprint is None
+    with patch.object(scanner, 'scan', return_value={"total_ram_gb": 16, "vram_mb": 8000}):
+        assert scanner.get_hardware_profile(None) == "full_node"
+
 def test_recommend_models():
     scanner = HardwareScanner()
 
@@ -56,6 +60,12 @@ def test_get_os_name_windows(mock_release, mock_system):
     scanner = HardwareScanner()
     assert scanner._get_os_name() == "Windows 11"
 
+@patch('platform.system')
+def test_get_os_name_unknown(mock_system):
+    mock_system.return_value = "FreeBSD"
+    scanner = HardwareScanner()
+    assert scanner._get_os_name() == "FreeBSD"
+
 @patch('subprocess.check_output')
 @patch('os.cpu_count')
 def test_get_cpu_cores(mock_cpu_count, mock_check_output):
@@ -100,8 +110,13 @@ def test_get_total_ram_gb(mock_check_output):
     mock_check_output.side_effect = check_output_side_effect
     assert scanner._get_total_ram_gb() == 16.0
 
-    # Test fallback
+    # Test fallback inside the exception handler (e.g., sysctl raises an exception)
     mock_check_output.side_effect = Exception("All failed")
+    assert scanner._get_total_ram_gb() == 8.0
+
+    # Test final fallback (e.g., Linux free doesn't find Mem: line)
+    mock_check_output.side_effect = None
+    mock_check_output.return_value = b"              total        used        free\nSwap:             0           0           0\n"
     assert scanner._get_total_ram_gb() == 8.0
 
 @patch('subprocess.check_output')
@@ -152,3 +167,67 @@ def test_scan(mock_vram, mock_ram, mock_cpu, mock_os):
     mock_vram.return_value = 0
     res2 = scanner.scan()
     assert res2["has_gpu"] == False
+
+@patch.object(HardwareScanner, 'get_hardware_profile')
+@patch.object(HardwareScanner, 'scan')
+def test_generate_capability_manifest(mock_scan, mock_profile):
+    scanner = HardwareScanner()
+
+    # Test full_node with GPU
+    mock_scan.return_value = {
+        "os_name": "Linux",
+        "cpu_cores": 8,
+        "total_ram_gb": 32.0,
+        "vram_mb": 16000,
+        "has_gpu": True
+    }
+    mock_profile.return_value = "full_node"
+    manifest_full_gpu = scanner.generate_capability_manifest()
+    assert manifest_full_gpu["tier"] == "full"
+    assert "zkml-gen" in manifest_full_gpu["services"]
+    assert manifest_full_gpu["benchmarks"]["inf/s"] == round((8 * 3.5) + (16000 / 1000 * 2.5), 2)
+    assert manifest_full_gpu["benchmarks"]["mem_bandwidth_gb_s"] == 51.2
+
+    # Test full_node without GPU
+    mock_scan.return_value = {
+        "os_name": "Linux",
+        "cpu_cores": 16,
+        "total_ram_gb": 64.0,
+        "vram_mb": 0,
+        "has_gpu": False
+    }
+    mock_profile.return_value = "full_node"
+    manifest_full_nogpu = scanner.generate_capability_manifest()
+    assert manifest_full_nogpu["tier"] == "full"
+    assert manifest_full_nogpu["benchmarks"]["inf/s"] == round(16 * 3.5, 2)
+    assert manifest_full_nogpu["benchmarks"]["mem_bandwidth_gb_s"] == 12.8
+
+    # Test edge
+    mock_scan.return_value = {
+        "os_name": "Linux",
+        "cpu_cores": 4,
+        "total_ram_gb": 8.0,
+        "vram_mb": 0,
+        "has_gpu": False
+    }
+    mock_profile.return_value = "edge"
+    manifest_edge = scanner.generate_capability_manifest()
+    assert manifest_edge["tier"] == "mid"
+    assert "partial-graph" in manifest_edge["services"]
+    assert manifest_edge["benchmarks"]["inf/s"] == round(4 * 1.5, 2)
+    assert manifest_edge["benchmarks"]["mem_bandwidth_gb_s"] == 8.5
+
+    # Test tablet / fallback
+    mock_scan.return_value = {
+        "os_name": "Linux",
+        "cpu_cores": 2,
+        "total_ram_gb": 4.0,
+        "vram_mb": 0,
+        "has_gpu": False
+    }
+    mock_profile.return_value = "tablet"
+    manifest_tablet = scanner.generate_capability_manifest()
+    assert manifest_tablet["tier"] == "edge"
+    assert "quantized-inference" in manifest_tablet["services"]
+    assert manifest_tablet["benchmarks"]["inf/s"] == round(2 * 0.8, 2)
+    assert manifest_tablet["benchmarks"]["mem_bandwidth_gb_s"] == 2.1
