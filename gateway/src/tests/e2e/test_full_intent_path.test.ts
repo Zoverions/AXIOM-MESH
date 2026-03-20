@@ -2,6 +2,8 @@ import axios from 'axios';
 import { spawn } from 'child_process';
 import express from 'express';
 import http from 'http';
+import https from 'https';
+import fs from 'fs';
 import path from 'path';
 import { WebSocket } from 'ws';
 
@@ -90,6 +92,7 @@ describe('Gateway integration contracts', () => {
             HYPERVISOR_URL: 'http://127.0.0.1:8005',
             HYPERVISOR_API_KEY: 'test_key',
             GRID_URL: 'http://127.0.0.1:5000/skills',
+            CERTS_DIR: path.resolve(__dirname, '../../../../certs'),
             NO_PROXY: 'localhost,127.0.0.1',
             no_proxy: 'localhost,127.0.0.1',
             HTTP_PROXY: '',
@@ -97,8 +100,8 @@ describe('Gateway integration contracts', () => {
             ALL_PROXY: ''
         };
 
-        gatewayProcess = spawn('node', ['-r', 'ts-node/register', 'src/index.ts'], {
-            cwd: path.resolve(__dirname, '../../../'),
+        gatewayProcess = spawn('node', ['-r', 'ts-node/register', 'index.ts'], {
+            cwd: path.resolve(__dirname, '../../'),
             env: gwEnv,
             stdio: 'inherit'
         });
@@ -106,19 +109,31 @@ describe('Gateway integration contracts', () => {
         let gwUp = false;
         for (let i = 0; i < 40; i++) {
             try {
-                const res = await axios.get('http://127.0.0.1:3005/health', {
-                    headers: { Origin: 'http://127.0.0.1:3005' }
+                const res = await axios.get('https://127.0.0.1:3005/health', {
+                    headers: { Origin: 'https://127.0.0.1:3005' },
+                    httpsAgent: new https.Agent({
+                        rejectUnauthorized: false,
+                        cert: fs.readFileSync(path.resolve(__dirname, '../../../../certs/gateway.crt')),
+                        key: fs.readFileSync(path.resolve(__dirname, '../../../../certs/gateway.key')),
+                        ca: [fs.readFileSync(path.resolve(__dirname, '../../../../certs/ca.crt'))]
+                    })
                 });
                 if (res.status === 200) {
                     gwUp = true;
                     break;
                 }
-            } catch {
+            } catch (err: any) {
                 await delay(500);
             }
         }
 
-        axios.defaults.headers.common['Origin'] = 'http://127.0.0.1:3005';
+        axios.defaults.headers.common['Origin'] = 'https://127.0.0.1:3005';
+        axios.defaults.httpsAgent = new https.Agent({
+            rejectUnauthorized: false,
+            cert: fs.readFileSync(path.resolve(__dirname, '../../../../certs/gateway.crt')),
+            key: fs.readFileSync(path.resolve(__dirname, '../../../../certs/gateway.key')),
+            ca: [fs.readFileSync(path.resolve(__dirname, '../../../../certs/ca.crt'))]
+        });
 
         if (!gwUp) {
             throw new Error('Gateway server failed to start');
@@ -132,18 +147,18 @@ describe('Gateway integration contracts', () => {
     });
 
     it('enforces auth consistently for dashboard and REST', async () => {
-        await expect(axios.get('http://127.0.0.1:3005/')).rejects.toMatchObject({
+        await expect(axios.get('https://127.0.0.1:3005/')).rejects.toMatchObject({
             response: { status: 401 }
         });
 
-        const dashboardRes = await axios.get('http://127.0.0.1:3005/?apiKey=gw_key');
+        const dashboardRes = await axios.get('https://127.0.0.1:3005/?apiKey=gw_key');
         expect(dashboardRes.status).toBe(200);
 
-        await expect(axios.get('http://127.0.0.1:3005/api/v1/agents')).rejects.toMatchObject({
+        await expect(axios.get('https://127.0.0.1:3005/api/v1/agents')).rejects.toMatchObject({
             response: { status: 401 }
         });
 
-        const agentsRes = await axios.get('http://127.0.0.1:3005/api/v1/agents', {
+        const agentsRes = await axios.get('https://127.0.0.1:3005/api/v1/agents', {
             headers: { 'x-api-key': 'gw_key' }
         });
         expect(agentsRes.status).toBe(200);
@@ -151,7 +166,7 @@ describe('Gateway integration contracts', () => {
     });
 
     it('processes intent with strict contract shape through hypervisor stub', async () => {
-        const missingContent = await axios.post('http://127.0.0.1:3005/api/v1/intent/process', { channel: 'test' }, {
+        const missingContent = await axios.post('https://127.0.0.1:3005/api/v1/intent/process', { channel: 'test' }, {
             headers: { Authorization: 'Bearer gw_key' },
             validateStatus: () => true
         });
@@ -165,7 +180,7 @@ describe('Gateway integration contracts', () => {
             metadata: { sender: 'integration_tester', response_style: 'analytical' }
         };
 
-        const response = await axios.post('http://127.0.0.1:3005/api/v1/intent/process', payload, {
+        const response = await axios.post('https://127.0.0.1:3005/api/v1/intent/process', payload, {
             headers: { Authorization: 'Bearer gw_key' }
         });
 
@@ -186,13 +201,13 @@ describe('Gateway integration contracts', () => {
     });
 
     it('uses grid stubs for status and network APIs', async () => {
-        const statusRes = await axios.get('http://127.0.0.1:3005/api/v1/status', {
+        const statusRes = await axios.get('https://127.0.0.1:3005/api/v1/status', {
             headers: { Authorization: 'Bearer gw_key' }
         });
         expect(statusRes.status).toBe(200);
         expect(statusRes.data.grid).toMatchObject({ status: 'ok', component: 'grid' });
 
-        const networkRes = await axios.get('http://127.0.0.1:3005/api/v1/network', {
+        const networkRes = await axios.get('https://127.0.0.1:3005/api/v1/network', {
             headers: { Authorization: 'Bearer gw_key' }
         });
         expect(networkRes.status).toBe(200);

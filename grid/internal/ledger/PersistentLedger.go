@@ -32,17 +32,33 @@ func NewWAL(path string) (*WAL, error) {
 	return &WAL{file: f}, nil
 }
 
-func (w *WAL) Append(entry interface{}) error {
-	data, err := json.Marshal(entry)
+// WALEntry represents an envelope for multiple types of ledger entries
+type WALEntry struct {
+	Type string          `json:"type"`
+	Data json.RawMessage `json:"data"`
+}
+
+func (w *WAL) Append(entryType string, data interface{}) error {
+	b, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
-	data = append(data, '\n')
+
+	env := WALEntry{
+		Type: entryType,
+		Data: b,
+	}
+
+	envData, err := json.Marshal(env)
+	if err != nil {
+		return err
+	}
+	envData = append(envData, '\n')
 
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	if _, err := w.file.Write(data); err != nil {
+	if _, err := w.file.Write(envData); err != nil {
 		return err
 	}
 	// fsync for durability
@@ -84,6 +100,7 @@ func (w *WAL) Close() error {
 type PersistentLedger struct {
 	mu        sync.RWMutex
 	cache     map[string]types.SkillVector
+	bondCache map[string]types.ComputeBond
 	cacheSize int
 
 	db  *badger.DB
@@ -113,9 +130,10 @@ func NewPersistentLedger(dataDir string) (*PersistentLedger, error) {
 	}
 
 	pl := &PersistentLedger{
-		cache: make(map[string]types.SkillVector),
-		db:    db,
-		wal:   wal,
+		cache:     make(map[string]types.SkillVector),
+		bondCache: make(map[string]types.ComputeBond),
+		db:        db,
+		wal:       wal,
 	}
 
 	// Load cache from BadgerDB on startup
@@ -139,26 +157,70 @@ func NewPersistentLedger(dataDir string) (*PersistentLedger, error) {
 				continue
 			}
 		}
+
+		bondPrefix := []byte("bond:")
+		for it.Seek(bondPrefix); it.ValidForPrefix(bondPrefix); it.Next() {
+			item := it.Item()
+			key := string(item.Key()[len(bondPrefix):])
+			err := item.Value(func(val []byte) error {
+				var bond types.ComputeBond
+				if err := json.Unmarshal(val, &bond); err == nil {
+					pl.bondCache[key] = bond
+				}
+				return nil
+			})
+			if err != nil {
+				continue
+			}
+		}
 		return nil
 	})
 
 	// Recover from WAL to ensure no states are lost during crash
 	err = pl.wal.Recover(func(entry []byte) error {
-		var skill types.SkillVector
-		if err := json.Unmarshal(entry, &skill); err != nil {
-			return err
+		var env WALEntry
+		if err := json.Unmarshal(entry, &env); err != nil || env.Type == "" {
+			// Backwards compatibility: attempt to unmarshal as skill directly
+			var skill types.SkillVector
+			if err := json.Unmarshal(entry, &skill); err == nil && skill.NodeID != "" {
+				env.Type = "skill"
+				env.Data = entry
+			} else {
+				return fmt.Errorf("failed to parse WAL entry: %v", err)
+			}
 		}
-		key := skill.NodeID + ":" + skill.Task
 
-		pl.mu.Lock()
-		pl.cache[key] = skill
-		pl.mu.Unlock()
+		if env.Type == "skill" {
+			var skill types.SkillVector
+			if err := json.Unmarshal(env.Data, &skill); err != nil {
+				return err
+			}
+			key := skill.NodeID + ":" + skill.Task
 
-		// Async badger update to sync state
-		go pl.db.Update(func(txn *badger.Txn) error {
-			data, _ := json.Marshal(skill)
-			return txn.Set([]byte("skill:"+key), data)
-		})
+			pl.mu.Lock()
+			pl.cache[key] = skill
+			pl.mu.Unlock()
+
+			// Async badger update to sync state
+			go pl.db.Update(func(txn *badger.Txn) error {
+				data, _ := json.Marshal(skill)
+				return txn.Set([]byte("skill:"+key), data)
+			})
+		} else if env.Type == "bond" {
+			var bond types.ComputeBond
+			if err := json.Unmarshal(env.Data, &bond); err != nil {
+				return err
+			}
+
+			pl.mu.Lock()
+			pl.bondCache[bond.NodeID] = bond
+			pl.mu.Unlock()
+
+			go pl.db.Update(func(txn *badger.Txn) error {
+				data, _ := json.Marshal(bond)
+				return txn.Set([]byte("bond:"+bond.NodeID), data)
+			})
+		}
 		return nil
 	})
 	if err != nil {
@@ -232,9 +294,41 @@ func (pl *PersistentLedger) GetAllSkills() []types.SkillVector {
 	return skills
 }
 
+// GetAllBonds returns all bonds from the cache
+func (pl *PersistentLedger) GetAllBonds() []types.ComputeBond {
+	pl.mu.RLock()
+	defer pl.mu.RUnlock()
+	bonds := make([]types.ComputeBond, 0, len(pl.bondCache))
+	for _, b := range pl.bondCache {
+		bonds = append(bonds, b)
+	}
+	return bonds
+}
+
+func (pl *PersistentLedger) SetBond(bond types.ComputeBond) error {
+	if err := pl.wal.Append("bond", bond); err != nil {
+		return err
+	}
+
+	pl.mu.Lock()
+	pl.bondCache[bond.NodeID] = bond
+	pl.mu.Unlock()
+
+	go func() {
+		err := pl.db.Update(func(txn *badger.Txn) error {
+			data, _ := json.Marshal(bond)
+			return txn.Set([]byte("bond:"+bond.NodeID), data)
+		})
+		if err != nil {
+			fmt.Printf("Error updating badger with bond: %v\n", err)
+		}
+	}()
+	return nil
+}
+
 func (pl *PersistentLedger) SetSkill(skill types.SkillVector) error {
 	// 1. Write to WAL first (durability)
-	if err := pl.wal.Append(skill); err != nil {
+	if err := pl.wal.Append("skill", skill); err != nil {
 		return err
 	}
 

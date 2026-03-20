@@ -9,7 +9,10 @@ import "./ComputeBond.sol";
 contract FounderShareManager is Initializable, UUPSUpgradeable {
     FounderCommitment public immutable founder;
     ComputeBond public immutable treasury;
-    uint256 public constant PERMANENT_FOUNDER_SHARE = 5; // 5%
+
+    // The founder share is NOT permanent. It starts at 5% and decays to 0% linearly as the gridSwarmSize reaches 10,000 nodes,
+    // as enforced by ComputeBond.getCurrentFounderShare().
+    uint256 public constant INITIAL_FOUNDER_SHARE = 5; // 5%
     uint256 public lastEpochAllocation;
 
     event FounderShareClaimed(uint256 amount);
@@ -29,12 +32,17 @@ contract FounderShareManager is Initializable, UUPSUpgradeable {
     function claimOrReallocate() external {
         require(founder.verifyFounder(""), "Founder verification failed");
 
-        uint256 epochUnused = treasury.calculateUnusedFounderShare(PERMANENT_FOUNDER_SHARE);
+        // getCurrentFounderShare returns basis points where 500 = 5.00%
+        // We divide by 100 to pass a consistent percentage (5% -> 0%) down
+        uint256 currentShare = treasury.getCurrentFounderShare();
+        uint256 percentage = currentShare / 100;
+
+        uint256 epochUnused = treasury.calculateUnusedFounderShare(percentage);
         if (epochUnused > 0) {
             treasury.reallocateToNetwork(epochUnused);
             emit UnusedShareReallocated(epochUnused);
         } else {
-            uint256 claimAmount = treasury.releaseFounderShare(PERMANENT_FOUNDER_SHARE);
+            uint256 claimAmount = treasury.releaseFounderShare(percentage);
             emit FounderShareClaimed(claimAmount);
         }
     }

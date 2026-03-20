@@ -1,6 +1,7 @@
 import express from 'express';
 import { WebSocketServer, WebSocket } from 'ws';
 import cors from 'cors';
+import helmet from 'helmet';
 import bodyParser from 'body-parser';
 import https from 'https';
 import fs from 'fs';
@@ -16,6 +17,7 @@ import { filterACS } from './middleware/referent_filter';
 import { getChannelFactory, getRegisteredChannelNames, Channel } from './channels/registry';
 import { initLogger } from './utils/logger';
 import { BackpressureWebSocket } from './performance/EventLoopOptimizer';
+import { wafMiddleware } from './middleware/waf';
 import './channels'; // Initialize channel registrations
 
 dotenv.config();
@@ -52,7 +54,9 @@ app.use(cors({
     }
 }));
 
+app.use(helmet());
 app.use(bodyParser.json());
+app.use(wafMiddleware);
 
 // Serve static frontend dashboard with the same auth model as REST/WS
 app.use((req, res, next) => {
