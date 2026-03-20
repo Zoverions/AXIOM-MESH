@@ -6,11 +6,14 @@ export interface CapsuleManifest {
     allowedHostcalls: string[];
     minimumTier?: string;
     version?: string;
+    signature: string;
+    signer: string;
 }
 
 export interface ExecutionToken {
     capsuleId: string;
     scopes: string[];
+    resourceBudgets: Record<string, number>;
     signature: string;
     signer: string;
     expiresAt: number;
@@ -38,6 +41,8 @@ export interface Attestation {
     hardwareTier: string;
     signature: string;
     timestamp: number;
+    teeQuote?: string;
+    zkProof?: string;
 }
 
 export class PolicyAttestationBroker {
@@ -46,6 +51,7 @@ export class PolicyAttestationBroker {
     private currentPolicy: PolicyRule;
     private hardwareTier: string;
     public auditLogs: AuditLog[] = [];
+    private hostcallCounts: Record<string, number> = {};
 
     constructor(
         privateKeyPem: string,
@@ -63,14 +69,26 @@ export class PolicyAttestationBroker {
      * Pre-execution checks: validate token signature, capsule manifest, hardware tier.
      */
     public validatePreExecution(token: ExecutionToken, manifest: CapsuleManifest): boolean {
+        // 0. Enforce presence of new security fields
+        if (!manifest.signature || !manifest.signer) {
+            this.logAudit(token.capsuleId, 'EXECUTION_BLOCKED', { reason: 'Missing signature or signer in manifest' });
+            throw new Error('Missing signature or signer in manifest');
+        }
+        if (!token.resourceBudgets) {
+            this.logAudit(token.capsuleId, 'EXECUTION_BLOCKED', { reason: 'Missing resourceBudgets in token' });
+            throw new Error('Missing resourceBudgets in token');
+        }
+
         // 1. Check expiration
         if (Date.now() > token.expiresAt) {
             this.logAudit(token.capsuleId, 'EXECUTION_BLOCKED', { reason: 'Token expired' });
             throw new Error('Token expired');
         }
 
-        // 2. Check capsule ID match
-        if (token.capsuleId !== manifest.id) {
+        // 2. Check capsule ID match (constant-time comparison)
+        const tIdBuf = Buffer.from(token.capsuleId);
+        const mIdBuf = Buffer.from(manifest.id);
+        if (tIdBuf.length !== mIdBuf.length || !crypto.timingSafeEqual(tIdBuf, mIdBuf)) {
             this.logAudit(token.capsuleId, 'EXECUTION_BLOCKED', { reason: 'Capsule ID mismatch' });
             throw new Error('Capsule ID mismatch');
         }
@@ -128,7 +146,7 @@ export class PolicyAttestationBroker {
         const redacted = structuredClone(input);
         // Deep clone or recursive redact could be used here
         // Simple top-level field removal for demonstration
-        const sensitiveFields = ['activeTabContent', 'rawLocalFiles', 'personalId', 'authTokens'];
+        const sensitiveFields = ['rawLocalFiles', 'personalId', 'authTokens'];
         for (const field of sensitiveFields) {
             if (field in redacted) {
                 redacted[field] = '[REDACTED]';
@@ -138,7 +156,9 @@ export class PolicyAttestationBroker {
         // Deep redacting `activeTabContent` string matching
         const redactDeep = (obj: any) => {
            for(let key in obj) {
-               if (key === 'activeTabContent' || key.toLowerCase().includes('password') || key.toLowerCase().includes('secret')) {
+               if (key === 'activeTabContent') {
+                   obj[key] = '[FEATURE_VECTOR_OR_ENCRYPTED_BLOB]';
+               } else if (key.toLowerCase().includes('password') || key.toLowerCase().includes('secret')) {
                    obj[key] = '[REDACTED]';
                } else if (typeof obj[key] === 'object' && obj[key] !== null) {
                    redactDeep(obj[key]);
@@ -155,6 +175,20 @@ export class PolicyAttestationBroker {
      * Sandbox orchestration hostcall mediation
      */
     public requestHostcall(capsuleId: string, manifest: CapsuleManifest, callName: string, args: any[]): boolean {
+        // 0. Hostcall rate limiting & noise injection for side-channel mitigation
+        const callKey = `${capsuleId}:${callName}`;
+        this.hostcallCounts[callKey] = (this.hostcallCounts[callKey] || 0) + 1;
+        if (this.hostcallCounts[callKey] > 100) {
+            this.logAudit(capsuleId, 'HOSTCALL_BLOCKED', { call: callName, reason: 'Rate limit exceeded' });
+            throw new Error(`Hostcall ${callName} rate limit exceeded`);
+        }
+
+        // Inject noise (dummy loop) for constant-time-ish side-channel mitigation
+        let noise = 0;
+        for (let i = 0; i < 1000; i++) {
+            noise += Math.random();
+        }
+
         // 1. Is it blocked by node policy?
         if (this.currentPolicy.blockedHostcalls.includes(callName)) {
             this.logAudit(capsuleId, 'HOSTCALL_BLOCKED', { call: callName, reason: 'Blocked by local policy' });
@@ -184,26 +218,36 @@ export class PolicyAttestationBroker {
     /**
      * Update policy with governance signature
      */
-    public updatePolicy(rawPolicyString: string, signature: string, governancePubKeyPem: string): boolean {
+    public updatePolicy(rawPolicyString: string, signatures: string[], governancePubKeyPems: string[], threshold: number = 2): boolean {
         try {
-            const govKey = crypto.createPublicKey(governancePubKeyPem);
-            const verify = crypto.createVerify('SHA256');
-            verify.update(rawPolicyString);
-            verify.end();
-            const isValid = verify.verify(govKey, Buffer.from(signature, 'hex'));
+            let validSignatures = 0;
 
-            if (!isValid) {
-                this.logAudit('SYSTEM', 'POLICY_UPDATE', { status: 'FAILED', reason: 'Invalid governance signature' });
-                throw new Error('Invalid governance signature');
+            for (let i = 0; i < signatures.length; i++) {
+                if (i >= governancePubKeyPems.length) break;
+
+                const govKey = crypto.createPublicKey(governancePubKeyPems[i]);
+                const verify = crypto.createVerify('SHA256');
+                verify.update(rawPolicyString);
+                verify.end();
+                const isValid = verify.verify(govKey, Buffer.from(signatures[i], 'hex'));
+
+                if (isValid) {
+                    validSignatures++;
+                }
+            }
+
+            if (validSignatures < threshold) {
+                this.logAudit('SYSTEM', 'POLICY_UPDATE', { status: 'FAILED', reason: `Insufficient valid signatures: ${validSignatures}/${threshold}` });
+                throw new Error(`Governance signature verification failed: threshold not met`);
             }
 
             const newPolicy = JSON.parse(rawPolicyString) as PolicyRule;
             this.currentPolicy = newPolicy;
             this.logAudit('SYSTEM', 'POLICY_UPDATE', { status: 'SUCCESS', newPolicy });
             return true;
-        } catch (e) {
+        } catch (e: any) {
             this.logAudit('SYSTEM', 'POLICY_UPDATE', { status: 'FAILED', reason: 'Signature verification failed' });
-            throw new Error('Governance signature verification failed');
+            throw new Error(e.message || 'Governance signature verification failed');
         }
     }
 
@@ -233,7 +277,7 @@ export class PolicyAttestationBroker {
     /**
      * Generate optional zk/TEE attestations for outputs
      */
-    public generateAttestation(capsuleId: string, outputData: any): Attestation {
+    public generateAttestation(capsuleId: string, outputData: any, isHighSensitivity: boolean = false): Attestation {
         const hash = crypto.createHash('sha256');
         hash.update(JSON.stringify(outputData));
         const outputHash = hash.digest('hex');
@@ -244,27 +288,35 @@ export class PolicyAttestationBroker {
         logHashCalc.update(JSON.stringify(recentLogs));
         const logHash = logHashCalc.digest('hex');
 
-        const attestationData = `${capsuleId}:${outputHash}:${logHash}:${this.hardwareTier}:${Date.now()}`;
+        const timestamp = Date.now();
+        const attestationData = `${capsuleId}:${outputHash}:${logHash}:${this.hardwareTier}:${timestamp}`;
 
         const sign = crypto.createSign('SHA256');
         sign.update(attestationData);
         sign.end();
         const signature = sign.sign(this.nodePrivateKey, 'hex');
 
-        return {
+        const attestation: Attestation = {
             attestationId: crypto.randomUUID(),
             capsuleId,
             logHash,
             hardwareTier: this.hardwareTier,
             signature,
-            timestamp: Date.now()
+            timestamp
         };
+
+        if (isHighSensitivity) {
+            attestation.teeQuote = Buffer.from(`MOCK_TEE_QUOTE_${capsuleId}_${timestamp}`).toString('base64');
+            attestation.zkProof = Buffer.from(`MOCK_ZK_PROOF_${capsuleId}_${timestamp}`).toString('base64');
+        }
+
+        return attestation;
     }
 
     /**
      * Mock Sandbox orchestration entry point
      */
-    public orchestrateExecution(token: ExecutionToken, manifest: CapsuleManifest, inputData: any, mockExecutionFn: (redactedInput: any) => any): any {
+    public orchestrateExecution(token: ExecutionToken, manifest: CapsuleManifest, inputData: any, isHighSensitivity: boolean = false, mockExecutionFn: (redactedInput: any) => any): any {
         // 1. Pre-execution checks
         this.validatePreExecution(token, manifest);
 
@@ -283,7 +335,7 @@ export class PolicyAttestationBroker {
         }
 
         // 4. Generate attestation
-        const attestation = this.generateAttestation(manifest.id, output);
+        const attestation = this.generateAttestation(manifest.id, output, isHighSensitivity);
 
         return {
             output,

@@ -10,7 +10,9 @@ describe('PolicyAttestationBroker', () => {
     let broker: PolicyAttestationBroker;
     let nodeKeyPair: any;
     let userKeyPair: any;
-    let govKeyPair: any;
+    let govKeyPair1: any;
+    let govKeyPair2: any;
+    let govKeyPair3: any;
 
     const initialPolicy: PolicyRule = {
         allowedScopes: ['network.read', 'fs.read.tmp', 'compute'],
@@ -32,7 +34,19 @@ describe('PolicyAttestationBroker', () => {
             privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
         });
 
-        govKeyPair = crypto.generateKeyPairSync('rsa', {
+        govKeyPair1 = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048,
+            publicKeyEncoding: { type: 'spki', format: 'pem' },
+            privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
+        });
+
+        govKeyPair2 = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048,
+            publicKeyEncoding: { type: 'spki', format: 'pem' },
+            privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
+        });
+
+        govKeyPair3 = crypto.generateKeyPairSync('rsa', {
             modulusLength: 2048,
             publicKeyEncoding: { type: 'spki', format: 'pem' },
             privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
@@ -59,6 +73,7 @@ describe('PolicyAttestationBroker', () => {
         return {
             capsuleId,
             scopes,
+            resourceBudgets: { memory: 128 },
             signature,
             signer: userKeyPair.publicKey,
             expiresAt
@@ -69,7 +84,9 @@ describe('PolicyAttestationBroker', () => {
         id: 'capsule-123',
         scopes: ['compute'],
         allowedHostcalls: ['fs_read_tmp', 'math_add'],
-        minimumTier: 'standard'
+        minimumTier: 'standard',
+        signature: 'mock_signature',
+        signer: 'mock_signer'
     };
 
     describe('Pre-execution checks', () => {
@@ -110,7 +127,7 @@ describe('PolicyAttestationBroker', () => {
                 rawLocalFiles: ['/etc/passwd']
             };
             const redacted = broker.redactData(input);
-            expect(redacted.activeTabContent).toBe('[REDACTED]');
+            expect(redacted.activeTabContent).toBe('[FEATURE_VECTOR_OR_ENCRYPTED_BLOB]');
             expect(redacted.rawLocalFiles).toBe('[REDACTED]');
             expect(redacted.data).toBe('hello');
         });
@@ -125,7 +142,7 @@ describe('PolicyAttestationBroker', () => {
             };
             const redacted = broker.redactData(input);
             expect(redacted.nested.passwordField).toBe('[REDACTED]');
-            expect(redacted.nested.activeTabContent).toBe('[REDACTED]');
+            expect(redacted.nested.activeTabContent).toBe('[FEATURE_VECTOR_OR_ENCRYPTED_BLOB]');
             expect(redacted.nested.normal).toBe('text');
         });
     });
@@ -156,11 +173,11 @@ describe('PolicyAttestationBroker', () => {
 
             const mockExecutionFn = (redacted: any) => {
                 // Ensure redaction worked inside mock execution
-                expect(redacted.activeTabContent).toBe('[REDACTED]');
+                expect(redacted.activeTabContent).toBe('[FEATURE_VECTOR_OR_ENCRYPTED_BLOB]');
                 return { result: 'success' };
             };
 
-            const result = broker.orchestrateExecution(token, validManifest, input, mockExecutionFn);
+            const result = broker.orchestrateExecution(token, validManifest, input, false, mockExecutionFn);
             expect(result.output.result).toBe('success');
             expect(result.attestation.capsuleId).toBe('capsule-123');
             expect(result.attestation.signature).toBeDefined();
@@ -172,7 +189,7 @@ describe('PolicyAttestationBroker', () => {
     });
 
     describe('Policy updates', () => {
-        it('should accept signed policy updates from governance', () => {
+        it('should accept signed policy updates from governance threshold', () => {
             const newPolicy: PolicyRule = {
                 allowedScopes: ['all'],
                 blockedHostcalls: [],
@@ -182,12 +199,20 @@ describe('PolicyAttestationBroker', () => {
 
             const rawPolicyString = JSON.stringify(newPolicy);
 
-            const sign = crypto.createSign('SHA256');
-            sign.update(rawPolicyString);
-            sign.end();
-            const signature = sign.sign(govKeyPair.privateKey, 'hex');
+            const sign1 = crypto.createSign('SHA256');
+            sign1.update(rawPolicyString);
+            sign1.end();
+            const signature1 = sign1.sign(govKeyPair1.privateKey, 'hex');
 
-            expect(broker.updatePolicy(rawPolicyString, signature, govKeyPair.publicKey)).toBe(true);
+            const sign2 = crypto.createSign('SHA256');
+            sign2.update(rawPolicyString);
+            sign2.end();
+            const signature2 = sign2.sign(govKeyPair2.privateKey, 'hex');
+
+            const pubKeys = [govKeyPair1.publicKey, govKeyPair2.publicKey, govKeyPair3.publicKey];
+            const signatures = [signature1, signature2]; // 2 valid signatures, threshold is 2
+
+            expect(broker.updatePolicy(rawPolicyString, signatures, pubKeys, 2)).toBe(true);
 
             // Redaction should now be disabled
             const input = { activeTabContent: 'secret' };
@@ -195,7 +220,7 @@ describe('PolicyAttestationBroker', () => {
             expect(redacted.activeTabContent).toBe('secret');
         });
 
-        it('should reject invalid signatures for policy updates', () => {
+        it('should reject when threshold is not met for policy updates', () => {
             const newPolicy: PolicyRule = {
                 allowedScopes: ['all'],
                 blockedHostcalls: [],
@@ -205,13 +230,21 @@ describe('PolicyAttestationBroker', () => {
 
             const rawPolicyString = JSON.stringify(newPolicy);
 
-            // Sign with user key instead of gov key
-            const sign = crypto.createSign('SHA256');
-            sign.update(rawPolicyString);
-            sign.end();
-            const signature = sign.sign(userKeyPair.privateKey, 'hex');
+            const sign1 = crypto.createSign('SHA256');
+            sign1.update(rawPolicyString);
+            sign1.end();
+            const signature1 = sign1.sign(govKeyPair1.privateKey, 'hex');
 
-            expect(() => broker.updatePolicy(rawPolicyString, signature, govKeyPair.publicKey)).toThrow('Governance signature verification failed');
+            // Second signature is invalid (signed by user key)
+            const signBad = crypto.createSign('SHA256');
+            signBad.update(rawPolicyString);
+            signBad.end();
+            const signatureBad = signBad.sign(userKeyPair.privateKey, 'hex');
+
+            const pubKeys = [govKeyPair1.publicKey, govKeyPair2.publicKey, govKeyPair3.publicKey];
+            const signatures = [signature1, signatureBad]; // Only 1 valid signature
+
+            expect(() => broker.updatePolicy(rawPolicyString, signatures, pubKeys, 2)).toThrow('Governance signature verification failed: threshold not met');
         });
     });
 });
