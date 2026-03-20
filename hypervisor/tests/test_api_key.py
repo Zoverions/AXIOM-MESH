@@ -20,7 +20,7 @@ def get_verify_api_key_func():
 
     nodes_to_compile = []
     for node in tree.body:
-        if isinstance(node, ast.FunctionDef) and node.name in ("_get_expected_api_key", "_validate_api_key", "verify_api_key"):
+        if isinstance(node, ast.FunctionDef) and node.name in ("get_expected_api_key", "validate_api_key", "verify_api_key"):
             nodes_to_compile.append(node)
 
     if not nodes_to_compile:
@@ -29,6 +29,11 @@ def get_verify_api_key_func():
     module = ast.Module(body=nodes_to_compile, type_ignores=[])
     code = compile(module, filename="<ast>", mode="exec")
 
+    class MockSecretManager:
+        @staticmethod
+        def get_secret(key):
+            return os.environ.get(key)
+
     context = {
         "Request": Request,
         "HTTPAuthorizationCredentials": HTTPAuthorizationCredentials,
@@ -36,7 +41,8 @@ def get_verify_api_key_func():
         "security": None,
         "os": os,
         "HTTPException": HTTPException,
-        "status": status
+        "status": status,
+        "SecretManager": MockSecretManager
     }
     exec(code, context)
     return context["verify_api_key"]

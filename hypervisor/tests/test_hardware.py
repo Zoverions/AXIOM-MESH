@@ -143,6 +143,69 @@ def test_get_vram_mb(mock_check_output):
     mock_check_output.side_effect = Exception("All failed")
     assert scanner._get_vram_mb() == 0
 
+@patch('platform.system')
+@patch('subprocess.check_output')
+def test_scan_full_mock(mock_check_output, mock_system):
+    mock_system.return_value = "Windows"
+
+    def check_output_side_effect(args, **kwargs):
+        if args[0] == "nproc":
+            return b"12\n"
+        elif args[0] == "free":
+            return b"              total        used        free      shared  buff/cache   available\nMem:             64           5          20           0           5          25\nSwap:             0           0           0\n"
+        elif args[0] == "nvidia-smi":
+            return b"16384\n"
+        raise Exception("Unknown command: " + str(args))
+
+    mock_check_output.side_effect = check_output_side_effect
+
+    with patch('platform.release', return_value="10"):
+        scanner = HardwareScanner()
+        res = scanner.scan()
+
+    assert res == {
+        "os_name": "Windows 10",
+        "cpu_cores": 12,
+        "total_ram_gb": 64.0,
+        "vram_mb": 16384,
+        "has_gpu": True
+    }
+
+@patch('platform.system')
+@patch('subprocess.check_output')
+@patch('os.cpu_count')
+def test_scan_no_gpu(mock_cpu_count, mock_check_output, mock_system):
+    mock_system.return_value = "Linux"
+    mock_cpu_count.return_value = 4
+
+    def check_output_side_effect(args, **kwargs):
+        if args[0] == "nproc":
+            raise Exception("No nproc")
+        elif args[0] == "sysctl" and "hw.ncpu" in args:
+            raise Exception("No sysctl ncpu")
+        elif args[0] == "free":
+            return b"              total        used        free      shared  buff/cache   available\nMem:             15           5          20           0           5          25\nSwap:             0           0           0\n"
+        elif args[0] == "nvidia-smi":
+            raise Exception("No nvidia-smi")
+        elif args[0] == "sysctl" and "machdep.cpu.brand_string" in args:
+            raise Exception("No Apple")
+        raise Exception("Unknown command: " + str(args))
+
+    mock_check_output.side_effect = check_output_side_effect
+
+    m_open = mock_open(read_data="NAME=\"Debian\"\nPRETTY_NAME=\"Debian GNU/Linux 11\"\n")
+    with patch("builtins.open", m_open):
+        scanner = HardwareScanner()
+        res = scanner.scan()
+
+    assert res == {
+        "os_name": "Linux (Debian GNU/Linux 11)",
+        "cpu_cores": 4,
+        "total_ram_gb": 15.0,
+        "vram_mb": 0,
+        "has_gpu": False
+    }
+
 @patch.object(HardwareScanner, '_get_os_name')
 @patch.object(HardwareScanner, '_get_cpu_cores')
 @patch.object(HardwareScanner, '_get_total_ram_gb')
@@ -168,12 +231,9 @@ def test_scan(mock_vram, mock_ram, mock_cpu, mock_os):
     res2 = scanner.scan()
     assert res2["has_gpu"] == False
 
-@patch.object(HardwareScanner, 'get_hardware_profile')
 @patch.object(HardwareScanner, 'scan')
-def test_generate_capability_manifest(mock_scan, mock_profile):
+def test_generate_capability_manifest_full_node(mock_scan):
     scanner = HardwareScanner()
-
-    # Test full_node with GPU
     mock_scan.return_value = {
         "os_name": "Linux",
         "cpu_cores": 8,
@@ -181,43 +241,40 @@ def test_generate_capability_manifest(mock_scan, mock_profile):
         "vram_mb": 16000,
         "has_gpu": True
     }
-    mock_profile.return_value = "full_node"
-    manifest_full_gpu = scanner.generate_capability_manifest()
-    assert manifest_full_gpu["tier"] == "full"
-    assert "zkml-gen" in manifest_full_gpu["services"]
-    assert manifest_full_gpu["benchmarks"]["inf/s"] == round((8 * 3.5) + (16000 / 1000 * 2.5), 2)
-    assert manifest_full_gpu["benchmarks"]["mem_bandwidth_gb_s"] == 51.2
 
-    # Test full_node without GPU
-    mock_scan.return_value = {
-        "os_name": "Linux",
-        "cpu_cores": 16,
-        "total_ram_gb": 64.0,
-        "vram_mb": 0,
-        "has_gpu": False
-    }
-    mock_profile.return_value = "full_node"
-    manifest_full_nogpu = scanner.generate_capability_manifest()
-    assert manifest_full_nogpu["tier"] == "full"
-    assert manifest_full_nogpu["benchmarks"]["inf/s"] == round(16 * 3.5, 2)
-    assert manifest_full_nogpu["benchmarks"]["mem_bandwidth_gb_s"] == 12.8
+    manifest = scanner.generate_capability_manifest()
 
-    # Test edge
+    assert manifest["tier"] == "full"
+    assert "zkml-gen" in manifest["services"]
+    assert "graph-full-sync" in manifest["services"]
+    assert "deep-archive-shard" in manifest["services"]
+    assert "sandbox-exec" in manifest["services"]
+    assert manifest["benchmarks"]["inf/s"] == round((8 * 3.5) + (16000 / 1000 * 2.5), 2)
+    assert manifest["benchmarks"]["mem_bandwidth_gb_s"] == 51.2
+
+@patch.object(HardwareScanner, 'scan')
+def test_generate_capability_manifest_edge(mock_scan):
+    scanner = HardwareScanner()
     mock_scan.return_value = {
         "os_name": "Linux",
         "cpu_cores": 4,
-        "total_ram_gb": 8.0,
+        "total_ram_gb": 16.0,
         "vram_mb": 0,
         "has_gpu": False
     }
-    mock_profile.return_value = "edge"
-    manifest_edge = scanner.generate_capability_manifest()
-    assert manifest_edge["tier"] == "mid"
-    assert "partial-graph" in manifest_edge["services"]
-    assert manifest_edge["benchmarks"]["inf/s"] == round(4 * 1.5, 2)
-    assert manifest_edge["benchmarks"]["mem_bandwidth_gb_s"] == 8.5
 
-    # Test tablet / fallback
+    manifest = scanner.generate_capability_manifest()
+
+    assert manifest["tier"] == "mid"
+    assert "sandbox-exec" in manifest["services"]
+    assert "partial-graph" in manifest["services"]
+    assert "proxy" in manifest["services"]
+    assert manifest["benchmarks"]["inf/s"] == round(4 * 1.5, 2)
+    assert manifest["benchmarks"]["mem_bandwidth_gb_s"] == 8.5
+
+@patch.object(HardwareScanner, 'scan')
+def test_generate_capability_manifest_tablet(mock_scan):
+    scanner = HardwareScanner()
     mock_scan.return_value = {
         "os_name": "Linux",
         "cpu_cores": 2,
@@ -225,9 +282,11 @@ def test_generate_capability_manifest(mock_scan, mock_profile):
         "vram_mb": 0,
         "has_gpu": False
     }
-    mock_profile.return_value = "tablet"
-    manifest_tablet = scanner.generate_capability_manifest()
-    assert manifest_tablet["tier"] == "edge"
-    assert "quantized-inference" in manifest_tablet["services"]
-    assert manifest_tablet["benchmarks"]["inf/s"] == round(2 * 0.8, 2)
-    assert manifest_tablet["benchmarks"]["mem_bandwidth_gb_s"] == 2.1
+
+    manifest = scanner.generate_capability_manifest()
+
+    assert manifest["tier"] == "edge"
+    assert "proxy" in manifest["services"]
+    assert "quantized-inference" in manifest["services"]
+    assert manifest["benchmarks"]["inf/s"] == round(2 * 0.8, 2)
+    assert manifest["benchmarks"]["mem_bandwidth_gb_s"] == 2.1
