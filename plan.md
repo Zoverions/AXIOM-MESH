@@ -9,6 +9,7 @@
 - [ ] Full OntarioEdAI + THUD guilds integration
 - [ ] AA (Account Abstraction) bonding with L1 piggyback
 - [ ] Complete MCP compatibility matrix with Alignment Profiles
+- [ ] Engage third-party auditor for Smart Contracts (Trail of Bits, Consensys Diligence, OpenZeppelin)
 
 Next: Formalize failure-mode proofs; map participatory closure to agent economics; LangGraph-inside-AXIOM-MESH adapter.
 

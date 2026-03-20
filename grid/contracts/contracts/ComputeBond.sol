@@ -268,9 +268,8 @@ contract ComputeBond is Ownable, AccessControl {
      */
     function withdraw(string memory nodeId, uint256 amount) external {
         Bond storage bond = bonds[nodeId];
-        if (!bond.isActive) revert BondNotActive();
         if (bond.staker != msg.sender) revert UnauthorizedStaker(msg.sender, bond.staker);
-        if (bond.amount < amount) revert WithdrawExceedsBond();
+        if (amount == 0 || bond.amount < amount) revert WithdrawExceedsBond();
 
         uint256 collectiveInvestmentRate = (amount * 15) / 100;
         uint256 withdrawalAmount = amount - collectiveInvestmentRate;
