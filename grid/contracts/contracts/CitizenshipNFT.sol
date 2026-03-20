@@ -3,10 +3,12 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "./DialecticArbitration.sol";
 
 contract CitizenshipNFT is Ownable, ERC721 {
     address public computeBondAddress;
     address public dialecticArbitrationAddress;
+    DialecticArbitration public governance;
 
     uint256 private tokenIdCounter;
 
@@ -38,6 +40,7 @@ contract CitizenshipNFT is Ownable, ERC721 {
 
     function setDialecticArbitrationAddress(address _arbitration) external onlyOwner {
         dialecticArbitrationAddress = _arbitration;
+        governance = DialecticArbitration(_arbitration);
     }
 
     function mintCitizenship(

@@ -1,131 +1,29 @@
-version: '3.8'
-
+version: '3.9'
 services:
-  gateway:
-    build:
-      context: ./gateway
-      dockerfile: Dockerfile
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 1G
-        reservations:
-          cpus: '0.25'
-          memory: 256M
-    ports:
-      - "3000:3000"
-      - "3001:3001"
-    environment:
-      - GATEWAY_REST_PORT=3000
-      - GATEWAY_WS_PORT=3001
-      - HYPERVISOR_URL=http://hypervisor:8000
-    depends_on:
-      hypervisor:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    volumes:
-      - ./.env:/app/.env
-
   hypervisor:
-    build:
-      context: ./hypervisor
-      dockerfile: Dockerfile
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 4G
-        reservations:
-          cpus: '0.5'
-          memory: 1G
-    ports:
-      - "8000:8000"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    environment:
-      - HYPERVISOR_PORT=8000
-      - SANDBOX_URL=http://sandbox:4000/execute
-      - GRID_URL=http://grid:5000/skills
-      - IPFS_API_URL=http://ipfs:5001/api/v0/add
-      - ARWEAVE_API_URL=https://upload.ardrive.io/v1/tx
-      - GRID_WS_URL=ws://grid:5000/ws/graph
-      - SANDBOX_API_KEY=${SANDBOX_API_KEY}
+    build: .
+    target: hypervisor
+    env_file: .env
+    ports: ["8000:8000"]
+    volumes: ["./hypervisor/memory:/data"]
+    depends_on: [grid]
 
-  sandbox:
-    build:
-      context: ./sandbox
-      dockerfile: Dockerfile
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
-    ports:
-      - "4000:4000"
-    environment:
-      - SANDBOX_PORT=4000
-      - SANDBOX_API_KEY=${SANDBOX_API_KEY}
-      - NEMOCLAW_POLICY_CID=${DEFAULT_POLICY_CID}
-      - AIRGAP_ENFORCED=true
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./meshstore:/meshstore:ro   # policies live here
-      - ./sandbox/policies:/policies:ro
-    security_opt:
-      - apparmor:unconfined
-      - seccomp:unconfined
-    command: ["./airgap", "--policy", "/policies/default.yaml"]
+  gateway:
+    build: .
+    target: gateway
+    ports: ["8080:8080"]
+    depends_on: [hypervisor]
 
   grid:
+    image: golang:1.23
+    command: go run grid/main.go
+    volumes: ["./grid:/app"]
+    ports: ["8545:8545"]  # local anvil or mainnet RPC proxy
+
+  # Optional: Cross-chain relayer service (new)
+  crosschain-relayer:
     build:
-      context: ./grid
-      dockerfile: Dockerfile
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
-    ports:
-      - "5000:5000"
-    environment:
-      - GRID_PORT=5000
-
-  ipfs:
-    image: ipfs/go-ipfs:latest
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 1G
-        reservations:
-          cpus: '0.25'
-          memory: 256M
-    ports:
-      - "4001:4001"   # swarm transport
-      - "5001:5001"   # API
-      - "8080:8080"   # gateway
-    volumes:
-      - ipfs_data:/data/ipfs
-      - ./meshstore:/meshstore:rw   # NEW: node-contributed MeshStore
-    environment:
-      - IPFS_STORAGE_MAX=${MESHSTORE_QUOTA_GB}G
-      - IPFS_PROFILE=server
-
-volumes:
-  ipfs_data:
+      context: .
+      target: hypervisor
+    command: ["python", "-m", "hypervisor.crosschain.OmnichainRelayer"]
+    env_file: .env
