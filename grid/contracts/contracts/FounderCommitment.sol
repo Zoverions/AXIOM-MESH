@@ -17,7 +17,10 @@ contract FounderCommitment is Initializable, UUPSUpgradeable, Ownable2StepUpgrad
     bytes32 public immutable founderHash;
     uint256 public constant TIMELOCK_DELAY = 180 days;
 
+    mapping(address => uint256) public upgradeTimelocks;
+
     event FounderVerified(address caller, bool success);
+    event UpgradeQueued(address indexed newImplementation, uint256 executeAfter);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(bytes32 _founderHash) {
@@ -37,5 +40,16 @@ contract FounderCommitment is Initializable, UUPSUpgradeable, Ownable2StepUpgrad
         return valid;
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+    function queueUpgrade(address newImplementation) external onlyOwner {
+        require(upgradeTimelocks[newImplementation] == 0, "Upgrade already queued");
+        uint256 executeAfter = block.timestamp + TIMELOCK_DELAY;
+        upgradeTimelocks[newImplementation] = executeAfter;
+        emit UpgradeQueued(newImplementation, executeAfter);
+    }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {
+        require(upgradeTimelocks[newImplementation] != 0, "Timelock: Upgrade not queued");
+        require(block.timestamp >= upgradeTimelocks[newImplementation], "Timelock: Delay not met");
+        upgradeTimelocks[newImplementation] = 0; // Reset
+    }
 }
