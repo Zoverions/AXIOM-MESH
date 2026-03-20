@@ -34,6 +34,11 @@
     "trace_id": {
       "type": "string",
       "description": "Trace identifier for end-to-end observability."
+    },
+    "intent_type": {
+      "type": "string",
+      "enum": ["GOV_MINT_CITIZENSHIP", "MEMORY_VAULT_ACCESS"],
+      "description": "Type of intent if applicable."
     }
   },
   "required": ["id", "intent_id", "response", "status"],

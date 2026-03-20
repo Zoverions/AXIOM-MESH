@@ -122,7 +122,7 @@ router.post('/api/v1/intent/process/public', ...publicIntentMiddlewares, async (
 
 router.post('/api/v1/nft/mint', authMiddleware, async (req: Request, res: Response) => {
     try {
-        const { targetDataSet, clarityLevel, recipientAddress } = req.body;
+        const { type, targetDataSet, clarityLevel, recipientAddress, jurisdiction, expiry, rightsTier, issuerGuildID } = req.body;
         const { spawn } = require('child_process');
 
         // 1. Generate zkML proof + apply obfuscation rules via NemoClaw (mocked for Gateway level as it delegates to Privacy Router / Grid usually)
@@ -155,29 +155,94 @@ router.post('/api/v1/nft/mint', authMiddleware, async (req: Request, res: Respon
         const provider = new ethers.JsonRpcProvider(process.env.LOCAL_RPC_URL || "http://127.0.0.1:8545");
         const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", provider);
 
-        // Use the deployed DualLedgerIdentity contract
-        // In a real scenario we'd dynamically load the ABI and address
+        if (type === "citizenship") {
+            const contractAddress = process.env.CITIZENSHIP_NFT_ADDRESS || "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
+            const abi = [
+                "function mintCitizenship(address holder, string calldata jurisdiction, uint256 expiry, string calldata rightsTier, bytes32 zkProofHash, string calldata issuerGuildID, string calldata metadataURI) external"
+            ];
+            const contract = new ethers.Contract(contractAddress, abi, wallet);
+            const metadataURI = `ipfs://${ipfsCidStr}`;
+            const tx = await contract.mintCitizenship(recipientAddress, jurisdiction || "Global", expiry || Date.now() + 31536000000, rightsTier || "Citizen", dataCID, issuerGuildID || "Guild-001", metadataURI);
+            const receipt = await tx.wait();
+
+            res.json({
+                status: 'success',
+                message: 'Citizenship NFT minted',
+                txHash: receipt.hash,
+                type: 'citizenship'
+            });
+        } else {
+            // Use the deployed DualLedgerIdentity contract
+            // In a real scenario we'd dynamically load the ABI and address
+            const contractAddress = process.env.DUAL_LEDGER_ADDRESS || "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707";
+            const abi = [
+                "function mintAuthorizationNFT(address holder, bytes32 dataCID, string calldata clarityLevel) external"
+            ];
+
+            const contract = new ethers.Contract(contractAddress, abi, wallet);
+
+            // Send transaction
+            const tx = await contract.mintAuthorizationNFT(recipientAddress, dataCID, clarityLevel);
+            const receipt = await tx.wait();
+
+            res.json({
+                status: 'success',
+                message: 'Authorization NFT minted',
+                txHash: receipt.hash,
+                dataCID: dataCID,
+                clarityLevel
+            });
+        }
+    } catch (error: any) {
+        console.error("Error minting NFT:", error);
+        res.status(500).json({ error: 'Failed to mint NFT', details: error.message });
+    }
+});
+
+router.post('/api/v1/identity/verify', authMiddleware, async (req: Request, res: Response) => {
+    try {
+        const { zkProofHash, a, b, c } = req.body;
+        if (!zkProofHash || !a || !b || !c) {
+            return res.status(400).json({ error: 'Missing zkProof params' });
+        }
+
+        const provider = new ethers.JsonRpcProvider(process.env.LOCAL_RPC_URL || "http://127.0.0.1:8545");
+        const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", provider);
+
         const contractAddress = process.env.DUAL_LEDGER_ADDRESS || "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707";
         const abi = [
-            "function mintAuthorizationNFT(address holder, bytes32 dataCID, string calldata clarityLevel) external"
+            "function verifyID(bytes32 zkProofHash, uint256[2] calldata a, uint256[2][2] calldata b, uint256[2] calldata c) external returns (bool)"
         ];
 
         const contract = new ethers.Contract(contractAddress, abi, wallet);
 
-        // Send transaction
-        const tx = await contract.mintAuthorizationNFT(recipientAddress, dataCID, clarityLevel);
-        const receipt = await tx.wait();
+        // This is a static call in our mock
+        const isValid = await contract.verifyID.staticCall(zkProofHash, a, b, c);
 
         res.json({
             status: 'success',
-            message: 'Authorization NFT minted',
-            txHash: receipt.hash,
-            dataCID: dataCID,
-            clarityLevel
+            isValid: isValid
         });
     } catch (error: any) {
-        console.error("Error minting NFT:", error);
-        res.status(500).json({ error: 'Failed to mint NFT', details: error.message });
+        res.status(500).json({ error: 'Failed to verify identity proof', details: error.message });
+    }
+});
+
+router.post('/api/v1/guild/issue', authMiddleware, async (req: Request, res: Response) => {
+    try {
+        const { guildId, recipientAddress, nftData } = req.body;
+        if (!guildId || !recipientAddress || !nftData) {
+            return res.status(400).json({ error: 'Missing issue payload' });
+        }
+
+        // Just simulating the delegation via POST to /api/v1/nft/mint
+        res.json({
+            status: 'success',
+            message: 'DAO Mint process initialized',
+            guildId
+        });
+    } catch (error: any) {
+        res.status(500).json({ error: 'Failed to issue via Guild', details: error.message });
     }
 });
 

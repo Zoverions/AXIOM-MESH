@@ -32,6 +32,7 @@ contract DualLedgerIdentity is Ownable, ERC721 {
     mapping(bytes32 => bytes32) public passkeyCommitments;   // public-key hash
     mapping(bytes32 => bytes32) public recoveryBundleCID;    // MeshStore IPFS link
     mapping(address => string) public anonymizedVotingDID;   // Public address to anonymized DID
+    mapping(address => uint256) public citizenshipNFTs;
 
     // Interface for ComputeBond access control
     address public computeBondAddress;
@@ -248,5 +249,15 @@ contract DualLedgerIdentity is Ownable, ERC721 {
         // Mint ERC-721 (reuse OpenZeppelin ERC721 already imported in repo)
         _mint(holder, ++tokenIdCounter);
         emit AuthorizationNFTMinted(tokenIdCounter, holder, dataCID, clarityLevel);
+    }
+
+    function linkCitizenshipNFT(uint256 tokenId) external {
+        require(identities[msg.sender].isRegistered, "NodeNotRegistered");
+        citizenshipNFTs[msg.sender] = tokenId;
+    }
+
+    function verifyID(bytes32 zkProofHash, uint256[2] calldata a, uint256[2][2] calldata b, uint256[2] calldata c) external returns (bool) {
+        require(zkmlVerifierAddress != address(0), "ZKML verifier not set");
+        return IZKMLVerifier(zkmlVerifierAddress).verifyProof(zkProofHash, a, b, c);
     }
 }

@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://axiommesh.io/schemas/gov-nft.v2.json",
+  "title": "Governmental NFT",
+  "description": "Schema for citizenship attributes.",
+  "type": "object",
+  "properties": {
+    "jurisdiction": { "type": "string" },
+    "expiry": { "type": "integer" },
+    "rightsTier": { "type": "string" },
+    "zkProofHash": { "type": "string" },
+    "issuerGuildID": { "type": "string" }
+  },
+  "required": ["jurisdiction", "expiry", "rightsTier", "zkProofHash", "issuerGuildID"],
+  "additionalProperties": false
+}

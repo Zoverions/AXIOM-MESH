@@ -31,8 +31,6 @@ type LedgerSnapshot struct {
 	WealthGenPool    uint64                       `json:"wealth_gen_pool"`
 	GPPEvents        []types.GPPEvent             `json:"gpp_events"`
 	RelayerQueue     []types.RelayerSettlement    `json:"relayer_queue"`
-	SettlementNextID uint64                         `json:"settlement_next_id"`
-	AgentManifests   map[string]types.AgentManifest `json:"agent_manifests"`
 	CRDTShards       map[string]types.CRDTShard     `json:"crdt_shards"`
 	DriftReports     map[string]types.DriftReport   `json:"drift_reports"`
 	SettlementNextID uint64                                   `json:"settlement_next_id"`
@@ -916,6 +914,8 @@ func (l *Ledger) GetDriftReportsSince(since uint64) []types.DriftReport {
 		}
 	}
 	return reports
+}
+
 // RegisterNodeProfile adds or updates a Node Capability Profile in the ledger.
 func (l *Ledger) RegisterNodeProfile(profile types.NodeCapabilityProfile) error {
 	l.mu.Lock()

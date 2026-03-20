@@ -31,7 +31,13 @@
     },
     "metadata": {
       "type": "object",
-      "description": "Additional channel-specific metadata."
+      "description": "Additional channel-specific metadata.",
+      "properties": {
+        "intent_type": {
+          "type": "string",
+          "enum": ["GOV_MINT_CITIZENSHIP", "MEMORY_VAULT_ACCESS"]
+        }
+      }
     },
     "timestamp": {
       "type": "integer",
