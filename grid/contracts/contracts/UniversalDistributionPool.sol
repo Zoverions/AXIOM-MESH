@@ -20,6 +20,7 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable {
     mapping(address => uint256) public outflows;  // recipient → total received
     mapping(bytes32 => uint256) public allocations; // taskId → amount
     address public crossChainBridge;
+    bool public externalFundsEnabled;
 
     event Inflow(address from, uint256 amount, string source);
     event Outflow(address to, uint256 amount, bytes32 zkProofHash);
@@ -38,9 +39,19 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable {
 
         __UUPSUpgradeable_init();
         networkSharePercentage = _defaultShare;
+        externalFundsEnabled = false; // Disabled until Level 3 gate is passed
     }
 
     function deposit(address from, uint256 amount, string calldata source) external payable {
+        require(
+            externalFundsEnabled ||
+            msg.sender == address(allocator) ||
+            msg.sender == address(treasury) ||
+            msg.sender == address(founder) ||
+            msg.sender == address(citizenship) ||
+            msg.sender == crossChainBridge,
+            "External funds disabled until Level 3"
+        );
         require(msg.value == amount || IERC20(address(treasury)).transferFrom(from, address(this), amount), "Deposit failed");
 
         inflows[from] += amount;
@@ -75,6 +86,11 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable {
     function setNetworkShare(uint256 newPercentage) external {
         require(allocator.governance().isProposalPassed(keccak256(abi.encode(newPercentage))), "Governance required");
         networkSharePercentage = newPercentage;
+    }
+
+    function setExternalFundsEnabled(bool _enabled) external {
+        require(allocator.governance().isProposalPassed(keccak256(abi.encode(_enabled))) || msg.sender == address(founder), "Governance or founder required");
+        externalFundsEnabled = _enabled;
     }
 
     function getAuditTrail(address entity) external view returns (uint256 totalIn, uint256 totalOut, uint256 networkContributed) {

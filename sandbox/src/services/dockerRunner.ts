@@ -75,7 +75,8 @@ export async function runCode(language: string, code: string, limitsOrUseTee?: R
             '--read-only',
             '--tmpfs=/tmp:rw,noexec,nosuid,size=64m',
             '--mount',
-            'type=tmpfs,destination=/workspace,tmpfs-size=16777216,tmpfs-mode=1777'
+            'type=tmpfs,destination=/workspace,tmpfs-size=16777216,tmpfs-mode=1777',
+            '--user=1000:1000'
         ];
 
         commonArgs.push('--label=sandbox_execution=true');
