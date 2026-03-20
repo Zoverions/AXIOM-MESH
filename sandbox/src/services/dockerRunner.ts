@@ -30,6 +30,13 @@ async function invokeAirgap(command: string, pid: number): Promise<void> {
 }
 
 export async function runCode(language: string, code: string): Promise<{ stdout: string; stderr: string }> {
+    if (typeof language !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(language)) {
+        throw new Error('Invalid language identifier');
+    }
+    if (typeof code !== 'string') {
+        throw new Error('Code must be a string');
+    }
+
     return new Promise((resolve, reject) => {
         let command: string;
         let args: string[];
@@ -38,6 +45,7 @@ export async function runCode(language: string, code: string): Promise<{ stdout:
         const commonArgs = [
             'run',
             '--rm',
+            '--runtime=runsc',
             '--network=none',
             '--memory=256m',
             '--memory-swap=256m',
@@ -52,6 +60,12 @@ export async function runCode(language: string, code: string): Promise<{ stdout:
             '--mount',
             'type=tmpfs,destination=/workspace,tmpfs-size=16777216,tmpfs-mode=1777'
         ];
+
+        // Syscall monitoring is handled at the host/cluster level via Falco daemon,
+        // which hooks into the kernel (eBPF) or gVisor to trace these containers.
+        // We add a label to help Falco filter and apply specific rules to these sandboxes.
+        commonArgs.push('--label=sandbox_execution=true');
+        commonArgs.push('--label=monitor_syscalls=falco');
 
         if (language === 'python' || language === 'python3') {
             command = 'docker';

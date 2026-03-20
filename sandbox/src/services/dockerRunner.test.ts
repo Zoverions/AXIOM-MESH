@@ -46,6 +46,7 @@ describe('dockerRunner', () => {
         expect(args).toContain('--network=none');
         expect(args).toContain('--security-opt=seccomp=/app/security/seccomp-default.json');
         expect(args).toContain('--security-opt=apparmor=docker-default');
+        expect(args).toContain('--label=monitor_syscalls=falco');
         expect(args.slice(-4)).toEqual(['python:3.9-slim', 'python', '-c', code]);
         expect(result).toEqual({ stdout: 'hello world\n', stderr: '' });
     });
@@ -63,6 +64,7 @@ describe('dockerRunner', () => {
         expect(args).toContain('--network=none');
         expect(args).toContain('--security-opt=seccomp=/app/security/seccomp-default.json');
         expect(args).toContain('--security-opt=apparmor=docker-default');
+        expect(args).toContain('--label=monitor_syscalls=falco');
         expect(args.slice(-4)).toEqual(['node:18-alpine', 'node', '-e', code]);
         expect(result).toEqual({ stdout: 'hello world\n', stderr: '' });
     });
