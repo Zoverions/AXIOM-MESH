@@ -105,7 +105,7 @@ contract WeightOracle is TimelockedOwnable {
      * @param node The address of the node.
      * @param newWeight The new weight score (e.g., 30-day moving average).
      */
-    function updateWeight(address node, uint256 newWeight) external onlyOwner {
+    function updateWeight(address node, uint256 newWeight) external onlyTimelocked(keccak256(abi.encodePacked("updateWeight", node, newWeight))) {
         if (!identityContract.isNodeRegistered(node)) revert NodeNotRegistered(node);
 
         uint256 oldWeight = nodeWeights[node];
@@ -119,7 +119,7 @@ contract WeightOracle is TimelockedOwnable {
      * @param nodes The addresses of the nodes.
      * @param newWeights The new weight scores.
      */
-    function batchUpdateWeights(address[] calldata nodes, uint256[] calldata newWeights) external onlyOwner {
+    function batchUpdateWeights(address[] calldata nodes, uint256[] calldata newWeights) external onlyTimelocked(keccak256(abi.encodePacked("batchUpdateWeights", nodes, newWeights))) {
         require(nodes.length == newWeights.length, "Arrays length mismatch");
         for (uint256 i = 0; i < nodes.length; i++) {
             address node = nodes[i];

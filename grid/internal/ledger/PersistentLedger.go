@@ -179,14 +179,14 @@ func NewPersistentLedger(dataDir string) (*PersistentLedger, error) {
 	// Recover from WAL to ensure no states are lost during crash
 	err = pl.wal.Recover(func(entry []byte) error {
 		var env WALEntry
-		if err := json.Unmarshal(entry, &env); err != nil || env.Type == "" {
+		if err := json.Unmarshal(entry, &env); err != nil {
 			// Backwards compatibility: attempt to unmarshal as skill directly
 			var skill types.SkillVector
 			if err := json.Unmarshal(entry, &skill); err == nil && skill.NodeID != "" {
 				env.Type = "skill"
 				env.Data = entry
 			} else {
-				return fmt.Errorf("failed to parse WAL entry: %v", err)
+				return err
 			}
 		}
 
