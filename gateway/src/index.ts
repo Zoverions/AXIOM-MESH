@@ -78,8 +78,8 @@ try {
     };
     server = https.createServer(mTLSConfig, app);
 } catch (e) {
-    console.warn("mTLS certs not found, falling back to HTTP for testing.");
-    server = app;
+    console.error("mTLS certs not found. mTLS is mandatory for security.");
+    process.exit(1);
 }
 
 server.listen(REST_PORT, () => {

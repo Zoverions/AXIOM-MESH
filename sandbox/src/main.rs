@@ -2,6 +2,9 @@
 use std::fs;
 use serde_yaml::Value;
 use anyhow::Result;
+use std::thread;
+
+pub mod network;
 
 #[derive(Debug)]
 pub struct OpenShellPolicy {
@@ -54,6 +57,17 @@ pub fn run_tee_enclave(app_path: &str, _input_data: &str) -> Result<String> {
 }
 
 fn main() {
+    // Start airgap UDS listener
+    let socket_path = std::env::var("AIRGAP_SOCKET").unwrap_or_else(|_| "/var/run/axiom-airgap.sock".to_string());
+
+    // Spawn UDS listener in background thread
+    let socket_path_clone = socket_path.clone();
+    thread::spawn(move || {
+        if let Err(e) = network::airgap::start_airgap_uds_listener(&socket_path_clone) {
+            eprintln!("Airgap UDS listener failed to start: {}", e);
+        }
+    });
+
     let args: Vec<String> = std::env::args().collect();
     let default_policy = String::from("/policies/default.yaml");
     let mut policy_path = &default_policy;
