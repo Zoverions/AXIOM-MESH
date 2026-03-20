@@ -1,100 +1,16 @@
-# AXIOM-MESH Roadmap – Master 2026 Edition (Updated March 2026)
-
-
-## Phase 5: NFT Credentialing, Hardware Scan, Refined Rewards (New – In Progress)
-- [ ] Track G: NFT Credential & Personality Tokenization
-- [ ] Track H: Hardware Scan & Dedicated OS Optimization
-- [ ] Track I: Refined Reward Multipliers
-- [ ] Track J: AM-SCS (Skill Capsule ingest→verify→compile→sign→revoke)
-- [ ] Full OntarioEdAI + THUD guilds integration
-- [ ] AA (Account Abstraction) bonding with L1 piggyback
-- [ ] Complete MCP compatibility matrix with Alignment Profiles
-- [ ] Engage third-party auditor for Smart Contracts (Trail of Bits, Consensys Diligence, OpenZeppelin)
-
-Next: Formalize failure-mode proofs; map participatory closure to agent economics; LangGraph-inside-AXIOM-MESH adapter.
-
-## 8-Week Implementation Roadmap (Technical Spec v2.0)
-- [ ] Phase 1 (Weeks 1-2): Security Hardening (MCP Firewall, Sandbox Airgap, Secret Scanning)
-- [ ] Phase 2 (Weeks 3-4): Performance Optimization (Python jemalloc, Node.js Workers, Go Persistence)
-- [ ] Phase 3 (Weeks 5-6): Architectural Enhancement (Circuit Breakers, zkML Caching, Governance Automation)
-- [ ] Phase 4 (Weeks 7-8): Observability & Polish (OpenTelemetry, Health Checks, Load Testing)
-
-
-## Q1 2026 – Complete System Fusion & Resource Orchestration (In Progress)
-- [ ] Phase 0: Documentation consolidation (this v1.8 directive)
-- [ ] Phase 1: ResourceBalancer node + priority allocation
-- [ ] Phase 2: GPP incentives + treasury splits (Network Security + Wealth Generation) + ERC-20 compatibility
-- [ ] Phase 3: Alignment Profile init + spectrum security profiles + MCP interoperability + firewall + hierarchical bonding + governance
-- [ ] Phase 4: Hardware profiles + offline resource awareness
-
-All prior fusions now unified under one self-regulating, risk-tolerant, firewall-protected, layer.
-
-## Priority Implementation Checklist (High → Low)
-
-### P0 — Decision Gate (Do First)
-- [x] **Repository boundary decision**: choose either:
-  - **Option A (recommended): AXIOM-MESH as source-of-truth monorepo** for contracts + gateway + hypervisor + sandbox + grid (+ vendored adapters for external references), or
-  - **Option B: polyrepo orchestration** with strict version pins and CI contract compatibility checks.
-- [x] Approve governance rule: any contract/API tweak required by AXIOM-MESH priorities lands here first, then is mirrored outward.
-- [x] Freeze an Interface Control Document (ICD) for Gateway ↔ Hypervisor ↔ Sandbox ↔ Grid ↔ Contracts.
-
-### P1 — Security & Identity Foundations
-- [x] Add Alignment Profile spec (goals, traits, characteristics, risk tolerance, priority tags).
-- [ ] Bind profile lifecycle to DID/VC + CRDT storage model.
-- [ ] Define bilateral severance protocol (human or agent initiated), including zero-knowledge selective disclosure requirements.
-- [ ] Define agent-as-firewall enforcement points for all external interaction paths.
-
-### P2 — Interoperability & Compatibility Controls
-- [x] Create MCP compatibility matrix schema (minimum security/risk thresholds per peer class).
-- [x] Define spectrum security profiles (legacy locked device → full zkML node).
-- [x] Specify hierarchical agent-to-agent bonding policy (nested trust, inheritance, revocation).
-- [x] Map governance controls (guild + bicameral + AIGovernor) to compatibility policy updates.
-
-### P3 — Resource/Treasury Mechanics
-- [x] Specify ResourceBalancer decisions (local vs peer vs Grid vs L1 path).
-- [x] Specify treasury split mechanics (Network Security Fund + Wealth Generation Pool) and reporting.
-- [x] Define ERC-20 compatibility envelope for rewards/currencies.
-- [x] Add zk-anonymized telemetry requirements for fairness proofs and anti-overload controls.
-
-### P4 — Delivery, Operations, and Rollout
-- [ ] Build phased migration plan for legacy hardware/offline cohorts.
-- [x] Define validation harness for success metrics (alignment choice integrity, compatibility enforcement, severance privacy, firewall routing, hierarchical bond behavior).
-- [x] Add release gating checklist and rollback criteria for each phase.
-
-## Parallel Work Lanes (Assign to Agents)
-
-### Lane A — Identity/Alignment (can run now)
-- Alignment Profile schema drafts
-- DID/VC + CRDT persistence model
-- Severance and memory-zeroization requirements
-
-### Lane B — Interop/Governance (can run now)
-- MCP compatibility matrix draft
-- Security profile taxonomy
-- Governance control map for interoperability knobs
-
-### Lane C — Resource/Treasury (can run now)
-- [x] ResourceBalancer policy draft
-- [x] Treasury split accounting model
-- [x] ERC-20 compatibility and token-flow diagrams
-
-### Lane D — Platform/Ops (can run now)
-- [x] Hardware profile matrix
-- [x] Offline-first sync and degraded-mode playbooks
-- [x] Test strategy + CI acceptance gates
-
-## Program Execution Companion
-- Detailed in-parallel delivery, merge, and release gates: `docs/PARALLEL-DELIVERY-PLAN-2026.md`
-
-## Dependencies Between Lanes
-- Lane A outputs feed Lane B policy constraints.
-- Lane B and Lane C must agree on enforceable thresholds before implementation starts.
-- Lane D finalizes rollout only after A/B/C define acceptance tests.
-
-## Success Metrics (Must Pass Before Phase PR Approval)
-- [ ] Alignment Profile creation preserves user/agent risk choice boundaries.
-- [ ] MCP discovery and handshakes reject peers below required security/risk profile.
-- [ ] Bond severance is bilateral, private, and cryptographically enforceable.
-- [ ] Firewall routing prevents direct unmediated external actions.
-- [ ] Hierarchical bonding follows inherited policy + independent revocation rights.
-- [ ] Prior fusion guarantees (treasury, ERC-20, offline resilience) remain intact.
+1. **Understand Goal**: Build a scheduler that routes tasks to nodes based on capability profiles, trust requirements, and cost/latency tradeoffs. The scheduler receives requests (`capsule_id`, `token`, `attestation_policy`, `compute_budget`) and returns a node assignment or node list along with a task ticket.
+2. **Current Implementation**:
+   - I have created `grid/internal/scheduler/scheduler.go` containing a `Scheduler` struct that holds task tickets and nodes metrics (trust scores, latencies, and costs).
+   - I have implemented a `Schedule` method to find candidates satisfying the provided `RoutingPolicy` and `compute_budget` and return a selected `node_id` and a `TaskTicket`.
+   - I have created tests to verify the routing based on max latency, max cost, and min trust score. It verifies that tasks are only sent to conforming nodes.
+   - I have added a REST API implementation in `grid/api/scheduler_api.go` which exposes `POST /schedule` and `GET /schedule/{ticket}/status`.
+   - I have integrated the API into the main HTTP multiplexer in `grid/api/server.go`.
+3. **Missing Items from Requirements**:
+   - The requirement specifies: "compatibility: node meets required_hardware_tier and service_classes" and the node registry should include these. Currently, my implementation only checks `MinTrustScore`, `MaxLatencyMs` and `MaxCost`. I need to update the scheduler logic and test to handle compatibility.
+   - I need to implement a mechanism for Failover: "if chosen node becomes unavailable, scheduler reassigns within token TTL".
+4. **Planned Changes**:
+   - Update `types.AgentManifest` (or internal scheduler registry type) to include `HardwareTier` and `ServiceClasses`.
+   - Update `RoutingPolicy` to include `RequiredHardwareTier` and `RequiredServiceClasses`.
+   - Update `Schedule` function to filter out nodes that don't match hardware tiers or lack required service classes.
+   - Add a `Reassign` API/method for the failover logic which returns a new node ID within the token TTL if the selected node becomes unavailable.
+   - Update the test logic to include the 200 node / 1000 task simulation covering compatibility and failover logic.

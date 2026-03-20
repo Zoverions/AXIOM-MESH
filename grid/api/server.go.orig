@@ -24,7 +24,6 @@ import (
 	"github.com/axiom-mesh/grid/blockchain"
 	chainclient "github.com/axiom-mesh/grid/chain"
 	"github.com/axiom-mesh/grid/consensus"
-	"github.com/axiom-mesh/grid/internal/scheduler"
 	"github.com/axiom-mesh/grid/p2p"
 	"github.com/axiom-mesh/grid/types"
 	"github.com/gorilla/websocket"
@@ -209,9 +208,6 @@ func validateZKMLPayload(payload types.ZKMLPayload) (bool, string) {
 
 func (s *Server) Start(addr string) error {
 	mux := http.NewServeMux()
-
-	sched := scheduler.NewScheduler()
-	RegisterSchedulerAPI(mux, sched)
 
 	mux.HandleFunc("/health", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]interface{}{
