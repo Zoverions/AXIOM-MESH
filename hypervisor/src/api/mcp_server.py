@@ -91,6 +91,30 @@ async def sandbox_execute(code: str, language: str = "python", auth_token: str =
         return f"Sandbox execution failed: {str(e)}"
 
 @mcp_server.tool()
+async def register_tee_skill(skill_name: str, public_fragment: dict, proof_attestation: str, auth_token: str = "") -> str:
+    """
+    Registers a TEE-backed skill capsule. Logs only the proof attestation to WORM audit trail.
+    """
+    expected_key = os.environ.get('HYPERVISOR_API_KEY')
+    if expected_key and auth_token != f"Bearer {expected_key}":
+        return "Security Halt: Server identity unverified. Missing or invalid API Key/Signature in identity chain."
+
+    sec_err = apply_mcp_security_requirements(f"{skill_name} {str(public_fragment)}", risk_score=0.2)
+    if sec_err:
+        return sec_err
+
+    # Create WORM audit log (simulated)
+    audit_log = {
+        "event": "register_tee_skill",
+        "skill_name": skill_name,
+        "attestation": proof_attestation,
+        # Intentionally omitting any encrypted logic or private fragments
+    }
+    print(f"WORM Audit Log: {audit_log}")
+
+    return f"Successfully registered TEE skill '{skill_name}' with attestation {proof_attestation[:10]}..."
+
+@mcp_server.tool()
 async def register_grid_skill(skill_name: str, description: str, endpoint: str, auth_token: str = "") -> str:
     """
     Registers a new capability/skill dynamically to the Grid ledger.

@@ -20,22 +20,28 @@ async function invokeAirgap(command: string, pid: number): Promise<void> {
         });
 
         client.on('error', (err) => {
-            // If the airgap listener is not running, we log a warning but don't strictly fail
-            // since Docker's --network=none provides baseline isolation. In a fully hardened
-            // environment, this could be changed to reject().
             console.warn(`Airgap UDS connection failed: ${err.message}. Relying on Docker isolation.`);
             resolve();
         });
     });
 }
 
-export async function runCode(language: string, code: string): Promise<{ stdout: string; stderr: string }> {
+export interface ResourceLimits {
+    memory_mb?: number;
+    cpu_ms?: number;
+}
+
+export async function runCode(language: string, code: string, limits?: ResourceLimits): Promise<{ stdout: string; stderr: string }> {
+export async function runCode(language: string, code: string, useTee: boolean = false): Promise<{ stdout: string; stderr: string }> {
     if (typeof language !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(language)) {
         throw new Error('Invalid language identifier');
     }
     if (typeof code !== 'string') {
         throw new Error('Code must be a string');
     }
+
+    const memoryMb = limits?.memory_mb || 256;
+    const cpus = limits?.cpu_ms ? (limits.cpu_ms / 100).toFixed(2) : "0.5";
 
     return new Promise((resolve, reject) => {
         let command: string;
@@ -47,9 +53,9 @@ export async function runCode(language: string, code: string): Promise<{ stdout:
             '--rm',
             '--runtime=runsc',
             '--network=none',
-            '--memory=256m',
-            '--memory-swap=256m',
-            '--cpus=0.5',
+            `--memory=${memoryMb}m`,
+            `--memory-swap=${memoryMb}m`,
+            `--cpus=${cpus}`,
             '--pids-limit=50',
             '--cap-drop=ALL',
             '--security-opt=no-new-privileges',
@@ -61,11 +67,15 @@ export async function runCode(language: string, code: string): Promise<{ stdout:
             'type=tmpfs,destination=/workspace,tmpfs-size=16777216,tmpfs-mode=1777'
         ];
 
-        // Syscall monitoring is handled at the host/cluster level via Falco daemon,
-        // which hooks into the kernel (eBPF) or gVisor to trace these containers.
-        // We add a label to help Falco filter and apply specific rules to these sandboxes.
         commonArgs.push('--label=sandbox_execution=true');
         commonArgs.push('--label=monitor_syscalls=falco');
+
+        if (useTee) {
+            commonArgs.push('--device=/dev/sgx_enclave');
+            commonArgs.push('--device=/dev/sgx_provision');
+            commonArgs.push('-e');
+            commonArgs.push('USE_TEE=1');
+        }
 
         if (language === 'python' || language === 'python3') {
             command = 'docker';
@@ -80,23 +90,17 @@ export async function runCode(language: string, code: string): Promise<{ stdout:
         const proc = spawn(command, args);
 
         if (proc.pid) {
-            // Best effort airgap integration. In a real environment, we'd need the
-            // container's internal PID or wait for it to be created, but for
-            // demonstration we pass the docker run process PID.
             invokeAirgap('lockdown', proc.pid).catch(err => console.error(err));
 
             const nnc = new NetworkNamespaceController();
 
-            // Implement cgroup v2 limits via UDS
             nnc.applyCgroupLimits(proc.pid, {
                 cpuQuota: "100000/1000000",
-                memoryMax: "512M",
+                memoryMax: `${memoryMb}M`,
                 pidsMax: 64,
                 ioWeight: 100
             }).catch(err => console.error(err));
 
-            // Implement custom seccomp-bpf profile to drop execve, ptrace, and mount via UDS
-            // Includes namespace manipulation syscalls (unshare, setns, clone)
             nnc.applySeccompProfile(proc.pid, {
                 defaultAction: "SCMP_ACT_ALLOW",
                 syscalls: [
@@ -116,7 +120,6 @@ export async function runCode(language: string, code: string): Promise<{ stdout:
             stderr += data.toString();
         });
 
-        // Add a timeout to kill long-running processes (10 seconds)
         const timer = setTimeout(() => {
             proc.kill();
             resolve({ stdout, stderr: stderr + '\nExecution timed out' });

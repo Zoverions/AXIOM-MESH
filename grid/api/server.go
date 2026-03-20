@@ -19,6 +19,7 @@ import (
 	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/axiom-mesh/grid/blockchain"
@@ -207,7 +208,7 @@ func validateZKMLPayload(payload types.ZKMLPayload) (bool, string) {
 	return true, ""
 }
 
-func (s *Server) Start(addr string) error {
+func (s *Server) SetupRouter() *http.ServeMux {
 	mux := http.NewServeMux()
 
 	sched := scheduler.NewScheduler()
@@ -292,6 +293,140 @@ func (s *Server) Start(addr string) error {
 			} else {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 			}
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}))
+
+	mux.HandleFunc("/node/register", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method != "POST" {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var profile types.NodeCapabilityProfile
+		if err := json.NewDecoder(r.Body).Decode(&profile); err == nil {
+			if profile.NodeID == "" {
+				http.Error(w, "node_id is required", http.StatusBadRequest)
+				return
+			}
+			if profile.LastSeenTS == 0 {
+				profile.LastSeenTS = time.Now().Unix()
+			}
+			if err := s.ledger.RegisterNodeProfile(profile); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			// For future P2P integration
+			// if s.p2pNode != nil {
+			// 	s.p2pNode.BroadcastNodeProfile(profile)
+			// }
+			json.NewEncoder(w).Encode(map[string]interface{}{"status": "success", "node_id": profile.NodeID})
+		} else {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+	}))
+
+	mux.HandleFunc("/node/", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "GET" {
+			nodeID := strings.TrimPrefix(r.URL.Path, "/node/")
+			if nodeID == "" || nodeID == "register" {
+				http.Error(w, "Not found", http.StatusNotFound)
+				return
+			}
+			profile, ok := s.ledger.GetNodeProfile(nodeID)
+			if !ok {
+				http.Error(w, "Node not found", http.StatusNotFound)
+				return
+			}
+			json.NewEncoder(w).Encode(profile)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}))
+
+	mux.HandleFunc("/nodes", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "GET" {
+			serviceFilter := r.URL.Query().Get("service")
+			minGpuStr := r.URL.Query().Get("min_gpu")
+			limitStr := r.URL.Query().Get("limit")
+			offsetStr := r.URL.Query().Get("offset")
+
+			var minGpu float64
+			if minGpuStr != "" {
+				if parsed, err := strconv.ParseFloat(minGpuStr, 64); err == nil {
+					minGpu = parsed
+				}
+			}
+
+			limit := 100
+			if limitStr != "" {
+				if parsed, err := strconv.Atoi(limitStr); err == nil && parsed > 0 {
+					limit = parsed
+				}
+			}
+
+			offset := 0
+			if offsetStr != "" {
+				if parsed, err := strconv.Atoi(offsetStr); err == nil && parsed > 0 {
+					offset = parsed
+				}
+			}
+
+			profiles := s.ledger.GetNodeProfiles()
+			var matched []types.NodeCapabilityProfile
+
+			for _, profile := range profiles {
+				// Filter by GPU memory
+				if minGpu > 0 && profile.GPUMemGB < minGpu {
+					continue
+				}
+
+				// Filter by service
+				if serviceFilter != "" {
+					hasService := false
+					for _, srv := range profile.ServiceClasses {
+						if strings.EqualFold(srv, serviceFilter) {
+							hasService = true
+							break
+						}
+					}
+					if !hasService {
+						continue
+					}
+				}
+
+				matched = append(matched, profile)
+			}
+
+			// Sort by node_id for consistent pagination
+			sort.Slice(matched, func(i, j int) bool {
+				return matched[i].NodeID < matched[j].NodeID
+			})
+
+			// Apply pagination
+			if offset >= len(matched) {
+				matched = []types.NodeCapabilityProfile{}
+			} else {
+				end := offset + limit
+				if end > len(matched) {
+					end = len(matched)
+				}
+				matched = matched[offset:end]
+			}
+
+			if matched == nil {
+				matched = []types.NodeCapabilityProfile{}
+			}
+
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"nodes":  matched,
+				"limit":  limit,
+				"offset": offset,
+			})
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
@@ -881,6 +1016,12 @@ func (s *Server) Start(addr string) error {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	}))
+
+	return mux
+}
+
+func (s *Server) Start(addr string) error {
+	mux := s.SetupRouter()
 
 	certsDir := os.Getenv("CERTS_DIR")
 	if certsDir == "" {
