@@ -30,12 +30,20 @@ class DeepArchive:
         ttl = os.environ.get("MEMORY_TTL_DAYS")
         self.ttl_days = float(ttl) if ttl else None
 
+        self._cache = None
+        self._last_mtime = 0
+
         self._ensure_storage()
         self.cleanup_expired()
 
     def _load_data(self) -> dict:
         if not os.path.exists(self.storage_path) or os.path.getsize(self.storage_path) == 0:
-            return {"nodes": {}, "edges": []}
+            self._cache = {"nodes": {}, "edges": []}
+            return self._cache
+
+        mtime = os.path.getmtime(self.storage_path)
+        if self._cache is not None and self._last_mtime == mtime:
+            return self._cache
 
         with open(self.storage_path, "rb") as f:
             raw_data = f.read()
@@ -52,7 +60,9 @@ class DeepArchive:
                     raise ValueError("Failed to decrypt archive. Invalid MEMORY_ENCRYPTION_KEY or corrupt data.") from e
 
         try:
-            return json.loads(raw_data.decode("utf-8"))
+            self._cache = json.loads(raw_data.decode("utf-8"))
+            self._last_mtime = mtime
+            return self._cache
         except json.JSONDecodeError as e:
             # If we don't have fernet configured but the data isn't valid JSON, it might be encrypted
             raise ValueError("Archive data is not valid JSON. If it is encrypted, provide the correct MEMORY_ENCRYPTION_KEY.") from e
@@ -64,6 +74,9 @@ class DeepArchive:
 
         with open(self.storage_path, "wb") as f:
             f.write(raw_data)
+
+        self._cache = data
+        self._last_mtime = os.path.getmtime(self.storage_path)
 
     def _ensure_storage(self) -> None:
         os.makedirs(os.path.dirname(self.storage_path), exist_ok=True)
@@ -192,8 +205,7 @@ class DeepArchive:
         ]
 
     def get_all(self, session_id: str = None) -> List[Dict]:
-        with open(self.storage_path, "r") as f:
-            data = json.load(f)
+        data = self._load_data()
 
         results = []
         for node_id, node in data.get("nodes", {}).items():
@@ -203,20 +215,17 @@ class DeepArchive:
         return results
 
     def delete(self, node_id: str) -> bool:
-        with open(self.storage_path, "r") as f:
-            data = json.load(f)
+        data = self._load_data()
 
         if node_id in data.get("nodes", {}):
             del data["nodes"][node_id]
             data["edges"] = [e for e in data.get("edges", []) if e["source"] != node_id and e["target"] != node_id]
-            with open(self.storage_path, "w") as f:
-                json.dump(data, f, indent=2)
+            self._save_data(data)
             return True
         return False
 
     def edit(self, node_id: str, new_content: str = None, metadata_updates: Dict = None) -> bool:
-        with open(self.storage_path, "r") as f:
-            data = json.load(f)
+        data = self._load_data()
 
         if node_id in data.get("nodes", {}):
             if new_content is not None:
@@ -226,8 +235,7 @@ class DeepArchive:
                     data["nodes"][node_id]["metadata"] = {}
                 data["nodes"][node_id]["metadata"].update(metadata_updates)
 
-            with open(self.storage_path, "w") as f:
-                json.dump(data, f, indent=2)
+            self._save_data(data)
             return True
         return False
 

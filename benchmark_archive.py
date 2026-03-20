@@ -1,40 +1,51 @@
 import time
-import uuid
-import random
-import string
-import sys
 import os
+import json
+import uuid
+import sys
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "hypervisor", "src"))
-from memory.archive import DeepArchive
+# Setup test data
+test_path = "data/test_archive.json"
+os.makedirs("data", exist_ok=True)
 
-def generate_random_word(length=5):
-    return ''.join(random.choice(string.ascii_lowercase) for _ in range(length))
-
-def generate_random_text(num_words=100):
-    return ' '.join(generate_random_word(random.randint(3, 8)) for _ in range(num_words))
-
-print("Setting up initial archive with 10000 nodes...")
-
-archive = DeepArchive("data/benchmark_archive.json")
-data = archive._load_data()
-for i in range(10000):
+# Generate mock data manually to avoid slow .add() method
+print("Generating test data...")
+data = {"nodes": {}, "edges": []}
+for i in range(5000):
     node_id = str(uuid.uuid4())
-    data.setdefault("nodes", {})[node_id] = {
-        "keywords": [generate_random_word() for _ in range(20)]
+    data["nodes"][node_id] = {
+        "id": node_id,
+        "content": f"test content {i}",
+        "metadata": {"session_id": "test_session" if i % 2 == 0 else "other_session", "idx": i},
+        "keywords": [f"test", "content", str(i)],
+        "timestamp": time.time()
     }
-archive._save_data(data)
 
-print("Starting benchmark for add()...")
+with open(test_path, "w") as f:
+    json.dump(data, f)
 
-test_content = [generate_random_text(50) for _ in range(100)]
+print(f"File size: {os.path.getsize(test_path) / 1024 / 1024:.2f} MB")
 
+# Import now that we have data
+sys.path.insert(0, os.path.abspath('hypervisor'))
+from src.memory.archive import DeepArchive
+
+archive = DeepArchive(test_path)
+
+# Benchmark get_all
+print("Benchmarking get_all...")
 start_time = time.time()
-for content in test_content:
-    archive.add(content)
-old_duration = time.time() - start_time
-print(f"Old time: {old_duration:.4f} seconds")
+
+num_reads = 100
+for _ in range(num_reads):
+    results = archive.get_all(session_id="test_session")
+
+end_time = time.time()
+duration = end_time - start_time
+
+print(f"Time for {num_reads} get_all calls: {duration:.4f}s")
+print(f"Average time per get_all call: {duration / num_reads:.4f}s")
 
 # Clean up
-if os.path.exists("data/benchmark_archive.json"):
-    os.remove("data/benchmark_archive.json")
+if os.path.exists(test_path):
+    os.remove(test_path)
