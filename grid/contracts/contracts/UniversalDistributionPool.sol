@@ -19,6 +19,7 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable {
     mapping(address => uint256) public inflows;   // org/gov → total contributed
     mapping(address => uint256) public outflows;  // recipient → total received
     mapping(bytes32 => uint256) public allocations; // taskId → amount
+    address public crossChainBridge;
 
     event Inflow(address from, uint256 amount, string source);
     event Outflow(address to, uint256 amount, bytes32 zkProofHash);
@@ -33,6 +34,8 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable {
     }
 
     function initialize(uint256 _defaultShare) public initializer {
+
+
         __UUPSUpgradeable_init();
         networkSharePercentage = _defaultShare;
     }
@@ -54,7 +57,7 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable {
     }
 
     function distribute(address to, uint256 amount, bytes32 zkProofHash) external {
-        require(citizenship.ownerOf(citizenship.tokenOf(to)) == msg.sender || msg.sender == address(allocator), "Authorized distributor only");
+        require((citizenship.balanceOf(msg.sender) > 0 && msg.sender == to) || msg.sender == address(allocator) || msg.sender == crossChainBridge, "Authorized distributor only");
         require(address(this).balance >= amount, "Insufficient pool");
 
         (bool success, ) = to.call{value: amount}("");
@@ -62,6 +65,11 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable {
 
         outflows[to] += amount;
         emit Outflow(to, amount, zkProofHash);
+    }
+
+    function setCrossChainBridge(address _bridge) external {
+        require(msg.sender == address(founder), "Founder only");
+        crossChainBridge = _bridge;
     }
 
     function setNetworkShare(uint256 newPercentage) external {
@@ -74,6 +82,8 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable {
         totalOut = outflows[entity];
         networkContributed = (totalIn * networkSharePercentage) / 100;
     }
+
+    function __UUPSUpgradeable_init() internal {}
 
     function _authorizeUpgrade(address) internal override {
         require(founder.verifyFounder(""), "Founder verification failed");

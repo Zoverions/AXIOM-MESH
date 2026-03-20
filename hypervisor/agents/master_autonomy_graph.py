@@ -9,6 +9,7 @@ from hypervisor.legacy.InheritanceExecutor import InheritanceExecutor
 from hypervisor.shadow.ShadowNode import ShadowNode
 from hypervisor.distribution.AutonomousDistributionManager import AutonomousDistributionManager
 from hypervisor.shadow.AirGapConsent import AirGapConsent  # for shadow
+from hypervisor.crosschain.OmnichainRelayer import OmnichainRelayer
 
 def build_master_autonomy_graph(primary_did: str):
     graph = StateGraph(dict)
@@ -81,11 +82,22 @@ def build_master_autonomy_graph(primary_did: str):
 
     graph.add_node("monitor_metrics_node", monitor_metrics_node)
 
+    # Pillar 7: Cross-Chain Sovereignty
+    relayer = OmnichainRelayer()
+
+    async def cross_chain_bridge_node(state):
+        await relayer.relay_payroll()
+        return state
+
+    graph.add_node("cross_chain_bridge", cross_chain_bridge_node)
+
+
     # Connect all pillars (monitor → allocate → distribute → train → shadow)
     graph.set_entry_point("monitor_metrics_node")
     graph.add_edge("monitor_metrics_node", "resource_allocation")
     graph.add_edge("resource_allocation", "distribution_pool")
-    graph.add_edge("distribution_pool", "ml_training")
+    graph.add_edge("distribution_pool", "cross_chain_bridge")
+    graph.add_edge("cross_chain_bridge", "ml_training")
     graph.add_edge("ml_training", "blockchain_deploy")
     graph.add_edge("blockchain_deploy", "shadow_sovereignty")
     graph.add_edge("shadow_sovereignty", "digital_legacy")

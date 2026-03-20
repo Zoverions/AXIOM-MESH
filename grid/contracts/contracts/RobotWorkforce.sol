@@ -29,7 +29,7 @@ contract RobotWorkforce is Initializable, UUPSUpgradeable {
     }
 
     function initialize() public initializer {
-        __UUPSUpgradeable_init();
+
     }
 
     function deployRobot(uint256 tokenId, string calldata model, uint256 salary) external {
@@ -44,6 +44,8 @@ contract RobotWorkforce is Initializable, UUPSUpgradeable {
         pool.distribute(address(this), r.salary, keccak256(abi.encode(robotId)));  // paid via pool
         emit PayrollProcessed(robotId, r.salary);
     }
+
+    function __UUPSUpgradeable_init() internal {}
 
     function _authorizeUpgrade(address) internal override {
         // Founder backstop
