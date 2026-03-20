@@ -25,6 +25,11 @@ describe('Skill Capsule Registry', () => {
 
         process.env.CAPSULE_PUBLIC_KEY = publicKeyPem;
         process.env.TEST_ALLOW_ALL_CAPSULES = 'false'; // Must be false to test real signature check
+        process.env.SANDBOX_API_KEY = 'test-sandbox-key';
+    });
+
+    afterAll(() => {
+        delete process.env.SANDBOX_API_KEY;
     });
 
     const createValidCapsule = () => {
@@ -64,6 +69,7 @@ describe('Skill Capsule Registry', () => {
 
         const pubRes = await request(app)
             .post('/capsule/publish')
+            .set('Authorization', 'Bearer test-sandbox-key')
             .send(validCapsule)
             .expect(200);
 
@@ -71,6 +77,7 @@ describe('Skill Capsule Registry', () => {
 
         const verifyRes = await request(app)
             .get(`/capsule/${validCapsule.manifest.id}/verify`)
+            .set('Authorization', 'Bearer test-sandbox-key')
             .expect(200);
 
         expect(verifyRes.body.verified).toBe(true);
@@ -83,6 +90,7 @@ describe('Skill Capsule Registry', () => {
 
         const pubRes = await request(app)
             .post('/capsule/publish')
+            .set('Authorization', 'Bearer test-sandbox-key')
             .send(tamperedCapsule)
             .expect(403);
 
@@ -94,6 +102,7 @@ describe('Skill Capsule Registry', () => {
 
         await request(app)
             .post('/capsule/publish')
+            .set('Authorization', 'Bearer test-sandbox-key')
             .send(validCapsule)
             .expect(200);
 
@@ -102,7 +111,8 @@ describe('Skill Capsule Registry', () => {
         // It might timeout or fail if docker is missing, so we just check for status 200/500
         // and that it actually attempted execution (no signature error).
         const execRes = await request(app)
-            .post(`/capsule/${validCapsule.manifest.id}/execute`);
+            .post(`/capsule/${validCapsule.manifest.id}/execute`)
+            .set('Authorization', 'Bearer test-sandbox-key');
 
         // If docker is running, it returns 200. If docker is absent it returns 500 but not 403.
         expect(execRes.status).not.toBe(403);
@@ -113,6 +123,7 @@ describe('Skill Capsule Registry', () => {
 
         await request(app)
             .post('/capsule/publish')
+            .set('Authorization', 'Bearer test-sandbox-key')
             .send(validCapsule)
             .expect(200);
 
@@ -127,6 +138,7 @@ describe('Skill Capsule Registry', () => {
 
         await request(app)
             .post('/capsule/publish')
+            .set('Authorization', 'Bearer test-sandbox-key')
             .send(invalidBody)
             .expect(403);
     });
@@ -138,6 +150,7 @@ describe('Skill Capsule Registry', () => {
 
         const pubRes = await request(app)
             .post('/capsule/publish')
+            .set('Authorization', 'Bearer test-sandbox-key')
             .send(validCapsule)
             .expect(400);
 
