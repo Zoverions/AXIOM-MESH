@@ -13,8 +13,12 @@ class ModificationPolicy:
     Governs rules for allowed self-mutations during AutoTraining.
     """
     def __init__(self):
-        self.forbidden_modules = {"os", "sys", "subprocess", "shlex", "pty", "socket"}
-        self.forbidden_funcs = {"__import__", "eval", "exec", "open"}
+        self.forbidden_modules = {"os", "sys", "subprocess", "shlex", "pty", "socket", "builtins", "importlib"}
+        self.forbidden_names = {
+            "__import__", "eval", "exec", "open", "compile",
+            "globals", "locals", "vars", "dir",
+            "getattr", "setattr", "delattr", "hasattr",
+        }
         self.max_lines = 100
 
     def evaluate(self, code_str: str) -> bool:
@@ -38,8 +42,13 @@ class ModificationPolicy:
             elif isinstance(node, ast.ImportFrom):
                 if node.module and node.module.split(".")[0] in self.forbidden_modules:
                     return False
-            elif isinstance(node, ast.Call):
-                if isinstance(node.func, ast.Name) and node.func.id in self.forbidden_funcs:
+            elif isinstance(node, ast.Name):
+                # Block known dangerous built-ins and all double-underscore variables/attributes
+                if node.id in self.forbidden_names or node.id.startswith("__"):
+                    return False
+            elif isinstance(node, ast.Attribute):
+                # Block accessing any double-underscore attributes (e.g., __class__, __dict__, __globals__)
+                if node.attr in self.forbidden_names or node.attr.startswith("__"):
                     return False
         return True
 
