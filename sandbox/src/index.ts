@@ -50,11 +50,11 @@ if (process.env.NODE_ENV !== 'test') {
         };
         server = https.createServer(mTLSConfig, app);
     } catch (e) {
-        console.warn("mTLS certs not found, falling back to HTTP.");
-        server = app;
+        console.error("mTLS certs not found. mTLS is mandatory for security.");
+        process.exit(1);
     }
 
     server.listen(PORT, () => {
-        console.log(`Execution Sandbox running on port ${PORT}`);
+        console.log(`Execution Sandbox running on port ${PORT} with mTLS`);
     });
 }

@@ -3,6 +3,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::process::Command;
 use std::thread;
+use serde_json::Value;
 
 const AIRGAP_CHAIN: &str = "AXIOM_AIRGAP";
 
@@ -97,26 +98,86 @@ pub fn start_airgap_uds_listener(socket_path: &str) -> Result<(), AirgapError> {
     Ok(())
 }
 
+pub fn apply_cgroup_limits(pid: u32, config: &Value) -> Result<(), AirgapError> {
+    ensure_pid(pid)?;
+
+    // Create cgroup v2 directory
+    let cgroup_dir = format!("/sys/fs/cgroup/sandbox-{}", pid);
+    std::fs::create_dir_all(&cgroup_dir)?;
+
+    // Move pid to cgroup
+    std::fs::write(format!("{}/cgroup.procs", cgroup_dir), pid.to_string())
+        .map_err(|e| AirgapError::CommandFailure(format!("Failed to move pid to cgroup: {}", e)))?;
+
+    // Apply limits from config
+    if let Some(cpu_quota) = config.get("cpuQuota").and_then(|v| v.as_str()) {
+        let max_val = cpu_quota.replace("/", " ");
+        let _ = std::fs::write(format!("{}/cpu.max", cgroup_dir), max_val);
+    }
+
+    if let Some(memory_max) = config.get("memoryMax").and_then(|v| v.as_str()) {
+        let _ = std::fs::write(format!("{}/memory.max", cgroup_dir), memory_max);
+    }
+
+    if let Some(pids_max) = config.get("pidsMax") {
+        let pids_str = if pids_max.is_number() { pids_max.to_string() } else { pids_max.as_str().unwrap_or("max").to_string() };
+        let _ = std::fs::write(format!("{}/pids.max", cgroup_dir), pids_str);
+    }
+
+    Ok(())
+}
+
 fn handle_client(mut stream: UnixStream) -> Result<(), AirgapError> {
     let reader = BufReader::new(stream.try_clone()?);
     for line in reader.lines() {
         let line = line?;
-        let mut parts = line.split_whitespace();
-        let cmd = parts.next().unwrap_or_default();
-        let pid = parts
-            .next()
-            .and_then(|raw| raw.parse::<u32>().ok())
-            .ok_or_else(|| AirgapError::CommandFailure("missing pid".to_string()))?;
 
-        let result = match cmd {
-            "lockdown" => lockdown_network(pid),
-            "restore" => restore_network(pid),
-            _ => Err(AirgapError::CommandFailure(format!("unknown command: {cmd}"))),
-        };
+        if line.starts_with('{') {
+            // JSON command
+            if let Ok(payload) = serde_json::from_str::<Value>(&line) {
+                let action = payload.get("action").and_then(|v| v.as_str()).unwrap_or_default();
+                let pid = payload.get("pid").and_then(|v| v.as_u64()).map(|v| v as u32).unwrap_or(0);
 
-        match result {
-            Ok(()) => stream.write_all(b"ok\n")?,
-            Err(err) => stream.write_all(format!("error {err}\n").as_bytes())?,
+                let result = match action {
+                    "isolate" => lockdown_network(pid),
+                    "restore" => restore_network(pid),
+                    "cgroups" => {
+                        if let Some(config) = payload.get("config") {
+                            apply_cgroup_limits(pid, config)
+                        } else {
+                            Err(AirgapError::CommandFailure("missing config for cgroups".to_string()))
+                        }
+                    },
+                    "seccomp" => Ok(()), // Handled by standard docker runtime opts
+                    _ => Err(AirgapError::CommandFailure(format!("unknown action: {}", action))),
+                };
+
+                match result {
+                    Ok(()) => stream.write_all(b"ok\n")?,
+                    Err(err) => stream.write_all(format!("error {}\n", err).as_bytes())?,
+                }
+            } else {
+                stream.write_all(b"error invalid json\n")?;
+            }
+        } else {
+            // Space separated protocol fallback
+            let mut parts = line.split_whitespace();
+            let cmd = parts.next().unwrap_or_default();
+            let pid = parts
+                .next()
+                .and_then(|raw| raw.parse::<u32>().ok())
+                .ok_or_else(|| AirgapError::CommandFailure("missing pid".to_string()))?;
+
+            let result = match cmd {
+                "lockdown" => lockdown_network(pid),
+                "restore" => restore_network(pid),
+                _ => Err(AirgapError::CommandFailure(format!("unknown command: {cmd}"))),
+            };
+
+            match result {
+                Ok(()) => stream.write_all(b"ok\n")?,
+                Err(err) => stream.write_all(format!("error {err}\n").as_bytes())?,
+            }
         }
     }
 

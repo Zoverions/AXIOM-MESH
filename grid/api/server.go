@@ -1195,8 +1195,8 @@ func (s *Server) Start(addr string) error {
 		}
 	}
 
-	log.Printf("Starting Grid server on %s with HTTP (mTLS certs not found)", addr)
-	return http.ListenAndServe(addr, mux)
+	log.Fatalf("mTLS certs not found in %s. mTLS is mandatory for security.", certsDir)
+	return nil
 }
 
 func (s *Server) handleGraphWebSocket(w http.ResponseWriter, r *http.Request) {
