@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 import stringify from 'fast-json-stable-stringify';
 import { runCode, ResourceLimits } from '../services/dockerRunner';
+import { validateSandboxApiKey } from '../utils/auth';
 
 const router = Router();
 
@@ -72,6 +73,12 @@ q5s6W7N+aJ9d2cQ2X9r+c2g7f5r3tZ5v7zYyHq5s6W7N+aJ9d2cQ2X9r+c2g
 
 router.post('/capsule/publish', async (req: Request, res: Response) => {
     try {
+        const authResult = await validateSandboxApiKey(req);
+        if (!authResult.ok) {
+            res.status(authResult.code).json({ error: authResult.error });
+            return;
+        }
+
         const { manifest, binary_base64, signature, signatures } = req.body;
         const sigs = signatures || (signature ? [signature] : []);
 
@@ -112,7 +119,13 @@ router.post('/capsule/publish', async (req: Request, res: Response) => {
     }
 });
 
-router.get('/capsule/:id', (req: Request, res: Response) => {
+router.get('/capsule/:id', async (req: Request, res: Response) => {
+    const authResult = await validateSandboxApiKey(req);
+    if (!authResult.ok) {
+        res.status(authResult.code).json({ error: authResult.error });
+        return;
+    }
+
     const capsule = registry.get(req.params.id as string);
     if (!capsule) {
         res.status(404).json({ error: 'Capsule not found' });
@@ -122,6 +135,12 @@ router.get('/capsule/:id', (req: Request, res: Response) => {
 });
 
 router.get('/capsule/:id/verify', async (req: Request, res: Response) => {
+    const authResult = await validateSandboxApiKey(req);
+    if (!authResult.ok) {
+        res.status(authResult.code).json({ error: authResult.error });
+        return;
+    }
+
     const capsule = registry.get(req.params.id as string);
     if (!capsule) {
         res.status(404).json({ error: 'Capsule not found' });
@@ -144,6 +163,12 @@ router.get('/capsule/:id/verify', async (req: Request, res: Response) => {
 
 router.post('/capsule/:id/execute', async (req: Request, res: Response) => {
     try {
+        const authResult = await validateSandboxApiKey(req);
+        if (!authResult.ok) {
+            res.status(authResult.code).json({ error: authResult.error });
+            return;
+        }
+
         const capsule = registry.get(req.params.id as string);
         if (!capsule) {
             res.status(404).json({ error: 'Capsule not found' });
