@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
+import https from 'https';
+import fs from 'fs';
 import dotenv from 'dotenv';
 import executeRoutes from './routes/execute';
 
@@ -34,7 +36,23 @@ app.use(bodyParser.json());
 app.use('/', executeRoutes);
 
 if (process.env.NODE_ENV !== 'test') {
-    app.listen(PORT, () => {
+    const certsDir = process.env.CERTS_DIR || '../certs';
+    let server;
+    try {
+        const mTLSConfig = {
+            key: fs.readFileSync(`${certsDir}/sandbox.key`),
+            cert: fs.readFileSync(`${certsDir}/sandbox.crt`),
+            ca: [fs.readFileSync(`${certsDir}/ca.crt`)],
+            requestCert: true,
+            rejectUnauthorized: true,
+        };
+        server = https.createServer(mTLSConfig, app);
+    } catch (e) {
+        console.warn("mTLS certs not found, falling back to HTTP.");
+        server = app;
+    }
+
+    server.listen(PORT, () => {
         console.log(`Execution Sandbox running on port ${PORT}`);
     });
 }

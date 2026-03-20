@@ -1,12 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { runCode } from '../services/dockerRunner';
 import { NetworkNamespaceController } from '../execution/SecureRuntime';
+import { SecretManager } from '../utils/secrets';
 
 const router = Router();
 
 
-function validateSandboxApiKey(req: Request): { ok: boolean; code: number; error?: string } {
-    const expected = process.env.SANDBOX_API_KEY;
+async function validateSandboxApiKey(req: Request): Promise<{ ok: boolean; code: number; error?: string }> {
+    const expected = await SecretManager.getSecret('SANDBOX_API_KEY');
     if (!expected) {
         return { ok: false, code: 500, error: 'Server configuration error: SANDBOX_API_KEY is not set' };
     }
@@ -26,7 +27,7 @@ function validateSandboxApiKey(req: Request): { ok: boolean; code: number; error
 
 router.post('/execute', async (req: Request, res: Response) => {
     try {
-        const authResult = validateSandboxApiKey(req);
+        const authResult = await validateSandboxApiKey(req);
         if (!authResult.ok) {
             res.status(authResult.code).json({ error: authResult.error });
             return;

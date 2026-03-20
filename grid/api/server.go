@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -13,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -214,6 +217,46 @@ func (s *Server) Start(addr string) error {
 				"p2p": "ok",
 			},
 		})
+	}))
+
+	mux.HandleFunc("/backup", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		backupDir := r.URL.Query().Get("dir")
+		if backupDir == "" {
+			backupDir = "ledger_backup"
+		}
+		if s.ledger.Persistent != nil {
+			if err := s.ledger.Persistent.Backup(backupDir); err != nil {
+				http.Error(w, fmt.Sprintf("Backup failed: %v", err), http.StatusInternalServerError)
+				return
+			}
+			json.NewEncoder(w).Encode(map[string]string{"status": "success", "message": "Backup created in " + backupDir})
+		} else {
+			http.Error(w, "Persistent ledger not configured", http.StatusInternalServerError)
+		}
+	}))
+
+	mux.HandleFunc("/restore", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		backupDir := r.URL.Query().Get("dir")
+		if backupDir == "" {
+			backupDir = "ledger_backup"
+		}
+		if s.ledger.Persistent != nil {
+			if err := s.ledger.Persistent.Restore(backupDir); err != nil {
+				http.Error(w, fmt.Sprintf("Restore failed: %v", err), http.StatusInternalServerError)
+				return
+			}
+			json.NewEncoder(w).Encode(map[string]string{"status": "success", "message": "Restored from " + backupDir})
+		} else {
+			http.Error(w, "Persistent ledger not configured", http.StatusInternalServerError)
+		}
 	}))
 
 	mux.HandleFunc("/manifest", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
@@ -835,6 +878,37 @@ func (s *Server) Start(addr string) error {
 		}
 	}))
 
+	certsDir := os.Getenv("CERTS_DIR")
+	if certsDir == "" {
+		certsDir = "../certs"
+	}
+
+	certFile := filepath.Join(certsDir, "grid.crt")
+	keyFile := filepath.Join(certsDir, "grid.key")
+	caFile := filepath.Join(certsDir, "ca.crt")
+
+	if _, err := os.Stat(certFile); err == nil {
+		caCert, err := os.ReadFile(caFile)
+		if err == nil {
+			caCertPool := x509.NewCertPool()
+			caCertPool.AppendCertsFromPEM(caCert)
+
+			tlsConfig := &tls.Config{
+				ClientCAs:  caCertPool,
+				ClientAuth: tls.RequireAndVerifyClientCert,
+			}
+
+			server := &http.Server{
+				Addr:      addr,
+				Handler:   mux,
+				TLSConfig: tlsConfig,
+			}
+			log.Printf("Starting Grid server on %s with mTLS", addr)
+			return server.ListenAndServeTLS(certFile, keyFile)
+		}
+	}
+
+	log.Printf("Starting Grid server on %s with HTTP (mTLS certs not found)", addr)
 	return http.ListenAndServe(addr, mux)
 }
 
