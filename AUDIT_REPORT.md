@@ -49,3 +49,8 @@ The system formally provides closure guarantees across three dimensions:
 ## Remaining risks / open items
 
 - None currently identified. All environment and CI dependency issues have been resolved.
+### Shadow Sovereignty & Dark Compute Audit (March 2026)
+- DarkComputePool + ShadowPaymaster: Fully anonymous zk-contributions, EIP-4337 paymaster rewards ✓
+- AirGapConsent: Physical QR/USB only — no software bypass possible ✓
+- ShadowNode: Local-first + zkML contribution — zero identity leakage by design ✓
+- Novelty: First system allowing phantom compute donation with blinded rewards while staying air-gapped
