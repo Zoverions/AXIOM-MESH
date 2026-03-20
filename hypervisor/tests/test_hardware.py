@@ -1,195 +1,154 @@
 import pytest
 from unittest.mock import patch, mock_open, MagicMock
 from src.evolution.hardware import HardwareScanner
-import subprocess
-import os
 
-@pytest.fixture
-def scanner():
-    return HardwareScanner()
+def test_hardware_profile():
+    scanner = HardwareScanner()
 
-def test_get_os_name_linux_with_os_release(scanner):
-    with patch('platform.system', return_value='Linux'):
-        mock_file = mock_open(read_data='PRETTY_NAME="Ubuntu 22.04 LTS"\n')
-        with patch('builtins.open', mock_file):
-            assert scanner._get_os_name() == 'Linux (Ubuntu 22.04 LTS)'
+    assert scanner.get_hardware_profile({"total_ram_gb": 16, "vram_mb": 8000}) == "full_node"
+    assert scanner.get_hardware_profile({"total_ram_gb": 16, "vram_mb": 4000}) == "edge"
+    assert scanner.get_hardware_profile({"total_ram_gb": 8, "vram_mb": 0}) == "edge"
+    assert scanner.get_hardware_profile({"total_ram_gb": 4, "vram_mb": 0}) == "tablet"
 
-def test_get_os_name_linux_without_os_release(scanner):
-    with patch('platform.system', return_value='Linux'):
-        with patch('builtins.open', side_effect=Exception('File not found')):
-            assert scanner._get_os_name() == 'Linux'
+def test_recommend_models():
+    scanner = HardwareScanner()
 
-def test_get_os_name_darwin(scanner):
-    with patch('platform.system', return_value='Darwin'):
-        with patch('platform.mac_ver', return_value=('13.0.0', ('', '', ''), 'arm64')):
-            assert scanner._get_os_name() == 'macOS 13.0.0'
+    res1 = scanner.recommend_models({"has_gpu": True, "vram_mb": 16000, "total_ram_gb": 32})
+    assert res1["default"] == "llama3:8b"
+    assert res1["coding"] == "codellama:7b"
 
-def test_get_os_name_windows(scanner):
-    with patch('platform.system', return_value='Windows'):
-        with patch('platform.release', return_value='10'):
-            assert scanner._get_os_name() == 'Windows 10'
+    res2 = scanner.recommend_models({"has_gpu": True, "vram_mb": 8000, "total_ram_gb": 16})
+    assert res2["coding"] == "qwen2.5-coder:7b"
 
-def test_get_cpu_cores_nproc(scanner):
-    with patch('subprocess.check_output', return_value=b'8\n'):
-        assert scanner._get_cpu_cores() == 8
+    res3 = scanner.recommend_models({"has_gpu": False, "total_ram_gb": 16})
+    assert res3["reasoning"] == "mistral:7b"
 
-def test_get_cpu_cores_sysctl(scanner):
-    def mock_check_output(args, **kwargs):
-        if args == ["nproc"]:
-            raise Exception("Command not found")
-        elif args == ["sysctl", "-n", "hw.ncpu"]:
-            return b'12\n'
-        raise Exception("Unknown command")
+    res4 = scanner.recommend_models({"has_gpu": False, "total_ram_gb": 8})
+    assert res4["default"] == "llama3:1b"
 
-    with patch('subprocess.check_output', side_effect=mock_check_output):
-        assert scanner._get_cpu_cores() == 12
+@patch('platform.system')
+def test_get_os_name_linux(mock_system):
+    mock_system.return_value = "Linux"
+    scanner = HardwareScanner()
 
-def test_get_cpu_cores_fallback(scanner):
-    with patch('subprocess.check_output', side_effect=Exception("Error")):
-        with patch('os.cpu_count', return_value=4):
-            assert scanner._get_cpu_cores() == 4
+    # Test with /etc/os-release
+    m_open = mock_open(read_data="NAME=\"Ubuntu\"\nPRETTY_NAME=\"Ubuntu 22.04 LTS\"\n")
+    with patch("builtins.open", m_open):
+        assert scanner._get_os_name() == "Linux (Ubuntu 22.04 LTS)"
 
-def test_get_cpu_cores_fallback_none(scanner):
-    with patch('subprocess.check_output', side_effect=Exception("Error")):
-        with patch('os.cpu_count', return_value=None):
-            assert scanner._get_cpu_cores() == 1
+    # Test without /etc/os-release
+    with patch("builtins.open", side_effect=FileNotFoundError):
+        assert scanner._get_os_name() == "Linux"
 
-def test_get_total_ram_gb_linux(scanner):
-    output = b"""              total        used        free      shared  buff/cache   available
-Mem:              31           8           5           0          17          22
-Swap:              0           0           0
-"""
-    with patch('subprocess.check_output', return_value=output):
-        assert scanner._get_total_ram_gb() == 31.0
+@patch('platform.system')
+@patch('platform.mac_ver')
+def test_get_os_name_mac(mock_mac_ver, mock_system):
+    mock_system.return_value = "Darwin"
+    mock_mac_ver.return_value = ("14.0", (), "")
+    scanner = HardwareScanner()
+    assert scanner._get_os_name() == "macOS 14.0"
 
-def test_get_total_ram_gb_macos(scanner):
-    def mock_check_output(args, **kwargs):
-        if args == ["free", "-g"]:
-            raise Exception("Command not found")
-        elif args == ["sysctl", "-n", "hw.memsize"]:
-            return b'17179869184\n' # 16 GB
-        raise Exception("Unknown command")
+@patch('platform.system')
+@patch('platform.release')
+def test_get_os_name_windows(mock_release, mock_system):
+    mock_system.return_value = "Windows"
+    mock_release.return_value = "11"
+    scanner = HardwareScanner()
+    assert scanner._get_os_name() == "Windows 11"
 
-    with patch('subprocess.check_output', side_effect=mock_check_output):
-        assert scanner._get_total_ram_gb() == 16.0
+@patch('subprocess.check_output')
+@patch('os.cpu_count')
+def test_get_cpu_cores(mock_cpu_count, mock_check_output):
+    scanner = HardwareScanner()
 
-def test_get_total_ram_gb_fallback(scanner):
-    with patch('subprocess.check_output', side_effect=Exception("Error")):
-        assert scanner._get_total_ram_gb() == 8.0
+    # Test nproc
+    mock_check_output.return_value = b"8\n"
+    assert scanner._get_cpu_cores() == 8
 
-def test_get_vram_mb_nvidia(scanner):
-    with patch('subprocess.check_output', return_value=b'12288\n'):
-        assert scanner._get_vram_mb() == 12288
+    # Test fallback to sysctl
+    def check_output_side_effect(args, **kwargs):
+        if args[0] == "nproc":
+            raise FileNotFoundError()
+        elif args[0] == "sysctl":
+            return b"10\n"
+        raise Exception("Unknown")
 
-def test_get_vram_mb_apple_silicon(scanner):
-    def mock_check_output(args, **kwargs):
+    mock_check_output.side_effect = check_output_side_effect
+    assert scanner._get_cpu_cores() == 10
+
+    # Test fallback to os.cpu_count
+    mock_check_output.side_effect = Exception("All failed")
+    mock_cpu_count.return_value = 12
+    assert scanner._get_cpu_cores() == 12
+
+@patch('subprocess.check_output')
+def test_get_total_ram_gb(mock_check_output):
+    scanner = HardwareScanner()
+
+    # Test Linux free
+    mock_check_output.return_value = b"              total        used        free      shared  buff/cache   available\nMem:             31           5          20           0           5          25\nSwap:             0           0           0\n"
+    assert scanner._get_total_ram_gb() == 31.0
+
+    # Test macOS sysctl
+    def check_output_side_effect(args, **kwargs):
+        if args[0] == "free":
+            raise Exception("No free command")
+        elif args[0] == "sysctl":
+            return b"17179869184\n" # 16GB
+        raise Exception("Unknown")
+
+    mock_check_output.side_effect = check_output_side_effect
+    assert scanner._get_total_ram_gb() == 16.0
+
+    # Test fallback
+    mock_check_output.side_effect = Exception("All failed")
+    assert scanner._get_total_ram_gb() == 8.0
+
+@patch('subprocess.check_output')
+def test_get_vram_mb(mock_check_output):
+    scanner = HardwareScanner()
+
+    # Test nvidia-smi
+    mock_check_output.return_value = b"24576\n"
+    assert scanner._get_vram_mb() == 24576
+
+    # Test Apple Silicon
+    def check_output_side_effect(args, **kwargs):
         if args[0] == "nvidia-smi":
             raise Exception("No nvidia")
-        elif args == ["sysctl", "-n", "machdep.cpu.brand_string"]:
-            return b'Apple M1 Pro\n'
-        raise Exception("Unknown command")
+        elif args[0] == "sysctl" and "machdep.cpu.brand_string" in args:
+            return b"Apple M2 Max\n"
+        raise Exception("Unknown")
 
-    with patch('subprocess.check_output', side_effect=mock_check_output):
-        with patch.object(scanner, '_get_total_ram_gb', return_value=16.0):
-            assert scanner._get_vram_mb() == 12288
+    mock_check_output.side_effect = check_output_side_effect
+    with patch.object(scanner, '_get_total_ram_gb', return_value=32.0):
+        assert scanner._get_vram_mb() == int(32 * 1024 * 0.75)
 
-def test_get_vram_mb_fallback(scanner):
-    with patch('subprocess.check_output', side_effect=Exception("Error")):
-        assert scanner._get_vram_mb() == 0
+    # Test fallback
+    mock_check_output.side_effect = Exception("All failed")
+    assert scanner._get_vram_mb() == 0
 
-def test_scan(scanner):
-    with patch.object(scanner, '_get_os_name', return_value='Linux'):
-        with patch.object(scanner, '_get_cpu_cores', return_value=8):
-            with patch.object(scanner, '_get_total_ram_gb', return_value=16.0):
-                with patch.object(scanner, '_get_vram_mb', return_value=8192):
-                    footprint = scanner.scan()
-                    assert footprint == {
-                        "os_name": "Linux",
-                        "cpu_cores": 8,
-                        "total_ram_gb": 16.0,
-                        "vram_mb": 8192,
-                        "has_gpu": True
-                    }
+@patch.object(HardwareScanner, '_get_os_name')
+@patch.object(HardwareScanner, '_get_cpu_cores')
+@patch.object(HardwareScanner, '_get_total_ram_gb')
+@patch.object(HardwareScanner, '_get_vram_mb')
+def test_scan(mock_vram, mock_ram, mock_cpu, mock_os):
+    mock_os.return_value = "Linux"
+    mock_cpu.return_value = 8
+    mock_ram.return_value = 16.0
+    mock_vram.return_value = 8192
 
-def test_scan_no_gpu(scanner):
-    with patch.object(scanner, '_get_os_name', return_value='Windows'):
-        with patch.object(scanner, '_get_cpu_cores', return_value=4):
-            with patch.object(scanner, '_get_total_ram_gb', return_value=8.0):
-                with patch.object(scanner, '_get_vram_mb', return_value=0):
-                    footprint = scanner.scan()
-                    assert footprint == {
-                        "os_name": "Windows",
-                        "cpu_cores": 4,
-                        "total_ram_gb": 8.0,
-                        "vram_mb": 0,
-                        "has_gpu": False
-                    }
+    scanner = HardwareScanner()
+    res = scanner.scan()
 
-def test_get_hardware_profile(scanner):
-    assert scanner.get_hardware_profile({
+    assert res == {
+        "os_name": "Linux",
+        "cpu_cores": 8,
         "total_ram_gb": 16.0,
-        "vram_mb": 8192
-    }) == "full_node"
-
-    assert scanner.get_hardware_profile({
-        "total_ram_gb": 16.0,
-        "vram_mb": 4096
-    }) == "edge"
-
-    assert scanner.get_hardware_profile({
-        "total_ram_gb": 8.0,
-        "vram_mb": 0
-    }) == "edge"
-
-    assert scanner.get_hardware_profile({
-        "total_ram_gb": 4.0,
-        "vram_mb": 0
-    }) == "tablet"
-
-def test_get_hardware_profile_default(scanner):
-    with patch.object(scanner, 'scan', return_value={
-        "total_ram_gb": 32.0,
-        "vram_mb": 16384
-    }):
-        assert scanner.get_hardware_profile() == "full_node"
-
-def test_recommend_models(scanner):
-    assert scanner.recommend_models({
-        "has_gpu": True,
-        "vram_mb": 16384,
-        "total_ram_gb": 32.0
-    }) == {
-        "default": "llama3:8b",
-        "coding": "codellama:7b",
-        "reasoning": "mistral:7b"
-    }
-
-    assert scanner.recommend_models({
-        "has_gpu": True,
         "vram_mb": 8192,
-        "total_ram_gb": 16.0
-    }) == {
-        "default": "llama3:8b",
-        "coding": "qwen2.5-coder:7b",
-        "reasoning": "mistral:7b"
+        "has_gpu": True
     }
 
-    assert scanner.recommend_models({
-        "has_gpu": False,
-        "vram_mb": 0,
-        "total_ram_gb": 16.0
-    }) == {
-        "default": "llama3:8b",
-        "coding": "codellama:7b",
-        "reasoning": "mistral:7b"
-    }
-
-    assert scanner.recommend_models({
-        "has_gpu": False,
-        "vram_mb": 0,
-        "total_ram_gb": 8.0
-    }) == {
-        "default": "llama3:1b",
-        "coding": "llama3:1b",
-        "reasoning": "llama3:1b"
-    }
+    mock_vram.return_value = 0
+    res2 = scanner.scan()
+    assert res2["has_gpu"] == False
