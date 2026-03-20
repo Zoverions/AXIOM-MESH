@@ -199,18 +199,25 @@ async def release_backpressure():
         except asyncio.QueueEmpty:
             pass
 
-def verify_api_key(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)):
+def _get_expected_api_key():
     expected_api_key = os.environ.get("HYPERVISOR_API_KEY")
     if not expected_api_key:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Server configuration error: HYPERVISOR_API_KEY is not set",
         )
-    if credentials.credentials != expected_api_key:
+    return expected_api_key
+
+def _validate_api_key(provided_key: str, expected_key: str):
+    if provided_key != expected_key:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid API Key",
         )
+
+def verify_api_key(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    expected_api_key = _get_expected_api_key()
+    _validate_api_key(credentials.credentials, expected_api_key)
 
     return credentials.credentials
 
