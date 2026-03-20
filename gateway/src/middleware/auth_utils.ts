@@ -1,4 +1,5 @@
 import { IncomingHttpHeaders } from 'http';
+import * as jwt from 'jsonwebtoken';
 
 export type AuthSource = {
     queryApiKey?: string | null;
@@ -48,9 +49,23 @@ export function validateGatewayApiKey(token: string | undefined, configuredApiKe
         return { ok: false, code: 401, error: 'Unauthorized: Missing API key token' };
     }
 
-    if (token !== configuredApiKey) {
-        return { ok: false, code: 403, error: 'Forbidden: Invalid API Key' };
+    // 1. Try to validate as API Key
+    const validKeys = configuredApiKey.split(',').map(k => k.trim()).filter(k => k.length > 0);
+    if (validKeys.includes(token)) {
+        return { ok: true, code: 200 };
     }
 
-    return { ok: true, code: 200 };
+    // 2. Try to validate as JWT if JWT_SECRET is configured
+    const jwtSecret = process.env.JWT_SECRET;
+    if (jwtSecret) {
+        try {
+            jwt.verify(token, jwtSecret);
+            return { ok: true, code: 200 };
+        } catch (err: any) {
+            // Token is either not a JWT or invalid JWT
+            return { ok: false, code: 403, error: 'Forbidden: Invalid API Key or JWT' };
+        }
+    }
+
+    return { ok: false, code: 403, error: 'Forbidden: Invalid API Key' };
 }
