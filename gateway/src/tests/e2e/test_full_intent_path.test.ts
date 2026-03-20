@@ -81,6 +81,9 @@ describe('Gateway integration contracts', () => {
 
         const gwEnv = {
             ...process.env,
+            NODE_ENV: 'test',
+            CORS_ORIGINS: 'http://127.0.0.1:3005',
+            ALLOW_MISSING_ORIGIN: 'true',
             GATEWAY_REST_PORT: '3005',
             GATEWAY_WS_PORT: '3006',
             GATEWAY_API_KEY: 'gw_key',
@@ -97,13 +100,15 @@ describe('Gateway integration contracts', () => {
         gatewayProcess = spawn('node', ['-r', 'ts-node/register', 'src/index.ts'], {
             cwd: path.resolve(__dirname, '../../../'),
             env: gwEnv,
-            stdio: 'ignore'
+            stdio: 'inherit'
         });
 
         let gwUp = false;
         for (let i = 0; i < 40; i++) {
             try {
-                const res = await axios.get('http://127.0.0.1:3005/health');
+                const res = await axios.get('http://127.0.0.1:3005/health', {
+                    headers: { Origin: 'http://127.0.0.1:3005' }
+                });
                 if (res.status === 200) {
                     gwUp = true;
                     break;
@@ -112,6 +117,8 @@ describe('Gateway integration contracts', () => {
                 await delay(500);
             }
         }
+
+        axios.defaults.headers.common['Origin'] = 'http://127.0.0.1:3005';
 
         if (!gwUp) {
             throw new Error('Gateway server failed to start');
