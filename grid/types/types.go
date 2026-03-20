@@ -7,6 +7,23 @@ type AgentManifest struct {
 	Timestamp       int64     `json:"timestamp"`
 }
 
+type NodeCapabilityProfile struct {
+	NodeID         string   `json:"node_id"`
+	CPUCores       int      `json:"cpu_cores"`
+	CPUFeatures    []string `json:"cpu_features,omitempty"`
+	GPUModel       string   `json:"gpu_model,omitempty"`
+	GPUMemGB       float64  `json:"gpu_mem_gb,omitempty"`
+	HasTEE         bool     `json:"has_tee"`
+	TEEType        string   `json:"tee_type,omitempty"`
+	RAMGB          float64  `json:"ram_gb"`
+	StorageGB      float64  `json:"storage_gb"`
+	BandwidthMbps  float64  `json:"bandwidth_mbps,omitempty"`
+	ServiceClasses []string `json:"service_classes,omitempty"`
+	LatencyScore   float64  `json:"latency_score,omitempty"`
+	TrustScore     float64  `json:"trust_score,omitempty"`
+	LastSeenTS     int64    `json:"last_seen_ts,omitempty"`
+}
+
 type Task struct {
 	ID          string `json:"id"`
 	Description string `json:"description"`
@@ -193,4 +210,22 @@ type CapabilityManifest struct {
 	Benchmarks map[string]float64 `json:"benchmarks"`
 	Version    uint64             `json:"version,omitempty"`
 	Hash       string             `json:"hash,omitempty"`
+// CRDTShard represents a fragmented Last-Write-Wins map piece for edge scaling
+type CRDTShard struct {
+	ShardID   string                 `json:"shardId"`
+	RootHash  string                 `json:"rootHash"`
+	NodeID    string                 `json:"nodeId"`
+	Data      map[string]interface{} `json:"data"`
+	Timestamp uint64                 `json:"timestamp"`
+	Signature string                 `json:"signature"`
+}
+
+// DriftReport represents an automated behavioral drift assessment
+type DriftReport struct {
+	NodeID           string  `json:"nodeId"`
+	SkillDrift       float64 `json:"skillDrift"`
+	ConsensusLatency float64 `json:"consensusLatency"`
+	RepetitiveLoops  int     `json:"repetitiveLoops,omitempty"`
+	Timestamp        uint64  `json:"timestamp"`
+	Signature        string  `json:"signature"`
 }

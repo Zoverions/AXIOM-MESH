@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "NodeCapabilityProfile",
+  "type": "object",
+  "properties": {
+    "node_id": {
+      "type": "string"
+    },
+    "cpu_cores": {
+      "type": "integer"
+    },
+    "cpu_features": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "gpu_model": {
+      "type": "string"
+    },
+    "gpu_mem_gb": {
+      "type": "number"
+    },
+    "has_tee": {
+      "type": "boolean"
+    },
+    "tee_type": {
+      "type": "string"
+    },
+    "ram_gb": {
+      "type": "number"
+    },
+    "storage_gb": {
+      "type": "number"
+    },
+    "bandwidth_mbps": {
+      "type": "number"
+    },
+    "service_classes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "latency_score": {
+      "type": "number"
+    },
+    "trust_score": {
+      "type": "number"
+    },
+    "last_seen_ts": {
+      "type": "integer"
+    }
+  },
+  "required": [
+    "node_id",
+    "cpu_cores",
+    "ram_gb",
+    "storage_gb"
+  ],
+  "additionalProperties": false
+}

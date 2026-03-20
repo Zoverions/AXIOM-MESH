@@ -33,7 +33,7 @@ router.post('/execute', async (req: Request, res: Response) => {
             return;
         }
 
-        const { language, code, ase_proof, zk_proof } = req.body;
+        const { language, code, ase_proof, zk_proof, use_tee } = req.body;
         if (!language || typeof language !== 'string' || !code || typeof code !== 'string') {
             res.status(400).json({ error: 'Language and code must be non-empty strings' });
             return;
@@ -105,7 +105,7 @@ router.post('/execute', async (req: Request, res: Response) => {
 
         try {
             await processIsolated.isolateProcess(process.pid);
-            result = await runCode(language, code);
+            result = await runCode(language, code, !!use_tee);
         } finally {
             await processIsolated.restoreNetworking(process.pid);
         }

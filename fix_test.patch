@@ -1,0 +1,26 @@
+--- grid/internal/scheduler/scheduler_test.go
++++ grid/internal/scheduler/scheduler_test.go
+@@ -106,7 +106,10 @@
+		}
+
+		// Reassign via Failover
+-		newNodeID, err := s.Failover(failoverTicket.ID)
++		// Ensure we don't hit "no alternative nodes" by adding a candidate
++		s.RegisterNode("failover-node-2", &types.AgentManifest{NodeID: "failover-node-2"}, 99.0, 10, 1, TierMedium, []string{"compute", "storage"})
++
++		newNodeID, err := s.Failover(failoverTicket.ID)
+		if err != nil {
+			t.Errorf("Failover failed: %v", err)
+		}
+@@ -115,7 +118,10 @@
+		}
+
+		// Wait for TTL expiration
+-		failoverTicket.ExpiresAt = time.Now().Unix() - 1 // artificially expire it
++		s.mu.Lock()
++		s.tasks[failoverTicket.ID].ExpiresAt = time.Now().Unix() - 1 // artificially expire it
++		s.mu.Unlock()
++
+		_, err = s.Failover(failoverTicket.ID)
+		if err == nil {
+			t.Errorf("Failover succeeded but token TTL should have expired")
