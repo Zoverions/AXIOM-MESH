@@ -45,8 +45,6 @@ contract RobotWorkforce is Initializable, UUPSUpgradeable {
         emit PayrollProcessed(robotId, r.salary);
     }
 
-    function __UUPSUpgradeable_init() internal {}
-
     function _authorizeUpgrade(address) internal override {
         // Founder backstop
     }

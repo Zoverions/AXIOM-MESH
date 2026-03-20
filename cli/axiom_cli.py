@@ -13,6 +13,30 @@ try:
 except ImportError:
     pass
 
+import asyncio
+
+def provide_liquidity():
+    """Network provides liquidity from pool share"""
+    try:
+        import sys
+        sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'hypervisor')))
+        from liquidity.AutonomousLiquidityManager import AutonomousLiquidityManager
+        manager = AutonomousLiquidityManager()
+        asyncio.run(manager.monitor_and_provide())
+    except Exception as e:
+        print(f"Error providing liquidity: {e}")
+
+def rebalance_liquidity():
+    """Rebalance all positions"""
+    try:
+        import sys
+        sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'hypervisor')))
+        from liquidity.AutonomousLiquidityManager import AutonomousLiquidityManager
+        manager = AutonomousLiquidityManager()
+        asyncio.run(manager.rebalance())
+    except Exception as e:
+        print(f"Error rebalancing liquidity: {e}")
+
 def send_intent(content: str):
     payload = {
         "channel": "cli",
@@ -206,6 +230,14 @@ if __name__ == "__main__":
                 except Exception as e:
                     print(f"Error accessing data: {e}")
                 sys.exit(0)
+        elif sys.argv[1] == "liquidity":
+            if len(sys.argv) > 2:
+                if sys.argv[2] == "provide":
+                    provide_liquidity()
+                    sys.exit(0)
+                elif sys.argv[2] == "rebalance":
+                    rebalance_liquidity()
+                    sys.exit(0)
 
     setup_node()
     print("AxiomMesh CLI - Interactive Mode")

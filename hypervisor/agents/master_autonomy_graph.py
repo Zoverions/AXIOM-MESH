@@ -10,6 +10,8 @@ from hypervisor.shadow.ShadowNode import ShadowNode
 from hypervisor.distribution.AutonomousDistributionManager import AutonomousDistributionManager
 from hypervisor.shadow.AirGapConsent import AirGapConsent  # for shadow
 from hypervisor.crosschain.OmnichainRelayer import OmnichainRelayer
+from hypervisor.liquidity.AutonomousLiquidityManager import AutonomousLiquidityManager
+from hypervisor.liquidity.AutomatedV3LiquidityManager import AutomatedV3LiquidityManager
 
 def build_master_autonomy_graph(primary_did: str):
     graph = StateGraph(dict)
@@ -77,6 +79,23 @@ def build_master_autonomy_graph(primary_did: str):
 
     graph.add_node("distribution_pool", distribution_pool_node)
 
+    # Pillar 8: Network Sovereign Liquidity
+    liquidity = AutonomousLiquidityManager()
+
+    async def network_liquidity_node(state):
+        await liquidity.monitor_and_provide()
+        return state
+
+    graph.add_node("network_liquidity", network_liquidity_node)
+
+    v3_manager = AutomatedV3LiquidityManager()
+
+    async def v3_fee_harvest_node(state):
+        await v3_manager.harvest_and_reinvest()
+        return state
+
+    graph.add_node("v3_fee_harvest", v3_fee_harvest_node)
+
     async def monitor_metrics_node(state):
         return state
 
@@ -92,11 +111,13 @@ def build_master_autonomy_graph(primary_did: str):
     graph.add_node("cross_chain_bridge", cross_chain_bridge_node)
 
 
-    # Connect all pillars (monitor → allocate → distribute → train → shadow)
+    # Connect all pillars (monitor → allocate → distribute → train → shadow → liquidity)
     graph.set_entry_point("monitor_metrics_node")
     graph.add_edge("monitor_metrics_node", "resource_allocation")
     graph.add_edge("resource_allocation", "distribution_pool")
-    graph.add_edge("distribution_pool", "cross_chain_bridge")
+    graph.add_edge("distribution_pool", "network_liquidity")
+    graph.add_edge("network_liquidity", "v3_fee_harvest")
+    graph.add_edge("v3_fee_harvest", "cross_chain_bridge")
     graph.add_edge("cross_chain_bridge", "ml_training")
     graph.add_edge("ml_training", "blockchain_deploy")
     graph.add_edge("blockchain_deploy", "shadow_sovereignty")

@@ -60,3 +60,10 @@ The system formally provides closure guarantees across three dimensions:
 - Mandatory network share (governance-tunable) auto-allocated to infrastructure ✓
 - Business/Gov on-ramp via DistributorNFT — payroll + UBI supported ✓
 - Direct donations enabled for anyone — transparent audit trail for every entity ✓
+
+### Network Sovereign Liquidity Audit (Pillar 8)
+- All positions on-chain (Uniswap V3 concentrated) ✓
+- Funded only from 10% distribution share + fees ✓
+- Sustainability lock + bicameral rebalance ✓
+- Cross-chain via LayerZero ✓
+- zk-anonymous shadow contributions supported ✓
