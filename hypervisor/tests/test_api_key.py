@@ -18,24 +18,28 @@ def get_verify_api_key_func():
     with open(file_path, "r") as f:
         tree = ast.parse(f.read())
 
+    nodes_to_compile = []
     for node in tree.body:
-        if isinstance(node, ast.FunctionDef) and node.name == "verify_api_key":
-            module = ast.Module(body=[node], type_ignores=[])
-            code = compile(module, filename="<ast>", mode="exec")
+        if isinstance(node, ast.FunctionDef) and node.name in ("_get_expected_api_key", "_validate_api_key", "verify_api_key"):
+            nodes_to_compile.append(node)
 
-            context = {
-                "Request": Request,
-                "HTTPAuthorizationCredentials": HTTPAuthorizationCredentials,
-                "Depends": lambda x: None,
-                "security": None,
-                "os": os,
-                "HTTPException": HTTPException,
-                "status": status
-            }
-            exec(code, context)
-            return context["verify_api_key"]
+    if not nodes_to_compile:
+        raise Exception("Could not find verify_api_key functions")
 
-    raise Exception("Could not find verify_api_key")
+    module = ast.Module(body=nodes_to_compile, type_ignores=[])
+    code = compile(module, filename="<ast>", mode="exec")
+
+    context = {
+        "Request": Request,
+        "HTTPAuthorizationCredentials": HTTPAuthorizationCredentials,
+        "Depends": lambda x: None,
+        "security": None,
+        "os": os,
+        "HTTPException": HTTPException,
+        "status": status
+    }
+    exec(code, context)
+    return context["verify_api_key"]
 
 # We use the isolated function instead of importing the whole server
 verify_api_key = get_verify_api_key_func()
