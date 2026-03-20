@@ -74,6 +74,26 @@ This README is a **code-accurate rewrite** intended to clearly separate what is 
 
 ---
 
+## AXIOM-MESH Core Pillars (v6.1)
+
+The system is now built on **6 self-managing pillars**:
+
+1. **Blockchain Autonomy** – DeploymentFactory, FounderCommitment, invisible founder control
+2. **Autonomous ML Training** – ModelRegistry + on-demand PyTorch/zkML training
+3. **Dynamic Resource Management** – 5% permanent Founder share + governance-controlled allocation
+4. **Automated Workforce & Digital Legacy** – RobotWorkforce.sol + inheritance execution
+5. **Shadow Sovereignty** – Air-gapped nodes, Dark Compute Pool, zk phantom participation
+6. **Universal Distribution Pool** – Payroll, UBI, government/business on-ramps, direct donations with mandatory network share
+
+All pillars are fully wired in `hypervisor/agents/master_autonomy_graph.py` and deployable via the autonomous factory.
+
+Quick Start:
+```bash
+forge script script/DeployAutonomy.s.sol
+python -m hypervisor.agents.master_autonomy_graph
+```
+---
+
 ## 2026 AI Agent Framework Integrations (New Section)
 
 AXIOM-MESH now leverages the best 2026 agent frameworks while preserving its zkML + decentralized core:
