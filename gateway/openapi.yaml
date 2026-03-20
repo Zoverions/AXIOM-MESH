@@ -1,0 +1,29 @@
+openapi: 3.1.0
+info:
+  title: AXIOM-MESH Distribution API
+  version: 6.1.0
+paths:
+  /api/v1/distribution/deposit:
+    post:
+      summary: Business/Gov/Individual Deposit (Payroll or Donation)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DistributionIntent'
+      responses:
+        '200':
+          description: Deposit successful – network share auto-allocated
+  /api/v1/distribution/audit/{entity}:
+    get:
+      summary: Full on-chain audit trail for any org/individual
+      parameters:
+        - name: entity
+          in: path
+          required: true
+      responses:
+        '200':
+          description: inflows, outflows, networkContributed
+  /api/v1/distribution/payroll:
+    post:
+      summary: Route org payroll through pool (zk-blinded)

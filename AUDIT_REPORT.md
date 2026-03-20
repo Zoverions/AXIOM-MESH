@@ -54,3 +54,9 @@ The system formally provides closure guarantees across three dimensions:
 - AirGapConsent: Physical QR/USB only — no software bypass possible ✓
 - ShadowNode: Local-first + zkML contribution — zero identity leakage by design ✓
 - Novelty: First system allowing phantom compute donation with blinded rewards while staying air-gapped
+
+### Universal Distribution Pool Audit (March 2026)
+- Inflows/outflows fully tracked on-chain with zk-proof payouts ✓
+- Mandatory network share (governance-tunable) auto-allocated to infrastructure ✓
+- Business/Gov on-ramp via DistributorNFT — payroll + UBI supported ✓
+- Direct donations enabled for anyone — transparent audit trail for every entity ✓

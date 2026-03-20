@@ -480,6 +480,9 @@ router.get('/api/v1/logs', authMiddleware, async (req: Request, res: Response) =
     }
 });
 
+import distributionRouter from './distribution';
+router.use('/api/v1/distribution', distributionRouter);
+
 // --- Configuration API ---
 const SENSITIVE_KEYWORDS = ['KEY', 'TOKEN', 'SECRET', 'PASSWORD', 'SESSION', 'PRIV'];
 
