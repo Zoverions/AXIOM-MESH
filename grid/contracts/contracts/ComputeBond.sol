@@ -47,6 +47,33 @@ contract ComputeBond is Ownable, AccessControl {
     event BondDelegated(bytes32 indexed nodeId, bytes32 indexed parentNodeId, uint256 bondAmount);
     event SwarmAttestation(bytes32 indexed nodeId, bytes32 swarmId);
 
+    // === Blockchain Autonomy Layer ===
+    address public deploymentFactory;
+
+    function setDeploymentFactory(address _deploymentFactory) external onlyOwner {
+        deploymentFactory = _deploymentFactory;
+    }
+
+    function autoFundDeployment(uint256 gasBudget) external returns (bool) {
+        require(msg.sender == deploymentFactory, "Only factory can auto fund");
+        require(totalSlashed + collectiveInvestmentPool >= gasBudget, "Insufficient funds");
+
+        if (totalSlashed >= gasBudget) {
+            totalSlashed -= gasBudget;
+        } else {
+            uint256 remainder = gasBudget - totalSlashed;
+            totalSlashed = 0;
+            collectiveInvestmentPool -= remainder;
+        }
+
+        // We simulate sending funds here (if native currency is needed)
+        // Normally factory uses this budget to deploy, sending it the value directly.
+        (bool success, ) = msg.sender.call{value: gasBudget}("");
+        require(success, "Transfer failed");
+
+        return true;
+    }
+
     // === MeshStore Storage Offering (Priority 1) ===
     event StorageOffered(address indexed agent, uint256 capacityGB, bytes32 cidRoot, uint256 poerBonus);
 
