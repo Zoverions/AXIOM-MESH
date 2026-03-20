@@ -98,6 +98,19 @@ type ZKMLPayload struct {
 	Settings        string    `json:"settings"`
 }
 
+type CitizenshipNFTMint struct {
+	NodeID          string `json:"nodeId"`
+	Jurisdiction    string `json:"jurisdiction"`
+	RightsTier      string `json:"rightsTier"`
+	TxHash          string `json:"txHash,omitempty"`
+}
+
+type VaultACL struct {
+	NodeID        string   `json:"nodeId"`
+	OwnerDID      string   `json:"ownerDID"`
+	AllowedAgents []string `json:"allowedAgents"`
+}
+
 type CCIPMessage struct {
 	MessageID   string `json:"message_id"`
 	SourceChain string `json:"source_chain"`
@@ -210,6 +223,8 @@ type CapabilityManifest struct {
 	Benchmarks map[string]float64 `json:"benchmarks"`
 	Version    uint64             `json:"version,omitempty"`
 	Hash       string             `json:"hash,omitempty"`
+}
+
 // CRDTShard represents a fragmented Last-Write-Wins map piece for edge scaling
 type CRDTShard struct {
 	ShardID   string                 `json:"shardId"`

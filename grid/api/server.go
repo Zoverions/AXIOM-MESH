@@ -313,6 +313,36 @@ func (s *Server) SetupRouter() *http.ServeMux {
 		}
 	}))
 
+	mux.HandleFunc("/vault/acl", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "POST" {
+			var acl types.VaultACL
+			if err := json.NewDecoder(r.Body).Decode(&acl); err == nil {
+				// Stub for PoER/Ledger checks on Vault ACL
+				json.NewEncoder(w).Encode(map[string]interface{}{"status": "success", "nodeId": acl.NodeID})
+			} else {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			}
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}))
+
+	mux.HandleFunc("/nft/citizenship", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "POST" {
+			var mint types.CitizenshipNFTMint
+			if err := json.NewDecoder(r.Body).Decode(&mint); err == nil {
+				// Stub for PoER check
+				json.NewEncoder(w).Encode(map[string]interface{}{"status": "success", "txHash": mint.TxHash})
+			} else {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			}
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}))
+
 	mux.HandleFunc("/node/register", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method != "POST" {

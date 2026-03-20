@@ -581,6 +581,58 @@ async def edit_memory(node_id: str, update_data: dict):
         return {"status": "success"}
     return {"status": "error", "message": "Memory node not found"}
 
+# --- Private Vault API ---
+# from src.memory.PrivateVault import PrivateVault
+# private_vault = PrivateVault(context_engine)
+
+@app.get("/memory/vault/{node_id}")
+async def get_vault_memory(node_id: str, request: Request, api_key: str = Depends(verify_signature)):
+    requester_did = request.headers.get("X-Requester-DID")
+    is_sub_agent = request.headers.get("X-Is-SubAgent") == "true"
+    ucp_consent_log = request.headers.get("X-UCP-Consent")
+
+    if not requester_did or not ucp_consent_log:
+        raise HTTPException(status_code=403, detail="Missing X-Requester-DID or X-UCP-Consent signature")
+
+    from src.memory.PrivateVault import PrivateVault
+    private_vault = PrivateVault(context_engine)
+    node = await run_in_threadpool(private_vault.get_node, node_id, requester_did, is_sub_agent)
+    if not node:
+        raise HTTPException(status_code=403, detail="Access denied or node not found in Private Vault")
+
+    return {"status": "success", "data": node}
+
+@app.put("/memory/vault/{node_id}")
+async def put_vault_memory(node_id: str, update_data: dict, request: Request, api_key: str = Depends(verify_signature)):
+    requester_did = request.headers.get("X-Requester-DID")
+    ucp_consent_log = request.headers.get("X-UCP-Consent")
+    if not requester_did or not ucp_consent_log:
+        raise HTTPException(status_code=403, detail="Missing X-Requester-DID or X-UCP-Consent signature")
+
+    content = update_data.get("content")
+    policy = update_data.get("policy", {})
+
+    from src.memory.PrivateVault import PrivateVault
+    private_vault = PrivateVault(context_engine)
+    success = await run_in_threadpool(private_vault.put_node, node_id, content, policy, requester_did)
+    if success:
+        return {"status": "success"}
+    raise HTTPException(status_code=403, detail="Forbidden or invalid owner DID")
+
+@app.delete("/memory/vault/{node_id}")
+async def delete_vault_memory(node_id: str, request: Request, api_key: str = Depends(verify_signature)):
+    requester_did = request.headers.get("X-Requester-DID")
+    ucp_consent_log = request.headers.get("X-UCP-Consent")
+    if not requester_did or not ucp_consent_log:
+        raise HTTPException(status_code=403, detail="Missing X-Requester-DID or X-UCP-Consent signature")
+
+    from src.memory.PrivateVault import PrivateVault
+    private_vault = PrivateVault(context_engine)
+    success = await run_in_threadpool(private_vault.delete_node, node_id, requester_did)
+    if success:
+        return {"status": "success"}
+    raise HTTPException(status_code=403, detail="Forbidden or node not found")
+
 @app.post("/graph/autoresearch")
 async def run_autoresearch_graph(input_data: dict, api_key: str = Depends(verify_api_key)):
     """Triggers the new LangGraph-based AutoResearch workflow."""
