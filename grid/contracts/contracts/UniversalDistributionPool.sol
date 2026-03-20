@@ -83,8 +83,6 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable {
         networkContributed = (totalIn * networkSharePercentage) / 100;
     }
 
-    function __UUPSUpgradeable_init() internal {}
-
     function _authorizeUpgrade(address) internal override {
         require(founder.verifyFounder(""), "Founder verification failed");
     }

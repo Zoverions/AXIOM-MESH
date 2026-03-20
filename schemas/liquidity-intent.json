@@ -1,0 +1,11 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Network Liquidity Intent",
+  "type": "object",
+  "properties": {
+    "intentType": { "enum": ["LIQUIDITY_PROVIDE", "LIQUIDITY_REBALANCE", "LIQUIDITY_BRIDGE"] },
+    "amount": { "type": "integer" },
+    "destChainId": { "type": "integer" }
+  },
+  "required": ["intentType"]
+}
