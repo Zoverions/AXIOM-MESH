@@ -76,7 +76,12 @@ describe('REST public intent route', () => {
     jest.clearAllMocks();
   });
 
-  test('public route does not use auth middleware and includes rate limiter', async () => {
+  test('public route does not use auth middleware and includes rate limiter in development', async () => {
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'development';
+    // Must clear module cache because the middlewares are bound at module load time
+    jest.resetModules();
+
     const { default: router } = await import('./rest');
     const handlers = getRouteLayers(router, 'post', '/api/v1/intent/process/public');
 
@@ -84,12 +89,34 @@ describe('REST public intent route', () => {
     // first middleware is public rate limiter, second is route handler
     expect(handlers[0].name).toBe('publicIntentRateLimit');
     expect(handlers.some((h: any) => h.name === 'authMiddleware')).toBe(false);
+
+    process.env.NODE_ENV = originalEnv;
+  });
+
+  test('public route uses auth middleware in production', async () => {
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    jest.resetModules();
+
+    const { default: router } = await import('./rest');
+    const handlers = getRouteLayers(router, 'post', '/api/v1/intent/process/public');
+
+    expect(handlers.length).toBeGreaterThanOrEqual(3);
+    expect(handlers[0].name).toBe('authMiddleware');
+    expect(handlers[1].name).toBe('publicIntentRateLimit');
+
+    process.env.NODE_ENV = originalEnv;
   });
 
   test('returns 400 when content missing', async () => {
+    // ensure test runs without authMiddleware failure due to environment leak
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'development';
+    jest.resetModules();
+
     const { default: router } = await import('./rest');
     const handlers = getRouteLayers(router, 'post', '/api/v1/intent/process/public');
-    const req: any = { headers: {}, ip: '127.0.0.1', body: { channel: 'web' } };
+    const req: any = { headers: {}, ip: '127.0.0.1', body: { channel: 'web' }, query: {} };
     const res = createMockRes();
 
     await invokeHandlers(handlers, req, res);
@@ -100,12 +127,20 @@ describe('REST public intent route', () => {
   });
 
   test('sanitizes content/metadata and forwards intent', async () => {
-    sendToHypervisor.mockResolvedValue({ status: 'success', response: 'ok' });
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'development';
+    jest.resetModules();
+
+    // Re-import the mocked module to get the fresh mock instance
+    const { sendToHypervisor: freshSendToHypervisor } = jest.requireMock('../services/hypervisorClient');
+    freshSendToHypervisor.mockResolvedValue({ status: 'success', response: 'ok' });
+
     const { default: router } = await import('./rest');
     const handlers = getRouteLayers(router, 'post', '/api/v1/intent/process/public');
     const req: any = {
       headers: { 'x-forwarded-for': '203.0.113.8' },
       ip: '127.0.0.1',
+      query: {},
       body: {
         session_id: 'sess-public',
         channel: 'web',
@@ -118,9 +153,9 @@ describe('REST public intent route', () => {
     await invokeHandlers(handlers, req, res);
 
     expect(res.statusCode).toBe(200);
-    expect(sendToHypervisor).toHaveBeenCalledTimes(1);
+    expect(freshSendToHypervisor).toHaveBeenCalledTimes(1);
 
-    const sentIntent = sendToHypervisor.mock.calls[0][0];
+    const sentIntent = freshSendToHypervisor.mock.calls[0][0];
     expect(sentIntent.session_id).toBe('sess-public');
     expect(sentIntent.channel).toBe('web');
     expect(sentIntent.content).toBe(sanitizeContent(req.body.content));
