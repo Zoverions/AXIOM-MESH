@@ -31,8 +31,19 @@ export interface ResourceLimits {
     cpu_ms?: number;
 }
 
-export async function runCode(language: string, code: string, limits?: ResourceLimits): Promise<{ stdout: string; stderr: string }> {
-export async function runCode(language: string, code: string, useTee: boolean = false): Promise<{ stdout: string; stderr: string }> {
+export async function runCode(language: string, code: string, limitsOrUseTee?: ResourceLimits | boolean, useTeeParam?: boolean): Promise<{ stdout: string; stderr: string }> {
+    let limits: ResourceLimits | undefined;
+    let useTee: boolean = false;
+
+    if (typeof limitsOrUseTee === 'boolean') {
+        useTee = limitsOrUseTee;
+    } else if (limitsOrUseTee !== undefined) {
+        limits = limitsOrUseTee as ResourceLimits;
+        if (useTeeParam !== undefined) {
+            useTee = useTeeParam;
+        }
+    }
+
     if (typeof language !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(language)) {
         throw new Error('Invalid language identifier');
     }
