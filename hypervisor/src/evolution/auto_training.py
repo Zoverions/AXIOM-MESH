@@ -53,12 +53,48 @@ class CodeMutator(ast.NodeTransformer):
             return ast.Constant(value=mutation)
         return node
 
+
+class BehavioralAnalytics:
+    """
+    Monitors agent loops for behavioral drift or runaway execution.
+    """
+    def __init__(self, loss_window: int = 10, drift_threshold: float = 2.0, max_code_size: int = 200):
+        self.loss_history = []
+        self.loss_window = loss_window
+        self.drift_threshold = drift_threshold
+        self.max_code_size = max_code_size
+
+    def check_runaway(self, current_loss: float, code_str: str) -> bool:
+        """
+        Returns True if the loop is exhibiting runaway or drifting behavior.
+        """
+        lines = len(code_str.strip().split('\n'))
+        if lines > self.max_code_size:
+            print(f"[Behavioral Analytics] Runaway Alert: Code size ({lines} lines) exceeds maximum allowed ({self.max_code_size} lines).")
+            return True
+
+        self.loss_history.append(current_loss)
+        if len(self.loss_history) > self.loss_window:
+            self.loss_history.pop(0)
+
+            # Check if loss is degrading significantly over the window
+            avg_loss_early = sum(self.loss_history[:self.loss_window//2]) / (self.loss_window // 2)
+            avg_loss_late = sum(self.loss_history[self.loss_window//2:]) / (self.loss_window - self.loss_window // 2)
+
+            # If the recent average loss is much worse (higher) than the older average loss
+            if avg_loss_late > avg_loss_early * self.drift_threshold and avg_loss_early > 0:
+                print(f"[Behavioral Analytics] Drift Alert: Loss has degraded significantly (early: {avg_loss_early:.4f}, late: {avg_loss_late:.4f}).")
+                return True
+
+        return False
+
 class AutoTrainingLoop:
     def __init__(self, human_approval_required: bool = False):
         self.running = False
         self.thread = None
         self.best_loss = float('inf')
         self.policy = ModificationPolicy()
+        self.analytics = BehavioralAnalytics()
         self.human_approval_required = human_approval_required
         self.best_code = """
 def train():
@@ -140,6 +176,13 @@ print(f"loss={train()}")
 
             if loss is not None:
                 print(f"[AutoTraining] Experiment finished. Loss: {loss:.4f}")
+
+                # Behavioral Analytics check
+                if self.analytics.check_runaway(loss, proposed_code):
+                    print(f"[AutoTraining] Loop halted due to runaway/drift detection.")
+                    self.stop()
+                    return
+
                 if loss < self.best_loss:
                     print(f"[AutoTraining] Improved!")
                     if self._request_approval(proposed_code, loss):
