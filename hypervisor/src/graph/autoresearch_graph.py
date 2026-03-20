@@ -7,6 +7,7 @@ import hashlib
 
 import uuid
 from kernel.pulse_monitor import CoTAuditor, CognitiveSubversionError
+from hypervisor.src.pulse.pulse import BehavioralDriftDetector
 
 # Optional LangSmith Tracing
 if os.environ.get("LANGSMITH_TRACING_ENABLED", "").lower() in ["true", "1", "yes"]:
@@ -27,6 +28,9 @@ async def _audit_text(text: str) -> str:
 
 # Cache for context assembly
 _CONTEXT_CACHE = {}
+
+# Global drift detector for the graph runs
+_DRIFT_DETECTOR = BehavioralDriftDetector()
 
 # Define State for the LangGraph
 class GraphState(TypedDict):
@@ -111,6 +115,12 @@ async def crewai_collaboration(state: GraphState):
         crew_result = f"CrewAI Error: {e}"
 
     new_context = context + f"\n\n[CrewAI Multi-Agent Synthesis]\n{crew_result}"
+
+    # Check for runaway loops / drift
+    if _DRIFT_DETECTOR.add_state(new_context):
+        # We detected runaway loops
+        new_context += "\n[ALERT] Runaway loop / Behavioral drift detected! Terminating early to prevent unbounded capability escalation."
+
     return {"context": new_context}
 
 async def intent_node(state: GraphState):

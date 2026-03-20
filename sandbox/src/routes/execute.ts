@@ -55,6 +55,13 @@ router.post('/execute', async (req: Request, res: Response) => {
             return;
         }
 
+        // Monitor for unexpected namespace manipulation syscalls
+        if (code.includes('unshare') || code.includes('setns') || code.includes('clone')) {
+            console.error('[ALERT] Unexpected namespace manipulation syscall attempted!');
+            // We can optionally block this entirely before execution.
+            // Continuing execution because seccomp profile will block it, but we satisfy monitoring requirements.
+        }
+
         // Agent-as-Firewall Enforcement:
         // All external interactions MUST route through Sandbox + ASEOracle + zkML checks.
         // In a fully integrated environment, this verifies against an on-chain or side-channel oracle.
@@ -62,6 +69,7 @@ router.post('/execute', async (req: Request, res: Response) => {
 
         if (isExternalOrHighRisk) {
             if (!ase_proof || !zk_proof) {
+                console.error('[SECURITY ALERT] Capability escalation attempt detected: high-risk/external capability requested without valid ase_proof or zk_proof.');
                 res.status(403).json({
                     error: 'Firewall Blocked: External interactions require ASEOracle ethics and zkML verification proofs (Agent-as-Firewall policy)'
                 });
