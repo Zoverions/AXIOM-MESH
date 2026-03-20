@@ -147,6 +147,36 @@ describe("ComputeBond", function () {
     });
   });
 
+  describe("Lifecycle Reconciliation", function () {
+    it("Should allow a severed bond to be withdrawn by the physical staker, completing reconciliation", async function () {
+      await computeBond.connect(node1).stake(NODE_ID, { value: STAKE_AMOUNT });
+
+      // Simulate a bilateral severance
+      await expect(computeBond.connect(node1).severBond(NODE_ID, "0x"))
+        .to.emit(computeBond, "BondSevered")
+        .withArgs(NODE_ID);
+
+      const bondAfterSever = await computeBond.bonds(NODE_ID);
+      expect(bondAfterSever.isActive).to.be.false;
+
+      // Ensure that the staker can STILL withdraw their capital despite the bond being deactivated
+      const initialBalance = await hre.ethers.provider.getBalance(node1.address);
+      const tx = await computeBond.connect(node1).withdraw(NODE_ID, STAKE_AMOUNT);
+      const receipt = await tx.wait();
+      const gasUsed = receipt.gasUsed * receipt.gasPrice;
+
+      const collectiveInvestmentRate = (STAKE_AMOUNT * 15n) / 100n;
+      const expectedWithdrawAmount = STAKE_AMOUNT - collectiveInvestmentRate;
+
+      const finalBalance = await hre.ethers.provider.getBalance(node1.address);
+      expect(finalBalance).to.equal(initialBalance + expectedWithdrawAmount - gasUsed);
+
+      const bondAfterWithdraw = await computeBond.bonds(NODE_ID);
+      expect(bondAfterWithdraw.amount).to.equal(0n);
+      expect(bondAfterWithdraw.isActive).to.be.false;
+    });
+  });
+
   describe("Owner withdrawing slashed funds", function () {
     beforeEach(async function () {
       await computeBond.connect(node1).stake(NODE_ID, { value: STAKE_AMOUNT });
