@@ -29,7 +29,7 @@ async function invokeAirgap(command: string, pid: number): Promise<void> {
     });
 }
 
-export async function runCode(language: string, code: string): Promise<{ stdout: string; stderr: string }> {
+export async function runCode(language: string, code: string, useTee: boolean = false): Promise<{ stdout: string; stderr: string }> {
     if (typeof language !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(language)) {
         throw new Error('Invalid language identifier');
     }
@@ -66,6 +66,13 @@ export async function runCode(language: string, code: string): Promise<{ stdout:
         // We add a label to help Falco filter and apply specific rules to these sandboxes.
         commonArgs.push('--label=sandbox_execution=true');
         commonArgs.push('--label=monitor_syscalls=falco');
+
+        if (useTee) {
+            commonArgs.push('--device=/dev/sgx_enclave');
+            commonArgs.push('--device=/dev/sgx_provision');
+            commonArgs.push('-e');
+            commonArgs.push('USE_TEE=1');
+        }
 
         if (language === 'python' || language === 'python3') {
             command = 'docker';
