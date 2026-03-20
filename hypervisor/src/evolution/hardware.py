@@ -128,3 +128,42 @@ class HardwareScanner:
         except Exception:
             pass
         return 0
+
+    def generate_capability_manifest(self) -> dict:
+        """
+        Generates a CapabilityManifest compliant dict based on hardware footprint.
+        """
+        footprint = self.scan()
+        profile = self.get_hardware_profile(footprint)
+
+        tier = "edge"
+        services = []
+        benchmarks = {}
+
+        if profile == "full_node":
+            tier = "full"
+            services = ["zkml-gen", "graph-full-sync", "deep-archive-shard", "sandbox-exec"]
+            # Mock benchmarks based on specs
+            inf_s = float(footprint.get("cpu_cores", 4)) * 3.5
+            if footprint.get("has_gpu"):
+                 inf_s += float(footprint.get("vram_mb", 0)) / 1000 * 2.5
+            benchmarks["inf/s"] = round(inf_s, 2)
+            benchmarks["mem_bandwidth_gb_s"] = 51.2 if footprint.get("has_gpu") else 12.8
+
+        elif profile == "edge":
+            tier = "mid"
+            services = ["sandbox-exec", "partial-graph", "proxy"]
+            benchmarks["inf/s"] = round(float(footprint.get("cpu_cores", 2)) * 1.5, 2)
+            benchmarks["mem_bandwidth_gb_s"] = 8.5
+
+        else:
+            tier = "edge"
+            services = ["proxy", "quantized-inference"]
+            benchmarks["inf/s"] = round(float(footprint.get("cpu_cores", 1)) * 0.8, 2)
+            benchmarks["mem_bandwidth_gb_s"] = 2.1
+
+        return {
+            "tier": tier,
+            "services": services,
+            "benchmarks": benchmarks
+        }

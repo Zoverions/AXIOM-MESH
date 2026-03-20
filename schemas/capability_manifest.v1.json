@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "id": "capability_manifest.v1",
+  "title": "CapabilityManifest",
+  "description": "Hardware-Aware Capability Manifest for a Grid Node.",
+  "type": "object",
+  "required": [
+    "tier",
+    "services",
+    "benchmarks"
+  ],
+  "properties": {
+    "tier": {
+      "type": "string",
+      "enum": ["edge", "mid", "full"]
+    },
+    "services": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "benchmarks": {
+      "type": "object",
+      "additionalProperties": { "type": "number" }
+    }
+  },
+  "additionalProperties": true
+}

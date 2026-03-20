@@ -103,3 +103,46 @@ class NetworkSync:
                         await asyncio.sleep(base_delay * (2 ** attempt))
                     else:
                         print(f"[Degraded Mode] Failed to publish to Grid cache after {max_retries} attempts: {e}")
+
+    async def publish_capability_manifest(self, manifest: dict):
+        """Publishes the local capability manifest to the Grid."""
+        import asyncio
+        import httpx
+        url = "http://localhost:5000/peers/manifests"
+        payload = {
+            "nodeId": self.public_key_hex,
+            "manifest": manifest
+        }
+        max_retries = 3
+        base_delay = 1.0
+        async with httpx.AsyncClient() as client:
+            for attempt in range(max_retries):
+                try:
+                    res = await client.post(url, json=payload, timeout=5.0)
+                    res.raise_for_status()
+                    return
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(base_delay * (2 ** attempt))
+                    else:
+                        print(f"[Degraded Mode] Failed to publish capability manifest after {max_retries} attempts: {e}")
+
+    async def fetch_peer_manifests(self):
+        """Fetches known peer capability manifests from the Grid."""
+        import asyncio
+        import httpx
+        url = "http://localhost:5000/peers/manifests"
+        max_retries = 3
+        base_delay = 1.0
+        async with httpx.AsyncClient() as client:
+            for attempt in range(max_retries):
+                try:
+                    res = await client.get(url, timeout=5.0)
+                    res.raise_for_status()
+                    return res.json()
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(base_delay * (2 ** attempt))
+                    else:
+                        print(f"[Degraded Mode] Failed to fetch peer manifests after {max_retries} attempts: {e}")
+                        return {}

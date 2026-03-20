@@ -186,3 +186,11 @@ type RelayerSettlement struct {
 	Token     string `json:"token"` // e.g., "GPP"
 	Status    string `json:"status"` // "Queued", "Processing", "Settled"
 }
+
+type CapabilityManifest struct {
+	Tier       string             `json:"tier"`
+	Services   []string           `json:"services"`
+	Benchmarks map[string]float64 `json:"benchmarks"`
+	Version    uint64             `json:"version,omitempty"`
+	Hash       string             `json:"hash,omitempty"`
+}

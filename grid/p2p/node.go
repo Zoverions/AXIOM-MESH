@@ -3,6 +3,7 @@ package p2p
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -26,6 +27,7 @@ type PeerInfo struct {
 	LastSeen time.Time
 	Score    int
 	Failures int
+	Manifest types.CapabilityManifest
 }
 
 type Node struct {
@@ -445,4 +447,102 @@ func (n *Node) SyncCCIPState() {
 			}
 		}
 	}
+}
+
+func (n *Node) UpdatePeerManifest(id string, manifest types.CapabilityManifest) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	if peer, exists := n.Peers[id]; exists {
+		// CRDT: Only update if the incoming version is strictly greater
+		if manifest.Version > peer.Manifest.Version || peer.Manifest.Version == 0 {
+			peer.Manifest = manifest
+			log.Printf("P2P Node %s: Updated manifest for peer %s (tier: %s, version: %d)", n.ID, id, manifest.Tier, manifest.Version)
+		}
+	}
+}
+
+func (n *Node) BroadcastCapabilityManifest(manifest types.CapabilityManifest) {
+	// Simple CRDT delta compression: only compute hash and broadcast if changed
+	hashBytes, _ := json.Marshal(manifest)
+	newHash := fmt.Sprintf("%x", sha256.Sum256(hashBytes))
+
+	// Increment version locally
+	n.mu.Lock()
+	if _, exists := n.Peers[n.ID]; !exists {
+		// Initialize self peer if missing
+		n.Peers[n.ID] = &PeerInfo{ID: n.ID, LastSeen: time.Now()}
+	}
+
+	if n.Peers[n.ID].Manifest.Hash == newHash && n.Peers[n.ID].Manifest.Version > 0 {
+		n.mu.Unlock()
+		return // No change, do not broadcast
+	}
+
+	manifest.Version = n.Peers[n.ID].Manifest.Version + 1
+	manifest.Hash = newHash
+	n.Peers[n.ID].Manifest = manifest
+	n.mu.Unlock()
+
+	n.gossipManifest(manifest, n.PublicKey)
+}
+
+func (n *Node) gossipManifest(manifest types.CapabilityManifest, sourceNodeID string) {
+	peers := n.snapshotPeers()
+	log.Printf("P2P Node %s: Gossiping Capability Manifest (v%d) from %s to %d peers", n.ID, manifest.Version, sourceNodeID, len(peers))
+
+	type ManifestPayload struct {
+		NodeID   string                   `json:"nodeId"`
+		Manifest types.CapabilityManifest `json:"manifest"`
+	}
+
+	payload := ManifestPayload{
+		NodeID:   sourceNodeID,
+		Manifest: manifest,
+	}
+
+	for _, peer := range peers {
+		if peer.ID == n.ID {
+			continue
+		} // skip self
+		go func(pID, addr string) {
+			err := sendWithBackoff(func() error {
+				data, err := json.Marshal(payload)
+				if err != nil {
+					return err
+				}
+				resp, err := http.Post(addr+"/peers/manifests", "application/json", bytes.NewBuffer(data))
+				if err != nil {
+					return err
+				}
+				defer resp.Body.Close()
+				if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+					return fmt.Errorf("status code %d", resp.StatusCode)
+				}
+				return nil
+			})
+			if err != nil {
+				log.Printf("P2P Node %s: Failed to gossip manifest with %s: %v", n.ID, addr, err)
+			}
+		}(peer.ID, peer.Address)
+	}
+}
+
+type ManifestWithAddress struct {
+	types.CapabilityManifest
+	Address string `json:"address"`
+}
+
+func (n *Node) GetPeerManifests() map[string]ManifestWithAddress {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+	manifests := make(map[string]ManifestWithAddress)
+	for id, peer := range n.Peers {
+		if peer.Manifest.Tier != "" && id != n.ID {
+			manifests[id] = ManifestWithAddress{
+				CapabilityManifest: peer.Manifest,
+				Address:            peer.Address,
+			}
+		}
+	}
+	return manifests
 }

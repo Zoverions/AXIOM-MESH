@@ -209,6 +209,8 @@ func validateZKMLPayload(payload types.ZKMLPayload) (bool, string) {
 func (s *Server) Start(addr string) error {
 	mux := http.NewServeMux()
 
+	mux.HandleFunc("/peers/manifests", s.handlePeersManifests)
+
 	mux.HandleFunc("/health", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":    "ok",
@@ -1005,4 +1007,38 @@ func (s *Server) handleGraphWebSocket(w http.ResponseWriter, r *http.Request) {
 			conn.WriteJSON(map[string]string{"error": "unknown request type"})
 		}
 	}
+}
+
+// handlePeersManifests handles capability manifest broadcast and retrieval
+func (s *Server) handlePeersManifests(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		manifests := s.p2pNode.GetPeerManifests()
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(manifests)
+		return
+	}
+
+	if r.Method == "POST" {
+		var payload struct {
+			NodeID   string                   `json:"nodeId"`
+			Manifest types.CapabilityManifest `json:"manifest"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		// If this is the local node's manifest (i.e. our own public key), broadcast it to peers
+		if payload.NodeID == s.p2pNode.PublicKey {
+			go s.p2pNode.BroadcastCapabilityManifest(payload.Manifest)
+		} else {
+			// Otherwise, it's a peer manifest broadcasted to us
+			s.p2pNode.UpdatePeerManifest(payload.NodeID, payload.Manifest)
+		}
+
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 }

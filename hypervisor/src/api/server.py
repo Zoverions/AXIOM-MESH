@@ -59,7 +59,12 @@ arena = VerificationArena()
 llm = LLMProvider()
 dialectic = DialecticOrchestrator(llm=llm)
 evolution = EvolutionEngine()
+from src.evolution.hardware import HardwareScanner
+from src.evolution.routing import RoutingEngine, PredictivePrefetcher
 network_sync = NetworkSync()
+hardware_scanner = HardwareScanner()
+local_manifest = hardware_scanner.generate_capability_manifest()
+routing_engine = RoutingEngine(local_manifest)
 action_engine = ActionEngine(network_sync=network_sync)
 signal_extractor = SignalExtractor()
 opd = OnPolicyDistillation()
@@ -89,6 +94,7 @@ async def autoresearch_task_loop():
 async def lifespan(app: FastAPI):
     # Phase 1 Initialization Acknowledged
     print("AxiomMesh Phase 1 Cognitive Hypervisor Started")
+    asyncio.create_task(network_sync.publish_capability_manifest(local_manifest))
 
     autoresearch_task = asyncio.create_task(autoresearch_task_loop())
     auto_training_loop.start()
@@ -265,6 +271,43 @@ async def _process_intent_core(intent: IntentObject, api_key: str):
         log_event("info", f"Processing intent from sender: {intent.metadata.get('sender', 'unknown')}", trace_id)
         content = intent.content
         sender = intent.metadata.get("sender", "unknown")
+
+        # Predictive Prefetching
+        prefetcher = PredictivePrefetcher()
+        await prefetcher.execute_prefetch(network_sync, intent.content)
+
+        # Dynamic Routing Engine (Capability Manifests)
+        hints = intent.metadata.get("resource_hints", {})
+        if hints and not intent.metadata.get("_delegated_already"):
+            peer_manifests = await network_sync.fetch_peer_manifests()
+            route, peer_addr = routing_engine.evaluate_route_with_address(hints, peer_manifests)
+            audit_trail["routing_decision"] = route
+
+            if route != "local" and peer_addr:
+                log_event("info", f"Delegating intent to peer {route} at {peer_addr} based on Capability Manifest", trace_id)
+                import httpx
+
+                # Mark as delegated so we don't loop
+                intent.metadata["_delegated_already"] = True
+
+                async with httpx.AsyncClient() as client:
+                    try:                        import urllib.parse
+                        parsed_addr = urllib.parse.urlparse(peer_addr)
+                        host = parsed_addr.hostname or peer_addr
+                        # The Hypervisor runs on 8081 by default
+                        forward_url = f"http://{host}:8081/api/v1/intent/process/public"
+                        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+                        res = await client.post(forward_url, json=intent.model_dump(), headers=headers, timeout=30.0)
+                        res.raise_for_status()
+                        delegated_resp = IntentResponse(**res.json())
+                        delegated_resp.audit_trail["delegated_via"] = local_manifest.get("tier", "unknown")
+                        return delegated_resp
+                    except Exception as e:
+                        log_event("error", f"Failed to delegate to {route}: {e}. Falling back to local execution.", trace_id)
+                        audit_trail["routing_decision_fallback"] = "local"
+        else:
+            audit_trail["routing_decision"] = "local (no hints or already delegated)"
+
 
         allowed, policy_decisions, policy_reason = await run_in_threadpool(evaluate_policy_gate, intent)
         audit_trail["safety_decisions"]["policy_gate"] = "Passed" if allowed else "Failed"

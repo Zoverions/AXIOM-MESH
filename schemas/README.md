@@ -13,6 +13,7 @@ This directory contains versioned JSON Schema definitions that define the contra
 * `SkillCapsuleManifest` (Capsule compiler -> Runtime): Defines capability, constraints, runtime budget, and token policy for a Mesh-native skill capsule.
 * `SourceDescriptor` (Ingestion pipeline -> Compiler): Captures upstream provenance, immutable source refs, and declared authority for external skills.
 * `RebuildAttestation` (Compiler -> Governance/Audit): Records rewrite/rebuild actions and security rationale for Mesh re-issuance.
+* `CapabilityManifest` (Node -> Grid): Hardware-aware capability and benchmark profile for dynamic routing.
 
 ## Versioning
 These schemas are versioned. Each schema has a `$schema` and `id` representing its version. For example: `intent_object.v1.json`.
