@@ -28,7 +28,7 @@ This section replaces abstract “directive-only” wording with implementation-
 | Alignment profiles + spectrum security | **Implemented baseline** | Schemas and policy mapping exist; advanced policy engine/ops maturity still iterative. |
 | Offline-first + CRDT/P2P continuity | **Partially implemented** | Sync and P2P primitives exist, but resilience hardening and full failure-mode test matrix remain open. |
 | Agent-as-firewall concept | **Partially implemented** | Controls exist in sandbox/policy gates; enterprise-grade policy centralization remains backlog. |
-| Hierarchical bonding + governance controls | **Implemented baseline** | Bond/delegate/sever pathways exist; stronger authn/authz and event-fidelity are needed for high compliance ops. |
+| Hierarchical bonding + governance controls | **Implemented baseline** | Bond/delegate/sever pathways exist; stronger authn/authz and event-fidelity are needed for high-compliance ops. |
 
 ### C. New AM-SCS Fusion
 
