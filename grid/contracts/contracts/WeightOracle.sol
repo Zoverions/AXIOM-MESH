@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "./TimelockedOwnable.sol";
 import "./DualLedgerIdentity.sol";
 
 /**
@@ -9,7 +9,7 @@ import "./DualLedgerIdentity.sol";
  * @dev Maintains the 30-day moving average equivalents for PoER (Algorithmic / Agent)
  * and PoSig (Anthropic / Human). Used to calculate voting weights dynamically based on node type.
  */
-contract WeightOracle is Ownable {
+contract WeightOracle is TimelockedOwnable {
     DualLedgerIdentity public identityContract;
 
     // Mapping from node address to their weight score (PoER or PoSig)
@@ -33,18 +33,18 @@ contract WeightOracle is Ownable {
     // Address of the ComputeBond contract allowed to add bonuses
     address public computeBondContract;
 
-    constructor(address _identityContract) Ownable(msg.sender) {
+    constructor(address _identityContract) TimelockedOwnable(msg.sender) {
         identityContract = DualLedgerIdentity(_identityContract);
     }
 
-    function setComputeBondContract(address _computeBondContract) external onlyOwner {
+    function setComputeBondContract(address _computeBondContract) external onlyTimelocked(keccak256(abi.encodePacked("setComputeBondContract", _computeBondContract))) {
         computeBondContract = _computeBondContract;
     }
 
     /**
      * @dev Set category weight multipliers. e.g., "deployment" => 150 (1.5x)
      */
-    function setCategoryWeight(string calldata category, uint256 multiplier) external onlyOwner {
+    function setCategoryWeight(string calldata category, uint256 multiplier) external onlyTimelocked(keccak256(abi.encodePacked("setCategoryWeight", category, multiplier))) {
         categoryWeights[category] = multiplier;
     }
 
@@ -79,7 +79,7 @@ contract WeightOracle is Ownable {
     /**
      * @dev Add verified skill points for an address. Only allowed by consensus/poer.
      */
-    function addVerifiedSkillPoints(address user, uint256 points) external onlyOwner {
+    function addVerifiedSkillPoints(address user, uint256 points) external onlyTimelocked(keccak256(abi.encodePacked("addVerifiedSkillPoints", user, points))) {
         verifiedSkillPoints[user] += points;
         // Weight calculation requires base weight + log(points) calculation (to be done off chain or simulated on chain)
     }
@@ -105,7 +105,7 @@ contract WeightOracle is Ownable {
      * @param node The address of the node.
      * @param newWeight The new weight score (e.g., 30-day moving average).
      */
-    function updateWeight(address node, uint256 newWeight) external onlyOwner {
+    function updateWeight(address node, uint256 newWeight) external onlyTimelocked(keccak256(abi.encodePacked("updateWeight", node, newWeight))) {
         if (!identityContract.isNodeRegistered(node)) revert NodeNotRegistered(node);
 
         uint256 oldWeight = nodeWeights[node];
@@ -119,7 +119,7 @@ contract WeightOracle is Ownable {
      * @param nodes The addresses of the nodes.
      * @param newWeights The new weight scores.
      */
-    function batchUpdateWeights(address[] calldata nodes, uint256[] calldata newWeights) external onlyOwner {
+    function batchUpdateWeights(address[] calldata nodes, uint256[] calldata newWeights) external onlyTimelocked(keccak256(abi.encodePacked("batchUpdateWeights", nodes, newWeights))) {
         require(nodes.length == newWeights.length, "Arrays length mismatch");
         for (uint256 i = 0; i < nodes.length; i++) {
             address node = nodes[i];
@@ -159,7 +159,7 @@ contract WeightOracle is Ownable {
      * @dev Updates the identity contract address.
      * @param _identityContract The address of the new identity contract.
      */
-    function setIdentityContract(address _identityContract) external onlyOwner {
+    function setIdentityContract(address _identityContract) external onlyTimelocked(keccak256(abi.encodePacked("setIdentityContract", _identityContract))) {
         identityContract = DualLedgerIdentity(_identityContract);
         emit IdentityContractUpdated(_identityContract);
     }

@@ -81,7 +81,7 @@ func NewLedger() *Ledger {
 		fmt.Printf("Warning: Failed to initialize PersistentLedger: %v\n", err)
 	}
 
-	return &Ledger{
+	ledgerInst := &Ledger{
 		Skills:   make([]types.SkillVector, 0),
 		WebCache: make(map[string]types.WebState),
 		Graph: types.DistributedGraph{
@@ -111,6 +111,14 @@ func NewLedger() *Ledger {
 		Persistent:            pl,
 		ExternalChainFallback: true, // Default to true until swarm grows
 	}
+
+	if pl != nil {
+		for _, bond := range pl.GetAllBonds() {
+			ledgerInst.Bonds[bond.NodeID] = bond
+		}
+	}
+
+	return ledgerInst
 }
 
 // UpdateTreasurySplit configures the X% Network Security Fund, Y% Wealth Generation Pool (bicameral proposal simulation)
@@ -204,6 +212,9 @@ func (l *Ledger) Stake(bond types.ComputeBond) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.Bonds[bond.NodeID] = bond
+	if l.Persistent != nil {
+		l.Persistent.SetBond(bond)
+	}
 }
 
 func (l *Ledger) GetBond(nodeID string) (types.ComputeBond, bool) {
@@ -250,6 +261,9 @@ func (l *Ledger) Slash(nodeID string, amount int, txHash string) error {
 	}
 
 	l.Bonds[nodeID] = bond
+	if l.Persistent != nil {
+		l.Persistent.SetBond(bond)
+	}
 	return nil
 }
 
@@ -643,6 +657,9 @@ func (l *Ledger) ApplyBondChainEvent(evt types.BondChainEvent) error {
 	}
 
 	l.Bonds[evt.NodeID] = bond
+	if l.Persistent != nil {
+		l.Persistent.SetBond(bond)
+	}
 	return nil
 }
 
@@ -655,6 +672,9 @@ func (l *Ledger) ReconcileBondFromChain(nodeID string, canonical types.ComputeBo
 	canonical.PendingFinalityTx = ""
 	canonical.LastEvent = "reconcile"
 	l.Bonds[nodeID] = canonical
+	if l.Persistent != nil {
+		l.Persistent.SetBond(canonical)
+	}
 }
 func (l *Ledger) GetAllCCIPMessages() []types.CCIPMessage {
 	l.mu.RLock()
