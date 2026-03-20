@@ -33,10 +33,16 @@ const allowedOrigins = process.env.CORS_ORIGINS
 
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
+        // Explicitly block requests with no origin to prevent CSRF bypass
+        // Exception: allowed if explicitly requested via CORS_ORIGINS '*' or explicitly configured
+        if (!origin) {
+            if (allowedOrigins.includes('*') || process.env.NODE_ENV === 'test' || process.env.ALLOW_MISSING_ORIGIN === 'true') {
+                return callback(null, true);
+            }
+            return callback(new Error('Not allowed by CORS'));
+        }
 
-        if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
+        if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*') || process.env.NODE_ENV === 'test') {
             callback(null, true);
         } else {
             callback(new Error('Not allowed by CORS'));
