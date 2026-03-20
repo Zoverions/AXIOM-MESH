@@ -113,7 +113,7 @@ func VerifyZKMLInference(commitment string, input []float64, output []float64, p
 	defer os.RemoveAll(jobDir) // Safe cleanup of concurrent job artifacts
 
 	proofPath := filepath.Join(jobDir, "proof.json")
-	if err := os.WriteFile(proofPath, []byte(proof), 0644); err != nil {
+	if err := os.WriteFile(proofPath, []byte(proof), 0600); err != nil {
 		log.Printf("Failed to write proof file: %v", err)
 		return false
 	}
@@ -136,7 +136,7 @@ except Exception as e:
 `
 
 	scriptPath := filepath.Join(jobDir, "verify.py")
-	if err := os.WriteFile(scriptPath, []byte(pyScript), 0644); err != nil {
+	if err := os.WriteFile(scriptPath, []byte(pyScript), 0600); err != nil {
 		log.Printf("Failed to write verification script: %v", err)
 		return false
 	}
@@ -145,7 +145,8 @@ except Exception as e:
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "python3", scriptPath, proofPath, settingsPath, vkPath)
+	cmd := exec.CommandContext(ctx, "python3", "-I", "-S", scriptPath, proofPath, settingsPath, vkPath)
+	cmd.Env = []string{}
 	err = cmd.Run()
 	if ctx.Err() == context.DeadlineExceeded {
 		log.Printf("zkML verification timed out for model commitment: %s", commitment)

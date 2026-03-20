@@ -1,15 +1,20 @@
+import xss from 'xss';
+
 const MAX_CONTENT_LENGTH = Number(process.env.GATEWAY_MAX_CONTENT_LENGTH || 4000);
 const MAX_METADATA_DEPTH = 3;
 
-const HTML_TAGS = /<[^>]*>?/gm;
-const SCRIPT_BLOCK = /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi;
 const SQL_COMMENT_TOKENS = /(--|;|\/\*|\*\/)/g;
 const CONTROL_CHARS = /[\u0000-\u001F\u007F]/g;
 
 function sanitizeString(value: string): string {
-    const cleaned = value
-        .replace(SCRIPT_BLOCK, '')
-        .replace(HTML_TAGS, '')
+    // Use xss to strip all HTML tags and script payloads
+    const noHtml = xss(value, {
+        whiteList: {}, // empty means no tags allowed
+        stripIgnoreTag: true, // strip all tags entirely, not just escape them
+        stripIgnoreTagBody: ['script', 'style'] // remove the content of script and style tags
+    });
+
+    const cleaned = noHtml
         .replace(SQL_COMMENT_TOKENS, '')
         .replace(CONTROL_CHARS, ' ')
         .replace(/\s+/g, ' ')
@@ -60,4 +65,3 @@ export function sanitizeMetadata(metadata: unknown): Record<string, unknown> {
     }
     return sanitized as Record<string, unknown>;
 }
-
