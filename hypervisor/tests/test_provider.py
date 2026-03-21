@@ -60,6 +60,21 @@ async def test_process_routes_to_openai(mock_hardware_scanner):
         provider._call_openai.assert_called_once_with("test context", temperature=0.7, frequency_penalty=0.0, presence_penalty=0.0)
 
 @pytest.mark.asyncio
+async def test_process_passes_penalties_to_openai(mock_hardware_scanner):
+    with patch.dict(os.environ, {
+        "ALLOW_CLOUD_LLM": "true",
+        "LLM_PROVIDER": "openai",
+        "OPENAI_API_KEY": "key"
+    }):
+        provider = LLMProvider()
+        provider._call_openai = AsyncMock(return_value="openai_response_penalties")
+
+        response = await provider.process("test context", frequency_penalty=0.8, presence_penalty=0.4)
+
+        assert response == "openai_response_penalties"
+        provider._call_openai.assert_called_once_with("test context", temperature=0.7, frequency_penalty=0.8, presence_penalty=0.4)
+
+@pytest.mark.asyncio
 async def test_process_routes_to_anthropic(mock_hardware_scanner):
     with patch.dict(os.environ, {
         "ALLOW_CLOUD_LLM": "true",
@@ -134,8 +149,21 @@ async def test_call_local_success_code(mock_hardware_scanner):
         mock_post = AsyncMock(return_value=mock_response)
 
         with patch("httpx.AsyncClient.post", mock_post):
-            response = await provider._call_local("write python code")
+            response = await provider._call_local("write python code", temperature=0.5)
             assert response == "local_coding_success"
+
+            mock_post.assert_called_once_with(
+                "http://localhost:11434/api/generate",
+                json={
+                    "model": "llama3:1b",
+                    "prompt": "write python code",
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.5
+                    }
+                },
+                timeout=30.0
+            )
 
 @pytest.mark.asyncio
 async def test_call_local_success_reason(mock_hardware_scanner):
@@ -151,6 +179,19 @@ async def test_call_local_success_reason(mock_hardware_scanner):
         with patch("httpx.AsyncClient.post", mock_post):
             response = await provider._call_local("explain this")
             assert response == "local_reasoning_success"
+
+            mock_post.assert_called_once_with(
+                "http://localhost:11434/api/generate",
+                json={
+                    "model": "llama3:1b",
+                    "prompt": "explain this",
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.7
+                    }
+                },
+                timeout=30.0
+            )
 
 @pytest.mark.asyncio
 async def test_call_local_exception(mock_hardware_scanner):
@@ -177,8 +218,57 @@ async def test_call_openai_success(mock_hardware_scanner):
         mock_post = AsyncMock(return_value=mock_response)
 
         with patch("httpx.AsyncClient.post", mock_post):
-            response = await provider._call_openai("test")
+            # Test that 0.0 values are filtered out
+            response = await provider._call_openai("test", model="gpt-4o", temperature=0.7, frequency_penalty=0.0, presence_penalty=0.0)
             assert response == "openai_success"
+
+            mock_post.assert_called_once_with(
+                "https://api.openai.com/v1/chat/completions",
+                headers={
+                    "Authorization": "Bearer key",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "gpt-4o",
+                    "messages": [{"role": "user", "content": "test"}],
+                    "temperature": 0.7
+                },
+                timeout=30.0
+            )
+
+@pytest.mark.asyncio
+async def test_call_openai_success_with_penalties(mock_hardware_scanner):
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}):
+        provider = LLMProvider()
+
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json.return_value = {
+            "choices": [{"message": {"content": "openai_success_penalties"}}]
+        }
+
+        mock_post = AsyncMock(return_value=mock_response)
+
+        with patch("httpx.AsyncClient.post", mock_post):
+            # Test that non-zero values are preserved
+            response = await provider._call_openai("test", model="gpt-4o", temperature=0.7, frequency_penalty=0.5, presence_penalty=0.2)
+            assert response == "openai_success_penalties"
+
+            mock_post.assert_called_once_with(
+                "https://api.openai.com/v1/chat/completions",
+                headers={
+                    "Authorization": "Bearer key",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "gpt-4o",
+                    "messages": [{"role": "user", "content": "test"}],
+                    "temperature": 0.7,
+                    "frequency_penalty": 0.5,
+                    "presence_penalty": 0.2
+                },
+                timeout=30.0
+            )
 
 @pytest.mark.asyncio
 async def test_call_openai_exception(mock_hardware_scanner):
@@ -205,8 +295,24 @@ async def test_call_anthropic_success(mock_hardware_scanner):
         mock_post = AsyncMock(return_value=mock_response)
 
         with patch("httpx.AsyncClient.post", mock_post):
-            response = await provider._call_anthropic("test")
+            response = await provider._call_anthropic("test", temperature=0.5)
             assert response == "anthropic_success"
+
+            mock_post.assert_called_once_with(
+                "https://api.anthropic.com/v1/messages",
+                headers={
+                    "x-api-key": "key",
+                    "anthropic-version": "2023-06-01",
+                    "content-type": "application/json"
+                },
+                json={
+                    "model": "claude-3-haiku-20240307",
+                    "max_tokens": 1024,
+                    "messages": [{"role": "user", "content": "test"}],
+                    "temperature": 0.5
+                },
+                timeout=30.0
+            )
 
 @pytest.mark.asyncio
 async def test_call_anthropic_exception(mock_hardware_scanner):
