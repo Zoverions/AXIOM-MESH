@@ -26,6 +26,8 @@ This README is a **code-accurate rewrite** intended to clearly separate what is 
 
 ## Documentation Map
 
+Use **`docs/README.md`** as the canonical documentation index and overlap-resolution source of truth.
+
 **Latest Strategic Documents** (March 2026):
 - **[docs/REPOSITORY-OVERVIEW.md](docs/REPOSITORY-OVERVIEW.md)** – High-level architecture, capabilities, caveats, and quick-start snapshot
 - **[docs/MASTER-INTEGRATION.md](docs/MASTER-INTEGRATION.md)** – Complete fusion of all requirements (OntarioEdAI, THUD guilds, AA bonding, resource orchestration, alignment profiles, MCP compatibility)
@@ -38,12 +40,14 @@ This README is a **code-accurate rewrite** intended to clearly separate what is 
 - **[docs/ROADMAP-v2026.md](docs/ROADMAP-v2026.md)** – Roadmap 2026
 
 **Architecture & Specifications**:
+- **[docs/FOUNDATIONS.md](docs/FOUNDATIONS.md)** – Canonical foundational principles and launch constraints.
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** – Master Lockdown Architecture Specification
 - **[docs/TECHNICAL-SPECIFICATION.md](docs/TECHNICAL-SPECIFICATION.md)** – Actionable technical specifications for optimizing, securing, and extending the AI stack.
 - **[docs/HARDWARE-PROFILE-MATRIX.md](docs/HARDWARE-PROFILE-MATRIX.md)** – Defines hardware profiles and constraints.
 - **[docs/RESOURCE-BALANCER-POLICY.md](docs/RESOURCE-BALANCER-POLICY.md)** – Defines the ResourceBalancer dynamic routing execution environment.
 
 **Governance & Operations**:
+- **[docs/TOKENOMICS.md](docs/TOKENOMICS.md)** – Canonical tokenomics policy and control requirements.
 - **[docs/GOVERNANCE.md](docs/GOVERNANCE.md)** – Bicameral + FDBA decay + zkML PoER
 - **[docs/GOVERNANCE-CONTROL-MAP.md](docs/GOVERNANCE-CONTROL-MAP.md)** – Control Map for Interoperability Knobs.
 - **[docs/TREASURY-SPLIT.md](docs/TREASURY-SPLIT.md)** – Treasury Split Accounting Model.
