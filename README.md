@@ -1,432 +1,101 @@
-# AxiomMesh (Repository Reality Guide)
+# AXIOM-MESH
 
-![Agent Frameworks](https://img.shields.io/badge/Agent%20Stack-LangGraph%20%2B%20MCP-00C300)
-![Resource Orchestration](https://img.shields.io/badge/Resource-Orchestration-blue)
-![Alignment Profile](https://img.shields.io/badge/Alignment-Profile-orange)
-![Treasury Split](https://img.shields.io/badge/Treasury-Split-gold)
-![Spectrum Security](https://img.shields.io/badge/Spectrum-Security-red)
+AXIOM-MESH is a multi-service agent runtime with four core pillars:
+- **Gateway** (TypeScript/Node): ingress APIs, channels, dashboard delivery.
+- **Hypervisor** (Python/FastAPI): orchestration, context engine, policy and routing logic.
+- **Sandbox** (TypeScript/Node + Docker): isolated code execution.
+- **Grid** (Go): ledger, verification, governance-aligned coordination.
 
-AxiomMesh is a multi-service AI systems stack with four runtime pillars plus supporting contracts, schemas, and tooling:
-
-- **Gateway (TypeScript/Node)**: authenticated ingress (REST + WebSocket), dashboard/static UI, and channel adapters.
-- **Hypervisor (Python/FastAPI)**: context synthesis, memory/archive orchestration, response shaping, and agent loops.
-- **Sandbox (TypeScript/Node + Docker runtime)**: constrained ephemeral code execution.
-- **Grid (Go)**: peer-aware ledger APIs, cache/graph sync, PoER checks, zk/zkML verification endpoints, and bicameral governance synchronization.
-
-## Architectural Philosophy
-Our architecture is built on four core principles:
-- **graph-native**: Knowledge and context are structured as traversable, distributed graphs.
-- **bicameral**: Governance splits control across dual independent layers ensuring balanced system evolution.
-- **zkML-hardened**: Inference runs locally with verifiable zero-knowledge proofs submitted on-chain.
-- **closure-first**: Encapsulated state execution with strict boundary controls prioritizing closure.
-
-This README is a **code-accurate rewrite** intended to clearly separate what is implemented now vs what is still prototype-grade or expected next.
+> Status (2026-03-21): repository/staging hardening. Not declared live on mainnet.
 
 ---
 
-## Documentation Map
+## Quick Start
 
-Use **`docs/README.md`** as the canonical documentation index and overlap-resolution source of truth.
-
-**Latest Strategic Documents** (March 2026):
-- **[docs/REPOSITORY-OVERVIEW.md](docs/REPOSITORY-OVERVIEW.md)** – High-level architecture, capabilities, caveats, and quick-start snapshot
-- **[docs/MASTER-INTEGRATION.md](docs/MASTER-INTEGRATION.md)** – Complete fusion of all requirements (OntarioEdAI, THUD guilds, AA bonding, resource orchestration, alignment profiles, MCP compatibility)
-- **[docs/AGENT-ENHANCEMENTS.md](docs/AGENT-ENHANCEMENTS.md)** – 2026 Framework integrations (LangGraph, CrewAI, MCP server specs, skill staking via zkML)
-- **[docs/SKILL-CAPSULE-SPEC.md](docs/SKILL-CAPSULE-SPEC.md)** – End-to-end Mesh-native skill capsule lifecycle (ingest→verify→compile→sign→execute→revoke)
-- **[docs/PROJECT-STATUS-2026.md](docs/PROJECT-STATUS-2026.md)** – Current implementation status + cleanup consolidation log
-- **[docs/INTERFACE-CONTROL-DOCUMENT.md](docs/INTERFACE-CONTROL-DOCUMENT.md)** – Formal pillar contracts and API specifications
-- **[docs/SECURITY-REALITY-2026.md](docs/SECURITY-REALITY-2026.md)** – Implementation-accurate production security posture and readiness gate
-- **[docs/PARALLEL-DELIVERY-PLAN-2026.md](docs/PARALLEL-DELIVERY-PLAN-2026.md)** – Concrete implementation program with merge/release discipline.
-- **[docs/ROADMAP-v2026.md](docs/ROADMAP-v2026.md)** – Roadmap 2026
-
-**Architecture & Specifications**:
-- **[docs/FOUNDATIONS.md](docs/FOUNDATIONS.md)** – Canonical foundational principles and launch constraints.
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** – Master Lockdown Architecture Specification
-- **[docs/TECHNICAL-SPECIFICATION.md](docs/TECHNICAL-SPECIFICATION.md)** – Actionable technical specifications for optimizing, securing, and extending the AI stack.
-- **[docs/HARDWARE-PROFILE-MATRIX.md](docs/HARDWARE-PROFILE-MATRIX.md)** – Defines hardware profiles and constraints.
-- **[docs/RESOURCE-BALANCER-POLICY.md](docs/RESOURCE-BALANCER-POLICY.md)** – Defines the ResourceBalancer dynamic routing execution environment.
-
-**Governance & Operations**:
-- **[docs/TOKENOMICS.md](docs/TOKENOMICS.md)** – Canonical tokenomics policy and control requirements.
-- **[docs/GOVERNANCE.md](docs/GOVERNANCE.md)** – Bicameral + FDBA decay + zkML PoER
-- **[docs/GOVERNANCE-CONTROL-MAP.md](docs/GOVERNANCE-CONTROL-MAP.md)** – Control Map for Interoperability Knobs.
-- **[docs/TREASURY-SPLIT.md](docs/TREASURY-SPLIT.md)** – Treasury Split Accounting Model.
-- **[docs/ERC20-COMPATIBILITY.md](docs/ERC20-COMPATIBILITY.md)** – Details the ERC-20 compatible token flow model.
-- **[docs/OPERATIONS.md](docs/OPERATIONS.md)** – Operations & Chaos Engineering Runbook.
-- **[docs/TEST-STRATEGY.md](docs/TEST-STRATEGY.md)** – Test Strategy & CI Acceptance Gates.
-
-**Security**:
-- **[docs/PRODUCTION-GRADE.md](docs/PRODUCTION-GRADE.md)** – Production Grade Security model
-- **[docs/SECURITY-HARDENING.md](docs/SECURITY-HARDENING.md)** – Security Hardening Guide
-- **[.github/SECURITY.md](.github/SECURITY.md)** – Vulnerability disclosure process and support policy
-- **[AUDIT_REPORT.md](AUDIT_REPORT.md)** – Canonical code audit and security findings
-
-**Service Documentation** (Quick Reference):
-- **[gateway/README.md](gateway/README.md)** – User-facing API, WebSocket, channel adapters
-- **[hypervisor/README.md](hypervisor/README.md)** – AI orchestration, LangGraph workflows, autonomous loops
-- **[sandbox/README.md](sandbox/README.md)** – Isolated execution, security policies, resource limits
-- **[grid/README.md](grid/README.md)** – Ledger, P2P consensus, smart contracts, zk verification
-- **[docs/MCP-INTEGRATION.md](docs/MCP-INTEGRATION.md)** – Model Context Protocol implementation details.
-- **[docs/DEGRADED-MODE-PLAYBOOK.md](docs/DEGRADED-MODE-PLAYBOOK.md)** – Offline-first Sync and Degraded-Mode.
-
-**Other**:
-- **[plan.md](plan.md)** – Canonical roadmap and feature backlog
-- **[schemas/README.md](schemas/README.md)** – Versioned JSON schema registry (intent, skill, zkml, alignment profile)
-
-**Quick Start**:
-- **This file** – Overview, architecture philosophy, what's implemented vs prototype
-
----
-
-## AXIOM-MESH Core Pillars (v6.1)
-
-The system is now built on **6 self-managing pillars**:
-
-1. **Blockchain Autonomy** – DeploymentFactory, FounderCommitment, invisible founder control
-2. **Autonomous ML Training** – ModelRegistry + on-demand PyTorch/zkML training
-3. **Dynamic Resource Management** – 5% permanent Founder share + governance-controlled allocation
-4. **Automated Workforce & Digital Legacy** – RobotWorkforce.sol + inheritance execution
-5. **Shadow Sovereignty** – Air-gapped nodes, Dark Compute Pool, zk phantom participation
-6. **Universal Distribution Pool** – Payroll, UBI, government/business on-ramps, direct donations with mandatory network share
-
-All pillars are fully wired in `hypervisor/agents/master_autonomy_graph.py` and deployable via the autonomous factory.
-
-Quick Start:
+### 1) Automated install (interactive)
 ```bash
-forge script script/DeployAutonomy.s.sol
-python -m hypervisor.agents.master_autonomy_graph
+./install.sh
 ```
----
 
-## 2026 AI Agent Framework Integrations (New Section)
+### 2) Automated install (non-interactive / agent mode)
+```bash
+AUTO_INSTALL=1 \
+MACHINE_ROLE=shared-machine \
+MESHSTORE_QUOTA_GB=50 \
+./install.sh
+```
 
-AXIOM-MESH now leverages the best 2026 agent frameworks while preserving its zkML + decentralized core:
-
-- **LangGraph** – Stateful orchestration backbone (Hypervisor)
-- **CrewAI** – Role-based multi-agent teams
-- **AgentZero + OpenClaw patterns** – Dynamic skill creation & MCP interoperability
-- **karpathy/autoresearch** – Enhanced AutoResearch/AutoTraining loops
-
-**Key New Capabilities**
-- MCP-compliant tool discovery
-- Persistent checkpointing with Grid ledger audit
-- Dynamic skill staking via zkML verification
-
-See `docs/AGENT-ENHANCEMENTS.md` (auto-generated by this update) and the updated roadmap below.
-
-
-## Framework Comparison (New – March 17, 2026)
-
-Below is a structural, non-marketing comparison of AXIOM-MESH against the dominant 2026-era agent frameworks. This is a design-intent and failure-mode map.
-
-1. High-Level Positioning
-- AXIOM-MESH: Closure-first, verifiable, governance-aware agent substrate. Failure Mode: Complexity cost; slower onboarding.
-- LangGraph: Deterministic agent flow graphs. Failure Mode: No native trust, isolation, or governance.
-- CrewAI: Human-like role collaboration. Failure Mode: Emergent drift, no formal closure.
-- AutoResearch: Autonomous epistemic exploration. Failure Mode: Runaway loops, unverifiable claims.
-
-AXIOM-MESH is the only system designed to survive hostile environments.
-
-2. Control & Closure Guarantees
-- Execution Closure: AXIOM-MESH has hard sandbox, capability-scoped, zkML, explicit boundaries. Others lack these.
-
-3. Governance & Drift Resistance
-- AXIOM-MESH has bicameral, stake/slash, skill audit, drift detection. Others do not.
-
-4. Knowledge Representation
-- AXIOM-MESH has graph-native, distributed sync, provenance, epistemic decay. Others are prompt-based or ad-hoc.
-
-5. Autonomy vs Alignment
-- AXIOM-MESH has bounded loops, structural alignment, hard stops, auditability. Others have none or partial.
-
-6. Developer Reality Check
-- AXIOM-MESH: Safe to deploy, regulator-ready, adversarial-ready. Others: Fast to prototype but unsafe.
-
-7. Strategic Summary
-- LangGraph: Compiler for logic.
-- CrewAI: Theater of collaboration.
-- AutoResearch: Curiosity engine.
-- AXIOM-MESH: Institutional substrate.
-
-If LangGraph is a circuit diagram, AXIOM-MESH is a constitutional system.
-
-## 1) System Topology
-
-### Services in `docker-compose`
-`docker-compose.yml` defines:
-- `gateway` on `3000` (REST/UI) and `3001` (WebSocket)
-- `hypervisor` on `8000`
-- `sandbox` on `4000`
-- `grid` on `5000`
-- `ipfs` on `4001/5001/8080`
-
-The standard request path is:
-`Client -> Gateway -> Hypervisor -> (optional Sandbox/Grid/IPFS/Arweave/NCP/MCP)`.
+This installer now:
+- detects hardware and writes `config/machine_profile.json`,
+- runs blockchain launch preflight (`local-mesh` / `single-node` / `launch-network`) and estimates required bootstrap funding,
+- persists `.env` defaults for machine role, launch mode, profile path, and funding estimate,
+- sets storage quota safely against available disk,
+- can run fully unattended for digital-agent onboarding.
 
 ---
 
-## 2) Capabilities by Pillar
 
-## Gateway (Pillar 4)
+## Lightweight Engagement Protocol
 
-### What it does today
-- **Unified API-key auth model** for REST routes, static dashboard routes, and WebSocket handshake validation.
-- **Intent ingress** through:
-  - `POST /api/v1/intent/process`
-  - `POST /api/v1/intent/process/public` (authenticated in production, unauthenticated low-trust ingress in development; governed by local rate limit)
-- **NFT & Query integrations**:
-  - `POST /api/v1/nft/mint` with mock MemoClaw routing and ZKML integration.
-  - `GET /api/v1/data/query` interacting with MeshStore schemas.
-- **WebSocket intent pipeline**:
-  - Zod parsing/sanitization of incoming payload.
-  - Normalization into canonical intent object (`conversation_id`, `actor_id`, `trace_id` etc.).
-  - Pending ack then final response relay.
-- **Input/response shaping**:
-  - schema validation + basic sanitization in parser.
-  - stylistic sludge/filler removal via referent filter.
-- **Cross-service status + metrics endpoints**:
-  - dependency health aggregation (`gateway/hypervisor/sandbox/grid`) with latency/degraded flags.
-  - local metrics and cooperation metrics persistence.
-- **Memory passthrough APIs** to Hypervisor (`get/edit/delete`).
-- **Channel adapters** (Discord/Slack/Telegram/WhatsApp) with retry + backoff + rate-limit-aware delivery receipts.
-- **Backpressure-aware Hypervisor client** with retry logic and queue cap guard.
+First-run setup now asks only a minimal secure set of user choices:
+- machine role (`dedicated-mesh`, `shared-machine`, `minimal-edge`),
+- launch mode (`local-mesh`, `single-node`, `launch-network`),
+- priority (`performance`, `security`, `cost`, `autonomy`).
 
-### Important caveats
-- Gateway sanitization is still hygiene-oriented input cleanup and should not be treated as a full application firewall.
-- `/api/v1/intent/process/public` requires authentication in production, but is intentionally unauthenticated in development. It is governed by a basic rate limiter middleware and should be fronted by a mature WAF in production.
+If `launch-network` is selected, preflight estimates bootstrap ETH required and surfaces whether wallet funding is needed before broadcast. If you skip funding, installer can fall back to local mesh mode.
 
 ---
 
-## Hypervisor (Pillar 2)
+## Runtime Resource-Aware Routing
 
-### What it does today
-- **Authenticated `/process` execution path** (Bearer API key required via signature verification).
-- **Universal Consent Protocol (UCP)**: Strict enforcement within the policy gate requiring explicit `consent_scope` to execute.
-- **Context assembly pipeline** that combines:
-  - system axioms and temporal state,
-  - local/deep archive retrieval,
-  - optional external NCP context,
-  - optional external MCP context,
-  - optional Chainlink-oracle endpoint context.
-- **Multi-Tier Inference Orchestrator**: routes AI intents across local (zkML), personal swarm (CRDT), decentralized zkML (Grid), and external providers.
-- **MCP Integration**: Fully mounted FastMCP server serving `sandbox_execute` and `register_grid_skill` natively through the FastAPI ASGI server over `/mcp`.
-- **Adaptive response style controls** (`concise`, `analytical`, `socratic`, `executive`) from metadata and user preference persistence.
-- **Intent output metadata**:
-  - `confidence` heuristic,
-  - `provenance` labels,
-  - `trace_id` propagation,
-  - `audit_trail` payload (logged via a WORM Event Sink).
-- **Memory management APIs**:
-  - `GET /memory`
-  - `PUT /memory/{node_id}`
-  - `DELETE /memory/{node_id}`
-- **Agent loops started at app lifespan**:
-  - AutoResearch daemon (powered by LangGraph via `/graph/autoresearch`),
-  - AutoTraining loop.
-- **Additional service endpoints**:
-  - `/agents`, `/metrics`, `/health`, `/zkml/infer`, `/priority-tag`.
+The ResourceBalancer (Hypervisor) uses machine profile + live host pressure to decide `local`, `p2p`, or `grid` execution:
+- shared machines bias away from local work when host pressure is high,
+- dedicated mesh machines keep more execution local,
+- critical or consensus tasks route to grid.
 
-### Chain-of-thought auditor status (requested topic)
-A dedicated “raw chain-of-thought exposure” feature is **not** fully operator-grade. What currently exists is an **audit-trail style explainability scaffold** attached to intent responses:
-- `audit_trail.intent_replay`
-- `audit_trail.safety_decisions`
-- `audit_trail.why_this_answer`
-- A WORM Event Sink (Append-only `audit.log`)
-
-So the current state is: **structured decision/audit metadata exists**, but it is not a full formal reasoning-auditor subsystem with policy engine, immutable log sinks, and operator tooling.
-
-### Important caveats
-- Several safety/reasoning fields are scaffolded placeholders rather than externally attested guarantees.
-- Oracle integration is endpoint-driven context enrichment, not an on-chain trust-finalized oracle consumer workflow.
+Primary implementation points:
+- `hypervisor/src/graph/resource_balancer.py`
+- `scripts/generate_machine_profile.py`
+- `scripts/network_launch_preflight.py`
+- `install.sh`
 
 ---
 
-## Sandbox (Pillar 3)
+## Documentation (Consolidated)
 
-### What it does today
-- **Code execution API**: `POST /execute` for Python and Node snippets using Docker child containers. Now strictly enforces authentication via `SANDBOX_API_KEY`.
-- **Health API**: `GET /health`.
-- **Hardened container execution defaults** include:
-  - `--network=none`
-  - memory/cpu/pid limits
-  - `--cap-drop=ALL`
-  - `--security-opt=no-new-privileges`
-  - seccomp profile
-  - apparmor profile
-  - read-only root fs
-  - tmpfs-only writable mounts
-  - timeout kill path
+Use `docs/README.md` as the canonical documentation index.
 
-### Egress air-gapping status (requested topic)
-AxiomMesh currently has **two relevant layers**:
-1. **Active runtime egress restriction in the Node sandbox runner** via `docker run --network=none` (implemented and used).
-2. **Additional Rust `airgap.rs` utility** that can apply per-PID netns iptables lockdown/restore through a UDS control socket. Sandbox execution now integrates `spawn` logic pointing to the airgap IPC socket.
+### Canonical execution queue
+- **`docs/MASTER-TODO.md`** is the single queue for active agent work.
+- Detailed task breakdowns live under `docs/subtasks/`.
 
-So: baseline egress isolation is active in execution containers, and a deeper namespace-level helper exists but is not fully integrated into service orchestration.
+### Execution references
+- `docs/PARALLEL-DELIVERY-PLAN-2026.md`
+- `docs/PRODUCTION-EXECUTION-BACKLOG.md`
+- `docs/PRODUCTION-READINESS-TRACKER.md`
+
+### Core references
+- `docs/ARCHITECTURE.md`
+- `docs/TECHNICAL-SPECIFICATION.md`
+- `docs/INTERFACE-CONTROL-DOCUMENT.md`
+- `docs/SECURITY-HARDENING.md`
+- `AUDIT_REPORT.md`
 
 ---
 
-## Grid (Pillar 1)
+## Consolidation & Pruning Rules
 
-### What it does today
-- **Go API server** with endpoints including:
-  - `GET /health`
-  - `GET/POST /skills`
-  - `POST /stake`, `POST /slash`, `POST /bond/events`
-  - swarm endpoints
-  - web cache endpoints
-  - graph websocket endpoint
-  - CCIP sync endpoints
-  - zkML verification endpoint path used by Hypervisor.
-  - DEM (Dynamic Equilibrium Monitor) / MSC calculus endpoints
-- **Ledger Persistence** `PersistentLedger.go` provides embedded BadgerDB KV store with Write-Ahead Log (WAL) mapping data to durable memory, though some queries still rely on hot memory maps.
-- **PoER gate** on skill submissions tied to active compute bond + PoER score threshold.
-- **P2P/transport loops** for discovery, peer score/failure tracking, sync/broadcast with retry/backoff.
-- **Graph query proof checks** using discrete-log-style NIZK verification helper.
-- **Deterministic-ish zkML verification workers** and artifact lifecycle caching for vk/settings/proof jobs.
-
-### Important caveats
-- While the ledger now implements BadgerDB for `PersistentLedger` capabilities, fully distributed, Byzantine-fault-tolerant, persistent chain state synchronization across many adversarial nodes remains an evolving target.
-- Graph retrieval is token/index based and lightweight; not a full distributed ranked retrieval engine.
-- Smart contracts are present in `grid/contracts`, and Grid can now optionally mirror stake/slash operations on-chain via ComputeBond (`GRID_ETH_*` + `GRID_COMPUTE_BOND_ADDRESS`), while full lifecycle reconciliation remains an active hardening track.
+To keep the repository organized and reduce list sprawl:
+1. Add new actionable work to `docs/MASTER-TODO.md` only.
+2. Keep detailed steps in linked subtask files, not parallel top-level lists.
+3. Archive duplicate/legacy planning docs to `docs/historical/` after migration.
+4. Keep service-level READMEs focused on implementation, not parallel strategy queues.
 
 ---
 
-## 3) Cross-Cutting Features & Components (Beyond Main Pillars)
+## Service Readmes
 
-- **Smart contracts (Hardhat)**:
-  - `DualLedgerIdentity.sol`
-  - `WeightOracle.sol`
-  - `DialecticArbitration.sol`
-  - `ComputeBond.sol`
-  with corresponding tests in `grid/contracts/test`.
-- **Schemas (`schemas/`)**:
-  versioned JSON schemas for `intent_object`, `intent_response`, `skill_vector`, `zkml_payload` contracts.
-- **CLI (`cli/axiom_cli.py`)**:
-  local terminal client that sends intents to Gateway.
-- **Install/bootstrap tooling**:
-  `install.sh` hardware scan + env prompt + startup flow.
-- **Make targets**:
-  convenience wrappers for up/down/cli/basic health checks.
-
----
-
-## 4) What is Completed vs Expected
-
-## Completed / Operational
-- Multi-service runtime with health endpoints and dashboard/static UI serving.
-- Authenticated Gateway-to-Hypervisor intent path with trace IDs and basic provenance/audit metadata.
-- Constrained sandbox execution with active network disablement and container hardening args.
-- Grid API with staking/slashing/skills/swarms/cache/graph/zkml primitives and bicameral governance synchronization.
-- External context hooks (NCP/MCP/oracle) and distributed archive sync attempts with degraded counters.
-
-## Implemented but Experimental / Prototype-grade
-- zkML verification flow and proof plumbing (works as implementation path, not yet full production trust ops).
-- AutoResearch/AutoTraining autonomous loops.
-- Explainability/audit metadata and policy hooks (currently scaffold + heuristic).
-- Distributed retrieval/sync behavior under network degradation.
-
-## Expected / Not fully realized yet
-- Production-grade, end-to-end chain-integrated bond lifecycle reconciliation and event finality operations.
-- Fully integrated advanced air-gap control plane (Rust UDS netns controller wired into sandbox orchestration).
-- Formalized operator-grade reasoning/safety auditor with immutable eventing and richer review UX.
-- More robust distributed graph search/ranking across peers and stronger persistence guarantees.
-
----
-
-## 5) API Surface Quick Reference
-
-## Gateway (`:3000` REST, `:3001` WS)
-- `GET /health`
-- `POST /api/v1/intent/process`
-- `POST /api/v1/intent/process/public`
-- `GET /api/v1/status`
-- `GET /api/v1/metrics/system`
-- `POST /api/v1/metrics/cooperation`
-- `GET /api/v1/memory`
-- `PUT /api/v1/memory/:nodeId`
-- `DELETE /api/v1/memory/:nodeId`
-- `GET /api/v1/agents`
-- `GET/POST /api/v1/swarms`
-- `GET /api/v1/logs`
-- plus config/tester endpoints in routes file.
-
-## Hypervisor (`:8000`)
-- `POST /process`
-- `GET /health`
-- `GET /metrics`
-- `GET /agents`
-- `GET /memory`
-- `PUT /memory/{node_id}`
-- `DELETE /memory/{node_id}`
-- `POST /zkml/infer`
-
-## Sandbox (`:4000`)
-- `GET /health`
-- `POST /execute`
-
-## Grid (`:5000`)
-- `GET /health`
-- skills/stake/slash/bond-events
-- swarm/cache/ccip/graph/ws/zkml/proposals routes (see `grid/api/server.go` for exact handlers)
-
----
-
-## 6) Runbook
-
-1. Create `.env` with at least:
-   - `GATEWAY_API_KEY`
-   - `HYPERVISOR_API_KEY`
-   - provider keys/config as needed.
-2. Start stack:
-   - `make up`
-3. Open dashboard:
-   - `http://localhost:3000` (API key required by current middleware model)
-4. Baseline checks:
-   - `curl http://localhost:3000/health`
-   - `curl http://localhost:8000/health`
-   - `curl http://localhost:4000/health`
-   - `curl http://localhost:5000/health`
-
----
-
-## 7) Accuracy Notes
-
-This README intentionally avoids “aspirational as implemented” claims. If you are planning production use, treat the “Expected / Not fully realized yet” section as engineering backlog, not delivered guarantees.
-
-## Master Integration & Resource Orchestration Layer (March 2026)
-
-### Scope (what this layer targets)
-- OntarioEdAI curriculum + dual verification + VCs
-- THUD guilds + GPP staking + ASE ethics + scholar NFTs + VRF + secure relayers
-- AA bonding + L1 piggyback + revocable human–agent credentials
-- Offline-first CRDT/P2P + encrypted backups
-- Resource balancing + treasury splits (Network Security Fund + Wealth Generation Pool) + ERC-20 compatibility
-
-### Current implementation status
-The repository now contains **partial implementation + partial documentation** for this layer, not full delivery:
-- Gateway public ingress hardening is improved (sanitization + route rate limiting).
-- Grid adds snapshot durability and optional ComputeBond on-chain stake/slash mirroring.
-- Hypervisor now enforces baseline policy gate checks and records them in `audit_trail`.
-- Full operator-grade controls (immutable audit sink, chain-finalized lifecycle reconciliation, formal policy engine) remain backlog.
-
-### Key capabilities (implemented and planned)
-- Dynamic task balancer + treasury splits (partial implemented path)
-- Alignment Profiles & MCP compatibility matrix (spec-first + partial plumbing)
-- Firewall protection + revocable hierarchical bonding (partial implemented path)
-- Governance steering for interoperability/risk controls (spec-first + incremental implementation)
-
-### Stage Accuracy
-- **Phase 0**: documentation-complete/in progress (`plan.md`, integration docs, caveat mapping).
-- **Phases 1–4**: implementation backlog with incremental landed work; do not treat as fully delivered.
-- **Execution checklist and parallel work lanes** are maintained in `plan.md` for implementation sequencing.
-
-## Critical Caveats for Production Use (Status)
-
-| Issue | Impact | Current status / resolution |
-|---|---|---|
-| Gateway sanitization is basic | Not a full application firewall | Centralized sanitization now strips script/html/control-token payloads and normalizes metadata, but this remains a lightweight hygiene layer and must be paired with perimeter controls in production. |
-| `/api/v1/intent/process/public` route naming and behavior | Could be misleading if authentication expectations are unclear | Route explicitly requires authentication (`authMiddleware`) in production, but is unauthenticated in development. Keep it behind gateway-level rate limits. |
-| Ledger is mostly in-memory | Partial persistence | Grid ledger is moving towards durable storage with the newly introduced `PersistentLedger` component via BadgerDB, but comprehensive synchronization and failure recoveries are still maturing. |
-| zkML verification is prototype-grade | Not yet production-trust operations | Verification pipeline is functional and deterministic in current code paths, but still considered pre-hardening for high-assurance trust operations. |
-| Safety/reasoning fields are scaffolds | Placeholders, not fully implemented policy logic | Audit trail fields exist for explainability and diagnostics; they should not be interpreted as formal policy-engine attestations yet. |
+- `gateway/README.md`
+- `hypervisor/README.md`
+- `sandbox/README.md`
+- `grid/README.md`

@@ -1,7 +1,11 @@
-import pytest
-from src.graph.resource_balancer import resource_balancer_app
-from src.engine.alignment import AlignmentProfile
+import json
 import os
+
+import pytest
+
+from src.engine.alignment import AlignmentProfile
+from src.graph.resource_balancer import resource_balancer_app
+
 
 @pytest.mark.asyncio
 async def test_resource_balancer_routing_critical():
@@ -9,11 +13,12 @@ async def test_resource_balancer_routing_critical():
         "intent": "Execute high value smart contract",
         "priority_tag": "critical",
         "selected_route": "",
-        "metrics": {}
+        "metrics": {},
     }
 
     final_state = await resource_balancer_app.ainvoke(initial_state)
     assert final_state["selected_route"] == "grid"
+
 
 @pytest.mark.asyncio
 async def test_resource_balancer_routing_low():
@@ -21,17 +26,14 @@ async def test_resource_balancer_routing_low():
         "intent": "Run background data sync",
         "priority_tag": "low",
         "selected_route": "",
-        "metrics": {"local_load": 0.9} # Simulate high local load
+        "metrics": {"local_load": 0.9},
     }
 
     final_state = await resource_balancer_app.ainvoke(initial_state)
-    # The analyze_metrics node currently overrides the initial metrics,
-    # let's assert the logic in evaluate_route works as intended based on the system metrics
-    # (which are mocked to 0.7 load in the file). Since 0.7 > 0.5, it should route to p2p.
     assert final_state["selected_route"] == "p2p"
 
+
 def test_alignment_profile_init_and_update(tmp_path):
-    # Test initialization
     storage_path = str(tmp_path / "test_alignment_profile.json")
     if os.path.exists(storage_path):
         os.remove(storage_path)
@@ -43,14 +45,61 @@ def test_alignment_profile_init_and_update(tmp_path):
     assert "goals" in prof_data
     assert prof_data["risk_tolerance"] == "balanced"
 
-    # Test priority tag update without bicameral approval
     with pytest.raises(PermissionError):
         profile.update_priority_tag("critical", 10.0, bicameral_approval=False)
 
-    # Test priority tag update with bicameral approval
     profile.update_priority_tag("critical", 10.0, bicameral_approval=True)
     assert profile.get_priority_weight("critical") == 10.0
 
-    # Test normal tag update
     profile.update_priority_tag("user_pref", 2.0)
     assert profile.get_priority_weight("user_pref") == 2.0
+
+
+@pytest.mark.asyncio
+async def test_resource_balancer_shared_machine_pressure_routes_offbox(tmp_path, monkeypatch):
+    profile_path = tmp_path / "machine_profile.json"
+    profile_path.write_text(
+        json.dumps(
+            {
+                "machine_role": "shared-machine",
+                "local_load_threshold": 0.6,
+                "memory_pressure_threshold": 0.7,
+            }
+        )
+    )
+    monkeypatch.setenv("MACHINE_PROFILE_PATH", str(profile_path))
+
+    initial_state = {
+        "intent": "run indexing task",
+        "priority_tag": "normal",
+        "selected_route": "",
+        "metrics": {"local_load": 0.85, "memory_pressure": 0.8, "p2p_latency": 0.2},
+    }
+
+    final_state = await resource_balancer_app.ainvoke(initial_state)
+    assert final_state["selected_route"] == "p2p"
+
+
+@pytest.mark.asyncio
+async def test_resource_balancer_dedicated_machine_keeps_local(tmp_path, monkeypatch):
+    profile_path = tmp_path / "machine_profile.json"
+    profile_path.write_text(
+        json.dumps(
+            {
+                "machine_role": "dedicated-mesh",
+                "local_load_threshold": 0.95,
+                "memory_pressure_threshold": 0.95,
+            }
+        )
+    )
+    monkeypatch.setenv("MACHINE_PROFILE_PATH", str(profile_path))
+
+    initial_state = {
+        "intent": "run local batch",
+        "priority_tag": "normal",
+        "selected_route": "",
+        "metrics": {"local_load": 0.7, "memory_pressure": 0.5, "p2p_latency": 0.2},
+    }
+
+    final_state = await resource_balancer_app.ainvoke(initial_state)
+    assert final_state["selected_route"] == "local"
