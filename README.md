@@ -32,7 +32,7 @@ This installer now:
 - sets storage quota safely against available disk,
 - can run fully unattended for digital-agent onboarding.
 
----
+Use `docs/README.md` as the canonical documentation index.
 
 
 ## Lightweight Engagement Protocol
