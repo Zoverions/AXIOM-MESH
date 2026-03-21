@@ -4,12 +4,14 @@ This document is the single source of truth for repository health, implementatio
 
 ## Repository health snapshot
 
+This status reflects code present in git and staging readiness work; it does not imply live testnet/mainnet deployment.
+
 - **Architecture:** 4-pillar runtime remains intact (Gateway, Hypervisor, Sandbox, Grid).
 - **Roadmap authority:** `plan.md` remains the canonical roadmap and priority tracker.
 - **Audit authority:** `AUDIT_REPORT.md` remains the canonical cross-service audit report.
 - **Production safety principle:** cleanup work must remove redundancy only and must not remove implemented runtime features.
 
-## Implemented and retained (production or production-ready)
+## Implemented and retained in repository (not yet deployed live)
 
 The following are confirmed as implemented and retained:
 

@@ -1,33 +1,35 @@
-**Official Launch Announcement (X / Discord / Telegram)**
+**Pre-Launch Campaign Draft (X / Discord / Telegram)**
 
-**AXIOM-MESH IS NOW LIVE ON MAINNET**
+**AXIOM-MESH IS IN PRE-LAUNCH BUILDOUT (NOT LIVE YET)**
 
-The first fully sovereign, self-managing, multi-chain AI network.
+AXIOM-MESH is currently in repository/staging hardening toward a future testnet launch.
 
-8 Pillars of True Sovereignty:
-- Autonomous everything
+8 Pillars of the planned system:
+- Autonomous orchestration
 - Shadow privacy by default
 - Robot workforce + digital legacy
 - Network-controlled liquidity (V3 + cross-chain)
-- Payroll & UBI for businesses & governments
+- Payroll & UBI distribution mechanisms
+- Formal auditability and governance controls
+- Interconnection reliability and recovery
+- Ecosystem integration readiness
 
-**Tokenomics v2**
-Total Supply: 1B AXM (fixed)
-5% permanent founder share (locked)
-10% of every inflow → network liquidity & treasury
+## Tokenomics v2 (Draft messaging)
+Total Supply target: 1B AXM (fixed, pending final governance ratification)
+Founder share policy target: 5% (subject to final contract controls and governance)
+Treasury policy target: 10% of selected inflows (subject to implementation and audit completion)
 
-**Live Now**
-• Contracts verified
-• Liquidity bootstrapped
-• Shadow mode air-gapped
-• Cross-chain via LayerZero
+## What to say publicly right now
+• Codebase is under active production-hardening
+• Testnet launch prep in progress
+• Security, financial, and reliability gates are being implemented
+• No official trading/liquidity announcement yet
 
-Join: https://github.com/Zoverions/AXIOM-MESH
-Trade: Uniswap V3 (link after bootstrap)
+Join/build: https://github.com/Zoverions/AXIOM-MESH
 
-#AXIOMMESH #SovereignAI #MainnetLaunch
+#AXIOMMESH #SovereignAI #BuildInPublic
 
-**Visual Assets** (attach these):
-- Logo + banner (use Grok Imagine prompt: "futuristic sovereign AI network with 8 glowing pillars and liquidity pools")
-- Infographic of 8 pillars
-- Short video: 15s clip of autonomous liquidity rebalance
+**Visual Assets** (draft placeholders):
+- Logo + banner
+- Infographic of pillars and delivery gates
+- Short demo clip from staging once approved
