@@ -1,16 +1,21 @@
-# AXIOM-MESH Mainnet Deployment (Ethereum + Arbitrum + Base)
+# AXIOM-MESH Deployment Address Registry (Pre-Launch)
 
-**Deployed on:** March 20, 2026
+As of March 21, 2026, AXIOM-MESH is **not deployed on mainnet**.
 
-| Pillar | Contract | Ethereum Address | Arbitrum Address | Verified |
-|--------|----------|------------------|------------------|----------|
-| 1      | FounderCommitment | `0x...` | `0x...` | ✅ |
-| 8      | AutomatedV3LiquidityManager | `0x...` | `0x...` | ✅ |
-| 6      | UniversalDistributionPool | `0x...` | `0x...` | ✅ |
-| All    | DeploymentFactory | `0x...` | `0x...` | ✅ |
+This file is reserved for future verified deployment addresses after official testnet/mainnet launches.
 
-**Verification Proofs** (Etherscan links):
-- https://etherscan.io/address/0x...#code
-- https://arbiscan.io/address/0x...#code
+## Planned networks
+- Ethereum
+- Arbitrum
+- Base
 
-All contracts verified via the CI/CD pipeline. Source code matches GitHub commit `main@latest`.
+## Publication policy
+- Addresses will only be added after deployment transactions are finalized and independently verified.
+- Verification links (Etherscan/Arbiscan/Basescan) must be included for every published contract.
+- Each entry must include the exact git commit SHA used for deployment artifacts.
+
+## Placeholder table (to be populated post-deployment)
+
+| Contract | Network | Address | Tx Hash | Verified | Commit SHA |
+|---|---|---|---|---|---|
+| _TBD_ | _TBD_ | _TBD_ | _TBD_ | _TBD_ | _TBD_ |
