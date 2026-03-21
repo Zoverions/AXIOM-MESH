@@ -20,7 +20,7 @@ def get_verify_api_key_func():
 
     nodes_to_compile = []
     for node in tree.body:
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in ("_get_expected_api_key", "_validate_api_key", "verify_api_key"):
+        if isinstance(node, ast.FunctionDef) and node.name in ("get_expected_api_key", "validate_api_key", "verify_api_key"):
             nodes_to_compile.append(node)
 
     if not nodes_to_compile:

@@ -156,3 +156,58 @@ func TestVerifyZKMLInferencePathTraversal(t *testing.T) {
 		t.Errorf("VerifyZKMLInference failed to block path traversal attempt")
 	}
 }
+
+func TestVerifyZKMLInference_MkdirAllFails(t *testing.T) {
+	commitment := "b1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+	modelDir := filepath.Join("data", "zkml", "models", commitment)
+
+	// Create a regular file where the directory should be
+	os.MkdirAll(filepath.Dir(modelDir), 0755)
+	os.WriteFile(modelDir, []byte("not a directory"), 0644)
+	defer os.Remove(modelDir)
+
+	result := VerifyZKMLInference(commitment, []float64{1.0}, []float64{2.0}, "proof", "ZHVtbXlfdms=", "settings")
+	if result != false {
+		t.Errorf("Expected VerifyZKMLInference to return false when MkdirAll fails")
+	}
+}
+
+func TestVerifyZKMLInference_CreateTempSettingsFails(t *testing.T) {
+	commitment := "c1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+	modelDir := filepath.Join("data", "zkml", "models", commitment)
+
+	os.MkdirAll(modelDir, 0755)
+
+	// Make directory read-only so CreateTemp fails
+	os.Chmod(modelDir, 0555)
+	defer os.Chmod(modelDir, 0755)
+	defer os.RemoveAll(modelDir)
+
+	result := VerifyZKMLInference(commitment, []float64{1.0}, []float64{2.0}, "proof", "ZHVtbXlfdms=", "settings")
+	if result != false {
+		t.Errorf("Expected VerifyZKMLInference to return false when CreateTemp for settings fails")
+	}
+}
+
+func TestVerifyZKMLInference_CreateTempVkFails(t *testing.T) {
+	commitment := "e1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+	modelDir := filepath.Join("data", "zkml", "models", commitment)
+
+	os.MkdirAll(modelDir, 0755)
+	defer func() {
+		os.Chmod(modelDir, 0755)
+		os.RemoveAll(modelDir)
+	}()
+
+	// Create settings.json so it skips settings creation
+	settingsPath := filepath.Join(modelDir, "settings.json")
+	os.WriteFile(settingsPath, []byte("{}"), 0644)
+
+	// Make directory read-only so CreateTemp for vk fails
+	os.Chmod(modelDir, 0555)
+
+	result := VerifyZKMLInference(commitment, []float64{1.0}, []float64{2.0}, "proof", "ZHVtbXlfdms=", "settings")
+	if result != false {
+		t.Errorf("Expected VerifyZKMLInference to return false when CreateTemp for vk fails")
+	}
+}

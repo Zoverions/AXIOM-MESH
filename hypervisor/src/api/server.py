@@ -188,7 +188,8 @@ async def release_backpressure():
         except asyncio.QueueEmpty:
             pass
 
-def _get_expected_api_key():
+def get_expected_api_key() -> str:
+    """Retrieves the configured HYPERVISOR_API_KEY from the SecretManager."""
     expected_api_key = SecretManager.get_secret("HYPERVISOR_API_KEY")
     if not expected_api_key:
         raise HTTPException(
@@ -197,17 +198,18 @@ def _get_expected_api_key():
         )
     return expected_api_key
 
-def _validate_api_key(provided_key: str, expected_key: str):
+def validate_api_key(provided_key: str, expected_key: str) -> None:
+    """Validates the provided API key against the expected one."""
     if provided_key != expected_key:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid API Key",
         )
 
-async def verify_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    api_key = credentials.credentials
-    expected_key = _get_expected_api_key()
-    _validate_api_key(api_key, expected_key)
+def verify_api_key(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
+    """FastAPI dependency to verify the API key from the request credentials."""
+    expected_api_key = get_expected_api_key()
+    validate_api_key(credentials.credentials, expected_api_key)
 
     return api_key
 
