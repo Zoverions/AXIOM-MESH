@@ -46,11 +46,11 @@ Detailed references:
 - `docs/HOWTO/release-gate-evidence.md`
 
 ## Lane M2 — Installer Automation (First-Run Onboarding)
-- [ ] **M2.1** Implement first-run installer orchestration with guided prompts + non-interactive defaults.
-- [ ] **M2.2** Auto-detect device profile (CPU/RAM/GPU/storage/network) and select safe service preset.
-- [ ] **M2.3** Add role mode selection: `dedicated-mesh` vs `shared-machine`.
-- [ ] **M2.4** Add post-install self-checks and auto-remediation suggestions.
-- [ ] **M2.5** Persist installer decisions to a machine profile used by runtime balancers.
+- [x] **M2.1** Implement first-run installer orchestration with guided prompts + non-interactive defaults. — 2026-03-21 — @agent-installer — pending
+- [x] **M2.2** Auto-detect device profile (CPU/RAM/GPU/storage/network) and select safe service preset. — 2026-03-21 — @agent-installer — pending
+- [x] **M2.3** Add role mode selection: `dedicated-mesh` vs `shared-machine`. — 2026-03-21 — @agent-installer — pending
+- [x] **M2.4** Add post-install self-checks and auto-remediation suggestions. — 2026-03-21 — @agent-installer — pending
+- [x] **M2.5** Persist installer decisions to a machine profile used by runtime balancers. — 2026-03-21 — @agent-installer — pending
 
 Detailed references:
 - `docs/subtasks/INSTALLER-AUTOMATION.md`
