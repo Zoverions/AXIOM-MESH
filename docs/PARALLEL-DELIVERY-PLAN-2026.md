@@ -1,232 +1,236 @@
-# AXIOM-MESH Parallel Delivery Plan (Run, Upgrade, Merge, Establish)
+# AXIOM-MESH Production Execution Plan (March–July 2026)
 
-**Version:** March 2026 (execution companion)
-**Purpose:** Turn strategy docs into a concrete, parallelized implementation program with merge/release discipline.
-
----
-
-## 1) Program Goals
-
-1. Establish a reproducible local+staging run path for all four pillars.
-2. Upgrade the system from prototype-hardening to production-ready controls.
-3. Merge work safely across multiple parallel tracks without interface drift.
-4. Establish an operationally reliable baseline with explicit release gates.
+**Version:** 2026-03-21  
+**Purpose:** Convert existing architecture and roadmap into an implementation-grade program that brings already-built features and interconnections to production quality (no mock pathways, no placeholder scaffolding).
 
 ---
 
-## 2) Parallel Workstreams (run concurrently)
+## 1) Program Mission and Non-Negotiables
 
-## WS-A: Gateway Perimeter & Ingress Security
-**Scope**
-- Distributed rate limiting backend (replace in-memory-only limiter in production profiles).
-- WAF integration + abuse detection + request fingerprinting.
-- Auth/session hardening for dashboard + API routes.
+### Mission
+Ship a production-safe AXIOM-MESH across Gateway, Grid, Hypervisor, Sandbox, contracts, and operational tooling by hardening current implementations, closing integration gaps, and proving readiness through repeatable evidence.
 
-**Deliverables**
-- Gateway edge policy profile (`dev`, `staging`, `prod`).
-- Rate-limit storage adapter (Redis or equivalent).
-- Security test pack (fuzz + abuse + replay + injection attempts).
-
-**Exit Criteria**
-- Public ingress route withstands synthetic abuse traffic without service collapse.
-- No unauthenticated route bypass beyond intended low-trust endpoint.
+### Non-negotiables
+- **No simulated-only paths:** every route that is tagged “production” must execute against real services/contracts or be clearly disabled.
+- **No unfinished scaffolding in release profiles:** dead flags, TODO-only modules, and partial adapters must be removed or completed.
+- **Auditability first:** every critical state transition (financial, policy, security) must have immutable logs, attribution, and replayability.
+- **Document-as-you-deliver:** each merged change must include operational and interface documentation updates in the same PR.
 
 ---
 
-## WS-B: Grid Durability + Chain Finality
-**Scope**
-- Promote snapshot durability to DB-backed ledger persistence.
-- Add on-chain event listener/replay (reorg + finality aware).
-- Reconciliation service between local ledger and chain canonical state.
+## 2) Current Scope Definition (What this plan covers)
 
-**Deliverables**
-- Durable storage backend with migration docs.
-- Finality-aware event processor + reconciliation CLI.
-- Recovery drills and corruption test scenarios.
+This plan is explicitly focused on productionizing existing capabilities:
+- Gateway ingress/auth/routing/security middleware
+- Grid persistence/reconciliation/chain connectivity
+- Hypervisor policy controls and execution governance
+- Sandbox isolation and runtime safety controls
+- Contract integration and ABI/interface compatibility
+- Financial and token-distribution workflows
+- Cross-cutting observability, runbooks, incident handling
 
-**Exit Criteria**
-- Restart/recovery retains canonical state under failure tests.
-- On-chain and local bond state converge with deterministic reconciliation logs.
+Out of scope for this cycle: net-new product lines not required for production readiness.
 
 ---
 
-## WS-C: Hypervisor Policy/Audit Hardening
-**Scope**
-- Expand policy gates from baseline checks to structured policy engine.
-- Immutable audit event sink with retention/access-control policy.
-- Operator review UI/queries for policy decisions and escalations.
+## 3) Workstreams and Quality Metrics
 
-**Deliverables**
-- Policy rule registry + versioning.
-- Immutable event transport/storage integration.
-- Incident review workflow and runbook.
+Each stream has objective evidence targets and a go/no-go threshold.
 
-**Exit Criteria**
-- Every high-risk action has policy decision lineage + immutable record.
-- Failing policy paths are auditable and reproducible.
+### WS-A: Security & Control Hardening
+**Focus:** perimeter, identity, policy enforcement, runtime isolation.
 
----
+**Key deliverables**
+- Production-grade distributed rate-limit backend for gateway.
+- End-to-end auth hardening (token/session lifecycle, admin protection, route protection parity).
+- Sandbox isolation verification with runtime deny controls and measurable escape resistance.
+- Standardized security regression suite (abuse, replay, injection, privilege escalation attempts).
 
-## WS-D: zkML Operational Trust Program
-**Scope**
-- Artifact provenance/integrity controls.
-- Runtime quotas and verifier SLO instrumentation.
-- Adversarial/chaos tests for queue saturation and malformed payloads.
+**Metrics**
+- 0 known critical/high exploitable findings open at release candidate.
+- 100% of privileged actions covered by authZ checks + audit events.
+- Mean time to detect security policy violations < 60 seconds in staging.
 
-**Deliverables**
-- zkML integrity checklist and attestation flow.
-- SLO dashboard (`verify_success_rate`, latency, queue depth, saturation).
-- Chaos runbook and regression suite.
+### WS-B: Financials, Treasury, and Tokenomics Integrity
+**Focus:** correctness and auditability of treasury flow, distribution, settlement, and token logic.
 
-**Exit Criteria**
-- zkML pipeline meets defined SLO targets in staging under load.
-- Invalid artifacts are rejected deterministically without service degradation.
+**Key deliverables**
+- Deterministic reconciliation between off-chain ledger and on-chain balances/events.
+- Double-entry style journal for treasury/distribution operations with correction workflows.
+- Tokenomics parameter registry (allocations, emissions, payout split assumptions) with versioned change control.
+- Audit export endpoints/reports for balance sheet, cash-flow, and distribution proofs.
 
----
+**Metrics**
+- Reconciliation variance must remain within defined tolerance (target: <= 0.01%).
+- 100% of treasury-affecting operations produce signed, replayable audit records.
+- Financial close dry-run can be reproduced by a separate operator from docs alone.
 
-## WS-E: Contract Lifecycle & DevEx
-**Scope**
-- Contract CI with compile/test/deploy verification on controlled runners.
-- Address + ABI registry pipeline for Grid consumption.
-- Pre-merge checks for contract/API schema compatibility.
+### WS-C: Core Runtime Interconnection Reliability
+**Focus:** production reliability of the existing cross-service execution path.
 
-**Deliverables**
-- Deterministic deployment manifests per environment.
-- ABI lockfile + compatibility checks in CI.
-- Contract security review gate policy.
+**Key deliverables**
+- Failure-aware service-to-service contracts (timeouts, retries, circuit breaking, idempotency).
+- Finality-aware chain listener + replay-safe event processing.
+- Recovery drills proving state continuity after restart, partial outage, and replay.
+- SLO/SLI instrumentation across end-to-end intent path.
 
-**Exit Criteria**
-- Contract upgrades cannot merge unless ABI/API compatibility passes.
-- Grid runtime can consume verified deployment manifests automatically.
+**Metrics**
+- P95 end-to-end intent latency and error budget defined and met in staging.
+- Recovery point objective (RPO) and recovery time objective (RTO) validated via drills.
+- 0 silent data loss scenarios in chaos/failure test matrix.
 
----
+### WS-D: Ecosystem and External Integration Readiness
+**Focus:** partner-facing and operator-facing interoperability.
 
-## 3) Merge Strategy (multi-agent safe)
+**Key deliverables**
+- Stabilized ICD/OpenAPI/schema set with compatibility policy and enforcement.
+- Release artifact package: ABI manifests, addresses, integration notes, migration notes.
+- Operational integration guides for node operators, auditors, and external channel partners.
 
-### Branching model
-- `main`: protected production branch.
-- `release/*`: staging candidates with frozen interfaces.
-- `ws-a/*`, `ws-b/*`, ...: workstream branches.
+**Metrics**
+- 100% of published external interfaces carry version + compatibility status.
+- Breaking changes blocked unless governance exception + migration playbook exists.
+- Partner smoke test suite passes against release candidate.
 
-### Interface freeze
-Before each sprint:
-- freeze ICD/API/schema/contracts for that sprint;
-- only additive changes allowed unless governance exception approved.
+### WS-E: Program Audit & Governance Evidence
+**Focus:** proving readiness and maintaining transparency.
 
-### PR requirements (all workstreams)
-- Linked task + acceptance criteria.
-- Backward compatibility statement.
-- Rollback plan and migration impact notes.
-- Test evidence (unit + integration + failure-path as relevant).
+**Key deliverables**
+- Unified production-readiness checklist mapped to security, financial, operational, and governance controls.
+- Audit dossier per release candidate (test evidence, control evidence, exception log, approvals).
+- Documentation freshness checks in CI (required docs touched for relevant change types).
 
-### Merge order per sprint
-1. Schema/ICD updates
-2. Service implementation
-3. Integration adapters
-4. Docs/runbook updates
-5. Release candidate cut
+**Metrics**
+- No release candidate promoted without complete gate evidence.
+- All exceptions time-bounded with owner and rollback/mitigation plan.
 
 ---
 
-## 4) Environment Upgrade Path
+## 4) Parallelization Plan (What can run together vs dependencies)
 
-### Dev (single-node)
-- Docker compose baseline, mocked external deps where needed.
-- Fast feedback tests and smoke checks.
+## Can run in parallel immediately (Week 1)
+- WS-A security regression expansion.
+- WS-B reconciliation engine hardening.
+- WS-C SLO instrumentation and failure taxonomy.
+- WS-D interface inventory and compatibility baseline.
+- WS-E release checklist template + evidence schema.
 
-### Staging (multi-node)
-- Multi-Grid node topology with synthetic adversarial traffic.
-- Real contract deployment manifests and event replay testing.
+## Must follow dependency order
+1. **Interface freeze (WS-D)** before broad implementation merges affecting schemas/contracts/API.
+2. **Security baseline controls (WS-A)** before opening full-load reliability/chaos runs.
+3. **Financial reconciliation core (WS-B)** before tokenomics/distribution automation signoff.
+4. **Recovery mechanisms (WS-C)** before high-value staging simulation.
+5. **Audit dossier integration (WS-E)** before RC promotion.
 
-### Production
-- Change windows + canary rollout.
-- Strict release gates + incident rollback automation.
-
----
-
-## 5) Release Gates (must pass to promote)
-
-1. **Security Gate**
-- ingress hardening checks
-- dependency/vuln scan
-- secret and policy linting
-
-2. **Reliability Gate**
-- restart/recovery drills
-- queue saturation behavior
-- chaos scenarios from `docs/OPERATIONS.md`
-
-3. **Ledger/Chain Gate**
-- durable persistence verification
-- chain reconciliation convergence report
-
-4. **Auditability Gate**
-- policy decision immutability
-- trace-to-action linkage completeness
-
-5. **Performance Gate**
-- endpoint latency/error budgets
-- zkML throughput and saturation thresholds
+## Synchronization points (non-parallel gates)
+- **Gate Sync A (end of Week 2):** interface freeze + control baseline approved.
+- **Gate Sync B (end of Week 4):** reconciliation and reliability drills pass minimum thresholds.
+- **Gate Sync C (end of Week 6):** security, financial, and ecosystem evidence complete for RC.
 
 ---
 
-## 6) 4-Sprint Execution Sequence (parallelized)
+## 5) Time-Phased Delivery Plan
 
-### Sprint 1 (Foundation)
-- WS-A perimeter baseline
-- WS-B DB persistence scaffold
-- WS-C policy rule framework
-- WS-E contract CI stabilization
+## Phase 0 — Mobilization (Week 0: 2026-03-23 to 2026-03-27)
+- Confirm owners, on-call responsibilities, and escalation matrix.
+- Lock canonical backlog for this productionization cycle.
+- Publish acceptance criteria per workstream in tracker.
 
-### Sprint 2 (Integration)
-- WS-B chain event listener + replay
-- WS-C immutable audit sink
-- WS-D zkML SLO instrumentation
-- WS-A distributed limiter rollout
+## Phase 1 — Baseline Hardening (Weeks 1–2: 2026-03-30 to 2026-04-10)
+- Deliver minimum security control set, interface freeze, financial journal baseline, and reliability instrumentation.
+- Execute first integrated staging run with evidence capture.
 
-### Sprint 3 (Hardening)
-- Adversarial/chaos testing across all streams
-- Reconciliation edge cases + rollback drills
-- Contract upgrade simulation and ABI drift checks
+## Phase 2 — Interconnection Completion (Weeks 3–4: 2026-04-13 to 2026-04-24)
+- Close cross-service failure handling, replay safety, and reconciliation gaps.
+- Validate token-distribution and treasury pathways under failure and replay scenarios.
 
-### Sprint 4 (Productionization)
-- Canary rollout playbooks
-- SLO enforcement and alerting
-- final security + readiness signoff
+## Phase 3 — Production Qualification (Weeks 5–6: 2026-04-27 to 2026-05-08)
+- Run security stress, chaos drills, partner integration tests, and financial close rehearsal.
+- Generate release candidate audit dossier.
 
----
-
-## 7) Ownership & Decision Cadence
-
-- Weekly architecture review: ICD/API/contracts drift check.
-- Twice-weekly workstream sync: blockers + dependency alignment.
-- End-of-sprint readiness review: release gate evidence signoff.
-
-Recommended owners:
-- WS-A: Gateway + SRE
-- WS-B: Grid + Chain
-- WS-C: Hypervisor + Security
-- WS-D: zkML + Reliability
-- WS-E: Contracts + DevEx
+## Phase 4 — Controlled Rollout (Weeks 7–8: 2026-05-11 to 2026-05-22)
+- Canary release with strict rollback criteria.
+- Post-canary review and signoff for full production promotion.
 
 ---
 
-## 8) Immediate Next Actions (this week)
+## 6) Detailed Task Matrix
 
-1. Convert this plan into tracked issues (one epic per workstream).
-2. Freeze current ICD + schema + contract ABI baseline.
-3. Stand up staging topology for multi-node Grid and replay tests.
-4. Enable release template requiring explicit gate evidence.
-5. Run first chaos pass using updated operations runbook.
+| Area | Task | Owner Group | Parallel? | Blocks | Done when |
+|---|---|---|---|---|---|
+| Security | Replace in-memory prod limiter backend | Gateway/SRE | Yes | None | Load test + abuse tests pass |
+| Security | Route authZ parity audit | Security + Gateway | Yes | None | 100% protected-route mapping complete |
+| Financials | Ledger↔chain reconciliation service | Grid/Finance Eng | Yes | Interface freeze | Variance threshold met across replay set |
+| Financials | Treasury journal + correction workflow | Finance Eng/Ops | Yes | Reconciliation base | Dry-run close reproducible |
+| Tokenomics | Parameter registry + governance control | Contracts/Gov | Partial | Reconciliation base | Versioned parameters + approval trail |
+| Reliability | End-to-end retry/idempotency matrix | Platform Eng | Yes | Interface freeze | Failure matrix green |
+| Reliability | Recovery drill automation | SRE/Grid | Partial | Persistence controls | RTO/RPO targets met |
+| Ecosystem | API/schema/ABI compatibility checks | DevEx/Platform | Yes | None | CI blocks incompatible changes |
+| Ecosystem | Operator + partner runbooks | Docs/Ops | Yes | Interface freeze | New operator can execute from docs |
+| Audit | RC evidence packaging | Security/Ops/PMO | Partial | All stream outputs | Gate package accepted |
 
 ---
 
-## 9) Source-of-Truth Links
+## 7) Documentation and Process Update Rules (Mandatory)
 
-- `README.md`
-- `plan.md`
-- `docs/REPOSITORY-OVERVIEW.md`
-- `docs/MASTER-INTEGRATION.md`
-- `docs/AGENT-ENHANCEMENTS.md`
-- `docs/SECURITY-REALITY-2026.md`
-- `docs/OPERATIONS.md`
+For every merged implementation PR:
+1. Update impacted technical spec / interface doc.
+2. Update at least one operational artifact (runbook, HOWTO, or incident playbook) if behavior changed.
+3. Attach test evidence references and rollback notes.
+4. Update control mapping if security/financial behavior changed.
+5. Mark roadmap/progress tracker entries with date + owner.
+
+**Definition of Done includes docs:** a code change is incomplete until the above are merged.
+
+---
+
+## 8) Release Gates (Production Promotion Criteria)
+
+A release candidate can only be promoted when all gates pass:
+- **Security Gate:** no unresolved critical/high findings; abuse + auth + policy tests pass.
+- **Financial Gate:** reconciliation within tolerance; treasury/distribution audit trail complete.
+- **Reliability Gate:** SLOs met; recovery drills validated; chaos failures within accepted envelope.
+- **Ecosystem Gate:** interface compatibility checks green; partner smoke tests green.
+- **Governance/Audit Gate:** full evidence dossier complete, signed by accountable owners.
+
+Any failed gate requires either remediation or explicit, time-bounded exception with rollback plan.
+
+---
+
+## 9) Cadence, Reporting, and Transparency
+
+- **Daily:** workstream standup with blocker and dependency tracking.
+- **Twice weekly:** architecture/interface drift review.
+- **Weekly:** executive readiness report (security, financial, reliability, ecosystem scorecards).
+- **Per gate sync:** publish evidence package snapshot and decision log.
+
+Status reports must include:
+- Objective metric trend vs threshold.
+- Risks and burn-down ETA.
+- Dependencies at risk of delaying critical path.
+
+---
+
+## 10) Immediate Next 10 Actions (starting now)
+
+1. Publish owners and deputies for WS-A through WS-E.
+2. Freeze current API/schema/ABI baselines and tag as `prodization-baseline-2026-03-21`.
+3. Stand up shared evidence storage structure for gate artifacts.
+4. Enable compatibility and docs-required checks in CI.
+5. Execute route authZ parity audit and open remediation tickets.
+6. Execute first reconciliation replay against recent ledger/chain window.
+7. Run first end-to-end staging failover drill.
+8. Publish tokenomics parameter register with current values + owners.
+9. Align HOWTO/runbook update backlog with stream tasks.
+10. Schedule Gate Sync A review for 2026-04-10 with required evidence checklist.
+
+---
+
+
+## 11) Execution Artifacts (New)
+
+To enforce execution discipline, this plan is paired with:
+- `docs/PRODUCTION-EXECUTION-BACKLOG.md` (task-level WBS with dependencies, durations, and acceptance criteria).
+- `docs/HOWTO/release-gate-evidence.md` (step-by-step process for producing gate evidence packages).
+
+These artifacts are normative for sprint execution and release reviews.
