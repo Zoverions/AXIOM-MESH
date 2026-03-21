@@ -211,7 +211,7 @@ def verify_api_key(request: Request, credentials: HTTPAuthorizationCredentials =
     expected_api_key = get_expected_api_key()
     validate_api_key(credentials.credentials, expected_api_key)
 
-    return credentials.credentials
+    return api_key
 
 async def verify_signature(request: Request, api_key: str = Depends(verify_api_key)):
     timestamp = request.headers.get("X-Axiom-Timestamp")
