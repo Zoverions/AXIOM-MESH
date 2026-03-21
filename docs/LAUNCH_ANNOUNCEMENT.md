@@ -1,34 +1,30 @@
-**AXIOM-MESH IS LIVE – The World’s First Self-Sovereign, Self-Training, Multi-Chain Network**
+**AXIOM-MESH PRE-LAUNCH UPDATE – Building Toward Testnet Readiness**
 
-Today, March 20 2026, we launch AXIOM-MESH.
+As of March 21, 2026, AXIOM-MESH is **not live on testnet or mainnet**.
 
-7 Pillars of True Sovereignty:
-1. Autonomous Blockchain Deployment
-2. On-Demand zkML Training
-3. Permanent 5% Founder Share + Dynamic Allocation
-4. Robot Workforce + Digital Legacy
-5. Shadow Nodes & Dark Compute Pool
-6. Universal Distribution Pool (Payroll, UBI, Donations)
-7. Cross-Chain Sovereignty (LayerZero + Wormhole)
+This repository currently contains implementation work in progress across core pillars:
+1. Autonomous blockchain deployment tooling
+2. On-demand zkML training and verification pathways
+3. Founder-share and allocation logic
+4. Robot workforce + digital legacy modules
+5. Shadow nodes and dark compute components
+6. Distribution pool mechanisms
+7. Cross-chain interoperability components
 
-**Tokenomics v2 (AXM Token)**
-- Total Supply: 1,000,000,000 AXM (fixed)
-- 5% permanent Founder allocation (invisible hash, auto-reallocate unused)
-- 10% of every payroll/donation/bridge fee → network treasury (governance-controlled)
-- Staking rewards via PoER + ComputeBond
-- Shadow contributions earn blinded rewards
-- Cross-chain transfers: 0.1% fee (auto to treasury)
-- No VC dump – 100% community & network-owned from genesis
+## Tokenomics v2 (Draft / Subject to governance + audit)
+- Total Supply target: 1,000,000,000 AXM (fixed, pending final governance ratification)
+- Founder allocation model: 5% target policy (pending final contract governance controls)
+- Treasury routing: 10% network share target on selected flows (pending implementation/audit signoff)
+- Staking/reward mechanics: PoER + ComputeBond workstream under hardening
+- Shadow contribution rewards: design in progress
+- Cross-chain transfer fee model: draft 0.1% proposal, pending final review
 
-Mainnet contracts verified. Docker images live. Shadow mode air-gapped by default. Founder control locked forever.
+## Current status
+- Contracts are under development and verification workflows are being built out.
+- Docker/runtime artifacts are for development and staging hardening.
+- Launch communication assets should be treated as **drafts** until official testnet announcement.
 
-Join the network. Own your data. Control your robots. Inherit your legacy.
-
-https://github.com/Zoverions/AXIOM-MESH
-#AXIOMMESH #SelfSovereignAI #MultiChain
-
-## Tokenomics v2 Summary Table
-- **Distribution Pool**: 10% network share mandatory
-- **Cross-Chain Fees**: 0.1% to treasury
-- **Robot Payroll**: Paid from pool + zk-verified
-- **Shadow Earnings**: 100% to contributor (blinded)
+Track readiness progress in:
+- `docs/PARALLEL-DELIVERY-PLAN-2026.md`
+- `docs/PRODUCTION-EXECUTION-BACKLOG.md`
+- `docs/PRODUCTION-READINESS-TRACKER.md`
