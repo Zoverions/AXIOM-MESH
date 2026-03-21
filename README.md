@@ -32,7 +32,7 @@ This installer now:
 - sets storage quota safely against available disk,
 - can run fully unattended for digital-agent onboarding.
 
----
+Use `docs/README.md` as the canonical documentation index.
 
 
 ## Lightweight Engagement Protocol
@@ -43,22 +43,6 @@ First-run setup now asks only a minimal secure set of user choices:
 - priority (`performance`, `security`, `cost`, `autonomy`).
 
 If `launch-network` is selected, preflight estimates bootstrap ETH required and surfaces whether wallet funding is needed before broadcast. If you skip funding, installer can fall back to local mesh mode.
-
----
-
-## Task Contracting & Request Mechanism (Foundational)
-
-The network now includes an on-chain task market foundation for both digital and physical-world work:
-- contract: `grid/contracts/contracts/TaskRequestMarket.sol`,
-- test coverage: `grid/contracts/test/TaskRequestMarket.js`.
-
-Core behaviors:
-- requester escrows AXM rewards for a task request,
-- performer accepts + submits proof URI,
-- requester/facilitator finalizes and records feedback score,
-- payout splits between performer and a public-goods treasury (infrastructure/security/service pool).
-
-This is designed as the bridge from mainstream service work to mesh-native contracting while preserving DAO-governed economics and feedback loops.
 
 ---
 

@@ -69,21 +69,6 @@ Detailed references:
 
 ---
 
-
-## Lane M4 — Task Contracting & Public-Goods Economy
-- [ ] **M4.1** Deploy `TaskRequestMarket` for testnet validation.
-- [ ] **M4.2** Define task classes for digital work, physical logistics, and hybrid tasks.
-- [ ] **M4.3** Implement feedback-weighted reputation and slashing hooks.
-- [ ] **M4.4** Integrate public-goods treasury split policy with governance controls.
-- [ ] **M4.5** Publish bridge playbooks for mainstream service workflows into mesh contracts.
-
-Detailed references:
-- `grid/contracts/contracts/TaskRequestMarket.sol`
-- `docs/GOVERNANCE.md`
-- `docs/TOKENOMICS.md`
-
----
-
 ## 3) Archive Candidates (After Migration Validation)
 
 Move to `docs/historical/` after confirming no net-new actionable tasks remain:
