@@ -223,14 +223,3 @@ Status reports must include:
 8. Publish tokenomics parameter register with current values + owners.
 9. Align HOWTO/runbook update backlog with stream tasks.
 10. Schedule Gate Sync A review for 2026-04-10 with required evidence checklist.
-
----
-
-
-## 11) Execution Artifacts (New)
-
-To enforce execution discipline, this plan is paired with:
-- `docs/PRODUCTION-EXECUTION-BACKLOG.md` (task-level WBS with dependencies, durations, and acceptance criteria).
-- `docs/HOWTO/release-gate-evidence.md` (step-by-step process for producing gate evidence packages).
-
-These artifacts are normative for sprint execution and release reviews.

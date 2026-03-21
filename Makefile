@@ -27,9 +27,7 @@ contracts-test:
 contracts-deploy:
 	cd grid/contracts && npm run deploy:localhost
 
+
 validate-release-evidence:
-	@test -n "$(RC_PATH)" || (echo "Usage: make validate-release-evidence RC_PATH=release-evidence/RC-<date>-<tag> [STRICT=1] [ENFORCE_SUMMARY=1]" && exit 1)
-	python3 scripts/validate_release_evidence.py \
-		$(if $(STRICT),--strict-artifacts,) \
-		$(if $(ENFORCE_SUMMARY),--enforce-summary-sections,) \
-		$(RC_PATH)
+	@test -n "$(RC_PATH)" || (echo "Usage: make validate-release-evidence RC_PATH=release-evidence/RC-<date>-<tag>" && exit 1)
+	python3 scripts/validate_release_evidence.py $(RC_PATH)
