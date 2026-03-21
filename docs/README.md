@@ -28,9 +28,10 @@ This index consolidates documentation ownership, reduces overlap, and defines wh
 - **ERC20 compatibility:** `docs/ERC20-COMPATIBILITY.md`
 
 ## Execution Program
-- **Execution plan:** `docs/PARALLEL-DELIVERY-PLAN-2026.md`
-- **Task-level backlog:** `docs/PRODUCTION-EXECUTION-BACKLOG.md`
-- **Live readiness board:** `docs/PRODUCTION-READINESS-TRACKER.md`
+- **Master to-do queue (canonical):** `docs/MASTER-TODO.md`
+- **Execution plan (reference):** `docs/PARALLEL-DELIVERY-PLAN-2026.md`
+- **Task-level backlog (reference):** `docs/PRODUCTION-EXECUTION-BACKLOG.md`
+- **Live readiness board (reference):** `docs/PRODUCTION-READINESS-TRACKER.md`
 - **Current status snapshot:** `docs/PROJECT-STATUS-2026.md`
 
 ## 2) HOWTO Coverage
@@ -50,7 +51,7 @@ Minimum operational HOWTO set now includes:
 ## 3) Overlap Resolution Rules
 
 1. If multiple docs discuss the same topic, prefer the canonical document listed above.
-2. Strategy docs may coexist, but implementation execution order is governed by:
+2. Strategy docs may coexist, but active execution is governed by `docs/MASTER-TODO.md` and supported by:
    - `docs/PARALLEL-DELIVERY-PLAN-2026.md`
    - `docs/PRODUCTION-EXECUTION-BACKLOG.md`
    - `docs/PRODUCTION-READINESS-TRACKER.md`

@@ -1,9 +1,13 @@
 # Production Readiness Tracker (Execution Board)
 
 **Last Updated:** 2026-03-21  
-**Purpose:** Single execution board with owner roles, checked progress, and near-term critical-path tasks.
+**Purpose:** Detailed readiness board linked from the canonical task queue in `docs/MASTER-TODO.md`.
 
 ---
+
+> Canonical execution queue: `docs/MASTER-TODO.md`
+>
+> Keep this file focused on role/accountability details and gate readiness evidence.
 
 ## 1) Active Role Assignments
 

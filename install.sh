@@ -1,178 +1,179 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-echo "=========================================================="
-echo "   AxiomMesh v2.0 - Automated Installation & Hardware Scan "
-echo "=========================================================="
-echo ""
-
-# Hardware Scan
-echo "-> Scanning Hardware..."
-
-# OS
-OS_TYPE=$(uname -s 2>/dev/null || echo "Unknown")
-case "$OS_TYPE" in
-    Linux*)
-        if [ -f /etc/os-release ]; then
-            OS_PRETTY_NAME=$(grep ^PRETTY_NAME= /etc/os-release | cut -d '=' -f 2 | tr -d '"')
-            if [ -z "$OS_PRETTY_NAME" ]; then
-                OS_NAME="Linux"
-            else
-                OS_NAME="Linux ($OS_PRETTY_NAME)"
-            fi
-        elif [ -n "$(uname -o 2>/dev/null | grep -i android)" ]; then
-            OS_NAME="Android"
-        else
-            OS_NAME="Linux"
-        fi
-        ;;
-    Darwin*)    OS_NAME="macOS" ;;
-    CYGWIN*|MINGW32*|MSYS*|MINGW*) OS_NAME="Windows" ;;
-    *)          OS_NAME="$OS_TYPE" ;;
-esac
-echo "  - Operating System: $OS_NAME"
-
-# CPU
-CPU_CORES=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo "Unknown")
-echo "  - CPU Cores: $CPU_CORES"
-
-# RAM
-if command -v free &> /dev/null; then
-    RAM_TOTAL=$(free -h | awk '/^Mem:/ {print $2}')
-elif command -v sysctl &> /dev/null; then
-    RAM_BYTES=$(sysctl -n hw.memsize 2>/dev/null)
-    if [ ! -z "$RAM_BYTES" ]; then
-        RAM_TOTAL=$(echo "scale=2; $RAM_BYTES/1024/1024/1024" | bc)G
-    else
-        RAM_TOTAL="Unknown"
-    fi
-else
-    RAM_TOTAL="Unknown"
-fi
-echo "  - Total RAM: $RAM_TOTAL"
-
-# GPU / Model Recommendation
-RECOMMENDED_MODEL="llama3:8b" # Default low-end model
-if command -v nvidia-smi &> /dev/null; then
-    GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader | head -n 1)
-    GPU_VRAM=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader | head -n 1 | awk '{print $1}')
-    echo "  - NVIDIA GPU Detected: $GPU_NAME (${GPU_VRAM}MB VRAM)"
-
-    if [ "$GPU_VRAM" -ge 24000 ]; then
-        RECOMMENDED_MODEL="llama3:70b (or command-r-plus if API)"
-    elif [ "$GPU_VRAM" -ge 12000 ]; then
-        RECOMMENDED_MODEL="mixtral:8x7b"
-    fi
-elif system_profiler SPDisplaysDataType &> /dev/null; then
-    APPLE_GPU=$(system_profiler SPDisplaysDataType | grep "Chipset Model" | awk -F': ' '{print $2}')
-    if [ ! -z "$APPLE_GPU" ]; then
-        echo "  - Apple Silicon GPU Detected: $APPLE_GPU"
-        # Assuming unified memory, check RAM again
-        if [[ "$RAM_TOTAL" == *"64"* || "$RAM_TOTAL" == *"128"* ]]; then
-             RECOMMENDED_MODEL="llama3:70b"
-        elif [[ "$RAM_TOTAL" == *"32"* ]]; then
-             RECOMMENDED_MODEL="mixtral:8x7b"
-        fi
-    else
-        echo "  - No dedicated GPU detected."
-    fi
-else
-    echo "  - No dedicated NVIDIA GPU or Apple Silicon detected."
-fi
-
-echo ""
-echo "-> Recommended Local Model based on scan: $RECOMMENDED_MODEL"
-echo "   (This will be used for local inference fallbacks)"
-echo ""
-
-# Generate standardized Hardware Profile JSON
-cat <<EOF > hardware_profile.json
-{
-  "os": "$OS_NAME",
-  "cpu_cores": "$CPU_CORES",
-  "ram": "$RAM_TOTAL",
-  "gpu_name": "${GPU_NAME:-$APPLE_GPU}",
-  "gpu_vram": "${GPU_VRAM:-Unknown}",
-  "recommended_model": "$RECOMMENDED_MODEL"
-}
-EOF
-echo "-> Hardware profile saved to hardware_profile.json"
-echo ""
-
-# MeshStore storage allocation
-FREE_DISK=$(df -h / | awk 'NR==2 {print $4}' | sed 's/G//')
-echo "💾 Detected free disk: ${FREE_DISK}G"
-read -p "How much storage for MeshStore (GB, default 50)? " QUOTA
-MESHSTORE_QUOTA_GB=${QUOTA:-50}
-echo "export MESHSTORE_QUOTA_GB=$MESHSTORE_QUOTA_GB" >> .env
-
-# Append to profile JSON (already generated)
-tmp=$(mktemp)
-jq --arg quota "$MESHSTORE_QUOTA_GB" '. + {storageOffer: {capacityGB: ($quota | tonumber), type: "ipfs-meshstore"}}' hardware_profile.json > "$tmp" && mv "$tmp" hardware_profile.json
-
-echo "📜 Generating default NemoClaw policy..."
-mkdir -p sandbox/policies
-cat > sandbox/policies/default.yaml <<EOF
-sandbox:
-  filesystem: ["/meshstore/**"]
-  network: ["ncp-servers"]
-  privacy:
-    level: local-only
-EOF
-CID=$(ipfs add -q sandbox/policies/default.yaml) && echo "export DEFAULT_POLICY_CID=$CID" >> .env
-
-echo "=========================================================="
-echo "   Environment Configuration (Interactive Setup) "
-echo "=========================================================="
-
+AUTO_INSTALL="${AUTO_INSTALL:-0}"
 ENV_FILE=".env"
-if [ -f "$ENV_FILE" ]; then
-    echo "Existing .env file found. We will skip overwriting existing keys."
-    source "$ENV_FILE"
-else
-    touch "$ENV_FILE"
-    echo "# AxiomMesh Environment Configuration" > "$ENV_FILE"
-fi
+MACHINE_ROLE="${MACHINE_ROLE:-}"
+MESHSTORE_QUOTA_DEFAULT="${MESHSTORE_QUOTA_GB:-50}"
+LAUNCH_MODE="${LAUNCH_MODE:-}"
+USER_PRIORITY="${USER_PRIORITY:-}"
+NETWORK_WALLET_ADDRESS="${NETWORK_WALLET_ADDRESS:-}"
+RPC_URL="${RPC_URL:-}"
 
 prompt_env() {
-    local key=$1
-    local default_val=$2
-    local prompt_msg=$3
+  local key="$1" default_val="$2" prompt_msg="$3"
+  if grep -q "^${key}=" "$ENV_FILE" 2>/dev/null; then
+    return
+  fi
 
-    # Check if already exists in .env
-    if grep -q "^$key=" "$ENV_FILE"; then
-        return
-    fi
-
-    read -p "$prompt_msg [$default_val]: " input
+  local input=""
+  if [[ "$AUTO_INSTALL" == "1" ]]; then
+    input="$default_val"
+  else
+    read -r -p "$prompt_msg [$default_val]: " input
     input=${input:-$default_val}
-    echo "$key=$input" >> "$ENV_FILE"
+  fi
+
+  printf '%s=%s\n' "$key" "$input" >> "$ENV_FILE"
 }
 
+prompt_choice() {
+  local prompt="$1" default="$2"
+  local answer=""
+  if [[ "$AUTO_INSTALL" == "1" ]]; then
+    echo "$default"
+    return
+  fi
+  read -r -p "$prompt [$default]: " answer
+  echo "${answer:-$default}"
+}
+
+echo "=========================================================="
+echo "   AxiomMesh v2.2 - Install + Launch Preflight + Host Safety"
+echo "=========================================================="
+
+if [[ ! -f "$ENV_FILE" ]]; then
+  echo "# AxiomMesh Environment Configuration" > "$ENV_FILE"
+fi
+
+if [[ -z "$MACHINE_ROLE" ]]; then
+  MACHINE_ROLE=$(prompt_choice "Machine role (dedicated-mesh/shared-machine/minimal-edge)" "shared-machine")
+fi
+if [[ -z "$LAUNCH_MODE" ]]; then
+  LAUNCH_MODE=$(prompt_choice "Launch mode (local-mesh/single-node/launch-network)" "local-mesh")
+fi
+if [[ -z "$USER_PRIORITY" ]]; then
+  USER_PRIORITY=$(prompt_choice "Primary priority (performance/security/cost/autonomy)" "security")
+fi
+
+PROFILE_PATH=$(python3 scripts/generate_machine_profile.py --machine-role "$MACHINE_ROLE" --output config/machine_profile.json)
+echo "-> Machine profile generated at: $PROFILE_PATH"
+
+RECOMMENDED_MODEL=$(python3 - <<'PY'
+import json
+from pathlib import Path
+profile = json.loads(Path('config/machine_profile.json').read_text())
+print(profile.get('recommended_local_model', 'llama3:8b'))
+PY
+)
+
+echo "-> Recommended local model: $RECOMMENDED_MODEL"
+
+echo "-> Running network launch preflight..."
+PRECHECK_JSON=$(python3 scripts/network_launch_preflight.py --launch-mode "$LAUNCH_MODE" --rpc-url "$RPC_URL" --wallet-address "$NETWORK_WALLET_ADDRESS")
+echo "$PRECHECK_JSON"
+
+REQUESTED_FUNDING_ETH=$(python3 -c 'import json,sys; obj=json.load(sys.stdin); print(obj.get("estimated_min_funding_eth",0))' <<< "$PRECHECK_JSON")
+CURRENT_BALANCE=$(python3 -c 'import json,sys; obj=json.load(sys.stdin); print(obj.get("wallet_balance_eth",0))' <<< "$PRECHECK_JSON")
+NEXT_ACTION=$(python3 -c 'import json,sys; obj=json.load(sys.stdin); print(obj.get("next_action",""))' <<< "$PRECHECK_JSON")
+
+echo "-> Preflight recommendation: $NEXT_ACTION"
+
+if [[ "$LAUNCH_MODE" == "launch-network" && "$AUTO_INSTALL" != "1" ]]; then
+  echo "Estimated bootstrap funding required: ~${REQUESTED_FUNDING_ETH} ETH"
+  echo "Current detected wallet balance: ${CURRENT_BALANCE} ETH"
+
+  if [[ -z "$NETWORK_WALLET_ADDRESS" ]]; then
+    read -r -p "Enter network wallet address for funding checks (optional): " NETWORK_WALLET_ADDRESS
+  fi
+  if [[ -z "$RPC_URL" ]]; then
+    read -r -p "Enter RPC URL for funding checks (optional): " RPC_URL
+  fi
+
+  FUNDING_DECISION=$(prompt_choice "Fund network wallet now? (yes/no/skip-to-local)" "no")
+  if [[ "$FUNDING_DECISION" == "skip-to-local" ]]; then
+    LAUNCH_MODE="local-mesh"
+    echo "-> Switched to local-mesh mode as requested."
+  fi
+fi
+
+FREE_DISK=$(python3 - <<'PY'
+import shutil
+print(int(shutil.disk_usage('/').free/1024/1024/1024))
+PY
+)
+
+if [[ "$AUTO_INSTALL" == "1" ]]; then
+  MESHSTORE_QUOTA_GB="$MESHSTORE_QUOTA_DEFAULT"
+else
+  read -r -p "How much storage for MeshStore (GB, default ${MESHSTORE_QUOTA_DEFAULT})? " QUOTA
+  MESHSTORE_QUOTA_GB=${QUOTA:-$MESHSTORE_QUOTA_DEFAULT}
+fi
+
+if (( MESHSTORE_QUOTA_GB > FREE_DISK )); then
+  echo "Requested quota ${MESHSTORE_QUOTA_GB}GB exceeds free disk ${FREE_DISK}GB; capping at ${FREE_DISK}GB."
+  MESHSTORE_QUOTA_GB="$FREE_DISK"
+fi
+
+python3 - <<PY
+import json
+from pathlib import Path
+p = Path('config/machine_profile.json')
+data = json.loads(p.read_text())
+data['storageOffer'] = {'capacityGB': int(${MESHSTORE_QUOTA_GB}), 'type': 'ipfs-meshstore'}
+data['user_priority'] = '${USER_PRIORITY}'
+data['launch_mode'] = '${LAUNCH_MODE}'
+p.write_text(json.dumps(data, indent=2) + '\n')
+PY
+
+prompt_env "MACHINE_ROLE" "$MACHINE_ROLE" "Machine role"
+prompt_env "MACHINE_PROFILE_PATH" "config/machine_profile.json" "Machine profile path"
+prompt_env "MESHSTORE_QUOTA_GB" "$MESHSTORE_QUOTA_GB" "MeshStore quota in GB"
+prompt_env "LAUNCH_MODE" "$LAUNCH_MODE" "Launch mode"
+prompt_env "USER_PRIORITY" "$USER_PRIORITY" "Primary user priority"
+prompt_env "NETWORK_WALLET_ADDRESS" "$NETWORK_WALLET_ADDRESS" "Network wallet address (for launch-network)"
+prompt_env "RPC_URL" "$RPC_URL" "RPC URL (for launch-network)"
+prompt_env "ESTIMATED_BOOTSTRAP_FUNDING_ETH" "$REQUESTED_FUNDING_ETH" "Estimated bootstrap funding (ETH)"
 prompt_env "LLM_PROVIDER" "openai" "Choose default LLM provider (openai/anthropic/local)"
 prompt_env "OPENAI_API_KEY" "" "Enter OpenAI API Key (leave blank if local)"
 prompt_env "DISCORD_TOKEN" "" "Enter Discord Bot Token (leave blank to skip)"
 prompt_env "WHATSAPP_SESSION" "" "Enter WhatsApp Session ID or Path (leave blank to skip)"
 prompt_env "NCP_SERVERS" "http://localhost:8080" "Enter comma-separated NCP server URLs"
 prompt_env "MCP_SERVERS" "" "Enter comma-separated MCP server SSE URLs"
-prompt_env "FDBA_FOUNDER_ADDRESS" "0x1c2cbabf75e1938ed2f2c59e734e83aa5fbe1b73" "Enter FDBA Founder Address (Exactly 5% starting control)"
+prompt_env "FDBA_FOUNDER_ADDRESS" "0x1c2cbabf75e1938ed2f2c59e734e83aa5fbe1b73" "Enter FDBA Founder Address"
+prompt_env "LOCAL_MODEL_FALLBACK" "$RECOMMENDED_MODEL" "Local model fallback"
 
-# Save the recommended model as fallback
-if ! grep -q "^LOCAL_MODEL_FALLBACK=" "$ENV_FILE"; then
-    echo "LOCAL_MODEL_FALLBACK=$RECOMMENDED_MODEL" >> "$ENV_FILE"
+mkdir -p sandbox/policies
+cat > sandbox/policies/default.yaml <<'YAML'
+sandbox:
+  filesystem: ["/meshstore/**"]
+  network: ["ncp-servers"]
+  privacy:
+    level: local-only
+YAML
+
+if command -v ipfs >/dev/null 2>&1; then
+  CID=$(ipfs add -q sandbox/policies/default.yaml | tail -n 1 || true)
+  if [[ -n "$CID" ]]; then
+    prompt_env "DEFAULT_POLICY_CID" "$CID" "Default policy CID"
+  fi
+else
+  echo "-> ipfs not found; skipping DEFAULT_POLICY_CID generation"
 fi
-
-echo ""
-echo "Configuration saved to $ENV_FILE!"
-echo ""
 
 echo "=========================================================="
 echo "   Starting AxiomMesh Platform "
 echo "=========================================================="
-echo "Running 'make up' to build and start docker-compose services..."
-
-make up
+if [[ "$LAUNCH_MODE" == "launch-network" ]]; then
+  echo "Running in launch-network mode; ensure wallet funding + deployment approvals are complete."
+  echo "Starting local control plane services with: make up"
+  make up
+else
+  echo "Running 'make up' to build and start docker-compose services..."
+  make up
+fi
 
 echo ""
 echo "Installation complete!"
-echo "You can access the Web Dashboard at: http://localhost:3000"
-echo "To interact via CLI, run: make cli"
+echo "Dashboard: http://localhost:3000"
+echo "CLI: make cli"
