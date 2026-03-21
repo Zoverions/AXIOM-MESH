@@ -204,11 +204,12 @@ def _validate_api_key(provided_key: str, expected_key: str):
             detail="Invalid API Key",
         )
 
-def verify_api_key(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)):
-    expected_api_key = _get_expected_api_key()
-    _validate_api_key(credentials.credentials, expected_api_key)
+async def verify_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    api_key = credentials.credentials
+    expected_key = _get_expected_api_key()
+    _validate_api_key(api_key, expected_key)
 
-    return credentials.credentials
+    return api_key
 
 async def verify_signature(request: Request, api_key: str = Depends(verify_api_key)):
     timestamp = request.headers.get("X-Axiom-Timestamp")

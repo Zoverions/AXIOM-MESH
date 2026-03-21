@@ -20,7 +20,7 @@ def get_verify_api_key_func():
 
     nodes_to_compile = []
     for node in tree.body:
-        if isinstance(node, ast.FunctionDef) and node.name in ("_get_expected_api_key", "_validate_api_key", "verify_api_key"):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in ("_get_expected_api_key", "_validate_api_key", "verify_api_key"):
             nodes_to_compile.append(node)
 
     if not nodes_to_compile:
@@ -29,6 +29,11 @@ def get_verify_api_key_func():
     module = ast.Module(body=nodes_to_compile, type_ignores=[])
     code = compile(module, filename="<ast>", mode="exec")
 
+    class MockSecretManager:
+        @staticmethod
+        def get_secret(key):
+            return os.environ.get(key)
+
     context = {
         "Request": Request,
         "HTTPAuthorizationCredentials": HTTPAuthorizationCredentials,
@@ -36,7 +41,8 @@ def get_verify_api_key_func():
         "security": None,
         "os": os,
         "HTTPException": HTTPException,
-        "status": status
+        "status": status,
+        "SecretManager": MockSecretManager
     }
     exec(code, context)
     return context["verify_api_key"]
@@ -44,16 +50,18 @@ def get_verify_api_key_func():
 # We use the isolated function instead of importing the whole server
 verify_api_key = get_verify_api_key_func()
 
-def test_verify_api_key_success():
-    mock_request = MagicMock(spec=Request)
+import asyncio
+
+@pytest.mark.asyncio
+async def test_verify_api_key_success():
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="valid_key")
 
     with patch.dict(os.environ, {"HYPERVISOR_API_KEY": "valid_key"}):
-        result = verify_api_key(mock_request, credentials)
+        result = await verify_api_key(credentials)
         assert result == "valid_key"
 
-def test_verify_api_key_missing_env():
-    mock_request = MagicMock(spec=Request)
+@pytest.mark.asyncio
+async def test_verify_api_key_missing_env():
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="valid_key")
 
     with patch.dict(os.environ, {}, clear=False):
@@ -61,18 +69,18 @@ def test_verify_api_key_missing_env():
             del os.environ["HYPERVISOR_API_KEY"]
 
         with pytest.raises(HTTPException) as exc_info:
-            verify_api_key(mock_request, credentials)
+            await verify_api_key(credentials)
 
         assert exc_info.value.status_code == 500
         assert exc_info.value.detail == "Server configuration error: HYPERVISOR_API_KEY is not set"
 
-def test_verify_api_key_invalid_key():
-    mock_request = MagicMock(spec=Request)
+@pytest.mark.asyncio
+async def test_verify_api_key_invalid_key():
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="wrong_key")
 
     with patch.dict(os.environ, {"HYPERVISOR_API_KEY": "valid_key"}):
         with pytest.raises(HTTPException) as exc_info:
-            verify_api_key(mock_request, credentials)
+            await verify_api_key(credentials)
 
         assert exc_info.value.status_code == 403
         assert exc_info.value.detail == "Invalid API Key"
