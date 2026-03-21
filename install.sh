@@ -42,8 +42,41 @@ echo "=========================================================="
 echo "   AxiomMesh v2.2 - Install + Launch Preflight + Host Safety"
 echo "=========================================================="
 
+validate_prerequisites() {
+  local missing=()
+  if ! command -v python3 >/dev/null 2>&1; then missing+=("python3"); fi
+  if ! command -v docker >/dev/null 2>&1; then missing+=("docker"); fi
+  if ! command -v make >/dev/null 2>&1; then missing+=("make"); fi
+
+  if [ ${#missing[@]} -gt 0 ]; then
+    echo "-> Missing prerequisites detected: ${missing[*]}"
+    echo "-> Deterministic Remediation Actions:"
+    for m in "${missing[@]}"; do
+      case "$m" in
+        "python3") echo "   - Install python3: sudo apt-get install -y python3 (Ubuntu) or brew install python (macOS)" ;;
+        "docker")  echo "   - Install docker: curl -fsSL https://get.docker.com | sh" ;;
+        "make")    echo "   - Install make: sudo apt-get install -y make (Ubuntu) or brew install make (macOS)" ;;
+      esac
+    done
+    if [[ "$AUTO_INSTALL" == "1" ]]; then
+      echo "-> AUTO_INSTALL=1 set. Please resolve missing dependencies and try again."
+      exit 1
+    else
+      read -r -p "-> Press Enter once remediated to re-run checks..."
+      validate_prerequisites
+    fi
+  else
+    echo "-> All prerequisites validated."
+  fi
+}
+
+validate_prerequisites
+
+FIRST_RUN=false
 if [[ ! -f "$ENV_FILE" ]]; then
   echo "# AxiomMesh Environment Configuration" > "$ENV_FILE"
+  FIRST_RUN=true
+  echo "-> First run detected, initiating bootstrap wizard."
 fi
 
 if [[ -z "$MACHINE_ROLE" ]]; then
@@ -144,13 +177,15 @@ prompt_env "FDBA_FOUNDER_ADDRESS" "0x1c2cbabf75e1938ed2f2c59e734e83aa5fbe1b73" "
 prompt_env "LOCAL_MODEL_FALLBACK" "$RECOMMENDED_MODEL" "Local model fallback"
 
 mkdir -p sandbox/policies
-cat > sandbox/policies/default.yaml <<'YAML'
+if [[ ! -f "sandbox/policies/default.yaml" ]]; then
+  cat > sandbox/policies/default.yaml <<'YAML'
 sandbox:
   filesystem: ["/meshstore/**"]
   network: ["ncp-servers"]
   privacy:
     level: local-only
 YAML
+fi
 
 if command -v ipfs >/dev/null 2>&1; then
   CID=$(ipfs add -q sandbox/policies/default.yaml | tail -n 1 || true)
