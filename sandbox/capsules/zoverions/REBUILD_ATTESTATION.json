@@ -1,0 +1,34 @@
+{
+  "capsule_id": "cap-zoverions-001",
+  "mode": "rebuild",
+  "compiler_version": "1.0",
+  "changes": [
+    {
+      "component": "CognitiveFirewall",
+      "action": "reimplement",
+      "reason": "separate objective physical/informational reality from human-generated narrative"
+    },
+    {
+      "component": "AnalyticalEngine",
+      "action": "reimplement",
+      "reason": "map problem across Substrate, OS, and UI layers"
+    },
+    {
+      "component": "EvaluativeMatrix",
+      "action": "reimplement",
+      "reason": "maximize Capacity and Optionality while minimizing Entropy"
+    },
+    {
+      "component": "SynthesisOutput",
+      "action": "reimplement",
+      "reason": "synthesize opposing viewpoints using Antagonistic, Recursive, Epistemic, Networked Argumentation"
+    }
+  ],
+  "security_findings": [
+    {
+      "severity": "low",
+      "summary": "Verified protection against prompt injection and emotional hijacking."
+    }
+  ],
+  "compiled_at": "2026-03-22T00:00:00Z"
+}
