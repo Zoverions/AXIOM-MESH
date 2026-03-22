@@ -73,19 +73,23 @@ def test_token_issue_and_validate():
 
 def test_token_expired():
     client = TestClient(app)
+    # Using time mocking because the API now rejects ttl_seconds <= 0
     req = {
         "requester_id": "req-2",
         "capsule_id": "cap-2",
         "consent_proof": "valid",
         "data_scope": "data",
-        "ttl_seconds": -1 # Expired immediately
+        "ttl_seconds": 10
     }
     res = client.post("/token/issue", json=req)
     token = res.json()["token"]
 
     validator = NodeValidator()
-    with pytest.raises(ValueError, match="Token has expired"):
-        validator.validate_token(token, "cap-2", "data")
+
+    # Mock time to be past expiration
+    with patch("time.time", return_value=time.time() + 15):
+        with pytest.raises(ValueError, match="Token has expired"):
+            validator.validate_token(token, "cap-2", "data")
 
 def test_token_mismatch_capsule_id():
     client = TestClient(app)
