@@ -1,0 +1,19 @@
+{
+  "capsule_id": "cap-edu-001",
+  "mode": "compile",
+  "compiler_version": "1.0",
+  "changes": [
+    {
+      "component": "Core",
+      "action": "add_education_engine",
+      "reason": "enable gamified learning operations"
+    }
+  ],
+  "security_findings": [
+    {
+      "severity": "low",
+      "summary": "No specific vulnerabilities detected in education operations."
+    }
+  ],
+  "compiled_at": "2026-03-22T00:00:00Z"
+}
