@@ -38,11 +38,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Auto-refresh logic on tab load
             if (targetId === 'memory') fetchMemory();
-            if (targetId === 'status') fetchStatus();
             if (targetId === 'agents') fetchAgents();
             if (targetId === 'swarms') fetchSwarms();
             if (targetId === 'tester' && window.initTester) window.initTester();
-            if (targetId === 'network') fetchNetwork();
             if (targetId === 'settings') fetchConfig();
             if (targetId === 'logs') fetchLogs();
         });
@@ -638,6 +636,14 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    document.getElementById('refresh-logs').addEventListener('click', fetchLogs);
+    document.getElementById('refresh-logs')?.addEventListener('click', fetchLogs);
+
+    // Standalone page initializers
+    if (document.getElementById('network-grid')) {
+        fetchNetwork();
+    }
+    if (document.getElementById('status-grid')) {
+        fetchStatus();
+    }
 
 });

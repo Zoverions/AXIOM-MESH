@@ -23,11 +23,11 @@
             <nav>
                 <button class="nav-btn active" data-target="chat">Chat Interface</button>
                 <button class="nav-btn" data-target="memory">Memory Controls</button>
-                <button class="nav-btn" data-target="status">System Status</button>
+                <a href="performance.html" class="nav-btn" style="display: block; text-decoration: none; color: inherit;">System Status</a>
                 <button class="nav-btn" data-target="agents">Active Agents</button>
                 <button class="nav-btn" data-target="swarms">Swarm Orchestration</button>
                 <button class="nav-btn" data-target="tester">Intentionality Tester</button>
-                <button class="nav-btn" data-target="network">Grid Mesh Nodes</button>
+                <a href="network.html" class="nav-btn" style="display: block; text-decoration: none; color: inherit;">Grid Mesh Nodes</a>
                 <button class="nav-btn" data-target="cockpit">Operator Cockpit</button>
                 <button class="nav-btn" data-target="settings">Settings / Config</button>
                 <button class="nav-btn" data-target="logs">Logs & Troubleshooting</button>
@@ -78,31 +78,6 @@
             </section>
 
             <!-- Status Tab -->
-            <section id="status" class="tab-content">
-                <h2>System Health Status</h2>
-                <div class="status-grid" id="status-grid">
-                    <div class="card">
-                        <h3>Gateway</h3>
-                        <p id="status-gateway">Loading...</p>
-                        <p id="metrics-gateway" class="text-sm text-gray-400"></p>
-                    </div>
-                    <div class="card">
-                        <h3>Hypervisor</h3>
-                        <p id="status-hypervisor">Loading...</p>
-                        <p id="deps-hypervisor" class="text-sm text-gray-400"></p>
-                    </div>
-                    <div class="card">
-                        <h3>Sandbox</h3>
-                        <p id="status-sandbox">Loading...</p>
-                        <p id="deps-sandbox" class="text-sm text-gray-400"></p>
-                    </div>
-                    <div class="card">
-                        <h3>Grid</h3>
-                        <p id="status-grid-node">Loading...</p>
-                        <p id="deps-grid" class="text-sm text-gray-400"></p>
-                    </div>
-                </div>
-            </section>
 
             <!-- Agents Tab -->
             <section id="agents" class="tab-content">
@@ -141,12 +116,6 @@
             </section>
 
             <!-- Network Tab -->
-            <section id="network" class="tab-content">
-                <h2>Connected Grid Nodes</h2>
-                <div id="network-grid" class="agents-grid">
-                    <p>Loading connected mesh nodes...</p>
-                </div>
-            </section>
 
             <!-- Operator Cockpit Tab -->
             <section id="cockpit" class="tab-content">
