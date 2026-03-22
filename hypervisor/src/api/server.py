@@ -640,7 +640,11 @@ async def _process_intent_core(intent: IntentObject, api_key: str):
 
         intent_metrics["success"] += 1
 
-        hypervisor_secret = os.environ.get("HYPERVISOR_SECRET", "default_secret").encode()
+        secret_val = SecretManager.get_secret("HYPERVISOR_SECRET")
+        if not secret_val:
+            raise RuntimeError("HYPERVISOR_SECRET is not configured")
+        hypervisor_secret = secret_val.encode()
+
         audit_trail.pop("policy_attestation_signature", None)
         audit_trail["policy_attestation_signature"] = hmac.new(
             hypervisor_secret,
