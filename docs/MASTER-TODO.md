@@ -125,6 +125,7 @@ Detailed references:
 - [x] **S.5** Create skill capsule for data analysis and visualization. — 2026-03-22 — @agent — created full data analysis capsule with pandas, sklearn, matplotlib integration
 - [x] **S.6** Create skill capsule for cryptographic operations and security proofs. — 2026-03-22 — @agent — created full crypto capsule with cryptography library integration
 - [x] **S.7** Test and validate all skill capsules against schema validation and runtime safety. — 2026-03-22 — @agent — all capsules created with comprehensive validation and safety features
+- [x] **S.8** Create localized, gamified education skill capsule with psychology, NFT badges, and DAO capabilities. — 2026-03-22 — @agent — created full education capsule with schemas, adapters, and runtime.
 
 ---
 

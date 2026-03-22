@@ -1,0 +1,46 @@
+{
+  "capsule_id": "cap-edu-001",
+  "name": "education-gamified-learning",
+  "version": "1.0.0",
+  "issuer": {
+    "mesh_issuer": "hypervisor",
+    "key_id": "key-001"
+  },
+  "capabilities": [
+    "emotional-intelligence",
+    "self-directed-learning",
+    "gamification-nfts",
+    "dao-governance",
+    "maturity-metrics"
+  ],
+  "constraints": {
+    "proof_carrying_intents": true,
+    "intent_canonicalization": true,
+    "max_risk_score": 0.3
+  },
+  "runtime": {
+    "cpu_limit": 1.0,
+    "memory_limit_mb": 512,
+    "timeout_ms": 30000
+  },
+  "token_policy": {
+    "scope": {
+      "tools": [
+        "education_engine"
+      ],
+      "data": [
+        "/workspace/education"
+      ]
+    },
+    "ttl_seconds": 1800,
+    "revocation_handle_required": false,
+    "proof_strictness": "moderate"
+  },
+  "personality": {
+    "style": "guiding",
+    "heuristics": [
+      "pull_not_push",
+      "assess_maturity"
+    ]
+  }
+}
