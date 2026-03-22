@@ -89,3 +89,4 @@ A task is done only when all are true:
 
 ## Lane GPD — Physics Research Kernel Integration
 - [x] Full dynamic agent ecosystem: Founder 5% + Network Public Pool (scripts → ascension entities)
+- [x] Baseline working physics agent capsule — 2026-03-22 — @jules — pending

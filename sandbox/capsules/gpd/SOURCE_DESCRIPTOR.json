@@ -1,0 +1,17 @@
+{
+  "source_type": "git",
+  "source_ref": "https://github.com/axiom-mesh/get-physics-done",
+  "immutable_digest": "abcdef1234567890",
+  "captured_at": "2026-03-22T00:00:00Z",
+  "upstream_signature": {
+    "present": true,
+    "algorithm": "sha256",
+    "key_id": "upstream-key",
+    "valid": true
+  },
+  "declared_authority": [
+    "tool_exec",
+    "data_read",
+    "data_write"
+  ]
+}

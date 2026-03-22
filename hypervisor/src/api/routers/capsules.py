@@ -21,6 +21,8 @@ class VerifyRequest(BaseModel):
 
 from src.capsules.compiler import intake_payload, compile_manifest, verify_signature
 
+import jsonschema
+
 @router.post("/intake")
 async def intake_capsule(request: IntakeRequest):
     try:
@@ -32,6 +34,8 @@ async def intake_capsule(request: IntakeRequest):
             request.runtime
         )
         return {"capsule_id": manifest["capsule_id"], "status": "intake_successful", "manifest": manifest}
+    except jsonschema.exceptions.ValidationError as e:
+        raise HTTPException(status_code=400, detail=f"Validation error: {e.message}")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -40,6 +44,8 @@ async def compile_capsule(request: CompileRequest):
     try:
         signature = compile_manifest(request.capsule_id)
         return {"capsule_id": request.capsule_id, "status": "compiled", "signature": signature}
+    except jsonschema.exceptions.ValidationError as e:
+        raise HTTPException(status_code=400, detail=f"Validation error: {e.message}")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

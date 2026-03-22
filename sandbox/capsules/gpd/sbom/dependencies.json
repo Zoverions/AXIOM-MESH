@@ -1,0 +1,23 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "gpd-capsule-sbom",
+  "documentNamespace": "http://spdx.org/spdxdocs/gpd-capsule-sbom-1.0.0",
+  "packages": [
+    {
+      "name": "get-physics-done",
+      "SPDXID": "SPDXRef-Package-get-physics-done",
+      "versionInfo": "1.0.0",
+      "downloadLocation": "NOASSERTION",
+      "licenseConcluded": "MIT"
+    },
+    {
+      "name": "uv",
+      "SPDXID": "SPDXRef-Package-uv",
+      "versionInfo": "latest",
+      "downloadLocation": "NOASSERTION",
+      "licenseConcluded": "MIT"
+    }
+  ]
+}
