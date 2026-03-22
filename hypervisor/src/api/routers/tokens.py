@@ -7,27 +7,32 @@ import hashlib
 import json
 import base64
 import os
+from src.core.secrets import SecretManager
 
 router = APIRouter(prefix="/token", tags=["token"])
 
 # Load secret key securely, fallback to a default only for local testing (not recommended in prod)
-SECRET_KEY = os.environ.get("CAPABILITY_TOKEN_SECRET", "hypervisor_capability_token_secret").encode()
+raw_secret = SecretManager.get_secret("CAPABILITY_TOKEN_SECRET")
+if not raw_secret:
+    raise RuntimeError("CAPABILITY_TOKEN_SECRET is missing or empty. A secure secret must be configured.")
+SECRET_KEY = raw_secret.encode()
+
 ISSUER_ID = "hypervisor-token-issuer"
 
 # In-memory storage for MVP
 _revoked_tokens = set()
 
 class ComputeBudget(BaseModel):
-    cpu_ms: int = 1000
-    gpu_ms: int = 0
-    memory_mb: int = 256
+    cpu_ms: int = Field(1000, ge=0)
+    gpu_ms: int = Field(0, ge=0)
+    memory_mb: int = Field(256, ge=0)
 
 class TokenIssueRequest(BaseModel):
     requester_id: str
     capsule_id: str
     consent_proof: str
     target_node: str = "*"
-    ttl_seconds: int = 3600
+    ttl_seconds: int = Field(3600, gt=0)
     data_scope: str = "default_scope"
     compute_budget: Optional[ComputeBudget] = None
 

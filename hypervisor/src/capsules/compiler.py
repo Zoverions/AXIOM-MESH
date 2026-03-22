@@ -13,8 +13,6 @@ _signatures: Dict[str, str] = {}
 _source_descriptors: Dict[str, Dict[str, Any]] = {}
 _rebuild_attestations: Dict[str, Dict[str, Any]] = {}
 
-# Dummy secret key for MVP signature generation
-SECRET_KEY = b"hypervisor_secret_key"
 
 def _load_schema(schema_name: str) -> Dict[str, Any]:
     schema_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'schemas', schema_name))
@@ -142,7 +140,11 @@ def compile_manifest(capsule_id: str) -> str:
     _rebuild_attestations[capsule_id] = rebuild_attestation
 
     # Generate HMAC signature
-    signature = hmac.new(SECRET_KEY, capsule_id.encode(), hashlib.sha256).hexdigest()
+    secret_key_str = os.environ.get("CAPSULE_COMPILER_SECRET")
+    if not secret_key_str:
+        raise RuntimeError("CAPSULE_COMPILER_SECRET is not set in environment variables")
+    secret_key = secret_key_str.encode()
+    signature = hmac.new(secret_key, capsule_id.encode(), hashlib.sha256).hexdigest()
 
     # Store signature
     _signatures[capsule_id] = signature

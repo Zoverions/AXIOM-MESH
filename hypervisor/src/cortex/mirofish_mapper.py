@@ -111,7 +111,3 @@ class MiroFishMapper:
         logger.info(f"[🐠] MiroFish PRM Judge scored rollout: {final_score:.4f} (Novelty Boost: {novelty_boost:.2f})")
 
         return final_score
-
-# Implementation Note:
-# This module will be used by the Context 2.0 Engine to select 'Spatial Clusters'
-# for the prompt, rather than relying on raw cosine similarity.

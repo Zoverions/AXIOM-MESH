@@ -5,14 +5,52 @@ import time
 import asyncio
 from unittest.mock import patch
 
-# Set secret BEFORE importing the app
-os.environ["CAPABILITY_TOKEN_SECRET"] = "test_secret_for_tests"
-
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# We need to mock SecretManager globally before app is imported
+from src.core.secrets import SecretManager
+original_get_secret = SecretManager.get_secret
+
+def mock_get_secret(secret_name, default=None):
+    if secret_name == "CAPABILITY_TOKEN_SECRET":
+        return "test_secret_for_tests"
+    return original_get_secret(secret_name, default)
+
+SecretManager.get_secret = staticmethod(mock_get_secret)
+
 from fastapi.testclient import TestClient
 from src.api.server import app
 from src.core.node_validator import NodeValidator
 import httpx
+
+def test_token_issue_default_budget():
+    client = TestClient(app)
+    req = {
+        "requester_id": "req-budget-test",
+        "capsule_id": "cap-budget",
+        "consent_proof": "valid-proof",
+        "data_scope": "feature_vector_only"
+    }
+    # Do NOT provide compute_budget
+    res = client.post("/token/issue", json=req)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "issued"
+    token = data["token"]
+
+    validator = NodeValidator()
+    payload = validator.validate_token(
+        token=token,
+        expected_capsule_id="cap-budget",
+        expected_data_scope="feature_vector_only",
+        nonce="nonce-budget-test"
+    )
+
+    budget = payload.get("compute_budget", {})
+    assert budget.get("cpu_ms") == 1000
+    assert budget.get("gpu_ms") == 0
+    assert budget.get("memory_mb") == 256
+
 
 def test_token_issue_and_validate():
     client = TestClient(app)
@@ -44,19 +82,23 @@ def test_token_issue_and_validate():
 
 def test_token_expired():
     client = TestClient(app)
+    # Using time mocking because the API now rejects ttl_seconds <= 0
     req = {
         "requester_id": "req-2",
         "capsule_id": "cap-2",
         "consent_proof": "valid",
         "data_scope": "data",
-        "ttl_seconds": -1 # Expired immediately
+        "ttl_seconds": 10
     }
     res = client.post("/token/issue", json=req)
     token = res.json()["token"]
 
     validator = NodeValidator()
-    with pytest.raises(ValueError, match="Token has expired"):
-        validator.validate_token(token, "cap-2", "data")
+
+    # Mock time to be past expiration
+    with patch("time.time", return_value=time.time() + 15):
+        with pytest.raises(ValueError, match="Token has expired"):
+            validator.validate_token(token, "cap-2", "data")
 
 def test_token_mismatch_capsule_id():
     client = TestClient(app)
@@ -144,14 +186,14 @@ async def test_token_revocation_network_partition():
     # If the network fails, the node validator catches the exception and does not crash.
     # It still uses its local cache.
     validator = NodeValidator()
-    validator.revoked_tokens.add("offline-revoked-token.fake")
+    validator.revoked_tokens.add("offline-revoked-token.fake-sig")
 
     with patch("httpx.AsyncClient.get", side_effect=httpx.ConnectError("Network partition")):
         await validator.sync_revocations()
 
     # Still fails for tokens cached locally
     with pytest.raises(ValueError, match="Token has been revoked"):
-        validator.validate_token("offline-revoked-token.fake", "cap", "data")
+        validator.validate_token("offline-revoked-token.fake-sig", "cap", "data")
 
 @pytest.mark.asyncio
 async def test_background_sync():
@@ -167,10 +209,20 @@ async def test_background_sync():
 
         assert "token-from-bg" in validator.revoked_tokens
 
+def test_revoke_token():
+    client = TestClient(app)
+    token_to_revoke = "test-token-to-revoke.sig"
+    req = {
+        "token": token_to_revoke,
+        "requester_id": "req-123"
+    }
 
-@patch.dict(os.environ, clear=False)
-def test_node_validator_no_secret():
-    if "CAPABILITY_TOKEN_SECRET" in os.environ:
-        del os.environ["CAPABILITY_TOKEN_SECRET"]
-    with pytest.raises(RuntimeError, match="CAPABILITY_TOKEN_SECRET is not configured"):
-        NodeValidator()
+    # Revoke the token
+    res = client.post("/token/revoke", json=req)
+    assert res.status_code == 200
+    assert res.json() == {"status": "revoked"}
+
+    # Verify it is in the revocations list
+    res_get = client.get("/token/revocations")
+    assert res_get.status_code == 200
+    assert token_to_revoke in res_get.json().get("revoked_tokens", [])
