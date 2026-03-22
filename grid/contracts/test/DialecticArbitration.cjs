@@ -18,6 +18,11 @@ describe("DialecticArbitration", function () {
     const WeightOracle = await ethers.getContractFactory("WeightOracle");
     weightOracle = await WeightOracle.deploy(dualLedgerIdentity.target);
 
+    await weightOracle.queueOperation(ethers.keccak256(ethers.solidityPacked(["string", "address", "uint256"], ["updateWeight", humanNode.address, 100])));
+    await weightOracle.queueOperation(ethers.keccak256(ethers.solidityPacked(["string", "address", "uint256"], ["updateWeight", agentNode.address, 100])));
+    await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+    await ethers.provider.send("evm_mine");
+
     await weightOracle.updateWeight(humanNode.address, 100);
     await weightOracle.updateWeight(agentNode.address, 100);
 

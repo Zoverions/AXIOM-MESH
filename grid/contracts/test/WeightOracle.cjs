@@ -25,6 +25,10 @@ describe("WeightOracle", function () {
   });
 
   it("should allow the owner to update the weight of a registered node", async function () {
+    await weightOracle.queueOperation(ethers.keccak256(ethers.solidityPacked(["string", "address", "uint256"], ["updateWeight", humanNode.address, 100])));
+    await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+    await ethers.provider.send("evm_mine");
+
     await expect(weightOracle.updateWeight(humanNode.address, 100))
       .to.emit(weightOracle, "WeightUpdated")
       .withArgs(humanNode.address, 0, 100);
@@ -33,12 +37,20 @@ describe("WeightOracle", function () {
   });
 
   it("should revert when updating the weight of an unregistered node", async function () {
+    await weightOracle.queueOperation(ethers.keccak256(ethers.solidityPacked(["string", "address", "uint256"], ["updateWeight", unregisteredNode.address, 100])));
+    await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+    await ethers.provider.send("evm_mine");
+
     await expect(weightOracle.updateWeight(unregisteredNode.address, 100))
       .to.be.revertedWithCustomError(weightOracle, "NodeNotRegistered")
       .withArgs(unregisteredNode.address);
   });
 
   it("should allow the owner to batch update weights", async function () {
+    await weightOracle.queueOperation(ethers.keccak256(ethers.solidityPacked(["string", "address[]", "uint256[]"], ["batchUpdateWeights", [humanNode.address, agentNode.address], [150, 250]])));
+    await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+    await ethers.provider.send("evm_mine");
+
     await expect(weightOracle.batchUpdateWeights(
       [humanNode.address, agentNode.address],
       [150, 250]
@@ -53,6 +65,10 @@ describe("WeightOracle", function () {
   });
 
   it("should revert if arrays length mismatch in batch update", async function () {
+    await weightOracle.queueOperation(ethers.keccak256(ethers.solidityPacked(["string", "address[]", "uint256[]"], ["batchUpdateWeights", [humanNode.address, agentNode.address], [150]])));
+    await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+    await ethers.provider.send("evm_mine");
+
     await expect(weightOracle.batchUpdateWeights(
       [humanNode.address, agentNode.address],
       [150]
