@@ -34,10 +34,16 @@ contract FounderCommitment is Initializable, UUPSUpgradeable, Ownable2StepUpgrad
     }
 
     function verifyFounder(bytes memory proof) external returns (bool) {
-        bool valid = keccak256(abi.encodePacked(msg.sender)) == founderHash ||
-                     ECDSA.recover(keccak256(abi.encodePacked(msg.sender)), proof) == owner();
-        emit FounderVerified(msg.sender, valid);
-        return valid;
+        if (proof.length == 0) {
+            bool valid = keccak256(abi.encodePacked(msg.sender)) == founderHash;
+            emit FounderVerified(msg.sender, valid);
+            return valid;
+        } else {
+            bool valid = keccak256(abi.encodePacked(msg.sender)) == founderHash ||
+                         ECDSA.recover(keccak256(abi.encodePacked(msg.sender)), proof) == owner();
+            emit FounderVerified(msg.sender, valid);
+            return valid;
+        }
     }
 
     function queueUpgrade(address newImplementation) external onlyOwner {

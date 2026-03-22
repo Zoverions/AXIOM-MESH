@@ -30,6 +30,10 @@ describe("Blockchain Autonomy Layer", function () {
     await identityContract.registerNode(agent.address, 2); // 2 = Agent
 
     // Assign initial weights
+    await weightOracle.queueOperation(ethers.keccak256(ethers.solidityPacked(["string", "address", "uint256"], ["updateWeight", human.address, 100])));
+    await weightOracle.queueOperation(ethers.keccak256(ethers.solidityPacked(["string", "address", "uint256"], ["updateWeight", agent.address, 100])));
+    await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+    await ethers.provider.send("evm_mine");
     await weightOracle.updateWeight(human.address, 100);
     await weightOracle.updateWeight(agent.address, 100);
 
@@ -63,6 +67,9 @@ describe("Blockchain Autonomy Layer", function () {
     await deploymentFactory.initialize();
 
     // Wire up compute bond to allow factory to auto-fund
+    await computeBond.queueOperation(ethers.keccak256(ethers.solidityPacked(["string", "address"], ["setDeploymentFactory", await deploymentFactory.getAddress()])));
+    await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+    await ethers.provider.send("evm_mine");
     await computeBond.setDeploymentFactory(await deploymentFactory.getAddress());
   });
 

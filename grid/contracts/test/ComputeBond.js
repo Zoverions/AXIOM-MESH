@@ -65,6 +65,10 @@ describe("ComputeBond", function () {
       const slashAmount = hre.ethers.parseEther("0.5");
       const expectedNewAmount = STAKE_AMOUNT - slashAmount;
 
+      await computeBond.connect(owner).queueOperation(hre.ethers.keccak256(hre.ethers.solidityPacked(["string", "string", "uint256"], ["slash", NODE_ID, slashAmount])));
+      await hre.ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+      await hre.ethers.provider.send("evm_mine");
+
       await expect(computeBond.connect(owner).slash(NODE_ID, slashAmount))
         .to.emit(computeBond, "BondSlashed")
         .withArgs(NODE_ID, slashAmount, expectedNewAmount);
@@ -80,21 +84,28 @@ describe("ComputeBond", function () {
     it("Should not allow non-owner to slash a bond", async function () {
       const slashAmount = hre.ethers.parseEther("0.5");
 
-      // We look for a custom error or just reverted With something for Ownable in current oz version
       await expect(
         computeBond.connect(node2).slash(NODE_ID, slashAmount)
-      ).to.be.revertedWithCustomError(computeBond, "OwnableUnauthorizedAccount")
-       .withArgs(node2.address);
+      ).to.be.revertedWith("Unauthorized: Not owner");
     });
 
     it("Should revert if slash amount exceeds bond amount", async function () {
       const slashAmount = hre.ethers.parseEther("2.0");
+
+      await computeBond.connect(owner).queueOperation(hre.ethers.keccak256(hre.ethers.solidityPacked(["string", "string", "uint256"], ["slash", NODE_ID, slashAmount])));
+      await hre.ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+      await hre.ethers.provider.send("evm_mine");
+
       await expect(
         computeBond.connect(owner).slash(NODE_ID, slashAmount)
       ).to.be.revertedWithCustomError(computeBond, "SlashExceedsBond");
     });
 
     it("Should revert if slashing a non-existent or inactive bond", async function () {
+      await computeBond.connect(owner).queueOperation(hre.ethers.keccak256(hre.ethers.solidityPacked(["string", "string", "uint256"], ["slash", "non-existent-node", hre.ethers.parseEther("0.5")])));
+      await hre.ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+      await hre.ethers.provider.send("evm_mine");
+
       await expect(
         computeBond.connect(owner).slash("non-existent-node", hre.ethers.parseEther("0.5"))
       ).to.be.revertedWithCustomError(computeBond, "BondNotActive");
@@ -184,10 +195,18 @@ describe("ComputeBond", function () {
 
     it("Should allow the owner to withdraw slashed funds", async function () {
       const slashAmount = hre.ethers.parseEther("0.5");
+      await computeBond.connect(owner).queueOperation(hre.ethers.keccak256(hre.ethers.solidityPacked(["string", "string", "uint256"], ["slash", NODE_ID, slashAmount])));
+      await hre.ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+      await hre.ethers.provider.send("evm_mine");
+
       await computeBond.connect(owner).slash(NODE_ID, slashAmount);
 
       const collectiveInvestmentRate = (slashAmount * 15n) / 100n;
       const expectedSlashedAmount = slashAmount - collectiveInvestmentRate;
+
+      await computeBond.connect(owner).queueOperation(hre.ethers.keccak256(hre.ethers.solidityPacked(["string", "uint256"], ["withdrawSlashedFunds", expectedSlashedAmount])));
+      await hre.ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+      await hre.ethers.provider.send("evm_mine");
 
       const initialOwnerBalance = await hre.ethers.provider.getBalance(owner.address);
 
@@ -202,10 +221,17 @@ describe("ComputeBond", function () {
 
     it("Should prevent owner from withdrawing more than slashed funds", async function () {
       const slashAmount = hre.ethers.parseEther("0.5");
+      await computeBond.connect(owner).queueOperation(hre.ethers.keccak256(hre.ethers.solidityPacked(["string", "string", "uint256"], ["slash", NODE_ID, slashAmount])));
+      await hre.ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+      await hre.ethers.provider.send("evm_mine");
       await computeBond.connect(owner).slash(NODE_ID, slashAmount);
 
       // Attempt to withdraw more than slashed (e.g., trying to dip into active stakes)
       const withdrawAmount = hre.ethers.parseEther("1.0");
+
+      await computeBond.connect(owner).queueOperation(hre.ethers.keccak256(hre.ethers.solidityPacked(["string", "uint256"], ["withdrawSlashedFunds", withdrawAmount])));
+      await hre.ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+      await hre.ethers.provider.send("evm_mine");
 
       await expect(
         computeBond.connect(owner).withdrawSlashedFunds(withdrawAmount)
@@ -219,8 +245,11 @@ describe("ComputeBond", function () {
       const collectiveInvestmentRate = (withdrawAmount * 15n) / 100n;
       expect(await computeBond.collectiveInvestmentPool()).to.equal(collectiveInvestmentRate);
 
-      const initialOwnerBalance = await hre.ethers.provider.getBalance(owner.address);
+      await computeBond.connect(owner).queueOperation(hre.ethers.keccak256(hre.ethers.solidityPacked(["string", "uint256"], ["withdrawCollectiveInvestmentPool", collectiveInvestmentRate])));
+      await hre.ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+      await hre.ethers.provider.send("evm_mine");
 
+      const initialOwnerBalance = await hre.ethers.provider.getBalance(owner.address);
       const tx = await computeBond.connect(owner).withdrawCollectiveInvestmentPool(collectiveInvestmentRate);
       const receipt = await tx.wait();
       const gasUsed = receipt.gasUsed * receipt.gasPrice;
@@ -238,8 +267,7 @@ describe("ComputeBond", function () {
 
       await expect(
         computeBond.connect(node2).withdrawCollectiveInvestmentPool(collectiveInvestmentRate)
-      ).to.be.revertedWithCustomError(computeBond, "OwnableUnauthorizedAccount")
-       .withArgs(node2.address);
+      ).to.be.revertedWith("Unauthorized: Not owner");
     });
   });
 });
