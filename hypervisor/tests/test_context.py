@@ -174,24 +174,6 @@ async def test_get_context_divergence_engine(mock_clients):
     # Node 6 was not in the original search list but was retrieved as diverse
     engine.divergence_engine.get_diverse_nodes = MagicMock(return_value=["node_diverge"])
 
-    # We need to simulate that content_map has 'node_diverge' populated,
-    # but the code populates content_map from retrieved_data so node_diverge wouldn't exist normally.
-    # However, if it returns an existing node_id that was in retrieved_data, it checks if it's already in archive_context_parts.
-    # The current code in ContextEngine says:
-    # diverse_node_ids = self.divergence_engine.get_diverse_nodes(top_n=2)
-    # for d_id in diverse_node_ids:
-    #     if d_id in content_map and content_map[d_id] not in archive_context_parts:
-
-    # To test this condition where it gets appended, we need to mock content_map, but it's a local var.
-    # Let's adjust the test to just ensure it doesn't crash when > 5, as mocking a local dict is hard.
-    # Wait, if get_diverse_nodes returns a node from content_map, but we intentionally omit it from archive_context_parts?
-    # Actually, `archive_context_parts = [item["content"] for item in retrieved_data]`
-    # So everything in content_map IS in archive_context_parts initially.
-    # The only way `content_map[d_id] not in archive_context_parts` is true is if we mutated `archive_context_parts`
-    # or if `content_map` was injected with extra items. But since `content_map` is built from `retrieved_data`,
-    # it's impossible for `content_map[d_id] not in archive_context_parts` to ever be true in the current implementation!
-    # Let's just test that get_diverse_nodes is called when len > 5.
-
     intent = IntentObject(
         id="test-3",
         content="Divergent query",
