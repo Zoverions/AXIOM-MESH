@@ -1,11 +1,11 @@
-# AXIOM-MESH Security Reality Check (March 2026)
+# AXIOM-MESH Security Reality Check (March 22, 2026)
 
-This is the implementation-accurate security posture and production-readiness gradecard for AXIOM-MESH as of **March 18, 2026**.
+This document is the implementation-accurate security posture as of **March 22, 2026**.
 
-It distinguishes:
-1. Controls currently implemented in code.
-2. Interconnect security posture between pillars.
-3. Production hardening required before financial/critical deployment.
+It separates:
+1. Controls implemented in repository code.
+2. Controls documented but not fully enforced end-to-end.
+3. Required hardening before financial-grade production claims.
 
 ---
 
@@ -13,91 +13,65 @@ It distinguishes:
 
 | Domain | Grade | Rationale |
 |---|---:|---|
-| Gateway edge security | **B-** | API-key auth exists for protected routes/WS; public route has local rate limit; no external WAF/DDOS layer in-repo. |
-| Hypervisor policy controls | **A-** | Authenticated `/process`, strict Universal Consent Protocol (UCP) policy gate checks, AST checks for `/exec`, structured audit trail fields with WORM event sink. |
-| Sandbox isolation | **A-** | Strong container runtime restrictions (`--network=none`, seccomp, apparmor, no-new-privileges, limits); fully enforces mandatory service-to-service `SANDBOX_API_KEY` token. |
-| Grid API security | **C** | Strong domain validation for zkML payloads and bond rules; no pervasive API auth/TLS boundary in current HTTP server. |
-| Inter-service interconnects | **C-** | Calls are mostly internal plain HTTP; partial auth boundaries now present on Hypervisor→Sandbox path; no mTLS/service mesh. |
-| Auditability & governance trail | **B-** | Safety decision trail and ledger events exist; immutable WORM-grade audit sink and compliance workflow not complete. |
-| Production readiness overall | **B- (non-financial prod)** | Suitable for controlled production environments with perimeter controls; not yet financial-grade/regulated-ready by default. |
+| Gateway edge security | **B-** | Protected routes/auth exist; public ingress still requires external perimeter controls for internet-scale exposure. |
+| Hypervisor policy controls | **B+** | Policy gates and structured checks exist; some proof/default paths still include placeholder semantics in code. |
+| Sandbox isolation | **A-** | Strong runtime restrictions and API key boundary; still needs full inter-service identity hardening for top-tier posture. |
+| Grid API security | **C** | Domain validation logic exists; broad service-auth and mTLS boundaries are not uniformly enforced. |
+| Inter-service interconnects | **C** | Mixed trust assumptions and mostly HTTP/internal trust; requires mTLS + anti-replay for A-grade. |
+| Auditability & governance trail | **B-** | Significant logging/governance intent exists; evidence packaging and immutability posture need consolidation. |
+| Production readiness overall | **B- (controlled env only)** | Suitable for controlled pilot deployments; not yet ready for financial-grade adversarial exposure claims. |
 
 ---
 
-## 2) Implemented Security Controls (Verified)
+## 2) Cryptography Reality (Classical vs Post-Quantum)
 
-### Gateway
-- Protected REST routes use API-key auth middleware.
-- WebSocket connections enforce API-key validation.
-- Public intent route (`/api/v1/intent/process/public`) is intentionally unauthenticated but rate-limited.
-- Basic content/metadata sanitization is present in ingress processing.
+## 2.1 Current implemented baseline
+- Strong classical primitives are used across components (e.g., SHA-256, HMAC-SHA-256, ECDSA/SECP256K1-family usage).
+- This is an acceptable efficiency/security baseline for current production-hardening stages.
 
-### Hypervisor
-- `/process` enforces bearer API key via signature verification middleware.
-- Policy gate strictly evaluates the Universal Consent Protocol (UCP), ensuring explicit `consent_scope` properties are validated.
-- `/exec` path applies AST denylist checks before sandbox handoff.
-- Response payload includes structured `audit_trail.safety_decisions` metadata which is logged append-only via a WORM event sink (`audit.log`).
-- Hypervisor automatically provides the mandatory `SANDBOX_API_KEY` Bearer authentication on remote sandbox execution calls.
+## 2.2 What is not yet true
+- The repository does **not** yet implement a full post-quantum cryptography (PQC) trust stack end-to-end.
+- Therefore, “fully quantum-safe platform” should **not** be claimed yet.
 
-### Sandbox
-- Docker execution uses restrictive runtime flags (`--network=none`, CPU/memory/pids limits, cap-drop, seccomp, apparmor, readonly rootfs, tmpfs writes).
-- External/high-risk code paths require proof fields (`ase_proof`, `zk_proof`) to align with the Agent-as-Firewall policy.
-- `/execute` strictly mandates cross-service validation via `SANDBOX_API_KEY`.
-
-### Grid
-- zkML endpoint validates required fields, model commitment format, and vector/artifact size bounds.
-- Bond/stake logic enforces minimums and status checks.
-- Ledger supports persistence snapshot save/load and event reconcile primitives.
+## 2.3 Required migration strategy
+1. Maintain strong classical crypto where currently deployed.
+2. Introduce **hybrid signatures/verification** (classical + PQ) for high-trust paths.
+3. Move to PQ-default only after operational tooling, key lifecycle, and verification paths are production-stable.
 
 ---
 
-## 3) Interconnect Security Grade (Pillar-to-Pillar)
+## 3) Highest-Impact Gaps
 
-| Interconnect | Current state | Grade | Required to reach A |
-|---|---|---:|---|
-| Client → Gateway | API key on protected routes + WS; public route rate-limited | **B-** | Add managed WAF, bot defense, geo/IP reputation, distributed rate-limit, SIEM alerts |
-| Gateway → Hypervisor | Bearer API key on `/process`, retries/backpressure | **B** | mTLS, request signing, per-route scoped service identity |
-| Hypervisor → Sandbox | Hardened sandbox + strict bearer auth (`SANDBOX_API_KEY`) | **B+** | Mandatory mTLS + nonce/replay protection |
-| Gateway → Grid | Internal HTTP calls, no strong API auth boundary by default | **C-** | Service authn/authz for Grid APIs, mTLS, signed mutation requests |
-| Hypervisor ↔ Grid | URL-config driven, mixed trust assumptions | **C** | Formal service accounts, signed events, anti-replay, consensus-finality aware event consumer |
-| Grid ↔ Chain (optional client) | Optional on-chain mirror calls | **C** | Production listener/replay with reorg handling, key isolation (HSM/KMS), finality SLOs |
+1. Placeholder/mock semantics still appear in selected non-test execution paths.
+2. Service-to-service identity is not uniformly mTLS + signed request/anti-replay.
+3. Grid mutation boundary hardening is incomplete for financial-grade claims.
+4. Evidence bundle completeness (including SBOM and control mapping) is not yet consistently release-bound.
 
 ---
 
-## 4) Production Gaps (Blocking for Financial-Grade)
+## 4) Hardening Plan (Security + Audit)
 
-1. **No mandatory service-to-service mTLS across pillars.**
-2. **Grid mutation endpoints are not consistently protected by strong service auth in current server layer.**
-3. **No repository-native WORM/immutable audit sink policy with retention and legal hold controls.**
-4. **No full chain listener/replay/finality subsystem with tested reorg semantics.**
-5. **No formal secrets rotation/attestation workflow across all services in this repo alone.**
+### P0
+- Remove/replace non-test placeholder execution/proof defaults in production paths.
+- Publish security control matrix that maps each claim to exact code path.
 
----
+### P1
+- Add mTLS and request signing (timestamp + nonce + signature) across pillar boundaries.
+- Apply uniform authz controls to Grid mutation routes.
 
-## 5) Build-Out Plan to Production (Interconnect First)
-
-### Phase P0 (Immediate hardening)
-- Enforce `SANDBOX_API_KEY` in all non-dev deployments.
-- Remove unrestricted public ingress in production profile or enforce strict upstream gateway/WAF policy.
-- Add network policy to restrict east-west traffic to explicit service pairs only.
-
-### Phase P1 (Service identity)
-- Introduce mTLS between Gateway, Hypervisor, Sandbox, and Grid.
-- Add signed service-to-service requests (timestamp + nonce + signature) for mutation endpoints.
-- Add Grid API auth boundary for all non-read routes.
-
-### Phase P2 (Audit and chain reliability)
-- Ship immutable audit event sink (append-only object store or ledger-backed WORM policy).
-- Implement chain event listener with replay cursor, confirmation depth policy, and reorg rollback handlers.
-
-### Phase P3 (Operational maturity)
-- Add alerting SLOs: auth failures, sandbox denial rates, zk verification latency/error budget, and policy gate rejects.
-- Add incident response runbooks and automated key rotation drills.
+### P2
+- Establish immutable audit retention policy and release evidence packaging discipline.
+- Run recurring replay/reconciliation drills tied to governance/financial controls.
 
 ---
 
-## 6) Deployment Label Guidance
+## 5) Claim Discipline for External Audience
 
-- **Allowed today:** internal production, controlled enterprise pilots, and security-supervised deployments with external perimeter controls.
-- **Not allowed today (without additional controls):** financial-grade, high-compliance, or adversarial internet exposure without mTLS + Grid auth boundary + immutable audit sink.
+Allowed now:
+- “Strong prototype/pilot security architecture with hardened sandboxing and structured policy controls.”
 
-In short: AXIOM-MESH is strong relative to prototype agent stacks, but still requires interconnect hardening and audit immutability completion to claim full production-grade trust posture.
+Not allowed yet:
+- “Fully financial-grade production-ready.”
+- “Fully quantum-secure cryptography stack active end-to-end.”
+
+This discipline protects credibility and keeps claims tightly aligned with implementation reality.

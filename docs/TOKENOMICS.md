@@ -1,58 +1,89 @@
 # AXIOM-MESH Tokenomics (Canonical Reference)
 
-**Status:** Pre-launch draft under implementation hardening and governance review.
+**Status:** Pre-launch draft under implementation hardening and governance review (updated March 22, 2026).
 
-This file consolidates tokenomics references that were previously spread across multiple docs.
+This document is the canonical tokenomics reference for external/internal stakeholders.
+
+---
 
 ## 1) Scope
 
-This document defines the intended token economic model and links to implementation constraints:
-- Treasury flow mechanics (`docs/TREASURY-SPLIT.md`)
-- ERC20 compatibility and transfer semantics (`docs/ERC20-COMPATIBILITY.md`)
-- Governance controls over economic parameters (`docs/GOVERNANCE.md`)
+This document defines:
+- policy targets,
+- control boundaries,
+- change-control rules,
+- evidence requirements for any public tokenomics claim.
 
-## 2) Core Parameters (Current Targets)
-
-- **Token symbol:** AXM
-- **Target total supply:** 1,000,000,000 AXM (fixed policy target)
-- **Founder allocation policy target:** 5%
-- **Network treasury policy target:** 10% on defined inflow classes (as specified by governance)
-
-These values are policy targets until finalized by governance and contract-level controls.
-
-## 3) Flow Categories
-
-Token/economic flows are organized by category:
-1. **Protocol/treasury inflows** (network share routing)
-2. **Distribution outflows** (payroll, UBI, incentives)
-3. **Validator/staker reward flows**
-4. **Cross-chain transfer-related fee flows**
-
-Each category must have:
-- deterministic accounting treatment,
-- traceable event records,
-- reconciliation path between off-chain ledger and on-chain state.
-
-## 4) Control Requirements Before Launch
-
-- Parameter changes require governance approval and audit trail.
-- Treasury-affecting actions must be reproducible from logs/evidence.
-- Reconciliation variance threshold must be explicitly monitored and enforced.
-- Exception handling must be time-bounded and owner-assigned.
-
-## 5) Non-Negotiable Transparency Rules
-
-- No “live mainnet/testnet tokenomics” claims without verified deployment evidence.
-- Public messaging must distinguish policy target vs implemented contract behavior.
-- Any economic model update must include:
-  - change rationale,
-  - migration/impact notes,
-  - updated runbooks and evidence requirements.
-
-## 6) Related Docs
-
+Related specs:
 - `docs/TREASURY-SPLIT.md`
 - `docs/ERC20-COMPATIBILITY.md`
 - `docs/GOVERNANCE.md`
-- `docs/PRODUCTION-EXECUTION-BACKLOG.md`
-- `docs/HOWTO/release-gate-evidence.md`
+
+---
+
+## 2) Core Parameters (Policy Targets)
+
+- **Token symbol:** AXM
+- **Target total supply:** 1,000,000,000 AXM
+- **Founder allocation policy target:** 5%
+- **Network treasury policy target:** 10% on defined inflow classes
+
+> These are policy targets unless and until finalized by governance decisions and deployed contract state.
+
+---
+
+## 3) Financial Control Framework
+
+All token and treasury flows must satisfy:
+
+1. **Deterministic accounting**
+   - The same inputs produce the same ledger/accounting outputs.
+2. **Traceability**
+   - Every material inflow/outflow has an attributable event path.
+3. **Reconciliation**
+   - Off-chain and on-chain state differences are detectable and triaged.
+4. **Change governance**
+   - Parameter updates require explicit governance authorization.
+
+---
+
+## 4) Tokenomics Claim Rules (Public Communications)
+
+Public statements must separate these classes:
+
+- **Implemented now:** backed by deployed code/contract state and evidence.
+- **Policy target:** intended configuration pending governance/deployment finalization.
+- **Planned roadmap:** not yet enforceable in production.
+
+No post, launch deck, or announcement should merge these classes into a single “already live” claim.
+
+---
+
+## 5) Parameter Change Control (Mandatory)
+
+Any parameter change must include:
+1. Governance proposal/reference.
+2. Reason for change.
+3. Impact analysis (holder, treasury, and network operations).
+4. Effective date and rollback conditions.
+5. Updated release evidence bundle and docs references.
+
+---
+
+## 6) Audit Evidence Checklist (Release Gate)
+
+Before declaring tokenomics “final” for a release:
+- [ ] Deployed contract addresses and chain IDs are published.
+- [ ] Contract parameters match declared policy values.
+- [ ] Treasury/distribution events are reconciled for the release period.
+- [ ] Exception/variance log is attached with owners and expiry.
+- [ ] Governance records for all parameter changes are linked.
+
+If any item is unchecked, release messaging must use “provisional / in-hardening” wording.
+
+---
+
+## 7) Versioning and Accountability
+
+- This file is canonical and must be updated in the same PR as any tokenomics-impacting code or governance change.
+- Historical snapshots should be retained in git history and release notes.
