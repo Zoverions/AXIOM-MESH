@@ -7,11 +7,16 @@ import hashlib
 import json
 import base64
 import os
+from src.core.secrets import SecretManager
 
 router = APIRouter(prefix="/token", tags=["token"])
 
 # Load secret key securely, fallback to a default only for local testing (not recommended in prod)
-SECRET_KEY = os.environ.get("CAPABILITY_TOKEN_SECRET", "hypervisor_capability_token_secret").encode()
+raw_secret = SecretManager.get_secret("CAPABILITY_TOKEN_SECRET")
+if not raw_secret:
+    raise RuntimeError("CAPABILITY_TOKEN_SECRET is missing or empty. A secure secret must be configured.")
+SECRET_KEY = raw_secret.encode()
+
 ISSUER_ID = "hypervisor-token-issuer"
 
 # In-memory storage for MVP
