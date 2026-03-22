@@ -1,0 +1,45 @@
+{
+  "capsule_id": "cap-websearch-001",
+  "name": "web-search",
+  "version": "1.0.0",
+  "issuer": {
+    "mesh_issuer": "hypervisor",
+    "key_id": "key-001"
+  },
+  "capabilities": [
+    "information-retrieval",
+    "web-scraping",
+    "data-aggregation"
+  ],
+  "constraints": {
+    "proof_carrying_intents": true,
+    "intent_canonicalization": true,
+    "max_risk_score": 0.4
+  },
+  "runtime": {
+    "cpu_limit": 1.5,
+    "memory_limit_mb": 768,
+    "timeout_ms": 45000
+  },
+  "token_policy": {
+    "scope": {
+      "tools": [
+        "requests",
+        "beautifulsoup"
+      ],
+      "data": [
+        "/workspace/web"
+      ]
+    },
+    "ttl_seconds": 1200,
+    "revocation_handle_required": true,
+    "proof_strictness": "moderate"
+  },
+  "personality": {
+    "style": "factual",
+    "heuristics": [
+      "prioritize_reliable_sources",
+      "summarize_key_points"
+    ]
+  }
+}

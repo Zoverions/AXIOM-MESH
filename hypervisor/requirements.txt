@@ -12,6 +12,7 @@ fastapi
 uvicorn
 ecdsa
 mcp
+slowapi
 
 # zkML dependencies
 ezkl
