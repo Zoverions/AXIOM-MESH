@@ -1,0 +1,19 @@
+{
+  "capsule_id": "cap-executive-001",
+  "mode": "compile",
+  "compiler_version": "1.0",
+  "changes": [
+    {
+      "component": "Core",
+      "action": "add_executive_tools",
+      "reason": "enable executive and marketing operations"
+    }
+  ],
+  "security_findings": [
+    {
+      "severity": "low",
+      "summary": "No specific vulnerabilities detected in executive operations."
+    }
+  ],
+  "compiled_at": "2026-03-22T00:00:00Z"
+}
