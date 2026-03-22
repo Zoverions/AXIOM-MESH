@@ -49,6 +49,11 @@ export default {
       url: process.env.ARBITRUM_ONE_RPC_URL || "https://arb1.arbitrum.io/rpc",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
+    pulsechain: {
+      url: process.env.PULSECHAIN_RPC_URL || "https://rpc.pulsechain.com",
+      chainId: 369,
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+    },
     polygon: {
       url: process.env.POLYGON_RPC_URL || "https://polygon-rpc.com/",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],

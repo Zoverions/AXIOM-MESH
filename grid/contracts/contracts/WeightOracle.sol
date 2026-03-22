@@ -141,7 +141,7 @@ contract WeightOracle is TimelockedOwnable {
      */
     function getWeight(address node) external view returns (uint256) {
         if (!identityContract.isNodeRegistered(node)) revert NodeNotRegistered(node);
-        return nodeWeights[node] + poerBonuses[node];
+        return this.calculateMeritWeight(node);
     }
 
     /**

@@ -145,14 +145,14 @@ contract ComputeBond is TimelockedOwnable, AccessControl {
             stakerPoerScores[msg.sender] += 300;
             if (weightOracleContract != address(0)) {
                 // Ignore return data or failure, fire and forget to Oracle
-                weightOracleContract.call(abi.encodeWithSignature("addPoERBonus(address,uint256)", msg.sender, 300));
+                (bool successAdd, ) = weightOracleContract.call(abi.encodeWithSignature("addPoERBonus(address,uint256)", msg.sender, 300)); require(successAdd, "Oracle call failed");
             }
             emit ZKMLProofSubmitted(msg.sender, proofHash, 300);
         } else {
             // Automatic slash for invalid proof
             stakerPoerScores[msg.sender] = 0;
             if (weightOracleContract != address(0)) {
-                weightOracleContract.call(abi.encodeWithSignature("slashPoERBonus(address)", msg.sender));
+                (bool successSlash, ) = weightOracleContract.call(abi.encodeWithSignature("slashPoERBonus(address)", msg.sender)); require(successSlash, "Oracle call failed");
             }
             revert("Invalid zkML proof");
         }
@@ -390,7 +390,7 @@ contract ComputeBond is TimelockedOwnable, AccessControl {
         uint256 bonus = capacityGB * 100; // simple multiplier (extendable)
         stakerPoerScores[msg.sender] += bonus;
         if (weightOracleContract != address(0)) {
-            weightOracleContract.call(abi.encodeWithSignature("addPoERBonus(address,uint256)", msg.sender, bonus));
+            (bool success, ) = weightOracleContract.call(abi.encodeWithSignature("addPoERBonus(address,uint256)", msg.sender, bonus)); require(success, "Oracle call failed");
         }
         emit StorageOffered(msg.sender, capacityGB, cidRoot, bonus);
     }
