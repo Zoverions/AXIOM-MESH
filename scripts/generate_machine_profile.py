@@ -50,6 +50,11 @@ def detect_ram_gb() -> float:
         out = _run(["sysctl", "-n", "hw.memsize"])
         if out.isdigit():
             return round(int(out) / 1024 / 1024 / 1024, 2)
+    if platform.system() == "Windows":
+        out = _run(["wmic", "OS", "get", "TotalVisibleMemorySize"])
+        for line in out.splitlines():
+            if line.strip().isdigit():
+                return round(int(line.strip()) / 1024 / 1024, 2)
     return 0.0
 
 
@@ -73,6 +78,10 @@ def detect_gpu() -> tuple[str, int]:
 
 
 def choose_hardware_tier(cpu: int, ram_gb: float, vram_mb: int) -> str:
+    # Android Termux check
+    if 'PREFIX' in os.environ and 'termux' in os.environ.get('PREFIX', '').lower():
+        return "light-edge"
+
     if cpu >= 16 and ram_gb >= 64 and vram_mb >= 24000:
         return "full_node"
     if cpu >= 8 and ram_gb >= 24:
