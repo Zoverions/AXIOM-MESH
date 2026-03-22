@@ -5,13 +5,17 @@ import hashlib
 import base64
 import httpx
 import os
+from src.core.secrets import SecretManager
 import asyncio
 from typing import Dict, Any, Optional
 
 class NodeValidator:
     def __init__(self, token_issuer_url: str = "http://localhost:8081", sync_interval_seconds: int = 30):
         self.token_issuer_url = token_issuer_url
-        self.secret_key = os.environ.get("CAPABILITY_TOKEN_SECRET", "hypervisor_capability_token_secret").encode()
+        secret_key = SecretManager.get_secret("CAPABILITY_TOKEN_SECRET")
+        if not secret_key:
+            raise RuntimeError("CAPABILITY_TOKEN_SECRET is not configured")
+        self.secret_key = secret_key.encode()
         self.revoked_tokens = set()
         self.seen_nonces = set()
         self.sync_interval = sync_interval_seconds

@@ -144,14 +144,14 @@ async def test_token_revocation_network_partition():
     # If the network fails, the node validator catches the exception and does not crash.
     # It still uses its local cache.
     validator = NodeValidator()
-    validator.revoked_tokens.add("offline-revoked-token")
+    validator.revoked_tokens.add("offline-revoked-token.fake")
 
     with patch("httpx.AsyncClient.get", side_effect=httpx.ConnectError("Network partition")):
         await validator.sync_revocations()
 
     # Still fails for tokens cached locally
     with pytest.raises(ValueError, match="Token has been revoked"):
-        validator.validate_token("offline-revoked-token", "cap", "data")
+        validator.validate_token("offline-revoked-token.fake", "cap", "data")
 
 @pytest.mark.asyncio
 async def test_background_sync():
@@ -166,3 +166,11 @@ async def test_background_sync():
         validator.stop_background_sync()
 
         assert "token-from-bg" in validator.revoked_tokens
+
+
+@patch.dict(os.environ, clear=False)
+def test_node_validator_no_secret():
+    if "CAPABILITY_TOKEN_SECRET" in os.environ:
+        del os.environ["CAPABILITY_TOKEN_SECRET"]
+    with pytest.raises(RuntimeError, match="CAPABILITY_TOKEN_SECRET is not configured"):
+        NodeValidator()
