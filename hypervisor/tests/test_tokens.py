@@ -44,19 +44,23 @@ def test_token_issue_and_validate():
 
 def test_token_expired():
     client = TestClient(app)
+    # Using time mocking because the API now rejects ttl_seconds <= 0
     req = {
         "requester_id": "req-2",
         "capsule_id": "cap-2",
         "consent_proof": "valid",
         "data_scope": "data",
-        "ttl_seconds": -1 # Expired immediately
+        "ttl_seconds": 10
     }
     res = client.post("/token/issue", json=req)
     token = res.json()["token"]
 
     validator = NodeValidator()
-    with pytest.raises(ValueError, match="Token has expired"):
-        validator.validate_token(token, "cap-2", "data")
+
+    # Mock time to be past expiration
+    with patch("time.time", return_value=time.time() + 15):
+        with pytest.raises(ValueError, match="Token has expired"):
+            validator.validate_token(token, "cap-2", "data")
 
 def test_token_mismatch_capsule_id():
     client = TestClient(app)
@@ -144,14 +148,16 @@ async def test_token_revocation_network_partition():
     # If the network fails, the node validator catches the exception and does not crash.
     # It still uses its local cache.
     validator = NodeValidator()
-    validator.revoked_tokens.add("offline-revoked-token")
+    # The token needs to be properly formatted (base64.signature)
+    valid_format_token = "dummy_base64_payload.dummy_signature"
+    validator.revoked_tokens.add(valid_format_token)
 
     with patch("httpx.AsyncClient.get", side_effect=httpx.ConnectError("Network partition")):
         await validator.sync_revocations()
 
     # Still fails for tokens cached locally
     with pytest.raises(ValueError, match="Token has been revoked"):
-        validator.validate_token("offline-revoked-token", "cap", "data")
+        validator.validate_token(valid_format_token, "cap", "data")
 
 @pytest.mark.asyncio
 async def test_background_sync():
@@ -166,3 +172,37 @@ async def test_background_sync():
         validator.stop_background_sync()
 
         assert "token-from-bg" in validator.revoked_tokens
+
+def test_token_issue_invalid_compute_budget():
+    client = TestClient(app)
+    req = {
+        "requester_id": "req-invalid",
+        "capsule_id": "cap-invalid",
+        "consent_proof": "valid-proof",
+        "compute_budget": {
+            "cpu_ms": -1,
+            "gpu_ms": -1,
+            "memory_mb": -1
+        }
+    }
+    res = client.post("/token/issue", json=req)
+    assert res.status_code == 422
+    data = res.json()
+    assert "detail" in data
+    # Check that there are 3 errors for the 3 negative fields
+    assert len(data["detail"]) == 3
+
+def test_token_issue_invalid_ttl():
+    client = TestClient(app)
+    req = {
+        "requester_id": "req-invalid",
+        "capsule_id": "cap-invalid",
+        "consent_proof": "valid-proof",
+        "ttl_seconds": 0
+    }
+    res = client.post("/token/issue", json=req)
+    assert res.status_code == 422
+
+    req["ttl_seconds"] = -10
+    res = client.post("/token/issue", json=req)
+    assert res.status_code == 422
