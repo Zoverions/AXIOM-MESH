@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from src.api.server import app
 
+@patch.dict(os.environ, {"CAPSULE_COMPILER_SECRET": "test_secret"})
 def test_capsule_pipeline():
     client = TestClient(app)
 
