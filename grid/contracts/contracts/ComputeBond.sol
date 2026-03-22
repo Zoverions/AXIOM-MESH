@@ -173,25 +173,45 @@ contract ComputeBond is TimelockedOwnable, AccessControl {
 
     // New 5% Permanent Founder Allocation Support Functions
 
+    uint256 public founderShareBalance;
+
     function calculateUnusedFounderShare(uint256 baseShare) external view returns (uint256) {
-        // Mock implementation for the permanent share system.
-        // It could return whatever calculation determines the unused portion.
-        return 0; // Return 0 for default test setup
+        // Unused portion is whatever is left in the founderShareBalance relative to baseShare
+        // If they requested more than available it would be capped.
+        if (founderShareBalance >= baseShare) {
+            return founderShareBalance - baseShare;
+        }
+        return 0;
     }
 
     function reallocateToNetwork(uint256 amount) external {
         require(hasRole(TREASURY_MANAGER_ROLE, msg.sender) || msg.sender == owner(), "Unauthorized");
-        // Internal reallocation mock logic
+        require(founderShareBalance >= amount, "Insufficient founder share");
+        founderShareBalance -= amount;
+        collectiveInvestmentPool += amount; // Reallocate back to the collective network pool
     }
 
     function releaseFounderShare(uint256 amount) external returns (uint256) {
-        require(hasRole(TREASURY_MANAGER_ROLE, msg.sender) || msg.sender == owner(), "Unauthorized");
-        // Mocks releasing founder share to the founder
-        return amount; // Return a mocked value
+        require(hasRole(TREASURY_MANAGER_ROLE, msg.sender) || msg.sender == owner() || msg.sender == founderAddress, "Unauthorized");
+        require(founderShareBalance >= amount, "Insufficient founder share");
+
+        founderShareBalance -= amount;
+
+        (bool success, ) = payable(founderAddress).call{value: amount}("");
+        if (!success) revert TransferFailed();
+
+        return amount;
     }
 
     function spend(uint256 amount) external returns (bool) {
-        // Mock spending function for the new resource allocator
+        require(hasRole(TREASURY_MANAGER_ROLE, msg.sender) || msg.sender == owner(), "Unauthorized");
+        require(collectiveInvestmentPool >= amount, "Insufficient network funds");
+
+        collectiveInvestmentPool -= amount;
+
+        (bool success, ) = payable(msg.sender).call{value: amount}("");
+        if (!success) revert TransferFailed();
+
         return true;
     }
 
