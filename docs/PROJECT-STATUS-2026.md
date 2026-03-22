@@ -7,8 +7,8 @@ This document is the single source of truth for repository health, implementatio
 This status reflects code present in git and staging readiness work; it does not imply live testnet/mainnet deployment.
 
 - **Architecture:** 4-pillar runtime remains intact (Gateway, Hypervisor, Sandbox, Grid).
-- **Roadmap authority:** `plan.md` remains the canonical roadmap and priority tracker.
-- **Audit authority:** `AUDIT_REPORT.md` remains the canonical cross-service audit report.
+- **Roadmap authority:** `docs/plan.md` remains the canonical roadmap and priority tracker.
+- **Audit authority:** `docs/AUDIT_REPORT.md` remains the canonical cross-service audit report.
 - **Production safety principle:** cleanup work must remove redundancy only and must not remove implemented runtime features.
 
 ## Implemented and retained in repository (not yet deployed live)
@@ -33,7 +33,7 @@ The following legacy status documents were moved to historical archives to reduc
 
 Rationale:
 - They overlapped heavily in scope (status + audit + roadmap commentary), creating parallel, conflicting “source-of-truth” risk.
-- Their action items are now represented by `plan.md` (roadmap) and `AUDIT_REPORT.md` (audit findings).
+- Their action items are now represented by `docs/plan.md` (roadmap) and `docs/AUDIT_REPORT.md` (audit findings).
 
 ### Code/script pruning
 
@@ -48,8 +48,8 @@ Rationale:
 
 ## What remains canonical
 
-- **Roadmap and delivery sequencing:** `plan.md`
-- **Audit findings and technical risk notes:** `AUDIT_REPORT.md`
+- **Roadmap and delivery sequencing:** `docs/plan.md`
+- **Audit findings and technical risk notes:** `docs/AUDIT_REPORT.md`
 - **Architecture and service references:** `README.md` + service-level READMEs + docs in `docs/`
 
 ## Follow-up cleanup policy

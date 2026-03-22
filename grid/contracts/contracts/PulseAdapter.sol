@@ -103,7 +103,6 @@ contract PulseAdapter is Ownable, ReentrancyGuard, Pausable {
         );
         emit PulseLiquiditySeeded(amountPLSX, amountAXM); // PLSX instead of PLS
     }
-
     function launchSkillCapsule(address token) external onlyGuardianOrCouncil {
         // Mirrors Pump.tires graduation (LP lock + renounce)
         emit SkillCapsuleLaunched(token, 0);

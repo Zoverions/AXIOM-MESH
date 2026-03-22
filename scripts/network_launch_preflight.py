@@ -22,7 +22,7 @@ def deploy_genesis(rpc_url: str) -> str | None:
         result = subprocess.run([
             "forge", "create", "--rpc-url", rpc_url or "",
             "--private-key", os.getenv("DEPLOYER_KEY") or "",
-            "contracts/core/Genesis.sol:Genesis", "--json"
+            "grid/contracts/contracts/core/Genesis.sol:Genesis", "--json"
         ], capture_output=True, text=True)
 
         if result.returncode == 0:

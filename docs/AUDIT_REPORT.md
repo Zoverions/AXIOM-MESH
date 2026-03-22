@@ -6,7 +6,7 @@ Audit scope: full repository file inventory (`rg --files`) plus executable verif
 
 - Enumerated all tracked files and reviewed architecture-critical files line-by-line (service entrypoints, API routes, core engines, contracts, tests, docs).
 - Ran syntax and test checks across language boundaries.
-- Reconciled documentation claims in `README.md`, `plan.md`, and `plan2.md` against current code behavior.
+- Reconciled documentation claims in `README.md`, `docs/plan.md`, and `docs/plan2.md` against current code behavior.
 
 ## High-priority findings fixed during this audit
 
@@ -28,7 +28,7 @@ Audit scope: full repository file inventory (`rg --files`) plus executable verif
   - Added note that dashboard runtime integrity fixes are now in place.
   - Removed stale appended task text that duplicated old contract TODO instructions.
 
-- `plan.md` and `plan2.md`
+- `docs/plan.md` and `docs/plan2.md`
   - Replaced stale implementation requests with current completion-status roadmaps.
 
 ## Closure Guarantees & Axiom Kernel (Foundational)
