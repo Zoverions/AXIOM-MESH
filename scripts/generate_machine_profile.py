@@ -27,6 +27,7 @@ class MachineProfile:
     recommended_local_model: str
     local_load_threshold: float
     memory_pressure_threshold: float
+    service_classes: list[str]
 
 
 def _run(cmd: list[str]) -> str:
@@ -100,6 +101,8 @@ def choose_model(ram_gb: float, vram_mb: int) -> str:
 def thresholds(machine_role: str) -> tuple[float, float]:
     if machine_role == "dedicated-mesh":
         return 0.9, 0.9
+    if machine_role == "education-node":
+        return 0.75, 0.85
     if machine_role == "minimal-edge":
         return 0.55, 0.7
     return 0.65, 0.8
@@ -119,6 +122,10 @@ def main() -> None:
     model = choose_model(ram_gb, vram_mb)
     load_th, mem_th = thresholds(args.machine_role)
 
+    service_classes = ["compute", "meshstore"]
+    if args.machine_role == "education-node":
+        service_classes.append("education_node")
+
     profile = MachineProfile(
         os=platform.platform(),
         cpu_cores=cpu,
@@ -131,6 +138,7 @@ def main() -> None:
         recommended_local_model=model,
         local_load_threshold=load_th,
         memory_pressure_threshold=mem_th,
+        service_classes=service_classes,
     )
 
     output = Path(args.output)

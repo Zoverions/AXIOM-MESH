@@ -162,7 +162,7 @@ def main():
         network_wallet = ""
         rpc_url = ""
     else:
-        machine_role = prompt_with_timeout("Machine role (dedicated-mesh/shared-machine/minimal-edge)", "shared-machine", 15)
+        machine_role = prompt_with_timeout("Machine role (dedicated-mesh/shared-machine/minimal-edge/education-node)", "shared-machine", 15)
         if os_type == 'android':
             print("Android detected, forcing minimal-edge role.")
             machine_role = "minimal-edge"
@@ -251,13 +251,25 @@ def main():
     policy_dir = Path("sandbox/policies")
     policy_dir.mkdir(parents=True, exist_ok=True)
     policy_file = policy_dir / "default.yaml"
-    if not policy_file.exists():
-        policy_file.write_text("""sandbox:
+
+    if machine_role == "education-node":
+        default_policy_content = """sandbox:
+  filesystem: ["/meshstore/**", "/education/**"]
+  network: ["ncp-servers", "open-claw", "nemo-claw"]
+  privacy:
+    level: safe-external
+    location_services: true
+"""
+    else:
+        default_policy_content = """sandbox:
   filesystem: ["/meshstore/**"]
   network: ["ncp-servers"]
   privacy:
     level: local-only
-""")
+"""
+
+    if not policy_file.exists():
+        policy_file.write_text(default_policy_content)
 
     default_policy_cid = ""
     if shutil.which("ipfs"):
