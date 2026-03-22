@@ -16,18 +16,26 @@ describe("DualLedgerIdentity", function () {
   });
 
   it("should register a human node correctly", async function () {
-    await expect(dualLedgerIdentity.registerNode(humanNode.address, 1, ethers.ZeroAddress))
-      .to.emit(dualLedgerIdentity, "NodeRegistered")
-      .withArgs(humanNode.address, 1, ethers.ZeroAddress);
+    const tx = await dualLedgerIdentity.registerNode(humanNode.address, 1, ethers.ZeroAddress);
+    const receipt = await tx.wait();
+    const event = receipt.logs.find(e => e.fragment && e.fragment.name === 'NodeRegistered');
+    expect(event).to.not.be.undefined;
+    expect(event.args[0]).to.equal(humanNode.address);
+    expect(event.args[1]).to.equal(1n);
+    expect(event.args[2]).to.not.equal(ethers.ZeroAddress); // Auto-created wallet
 
     expect(await dualLedgerIdentity.isNodeRegistered(humanNode.address)).to.be.true;
     expect(await dualLedgerIdentity.getIdentityType(humanNode.address)).to.equal(1);
   });
 
   it("should register an agent node correctly", async function () {
-    await expect(dualLedgerIdentity.registerNode(agentNode.address, 2, ethers.ZeroAddress))
-      .to.emit(dualLedgerIdentity, "NodeRegistered")
-      .withArgs(agentNode.address, 2, ethers.ZeroAddress);
+    const tx = await dualLedgerIdentity.registerNode(agentNode.address, 2, ethers.ZeroAddress);
+    const receipt = await tx.wait();
+    const event = receipt.logs.find(e => e.fragment && e.fragment.name === 'NodeRegistered');
+    expect(event).to.not.be.undefined;
+    expect(event.args[0]).to.equal(agentNode.address);
+    expect(event.args[1]).to.equal(2n);
+    expect(event.args[2]).to.not.equal(ethers.ZeroAddress); // Auto-created wallet
 
     expect(await dualLedgerIdentity.isNodeRegistered(agentNode.address)).to.be.true;
     expect(await dualLedgerIdentity.getIdentityType(agentNode.address)).to.equal(2);
