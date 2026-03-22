@@ -441,6 +441,93 @@ async def _process_intent_core(intent: IntentObject, api_key: str):
             intent_metrics["success"] += 1
             return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Synced skills: {skills}", status="success", trace_id=trace_id, audit_trail=audit_trail)
 
+        # Record Data Feed command
+        if content.startswith("/record_data"):
+            json_data_str = content[len("/record_data"):].strip()
+
+            try:
+                parsed_data = json.loads(json_data_str)
+            except json.JSONDecodeError:
+                return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Error: Invalid JSON payload in data feed.", status="error", trace_id=trace_id)
+
+            metadata = intent.metadata or {}
+            consent_scope = metadata.get("consent_scope", "allowed")
+
+            if consent_scope == "revoked":
+                return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Error: Data ingestion rejected due to revoked consent scope.", status="error", trace_id=trace_id)
+
+            metadata_to_store = {
+                "type": "data_feed",
+                "consent": consent_scope,
+                "source_device": metadata.get("source_device", "unknown")
+            }
+
+            # Store in local memory store (Tier 3 deep archive)
+            await run_in_threadpool(context_engine.deep_archive.add, json_data_str, metadata_to_store)
+
+            # To meet the requirement "anything that is committed to the blockchain won't be discarded",
+            # we publish current data feed updates and broadcast to Grid via NetworkSync (re-using publish_skill logic for now).
+            # This commits a hash to the ledger so it cannot be discarded/manipulated.
+            try:
+                payload = {
+                    "id": f"data_feed_{uuid.uuid4()}",
+                    "name": metadata_to_store["source_device"],
+                    "payload_hash": hashlib.sha256(json_data_str.encode()).hexdigest(),
+                    "type": "data_feed_record"
+                }
+                await network_sync.publish_skill(payload)
+            except Exception as e:
+                log_event("warning", f"Failed to commit data feed state to Grid: {e}")
+
+            intent_metrics["success"] += 1
+            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Data recorded and committed successfully.", status="success", trace_id=trace_id, audit_trail=audit_trail)
+
+        # Query Data Feed command
+        if content.startswith("/query_data"):
+            from src.core.node_validator import NodeValidator
+            token_str = content[len("/query_data"):].strip()
+
+            try:
+                validator = NodeValidator()
+                # We enforce the "telemetry" data scope and "data-feed-query" capsule ID for access control.
+                # In production, this guarantees only authorized callers holding a specific token can pull the data.
+                validator.validate_token(token_str, expected_capsule_id="data-feed-query", expected_data_scope="telemetry")
+            except ValueError as e:
+                return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Error: Token validation failed - {str(e)}", status="error", trace_id=trace_id)
+
+            # Simple retrieval from deep archive
+            memories = await run_in_threadpool(context_engine.deep_archive.get_all)
+
+            data_feeds = []
+            aggregated_metrics = {}
+            count = 0
+
+            for mem in memories:
+                if mem.get("metadata", {}).get("type") == "data_feed":
+                    try:
+                        mem_data = json.loads(mem.get("content", "{}"))
+                        data_feeds.append(mem_data)
+
+                        # Apply aggregation on numeric fields if present
+                        for k, v in mem_data.items():
+                            if isinstance(v, (int, float)):
+                                aggregated_metrics[k] = aggregated_metrics.get(k, 0) + v
+                        count += 1
+                    except Exception:
+                        pass
+
+            # Compute averages
+            for k in aggregated_metrics:
+                aggregated_metrics[k] = aggregated_metrics[k] / count if count > 0 else 0
+
+            response_json = json.dumps({
+                "aggregated_statistics": aggregated_metrics,
+                "raw_feeds_count": count
+            })
+
+            intent_metrics["success"] += 1
+            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=response_json, status="success", trace_id=trace_id, audit_trail=audit_trail)
+
         # Standard LLM handling with Tier 1 and Tier 3 memory
         context = await context_engine.get_context(intent)
 

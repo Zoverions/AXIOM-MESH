@@ -246,6 +246,36 @@ router.post('/api/v1/guild/issue', authMiddleware, async (req: Request, res: Res
     }
 });
 
+router.post('/api/v1/data/feed', authMiddleware, async (req: Request, res: Response) => {
+    try {
+        const { source_device, data, consent_scope } = req.body;
+
+        if (!source_device || !data) {
+            return res.status(400).json({ error: 'source_device and data are required' });
+        }
+
+        const dataStr = typeof data === 'string' ? data : JSON.stringify(data);
+
+        const intent = normalizeInput("data_feed_session", "api", `/record_data ${dataStr}`, {
+            source_device: source_device,
+            consent_scope: consent_scope || "allowed",
+            type: "data_feed"
+        });
+
+        const hypervisorRes = await sendToHypervisor(intent);
+
+        res.json({
+            status: 'success',
+            message: 'Data feed recorded',
+            intent_id: intent.id,
+            response: hypervisorRes.response
+        });
+    } catch (error: any) {
+        console.error("Error ingesting data feed:", error);
+        res.status(500).json({ error: 'Failed to ingest data feed', details: error.message });
+    }
+});
+
 router.get('/api/v1/data/query', authMiddleware, async (req: Request, res: Response) => {
     try {
         const { tokenId } = req.query;
@@ -253,15 +283,21 @@ router.get('/api/v1/data/query', authMiddleware, async (req: Request, res: Respo
             return res.status(400).json({ error: 'tokenId is required' });
         }
 
-        // 1. Send the query intent through the Privacy Router
-        const intent = normalizeInput("data_query_session", "api", "query data", { tokenId: tokenId.toString() });
+        // Send the query intent through the Privacy Router
+        const intent = normalizeInput("data_query_session", "api", `/query_data ${tokenId}`, { tokenId: tokenId.toString() });
         const hypervisorRes = await sendToHypervisor(intent);
 
-        // Simulate reading from MeshStore and applying ZKMLVerifier check
+        let parsedData;
+        try {
+            parsedData = JSON.parse(hypervisorRes.response);
+        } catch (e) {
+            parsedData = hypervisorRes.response;
+        }
+
         res.json({
             status: 'success',
             message: `Data queried with token ${tokenId}`,
-            data: hypervisorRes.response || { averageHeartRate: 75 }
+            data: parsedData
         });
     } catch (error: any) {
         console.error("Error querying data:", error);
