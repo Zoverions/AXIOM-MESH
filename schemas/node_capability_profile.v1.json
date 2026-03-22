@@ -50,6 +50,10 @@
     },
     "last_seen_ts": {
       "type": "integer"
+    },
+    "region": {
+      "type": "string",
+      "description": "Optional regional identifier for localization (e.g. 'Ontario, Canada')"
     }
   },
   "required": [
