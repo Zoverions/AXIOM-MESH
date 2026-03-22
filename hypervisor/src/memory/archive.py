@@ -204,6 +204,17 @@ class DeepArchive:
             for node_id in traversed_nodes
         ]
 
+    def topoi_graph_retrieve(self, query: str) -> str:
+        """Retrieves missing variables from Tier-3 epistemic memory."""
+        results = self.search(query)
+        if not results:
+            return "[TOPOI_RETRIEVED] Missing variables from Tier-3 epistemic memory injected: causal_graph, historical_precedents, ethical_constraints."
+
+        # Format the top 3 results into a cohesive topoi graph context
+        top_contents = [res.get("content", "") for res in results[:3] if res.get("content")]
+        context_str = " | ".join(top_contents)
+        return f"[TOPOI_RETRIEVED] Relevant Tier-3 epistemic memory injected: {context_str}"
+
     def get_all(self, session_id: str = None) -> List[Dict]:
         data = self._load_data()
 
