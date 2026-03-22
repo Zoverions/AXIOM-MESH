@@ -6,6 +6,7 @@ import httpx
 import ast
 import uuid
 import re
+from src.core.secrets import SecretManager
 
 # Initialize the FastMCP server
 mcp_server = FastMCP(
@@ -56,7 +57,10 @@ import hmac
 
 def verify_code_signature(code: str, signature: str) -> bool:
     """Verifies the code payload signature to neutralize Confused Deputy attacks."""
-    secret = os.environ.get("MCP_CODE_SIGNING_SECRET", "default_signing_secret").encode()
+    secret_str = SecretManager.get_secret("MCP_CODE_SIGNING_SECRET")
+    if not secret_str:
+        raise RuntimeError("MCP_CODE_SIGNING_SECRET is not configured. Code execution is disabled for security.")
+    secret = secret_str.encode()
     expected_sig = hmac.new(secret, code.encode(), hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected_sig, signature)
 
