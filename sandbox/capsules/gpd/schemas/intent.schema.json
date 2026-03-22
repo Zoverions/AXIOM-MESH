@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "id": "intent.schema.json",
+  "title": "GPD Intent Schema",
+  "type": "object",
+  "required": ["task"],
+  "properties": {
+    "task": {
+      "type": "string",
+      "enum": ["simulate", "analyze"]
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "duration": { "type": "number", "minimum": 0 },
+        "timestep": { "type": "number", "minimum": 0, "exclusiveMinimum": 0 },
+        "data_file": { "type": "string" }
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "properties": {
+        "max_time": { "type": "number" }
+      }
+    }
+  },
+  "additionalProperties": false
+}
