@@ -3,7 +3,7 @@ import json
 import logging
 import os
 import tempfile
-from .context_engine import enforce_context_cap
+from src.engine.context_engine import enforce_context_cap
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
