@@ -226,6 +226,8 @@ func (s *Server) SetupRouter() *http.ServeMux {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/peers/manifests", s.handlePeersManifests)
+	mux.HandleFunc("/peers/profiles", s.handlePeersProfiles)
+	mux.HandleFunc("/peers/pings", s.handlePeersPings)
 	sched := scheduler.NewScheduler()
 	RegisterSchedulerAPI(mux, sched)
 
@@ -1315,6 +1317,78 @@ func (s *Server) handlePeersManifests(w http.ResponseWriter, r *http.Request) {
 		} else {
 			// Otherwise, it's a peer manifest broadcasted to us
 			s.p2pNode.UpdatePeerManifest(payload.NodeID, payload.Manifest)
+		}
+
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+}
+
+// handlePeersProfiles handles node capability profile broadcast and retrieval
+func (s *Server) handlePeersProfiles(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		profiles := s.p2pNode.GetPeerProfiles()
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(profiles)
+		return
+	}
+
+	if r.Method == "POST" {
+		var payload struct {
+			NodeID  string                      `json:"nodeId"`
+			Profile types.NodeCapabilityProfile `json:"profile"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		isSync := r.URL.Query().Get("sync") == "true"
+
+		// If this is the local node's profile (i.e. our own node ID) and it's NOT a sync request from another node
+		if payload.NodeID == s.p2pNode.ID && !isSync {
+			go s.p2pNode.BroadcastNodeProfile(payload.Profile)
+		} else {
+			// Otherwise, it's a peer profile broadcasted to us
+			s.p2pNode.UpdatePeerProfile(payload.NodeID, payload.Profile)
+		}
+
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+}
+
+// handlePeersPings handles lightweight ping profile broadcast and retrieval
+func (s *Server) handlePeersPings(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		profiles := s.p2pNode.GetPeerPingProfiles()
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(profiles)
+		return
+	}
+
+	if r.Method == "POST" {
+		var payload struct {
+			NodeID  string                       `json:"nodeId"`
+			Profile types.LightweightPingProfile `json:"profile"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		isSync := r.URL.Query().Get("sync") == "true"
+
+		// If this is the local node's profile (i.e. our own node ID) and it's NOT a sync request from another node
+		if payload.NodeID == s.p2pNode.ID && !isSync {
+			go s.p2pNode.BroadcastPingProfile(payload.Profile)
+		} else {
+			// Otherwise, it's a peer profile broadcasted to us
+			s.p2pNode.UpdatePeerPingProfile(payload.NodeID, payload.Profile)
 		}
 
 		w.WriteHeader(http.StatusOK)
