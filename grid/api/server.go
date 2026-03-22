@@ -363,10 +363,6 @@ func (s *Server) SetupRouter() *http.ServeMux {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			// For future P2P integration
-			// if s.p2pNode != nil {
-			// 	s.p2pNode.BroadcastNodeProfile(profile)
-			// }
 			json.NewEncoder(w).Encode(map[string]interface{}{"status": "success", "node_id": profile.NodeID})
 		} else {
 			http.Error(w, err.Error(), http.StatusBadRequest)
