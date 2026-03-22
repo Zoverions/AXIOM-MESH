@@ -2,6 +2,7 @@ import request from 'supertest';
 import { app } from '../index';
 import crypto from 'crypto';
 import stringify from 'fast-json-stable-stringify';
+import { registry } from '../routes/capsule';
 
 describe('Skill Capsule Registry', () => {
     let publicKeyPem: string;
@@ -127,19 +128,17 @@ describe('Skill Capsule Registry', () => {
             .send(validCapsule)
             .expect(200);
 
-        // Hack internal registry through another publish attempt but failing
-        // We simulate a registry state where signature mismatch happens by querying with different payload.
-        // Since we can't easily modify the in-memory registry, we rely on the publish rejection.
-
-        const invalidBody = {
-            ...validCapsule,
+        // Hack internal registry directly to simulate tampered capsule
+        const storedCapsule = registry.get(validCapsule.manifest.id);
+        const tamperedCapsule = {
+            ...storedCapsule,
             signature: Buffer.from('invalid_signature').toString('base64')
         };
+        registry.set(validCapsule.manifest.id, tamperedCapsule);
 
         await request(app)
-            .post('/capsule/publish')
+            .post(`/capsule/${validCapsule.manifest.id}/execute`)
             .set('Authorization', 'Bearer test-sandbox-key')
-            .send(invalidBody)
             .expect(403);
     });
 

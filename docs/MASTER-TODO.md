@@ -118,6 +118,7 @@ Detailed references:
 - [x] **M4.15** Add tokenomics parameter controls and transparency. — 2026-03-22 — @agent — documented in TOKENOMICS.md
 - [x] **M4.16** Implement bicameral governance with skill staking. — 2026-03-22 — @agent — implemented in grid governance
 - [x] **M4.17** Add monitoring for SLOs and alerts. — 2026-03-22 — @agent — added hypervisor_metrics and intent_metrics
+- [x] **M4.18** Improve test coverage for Sandbox execution. — 2026-03-22 — @agent — added test_mcp_sandbox_execute.py with 10 passing tests
 - [x] **S.1** Complete full implementation of physics research skill capsule (gpd) — ensure adapter, runtime, and schemas are production-ready. — 2026-03-22 — @agent — created full physics capsule with adapter, runtime, schema, descriptor, attestation, signature, proof_hooks, tool_translation, SBOM
 - [x] **S.2** Create skill capsule for mathematical computation and symbolic manipulation. — 2026-03-22 — @agent — created full capsule structure with sympy integration
 - [x] **S.3** Create skill capsule for web search and information retrieval. — 2026-03-22 — @agent — created full capsule with requests integration

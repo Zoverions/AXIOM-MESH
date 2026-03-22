@@ -7,7 +7,7 @@ import { validateSandboxApiKey } from '../utils/auth';
 const router = Router();
 
 // In-memory registry mapping ID -> Capsule data
-const registry = new Map<string, any>();
+export const registry = new Map<string, any>();
 
 // Validate Signatures with configured Public Keys and threshold
 async function verifySignatures(payload: any, signaturesBase64: string[], threshold: number = 1): Promise<boolean> {
