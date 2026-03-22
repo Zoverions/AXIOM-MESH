@@ -63,7 +63,7 @@ contract DualLedgerIdentity is Ownable, ERC721 {
      * @dev Register a node as either Human or Agent. Only callable by the owner (or an authorized registrar).
      * @param node The address of the node.
      * @param idType The type of identity (Human or Agent).
-     * @param connectedWallet Optional external connected EVM wallet. If address(0), the system auto-creates a NodeWallet.
+     * @param connectedWallet The connected EVM wallet for ERC-20 settlements.
      */
     function registerNode(address node, IdentityType idType, address connectedWallet) external onlyOwner {
         if (idType != IdentityType.Human && idType != IdentityType.Agent) revert InvalidIdentityType();
@@ -78,10 +78,10 @@ contract DualLedgerIdentity is Ownable, ERC721 {
         identities[node] = Identity({
             idType: idType,
             isRegistered: true,
-            connectedWallet: activeWallet
+            connectedWallet: connectedWallet
         });
 
-        emit NodeRegistered(node, idType, activeWallet);
+        emit NodeRegistered(node, idType, connectedWallet);
     }
 
     /**
