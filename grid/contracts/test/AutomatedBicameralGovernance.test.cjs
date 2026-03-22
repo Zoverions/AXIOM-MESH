@@ -81,8 +81,8 @@ describe("AutomatedBicameralGovernance", function () {
     it("should synthesize deadlock", async function () {
 
         // Advance time and resolve as deadlock (we skip voting to let human 0 vs agent 0, which doesn't deadlock, so we actually have to vote)
-        await id.registerNode(owner.address, 1); // Human
-        await id.registerNode(addr1.address, 2); // Agent
+        await id.registerNode(owner.address, 1, ethers.ZeroAddress); // Human
+        await id.registerNode(addr1.address, 2, ethers.ZeroAddress); // Agent
         await oracle.queueOperation(ethers.keccak256(ethers.solidityPacked(["string", "address", "uint256"], ["updateWeight", owner.address, 10])));
         await oracle.queueOperation(ethers.keccak256(ethers.solidityPacked(["string", "address", "uint256"], ["updateWeight", addr1.address, 10])));
 
