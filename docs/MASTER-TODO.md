@@ -1,6 +1,6 @@
 # AXIOM-MESH Master To-Do List (Canonical Agent Queue)
 
-**Version:** 2026-03-21  
+**Version:** 2026-03-22  
 **Purpose:** Single list for all human/digital agents to execute, update, and close.  
 **Rule:** If a task exists here, it is active. If it only exists elsewhere, it is reference-only and should be migrated or archived.
 
@@ -130,6 +130,14 @@ Detailed references:
 - [x] **S.9** Update node capability profiles and NemoClaw policy schemas to support region-aware localization services. — 2026-03-22 — @agent — added region handling and updated education engine for regional-alignment.
 
 ---
+
+
+## Lane M5 — Pre-Public-Release Accuracy & Trust (Open)
+- [ ] **M5.1** Remove/replace all non-test placeholder or mock execution branches in production code paths (contracts, hypervisor proof defaults, sandbox execution pipeline). — owner: core+contracts
+- [ ] **M5.2** Build cryptography posture matrix (Implemented / Planned / Experimental) and link each claim to exact code references. — owner: security
+- [ ] **M5.3** Publish financial controls evidence index (control → artifact → verification command). — owner: finance+ops
+- [ ] **M5.4** Publish tokenomics lock table with current effective values, governance reference, and release timestamp. — owner: tokenomics
+- [ ] **M5.5** Final audience-facing documentation pass: remove overstatements, preserve policy-vs-implemented distinctions, and verify all HOWTO paths are current. — owner: docs
 
 ## 3) Archive Candidates (After Migration Validation)
 
