@@ -217,5 +217,6 @@ fi
 
 echo ""
 echo "Installation complete!"
+python3 -m hypervisor.src.orchestrator --mode public-pool &
 echo "Dashboard: http://localhost:3000"
 echo "CLI: make cli"
