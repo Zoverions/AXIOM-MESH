@@ -7,11 +7,15 @@ import httpx
 import os
 import asyncio
 from typing import Dict, Any, Optional
+from src.core.secrets import SecretManager
 
 class NodeValidator:
     def __init__(self, token_issuer_url: str = "http://localhost:8081", sync_interval_seconds: int = 30):
         self.token_issuer_url = token_issuer_url
-        self.secret_key = os.environ.get("CAPABILITY_TOKEN_SECRET", "hypervisor_capability_token_secret").encode()
+        raw_secret = SecretManager.get_secret("CAPABILITY_TOKEN_SECRET")
+        if not raw_secret:
+            raise RuntimeError("CAPABILITY_TOKEN_SECRET is missing or empty. A secure secret must be configured.")
+        self.secret_key = raw_secret.encode()
         self.revoked_tokens = set()
         self.seen_nonces = set()
         self.sync_interval = sync_interval_seconds
@@ -60,11 +64,11 @@ class NodeValidator:
         Validates the capability token.
         Raises ValueError if token is invalid, expired, revoked, or mismatches expected context.
         """
-        if not token or "." not in token:
-            raise ValueError("Invalid token format")
-
         if token in self.revoked_tokens:
             raise ValueError("Token has been revoked")
+
+        if not token or "." not in token:
+            raise ValueError("Invalid token format")
 
         if nonce:
             if nonce in self.seen_nonces:

@@ -5,10 +5,19 @@ import time
 import asyncio
 from unittest.mock import patch
 
-# Set secret BEFORE importing the app
-os.environ["CAPABILITY_TOKEN_SECRET"] = "test_secret_for_tests"
-
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# We need to mock SecretManager globally before app is imported
+from src.core.secrets import SecretManager
+original_get_secret = SecretManager.get_secret
+
+def mock_get_secret(secret_name, default=None):
+    if secret_name == "CAPABILITY_TOKEN_SECRET":
+        return "test_secret_for_tests"
+    return original_get_secret(secret_name, default)
+
+SecretManager.get_secret = staticmethod(mock_get_secret)
+
 from fastapi.testclient import TestClient
 from src.api.server import app
 from src.core.node_validator import NodeValidator
