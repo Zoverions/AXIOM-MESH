@@ -55,13 +55,13 @@ def apply_mcp_security_requirements(payload_content: str, risk_score: float = 0.
 import hashlib
 import hmac
 
-def verify_code_signature(code: str, signature: str) -> bool:
-    """Verifies the code payload signature to neutralize Confused Deputy attacks."""
+def verify_signature(payload: str, signature: str) -> bool:
+    """Verify the HMAC signature of the payload."""
     secret_str = SecretManager.get_secret("MCP_CODE_SIGNING_SECRET")
     if not secret_str:
         raise RuntimeError("MCP_CODE_SIGNING_SECRET is not configured. Code execution is disabled for security.")
     secret = secret_str.encode()
-    expected_sig = hmac.new(secret, code.encode(), hashlib.sha256).hexdigest()
+    expected_sig = hmac.new(secret, payload.encode(), hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected_sig, signature)
 
 @mcp_server.tool()
@@ -75,7 +75,7 @@ async def sandbox_execute(code: str, signature: str, language: str = "python", a
     if expected_key and auth_token != f"Bearer {expected_key}":
         return "Security Halt: Server identity unverified. Missing or invalid API Key/Signature in identity chain."
 
-    if not verify_code_signature(code, signature):
+    if not verify_signature(code, signature):
         return "Security Halt: Invalid code signature. Confused Deputy/Prompt Injection protection triggered."
 
     if len(code) > int(os.environ.get("HYPERVISOR_MAX_CONTENT_LENGTH", "4000")):
