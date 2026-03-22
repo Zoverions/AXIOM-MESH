@@ -163,6 +163,20 @@ class DeepArchive:
     def clear(self) -> None:
         self._save_data({"nodes": {}, "edges": []})
 
+    def topoi_graph_retrieve(self, error_context: str) -> str:
+        """
+        Retrieves topoi graph epistemic memory context based on the error context.
+        """
+        results = self.search(error_context)
+        if not results:
+            return "[TOPOI_RETRIEVED] No additional epistemic context found in Tier-3 memory."
+
+        context_parts = ["[TOPOI_RETRIEVED] Missing variables from Tier-3 epistemic memory injected:"]
+        for res in results[:5]:  # Limit to top 5 results to avoid bloat
+            context_parts.append(f"- {res['content']}")
+
+        return "\n".join(context_parts)
+
     def zeroize(self) -> None:
         """
         Securely erases the archive data by overwriting the file with random bytes
@@ -181,6 +195,10 @@ class DeepArchive:
                         os.fsync(f.fileno())
         # Finally, reset to empty state
         self.clear()
+
+    def topoi_graph_retrieve(self, query: str) -> List[Dict]:
+        """Alias for search() to support cognitive rescue/Topoi retrieval."""
+        return self.search(query)
 
     def search(self, query: str) -> List[Dict]:
         data = self._load_data()
@@ -509,6 +527,20 @@ class DistributedDeepArchive(DeepArchive):
                 else:
                     print(f"[Degraded Mode] Grid sync failed after {max_retries} attempts: {e}")
                     self.degraded_counters["grid"] += 1
+
+    async def topoi_graph_retrieve(self, error_context: str) -> str:
+        """
+        Retrieves topoi graph epistemic memory context from the distributed grid.
+        """
+        results = await self.search_distributed(error_context)
+        if not results:
+            return "[TOPOI_RETRIEVED] No additional epistemic context found in Tier-3 memory."
+
+        context_parts = ["[TOPOI_RETRIEVED] Missing variables from Tier-3 epistemic memory injected:"]
+        for res in results[:5]:  # Limit to top 5 results
+            context_parts.append(f"- {res['content']}")
+
+        return "\n".join(context_parts)
 
     async def sever_bond(self, peer_id: str, zk_proof: str) -> bool:
         """
