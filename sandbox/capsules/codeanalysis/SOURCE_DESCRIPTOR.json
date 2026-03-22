@@ -1,7 +1,7 @@
 {
   "source_type": "internal",
   "source_ref": "hypervisor-builtin",
-  "immutable_digest": "websearch1234567890abcd",
+  "immutable_digest": "codeanalysis1234567890abcd",
   "captured_at": "2026-03-22T00:00:00Z",
   "upstream_signature": {
     "present": false,
@@ -10,8 +10,8 @@
     "valid": true
   },
   "declared_authority": [
-    "web_read",
-    "search_exec",
+    "code_read",
+    "analysis_exec",
     "result_write"
   ]
 }

@@ -2,7 +2,7 @@ import json
 
 def normalize_intent(intent_payload):
     """
-    Normalizes a generic incoming intent for the web search capsule.
+    Normalizes a generic incoming intent for the math computation capsule.
     """
     if isinstance(intent_payload, str):
         try:
@@ -13,9 +13,8 @@ def normalize_intent(intent_payload):
         intent = intent_payload
 
     normalized = {
-        "canonical_task": intent.get("task", "search"),
-        "query": intent.get("query", ""),
-        "url": intent.get("url", ""),
+        "canonical_task": intent.get("task", "solve"),
+        "expression": intent.get("expression", ""),
         "parameters": intent.get("parameters", {})
     }
     return normalized
