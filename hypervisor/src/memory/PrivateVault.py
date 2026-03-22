@@ -4,7 +4,12 @@ from typing import Dict, Optional
 from src.core.secrets import SecretManager
 
 # Use the actual Privacy Router for encryption
-from hypervisor.src.engine.privacy_router import PrivacyRouter
+from src.engine.privacy_router import PrivacyRouter
+# Fix absolute import path
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+from shadow.AirGapConsent import ConsentManifest, AirGapConsent
 
 class PrivateVault:
     def __init__(self, context_engine):
@@ -18,13 +23,18 @@ class PrivateVault:
             raise RuntimeError("CRITICAL: VAULT_MASTER_KEY must be securely configured. Refusing to use insecure default.")
         return f"{owner_did}:{system_secret}"
 
-    def get_node(self, node_id: str, requester_did: str, is_sub_agent: bool) -> Optional[Dict]:
+    def get_node(self, node_id: str, requester_did: str, is_sub_agent: bool, consent_manifest: ConsentManifest = None, signature: str = None) -> Optional[Dict]:
         node = self.context_engine.deep_archive.store.get(node_id)
         if not node:
             return None
 
         policy = node.get("metadata", {}).get("vault_policy", {})
         owner_did = policy.get("ownerDID")
+
+        # Universal Consent Protocol verification for external entities
+        if consent_manifest and signature:
+             if not AirGapConsent.verify_ucp_signature(consent_manifest, signature, requester_did):
+                  return None # UCP Hard Reject
 
         # Primary personality or human user (matching ownerDID)
         if requester_did == owner_did:

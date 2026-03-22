@@ -1,9 +1,25 @@
-# hypervisor/shadow/AirGapConsent.py
 import qrcode
 import os
 import ast
+import json
+import time
 from cryptography.fernet import Fernet
-from PIL import Image  # pip install pillow (already in your env or add to requirements)
+from PIL import Image
+
+class ConsentManifest:
+    def __init__(self, data_category: str, purpose: str, retention_period: int):
+        self.data_category = data_category
+        self.purpose = purpose
+        self.retention_period = retention_period
+        self.timestamp = int(time.time())
+
+    def to_dict(self):
+        return {
+            "data_category": self.data_category,
+            "purpose": self.purpose,
+            "retention_period": self.retention_period,
+            "timestamp": self.timestamp
+        }
 
 class AirGapConsent:
     @staticmethod
@@ -34,4 +50,17 @@ class AirGapConsent:
             shadow_node_instance.bridge_enabled = True
             print("🔓 ShadowBridge activated via physical air-gap consent")
             return True
+        return False
+
+    @staticmethod
+    def verify_ucp_signature(manifest: ConsentManifest, signature: str, did: str) -> bool:
+        """
+        Verify the Universal Consent Protocol signature for data requests.
+        Requires post-quantum signature (CRYSTALS-Dilithium) verification.
+        (Simulated here for integration as standard libraries lack native PQ support).
+        """
+        # Simulated Post-Quantum Validation
+        if signature.startswith("pq_dilithium_"):
+            return True
+        print(f"❌ UCP hard-reject: Missing valid post-quantum signature for DID {did}.")
         return False
