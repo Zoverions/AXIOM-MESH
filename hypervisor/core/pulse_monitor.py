@@ -5,6 +5,8 @@ from collections import deque
 from typing import Dict, List, Optional
 from dataclasses import dataclass
 
+from src.memory.archive import DeepArchive
+
 class LogitVarianceTracker:
     def __init__(self, window_size: int = 20):
         self.window_size = window_size
@@ -135,9 +137,10 @@ class CoTAuditor:
         return AuditResult(True, "Monitoring completed within limits", self.epistemic_state)
 
     async def _trigger_topoi_retrieval(self, error_context: str) -> str:
-        """Stub — hook to DeepArchive / Tier 3 memory."""
-        # TODO: Real integration with DeepArchive.topoi_graph_retrieve()
-        return "[TOPOI_RETRIEVED] Missing variables from Tier-3 epistemic memory injected: causal_graph, historical_precedents, ethical_constraints."
+        """Hook to DeepArchive / Tier 3 memory."""
+        archive = DeepArchive()
+        results = archive.topoi_graph_retrieve(error_context)
+        return f"[TOPOI_RETRIEVED] Missing variables from Tier-3 epistemic memory injected. {len(results)} context nodes retrieved: {results}"
 
 if __name__ == "__main__":
     auditor = CoTAuditor()

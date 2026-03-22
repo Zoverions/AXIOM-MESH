@@ -182,6 +182,10 @@ class DeepArchive:
         # Finally, reset to empty state
         self.clear()
 
+    def topoi_graph_retrieve(self, query: str) -> List[Dict]:
+        """Alias for search() to support cognitive rescue/Topoi retrieval."""
+        return self.search(query)
+
     def search(self, query: str) -> List[Dict]:
         data = self._load_data()
 
