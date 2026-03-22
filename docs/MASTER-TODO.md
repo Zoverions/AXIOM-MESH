@@ -134,6 +134,7 @@ Detailed references:
 
 ## Lane M5 — Pre-Public-Release Accuracy & Trust (Open)
 - [ ] **M5.1** Remove/replace all non-test placeholder or mock execution branches in production code paths (contracts, hypervisor proof defaults, sandbox execution pipeline). — owner: core+contracts
+  - 2026-03-22 — @agent — removed placeholder proof fallbacks in `hypervisor/src/engine/inference_orchestrator.py` and `hypervisor/src/graph/autoresearch_graph.py`; now fail closed on missing proof material.
 - [ ] **M5.2** Build cryptography posture matrix (Implemented / Planned / Experimental) and link each claim to exact code references. — owner: security
 - [ ] **M5.3** Publish financial controls evidence index (control → artifact → verification command). — owner: finance+ops
 - [ ] **M5.4** Publish tokenomics lock table with current effective values, governance reference, and release timestamp. — owner: tokenomics

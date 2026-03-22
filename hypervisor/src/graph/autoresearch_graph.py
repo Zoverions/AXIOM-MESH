@@ -232,13 +232,19 @@ async def zkml_verify(state: GraphState):
     input_vector = [1.0, float(len(sandbox_output) % 100), 0.5]
     result = prover.infer_and_prove(input_vector)
 
+    proof = result.get("proof")
+    vk = result.get("vk")
+    settings = result.get("settings")
+    if not all(isinstance(field, str) and field.strip() for field in (proof, vk, settings)):
+        raise ValueError("ZKML prover response missing proof material; refusing placeholder defaults.")
+
     payload = {
         "model_commitment": result.get("model_commitment", "a" * 64),
         "input": input_vector,
         "output": result.get("output", [0.0]),
-        "proof": result.get("proof", "groth16-placeholder"),
-        "vk": result.get("vk", "dummy_vk"),
-        "settings": result.get("settings", "dummy_settings")
+        "proof": proof,
+        "vk": vk,
+        "settings": settings
     }
 
     verified = False
