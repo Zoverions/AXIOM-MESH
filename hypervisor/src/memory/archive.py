@@ -394,6 +394,24 @@ class DistributedDeepArchive(DeepArchive):
         r = (v - c * self._secret_x) % self.Q
         return json.dumps({"y": hex(self._public_y), "t": hex(t), "r": hex(r)})
 
+    async def topoi_graph_retrieve(self, query: str) -> str:
+        """
+        Retrieves topoi (topological graph subsets) based on the context query.
+        Searches for relevant nodes and constructs a causal graph text representation.
+        """
+        results = await self.search_distributed(query)
+        if not results:
+            return "[TOPOI_RETRIEVED] No historical precedents or causal graphs found for this context."
+
+        formatted_paths = []
+        for i, res in enumerate(results[:5]):  # Limit to top 5 to avoid overwhelming context
+            content = res.get("content", "").strip()
+            source = res.get("metadata", {}).get("source", "local_archive")
+            formatted_paths.append(f"Node {i+1} [{source}]: {content}")
+
+        topoi_text = "\n".join(formatted_paths)
+        return f"[TOPOI_RETRIEVED] Missing variables from Tier-3 epistemic memory injected:\n\n{topoi_text}"
+
     async def search_distributed(self, query: str) -> List[Dict]:
         local_results = self.search(query)
 
