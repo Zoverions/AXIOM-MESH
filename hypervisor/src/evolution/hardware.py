@@ -20,6 +20,29 @@ class HardwareScanner:
 
         return footprint
 
+
+    def get_baseline_quotas(self, profile: str = None) -> dict:
+        if profile is None:
+            profile = self.get_hardware_profile()
+        quotas = {
+            "full_node": {
+                "cpu_quota_ms": 100000,
+                "memory_max_mb": 8192,
+                "io_weight": 1000
+            },
+            "edge": {
+                "cpu_quota_ms": 50000,
+                "memory_max_mb": 4096,
+                "io_weight": 500
+            },
+            "tablet": {
+                "cpu_quota_ms": 20000,
+                "memory_max_mb": 1024,
+                "io_weight": 100
+            }
+        }
+        return quotas.get(profile, quotas["tablet"])
+
     def get_hardware_profile(self, footprint: dict = None) -> str:
         if footprint is None:
             footprint = self.scan()
