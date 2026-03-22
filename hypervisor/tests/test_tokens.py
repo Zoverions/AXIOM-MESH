@@ -144,14 +144,14 @@ async def test_token_revocation_network_partition():
     # If the network fails, the node validator catches the exception and does not crash.
     # It still uses its local cache.
     validator = NodeValidator()
-    validator.revoked_tokens.add("offline-revoked-token")
+    validator.revoked_tokens.add("offline-revoked-token.sig")
 
     with patch("httpx.AsyncClient.get", side_effect=httpx.ConnectError("Network partition")):
         await validator.sync_revocations()
 
     # Still fails for tokens cached locally
     with pytest.raises(ValueError, match="Token has been revoked"):
-        validator.validate_token("offline-revoked-token", "cap", "data")
+        validator.validate_token("offline-revoked-token.sig", "cap", "data")
 
 @pytest.mark.asyncio
 async def test_background_sync():
@@ -166,3 +166,35 @@ async def test_background_sync():
         validator.stop_background_sync()
 
         assert "token-from-bg" in validator.revoked_tokens
+
+def test_get_revocations():
+    client = TestClient(app)
+
+    # 1. First ensure we can call the endpoint and get a list
+    res = client.get("/token/revocations")
+    assert res.status_code == 200
+    data = res.json()
+    assert "revoked_tokens" in data
+    assert isinstance(data["revoked_tokens"], list)
+
+    # 2. Issue a token and then revoke it to test the state change
+    req = {
+        "requester_id": "req-7",
+        "capsule_id": "cap-7",
+        "consent_proof": "valid",
+        "data_scope": "data"
+    }
+    issue_res = client.post("/token/issue", json=req)
+    assert issue_res.status_code == 200
+    token = issue_res.json()["token"]
+
+    revoke_res = client.post("/token/revoke", json={"token": token, "requester_id": "req-7"})
+    assert revoke_res.status_code == 200
+
+    # 3. Check if the newly revoked token is present in the list returned by /token/revocations
+    res_after = client.get("/token/revocations")
+    assert res_after.status_code == 200
+    data_after = res_after.json()
+    assert "revoked_tokens" in data_after
+    assert isinstance(data_after["revoked_tokens"], list)
+    assert token in data_after["revoked_tokens"]
