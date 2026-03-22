@@ -21,10 +21,22 @@
     "handoverTriggers": "Heartbeat 30d -> CouncilAutonomy | 90d or death -> FullMeshHandover"
   },
   "epochs": {
-    "Bootstrap": { "control": "100% Founder", "pulseActions": ["deploy PLS bridge", "seed initial PulseX pair"] },
-    "BicameralAscension": { "pulseGate": "Council 51% approves Tier 2+" },
-    "CouncilAutonomy": { "pulseGate": "Full Tier 3 (ProveX) only after 90-day monitored testnet" },
-    "FullMeshHandover": { "pulseControl": "Network + digital agents maintain all bridges; founder heartbeat/death triggers auto-pause if needed" }
+    "Bootstrap": {
+      "control": "100% Founder",
+      "pulseActions": [
+        "deploy PLS bridge",
+        "seed initial PulseX pair"
+      ]
+    },
+    "BicameralAscension": {
+      "pulseGate": "Council 51% approves Tier 2+"
+    },
+    "CouncilAutonomy": {
+      "pulseGate": "Full Tier 3 (ProveX) only after 90-day monitored testnet"
+    },
+    "FullMeshHandover": {
+      "pulseControl": "Network + digital agents maintain all bridges; founder heartbeat/death triggers auto-pause if needed"
+    }
   },
   "handoverMechanics": {
     "pulseSentinelInactivityTrigger": "30 days -> Council assumes control of 5% reserve"

@@ -10,12 +10,15 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 interface IUniswapV2Router02 {
     function WETH() external pure returns (address);
     function addLiquidityETH(address token, uint amountTokenDesired, uint amountTokenMin, uint amountETHMin, address to, uint deadline) external payable returns (uint amountToken, uint amountETH, uint liquidity);
+    function addLiquidity(address tokenA, address tokenB, uint amountADesired, uint amountBDesired, uint amountAMin, uint amountBMin, address to, uint deadline) external returns (uint amountA, uint amountB, uint liquidity);
     function swapExactETHForTokens(uint amountOutMin, address[] calldata path, address to, uint deadline) external payable returns (uint[] memory amounts);
+    function swapExactTokensForTokens(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline) external returns (uint[] memory amounts);
 }
 
 contract PulseAdapter is Ownable, ReentrancyGuard, Pausable {
     address public constant PULSEX_ROUTER = 0x165C3410fC91EF562C50559f7d2289fEbed552d9;
     address public constant WPLS = 0xA1077a294dDE1B09bB078844df40758a5D0f9a27;
+    address public constant PLSX_TOKEN = 0x95B303987A60C71504D99Aa1b13B4DA07b0790ab;
     address public immutable AXM_TOKEN;
 
     uint256 public constant GUARDIAN_RESERVE_BPS = 500; // 5%
@@ -53,16 +56,53 @@ contract PulseAdapter is Ownable, ReentrancyGuard, Pausable {
         address[] memory path = new address[](2);
         path[0] = WPLS;
         path[1] = AXM_TOKEN;
-        IUniswapV2Router02(PULSEX_ROUTER).swapExactETHForTokens{value: msg.value}(amountOutMin, path, msg.sender, block.timestamp);
+        IUniswapV2Router02(PULSEX_ROUTER).swapExactETHForTokens{value: msg.value}(amountOutMin, path, msg.sender, block.timestamp + 15 minutes);
     }
 
-    function seedGuardianLiquidity(uint256 amountAXM) external payable onlyGuardianOrCouncil nonReentrant {
+    function swapAXMForPLSX(uint256 amountInAXM, uint256 amountOutMinPLSX) external nonReentrant whenNotPaused heartbeatCheck {
+        IERC20(AXM_TOKEN).transferFrom(msg.sender, address(this), amountInAXM);
+        IERC20(AXM_TOKEN).approve(PULSEX_ROUTER, amountInAXM);
+
+        address[] memory path = new address[](3);
+        path[0] = AXM_TOKEN;
+        path[1] = WPLS;
+        path[2] = PLSX_TOKEN;
+
+        IUniswapV2Router02(PULSEX_ROUTER).swapExactTokensForTokens(
+            amountInAXM,
+            amountOutMinPLSX,
+            path,
+            msg.sender,
+            block.timestamp + 15 minutes
+        );
+    }
+
+    function seedGuardianLiquidity(uint256 amountAXM, uint256 amountTokenMin, uint256 amountETHMin) external payable onlyGuardianOrCouncil nonReentrant {
         IERC20(AXM_TOKEN).transferFrom(msg.sender, address(this), amountAXM);
         IERC20(AXM_TOKEN).approve(PULSEX_ROUTER, amountAXM);
-        IUniswapV2Router02(PULSEX_ROUTER).addLiquidityETH{value: msg.value}(AXM_TOKEN, amountAXM, 0, 0, address(this), block.timestamp);
+        IUniswapV2Router02(PULSEX_ROUTER).addLiquidityETH{value: msg.value}(AXM_TOKEN, amountAXM, amountTokenMin, amountETHMin, address(this), block.timestamp + 15 minutes);
         emit PulseLiquiditySeeded(msg.value, amountAXM);
     }
 
+    function seedGuardianLiquidityPLSX(uint256 amountAXM, uint256 amountPLSX, uint256 amountAXMMin, uint256 amountPLSXMin) external onlyGuardianOrCouncil nonReentrant {
+        IERC20(AXM_TOKEN).transferFrom(msg.sender, address(this), amountAXM);
+        IERC20(PLSX_TOKEN).transferFrom(msg.sender, address(this), amountPLSX);
+
+        IERC20(AXM_TOKEN).approve(PULSEX_ROUTER, amountAXM);
+        IERC20(PLSX_TOKEN).approve(PULSEX_ROUTER, amountPLSX);
+
+        IUniswapV2Router02(PULSEX_ROUTER).addLiquidity(
+            AXM_TOKEN,
+            PLSX_TOKEN,
+            amountAXM,
+            amountPLSX,
+            amountAXMMin,
+            amountPLSXMin,
+            address(this),
+            block.timestamp + 15 minutes
+        );
+        emit PulseLiquiditySeeded(amountPLSX, amountAXM); // PLSX instead of PLS
+    }
     function launchSkillCapsule(address token) external onlyGuardianOrCouncil {
         // Mirrors Pump.tires graduation (LP lock + renounce)
         emit SkillCapsuleLaunched(token, 0);
