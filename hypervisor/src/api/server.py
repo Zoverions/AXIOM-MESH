@@ -1,5 +1,8 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.middleware import SlowAPIMiddleware
 import uuid
 import random
 import requests
@@ -121,6 +124,10 @@ async def lifespan(app: FastAPI):
     auto_training_loop.stop()
 
 app = FastAPI(lifespan=lifespan)
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(_rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 app.include_router(audio_router)
 app.include_router(capsules_router)
 app.include_router(tokens_router)

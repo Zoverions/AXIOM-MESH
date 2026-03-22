@@ -1,8 +1,8 @@
 # HOWTO: Run AXIOM-MESH Locally and Verify Health
 
 ## Prerequisites
-- Docker and Docker Compose installed
-- Ports 3000, 3001, 4000, 5000, 8000 available
+- [ ] Docker and Docker Compose installed
+- [ ] Ports 3000, 3001, 4000, 5000, 8000 available
 
 ## Start services
 ```bash
@@ -18,6 +18,12 @@ curl http://localhost:5000/health
 ```
 
 Expected: each endpoint returns a healthy status payload.
+
+## Verification Checklist
+- [ ] All services started without errors
+- [ ] Health endpoints return 200 OK
+- [ ] Logs show no critical errors
+- [ ] Can submit a test intent successfully
 
 ## Basic smoke check via Makefile
 ```bash

@@ -1,0 +1,19 @@
+{
+  "capsule_id": "cap-websearch-001",
+  "mode": "compile",
+  "compiler_version": "1.0",
+  "changes": [
+    {
+      "component": "Network",
+      "action": "add_http_client",
+      "reason": "enable web data retrieval"
+    }
+  ],
+  "security_findings": [
+    {
+      "severity": "medium",
+      "summary": "Rate limiting and content filtering required for safe web access."
+    }
+  ],
+  "compiled_at": "2026-03-22T00:00:00Z"
+}

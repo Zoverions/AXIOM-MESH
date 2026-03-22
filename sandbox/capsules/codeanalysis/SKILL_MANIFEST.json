@@ -1,0 +1,46 @@
+{
+  "capsule_id": "cap-codeanalysis-001",
+  "name": "code-analysis",
+  "version": "1.0.0",
+  "issuer": {
+    "mesh_issuer": "hypervisor",
+    "key_id": "key-001"
+  },
+  "capabilities": [
+    "code-parsing",
+    "syntax-checking",
+    "bug-detection",
+    "code-generation"
+  ],
+  "constraints": {
+    "proof_carrying_intents": true,
+    "intent_canonicalization": true,
+    "max_risk_score": 0.2
+  },
+  "runtime": {
+    "cpu_limit": 1.0,
+    "memory_limit_mb": 512,
+    "timeout_ms": 30000
+  },
+  "token_policy": {
+    "scope": {
+      "tools": [
+        "ast",
+        "pylint"
+      ],
+      "data": [
+        "/workspace/code"
+      ]
+    },
+    "ttl_seconds": 900,
+    "revocation_handle_required": false,
+    "proof_strictness": "strict"
+  },
+  "personality": {
+    "style": "analytical",
+    "heuristics": [
+      "focus_on_correctness",
+      "suggest_best_practices"
+    ]
+  }
+}

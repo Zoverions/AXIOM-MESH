@@ -1,0 +1,17 @@
+{
+  "source_type": "internal",
+  "source_ref": "hypervisor-builtin",
+  "immutable_digest": "websearch1234567890",
+  "captured_at": "2026-03-22T00:00:00Z",
+  "upstream_signature": {
+    "present": false,
+    "algorithm": "none",
+    "key_id": "builtin",
+    "valid": true
+  },
+  "declared_authority": [
+    "web_access",
+    "data_fetch",
+    "content_parse"
+  ]
+}

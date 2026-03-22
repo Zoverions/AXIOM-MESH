@@ -11,15 +11,15 @@
 
 ## 1) Active Role Assignments
 
-| Role | Responsibility | Current Focus |
-|---|---|---|
-| Release Manager | Drive gate cadence and final go/no-go | RC evidence package quality |
-| Security Lead | Security controls and regression hardening | AuthZ parity + abuse/regression CI |
-| Financial Controls Lead | Reconciliation, journals, tokenomics controls | Ledger↔chain reconciliation baseline |
-| Platform Reliability Lead | Inter-service reliability and recovery drills | Retry/idempotency matrix + RTO/RPO drills |
-| Ecosystem Integration Lead | Interface compatibility and partner readiness | API/schema/ABI lock + smoke tests |
-| Audit & Compliance Lead | Evidence integrity and exception workflow | Dossier completeness + exception expiry controls |
-| Documentation Lead | Keep HOWTO/runbooks/specs aligned with behavior | PR-level documentation parity checks |
+| Role | Responsibility | Current Focus | Owner | Deputy |
+|---|---|---|---|---|
+| Release Manager | Drive gate cadence and final go/no-go | RC evidence package quality | @Zoverions | @agent |
+| Security Lead | Security controls and regression hardening | AuthZ parity + abuse/regression CI | @agent | @Zoverions |
+| Financial Controls Lead | Reconciliation, journals, tokenomics controls | Ledger↔chain reconciliation baseline | @agent | @Zoverions |
+| Platform Reliability Lead | Inter-service reliability and recovery drills | Retry/idempotency matrix + RTO/RPO drills | @agent | @Zoverions |
+| Ecosystem Integration Lead | Interface compatibility and partner readiness | API/schema/ABI lock + smoke tests | @agent | @Zoverions |
+| Audit & Compliance Lead | Evidence integrity and exception workflow | Dossier completeness + exception expiry controls | @agent | @Zoverions |
+| Documentation Lead | Keep HOWTO/runbooks/specs aligned with behavior | PR-level documentation parity checks | @agent | @Zoverions |
 
 ---
 

@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "id": "math-telemetry.schema.json",
+  "title": "Math Telemetry Schema",
+  "type": "object",
+  "required": ["timestamp", "metrics"],
+  "properties": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "computation_time": { "type": "number" },
+        "complexity_score": { "type": "number" },
+        "accuracy_confidence": { "type": "number" }
+      },
+      "required": ["computation_time", "complexity_score", "accuracy_confidence"]
+    }
+  },
+  "additionalProperties": false
+}
