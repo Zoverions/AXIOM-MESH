@@ -1,6 +1,7 @@
 # hypervisor/shadow/AirGapConsent.py
 import qrcode
 import os
+import ast
 from cryptography.fernet import Fernet
 from PIL import Image  # pip install pillow (already in your env or add to requirements)
 
@@ -28,8 +29,8 @@ class AirGapConsent:
     def verify_usb_consent(scanned_hex: str, shadow_node_instance):
         """Called after user scans QR or plugs USB with signed file"""
         decrypted = Fernet(shadow_node_instance.cipher.key).decrypt(bytes.fromhex(scanned_hex))
-        data = eval(decrypted.decode())
-        if data["action"] == "ENABLE_SHADOW_BRIDGE":
+        data = ast.literal_eval(decrypted.decode())
+        if data.get("action") == "ENABLE_SHADOW_BRIDGE":
             shadow_node_instance.bridge_enabled = True
             print("🔓 ShadowBridge activated via physical air-gap consent")
             return True
