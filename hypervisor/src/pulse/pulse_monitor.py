@@ -27,6 +27,7 @@ class CoTAuditor:
         self.entropy_loop_patterns = [
             re.compile(r'(?i)(let me think|reconsider|loop|repeat the process)'),
         ]
+        self.archive = DeepArchive()
 
         # === NEW: EPISTEMIC EMOTION TRACKING ===
         self.epistemic_state: Dict = {
