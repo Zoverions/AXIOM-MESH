@@ -1,5 +1,9 @@
 # ERC-20 Compatibility & Token Flow
 
+## Testnet Deployment Plan
+- ERC-20 contracts to be deployed on Sepolia and Base Sepolia in Q2 2026
+- Full compatibility testing with Uniswap, MetaMask, and major wallets
+
 ## Overview
 The AXIOM-MESH ecosystem incorporates an ERC-20 compatible token flow model designed around the **GPP** token. This document outlines the fundamental lifecycle, accounting operations, and cross-layer mechanics of GPP tokens. These operations are off-chain but designed to seamlessly interoperate with on-chain Ethereum/Polygon/Base environments.
 

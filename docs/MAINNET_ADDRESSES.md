@@ -4,6 +4,10 @@ As of March 21, 2026, AXIOM-MESH is **not deployed on mainnet**.
 
 This file is reserved for future verified deployment addresses after official testnet/mainnet launches.
 
+## Testnet Deployment Plan
+- Sepolia: Planned Q2 2026
+- Base Sepolia: Planned Q2 2026
+
 ## Planned networks
 - Ethereum
 - Arbitrum

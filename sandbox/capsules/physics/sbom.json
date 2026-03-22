@@ -1,0 +1,145 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "documentName": "physics-research-capsule-sbom",
+  "documentNamespace": "https://axiom-mesh.org/sbom/physics-research/1.0.0",
+  "creationInfo": {
+    "created": "2026-03-22T12:00:00Z",
+    "creators": ["Tool: syft-0.100.0", "Organization: AXIOM-MESH"]
+  },
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Package-physics-capsule",
+      "name": "physics-research-capsule",
+      "versionInfo": "1.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": true,
+      "supplier": "Organization: AXIOM-MESH",
+      "originator": "Organization: AXIOM-MESH",
+      "copyrightText": "NOASSERTION",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "description": "Physics research and computational modeling skill capsule",
+      "hasFiles": [
+        "SPDXRef-File-physics-adapter",
+        "SPDXRef-File-physics-runtime",
+        "SPDXRef-File-physics-manifest",
+        "SPDXRef-File-physics-schema"
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-numpy",
+      "name": "numpy",
+      "versionInfo": "1.24.0",
+      "downloadLocation": "https://pypi.org/project/numpy/1.24.0/",
+      "supplier": "Organization: NumPy Developers",
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-scipy",
+      "name": "scipy",
+      "versionInfo": "1.10.0",
+      "downloadLocation": "https://pypi.org/project/scipy/1.10.0/",
+      "supplier": "Organization: SciPy Developers",
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-sympy",
+      "name": "sympy",
+      "versionInfo": "1.12.0",
+      "downloadLocation": "https://pypi.org/project/sympy/1.12.0/",
+      "supplier": "Organization: SymPy Development Team",
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-matplotlib",
+      "name": "matplotlib",
+      "versionInfo": "3.6.0",
+      "downloadLocation": "https://pypi.org/project/matplotlib/3.6.0/",
+      "supplier": "Organization: Matplotlib Developers",
+      "licenseConcluded": "PSF-2.0",
+      "licenseDeclared": "PSF-2.0"
+    }
+  ],
+  "files": [
+    {
+      "SPDXID": "SPDXRef-File-physics-adapter",
+      "fileName": "physics_adapter.py",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "placeholder-sha256-adapter"
+        }
+      ],
+      "licenseConcluded": "MIT",
+      "copyrightText": "Copyright 2026 AXIOM-MESH"
+    },
+    {
+      "SPDXID": "SPDXRef-File-physics-runtime",
+      "fileName": "physics_runtime.py",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "placeholder-sha256-runtime"
+        }
+      ],
+      "licenseConcluded": "MIT",
+      "copyrightText": "Copyright 2026 AXIOM-MESH"
+    },
+    {
+      "SPDXID": "SPDXRef-File-physics-manifest",
+      "fileName": "SKILL_MANIFEST.json",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "placeholder-sha256-manifest"
+        }
+      ],
+      "licenseConcluded": "MIT",
+      "copyrightText": "Copyright 2026 AXIOM-MESH"
+    },
+    {
+      "SPDXID": "SPDXRef-File-physics-schema",
+      "fileName": "physics-intent.v1.json",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "placeholder-sha256-schema"
+        }
+      ],
+      "licenseConcluded": "MIT",
+      "copyrightText": "Copyright 2026 AXIOM-MESH"
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-physics-capsule"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-physics-capsule",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-numpy"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-physics-capsule",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-scipy"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-physics-capsule",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-sympy"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-physics-capsule",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-matplotlib"
+    }
+  ]
+}

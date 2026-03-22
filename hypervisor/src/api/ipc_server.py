@@ -2,12 +2,13 @@ import asyncio
 import json
 import logging
 import os
+import tempfile
 from .context_engine import enforce_context_cap
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-SOCKET_PATH = "/tmp/axiom_mesh.sock"
+SOCKET_PATH = os.path.join(tempfile.gettempdir(), "axiom_mesh.sock")
 
 async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
     logger.info("New IPC connection established.")

@@ -1,0 +1,43 @@
+{
+  "name": "crypto-operations",
+  "version": "1.0.0",
+  "description": "Advanced cryptographic operations and security proofs capsule",
+  "author": "AXIOM-MESH Core Team",
+  "license": "MIT",
+  "repository": "https://github.com/axiom-mesh/capsules/crypto",
+  "tags": ["cryptography", "security", "encryption", "signatures", "hashing"],
+  "capabilities": {
+    "symmetric_cryptography": {
+      "aes_gcm": "Authenticated encryption with AES-GCM",
+      "chacha20_poly1305": "Stream cipher with Poly1305 authentication",
+      "key_derivation": "PBKDF2, Scrypt, Argon2 key derivation functions"
+    },
+    "asymmetric_cryptography": {
+      "rsa_signing": "RSA digital signatures (2048, 3072, 4096 bit)",
+      "ecdsa_signing": "ECDSA digital signatures (P-256, P-384 curves)",
+      "key_generation": "Secure key pair generation and management"
+    },
+    "cryptographic_hashing": {
+      "sha2_family": "SHA-256, SHA-384, SHA-512 hash functions",
+      "blake2": "BLAKE2b high-performance hash function",
+      "hash_verification": "Hash comparison and integrity checking"
+    },
+    "random_number_generation": {
+      "cryptographically_secure": "CSPRNG using system entropy",
+      "key_generation": "Secure key material generation",
+      "nonce_generation": "Unique nonce and IV generation"
+    }
+  },
+  "performance_characteristics": {
+    "speed": "Optimized cryptographic primitives for performance",
+    "security": "Industry-standard security levels and algorithms",
+    "compatibility": "Standards-compliant implementations",
+    "reliability": "Comprehensive error handling and validation"
+  },
+  "safety_features": {
+    "constant_time": "Constant-time implementations to prevent timing attacks",
+    "memory_safe": "Secure memory handling to prevent information leakage",
+    "isolation": "High-security sandboxed execution environment",
+    "audit_logging": "Cryptographic operation logging for compliance"
+  }
+}

@@ -31,6 +31,22 @@ def log_event(level: str, msg: str, trace_id: str = None):
     with open(audit_file, "a", encoding="utf-8") as f:
         f.write(log_json + "\n")
 
+def create_mtls_client():
+    """Create httpx client with mTLS configuration."""
+    certs_dir = os.environ.get("CERTS_DIR", "../certs")
+    ssl_certfile = os.path.join(certs_dir, "hypervisor.crt")
+    ssl_keyfile = os.path.join(certs_dir, "hypervisor.key")
+    ssl_ca_certs = os.path.join(certs_dir, "ca.crt")
+    
+    if os.path.exists(ssl_certfile) and os.path.exists(ssl_keyfile) and os.path.exists(ssl_ca_certs):
+        return httpx.AsyncClient(
+            cert=(ssl_certfile, ssl_keyfile),
+            verify=ssl_ca_certs
+        )
+    else:
+        # Fallback to regular client if certs not available
+        return httpx.AsyncClient()
+
 import asyncio
 from fastapi.concurrency import run_in_threadpool
 
@@ -304,7 +320,7 @@ async def _process_intent_core(intent: IntentObject, api_key: str):
                 # Mark as delegated so we don't loop
                 intent.metadata["_delegated_already"] = True
 
-                async with httpx.AsyncClient() as client:
+                async with create_mtls_client() as client:
                     try:
                         import urllib.parse
                         parsed_addr = urllib.parse.urlparse(peer_addr)
@@ -408,7 +424,7 @@ async def _process_intent_core(intent: IntentObject, api_key: str):
                 if not sandbox_api_key:
                     raise Exception("SANDBOX_API_KEY is not configured")
                 headers = {"Authorization": f"Bearer {sandbox_api_key}"}
-                async with httpx.AsyncClient() as client:
+                async with create_mtls_client() as client:
                     sandbox_res = await client.post(SANDBOX_URL, json={"language": "python", "code": code}, headers=headers)
                     if sandbox_res.status_code != 200:
                         raise Exception(f"Sandbox returned status {sandbox_res.status_code}: {sandbox_res.text}")
@@ -696,7 +712,7 @@ async def zkml_infer(input_data: dict):
     # 2. Submit to Grid Consensus
     try:
         grid_url = "http://localhost:5000/zkml/verify"
-        async with httpx.AsyncClient() as client:
+        async with create_mtls_client() as client:
             response = await client.post(grid_url, json=result, timeout=10.0)
             if response.status_code == 200:
                 result["consensus"] = "verified"

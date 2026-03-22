@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom-mesh.org/schemas/crypto-intent.v1.json",
+  "title": "Crypto Operations Intent Schema",
+  "description": "Schema for cryptographic operations and security intents",
+  "type": "object",
+  "properties": {
+    "operation": {
+      "type": "string",
+      "enum": ["encrypt", "decrypt", "sign", "verify", "hash", "generate"],
+      "description": "The cryptographic operation"
+    },
+    "algorithm": {
+      "type": "string",
+      "enum": ["aes-256-gcm", "chacha20-poly1305", "rsa-2048", "rsa-4096", "ecdsa-p256", "ecdsa-p384", "sha256", "sha384", "sha512", "random"],
+      "description": "Cryptographic algorithm to use"
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "string",
+          "description": "Data to process"
+        },
+        "key": {
+          "type": "string",
+          "description": "Encryption/decryption key"
+        },
+        "private_key": {
+          "type": "string",
+          "description": "Private key for signing"
+        },
+        "public_key": {
+          "type": "string",
+          "description": "Public key for verification"
+        },
+        "key_size": {
+          "type": "integer",
+          "minimum": 128,
+          "maximum": 4096,
+          "description": "Key size in bits"
+        },
+        "key_type": {
+          "type": "string",
+          "enum": ["rsa", "ecdsa", "symmetric"],
+          "description": "Type of key to generate"
+        }
+      },
+      "additionalProperties": true
+    },
+    "constraints": {
+      "type": "object",
+      "properties": {
+        "max_key_size": {
+          "type": "integer",
+          "minimum": 128,
+          "maximum": 4096
+        },
+        "timeout": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 3600
+        },
+        "memory_limit": {
+          "type": "integer",
+          "minimum": 1048576
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "required": ["operation", "algorithm", "parameters"]
+}

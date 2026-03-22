@@ -1,0 +1,43 @@
+{
+  "name": "data-analysis",
+  "version": "1.0.0",
+  "description": "Advanced data analysis and machine learning capsule",
+  "author": "AXIOM-MESH Core Team",
+  "license": "MIT",
+  "repository": "https://github.com/axiom-mesh/capsules/data-analysis",
+  "tags": ["data", "analysis", "statistics", "machine-learning", "visualization"],
+  "capabilities": {
+    "statistical_analysis": {
+      "descriptive_stats": "Mean, median, variance, distribution analysis",
+      "hypothesis_testing": "t-tests, ANOVA, chi-square tests",
+      "correlation_analysis": "Pearson, Spearman correlation coefficients"
+    },
+    "machine_learning": {
+      "supervised_learning": "Regression and classification algorithms",
+      "unsupervised_learning": "Clustering and dimensionality reduction",
+      "model_evaluation": "Cross-validation, performance metrics"
+    },
+    "data_visualization": {
+      "charts": "Histograms, scatter plots, box plots, heatmaps",
+      "time_series": "Line charts, seasonal decomposition plots",
+      "statistical_plots": "Q-Q plots, residual plots, correlation matrices"
+    },
+    "time_series_analysis": {
+      "forecasting": "ARIMA, exponential smoothing models",
+      "decomposition": "Trend, seasonal, residual components",
+      "anomaly_detection": "Statistical outlier detection methods"
+    }
+  },
+  "performance_characteristics": {
+    "accuracy": "Statistically rigorous methods with proper error handling",
+    "speed": "Optimized algorithms for large datasets",
+    "scalability": "Memory-efficient processing for big data",
+    "reliability": "Robust error handling and data validation"
+  },
+  "safety_features": {
+    "input_validation": "Comprehensive data type and range checking",
+    "resource_limits": "Memory and computation time constraints",
+    "isolation": "Sandboxed execution environment",
+    "audit_logging": "All operations logged for reproducibility"
+  }
+}
