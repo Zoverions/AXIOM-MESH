@@ -79,7 +79,7 @@ Use `docs/README.md` as the canonical documentation index.
 - `docs/TECHNICAL-SPECIFICATION.md`
 - `docs/INTERFACE-CONTROL-DOCUMENT.md`
 - `docs/SECURITY-HARDENING.md`
-- `AUDIT_REPORT.md`
+- `docs/AUDIT_REPORT.md`
 
 ---
 
