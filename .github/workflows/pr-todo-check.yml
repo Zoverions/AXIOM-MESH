@@ -1,0 +1,34 @@
+name: PR Master TODO Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check-master-todo:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Check if source code changed but MASTER-TODO.md did not
+      run: |
+        git fetch origin ${{ github.base_ref }}
+
+        # Get list of changed files
+        git diff --name-only origin/${{ github.base_ref }}...${{ github.sha }} > changed_files.txt
+
+        # Check if code files changed
+        CODE_CHANGED=$(grep -E "\.(py|go|ts|js|sol)$" changed_files.txt || true)
+
+        # Check if MASTER-TODO.md changed
+        TODO_CHANGED=$(grep "docs/MASTER-TODO.md" changed_files.txt || true)
+
+        if [ -n "$CODE_CHANGED" ] && [ -z "$TODO_CHANGED" ]; then
+          echo "ERROR: Source code files were modified but docs/MASTER-TODO.md was not updated."
+          echo "Please update docs/MASTER-TODO.md to reflect the completion of execution tasks."
+          exit 1
+        fi
+
+        echo "Check passed. Either no code was changed, or MASTER-TODO.md was correctly updated."

@@ -22,10 +22,10 @@ Update format example:
 ## 2) Priority Lanes (Now)
 
 ## Lane M0 — Program Control & Consolidation (Immediate)
-- [ ] **M0.1** Freeze this file as the sole execution queue for cross-team delivery.
-- [ ] **M0.2** Migrate remaining actionable tasks from legacy roadmap/tracker docs into this file.
-- [ ] **M0.3** Archive duplicate planning lists once migrated (retain links/history only).
-- [ ] **M0.4** Enforce PR check: execution-impacting PRs must update this file.
+- [x] **M0.1** Freeze this file as the sole execution queue for cross-team delivery. — 2026-03-22 — @agent-orchestrator — completed
+- [x] **M0.2** Migrate remaining actionable tasks from legacy roadmap/tracker docs into this file. — 2026-03-22 — @agent-orchestrator — completed
+- [x] **M0.3** Archive duplicate planning lists once migrated (retain links/history only). — 2026-03-22 — @agent-orchestrator — completed
+- [x] **M0.4** Enforce PR check: execution-impacting PRs must update this file. — 2026-03-22 — @agent-orchestrator — completed
 
 Detailed references:
 - `docs/PRODUCTION-EXECUTION-BACKLOG.md` (task definitions)
@@ -69,13 +69,50 @@ Detailed references:
 
 ---
 
+
+
+## Lane PR — Production Readiness Roadmap
+- [ ] **PR.1** Complete all "Caveats" documentation to "Implementation" status
+- [ ] **PR.2** Freeze feature addition; bugfix-only mode
+- [ ] **PR.3** Establish formal threat model (STRIDE per component)
+- [ ] **PR.4** Implement chaos engineering baseline (failure injection)
+
+## Lane A — Post-Audit Hardening
+- [ ] **A.1** Run full static analysis (Security Auditor Agent owns):
+- [ ] **A.2** Fix every High/Critical finding; log results to WORM audit trail
+- [ ] **A.3** Generate + commit SBOM (`syft . -o spdx-json > sbom.json`)
+- [x] **A.4** Enforce `SANDBOX_API_KEY` on **every** east-west and sandbox endpoint (March 20, 2026 - Extracted validateSandboxApiKey to utils/auth.ts and applied to all capsule routes)
+- [ ] **A.5** Add strict rate-limiting + improved sanitization on public route `/intent/process/public`
+- [ ] **A.6** Front public endpoints with WAF (Cloudflare or equivalent) – config in `gateway/`
+- [ ] **A.7** Create `docs/TOKENOMICS.md` with:
+- [ ] **A.8** Update `MAINNET_ADDRESSES.md` and `ERC20-COMPATIBILITY.md` with testnet deployment plan
+- [ ] **A.9** Deploy **all** contracts (`ComputeBond`, `DualLedgerIdentity`, `WeightOracle`, `DialecticArbitration`, etc.) to Sepolia/Base Sepolia
+- [ ] **A.10** Run full test suite + generate coverage report (>85%)
+- [ ] **A.11** Add basic OpenZeppelin guards (ReentrancyGuard, Pausable) where missing
+- [ ] **A.12** Implement mutual TLS (mTLS) between **all** pillars (Gateway ↔ Hypervisor ↔ Grid ↔ Sandbox)
+- [ ] **A.13** Add cryptographic request signing for Grid mutation endpoints
+- [ ] **A.14** Enforce signed east-west traffic everywhere
+- [ ] **A.15** Complete production-grade chain listener with reorg handling and finality
+- [ ] **A.16** Make internal ledger append-only WORM compliant (Phase P1 target)
+- [ ] **A.17** Upgrade zkML verification pipeline to production-grade (model commitment + size checks)
+- [ ] **A.18** Integrate full OpenZeppelin suite (AccessControl, TimelockController)
+- [ ] **A.19** Add timelocks + multi-sig on treasury, governance, and slashing functions
+- [ ] **A.20** Prepare contracts for professional external audit (schedule with Zellic/Trail of Bits/Cantina)
+- [ ] **A.21** Expand E2E test suite (`test_*.py` + new adversarial scenarios)
+- [ ] **A.22** Test: malicious skill capsules, oracle manipulation, slashing abuse, reorg attacks
+- [ ] **A.23** Implement immutable audit trail sink (S3 append-only or Arweave/IPFS)
+- [ ] **A.24** Launch bug bounty (Immunefi or similar) – Governance Agent
+- [ ] **A.25** Complete bicameral governance execution in contracts
+- [ ] **A.26** Full treasury management contracts with automatic split enforcement
+- [ ] **A.27** zkML + ComputeBond to final production grade
+
+## Lane AE — Agent Enhancements
+
+## Lane RM — Roadmap 2026
+
 ## 3) Archive Candidates (After Migration Validation)
 
 Move to `docs/historical/` after confirming no net-new actionable tasks remain:
-- `docs/ROADMAP-v2026.md`
-- `docs/PRODUCTION-READINESS-ROADMAP.md`
-- `docs/AGENT-ENHANCEMENTS.md`
-- `docs/AGENT-POST-AUDIT-ACTION-PLAN.md`
 
 ---
 
