@@ -14,6 +14,35 @@ from src.api.server import app
 from src.core.node_validator import NodeValidator
 import httpx
 
+def test_token_issue_default_budget():
+    client = TestClient(app)
+    req = {
+        "requester_id": "req-budget-test",
+        "capsule_id": "cap-budget",
+        "consent_proof": "valid-proof",
+        "data_scope": "feature_vector_only"
+    }
+    # Do NOT provide compute_budget
+    res = client.post("/token/issue", json=req)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "issued"
+    token = data["token"]
+
+    validator = NodeValidator()
+    payload = validator.validate_token(
+        token=token,
+        expected_capsule_id="cap-budget",
+        expected_data_scope="feature_vector_only",
+        nonce="nonce-budget-test"
+    )
+
+    budget = payload.get("compute_budget", {})
+    assert budget.get("cpu_ms") == 1000
+    assert budget.get("gpu_ms") == 0
+    assert budget.get("memory_mb") == 256
+
+
 def test_token_issue_and_validate():
     client = TestClient(app)
 
