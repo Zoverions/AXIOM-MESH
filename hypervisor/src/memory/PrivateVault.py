@@ -13,7 +13,9 @@ class PrivateVault:
         self.privacy_router = PrivacyRouter()
 
     def get_encryption_key(self, owner_did: str) -> str:
-        system_secret = SecretManager.get_secret("VAULT_MASTER_KEY") or "default_master_secret"
+        system_secret = SecretManager.get_secret("VAULT_MASTER_KEY")
+        if not system_secret:
+            raise RuntimeError("CRITICAL: VAULT_MASTER_KEY must be securely configured. Refusing to use insecure default.")
         return f"{owner_did}:{system_secret}"
 
     def get_node(self, node_id: str, requester_did: str, is_sub_agent: bool) -> Optional[Dict]:
