@@ -7,6 +7,15 @@ type AgentManifest struct {
 	Timestamp       int64     `json:"timestamp"`
 }
 
+type LightweightPingProfile struct {
+	NodeID       string  `json:"node_id"`
+	Tier         string  `json:"tier"`          // e.g. "minimal-edge", "dedicated-mesh"
+	TrustScore   float64 `json:"trust_score"`   // 0.0 to 1.0
+	LatencyScore float64 `json:"latency_score"` // 0.0 to 1.0 (or ms)
+	Version      uint64  `json:"version"`
+	Hash         string  `json:"hash"`
+}
+
 type NodeCapabilityProfile struct {
 	NodeID         string   `json:"node_id"`
 	CPUCores       int      `json:"cpu_cores"`
