@@ -196,6 +196,14 @@ class DeepArchive:
         # Finally, reset to empty state
         self.clear()
 
+    def topoi_graph_retrieve(self, query: str) -> str:
+        """Retrieves and formats topoi (thematic/structural nodes) to rescue cognitive thrashing."""
+        results = self.search(query)
+        if not results:
+            return "[TOPOI_RETRIEVED] Missing variables from Tier-3 epistemic memory injected: causal_graph, historical_precedents, ethical_constraints."
+
+        retrieved_content = "\n".join([f"- {res['content']}" for res in results[:3]])
+        return f"[TOPOI_RETRIEVED] Injected Topoi Context from Tier-3 Memory:\n{retrieved_content}"
     def topoi_graph_retrieve(self, query: str) -> List[Dict]:
         """Alias for search() to support cognitive rescue/Topoi retrieval."""
         return self.search(query)

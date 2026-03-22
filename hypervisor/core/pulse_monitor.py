@@ -71,6 +71,8 @@ class CoTAuditor:
             r"(?i)clearly", r"(?i)undoubtedly", r"(?i)of course"
         ]
 
+        # Connect to Tier-3 epistemic memory
+        self.archive = DeepArchive()
         # DeepArchive instance for topoi graph retrieval
         self.archive = DistributedDeepArchive()
 
@@ -143,6 +145,8 @@ class CoTAuditor:
 
     async def _trigger_topoi_retrieval(self, error_context: str) -> str:
         """Hook to DeepArchive / Tier 3 memory."""
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.archive.topoi_graph_retrieve, error_context)
         try:
             return await self.archive.topoi_graph_retrieve(error_context)
         except Exception as e:
