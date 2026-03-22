@@ -1,0 +1,48 @@
+{
+  "capsule_id": "cap-zoverions-001",
+  "name": "zoverions-epistemic-lens",
+  "version": "1.0.0",
+  "issuer": {
+    "mesh_issuer": "hypervisor",
+    "key_id": "key-zoverions"
+  },
+  "capabilities": [
+    "epistemic-filtering",
+    "cognitive-firewall",
+    "intellectual-arbitrage",
+    "systems-engineering-analysis"
+  ],
+  "constraints": {
+    "proof_carrying_intents": true,
+    "intent_canonicalization": true,
+    "max_risk_score": 0.1
+  },
+  "runtime": {
+    "cpu_limit": 2.0,
+    "memory_limit_mb": 1024,
+    "timeout_ms": 60000
+  },
+  "token_policy": {
+    "scope": {
+      "tools": [
+        "semantic-parser",
+        "arena-protocol"
+      ],
+      "data": [
+        "/workspace/zoverions"
+      ]
+    },
+    "ttl_seconds": 3600,
+    "revocation_handle_required": true,
+    "proof_strictness": "high"
+  },
+  "personality": {
+    "style": "sovereign-operator",
+    "heuristics": [
+      "causal_fidelity",
+      "information_theoretic_hierarchy",
+      "zoverions_hamiltonian",
+      "arena_protocol_synthesis"
+    ]
+  }
+}
