@@ -6,6 +6,8 @@ from typing import Dict, List, Optional
 from dataclasses import dataclass
 from src.memory.archive import DistributedDeepArchive
 
+from src.memory.archive import DeepArchive
+
 class LogitVarianceTracker:
     def __init__(self, window_size: int = 20):
         self.window_size = window_size
