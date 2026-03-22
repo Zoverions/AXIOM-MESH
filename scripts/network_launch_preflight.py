@@ -59,7 +59,7 @@ class LaunchAssessment:
 
 
 def assess_launch(launch_mode: str, rpc_url: str, wallet_address: str) -> LaunchAssessment:
-    if launch_mode != "launch-network":
+    if launch_mode not in ("launch-network", "launch-testnet"):
         return LaunchAssessment(
             launch_mode=launch_mode,
             rpc_url=rpc_url,
@@ -93,7 +93,7 @@ def assess_launch(launch_mode: str, rpc_url: str, wallet_address: str) -> Launch
     funded_enough = wallet_balance_eth >= estimated if wallet_address else False
 
     if not wallet_address:
-        next_action = "Set NETWORK_WALLET_ADDRESS, then re-run preflight before launch-network."
+        next_action = f"Set NETWORK_WALLET_ADDRESS, then re-run preflight before {launch_mode}."
     elif not rpc_reachable:
         next_action = "RPC not reachable; verify RPC_URL/network connectivity or choose local-mesh mode."
     elif funded_enough:
@@ -125,7 +125,7 @@ def main() -> None:
 
     result = assess_launch(args.launch_mode, args.rpc_url, args.wallet_address)
 
-    if args.deploy and args.launch_mode == "launch-network":
+    if args.deploy and args.launch_mode in ("launch-network", "launch-testnet"):
         deploy_genesis(args.rpc_url)
 
     print(json.dumps(asdict(result), indent=2))

@@ -27,7 +27,7 @@ MESHSTORE_QUOTA_GB=50 \
 
 This installer now:
 - detects hardware and writes `config/machine_profile.json`,
-- runs blockchain launch preflight (`local-mesh` / `single-node` / `launch-network`) and estimates required bootstrap funding,
+- runs blockchain launch preflight (`local-mesh` / `single-node` / `launch-testnet` / `launch-network`) and estimates required bootstrap funding,
 - persists `.env` defaults for machine role, launch mode, profile path, and funding estimate,
 - sets storage quota safely against available disk,
 - can run fully unattended for digital-agent onboarding.
@@ -39,10 +39,10 @@ Use `docs/README.md` as the canonical documentation index.
 
 First-run setup now asks only a minimal secure set of user choices:
 - machine role (`dedicated-mesh`, `shared-machine`, `minimal-edge`),
-- launch mode (`local-mesh`, `single-node`, `launch-network`),
+- launch mode (`local-mesh`, `single-node`, `launch-testnet`, `launch-network`),
 - priority (`performance`, `security`, `cost`, `autonomy`).
 
-If `launch-network` is selected, preflight estimates bootstrap ETH required and surfaces whether wallet funding is needed before broadcast. If you skip funding, installer can fall back to local mesh mode.
+If `launch-network` or `launch-testnet` is selected, preflight estimates bootstrap ETH required and surfaces whether wallet funding is needed before broadcast. If you skip funding, installer can fall back to local mesh mode.
 
 ---
 

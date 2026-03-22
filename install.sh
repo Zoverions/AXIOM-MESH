@@ -83,7 +83,7 @@ if [[ -z "$MACHINE_ROLE" ]]; then
   MACHINE_ROLE=$(prompt_choice "Machine role (dedicated-mesh/shared-machine/minimal-edge)" "shared-machine")
 fi
 if [[ -z "$LAUNCH_MODE" ]]; then
-  LAUNCH_MODE=$(prompt_choice "Launch mode (local-mesh/single-node/launch-network)" "local-mesh")
+  LAUNCH_MODE=$(prompt_choice "Launch mode (local-mesh/single-node/launch-testnet/launch-network)" "local-mesh")
 fi
 if [[ -z "$USER_PRIORITY" ]]; then
   USER_PRIORITY=$(prompt_choice "Primary priority (performance/security/cost/autonomy)" "security")
@@ -102,7 +102,7 @@ PY
 
 echo "-> Recommended local model: $RECOMMENDED_MODEL"
 
-if [[ "$LAUNCH_MODE" == "launch-network" && "$AUTO_INSTALL" != "1" ]]; then
+if [[ "$LAUNCH_MODE" == "launch-network" || "$LAUNCH_MODE" == "launch-testnet" ]] && [[ "$AUTO_INSTALL" != "1" ]]; then
   if [[ -z "$RPC_URL" ]]; then
     read -r -p "Enter RPC URL for funding checks (e.g. https://rpc.pulsechain.com) [optional]: " RPC_URL
   fi
@@ -121,7 +121,7 @@ NEXT_ACTION=$(python3 -c 'import json,sys; obj=json.load(sys.stdin); print(obj.g
 
 echo "-> Preflight recommendation: $NEXT_ACTION"
 
-if [[ "$LAUNCH_MODE" == "launch-network" && "$AUTO_INSTALL" != "1" ]]; then
+if [[ "$LAUNCH_MODE" == "launch-network" || "$LAUNCH_MODE" == "launch-testnet" ]] && [[ "$AUTO_INSTALL" != "1" ]]; then
   echo "Estimated bootstrap funding required: ~${REQUESTED_FUNDING_ETH} ETH"
   echo "Current detected wallet balance: ${CURRENT_BALANCE} ETH"
 
@@ -132,7 +132,7 @@ if [[ "$LAUNCH_MODE" == "launch-network" && "$AUTO_INSTALL" != "1" ]]; then
   fi
 fi
 
-if [ "$LAUNCH_MODE" = "launch-network" ]; then
+if [[ "$LAUNCH_MODE" == "launch-network" || "$LAUNCH_MODE" == "launch-testnet" ]]; then
     python3 scripts/network_launch_preflight.py --launch-mode "$LAUNCH_MODE" --rpc-url "$RPC_URL" --wallet-address "$NETWORK_WALLET_ADDRESS" --deploy
     echo "Network launched. Founder controls locked to canonical address."
 fi
@@ -171,8 +171,8 @@ prompt_env "MACHINE_PROFILE_PATH" "config/machine_profile.json" "Machine profile
 prompt_env "MESHSTORE_QUOTA_GB" "$MESHSTORE_QUOTA_GB" "MeshStore quota in GB"
 prompt_env "LAUNCH_MODE" "$LAUNCH_MODE" "Launch mode"
 prompt_env "USER_PRIORITY" "$USER_PRIORITY" "Primary user priority"
-prompt_env "NETWORK_WALLET_ADDRESS" "$NETWORK_WALLET_ADDRESS" "Network wallet address (for launch-network)"
-prompt_env "RPC_URL" "$RPC_URL" "RPC URL (for launch-network)"
+prompt_env "NETWORK_WALLET_ADDRESS" "$NETWORK_WALLET_ADDRESS" "Network wallet address (for launch-network/launch-testnet)"
+prompt_env "RPC_URL" "$RPC_URL" "RPC URL (for launch-network/launch-testnet)"
 prompt_env "ESTIMATED_BOOTSTRAP_FUNDING_ETH" "$REQUESTED_FUNDING_ETH" "Estimated bootstrap funding (ETH)"
 prompt_env "LLM_PROVIDER" "openai" "Choose default LLM provider (openai/anthropic/local)"
 prompt_env "OPENAI_API_KEY" "" "Enter OpenAI API Key (leave blank if local)"
@@ -206,8 +206,8 @@ fi
 echo "=========================================================="
 echo "   Starting AxiomMesh Platform "
 echo "=========================================================="
-if [[ "$LAUNCH_MODE" == "launch-network" ]]; then
-  echo "Running in launch-network mode; ensure wallet funding + deployment approvals are complete."
+if [[ "$LAUNCH_MODE" == "launch-network" || "$LAUNCH_MODE" == "launch-testnet" ]]; then
+  echo "Running in $LAUNCH_MODE mode; ensure wallet funding + deployment approvals are complete."
   echo "Starting local control plane services with: make up"
   make up
 else

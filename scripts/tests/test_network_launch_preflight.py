@@ -25,3 +25,9 @@ def test_assess_launch_network_without_wallet_requests_setup() -> None:
     result = assess_launch("launch-network", "", "")
     assert result.funded_enough is False
     assert "NETWORK_WALLET_ADDRESS" in result.next_action
+
+
+def test_assess_launch_testnet_without_wallet_requests_setup() -> None:
+    result = assess_launch("launch-testnet", "", "")
+    assert result.funded_enough is False
+    assert "NETWORK_WALLET_ADDRESS" in result.next_action
