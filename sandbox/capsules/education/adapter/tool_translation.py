@@ -8,14 +8,30 @@ def map_intent_to_edu_args(normalized_intent):
     """
     task = normalized_intent.get("canonical_task")
     student_id = normalized_intent.get("student_id")
+    region = normalized_intent.get("region")
     params = normalized_intent.get("parameters", {})
 
     if task == "assess_maturity":
-        return {"operation": "assess_maturity", "student_id": student_id, "result": "Maturity assessed to level 3"}
+        return {
+            "operation": "assess_maturity",
+            "student_id": student_id,
+            "region": region,
+            "result": "Maturity assessed to level 3"
+        }
     elif task == "grant_badge":
-        return {"operation": "grant_badge", "student_id": student_id, "result": "Badge NFT granted"}
+        return {
+            "operation": "grant_badge",
+            "student_id": student_id,
+            "region": region,
+            "result": "Badge NFT granted"
+        }
     elif task == "dao_proposal":
-        return {"operation": "dao_proposal", "student_id": student_id, "result": "DAO access granted"}
+        return {
+            "operation": "dao_proposal",
+            "student_id": student_id,
+            "region": region,
+            "result": "DAO access granted"
+        }
     else:
         return {"error": "Unknown task"}
 

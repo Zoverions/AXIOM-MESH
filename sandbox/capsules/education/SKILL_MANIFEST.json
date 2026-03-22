@@ -11,7 +11,8 @@
     "self-directed-learning",
     "gamification-nfts",
     "dao-governance",
-    "maturity-metrics"
+    "maturity-metrics",
+    "regional-alignment"
   ],
   "constraints": {
     "proof_carrying_intents": true,
@@ -40,7 +41,8 @@
     "style": "guiding",
     "heuristics": [
       "pull_not_push",
-      "assess_maturity"
+      "assess_maturity",
+      "region_aware"
     ]
   }
 }

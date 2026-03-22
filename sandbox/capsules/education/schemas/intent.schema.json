@@ -12,6 +12,9 @@
     "student_id": {
       "type": "string"
     },
+    "region": {
+      "type": "string"
+    },
     "parameters": {
       "type": "object"
     }

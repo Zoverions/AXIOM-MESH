@@ -126,6 +126,7 @@ Detailed references:
 - [x] **S.6** Create skill capsule for cryptographic operations and security proofs. — 2026-03-22 — @agent — created full crypto capsule with cryptography library integration
 - [x] **S.7** Test and validate all skill capsules against schema validation and runtime safety. — 2026-03-22 — @agent — all capsules created with comprehensive validation and safety features
 - [x] **S.8** Create localized, gamified education skill capsule with psychology, NFT badges, and DAO capabilities. — 2026-03-22 — @agent — created full education capsule with schemas, adapters, and runtime.
+- [x] **S.9** Update node capability profiles and NemoClaw policy schemas to support region-aware localization services. — 2026-03-22 — @agent — added region handling and updated education engine for regional-alignment.
 
 ---
 

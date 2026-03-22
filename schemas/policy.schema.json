@@ -8,7 +8,13 @@
       "properties": {
         "filesystem": { "type": "array", "items": { "type": "string" } },
         "network": { "type": "array", "items": { "type": "string" } },
-        "privacy": { "type": "object", "properties": { "level": { "enum": ["local-only", "safe-external"] } } }
+        "privacy": {
+          "type": "object",
+          "properties": {
+            "level": { "enum": ["local-only", "safe-external"] },
+            "location_services": { "type": "boolean", "description": "Opt-in to regional alignment settings" }
+          }
+        }
       }
     }
   },
