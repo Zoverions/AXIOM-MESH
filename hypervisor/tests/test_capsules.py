@@ -43,3 +43,23 @@ def test_capsule_compile_invalid_id():
     client = TestClient(app)
     compile_response = client.post("/capsules/compile", json={"capsule_id": "invalid-id"})
     assert compile_response.status_code == 400
+
+from unittest.mock import patch
+
+@patch("src.api.routers.capsules.compile_manifest")
+def test_capsule_compile_general_error(mock_compile_manifest):
+    mock_compile_manifest.side_effect = Exception("Compilation failed")
+    client = TestClient(app)
+    compile_response = client.post("/capsules/compile", json={"capsule_id": "test-id"})
+    assert compile_response.status_code == 400
+    assert compile_response.json() == {"detail": "Compilation failed"}
+
+import jsonschema
+
+@patch("src.api.routers.capsules.compile_manifest")
+def test_capsule_compile_validation_error(mock_compile_manifest):
+    mock_compile_manifest.side_effect = jsonschema.exceptions.ValidationError("Schema is invalid", instance="test", schema="test")
+    client = TestClient(app)
+    compile_response = client.post("/capsules/compile", json={"capsule_id": "test-id"})
+    assert compile_response.status_code == 400
+    assert compile_response.json() == {"detail": "Validation error: Schema is invalid"}
