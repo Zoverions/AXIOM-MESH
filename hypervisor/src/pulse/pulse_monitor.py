@@ -18,7 +18,8 @@ class AuditResult:
     epistemic_state: Dict
 
 class CoTAuditor:
-    def __init__(self):
+    def __init__(self, archive=None):
+        self.archive = archive
         # === ORIGINAL SECURITY COMPONENTS (preserved) ===
         self.malicious_patterns = [
             re.compile(r'(?i)(jailbreak|ignore previous|disregard rules|override|system prompt)'),
@@ -128,6 +129,12 @@ class CoTAuditor:
         return AuditResult(True, "Monitoring completed within limits", self.epistemic_state)
 
     async def _trigger_topoi_retrieval(self, error_context: str) -> str:
+        """Real integration with DeepArchive / Tier 3 memory."""
+        if self.archive is None:
+            from src.memory.archive import DistributedDeepArchive
+            self.archive = DistributedDeepArchive()
+
+        return await self.archive.topoi_graph_retrieve(error_context)
         """Hook to DeepArchive / Tier 3 memory."""
         try:
             return await self.archive.topoi_graph_retrieve(error_context)
@@ -135,5 +142,7 @@ class CoTAuditor:
             return f"[TOPOI_RETRIEVED] Failed to retrieve from Tier-3 memory: {str(e)}"
 
 if __name__ == "__main__":
-    auditor = CoTAuditor()
+    from src.memory.archive import DistributedDeepArchive
+    archive = DistributedDeepArchive()
+    auditor = CoTAuditor(archive=archive)
     # Real usage: await auditor.monitor_cot(live_cot_text)
