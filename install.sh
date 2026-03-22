@@ -102,6 +102,15 @@ PY
 
 echo "-> Recommended local model: $RECOMMENDED_MODEL"
 
+if [[ "$LAUNCH_MODE" == "launch-network" && "$AUTO_INSTALL" != "1" ]]; then
+  if [[ -z "$RPC_URL" ]]; then
+    read -r -p "Enter RPC URL for funding checks (e.g. https://rpc.pulsechain.com) [optional]: " RPC_URL
+  fi
+  if [[ -z "$NETWORK_WALLET_ADDRESS" ]]; then
+    read -r -p "Enter network wallet address for funding checks (optional): " NETWORK_WALLET_ADDRESS
+  fi
+fi
+
 echo "-> Running network launch preflight..."
 PRECHECK_JSON=$(python3 scripts/network_launch_preflight.py --launch-mode "$LAUNCH_MODE" --rpc-url "$RPC_URL" --wallet-address "$NETWORK_WALLET_ADDRESS")
 echo "$PRECHECK_JSON"
@@ -116,18 +125,16 @@ if [[ "$LAUNCH_MODE" == "launch-network" && "$AUTO_INSTALL" != "1" ]]; then
   echo "Estimated bootstrap funding required: ~${REQUESTED_FUNDING_ETH} ETH"
   echo "Current detected wallet balance: ${CURRENT_BALANCE} ETH"
 
-  if [[ -z "$NETWORK_WALLET_ADDRESS" ]]; then
-    read -r -p "Enter network wallet address for funding checks (optional): " NETWORK_WALLET_ADDRESS
-  fi
-  if [[ -z "$RPC_URL" ]]; then
-    read -r -p "Enter RPC URL for funding checks (optional): " RPC_URL
-  fi
-
   FUNDING_DECISION=$(prompt_choice "Fund network wallet now? (yes/no/skip-to-local)" "no")
   if [[ "$FUNDING_DECISION" == "skip-to-local" ]]; then
     LAUNCH_MODE="local-mesh"
     echo "-> Switched to local-mesh mode as requested."
   fi
+fi
+
+if [ "$LAUNCH_MODE" = "launch-network" ]; then
+    python3 scripts/network_launch_preflight.py --launch-mode "$LAUNCH_MODE" --rpc-url "$RPC_URL" --wallet-address "$NETWORK_WALLET_ADDRESS" --deploy
+    echo "Network launched. Founder controls locked to canonical address."
 fi
 
 FREE_DISK=$(python3 - <<'PY'

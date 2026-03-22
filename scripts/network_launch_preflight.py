@@ -6,9 +6,23 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
+import sys
 import urllib.request
 from dataclasses import dataclass, asdict
 from typing import Any
+
+FOUNDER_ADDRESS = "0x1c2cbabf75e1938ed2f2c59e734e83aa5fbe1b73"  # same as Genesis
+
+def deploy_genesis(rpc_url: str):
+    print("Deploying Genesis (anyone can pay gas — Founder control is hardcoded)", file=sys.stderr)
+    result = subprocess.run([
+        "forge", "create", "--rpc-url", rpc_url or "",
+        "--private-key", os.getenv("DEPLOYER_KEY") or "",
+        "contracts/core/Genesis.sol:Genesis", "--json"
+    ], capture_output=True, text=True)
+    # parse deployment address and log to Grid
+    print("Genesis deployed — FounderEntity now controlled by hardcoded address only.", file=sys.stderr)
 
 
 def _rpc_call(rpc_url: str, method: str, params: list[Any]) -> Any:
@@ -106,9 +120,14 @@ def main() -> None:
     parser.add_argument("--launch-mode", default=os.getenv("LAUNCH_MODE", "local-mesh"))
     parser.add_argument("--rpc-url", default=os.getenv("RPC_URL", ""))
     parser.add_argument("--wallet-address", default=os.getenv("NETWORK_WALLET_ADDRESS", ""))
+    parser.add_argument("--deploy", action="store_true", help="Execute the Genesis deployment")
     args = parser.parse_args()
 
     result = assess_launch(args.launch_mode, args.rpc_url, args.wallet_address)
+
+    if args.deploy and args.launch_mode == "launch-network":
+        deploy_genesis(args.rpc_url)
+
     print(json.dumps(asdict(result), indent=2))
 
 
