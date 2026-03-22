@@ -18,6 +18,13 @@ contract FounderShareManager is Initializable, UUPSUpgradeable {
     event FounderShareClaimed(uint256 amount);
     event UnusedShareReallocated(uint256 amount);
 
+    address public pulseAdapter;
+    address public proveXWrapper;
+    bool public councilAutonomyActive;
+
+    event CouncilAutonomyActivated();
+    event FullHandoverTriggered(string reason);
+
     constructor(address _founder, address _treasury) {
         founder = FounderCommitment(_founder);
         treasury = ComputeBond(_treasury);
@@ -27,6 +34,37 @@ contract FounderShareManager is Initializable, UUPSUpgradeable {
     function initialize() public initializer {
 
         lastEpochAllocation = block.timestamp;
+    }
+
+    function setPulseAdapter(address _adapter) external {
+        require(founder.verifyFounder(""), "Unauthorized");
+        pulseAdapter = _adapter;
+    }
+
+    function setProveXWrapper(address _wrapper) external {
+        require(founder.verifyFounder(""), "Unauthorized");
+        proveXWrapper = _wrapper;
+    }
+
+    function activateCouncilAutonomy() external {
+        require(founder.verifyFounder(""), "Unauthorized");
+        councilAutonomyActive = true;
+        // Assuming PulseAdapter and ProveXWrapper have these interfaces
+        // PulseAdapter(pulseAdapter).activateCouncilAutonomy();
+        (bool success1, ) = pulseAdapter.call(abi.encodeWithSignature("activateCouncilAutonomy()"));
+        require(success1, "PulseAdapter activation failed");
+
+        (bool success2, ) = proveXWrapper.call(abi.encodeWithSignature("activateCouncilAutonomy()"));
+        require(success2, "ProveXWrapper activation failed");
+
+        emit CouncilAutonomyActivated();
+    }
+
+    function triggerFullHandover(string calldata reason) external {
+        require(founder.verifyFounder(""), "Unauthorized");
+        // Called by heartbeat miss (90 days) or Council 75% vote or death oracle
+        councilAutonomyActive = true;
+        emit FullHandoverTriggered(reason);
     }
 
     function claimOrReallocate() external {
