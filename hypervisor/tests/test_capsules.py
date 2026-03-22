@@ -2,12 +2,14 @@ import pytest
 from fastapi.testclient import TestClient
 import sys
 import os
+from unittest.mock import patch
 
 # Ensure the parent directory is in the path to fix absolute imports like `from src.api.server`
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.api.server import app
 
+@patch.dict(os.environ, {"CAPSULE_COMPILER_SECRET": "test_secret"})
 def test_capsule_pipeline():
     client = TestClient(app)
 
