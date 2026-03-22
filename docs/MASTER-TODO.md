@@ -86,3 +86,6 @@ A task is done only when all are true:
 - linked detailed file items resolved,
 - tests/checks recorded in PR,
 - documentation updated if behavior changed.
+
+## Lane GPD — Physics Research Kernel Integration
+- [x] Full dynamic agent ecosystem: Founder 5% + Network Public Pool (scripts → ascension entities)
