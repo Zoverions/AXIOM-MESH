@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 import sys
 import os
 from unittest.mock import patch
+import jsonschema
 
 # Ensure the parent directory is in the path to fix absolute imports like `from src.api.server`
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -45,3 +46,19 @@ def test_capsule_compile_invalid_id():
     client = TestClient(app)
     compile_response = client.post("/capsules/compile", json={"capsule_id": "invalid-id"})
     assert compile_response.status_code == 400
+
+def test_capsule_intake_validation_error():
+    client = TestClient(app)
+    with patch("src.api.routers.capsules.intake_payload") as mock_intake:
+        mock_intake.side_effect = jsonschema.exceptions.ValidationError("Mocked validation error")
+        response = client.post("/capsules/intake", json={"source": "test", "name": "test-capsule"})
+        assert response.status_code == 400
+        assert "Validation error: Mocked validation error" in response.json()["detail"]
+
+def test_capsule_intake_general_error():
+    client = TestClient(app)
+    with patch("src.api.routers.capsules.intake_payload") as mock_intake:
+        mock_intake.side_effect = Exception("General error occurred")
+        response = client.post("/capsules/intake", json={"source": "test", "name": "test-capsule"})
+        assert response.status_code == 400
+        assert response.json()["detail"] == "General error occurred"
