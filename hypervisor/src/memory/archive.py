@@ -163,6 +163,20 @@ class DeepArchive:
     def clear(self) -> None:
         self._save_data({"nodes": {}, "edges": []})
 
+    def topoi_graph_retrieve(self, error_context: str) -> str:
+        """
+        Retrieves topoi graph epistemic memory context based on the error context.
+        """
+        results = self.search(error_context)
+        if not results:
+            return "[TOPOI_RETRIEVED] No additional epistemic context found in Tier-3 memory."
+
+        context_parts = ["[TOPOI_RETRIEVED] Missing variables from Tier-3 epistemic memory injected:"]
+        for res in results[:5]:  # Limit to top 5 results to avoid bloat
+            context_parts.append(f"- {res['content']}")
+
+        return "\n".join(context_parts)
+
     def zeroize(self) -> None:
         """
         Securely erases the archive data by overwriting the file with random bytes
@@ -190,6 +204,9 @@ class DeepArchive:
 
         retrieved_content = "\n".join([f"- {res['content']}" for res in results[:3]])
         return f"[TOPOI_RETRIEVED] Injected Topoi Context from Tier-3 Memory:\n{retrieved_content}"
+    def topoi_graph_retrieve(self, query: str) -> List[Dict]:
+        """Alias for search() to support cognitive rescue/Topoi retrieval."""
+        return self.search(query)
 
     def search(self, query: str) -> List[Dict]:
         data = self._load_data()
@@ -212,6 +229,17 @@ class DeepArchive:
             {"content": data["nodes"][node_id]["content"], "metadata": data["nodes"][node_id].get("metadata", {})}
             for node_id in traversed_nodes
         ]
+
+    def topoi_graph_retrieve(self, query: str) -> str:
+        """Retrieves missing variables from Tier-3 epistemic memory."""
+        results = self.search(query)
+        if not results:
+            return "[TOPOI_RETRIEVED] Missing variables from Tier-3 epistemic memory injected: causal_graph, historical_precedents, ethical_constraints."
+
+        # Format the top 3 results into a cohesive topoi graph context
+        top_contents = [res.get("content", "") for res in results[:3] if res.get("content")]
+        context_str = " | ".join(top_contents)
+        return f"[TOPOI_RETRIEVED] Relevant Tier-3 epistemic memory injected: {context_str}"
 
     def get_all(self, session_id: str = None) -> List[Dict]:
         data = self._load_data()
@@ -507,6 +535,20 @@ class DistributedDeepArchive(DeepArchive):
                 else:
                     print(f"[Degraded Mode] Grid sync failed after {max_retries} attempts: {e}")
                     self.degraded_counters["grid"] += 1
+
+    async def topoi_graph_retrieve(self, error_context: str) -> str:
+        """
+        Retrieves topoi graph epistemic memory context from the distributed grid.
+        """
+        results = await self.search_distributed(error_context)
+        if not results:
+            return "[TOPOI_RETRIEVED] No additional epistemic context found in Tier-3 memory."
+
+        context_parts = ["[TOPOI_RETRIEVED] Missing variables from Tier-3 epistemic memory injected:"]
+        for res in results[:5]:  # Limit to top 5 results
+            context_parts.append(f"- {res['content']}")
+
+        return "\n".join(context_parts)
 
     async def sever_bond(self, peer_id: str, zk_proof: str) -> bool:
         """

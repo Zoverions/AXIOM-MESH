@@ -4,6 +4,8 @@ import statistics
 from collections import deque
 from typing import Dict, List, Optional
 from dataclasses import dataclass
+from src.memory.archive import DistributedDeepArchive
+
 from src.memory.archive import DeepArchive
 
 class LogitVarianceTracker:
@@ -45,6 +47,7 @@ class CoTAuditor:
         self.entropy_loop_patterns = [
             re.compile(r'(?i)(let me think|reconsider|loop|repeat the process)'),
         ]
+        self.archive = DeepArchive()
 
         # === NEW: EPISTEMIC EMOTION TRACKING ===
         self.epistemic_state: Dict = {
@@ -70,6 +73,8 @@ class CoTAuditor:
 
         # Connect to Tier-3 epistemic memory
         self.archive = DeepArchive()
+        # DeepArchive instance for topoi graph retrieval
+        self.archive = DistributedDeepArchive()
 
     def _scan_friction_flags(self, cot_text: str) -> AuditResult:
         """Upgraded scanner with epistemic emotion analysis."""
@@ -142,6 +147,10 @@ class CoTAuditor:
         """Hook to DeepArchive / Tier 3 memory."""
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self.archive.topoi_graph_retrieve, error_context)
+        try:
+            return await self.archive.topoi_graph_retrieve(error_context)
+        except Exception as e:
+            return f"[TOPOI_RETRIEVED] Failed to retrieve from Tier-3 memory: {str(e)}"
 
 if __name__ == "__main__":
     auditor = CoTAuditor()
