@@ -6,7 +6,7 @@ AXIOM-MESH is a multi-service agent runtime with four core pillars:
 - **Sandbox** (TypeScript/Node + Docker): isolated code execution.
 - **Grid** (Go): ledger, verification, governance-aligned coordination.
 
-> Status (2026-03-21): repository/staging hardening. Not declared live on mainnet.
+> Status (2026-03-22): repository/staging hardening. Not declared live on mainnet. PulseChain Integration (PulseAdapter, ProveXVerifierWrapper) ready for testnet.
 
 ---
 

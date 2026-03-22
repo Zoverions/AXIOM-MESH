@@ -67,3 +67,10 @@ The system formally provides closure guarantees across three dimensions:
 - Sustainability lock + bicameral rebalance ✓
 - Cross-chain via LayerZero ✓
 - zk-anonymous shadow contributions supported ✓
+
+### PulseChain Integration & Guardian Sentinel Audit (March 2026)
+- PulseAdapter manages secondary PLS gas and PulseX liquidity seeding ✓
+- ProveXVerifierWrapper implements guarded fiat on-ramps utilizing CognitiveFrictionVerifier cross-checks ✓
+- Gated by a 5% Guardian Reserve (Pulse Sentinel) acting as an active observer/intervener ✓
+- Handover logic fully implemented: Founder -> Council -> Digital Agents via timelocked heartbeat/death triggers ✓
+- Smart contracts: `PulseAdapter`, `ProveXVerifierWrapper`, `CognitiveFrictionVerifier`, and updated `FounderShareManager` ✓
