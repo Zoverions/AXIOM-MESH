@@ -25,7 +25,7 @@ Parent queue: `docs/MASTER-TODO.md` (Lane M2)
 - [x] Ensure ResourceBalancer consumes profile on startup.
 
 ## M2.6 Launch preflight + funding gate
-- [x] Add launch mode gate (`local-mesh`, `single-node`, `launch-network`).
+- [x] Add launch mode gate (`local-mesh`, `single-node`, `launch-testnet`, `launch-network`).
 - [x] Assess RPC/wallet readiness before network launch.
 - [x] Estimate bootstrap ETH requirement and request user funding decision.
 - [x] Allow safe fallback to local mesh mode if funding is deferred.
