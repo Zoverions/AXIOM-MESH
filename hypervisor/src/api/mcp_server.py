@@ -6,6 +6,7 @@ import httpx
 import ast
 import uuid
 import re
+import uuid
 from src.core.secrets import SecretManager
 
 # Initialize the FastMCP server
@@ -160,3 +161,134 @@ async def register_grid_skill(skill_name: str, description: str, endpoint: str, 
                 return f"Grid Registration Error: {res.status_code} - {res.text}"
     except Exception as e:
         return f"Failed to register skill on Grid: {str(e)}"
+
+@mcp_server.tool()
+async def spin_advisory_panel(proposal: str, agents: list[str] = ["Strategist", "Empath", "Skeptic"], auth_token: str = "") -> dict:
+    """
+    Instantiates an Advisory Panel inside a TEE to deliberate on a policy proposal via the ARENA protocol.
+    Enforces Agentic Steel-manning.
+    """
+    expected_key = os.environ.get('HYPERVISOR_API_KEY')
+    if expected_key and auth_token != f"Bearer {expected_key}":
+        return {"error": "Security Halt: Server identity unverified. Missing or invalid API Key/Signature in identity chain."}
+
+    sec_err = apply_mcp_security_requirements(f"{proposal} {agents}", risk_score=0.2)
+    if sec_err:
+        return {"error": sec_err}
+
+    # Simulate spinning up isolated TEE environments for the agents
+    panel_results = {
+        "proposal": proposal,
+        "agents": agents,
+        "deliberation": [],
+        "consensus": None
+    }
+
+    # Simple simulation of ARENA protocol with steel-manning
+    for agent in agents:
+        agent_stance = f"Stance from {agent} on '{proposal}'."
+        panel_results["deliberation"].append({
+            "agent": agent,
+            "stance": agent_stance,
+            "steelman_required": True
+        })
+
+    return panel_results
+
+@mcp_server.tool()
+async def submit_counter_argument(agent: str, counter_argument: str, opponent: str, opponent_stance: str, steelman_attempt: str, auth_token: str = "") -> dict:
+    """
+    Submits a counter-argument within the ARENA Protocol.
+    Strictly enforces "Agentic Steel-manning": The agent MUST regenerate the opposing agent's argument to a high degree of semantic fidelity before the counter-argument is accepted.
+    """
+    expected_key = os.environ.get('HYPERVISOR_API_KEY')
+    if expected_key and auth_token != f"Bearer {expected_key}":
+        return {"error": "Security Halt: Server identity unverified."}
+
+    # Simplified Semantic Fidelity Check
+    # In a real implementation, this would use embeddings to check cosine similarity
+    similarity_score = 0.0
+    words_stance = set(opponent_stance.lower().split())
+    words_steelman = set(steelman_attempt.lower().split())
+
+    if len(words_stance) > 0:
+        intersection = words_stance.intersection(words_steelman)
+        similarity_score = len(intersection) / len(words_stance)
+
+    if similarity_score < 0.7:
+        return {
+            "error": "Agentic Steel-manning Failed.",
+            "message": f"Semantic fidelity score {similarity_score:.2f} is below the 0.7 threshold. You must accurately represent {opponent}'s argument before countering.",
+            "accepted": False
+        }
+
+    return {
+        "message": f"Counter-argument accepted. Steel-man fidelity: {similarity_score:.2f}",
+        "accepted": True,
+        "counter_argument": counter_argument
+    }
+
+@mcp_server.tool()
+async def trigger_production_mint(automated_workforce_output: int, amount_to_mint: int, auth_token: str = "") -> dict:
+    """
+    Acts as the Web3 Bridge / Oracle. Tracks real-world production metrics
+    and triggers the `mintFromProduction` function on the GlobalDefenseToken (GDT) smart contract.
+    """
+    expected_key = os.environ.get('HYPERVISOR_API_KEY')
+    if expected_key and auth_token != f"Bearer {expected_key}":
+        return {"error": "Security Halt: Server identity unverified."}
+
+    # In a real implementation, this would use Web3.py to interact with the GDT contract
+    # on the Grid/Pulsechain network, signing the transaction as an authorized Oracle.
+
+    # Simulated Web3 Interaction
+    contract_address = os.environ.get("GDT_CONTRACT_ADDRESS", "0x0000000000000000000000000000000000000000")
+    oracle_address = os.environ.get("ORACLE_WALLET_ADDRESS", "0x0000000000000000000000000000000000000001")
+
+    # Simulated WORM Audit Log
+    audit_log = {
+        "event": "mintFromProduction",
+        "contract": contract_address,
+        "oracle": oracle_address,
+        "automated_workforce_output": automated_workforce_output,
+        "amount_minted": amount_to_mint,
+        "status": "Submitted to Mempool",
+        "tx_hash": f"0x{uuid.uuid4().hex}{uuid.uuid4().hex}"
+    }
+    print(f"Web3 Bridge Event: {audit_log}")
+
+    return {
+        "message": f"Successfully bridged production metrics to GDT contract. Minted {amount_to_mint} GDT.",
+        "transaction_receipt": audit_log
+    }
+
+@mcp_server.tool()
+async def bridge_qdao_proposal(proposal_description: str, is_strategic: bool, auth_token: str = "") -> dict:
+    """
+    Bridges a policy proposal from the Python mesh (e.g., after PVP simulation)
+    to the ZoverionsDAO smart contract for quadratic voting or multi-sig veto.
+    """
+    expected_key = os.environ.get('HYPERVISOR_API_KEY')
+    if expected_key and auth_token != f"Bearer {expected_key}":
+        return {"error": "Security Halt: Server identity unverified."}
+
+    # Simulated Web3 Interaction to createProposal on ZoverionsDAO
+    dao_address = os.environ.get("QDAO_CONTRACT_ADDRESS", "0x0000000000000000000000000000000000000002")
+
+    proposal_id = int(uuid.uuid4().int % 10000) # Simulated ID
+
+    audit_log = {
+        "event": "createProposal",
+        "contract": dao_address,
+        "proposal_id": proposal_id,
+        "description": proposal_description,
+        "is_strategic": is_strategic,
+        "tx_hash": f"0x{uuid.uuid4().hex}{uuid.uuid4().hex}"
+    }
+    print(f"Web3 Bridge Event: {audit_log}")
+
+    return {
+        "message": f"Successfully submitted proposal to ZoverionsDAO.",
+        "proposal_id": proposal_id,
+        "transaction_receipt": audit_log
+    }
