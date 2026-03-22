@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "../treasury/GuildTreasuryFactory.sol";
 
 contract FounderEntity is Ownable {
     uint256 public constant MAX_RESOURCE_PERCENT = 5;
@@ -23,6 +24,6 @@ contract FounderEntity is Ownable {
     }
 
     function createGuild(string calldata name) external onlyOwner {
-        // GuildTreasuryFactory(guildFactory).createGuild(name);
+        GuildTreasuryFactory(guildFactory).createGuild(name);
     }
 }

@@ -22,7 +22,7 @@ contract Genesis {
         address guildF = address(new GuildTreasuryFactory());
         founderEntity = address(new FounderEntity(FOUNDER, guildF));
         axmToken = address(new AXM(founderEntity));
-        mainTreasury = address(new NetworkTreasury());
+        mainTreasury = address(new NetworkTreasury(FOUNDER));
 
         guildFactory = guildF;
 
