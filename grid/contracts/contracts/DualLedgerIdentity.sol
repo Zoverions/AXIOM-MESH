@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "./NodeWallet.sol";
 
 interface IZKMLVerifier {
     function verifyProof(bytes32 proofHash, uint256[2] calldata a, uint256[2][2] calldata b, uint256[2] calldata c) external returns (bool);
@@ -67,6 +68,12 @@ contract DualLedgerIdentity is Ownable, ERC721 {
     function registerNode(address node, IdentityType idType, address connectedWallet) external onlyOwner {
         if (idType != IdentityType.Human && idType != IdentityType.Agent) revert InvalidIdentityType();
         if (identities[node].isRegistered) revert NodeAlreadyRegistered(node);
+
+        address activeWallet = connectedWallet;
+        // Auto-provision a decentralized, integrated wallet if none is provided
+        if (activeWallet == address(0)) {
+            activeWallet = address(new NodeWallet(node));
+        }
 
         identities[node] = Identity({
             idType: idType,
