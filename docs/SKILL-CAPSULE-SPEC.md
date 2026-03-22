@@ -20,9 +20,9 @@ It unifies:
 
 ---
 
-## 2) Canonical Artifact: Skill Capsule
+## 2) Canonical Artifact: Skill Capsule (aka "Skill Pill")
 
-The mesh executes only a **Skill Capsule** bundle.
+The mesh executes only a **Skill Capsule** bundle (colloquially known in the community as a **"Skill Pill"**).
 
 ```text
 skill-capsule/
