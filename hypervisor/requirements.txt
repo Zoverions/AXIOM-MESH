@@ -13,8 +13,6 @@ uvicorn
 ecdsa
 mcp
 
-jsonschema
-
 # zkML dependencies
 ezkl
 torch
