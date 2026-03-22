@@ -22,6 +22,8 @@ type NodeCapabilityProfile struct {
 	LatencyScore   float64  `json:"latency_score,omitempty"`
 	TrustScore     float64  `json:"trust_score,omitempty"`
 	LastSeenTS     int64    `json:"last_seen_ts,omitempty"`
+	Version        uint64   `json:"version,omitempty"`
+	Hash           string   `json:"hash,omitempty"`
 }
 
 type Task struct {
