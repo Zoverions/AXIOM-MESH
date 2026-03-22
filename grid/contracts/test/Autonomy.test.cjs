@@ -26,8 +26,8 @@ describe("Blockchain Autonomy Layer", function () {
     await weightOracle.waitForDeployment();
 
     // Register test voters
-    await identityContract.registerNode(human.address, 1); // 1 = Human
-    await identityContract.registerNode(agent.address, 2); // 2 = Agent
+    await identityContract.registerNode(human.address, 1, ethers.ZeroAddress); // 1 = Human
+    await identityContract.registerNode(agent.address, 2, ethers.ZeroAddress); // 2 = Agent
 
     // Assign initial weights
     await weightOracle.queueOperation(ethers.keccak256(ethers.solidityPacked(["string", "address", "uint256"], ["updateWeight", human.address, 100])));

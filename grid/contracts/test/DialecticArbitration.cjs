@@ -12,8 +12,8 @@ describe("DialecticArbitration", function () {
     const DualLedgerIdentity = await ethers.getContractFactory("DualLedgerIdentity");
     dualLedgerIdentity = await DualLedgerIdentity.deploy();
 
-    await dualLedgerIdentity.registerNode(humanNode.address, 1);
-    await dualLedgerIdentity.registerNode(agentNode.address, 2);
+    await dualLedgerIdentity.registerNode(humanNode.address, 1, ethers.ZeroAddress);
+    await dualLedgerIdentity.registerNode(agentNode.address, 2, ethers.ZeroAddress);
 
     const WeightOracle = await ethers.getContractFactory("WeightOracle");
     weightOracle = await WeightOracle.deploy(dualLedgerIdentity.target);

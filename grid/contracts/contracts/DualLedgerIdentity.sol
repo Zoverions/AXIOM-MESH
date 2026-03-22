@@ -22,6 +22,7 @@ contract DualLedgerIdentity is Ownable, ERC721 {
     struct Identity {
         IdentityType idType;
         bool isRegistered;
+        address connectedWallet;
     }
 
     mapping(address => Identity) public identities;
@@ -50,9 +51,10 @@ contract DualLedgerIdentity is Ownable, ERC721 {
     event RecoveryRegistered(bytes32 indexed nodeId, bytes32 totpCommitment, bytes32 passkeyCommitment);
     event RecoveryUsed(bytes32 indexed nodeId, address reconnector);
 
-    event NodeRegistered(address indexed node, IdentityType idType);
+    event NodeRegistered(address indexed node, IdentityType idType, address connectedWallet);
     event NodeDeregistered(address indexed node);
     event AuthorizationNFTMinted(uint256 indexed tokenId, address indexed holder, bytes32 dataCID, string clarityLevel);
+    event WalletLinked(address indexed node, address connectedWallet);
 
     constructor() Ownable(msg.sender) ERC721("AuthorizationNFT", "ANFT") {}
 
@@ -60,17 +62,29 @@ contract DualLedgerIdentity is Ownable, ERC721 {
      * @dev Register a node as either Human or Agent. Only callable by the owner (or an authorized registrar).
      * @param node The address of the node.
      * @param idType The type of identity (Human or Agent).
+     * @param connectedWallet The connected EVM wallet for ERC-20 settlements.
      */
-    function registerNode(address node, IdentityType idType) external onlyOwner {
+    function registerNode(address node, IdentityType idType, address connectedWallet) external onlyOwner {
         if (idType != IdentityType.Human && idType != IdentityType.Agent) revert InvalidIdentityType();
         if (identities[node].isRegistered) revert NodeAlreadyRegistered(node);
 
         identities[node] = Identity({
             idType: idType,
-            isRegistered: true
+            isRegistered: true,
+            connectedWallet: connectedWallet
         });
 
-        emit NodeRegistered(node, idType);
+        emit NodeRegistered(node, idType, connectedWallet);
+    }
+
+    /**
+     * @dev Allows an already registered node to update or link their connected wallet for L1/L2 integration.
+     * @param wallet The EVM address to link.
+     */
+    function linkConnectedWallet(address wallet) external {
+        if (!identities[msg.sender].isRegistered) revert NodeNotRegistered(msg.sender);
+        identities[msg.sender].connectedWallet = wallet;
+        emit WalletLinked(msg.sender, wallet);
     }
 
     /**
