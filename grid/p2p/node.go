@@ -22,14 +22,13 @@ import (
 )
 
 type PeerInfo struct {
-	ID          string
-	Address     string
-	LastSeen    time.Time
-	Score       int
-	Failures    int
-	Manifest    types.CapabilityManifest
-	Profile     types.NodeCapabilityProfile
-	PingProfile types.LightweightPingProfile
+	ID       string
+	Address  string
+	LastSeen time.Time
+	Score    int
+	Failures int
+	Manifest types.CapabilityManifest
+	Profile  types.NodeCapabilityProfile
 }
 
 type Node struct {
@@ -769,123 +768,6 @@ func (n *Node) GetPeerProfiles() map[string]ProfileWithAddress {
 			profiles[id] = ProfileWithAddress{
 				NodeCapabilityProfile: peer.Profile,
 				Address:               peer.Address,
-			}
-		}
-	}
-	return profiles
-}
-
-func (n *Node) UpdatePeerPingProfile(id string, profile types.LightweightPingProfile) {
-	n.mu.Lock()
-	updated := false
-	peer, exists := n.Peers[id]
-	if !exists {
-		peer = &PeerInfo{ID: id, LastSeen: time.Now()}
-		n.Peers[id] = peer
-	}
-
-	// CRDT: Only update if the incoming version is strictly greater
-	if profile.Version > peer.PingProfile.Version || peer.PingProfile.Version == 0 {
-		peer.PingProfile = profile
-		peer.LastSeen = time.Now()
-		updated = true
-		// Pings are gossiped more frequently, reducing log level or omitting might be useful,
-		// but logging is fine for demonstration.
-		log.Printf("P2P Node %s: Updated ping profile for peer %s (version: %d)", n.ID, id, profile.Version)
-	}
-	n.mu.Unlock()
-
-	if updated {
-		// Re-gossip the updated profile to other peers to propagate it through the network
-		go n.gossipPingProfile(profile, id)
-	}
-}
-
-func (n *Node) BroadcastPingProfile(profile types.LightweightPingProfile) {
-	// Ensure the profile's NodeID is set to this node's ID
-	if profile.NodeID == "" {
-		profile.NodeID = n.ID
-	}
-
-	// Simple CRDT delta compression: only compute hash and broadcast if changed
-	hashBytes, _ := json.Marshal(profile)
-	newHash := fmt.Sprintf("%x", sha256.Sum256(hashBytes))
-
-	// Increment version locally
-	n.mu.Lock()
-	if _, exists := n.Peers[n.ID]; !exists {
-		// Initialize self peer if missing
-		n.Peers[n.ID] = &PeerInfo{ID: n.ID, LastSeen: time.Now()}
-	}
-
-	if n.Peers[n.ID].PingProfile.Hash == newHash && n.Peers[n.ID].PingProfile.Version > 0 {
-		n.mu.Unlock()
-		return // No change, do not broadcast
-	}
-
-	profile.Version = n.Peers[n.ID].PingProfile.Version + 1
-	profile.Hash = newHash
-	n.Peers[n.ID].PingProfile = profile
-	n.mu.Unlock()
-
-	n.gossipPingProfile(profile, n.ID)
-}
-
-func (n *Node) gossipPingProfile(profile types.LightweightPingProfile, sourceNodeID string) {
-	peers := n.snapshotPeers()
-	log.Printf("P2P Node %s: Gossiping Lightweight Ping Profile (v%d) from %s to %d peers", n.ID, profile.Version, sourceNodeID, len(peers))
-
-	type PingPayload struct {
-		NodeID  string                       `json:"nodeId"`
-		Profile types.LightweightPingProfile `json:"profile"`
-	}
-
-	payload := PingPayload{
-		NodeID:  sourceNodeID,
-		Profile: profile,
-	}
-
-	for _, peer := range peers {
-		if peer.ID == n.ID {
-			continue
-		} // skip self
-		go func(pID, addr string) {
-			err := sendWithBackoff(func() error {
-				data, err := json.Marshal(payload)
-				if err != nil {
-					return err
-				}
-				resp, err := http.Post(addr+"/peers/pings?sync=true", "application/json", bytes.NewBuffer(data))
-				if err != nil {
-					return err
-				}
-				defer resp.Body.Close()
-				if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-					return fmt.Errorf("status code %d", resp.StatusCode)
-				}
-				return nil
-			})
-			if err != nil {
-				log.Printf("P2P Node %s: Failed to gossip ping profile with %s: %v", n.ID, addr, err)
-			}
-		}(peer.ID, peer.Address)
-	}
-}
-
-type PingProfileWithAddress struct {
-	types.LightweightPingProfile
-	Address string `json:"address"`
-}
-
-func (n *Node) GetPeerPingProfiles() map[string]PingProfileWithAddress {
-	n.mu.RLock()
-	defer n.mu.RUnlock()
-	profiles := make(map[string]PingProfileWithAddress)
-	for id, peer := range n.Peers {
-		if peer.PingProfile.NodeID != "" && id != n.ID {
-			profiles[id] = PingProfileWithAddress{
-				LightweightPingProfile: peer.PingProfile,
-				Address:                peer.Address,
 			}
 		}
 	}
