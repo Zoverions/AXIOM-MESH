@@ -2,6 +2,7 @@ import re
 import asyncio
 from typing import Dict, List, Optional
 from dataclasses import dataclass
+from src.memory.archive import DistributedDeepArchive
 
 class CognitiveThrashingError(Exception):
     """Raised when LLM shows high confusion/thrashing that can be rescued with more context."""
@@ -46,6 +47,9 @@ class CoTAuditor:
             r"(?i)obviously", r"(?i)it is certain", r"(?i)without a doubt",
             r"(?i)clearly", r"(?i)undoubtedly", r"(?i)of course"
         ]
+
+        # DeepArchive instance for topoi graph retrieval
+        self.archive = DistributedDeepArchive()
 
     def _scan_friction_flags(self, cot_text: str) -> AuditResult:
         """Upgraded scanner with epistemic emotion analysis."""
@@ -123,9 +127,11 @@ class CoTAuditor:
         return AuditResult(True, "Monitoring completed within limits", self.epistemic_state)
 
     async def _trigger_topoi_retrieval(self, error_context: str) -> str:
-        """Stub — hook to DeepArchive / Tier 3 memory."""
-        # TODO: Real integration with DeepArchive.topoi_graph_retrieve()
-        return "[TOPOI_RETRIEVED] Missing variables from Tier-3 epistemic memory injected: causal_graph, historical_precedents, ethical_constraints."
+        """Hook to DeepArchive / Tier 3 memory."""
+        try:
+            return await self.archive.topoi_graph_retrieve(error_context)
+        except Exception as e:
+            return f"[TOPOI_RETRIEVED] Failed to retrieve from Tier-3 memory: {str(e)}"
 
 if __name__ == "__main__":
     auditor = CoTAuditor()
