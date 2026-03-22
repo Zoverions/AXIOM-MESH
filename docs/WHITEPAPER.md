@@ -35,7 +35,7 @@ Token/economic flows are deterministic, traceable, and support full reconciliati
 ## 5. Ecosystem & Integration
 
 AXIOM-MESH is deeply integrated with the broader ecosystem, ensuring robust interconnectivity and automation:
-- **PulseChain Integration:** Core infrastructure leverages PulseChain (chain IDs 369, 943) via the `PulseAdapter` and `ProveXVerifierWrapper` contracts. This integration utilizes PLS for execution gas, PulseX for native liquidity, Pump.tires for permissionless skill capsule token launches, and ProveX for guarded P2P fiat-crypto settlements.
+- **PulseChain Integration:** Core infrastructure leverages PulseChain (chain IDs 369, 943) via the `PulseAdapter` and `ProveXVerifierWrapper` contracts. This integration utilizes PLS for execution gas, PulseX for native liquidity, Pump.tires for permissionless skill capsule (colloquially termed "skill pill") token launches, and ProveX for guarded P2P fiat-crypto settlements.
 - **Agentic Repository Management:** The repository itself is designed to be managed by human and digital entities. Agents and the mesh are capable of managing the repository, including approving and denying changes, streamlining the continuous integration and delivery processes.
 - **Roadmap & Hardening:** The roadmap for what is to be built and hardened is transparently tracked in `docs/plan.md`. This canonical document serves as the central authority for roadmap execution, audit findings, and technical risk management, ensuring all ecosystem participants have clear visibility into the project's trajectory.
 
