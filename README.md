@@ -1,5 +1,7 @@
 # AXIOM-MESH
 
+<img src="logo.png" alt="Axiom Mesh Logo" width="150" align="right">
+
 AXIOM-MESH is a multi-service agent runtime with four core pillars:
 - **Gateway** (TypeScript/Node): ingress APIs, channels, dashboard delivery.
 - **Hypervisor** (Python/FastAPI): orchestration, context engine, policy and routing logic.

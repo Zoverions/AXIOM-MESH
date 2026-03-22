@@ -1,5 +1,7 @@
 # AXIOM-MESH Documentation Hub (Canonical Index)
 
+<img src="../logo.png" alt="Axiom Mesh Logo" width="150" align="right">
+
 **Status Date:** 2026-03-21  
 **Reality Statement:** AXIOM-MESH is currently in repository/staging hardening and is not live on testnet/mainnet.
 
