@@ -14,6 +14,35 @@ from src.api.server import app
 from src.core.node_validator import NodeValidator
 import httpx
 
+def test_token_issue_default_budget():
+    client = TestClient(app)
+    req = {
+        "requester_id": "req-budget-test",
+        "capsule_id": "cap-budget",
+        "consent_proof": "valid-proof",
+        "data_scope": "feature_vector_only"
+    }
+    # Do NOT provide compute_budget
+    res = client.post("/token/issue", json=req)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "issued"
+    token = data["token"]
+
+    validator = NodeValidator()
+    payload = validator.validate_token(
+        token=token,
+        expected_capsule_id="cap-budget",
+        expected_data_scope="feature_vector_only",
+        nonce="nonce-budget-test"
+    )
+
+    budget = payload.get("compute_budget", {})
+    assert budget.get("cpu_ms") == 1000
+    assert budget.get("gpu_ms") == 0
+    assert budget.get("memory_mb") == 256
+
+
 def test_token_issue_and_validate():
     client = TestClient(app)
 
@@ -144,14 +173,14 @@ async def test_token_revocation_network_partition():
     # If the network fails, the node validator catches the exception and does not crash.
     # It still uses its local cache.
     validator = NodeValidator()
-    validator.revoked_tokens.add("offline-revoked-token")
+    validator.revoked_tokens.add("offline-revoked-token.fake-sig")
 
     with patch("httpx.AsyncClient.get", side_effect=httpx.ConnectError("Network partition")):
         await validator.sync_revocations()
 
     # Still fails for tokens cached locally
     with pytest.raises(ValueError, match="Token has been revoked"):
-        validator.validate_token("offline-revoked-token", "cap", "data")
+        validator.validate_token("offline-revoked-token.fake-sig", "cap", "data")
 
 @pytest.mark.asyncio
 async def test_background_sync():
@@ -166,3 +195,21 @@ async def test_background_sync():
         validator.stop_background_sync()
 
         assert "token-from-bg" in validator.revoked_tokens
+
+def test_revoke_token():
+    client = TestClient(app)
+    token_to_revoke = "test-token-to-revoke.sig"
+    req = {
+        "token": token_to_revoke,
+        "requester_id": "req-123"
+    }
+
+    # Revoke the token
+    res = client.post("/token/revoke", json=req)
+    assert res.status_code == 200
+    assert res.json() == {"status": "revoked"}
+
+    # Verify it is in the revocations list
+    res_get = client.get("/token/revocations")
+    assert res_get.status_code == 200
+    assert token_to_revoke in res_get.json().get("revoked_tokens", [])

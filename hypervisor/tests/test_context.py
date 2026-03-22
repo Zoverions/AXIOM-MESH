@@ -174,8 +174,6 @@ async def test_get_context_divergence_engine(mock_clients):
     # Node 6 was not in the original search list but was retrieved as diverse
     engine.divergence_engine.get_diverse_nodes = MagicMock(return_value=["node_diverge"])
 
-    # Let's just test that get_diverse_nodes is called when len > 5.
-
     intent = IntentObject(
         id="test-3",
         content="Divergent query",

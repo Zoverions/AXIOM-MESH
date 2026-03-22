@@ -50,18 +50,17 @@ def get_verify_api_key_func():
 # We use the isolated function instead of importing the whole server
 verify_api_key = get_verify_api_key_func()
 
-import asyncio
 
-@pytest.mark.asyncio
-async def test_verify_api_key_success():
+def test_verify_api_key_success():
+    mock_request = MagicMock(spec=Request)
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="valid_key")
 
     with patch.dict(os.environ, {"HYPERVISOR_API_KEY": "valid_key"}):
-        result = await verify_api_key(credentials)
+        result = verify_api_key(mock_request, credentials)
         assert result == "valid_key"
 
-@pytest.mark.asyncio
-async def test_verify_api_key_missing_env():
+def test_verify_api_key_missing_env():
+    mock_request = MagicMock(spec=Request)
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="valid_key")
 
     with patch.dict(os.environ, {}, clear=False):
@@ -69,18 +68,18 @@ async def test_verify_api_key_missing_env():
             del os.environ["HYPERVISOR_API_KEY"]
 
         with pytest.raises(HTTPException) as exc_info:
-            await verify_api_key(credentials)
+            verify_api_key(mock_request, credentials)
 
         assert exc_info.value.status_code == 500
         assert exc_info.value.detail == "Server configuration error: HYPERVISOR_API_KEY is not set"
 
-@pytest.mark.asyncio
-async def test_verify_api_key_invalid_key():
+def test_verify_api_key_invalid_key():
+    mock_request = MagicMock(spec=Request)
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="wrong_key")
 
     with patch.dict(os.environ, {"HYPERVISOR_API_KEY": "valid_key"}):
         with pytest.raises(HTTPException) as exc_info:
-            await verify_api_key(credentials)
+            verify_api_key(mock_request, credentials)
 
         assert exc_info.value.status_code == 403
         assert exc_info.value.detail == "Invalid API Key"
