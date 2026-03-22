@@ -1,3 +1,4 @@
+from slowapi.errors import RateLimitExceeded
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -142,7 +143,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
-app.add_exception_handler(_rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 app.include_router(audio_router)
 app.include_router(capsules_router)
