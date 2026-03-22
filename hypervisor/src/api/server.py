@@ -93,6 +93,7 @@ opd = OnPolicyDistillation()
 
 auto_training_loop = AutoTrainingLoop()
 meshstore_agent = MeshStoreAgent()
+autoresearch_task = None
 
 async def autoresearch_task_loop():
     while True:
@@ -114,6 +115,7 @@ async def autoresearch_task_loop():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global autoresearch_task
     # Phase 1 Initialization Acknowledged
     print("AxiomMesh Phase 1 Cognitive Hypervisor Started")
     asyncio.create_task(network_sync.publish_capability_manifest(local_manifest))
@@ -237,7 +239,7 @@ def verify_api_key(request: Request, credentials: HTTPAuthorizationCredentials =
     expected_api_key = get_expected_api_key()
     validate_api_key(credentials.credentials, expected_api_key)
 
-    return api_key
+    return credentials.credentials
 
 async def verify_signature(request: Request, api_key: str = Depends(verify_api_key)):
     timestamp = request.headers.get("X-Axiom-Timestamp")
@@ -820,7 +822,7 @@ async def agents_status():
         "agents": [
             {
                 "name": "AutoResearch Daemon",
-                "status": "Active (Idle/Foraging)" if autoresearch_daemon.running else "Stopped",
+                "status": "Active (Idle/Foraging)" if autoresearch_task and not autoresearch_task.done() else "Stopped",
                 "current_task": "Epistemic foraging from unstructured data",
                 "next_plan": "Compile new findings into the Tier 3 Knowledge Graph when node is idle."
             },

@@ -18,16 +18,16 @@ ISSUER_ID = "hypervisor-token-issuer"
 _revoked_tokens = set()
 
 class ComputeBudget(BaseModel):
-    cpu_ms: int = 1000
-    gpu_ms: int = 0
-    memory_mb: int = 256
+    cpu_ms: int = Field(1000, ge=0)
+    gpu_ms: int = Field(0, ge=0)
+    memory_mb: int = Field(256, ge=0)
 
 class TokenIssueRequest(BaseModel):
     requester_id: str
     capsule_id: str
     consent_proof: str
     target_node: str = "*"
-    ttl_seconds: int = 3600
+    ttl_seconds: int = Field(3600, gt=0)
     data_scope: str = "default_scope"
     compute_budget: Optional[ComputeBudget] = None
 

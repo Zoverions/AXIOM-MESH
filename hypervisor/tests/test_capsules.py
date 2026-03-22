@@ -2,12 +2,15 @@ import pytest
 from fastapi.testclient import TestClient
 import sys
 import os
+from unittest.mock import patch
+import jsonschema
 
 # Ensure the parent directory is in the path to fix absolute imports like `from src.api.server`
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.api.server import app
 
+@patch.dict(os.environ, {"CAPSULE_COMPILER_SECRET": "test_secret"})
 def test_capsule_pipeline():
     client = TestClient(app)
 
@@ -44,22 +47,18 @@ def test_capsule_compile_invalid_id():
     compile_response = client.post("/capsules/compile", json={"capsule_id": "invalid-id"})
     assert compile_response.status_code == 400
 
-from unittest.mock import patch
-
-@patch("src.api.routers.capsules.compile_manifest")
-def test_capsule_compile_general_error(mock_compile_manifest):
-    mock_compile_manifest.side_effect = Exception("Compilation failed")
+def test_capsule_intake_validation_error():
     client = TestClient(app)
-    compile_response = client.post("/capsules/compile", json={"capsule_id": "test-id"})
-    assert compile_response.status_code == 400
-    assert compile_response.json() == {"detail": "Compilation failed"}
+    with patch("src.api.routers.capsules.intake_payload") as mock_intake:
+        mock_intake.side_effect = jsonschema.exceptions.ValidationError("Mocked validation error")
+        response = client.post("/capsules/intake", json={"source": "test", "name": "test-capsule"})
+        assert response.status_code == 400
+        assert "Validation error: Mocked validation error" in response.json()["detail"]
 
-import jsonschema
-
-@patch("src.api.routers.capsules.compile_manifest")
-def test_capsule_compile_validation_error(mock_compile_manifest):
-    mock_compile_manifest.side_effect = jsonschema.exceptions.ValidationError("Schema is invalid", instance="test", schema="test")
+def test_capsule_intake_general_error():
     client = TestClient(app)
-    compile_response = client.post("/capsules/compile", json={"capsule_id": "test-id"})
-    assert compile_response.status_code == 400
-    assert compile_response.json() == {"detail": "Validation error: Schema is invalid"}
+    with patch("src.api.routers.capsules.intake_payload") as mock_intake:
+        mock_intake.side_effect = Exception("General error occurred")
+        response = client.post("/capsules/intake", json={"source": "test", "name": "test-capsule"})
+        assert response.status_code == 400
+        assert response.json()["detail"] == "General error occurred"
