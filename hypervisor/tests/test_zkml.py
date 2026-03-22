@@ -2,6 +2,8 @@ import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 from src.zkml.prover import EdgeZKMLProver
 from src.graph.autoresearch_graph import autoresearch_app
+from fastapi.testclient import TestClient
+from src.api.server import app
 
 def mock_gen_settings(onnx_path, settings_path):
     with open(settings_path, "w") as f:
@@ -126,3 +128,91 @@ async def test_cot_auditor():
     res_malicious = await autoresearch_app.ainvoke(state_malicious)
 
     assert "Blocked" in res_malicious.get("context", "") or "Blocked" in res_malicious.get("sandbox_output", "")
+
+def test_api_zkml_infer_missing_input():
+    client = TestClient(app)
+    response = client.post("/zkml/infer", json={"input": []})
+    assert response.status_code == 200
+    assert response.json() == {"status": "error", "message": "Input vector required"}
+
+@patch("src.api.server.create_mtls_client")
+@patch("src.api.server.EdgeZKMLProver")
+def test_api_zkml_infer_verified(mock_prover_class, mock_create_client):
+    mock_prover = MagicMock()
+    mock_prover.infer_and_prove.return_value = {
+        "model_commitment": "mock_commitment",
+        "input": [1.0, 2.0],
+        "output": [3.0],
+        "proof": '{"mock": "proof"}',
+        "vk": "mock_vk",
+        "settings": '{"mock": "settings"}'
+    }
+    mock_prover_class.return_value = mock_prover
+
+    mock_client = AsyncMock()
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_client.post.return_value = mock_response
+
+    # mock_create_client returns an async context manager
+    mock_create_client.return_value.__aenter__.return_value = mock_client
+
+    client = TestClient(app)
+    response = client.post("/zkml/infer", json={"input": [1.0, 2.0]})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["consensus"] == "verified"
+    assert data["proof"] == '{"mock": "proof"}'
+    mock_prover.infer_and_prove.assert_called_once_with([1.0, 2.0])
+    mock_client.post.assert_called_once()
+
+@patch("src.api.server.create_mtls_client")
+@patch("src.api.server.EdgeZKMLProver")
+def test_api_zkml_infer_failed(mock_prover_class, mock_create_client):
+    mock_prover = MagicMock()
+    mock_prover.infer_and_prove.return_value = {
+        "model_commitment": "mock_commitment",
+        "input": [1.0, 2.0],
+        "output": [3.0],
+        "proof": '{"mock": "proof"}'
+    }
+    mock_prover_class.return_value = mock_prover
+
+    mock_client = AsyncMock()
+    mock_response = MagicMock()
+    mock_response.status_code = 400
+    mock_response.text = "Verification failed"
+    mock_client.post.return_value = mock_response
+
+    mock_create_client.return_value.__aenter__.return_value = mock_client
+
+    client = TestClient(app)
+    response = client.post("/zkml/infer", json={"input": [1.0, 2.0]})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["consensus"] == "failed"
+    assert data["grid_error"] == "Verification failed"
+
+@patch("src.api.server.create_mtls_client")
+@patch("src.api.server.EdgeZKMLProver")
+def test_api_zkml_infer_network_error(mock_prover_class, mock_create_client):
+    mock_prover = MagicMock()
+    mock_prover.infer_and_prove.return_value = {
+        "model_commitment": "mock_commitment",
+        "input": [1.0, 2.0],
+        "output": [3.0],
+        "proof": '{"mock": "proof"}'
+    }
+    mock_prover_class.return_value = mock_prover
+
+    mock_client = AsyncMock()
+    mock_client.post.side_effect = Exception("Connection refused")
+
+    mock_create_client.return_value.__aenter__.return_value = mock_client
+
+    client = TestClient(app)
+    response = client.post("/zkml/infer", json={"input": [1.0, 2.0]})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["consensus"] == "network_error"
+    assert data["grid_error"] == "Connection refused"

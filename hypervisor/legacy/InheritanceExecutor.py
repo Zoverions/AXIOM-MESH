@@ -1,5 +1,5 @@
 # hypervisor/legacy/InheritanceExecutor.py
-from hypervisor.memory.PrivateVault import PrivateVault
+from hypervisor.src.memory.PrivateVault import PrivateVault
 
 class InheritanceExecutor:
     async def execute(self, token_id: int):
