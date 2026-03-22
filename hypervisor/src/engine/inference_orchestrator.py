@@ -68,7 +68,9 @@ class InferenceOrchestrator:
         prover = EdgeZKMLProver(weights=[0.5, -0.2, 0.8, 1.2])
         input_vector = [1.0, float(len(context) % 100), 0.5]
         proof_res = prover.infer_and_prove(input_vector)
-        proof = proof_res.get("proof", "groth16-placeholder")
+        proof = proof_res.get("proof")
+        if not isinstance(proof, str) or not proof.strip():
+            raise ValueError("ZKML prover returned an empty proof; refusing placeholder fallback.")
 
         if hasattr(self, "llm"):
             response = await self.llm.process(context, frequency_penalty=freq_penalty, presence_penalty=pres_penalty)
