@@ -43,7 +43,9 @@ class BackpressureQueue:
         # Note: self.queue.shutdown() is available in Python 3.13+, but we are targeting 3.9
         # In earlier versions, there's no native asyncio.Queue shutdown, so we manage the flag.
 
-# Dummy hypervisor for streaming response example
+import json
+
+# Dummy hypervisor for streaming response example (simulating the external processing logic)
 class _DummyHypervisor:
     async def process_streaming(self, intent_id: str):
         class Chunk:
@@ -56,4 +58,40 @@ hypervisor = _DummyHypervisor()
 async def stream_intent_response(intent_id: str) -> AsyncIterator[str]:
     chunks = await hypervisor.process_streaming(intent_id)
     for chunk in chunks:
-        yield chunk.json() + "\n"
+        # Standardize yielding chunks over NDJSON for streaming endpoints as requested
+        if hasattr(chunk, 'json'):
+            yield chunk.json() + "\n"
+        elif isinstance(chunk, dict):
+            yield json.dumps(chunk) + "\n"
+        else:
+            yield str(chunk) + "\n"
+
+from contextlib import asynccontextmanager
+import asyncpg
+import os
+
+# Production-ready asyncpg pool connection pattern
+_pool = None
+
+async def init_db_pool():
+    global _pool
+    if not _pool:
+        db_url = os.getenv("DATABASE_URL")
+        if not db_url:
+            raise RuntimeError("DATABASE_URL environment variable is required to initialize the database pool.")
+
+        _pool = await asyncpg.create_pool(
+            dsn=db_url,
+            min_size=1,
+            max_size=10
+        )
+    return _pool
+
+@asynccontextmanager
+async def get_db_connection() -> AsyncIterator[asyncpg.Connection]:
+    pool = await init_db_pool()
+    conn = await pool.acquire()
+    try:
+        yield conn
+    finally:
+        await pool.release(conn)
