@@ -176,7 +176,7 @@ A task is done only when all are true:
 ## 5) Audit Domain To-Do List (Scaffolded, Mocked, and Incomplete Code Pathways)
 
 ### 1. Financial Audit
-* [ ] **FIN-A.1** Consolidate Financial Evidence Bundles (Owner: finance+ops, ETA: TBD): Financial and tokenomics controls are mostly policy-defined but lack a fully packaged, verifiable evidence set proving every control in a regulated-style audit trail. (CI Check: verify-evidence-bundles)
+* [x] **FIN-A.1** Consolidate Financial Evidence Bundles (Owner: finance+ops, ETA: 2026-03-23): Financial and tokenomics controls are mostly policy-defined but lack a fully packaged, verifiable evidence set proving every control in a regulated-style audit trail. (CI Check: verify-evidence-bundles) — 2026-03-23 — @agent — added `evidence/financial/FIN-2026-03-23` bundle and validator script/Makefile target.
 * [ ] **FIN-A.2** Enforce Operational Tokenomics Controls (Owner: finance+ops, ETA: TBD): Bridge the gap between the implemented `AXM.sol` contract split (5/10/85) and the governance/evidence controls that are not yet fully locked operationally. (CI Check: verify-tokenomics-controls)
 * [ ] **FIN-A.3** Automate Financial Reconciliation Drills (Owner: finance+ops, ETA: TBD): Implement recurring replay/reconciliation drills tied directly to governance and financial controls to ensure ledger vs. chain convergence. (CI Check: test-reconciliation)
 
