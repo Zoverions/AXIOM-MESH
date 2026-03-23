@@ -29,6 +29,7 @@ async function invokeAirgap(command: string, pid: number): Promise<void> {
 export interface ResourceLimits {
     memory_mb?: number;
     cpu_ms?: number;
+    io_weight?: number;
 }
 
 export async function runCode(language: string, code: string, limitsOrUseTee?: ResourceLimits | boolean, useTeeParam?: boolean): Promise<{ stdout: string; stderr: string }> {
@@ -106,11 +107,14 @@ export async function runCode(language: string, code: string, limitsOrUseTee?: R
 
             const nnc = new NetworkNamespaceController();
 
+            const ioWeight = limits?.io_weight || 100;
+            const cpuQuotaStr = limits?.cpu_ms ? `${limits.cpu_ms * 1000}/1000000` : "100000/1000000";
+
             nnc.applyCgroupLimits(proc.pid, {
-                cpuQuota: "100000/1000000",
+                cpuQuota: cpuQuotaStr,
                 memoryMax: `${memoryMb}M`,
                 pidsMax: 64,
-                ioWeight: 100
+                ioWeight: ioWeight
             }).catch(err => console.error(err));
 
             nnc.applySeccompProfile(proc.pid, {

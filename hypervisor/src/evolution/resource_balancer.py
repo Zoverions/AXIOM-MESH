@@ -21,7 +21,9 @@ class ResourceBalancer:
         if tier == "critical":
             self.logger.info(f"Throttle tier is CRITICAL. Escalating task {task_type} (complexity {complexity_score}) to grid/l1.")
             if task_type == "settlement":
+                self.logger.info(f"Routed {task_type} to l1 (Tier: {tier}, Profile: {self.profile})")
                 return "l1"
+            self.logger.info(f"Routed {task_type} to grid (Tier: {tier}, Profile: {self.profile})")
             return "grid"
         elif tier == "constrained":
             # Reduce thresholds for local execution
@@ -30,12 +32,12 @@ class ResourceBalancer:
 
         if task_type == "settlement":
             decision = "l1"
-            self.logger.info(f"Routed {task_type} to {decision}")
+            self.logger.info(f"Routed {task_type} to {decision} (Tier: {tier}, Profile: {self.profile})")
             return decision
 
         if task_type == "consensus":
             decision = "grid"
-            self.logger.info(f"Routed {task_type} to {decision}")
+            self.logger.info(f"Routed {task_type} to {decision} (Tier: {tier}, Profile: {self.profile})")
             return decision
 
         decision = "local"
