@@ -124,4 +124,28 @@ describe('WebSocket E2E Tests', () => {
             }
         });
     });
+
+    test('should reconnect and process message after prior disconnect', (done) => {
+        const firstClient = new WebSocket(`ws://localhost:${port}?apiKey=test-key`);
+
+        firstClient.on('open', () => {
+            firstClient.close();
+        });
+
+        firstClient.on('close', () => {
+            const secondClient = new WebSocket(`ws://localhost:${port}?apiKey=test-key`);
+
+            secondClient.on('open', () => {
+                secondClient.send(JSON.stringify({ input: 'hello again' }));
+            });
+
+            secondClient.on('message', (data) => {
+                const response = JSON.parse(data.toString());
+                if (response.response === 'mocked response') {
+                    secondClient.close();
+                    done();
+                }
+            });
+        });
+    });
 });

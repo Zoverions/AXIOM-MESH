@@ -1,4 +1,4 @@
-.PHONY: up down cli test validate-release-evidence
+.PHONY: up down cli test validate-release-evidence verify-evidence-bundles
 
 up:
 	docker compose up -d --build
@@ -31,3 +31,6 @@ contracts-deploy:
 validate-release-evidence:
 	@test -n "$(RC_PATH)" || (echo "Usage: make validate-release-evidence RC_PATH=release-evidence/RC-<date>-<tag>" && exit 1)
 	python3 scripts/validate_release_evidence.py $(RC_PATH)
+
+verify-evidence-bundles:
+	python3 scripts/verify_evidence_bundles.py

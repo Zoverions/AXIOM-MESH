@@ -1,11 +1,15 @@
 # AXIOM-MESH Financial Controls Evidence Index
 
-**Version:** 2026-03-24
+**Version:** 2026-03-23
 **Purpose:** Links financial control policies to concrete implementation artifacts, tests, and verification commands. This fulfills the `M5.3` post-audit requirement.
 
 ## 1) Overview
 
 AXIOM-MESH integrates on-chain smart contracts with off-chain governance and hypervisor validation. This index maps the financial controls defined in `docs/TOKENOMICS.md` and `docs/TREASURY-SPLIT.md` to verifiable codebase implementation.
+
+Canonical financial evidence bundle directory:
+- `evidence/financial/FIN-2026-03-23/`
+- Validation command: `make verify-evidence-bundles`
 
 ---
 
