@@ -24,7 +24,9 @@ type RoutingPolicy struct {
 	MaxLatencyMs           int          `json:"max_latency_ms"`
 	MaxCost                int          `json:"max_cost"`
 	MinTrustScore          float64      `json:"min_trust_score"`
+	// RequiredHardwareTier enforces task compatibility with minimum node hardware.
 	RequiredHardwareTier   HardwareTier `json:"required_hardware_tier"`
+	// RequiredServiceClasses filters out nodes lacking specific task requirements.
 	RequiredServiceClasses []string     `json:"required_service_classes"`
 }
 
@@ -143,10 +145,12 @@ func (s *Scheduler) findCandidates(policy RoutingPolicy, budget int, excludeNode
 		if metrics.Cost > budget {
 			continue
 		}
+		// Filter out nodes that don't match the required hardware tier.
 		if metrics.HardwareTier < policy.RequiredHardwareTier {
 			continue
 		}
 
+		// Filter out nodes that lack any of the required service classes.
 		missingService := false
 		for _, requiredSvc := range policy.RequiredServiceClasses {
 			if !metrics.ServiceClasses[requiredSvc] {
@@ -226,6 +230,8 @@ func (s *Scheduler) Schedule(capsuleID string, token string, policy RoutingPolic
 	return selectedNode, ticket.Clone(), nil
 }
 
+// Reassign is the failover logic which returns a new node ID within the token TTL
+// if the selected node becomes unavailable.
 func (s *Scheduler) Reassign(ticketID string) (string, error) {
 	return s.Failover(ticketID)
 }
