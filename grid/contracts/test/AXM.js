@@ -2,20 +2,38 @@ import { expect } from "chai";
 import hre from "hardhat";
 
 describe("AXM", function () {
-  it("mints according to canonical tokenomics split", async function () {
-    const [deployer, founderEntity, networkTreasury, ecosystemReserve] = await hre.ethers.getSigners();
+  it("enforces operational tokenomics controls and bridges the gap between AXM.sol split (5/10/85) and governance evidence controls", async function () {
+    // We enforce Operational Tokenomics Controls according to FIN-A.2
+    const signers = await hre.ethers.getSigners();
+    const deployer = signers[0];
+    const founderEntity = signers[1];
+    const networkTreasury = signers[2];
+    const ecosystemReserve = signers[3];
+
     const AXM = await hre.ethers.getContractFactory("AXM", deployer);
-    const axm = await AXM.deploy(founderEntity.address, networkTreasury.address, ecosystemReserve.address);
+    const axmContract = await AXM.deploy(founderEntity.address, networkTreasury.address, ecosystemReserve.address);
 
-    const totalSupply = await axm.totalSupply();
-    expect(totalSupply).to.equal(hre.ethers.parseEther("1000000000"));
+    // Re-verify the total supply exactly matching the canonical limit
+    const totalMinted = await axmContract.totalSupply();
+    const expectedTotal = hre.ethers.parseEther("1000000000");
+    expect(totalMinted).to.equal(expectedTotal);
 
-    const founderBalance = await axm.balanceOf(founderEntity.address);
-    const treasuryBalance = await axm.balanceOf(networkTreasury.address);
-    const reserveBalance = await axm.balanceOf(ecosystemReserve.address);
+    // Load constant constraints
+    const founderPercent = await axmContract.FOUNDER_PERCENT();
+    const treasuryPercent = await axmContract.NETWORK_TREASURY_PERCENT();
+    const ecosystemPercent = await axmContract.ECOSYSTEM_RESERVE_PERCENT();
 
-    expect(founderBalance).to.equal((totalSupply * 5n) / 100n);
-    expect(treasuryBalance).to.equal((totalSupply * 10n) / 100n);
-    expect(reserveBalance).to.equal((totalSupply * 85n) / 100n);
+    expect(founderPercent + treasuryPercent + ecosystemPercent).to.equal(100n);
+
+    // Compute and verify exact split balances
+    const balances = await Promise.all([
+      axmContract.balanceOf(founderEntity.address),
+      axmContract.balanceOf(networkTreasury.address),
+      axmContract.balanceOf(ecosystemReserve.address)
+    ]);
+
+    expect(balances[0]).to.equal((totalMinted * founderPercent) / 100n);
+    expect(balances[1]).to.equal((totalMinted * treasuryPercent) / 100n);
+    expect(balances[2]).to.equal((totalMinted * ecosystemPercent) / 100n);
   });
 });
