@@ -1,4 +1,4 @@
-.PHONY: up down cli test validate-release-evidence verify-evidence-bundles verify-tokenomics-controls
+.PHONY: up down cli test validate-release-evidence verify-evidence-bundles verify-tokenomics-controls test-reconciliation
 
 up:
 	docker compose up -d --build
@@ -37,3 +37,7 @@ verify-evidence-bundles:
 
 verify-tokenomics-controls:
 	python3 scripts/verify_tokenomics_controls.py
+
+
+test-reconciliation:
+	python3 scripts/run_reconciliation_drill.py

@@ -9,7 +9,8 @@ AXIOM-MESH integrates on-chain smart contracts with off-chain governance and hyp
 
 Canonical financial evidence bundle directory:
 - `evidence/financial/FIN-2026-03-23/`
-- Validation command: `make verify-evidence-bundles`
+- Reconciliation drill reports: `evidence/financial/reconciliation-drills/`
+- Validation commands: `make verify-evidence-bundles` and `make test-reconciliation`
 
 ---
 
@@ -22,6 +23,7 @@ Canonical financial evidence bundle directory:
 | **Treasury Multi-Sig Governance** | `docs/GOVERNANCE.md` | `grid/contracts/contracts/Treasury.sol` | Mapped in `GOVERNANCE-CONTROL-MAP.md`. |
 | **Storage Offer Persistence** | `docs/AUDIT_REPORT.md` | `grid/contracts/contracts/ComputeBond.sol` | Test `getStorageOffer` returns persisted data. |
 | **PoER Payouts** | `docs/TOKENOMICS.md` | `grid/contracts/contracts/ProveXVerifierWrapper.sol` | Verified dynamic allocation calculation based on score. |
+| **Ledger↔Chain Reconciliation Drill** | `docs/TOKENOMICS.md` | `grid/blockchain/chain.go` + `scripts/run_reconciliation_drill.py` | `make test-reconciliation` (writes `evidence/financial/reconciliation-drills/latest.json`). |
 
 ---
 
