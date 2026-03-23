@@ -63,7 +63,7 @@ AXIOM-MESH adheres to strict principles to ensure the integrity of the network:
 
 Governance utilizes layered artifacts, supporting explicit approval trails, emergency rollback mechanisms, and parameter change logging to ensure the network remains adaptable yet secure. Security posture spans from ingress hardening to strict sandbox isolation, inter-service authentication (mTLS), and immutable audit trails.
 
-## 8. March 23, 2026 Implementation Addendum
+## 7. March 23, 2026 Implementation Addendum
 
 The following hardening changes are now implemented in repository code:
 
