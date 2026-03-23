@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/axiom-mesh/grid/consensus"
 	"github.com/axiom-mesh/grid/internal/ledger"
@@ -1061,4 +1062,33 @@ func (l *Ledger) LoadFromFile(path string) error {
 	}
 
 	return nil
+}
+
+// Prune removes historical data older than the specified retention period
+func (l *Ledger) Prune(retentionPeriod time.Duration) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	cutoff := uint64(time.Now().Add(-retentionPeriod).Unix())
+
+	// Prune CRDTShards
+	for id, shard := range l.CRDTShards {
+		if shard.Timestamp < cutoff {
+			delete(l.CRDTShards, id)
+		}
+	}
+
+	// Prune DriftReports
+	for id, report := range l.DriftReports {
+		if report.Timestamp < cutoff {
+			delete(l.DriftReports, id)
+		}
+	}
+
+	// Prune Proposals
+	for id, proposal := range l.Proposals {
+		if proposal.EndTime < cutoff && proposal.State == types.ProposalStateResolved {
+			delete(l.Proposals, id)
+		}
+	}
 }
