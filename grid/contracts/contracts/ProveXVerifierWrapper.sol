@@ -55,7 +55,8 @@ contract ProveXVerifierWrapper is Ownable, ReentrancyGuard, Pausable {
 
         // Release UBI from UniversalDistributionPool (gated by PoER)
         if (poerScores[recipient] >= 1000) { // threshold example
-            emit FiatUBIReleased(recipient, 1000 ether); // placeholder
+            uint256 releaseAmount = 1 ether + (poerScores[recipient] * 1e15); // Base UBI + score bonus
+            emit FiatUBIReleased(recipient, releaseAmount);
         }
     }
 

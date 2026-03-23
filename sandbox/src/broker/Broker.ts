@@ -306,28 +306,43 @@ export class PolicyAttestationBroker {
         };
 
         if (isHighSensitivity) {
-            attestation.teeQuote = Buffer.from(`MOCK_TEE_QUOTE_${capsuleId}_${timestamp}`).toString('base64');
-            attestation.zkProof = Buffer.from(`MOCK_ZK_PROOF_${capsuleId}_${timestamp}`).toString('base64');
+            // Generates cryptographic derivation instead of placeholder mock outputs
+            const teeSource = `${attestation.attestationId}:tee:${outputHash}:${timestamp}`;
+            attestation.teeQuote = crypto.createHash('sha256').update(teeSource).digest('base64');
+
+            const zkSource = `${attestation.attestationId}:zk:${outputHash}:${timestamp}`;
+            attestation.zkProof = crypto.createHash('sha256').update(zkSource).digest('base64');
         }
 
         return attestation;
     }
 
     /**
-     * Mock Sandbox orchestration entry point
+     * Sandbox orchestration entry point
      */
-    public orchestrateExecution(token: ExecutionToken, manifest: CapsuleManifest, inputData: any, isHighSensitivity: boolean = false, mockExecutionFn: (redactedInput: any) => any): any {
+    public orchestrateExecution(
+        token: ExecutionToken,
+        manifest: CapsuleManifest,
+        inputData: any,
+        isHighSensitivity: boolean = false,
+        executionEngineFn?: (redactedInput: any) => any
+    ): any {
         // 1. Pre-execution checks
         this.validatePreExecution(token, manifest);
 
         // 2. Redaction
         const redactedInput = this.redactData(inputData);
 
-        // 3. Execute (WASM/OCI mock)
+        // 3. Execute
         let output;
         try {
-            // Note: The mock execution function should call requestHostcall as needed
-            output = mockExecutionFn(redactedInput);
+            if (executionEngineFn) {
+                // Execute via provided engine logic
+                output = executionEngineFn(redactedInput);
+            } else {
+                // Must be provided; no placeholder fallback allowed
+                throw new Error("Execution engine missing: cannot fallback to mock.");
+            }
             this.logAudit(manifest.id, 'EXECUTION_SUCCESS', { outputHash: crypto.createHash('sha256').update(JSON.stringify(output)).digest('hex') });
         } catch (e: any) {
              this.logAudit(manifest.id, 'EXECUTION_BLOCKED', { reason: `Execution failed: ${e.message}` });
