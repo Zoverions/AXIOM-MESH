@@ -34,7 +34,6 @@ Detailed references:
 ## Lane M1 — Production Readiness Critical Path
 - [x] **M1.1** Publish owner + deputy roster for all delivery roles. — 2026-03-22 — @agent — updated PRODUCTION-READINESS-TRACKER.md
 - [x] **M1.2** Freeze API/schema/ABI baseline and enforce compatibility checks in CI. — 2026-03-22 — @agent — tagged v2026-baseline
-- [x] **M1.2** Freeze API/schema/ABI baseline and enforce compatibility checks in CI. — 2026-03-22 — @agent — tagged v2026-baseline
   - [x] ECO-01: API/schema/ABI lock and compatibility checks (2 days, D1) — 2026-03-22 — @agent — compatibility checks enforced in CI
 - [x] **M1.3** Complete route authZ parity audit + remediation backlog. — 2026-03-22 — @agent — all SEC subtasks completed
   - [x] SEC-01: Route inventory + authZ parity map (2 days, A1) — 2026-03-22 — @agent — all routes have auth dependencies
@@ -99,7 +98,6 @@ Detailed references:
 - [x] **D.3** Restructure docs for actionability: add checklists, step-by-step guides, and clear acceptance criteria. — 2026-03-22 — @agent — added checklists to run-local-stack.md
 - [x] **D.4** Create unified HOWTO index linking all operational procedures. — 2026-03-22 — @agent — created docs/HOWTO/index.md
 
-## Lane M4 — Post-Audit Remediation (P0-P3 Tasks)
 ## Lane M4 — Post-Audit Remediation (P0-P3 Tasks)
 - [x] **M4.1** Run full static analysis and fix High/Critical findings. — 2026-03-22 — @agent — ran bandit (no high/crit, fixed medium tmp path), safety (upgraded urllib3)
 - [x] **M4.2** Generate and commit SBOM. — 2026-03-22 — @agent — placeholder, syft install denied
@@ -178,7 +176,7 @@ A task is done only when all are true:
 ### 1. Financial Audit
 * [x] **FIN-A.1** Consolidate Financial Evidence Bundles (Owner: finance+ops, ETA: 2026-03-23): Financial and tokenomics controls are mostly policy-defined but lack a fully packaged, verifiable evidence set proving every control in a regulated-style audit trail. (CI Check: verify-evidence-bundles) — 2026-03-23 — @agent — added `evidence/financial/FIN-2026-03-23` bundle and validator script/Makefile target.
 * [x] **FIN-A.2** Enforce Operational Tokenomics Controls (Owner: finance+ops, ETA: TBD): Bridge the gap between the implemented `AXM.sol` contract split (5/10/85) and the governance/evidence controls that are not yet fully locked operationally. (CI Check: verify-tokenomics-controls) — 2026-03-24 — @agent — added CI checks and explicit mapping in AXM.sol to enforce 5/10/85 operational splits.
-* [ ] **FIN-A.3** Automate Financial Reconciliation Drills (Owner: finance+ops, ETA: TBD): Implement recurring replay/reconciliation drills tied directly to governance and financial controls to ensure ledger vs. chain convergence. (CI Check: test-reconciliation)
+* [x] **FIN-A.3** Automate Financial Reconciliation Drills (Owner: finance+ops, ETA: TBD): Implement recurring replay/reconciliation drills tied directly to governance and financial controls to ensure ledger vs. chain convergence. (CI Check: test-reconciliation) — 2026-03-23 — @agent — added `scripts/run_reconciliation_drill.py`, `make test-reconciliation`, and reconciliation report output — 212375d
 
 ### 2. Blockchain Audit
 * [ ] **BLK-A.1** Harden Grid Mutation Boundaries (Owner: core+contracts, ETA: TBD): Apply uniform AuthZ controls and mutation boundary hardening to all Grid routes to meet financial-grade claims. (CI Check: test-grid-authz)
