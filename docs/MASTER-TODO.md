@@ -176,35 +176,35 @@ A task is done only when all are true:
 ## 5) Audit Domain To-Do List (Scaffolded, Mocked, and Incomplete Code Pathways)
 
 ### 1. Financial Audit
-* [ ] **FIN-A.1** Consolidate Financial Evidence Bundles: Financial and tokenomics controls are mostly policy-defined but lack a fully packaged, verifiable evidence set proving every control in a regulated-style audit trail.
-* [ ] **FIN-A.2** Enforce Operational Tokenomics Controls: Bridge the gap between the implemented `AXM.sol` contract split (5/10/85) and the governance/evidence controls that are not yet fully locked operationally.
-* [ ] **FIN-A.3** Automate Financial Reconciliation Drills: Implement recurring replay/reconciliation drills tied directly to governance and financial controls to ensure ledger vs. chain convergence.
+* [ ] **FIN-A.1** Consolidate Financial Evidence Bundles (Owner: finance+ops, ETA: TBD): Financial and tokenomics controls are mostly policy-defined but lack a fully packaged, verifiable evidence set proving every control in a regulated-style audit trail. (CI Check: verify-evidence-bundles)
+* [ ] **FIN-A.2** Enforce Operational Tokenomics Controls (Owner: finance+ops, ETA: TBD): Bridge the gap between the implemented `AXM.sol` contract split (5/10/85) and the governance/evidence controls that are not yet fully locked operationally. (CI Check: verify-tokenomics-controls)
+* [ ] **FIN-A.3** Automate Financial Reconciliation Drills (Owner: finance+ops, ETA: TBD): Implement recurring replay/reconciliation drills tied directly to governance and financial controls to ensure ledger vs. chain convergence. (CI Check: test-reconciliation)
 
 ### 2. Blockchain Audit
-* [ ] **BLK-A.1** Harden Grid Mutation Boundaries: Apply uniform AuthZ controls and mutation boundary hardening to all Grid routes to meet financial-grade claims.
-* [ ] **BLK-A.2** Enforce Tokenomics Change-Control: Build programmatic evidence binding for tokenomics parameter updates so that any change automatically requires a verifiable governance decision record and migration note.
-* [ ] **BLK-A.3** Verify `ProveXVerifierWrapper.sol` Scaffold Removal: Ensure the explicit placeholder release amounts in the wrapper contract have been fully replaced with dynamic, cryptographically verified logic in all environments.
-* [ ] **BLK-A.4** Implement Immutable Audit Retention: Consolidate the logging architecture to enforce an immutable, WORM (Write Once, Read Many) audit retention policy for all on-chain state changes.
+* [ ] **BLK-A.1** Harden Grid Mutation Boundaries (Owner: core+contracts, ETA: TBD): Apply uniform AuthZ controls and mutation boundary hardening to all Grid routes to meet financial-grade claims. (CI Check: test-grid-authz)
+* [ ] **BLK-A.2** Enforce Tokenomics Change-Control (Owner: core+contracts, ETA: TBD): Build programmatic evidence binding for tokenomics parameter updates so that any change automatically requires a verifiable governance decision record and migration note. (CI Check: verify-change-control)
+* [ ] **BLK-A.3** Verify `ProveXVerifierWrapper.sol` Scaffold Removal (Owner: core+contracts, ETA: TBD): Ensure the explicit placeholder release amounts in the wrapper contract have been fully replaced with dynamic, cryptographically verified logic in all environments. (CI Check: test-provex-wrapper)
+* [ ] **BLK-A.4** Implement Immutable Audit Retention (Owner: core+contracts, ETA: TBD): Consolidate the logging architecture to enforce an immutable, WORM (Write Once, Read Many) audit retention policy for all on-chain state changes. (CI Check: test-audit-retention)
 
 ### 3. Security Audit
-* [ ] **SEC-A.1** Implement Post-Quantum (PQ) Cryptography Pipeline: Replace the current "classical-only" trust roots (SHA-256/ECDSA). Build out the Phase 1 hybrid signature scheme (Classical + PQ) for all high-trust pathways.
-* [ ] **SEC-A.2** Enforce Service-to-Service mTLS & Anti-Replay: Inter-service interconnects currently rely on mixed/internal HTTP trust. Implement uniform mTLS, signed requests, timestamping, and nonces across all pillar boundaries.
-* [ ] **SEC-A.3** Harden Sandbox Identity Boundaries: Upgrade the Sandbox runtime from relying on a basic API key boundary to utilizing full inter-service identity hardening.
-* [ ] **SEC-A.4** Deploy Edge Perimeter Controls: The Gateway's public ingress still requires external perimeter controls (like a hardened WAF and strict rate-limiting architectures) for safe internet-scale exposure.
+* [ ] **SEC-A.1** Implement Post-Quantum (PQ) Cryptography Pipeline (Owner: security, ETA: TBD): Replace the current "classical-only" trust roots (SHA-256/ECDSA). Build out the Phase 1 hybrid signature scheme (Classical + PQ) for all high-trust pathways. (CI Check: test-pq-crypto)
+* [ ] **SEC-A.2** Enforce Service-to-Service mTLS & Anti-Replay (Owner: security, ETA: TBD): Inter-service interconnects currently rely on mixed/internal HTTP trust. Implement uniform mTLS, signed requests, timestamping, and nonces across all pillar boundaries. (CI Check: test-mtls)
+* [ ] **SEC-A.3** Harden Sandbox Identity Boundaries (Owner: security, ETA: TBD): Upgrade the Sandbox runtime from relying on a basic API key boundary to utilizing full inter-service identity hardening. (CI Check: test-sandbox-identity)
+* [ ] **SEC-A.4** Deploy Edge Perimeter Controls (Owner: security, ETA: TBD): The Gateway's public ingress still requires external perimeter controls (like a hardened WAF and strict rate-limiting architectures) for safe internet-scale exposure. (CI Check: test-waf-rate-limiting)
 
 ### 4. Functionality Audit
-* [ ] **FUN-A.1** Replace SBOM Placeholder Logic: The Software Bill of Materials generation currently contains a failing scaffold (`placeholder, syft install denied`). Fix the installation environment and fully automate SBOM generation.
-* [ ] **FUN-A.2** Remove Sandbox Execution Mocks: The `sandbox/src/broker/Broker.ts` implementation labels the execution stage as a mock path. Wire the broker to the actual execution orchestration flow.
-* [ ] **FUN-A.3** Purge Hypervisor Placeholder Semantics: Hunt down and remove the remaining placeholder/mock execution pathways and proof fallbacks within the Hypervisor policy gates.
+* [ ] **FUN-A.1** Replace SBOM Placeholder Logic (Owner: core, ETA: TBD): The Software Bill of Materials generation currently contains a failing scaffold (`placeholder, syft install denied`). Fix the installation environment and fully automate SBOM generation. (CI Check: verify-sbom)
+* [ ] **FUN-A.2** Remove Sandbox Execution Mocks (Owner: core, ETA: TBD): The `sandbox/src/broker/Broker.ts` implementation labels the execution stage as a mock path. Wire the broker to the actual execution orchestration flow. (CI Check: test-sandbox-broker)
+* [ ] **FUN-A.3** Purge Hypervisor Placeholder Semantics (Owner: core, ETA: TBD): Hunt down and remove the remaining placeholder/mock execution pathways and proof fallbacks within the Hypervisor policy gates. (CI Check: test-hypervisor-fallbacks)
 
 ### 5. Feature Complete Audit
-* [ ] **FEA-A.1** Automate Gate Evidence Packaging: Evidence bundle completeness (including SBOM and control mapping) is not yet consistently release-bound. Build the final collection hooks to fully automate the Release Candidate (RC) dossier assembly.
-* [ ] **FEA-A.2** Complete Cryptography Posture Matrix: Publish a comprehensive matrix (Implemented vs. Planned vs. Experimental) that links every quantum-ready claim to exact repository code paths.
+* [ ] **FEA-A.1** Automate Gate Evidence Packaging (Owner: release, ETA: TBD): Evidence bundle completeness (including SBOM and control mapping) is not yet consistently release-bound. Build the final collection hooks to fully automate the Release Candidate (RC) dossier assembly. (CI Check: verify-rc-dossier)
+* [ ] **FEA-A.2** Complete Cryptography Posture Matrix (Owner: release, ETA: TBD): Publish a comprehensive matrix (Implemented vs. Planned vs. Experimental) that links every quantum-ready claim to exact repository code paths. (CI Check: verify-crypto-matrix)
 
 ### 6. Stability Audit
-* [ ] **STA-A.1** Upgrade Internal Trust Assumptions: Transition internal network topologies away from "mostly internal trust" to a zero-trust architecture to prevent localized Sandbox/Grid failures from cascading.
-* [ ] **STA-A.2** Finalize Failure-Path Matrices: While initial recovery drills were automated, continuous telemetry and P95 error budget alerts must be wired to automatically trigger degraded-mode playbooks during partial outages.
+* [ ] **STA-A.1** Upgrade Internal Trust Assumptions (Owner: ops, ETA: TBD): Transition internal network topologies away from "mostly internal trust" to a zero-trust architecture to prevent localized Sandbox/Grid failures from cascading. (CI Check: test-zero-trust)
+* [ ] **STA-A.2** Finalize Failure-Path Matrices (Owner: ops, ETA: TBD): While initial recovery drills were automated, continuous telemetry and P95 error budget alerts must be wired to automatically trigger degraded-mode playbooks during partial outages. (CI Check: test-telemetry-alerts)
 
 ### 7. Efficiency Audit
-* [ ] **EFF-A.1** Benchmark Hybrid Crypto Overhead: Before moving to PQ-default cryptography, baseline the performance impact of the hybrid signature implementation to ensure it does not degrade the currently efficient classical cryptography throughput.
-* [ ] **EFF-A.2** Optimize Dynamic Resource Protection: Calibrate the adaptive throttling in the Resource Balancer so that foreground-protection modes on shared host machines safely throttle without starving critical Sandbox execution threads.
+* [ ] **EFF-A.1** Benchmark Hybrid Crypto Overhead (Owner: ops, ETA: TBD): Before moving to PQ-default cryptography, baseline the performance impact of the hybrid signature implementation to ensure it does not degrade the currently efficient classical cryptography throughput. (CI Check: run-crypto-benchmarks)
+* [ ] **EFF-A.2** Optimize Dynamic Resource Protection (Owner: ops, ETA: TBD): Calibrate the adaptive throttling in the Resource Balancer so that foreground-protection modes on shared host machines safely throttle without starving critical Sandbox execution threads. (CI Check: test-resource-throttling)
