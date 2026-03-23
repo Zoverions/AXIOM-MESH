@@ -40,13 +40,45 @@ export interface MCPSecurityPolicy {
   };
 }
 
+import * as crypto from 'crypto';
+
 export class MCPFirewall {
   private policy: MCPSecurityPolicy;
   private allowlist: Set<string>;
 
+  private rateLimits: Map<string, { count: number; timestamp: number }> = new Map();
+  private pendingApprovals: Map<string, { toolCall: ToolCall; timestamp: number }> = new Map();
+
+  private cleanupInterval: NodeJS.Timeout;
+
   constructor(policy: MCPSecurityPolicy, allowlist: string[]) {
     this.policy = policy;
     this.allowlist = new Set(allowlist);
+
+    // Start background cleanup for memory leak prevention
+    this.cleanupInterval = setInterval(() => this.cleanup(), 60000);
+  }
+
+  // Periodic cleanup to prevent OOM
+  private cleanup() {
+    const now = Date.now();
+    // Clean rate limits older than 1 minute
+    for (const [key, record] of this.rateLimits.entries()) {
+      if (now - record.timestamp > 60000) {
+        this.rateLimits.delete(key);
+      }
+    }
+    // Clean pending approvals older than 15 minutes
+    for (const [key, record] of this.pendingApprovals.entries()) {
+      if (now - record.timestamp > 15 * 60000) {
+        this.pendingApprovals.delete(key);
+      }
+    }
+  }
+
+  // Graceful shutdown
+  public destroy() {
+    clearInterval(this.cleanupInterval);
   }
 
   // Implement tool call validation with AST analysis
@@ -124,11 +156,26 @@ export class MCPFirewall {
          }
     }
 
-    // 4. Rate limit per-user per-tool (stubbed as this requires a distributed store like Redis in production)
-
     if (!toolName || !userContext) {
       return { valid: false, reason: "Missing toolName or userContext" };
     }
+
+    // 4. Rate limit per-user per-tool
+    const rateLimitKey = `${userContext.userId}:${toolName}`;
+    const now = Date.now();
+    const windowMs = 60000; // 1 minute window
+
+    const limitRecord = this.rateLimits.get(rateLimitKey);
+    if (limitRecord && now - limitRecord.timestamp < windowMs) {
+      if (limitRecord.count >= 100) {
+        return { valid: false, reason: "Rate limit exceeded for tool" };
+      }
+      limitRecord.count++;
+      this.rateLimits.set(rateLimitKey, limitRecord);
+    } else {
+      this.rateLimits.set(rateLimitKey, { count: 1, timestamp: now });
+    }
+
     return { valid: true };
   }
 
@@ -181,11 +228,14 @@ export class MCPFirewall {
   async requireExplicitApproval(toolCall: ToolCall, riskScore: number): Promise<boolean> {
     // Risk > 0.7 requires explicit user confirmation
     // Risk > 0.9 requires second-factor authentication
-    if (riskScore > 0.9) {
-      // Return false indicating 2FA is required and not yet provided in this automated context
-      return false;
-    } else if (riskScore > 0.7) {
-      // In a real implementation this would trigger an async workflow waiting for user confirmation
+    if (riskScore > 0.9 || riskScore > 0.7) {
+      const approvalId = crypto.randomUUID();
+      this.pendingApprovals.set(approvalId, {
+        toolCall,
+        timestamp: Date.now()
+      });
+      console.log(`High risk score (${riskScore}) detected. Approval required. ID: ${approvalId}`);
+      // Return false indicating confirmation or 2FA is required and not yet provided
       return false;
     }
     return true;
