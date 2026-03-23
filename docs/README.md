@@ -2,7 +2,7 @@
 
 <img src="../logo.png" alt="Axiom Mesh Logo" width="150" align="right">
 
-**Status Date:** 2026-03-21  
+**Status Date:** 2026-03-23  
 **Reality Statement:** AXIOM-MESH is currently in repository/staging hardening and is not live on testnet/mainnet.
 
 This index consolidates documentation ownership, reduces overlap, and defines which documents are canonical for each domain.
@@ -35,6 +35,7 @@ This index consolidates documentation ownership, reduces overlap, and defines wh
 - **Task-level backlog (reference):** `docs/PRODUCTION-EXECUTION-BACKLOG.md`
 - **Live readiness board (reference):** `docs/PRODUCTION-READINESS-TRACKER.md`
 - **Current status snapshot:** `docs/PROJECT-STATUS-2026.md`
+- **Strategic assessment response:** `docs/STRATEGIC-AUDIT-RESPONSE.md`
 
 ## 2) HOWTO Coverage
 
