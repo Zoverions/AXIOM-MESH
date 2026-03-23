@@ -202,11 +202,7 @@ curl -X POST http://localhost:5000/zkml/verify \
 
 ## Known Issues / TODOs
 
-- [ ] Contract compilation in CI (Hardhat proxy issue)
-- [ ] CCIP integration for Ethereum <> L2 settlement
-- [ ] Lightweight ZK graph query proofs
-- [ ] WebSocket event streaming (planned)
-- [ ] Historical ledger pruning strategy
+Please refer to the [MASTER-TODO.md](../docs/MASTER-TODO.md) list for specific active execution tasks and known issues backlog.
 
 ## Related Services
 

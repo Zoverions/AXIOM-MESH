@@ -141,11 +141,7 @@ python -m pytest tests/test_autoresearch_graph.py -v
 
 ## Known Issues / TODOs
 
-- [ ] Contract compilation in CI (Hardhat proxy 403 issue)
-- [ ] MCP server implementation (planned for 8081)
-- [ ] GPP (Global Pricing Protocol) verifiable computation
-- [ ] CCIP integration for cross-chain settlement
-- [ ] Lightweight ZK graph query proofs
+Please refer to the [MASTER-TODO.md](../docs/MASTER-TODO.md) list for specific active execution tasks and known issues backlog.
 
 ## Related Services
 

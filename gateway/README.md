@@ -90,8 +90,7 @@ Current coverage: ~30-40%
 
 ## Known Issues
 
-- Channel adapter tests missing (Discord, Slack, Telegram)
-  - **Fix**: Add mocked channel tests in next iteration
+Please refer to the [MASTER-TODO.md](../docs/MASTER-TODO.md) list for specific active execution tasks and known issues backlog.
 
 ## Related Services
 
