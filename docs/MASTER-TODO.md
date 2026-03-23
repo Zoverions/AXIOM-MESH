@@ -170,3 +170,41 @@ A task is done only when all are true:
 - [ ] **Sched.3** Update `Schedule` function to filter out nodes that don't match hardware tiers or lack required service classes.
 - [ ] **Sched.4** Add a `Reassign` API/method for the failover logic which returns a new node ID within the token TTL if the selected node becomes unavailable.
 - [ ] **Sched.5** Update the test logic to include the 200 node / 1000 task simulation covering compatibility and failover logic.
+
+---
+
+## 5) Audit Domain To-Do List (Scaffolded, Mocked, and Incomplete Code Pathways)
+
+### 1. Financial Audit
+* [ ] **FIN-A.1** Consolidate Financial Evidence Bundles: Financial and tokenomics controls are mostly policy-defined but lack a fully packaged, verifiable evidence set proving every control in a regulated-style audit trail.
+* [ ] **FIN-A.2** Enforce Operational Tokenomics Controls: Bridge the gap between the implemented `AXM.sol` contract split (5/10/85) and the governance/evidence controls that are not yet fully locked operationally.
+* [ ] **FIN-A.3** Automate Financial Reconciliation Drills: Implement recurring replay/reconciliation drills tied directly to governance and financial controls to ensure ledger vs. chain convergence.
+
+### 2. Blockchain Audit
+* [ ] **BLK-A.1** Harden Grid Mutation Boundaries: Apply uniform AuthZ controls and mutation boundary hardening to all Grid routes to meet financial-grade claims.
+* [ ] **BLK-A.2** Enforce Tokenomics Change-Control: Build programmatic evidence binding for tokenomics parameter updates so that any change automatically requires a verifiable governance decision record and migration note.
+* [ ] **BLK-A.3** Verify `ProveXVerifierWrapper.sol` Scaffold Removal: Ensure the explicit placeholder release amounts in the wrapper contract have been fully replaced with dynamic, cryptographically verified logic in all environments.
+* [ ] **BLK-A.4** Implement Immutable Audit Retention: Consolidate the logging architecture to enforce an immutable, WORM (Write Once, Read Many) audit retention policy for all on-chain state changes.
+
+### 3. Security Audit
+* [ ] **SEC-A.1** Implement Post-Quantum (PQ) Cryptography Pipeline: Replace the current "classical-only" trust roots (SHA-256/ECDSA). Build out the Phase 1 hybrid signature scheme (Classical + PQ) for all high-trust pathways.
+* [ ] **SEC-A.2** Enforce Service-to-Service mTLS & Anti-Replay: Inter-service interconnects currently rely on mixed/internal HTTP trust. Implement uniform mTLS, signed requests, timestamping, and nonces across all pillar boundaries.
+* [ ] **SEC-A.3** Harden Sandbox Identity Boundaries: Upgrade the Sandbox runtime from relying on a basic API key boundary to utilizing full inter-service identity hardening.
+* [ ] **SEC-A.4** Deploy Edge Perimeter Controls: The Gateway's public ingress still requires external perimeter controls (like a hardened WAF and strict rate-limiting architectures) for safe internet-scale exposure.
+
+### 4. Functionality Audit
+* [ ] **FUN-A.1** Replace SBOM Placeholder Logic: The Software Bill of Materials generation currently contains a failing scaffold (`placeholder, syft install denied`). Fix the installation environment and fully automate SBOM generation.
+* [ ] **FUN-A.2** Remove Sandbox Execution Mocks: The `sandbox/src/broker/Broker.ts` implementation labels the execution stage as a mock path. Wire the broker to the actual execution orchestration flow.
+* [ ] **FUN-A.3** Purge Hypervisor Placeholder Semantics: Hunt down and remove the remaining placeholder/mock execution pathways and proof fallbacks within the Hypervisor policy gates.
+
+### 5. Feature Complete Audit
+* [ ] **FEA-A.1** Automate Gate Evidence Packaging: Evidence bundle completeness (including SBOM and control mapping) is not yet consistently release-bound. Build the final collection hooks to fully automate the Release Candidate (RC) dossier assembly.
+* [ ] **FEA-A.2** Complete Cryptography Posture Matrix: Publish a comprehensive matrix (Implemented vs. Planned vs. Experimental) that links every quantum-ready claim to exact repository code paths.
+
+### 6. Stability Audit
+* [ ] **STA-A.1** Upgrade Internal Trust Assumptions: Transition internal network topologies away from "mostly internal trust" to a zero-trust architecture to prevent localized Sandbox/Grid failures from cascading.
+* [ ] **STA-A.2** Finalize Failure-Path Matrices: While initial recovery drills were automated, continuous telemetry and P95 error budget alerts must be wired to automatically trigger degraded-mode playbooks during partial outages.
+
+### 7. Efficiency Audit
+* [ ] **EFF-A.1** Benchmark Hybrid Crypto Overhead: Before moving to PQ-default cryptography, baseline the performance impact of the hybrid signature implementation to ensure it does not degrade the currently efficient classical cryptography throughput.
+* [ ] **EFF-A.2** Optimize Dynamic Resource Protection: Calibrate the adaptive throttling in the Resource Balancer so that foreground-protection modes on shared host machines safely throttle without starving critical Sandbox execution threads.
