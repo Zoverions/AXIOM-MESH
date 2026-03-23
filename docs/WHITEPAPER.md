@@ -44,7 +44,16 @@ AXIOM-MESH is deeply integrated with the broader ecosystem, ensuring robust inte
 - **Agentic Repository Management:** The repository itself is designed to be managed by human and digital entities. Agents and the mesh are capable of managing the repository, including approving and denying changes, streamlining the continuous integration and delivery processes.
 - **Roadmap & Hardening:** The roadmap for what is to be built and hardened is transparently tracked in `docs/plan.md`. This canonical document serves as the central authority for roadmap execution, audit findings, and technical risk management, ensuring all ecosystem participants have clear visibility into the project's trajectory.
 
-## 6. Trust, Control, Governance, and Security Principles
+## 6. Decentralized Storage as Core Network Infrastructure
+
+Storage is a first-class network primitive in AXIOM-MESH, not an accessory service:
+
+- **On-chain storage commitments:** `ComputeBond.offerStorage(...)` records stake-backed storage offers and `getStorageOffer(...)` returns persisted offer state for integration by Grid listeners and schedulers.
+- **Decentralized data plane:** MeshStore/IPFS is used for CID-addressed persistence and recovery payload pinning in Hypervisor memory/recovery flows.
+- **Multi-provider continuity backups:** backup routes support decentralized and cloud continuity paths, including **MeshStore/IPFS**, **AWS S3 (presigned URL flow)**, **Google Drive**, and **OneDrive** for operational resilience.
+- **No placeholder storage returns on core path:** storage offer reads are persisted and queryable rather than zero-value placeholders.
+
+## 7. Trust, Control, Governance, and Security Principles
 
 AXIOM-MESH adheres to strict principles to ensure the integrity of the network:
 - **Least Privilege:** Privileged actions are authenticated, authorized, and auditable.
