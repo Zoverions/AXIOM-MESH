@@ -1,4 +1,4 @@
-.PHONY: up down cli test validate-release-evidence verify-evidence-bundles
+.PHONY: up down cli test validate-release-evidence verify-evidence-bundles verify-tokenomics-controls
 
 up:
 	docker compose up -d --build
@@ -34,3 +34,6 @@ validate-release-evidence:
 
 verify-evidence-bundles:
 	python3 scripts/verify_evidence_bundles.py
+
+verify-tokenomics-controls:
+	python3 scripts/verify_tokenomics_controls.py
