@@ -114,10 +114,7 @@ npm run lint         # Run ESLint
 
 ## Known Issues
 
-- Seccomp policy not extensively tested
-- AppArmor profile not yet deployed in production
-- Bash execution path may leak system commands (security audit needed)
-- No support for GPU acceleration (planned for compute-heavy workloads)
+Please refer to the [MASTER-TODO.md](../docs/MASTER-TODO.md) list for specific active execution tasks and known issues backlog.
 
 ## Related Services
 
