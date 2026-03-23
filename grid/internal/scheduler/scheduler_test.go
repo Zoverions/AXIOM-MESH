@@ -36,10 +36,13 @@ func TestSchedulerAdvanced(t *testing.T) {
 		}
 
 		manifest := &types.AgentManifest{
-			NodeID: nodeID,
+			NodeID:         nodeID,
+			HardwareTier:   int(tier),
+			ServiceClasses: services,
 		}
 
-		s.RegisterNode(nodeID, manifest, score, latency, cost, tier, services)
+		// Pass default tier and empty services to RegisterNode to test that it extracts from manifest
+		s.RegisterNode(nodeID, manifest, score, latency, cost, TierUnknown, []string{})
 	}
 
 	policy := RoutingPolicy{
@@ -109,9 +112,14 @@ func TestSchedulerAdvanced(t *testing.T) {
 
 		// Reassign via Failover
 		// Ensure we don't hit "no alternative nodes" by adding a candidate
-		s.RegisterNode("failover-node-2", &types.AgentManifest{NodeID: "failover-node-2"}, 99.0, 10, 1, TierMedium, []string{"compute", "storage"})
+		failoverManifest2 := &types.AgentManifest{
+			NodeID:         "failover-node-2",
+			HardwareTier:   int(TierMedium),
+			ServiceClasses: []string{"compute", "storage"},
+		}
+		s.RegisterNode("failover-node-2", failoverManifest2, 99.0, 10, 1, TierMedium, []string{"compute", "storage"})
 
-		newNodeID, err := s.Failover(failoverTicket.ID)
+		newNodeID, err := s.Reassign(failoverTicket.ID)
 		if err != nil {
 			t.Errorf("Failover failed: %v", err)
 		}
@@ -124,7 +132,7 @@ func TestSchedulerAdvanced(t *testing.T) {
 		s.tasks[failoverTicket.ID].ExpiresAt = time.Now().Unix() - 1 // artificially expire it
 		s.mu.Unlock()
 
-		_, err = s.Failover(failoverTicket.ID)
+		_, err = s.Reassign(failoverTicket.ID)
 		if err == nil {
 			t.Errorf("Failover succeeded but token TTL should have expired")
 		}

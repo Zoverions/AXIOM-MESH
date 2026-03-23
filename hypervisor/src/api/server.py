@@ -73,6 +73,8 @@ from src.engine.inference_orchestrator import InferenceOrchestrator
 from src.api.routers.capsules import router as capsules_router
 from src.api.routers.tokens import router as tokens_router
 from src.api.routers.backup import router as backup_router
+from src.api.routers.tasks import router as tasks_router
+from src.orchestrator.task_scheduler import global_scheduler
 from src.core.secrets import SecretManager
 
 context_engine = ContextEngine()
@@ -122,6 +124,7 @@ async def lifespan(app: FastAPI):
 
     autoresearch_task = asyncio.create_task(autoresearch_task_loop())
     auto_training_loop.start()
+    global_scheduler.start()
 
     # Priority 1: Fire and forget initial MeshStore agent run or start loop
     # Depending on how run is implemented, if it blocks, it should be in a task,
@@ -141,6 +144,7 @@ async def lifespan(app: FastAPI):
     yield
     autoresearch_task.cancel()
     auto_training_loop.stop()
+    global_scheduler.stop()
 
 app = FastAPI(lifespan=lifespan)
 limiter = Limiter(key_func=get_remote_address)
@@ -151,6 +155,7 @@ app.include_router(audio_router)
 app.include_router(capsules_router)
 app.include_router(tokens_router)
 app.include_router(backup_router)
+app.include_router(tasks_router)
 
 # Mount MCP Server SSE and Messages endpoints
 app.mount("/mcp", mcp_server.sse_app())
