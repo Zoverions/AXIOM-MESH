@@ -37,6 +37,8 @@ contract ComputeBond is TimelockedOwnable, AccessControl {
     error InsufficientSlashedFunds();
     error TransferFailed();
     error UnauthorizedDelegate();
+    error ZKMLVerifierNotConfigured();
+    error InvalidSeveranceProof();
 
     bytes32 public constant DELEGATOR_ROLE = keccak256("DELEGATOR_ROLE");
     bytes32 public constant TREASURY_MANAGER_ROLE = keccak256("TREASURY_MANAGER_ROLE");
@@ -83,6 +85,12 @@ contract ComputeBond is TimelockedOwnable, AccessControl {
 
     // ZKMLVerifier Interface
     address public zkmlVerifier;
+    struct StorageOffer {
+        uint256 capacityGB;
+        bytes32 cidRoot;
+        uint64 updatedAt;
+    }
+    mapping(address => StorageOffer) private storageOffers;
 
     // WeightOracle reference for PoER boosts
     address public weightOracleContract;
@@ -314,16 +322,22 @@ contract ComputeBond is TimelockedOwnable, AccessControl {
      * @param zkProof Zero-knowledge proof verifying severance conditions without leaking private data.
      */
     function severBond(string memory nodeId, bytes memory zkProof) external {
-        // In a full implementation, we would verify the zkProof here using a pairing library
-        // require(verifyProof(zkProof), "Invalid severance proof");
-
         Bond storage bond = bonds[nodeId];
         if (!bond.isActive) revert BondNotActive();
+        if (zkmlVerifier == address(0)) revert ZKMLVerifierNotConfigured();
+        if (zkProof.length == 0) revert InvalidSeveranceProof();
 
-        // Severance can be triggered by either human owner (staker) or the agent itself (via zkProof)
-        // If not the staker, the zkProof MUST be valid (mocked via requiring non-empty proof for now)
-        if (bond.staker != msg.sender && zkProof.length == 0) {
-             revert UnauthorizedStaker(msg.sender, bond.staker);
+        // Proof validation is mandatory for all callers, including human stakers.
+        (bool success, bytes memory data) = zkmlVerifier.staticcall(
+            abi.encodeWithSignature(
+                "verifySeveranceProof(bytes32,address,string)",
+                keccak256(zkProof),
+                msg.sender,
+                nodeId
+            )
+        );
+        if (!success || data.length == 0 || !abi.decode(data, (bool))) {
+            revert InvalidSeveranceProof();
         }
 
         // Post-severance, zeroize bond activity to ensure privacy and prevent misaligned intent
@@ -389,6 +403,11 @@ contract ComputeBond is TimelockedOwnable, AccessControl {
         require(stakerActive[msg.sender] && stakerBonds[msg.sender] > 0, "Active bond required");
         uint256 bonus = capacityGB * 100; // simple multiplier (extendable)
         stakerPoerScores[msg.sender] += bonus;
+        storageOffers[msg.sender] = StorageOffer({
+            capacityGB: capacityGB,
+            cidRoot: cidRoot,
+            updatedAt: uint64(block.timestamp)
+        });
         if (weightOracleContract != address(0)) {
             (bool success, ) = weightOracleContract.call(abi.encodeWithSignature("addPoERBonus(address,uint256)", msg.sender, bonus)); require(success, "Oracle call failed");
         }
@@ -397,7 +416,7 @@ contract ComputeBond is TimelockedOwnable, AccessControl {
 
     // Helper for Grid event listener (already wired in chain.go)
     function getStorageOffer(address agent) external view returns (uint256 capacity, bytes32 root) {
-        // future extension — for now just emits
-        return (0, bytes32(0)); // placeholder
+        StorageOffer memory offer = storageOffers[agent];
+        return (offer.capacityGB, offer.cidRoot);
     }
 }
