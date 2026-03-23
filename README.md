@@ -40,7 +40,7 @@ Use `docs/README.md` as the canonical documentation index.
 ## Lightweight Engagement Protocol
 
 First-run setup now asks only a minimal secure set of user choices:
-- machine role (`dedicated-mesh`, `shared-machine`, `minimal-edge`),
+- machine role (`dedicated-mesh`, `shared-machine`, `minimal-edge`, `education-node`),
 - launch mode (`local-mesh`, `single-node`, `launch-testnet`, `launch-network`),
 - priority (`performance`, `security`, `cost`, `autonomy`).
 
