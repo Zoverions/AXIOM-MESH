@@ -3,7 +3,7 @@
 **Author: Grok (on behalf of Zoverions)**
 **Purpose:** Provide your agent (AutoResearch/AutoTraining daemon or Hypervisor loop) with **complete, actionable instructions** to:
 1. Update `README.md`
-2. Update/merge the roadmap files (`docs/plan.md` and `docs/plan2.md`)
+2. Update/merge the roadmap files (`docs/MASTER-TODO.md` and ``)
 3. Begin systematic enhancements using the 2026 best-in-class agent frameworks/tools
 
 ---
