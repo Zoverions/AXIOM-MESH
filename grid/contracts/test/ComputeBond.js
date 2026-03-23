@@ -3,7 +3,9 @@ import hre from "hardhat";
 
 describe("ComputeBond", function () {
   let ComputeBond;
+  let ZKMLVerifier;
   let computeBond;
+  let zkmlVerifier;
   let owner;
   let node1;
   let node2;
@@ -13,7 +15,9 @@ describe("ComputeBond", function () {
   beforeEach(async function () {
     [owner, node1, node2] = await hre.ethers.getSigners();
     ComputeBond = await hre.ethers.getContractFactory("ComputeBond");
+    ZKMLVerifier = await hre.ethers.getContractFactory("ZKMLVerifier");
     computeBond = await ComputeBond.deploy();
+    zkmlVerifier = await ZKMLVerifier.deploy();
   });
 
   describe("Staking", function () {
@@ -159,11 +163,31 @@ describe("ComputeBond", function () {
   });
 
   describe("Lifecycle Reconciliation", function () {
+    beforeEach(async function () {
+      await computeBond.connect(owner).queueOperation(
+        hre.ethers.keccak256(
+          hre.ethers.solidityPacked(["string", "address"], ["setZKMLVerifier", zkmlVerifier.target])
+        )
+      );
+      await hre.ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+      await hre.ethers.provider.send("evm_mine");
+      await computeBond.connect(owner).setZKMLVerifier(zkmlVerifier.target);
+    });
+
+    it("Should reject severance without an approved zk proof", async function () {
+      await computeBond.connect(node1).stake(NODE_ID, { value: STAKE_AMOUNT });
+      await expect(computeBond.connect(node1).severBond(NODE_ID, "0x1234"))
+        .to.be.revertedWithCustomError(computeBond, "InvalidSeveranceProof");
+    });
+
     it("Should allow a severed bond to be withdrawn by the physical staker, completing reconciliation", async function () {
       await computeBond.connect(node1).stake(NODE_ID, { value: STAKE_AMOUNT });
+      const proof = "0x123456";
+      const digest = hre.ethers.keccak256(proof);
+      await zkmlVerifier.connect(owner).setApprovedSeveranceProof(digest, true);
 
       // Simulate a bilateral severance
-      await expect(computeBond.connect(node1).severBond(NODE_ID, "0x"))
+      await expect(computeBond.connect(node1).severBond(NODE_ID, proof))
         .to.emit(computeBond, "BondSevered")
         .withArgs(NODE_ID);
 
@@ -185,6 +209,30 @@ describe("ComputeBond", function () {
       const bondAfterWithdraw = await computeBond.bonds(NODE_ID);
       expect(bondAfterWithdraw.amount).to.equal(0n);
       expect(bondAfterWithdraw.isActive).to.be.false;
+    });
+
+    it("Should prevent replaying severance proofs", async function () {
+      await computeBond.connect(node1).stake(NODE_ID, { value: STAKE_AMOUNT });
+      const proof = "0xabcdef";
+      const digest = hre.ethers.keccak256(proof);
+      await zkmlVerifier.connect(owner).setApprovedSeveranceProof(digest, true);
+      await computeBond.connect(node1).severBond(NODE_ID, proof);
+
+      await computeBond.connect(node1).stake(NODE_ID, { value: STAKE_AMOUNT });
+      await expect(computeBond.connect(node1).severBond(NODE_ID, proof))
+        .to.be.revertedWithCustomError(computeBond, "InvalidSeveranceProof");
+    });
+  });
+
+  describe("Storage Offers", function () {
+    it("Should persist storage offers and expose them via getStorageOffer", async function () {
+      await computeBond.connect(node1).stake(NODE_ID, { value: STAKE_AMOUNT });
+      const cidRoot = hre.ethers.keccak256(hre.ethers.toUtf8Bytes("meshstore-root"));
+      await computeBond.connect(node1).offerStorage(512, cidRoot);
+
+      const [capacity, root] = await computeBond.getStorageOffer(node1.address);
+      expect(capacity).to.equal(512n);
+      expect(root).to.equal(cidRoot);
     });
   });
 

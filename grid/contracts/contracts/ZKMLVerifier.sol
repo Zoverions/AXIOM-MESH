@@ -5,6 +5,11 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract ZKMLVerifier is Ownable {
     event ProofVerified(bytes32 indexed proofHash, bool valid, uint256 poerBonus);
+    event SeveranceProofApproved(bytes32 indexed proofDigest, bool approved);
+    event SeveranceProofVerified(bytes32 indexed proofDigest, address indexed requester, string indexed nodeId);
+
+    mapping(bytes32 => bool) public approvedSeveranceProofs;
+    mapping(bytes32 => bool) public consumedSeveranceProofs;
 
     constructor() Ownable(msg.sender) {}
 
@@ -20,5 +25,20 @@ contract ZKMLVerifier is Ownable {
         }
 
         return valid;
+    }
+
+    function setApprovedSeveranceProof(bytes32 proofDigest, bool approved) external onlyOwner {
+        approvedSeveranceProofs[proofDigest] = approved;
+        emit SeveranceProofApproved(proofDigest, approved);
+    }
+
+    function verifySeveranceProof(bytes32 proofDigest, address requester, string calldata nodeId) external returns (bool) {
+        if (proofDigest == bytes32(0)) return false;
+        if (consumedSeveranceProofs[proofDigest]) return false; // anti-replay
+        if (!approvedSeveranceProofs[proofDigest]) return false;
+
+        consumedSeveranceProofs[proofDigest] = true;
+        emit SeveranceProofVerified(proofDigest, requester, nodeId);
+        return true;
     }
 }

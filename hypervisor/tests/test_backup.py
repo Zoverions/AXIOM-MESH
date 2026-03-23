@@ -7,7 +7,7 @@ import sys
 
 from src.api.server import app
 from src.recovery.bundle_manager import RecoveryBundleManager
-from src.recovery.cloud_storage import CloudStorageFactory
+from src.recovery.cloud_storage import CloudStorageFactory, AWSS3Provider, MeshStoreProvider
 
 client = TestClient(app)
 
@@ -25,8 +25,14 @@ def setup_teardown(monkeypatch):
 def test_backup_providers():
     res = client.get("/backup/providers")
     assert res.status_code == 200
+    assert "meshstore" in res.json()["providers"]
+    assert "aws-s3" in res.json()["providers"]
     assert "gdrive" in res.json()["providers"]
     assert "onedrive" in res.json()["providers"]
+
+def test_cloud_storage_factory_extended_providers():
+    assert isinstance(CloudStorageFactory.get_provider("aws-s3"), AWSS3Provider)
+    assert isinstance(CloudStorageFactory.get_provider("meshstore"), MeshStoreProvider)
 
 def test_create_backup_local():
     headers = {

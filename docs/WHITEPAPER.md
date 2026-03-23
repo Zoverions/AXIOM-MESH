@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary
 
-AXIOM-MESH is a multi-service agent runtime featuring a unique architectural approach that integrates a four-pillar structure for autonomous agent orchestration, secure sandbox execution, and deterministic governance. It establishes a novel paradigm by combining decaying founder control with Zero-Knowledge Machine Learning (zkML) as a self-regulating bootstrap primitive, scaling back securely to 0% reliance by 10k nodes.
+AXIOM-MESH is a multi-service agent runtime featuring a four-pillar structure for autonomous agent orchestration, secure sandbox execution, and deterministic governance. It combines cryptographic verification pathways (zkML + contract-level verification hooks) with explicit governance controls and deterministic accounting.
 
 ## 2. Architecture: The Four Pillars
 
@@ -20,15 +20,20 @@ Every high-stakes inference in AXIOM-MESH is verifiable on-chain, ensuring trust
 - **On-chain Verification:** Handled via `ZKMLVerifier.sol`.
 - **Proof of Execution & Reliability (PoER):** Boosts rewards for valid zkML proofs.
 
-## 4. Tokenomics & Treasury Mechanics
+## 4. Tokenomics & Treasury Mechanics (Implemented vs Policy)
 
 The economic model is designed for long-term sustainability and deterministic accounting.
 
 **Core Parameters:**
 - **Token Symbol:** AXM
 - **Target Total Supply:** 1,000,000,000 AXM
-- **Founder Allocation:** Permanently set to 5% with claims up to 5% dynamic resources (superseding decaying models as per recent genesis locking constraints).
-- **Network Treasury:** 10% on defined inflow classes as specified by governance.
+- **Implemented in code (`AXM.sol`):**
+  - Founder allocation mint: **5%**
+  - Network treasury mint: **10%**
+  - Ecosystem reserve mint: **85%**
+- **Policy-governed (not fully operationally locked):**
+  - Treasury inflow-class routing details
+  - Release evidence packaging and control attestations
 
 Token/economic flows are deterministic, traceable, and support full reconciliation between off-chain ledgers and on-chain state, covering protocol inflows, distribution outflows (payroll, incentives), staker reward flows, and cross-chain transfer-related fee flows.
 
@@ -39,7 +44,16 @@ AXIOM-MESH is deeply integrated with the broader ecosystem, ensuring robust inte
 - **Agentic Repository Management:** The repository itself is designed to be managed by human and digital entities. Agents and the mesh are capable of managing the repository, including approving and denying changes, streamlining the continuous integration and delivery processes.
 - **Roadmap & Hardening:** The roadmap for what is to be built and hardened is transparently tracked in `docs/plan.md`. This canonical document serves as the central authority for roadmap execution, audit findings, and technical risk management, ensuring all ecosystem participants have clear visibility into the project's trajectory.
 
-## 6. Trust, Control, Governance, and Security Principles
+## 6. Decentralized Storage as Core Network Infrastructure
+
+Storage is a first-class network primitive in AXIOM-MESH, not an accessory service:
+
+- **On-chain storage commitments:** `ComputeBond.offerStorage(...)` records stake-backed storage offers and `getStorageOffer(...)` returns persisted offer state for integration by Grid listeners and schedulers.
+- **Decentralized data plane:** MeshStore/IPFS is used for CID-addressed persistence and recovery payload pinning in Hypervisor memory/recovery flows.
+- **Multi-provider continuity backups:** backup routes support decentralized and cloud continuity paths, including **MeshStore/IPFS**, **AWS S3 (presigned URL flow)**, **Google Drive**, and **OneDrive** for operational resilience.
+- **No placeholder storage returns on core path:** storage offer reads are persisted and queryable rather than zero-value placeholders.
+
+## 7. Trust, Control, Governance, and Security Principles
 
 AXIOM-MESH adheres to strict principles to ensure the integrity of the network:
 - **Least Privilege:** Privileged actions are authenticated, authorized, and auditable.
@@ -48,3 +62,14 @@ AXIOM-MESH adheres to strict principles to ensure the integrity of the network:
 - **Evidence-Backed Promotion:** All release decisions require auditable gate evidence.
 
 Governance utilizes layered artifacts, supporting explicit approval trails, emergency rollback mechanisms, and parameter change logging to ensure the network remains adaptable yet secure. Security posture spans from ingress hardening to strict sandbox isolation, inter-service authentication (mTLS), and immutable audit trails.
+
+## 8. March 23, 2026 Implementation Addendum
+
+The following hardening changes are now implemented in repository code:
+
+- **ComputeBond severance proof gating:** severance no longer accepts a staker bypass path; proof verification is required for all severance calls.
+- **Severance anti-replay semantics:** verifier tracks single-use proof consumption for severance flow.
+- **Storage offer persistence:** `getStorageOffer` now returns persisted on-chain values instead of placeholder defaults.
+- **Tokenomics split lock:** `AXM.sol` now enforces explicit 5/10/85 mint allocation semantics.
+
+These implementation upgrades improve auditability, but AXIOM-MESH still does **not** claim full post-quantum, financial-grade finality at this time.

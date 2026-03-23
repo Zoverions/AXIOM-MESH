@@ -1,4 +1,4 @@
-# AXIOM-MESH Project Status (March 2026)
+# AXIOM-MESH Project Status (March 2026, updated March 23)
 
 This document is the single source of truth for repository health, implementation status, and cleanup posture.
 
@@ -22,6 +22,19 @@ The following are confirmed as implemented and retained:
 - Contract, schema, and interface control documentation used by active development.
 
 ## Cleanup changes in this cycle
+
+### Contract and tokenomics hardening (March 23 update)
+
+The following production-path hardening changes are now implemented:
+
+- `AXM.sol` enforces explicit mint split semantics: 5% founder, 10% network treasury, 85% ecosystem reserve.
+- `Genesis.sol` now wires an explicit ecosystem reserve treasury in deployment.
+- `ComputeBond.sol` severance requires verifier-backed proof validation for all callers (no human-staker bypass).
+- `ComputeBond.sol` storage offers are now persisted and queryable via `getStorageOffer`.
+- `ZKMLVerifier.sol` includes approved-proof registration and single-use anti-replay severance verification semantics.
+- Hypervisor backup infrastructure now includes decentralized MeshStore/IPFS plus AWS S3, Google Drive, and OneDrive provider support for encrypted bundle continuity.
+
+These updates improve implementation accuracy against documented tokenomics and security posture, while broader financial-grade evidence packaging and post-quantum migration remain in progress.
 
 ### Documentation consolidation
 

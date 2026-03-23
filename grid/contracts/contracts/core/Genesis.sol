@@ -15,6 +15,7 @@ contract Genesis {
     address public immutable axmToken;
     address public immutable founderEntity;
     address public immutable mainTreasury;
+    address public immutable ecosystemReserveTreasury;
     address public immutable guildFactory;
 
     constructor() {
@@ -22,7 +23,8 @@ contract Genesis {
         address guildF = address(new GuildTreasuryFactory());
         founderEntity = address(new FounderEntity(FOUNDER, guildF));
         mainTreasury = address(new NetworkTreasury(FOUNDER));
-        axmToken = address(new AXM(founderEntity, mainTreasury));
+        ecosystemReserveTreasury = address(new NetworkTreasury(FOUNDER));
+        axmToken = address(new AXM(founderEntity, mainTreasury, ecosystemReserveTreasury));
 
         guildFactory = guildF;
 
