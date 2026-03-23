@@ -328,7 +328,7 @@ contract ComputeBond is TimelockedOwnable, AccessControl {
         if (zkProof.length == 0) revert InvalidSeveranceProof();
 
         // Proof validation is mandatory for all callers, including human stakers.
-        (bool success, bytes memory data) = zkmlVerifier.staticcall(
+        (bool success, bytes memory data) = zkmlVerifier.call(
             abi.encodeWithSignature(
                 "verifySeveranceProof(bytes32,address,string)",
                 keccak256(zkProof),
