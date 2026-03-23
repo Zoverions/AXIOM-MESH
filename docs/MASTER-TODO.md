@@ -165,11 +165,11 @@ A task is done only when all are true:
 - [x] Full dynamic agent ecosystem: Founder 5% + Network Public Pool (scripts → ascension entities)
 
 ## Lane Sched — Scheduler Capabilities & Failover
-- [ ] **Sched.1** Update `types.AgentManifest` (or internal scheduler registry type) to include `HardwareTier` and `ServiceClasses`.
-- [ ] **Sched.2** Update `RoutingPolicy` to include `RequiredHardwareTier` and `RequiredServiceClasses`.
-- [ ] **Sched.3** Update `Schedule` function to filter out nodes that don't match hardware tiers or lack required service classes.
-- [ ] **Sched.4** Add a `Reassign` API/method for the failover logic which returns a new node ID within the token TTL if the selected node becomes unavailable.
-- [ ] **Sched.5** Update the test logic to include the 200 node / 1000 task simulation covering compatibility and failover logic.
+- [x] **Sched.1** Update `types.AgentManifest` (or internal scheduler registry type) to include `HardwareTier` and `ServiceClasses`. — 2026-03-24 — @agent — updated types
+- [x] **Sched.2** Update `RoutingPolicy` to include `RequiredHardwareTier` and `RequiredServiceClasses`. — 2026-03-24 — @agent — updated routing policy
+- [x] **Sched.3** Update `Schedule` function to filter out nodes that don't match hardware tiers or lack required service classes. — 2026-03-24 — @agent — added filtering
+- [x] **Sched.4** Add a `Reassign` API/method for the failover logic which returns a new node ID within the token TTL if the selected node becomes unavailable. — 2026-03-24 — @agent — implemented reassign
+- [x] **Sched.5** Update the test logic to include the 200 node / 1000 task simulation covering compatibility and failover logic. — 2026-03-24 — @agent — updated tests
 
 ---
 

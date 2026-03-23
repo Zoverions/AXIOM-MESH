@@ -5,7 +5,9 @@ type AgentManifest struct {
 	CognitiveVector []float64 `json:"cognitiveVector"`
 	Signature       string    `json:"signature"`
 	Timestamp       int64     `json:"timestamp"`
+	// HardwareTier explicitly defines the hardware capability tier of the node.
 	HardwareTier    int       `json:"hardwareTier"`
+	// ServiceClasses lists the specific capabilities provided by the node.
 	ServiceClasses  []string  `json:"serviceClasses"`
 }
 
