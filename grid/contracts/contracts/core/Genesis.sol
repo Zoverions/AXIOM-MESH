@@ -7,6 +7,7 @@ import "./FounderEntity.sol";
 import "../token/AXM.sol";
 import "../treasury/NetworkTreasury.sol";
 import "../treasury/GuildTreasuryFactory.sol";
+import "./FounderMultiSig.sol";
 
 address constant FOUNDER = 0x1c2cBabF75e1938ED2f2c59e734e83aa5FBe1B73;
 
@@ -18,18 +19,21 @@ contract Genesis {
     address public immutable ecosystemReserveTreasury;
     address public immutable guildFactory;
 
-    constructor() {
-        founder = FOUNDER;
+    constructor(address[] memory owners, uint numConfirmationsRequired) {
+
+        // Deploy multi-sig wallet
+        founder = address(new FounderMultiSig(owners, numConfirmationsRequired));
+
         address guildF = address(new GuildTreasuryFactory());
-        founderEntity = address(new FounderEntity(FOUNDER, guildF));
-        mainTreasury = address(new NetworkTreasury(FOUNDER));
-        ecosystemReserveTreasury = address(new NetworkTreasury(FOUNDER));
+        founderEntity = address(new FounderEntity(founder, guildF));
+        mainTreasury = address(new NetworkTreasury(founder));
+        ecosystemReserveTreasury = address(new NetworkTreasury(founder));
         axmToken = address(new AXM(founderEntity, mainTreasury, ecosystemReserveTreasury));
 
         guildFactory = guildF;
 
-        // Deploy NFTs
-        new FounderNFT(FOUNDER);
+        // Deploy NFTs to multi-sig founder
+        new FounderNFT(founder);
         new GenesisNFT(msg.sender);
 
         // Grid ledger will record this deployment hash as canonical

@@ -10,6 +10,14 @@ async function main() {
   const dualLedgerIdentity = await DualLedgerIdentity.deploy();
   await dualLedgerIdentity.waitForDeployment();
 
+  const Genesis = await hre.ethers.getContractFactory("Genesis");
+  const owner1 = "0x1c2cBabF75e1938ED2f2c59e734e83aa5FBe1B73";
+  const owner2 = "0x2c3cbabf75e1938ed2f2c59e734e83aa5fbe1b74";
+  const owner3 = "0x3c4cbabf75e1938ed2f2c59e734e83aa5fbe1b75";
+  const genesis = await Genesis.deploy([owner1, owner2, owner3], 2);
+
+  await genesis.waitForDeployment();
+
   const WeightOracle = await hre.ethers.getContractFactory("WeightOracle");
   const weightOracle = await WeightOracle.deploy(await dualLedgerIdentity.getAddress());
   await weightOracle.waitForDeployment();
@@ -53,6 +61,7 @@ async function main() {
     deployer: deployer.address,
     deployedAt: new Date().toISOString(),
     contracts: {
+      Genesis: await genesis.getAddress(),
       DualLedgerIdentity: await dualLedgerIdentity.getAddress(),
       WeightOracle: await weightOracle.getAddress(),
       DialecticArbitration: await dialecticArbitration.getAddress(),
