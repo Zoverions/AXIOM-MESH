@@ -1,6 +1,6 @@
 # AXIOM-MESH Master To-Do List (Canonical Agent Queue)
 
-**Version:** 2026-03-22  
+**Version:** 2026-03-23  
 **Purpose:** Single list for all human/digital agents to execute, update, and close.  
 **Rule:** If a task exists here, it is active. If it only exists elsewhere, it is reference-only and should be migrated or archived.
 
@@ -135,10 +135,11 @@ Detailed references:
 ## Lane M5 — Pre-Public-Release Accuracy & Trust (Open)
 - [ ] **M5.1** Remove/replace all non-test placeholder or mock execution branches in production code paths (contracts, hypervisor proof defaults, sandbox execution pipeline). — owner: core+contracts
   - 2026-03-22 — @agent — removed placeholder proof fallbacks in `hypervisor/src/engine/inference_orchestrator.py` and `hypervisor/src/graph/autoresearch_graph.py`; now fail closed on missing proof material.
+  - 2026-03-23 — @agent — hardened storage core paths: `ComputeBond.getStorageOffer` now returns persisted values and Grid `JoinSwarm` now resolves real storage capacity from `NodeProfiles`/env with deterministic storage-offer publication.
 - [ ] **M5.2** Build cryptography posture matrix (Implemented / Planned / Experimental) and link each claim to exact code references. — owner: security
 - [ ] **M5.3** Publish financial controls evidence index (control → artifact → verification command). — owner: finance+ops
-- [ ] **M5.4** Publish tokenomics lock table with current effective values, governance reference, and release timestamp. — owner: tokenomics
-- [ ] **M5.5** Final audience-facing documentation pass: remove overstatements, preserve policy-vs-implemented distinctions, and verify all HOWTO paths are current. — owner: docs
+- [x] **M5.4** Publish tokenomics lock table with current effective values, governance reference, and release timestamp. — 2026-03-23 — @agent — `docs/TOKENOMICS.md` + `AXM.sol`/`Genesis.sol` now aligned to explicit 5%/10%/85% implemented split and dated status updates.
+- [x] **M5.5** Final audience-facing documentation pass: remove overstatements, preserve policy-vs-implemented distinctions, and verify all HOWTO paths are current. — 2026-03-23 — @agent — updated Whitepaper, Architecture, Project Status, Audit Report, Recovery HOWTO, docs index, and added strategic audit response.
 
 ## 3) Archive Candidates (After Migration Validation)
 

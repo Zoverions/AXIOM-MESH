@@ -15,3 +15,13 @@ Every high-stakes inference is verifiable on-chain.
 - NemoClaw Routing
 - On-chain Verification via `ZKMLVerifier.sol`
 - PoER boost for valid zkML proofs.
+
+## Storage and Recovery Infrastructure
+
+Storage is integrated across chain, mesh, and provider layers:
+
+- **On-chain commitments:** `ComputeBond` stores stake-backed storage offers and exposes retrieval via `getStorageOffer`.
+- **Decentralized persistence:** MeshStore/IPFS is used for CID-addressed runtime artifacts and recovery bundles.
+- **Continuity backups:** Hypervisor backup API supports MeshStore/IPFS, AWS S3 (presigned URL mode), Google Drive, and OneDrive.
+
+This design gives a portable storage posture across decentralized and enterprise environments while preserving verifiable references (CIDs + on-chain state).

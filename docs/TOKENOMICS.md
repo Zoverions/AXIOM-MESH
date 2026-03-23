@@ -1,6 +1,6 @@
 # AXIOM-MESH Tokenomics (Canonical Reference)
 
-**Status:** Pre-launch draft under implementation hardening and governance review (updated March 22, 2026).
+**Status:** Pre-launch hardening with partially locked on-chain parameters (updated March 23, 2026).
 
 This document is the canonical tokenomics reference for external/internal stakeholders.
 
@@ -25,10 +25,11 @@ Related specs:
 
 - **Token symbol:** AXM
 - **Target total supply:** 1,000,000,000 AXM
-- **Founder allocation policy target:** 5%
-- **Network treasury policy target:** 10% on defined inflow classes
+- **Founder allocation:** 5% (implemented in `AXM.sol`)
+- **Network treasury allocation:** 10% (implemented in `AXM.sol`)
+- **Ecosystem reserve allocation:** 85% (implemented in `AXM.sol`)
 
-> These are policy targets unless and until finalized by governance decisions and deployed contract state.
+> Supply split is now codified in `grid/contracts/contracts/token/AXM.sol`; treasury inflow classes and release controls still require governance finalization.
 
 ---
 

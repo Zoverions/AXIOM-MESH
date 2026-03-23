@@ -3,6 +3,7 @@ package blockchain
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/axiom-mesh/grid/types"
 )
@@ -487,5 +488,37 @@ func TestLedger_SwarmManagement(t *testing.T) {
 
 	if !found1 || !found2 {
 		t.Errorf("Expected both swarms to be present in GetSwarms result")
+	}
+}
+
+func TestLedger_JoinSwarm_UsesNodeProfileStorageCapacity(t *testing.T) {
+	l := NewLedger()
+	swarmID := "swarm-storage"
+	nodeID := "node-storage"
+	l.CreateSwarm(types.Swarm{ID: swarmID, TaskID: "task-storage", Nodes: []string{}, Status: "active"})
+
+	if err := l.RegisterNodeProfile(types.NodeCapabilityProfile{
+		NodeID:    nodeID,
+		StorageGB: 2048,
+	}); err != nil {
+		t.Fatalf("failed to register node profile: %v", err)
+	}
+
+	done := make(chan uint64, 1)
+	l.OnSwarmJoined = func(_ [32]byte, capacity uint64, _ [32]byte) {
+		done <- capacity
+	}
+
+	if ok := l.JoinSwarm(swarmID, nodeID); !ok {
+		t.Fatalf("expected swarm join to succeed")
+	}
+
+	select {
+	case capacity := <-done:
+		if capacity != 2048 {
+			t.Fatalf("expected capacity 2048 from node profile, got %d", capacity)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("expected OnSwarmJoined callback to be triggered")
 	}
 }

@@ -1,6 +1,6 @@
 # AXIOM-MESH Repository Audit Report (Code + Financial + Tokenomics)
 
-**Audit date:** March 22, 2026  
+**Audit date:** March 23, 2026  
 **Scope:** `gateway/`, `hypervisor/`, `grid/`, `sandbox/`, `docs/`, `schemas/`, deployment scripts and tests.  
 **Goal:** provide a publishable, implementation-accurate status report before external audience sharing.
 
@@ -24,10 +24,19 @@
 
 The repository demonstrates substantial progress and breadth, but **is not yet in a “fully final/no-scaffold” state**. The primary blockers before public launch are:
 
-1. **Production code still contains placeholder/mock pathways** in key areas (contracts and orchestrator proof fields).
+1. **Production code still contains placeholder/mock pathways** in key areas (selected contracts and sandbox execution paths).
 2. **Documentation overstates completion** in places (for example, historical “none remaining risks” language).
 3. **Post-quantum cryptography is not implemented end-to-end** despite partial references in policy language.
 4. **Financial and tokenomics controls are mostly policy-defined and partially implemented**, but do not yet have a consolidated verifiable evidence bundle in-repo.
+
+### March 23, 2026 update (implemented since prior pass)
+
+The following previously flagged items are now remediated in-repo:
+- `ComputeBond.severBond` now requires verifier-backed proof validation for all callers (no staker bypass path).
+- `ComputeBond.getStorageOffer` now returns persisted on-chain storage offer state.
+- Hypervisor proof-orchestration paths now explicitly refuse placeholder proof fallbacks.
+- Token mint split is now explicitly locked in `AXM.sol` as 5% founder / 10% network treasury / 85% ecosystem reserve.
+- Backup provider support now includes decentralized MeshStore/IPFS plus AWS S3, Google Drive, and OneDrive continuity paths.
 
 This means the correct public posture today is:
 - “strong prototype / pilot-grade platform with many hardened components,”
@@ -41,11 +50,8 @@ This means the correct public posture today is:
 
 ### A. Placeholder/mock implementation paths in non-test code
 Examples identified in executable paths:
-- `grid/contracts/contracts/ComputeBond.sol` returns placeholder tuple in fallback path.
 - `grid/contracts/contracts/ProveXVerifierWrapper.sol` contains explicit placeholder release amount.
-- `hypervisor/src/engine/inference_orchestrator.py` defaults proof field to `groth16-placeholder`.
-- `hypervisor/src/graph/autoresearch_graph.py` also defaults proof to `groth16-placeholder`.
-- `sandbox/src/broker/Broker.ts` still labels execution stage as mock execution path.
+- `sandbox/src/broker/Broker.ts` still labels execution stage as mock execution path and currently relies on a mock execution function in orchestration flow.
 
 **Risk:** functional ambiguity and unverifiable assurances if those pathways are hit in live environments.
 
@@ -76,11 +82,11 @@ Current strong classical primitives are present (SHA-256/HMAC/ECDSA/SECP256K1 et
 
 ## 3.3 Tokenomics audit findings
 
-### A. Policy targets are clear
-- Supply, founder share, and treasury policy targets are documented.
+### A. Supply split parameters are now code-locked
+- Supply and mint split are codified in `AXM.sol` (5/10/85).
 
-### B. Must remain explicitly marked as policy targets until cryptographically and operationally locked
-- Public-facing docs should continue distinguishing: **target policy** vs **deployed/finalized parameters**.
+### B. Operational controls remain partially policy-defined
+- Public-facing docs should continue distinguishing: **implemented contract split** vs **governance/evidence controls not yet fully locked operationally**.
 
 ### C. Change-control requirement
 - Any tokenomics parameter update requires governance decision record, migration note, and release evidence update.
@@ -119,7 +125,7 @@ Until full PQ cryptography is deployed and validated across all trust boundaries
 
 ## 6) Publication Readiness Verdict
 
-**Verdict as of March 22, 2026:** **Conditional**.
+**Verdict as of March 23, 2026:** **Conditional**.
 
 Recommended external messaging:
 - “AXIOM-MESH is in advanced hardening with broad subsystem coverage.”

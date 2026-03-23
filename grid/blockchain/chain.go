@@ -10,32 +10,32 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/axiom-mesh/grid/consensus"
 	"github.com/axiom-mesh/grid/internal/ledger"
 	"github.com/axiom-mesh/grid/types"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 type LedgerSnapshot struct {
-	Skills           []types.SkillVector          `json:"skills"`
-	WebCache         map[string]types.WebState    `json:"web_cache"`
-	Graph            types.DistributedGraph       `json:"graph"`
-	GraphIndex       map[string][]string          `json:"graph_index"`
-	Bonds            map[string]types.ComputeBond `json:"bonds"`
-	CCIPMessages     map[string]types.CCIPMessage `json:"ccip_messages"`
-	Swarms           map[string]types.Swarm       `json:"swarms"`
-	Proposals        map[string]types.Proposal    `json:"proposals"`
-	TreasurySplit    types.TreasurySplitConfig    `json:"treasury_split"`
-	GPPBalances      map[string]uint64            `json:"gpp_balances"`
-	NetworkSecPool   uint64                       `json:"network_sec_pool"`
-	WealthGenPool    uint64                       `json:"wealth_gen_pool"`
-	GPPEvents        []types.GPPEvent             `json:"gpp_events"`
-	RelayerQueue     []types.RelayerSettlement    `json:"relayer_queue"`
-	CRDTShards       map[string]types.CRDTShard     `json:"crdt_shards"`
-	DriftReports     map[string]types.DriftReport   `json:"drift_reports"`
-	SettlementNextID uint64                                   `json:"settlement_next_id"`
-	AgentManifests   map[string]types.AgentManifest           `json:"agent_manifests"`
-	NodeProfiles     map[string]types.NodeCapabilityProfile   `json:"node_profiles"`
+	Skills           []types.SkillVector                    `json:"skills"`
+	WebCache         map[string]types.WebState              `json:"web_cache"`
+	Graph            types.DistributedGraph                 `json:"graph"`
+	GraphIndex       map[string][]string                    `json:"graph_index"`
+	Bonds            map[string]types.ComputeBond           `json:"bonds"`
+	CCIPMessages     map[string]types.CCIPMessage           `json:"ccip_messages"`
+	Swarms           map[string]types.Swarm                 `json:"swarms"`
+	Proposals        map[string]types.Proposal              `json:"proposals"`
+	TreasurySplit    types.TreasurySplitConfig              `json:"treasury_split"`
+	GPPBalances      map[string]uint64                      `json:"gpp_balances"`
+	NetworkSecPool   uint64                                 `json:"network_sec_pool"`
+	WealthGenPool    uint64                                 `json:"wealth_gen_pool"`
+	GPPEvents        []types.GPPEvent                       `json:"gpp_events"`
+	RelayerQueue     []types.RelayerSettlement              `json:"relayer_queue"`
+	CRDTShards       map[string]types.CRDTShard             `json:"crdt_shards"`
+	DriftReports     map[string]types.DriftReport           `json:"drift_reports"`
+	SettlementNextID uint64                                 `json:"settlement_next_id"`
+	AgentManifests   map[string]types.AgentManifest         `json:"agent_manifests"`
+	NodeProfiles     map[string]types.NodeCapabilityProfile `json:"node_profiles"`
 }
 
 type Ledger struct {
@@ -53,8 +53,8 @@ type Ledger struct {
 	DriftReports   map[string]types.DriftReport
 
 	// Progressive CRDT Sharding Config
-	IsEdgeNode bool
-	NodeProfiles   map[string]types.NodeCapabilityProfile
+	IsEdgeNode   bool
+	NodeProfiles map[string]types.NodeCapabilityProfile
 
 	// Treasury and Distribution
 	TreasurySplit    types.TreasurySplitConfig
@@ -88,7 +88,7 @@ func NewLedger() *Ledger {
 			Nodes: make(map[string]types.GraphNode),
 			Edges: make([]types.GraphEdge, 0),
 		},
-		GraphIndex:   make(map[string][]string),
+		GraphIndex:     make(map[string][]string),
 		Bonds:          make(map[string]types.ComputeBond),
 		CCIPMessages:   make(map[string]types.CCIPMessage),
 		Swarms:         make(map[string]types.Swarm),
@@ -97,16 +97,16 @@ func NewLedger() *Ledger {
 		CRDTShards:     make(map[string]types.CRDTShard),
 		DriftReports:   make(map[string]types.DriftReport),
 
-		IsEdgeNode:     os.Getenv("AXIOM_EDGE_NODE") == "true",
-		NodeProfiles:   make(map[string]types.NodeCapabilityProfile),
+		IsEdgeNode:   os.Getenv("AXIOM_EDGE_NODE") == "true",
+		NodeProfiles: make(map[string]types.NodeCapabilityProfile),
 
 		// Default split configuration
 		TreasurySplit: types.TreasurySplitConfig{
 			NetworkSecurityFund:  50,
 			WealthGenerationPool: 50,
 		},
-		GPPBalances:  make(map[string]uint64),
-		GPPEvents:    make([]types.GPPEvent, 0),
+		GPPBalances:           make(map[string]uint64),
+		GPPEvents:             make([]types.GPPEvent, 0),
 		RelayerQueue:          make([]types.RelayerSettlement, 0),
 		Persistent:            pl,
 		ExternalChainFallback: true, // Default to true until swarm grows
@@ -304,21 +304,32 @@ func (l *Ledger) JoinSwarm(swarmID string, nodeID string) bool {
 	swarm.Nodes = append(swarm.Nodes, nodeID)
 	l.Swarms[swarmID] = swarm
 
-	// Release lock temporarily if needed, but since we're just emitting/calculating, it's fine.
-	// But to avoid potential deadlocks, let's call it async or be mindful.
-	// For Priority 1, we simulate the storage offer immediately:
+	capacity := l.resolveStorageCapacityUnsafe(nodeID)
+	encodedNodeID := [32]byte{}
+	copy(encodedNodeID[:], []byte(nodeID))
+
+	// Trigger storage-offer publication asynchronously so mesh join latency stays low.
 	go func() {
-		var capacity uint64 = 50 // default fallback
-		if profileQuota := os.Getenv("MESHSTORE_QUOTA_GB"); profileQuota != "" {
-			fmt.Sscanf(profileQuota, "%d", &capacity)
-		}
-		var parsedNodeID [32]byte
-		copy(parsedNodeID[:], []byte(nodeID))
-		l.OfferStorageToSwarm(parsedNodeID, capacity)
+		l.OfferStorageToSwarm(encodedNodeID, capacity)
 		l.CheckSelfSustaining()
 	}()
 
 	return true
+}
+
+func (l *Ledger) resolveStorageCapacityUnsafe(nodeID string) uint64 {
+	if profile, ok := l.NodeProfiles[nodeID]; ok && profile.StorageGB > 0 {
+		return uint64(profile.StorageGB)
+	}
+
+	if profileQuota := os.Getenv("MESHSTORE_QUOTA_GB"); profileQuota != "" {
+		var capacity uint64
+		if _, err := fmt.Sscanf(profileQuota, "%d", &capacity); err == nil && capacity > 0 {
+			return capacity
+		}
+	}
+
+	return 50
 }
 
 func (l *Ledger) GetSwarms() []types.Swarm {
@@ -479,7 +490,7 @@ func (l *Ledger) RollbackGPPBalances(checkpointBlockHash string) error {
 
 // MeshStore integration — called after JoinSwarm
 func (l *Ledger) OfferStorageToSwarm(nodeID [32]byte, capacity uint64) {
-    cidRoot := crypto.Keccak256([]byte("meshstore-root-" + hex.EncodeToString(nodeID[:])))
+	cidRoot := crypto.Keccak256([]byte(fmt.Sprintf("meshstore-root-%s-%d", hex.EncodeToString(nodeID[:]), capacity)))
 	var cidRootArr [32]byte
 	copy(cidRootArr[:], cidRoot)
 
@@ -497,10 +508,10 @@ func (l *Ledger) emitStorageEvent(nodeID [32]byte, capacity uint64, cidRoot []by
 
 // Self-sustaining check (runs on every join)
 func (l *Ledger) CheckSelfSustaining() {
-    if l.swarmSize() >= 100 {
-        l.ExternalChainFallback = false
-        log.Println("🌐 MeshStore now self-sustaining — external chains disabled")
-    }
+	if l.swarmSize() >= 100 {
+		l.ExternalChainFallback = false
+		log.Println("🌐 MeshStore now self-sustaining — external chains disabled")
+	}
 }
 
 func (l *Ledger) swarmSize() int {

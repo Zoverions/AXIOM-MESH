@@ -117,5 +117,5 @@ async def restore_backup(request: BackupRestoreRequest, api_key: str = Depends(v
 @router.get("/providers")
 async def get_providers():
     return {
-        "providers": ["gdrive", "onedrive"]
+        "providers": ["meshstore", "aws-s3", "gdrive", "onedrive"]
     }
