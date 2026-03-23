@@ -34,7 +34,6 @@ Detailed references:
 ## Lane M1 — Production Readiness Critical Path
 - [x] **M1.1** Publish owner + deputy roster for all delivery roles. — 2026-03-22 — @agent — updated PRODUCTION-READINESS-TRACKER.md
 - [x] **M1.2** Freeze API/schema/ABI baseline and enforce compatibility checks in CI. — 2026-03-22 — @agent — tagged v2026-baseline
-- [x] **M1.2** Freeze API/schema/ABI baseline and enforce compatibility checks in CI. — 2026-03-22 — @agent — tagged v2026-baseline
   - [x] ECO-01: API/schema/ABI lock and compatibility checks (2 days, D1) — 2026-03-22 — @agent — compatibility checks enforced in CI
 - [x] **M1.3** Complete route authZ parity audit + remediation backlog. — 2026-03-22 — @agent — all SEC subtasks completed
   - [x] SEC-01: Route inventory + authZ parity map (2 days, A1) — 2026-03-22 — @agent — all routes have auth dependencies
@@ -99,7 +98,6 @@ Detailed references:
 - [x] **D.3** Restructure docs for actionability: add checklists, step-by-step guides, and clear acceptance criteria. — 2026-03-22 — @agent — added checklists to run-local-stack.md
 - [x] **D.4** Create unified HOWTO index linking all operational procedures. — 2026-03-22 — @agent — created docs/HOWTO/index.md
 
-## Lane M4 — Post-Audit Remediation (P0-P3 Tasks)
 ## Lane M4 — Post-Audit Remediation (P0-P3 Tasks)
 - [x] **M4.1** Run full static analysis and fix High/Critical findings. — 2026-03-22 — @agent — ran bandit (no high/crit, fixed medium tmp path), safety (upgraded urllib3)
 - [x] **M4.2** Generate and commit SBOM. — 2026-03-22 — @agent — placeholder, syft install denied
