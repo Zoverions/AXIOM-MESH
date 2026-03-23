@@ -87,8 +87,19 @@ func (s *Scheduler) RegisterNode(nodeID string, manifest *types.AgentManifest, s
 	defer s.mu.Unlock()
 	s.nodes[nodeID] = manifest
 
+	// If the manifest provides hardware tier and service classes, use them over defaults.
+	actualTier := tier
+	if manifest != nil && manifest.HardwareTier != 0 {
+		actualTier = HardwareTier(manifest.HardwareTier)
+	}
+
+	actualServices := services
+	if manifest != nil && len(manifest.ServiceClasses) > 0 {
+		actualServices = manifest.ServiceClasses
+	}
+
 	svcMap := make(map[string]bool)
-	for _, svc := range services {
+	for _, svc := range actualServices {
 		svcMap[svc] = true
 	}
 
@@ -96,7 +107,7 @@ func (s *Scheduler) RegisterNode(nodeID string, manifest *types.AgentManifest, s
 		Score:          score,
 		LatencyMs:      latencyMs,
 		Cost:           cost,
-		HardwareTier:   tier,
+		HardwareTier:   actualTier,
 		ServiceClasses: svcMap,
 	}
 }
@@ -213,6 +224,10 @@ func (s *Scheduler) Schedule(capsuleID string, token string, policy RoutingPolic
 	s.mu.Unlock()
 
 	return selectedNode, ticket.Clone(), nil
+}
+
+func (s *Scheduler) Reassign(ticketID string) (string, error) {
+	return s.Failover(ticketID)
 }
 
 func (s *Scheduler) Failover(ticketID string) (string, error) {

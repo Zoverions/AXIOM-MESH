@@ -5,6 +5,8 @@ type AgentManifest struct {
 	CognitiveVector []float64 `json:"cognitiveVector"`
 	Signature       string    `json:"signature"`
 	Timestamp       int64     `json:"timestamp"`
+	HardwareTier    int       `json:"hardwareTier"`
+	ServiceClasses  []string  `json:"serviceClasses"`
 }
 
 type LightweightPingProfile struct {
