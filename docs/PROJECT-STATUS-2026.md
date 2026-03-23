@@ -32,7 +32,6 @@ The following production-path hardening changes are now implemented:
 - `ComputeBond.sol` severance requires verifier-backed proof validation for all callers (no human-staker bypass).
 - `ComputeBond.sol` storage offers are now persisted and queryable via `getStorageOffer`.
 - `ZKMLVerifier.sol` includes approved-proof registration and single-use anti-replay severance verification semantics.
-- Hypervisor backup infrastructure now includes decentralized MeshStore/IPFS plus AWS S3, Google Drive, and OneDrive provider support for encrypted bundle continuity.
 
 These updates improve implementation accuracy against documented tokenomics and security posture, while broader financial-grade evidence packaging and post-quantum migration remain in progress.
 

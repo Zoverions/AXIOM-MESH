@@ -36,7 +36,6 @@ The following previously flagged items are now remediated in-repo:
 - `ComputeBond.getStorageOffer` now returns persisted on-chain storage offer state.
 - Hypervisor proof-orchestration paths now explicitly refuse placeholder proof fallbacks.
 - Token mint split is now explicitly locked in `AXM.sol` as 5% founder / 10% network treasury / 85% ecosystem reserve.
-- Backup provider support now includes decentralized MeshStore/IPFS plus AWS S3, Google Drive, and OneDrive continuity paths.
 
 This means the correct public posture today is:
 - “strong prototype / pilot-grade platform with many hardened components,”
