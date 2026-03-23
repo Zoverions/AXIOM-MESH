@@ -522,3 +522,76 @@ func TestLedger_JoinSwarm_UsesNodeProfileStorageCapacity(t *testing.T) {
 		t.Fatalf("expected OnSwarmJoined callback to be triggered")
 	}
 }
+
+func TestLedger_Prune(t *testing.T) {
+	l := NewLedger()
+
+	now := uint64(time.Now().Unix())
+
+	// Add CRDTShards
+	l.CRDTShards["shard-old"] = types.CRDTShard{
+		ShardID:   "shard-old",
+		Timestamp: now - 3600*48, // 48 hours old
+	}
+	l.CRDTShards["shard-new"] = types.CRDTShard{
+		ShardID:   "shard-new",
+		Timestamp: now - 3600*12, // 12 hours old
+	}
+
+	// Add DriftReports
+	l.DriftReports["node-old"] = types.DriftReport{
+		NodeID:    "node-old",
+		Timestamp: now - 3600*48,
+	}
+	l.DriftReports["node-new"] = types.DriftReport{
+		NodeID:    "node-new",
+		Timestamp: now - 3600*12,
+	}
+
+	// Add Proposals
+	l.Proposals["prop-old-resolved"] = types.Proposal{
+		ID:      "prop-old-resolved",
+		EndTime: now - 3600*48,
+		State:   types.ProposalStateResolved,
+	}
+	l.Proposals["prop-old-active"] = types.Proposal{
+		ID:      "prop-old-active",
+		EndTime: now - 3600*48,
+		State:   types.ProposalStateActive,
+	}
+	l.Proposals["prop-new-resolved"] = types.Proposal{
+		ID:      "prop-new-resolved",
+		EndTime: now - 3600*12,
+		State:   types.ProposalStateResolved,
+	}
+
+	// Prune with 24 hours retention
+	l.Prune(24 * time.Hour)
+
+	// Verify CRDTShards
+	if _, ok := l.CRDTShards["shard-old"]; ok {
+		t.Errorf("Expected shard-old to be pruned")
+	}
+	if _, ok := l.CRDTShards["shard-new"]; !ok {
+		t.Errorf("Expected shard-new to be retained")
+	}
+
+	// Verify DriftReports
+	if _, ok := l.DriftReports["node-old"]; ok {
+		t.Errorf("Expected node-old drift report to be pruned")
+	}
+	if _, ok := l.DriftReports["node-new"]; !ok {
+		t.Errorf("Expected node-new drift report to be retained")
+	}
+
+	// Verify Proposals
+	if _, ok := l.Proposals["prop-old-resolved"]; ok {
+		t.Errorf("Expected prop-old-resolved to be pruned")
+	}
+	if _, ok := l.Proposals["prop-old-active"]; !ok {
+		t.Errorf("Expected prop-old-active to be retained")
+	}
+	if _, ok := l.Proposals["prop-new-resolved"]; !ok {
+		t.Errorf("Expected prop-new-resolved to be retained")
+	}
+}

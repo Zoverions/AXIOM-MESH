@@ -1106,6 +1106,33 @@ func (s *Server) SetupRouter() *http.ServeMux {
 		}
 	}))
 
+	mux.HandleFunc("/ledger/prune", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		retentionStr := r.URL.Query().Get("retention")
+		if retentionStr == "" {
+			retentionStr = "24h" // Default to 24 hours
+		}
+
+		retentionPeriod, err := time.ParseDuration(retentionStr)
+		if err != nil {
+			http.Error(w, "Invalid retention duration format", http.StatusBadRequest)
+			return
+		}
+
+		s.ledger.Prune(retentionPeriod)
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{
+			"status":            "success",
+			"message":           "Historical ledger pruned successfully",
+			"retention_applied": retentionPeriod.String(),
+		})
+	}))
+
 	mux.HandleFunc("/ccip", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == "GET" {
