@@ -6,14 +6,21 @@ import { ethers } from 'ethers';
 jest.mock('uuid', () => ({ v4: () => '123e4567-e89b-12d3-a456-426614174000' }));
 
 // Must mock auth before importing router
+jest.mock('../middleware/auth', () => ({
+    authMiddleware: (req: any, res: any, next: any) => next()
+}));
+
 jest.mock('../middleware/auth_utils', () => ({
-    authMiddleware: (req: Request, res: Response, next: Function) => next()
+    authMiddleware: (req: any, res: any, next: any) => next()
 }));
 
 // Mock child_process for IPFS
 jest.mock('child_process', () => {
     const EventEmitter = require('events');
     return {
+        exec: jest.fn((cmd, cb) => {
+            if (cb) cb(null, { stdout: '', stderr: '' });
+        }),
         spawn: jest.fn().mockImplementation((cmd, args) => {
             const child: any = new EventEmitter();
             child.stdout = new EventEmitter();
@@ -50,7 +57,7 @@ import restRouter from './rest';
 
 const app = express();
 app.use(express.json());
-app.use('/api/v1', restRouter);
+app.use('/', restRouter);
 
 describe('REST NFT routes', () => {
     beforeEach(() => {

@@ -103,7 +103,7 @@ router.post('/capsule/publish', async (req: Request, res: Response) => {
         // We will mock verify logic for testing using an env var to bypass if strictly required in tests
         let isValid = await verifySignatures(payload, sigs, threshold);
 
-        if (process.env.TEST_ALLOW_ALL_CAPSULES === 'true') {
+        if (process.env.TEST_ALLOW_ALL_CAPSULES === 'true' && process.env.NODE_ENV !== 'production') {
             isValid = true;
         }
 
@@ -150,9 +150,9 @@ router.get('/capsule/:id/verify', async (req: Request, res: Response) => {
     const sigs = capsule.signatures || (capsule.signature ? [capsule.signature] : []);
     const threshold = process.env.CAPSULE_THRESHOLD ? parseInt(process.env.CAPSULE_THRESHOLD) : 1;
     let isValid = await verifySignatures(payload, sigs, threshold);
-    if (process.env.TEST_ALLOW_ALL_CAPSULES === 'true') {
-        isValid = true;
-    }
+    if (process.env.TEST_ALLOW_ALL_CAPSULES === 'true' && process.env.NODE_ENV !== 'production') {
+            isValid = true;
+        }
 
     if (isValid) {
         res.json({ verified: true });
@@ -179,7 +179,7 @@ router.post('/capsule/:id/execute', async (req: Request, res: Response) => {
         const sigs = capsule.signatures || (capsule.signature ? [capsule.signature] : []);
         const threshold = process.env.CAPSULE_THRESHOLD ? parseInt(process.env.CAPSULE_THRESHOLD) : 1;
         let isValid = await verifySignatures(payload, sigs, threshold);
-        if (process.env.TEST_ALLOW_ALL_CAPSULES === 'true') {
+        if (process.env.TEST_ALLOW_ALL_CAPSULES === 'true' && process.env.NODE_ENV !== 'production') {
             isValid = true;
         }
 

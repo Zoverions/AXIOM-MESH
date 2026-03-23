@@ -8,8 +8,9 @@ import { sendToHypervisor } from '../services/hypervisorClient';
 import { getLogsBuffer } from '../utils/logger';
 import { authMiddleware } from '../middleware/auth';
 import { publicIntentRateLimit } from '../middleware/public_rate_limit';
-import { exec } from 'child_process';
 import util from 'util';
+import child_process from 'child_process';
+const exec = child_process.exec;
 import { ethers } from 'ethers';
 
 const execPromise = util.promisify(exec);
@@ -127,7 +128,10 @@ router.post('/api/v1/nft/mint', authMiddleware, async (req: Request, res: Respon
 
         // 1. Generate zkML proof + apply obfuscation rules via NemoClaw (mocked for Gateway level as it delegates to Privacy Router / Grid usually)
         // Actually pin the data to IPFS to get a CID
-        const dataToUpload = targetDataSet || "default_data";
+        if (!targetDataSet) {
+            return res.status(400).json({ error: 'targetDataSet is required for actual upload' });
+        }
+        const dataToUpload = targetDataSet;
         let ipfsCidStr = "";
 
         try {
@@ -145,7 +149,7 @@ router.post('/api/v1/nft/mint', authMiddleware, async (req: Request, res: Respon
             });
         } catch (err) {
             console.error("IPFS upload failed, falling back to keccak256 hash:", err);
-            ipfsCidStr = dataToUpload; // fallback to hashing the data itself
+            return res.status(503).json({ error: 'IPFS daemon unreachable, cannot pin data' });
         }
 
         // Ensure dataCID fits into bytes32 for the contract
