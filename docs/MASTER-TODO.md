@@ -138,8 +138,8 @@ Detailed references:
   - 2026-03-23 — @agent — hardened storage core paths: `ComputeBond.getStorageOffer` now returns persisted values and Grid `JoinSwarm` now resolves real storage capacity from `NodeProfiles`/env with deterministic storage-offer publication.
   - 2026-03-23 — @agent — replaced placeholders in `ProveXVerifierWrapper.sol` with dynamic amount logic.
   - 2026-03-23 — @agent — replaced mocked token returns in `Broker.ts` and enabled engine injection execution support.
-- [ ] **M5.2** Build cryptography posture matrix (Implemented / Planned / Experimental) and link each claim to exact code references. — owner: security
-- [ ] **M5.3** Publish financial controls evidence index (control → artifact → verification command). — owner: finance+ops
+- [x] **M5.2** Build cryptography posture matrix (Implemented / Planned / Experimental) and link each claim to exact code references. — owner: security — 2026-03-24 — @agent — created docs/CRYPTOGRAPHY-POSTURE-MATRIX.md
+- [x] **M5.3** Publish financial controls evidence index (control → artifact → verification command). — owner: finance+ops — 2026-03-24 — @agent — created docs/FINANCIAL-CONTROLS-EVIDENCE.md
 - [x] **M5.4** Publish tokenomics lock table with current effective values, governance reference, and release timestamp. — 2026-03-23 — @agent — `docs/TOKENOMICS.md` + `AXM.sol`/`Genesis.sol` now aligned to explicit 5%/10%/85% implemented split and dated status updates.
 - [x] **M5.5** Final audience-facing documentation pass: remove overstatements, preserve policy-vs-implemented distinctions, and verify all HOWTO paths are current. — 2026-03-23 — @agent — updated Whitepaper, Architecture, Project Status, Audit Report, Recovery HOWTO, docs index, and added strategic audit response.
 
