@@ -29,7 +29,10 @@ def test_hardware_profile_full_node():
     scanner = MockHardwareScanner(footprint)
     assert scanner.get_hardware_profile() == "full_node"
 
-def test_resource_balancer_routing():
+from unittest.mock import patch
+
+@patch("src.evolution.monitor.SystemMonitor.evaluate_tier", return_value="normal")
+def test_resource_balancer_routing(mock_eval):
     # Test Full Node
     footprint_full = {"cpu_cores": 8, "total_ram_gb": 16, "vram_mb": 8000, "has_gpu": True}
     scanner_full = MockHardwareScanner(footprint_full)
