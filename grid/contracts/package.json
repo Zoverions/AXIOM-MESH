@@ -46,7 +46,7 @@
     "@layerzerolabs/lz-evm-protocol-v2": "^3.0.167",
     "@openzeppelin/contracts-upgradeable": "^5.0.0",
     "@uniswap/v3-core": "^1.0.1",
-    "@uniswap/v3-periphery": "^1.4.4",
+    "@uniswap/v3-periphery": "^1.4.3",
     "@wormhole-foundation/wormhole-solidity-sdk": "^1.1.0",
     "dotenv": "^17.3.1"
   }
