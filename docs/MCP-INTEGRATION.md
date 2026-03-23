@@ -5,7 +5,7 @@ This document details the progress made towards implementing the enhancements sp
 
 **Completed successfully:**
 *   Updated `README.md` to include the Framework Comparison.
-*   Updated `docs/plan.md` to reflect the new Phase 5 roadmaps.
+*   Updated `docs/MASTER-TODO.md` to reflect the new Phase 5 roadmaps.
 *   Updated `docs/MASTER-INTEGRATION.md` with the full consolidated Master Directive v2.1.
 *   Integrated **LangSmith tracing** into `hypervisor/src/graph/autoresearch_graph.py` (toggled via the `LANGSMITH_TRACING_ENABLED` environment variable).
 *   Created the **MCP Server** logic in `hypervisor/src/api/mcp_server.py` using `mcp.server.fastmcp.FastMCP` (including tools for `sandbox_execute` and `register_grid_skill`, and required security validations).

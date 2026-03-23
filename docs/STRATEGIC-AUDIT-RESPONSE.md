@@ -37,7 +37,7 @@ AXIOM-MESH is a four-pillar mesh runtime (Gateway / Hypervisor / Sandbox / Grid)
 
 - Node capability profiles provide per-node storage metadata for storage-offer routing.
 - Swarm callback model supports asynchronous publication, reducing join latency impact.
-- Remaining capacity/routing optimization work is tracked in roadmap artifacts (`docs/plan.md`, `docs/PRODUCTION-EXECUTION-BACKLOG.md`).
+- Remaining capacity/routing optimization work is tracked in roadmap artifacts (`docs/MASTER-TODO.md`, `docs/PRODUCTION-EXECUTION-BACKLOG.md`).
 
 ---
 

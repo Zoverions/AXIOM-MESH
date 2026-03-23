@@ -163,3 +163,10 @@ A task is done only when all are true:
 
 ## Lane GPD — Physics Research Kernel Integration
 - [x] Full dynamic agent ecosystem: Founder 5% + Network Public Pool (scripts → ascension entities)
+
+## Lane Sched — Scheduler Capabilities & Failover
+- [ ] **Sched.1** Update `types.AgentManifest` (or internal scheduler registry type) to include `HardwareTier` and `ServiceClasses`.
+- [ ] **Sched.2** Update `RoutingPolicy` to include `RequiredHardwareTier` and `RequiredServiceClasses`.
+- [ ] **Sched.3** Update `Schedule` function to filter out nodes that don't match hardware tiers or lack required service classes.
+- [ ] **Sched.4** Add a `Reassign` API/method for the failover logic which returns a new node ID within the token TTL if the selected node becomes unavailable.
+- [ ] **Sched.5** Update the test logic to include the 200 node / 1000 task simulation covering compatibility and failover logic.
