@@ -39,3 +39,26 @@ func TestDecodeProposalTensor_RejectsNonModelRun(t *testing.T) {
 		t.Fatal("expected unsupported proposal type error")
 	}
 }
+
+func TestDecodeProposalTensor_UsesCapnpMetadataFallback(t *testing.T) {
+	intent := IntentPayload{
+		Modality: ModalityLatentVector,
+		Payload:  []byte(`{"proposalType":"MODEL_RUN","tensor":"AQI="}`),
+		ProposalTensor: &ProposalTensorMetadata{
+			ProposalType: ProposalTypeModelRun,
+			TensorShape:  []uint32{1, 2},
+			TensorDType:  "float16",
+		},
+	}
+
+	candidate, err := DecodeProposalTensor(intent)
+	if err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+	if len(candidate.TensorShape) != 2 || candidate.TensorShape[0] != 1 || candidate.TensorShape[1] != 2 {
+		t.Fatalf("unexpected tensor shape fallback: %#v", candidate.TensorShape)
+	}
+	if candidate.TensorDType != "float16" {
+		t.Fatalf("unexpected tensor dtype fallback: %s", candidate.TensorDType)
+	}
+}

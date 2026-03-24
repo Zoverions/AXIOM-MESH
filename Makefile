@@ -2,7 +2,7 @@
 	up down cli test nemo-airgap \
 	contracts-compile contracts-test contracts-deploy \
 	compile-capnp hardhat-compile \
-	transformer-grid-e2e transformer-hypervisor-e2e transformer-gate \
+	verify-transformer-toolchains transformer-grid-e2e transformer-hypervisor-e2e transformer-gate \
 	validate-release-evidence verify-evidence-bundles verify-tokenomics-controls \
 	test-reconciliation test-grid-authz verify-change-control test-provex-wrapper \
 	test-zero-trust test-telemetry-alerts \
@@ -39,16 +39,28 @@ compile-capnp:
 	@command -v capnp >/dev/null 2>&1 || (echo "capnp CLI not installed"; exit 1)
 	capnp compile -I schemas -ocapnp schemas/aicp_intent.capnp
 
+verify-transformer-toolchains:
+	@command -v go >/dev/null 2>&1 || (echo "go CLI not installed"; exit 1)
+	@command -v python3 >/dev/null 2>&1 || (echo "python3 CLI not installed"; exit 1)
+	@command -v node >/dev/null 2>&1 || (echo "node CLI not installed"; exit 1)
+	@command -v npm >/dev/null 2>&1 || (echo "npm CLI not installed"; exit 1)
+	@command -v capnp >/dev/null 2>&1 || (echo "capnp CLI not installed"; exit 1)
+	@go version
+	@python3 --version
+	@node --version
+	@npm --version
+	@capnp --version
+
 hardhat-compile:
-	cd grid/contracts && npm install --legacy-peer-deps && npx hardhat compile
+	cd grid/contracts && npx hardhat compile
 
 transformer-grid-e2e:
-	cd grid && go test ./p2p -run 'TestRouteIntent_LatentVectorRoutesToProposalTensor|TestDecodeProposalTensor_RejectsNonModelRun'
+	cd grid && go test ./p2p -run 'TestRouteIntent_LatentVectorRoutesToProposalTensor|TestDecodeProposalTensor_RejectsNonModelRun|TestDecodeProposalTensor_UsesCapnpMetadataFallback'
 
 transformer-hypervisor-e2e:
 	PYTHONPATH=. pytest -q hypervisor/src/engine/aicp_e2e_test.py
 
-transformer-gate: compile-capnp hardhat-compile transformer-grid-e2e transformer-hypervisor-e2e
+transformer-gate: verify-transformer-toolchains compile-capnp hardhat-compile transformer-grid-e2e transformer-hypervisor-e2e
 
 validate-release-evidence:
 	@test -n "$(RC_PATH)" || (echo "Usage: make validate-release-evidence RC_PATH=release-evidence/RC-<date>-<tag>" && exit 1)

@@ -19,6 +19,7 @@ This directory contains step-by-step guides for operating and developing AXIOM-M
 
 ## Development & Deployment
 - [Release Gate Evidence](release-gate-evidence.md) - Prepare evidence for release gates
+- [Transformer Foundation PulseChain Testnet Deployment](transformer-foundation-pulsechain.md) - Deploy transformer package and publish on-chain evidence
 
 ## Quick Checklist for Common Tasks
 - **New Developer Setup**: Follow [Run Local Stack](run-local-stack.md) then [Submit Intent](submit-intent.md)
