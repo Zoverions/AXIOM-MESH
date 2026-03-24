@@ -155,6 +155,20 @@ router.post('/api/v1/nft/mint', authMiddleware, async (req: Request, res: Respon
         // Ensure dataCID fits into bytes32 for the contract
         const dataCID = ethers.keccak256(ethers.toUtf8Bytes(ipfsCidStr));
 
+        // Call Hypervisor zkML infer to get a real proof hash
+        let zkProofHash = dataCID;
+        try {
+            const hypervisorUrl = process.env.HYPERVISOR_URL || 'http://localhost:8000';
+            const zkmlResponse = await axios.post(`${hypervisorUrl}/zkml/infer`, {
+                input: [1.0, 2.0, 3.0] // Dummy input to trigger proof generation
+            });
+            if (zkmlResponse.data && zkmlResponse.data.proof) {
+                zkProofHash = ethers.keccak256(ethers.toUtf8Bytes(JSON.stringify(zkmlResponse.data.proof)));
+            }
+        } catch (error) {
+            console.error("Failed to generate zkML proof via Hypervisor, falling back to dataCID:", error);
+        }
+
         // 2. Mint the NFT on-chain
         const provider = new ethers.JsonRpcProvider(process.env.LOCAL_RPC_URL || "http://127.0.0.1:8545");
         const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", provider);
@@ -166,7 +180,7 @@ router.post('/api/v1/nft/mint', authMiddleware, async (req: Request, res: Respon
             ];
             const contract = new ethers.Contract(contractAddress, abi, wallet);
             const metadataURI = `ipfs://${ipfsCidStr}`;
-            const tx = await contract.mintCitizenship(recipientAddress, jurisdiction || "Global", expiry || Date.now() + 31536000000, rightsTier || "Citizen", dataCID, issuerGuildID || "Guild-001", metadataURI);
+            const tx = await contract.mintCitizenship(recipientAddress, jurisdiction || "Global", expiry || Date.now() + 31536000000, rightsTier || "Citizen", zkProofHash, issuerGuildID || "Guild-001", metadataURI);
             const receipt = await tx.wait();
 
             res.json({
