@@ -225,8 +225,8 @@ func validateZKMLPayload(payload types.ZKMLPayload) (bool, string) {
 func (s *Server) SetupRouter() *http.ServeMux {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/peers/manifests", s.handlePeersManifests)
-	mux.HandleFunc("/peers/profiles", s.handlePeersProfiles)
+	mux.HandleFunc("/peers/manifests", verifySignatureMiddleware(s.handlePeersManifests))
+	mux.HandleFunc("/peers/profiles", verifySignatureMiddleware(s.handlePeersProfiles))
 	sched := scheduler.NewScheduler()
 	RegisterSchedulerAPI(mux, sched)
 

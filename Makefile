@@ -41,3 +41,12 @@ verify-tokenomics-controls:
 
 test-reconciliation:
 	python3 scripts/run_reconciliation_drill.py
+
+test-grid-authz:
+	python3 scripts/test_grid_authz.py
+
+verify-change-control:
+	python3 scripts/verify_change_control.py
+
+test-provex-wrapper:
+	python3 scripts/test_provex_wrapper.py

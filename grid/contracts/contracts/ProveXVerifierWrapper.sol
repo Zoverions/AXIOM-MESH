@@ -55,9 +55,16 @@ contract ProveXVerifierWrapper is Ownable, ReentrancyGuard, Pausable {
 
         // Release UBI from UniversalDistributionPool (gated by PoER)
         if (poerScores[recipient] >= 1000) { // threshold example
-            uint256 releaseAmount = 1 ether + (poerScores[recipient] * 1e15); // Base UBI + score bonus
+            uint256 releaseAmount = calculateDynamicReleaseAmount(recipient); // Dynamically calculated base UBI + score bonus
             emit FiatUBIReleased(recipient, releaseAmount);
         }
+    }
+
+    function calculateDynamicReleaseAmount(address recipient) internal view returns (uint256) {
+        // Base amount dynamic depending on score (example logic replacing explicit static placeholders)
+        uint256 baseAmount = (poerScores[recipient] > 2000) ? 2 ether : 1 ether;
+        uint256 bonusAmount = poerScores[recipient] * 1e15;
+        return baseAmount + bonusAmount;
     }
 
     // Guardian Sentinel challenge (7-day timelock)
