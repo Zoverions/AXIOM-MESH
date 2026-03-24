@@ -3,10 +3,27 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
-import "./token/AXM.sol";
-import "./CognitiveFrictionVerifier.sol";
-import "./PulseAdapter.sol";
-import "./FounderShareManager.sol";
+interface IAXM {
+    function transferFrom(address from, address to, uint256 value) external returns (bool);
+    function transfer(address to, uint256 value) external returns (bool);
+}
+
+interface ICognitiveFrictionVerifier {
+    function verifyPoER(
+        bytes32 stateRootBefore,
+        bytes32 stateRootAfter,
+        bytes32 attentionScopeHash,
+        bytes32 dependencyGraphRoot,
+        bytes32 capabilityRoot,
+        bytes32 modelRoot,
+        bytes32 executionTraceHash,
+        bytes calldata zkProof
+    ) external returns (bool);
+}
+
+interface IPulseAdapter {
+    function guardianSentinel() external view returns (address);
+}
 
 struct AttentionArtifact {
     bytes32 attentionScopeHash;
@@ -17,10 +34,10 @@ struct AttentionArtifact {
 }
 
 contract StigmergicStateChannel is ReentrancyGuard, Pausable {
-    AXM public immutable axmToken;
-    CognitiveFrictionVerifier public immutable poerVerifier;
-    PulseAdapter public immutable pulseAdapter;
-    FounderShareManager public immutable founderManager;
+    IAXM public immutable axmToken;
+    ICognitiveFrictionVerifier public immutable poerVerifier;
+    IPulseAdapter public immutable pulseAdapter;
+    address public immutable founderManager;
     address public immutable universalDistributionPool;
     address public immutable guardianSentinel;
 
@@ -36,6 +53,7 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
         uint256 openedAt;
         uint256 challengeWindowEnds;
         bool isSettled;
+        bool isChallenged;
     }
 
     mapping(bytes32 => Channel) public channels;
@@ -43,6 +61,7 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
     event ChannelOpened(bytes32 indexed channelId, uint256 challengeEnds);
     event OptimisticSettled(bytes32 indexed channelId, bytes32 stateRootAfter);
     event SettlementChallenged(bytes32 indexed channelId, address challenger);
+    event ChannelFundingReleased(bytes32 indexed channelId, uint256 networkTax, uint256 payoutA, uint256 payoutB);
 
     constructor(
         address _axm,
@@ -52,12 +71,21 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
         address _universalPool,
         address _guardian
     ) {
-        axmToken = AXM(_axm);
-        poerVerifier = CognitiveFrictionVerifier(_poer);
-        pulseAdapter = PulseAdapter(_pulse);
-        founderManager = FounderShareManager(_founder);
+        require(_axm != address(0), "AXM required");
+        require(_poer != address(0), "PoER required");
+        require(_pulse != address(0), "Pulse required");
+        require(_founder != address(0), "Founder required");
+        require(_universalPool != address(0), "Pool required");
+        require(_guardian != address(0), "Guardian required");
+
+        axmToken = IAXM(_axm);
+        poerVerifier = ICognitiveFrictionVerifier(_poer);
+        pulseAdapter = IPulseAdapter(_pulse);
+        founderManager = _founder;
         universalDistributionPool = _universalPool;
         guardianSentinel = _guardian;
+
+        require(pulseAdapter.guardianSentinel() == _guardian, "Guardian mismatch");
     }
 
     function openChannel(address agentB, bytes32 taskHash, uint256 stake) external nonReentrant returns (bytes32) {
@@ -73,7 +101,8 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
             finalStateRoot: bytes32(0),
             openedAt: block.timestamp,
             challengeWindowEnds: block.timestamp + CHALLENGE_WINDOW,
-            isSettled: false
+            isSettled: false,
+            isChallenged: false
         });
 
         require(axmToken.transferFrom(msg.sender, address(this), stake), "Stake transfer failed");
@@ -92,7 +121,12 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
         Channel storage ch = channels[channelId];
         require(ch.agentA != address(0), "Channel not found");
         require(!ch.isSettled, "Already settled");
+        require(!ch.isChallenged, "Settlement challenged");
         require(block.timestamp > ch.challengeWindowEnds, "Challenge window open");
+        require(
+            msg.sender == ch.agentA || msg.sender == ch.agentB || msg.sender == guardianSentinel,
+            "Unauthorized settler"
+        );
 
         require(
             poerVerifier.verifyPoER(
@@ -119,11 +153,16 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
         require(axmToken.transfer(ch.agentB, payout - (payout / 2)), "B payout failed");
 
         emit OptimisticSettled(channelId, stateRootAfter);
+        emit ChannelFundingReleased(channelId, tax, payout / 2, payout - (payout / 2));
     }
 
     function challengeSettlement(bytes32 channelId, bytes calldata fraudProof) external {
-        require(channels[channelId].agentA != address(0), "Channel not found");
+        Channel storage ch = channels[channelId];
+        require(ch.agentA != address(0), "Channel not found");
+        require(!ch.isSettled, "Already settled");
+        require(block.timestamp <= ch.challengeWindowEnds, "Window closed");
         require(fraudProof.length > 0, "Missing fraud proof");
+        ch.isChallenged = true;
         emit SettlementChallenged(channelId, msg.sender);
     }
 }
