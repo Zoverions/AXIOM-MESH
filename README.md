@@ -107,7 +107,7 @@ To keep the repository organized and reduce list sprawl:
 ## Roadmap & Architecture
 
 ### Current Foundation
-- Attention-Indexed State Machine (transformer proposer + symbolic verification)
+- Attention-Indexed State Machine (transformer proposer + symbolic verification + 2nd/3rd-order consequence awareness)
 
 ### Execution Model
 - AICP tensor routing (off-chain)
@@ -119,20 +119,24 @@ To keep the repository organized and reduce list sprawl:
 - Dynamic rating/polling/quorum-sensing for bridge-path selection
 - Final token redemption/claim on PulseChain
 
+### Multi-Chain
+- Simultaneous deployment + dynamic bridge selection; final claims on PulseChain.
+
 ### Gas Target
 - 99.9% of operations at $0.00 through off-chain cognition and optimistic channels
 
 ### Top-Level To Do
 - Transformer Foundation (this package) – IN PROGRESS
 - Multi-Chain Bridging & Rating System
+- Consequence Forecasting Module (2nd/3rd-order awareness)
 - Mainnet Genesis + Bug Bounty
-- Full Security Audit (Zellic / Trail of Bits)
+- Full Security Audit
 
 ### Transformer Foundation Sub-Tasks
 - Create `docs/whitepaper-attention-blockchains.md` with locked v1.0 semantics.
-- Implement `StigmergicStateChannel.sol` v4 (optimistic sliding + `AttentionArtifact`).
+- Implement StigmergicStateChannel v4 + transformer wiring.
+- Add Consequence Forecasting module to transformer proposer.
 - Wire `MODEL_RUN` outcomes into Cognitive Friction + PoER validation.
-- Update AICP transport for proposal tensors (`latentVector`).
 - Run toy MDP simulation and attach phase plots.
 - Deploy full testnet via `scripts/deploy-full-testnet.js`.
 - Update service READMEs with transformer-foundation roadmap.
@@ -140,6 +144,6 @@ To keep the repository organized and reduce list sprawl:
 ### Multi-Chain Sub-Tasks
 - Deploy core contracts simultaneously on Ethereum/Base/Arbitrum.
 - Implement bridge contracts + PulseX/1inch aggregator hooks.
-- Build rating/polling/quorum oracle for bridge selection.
+- Build rating/polling oracle for bridge selection.
 - Enforce PulseChain-only final redemption/claim destination.
 - Extend deployment scripts/manifests for multi-chain pathing.

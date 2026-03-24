@@ -1,23 +1,30 @@
 #!/usr/bin/env python3
 import sys
-import re
 from pathlib import Path
 
+
+def assert_contains(content: str, required: str, message: str) -> None:
+    if required not in content:
+        print(f"Error: {message}")
+        sys.exit(1)
+
+
 def main():
-    chain_go = Path("grid/api/server.go")
-    if not chain_go.exists():
-        print("grid/api/server.go not found")
+    hypervisor_server = Path("hypervisor/src/api/server.py")
+    if not hypervisor_server.exists():
+        print("hypervisor/src/api/server.py not found")
         sys.exit(1)
 
-    content = chain_go.read_text()
+    content = hypervisor_server.read_text()
+    assert_contains(content, "raise RuntimeError(", "mTLS fail-closed RuntimeError missing")
+    assert_contains(content, "build_signed_headers(", "signed inter-service header helper missing")
+    assert_contains(content, "X-Axiom-Nonce", "anti-replay nonce header missing")
+    assert_contains(content, "X-Axiom-Timestamp", "anti-replay timestamp header missing")
+    assert_contains(content, "X-Axiom-Signature", "request signature header missing")
 
-    # Check if Anti-Replay / Nonce handling is implemented with verifySignatureMiddleware
-    if 'nonce' not in content.lower() and 'timestamp' not in content.lower():
-        print("Error: Anti-Replay not implemented in grid/api/server.go")
-        sys.exit(1)
-
-    print("mTLS & Anti-Replay verified.")
+    print("mTLS fail-closed and anti-replay signing verified.")
     sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

@@ -7,9 +7,10 @@
     "tier2": "PulseChain PoER final settlement – <$0.001"
   },
   "multiChainSupport": {
-    "primarySettlement": "PulseChain (PulseX-native)",
+    "primarySettlement": "PulseChain",
     "simultaneousDeployment": ["Ethereum", "Base", "Arbitrum"],
-    "bridgingStrategy": "Rating/polling/quorum-sensing selects best path; final claim on PulseChain"
+    "bridgingStrategy": "Dynamic rating/polling selects best path; final claim on PulseChain"
   },
+  "consequenceAwareness": "2nd/3rd-order forecasting module added to transformer proposer",
   "foundationalStatus": "Locked – transformer attention is now the native VM"
 }

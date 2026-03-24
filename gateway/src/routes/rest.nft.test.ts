@@ -68,6 +68,10 @@ app.use('/', restRouter);
 describe('REST NFT routes', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        process.env.LOCAL_RPC_URL = 'http://127.0.0.1:8545';
+        process.env.PRIVATE_KEY = '0xabc123';
+        process.env.CITIZENSHIP_NFT_ADDRESS = '0x1111111111111111111111111111111111111111';
+        process.env.DUAL_LEDGER_ADDRESS = '0x2222222222222222222222222222222222222222';
         mockedAxios.post.mockResolvedValue({
             data: {
                 proof: { pi_a: ["1"], pi_b: [["2"]], pi_c: ["3"], protocol: "groth16" }
@@ -100,5 +104,19 @@ describe('REST NFT routes', () => {
 
         expect(response.status).toBe(503);
         expect(response.body.error).toBe('IPFS daemon unreachable, cannot pin data');
+    });
+
+    test('POST /api/v1/nft/mint fails closed when required env is missing', async () => {
+        delete process.env.PRIVATE_KEY;
+        const response = await request(app)
+            .post('/api/v1/nft/mint')
+            .send({
+                type: 'citizenship',
+                targetDataSet: 'some secure data',
+            });
+
+        expect(response.status).toBe(500);
+        expect(response.body.error).toBe('Failed to mint NFT');
+        expect(response.body.details).toContain('Missing required environment variables');
     });
 });

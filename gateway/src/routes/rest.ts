@@ -45,6 +45,14 @@ const registeredMCPServers = new Map<string, any>();
 const ENV_PATH = fs.existsSync('/app/.env') ? '/app/.env' : path.resolve(__dirname, '../../../.env');
 
 const router = Router();
+const REQUIRED_NFT_ENV_KEYS = ['LOCAL_RPC_URL', 'PRIVATE_KEY', 'CITIZENSHIP_NFT_ADDRESS', 'DUAL_LEDGER_ADDRESS'] as const;
+
+export function validateNftRouteEnv(): void {
+    const missing = REQUIRED_NFT_ENV_KEYS.filter((key) => !process.env[key] || process.env[key]?.trim() === '');
+    if (missing.length > 0) {
+        throw new Error(`Missing required environment variables for NFT routes: ${missing.join(', ')}`);
+    }
+}
 
 router.post('/api/v1/mcp/register', authMiddleware, async (req: Request, res: Response) => {
     try {
@@ -123,6 +131,7 @@ router.post('/api/v1/intent/process/dev-public', ...publicIntentMiddlewares, asy
 
 router.post('/api/v1/nft/mint', authMiddleware, async (req: Request, res: Response) => {
     try {
+        validateNftRouteEnv();
         const { type, targetDataSet, clarityLevel, recipientAddress, jurisdiction, expiry, rightsTier, issuerGuildID } = req.body;
         const { spawn } = require('child_process');
 
@@ -170,11 +179,11 @@ router.post('/api/v1/nft/mint', authMiddleware, async (req: Request, res: Respon
         }
 
         // 2. Mint the NFT on-chain
-        const provider = new ethers.JsonRpcProvider(process.env.LOCAL_RPC_URL || "http://127.0.0.1:8545");
-        const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", provider);
+        const provider = new ethers.JsonRpcProvider(process.env.LOCAL_RPC_URL as string);
+        const wallet = new ethers.Wallet(process.env.PRIVATE_KEY as string, provider);
 
         if (type === "citizenship") {
-            const contractAddress = process.env.CITIZENSHIP_NFT_ADDRESS || "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
+            const contractAddress = process.env.CITIZENSHIP_NFT_ADDRESS as string;
             const abi = [
                 "function mintCitizenship(address holder, string calldata jurisdiction, uint256 expiry, string calldata rightsTier, bytes32 zkProofHash, string calldata issuerGuildID, string calldata metadataURI) external"
             ];
@@ -192,7 +201,7 @@ router.post('/api/v1/nft/mint', authMiddleware, async (req: Request, res: Respon
         } else {
             // Use the deployed DualLedgerIdentity contract
             // In a real scenario we'd dynamically load the ABI and address
-            const contractAddress = process.env.DUAL_LEDGER_ADDRESS || "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707";
+            const contractAddress = process.env.DUAL_LEDGER_ADDRESS as string;
             const abi = [
                 "function mintAuthorizationNFT(address holder, bytes32 dataCID, string calldata clarityLevel) external"
             ];
@@ -219,15 +228,16 @@ router.post('/api/v1/nft/mint', authMiddleware, async (req: Request, res: Respon
 
 router.post('/api/v1/identity/verify', authMiddleware, async (req: Request, res: Response) => {
     try {
+        validateNftRouteEnv();
         const { zkProofHash, a, b, c } = req.body;
         if (!zkProofHash || !a || !b || !c) {
             return res.status(400).json({ error: 'Missing zkProof params' });
         }
 
-        const provider = new ethers.JsonRpcProvider(process.env.LOCAL_RPC_URL || "http://127.0.0.1:8545");
-        const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", provider);
+        const provider = new ethers.JsonRpcProvider(process.env.LOCAL_RPC_URL as string);
+        const wallet = new ethers.Wallet(process.env.PRIVATE_KEY as string, provider);
 
-        const contractAddress = process.env.DUAL_LEDGER_ADDRESS || "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707";
+        const contractAddress = process.env.DUAL_LEDGER_ADDRESS as string;
         const abi = [
             "function verifyID(bytes32 zkProofHash, uint256[2] calldata a, uint256[2][2] calldata b, uint256[2] calldata c) external returns (bool)"
         ];
