@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 )
@@ -15,6 +16,8 @@ const (
 	ModalityZKProof
 )
 
+const ProposalTypeModelRun = "MODEL_RUN"
+
 // IntentPayload is the transport-level normalized frame.
 type IntentPayload struct {
 	ID        []byte
@@ -25,10 +28,21 @@ type IntentPayload struct {
 	Signature []byte
 }
 
+// ProposalTensorEnvelope is the latent vector wire format for proposal execution.
+type ProposalTensorEnvelope struct {
+	ProposalType string   `json:"proposalType"`
+	Tensor       []byte   `json:"tensor"`
+	TensorShape  []uint32 `json:"tensorShape,omitempty"`
+	TensorDType  string   `json:"tensorDtype,omitempty"`
+}
+
 // ProposalCandidate represents a transformer proposal tensor routed to MODEL_RUN.
 type ProposalCandidate struct {
-	Tensor []byte
-	Source string
+	ProposalType string
+	Tensor       []byte
+	TensorShape  []uint32
+	TensorDType  string
+	Source       string
 }
 
 // RouteIntent routes an AICP payload to a logical path.
@@ -55,5 +69,41 @@ func DecodeProposalTensor(intent IntentPayload) (ProposalCandidate, error) {
 	if len(intent.Payload) == 0 {
 		return ProposalCandidate{}, errors.New("latent vector payload is empty")
 	}
-	return ProposalCandidate{Tensor: intent.Payload, Source: "aicp"}, nil
+
+	var envelope ProposalTensorEnvelope
+	if err := json.Unmarshal(intent.Payload, &envelope); err != nil {
+		return ProposalCandidate{}, fmt.Errorf("invalid proposal tensor envelope: %w", err)
+	}
+	if envelope.ProposalType != ProposalTypeModelRun {
+		return ProposalCandidate{}, fmt.Errorf("unsupported proposal type: %s", envelope.ProposalType)
+	}
+	if len(envelope.Tensor) == 0 {
+		return ProposalCandidate{}, errors.New("proposal tensor payload is empty")
+	}
+
+	return ProposalCandidate{
+		ProposalType: envelope.ProposalType,
+		Tensor:       envelope.Tensor,
+		TensorShape:  envelope.TensorShape,
+		TensorDType:  envelope.TensorDType,
+		Source:       "aicp",
+	}, nil
+}
+
+// EncodeModelRunTensor builds the AICP payload envelope for MODEL_RUN proposal tensors.
+func EncodeModelRunTensor(tensor []byte, tensorShape []uint32, tensorDType string) ([]byte, error) {
+	if len(tensor) == 0 {
+		return nil, errors.New("tensor payload is empty")
+	}
+	envelope := ProposalTensorEnvelope{
+		ProposalType: ProposalTypeModelRun,
+		Tensor:       tensor,
+		TensorShape:  tensorShape,
+		TensorDType:  tensorDType,
+	}
+	payload, err := json.Marshal(envelope)
+	if err != nil {
+		return nil, fmt.Errorf("marshal proposal envelope: %w", err)
+	}
+	return payload, nil
 }
