@@ -22,10 +22,11 @@ AXIOM-MESH currently relies on strong, industry-standard classical cryptography 
 | **Mesh Identity & Signatures** | ECDSA (secp256k1) | **Implemented** | `grid/contracts/contracts/` (Solidity), `sandbox/src/broker/Broker.ts` | Standard Ethereum-compatible signing for transactions and agent orchestration. |
 | **Data Hashing & Commitments** | SHA-256 / Keccak256 | **Implemented** | `grid/p2p/node.go`, `hypervisor/src/api/server.py`, `grid/contracts/` | Used for state commitments, payload hashing, and smart contract state. |
 | **API Authentication (Gateway)** | HMAC-SHA256, JWT (RSA/ECDSA) | **Implemented** | `gateway/src/security/`, `hypervisor/src/api/` | Secures ingress routing and inter-service authentication. |
-| **Inter-Service Encryption** | TLS 1.2+ / mTLS | **Implemented** | `gateway/config/`, `install.sh` | Secures transport between Gateway, Hypervisor, and Grid. |
-| **Universal Consent Protocol (UCP)** | Hybrid Post-Quantum Signatures | **Planned** | N/A (Policy defined in `ARCHITECTURE.md`) | Planned to combine classical (ECDSA/Ed25519) with PQC (e.g., CRYSTALS-Dilithium). |
+| **Inter-Service Encryption** | TLS 1.2+ / mTLS | **Implemented** | `certs/`, `install.sh` | Secures transport between Gateway, Hypervisor, and Grid. |
+| **Universal Consent Protocol (UCP)** | Hybrid Post-Quantum Signatures | **Planned** | `docs/ARCHITECTURE.md` | Planned to combine classical (ECDSA/Ed25519) with PQC (e.g., CRYSTALS-Dilithium). |
 | **ZKML / ZK-Proofs** | PLONK / Groth16 (via external provers) | **Planned / Experimental** | `hypervisor/src/engine/inference_orchestrator.py` | Orchestration logic exists, but underlying cryptographic proof generation relies on external or placeholder logic. |
-| **Post-Quantum Key Exchange** | Kyber (ML-KEM) | **Planned** | N/A | Planned for future P2P and Gateway transport hardening. |
+| **Post-Quantum Key Exchange** | Kyber (ML-KEM) | **Planned** | `docs/SECURITY-REALITY-2026.md` | Planned for future P2P and Gateway transport hardening. |
+| **Agent Skill Attestations**   | ECDSA (secp256k1) / HMAC     | **Implemented** | `hypervisor/src/decision/verifiers/`               | Classical verification of agent module execution boundaries. |
 
 ---
 
@@ -36,3 +37,9 @@ As defined in `docs/AUDIT_REPORT.md` and `docs/SECURITY-REALITY-2026.md`, our pu
 1. **Current State:** We use strong, efficient, industry-standard classical primitives.
 2. **Transition State (Planned):** We are designing a staged migration to hybrid signatures (classical + PQ).
 3. **End State:** We will not claim full quantum-safe operation until signatures, key exchange, verification tooling, and operational key lifecycle are all migrated and audited.
+
+---
+
+## 4) Document Verification
+
+This document is bound to the CI pipeline via `make verify-crypto-matrix` to assert its structural integrity and ensure no required control areas are dropped.

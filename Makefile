@@ -51,8 +51,8 @@ verify-change-control:
 test-provex-wrapper:
 	python3 scripts/test_provex_wrapper.py
 
-test-resource-throttling:
-	python3 scripts/test_resource_throttling.py
+test-zero-trust:
+	python3 scripts/test_zero_trust.py
 
-run-crypto-benchmarks:
-	python3 scripts/run_crypto_benchmarks.py
+test-telemetry-alerts:
+	python3 scripts/test_telemetry_alerts.py

@@ -4,7 +4,8 @@ import request from 'supertest';
 import express from 'express';
 import restRouter from '../../routes/rest';
 
-describe('Channel Adapters Mock Tests', () => {
+// TODO: SUB-W.1 Gateway: Channel adapter tests missing (Discord, Slack, Telegram).
+describe('Mocked Channel Adapters Tests (Discord, Slack, Telegram)', () => {
     let app: express.Express;
 
     beforeAll(() => {
@@ -13,13 +14,14 @@ describe('Channel Adapters Mock Tests', () => {
         app.use('/', restRouter);
     });
 
-    test('Discord channel adapter normalization', async () => {
+    test('Discord channel adapter normalization process', async () => {
         const payload = {
             channel: 'discord',
-            content: 'test message from discord',
+            content: 'discord message normalization test',
             metadata: {
-                guildId: '12345',
-                userId: '67890'
+                guildId: '11111',
+                userId: '22222',
+                channelId: '33333'
             }
         };
 
@@ -28,16 +30,17 @@ describe('Channel Adapters Mock Tests', () => {
             .send(payload);
 
         expect(response.status).toBe(200);
-        expect(response.body).toBeDefined();
+        expect(response.body.intent_id).toBeDefined();
     });
 
-    test('Slack channel adapter normalization', async () => {
+    test('Slack channel adapter normalization process', async () => {
         const payload = {
             channel: 'slack',
-            content: 'test message from slack',
+            content: 'slack message normalization test',
             metadata: {
-                teamId: '12345',
-                userId: '67890'
+                teamId: '44444',
+                userId: '55555',
+                channelId: '66666'
             }
         };
 
@@ -46,16 +49,17 @@ describe('Channel Adapters Mock Tests', () => {
             .send(payload);
 
         expect(response.status).toBe(200);
-        expect(response.body).toBeDefined();
+        expect(response.body.intent_id).toBeDefined();
     });
 
-    test('Telegram channel adapter normalization', async () => {
+    test('Telegram channel adapter normalization process', async () => {
         const payload = {
             channel: 'telegram',
-            content: 'test message from telegram',
+            content: 'telegram message normalization test',
             metadata: {
-                chatId: '12345',
-                userId: '67890'
+                chatId: '77777',
+                userId: '88888',
+                messageId: '99999'
             }
         };
 
@@ -64,6 +68,6 @@ describe('Channel Adapters Mock Tests', () => {
             .send(payload);
 
         expect(response.status).toBe(200);
-        expect(response.body).toBeDefined();
+        expect(response.body.intent_id).toBeDefined();
     });
 });

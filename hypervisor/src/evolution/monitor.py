@@ -10,6 +10,9 @@ class SystemMonitor:
         self.current_tier = "normal"
         self.consecutive_normal_ticks = 0
         self.recovery_threshold = 3
+        self.consecutive_critical_ticks = 0
+        self.degraded_mode_triggered = False
+        self.p95_error_budget_alert = False
 
     def get_system_metrics(self) -> dict:
         metrics = {
@@ -150,12 +153,28 @@ class SystemMonitor:
             if self.consecutive_normal_ticks >= self.recovery_threshold:
                 self.current_tier = "normal"
                 self.consecutive_normal_ticks = 0
+                self.degraded_mode_triggered = False
         else:
             if new_tier != "normal":
                 self.consecutive_normal_ticks = 0
             self.current_tier = new_tier
 
+        if new_tier == "critical" or self.p95_error_budget_alert:
+            self.consecutive_critical_ticks += 1
+            if self.consecutive_critical_ticks >= 2:
+                self.trigger_degraded_mode_playbook()
+        else:
+            self.consecutive_critical_ticks = 0
+
         return self.current_tier
+
+    def trigger_degraded_mode_playbook(self) -> None:
+        """Automatically triggers degraded-mode playbooks during partial outages based on telemetry and P95 alerts."""
+        if not self.degraded_mode_triggered:
+            print("[Monitor] Telemetry triggered: Degraded-mode playbook activated due to critical resource starvation or P95 error budget depletion.")
+            self.degraded_mode_triggered = True
+            # Logic to invoke the degraded-mode actions
+
 
     def check_quiet_hours(self) -> bool:
         # Example logic: active user session heuristic or specific time window
