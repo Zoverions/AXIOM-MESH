@@ -2,8 +2,14 @@ import express, { Request, Response } from 'express';
 import request from 'supertest';
 import { ethers } from 'ethers';
 
+import axios from 'axios';
+
 // Jest configuration issues with uuid/ESM - mock uuid before import
 jest.mock('uuid', () => ({ v4: () => '123e4567-e89b-12d3-a456-426614174000' }));
+
+// Mock axios for zkml infer call
+jest.mock('axios');
+const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 // Must mock auth before importing router
 jest.mock('../middleware/auth', () => ({
@@ -62,6 +68,11 @@ app.use('/', restRouter);
 describe('REST NFT routes', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        mockedAxios.post.mockResolvedValue({
+            data: {
+                proof: { pi_a: ["1"], pi_b: [["2"]], pi_c: ["3"], protocol: "groth16" }
+            }
+        });
     });
 
     test('POST /api/v1/nft/mint fails gracefully when targetDataSet missing', async () => {

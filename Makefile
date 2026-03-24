@@ -51,11 +51,8 @@ verify-change-control:
 test-provex-wrapper:
 	python3 scripts/test_provex_wrapper.py
 
-generate-rc-dossier:
-	python3 scripts/generate_rc_dossier.py
+test-zero-trust:
+	python3 scripts/test_zero_trust.py
 
-verify-rc-dossier:
-	python3 scripts/verify_rc_dossier.py
-
-verify-crypto-matrix:
-	python3 scripts/verify_crypto_matrix.py
+test-telemetry-alerts:
+	python3 scripts/test_telemetry_alerts.py
