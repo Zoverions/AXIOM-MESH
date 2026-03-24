@@ -35,6 +35,30 @@ contract CognitiveFrictionVerifier is Ownable {
         return frictionPassed;
     }
 
+    function verifyPoER(
+        bytes32 stateRootBefore,
+        bytes32 stateRootAfter,
+        bytes32 attentionScopeHash,
+        bytes32 dependencyGraphRoot,
+        bytes32 capabilityRoot,
+        bytes32 modelRoot,
+        bytes32 executionTraceHash,
+        bytes calldata zkProof
+    ) external returns (bool) {
+        bytes32 proofHash = keccak256(
+            abi.encode(
+                stateRootBefore,
+                stateRootAfter,
+                attentionScopeHash,
+                dependencyGraphRoot,
+                capabilityRoot,
+                modelRoot,
+                executionTraceHash
+            )
+        );
+        return this.verifyProofWithFriction(proofHash, zkProof);
+    }
+
     function updatePoERScore(address agent, uint256 score) external onlyOwner {
         poerScores[agent] = score;
     }
