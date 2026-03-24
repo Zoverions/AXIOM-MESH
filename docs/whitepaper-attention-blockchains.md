@@ -14,6 +14,7 @@ AXIOM-MESH integrates this model with:
 - challengeable fraud proofs,
 - Guardian Sentinel monitoring,
 - staged decentralization and founder handover controls.
+- 2nd/3rd-order consequence forecasting inside transformer proposal pre-checks.
 
 ## 1. Design Principles
 
@@ -144,6 +145,10 @@ A toy MDP with states `{stable, exploratory, thrashing}` and actions `{propose, 
 4. **Capability integrity invariant:** capabilities are monotonic and explicit.
 5. **Fail-closed invariant:** unverifiable proposals resolve to no-op.
 
-## 12. Conclusion
+## 12. Consequence Forecasting (2nd/3rd-Order)
+
+Before a MODEL_RUN proposal enters settlement candidacy, AXIOM-MESH performs consequence forecasting over second- and third-order effects. Candidate actions are simulated against policy constraints and counterfactual state rollouts, then gated by Cognitive Friction. Any proposal with unstable downstream effects (e.g., risk amplification, rights regressions, or governance destabilization) is rejected pre-settlement and treated as a no-op.
+
+## 13. Conclusion
 
 The Attention-Indexed State Machine enables transformer-augmented coordination without sacrificing deterministic consensus guarantees. AXIOM-MESH adopts this as a foundational execution layer where neural systems improve proposal quality while symbolic verification retains final authority.

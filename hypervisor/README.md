@@ -154,3 +154,4 @@ Please refer to the [MASTER-TODO.md](../docs/MASTER-TODO.md) list for specific a
 Hypervisor now routes pure latent vectors via Cap'n Proto for `MODEL_RUN` proposals.
 These proposal tensors are candidate-only outputs and must pass symbolic verification,
 PoER checks, and cognitive-friction gating before any settlement path is allowed.
+Hypervisor now routes pure latent vectors for MODEL_RUN proposals and consequence forecasting.

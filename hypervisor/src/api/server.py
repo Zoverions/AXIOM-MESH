@@ -38,15 +38,30 @@ def create_mtls_client():
     ssl_certfile = os.path.join(certs_dir, "hypervisor.crt")
     ssl_keyfile = os.path.join(certs_dir, "hypervisor.key")
     ssl_ca_certs = os.path.join(certs_dir, "ca.crt")
-    
-    if os.path.exists(ssl_certfile) and os.path.exists(ssl_keyfile) and os.path.exists(ssl_ca_certs):
-        return httpx.AsyncClient(
-            cert=(ssl_certfile, ssl_keyfile),
-            verify=ssl_ca_certs
-        )
-    else:
-        # Fallback to regular client if certs not available
-        return httpx.AsyncClient()
+
+    missing = [p for p in (ssl_certfile, ssl_keyfile, ssl_ca_certs) if not os.path.exists(p)]
+    if missing:
+        raise RuntimeError(f"mTLS cert configuration missing: {', '.join(missing)}")
+
+    return httpx.AsyncClient(
+        cert=(ssl_certfile, ssl_keyfile),
+        verify=ssl_ca_certs
+    )
+
+
+def build_signed_headers(api_key: str, payload: dict) -> dict:
+    timestamp_ms = str(int(datetime.now(timezone.utc).timestamp() * 1000))
+    nonce = str(uuid.uuid4())
+    payload_bytes = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    body_hash = hashlib.sha256(payload_bytes).hexdigest()
+    signature_payload = f"{timestamp_ms}:{nonce}:{body_hash}"
+    signature = hmac.new(api_key.encode("utf-8"), signature_payload.encode("utf-8"), hashlib.sha256).hexdigest()
+    return {
+        "Authorization": f"Bearer {api_key}",
+        "X-Axiom-Timestamp": timestamp_ms,
+        "X-Axiom-Nonce": nonce,
+        "X-Axiom-Signature": signature,
+    }
 
 import asyncio
 from fastapi.concurrency import run_in_threadpool
@@ -140,6 +155,10 @@ async def lifespan(app: FastAPI):
             print(f"Recovery Bundle Pinned to MeshStore: {cid}")
         except Exception as e:
             print(f"Failed to create recovery bundle: {e}")
+
+    # Ensure transport identity cannot silently fail open.
+    _probe = create_mtls_client()
+    await _probe.aclose()
 
     yield
     autoresearch_task.cancel()
@@ -335,8 +354,9 @@ async def _process_intent_core(intent: IntentObject, api_key: str):
                         host = parsed_addr.hostname or peer_addr
                         # The Hypervisor runs on 8081 by default
                         forward_url = f"http://{host}:8081/api/v1/intent/process/dev-public"
-                        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
-                        res = await client.post(forward_url, json=intent.model_dump(), headers=headers, timeout=30.0)
+                        payload = intent.model_dump()
+                        headers = build_signed_headers(api_key, payload) if api_key else {}
+                        res = await client.post(forward_url, json=payload, headers=headers, timeout=30.0)
                         res.raise_for_status()
                         delegated_resp = IntentResponse(**res.json())
                         delegated_resp.audit_trail["delegated_via"] = local_manifest.get("tier", "unknown")
@@ -431,9 +451,10 @@ async def _process_intent_core(intent: IntentObject, api_key: str):
                 sandbox_api_key = os.environ.get("SANDBOX_API_KEY")
                 if not sandbox_api_key:
                     raise Exception("SANDBOX_API_KEY is not configured")
-                headers = {"Authorization": f"Bearer {sandbox_api_key}"}
+                sandbox_payload = {"language": "python", "code": code}
+                headers = build_signed_headers(sandbox_api_key, sandbox_payload)
                 async with create_mtls_client() as client:
-                    sandbox_res = await client.post(SANDBOX_URL, json={"language": "python", "code": code}, headers=headers)
+                    sandbox_res = await client.post(SANDBOX_URL, json=sandbox_payload, headers=headers)
                     if sandbox_res.status_code != 200:
                         raise Exception(f"Sandbox returned status {sandbox_res.status_code}: {sandbox_res.text}")
                     response_text = f"Execution result:\n{sandbox_res.json()}"

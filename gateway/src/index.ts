@@ -9,7 +9,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { authMiddleware } from './middleware/auth';
 import { extractApiKeyFromHeaders, validateGatewayApiKey } from './middleware/auth_utils';
-import restRoutes from './routes/rest';
+import restRoutes, { validateNftRouteEnv } from './routes/rest';
 import { normalizeInput } from './utils/normalizer';
 import { sendToHypervisor } from './services/hypervisorClient';
 import { parseAndSanitizeIntent } from './middleware/intent_parser';
@@ -21,6 +21,15 @@ import { wafMiddleware } from './middleware/waf';
 import './channels'; // Initialize channel registrations
 
 dotenv.config();
+
+if (process.env.NODE_ENV !== 'test' && process.env.ENABLE_NFT_ROUTES !== 'false') {
+    try {
+        validateNftRouteEnv();
+    } catch (error) {
+        console.error(`Gateway startup validation failed: ${(error as Error).message}`);
+        process.exit(1);
+    }
+}
 
 // Initialize the log buffer to capture terminal output safely
 initLogger();
