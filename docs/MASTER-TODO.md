@@ -254,3 +254,9 @@ A task is done only when all are true:
 - [ ] **M7.1** Lock down Gateway signing/mint route defaults: remove embedded dev private key and localhost contract address fallbacks in `gateway/src/routes/rest.ts`, require environment-backed secrets + explicit startup validation, and add regression tests for fail-closed behavior. (owner: gateway+security, CI Check: `npm --prefix gateway test -- rest.nft`)
 - [ ] **M7.2** Hard-fail service identity transport: remove plaintext fallback in `hypervisor/src/api/server.py:create_mtls_client`, enforce mTLS cert presence at boot, and add anti-replay coverage for inter-service requests. (owner: hypervisor+security, CI Check: `python scripts/test_mtls.py`)
 - [ ] **M7.3** Sandbox scheduled-command execution: replace raw command execution in `hypervisor/src/api/routers/tasks.py` with an allowlisted/sandboxed executor, signed task payloads, per-command timeouts, and immutable audit evidence. (owner: hypervisor+security, CI Check: `pytest hypervisor/tests/test_task_scheduler.py`)
+
+### 10. External Security Audit Intake (2026-03-25)
+* [ ] **EXT-AUD.1** Commission independent smart contract audit before mainnet launch (Owner: security+contracts, ETA: TBD): Engage external auditors for ComputeBond/WeightOracle/Treasury and publish findings + remediation plan. (CI Check: verify-external-audit-artifacts)
+* [ ] **EXT-AUD.2** Complete zkML/Groth16 security review package (Owner: security+zk, ETA: TBD): Document trusted setup provenance, verifying-key custody, circuit constraint coverage, and proof malleability test evidence. (CI Check: verify-zkml-audit-pack)
+* [ ] **EXT-AUD.3** Perform dedicated cross-chain bridge security assessment (Owner: security+crosschain, ETA: TBD): Audit Wormhole fallback, cross-chain verifier, replay protection, emergency pause paths, and publish runbooks. (CI Check: verify-bridge-audit-pack)
+
