@@ -215,9 +215,9 @@ A task is done only when all are true:
 * [ ] **SUB-G.5** Grid: Historical ledger pruning strategy (Owner: core, ETA: TBD)
 * [ ] **SUB-H.1** Hypervisor: Contract compilation in CI (Hardhat proxy 403 issue) (Owner: core, ETA: TBD)
 * [ ] **SUB-H.2** Hypervisor: MCP server implementation (planned for 8081) (Owner: core, ETA: TBD)
-* [ ] **SUB-H.3** Hypervisor: GPP (Global Pricing Protocol) verifiable computation (Owner: core, ETA: TBD)
-* [ ] **SUB-H.4** Hypervisor: CCIP integration for cross-chain settlement (Owner: core, ETA: TBD)
-* [ ] **SUB-H.5** Hypervisor: Lightweight ZK graph query proofs (Owner: core, ETA: TBD)
+* [x] **SUB-H.3** Hypervisor: GPP (Global Pricing Protocol) verifiable computation (Owner: core, ETA: TBD) - implemented src/pricing/gpp.py
+* [x] **SUB-H.4** Hypervisor: CCIP integration for cross-chain settlement (Owner: core, ETA: TBD) - implemented src/settlement/ccip.py
+* [x] **SUB-H.5** Hypervisor: Lightweight ZK graph query proofs (Owner: core, ETA: TBD) - implemented src/zk/graph_proofs.py
 * [ ] **SUB-S.1** Sandbox: Seccomp policy not extensively tested (Owner: security, ETA: TBD)
 * [ ] **SUB-S.2** Sandbox: AppArmor profile not yet deployed in production (Owner: security, ETA: TBD)
 * [ ] **SUB-S.3** Sandbox: Bash execution path may leak system commands (security audit needed) (Owner: security, ETA: TBD)
