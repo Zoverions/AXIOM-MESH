@@ -143,7 +143,7 @@ Detailed references:
 
 ## Lane M6 — Transformer Foundation & Multi-Chain Rollout (Open)
 - [x] **M6.1** Finalize and audit `StigmergicStateChannel.sol` v4 against existing AXIOM/PulseAdapter/CognitiveFriction interfaces (owner: core+contracts, ETA: TBD). — 2026-03-24 — @agent — added interface-locked guardrails, settlement challenge gating, and audit coverage — 8cb6953
-- [x] **M6.2** Wire `MODEL_RUN` proposal tensors end-to-end across Cap'n Proto schema, Grid AICP transport, and Hypervisor IPC runtime paths (owner: core+hypervisor, ETA: TBD). — 2026-03-24 — @agent — added `ProposalTensor` schema + MODEL_RUN envelope validation across Grid transport and Hypervisor IPC — 3901eed
+- [ ] **M6.2** Wire `MODEL_RUN` proposal tensors end-to-end across Cap'n Proto schema, Grid AICP transport, and Hypervisor IPC runtime paths (owner: core+hypervisor, ETA: TBD).
 - [ ] **M6.3** Run full compile/test gate for transformer package (`make compile-capnp`, Hardhat compile, Grid/Hypervisor E2E) in CI with required toolchains installed (owner: infra, ETA: TBD).
 - [ ] **M6.4** Deploy transformer foundation contracts on PulseChain testnet and publish deployment evidence bundle (owner: contracts+release, ETA: TBD).
 - [ ] **M6.5** Extend deploy pipeline for simultaneous Ethereum/Base/Arbitrum deployments with bridge-path rating/polling/quorum oracle hooks (owner: crosschain, ETA: TBD).
