@@ -11,6 +11,8 @@ def main():
         sys.exit(1)
 
     for f in api_dir.glob("*.go"):
+        if f.name.endswith("_test.go"):
+            continue
         content = f.read_text()
         for match in re.finditer(r'mux\.HandleFunc\("([^"]+)",\s*(.*)', content):
             route = match.group(1)

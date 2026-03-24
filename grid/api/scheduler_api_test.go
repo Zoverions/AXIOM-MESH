@@ -23,7 +23,7 @@ func signRequestForTest(req *http.Request, payload []byte) {
 
 	timestamp := time.Now().UnixNano() / int64(time.Millisecond)
 	timestampStr := strconv.FormatInt(timestamp, 10)
-	nonce := "test-nonce"
+	nonce := fmt.Sprintf("test-nonce-%d", time.Now().UnixNano())
 
 	payloadStr := fmt.Sprintf("%s:%s:%s", timestampStr, nonce, string(payload))
 	mac := hmac.New(sha256.New, []byte(apiKey))
