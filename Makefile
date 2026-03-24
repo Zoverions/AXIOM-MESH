@@ -1,4 +1,4 @@
-.PHONY: up down cli test validate-release-evidence verify-evidence-bundles verify-tokenomics-controls test-reconciliation
+.PHONY: up down cli test validate-release-evidence verify-evidence-bundles verify-tokenomics-controls test-reconciliation test-resource-throttling run-crypto-benchmarks
 
 up:
 	docker compose up -d --build
@@ -50,3 +50,9 @@ verify-change-control:
 
 test-provex-wrapper:
 	python3 scripts/test_provex_wrapper.py
+
+test-resource-throttling:
+	python3 scripts/test_resource_throttling.py
+
+run-crypto-benchmarks:
+	python3 scripts/run_crypto_benchmarks.py
