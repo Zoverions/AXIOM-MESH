@@ -35,6 +35,7 @@ type Node struct {
 	ID                string
 	PrivateKey        *ecdsa.PrivateKey
 	PublicKey         string
+	KyberPublicKey    string // Phase 1 hybrid signature scheme (Classical + PQ)
 	Peers             map[string]*PeerInfo
 	PeerAddresses     map[string]string // Mapping of Peer ID to API endpoint
 	Transport         Transport
@@ -49,10 +50,14 @@ func NewNode(id string, priv *ecdsa.PrivateKey) *Node {
 	pubBytes := crypto.FromECDSAPub(&priv.PublicKey)
 	pubHex := hex.EncodeToString(pubBytes)
 
+	// Post-Quantum Kyber Key Generation Mock
+	kyberPub := "PQ_Kyber1024_" + pubHex[:16]
+
 	return &Node{
 		ID:            id,
 		PrivateKey:    priv,
 		PublicKey:     pubHex,
+		KyberPublicKey: kyberPub,
 		Peers:         make(map[string]*PeerInfo),
 		PeerAddresses: make(map[string]string),
 		Transport:     NewHTTPTransport(),

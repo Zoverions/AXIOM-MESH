@@ -29,6 +29,12 @@ import (
 	"github.com/axiom-mesh/grid/p2p"
 	"github.com/axiom-mesh/grid/types"
 	"github.com/gorilla/websocket"
+	"sync"
+)
+
+var (
+	nonceCache      = make(map[string]int64)
+	nonceCacheMutex sync.Mutex
 )
 
 func verifySignatureMiddleware(next http.HandlerFunc) http.HandlerFunc {
@@ -64,6 +70,24 @@ func verifySignatureMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			http.Error(w, "Request signature expired", http.StatusForbidden)
 			return
 		}
+
+		// Simple replay cache mitigation for nonces
+		nonceCacheMutex.Lock()
+		if _, exists := nonceCache[nonce]; exists {
+			nonceCacheMutex.Unlock()
+			http.Error(w, "Replay attack detected: duplicate nonce", http.StatusForbidden)
+			return
+		}
+		nonceCache[nonce] = now
+		// Cleanup old nonces periodically in production
+		if len(nonceCache) > 10000 {
+			for k, v := range nonceCache {
+				if now-v > 300000 {
+					delete(nonceCache, k)
+				}
+			}
+		}
+		nonceCacheMutex.Unlock()
 
 		bodyBytes, err := ioutil.ReadAll(r.Body)
 		if err != nil {

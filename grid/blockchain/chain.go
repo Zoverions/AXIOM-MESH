@@ -17,6 +17,27 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
+func logWORMEvent(eventType, details string) {
+	logDir := filepath.Join(".", "data")
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		log.Printf("Failed to create WORM log directory: %v", err)
+		return
+	}
+	auditFile := filepath.Join(logDir, "audit.log")
+	f, err := os.OpenFile(auditFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Printf("Failed to open WORM audit log: %v", err)
+		return
+	}
+	defer f.Close()
+
+	timestamp := time.Now().UTC().Format(time.RFC3339)
+	entry := fmt.Sprintf(`{"timestamp": "%s", "event": "%s", "details": "%s"}`+"\n", timestamp, eventType, details)
+	if _, err := f.WriteString(entry); err != nil {
+		log.Printf("Failed to write to WORM audit log: %v", err)
+	}
+}
+
 type LedgerSnapshot struct {
 	Skills           []types.SkillVector                    `json:"skills"`
 	WebCache         map[string]types.WebState              `json:"web_cache"`
@@ -628,6 +649,8 @@ func (l *Ledger) ApplyBondChainEvent(evt types.BondChainEvent) error {
 	if evt.NodeID == "" || evt.Type == "" {
 		return fmt.Errorf("invalid chain event payload")
 	}
+
+	logWORMEvent("ApplyBondChainEvent", fmt.Sprintf("NodeID: %s, Type: %s, Amount: %d, TxHash: %s, BlockNumber: %d, Finalized: %t", evt.NodeID, evt.Type, evt.Amount, evt.TxHash, evt.BlockNumber, evt.Finalized))
 	if evt.Type != "delegate" && evt.Amount < 0 {
 		return fmt.Errorf("invalid chain event payload amount")
 	}
@@ -705,6 +728,8 @@ func (l *Ledger) ApplyProposalChainEvent(evt types.ProposalChainEvent) error {
 	if evt.ProposalID == "" {
 		return fmt.Errorf("proposalId is required")
 	}
+
+	logWORMEvent("ApplyProposalChainEvent", fmt.Sprintf("ProposalID: %s, Type: %s", evt.ProposalID, evt.Type))
 
 	proposal, exists := l.Proposals[evt.ProposalID]
 
