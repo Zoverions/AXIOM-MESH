@@ -200,8 +200,8 @@ A task is done only when all are true:
 * [ ] **FEA-A.2** Complete Cryptography Posture Matrix (Owner: release, ETA: TBD): Publish a comprehensive matrix (Implemented vs. Planned vs. Experimental) that links every quantum-ready claim to exact repository code paths. (CI Check: verify-crypto-matrix)
 
 ### 6. Stability Audit
-* [ ] **STA-A.1** Upgrade Internal Trust Assumptions (Owner: ops, ETA: TBD): Transition internal network topologies away from "mostly internal trust" to a zero-trust architecture to prevent localized Sandbox/Grid failures from cascading. (CI Check: test-zero-trust)
-* [ ] **STA-A.2** Finalize Failure-Path Matrices (Owner: ops, ETA: TBD): While initial recovery drills were automated, continuous telemetry and P95 error budget alerts must be wired to automatically trigger degraded-mode playbooks during partial outages. (CI Check: test-telemetry-alerts)
+* [x] **STA-A.1** Upgrade Internal Trust Assumptions (Owner: ops, ETA: TBD): Transition internal network topologies away from "mostly internal trust" to a zero-trust architecture to prevent localized Sandbox/Grid failures from cascading. (CI Check: test-zero-trust) — 2026-03-24 — @agent — upgraded to zero-trust architecture and added test
+* [x] **STA-A.2** Finalize Failure-Path Matrices (Owner: ops, ETA: TBD): While initial recovery drills were automated, continuous telemetry and P95 error budget alerts must be wired to automatically trigger degraded-mode playbooks during partial outages. (CI Check: test-telemetry-alerts) — 2026-03-24 — @agent — added telemetry and P95 trigger logic with test
 
 ### 7. Efficiency Audit
 * [ ] **EFF-A.1** Benchmark Hybrid Crypto Overhead (Owner: ops, ETA: TBD): Before moving to PQ-default cryptography, baseline the performance impact of the hybrid signature implementation to ensure it does not degrade the currently efficient classical cryptography throughput. (CI Check: run-crypto-benchmarks)
