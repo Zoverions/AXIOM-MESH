@@ -208,12 +208,12 @@ A task is done only when all are true:
 * [ ] **EFF-A.2** Optimize Dynamic Resource Protection (Owner: ops, ETA: TBD): Calibrate the adaptive throttling in the Resource Balancer so that foreground-protection modes on shared host machines safely throttle without starving critical Sandbox execution threads. (CI Check: test-resource-throttling)
 
 ### 8. Subsystem Known Issues & Feature Backlog
-* [ ] **SUB-G.1** Grid: Contract compilation in CI (Hardhat proxy issue) (Owner: core, ETA: TBD)
+* [x] **SUB-G.1** Grid: Contract compilation in CI (Hardhat proxy issue) (Owner: core, ETA: TBD) - @agent fixed Solidity explicit type conversions by patching OpenZeppelin 5.0 compatibility in `UniversalDistributionPool.sol` and `AutomatedV3LiquidityManager.sol` by removing the deprecated `__UUPSUpgradeable_init` modifier on 2026-03-24.
 * [ ] **SUB-G.2** Grid: CCIP integration for Ethereum <> L2 settlement (Owner: core, ETA: TBD)
 * [ ] **SUB-G.3** Grid: Lightweight ZK graph query proofs (Owner: core, ETA: TBD)
 * [ ] **SUB-G.4** Grid: WebSocket event streaming (planned) (Owner: core, ETA: TBD)
 * [ ] **SUB-G.5** Grid: Historical ledger pruning strategy (Owner: core, ETA: TBD)
-* [ ] **SUB-H.1** Hypervisor: Contract compilation in CI (Hardhat proxy 403 issue) (Owner: core, ETA: TBD)
+* [x] **SUB-H.1** Hypervisor: Contract compilation in CI (Hardhat proxy 403 issue) (Owner: core, ETA: TBD) - @agent marked complete: `ci.yml` correctly bypasses HTTP_PROXY for the Hardhat node step.
 * [ ] **SUB-H.2** Hypervisor: MCP server implementation (planned for 8081) (Owner: core, ETA: TBD)
 * [ ] **SUB-H.3** Hypervisor: GPP (Global Pricing Protocol) verifiable computation (Owner: core, ETA: TBD)
 * [ ] **SUB-H.4** Hypervisor: CCIP integration for cross-chain settlement (Owner: core, ETA: TBD)

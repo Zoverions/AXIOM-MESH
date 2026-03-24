@@ -31,7 +31,7 @@ contract NetworkLiquidityManager is Initializable, UUPSUpgradeable {
     }
 
     function initialize() public initializer {
-        __UUPSUpgradeable_init();
+        //__UUPSUpgradeable_init();
     }
 
     function addNetworkLiquidity(uint256 amount, uint256 tokenId) external {

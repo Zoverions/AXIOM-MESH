@@ -30,7 +30,7 @@ contract AutomatedV3LiquidityManager is Initializable, UUPSUpgradeable {
     }
 
     function initialize() public initializer {
-        __UUPSUpgradeable_init();
+        //__UUPSUpgradeable_init();
     }
 
     function managePosition(uint256 tokenId, uint128 liquidityDelta) external {
