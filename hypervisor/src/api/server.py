@@ -622,15 +622,33 @@ async def _process_intent_core(intent: IntentObject, api_key: str):
             "sender": sender
         })
 
-        # Mock confidence and provenance based on context presence
-        confidence = 0.95 if "DEEP ARCHIVE CONTEXT" in context and len(context) > 2000 else 0.75
+        # Dynamic confidence and provenance based on routing orchestration
+        tier_used = routed_result.get("tier_used", "local")
+        is_zkml_verified = routed_result.get("zkml_verified", False)
+
+        if is_zkml_verified:
+            confidence = 0.99
+        elif tier_used == "swarm":
+            confidence = 0.90
+        elif tier_used == "external":
+            confidence = 0.75
+        else:
+            confidence = 0.85
+
         provenance = []
-        if "EXTERNAL NCP CONTEXT" in context:
-            provenance.append("NCP")
-        if "EXTERNAL MCP CONTEXT" in context:
-            provenance.append("MCP")
-        if "TRUTH CONTEXT" in context:
-            provenance.append("Chainlink Oracle")
+        if is_zkml_verified:
+            provenance.append("zkML Consensus")
+        if tier_used == "swarm":
+            provenance.append("Swarm Shard")
+            if "meshstore_cid" in routed_result:
+                provenance.append(f"MeshStore CID: {routed_result['meshstore_cid']}")
+        if tier_used == "external":
+            provenance.append("External Provider")
+            if "provider" in routed_result:
+                provenance.append(f"Provider: {routed_result['provider']}")
+        if tier_used == "local" and not is_zkml_verified:
+            provenance.append("Local Fallback")
+
         if not provenance:
             provenance.append("Base Model")
 
