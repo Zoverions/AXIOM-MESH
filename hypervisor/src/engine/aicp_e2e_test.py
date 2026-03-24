@@ -62,3 +62,27 @@ def test_message_from_aicp_intent_maps_tensor_metadata() -> None:
     assert message.proposal_type is ProposalType.MODEL_RUN
     assert message.tensor_shape == (2, 1)
     assert message.tensor_payload == b"\x10\x11"
+
+
+def test_message_from_aicp_intent_supports_transport_payload_envelope() -> None:
+    intent = {
+        "id": b"\x01",
+        "senderPubKey": b"\x02",
+        "timestamp": 100,
+        "modality": "latentVector",
+        "proposalType": "MODEL_RUN",
+        "payload": b'{"proposalType":"MODEL_RUN","tensor":"EAE="}',
+        "proposalTensor": {
+            "proposalType": "MODEL_RUN",
+            "tensorShape": [1, 2],
+            "tensorDtype": "float16",
+        },
+        "signature": b"\x03",
+    }
+
+    message = message_from_aicp_intent(intent)
+
+    assert message.proposal_type is ProposalType.MODEL_RUN
+    assert message.tensor_shape == (1, 2)
+    assert message.tensor_dtype == "float16"
+    assert message.tensor_payload == b"\x10\x01"

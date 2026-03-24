@@ -20,12 +20,20 @@ const ProposalTypeModelRun = "MODEL_RUN"
 
 // IntentPayload is the transport-level normalized frame.
 type IntentPayload struct {
-	ID        []byte
-	SenderKey []byte
-	Timestamp uint64
-	Modality  Modality
-	Payload   []byte
-	Signature []byte
+	ID             []byte
+	SenderKey      []byte
+	Timestamp      uint64
+	Modality       Modality
+	Payload        []byte
+	ProposalTensor *ProposalTensorMetadata
+	Signature      []byte
+}
+
+// ProposalTensorMetadata mirrors the capnp ProposalTensor schema metadata.
+type ProposalTensorMetadata struct {
+	ProposalType string
+	TensorShape  []uint32
+	TensorDType  string
 }
 
 // ProposalTensorEnvelope is the latent vector wire format for proposal execution.
@@ -81,11 +89,21 @@ func DecodeProposalTensor(intent IntentPayload) (ProposalCandidate, error) {
 		return ProposalCandidate{}, errors.New("proposal tensor payload is empty")
 	}
 
+	tensorShape := envelope.TensorShape
+	if len(tensorShape) == 0 && intent.ProposalTensor != nil {
+		tensorShape = intent.ProposalTensor.TensorShape
+	}
+
+	tensorDType := envelope.TensorDType
+	if tensorDType == "" && intent.ProposalTensor != nil {
+		tensorDType = intent.ProposalTensor.TensorDType
+	}
+
 	return ProposalCandidate{
 		ProposalType: envelope.ProposalType,
 		Tensor:       envelope.Tensor,
-		TensorShape:  envelope.TensorShape,
-		TensorDType:  envelope.TensorDType,
+		TensorShape:  tensorShape,
+		TensorDType:  tensorDType,
 		Source:       "aicp",
 	}, nil
 }

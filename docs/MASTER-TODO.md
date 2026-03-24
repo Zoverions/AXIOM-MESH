@@ -143,7 +143,7 @@ Detailed references:
 
 ## Lane M6 — Transformer Foundation & Multi-Chain Rollout (Open)
 - [x] **M6.1** Finalize and audit `StigmergicStateChannel.sol` v4 against existing AXIOM/PulseAdapter/CognitiveFriction interfaces (owner: core+contracts, ETA: TBD). — 2026-03-24 — @agent — added interface-locked guardrails, settlement challenge gating, and audit coverage — 8cb6953
-- [ ] **M6.2** Wire `MODEL_RUN` proposal tensors end-to-end across Cap'n Proto schema, Grid AICP transport, and Hypervisor IPC runtime paths (owner: core+hypervisor, ETA: TBD).
+- [x] **M6.2** Wire `MODEL_RUN` proposal tensors end-to-end across Cap'n Proto schema, Grid AICP transport, and Hypervisor IPC runtime paths (owner: core+hypervisor, ETA: TBD). — 2026-03-24 — @agent — aligned Grid proposal metadata fallback with Cap'n Proto fields and added Hypervisor transport-envelope decoding + interoperability tests.
 - [ ] **M6.3** Run full compile/test gate for transformer package (`make compile-capnp`, Hardhat compile, Grid/Hypervisor E2E) in CI with required toolchains installed (owner: infra, ETA: TBD).
 - [ ] **M6.4** Deploy transformer foundation contracts on PulseChain testnet and publish deployment evidence bundle (owner: contracts+release, ETA: TBD).
   - 2026-03-24 — @agent — added PulseChain testnet deployment + evidence-generation automation (`pulsechainTestnet` network config, deployment script output bundle, and verification command); pending funded deployer key + live run.
@@ -260,4 +260,3 @@ A task is done only when all are true:
 * [x] **EXT-AUD.1** Commission independent smart contract audit before mainnet launch (Owner: security+contracts, ETA: TBD): Engage external auditors for ComputeBond/WeightOracle/Treasury and publish findings + remediation plan. (CI Check: verify-external-audit-artifacts) — 2026-03-25 — @agent — added verify-external-audit-artifacts
 * [x] **EXT-AUD.2** Complete zkML/Groth16 security review package (Owner: security+zk, ETA: TBD): Document trusted setup provenance, verifying-key custody, circuit constraint coverage, and proof malleability test evidence. (CI Check: verify-zkml-audit-pack) — 2026-03-25 — @agent — added verify-zkml-audit-pack
 * [x] **EXT-AUD.3** Perform dedicated cross-chain bridge security assessment (Owner: security+crosschain, ETA: TBD): Audit Wormhole fallback, cross-chain verifier, replay protection, emergency pause paths, and publish runbooks. (CI Check: verify-bridge-audit-pack) — 2026-03-25 — @agent — added verify-bridge-audit-pack
-
