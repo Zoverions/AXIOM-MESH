@@ -32,6 +32,7 @@ def log_event(level: str, msg: str, trace_id: str = None):
     with open(audit_file, "a", encoding="utf-8") as f:
         f.write(log_json + "\n")
 
+# M7.2 Hard-fail service identity transport: remove plaintext fallback in hypervisor/src/api/server.py:create_mtls_client, enforce mTLS cert presence at boot, and add anti-replay coverage for inter-service requests.
 def create_mtls_client():
     """Create httpx client with mTLS configuration."""
     certs_dir = os.environ.get("CERTS_DIR", "../certs")
