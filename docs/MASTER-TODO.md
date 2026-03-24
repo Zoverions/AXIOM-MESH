@@ -237,5 +237,5 @@ A task is done only when all are true:
 * [ ] **MOCK-10** `hypervisor/src/evolution/hardware.py`: Replace mock benchmarks based on specs with real execution. (Owner: core, ETA: TBD)
 * [ ] **MOCK-11** `sandbox/src/main.rs`: Integrate processing execution routing instead of mock logic. (Owner: core, ETA: TBD)
 * [ ] **MOCK-12** `sandbox/capsules/websearch/adapter/tool_translation.py`: Replace placeholder for actual search API integration. (Owner: core, ETA: TBD)
-* [ ] **MOCK-13** `gateway/src/routes/distribution.ts`: Implement AutonomousDistributionManager equivalent instead of mock. (Owner: core, ETA: TBD)
-* [ ] **MOCK-14** `gateway/src/routes/rest.ts`: Replace mocked zkML proof + obfuscation rules via NemoClaw with real delegation. (Owner: core, ETA: TBD)
+* [x] **MOCK-13** `gateway/src/routes/distribution.ts`: Implement AutonomousDistributionManager equivalent instead of mock. (Owner: core, ETA: TBD) — 2026-03-24 — @agent — replaced python mock with proper typescript integration.
+* [x] **MOCK-14** `gateway/src/routes/rest.ts`: Replace mocked zkML proof + obfuscation rules via NemoClaw with real delegation. (Owner: core, ETA: TBD) — 2026-03-24 — @agent — routed to actual /zkml/infer generation.
