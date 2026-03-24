@@ -88,6 +88,19 @@ describe('dockerRunner', () => {
         expect(result).toEqual({ stdout: 'hello world\n', stderr: '' });
     });
 
+    it('should include --gpus=all when gpu limit is true', async () => {
+        const runPromise = runCode('python', 'print("gpu")', { gpu: true });
+
+        mockProcess.stdout.emit('data', 'gpu\n');
+        mockProcess.emit('close', 0);
+
+        const result = await runPromise;
+
+        const args = mockSpawn.mock.calls[0][1];
+        expect(args).toContain('--gpus=all');
+        expect(result).toEqual({ stdout: 'gpu\n', stderr: '' });
+    });
+
     it('should handle process spawn error', async () => {
         const runPromise = runCode('python', 'print("done")');
 

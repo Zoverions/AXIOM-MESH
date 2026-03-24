@@ -30,6 +30,7 @@ export interface ResourceLimits {
     memory_mb?: number;
     cpu_ms?: number;
     io_weight?: number;
+    gpu?: boolean;
 }
 
 export async function runCode(language: string, code: string, limitsOrUseTee?: ResourceLimits | boolean, useTeeParam?: boolean): Promise<{ stdout: string; stderr: string }> {
@@ -82,6 +83,10 @@ export async function runCode(language: string, code: string, limitsOrUseTee?: R
 
         commonArgs.push('--label=sandbox_execution=true');
         commonArgs.push('--label=monitor_syscalls=falco');
+
+        if (limits?.gpu) {
+            commonArgs.push('--gpus=all');
+        }
 
         if (useTee) {
             commonArgs.push('--device=/dev/sgx_enclave');
