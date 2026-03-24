@@ -50,3 +50,12 @@ verify-change-control:
 
 test-provex-wrapper:
 	python3 scripts/test_provex_wrapper.py
+
+generate-rc-dossier:
+	python3 scripts/generate_rc_dossier.py
+
+verify-rc-dossier:
+	python3 scripts/verify_rc_dossier.py
+
+verify-crypto-matrix:
+	python3 scripts/verify_crypto_matrix.py

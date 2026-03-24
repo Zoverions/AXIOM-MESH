@@ -196,8 +196,8 @@ A task is done only when all are true:
 * [ ] **FUN-A.3** Purge Hypervisor Placeholder Semantics (Owner: core, ETA: TBD): Hunt down and remove the remaining placeholder/mock execution pathways and proof fallbacks within the Hypervisor policy gates. (CI Check: test-hypervisor-fallbacks)
 
 ### 5. Feature Complete Audit
-* [ ] **FEA-A.1** Automate Gate Evidence Packaging (Owner: release, ETA: TBD): Evidence bundle completeness (including SBOM and control mapping) is not yet consistently release-bound. Build the final collection hooks to fully automate the Release Candidate (RC) dossier assembly. (CI Check: verify-rc-dossier)
-* [ ] **FEA-A.2** Complete Cryptography Posture Matrix (Owner: release, ETA: TBD): Publish a comprehensive matrix (Implemented vs. Planned vs. Experimental) that links every quantum-ready claim to exact repository code paths. (CI Check: verify-crypto-matrix)
+* [x] **FEA-A.1** Automate Gate Evidence Packaging (Owner: release, ETA: TBD): Evidence bundle completeness (including SBOM and control mapping) is not yet consistently release-bound. Build the final collection hooks to fully automate the Release Candidate (RC) dossier assembly. (CI Check: verify-rc-dossier) — 2026-03-24 — @agent — created validation scripts, make targets, and sample dossier structure.
+* [x] **FEA-A.2** Complete Cryptography Posture Matrix (Owner: release, ETA: TBD): Publish a comprehensive matrix (Implemented vs. Planned vs. Experimental) that links every quantum-ready claim to exact repository code paths. (CI Check: verify-crypto-matrix) — 2026-03-24 — @agent — added verify-crypto-matrix check script and make target to validate matrix.
 
 ### 6. Stability Audit
 * [ ] **STA-A.1** Upgrade Internal Trust Assumptions (Owner: ops, ETA: TBD): Transition internal network topologies away from "mostly internal trust" to a zero-trust architecture to prevent localized Sandbox/Grid failures from cascading. (CI Check: test-zero-trust)
