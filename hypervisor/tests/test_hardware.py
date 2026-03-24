@@ -242,14 +242,15 @@ def test_generate_capability_manifest_full_node(mock_scan):
         "has_gpu": True
     }
 
-    manifest = scanner.generate_capability_manifest()
+    with patch.object(HardwareScanner, '_run_real_benchmarks', return_value=(68.0, 51.2)):
+        manifest = scanner.generate_capability_manifest()
 
     assert manifest["tier"] == "full"
     assert "zkml-gen" in manifest["services"]
     assert "graph-full-sync" in manifest["services"]
     assert "deep-archive-shard" in manifest["services"]
     assert "sandbox-exec" in manifest["services"]
-    assert manifest["benchmarks"]["inf/s"] == round((8 * 3.5) + (16000 / 1000 * 2.5), 2)
+    assert manifest["benchmarks"]["inf/s"] == 68.0
     assert manifest["benchmarks"]["mem_bandwidth_gb_s"] == 51.2
 
 @patch.object(HardwareScanner, 'scan')
@@ -263,13 +264,14 @@ def test_generate_capability_manifest_edge(mock_scan):
         "has_gpu": False
     }
 
-    manifest = scanner.generate_capability_manifest()
+    with patch.object(HardwareScanner, '_run_real_benchmarks', return_value=(6.0, 8.5)):
+        manifest = scanner.generate_capability_manifest()
 
     assert manifest["tier"] == "mid"
     assert "sandbox-exec" in manifest["services"]
     assert "partial-graph" in manifest["services"]
     assert "proxy" in manifest["services"]
-    assert manifest["benchmarks"]["inf/s"] == round(4 * 1.5, 2)
+    assert manifest["benchmarks"]["inf/s"] == 6.0
     assert manifest["benchmarks"]["mem_bandwidth_gb_s"] == 8.5
 
 @patch.object(HardwareScanner, 'scan')
@@ -283,10 +285,11 @@ def test_generate_capability_manifest_tablet(mock_scan):
         "has_gpu": False
     }
 
-    manifest = scanner.generate_capability_manifest()
+    with patch.object(HardwareScanner, '_run_real_benchmarks', return_value=(1.6, 2.1)):
+        manifest = scanner.generate_capability_manifest()
 
     assert manifest["tier"] == "edge"
     assert "proxy" in manifest["services"]
     assert "quantized-inference" in manifest["services"]
-    assert manifest["benchmarks"]["inf/s"] == round(2 * 0.8, 2)
+    assert manifest["benchmarks"]["inf/s"] == 1.6
     assert manifest["benchmarks"]["mem_bandwidth_gb_s"] == 2.1
