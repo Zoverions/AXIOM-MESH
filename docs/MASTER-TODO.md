@@ -220,7 +220,7 @@ A task is done only when all are true:
 * [ ] **SUB-H.5** Hypervisor: Lightweight ZK graph query proofs (Owner: core, ETA: TBD)
 * [ ] **SUB-S.1** Sandbox: Seccomp policy not extensively tested (Owner: security, ETA: TBD)
 * [ ] **SUB-S.2** Sandbox: AppArmor profile not yet deployed in production (Owner: security, ETA: TBD)
-* [ ] **SUB-S.3** Sandbox: Bash execution path may leak system commands (security audit needed) (Owner: security, ETA: TBD)
+* [x] **SUB-S.3** Sandbox: Bash execution path may leak system commands (security audit needed) (Owner: security, ETA: TBD) — 2026-03-24 — @agent — Fixed bash execution path system command leak by appending `--` to the `bash -c` command in dockerRunner.ts.
 * [ ] **SUB-S.4** Sandbox: No support for GPU acceleration (planned for compute-heavy workloads) (Owner: core, ETA: TBD)
 * [ ] **SUB-W.1** Gateway: Channel adapter tests missing (Discord, Slack, Telegram). Add mocked channel tests in next iteration. (Owner: core, ETA: TBD)
 

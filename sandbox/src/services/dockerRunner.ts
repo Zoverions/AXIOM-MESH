@@ -98,7 +98,8 @@ export async function runCode(language: string, code: string, limitsOrUseTee?: R
             args = [...commonArgs, 'node:18-alpine', 'node', '-e', code];
         } else if (language === 'bash' || language === 'sh') {
             command = 'docker';
-            args = [...commonArgs, 'python:3.9-slim', 'bash', '-c', code];
+            // TODO SUB-S.3: Fixed bash execution path system command leak
+            args = [...commonArgs, 'python:3.9-slim', 'bash', '-c', '--', code];
         } else {
             return reject(new Error(`Unsupported language: ${language}`));
         }
