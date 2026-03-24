@@ -69,7 +69,8 @@ describe('dockerRunner', () => {
         expect(result).toEqual({ stdout: 'hello world\n', stderr: '' });
     });
 
-    it('should run bash code successfully', async () => {
+    // TODO SUB-S.3: Fixed bash execution path system command leak
+    it('should securely run bash code and prevent command injection via options (SUB-S.3)', async () => {
         const code = 'echo "hello world"';
         const runPromise = runCode('bash', code);
 
@@ -83,8 +84,21 @@ describe('dockerRunner', () => {
         expect(args).toContain('--security-opt=seccomp=/app/security/seccomp-default.json');
         expect(args).toContain('--security-opt=apparmor=docker-default');
         expect(args).toContain('--label=monitor_syscalls=falco');
-        expect(args.slice(-4)).toEqual(['python:3.9-slim', 'bash', '-c', code]);
+        expect(args.slice(-5)).toEqual(['python:3.9-slim', 'bash', '-c', '--', code]);
         expect(result).toEqual({ stdout: 'hello world\n', stderr: '' });
+    });
+
+    it('should include --gpus=all when gpu limit is true', async () => {
+        const runPromise = runCode('python', 'print("gpu")', { gpu: true });
+
+        mockProcess.stdout.emit('data', 'gpu\n');
+        mockProcess.emit('close', 0);
+
+        const result = await runPromise;
+
+        const args = mockSpawn.mock.calls[0][1];
+        expect(args).toContain('--gpus=all');
+        expect(result).toEqual({ stdout: 'gpu\n', stderr: '' });
     });
 
     it('should handle process spawn error', async () => {

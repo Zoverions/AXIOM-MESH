@@ -90,6 +90,18 @@ func main() {
 		}
 	}()
 
+	// Start automatic historical pruning
+	retentionStr := os.Getenv("GRID_LEDGER_RETENTION")
+	if retentionStr == "" {
+		retentionStr = "24h" // Default 24 hours
+	}
+	retentionPeriod, err := time.ParseDuration(retentionStr)
+	if err != nil {
+		log.Printf("Invalid GRID_LEDGER_RETENTION '%s', falling back to 24h: %v", retentionStr, err)
+		retentionPeriod = 24 * time.Hour
+	}
+	ledger.StartPruning(1*time.Hour, retentionPeriod)
+
 	p2pNode := p2p.NewNode(host.ID().String(), priv)
 	go p2pNode.Start()
 

@@ -1,4 +1,12 @@
 version: '3.9'
+networks:
+  zero-trust-grid:
+    internal: true
+  zero-trust-gateway:
+    internal: false
+  zero-trust-crosschain:
+    internal: true
+
 services:
   hypervisor:
     build:
@@ -8,6 +16,10 @@ services:
     ports: ["8000:8000"]
     volumes: ["./hypervisor/memory:/data"]
     depends_on: [grid]
+    networks:
+      - zero-trust-grid
+      - zero-trust-gateway
+      - zero-trust-crosschain
 
   gateway:
     build:
@@ -15,12 +27,16 @@ services:
       target: gateway
     ports: ["8080:8080"]
     depends_on: [hypervisor]
+    networks:
+      - zero-trust-gateway
 
   grid:
     image: golang:1.23
     command: go run grid/main.go
     volumes: ["./grid:/app"]
     ports: ["8545:8545"]  # local anvil or mainnet RPC proxy
+    networks:
+      - zero-trust-grid
 
   # Optional: Cross-chain relayer service (new)
   crosschain-relayer:
@@ -29,3 +45,5 @@ services:
       target: hypervisor
     command: ["python", "-m", "hypervisor.crosschain.OmnichainRelayer"]
     env_file: .env
+    networks:
+      - zero-trust-crosschain

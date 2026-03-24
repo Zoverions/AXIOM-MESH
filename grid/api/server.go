@@ -116,12 +116,19 @@ type ZKMLJob struct {
 	Result  chan bool
 }
 
+type WSEventClient struct {
+	conn *websocket.Conn
+	mu   sync.Mutex
+}
+
 type Server struct {
 	ledger             *blockchain.Ledger
 	p2pNode            *p2p.Node
 	upgrader           websocket.Upgrader
 	zkmlQueue          chan ZKMLJob
 	computeBondOnChain *chainclient.ComputeBondClient
+	eventClients       map[*WSEventClient]bool
+	eventClientsMutex  sync.Mutex
 }
 
 func NewServer(ledger *blockchain.Ledger, p2pNode *p2p.Node) *Server {
@@ -156,21 +163,27 @@ func NewServer(ledger *blockchain.Ledger, p2pNode *p2p.Node) *Server {
 		}
 	}
 
-	server := &Server{
+	s := &Server{
 		ledger:  ledger,
 		p2pNode: p2pNode,
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool { return true },
 		},
-		zkmlQueue: make(chan ZKMLJob, 100), // Buffered queue for deterministic workers
+		zkmlQueue:    make(chan ZKMLJob, 100), // Buffered queue for deterministic workers
+		eventClients: make(map[*WSEventClient]bool),
+	}
+
+	// Register event callback for WebSocket streaming
+	if ledger != nil {
+		ledger.OnEvent = s.BroadcastEvent
 	}
 
 	// Start a deterministic worker pool for zkML verifications (concurrency limited to 2 for deterministic compute)
 	for i := 0; i < 2; i++ {
-		go server.startZKMLWorker()
+		go s.startZKMLWorker()
 	}
 
-	return server
+	return s
 }
 
 func (s *Server) SetComputeBondClient(client *chainclient.ComputeBondClient) {
@@ -998,6 +1011,7 @@ func (s *Server) SetupRouter() *http.ServeMux {
 	}))
 
 	mux.HandleFunc("/ws/graph", s.handleGraphWebSocket)
+	mux.HandleFunc("/ws/events", s.handleEventsWebSocket)
 
 	mux.HandleFunc("/proposals", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -1410,4 +1424,69 @@ func (s *Server) handlePeersProfiles(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+}
+
+// BroadcastEvent sends a live event to all connected WebSocket clients listening for events
+// SUB-G.4 Grid: WebSocket event streaming
+func (s *Server) BroadcastEvent(eventType string, payload interface{}) {
+	msg := map[string]interface{}{
+		"type":      eventType,
+		"payload":   payload,
+		"timestamp": time.Now().Unix(),
+	}
+
+	s.eventClientsMutex.Lock()
+	clients := make([]*WSEventClient, 0, len(s.eventClients))
+	for client := range s.eventClients {
+		clients = append(clients, client)
+	}
+	s.eventClientsMutex.Unlock()
+
+	for _, client := range clients {
+		go func(c *WSEventClient) {
+			c.mu.Lock()
+			defer c.mu.Unlock()
+
+			// Set a write deadline to prevent slow clients from blocking the event stream
+			_ = c.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+			if err := c.conn.WriteJSON(msg); err != nil {
+				c.conn.Close()
+				s.eventClientsMutex.Lock()
+				delete(s.eventClients, c)
+				s.eventClientsMutex.Unlock()
+			}
+		}(client)
+	}
+}
+
+// handleEventsWebSocket manages live connections for streaming ledger and grid events
+func (s *Server) handleEventsWebSocket(w http.ResponseWriter, r *http.Request) {
+	conn, err := s.upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("Upgrade error for events ws: %v", err)
+		return
+	}
+
+	client := &WSEventClient{
+		conn: conn,
+	}
+	defer client.conn.Close()
+
+	s.eventClientsMutex.Lock()
+	if s.eventClients == nil {
+		s.eventClients = make(map[*WSEventClient]bool)
+	}
+	s.eventClients[client] = true
+	s.eventClientsMutex.Unlock()
+
+	// Keep connection alive until client disconnects
+	for {
+		if _, _, err := client.conn.ReadMessage(); err != nil {
+			break
+		}
+	}
+
+	s.eventClientsMutex.Lock()
+	delete(s.eventClients, client)
+	s.eventClientsMutex.Unlock()
 }

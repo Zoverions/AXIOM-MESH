@@ -30,6 +30,7 @@ export interface ResourceLimits {
     memory_mb?: number;
     cpu_ms?: number;
     io_weight?: number;
+    gpu?: boolean;
 }
 
 export async function runCode(language: string, code: string, limitsOrUseTee?: ResourceLimits | boolean, useTeeParam?: boolean): Promise<{ stdout: string; stderr: string }> {
@@ -83,6 +84,10 @@ export async function runCode(language: string, code: string, limitsOrUseTee?: R
         commonArgs.push('--label=sandbox_execution=true');
         commonArgs.push('--label=monitor_syscalls=falco');
 
+        if (limits?.gpu) {
+            commonArgs.push('--gpus=all');
+        }
+
         if (useTee) {
             commonArgs.push('--device=/dev/sgx_enclave');
             commonArgs.push('--device=/dev/sgx_provision');
@@ -98,7 +103,8 @@ export async function runCode(language: string, code: string, limitsOrUseTee?: R
             args = [...commonArgs, 'node:18-alpine', 'node', '-e', code];
         } else if (language === 'bash' || language === 'sh') {
             command = 'docker';
-            args = [...commonArgs, 'python:3.9-slim', 'bash', '-c', code];
+            // TODO SUB-S.3: Fixed bash execution path system command leak
+            args = [...commonArgs, 'python:3.9-slim', 'bash', '-c', '--', code];
         } else {
             return reject(new Error(`Unsupported language: ${language}`));
         }

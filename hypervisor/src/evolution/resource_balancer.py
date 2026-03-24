@@ -19,6 +19,10 @@ class ResourceBalancer:
 
         # Adaptation under pressure
         if tier == "critical":
+            if task_type == "sandbox-exec" or task_type.startswith("sandbox"):
+                self.logger.info(f"Throttle tier is CRITICAL. Preserving critical sandbox thread {task_type} locally.")
+                return "local"
+
             self.logger.info(f"Throttle tier is CRITICAL. Escalating task {task_type} (complexity {complexity_score}) to grid/l1.")
             if task_type == "settlement":
                 self.logger.info(f"Routed {task_type} to l1 (Tier: {tier}, Profile: {self.profile})")
