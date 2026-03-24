@@ -37,7 +37,7 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable {
     function initialize(uint256 _defaultShare) public initializer {
 
 
-        __UUPSUpgradeable_init();
+        //__UUPSUpgradeable_init();
         networkSharePercentage = _defaultShare;
         externalFundsEnabled = false; // Disabled until Level 3 gate is passed
     }

@@ -28,8 +28,8 @@ export default {
             runs: 200
           }
         }
-      }
-    ],
+      },
+    ]
   },
   networks: {
     hardhat: {},
