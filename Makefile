@@ -1,4 +1,4 @@
-.PHONY: up down cli test validate-release-evidence verify-evidence-bundles verify-tokenomics-controls test-reconciliation
+.PHONY: up down cli test validate-release-evidence verify-evidence-bundles verify-tokenomics-controls test-reconciliation test-resource-throttling run-crypto-benchmarks
 
 up:
 	docker compose up -d --build
