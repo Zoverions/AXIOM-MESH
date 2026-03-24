@@ -5,6 +5,8 @@ This module includes transformer proposal tensor forwarding for MODEL_RUN.
 
 from __future__ import annotations
 
+import base64
+import json
 from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, Any, Sequence
@@ -44,27 +46,52 @@ def encode_message(payload: Dict[str, Any]) -> bytes:
 
 def message_from_aicp_intent(intent: Dict[str, Any]) -> ProposalTensorMessage:
     """Convert normalized AICP intent dict into a MODEL_RUN IPC message."""
-    proposal_type = intent.get("proposal_type")
+    proposal_type = (
+        intent.get("proposal_type")
+        or intent.get("proposalType")
+        or ((intent.get("proposalTensor") or {}).get("proposalType"))
+    )
     if proposal_type != ProposalType.MODEL_RUN.value:
         raise ValueError(f"unsupported proposal type: {proposal_type}")
 
     modality = intent.get("modality")
-    if modality != Modality.LATENT_VECTOR.value:
+    if isinstance(modality, Modality):
+        modality_value = modality.value
+    else:
+        modality_value = modality
+    if modality_value != Modality.LATENT_VECTOR.value:
         raise ValueError(f"unsupported modality: {modality}")
 
     tensor_payload = intent.get("tensor_payload")
+    if tensor_payload is None and isinstance(intent.get("payload"), (bytes, bytearray)):
+        payload = json.loads(bytes(intent["payload"]).decode("utf-8"))
+        tensor_value = payload.get("tensor")
+        if isinstance(tensor_value, str):
+            tensor_payload = base64.b64decode(tensor_value)
+        proposal_type = payload.get("proposalType", proposal_type)
+
     if not isinstance(tensor_payload, (bytes, bytearray)) or len(tensor_payload) == 0:
         raise ValueError("tensor payload must be non-empty bytes")
 
     return ProposalTensorMessage(
-        intent_id=intent["intent_id"],
-        sender_pub_key=intent["sender_pub_key"],
+        intent_id=intent.get("intent_id", intent.get("id", b"")),
+        sender_pub_key=intent.get("sender_pub_key", intent.get("senderPubKey", b"")),
         timestamp=int(intent["timestamp"]),
         tensor_payload=bytes(tensor_payload),
-        signature=intent["signature"],
+        signature=intent.get("signature", b""),
         proposal_type=ProposalType.MODEL_RUN,
-        tensor_shape=tuple(intent.get("tensor_shape", ())),
-        tensor_dtype=intent.get("tensor_dtype", "float32"),
+        tensor_shape=tuple(
+            intent.get("tensor_shape")
+            or intent.get("tensorShape")
+            or ((intent.get("proposalTensor") or {}).get("tensorShape"))
+            or ()
+        ),
+        tensor_dtype=(
+            intent.get("tensor_dtype")
+            or intent.get("tensorDtype")
+            or ((intent.get("proposalTensor") or {}).get("tensorDtype"))
+            or "float32"
+        ),
     )
 
 
