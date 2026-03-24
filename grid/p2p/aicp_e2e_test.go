@@ -3,7 +3,12 @@ package p2p
 import "testing"
 
 func TestRouteIntent_LatentVectorRoutesToProposalTensor(t *testing.T) {
-	intent := IntentPayload{Modality: ModalityLatentVector, Payload: []byte{0x01, 0x02}}
+	payload, err := EncodeModelRunTensor([]byte{0x01, 0x02}, []uint32{1, 2}, "float16")
+	if err != nil {
+		t.Fatalf("unexpected encode error: %v", err)
+	}
+
+	intent := IntentPayload{Modality: ModalityLatentVector, Payload: payload}
 
 	route, err := RouteIntent(intent)
 	if err != nil {
@@ -17,7 +22,20 @@ func TestRouteIntent_LatentVectorRoutesToProposalTensor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error decoding proposal tensor: %v", err)
 	}
+	if candidate.ProposalType != ProposalTypeModelRun {
+		t.Fatalf("unexpected proposal type: %s", candidate.ProposalType)
+	}
 	if len(candidate.Tensor) != 2 {
 		t.Fatalf("unexpected tensor length: %d", len(candidate.Tensor))
+	}
+	if candidate.TensorDType != "float16" {
+		t.Fatalf("unexpected tensor dtype: %s", candidate.TensorDType)
+	}
+}
+
+func TestDecodeProposalTensor_RejectsNonModelRun(t *testing.T) {
+	intent := IntentPayload{Modality: ModalityLatentVector, Payload: []byte(`{"proposalType":"OTHER","tensor":"AQI="}`)}
+	if _, err := DecodeProposalTensor(intent); err == nil {
+		t.Fatal("expected unsupported proposal type error")
 	}
 }
