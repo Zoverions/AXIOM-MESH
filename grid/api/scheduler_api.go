@@ -25,7 +25,7 @@ type FailoverResponse struct {
 }
 
 func RegisterSchedulerAPI(mux *http.ServeMux, s *scheduler.Scheduler) {
-	mux.HandleFunc("/schedule", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/schedule", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -49,9 +49,9 @@ func RegisterSchedulerAPI(mux *http.ServeMux, s *scheduler.Scheduler) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(resp)
-	})
+	}))
 
-	mux.HandleFunc("/schedule/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/schedule/", verifySignatureMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 		if len(pathParts) != 3 {
 			http.Error(w, "Invalid path", http.StatusBadRequest)
@@ -96,5 +96,5 @@ func RegisterSchedulerAPI(mux *http.ServeMux, s *scheduler.Scheduler) {
 		}
 
 		http.Error(w, "Unknown action", http.StatusBadRequest)
-	})
+	}))
 }

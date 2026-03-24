@@ -6,9 +6,34 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"os"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"time"
+	"strconv"
 
 	"github.com/axiom-mesh/grid/internal/scheduler"
 )
+
+func signRequestForTest(req *http.Request, payload []byte) {
+	apiKey := "test-api-key"
+	os.Setenv("HYPERVISOR_API_KEY", apiKey)
+
+	timestamp := time.Now().UnixNano() / int64(time.Millisecond)
+	timestampStr := strconv.FormatInt(timestamp, 10)
+	nonce := "test-nonce"
+
+	payloadStr := fmt.Sprintf("%s:%s:%s", timestampStr, nonce, string(payload))
+	mac := hmac.New(sha256.New, []byte(apiKey))
+	mac.Write([]byte(payloadStr))
+	signature := hex.EncodeToString(mac.Sum(nil))
+
+	req.Header.Set("X-Axiom-Timestamp", timestampStr)
+	req.Header.Set("X-Axiom-Nonce", nonce)
+	req.Header.Set("X-Axiom-Signature", signature)
+}
 
 func TestSchedulerAPI(t *testing.T) {
 	s := scheduler.NewScheduler()
@@ -35,17 +60,18 @@ func TestSchedulerAPI(t *testing.T) {
 	})
 
 	req := httptest.NewRequest("POST", "/schedule", bytes.NewBuffer(reqBody))
+	signRequestForTest(req, reqBody)
 	rr := httptest.NewRecorder()
 
 	mux.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
-		t.Errorf("Expected status OK, got %d", rr.Code)
+		t.Fatalf("Expected status OK, got %d", rr.Code)
 	}
 
 	var resp ScheduleResponse
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
-		t.Errorf("Failed to decode response: %v", err)
+		t.Fatalf("Failed to decode response: %v", err)
 	}
 
 	if resp.NodeID != "node-1" {
@@ -57,6 +83,7 @@ func TestSchedulerAPI(t *testing.T) {
 
 	// Test GET /schedule/{ticket}/status
 	reqStatus := httptest.NewRequest("GET", "/schedule/"+resp.Ticket.ID+"/status", nil)
+	signRequestForTest(reqStatus, []byte(""))
 	rrStatus := httptest.NewRecorder()
 
 	mux.ServeHTTP(rrStatus, reqStatus)
@@ -75,10 +102,9 @@ func TestSchedulerAPI(t *testing.T) {
 	}
 
 	// Test POST /schedule/{ticket}/failover
-	// Wait for failover response
-	// We don't have enough candidates to failover to, so add one more node before testing failover
 	s.RegisterNode("node-3", nil, 90.0, 20, 2, scheduler.TierMedium, []string{"compute"})
 	reqFailover := httptest.NewRequest("POST", "/schedule/"+resp.Ticket.ID+"/failover", nil)
+	signRequestForTest(reqFailover, []byte(""))
 	rrFailover := httptest.NewRecorder()
 
 	mux.ServeHTTP(rrFailover, reqFailover)
