@@ -248,3 +248,9 @@ A task is done only when all are true:
 * [ ] **MOCK-12** `sandbox/capsules/websearch/adapter/tool_translation.py`: Replace placeholder for actual search API integration. (Owner: core, ETA: TBD)
 * [x] **MOCK-13** `gateway/src/routes/distribution.ts`: Implement AutonomousDistributionManager equivalent instead of mock. (Owner: core, ETA: TBD) — 2026-03-24 — @agent — replaced python mock with proper typescript integration.
 * [x] **MOCK-14** `gateway/src/routes/rest.ts`: Replace mocked zkML proof + obfuscation rules via NemoClaw with real delegation. (Owner: core, ETA: TBD) — 2026-03-24 — @agent — routed to actual /zkml/infer generation.
+
+## Lane M7 — Immediate Next 3 (Codebase Scan: 2026-03-24)
+
+- [ ] **M7.1** Lock down Gateway signing/mint route defaults: remove embedded dev private key and localhost contract address fallbacks in `gateway/src/routes/rest.ts`, require environment-backed secrets + explicit startup validation, and add regression tests for fail-closed behavior. (owner: gateway+security, CI Check: `npm --prefix gateway test -- rest.nft`)
+- [ ] **M7.2** Hard-fail service identity transport: remove plaintext fallback in `hypervisor/src/api/server.py:create_mtls_client`, enforce mTLS cert presence at boot, and add anti-replay coverage for inter-service requests. (owner: hypervisor+security, CI Check: `python scripts/test_mtls.py`)
+- [ ] **M7.3** Sandbox scheduled-command execution: replace raw command execution in `hypervisor/src/api/routers/tasks.py` with an allowlisted/sandboxed executor, signed task payloads, per-command timeouts, and immutable audit evidence. (owner: hypervisor+security, CI Check: `pytest hypervisor/tests/test_task_scheduler.py`)
