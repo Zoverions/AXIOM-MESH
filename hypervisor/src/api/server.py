@@ -622,24 +622,33 @@ async def _process_intent_core(intent: IntentObject, api_key: str):
             "sender": sender
         })
 
-        # FUN-A.3: Purge Hypervisor Placeholder Semantics
-        # Dynamically calculate confidence based on entropy and temporal/archive context
-        base_confidence = max(0.1, 1.0 - (pulse.entropy_level * 0.2))
+        # Dynamic confidence and provenance based on routing orchestration
+        tier_used = routed_result.get("tier_used", "local")
+        is_zkml_verified = routed_result.get("zkml_verified", False)
+
+        if is_zkml_verified:
+            confidence = 0.99
+        elif tier_used == "swarm":
+            confidence = 0.90
+        elif tier_used == "external":
+            confidence = 0.75
+        else:
+            confidence = 0.85
+
         provenance = []
+        if is_zkml_verified:
+            provenance.append("zkML Consensus")
+        if tier_used == "swarm":
+            provenance.append("Swarm Shard")
+            if "meshstore_cid" in routed_result:
+                provenance.append(f"MeshStore CID: {routed_result['meshstore_cid']}")
+        if tier_used == "external":
+            provenance.append("External Provider")
+            if "provider" in routed_result:
+                provenance.append(f"Provider: {routed_result['provider']}")
+        if tier_used == "local" and not is_zkml_verified:
+            provenance.append("Local Fallback")
 
-        if "EXTERNAL NCP CONTEXT" in context:
-            provenance.append("NCP")
-            base_confidence += 0.05
-        if "EXTERNAL MCP CONTEXT" in context:
-            provenance.append("MCP")
-            base_confidence += 0.05
-        if "TRUTH CONTEXT" in context:
-            provenance.append("Chainlink Oracle")
-            base_confidence += 0.1
-        if "DEEP ARCHIVE CONTEXT" in context and len(context) > 2000:
-            base_confidence += 0.1
-
-        confidence = round(min(1.0, base_confidence), 3)
         if not provenance:
             provenance.append("Base Model")
 

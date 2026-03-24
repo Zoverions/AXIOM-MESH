@@ -9,7 +9,6 @@ describe('Skill Capsule Registry', () => {
     let privateKeyPem: string;
 
     beforeAll(() => {
-        // Generate a real key pair for testing verification
         const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
             modulusLength: 2048,
         });
@@ -25,60 +24,81 @@ describe('Skill Capsule Registry', () => {
         }).toString();
 
         process.env.CAPSULE_PUBLIC_KEY = publicKeyPem;
-        process.env.TEST_ALLOW_ALL_CAPSULES = 'false'; // Must be false to test real signature check
+        process.env.TEST_ALLOW_ALL_CAPSULES = 'false';
         process.env.SANDBOX_API_KEY = 'test-sandbox-key';
     });
 
     afterAll(() => {
-        delete process.env.SANDBOX_API_KEY;
+        delete process.env.CAPSULE_PUBLIC_KEY;
+        delete process.env.TEST_ALLOW_ALL_CAPSULES;
     });
+
+    function getAuthHeaders(payload: any, key: string = 'test-sandbox-key') {
+        const payloadStr = payload && Object.keys(payload).length > 0 ? stringify(payload) : '';
+        const timestampStr = Date.now().toString();
+        const nonce = 'test-nonce-' + Math.random().toString(36).substring(7);
+        const hmac = crypto.createHmac('sha256', key);
+        hmac.update(`${timestampStr}:${nonce}:${payloadStr}`);
+
+
+        return {
+            'x-axiom-timestamp': timestampStr,
+            'x-axiom-nonce': nonce,
+            'x-axiom-signature': hmac.digest('hex')
+        };
+    }
 
     const createValidCapsule = () => {
         const manifest = {
-            id: crypto.randomUUID(),
+            id: 'test-capsule-1',
             version: '1.0.0',
-            entrypoint: 'python',
+            entrypoint: 'main.py',
+            language: 'python',
+            author: '0x123',
+            required_hardware_tier: 'minimal-edge',
+            attestation_policy: 'tee-only',
             scopes: {
+                network: true,
+                storage: true,
                 resource_limits: {
-                    cpu_ms: 100,
-                    mem_mb: 256,
-                    gpu_required: false
+                    mem_mb: 512,
+                    cpu_cores: 1,
+                    time_s: 30
                 }
-            },
-            required_hardware_tier: 'Tier0',
-            attestation_policy: 'none'
+            }
         };
 
-        const binary_base64 = Buffer.from('print("Capsule Execution Test")').toString('base64');
-        const payload = { manifest, binary_base64 };
+        const binary_base64 = Buffer.from('print("Hello from capsule")').toString('base64');
+        const payloadToSign = stringify({ manifest, binary_base64 });
 
         const sign = crypto.createSign('SHA256');
-        sign.update(stringify(payload));
+        sign.update(payloadToSign);
         sign.end();
+        const signature = sign.sign({ key: privateKeyPem, padding: crypto.constants.RSA_PKCS1_PSS_PADDING, saltLength: crypto.constants.RSA_PSS_SALTLEN_MAX_SIGN }, 'base64');
 
-        const signature = sign.sign({
-            key: privateKeyPem,
-            padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
-            saltLength: crypto.constants.RSA_PSS_SALTLEN_MAX_SIGN
-        }).toString('base64');
-
-        return { manifest, binary_base64, signature };
+        return {
+            manifest,
+            binary_base64,
+            signatures: [signature]
+        };
     };
 
     it('should publish and verify a valid signed capsule', async () => {
         const validCapsule = createValidCapsule();
+        const payloadStr = stringify(validCapsule);
 
         const pubRes = await request(app)
             .post('/capsule/publish')
-            .set('Authorization', 'Bearer test-sandbox-key')
-            .send(validCapsule)
+            .set(getAuthHeaders(validCapsule))
+            .set('Content-Type', 'application/json')
+            .send(payloadStr)
             .expect(200);
 
         expect(pubRes.body.status).toBe('published');
 
         const verifyRes = await request(app)
             .get(`/capsule/${validCapsule.manifest.id}/verify`)
-            .set('Authorization', 'Bearer test-sandbox-key')
+            .set(getAuthHeaders(''))
             .expect(200);
 
         expect(verifyRes.body.verified).toBe(true);
@@ -86,13 +106,14 @@ describe('Skill Capsule Registry', () => {
 
     it('should reject a tampered capsule (replay attack simulation)', async () => {
         const tamperedCapsule = createValidCapsule();
-        // Modify manifest after signing
         tamperedCapsule.manifest.scopes.resource_limits.mem_mb = 1024;
+        const payloadStr = stringify(tamperedCapsule);
 
         const pubRes = await request(app)
             .post('/capsule/publish')
-            .set('Authorization', 'Bearer test-sandbox-key')
-            .send(tamperedCapsule)
+            .set(getAuthHeaders(tamperedCapsule))
+            .set('Content-Type', 'application/json')
+            .send(payloadStr)
             .expect(403);
 
         expect(pubRes.body.error).toContain('Signature verification failed');
@@ -100,57 +121,61 @@ describe('Skill Capsule Registry', () => {
 
     it('should execute a valid capsule', async () => {
         const validCapsule = createValidCapsule();
+        const payloadStr = stringify(validCapsule);
 
         await request(app)
             .post('/capsule/publish')
-            .set('Authorization', 'Bearer test-sandbox-key')
-            .send(validCapsule)
+            .set(getAuthHeaders(validCapsule))
+            .set('Content-Type', 'application/json')
+            .send(payloadStr)
             .expect(200);
 
-        // We mock docker execution slightly if needed, or if docker is available it will run
-        // Here it will attempt to spawn python container.
-        // It might timeout or fail if docker is missing, so we just check for status 200/500
-        // and that it actually attempted execution (no signature error).
+        const execPayload = {};
+        const execPayloadStr = '{}';
         const execRes = await request(app)
             .post(`/capsule/${validCapsule.manifest.id}/execute`)
-            .set('Authorization', 'Bearer test-sandbox-key');
+            .set(getAuthHeaders({}))
+            .set('Content-Type', 'application/json')
+            .send(execPayloadStr);
 
-        // If docker is running, it returns 200. If docker is absent it returns 500 but not 403.
         expect(execRes.status).not.toBe(403);
     });
 
     it('should reject execution of tampered capsule if it somehow was loaded', async () => {
         const validCapsule = createValidCapsule();
+        const payloadStr = stringify(validCapsule);
 
         await request(app)
             .post('/capsule/publish')
-            .set('Authorization', 'Bearer test-sandbox-key')
-            .send(validCapsule)
+            .set(getAuthHeaders(validCapsule))
+            .set('Content-Type', 'application/json')
+            .send(payloadStr)
             .expect(200);
 
-        // Hack internal registry directly to simulate tampered capsule
         const storedCapsule = registry.get(validCapsule.manifest.id);
-        const tamperedCapsule = {
-            ...storedCapsule,
-            signature: Buffer.from('invalid_signature').toString('base64')
-        };
+        const tamperedCapsule = { ...storedCapsule, signatures: [Buffer.from('invalid_signature').toString('base64')] };
         registry.set(validCapsule.manifest.id, tamperedCapsule);
 
+        const execPayload = {};
+        const execPayloadStr = '{}';
         await request(app)
             .post(`/capsule/${validCapsule.manifest.id}/execute`)
-            .set('Authorization', 'Bearer test-sandbox-key')
+            .set(getAuthHeaders({}))
+            .set('Content-Type', 'application/json')
+            .send(execPayloadStr)
             .expect(403);
     });
 
     it('fuzz manifest fields', async () => {
         const validCapsule = createValidCapsule();
-        // missing required field
         delete (validCapsule.manifest as any).entrypoint;
+        const payloadStr = stringify(validCapsule);
 
         const pubRes = await request(app)
             .post('/capsule/publish')
-            .set('Authorization', 'Bearer test-sandbox-key')
-            .send(validCapsule)
+            .set(getAuthHeaders(validCapsule))
+            .set('Content-Type', 'application/json')
+            .send(payloadStr)
             .expect(400);
 
         expect(pubRes.body.error).toContain('Manifest missing required field');

@@ -91,6 +91,7 @@ type Ledger struct {
 
 	// Callbacks for decoupled blockchain execution
 	OnSwarmJoined         func(nodeID [32]byte, capacity uint64, cidRoot [32]byte)
+	OnEvent               func(eventType string, payload interface{})
 	ExternalChainFallback bool
 }
 
@@ -399,6 +400,18 @@ func (l *Ledger) UpdateGraph(node types.GraphNode, edges []types.GraphEdge) {
 	}
 }
 
+// StartPruning runs a background job to periodically prune historical ledger data
+func (l *Ledger) StartPruning(interval time.Duration, retentionPeriod time.Duration) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for range ticker.C {
+			log.Printf("Running historical ledger pruning (retention: %s)", retentionPeriod.String())
+			l.Prune(retentionPeriod)
+		}
+	}()
+}
+
 func (l *Ledger) SearchGraph(query string) []types.GraphNode {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
@@ -651,6 +664,10 @@ func (l *Ledger) ApplyBondChainEvent(evt types.BondChainEvent) error {
 	}
 
 	logWORMEvent("ApplyBondChainEvent", fmt.Sprintf("NodeID: %s, Type: %s, Amount: %d, TxHash: %s, BlockNumber: %d, Finalized: %t", evt.NodeID, evt.Type, evt.Amount, evt.TxHash, evt.BlockNumber, evt.Finalized))
+
+	if l.OnEvent != nil {
+		go l.OnEvent("bond_chain_event", evt)
+	}
 	if evt.Type != "delegate" && evt.Amount < 0 {
 		return fmt.Errorf("invalid chain event payload amount")
 	}
@@ -730,6 +747,10 @@ func (l *Ledger) ApplyProposalChainEvent(evt types.ProposalChainEvent) error {
 	}
 
 	logWORMEvent("ApplyProposalChainEvent", fmt.Sprintf("ProposalID: %s, Type: %s", evt.ProposalID, evt.Type))
+
+	if l.OnEvent != nil {
+		go l.OnEvent("proposal_chain_event", evt)
+	}
 
 	proposal, exists := l.Proposals[evt.ProposalID]
 
@@ -1090,30 +1111,32 @@ func (l *Ledger) LoadFromFile(path string) error {
 }
 
 // Prune removes historical data older than the specified retention period
+// SUB-G.5 Grid: Historical ledger pruning strategy
 func (l *Ledger) Prune(retentionPeriod time.Duration) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	cutoff := uint64(time.Now().Add(-retentionPeriod).Unix())
+	// Calculate the exact Unix timestamp for the historical cutoff boundary
+	cutoffTimestamp := uint64(time.Now().Add(-retentionPeriod).Unix())
 
-	// Prune CRDTShards
-	for id, shard := range l.CRDTShards {
-		if shard.Timestamp < cutoff {
-			delete(l.CRDTShards, id)
+	// Strategy: Prune CRDTShards beyond the retention period
+	for shardID, crdtShard := range l.CRDTShards {
+		if crdtShard.Timestamp < cutoffTimestamp {
+			delete(l.CRDTShards, shardID)
 		}
 	}
 
-	// Prune DriftReports
-	for id, report := range l.DriftReports {
-		if report.Timestamp < cutoff {
-			delete(l.DriftReports, id)
+	// Strategy: Prune DriftReports beyond the retention period
+	for reportID, driftReport := range l.DriftReports {
+		if driftReport.Timestamp < cutoffTimestamp {
+			delete(l.DriftReports, reportID)
 		}
 	}
 
-	// Prune Proposals
-	for id, proposal := range l.Proposals {
-		if proposal.EndTime < cutoff && proposal.State == types.ProposalStateResolved {
-			delete(l.Proposals, id)
+	// Strategy: Prune resolved Proposals beyond the retention period
+	for propID, prop := range l.Proposals {
+		if prop.State == types.ProposalStateResolved && prop.EndTime < cutoffTimestamp {
+			delete(l.Proposals, propID)
 		}
 	}
 }

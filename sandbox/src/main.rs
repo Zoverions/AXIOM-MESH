@@ -38,22 +38,61 @@ pub fn enforce_policy(policy: &OpenShellPolicy) {
 }
 
 pub fn run_ezkl_prover(model_path: &str, input_data: &str) -> Result<String> {
-    // This is the enterprise-grade EZKL prover integration stub
+    // Enterprise-grade EZKL prover execution routing
     println!("Running EZKL prover for model {} with input {}", model_path, input_data);
-    Ok("0xZKMLPROOF_EZKL".to_string())
+
+    let output = std::process::Command::new("ezkl")
+        .arg("prove")
+        .arg("-M")
+        .arg(model_path)
+        .arg("--data")
+        .arg(input_data)
+        .output()?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    } else {
+        Err(anyhow::anyhow!("EZKL prover failed: {}", String::from_utf8_lossy(&output.stderr)))
+    }
 }
 
 pub fn run_risc_zero_prover(elf_path: &str, input_data: &str) -> Result<String> {
-    // This is the enterprise-grade RISC Zero prover integration stub
+    // Enterprise-grade RISC Zero prover execution routing
     println!("Running RISC Zero prover for ELF {} with input {}", elf_path, input_data);
-    Ok("0xZKMLPROOF_RISC0".to_string())
+
+    let output = std::process::Command::new("cargo")
+        .arg("run")
+        .arg("--release")
+        .arg("--bin")
+        .arg("risc0-prover")
+        .arg("--")
+        .arg("--elf")
+        .arg(elf_path)
+        .arg("--input")
+        .arg(input_data)
+        .output()?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    } else {
+        Err(anyhow::anyhow!("RISC Zero prover failed: {}", String::from_utf8_lossy(&output.stderr)))
+    }
 }
 
-pub fn run_tee_enclave(app_path: &str, _input_data: &str) -> Result<String> {
-    // TEE shim using Rust sgx-sdk or eBPF integration stub
+pub fn run_tee_enclave(app_path: &str, input_data: &str) -> Result<String> {
+    // TEE shim using Rust sgx-sdk or eBPF integration execution routing
     println!("Running TEE shim (SGX/SEV) for payload {}", app_path);
-    // In a real TEE execution, the agent logic would be decrypted inside the enclave
-    Ok("0xTEE_ATTESTATION".to_string())
+
+    let output = std::process::Command::new("gramine-sgx")
+        .arg(app_path)
+        .arg(input_data)
+        .output()?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    } else {
+        Err(anyhow::anyhow!("TEE enclave execution failed: {}", String::from_utf8_lossy(&output.stderr)))
+    }
 }
 
 fn main() {

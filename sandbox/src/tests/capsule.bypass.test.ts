@@ -42,7 +42,7 @@ describe('Capsule Security Bypasses', () => {
         expect(response.body.error).toContain('Signature verification failed');
     });
 
-    test('should allow bypass in non-production mode', async () => {
+    test('should reject bypass in non-production mode (security enforcement)', async () => {
         process.env.TEST_ALLOW_ALL_CAPSULES = 'true';
         process.env.NODE_ENV = 'development';
         const payload = {
@@ -62,8 +62,8 @@ describe('Capsule Security Bypasses', () => {
             .post('/capsule/publish')
             .send(payload);
 
-        expect(response.status).toBe(200);
-        expect(response.body.status).toBe('published');
+        expect(response.status).toBe(403);
+        expect(response.body.error).toContain('Signature verification failed');
     });
 
     test('should ignore bypass in production mode', async () => {

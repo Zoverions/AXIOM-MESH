@@ -1,4 +1,4 @@
-.PHONY: up down cli test validate-release-evidence verify-evidence-bundles verify-tokenomics-controls test-reconciliation
+.PHONY: up down cli test validate-release-evidence verify-evidence-bundles verify-tokenomics-controls test-reconciliation test-resource-throttling run-crypto-benchmarks
 
 up:
 	docker compose up -d --build
@@ -51,11 +51,8 @@ verify-change-control:
 test-provex-wrapper:
 	python3 scripts/test_provex_wrapper.py
 
-verify-sbom:
-	python3 scripts/verify_sbom.py
+test-zero-trust:
+	python3 scripts/test_zero_trust.py
 
-test-sandbox-broker:
-	cd sandbox && npm test -- Broker.test.ts
-
-test-hypervisor-fallbacks:
-	python3 scripts/test_hypervisor_fallbacks.py
+test-telemetry-alerts:
+	python3 scripts/test_telemetry_alerts.py

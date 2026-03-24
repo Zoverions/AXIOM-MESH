@@ -152,6 +152,29 @@ class HardwareScanner:
             pass
         return 0
 
+    def _run_real_benchmarks(self) -> tuple:
+        """
+        Computes real benchmarks dynamically using execution instead of mock specs.
+        Returns a tuple of (inf_s, mem_bandwidth_gb_s).
+        """
+        import timeit
+        try:
+            # CPU throughput proxy: 1M float ops
+            elapsed_cpu = timeit.timeit('for i in range(1000000): a = i * 1.5', number=5)
+            # scale to simulate an 'inf/s' token rate. Very roughly 5M passes ~ 50 inf/s on modern CPU.
+            inf_s = round(25.0 / max(0.001, elapsed_cpu), 2)
+
+            # Memory bandwidth proxy: allocate and iterate bytearray
+            # 50MB array memory write
+            setup_code = 'arr = bytearray(50 * 1024 * 1024); data = b"\\x01" * (50 * 1024 * 1024)'
+            test_code = 'arr[:] = data'
+            elapsed_mem = timeit.timeit(stmt=test_code, setup=setup_code, number=20)
+            # 50MB * 20 passes = 1GB
+            mem_bandwidth_gb_s = round(1.0 / max(0.001, elapsed_mem), 2)
+            return inf_s, mem_bandwidth_gb_s
+        except Exception:
+            return 1.0, 1.0
+
     def generate_capability_manifest(self) -> dict:
         """
         Generates a CapabilityManifest compliant dict based on hardware footprint.
@@ -163,27 +186,20 @@ class HardwareScanner:
         services = []
         benchmarks = {}
 
+        # Compute real benchmarks dynamically instead of relying on static mock equations
+        inf_s, mem_bandwidth_gb_s = self._run_real_benchmarks()
+        benchmarks["inf/s"] = inf_s
+        benchmarks["mem_bandwidth_gb_s"] = mem_bandwidth_gb_s
+
         if profile == "full_node":
             tier = "full"
             services = ["zkml-gen", "graph-full-sync", "deep-archive-shard", "sandbox-exec"]
-            # Mock benchmarks based on specs
-            inf_s = float(footprint.get("cpu_cores", 4)) * 3.5
-            if footprint.get("has_gpu"):
-                 inf_s += float(footprint.get("vram_mb", 0)) / 1000 * 2.5
-            benchmarks["inf/s"] = round(inf_s, 2)
-            benchmarks["mem_bandwidth_gb_s"] = 51.2 if footprint.get("has_gpu") else 12.8
-
         elif profile == "edge":
             tier = "mid"
             services = ["sandbox-exec", "partial-graph", "proxy"]
-            benchmarks["inf/s"] = round(float(footprint.get("cpu_cores", 2)) * 1.5, 2)
-            benchmarks["mem_bandwidth_gb_s"] = 8.5
-
         else:
             tier = "edge"
             services = ["proxy", "quantized-inference"]
-            benchmarks["inf/s"] = round(float(footprint.get("cpu_cores", 1)) * 0.8, 2)
-            benchmarks["mem_bandwidth_gb_s"] = 2.1
 
         return {
             "tier": tier,
