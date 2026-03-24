@@ -5,8 +5,11 @@
   "documentName": "physics-research-capsule-sbom",
   "documentNamespace": "https://axiom-mesh.org/sbom/physics-research/1.0.0",
   "creationInfo": {
-    "created": "2026-03-22T12:00:00Z",
-    "creators": ["Tool: syft-0.100.0", "Organization: AXIOM-MESH"]
+    "created": "2026-03-24T13:00:58.034565+00:00",
+    "creators": [
+      "Tool: custom-sbom-generator",
+      "Organization: AXIOM-MESH"
+    ]
   },
   "packages": [
     {
@@ -72,7 +75,7 @@
       "checksums": [
         {
           "algorithm": "SHA256",
-          "checksumValue": "placeholder-sha256-adapter"
+          "checksumValue": "c750a7a1882211d82a05ed730f44d4ed2cb5979e26fe53e395875e7de0c8dfe3"
         }
       ],
       "licenseConcluded": "MIT",
@@ -84,7 +87,7 @@
       "checksums": [
         {
           "algorithm": "SHA256",
-          "checksumValue": "placeholder-sha256-runtime"
+          "checksumValue": "0baf68ec2560667452dcf308239792bac14c5c4e006fcdacaec0bbae8dc539e4"
         }
       ],
       "licenseConcluded": "MIT",
@@ -96,7 +99,7 @@
       "checksums": [
         {
           "algorithm": "SHA256",
-          "checksumValue": "placeholder-sha256-manifest"
+          "checksumValue": "c4bda26fe53d8c06467d93a310234c07b6add36021de8baf99c146d4e1c2240a"
         }
       ],
       "licenseConcluded": "MIT",
@@ -108,7 +111,7 @@
       "checksums": [
         {
           "algorithm": "SHA256",
-          "checksumValue": "placeholder-sha256-schema"
+          "checksumValue": "2423800523633ff7e042b8f6cc933452ca4072af3b85d5b5303b521fbf0e231f"
         }
       ],
       "licenseConcluded": "MIT",

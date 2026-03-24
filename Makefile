@@ -50,3 +50,12 @@ verify-change-control:
 
 test-provex-wrapper:
 	python3 scripts/test_provex_wrapper.py
+
+verify-sbom:
+	python3 scripts/verify_sbom.py
+
+test-sandbox-broker:
+	cd sandbox && npm test -- Broker.test.ts
+
+test-hypervisor-fallbacks:
+	python3 scripts/test_hypervisor_fallbacks.py

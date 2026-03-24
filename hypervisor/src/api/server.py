@@ -622,15 +622,24 @@ async def _process_intent_core(intent: IntentObject, api_key: str):
             "sender": sender
         })
 
-        # Mock confidence and provenance based on context presence
-        confidence = 0.95 if "DEEP ARCHIVE CONTEXT" in context and len(context) > 2000 else 0.75
+        # FUN-A.3: Purge Hypervisor Placeholder Semantics
+        # Dynamically calculate confidence based on entropy and temporal/archive context
+        base_confidence = max(0.1, 1.0 - (pulse.entropy_level * 0.2))
         provenance = []
+
         if "EXTERNAL NCP CONTEXT" in context:
             provenance.append("NCP")
+            base_confidence += 0.05
         if "EXTERNAL MCP CONTEXT" in context:
             provenance.append("MCP")
+            base_confidence += 0.05
         if "TRUTH CONTEXT" in context:
             provenance.append("Chainlink Oracle")
+            base_confidence += 0.1
+        if "DEEP ARCHIVE CONTEXT" in context and len(context) > 2000:
+            base_confidence += 0.1
+
+        confidence = round(min(1.0, base_confidence), 3)
         if not provenance:
             provenance.append("Base Model")
 

@@ -1,1 +1,9 @@
-{}
+{
+  "creationInfo": {
+    "created": "2026-03-24T13:00:58.035548+00:00",
+    "creators": [
+      "Tool: custom-sbom-generator",
+      "Organization: AXIOM-MESH"
+    ]
+  }
+}
