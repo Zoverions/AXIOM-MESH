@@ -101,3 +101,45 @@ To keep the repository organized and reduce list sprawl:
 - `hypervisor/README.md`
 - `sandbox/README.md`
 - `grid/README.md`
+
+---
+
+## Roadmap & Architecture
+
+### Current Foundation
+- Attention-Indexed State Machine (transformer proposer + symbolic verification)
+
+### Execution Model
+- AICP tensor routing (off-chain)
+- Optimistic Stigmergic State Channels (challengeable settlement windows)
+- PulseChain PoER final settlement
+
+### Multi-Chain Strategy
+- Simultaneous deployment on Ethereum, Base, and Arbitrum
+- Dynamic rating/polling/quorum-sensing for bridge-path selection
+- Final token redemption/claim on PulseChain
+
+### Gas Target
+- 99.9% of operations at $0.00 through off-chain cognition and optimistic channels
+
+### Top-Level To Do
+- Transformer Foundation (this package) – IN PROGRESS
+- Multi-Chain Bridging & Rating System
+- Mainnet Genesis + Bug Bounty
+- Full Security Audit (Zellic / Trail of Bits)
+
+### Transformer Foundation Sub-Tasks
+- Create `docs/whitepaper-attention-blockchains.md` with locked v1.0 semantics.
+- Implement `StigmergicStateChannel.sol` v4 (optimistic sliding + `AttentionArtifact`).
+- Wire `MODEL_RUN` outcomes into Cognitive Friction + PoER validation.
+- Update AICP transport for proposal tensors (`latentVector`).
+- Run toy MDP simulation and attach phase plots.
+- Deploy full testnet via `scripts/deploy-full-testnet.js`.
+- Update service READMEs with transformer-foundation roadmap.
+
+### Multi-Chain Sub-Tasks
+- Deploy core contracts simultaneously on Ethereum/Base/Arbitrum.
+- Implement bridge contracts + PulseX/1inch aggregator hooks.
+- Build rating/polling/quorum oracle for bridge selection.
+- Enforce PulseChain-only final redemption/claim destination.
+- Extend deployment scripts/manifests for multi-chain pathing.

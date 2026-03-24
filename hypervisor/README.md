@@ -148,3 +148,9 @@ Please refer to the [MASTER-TODO.md](../docs/MASTER-TODO.md) list for specific a
 - **Gateway** – User-facing API, intent routing
 - **Sandbox** – Code execution environment
 - **Grid** – Ledger, P2P consensus, smart contracts
+
+## Transformer Foundation Update (v15.4.6)
+
+Hypervisor now routes pure latent vectors via Cap'n Proto for `MODEL_RUN` proposals.
+These proposal tensors are candidate-only outputs and must pass symbolic verification,
+PoER checks, and cognitive-friction gating before any settlement path is allowed.

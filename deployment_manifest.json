@@ -1,44 +1,15 @@
 {
-  "version": "15.4.6-PulseEdition",
-  "pulseChainIntegration": {
-    "enabled": true,
-    "layers": {
-      "execution": "PLS (secondary gas for Grid/Hypervisor)",
-      "liquidity": "PulseX (AXM pairs + farming)",
-      "tokenLauncher": "Pump.tires (permissionless skill capsules)",
-      "fiatRail": "ProveX (guarded UBI on-ramp via zk-proofs)"
-    },
-    "guardianReserveRole": "Pulse Sentinel - monitors ProveX proofs, audits bias/coercion, triggers ARP if drift detected",
-    "allocationFlexibility": "5% can dynamically seed liquidity or cover ProveX testnet costs (Council re-vote required post-Bicameral)",
-    "contracts": {
-      "FounderShareManager": "contracts/FounderShareManager.sol",
-      "CognitiveFrictionVerifier": "contracts/CognitiveFrictionVerifier.sol",
-      "PulseAdapter": "contracts/PulseAdapter.sol",
-      "ProveXVerifierWrapper": "contracts/ProveXVerifierWrapper.sol"
-    },
-    "guardianSentinelRole": "Pulse Sentinel - protects liquidity + ProveX proofs",
-    "deploymentStatus": "Complete - ready for testnet",
-    "handoverTriggers": "Heartbeat 30d -> CouncilAutonomy | 90d or death -> FullMeshHandover"
+  "version": "15.4.6-TRANSFORMER-FOUNDATION",
+  "executionLayer": "Attention-Indexed State Machine (transformer proposer + symbolic verification)",
+  "gasStrategy": {
+    "tier0": "AICP QUIC tensors – $0.00",
+    "tier1": "Optimistic sliding channels – $0.00 until dispute",
+    "tier2": "PulseChain PoER final settlement – <$0.001"
   },
-  "epochs": {
-    "Bootstrap": {
-      "control": "100% Founder",
-      "pulseActions": [
-        "deploy PLS bridge",
-        "seed initial PulseX pair"
-      ]
-    },
-    "BicameralAscension": {
-      "pulseGate": "Council 51% approves Tier 2+"
-    },
-    "CouncilAutonomy": {
-      "pulseGate": "Full Tier 3 (ProveX) only after 90-day monitored testnet"
-    },
-    "FullMeshHandover": {
-      "pulseControl": "Network + digital agents maintain all bridges; founder heartbeat/death triggers auto-pause if needed"
-    }
+  "multiChainSupport": {
+    "primarySettlement": "PulseChain (PulseX-native)",
+    "simultaneousDeployment": ["Ethereum", "Base", "Arbitrum"],
+    "bridgingStrategy": "Rating/polling/quorum-sensing selects best path; final claim on PulseChain"
   },
-  "handoverMechanics": {
-    "pulseSentinelInactivityTrigger": "30 days -> Council assumes control of 5% reserve"
-  }
+  "foundationalStatus": "Locked – transformer attention is now the native VM"
 }

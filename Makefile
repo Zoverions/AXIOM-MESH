@@ -1,4 +1,4 @@
-.PHONY: up down cli test validate-release-evidence verify-evidence-bundles verify-tokenomics-controls test-reconciliation test-resource-throttling run-crypto-benchmarks
+.PHONY: up down cli test compile-capnp hardhat-compile validate-release-evidence verify-evidence-bundles verify-tokenomics-controls test-reconciliation test-resource-throttling run-crypto-benchmarks
 
 up:
 	docker compose up -d --build
@@ -26,6 +26,13 @@ contracts-test:
 
 contracts-deploy:
 	cd grid/contracts && npm run deploy:localhost
+
+compile-capnp:
+	@command -v capnp >/dev/null 2>&1 || (echo "capnp CLI not installed"; exit 1)
+	capnp compile -I schemas -ocapnp schemas/aicp_intent.capnp
+
+hardhat-compile:
+	npx hardhat compile
 
 
 validate-release-evidence:
