@@ -1,6 +1,8 @@
 import sys
 import json
 import select
+import urllib.request
+import urllib.parse
 try:
     import requests
     from bs4 import BeautifulSoup
@@ -16,8 +18,41 @@ def map_intent_to_search_args(normalized_intent):
     params = normalized_intent.get("parameters", {})
 
     if task == "search":
-        # Placeholder for actual search API integration
-        return {"operation": "search", "query": query, "results": ["Placeholder result for: " + query]}
+        # Actual search API integration using duckduckgo html search
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            results = []
+            if 'requests' in sys.modules:
+                try:
+                    response = requests.get('https://html.duckduckgo.com/html/', params={'q': query}, headers=headers, timeout=10)
+                    response.raise_for_status()
+                    soup = BeautifulSoup(response.text, 'html.parser')
+                    for item in soup.find_all('div', class_='result'):
+                        title = item.find('a', class_='result__a')
+                        snippet = item.find('a', class_='result__snippet')
+                        if title and snippet:
+                            results.append(f"{title.get_text(strip=True)}: {snippet.get_text(strip=True)}")
+                        if len(results) >= 5:
+                            break
+                except Exception:
+                    pass
+
+            if not results:
+                # Fallback to wikipedia API using urllib if requests/duckduckgo blocked us
+                url = "https://en.wikipedia.org/w/api.php?" + urllib.parse.urlencode({
+                    "action": "query", "list": "search", "srsearch": query, "format": "json"
+                })
+                req = urllib.request.Request(url, headers=headers)
+                with urllib.request.urlopen(req, timeout=10) as wiki_resp:
+                    data = json.loads(wiki_resp.read().decode('utf-8'))
+                    for search_item in data.get('query', {}).get('search', [])[:5]:
+                        results.append(f"{search_item.get('title')}: {search_item.get('snippet')}")
+
+            return {"operation": "search", "query": query, "results": results if results else ["No results found"]}
+        except Exception as e:
+            return {"error": str(e), "operation": "search", "query": query}
     elif task == "scrape":
         url = normalized_intent.get("url", "")
         if not url:
