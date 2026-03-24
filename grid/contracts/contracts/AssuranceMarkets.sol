@@ -4,8 +4,13 @@ pragma solidity ^0.8.28;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+interface IRewardPool {
+    function distributeReward(address user, uint256 userStake, uint256 totalStake) external;
+}
+
 contract AssuranceMarkets is Ownable {
     IERC20 public gdt;
+    address public rewardPool;
 
     struct PolicyMarket {
         uint256 targetFlourishingIndex;
@@ -23,6 +28,10 @@ contract AssuranceMarkets is Ownable {
 
     constructor(address _gdt, address initialOwner) Ownable(initialOwner) {
         gdt = IERC20(_gdt);
+    }
+
+    function setRewardPool(address _rewardPool) external onlyOwner {
+        rewardPool = _rewardPool;
     }
 
     function createMarket(uint256 policyId, uint256 targetFlourishingIndex) external onlyOwner {
@@ -68,8 +77,13 @@ contract AssuranceMarkets is Ownable {
 
         stakes[policyId][msg.sender] = 0;
 
-        // Return original stake plus mock reward (in reality this would be driven by external reward pool)
+        // Return original stake
         gdt.transfer(msg.sender, amount);
+
+        // Drive reward logic from external reward pool instead of placeholder
+        if (rewardPool != address(0)) {
+            IRewardPool(rewardPool).distributeReward(msg.sender, amount, markets[policyId].totalStaked);
+        }
 
         emit StakeWithdrawn(policyId, msg.sender, amount);
     }

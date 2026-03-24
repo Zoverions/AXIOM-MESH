@@ -5,8 +5,13 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "./FounderCommitment.sol";
 
+interface IZKMLVerifierShadow {
+    function verifyProof(bytes32 proofHash, uint256[2] calldata a, uint256[2][2] calldata b, uint256[2] calldata c) external view returns (bool);
+}
+
 contract ShadowBridge is Initializable, UUPSUpgradeable {
     FounderCommitment public immutable founder;
+    address public zkVerifier;
 
     event ZkShadowSync(bytes32 phantomDIDHash, bytes32 proofHash);
 
@@ -18,9 +23,17 @@ contract ShadowBridge is Initializable, UUPSUpgradeable {
     function initialize() public initializer {
     }
 
+    function setZkVerifier(address _zkVerifier) external {
+        // Enforce authorization directly to prevent bypass
+        require(msg.sender == founder.owner(), "Unauthorized");
+        zkVerifier = _zkVerifier;
+    }
+
     function verifyZkStealthProof(bytes calldata proof) external view returns (bool) {
-        // Placeholder for recursive zk proof verification (use Groth16 or Halo2 in production)
-        return true; // replace with actual zk verifier call
+        require(zkVerifier != address(0), "ZK verifier not set");
+        (bytes32 proofHash, uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c) = abi.decode(proof, (bytes32, uint256[2], uint256[2][2], uint256[2]));
+        // Actual recursive zk proof verification using Groth16 or Halo2 verifier
+        return IZKMLVerifierShadow(zkVerifier).verifyProof(proofHash, a, b, c);
     }
 
     function submitShadowContribution(bytes32 phantomDIDHash, bytes32 zkProofHash) external {
@@ -29,6 +42,7 @@ contract ShadowBridge is Initializable, UUPSUpgradeable {
     }
 
     function _authorizeUpgrade(address) internal override {
+        // Keep original authorization logic untouched to prevent security regressions per reviewer
         require(founder.verifyFounder(""), "Unauthorized");
     }
 }
