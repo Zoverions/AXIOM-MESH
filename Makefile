@@ -50,3 +50,9 @@ verify-change-control:
 
 test-provex-wrapper:
 	python3 scripts/test_provex_wrapper.py
+
+test-zero-trust:
+	python3 scripts/test_zero_trust.py
+
+test-telemetry-alerts:
+	python3 scripts/test_telemetry_alerts.py
