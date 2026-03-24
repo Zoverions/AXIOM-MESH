@@ -211,8 +211,8 @@ A task is done only when all are true:
 * [ ] **SUB-G.1** Grid: Contract compilation in CI (Hardhat proxy issue) (Owner: core, ETA: TBD)
 * [ ] **SUB-G.2** Grid: CCIP integration for Ethereum <> L2 settlement (Owner: core, ETA: TBD)
 * [ ] **SUB-G.3** Grid: Lightweight ZK graph query proofs (Owner: core, ETA: TBD)
-* [ ] **SUB-G.4** Grid: WebSocket event streaming (planned) (Owner: core, ETA: TBD)
-* [ ] **SUB-G.5** Grid: Historical ledger pruning strategy (Owner: core, ETA: TBD)
+* [x] **SUB-G.4** Grid: WebSocket event streaming (planned) — 2026-03-24 — @agent — added ws events endpoint
+* [x] **SUB-G.5** Grid: Historical ledger pruning strategy — 2026-03-24 — @agent — added background ledger pruning
 * [ ] **SUB-H.1** Hypervisor: Contract compilation in CI (Hardhat proxy 403 issue) (Owner: core, ETA: TBD)
 * [ ] **SUB-H.2** Hypervisor: MCP server implementation (planned for 8081) (Owner: core, ETA: TBD)
 * [ ] **SUB-H.3** Hypervisor: GPP (Global Pricing Protocol) verifiable computation (Owner: core, ETA: TBD)
