@@ -63,3 +63,6 @@ test-zero-trust:
 
 test-telemetry-alerts:
 	python3 scripts/test_telemetry_alerts.py
+verify-external-audit-artifacts:\n\tpython3 scripts/verify_external_audit_artifacts.py
+verify-zkml-audit-pack:\n\tpython3 scripts/verify_zkml_audit_pack.py
+verify-bridge-audit-pack:\n\tpython3 scripts/verify_bridge_audit_pack.py
