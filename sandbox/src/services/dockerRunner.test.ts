@@ -101,6 +101,24 @@ describe('dockerRunner', () => {
         expect(result).toEqual({ stdout: 'gpu\n', stderr: '' });
     });
 
+    it('should use axiom-sandbox apparmor profile in production', async () => {
+        const originalEnv = process.env.NODE_ENV;
+        process.env.NODE_ENV = 'production';
+
+        const runPromise = runCode('python', 'print("prod")');
+
+        mockProcess.stdout.emit('data', 'prod\n');
+        mockProcess.emit('close', 0);
+
+        const result = await runPromise;
+
+        const args = mockSpawn.mock.calls[0][1];
+        expect(args).toContain('--security-opt=apparmor=axiom-sandbox');
+        expect(result).toEqual({ stdout: 'prod\n', stderr: '' });
+
+        process.env.NODE_ENV = originalEnv;
+    });
+
     it('should handle process spawn error', async () => {
         const runPromise = runCode('python', 'print("done")');
 
