@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# EFF-A.2 Optimize Dynamic Resource Protection
 import sys
 import logging
 
@@ -7,8 +8,8 @@ from src.evolution.resource_balancer import ResourceBalancer
 from src.evolution.hardware import HardwareScanner
 from src.evolution.monitor import SystemMonitor
 
-def main():
-    print("Testing ResourceBalancer dynamic resource throttling...")
+def test_eff_a_2_optimize_dynamic_resource_protection():
+    print("Testing EFF-A.2: ResourceBalancer dynamic resource throttling...")
 
     class MockHardwareScanner(HardwareScanner):
         def __init__(self, footprint):
@@ -38,4 +39,4 @@ def main():
     print("Resource throttling logic verified successfully.")
 
 if __name__ == "__main__":
-    main()
+    test_eff_a_2_optimize_dynamic_resource_protection()

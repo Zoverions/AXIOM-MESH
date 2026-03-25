@@ -60,7 +60,8 @@ export async function runCode(language: string, code: string, limitsOrUseTee?: R
         let command: string;
         let args: string[];
         const seccompProfile = process.env.SANDBOX_SECCOMP_PROFILE || '/app/security/seccomp-default.json';
-        const apparmorProfile = process.env.SANDBOX_APPARMOR_PROFILE || 'docker-default';
+        const defaultApparmor = process.env.NODE_ENV === 'production' ? 'axiom-sandbox' : 'docker-default';
+        const apparmorProfile = process.env.SANDBOX_APPARMOR_PROFILE || defaultApparmor;
         const commonArgs = [
             'run',
             '--rm',
@@ -84,7 +85,9 @@ export async function runCode(language: string, code: string, limitsOrUseTee?: R
         commonArgs.push('--label=sandbox_execution=true');
         commonArgs.push('--label=monitor_syscalls=falco');
 
-        if (limits?.gpu) {
+        // SUB-S.4 Sandbox: GPU acceleration for compute-heavy workloads
+        if (limits !== undefined && limits.gpu === true) {
+            // Enable NVIDIA container toolkit GPU access if configured
             commonArgs.push('--gpus=all');
         }
 

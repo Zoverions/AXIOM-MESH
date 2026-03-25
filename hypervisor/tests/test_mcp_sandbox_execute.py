@@ -96,7 +96,7 @@ async def test_sandbox_execute_unsafe_python(auth_setup, mock_mcp_modules):
     sig = generate_signature(code)
 
     result = await mock_mcp_modules.sandbox_execute(code, sig, "python", auth_setup)
-    assert "Security Halt: Code execution contains forbidden operations" in result
+    assert "Security Halt: Risk > 0.7" in result or "Security Halt: Code execution contains forbidden operations" in result
 
 @pytest.mark.asyncio
 async def test_sandbox_execute_http_success(auth_setup, mock_mcp_modules):

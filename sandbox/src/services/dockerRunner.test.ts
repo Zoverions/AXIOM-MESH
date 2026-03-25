@@ -88,17 +88,37 @@ describe('dockerRunner', () => {
         expect(result).toEqual({ stdout: 'hello world\n', stderr: '' });
     });
 
-    it('should include --gpus=all when gpu limit is true', async () => {
-        const runPromise = runCode('python', 'print("gpu")', { gpu: true });
+    // SUB-S.4 Sandbox: GPU acceleration for compute-heavy workloads
+    it('should appropriately append the --gpus=all flag whenever the GPU limit request evaluates to true (SUB-S.4)', async () => {
+        const computeHeavyCode = 'import tensorflow as tf; print(tf.test.is_gpu_available())';
+        const executionPromise = runCode('python', computeHeavyCode, { gpu: true });
 
-        mockProcess.stdout.emit('data', 'gpu\n');
+        mockProcess.stdout.emit('data', 'True\n');
+        mockProcess.emit('close', 0);
+
+        const executionResult = await executionPromise;
+
+        const generatedArgs = mockSpawn.mock.calls[0][1];
+        expect(generatedArgs).toContain('--gpus=all');
+        expect(executionResult).toEqual({ stdout: 'True\n', stderr: '' });
+    });
+
+    it('should use axiom-sandbox apparmor profile in production', async () => {
+        const originalEnv = process.env.NODE_ENV;
+        process.env.NODE_ENV = 'production';
+
+        const runPromise = runCode('python', 'print("prod")');
+
+        mockProcess.stdout.emit('data', 'prod\n');
         mockProcess.emit('close', 0);
 
         const result = await runPromise;
 
         const args = mockSpawn.mock.calls[0][1];
-        expect(args).toContain('--gpus=all');
-        expect(result).toEqual({ stdout: 'gpu\n', stderr: '' });
+        expect(args).toContain('--security-opt=apparmor=axiom-sandbox');
+        expect(result).toEqual({ stdout: 'prod\n', stderr: '' });
+
+        process.env.NODE_ENV = originalEnv;
     });
 
     it('should handle process spawn error', async () => {

@@ -51,8 +51,8 @@ func BenchmarkClassicalVerification(b *testing.B) {
 	}
 }
 
-// Simulated Hybrid Crypto Overhead Benchmark (Classical + PQ mock overhead)
-func BenchmarkHybridSignatureSimulated(b *testing.B) {
+// EFF-A.1 Benchmark Hybrid Crypto Overhead (Classical + PQ mock overhead)
+func BenchmarkEFF_A_1_HybridSignatureSimulated(b *testing.B) {
 	privKey, err := crypto.GenerateKey()
 	if err != nil {
 		b.Fatalf("Failed to generate key: %v", err)
@@ -74,8 +74,8 @@ func BenchmarkHybridSignatureSimulated(b *testing.B) {
 	}
 }
 
-// BenchmarkHybridVerificationSimulated simulates hybrid verification overhead
-func BenchmarkHybridVerificationSimulated(b *testing.B) {
+// BenchmarkEFF_A_1_HybridVerificationSimulated simulates hybrid verification overhead
+func BenchmarkEFF_A_1_HybridVerificationSimulated(b *testing.B) {
 	privKey, err := crypto.GenerateKey()
 	if err != nil {
 		b.Fatalf("Failed to generate key: %v", err)

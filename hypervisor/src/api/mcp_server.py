@@ -82,8 +82,25 @@ async def sandbox_execute(code: str, signature: str, language: str = "python", a
     if len(code) > int(os.environ.get("HYPERVISOR_MAX_CONTENT_LENGTH", "4000")):
          return "Error: Code exceeds maximum content length."
 
-    # Mock risk calculation based on code length and sensitive keywords
     risk_score = 0.1
+    try:
+        tree = ast.parse(code)
+        forbidden_modules = {"os", "sys", "subprocess", "shlex", "pty", "socket"}
+        forbidden_funcs = {"__import__", "eval", "exec", "open"}
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.name.split(".")[0] in forbidden_modules:
+                        risk_score += 0.8
+            elif isinstance(node, ast.ImportFrom):
+                if node.module and node.module.split(".")[0] in forbidden_modules:
+                    risk_score += 0.8
+            elif isinstance(node, ast.Call):
+                if isinstance(node.func, ast.Name) and node.func.id in forbidden_funcs:
+                    risk_score += 0.8
+    except SyntaxError:
+        risk_score += 0.9
+
     if "network" in code.lower() or "eval" in code.lower():
         risk_score += 0.5
     if len(code) > 1000:
