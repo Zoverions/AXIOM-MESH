@@ -6,7 +6,8 @@
 	validate-release-evidence verify-evidence-bundles verify-tokenomics-controls \
 	test-reconciliation test-grid-authz verify-change-control test-provex-wrapper \
 	test-zero-trust test-telemetry-alerts \
-	verify-external-audit-artifacts verify-zkml-audit-pack verify-bridge-audit-pack
+	verify-external-audit-artifacts verify-zkml-audit-pack verify-bridge-audit-pack \
+	verify-gas-target verify-gas-slo
 
 up:
 	docker compose up -d --build
@@ -98,3 +99,9 @@ verify-zkml-audit-pack:
 
 verify-bridge-audit-pack:
 	python3 scripts/verify_bridge_audit_pack.py
+
+verify-gas-target:
+	cd grid/contracts && npm run test:gas
+
+verify-gas-slo:
+	python3 scripts/verify_gas_target_slo.py
