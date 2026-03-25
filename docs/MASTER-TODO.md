@@ -292,3 +292,218 @@ A task is done only when all are true:
 * [x] **EXT-AUD.1** Commission independent smart contract audit before mainnet launch (Owner: security+contracts, ETA: TBD): Engage external auditors for ComputeBond/WeightOracle/Treasury and publish findings + remediation plan. (CI Check: verify-external-audit-artifacts) — 2026-03-25 — @agent — added verify-external-audit-artifacts
 * [x] **EXT-AUD.2** Complete zkML/Groth16 security review package (Owner: security+zk, ETA: TBD): Document trusted setup provenance, verifying-key custody, circuit constraint coverage, and proof malleability test evidence. (CI Check: verify-zkml-audit-pack) — 2026-03-25 — @agent — added verify-zkml-audit-pack
 * [x] **EXT-AUD.3** Perform dedicated cross-chain bridge security assessment (Owner: security+crosschain, ETA: TBD): Audit Wormhole fallback, cross-chain verifier, replay protection, emergency pause paths, and publish runbooks. (CI Check: verify-bridge-audit-pack) — 2026-03-25 — @agent — added verify-bridge-audit-pack
+
+---
+
+## 6) Consolidated Architecture, Security & Readiness Review
+
+### AXIOM‑MESH — Synthesis of Internal + External Audits (March 2026)
+
+#### 1. Executive Verdict (Unified)
+
+**AXIOM‑MESH is testnet‑ready and architecturally differentiated**, with genuine category‑defining innovations (Proof‑of‑Truth, PoER, zkML‑verified execution, mTLS‑secured P2P).
+However, **three structural risks remain** that must be addressed before mainnet:
+
+1. **Authority creep risk** (Grid + Hypervisor scope gravity)
+2. **Single‑maintainer fragility** (organizational, not technical)
+3. **Incomplete enforcement formalization** (closure philosophy > closure proofs)
+
+**Overall consolidated score:**
+- **Technical Innovation:** 96/100
+- **Security Posture:** 92/100
+- **Architecture Quality:** 90/100
+- **Operational Readiness:** 88/100 (testnet)
+- **Mainnet Readiness:** *Conditional*
+
+#### 2. Architecture — Where Both Reviews Fully Agree
+
+**Four‑Pillar Separation Is Correct and Rarely This Clean**
+
+| Pillar | Role | Status | Risk |
+|------|------|------|------|
+| **Gateway (TS)** | Ingress, auth, schema validation | Production | Needs rate limiting |
+| **Hypervisor (Python)** | Intent → plan → tool routing | Production | Authority creep risk |
+| **Sandbox (TS + Docker)** | Isolated execution | Production | Needs manifest formalization |
+| **Grid (Go)** | Attestation, ledger, governance | Production | Scope gravity |
+
+Both reviews independently conclude:
+
+> **The pillar boundaries are conceptually correct. The next step is mechanical enforcement.**
+
+#### 3. Core Architectural Insight (New Synthesis)
+
+**AXIOM‑MESH Already Has a Canonical Core Loop — It Just Isn’t Locked Yet**
+
+Both reviews implicitly describe the same execution invariant. It should now be **explicitly frozen**:
+
+```text
+Intent
+  → Plan
+    → Capability Manifest
+      → Sandbox Execution
+        → Attestation (Grid)
+          → Response Shaping
+```
+
+**Action:**
+Create a single document + test suite called:
+
+> **AXIOM‑MESH Core Loop Contract**
+
+This is the anchor that prevents:
+- Framework churn (LangGraph, CrewAI, MCP)
+- Silent bypasses
+- Reviewer confusion
+
+#### 4. Proof‑of‑Truth & PoER — Unified Assessment
+
+Both reviews converge strongly here.
+
+**Proof‑of‑Truth (PoT)**
+- **TruthAnchor / TruthBond / TruthWeightOracle** form a **novel economic verification layer**
+- Challenge markets + staking = *truth as a priced signal*
+- No direct competitor has this today
+
+**PoER (Proof‑of‑Execution & Reasoning)**
+- zkML + ezkl + RISC‑Zero + schemas = **audit‑grade AI reasoning**
+- This directly anticipates EU AI Act transparency requirements
+
+**Unified conclusion:**
+> PoT + PoER is AXIOM‑MESH’s deepest moat. Protect it with governance rigor.
+
+**Immediate hardening needed:**
+- Multi‑sig on Truth contracts
+- Explicit oracle fallback strategy
+- Formal challenge resolution invariants
+
+#### 5. Security Posture — Where You Are Strongest
+
+**What Is Already Industry‑Leading**
+- **mTLS everywhere** (API + P2P)
+- **Anti‑replay headers**
+- **WORM audit logs**
+- **Timelocked admin actions**
+- **Mock elimination in critical paths**
+
+This exceeds most DeFi and decentralized compute networks.
+
+**Remaining Gaps (Both Reviews Agree)**
+
+| Gap | Severity | Fix |
+|---|---|---|
+| No Gateway rate limiting | Medium | Redis‑backed limiter |
+| No bug bounty | Medium | Immunefi‑style |
+| No external audit | High | Smart contracts |
+| Single maintainer | Critical | Add co‑maintainers |
+
+#### 6. Grid Scope Gravity — The Quiet Risk
+
+Both reviews flag this differently, but they point to the same danger:
+
+> **Grid is becoming the “center of the universe.”**
+
+Grid currently handles:
+- Ledger
+- Attestation
+- Governance sync
+- zk verification
+- Liquidity
+- P2P transport
+
+**Actionable constraint to enforce:**
+
+> Grid may **verify, attest, and synchronize** —
+> it must **never decide intent or execution policy**.
+
+**Concrete fix:**
+Add a **Grid Scope Firewall** doc + tests:
+- Grid rejects unsigned manifests
+- Grid cannot initiate execution
+- Grid only accepts proof‑carrying artifacts
+
+#### 7. Sandbox & Capability Manifests — The Missing Lock
+
+You already *behave* as if execution is capability‑bounded.
+Now formalize it.
+
+**Required Manifest Fields (Unified Recommendation)**
+
+Every execution must carry:
+- Declared capabilities
+- Resource bounds
+- Network policy
+- Input/output schemas
+- Attestation target
+
+**No manifest → no execution.**
+This turns “closure‑first” from philosophy into enforcement.
+
+#### 8. Tokenomics & Liquidity — Aligned but Needs Tuning
+
+Both reviews agree:
+- Timelocks are correct
+- Automated V3 liquidity is strong
+- Initial concentration is high
+
+**Unified recommendation:**
+- Reduce initial liquidity concentration
+- Add oracle redundancy
+- Treat liquidity contracts as *critical infrastructure*, not growth tooling
+
+#### 9. Testing & Verification — Where to Focus Next
+
+Mocks are gone. Good.
+
+Now prioritize:
+1. **Smart contract unit tests → 90%**
+2. **Load & stress tests**
+3. **Penetration testing**
+4. **Cross‑chain failure modes**
+
+Add **contract tests tied to the Interface Control Document** so drift fails CI.
+
+#### 10. Organizational Risk (Non‑Technical but Critical)
+
+Both reviews independently flag this as the **largest existential risk**:
+
+> **Single‑maintainer systems fail socially before they fail technically.**
+
+**Immediate action:**
+- Add 2–3 trusted co‑maintainers
+- Separate deploy keys
+- Document emergency governance paths
+
+#### 11. Final Unified Action Plan (Agent‑Ready)
+
+**P0 — Before Mainnet**
+- Lock **Core Loop Contract**
+- Add **Gateway rate limiting**
+- Launch **bug bounty**
+- Commission **external audit**
+- Add **Truth contract multi‑sig**
+- Onboard **co‑maintainers**
+
+**P1 — Short Term**
+- Capability manifest enforcement
+- Grid scope firewall
+- Oracle redundancy
+- Test coverage ≥ 80%
+
+**P2 — Medium Term**
+- DAO migration
+- Validator onboarding
+- Cross‑chain stress testing
+- Governance simulation
+
+#### 12. Final Synthesis Statement
+
+AXIOM‑MESH is not “another agent framework.”
+It is shaping into a **verifiable, economically grounded execution substrate**.
+
+Your remaining work is not invention — it is **constraint locking**.
+
+Once authority flow is mechanically frozen, this system becomes:
+- Reviewer‑proof
+- Auditor‑legible
+- Attack‑resistant
+- Framework‑agnostic
