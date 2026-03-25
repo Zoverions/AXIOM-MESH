@@ -59,6 +59,21 @@ contract CognitiveFrictionVerifier is Ownable {
         return this.verifyProofWithFriction(proofHash, zkProof);
     }
 
+    function verifyHigherOrderFriction(bytes32 proofHash, bytes calldata zkProofData) external returns (bool) {
+        require(zkVerifier != address(0), "ZK verifier not set");
+        (uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c) = abi.decode(zkProofData, (uint256[2], uint256[2][2], uint256[2]));
+        // Real Groth16/ezkl verification for collective utility and 2nd/3rd order effects
+        bool frictionPassed = IZKMLVerifierFriction(zkVerifier).verifyProof(proofHash, a, b, c);
+
+        verifiedProofs[proofHash] = frictionPassed;
+
+        uint256 score = frictionPassed ? 2500 : 0;
+        poerScores[msg.sender] += score;
+
+        emit ProofVerified(proofHash, frictionPassed, score);
+        return frictionPassed;
+    }
+
     function updatePoERScore(address agent, uint256 score) external onlyOwner {
         poerScores[agent] = score;
     }

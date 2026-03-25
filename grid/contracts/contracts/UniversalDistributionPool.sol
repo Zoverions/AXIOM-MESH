@@ -102,4 +102,6 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable {
     function _authorizeUpgrade(address) internal override {
         require(founder.verifyFounder(""), "Founder verification failed");
     }
+
+    receive() external payable {}
 }

@@ -3,7 +3,7 @@ package p2p
 import "testing"
 
 func TestRouteIntent_LatentVectorRoutesToProposalTensor(t *testing.T) {
-	payload, err := EncodeModelRunTensor([]byte{0x01, 0x02}, []uint32{1, 2}, "float16")
+	payload, err := EncodeModelRunTensor([]byte{0x01, 0x02}, []uint32{1, 2}, "float16", nil, nil, nil)
 	if err != nil {
 		t.Fatalf("unexpected encode error: %v", err)
 	}
