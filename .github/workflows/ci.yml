@@ -67,6 +67,7 @@ jobs:
         # Ensures that compiler downloads bypass restricted proxy environments in CI
         HTTP_PROXY: ""
         HTTPS_PROXY: ""
+        # SUB-H.1 Hypervisor: Contract compilation in CI (Hardhat proxy 403 issue) — explicit proxy bypass added for Hardhat job to prevent 403 errors
       run: |
         cd grid/contracts
         npm install

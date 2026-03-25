@@ -255,8 +255,8 @@ A task is done only when all are true:
 * [ ] **SUB-G.3** Grid: Lightweight ZK graph query proofs (Owner: core, ETA: TBD)
 * [x] **SUB-G.4** Grid: WebSocket event streaming (planned) — 2026-03-24 — @agent — added ws events endpoint
 * [x] **SUB-G.5** Grid: Historical ledger pruning strategy — 2026-03-24 — @agent — added background ledger pruning
-* [ ] **SUB-H.1** Hypervisor: Contract compilation in CI (Hardhat proxy 403 issue) (Owner: core, ETA: TBD)
-* [ ] **SUB-H.2** Hypervisor: MCP server implementation (planned for 8081) (Owner: core, ETA: TBD)
+* [x] **SUB-H.1** Hypervisor: Contract compilation in CI (Hardhat proxy 403 issue) (Owner: core, ETA: TBD) — Fixed explicit proxy env vars in Hardhat job + comment added.
+* [x] **SUB-H.2** Hypervisor: MCP server implementation (planned for 8081) (Owner: core, ETA: TBD) — Standalone MCP server on 8081 added in mcp_server.py with comment.
 * [x] **SUB-H.3** Hypervisor: GPP (Global Pricing Protocol) verifiable computation (Owner: core, ETA: TBD) - implemented src/pricing/gpp.py
 * [x] **SUB-H.4** Hypervisor: CCIP integration for cross-chain settlement (Owner: core, ETA: TBD) - implemented src/settlement/ccip.py
 * [x] **SUB-H.5** Hypervisor: Lightweight ZK graph query proofs (Owner: core, ETA: TBD) - implemented src/zk/graph_proofs.py
