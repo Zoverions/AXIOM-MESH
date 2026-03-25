@@ -31,6 +31,7 @@ class CoTAuditor:
         thought_open_tag: str = "<think>",
         thought_close_tag: str = "</think>",
         context_purge_cb: Optional[Callable[[], Optional[Awaitable[None]]]] = None,
+        friction_flag_cb: Optional[Callable[[str, str], Optional[Awaitable[None]]]] = None,
         audit_log_path: str = "hypervisor/core/secure_audit.log",
         repetition_window: int = 24,
         repetition_threshold: int = 5,
@@ -39,6 +40,7 @@ class CoTAuditor:
         self._open_tag = thought_open_tag
         self._close_tag = thought_close_tag
         self._context_purge_cb = context_purge_cb
+        self._friction_flag_cb = friction_flag_cb
         self._audit_log_path = audit_log_path
         self._repetition_window = repetition_window
         self._repetition_threshold = repetition_threshold
@@ -172,9 +174,19 @@ class CoTAuditor:
         return False
 
     async def _execute_kill_switch(self) -> None:
+        await self._emit_friction_flag()
         await self._purge_active_context()
         await self._log_subversion_attempt(self._kill_reason)
         raise CognitiveSubversionError(self._kill_reason)
+
+    async def _emit_friction_flag(self) -> None:
+        if self._friction_flag_cb is None:
+            return
+
+        context_excerpt = "".join(list(self._context_window)[-64:])
+        maybe_awaitable = self._friction_flag_cb(self._kill_reason, context_excerpt)
+        if asyncio.iscoroutine(maybe_awaitable):
+            await maybe_awaitable
 
     async def _purge_active_context(self) -> None:
         self._context_window.clear()
@@ -201,4 +213,3 @@ class CoTAuditor:
                 os.close(fd)
 
         await asyncio.to_thread(_write)
-
