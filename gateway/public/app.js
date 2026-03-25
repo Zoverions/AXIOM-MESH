@@ -55,6 +55,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const chatSendBtn = document.getElementById("chat-send");
     const responseStyleSelect = document.getElementById("response-style");
     const consentScopeSelect = document.getElementById("consent-scope");
+    const innovationGoalInput = document.getElementById("innovation-goal");
+    const innovationRiskSelect = document.getElementById("innovation-risk");
+    const innovationOutput = document.getElementById("innovation-output");
+    const generateInnovationBtn = document.getElementById("generate-innovation-btn");
+    const injectInnovationToChatBtn = document.getElementById("inject-innovation-to-chat-btn");
 
     // --- Session ID Management ---
     let sessionId = localStorage.getItem('axiom_session_id');
@@ -185,6 +190,78 @@ document.addEventListener("DOMContentLoaded", () => {
     chatInput.addEventListener("keypress", (e) => {
         if (e.key === "Enter") sendMessage();
     });
+
+    const frontierModules = [
+        "self-healing policy graph",
+        "zero-knowledge provenance lattice",
+        "attention-indexed anomaly mirror",
+        "economic trust shock absorber",
+        "cross-swarm federated planner",
+        "predictive resource balancer"
+    ];
+    const edgeCapabilities = [
+        "streaming counterfactual simulation",
+        "cryptographic memory compression",
+        "consensus-time reputation sculpting",
+        "adversarial intent shadowing",
+        "quantized confidence telemetry",
+        "autonomous rollback choreography"
+    ];
+    const impactProfiles = {
+        bold: "maximize strategic asymmetry, accept controlled experimental volatility",
+        balanced: "pursue measurable innovation while preserving operator observability",
+        conservative: "prioritize safety guarantees and reversible rollout checkpoints"
+    };
+
+    function pickRandom(items) {
+        return items[Math.floor(Math.random() * items.length)];
+    }
+
+    function buildInnovationBlueprint() {
+        const goal = innovationGoalInput?.value?.trim() || "next-generation autonomous coordination";
+        const risk = innovationRiskSelect?.value || "balanced";
+        const moduleA = pickRandom(frontierModules);
+        const moduleB = pickRandom(frontierModules.filter(item => item !== moduleA));
+        const capability = pickRandom(edgeCapabilities);
+
+        const blueprint = [
+            `Feature Name: ${goal.split(" ").slice(0, 4).join(" ")} Hyperloop`,
+            "",
+            "Core Thesis:",
+            `Fuse ${moduleA} with ${moduleB} to create a continuously adapting execution fabric.`,
+            "",
+            "Novel Mechanism:",
+            `Use ${capability} to detect weak signals early, then auto-route intents through confidence-aware execution lanes.`,
+            "",
+            "Deployment Shape:",
+            `Risk posture: ${risk.toUpperCase()} — ${impactProfiles[risk]}.`,
+            "Roll out behind a canary policy, collect trace-level telemetry, and enable one-click rollback for degraded confidence bands.",
+            "",
+            "Why this is unique:",
+            "It links intelligence, cryptographic trust, and infrastructure elasticity into a single operator-controlled feedback loop."
+        ].join("\n");
+
+        innovationOutput.textContent = blueprint;
+    }
+
+    if (generateInnovationBtn) {
+        generateInnovationBtn.addEventListener("click", buildInnovationBlueprint);
+    }
+
+    if (injectInnovationToChatBtn) {
+        injectInnovationToChatBtn.addEventListener("click", () => {
+            const blueprint = innovationOutput.textContent.trim();
+            if (!blueprint || blueprint.startsWith('Press "Generate')) return;
+            chatInput.value = `Let's execute this feature concept:\n\n${blueprint}`;
+
+            navButtons.forEach(b => b.classList.remove("active"));
+            tabs.forEach(t => t.classList.remove("active"));
+            const chatBtn = document.querySelector('.nav-btn[data-target="chat"]');
+            if (chatBtn) chatBtn.classList.add("active");
+            document.getElementById("chat").classList.add("active");
+            chatInput.focus();
+        });
+    }
 
     // --- Operator Cockpit Render Logic ---
     function renderCockpitList() {
