@@ -69,11 +69,9 @@ Without end-to-end counters proving which operations actually hit state-changing
 
 ```bash
 make verify-gas-target
-make verify-gas-slo
 ```
 
-- `verify-gas-target` produces the contract-level gas profile baseline (`grid/contracts/gas-report.txt`) for optimization and budget control.
-- `verify-gas-slo` validates operation-level SLO evidence from JSONL records and fails if off-chain ratio falls below `0.999` or if on-chain category usage is outside the allowlist.
+Produces contract-level gas profile baseline (`grid/contracts/gas-report.txt`) for optimization and budget control, but this is only one part of the full 99.9% operations KPI.
 
 ## Conclusion
 
