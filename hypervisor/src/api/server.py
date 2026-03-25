@@ -210,6 +210,73 @@ def is_safe_code(code_str: str) -> bool:
 security = HTTPBearer()
 
 
+def validate_causal_reasoning_attestation(payload: dict) -> tuple[bool, list[str]]:
+    """
+    Performs fail-closed structural validation for CPoR payloads.
+    This is intentionally strict and returns all discovered mismatches.
+    """
+    mismatches = []
+    required_fields = [
+        "attestation_id",
+        "intent_id",
+        "model_commitment",
+        "input_commitment",
+        "output_commitment",
+        "causal_graph",
+        "consensus_context",
+        "proof_bundle",
+        "nonce",
+        "timestamp_ms",
+    ]
+
+    for field in required_fields:
+        if field not in payload:
+            mismatches.append(f"missing_field:{field}")
+
+    causal_graph = payload.get("causal_graph", {})
+    nodes = causal_graph.get("nodes", [])
+    edges = causal_graph.get("edges", [])
+    if not isinstance(nodes, list) or len(nodes) == 0:
+        mismatches.append("invalid_causal_graph:nodes_empty_or_invalid")
+        return False, mismatches
+
+    node_ids = set()
+    for index, node in enumerate(nodes):
+        node_id = node.get("node_id")
+        step_type = node.get("step_type")
+        attention_weight = node.get("attention_weight")
+        timestamp_ms = node.get("timestamp_ms")
+        if not node_id:
+            mismatches.append(f"invalid_node:{index}:missing_node_id")
+        else:
+            node_ids.add(node_id)
+        if step_type not in {"observation", "transformation", "policy_check", "decision", "consensus"}:
+            mismatches.append(f"invalid_node:{index}:step_type")
+        if not isinstance(attention_weight, (int, float)) or attention_weight < 0:
+            mismatches.append(f"invalid_node:{index}:attention_weight")
+        if not isinstance(timestamp_ms, int) or timestamp_ms < 0:
+            mismatches.append(f"invalid_node:{index}:timestamp_ms")
+
+    if not isinstance(edges, list):
+        mismatches.append("invalid_causal_graph:edges_not_array")
+    else:
+        for edge_index, edge in enumerate(edges):
+            src = edge.get("from")
+            dst = edge.get("to")
+            relation = edge.get("relation")
+            if src not in node_ids or dst not in node_ids:
+                mismatches.append(f"invalid_edge:{edge_index}:dangling_node_ref")
+            if relation not in {"depends_on", "supports", "contradicts", "gates"}:
+                mismatches.append(f"invalid_edge:{edge_index}:relation")
+
+    proof_bundle = payload.get("proof_bundle", {})
+    for proof_key in ("zkml_proof", "causal_proof", "signature"):
+        if not proof_bundle.get(proof_key):
+            mismatches.append(f"invalid_proof_bundle:missing_{proof_key}")
+
+    return len(mismatches) == 0, mismatches
+
+
 from src.core.policy_engine import PolicyEngine
 policy_engine = PolicyEngine()
 
@@ -863,6 +930,31 @@ async def zkml_infer(input_data: dict):
         result["grid_error"] = str(e)
 
     return result
+
+
+@app.post("/verify/reasoning")
+async def verify_reasoning_attestation(input_data: dict, api_key: str = Depends(verify_api_key)):
+    """
+    CPoR verification endpoint (dry-run phase).
+    Validates reasoning attestation structure and returns mismatch taxonomy.
+    """
+    is_valid, mismatches = validate_causal_reasoning_attestation(input_data)
+    verdict = "accepted" if is_valid else "rejected"
+    trace_id = str(uuid.uuid4())
+
+    log_event(
+        "info" if is_valid else "warning",
+        f"CPoR attestation {verdict}",
+        trace_id=trace_id
+    )
+
+    return {
+        "status": "success",
+        "verdict": verdict,
+        "trace_id": trace_id,
+        "mismatches": mismatches,
+        "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    }
 
 @app.get("/agents")
 async def agents_status():

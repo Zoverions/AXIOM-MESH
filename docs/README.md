@@ -16,6 +16,7 @@ This index consolidates documentation ownership, reduces overlap, and defines wh
 - **Technical Specification:** `docs/TECHNICAL-SPECIFICATION.md`
 - **Interface Contracts:** `docs/INTERFACE-CONTROL-DOCUMENT.md`
 - **Foundations Summary:** `docs/FOUNDATIONS.md`
+- **Causal Proof-of-Reasoning blueprint:** `docs/CAUSAL-PROOF-OF-REASONING.md`
 
 ## Security & Reliability
 - **Security posture and controls:** `docs/SECURITY-HARDENING.md`
