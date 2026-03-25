@@ -264,6 +264,11 @@ func (s *Server) SetupRouter() *http.ServeMux {
 
 	mux.HandleFunc("/peers/manifests", verifySignatureMiddleware(s.handlePeersManifests))
 	mux.HandleFunc("/peers/profiles", verifySignatureMiddleware(s.handlePeersProfiles))
+
+	// M10.2 SSI endpoints
+	mux.HandleFunc("/ssi/register", verifySignatureMiddleware(s.handleSSIRegister))
+	mux.HandleFunc("/ssi/consent", verifySignatureMiddleware(s.handleSSIConsent))
+	mux.HandleFunc("/ssi/verify-disclosure", verifySignatureMiddleware(s.handleSSIVerifyDisclosure))
 	sched := scheduler.NewScheduler()
 	RegisterSchedulerAPI(mux, sched)
 
@@ -1229,7 +1234,13 @@ func (s *Server) Start(addr string) error {
 
 	certsDir := os.Getenv("CERTS_DIR")
 	if certsDir == "" {
-		certsDir = "../certs"
+		certsDir = "certs"
+		if _, err := os.Stat(certsDir); os.IsNotExist(err) {
+			certsDir = "../certs"
+			if _, err := os.Stat(certsDir); os.IsNotExist(err) {
+				certsDir = "../../certs"
+			}
+		}
 	}
 
 	certFile := filepath.Join(certsDir, "grid.crt")

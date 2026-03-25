@@ -137,10 +137,11 @@ type CCIPMessage struct {
 }
 
 type Swarm struct {
-	ID     string   `json:"id"`
-	TaskID string   `json:"taskId"`
-	Nodes  []string `json:"nodes"`
-	Status string   `json:"status"`
+	ID        string   `json:"id"`
+	TaskID    string   `json:"taskId"`
+	Nodes     []string `json:"nodes"`
+	Status    string   `json:"status"`
+	Signature string   `json:"signature,omitempty"`
 }
 
 type GraphSyncMessage struct {

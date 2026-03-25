@@ -22,7 +22,7 @@ contract NetworkLiquidityManager is Initializable, UUPSUpgradeable {
     event LiquidityRebalanced(uint256 positionId);
     event LiquidityCrossChain(uint256 amount, uint32 destEid);
 
-    constructor(address _founder, address _distPool, address _bridge, address _positionManager) {
+    constructor(address _founder, address payable _distPool, address _bridge, address _positionManager) {
         founder = FounderCommitment(_founder);
         distPool = UniversalDistributionPool(_distPool);
         bridge = CrossChainBridge(_bridge);

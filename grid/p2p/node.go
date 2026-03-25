@@ -17,9 +17,28 @@ import (
 	"github.com/axiom-mesh/grid/consensus"
 	"github.com/axiom-mesh/grid/types"
 
+	"github.com/cloudflare/circl/sign/dilithium/mode3"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gorilla/websocket"
 )
+
+// generateHybridSignature generates a phase 1 hybrid signature combining classical ECDSA
+// and post-quantum Dilithium signatures.
+func (n *Node) generateHybridSignature(data []byte) (string, error) {
+	// 1. Classical ECDSA signature
+	classicalSig, err := consensus.SignData(n.PrivateKey, data)
+	if err != nil {
+		return "", err
+	}
+
+	// 2. Post-Quantum Dilithium signature
+	var pqSig [mode3.SignatureSize]byte
+	mode3.SignTo(n.DilithiumPrivateKey, data, pqSig[:])
+	pqSigHex := hex.EncodeToString(pqSig[:])
+
+	// Return combined signatures separated by a delimiter
+	return classicalSig + ":" + pqSigHex, nil
+}
 
 type PeerInfo struct {
 	ID       string
@@ -32,13 +51,15 @@ type PeerInfo struct {
 }
 
 type Node struct {
-	ID                string
-	PrivateKey        *ecdsa.PrivateKey
-	PublicKey         string
-	KyberPublicKey    string // Phase 1 hybrid signature scheme (Classical + PQ)
-	Peers             map[string]*PeerInfo
-	PeerAddresses     map[string]string // Mapping of Peer ID to API endpoint
-	Transport         Transport
+	ID                  string
+	PrivateKey          *ecdsa.PrivateKey
+	PublicKey           string
+	KyberPublicKey      string // Phase 1 hybrid signature scheme (Classical + PQ)
+	DilithiumPrivateKey *mode3.PrivateKey
+	DilithiumPublicKey  *mode3.PublicKey
+	Peers               map[string]*PeerInfo
+	PeerAddresses       map[string]string // Mapping of Peer ID to API endpoint
+	Transport           Transport
 	SyncCallback            func(msg types.CCIPMessage) bool // Used to inject messages into local ledger
 	SyncSwarmCallback       func(msg types.Swarm) bool       // Used to inject swarms into local ledger
 	SyncCRDTShardCallback   func(shard types.CRDTShard) bool
@@ -53,14 +74,18 @@ func NewNode(id string, priv *ecdsa.PrivateKey) *Node {
 	// Post-Quantum Kyber Key Generation Mock
 	kyberPub := "PQ_Kyber1024_" + pubHex[:16]
 
+	pqPub, pqPriv, _ := mode3.GenerateKey(nil)
+
 	return &Node{
-		ID:            id,
-		PrivateKey:    priv,
-		PublicKey:     pubHex,
-		KyberPublicKey: kyberPub,
-		Peers:         make(map[string]*PeerInfo),
-		PeerAddresses: make(map[string]string),
-		Transport:     NewHTTPTransport(),
+		ID:                  id,
+		PrivateKey:          priv,
+		PublicKey:           pubHex,
+		KyberPublicKey:      kyberPub,
+		DilithiumPrivateKey: pqPriv,
+		DilithiumPublicKey:  pqPub,
+		Peers:               make(map[string]*PeerInfo),
+		PeerAddresses:       make(map[string]string),
+		Transport:           NewHTTPTransport(),
 	}
 }
 
@@ -263,10 +288,31 @@ func (n *Node) snapshotPeers() []PeerInfo {
 func (n *Node) BroadcastGraphUpdate(node types.GraphNode, edges []types.GraphEdge) {
 	peers := n.snapshotPeers()
 	for _, peer := range peers {
-		wsURL := strings.Replace(peer.Address, "http://", "ws://", 1) + "/ws/graph"
+		wsURL := strings.Replace(peer.Address, "https://", "wss://", 1) + "/ws/graph"
 		go func(pID, urlStr string) {
 			err := sendWithBackoff(func() error {
-				c, _, err := websocket.DefaultDialer.Dial(urlStr, nil)
+
+				// Setup TLS dialer since mTLS is enabled
+				dialer := &websocket.Dialer{
+					Proxy:            http.ProxyFromEnvironment,
+					HandshakeTimeout: 45 * time.Second,
+				}
+				if transport, ok := n.Transport.(*HTTPTransport); ok {
+					if transport.client.Transport != nil {
+						if httpTransport, ok := transport.client.Transport.(*http.Transport); ok {
+							dialer.TLSClientConfig = httpTransport.TLSClientConfig
+						}
+					}
+				}
+
+				// Create header
+				header := make(http.Header)
+				httpReq, _ := http.NewRequest("GET", urlStr, nil)
+				if transport, ok := n.Transport.(*HTTPTransport); ok {
+				    transport.BuildSignedHeaders(httpReq, []byte(""))
+				    header = httpReq.Header
+				}
+				c, _, err := dialer.Dial(urlStr, header)
 				if err != nil {
 					return fmt.Errorf("dial: %w", err)
 				}
@@ -280,7 +326,7 @@ func (n *Node) BroadcastGraphUpdate(node types.GraphNode, edges []types.GraphEdg
 					NodeID: n.PublicKey,
 				}
 				payloadStr := fmt.Sprintf("%s:%d", node.ID, len(edges))
-				sig, err := consensus.SignData(n.PrivateKey, []byte(payloadStr))
+				sig, err := n.generateHybridSignature([]byte(payloadStr))
 				if err == nil {
 					req.Signature = sig
 				}
@@ -302,7 +348,7 @@ func (n *Node) BroadcastWebState(state types.WebState) {
 	if state.Signature == "" {
 		state.NodeID = n.PublicKey
 		payloadStr := fmt.Sprintf("%s:%d", state.URL, state.TextLength)
-		sig, err := consensus.SignData(n.PrivateKey, []byte(payloadStr))
+		sig, err := n.generateHybridSignature([]byte(payloadStr))
 		if err == nil {
 			state.Signature = sig
 		}
@@ -315,11 +361,28 @@ func (n *Node) BroadcastWebState(state types.WebState) {
 		go func(pID, addr string) {
 			err := sendWithBackoff(func() error {
 				data, _ := json.Marshal(state)
-				resp, err := http.Post(addr+"/cache?sync=true", "application/json", bytes.NewBuffer(data))
+				req, err := http.NewRequest("POST", addr+"/cache?sync=true", bytes.NewBuffer(data))
+				if err != nil {
+					return err
+				}
+				req.Header.Set("Content-Type", "application/json")
+				var resp *http.Response
+				if transport, ok := n.Transport.(*HTTPTransport); ok {
+					if err := transport.BuildSignedHeaders(req, data); err != nil {
+						return err
+					}
+					resp, err = transport.client.Do(req)
+				} else {
+					resp, err = http.DefaultClient.Do(req)
+				}
 				if err != nil {
 					return err
 				}
 				defer resp.Body.Close()
+				if err != nil {
+					return err
+				}
+
 				if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 					return fmt.Errorf("status code %d", resp.StatusCode)
 				}
@@ -375,6 +438,14 @@ func (n *Node) BroadcastDriftReport(report types.DriftReport) {
 }
 
 func (n *Node) BroadcastSwarm(msg types.Swarm) {
+	// Sign the swarm ID to fulfill the hybrid signature requirement for high-trust pathways
+	if msg.Signature == "" {
+		sig, err := n.generateHybridSignature([]byte(msg.ID))
+		if err == nil {
+			msg.Signature = sig
+		}
+	}
+
 	peers := n.snapshotPeers()
 
 	log.Printf("P2P Node %s: Broadcasting swarm message %s to %d peers", n.ID, msg.ID, len(peers))
@@ -432,12 +503,33 @@ func (n *Node) QueryNetwork(query string, proof string) []PeerQueryResult {
 
 	for _, peer := range peers {
 		wg.Add(1)
-		wsURL := strings.Replace(peer.Address, "http://", "ws://", 1) + "/ws/graph"
+		wsURL := strings.Replace(peer.Address, "https://", "wss://", 1) + "/ws/graph"
 		go func(pID, urlStr string) {
 			defer wg.Done()
 			var peerNodes []PeerQueryResult
 			err := sendWithBackoff(func() error {
-				c, _, err := websocket.DefaultDialer.Dial(urlStr, nil)
+
+				// Setup TLS dialer since mTLS is enabled
+				dialer := &websocket.Dialer{
+					Proxy:            http.ProxyFromEnvironment,
+					HandshakeTimeout: 45 * time.Second,
+				}
+				if transport, ok := n.Transport.(*HTTPTransport); ok {
+					if transport.client.Transport != nil {
+						if httpTransport, ok := transport.client.Transport.(*http.Transport); ok {
+							dialer.TLSClientConfig = httpTransport.TLSClientConfig
+						}
+					}
+				}
+
+				// Create header
+				header := make(http.Header)
+				httpReq, _ := http.NewRequest("GET", urlStr, nil)
+				if transport, ok := n.Transport.(*HTTPTransport); ok {
+				    transport.BuildSignedHeaders(httpReq, []byte(""))
+				    header = httpReq.Header
+				}
+				c, _, err := dialer.Dial(urlStr, header)
 				if err != nil {
 					return err
 				}
@@ -507,7 +599,7 @@ func (n *Node) listenForPeers() {
 		}
 		peerID := string(buf[:nBytes])
 		if peerID != n.ID {
-			n.AddPeer(peerID, fmt.Sprintf("http://%s:5000", remoteAddr.IP.String()))
+			n.AddPeer(peerID, fmt.Sprintf("https://%s:5000", remoteAddr.IP.String()))
 		}
 	}
 }
@@ -627,11 +719,28 @@ func (n *Node) gossipManifest(manifest types.CapabilityManifest, sourceNodeID st
 				if err != nil {
 					return err
 				}
-				resp, err := http.Post(addr+"/peers/manifests", "application/json", bytes.NewBuffer(data))
+				req, err := http.NewRequest("POST", addr+"/peers/manifests", bytes.NewBuffer(data))
+				if err != nil {
+					return err
+				}
+				req.Header.Set("Content-Type", "application/json")
+				var resp *http.Response
+				if transport, ok := n.Transport.(*HTTPTransport); ok {
+					if err := transport.BuildSignedHeaders(req, data); err != nil {
+						return err
+					}
+					resp, err = transport.client.Do(req)
+				} else {
+					resp, err = http.DefaultClient.Do(req)
+				}
 				if err != nil {
 					return err
 				}
 				defer resp.Body.Close()
+				if err != nil {
+					return err
+				}
+
 				if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 					return fmt.Errorf("status code %d", resp.StatusCode)
 				}
@@ -742,11 +851,28 @@ func (n *Node) gossipProfile(profile types.NodeCapabilityProfile, sourceNodeID s
 				if err != nil {
 					return err
 				}
-				resp, err := http.Post(addr+"/peers/profiles?sync=true", "application/json", bytes.NewBuffer(data))
+				req, err := http.NewRequest("POST", addr+"/peers/profiles?sync=true", bytes.NewBuffer(data))
+				if err != nil {
+					return err
+				}
+				req.Header.Set("Content-Type", "application/json")
+				var resp *http.Response
+				if transport, ok := n.Transport.(*HTTPTransport); ok {
+					if err := transport.BuildSignedHeaders(req, data); err != nil {
+						return err
+					}
+					resp, err = transport.client.Do(req)
+				} else {
+					resp, err = http.DefaultClient.Do(req)
+				}
 				if err != nil {
 					return err
 				}
 				defer resp.Body.Close()
+				if err != nil {
+					return err
+				}
+
 				if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 					return fmt.Errorf("status code %d", resp.StatusCode)
 				}

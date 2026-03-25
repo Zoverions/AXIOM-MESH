@@ -1,0 +1,139 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://axiommesh.io/schemas/causal_reasoning_attestation.v1.json",
+  "title": "CausalReasoningAttestation",
+  "description": "Verifiable payload that binds inference outputs to an auditable causal reasoning graph.",
+  "type": "object",
+  "properties": {
+    "attestation_id": {
+      "type": "string",
+      "description": "Unique identifier for this reasoning attestation."
+    },
+    "intent_id": {
+      "type": "string",
+      "description": "Intent identifier associated with the attestation."
+    },
+    "model_commitment": {
+      "type": "string",
+      "description": "Cryptographic commitment to model parameters used for inference."
+    },
+    "input_commitment": {
+      "type": "string",
+      "description": "Commitment to normalized input used in reasoning."
+    },
+    "output_commitment": {
+      "type": "string",
+      "description": "Commitment to model output/result."
+    },
+    "causal_graph": {
+      "type": "object",
+      "properties": {
+        "root_hash": {
+          "type": "string",
+          "description": "Merkle root for canonicalized causal graph nodes and edges."
+        },
+        "serialization_hash": {
+          "type": "string",
+          "description": "Hash of canonical DAG serialization for replay determinism."
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "node_id": { "type": "string" },
+              "step_type": {
+                "type": "string",
+                "enum": ["observation", "transformation", "policy_check", "decision", "consensus"]
+              },
+              "evidence_hash": { "type": "string" },
+              "attention_weight": { "type": "number", "minimum": 0 },
+              "policy_checkpoint_ref": { "type": "string" },
+              "timestamp_ms": { "type": "integer", "minimum": 0 }
+            },
+            "required": [
+              "node_id",
+              "step_type",
+              "evidence_hash",
+              "attention_weight",
+              "timestamp_ms"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "from": { "type": "string" },
+              "to": { "type": "string" },
+              "relation": {
+                "type": "string",
+                "enum": ["depends_on", "supports", "contradicts", "gates"]
+              }
+            },
+            "required": ["from", "to", "relation"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["root_hash", "serialization_hash", "nodes", "edges"],
+      "additionalProperties": false
+    },
+    "consensus_context": {
+      "type": "object",
+      "properties": {
+        "task_profile": { "type": "string" },
+        "participants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "node_id": { "type": "string" },
+              "attention_score": { "type": "number", "minimum": 0 },
+              "reliability_score": { "type": "number", "minimum": 0, "maximum": 1 }
+            },
+            "required": ["node_id", "attention_score", "reliability_score"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["task_profile", "participants"],
+      "additionalProperties": false
+    },
+    "proof_bundle": {
+      "type": "object",
+      "properties": {
+        "zkml_proof": { "type": "string" },
+        "causal_proof": { "type": "string" },
+        "signature": { "type": "string" }
+      },
+      "required": ["zkml_proof", "causal_proof", "signature"],
+      "additionalProperties": false
+    },
+    "nonce": {
+      "type": "string",
+      "description": "Anti-replay nonce for attestation verification."
+    },
+    "timestamp_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Unix epoch timestamp in milliseconds when attestation was produced."
+    }
+  },
+  "required": [
+    "attestation_id",
+    "intent_id",
+    "model_commitment",
+    "input_commitment",
+    "output_commitment",
+    "causal_graph",
+    "consensus_context",
+    "proof_bundle",
+    "nonce",
+    "timestamp_ms"
+  ],
+  "additionalProperties": false
+}

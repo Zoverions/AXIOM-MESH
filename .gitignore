@@ -147,3 +147,4 @@ sandbox/capsules/*
 !sandbox/capsules/physics/
 !sandbox/capsules/websearch/
 test_output.log
+sandbox/target/

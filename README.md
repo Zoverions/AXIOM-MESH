@@ -127,10 +127,22 @@ To keep the repository organized and reduce list sprawl:
 
 ### Top-Level To Do
 - Transformer Foundation (this package) – IN PROGRESS
+- Axiom Vault Network
+- Axiom Symbiosis Engine + Monetization Layer
 - Multi-Chain Bridging & Rating System
 - Consequence Forecasting Module (2nd/3rd-order awareness)
 - Mainnet Genesis + Bug Bounty
 - Full Security Audit
+
+### Sub-Tasks for Monetization, Funding Campaign, & Vaults
+- Implement `SymbiosisEngine.sol` with built-in fee routing
+- Implement `VaultManager.sol` for NFT-keyed secure vaults
+- Implement `DonationCampaign.sol`
+- Add HorizonForecast integration for fee eligibility
+- Wire fee logic into StigmergicStateChannel, SkillCapsuleLauncher, and UniversalDistributionPool
+- Update deployment_manifest.json with fee schedule and vault features
+- Test monetization flows on PulseChain testnet (symbiosis bundles with UBI + liquidity)
+- Launch automated marketing agents for funding + vaults
 
 ### Transformer Foundation Sub-Tasks
 - Create `docs/whitepaper-attention-blockchains.md` with locked v1.0 semantics.

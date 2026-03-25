@@ -22,7 +22,7 @@ contract RobotWorkforce is Initializable, UUPSUpgradeable {
     event RobotDeployed(uint256 tokenId, string model);
     event PayrollProcessed(uint256 robotId, uint256 amount);
 
-    constructor(address _pool, address _allocator) {
+    constructor(address payable _pool, address _allocator) {
         pool = UniversalDistributionPool(_pool);
         allocator = DynamicResourceAllocator(_allocator);
         _disableInitializers();

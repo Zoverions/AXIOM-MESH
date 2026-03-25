@@ -5,8 +5,15 @@ import (
 	"time"
 )
 
+// Default mock RPC client to satisfy tests
+type defaultMockRPC struct{}
+
+func (d *defaultMockRPC) FetchStateHash(peerID string) (string, error) {
+	return "mock_peer_hash_" + peerID, nil
+}
+
 func TestStigmergyCoordinator_LayAndSense(t *testing.T) {
-	sc := NewStigmergyCoordinator()
+	sc := NewStigmergyCoordinator(&defaultMockRPC{})
 
 	loc := "skill-123"
 

@@ -39,24 +39,16 @@ type RPCClient interface {
 	FetchStateHash(peerID string) (string, error)
 }
 
-// Default mock RPC client to satisfy tests while removing hardcoding
-type defaultMockRPC struct{}
-
-func (d *defaultMockRPC) FetchStateHash(peerID string) (string, error) {
-	// Simulate an RPC call fetching a peer's state hash
-	return "mock_peer_hash_" + peerID, nil
-}
-
 type StigmergyCoordinator struct {
 	pheromones map[string][]Pheromone // Location -> pheromones
 	mu         sync.RWMutex
 	rpcClient  RPCClient
 }
 
-func NewStigmergyCoordinator() *StigmergyCoordinator {
+func NewStigmergyCoordinator(client RPCClient) *StigmergyCoordinator {
 	return &StigmergyCoordinator{
 		pheromones: make(map[string][]Pheromone),
-		rpcClient:  &defaultMockRPC{},
+		rpcClient:  client,
 	}
 }
 

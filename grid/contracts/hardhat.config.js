@@ -1,4 +1,5 @@
 import "@nomicfoundation/hardhat-toolbox";
+import "hardhat-gas-reporter";
 import * as dotenv from "dotenv";
 
 dotenv.config();
@@ -54,9 +55,22 @@ export default {
       chainId: 369,
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
+    pulsechainTestnet: {
+      url: process.env.PULSECHAIN_TESTNET_RPC_URL || "https://rpc.v4.testnet.pulsechain.com",
+      chainId: 943,
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+    },
     polygon: {
       url: process.env.POLYGON_RPC_URL || "https://polygon-rpc.com/",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     }
-  }
+  },
+  gasReporter: {
+    enabled: process.env.REPORT_GAS === "true",
+    currency: "USD",
+    noColors: true,
+    showTimeSpent: true,
+    outputFile: process.env.GAS_REPORT_FILE || "gas-report.txt",
+    coinmarketcap: process.env.COINMARKETCAP_API_KEY || undefined,
+  },
 };

@@ -56,7 +56,8 @@ export async function sendToHypervisor(intent: IntentObject): Promise<IntentResp
                         rejectUnauthorized: true
                     });
                 } catch (e) {
-                    console.warn("mTLS certs not found, client skipping mTLS.");
+                    console.error("mTLS certs not found. mTLS is mandatory for security.");
+                    process.exit(1);
                 }
 
                 const response = await axios.post(`${HYPERVISOR_URL}/process`, intent, {

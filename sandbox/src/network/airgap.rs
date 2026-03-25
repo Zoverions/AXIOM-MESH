@@ -127,6 +127,23 @@ pub fn apply_cgroup_limits(pid: u32, config: &Value) -> Result<(), AirgapError> 
     Ok(())
 }
 
+/// Kill the target PID using SIGKILL (kill -9)
+pub fn kill_process(pid: u32) -> Result<(), AirgapError> {
+    ensure_pid(pid)?;
+
+    let mut cmd = Command::new("kill");
+    cmd.arg("-9").arg(pid.to_string());
+
+    let output = cmd.output()?;
+    if !output.status.success() {
+        return Err(AirgapError::CommandFailure(
+            String::from_utf8_lossy(&output.stderr).to_string(),
+        ));
+    }
+
+    Ok(())
+}
+
 fn handle_client(mut stream: UnixStream) -> Result<(), AirgapError> {
     let reader = BufReader::new(stream.try_clone()?);
     for line in reader.lines() {
@@ -138,9 +155,10 @@ fn handle_client(mut stream: UnixStream) -> Result<(), AirgapError> {
                 let action = payload.get("action").and_then(|v| v.as_str()).unwrap_or_default();
                 let pid = payload.get("pid").and_then(|v| v.as_u64()).map(|v| v as u32).unwrap_or(0);
 
-                let result = match action {
+                                    let result = match action {
                     "isolate" => lockdown_network(pid),
                     "restore" => restore_network(pid),
+                    "kill" => kill_process(pid),
                     "cgroups" => {
                         if let Some(config) = payload.get("config") {
                             apply_cgroup_limits(pid, config)

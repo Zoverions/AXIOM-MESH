@@ -10,6 +10,7 @@
     "postinstall": "node scripts/patch-uniswap.cjs",
     "compile": "hardhat compile",
     "test": "hardhat test",
+    "test:gas": "REPORT_GAS=true GAS_REPORT_FILE=gas-report.txt hardhat test",
     "deploy:localhost": "hardhat run scripts/deploy.js --network localhost",
     "deploy:hardhat": "hardhat run scripts/deploy.js --network hardhat"
   },

@@ -16,12 +16,19 @@ contract AutomatedV3LiquidityManager is Initializable, UUPSUpgradeable {
     ISwapRouter public immutable swapRouter;
 
     uint256 public lastHarvest;
-    uint256 public constant HARVEST_INTERVAL = 1 days;
+    uint256 public constant HARVEST_INTERVAL = 4 hours;
+
+    uint256 public lastAdminAction;
+    uint256 public constant ADMIN_TIMELOCK = 2 days;
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+
+    bool public initialLiquidityBypassed;
+    event InitialLiquidityBypassed(address indexed admin, uint256 timestamp);
 
     event PositionManaged(uint256 tokenId, uint128 liquidity);
     event FeesHarvested(uint256 amount0, uint256 amount1);
 
-    constructor(address _founder, address _distPool, address _npm, address _swapRouter) {
+    constructor(address _founder, address payable _distPool, address _npm, address _swapRouter) {
         founder = FounderCommitment(_founder);
         distPool = UniversalDistributionPool(_distPool);
         npm = INonfungiblePositionManager(_npm);
@@ -62,6 +69,24 @@ contract AutomatedV3LiquidityManager is Initializable, UUPSUpgradeable {
         }));
         lastHarvest = block.timestamp;
         emit FeesHarvested(amount0, amount1);
+    }
+
+    modifier withTimelock() {
+        require(
+            block.timestamp >= lastAdminAction + ADMIN_TIMELOCK,
+            "LiquidityManager: Timelock not expired"
+        );
+        _;
+        lastAdminAction = block.timestamp;
+    }
+
+    function bypassInitialLiquidity() external withTimelock {
+        require(founder.verifyFounder(""), "LiquidityManager: Founder verification failed");
+        require(!initialLiquidityBypassed, "LiquidityManager: Already bypassed");
+
+        initialLiquidityBypassed = true;
+
+        emit InitialLiquidityBypassed(msg.sender, block.timestamp);
     }
 
     function _authorizeUpgrade(address) internal override {

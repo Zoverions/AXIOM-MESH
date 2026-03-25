@@ -86,16 +86,48 @@ def test_stress_test_mpc_orchestration():
     # Since each orchestration takes 0.1s, 10 orchestrations should take at least 1s
     assert (end_time - start_time) >= 1.0
 
-def test_verifiers():
+import json
+import base64
+import hashlib
+from ecdsa import SigningKey, NIST256p
+
+def test_verifiers_actual_logic():
+    # MOCK-9: Rewrote test to generate valid structural payloads rather than matching mock string "valid_proof".
     tee_verifier = TEEVerifier()
     zk_verifier = ZKProofVerifier()
 
-    registry_keys = {"trusted": True}
+    # Generate actual valid payload and keys for TEEVerifier
+    sk = SigningKey.generate(curve=NIST256p)
+    vk = sk.verifying_key
+    public_key_pem = vk.to_pem().decode('utf-8')
+    registry_keys = {"public_key_pem": public_key_pem}
 
-    assert tee_verifier.verify_quote("valid_quote", registry_keys) == True
-    assert tee_verifier.verify_quote("invalid_quote", registry_keys) == False
-    assert tee_verifier.verify_quote("valid_quote", {"trusted": False}) == False
+    payload = "valid payload content"
+    signature = sk.sign(payload.encode('utf-8'), hashfunc=hashlib.sha256)
+    signature_b64 = base64.b64encode(signature).decode('utf-8')
 
-    assert zk_verifier.verify_proof("valid_proof", registry_keys) == True
-    assert zk_verifier.verify_proof("invalid_proof", registry_keys) == False
-    assert zk_verifier.verify_proof("valid_proof", {"trusted": False}) == False
+    valid_quote = json.dumps({"payload": payload, "signature": signature_b64})
+    invalid_quote = json.dumps({"payload": payload, "signature": "bad_sig_b64"})
+
+    assert tee_verifier.verify_quote(valid_quote, registry_keys) == True
+    assert tee_verifier.verify_quote(invalid_quote, registry_keys) == False
+    assert tee_verifier.verify_quote(valid_quote, {"public_key_pem": "bad_pem_format"}) == False
+
+    # Test ZKProofVerifier parsing (without valid ezkl environment, we mock ezkl verify)
+    from unittest.mock import patch
+
+    valid_proof = json.dumps({
+        "proof": "proof_data",
+        "vk": base64.b64encode(b"vk_data").decode('utf-8'),
+        "settings": "settings_data"
+    })
+    invalid_proof_missing = json.dumps({"proof": "proof_data"})
+
+    with patch('src.decision.verifiers.zk_verifier.ezkl.verify', return_value=True):
+        assert zk_verifier.verify_proof(valid_proof, registry_keys) == True
+
+    with patch('src.decision.verifiers.zk_verifier.ezkl.verify', return_value=False):
+        assert zk_verifier.verify_proof(valid_proof, registry_keys) == False
+
+    assert zk_verifier.verify_proof(invalid_proof_missing, registry_keys) == False
+    assert zk_verifier.verify_proof("not a json string", registry_keys) == False

@@ -154,15 +154,18 @@ class HardwareScanner:
 
     def _run_real_benchmarks(self) -> tuple:
         """
+        MOCK-10: Replaced mock benchmarks based on specs with real execution.
         Computes real benchmarks dynamically using execution instead of mock specs.
         Returns a tuple of (inf_s, mem_bandwidth_gb_s).
         """
         import timeit
         try:
-            # CPU throughput proxy: 1M float ops
-            elapsed_cpu = timeit.timeit('for i in range(1000000): a = i * 1.5', number=5)
-            # scale to simulate an 'inf/s' token rate. Very roughly 5M passes ~ 50 inf/s on modern CPU.
-            inf_s = round(25.0 / max(0.001, elapsed_cpu), 2)
+            # CPU throughput proxy: compute a dot product of 100k element arrays 5 times
+            setup_cpu = 'import random; a = [random.random() for _ in range(100000)]; b = [random.random() for _ in range(100000)]'
+            test_cpu = 'sum(x*y for x, y in zip(a, b))'
+            elapsed_cpu = timeit.timeit(stmt=test_cpu, setup=setup_cpu, number=5)
+            # scale to simulate an 'inf/s' token rate based on dot product throughput
+            inf_s = round(10.0 / max(0.001, elapsed_cpu), 2)
 
             # Memory bandwidth proxy: allocate and iterate bytearray
             # 50MB array memory write
@@ -170,8 +173,8 @@ class HardwareScanner:
             test_code = 'arr[:] = data'
             elapsed_mem = timeit.timeit(stmt=test_code, setup=setup_code, number=20)
             # 50MB * 20 passes = 1GB
-            mem_bandwidth_gb_s = round(1.0 / max(0.001, elapsed_mem), 2)
-            return inf_s, mem_bandwidth_gb_s
+            computed_bandwidth_gb_s = round(1.0 / max(0.001, elapsed_mem), 2)
+            return inf_s, computed_bandwidth_gb_s
         except Exception:
             return 1.0, 1.0
 
