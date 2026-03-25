@@ -233,7 +233,7 @@ A task is done only when all are true:
 * [ ] **SEC-A.4** Deploy Edge Perimeter Controls (Owner: security, ETA: TBD): The Gateway's public ingress still requires external perimeter controls (like a hardened WAF and strict rate-limiting architectures) for safe internet-scale exposure. (CI Check: test-waf-rate-limiting)
 
 ### 4. Functionality Audit
-* [ ] **FUN-A.1** Replace SBOM Placeholder Logic (Owner: core, ETA: TBD): The Software Bill of Materials generation currently contains a failing scaffold (`placeholder, syft install denied`). Fix the installation environment and fully automate SBOM generation. (CI Check: verify-sbom)
+* [x] **FUN-A.1** Replace SBOM Placeholder Logic (Owner: core, ETA: TBD): The Software Bill of Materials generation currently contains a failing scaffold (`placeholder, syft install denied`). Fix the installation environment and fully automate SBOM generation. (CI Check: verify-sbom) — 2026-03-25 — @agent — Replaced placeholder SBOM logic with proper generation via `syft` and `generate_sbom.sh`.
 * [ ] **FUN-A.2** Remove Sandbox Execution Mocks (Owner: core, ETA: TBD): The `sandbox/src/broker/Broker.ts` implementation labels the execution stage as a mock path. Wire the broker to the actual execution orchestration flow. (CI Check: test-sandbox-broker)
 * [ ] **FUN-A.3** Purge Hypervisor Placeholder Semantics (Owner: core, ETA: TBD): Hunt down and remove the remaining placeholder/mock execution pathways and proof fallbacks within the Hypervisor policy gates. (CI Check: test-hypervisor-fallbacks)
 

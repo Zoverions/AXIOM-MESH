@@ -7,7 +7,7 @@
 	test-reconciliation test-grid-authz verify-change-control test-provex-wrapper \
 	test-mtls test-sandbox-identity test-zero-trust test-telemetry-alerts \
 	verify-external-audit-artifacts verify-zkml-audit-pack verify-bridge-audit-pack \
-	verify-gas-target
+	verify-gas-target verify-sbom
 
 up:
 	docker compose up -d --build
@@ -108,3 +108,7 @@ verify-bridge-audit-pack:
 
 verify-gas-target:
 	cd grid/contracts && npm run test:gas
+
+verify-sbom:
+	./scripts/generate_sbom.sh
+	python3 scripts/verify_sbom.py
