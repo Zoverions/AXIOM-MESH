@@ -1,7 +1,7 @@
 .PHONY: \
 	up down cli test nemo-airgap \
 	contracts-compile contracts-test contracts-deploy \
-	compile-capnp hardhat-compile \
+	build-schemas compile-capnp hardhat-compile \
 	verify-transformer-toolchains transformer-grid-e2e transformer-hypervisor-e2e transformer-gate \
 	validate-release-evidence verify-evidence-bundles verify-tokenomics-controls \
 	test-reconciliation test-grid-authz verify-change-control test-provex-wrapper \
@@ -35,6 +35,16 @@ contracts-test:
 
 contracts-deploy:
 	cd grid/contracts && npm run deploy:localhost
+
+build-schemas:
+	@if ! command -v capnp >/dev/null 2>&1; then echo "capnp CLI not installed"; false; fi
+	@if ! command -v capnpc-go >/dev/null 2>&1; then echo "capnpc-go CLI not installed"; false; fi
+	mkdir -p grid/types hypervisor/src/models
+	capnp compile -I schemas -ogo:grid/types schemas/aicp_intent.capnp
+	capnp compile -I schemas -ocapnp schemas/aicp_intent.capnp
+	capnp compile -I schemas -ogo:grid/types schemas/aicp_intent.capnp
+	cp schemas/aicp_intent.capnp hypervisor/src/models/
+	@echo 'For Python, pycapnp loads .capnp files at runtime'
 
 compile-capnp:
 	@command -v capnp >/dev/null 2>&1 || (echo "capnp CLI not installed"; exit 1)

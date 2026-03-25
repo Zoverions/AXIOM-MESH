@@ -3,8 +3,10 @@ import random
 from typing import Dict, Any
 try:
     from src.cortex.riker import RIKERGenerator
+    from src.cortex.dialectic import DialecticOrchestrator
 except ModuleNotFoundError:
     from cortex.riker import RIKERGenerator
+    from cortex.dialectic import DialecticOrchestrator
 
 class VerificationArena:
     def __init__(self):
@@ -64,7 +66,7 @@ class VerificationArena:
         # If the LLM provides a factual-sounding answer for a fake entity, it failed.
         return False
 
-    def evaluate_execution(self, action_intent: str, proposed_execution: str) -> Dict[str, Any]:
+    async def evaluate_execution(self, action_intent: str, proposed_execution: str, llm_provider=None) -> Dict[str, Any]:
         """
         Structured evaluator feedback loop beyond binary verification.
         Returns a dictionary with validation status, specific issues, and a score.
@@ -75,7 +77,7 @@ class VerificationArena:
 
         if self.uncertainty_pattern.search(proposed_execution):
             # Acknowledged uncertainty is highly rewarded
-            return {"is_valid": True, "issues": [], "score": 10.0}
+            return {"is_valid": True, "issues": [], "score": 10.0, "proposed_execution": proposed_execution}
 
         if self.weak_confidence_pattern.search(proposed_execution):
             is_valid = False
@@ -87,12 +89,24 @@ class VerificationArena:
             issues.append("Empty execution proposal.")
             score -= 10.0
 
-        # Further structural checks can decrease score or add issues
+        confidence = score / 10.0
+
+        if confidence < 0.4 and llm_provider:
+            # GAP 3: If reflective federation fails to reach consensus (confidence < 0.4), dynamically inject it into a polarized dialectic.
+            dialectic = DialecticOrchestrator(llm=llm_provider)
+            synthesis = await dialectic.synthesize_with_feedback_loop(action_intent)
+            proposed_execution += f"\n\n[DIALECTIC ARBITRATION TRIGGERED]\n{synthesis}"
+
+            # Since we forced causal emergence, we overturn the veto
+            is_valid = True
+            issues.append("Resolved hallucination via Dialectic Arbitration")
+            score = 7.0
 
         return {
             "is_valid": is_valid,
             "issues": issues,
-            "score": max(0.0, score)
+            "score": max(0.0, score),
+            "proposed_execution": proposed_execution
         }
 
     async def run_adversarial_suite(self, llm_provider) -> Dict[str, Any]:
