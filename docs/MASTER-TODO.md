@@ -159,7 +159,6 @@ Detailed references:
 ## Lane M9 — Security Hardening to Mainnet Gate (Open)
 - [ ] **M9.1** Full security audit prep and immutable audit retention dossier finalization (BLK-A.4, EXT-AUD evidence packaging, chain-of-custody review) (owner: security+release, ETA: TBD).
 - [ ] **M9.2** Mainnet genesis ceremony rehearsal and economic sovereignty smoke tests (PulseChain RPC outage, local-mesh fallback, treasury continuity) (owner: ops+governance, ETA: TBD).
-- [ ] **M9.3** Gas SLO certification: prove `>=99.9%` operations complete at `$0.00` using off-chain cognition + optimistic channels, publish daily KPI artifact (`N_total`, `N_onchain`, `R_zero_gas`) and enforce fail-closed policy when breached (owner: ops+grid+gateway, ETA: TBD).
 
 ## Lane M10 — Sovereign Governance Guild Framework (Design→Pilot)
 **Goal:** deliver deployable governance guild templates (federal/provincial/municipal/citizen), SSI-first identity, and consented service migration patterns.
