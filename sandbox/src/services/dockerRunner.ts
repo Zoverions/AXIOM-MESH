@@ -84,7 +84,9 @@ export async function runCode(language: string, code: string, limitsOrUseTee?: R
         commonArgs.push('--label=sandbox_execution=true');
         commonArgs.push('--label=monitor_syscalls=falco');
 
-        if (limits?.gpu) {
+        // SUB-S.4 Sandbox: GPU acceleration for compute-heavy workloads
+        if (limits !== undefined && limits.gpu === true) {
+            // Enable NVIDIA container toolkit GPU access if configured
             commonArgs.push('--gpus=all');
         }
 

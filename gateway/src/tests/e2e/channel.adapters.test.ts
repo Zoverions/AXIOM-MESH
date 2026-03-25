@@ -4,70 +4,52 @@ import request from 'supertest';
 import express from 'express';
 import restRouter from '../../routes/rest';
 
-// TODO: SUB-W.1 Gateway: Channel adapter tests missing (Discord, Slack, Telegram).
-describe('Mocked Channel Adapters Tests (Discord, Slack, Telegram)', () => {
-    let app: express.Express;
+// SUB-W.1 Gateway: Channel adapter tests missing (Discord, Slack, Telegram). Add mocked channel tests in next iteration.
+// This implements SUB-W.1.
+describe('Gateway Channel Adapters Mock Tests for Discord, Slack, and Telegram', () => {
+    let mockApp: express.Express;
 
     beforeAll(() => {
-        app = express();
-        app.use(express.json());
-        app.use('/', restRouter);
+        mockApp = express();
+        mockApp.use(express.json());
+        mockApp.use('/', restRouter);
     });
 
-    test('Discord channel adapter normalization process', async () => {
-        const payload = {
-            channel: 'discord',
-            content: 'discord message normalization test',
-            metadata: {
-                guildId: '11111',
-                userId: '22222',
-                channelId: '33333'
+    const channelsToTest = [
+        {
+            name: 'discord',
+            data: {
+                channel: 'discord',
+                content: 'testing discord channel normalization',
+                metadata: { guildId: 'd-123', userId: 'u-456', channelId: 'c-789' }
             }
-        };
-
-        const response = await request(app)
-            .post('/api/v1/intent/process/dev-public')
-            .send(payload);
-
-        expect(response.status).toBe(200);
-        expect(response.body.intent_id).toBeDefined();
-    });
-
-    test('Slack channel adapter normalization process', async () => {
-        const payload = {
-            channel: 'slack',
-            content: 'slack message normalization test',
-            metadata: {
-                teamId: '44444',
-                userId: '55555',
-                channelId: '66666'
+        },
+        {
+            name: 'slack',
+            data: {
+                channel: 'slack',
+                content: 'testing slack channel normalization',
+                metadata: { teamId: 't-123', userId: 'u-456', channelId: 'c-789' }
             }
-        };
-
-        const response = await request(app)
-            .post('/api/v1/intent/process/dev-public')
-            .send(payload);
-
-        expect(response.status).toBe(200);
-        expect(response.body.intent_id).toBeDefined();
-    });
-
-    test('Telegram channel adapter normalization process', async () => {
-        const payload = {
-            channel: 'telegram',
-            content: 'telegram message normalization test',
-            metadata: {
-                chatId: '77777',
-                userId: '88888',
-                messageId: '99999'
+        },
+        {
+            name: 'telegram',
+            data: {
+                channel: 'telegram',
+                content: 'testing telegram channel normalization',
+                metadata: { chatId: 'ch-123', userId: 'u-456', messageId: 'm-789' }
             }
-        };
+        }
+    ];
 
-        const response = await request(app)
-            .post('/api/v1/intent/process/dev-public')
-            .send(payload);
+    for (const channelTest of channelsToTest) {
+        it(`should successfully process and normalize the ${channelTest.name} adapter payload`, async () => {
+            const response = await request(mockApp)
+                .post('/api/v1/intent/process/dev-public')
+                .send(channelTest.data);
 
-        expect(response.status).toBe(200);
-        expect(response.body.intent_id).toBeDefined();
-    });
+            expect(response.status).toEqual(200);
+            expect(response.body.intent_id).toBeTruthy();
+        });
+    }
 });
