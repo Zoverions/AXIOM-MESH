@@ -180,16 +180,6 @@ Detailed references:
 - [ ] **M11.6** Define federated memory contribution attestation contract path and reward-accounting invariants (owner: contracts+governance, ETA: TBD).
 - [ ] **M11.7** Publish threat model + test harness for coordinated-behavior attack simulations and rollback/quarantine playbooks (owner: security+ops, ETA: TBD).
 
-## Lane M12 — Epistemic Antibody Protocol (EAP) + Proof-of-Truth (PoT)
-**Goal:** evolve from local kill-switch defense to mesh-wide self-healing immunity and challengeable truth settlement.
-
-- [ ] **M12.1** Implement quarantine namespace orchestration in Hypervisor/Sandbox and emit immutable quarantine artifacts (owner: hypervisor+sandbox, ETA: TBD).
-- [ ] **M12.2** Integrate latent-trajectory extraction + inverse antibody generation with stigmergic mesh broadcast semantics (owner: hypervisor+grid, ETA: TBD).
-- [ ] **M12.3** Add antibody ingestion hooks to deconfinement pipeline with rollback guardrails and per-model compatibility gating (owner: hypervisor, ETA: TBD).
-- [ ] **M12.4** Create `TruthAnchor.sol` + `TruthBond.sol` draft contracts and formalize challenge window/slashing invariants (owner: contracts+governance, ETA: TBD).
-- [ ] **M12.5** Add Hypervisor `/truth/*` API endpoints and Grid provenance tracker for source lineage + claim lifecycle events (owner: hypervisor+grid, ETA: TBD).
-- [ ] **M12.6** Build adversarial simulation harness for prompt zero-days and false-claim challenge games with economic calibration outputs (owner: security+research, ETA: TBD).
-
 ## 3) Archive Candidates (After Migration Validation)
 
 Move to `docs/historical/` after confirming no net-new actionable tasks remain:
