@@ -133,6 +133,10 @@ To keep the repository organized and reduce list sprawl:
 - Consequence Forecasting Module (2nd/3rd-order awareness)
 - Mainnet Genesis + Bug Bounty
 - Full Security Audit
+- **NEW**: Comprehensive Education Skill Capsules (Knowledge Bookcase)
+- **NEW**: Native Stablecoin Payroll Integrations
+- **NEW**: Credentialed Submission Structures (Governance)
+- **NEW**: Information Dashboards & Data Pipelines
 
 ### Sub-Tasks for Monetization, Funding Campaign, & Vaults
 - Implement `SymbiosisEngine.sol` with built-in fee routing
