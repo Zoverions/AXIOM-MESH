@@ -44,6 +44,14 @@ type ProposalTensorEnvelope struct {
 	TensorDType  string   `json:"tensorDtype,omitempty"`
 }
 
+// ProposalTensorEnvelope is the latent vector wire format for proposal execution.
+type ProposalTensorEnvelope struct {
+	ProposalType string   `json:"proposalType"`
+	Tensor       []byte   `json:"tensor"`
+	TensorShape  []uint32 `json:"tensorShape,omitempty"`
+	TensorDType  string   `json:"tensorDtype,omitempty"`
+}
+
 // ProposalCandidate represents a transformer proposal tensor routed to MODEL_RUN.
 type ProposalCandidate struct {
 	ProposalType string
