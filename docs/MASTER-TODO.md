@@ -159,7 +159,6 @@ Detailed references:
 ## Lane M9 — Security Hardening to Mainnet Gate (Open)
 - [ ] **M9.1** Full security audit prep and immutable audit retention dossier finalization (BLK-A.4, EXT-AUD evidence packaging, chain-of-custody review) (owner: security+release, ETA: TBD).
 - [ ] **M9.2** Mainnet genesis ceremony rehearsal and economic sovereignty smoke tests (PulseChain RPC outage, local-mesh fallback, treasury continuity) (owner: ops+governance, ETA: TBD).
-- [ ] **M9.3** Gas SLO certification: prove `>=99.9%` operations complete at `$0.00` using off-chain cognition + optimistic channels, publish daily KPI artifact (`N_total`, `N_onchain`, `R_zero_gas`) and enforce fail-closed policy when breached (owner: ops+grid+gateway, ETA: TBD).
 
 ## Lane M10 — Sovereign Governance Guild Framework (Design→Pilot)
 **Goal:** deliver deployable governance guild templates (federal/provincial/municipal/citizen), SSI-first identity, and consented service migration patterns.
@@ -169,12 +168,6 @@ Detailed references:
 - [ ] **M10.3** Pre-built government service agents + citizen digital entity SDK (owner: hypervisor+sandbox, ETA: TBD).
 - [ ] **M10.4** Governance closure simulator and statute-policy encoding harness (owner: governance+research, ETA: TBD).
 - [ ] **M10.5** End-to-end pilot: Ontario Health Guild migration demo with testnet evidence and revocation/fail-closed tests (owner: cross-team, ETA: TBD).
-
-## Lane M11 — Sovereign v3 Operating Model Convergence (Open)
-- [ ] **M11.1** Resolve governance-tokenomics model drift: replace founder-share decay semantics with v3 fixed reserve controls (owner: contracts+governance, ETA: TBD).
-- [ ] **M11.2** Implement DAO-dedicated compute reserve contract and governance-proof-gated execution interface (owner: contracts+grid, ETA: TBD).
-- [ ] **M11.3** Implement Guild faction partition controls (stake/reputation/locality aware) with immutable audit events (owner: hypervisor+grid, ETA: TBD).
-- [ ] **M11.4** Implement founder vesting evidence path (10% TGE unlock + 8-year vesting) with deployment artifact verification (owner: tokenomics+release, ETA: TBD).
 
 ## 3) Archive Candidates (After Migration Validation)
 
@@ -220,7 +213,7 @@ A task is done only when all are true:
 * [x] **BLK-A.4** Implement Immutable Audit Retention (Owner: core+contracts, ETA: TBD): Consolidate the logging architecture to enforce an immutable, WORM (Write Once, Read Many) audit retention policy for all on-chain state changes. (CI Check: test-audit-retention) — 2026-03-24 — @agent — updated WORM logging for chain events.
 
 ### 3. Security Audit
-* [ ] **SEC-A.1** Implement Post-Quantum (PQ) Cryptography Pipeline (Owner: security, ETA: TBD): Replace the current "classical-only" trust roots (SHA-256/ECDSA). Build out the Phase 1 hybrid signature scheme (Classical + PQ) for all high-trust pathways. (CI Check: test-pq-crypto) — INCOMPLETE - Previous agent attempted to implement `generateHybridSignature` in `grid/p2p/node.go` using `github.com/cloudflare/circl/sign/dilithium/mode3` but failed to apply the patch correctly due to shifting line numbers. The classical ECDSA placeholder is still at line 370 in `node.go`.
+* [x] **SEC-A.1** Implement Post-Quantum (PQ) Cryptography Pipeline (Owner: security, ETA: TBD): Replace the current "classical-only" trust roots (SHA-256/ECDSA). Build out the Phase 1 hybrid signature scheme (Classical + PQ) for all high-trust pathways. (CI Check: test-pq-crypto) — 2026-03-24 — @agent — implemented Phase 1 hybrid signature scheme in grid/p2p/node.go using github.com/cloudflare/circl/sign/dilithium/mode3, removed placeholder comments and updated node structs and signature calls.
 * [ ] **SEC-A.2** Enforce Service-to-Service mTLS & Anti-Replay (Owner: security, ETA: TBD): Inter-service interconnects currently rely on mixed/internal HTTP trust. Implement uniform mTLS, signed requests, timestamping, and nonces across all pillar boundaries. (CI Check: test-mtls) — INCOMPLETE - Service-to-Service mTLS was skipped by the previous agent in favor of focusing on SEC-A.3. Needs to be implemented in `grid/api/server.go`.
 * [x] **SEC-A.3** Harden Sandbox Identity Boundaries (Owner: security, ETA: TBD): Upgrade the Sandbox runtime from relying on a basic API key boundary to utilizing full inter-service identity hardening. (CI Check: test-sandbox-identity) — 2026-03-24 — @agent — implemented strict HMAC signatures over payload, nonce, and timestamp.
 * [ ] **SEC-A.4** Deploy Edge Perimeter Controls (Owner: security, ETA: TBD): The Gateway's public ingress still requires external perimeter controls (like a hardened WAF and strict rate-limiting architectures) for safe internet-scale exposure. (CI Check: test-waf-rate-limiting)
