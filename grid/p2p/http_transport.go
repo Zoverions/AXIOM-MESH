@@ -2,12 +2,22 @@ package p2p
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/axiom-mesh/grid/types"
+	"github.com/google/uuid"
 )
 
 type HTTPTransport struct {
@@ -15,11 +25,96 @@ type HTTPTransport struct {
 }
 
 func NewHTTPTransport() *HTTPTransport {
+	certsDir := os.Getenv("CERTS_DIR")
+	if certsDir == "" {
+		certsDir = "certs"
+		if _, err := os.Stat(certsDir); os.IsNotExist(err) {
+			certsDir = "../certs"
+			if _, err := os.Stat(certsDir); os.IsNotExist(err) {
+				certsDir = "../../certs"
+			}
+		}
+	}
+
+	certFile := filepath.Join(certsDir, "grid.crt")
+	keyFile := filepath.Join(certsDir, "grid.key")
+	caFile := filepath.Join(certsDir, "ca.crt")
+
+	if _, err := os.Stat(certFile); os.IsNotExist(err) {
+		log.Fatalf("mTLS certs not found in %s. mTLS is mandatory for security.", certsDir)
+	}
+
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		log.Fatalf("Failed to load key pair: %v", err)
+	}
+
+	caCert, err := ioutil.ReadFile(caFile)
+	if err != nil {
+		log.Fatalf("Failed to read CA cert: %v", err)
+	}
+
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      caCertPool,
+	}
+
 	return &HTTPTransport{
 		client: &http.Client{
 			Timeout: 10 * time.Second,
+			Transport: &http.Transport{
+				TLSClientConfig: tlsConfig,
+			},
 		},
 	}
+}
+
+func (t *HTTPTransport) BuildSignedHeaders(req *http.Request, payload []byte) error {
+	apiKey := os.Getenv("HYPERVISOR_API_KEY")
+	if apiKey == "" {
+		return fmt.Errorf("HYPERVISOR_API_KEY not configured")
+	}
+
+	timestamp := fmt.Sprintf("%d", time.Now().UnixNano()/int64(time.Millisecond))
+	nonce := uuid.New().String()
+
+	req.Header.Set("X-Axiom-Timestamp", timestamp)
+	req.Header.Set("X-Axiom-Nonce", nonce)
+
+	payloadStr := fmt.Sprintf("%s:%s:%s", timestamp, nonce, string(payload))
+	mac := hmac.New(sha256.New, []byte(apiKey))
+	mac.Write([]byte(payloadStr))
+	signature := hex.EncodeToString(mac.Sum(nil))
+
+	req.Header.Set("X-Axiom-Signature", signature)
+	return nil
+}
+
+func (t *HTTPTransport) postWithAuth(url string, payload []byte) (*http.Response, error) {
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if err := t.BuildSignedHeaders(req, payload); err != nil {
+		return nil, err
+	}
+	return t.client.Do(req)
+}
+
+func (t *HTTPTransport) getWithAuth(url string) (*http.Response, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	// For GET requests, the payload is an empty string
+	if err := t.BuildSignedHeaders(req, []byte("")); err != nil {
+		return nil, err
+	}
+	return t.client.Do(req)
 }
 
 func (t *HTTPTransport) SendCCIPMessage(addr string, msg types.CCIPMessage) error {
@@ -27,7 +122,7 @@ func (t *HTTPTransport) SendCCIPMessage(addr string, msg types.CCIPMessage) erro
 	if err != nil {
 		return fmt.Errorf("failed to marshal ccip message: %w", err)
 	}
-	resp, err := t.client.Post(addr+"/ccip?sync=true", "application/json", bytes.NewBuffer(data))
+	resp, err := t.postWithAuth(addr+"/ccip?sync=true", data)
 	if err != nil {
 		return fmt.Errorf("failed to send ccip message to %s: %w", addr, err)
 	}
@@ -41,7 +136,7 @@ func (t *HTTPTransport) SendCCIPMessage(addr string, msg types.CCIPMessage) erro
 }
 
 func (t *HTTPTransport) FetchCCIPMessages(addr string) ([]types.CCIPMessage, error) {
-	resp, err := t.client.Get(addr + "/ccip")
+	resp, err := t.getWithAuth(addr + "/ccip")
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch ccip messages from %s: %w", addr, err)
 	}
@@ -53,7 +148,6 @@ func (t *HTTPTransport) FetchCCIPMessages(addr string) ([]types.CCIPMessage, err
 
 	var msgs []types.CCIPMessage
 	if err := json.NewDecoder(resp.Body).Decode(&msgs); err != nil {
-		// Handle the case where the endpoint might return a single message or an error format
 		return nil, fmt.Errorf("failed to decode ccip messages: %w", err)
 	}
 
@@ -65,7 +159,7 @@ func (t *HTTPTransport) SendSwarm(addr string, msg types.Swarm) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal swarm message: %w", err)
 	}
-	resp, err := t.client.Post(addr+"/swarm?sync=true", "application/json", bytes.NewBuffer(data))
+	resp, err := t.postWithAuth(addr+"/swarm?sync=true", data)
 	if err != nil {
 		return fmt.Errorf("failed to send swarm message to %s: %w", addr, err)
 	}
@@ -79,7 +173,7 @@ func (t *HTTPTransport) SendSwarm(addr string, msg types.Swarm) error {
 }
 
 func (t *HTTPTransport) FetchSwarms(addr string) ([]types.Swarm, error) {
-	resp, err := t.client.Get(addr + "/swarm")
+	resp, err := t.getWithAuth(addr + "/swarm")
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch swarms from %s: %w", addr, err)
 	}
@@ -102,7 +196,7 @@ func (t *HTTPTransport) SendCRDTShard(addr string, shard types.CRDTShard) error 
 	if err != nil {
 		return fmt.Errorf("failed to marshal crdt shard: %w", err)
 	}
-	resp, err := t.client.Post(addr+"/crdt/shard?sync=true", "application/json", bytes.NewBuffer(data))
+	resp, err := t.postWithAuth(addr+"/crdt/shard?sync=true", data)
 	if err != nil {
 		return fmt.Errorf("failed to send crdt shard to %s: %w", addr, err)
 	}
@@ -116,7 +210,7 @@ func (t *HTTPTransport) SendCRDTShard(addr string, shard types.CRDTShard) error 
 
 func (t *HTTPTransport) FetchCRDTShards(addr string, since uint64) ([]types.CRDTShard, error) {
 	url := fmt.Sprintf("%s/crdt/shard?since=%d", addr, since)
-	resp, err := t.client.Get(url)
+	resp, err := t.getWithAuth(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch crdt shards from %s: %w", addr, err)
 	}
@@ -138,7 +232,7 @@ func (t *HTTPTransport) SendDriftReport(addr string, report types.DriftReport) e
 	if err != nil {
 		return fmt.Errorf("failed to marshal drift report: %w", err)
 	}
-	resp, err := t.client.Post(addr+"/drift/report?sync=true", "application/json", bytes.NewBuffer(data))
+	resp, err := t.postWithAuth(addr+"/drift/report?sync=true", data)
 	if err != nil {
 		return fmt.Errorf("failed to send drift report to %s: %w", addr, err)
 	}
@@ -152,7 +246,7 @@ func (t *HTTPTransport) SendDriftReport(addr string, report types.DriftReport) e
 
 func (t *HTTPTransport) FetchDriftReports(addr string, since uint64) ([]types.DriftReport, error) {
 	url := fmt.Sprintf("%s/drift/report?since=%d", addr, since)
-	resp, err := t.client.Get(url)
+	resp, err := t.getWithAuth(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch drift reports from %s: %w", addr, err)
 	}

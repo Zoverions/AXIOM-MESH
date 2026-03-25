@@ -288,31 +288,10 @@ func (n *Node) snapshotPeers() []PeerInfo {
 func (n *Node) BroadcastGraphUpdate(node types.GraphNode, edges []types.GraphEdge) {
 	peers := n.snapshotPeers()
 	for _, peer := range peers {
-		wsURL := strings.Replace(peer.Address, "https://", "wss://", 1) + "/ws/graph"
+		wsURL := strings.Replace(peer.Address, "http://", "ws://", 1) + "/ws/graph"
 		go func(pID, urlStr string) {
 			err := sendWithBackoff(func() error {
-
-				// Setup TLS dialer since mTLS is enabled
-				dialer := &websocket.Dialer{
-					Proxy:            http.ProxyFromEnvironment,
-					HandshakeTimeout: 45 * time.Second,
-				}
-				if transport, ok := n.Transport.(*HTTPTransport); ok {
-					if transport.client.Transport != nil {
-						if httpTransport, ok := transport.client.Transport.(*http.Transport); ok {
-							dialer.TLSClientConfig = httpTransport.TLSClientConfig
-						}
-					}
-				}
-
-				// Create header
-				header := make(http.Header)
-				httpReq, _ := http.NewRequest("GET", urlStr, nil)
-				if transport, ok := n.Transport.(*HTTPTransport); ok {
-				    transport.BuildSignedHeaders(httpReq, []byte(""))
-				    header = httpReq.Header
-				}
-				c, _, err := dialer.Dial(urlStr, header)
+				c, _, err := websocket.DefaultDialer.Dial(urlStr, nil)
 				if err != nil {
 					return fmt.Errorf("dial: %w", err)
 				}
@@ -361,28 +340,11 @@ func (n *Node) BroadcastWebState(state types.WebState) {
 		go func(pID, addr string) {
 			err := sendWithBackoff(func() error {
 				data, _ := json.Marshal(state)
-				req, err := http.NewRequest("POST", addr+"/cache?sync=true", bytes.NewBuffer(data))
-				if err != nil {
-					return err
-				}
-				req.Header.Set("Content-Type", "application/json")
-				var resp *http.Response
-				if transport, ok := n.Transport.(*HTTPTransport); ok {
-					if err := transport.BuildSignedHeaders(req, data); err != nil {
-						return err
-					}
-					resp, err = transport.client.Do(req)
-				} else {
-					resp, err = http.DefaultClient.Do(req)
-				}
+				resp, err := http.Post(addr+"/cache?sync=true", "application/json", bytes.NewBuffer(data))
 				if err != nil {
 					return err
 				}
 				defer resp.Body.Close()
-				if err != nil {
-					return err
-				}
-
 				if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 					return fmt.Errorf("status code %d", resp.StatusCode)
 				}
@@ -503,33 +465,12 @@ func (n *Node) QueryNetwork(query string, proof string) []PeerQueryResult {
 
 	for _, peer := range peers {
 		wg.Add(1)
-		wsURL := strings.Replace(peer.Address, "https://", "wss://", 1) + "/ws/graph"
+		wsURL := strings.Replace(peer.Address, "http://", "ws://", 1) + "/ws/graph"
 		go func(pID, urlStr string) {
 			defer wg.Done()
 			var peerNodes []PeerQueryResult
 			err := sendWithBackoff(func() error {
-
-				// Setup TLS dialer since mTLS is enabled
-				dialer := &websocket.Dialer{
-					Proxy:            http.ProxyFromEnvironment,
-					HandshakeTimeout: 45 * time.Second,
-				}
-				if transport, ok := n.Transport.(*HTTPTransport); ok {
-					if transport.client.Transport != nil {
-						if httpTransport, ok := transport.client.Transport.(*http.Transport); ok {
-							dialer.TLSClientConfig = httpTransport.TLSClientConfig
-						}
-					}
-				}
-
-				// Create header
-				header := make(http.Header)
-				httpReq, _ := http.NewRequest("GET", urlStr, nil)
-				if transport, ok := n.Transport.(*HTTPTransport); ok {
-				    transport.BuildSignedHeaders(httpReq, []byte(""))
-				    header = httpReq.Header
-				}
-				c, _, err := dialer.Dial(urlStr, header)
+				c, _, err := websocket.DefaultDialer.Dial(urlStr, nil)
 				if err != nil {
 					return err
 				}
@@ -599,7 +540,7 @@ func (n *Node) listenForPeers() {
 		}
 		peerID := string(buf[:nBytes])
 		if peerID != n.ID {
-			n.AddPeer(peerID, fmt.Sprintf("https://%s:5000", remoteAddr.IP.String()))
+			n.AddPeer(peerID, fmt.Sprintf("http://%s:5000", remoteAddr.IP.String()))
 		}
 	}
 }
@@ -719,28 +660,11 @@ func (n *Node) gossipManifest(manifest types.CapabilityManifest, sourceNodeID st
 				if err != nil {
 					return err
 				}
-				req, err := http.NewRequest("POST", addr+"/peers/manifests", bytes.NewBuffer(data))
-				if err != nil {
-					return err
-				}
-				req.Header.Set("Content-Type", "application/json")
-				var resp *http.Response
-				if transport, ok := n.Transport.(*HTTPTransport); ok {
-					if err := transport.BuildSignedHeaders(req, data); err != nil {
-						return err
-					}
-					resp, err = transport.client.Do(req)
-				} else {
-					resp, err = http.DefaultClient.Do(req)
-				}
+				resp, err := http.Post(addr+"/peers/manifests", "application/json", bytes.NewBuffer(data))
 				if err != nil {
 					return err
 				}
 				defer resp.Body.Close()
-				if err != nil {
-					return err
-				}
-
 				if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 					return fmt.Errorf("status code %d", resp.StatusCode)
 				}
@@ -851,28 +775,11 @@ func (n *Node) gossipProfile(profile types.NodeCapabilityProfile, sourceNodeID s
 				if err != nil {
 					return err
 				}
-				req, err := http.NewRequest("POST", addr+"/peers/profiles?sync=true", bytes.NewBuffer(data))
-				if err != nil {
-					return err
-				}
-				req.Header.Set("Content-Type", "application/json")
-				var resp *http.Response
-				if transport, ok := n.Transport.(*HTTPTransport); ok {
-					if err := transport.BuildSignedHeaders(req, data); err != nil {
-						return err
-					}
-					resp, err = transport.client.Do(req)
-				} else {
-					resp, err = http.DefaultClient.Do(req)
-				}
+				resp, err := http.Post(addr+"/peers/profiles?sync=true", "application/json", bytes.NewBuffer(data))
 				if err != nil {
 					return err
 				}
 				defer resp.Body.Close()
-				if err != nil {
-					return err
-				}
-
 				if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 					return fmt.Errorf("status code %d", resp.StatusCode)
 				}

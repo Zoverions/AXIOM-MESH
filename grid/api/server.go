@@ -1229,7 +1229,13 @@ func (s *Server) Start(addr string) error {
 
 	certsDir := os.Getenv("CERTS_DIR")
 	if certsDir == "" {
-		certsDir = "../certs"
+		certsDir = "certs"
+		if _, err := os.Stat(certsDir); os.IsNotExist(err) {
+			certsDir = "../certs"
+			if _, err := os.Stat(certsDir); os.IsNotExist(err) {
+				certsDir = "../../certs"
+			}
+		}
 	}
 
 	certFile := filepath.Join(certsDir, "grid.crt")
