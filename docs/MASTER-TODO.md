@@ -246,8 +246,8 @@ A task is done only when all are true:
 * [x] **STA-A.2** Finalize Failure-Path Matrices (Owner: ops, ETA: TBD): While initial recovery drills were automated, continuous telemetry and P95 error budget alerts must be wired to automatically trigger degraded-mode playbooks during partial outages. (CI Check: test-telemetry-alerts) — 2026-03-24 — @agent — added telemetry and P95 trigger logic with test
 
 ### 7. Efficiency Audit
-* [ ] **EFF-A.1** Benchmark Hybrid Crypto Overhead (Owner: ops, ETA: TBD): Before moving to PQ-default cryptography, baseline the performance impact of the hybrid signature implementation to ensure it does not degrade the currently efficient classical cryptography throughput. (CI Check: run-crypto-benchmarks)
-* [ ] **EFF-A.2** Optimize Dynamic Resource Protection (Owner: ops, ETA: TBD): Calibrate the adaptive throttling in the Resource Balancer so that foreground-protection modes on shared host machines safely throttle without starving critical Sandbox execution threads. (CI Check: test-resource-throttling)
+* [x] **EFF-A.1** Benchmark Hybrid Crypto Overhead (Owner: ops, ETA: TBD): Before moving to PQ-default cryptography, baseline the performance impact of the hybrid signature implementation to ensure it does not degrade the currently efficient classical cryptography throughput. (CI Check: run-crypto-benchmarks) — 2026-03-25 — @agent — verified
+* [x] **EFF-A.2** Optimize Dynamic Resource Protection (Owner: ops, ETA: TBD): Calibrate the adaptive throttling in the Resource Balancer so that foreground-protection modes on shared host machines safely throttle without starving critical Sandbox execution threads. (CI Check: test-resource-throttling) — 2026-03-25 — @agent — verified
 
 ### 8. Subsystem Known Issues & Feature Backlog
 * [x] **SUB-G.1** Grid: Contract compilation in CI (Hardhat proxy issue) (Owner: core, ETA: TBD) - @agent fixed Solidity explicit type conversions by patching OpenZeppelin 5.0 compatibility in `UniversalDistributionPool.sol` and `AutomatedV3LiquidityManager.sol` by removing the deprecated `__UUPSUpgradeable_init` modifier on 2026-03-24.
