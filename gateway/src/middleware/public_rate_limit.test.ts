@@ -1,11 +1,11 @@
 import { publicIntentRateLimit, resetPublicRateLimitStateForTests } from './public_rate_limit';
 
 describe('publicIntentRateLimit', () => {
-  beforeEach(() => {
-    resetPublicRateLimitStateForTests();
+  beforeEach(async () => {
+    await resetPublicRateLimitStateForTests();
   });
 
-  test('allows requests below limit', () => {
+  test('allows requests below limit', async () => {
     const req: any = { headers: {}, ip: '127.0.0.1' };
     const res: any = {
       setHeader: jest.fn(),
@@ -21,7 +21,7 @@ describe('publicIntentRateLimit', () => {
     expect(res.status).not.toHaveBeenCalled();
   });
 
-  test('returns 429 after exceeding limit', () => {
+  test('returns 429 after exceeding limit', async () => {
     const req: any = { headers: { 'x-forwarded-for': '203.0.113.10' }, ip: '127.0.0.1' };
     const res: any = {
       setHeader: jest.fn(),
@@ -31,7 +31,10 @@ describe('publicIntentRateLimit', () => {
     const next = jest.fn();
 
     publicIntentRateLimit(req, res, next, { windowMs: 10_000, maxRequests: 1 });
+    // Simulate delay to ensure the first request processes if async
+    await new Promise(resolve => setTimeout(resolve, 50));
     publicIntentRateLimit(req, res, next, { windowMs: 10_000, maxRequests: 1 });
+    await new Promise(resolve => setTimeout(resolve, 50));
 
     expect(next).toHaveBeenCalledTimes(1);
     expect(res.status).toHaveBeenCalledWith(429);
