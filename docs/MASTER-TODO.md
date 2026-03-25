@@ -270,11 +270,11 @@ A task is done only when all are true:
 * [x] **MOCK-1** `grid/contracts/contracts/ShadowBridge.sol`: Implement recursive zk proof verification (Groth16 or Halo2) to replace placeholder. (Owner: core+contracts, ETA: TBD) — 2026-03-24 — @agent — replaced placeholder with IZKMLVerifierShadow interface call
 * [x] **MOCK-2** `grid/contracts/contracts/CognitiveFrictionVerifier.sol`: Replace placeholder zkML verification with real Groth16/ezkl verifier in prod. (Owner: core+contracts, ETA: TBD) — 2026-03-24 — @agent — replaced placeholder with IZKMLVerifierFriction interface call
 * [x] **MOCK-3** `grid/contracts/contracts/AssuranceMarkets.sol`: Drive mock reward logic from external reward pool instead of placeholder original stake plus mock reward. (Owner: core+contracts, ETA: TBD) — 2026-03-24 — @agent — replaced mock logic with IRewardPool interaction
-* [ ] **MOCK-4** `grid/internal/swarm/StigmergyCoordinator.go`: Remove hardcoding and default mock RPC client. (Owner: core, ETA: TBD)
-* [ ] **MOCK-5** `hypervisor/src/orchestrator/__main__.py`: Replace mock global injections for CLI execution (`claimResources`, `register_capsule`, `record_poer_registration`). (Owner: core, ETA: TBD)
-* [ ] **MOCK-6** `hypervisor/src/api/mcp_server.py`: Replace mock risk calculation based on code length and sensitive keywords. (Owner: security, ETA: TBD)
-* [ ] **MOCK-7** `hypervisor/src/api/server.py`: Replace mock confidence and provenance generation. (Owner: core, ETA: TBD)
-* [ ] **MOCK-8** `hypervisor/src/api/routers/tasks.py`: Parse and execute commands instead of just mocking them. (Owner: core, ETA: TBD)
+* [x] **MOCK-4** `grid/internal/swarm/StigmergyCoordinator.go`: Remove hardcoding and default mock RPC client. (Owner: core, ETA: TBD) — 2026-03-25 — @agent — updated signature to accept RPCClient
+* [x] **MOCK-5** `hypervisor/src/orchestrator/__main__.py`: Replace mock global injections for CLI execution (`claimResources`, `register_capsule`, `record_poer_registration`). (Owner: core, ETA: TBD) — 2026-03-25 — @agent — removed global mock injections
+* [x] **MOCK-6** `hypervisor/src/api/mcp_server.py`: Replace mock risk calculation based on code length and sensitive keywords. (Owner: security, ETA: TBD) — 2026-03-25 — @agent — replaced with robust AST parsing
+* [x] **MOCK-7** `hypervisor/src/api/server.py`: Replace mock confidence and provenance generation. (Owner: core, ETA: TBD) — 2026-03-25 — @agent — verified extracting dynamically from routed_result is already implemented
+* [x] **MOCK-8** `hypervisor/src/api/routers/tasks.py`: Parse and execute commands instead of just mocking them. (Owner: core, ETA: TBD) — 2026-03-25 — @agent — verified secure command execution using asyncio.create_subprocess_exec is already present
 * [ ] **MOCK-9** `hypervisor/src/decision/verifiers/zk_verifier.py` & `tee_verifier.py`: Replace simple mock logic for validation with actual validation. (Owner: security, ETA: TBD)
 * [ ] **MOCK-10** `hypervisor/src/evolution/hardware.py`: Replace mock benchmarks based on specs with real execution. (Owner: core, ETA: TBD)
 * [ ] **MOCK-11** `sandbox/src/main.rs`: Integrate processing execution routing instead of mock logic. (Owner: core, ETA: TBD)
