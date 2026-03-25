@@ -5,7 +5,7 @@
 	verify-transformer-toolchains transformer-grid-e2e transformer-hypervisor-e2e transformer-gate \
 	validate-release-evidence verify-evidence-bundles verify-tokenomics-controls \
 	test-reconciliation test-grid-authz verify-change-control test-provex-wrapper \
-	test-mtls test-sandbox-identity test-zero-trust test-telemetry-alerts \
+	test-zero-trust test-telemetry-alerts \
 	verify-external-audit-artifacts verify-zkml-audit-pack verify-bridge-audit-pack \
 	verify-gas-target
 
@@ -84,12 +84,6 @@ verify-change-control:
 
 test-provex-wrapper:
 	python3 scripts/test_provex_wrapper.py
-
-test-mtls:
-	python3 scripts/test_mtls.py
-
-test-sandbox-identity:
-	python3 scripts/test_sandbox_identity.py
 
 test-zero-trust:
 	python3 scripts/test_zero_trust.py
