@@ -3,6 +3,8 @@ import asyncio
 from typing import Dict, List, Optional
 from dataclasses import dataclass
 from src.memory.archive import DistributedDeepArchive
+from src.immune.quarantine_sandbox import QuarantineSandboxManager
+from src.immune.antibody_generator import EpistemicAntibodyGenerator
 
 class CognitiveThrashingError(Exception):
     """Raised when LLM shows high confusion/thrashing that can be rescued with more context."""
@@ -28,7 +30,6 @@ class CoTAuditor:
         self.entropy_loop_patterns = [
             re.compile(r'(?i)(let me think|reconsider|loop|repeat the process)'),
         ]
-        self.archive = DeepArchive()
 
         # === NEW: EPISTEMIC EMOTION TRACKING ===
         self.epistemic_state: Dict = {
@@ -52,13 +53,17 @@ class CoTAuditor:
 
         # DeepArchive instance for topoi graph retrieval
         self.archive = DistributedDeepArchive()
+        self.quarantine_manager = QuarantineSandboxManager()
+        self.antibody_generator = EpistemicAntibodyGenerator(latent_dim=16)
 
     def _scan_friction_flags(self, cot_text: str) -> AuditResult:
         """Upgraded scanner with epistemic emotion analysis."""
-        # Original security scans (hard kill)
+        # Original security scans now trigger topological quarantine + antibody generation.
         for pattern in self.malicious_patterns:
             if pattern.search(cot_text):
-                return AuditResult(False, "Malicious intent detected - hard kill", self.epistemic_state)
+                reason = "Malicious intent detected"
+                protocol_state = self._run_epistemic_antibody_protocol(cot_text, reason)
+                return AuditResult(False, "Topological quarantine activated", protocol_state)
 
         # NEW Epistemic analysis
         confusion_count = sum(1 for p in self.confusion_phrases if re.search(p, cot_text))
@@ -92,6 +97,30 @@ class CoTAuditor:
                 return AuditResult(False, "Entropy loop detected", self.epistemic_state)
 
         return AuditResult(True, "CoT appears safe and epistemically balanced", self.epistemic_state)
+
+    def _run_epistemic_antibody_protocol(self, cot_text: str, reason: str) -> Dict:
+        artifact = self.quarantine_manager.fork_namespace(
+            reason=reason,
+            payload={
+                "cot_excerpt": cot_text[:600],
+                "entropy_level": self.epistemic_state.get("entropy_level", 0.0),
+                "confusion_markers": self.epistemic_state.get("confusion_markers", 0),
+            }
+        )
+        trajectory = self.antibody_generator.extract_latent_trajectory(cot_text)
+        antibody = self.antibody_generator.generate_antibody(trajectory)
+        confidence = self.antibody_generator.estimate_neutralization_confidence(trajectory, antibody)
+        antibody_id = self.quarantine_manager.broadcast_antibody(
+            namespace_id=artifact.namespace_id,
+            antibody_vector=antibody,
+            confidence=confidence
+        )
+
+        self.epistemic_state["quarantine_namespace"] = artifact.namespace_id
+        self.epistemic_state["antibody_id"] = antibody_id
+        self.epistemic_state["antibody_confidence"] = confidence
+        self.epistemic_state["protocol"] = "EAP-v1"
+        return self.epistemic_state
 
     async def monitor_cot(self, cot_stream: str, max_iterations: int = 50) -> AuditResult:
         """Main monitoring loop with rescue mechanism."""

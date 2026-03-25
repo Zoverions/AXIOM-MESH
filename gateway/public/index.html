@@ -29,6 +29,7 @@
                 <button class="nav-btn" data-target="tester">Intentionality Tester</button>
                 <a href="network.html" class="nav-btn" style="display: block; text-decoration: none; color: inherit;">Grid Mesh Nodes</a>
                 <button class="nav-btn" data-target="cockpit">Operator Cockpit</button>
+                <button class="nav-btn" data-target="innovation">Innovation Lab</button>
                 <button class="nav-btn" data-target="settings">Settings / Config</button>
                 <button class="nav-btn" data-target="logs">Logs & Troubleshooting</button>
             </nav>
@@ -148,6 +149,36 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </section>
+
+            <!-- Innovation Tab -->
+            <section id="innovation" class="tab-content">
+                <h2>Innovation Lab — Frontier Feature Synthesizer</h2>
+                <p style="color: #aaa; max-width: 900px;">
+                    Generate a cutting-edge feature blueprint by combining advanced primitives across intelligence, trust, and network orchestration.
+                </p>
+
+                <div class="innovation-controls">
+                    <div class="form-group">
+                        <label for="innovation-goal">Strategic Goal</label>
+                        <input type="text" id="innovation-goal" placeholder="e.g., autonomous defense, decentralized memory economy">
+                    </div>
+                    <div class="form-group">
+                        <label for="innovation-risk">Risk Tolerance</label>
+                        <select id="innovation-risk">
+                            <option value="bold">Bold</option>
+                            <option value="balanced" selected>Balanced</option>
+                            <option value="conservative">Conservative</option>
+                        </select>
+                    </div>
+                    <button id="generate-innovation-btn">Generate Novel Feature</button>
+                </div>
+
+                <div class="card innovation-output-card" style="text-align: left; margin-top: 16px;">
+                    <h3 style="color: var(--accent);">Generated Concept</h3>
+                    <pre id="innovation-output">Press "Generate Novel Feature" to synthesize a new roadmap-ready idea.</pre>
+                    <button id="inject-innovation-to-chat-btn" style="margin-top: 12px;">Send Blueprint to Chat</button>
                 </div>
             </section>
 

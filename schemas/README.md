@@ -14,6 +14,7 @@ This directory contains versioned JSON Schema definitions that define the contra
 * `SourceDescriptor` (Ingestion pipeline -> Compiler): Captures upstream provenance, immutable source refs, and declared authority for external skills.
 * `RebuildAttestation` (Compiler -> Governance/Audit): Records rewrite/rebuild actions and security rationale for Mesh re-issuance.
 * `CapabilityManifest` (Node -> Grid): Hardware-aware capability and benchmark profile for dynamic routing.
+* `CausalReasoningAttestation` (Hypervisor/Grid -> Verifier): Binds inference outputs to an auditable causal DAG, consensus context, and proof bundle for CPoR verification.
 
 ## Versioning
 These schemas are versioned. Each schema has a `$schema` and `id` representing its version. For example: `intent_object.v1.json`.
