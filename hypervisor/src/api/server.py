@@ -212,6 +212,7 @@ security = HTTPBearer()
 
 def validate_causal_reasoning_attestation(payload: dict) -> tuple[bool, list[str]]:
     """
+    M11.3: Emits mismatch taxonomy for dry-run validation.
     Performs fail-closed structural validation for CPoR payloads.
     This is intentionally strict and returns all discovered mismatches.
     """
@@ -935,8 +936,8 @@ async def zkml_infer(input_data: dict):
 @app.post("/verify/reasoning")
 async def verify_reasoning_attestation(input_data: dict, api_key: str = Depends(verify_api_key)):
     """
-    CPoR verification endpoint (dry-run phase).
-    Validates reasoning attestation structure and returns mismatch taxonomy.
+    M11.3: Add Hypervisor /verify/reasoning endpoint in dry-run mode that validates attestation payloads and emits mismatch taxonomy.
+    This CPoR verification endpoint evaluates reasoning attestation structure.
     """
     is_valid, mismatches = validate_causal_reasoning_attestation(input_data)
     verdict = "accepted" if is_valid else "rejected"
