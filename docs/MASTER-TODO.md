@@ -184,6 +184,15 @@ Detailed references:
 - [ ] **M11.7** Publish threat model + test harness for coordinated-behavior attack simulations and rollback/quarantine playbooks (owner: security+ops, ETA: TBD).
 
 
+## Lane M13 — Comprehensive System Extensions (Audit Response)
+**Goal:** Deliver expanded agent-centric structures, education platforms, payroll mirroring, credentialed submissions, and dashboard interfaces.
+
+- [x] **M13.1** Update `docs/MASTER-TODO.md` and create subtask documentation (`EDUCATION-CAPSULE.md`, `PAYROLL-INTEGRATION.md`, `SUBMISSION-STRUCTURES.md`, `DASHBOARD-INTERFACES.md`). — 2026-03-25 — @agent
+- [x] **M13.2** Implement Stablecoin Payroll Contract (`StablecoinPayroll.sol`) mirroring existing payroll intervals. — 2026-03-25 — @agent
+- [x] **M13.3** Implement Credentialed Submission Structure (`CredentialedSubmission.sol`) gating document/resource submission by skill/trust score. — 2026-03-25 — @agent
+- [x] **M13.4** Enhance Education Skill Capsule Structure (`education_tome`), incorporating childhood psychologist, guidance counselor, and expert sub-agents. — 2026-03-25 — @agent
+- [x] **M13.5** Build Information Dashboard & Trust Score Interfaces in the Gateway (`gateway/src/routes/dashboard.ts`). — 2026-03-25 — @agent
+
 ## Lane M12 — Architecture Review Remediation (Pre-Mainnet)
 - [ ] **M12.1** Create **AXIOM-MESH Core Loop Contract** document + test suite (Intent -> Plan -> Capability Manifest -> Sandbox Execution -> Attestation (Grid) -> Response Shaping) (Owner: core).
 - [ ] **M12.2** Add **Grid Scope Firewall** doc + tests: Grid rejects unsigned manifests, cannot initiate execution, and only accepts proof-carrying artifacts. (Owner: core+grid).
