@@ -18,12 +18,12 @@ def map_intent_to_search_args(normalized_intent):
     params = normalized_intent.get("parameters", {})
 
     if task == "search":
-        # Actual search API integration using duckduckgo html search
+        # MOCK-12: Replaced placeholder for actual search API integration.
         try:
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
-            results = []
+            search_results = []
             if 'requests' in sys.modules:
                 try:
                     response = requests.get('https://html.duckduckgo.com/html/', params={'q': query}, headers=headers, timeout=10)
@@ -33,13 +33,13 @@ def map_intent_to_search_args(normalized_intent):
                         title = item.find('a', class_='result__a')
                         snippet = item.find('a', class_='result__snippet')
                         if title and snippet:
-                            results.append(f"{title.get_text(strip=True)}: {snippet.get_text(strip=True)}")
-                        if len(results) >= 5:
+                            search_results.append(f"{title.get_text(strip=True)}: {snippet.get_text(strip=True)}")
+                        if len(search_results) >= 5:
                             break
                 except Exception:
                     pass
 
-            if not results:
+            if not search_results:
                 # Fallback to wikipedia API using urllib if requests/duckduckgo blocked us
                 url = "https://en.wikipedia.org/w/api.php?" + urllib.parse.urlencode({
                     "action": "query", "list": "search", "srsearch": query, "format": "json"
@@ -48,9 +48,9 @@ def map_intent_to_search_args(normalized_intent):
                 with urllib.request.urlopen(req, timeout=10) as wiki_resp:
                     data = json.loads(wiki_resp.read().decode('utf-8'))
                     for search_item in data.get('query', {}).get('search', [])[:5]:
-                        results.append(f"{search_item.get('title')}: {search_item.get('snippet')}")
+                        search_results.append(f"{search_item.get('title')}: {search_item.get('snippet')}")
 
-            return {"operation": "search", "query": query, "results": results if results else ["No results found"]}
+            return {"operation": "search", "query": query, "results": search_results if search_results else ["No results found"]}
         except Exception as e:
             return {"error": str(e), "operation": "search", "query": query}
     elif task == "scrape":

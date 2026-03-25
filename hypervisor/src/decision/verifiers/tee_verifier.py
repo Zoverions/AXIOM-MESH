@@ -12,12 +12,7 @@ class TEEVerifier:
         if not quote:
             return False
 
-        # Keep existing mock logic for simple test compatibility
-        if quote == "valid_quote" and registry_keys.get("trusted", False):
-            return True
-        if quote == "invalid_quote" or quote == "valid_quote":
-            return False
-
+        # MOCK-9: Replaced simple mock logic for validation with actual validation.
         try:
             # Assume quote is a JSON string containing 'payload' and 'signature'
             data = json.loads(quote)
@@ -35,6 +30,6 @@ class TEEVerifier:
             # Use SHA256 for the hash function
             is_valid = vk.verify(signature, payload.encode('utf-8'), hashfunc=hashlib.sha256)
             return is_valid
-        except (ValueError, BadSignatureError, json.JSONDecodeError, KeyError) as e:
+        except Exception as e:
             print(f"[TEEVerifier] Verification error: {e}")
             return False

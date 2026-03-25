@@ -13,12 +13,7 @@ class ZKProofVerifier:
         if not proof:
             return False
 
-        # Keep existing mock logic for simple test compatibility
-        if proof == "valid_proof" and registry_keys.get("trusted", False):
-            return True
-        if proof == "invalid_proof" or proof == "valid_proof":
-            return False
-
+        # MOCK-9: Replaced simple mock logic for validation with actual validation.
         try:
             # Assume proof is a JSON string with 'proof', 'vk', 'settings'
             data = json.loads(proof)
