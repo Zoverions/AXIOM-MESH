@@ -164,7 +164,7 @@ Detailed references:
 **Goal:** deliver deployable governance guild templates (federal/provincial/municipal/citizen), SSI-first identity, and consented service migration patterns.
 
 - [ ] **M10.1** Guild template contracts + hierarchical DAO structure with canonical parent-child policy inheritance (owner: contracts+governance, ETA: TBD).
-- [ ] **M10.2** SSI technical implementation: DID registry + consent receipts + citizen vault interface with ZK selective disclosure checks (owner: grid+hypervisor, ETA: TBD).
+- [x] **M10.2** SSI technical implementation: DID registry + consent receipts + citizen vault interface with ZK selective disclosure checks (owner: grid+hypervisor, ETA: TBD). (implemented via SSIRegistry contract, grid endpoints, and hypervisor policy hooks)
 - [ ] **M10.3** Pre-built government service agents + citizen digital entity SDK (owner: hypervisor+sandbox, ETA: TBD).
 - [ ] **M10.4** Governance closure simulator and statute-policy encoding harness (owner: governance+research, ETA: TBD).
 - [ ] **M10.5** End-to-end pilot: Ontario Health Guild migration demo with testnet evidence and revocation/fail-closed tests (owner: cross-team, ETA: TBD).
