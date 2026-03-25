@@ -309,3 +309,8 @@ async def bridge_qdao_proposal(proposal_description: str, is_strategic: bool, au
         "proposal_id": proposal_id,
         "transaction_receipt": audit_log
     }
+
+if __name__ == "__main__":
+    # SUB-H.2 Hypervisor: MCP server implementation (planned for 8081)
+    # Standalone FastMCP server exposed on port 8081 for dedicated MCP traffic
+    mcp_server.run(transport="http", host="0.0.0.0", port=8081)
