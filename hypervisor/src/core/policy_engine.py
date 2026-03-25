@@ -57,6 +57,25 @@ class PolicyEngine:
                 if not decisions["privacy_level_valid"]:
                     return False, decisions, f"Violation of policy: privacy level {intent_privacy} not in {required_privacy}"
 
+        # M10.2 explicit consent TTL and purpose limitations
+        import time
+        consent_expiry = metadata.get("consent_expiry")
+        if consent_expiry is not None:
+            try:
+                expiry_val = float(consent_expiry)
+                decisions["consent_expired"] = time.time() > expiry_val
+            except (ValueError, TypeError):
+                decisions["consent_expired"] = True # Fail-closed on malformed expiry
+        else:
+            decisions["consent_expired"] = False
+
+        required_purpose = self.rules.get("properties", {}).get("consent", {}).get("properties", {}).get("purpose", {}).get("enum", [])
+        intent_purpose = metadata.get("purpose_code")
+        if required_purpose and intent_purpose is not None:
+            decisions["purpose_valid"] = intent_purpose in required_purpose
+        else:
+            decisions["purpose_valid"] = True
+
         # Consolidate decisions
         if not decisions["content_length_ok"]:
             return False, decisions, f"Input too long (max {max_len} chars)"
@@ -64,6 +83,12 @@ class PolicyEngine:
             return False, decisions, "Missing required consent_scope metadata for UCP compliance"
         if not decisions["consent_scope_valid"]:
             return False, decisions, "Invalid consent_scope value"
+        if consent_scope == "revoked":
+            return False, decisions, "Emergency Revoke: consent scope is strictly revoked"
+        if decisions.get("consent_expired", False):
+            return False, decisions, "Consent expired"
+        if not decisions.get("purpose_valid", True):
+            return False, decisions, "Purpose limitation violation: overbroad scope request"
         if not decisions["exec_requires_allowed_consent"]:
             return False, decisions, "Code execution requires consent_scope=allowed"
 
