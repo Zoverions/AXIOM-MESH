@@ -1,3 +1,4 @@
+@0xd30d07ce540e009c;
 enum Modality {
   text @0;
   latentVector @1;
