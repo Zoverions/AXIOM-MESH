@@ -123,12 +123,36 @@ fn main() {
 
     enforce_policy(&policy);
 
-    // Mock processing execution routing
-    if args.contains(&"--prove-ezkl".to_string()) {
-        let _ = run_ezkl_prover("model.onnx", "input.json");
-    } else if args.contains(&"--prove-risc0".to_string()) {
-        let _ = run_risc_zero_prover("method.elf", "input.json");
-    } else if args.contains(&"--run-tee".to_string()) {
-        let _ = run_tee_enclave("payload.bin", "input.json");
+    // MOCK-11: Integrated processing execution routing instead of mock logic.
+    // Extract actual dynamic arguments (model_path, elf_path, app_path, and input_data) from CLI args.
+    let input_idx = args.iter().position(|r| r == "--input").unwrap_or(0);
+    let input_data: &str = if input_idx > 0 && input_idx + 1 < args.len() {
+        &args[input_idx + 1]
+    } else {
+        "input.json"
+    };
+
+    if let Some(idx) = args.iter().position(|r| r == "--prove-ezkl") {
+        let model_path: &str = if idx + 1 < args.len() && args[idx + 1] != "--input" { &args[idx + 1] } else { "model.onnx" };
+        match run_ezkl_prover(model_path, input_data) {
+            Ok(res) => println!("EZKL prover execution routed successfully: {}", res),
+            Err(e) => eprintln!("EZKL prover routing error: {}", e),
+        }
+    }
+
+    if let Some(idx) = args.iter().position(|r| r == "--prove-risc0") {
+        let elf_path: &str = if idx + 1 < args.len() && args[idx + 1] != "--input" { &args[idx + 1] } else { "method.elf" };
+        match run_risc_zero_prover(elf_path, input_data) {
+            Ok(res) => println!("RISC Zero prover execution routed successfully: {}", res),
+            Err(e) => eprintln!("RISC Zero prover routing error: {}", e),
+        }
+    }
+
+    if let Some(idx) = args.iter().position(|r| r == "--run-tee") {
+        let app_path: &str = if idx + 1 < args.len() && args[idx + 1] != "--input" { &args[idx + 1] } else { "payload.bin" };
+        match run_tee_enclave(app_path, input_data) {
+            Ok(res) => println!("TEE enclave execution routed successfully: {}", res),
+            Err(e) => eprintln!("TEE enclave routing error: {}", e),
+        }
     }
 }

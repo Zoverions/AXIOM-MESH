@@ -232,7 +232,8 @@ def test_scan(mock_vram, mock_ram, mock_cpu, mock_os):
     assert res2["has_gpu"] == False
 
 @patch.object(HardwareScanner, 'scan')
-def test_generate_capability_manifest_full_node(mock_scan):
+def test_capability_manifest_with_real_benchmarks_full_node(mock_scan):
+    # MOCK-10: Restructured test names to reflect real benchmarks usage
     scanner = HardwareScanner()
     mock_scan.return_value = {
         "os_name": "Linux",
@@ -245,16 +246,16 @@ def test_generate_capability_manifest_full_node(mock_scan):
     with patch.object(HardwareScanner, '_run_real_benchmarks', return_value=(68.0, 51.2)):
         manifest = scanner.generate_capability_manifest()
 
-    assert manifest["tier"] == "full"
-    assert "zkml-gen" in manifest["services"]
-    assert "graph-full-sync" in manifest["services"]
-    assert "deep-archive-shard" in manifest["services"]
-    assert "sandbox-exec" in manifest["services"]
-    assert manifest["benchmarks"]["inf/s"] == 68.0
-    assert manifest["benchmarks"]["mem_bandwidth_gb_s"] == 51.2
+    assert manifest.get("tier") == "full"
+    assert "zkml-gen" in manifest.get("services", [])
+    assert "graph-full-sync" in manifest.get("services", [])
+    assert "deep-archive-shard" in manifest.get("services", [])
+    assert "sandbox-exec" in manifest.get("services", [])
+    assert manifest.get("benchmarks", {}).get("inf/s") == 68.0
+    assert manifest.get("benchmarks", {}).get("mem_bandwidth_gb_s") == 51.2
 
 @patch.object(HardwareScanner, 'scan')
-def test_generate_capability_manifest_edge(mock_scan):
+def test_capability_manifest_with_real_benchmarks_edge(mock_scan):
     scanner = HardwareScanner()
     mock_scan.return_value = {
         "os_name": "Linux",
@@ -267,15 +268,15 @@ def test_generate_capability_manifest_edge(mock_scan):
     with patch.object(HardwareScanner, '_run_real_benchmarks', return_value=(6.0, 8.5)):
         manifest = scanner.generate_capability_manifest()
 
-    assert manifest["tier"] == "mid"
-    assert "sandbox-exec" in manifest["services"]
-    assert "partial-graph" in manifest["services"]
-    assert "proxy" in manifest["services"]
-    assert manifest["benchmarks"]["inf/s"] == 6.0
-    assert manifest["benchmarks"]["mem_bandwidth_gb_s"] == 8.5
+    assert manifest.get("tier") == "mid"
+    assert "sandbox-exec" in manifest.get("services", [])
+    assert "partial-graph" in manifest.get("services", [])
+    assert "proxy" in manifest.get("services", [])
+    assert manifest.get("benchmarks", {}).get("inf/s") == 6.0
+    assert manifest.get("benchmarks", {}).get("mem_bandwidth_gb_s") == 8.5
 
 @patch.object(HardwareScanner, 'scan')
-def test_generate_capability_manifest_tablet(mock_scan):
+def test_capability_manifest_with_real_benchmarks_tablet(mock_scan):
     scanner = HardwareScanner()
     mock_scan.return_value = {
         "os_name": "Linux",
@@ -288,8 +289,8 @@ def test_generate_capability_manifest_tablet(mock_scan):
     with patch.object(HardwareScanner, '_run_real_benchmarks', return_value=(1.6, 2.1)):
         manifest = scanner.generate_capability_manifest()
 
-    assert manifest["tier"] == "edge"
-    assert "proxy" in manifest["services"]
-    assert "quantized-inference" in manifest["services"]
-    assert manifest["benchmarks"]["inf/s"] == 1.6
-    assert manifest["benchmarks"]["mem_bandwidth_gb_s"] == 2.1
+    assert manifest.get("tier") == "edge"
+    assert "proxy" in manifest.get("services", [])
+    assert "quantized-inference" in manifest.get("services", [])
+    assert manifest.get("benchmarks", {}).get("inf/s") == 1.6
+    assert manifest.get("benchmarks", {}).get("mem_bandwidth_gb_s") == 2.1
