@@ -21,7 +21,7 @@ contract AutomatedV3LiquidityManager is Initializable, UUPSUpgradeable {
     event PositionManaged(uint256 tokenId, uint128 liquidity);
     event FeesHarvested(uint256 amount0, uint256 amount1);
 
-    constructor(address _founder, address _distPool, address _npm, address _swapRouter) {
+    constructor(address _founder, address payable _distPool, address _npm, address _swapRouter) {
         founder = FounderCommitment(_founder);
         distPool = UniversalDistributionPool(_distPool);
         npm = INonfungiblePositionManager(_npm);

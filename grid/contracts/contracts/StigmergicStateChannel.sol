@@ -25,6 +25,16 @@ interface IPulseAdapter {
     function guardianSentinel() external view returns (address);
 }
 
+interface IHorizonForecast {
+    function generateForecast(
+        bytes32 proposalHash,
+        bytes calldata simulationProof,
+        bytes32 firstOrderRoot,
+        bytes32 secondOrderRoot,
+        bytes32 thirdOrderRoot
+    ) external returns (bool);
+}
+
 struct AttentionArtifact {
     bytes32 attentionScopeHash;
     bytes32 dependencyGraphRoot;
@@ -40,6 +50,7 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
     address public immutable founderManager;
     address public immutable universalDistributionPool;
     address public immutable guardianSentinel;
+    address public horizonForecast;
 
     uint256 public constant CHALLENGE_WINDOW = 7 days;
     uint256 public constant NETWORK_TAX_BPS = 500;
@@ -88,6 +99,11 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
         require(pulseAdapter.guardianSentinel() == _guardian, "Guardian mismatch");
     }
 
+    function setHorizonForecast(address _horizon) external {
+        require(msg.sender == guardianSentinel, "Unauthorized setter");
+        horizonForecast = _horizon;
+    }
+
     function openChannel(address agentB, bytes32 taskHash, uint256 stake) external nonReentrant returns (bytes32) {
         require(agentB != address(0), "Invalid peer");
         require(stake > 0, "Invalid stake");
@@ -118,6 +134,40 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
         AttentionArtifact calldata artifact,
         bytes calldata zkProof
     ) external nonReentrant {
+        _optimisticSettleCore(channelId, stateRootBefore, stateRootAfter, artifact, zkProof);
+    }
+
+    function optimisticSettleWithForecast(
+        bytes32 channelId,
+        bytes32 stateRootBefore,
+        bytes32 stateRootAfter,
+        AttentionArtifact calldata artifact,
+        bytes calldata zkProof,
+        bytes calldata simulationProof,
+        bytes32 firstOrderRoot,
+        bytes32 secondOrderRoot,
+        bytes32 thirdOrderRoot
+    ) external nonReentrant {
+        if (horizonForecast != address(0)) {
+            IHorizonForecast(horizonForecast).generateForecast(
+                channelId,
+                simulationProof,
+                firstOrderRoot,
+                secondOrderRoot,
+                thirdOrderRoot
+            );
+        }
+
+        _optimisticSettleCore(channelId, stateRootBefore, stateRootAfter, artifact, zkProof);
+    }
+
+    function _optimisticSettleCore(
+        bytes32 channelId,
+        bytes32 stateRootBefore,
+        bytes32 stateRootAfter,
+        AttentionArtifact calldata artifact,
+        bytes calldata zkProof
+    ) internal {
         Channel storage ch = channels[channelId];
         require(ch.agentA != address(0), "Channel not found");
         require(!ch.isSettled, "Already settled");

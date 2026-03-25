@@ -16,7 +16,7 @@ contract CrossChainBridge is OApp {
 
     event ArbitrageExecuted(uint256 profit, address token);
 
-    constructor(address _endpoint, address _founder, address _pool, address _shadow) OApp(_endpoint, msg.sender) Ownable(msg.sender) {
+    constructor(address _endpoint, address _founder, address payable _pool, address _shadow) OApp(_endpoint, msg.sender) Ownable(msg.sender) {
         founder = FounderCommitment(_founder);
         pool = UniversalDistributionPool(_pool);
         shadow = ShadowBridge(_shadow);

@@ -38,19 +38,25 @@ type ProposalTensorMetadata struct {
 
 // ProposalTensorEnvelope is the latent vector wire format for proposal execution.
 type ProposalTensorEnvelope struct {
-	ProposalType string   `json:"proposalType"`
-	Tensor       []byte   `json:"tensor"`
-	TensorShape  []uint32 `json:"tensorShape,omitempty"`
-	TensorDType  string   `json:"tensorDtype,omitempty"`
+	ProposalType          string   `json:"proposalType"`
+	Tensor                []byte   `json:"tensor"`
+	TensorShape           []uint32 `json:"tensorShape,omitempty"`
+	TensorDType           string   `json:"tensorDtype,omitempty"`
+	SecondOrderRoot       []byte   `json:"secondOrderRoot,omitempty"`
+	ThirdOrderRoot        []byte   `json:"thirdOrderRoot,omitempty"`
+	CollectiveUtilityRoot []byte   `json:"collectiveUtilityRoot,omitempty"`
 }
 
 // ProposalCandidate represents a transformer proposal tensor routed to MODEL_RUN.
 type ProposalCandidate struct {
-	ProposalType string
-	Tensor       []byte
-	TensorShape  []uint32
-	TensorDType  string
-	Source       string
+	ProposalType          string
+	Tensor                []byte
+	TensorShape           []uint32
+	TensorDType           string
+	Source                string
+	SecondOrderRoot       []byte
+	ThirdOrderRoot        []byte
+	CollectiveUtilityRoot []byte
 }
 
 // RouteIntent routes an AICP payload to a logical path.
@@ -100,24 +106,30 @@ func DecodeProposalTensor(intent IntentPayload) (ProposalCandidate, error) {
 	}
 
 	return ProposalCandidate{
-		ProposalType: envelope.ProposalType,
-		Tensor:       envelope.Tensor,
-		TensorShape:  tensorShape,
-		TensorDType:  tensorDType,
-		Source:       "aicp",
+		ProposalType:          envelope.ProposalType,
+		Tensor:                envelope.Tensor,
+		TensorShape:           tensorShape,
+		TensorDType:           tensorDType,
+		Source:                "aicp",
+		SecondOrderRoot:       envelope.SecondOrderRoot,
+		ThirdOrderRoot:        envelope.ThirdOrderRoot,
+		CollectiveUtilityRoot: envelope.CollectiveUtilityRoot,
 	}, nil
 }
 
 // EncodeModelRunTensor builds the AICP payload envelope for MODEL_RUN proposal tensors.
-func EncodeModelRunTensor(tensor []byte, tensorShape []uint32, tensorDType string) ([]byte, error) {
+func EncodeModelRunTensor(tensor []byte, tensorShape []uint32, tensorDType string, secondOrderRoot []byte, thirdOrderRoot []byte, collectiveUtilityRoot []byte) ([]byte, error) {
 	if len(tensor) == 0 {
 		return nil, errors.New("tensor payload is empty")
 	}
 	envelope := ProposalTensorEnvelope{
-		ProposalType: ProposalTypeModelRun,
-		Tensor:       tensor,
-		TensorShape:  tensorShape,
-		TensorDType:  tensorDType,
+		ProposalType:          ProposalTypeModelRun,
+		Tensor:                tensor,
+		TensorShape:           tensorShape,
+		TensorDType:           tensorDType,
+		SecondOrderRoot:       secondOrderRoot,
+		ThirdOrderRoot:        thirdOrderRoot,
+		CollectiveUtilityRoot: collectiveUtilityRoot,
 	}
 	payload, err := json.Marshal(envelope)
 	if err != nil {
