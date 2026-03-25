@@ -183,6 +183,24 @@ Detailed references:
 - [ ] **M11.6** Define federated memory contribution attestation contract path and reward-accounting invariants (owner: contracts+governance, ETA: TBD).
 - [ ] **M11.7** Publish threat model + test harness for coordinated-behavior attack simulations and rollback/quarantine playbooks (owner: security+ops, ETA: TBD).
 
+
+## Lane M12 — Architecture Review Remediation (Pre-Mainnet)
+- [ ] **M12.1** Create **AXIOM-MESH Core Loop Contract** document + test suite (Intent -> Plan -> Capability Manifest -> Sandbox Execution -> Attestation (Grid) -> Response Shaping) (Owner: core).
+- [ ] **M12.2** Add **Grid Scope Firewall** doc + tests: Grid rejects unsigned manifests, cannot initiate execution, and only accepts proof-carrying artifacts. (Owner: core+grid).
+- [ ] **M12.3** Add **Truth contract multi-sig** and document formal challenge resolution invariants. (Owner: contracts).
+- [ ] **M12.4** Launch **bug bounty** (Immunefi-style). (Owner: security).
+- [ ] **M12.5** Onboard 2-3 trusted co-maintainers and separate deploy keys to address single-maintainer fragility. (Owner: ops).
+- [ ] **M12.6** Capability manifest enforcement: No manifest -> no execution. Manifest must declare capabilities, resource bounds, network policy, I/O schemas, attestation target. (Owner: core+hypervisor).
+- [ ] **M12.7** Oracle redundancy: Add explicit oracle fallback strategy and reduce initial liquidity concentration. (Owner: contracts+finance).
+- [ ] **M12.8** Reach >= 90% smart contract unit test coverage and tie tests to the Interface Control Document. (Owner: contracts).
+- [ ] **M12.9** Penetration testing, Load & stress tests, and Cross-chain failure mode drills. (Owner: security+ops).
+
+
+- [ ] **M12.10** DAO migration. (Owner: governance).
+- [ ] **M12.11** Validator onboarding. (Owner: ops).
+- [ ] **M12.12** Governance simulation. (Owner: governance+research).
+- [ ] **M12.13** Commission **external audit** for smart contracts (post-review). (Owner: security+contracts).
+
 ## 3) Archive Candidates (After Migration Validation)
 
 Move to `docs/historical/` after confirming no net-new actionable tasks remain:
@@ -230,12 +248,12 @@ A task is done only when all are true:
 * [x] **SEC-A.1** Implement Post-Quantum (PQ) Cryptography Pipeline (Owner: security, ETA: TBD): Replace the current "classical-only" trust roots (SHA-256/ECDSA). Build out the Phase 1 hybrid signature scheme (Classical + PQ) for all high-trust pathways. (CI Check: test-pq-crypto) — 2026-03-24 — @agent — implemented Phase 1 hybrid signature scheme in grid/p2p/node.go using github.com/cloudflare/circl/sign/dilithium/mode3, removed placeholder comments and updated node structs and signature calls.
 * [x] **SEC-A.2** Enforce Service-to-Service mTLS & Anti-Replay (Owner: security, ETA: TBD): Inter-service interconnects currently rely on mixed/internal HTTP trust. Implement uniform mTLS, signed requests, timestamping, and nonces across all pillar boundaries. (CI Check: test-mtls) — 2026-03-25 — @agent — added mTLS HTTP client and anti-replay header support in grid/p2p/http_transport.go and grid/p2p/node.go.
 * [x] **SEC-A.3** Harden Sandbox Identity Boundaries (Owner: security, ETA: TBD): Upgrade the Sandbox runtime from relying on a basic API key boundary to utilizing full inter-service identity hardening. (CI Check: test-sandbox-identity) — 2026-03-24 — @agent — implemented strict HMAC signatures over payload, nonce, and timestamp.
-* [ ] **SEC-A.4** Deploy Edge Perimeter Controls (Owner: security, ETA: TBD): The Gateway's public ingress still requires external perimeter controls (like a hardened WAF and strict rate-limiting architectures) for safe internet-scale exposure. (CI Check: test-waf-rate-limiting)
+* [ ] **SEC-A.4** Deploy Edge Perimeter Controls (Owner: security, ETA: TBD): The Gateway's public ingress still requires external perimeter controls (like a hardened WAF and strict Redis-backed rate-limiting architectures) for safe internet-scale exposure. (CI Check: test-waf-rate-limiting)
 
 ### 4. Functionality Audit
 * [x] **FUN-A.1** Replace SBOM Placeholder Logic (Owner: core, ETA: TBD): The Software Bill of Materials generation currently contains a failing scaffold (`placeholder, syft install denied`). Fix the installation environment and fully automate SBOM generation. (CI Check: verify-sbom) — 2026-03-25 — @agent — Replaced placeholder SBOM logic with proper generation via `syft` and `generate_sbom.sh`.
-* [ ] **FUN-A.2** Remove Sandbox Execution Mocks (Owner: core, ETA: TBD): The `sandbox/src/broker/Broker.ts` implementation labels the execution stage as a mock path. Wire the broker to the actual execution orchestration flow. (CI Check: test-sandbox-broker)
-* [ ] **FUN-A.3** Purge Hypervisor Placeholder Semantics (Owner: core, ETA: TBD): Hunt down and remove the remaining placeholder/mock execution pathways and proof fallbacks within the Hypervisor policy gates. (CI Check: test-hypervisor-fallbacks)
+* [x] **FUN-A.2** Remove Sandbox Execution Mocks (Owner: core, ETA: TBD): The `sandbox/src/broker/Broker.ts` implementation labels the execution stage as a mock path. Wire the broker to the actual execution orchestration flow. (CI Check: test-sandbox-broker) — 2026-03-25 — @agent — removed execution mocks in Broker.ts
+* [x] **FUN-A.3** Purge Hypervisor Placeholder Semantics (Owner: core, ETA: TBD): Hunt down and remove the remaining placeholder/mock execution pathways and proof fallbacks within the Hypervisor policy gates. (CI Check: test-hypervisor-fallbacks) — 2026-03-25 — @agent — removed proof fallbacks in inference_orchestrator.py
 
 ### 5. Feature Complete Audit
 * [x] **FEA-A.1** Automate Gate Evidence Packaging (Owner: release, ETA: TBD): Evidence bundle completeness (including SBOM and control mapping) is not yet consistently release-bound. Build the final collection hooks to fully automate the Release Candidate (RC) dossier assembly. (CI Check: verify-rc-dossier) — 2026-03-24 — @agent — created validation scripts, make targets, and sample dossier structure.
@@ -275,10 +293,10 @@ A task is done only when all are true:
 * [x] **MOCK-6** `hypervisor/src/api/mcp_server.py`: Replace mock risk calculation based on code length and sensitive keywords. (Owner: security, ETA: TBD) — 2026-03-25 — @agent — replaced with robust AST parsing
 * [x] **MOCK-7** `hypervisor/src/api/server.py`: Replace mock confidence and provenance generation. (Owner: core, ETA: TBD) — 2026-03-25 — @agent — verified extracting dynamically from routed_result is already implemented
 * [x] **MOCK-8** `hypervisor/src/api/routers/tasks.py`: Parse and execute commands instead of just mocking them. (Owner: core, ETA: TBD) — 2026-03-25 — @agent — verified secure command execution using asyncio.create_subprocess_exec is already present
-* [ ] **MOCK-9** `hypervisor/src/decision/verifiers/zk_verifier.py` & `tee_verifier.py`: Replace simple mock logic for validation with actual validation. (Owner: security, ETA: TBD)
-* [ ] **MOCK-10** `hypervisor/src/evolution/hardware.py`: Replace mock benchmarks based on specs with real execution. (Owner: core, ETA: TBD)
-* [ ] **MOCK-11** `sandbox/src/main.rs`: Integrate processing execution routing instead of mock logic. (Owner: core, ETA: TBD)
-* [ ] **MOCK-12** `sandbox/capsules/websearch/adapter/tool_translation.py`: Replace placeholder for actual search API integration. (Owner: core, ETA: TBD)
+* [x] **MOCK-9** `hypervisor/src/decision/verifiers/zk_verifier.py` & `tee_verifier.py`: Replace simple mock logic for validation with actual validation. (Owner: security, ETA: TBD) — 2026-03-25 — @agent — replaced with ezkl and ecdsa verification
+* [x] **MOCK-10** `hypervisor/src/evolution/hardware.py`: Replace mock benchmarks based on specs with real execution. (Owner: core, ETA: TBD) — 2026-03-25 — @agent — replaced with real timeit execution benchmarks
+* [x] **MOCK-11** `sandbox/src/main.rs`: Integrate processing execution routing instead of mock logic. (Owner: core, ETA: TBD) — 2026-03-25 — @agent — integrated processing execution routing in rust sandbox
+* [x] **MOCK-12** `sandbox/capsules/websearch/adapter/tool_translation.py`: Replace placeholder for actual search API integration. (Owner: core, ETA: TBD) — 2026-03-25 — @agent — integrated actual search API
 * [x] **MOCK-13** `gateway/src/routes/distribution.ts`: Implement AutonomousDistributionManager equivalent instead of mock. (Owner: core, ETA: TBD) — 2026-03-24 — @agent — replaced python mock with proper typescript integration.
 * [x] **MOCK-14** `gateway/src/routes/rest.ts`: Replace mocked zkML proof + obfuscation rules via NemoClaw with real delegation. (Owner: core, ETA: TBD) — 2026-03-24 — @agent — routed to actual /zkml/infer generation.
 
