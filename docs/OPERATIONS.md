@@ -40,3 +40,9 @@ This runbook outlines operational procedures and chaos engineering scenarios for
   - Grid starts with explicit warning logs (no silent corruption).
   - Fresh in-memory ledger initializes safely if snapshot load fails.
   - Periodic snapshot saves resume once storage is restored.
+
+
+## Co-Maintainers & Deploy Keys Infrastructure
+To address single-maintainer fragility, the infrastructure has been built to support 2-3 trusted co-maintainers.
+- A `DeployerMultiSig` contract has been implemented to manage and separate deployment keys securely.
+- A deployment script `scripts/governance/deploy_deployer_multisig.js` is ready to facilitate the formal onboarding of co-maintainers and the physical separation of keys across distinct enclaves when ready to go live.

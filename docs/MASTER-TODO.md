@@ -194,11 +194,11 @@ Detailed references:
 - [x] **M13.5** Build Information Dashboard & Trust Score Interfaces in the Gateway (`gateway/src/routes/dashboard.ts`). — 2026-03-25 — @agent
 
 ## Lane M12 — Architecture Review Remediation (Pre-Mainnet)
-- [ ] **M12.1** Create **AXIOM-MESH Core Loop Contract** document + test suite (Intent -> Plan -> Capability Manifest -> Sandbox Execution -> Attestation (Grid) -> Response Shaping) (Owner: core).
-- [ ] **M12.2** Add **Grid Scope Firewall** doc + tests: Grid rejects unsigned manifests, cannot initiate execution, and only accepts proof-carrying artifacts. (Owner: core+grid).
-- [ ] **M12.3** Add **Truth contract multi-sig** and document formal challenge resolution invariants. (Owner: contracts).
+- [x] **M12.1** Create **AXIOM-MESH Core Loop Contract** document + test suite (Intent -> Plan -> Capability Manifest -> Sandbox Execution -> Attestation (Grid) -> Response Shaping) (Owner: core).
+- [x] **M12.2** Add **Grid Scope Firewall** doc + tests: Grid rejects unsigned manifests, cannot initiate execution, and only accepts proof-carrying artifacts. (Owner: core+grid).
+- [x] **M12.3** Add **Truth contract multi-sig** and document formal challenge resolution invariants. (Owner: contracts).
 - [ ] **M12.4** Launch **bug bounty** (Immunefi-style). (Owner: security).
-- [ ] **M12.5** Onboard 2-3 trusted co-maintainers and separate deploy keys to address single-maintainer fragility. (Owner: ops).
+- [x] **M12.5** Onboard 2-3 trusted co-maintainers and separate deploy keys to address single-maintainer fragility. (Owner: ops).
 - [ ] **M12.6** Capability manifest enforcement: No manifest -> no execution. Manifest must declare capabilities, resource bounds, network policy, I/O schemas, attestation target. (Owner: core+hypervisor).
 - [ ] **M12.7** Oracle redundancy: Add explicit oracle fallback strategy and reduce initial liquidity concentration. (Owner: contracts+finance).
 - [ ] **M12.8** Reach >= 90% smart contract unit test coverage and tie tests to the Interface Control Document. (Owner: contracts).
