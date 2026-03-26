@@ -403,6 +403,24 @@ async def _process_intent_core(intent: IntentObject, api_key: str):
         await prefetcher.execute_prefetch(network_sync, intent.content)
 
         # Dynamic Routing Engine (Capability Manifests)
+        # M14.1 Capability Manifest Enforcement
+        capability_manifest = intent.metadata.get("capability_manifest", {})
+        required_hardware = capability_manifest.get("required_hardware")
+        network_scope = capability_manifest.get("network_scope")
+
+        if not capability_manifest or not required_hardware or not network_scope:
+            intent_metrics["error"] += 1
+            audit_trail["safety_decisions"]["capability_manifest"] = "Failed"
+            return IntentResponse(
+                id=str(uuid.uuid4()),
+                intent_id=intent.id,
+                response="System Halt: Missing or invalid capability manifest. Execution must declare required_hardware and network_scope bounds.",
+                status="error",
+                trace_id=trace_id,
+                audit_trail=audit_trail
+            )
+        audit_trail["safety_decisions"]["capability_manifest"] = "Passed"
+
         hints = intent.metadata.get("resource_hints", {})
         if hints and not intent.metadata.get("_delegated_already"):
             peer_manifests = await network_sync.fetch_peer_manifests()
