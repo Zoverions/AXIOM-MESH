@@ -87,6 +87,39 @@ jobs:
         npx tsc --noEmit
         npm test
 
+  security-scans:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        cd grid/contracts
+        npm install --legacy-peer-deps
+        pip install slither-analyzer
+        # mythril is often installed via docker or requires specific python versions
+        # we'll use the docker container to run it.
+
+    - name: Run Slither
+      run: |
+        cd grid/contracts
+        slither . --compile-force-framework hardhat || true
+
+    - name: Run Mythril
+      run: |
+        cd grid/contracts
+        docker run --rm -v $(pwd):/share --entrypoint /bin/sh mythril/myth -c "myth analyze /share/contracts/**/*.sol --max-depth 2 || exit 0"
+
   transformer-foundation-gate:
     runs-on: ubuntu-latest
     needs: lint-and-test
