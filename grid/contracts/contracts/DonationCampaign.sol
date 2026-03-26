@@ -6,6 +6,7 @@ import "./CognitiveFrictionVerifier.sol";
 import "./UniversalDistributionPool.sol";
 import "./FounderShareManager.sol";
 
+// TODO ID: Top-Level To Do 6 - DonationCampaign + Self-Funding Loop
 contract DonationCampaign is ReentrancyGuard {
     CognitiveFrictionVerifier public poerVerifier;
     UniversalDistributionPool public ubiPool;

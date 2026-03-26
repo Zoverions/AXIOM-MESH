@@ -11,6 +11,7 @@ import "./FounderMultiSig.sol";
 
 address constant FOUNDER = 0x1c2cBabF75e1938ED2f2c59e734e83aa5FBe1B73;
 
+// TODO ID: Top-Level To Do 8 - Mainnet Genesis + Bug Bounty
 contract Genesis {
     address public immutable founder;
     address public immutable axmToken;
