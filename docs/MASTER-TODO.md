@@ -178,10 +178,10 @@ Detailed references:
 - [x] **M11.1** Freeze CPoR attestation schema + canonical serialization format and wire schema validation in CI (owner: hypervisor+infra, CI Check: `make verify-cpor-schema`) — 2026-03-26 — @agent — completed schema validation script and make target.
 - [x] **M11.2** Implement Grid causal DAG builder and replay-hash computation (`grid/.../causal_graph.go`) with bounded-depth controls (owner: grid, ETA: TBD) — 2026-03-26 — @agent — completed causal DAG builder in grid/zkml/cpor.
 - [x] **M11.3** Add Hypervisor `/verify/reasoning` endpoint in dry-run mode that validates attestation payloads and emits mismatch taxonomy (owner: hypervisor, ETA: 2026-03-25, 5777794).
-- [ ] **M11.4** Implement attention-weighted consensus scoring path and integrate with compute bond/slashing policy hooks (owner: contracts+grid, ETA: TBD).
-- [ ] **M11.5** Introduce `EMERGENCE_ALERT` event generation for coalition anomaly signatures and wire gateway/operator alert surfaces (owner: grid+gateway, ETA: TBD).
-- [ ] **M11.6** Define federated memory contribution attestation contract path and reward-accounting invariants (owner: contracts+governance, ETA: TBD).
-- [ ] **M11.7** Publish threat model + test harness for coordinated-behavior attack simulations and rollback/quarantine playbooks (owner: security+ops, ETA: TBD).
+- [x] **M11.4** Implement attention-weighted consensus scoring path and integrate with compute bond/slashing policy hooks (owner: contracts+grid, ETA: TBD).
+- [x] **M11.5** Introduce `EMERGENCE_ALERT` event generation for coalition anomaly signatures and wire gateway/operator alert surfaces (owner: grid+gateway, ETA: TBD).
+- [x] **M11.6** Define federated memory contribution attestation contract path and reward-accounting invariants (owner: contracts+governance, ETA: TBD).
+- [x] **M11.7** Publish threat model + test harness for coordinated-behavior attack simulations and rollback/quarantine playbooks (owner: security+ops, ETA: TBD).
 
 
 ## Lane M13 — Comprehensive System Extensions (Audit Response)
