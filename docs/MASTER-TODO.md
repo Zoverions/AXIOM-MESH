@@ -577,7 +577,7 @@ Once authority flow is mechanically frozen, this system becomes:
 ## Lane M16 — Novel Insights & Innovation (New)
 **Goal:** Implement Attention-Indexed State Machine enhancements, Network Sovereign Liquidity integrations, and Governance innovations.
 
-- [ ] **M16.1** Consequence Graph Caching: Pre-compute common proposal consequence chains, store as Merkle trees for quick verification, and enable "consequence futures" trading (owner: core+research, ETA: TBD).
+- [x] **M16.1** Consequence Graph Caching: Pre-compute common proposal consequence chains, store as Merkle trees for quick verification, and enable "consequence futures" trading (owner: core+research, ETA: TBD). — 2026-03-27 — @agent — added Consequence Graph Caching via `consequenceCache` mapping and added a "consequence futures" pool via `tradeConsequenceFuture`
 - [ ] **M16.2** Stigmergic State Channel Optimization: Add reputation-weighted challenge periods where high-reputation actors receive shorter challenges, while low-reputation actors receive longer challenges and higher bond requirements (owner: contracts, ETA: TBD).
 - [ ] **M16.3** Proof of Truth (PoT) Innovation: Integrate zkML for private inference verification, create truth derivatives (tradable instruments based on prediction accuracy), and implement cross-chain truth oracles with cryptographic attestations (owner: core+research, ETA: TBD).
 - [ ] **M16.4** Network Sovereign Liquidity Layer: Tokenize LP positions as tradeable NFTs, auto-compound fees into yield-bearing vaults, implement Wormhole-layer cross-chain liquidity sharing, and add private transaction routing for MEV protection (owner: finance+contracts, ETA: TBD).
