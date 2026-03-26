@@ -588,7 +588,7 @@ Once authority flow is mechanically frozen, this system becomes:
 ## Lane M17 — Code Quality, Scalability & Tokenomics (New)
 **Goal:** Address technical debt, improve horizontal scaling, establish formal state management architecture, and finalize tokenomics / revenue models.
 
-- [ ] **M17.1** CI/CD Pipeline Hardening: Implement a full pipeline including lint, test, security scan (Slither, Mythril), and automated deploy (owner: ops, ETA: TBD).
+- [x] **M17.1** CI/CD Pipeline Hardening: Implement a full pipeline including lint, test, security scan (Slither, Mythril), and automated deploy (owner: ops, ETA: TBD).
 - [ ] **M17.2** Documentation Auto-generation: Fix critical missing documentation and establish auto-generated versioned docs site from code comments (owner: release, ETA: TBD).
 - [ ] **M17.3** Comprehensive Test Coverage: Achieve 80%+ unit test coverage + integration tests across all services (owner: all, ETA: TBD).
 - [ ] **M17.4** Observability Stack: Deploy Prometheus + Grafana + distributed tracing for full visibility (owner: ops, ETA: TBD).

@@ -40,7 +40,7 @@ jobs:
       - name: Build & Push Docker
         uses: docker/build-push-action@v6
         with:
-          push: false
+          push: true
           tags: zoverions/axiom-mesh:latest
           file: Dockerfile
 
