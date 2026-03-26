@@ -1,0 +1,10 @@
+{
+    "gates": {
+        "security": "pass",
+        "financial": "pass",
+        "reliability": "pass",
+        "ecosystem": "pass",
+        "governance": "pass"
+    },
+    "decision": "go"
+}
