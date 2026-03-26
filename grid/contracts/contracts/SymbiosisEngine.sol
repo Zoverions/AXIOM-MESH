@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import "./CognitiveFrictionVerifier.sol";
 import "./HorizonForecast.sol";  // already in foundation
 import "./StigmergicStateChannel.sol";
+import "./MemoryLattice.sol";
 
 struct SymbiosisBundle {
     bytes32 bundleHash;
@@ -17,6 +18,7 @@ contract SymbiosisEngine {
     CognitiveFrictionVerifier public poerVerifier;
     HorizonForecast public horizon;
     StigmergicStateChannel public channel;
+    MemoryLattice public memoryLattice;
 
     mapping(bytes32 => SymbiosisBundle) public bundles;
 
@@ -27,6 +29,10 @@ contract SymbiosisEngine {
         poerVerifier = CognitiveFrictionVerifier(_poer);
         horizon = HorizonForecast(_horizon);
         channel = StigmergicStateChannel(_channel);
+    }
+
+    function setMemoryLattice(address _lattice) external {
+        memoryLattice = MemoryLattice(_lattice);
     }
 
     // Called by agents via AICP tensor routing
@@ -40,6 +46,10 @@ contract SymbiosisEngine {
 
         bool frictionPassed = poerVerifier.verifyProofWithFriction(bundleHash, simulationProof);
         require(frictionPassed, "Cognitive Friction failed on collective benefit");
+
+        if (address(memoryLattice) != address(0) && actionHashes.length > 0) {
+            memoryLattice.getLatticePath(bundleHash, actionHashes[0]);
+        }
 
         // Horizon already verified 2nd/3rd-order effects
         bundles[bundleHash] = SymbiosisBundle({

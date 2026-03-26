@@ -8,12 +8,14 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./CognitiveFrictionVerifier.sol";
 import "./HorizonForecast.sol";
 import "./SymbiosisEngine.sol";
+import "./MemoryLattice.sol";
 
 contract VaultManager is ReentrancyGuard {
     IERC721 public immutable vaultKeyNFT;          // NFT acts as key
     CognitiveFrictionVerifier public poerVerifier;
     HorizonForecast public horizon;
     SymbiosisEngine public symbiosis;
+    MemoryLattice public memoryLattice;
 
     struct Vault {
         address owner;
@@ -35,6 +37,10 @@ contract VaultManager is ReentrancyGuard {
         symbiosis = SymbiosisEngine(_symbiosis);
     }
 
+    function setMemoryLattice(address _lattice) external {
+        memoryLattice = MemoryLattice(_lattice);
+    }
+
     function createVault(uint256 nftId) external nonReentrant {
         require(vaultKeyNFT.ownerOf(nftId) == msg.sender, "Must own NFT key");
         require(!vaults[nftId].isActive, "Vault already exists");
@@ -50,6 +56,7 @@ contract VaultManager is ReentrancyGuard {
     function lockAssets(uint256 nftId, address token, uint256 amount) external nonReentrant {
         // For now, allow owner to lock assets
         require(vaults[nftId].owner == msg.sender, "Unauthorized");
+        require(address(memoryLattice) == address(0) || memoryLattice.getLatticePath(bytes32(nftId), bytes32(uint256(uint160(token)))).length >= 0, "Lattice stability check failed");
 
         // Transfer ERC20 token to vault
         SafeERC20.safeTransferFrom(IERC20(token), msg.sender, address(this), amount);
@@ -61,6 +68,7 @@ contract VaultManager is ReentrancyGuard {
     // Horizon-verified release (only through Symbiosis proposals)
     function releaseAssets(uint256 nftId, address token, uint256 amount, bytes calldata horizonProof) external nonReentrant {
         // Assume horizon.verifyForecast(horizonProof) or similar logic for checking higher order risk.
+        require(address(memoryLattice) == address(0) || memoryLattice.getLatticePath(bytes32(nftId), bytes32(uint256(uint160(token)))).length >= 0, "Lattice stability check failed");
         // Here we require that it's called by SymbiosisEngine or the owner
         require(msg.sender == vaults[nftId].owner || msg.sender == address(symbiosis), "Unauthorized");
         require(vaults[nftId].lockedTokens[token] >= amount, "Insufficient locked balance");
