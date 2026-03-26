@@ -11,6 +11,7 @@ describe("StigmergicStateChannel v4 interface audit", function () {
   let verifier;
   let pulseAdapter;
   let channel;
+  let soulboundReputation;
 
   beforeEach(async function () {
     [owner, agentA, agentB, guardian, pool] = await ethers.getSigners();
@@ -48,7 +49,12 @@ describe("StigmergicStateChannel v4 interface audit", function () {
 
     await channel.connect(guardian).setHorizonForecast(await horizon.getAddress());
 
-    const stake = ethers.parseEther("100");
+    const SoulboundReputation = await ethers.getContractFactory("SoulboundReputation");
+    soulboundReputation = await SoulboundReputation.deploy();
+    await soulboundReputation.waitForDeployment();
+    await channel.connect(guardian).setSoulboundReputation(await soulboundReputation.getAddress());
+
+    const stake = ethers.parseEther("500");
     await axm.transfer(agentA.address, stake);
     await axm.connect(agentA).approve(await channel.getAddress(), stake);
 
@@ -73,6 +79,13 @@ describe("StigmergicStateChannel v4 interface audit", function () {
   it("only allows participant/guardian settlement and blocks challenged channels", async function () {
     const stake = ethers.parseEther("100");
     const taskHash = ethers.keccak256(ethers.toUtf8Bytes("task-1"));
+
+    // Set reputation to 600 (default window: 7 days)
+    // Needs 7 categories of 600 to average 600
+    for(let i=0; i<7; i++) {
+        await soulboundReputation.updateReputation(agentA.address, i, "test", 600);
+        await soulboundReputation.updateReputation(agentB.address, i, "test", 600);
+    }
 
     const openTx = await channel.connect(agentA).openChannel(agentB.address, taskHash, stake);
     const openReceipt = await openTx.wait();
@@ -115,6 +128,11 @@ describe("StigmergicStateChannel v4 interface audit", function () {
     const stake = ethers.parseEther("100");
     const taskHash = ethers.keccak256(ethers.toUtf8Bytes("task-2"));
 
+    for(let i=0; i<7; i++) {
+        await soulboundReputation.updateReputation(agentA.address, i, "test", 600);
+        await soulboundReputation.updateReputation(agentB.address, i, "test", 600);
+    }
+
     const openTx = await channel.connect(agentA).openChannel(agentB.address, taskHash, stake);
     const openReceipt = await openTx.wait();
     const openEvent = openReceipt.logs.find((log) => log.fragment && log.fragment.name === "ChannelOpened");
@@ -155,18 +173,19 @@ describe("StigmergicStateChannel v4 interface audit", function () {
 
     // AXM mints 1 billion tokens to the pool initially. 200 ether total stake, tax is 5% = 10 ether.
     expect(await axm.balanceOf(pool.address)).to.equal(ethers.parseEther("100000010"));
-    expect(await axm.balanceOf(agentA.address)).to.equal(ethers.parseEther("95"));
-    expect(await axm.balanceOf(agentB.address)).to.equal(ethers.parseEther("95"));
+    // Since we minted 500 ether to agents and used 100 as stake, agent gets 400 + 95 = 495
+    expect(await axm.balanceOf(agentA.address)).to.equal(ethers.parseEther("495"));
+    expect(await axm.balanceOf(agentB.address)).to.equal(ethers.parseEther("495"));
   });
 
   it("settles and emits funding split once challenge window closes using optimisticSettleWithForecast", async function () {
     const stake = ethers.parseEther("100");
     const taskHash = ethers.keccak256(ethers.toUtf8Bytes("task-3"));
 
-    await axm.transfer(agentA.address, stake);
-    await axm.connect(agentA).approve(await channel.getAddress(), stake);
-    await axm.transfer(agentB.address, stake);
-    await axm.connect(agentB).approve(await channel.getAddress(), stake);
+    for(let i=0; i<7; i++) {
+        await soulboundReputation.updateReputation(agentA.address, i, "test", 600);
+        await soulboundReputation.updateReputation(agentB.address, i, "test", 600);
+    }
 
     const openTx = await channel.connect(agentA).openChannel(agentB.address, taskHash, stake);
     const openReceipt = await openTx.wait();
@@ -229,6 +248,11 @@ describe("StigmergicStateChannel v4 interface audit", function () {
     const stake = ethers.parseEther("100");
     const taskHash = ethers.keccak256(ethers.toUtf8Bytes("task-repeat"));
 
+    for(let i=0; i<7; i++) {
+        await soulboundReputation.updateReputation(agentA.address, i, "test", 600);
+        await soulboundReputation.updateReputation(agentB.address, i, "test", 600);
+    }
+
     // Need more tokens for agentA to open a second channel
     await axm.transfer(agentA.address, stake);
     await axm.connect(agentA).approve(await channel.getAddress(), stake * 2n); // previous was 100, give it 200
@@ -244,5 +268,58 @@ describe("StigmergicStateChannel v4 interface audit", function () {
     const channelId2 = openEvent2.args.channelId;
 
     expect(channelId1).to.not.equal(channelId2);
+  });
+
+  it("applies shorter challenge window for high reputation actors", async function () {
+    const stake = ethers.parseEther("100");
+    const taskHash = ethers.keccak256(ethers.toUtf8Bytes("task-high-rep"));
+
+    // Set reputation to 900 (high rep window: 3 days)
+    for(let i=0; i<7; i++) {
+        await soulboundReputation.updateReputation(agentA.address, i, "test", 900);
+        await soulboundReputation.updateReputation(agentB.address, i, "test", 900);
+    }
+
+    const openTx = await channel.connect(agentA).openChannel(agentB.address, taskHash, stake);
+    const openReceipt = await openTx.wait();
+    const openEvent = openReceipt.logs.find((log) => log.fragment && log.fragment.name === "ChannelOpened");
+
+    // Check if challengeEnds is 3 days from openedAt
+    const block = await ethers.provider.getBlock(openReceipt.blockNumber);
+    const expectedChallengeEnds = block.timestamp + 3 * 24 * 60 * 60;
+
+    expect(openEvent.args.challengeEnds).to.equal(expectedChallengeEnds);
+
+    const channelId = openEvent.args.channelId;
+    const channelData = await channel.channels(channelId);
+    expect(channelData.lockedStake).to.equal(stake * 2n);
+  });
+
+  it("applies longer challenge window and higher bond for low reputation actors", async function () {
+    const stake = ethers.parseEther("100");
+    const taskHash = ethers.keccak256(ethers.toUtf8Bytes("task-low-rep"));
+
+    // Set reputation to 200 (low rep window: 14 days, stake multiplier: 2)
+    for(let i=0; i<7; i++) {
+        await soulboundReputation.updateReputation(agentA.address, i, "test", 200);
+        await soulboundReputation.updateReputation(agentB.address, i, "test", 200);
+    }
+
+    // Agent A needs 200 stake approved
+    await axm.connect(agentA).approve(await channel.getAddress(), ethers.parseEther("200"));
+
+    const openTx = await channel.connect(agentA).openChannel(agentB.address, taskHash, stake);
+    const openReceipt = await openTx.wait();
+    const openEvent = openReceipt.logs.find((log) => log.fragment && log.fragment.name === "ChannelOpened");
+
+    // Check if challengeEnds is 14 days from openedAt
+    const block = await ethers.provider.getBlock(openReceipt.blockNumber);
+    const expectedChallengeEnds = block.timestamp + 14 * 24 * 60 * 60;
+
+    expect(openEvent.args.challengeEnds).to.equal(expectedChallengeEnds);
+
+    const channelId = openEvent.args.channelId;
+    const channelData = await channel.channels(channelId);
+    expect(channelData.lockedStake).to.equal(stake * 4n); // stake * 2 from A, stake * 2 from B -> stake * 4 total
   });
 });
