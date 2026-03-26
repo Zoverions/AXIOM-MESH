@@ -200,7 +200,7 @@ Detailed references:
 - [x] **M12.3** Add **Truth contract multi-sig** and document formal challenge resolution invariants. (Owner: contracts).
 - [ ] **M12.4** Launch **bug bounty** (Immunefi-style). (Owner: security).
 - [x] **M12.5** Onboard 2-3 trusted co-maintainers and separate deploy keys to address single-maintainer fragility. (Owner: ops).
-- [ ] **M12.6** Capability manifest enforcement: No manifest -> no execution. Manifest must declare capabilities, resource bounds, network policy, I/O schemas, attestation target. (Owner: core+hypervisor).
+- [x] **M12.6** Capability manifest enforcement: No manifest -> no execution. Manifest must declare capabilities, resource bounds, network policy, I/O schemas, attestation target. (Owner: core+hypervisor). — 2026-03-27 — @agent — completed and verified implementation.
 - [ ] **M12.7** Oracle redundancy: Add explicit oracle fallback strategy and reduce initial liquidity concentration. (Owner: contracts+finance).
 - [ ] **M12.8** Reach >= 90% smart contract unit test coverage and tie tests to the Interface Control Document. (Owner: contracts).
 - [ ] **M12.9** Penetration testing, Load & stress tests, and Cross-chain failure mode drills. (Owner: security+ops).
