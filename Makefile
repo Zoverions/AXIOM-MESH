@@ -122,3 +122,6 @@ verify-gas-target:
 verify-sbom:
 	./scripts/generate_sbom.sh
 	python3 scripts/verify_sbom.py
+
+verify-cpor-schema:
+	CAPABILITY_TOKEN_SECRET="mock" PYTHONPATH=hypervisor python3 scripts/verify_cpor_schema.py

@@ -132,6 +132,13 @@ jobs:
       run: |
         make transformer-gate
 
+    - name: Verify CPoR Schema Validation
+      env:
+        CAPABILITY_TOKEN_SECRET: "mock"
+        PYTHONPATH: "hypervisor"
+      run: |
+        make verify-cpor-schema
+
   integration-matrix:
     runs-on: ubuntu-latest
     needs:
