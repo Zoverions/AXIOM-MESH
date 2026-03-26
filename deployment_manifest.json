@@ -1,5 +1,5 @@
 {
-  "version": "15.4.6-VAULT-LAUNCH",
+  "version": "15.4.6-MEMORY-LATTICE",
   "executionLayer": "Attention-Indexed State Machine (transformer proposer + symbolic verification)",
   "gasStrategy": {
     "tier0": "AICP QUIC tensors – $0.00",
@@ -17,6 +17,10 @@
     "axiomVaultNetwork": "NFT-keyed secure vaults for tokens, NFTs, bridged stablecoins",
     "fundingCampaign": "Unlimited incentivized donations with PoER boosts and priority access",
     "selfFundingLoop": "Donations + fees → infrastructure + network growth"
+  },
+  "memoryLattice": {
+    "enabled": true,
+    "purpose": "On-chain verifiable economic memory from transformer attention graphs"
   },
   "chainStrategy": "PulseChain primary + L2 simultaneous deployment, bridged assets locked in vaults"
 }

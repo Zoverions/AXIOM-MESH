@@ -3,6 +3,8 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
+import "./MemoryLattice.sol";
+
 interface IAXM {
     function transferFrom(address from, address to, uint256 value) external returns (bool);
     function transfer(address to, uint256 value) external returns (bool);
@@ -51,6 +53,7 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
     address public immutable universalDistributionPool;
     address public immutable guardianSentinel;
     address public horizonForecast;
+    MemoryLattice public memoryLattice;
 
     uint256 public constant CHALLENGE_WINDOW = 7 days;
     uint256 public constant NETWORK_TAX_BPS = 500;
@@ -104,6 +107,11 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
         horizonForecast = _horizon;
     }
 
+    function setMemoryLattice(address _lattice) external {
+        require(msg.sender == guardianSentinel, "Unauthorized setter");
+        memoryLattice = MemoryLattice(_lattice);
+    }
+
     function openChannel(address agentB, bytes32 taskHash, uint256 stake) external nonReentrant returns (bytes32) {
         require(agentB != address(0), "Invalid peer");
         require(stake > 0, "Invalid stake");
@@ -135,6 +143,10 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
         bytes calldata zkProof
     ) external nonReentrant {
         _optimisticSettleCore(channelId, stateRootBefore, stateRootAfter, artifact, zkProof);
+
+        if (address(memoryLattice) != address(0)) {
+            memoryLattice.addAttentionNode(artifact.attentionScopeHash, channelId, zkProof);
+        }
     }
 
     function optimisticSettleWithForecast(
@@ -159,6 +171,11 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
         }
 
         _optimisticSettleCore(channelId, stateRootBefore, stateRootAfter, artifact, zkProof);
+
+        if (address(memoryLattice) != address(0)) {
+            memoryLattice.addAttentionNode(artifact.attentionScopeHash, channelId, zkProof);
+            memoryLattice.addAttentionEdge(artifact.attentionScopeHash, stateRootAfter, 100, simulationProof);
+        }
     }
 
     function _optimisticSettleCore(

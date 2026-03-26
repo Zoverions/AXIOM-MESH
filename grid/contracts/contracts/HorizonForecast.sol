@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import "./CognitiveFrictionVerifier.sol";
 import "./StigmergicStateChannel.sol";
+import "./MemoryLattice.sol";
 
 struct ConsequenceArtifact {
     bytes32 proposalHash;           // Original action hash
@@ -16,6 +17,7 @@ struct ConsequenceArtifact {
 contract HorizonForecast {
     CognitiveFrictionVerifier public poerVerifier;
     StigmergicStateChannel public channel;
+    MemoryLattice public memoryLattice;
 
     event HorizonForecastGenerated(bytes32 indexed proposalHash, uint8 orderDepth, bool approved);
     event HorizonChallenged(bytes32 indexed proposalHash, address challenger, string reason);
@@ -23,6 +25,18 @@ contract HorizonForecast {
     constructor(address _poer, address _channel) {
         poerVerifier = CognitiveFrictionVerifier(_poer);
         channel = StigmergicStateChannel(_channel);
+    }
+
+    function setMemoryLattice(address _lattice) external {
+        memoryLattice = MemoryLattice(_lattice);
+    }
+
+    function verifyForecast(bytes calldata horizonProof) external returns (bool) {
+        if (horizonProof.length > 0) {
+            bytes32 proofHash = keccak256(horizonProof);
+            return poerVerifier.verifyHigherOrderFriction(proofHash, horizonProof);
+        }
+        return true;
     }
 
     // Called by transformer proposer via AICP before any high-stakes action
@@ -35,6 +49,10 @@ contract HorizonForecast {
     ) external returns (bool approved) {
         bool frictionPassed = poerVerifier.verifyProofWithFriction(proposalHash, simulationProof);
         require(frictionPassed, "Cognitive Friction failed on higher-order consequences");
+
+        if (address(memoryLattice) != address(0)) {
+            memoryLattice.getLatticePath(proposalHash, firstOrderRoot);
+        }
 
         // Guardian Sentinel can still challenge
         emit HorizonForecastGenerated(proposalHash, 3, true);
