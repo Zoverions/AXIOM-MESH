@@ -493,6 +493,18 @@ type PeerQueryResult struct {
 }
 
 func (n *Node) QueryNetwork(query string, proof string) []PeerQueryResult {
+
+	// Generate a lightweight ZK proof for the query if not provided
+	// Since the node does not have a real private key stored for this demo, we use a deterministic secret derived from Node ID
+	if proof == "" {
+		secretHex := fmt.Sprintf("%x", sha256.Sum256([]byte(n.ID)))
+		var err error
+		proof, err = consensus.GenerateGraphQueryProof(query, secretHex)
+		if err != nil {
+			log.Printf("P2P Node %s: Failed to generate graph query proof: %v", n.ID, err)
+			proof = ""
+		}
+	}
 	peers := n.snapshotPeers()
 
 	log.Printf("P2P Node %s: Querying network for '%s' with ZKP to %d peers", n.ID, query, len(peers))

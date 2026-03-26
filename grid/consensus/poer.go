@@ -36,3 +36,14 @@ func MineEntropyReduction(taskID string) string {
 		nonce++
 	}
 }
+
+// CalculateAttentionWeightedScore computes an attention-weighted consensus score.
+// It integrates route-specific semantic profile relevance (attentionWeight) and
+// prior reliability, ensuring low-relevance high-reputation peers cannot dominate
+// unrelated domains.
+func CalculateAttentionWeightedScore(baseScore float64, attentionWeight float64, priorReliability float64) float64 {
+	// Simple formula: base score is heavily weighted by the attention relevance,
+	// and moderately adjusted by prior reliability.
+	// If attentionWeight is 0, the final score should be 0 (no relevance).
+	return baseScore * attentionWeight * (0.5 + 0.5*priorReliability)
+}

@@ -172,6 +172,33 @@ func (sc *StigmergyCoordinator) SensePheromones(
 	return sortByIntensity(relevant)
 }
 
+// RouteByPheromone discovers the peer ID (location) with the strongest
+// intensity for a specific agentType and intentType (PheromoneType).
+func (sc *StigmergyCoordinator) RouteByPheromone(agentType AgentType, intentType PheromoneType) string {
+	sc.mu.RLock()
+	defer sc.mu.RUnlock()
+
+	var bestLocation string
+	var maxIntensity float64 = -1
+
+	for location, pheromones := range sc.pheromones {
+		relevant := filterByType(pheromones, agentType)
+		var totalIntensity float64
+		for _, p := range relevant {
+			if p.Type == intentType {
+				totalIntensity += p.Intensity
+			}
+		}
+
+		if totalIntensity > maxIntensity {
+			maxIntensity = totalIntensity
+			bestLocation = location
+		}
+	}
+
+	return bestLocation
+}
+
 // ComputeStateHash computes a simulated Merkle-like root hash of local pheromones
 func (sc *StigmergyCoordinator) ComputeStateHash() string {
 	sc.mu.RLock()
