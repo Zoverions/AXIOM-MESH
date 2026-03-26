@@ -54,7 +54,7 @@ class InferenceOrchestrator:
                 base *= 0.3
 
         # Swarm check
-        if tier == "swarm" and len(sync_swarm_manifest()) < self.min_swarm_devices:
+        if tier == "swarm" and len(sync_swarm_manifest("default_swarm")) < self.min_swarm_devices:
             base = 0.0
 
         return base

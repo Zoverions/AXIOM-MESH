@@ -409,14 +409,17 @@ async def _process_intent_core(intent: IntentObject, api_key: str):
         required_hardware = capability_manifest.get("required_hardware")
         network_scope = capability_manifest.get("network_scope")
         memory_quota_mb = capability_manifest.get("memory_quota_mb")
+        capabilities = capability_manifest.get("capabilities")
+        io_schemas = capability_manifest.get("io_schemas")
+        attestation_target = capability_manifest.get("attestation_target")
 
-        if not capability_manifest or not required_hardware or not network_scope or not memory_quota_mb:
+        if not capability_manifest or not required_hardware or not network_scope or not memory_quota_mb or not capabilities or not io_schemas or not attestation_target:
             intent_metrics["error"] += 1
             audit_trail["safety_decisions"]["capability_manifest"] = "Failed"
             return IntentResponse(
                 id=str(uuid.uuid4()),
                 intent_id=intent.id,
-                response="System Halt: Missing or invalid capability manifest. Execution must declare required_hardware, memory_quota_mb, and network_scope bounds.",
+                response="System Halt: Missing or invalid capability manifest. Execution must declare required_hardware, memory_quota_mb, network_scope bounds, capabilities, io_schemas, and attestation_target.",
                 status="error",
                 trace_id=trace_id,
                 audit_trail=audit_trail
