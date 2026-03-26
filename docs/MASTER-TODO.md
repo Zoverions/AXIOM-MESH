@@ -146,6 +146,7 @@ Detailed references:
 - [x] **M6.2** Wire `MODEL_RUN` proposal tensors end-to-end across Cap'n Proto schema, Grid AICP transport, and Hypervisor IPC runtime paths (owner: core+hypervisor, ETA: TBD). — 2026-03-24 — @agent — aligned Grid proposal metadata fallback with Cap'n Proto fields and added Hypervisor transport-envelope decoding + interoperability tests.
 - [x] **M6.3** Run full compile/test gate for transformer package (`make compile-capnp`, Hardhat compile, Grid/Hypervisor E2E) in CI with required toolchains installed (owner: infra, ETA: TBD). — 2026-03-25 — @agent — updated `schemas/aicp_intent.capnp` with required ID so `make compile-capnp` succeeds.
 - [ ] **M6.4** Deploy transformer foundation contracts on PulseChain testnet and publish deployment evidence bundle (owner: contracts+release, ETA: TBD).
+  - 2026-03-26 — @agent — updated deploy script to generate testnet wallet and halt for manual funding; awaiting faucet funding to execute the live testnet run
   - 2026-03-24 — @agent — added PulseChain testnet deployment + evidence-generation automation (`pulsechainTestnet` network config, deployment script output bundle, and verification command); pending funded deployer key + live run.
 - [ ] **M6.5** Extend deploy pipeline for simultaneous Ethereum/Base/Arbitrum deployments with bridge-path rating/polling/quorum oracle hooks (owner: crosschain, ETA: TBD).
 - [ ] **M6.6** Enforce PulseChain-only final redemption path for bridged assets and document invariants + runbooks (owner: core+ops, ETA: TBD).
