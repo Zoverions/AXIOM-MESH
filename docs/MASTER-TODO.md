@@ -583,7 +583,7 @@ Once authority flow is mechanically frozen, this system becomes:
 - [ ] **M16.4** Network Sovereign Liquidity Layer: Tokenize LP positions as tradeable NFTs, auto-compound fees into yield-bearing vaults, implement Wormhole-layer cross-chain liquidity sharing, and add private transaction routing for MEV protection (owner: finance+contracts, ETA: TBD).
 - [ ] **M16.5** Governance Innovation: Integrate Quadratic Voting with Truth Weighting (voting power = √(tokens) × truth_score) to prevent whale dominance (owner: governance, ETA: TBD).
 - [ ] **M16.6** Governance Innovation: Integrate Futarchy mechanisms where policy decisions are tied to prediction market outcomes (vote on values, bet on beliefs) (owner: governance, ETA: TBD).
-- [ ] **M16.7** Governance Innovation: Implement Liquid Democracy with dynamic delegation markets to create a reputation-based delegate marketplace (owner: governance, ETA: TBD).
+- [x] **M16.7** Governance Innovation: Implement Liquid Democracy with dynamic delegation markets to create a reputation-based delegate marketplace (owner: governance, ETA: TBD).
 
 ## Lane M17 — Code Quality, Scalability & Tokenomics (New)
 **Goal:** Address technical debt, improve horizontal scaling, establish formal state management architecture, and finalize tokenomics / revenue models.
