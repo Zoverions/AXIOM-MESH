@@ -3,6 +3,7 @@ module github.com/axiom-mesh/grid
 go 1.25
 
 require (
+	capnproto.org/go/capnp/v3 v3.1.0-alpha.2
 	github.com/cloudflare/circl v1.6.3
 	github.com/dgraph-io/badger/v4 v4.9.1
 	github.com/ethereum/go-ethereum v1.17.1

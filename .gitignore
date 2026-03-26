@@ -148,3 +148,5 @@ sandbox/capsules/*
 !sandbox/capsules/websearch/
 test_output.log
 sandbox/target/
+evidence/release/
+*.zip

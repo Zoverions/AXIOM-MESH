@@ -24,7 +24,6 @@ describe("HorizonForecast", function () {
       poerVerifier.target,
       pulse.target,
       owner.address,
-      owner.address,
       owner.address
     );
 
