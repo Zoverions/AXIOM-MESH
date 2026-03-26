@@ -185,8 +185,9 @@ func (v *Verifier) AggregateProofs(proofs []ZKProof) (AggregatedProof, error) {
 		return AggregatedProof{Valid: false}, errors.New("no proofs provided")
 	}
 
-	hasher := sha256.New()
 	allValid := true
+	hashes := make([]string, 0, len(proofs))
+
 	for i, p := range proofs {
 		res, err := v.VerifyWithCache(p)
 		if err != nil || !res.Valid {
@@ -195,15 +196,49 @@ func (v *Verifier) AggregateProofs(proofs []ZKProof) (AggregatedProof, error) {
 		}
 		if proofs[i].Hash == "" {
 			proofs[i].Hash = hashProof(p.Content)
-			p.Hash = proofs[i].Hash
 		}
-		hasher.Write([]byte(p.Hash))
+		hashes = append(hashes, proofs[i].Hash)
 	}
 
-	aggregatedHash := hex.EncodeToString(hasher.Sum(nil))
-
 	if !allValid {
-		return AggregatedProof{Hash: aggregatedHash, Valid: false}, errors.New("one or more proofs are invalid")
+		// Calculate a single hash anyway to represent the failed batch state
+		hasher := sha256.New()
+		for _, h := range hashes {
+			hasher.Write([]byte(h))
+		}
+		return AggregatedProof{Hash: hex.EncodeToString(hasher.Sum(nil)), Valid: false}, errors.New("one or more proofs are invalid")
+	}
+
+	aggregatedHash := ""
+
+	if v.Pipeline.Aggregation.Strategy == "recursive" {
+		// Simulate Merkle tree folding
+		currentHashes := hashes
+		for len(currentHashes) > 1 {
+			var nextHashes []string
+			for i := 0; i < len(currentHashes); i += 2 {
+				hasher := sha256.New()
+				hasher.Write([]byte(currentHashes[i]))
+				if i+1 < len(currentHashes) {
+					hasher.Write([]byte(currentHashes[i+1]))
+				} else {
+					// Duplicate last hash if odd number
+					hasher.Write([]byte(currentHashes[i]))
+				}
+				nextHashes = append(nextHashes, hex.EncodeToString(hasher.Sum(nil)))
+			}
+			currentHashes = nextHashes
+		}
+		if len(currentHashes) > 0 {
+			aggregatedHash = currentHashes[0]
+		}
+	} else {
+		// Linear
+		hasher := sha256.New()
+		for _, h := range hashes {
+			hasher.Write([]byte(h))
+		}
+		aggregatedHash = hex.EncodeToString(hasher.Sum(nil))
 	}
 
 	return AggregatedProof{Hash: aggregatedHash, Valid: true}, nil

@@ -19,9 +19,13 @@ class RoutingEngine:
 
         required_services = intent_hints.get("required_services", [])
         min_inf_s = intent_hints.get("min_inf_s", 0)
+        guild_id = intent_hints.get("guild_id")
 
         # Helper to check if a manifest satisfies the hints
         def satisfies(manifest: Dict[str, Any]) -> bool:
+            if guild_id and manifest.get("guild_id") != guild_id:
+                return False
+
             services = manifest.get("services", [])
             if any(req not in services for req in required_services):
                 return False

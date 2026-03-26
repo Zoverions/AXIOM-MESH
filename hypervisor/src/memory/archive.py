@@ -480,10 +480,20 @@ class DistributedDeepArchive(DeepArchive):
         return local_results
 
     async def sync_to_grid(self, content: str, metadata: Dict = None) -> None:
+        # M14.5 Symbiote Privacy & Disclosure
+        meta = metadata or {}
+        ucp_consent = meta.get("X-UCP-Consent")
+        requester_did = meta.get("X-Requester-DID")
+
+        if not ucp_consent or not requester_did:
+            print("[Privacy Enforced] Missing X-UCP-Consent or X-Requester-DID. Failing closed and skipping Grid sync.")
+            self.add(content, {**meta, "sync_mode": "local_only_privacy_fail_closed"})
+            return
+
         if len(self._load_data().get("nodes", {})) >= self.max_sync_queue:
             print("[Degraded Mode] Archive backpressure active: sync queue limit reached. Skipping distributed sync.")
             self.degraded_counters["grid"] += 1
-            self.add(content, {**(metadata or {}), "sync_mode": "local_only_backpressure"})
+            self.add(content, {**meta, "sync_mode": "local_only_backpressure"})
             return
 
         data = self._load_data()
