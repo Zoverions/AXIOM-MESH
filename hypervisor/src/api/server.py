@@ -404,17 +404,22 @@ async def _process_intent_core(intent: IntentObject, api_key: str):
 
         # Dynamic Routing Engine (Capability Manifests)
         # M14.1 Capability Manifest Enforcement
+        # M12.6 Capability manifest enforcement: No manifest -> no execution. Manifest must declare capabilities, resource bounds, network policy, I/O schemas, attestation target.
         capability_manifest = intent.metadata.get("capability_manifest", {})
-        required_hardware = capability_manifest.get("required_hardware")
-        network_scope = capability_manifest.get("network_scope")
+        capabilities = capability_manifest.get("capabilities")
+        resource_bounds = capability_manifest.get("resource_bounds")
+        network_policy = capability_manifest.get("network_policy")
+        io_schemas = capability_manifest.get("io_schemas")
+        attestation_target = capability_manifest.get("attestation_target")
 
-        if not capability_manifest or not required_hardware or not network_scope:
+        # Explicitly checking all required M12.6 fields. If not present, we halt execution.
+        if not capability_manifest or not capabilities or not resource_bounds or not network_policy or not io_schemas or not attestation_target:
             intent_metrics["error"] += 1
             audit_trail["safety_decisions"]["capability_manifest"] = "Failed"
             return IntentResponse(
                 id=str(uuid.uuid4()),
                 intent_id=intent.id,
-                response="System Halt: Missing or invalid capability manifest. Execution must declare required_hardware and network_scope bounds.",
+                response="System Halt: Missing or invalid capability manifest. Execution must declare capabilities, resource_bounds, network_policy, io_schemas, and attestation_target.",
                 status="error",
                 trace_id=trace_id,
                 audit_trail=audit_trail

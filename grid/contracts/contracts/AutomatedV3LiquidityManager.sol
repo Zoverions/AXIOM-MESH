@@ -25,6 +25,12 @@ contract AutomatedV3LiquidityManager is Initializable, UUPSUpgradeable {
     bool public initialLiquidityBypassed;
     event InitialLiquidityBypassed(address indexed admin, uint256 timestamp);
 
+    // M12.7 Oracle redundancy & Reduce initial liquidity concentration
+    uint256 public constant MAX_LIQUIDITY_DEPLOYMENT_BPS = 2000; // 20% max deployment per 30 days
+    uint256 public constant DEPLOYMENT_COOLDOWN = 30 days;
+    mapping(uint256 => uint256) public lastDeploymentTimestamp;
+    mapping(uint256 => uint256) public totalDeployedInCooldown;
+
     event PositionManaged(uint256 tokenId, uint128 liquidity);
     event FeesHarvested(uint256 amount0, uint256 amount1);
 
@@ -41,11 +47,20 @@ contract AutomatedV3LiquidityManager is Initializable, UUPSUpgradeable {
     }
 
     function managePosition(uint256 tokenId, uint128 liquidityDelta) external {
-        // We approve the NPM contract to use the token in production:
-        // address token0 = ...
-        // address token1 = ...
-        // IERC20(token0).approve(address(npm), type(uint256).max);
-        // IERC20(token1).approve(address(npm), type(uint256).max);
+        // M12.7: Throttle liquidity deployment to reduce initial liquidity concentration risk
+        if (block.timestamp > lastDeploymentTimestamp[tokenId] + DEPLOYMENT_COOLDOWN) {
+            totalDeployedInCooldown[tokenId] = 0; // Reset cooldown
+        }
+
+        // Ensure we don't deploy too much liquidity at once (e.g. max 20% of a 5 million token baseline per pool).
+        // 20% of 5,000,000 = 1,000,000 using the BPS constant.
+        uint256 assumedPoolCap = 5_000_000 ether;
+        uint256 allowedDeployment = (assumedPoolCap * MAX_LIQUIDITY_DEPLOYMENT_BPS) / 10000;
+
+        require(totalDeployedInCooldown[tokenId] + liquidityDelta <= allowedDeployment, "Exceeds max liquidity deployment limit for cooldown window");
+
+        totalDeployedInCooldown[tokenId] += liquidityDelta;
+        lastDeploymentTimestamp[tokenId] = block.timestamp;
 
         // Increase or decrease liquidity (governance-gated in production)
         npm.increaseLiquidity(INonfungiblePositionManager.IncreaseLiquidityParams({

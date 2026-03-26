@@ -4,8 +4,13 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./DialecticArbitration.sol";
 
+// M12.12 Governance simulation.
 contract AutomatedBicameralGovernance is Ownable {
     DialecticArbitration public arbitrationContract;
+
+    // Flag to enable a safe mode where governance parameter changes are only simulated and logged, not enacted.
+    bool public simulationModeActive;
+    event SimulationExecuted(bytes32 indexed peerClassId, ActionType simulatedPolicy);
 
     // Policy structures
     enum ActionType { None, Deny, AllowWithReview, Allow }
@@ -97,6 +102,13 @@ contract AutomatedBicameralGovernance is Ownable {
     }
 
     /**
+     * @dev Set simulation mode
+     */
+    function setSimulationMode(bool _active) external onlyAIGovernor {
+        simulationModeActive = _active;
+    }
+
+    /**
      * @dev Updates overall policy configuration
      */
     function updatePolicy(
@@ -107,6 +119,12 @@ contract AutomatedBicameralGovernance is Ownable {
     ) external onlyAIGovernor onlyWhenActive {
         if (minSecurityProfile > 3) revert InvalidSecurityProfile();
         if (maxRiskTier > 4) revert InvalidRiskTier();
+
+        if (simulationModeActive) {
+            // M12.12 Governance Simulation: Only emit event to track hypothetical impact, do not alter state
+            emit SimulationExecuted(peerClassId, defaultPolicy);
+            return;
+        }
 
         peerClassRisks[peerClassId] = PeerClassRisk({
             defaultPolicy: defaultPolicy,

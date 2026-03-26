@@ -12,6 +12,10 @@ import "./DualLedgerIdentity.sol";
 contract WeightOracle is TimelockedOwnable {
     DualLedgerIdentity public identityContract;
 
+    // M12.7 Oracle redundancy: Add explicit oracle fallback strategy and reduce initial liquidity concentration.
+    // We add a fallback oracle address to be used if the main feed fails or needs redundancy.
+    address public fallbackOracle;
+
     // Mapping from node address to their weight score (PoER or PoSig)
     mapping(address => uint256) public nodeWeights;
 
@@ -141,7 +145,27 @@ contract WeightOracle is TimelockedOwnable {
      */
     function getWeight(address node) external view returns (uint256) {
         if (!identityContract.isNodeRegistered(node)) revert NodeNotRegistered(node);
-        return this.calculateMeritWeight(node);
+
+        uint256 weight = this.calculateMeritWeight(node);
+
+        // M12.7 Oracle redundancy: Use fallback oracle if base weight calculation returns 0
+        if (weight == 0 && fallbackOracle != address(0)) {
+            (bool success, bytes memory data) = fallbackOracle.staticcall(
+                abi.encodeWithSignature("getWeight(address)", node)
+            );
+            if (success && data.length > 0) {
+                weight = abi.decode(data, (uint256));
+            }
+        }
+
+        return weight;
+    }
+
+    /**
+     * @dev Set the fallback oracle address
+     */
+    function setFallbackOracle(address _fallbackOracle) external onlyTimelocked(keccak256(abi.encodePacked("setFallbackOracle", _fallbackOracle))) {
+        fallbackOracle = _fallbackOracle;
     }
 
     /**

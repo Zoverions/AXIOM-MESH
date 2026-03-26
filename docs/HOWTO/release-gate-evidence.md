@@ -44,6 +44,11 @@ release-evidence/
 - Signed approval record from accountable owners.
 - Any exception documents with owner + expiry + mitigation.
 
+### M12.13 External Audit Gate
+- Evidence of external smart contract security audit matching the exact commit hashes deployed.
+- Resolution matrix of all findings marked as "Fixed" or "Acknowledged" with an architectural justification.
+- Official PDF/attestation from external auditing firm checked into the `evidence/` directory.
+
 ## 3) Assembly workflow
 
 1. Create RC folder and pre-populate all gate subfolders.
