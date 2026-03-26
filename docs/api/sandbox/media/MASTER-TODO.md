@@ -1,7 +1,7 @@
 # AXIOM-MESH Master To-Do List (Canonical Agent Queue)
 
-**Version:** 2026-03-23  
-**Purpose:** Single list for all human/digital agents to execute, update, and close.  
+**Version:** 2026-03-23
+**Purpose:** Single list for all human/digital agents to execute, update, and close.
 **Rule:** If a task exists here, it is active. If it only exists elsewhere, it is reference-only and should be migrated or archived.
 
 ---

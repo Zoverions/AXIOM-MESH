@@ -7,7 +7,19 @@
 	test-reconciliation test-grid-authz verify-change-control test-provex-wrapper \
 	test-mtls test-sandbox-identity test-zero-trust test-telemetry-alerts \
 	verify-external-audit-artifacts verify-zkml-audit-pack verify-bridge-audit-pack \
-	verify-gas-target verify-sbom verify-genesis-ceremony
+	verify-gas-target verify-sbom verify-genesis-ceremony \
+	generate-docs
+
+generate-docs:
+	@echo "Generating API Documentation..."
+	# Gateway Docs (TypeDoc)
+	cd gateway && npm install --save-dev @types/jest && echo '{"extends": "./tsconfig.json", "compilerOptions": {"types": ["jest", "node"]}, "exclude": ["**/*.test.ts", "**/*.spec.ts", "../testing/**/*"]}' > tsconfig.docs.json && npx typedoc --out ../docs/api/gateway --tsconfig tsconfig.docs.json src || true
+	# Sandbox Docs (TypeDoc)
+	cd sandbox && npm install --save-dev @types/jest @types/node && echo '{"extends": "./tsconfig.json", "compilerOptions": {"types": ["jest", "node"]}, "exclude": ["**/*.test.ts", "**/*.spec.ts", "../testing/**/*"]}' > tsconfig.docs.json && npx typedoc --out ../docs/api/sandbox --tsconfig tsconfig.docs.json src || true
+	# Hypervisor Docs (pdoc)
+	cd hypervisor && pip install -r requirements.txt && pip install pdoc && PYTHONPATH=src:../ pdoc -o ../docs/api/hypervisor ./src || true
+	# Grid Docs (GoMarkDoc)
+	export GOPATH=$$HOME/go && export PATH=$$PATH:$$GOPATH/bin && go install github.com/princjef/gomarkdoc/cmd/gomarkdoc@latest && mkdir -p docs/api/grid && cd grid && $$HOME/go/bin/gomarkdoc -o ../docs/api/grid/README.md ./... || true
 
 up:
 	docker compose up -d --build
