@@ -37,6 +37,10 @@ interface IHorizonForecast {
     ) external returns (bool);
 }
 
+interface ISoulboundReputation {
+    function getAggregateReputation(address _user) external view returns (uint256);
+}
+
 struct AttentionArtifact {
     bytes32 attentionScopeHash;
     bytes32 dependencyGraphRoot;
@@ -53,6 +57,7 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
     address public immutable guardianSentinel;
     address public horizonForecast;
     MemoryLattice public memoryLattice;
+    ISoulboundReputation public soulboundReputation;
 
     uint256 public constant CHALLENGE_WINDOW = 7 days;
     uint256 public constant NETWORK_TAX_BPS = 500;
@@ -110,27 +115,48 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
         memoryLattice = MemoryLattice(_lattice);
     }
 
+    function setSoulboundReputation(address _reputation) external {
+        require(msg.sender == guardianSentinel, "Unauthorized setter");
+        soulboundReputation = ISoulboundReputation(_reputation);
+    }
+
     function openChannel(address agentB, bytes32 taskHash, uint256 stake) external nonReentrant returns (bytes32) {
         require(agentB != address(0), "Invalid peer");
         require(stake > 0, "Invalid stake");
+
+        uint256 challengeWindow = CHALLENGE_WINDOW;
+        uint256 requiredStake = stake;
+
+        if (address(soulboundReputation) != address(0)) {
+            uint256 repA = soulboundReputation.getAggregateReputation(msg.sender);
+            uint256 repB = soulboundReputation.getAggregateReputation(agentB);
+            uint256 minRep = repA < repB ? repA : repB;
+
+            if (minRep >= 800) {
+                challengeWindow = 3 days;
+            } else if (minRep < 500) {
+                challengeWindow = 14 days;
+                requiredStake = stake * 2;
+            }
+        }
 
         bytes32 channelId = keccak256(abi.encodePacked(msg.sender, agentB, taskHash, block.timestamp, channelNonce++));
         channels[channelId] = Channel({
             agentA: msg.sender,
             agentB: agentB,
-            lockedStake: stake * 2,
+            lockedStake: requiredStake * 2,
             taskHash: taskHash,
             finalStateRoot: bytes32(0),
             openedAt: block.timestamp,
-            challengeWindowEnds: block.timestamp + CHALLENGE_WINDOW,
+            challengeWindowEnds: block.timestamp + challengeWindow,
             isSettled: false,
             isChallenged: false,
             agentBJoined: false
         });
 
-        require(axmToken.transferFrom(msg.sender, address(this), stake), "Stake A transfer failed");
+        require(axmToken.transferFrom(msg.sender, address(this), requiredStake), "Stake A transfer failed");
 
-        emit ChannelOpened(channelId, block.timestamp + CHALLENGE_WINDOW);
+        emit ChannelOpened(channelId, block.timestamp + challengeWindow);
         return channelId;
     }
 
