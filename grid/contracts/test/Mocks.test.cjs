@@ -102,7 +102,7 @@ describe("Mock Implementations Replacements", function () {
 
     it("Should deploy and setup AssuranceMarkets", async function () {
       const MockToken = await ethers.getContractFactory("contracts/mock/MockERC20.sol:MockERC20");
-      gdtToken = await MockToken.deploy("Global Defense Token", "GDT");
+      gdtToken = await MockToken.deploy("Global Defense Token", "GDT", ethers.parseUnits("100000", 18));
       await gdtToken.waitForDeployment();
 
       const AssuranceMarkets = await ethers.getContractFactory("AssuranceMarkets");

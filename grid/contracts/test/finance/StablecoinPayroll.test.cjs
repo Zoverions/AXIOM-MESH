@@ -13,7 +13,7 @@ describe("StablecoinPayroll", function () {
 
     // Deploy mock ERC20 stablecoin
     const MockERC20 = await ethers.getContractFactory("MockERC20");
-    mockStablecoin = await MockERC20.deploy("Mock USDC", "mUSDC");
+    mockStablecoin = await MockERC20.deploy("Mock USDC", "mUSDC", ethers.parseUnits("1000000", 6));
 
     // Give owner some tokens
     await mockStablecoin.mint(owner.address, ethers.parseEther("1000000"));
