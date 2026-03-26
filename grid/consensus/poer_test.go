@@ -62,3 +62,25 @@ func TestCalculatePoERScoreVectors(t *testing.T) {
 		}
 	}
 }
+
+func TestCalculateAttentionWeightedScore(t *testing.T) {
+	cases := []struct {
+		base              float64
+		attentionWeight   float64
+		priorReliability  float64
+		expected          float64
+	}{
+		{100.0, 1.0, 1.0, 100.0},
+		{100.0, 0.0, 1.0, 0.0}, // No relevance
+		{100.0, 1.0, 0.0, 50.0}, // Zero prior reliability cuts score in half
+		{100.0, 0.5, 0.5, 37.5}, // 100 * 0.5 * 0.75
+	}
+
+	for _, tc := range cases {
+		result := CalculateAttentionWeightedScore(tc.base, tc.attentionWeight, tc.priorReliability)
+		if result != tc.expected {
+			t.Errorf("CalculateAttentionWeightedScore(%f, %f, %f) = %f; want %f",
+				tc.base, tc.attentionWeight, tc.priorReliability, result, tc.expected)
+		}
+	}
+}
