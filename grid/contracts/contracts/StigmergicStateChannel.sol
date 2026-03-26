@@ -49,7 +49,6 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
     IAXM public immutable axmToken;
     ICognitiveFrictionVerifier public immutable poerVerifier;
     IPulseAdapter public immutable pulseAdapter;
-    address public immutable founderManager;
     address public immutable universalDistributionPool;
     address public immutable guardianSentinel;
     address public horizonForecast;
@@ -57,6 +56,7 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
 
     uint256 public constant CHALLENGE_WINDOW = 7 days;
     uint256 public constant NETWORK_TAX_BPS = 500;
+    uint256 public channelNonce;
 
     struct Channel {
         address agentA;
@@ -68,6 +68,7 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
         uint256 challengeWindowEnds;
         bool isSettled;
         bool isChallenged;
+        bool agentBJoined;
     }
 
     mapping(bytes32 => Channel) public channels;
@@ -81,21 +82,18 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
         address _axm,
         address _poer,
         address _pulse,
-        address _founder,
         address _universalPool,
         address _guardian
     ) {
         require(_axm != address(0), "AXM required");
         require(_poer != address(0), "PoER required");
         require(_pulse != address(0), "Pulse required");
-        require(_founder != address(0), "Founder required");
         require(_universalPool != address(0), "Pool required");
         require(_guardian != address(0), "Guardian required");
 
         axmToken = IAXM(_axm);
         poerVerifier = ICognitiveFrictionVerifier(_poer);
         pulseAdapter = IPulseAdapter(_pulse);
-        founderManager = _founder;
         universalDistributionPool = _universalPool;
         guardianSentinel = _guardian;
 
@@ -116,23 +114,36 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
         require(agentB != address(0), "Invalid peer");
         require(stake > 0, "Invalid stake");
 
-        bytes32 channelId = keccak256(abi.encodePacked(msg.sender, agentB, taskHash, block.timestamp));
+        bytes32 channelId = keccak256(abi.encodePacked(msg.sender, agentB, taskHash, block.timestamp, channelNonce++));
         channels[channelId] = Channel({
             agentA: msg.sender,
             agentB: agentB,
-            lockedStake: stake,
+            lockedStake: stake * 2,
             taskHash: taskHash,
             finalStateRoot: bytes32(0),
             openedAt: block.timestamp,
             challengeWindowEnds: block.timestamp + CHALLENGE_WINDOW,
             isSettled: false,
-            isChallenged: false
+            isChallenged: false,
+            agentBJoined: false
         });
 
-        require(axmToken.transferFrom(msg.sender, address(this), stake), "Stake transfer failed");
+        require(axmToken.transferFrom(msg.sender, address(this), stake), "Stake A transfer failed");
 
         emit ChannelOpened(channelId, block.timestamp + CHALLENGE_WINDOW);
         return channelId;
+    }
+
+    function joinChannel(bytes32 channelId) external nonReentrant {
+        Channel storage ch = channels[channelId];
+        require(ch.agentA != address(0), "Channel not found");
+        require(msg.sender == ch.agentB, "Only agentB can join");
+        require(!ch.agentBJoined, "Already joined");
+
+        uint256 individualStake = ch.lockedStake / 2;
+        require(axmToken.transferFrom(msg.sender, address(this), individualStake), "Stake B transfer failed");
+
+        ch.agentBJoined = true;
     }
 
     function optimisticSettle(
@@ -187,6 +198,7 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
     ) internal {
         Channel storage ch = channels[channelId];
         require(ch.agentA != address(0), "Channel not found");
+        require(ch.agentBJoined, "Agent B has not joined");
         require(!ch.isSettled, "Already settled");
         require(!ch.isChallenged, "Settlement challenged");
         require(block.timestamp > ch.challengeWindowEnds, "Challenge window open");
@@ -226,6 +238,7 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
     function challengeSettlement(bytes32 channelId, bytes calldata fraudProof) external {
         Channel storage ch = channels[channelId];
         require(ch.agentA != address(0), "Channel not found");
+        require(msg.sender == ch.agentA || msg.sender == ch.agentB || msg.sender == guardianSentinel, "Unauthorized challenger");
         require(!ch.isSettled, "Already settled");
         require(block.timestamp <= ch.challengeWindowEnds, "Window closed");
         require(fraudProof.length > 0, "Missing fraud proof");

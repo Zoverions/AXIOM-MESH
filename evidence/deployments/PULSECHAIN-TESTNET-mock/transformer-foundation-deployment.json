@@ -1,0 +1,21 @@
+{
+  "commit": "mock-commit-sha",
+  "network": {
+    "name": "pulsechainTestnet",
+    "chainId": 943,
+    "rpcUrl": "https://rpc.v4.testnet.pulsechain.com"
+  },
+  "deployer": "0x1234567890123456789012345678901234567890",
+  "contracts": {
+    "AXMToken": {
+      "address": "0x1111111111111111111111111111111111111111",
+      "txHash": "0xabc",
+      "blockNumber": 1
+    },
+    "FounderCommitment": {
+      "address": "0x2222222222222222222222222222222222222222",
+      "txHash": "0xdef",
+      "blockNumber": 2
+    }
+  }
+}
