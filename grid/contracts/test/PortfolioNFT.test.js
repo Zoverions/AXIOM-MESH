@@ -14,7 +14,7 @@ describe("PortfolioNFT Ecosystem Asset Vault", function () {
 
     // Deploy a generic ERC20 to simulate an ecosystem token like HEX, bridged stablecoin, or PLSX
     const MockERC20 = await ethers.getContractFactory("contracts/mock/MockERC20.sol:MockERC20");
-    mockERC20 = await MockERC20.deploy("Bridged USDC", "USDC");
+    mockERC20 = await MockERC20.deploy("Bridged USDC", "USDC", ethers.parseUnits("100000", 18));
   });
 
   it("should mint an NFT and deploy a vault", async function () {
