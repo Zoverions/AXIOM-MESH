@@ -15,7 +15,19 @@ contract CrossChainBridge is OApp {
     UniversalDistributionPool public immutable pool;
     ShadowBridge public immutable shadow;
 
+    struct PendingClaim {
+        address recipient;
+        uint256 amount;
+        bytes32 zkProof;
+        uint256 timestamp;
+    }
+
+    mapping(bytes32 => PendingClaim) public pendingClaims;
+    mapping(uint32 => uint256) public chainFinalityBlocks;
+
     event ArbitrageExecuted(uint256 profit, address token);
+    event ClaimReceived(bytes32 indexed guid, address recipient, uint256 amount);
+    event ClaimRedeemed(bytes32 indexed guid, address recipient, uint256 amount);
 
     constructor(address _endpoint, address _founder, address payable _pool, address _shadow) OApp(_endpoint, msg.sender) Ownable(msg.sender) {
         founder = FounderCommitment(_founder);
@@ -43,6 +55,27 @@ contract CrossChainBridge is OApp {
     function _lzReceive(Origin calldata _origin, bytes32 _guid, bytes calldata payload, address _executor, bytes calldata _extraData) internal override {
         // Receive shadow contribution or robot payroll on destination chain
         (address recipient, uint256 amount, bytes32 zkProof) = abi.decode(payload, (address, uint256, bytes32));
-        pool.distribute(recipient, amount, zkProof);
+        pendingClaims[_guid] = PendingClaim({
+            recipient: recipient,
+            amount: amount,
+            zkProof: zkProof,
+            timestamp: block.timestamp
+        });
+        emit ClaimReceived(_guid, recipient, amount);
+    }
+
+    function claimRedemption(bytes32 _guid) external {
+        PendingClaim memory claim = pendingClaims[_guid];
+        require(claim.timestamp > 0, "Claim not found");
+        require(block.timestamp >= claim.timestamp + 1 hours, "Finality delay not met");
+
+        delete pendingClaims[_guid];
+        pool.distribute(claim.recipient, claim.amount, claim.zkProof);
+        emit ClaimRedeemed(_guid, claim.recipient, claim.amount);
+    }
+
+    function interceptClaim(bytes32 _guid) external onlyOwner {
+        require(pendingClaims[_guid].timestamp > 0, "Claim not found");
+        delete pendingClaims[_guid];
     }
 }

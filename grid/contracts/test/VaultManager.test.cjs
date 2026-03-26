@@ -27,7 +27,6 @@ describe("VaultManager", function () {
       poerVerifier.target,
       pulse.target,
       owner.address,
-      owner.address,
       owner.address
     );
 
