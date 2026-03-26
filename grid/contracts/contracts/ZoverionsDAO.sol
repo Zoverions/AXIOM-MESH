@@ -3,9 +3,11 @@ pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./WeightOracle.sol";
 
 contract ZoverionsDAO is Ownable {
     IERC20 public governanceToken;
+    WeightOracle public weightOracle;
 
     struct Proposal {
         string description;
@@ -25,8 +27,9 @@ contract ZoverionsDAO is Ownable {
     event Voted(uint256 indexed id, address voter, uint256 votesCast, uint256 cost, bool support);
     event Vetoed(uint256 indexed id, address guardian);
 
-    constructor(address _governanceToken, address initialOwner) Ownable(initialOwner) {
+    constructor(address _governanceToken, address _weightOracle, address initialOwner) Ownable(initialOwner) {
         governanceToken = IERC20(_governanceToken);
+        weightOracle = WeightOracle(_weightOracle);
     }
 
     function setGuardian(address guardian, bool status) external onlyOwner {
@@ -46,7 +49,7 @@ contract ZoverionsDAO is Ownable {
         return id;
     }
 
-    // Assembly of Stewards Layer: Quadratic Voting (cost = votes^2)
+    // Assembly of Stewards Layer: Quadratic Voting with Truth Weighting (voting power = √(tokens) × truth_score)
     function vote(uint256 proposalId, uint256 votesToCast, bool support) external {
         require(!proposals[proposalId].executed, "DAO: Already executed");
         require(votesToCast > 0, "DAO: Must cast at least one vote");
@@ -61,14 +64,17 @@ contract ZoverionsDAO is Ownable {
         // Burn or lock the governance tokens used to pay the quadratic cost
         governanceToken.transferFrom(msg.sender, address(this), costToPay);
 
+        uint256 truthScore = weightOracle.getWeight(msg.sender);
+        uint256 effectiveVotes = votesToCast * truthScore;
+
         if (support) {
-            proposals[proposalId].votesFor += votesToCast;
+            proposals[proposalId].votesFor += effectiveVotes;
         } else {
-            proposals[proposalId].votesAgainst += votesToCast;
+            proposals[proposalId].votesAgainst += effectiveVotes;
         }
 
         quadraticVotes[proposalId][msg.sender] = newTotalVotes;
-        emit Voted(proposalId, msg.sender, votesToCast, costToPay, support);
+        emit Voted(proposalId, msg.sender, effectiveVotes, costToPay, support);
     }
 
     // Council of Guardians Layer: Multi-sig veto
