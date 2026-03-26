@@ -100,10 +100,10 @@ describe('Gateway integration contracts', () => {
             ALL_PROXY: ''
         };
 
-        gatewayProcess = spawn('node', ['-r', 'ts-node/register', 'index.ts'], {
+        gatewayProcess = spawn('node', ['-r', 'ts-node/register', 'src/index.ts'], {
             cwd: path.resolve(__dirname, '../../'),
-            env: gwEnv,
-            stdio: 'inherit'
+            env: { ...gwEnv, LOCAL_RPC_URL: "http://localhost:8545", PATH: process.env.PATH },
+            stdio: 'pipe'
         });
 
         let gwUp = false;
