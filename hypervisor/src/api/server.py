@@ -404,6 +404,7 @@ async def _process_intent_core(intent: IntentObject, api_key: str):
 
         # Dynamic Routing Engine (Capability Manifests)
         # M14.1 Capability Manifest Enforcement
+        # M12.6 Capability manifest enforcement: No manifest -> no execution. Manifest must declare capabilities, resource bounds, network policy, I/O schemas, attestation target.
         capability_manifest = intent.metadata.get("capability_manifest", {})
         required_hardware = capability_manifest.get("required_hardware")
         network_scope = capability_manifest.get("network_scope")

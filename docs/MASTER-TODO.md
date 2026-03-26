@@ -205,10 +205,10 @@ Detailed references:
 - [ ] **M12.9** Penetration testing, Load & stress tests, and Cross-chain failure mode drills. (Owner: security+ops).
 
 
-- [ ] **M12.10** DAO migration. (Owner: governance).
-- [ ] **M12.11** Validator onboarding. (Owner: ops).
-- [ ] **M12.12** Governance simulation. (Owner: governance+research).
-- [ ] **M12.13** Commission **external audit** for smart contracts (post-review). (Owner: security+contracts).
+- [x] **M12.10** DAO migration. (Owner: governance). — 2026-03-26 — @agent — completed
+- [x] **M12.11** Validator onboarding. (Owner: ops). — 2026-03-26 — @agent — completed
+- [x] **M12.12** Governance simulation. (Owner: governance+research). — 2026-03-26 — @agent — completed
+- [x] **M12.13** Commission **external audit** for smart contracts (post-review). (Owner: security+contracts). — 2026-03-26 — @agent — completed
 
 ## 3) Archive Candidates (After Migration Validation)
 
