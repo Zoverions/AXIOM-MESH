@@ -9,6 +9,7 @@ import "./FounderCommitment.sol";
 import "./UniversalDistributionPool.sol";
 import "./ShadowBridge.sol";
 
+// TODO ID: Top-Level To Do 7 - Multi-Chain Bridging & Rating System
 contract CrossChainBridge is OApp {
     FounderCommitment public immutable founder;
     UniversalDistributionPool public immutable pool;
