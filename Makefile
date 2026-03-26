@@ -7,7 +7,7 @@
 	test-reconciliation test-grid-authz verify-change-control test-provex-wrapper \
 	test-mtls test-sandbox-identity test-zero-trust test-telemetry-alerts \
 	verify-external-audit-artifacts verify-zkml-audit-pack verify-bridge-audit-pack \
-	verify-gas-target verify-sbom
+	verify-gas-target verify-sbom verify-genesis-ceremony
 
 up:
 	docker compose up -d --build
@@ -122,3 +122,6 @@ verify-gas-target:
 verify-sbom:
 	./scripts/generate_sbom.sh
 	python3 scripts/verify_sbom.py
+
+verify-genesis-ceremony:
+	python3 scripts/test_genesis_ceremony.py

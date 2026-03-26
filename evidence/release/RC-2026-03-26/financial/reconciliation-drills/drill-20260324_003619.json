@@ -1,0 +1,37 @@
+{
+  "drill": "financial_reconciliation",
+  "generated_at": "2026-03-24T00:36:19Z",
+  "status": "pass",
+  "checks": {
+    "control_artifacts": [
+      {
+        "artifact": "docs/FINANCIAL-CONTROLS-EVIDENCE.md",
+        "status": "pass",
+        "detail": "present"
+      },
+      {
+        "artifact": "docs/TOKENOMICS.md",
+        "status": "pass",
+        "detail": "present"
+      },
+      {
+        "artifact": "grid/contracts/contracts/token/AXM.sol",
+        "status": "pass",
+        "detail": "present"
+      },
+      {
+        "artifact": "grid/contracts/contracts/AutomatedBicameralGovernance.sol",
+        "status": "pass",
+        "detail": "present"
+      }
+    ],
+    "reconciliation_test": {
+      "name": "ledger_chain_reconciliation",
+      "status": "pass",
+      "command": "go test ./blockchain -run TestLedger_ApplyBondChainEvent_And_Reconcile -count=1",
+      "exit_code": 0,
+      "stdout": "ok  \tgithub.com/axiom-mesh/grid/blockchain\t0.021s",
+      "stderr": ""
+    }
+  }
+}
