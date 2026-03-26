@@ -522,6 +522,18 @@ Both reviews independently flag this as the **largest existential risk**:
 - Cross‑chain stress testing
 - Governance simulation
 
+## 7) Top-Level To Do
+1. Transformer Foundation
+2. Axiom Symbiosis Engine + Monetization
+3. Axiom Vault Network
+4. Axiom Memory Lattice
+5. [x] **Sacrifice Campaign + Digital Entity / Symbiote Core** — 2026-03-26 — @agent — completed and verified implementation.
+6. DonationCampaign + Self-Funding Loop
+7. Multi-Chain Bridging & Rating System
+8. Mainnet Genesis + Bug Bounty
+
+---
+
 #### 12. Final Synthesis Statement
 
 AXIOM‑MESH is not “another agent framework.”

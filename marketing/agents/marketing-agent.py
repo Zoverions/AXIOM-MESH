@@ -6,7 +6,10 @@ class MarketingAgent:
 
     def run_campaign(self):
         while True:
-            post = f"🚀 Support AXIOM-MESH growth! Donate to the Funding Campaign: {self.campaign_address}\n\nEvery contribution funds infrastructure, UBI, and stability. Donors get PoER boost + priority Vault access and priority in Symbiosis bundles. Check out our new Axiom Vault Network!"
+            post = (f"🔥 Join the AXIOM-MESH Sacrifice Campaign!\n\n"
+                    f"\"I sacrifice to AXIOM-MESH for freedom, open source, collective benefit, and system stability. No expectation of return.\"\n\n"
+                    f"Funds automatically allocate to UBI and Guardian Reserve. Claim your optional Sacrificer Recognition NFT for your Digital Entity profile.\n"
+                    f"Donate here: {self.campaign_address}")
             print("Marketing post:", post)
             # Post to X, Discord, etc. via APIs
             time.sleep(3600)
