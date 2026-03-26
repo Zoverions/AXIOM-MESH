@@ -25,6 +25,11 @@ contract FounderShareManager is Initializable, UUPSUpgradeable {
     event CouncilAutonomyActivated();
     event FullHandoverTriggered(string reason);
 
+    function guardianSentinel() external view returns (address) {
+        // Return founder address or treasury as guardian
+        return address(founder);
+    }
+
     constructor(address _founder, address _treasury) {
         founder = FounderCommitment(_founder);
         treasury = ComputeBond(_treasury);

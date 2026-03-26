@@ -1,5 +1,5 @@
 {
-  "version": "15.4.6-MEMORY-LATTICE",
+  "version": "15.4.6-SACRIFICE-SYMBIOTE",
   "executionLayer": "Attention-Indexed State Machine (transformer proposer + symbolic verification)",
   "gasStrategy": {
     "tier0": "AICP QUIC tensors – $0.00",
@@ -15,9 +15,15 @@
   "foundationalStatus": "Locked – transformer attention is now the native VM",
   "features": {
     "axiomVaultNetwork": "NFT-keyed secure vaults for tokens, NFTs, bridged stablecoins",
-    "fundingCampaign": "Unlimited incentivized donations with PoER boosts and priority access",
     "selfFundingLoop": "Donations + fees → infrastructure + network growth"
   },
+  "sacrificeCampaign": {
+    "enabled": true,
+    "message": "Voluntary ideological sacrifice for freedom, open source, collective good, and system stability",
+    "incentives": "Recognition NFT + PoER boost (no financial return)",
+    "ledger": "On-chain donor history with optional public profile sharing"
+  },
+  "digitalEntityCore": "Symbiote Connection + Educational Node as living heart of the Mesh",
   "memoryLattice": {
     "enabled": true,
     "purpose": "On-chain verifiable economic memory from transformer attention graphs"
