@@ -47,3 +47,8 @@ PoT extends proof-of-computation into proof-of-truth. Instead of only proving an
 - **PoT** governs truth claims and economic settlement of disputed assertions.
 
 Together they form a layered trust stack: **Reasoning Integrity + Attack Immunity + Truth Finality**.
+
+## 7) Formal Challenge Resolution Invariants
+- Challenge bond must equal or exceed the original claim bond.
+- Challenge window is strictly bounded (e.g., 7 days).
+- Slashing distribution invariant: 50% to successful challengers, 50% burned/treasury.
