@@ -37,6 +37,10 @@ interface IHorizonForecast {
     ) external returns (bool);
 }
 
+interface ISoulboundReputation {
+    function getAggregateReputation(address _user) external view returns (uint256);
+}
+
 struct AttentionArtifact {
     bytes32 attentionScopeHash;
     bytes32 dependencyGraphRoot;
@@ -53,6 +57,7 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
     address public immutable guardianSentinel;
     address public horizonForecast;
     MemoryLattice public memoryLattice;
+    ISoulboundReputation public soulboundReputation;
 
     uint256 public constant CHALLENGE_WINDOW = 7 days;
     uint256 public constant NETWORK_TAX_BPS = 500;
@@ -62,9 +67,12 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
         address agentA;
         address agentB;
         uint256 lockedStake;
+        uint256 stakeA;
+        uint256 stakeB;
         bytes32 taskHash;
         bytes32 finalStateRoot;
         uint256 openedAt;
+        uint256 challengeWindow;
         uint256 challengeWindowEnds;
         bool isSettled;
         bool isChallenged;
@@ -77,6 +85,7 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
     event OptimisticSettled(bytes32 indexed channelId, bytes32 stateRootAfter);
     event SettlementChallenged(bytes32 indexed channelId, address challenger);
     event ChannelFundingReleased(bytes32 indexed channelId, uint256 networkTax, uint256 payoutA, uint256 payoutB);
+    event ChallengeModifiersApplied(bytes32 indexed channelId, uint256 minRep, uint256 modifiedWindow, uint256 modifiedStake);
 
     constructor(
         address _axm,
@@ -110,27 +119,57 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
         memoryLattice = MemoryLattice(_lattice);
     }
 
+    function setSoulboundReputation(address _reputation) external {
+        require(msg.sender == guardianSentinel, "Unauthorized setter");
+        soulboundReputation = ISoulboundReputation(_reputation);
+    }
+
     function openChannel(address agentB, bytes32 taskHash, uint256 stake) external nonReentrant returns (bytes32) {
         require(agentB != address(0), "Invalid peer");
         require(stake > 0, "Invalid stake");
 
+        uint256 challengeWindow = CHALLENGE_WINDOW;
+        uint256 requiredStake = stake;
+
+        uint256 minRep = 0;
+        if (address(soulboundReputation) != address(0)) {
+            uint256 repA = soulboundReputation.getAggregateReputation(msg.sender);
+            uint256 repB = soulboundReputation.getAggregateReputation(agentB);
+            minRep = repA < repB ? repA : repB;
+
+            if (minRep >= 800) {
+                challengeWindow = 3 days;
+            } else if (minRep < 500) {
+                challengeWindow = 14 days;
+                requiredStake = stake * 2;
+            }
+        }
+
         bytes32 channelId = keccak256(abi.encodePacked(msg.sender, agentB, taskHash, block.timestamp, channelNonce++));
+
+        if (challengeWindow != CHALLENGE_WINDOW || requiredStake != stake) {
+            emit ChallengeModifiersApplied(channelId, minRep, challengeWindow, requiredStake);
+        }
+
         channels[channelId] = Channel({
             agentA: msg.sender,
             agentB: agentB,
-            lockedStake: stake * 2,
+            lockedStake: requiredStake * 2,
+            stakeA: requiredStake,
+            stakeB: requiredStake,
             taskHash: taskHash,
             finalStateRoot: bytes32(0),
             openedAt: block.timestamp,
-            challengeWindowEnds: block.timestamp + CHALLENGE_WINDOW,
+            challengeWindow: challengeWindow,
+            challengeWindowEnds: block.timestamp + challengeWindow,
             isSettled: false,
             isChallenged: false,
             agentBJoined: false
         });
 
-        require(axmToken.transferFrom(msg.sender, address(this), stake), "Stake A transfer failed");
+        require(axmToken.transferFrom(msg.sender, address(this), requiredStake), "Stake A transfer failed");
 
-        emit ChannelOpened(channelId, block.timestamp + CHALLENGE_WINDOW);
+        emit ChannelOpened(channelId, block.timestamp + challengeWindow);
         return channelId;
     }
 
@@ -140,7 +179,7 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
         require(msg.sender == ch.agentB, "Only agentB can join");
         require(!ch.agentBJoined, "Already joined");
 
-        uint256 individualStake = ch.lockedStake / 2;
+        uint256 individualStake = ch.stakeB;
         require(axmToken.transferFrom(msg.sender, address(this), individualStake), "Stake B transfer failed");
 
         ch.agentBJoined = true;
@@ -227,12 +266,15 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
         uint256 tax = (ch.lockedStake * NETWORK_TAX_BPS) / 10_000;
         uint256 payout = ch.lockedStake - tax;
 
+        uint256 payoutA = (payout * ch.stakeA) / ch.lockedStake;
+        uint256 payoutB = payout - payoutA;
+
         require(axmToken.transfer(universalDistributionPool, tax), "Tax transfer failed");
-        require(axmToken.transfer(ch.agentA, payout / 2), "A payout failed");
-        require(axmToken.transfer(ch.agentB, payout - (payout / 2)), "B payout failed");
+        require(axmToken.transfer(ch.agentA, payoutA), "A payout failed");
+        require(axmToken.transfer(ch.agentB, payoutB), "B payout failed");
 
         emit OptimisticSettled(channelId, stateRootAfter);
-        emit ChannelFundingReleased(channelId, tax, payout / 2, payout - (payout / 2));
+        emit ChannelFundingReleased(channelId, tax, payoutA, payoutB);
     }
 
     function challengeSettlement(bytes32 channelId, bytes calldata fraudProof) external {

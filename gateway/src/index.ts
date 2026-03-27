@@ -3,10 +3,13 @@ import { WebSocketServer, WebSocket } from 'ws';
 import cors from 'cors';
 import helmet from 'helmet';
 import bodyParser from 'body-parser';
+import http from 'http';
 import https from 'https';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import path from 'path';
+import cluster from 'cluster';
+import os from 'os';
 import { authMiddleware } from './middleware/auth';
 import { extractApiKeyFromHeaders, validateGatewayApiKey } from './middleware/auth_utils';
 import restRoutes, { validateNftRouteEnv } from './routes/rest';
@@ -18,6 +21,7 @@ import { getChannelFactory, getRegisteredChannelNames, Channel } from './channel
 import { initLogger } from './utils/logger';
 import { BackpressureWebSocket } from './performance/EventLoopOptimizer';
 import { wafMiddleware } from './middleware/waf';
+import { initRedisRateLimiter } from './middleware/public_rate_limit';
 import './channels'; // Initialize channel registrations
 
 dotenv.config();
@@ -34,8 +38,25 @@ if (process.env.NODE_ENV !== 'test' && process.env.ENABLE_NFT_ROUTES !== 'false'
 // Initialize the log buffer to capture terminal output safely
 initLogger();
 
+// Initialize Redis rate limiter for public routes
+initRedisRateLimiter().catch(err => console.error('Failed to initialize Redis rate limiter:', err));
+
 const REST_PORT = process.env.GATEWAY_REST_PORT || 3000;
 const WS_PORT = process.env.GATEWAY_WS_PORT || 3001;
+
+if (cluster.isPrimary && process.env.NODE_ENV !== 'test') {
+    const numCPUs = os.cpus().length;
+    console.log(`Primary ${process.pid} is running. Forking ${numCPUs} workers for horizontal scaling...`);
+
+    for (let i = 0; i < numCPUs; i++) {
+        cluster.fork();
+    }
+
+    cluster.on('exit', (worker, code, signal) => {
+        console.log(`Worker ${worker.process.pid} died. Restarting...`);
+        cluster.fork();
+    });
+} else {
 
 // REST Server
 const app = express();
@@ -79,20 +100,40 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 app.use('/', restRoutes);
 
-const certsDir = process.env.CERTS_DIR || '../certs';
 let server;
 try {
-    const mTLSConfig = {
-        key: fs.readFileSync(`${certsDir}/gateway.key`),
-        cert: fs.readFileSync(`${certsDir}/gateway.crt`),
-        ca: [fs.readFileSync(`${certsDir}/ca.crt`)],
-        requestCert: true,
-        rejectUnauthorized: true,
-    };
-    server = https.createServer(mTLSConfig, app);
+    let mTLSConfig;
+    if (process.env.MTLS_CA_CERT && process.env.MTLS_CLIENT_CERT && process.env.MTLS_CLIENT_KEY) {
+        mTLSConfig = {
+            key: process.env.MTLS_CLIENT_KEY,
+            cert: process.env.MTLS_CLIENT_CERT,
+            ca: [process.env.MTLS_CA_CERT],
+            requestCert: true,
+            rejectUnauthorized: true,
+        };
+    } else {
+        const certsDir = process.env.CERTS_DIR || '../certs';
+        mTLSConfig = {
+            key: fs.readFileSync(`${certsDir}/gateway.key`),
+            cert: fs.readFileSync(`${certsDir}/gateway.crt`),
+            ca: [fs.readFileSync(`${certsDir}/ca.crt`)],
+            requestCert: true,
+            rejectUnauthorized: true,
+        };
+    }
+
+    if (process.env.NODE_ENV === 'test') {
+        server = http.createServer(app);
+    } else {
+        server = https.createServer(mTLSConfig, app);
+    }
 } catch (e) {
-    console.error("mTLS certs not found. mTLS is mandatory for security.");
-    process.exit(1);
+    console.error("mTLS certs not found. mTLS is mandatory for security.", e);
+    if (process.env.NODE_ENV !== 'test') {
+        process.exit(1);
+    } else {
+        server = http.createServer(app);
+    }
 }
 
 server.listen(REST_PORT, () => {
@@ -200,3 +241,5 @@ async function startChannels() {
 }
 
 startChannels().catch(console.error);
+
+} // End else

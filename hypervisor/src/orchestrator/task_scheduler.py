@@ -44,6 +44,20 @@ class TaskScheduler:
         async def dummy_task_network_sync():
             print(f"[TaskScheduler] Running network state sync for {machine_role}")
 
+        async def dream_state_learning_loop():
+            # Periodic Nudge: When the 1.58-bit Ternary Engine is idle, it enters a "Dream State".
+            # Reviews recent execution artifacts, compresses them into new latent skill vectors,
+            # and updates Tier 2 memory without human prompting.
+            print(f"[TaskScheduler] Entering Dream State learning loop for {machine_role} (Periodic Nudge)")
+            try:
+                from src.evolution.evolution import EvolutionEngine
+                engine = EvolutionEngine()
+                # Simulate reviewing recent artifacts and compressing them
+                engine.extract_skill("dream_state_compression", "compressed_artifact_hash", vector_repr="v_dream(0.9, 0.9, 0.1)")
+                print(f"[TaskScheduler] Dream State complete. New skill compressed: {list(engine.get_skills().keys())[-1]}")
+            except Exception as e:
+                print(f"[TaskScheduler] Dream State failed: {str(e)}")
+
         if machine_role == "education-node":
             self.add_task("education_knowledge_sync", 3600, dummy_task_knowledge_sync)
         elif machine_role == "minimal-edge":
@@ -52,6 +66,9 @@ class TaskScheduler:
             self.add_task("dedicated_network_sync", 600, dummy_task_network_sync)
         else:
             self.add_task("shared_maintenance", 86400, dummy_task_cache_clear)
+
+        # Add the dream state task for all nodes, running periodically when idle (simulated by interval)
+        self.add_task("dream_state_learning", 3600, dream_state_learning_loop)
 
     async def _run_loop(self):
         while self.running:

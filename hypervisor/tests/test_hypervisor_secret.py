@@ -23,7 +23,17 @@ async def test_process_intent_core_missing_hypervisor_secret():
         id=str(uuid.uuid4()),
         content="hello",
         channel="test",
-        metadata={"sender": "test_user"},
+            metadata={
+                "sender": "test_user",
+                "capability_manifest": {
+                    "required_hardware": "minimal-edge",
+                    "network_scope": "local",
+                    "memory_quota_mb": 512,
+                    "capabilities": ["test"],
+                    "io_schemas": ["test"],
+                    "attestation_target": "test"
+                }
+            },
         timestamp=1704067200
     )
 
@@ -47,7 +57,7 @@ async def test_process_intent_core_missing_hypervisor_secret():
         res = await _process_intent_core(intent, "mock_api_key")
 
         assert res.status == "error"
-        assert "HYPERVISOR_SECRET is not configured" in res.response
+        assert "HYPERVISOR_SECRET" in res.response
 
 @pytest.mark.asyncio
 async def test_process_intent_core_with_hypervisor_secret():

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "=========================================================="
-echo "   AxiomMesh Bootstrap (Unix/Linux/macOS)                 "
+echo "   AXIOM-MESH Bootstrap (Unix/Linux/macOS)                 "
 echo "=========================================================="
 
 if ! command -v python3 >/dev/null 2>&1; then
