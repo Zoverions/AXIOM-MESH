@@ -40,6 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (targetId === 'memory') fetchMemory();
             if (targetId === 'agents') fetchAgents();
             if (targetId === 'swarms') fetchSwarms();
+            if (targetId === 'comprehensive') fetchComprehensiveDashboard();
             if (targetId === 'tester' && window.initTester) window.initTester();
             if (targetId === 'settings') fetchConfig();
             if (targetId === 'logs') fetchLogs();
@@ -450,6 +451,83 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error('Failed to fetch agents:', error);
             grid.innerHTML = '<p>Failed to load agent states. Is the hypervisor offline?</p>';
         }
+    }
+
+    // --- Comprehensive Dashboard Logic ---
+    async function fetchComprehensiveDashboard() {
+        const dashboardSection = document.getElementById('comprehensive');
+        try {
+            const res = await fetch('/api/v1/dashboard/comprehensive', { headers: getAuthHeaders() });
+            const data = await res.json();
+
+            // Render Mesh
+            const meshToggle = document.getElementById('greater-mesh-toggle');
+            if (meshToggle) meshToggle.checked = data.mesh_status.connected_to_greater_mesh;
+
+            const nodesVisual = document.getElementById('private-nodes-visual');
+            if (nodesVisual) {
+                nodesVisual.innerHTML = data.mesh_status.private_nodes.map(n => `
+                    <div style="padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: #333; text-align: center;">
+                        <strong style="color: var(--accent);">${n.id}</strong><br>
+                        <small>${n.role}</small><br>
+                        <span style="color: ${n.status === 'active' ? '#4caf50' : '#ffeb3b'}">${n.status}</span>
+                    </div>
+                `).join('');
+            }
+
+            // Render Security
+            const secVisual = document.getElementById('security-status-visual');
+            if (secVisual) {
+                secVisual.innerHTML = `
+                    <p><strong>Overall Status:</strong> <span style="color: #4caf50;">${data.security.status}</span></p>
+                    <p><strong>WAF Active:</strong> ${data.security.waf_active ? 'Yes' : 'No'}</p>
+                    <p><strong>Threat Level:</strong> ${data.security.threat_level}</p>
+                    <p><strong>Last Scan:</strong> ${new Date(data.security.last_scan).toLocaleString()}</p>
+                `;
+            }
+
+            // Render Models
+            const localModelsList = document.getElementById('local-models-list');
+            if (localModelsList) {
+                localModelsList.innerHTML = data.models.local.map(m => `<li>${m}</li>`).join('');
+            }
+            const remoteModelsList = document.getElementById('remote-models-list');
+            if (remoteModelsList) {
+                remoteModelsList.innerHTML = data.models.remote.map(m => `<li>${m}</li>`).join('');
+            }
+
+            // Render Assets
+            const nftsList = document.getElementById('nfts-list');
+            if (nftsList) {
+                nftsList.innerHTML = data.assets.nfts.map(n => `<li>${n}</li>`).join('');
+            }
+            const entitiesList = document.getElementById('entities-list');
+            if (entitiesList) {
+                entitiesList.innerHTML = data.assets.entities.map(e => `<li>${e}</li>`).join('');
+            }
+
+            // Render Governance
+            const govVisual = document.getElementById('governance-visual');
+            if (govVisual) {
+                govVisual.innerHTML = `
+                    <p><strong>Electoral System:</strong> ${data.governance.system}</p>
+                    <p><strong>Template:</strong> ${data.governance.template}</p>
+                    <p><strong>Election Status:</strong> ${data.governance.current_election_status}</p>
+                    <p><strong>Representatives (Seats):</strong> ${data.governance.representatives}</p>
+                `;
+            }
+        } catch (e) {
+            console.error('Failed to fetch comprehensive dashboard data', e);
+        }
+    }
+
+    // Connect Mesh Toggle interaction
+    const meshToggle = document.getElementById('greater-mesh-toggle');
+    if (meshToggle) {
+        meshToggle.addEventListener('change', (e) => {
+            console.log(`Connection to Greater Mesh is now ${e.target.checked ? 'ON' : 'OFF'}`);
+            // Future logic to trigger backend endpoint
+        });
     }
 
     // --- Swarm / Orchestration Logic ---
