@@ -23,7 +23,17 @@ async def test_process_intent_core_missing_hypervisor_secret():
         id=str(uuid.uuid4()),
         content="hello",
         channel="test",
-        metadata={"sender": "test_user"},
+            metadata={
+                "sender": "test_user",
+                "capability_manifest": {
+                    "required_hardware": "minimal-edge",
+                    "network_scope": "local",
+                    "memory_quota_mb": 512,
+                    "capabilities": ["test"],
+                    "io_schemas": ["test"],
+                    "attestation_target": "test"
+                }
+            },
         timestamp=1704067200
     )
 

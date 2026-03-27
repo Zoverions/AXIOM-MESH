@@ -52,22 +52,23 @@ async def test_run_hallucination_probe():
     result = await arena.run_hallucination_probe(mock_llm)
     assert result is True
 
-def test_evaluate_execution():
+@pytest.mark.asyncio
+async def test_evaluate_execution():
     arena = VerificationArena()
 
     # Test valid case (uncertainty)
-    res1 = arena.evaluate_execution("test", "I do not know.")
+    res1 = await arena.evaluate_execution("test", "I do not know.")
     assert res1["is_valid"] is True
     assert res1["score"] == 10.0
 
     # Test invalid case (weak confidence)
-    res2 = arena.evaluate_execution("test", "I guess this works.")
+    res2 = await arena.evaluate_execution("test", "I guess this works.")
     assert res2["is_valid"] is False
     assert "Weak confidence or guessing detected." in res2["issues"]
     assert res2["score"] == 5.0
 
     # Test invalid case (empty)
-    res3 = arena.evaluate_execution("test", "   ")
+    res3 = await arena.evaluate_execution("test", "   ")
     assert res3["is_valid"] is False
     assert "Empty execution proposal." in res3["issues"]
     assert res3["score"] == 0.0

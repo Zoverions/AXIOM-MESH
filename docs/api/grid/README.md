@@ -89,7 +89,7 @@ func NewServer(ledger *blockchain.Ledger, p2pNode *p2p.Node) *Server
 
 
 <a name="Server.BroadcastEvent"></a>
-### func \(\*Server\) [BroadcastEvent](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/api/server.go#L1548>)
+### func \(\*Server\) [BroadcastEvent](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/api/server.go#L1582>)
 
 ```go
 func (s *Server) BroadcastEvent(eventType string, payload interface{})
@@ -1150,7 +1150,7 @@ func NewHTTPTransport() *HTTPTransport
 
 
 <a name="HTTPTransport.BuildSignedHeaders"></a>
-### func \(\*HTTPTransport\) [BuildSignedHeaders](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/http_transport.go#L75>)
+### func \(\*HTTPTransport\) [BuildSignedHeaders](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/http_transport.go#L91>)
 
 ```go
 func (t *HTTPTransport) BuildSignedHeaders(req *http.Request, payload []byte) error
@@ -1159,7 +1159,7 @@ func (t *HTTPTransport) BuildSignedHeaders(req *http.Request, payload []byte) er
 
 
 <a name="HTTPTransport.FetchCCIPMessages"></a>
-### func \(\*HTTPTransport\) [FetchCCIPMessages](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/http_transport.go#L138>)
+### func \(\*HTTPTransport\) [FetchCCIPMessages](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/http_transport.go#L154>)
 
 ```go
 func (t *HTTPTransport) FetchCCIPMessages(addr string) ([]types.CCIPMessage, error)
@@ -1168,7 +1168,7 @@ func (t *HTTPTransport) FetchCCIPMessages(addr string) ([]types.CCIPMessage, err
 
 
 <a name="HTTPTransport.FetchCRDTShards"></a>
-### func \(\*HTTPTransport\) [FetchCRDTShards](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/http_transport.go#L211>)
+### func \(\*HTTPTransport\) [FetchCRDTShards](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/http_transport.go#L227>)
 
 ```go
 func (t *HTTPTransport) FetchCRDTShards(addr string, since uint64) ([]types.CRDTShard, error)
@@ -1177,7 +1177,7 @@ func (t *HTTPTransport) FetchCRDTShards(addr string, since uint64) ([]types.CRDT
 
 
 <a name="HTTPTransport.FetchDriftReports"></a>
-### func \(\*HTTPTransport\) [FetchDriftReports](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/http_transport.go#L247>)
+### func \(\*HTTPTransport\) [FetchDriftReports](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/http_transport.go#L263>)
 
 ```go
 func (t *HTTPTransport) FetchDriftReports(addr string, since uint64) ([]types.DriftReport, error)
@@ -1186,7 +1186,7 @@ func (t *HTTPTransport) FetchDriftReports(addr string, since uint64) ([]types.Dr
 
 
 <a name="HTTPTransport.FetchSwarms"></a>
-### func \(\*HTTPTransport\) [FetchSwarms](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/http_transport.go#L175>)
+### func \(\*HTTPTransport\) [FetchSwarms](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/http_transport.go#L191>)
 
 ```go
 func (t *HTTPTransport) FetchSwarms(addr string) ([]types.Swarm, error)
@@ -1195,7 +1195,7 @@ func (t *HTTPTransport) FetchSwarms(addr string) ([]types.Swarm, error)
 
 
 <a name="HTTPTransport.SendCCIPMessage"></a>
-### func \(\*HTTPTransport\) [SendCCIPMessage](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/http_transport.go#L120>)
+### func \(\*HTTPTransport\) [SendCCIPMessage](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/http_transport.go#L136>)
 
 ```go
 func (t *HTTPTransport) SendCCIPMessage(addr string, msg types.CCIPMessage) error
@@ -1204,7 +1204,7 @@ func (t *HTTPTransport) SendCCIPMessage(addr string, msg types.CCIPMessage) erro
 
 
 <a name="HTTPTransport.SendCRDTShard"></a>
-### func \(\*HTTPTransport\) [SendCRDTShard](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/http_transport.go#L194>)
+### func \(\*HTTPTransport\) [SendCRDTShard](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/http_transport.go#L210>)
 
 ```go
 func (t *HTTPTransport) SendCRDTShard(addr string, shard types.CRDTShard) error
@@ -1213,7 +1213,7 @@ func (t *HTTPTransport) SendCRDTShard(addr string, shard types.CRDTShard) error
 
 
 <a name="HTTPTransport.SendDriftReport"></a>
-### func \(\*HTTPTransport\) [SendDriftReport](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/http_transport.go#L230>)
+### func \(\*HTTPTransport\) [SendDriftReport](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/http_transport.go#L246>)
 
 ```go
 func (t *HTTPTransport) SendDriftReport(addr string, report types.DriftReport) error
@@ -1222,7 +1222,7 @@ func (t *HTTPTransport) SendDriftReport(addr string, report types.DriftReport) e
 
 
 <a name="HTTPTransport.SendSwarm"></a>
-### func \(\*HTTPTransport\) [SendSwarm](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/http_transport.go#L157>)
+### func \(\*HTTPTransport\) [SendSwarm](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/http_transport.go#L173>)
 
 ```go
 func (t *HTTPTransport) SendSwarm(addr string, msg types.Swarm) error
@@ -1248,7 +1248,7 @@ type IntentPayload struct {
 ```
 
 <a name="ManifestWithAddress"></a>
-## type [ManifestWithAddress](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L768-L771>)
+## type [ManifestWithAddress](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L776-L779>)
 
 
 
@@ -1280,12 +1280,13 @@ const (
 ```
 
 <a name="Node"></a>
-## type [Node](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L53-L68>)
+## type [Node](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L54-L70>)
 
 
 
 ```go
 type Node struct {
+    ShardID                 string // Sharded consensus identifier
     ID                      string
     PrivateKey              *ecdsa.PrivateKey
     PublicKey               string
@@ -1304,7 +1305,7 @@ type Node struct {
 ```
 
 <a name="NewNode"></a>
-### func [NewNode](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L70>)
+### func [NewNode](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L72>)
 
 ```go
 func NewNode(id string, priv *ecdsa.PrivateKey) *Node
@@ -1313,7 +1314,7 @@ func NewNode(id string, priv *ecdsa.PrivateKey) *Node
 
 
 <a name="Node.AddPeer"></a>
-### func \(\*Node\) [AddPeer](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L92>)
+### func \(\*Node\) [AddPeer](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L100>)
 
 ```go
 func (n *Node) AddPeer(id, address string)
@@ -1322,7 +1323,7 @@ func (n *Node) AddPeer(id, address string)
 
 
 <a name="Node.BroadcastCCIPMessage"></a>
-### func \(\*Node\) [BroadcastCCIPMessage](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L468>)
+### func \(\*Node\) [BroadcastCCIPMessage](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L476>)
 
 ```go
 func (n *Node) BroadcastCCIPMessage(msg types.CCIPMessage)
@@ -1331,7 +1332,7 @@ func (n *Node) BroadcastCCIPMessage(msg types.CCIPMessage)
 
 
 <a name="Node.BroadcastCRDTShard"></a>
-### func \(\*Node\) [BroadcastCRDTShard](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L402>)
+### func \(\*Node\) [BroadcastCRDTShard](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L410>)
 
 ```go
 func (n *Node) BroadcastCRDTShard(shard types.CRDTShard)
@@ -1340,7 +1341,7 @@ func (n *Node) BroadcastCRDTShard(shard types.CRDTShard)
 
 
 <a name="Node.BroadcastCapabilityManifest"></a>
-### func \(\*Node\) [BroadcastCapabilityManifest](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L685>)
+### func \(\*Node\) [BroadcastCapabilityManifest](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L693>)
 
 ```go
 func (n *Node) BroadcastCapabilityManifest(manifest types.CapabilityManifest)
@@ -1349,7 +1350,7 @@ func (n *Node) BroadcastCapabilityManifest(manifest types.CapabilityManifest)
 
 
 <a name="Node.BroadcastDriftReport"></a>
-### func \(\*Node\) [BroadcastDriftReport](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L421>)
+### func \(\*Node\) [BroadcastDriftReport](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L429>)
 
 ```go
 func (n *Node) BroadcastDriftReport(report types.DriftReport)
@@ -1358,7 +1359,7 @@ func (n *Node) BroadcastDriftReport(report types.DriftReport)
 
 
 <a name="Node.BroadcastGraphUpdate"></a>
-### func \(\*Node\) [BroadcastGraphUpdate](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L288>)
+### func \(\*Node\) [BroadcastGraphUpdate](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L296>)
 
 ```go
 func (n *Node) BroadcastGraphUpdate(node types.GraphNode, edges []types.GraphEdge)
@@ -1367,7 +1368,7 @@ func (n *Node) BroadcastGraphUpdate(node types.GraphNode, edges []types.GraphEdg
 
 
 <a name="Node.BroadcastNodeProfile"></a>
-### func \(\*Node\) [BroadcastNodeProfile](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L812>)
+### func \(\*Node\) [BroadcastNodeProfile](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L820>)
 
 ```go
 func (n *Node) BroadcastNodeProfile(profile types.NodeCapabilityProfile)
@@ -1376,7 +1377,7 @@ func (n *Node) BroadcastNodeProfile(profile types.NodeCapabilityProfile)
 
 
 <a name="Node.BroadcastSwarm"></a>
-### func \(\*Node\) [BroadcastSwarm](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L440>)
+### func \(\*Node\) [BroadcastSwarm](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L448>)
 
 ```go
 func (n *Node) BroadcastSwarm(msg types.Swarm)
@@ -1385,7 +1386,7 @@ func (n *Node) BroadcastSwarm(msg types.Swarm)
 
 
 <a name="Node.BroadcastWebState"></a>
-### func \(\*Node\) [BroadcastWebState](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L347>)
+### func \(\*Node\) [BroadcastWebState](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L355>)
 
 ```go
 func (n *Node) BroadcastWebState(state types.WebState)
@@ -1394,7 +1395,7 @@ func (n *Node) BroadcastWebState(state types.WebState)
 
 
 <a name="Node.GetPeerManifests"></a>
-### func \(\*Node\) [GetPeerManifests](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L773>)
+### func \(\*Node\) [GetPeerManifests](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L781>)
 
 ```go
 func (n *Node) GetPeerManifests() map[string]ManifestWithAddress
@@ -1403,7 +1404,7 @@ func (n *Node) GetPeerManifests() map[string]ManifestWithAddress
 
 
 <a name="Node.GetPeerProfiles"></a>
-### func \(\*Node\) [GetPeerProfiles](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L905>)
+### func \(\*Node\) [GetPeerProfiles](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L913>)
 
 ```go
 func (n *Node) GetPeerProfiles() map[string]ProfileWithAddress
@@ -1412,7 +1413,7 @@ func (n *Node) GetPeerProfiles() map[string]ProfileWithAddress
 
 
 <a name="Node.IncrementPeerFailure"></a>
-### func \(\*Node\) [IncrementPeerFailure](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L123>)
+### func \(\*Node\) [IncrementPeerFailure](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L131>)
 
 ```go
 func (n *Node) IncrementPeerFailure(id string)
@@ -1421,7 +1422,7 @@ func (n *Node) IncrementPeerFailure(id string)
 
 
 <a name="Node.QueryNetwork"></a>
-### func \(\*Node\) [QueryNetwork](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L495>)
+### func \(\*Node\) [QueryNetwork](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L503>)
 
 ```go
 func (n *Node) QueryNetwork(query string, proof string) []PeerQueryResult
@@ -1430,7 +1431,7 @@ func (n *Node) QueryNetwork(query string, proof string) []PeerQueryResult
 
 
 <a name="Node.RemovePeer"></a>
-### func \(\*Node\) [RemovePeer](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L106>)
+### func \(\*Node\) [RemovePeer](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L114>)
 
 ```go
 func (n *Node) RemovePeer(id string)
@@ -1439,7 +1440,7 @@ func (n *Node) RemovePeer(id string)
 
 
 <a name="Node.Start"></a>
-### func \(\*Node\) [Start](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L180>)
+### func \(\*Node\) [Start](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L188>)
 
 ```go
 func (n *Node) Start()
@@ -1448,7 +1449,7 @@ func (n *Node) Start()
 
 
 <a name="Node.SyncCCIPState"></a>
-### func \(\*Node\) [SyncCCIPState](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L641>)
+### func \(\*Node\) [SyncCCIPState](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L649>)
 
 ```go
 func (n *Node) SyncCCIPState()
@@ -1457,7 +1458,7 @@ func (n *Node) SyncCCIPState()
 
 
 <a name="Node.SyncCRDTState"></a>
-### func \(\*Node\) [SyncCRDTState](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L191>)
+### func \(\*Node\) [SyncCRDTState](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L199>)
 
 ```go
 func (n *Node) SyncCRDTState()
@@ -1466,7 +1467,7 @@ func (n *Node) SyncCRDTState()
 
 
 <a name="Node.SyncDriftState"></a>
-### func \(\*Node\) [SyncDriftState](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L225>)
+### func \(\*Node\) [SyncDriftState](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L233>)
 
 ```go
 func (n *Node) SyncDriftState()
@@ -1475,7 +1476,7 @@ func (n *Node) SyncDriftState()
 
 
 <a name="Node.SyncSwarmState"></a>
-### func \(\*Node\) [SyncSwarmState](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L135>)
+### func \(\*Node\) [SyncSwarmState](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L143>)
 
 ```go
 func (n *Node) SyncSwarmState()
@@ -1484,7 +1485,7 @@ func (n *Node) SyncSwarmState()
 
 
 <a name="Node.UpdatePeerManifest"></a>
-### func \(\*Node\) [UpdatePeerManifest](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L673>)
+### func \(\*Node\) [UpdatePeerManifest](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L681>)
 
 ```go
 func (n *Node) UpdatePeerManifest(id string, manifest types.CapabilityManifest)
@@ -1493,7 +1494,7 @@ func (n *Node) UpdatePeerManifest(id string, manifest types.CapabilityManifest)
 
 
 <a name="Node.UpdatePeerProfile"></a>
-### func \(\*Node\) [UpdatePeerProfile](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L788>)
+### func \(\*Node\) [UpdatePeerProfile](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L796>)
 
 ```go
 func (n *Node) UpdatePeerProfile(id string, profile types.NodeCapabilityProfile)
@@ -1502,7 +1503,7 @@ func (n *Node) UpdatePeerProfile(id string, profile types.NodeCapabilityProfile)
 
 
 <a name="Node.UpdatePeerScore"></a>
-### func \(\*Node\) [UpdatePeerScore](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L115>)
+### func \(\*Node\) [UpdatePeerScore](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L123>)
 
 ```go
 func (n *Node) UpdatePeerScore(id string, delta int)
@@ -1511,7 +1512,7 @@ func (n *Node) UpdatePeerScore(id string, delta int)
 
 
 <a name="PeerInfo"></a>
-## type [PeerInfo](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L43-L51>)
+## type [PeerInfo](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L44-L52>)
 
 
 
@@ -1528,7 +1529,7 @@ type PeerInfo struct {
 ```
 
 <a name="PeerQueryResult"></a>
-## type [PeerQueryResult](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L487-L493>)
+## type [PeerQueryResult](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L495-L501>)
 
 
 
@@ -1543,7 +1544,7 @@ type PeerQueryResult struct {
 ```
 
 <a name="ProfileWithAddress"></a>
-## type [ProfileWithAddress](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L900-L903>)
+## type [ProfileWithAddress](<https://github.com/Zoverions/AXIOM-MESH/blob/Main/grid/p2p/node.go#L908-L911>)
 
 
 
