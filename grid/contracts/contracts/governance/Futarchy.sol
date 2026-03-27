@@ -2,9 +2,12 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract Futarchy is Ownable {
+    using SafeERC20 for IERC20;
+
     IERC20 public governanceToken;
 
     struct Proposal {
@@ -109,7 +112,7 @@ contract Futarchy is Ownable {
         }
 
         require(reward > 0, "No reward to claim");
-        governanceToken.transfer(msg.sender, reward);
+        governanceToken.safeTransfer(msg.sender, reward);
 
         emit WinningsClaimed(proposalId, msg.sender, reward);
     }

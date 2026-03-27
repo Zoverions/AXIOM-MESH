@@ -24,12 +24,24 @@ Related specs:
 ## 2) Core Parameters (Policy Targets)
 
 - **Token symbol:** AXM
-- **Target total supply:** 1,000,000,000 AXM
-- **Founder allocation:** 5% (implemented in `AXM.sol`)
-- **Network treasury allocation:** 10% (implemented in `AXM.sol`)
-- **Ecosystem reserve allocation:** 85% (implemented in `AXM.sol`)
+- **Target total supply:** 1,000,000,000 AXM (Fixed)
+- **Founder allocation:** 5% (implemented in `AXM.sol`, linear 4-year vesting via `TeamVesting.sol`)
+- **Network treasury allocation:** 10% (implemented in `AXM.sol`, linear 4-year vesting via `TeamVesting.sol`)
+- **Ecosystem reserve allocation:** 85% (implemented in `AXM.sol`, dynamically emitted based on network utilization and inflation rules)
 
 > Supply split is now codified in `grid/contracts/contracts/token/AXM.sol`; treasury inflow classes and release controls still require governance finalization.
+
+### Fee Distribution Formula
+
+All execution fees and protocol revenue generated on the network are distributed according to the parameters encoded in `UniversalDistributionPool.sol`.
+
+- **Network Security Fund:** 60% of all generated fees (managed via the `networkSharePercentage` parameter).
+- **Wealth Generation Pool:** 40% (remaining balance allocated back to performing nodes and delegators).
+
+### Deflationary Mechanics
+
+- Slashed bonds from misbehaving nodes are seized.
+- The protocol reserves the right to implement targeted fee burning subject to future bicameral governance proposals (`ZoverionsDAO.sol`).
 
 ---
 

@@ -35,7 +35,6 @@ describe("AutomatedV3LiquidityManager", function () {
     // Fast forward 2 days for timelock
     await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
     await ethers.provider.send("evm_mine");
-    await manager.setKeeper(admin.address, true);
   });
 
   it("should deploy correctly", async function () {

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 interface IRewardPool {
@@ -9,6 +10,8 @@ interface IRewardPool {
 }
 
 contract AssuranceMarkets is Ownable {
+    using SafeERC20 for IERC20;
+
     IERC20 public gdt;
     address public rewardPool;
 
@@ -61,7 +64,7 @@ contract AssuranceMarkets is Ownable {
             // Slash stakes of approving nodes
             slashed = true;
             // Funds sent to dead address or treasury to enforce assurance penalty
-            gdt.transfer(address(0x000000000000000000000000000000000000dEaD), markets[policyId].totalStaked);
+            gdt.safeTransfer(address(0x000000000000000000000000000000000000dEaD), markets[policyId].totalStaked);
         }
 
         emit MarketResolved(policyId, finalFlourishingIndex, slashed);
@@ -78,7 +81,7 @@ contract AssuranceMarkets is Ownable {
         stakes[policyId][msg.sender] = 0;
 
         // Return original stake
-        gdt.transfer(msg.sender, amount);
+        gdt.safeTransfer(msg.sender, amount);
 
         // Drive reward logic from external reward pool instead of placeholder
         if (rewardPool != address(0)) {
