@@ -108,6 +108,12 @@ contract CrossChainBridge is OApp {
     }
 
     function claimRedemption(bytes32 _guid) external {
+        uint256 chainId;
+        assembly {
+            chainId := chainid()
+        }
+        require(chainId == 369 || chainId == 943 || chainId == 31337, "Redemption only permitted on PulseChain");
+
         PendingClaim memory claim = pendingClaims[_guid];
         require(claim.timestamp > 0, "Claim not found");
         require(block.timestamp >= claim.timestamp + 1 hours, "Finality delay not met");
