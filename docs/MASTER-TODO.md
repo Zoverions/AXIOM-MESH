@@ -569,9 +569,9 @@ Once authority flow is mechanically frozen, this system becomes:
 - [ ] **M15.1** Python Hypervisor Redesign: Async-first redesign + Rust FFI bindings to overcome GIL limitations (owner: hypervisor, ETA: TBD).
 - [ ] **M15.2** Go Grid P2P: Implement worker pool + connection pooling for single-threaded peers (owner: grid, ETA: TBD).
 - [ ] **M15.3** Sandbox WASM: Implement WASM sandboxing to reduce Docker overhead and achieve 30-50x faster cold starts (owner: sandbox, ETA: TBD).
-- [ ] **M15.4** Contract Gas Optimization: Refactor `AutomatedV3LiquidityManager.sol` for batch operations + packed storage (est. ~40% savings) (owner: contracts, ETA: TBD).
-- [ ] **M15.5** Contract Gas Optimization: Refactor `TruthAnchor.sol` unbounded loop in verification to use Merkle proof verification (est. ~60% savings) (owner: contracts, ETA: TBD).
-- [ ] **M15.6** Contract Gas Optimization: Refactor `UniversalDistributionPool.sol` individual transfer loops to use multi-send pattern (est. ~50% savings) (owner: contracts, ETA: TBD).
+- [x] **M15.4** Contract Gas Optimization: Refactor `AutomatedV3LiquidityManager.sol` for batch operations + packed storage (est. ~40% savings) (owner: contracts, ETA: TBD).
+- [x] **M15.5** Contract Gas Optimization: Refactor `TruthAnchor.sol` unbounded loop in verification to use Merkle proof verification (est. ~60% savings) (owner: contracts, ETA: TBD).
+- [x] **M15.6** Contract Gas Optimization: Refactor `UniversalDistributionPool.sol` individual transfer loops to use multi-send pattern (est. ~50% savings) (owner: contracts, ETA: TBD).
 - [x] **M15.7** Storage Efficiency: Implement batch + compression + columnar storage in `hypervisor/src/graph/` (`write_batch_manager.py`, `columnar_cache.py`, `lru_tiered_cache.py`) (owner: hypervisor, ETA: TBD). — 2026-03-27 — @agent — completed and verified implementation.
 
 ## Lane M16 — Novel Insights & Innovation (New)
