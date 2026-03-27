@@ -30,6 +30,12 @@ describe("AutomatedV3LiquidityManager", function () {
       mockNpm.target,
       ethers.ZeroAddress
     );
+    await manager.waitForDeployment();
+
+    // Fast forward 2 days for timelock
+    await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+    await ethers.provider.send("evm_mine");
+    await manager.setKeeper(admin.address, true);
   });
 
   it("should deploy correctly", async function () {
@@ -41,48 +47,48 @@ describe("AutomatedV3LiquidityManager", function () {
   describe("managePosition and M12.7 throttling", function () {
     it("should allow liquidity deployment within limit", async function () {
       const tokenId = 1;
-      const amount = ethers.parseEther("1000000"); // 1 million is the limit (20% of 5m)
+      const amount = ethers.parseEther("250000"); // 250k is the limit (5% of 5m)
 
-      await expect(manager.managePosition(tokenId, amount))
+      await expect(manager.managePosition(tokenId, amount, 0, 0))
         .to.emit(manager, "PositionManaged")
         .withArgs(tokenId, amount);
     });
 
     it("should revert if liquidity deployment exceeds limit", async function () {
       const tokenId = 1;
-      const amount = ethers.parseEther("1000001"); // > 1 million
+      const amount = ethers.parseEther("250001"); // > 250k
 
-      await expect(manager.managePosition(tokenId, amount))
+      await expect(manager.managePosition(tokenId, amount, 0, 0))
         .to.be.revertedWith("Exceeds max liquidity deployment limit for cooldown window");
     });
 
     it("should track total deployed in cooldown window correctly", async function () {
       const tokenId = 1;
-      const amount1 = ethers.parseEther("500000");
-      const amount2 = ethers.parseEther("500000");
+      const amount1 = ethers.parseEther("125000");
+      const amount2 = ethers.parseEther("125000");
 
-      await manager.managePosition(tokenId, amount1);
+      await manager.managePosition(tokenId, amount1, 0, 0);
 
       // Still within limit
-      await expect(manager.managePosition(tokenId, amount2))
+      await expect(manager.managePosition(tokenId, amount2, 0, 0))
         .to.emit(manager, "PositionManaged")
         .withArgs(tokenId, amount2);
 
       // Now it should exceed
       const amount3 = ethers.parseEther("1");
-      await expect(manager.managePosition(tokenId, amount3))
+      await expect(manager.managePosition(tokenId, amount3, 0, 0))
         .to.be.revertedWith("Exceeds max liquidity deployment limit for cooldown window");
     });
 
     it("should reset cooldown after 30 days", async function () {
       const tokenId = 1;
-      const amount1 = ethers.parseEther("1000000"); // reach limit
+      const amount1 = ethers.parseEther("250000"); // reach limit
 
-      await manager.managePosition(tokenId, amount1);
+      await manager.managePosition(tokenId, amount1, 0, 0);
 
       // Should exceed
       const amount2 = ethers.parseEther("1");
-      await expect(manager.managePosition(tokenId, amount2))
+      await expect(manager.managePosition(tokenId, amount2, 0, 0))
         .to.be.revertedWith("Exceeds max liquidity deployment limit for cooldown window");
 
       // Advance time by 30 days + 1 second
@@ -90,7 +96,7 @@ describe("AutomatedV3LiquidityManager", function () {
       await ethers.provider.send("evm_mine");
 
       // Now it should allow deploying again
-      await expect(manager.managePosition(tokenId, amount1))
+      await expect(manager.managePosition(tokenId, amount1, 0, 0))
         .to.emit(manager, "PositionManaged")
         .withArgs(tokenId, amount1);
     });

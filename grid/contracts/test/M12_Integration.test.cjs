@@ -21,17 +21,21 @@ describe("M12 Integration Tests: Comprehensive Suite", function () {
                 owner.address  // swapRouter
             );
             await liquidityManager.waitForDeployment();
+
+            await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+            await ethers.provider.send("evm_mine");
+            await liquidityManager.setKeeper(owner.address, true);
         });
 
         it("Should enforce the cooldown and max liquidity deployment BPS", async function () {
-            const amount = ethers.parseEther("1000000"); // Exactly the limit
+            const amount = ethers.parseEther("250000"); // Exactly the limit
 
             // First deployment should succeed, though it will revert natively because NPM is not real
-            await expect(liquidityManager.managePosition(1, amount)).to.be.reverted;
+            await expect(liquidityManager.managePosition(1, amount, 0, 0)).to.be.reverted;
 
             // But it should hit the limit if we try to deploy MORE than the limit
-            const overAmount = ethers.parseEther("1000001");
-            await expect(liquidityManager.managePosition(1, overAmount)).to.be.revertedWith("Exceeds max liquidity deployment limit for cooldown window");
+            const overAmount = ethers.parseEther("250001");
+            await expect(liquidityManager.managePosition(1, overAmount, 0, 0)).to.be.revertedWith("Exceeds max liquidity deployment limit for cooldown window");
         });
     });
 
