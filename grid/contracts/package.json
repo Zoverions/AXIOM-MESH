@@ -33,7 +33,7 @@
     "@typechain/hardhat": "^9.1.0",
     "@types/chai": "^4.3.20",
     "@types/mocha": "^10.0.10",
-    "chai": "^4.5.0",
+    "chai": "^4.3.7",
     "ethers": "^6.16.0",
     "fast-check": "^4.6.0",
     "hardhat": "^2.28.6",
@@ -51,6 +51,7 @@
     "@uniswap/v3-core": "^1.0.1",
     "@uniswap/v3-periphery": "^1.4.3",
     "@wormhole-foundation/wormhole-solidity-sdk": "^1.1.0",
-    "dotenv": "^17.3.1"
+    "dotenv": "^17.3.1",
+    "mocha": "^11.7.5"
   }
 }
