@@ -7,6 +7,8 @@ import https from 'https';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import path from 'path';
+import cluster from 'cluster';
+import os from 'os';
 import { authMiddleware } from './middleware/auth';
 import { extractApiKeyFromHeaders, validateGatewayApiKey } from './middleware/auth_utils';
 import restRoutes, { validateNftRouteEnv } from './routes/rest';
@@ -36,6 +38,20 @@ initLogger();
 
 const REST_PORT = process.env.GATEWAY_REST_PORT || 3000;
 const WS_PORT = process.env.GATEWAY_WS_PORT || 3001;
+
+if (cluster.isPrimary && process.env.NODE_ENV !== 'test') {
+    const numCPUs = os.cpus().length;
+    console.log(`Primary ${process.pid} is running. Forking ${numCPUs} workers for horizontal scaling...`);
+
+    for (let i = 0; i < numCPUs; i++) {
+        cluster.fork();
+    }
+
+    cluster.on('exit', (worker, code, signal) => {
+        console.log(`Worker ${worker.process.pid} died. Restarting...`);
+        cluster.fork();
+    });
+} else {
 
 // REST Server
 const app = express();
@@ -200,3 +216,5 @@ async function startChannels() {
 }
 
 startChannels().catch(console.error);
+
+} // End else
