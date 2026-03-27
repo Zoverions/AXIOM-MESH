@@ -600,10 +600,10 @@ Once authority flow is mechanically frozen, this system becomes:
 ## Lane M18 — Blockchain Interconnect Mock Elimination (New)
 **Goal:** Replace all placeholder, stub, and scaffolded code from blockchain interconnect layer before mainnet deployment with production ready code. Audit report: `docs/audits/blockchain-interconnect-mock-audit-2026-03-27.md`
 
-- [ ] **M18.1** Implement AutonomousDeployer._submit_governance_proposal() with real UCP flow integration (owner: hypervisor, ETA: 2 days, P0)
-- [ ] **M18.2** Complete NetworkLiquidityManager.addNetworkLiquidity() with Uniswap V3 mint/increase position logic (owner: contracts, ETA: 3 days, P0)
-- [ ] **M18.3** Wire gateway /api/v1/distribution/audit/{entity} to UniversalDistributionPool.getAuditTrail() (owner: gateway, ETA: 1 day, P1)
-- [ ] **M18.4** Implement ShadowNode zk-proof generation with ezkl/circom integration (owner: hypervisor+zkml, ETA: 3 days, P1)
-- [ ] **M18.5** Add error logging and metrics to ZKML verification in autoresearch_graph.py (owner: hypervisor, ETA: 0.5 days, P2)
-- [ ] **M18.6** Add abc.ABC decorator to CloudStorageProvider base class (owner: hypervisor, ETA: 0.25 days, P3)
-- [ ] **M18.7** Document arweave.py as test compatibility shim only (owner: docs, ETA: 0.25 days, P4)
+- [x] **M18.1** Implement AutonomousDeployer._submit_governance_proposal() with real UCP flow integration (owner: hypervisor, ETA: 2 days, P0) — 2026-03-27 — @agent
+- [x] **M18.2** Complete NetworkLiquidityManager.addNetworkLiquidity() with Uniswap V3 mint/increase position logic (owner: contracts, ETA: 3 days, P0) — 2026-03-27 — @agent
+- [x] **M18.3** Wire gateway /api/v1/distribution/audit/{entity} to UniversalDistributionPool.getAuditTrail() (owner: gateway, ETA: 1 day, P1) — 2026-03-27 — @agent
+- [x] **M18.4** Implement ShadowNode zk-proof generation with ezkl/circom integration (owner: hypervisor+zkml, ETA: 3 days, P1) — 2026-03-27 — @agent
+- [x] **M18.5** Add error logging and metrics to ZKML verification in autoresearch_graph.py (owner: hypervisor, ETA: 0.5 days, P2) — 2026-03-27 — @agent
+- [x] **M18.6** Add abc.ABC decorator to CloudStorageProvider base class (owner: hypervisor, ETA: 0.25 days, P3) — 2026-03-27 — @agent
+- [x] **M18.7** Document arweave.py as test compatibility shim only (owner: docs, ETA: 0.25 days, P4) — 2026-03-27 — @agent

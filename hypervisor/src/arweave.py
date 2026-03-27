@@ -1,4 +1,4 @@
-"""Compatibility shim for tests that patch arweave symbols."""
+"""Compatibility shim for tests that patch arweave symbols. DO NOT USE IN PRODUCTION."""
 
 
 class Wallet:

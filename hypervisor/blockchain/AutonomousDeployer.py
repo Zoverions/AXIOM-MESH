@@ -40,8 +40,34 @@ class AutonomousDeployer:
             await self._log_worm_event("deployment", receipt.contractAddress)
 
     async def _submit_governance_proposal(self, bytecode, salt):
-        # Calls your existing Hypervisor intent system — zero new code needed
-        return "proposal-id-placeholder"  # integrate with your UCP flow
+        import httpx
+        import uuid
+        import time
+
+        intent_id = str(uuid.uuid4())
+        intent_payload = {
+            "id": intent_id,
+            "channel": "governance",
+            "content": "GOV_AUTO_DEPLOY_CONTRACT",
+            "metadata": {
+                "bytecode": bytecode.hex() if isinstance(bytecode, bytes) else bytecode,
+                "salt": salt.hex() if isinstance(salt, bytes) else salt
+            },
+            "timestamp": int(time.time())
+        }
+
+        async with httpx.AsyncClient() as client:
+            try:
+                headers = {
+                    "Authorization": f"Bearer {os.getenv('HYPERVISOR_API_KEY', 'dummy')}",
+                    "X-Axiom-Nonce": str(int(time.time() * 1000))
+                }
+                response = await client.post("http://localhost:8000/process", json=intent_payload, headers=headers, timeout=10.0)
+                if response.status_code == 200:
+                    return response.json().get("response", "fallback-proposal-id")
+                return f"error-{response.status_code}"
+            except Exception as e:
+                return f"error-exception-{str(e)}"
 
 # Register in your main agent loop (hypervisor/agents/main_loop.py or wherever you mount LangGraph)
 # autonomous_deployer = AutonomousDeployer()

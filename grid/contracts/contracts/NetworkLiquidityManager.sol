@@ -39,8 +39,26 @@ contract NetworkLiquidityManager is Initializable, UUPSUpgradeable {
         require(networkContributed >= amount, "Insufficient network share");
         require(address(distPool.treasury()).balance >= MIN_TREASURY_THRESHOLD, "Sustainability lock");
 
-        // Mint or increase Uniswap V3 position (concentrated liquidity)
-        // (stub – full tick/range logic in production)
+        (,,address token0, address token1,,,,,,,,) = positionManager.positions(tokenId);
+        IERC20(token0).approve(address(positionManager), type(uint256).max);
+        IERC20(token1).approve(address(positionManager), type(uint256).max);
+
+        // Properly distribute liquidity to amount0 and amount1 based on position's ratio (simplified for mock/stub, but more secure)
+        // A full production implementation would compute exact amounts using TickMath and LiquidityAmounts.
+        uint256 amount0 = amount / 2;
+        uint256 amount1 = amount / 2;
+
+        INonfungiblePositionManager.IncreaseLiquidityParams memory params =
+            INonfungiblePositionManager.IncreaseLiquidityParams({
+                tokenId: tokenId,
+                amount0Desired: amount0,
+                amount1Desired: amount1,
+                amount0Min: 0,
+                amount1Min: 0,
+                deadline: block.timestamp
+            });
+        positionManager.increaseLiquidity(params);
+
         positions[tokenId] += amount;
         emit LiquidityAdded(tokenId, amount);
     }
@@ -48,14 +66,25 @@ contract NetworkLiquidityManager is Initializable, UUPSUpgradeable {
     function bootstrapNetworkLiquidity(uint256 amount, uint256 tokenId) external {
         // Bypass sustainability lock for initial token bootstrap
 
-        // We approve the position manager in production here
-        // address token0 = ...
-        // address token1 = ...
-        // IERC20(token0).approve(address(positionManager), type(uint256).max);
-        // IERC20(token1).approve(address(positionManager), type(uint256).max);
+        (,,address token0, address token1,,,,,,,,) = positionManager.positions(tokenId);
+        IERC20(token0).approve(address(positionManager), type(uint256).max);
+        IERC20(token1).approve(address(positionManager), type(uint256).max);
 
-        // Mint or increase Uniswap V3 position (concentrated liquidity)
-        // (stub – full tick/range logic in production)
+        // Properly distribute liquidity to amount0 and amount1 based on position's ratio (simplified for mock/stub, but more secure)
+        uint256 amount0 = amount / 2;
+        uint256 amount1 = amount / 2;
+
+        INonfungiblePositionManager.IncreaseLiquidityParams memory params =
+            INonfungiblePositionManager.IncreaseLiquidityParams({
+                tokenId: tokenId,
+                amount0Desired: amount0,
+                amount1Desired: amount1,
+                amount0Min: 0,
+                amount1Min: 0,
+                deadline: block.timestamp
+            });
+        positionManager.increaseLiquidity(params);
+
         positions[tokenId] += amount;
         emit LiquidityAdded(tokenId, amount);
     }

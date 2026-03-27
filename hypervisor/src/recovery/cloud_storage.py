@@ -1,11 +1,14 @@
 import requests
 import json
 from typing import Dict, Any, Union
+from abc import ABC, abstractmethod
 
-class CloudStorageProvider:
+class CloudStorageProvider(ABC):
+    @abstractmethod
     def upload_file(self, file_content: bytes, destination: str, credentials: str) -> str:
         raise NotImplementedError
 
+    @abstractmethod
     def download_file(self, source: str, credentials: str) -> bytes:
         raise NotImplementedError
 

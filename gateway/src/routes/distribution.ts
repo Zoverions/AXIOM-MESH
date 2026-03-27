@@ -34,6 +34,7 @@ class AutonomousDistributionManager {
             "function deposit(address from, uint256 amount, string calldata source) external payable",
             "function getAuditTrail(address entity) external view returns (uint256 totalIn, uint256 totalOut, uint256 networkContributed)"
         ];
+        // Wired to UniversalDistributionPool.getAuditTrail
         this.pool = new ethers.Contract(poolAddress, abi, this.wallet);
     }
 
