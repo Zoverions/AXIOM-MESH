@@ -26,6 +26,7 @@
                 <a href="performance.html" class="nav-btn" style="display: block; text-decoration: none; color: inherit;">System Status</a>
                 <button class="nav-btn" data-target="agents">Active Agents</button>
                 <button class="nav-btn" data-target="swarms">Swarm Orchestration</button>
+                <button class="nav-btn" data-target="comprehensive">Comprehensive Dashboard</button>
                 <button class="nav-btn" data-target="tester">Intentionality Tester</button>
                 <a href="network.html" class="nav-btn" style="display: block; text-decoration: none; color: inherit;">Grid Mesh Nodes</a>
                 <button class="nav-btn" data-target="cockpit">Operator Cockpit</button>
@@ -107,6 +108,81 @@
 
                 <div id="swarms-grid" class="agents-grid">
                     <p>Loading active swarms...</p>
+                </div>
+            </section>
+
+            <!-- Comprehensive Dashboard Tab -->
+            <section id="comprehensive" class="tab-content">
+                <h2>Comprehensive System Dashboard</h2>
+
+                <!-- Mesh Connection & Nodes -->
+                <div class="card" style="text-align: left; margin-bottom: 20px;">
+                    <h3 style="color: var(--accent);">Mesh Network Status</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <span>Connection to Greater Mesh:</span>
+                        <label class="switch">
+                            <input type="checkbox" id="greater-mesh-toggle" checked>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <h4>Private Mesh Nodes</h4>
+                    <div id="private-nodes-visual" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <p>Loading nodes...</p>
+                    </div>
+                </div>
+
+                <!-- Security Status -->
+                <div class="card" style="text-align: left; margin-bottom: 20px;">
+                    <h3 style="color: var(--accent);">Security Status</h3>
+                    <div id="security-status-visual">
+                        <p>Loading security status...</p>
+                    </div>
+                </div>
+
+                <!-- Models -->
+                <div class="card" style="text-align: left; margin-bottom: 20px;">
+                    <h3 style="color: var(--accent);">AI Models Available</h3>
+                    <div style="display: flex; gap: 20px;">
+                        <div style="flex: 1;">
+                            <h4>Local Models</h4>
+                            <ul id="local-models-list" style="padding-left: 20px;">
+                                <li>Loading...</li>
+                            </ul>
+                        </div>
+                        <div style="flex: 1;">
+                            <h4>Greater Mesh Models</h4>
+                            <ul id="remote-models-list" style="padding-left: 20px;">
+                                <li>Loading...</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Assets -->
+                <div class="card" style="text-align: left; margin-bottom: 20px;">
+                    <h3 style="color: var(--accent);">Digital Assets & Entities</h3>
+                    <div style="display: flex; gap: 20px;">
+                        <div style="flex: 1;">
+                            <h4>Held NFTs</h4>
+                            <ul id="nfts-list" style="padding-left: 20px;">
+                                <li>Loading...</li>
+                            </ul>
+                        </div>
+                        <div style="flex: 1;">
+                            <h4>Agents & Skill Capsules</h4>
+                            <ul id="entities-list" style="padding-left: 20px;">
+                                <li>Loading...</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Governance -->
+                <div class="card" style="text-align: left; margin-bottom: 20px;">
+                    <h3 style="color: var(--accent);">Governance (Canada Template - FPTP)</h3>
+                    <div id="governance-visual">
+                        <p>Loading governance info...</p>
+                    </div>
                 </div>
             </section>
 

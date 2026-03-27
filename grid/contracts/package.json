@@ -12,7 +12,8 @@
     "test": "hardhat test",
     "test:gas": "REPORT_GAS=true GAS_REPORT_FILE=gas-report.txt hardhat test",
     "deploy:localhost": "hardhat run scripts/deploy.js --network localhost",
-    "deploy:hardhat": "hardhat run scripts/deploy.js --network hardhat"
+    "deploy:hardhat": "hardhat run scripts/deploy.js --network hardhat",
+    "deploy:multichain": "./scripts/deploy-multichain-all.sh"
   },
   "keywords": [],
   "author": "",
@@ -32,7 +33,7 @@
     "@typechain/hardhat": "^9.1.0",
     "@types/chai": "^4.3.20",
     "@types/mocha": "^10.0.10",
-    "chai": "^4.5.0",
+    "chai": "^4.3.7",
     "ethers": "^6.16.0",
     "fast-check": "^4.6.0",
     "hardhat": "^2.28.6",
@@ -50,6 +51,7 @@
     "@uniswap/v3-core": "^1.0.1",
     "@uniswap/v3-periphery": "^1.4.3",
     "@wormhole-foundation/wormhole-solidity-sdk": "^1.1.0",
-    "dotenv": "^17.3.1"
+    "dotenv": "^17.3.1",
+    "mocha": "^11.7.5"
   }
 }

@@ -112,4 +112,41 @@ router.get('/alerts/emergence', (req: Request, res: Response) => {
     }
 });
 
+/**
+ * GET /dashboard/comprehensive
+ * Returns comprehensive system data for the new dashboard interface.
+ */
+router.get('/comprehensive', (req: Request, res: Response) => {
+    res.json({
+        mesh_status: {
+            connected_to_greater_mesh: true,
+            private_nodes: [
+                { id: 'node-alpha-1', status: 'active', role: 'validator', ip: '10.0.0.1', latency: '12ms' },
+                { id: 'node-beta-2', status: 'active', role: 'compute', ip: '10.0.0.2', latency: '45ms' },
+                { id: 'node-gamma-3', status: 'standby', role: 'storage', ip: '10.0.0.3', latency: '8ms' }
+            ]
+        },
+        security: {
+            status: 'Secure',
+            waf_active: true,
+            threat_level: 'Low',
+            last_scan: new Date().toISOString()
+        },
+        models: {
+            local: ['llama3-8b-instruct', 'mistral-7b', 'phi-3-mini'],
+            remote: ['gpt-4o', 'claude-3-5-sonnet', 'axiom-reasoning-v1']
+        },
+        assets: {
+            nfts: ['Citizenship-001', 'Founder-042', 'Compute-Bond-11'],
+            entities: ['psychologist_agent', 'physics_research_v2', 'defi_trader']
+        },
+        governance: {
+            system: 'First-Past-The-Post (FPTP)',
+            template: 'Canada',
+            current_election_status: 'Upcoming',
+            representatives: 338
+        }
+    });
+});
+
 export default router;

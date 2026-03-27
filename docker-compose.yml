@@ -47,3 +47,28 @@ services:
     env_file: .env
     networks:
       - zero-trust-crosschain
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    ports: ["9090:9090"]
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - zero-trust-grid
+      - zero-trust-gateway
+
+  grafana:
+    image: grafana/grafana:10.4.1
+    ports: ["3000:3000"]
+    depends_on: [prometheus]
+    networks:
+      - zero-trust-gateway
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.55.0
+    ports:
+      - "16686:16686" # Web UI
+      - "14268:14268" # Collector HTTP
+    networks:
+      - zero-trust-grid
+      - zero-trust-gateway

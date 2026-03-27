@@ -48,18 +48,17 @@ export class NetworkNamespaceController {
     this.udsSocketPath = udsSocketPath;
   }
 
-  async isolateProcess(pid: number): Promise<void> {
+  private async _sendSocatCommand(payloadObj: any, description: string): Promise<void> {
+    const pid = payloadObj.pid;
     return new Promise((resolve, reject) => {
-      const payload = JSON.stringify({ action: "isolate", pid });
-      console.log(`Sending isolation command for PID ${pid} to airgap socket at ${this.udsSocketPath}`);
-      // Using spawn to avoid shell injection via exec
-      // Avoid breaking tests if socat is not available or if stdin is not writable
+      const payload = JSON.stringify(payloadObj);
+      console.log(`Sending ${description} command for PID ${pid} to airgap socket at ${this.udsSocketPath}`);
       try {
         const socat = spawn('socat', ['-', `UNIX-CONNECT:${this.udsSocketPath}`]);
 
         socat.on('close', (code) => {
           if (code === 0 || code === 1) { // We accept 1 for tests where the socket doesn't exist
-             console.log(`Isolated process ${pid}`);
+             console.log(`${description} successful for process ${pid}`);
              resolve();
           } else {
              reject(new Error(`socat process exited with code ${code}`));
@@ -68,7 +67,7 @@ export class NetworkNamespaceController {
 
         socat.on('error', (err) => {
           // In tests the socket may not exist, so we mock success
-          console.warn(`socat error isolating process ${pid}:`, err.message);
+          console.warn(`socat error during ${description} for process ${pid}:`, err.message);
           resolve();
         });
 
@@ -82,104 +81,21 @@ export class NetworkNamespaceController {
           resolve();
       }
     });
+  }
+
+  async isolateProcess(pid: number): Promise<void> {
+    return this._sendSocatCommand({ action: "isolate", pid }, "isolation");
   }
 
   async applyCgroupLimits(pid: number, config: any): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const payload = JSON.stringify({ action: "cgroups", pid, config });
-      console.log(`Sending cgroups limits command for PID ${pid} to airgap socket at ${this.udsSocketPath}`);
-      try {
-        const socat = spawn('socat', ['-', `UNIX-CONNECT:${this.udsSocketPath}`]);
-
-        socat.on('close', (code) => {
-          if (code === 0 || code === 1) {
-             console.log(`Applied cgroup limits for process ${pid}`);
-             resolve();
-          } else {
-             reject(new Error(`socat process exited with code ${code}`));
-          }
-        });
-
-        socat.on('error', (err) => {
-          console.warn(`socat error applying cgroup limits to process ${pid}:`, err.message);
-          resolve();
-        });
-
-        if (socat.stdin) {
-            socat.stdin.write(payload);
-            socat.stdin.end();
-        } else {
-            resolve();
-        }
-      } catch(e) {
-          resolve();
-      }
-    });
+    return this._sendSocatCommand({ action: "cgroups", pid, config }, "cgroups limits");
   }
 
   async applySeccompProfile(pid: number, profile: any): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const payload = JSON.stringify({ action: "seccomp", pid, profile });
-      console.log(`Sending seccomp profile command for PID ${pid} to airgap socket at ${this.udsSocketPath}`);
-      try {
-        const socat = spawn('socat', ['-', `UNIX-CONNECT:${this.udsSocketPath}`]);
-
-        socat.on('close', (code) => {
-          if (code === 0 || code === 1) {
-             console.log(`Applied seccomp profile for process ${pid}`);
-             resolve();
-          } else {
-             reject(new Error(`socat process exited with code ${code}`));
-          }
-        });
-
-        socat.on('error', (err) => {
-          console.warn(`socat error applying seccomp profile to process ${pid}:`, err.message);
-          resolve();
-        });
-
-        if (socat.stdin) {
-            socat.stdin.write(payload);
-            socat.stdin.end();
-        } else {
-            resolve();
-        }
-      } catch(e) {
-          resolve();
-      }
-    });
+    return this._sendSocatCommand({ action: "seccomp", pid, profile }, "seccomp profile");
   }
 
   async restoreNetworking(pid: number): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const payload = JSON.stringify({ action: "restore", pid });
-      console.log(`Sending restore command for PID ${pid} to airgap socket at ${this.udsSocketPath}`);
-      try {
-        const socat = spawn('socat', ['-', `UNIX-CONNECT:${this.udsSocketPath}`]);
-
-        socat.on('close', (code) => {
-          if (code === 0 || code === 1) {
-             console.log(`Restored networking for process ${pid}`);
-             resolve();
-          } else {
-             reject(new Error(`socat process exited with code ${code}`));
-          }
-        });
-
-        socat.on('error', (err) => {
-          console.warn(`socat error restoring process ${pid}:`, err.message);
-          resolve();
-        });
-
-        if (socat.stdin) {
-            socat.stdin.write(payload);
-            socat.stdin.end();
-        } else {
-            resolve();
-        }
-      } catch(e) {
-          resolve();
-      }
-    });
+    return this._sendSocatCommand({ action: "restore", pid }, "restore");
   }
 }

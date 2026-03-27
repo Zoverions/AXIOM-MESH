@@ -8,59 +8,82 @@ def mcp_client():
     return MCPClient()
 
 @pytest.mark.asyncio
-@patch("asyncio.create_subprocess_exec", new_callable=AsyncMock)
-async def test_mcp_fetch_context_success(mock_exec, mcp_client):
+@patch("src.engine.mcp_client.ClientSession")
+@patch("src.engine.mcp_client.sse_client")
+async def test_mcp_fetch_context_success(mock_sse_client, mock_client_session, mcp_client):
     """Test successful external tool execution logic."""
     # Ensure there's a server configured to trigger the fetching loop
     mcp_client.servers = ["http://test-mcp"]
 
-    mock_process = AsyncMock()
-    mock_process.communicate.return_value = (b"mocked external mcp context", b"")
-    mock_process.returncode = 0
-    mock_exec.return_value = mock_process
+    # Mock SSE streams
+    mock_streams = (AsyncMock(), AsyncMock())
+    mock_sse_client.return_value.__aenter__.return_value = mock_streams
 
-    result = await mcp_client.fetch_context("test intent")
+    # Mock Session and its methods
+    mock_session_instance = AsyncMock()
+    mock_client_session.return_value.__aenter__.return_value = mock_session_instance
 
-    # Assert that subprocess was called and the result was handled
-    assert mock_exec.called
+    mock_tools_response = MagicMock()
+    mock_tool = MagicMock()
+    mock_tool.name = "test_tool"
+    mock_tool.description = "Test description"
+    mock_tools_response.tools = [mock_tool]
+    mock_session_instance.list_tools.return_value = mock_tools_response
+
+    mock_prompts_response = MagicMock()
+    mock_prompt = MagicMock()
+    mock_prompt.name = "test_prompt"
+    mock_prompt.description = "Test prompt desc"
+    mock_prompts_response.prompts = [mock_prompt]
+    mock_session_instance.list_prompts.return_value = mock_prompts_response
+
+    with patch.object(mcp_client, 'verify_peer_compatibility', return_value=True), \
+         patch.object(mcp_client, 'check_compatibility', return_value=True):
+        result = await mcp_client.fetch_context("test intent")
+
     assert result is not None
     assert type(result) == str
+    assert "test_tool" in result
+    assert "test_prompt" in result
 
 @pytest.mark.asyncio
-@patch("asyncio.create_subprocess_exec", new_callable=AsyncMock)
-async def test_mcp_fetch_context_timeout(mock_exec, mcp_client):
+@patch("src.engine.mcp_client.ClientSession")
+@patch("src.engine.mcp_client.sse_client")
+async def test_mcp_fetch_context_timeout(mock_sse_client, mock_client_session, mcp_client):
     """Test resilience against execution timeouts."""
     mcp_client.servers = ["http://test-mcp"]
 
-    mock_process = AsyncMock()
+    # Simulate connection error
+    mock_sse_client.return_value.__aenter__.side_effect = asyncio.TimeoutError("Timeout")
 
-    # Simulate wait_for raising TimeoutError
-    async def mock_communicate():
-        raise asyncio.TimeoutError("Timeout")
+    with patch.object(mcp_client, 'verify_peer_compatibility', return_value=True), \
+         patch.object(mcp_client, 'check_compatibility', return_value=True):
+        result = await mcp_client.fetch_context("test intent")
 
-    mock_process.communicate.side_effect = mock_communicate
-    mock_exec.return_value = mock_process
-
-    # Execute and verify it doesn't crash
-    result = await mcp_client.fetch_context("test intent")
-
-    assert mock_exec.called
     assert result is not None
     assert type(result) == str
+    assert "Offline or Unreachable" in result
 
 @pytest.mark.asyncio
-@patch("asyncio.create_subprocess_exec", new_callable=AsyncMock)
-async def test_mcp_fetch_context_subprocess_failure(mock_exec, mcp_client):
+@patch("src.engine.mcp_client.ClientSession")
+@patch("src.engine.mcp_client.sse_client")
+async def test_mcp_fetch_context_subprocess_failure(mock_sse_client, mock_client_session, mcp_client):
     """Test resilience against external tool non-zero exit codes."""
     mcp_client.servers = ["http://test-mcp"]
 
-    mock_process = AsyncMock()
-    mock_process.communicate.return_value = (b"", b"Tool execution failed")
-    mock_process.returncode = 1
-    mock_exec.return_value = mock_process
+    # Mock SSE streams
+    mock_streams = (AsyncMock(), AsyncMock())
+    mock_sse_client.return_value.__aenter__.return_value = mock_streams
 
-    result = await mcp_client.fetch_context("test intent")
+    # Mock Session and its methods
+    mock_session_instance = AsyncMock()
+    mock_client_session.return_value.__aenter__.return_value = mock_session_instance
+    mock_session_instance.initialize.side_effect = Exception("Tool execution failed")
 
-    assert mock_exec.called
+    with patch.object(mcp_client, 'verify_peer_compatibility', return_value=True), \
+         patch.object(mcp_client, 'check_compatibility', return_value=True):
+        result = await mcp_client.fetch_context("test intent")
+
     assert result is not None
     assert type(result) == str
+    assert "Offline or Unreachable" in result

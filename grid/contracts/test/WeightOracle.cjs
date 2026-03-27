@@ -101,6 +101,23 @@ describe("WeightOracle", function () {
       .to.be.revertedWith("Unauthorized: Only ComputeBond can slash PoER bonus");
   });
 
+  it("should use the fallback oracle if base weight calculation returns 0", async function () {
+    const MockFallbackOracle = await ethers.getContractFactory("WeightOracle");
+    const fallback = await MockFallbackOracle.deploy(dualLedgerIdentity.target);
+
+    await fallback.queueOperation(ethers.keccak256(ethers.solidityPacked(["string", "address", "uint256"], ["updateWeight", humanNode.address, 999])));
+    await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+    await ethers.provider.send("evm_mine");
+    await fallback.updateWeight(humanNode.address, 999);
+
+    await weightOracle.queueOperation(ethers.keccak256(ethers.solidityPacked(["string", "address"], ["setFallbackOracle", fallback.target])));
+    await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+    await ethers.provider.send("evm_mine");
+    await weightOracle.setFallbackOracle(fallback.target);
+
+    expect(await weightOracle.getWeight(humanNode.address)).to.equal(999);
+  });
+
   it("should calculate merit weight correctly with verified skill points", async function () {
     await weightOracle.queueOperation(ethers.keccak256(ethers.solidityPacked(["string", "address", "uint256"], ["updateWeight", humanNode.address, 100])));
     await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);

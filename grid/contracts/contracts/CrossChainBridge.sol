@@ -22,21 +22,64 @@ contract CrossChainBridge is OApp {
         uint256 timestamp;
     }
 
+    struct BridgeOracleHooks {
+        address oracleContract;
+        uint256 ratingThreshold;
+        uint256 pollingInterval;
+        uint256 quorumRequired;
+        bool enabled;
+    }
+
+    BridgeOracleHooks public oracleHooks;
+
     mapping(bytes32 => PendingClaim) public pendingClaims;
     mapping(uint32 => uint256) public chainFinalityBlocks;
 
     event ArbitrageExecuted(uint256 profit, address token);
     event ClaimReceived(bytes32 indexed guid, address recipient, uint256 amount);
     event ClaimRedeemed(bytes32 indexed guid, address recipient, uint256 amount);
+    event OracleHooksUpdated(address oracleContract, uint256 ratingThreshold, uint256 pollingInterval, uint256 quorumRequired, bool enabled);
 
     constructor(address _endpoint, address _founder, address payable _pool, address _shadow) OApp(_endpoint, msg.sender) Ownable(msg.sender) {
         founder = FounderCommitment(_founder);
         pool = UniversalDistributionPool(_pool);
         shadow = ShadowBridge(_shadow);
+
+        oracleHooks = BridgeOracleHooks({
+            oracleContract: address(0), // Can be updated by owner to point to a WeightOracle or BridgeRatingOracle
+            ratingThreshold: 80,
+            pollingInterval: 10 minutes,
+            quorumRequired: 3,
+            enabled: false
+        });
+    }
+
+    function updateOracleHooks(address _oracleContract, uint256 _ratingThreshold, uint256 _pollingInterval, uint256 _quorumRequired, bool _enabled) external onlyOwner {
+        oracleHooks = BridgeOracleHooks({
+            oracleContract: _oracleContract,
+            ratingThreshold: _ratingThreshold,
+            pollingInterval: _pollingInterval,
+            quorumRequired: _quorumRequired,
+            enabled: _enabled
+        });
+        emit OracleHooksUpdated(_oracleContract, _ratingThreshold, _pollingInterval, _quorumRequired, _enabled);
     }
 
     // LayerZero omnichain payroll/UBI transfer
     function bridgePayroll(uint256 amount, uint32 dstEid, bytes calldata options, bytes32 zkProof) external payable {
+        if (oracleHooks.enabled) {
+            require(oracleHooks.oracleContract != address(0), "Oracle contract not configured");
+
+            // Expected interface: function getBridgeRating(uint32 dstEid) external view returns (uint256 rating, uint256 quorum, uint256 lastUpdateTimestamp)
+            (bool success, bytes memory data) = oracleHooks.oracleContract.staticcall(abi.encodeWithSignature("getBridgeRating(uint32)", dstEid));
+            require(success, "Oracle call failed");
+
+            (uint256 currentRating, uint256 quorum, uint256 lastUpdateTimestamp) = abi.decode(data, (uint256, uint256, uint256));
+
+            require(currentRating >= oracleHooks.ratingThreshold, "Bridge path rating too low");
+            require(quorum >= oracleHooks.quorumRequired, "Bridge path quorum not met");
+            require(block.timestamp <= lastUpdateTimestamp + oracleHooks.pollingInterval, "Bridge path rating is stale");
+        }
         pool.distribute(msg.sender, amount, zkProof);
         bytes memory payload = abi.encode(msg.sender, amount, zkProof);
         _lzSend(dstEid, payload, options, MessagingFee(msg.value, 0), payable(msg.sender));
@@ -65,6 +108,12 @@ contract CrossChainBridge is OApp {
     }
 
     function claimRedemption(bytes32 _guid) external {
+        uint256 chainId;
+        assembly {
+            chainId := chainid()
+        }
+        require(chainId == 369 || chainId == 943 || chainId == 31337, "Redemption only permitted on PulseChain");
+
         PendingClaim memory claim = pendingClaims[_guid];
         require(claim.timestamp > 0, "Claim not found");
         require(block.timestamp >= claim.timestamp + 1 hours, "Finality delay not met");

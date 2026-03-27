@@ -95,6 +95,21 @@ pub fn run_tee_enclave(app_path: &str, input_data: &str) -> Result<String> {
     }
 }
 
+pub fn run_wasmtime_module(wasm_path: &str, input_data: &str) -> Result<String> {
+    // Fallback WASM execution pathway
+    println!("Running WASM module {} with input {}", wasm_path, input_data);
+
+    let output = std::process::Command::new("wasmtime")
+        .arg(wasm_path)
+        .output()?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    } else {
+        Err(anyhow::anyhow!("WASM execution failed: {}", String::from_utf8_lossy(&output.stderr)))
+    }
+}
+
 fn main() {
     // Start airgap UDS listener
     let socket_path = std::env::var("AIRGAP_SOCKET").unwrap_or_else(|_| "/var/run/axiom-airgap.sock".to_string());
@@ -153,6 +168,14 @@ fn main() {
         match run_tee_enclave(app_path, input_data) {
             Ok(res) => println!("TEE enclave execution routed successfully: {}", res),
             Err(e) => eprintln!("TEE enclave routing error: {}", e),
+        }
+    }
+
+    if let Some(idx) = args.iter().position(|r| r == "--run-wasm") {
+        let wasm_path: &str = if idx + 1 < args.len() && args[idx + 1] != "--input" { &args[idx + 1] } else { "module.wasm" };
+        match run_wasmtime_module(wasm_path, input_data) {
+            Ok(res) => println!("WASM execution routed successfully: {}", res),
+            Err(e) => eprintln!("WASM routing error: {}", e),
         }
     }
 }
