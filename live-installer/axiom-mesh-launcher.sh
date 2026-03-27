@@ -55,16 +55,46 @@ if [ $EXISTING -eq 1 ]; then
     echo "Booting in normal mode..."
     echo ""
     
-    # Try to open dashboard in browser
-    if command -v xdg-open &> /dev/null; then
-        xdg-open "http://localhost:3000" 2>/dev/null || true
+    # Check if custom GUI is available
+    if [ -f /opt/axiom-mesh/gui-skin/index.html ] || [ -d /opt/axiom-mesh/gui-skin ]; then
+        echo -e "${YELLOW}🎨 Custom GUI skin detected!${NC}"
+        echo "Opening both standard dashboard and custom interface..."
+        echo ""
+        
+        # Start the custom GUI service if not running
+        if command -v systemctl &> /dev/null && systemctl is-active --quiet axiom-gui.service 2>/dev/null; then
+            echo "✅ Custom GUI service already running"
+        elif command -v systemctl &> /dev/null; then
+            echo "Starting custom GUI service..."
+            systemctl start axiom-gui.service 2>/dev/null || true
+        fi
+        
+        sleep 3
+        
+        # Try to open both interfaces
+        if command -v xdg-open &> /dev/null; then
+            xdg-open "http://localhost:8080" 2>/dev/null &
+            sleep 1
+            xdg-open "http://localhost:3000" 2>/dev/null &
+        fi
+        
+        echo -e "${GREEN}📊 Standard Dashboard: http://localhost:3000${NC}"
+        echo -e "${YELLOW}🎨 Custom Node GUI: http://localhost:8080${NC}"
+        echo ""
+        echo "The custom GUI will automatically adapt to your node type!"
+    else
+        # Try to open dashboard in browser
+        if command -v xdg-open &> /dev/null; then
+            xdg-open "http://localhost:3000" 2>/dev/null || true
+        fi
+        
+        echo -e "${YELLOW}📊 Dashboard: http://localhost:3000${NC}"
     fi
     
-    echo -e "${YELLOW}📊 Dashboard: http://localhost:3000${NC}"
     echo -e "${YELLOW}📁 Installation path: $INSTALL_PATH${NC}"
     echo ""
     echo "You can now:"
-    echo "  - Open http://localhost:3000 in your browser"
+    echo "  - Open the dashboards in your browser"
     echo "  - Access your existing AXIOM-MESH instance"
     echo "  - Use the live environment for troubleshooting"
     echo ""
@@ -105,10 +135,20 @@ else
         echo -e "${GREEN}   🎉 Installation completed successfully!${NC}"
         echo -e "${GREEN}==================================================${NC}"
         echo ""
+        
+        # Install custom GUI skin if available
+        if [ -d /opt/axiom-mesh/live-installer/gui-skin ]; then
+            echo ""
+            echo -e "${YELLOW}🎨 Installing custom GUI skin...${NC}"
+            bash /opt/axiom-mesh/live-installer/gui-skin/install-skin.sh
+            echo ""
+        fi
+        
         echo "Next steps:"
         echo "  1. Start the mesh: cd /opt/axiom-mesh && make up"
-        echo "  2. Open dashboard: http://localhost:3000"
-        echo "  3. Or reboot into your installed system"
+        echo "  2. Open standard dashboard: http://localhost:3000"
+        echo "  3. Open custom node GUI: http://localhost:8080"
+        echo "  4. Or reboot into your installed system"
         echo ""
         
         # Optionally start the services automatically
@@ -117,6 +157,24 @@ else
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             echo "Starting services..."
             make up
+            
+            # Start custom GUI service
+            if command -v systemctl &> /dev/null; then
+                echo "Starting custom GUI service..."
+                systemctl start axiom-gui.service 2>/dev/null || true
+            fi
+            
+            echo ""
+            echo -e "${GREEN}✅ Services started!${NC}"
+            echo -e "${YELLOW}📊 Opening dashboards...${NC}"
+            
+            sleep 5
+            
+            if command -v xdg-open &> /dev/null; then
+                xdg-open "http://localhost:3000" 2>/dev/null &
+                sleep 2
+                xdg-open "http://localhost:8080" 2>/dev/null &
+            fi
         fi
     else
         echo -e "${RED}❌ Installation failed with status: $INSTALL_STATUS${NC}"
