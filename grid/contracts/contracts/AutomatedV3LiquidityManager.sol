@@ -42,6 +42,8 @@ contract AutomatedV3LiquidityManager is Initializable, UUPSUpgradeable {
     }
     ManagerState public managerState;
 
+    address public priceOracle;
+
     event PositionManaged(uint256 tokenId, uint128 liquidity);
     event FeesHarvested(uint256 amount0, uint256 amount1);
 
@@ -57,15 +59,23 @@ contract AutomatedV3LiquidityManager is Initializable, UUPSUpgradeable {
         //__UUPSUpgradeable_init();
     }
 
-    function managePositionBatch(uint256[] calldata tokenIds, uint128[] calldata liquidityDeltas) external {
+
+    function managePositionBatch(
+        uint256[] calldata tokenIds,
+        uint128[] calldata liquidityDeltas,
+        uint256[] calldata amount0Mins,
+        uint256[] calldata amount1Mins
+    ) external {
         require(tokenIds.length > 0, "Empty array");
         require(tokenIds.length == liquidityDeltas.length, "Length mismatch");
+        require(tokenIds.length == amount0Mins.length, "Length mismatch");
+        require(tokenIds.length == amount1Mins.length, "Length mismatch");
         for (uint256 i = 0; i < tokenIds.length; i++) {
-            managePosition(tokenIds[i], liquidityDeltas[i]);
+            managePosition(tokenIds[i], liquidityDeltas[i], amount0Mins[i], amount1Mins[i]);
         }
     }
 
-    function managePosition(uint256 tokenId, uint128 liquidityDelta) public {
+    function managePosition(uint256 tokenId, uint128 liquidityDelta, uint256 _amount0Min, uint256 _amount1Min) public {
         // M12.7: Throttle liquidity deployment to reduce initial liquidity concentration risk
         if (block.timestamp > lastDeploymentTimestamp[tokenId] + DEPLOYMENT_COOLDOWN) {
             totalDeployedInCooldown[tokenId] = 0; // Reset cooldown
@@ -92,8 +102,8 @@ contract AutomatedV3LiquidityManager is Initializable, UUPSUpgradeable {
             tokenId: tokenId,
             amount0Desired: liquidityDelta,
             amount1Desired: liquidityDelta,
-            amount0Min: amount0Min,
-            amount1Min: amount1Min,
+            amount0Min: _amount0Min,
+            amount1Min: _amount1Min,
             deadline: block.timestamp + 300
         }));
         emit PositionManaged(tokenId, liquidityDelta);

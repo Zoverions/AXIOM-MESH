@@ -12,10 +12,16 @@ describe("M12 Integration Tests: Comprehensive Suite", function () {
         let liquidityManager;
 
         beforeEach(async function () {
+            // Deploy FounderCommitment mock so verifyFounder works
+            const FounderCommitment = await ethers.getContractFactory("FounderCommitment");
+            const founderHash = ethers.keccak256(ethers.solidityPacked(["address"], [owner.address]));
+            const founderCommitment = await FounderCommitment.deploy(founderHash);
+            await founderCommitment.initialize(owner.address);
+
             // Mock UniversalDistributionPool, NPM, SwapRouter by address
             const LiquidityManager = await ethers.getContractFactory("AutomatedV3LiquidityManager");
             liquidityManager = await LiquidityManager.deploy(
-                owner.address, // Founder
+                founderCommitment.target, // Founder
                 owner.address, // distPool
                 owner.address, // npm
                 owner.address  // swapRouter
@@ -24,7 +30,6 @@ describe("M12 Integration Tests: Comprehensive Suite", function () {
 
             await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
             await ethers.provider.send("evm_mine");
-            await liquidityManager.setKeeper(owner.address, true);
         });
 
         it("Should enforce the cooldown and max liquidity deployment BPS", async function () {
