@@ -3,6 +3,7 @@ package p2p
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"os"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -51,6 +52,7 @@ type PeerInfo struct {
 }
 
 type Node struct {
+	ShardID             string // Sharded consensus identifier
 	ID                  string
 	PrivateKey          *ecdsa.PrivateKey
 	PublicKey           string
@@ -76,8 +78,14 @@ func NewNode(id string, priv *ecdsa.PrivateKey) *Node {
 
 	pqPub, pqPriv, _ := mode3.GenerateKey(nil)
 
+	shardID := os.Getenv("GRID_SHARD_ID")
+	if shardID == "" {
+		shardID = "global" // Default fallback if not set
+	}
+
 	return &Node{
 		ID:                  id,
+		ShardID:             shardID,
 		PrivateKey:          priv,
 		PublicKey:           pubHex,
 		KyberPublicKey:      kyberPub,

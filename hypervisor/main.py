@@ -13,12 +13,16 @@ if __name__ == "__main__":
         print(f"mTLS certs not found in {certs_dir}. mTLS is mandatory for security.")
         exit(1)
 
-    print(f"Starting Uvicorn with mTLS on port {port}")
+    workers = int(os.environ.get("HYPERVISOR_WORKERS", 1))
+    reload = True if workers == 1 else False
+
+    print(f"Starting Uvicorn with mTLS on port {port} with {workers} workers")
     uvicorn.run(
         "src.api.server:app",
         host="0.0.0.0",
         port=port,
-        reload=True,
+        workers=workers,
+        reload=reload,
         ssl_keyfile=ssl_keyfile,
         ssl_certfile=ssl_certfile,
         ssl_ca_certs=ssl_ca_certs,

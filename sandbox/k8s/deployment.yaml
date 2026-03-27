@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: axiom-sandbox
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: axiom-sandbox
+  template:
+    metadata:
+      labels:
+        app: axiom-sandbox
+    spec:
+      containers:
+      - name: axiom-sandbox
+        image: axiom-sandbox:latest
+        ports:
+        - containerPort: 8080
