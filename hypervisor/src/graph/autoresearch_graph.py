@@ -247,16 +247,27 @@ async def zkml_verify(state: GraphState):
         "settings": settings
     }
 
+    import logging
+    import time
+    logger = logging.getLogger(__name__)
+
     verified = False
+    start_time = time.time()
     try:
         async with httpx.AsyncClient() as client:
             res = await client.post(GRID_ZKML_URL, json=payload, timeout=5.0)
             if res.status_code == 200:
                 verified = True
     except Exception as e:
-        pass
+        logger.error(f"ZKML verification error: {e}")
 
-    return {"zkml_verified": verified}
+    duration = time.time() - start_time
+    if not verified:
+        logger.error(f"ZKML verification failed after {duration:.2f}s")
+    else:
+        logger.info(f"ZKML verification succeeded in {duration:.2f}s")
+
+    return {"zkml_verified": verified, "zkml_metrics": {"duration": duration}}
 
 async def grid_stake(state: GraphState):
     """Stakes via Grid ledger based on verified results."""
