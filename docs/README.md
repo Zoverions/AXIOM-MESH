@@ -83,7 +83,9 @@ See `docs/audits/` directory for comprehensive security audits:
 
 See `docs/HOWTO/README.md` for the full operational runbook index.
 
-**Minimum operational HOWTO set now includes:**
+**New Users Start Here:** [`docs/INSTALLATION-GUIDE.md`](INSTALLATION-GUIDE.md) — comprehensive step-by-step installation instructions.
+
+Minimum operational HOWTO set now includes:
 - Local stack bring-up and health checks
 - Intent submission and tracing
 - Local contract compile/test/deploy loop
