@@ -46,15 +46,24 @@ export async function sendToHypervisor(intent: IntentObject): Promise<IntentResp
                 const signaturePayload = `${timestamp}:${nonce}:${payloadStr}`;
                 const signature = await cryptoWorkerPool.hmacSignature(apiKey, signaturePayload);
 
-                const certsDir = process.env.CERTS_DIR || '../certs';
                 let httpsAgent;
                 try {
-                    httpsAgent = new https.Agent({
-                        cert: fs.readFileSync(`${certsDir}/gateway.crt`),
-                        key: fs.readFileSync(`${certsDir}/gateway.key`),
-                        ca: fs.readFileSync(`${certsDir}/ca.crt`),
-                        rejectUnauthorized: true
-                    });
+                    if (process.env.MTLS_CA_CERT && process.env.MTLS_CLIENT_CERT && process.env.MTLS_CLIENT_KEY) {
+                        httpsAgent = new https.Agent({
+                            cert: process.env.MTLS_CLIENT_CERT,
+                            key: process.env.MTLS_CLIENT_KEY,
+                            ca: process.env.MTLS_CA_CERT,
+                            rejectUnauthorized: true
+                        });
+                    } else {
+                        const certsDir = process.env.CERTS_DIR || '../certs';
+                        httpsAgent = new https.Agent({
+                            cert: fs.readFileSync(`${certsDir}/gateway.crt`),
+                            key: fs.readFileSync(`${certsDir}/gateway.key`),
+                            ca: fs.readFileSync(`${certsDir}/ca.crt`),
+                            rejectUnauthorized: true
+                        });
+                    }
                 } catch (e) {
                     console.error("mTLS certs not found. mTLS is mandatory for security.");
                     process.exit(1);

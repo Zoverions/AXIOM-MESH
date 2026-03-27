@@ -1,0 +1,25 @@
+name: Enforce Multi-Sig Governance
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  check-approvals:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify 2+ Approvals
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const reviews = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            const approvedReviews = reviews.data.filter(r => r.state === 'APPROVED');
+            const uniqueApprovers = new Set(approvedReviews.map(r => r.user.id));
+            if (uniqueApprovers.size < 2) {
+              core.setFailed(`Requires 2+ approvals, found ${uniqueApprovers.size}.`);
+            }

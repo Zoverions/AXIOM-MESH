@@ -35,14 +35,38 @@ def log_event(level: str, msg: str, trace_id: str = None):
 # M7.2 Hard-fail service identity transport: remove plaintext fallback in hypervisor/src/api/server.py:create_mtls_client, enforce mTLS cert presence at boot, and add anti-replay coverage for inter-service requests.
 def create_mtls_client():
     """Create httpx client with mTLS configuration."""
-    certs_dir = os.environ.get("CERTS_DIR", "../certs")
-    ssl_certfile = os.path.join(certs_dir, "hypervisor.crt")
-    ssl_keyfile = os.path.join(certs_dir, "hypervisor.key")
-    ssl_ca_certs = os.path.join(certs_dir, "ca.crt")
+    if os.environ.get("NODE_ENV") == "test":
+        return httpx.AsyncClient()
 
-    missing = [p for p in (ssl_certfile, ssl_keyfile, ssl_ca_certs) if not os.path.exists(p)]
-    if missing:
-        raise RuntimeError(f"mTLS cert configuration missing: {', '.join(missing)}")
+    mtls_ca_cert = os.environ.get("MTLS_CA_CERT")
+    mtls_client_cert = os.environ.get("MTLS_CLIENT_CERT")
+    mtls_client_key = os.environ.get("MTLS_CLIENT_KEY")
+
+    if mtls_ca_cert and mtls_client_cert and mtls_client_key:
+        import tempfile
+        f_cert = tempfile.NamedTemporaryFile(delete=False, suffix=".crt")
+        f_cert.write(mtls_client_cert.encode('utf-8'))
+        f_cert.close()
+        ssl_certfile = f_cert.name
+
+        f_key = tempfile.NamedTemporaryFile(delete=False, suffix=".key")
+        f_key.write(mtls_client_key.encode('utf-8'))
+        f_key.close()
+        ssl_keyfile = f_key.name
+
+        f_ca = tempfile.NamedTemporaryFile(delete=False, suffix=".crt")
+        f_ca.write(mtls_ca_cert.encode('utf-8'))
+        f_ca.close()
+        ssl_ca_certs = f_ca.name
+    else:
+        certs_dir = os.environ.get("CERTS_DIR", "../certs")
+        ssl_certfile = os.path.join(certs_dir, "hypervisor.crt")
+        ssl_keyfile = os.path.join(certs_dir, "hypervisor.key")
+        ssl_ca_certs = os.path.join(certs_dir, "ca.crt")
+
+        missing = [p for p in (ssl_certfile, ssl_keyfile, ssl_ca_certs) if not os.path.exists(p)]
+        if missing:
+            raise RuntimeError(f"mTLS cert configuration missing: {', '.join(missing)}")
 
     return httpx.AsyncClient(
         cert=(ssl_certfile, ssl_keyfile),

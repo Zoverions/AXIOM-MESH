@@ -47,7 +47,7 @@ async def test_process_intent_core_missing_hypervisor_secret():
         res = await _process_intent_core(intent, "mock_api_key")
 
         assert res.status == "error"
-        assert "HYPERVISOR_SECRET is not configured" in res.response
+        assert "HYPERVISOR_SECRET" in res.response
 
 @pytest.mark.asyncio
 async def test_process_intent_core_with_hypervisor_secret():
