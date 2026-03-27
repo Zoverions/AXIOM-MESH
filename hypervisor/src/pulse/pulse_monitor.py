@@ -52,7 +52,8 @@ class CoTAuditor:
         ]
 
         # DeepArchive instance for topoi graph retrieval
-        self.archive = DistributedDeepArchive()
+        if self.archive is None:
+            self.archive = DistributedDeepArchive()
         self.quarantine_manager = QuarantineSandboxManager()
         self.antibody_generator = EpistemicAntibodyGenerator(latent_dim=16)
 
