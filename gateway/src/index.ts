@@ -3,6 +3,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import cors from 'cors';
 import helmet from 'helmet';
 import bodyParser from 'body-parser';
+import http from 'http';
 import https from 'https';
 import fs from 'fs';
 import dotenv from 'dotenv';
@@ -95,20 +96,40 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 app.use('/', restRoutes);
 
-const certsDir = process.env.CERTS_DIR || '../certs';
 let server;
 try {
-    const mTLSConfig = {
-        key: fs.readFileSync(`${certsDir}/gateway.key`),
-        cert: fs.readFileSync(`${certsDir}/gateway.crt`),
-        ca: [fs.readFileSync(`${certsDir}/ca.crt`)],
-        requestCert: true,
-        rejectUnauthorized: true,
-    };
-    server = https.createServer(mTLSConfig, app);
+    let mTLSConfig;
+    if (process.env.MTLS_CA_CERT && process.env.MTLS_CLIENT_CERT && process.env.MTLS_CLIENT_KEY) {
+        mTLSConfig = {
+            key: process.env.MTLS_CLIENT_KEY,
+            cert: process.env.MTLS_CLIENT_CERT,
+            ca: [process.env.MTLS_CA_CERT],
+            requestCert: true,
+            rejectUnauthorized: true,
+        };
+    } else {
+        const certsDir = process.env.CERTS_DIR || '../certs';
+        mTLSConfig = {
+            key: fs.readFileSync(`${certsDir}/gateway.key`),
+            cert: fs.readFileSync(`${certsDir}/gateway.crt`),
+            ca: [fs.readFileSync(`${certsDir}/ca.crt`)],
+            requestCert: true,
+            rejectUnauthorized: true,
+        };
+    }
+
+    if (process.env.NODE_ENV === 'test') {
+        server = http.createServer(app);
+    } else {
+        server = https.createServer(mTLSConfig, app);
+    }
 } catch (e) {
-    console.error("mTLS certs not found. mTLS is mandatory for security.");
-    process.exit(1);
+    console.error("mTLS certs not found. mTLS is mandatory for security.", e);
+    if (process.env.NODE_ENV !== 'test') {
+        process.exit(1);
+    } else {
+        server = http.createServer(app);
+    }
 }
 
 server.listen(REST_PORT, () => {

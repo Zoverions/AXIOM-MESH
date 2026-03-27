@@ -1338,6 +1338,40 @@ func (s *Server) SetupRouter() *http.ServeMux {
 func (s *Server) Start(addr string) error {
 	mux := s.SetupRouter()
 
+	mtlsClientCert := os.Getenv("MTLS_CLIENT_CERT")
+	mtlsClientKey := os.Getenv("MTLS_CLIENT_KEY")
+	mtlsCaCert := os.Getenv("MTLS_CA_CERT")
+
+	if mtlsClientCert != "" && mtlsClientKey != "" && mtlsCaCert != "" {
+		cert, err := tls.X509KeyPair([]byte(mtlsClientCert), []byte(mtlsClientKey))
+		if err != nil {
+			log.Fatalf("Failed to load key pair from environment: %v", err)
+		}
+
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM([]byte(mtlsCaCert))
+
+		tlsConfig := &tls.Config{
+			Certificates: []tls.Certificate{cert},
+			ClientCAs:    caCertPool,
+			ClientAuth:   tls.RequireAndVerifyClientCert,
+		}
+
+		server := &http.Server{
+			Addr:      addr,
+			Handler:   mux,
+			TLSConfig: tlsConfig,
+		}
+		log.Printf("Starting Grid server on %s with mTLS from env vars", addr)
+
+		// In-memory TLS listener
+		listener, err := tls.Listen("tcp", addr, tlsConfig)
+		if err != nil {
+			log.Fatalf("Failed to listen: %v", err)
+		}
+		return server.Serve(listener)
+	}
+
 	certsDir := os.Getenv("CERTS_DIR")
 	if certsDir == "" {
 		certsDir = "certs"
@@ -1374,7 +1408,7 @@ func (s *Server) Start(addr string) error {
 		}
 	}
 
-	log.Fatalf("mTLS certs not found in %s. mTLS is mandatory for security.", certsDir)
+	log.Fatalf("mTLS certs not found in %s and not provided via env vars. mTLS is mandatory for security.", certsDir)
 	return nil
 }
 

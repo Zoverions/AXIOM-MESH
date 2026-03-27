@@ -25,33 +25,49 @@ type HTTPTransport struct {
 }
 
 func NewHTTPTransport() *HTTPTransport {
-	certsDir := os.Getenv("CERTS_DIR")
-	if certsDir == "" {
-		certsDir = "certs"
-		if _, err := os.Stat(certsDir); os.IsNotExist(err) {
-			certsDir = "../certs"
+	var cert tls.Certificate
+	var err error
+	var caCert []byte
+
+	mtlsClientCert := os.Getenv("MTLS_CLIENT_CERT")
+	mtlsClientKey := os.Getenv("MTLS_CLIENT_KEY")
+	mtlsCaCert := os.Getenv("MTLS_CA_CERT")
+
+	if mtlsClientCert != "" && mtlsClientKey != "" && mtlsCaCert != "" {
+		cert, err = tls.X509KeyPair([]byte(mtlsClientCert), []byte(mtlsClientKey))
+		if err != nil {
+			log.Fatalf("Failed to load key pair from environment: %v", err)
+		}
+		caCert = []byte(mtlsCaCert)
+	} else {
+		certsDir := os.Getenv("CERTS_DIR")
+		if certsDir == "" {
+			certsDir = "certs"
 			if _, err := os.Stat(certsDir); os.IsNotExist(err) {
-				certsDir = "../../certs"
+				certsDir = "../certs"
+				if _, err := os.Stat(certsDir); os.IsNotExist(err) {
+					certsDir = "../../certs"
+				}
 			}
 		}
-	}
 
-	certFile := filepath.Join(certsDir, "grid.crt")
-	keyFile := filepath.Join(certsDir, "grid.key")
-	caFile := filepath.Join(certsDir, "ca.crt")
+		certFile := filepath.Join(certsDir, "grid.crt")
+		keyFile := filepath.Join(certsDir, "grid.key")
+		caFile := filepath.Join(certsDir, "ca.crt")
 
-	if _, err := os.Stat(certFile); os.IsNotExist(err) {
-		log.Fatalf("mTLS certs not found in %s. mTLS is mandatory for security.", certsDir)
-	}
+		if _, err := os.Stat(certFile); os.IsNotExist(err) {
+			log.Fatalf("mTLS certs not found in %s and not provided via env vars. mTLS is mandatory for security.", certsDir)
+		}
 
-	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-	if err != nil {
-		log.Fatalf("Failed to load key pair: %v", err)
-	}
+		cert, err = tls.LoadX509KeyPair(certFile, keyFile)
+		if err != nil {
+			log.Fatalf("Failed to load key pair: %v", err)
+		}
 
-	caCert, err := ioutil.ReadFile(caFile)
-	if err != nil {
-		log.Fatalf("Failed to read CA cert: %v", err)
+		caCert, err = ioutil.ReadFile(caFile)
+		if err != nil {
+			log.Fatalf("Failed to read CA cert: %v", err)
+		}
 	}
 
 	caCertPool := x509.NewCertPool()

@@ -131,6 +131,8 @@ pkg/
 # AXIOM-MESH specific
 data/
 *.db
+certs/*
+!certs/.gitkeep
 *.sqlite
 *.sqlite3
 sandbox/airgap
