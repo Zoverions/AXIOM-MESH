@@ -26,10 +26,19 @@ contract AutomatedV3LiquidityManager is Initializable, UUPSUpgradeable {
     event InitialLiquidityBypassed(address indexed admin, uint256 timestamp);
 
     // M12.7 Oracle redundancy & Reduce initial liquidity concentration
-    uint256 public constant MAX_LIQUIDITY_DEPLOYMENT_BPS = 2000; // 20% max deployment per 30 days
+    uint256 public constant MAX_LIQUIDITY_DEPLOYMENT_BPS = 500; // 5% max deployment per 30 days
     uint256 public constant DEPLOYMENT_COOLDOWN = 30 days;
     mapping(uint256 => uint256) public lastDeploymentTimestamp;
     mapping(uint256 => uint256) public totalDeployedInCooldown;
+
+    // M12.7 Add oracle redundancy
+    address public priceOracle;
+
+    // Keepers for critical infrastructure
+    mapping(address => bool) public authorizedKeepers;
+
+    event KeeperUpdated(address indexed keeper, bool status);
+    event OracleUpdated(address indexed newOracle);
 
     event PositionManaged(uint256 tokenId, uint128 liquidity);
     event FeesHarvested(uint256 amount0, uint256 amount1);
@@ -46,14 +55,35 @@ contract AutomatedV3LiquidityManager is Initializable, UUPSUpgradeable {
         //__UUPSUpgradeable_init();
     }
 
-    function managePosition(uint256 tokenId, uint128 liquidityDelta) external {
+    modifier onlyKeeper() {
+        require(authorizedKeepers[msg.sender] || msg.sender == address(founder), "Not authorized keeper");
+        _;
+    }
+
+    function setKeeper(address keeper, bool status) external withTimelock {
+        authorizedKeepers[keeper] = status;
+        emit KeeperUpdated(keeper, status);
+    }
+
+    function setPriceOracle(address _oracle) external withTimelock {
+        priceOracle = _oracle;
+        emit OracleUpdated(_oracle);
+    }
+
+    function managePosition(uint256 tokenId, uint128 liquidityDelta, uint256 amount0Min, uint256 amount1Min) external onlyKeeper {
         // M12.7: Throttle liquidity deployment to reduce initial liquidity concentration risk
         if (block.timestamp > lastDeploymentTimestamp[tokenId] + DEPLOYMENT_COOLDOWN) {
             totalDeployedInCooldown[tokenId] = 0; // Reset cooldown
         }
 
+        // Oracle redundancy check
+        if (priceOracle != address(0)) {
+            (bool success, ) = priceOracle.staticcall(abi.encodeWithSignature("checkPriceBounds(uint256)", tokenId));
+            require(success, "Oracle bounds check failed");
+        }
+
         // Ensure we don't deploy too much liquidity at once (e.g. max 20% of a 5 million token baseline per pool).
-        // 20% of 5,000,000 = 1,000,000 using the BPS constant.
+        // 5% of 5,000,000 = 250,000 using the BPS constant.
         uint256 assumedPoolCap = 5_000_000 ether;
         uint256 allowedDeployment = (assumedPoolCap * MAX_LIQUIDITY_DEPLOYMENT_BPS) / 10000;
 
@@ -67,14 +97,14 @@ contract AutomatedV3LiquidityManager is Initializable, UUPSUpgradeable {
             tokenId: tokenId,
             amount0Desired: liquidityDelta,
             amount1Desired: liquidityDelta,
-            amount0Min: 0,
-            amount1Min: 0,
+            amount0Min: amount0Min,
+            amount1Min: amount1Min,
             deadline: block.timestamp + 300
         }));
         emit PositionManaged(tokenId, liquidityDelta);
     }
 
-    function harvestFees(uint256 tokenId) external {
+    function harvestFees(uint256 tokenId) external onlyKeeper {
         require(block.timestamp >= lastHarvest + HARVEST_INTERVAL, "Too soon");
         (uint256 amount0, uint256 amount1) = npm.collect(INonfungiblePositionManager.CollectParams({
             tokenId: tokenId,
