@@ -1,11 +1,52 @@
-(docs/enhancements/SECURITY-EFFICIENCY-SUMMARY.md, docs/enhancements/blockchain-security-efficiency-plan-2026-03-27.md]
+```
+# Documentation and temporary files
+*.tmp
+*.swp
+*.log
 
-### Deleted files:
-[]
+# Environment files
+.env
+.env.local
+.env.*
 
-### Modified files:
-['docs/MASTER-TODO.md']
+# Editor/IDE files
+.vscode/
+.idea/
 
-###current .gitignore Content
+# Python specific
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg-info/
+.eggs/
 
-Your output: Only the optimized .gitignore content (or empty if no ignores needed).
+# Build artifacts
+dist/
+build/
+*.out
+*.exe
+*.dll
+*.so
+*.a
+*.obj
+
+# Dependencies
+.venv/
+venv/
+.env/
+node_modules/
+target/
+.gradle/
+.mypy_cache/
+.pytest_cache/
+.coverage
+coverage/
+htmlcov/
+
+# System files
+.DS_Store
+Thumbs.db
+```
