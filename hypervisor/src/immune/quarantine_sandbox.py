@@ -62,6 +62,19 @@ class QuarantineSandboxManager:
         )
         return antibody_id
 
+    def escalate_false_positive(self, namespace_id: str, resolution_notes: str, authorizing_entity: str) -> Dict[str, Any]:
+        """Formal escalation path for recovering false positives from quarantine."""
+        event = {
+            "event": "escalation_false_positive",
+            "status": "false_positive_cleared",
+            "namespace_id": namespace_id,
+            "resolution_notes": resolution_notes,
+            "authorizing_entity": authorizing_entity,
+            "cleared_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        }
+        self._append_event(event)
+        return event
+
     def _append_event(self, event: Dict[str, Any]) -> None:
         directory = os.path.dirname(self.audit_path) or "."
         os.makedirs(directory, exist_ok=True)
