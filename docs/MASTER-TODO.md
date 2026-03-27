@@ -285,8 +285,8 @@ A task is done only when all are true:
 
 ### 8. Subsystem Known Issues & Feature Backlog
 * [x] **SUB-G.1** Grid: Contract compilation in CI (Hardhat proxy issue) (Owner: core, ETA: TBD) - @agent fixed Solidity explicit type conversions by patching OpenZeppelin 5.0 compatibility in `UniversalDistributionPool.sol` and `AutomatedV3LiquidityManager.sol` by removing the deprecated `__UUPSUpgradeable_init` modifier on 2026-03-24.
-* [ ] **SUB-G.2** Grid: CCIP integration for Ethereum <> L2 settlement (Owner: core, ETA: TBD)
-* [ ] **SUB-G.3** Grid: Lightweight ZK graph query proofs (Owner: core, ETA: TBD)
+* [x] **SUB-G.2** Grid: CCIP integration for Ethereum <> L2 settlement (Owner: core, ETA: TBD) - 2026-03-27 — @agent — implemented internal settlement module using CCIP integration and verification tests.
+* [x] **SUB-G.3** Grid: Lightweight ZK graph query proofs (Owner: core, ETA: TBD) - 2026-03-27 — @agent — implemented internal zkml module using graph query proofs logic and verification tests.
 * [x] **SUB-G.4** Grid: WebSocket event streaming (planned) — 2026-03-24 — @agent — added ws events endpoint
 * [x] **SUB-G.5** Grid: Historical ledger pruning strategy — 2026-03-24 — @agent — added background ledger pruning
 * [x] **SUB-H.1** Hypervisor: Contract compilation in CI (Hardhat proxy 403 issue) (Owner: core, ETA: TBD) — Fixed explicit proxy env vars in Hardhat job + comment added.
