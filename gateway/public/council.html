@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Founders Council Dashboard - AXIOM-MESH</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <div class="sidebar">
+            <div class="logo">
+                <img src="logo.png" alt="AxiomMesh Logo" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cG9seWdvbiBwb2ludHM9IjUwLDUgOTUsMjUgOTUsNzUgNTAsOTUgNSw3NSA1LDI1IiBmaWxsPSJub25lIiBzdHJva2U9IiMzNDk4ZGIiIHN0cm9rZS13aWR0aD0iNSIvPjxwb2x5Z29uIHBvaW50cz0iNTAsMjAgODAsMzUgODAsNjUgNTAsODAgMjAsNjUgMjAsMzUiIGZpbGw9IiMzNDk4ZGIiLz48L3N2Zz4='">
+                <h2>AXIOM-MESH</h2>
+            </div>
+            <nav>
+                <a href="index.html" class="nav-btn" style="display: block; text-decoration: none; color: inherit;">Main Interface</a>
+                <a href="network.html" class="nav-btn" style="display: block; text-decoration: none; color: inherit;">Grid Mesh Nodes</a>
+                <a href="council.html" class="nav-btn active" style="display: block; text-decoration: none; color: inherit;">Founders Council</a>
+            </nav>
+        </div>
+
+        <main class="main-content">
+            <header class="topbar">
+                <h1>Founders Council</h1>
+                <div class="user-status">
+                    <span id="connection-status" class="status online">Connected</span>
+                    <button id="auth-btn">Sign In</button>
+                </div>
+            </header>
+            <section class="panel governance-phase-panel">
+                <div class="panel-header">
+                    <h2>Governance Phase</h2>
+                </div>
+                <div class="panel-body">
+                    <div class="phase-info">
+                        <h3>Current Phase: <span id="current-phase-name">Loading...</span></h3>
+                        <p>Phase ID: <span id="current-phase-id">--</span></p>
+                    </div>
+                    <div class="action-buttons">
+                        <button id="transition-phase-btn" class="primary-btn">Transition to Next Phase</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel council-roles-panel">
+                <div class="panel-header">
+                    <h2>Founders Council Roles</h2>
+                </div>
+                <div class="panel-body">
+                    <div id="roles-container">
+                        <!-- Roles will be injected here via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel recommendations-panel">
+                <div class="panel-header">
+                    <h2>System Recommendations</h2>
+                </div>
+                <div class="panel-body">
+                    <select id="recommendation-role-select">
+                        <option value="">Select a Role to view recommendations</option>
+                    </select>
+                    <button id="fetch-recommendations-btn" class="secondary-btn">Get Recommendations</button>
+                    <div id="recommendations-container" style="margin-top: 15px;">
+                        <!-- Recommendations will be shown here -->
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
