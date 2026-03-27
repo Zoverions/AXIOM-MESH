@@ -1,0 +1,23 @@
+{
+  "os": "Linux-4.19.91-c8dfc93.al7.x86_64-x86_64-with-glibc2.36",
+  "cpu_cores": 2,
+  "ram_gb": 1.03,
+  "disk_free_gb": 0.08,
+  "gpu_name": "none",
+  "gpu_vram_mb": 0,
+  "machine_role": "shared-machine",
+  "hardware_tier": "edge",
+  "recommended_local_model": "llama3:8b",
+  "local_load_threshold": 0.65,
+  "memory_pressure_threshold": 0.8,
+  "service_classes": [
+    "compute",
+    "meshstore"
+  ],
+  "storageOffer": {
+    "capacityGB": 0,
+    "type": "ipfs-meshstore"
+  },
+  "user_priority": "security",
+  "launch_mode": "local-mesh"
+}

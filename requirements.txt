@@ -1,0 +1,10 @@
+httpx
+fastapi
+uvicorn
+pydantic
+python-dotenv
+requests
+rich
+psutil
+docker
+pyyaml
