@@ -132,13 +132,13 @@ def write_env(config):
             env_dict[k] = str(v)
 
     with open(ENV_FILE, 'w') as f:
-        f.write("# AxiomMesh Environment Configuration\n")
+        f.write("# AXIOM-MESH Environment Configuration\n")
         for k, v in env_dict.items():
             f.write(f"{k}={v}\n")
 
 def main():
     print("==========================================================")
-    print("   AxiomMesh v2.2 - Universal Cross-Platform Installer")
+    print("   AXIOM-MESH v16.0.0-Lockdown - Universal Cross-Platform Installer")
     print("==========================================================")
 
     os_type = get_os()
@@ -149,7 +149,7 @@ def main():
     first_run = not os.path.exists(ENV_FILE)
     if first_run:
         with open(ENV_FILE, 'w') as f:
-            f.write("# AxiomMesh Environment Configuration\n")
+            f.write("# AXIOM-MESH Environment Configuration\n")
         print("-> First run detected, initiating bootstrap wizard.")
 
     auto_install = os.environ.get("AUTO_INSTALL", "0") == "1"
@@ -303,7 +303,7 @@ def main():
 
     print("Configuration saved to .env")
     print("==========================================================")
-    print("   Starting AxiomMesh Platform ")
+    print("   Starting AXIOM-MESH Platform ")
     print("==========================================================")
 
     if os_type == 'android':

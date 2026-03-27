@@ -1,6 +1,6 @@
 @echo off
 echo ==========================================================
-echo    AxiomMesh Bootstrap (Windows)
+echo    AXIOM-MESH Bootstrap (Windows)
 echo ==========================================================
 
 python --version >nul 2>&1
