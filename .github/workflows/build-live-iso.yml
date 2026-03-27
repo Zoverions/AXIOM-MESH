@@ -1,0 +1,75 @@
+name: Build Live ISO
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v16.0.0)'
+        required: true
+        default: 'latest'
+
+jobs:
+  build-iso:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xorriso squashfs-tools wget genisoimage
+      
+      - name: Check disk space
+        run: df -h /tmp
+      
+      - name: Build Live ISO
+        run: |
+          cd live-installer
+          ./build-axiom-live.sh << EOF
+n
+EOF
+        env:
+          CI: true
+      
+      - name: Find generated ISO
+        id: find-iso
+        run: |
+          ISO_FILE=$(ls live-installer/axiom-mesh-live-*.iso | head -1)
+          echo "iso_file=$ISO_FILE" >> $GITHUB_OUTPUT
+          echo "iso_name=$(basename $ISO_FILE)" >> $GITHUB_OUTPUT
+      
+      - name: Upload ISO to Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ steps.find-iso.outputs.iso_file }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Upload ISO as Artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: axiom-mesh-live-iso
+          path: ${{ steps.find-iso.outputs.iso_file }}
+          retention-days: 30
+      
+      - name: Upload checksum
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ steps.find-iso.outputs.iso_file }}.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Build complete
+        run: |
+          echo "✅ ISO built successfully!"
+          echo "File: ${{ steps.find-iso.outputs.iso_name }}"
+          echo "Size: $(du -h ${{ steps.find-iso.outputs.iso_file }} | cut -f1)"
