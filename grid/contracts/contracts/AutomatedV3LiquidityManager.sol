@@ -15,14 +15,17 @@ contract AutomatedV3LiquidityManager is Initializable, UUPSUpgradeable {
     INonfungiblePositionManager public immutable npm;
     ISwapRouter public immutable swapRouter;
 
-    uint256 public lastHarvest;
+    // DEPRECATED: Do not use. Retained to prevent storage collision during proxy upgrade.
+    uint256 private _deprecated_lastHarvest;
     uint256 public constant HARVEST_INTERVAL = 4 hours;
 
-    uint256 public lastAdminAction;
+    // DEPRECATED: Do not use. Retained to prevent storage collision during proxy upgrade.
+    uint256 private _deprecated_lastAdminAction;
     uint256 public constant ADMIN_TIMELOCK = 2 days;
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
-    bool public initialLiquidityBypassed;
+    // DEPRECATED: Do not use. Retained to prevent storage collision during proxy upgrade.
+    bool private _deprecated_initialLiquidityBypassed;
     event InitialLiquidityBypassed(address indexed admin, uint256 timestamp);
 
     // M12.7 Oracle redundancy & Reduce initial liquidity concentration
@@ -30,6 +33,14 @@ contract AutomatedV3LiquidityManager is Initializable, UUPSUpgradeable {
     uint256 public constant DEPLOYMENT_COOLDOWN = 30 days;
     mapping(uint256 => uint256) public lastDeploymentTimestamp;
     mapping(uint256 => uint256) public totalDeployedInCooldown;
+
+    // --- M15.4 Packed Storage Variables ---
+    struct ManagerState {
+        uint40 lastHarvest;
+        uint40 lastAdminAction;
+        bool initialLiquidityBypassed;
+    }
+    ManagerState public managerState;
 
     event PositionManaged(uint256 tokenId, uint128 liquidity);
     event FeesHarvested(uint256 amount0, uint256 amount1);
@@ -46,7 +57,15 @@ contract AutomatedV3LiquidityManager is Initializable, UUPSUpgradeable {
         //__UUPSUpgradeable_init();
     }
 
-    function managePosition(uint256 tokenId, uint128 liquidityDelta) external {
+    function managePositionBatch(uint256[] calldata tokenIds, uint128[] calldata liquidityDeltas) external {
+        require(tokenIds.length > 0, "Empty array");
+        require(tokenIds.length == liquidityDeltas.length, "Length mismatch");
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            managePosition(tokenIds[i], liquidityDeltas[i]);
+        }
+    }
+
+    function managePosition(uint256 tokenId, uint128 liquidityDelta) public {
         // M12.7: Throttle liquidity deployment to reduce initial liquidity concentration risk
         if (block.timestamp > lastDeploymentTimestamp[tokenId] + DEPLOYMENT_COOLDOWN) {
             totalDeployedInCooldown[tokenId] = 0; // Reset cooldown
@@ -74,32 +93,54 @@ contract AutomatedV3LiquidityManager is Initializable, UUPSUpgradeable {
         emit PositionManaged(tokenId, liquidityDelta);
     }
 
+    function harvestFeesBatch(uint256[] calldata tokenIds) external {
+        require(tokenIds.length > 0, "Empty array");
+        require(block.timestamp >= managerState.lastHarvest + HARVEST_INTERVAL, "Too soon");
+
+        uint256 totalAmount0 = 0;
+        uint256 totalAmount1 = 0;
+
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            (uint256 amount0, uint256 amount1) = npm.collect(INonfungiblePositionManager.CollectParams({
+                tokenId: tokenIds[i],
+                recipient: address(distPool),
+                amount0Max: type(uint128).max,
+                amount1Max: type(uint128).max
+            }));
+            totalAmount0 += amount0;
+            totalAmount1 += amount1;
+        }
+
+        managerState.lastHarvest = uint40(block.timestamp);
+        emit FeesHarvested(totalAmount0, totalAmount1);
+    }
+
     function harvestFees(uint256 tokenId) external {
-        require(block.timestamp >= lastHarvest + HARVEST_INTERVAL, "Too soon");
+        require(block.timestamp >= managerState.lastHarvest + HARVEST_INTERVAL, "Too soon");
         (uint256 amount0, uint256 amount1) = npm.collect(INonfungiblePositionManager.CollectParams({
             tokenId: tokenId,
             recipient: address(distPool),
             amount0Max: type(uint128).max,
             amount1Max: type(uint128).max
         }));
-        lastHarvest = block.timestamp;
+        managerState.lastHarvest = uint40(block.timestamp);
         emit FeesHarvested(amount0, amount1);
     }
 
     modifier withTimelock() {
         require(
-            block.timestamp >= lastAdminAction + ADMIN_TIMELOCK,
+            block.timestamp >= managerState.lastAdminAction + ADMIN_TIMELOCK,
             "LiquidityManager: Timelock not expired"
         );
         _;
-        lastAdminAction = block.timestamp;
+        managerState.lastAdminAction = uint40(block.timestamp);
     }
 
     function bypassInitialLiquidity() external withTimelock {
         require(founder.verifyFounder(""), "LiquidityManager: Founder verification failed");
-        require(!initialLiquidityBypassed, "LiquidityManager: Already bypassed");
+        require(!managerState.initialLiquidityBypassed, "LiquidityManager: Already bypassed");
 
-        initialLiquidityBypassed = true;
+        managerState.initialLiquidityBypassed = true;
 
         emit InitialLiquidityBypassed(msg.sender, block.timestamp);
     }
