@@ -84,14 +84,27 @@ See `docs/audits/` directory for comprehensive security audits:
 See `docs/HOWTO/README.md` for the full operational runbook index.
 
 **Minimum operational HOWTO set now includes:**
-- Local stack bring-up and health checks
-- Intent submission and tracing
-- Local contract compile/test/deploy loop
-- Swarm join and zkML inference
-- 2FA recovery, founder claims, policy update flow
-- Release-gate evidence assembly and validation
-- Secret management and rotation
-- Emergency bridge procedures
+- **Installation & Deployment:**
+  - Comprehensive installation guide (Windows/macOS/Linux/Termux)
+  - Live USB/ISO creation and deployment
+  - Custom bootable USB builder with auto-installer
+- **Node Operations:**
+  - Local stack bring-up and health checks
+  - Intent submission and tracing
+  - Local contract compile/test/deploy loop
+  - Swarm join and zkML inference
+  - Custom node-specific GUIs (Education, Validator, Storage, Compute)
+- **Security & Recovery:**
+  - 2FA recovery procedures
+  - Secret management and rotation
+  - Release-gate evidence assembly and validation
+- **Governance & Claims:**
+  - Founder claims and vesting
+  - Policy update flow (Nemoclaw)
+  - MeshStore storage claims
+- **Emergency Procedures:**
+  - Emergency bridge runbooks
+  - Disaster recovery protocols
 
 ---
 
