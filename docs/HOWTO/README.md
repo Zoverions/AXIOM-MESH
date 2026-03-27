@@ -11,6 +11,7 @@ Welcome to the AXIOM-MESH practical documentation. These guides cover installati
 |-------|-------------|------------|
 | **[Installation Guide](../INSTALLATION-GUIDE.md)** | Complete step-by-step setup for all platforms (Windows, macOS, Linux, Termux) | ⭐ Beginner |
 | **[Create Bootable Live USB](create-bootable-usb.md)** | Build a self-contained, bootable AXIOM-MESH OS on a USB stick | ⭐⭐ Intermediate |
+| **[Add Nodes via QR Code](add-nodes-via-qr.md)** | Quick and secure node onboarding with QR codes and wallet signatures | ⭐ Beginner |
 | **[First Steps](first-steps.md)** | What to do after installation: Dashboard, CLI, and first contract | ⭐ Beginner |
 | **[Custom Node GUIs](custom-guis.md)** | Using node-specific interfaces (Education, Validator, Storage, Compute) | ⭐ Beginner |
 
