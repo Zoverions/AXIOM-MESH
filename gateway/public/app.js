@@ -793,12 +793,118 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById('refresh-logs')?.addEventListener('click', fetchLogs);
 
+    // --- Council Logic ---
+    async function fetchCouncilPhase() {
+        try {
+            const res = await fetch('/api/v1/council/phase', { headers: getAuthHeaders() });
+            const data = await res.json();
+            const phaseNameEl = document.getElementById('current-phase-name');
+            const phaseIdEl = document.getElementById('current-phase-id');
+            if (phaseNameEl) phaseNameEl.textContent = data.phaseName;
+            if (phaseIdEl) phaseIdEl.textContent = data.phaseId;
+        } catch (error) {
+            console.error('Failed to fetch council phase:', error);
+        }
+    }
+
+    document.getElementById('transition-phase-btn')?.addEventListener('click', async () => {
+        try {
+            const res = await fetch('/api/v1/council/transition', { method: 'POST', headers: getAuthHeaders() });
+            const data = await res.json();
+            if (data.error) {
+                alert(data.error);
+            } else {
+                fetchCouncilPhase();
+            }
+        } catch (error) {
+            console.error('Failed to transition phase:', error);
+        }
+    });
+
+    async function fetchCouncilRoles() {
+        try {
+            const res = await fetch('/api/v1/council/roles', { headers: getAuthHeaders() });
+            const data = await res.json();
+            const container = document.getElementById('roles-container');
+            const select = document.getElementById('recommendation-role-select');
+            if (!container) return;
+
+            container.innerHTML = '';
+            if (select) select.innerHTML = '<option value="">Select a Role to view recommendations</option>';
+
+            const roles = data.roles || [];
+
+            // Fetch members to display with roles
+            const memRes = await fetch('/api/v1/council/members', { headers: getAuthHeaders() });
+            const memData = await memRes.json();
+            const members = memData.members || [];
+
+            roles.forEach(role => {
+                const memberInfo = members.find(m => m.roleId === role.id);
+                const roleDiv = document.createElement('div');
+                roleDiv.className = 'role-card';
+                roleDiv.style.border = '1px solid #ccc';
+                roleDiv.style.padding = '10px';
+                roleDiv.style.marginBottom = '10px';
+
+                roleDiv.innerHTML = `
+                    <h3>${role.name}</h3>
+                    <p><strong>Human Member:</strong> ${memberInfo ? memberInfo.humanMember : 'Unassigned'}</p>
+                    <p><strong>AI Agent:</strong> ${memberInfo ? memberInfo.aiAgent : 'Unassigned'}</p>
+                `;
+                container.appendChild(roleDiv);
+
+                if (select) {
+                    const opt = document.createElement('option');
+                    opt.value = role.id;
+                    opt.textContent = role.name;
+                    select.appendChild(opt);
+                }
+            });
+        } catch (error) {
+            console.error('Failed to fetch council roles:', error);
+        }
+    }
+
+    document.getElementById('fetch-recommendations-btn')?.addEventListener('click', async () => {
+        const select = document.getElementById('recommendation-role-select');
+        const container = document.getElementById('recommendations-container');
+        if (!select || !container || select.value === '') return;
+
+        container.innerHTML = 'Loading recommendations...';
+        try {
+            const res = await fetch(`/api/v1/council/recommendations/${select.value}`, { headers: getAuthHeaders() });
+            const data = await res.json();
+            container.innerHTML = '';
+
+            if (data.recommendations && data.recommendations.length > 0) {
+                data.recommendations.forEach(rec => {
+                    const div = document.createElement('div');
+                    div.style.background = '#f9f9f9';
+                    div.style.padding = '8px';
+                    div.style.marginBottom = '5px';
+                    div.innerHTML = `<strong>Candidate:</strong> ${rec.candidateAddress} | <strong>Score:</strong> ${rec.score}`;
+                    container.appendChild(div);
+                });
+            } else {
+                container.innerHTML = 'No recommendations found.';
+            }
+        } catch (error) {
+            container.innerHTML = 'Error fetching recommendations.';
+            console.error(error);
+        }
+    });
+
     // Standalone page initializers
     if (document.getElementById('network-grid')) {
         fetchNetwork();
     }
     if (document.getElementById('status-grid')) {
         fetchStatus();
+    }
+    if (document.getElementById('roles-container')) {
+        fetchCouncilPhase();
+        fetchCouncilRoles();
     }
 
 });
