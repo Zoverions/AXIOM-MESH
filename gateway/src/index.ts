@@ -21,6 +21,7 @@ import { getChannelFactory, getRegisteredChannelNames, Channel } from './channel
 import { initLogger } from './utils/logger';
 import { BackpressureWebSocket } from './performance/EventLoopOptimizer';
 import { wafMiddleware } from './middleware/waf';
+import { initRedisRateLimiter } from './middleware/public_rate_limit';
 import './channels'; // Initialize channel registrations
 
 dotenv.config();
@@ -36,6 +37,9 @@ if (process.env.NODE_ENV !== 'test' && process.env.ENABLE_NFT_ROUTES !== 'false'
 
 // Initialize the log buffer to capture terminal output safely
 initLogger();
+
+// Initialize Redis rate limiter for public routes
+initRedisRateLimiter().catch(err => console.error('Failed to initialize Redis rate limiter:', err));
 
 const REST_PORT = process.env.GATEWAY_REST_PORT || 3000;
 const WS_PORT = process.env.GATEWAY_WS_PORT || 3001;
