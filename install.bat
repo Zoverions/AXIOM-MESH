@@ -1,43 +1,25 @@
 @echo off
 echo ==========================================================
-echo    AXIOM-MESH Bootstrap (Windows)
+echo    AXIOM-MESH Bootstrap (Windows) - FULL AUTO MODE
 echo ==========================================================
 
-python --version >nul 2>&1
-if %errorlevel% equ 0 goto start_python
-
-echo Python is not installed or not in your PATH.
-echo Attempting to install Python via Chocolatey...
-
+:: Auto-install Chocolatey if missing
 choco -v >nul 2>&1
 if %errorlevel% neq 0 (
-    echo Chocolatey is not installed.
-    echo Please install Chocolatey ^(https://chocolatey.org/^) and then re-run this script,
-    echo or install Python manually.
-    pause
-    exit /b 1
+    echo Chocolatey not found → installing automatically...
+    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+        "Set-ExecutionPolicy Bypass -Scope Process -Force; ^
+         [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; ^
+         iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1 '))"
 )
 
-choco install python -y
-if %errorlevel% neq 0 (
-    echo Failed to install Python via Chocolatey.
-    pause
-    exit /b 1
-)
-
-echo Python installed. You may need to restart this terminal to update your PATH.
-echo Restart your terminal and run install.bat again.
-pause
-exit /b 1
-
-:start_python
-
+:: Now hand over to the smart Python installer
 if not exist install.py (
-    echo Error: install.py not found in the current directory.
+    echo Error: install.py not found!
     pause
     exit /b 1
 )
 
-echo Python is installed. Handing over to cross-platform installer (install.py)...
+echo Python detected. Launching universal auto-installer...
 python install.py
 pause

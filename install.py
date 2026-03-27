@@ -9,6 +9,10 @@ import threading
 from pathlib import Path
 
 ENV_FILE = ".env"
+PYTHON_DEPS = [
+    "httpx", "fastapi", "uvicorn", "pydantic", "python-dotenv",
+    "requests", "rich", "psutil", "docker", "pyyaml"
+]
 
 def run_cmd(cmd, shell=False, check=True, capture_output=False):
     try:
@@ -17,7 +21,7 @@ def run_cmd(cmd, shell=False, check=True, capture_output=False):
             return res.stdout.strip()
         return True
     except subprocess.CalledProcessError as e:
-        print(f"Error running command: {cmd}\n{e}")
+        print(f"⚠️  Command failed: {cmd}\n   {e}")
         if capture_output:
             return ""
         return False
@@ -39,53 +43,67 @@ def get_os():
     return sys_os
 
 def install_prereqs(os_type):
-    print("Checking prerequisites...")
+    print("🔍 Checking prerequisites...")
     missing = []
-    has_docker = shutil.which("docker") is not None
-    has_make = shutil.which("make") is not None
-
-    if not has_docker:
+    if not shutil.which("docker"):
         missing.append("docker")
-    if not has_make:
+    if not shutil.which("make"):
         missing.append("make")
+    if not shutil.which("node"):
+        missing.append("nodejs")
 
     if not missing:
-        print("All prerequisites met.")
-        return
+        print("✅ All core prerequisites met.")
+    else:
+        print(f"📦 Missing: {', '.join(missing)} → Installing automatically...")
 
-    print(f"Missing prerequisites: {', '.join(missing)}")
-    print("Attempting automatic installation...")
+        if os_type == 'windows':
+            # Auto Chocolatey already handled in install.bat, but safe-guard
+            if not shutil.which("choco"):
+                print("❌ Chocolatey still missing. This should not happen.")
+                return
 
-    if os_type == 'linux':
-        if shutil.which("apt-get"):
             if "docker" in missing:
-                print("Installing docker via get.docker.com...")
-                run_cmd("curl -fsSL https://get.docker.com | sh", shell=True)
+                print("🐳 Installing Docker Desktop...")
+                run_cmd(["choco", "install", "docker-desktop", "-y", "--force"])
+                print("⚠️  Docker Desktop installed. Please RESTART your computer, then run install.bat again.")
+                input("Press Enter after restart to continue...")
             if "make" in missing:
-                run_cmd(["sudo", "apt-get", "update"])
-                run_cmd(["sudo", "apt-get", "install", "-y", "make"])
-    elif os_type == 'macos':
-        if shutil.which("brew"):
+                run_cmd(["choco", "install", "make", "-y"])
+            if "nodejs" in missing:
+                run_cmd(["choco", "install", "nodejs", "-y", "--force"])
+
+        elif os_type == 'linux':
+            if shutil.which("apt-get"):
+                run_cmd("sudo apt-get update -qq", shell=True)
+                if "docker" in missing:
+                    run_cmd("curl -fsSL https://get.docker.com | sh", shell=True)
+                    run_cmd("sudo usermod -aG docker $USER", shell=True)
+                if "make" in missing or "nodejs" in missing:
+                    run_cmd(["sudo", "apt-get", "install", "-y", "make", "curl"])
+                if "nodejs" in missing:
+                    run_cmd("curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-get install -y nodejs", shell=True)
+
+        elif os_type == 'macos':
+            if not shutil.which("brew"):
+                print("Homebrew not found. Installing...")
+                run_cmd('/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"', shell=True)
             if "docker" in missing:
                 run_cmd(["brew", "install", "--cask", "docker"])
             if "make" in missing:
                 run_cmd(["brew", "install", "make"])
-        else:
-            print("Homebrew not found. Please install prerequisites manually.")
-    elif os_type == 'windows':
-        if shutil.which("choco"):
-            if "docker" in missing:
-                run_cmd(["choco", "install", "docker-desktop", "-y"])
-            if "make" in missing:
-                run_cmd(["choco", "install", "make", "-y"])
-        else:
-            print("Chocolatey not found. Please install Docker Desktop and Make manually.")
-    elif os_type == 'android':
-        if shutil.which("pkg"):
-            if "make" in missing:
-                run_cmd(["pkg", "install", "-y", "make"])
-            if "docker" in missing:
-                print("Docker is not natively supported on Termux without root/QEMU. Will proceed with minimal-edge mode.")
+            if "nodejs" in missing:
+                run_cmd(["brew", "install", "node@20"])
+
+        elif os_type == 'android':
+            if shutil.which("pkg"):
+                run_cmd(["pkg", "install", "-y", "make", "nodejs", "docker"])
+            print("📱 Android/Termux → using minimal-edge mode")
+
+    # Always install Python dependencies
+    print("🐍 Installing Python dependencies...")
+    run_cmd([sys.executable, "-m", "pip", "install", "--upgrade", "pip"])
+    run_cmd([sys.executable, "-m", "pip", "install"] + PYTHON_DEPS)
 
 def prompt_with_timeout(prompt, default, timeout=15):
     """Prompt user with a timeout. If timeout is reached, return default."""

@@ -2,21 +2,97 @@
 set -euo pipefail
 
 echo "=========================================================="
-echo "   AXIOM-MESH Bootstrap (Unix/Linux/macOS)                 "
+echo "   AXIOM-MESH Bootstrap (Unix/Linux/macOS) - FULL AUTO MODE"
 echo "=========================================================="
 
-if ! command -v python3 >/dev/null 2>&1; then
-    echo "python3 is required but not installed."
-    echo "Attempting to install python3..."
+# Auto-install Homebrew on macOS if missing
+if [[ "$(uname)" == "Darwin" ]] && ! command -v brew >/dev/null 2>&1; then
+    echo "Homebrew not found → installing automatically..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+fi
+
+# Auto-install Docker, Make, Node.js via native package managers
+missing=()
+if ! command -v docker >/dev/null 2>&1; then
+    missing+=("docker")
+fi
+if ! command -v make >/dev/null 2>&1; then
+    missing+=("make")
+fi
+if ! command -v node >/dev/null 2>&1; then
+    missing+=("nodejs")
+fi
+
+if [[ ${#missing[@]} -gt 0 ]]; then
+    echo "📦 Missing: ${missing[*]} → Installing automatically..."
+    
     if command -v apt-get >/dev/null 2>&1; then
-        sudo apt-get update && sudo apt-get install -y python3
+        # Linux (Debian/Ubuntu)
+        sudo apt-get update -qq
+        if [[ " ${missing[*]} " =~ " docker " ]]; then
+            echo "🐳 Installing Docker..."
+            curl -fsSL https://get.docker.com | sh
+            sudo usermod -aG docker $USER || true
+        fi
+        if [[ " ${missing[*]} " =~ " make " ]] || [[ " ${missing[*]} " =~ " nodejs " ]]; then
+            sudo apt-get install -y make curl
+        fi
+        if [[ " ${missing[*]} " =~ " nodejs " ]]; then
+            echo "📦 Installing Node.js 20 LTS..."
+            curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+            sudo apt-get install -y nodejs
+        fi
+        
+    elif command -v dnf >/dev/null 2>&1; then
+        # Linux (Fedora/RHEL)
+        if [[ " ${missing[*]} " =~ " docker " ]]; then
+            echo "🐳 Installing Docker..."
+            sudo dnf install -y docker
+            sudo systemctl start docker || true
+            sudo usermod -aG docker $USER || true
+        fi
+        if [[ " ${missing[*]} " =~ " make " ]]; then
+            sudo dnf install -y make
+        fi
+        if [[ " ${missing[*]} " =~ " nodejs " ]]; then
+            echo "📦 Installing Node.js..."
+            sudo dnf install -y nodejs
+        fi
+        
+    elif command -v brew >/dev/null 2>&1; then
+        # macOS
+        if [[ " ${missing[*]} " =~ " docker " ]]; then
+            echo "🐳 Installing Docker Desktop..."
+            brew install --cask docker
+        fi
+        if [[ " ${missing[*]} " =~ " make " ]]; then
+            brew install make
+        fi
+        if [[ " ${missing[*]} " =~ " nodejs " ]]; then
+            echo "📦 Installing Node.js 20 LTS..."
+            brew install node@20
+        fi
+        
+    elif command -v pkg >/dev/null 2>&1; then
+        # Android/Termux
+        echo "📱 Android/Termux detected..."
+        pkg install -y make nodejs docker || true
+    fi
+else
+    echo "✅ All core prerequisites met."
+fi
+
+# Ensure Python3 is available
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "python3 is required but not installed. Attempting to install..."
+    if command -v apt-get >/dev/null 2>&1; then
+        sudo apt-get update && sudo apt-get install -y python3 python3-pip
     elif command -v brew >/dev/null 2>&1; then
         brew install python
     elif command -v pkg >/dev/null 2>&1; then
         pkg install -y python
     else
         echo "Could not find a supported package manager to install Python 3."
-        echo "Please install Python 3 manually."
         exit 1
     fi
 fi
@@ -26,5 +102,5 @@ if [[ ! -f "install.py" ]]; then
     exit 1
 fi
 
-echo "Python 3 is installed. Handing over to cross-platform installer (install.py)..."
+echo "Python 3 is ready. Launching universal auto-installer..."
 python3 install.py
