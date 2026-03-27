@@ -598,7 +598,7 @@ Once authority flow is mechanically frozen, this system becomes:
 - [x] **M17.8** Revenue Model Expansion: Implement enterprise API tiers, premium sandbox environments, governance delegation fees, cross-chain bridge fees, and an anonymized network data marketplace (owner: finance+core, ETA: TBD).
 
 ## Lane M18 — Blockchain Interconnect Mock Elimination (New)
-**Goal:** Remove all placeholder, stub, and scaffolded code from blockchain interconnect layer before mainnet deployment. Audit report: `docs/audits/blockchain-interconnect-mock-audit-2026-03-27.md`
+**Goal:** Replace all placeholder, stub, and scaffolded code from blockchain interconnect layer before mainnet deployment with production ready code. Audit report: `docs/audits/blockchain-interconnect-mock-audit-2026-03-27.md`
 
 - [ ] **M18.1** Implement AutonomousDeployer._submit_governance_proposal() with real UCP flow integration (owner: hypervisor, ETA: 2 days, P0)
 - [ ] **M18.2** Complete NetworkLiquidityManager.addNetworkLiquidity() with Uniswap V3 mint/increase position logic (owner: contracts, ETA: 3 days, P0)
