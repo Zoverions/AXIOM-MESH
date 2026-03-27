@@ -67,14 +67,38 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable {
         emit Inflow(from, amount, source);
     }
 
+    function distributeBatch(address[] calldata recipients, uint256[] calldata amounts, bytes32 zkProofHash) external {
+        require(msg.sender == address(allocator) || msg.sender == crossChainBridge, "Authorized distributor only");
+        require(recipients.length == amounts.length, "Mismatched arrays");
+
+        uint256 totalAmount = 0;
+        for (uint256 i = 0; i < amounts.length; i++) {
+            totalAmount += amounts[i];
+        }
+        require(address(this).balance >= totalAmount, "Insufficient pool");
+
+        for (uint256 i = 0; i < recipients.length; i++) {
+            address to = recipients[i];
+            uint256 amount = amounts[i];
+
+            outflows[to] += amount;
+
+            (bool success, ) = to.call{value: amount}("");
+            require(success, "Distribution failed");
+
+            emit Outflow(to, amount, zkProofHash);
+        }
+    }
+
     function distribute(address to, uint256 amount, bytes32 zkProofHash) external {
         require((citizenship.balanceOf(msg.sender) > 0 && msg.sender == to) || msg.sender == address(allocator) || msg.sender == crossChainBridge, "Authorized distributor only");
         require(address(this).balance >= amount, "Insufficient pool");
 
+        outflows[to] += amount;
+
         (bool success, ) = to.call{value: amount}("");
         require(success, "Distribution failed");
 
-        outflows[to] += amount;
         emit Outflow(to, amount, zkProofHash);
     }
 

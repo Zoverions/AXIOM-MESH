@@ -87,7 +87,7 @@ class TestProofOfTruth:
                 def getChallenge(self, challenge_id):
                     class CallMock:
                         def call(self):
-                            return [challenge_id, 1, '0x123', b'ev_hash', 500, 123, 0]
+                            return [challenge_id, 1, '0x123', b'ev_hash', 500 * 10**18, 123, 0]
                     return CallMock()
 
             class EventsMock:
