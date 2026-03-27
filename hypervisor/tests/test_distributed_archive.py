@@ -96,7 +96,7 @@ async def test_sync_to_grid_mocked(distributed_archive):
                     with patch("arweave.Wallet"):
                         with patch("arweave.Transaction") as mock_tx:
                             mock_tx.return_value.id = "real-tx-id"
-                            await distributed_archive.sync_to_grid(content)
+                            await distributed_archive.sync_to_grid(content, metadata={"X-UCP-Consent": "test-consent", "X-Requester-DID": "did:test:123"})
 
             # Verify ws.send was called with the correct payload structure
             args, _ = mock_ws.send.call_args
