@@ -546,9 +546,11 @@ router.get('/api/v1/logs', authMiddleware, async (req: Request, res: Response) =
 
 import distributionRouter from './distribution';
 import dashboardRouter from './dashboard';
+import councilRouter from './council';
 
 router.use('/api/v1/distribution', distributionRouter);
 router.use('/api/v1/dashboard', dashboardRouter);
+router.use('/api/v1/council', councilRouter);
 
 // --- Configuration API ---
 const SENSITIVE_KEYWORDS = ['KEY', 'TOKEN', 'SECRET', 'PASSWORD', 'SESSION', 'PRIV'];
