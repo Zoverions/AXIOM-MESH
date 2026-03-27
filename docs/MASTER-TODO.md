@@ -207,7 +207,7 @@ Detailed references:
 - [x] **M12.4** Launch **bug bounty** (Immunefi-style). (Owner: security). — 2026-03-27 — @agent — deployed `BugBounty.sol` smart contract and created `BUG-BOUNTY-POLICY.md`.
 - [x] **M12.5** Onboard 2-3 trusted co-maintainers and separate deploy keys to address single-maintainer fragility. (Owner: ops).
 - [x] **M12.6** Capability manifest enforcement: No manifest -> no execution. Manifest must declare capabilities, resource bounds, network policy, I/O schemas, attestation target. (Owner: core+hypervisor). — 2026-03-27 — @agent — completed and verified implementation.
-- [ ] **M12.7** Oracle redundancy: Add explicit oracle fallback strategy and reduce initial liquidity concentration. (Owner: contracts+finance).
+- [x] **M12.7** Oracle redundancy: Add explicit oracle fallback strategy and reduce initial liquidity concentration. (Owner: contracts+finance). — 2026-03-27 — @agent — completed and verified implementation.
 - [ ] **M12.8** Reach >= 90% smart contract unit test coverage and tie tests to the Interface Control Document. (Owner: contracts).
 - [ ] **M12.9** Penetration testing, Load & stress tests, and Cross-chain failure mode drills. (Owner: security+ops).
 
@@ -285,8 +285,8 @@ A task is done only when all are true:
 
 ### 8. Subsystem Known Issues & Feature Backlog
 * [x] **SUB-G.1** Grid: Contract compilation in CI (Hardhat proxy issue) (Owner: core, ETA: TBD) - @agent fixed Solidity explicit type conversions by patching OpenZeppelin 5.0 compatibility in `UniversalDistributionPool.sol` and `AutomatedV3LiquidityManager.sol` by removing the deprecated `__UUPSUpgradeable_init` modifier on 2026-03-24.
-* [ ] **SUB-G.2** Grid: CCIP integration for Ethereum <> L2 settlement (Owner: core, ETA: TBD)
-* [ ] **SUB-G.3** Grid: Lightweight ZK graph query proofs (Owner: core, ETA: TBD)
+* [x] **SUB-G.2** Grid: CCIP integration for Ethereum <> L2 settlement (Owner: core, ETA: TBD) - 2026-03-27 — @agent — implemented internal settlement module using CCIP integration and verification tests.
+* [x] **SUB-G.3** Grid: Lightweight ZK graph query proofs (Owner: core, ETA: TBD) - 2026-03-27 — @agent — implemented internal zkml module using graph query proofs logic and verification tests.
 * [x] **SUB-G.4** Grid: WebSocket event streaming (planned) — 2026-03-24 — @agent — added ws events endpoint
 * [x] **SUB-G.5** Grid: Historical ledger pruning strategy — 2026-03-24 — @agent — added background ledger pruning
 * [x] **SUB-H.1** Hypervisor: Contract compilation in CI (Hardhat proxy 403 issue) (Owner: core, ETA: TBD) — Fixed explicit proxy env vars in Hardhat job + comment added.
@@ -572,17 +572,17 @@ Once authority flow is mechanically frozen, this system becomes:
 - [ ] **M15.4** Contract Gas Optimization: Refactor `AutomatedV3LiquidityManager.sol` for batch operations + packed storage (est. ~40% savings) (owner: contracts, ETA: TBD).
 - [ ] **M15.5** Contract Gas Optimization: Refactor `TruthAnchor.sol` unbounded loop in verification to use Merkle proof verification (est. ~60% savings) (owner: contracts, ETA: TBD).
 - [ ] **M15.6** Contract Gas Optimization: Refactor `UniversalDistributionPool.sol` individual transfer loops to use multi-send pattern (est. ~50% savings) (owner: contracts, ETA: TBD).
-- [ ] **M15.7** Storage Efficiency: Implement batch + compression + columnar storage in `hypervisor/src/graph/` (`write_batch_manager.py`, `columnar_cache.py`, `lru_tiered_cache.py`) (owner: hypervisor, ETA: TBD).
+- [x] **M15.7** Storage Efficiency: Implement batch + compression + columnar storage in `hypervisor/src/graph/` (`write_batch_manager.py`, `columnar_cache.py`, `lru_tiered_cache.py`) (owner: hypervisor, ETA: TBD). — 2026-03-27 — @agent — completed and verified implementation.
 
 ## Lane M16 — Novel Insights & Innovation (New)
 **Goal:** Implement Attention-Indexed State Machine enhancements, Network Sovereign Liquidity integrations, and Governance innovations.
 
 - [x] **M16.1** Consequence Graph Caching: Pre-compute common proposal consequence chains, store as Merkle trees for quick verification, and enable "consequence futures" trading (owner: core+research, ETA: TBD). — 2026-03-27 — @agent — added Consequence Graph Caching via `consequenceCache` mapping and added a "consequence futures" pool via `tradeConsequenceFuture`
-- [ ] **M16.2** Stigmergic State Channel Optimization: Add reputation-weighted challenge periods where high-reputation actors receive shorter challenges, while low-reputation actors receive longer challenges and higher bond requirements (owner: contracts, ETA: TBD).
-- [ ] **M16.3** Proof of Truth (PoT) Innovation: Integrate zkML for private inference verification, create truth derivatives (tradable instruments based on prediction accuracy), and implement cross-chain truth oracles with cryptographic attestations (owner: core+research, ETA: TBD).
+- [x] **M16.2** Stigmergic State Channel Optimization: Add reputation-weighted challenge periods where high-reputation actors receive shorter challenges, while low-reputation actors receive longer challenges and higher bond requirements (owner: contracts, ETA: TBD).
+- [x] **M16.3** Proof of Truth (PoT) Innovation: Integrate zkML for private inference verification, create truth derivatives (tradable instruments based on prediction accuracy), and implement cross-chain truth oracles with cryptographic attestations (owner: core+research, ETA: TBD).
 - [x] **M16.4** Network Sovereign Liquidity Layer: Tokenize LP positions as tradeable NFTs, auto-compound fees into yield-bearing vaults, implement Wormhole-layer cross-chain liquidity sharing, and add private transaction routing for MEV protection (owner: finance+contracts, ETA: TBD). — 2026-03-27 — @agent — completed and verified implementation.
-- [ ] **M16.5** Governance Innovation: Integrate Quadratic Voting with Truth Weighting (voting power = √(tokens) × truth_score) to prevent whale dominance (owner: governance, ETA: TBD).
-- [ ] **M16.6** Governance Innovation: Integrate Futarchy mechanisms where policy decisions are tied to prediction market outcomes (vote on values, bet on beliefs) (owner: governance, ETA: TBD).
+- [x] **M16.5** Governance Innovation: Integrate Quadratic Voting with Truth Weighting (voting power = √(tokens) × truth_score) to prevent whale dominance (owner: governance, ETA: TBD). — @agent — completed and verified implementation via `ZoverionsDAO.sol`.
+- [x] **M16.6** Governance Innovation: Integrate Futarchy mechanisms where policy decisions are tied to prediction market outcomes (vote on values, bet on beliefs) (owner: governance, ETA: TBD). — @agent — completed and verified implementation via `Futarchy.sol`.
 - [x] **M16.7** Governance Innovation: Implement Liquid Democracy with dynamic delegation markets to create a reputation-based delegate marketplace (owner: governance, ETA: TBD).
 
 ## Lane M17 — Code Quality, Scalability & Tokenomics (New)
@@ -594,5 +594,5 @@ Once authority flow is mechanically frozen, this system becomes:
 - [x] **M17.4** Observability Stack: Deploy Prometheus + Grafana + distributed tracing for full visibility (owner: ops, ETA: TBD). — 2026-03-26 — @agent — completed
 - [x] **M17.5** Horizontal Scaling Implementation: Implement Gateway load-balanced cluster + CDN, Hypervisor multi-process + async workers, Sandbox Kubernetes + WASM fallback, Grid sharded consensus, and L2 rollups for smart contracts (owner: ops+core, ETA: TBD). — 2026-03-27 — @agent — completed horizontal scaling features across modules
 - [x] **M17.6** State Management Architecture: Formalize 3-layer architecture (Layer 1: Execution off-chain, Layer 2: Settlement optimistic channels, Layer 3: Finality on-chain) (owner: core, ETA: TBD). — 2026-03-27 — @agent — created docs/STATE-MANAGEMENT-ARCHITECTURE.md
-- [ ] **M17.7** Token Economics Update: Implement deflationary burn mechanism, community treasury + ecosystem fund, staking rewards + liquidity mining, and 4-year linear vesting for team (owner: finance, ETA: TBD).
-- [ ] **M17.8** Revenue Model Expansion: Implement enterprise API tiers, premium sandbox environments, governance delegation fees, cross-chain bridge fees, and an anonymized network data marketplace (owner: finance+core, ETA: TBD).
+- [x] **M17.7** Token Economics Update: Implement deflationary burn mechanism, community treasury + ecosystem fund, staking rewards + liquidity mining, and 4-year linear vesting for team (owner: finance, ETA: TBD).
+- [x] **M17.8** Revenue Model Expansion: Implement enterprise API tiers, premium sandbox environments, governance delegation fees, cross-chain bridge fees, and an anonymized network data marketplace (owner: finance+core, ETA: TBD).
