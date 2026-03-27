@@ -2,10 +2,30 @@
 
 <img src="../logo.png" alt="Axiom Mesh Logo" width="150" align="right">
 
-**Status Date:** 2026-03-23  
+**Status Date:** 2026-03-27  
 **Reality Statement:** AXIOM-MESH is currently in repository/staging hardening and is not live on testnet/mainnet.
 
 This index consolidates documentation ownership, reduces overlap, and defines which documents are canonical for each domain.
+
+---
+
+## 🚀 New Users Start Here
+
+### Quick Installation
+- **📖 Comprehensive Installation Guide:** [`docs/INSTALLATION-GUIDE.md`](INSTALLATION-GUIDE.md) — Step-by-step installation with auto-detected platform support
+- **💿 Live USB/ISO Builder:** [`live-installer/README.md`](../live-installer/README.md) — Create bootable AXIOM-MESH USB drives
+- **🎨 Custom Node GUIs:** Each node type gets a dedicated dashboard at `http://localhost:8080`
+
+### One-Command Install
+```bash
+# Windows
+.\install.bat
+
+# macOS/Linux
+./install.sh
+```
+
+The installer automatically detects your platform and installs all dependencies (Docker, Node.js, Python packages, etc.).
 
 ---
 
@@ -22,6 +42,8 @@ This index consolidates documentation ownership, reduces overlap, and defines wh
 - **Security posture and controls:** `docs/SECURITY-HARDENING.md`
 - **Operational playbooks:** `docs/OPERATIONS.md`
 - **Testing and quality gates:** `docs/TEST-STRATEGY.md`
+- **Cryptography posture matrix:** `docs/CRYPTOGRAPHY-POSTURE-MATRIX.md`
+- **Threat models:** `docs/COORDINATED-BEHAVIOR-THREAT-MODEL.md`
 
 ## Governance & Economics
 - **Governance model:** `docs/GOVERNANCE.md`
@@ -29,6 +51,7 @@ This index consolidates documentation ownership, reduces overlap, and defines wh
 - **Tokenomics (canonical):** `docs/TOKENOMICS.md`
 - **Treasury split details:** `docs/TREASURY-SPLIT.md`
 - **ERC20 compatibility:** `docs/ERC20-COMPATIBILITY.md`
+- **Financial controls evidence:** `docs/FINANCIAL-CONTROLS-EVIDENCE.md`
 
 ## Execution Program
 - **Master to-do queue (canonical):** `docs/MASTER-TODO.md`
@@ -37,6 +60,24 @@ This index consolidates documentation ownership, reduces overlap, and defines wh
 - **Live readiness board (reference):** `docs/PRODUCTION-READINESS-TRACKER.md`
 - **Current status snapshot:** `docs/PROJECT-STATUS-2026.md`
 - **Strategic assessment response:** `docs/STRATEGIC-AUDIT-RESPONSE.md`
+
+## Deployment & Operations
+- **Deployment cost analysis:** `docs/DEPLOYMENT_COST_ANALYSIS.md`
+- **Hardware profile matrix:** `docs/HARDWARE-PROFILE-MATRIX.md`
+- **Resource balancer policy:** `docs/RESOURCE-BALANCER-POLICY.md`
+- **Mainnet contract addresses:** `docs/MAINNET_ADDRESSES.md`
+- **Skill capsule specification:** `docs/SKILL-CAPSULE-SPEC.md`
+- **SSI technical implementation:** `docs/SSI-TECHNICAL-IMPLEMENTATION.md`
+
+## Audit Reports
+See `docs/audits/` directory for comprehensive security audits:
+- **External audit report:** `docs/audits/AUDIT_REPORT_EXTERNAL.md`
+- **Smart contract audit:** `docs/audits/smart-contract-audit-report.md`
+- **Transformer Foundation review:** `docs/audits/transformer-foundation-security-review.md`
+- **State channel deep dive:** `docs/audits/stigmergic-state-channel-v4-deep-dive.md`
+- **Remediation plan:** `docs/audits/remediation-plan.md`
+
+---
 
 ## 2) HOWTO Coverage
 
@@ -51,6 +92,8 @@ Minimum operational HOWTO set now includes:
 - Swarm join and zkML inference
 - 2FA recovery, founder claims, policy update flow
 - Release-gate evidence assembly and validation
+- Secret management and rotation
+- Emergency bridge procedures
 
 ---
 
