@@ -581,8 +581,8 @@ Once authority flow is mechanically frozen, this system becomes:
 - [ ] **M16.2** Stigmergic State Channel Optimization: Add reputation-weighted challenge periods where high-reputation actors receive shorter challenges, while low-reputation actors receive longer challenges and higher bond requirements (owner: contracts, ETA: TBD).
 - [ ] **M16.3** Proof of Truth (PoT) Innovation: Integrate zkML for private inference verification, create truth derivatives (tradable instruments based on prediction accuracy), and implement cross-chain truth oracles with cryptographic attestations (owner: core+research, ETA: TBD).
 - [x] **M16.4** Network Sovereign Liquidity Layer: Tokenize LP positions as tradeable NFTs, auto-compound fees into yield-bearing vaults, implement Wormhole-layer cross-chain liquidity sharing, and add private transaction routing for MEV protection (owner: finance+contracts, ETA: TBD). — 2026-03-27 — @agent — completed and verified implementation.
-- [ ] **M16.5** Governance Innovation: Integrate Quadratic Voting with Truth Weighting (voting power = √(tokens) × truth_score) to prevent whale dominance (owner: governance, ETA: TBD).
-- [ ] **M16.6** Governance Innovation: Integrate Futarchy mechanisms where policy decisions are tied to prediction market outcomes (vote on values, bet on beliefs) (owner: governance, ETA: TBD).
+- [x] **M16.5** Governance Innovation: Integrate Quadratic Voting with Truth Weighting (voting power = √(tokens) × truth_score) to prevent whale dominance (owner: governance, ETA: TBD). — @agent — completed and verified implementation via `ZoverionsDAO.sol`.
+- [x] **M16.6** Governance Innovation: Integrate Futarchy mechanisms where policy decisions are tied to prediction market outcomes (vote on values, bet on beliefs) (owner: governance, ETA: TBD). — @agent — completed and verified implementation via `Futarchy.sol`.
 - [x] **M16.7** Governance Innovation: Implement Liquid Democracy with dynamic delegation markets to create a reputation-based delegate marketplace (owner: governance, ETA: TBD).
 
 ## Lane M17 — Code Quality, Scalability & Tokenomics (New)
