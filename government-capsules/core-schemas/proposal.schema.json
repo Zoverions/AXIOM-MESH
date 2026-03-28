@@ -1,0 +1,236 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://axiom-mesh.io/government-capsules/schemas/proposal.schema.json",
+  "title": "Government Proposal Schema",
+  "description": "Schema for government resource allocation proposals submitted by citizens or their agent representatives",
+  "type": "object",
+  "required": [
+    "title",
+    "description",
+    "requestedAmount",
+    "category",
+    "proposer"
+  ],
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Short descriptive title of the proposal",
+      "minLength": 5,
+      "maxLength": 200
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of the proposal including objectives and expected outcomes",
+      "minLength": 50,
+      "maxLength": 10000
+    },
+    "category": {
+      "type": "string",
+      "description": "Category of the proposal",
+      "enum": [
+        "infrastructure",
+        "healthcare",
+        "education",
+        "public_safety",
+        "environment",
+        "social_services",
+        "technology",
+        "economic_development",
+        "culture",
+        "other"
+      ]
+    },
+    "requestedAmount": {
+      "type": "number",
+      "description": "Amount of funding requested",
+      "minimum": 0.0001,
+      "exclusiveMinimum": true
+    },
+    "token": {
+      "type": "string",
+      "description": "Token address for funding (0x0 for native token)",
+      "pattern": "^0x[a-fA-F0-9]{40}$|^0x0$"
+    },
+    "proposer": {
+      "type": "object",
+      "required": ["address", "type"],
+      "properties": {
+        "address": {
+          "type": "string",
+          "pattern": "^0x[a-fA-F0-9]{40}$",
+          "description": "Address of the proposer (citizen or agent)"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["citizen", "agent", "organization"],
+          "description": "Type of proposer"
+        },
+        "agentId": {
+          "type": "string",
+          "description": "If proposer is an agent, the agent identifier"
+        },
+        "organizationId": {
+          "type": "string",
+          "description": "If proposer is an organization, the organization identifier"
+        }
+      }
+    },
+    "beneficiaries": {
+      "type": "array",
+      "description": "List of intended beneficiaries",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["individuals", "community", "region", "nationwide"]
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of beneficiary group"
+          },
+          "estimatedCount": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Estimated number of individuals benefited"
+          },
+          "region": {
+            "type": "string",
+            "description": "Geographic region if applicable"
+          }
+        }
+      }
+    },
+    "timeline": {
+      "type": "object",
+      "description": "Project timeline",
+      "properties": {
+        "startDate": {
+          "type": "string",
+          "format": "date",
+          "description": "Expected start date"
+        },
+        "endDate": {
+          "type": "string",
+          "format": "date",
+          "description": "Expected completion date"
+        },
+        "milestones": {
+          "type": "array",
+          "description": "Project milestones",
+          "items": {
+            "type": "object",
+            "required": ["description", "deliverable", "estimatedDate"],
+            "properties": {
+              "description": {
+                "type": "string",
+                "description": "Milestone description"
+              },
+              "deliverable": {
+                "type": "string",
+                "description": "Expected deliverable for this milestone"
+              },
+              "estimatedDate": {
+                "type": "string",
+                "format": "date",
+                "description": "Estimated completion date"
+              },
+              "weight": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Weight of this milestone in fund release (0-1)"
+              }
+            }
+          }
+        }
+      }
+    },
+    "requirements": {
+      "type": "object",
+      "description": "Requirements for contractors bidding on this proposal",
+      "properties": {
+        "minReputation": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Minimum reputation score required"
+        },
+        "requiredCertifications": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Required certifications or qualifications"
+        },
+        "maxBudget": {
+          "type": "number",
+          "description": "Maximum acceptable bid amount"
+        },
+        "maxTimeline": {
+          "type": "integer",
+          "description": "Maximum timeline in days"
+        },
+        "preferredExperience": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Preferred areas of experience"
+        }
+      }
+    },
+    "supportingDocuments": {
+      "type": "array",
+      "description": "IPFS hashes or URLs of supporting documents",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["pdf", "image", "video", "spreadsheet", "other"]
+          },
+          "ipfsHash": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9]+$",
+            "description": "IPFS hash of the document"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to the document"
+          },
+          "description": {
+            "type": "string",
+            "description": "Document description"
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Proposal creation timestamp"
+        },
+        "version": {
+          "type": "string",
+          "description": "Schema version"
+        },
+        "jurisdiction": {
+          "type": "string",
+          "description": "Applicable jurisdiction (e.g., 'Canada/Federal', 'US/California')"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Tags for categorization and search"
+        }
+      }
+    }
+  }
+}
