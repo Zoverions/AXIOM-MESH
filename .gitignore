@@ -1,1 +1,41 @@
-(docs/MASTER-TODO.md, docs/subtasks/DASHBOARD-INTERFACES.md, docs/subtasks/EDUCATION-CAPSULE.md, docs/subtasks/PAYROLL-INTEGRATION.md, docs/subtasks/SUBMISSION-STRUCTURES.md)
+```
+# Compiled and build artifacts
+*.pyc
+__pycache__/
+*.o
+*.obj
+dist/
+build/
+target/
+
+# Dependencies
+.venv/
+venv/
+node_modules/
+.mypy_cache/
+.pytest_cache/
+.gradle/
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Editors
+.vscode/
+.idea/
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# System files
+.DS_Store
+Thumbs.db
+```
