@@ -1,0 +1,131 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://axiommesh.io/schemas/government-capsule.v1.json",
+  "title": "Canadian Government Capsule Schema",
+  "description": "Schema for multi-level government governance capsule with funding, voting, and oversight capabilities",
+  "type": "object",
+  "definitions": {
+    "JurisdictionLevel": {
+      "type": "string",
+      "enum": ["federal", "provincial", "municipal", "organization"]
+    },
+    "VotingMechanism": {
+      "type": "string",
+      "enum": [
+        "first_past_the_post",
+        "ranked_ballot",
+        "proportional_representation",
+        "single_transferable_vote",
+        "approval_voting",
+        "quadratic_voting"
+      ]
+    },
+    "FundingStatus": {
+      "type": "string",
+      "enum": ["pending", "under_review", "approved", "rejected", "disbursed", "audited"]
+    },
+    "OversightType": {
+      "type": "string",
+      "enum": ["ai_automated", "human_review", "joint_oversight", "public_audit"]
+    },
+    "GovernanceEntity": {
+      "type": "object",
+      "properties": {
+        "entity_id": {"type": "string"},
+        "name": {"type": "string"},
+        "jurisdiction_level": {"$ref": "#/definitions/JurisdictionLevel"},
+        "parent_entity_id": {"type": ["string", "null"]},
+        "budget_allocation": {"type": "number", "minimum": 0},
+        "active_programs": {"type": "array", "items": {"type": "string"}},
+        "metadata": {"type": "object"}
+      },
+      "required": ["entity_id", "name", "jurisdiction_level"]
+    },
+    "FundingRequest": {
+      "type": "object",
+      "properties": {
+        "request_id": {"type": "string"},
+        "requester_id": {"type": "string"},
+        "amount": {"type": "number", "minimum": 0},
+        "purpose": {"type": "string"},
+        "program_type": {"type": "string"},
+        "justification": {"type": "string"},
+        "status": {"$ref": "#/definitions/FundingStatus"},
+        "created_at": {"type": "number"},
+        "approved_by": {"type": ["string", "null"]},
+        "oversight_type": {"$ref": "#/definitions/OversightType"},
+        "ai_assessment": {"type": ["object", "null"]},
+        "human_reviewer": {"type": ["string", "null"]},
+        "audit_trail": {"type": "array", "items": {"type": "object"}}
+      },
+      "required": ["request_id", "requester_id", "amount", "purpose", "program_type"]
+    },
+    "VotingConfiguration": {
+      "type": "object",
+      "properties": {
+        "mechanism": {"$ref": "#/definitions/VotingMechanism"},
+        "parameters": {"type": "object"},
+        "custom_rules": {"type": "array", "items": {"type": "string"}},
+        "quorum_requirement": {"type": "number", "minimum": 0, "maximum": 1},
+        "threshold": {"type": "number", "minimum": 0, "maximum": 1}
+      },
+      "required": ["mechanism"]
+    },
+    "GovernanceModule": {
+      "type": "object",
+      "properties": {
+        "module_id": {"type": "string"},
+        "module_type": {"type": "string"},
+        "name": {"type": "string"},
+        "description": {"type": "string"},
+        "version": {"type": "string"},
+        "configuration": {"type": "object"},
+        "voting_config": {"$ref": "#/definitions/VotingConfiguration"},
+        "funding_rules": {"type": "object"},
+        "compliance_requirements": {"type": "array", "items": {"type": "string"}},
+        "is_customized": {"type": "boolean"}
+      },
+      "required": ["module_id", "module_type", "name", "version"]
+    },
+    "AuditEntry": {
+      "type": "object",
+      "properties": {
+        "timestamp": {"type": "number"},
+        "datetime": {"type": "string"},
+        "action": {"type": "string"},
+        "details": {"type": "string"},
+        "region": {"type": "string"}
+      },
+      "required": ["timestamp", "action", "details"]
+    }
+  },
+  "properties": {
+    "region": {"type": "string"},
+    "entities": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/definitions/GovernanceEntity"}
+    },
+    "funding_requests": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/definitions/FundingRequest"}
+    },
+    "modules": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/definitions/GovernanceModule"}
+    },
+    "voting_sessions": {
+      "type": "object",
+      "additionalProperties": {"type": "object"}
+    },
+    "audit_log": {
+      "type": "array",
+      "items": {"$ref": "#/definitions/AuditEntry"}
+    },
+    "oversight_queue": {
+      "type": "array",
+      "items": {"type": "object"}
+    }
+  },
+  "required": ["region", "entities", "modules"],
+  "additionalProperties": false
+}
