@@ -20,8 +20,8 @@ async function invokeAirgap(command: string, pid: number): Promise<void> {
         });
 
         client.on('error', (err) => {
-            console.warn(`Airgap UDS connection failed: ${err.message}. Relying on Docker isolation.`);
-            resolve();
+            console.error(`Airgap UDS connection failed: ${err.message}. Execution aborted due to isolation failure.`);
+            reject(new Error(`Critical isolation failure: ${err.message}`));
         });
     });
 }
@@ -56,7 +56,7 @@ export async function runCode(language: string, code: string, limitsOrUseTee?: R
     const memoryMb = limits?.memory_mb || 256;
     const cpus = limits?.cpu_ms ? (limits.cpu_ms / 100).toFixed(2) : "0.5";
 
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
         let command: string;
         let args: string[];
         const seccompProfile = process.env.SANDBOX_SECCOMP_PROFILE || '/app/security/seccomp-default.json';
@@ -105,9 +105,9 @@ export async function runCode(language: string, code: string, limitsOrUseTee?: R
             command = 'docker';
             args = [...commonArgs, 'node:18-alpine', 'node', '-e', code];
         } else if (language === 'bash' || language === 'sh') {
-            command = 'docker';
-            // TODO SUB-S.3: Fixed bash execution path system command leak
-            args = [...commonArgs, 'python:3.9-slim', 'bash', '-c', '--', code];
+            // SECURITY FIX: Bash execution disabled due to command injection risk
+            // If shell execution is required, use a dedicated shell capsule with strict input validation
+            return reject(new Error('Bash/shell execution is disabled for security. Use Python or JavaScript instead.'));
         } else {
             return reject(new Error(`Unsupported language: ${language}`));
         }
@@ -115,26 +115,38 @@ export async function runCode(language: string, code: string, limitsOrUseTee?: R
         const proc = spawn(command, args);
 
         if (proc.pid) {
-            invokeAirgap('lockdown', proc.pid).catch(err => console.error(err));
+            // CRITICAL: Wait for airgap isolation to complete before proceeding
+            try {
+                await invokeAirgap('lockdown', proc.pid);
+            } catch (err) {
+                proc.kill();
+                return reject(new Error(`Critical isolation failure: ${err instanceof Error ? err.message : String(err)}`));
+            }
 
             const nnc = new NetworkNamespaceController();
 
             const ioWeight = limits?.io_weight || 100;
             const cpuQuotaStr = limits?.cpu_ms ? `${limits.cpu_ms * 1000}/1000000` : "100000/1000000";
 
-            nnc.applyCgroupLimits(proc.pid, {
-                cpuQuota: cpuQuotaStr,
-                memoryMax: `${memoryMb}M`,
-                pidsMax: 64,
-                ioWeight: ioWeight
-            }).catch(err => console.error(err));
-
-            nnc.applySeccompProfile(proc.pid, {
-                defaultAction: "SCMP_ACT_ALLOW",
-                syscalls: [
-                    { names: ["execve", "ptrace", "mount", "unshare", "setns", "clone"], action: "SCMP_ACT_ERRNO" }
-                ]
-            }).catch(err => console.error(err));
+            try {
+                await Promise.all([
+                    nnc.applyCgroupLimits(proc.pid, {
+                        cpuQuota: cpuQuotaStr,
+                        memoryMax: `${memoryMb}M`,
+                        pidsMax: 64,
+                        ioWeight: ioWeight
+                    }),
+                    nnc.applySeccompProfile(proc.pid, {
+                        defaultAction: "SCMP_ACT_ERRNO",
+                        syscalls: [
+                            { names: ["execve", "ptrace", "mount", "unshare", "setns", "clone"], action: "SCMP_ACT_ERRNO" }
+                        ]
+                    })
+                ]);
+            } catch (err) {
+                proc.kill();
+                return reject(new Error(`Critical hardening failure: ${err instanceof Error ? err.message : String(err)}`));
+            }
         }
 
         let stdout = '';
