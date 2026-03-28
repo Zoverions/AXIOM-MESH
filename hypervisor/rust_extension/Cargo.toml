@@ -1,0 +1,21 @@
+[package]
+name = "hypervisor-rust-extension"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "rust_extension"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.20", features = ["extension-module"] }
+sha2 = "0.10"
+hex = "0.4"
+ring = "0.17"
+aes-gcm = "0.10"
+rand = "0.8"
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3
