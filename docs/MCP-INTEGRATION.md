@@ -27,3 +27,4 @@ This document details the progress made towards implementing the enhancements sp
 *   `mcp_server.sse_app()` is successfully mounted inside `hypervisor/src/api/server.py` using `app.mount("/mcp", ...)`.
 *   Tests in `test_server_startup.py` execute normally without 404 overwrites.
 *   The MCP API is available at `/mcp/sse` and `/mcp/messages` to external clients.
+*   **External Integration (Open-CLAW, Gemini, Claude):** Because the server uses standard FastMCP over SSE, external frameworks like Open-CLAW, or users directly interacting via Claude Desktop or Google Gemini (if supported via their tooling), can connect to this endpoint to interact with the AXIOM-MESH infrastructure directly as top-level coordinators.
