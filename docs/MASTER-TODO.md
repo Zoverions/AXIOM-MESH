@@ -153,13 +153,32 @@ Detailed references:
 - [x] **M6.6** Enforce PulseChain-only final redemption path for bridged assets and document invariants + runbooks (owner: core+ops, ETA: TBD). — 2026-03-27 — @agent — enforced in CrossChainBridge and documented runbook
 - [x] **M6.7** Complete external security review scope for Transformer Foundation (PoER, Cognitive Friction, optimistic challenge windows) and queue Zellic/ToB handoff package (owner: security, ETA: TBD). — 2026-03-27 — @agent — created handoff package in docs/audits/transformer-foundation-security-review.md
 
-## Lane M7 — Documentation & Live USB System (Completed)
+## Lane M7 — Documentation & Live USB System (Mostly Complete)
 - [x] **M7.1** Create comprehensive installation guide with platform-specific instructions — 2026-03-27 — @agent — created docs/INSTALLATION-GUIDE.md (777 lines)
 - [x] **M7.2** Implement universal auto-installer for Windows/macOS/Linux/Android-Termux — 2026-03-27 — @agent — upgraded install.bat, install.py, install.sh with auto-dependency detection
 - [x] **M7.3** Build Live USB/ISO system with smart boot detection — 2026-03-27 — @agent — created live-installer/ directory with build-axiom-live.sh, axiom-mesh-launcher.sh
 - [x] **M7.4** Implement custom node-type-specific GUI skins — 2026-03-27 — @agent — created gateway GUI detection system serving at port 8080
 - [x] **M7.5** Update all documentation indexes and HOWTOs — 2026-03-27 — @agent — updated docs/README.md, docs/HOWTO/README.md, docs/WHITEPAPER.md, docs/TOKENOMICS.md
 - [x] **M7.6** Add GitHub Actions workflow for automated ISO builds — 2026-03-27 — @agent — created .github/workflows/build-live-iso.yml
+- [ ] **M7.7** Live USB/ISO Testing & Validation — owner: ops+qa — pending hardware validation
+  - [ ] Test Live USB boot on physical hardware (multiple vendors)
+  - [ ] Test Live USB boot in virtual machines (VirtualBox, VMware, QEMU)
+  - [ ] Validate auto-detection logic with various disk configurations
+  - [ ] Test installer automation on fresh systems
+  - [ ] Validate GUI skins on all node types
+  - [ ] Performance testing: boot time, installation duration
+  - [ ] Security validation: Secure Boot compatibility, encryption options
+- [ ] **M7.8** Live USB/ISO Distribution & Deployment — owner: release+ops — pending distribution channel setup
+  - [ ] Publish ISO torrents for decentralized distribution
+  - [ ] Upload to IPFS for redundancy
+  - [ ] Create verification instructions for downloads
+  - [ ] Set up mirror sites for high availability
+  - [ ] Document USB creation tools (Rufus, Etcher, dd)
+  - [ ] Create video tutorials for first-time users
+- [ ] **M7.4.9** GUI Cross-Browser & Accessibility Testing — owner: gateway+qa — pending UI/UX testing
+  - [ ] Cross-browser compatibility testing (Chrome, Firefox, Safari, Edge)
+  - [ ] Mobile responsiveness testing
+  - [ ] Accessibility compliance (WCAG 2.1 AA)
 
 ## Lane M8 — PulseChain Testnet Integration & Governance Closure (Open)
 - [x] **M8.1** PulseChain testnet transformer deployment evidence: run funded deployment and publish immutable evidence bundle (owner: contracts+release, ETA: TBD). — 2026-03-27 — @agent — Generated mock evidence bundle for testnet deployment.
@@ -209,6 +228,10 @@ Detailed references:
 - [x] **M13.3** Implement Credentialed Submission Structure (`CredentialedSubmission.sol`) gating document/resource submission by skill/trust score. — 2026-03-25 — @agent
 - [x] **M13.4** Enhance Education Skill Capsule Structure (`education_tome`), incorporating childhood psychologist, guidance counselor, and expert sub-agents. — 2026-03-25 — @agent
 - [x] **M13.5** Build Information Dashboard & Trust Score Interfaces in the Gateway (`gateway/src/routes/dashboard.ts`). — 2026-03-25 — @agent
+- [ ] **M13.6** Complete DASHBOARD-INTERFACES implementation: Wire endpoints to real Grid ledger/Hypervisor telemetry data (owner: gateway+grid). — pending integration with Go Grid ledger and Python Hypervisor metrics
+- [ ] **M13.7** Complete EDUCATION-CAPSULE implementation: Define `schemas/education_tome.capcp` and implement multi-agent persona runtimes (childhood psychologist, guidance counselor, subject expert) (owner: sandbox+ai). — pending schema definition and persona scaffolding
+- [ ] **M13.8** Complete PAYROLL-INTEGRATION: Add UI/Gateway endpoints for payroll queries and claims, investigate fiat off-ramp/tax compliance integrations (owner: gateway+compliance). — pending UI integration and third-party service research
+- [ ] **M13.9** Complete SUBMISSION-STRUCTURES: Implement credential-gated submission review system and merge workflow into canonical repository/IPFS registry (owner: governance+gateway). — pending review system design
 
 - [ ] **M12.9** Penetration testing, Load & stress tests, and Cross-chain failure mode drills. (Owner: security+ops).
 
