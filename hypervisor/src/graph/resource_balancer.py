@@ -34,6 +34,17 @@ class SystemMetrics:
     def get_grid_gas_fee() -> int:
         return 15
 
+    @staticmethod
+    def get_active_services_count() -> int:
+        try:
+            # Check local models count as a proxy for active services
+            if Path("data/local_models.json").exists():
+                models = json.loads(Path("data/local_models.json").read_text())
+                return len(models)
+        except Exception:
+            pass
+        return 0
+
 
 class BalancerState(TypedDict):
     intent: str
@@ -60,6 +71,7 @@ def analyze_metrics(state: BalancerState):
         "memory_pressure": SystemMetrics.get_memory_pressure(),
         "p2p_latency": SystemMetrics.get_p2p_latency(),
         "grid_gas": SystemMetrics.get_grid_gas_fee(),
+        "active_services_count": SystemMetrics.get_active_services_count(),
     }
     metrics.update(state.get("metrics", {}))
     metrics["machine_profile"] = _load_machine_profile()
@@ -99,6 +111,15 @@ async def evaluate_route(state: BalancerState):
     local_load = float(metrics.get("local_load", 0.0))
     memory_pressure = float(metrics.get("memory_pressure", 0.0))
     p2p_latency = float(metrics.get("p2p_latency", 1.0))
+    active_services = int(metrics.get("active_services_count", 0))
+
+    # Penalize local load evaluation if node is spinning up tons of services (avoid concentration of power)
+    if active_services > 10:
+        local_load += 0.2
+
+    risk_tolerance = profile.get_profile().get("risk_tolerance", "balanced")
+    if risk_tolerance in ["experimental", "assertive"]:
+        metrics["canary_reward_multiplier"] = 1.15
 
     if any(k in intent for k in ["consensus", "grid", "settle", "l1"]) or tag == "critical" or weight >= 5.0:
         route = "grid"
