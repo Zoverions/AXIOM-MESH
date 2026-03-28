@@ -1,19 +1,18 @@
 ```
-# Dependencies
-__pycache__/
+# Compiled and build artifacts
 *.pyc
-*.pyo
-*.pyd
-.julia/
-zig*/
-target/
+__pycache__/
 
-# Build artifacts
-build/
-dist/
-*.so
-*.dylib
-*.dll
+# Dependencies
+.venv/
+venv/
+node_modules/
+pip-tools/
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
 
 # Environment
 .env
@@ -26,19 +25,20 @@ dist/
 *.swp
 *.swo
 
-# Logs
-*.log
-
 # Coverage
 .coverage
 coverage/
 htmlcov/
 
-# OS
-.DS_Store
-Thumbs.db
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
 
-# Testing
-.mypy_cache/
-.pytest_cache/
+# Python specific
+*.py[cod]
+*$py.class
+*.so
+.Python
 ```
