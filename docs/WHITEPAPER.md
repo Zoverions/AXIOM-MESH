@@ -159,6 +159,7 @@ The GUI is automatically detected and served based on the node's configured role
 - **Defense Fund (DoD):** Defensive technologies allocation to neutralize global threats
 - **Scarcity-as-a-Service:** Opt-in extreme experience contracts with instant revocation
 - **Ontario Health Guild:** Pilot migration demo with testnet evidence and fail-closed mechanisms
+- **Ontario Education Capsule:** Regional education framework integrating with Ontario Health Guild for cross-domain governance, implementing EDI-compliant maturity assessments, NFT badge systems aligned with Ontario credit values, and parental oversight mechanisms for minor students. Features the **EducationTomeRegistry** smart contract for multi-agent interactions (childhood psychologist, guidance counselor, expert agents), tracking student sessions with trust scores and session outcomes, integrated with credential attestation systems.
 
 ## 10. Trust, Control, Governance, and Security Principles
 

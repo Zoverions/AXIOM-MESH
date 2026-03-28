@@ -1,13 +1,19 @@
-# Government Replacement Capsules
+# Government Capsules
 
 ## Overview
 
-This repository contains governmental replacement capsules for various political systems worldwide. Each capsule provides:
+This directory contains governmental replacement capsules for various political systems worldwide. Each capsule provides:
 
 1. **Smart Contracts** - Blockchain-based governance mechanisms tailored to each nation's political structure
 2. **Digital Agents** - Narrow AI agents for mundane tasks (bidding, logistics, supply chain, fund allocation)
 3. **Schemas** - Standardized data structures for proposals, bids, contracts, and resource allocation
 4. **Adapters** - Integration layers for existing government systems and external services
+
+These capsules are part of the AXIOM-MESH Sandbox skill capsule system and integrate with the broader ecosystem through the Hypervisor orchestration layer and Grid verification layer.
+
+## Location
+
+This capsule collection is located at: `sandbox/capsules/government/`
 
 ## Core Mechanisms (Shared Across All Capsules)
 
@@ -65,7 +71,7 @@ The following mechanisms are universal and can be applied throughout different p
 ## Architecture
 
 ```
-government-capsules/
+sandbox/capsules/government/
 ├── {nation}/
 │   ├── contracts/          # Solidity smart contracts
 │   │   ├── GovernmentCore.sol      # Main governance contract
