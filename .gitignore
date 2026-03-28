@@ -1,16 +1,44 @@
 ```
 # Dependencies
-node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.julia/
+zig*/
+target/
 
-# Logs and temp files
-*.log
-*.tmp
+# Build artifacts
+build/
+dist/
+*.so
+*.dylib
+*.dll
 
 # Environment
 .env
 .env.local
-.env.*
+*.env.*
 
 # Editors
 .vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Coverage
+.coverage
+coverage/
+htmlcov/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.mypy_cache/
+.pytest_cache/
 ```

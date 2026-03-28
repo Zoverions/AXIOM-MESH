@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://axiom-mesh.io/government-capsules/schemas/bid.schema.json",
+  "$id": "https://axiom-mesh.io/sandbox/capsules/government/schemas/bid.schema.json",
   "title": "Government Contract Bid Schema",
   "description": "Schema for bids submitted by contractors or their agent representatives for government proposals",
   "type": "object",

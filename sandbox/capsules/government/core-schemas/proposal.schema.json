@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://axiom-mesh.io/government-capsules/schemas/proposal.schema.json",
+  "$id": "https://axiom-mesh.io/sandbox/capsules/government/schemas/proposal.schema.json",
   "title": "Government Proposal Schema",
   "description": "Schema for government resource allocation proposals submitted by citizens or their agent representatives",
   "type": "object",
