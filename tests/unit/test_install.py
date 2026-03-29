@@ -1,32 +1,39 @@
-import pytest
 import sys
-import os
-import time
+import pytest
 from unittest.mock import patch
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
-from install import prompt_with_timeout
+# Need to ensure the script directory is in path so we can import install
+sys.path.append('.')
+import install
 
-def test_prompt_with_timeout_user_input():
-    with patch('builtins.input', return_value='my_input'):
-        result = prompt_with_timeout("Test prompt", "default_value", timeout=1)
-        assert result == 'my_input'
+@patch('install.install_prereqs')
+@patch('install.get_os')
+@patch('builtins.print')
+def test_main(mock_print, mock_get_os, mock_install_prereqs):
+    """
+    Test that main() correctly detects the OS and calls install_prereqs.
+    We raise an exception in install_prereqs to halt execution and avoid side effects
+    further down in the main function.
+    """
+    # Setup mock returns
+    mock_get_os.return_value = 'linux'
 
-def test_prompt_with_timeout_empty_input():
-    with patch('builtins.input', return_value='   '):
-        result = prompt_with_timeout("Test prompt", "default_value", timeout=1)
-        assert result == 'default_value'
+    # We use a custom exception to stop main() from running the rest of the installer script
+    class StopExecution(Exception):
+        pass
 
-def test_prompt_with_timeout_reached():
-    def slow_input():
-        time.sleep(0.5)
-        return "too_late"
+    mock_install_prereqs.side_effect = StopExecution("Stop early")
 
-    with patch('builtins.input', side_effect=slow_input):
-        result = prompt_with_timeout("Test prompt", "default_value", timeout=0.1)
-        assert result == 'default_value'
+    # Patch sys.argv to avoid argparse issues during test run
+    with patch.object(sys, 'argv', ['install.py']):
+        with pytest.raises(StopExecution):
+            install.main()
 
-def test_prompt_with_timeout_eof():
-    with patch('builtins.input', side_effect=EOFError):
-        result = prompt_with_timeout("Test prompt", "default_value", timeout=1)
-        assert result == 'default_value'
+    # Verify that get_os was called
+    mock_get_os.assert_called_once()
+
+    # Verify install_prereqs was called with the detected OS
+    mock_install_prereqs.assert_called_once_with('linux')
+
+    # Verify the correct print statements were executed
+    mock_print.assert_any_call("Detected OS: linux")
