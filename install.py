@@ -173,6 +173,8 @@ def main():
     parser.add_argument("--platform", type=str, help="Target platform overrides")
     parser.add_argument("--monitor", type=str, choices=["dedicated-mesh", "shared-machine", "education-node", "minimal-edge"], help="Monitoring and edge role overrides (4-mode matrix + runtime toggle)")
     parser.add_argument("--region", type=str, default=DEFAULT_REGION, help="Regional curriculum focus (e.g. ontario)")
+    parser.add_argument("--auto", action="store_true", help="Run non-interactively with safe defaults")
+    parser.add_argument("--skip-launch", action="store_true", help="Generate configuration without starting services")
     args, unknown = parser.parse_known_args()
     supported_regions = load_supported_regions()
     selected_region = (args.region or DEFAULT_REGION).strip().lower()
@@ -199,7 +201,7 @@ def main():
             f.write("# AXIOM-MESH Environment Configuration\n")
         print("-> First run detected, initiating bootstrap wizard.")
 
-    auto_install = os.environ.get("AUTO_INSTALL", "0") == "1"
+    auto_install = args.auto or os.environ.get("AUTO_INSTALL", "0") == "1"
 
     if auto_install:
         machine_role = "shared-machine"
@@ -372,31 +374,30 @@ def main():
     print("   Starting AXIOM-MESH Platform ")
     print("==========================================================")
 
-    if os_type == 'android' or machine_role == 'minimal-edge':
-        print("📱 Android / Minimal Edge environment: running minimal services...")
-        print("Installation complete!")
-        print("----------------------------------------------------------")
-        print("🚀 Mobile Utilities Enabled:")
-        print(" - QR Sync Init: POST /api/mobile/sync/init")
-        print(" - 2FA Verification: POST /api/mobile/2fa/verify")
-        print(" - Wallet Dashboard: GET /api/mobile/dashboard/data")
-        print("----------------------------------------------------------")
-        if os_type == 'android':
-            print("To run, execute: python3 -m hypervisor.src.orchestrator --mode public-pool")
-            subprocess.Popen([sys.executable, "-m", "hypervisor.src.orchestrator", "--mode", "public-pool"])
-    else:
-        if launch_mode in ["launch-network", "launch-testnet"]:
-            print(f"Running in {launch_mode} mode; ensure wallet funding + deployment approvals are complete.")
-            print("Starting local control plane services with: make up")
-        else:
-            print("Running 'make up' to build and start docker-compose services...")
+    if args.skip_launch:
+        print("✅ Installation profile generated. Launch skipped (--skip-launch).")
+        print("Next steps: run `make up` then `python3 -m hypervisor.src.orchestrator --mode public-pool`.")
+        return
 
-        run_cmd(["make", "up"])
-
+    if os_type == 'android':
+        print("Android environment: running minimal services...")
         print("Installation complete!")
+        print("To run, execute: python3 -m hypervisor.src.orchestrator --mode public-pool")
         subprocess.Popen([sys.executable, "-m", "hypervisor.src.orchestrator", "--mode", "public-pool"])
-        print("Dashboard: http://localhost:3000")
-        print("CLI: make cli")
+        return
+
+    if launch_mode in ["launch-network", "launch-testnet"]:
+        print(f"Running in {launch_mode} mode; ensure wallet funding + deployment approvals are complete.")
+        print("Starting local control plane services with: make up")
+    else:
+        print("Running 'make up' to build and start docker-compose services...")
+
+    run_cmd(["make", "up"])
+
+    print("Installation complete!")
+    subprocess.Popen([sys.executable, "-m", "hypervisor.src.orchestrator", "--mode", "public-pool"])
+    print("Dashboard: http://localhost:3000")
+    print("CLI: make cli")
 
 if __name__ == "__main__":
     main()

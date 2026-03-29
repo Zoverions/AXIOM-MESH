@@ -55,3 +55,43 @@ class EducationEngine:
             "dao_role": "junior_council_ontario" if region == "Ontario, Canada" else "junior_council",
             "advisors_assigned": ["parent", "teacher_agent"]
         }
+
+    def build_handwriting_plan(self, student_id, focus_letters="ABC", include_printing=True):
+        """
+        Create handwriting and printing exercises with explicit tracing passes.
+        """
+        clean_letters = "".join([c for c in focus_letters.upper() if c.isalpha()])[:8] or "ABC"
+        exercises = []
+
+        for letter in clean_letters:
+            exercises.append({
+                "type": "trace",
+                "title": f"Trace uppercase {letter}",
+                "instructions": "Trace over the dotted guide 3 times, then write once independently.",
+                "guide": f"{letter} {letter} {letter}",
+                "repetitions": 4
+            })
+            if include_printing:
+                exercises.append({
+                    "type": "print",
+                    "title": f"Print uppercase {letter}",
+                    "instructions": "Print the letter clearly on each baseline while matching stroke order.",
+                    "guide": f"{letter.lower()} → {letter}",
+                    "repetitions": 5
+                })
+
+        sentence = " ".join(clean_letters[:3])
+        exercises.append({
+            "type": "sentence",
+            "title": "Sentence flow",
+            "instructions": "Trace once, then print the full line twice with spacing between letters.",
+            "guide": f"Trace: {sentence} | Print: {sentence}",
+            "repetitions": 2
+        })
+
+        return {
+            "student_id": student_id,
+            "focus_letters": list(clean_letters),
+            "exercise_count": len(exercises),
+            "exercises": exercises
+        }

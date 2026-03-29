@@ -130,5 +130,4 @@ if [[ ! -f "install.py" ]]; then
 fi
 
 echo "Python 3 is ready. Launching universal auto-installer..."
-
-python3 install.py "$@"
+AUTO_INSTALL=1 python3 install.py --auto "$@"

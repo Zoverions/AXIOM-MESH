@@ -32,6 +32,7 @@
                 <a href="council.html" class="nav-btn" style="display: block; text-decoration: none; color: inherit;">Founders Council</a>
                 <button class="nav-btn" data-target="cockpit">Operator Cockpit</button>
                 <button class="nav-btn" data-target="innovation">Innovation Lab</button>
+                <button class="nav-btn" data-target="handwriting">Handwriting Lab</button>
                 <button class="nav-btn" data-target="settings">Settings / Config</button>
                 <button class="nav-btn" data-target="logs">Logs & Troubleshooting</button>
             </nav>
@@ -256,6 +257,34 @@
                     <h3 style="color: var(--accent);">Generated Concept</h3>
                     <pre id="innovation-output">Press "Generate Novel Feature" to synthesize a new roadmap-ready idea.</pre>
                     <button id="inject-innovation-to-chat-btn" style="margin-top: 12px;">Send Blueprint to Chat</button>
+                </div>
+            </section>
+
+            <section id="handwriting" class="tab-content">
+                <h2>Handwriting Lab — Trace + Print Practice</h2>
+                <p style="color: #aaa; max-width: 900px;">
+                    Build guided exercises that teach letter formation with dotted tracing, then transition to independent printing.
+                </p>
+                <div class="card" style="text-align: left;">
+                    <div class="form-group">
+                        <label for="handwriting-text">Letters or short words</label>
+                        <input type="text" id="handwriting-text" maxlength="24" placeholder="e.g., abc cat">
+                    </div>
+                    <div class="form-group">
+                        <label for="handwriting-level">Difficulty</label>
+                        <select id="handwriting-level">
+                            <option value="beginner" selected>Beginner</option>
+                            <option value="intermediate">Intermediate</option>
+                            <option value="advanced">Advanced</option>
+                        </select>
+                    </div>
+                    <button id="generate-handwriting-btn">Generate Exercise Sheet</button>
+                    <button id="clear-trace-btn" style="margin-left: 8px;">Clear Trace Layer</button>
+                </div>
+                <div id="handwriting-preview" class="card handwriting-sheet" style="margin-top: 16px; text-align: left;"></div>
+                <div class="card" style="margin-top: 16px; text-align: left;">
+                    <h3 style="color: var(--accent);">Trace Pad</h3>
+                    <canvas id="trace-canvas" width="900" height="220"></canvas>
                 </div>
             </section>
 

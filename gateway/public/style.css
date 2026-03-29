@@ -282,6 +282,37 @@ h2 {
     cursor: pointer;
 }
 
+.handwriting-sheet {
+    background: #1b1b1b;
+    border: 1px dashed #4f4f4f;
+}
+
+.handwriting-row {
+    border-bottom: 1px solid #333;
+    padding: 10px 0;
+    font-size: 1.05rem;
+}
+
+.trace-guide {
+    letter-spacing: 0.2rem;
+    color: #6f6f6f;
+    font-family: "Courier New", monospace;
+}
+
+#trace-canvas {
+    width: 100%;
+    background: repeating-linear-gradient(
+        to bottom,
+        #141414 0px,
+        #141414 32px,
+        #2f2f2f 32px,
+        #2f2f2f 34px
+    );
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    touch-action: none;
+}
+
 /* Switch Toggle */
 .switch {
   position: relative;
