@@ -49,8 +49,10 @@ This means the correct public posture today is:
 
 ### A. Placeholder/mock implementation paths in non-test code
 Examples identified in executable paths:
-- `grid/contracts/contracts/ProveXVerifierWrapper.sol` contains explicit placeholder release amount.
 - `sandbox/src/broker/Broker.ts` still labels execution stage as mock execution path and currently relies on a mock execution function in orchestration flow.
+- `gateway/src/routes/dashboard.ts` currently serves mock/static trust and pipeline telemetry responses.
+
+> 2026-03-29 reconciliation note: `grid/contracts/contracts/ProveXVerifierWrapper.sol` no longer uses an explicit static placeholder release amount; it now computes a dynamic value.
 
 **Risk:** functional ambiguity and unverifiable assurances if those pathways are hit in live environments.
 
