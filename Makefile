@@ -8,7 +8,7 @@
 	test-mtls test-sandbox-identity test-zero-trust test-telemetry-alerts \
 	verify-external-audit-artifacts verify-zkml-audit-pack verify-bridge-audit-pack \
 	verify-gas-target verify-sbom verify-genesis-ceremony \
-	generate-docs
+	generate-docs steering-index
 
 generate-docs:
 	@echo "Generating API Documentation..."
@@ -137,3 +137,6 @@ verify-sbom:
 
 verify-genesis-ceremony:
 	python3 scripts/test_genesis_ceremony.py
+
+steering-index:
+	python3 scripts/generate_agent_steering_index.py

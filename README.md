@@ -59,7 +59,16 @@ Primary implementation points:
 - `hypervisor/src/graph/resource_balancer.py`
 - `scripts/generate_machine_profile.py`
 - `scripts/network_launch_preflight.py`
+- `scripts/generate_agent_steering_index.py`
 - `install.sh`
+
+Agent steering files (for example `AGENTS.md`, `STEERING.md`, `SKILL.md`) can be indexed once for secure and fast lookup by running:
+
+```bash
+python scripts/generate_agent_steering_index.py
+```
+
+The index is written to `config/agent_steering_index.json` and avoids repeated full-tree scans at runtime.
 
 ---
 
