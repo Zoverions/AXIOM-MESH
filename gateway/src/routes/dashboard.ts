@@ -63,9 +63,9 @@ const internalAuth = (req: Request, res: Response, next: Function) => {
         return;
     }
 
-    const secretToMatch = expectedSecret || "internal-dev-secret-1234";
+    const secretToMatch = expectedSecret;
 
-    if (authHeader === `Bearer ${secretToMatch}`) {
+    if (secretToMatch && authHeader === `Bearer ${secretToMatch}`) {
         next();
     } else {
         res.status(403).json({ error: "Forbidden: Invalid internal secret" });
