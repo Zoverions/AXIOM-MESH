@@ -171,7 +171,7 @@ def main():
     parser = argparse.ArgumentParser(description="AXIOM-MESH Universal Cross-Platform Installer")
     parser.add_argument("--capsule", type=str, choices=["skill-pill", "capsule", "capsule-plus"], default="capsule", help="Capsule layer to install")
     parser.add_argument("--platform", type=str, help="Target platform overrides")
-    parser.add_argument("--monitor", type=str, help="Monitoring and edge role overrides")
+    parser.add_argument("--monitor", type=str, choices=["dedicated-mesh", "shared-machine", "education-node", "minimal-edge"], help="Monitoring and edge role overrides (4-mode matrix + runtime toggle)")
     parser.add_argument("--region", type=str, default=DEFAULT_REGION, help="Regional curriculum focus (e.g. ontario)")
     parser.add_argument("--auto", action="store_true", help="Run non-interactively with safe defaults")
     parser.add_argument("--skip-launch", action="store_true", help="Generate configuration without starting services")
@@ -223,12 +223,13 @@ def main():
                 machine_role = "education-node"
 
         if args.monitor:
-            print(f"Applying monitor override: {args.monitor}")
+            print(f"Applying monitor override (4-mode matrix toggle): {args.monitor}")
             machine_role = args.monitor
 
         if os_type == 'android':
             print("Android detected, forcing minimal-edge role.")
-            machine_role = "minimal-edge"
+            if not args.monitor:
+                machine_role = "minimal-edge"
 
         launch_mode = prompt_with_timeout("Launch mode (local-mesh/single-node/launch-testnet/launch-network)", "local-mesh", 15)
         user_priority = prompt_with_timeout("Primary priority (performance/security/cost/autonomy)", "security", 15)

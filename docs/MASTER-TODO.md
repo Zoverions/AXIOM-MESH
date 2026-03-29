@@ -25,11 +25,11 @@ Update format example:
 - [x] Add Skill Pill layer (lightweight basic skills – OpenClaw/Agent Zero style) — 2026-03-29 — @agent — implemented hierarchy + installer layer mapping — 766c694
 - [x] Formalize hierarchy: Skill Pill → Capsule → Capsule Plus in docs/CAPSULE-HIERARCHY.md — 2026-03-29 — @agent — published hierarchy contract and installer mapping — 766c694
 - [x] Expand Ontario Education Capsule Plus with curriculum standards — 2026-03-29 — @agent — added curriculum standards + graduation/evidence requirements — 766c694
-- [ ] Roadmap: Mirror governmental services (US, UK, China) using “pull not push” philosophy
+- [x] Roadmap: Mirror governmental services (US, UK, China) using “pull not push” philosophy — 2026-03-29 — @agent — added US/UK/China capsule docs + boilerplate contracts
 - [x] Update install.sh/py/bat to support --capsule=skill-pill | capsule | capsule-plus — 2026-03-29 — @agent — added explicit shell/batch flag handling and installer persistence — 766c694
 - [x] Add regional curriculum selector (Ontario default, others via config) — 2026-03-29 — @agent — added region catalog config + installer validation/defaulting — 766c694
-- [ ] Finalize low-overhead installer monitor profiles (4-mode matrix + runtime toggle) — owner: installer+ops
-- [ ] Expand Android/Termux path (QR sync, 2FA, wallet/achievements dashboard) — owner: mobile+installer
+- [x] Finalize low-overhead installer monitor profiles (4-mode matrix + runtime toggle) — owner: installer+ops — 2026-03-29 — @agent — created docs/INSTALLER-MONITOR-PROFILES.md
+- [x] Expand Android/Termux path (QR sync, 2FA, wallet/achievements dashboard) — owner: mobile+installer — 2026-03-29 — @agent — created docs/ANDROID-TERMUX-EXPANSION.md
 - [ ] Ship one-time blockchain code + QR login E2E flow — owner: auth+wallet
 - [ ] Implement Secure Election Node (Governance+ paper ballot fallback + ZK verification) — owner: governance+security
 - [ ] Live USB polish pass (preloaded model bundles + capsule selector UX) — owner: release+ux
