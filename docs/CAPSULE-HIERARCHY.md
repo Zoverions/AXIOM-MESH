@@ -48,8 +48,3 @@ The canonical region map and rollout status is stored in:
 - `config/regional_curricula.json`
 
 Ontario remains the default active curriculum profile.
-
-
-## Roadmap Reference
-
-- Government services mirror roadmap (US/UK/China, pull-not-push): `docs/governance/GOVERNMENT-SERVICES-MIRROR-ROADMAP.md`
