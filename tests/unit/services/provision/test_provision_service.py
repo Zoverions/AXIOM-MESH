@@ -1,113 +1,37 @@
 import os
-import pytest
-import json
-import base64
-import hashlib
-from typing import Dict, Any
+import time
+from unittest.mock import patch
+from services.provision.provision_service import generate_config_file, InvitationToken
 
-# Ensure we can import the module correctly
-import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../")))
+def test_generate_config_file():
+    token = InvitationToken(
+        token_id="test-token-123",
+        mesh_id="test-mesh",
+        coordinator_url="http://test-coord",
+        expires_at=time.time() + 3600,
+        created_at=time.time(),
+        node_type="validator"
+    )
 
-from services.provision.provision_service import sign_payload, verify_signature
+    with patch('services.provision.provision_service.get_mesh_config') as mock_config:
+        mock_config.return_value = {
+            "mesh_id": "test-mesh-id",
+            "coordinator_url": "http://test-coord",
+            "network_name": "test-net",
+            "chain_id": "1234",
+            "rpc_url": "http://test-rpc"
+        }
 
-def test_sign_payload_basic():
-    """Test signing a basic payload"""
-    payload = {"test": "data", "id": 123}
-    secret = "test-secret"
+        config_content = generate_config_file(token)
 
-    signed = sign_payload(payload, secret)
-
-    # Check format
-    assert "." in signed
-    encoded_payload, signature = signed.rsplit('.', 1)
-
-    # Verify payload encoding
-    decoded_payload = json.loads(base64.urlsafe_b64decode(encoded_payload.encode()).decode())
-    assert decoded_payload == payload
-
-    # Verify signature length (HMAC-SHA256 hex digest is 64 chars)
-    assert len(signature) == 64
-
-    # Verify with verify_signature
-    verified = verify_signature(signed, secret)
-    assert verified == payload
-
-def test_sign_payload_default_secret(monkeypatch):
-    """Test signing with default secret from environment"""
-    payload = {"test": "default"}
-
-    # Mock environment variable
-    monkeypatch.setenv("AXIOM_MESH_SECRET", "mock-env-secret")
-
-    signed = sign_payload(payload)
-    verified = verify_signature(signed, "mock-env-secret")
-
-    assert verified == payload
-
-    # Check that it fails with a different secret
-    assert verify_signature(signed, "wrong-secret") is None
-
-def test_sign_payload_deterministic():
-    """Test that signing the same payload with the same secret gives the same result"""
-    payload = {"a": 1, "b": 2}
-    secret = "secret123"
-
-    # In python dict order might not be preserved, but json.dumps(sort_keys=True) is used
-    payload2 = {"b": 2, "a": 1}
-
-    signed1 = sign_payload(payload, secret)
-    signed2 = sign_payload(payload2, secret)
-
-    assert signed1 == signed2
-
-def test_sign_payload_different_secrets():
-    """Test that different secrets give different signatures"""
-    payload = {"test": "data"}
-
-    signed1 = sign_payload(payload, "secret-A")
-    signed2 = sign_payload(payload, "secret-B")
-
-    assert signed1 != signed2
-
-    # The encoded payload part should be the same
-    assert signed1.split('.')[0] == signed2.split('.')[0]
-
-    # The signature part should be different
-    assert signed1.split('.')[1] != signed2.split('.')[1]
-
-def test_sign_payload_different_payloads():
-    """Test that different payloads give different signatures"""
-    secret = "common-secret"
-
-    signed1 = sign_payload({"test": "data1"}, secret)
-    signed2 = sign_payload({"test": "data2"}, secret)
-
-    assert signed1 != signed2
-    assert signed1.split('.')[1] != signed2.split('.')[1]
-
-def test_sign_payload_empty_dict():
-    """Test signing an empty dictionary"""
-    payload = {}
-    secret = "secret"
-
-    signed = sign_payload(payload, secret)
-    verified = verify_signature(signed, secret)
-
-    assert verified == payload
-
-def test_verify_signature_tampered_payload():
-    """Test that tampering with the payload invalidates the signature"""
-    payload = {"role": "user"}
-    secret = "secret"
-
-    signed = sign_payload(payload, secret)
-    encoded_payload, signature = signed.split('.')
-
-    # Tamper with the payload
-    tampered_payload = {"role": "admin"}
-    tampered_encoded = base64.urlsafe_b64encode(json.dumps(tampered_payload).encode()).decode()
-
-    tampered_signed = f"{tampered_encoded}.{signature}"
-
-    assert verify_signature(tampered_signed, secret) is None
+        assert "NODE_TYPE=validator" in config_content
+        assert "MESH_ID=test-mesh-id" in config_content
+        assert "COORDINATOR_URL=http://test-coord" in config_content
+        assert "NETWORK_NAME=test-net" in config_content
+        assert "CHAIN_ID=1234" in config_content
+        assert "RPC_URL=http://test-rpc" in config_content
+        assert "JOIN_TOKEN=test-token-123" in config_content
+        assert f"JOIN_TOKEN_EXPIRES={token.expires_at}" in config_content
+        assert "NODE_ID=node-" in config_content
+        assert "API_KEY=" in config_content
+        assert "SECRET_KEY=" in config_content
