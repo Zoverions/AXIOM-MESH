@@ -9,6 +9,7 @@ describe("StigmergicStateChannel v4 interface audit", function () {
   let pool;
   let axm;
   let verifier;
+  let fraudProofVerifier;
   let pulseAdapter;
   let channel;
   let soulboundReputation;
@@ -43,6 +44,11 @@ describe("StigmergicStateChannel v4 interface audit", function () {
     );
     await channel.waitForDeployment();
 
+    const FraudProofVerifier = await ethers.getContractFactory("FraudProofVerifier");
+    fraudProofVerifier = await FraudProofVerifier.deploy(guardian.address);
+    await fraudProofVerifier.waitForDeployment();
+    await channel.connect(guardian).setFraudProofVerifier(await fraudProofVerifier.getAddress());
+
     const HorizonForecast = await ethers.getContractFactory("HorizonForecast");
     const horizon = await HorizonForecast.deploy(await verifier.getAddress(), await channel.getAddress());
     await horizon.waitForDeployment();
@@ -61,6 +67,13 @@ describe("StigmergicStateChannel v4 interface audit", function () {
     await axm.transfer(agentB.address, stake);
     await axm.connect(agentB).approve(await channel.getAddress(), stake);
   });
+
+  function encodeFraudProof(channelId, stateRoot, violationType = 1) {
+    return ethers.AbiCoder.defaultAbiCoder().encode(
+      ["tuple(bytes32 channelId, bytes32 claimedStateRoot, uint8 violationType, bytes evidence)"],
+      [[channelId, stateRoot, violationType, ethers.toUtf8Bytes("fraud-evidence")]]
+    );
+  }
 
   it("requires the pulse adapter guardian sentinel to match constructor guardian", async function () {
     const StigmergicStateChannel = await ethers.getContractFactory("StigmergicStateChannel");
@@ -95,7 +108,8 @@ describe("StigmergicStateChannel v4 interface audit", function () {
     await channel.connect(agentB).joinChannel(channelId);
 
     // Use agentA to challenge
-    await expect(channel.connect(agentA).challengeSettlement(channelId, "0x1234"))
+    const fraudProof = encodeFraudProof(channelId, ethers.ZeroHash);
+    await expect(channel.connect(agentA).challengeSettlement(channelId, fraudProof))
       .to.emit(channel, "SettlementChallenged");
 
     await ethers.provider.send("evm_increaseTime", [7 * 24 * 60 * 60 + 1]);
@@ -240,7 +254,8 @@ describe("StigmergicStateChannel v4 interface audit", function () {
 
     await channel.connect(agentB).joinChannel(channelId);
 
-    await expect(channel.connect(owner).challengeSettlement(channelId, "0x1234"))
+    const fraudProof = encodeFraudProof(channelId, ethers.ZeroHash);
+    await expect(channel.connect(owner).challengeSettlement(channelId, fraudProof))
       .to.be.revertedWith("Unauthorized challenger");
   });
 

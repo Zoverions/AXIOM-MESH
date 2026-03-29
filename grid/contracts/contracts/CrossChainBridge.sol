@@ -30,7 +30,17 @@ contract CrossChainBridge is OApp {
         bool enabled;
     }
 
+    struct PayrollCommitment {
+        bytes32 commitmentHash;
+        uint256 committedAt;
+    }
+
     BridgeOracleHooks public oracleHooks;
+    bool public mevProtectionEnabled;
+    uint256 public commitDelay = 30 seconds;
+    uint256 public commitExpiry = 20 minutes;
+
+    mapping(address => PayrollCommitment) public payrollCommitments;
 
     mapping(bytes32 => PendingClaim) public pendingClaims;
     mapping(uint32 => uint256) public chainFinalityBlocks;
@@ -39,6 +49,8 @@ contract CrossChainBridge is OApp {
     event ClaimReceived(bytes32 indexed guid, address recipient, uint256 amount);
     event ClaimRedeemed(bytes32 indexed guid, address recipient, uint256 amount);
     event OracleHooksUpdated(address oracleContract, uint256 ratingThreshold, uint256 pollingInterval, uint256 quorumRequired, bool enabled);
+    event PayrollCommitted(address indexed user, bytes32 indexed commitmentHash);
+    event MEVProtectionUpdated(bool enabled, uint256 commitDelay, uint256 commitExpiry);
 
     constructor(address _endpoint, address _founder, address payable _pool, address _shadow) OApp(_endpoint, msg.sender) Ownable(msg.sender) {
         founder = FounderCommitment(_founder);
@@ -65,8 +77,44 @@ contract CrossChainBridge is OApp {
         emit OracleHooksUpdated(_oracleContract, _ratingThreshold, _pollingInterval, _quorumRequired, _enabled);
     }
 
+    /// @notice Commit hash for bridgePayroll reveal path when MEV protection is enabled.
+    /// @dev commitmentHash must be keccak256(abi.encode(user, amount, dstEid, options, zkProof, salt)).
+    function commitBridgePayroll(bytes32 commitmentHash) external {
+        require(commitmentHash != bytes32(0), "Invalid commitment");
+        payrollCommitments[msg.sender] = PayrollCommitment({
+            commitmentHash: commitmentHash,
+            committedAt: block.timestamp
+        });
+        emit PayrollCommitted(msg.sender, commitmentHash);
+    }
+
+    function updateMEVProtection(bool _enabled, uint256 _commitDelay, uint256 _commitExpiry) external onlyOwner {
+        require(_commitExpiry > _commitDelay, "Expiry must exceed delay");
+        mevProtectionEnabled = _enabled;
+        commitDelay = _commitDelay;
+        commitExpiry = _commitExpiry;
+        emit MEVProtectionUpdated(_enabled, _commitDelay, _commitExpiry);
+    }
+
     // LayerZero omnichain payroll/UBI transfer
-    function bridgePayroll(uint256 amount, uint32 dstEid, bytes calldata options, bytes32 zkProof) external payable {
+    function bridgePayroll(
+        uint256 amount,
+        uint32 dstEid,
+        bytes calldata options,
+        bytes32 zkProof,
+        bytes32 salt
+    ) external payable {
+        if (mevProtectionEnabled) {
+            PayrollCommitment memory commitment = payrollCommitments[msg.sender];
+            require(commitment.commitmentHash != bytes32(0), "Commitment missing");
+            require(block.timestamp >= commitment.committedAt + commitDelay, "Commit delay active");
+            require(block.timestamp <= commitment.committedAt + commitExpiry, "Commitment expired");
+
+            bytes32 revealHash = keccak256(abi.encode(msg.sender, amount, dstEid, options, zkProof, salt));
+            require(revealHash == commitment.commitmentHash, "Commitment mismatch");
+            delete payrollCommitments[msg.sender];
+        }
+
         if (oracleHooks.enabled) {
             require(oracleHooks.oracleContract != address(0), "Oracle contract not configured");
 

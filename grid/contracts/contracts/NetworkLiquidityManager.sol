@@ -95,7 +95,7 @@ contract NetworkLiquidityManager is Initializable, UUPSUpgradeable {
     }
 
     function bridgeLiquidity(uint256 amount, uint32 destEid) external {
-        bridge.bridgePayroll(amount, destEid, "", keccak256(abi.encode("liquidity")));
+        bridge.bridgePayroll(amount, destEid, "", keccak256(abi.encode("liquidity")), bytes32(0));
         emit LiquidityCrossChain(amount, destEid);
     }
 
