@@ -8,12 +8,7 @@ import { sendToHypervisor } from '../services/hypervisorClient';
 import { getLogsBuffer } from '../utils/logger';
 import { authMiddleware } from '../middleware/auth';
 import { publicIntentRateLimit } from '../middleware/public_rate_limit';
-import util from 'util';
-import child_process from 'child_process';
-const exec = child_process.exec;
 import { ethers } from 'ethers';
-
-const execPromise = util.promisify(exec);
 
 import { MCPFirewall, MCPSecurityPolicy } from '../security/MCPFirewall';
 
@@ -515,12 +510,14 @@ router.get('/api/v1/logs', authMiddleware, async (req: Request, res: Response) =
         // If docker socket is available (e.g., if re-mounted for complete system observability)
         if (fs.existsSync('/var/run/docker.sock')) {
             try {
-                // Execute a lightweight curl against the Docker engine API to get recent logs for other containers
+                // Execute a lightweight request against the Docker engine API to get recent logs for other containers
                 // This avoids needing the full `docker-compose` CLI inside the Node container.
-                const { stdout, stderr } = await execPromise('curl --silent --unix-socket /var/run/docker.sock http://localhost/containers/json');
-                if (stdout) {
+                const response = await axios.get('http://localhost/containers/json', {
+                    socketPath: '/var/run/docker.sock'
+                });
+                if (response.data) {
                     try {
-                        const containers = JSON.parse(stdout);
+                        const containers = response.data;
                         let formattedStatus = "";
                         containers.forEach((c: any) => {
                             const name = c.Names && c.Names.length > 0 ? c.Names[0].replace('/', '') : 'Unknown';
