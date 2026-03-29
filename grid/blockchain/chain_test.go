@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/axiom-mesh/grid/consensus"
 	"github.com/axiom-mesh/grid/types"
 )
 
@@ -520,6 +521,32 @@ func TestLedger_JoinSwarm_UsesNodeProfileStorageCapacity(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatalf("expected OnSwarmJoined callback to be triggered")
+	}
+}
+
+func TestLedger_LeaveSwarm_UpdatesAdaptiveNodeCount(t *testing.T) {
+	l := NewLedger()
+	l.CreateSwarm(types.Swarm{ID: "swarm-a", TaskID: "task-a", Nodes: []string{"node-1", "node-2"}, Status: "active"})
+	l.CreateSwarm(types.Swarm{ID: "swarm-b", TaskID: "task-b", Nodes: []string{"node-3"}, Status: "active"})
+
+	if ok := l.LeaveSwarm("swarm-a", "node-2"); !ok {
+		t.Fatalf("expected leave swarm to succeed")
+	}
+
+	swarmA, ok := l.GetSwarm("swarm-a")
+	if !ok {
+		t.Fatalf("expected swarm-a to exist")
+	}
+	if len(swarmA.Nodes) != 1 {
+		t.Fatalf("expected one node left in swarm-a, got %d", len(swarmA.Nodes))
+	}
+
+	if got := consensus.GetNetworkNodeCount(); got != 2 {
+		t.Fatalf("expected adaptive node count to be 2 after leave, got %d", got)
+	}
+
+	if ok := l.LeaveSwarm("swarm-a", "missing-node"); ok {
+		t.Fatalf("expected leave to fail for missing node")
 	}
 }
 

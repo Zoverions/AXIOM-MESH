@@ -29,9 +29,9 @@ Update format example:
 - [x] Add IFraudProofVerifier interface + semantic fraud proof verification in StigmergicStateChannel — 2026-03-29 — @agent — replaced fraudProof.length > 0 with verifyFraudProof() call; fail-closed if verifier not configured
 - [x] Implement adaptive PoER difficulty in grid/consensus/poer.go — 2026-03-29 — @agent — BaseDifficulty=8, scales to 24 at 10k+ nodes; atomic SetNetworkNodeCount(); updated poer_test.go
 - [x] Write docs/TOKENOMICS-IMPROVEMENTS-2026-03-29.md — 2026-03-29 — @agent — full audit findings, applied fixes, remaining roadmap, burn mechanism proposal
-- [ ] Wire SetNetworkNodeCount() into chain.go JoinSwarm/LeaveSwarm — owner: grid
-- [ ] Define and enforce ecosystem reserve emission schedule in AXM.sol — owner: contracts+governance
-- [ ] Add gridSwarmSize oracle verification for FDBA manipulation prevention — owner: contracts+security
+- [x] Wire SetNetworkNodeCount() into chain.go JoinSwarm/LeaveSwarm — 2026-03-29 — @agent — added Ledger.LeaveSwarm() with adaptive PoER node recount and coverage tests
+- [x] Define and enforce ecosystem reserve emission schedule in AXM.sol — 2026-03-29 — @agent — locked 85% reserve behind 10-year linear on-chain emission with releasable accounting
+- [x] Add gridSwarmSize oracle verification for FDBA manipulation prevention — 2026-03-29 — @agent — added oracle-backed drift checks + sync path; founder-share calc now fails closed on tampered swarm size
 - [ ] Activate fee burn via ZoverionsDAO governance proposal (target: 0.5% of channel tax) — owner: governance
 - [ ] Fix WeightOracle DoS vector in ComputeBond.submitZKMLProof (decouple oracle call from proof submission) — owner: contracts
 - [ ] Add release/burn mechanism for governance-locked quadratic voting tokens in ZoverionsDAO — owner: contracts

@@ -236,6 +236,59 @@ describe("ComputeBond", function () {
     });
   });
 
+  describe("FDBA swarm-size oracle verification", function () {
+    let swarmOracle;
+
+    beforeEach(async function () {
+      const MockSwarmSizeOracle = await hre.ethers.getContractFactory("MockSwarmSizeOracle");
+      swarmOracle = await MockSwarmSizeOracle.deploy();
+      await swarmOracle.setNetworkNodeCount(1);
+    });
+
+    it("Should use oracle-verified swarm size for founder share calculations", async function () {
+      await computeBond.connect(node1).stake(NODE_ID, { value: STAKE_AMOUNT });
+
+      const opId = hre.ethers.keccak256(
+        hre.ethers.solidityPacked(["string", "address"], ["setSwarmSizeOracle", swarmOracle.target])
+      );
+      await computeBond.connect(owner).queueOperation(opId);
+      await hre.ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+      await hre.ethers.provider.send("evm_mine");
+      await computeBond.connect(owner).setSwarmSizeOracle(swarmOracle.target);
+
+      await swarmOracle.setNetworkNodeCount(10000);
+      await expect(computeBond.getCurrentFounderShare()).to.equal(0n);
+    });
+
+    it("Should fail-closed when local swarm size diverges from oracle beyond drift threshold", async function () {
+      await computeBond.connect(node1).stake(NODE_ID, { value: STAKE_AMOUNT });
+
+      let opId = hre.ethers.keccak256(
+        hre.ethers.solidityPacked(["string", "address"], ["setSwarmSizeOracle", swarmOracle.target])
+      );
+      await computeBond.connect(owner).queueOperation(opId);
+      await hre.ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+      await hre.ethers.provider.send("evm_mine");
+      await computeBond.connect(owner).setSwarmSizeOracle(swarmOracle.target);
+
+      await swarmOracle.setNetworkNodeCount(1000);
+      await expect(computeBond.getCurrentFounderShare()).to.be.revertedWithCustomError(
+        computeBond,
+        "SwarmSizeOracleMismatch"
+      );
+
+      opId = hre.ethers.keccak256(
+        hre.ethers.solidityPacked(["string", "uint256"], ["setMaxSwarmSizeDriftBps", 10000])
+      );
+      await computeBond.connect(owner).queueOperation(opId);
+      await hre.ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+      await hre.ethers.provider.send("evm_mine");
+      await computeBond.connect(owner).setMaxSwarmSizeDriftBps(10000);
+
+      await expect(computeBond.getCurrentFounderShare()).to.not.be.reverted;
+    });
+  });
+
   describe("Owner withdrawing slashed funds", function () {
     beforeEach(async function () {
       await computeBond.connect(node1).stake(NODE_ID, { value: STAKE_AMOUNT });
