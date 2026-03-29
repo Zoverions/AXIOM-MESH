@@ -80,6 +80,56 @@ announce_local_payloads() {
     done
 }
 
+choose_capsule_tier() {
+    local selected_tier
+    echo -e "${YELLOW}🧩 Select capsule tier for this installation:${NC}"
+    echo "  [1] skill-pill   - lightweight/offline-first profile"
+    echo "  [2] capsule      - standard profile (recommended)"
+    echo "  [3] capsule-plus - full curriculum/governance profile"
+    read -r -p "Choose [1-3] (default: 2): " selected_tier
+    case "$selected_tier" in
+        1) echo "skill-pill" ;;
+        3) echo "capsule-plus" ;;
+        *) echo "capsule" ;;
+    esac
+}
+
+select_preloaded_model_bundle() {
+    local bundle_dir="/opt/axiom-mesh/live-installer/offline/models"
+    local selected_bundle
+    if [ ! -d "$bundle_dir" ]; then
+        echo "none"
+        return
+    fi
+
+    mapfile -t bundles < <(find "$bundle_dir" -mindepth 1 -maxdepth 1 -type d -printf "%f\n" | sort)
+    if [ ${#bundles[@]} -eq 0 ]; then
+        echo "none"
+        return
+    fi
+
+    echo -e "${YELLOW}🤖 Select local model bundle:${NC}"
+    echo "  [0] none (online pull if available)"
+    local idx=1
+    for bundle in "${bundles[@]}"; do
+        echo "  [$idx] $bundle"
+        idx=$((idx + 1))
+    done
+
+    read -r -p "Choose [0-${#bundles[@]}] (default: 0): " selected_bundle
+    if [ -z "$selected_bundle" ] || [ "$selected_bundle" = "0" ]; then
+        echo "none"
+        return
+    fi
+
+    if [[ "$selected_bundle" =~ ^[0-9]+$ ]] && [ "$selected_bundle" -ge 1 ] && [ "$selected_bundle" -le "${#bundles[@]}" ]; then
+        echo "${bundles[$((selected_bundle - 1))]}"
+        return
+    fi
+
+    echo "none"
+}
+
 # Try to detect existing installation on any internal drive
 echo -e "${YELLOW}🔍 Scanning for existing AXIOM-MESH installations...${NC}"
 hardware_assessment
@@ -174,6 +224,16 @@ else
     echo "Launching full auto-installer..."
     echo -e "${YELLOW}🖥️ Existing OS detected: ${DETECTED_OS}${NC}"
     announce_local_payloads
+    CAPSULE_TIER="$(choose_capsule_tier)"
+    MODEL_BUNDLE="$(select_preloaded_model_bundle)"
+    echo -e "${YELLOW}🧩 Capsule tier selected: ${CAPSULE_TIER}${NC}"
+    if [ "$MODEL_BUNDLE" != "none" ]; then
+        echo -e "${YELLOW}🤖 Model bundle selected: ${MODEL_BUNDLE}${NC}"
+        mkdir -p /tmp/axiom-assessment
+        echo "$MODEL_BUNDLE" > /tmp/axiom-assessment/selected_model_bundle.txt
+    else
+        echo -e "${YELLOW}🤖 Model bundle selected: none${NC}"
+    fi
     echo ""
     
     # Navigate to the AXIOM-MESH directory on the live USB
@@ -193,7 +253,8 @@ else
     python3 install.py --auto \
         --role education-node \
         --mode local-mesh \
-        --priority cost
+        --priority cost \
+        --capsule "$CAPSULE_TIER"
     
     INSTALL_STATUS=$?
     
