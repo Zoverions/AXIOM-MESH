@@ -61,6 +61,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const innovationOutput = document.getElementById("innovation-output");
     const generateInnovationBtn = document.getElementById("generate-innovation-btn");
     const injectInnovationToChatBtn = document.getElementById("inject-innovation-to-chat-btn");
+    const handwritingTextInput = document.getElementById("handwriting-text");
+    const handwritingLevelSelect = document.getElementById("handwriting-level");
+    const generateHandwritingBtn = document.getElementById("generate-handwriting-btn");
+    const clearTraceBtn = document.getElementById("clear-trace-btn");
+    const handwritingPreview = document.getElementById("handwriting-preview");
+    const traceCanvas = document.getElementById("trace-canvas");
 
     // --- Session ID Management ---
     let sessionId = localStorage.getItem('axiom_session_id');
@@ -262,6 +268,77 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("chat").classList.add("active");
             chatInput.focus();
         });
+    }
+
+    function buildHandwritingRows(text, level) {
+        const seed = (text || "abc").replace(/[^a-zA-Z ]/g, "").trim() || "abc";
+        const clean = seed.slice(0, 24);
+        const repeats = level === "advanced" ? 1 : (level === "intermediate" ? 2 : 3);
+        const rows = [];
+        const units = clean.split(/\s+/).filter(Boolean);
+        units.forEach((unit) => {
+            const uppercase = unit.toUpperCase();
+            rows.push(`<div class="handwriting-row"><strong>Trace:</strong> <span class="trace-guide">${`${uppercase} `.repeat(repeats + 1)}</span></div>`);
+            rows.push(`<div class="handwriting-row"><strong>Print:</strong> ${"_ ".repeat(Math.max(8, unit.length * 4))}</div>`);
+        });
+        rows.push('<div class="handwriting-row"><strong>Sentence:</strong> Trace once, then print twice with finger-spaced gaps.</div>');
+        return rows.join("");
+    }
+
+    if (generateHandwritingBtn && handwritingPreview) {
+        generateHandwritingBtn.addEventListener("click", () => {
+            handwritingPreview.innerHTML = buildHandwritingRows(handwritingTextInput?.value, handwritingLevelSelect?.value || "beginner");
+        });
+        handwritingPreview.innerHTML = buildHandwritingRows("abc", "beginner");
+    }
+
+    if (traceCanvas) {
+        const ctx = traceCanvas.getContext("2d");
+        let drawing = false;
+
+        function pointFromEvent(evt) {
+            const rect = traceCanvas.getBoundingClientRect();
+            const source = evt.touches ? evt.touches[0] : evt;
+            return { x: source.clientX - rect.left, y: source.clientY - rect.top };
+        }
+
+        function startDraw(evt) {
+            drawing = true;
+            const { x, y } = pointFromEvent(evt);
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            evt.preventDefault();
+        }
+
+        function draw(evt) {
+            if (!drawing) return;
+            const { x, y } = pointFromEvent(evt);
+            ctx.lineWidth = 3;
+            ctx.lineCap = "round";
+            ctx.strokeStyle = "#bb86fc";
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            evt.preventDefault();
+        }
+
+        function stopDraw() {
+            drawing = false;
+            ctx.beginPath();
+        }
+
+        traceCanvas.addEventListener("mousedown", startDraw);
+        traceCanvas.addEventListener("mousemove", draw);
+        traceCanvas.addEventListener("mouseup", stopDraw);
+        traceCanvas.addEventListener("mouseleave", stopDraw);
+        traceCanvas.addEventListener("touchstart", startDraw, { passive: false });
+        traceCanvas.addEventListener("touchmove", draw, { passive: false });
+        traceCanvas.addEventListener("touchend", stopDraw);
+
+        if (clearTraceBtn) {
+            clearTraceBtn.addEventListener("click", () => {
+                ctx.clearRect(0, 0, traceCanvas.width, traceCanvas.height);
+            });
+        }
     }
 
     // --- Operator Cockpit Render Logic ---
