@@ -13,6 +13,7 @@ ISO_NAME="axiom-mesh-live-$(date +%Y%m%d).iso"
 OUTPUT_ISO="$SCRIPT_DIR/$ISO_NAME"
 UBUNTU_ISO_URL="https://releases.ubuntu.com/noble/ubuntu-24.04-desktop-amd64.iso"
 UBUNTU_ISO="$WORK_DIR/ubuntu-24.04-desktop-amd64.iso"
+OFFLINE_MANIFEST="$SCRIPT_DIR/offline-bundle.manifest.json"
 
 # Colors
 RED='\033[0;31m'
@@ -44,6 +45,7 @@ check_prerequisites() {
     command -v unsquashfs >/dev/null 2>&1 || missing+=("squashfs-tools")
     command -v wget >/dev/null 2>&1 || missing+=("wget")
     command -v mkisofs >/dev/null 2>&1 || missing+=("genisoimage")
+    command -v python3 >/dev/null 2>&1 || missing+=("python3")
     
     if [ ${#missing[@]} -ne 0 ]; then
         log_error "Missing required packages: ${missing[*]}"
@@ -61,6 +63,42 @@ check_prerequisites() {
     fi
     
     log_success "All prerequisites met."
+}
+
+load_offline_bundle_manifest() {
+    export AXIOM_LINUX_PACKAGES=""
+    export AXIOM_PYTHON_PACKAGES=""
+    export AXIOM_NODE_GLOBAL_PACKAGES=""
+    export AXIOM_LOCAL_MODEL_TAGS=""
+
+    if [ ! -f "$OFFLINE_MANIFEST" ]; then
+        log_warn "No offline bundle manifest found at $OFFLINE_MANIFEST. Using built-in dependency defaults."
+        return
+    fi
+
+    log_info "Loading offline bundle manifest..."
+
+    local parsed
+    parsed="$(python3 - "$OFFLINE_MANIFEST" << 'PY'
+import json
+import sys
+from pathlib import Path
+
+manifest_path = Path(sys.argv[1])
+manifest = json.loads(manifest_path.read_text())
+
+def serialise(key, value):
+    print(f"{key}={','.join(value)}")
+
+serialise("AXIOM_LINUX_PACKAGES", manifest.get("linux_packages", []))
+serialise("AXIOM_PYTHON_PACKAGES", manifest.get("python_packages", []))
+serialise("AXIOM_NODE_GLOBAL_PACKAGES", manifest.get("node_global_packages", []))
+serialise("AXIOM_LOCAL_MODEL_TAGS", [m.get("tag", "") for m in manifest.get("model_artifacts", []) if m.get("tag")])
+PY
+)"
+
+    eval "$parsed"
+    log_success "Offline bundle manifest loaded."
 }
 
 download_ubuntu_iso() {
@@ -105,6 +143,13 @@ customize_system() {
     log_info "Copying AXIOM-MESH repository..."
     mkdir -p "$WORK_DIR/new-root/opt/axiom-mesh"
     cp -r "$REPO_ROOT"/* "$WORK_DIR/new-root/opt/axiom-mesh/"
+
+    # Copy optional offline payloads for cross-platform provisioning
+    if [ -d "$REPO_ROOT/live-installer/offline" ]; then
+        log_info "Copying offline payload cache..."
+        mkdir -p "$WORK_DIR/new-root/opt/axiom-mesh/live-installer/offline"
+        cp -r "$REPO_ROOT/live-installer/offline/"* "$WORK_DIR/new-root/opt/axiom-mesh/live-installer/offline/" 2>/dev/null || true
+    fi
     
     # Make installer scripts executable
     chmod +x "$WORK_DIR/new-root/opt/axiom-mesh/install.py"
@@ -137,7 +182,7 @@ EOF
     
     # Install additional packages needed by AXIOM-MESH
     log_info "Preparing package list..."
-    cat >> "$WORK_DIR/new-root/tmp/axiom-packages.txt" << EOF
+    cat > "$WORK_DIR/new-root/tmp/axiom-packages.txt" << EOF
 docker.io
 docker-compose
 make
@@ -149,6 +194,40 @@ git
 curl
 wget
 EOF
+
+    if [ -n "$AXIOM_LINUX_PACKAGES" ]; then
+        echo "$AXIOM_LINUX_PACKAGES" | tr ',' '\n' >> "$WORK_DIR/new-root/tmp/axiom-packages.txt"
+    fi
+
+    # Prepare python package intent list for chroot provisioning
+    cat > "$WORK_DIR/new-root/tmp/axiom-python-packages.txt" << EOF
+httpx
+fastapi
+uvicorn
+pydantic
+python-dotenv
+requests
+rich
+psutil
+docker
+pyyaml
+EOF
+
+    if [ -n "$AXIOM_PYTHON_PACKAGES" ]; then
+        echo "$AXIOM_PYTHON_PACKAGES" | tr ',' '\n' >> "$WORK_DIR/new-root/tmp/axiom-python-packages.txt"
+    fi
+
+    cat > "$WORK_DIR/new-root/tmp/axiom-node-packages.txt" << EOF
+EOF
+    if [ -n "$AXIOM_NODE_GLOBAL_PACKAGES" ]; then
+        echo "$AXIOM_NODE_GLOBAL_PACKAGES" | tr ',' '\n' >> "$WORK_DIR/new-root/tmp/axiom-node-packages.txt"
+    fi
+
+    cat > "$WORK_DIR/new-root/tmp/axiom-model-tags.txt" << EOF
+EOF
+    if [ -n "$AXIOM_LOCAL_MODEL_TAGS" ]; then
+        echo "$AXIOM_LOCAL_MODEL_TAGS" | tr ',' '\n' >> "$WORK_DIR/new-root/tmp/axiom-model-tags.txt"
+    fi
     
     # Create post-installation script to run in chroot
     cat > "$WORK_DIR/new-root/tmp/setup-axiom.sh" << 'CHROOT_SCRIPT'
@@ -173,11 +252,31 @@ usermod -aG docker ubuntu 2>/dev/null || true
 
 # Install Python dependencies for AXIOM-MESH
 cd /opt/axiom-mesh
-pip3 install --break-system-packages -r requirements.txt 2>/dev/null || \
-pip3 install httpx fastapi uvicorn pydantic python-dotenv requests rich psutil docker pyyaml
+pip3 install --break-system-packages -r requirements.txt 2>/dev/null || true
+
+# Install curated Python packages (fallback list + manifest-provided list)
+if [ -f /tmp/axiom-python-packages.txt ]; then
+    pip3 install --break-system-packages $(cat /tmp/axiom-python-packages.txt | grep -v "^#" | tr '\n' ' ') 2>/dev/null || true
+fi
+
+# Install offline wheels when bundled
+if ls /opt/axiom-mesh/live-installer/offline/wheels/*.whl >/dev/null 2>&1; then
+    pip3 install --break-system-packages /opt/axiom-mesh/live-installer/offline/wheels/*.whl 2>/dev/null || true
+fi
+
+# Install optional global node packages from manifest
+if [ -s /tmp/axiom-node-packages.txt ]; then
+    npm install -g $(cat /tmp/axiom-node-packages.txt | grep -v "^#" | tr '\n' ' ') 2>/dev/null || true
+fi
+
+# Save local model intent for first boot provisioning
+if [ -s /tmp/axiom-model-tags.txt ]; then
+    mkdir -p /opt/axiom-mesh/config
+    cp /tmp/axiom-model-tags.txt /opt/axiom-mesh/config/local_model_tags.txt
+fi
 
 # Clean up
-rm -f /tmp/axiom-packages.txt /tmp/setup-axiom.sh
+rm -f /tmp/axiom-packages.txt /tmp/axiom-python-packages.txt /tmp/axiom-node-packages.txt /tmp/axiom-model-tags.txt /tmp/setup-axiom.sh
 
 echo "AXIOM-MESH setup complete!"
 CHROOT_SCRIPT
@@ -317,6 +416,7 @@ main() {
     echo ""
     
     check_prerequisites
+    load_offline_bundle_manifest
     download_ubuntu_iso
     extract_iso
     customize_system
