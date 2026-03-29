@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -10,7 +11,7 @@ import "./HorizonForecast.sol";
 import "./SymbiosisEngine.sol";
 import "./MemoryLattice.sol";
 
-contract VaultManager is ReentrancyGuard {
+contract VaultManager is ReentrancyGuard, Ownable {
     IERC721 public immutable vaultKeyNFT;          // NFT acts as key
     CognitiveFrictionVerifier public poerVerifier;
     HorizonForecast public horizon;
@@ -30,15 +31,24 @@ contract VaultManager is ReentrancyGuard {
     event AssetsLocked(uint256 indexed nftId, address token, uint256 amount);
     event AssetsReleased(uint256 indexed nftId, address token, uint256 amount);
 
-    constructor(address _nft, address _poer, address _horizon, address _symbiosis) {
+    constructor(address _nft, address _poer, address _horizon, address _symbiosis) Ownable(msg.sender) {
         vaultKeyNFT = IERC721(_nft);
         poerVerifier = CognitiveFrictionVerifier(_poer);
         horizon = HorizonForecast(_horizon);
         symbiosis = SymbiosisEngine(_symbiosis);
     }
 
-    function setMemoryLattice(address _lattice) external {
+    function setMemoryLattice(address _lattice) external onlyOwner {
         memoryLattice = MemoryLattice(_lattice);
+    }
+
+    function _assertLatticeStable(uint256 nftId, address token) internal view {
+        if (address(memoryLattice) == address(0)) {
+            return;
+        }
+        bytes32 fromNode = keccak256(abi.encodePacked("VAULT", nftId));
+        bytes32 toNode = keccak256(abi.encodePacked("TOKEN", token));
+        require(memoryLattice.hasDirectEdge(fromNode, toNode), "Lattice stability check failed");
     }
 
     function createVault(uint256 nftId) external nonReentrant {
@@ -56,7 +66,8 @@ contract VaultManager is ReentrancyGuard {
     function lockAssets(uint256 nftId, address token, uint256 amount) external nonReentrant {
         // For now, allow owner to lock assets
         require(vaults[nftId].owner == msg.sender, "Unauthorized");
-        require(address(memoryLattice) == address(0) || memoryLattice.getLatticePath(bytes32(nftId), bytes32(uint256(uint160(token)))).length >= 0, "Lattice stability check failed");
+        require(amount > 0, "Amount must be > 0");
+        _assertLatticeStable(nftId, token);
 
         // Transfer ERC20 token to vault
         SafeERC20.safeTransferFrom(IERC20(token), msg.sender, address(this), amount);
@@ -67,11 +78,15 @@ contract VaultManager is ReentrancyGuard {
 
     // Horizon-verified release (only through Symbiosis proposals)
     function releaseAssets(uint256 nftId, address token, uint256 amount, bytes calldata horizonProof) external nonReentrant {
-        // Assume horizon.verifyForecast(horizonProof) or similar logic for checking higher order risk.
-        require(address(memoryLattice) == address(0) || memoryLattice.getLatticePath(bytes32(nftId), bytes32(uint256(uint160(token)))).length >= 0, "Lattice stability check failed");
+        _assertLatticeStable(nftId, token);
         // Here we require that it's called by SymbiosisEngine or the owner
         require(msg.sender == vaults[nftId].owner || msg.sender == address(symbiosis), "Unauthorized");
         require(vaults[nftId].lockedTokens[token] >= amount, "Insufficient locked balance");
+        require(amount > 0, "Amount must be > 0");
+
+        if (msg.sender == address(symbiosis)) {
+            require(horizon.verifyForecast(horizonProof), "Invalid horizon proof");
+        }
 
         vaults[nftId].lockedTokens[token] -= amount;
         SafeERC20.safeTransfer(IERC20(token), msg.sender, amount);

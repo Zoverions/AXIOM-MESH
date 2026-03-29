@@ -587,9 +587,9 @@ Both reviews independently flag this as the **largest existential risk**:
 
 ## 7) Top-Level To Do
 1. Transformer Foundation
-2. Axiom Symbiosis Engine + Monetization
-3. Axiom Vault Network
-4. Axiom Memory Lattice
+2. [x] **Axiom Symbiosis Engine + Monetization** — 2026-03-29 — @agent — implemented owner-gated monetization controls (`setMonetization`), fee telemetry (`BundleMonetized`), and channel-only execution guardrails in `SymbiosisEngine.sol`.
+3. [x] **Axiom Vault Network** — 2026-03-29 — @agent — implemented owner-gated lattice wiring, enforceable lattice edge checks, and stricter lock/release controls (non-zero amounts + proof-gated symbiosis releases) in `VaultManager.sol`.
+4. [x] **Axiom Memory Lattice** — 2026-03-29 — @agent — hardened lattice graph semantics in `MemoryLattice.sol` with node existence/weight validation for edges plus `hasDirectEdge` checks consumed by vault policy.
 5. [x] **Digital Entity + Symbiote Connection + Educational Node** — 2026-03-26 — @agent — completed and verified implementation.
 6. [x] **DonationCampaign + Self-Funding Loop** — 2026-03-26 — @agent — completed and verified implementation.
 7. [x] **Multi-Chain Bridging & Rating System** — 2026-03-26 — @agent — completed and verified implementation.
