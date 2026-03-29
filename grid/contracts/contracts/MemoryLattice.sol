@@ -59,6 +59,9 @@ contract MemoryLattice is ReentrancyGuard {
         uint256 weight,
         bytes calldata horizonProof
     ) external nonReentrant {
+        require(nodes[fromNode].timestamp != 0, "Source node missing");
+        require(nodes[toNode].timestamp != 0, "Target node missing");
+        require(weight > 0, "Weight must be > 0");
         require(horizon.verifyForecast(horizonProof), "Higher-order risk detected");
 
         edgesFrom[fromNode].push(LatticeEdge({
@@ -76,5 +79,15 @@ contract MemoryLattice is ReentrancyGuard {
         // Simple traversal (expandable); returns verifiable dependency path
         // Implementation can be extended later with graph algorithms
         return edgesFrom[startNode];
+    }
+
+    function hasDirectEdge(bytes32 fromNode, bytes32 toNode) external view returns (bool) {
+        LatticeEdge[] storage outgoing = edgesFrom[fromNode];
+        for (uint256 i = 0; i < outgoing.length; i++) {
+            if (outgoing[i].toNode == toNode) {
+                return true;
+            }
+        }
+        return false;
     }
 }

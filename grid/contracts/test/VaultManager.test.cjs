@@ -65,4 +65,29 @@ describe("VaultManager", function () {
         .to.emit(vaultManager, "AssetsReleased")
         .withArgs(nftId, erc20.target, 50);
   });
+
+  it("Should enforce owner-only memory lattice setter", async function () {
+    await expect(vaultManager.connect(user).setMemoryLattice(ethers.ZeroAddress))
+      .to.be.reverted;
+
+    await expect(vaultManager.connect(owner).setMemoryLattice(ethers.ZeroAddress))
+      .to.not.be.reverted;
+  });
+
+  it("Should reject zero-amount lock/release", async function () {
+    const nftId = 2;
+    await vaultKeyNFT.mint(user.address, nftId);
+    await vaultManager.connect(user).createVault(nftId);
+
+    const AXM = await ethers.getContractFactory("AXM");
+    const erc20 = await AXM.deploy(owner.address, owner.address, owner.address);
+    await erc20.transfer(user.address, 1000);
+    await erc20.connect(user).approve(vaultManager.target, 1000);
+
+    await expect(vaultManager.connect(user).lockAssets(nftId, erc20.target, 0))
+      .to.be.revertedWith("Amount must be > 0");
+
+    await expect(vaultManager.connect(user).releaseAssets(nftId, erc20.target, 0, "0x"))
+      .to.be.revertedWith("Insufficient locked balance");
+  });
 });

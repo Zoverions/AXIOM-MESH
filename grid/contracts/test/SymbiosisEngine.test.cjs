@@ -66,9 +66,69 @@ describe("SymbiosisEngine", function () {
   });
 
   it("Should execute symbiosis bundle", async function () {
-    const bundleHash = ethers.keccak256(ethers.toUtf8Bytes("bundle"));
+    const action1 = ethers.keccak256(ethers.toUtf8Bytes("action1"));
+    const MockZKMLVerifier = await ethers.getContractFactory("MockZKMLVerifier");
+    const zk = await MockZKMLVerifier.deploy();
+    await poerVerifier.setZkVerifier(zk.target);
+
+    const a = [0, 0];
+    const b = [[0, 0], [0, 0]];
+    const c = [0, 0];
+    const dummyProof = ethers.AbiCoder.defaultAbiCoder().encode(
+      ["uint256[2]", "uint256[2][2]", "uint256[2]"],
+      [a, b, c]
+    );
+    const tx = await symbiosis.proposeSymbiosisBundle([action1], dummyProof, ethers.ZeroHash, ethers.ZeroHash);
+    const receipt = await tx.wait();
+    const proposedEvent = receipt.logs.find(e => e.fragment && e.fragment.name === "SymbiosisBundleProposed");
+    const bundleHash = proposedEvent.args[0];
+
     await expect(symbiosis.executeSymbiosisBundle(bundleHash))
-      .to.emit(symbiosis, "SymbiosisBundleExecuted")
-      .withArgs(bundleHash);
+      .to.be.revertedWith("Only channel");
+  });
+
+  it("Should allow owner to set monetization and emit monetization event on proposal", async function () {
+    await expect(symbiosis.connect(agentA).setMonetization(50, agentA.address))
+      .to.be.reverted;
+
+    await expect(symbiosis.setMonetization(50, owner.address))
+      .to.emit(symbiosis, "MonetizationUpdated")
+      .withArgs(50, owner.address);
+
+    const action1 = ethers.keccak256(ethers.toUtf8Bytes("action1"));
+    const MockZKMLVerifier = await ethers.getContractFactory("MockZKMLVerifier");
+    const zk = await MockZKMLVerifier.deploy();
+    await poerVerifier.setZkVerifier(zk.target);
+
+    const a = [0, 0];
+    const b = [[0, 0], [0, 0]];
+    const c = [0, 0];
+    const dummyProof = ethers.AbiCoder.defaultAbiCoder().encode(
+      ["uint256[2]", "uint256[2][2]", "uint256[2]"],
+      [a, b, c]
+    );
+
+    await expect(symbiosis.proposeSymbiosisBundle([action1], dummyProof, ethers.ZeroHash, ethers.ZeroHash))
+      .to.emit(symbiosis, "BundleMonetized");
+  });
+
+  it("Should reject invalid monetization configuration", async function () {
+    await expect(symbiosis.setMonetization(10001, owner.address))
+      .to.be.revertedWith("Fee too high");
+
+    await expect(symbiosis.setMonetization(100, ethers.ZeroAddress))
+      .to.be.revertedWith("Invalid collector");
+  });
+
+  it("Should enforce owner-only memory lattice wiring", async function () {
+    const fakeHash = ethers.keccak256(ethers.toUtf8Bytes("missing-bundle"));
+    await expect(symbiosis.connect(owner).executeSymbiosisBundle(fakeHash))
+      .to.be.revertedWith("Only channel");
+
+    await expect(symbiosis.connect(agentA).setMemoryLattice(ethers.ZeroAddress))
+      .to.be.reverted;
+
+    await expect(symbiosis.connect(owner).setMemoryLattice(ethers.ZeroAddress))
+      .to.not.be.reverted;
   });
 });
