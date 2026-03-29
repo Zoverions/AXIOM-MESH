@@ -29,11 +29,21 @@ describe("AXM", function () {
     const balances = await Promise.all([
       axmContract.balanceOf(founderEntity.address),
       axmContract.balanceOf(networkTreasury.address),
-      axmContract.balanceOf(ecosystemReserve.address)
+      axmContract.balanceOf(await axmContract.getAddress())
     ]);
 
     expect(balances[0]).to.equal((totalMinted * founderPercent) / 100n);
     expect(balances[1]).to.equal((totalMinted * treasuryPercent) / 100n);
     expect(balances[2]).to.equal((totalMinted * ecosystemPercent) / 100n);
+
+    // Ecosystem reserve is emitted over time, not released at T0.
+    expect(await axmContract.balanceOf(ecosystemReserve.address)).to.equal(0n);
+
+    await hre.ethers.provider.send("evm_increaseTime", [365 * 24 * 60 * 60]); // 1 year
+    await hre.ethers.provider.send("evm_mine", []);
+    await axmContract.releaseEcosystemEmission();
+
+    const emitted = await axmContract.balanceOf(ecosystemReserve.address);
+    expect(emitted).to.be.greaterThan(0n);
   });
 });

@@ -347,6 +347,40 @@ func (l *Ledger) JoinSwarm(swarmID string, nodeID string) bool {
 	return true
 }
 
+// LeaveSwarm removes a node from a swarm and updates adaptive PoER difficulty.
+// Returns true if the node was removed, false if swarm/node was not found.
+func (l *Ledger) LeaveSwarm(swarmID string, nodeID string) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	swarm, ok := l.Swarms[swarmID]
+	if !ok {
+		return false
+	}
+
+	index := -1
+	for i, n := range swarm.Nodes {
+		if n == nodeID {
+			index = i
+			break
+		}
+	}
+	if index == -1 {
+		return false
+	}
+
+	swarm.Nodes = append(swarm.Nodes[:index], swarm.Nodes[index+1:]...)
+	l.Swarms[swarmID] = swarm
+
+	totalNodes := 0
+	for _, s := range l.Swarms {
+		totalNodes += len(s.Nodes)
+	}
+	consensus.SetNetworkNodeCount(int64(totalNodes))
+
+	return true
+}
+
 func (l *Ledger) resolveStorageCapacityUnsafe(nodeID string) uint64 {
 	if profile, ok := l.NodeProfiles[nodeID]; ok && profile.StorageGB > 0 {
 		return uint64(profile.StorageGB)

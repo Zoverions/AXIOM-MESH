@@ -4,8 +4,11 @@ pragma solidity ^0.8.20;
 import "./TimelockedOwnable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract ComputeBond is TimelockedOwnable, AccessControl {
+interface ISwarmSizeOracle {
+    function getNetworkNodeCount() external view returns (uint256);
+}
 
+contract ComputeBond is TimelockedOwnable, AccessControl {
     // M12.8 Reach >= 90% smart contract unit test coverage and tie tests to the Interface Control Document.
     // The test suites explicitly cover stake, slash, and withdraw functions covering full node lifecycle constraints.
     struct Bond {
@@ -41,6 +44,7 @@ contract ComputeBond is TimelockedOwnable, AccessControl {
     error UnauthorizedDelegate();
     error ZKMLVerifierNotConfigured();
     error InvalidSeveranceProof();
+    error SwarmSizeOracleMismatch(uint256 localSize, uint256 oracleSize);
 
     bytes32 public constant DELEGATOR_ROLE = keccak256("DELEGATOR_ROLE");
     bytes32 public constant TREASURY_MANAGER_ROLE = keccak256("TREASURY_MANAGER_ROLE");
@@ -128,6 +132,10 @@ contract ComputeBond is TimelockedOwnable, AccessControl {
 
     // Simple state variable to track total active nodes for decay math
     uint256 public gridSwarmSize;
+    address public swarmSizeOracle;
+    uint256 public maxSwarmSizeDriftBps = 500; // 5% allowed drift
+    event SwarmSizeOracleConfigured(address indexed oracle, uint256 maxDriftBps);
+    event SwarmSizeSynchronized(uint256 previousLocal, uint256 oracleSize);
 
     constructor() TimelockedOwnable(msg.sender) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -139,6 +147,17 @@ contract ComputeBond is TimelockedOwnable, AccessControl {
 
     function setWeightOracle(address _oracle) external onlyTimelocked(keccak256(abi.encodePacked("setWeightOracle", _oracle))) {
         weightOracleContract = _oracle;
+    }
+
+    function setSwarmSizeOracle(address _oracle) external onlyTimelocked(keccak256(abi.encodePacked("setSwarmSizeOracle", _oracle))) {
+        swarmSizeOracle = _oracle;
+        emit SwarmSizeOracleConfigured(_oracle, maxSwarmSizeDriftBps);
+    }
+
+    function setMaxSwarmSizeDriftBps(uint256 _bps) external onlyTimelocked(keccak256(abi.encodePacked("setMaxSwarmSizeDriftBps", _bps))) {
+        require(_bps <= 10_000, "Invalid bps");
+        maxSwarmSizeDriftBps = _bps;
+        emit SwarmSizeOracleConfigured(swarmSizeOracle, _bps);
     }
 
     /**
@@ -193,12 +212,40 @@ contract ComputeBond is TimelockedOwnable, AccessControl {
      * Exactly 5.00% starting share, decaying to 0% at 10k nodes.
      */
     function getCurrentFounderShare() external view returns (uint256) {
-        uint256 s = gridSwarmSize;
+        uint256 s = _verifiedSwarmSize();
         if (s >= 10000) return 0;
 
         // 500 = 5.00%
         uint256 share = 500 - (s * 500 / 10000);
         return share < 50 ? 0 : share;
+    }
+
+    function syncGridSwarmSizeFromOracle() external {
+        if (swarmSizeOracle == address(0)) return;
+        uint256 oracleSize = ISwarmSizeOracle(swarmSizeOracle).getNetworkNodeCount();
+        uint256 previous = gridSwarmSize;
+        gridSwarmSize = oracleSize;
+        emit SwarmSizeSynchronized(previous, oracleSize);
+    }
+
+    function _verifiedSwarmSize() internal view returns (uint256) {
+        uint256 localSize = gridSwarmSize;
+        if (swarmSizeOracle == address(0)) {
+            return localSize;
+        }
+
+        uint256 oracleSize = ISwarmSizeOracle(swarmSizeOracle).getNetworkNodeCount();
+        if (!_withinDrift(localSize, oracleSize, maxSwarmSizeDriftBps)) {
+            revert SwarmSizeOracleMismatch(localSize, oracleSize);
+        }
+        return oracleSize;
+    }
+
+    function _withinDrift(uint256 a, uint256 b, uint256 driftBps) internal pure returns (bool) {
+        if (a == b) return true;
+        if (b == 0) return a == 0;
+        uint256 diff = a > b ? a - b : b - a;
+        return (diff * 10_000) <= (b * driftBps);
     }
 
     // New 5% Permanent Founder Allocation Support Functions
