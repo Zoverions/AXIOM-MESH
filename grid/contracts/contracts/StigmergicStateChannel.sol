@@ -41,6 +41,18 @@ interface ISoulboundReputation {
     function getAggregateReputation(address _user) external view returns (uint256);
 }
 
+/// @notice Verifies a fraud proof submitted during a channel challenge.
+///         The verifier must confirm that the submitted proof demonstrates a
+///         state transition violation (e.g., invalid zkML output, double-spend,
+///         or mismatched state roots) for the given channel.
+interface IFraudProofVerifier {
+    function verifyFraudProof(
+        bytes32 channelId,
+        bytes32 claimedStateRoot,
+        bytes calldata fraudProof
+    ) external returns (bool);
+}
+
 struct AttentionArtifact {
     bytes32 attentionScopeHash;
     bytes32 dependencyGraphRoot;
@@ -58,6 +70,7 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
     address public horizonForecast;
     MemoryLattice public memoryLattice;
     ISoulboundReputation public soulboundReputation;
+    IFraudProofVerifier public fraudProofVerifier;
 
     uint256 public constant CHALLENGE_WINDOW = 7 days;
     uint256 public constant NETWORK_TAX_BPS = 500;
@@ -122,6 +135,11 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
     function setSoulboundReputation(address _reputation) external {
         require(msg.sender == guardianSentinel, "Unauthorized setter");
         soulboundReputation = ISoulboundReputation(_reputation);
+    }
+
+    function setFraudProofVerifier(address _verifier) external {
+        require(msg.sender == guardianSentinel, "Unauthorized setter");
+        fraudProofVerifier = IFraudProofVerifier(_verifier);
     }
 
     function openChannel(address agentB, bytes32 taskHash, uint256 stake) external nonReentrant returns (bytes32) {
@@ -284,6 +302,15 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
         require(!ch.isSettled, "Already settled");
         require(block.timestamp <= ch.challengeWindowEnds, "Window closed");
         require(fraudProof.length > 0, "Missing fraud proof");
+
+        // Semantic fraud proof verification — requires a deployed IFraudProofVerifier.
+        // If no verifier is configured, challenges are rejected to prevent griefing.
+        require(address(fraudProofVerifier) != address(0), "Fraud proof verifier not configured");
+        require(
+            fraudProofVerifier.verifyFraudProof(channelId, ch.finalStateRoot, fraudProof),
+            "Invalid fraud proof"
+        );
+
         ch.isChallenged = true;
         emit SettlementChallenged(channelId, msg.sender);
     }

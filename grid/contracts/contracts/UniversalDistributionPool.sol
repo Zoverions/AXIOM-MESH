@@ -35,10 +35,10 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable {
     }
 
     function initialize(uint256 _defaultShare) public initializer {
-
-
-        //__UUPSUpgradeable_init();
-        networkSharePercentage = _defaultShare;
+        // Default to 60 per policy (60% Network Security Fund, 40% Wealth Generation Pool).
+        // Caller may override via _defaultShare; passing 0 applies the canonical 60% default.
+        __UUPSUpgradeable_init();
+        networkSharePercentage = _defaultShare == 0 ? 60 : _defaultShare;
         externalFundsEnabled = false; // Disabled until Level 3 gate is passed
     }
 

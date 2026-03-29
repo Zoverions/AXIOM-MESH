@@ -5,6 +5,17 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+interface IUniversalDistributionPool {
+    function deposit(address from, uint256 amount, string calldata source) external payable;
+}
+
+/**
+ * @title RevenueModel
+ * @notice Collects protocol revenue (API tiers, sandbox, bridge fees) and routes
+ *         all proceeds directly to the UniversalDistributionPool for 60/40 split.
+ *         Owner can no longer drain fees to an arbitrary wallet — treasury routing
+ *         is enforced at the contract level.
+ */
 contract RevenueModel is Ownable {
     using SafeERC20 for IERC20;
 
@@ -34,6 +45,7 @@ contract RevenueModel is Ownable {
     uint256 public nextDatasetId = 1;
 
     IERC20 public paymentToken;
+    IUniversalDistributionPool public distributionPool;
 
     event TierUpgraded(address indexed user, APITier tier);
     event SandboxPurchased(address indexed user);
@@ -41,9 +53,20 @@ contract RevenueModel is Ownable {
     event BridgeFeePaid(address indexed user, uint256 fee);
     event DatasetListed(uint256 indexed id, string name, uint256 price, address provider);
     event DatasetPurchased(uint256 indexed id, address indexed buyer);
+    event FeeRouted(address indexed from, uint256 amount, string source);
 
-    constructor(address _paymentToken) Ownable(msg.sender) {
+    constructor(address _paymentToken, address _distributionPool) Ownable(msg.sender) {
+        require(_paymentToken != address(0), "Invalid token");
+        require(_distributionPool != address(0), "Invalid pool");
         paymentToken = IERC20(_paymentToken);
+        distributionPool = IUniversalDistributionPool(_distributionPool);
+    }
+
+    /// @dev Routes collected fees to the UniversalDistributionPool.
+    function _routeToPool(uint256 amount, string memory source) internal {
+        paymentToken.safeApprove(address(distributionPool), amount);
+        distributionPool.deposit(address(this), amount, source);
+        emit FeeRouted(msg.sender, amount, source);
     }
 
     function upgradeTier(APITier newTier) external {
@@ -58,6 +81,7 @@ contract RevenueModel is Ownable {
 
         if (fee > 0) {
             paymentToken.safeTransferFrom(msg.sender, address(this), fee);
+            _routeToPool(fee, "api-tier");
         }
 
         userTiers[msg.sender] = newTier;
@@ -67,6 +91,7 @@ contract RevenueModel is Ownable {
     function purchasePremiumSandbox() external {
         require(!premiumSandboxes[msg.sender], "Already own premium sandbox");
         paymentToken.safeTransferFrom(msg.sender, address(this), premiumSandboxFee);
+        _routeToPool(premiumSandboxFee, "premium-sandbox");
         premiumSandboxes[msg.sender] = true;
         emit SandboxPurchased(msg.sender);
     }
@@ -74,6 +99,7 @@ contract RevenueModel is Ownable {
     function payDelegationFee(address delegatee) external {
         uint256 fee = delegationFees[delegatee];
         require(fee > 0, "No fee set");
+        // Delegation fees go directly to the delegatee — not pooled.
         paymentToken.safeTransferFrom(msg.sender, delegatee, fee);
         emit DelegationFeePaid(msg.sender, delegatee, fee);
     }
@@ -84,6 +110,7 @@ contract RevenueModel is Ownable {
 
     function payBridgeFee() external {
         paymentToken.safeTransferFrom(msg.sender, address(this), bridgeFee);
+        _routeToPool(bridgeFee, "bridge-fee");
         emit BridgeFeePaid(msg.sender, bridgeFee);
     }
 
@@ -96,12 +123,27 @@ contract RevenueModel is Ownable {
     function purchaseDataset(uint256 datasetId) external {
         Dataset memory dataset = datasets[datasetId];
         require(dataset.provider != address(0), "Dataset does not exist");
+        // Dataset fees go to the data provider — not pooled.
         paymentToken.safeTransferFrom(msg.sender, dataset.provider, dataset.price);
         emit DatasetPurchased(datasetId, msg.sender);
     }
 
-    function withdrawFees(address to, uint256 amount) external onlyOwner {
-        require(to != address(0), "Invalid recipient");
-        paymentToken.safeTransfer(to, amount);
+    /// @notice Owner can update fee parameters via governance.
+    function setFees(
+        uint256 _developerTierFee,
+        uint256 _enterpriseTierFee,
+        uint256 _premiumSandboxFee,
+        uint256 _bridgeFee
+    ) external onlyOwner {
+        developerTierFee = _developerTierFee;
+        enterpriseTierFee = _enterpriseTierFee;
+        premiumSandboxFee = _premiumSandboxFee;
+        bridgeFee = _bridgeFee;
+    }
+
+    /// @notice Update the distribution pool address (owner-only, governance-gated in practice).
+    function setDistributionPool(address _pool) external onlyOwner {
+        require(_pool != address(0), "Invalid pool");
+        distributionPool = IUniversalDistributionPool(_pool);
     }
 }

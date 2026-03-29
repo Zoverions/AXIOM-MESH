@@ -21,6 +21,24 @@ Update format example:
 
 ## 2) Priority Lanes (Now)
 
+### NEW – Tokenomics Hardening & Sustainability (2026-03-29)
+- [x] Fix networkSharePercentage default (10 → 60) in UniversalDistributionPool.sol — 2026-03-29 — @agent — aligned contract default with published 60/40 policy; uncommented __UUPSUpgradeable_init()
+- [x] Fix RevenueModel.sol fee routing — route all protocol fees to UniversalDistributionPool instead of owner wallet — 2026-03-29 — @agent — rewrote RevenueModel with _routeToPool(), removed withdrawFees() drain vector
+- [x] Auto-route collectiveInvestmentPool on slash/withdraw in ComputeBond.sol — 2026-03-29 — @agent — added distributionPool state var, flushCollectiveInvestmentPool(), called on slash+withdraw
+- [x] Fix missing closing brace in ComputeBond.slash() — 2026-03-29 — @agent — pre-existing syntax bug fixed
+- [x] Add IFraudProofVerifier interface + semantic fraud proof verification in StigmergicStateChannel — 2026-03-29 — @agent — replaced fraudProof.length > 0 with verifyFraudProof() call; fail-closed if verifier not configured
+- [x] Implement adaptive PoER difficulty in grid/consensus/poer.go — 2026-03-29 — @agent — BaseDifficulty=8, scales to 24 at 10k+ nodes; atomic SetNetworkNodeCount(); updated poer_test.go
+- [x] Write docs/TOKENOMICS-IMPROVEMENTS-2026-03-29.md — 2026-03-29 — @agent — full audit findings, applied fixes, remaining roadmap, burn mechanism proposal
+- [ ] Wire SetNetworkNodeCount() into chain.go JoinSwarm/LeaveSwarm — owner: grid
+- [ ] Define and enforce ecosystem reserve emission schedule in AXM.sol — owner: contracts+governance
+- [ ] Add gridSwarmSize oracle verification for FDBA manipulation prevention — owner: contracts+security
+- [ ] Activate fee burn via ZoverionsDAO governance proposal (target: 0.5% of channel tax) — owner: governance
+- [ ] Fix WeightOracle DoS vector in ComputeBond.submitZKMLProof (decouple oracle call from proof submission) — owner: contracts
+- [ ] Add release/burn mechanism for governance-locked quadratic voting tokens in ZoverionsDAO — owner: contracts
+- [ ] Wire UniversalDistributionPool revenue to auto-fund StakingRewards.notifyRewardAmount() — owner: contracts+finance
+- [ ] Add MEV protection (commit-reveal or time-weighted ordering) to CrossChainBridge — owner: contracts+security
+- [ ] Deploy IFraudProofVerifier implementation contract and wire to StigmergicStateChannel — owner: contracts
+
 ### NEW – Capsule Hierarchy Refinement (User Zov – March 28 2026)
 - [x] Add Skill Pill layer (lightweight basic skills – OpenClaw/Agent Zero style) — 2026-03-29 — @agent — implemented hierarchy + installer layer mapping — 766c694
 - [x] Formalize hierarchy: Skill Pill → Capsule → Capsule Plus in docs/CAPSULE-HIERARCHY.md — 2026-03-29 — @agent — published hierarchy contract and installer mapping — 766c694

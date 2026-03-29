@@ -327,6 +327,13 @@ func (l *Ledger) JoinSwarm(swarmID string, nodeID string) bool {
 	swarm.Nodes = append(swarm.Nodes, nodeID)
 	l.Swarms[swarmID] = swarm
 
+	// Update adaptive PoER difficulty with the new total node count.
+	totalNodes := 0
+	for _, s := range l.Swarms {
+		totalNodes += len(s.Nodes)
+	}
+	consensus.SetNetworkNodeCount(int64(totalNodes))
+
 	capacity := l.resolveStorageCapacityUnsafe(nodeID)
 	encodedNodeID := [32]byte{}
 	copy(encodedNodeID[:], []byte(nodeID))

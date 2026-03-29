@@ -97,6 +97,26 @@ contract ComputeBond is TimelockedOwnable, AccessControl {
     // WeightOracle reference for PoER boosts
     address public weightOracleContract;
 
+    // UniversalDistributionPool — collectiveInvestmentPool is auto-routed here
+    address public distributionPool;
+    event CollectiveInvestmentRouted(uint256 amount);
+
+    function setDistributionPool(address _pool) external onlyTimelocked(keccak256(abi.encodePacked("setDistributionPool", _pool))) {
+        require(_pool != address(0), "Invalid pool");
+        distributionPool = _pool;
+    }
+
+    /// @dev Routes accumulated collectiveInvestmentPool balance to the distribution pool.
+    ///      Called automatically on slash/withdraw; can also be called manually.
+    function flushCollectiveInvestmentPool() public {
+        uint256 amount = collectiveInvestmentPool;
+        if (amount == 0 || distributionPool == address(0)) return;
+        collectiveInvestmentPool = 0;
+        (bool success, ) = distributionPool.call{value: amount}("");
+        require(success, "CIP flush failed");
+        emit CollectiveInvestmentRouted(amount);
+    }
+
     // FDBA: Founder Decaying Bootstrap Allocation
     // The founder's allocation starts at 5% and linearly decays to 0% once the network reaches 10,000 active nodes.
     // This decay is programmatically enforced in `getCurrentFounderShare()`, preventing permanent rent extraction.
@@ -337,6 +357,8 @@ contract ComputeBond is TimelockedOwnable, AccessControl {
         }
 
         emit BondSlashed(nodeId, amount, bond.amount);
+        // Auto-route the collective investment portion to the distribution pool.
+        flushCollectiveInvestmentPool();
     }
 
     /**
@@ -424,6 +446,8 @@ contract ComputeBond is TimelockedOwnable, AccessControl {
         if (!success) revert TransferFailed();
 
         emit BondWithdrawn(nodeId, msg.sender, amount);
+        // Auto-route the collective investment portion to the distribution pool.
+        flushCollectiveInvestmentPool();
     }
 
     /**
