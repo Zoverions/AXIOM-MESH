@@ -65,6 +65,7 @@ The installer automatically detects your platform and installs all dependencies 
 - **Deployment cost analysis:** `docs/DEPLOYMENT_COST_ANALYSIS.md`
 - **Hardware profile matrix:** `docs/HARDWARE-PROFILE-MATRIX.md`
 - **Resource balancer policy:** `docs/RESOURCE-BALANCER-POLICY.md`
+- **Network efficiency strategy backlog:** `docs/subtasks/NETWORK-EFFICIENCY-NOVEL-STRATEGIES.md`
 - **Mainnet contract addresses:** `docs/MAINNET_ADDRESSES.md`
 - **Skill capsule specification:** `docs/SKILL-CAPSULE-SPEC.md`
 - **SSI technical implementation:** `docs/SSI-TECHNICAL-IMPLEMENTATION.md`
