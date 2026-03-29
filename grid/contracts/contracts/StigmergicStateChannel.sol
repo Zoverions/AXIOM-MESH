@@ -8,6 +8,7 @@ import "./MemoryLattice.sol";
 interface IAXM {
     function transferFrom(address from, address to, uint256 value) external returns (bool);
     function transfer(address to, uint256 value) external returns (bool);
+    function burn(uint256 value) external;
 }
 
 interface ICognitiveFrictionVerifier {
@@ -74,6 +75,7 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
 
     uint256 public constant CHALLENGE_WINDOW = 7 days;
     uint256 public constant NETWORK_TAX_BPS = 500;
+    uint256 public feeBurnBpsOfTax;
     uint256 public channelNonce;
 
     struct Channel {
@@ -99,6 +101,8 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
     event SettlementChallenged(bytes32 indexed channelId, address challenger);
     event ChannelFundingReleased(bytes32 indexed channelId, uint256 networkTax, uint256 payoutA, uint256 payoutB);
     event ChallengeModifiersApplied(bytes32 indexed channelId, uint256 minRep, uint256 modifiedWindow, uint256 modifiedStake);
+    event FeeBurnBpsUpdated(uint256 previousBps, uint256 newBps);
+    event ChannelTaxBurned(bytes32 indexed channelId, uint256 burnedAmount);
 
     constructor(
         address _axm,
@@ -140,6 +144,16 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
     function setFraudProofVerifier(address _verifier) external {
         require(msg.sender == guardianSentinel, "Unauthorized setter");
         fraudProofVerifier = IFraudProofVerifier(_verifier);
+    }
+
+    /// @notice Sets the percentage of channel tax to burn (in BPS), e.g. 50 = 0.5% of tax.
+    /// @dev Can only be set by guardianSentinel (governance executor path).
+    function setFeeBurnBpsOfTax(uint256 _feeBurnBpsOfTax) external {
+        require(msg.sender == guardianSentinel, "Unauthorized setter");
+        require(_feeBurnBpsOfTax <= 10_000, "Invalid bps");
+        uint256 previous = feeBurnBpsOfTax;
+        feeBurnBpsOfTax = _feeBurnBpsOfTax;
+        emit FeeBurnBpsUpdated(previous, _feeBurnBpsOfTax);
     }
 
     function openChannel(address agentB, bytes32 taskHash, uint256 stake) external nonReentrant returns (bytes32) {
@@ -287,7 +301,14 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
         uint256 payoutA = (payout * ch.stakeA) / ch.lockedStake;
         uint256 payoutB = payout - payoutA;
 
-        require(axmToken.transfer(universalDistributionPool, tax), "Tax transfer failed");
+        uint256 burnAmount = (tax * feeBurnBpsOfTax) / 10_000;
+        uint256 poolAmount = tax - burnAmount;
+
+        if (burnAmount > 0) {
+            axmToken.burn(burnAmount);
+            emit ChannelTaxBurned(channelId, burnAmount);
+        }
+        require(axmToken.transfer(universalDistributionPool, poolAmount), "Tax transfer failed");
         require(axmToken.transfer(ch.agentA, payoutA), "A payout failed");
         require(axmToken.transfer(ch.agentB, payoutB), "B payout failed");
 

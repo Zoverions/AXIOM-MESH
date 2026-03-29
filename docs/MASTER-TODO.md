@@ -32,9 +32,9 @@ Update format example:
 - [x] Wire SetNetworkNodeCount() into chain.go JoinSwarm/LeaveSwarm — 2026-03-29 — @agent — added Ledger.LeaveSwarm() with adaptive PoER node recount and coverage tests
 - [x] Define and enforce ecosystem reserve emission schedule in AXM.sol — 2026-03-29 — @agent — locked 85% reserve behind 10-year linear on-chain emission with releasable accounting
 - [x] Add gridSwarmSize oracle verification for FDBA manipulation prevention — 2026-03-29 — @agent — added oracle-backed drift checks + sync path; founder-share calc now fails closed on tampered swarm size
-- [ ] Activate fee burn via ZoverionsDAO governance proposal (target: 0.5% of channel tax) — owner: governance
-- [ ] Fix WeightOracle DoS vector in ComputeBond.submitZKMLProof (decouple oracle call from proof submission) — owner: contracts
-- [ ] Add release/burn mechanism for governance-locked quadratic voting tokens in ZoverionsDAO — owner: contracts
+- [x] Activate fee burn via ZoverionsDAO governance proposal (target: 0.5% of channel tax) — 2026-03-29 — @agent — added DAO fee-burn activation proposal/execution path and state-channel burn BPS control — c2f0162
+- [x] Fix WeightOracle DoS vector in ComputeBond.submitZKMLProof (decouple oracle call from proof submission) — 2026-03-29 — @agent — removed oracle-liveness hard dependency from proof submission and added skip event telemetry — c2f0162
+- [x] Add release/burn mechanism for governance-locked quadratic voting tokens in ZoverionsDAO — 2026-03-29 — @agent — added proposal finalization, unlock delay, voter release flow, and burn path for passed proposals — c2f0162
 - [ ] Wire UniversalDistributionPool revenue to auto-fund StakingRewards.notifyRewardAmount() — owner: contracts+finance
 - [ ] Add MEV protection (commit-reveal or time-weighted ordering) to CrossChainBridge — owner: contracts+security
 - [ ] Deploy IFraudProofVerifier implementation contract and wire to StigmergicStateChannel — owner: contracts
