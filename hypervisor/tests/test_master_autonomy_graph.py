@@ -99,3 +99,40 @@ async def test_build_master_autonomy_graph(
     mock_deployer_instance.propose_and_deploy.assert_called_once_with(b'1234', b'salt', "TestContract", 50000)
     mock_shadow_node_instance.run_local_cycle.assert_called_once()
     mock_inheritance_instance.execute.assert_called_once()
+
+
+@patch("hypervisor.agents.master_autonomy_graph.AutonomousDeployer")
+@patch("hypervisor.agents.master_autonomy_graph.AutonomousModelTrainer")
+@patch("hypervisor.agents.master_autonomy_graph.AutonomousResourceManager")
+@patch("hypervisor.agents.master_autonomy_graph.InheritanceExecutor")
+@patch("hypervisor.agents.master_autonomy_graph.ShadowNode")
+@patch("hypervisor.agents.master_autonomy_graph.AutonomousDistributionManager")
+@patch("hypervisor.agents.master_autonomy_graph.AutonomousLiquidityManager")
+@patch("hypervisor.agents.master_autonomy_graph.AutomatedV3LiquidityManager")
+@patch("hypervisor.agents.master_autonomy_graph.OmnichainRelayer")
+def test_build_master_autonomy_graph_creation(
+    mock_omnichain_relayer, mock_v3_liquidity, mock_liquidity, mock_dist_manager,
+    mock_shadow_node, mock_inheritance, mock_resource_manager, mock_trainer, mock_deployer
+):
+    """
+    Test the structure and creation of the master autonomy graph.
+    Mocks external systems to verify graph instantiation and node composition.
+    """
+    # Initialize the graph
+    graph = build_master_autonomy_graph("did:test")
+
+    # Verify graph exists and is configured
+    assert graph is not None
+
+    # Verify all expected nodes exist in the compiled graph structure
+    assert "blockchain_deploy" in graph.builder.nodes
+    assert "ml_training" in graph.builder.nodes
+    assert "resource_allocation" in graph.builder.nodes
+    assert "digital_legacy" in graph.builder.nodes
+    assert "shadow_sovereignty" in graph.builder.nodes
+    assert "dark_compute" in graph.builder.nodes
+    assert "distribution_pool" in graph.builder.nodes
+    assert "network_liquidity" in graph.builder.nodes
+    assert "v3_fee_harvest" in graph.builder.nodes
+    assert "monitor_metrics_node" in graph.builder.nodes
+    assert "cross_chain_bridge" in graph.builder.nodes

@@ -110,7 +110,7 @@ def save_token_store():
     """Save token store to disk"""
     try:
         with open(PROVISION_DB, 'w') as f:
-            json.dump({k: v.dict() for k, v in token_store.items()}, f, indent=2)
+            json.dump({k: v.model_dump() for k, v in token_store.items()}, f, indent=2)
     except Exception as e:
         print(f"⚠️  Error saving token store: {e}")
 
