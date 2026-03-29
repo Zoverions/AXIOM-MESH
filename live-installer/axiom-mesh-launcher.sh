@@ -16,9 +16,73 @@ NC='\033[0m' # No Color
 
 EXISTING=0
 INSTALL_PATH=""
+DETECTED_OS="unknown"
+
+hardware_assessment() {
+    echo -e "${YELLOW}🧠 Running hardware assessment...${NC}"
+    local cpu_model cpu_cores ram_mb disk_gb
+    cpu_model="$(lscpu 2>/dev/null | awk -F: '/Model name/ {gsub(/^[ \t]+/, "", $2); print $2; exit}')"
+    cpu_cores="$(nproc 2>/dev/null || echo "unknown")"
+    ram_mb="$(free -m 2>/dev/null | awk '/^Mem:/ {print $2; exit}')"
+    disk_gb="$(lsblk -b -dn -o SIZE,TYPE 2>/dev/null | awk '$2=="disk"{sum+=$1} END {printf "%.0f", sum/1024/1024/1024}')"
+
+    cpu_model="${cpu_model:-unknown}"
+    cpu_cores="${cpu_cores:-unknown}"
+    ram_mb="${ram_mb:-0}"
+    disk_gb="${disk_gb:-0}"
+
+    echo "CPU: $cpu_model ($cpu_cores cores)"
+    echo "RAM: ${ram_mb}MB"
+    echo "Disk: ${disk_gb}GB total attached"
+
+    mkdir -p /tmp/axiom-assessment
+    cat > /tmp/axiom-assessment/hardware_profile.json << EOF
+{
+  "cpu_model": "$(echo "$cpu_model" | sed 's/"/\\"/g')",
+  "cpu_cores": "$cpu_cores",
+  "ram_mb": "$ram_mb",
+  "disk_gb": "$disk_gb",
+  "timestamp_utc": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+}
+EOF
+}
+
+detect_partition_os() {
+    local mount_point="$1"
+    if [ -f "$mount_point/etc/os-release" ]; then
+        DETECTED_OS="$(grep '^PRETTY_NAME=' "$mount_point/etc/os-release" | head -n1 | cut -d= -f2- | tr -d '"')"
+        return
+    fi
+    if [ -d "$mount_point/Windows/System32" ] || [ -d "$mount_point/Program Files" ]; then
+        DETECTED_OS="Microsoft Windows"
+        return
+    fi
+    if [ -d "$mount_point/System/Library/CoreServices" ] || [ -f "$mount_point/System/Library/CoreServices/SystemVersion.plist" ]; then
+        DETECTED_OS="Apple macOS"
+        return
+    fi
+}
+
+announce_local_payloads() {
+    local payload_root="/opt/axiom-mesh/live-installer/offline"
+    if [ ! -d "$payload_root" ]; then
+        echo -e "${YELLOW}ℹ️ No offline payload directory found. Installer will use online package sources when needed.${NC}"
+        return
+    fi
+
+    echo -e "${YELLOW}📦 Offline payload inventory:${NC}"
+    for subdir in models wheels npm platforms; do
+        if [ -d "$payload_root/$subdir" ]; then
+            local count
+            count="$(find "$payload_root/$subdir" -type f | wc -l)"
+            echo "  - $subdir: $count file(s)"
+        fi
+    done
+}
 
 # Try to detect existing installation on any internal drive
 echo -e "${YELLOW}🔍 Scanning for existing AXIOM-MESH installations...${NC}"
+hardware_assessment
 
 for dev in /dev/sd[a-z] /dev/nvme0n1 /dev/vda; do
     if [ -e "$dev" ]; then
@@ -28,6 +92,7 @@ for dev in /dev/sd[a-z] /dev/nvme0n1 /dev/vda; do
             if [ -e "$partition" ]; then
                 mkdir -p /mnt/check_axiom
                 if mount "$partition" /mnt/check_axiom 2>/dev/null; then
+                    detect_partition_os /mnt/check_axiom
                     # Check for AXIOM-MESH indicators
                     if [ -f /mnt/check_axiom/axiom-mesh/.installed ] || \
                        [ -d /mnt/check_axiom/opt/axiom-mesh ] || \
@@ -53,6 +118,7 @@ if [ $EXISTING -eq 1 ]; then
     echo -e "${GREEN}==================================================${NC}"
     echo ""
     echo "Booting in normal mode..."
+    echo -e "${YELLOW}🖥️ Existing OS detected: ${DETECTED_OS}${NC}"
     echo ""
     
     # Check if custom GUI is available
@@ -106,6 +172,8 @@ else
     echo -e "${YELLOW}==================================================${NC}"
     echo ""
     echo "Launching full auto-installer..."
+    echo -e "${YELLOW}🖥️ Existing OS detected: ${DETECTED_OS}${NC}"
+    announce_local_payloads
     echo ""
     
     # Navigate to the AXIOM-MESH directory on the live USB
@@ -149,6 +217,11 @@ else
         echo "  2. Open standard dashboard: http://localhost:3000"
         echo "  3. Open custom node GUI: http://localhost:8080"
         echo "  4. Or reboot into your installed system"
+        if [ -f /opt/axiom-mesh/config/local_model_tags.txt ]; then
+            echo ""
+            echo -e "${YELLOW}🤖 Local model targets bundled in ISO:${NC}"
+            sed 's/^/  - /' /opt/axiom-mesh/config/local_model_tags.txt
+        fi
         echo ""
         
         # Optionally start the services automatically

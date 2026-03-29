@@ -6,9 +6,11 @@ Create a bootable Ubuntu 24.04 Desktop environment with AXIOM-MESH pre-configure
 
 - **Full Desktop Environment**: Boots into a complete Ubuntu 24.04 Desktop (not server-only)
 - **Auto-Detection**: Automatically detects existing AXIOM-MESH installations on internal drives
+- **Hardware + OS Assessment**: Records CPU/RAM/disk profile and detects resident OS signatures (Linux/Windows/macOS)
 - **Smart Installation**:
   - If installation found → boots normally with dashboard link
   - If no installation → runs fully automated installer
+- **Offline-First Payloads**: Supports bundled models, Python wheels, node payloads, and platform helper assets
 - **Zero Configuration**: Uses sensible defaults (education-node, local-mesh, cost priority, 50GB storage)
 - **Built from Your Repo**: 100% compiled from the AXIOM-MESH repository
 
@@ -36,7 +38,7 @@ cd live-installer
 The script will:
 1. Download Ubuntu 24.04 Desktop ISO (~5GB)
 2. Extract and customize it with your AXIOM-MESH repo
-3. Install all dependencies (Docker, Node.js, Python packages, etc.)
+3. Install all dependencies (Docker, Node.js, Python packages, framework runtime packages)
 4. Configure auto-launcher for first boot
 5. Rebuild into a new bootable ISO
 6. Optionally write directly to USB
@@ -98,6 +100,8 @@ python3 install.py --auto \
 |------|---------|
 | `build-axiom-live.sh` | Main build script - creates the ISO |
 | `axiom-mesh-launcher.sh` | Auto-launcher that runs on first boot |
+| `offline-bundle.manifest.json` | Dependency/model manifest consumed during ISO build |
+| `offline/README.md` | Offline payload staging instructions |
 | `README.md` | This documentation |
 
 ## Output
@@ -142,22 +146,27 @@ UBUNTU_ISO_URL="https://releases.ubuntu.com/noble/ubuntu-24.04-live-server-amd64
 
 ### Custom Package List
 
-Edit the package list in `build-axiom-live.sh`:
+Edit `offline-bundle.manifest.json`:
+
+```json
+{
+  "linux_packages": ["build-essential", "cmake", "python3-dev"],
+  "python_packages": ["torch", "transformers"],
+  "node_global_packages": ["pnpm"],
+  "model_artifacts": [
+    { "tag": "llama3:8b", "source_path": "live-installer/offline/models/llama3-8b.gguf" }
+  ]
+}
+```
+
+### Bundle Dependencies + Models for Local-Only Install
+
+Stage assets before running the builder:
 
 ```bash
-cat >> "$WORK_DIR/new-root/tmp/axiom-packages.txt" << EOF
-docker.io
-docker-compose
-make
-nodejs
-npm
-python3
-python3-pip
-git
-curl
-wget
-# Add your custom packages here
-EOF
+mkdir -p live-installer/offline/{models,wheels,npm,platforms/windows,platforms/linux,platforms/macos}
+# copy your assets into these folders, then run:
+cd live-installer && ./build-axiom-live.sh
 ```
 
 ### GitHub Actions CI/CD
