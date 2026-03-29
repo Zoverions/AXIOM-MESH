@@ -77,6 +77,11 @@ See `docs/audits/` directory for comprehensive security audits:
 - **State channel deep dive:** `docs/audits/stigmergic-state-channel-v4-deep-dive.md`
 - **Remediation plan:** `docs/audits/remediation-plan.md`
 
+## Assessments & Integration Plans
+See `docs/assessments/` for non-audit strategic assessments and integration planning:
+- **Ontario education capsule integration plan:** `docs/assessments/ONTARIO_EDUCATION_CAPSULE_INTEGRATION_PLAN.md`
+- **Repository automation + vetting + dashboard plan:** `docs/assessments/REPOSITORY_AUTOMATION_VETTING_AND_DASHBOARD_PLAN.md`
+
 ---
 
 ## 2) HOWTO Coverage
