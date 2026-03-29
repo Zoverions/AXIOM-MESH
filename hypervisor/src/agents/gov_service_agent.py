@@ -1,4 +1,3 @@
-from typing import Optional
 from src.sdk.citizen_sdk import CitizenDigitalEntity
 
 class GovServiceAgent:
