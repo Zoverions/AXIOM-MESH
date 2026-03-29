@@ -1,0 +1,258 @@
+{
+  "version": 1,
+  "root": "/workspace/AXIOM-MESH",
+  "steering_filenames": [
+    "AGENTS.md",
+    "SKILL.md",
+    "SKILL_MANIFEST.json",
+    "SOURCE_DESCRIPTOR.json",
+    "STEERING.md"
+  ],
+  "exclude_dirs": [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "build",
+    "coverage",
+    "dist",
+    "node_modules",
+    "venv"
+  ],
+  "entry_count": 18,
+  "entries": [
+    {
+      "path": "sandbox/capsules/codeanalysis/SKILL_MANIFEST.json",
+      "name": "SKILL_MANIFEST.json",
+      "scope_root": "sandbox/capsules/codeanalysis",
+      "scope_chain": [
+        "sandbox/capsules/codeanalysis",
+        "sandbox/capsules",
+        "sandbox",
+        "."
+      ],
+      "sha256": "e6008b891b6af68ce636d8d1af394bbcd95fbfaed9cc113520ead8c8e2b65c0d",
+      "size_bytes": 886
+    },
+    {
+      "path": "sandbox/capsules/codeanalysis/SOURCE_DESCRIPTOR.json",
+      "name": "SOURCE_DESCRIPTOR.json",
+      "scope_root": "sandbox/capsules/codeanalysis",
+      "scope_chain": [
+        "sandbox/capsules/codeanalysis",
+        "sandbox/capsules",
+        "sandbox",
+        "."
+      ],
+      "sha256": "49e2d8690cfd3206a973565771413acf7890de983cf1a4c0fae562d681a4c23a",
+      "size_bytes": 372
+    },
+    {
+      "path": "sandbox/capsules/crypto/SKILL_MANIFEST.json",
+      "name": "SKILL_MANIFEST.json",
+      "scope_root": "sandbox/capsules/crypto",
+      "scope_chain": [
+        "sandbox/capsules/crypto",
+        "sandbox/capsules",
+        "sandbox",
+        "."
+      ],
+      "sha256": "b1ac7c74a3ab867fea47b4c4d30165865976b88e07170df17503ffada5cfee94",
+      "size_bytes": 767
+    },
+    {
+      "path": "sandbox/capsules/crypto/SOURCE_DESCRIPTOR.json",
+      "name": "SOURCE_DESCRIPTOR.json",
+      "scope_root": "sandbox/capsules/crypto",
+      "scope_chain": [
+        "sandbox/capsules/crypto",
+        "sandbox/capsules",
+        "sandbox",
+        "."
+      ],
+      "sha256": "f6da33b51ac25a20c8e5e68ef2662557fc7779447420b4dceb2b0c78486c229f",
+      "size_bytes": 1928
+    },
+    {
+      "path": "sandbox/capsules/data_analysis/SKILL_MANIFEST.json",
+      "name": "SKILL_MANIFEST.json",
+      "scope_root": "sandbox/capsules/data_analysis",
+      "scope_chain": [
+        "sandbox/capsules/data_analysis",
+        "sandbox/capsules",
+        "sandbox",
+        "."
+      ],
+      "sha256": "22322458df4e6a4933d3631a329045855aae62322b1733d97ab85432541c6bd9",
+      "size_bytes": 873
+    },
+    {
+      "path": "sandbox/capsules/data_analysis/SOURCE_DESCRIPTOR.json",
+      "name": "SOURCE_DESCRIPTOR.json",
+      "scope_root": "sandbox/capsules/data_analysis",
+      "scope_chain": [
+        "sandbox/capsules/data_analysis",
+        "sandbox/capsules",
+        "sandbox",
+        "."
+      ],
+      "sha256": "faba62cd6ae4f9ac1b2b295e1d2564f15500142849c5fc2ec8dc841d55173192",
+      "size_bytes": 1907
+    },
+    {
+      "path": "sandbox/capsules/education/SKILL_MANIFEST.json",
+      "name": "SKILL_MANIFEST.json",
+      "scope_root": "sandbox/capsules/education",
+      "scope_chain": [
+        "sandbox/capsules/education",
+        "sandbox/capsules",
+        "sandbox",
+        "."
+      ],
+      "sha256": "64f09a851f0d3e7a955b2121cff417d2d8414a0324cf93c0c368185159312be9",
+      "size_bytes": 970
+    },
+    {
+      "path": "sandbox/capsules/education/SOURCE_DESCRIPTOR.json",
+      "name": "SOURCE_DESCRIPTOR.json",
+      "scope_root": "sandbox/capsules/education",
+      "scope_chain": [
+        "sandbox/capsules/education",
+        "sandbox/capsules",
+        "sandbox",
+        "."
+      ],
+      "sha256": "8426748f977fe43594cc66ec05191468305c6997e3f51b961f3467ecdb17459c",
+      "size_bytes": 362
+    },
+    {
+      "path": "sandbox/capsules/executive/SKILL_MANIFEST.json",
+      "name": "SKILL_MANIFEST.json",
+      "scope_root": "sandbox/capsules/executive",
+      "scope_chain": [
+        "sandbox/capsules/executive",
+        "sandbox/capsules",
+        "sandbox",
+        "."
+      ],
+      "sha256": "29b256fc857bb472814867200c630b96fd90e2ce9e26642f15f5d8ab202d1ee8",
+      "size_bytes": 949
+    },
+    {
+      "path": "sandbox/capsules/executive/SOURCE_DESCRIPTOR.json",
+      "name": "SOURCE_DESCRIPTOR.json",
+      "scope_root": "sandbox/capsules/executive",
+      "scope_chain": [
+        "sandbox/capsules/executive",
+        "sandbox/capsules",
+        "sandbox",
+        "."
+      ],
+      "sha256": "83c6807ca7732508af280956fece35b7c821626197142a52ea857332ff6c6079",
+      "size_bytes": 409
+    },
+    {
+      "path": "sandbox/capsules/math/SKILL_MANIFEST.json",
+      "name": "SKILL_MANIFEST.json",
+      "scope_root": "sandbox/capsules/math",
+      "scope_chain": [
+        "sandbox/capsules/math",
+        "sandbox/capsules",
+        "sandbox",
+        "."
+      ],
+      "sha256": "24fe08abf7d3e0830c8e109dc7bdaa8fded58217ff36d3d805d1d70ac8aa43d2",
+      "size_bytes": 867
+    },
+    {
+      "path": "sandbox/capsules/math/SOURCE_DESCRIPTOR.json",
+      "name": "SOURCE_DESCRIPTOR.json",
+      "scope_root": "sandbox/capsules/math",
+      "scope_chain": [
+        "sandbox/capsules/math",
+        "sandbox/capsules",
+        "sandbox",
+        "."
+      ],
+      "sha256": "f053e1ac77146fa8cf4ddf9008e3aac991bdb2568aeeb103f3c224be75e830cb",
+      "size_bytes": 366
+    },
+    {
+      "path": "sandbox/capsules/physics/SKILL_MANIFEST.json",
+      "name": "SKILL_MANIFEST.json",
+      "scope_root": "sandbox/capsules/physics",
+      "scope_chain": [
+        "sandbox/capsules/physics",
+        "sandbox/capsules",
+        "sandbox",
+        "."
+      ],
+      "sha256": "c4bda26fe53d8c06467d93a310234c07b6add36021de8baf99c146d4e1c2240a",
+      "size_bytes": 824
+    },
+    {
+      "path": "sandbox/capsules/physics/SOURCE_DESCRIPTOR.json",
+      "name": "SOURCE_DESCRIPTOR.json",
+      "scope_root": "sandbox/capsules/physics",
+      "scope_chain": [
+        "sandbox/capsules/physics",
+        "sandbox/capsules",
+        "sandbox",
+        "."
+      ],
+      "sha256": "e0b2f65d4f7228fd8e761c25095bedd44c136a71c9b810d214ecf480178e5748",
+      "size_bytes": 2220
+    },
+    {
+      "path": "sandbox/capsules/websearch/SKILL_MANIFEST.json",
+      "name": "SKILL_MANIFEST.json",
+      "scope_root": "sandbox/capsules/websearch",
+      "scope_chain": [
+        "sandbox/capsules/websearch",
+        "sandbox/capsules",
+        "sandbox",
+        "."
+      ],
+      "sha256": "bd798f93e174f295b40215922dcf6cd98ca16f234b677756d9b845a5d5becf48",
+      "size_bytes": 881
+    },
+    {
+      "path": "sandbox/capsules/websearch/SOURCE_DESCRIPTOR.json",
+      "name": "SOURCE_DESCRIPTOR.json",
+      "scope_root": "sandbox/capsules/websearch",
+      "scope_chain": [
+        "sandbox/capsules/websearch",
+        "sandbox/capsules",
+        "sandbox",
+        "."
+      ],
+      "sha256": "9e071cf371ac027a8d9f7255573bdcffe3363e5077c07b949de4237c0030190c",
+      "size_bytes": 366
+    },
+    {
+      "path": "sandbox/capsules/zoverions/SKILL_MANIFEST.json",
+      "name": "SKILL_MANIFEST.json",
+      "scope_root": "sandbox/capsules/zoverions",
+      "scope_chain": [
+        "sandbox/capsules/zoverions",
+        "sandbox/capsules",
+        "sandbox",
+        "."
+      ],
+      "sha256": "ce1b64525d34b799c642aaaac327bb1dba6bbea235e8a14c2ca98b1a4f175ee3",
+      "size_bytes": 1034
+    },
+    {
+      "path": "sandbox/capsules/zoverions/SOURCE_DESCRIPTOR.json",
+      "name": "SOURCE_DESCRIPTOR.json",
+      "scope_root": "sandbox/capsules/zoverions",
+      "scope_chain": [
+        "sandbox/capsules/zoverions",
+        "sandbox/capsules",
+        "sandbox",
+        "."
+      ],
+      "sha256": "917be8670cbcbed35ae847093d08076c30caa2172b6c1fab9dd2e1fdfe43383b",
+      "size_bytes": 375
+    }
+  ]
+}
