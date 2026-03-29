@@ -3,57 +3,99 @@
     "version": "2026.1",
     "region": "Ontario, Canada",
     "last_updated": "2026-03-28",
-    "grade_levels": ["9", "10", "11", "12"],
+    "grade_levels": [
+      "9",
+      "10",
+      "11",
+      "12"
+    ],
     "credit_system": {
       "total_credits_required": 30,
       "compulsory_credits": 18,
       "optional_credits": 12,
-      "credit_values": [0.5, 1.0, 1.5, 2.0]
+      "credit_values": [
+        0.5,
+        1.0,
+        1.5,
+        2.0
+      ]
     },
     "subject_areas": [
       {
         "name": "Mathematics",
-        "codes": ["MTH1W", "MPM2D", "MHF4U", "MCV4U"],
+        "codes": [
+          "MTH1W",
+          "MPM2D",
+          "MHF4U",
+          "MCV4U"
+        ],
         "edi_integration": true
       },
       {
         "name": "Science",
-        "codes": ["SNC1W", "SNC2D", "SBI3U", "SCH4U"],
+        "codes": [
+          "SNC1W",
+          "SNC2D",
+          "SBI3U",
+          "SCH4U"
+        ],
         "edi_integration": true
       },
       {
         "name": "English",
-        "codes": ["ENG1W", "ENG2D", "ENG3U", "ENG4U"],
+        "codes": [
+          "ENG1W",
+          "ENG2D",
+          "ENG3U",
+          "ENG4U"
+        ],
         "edi_integration": true
       },
       {
         "name": "Canadian Geography",
-        "codes": ["CGC1W"],
+        "codes": [
+          "CGC1W"
+        ],
         "edi_integration": true
       },
       {
         "name": "Canadian History",
-        "codes": ["CHC2D"],
+        "codes": [
+          "CHC2D"
+        ],
         "edi_integration": true
       },
       {
         "name": "Arts",
-        "codes": ["ATC1O", "AMU2O", "ADA3M"],
+        "codes": [
+          "ATC1O",
+          "AMU2O",
+          "ADA3M"
+        ],
         "edi_integration": true
       },
       {
         "name": "Health and Physical Education",
-        "codes": ["PPL1O", "PAF3O"],
+        "codes": [
+          "PPL1O",
+          "PAF3O"
+        ],
         "edi_integration": true
       },
       {
         "name": "French as a Second Language",
-        "codes": ["FSF1O", "FSF2O"],
+        "codes": [
+          "FSF1O",
+          "FSF2O"
+        ],
         "edi_integration": true
       },
       {
         "name": "Social Sciences and Humanities",
-        "codes": ["HIF1O", "HSP3U"],
+        "codes": [
+          "HIF1O",
+          "HSP3U"
+        ],
         "edi_integration": true
       }
     ],
@@ -135,8 +177,36 @@
     "blockchain_integration": {
       "attestation_contract": "OntarioEducationAttestor",
       "governance_oversight": "OntarioHealthGuild",
-      "supported_networks": ["ethereum", "polygon", "optimism"],
+      "supported_networks": [
+        "ethereum",
+        "polygon",
+        "optimism"
+      ],
       "fail_closed_mechanism": true
+    },
+    "curriculum_standards": {
+      "issuing_authority": "Ontario Ministry of Education",
+      "framework": "Ontario Curriculum (Grades 9-12)",
+      "compliance_cycle": "semester",
+      "strands": [
+        "Knowledge and Understanding",
+        "Thinking",
+        "Communication",
+        "Application"
+      ],
+      "graduation_requirements": {
+        "osslt_required": true,
+        "community_involvement_hours": 40,
+        "literacy_pathways": [
+          "OSSLT",
+          "OLC4O"
+        ]
+      },
+      "evidence_requirements": [
+        "course expectation traceability",
+        "assessment artifact retention",
+        "parental consent receipts for minors"
+      ]
     }
   }
 }

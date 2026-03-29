@@ -4,6 +4,10 @@ echo ==========================================================
 echo    AXIOM-MESH Bootstrap (Windows) - FULL AUTO MODE
 echo ==========================================================
 
+:: Supported pass-through flags to install.py:
+::   --capsule=skill-pill|capsule|capsule-plus
+::   --region=ontario|us|uk|china
+
 :: Auto-install Chocolatey if missing
 choco -v >nul 2>&1
 if %errorlevel% neq 0 (
