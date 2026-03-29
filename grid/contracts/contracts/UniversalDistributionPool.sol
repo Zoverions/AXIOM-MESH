@@ -9,6 +9,10 @@ import "./DynamicResourceAllocator.sol";
 import "./ComputeBond.sol";
 import "./CitizenshipNFT.sol";
 
+interface IStakingRewards {
+    function notifyRewardAmount(uint256 reward) external;
+}
+
 contract UniversalDistributionPool is Initializable, UUPSUpgradeable {
     FounderCommitment public immutable founder;
     DynamicResourceAllocator public immutable allocator;
@@ -21,10 +25,14 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable {
     mapping(bytes32 => uint256) public allocations; // taskId → amount
     address public crossChainBridge;
     bool public externalFundsEnabled;
+    address public stakingRewards;
+    uint256 public stakingRewardShareBps;
 
     event Inflow(address from, uint256 amount, string source);
     event Outflow(address to, uint256 amount, bytes32 zkProofHash);
     event NetworkShareAllocated(uint256 amount);
+    event StakingRewardsConfigured(address stakingRewards, uint256 rewardShareBps);
+    event StakingRewardsFunded(uint256 amount);
 
     constructor(address _founder, address _allocator, address _treasury, address _citizenship) {
         founder = FounderCommitment(_founder);
@@ -56,13 +64,21 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable {
 
         inflows[from] += amount;
         uint256 networkShare = (amount * networkSharePercentage) / 100;
+        uint256 stakingRewardAmount = 0;
+
+        if (msg.value != amount && stakingRewards != address(0) && stakingRewardShareBps > 0) {
+            stakingRewardAmount = (amount * stakingRewardShareBps) / 10_000;
+            require(IERC20(address(treasury)).transfer(stakingRewards, stakingRewardAmount), "Staking reward transfer failed");
+            IStakingRewards(stakingRewards).notifyRewardAmount(stakingRewardAmount);
+            emit StakingRewardsFunded(stakingRewardAmount);
+        }
 
         // Auto-send to general network pool
         (bool success, ) = address(treasury).call{value: networkShare}("");
         require(success, "Network share transfer failed");
         emit NetworkShareAllocated(networkShare);
 
-        allocator.allocateToTask(keccak256(abi.encode(from)), "distribution-pool", amount - networkShare);
+        allocator.allocateToTask(keccak256(abi.encode(from)), "distribution-pool", amount - networkShare - stakingRewardAmount);
 
         emit Inflow(from, amount, source);
     }
@@ -115,6 +131,14 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable {
     function setExternalFundsEnabled(bool _enabled) external {
         require(allocator.governance().isProposalPassed(keccak256(abi.encode(_enabled))) || msg.sender == address(founder), "Governance or founder required");
         externalFundsEnabled = _enabled;
+    }
+
+    function setStakingRewards(address _stakingRewards, uint256 _rewardShareBps) external {
+        require(msg.sender == address(founder), "Founder only");
+        require(_rewardShareBps <= 10_000, "Invalid bps");
+        stakingRewards = _stakingRewards;
+        stakingRewardShareBps = _rewardShareBps;
+        emit StakingRewardsConfigured(_stakingRewards, _rewardShareBps);
     }
 
     function getAuditTrail(address entity) external view returns (uint256 totalIn, uint256 totalOut, uint256 networkContributed) {
