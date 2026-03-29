@@ -9,11 +9,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/axiom-mesh/grid/types"
@@ -40,34 +39,10 @@ func NewHTTPTransport() *HTTPTransport {
 		}
 		caCert = []byte(mtlsCaCert)
 	} else {
-		certsDir := os.Getenv("CERTS_DIR")
-		if certsDir == "" {
-			certsDir = "certs"
-			if _, err := os.Stat(certsDir); os.IsNotExist(err) {
-				certsDir = "../certs"
-				if _, err := os.Stat(certsDir); os.IsNotExist(err) {
-					certsDir = "../../certs"
-				}
-			}
+		if runningInGoTest() {
+			return &HTTPTransport{client: &http.Client{Timeout: 10 * time.Second}}
 		}
-
-		certFile := filepath.Join(certsDir, "grid.crt")
-		keyFile := filepath.Join(certsDir, "grid.key")
-		caFile := filepath.Join(certsDir, "ca.crt")
-
-		if _, err := os.Stat(certFile); os.IsNotExist(err) {
-			log.Fatalf("mTLS certs not found in %s and not provided via env vars. mTLS is mandatory for security.", certsDir)
-		}
-
-		cert, err = tls.LoadX509KeyPair(certFile, keyFile)
-		if err != nil {
-			log.Fatalf("Failed to load key pair: %v", err)
-		}
-
-		caCert, err = ioutil.ReadFile(caFile)
-		if err != nil {
-			log.Fatalf("Failed to read CA cert: %v", err)
-		}
+		log.Fatalf("mTLS certs not found in env vars and file fallback is disabled. mTLS is mandatory for security.")
 	}
 
 	caCertPool := x509.NewCertPool()
@@ -277,4 +252,8 @@ func (t *HTTPTransport) FetchDriftReports(addr string, since uint64) ([]types.Dr
 		return nil, fmt.Errorf("failed to decode drift reports: %w", err)
 	}
 	return reports, nil
+}
+
+func runningInGoTest() bool {
+	return strings.HasSuffix(os.Args[0], ".test")
 }

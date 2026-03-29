@@ -1,6 +1,5 @@
 import axios from 'axios';
 import https from 'https';
-import fs from 'fs';
 import { IntentObject, IntentResponse } from '../types';
 import { asyncRandomBytes, CryptoWorkerPool } from '../performance/EventLoopOptimizer';
 import { SecretManager } from '../utils/secrets';
@@ -48,22 +47,15 @@ export async function sendToHypervisor(intent: IntentObject): Promise<IntentResp
 
                 let httpsAgent;
                 try {
-                    if (process.env.MTLS_CA_CERT && process.env.MTLS_CLIENT_CERT && process.env.MTLS_CLIENT_KEY) {
-                        httpsAgent = new https.Agent({
-                            cert: process.env.MTLS_CLIENT_CERT,
-                            key: process.env.MTLS_CLIENT_KEY,
-                            ca: process.env.MTLS_CA_CERT,
-                            rejectUnauthorized: true
-                        });
-                    } else {
-                        const certsDir = process.env.CERTS_DIR || '../certs';
-                        httpsAgent = new https.Agent({
-                            cert: fs.readFileSync(`${certsDir}/gateway.crt`),
-                            key: fs.readFileSync(`${certsDir}/gateway.key`),
-                            ca: fs.readFileSync(`${certsDir}/ca.crt`),
-                            rejectUnauthorized: true
-                        });
+                    if (!(process.env.MTLS_CA_CERT && process.env.MTLS_CLIENT_CERT && process.env.MTLS_CLIENT_KEY)) {
+                        throw new Error('Missing mTLS env secrets: MTLS_CA_CERT, MTLS_CLIENT_CERT, MTLS_CLIENT_KEY');
                     }
+                    httpsAgent = new https.Agent({
+                        cert: process.env.MTLS_CLIENT_CERT,
+                        key: process.env.MTLS_CLIENT_KEY,
+                        ca: process.env.MTLS_CA_CERT,
+                        rejectUnauthorized: true
+                    });
                 } catch (e) {
                     console.error("mTLS certs not found. mTLS is mandatory for security.");
                     process.exit(1);

@@ -15,7 +15,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -183,8 +182,6 @@ func NewServer(ledger *blockchain.Ledger, p2pNode *p2p.Node) *Server {
 		go s.startZKMLWorker()
 	}
 
-
-
 	return s
 }
 
@@ -276,12 +273,11 @@ func (s *Server) SetupRouter() *http.ServeMux {
 				RecommendedAction      string   `json:"recommended_action"`
 			}
 
-
 			if err := json.NewDecoder(r.Body).Decode(&alert); err == nil {
 				// Broadcast the event to all websocket listeners
 				s.BroadcastEvent("EMERGENCE_ALERT", alert)
 
-// Push the alert to Gateway Dashboard API
+				// Push the alert to Gateway Dashboard API
 				gatewayURL := os.Getenv("GATEWAY_API_URL")
 				if gatewayURL != "" {
 					go func() {
@@ -314,7 +310,6 @@ func (s *Server) SetupRouter() *http.ServeMux {
 				w.WriteHeader(http.StatusOK)
 				json.NewEncoder(w).Encode(map[string]string{"status": "alert broadcasted"})
 
-
 			} else {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 			}
@@ -322,7 +317,6 @@ func (s *Server) SetupRouter() *http.ServeMux {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	}))
-
 
 	mux.HandleFunc("/peers/manifests", verifySignatureMiddleware(s.handlePeersManifests))
 	mux.HandleFunc("/peers/profiles", verifySignatureMiddleware(s.handlePeersProfiles))
@@ -606,9 +600,6 @@ func (s *Server) SetupRouter() *http.ServeMux {
 				// For now we use default values: 1.0 attention, 1.0 reliability.
 				// This directly affects the final trust/PoER weighting integrated into the compute bond slash policy logic.
 
-
-
-
 				// M11.4: Attention-weighted consensus scoring path and integrate with compute bond/slashing policy hooks
 				// Determine attentionWeight based on the task type vs node's registered service classes
 				attentionWeight := 0.5 // Default baseline
@@ -641,9 +632,6 @@ func (s *Server) SetupRouter() *http.ServeMux {
 				}
 
 				s.ledger.AddSkill(skill)
-
-
-
 
 				json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 			} else {
@@ -1033,17 +1021,17 @@ func (s *Server) SetupRouter() *http.ServeMux {
 			}
 
 			// Non-linear thermodynamic health score calculation
-			thermodynamicScore := float64(activeNodes) * 1.5 + float64(snap.NetworkSecPool)*0.01 + float64(snap.WealthGenPool)*0.01
-			mscScore := graphDensity * 100.0 + thermodynamicScore
+			thermodynamicScore := float64(activeNodes)*1.5 + float64(snap.NetworkSecPool)*0.01 + float64(snap.WealthGenPool)*0.01
+			mscScore := graphDensity*100.0 + thermodynamicScore
 
 			demStats := map[string]interface{}{
-				"thermodynamic_health":   thermodynamicScore,
-				"meta_sentience_score":   mscScore,
-				"active_nodes":           activeNodes,
-				"network_sec_pool":       snap.NetworkSecPool,
-				"wealth_gen_pool":        snap.WealthGenPool,
-				"graph_density":          graphDensity,
-				"equilibrium_status":     "stable",
+				"thermodynamic_health": thermodynamicScore,
+				"meta_sentience_score": mscScore,
+				"active_nodes":         activeNodes,
+				"network_sec_pool":     snap.NetworkSecPool,
+				"wealth_gen_pool":      snap.WealthGenPool,
+				"graph_density":        graphDensity,
+				"equilibrium_status":   "stable",
 			}
 			json.NewEncoder(w).Encode(demStats)
 		} else {
@@ -1372,43 +1360,7 @@ func (s *Server) Start(addr string) error {
 		return server.Serve(listener)
 	}
 
-	certsDir := os.Getenv("CERTS_DIR")
-	if certsDir == "" {
-		certsDir = "certs"
-		if _, err := os.Stat(certsDir); os.IsNotExist(err) {
-			certsDir = "../certs"
-			if _, err := os.Stat(certsDir); os.IsNotExist(err) {
-				certsDir = "../../certs"
-			}
-		}
-	}
-
-	certFile := filepath.Join(certsDir, "grid.crt")
-	keyFile := filepath.Join(certsDir, "grid.key")
-	caFile := filepath.Join(certsDir, "ca.crt")
-
-	if _, err := os.Stat(certFile); err == nil {
-		caCert, err := os.ReadFile(caFile)
-		if err == nil {
-			caCertPool := x509.NewCertPool()
-			caCertPool.AppendCertsFromPEM(caCert)
-
-			tlsConfig := &tls.Config{
-				ClientCAs:  caCertPool,
-				ClientAuth: tls.RequireAndVerifyClientCert,
-			}
-
-			server := &http.Server{
-				Addr:      addr,
-				Handler:   mux,
-				TLSConfig: tlsConfig,
-			}
-			log.Printf("Starting Grid server on %s with mTLS", addr)
-			return server.ListenAndServeTLS(certFile, keyFile)
-		}
-	}
-
-	log.Fatalf("mTLS certs not found in %s and not provided via env vars. mTLS is mandatory for security.", certsDir)
+	log.Fatalf("mTLS certs not found in env vars and file fallback is disabled. mTLS is mandatory for security.")
 	return nil
 }
 

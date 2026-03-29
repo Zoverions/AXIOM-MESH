@@ -39,3 +39,10 @@ htmlcov/
 .DS_Store
 Thumbs.db
 ```
+# mTLS material (must come from secret manager at runtime)
+certs/*.crt
+certs/*.key
+certs/*.csr
+certs/*.srl
+!certs/.gitkeep
+!certs/README.md

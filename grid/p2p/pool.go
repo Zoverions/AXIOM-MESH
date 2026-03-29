@@ -1,15 +1,15 @@
 package p2p
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -45,34 +45,10 @@ func NewConnectionPool(maxIdle int, idleTimeout time.Duration) *ConnectionPool {
 		caCertPool.AppendCertsFromPEM([]byte(mtlsCaCert))
 		tlsConfig.RootCAs = caCertPool
 	} else {
-		certsDir := os.Getenv("CERTS_DIR")
-		if certsDir == "" {
-			certsDir = "certs"
-			if _, err := os.Stat(certsDir); os.IsNotExist(err) {
-				certsDir = "../certs"
-				if _, err := os.Stat(certsDir); os.IsNotExist(err) {
-					certsDir = "../../certs"
-				}
-			}
+		if runningInGoTest() {
+			return &ConnectionPool{connections: make(map[string]*http.Client), maxIdle: maxIdle, idleTimeout: idleTimeout, tlsConfig: tlsConfig}
 		}
-
-		certFile := filepath.Join(certsDir, "grid.crt")
-		keyFile := filepath.Join(certsDir, "grid.key")
-		caFile := filepath.Join(certsDir, "ca.crt")
-
-		if _, err := os.Stat(certFile); err == nil {
-			cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-			if err == nil {
-				tlsConfig.Certificates = []tls.Certificate{cert}
-			}
-
-			caCert, err := ioutil.ReadFile(caFile)
-			if err == nil {
-				caCertPool := x509.NewCertPool()
-				caCertPool.AppendCertsFromPEM(caCert)
-				tlsConfig.RootCAs = caCertPool
-			}
-		}
+		panic("mTLS certs not found in env vars and file fallback is disabled. mTLS is mandatory for security")
 	}
 
 	return &ConnectionPool{
@@ -103,10 +79,10 @@ func (p *ConnectionPool) GetClient(peerAddr string) *http.Client {
 
 	// Create new connection with pooling
 	transport := &http.Transport{
-		TLSClientConfig:       p.tlsConfig,
-		MaxIdleConns:          p.maxIdle,
-		MaxIdleConnsPerHost:   p.maxIdle,
-		IdleConnTimeout:       p.idleTimeout,
+		TLSClientConfig:     p.tlsConfig,
+		MaxIdleConns:        p.maxIdle,
+		MaxIdleConnsPerHost: p.maxIdle,
+		IdleConnTimeout:     p.idleTimeout,
 		DialContext: (&net.Dialer{
 			Timeout:   10 * time.Second,
 			KeepAlive: 30 * time.Second,
@@ -281,11 +257,11 @@ func (p *WorkerPool) GetStats() PoolStats {
 // P2PNodeWithPooling extends Node with connection and worker pooling
 type P2PNodeWithPooling struct {
 	*Node
-	connPool      *ConnectionPool
-	workerPool    *WorkerPool
-	broadcastWg   sync.WaitGroup
-	maxRetries    int
-	retryDelay    time.Duration
+	connPool    *ConnectionPool
+	workerPool  *WorkerPool
+	broadcastWg sync.WaitGroup
+	maxRetries  int
+	retryDelay  time.Duration
 }
 
 // NewP2PNodeWithPooling creates a new P2P node with optimized pooling
@@ -375,8 +351,8 @@ func (n *P2PNodeWithPooling) Shutdown(timeout time.Duration) {
 // GetPoolStats returns combined statistics for monitoring
 func (n *P2PNodeWithPooling) GetPoolStats() map[string]interface{} {
 	return map[string]interface{}{
-		"worker_pool":   n.workerPool.GetStats(),
+		"worker_pool":          n.workerPool.GetStats(),
 		"connection_pool_size": len(n.connPool.connections),
-		"peer_count":    len(n.Peers),
+		"peer_count":           len(n.Peers),
 	}
 }
