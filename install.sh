@@ -9,12 +9,19 @@ echo "=========================================================="
 CAPSULE_TYPE=${CAPSULE_TYPE:-"capsule"}  # skill-pill | capsule | capsule-plus
 CURRICULUM_REGION=${CURRICULUM_REGION:-"ontario"}
 
+MONITOR_PROFILE=""
+
 for arg in "$@"; do
   case "$arg" in
     --capsule=*) CAPSULE_TYPE="${arg#*=}" ;;
     --region=*) CURRICULUM_REGION="${arg#*=}" ;;
+    --monitor=*) MONITOR_PROFILE="${arg#*=}" ;;
   esac
 done
+
+if [ -n "$MONITOR_PROFILE" ]; then
+  echo "⚙️  Installer monitor profile explicitly set to: $MONITOR_PROFILE"
+fi
 
 if [ "$CAPSULE_TYPE" = "skill-pill" ]; then
   echo "🟢 Installing Skill Pill (ultra-lightweight) – <150 MB RAM"
@@ -123,4 +130,5 @@ if [[ ! -f "install.py" ]]; then
 fi
 
 echo "Python 3 is ready. Launching universal auto-installer..."
+
 python3 install.py "$@"

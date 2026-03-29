@@ -7,6 +7,7 @@ echo ==========================================================
 :: Supported pass-through flags to install.py:
 ::   --capsule=skill-pill|capsule|capsule-plus
 ::   --region=ontario|us|uk|china
+::   --monitor=dedicated-mesh|shared-machine|education-node|minimal-edge
 
 :: Auto-install Chocolatey if missing
 choco -v >nul 2>&1

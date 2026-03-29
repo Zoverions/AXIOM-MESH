@@ -13,6 +13,7 @@ import os from 'os';
 import { authMiddleware } from './middleware/auth';
 import { extractApiKeyFromHeaders, validateGatewayApiKey } from './middleware/auth_utils';
 import restRoutes, { validateNftRouteEnv } from './routes/rest';
+import mobileRoutes from './routes/mobile';
 import { normalizeInput } from './utils/normalizer';
 import { sendToHypervisor } from './services/hypervisorClient';
 import { parseAndSanitizeIntent } from './middleware/intent_parser';
@@ -89,7 +90,7 @@ app.use(bodyParser.json());
 app.use(wafMiddleware);
 
 // Serve static frontend dashboard with the same auth model as REST/WS
-app.use((req, res, next) => {
+app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (req.path.startsWith('/api') || req.path === '/health') {
         next();
         return;
@@ -99,6 +100,7 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, '../public')));
 
 app.use('/', restRoutes);
+app.use('/api/mobile', mobileRoutes);
 
 let server;
 try {

@@ -171,7 +171,7 @@ def main():
     parser = argparse.ArgumentParser(description="AXIOM-MESH Universal Cross-Platform Installer")
     parser.add_argument("--capsule", type=str, choices=["skill-pill", "capsule", "capsule-plus"], default="capsule", help="Capsule layer to install")
     parser.add_argument("--platform", type=str, help="Target platform overrides")
-    parser.add_argument("--monitor", type=str, help="Monitoring and edge role overrides")
+    parser.add_argument("--monitor", type=str, choices=["dedicated-mesh", "shared-machine", "education-node", "minimal-edge"], help="Monitoring and edge role overrides (4-mode matrix + runtime toggle)")
     parser.add_argument("--region", type=str, default=DEFAULT_REGION, help="Regional curriculum focus (e.g. ontario)")
     args, unknown = parser.parse_known_args()
     supported_regions = load_supported_regions()
@@ -221,12 +221,13 @@ def main():
                 machine_role = "education-node"
 
         if args.monitor:
-            print(f"Applying monitor override: {args.monitor}")
+            print(f"Applying monitor override (4-mode matrix toggle): {args.monitor}")
             machine_role = args.monitor
 
         if os_type == 'android':
             print("Android detected, forcing minimal-edge role.")
-            machine_role = "minimal-edge"
+            if not args.monitor:
+                machine_role = "minimal-edge"
 
         launch_mode = prompt_with_timeout("Launch mode (local-mesh/single-node/launch-testnet/launch-network)", "local-mesh", 15)
         user_priority = prompt_with_timeout("Primary priority (performance/security/cost/autonomy)", "security", 15)
@@ -371,11 +372,18 @@ def main():
     print("   Starting AXIOM-MESH Platform ")
     print("==========================================================")
 
-    if os_type == 'android':
-        print("Android environment: running minimal services...")
+    if os_type == 'android' or machine_role == 'minimal-edge':
+        print("📱 Android / Minimal Edge environment: running minimal services...")
         print("Installation complete!")
-        print("To run, execute: python3 -m hypervisor.src.orchestrator --mode public-pool")
-        subprocess.Popen([sys.executable, "-m", "hypervisor.src.orchestrator", "--mode", "public-pool"])
+        print("----------------------------------------------------------")
+        print("🚀 Mobile Utilities Enabled:")
+        print(" - QR Sync Init: POST /api/mobile/sync/init")
+        print(" - 2FA Verification: POST /api/mobile/2fa/verify")
+        print(" - Wallet Dashboard: GET /api/mobile/dashboard/data")
+        print("----------------------------------------------------------")
+        if os_type == 'android':
+            print("To run, execute: python3 -m hypervisor.src.orchestrator --mode public-pool")
+            subprocess.Popen([sys.executable, "-m", "hypervisor.src.orchestrator", "--mode", "public-pool"])
     else:
         if launch_mode in ["launch-network", "launch-testnet"]:
             print(f"Running in {launch_mode} mode; ensure wallet funding + deployment approvals are complete.")
