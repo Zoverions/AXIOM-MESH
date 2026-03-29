@@ -45,7 +45,7 @@ router.get('/members', (req: Request, res: Response) => {
  * Requests the system for candidate recommendations based on SoulboundReputation and system metrics.
  */
 router.get('/recommendations/:roleId', (req: Request, res: Response) => {
-    const roleId = parseInt(req.params.roleId, 10);
+    const roleId = parseInt(req.params.roleId as string, 10);
     const role = MOCK_ROLES.find(r => r.id === roleId);
 
     if (!role) {
