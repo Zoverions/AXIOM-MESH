@@ -5,6 +5,15 @@ echo "=========================================================="
 echo "   AXIOM-MESH Bootstrap (Unix/Linux/macOS) - FULL AUTO MODE"
 echo "=========================================================="
 
+# Capsule selector (new Skill Pill layer)
+CAPSULE_TYPE=${CAPSULE_TYPE:-"capsule"}  # skill-pill | capsule | capsule-plus
+if [ "$CAPSULE_TYPE" = "skill-pill" ]; then
+  echo "🟢 Installing Skill Pill (ultra-lightweight) – <150 MB RAM"
+  # only install minimal kernel + selected pill
+elif [ "$CAPSULE_TYPE" = "capsule-plus" ]; then
+  echo "🔥 Installing Capsule Plus (full education/governance) – Ontario default"
+fi
+
 # Auto-install Homebrew on macOS if missing
 if [[ "$(uname)" == "Darwin" ]] && ! command -v brew >/dev/null 2>&1; then
     echo "Homebrew not found → installing automatically..."
@@ -103,4 +112,4 @@ if [[ ! -f "install.py" ]]; then
 fi
 
 echo "Python 3 is ready. Launching universal auto-installer..."
-python3 install.py
+python3 install.py "$@"

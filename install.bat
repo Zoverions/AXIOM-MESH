@@ -22,6 +22,6 @@ if not exist install.py (
 )
 
 echo Python detected. Launching universal auto-installer...
-python install.py
+python install.py %*
 
 pause

@@ -21,6 +21,14 @@ Update format example:
 
 ## 2) Priority Lanes (Now)
 
+### NEW – Capsule Hierarchy Refinement (User Zov – March 28 2026)
+- [ ] Add Skill Pill layer (lightweight basic skills – OpenClaw/Agent Zero style)
+- [ ] Formalize hierarchy: Skill Pill → Capsule → Capsule Plus in docs/CAPSULE-HIERARCHY.md
+- [ ] Expand Ontario Education Capsule Plus with curriculum standards
+- [ ] Roadmap: Mirror governmental services (US, UK, China) using “pull not push” philosophy
+- [ ] Update install.sh/py/bat to support --capsule=skill-pill | capsule | capsule-plus
+- [ ] Add regional curriculum selector (Ontario default, others via config)
+
 ## Lane M0 — Program Control & Consolidation (Immediate)
 - [x] **M0.1** Freeze this file as the sole execution queue for cross-team delivery. — 2026-03-22 — @agent — established as canonical
 - [x] **M0.2** Migrate remaining actionable tasks from legacy roadmap/tracker docs into this file. — 2026-03-22 — @agent — migrated WBS tasks from PRODUCTION-EXECUTION-BACKLOG.md
