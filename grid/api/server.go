@@ -295,7 +295,7 @@ func (s *Server) SetupRouter() *http.ServeMux {
 						// Include internal auth token corresponding to Gateway configuration
 						secret := os.Getenv("GATEWAY_INTERNAL_SECRET")
 						if secret == "" {
-							secret = "internal-dev-secret-1234"
+							log.Printf("⚠️  GATEWAY_INTERNAL_SECRET not set. Gateway ingestion may fail.")
 						}
 						req.Header.Set("Authorization", "Bearer "+secret)
 

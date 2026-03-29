@@ -1,39 +1,37 @@
-import pytest
-from unittest.mock import patch, MagicMock
-from pathlib import Path
+import os
+import time
+from unittest.mock import patch
+from services.provision.provision_service import generate_config_file, InvitationToken
 
-from services.provision.provision_service import generate_qr_code
+def test_generate_config_file():
+    token = InvitationToken(
+        token_id="test-token-123",
+        mesh_id="test-mesh",
+        coordinator_url="http://test-coord",
+        expires_at=time.time() + 3600,
+        created_at=time.time(),
+        node_type="validator"
+    )
 
-@patch('services.provision.provision_service.qrcode.QRCode')
-@patch('services.provision.provision_service.Path')
-def test_generate_qr_code(mock_path_class, mock_qrcode_class):
-    # Setup mocks
-    mock_qr_instance = MagicMock()
-    mock_qrcode_class.return_value = mock_qr_instance
+    with patch('services.provision.provision_service.get_mesh_config') as mock_config:
+        mock_config.return_value = {
+            "mesh_id": "test-mesh-id",
+            "coordinator_url": "http://test-coord",
+            "network_name": "test-net",
+            "chain_id": "1234",
+            "rpc_url": "http://test-rpc"
+        }
 
-    mock_img = MagicMock()
-    mock_qr_instance.make_image.return_value = mock_img
+        config_content = generate_config_file(token)
 
-    mock_path_instance = MagicMock()
-    mock_path_class.return_value = mock_path_instance
-
-    # Mock the / operator for Path
-    mock_filepath = MagicMock()
-    mock_path_instance.__truediv__.return_value = mock_filepath
-    mock_filepath.__str__.return_value = "/tmp/axiom_qr_codes/token_123.png"
-
-    # Call function
-    result = generate_qr_code("test_data", "token_123")
-
-    # Assertions
-    mock_path_class.assert_called_with("/tmp/axiom_qr_codes")
-    mock_path_instance.mkdir.assert_called_with(exist_ok=True)
-
-    mock_qrcode_class.assert_called_once()
-    mock_qr_instance.add_data.assert_called_with("test_data")
-    mock_qr_instance.make.assert_called_with(fit=True)
-    mock_qr_instance.make_image.assert_called_with(fill_color="black", back_color="white")
-
-    mock_img.save.assert_called_once_with(mock_filepath)
-
-    assert result == "/tmp/axiom_qr_codes/token_123.png"
+        assert "NODE_TYPE=validator" in config_content
+        assert "MESH_ID=test-mesh-id" in config_content
+        assert "COORDINATOR_URL=http://test-coord" in config_content
+        assert "NETWORK_NAME=test-net" in config_content
+        assert "CHAIN_ID=1234" in config_content
+        assert "RPC_URL=http://test-rpc" in config_content
+        assert "JOIN_TOKEN=test-token-123" in config_content
+        assert f"JOIN_TOKEN_EXPIRES={token.expires_at}" in config_content
+        assert "NODE_ID=node-" in config_content
+        assert "API_KEY=" in config_content
+        assert "SECRET_KEY=" in config_content
