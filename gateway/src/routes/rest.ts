@@ -543,10 +543,12 @@ router.get('/api/v1/logs', authMiddleware, async (req: Request, res: Response) =
 
 import distributionRouter from './distribution';
 import dashboardRouter from './dashboard';
+import payrollRouter from './payroll';
 import councilRouter from './council';
 
 router.use('/api/v1/distribution', distributionRouter);
 router.use('/api/v1/dashboard', dashboardRouter);
+router.use('/api/v1/payroll', payrollRouter);
 router.use('/api/v1/council', councilRouter);
 
 // --- Configuration API ---
