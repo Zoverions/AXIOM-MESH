@@ -19,6 +19,7 @@ from typing import Optional, Dict, Any, List
 
 try:
     from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
+    from fastapi.concurrency import run_in_threadpool
     from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
     from fastapi.staticfiles import StaticFiles
     from fastapi.middleware.cors import CORSMiddleware
@@ -174,6 +175,11 @@ def generate_qr_code(data: str, token_id: str) -> str:
     img.save(filepath)
     
     return str(filepath)
+
+def save_config_file(filepath: Path, content: str):
+    """Write configuration file to disk (synchronous)"""
+    with open(filepath, 'w') as f:
+        f.write(content)
 
 def generate_config_file(token: InvitationToken) -> str:
     """Generate .env configuration file content for new node"""
@@ -539,7 +545,7 @@ async def generate_invitation(request: InvitationRequest):
     
     # Store token
     token_store[token_id] = token
-    save_token_store()
+    await run_in_threadpool(save_token_store)
     
     # Create signed payload for QR code
     payload = {
@@ -553,7 +559,7 @@ async def generate_invitation(request: InvitationRequest):
     signed_data = sign_payload(payload)
     
     # Generate QR code
-    qr_filepath = generate_qr_code(signed_data, token_id)
+    qr_filepath = await run_in_threadpool(generate_qr_code, signed_data, token_id)
     
     # Generate config file
     config_content = generate_config_file(token)
@@ -562,8 +568,7 @@ async def generate_invitation(request: InvitationRequest):
     config_dir = Path("/tmp/axiom_configs")
     config_dir.mkdir(exist_ok=True)
     config_filepath = config_dir / f"{token_id}.env"
-    with open(config_filepath, 'w') as f:
-        f.write(config_content)
+    await run_in_threadpool(save_config_file, config_filepath, config_content)
     
     return InvitationResponse(
         token_id=token_id,
@@ -635,7 +640,7 @@ async def join_mesh(request: Request):
         # Check expiration
         if time.time() > token.expires_at:
             del token_store[token_id]
-            save_token_store()
+            await run_in_threadpool(save_token_store)
             raise HTTPException(status_code=400, detail="Token expired")
         
         # Check usage limit
@@ -652,7 +657,7 @@ async def join_mesh(request: Request):
         token.metadata["wallet_address"] = wallet_address
         token.metadata["joined_at"] = datetime.now().isoformat()
         
-        save_token_store()
+        await run_in_threadpool(save_token_store)
         
         return {
             "success": True,
@@ -673,7 +678,7 @@ async def revoke_token(token_id: str):
         raise HTTPException(status_code=404, detail="Token not found")
     
     del token_store[token_id]
-    save_token_store()
+    await run_in_threadpool(save_token_store)
     
     return {"success": True, "message": "Token revoked"}
 
