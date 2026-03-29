@@ -28,6 +28,12 @@ Update format example:
 - [ ] Roadmap: Mirror governmental services (US, UK, China) using “pull not push” philosophy
 - [x] Update install.sh/py/bat to support --capsule=skill-pill | capsule | capsule-plus — 2026-03-29 — @agent — added explicit shell/batch flag handling and installer persistence — 766c694
 - [x] Add regional curriculum selector (Ontario default, others via config) — 2026-03-29 — @agent — added region catalog config + installer validation/defaulting — 766c694
+- [ ] Finalize low-overhead installer monitor profiles (4-mode matrix + runtime toggle) — owner: installer+ops
+- [ ] Expand Android/Termux path (QR sync, 2FA, wallet/achievements dashboard) — owner: mobile+installer
+- [ ] Ship one-time blockchain code + QR login E2E flow — owner: auth+wallet
+- [ ] Implement Secure Election Node (Governance+ paper ballot fallback + ZK verification) — owner: governance+security
+- [ ] Live USB polish pass (preloaded model bundles + capsule selector UX) — owner: release+ux
+- [x] Publish status snapshot for the above roadmap cluster — 2026-03-29 — @agent — added docs/STATUS-SKILL-PILL-AND-CAPSULE-ROADMAP-2026-03-29.md
 
 ## Lane M0 — Program Control & Consolidation (Immediate)
 - [x] **M0.1** Freeze this file as the sole execution queue for cross-team delivery. — 2026-03-22 — @agent — established as canonical
