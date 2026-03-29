@@ -5,13 +5,24 @@ echo "=========================================================="
 echo "   AXIOM-MESH Bootstrap (Unix/Linux/macOS) - FULL AUTO MODE"
 echo "=========================================================="
 
-# Capsule selector (new Skill Pill layer)
+# Parse early flags so shell-side messaging reflects requested mode.
 CAPSULE_TYPE=${CAPSULE_TYPE:-"capsule"}  # skill-pill | capsule | capsule-plus
+CURRICULUM_REGION=${CURRICULUM_REGION:-"ontario"}
+
+for arg in "$@"; do
+  case "$arg" in
+    --capsule=*) CAPSULE_TYPE="${arg#*=}" ;;
+    --region=*) CURRICULUM_REGION="${arg#*=}" ;;
+  esac
+done
+
 if [ "$CAPSULE_TYPE" = "skill-pill" ]; then
   echo "🟢 Installing Skill Pill (ultra-lightweight) – <150 MB RAM"
   # only install minimal kernel + selected pill
 elif [ "$CAPSULE_TYPE" = "capsule-plus" ]; then
-  echo "🔥 Installing Capsule Plus (full education/governance) – Ontario default"
+  echo "🔥 Installing Capsule Plus (full education/governance) – region default: ${CURRICULUM_REGION}"
+else
+  echo "📦 Installing Standard Capsule layer – region: ${CURRICULUM_REGION}"
 fi
 
 # Auto-install Homebrew on macOS if missing

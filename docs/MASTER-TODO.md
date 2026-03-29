@@ -22,12 +22,12 @@ Update format example:
 ## 2) Priority Lanes (Now)
 
 ### NEW – Capsule Hierarchy Refinement (User Zov – March 28 2026)
-- [ ] Add Skill Pill layer (lightweight basic skills – OpenClaw/Agent Zero style)
-- [ ] Formalize hierarchy: Skill Pill → Capsule → Capsule Plus in docs/CAPSULE-HIERARCHY.md
-- [ ] Expand Ontario Education Capsule Plus with curriculum standards
-- [ ] Roadmap: Mirror governmental services (US, UK, China) using “pull not push” philosophy
-- [ ] Update install.sh/py/bat to support --capsule=skill-pill | capsule | capsule-plus
-- [ ] Add regional curriculum selector (Ontario default, others via config)
+- [x] Add Skill Pill layer (lightweight basic skills – OpenClaw/Agent Zero style) — 2026-03-29 — @agent — implemented hierarchy + installer layer mapping — 766c694
+- [x] Formalize hierarchy: Skill Pill → Capsule → Capsule Plus in docs/CAPSULE-HIERARCHY.md — 2026-03-29 — @agent — published hierarchy contract and installer mapping — 766c694
+- [x] Expand Ontario Education Capsule Plus with curriculum standards — 2026-03-29 — @agent — added curriculum standards + graduation/evidence requirements — 766c694
+- [x] Roadmap: Mirror governmental services (US, UK, China) using “pull not push” philosophy — 2026-03-29 — @agent — published pull-not-push roadmap doc and linked hierarchy/index — e69becb
+- [x] Update install.sh/py/bat to support --capsule=skill-pill | capsule | capsule-plus — 2026-03-29 — @agent — added explicit shell/batch flag handling and installer persistence — 766c694
+- [x] Add regional curriculum selector (Ontario default, others via config) — 2026-03-29 — @agent — added region catalog config + installer validation/defaulting — 766c694
 
 ## Lane M0 — Program Control & Consolidation (Immediate)
 - [x] **M0.1** Freeze this file as the sole execution queue for cross-team delivery. — 2026-03-22 — @agent — established as canonical
