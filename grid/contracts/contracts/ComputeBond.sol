@@ -88,6 +88,7 @@ contract ComputeBond is TimelockedOwnable, AccessControl {
 
     // === ZKML Enterprise & FDBA ===
     event ZKMLProofSubmitted(address indexed agent, bytes32 proofHash, uint256 poerBoost);
+    event WeightOracleSyncSkipped(address indexed oracle, address indexed agent, bool slashPath);
 
     // ZKMLVerifier Interface
     address public zkmlVerifier;
@@ -193,15 +194,22 @@ contract ComputeBond is TimelockedOwnable, AccessControl {
             // PoER Boost for valid enterprise proofs
             stakerPoerScores[msg.sender] += 300;
             if (weightOracleContract != address(0)) {
-                // Ignore return data or failure, fire and forget to Oracle
-                (bool successAdd, ) = weightOracleContract.call(abi.encodeWithSignature("addPoERBonus(address,uint256)", msg.sender, 300)); require(successAdd, "Oracle call failed");
+                // Do not revert proof acceptance if the oracle path is temporarily unavailable.
+                // This decouples proof submission from oracle liveness and prevents a DoS vector.
+                (bool successAdd, ) = weightOracleContract.call(abi.encodeWithSignature("addPoERBonus(address,uint256)", msg.sender, 300));
+                if (!successAdd) {
+                    emit WeightOracleSyncSkipped(weightOracleContract, msg.sender, false);
+                }
             }
             emit ZKMLProofSubmitted(msg.sender, proofHash, 300);
         } else {
             // Automatic slash for invalid proof
             stakerPoerScores[msg.sender] = 0;
             if (weightOracleContract != address(0)) {
-                (bool successSlash, ) = weightOracleContract.call(abi.encodeWithSignature("slashPoERBonus(address)", msg.sender)); require(successSlash, "Oracle call failed");
+                (bool successSlash, ) = weightOracleContract.call(abi.encodeWithSignature("slashPoERBonus(address)", msg.sender));
+                if (!successSlash) {
+                    emit WeightOracleSyncSkipped(weightOracleContract, msg.sender, true);
+                }
             }
             revert("Invalid zkML proof");
         }
