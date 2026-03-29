@@ -104,25 +104,16 @@ app.use('/api/mobile', mobileRoutes);
 
 let server;
 try {
-    let mTLSConfig;
-    if (process.env.MTLS_CA_CERT && process.env.MTLS_CLIENT_CERT && process.env.MTLS_CLIENT_KEY) {
-        mTLSConfig = {
-            key: process.env.MTLS_CLIENT_KEY,
-            cert: process.env.MTLS_CLIENT_CERT,
-            ca: [process.env.MTLS_CA_CERT],
-            requestCert: true,
-            rejectUnauthorized: true,
-        };
-    } else {
-        const certsDir = process.env.CERTS_DIR || '../certs';
-        mTLSConfig = {
-            key: fs.readFileSync(`${certsDir}/gateway.key`),
-            cert: fs.readFileSync(`${certsDir}/gateway.crt`),
-            ca: [fs.readFileSync(`${certsDir}/ca.crt`)],
-            requestCert: true,
-            rejectUnauthorized: true,
-        };
+    if (!(process.env.MTLS_CA_CERT && process.env.MTLS_CLIENT_CERT && process.env.MTLS_CLIENT_KEY)) {
+        throw new Error('MTLS_CA_CERT, MTLS_CLIENT_CERT, and MTLS_CLIENT_KEY must be provided by secret manager injection');
     }
+    const mTLSConfig = {
+        key: process.env.MTLS_CLIENT_KEY,
+        cert: process.env.MTLS_CLIENT_CERT,
+        ca: [process.env.MTLS_CA_CERT],
+        requestCert: true,
+        rejectUnauthorized: true,
+    };
 
     if (process.env.NODE_ENV === 'test') {
         server = http.createServer(app);

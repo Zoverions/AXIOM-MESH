@@ -545,11 +545,13 @@ import distributionRouter from './distribution';
 import dashboardRouter from './dashboard';
 import payrollRouter from './payroll';
 import councilRouter from './council';
+import submissionsRouter from './submissions';
 
 router.use('/api/v1/distribution', distributionRouter);
 router.use('/api/v1/dashboard', dashboardRouter);
 router.use('/api/v1/payroll', payrollRouter);
 router.use('/api/v1/council', councilRouter);
+router.use('/api/v1/submissions', submissionsRouter);
 
 // --- Configuration API ---
 const SENSITIVE_KEYWORDS = ['KEY', 'TOKEN', 'SECRET', 'PASSWORD', 'SESSION', 'PRIV'];

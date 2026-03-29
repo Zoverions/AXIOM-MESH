@@ -59,14 +59,7 @@ def create_mtls_client():
         f_ca.close()
         ssl_ca_certs = f_ca.name
     else:
-        certs_dir = os.environ.get("CERTS_DIR", "../certs")
-        ssl_certfile = os.path.join(certs_dir, "hypervisor.crt")
-        ssl_keyfile = os.path.join(certs_dir, "hypervisor.key")
-        ssl_ca_certs = os.path.join(certs_dir, "ca.crt")
-
-        missing = [p for p in (ssl_certfile, ssl_keyfile, ssl_ca_certs) if not os.path.exists(p)]
-        if missing:
-            raise RuntimeError(f"mTLS cert configuration missing: {', '.join(missing)}")
+        raise RuntimeError("mTLS cert configuration missing: MTLS_CA_CERT, MTLS_CLIENT_CERT, MTLS_CLIENT_KEY must be injected")
 
     return httpx.AsyncClient(
         cert=(ssl_certfile, ssl_keyfile),

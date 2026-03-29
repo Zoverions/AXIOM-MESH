@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import https from 'https';
-import fs from 'fs';
 import dotenv from 'dotenv';
 import executeRoutes from './routes/execute';
 import capsuleRoutes from './routes/capsule';
@@ -38,13 +37,15 @@ app.use('/', executeRoutes);
 app.use('/', capsuleRoutes);
 
 if (process.env.NODE_ENV !== 'test') {
-    const certsDir = process.env.CERTS_DIR || '../certs';
     let server;
     try {
+        if (!(process.env.MTLS_CA_CERT && process.env.MTLS_CLIENT_CERT && process.env.MTLS_CLIENT_KEY)) {
+            throw new Error('MTLS_CA_CERT, MTLS_CLIENT_CERT, and MTLS_CLIENT_KEY must be injected by secret manager');
+        }
         const mTLSConfig = {
-            key: fs.readFileSync(`${certsDir}/sandbox.key`),
-            cert: fs.readFileSync(`${certsDir}/sandbox.crt`),
-            ca: [fs.readFileSync(`${certsDir}/ca.crt`)],
+            key: process.env.MTLS_CLIENT_KEY,
+            cert: process.env.MTLS_CLIENT_CERT,
+            ca: [process.env.MTLS_CA_CERT],
             requestCert: true,
             rejectUnauthorized: true,
         };
