@@ -15,6 +15,18 @@ PYTHON_DEPS = [
     "requests", "rich", "psutil", "docker", "pyyaml"
 ]
 
+REGIONAL_CURRICULUM_CATALOG = Path("config/regional_curricula.json")
+DEFAULT_REGION = "ontario"
+
+def load_supported_regions():
+    if not REGIONAL_CURRICULUM_CATALOG.exists():
+        return {DEFAULT_REGION: {"name": "Ontario", "capsule_layer": "capsule-plus"}}
+    try:
+        data = json.loads(REGIONAL_CURRICULUM_CATALOG.read_text())
+        return data.get("regions", {})
+    except Exception:
+        return {DEFAULT_REGION: {"name": "Ontario", "capsule_layer": "capsule-plus"}}
+
 def run_cmd(cmd, shell=False, check=True, capture_output=False):
     try:
         res = subprocess.run(cmd, shell=shell, check=check, capture_output=capture_output, text=True)
@@ -160,8 +172,13 @@ def main():
     parser.add_argument("--capsule", type=str, choices=["skill-pill", "capsule", "capsule-plus"], default="capsule", help="Capsule layer to install")
     parser.add_argument("--platform", type=str, help="Target platform overrides")
     parser.add_argument("--monitor", type=str, help="Monitoring and edge role overrides")
-    parser.add_argument("--region", type=str, default="ontario", help="Regional curriculum focus (e.g. ontario)")
+    parser.add_argument("--region", type=str, default=DEFAULT_REGION, help="Regional curriculum focus (e.g. ontario)")
     args, unknown = parser.parse_known_args()
+    supported_regions = load_supported_regions()
+    selected_region = (args.region or DEFAULT_REGION).strip().lower()
+    if selected_region not in supported_regions:
+        print(f"⚠️  Unknown region '{selected_region}'. Falling back to {DEFAULT_REGION}.")
+        selected_region = DEFAULT_REGION
 
     print("==========================================================")
     print("   AXIOM-MESH v16.0.0-Lockdown - Universal Cross-Platform Installer")
@@ -172,6 +189,7 @@ def main():
         print(f"Override platform specified: {args.platform}")
         os_type = args.platform.lower()
     print(f"Detected OS: {os_type}")
+    print(f"Curriculum region: {selected_region} (supported: {', '.join(sorted(supported_regions.keys()))})")
 
     install_prereqs(os_type)
 
@@ -198,7 +216,7 @@ def main():
             print("🟢 Skill Pill selected, forcing minimal-edge role for ultra-lightweight execution.")
             machine_role = "minimal-edge"
         elif args.capsule == "capsule-plus":
-            print(f"🔥 Capsule Plus selected, ensuring heavy-duty config with regional focus: {args.region}.")
+            print(f"🔥 Capsule Plus selected, ensuring heavy-duty config with regional focus: {selected_region}.")
             if machine_role not in ["education-node", "dedicated-mesh"]:
                 machine_role = "education-node"
 
@@ -288,6 +306,8 @@ def main():
     profile['storageOffer'] = {'capacityGB': quota_int, 'type': 'ipfs-meshstore'}
     profile['user_priority'] = user_priority
     profile['launch_mode'] = launch_mode
+    profile['curriculum_region'] = selected_region
+    profile['capsule_layer'] = args.capsule
     profile_path.write_text(json.dumps(profile, indent=2) + '\n')
 
     # Setup Sandbox Default Policy
@@ -336,7 +356,9 @@ def main():
         "NCP_SERVERS": "http://localhost:8080",
         "MCP_SERVERS": "",
         "FDBA_FOUNDER_ADDRESS": "0x1c2cbabf75e1938ed2f2c59e734e83aa5fbe1b73",
-        "LOCAL_MODEL_FALLBACK": recommended_model
+        "LOCAL_MODEL_FALLBACK": recommended_model,
+        "CURRICULUM_REGION": selected_region,
+        "CAPSULE_LAYER": args.capsule
     }
 
     if default_policy_cid:

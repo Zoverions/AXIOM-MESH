@@ -16,6 +16,16 @@ This capsule implements the Ontario-specific education framework, integrating wi
 - Cultural adjustments for Ontario-specific educational norms
 - DAO role assignments specific to Ontario educational governance
 
+
+## Curriculum Standards (Capsule Plus)
+
+The Ontario Capsule Plus profile now encodes explicit curriculum controls in `config/ontario_curriculum.json`:
+- Ontario Curriculum (Grades 9-12) authority metadata
+- Achievement strand mapping (Knowledge/Thinking/Communication/Application)
+- OSSLT/OLC4O literacy pathway handling
+- 40-hour community involvement graduation requirement
+- Evidence retention requirements for traceability and parental consent
+
 ## Smart Contracts
 
 ### OntarioEducationAttestor.sol
