@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Any
 from enum import Enum
 import json
+from collections import Counter
 import hashlib
 import time
 
@@ -509,12 +510,11 @@ class AgentRegistry:
             "agents_by_capability": {}
         }
         
-        for agent in self.agents.values():
-            for cap in agent.capabilities:
-                cap_name = cap.value
-                if cap_name not in stats["agents_by_capability"]:
-                    stats["agents_by_capability"][cap_name] = 0
-                stats["agents_by_capability"][cap_name] += 1
+        stats["agents_by_capability"] = dict(Counter(
+            cap.value
+            for agent in self.agents.values()
+            for cap in agent.capabilities
+        ))
         
         return stats
 
