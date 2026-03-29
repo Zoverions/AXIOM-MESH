@@ -1,6 +1,6 @@
 # Production Readiness Tracker (Execution Board)
 
-**Last Updated:** 2026-03-21  
+**Last Updated:** 2026-03-29  
 **Purpose:** Detailed readiness board linked from the canonical task queue in `docs/MASTER-TODO.md`.
 
 ---
@@ -8,6 +8,8 @@
 > Canonical execution queue: `docs/MASTER-TODO.md`
 >
 > Keep this file focused on role/accountability details and gate readiness evidence.
+
+> **Status note (2026-03-29):** This board is a supporting view only. For execution truth, defer to `docs/MASTER-TODO.md`; where conflicts exist, MASTER-TODO wins.
 
 ## 1) Active Role Assignments
 
