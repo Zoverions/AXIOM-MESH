@@ -6,6 +6,7 @@ import subprocess
 import json
 import shutil
 import threading
+import argparse
 from pathlib import Path
 
 ENV_FILE = ".env"
@@ -155,11 +156,21 @@ def write_env(config):
             f.write(f"{k}={v}\n")
 
 def main():
+    parser = argparse.ArgumentParser(description="AXIOM-MESH Universal Cross-Platform Installer")
+    parser.add_argument("--capsule", type=str, choices=["skill-pill", "capsule", "capsule-plus"], default="capsule", help="Capsule layer to install")
+    parser.add_argument("--platform", type=str, help="Target platform overrides")
+    parser.add_argument("--monitor", type=str, help="Monitoring and edge role overrides")
+    parser.add_argument("--region", type=str, default="ontario", help="Regional curriculum focus (e.g. ontario)")
+    args, unknown = parser.parse_known_args()
+
     print("==========================================================")
     print("   AXIOM-MESH v16.0.0-Lockdown - Universal Cross-Platform Installer")
     print("==========================================================")
 
     os_type = get_os()
+    if args.platform:
+        print(f"Override platform specified: {args.platform}")
+        os_type = args.platform.lower()
     print(f"Detected OS: {os_type}")
 
     install_prereqs(os_type)
@@ -181,6 +192,20 @@ def main():
         rpc_url = ""
     else:
         machine_role = prompt_with_timeout("Machine role (dedicated-mesh/shared-machine/minimal-edge/education-node)", "shared-machine", 15)
+
+        # Override machine_role if capsule is skill-pill or if platform overrides mandate it
+        if args.capsule == "skill-pill":
+            print("🟢 Skill Pill selected, forcing minimal-edge role for ultra-lightweight execution.")
+            machine_role = "minimal-edge"
+        elif args.capsule == "capsule-plus":
+            print(f"🔥 Capsule Plus selected, ensuring heavy-duty config with regional focus: {args.region}.")
+            if machine_role not in ["education-node", "dedicated-mesh"]:
+                machine_role = "education-node"
+
+        if args.monitor:
+            print(f"Applying monitor override: {args.monitor}")
+            machine_role = args.monitor
+
         if os_type == 'android':
             print("Android detected, forcing minimal-edge role.")
             machine_role = "minimal-edge"
