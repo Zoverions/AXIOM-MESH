@@ -1,6 +1,6 @@
 # Dashboard Interfaces
 
-**Status**: In Progress — Primary tasks moved to MASTER-TODO.md Lane M13
+**Status**: Implemented — Primary tasks tracked in MASTER-TODO.md Lane M13
 **Owner**: @agent+gateway+grid
 **Date**: 2026-03-25 (Updated: 2026-03-28)
 
@@ -15,7 +15,7 @@ The foundational Gateway API (`/dashboard` route) has been implemented with mock
 - [x] **Mock Data Pipeline**: Returns mock anonymized data for Trust Scores, execution times, and pipeline status
 
 ## Remaining Tasks (Tracked in MASTER-TODO.md)
-- [ ] **M13.6** Wire endpoints to real Grid ledger/Hypervisor telemetry data
+- [x] **M13.6** Wire endpoints to real Grid ledger/Hypervisor telemetry data
   - Integrate with Go Grid ledger for real-time attestation data
   - Connect to Python Hypervisor metrics for execution telemetry
   - Implement GraphQL indexing service for efficient queries
@@ -27,4 +27,4 @@ Ensure that only authorized sources can access the specific endpoints, likely th
 - **Master TODO:** `docs/MASTER-TODO.md` (Lane M13.6)
 - **Gateway Routes:** `gateway/src/routes/dashboard.ts`
 - **Grid Ledger:** `grid/internal/ledger/`
-- **Hypervisor Metrics:** `hypervisor/src/api/routers/metrics.py`
+- **Hypervisor Metrics:** `hypervisor/src/api/server.py` (`/metrics`)

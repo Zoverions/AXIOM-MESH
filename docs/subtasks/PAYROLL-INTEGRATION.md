@@ -1,6 +1,6 @@
 # Stablecoin Payroll Integration
 
-**Status**: In Progress — Primary tasks moved to MASTER-TODO.md Lane M13
+**Status**: Implemented — Primary tasks tracked in MASTER-TODO.md Lane M13
 **Owner**: @agent+gateway+compliance
 **Date**: 2026-03-25 (Updated: 2026-03-28)
 
@@ -15,7 +15,7 @@ As part of bridging traditional infrastructure to open-source blockchain infrast
 - [x] ERC-20 interface support for USDC and testnet equivalents
 
 ## Remaining Tasks (Tracked in MASTER-TODO.md)
-- [ ] **M13.8** Complete PAYROLL-INTEGRATION
+- [x] **M13.8** Complete PAYROLL-INTEGRATION
   - Build UI/Gateway endpoints for:
     - Query pending payroll amounts
     - View historical claims
@@ -28,4 +28,4 @@ As part of bridging traditional infrastructure to open-source blockchain infrast
 ## Related Documents
 - **Master TODO:** `docs/MASTER-TODO.md` (Lane M13.8)
 - **Smart Contract:** `grid/contracts/contracts/StablecoinPayroll.sol`
-- **Gateway Routes:** `gateway/src/routes/` (pending payroll endpoints)
+- **Gateway Routes:** `gateway/src/routes/payroll.ts`

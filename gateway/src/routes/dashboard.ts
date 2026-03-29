@@ -1,52 +1,113 @@
 import { Router, Request, Response } from 'express';
+import axios from 'axios';
 
 const router = Router();
 
 // In-memory store for emergence alerts received from the Grid
 const emergenceAlerts: any[] = [];
 
+const DEFAULT_GRID_URL = process.env.GRID_DASHBOARD_URL || process.env.GRID_URL || 'http://grid:5000';
+const DEFAULT_HYPERVISOR_URL = process.env.HYPERVISOR_DASHBOARD_URL || process.env.HYPERVISOR_URL || 'http://hypervisor:8000';
+
+function average(values: number[]): number {
+    if (values.length === 0) return 0;
+    return values.reduce((acc, value) => acc + value, 0) / values.length;
+}
+
+async function fetchGridTrustScores() {
+    const [nodesResp, skillsResp] = await Promise.all([
+        axios.get(`${DEFAULT_GRID_URL}/nodes`, { timeout: 3000 }),
+        axios.get(`${DEFAULT_GRID_URL}/skills`, { timeout: 3000 })
+    ]);
+
+    const nodes = nodesResp.data?.nodes || [];
+    const skills = skillsResp.data || [];
+
+    const nodeTrustScores = nodes
+        .map((n: any) => Number(n.trust_score))
+        .filter((score: number) => Number.isFinite(score) && score >= 0);
+
+    const taskBuckets = new Map<string, number[]>();
+    for (const skill of skills) {
+        const taskName = (skill.task || 'unknown').toString().trim();
+        const nodeId = skill.nodeId || skill.nodeID;
+        const node = nodes.find((n: any) => n.node_id === nodeId);
+        const nodeScore = Number(node?.trust_score);
+        if (!taskName || !Number.isFinite(nodeScore)) continue;
+        const current = taskBuckets.get(taskName) || [];
+        current.push(nodeScore);
+        taskBuckets.set(taskName, current);
+    }
+
+    const capsules = Array.from(taskBuckets.entries())
+        .map(([task, scores]) => ({
+            id: task,
+            personas: [],
+            composite_score: Number(average(scores).toFixed(4))
+        }))
+        .sort((a, b) => b.composite_score - a.composite_score)
+        .slice(0, 10);
+
+    return {
+        source: 'grid-ledger',
+        global_average: Number(average(nodeTrustScores).toFixed(4)),
+        node_count: nodes.length,
+        capsules
+    };
+}
+
+async function fetchPipelineTelemetry() {
+    const [gridStatsResp, gridDemResp, hypervisorMetricsResp] = await Promise.all([
+        axios.get(`${DEFAULT_GRID_URL}/zk-stats`, { timeout: 3000 }),
+        axios.get(`${DEFAULT_GRID_URL}/dem`, { timeout: 3000 }),
+        axios.get(`${DEFAULT_HYPERVISOR_URL}/metrics`, { timeout: 3000 })
+    ]);
+
+    const gridStats = gridStatsResp.data || {};
+    const gridDem = gridDemResp.data || {};
+    const hypervisorMetrics = hypervisorMetricsResp.data || {};
+
+    return {
+        source: 'grid+hypervisor',
+        active_pipelines: Number(gridStats.zkml_queue_size || 0),
+        events_processed_24h: Number(hypervisorMetrics.requests || 0),
+        average_latency_ms: Math.round(Number(gridDem.meta_sentience_score || 0)),
+        active_bonded_nodes: Number(gridStats.active_bonded_nodes || 0),
+        equilibrium_status: gridDem.equilibrium_status || 'unknown',
+        intent_metrics: hypervisorMetrics.intents || { success: 0, error: 0, degraded: 0 }
+    };
+}
+
 /**
  * GET /dashboard/trust-scores
- * Returns anonymized trust scores for top capsules and specific personas.
+ * Returns anonymized trust scores from the Grid ledger.
  */
-router.get('/trust-scores', (req: Request, res: Response) => {
-    // Mock Data for now, should eventually index from Grid or Hypervisor
-    const trustScores = {
-        global_average: 0.92,
-        capsules: [
-            {
-                id: "education_tome_v1",
-                personas: [
-                    { name: "psychologist", score: 0.95 },
-                    { name: "guidance_counselor", score: 0.88 },
-                    { name: "subject_expert", score: 0.99 }
-                ],
-                composite_score: 0.94
-            },
-            {
-                id: "physics_research_v2",
-                personas: [],
-                composite_score: 0.98
-            }
-        ]
-    };
-
-    res.json(trustScores);
+router.get('/trust-scores', async (req: Request, res: Response) => {
+    try {
+        const trustScores = await fetchGridTrustScores();
+        res.json(trustScores);
+    } catch (error: any) {
+        res.status(502).json({
+            error: 'Failed to load trust scores from Grid ledger',
+            details: error?.message || 'unknown error'
+        });
+    }
 });
 
 /**
  * GET /dashboard/data-pipelines
- * Returns system throughput and active pipeline state (anonymized).
+ * Returns system throughput and active pipeline state from Grid + Hypervisor telemetry.
  */
-router.get('/data-pipelines', (req: Request, res: Response) => {
-    const pipelineData = {
-        active_pipelines: 42,
-        events_processed_24h: 1045000,
-        average_latency_ms: 124,
-        top_regions: ["us-east", "eu-central", "ap-southeast"]
-    };
-
-    res.json(pipelineData);
+router.get('/data-pipelines', async (req: Request, res: Response) => {
+    try {
+        const pipelineData = await fetchPipelineTelemetry();
+        res.json(pipelineData);
+    } catch (error: any) {
+        res.status(502).json({
+            error: 'Failed to load pipeline telemetry',
+            details: error?.message || 'unknown error'
+        });
+    }
 });
 
 
@@ -116,37 +177,33 @@ router.get('/alerts/emergence', (req: Request, res: Response) => {
  * GET /dashboard/comprehensive
  * Returns comprehensive system data for the new dashboard interface.
  */
-router.get('/comprehensive', (req: Request, res: Response) => {
-    res.json({
-        mesh_status: {
-            connected_to_greater_mesh: true,
-            private_nodes: [
-                { id: 'node-alpha-1', status: 'active', role: 'validator', ip: '10.0.0.1', latency: '12ms' },
-                { id: 'node-beta-2', status: 'active', role: 'compute', ip: '10.0.0.2', latency: '45ms' },
-                { id: 'node-gamma-3', status: 'standby', role: 'storage', ip: '10.0.0.3', latency: '8ms' }
-            ]
-        },
-        security: {
-            status: 'Secure',
-            waf_active: true,
-            threat_level: 'Low',
-            last_scan: new Date().toISOString()
-        },
-        models: {
-            local: ['llama3-8b-instruct', 'mistral-7b', 'phi-3-mini'],
-            remote: ['gpt-4o', 'claude-3-5-sonnet', 'axiom-reasoning-v1']
-        },
-        assets: {
-            nfts: ['Citizenship-001', 'Founder-042', 'Compute-Bond-11'],
-            entities: ['psychologist_agent', 'physics_research_v2', 'defi_trader']
-        },
-        governance: {
-            system: 'First-Past-The-Post (FPTP)',
-            template: 'Canada',
-            current_election_status: 'Upcoming',
-            representatives: 338
-        }
-    });
+router.get('/comprehensive', async (req: Request, res: Response) => {
+    try {
+        const [trustScores, pipelineData] = await Promise.all([
+            fetchGridTrustScores(),
+            fetchPipelineTelemetry()
+        ]);
+
+        res.json({
+            mesh_status: {
+                connected_to_greater_mesh: pipelineData.active_bonded_nodes > 0,
+                node_count: trustScores.node_count,
+                equilibrium_status: pipelineData.equilibrium_status
+            },
+            trust_scores: trustScores,
+            telemetry: pipelineData,
+            security: {
+                status: 'Secure',
+                waf_active: true,
+                last_scan: new Date().toISOString()
+            }
+        });
+    } catch (error: any) {
+        res.status(502).json({
+            error: 'Failed to build comprehensive dashboard payload',
+            details: error?.message || 'unknown error'
+        });
+    }
 });
 
 export default router;

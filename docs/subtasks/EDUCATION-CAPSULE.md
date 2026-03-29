@@ -1,6 +1,6 @@
 # Education Skill Capsule (Knowledge Bookcase / Tome) Structure
 
-**Status**: In Progress — Primary tasks moved to MASTER-TODO.md Lane M13
+**Status**: Implemented — Primary tasks tracked in MASTER-TODO.md Lane M13
 **Owner**: @agent+sandbox+ai
 **Date**: 2026-03-25 (Updated: 2026-03-28)
 
@@ -20,7 +20,7 @@ The capsule must incorporate multiple essential personalities and structures:
 - [x] M13.4: Enhanced Education Skill Capsule Structure with multi-agent concepts
 
 ## Remaining Tasks (Tracked in MASTER-TODO.md)
-- [ ] **M13.7** Complete EDUCATION-CAPSULE implementation
+- [x] **M13.7** Complete EDUCATION-CAPSULE implementation
   - Define `schemas/education_tome.capnp` for multi-agent request/response modeling
   - Implement multi-agent persona runtimes:
     - Childhood psychologist agent for emotional/psychological analysis
