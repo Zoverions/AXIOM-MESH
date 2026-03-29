@@ -1,154 +1,157 @@
 # AXIOM-MESH Codebase + Documentation Analysis
 
 **Date:** 2026-03-29  
-**Scope:** Code/document consistency, feature-claim accuracy, to-do accuracy, completeness/robustness, and security posture.
+**Repository:** `AXIOM-MESH`  
+**Scope:** Code/document consistency, implementation completeness signals, and security posture indicators from static review.
 
 ---
 
-## 1) Method
+## 1) Method Used
 
-This pass focused on:
+This analysis was produced by:
 
-1. Cross-checking canonical planning/status docs against code reality (`README.md`, `docs/MASTER-TODO.md`, `docs/PROJECT-STATUS-2026.md`, `docs/PRODUCTION-READINESS-TRACKER.md`, `docs/AUDIT_REPORT.md`).
-2. Running repository-wide pattern scans for indicators of non-finalized behavior (`TODO`, `FIXME`, `mock`, `placeholder`) and security-sensitive markers (embedded keys/secrets/fallback defaults).
-3. Verifying select high-risk implementation paths in Gateway, Grid, Sandbox, and security assets.
+1. Cross-checking status/planning documents against implementation artifacts.
+2. Running targeted repository pattern scans for:
+   - incompleteness markers (`TODO`, `FIXME`, `mock`, `placeholder`, `NotImplementedError`)
+   - secret/key risk indicators (`BEGIN ... PRIVATE KEY`, `secret`, `api_key`, `token`)
+3. Verifying selected implementation hotspots called out by docs and tests.
 
----
-
-## 2) Executive Findings
-
-## 2.1 Overall assessment
-
-- The repository has substantial implementation breadth and contains many hardened pathways.
-- There is still **material drift** between some docs and current code reality.
-- The highest-risk gap is **credential/key handling posture mismatch**: docs/todo entries claim certificate migration is complete, but private key material is still present in-repo.
-
-## 2.2 Risk ranking summary
-
-- **Critical:** Private keys committed in `certs/`.
-- **High:** Internal-auth dev fallback secret values hardcoded in both Gateway and Grid alert path.
-- **Medium:** Dashboard and education subsystems still include mock/demo/static logic while some high-level docs communicate stronger completion.
-- **Medium:** Status board inconsistencies across docs can mislead release/readiness decisions.
+> Note: this is a static pass (no live service deployment validation in this report).
 
 ---
 
-## 3) Evidence Matrix: Feature Claim vs Code Reality
+## 2) Executive Summary
 
-| Area | Documented Claim | Code/Repo Reality | Verdict |
+- The repo demonstrates broad implementation coverage, but there is still **documentation-state drift** across status artifacts.
+- There is a **critical key-management issue**: private key PEM files remain committed under `certs/`.
+- There are still **non-production placeholders/fallbacks** in runtime paths (especially around mocked outputs and local defaults), so several “done” claims should stay scoped as partial.
+
+### Risk ranking (this pass)
+
+- **Critical:** Committed private keys in-repo.
+- **High:** Runtime paths that still default to permissive/dev-style values.
+- **Medium:** Doc inconsistency across trackers and audit/status files.
+- **Medium:** Remaining mock/demo logic in runtime features.
+
+---
+
+## 3) Evidence Matrix (Claims vs Reality)
+
+| Area | Documentation Signal | Code/Repo Reality | Assessment |
 |---|---|---|---|
-| mTLS cert migration (M9.4) | Marked complete in canonical TODO | `certs/*.key` files are tracked in git | **Not accurate / incomplete** |
-| Dashboard interfaces | M13.6 marked pending | Gateway dashboard endpoints currently return mock/static values | **Accurate that integration is incomplete** |
-| Education capsule completeness | M13.7 says define `schemas/education_tome.capcp` and personas | `schemas/education_tome.capnp` already exists; runtime still contains mock/demo logic | **Partially inaccurate wording** |
-| Production readiness tracker | Shows critical path still unchecked | Canonical TODO records many of these as complete | **Out of sync** |
-| Audit report placeholder findings | Flags ProveX placeholder amount | Current contract computes dynamic release amount | **Outdated statement** |
+| Certificate/key hardening | Some trackers imply hardening progress complete | `certs/ca.key`, `certs/gateway.key`, `certs/grid.key` are tracked | **Critical gap remains** |
+| Dashboard maturity | Dashboard integration work listed as ongoing in planning docs | Gateway dashboard stack still includes mock/static-oriented test and fallback behavior | **Open work is real** |
+| Education capsule maturity | Planning docs reference remaining education work | `schemas/education_tome.capnp` exists, but runtime still carries mock/demo traces in adjacent flows | **Partially complete** |
+| Production readiness narratives | Different docs report different completion states | TODO tracker and readiness tracker are not fully synchronized | **Governance drift** |
+| Audit freshness | Audit report lists historical issues | At least some issues appear remediated in code, but report language is stale | **Needs dated refresh** |
 
 ---
 
 ## 4) Detailed Findings
 
-## 4.1 Security: key-material and secret management
+### F1 — Private key material is committed (`Critical`)
 
-### F1 — Private keys are committed to repository
-- `certs/ca.key`, `certs/gateway.key`, and `certs/grid.key` are tracked files and contain PEM private keys.
-- This directly conflicts with completed-task narrative that cert/key handling was moved out of repo.
+`certs/ca.key`, `certs/gateway.key`, and `certs/grid.key` are present as tracked repository files.
 
-**Impact:** Immediate credential leakage risk, key compromise risk, and audit credibility risk.
+**Impact:** If any of these keys were ever used beyond isolated local testing, they should be considered compromised.
 
-**Action:** Re-open/continue M9.4 until key rotation + history cleanup + runtime secret injection are fully complete.
-
-### F2 — Dev fallback internal secret remains in runtime paths
-- Gateway internal auth falls back to `internal-dev-secret-1234` when env var is absent (outside production mode).
-- Grid emits the same fallback when pushing `EMERGENCE_ALERT` to Gateway.
-
-**Impact:** Inconsistent hardening posture, easier lateral movement in misconfigured environments.
-
-**Action:** Remove fallback and fail closed in all environments except explicit local-test mode behind compile/runtime flag.
-
-## 4.2 Feature completeness and robustness
-
-### F3 — Dashboard endpoints remain mostly demo/static
-- Trust score and pipeline endpoints use static payloads and comments indicating mock data.
-- Comprehensive endpoint uses static status/model/asset structures.
-
-**Impact:** Operational dashboards can be mistaken for live telemetry.
-
-**Action:** Keep M13.6 open (already open) and add acceptance checks requiring real Grid + Hypervisor wiring.
-
-### F4 — Education capsule still has mock decision logic
-- `check_dao_access` includes explicit “Default mock logic for demonstration”.
-
-**Impact:** Functional claims for production-grade educational governance behavior are premature.
-
-**Action:** Keep M13.7 open, but correct task wording (schema exists; runtime depth remains).
-
-## 4.3 Document consistency and governance hygiene
-
-### F5 — Canonical TODO vs readiness tracker contradiction
-- `docs/PRODUCTION-READINESS-TRACKER.md` still marks interface freeze/authz/reconciliation/recovery/RC package as in progress while canonical TODO marks corresponding M1 tasks complete.
-
-**Impact:** Decision ambiguity for release gates and stakeholder reporting.
-
-**Action:** Align tracker with canonical TODO or explicitly label tracker as historical snapshot.
-
-### F6 — Audit report includes now-outdated finding
-- `docs/AUDIT_REPORT.md` states ProveX contains explicit placeholder release amount; contract now uses dynamic logic.
-
-**Impact:** Audit narrative can understate remediation progress and reduce trust in report freshness.
-
-**Action:** Refresh audit report findings with date-stamped deltas.
+**Recommendation:**
+1. Rotate all impacted cert/key material immediately.
+2. Remove private keys from git history and current tree.
+3. Enforce runtime secret injection (vault/secret manager) and CI secret scanning.
 
 ---
 
-## 5) To-Do List Accuracy Review
+### F2 — Dev/default secret fallbacks still exist in runtime-related paths (`High`)
 
-## 5.1 Accurate open items
-- M13.6 (dashboard real data integration) is correctly open and supported by code reality.
+Pattern scan shows several places where secret-bearing settings still allow local/default fallback behavior (for example default API-key semantics in some hypervisor modules and test fixtures referencing known dev values).
 
-## 5.2 Inaccurate/needs correction
-- M9.4 was marked complete but is not complete given tracked private keys.
-- M13.7 references `education_tome.capcp` (typo/non-existent target) and claims schema definition pending although schema exists.
+**Impact:** Misconfigured deployments may silently run with weak defaults.
 
----
-
-## 6) Recommended Remediation Sequence (Security-first)
-
-1. **P0 — Key hygiene emergency pass**
-   - Rotate all exposed keys.
-   - Remove private keys from repository and secret inject at runtime.
-   - Add pre-commit/CI secret scanning and fail on key patterns.
-
-2. **P0 — Remove hardcoded internal secret fallback**
-   - Enforce env-based secret for Gateway/Grid internal alert path.
-   - Fail closed with explicit startup validation.
-
-3. **P1 — Documentation reconciliation sprint**
-   - Align `MASTER-TODO`, `PRODUCTION-READINESS-TRACKER`, and `AUDIT_REPORT` to same state model/date.
-   - Add “last-verified against code commit” footer in status docs.
-
-4. **P1 — Functional completion hardening**
-   - Finish dashboard real telemetry integration and add integration tests.
-   - Replace remaining demo/mock logic in education runtime with policy/attestation-backed path.
+**Recommendation:**
+- Fail closed by default in non-test modes.
+- Centralize startup-time secret validation with explicit fatal errors.
+- Keep local-test overrides behind explicit profile flags.
 
 ---
 
-## 7) Proposed Definition of “Complete and Robust” for this repo
+### F3 — Mock/demo logic remains in non-test source directories (`Medium`)
 
-A task should only be marked complete when all are true:
+Pattern scan still finds mock/placeholder strings and explicit fallback pathways in runtime modules (hypervisor orchestrator/memory/inference and related subsystems).
 
-1. **Code implemented** in non-test runtime path.
-2. **Security constraints enforced** (fail-closed, no weak fallback).
-3. **Tests present** for success + failure + abuse cases.
-4. **Docs updated** with implementation-accurate language.
-5. **Evidence artifact linked** (command + file + expected result).
+**Impact:** Operational confidence can be overstated if “mock-to-live” boundaries are not explicit.
+
+**Recommendation:**
+- Maintain a “mock debt” checklist tied to CI.
+- Add acceptance criteria that block milestone closure while production code paths still return synthetic/default payloads for core workflows.
 
 ---
 
-## 8) Commands Used During This Analysis
+### F4 — Documentation synchronization debt (`Medium`)
 
+Status, readiness, and audit files are not fully aligned in terminology and closure state.
+
+**Impact:** Stakeholders can reach contradictory go/no-go conclusions depending on which doc they read.
+
+**Recommendation:**
+- Introduce a single canonical status source with “last verified commit SHA/date”.
+- Auto-check cross-document consistency in CI (simple linting rules can catch mismatched state tags).
+
+---
+
+## 5) To-Do / Tracker Accuracy Notes
+
+### Accurate open-item signals
+
+- Dashboard and advanced integration work appears legitimately still open.
+- Some security hardening items are correctly represented as ongoing at code level.
+
+### Inaccurate or ambiguous signals
+
+- Any item marked “complete” for key-management migration is misleading while private keys remain committed.
+- Several tracker statements appear historically valid but presently stale without commit/date context.
+
+---
+
+## 6) Recommended Remediation Sequence
+
+1. **P0: Key hygiene emergency**
+   - Rotate exposed keys.
+   - Remove key files/history.
+   - Enforce secret scanning pre-commit + CI.
+
+2. **P0: Secret fallback hard-fail policy**
+   - Remove permissive defaults from production profiles.
+   - Require startup validation of required credentials.
+
+3. **P1: Doc reconciliation sprint**
+   - Align `MASTER-TODO`, production readiness tracker, and audit report.
+   - Add “verified against commit” footers.
+
+4. **P1: Mock-debt burn-down**
+   - Convert remaining runtime mock placeholders to wired integrations.
+   - Add integration tests for the replaced paths.
+
+---
+
+## 7) Definition of “Complete and Robust” (Suggested)
+
+Mark an item complete only when all are true:
+
+1. Implemented in production runtime path.
+2. Security controls fail closed (no implicit weak defaults).
+3. Tests cover success + failure + abuse/negative paths.
+4. Documentation reflects current behavior and includes verification date/SHA.
+5. Evidence artifacts (commands, outputs, linked files) are attached.
+
+---
+
+## 8) Commands Used (2026-03-29)
+
+- `git status --short`
 - `rg --files -g 'AGENTS.md'`
-- `find . -maxdepth 2 -type f | sed 's#^./##' | head -n 200`
-- `rg -n "TODO|FIXME|HACK|XXX|mock|placeholder|pass #|raise NotImplementedError" --glob '!node_modules/**' --glob '!*.lock'`
-- `rg -n "PRIVATE KEY|BEGIN .*PRIVATE KEY|password\s*=|secret|api[_-]?key|token\s*=|ca.key|gateway.key|grid.key" --glob '!node_modules/**' --glob '!*.lock'`
-- `git ls-files certs`
-- `python -m pytest -q tests/test_mock_elimination.py -q`
+- `rg --files | head -n 80`
+- `rg -n "TODO|FIXME|HACK|XXX|mock|placeholder|pass #|raise NotImplementedError" --glob '!node_modules/**' --glob '!*.lock' | head -n 120`
+- `rg -n "PRIVATE KEY|BEGIN .*PRIVATE KEY|password\s*=|secret|api[_-]?key|token\s*=|ca.key|gateway.key|grid.key" --glob '!node_modules/**' --glob '!*.lock' | head -n 120`
+- `rg -n "internal-dev-secret-1234|EMERGENCE_ALERT|default.*secret|fallback" gateway grid hypervisor | head -n 80`
 
