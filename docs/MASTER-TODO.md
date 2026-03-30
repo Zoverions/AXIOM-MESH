@@ -696,3 +696,4 @@ Once authority flow is mechanically frozen, this system becomes:
 - [ ] 4. Immune-System Security Overlay: Real-time quarantine for PulseChain network.
 - [ ] 5. AI Governance Toolkit: Agent-steered proposal evaluation + secure elections.
 - [ ] 6. Edge Bootstrap: Skill Pill live USB / Android nodes as PulseChain on-ramps.
+- [ ] 7. Dual-Purpose Hardware Validator Co-Funding: 32m PLS stake platform coverage with 85/15 reward splits.

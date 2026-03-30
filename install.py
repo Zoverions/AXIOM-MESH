@@ -271,6 +271,8 @@ def main():
     parser.add_argument("--no-monitor", action="store_true", help="Disable the installation monitor entirely")
     parser.add_argument("--reward-mode", type=str, choices=["internal-only", "pulsechain-optin"], default="internal-only", help="Set the reward mode for the network (self-funding edition)")
     parser.add_argument("--enhance-pulsechain", type=str, choices=["true", "false"], default="false", help="Opt-in to actively improve PulseChain’s intelligence, security, and governance via AXIOM-MESH")
+    parser.add_argument("--pulsechain-mode", type=str, choices=["none", "full-node", "validator"], default="none", help="Opt-in dual-purpose hardware: PulseChain node + Validator co-funding")
+    parser.add_argument("--validator-share", type=int, default=85, help="User percentage of validator rewards (platform gets the rest)")
     parser.add_argument("--launch-mode", type=str, choices=LAUNCH_MODES, help="Launch profile override")
     parser.add_argument("--region", type=str, default=DEFAULT_REGION, help="Regional curriculum focus (e.g. ontario)")
     parser.add_argument("--auto", action="store_true", help="Run non-interactively with safe defaults")
@@ -407,9 +409,11 @@ def main():
     profile['capsule_layer'] = args.capsule
     profile['reward_mode'] = args.reward_mode
     profile['enhance_pulsechain'] = args.enhance_pulsechain == "true"
+    profile['pulsechain_mode'] = args.pulsechain_mode
+    profile['validator_share'] = args.validator_share
     profile_path.write_text(json.dumps(profile, indent=2) + '\n')
 
-    monitor.log(f"Profile saved: {args.capsule} capsule, {args.reward_mode} reward mode, enhance pulsechain: {args.enhance_pulsechain}", cpu=25, ram=250)
+    monitor.log(f"Profile saved: {args.capsule} capsule, {args.reward_mode} reward mode, pulsechain mode: {args.pulsechain_mode}", cpu=25, ram=250)
 
     # Setup Sandbox Default Policy
     policy_dir = Path("sandbox/policies")
@@ -461,7 +465,9 @@ def main():
         "CURRICULUM_REGION": selected_region,
         "CAPSULE_LAYER": args.capsule,
         "REWARD_MODE": args.reward_mode,
-        "ENHANCE_PULSECHAIN": "1" if args.enhance_pulsechain == "true" else "0"
+        "ENHANCE_PULSECHAIN": "1" if args.enhance_pulsechain == "true" else "0",
+        "PULSECHAIN_MODE": args.pulsechain_mode,
+        "VALIDATOR_SHARE": str(args.validator_share)
     }
 
     if default_policy_cid:

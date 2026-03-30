@@ -17,10 +17,13 @@
 4. Immune-System Security Overlay: Real-time quarantine for PulseChain network.
 5. AI Governance Toolkit: Agent-steered proposal evaluation + secure elections.
 6. Edge Bootstrap: Skill Pill live USB / Android nodes as PulseChain on-ramps.
+7. Dual-Purpose Hardware: Opt-in co-funding for PulseChain validator stake (32m PLS) via internal platform treasury with configurable reward splitting.
 
 **Flags** (add to installers):
 --enhance-pulsechain=true   # defaults to false (opt-in only)
 --reward-mode=internal-only | pulsechain-optin
+--pulsechain-mode=none | full-node | validator # Optional dual-hardware mode
+--validator-share=85 # Configurable user % of validator rewards
 
 **Self-Funding Enforcement**:
 - All enhancements funded by shared node resources.
