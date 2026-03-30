@@ -20,6 +20,10 @@
                 <label for="dashboard-api-key" style="display: block; font-size: 0.8rem; margin-bottom: 5px;">Gateway API Key:</label>
                 <input type="password" id="dashboard-api-key" placeholder="Enter API Key" style="width: 100%; padding: 5px; box-sizing: border-box; font-size: 0.8rem;">
             </div>
+            <div class="nav-search-box">
+                <label for="nav-search" class="sr-only">Search navigation</label>
+                <input type="text" id="nav-search" placeholder="Filter sections...">
+            </div>
             <nav>
                 <button class="nav-btn active" data-target="chat">Chat Interface</button>
                 <button class="nav-btn" data-target="memory">Memory Controls</button>
@@ -42,6 +46,10 @@
             <!-- Chat Tab -->
             <section id="chat" class="tab-content active">
                 <div class="chat-container">
+                    <div class="chat-toolbar">
+                        <div id="chat-connection-status" class="connection-pill disconnected">Offline</div>
+                        <button id="jump-to-input" class="secondary-btn" title="Shortcut: Ctrl/⌘ + K">Jump to Input</button>
+                    </div>
                     <div class="chat-controls" style="padding: 10px; background: #2a2a2a; display: flex; gap: 10px; align-items: center;">
                         <label for="response-style" style="color: #ccc;">Response Style:</label>
                         <select id="response-style" style="padding: 5px; border-radius: 4px; border: 1px solid #444; background: #333; color: white;">
@@ -58,10 +66,12 @@
                             <option value="revoked">Revoked</option>
                         </select>
                     </div>
-                    <div id="chat-messages" class="messages"></div>
+                    <div id="chat-messages" class="messages">
+                        <div class="empty-chat-hint">Start a conversation to see responses, confidence, and trace IDs here.</div>
+                    </div>
                     <div class="input-area">
-                        <input type="text" id="chat-input" placeholder="Enter intent or command (e.g., /dialectic AGI)">
-                        <button id="chat-send">Send</button>
+                        <input type="text" id="chat-input" maxlength="1000" placeholder="Enter intent or command (e.g., /dialectic AGI)">
+                        <button id="chat-send" disabled>Send</button>
                     </div>
                 </div>
             </section>
