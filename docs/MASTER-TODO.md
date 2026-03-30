@@ -673,9 +673,9 @@ Once authority flow is mechanically frozen, this system becomes:
 - [x] **M19.4** GAS-01: Optimize Uniswap V3 liquidity flow to reduce mint/increase gas overhead (owner: contracts). — 2026-03-30 — @agent — reduced repeated approval overhead via one-time token approval initialization and shared liquidity-increase path in `NetworkLiquidityManager`.
 - [x] **M19.5** GAS-02: Optimize distribution audit-path gas usage while preserving verifiability (owner: contracts+gateway). — 2026-03-30 — @agent — added cached `networkContributions` accounting plus `getAuditTrailSummary()` and wired gateway audit reads to summary view.
 - [x] **M19.6** SEC-04: Enforce timelock delays on high-impact admin/governance contract actions (owner: governance+security). — 2026-03-30 — @agent — added explicit 48h admin operation queue/execute timelock controls for sensitive liquidity/distribution parameter changes.
-- [ ] **M19.7** SEC-05: Ensure zkML verification remains fail-closed under verifier faults (owner: hypervisor+zkml).
-- [ ] **M19.8** GAS-03: Add oracle caching strategy and cache-invalidation controls for gas savings (owner: grid+contracts).
-- [ ] **M19.9** GAS-04: Implement batch-operation paths for high-frequency on-chain workflows (owner: contracts+gateway).
+- [x] **M19.7** SEC-05: Ensure zkML verification remains fail-closed under verifier faults (owner: hypervisor+zkml). — 2026-03-30 — @agent — hardened `zkml_verify` with explicit fail-closed telemetry and non-silent verifier fault handling.
+- [x] **M19.8** GAS-03: Add oracle caching strategy and cache-invalidation controls for gas savings (owner: grid+contracts). — 2026-03-30 — @agent — added bridge oracle rating cache with refresh/invalidate controls and staleness-aware reads in `CrossChainBridge`.
+- [x] **M19.9** GAS-04: Implement batch-operation paths for high-frequency on-chain workflows (owner: contracts+gateway). — 2026-03-30 — @agent — added `batchBridgePayroll` on-chain path and gateway batch distribution/bridge endpoints.
 - [ ] **M19.10** EFF-01: Implement gas-price oracle policy for transaction cost-aware routing (owner: ops+grid).
 - [ ] **M19.11** EFF-02: Add transaction monitoring and stuck-tx recovery automation (owner: ops+security).
 - [ ] **M19.12** EFF-03: Optimize state-channel operations for lower settlement overhead and faster finalization (owner: contracts+grid).
