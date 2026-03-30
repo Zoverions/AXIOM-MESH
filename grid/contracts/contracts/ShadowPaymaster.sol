@@ -8,6 +8,18 @@ import "./FounderCommitment.sol";
 contract ShadowPaymaster is BasePaymaster {
     DarkComputePool public immutable darkPool;
     FounderCommitment public immutable founder;
+    address public upgradeTimelock;
+
+    function setUpgradeTimelock(address _timelock) external {
+        if (upgradeTimelock == address(0)) {
+            require(founder.verifyFounder(""), "Unauthorized");
+        } else {
+            require(msg.sender == upgradeTimelock, "Unauthorized: not upgrade timelock");
+        }
+        upgradeTimelock = _timelock;
+    }
+
+
 
     constructor(IEntryPoint _entryPoint, address _darkPool, address _founder) BasePaymaster(_entryPoint) {
         darkPool = DarkComputePool(_darkPool);
@@ -28,6 +40,6 @@ contract ShadowPaymaster is BasePaymaster {
     }
 
     function _authorizeUpgrade(address) internal virtual {
-        require(founder.verifyFounder(""), "Unauthorized");
+        require(msg.sender == upgradeTimelock, "Unauthorized: not upgrade timelock");
     }
 }

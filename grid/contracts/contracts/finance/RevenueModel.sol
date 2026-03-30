@@ -64,7 +64,7 @@ contract RevenueModel is Ownable {
 
     /// @dev Routes collected fees to the UniversalDistributionPool.
     function _routeToPool(uint256 amount, string memory source) internal {
-        paymentToken.safeApprove(address(distributionPool), amount);
+        paymentToken.forceApprove(address(distributionPool), amount);
         distributionPool.deposit(address(this), amount, source);
         emit FeeRouted(msg.sender, amount, source);
     }

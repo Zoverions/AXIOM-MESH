@@ -21,6 +21,18 @@ contract RobotWorkforce is Initializable, UUPSUpgradeable {
 
     event RobotDeployed(uint256 tokenId, string model);
     event PayrollProcessed(uint256 robotId, uint256 amount);
+    address public upgradeTimelock;
+
+    function setUpgradeTimelock(address _timelock) external {
+        if (upgradeTimelock == address(0)) {
+            require(msg.sender == address(allocator.founderManager().founder()), "Founder required");
+        } else {
+            require(msg.sender == upgradeTimelock, "Unauthorized: not upgrade timelock");
+        }
+        upgradeTimelock = _timelock;
+    }
+
+
 
     constructor(address payable _pool, address _allocator) {
         pool = UniversalDistributionPool(_pool);
@@ -46,6 +58,6 @@ contract RobotWorkforce is Initializable, UUPSUpgradeable {
     }
 
     function _authorizeUpgrade(address) internal override {
-        // Founder backstop
+        require(msg.sender == upgradeTimelock, "Unauthorized: not upgrade timelock");
     }
 }

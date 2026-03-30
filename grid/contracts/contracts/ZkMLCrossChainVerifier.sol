@@ -10,6 +10,18 @@ contract ZkMLCrossChainVerifier is Initializable, UUPSUpgradeable {
     bytes32 public constant GROTH16_VERIFIER = 0x0000000000000000000000000000000000000000000000000000000000000000; // Groth16 verifier address (deploy once)
 
     event ZkMLProofVerified(bytes32 modelId, uint256 chainId, bool valid);
+    address public upgradeTimelock;
+
+    function setUpgradeTimelock(address _timelock) external {
+        if (upgradeTimelock == address(0)) {
+            require(founder.verifyFounder(new bytes(0)), "Unauthorized");
+        } else {
+            require(msg.sender == upgradeTimelock, "Unauthorized: not upgrade timelock");
+        }
+        upgradeTimelock = _timelock;
+    }
+
+
 
     constructor(address _founder) {
         founder = FounderCommitment(_founder);
@@ -29,6 +41,6 @@ contract ZkMLCrossChainVerifier is Initializable, UUPSUpgradeable {
     }
 
     function _authorizeUpgrade(address) internal override {
-        require(founder.verifyFounder(new bytes(0)), "Unauthorized");
+        require(msg.sender == upgradeTimelock, "Unauthorized: not upgrade timelock");
     }
 }
