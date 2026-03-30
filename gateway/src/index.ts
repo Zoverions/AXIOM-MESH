@@ -5,7 +5,6 @@ import helmet from 'helmet';
 import bodyParser from 'body-parser';
 import http from 'http';
 import https from 'https';
-import fs from 'fs';
 import dotenv from 'dotenv';
 import path from 'path';
 import cluster from 'cluster';
@@ -23,6 +22,7 @@ import { initLogger } from './utils/logger';
 import { BackpressureWebSocket } from './performance/EventLoopOptimizer';
 import { wafMiddleware } from './middleware/waf';
 import { initRedisRateLimiter } from './middleware/public_rate_limit';
+import { isOriginAllowed, parseAllowedOrigins, parseByteLimit } from './config/security';
 import './channels'; // Initialize channel registrations
 
 dotenv.config();
@@ -62,22 +62,13 @@ if (cluster.isPrimary && process.env.NODE_ENV !== 'test') {
 // REST Server
 const app = express();
 
-const allowedOrigins = process.env.CORS_ORIGINS
-    ? process.env.CORS_ORIGINS.split(',')
-    : [`http://localhost:${REST_PORT}`, `http://127.0.0.1:${REST_PORT}`];
+const allowedOrigins = parseAllowedOrigins(process.env.CORS_ORIGINS, REST_PORT);
+const maxJsonBodyBytes = parseByteLimit(process.env.GATEWAY_MAX_JSON_BODY_BYTES, 1024 * 100);
+const wsMaxPayloadBytes = parseByteLimit(process.env.GATEWAY_WS_MAX_PAYLOAD_BYTES, 1024 * 1024);
 
 app.use(cors({
     origin: function (origin, callback) {
-        // Explicitly block requests with no origin to prevent CSRF bypass
-        // Exception: allowed if explicitly requested via CORS_ORIGINS '*' or explicitly configured
-        if (!origin) {
-            if (allowedOrigins.includes('*') || process.env.NODE_ENV === 'test' || process.env.ALLOW_MISSING_ORIGIN === 'true') {
-                return callback(null, true);
-            }
-            return callback(new Error('Not allowed by CORS'));
-        }
-
-        if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*') || process.env.NODE_ENV === 'test') {
+        if (isOriginAllowed(origin, allowedOrigins, process.env.NODE_ENV, process.env.ALLOW_MISSING_ORIGIN)) {
             callback(null, true);
         } else {
             callback(new Error('Not allowed by CORS'));
@@ -85,8 +76,9 @@ app.use(cors({
     }
 }));
 
+app.disable('x-powered-by');
 app.use(helmet());
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: maxJsonBodyBytes }));
 app.use(wafMiddleware);
 
 // Serve static frontend dashboard with the same auth model as REST/WS
@@ -97,7 +89,10 @@ app.use((req: express.Request, res: express.Response, next: express.NextFunction
     }
     authMiddleware(req, res, next);
 });
-app.use(express.static(path.join(__dirname, '../public')));
+app.use(express.static(path.join(__dirname, '../public'), {
+    etag: true,
+    maxAge: process.env.NODE_ENV === 'production' ? '5m' : 0,
+}));
 
 app.use('/', restRoutes);
 app.use('/api/mobile', mobileRoutes);
@@ -134,7 +129,24 @@ server.listen(REST_PORT, () => {
 });
 
 // WebSocket Server
-const wss = new WebSocketServer({ port: Number(WS_PORT) });
+const wss = new WebSocketServer({
+    port: Number(WS_PORT),
+    maxPayload: wsMaxPayloadBytes,
+    perMessageDeflate: {
+        threshold: 1024,
+        clientNoContextTakeover: true,
+        serverNoContextTakeover: true,
+    },
+    verifyClient: (info, done) => {
+        const allowed = isOriginAllowed(info.origin, allowedOrigins, process.env.NODE_ENV, process.env.ALLOW_MISSING_ORIGIN);
+        if (!allowed) {
+            done(false, 403, 'Forbidden origin');
+            return;
+        }
+
+        done(true);
+    },
+});
 
 wss.on('connection', (ws: WebSocket, req: any) => {
     const url = new URL(req.url, `http://${req.headers.host}`);
