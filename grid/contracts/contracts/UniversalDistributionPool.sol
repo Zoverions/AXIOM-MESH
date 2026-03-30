@@ -31,6 +31,9 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable, Reentrancy
     uint256 public stakingRewardShareBps;
     uint256 public maxSingleDistributionAmount;
     uint256 public maxBatchDistributionAmount;
+    uint256 public constant ADMIN_TIMELOCK_DELAY = 2 days;
+    mapping(address => uint256) public networkContributions;
+    mapping(bytes32 => uint256) public queuedAdminOperations;
 
     event Inflow(address from, uint256 amount, string source);
     event Outflow(address to, uint256 amount, bytes32 zkProofHash);
@@ -40,6 +43,8 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable, Reentrancy
     event DistributionCircuitBreakersUpdated(uint256 maxSingleDistributionAmount, uint256 maxBatchDistributionAmount);
     event DistributionEmergencyPause(address indexed triggeredBy);
     event DistributionEmergencyUnpause(address indexed triggeredBy);
+    event AdminOperationQueued(bytes32 indexed operationId, uint256 executeAfter);
+    event AdminOperationExecuted(bytes32 indexed operationId);
 
     constructor(address _founder, address _allocator, address _treasury, address _citizenship) {
         founder = FounderCommitment(_founder);
@@ -73,6 +78,7 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable, Reentrancy
 
         inflows[from] += amount;
         uint256 networkShare = (amount * networkSharePercentage) / 100;
+        networkContributions[from] += networkShare;
         uint256 stakingRewardAmount = 0;
 
         if (msg.value != amount && stakingRewards != address(0) && stakingRewardShareBps > 0) {
@@ -130,6 +136,8 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable, Reentrancy
     }
 
     function setCrossChainBridge(address _bridge) external {
+        bytes32 operationId = keccak256(abi.encode("setCrossChainBridge", _bridge));
+        _consumeAdminTimelock(operationId);
         require(msg.sender == address(founder), "Founder only");
         crossChainBridge = _bridge;
     }
@@ -140,11 +148,17 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable, Reentrancy
     }
 
     function setExternalFundsEnabled(bool _enabled) external {
+        if (msg.sender == address(founder)) {
+            bytes32 operationId = keccak256(abi.encode("setExternalFundsEnabled", _enabled));
+            _consumeAdminTimelock(operationId);
+        }
         require(allocator.governance().isProposalPassed(keccak256(abi.encode(_enabled))) || msg.sender == address(founder), "Governance or founder required");
         externalFundsEnabled = _enabled;
     }
 
     function setStakingRewards(address _stakingRewards, uint256 _rewardShareBps) external {
+        bytes32 operationId = keccak256(abi.encode("setStakingRewards", _stakingRewards, _rewardShareBps));
+        _consumeAdminTimelock(operationId);
         require(msg.sender == address(founder), "Founder only");
         require(_rewardShareBps <= 10_000, "Invalid bps");
         stakingRewards = _stakingRewards;
@@ -153,11 +167,23 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable, Reentrancy
     }
 
     function setDistributionCircuitBreakers(uint256 _maxSingleDistributionAmount, uint256 _maxBatchDistributionAmount) external {
+        bytes32 operationId = keccak256(
+            abi.encode("setDistributionCircuitBreakers", _maxSingleDistributionAmount, _maxBatchDistributionAmount)
+        );
+        _consumeAdminTimelock(operationId);
         require(msg.sender == address(founder), "Founder only");
         require(_maxSingleDistributionAmount > 0 && _maxBatchDistributionAmount >= _maxSingleDistributionAmount, "Invalid thresholds");
         maxSingleDistributionAmount = _maxSingleDistributionAmount;
         maxBatchDistributionAmount = _maxBatchDistributionAmount;
         emit DistributionCircuitBreakersUpdated(_maxSingleDistributionAmount, _maxBatchDistributionAmount);
+    }
+
+    function queueAdminOperation(bytes32 operationId) external {
+        require(msg.sender == address(founder), "Founder only");
+        require(queuedAdminOperations[operationId] == 0, "Operation already queued");
+        uint256 executeAfter = block.timestamp + ADMIN_TIMELOCK_DELAY;
+        queuedAdminOperations[operationId] = executeAfter;
+        emit AdminOperationQueued(operationId, executeAfter);
     }
 
     function emergencyPause() external {
@@ -175,11 +201,25 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable, Reentrancy
     function getAuditTrail(address entity) external view returns (uint256 totalIn, uint256 totalOut, uint256 networkContributed) {
         totalIn = inflows[entity];
         totalOut = outflows[entity];
-        networkContributed = (totalIn * networkSharePercentage) / 100;
+        networkContributed = networkContributions[entity];
+    }
+
+    function getAuditTrailSummary(address entity) external view returns (uint256 totalIn, uint256 totalOut, uint256 networkContributed) {
+        totalIn = inflows[entity];
+        totalOut = outflows[entity];
+        networkContributed = networkContributions[entity];
     }
 
     function _authorizeUpgrade(address) internal override {
         require(founder.verifyFounder(""), "Founder verification failed");
+    }
+
+    function _consumeAdminTimelock(bytes32 operationId) internal {
+        uint256 executeAfter = queuedAdminOperations[operationId];
+        require(executeAfter != 0, "Admin timelock: operation not queued");
+        require(block.timestamp >= executeAfter, "Admin timelock: delay not met");
+        delete queuedAdminOperations[operationId];
+        emit AdminOperationExecuted(operationId);
     }
 
     receive() external payable {}

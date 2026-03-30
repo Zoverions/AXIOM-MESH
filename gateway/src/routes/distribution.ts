@@ -32,7 +32,7 @@ class AutonomousDistributionManager {
         const poolAddress = process.env.UNIVERSAL_DISTRIBUTION_POOL_ADDRESS || "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
         const abi = [
             "function deposit(address from, uint256 amount, string calldata source) external payable",
-            "function getAuditTrail(address entity) external view returns (uint256 totalIn, uint256 totalOut, uint256 networkContributed)"
+            "function getAuditTrailSummary(address entity) external view returns (uint256 totalIn, uint256 totalOut, uint256 networkContributed)"
         ];
         // Wired to UniversalDistributionPool.getAuditTrail
         this.pool = new ethers.Contract(poolAddress, abi, this.wallet);
@@ -45,7 +45,7 @@ class AutonomousDistributionManager {
     }
 
     async getAuditTrail(entity: string) {
-        return await this.pool.getAuditTrail(entity);
+        return await this.pool.getAuditTrailSummary(entity);
     }
 }
 
