@@ -55,9 +55,10 @@ The installer automatically detects your platform and installs all dependencies 
 
 ## Execution Program
 - **Master to-do queue (canonical):** `docs/MASTER-TODO.md`
-- **Execution plan (reference):** `docs/PARALLEL-DELIVERY-PLAN-2026.md`
-- **Task-level backlog (reference):** `docs/PRODUCTION-EXECUTION-BACKLOG.md`
-- **Live readiness board (reference):** `docs/PRODUCTION-READINESS-TRACKER.md`
+- **Canonical roadmap:** `docs/ROADMAP.md`
+- **Execution plan (supporting reference):** `docs/PARALLEL-DELIVERY-PLAN-2026.md`
+- **Task-level backlog (supporting reference):** `docs/PRODUCTION-EXECUTION-BACKLOG.md`
+- **Live readiness board (supporting reference):** `docs/PRODUCTION-READINESS-TRACKER.md`
 - **Current status snapshot:** `docs/PROJECT-STATUS-2026.md`
 - **Strategic assessment response:** `docs/STRATEGIC-AUDIT-RESPONSE.md`
 
