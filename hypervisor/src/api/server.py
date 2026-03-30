@@ -200,6 +200,17 @@ app.include_router(tasks_router)
 # Mount MCP Server SSE and Messages endpoints
 app.mount("/mcp", mcp_server.sse_app())
 
+@app.post("/api/v1/oracle/zkml-stub")
+async def pulsechain_zkml_stub(request: Request):
+    """
+    Opt-in zkML oracle service stub for PulseChain Enhancement Layer.
+    Only active if ENHANCE_PULSECHAIN=1
+    """
+    if os.environ.get("ENHANCE_PULSECHAIN") != "1":
+        raise HTTPException(status_code=403, detail="PulseChain enhancement layer disabled")
+    return {"status": "success", "message": "zkML proof generated and submitted to PulseChain Oracle"}
+
+
 hypervisor_metrics = {"requests": 0, "errors": 0}
 intent_metrics = {"success": 0, "error": 0, "degraded": 0}
 

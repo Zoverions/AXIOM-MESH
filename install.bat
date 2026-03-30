@@ -8,6 +8,10 @@ echo ==========================================================
 ::   --capsule=skill-pill|capsule|capsule-plus
 ::   --region=ontario|us|uk|china
 ::   --monitor=dedicated-mesh|shared-machine|education-node|minimal-edge
+::   --no-monitor
+::   --reward-mode=internal-only|pulsechain-optin
+::   --enhance-pulsechain=true|false
+::   --platform=windows|linux|android|live-usb
 ::   --launch-mode=local-mesh|single-node|launch-testnet|launch-network
 
 :: Auto-install Chocolatey if missing

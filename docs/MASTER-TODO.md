@@ -675,3 +675,24 @@ Once authority flow is mechanically frozen, this system becomes:
 - [x] **M19.10** EFF-01: Implement gas-price oracle policy for transaction cost-aware routing (owner: ops+grid). — 2026-03-30 — @agent — added bounded gas-policy oracle, adaptive fee caps, and `/distribution/gas-policy` visibility in gateway routing — 33fe45a
 - [x] **M19.11** EFF-02: Add transaction monitoring and stuck-tx recovery automation (owner: ops+security). — 2026-03-30 — @agent — added pending-tx monitor with nonce-safe replacement escalation for stuck tx recovery in distribution execution paths — 33fe45a
 - [x] **M19.12** EFF-03: Optimize state-channel operations for lower settlement overhead and faster finalization (owner: contracts+grid). — 2026-03-30 — @agent — added participant fast-finalization consent path + batch settlement entrypoint with coverage tests — 33fe45a
+
+### ZERO BARRIERS + SELF-FUNDING POLICY (Zov – March 30 2026)
+- [x] Enforce: No token gating for education/governance/adoption EVER
+- [x] Enforce: All rewards MUST be self-funding from shared node resources
+- [x] Create docs/CAPSULE-HIERARCHY.md (Skill Pill → Capsule → Capsule Plus)
+- [x] Create docs/PULSECHAIN-INTEGRATION-ROADMAP.md (self-funding edition)
+- [ ] Add --capsule and --reward-mode flags to all installers
+- [ ] Implement InstallationMonitor (4 modes) + resource accounting in Grid/ComputeBond
+- [x] Android/Termux lightweight guide + QR/2FA
+- [ ] Optional PulseChain opt-in yield only after internal surplus
+- [ ] Expand Ontario Education Capsule with full curriculum standards
+- [ ] Governmental mirroring roadmap (US/UK/China, pull not push)
+
+### PulseChain Enhancement Layer (Bidirectional Value – March 30 2026)
+- [ ] Core Rule: AXIOM-MESH must actively improve PulseChain’s intelligence, security, governance, and adoption.
+- [ ] 1. zkML Oracle Service: Nodes generate zk-proofs of AI inferences → PulseChain contracts.
+- [ ] 2. Hypervisor Node Manager: AI-orchestrated PulseChain validator / full-node management.
+- [ ] 3. OntarioEdAI as PulseChain dApp: On-chain education content + missions.
+- [ ] 4. Immune-System Security Overlay: Real-time quarantine for PulseChain network.
+- [ ] 5. AI Governance Toolkit: Agent-steered proposal evaluation + secure elections.
+- [ ] 6. Edge Bootstrap: Skill Pill live USB / Android nodes as PulseChain on-ramps.
