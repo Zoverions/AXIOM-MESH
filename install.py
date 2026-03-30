@@ -17,6 +17,9 @@ PYTHON_DEPS = [
 
 REGIONAL_CURRICULUM_CATALOG = Path("config/regional_curricula.json")
 DEFAULT_REGION = "ontario"
+MACHINE_ROLES = ["dedicated-mesh", "shared-machine", "education-node", "minimal-edge"]
+LAUNCH_MODES = ["local-mesh", "single-node", "launch-testnet", "launch-network"]
+USER_PRIORITIES = ["performance", "security", "cost", "autonomy"]
 
 def load_supported_regions():
     if not REGIONAL_CURRICULUM_CATALOG.exists():
@@ -42,6 +45,12 @@ def run_cmd(cmd, shell=False, check=True, capture_output=False):
         if capture_output:
             return ""
         return False
+
+def detect_linux_package_manager():
+    for candidate in ["apt-get", "dnf", "yum", "pacman", "zypper", "apk"]:
+        if shutil.which(candidate):
+            return candidate
+    return None
 
 def get_os():
     sys_os = platform.system().lower()
@@ -87,7 +96,8 @@ def install_prereqs(os_type):
                 run_cmd(["choco", "install", "nodejs", "-y", "--force"])
 
         elif os_type == 'linux':
-            if shutil.which("apt-get"):
+            pm = detect_linux_package_manager()
+            if pm == "apt-get":
                 run_cmd("sudo apt-get update -qq", shell=True)
                 if "docker" in missing:
                     run_cmd("curl -fsSL https://get.docker.com | sh", shell=True)
@@ -96,6 +106,50 @@ def install_prereqs(os_type):
                     run_cmd(["sudo", "apt-get", "install", "-y", "make", "curl"])
                 if "nodejs" in missing:
                     run_cmd("curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-get install -y nodejs", shell=True)
+            elif pm in ["dnf", "yum"]:
+                if "docker" in missing:
+                    run_cmd(["sudo", pm, "install", "-y", "docker"])
+                    run_cmd(["sudo", "systemctl", "enable", "--now", "docker"], check=False)
+                    run_cmd("sudo usermod -aG docker $USER", shell=True, check=False)
+                if "make" in missing:
+                    run_cmd(["sudo", pm, "install", "-y", "make"])
+                if "nodejs" in missing:
+                    run_cmd(["sudo", pm, "install", "-y", "nodejs", "npm"])
+            elif pm == "pacman":
+                if "docker" in missing:
+                    run_cmd(["sudo", "pacman", "-Sy", "--noconfirm", "docker"])
+                    run_cmd(["sudo", "systemctl", "enable", "--now", "docker"], check=False)
+                    run_cmd("sudo usermod -aG docker $USER", shell=True, check=False)
+                if "make" in missing or "nodejs" in missing:
+                    packages = ["base-devel"] if "make" in missing else []
+                    if "nodejs" in missing:
+                        packages.extend(["nodejs", "npm"])
+                    if packages:
+                        run_cmd(["sudo", "pacman", "-Sy", "--noconfirm"] + packages)
+            elif pm == "zypper":
+                if "docker" in missing:
+                    run_cmd(["sudo", "zypper", "--non-interactive", "install", "docker"])
+                    run_cmd(["sudo", "systemctl", "enable", "--now", "docker"], check=False)
+                    run_cmd("sudo usermod -aG docker $USER", shell=True, check=False)
+                if "make" in missing:
+                    run_cmd(["sudo", "zypper", "--non-interactive", "install", "make"])
+                if "nodejs" in missing:
+                    run_cmd(["sudo", "zypper", "--non-interactive", "install", "nodejs20", "npm20"], check=False)
+                    run_cmd(["sudo", "zypper", "--non-interactive", "install", "nodejs", "npm"], check=False)
+            elif pm == "apk":
+                if "docker" in missing:
+                    run_cmd(["sudo", "apk", "add", "docker"])
+                    run_cmd(["sudo", "rc-update", "add", "docker", "default"], check=False)
+                    run_cmd(["sudo", "service", "docker", "start"], check=False)
+                if "make" in missing or "nodejs" in missing:
+                    packages = []
+                    if "make" in missing:
+                        packages.append("make")
+                    if "nodejs" in missing:
+                        packages.extend(["nodejs", "npm"])
+                    run_cmd(["sudo", "apk", "add"] + packages)
+            else:
+                print("⚠️  Unsupported Linux package manager. Install docker/make/nodejs manually.")
 
         elif os_type == 'macos':
             if not shutil.which("brew"):
@@ -112,6 +166,8 @@ def install_prereqs(os_type):
             if shutil.which("pkg"):
                 run_cmd(["pkg", "install", "-y", "make", "nodejs", "docker"])
             print("📱 Android/Termux → using minimal-edge mode")
+        else:
+            print(f"⚠️  Unsupported OS '{os_type}'. Install docker/make/nodejs manually.")
 
     # Always install Python dependencies
     print("🐍 Installing Python dependencies...")
@@ -144,6 +200,35 @@ def prompt_with_timeout(prompt, default, timeout=15):
         else:
             return default
 
+def normalize_choice(value, allowed, default, label):
+    normalized = (value or "").strip().lower()
+    if normalized in allowed:
+        return normalized
+    print(f"⚠️  Unknown {label} '{value}'. Falling back to {default}.")
+    return default
+
+def resolve_machine_role(base_role, capsule_layer, monitor_override, os_type):
+    role = normalize_choice(base_role, MACHINE_ROLES, "shared-machine", "machine role")
+
+    if capsule_layer == "skill-pill":
+        print("🟢 Skill Pill selected, forcing minimal-edge role for ultra-lightweight execution.")
+        role = "minimal-edge"
+    elif capsule_layer == "capsule-plus":
+        print("🔥 Capsule Plus selected, ensuring heavy-duty config with regional focus.")
+        if role not in ["education-node", "dedicated-mesh"]:
+            role = "education-node"
+
+    if monitor_override:
+        forced_role = normalize_choice(monitor_override, MACHINE_ROLES, role, "monitor override")
+        print(f"Applying monitor override (4-mode matrix toggle): {forced_role}")
+        role = forced_role
+
+    if os_type == "android" and not monitor_override:
+        print("Android detected, forcing minimal-edge role.")
+        role = "minimal-edge"
+
+    return role
+
 def write_env(config):
     env_lines = []
     if os.path.exists(ENV_FILE):
@@ -171,7 +256,8 @@ def main():
     parser = argparse.ArgumentParser(description="AXIOM-MESH Universal Cross-Platform Installer")
     parser.add_argument("--capsule", type=str, choices=["skill-pill", "capsule", "capsule-plus"], default="capsule", help="Capsule layer to install")
     parser.add_argument("--platform", type=str, help="Target platform overrides")
-    parser.add_argument("--monitor", type=str, choices=["dedicated-mesh", "shared-machine", "education-node", "minimal-edge"], help="Monitoring and edge role overrides (4-mode matrix + runtime toggle)")
+    parser.add_argument("--monitor", type=str, choices=MACHINE_ROLES, help="Monitoring and edge role overrides (4-mode matrix + runtime toggle)")
+    parser.add_argument("--launch-mode", type=str, choices=LAUNCH_MODES, help="Launch profile override")
     parser.add_argument("--region", type=str, default=DEFAULT_REGION, help="Regional curriculum focus (e.g. ontario)")
     parser.add_argument("--auto", action="store_true", help="Run non-interactively with safe defaults")
     parser.add_argument("--skip-launch", action="store_true", help="Generate configuration without starting services")
@@ -205,34 +291,19 @@ def main():
 
     if auto_install:
         machine_role = "shared-machine"
-        launch_mode = "local-mesh"
+        launch_mode = args.launch_mode or "local-mesh"
         user_priority = "security"
         meshstore_quota = "50"
         network_wallet = ""
         rpc_url = ""
     else:
         machine_role = prompt_with_timeout("Machine role (dedicated-mesh/shared-machine/minimal-edge/education-node)", "shared-machine", 15)
-
-        # Override machine_role if capsule is skill-pill or if platform overrides mandate it
-        if args.capsule == "skill-pill":
-            print("🟢 Skill Pill selected, forcing minimal-edge role for ultra-lightweight execution.")
-            machine_role = "minimal-edge"
-        elif args.capsule == "capsule-plus":
-            print(f"🔥 Capsule Plus selected, ensuring heavy-duty config with regional focus: {selected_region}.")
-            if machine_role not in ["education-node", "dedicated-mesh"]:
-                machine_role = "education-node"
-
-        if args.monitor:
-            print(f"Applying monitor override (4-mode matrix toggle): {args.monitor}")
-            machine_role = args.monitor
-
-        if os_type == 'android':
-            print("Android detected, forcing minimal-edge role.")
-            if not args.monitor:
-                machine_role = "minimal-edge"
-
-        launch_mode = prompt_with_timeout("Launch mode (local-mesh/single-node/launch-testnet/launch-network)", "local-mesh", 15)
+        launch_mode = args.launch_mode or prompt_with_timeout("Launch mode (local-mesh/single-node/launch-testnet/launch-network)", "local-mesh", 15)
         user_priority = prompt_with_timeout("Primary priority (performance/security/cost/autonomy)", "security", 15)
+
+    machine_role = resolve_machine_role(machine_role, args.capsule, args.monitor, os_type)
+    launch_mode = normalize_choice(launch_mode, LAUNCH_MODES, "local-mesh", "launch mode")
+    user_priority = normalize_choice(user_priority, USER_PRIORITIES, "security", "primary priority")
 
     print("Generating machine profile...")
     os.environ["MACHINE_ROLE"] = machine_role
