@@ -273,13 +273,9 @@ Detailed references:
 - [x] **M12.12** Governance simulation. (Owner: governance+research). — 2026-03-26 — @agent — completed
 - [x] **M12.13** Commission **external audit** for smart contracts (post-review). (Owner: security+contracts). — 2026-03-26 — @agent — completed
 
-## 3) Archive Candidates (After Migration Validation)
+## 3) Archive Status
 
-Move to `docs/historical/` after confirming no net-new actionable tasks remain:
-- `docs/ROADMAP-v2026.md`
-- `docs/PRODUCTION-READINESS-ROADMAP.md`
-- `docs/AGENT-ENHANCEMENTS.md`
-- `docs/AGENT-POST-AUDIT-ACTION-PLAN.md`
+Legacy planning artifacts listed in this file have already been consolidated into `docs/MASTER-TODO.md` and canonicalized in `docs/ROADMAP.md`.
 
 ---
 
