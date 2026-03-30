@@ -55,6 +55,14 @@ export async function runCode(language: string, code: string, limitsOrUseTee?: R
 
     const memoryMb = limits?.memory_mb || 256;
     const cpus = limits?.cpu_ms ? (limits.cpu_ms / 100).toFixed(2) : "0.5";
+    const maxOutputBytes = Number(process.env.SANDBOX_MAX_OUTPUT_BYTES || 1024 * 1024);
+    const pythonImage = process.env.SANDBOX_PYTHON_IMAGE || 'python:3.9-slim';
+    const nodeImage = process.env.SANDBOX_NODE_IMAGE || 'node:18-alpine';
+    const requireDigest = process.env.SANDBOX_REQUIRE_IMAGE_DIGESTS === '1';
+
+    if (requireDigest && (!pythonImage.includes('@sha256:') || !nodeImage.includes('@sha256:'))) {
+        throw new Error('Production sandbox requires digest-pinned SANDBOX_PYTHON_IMAGE and SANDBOX_NODE_IMAGE');
+    }
 
     return new Promise(async (resolve, reject) => {
         let command: string;
@@ -100,10 +108,10 @@ export async function runCode(language: string, code: string, limitsOrUseTee?: R
 
         if (language === 'python' || language === 'python3') {
             command = 'docker';
-            args = [...commonArgs, 'python:3.9-slim', 'python', '-c', code];
+            args = [...commonArgs, pythonImage, 'python', '-c', code];
         } else if (language === 'javascript' || language === 'node') {
             command = 'docker';
-            args = [...commonArgs, 'node:18-alpine', 'node', '-e', code];
+            args = [...commonArgs, nodeImage, 'node', '-e', code];
         } else if (language === 'bash' || language === 'sh') {
             // SECURITY FIX: Bash execution disabled due to command injection risk
             // If shell execution is required, use a dedicated shell capsule with strict input validation
@@ -153,25 +161,50 @@ export async function runCode(language: string, code: string, limitsOrUseTee?: R
         let stderr = '';
 
         proc.stdout.on('data', (data) => {
-            stdout += data.toString();
+            if (stdout.length >= maxOutputBytes) {
+                return;
+            }
+            stdout += data.toString().slice(0, maxOutputBytes - stdout.length);
         });
 
         proc.stderr.on('data', (data) => {
-            stderr += data.toString();
+            if (stderr.length >= maxOutputBytes) {
+                return;
+            }
+            stderr += data.toString().slice(0, maxOutputBytes - stderr.length);
         });
+
+        const outputGuard = setInterval(() => {
+            if (stdout.length + stderr.length > maxOutputBytes * 2) {
+                proc.kill();
+                stderr += '\nExecution terminated: output limit exceeded';
+            }
+        }, 100);
+
+        const cleanup = () => {
+            clearTimeout(timer);
+            clearInterval(outputGuard);
+            if (stdout.length >= maxOutputBytes) {
+                stdout += '\n[truncated]';
+            }
+            if (stderr.length >= maxOutputBytes) {
+                stderr += '\n[truncated]';
+            }
+        };
 
         const timer = setTimeout(() => {
             proc.kill();
+            cleanup();
             resolve({ stdout, stderr: stderr + '\nExecution timed out' });
         }, 10000);
 
-        proc.on('close', (code) => {
-            clearTimeout(timer);
+        proc.on('close', (_code: number) => {
+            cleanup();
             resolve({ stdout, stderr });
         });
 
         proc.on('error', (error) => {
-            clearTimeout(timer);
+            cleanup();
             resolve({ stdout: '', stderr: error.message || 'Execution failed' });
         });
     });

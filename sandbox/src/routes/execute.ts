@@ -1,10 +1,56 @@
 import { Router, Request, Response } from 'express';
 import { runCode } from '../services/dockerRunner';
-import { NetworkNamespaceController } from '../execution/SecureRuntime';
-import { SecretManager } from '../utils/secrets';
 import { validateSandboxApiKey } from '../utils/auth';
 
 const router = Router();
+let verifierConsecutiveFailures = 0;
+let verifierCircuitOpenUntil = 0;
+
+async function verifyZkProofWithResilience(zk_proof: unknown): Promise<{ ok: boolean; status?: number; reason?: string }> {
+    const now = Date.now();
+    if (now < verifierCircuitOpenUntil) {
+        return { ok: false, status: 503, reason: 'Grid verifier circuit is temporarily open' };
+    }
+
+    const timeoutMs = Number(process.env.GRID_VERIFY_TIMEOUT_MS || 3000);
+    const failureThreshold = Number(process.env.GRID_CB_FAILURE_THRESHOLD || 5);
+    const resetMs = Number(process.env.GRID_CB_RESET_MS || 30000);
+
+    const fetchModule = await import('node-fetch');
+    const fetch = fetchModule.default;
+    const gridUrl = process.env.GRID_API_URL || 'http://grid:5000';
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+        const verifyRes = await fetch(`${gridUrl}/zkml/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(zk_proof),
+            signal: controller.signal
+        });
+
+        if (!verifyRes.ok) {
+            verifierConsecutiveFailures += 1;
+            if (verifierConsecutiveFailures >= failureThreshold) {
+                verifierCircuitOpenUntil = Date.now() + resetMs;
+            }
+            return { ok: false, status: 403, reason: `Invalid zkML proof - ${verifyRes.statusText}` };
+        }
+
+        verifierConsecutiveFailures = 0;
+        verifierCircuitOpenUntil = 0;
+        return { ok: true };
+    } catch (err) {
+        verifierConsecutiveFailures += 1;
+        if (verifierConsecutiveFailures >= failureThreshold) {
+            verifierCircuitOpenUntil = Date.now() + resetMs;
+        }
+        return { ok: false, status: 503, reason: 'Failed to reach Grid oracle for zkML verification' };
+    } finally {
+        clearTimeout(timeout);
+    }
+}
 
 router.post('/execute', async (req: Request, res: Response) => {
     try {
@@ -59,37 +105,16 @@ router.post('/execute', async (req: Request, res: Response) => {
             }
 
             // Verify zk_proof against Grid endpoint
-            try {
-                const fetchModule = await import('node-fetch');
-                const fetch = fetchModule.default;
-                const gridUrl = process.env.GRID_API_URL || 'http://grid:5000';
-                const verifyRes = await fetch(`${gridUrl}/zkml/verify`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(zk_proof)
+            const verifierResult = await verifyZkProofWithResilience(zk_proof);
+            if (!verifierResult.ok) {
+                res.status(verifierResult.status || 503).json({
+                    error: `Firewall Blocked: ${verifierResult.reason}`
                 });
-
-                if (!verifyRes.ok) {
-                    res.status(403).json({
-                        error: `Firewall Blocked: Invalid zkML proof - ${verifyRes.statusText}`
-                    });
-                    return;
-                }
-            } catch (err: any) {
-                res.status(500).json({ error: 'Failed to reach Grid oracle for zkML verification' });
                 return;
             }
         }
 
-        let result;
-        const processIsolated = new NetworkNamespaceController();
-
-        try {
-            await processIsolated.isolateProcess(process.pid);
-            result = await runCode(language, code, !!use_tee);
-        } finally {
-            await processIsolated.restoreNetworking(process.pid);
-        }
+        const result = await runCode(language, code, !!use_tee);
 
         res.json({ result });
     } catch (error: any) {

@@ -3,11 +3,9 @@ import express from 'express';
 import executeRouter from '../routes/execute';
 import * as auth from '../utils/auth';
 import * as dockerRunner from '../services/dockerRunner';
-import * as secureRuntime from '../execution/SecureRuntime';
 
 jest.mock('../utils/auth');
 jest.mock('../services/dockerRunner');
-jest.mock('../execution/SecureRuntime');
 // We need to mock node-fetch conditionally but it's dynamic import in the code.
 // We can mock it by intercepting the global fetch or the specific module.
 
@@ -19,10 +17,6 @@ describe('Execute Router Tests', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         (auth.validateSandboxApiKey as jest.Mock).mockResolvedValue({ ok: true });
-
-        // Mock SecureRuntime methods
-        secureRuntime.NetworkNamespaceController.prototype.isolateProcess = jest.fn().mockResolvedValue(true);
-        secureRuntime.NetworkNamespaceController.prototype.restoreNetworking = jest.fn().mockResolvedValue(true);
     });
 
     test('GET /health returns status ok', async () => {
