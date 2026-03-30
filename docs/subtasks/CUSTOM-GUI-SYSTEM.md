@@ -261,11 +261,11 @@ Each GUI exposes a REST API for programmatic access:
 - [x] Integration tests for each GUI endpoint
 - [x] Load testing for concurrent connections
 - [x] Security penetration testing
-- [ ] Cross-browser compatibility testing (Chrome, Firefox, Safari, Edge)
-- [ ] Mobile responsiveness testing
-- [ ] Accessibility compliance (WCAG 2.1 AA)
+- [x] Cross-browser compatibility testing (Chrome, Firefox, Safari, Edge)
+- [x] Mobile responsiveness testing
+- [x] Accessibility compliance (WCAG 2.1 AA)
 
-**Status:** 🔄 In Progress — Core tests complete, UI/UX testing pending
+**Status:** ✅ Complete — UI/UX/browser/accessibility validation published in `docs/GUI-CROSS-BROWSER-ACCESSIBILITY-TESTING.md`
 
 ## M7.4.10 Documentation
 - [x] Create comprehensive HOWTO guide (`docs/HOWTO/custom-guis.md`)
@@ -294,6 +294,7 @@ Each GUI exposes a REST API for programmatic access:
 - **Hardware Profiles:** `docs/HARDWARE-PROFILE-MATRIX.md`
 - **API Documentation:** `packages/api/README.md`
 - **Master TODO:** `docs/MASTER-TODO.md` (Lane M7.4)
+- **Audit Reports:** `docs/audits/FULL-ECOSYSTEM-AUDIT-2026-03-29.md`, `docs/audits/security-hardening-blockchain-tokenomics-audit-2026-03-29.md`
 
 ## Success Criteria
 
@@ -303,12 +304,12 @@ Each GUI exposes a REST API for programmatic access:
 - ✅ Authentication secures remote access
 - ✅ REST APIs provide full programmatic control
 - ✅ Documentation is comprehensive and accurate
-- ⏳ Cross-browser testing complete
-- ⏳ Accessibility compliance verified
+- ✅ Cross-browser testing complete
+- ✅ Accessibility compliance verified
 
 ---
 
-**Last Updated:** 2026-03-27  
+**Last Updated:** 2026-03-30  
 **Owner:** @agent-gateway  
 **Priority:** High (M7 Lane)  
-**Status:** ✅ Feature Complete, 🔄 Testing In Progress
+**Status:** ✅ Feature Complete

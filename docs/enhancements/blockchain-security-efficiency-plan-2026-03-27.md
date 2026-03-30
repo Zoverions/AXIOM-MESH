@@ -3,6 +3,7 @@
 **Date:** 2026-03-27  
 **Author:** @agent  
 **Scope:** Comprehensive security hardening and gas optimization across blockchain interconnect layer  
+**Consolidation Status (2026-03-30):** Reference-only planning document. Active execution tasks are tracked in `docs/MASTER-TODO.md` Lane M19; completed mock-audit tasks are tracked in Lane M18.
 
 ---
 
@@ -433,8 +434,8 @@ function settleEarly(uint256 channelId) external {
 - [ ] SEC-01: Reentrancy guards (0.5 days)
 - [ ] SEC-02: Circuit breakers (1 day)
 - [ ] SEC-03: Multi-sig treasury (2 days)
-- [ ] M18.1: AutonomousDeployer governance flow (2 days) ← from mock audit
-- [ ] M18.2: NetworkLiquidityManager Uniswap integration (3 days) ← from mock audit
+- [x] M18.1: AutonomousDeployer governance flow (2 days) ← from mock audit (completed; see MASTER-TODO Lane M18)
+- [x] M18.2: NetworkLiquidityManager Uniswap integration (3 days) ← from mock audit (completed; see MASTER-TODO Lane M18)
 
 **Total:** 5 days  
 **Risk Mitigation:** Addresses top 3 security vulnerabilities
@@ -442,7 +443,7 @@ function settleEarly(uint256 channelId) external {
 ### Phase 2: Gas Optimization (Week 2)
 - [ ] GAS-01: Uniswap V3 optimization (3 days)
 - [ ] GAS-02: Distribution audit optimization (1 day)
-- [ ] M18.3: Wire distribution audit trail (1 day) ← from mock audit
+- [x] M18.3: Wire distribution audit trail (1 day) ← from mock audit (completed; see MASTER-TODO Lane M18)
 
 **Total:** 5 days  
 **Impact:** 60-80% gas cost reduction
@@ -450,8 +451,8 @@ function settleEarly(uint256 channelId) external {
 ### Phase 3: Enhanced Security (Week 3)
 - [ ] SEC-04: Time-lock delays (1.5 days)
 - [ ] SEC-05: ZKML fail-closed (0.5 days)
-- [ ] M18.4: ShadowNode zk-proof generation (3 days) ← from mock audit
-- [ ] M18.5: ZKML error logging (0.5 days) ← from mock audit
+- [x] M18.4: ShadowNode zk-proof generation (3 days) ← from mock audit (completed; see MASTER-TODO Lane M18)
+- [x] M18.5: ZKML error logging (0.5 days) ← from mock audit (completed; see MASTER-TODO Lane M18)
 
 **Total:** 5.5 days  
 **Impact:** Defense-in-depth security posture
@@ -462,8 +463,8 @@ function settleEarly(uint256 channelId) external {
 - [ ] EFF-01: Gas price oracle (1.5 days)
 - [ ] EFF-02: Transaction monitoring (2 days)
 - [ ] EFF-03: State channel optimization (1.5 days)
-- [ ] M18.6: ABC decorators (0.25 days) ← from mock audit
-- [ ] M18.7: Arweave documentation (0.25 days) ← from mock audit
+- [x] M18.6: ABC decorators (0.25 days) ← from mock audit (completed; see MASTER-TODO Lane M18)
+- [x] M18.7: Arweave documentation (0.25 days) ← from mock audit (completed; see MASTER-TODO Lane M18)
 
 **Total:** 9 days  
 **Impact:** 30% operational cost reduction

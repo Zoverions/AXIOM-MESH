@@ -1,5 +1,7 @@
 # Ontario Education Capsule Integration Plan
 
+> **Consolidation Note (2026-03-30):** This is an architecture/planning assessment document. Active execution tasks are tracked only in `docs/MASTER-TODO.md` (Lane M13 and related lanes). Checklist items in this document are reference design checkpoints, not the canonical delivery queue.
+
 ## Executive Summary
 
 This document outlines the strategic integration of the **OntarioEdAI** foundation into the existing **Education Capsule** framework (`/workspace/sandbox/capsules/education/ontario/`). The goal is to create a unified, production-ready Ontario education system that combines:

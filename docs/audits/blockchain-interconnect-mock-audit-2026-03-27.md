@@ -21,6 +21,7 @@ This audit identified **7 critical areas** with mock/scaffolded code in the bloc
 
 **Risk Level:** MEDIUM-HIGH  
 **Recommendation:** Complete implementations before mainnet deployment
+**Consolidation Status (2026-03-30):** Action items from this audit are canonically tracked in `docs/MASTER-TODO.md` Lane M18 (completed) and Lane M19 (remaining enhancement backlog).
 
 ---
 
@@ -264,13 +265,13 @@ The following tasks should be added to `/workspace/docs/MASTER-TODO.md`:
 
 ```markdown
 ## Lane M18 — Blockchain Interconnect Mock Elimination (New)
-- [ ] **M18.1** Implement AutonomousDeployer._submit_governance_proposal() with real UCP flow integration (owner: hypervisor, ETA: 2 days)
-- [ ] **M18.2** Complete NetworkLiquidityManager.addNetworkLiquidity() with Uniswap V3 mint/increase position logic (owner: contracts, ETA: 3 days)
-- [ ] **M18.3** Wire gateway /api/v1/distribution/audit/{entity} to UniversalDistributionPool.getAuditTrail() (owner: gateway, ETA: 1 day)
-- [ ] **M18.4** Implement ShadowNode zk-proof generation with ezkl/circom integration (owner: hypervisor+zkml, ETA: 3 days)
-- [ ] **M18.5** Add error logging and metrics to ZKML verification in autoresearch_graph.py (owner: hypervisor, ETA: 0.5 days)
-- [ ] **M18.6** Add abc.ABC decorator to CloudStorageProvider base class (owner: hypervisor, ETA: 0.25 days)
-- [ ] **M18.7** Document arweave.py as test compatibility shim only (owner: docs, ETA: 0.25 days)
+- [x] **M18.1** Implement AutonomousDeployer._submit_governance_proposal() with real UCP flow integration (owner: hypervisor, ETA: 2 days) — completed in `docs/MASTER-TODO.md` Lane M18 on 2026-03-27.
+- [x] **M18.2** Complete NetworkLiquidityManager.addNetworkLiquidity() with Uniswap V3 mint/increase position logic (owner: contracts, ETA: 3 days) — completed in `docs/MASTER-TODO.md` Lane M18 on 2026-03-27.
+- [x] **M18.3** Wire gateway /api/v1/distribution/audit/{entity} to UniversalDistributionPool.getAuditTrail() (owner: gateway, ETA: 1 day) — completed in `docs/MASTER-TODO.md` Lane M18 on 2026-03-27.
+- [x] **M18.4** Implement ShadowNode zk-proof generation with ezkl/circom integration (owner: hypervisor+zkml, ETA: 3 days) — completed in `docs/MASTER-TODO.md` Lane M18 on 2026-03-27.
+- [x] **M18.5** Add error logging and metrics to ZKML verification in autoresearch_graph.py (owner: hypervisor, ETA: 0.5 days) — completed in `docs/MASTER-TODO.md` Lane M18 on 2026-03-27.
+- [x] **M18.6** Add abc.ABC decorator to CloudStorageProvider base class (owner: hypervisor, ETA: 0.25 days) — completed in `docs/MASTER-TODO.md` Lane M18 on 2026-03-27.
+- [x] **M18.7** Document arweave.py as test compatibility shim only (owner: docs, ETA: 0.25 days) — completed in `docs/MASTER-TODO.md` Lane M18 on 2026-03-27.
 ```
 
 ---

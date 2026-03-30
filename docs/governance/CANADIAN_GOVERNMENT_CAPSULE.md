@@ -1,5 +1,7 @@
 # Canadian Government Capsule
 
+> **Consolidation Note (2026-03-30):** This file is a governance blueprint/reference. Execution tasks are consolidated in `docs/MASTER-TODO.md` (Lane M10 and related governance lanes). Any checkbox items here are non-canonical design checkpoints.
+
 ## Overview
 
 The Canadian Government Capsule is a comprehensive governance infrastructure designed to support multi-level government operations across Canada, with initial focus on Ontario as the most populous province. This capsule provides transparent, automated governance with both AI and human oversight.

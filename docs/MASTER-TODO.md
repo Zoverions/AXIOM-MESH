@@ -320,7 +320,7 @@ A task is done only when all are true:
 * [x] **SEC-A.1** Implement Post-Quantum (PQ) Cryptography Pipeline (Owner: security, ETA: TBD): Replace the current "classical-only" trust roots (SHA-256/ECDSA). Build out the Phase 1 hybrid signature scheme (Classical + PQ) for all high-trust pathways. (CI Check: test-pq-crypto) — 2026-03-24 — @agent — implemented Phase 1 hybrid signature scheme in grid/p2p/node.go using github.com/cloudflare/circl/sign/dilithium/mode3, removed placeholder comments and updated node structs and signature calls.
 * [x] **SEC-A.2** Enforce Service-to-Service mTLS & Anti-Replay (Owner: security, ETA: TBD): Inter-service interconnects currently rely on mixed/internal HTTP trust. Implement uniform mTLS, signed requests, timestamping, and nonces across all pillar boundaries. (CI Check: test-mtls) — 2026-03-25 — @agent — added mTLS HTTP client and anti-replay header support in grid/p2p/http_transport.go and grid/p2p/node.go.
 * [x] **SEC-A.3** Harden Sandbox Identity Boundaries (Owner: security, ETA: TBD): Upgrade the Sandbox runtime from relying on a basic API key boundary to utilizing full inter-service identity hardening. (CI Check: test-sandbox-identity) — 2026-03-24 — @agent — implemented strict HMAC signatures over payload, nonce, and timestamp.
-* [ ] **SEC-A.4** Deploy Edge Perimeter Controls (Owner: security, ETA: TBD): The Gateway's public ingress still requires external perimeter controls (like a hardened WAF and strict Redis-backed rate-limiting architectures) for safe internet-scale exposure. (CI Check: test-waf-rate-limiting)
+* [x] **SEC-A.4** Deploy Edge Perimeter Controls (Owner: security, ETA: TBD): The Gateway's public ingress still requires external perimeter controls (like a hardened WAF and strict Redis-backed rate-limiting architectures) for safe internet-scale exposure. (CI Check: test-waf-rate-limiting) — 2026-03-30 — @agent — validated gateway `wafMiddleware` + Redis-backed limiter wiring and passing verification script (`python3 scripts/test_waf_rate_limiting.py`); see `docs/audits/FULL-ECOSYSTEM-AUDIT-2026-03-29.md` and `docs/audits/security-hardening-blockchain-tokenomics-audit-2026-03-29.md`.
 
 ### 4. Functionality Audit
 * [x] **FUN-A.1** Replace SBOM Placeholder Logic (Owner: core, ETA: TBD): The Software Bill of Materials generation currently contains a failing scaffold (`placeholder, syft install denied`). Fix the installation environment and fully automate SBOM generation. (CI Check: verify-sbom) — 2026-03-25 — @agent — Replaced placeholder SBOM logic with proper generation via `syft` and `generate_sbom.sh`.
@@ -663,3 +663,19 @@ Once authority flow is mechanically frozen, this system becomes:
 - [x] **M18.5** Add error logging and metrics to ZKML verification in autoresearch_graph.py (owner: hypervisor, ETA: 0.5 days, P2) — 2026-03-27 — @agent
 - [x] **M18.6** Add abc.ABC decorator to CloudStorageProvider base class (owner: hypervisor, ETA: 0.25 days, P3) — 2026-03-27 — @agent
 - [x] **M18.7** Document arweave.py as test compatibility shim only (owner: docs, ETA: 0.25 days, P4) — 2026-03-27 — @agent
+
+## Lane M19 — Blockchain Security & Efficiency Enhancements (Consolidated from `docs/enhancements/*`)
+**Goal:** Keep all remaining enhancement execution tasks in this canonical queue while enhancement docs remain reference-only planning artifacts.
+
+- [ ] **M19.1** SEC-01: Implement reentrancy guards on remaining external-call contract paths (owner: contracts+security).
+- [ ] **M19.2** SEC-02: Add circuit-breaker controls for distribution/liquidity anomalies (owner: contracts+ops).
+- [ ] **M19.3** SEC-03: Migrate treasury operations to multi-sig governance controls (owner: governance+security).
+- [ ] **M19.4** GAS-01: Optimize Uniswap V3 liquidity flow to reduce mint/increase gas overhead (owner: contracts).
+- [ ] **M19.5** GAS-02: Optimize distribution audit-path gas usage while preserving verifiability (owner: contracts+gateway).
+- [ ] **M19.6** SEC-04: Enforce timelock delays on high-impact admin/governance contract actions (owner: governance+security).
+- [ ] **M19.7** SEC-05: Ensure zkML verification remains fail-closed under verifier faults (owner: hypervisor+zkml).
+- [ ] **M19.8** GAS-03: Add oracle caching strategy and cache-invalidation controls for gas savings (owner: grid+contracts).
+- [ ] **M19.9** GAS-04: Implement batch-operation paths for high-frequency on-chain workflows (owner: contracts+gateway).
+- [ ] **M19.10** EFF-01: Implement gas-price oracle policy for transaction cost-aware routing (owner: ops+grid).
+- [ ] **M19.11** EFF-02: Add transaction monitoring and stuck-tx recovery automation (owner: ops+security).
+- [ ] **M19.12** EFF-03: Optimize state-channel operations for lower settlement overhead and faster finalization (owner: contracts+grid).
