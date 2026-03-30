@@ -590,7 +590,7 @@ func (s *Server) SetupRouter() *http.ServeMux {
 					return
 				}
 
-				if consensus.CalculatePoERScore(skill.Task, skill.PoERHash) < consensus.Difficulty {
+				if consensus.CalculatePoERScore(skill.Task, skill.PoERHash) < consensus.AdaptiveDifficulty() {
 					http.Error(w, "PoER verification failed", http.StatusForbidden)
 					return
 				}

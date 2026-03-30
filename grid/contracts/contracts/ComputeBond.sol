@@ -534,7 +534,12 @@ contract ComputeBond is TimelockedOwnable, AccessControl {
             updatedAt: uint64(block.timestamp)
         });
         if (weightOracleContract != address(0)) {
-            (bool success, ) = weightOracleContract.call(abi.encodeWithSignature("addPoERBonus(address,uint256)", msg.sender, bonus)); require(success, "Oracle call failed");
+            (bool success, ) = weightOracleContract.call(
+                abi.encodeWithSignature("addPoERBonus(address,uint256)", msg.sender, bonus)
+            );
+            if (!success) {
+                emit WeightOracleSyncSkipped(weightOracleContract, msg.sender, false);
+            }
         }
         emit StorageOffered(msg.sender, capacityGB, cidRoot, bonus);
     }

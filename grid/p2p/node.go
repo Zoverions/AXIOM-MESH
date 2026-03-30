@@ -3,7 +3,6 @@ package p2p
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"os"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -11,6 +10,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -52,16 +52,16 @@ type PeerInfo struct {
 }
 
 type Node struct {
-	ShardID             string // Sharded consensus identifier
-	ID                  string
-	PrivateKey          *ecdsa.PrivateKey
-	PublicKey           string
-	KyberPublicKey      string // Phase 1 hybrid signature scheme (Classical + PQ)
-	DilithiumPrivateKey *mode3.PrivateKey
-	DilithiumPublicKey  *mode3.PublicKey
-	Peers               map[string]*PeerInfo
-	PeerAddresses       map[string]string // Mapping of Peer ID to API endpoint
-	Transport           Transport
+	ShardID                 string // Sharded consensus identifier
+	ID                      string
+	PrivateKey              *ecdsa.PrivateKey
+	PublicKey               string
+	KyberPublicKey          string // Phase 1 hybrid signature scheme (Classical + PQ)
+	DilithiumPrivateKey     *mode3.PrivateKey
+	DilithiumPublicKey      *mode3.PublicKey
+	Peers                   map[string]*PeerInfo
+	PeerAddresses           map[string]string // Mapping of Peer ID to API endpoint
+	Transport               Transport
 	SyncCallback            func(msg types.CCIPMessage) bool // Used to inject messages into local ledger
 	SyncSwarmCallback       func(msg types.Swarm) bool       // Used to inject swarms into local ledger
 	SyncCRDTShardCallback   func(shard types.CRDTShard) bool
@@ -109,6 +109,7 @@ func (n *Node) AddPeer(id, address string) {
 
 	n.Peers[id] = &PeerInfo{ID: id, Address: address, LastSeen: time.Now()}
 	log.Printf("P2P Node %s: Discovered new peer: %s at %s", n.ID, id, address)
+	n.refreshAdaptiveDifficultyLocked()
 }
 
 func (n *Node) RemovePeer(id string) {
@@ -117,6 +118,7 @@ func (n *Node) RemovePeer(id string) {
 	if _, exists := n.Peers[id]; exists {
 		delete(n.Peers, id)
 		log.Printf("P2P Node %s: Removed peer %s", n.ID, id)
+		n.refreshAdaptiveDifficultyLocked()
 	}
 }
 
@@ -136,6 +138,7 @@ func (n *Node) IncrementPeerFailure(id string) {
 		if peer.Failures >= 3 {
 			delete(n.Peers, id)
 			log.Printf("P2P Node %s: Evicted peer %s due to max failures", n.ID, id)
+			n.refreshAdaptiveDifficultyLocked()
 		}
 	}
 }
@@ -181,12 +184,14 @@ func (n *Node) heartbeatLoop() {
 				delete(n.Peers, id)
 			}
 		}
+		n.refreshAdaptiveDifficultyLocked()
 		n.mu.Unlock()
 	}
 }
 
 func (n *Node) Start() {
 	log.Printf("P2P Node %s started", n.ID)
+	n.updateAdaptiveDifficulty()
 	go n.listenForPeers()
 	go n.discoverSubnets()
 	go n.heartbeatLoop()
@@ -194,6 +199,24 @@ func (n *Node) Start() {
 	go n.SyncSwarmState()
 	go n.SyncCRDTState()
 	go n.SyncDriftState()
+}
+
+// PeerCount returns the known peer count.
+func (n *Node) PeerCount() int {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+	return len(n.Peers)
+}
+
+func (n *Node) updateAdaptiveDifficulty() {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	n.refreshAdaptiveDifficultyLocked()
+}
+
+func (n *Node) refreshAdaptiveDifficultyLocked() {
+	// Include local node (+1) so network size is never under-reported.
+	consensus.SetNetworkNodeCount(int64(len(n.Peers) + 1))
 }
 
 func (n *Node) SyncCRDTState() {
@@ -317,8 +340,8 @@ func (n *Node) BroadcastGraphUpdate(node types.GraphNode, edges []types.GraphEdg
 				header := make(http.Header)
 				httpReq, _ := http.NewRequest("GET", urlStr, nil)
 				if transport, ok := n.Transport.(*HTTPTransport); ok {
-				    transport.BuildSignedHeaders(httpReq, []byte(""))
-				    header = httpReq.Header
+					transport.BuildSignedHeaders(httpReq, []byte(""))
+					header = httpReq.Header
 				}
 				c, _, err := dialer.Dial(urlStr, header)
 				if err != nil {
@@ -546,8 +569,8 @@ func (n *Node) QueryNetwork(query string, proof string) []PeerQueryResult {
 				header := make(http.Header)
 				httpReq, _ := http.NewRequest("GET", urlStr, nil)
 				if transport, ok := n.Transport.(*HTTPTransport); ok {
-				    transport.BuildSignedHeaders(httpReq, []byte(""))
-				    header = httpReq.Header
+					transport.BuildSignedHeaders(httpReq, []byte(""))
+					header = httpReq.Header
 				}
 				c, _, err := dialer.Dial(urlStr, header)
 				if err != nil {

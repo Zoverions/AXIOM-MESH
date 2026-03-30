@@ -6,6 +6,8 @@ import (
 	"crypto/rand"
 	"errors"
 	"testing"
+
+	"github.com/axiom-mesh/grid/consensus"
 	"github.com/axiom-mesh/grid/types"
 	"time"
 )
@@ -72,6 +74,32 @@ func TestIncrementPeerFailureAndEviction(t *testing.T) {
 	node.IncrementPeerFailure("peer1")
 	if _, exists := node.Peers["peer1"]; exists {
 		t.Errorf("expected peer to be evicted after 3 failures")
+	}
+}
+
+func TestAdaptiveDifficultyTracksPeerTopology(t *testing.T) {
+	consensus.SetNetworkNodeCount(1)
+
+	priv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	node := NewNode("node1", priv)
+
+	if got := consensus.GetNetworkNodeCount(); got != 1 {
+		t.Fatalf("expected single-node baseline, got %d", got)
+	}
+
+	node.AddPeer("peer1", "http://127.0.0.1:5000")
+	node.AddPeer("peer2", "http://127.0.0.2:5000")
+
+	if node.PeerCount() != 2 {
+		t.Fatalf("expected 2 peers, got %d", node.PeerCount())
+	}
+	if got := consensus.GetNetworkNodeCount(); got != 3 {
+		t.Fatalf("expected network count to include local node + peers (=3), got %d", got)
+	}
+
+	node.RemovePeer("peer2")
+	if got := consensus.GetNetworkNodeCount(); got != 2 {
+		t.Fatalf("expected network count to drop to 2 after removal, got %d", got)
 	}
 }
 
@@ -193,12 +221,16 @@ func (m *mockTransport) FetchCCIPMessages(addr string) ([]types.CCIPMessage, err
 	return m.fetchMessages, m.fetchError
 }
 
-func (m *mockTransport) SendSwarm(addr string, msg types.Swarm) error { return nil }
-func (m *mockTransport) FetchSwarms(addr string) ([]types.Swarm, error) { return nil, nil }
+func (m *mockTransport) SendSwarm(addr string, msg types.Swarm) error           { return nil }
+func (m *mockTransport) FetchSwarms(addr string) ([]types.Swarm, error)         { return nil, nil }
 func (m *mockTransport) SendCRDTShard(addr string, shard types.CRDTShard) error { return nil }
-func (m *mockTransport) FetchCRDTShards(addr string, since uint64) ([]types.CRDTShard, error) { return nil, nil }
+func (m *mockTransport) FetchCRDTShards(addr string, since uint64) ([]types.CRDTShard, error) {
+	return nil, nil
+}
 func (m *mockTransport) SendDriftReport(addr string, report types.DriftReport) error { return nil }
-func (m *mockTransport) FetchDriftReports(addr string, since uint64) ([]types.DriftReport, error) { return nil, nil }
+func (m *mockTransport) FetchDriftReports(addr string, since uint64) ([]types.DriftReport, error) {
+	return nil, nil
+}
 
 func TestNode_BroadcastCCIPMessage(t *testing.T) {
 	priv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)

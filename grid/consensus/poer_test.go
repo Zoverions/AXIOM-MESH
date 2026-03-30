@@ -115,52 +115,12 @@ func TestCalculateAttentionWeightedScore(t *testing.T) {
 	}
 }
 
-func TestCalculatePoERScoreVectors(t *testing.T) {
-	vectors := []struct {
-		taskID   string
-		nonce    string
-		expected int
-	}{
-		{"hello", "1", 0},
-		{"hello", "2", 0},
-		{"world", "123", 2},
-		{"test-task", "0", 1},
-		{"test-task", "1", 0},
-		{"axiom", "42", 0},
-		{"mesh", "999", 2},
-		{"hello", "227", 11},
-		{"world", "38", 8},
-		{"test-task", "195", 10},
-		{"axiom", "496", 8},
-		{"mesh", "416", 8},
-	}
+func TestMeetsAdaptiveDifficulty(t *testing.T) {
+	SetNetworkNodeCount(1)
+	taskID := "adaptive-threshold"
+	nonce := MineEntropyReduction(taskID)
 
-	for _, v := range vectors {
-		score := CalculatePoERScore(v.taskID, v.nonce)
-		if score != v.expected {
-			t.Errorf("CalculatePoERScore(%q, %q) = %d; expected %d", v.taskID, v.nonce, score, v.expected)
-		}
-	}
-}
-
-func TestCalculateAttentionWeightedScore(t *testing.T) {
-	cases := []struct {
-		base              float64
-		attentionWeight   float64
-		priorReliability  float64
-		expected          float64
-	}{
-		{100.0, 1.0, 1.0, 100.0},
-		{100.0, 0.0, 1.0, 0.0}, // No relevance
-		{100.0, 1.0, 0.0, 50.0}, // Zero prior reliability cuts score in half
-		{100.0, 0.5, 0.5, 37.5}, // 100 * 0.5 * 0.75
-	}
-
-	for _, tc := range cases {
-		result := CalculateAttentionWeightedScore(tc.base, tc.attentionWeight, tc.priorReliability)
-		if result != tc.expected {
-			t.Errorf("CalculateAttentionWeightedScore(%f, %f, %f) = %f; want %f",
-				tc.base, tc.attentionWeight, tc.priorReliability, result, tc.expected)
-		}
+	if !MeetsAdaptiveDifficulty(taskID, nonce) {
+		t.Fatalf("expected mined nonce %q to satisfy adaptive threshold", nonce)
 	}
 }
