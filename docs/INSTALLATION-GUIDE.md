@@ -748,7 +748,7 @@ Want to contribute? See [`CONTRIBUTING.md`](CONTRIBUTING.md) for guidelines.
 ```
 axiom-mesh/
 ├── gateway/           # TypeScript/Node API gateway
-├── hypervisor/        # Python orchestration engine
+├── hypervisor/        # Orchestration and reasoning engine
 ├── sandbox/           # Isolated execution environment
 ├── grid/              # Go ledger and coordination
 ├── cli/               # Command-line interface

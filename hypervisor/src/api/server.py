@@ -1,5 +1,6 @@
 from slowapi.errors import RateLimitExceeded
 from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -12,6 +13,8 @@ import httpx
 import ast
 import json
 from datetime import datetime, timezone
+
+SERVICE_START_TIME = datetime.now(timezone.utc)
 
 def log_event(level: str, msg: str, trace_id: str = None):
     log_data = {
@@ -827,23 +830,54 @@ async def _process_intent_core(intent: IntentObject, api_key: str):
 async def get_metrics():
     return {**hypervisor_metrics, "intents": intent_metrics}
 
+def _dependency_health_snapshot():
+    distributed_degraded = getattr(context_engine.deep_archive, "degraded_counters", {}) or {}
+    total_degraded = sum(distributed_degraded.values())
+    dependencies = {
+        "grid": "degraded" if distributed_degraded.get("grid", 0) > 0 else "ok",
+        "ipfs": "degraded" if distributed_degraded.get("ipfs", 0) > 0 else "ok",
+        "arweave": "degraded" if distributed_degraded.get("arweave", 0) > 0 else "ok",
+        "sandbox": "ok"
+    }
+    return dependencies, distributed_degraded, total_degraded
+
 @app.get("/health")
 async def health_check():
     log_event("info", "Health check requested")
-    distributed_degraded = getattr(context_engine.deep_archive, "degraded_counters", {})
-    total_degraded = sum(distributed_degraded.values()) if distributed_degraded else 0
+    dependencies, distributed_degraded, total_degraded = _dependency_health_snapshot()
     degraded = intent_metrics["degraded"] > 0 or total_degraded > 0
+    uptime_seconds = int((datetime.now(timezone.utc) - SERVICE_START_TIME).total_seconds())
     return {
         "status": "degraded" if degraded else "ok",
         "component": "hypervisor",
-        "dependencies": {
-            "grid": "degraded" if distributed_degraded.get("grid", 0) > 0 else "ok",
-            "ipfs": "degraded" if distributed_degraded.get("ipfs", 0) > 0 else "ok",
-            "arweave": "degraded" if distributed_degraded.get("arweave", 0) > 0 else "ok",
-            "sandbox": "ok"
-        },
+        "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "uptime_seconds": uptime_seconds,
+        "ready": not degraded,
+        "dependencies": dependencies,
         "metrics": {**intent_metrics, "distributed": distributed_degraded}
     }
+
+@app.get("/health/live")
+async def health_live():
+    return {
+        "status": "ok",
+        "component": "hypervisor",
+        "uptime_seconds": int((datetime.now(timezone.utc) - SERVICE_START_TIME).total_seconds())
+    }
+
+@app.get("/health/ready")
+async def health_ready():
+    dependencies, distributed_degraded, total_degraded = _dependency_health_snapshot()
+    degraded = intent_metrics["degraded"] > 0 or total_degraded > 0
+    payload = {
+        "status": "ready" if not degraded else "not_ready",
+        "component": "hypervisor",
+        "dependencies": dependencies,
+        "metrics": {**intent_metrics, "distributed": distributed_degraded}
+    }
+    if degraded:
+        return JSONResponse(status_code=503, content=payload)
+    return payload
 
 @app.get("/memory")
 async def get_memory(session_id: str = None):
