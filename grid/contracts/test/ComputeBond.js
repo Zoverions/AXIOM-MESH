@@ -234,6 +234,27 @@ describe("ComputeBond", function () {
       expect(capacity).to.equal(512n);
       expect(root).to.equal(cidRoot);
     });
+
+    it("Should not revert storage offers when the weight oracle sync path is unavailable", async function () {
+      await computeBond.connect(node1).stake(NODE_ID, { value: STAKE_AMOUNT });
+      const badOracle = "0x000000000000000000000000000000000000dEaD";
+      const opId = hre.ethers.keccak256(
+        hre.ethers.solidityPacked(["string", "address"], ["setWeightOracle", badOracle])
+      );
+      await computeBond.connect(owner).queueOperation(opId);
+      await hre.ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+      await hre.ethers.provider.send("evm_mine");
+      await computeBond.connect(owner).setWeightOracle(badOracle);
+
+      const cidRoot = hre.ethers.keccak256(hre.ethers.toUtf8Bytes("meshstore-oracle-skip"));
+      await expect(computeBond.connect(node1).offerStorage(64, cidRoot))
+        .to.emit(computeBond, "WeightOracleSyncSkipped")
+        .withArgs(badOracle, node1.address, false);
+
+      const [capacity, root] = await computeBond.getStorageOffer(node1.address);
+      expect(capacity).to.equal(64n);
+      expect(root).to.equal(cidRoot);
+    });
   });
 
   describe("FDBA swarm-size oracle verification", function () {

@@ -103,6 +103,12 @@ func MineEntropyReductionWithDifficulty(taskID string, difficulty int) string {
 	}
 }
 
+// MeetsAdaptiveDifficulty verifies whether taskID+nonce satisfies the
+// currently active adaptive PoER difficulty target.
+func MeetsAdaptiveDifficulty(taskID string, nonce string) bool {
+	return CalculatePoERScore(taskID, nonce) >= AdaptiveDifficulty()
+}
+
 // CalculateAttentionWeightedScore computes an attention-weighted consensus score.
 // It integrates route-specific semantic profile relevance (attentionWeight) and
 // prior reliability, ensuring low-relevance high-reputation peers cannot dominate
