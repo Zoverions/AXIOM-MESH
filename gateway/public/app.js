@@ -25,10 +25,12 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Navigation Tabs ---
     const navButtons = document.querySelectorAll(".nav-btn");
     const tabs = document.querySelectorAll(".tab-content");
+    const navSearch = document.getElementById("nav-search");
 
     navButtons.forEach(btn => {
         btn.addEventListener("click", () => {
             const targetId = btn.getAttribute("data-target");
+            if (!targetId) return;
 
             navButtons.forEach(b => b.classList.remove("active"));
             tabs.forEach(t => t.classList.remove("active"));
@@ -47,6 +49,16 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
+    if (navSearch) {
+        navSearch.addEventListener("input", () => {
+            const query = navSearch.value.trim().toLowerCase();
+            navButtons.forEach(btn => {
+                const label = btn.textContent.toLowerCase();
+                btn.style.display = label.includes(query) ? "" : "none";
+            });
+        });
+    }
+
     // --- Operator Cockpit History Array ---
     const auditHistory = [];
 
@@ -54,6 +66,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const chatMessages = document.getElementById("chat-messages");
     const chatInput = document.getElementById("chat-input");
     const chatSendBtn = document.getElementById("chat-send");
+    const chatConnectionStatus = document.getElementById("chat-connection-status");
+    const jumpToInputBtn = document.getElementById("jump-to-input");
     const responseStyleSelect = document.getElementById("response-style");
     const consentScopeSelect = document.getElementById("consent-scope");
     const innovationGoalInput = document.getElementById("innovation-goal");
@@ -77,6 +91,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let ws = null;
 
+    function setConnectionStatus(isConnected) {
+        if (!chatConnectionStatus) return;
+        chatConnectionStatus.textContent = isConnected ? "Connected" : "Offline";
+        chatConnectionStatus.classList.toggle("connected", isConnected);
+        chatConnectionStatus.classList.toggle("disconnected", !isConnected);
+    }
+
+    function updateSendState() {
+        if (!chatSendBtn || !chatInput) return;
+        const hasText = chatInput.value.trim().length > 0;
+        const online = ws && ws.readyState === WebSocket.OPEN;
+        chatSendBtn.disabled = !(hasText && online);
+    }
+
     function connectWebSocket() {
         const apiKey = localStorage.getItem('GATEWAY_API_KEY') || '';
         const wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -85,7 +113,9 @@ document.addEventListener("DOMContentLoaded", () => {
         ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
+            setConnectionStatus(true);
             appendMessage('system', 'Connected to AxiomMesh Gateway.');
+            updateSendState();
         };
 
         ws.onmessage = (event) => {
@@ -114,11 +144,15 @@ document.addEventListener("DOMContentLoaded", () => {
         };
 
         ws.onerror = (error) => {
+            setConnectionStatus(false);
+            updateSendState();
             appendMessage('system', 'WebSocket Error. Please check your API Key and connection.');
             console.error('WebSocket Error: ', error);
         };
 
         ws.onclose = () => {
+            setConnectionStatus(false);
+            updateSendState();
             appendMessage('system', 'Disconnected from Gateway.');
         };
     }
@@ -127,6 +161,9 @@ document.addEventListener("DOMContentLoaded", () => {
     connectWebSocket();
 
     function appendMessage(sender, text, confidence, provenance, traceId) {
+        const emptyHint = chatMessages.querySelector(".empty-chat-hint");
+        if (emptyHint) emptyHint.remove();
+
         const msgDiv = document.createElement("div");
         msgDiv.className = `message ${sender}-message`;
 
@@ -138,9 +175,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (sender === 'agent' && (confidence !== undefined || provenance?.length > 0)) {
             const metaDiv = document.createElement("div");
             metaDiv.className = "message-meta";
-            metaDiv.style.fontSize = "0.8em";
-            metaDiv.style.color = "#888";
-            metaDiv.style.marginTop = "5px";
 
             let metaHtml = "";
             if (confidence !== undefined) {
@@ -154,6 +188,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (traceId) {
                 metaHtml += ` | <span>Trace: ${traceId}</span>`;
             }
+            metaHtml += ` | <span>${new Date().toLocaleTimeString()}</span>`;
             metaDiv.innerHTML = metaHtml;
             msgDiv.appendChild(metaDiv);
         }
@@ -165,9 +200,15 @@ document.addEventListener("DOMContentLoaded", () => {
     function sendMessage() {
         const text = chatInput.value.trim();
         if (!text) return;
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            appendMessage('system', 'Cannot send: WebSocket offline.');
+            updateSendState();
+            return;
+        }
 
         appendMessage('user', text);
         chatInput.value = '';
+        updateSendState();
 
         const style = responseStyleSelect ? responseStyleSelect.value : 'standard';
         const consentScope = consentScopeSelect ? consentScopeSelect.value : 'allowed';
@@ -188,14 +229,25 @@ document.addEventListener("DOMContentLoaded", () => {
                 timestamp: Date.now()
             };
             ws.send(JSON.stringify(payload));
-        } else {
-            appendMessage('system', 'Cannot send: WebSocket offline.');
         }
     }
 
     chatSendBtn.addEventListener("click", sendMessage);
     chatInput.addEventListener("keypress", (e) => {
         if (e.key === "Enter") sendMessage();
+    });
+    chatInput.addEventListener("input", updateSendState);
+
+    if (jumpToInputBtn) {
+        jumpToInputBtn.addEventListener("click", () => chatInput.focus());
+    }
+
+    document.addEventListener("keydown", (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+            event.preventDefault();
+            chatInput.focus();
+            chatInput.select();
+        }
     });
 
     const frontierModules = [

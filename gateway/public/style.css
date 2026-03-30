@@ -45,6 +45,32 @@ body {
     flex-direction: column;
 }
 
+.nav-search-box {
+    padding: 0 12px 14px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+}
+
+#nav-search {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: #171717;
+    color: var(--text-main);
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
 .nav-btn {
     background: none;
     border: none;
@@ -97,6 +123,45 @@ h2 {
     border: 1px solid var(--border);
 }
 
+.chat-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-bottom: 1px solid var(--border);
+    background: #1a1a1a;
+}
+
+.connection-pill {
+    font-size: 0.8rem;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-weight: 700;
+    border: 1px solid transparent;
+}
+
+.connection-pill.connected {
+    background: rgba(76, 175, 80, 0.18);
+    border-color: #2e7d32;
+    color: #8de593;
+}
+
+.connection-pill.disconnected {
+    background: rgba(239, 83, 80, 0.18);
+    border-color: #c62828;
+    color: #ffab91;
+}
+
+.secondary-btn {
+    border: 1px solid var(--border);
+    background: #232323;
+    color: var(--text-main);
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+}
+
 .messages {
     flex-grow: 1;
     padding: 20px;
@@ -104,6 +169,14 @@ h2 {
     display: flex;
     flex-direction: column;
     gap: 15px;
+}
+
+.empty-chat-hint {
+    color: #8f8f8f;
+    text-align: center;
+    margin: auto;
+    max-width: 420px;
+    line-height: 1.4;
 }
 
 .message {
@@ -140,6 +213,12 @@ h2 {
     font-style: italic;
 }
 
+.message-meta {
+    font-size: 0.8em;
+    color: #999;
+    margin-top: 6px;
+}
+
 .input-area {
     display: flex;
     padding: 15px;
@@ -166,6 +245,43 @@ h2 {
     border-radius: 4px;
     font-weight: bold;
     cursor: pointer;
+}
+
+.input-area button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@media (max-width: 900px) {
+    #app {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 10px;
+    }
+
+    .sidebar nav {
+        flex-direction: row;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    .nav-btn {
+        font-size: 14px;
+        padding: 10px 14px;
+    }
+
+    .content {
+        padding: 14px;
+    }
+
+    .chat-container {
+        height: calc(100vh - 260px);
+    }
 }
 
 /* Status Grid */
