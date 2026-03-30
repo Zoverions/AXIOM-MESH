@@ -37,3 +37,25 @@ struct IntentPayload {
   epistemicState @5 :EpistemicState;
   signature @6 :Data;
 }
+
+
+struct StateWitness {
+  domainId @0 :UInt32;
+  key @1 :Data;
+  valueHash @2 :Data;
+}
+
+struct TurboQuantEdge {
+  source @0 :UInt32;
+  target @1 :UInt32;
+  radius @2 :Float32;
+  polarAngle @3 :UInt8;
+  qjlResidual @4 :Int8;
+}
+
+struct ExecutionArtifact {
+  attentionScope @0 :List(UInt32);
+  readSet @1 :List(StateWitness);
+  writeSet @2 :List(StateWitness);
+  graphEdges @3 :List(TurboQuantEdge);
+}
