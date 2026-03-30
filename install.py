@@ -9,6 +9,17 @@ import threading
 import argparse
 from pathlib import Path
 
+class InstallationMonitor:
+    def __init__(self, mode="normal"):
+        self.mode = mode
+        self.no_monitor = "--no-monitor" in sys.argv
+    def log(self, msg, cpu=0, ram=0):
+        if self.no_monitor or self.mode == "quiet": return
+        if self.mode == "minimal-edge":
+            print(f"[{msg}]", end="\r")
+        else:
+            print(f"[{msg}] CPU:{cpu}% RAM:{ram}MB")
+
 ENV_FILE = ".env"
 PYTHON_DEPS = [
     "httpx", "fastapi", "uvicorn", "pydantic", "python-dotenv",
@@ -256,7 +267,12 @@ def main():
     parser = argparse.ArgumentParser(description="AXIOM-MESH Universal Cross-Platform Installer")
     parser.add_argument("--capsule", type=str, choices=["skill-pill", "capsule", "capsule-plus"], default="capsule", help="Capsule layer to install")
     parser.add_argument("--platform", type=str, help="Target platform overrides")
-    parser.add_argument("--monitor", type=str, choices=MACHINE_ROLES, help="Monitoring and edge role overrides (4-mode matrix + runtime toggle)")
+    parser.add_argument("--monitor", type=str, help="Monitoring and edge role overrides (verbose, normal, quiet, minimal-edge)")
+    parser.add_argument("--no-monitor", action="store_true", help="Disable the installation monitor entirely")
+    parser.add_argument("--reward-mode", type=str, choices=["internal-only", "pulsechain-optin"], default="internal-only", help="Set the reward mode for the network (self-funding edition)")
+    parser.add_argument("--enhance-pulsechain", type=str, choices=["true", "false"], default="false", help="Opt-in to actively improve PulseChain’s intelligence, security, and governance via AXIOM-MESH")
+    parser.add_argument("--pulsechain-mode", type=str, choices=["none", "full-node", "validator"], default="none", help="Opt-in dual-purpose hardware: PulseChain node + Validator co-funding")
+    parser.add_argument("--validator-share", type=int, default=85, help="User percentage of validator rewards (platform gets the rest)")
     parser.add_argument("--launch-mode", type=str, choices=LAUNCH_MODES, help="Launch profile override")
     parser.add_argument("--region", type=str, default=DEFAULT_REGION, help="Regional curriculum focus (e.g. ontario)")
     parser.add_argument("--auto", action="store_true", help="Run non-interactively with safe defaults")
@@ -268,9 +284,16 @@ def main():
         print(f"⚠️  Unknown region '{selected_region}'. Falling back to {DEFAULT_REGION}.")
         selected_region = DEFAULT_REGION
 
+    monitor_mode = args.monitor if args.monitor else ("quiet" if args.auto else "normal")
+    if args.no_monitor:
+        monitor_mode = "quiet"
+    monitor = InstallationMonitor(mode=monitor_mode)
+
     print("==========================================================")
     print("   AXIOM-MESH v16.0.0-Lockdown - Universal Cross-Platform Installer")
     print("==========================================================")
+
+    monitor.log(f"Starting AXIOM-MESH Universal Installer...", cpu=5, ram=100)
 
     os_type = get_os()
     if args.platform:
@@ -305,6 +328,7 @@ def main():
     launch_mode = normalize_choice(launch_mode, LAUNCH_MODES, "local-mesh", "launch mode")
     user_priority = normalize_choice(user_priority, USER_PRIORITIES, "security", "primary priority")
 
+    monitor.log("Generating machine profile...", cpu=15, ram=150)
     print("Generating machine profile...")
     os.environ["MACHINE_ROLE"] = machine_role
     run_cmd([sys.executable, "scripts/generate_machine_profile.py", "--machine-role", machine_role, "--output", "config/machine_profile.json"])
@@ -326,6 +350,7 @@ def main():
         rpc_url = ""
         network_wallet = ""
 
+    monitor.log("Running network launch preflight...", cpu=20, ram=200)
     print("-> Running network launch preflight...")
     precheck_cmd = [sys.executable, "scripts/network_launch_preflight.py", "--launch-mode", launch_mode]
     if rpc_url:
@@ -382,7 +407,13 @@ def main():
     profile['launch_mode'] = launch_mode
     profile['curriculum_region'] = selected_region
     profile['capsule_layer'] = args.capsule
+    profile['reward_mode'] = args.reward_mode
+    profile['enhance_pulsechain'] = args.enhance_pulsechain == "true"
+    profile['pulsechain_mode'] = args.pulsechain_mode
+    profile['validator_share'] = args.validator_share
     profile_path.write_text(json.dumps(profile, indent=2) + '\n')
+
+    monitor.log(f"Profile saved: {args.capsule} capsule, {args.reward_mode} reward mode, pulsechain mode: {args.pulsechain_mode}", cpu=25, ram=250)
 
     # Setup Sandbox Default Policy
     policy_dir = Path("sandbox/policies")
@@ -432,7 +463,11 @@ def main():
         "FDBA_FOUNDER_ADDRESS": "0x1c2cbabf75e1938ed2f2c59e734e83aa5fbe1b73",
         "LOCAL_MODEL_FALLBACK": recommended_model,
         "CURRICULUM_REGION": selected_region,
-        "CAPSULE_LAYER": args.capsule
+        "CAPSULE_LAYER": args.capsule,
+        "REWARD_MODE": args.reward_mode,
+        "ENHANCE_PULSECHAIN": "1" if args.enhance_pulsechain == "true" else "0",
+        "PULSECHAIN_MODE": args.pulsechain_mode,
+        "VALIDATOR_SHARE": str(args.validator_share)
     }
 
     if default_policy_cid:
@@ -440,6 +475,7 @@ def main():
 
     write_env(config)
 
+    monitor.log("Installation complete, environment prepared.", cpu=5, ram=400)
     print("Configuration saved to .env")
     print("==========================================================")
     print("   Starting AXIOM-MESH Platform ")

@@ -97,7 +97,48 @@ contract ComputeBond is TimelockedOwnable, AccessControl {
         bytes32 cidRoot;
         uint64 updatedAt;
     }
+
+    // Resource Metering (Self-Funding Policy)
+    struct ResourceUsage {
+        uint256 computeHours;
+        uint256 bandwidthGB;
+        uint256 storageGB;
+    }
+    mapping(address => ResourceUsage) public resourceMeters;
+    address public resourceOracle;
+    address public internalBadgeNFT; // Deployed soul-bound badge NFT contract
+    event ResourceMetered(address indexed node, uint256 compute, uint256 bandwidth, uint256 storageUsage);
     mapping(address => StorageOffer) private storageOffers;
+
+    function setResourceOracle(address _oracle) external onlyTimelocked(keccak256(abi.encodePacked("setResourceOracle", _oracle))) {
+        resourceOracle = _oracle;
+    }
+
+    function setInternalBadgeNFT(address _badgeNFT) external onlyTimelocked(keccak256(abi.encodePacked("setInternalBadgeNFT", _badgeNFT))) {
+        internalBadgeNFT = _badgeNFT;
+    }
+
+    // A minimal stub threshold for demonstration
+    uint256 public constant BADGE_COMPUTE_THRESHOLD = 100;
+
+    function recordResourceUsage(address node, uint256 compute, uint256 bandwidth, uint256 storageUsage) external {
+        require(msg.sender == resourceOracle, "Unauthorized oracle");
+        ResourceUsage storage usage = resourceMeters[node];
+        uint256 prevCompute = usage.computeHours;
+        usage.computeHours += compute;
+        usage.bandwidthGB += bandwidth;
+        usage.storageGB += storageUsage;
+
+        // Mint internal badge if compute threshold is crossed during this update
+        if (prevCompute < BADGE_COMPUTE_THRESHOLD && usage.computeHours >= BADGE_COMPUTE_THRESHOLD) {
+             if (internalBadgeNFT != address(0)) {
+                 // Requires ComputeBond to be owner/minter of InternalBadgeNFT
+                 (bool success,) = internalBadgeNFT.call(abi.encodeWithSignature("mintBadge(address)", node));
+                 // Silent fail to avoid bricking oracle transaction
+             }
+        }
+        emit ResourceMetered(node, compute, bandwidth, storageUsage);
+    }
 
     // WeightOracle reference for PoER boosts
     address public weightOracleContract;

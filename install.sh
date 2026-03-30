@@ -16,6 +16,12 @@ for arg in "$@"; do
     --capsule=*) CAPSULE_TYPE="${arg#*=}" ;;
     --region=*) CURRICULUM_REGION="${arg#*=}" ;;
     --monitor=*) MONITOR_PROFILE="${arg#*=}" ;;
+    --enhance-pulsechain=*) ENHANCE_PULSECHAIN="${arg#*=}" ;;
+    --reward-mode=*) REWARD_MODE="${arg#*=}" ;;
+    --pulsechain-mode=*) PULSECHAIN_MODE="${arg#*=}" ;;
+    --validator-share=*) VALIDATOR_SHARE="${arg#*=}" ;;
+    --platform=*) PLATFORM="${arg#*=}" ;;
+    --no-monitor) NO_MONITOR="1" ;;
   esac
 done
 
