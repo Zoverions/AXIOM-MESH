@@ -14,6 +14,18 @@ contract ShadowAccount is IAccount, Initializable, UUPSUpgradeable {
     bytes32 public phantomDIDHash; // local ephemeral hash only
 
     event StealthOperationExecuted(bytes32 opHash);
+    address public upgradeTimelock;
+
+    function setUpgradeTimelock(address _timelock) external {
+        if (upgradeTimelock == address(0)) {
+            require(founder.verifyFounder(""), "Founder verification failed");
+        } else {
+            require(msg.sender == upgradeTimelock, "Unauthorized: not upgrade timelock");
+        }
+        upgradeTimelock = _timelock;
+    }
+
+
 
     constructor(address _founder, address _bridge) {
         founder = FounderCommitment(_founder);
@@ -34,6 +46,6 @@ contract ShadowAccount is IAccount, Initializable, UUPSUpgradeable {
     }
 
     function _authorizeUpgrade(address) internal override {
-        require(founder.verifyFounder(""), "Founder verification failed");
+        require(msg.sender == upgradeTimelock, "Unauthorized: not upgrade timelock");
     }
 }

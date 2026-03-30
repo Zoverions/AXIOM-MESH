@@ -29,6 +29,18 @@ contract FounderShareManager is Initializable, UUPSUpgradeable {
         // Return founder address or treasury as guardian
         return address(founder);
     }
+    address public upgradeTimelock;
+
+    function setUpgradeTimelock(address _timelock) external {
+        if (upgradeTimelock == address(0)) {
+            require(founder.verifyFounder(""), "Unauthorized");
+        } else {
+            require(msg.sender == upgradeTimelock, "Unauthorized: not upgrade timelock");
+        }
+        upgradeTimelock = _timelock;
+    }
+
+
 
     constructor(address _founder, address _treasury) {
         founder = FounderCommitment(_founder);
@@ -91,6 +103,6 @@ contract FounderShareManager is Initializable, UUPSUpgradeable {
     }
 
     function _authorizeUpgrade(address) internal override {
-        require(founder.verifyFounder(""), "Unauthorized");
+        require(msg.sender == upgradeTimelock, "Unauthorized: not upgrade timelock");
     }
 }

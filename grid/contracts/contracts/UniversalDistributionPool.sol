@@ -15,6 +15,8 @@ interface IStakingRewards {
     function notifyRewardAmount(uint256 reward) external;
 }
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+
 contract UniversalDistributionPool is Initializable, UUPSUpgradeable, ReentrancyGuard, Pausable {
     FounderCommitment public immutable founder;
     DynamicResourceAllocator public immutable allocator;
@@ -45,6 +47,18 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable, Reentrancy
     event DistributionEmergencyUnpause(address indexed triggeredBy);
     event AdminOperationQueued(bytes32 indexed operationId, uint256 executeAfter);
     event AdminOperationExecuted(bytes32 indexed operationId);
+    address public upgradeTimelock;
+
+    function setUpgradeTimelock(address _timelock) external {
+        if (upgradeTimelock == address(0)) {
+            require(founder.verifyFounder(""), "Founder verification failed");
+        } else {
+            require(msg.sender == upgradeTimelock, "Unauthorized: not upgrade timelock");
+        }
+        upgradeTimelock = _timelock;
+    }
+
+
 
     constructor(address _founder, address _allocator, address _treasury, address _citizenship) {
         founder = FounderCommitment(_founder);
@@ -57,7 +71,7 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable, Reentrancy
     function initialize(uint256 _defaultShare) public initializer {
         // Default to 60 per policy (60% Network Security Fund, 40% Wealth Generation Pool).
         // Caller may override via _defaultShare; passing 0 applies the canonical 60% default.
-        __UUPSUpgradeable_init();
+        // Initialization handled implicitly per OZ 5.0 updates if no parent requires arguments
         networkSharePercentage = _defaultShare == 0 ? 60 : _defaultShare;
         externalFundsEnabled = false; // Disabled until Level 3 gate is passed
         maxSingleDistributionAmount = 100_000 ether;
@@ -211,7 +225,7 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable, Reentrancy
     }
 
     function _authorizeUpgrade(address) internal override {
-        require(founder.verifyFounder(""), "Founder verification failed");
+        require(msg.sender == upgradeTimelock, "Unauthorized: not upgrade timelock");
     }
 
     function _consumeAdminTimelock(bytes32 operationId) internal {

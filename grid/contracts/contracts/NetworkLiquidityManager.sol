@@ -35,6 +35,18 @@ contract NetworkLiquidityManager is Initializable, UUPSUpgradeable, ReentrancyGu
     event LiquidityEmergencyUnpause(address indexed triggeredBy);
     event AdminOperationQueued(bytes32 indexed operationId, uint256 executeAfter);
     event AdminOperationExecuted(bytes32 indexed operationId);
+    address public upgradeTimelock;
+
+    function setUpgradeTimelock(address _timelock) external {
+        if (upgradeTimelock == address(0)) {
+            require(founder.verifyFounder(""), "Founder verification failed");
+        } else {
+            require(msg.sender == upgradeTimelock, "Unauthorized: not upgrade timelock");
+        }
+        upgradeTimelock = _timelock;
+    }
+
+
 
     constructor(address _founder, address payable _distPool, address _bridge, address _positionManager) {
         founder = FounderCommitment(_founder);
@@ -106,7 +118,7 @@ contract NetworkLiquidityManager is Initializable, UUPSUpgradeable, ReentrancyGu
     }
 
     function _authorizeUpgrade(address) internal override {
-        require(founder.verifyFounder(""), "Founder verification failed");
+        require(msg.sender == upgradeTimelock, "Unauthorized: not upgrade timelock");
     }
 
     function _increaseLiquidity(uint256 amount, uint256 tokenId) internal {

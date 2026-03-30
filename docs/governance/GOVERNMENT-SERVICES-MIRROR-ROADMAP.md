@@ -37,7 +37,7 @@ Mirror high-value government service flows for the US, UK, and China using a **p
 
 ## Regional Capsule Plus Tracks
 
-### US Government Capsule Plus (planned)
+### US Government Capsule Plus (implemented)
 - Standards alignment: state/federal split policy overlays.
 - Early services: identity/benefits, permits, education verification.
 - Governance note: federal + state policy inheritance.

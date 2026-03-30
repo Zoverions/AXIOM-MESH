@@ -22,6 +22,18 @@ contract DarkComputePool is Initializable, UUPSUpgradeable, ReentrancyGuard {
 
     mapping(bytes32 => Contribution) public contributions;
     event AnonymousContribution(bytes32 phantomDIDHash, uint256 computeUnits, bytes32 zkProofHash);
+    address public upgradeTimelock;
+
+    function setUpgradeTimelock(address _timelock) external {
+        if (upgradeTimelock == address(0)) {
+            require(founder.verifyFounder(""), "Founder verification failed");
+        } else {
+            require(msg.sender == upgradeTimelock, "Unauthorized: not upgrade timelock");
+        }
+        upgradeTimelock = _timelock;
+    }
+
+
 
     constructor(address _bridge, address _allocator, address _founder) {
         bridge = ShadowBridge(_bridge);
@@ -48,6 +60,6 @@ contract DarkComputePool is Initializable, UUPSUpgradeable, ReentrancyGuard {
     }
 
     function _authorizeUpgrade(address) internal override {
-        require(founder.verifyFounder(""), "Founder verification failed");
+        require(msg.sender == upgradeTimelock, "Unauthorized: not upgrade timelock");
     }
 }

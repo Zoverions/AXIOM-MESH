@@ -21,6 +21,18 @@ contract DeploymentFactory is Initializable, UUPSUpgradeable {
 
     event ContractDeployed(address deployed, bytes32 salt, string contractType);
     event DeploymentFunded(uint256 gasBudget);
+    address public upgradeTimelock;
+
+    function setUpgradeTimelock(address _timelock) external {
+        if (upgradeTimelock == address(0)) {
+            require(founderCommitment.verifyFounder(new bytes(0)), "Founder verification failed");
+        } else {
+            require(msg.sender == upgradeTimelock, "Unauthorized: not upgrade timelock");
+        }
+        upgradeTimelock = _timelock;
+    }
+
+
 
     constructor(address _founderCommitment, address _governance, address _treasury) {
         founderCommitment = FounderCommitment(_founderCommitment);
@@ -55,6 +67,6 @@ contract DeploymentFactory is Initializable, UUPSUpgradeable {
     }
 
     function _authorizeUpgrade(address) internal override {
-        require(founderCommitment.verifyFounder(new bytes(0)), "Founder verification failed");
+        require(msg.sender == upgradeTimelock, "Unauthorized: not upgrade timelock");
     }
 }
