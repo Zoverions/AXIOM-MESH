@@ -663,3 +663,19 @@ Once authority flow is mechanically frozen, this system becomes:
 - [x] **M18.5** Add error logging and metrics to ZKML verification in autoresearch_graph.py (owner: hypervisor, ETA: 0.5 days, P2) — 2026-03-27 — @agent
 - [x] **M18.6** Add abc.ABC decorator to CloudStorageProvider base class (owner: hypervisor, ETA: 0.25 days, P3) — 2026-03-27 — @agent
 - [x] **M18.7** Document arweave.py as test compatibility shim only (owner: docs, ETA: 0.25 days, P4) — 2026-03-27 — @agent
+
+## Lane M19 — Blockchain Security & Efficiency Enhancements (Consolidated from `docs/enhancements/*`)
+**Goal:** Keep all remaining enhancement execution tasks in this canonical queue while enhancement docs remain reference-only planning artifacts.
+
+- [ ] **M19.1** SEC-01: Implement reentrancy guards on remaining external-call contract paths (owner: contracts+security).
+- [ ] **M19.2** SEC-02: Add circuit-breaker controls for distribution/liquidity anomalies (owner: contracts+ops).
+- [ ] **M19.3** SEC-03: Migrate treasury operations to multi-sig governance controls (owner: governance+security).
+- [ ] **M19.4** GAS-01: Optimize Uniswap V3 liquidity flow to reduce mint/increase gas overhead (owner: contracts).
+- [ ] **M19.5** GAS-02: Optimize distribution audit-path gas usage while preserving verifiability (owner: contracts+gateway).
+- [ ] **M19.6** SEC-04: Enforce timelock delays on high-impact admin/governance contract actions (owner: governance+security).
+- [ ] **M19.7** SEC-05: Ensure zkML verification remains fail-closed under verifier faults (owner: hypervisor+zkml).
+- [ ] **M19.8** GAS-03: Add oracle caching strategy and cache-invalidation controls for gas savings (owner: grid+contracts).
+- [ ] **M19.9** GAS-04: Implement batch-operation paths for high-frequency on-chain workflows (owner: contracts+gateway).
+- [ ] **M19.10** EFF-01: Implement gas-price oracle policy for transaction cost-aware routing (owner: ops+grid).
+- [ ] **M19.11** EFF-02: Add transaction monitoring and stuck-tx recovery automation (owner: ops+security).
+- [ ] **M19.12** EFF-03: Optimize state-channel operations for lower settlement overhead and faster finalization (owner: contracts+grid).
