@@ -12,7 +12,7 @@
       "name": "United States",
       "country": "United States",
       "capsule_layer": "capsule-plus",
-      "status": "planned",
+      "status": "implemented",
       "curriculum_standard": "State standards + Common Core alignment"
     },
     "uk": {
