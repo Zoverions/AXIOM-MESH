@@ -667,9 +667,9 @@ Once authority flow is mechanically frozen, this system becomes:
 ## Lane M19 — Blockchain Security & Efficiency Enhancements (Consolidated from `docs/enhancements/*`)
 **Goal:** Keep all remaining enhancement execution tasks in this canonical queue while enhancement docs remain reference-only planning artifacts.
 
-- [ ] **M19.1** SEC-01: Implement reentrancy guards on remaining external-call contract paths (owner: contracts+security).
-- [ ] **M19.2** SEC-02: Add circuit-breaker controls for distribution/liquidity anomalies (owner: contracts+ops).
-- [ ] **M19.3** SEC-03: Migrate treasury operations to multi-sig governance controls (owner: governance+security).
+- [x] **M19.1** SEC-01: Implement reentrancy guards on remaining external-call contract paths (owner: contracts+security). — 2026-03-30 — @agent — added `nonReentrant` protections for liquidity/distribution external-call flows — a20de65
+- [x] **M19.2** SEC-02: Add circuit-breaker controls for distribution/liquidity anomalies (owner: contracts+ops). — 2026-03-30 — @agent — added threshold-based circuit breakers plus emergency pause/unpause controls in liquidity + distribution managers — a20de65
+- [x] **M19.3** SEC-03: Migrate treasury operations to multi-sig governance controls (owner: governance+security). — 2026-03-30 — @agent — enforced governance-multisig authorization for treasury execute/allocate operations — a20de65
 - [ ] **M19.4** GAS-01: Optimize Uniswap V3 liquidity flow to reduce mint/increase gas overhead (owner: contracts).
 - [ ] **M19.5** GAS-02: Optimize distribution audit-path gas usage while preserving verifiability (owner: contracts+gateway).
 - [ ] **M19.6** SEC-04: Enforce timelock delays on high-impact admin/governance contract actions (owner: governance+security).
