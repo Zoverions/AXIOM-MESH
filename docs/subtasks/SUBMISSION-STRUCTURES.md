@@ -1,6 +1,6 @@
 # Credentialed Submission Structures
 
-**Status**: In Progress — Primary tasks moved to MASTER-TODO.md Lane M13
+**Status**: Implemented — Primary tasks moved to MASTER-TODO.md Lane M13
 **Owner**: @agent+governance+gateway
 **Date**: 2026-03-25 (Updated: 2026-03-28)
 
@@ -18,7 +18,7 @@ We need to implement structures where documents and pertinent files/resources ca
 - [x] Basic whitelist/interface check mechanism
 
 ## Remaining Tasks (Tracked in MASTER-TODO.md)
-- [ ] **M13.9** Complete SUBMISSION-STRUCTURES
+- [x] **M13.9** Complete SUBMISSION-STRUCTURES
   - Implement Gateway/Hypervisor endpoints for:
     - Signing credentialed transactions
     - Routing high-value submissions
@@ -32,4 +32,5 @@ We need to implement structures where documents and pertinent files/resources ca
 - **Master TODO:** `docs/MASTER-TODO.md` (Lane M13.9)
 - **Smart Contract:** `grid/contracts/contracts/CredentialedSubmission.sol`
 - **Credential Contracts:** `grid/contracts/contracts/` (FounderCommitment, CitizenshipNFT, etc.)
-- **Gateway Routes:** `gateway/src/routes/` (pending submission endpoints)
+- **Gateway Routes:** `gateway/src/routes/submissions.ts`
+- **Audit Reports:** `docs/audits/FULL-ECOSYSTEM-AUDIT-2026-03-29.md`, `docs/audits/sovereign-v3-gap-audit-2026-03-25.md`
