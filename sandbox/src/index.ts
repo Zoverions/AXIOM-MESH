@@ -8,30 +8,29 @@ import capsuleRoutes from './routes/capsule';
 
 dotenv.config();
 
-// Structured logging setup
-const originalLog = console.log;
-const originalError = console.error;
-
-console.log = (...args) => {
-    originalLog(JSON.stringify({
+function log(level: 'info' | 'error', message: string, details?: Record<string, unknown>): void {
+    const payload = {
         timestamp: new Date().toISOString(),
-        level: 'info',
-        message: args.join(' ')
-    }));
-};
-
-console.error = (...args) => {
-    originalError(JSON.stringify({
-        timestamp: new Date().toISOString(),
-        level: 'error',
-        message: args.join(' ')
-    }));
-};
+        level,
+        message,
+        ...(details || {})
+    };
+    const line = JSON.stringify(payload);
+    if (level === 'error') {
+        process.stderr.write(`${line}\n`);
+        return;
+    }
+    process.stdout.write(`${line}\n`);
+}
 
 const PORT = process.env.SANDBOX_PORT || 4000;
+const corsOrigins = (process.env.SANDBOX_CORS_ORIGINS || 'http://localhost:3000,http://localhost:8000,http://localhost:5000')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
 
 export const app = express();
-app.use(cors({ origin: ['http://localhost:3000', 'http://localhost:8000', 'http://localhost:5000'] }));
+app.use(cors({ origin: corsOrigins }));
 app.use(bodyParser.json());
 app.use('/', executeRoutes);
 app.use('/', capsuleRoutes);
@@ -51,11 +50,11 @@ if (process.env.NODE_ENV !== 'test') {
         };
         server = https.createServer(mTLSConfig, app);
     } catch (e) {
-        console.error("mTLS certs not found. mTLS is mandatory for security.");
+        log('error', 'mTLS certs not found. mTLS is mandatory for security.');
         process.exit(1);
     }
 
     server.listen(PORT, () => {
-        console.log(`Execution Sandbox running on port ${PORT} with mTLS`);
+        log('info', `Execution Sandbox running on port ${PORT} with mTLS`, { corsOrigins });
     });
 }

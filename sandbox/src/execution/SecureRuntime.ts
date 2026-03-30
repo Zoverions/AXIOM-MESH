@@ -43,9 +43,12 @@ export interface SandboxHardeningConfig {
 
 export class NetworkNamespaceController {
   private udsSocketPath: string;
+  private strictIsolation: boolean;
 
   constructor(udsSocketPath: string = '/var/run/axiom-airgap.sock') {
     this.udsSocketPath = udsSocketPath;
+    // Fail closed in production unless explicitly disabled.
+    this.strictIsolation = process.env.AIRGAP_STRICT !== '0' && process.env.NODE_ENV === 'production';
   }
 
   private async _sendSocatCommand(payloadObj: any, description: string): Promise<void> {
@@ -57,17 +60,29 @@ export class NetworkNamespaceController {
         const socat = spawn('socat', ['-', `UNIX-CONNECT:${this.udsSocketPath}`]);
 
         socat.on('close', (code) => {
-          if (code === 0 || code === 1) { // We accept 1 for tests where the socket doesn't exist
-             console.log(`${description} successful for process ${pid}`);
-             resolve();
-          } else {
-             reject(new Error(`socat process exited with code ${code}`));
+          if (code === 0) {
+            console.log(`${description} successful for process ${pid}`);
+            resolve();
+            return;
           }
+
+          // In non-production/test workflows we can operate in fail-open mode to keep local execution usable.
+          if (!this.strictIsolation && code === 1) {
+            console.warn(`${description} returned code 1 for process ${pid}; continuing in non-strict mode.`);
+            resolve();
+            return;
+          }
+
+          reject(new Error(`socat process exited with code ${code}`));
         });
 
         socat.on('error', (err) => {
-          // In tests the socket may not exist, so we mock success
-          console.warn(`socat error during ${description} for process ${pid}:`, err.message);
+          if (this.strictIsolation) {
+            reject(new Error(`socat error during ${description} for process ${pid}: ${err.message}`));
+            return;
+          }
+          // In local and test workflows the socket may not exist; keep behavior fail-open.
+          console.warn(`socat error during ${description} for process ${pid}: ${err.message} (non-strict mode)`);
           resolve();
         });
 
@@ -78,6 +93,10 @@ export class NetworkNamespaceController {
             resolve();
         }
       } catch(e) {
+          if (this.strictIsolation) {
+            reject(e instanceof Error ? e : new Error(String(e)));
+            return;
+          }
           resolve();
       }
     });
