@@ -21,6 +21,18 @@ contract DynamicResourceAllocator is Initializable, UUPSUpgradeable {
     mapping(bytes32 => TaskAllocation) public allocations;
 
     event ResourcesAllocated(bytes32 taskId, string purpose, uint256 amount);
+    address public upgradeTimelock;
+
+    function setUpgradeTimelock(address _timelock) external {
+        if (upgradeTimelock == address(0)) {
+            require(founderManager.founder().verifyFounder(""), "Founder required");
+        } else {
+            require(msg.sender == upgradeTimelock, "Unauthorized: not upgrade timelock");
+        }
+        upgradeTimelock = _timelock;
+    }
+
+
 
     constructor(address _governance, address _treasury, address _founderManager) {
         governance = DialecticArbitration(_governance);
@@ -46,6 +58,6 @@ contract DynamicResourceAllocator is Initializable, UUPSUpgradeable {
     }
 
     function _authorizeUpgrade(address) internal override {
-        require(founderManager.founder().verifyFounder(""), "Founder required");
+        require(msg.sender == upgradeTimelock, "Unauthorized: not upgrade timelock");
     }
 }

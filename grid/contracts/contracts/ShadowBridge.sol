@@ -14,6 +14,18 @@ contract ShadowBridge is Initializable, UUPSUpgradeable {
     address public zkVerifier;
 
     event ZkShadowSync(bytes32 phantomDIDHash, bytes32 proofHash);
+    address public upgradeTimelock;
+
+    function setUpgradeTimelock(address _timelock) external {
+        if (upgradeTimelock == address(0)) {
+            require(founder.verifyFounder(""), "Unauthorized");
+        } else {
+            require(msg.sender == upgradeTimelock, "Unauthorized: not upgrade timelock");
+        }
+        upgradeTimelock = _timelock;
+    }
+
+
 
     constructor(address _founder) {
         founder = FounderCommitment(_founder);
@@ -43,6 +55,10 @@ contract ShadowBridge is Initializable, UUPSUpgradeable {
 
     function _authorizeUpgrade(address) internal override {
         // Keep original authorization logic untouched to prevent security regressions per reviewer
-        require(founder.verifyFounder(""), "Unauthorized");
+        if (upgradeTimelock == address(0)) {
+            require(founder.verifyFounder(""), "Unauthorized");
+        } else {
+            require(msg.sender == upgradeTimelock, "Unauthorized: not upgrade timelock");
+        }
     }
 }

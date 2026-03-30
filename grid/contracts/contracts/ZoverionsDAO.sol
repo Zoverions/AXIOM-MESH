@@ -57,7 +57,7 @@ contract ZoverionsDAO is Ownable {
         councilGuardians[guardian] = status;
     }
 
-    function createProposal(string calldata description, bool isStrategic) public returns (uint256) {
+    function createProposal(string memory description, bool isStrategic) public returns (uint256) {
         uint256 id = proposalCount++;
         proposals[id] = Proposal({
             description: description,

@@ -675,3 +675,9 @@ Once authority flow is mechanically frozen, this system becomes:
 - [x] **M19.10** EFF-01: Implement gas-price oracle policy for transaction cost-aware routing (owner: ops+grid). — 2026-03-30 — @agent — added bounded gas-policy oracle, adaptive fee caps, and `/distribution/gas-policy` visibility in gateway routing — 33fe45a
 - [x] **M19.11** EFF-02: Add transaction monitoring and stuck-tx recovery automation (owner: ops+security). — 2026-03-30 — @agent — added pending-tx monitor with nonce-safe replacement escalation for stuck tx recovery in distribution execution paths — 33fe45a
 - [x] **M19.12** EFF-03: Optimize state-channel operations for lower settlement overhead and faster finalization (owner: contracts+grid). — 2026-03-30 — @agent — added participant fast-finalization consent path + batch settlement entrypoint with coverage tests — 33fe45a
+
+## Extracted Codebase TODOs
+
+- `grid/contracts/contracts/CrossChainBridge.sol:12`: `// TODO ID: Top-Level To Do 7 - Multi-Chain Bridging & Rating System`
+- `grid/contracts/contracts/DonationCampaign.sol:9`: `// TODO ID: Top-Level To Do 6 - DonationCampaign + Self-Funding Loop`
+- `grid/contracts/contracts/core/Genesis.sol:14`: `// TODO ID: Top-Level To Do 8 - Mainnet Genesis + Bug Bounty`
