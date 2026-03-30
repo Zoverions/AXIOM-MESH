@@ -8,6 +8,12 @@ class DistributionManager {
     private wallet: ethers.Wallet;
     private pool: ethers.Contract;
     private bridge: ethers.Contract;
+    private readonly gasOracleMultiplierBps: bigint;
+    private readonly gasOracleFloorGwei: bigint;
+    private readonly gasOracleCeilingGwei: bigint;
+    private readonly gasEscalationBps: bigint;
+    private readonly txStuckTimeoutMs: number;
+    private readonly txConfirmations: number;
 
     constructor() {
         this.provider = new ethers.JsonRpcProvider(process.env.LOCAL_RPC_URL || 'http://127.0.0.1:8545');
@@ -35,11 +41,80 @@ class DistributionManager {
             ],
             this.wallet
         );
+
+        this.gasOracleMultiplierBps = BigInt(process.env.GAS_ORACLE_MULTIPLIER_BPS || '11500');
+        this.gasOracleFloorGwei = BigInt(process.env.GAS_ORACLE_FLOOR_GWEI || '1');
+        this.gasOracleCeilingGwei = BigInt(process.env.GAS_ORACLE_CEILING_GWEI || '250');
+        this.gasEscalationBps = BigInt(process.env.GAS_ESCALATION_BPS || '12500');
+        this.txStuckTimeoutMs = Number(process.env.TX_STUCK_TIMEOUT_MS || '45000');
+        this.txConfirmations = Number(process.env.TX_CONFIRMATIONS || '1');
+    }
+
+    private gweiToWei(value: bigint): bigint {
+        return value * BigInt(1_000_000_000);
+    }
+
+    private async buildGasPolicy(): Promise<{ maxFeePerGas: bigint; maxPriorityFeePerGas: bigint; baseEstimateWei: bigint }> {
+        const feeData = await this.provider.getFeeData();
+        const networkEstimate = feeData.gasPrice || feeData.maxFeePerGas || this.gweiToWei(this.gasOracleFloorGwei);
+
+        const boundedEstimate = networkEstimate < this.gweiToWei(this.gasOracleFloorGwei)
+            ? this.gweiToWei(this.gasOracleFloorGwei)
+            : networkEstimate > this.gweiToWei(this.gasOracleCeilingGwei)
+                ? this.gweiToWei(this.gasOracleCeilingGwei)
+                : networkEstimate;
+
+        const maxFeePerGas = (boundedEstimate * this.gasOracleMultiplierBps) / BigInt(10_000);
+        const maxPriorityFeePerGas = feeData.maxPriorityFeePerGas || (maxFeePerGas / BigInt(10));
+
+        return { maxFeePerGas, maxPriorityFeePerGas, baseEstimateWei: boundedEstimate };
+    }
+
+    private async waitForReceiptWithRecovery(txResponse: ethers.TransactionResponse): Promise<ethers.TransactionReceipt> {
+        const start = Date.now();
+        const initialNonce = txResponse.nonce;
+        const gasPolicy = await this.buildGasPolicy();
+
+        while (Date.now() - start < this.txStuckTimeoutMs) {
+            const receipt = await this.provider.getTransactionReceipt(txResponse.hash);
+            if (receipt && receipt.confirmations >= this.txConfirmations) {
+                return receipt;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 2500));
+        }
+
+        const pendingTx = await this.provider.getTransaction(txResponse.hash);
+        if (!pendingTx) {
+            throw new Error(`Transaction ${txResponse.hash} not found for recovery`);
+        }
+
+        const replacementMaxFee = ((pendingTx.maxFeePerGas || gasPolicy.maxFeePerGas) * this.gasEscalationBps) / BigInt(10_000);
+        const replacementPriority = ((pendingTx.maxPriorityFeePerGas || gasPolicy.maxPriorityFeePerGas) * this.gasEscalationBps) / BigInt(10_000);
+
+        const replacementTx = await this.wallet.sendTransaction({
+            to: pendingTx.to,
+            data: pendingTx.data,
+            value: pendingTx.value,
+            nonce: initialNonce,
+            gasLimit: pendingTx.gasLimit,
+            maxFeePerGas: replacementMaxFee,
+            maxPriorityFeePerGas: replacementPriority
+        });
+
+        const replacementReceipt = await replacementTx.wait(this.txConfirmations);
+        if (!replacementReceipt) {
+            throw new Error(`Replacement transaction ${replacementTx.hash} did not confirm`);
+        }
+        return replacementReceipt;
     }
 
     async deposit(from: string, amount: bigint, source: string): Promise<void> {
-        const tx = await this.pool.deposit(from, amount, source);
-        await tx.wait();
+        const gasPolicy = await this.buildGasPolicy();
+        const tx = await this.pool.deposit(from, amount, source, {
+            maxFeePerGas: gasPolicy.maxFeePerGas,
+            maxPriorityFeePerGas: gasPolicy.maxPriorityFeePerGas
+        });
+        await this.waitForReceiptWithRecovery(tx);
     }
 
     async batchDeposit(from: string, amounts: bigint[], source: string): Promise<void> {
@@ -55,15 +130,29 @@ class DistributionManager {
         zkProofs: string[];
         salts: string[];
     }): Promise<void> {
+        const gasPolicy = await this.buildGasPolicy();
         const tx = await this.bridge.batchBridgePayroll(
             payload.amounts,
             payload.dstEids,
             payload.optionsList,
             payload.zkProofs,
             payload.salts,
-            { value: 0 }
+            {
+                value: 0,
+                maxFeePerGas: gasPolicy.maxFeePerGas,
+                maxPriorityFeePerGas: gasPolicy.maxPriorityFeePerGas
+            }
         );
-        await tx.wait();
+        await this.waitForReceiptWithRecovery(tx);
+    }
+
+    async gasPolicyQuote(): Promise<{ baseEstimateWei: string; maxFeePerGasWei: string; maxPriorityFeePerGasWei: string }> {
+        const gasPolicy = await this.buildGasPolicy();
+        return {
+            baseEstimateWei: gasPolicy.baseEstimateWei.toString(),
+            maxFeePerGasWei: gasPolicy.maxFeePerGas.toString(),
+            maxPriorityFeePerGasWei: gasPolicy.maxPriorityFeePerGas.toString()
+        };
     }
 
     async getAuditTrail(entity: string): Promise<{ totalIn: bigint; totalOut: bigint; networkContributed: bigint }> {
@@ -134,6 +223,15 @@ router.get('/audit/:entity', async (req: Request, res: Response) => {
             totalOut: trail.totalOut.toString(),
             networkContributed: trail.networkContributed.toString()
         });
+    } catch (error: any) {
+        return res.status(500).json({ error: error.message });
+    }
+});
+
+router.get('/gas-policy', async (_req: Request, res: Response) => {
+    try {
+        const quote = await manager.gasPolicyQuote();
+        return res.json(quote);
     } catch (error: any) {
         return res.status(500).json({ error: error.message });
     }

@@ -92,6 +92,8 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
         bool isSettled;
         bool isChallenged;
         bool agentBJoined;
+        bool agentAFastFinalizationConsent;
+        bool agentBFastFinalizationConsent;
     }
 
     mapping(bytes32 => Channel) public channels;
@@ -103,6 +105,8 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
     event ChallengeModifiersApplied(bytes32 indexed channelId, uint256 minRep, uint256 modifiedWindow, uint256 modifiedStake);
     event FeeBurnBpsUpdated(uint256 previousBps, uint256 newBps);
     event ChannelTaxBurned(bytes32 indexed channelId, uint256 burnedAmount);
+    event FastFinalizationConsented(bytes32 indexed channelId, address indexed participant);
+    event BatchSettled(uint256 requested, uint256 settled);
 
     constructor(
         address _axm,
@@ -196,7 +200,9 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
             challengeWindowEnds: block.timestamp + challengeWindow,
             isSettled: false,
             isChallenged: false,
-            agentBJoined: false
+            agentBJoined: false,
+            agentAFastFinalizationConsent: false,
+            agentBFastFinalizationConsent: false
         });
 
         require(axmToken.transferFrom(msg.sender, address(this), requiredStake), "Stake A transfer failed");
@@ -272,7 +278,11 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
         require(ch.agentBJoined, "Agent B has not joined");
         require(!ch.isSettled, "Already settled");
         require(!ch.isChallenged, "Settlement challenged");
-        require(block.timestamp > ch.challengeWindowEnds, "Challenge window open");
+        require(
+            block.timestamp > ch.challengeWindowEnds ||
+            (ch.agentAFastFinalizationConsent && ch.agentBFastFinalizationConsent),
+            "Challenge window open"
+        );
         require(
             msg.sender == ch.agentA || msg.sender == ch.agentB || msg.sender == guardianSentinel,
             "Unauthorized settler"
@@ -314,6 +324,50 @@ contract StigmergicStateChannel is ReentrancyGuard, Pausable {
 
         emit OptimisticSettled(channelId, stateRootAfter);
         emit ChannelFundingReleased(channelId, tax, payoutA, payoutB);
+    }
+
+    /// @notice Allows channel participants to mutually consent to immediate finalization.
+    ///         When both parties have consented, settlement can occur before challengeWindowEnds.
+    function consentFastFinalization(bytes32 channelId) external {
+        Channel storage ch = channels[channelId];
+        require(ch.agentA != address(0), "Channel not found");
+        require(!ch.isSettled, "Already settled");
+        require(!ch.isChallenged, "Settlement challenged");
+
+        if (msg.sender == ch.agentA) {
+            ch.agentAFastFinalizationConsent = true;
+        } else if (msg.sender == ch.agentB) {
+            ch.agentBFastFinalizationConsent = true;
+        } else {
+            revert("Unauthorized participant");
+        }
+
+        emit FastFinalizationConsented(channelId, msg.sender);
+    }
+
+    /// @notice Batch settlement entrypoint for reduced per-call overhead during high-throughput finalization windows.
+    function batchOptimisticSettle(
+        bytes32[] calldata channelIds,
+        bytes32[] calldata stateRootBefores,
+        bytes32[] calldata stateRootAfters,
+        AttentionArtifact[] calldata artifacts,
+        bytes[] calldata zkProofs
+    ) external nonReentrant {
+        uint256 count = channelIds.length;
+        require(count > 0, "Empty batch");
+        require(
+            count == stateRootBefores.length &&
+            count == stateRootAfters.length &&
+            count == artifacts.length &&
+            count == zkProofs.length,
+            "Mismatched batch arrays"
+        );
+
+        for (uint256 i = 0; i < count; i++) {
+            _optimisticSettleCore(channelIds[i], stateRootBefores[i], stateRootAfters[i], artifacts[i], zkProofs[i]);
+        }
+
+        emit BatchSettled(count, count);
     }
 
     function challengeSettlement(bytes32 channelId, bytes calldata fraudProof) external {

@@ -337,4 +337,92 @@ describe("StigmergicStateChannel v4 interface audit", function () {
     const channelData = await channel.channels(channelId);
     expect(channelData.lockedStake).to.equal(stake * 4n); // stake * 2 from A, stake * 2 from B -> stake * 4 total
   });
+
+  it("allows early settlement once both channel participants consent to fast finalization", async function () {
+    const stake = ethers.parseEther("50");
+    const taskHash = ethers.keccak256(ethers.toUtf8Bytes("task-fast-finalization"));
+
+    const openTx = await channel.connect(agentA).openChannel(agentB.address, taskHash, stake);
+    const openReceipt = await openTx.wait();
+    const openEvent = openReceipt.logs.find((log) => log.fragment && log.fragment.name === "ChannelOpened");
+    const channelId = openEvent.args.channelId;
+
+    await channel.connect(agentB).joinChannel(channelId);
+    await channel.connect(agentA).consentFastFinalization(channelId);
+    await channel.connect(agentB).consentFastFinalization(channelId);
+
+    const artifact = {
+      attentionScopeHash: ethers.keccak256(ethers.toUtf8Bytes("attention-fast")),
+      dependencyGraphRoot: ethers.keccak256(ethers.toUtf8Bytes("deps-fast")),
+      capabilityRoot: ethers.keccak256(ethers.toUtf8Bytes("cap-fast")),
+      modelRoot: ethers.keccak256(ethers.toUtf8Bytes("model-fast")),
+      executionTraceHash: ethers.keccak256(ethers.toUtf8Bytes("trace-fast")),
+    };
+
+    const coder = ethers.AbiCoder.defaultAbiCoder();
+    const zkProof = coder.encode(
+      ["uint256[2]", "uint256[2][2]", "uint256[2]"],
+      [
+        [21, 22],
+        [[23, 24], [25, 26]],
+        [27, 28]
+      ]
+    );
+
+    await expect(
+      channel.connect(agentA).optimisticSettle(
+        channelId,
+        ethers.keccak256(ethers.toUtf8Bytes("before-fast")),
+        ethers.keccak256(ethers.toUtf8Bytes("after-fast")),
+        artifact,
+        zkProof
+      )
+    ).to.emit(channel, "ChannelFundingReleased");
+  });
+
+  it("settles multiple channels in a single batch call", async function () {
+    const stake = ethers.parseEther("20");
+    const coder = ethers.AbiCoder.defaultAbiCoder();
+    const zkProof = coder.encode(
+      ["uint256[2]", "uint256[2][2]", "uint256[2]"],
+      [
+        [31, 32],
+        [[33, 34], [35, 36]],
+        [37, 38]
+      ]
+    );
+
+    const channelIds = [];
+    const stateRootBefores = [];
+    const stateRootAfters = [];
+    const artifacts = [];
+    const proofs = [];
+
+    for (let i = 0; i < 2; i++) {
+      const taskHash = ethers.keccak256(ethers.toUtf8Bytes(`task-batch-${i}`));
+      const openTx = await channel.connect(agentA).openChannel(agentB.address, taskHash, stake);
+      const openReceipt = await openTx.wait();
+      const openEvent = openReceipt.logs.find((log) => log.fragment && log.fragment.name === "ChannelOpened");
+      const channelId = openEvent.args.channelId;
+      channelIds.push(channelId);
+      await channel.connect(agentB).joinChannel(channelId);
+      await channel.connect(agentA).consentFastFinalization(channelId);
+      await channel.connect(agentB).consentFastFinalization(channelId);
+
+      stateRootBefores.push(ethers.keccak256(ethers.toUtf8Bytes(`before-batch-${i}`)));
+      stateRootAfters.push(ethers.keccak256(ethers.toUtf8Bytes(`after-batch-${i}`)));
+      artifacts.push({
+        attentionScopeHash: ethers.keccak256(ethers.toUtf8Bytes(`attention-batch-${i}`)),
+        dependencyGraphRoot: ethers.keccak256(ethers.toUtf8Bytes(`deps-batch-${i}`)),
+        capabilityRoot: ethers.keccak256(ethers.toUtf8Bytes(`cap-batch-${i}`)),
+        modelRoot: ethers.keccak256(ethers.toUtf8Bytes(`model-batch-${i}`)),
+        executionTraceHash: ethers.keccak256(ethers.toUtf8Bytes(`trace-batch-${i}`)),
+      });
+      proofs.push(zkProof);
+    }
+
+    await expect(
+      channel.connect(agentA).batchOptimisticSettle(channelIds, stateRootBefores, stateRootAfters, artifacts, proofs)
+    ).to.emit(channel, "BatchSettled");
+  });
 });
