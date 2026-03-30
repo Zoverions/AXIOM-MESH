@@ -52,6 +52,9 @@ Set environment variables in `.env`:
 ```bash
 GATEWAY_REST_PORT=3000
 GATEWAY_WS_PORT=3001
+CORS_ORIGINS=http://localhost:3000
+GATEWAY_MAX_JSON_BODY_BYTES=102400
+GATEWAY_WS_MAX_PAYLOAD_BYTES=1048576
 HYPERVISOR_API_KEY=your_key
 HYPERVISOR_PORT=8000
 ```
@@ -83,8 +86,9 @@ Current coverage: ~30-40%
 
 ## Production Considerations
 
-- CORS is configured for trusted origins only (set `ALLOWED_ORIGINS`)
+- CORS is configured for trusted origins only (set `CORS_ORIGINS`)
 - WebSocket messages are validated against `ZodSchema`
+- WebSocket handshake origin checks and max payload limits are configurable (`GATEWAY_WS_MAX_PAYLOAD_BYTES`)
 - Hypervisor client uses exponential backoff (max retries: 3, initial delay: 100ms)
 - Rate limiting: 100 req/min per IP (configurable via env)
 
