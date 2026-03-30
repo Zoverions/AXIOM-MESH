@@ -8,6 +8,7 @@ echo ==========================================================
 ::   --capsule=skill-pill|capsule|capsule-plus
 ::   --region=ontario|us|uk|china
 ::   --monitor=dedicated-mesh|shared-machine|education-node|minimal-edge
+::   --launch-mode=local-mesh|single-node|launch-testnet|launch-network
 
 :: Auto-install Chocolatey if missing
 choco -v >nul 2>&1

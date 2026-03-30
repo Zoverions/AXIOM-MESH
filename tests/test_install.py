@@ -18,3 +18,38 @@ def test_get_os(mock_system, mock_environ, expected):
     with patch('platform.system', return_value=mock_system):
         with patch.dict(os.environ, mock_environ, clear=True):
             assert install.get_os() == expected
+
+
+@pytest.mark.parametrize(
+    "base_role,capsule,monitor,os_type,expected",
+    [
+        ("shared-machine", "capsule", None, "linux", "shared-machine"),
+        ("shared-machine", "skill-pill", None, "linux", "minimal-edge"),
+        ("shared-machine", "capsule-plus", None, "linux", "education-node"),
+        ("shared-machine", "capsule", "dedicated-mesh", "linux", "dedicated-mesh"),
+        ("shared-machine", "capsule", None, "android", "minimal-edge"),
+        ("shared-machine", "capsule", "education-node", "android", "education-node"),
+    ],
+)
+def test_resolve_machine_role(base_role, capsule, monitor, os_type, expected):
+    assert install.resolve_machine_role(base_role, capsule, monitor, os_type) == expected
+
+
+def test_normalize_choice_falls_back_to_default():
+    assert install.normalize_choice("unknown", ["a", "b"], "a", "test label") == "a"
+
+
+@pytest.mark.parametrize(
+    "available,expected",
+    [
+        ({"apt-get": "/usr/bin/apt-get"}, "apt-get"),
+        ({"dnf": "/usr/bin/dnf"}, "dnf"),
+        ({}, None),
+    ],
+)
+def test_detect_linux_package_manager(available, expected):
+    def fake_which(name):
+        return available.get(name)
+
+    with patch("shutil.which", side_effect=fake_which):
+        assert install.detect_linux_package_manager() == expected
