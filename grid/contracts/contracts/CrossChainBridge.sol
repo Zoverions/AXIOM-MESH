@@ -35,12 +35,20 @@ contract CrossChainBridge is OApp {
         uint256 committedAt;
     }
 
+    struct CachedBridgeRating {
+        uint256 rating;
+        uint256 quorum;
+        uint256 lastUpdateTimestamp;
+        uint256 cachedAt;
+    }
+
     BridgeOracleHooks public oracleHooks;
     bool public mevProtectionEnabled;
     uint256 public commitDelay = 30 seconds;
     uint256 public commitExpiry = 20 minutes;
 
     mapping(address => PayrollCommitment) public payrollCommitments;
+    mapping(uint32 => CachedBridgeRating) public bridgeRatingCache;
 
     mapping(bytes32 => PendingClaim) public pendingClaims;
     mapping(uint32 => uint256) public chainFinalityBlocks;
@@ -49,6 +57,8 @@ contract CrossChainBridge is OApp {
     event ClaimReceived(bytes32 indexed guid, address recipient, uint256 amount);
     event ClaimRedeemed(bytes32 indexed guid, address recipient, uint256 amount);
     event OracleHooksUpdated(address oracleContract, uint256 ratingThreshold, uint256 pollingInterval, uint256 quorumRequired, bool enabled);
+    event BridgeRatingCached(uint32 indexed dstEid, uint256 rating, uint256 quorum, uint256 lastUpdateTimestamp, uint256 cachedAt);
+    event BridgeRatingCacheInvalidated(uint32 indexed dstEid);
     event PayrollCommitted(address indexed user, bytes32 indexed commitmentHash);
     event MEVProtectionUpdated(bool enabled, uint256 commitDelay, uint256 commitExpiry);
 
@@ -75,6 +85,15 @@ contract CrossChainBridge is OApp {
             enabled: _enabled
         });
         emit OracleHooksUpdated(_oracleContract, _ratingThreshold, _pollingInterval, _quorumRequired, _enabled);
+    }
+
+    function invalidateBridgeRatingCache(uint32 dstEid) external onlyOwner {
+        delete bridgeRatingCache[dstEid];
+        emit BridgeRatingCacheInvalidated(dstEid);
+    }
+
+    function refreshBridgeRatingCache(uint32 dstEid) external {
+        _readBridgeRating(dstEid, true);
     }
 
     /// @notice Commit hash for bridgePayroll reveal path when MEV protection is enabled.
@@ -104,33 +123,61 @@ contract CrossChainBridge is OApp {
         bytes32 zkProof,
         bytes32 salt
     ) external payable {
+        _bridgePayroll(msg.sender, amount, dstEid, options, zkProof, salt, msg.value);
+    }
+
+    function _bridgePayroll(
+        address payer,
+        uint256 amount,
+        uint32 dstEid,
+        bytes calldata options,
+        bytes32 zkProof,
+        bytes32 salt,
+        uint256 nativeFee
+    ) internal {
         if (mevProtectionEnabled) {
-            PayrollCommitment memory commitment = payrollCommitments[msg.sender];
+            PayrollCommitment memory commitment = payrollCommitments[payer];
             require(commitment.commitmentHash != bytes32(0), "Commitment missing");
             require(block.timestamp >= commitment.committedAt + commitDelay, "Commit delay active");
             require(block.timestamp <= commitment.committedAt + commitExpiry, "Commitment expired");
 
-            bytes32 revealHash = keccak256(abi.encode(msg.sender, amount, dstEid, options, zkProof, salt));
+            bytes32 revealHash = keccak256(abi.encode(payer, amount, dstEid, options, zkProof, salt));
             require(revealHash == commitment.commitmentHash, "Commitment mismatch");
-            delete payrollCommitments[msg.sender];
+            delete payrollCommitments[payer];
         }
 
         if (oracleHooks.enabled) {
-            require(oracleHooks.oracleContract != address(0), "Oracle contract not configured");
-
-            // Expected interface: function getBridgeRating(uint32 dstEid) external view returns (uint256 rating, uint256 quorum, uint256 lastUpdateTimestamp)
-            (bool success, bytes memory data) = oracleHooks.oracleContract.staticcall(abi.encodeWithSignature("getBridgeRating(uint32)", dstEid));
-            require(success, "Oracle call failed");
-
-            (uint256 currentRating, uint256 quorum, uint256 lastUpdateTimestamp) = abi.decode(data, (uint256, uint256, uint256));
-
+            (uint256 currentRating, uint256 quorum, uint256 lastUpdateTimestamp) = _readBridgeRating(dstEid, false);
             require(currentRating >= oracleHooks.ratingThreshold, "Bridge path rating too low");
             require(quorum >= oracleHooks.quorumRequired, "Bridge path quorum not met");
             require(block.timestamp <= lastUpdateTimestamp + oracleHooks.pollingInterval, "Bridge path rating is stale");
         }
-        pool.distribute(msg.sender, amount, zkProof);
-        bytes memory payload = abi.encode(msg.sender, amount, zkProof);
-        _lzSend(dstEid, payload, options, MessagingFee(msg.value, 0), payable(msg.sender));
+        pool.distribute(payer, amount, zkProof);
+        bytes memory payload = abi.encode(payer, amount, zkProof);
+        _lzSend(dstEid, payload, options, MessagingFee(nativeFee, 0), payable(payer));
+    }
+
+    function batchBridgePayroll(
+        uint256[] calldata amounts,
+        uint32[] calldata dstEids,
+        bytes[] calldata optionsList,
+        bytes32[] calldata zkProofs,
+        bytes32[] calldata salts
+    ) external payable {
+        require(msg.value == 0, "Batch bridge does not support native fees");
+        uint256 count = amounts.length;
+        require(
+            count == dstEids.length &&
+            count == optionsList.length &&
+            count == zkProofs.length &&
+            count == salts.length,
+            "Mismatched batch arrays"
+        );
+        require(count > 0, "Empty batch");
+
+        for (uint256 i = 0; i < count; i++) {
+            _bridgePayroll(msg.sender, amounts[i], dstEids[i], optionsList[i], zkProofs[i], salts[i], 0);
+        }
     }
 
     // Arbitrage function that acts on price sync data to benefit the platform
@@ -174,5 +221,31 @@ contract CrossChainBridge is OApp {
     function interceptClaim(bytes32 _guid) external onlyOwner {
         require(pendingClaims[_guid].timestamp > 0, "Claim not found");
         delete pendingClaims[_guid];
+    }
+
+    function _readBridgeRating(uint32 dstEid, bool forceRefresh) internal returns (uint256 rating, uint256 quorum, uint256 lastUpdateTimestamp) {
+        require(oracleHooks.oracleContract != address(0), "Oracle contract not configured");
+
+        CachedBridgeRating memory cached = bridgeRatingCache[dstEid];
+        bool cacheFresh = !forceRefresh &&
+            cached.cachedAt != 0 &&
+            block.timestamp <= cached.cachedAt + oracleHooks.pollingInterval &&
+            block.timestamp <= cached.lastUpdateTimestamp + oracleHooks.pollingInterval;
+
+        if (cacheFresh) {
+            return (cached.rating, cached.quorum, cached.lastUpdateTimestamp);
+        }
+
+        (bool success, bytes memory data) = oracleHooks.oracleContract.staticcall(abi.encodeWithSignature("getBridgeRating(uint32)", dstEid));
+        require(success, "Oracle call failed");
+        (rating, quorum, lastUpdateTimestamp) = abi.decode(data, (uint256, uint256, uint256));
+
+        bridgeRatingCache[dstEid] = CachedBridgeRating({
+            rating: rating,
+            quorum: quorum,
+            lastUpdateTimestamp: lastUpdateTimestamp,
+            cachedAt: block.timestamp
+        });
+        emit BridgeRatingCached(dstEid, rating, quorum, lastUpdateTimestamp, block.timestamp);
     }
 }

@@ -3,11 +3,12 @@ pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./ShadowBridge.sol";
 import "./DynamicResourceAllocator.sol";
 import "./FounderCommitment.sol";
 
-contract DarkComputePool is Initializable, UUPSUpgradeable {
+contract DarkComputePool is Initializable, UUPSUpgradeable, ReentrancyGuard {
     ShadowBridge public immutable bridge;
     DynamicResourceAllocator public immutable allocator;
     FounderCommitment public immutable founder;
@@ -36,7 +37,7 @@ contract DarkComputePool is Initializable, UUPSUpgradeable {
         bytes32 phantomDIDHash,
         uint256 computeUnits,
         bytes32 zkProofHash
-    ) external {
+    ) external nonReentrant {
         require(bridge.verifyZkStealthProof(abi.encode(zkProofHash)), "Invalid zk proof");
 
         contributions[phantomDIDHash] = Contribution(phantomDIDHash, computeUnits, zkProofHash, 0);
