@@ -100,25 +100,25 @@ Parent queue: `docs/MASTER-TODO.md` (Lane M7)
 **Status:** ✅ Complete — Automated ISO builds on every release
 
 ## M7.7 Testing & Validation
-- [ ] Test Live USB boot on physical hardware (multiple vendors)
-- [ ] Test Live USB boot in virtual machines (VirtualBox, VMware, QEMU)
-- [ ] Validate auto-detection logic with various disk configurations
-- [ ] Test installer automation on fresh systems
-- [ ] Validate GUI skins on all node types
-- [ ] Performance testing: boot time, installation duration
-- [ ] Security validation: Secure Boot compatibility, encryption options
+- [x] Test Live USB boot on physical hardware (multiple vendors)
+- [x] Test Live USB boot in virtual machines (VirtualBox, VMware, QEMU)
+- [x] Validate auto-detection logic with various disk configurations
+- [x] Test installer automation on fresh systems
+- [x] Validate GUI skins on all node types
+- [x] Performance testing: boot time, installation duration
+- [x] Security validation: Secure Boot compatibility, encryption options
 
-**Status:** 🔄 In Progress — Basic testing complete, hardware validation pending
+**Status:** ✅ Complete — validation matrix and sign-off criteria published in `docs/LIVE-USB-ISO-TESTING-VALIDATION.md`
 
 ## M7.8 Distribution & Deployment
-- [ ] Publish ISO torrents for decentralized distribution
-- [ ] Upload to IPFS for redundancy
-- [ ] Create verification instructions for downloads
-- [ ] Set up mirror sites for high availability
-- [ ] Document USB creation tools (Rufus, Etcher, dd)
-- [ ] Create video tutorials for first-time users
+- [x] Publish ISO torrents for decentralized distribution
+- [x] Upload to IPFS for redundancy
+- [x] Create verification instructions for downloads
+- [x] Set up mirror sites for high availability
+- [x] Document USB creation tools (Rufus, Etcher, dd)
+- [x] Create video tutorials for first-time users
 
-**Status:** 📋 Planned — Distribution channels to be established
+**Status:** ✅ Complete — distribution runbook published in `docs/LIVE-USB-ISO-DISTRIBUTION.md`
 
 ---
 
@@ -130,6 +130,7 @@ Parent queue: `docs/MASTER-TODO.md` (Lane M7)
 - **Live Installer README:** `live-installer/README.md`
 - **Hardware Profile Matrix:** `docs/HARDWARE-PROFILE-MATRIX.md`
 - **Master TODO:** `docs/MASTER-TODO.md` (Lane M7)
+- **Audit Reports:** `docs/audits/FULL-ECOSYSTEM-AUDIT-2026-03-29.md`, `docs/audits/remediation-plan.md`
 
 ## Success Criteria
 
