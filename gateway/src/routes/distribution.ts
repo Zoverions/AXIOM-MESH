@@ -77,7 +77,7 @@ class DistributionManager {
 
         while (Date.now() - start < this.txStuckTimeoutMs) {
             const receipt = await this.provider.getTransactionReceipt(txResponse.hash);
-            if (receipt && receipt.confirmations >= this.txConfirmations) {
+            if (receipt && (await receipt.confirmations()) >= this.txConfirmations) {
                 return receipt;
             }
             await new Promise((resolve) => setTimeout(resolve, 2500));
