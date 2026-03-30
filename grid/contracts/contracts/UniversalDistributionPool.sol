@@ -4,6 +4,8 @@ pragma solidity ^0.8.28;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "./FounderCommitment.sol";
 import "./DynamicResourceAllocator.sol";
 import "./ComputeBond.sol";
@@ -13,7 +15,7 @@ interface IStakingRewards {
     function notifyRewardAmount(uint256 reward) external;
 }
 
-contract UniversalDistributionPool is Initializable, UUPSUpgradeable {
+contract UniversalDistributionPool is Initializable, UUPSUpgradeable, ReentrancyGuard, Pausable {
     FounderCommitment public immutable founder;
     DynamicResourceAllocator public immutable allocator;
     ComputeBond public immutable treasury;
@@ -27,12 +29,17 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable {
     bool public externalFundsEnabled;
     address public stakingRewards;
     uint256 public stakingRewardShareBps;
+    uint256 public maxSingleDistributionAmount;
+    uint256 public maxBatchDistributionAmount;
 
     event Inflow(address from, uint256 amount, string source);
     event Outflow(address to, uint256 amount, bytes32 zkProofHash);
     event NetworkShareAllocated(uint256 amount);
     event StakingRewardsConfigured(address stakingRewards, uint256 rewardShareBps);
     event StakingRewardsFunded(uint256 amount);
+    event DistributionCircuitBreakersUpdated(uint256 maxSingleDistributionAmount, uint256 maxBatchDistributionAmount);
+    event DistributionEmergencyPause(address indexed triggeredBy);
+    event DistributionEmergencyUnpause(address indexed triggeredBy);
 
     constructor(address _founder, address _allocator, address _treasury, address _citizenship) {
         founder = FounderCommitment(_founder);
@@ -48,9 +55,11 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable {
         __UUPSUpgradeable_init();
         networkSharePercentage = _defaultShare == 0 ? 60 : _defaultShare;
         externalFundsEnabled = false; // Disabled until Level 3 gate is passed
+        maxSingleDistributionAmount = 100_000 ether;
+        maxBatchDistributionAmount = 1_000_000 ether;
     }
 
-    function deposit(address from, uint256 amount, string calldata source) external payable {
+    function deposit(address from, uint256 amount, string calldata source) external payable nonReentrant whenNotPaused {
         require(
             externalFundsEnabled ||
             msg.sender == address(allocator) ||
@@ -83,7 +92,7 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable {
         emit Inflow(from, amount, source);
     }
 
-    function distributeBatch(address[] calldata recipients, uint256[] calldata amounts, bytes32 zkProofHash) external {
+    function distributeBatch(address[] calldata recipients, uint256[] calldata amounts, bytes32 zkProofHash) external nonReentrant whenNotPaused {
         require(msg.sender == address(allocator) || msg.sender == crossChainBridge, "Authorized distributor only");
         require(recipients.length == amounts.length, "Mismatched arrays");
 
@@ -91,6 +100,7 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable {
         for (uint256 i = 0; i < amounts.length; i++) {
             totalAmount += amounts[i];
         }
+        require(totalAmount <= maxBatchDistributionAmount, "Circuit breaker: batch distribution too high");
         require(address(this).balance >= totalAmount, "Insufficient pool");
 
         for (uint256 i = 0; i < recipients.length; i++) {
@@ -106,8 +116,9 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable {
         }
     }
 
-    function distribute(address to, uint256 amount, bytes32 zkProofHash) external {
+    function distribute(address to, uint256 amount, bytes32 zkProofHash) external nonReentrant whenNotPaused {
         require((citizenship.balanceOf(msg.sender) > 0 && msg.sender == to) || msg.sender == address(allocator) || msg.sender == crossChainBridge, "Authorized distributor only");
+        require(amount <= maxSingleDistributionAmount, "Circuit breaker: distribution too high");
         require(address(this).balance >= amount, "Insufficient pool");
 
         outflows[to] += amount;
@@ -139,6 +150,26 @@ contract UniversalDistributionPool is Initializable, UUPSUpgradeable {
         stakingRewards = _stakingRewards;
         stakingRewardShareBps = _rewardShareBps;
         emit StakingRewardsConfigured(_stakingRewards, _rewardShareBps);
+    }
+
+    function setDistributionCircuitBreakers(uint256 _maxSingleDistributionAmount, uint256 _maxBatchDistributionAmount) external {
+        require(msg.sender == address(founder), "Founder only");
+        require(_maxSingleDistributionAmount > 0 && _maxBatchDistributionAmount >= _maxSingleDistributionAmount, "Invalid thresholds");
+        maxSingleDistributionAmount = _maxSingleDistributionAmount;
+        maxBatchDistributionAmount = _maxBatchDistributionAmount;
+        emit DistributionCircuitBreakersUpdated(_maxSingleDistributionAmount, _maxBatchDistributionAmount);
+    }
+
+    function emergencyPause() external {
+        require(msg.sender == address(founder), "Founder only");
+        _pause();
+        emit DistributionEmergencyPause(msg.sender);
+    }
+
+    function emergencyUnpause() external {
+        require(msg.sender == address(founder), "Founder only");
+        _unpause();
+        emit DistributionEmergencyUnpause(msg.sender);
     }
 
     function getAuditTrail(address entity) external view returns (uint256 totalIn, uint256 totalOut, uint256 networkContributed) {

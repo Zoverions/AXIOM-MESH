@@ -10,6 +10,9 @@ contract CommunityTreasury is Ownable {
 
     event FundsAllocated(address indexed recipient, uint256 amount, string purpose);
     event FundsReceived(address indexed sender, uint256 amount);
+    event GovernanceMultisigUpdated(address indexed previousMultisig, address indexed newMultisig);
+
+    address public governanceMultisig;
 
     constructor() Ownable(msg.sender) {}
 
@@ -17,14 +20,25 @@ contract CommunityTreasury is Ownable {
         emit FundsReceived(msg.sender, msg.value);
     }
 
-    function allocateFunds(IERC20 token, address recipient, uint256 amount, string calldata purpose) external onlyOwner {
+    modifier onlyGovernanceMultisig() {
+        require(msg.sender == governanceMultisig, "CommunityTreasury: governance multisig required");
+        _;
+    }
+
+    function setGovernanceMultisig(address newGovernanceMultisig) external onlyOwner {
+        require(newGovernanceMultisig != address(0), "CommunityTreasury: invalid multisig");
+        emit GovernanceMultisigUpdated(governanceMultisig, newGovernanceMultisig);
+        governanceMultisig = newGovernanceMultisig;
+    }
+
+    function allocateFunds(IERC20 token, address recipient, uint256 amount, string calldata purpose) external onlyGovernanceMultisig {
         require(recipient != address(0), "Invalid recipient");
         require(amount > 0, "Invalid amount");
         token.safeTransfer(recipient, amount);
         emit FundsAllocated(recipient, amount, purpose);
     }
 
-    function allocateEther(address payable recipient, uint256 amount, string calldata purpose) external onlyOwner {
+    function allocateEther(address payable recipient, uint256 amount, string calldata purpose) external onlyGovernanceMultisig {
         require(recipient != address(0), "Invalid recipient");
         require(amount > 0, "Invalid amount");
         require(address(this).balance >= amount, "Insufficient balance");
