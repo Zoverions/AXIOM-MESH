@@ -236,6 +236,7 @@ async def scanner_ui():
                         timestamp: Math.floor(Date.now() / 1000)
                     }
                 });
+                const timestamp = JSON.parse(msgParams).message.timestamp;
                 
                 signature = await window.ethereum.request({
                     method: 'eth_signTypedData_v4',
@@ -249,7 +250,8 @@ async def scanner_ui():
                     body: JSON.stringify({
                         token_id: scannedData.token_id,
                         wallet_address: walletAddress,
-                        signature: signature
+                        signature: signature,
+                        timestamp: timestamp
                     })
                 });
                 
