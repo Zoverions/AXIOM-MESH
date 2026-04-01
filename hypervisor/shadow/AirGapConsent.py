@@ -4,7 +4,6 @@ import ast
 import json
 import time
 from cryptography.fernet import Fernet
-from PIL import Image
 
 class ConsentManifest:
     def __init__(self, data_category: str, purpose: str, retention_period: int):
