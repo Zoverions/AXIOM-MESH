@@ -53,3 +53,21 @@ def test_detect_linux_package_manager(available, expected):
 
     with patch("shutil.which", side_effect=fake_which):
         assert install.detect_linux_package_manager() == expected
+
+import subprocess
+
+@patch('subprocess.run')
+def test_run_cmd_success(mock_run):
+    mock_run.return_value.stdout = " test output \n"
+
+    assert install.run_cmd(["echo", "test"]) is True
+    assert install.run_cmd(["echo", "test"], capture_output=True) == "test output"
+
+@patch('subprocess.run')
+def test_run_cmd_failure(mock_run):
+    mock_run.side_effect = subprocess.CalledProcessError(1, "cmd")
+
+    res = install.run_cmd(["invalid"])
+    assert res in (None, False)
+
+    assert install.run_cmd(["invalid"], capture_output=True) == ""
