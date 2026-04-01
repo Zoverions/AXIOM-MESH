@@ -32,13 +32,11 @@ except ImportError as e:
 
 try:
     import qrcode
-    from qrcode.image.styledpil import StyledPilImage
     from qrcode.constants import ERROR_CORRECT_H
 except ImportError:
     print("⚠️  Installing qrcode library...")
     os.system(f"{sys.executable} -m pip install qrcode[pil]")
     import qrcode
-    from qrcode.image.styledpil import StyledPilImage
     from qrcode.constants import ERROR_CORRECT_H
 
 # Configuration
