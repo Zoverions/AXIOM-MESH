@@ -46,3 +46,10 @@ certs/*.csr
 certs/*.srl
 !certs/.gitkeep
 !certs/README.md
+
+# Hypervisor Data Artifacts
+hypervisor/data/*.json
+hypervisor/data/*.pem
+hypervisor/data/*.db
+hypervisor/data/*.key
+hypervisor/data/*.log

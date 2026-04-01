@@ -112,6 +112,63 @@ def test_load_token_store_invalid_json():
     # Should clear the store to {} on exception
     assert len(provision_service.token_store) == 0
 
+def test_save_token_store_success():
+    """Test successfully saving token store to disk"""
+    now = time.time()
+
+    # Add a token to the store
+    token = provision_service.InvitationToken(
+        token_id="save_test_token",
+        mesh_id="test_mesh",
+        coordinator_url="http://localhost",
+        expires_at=now + 3600,
+        created_at=now,
+        used=False,
+        uses_count=0,
+        max_uses=1,
+        node_type="validator",
+        metadata={}
+    )
+    provision_service.token_store["save_test_token"] = token
+
+    # Call function under test
+    provision_service.save_token_store()
+
+    # Verify file was created and contains correct data
+    assert TEST_DB.exists()
+    with open(TEST_DB, 'r') as f:
+        data = json.load(f)
+
+    assert "save_test_token" in data
+    assert data["save_test_token"]["token_id"] == "save_test_token"
+    assert data["save_test_token"]["mesh_id"] == "test_mesh"
+
+def test_save_token_store_error(monkeypatch, capsys):
+    """Test error handling when saving token store fails"""
+    # Mock open to raise an exception
+    def mock_open(*args, **kwargs):
+        raise IOError("Mock permission denied")
+
+    monkeypatch.setattr("builtins.open", mock_open)
+
+    # Add a token to ensure the loop runs and tries to save
+    now = time.time()
+    token = provision_service.InvitationToken(
+        token_id="save_error_token",
+        mesh_id="test_mesh",
+        coordinator_url="http://localhost",
+        expires_at=now + 3600,
+        created_at=now
+    )
+    provision_service.token_store["save_error_token"] = token
+
+    # Call function under test - should not raise exception
+    provision_service.save_token_store()
+
+    # Verify error was printed
+    captured = capsys.readouterr()
+    assert "Error saving token store" in captured.out
+
 def test_load_token_store_malformed_token():
     """Test loading token store where token data is invalid for InvitationToken"""
     # Missing required fields
