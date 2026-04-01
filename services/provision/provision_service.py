@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Optional, Dict, Any, List
 
 try:
-    from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
+    from fastapi import FastAPI, HTTPException, Request
     from fastapi.concurrency import run_in_threadpool
     from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
     from fastapi.staticfiles import StaticFiles
