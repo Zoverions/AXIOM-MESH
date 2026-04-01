@@ -53,3 +53,23 @@ def test_detect_linux_package_manager(available, expected):
 
     with patch("shutil.which", side_effect=fake_which):
         assert install.detect_linux_package_manager() == expected
+
+def test_prompt_with_timeout_early_input():
+    with patch("builtins.input", return_value="my_input"):
+        assert install.prompt_with_timeout("Test prompt", "default", timeout=2) == "my_input"
+
+def test_prompt_with_timeout_eof():
+    with patch("builtins.input", side_effect=EOFError):
+        assert install.prompt_with_timeout("Test prompt", "default", timeout=0.1) == "default"
+
+def test_prompt_with_timeout_timeout():
+    import time
+    def slow_input():
+        time.sleep(0.5)
+        return "late_input"
+    with patch("builtins.input", side_effect=slow_input):
+        assert install.prompt_with_timeout("Test prompt", "default", timeout=0.1) == "default"
+
+def test_prompt_with_timeout_empty_string():
+    with patch("builtins.input", return_value="   "):
+        assert install.prompt_with_timeout("Test prompt", "default", timeout=0.1) == "default"
