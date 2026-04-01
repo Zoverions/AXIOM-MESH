@@ -1,5 +1,4 @@
 from mcp.server.fastmcp import FastMCP
-from mcp.server.fastmcp import Context
 from pydantic import BaseModel, Field
 import os
 import httpx
