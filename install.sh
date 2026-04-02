@@ -1,6 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# =============================================
+# SELF-BOOTSTRAPPING DEPENDENCY BLOCK (NEW)
+# Runs on first execution on any fresh Debian/Ubuntu VPS
+# =============================================
+if ! command -v curl >/dev/null 2>&1 || ! command -v git >/dev/null 2>&1 || ! command -v docker >/dev/null 2>&1; then
+    echo "🔧 Fresh system detected – auto-installing ALL required dependencies..."
+    sudo apt update -qq
+    sudo apt install -y curl wget git make python3 python3-pip docker.io docker-compose
+    sudo systemctl enable --now docker
+    echo "✅ All dependencies installed automatically."
+fi
+# =============================================
+
 echo "=========================================================="
 echo "   AXIOM-MESH Bootstrap (Unix/Linux/macOS) - FULL AUTO MODE"
 echo "=========================================================="
