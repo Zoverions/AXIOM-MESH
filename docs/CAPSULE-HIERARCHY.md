@@ -24,15 +24,16 @@ This document formalizes the package hierarchy requested for operations and inst
 - Overlaps: Shares core mesh, wallet, auth primitives
 - RAM target: 300–600 MB
 
-## 2. Capsule Plus (advanced education/governance)
+## 2. Capsule Plus (advanced education/governance/business)
 - Requires: Capsule
-- Major overlapping cores: curriculum-engine, mission-dashboard, achievement-tracker, zero-knowledge voting, paper-ballot backup
-- Regional curricula (primary focus Ontario → expand):
+- Major overlapping cores: curriculum-engine, mission-dashboard, achievement-tracker, zero-knowledge voting, paper-ballot backup, portfolio-manager, digital-agency-core
+- Regional/Domain profiles:
   - Ontario Education Capsule Plus (implemented)
   - Canadian Government Capsule Plus (implemented)
   - US Government Capsule Plus (implemented)
   - UK Government Capsule Plus (planned)
   - China Governance Capsule Plus (planned – pull-not-push philosophy)
+  - Business / Digital Agency Capsule Plus (planned – autonomous revenue generation and portfolio management)
 - RAM target: 800 MB – 2 GB (full-system mode)
 
 ## Installer Mapping
