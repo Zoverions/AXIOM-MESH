@@ -654,11 +654,11 @@ async def join_mesh(request: Request):
             raise HTTPException(status_code=400, detail="Token already used")
         
         # Verify wallet signature
-        if HAS_ETH_ACCOUNT:
-            timestamp = data.get("timestamp")
-            if timestamp is None:
-                raise HTTPException(status_code=400, detail="Missing timestamp for signature verification")
+        timestamp = data.get("timestamp")
+        if timestamp is None:
+            raise HTTPException(status_code=400, detail="Missing timestamp for signature verification")
 
+        if HAS_ETH_ACCOUNT:
             domain_data = {
                 "name": "AXIOM-MESH",
                 "version": "1",
@@ -683,6 +683,8 @@ async def join_mesh(request: Request):
                     raise HTTPException(status_code=400, detail="Invalid wallet signature")
             except Exception as e:
                 raise HTTPException(status_code=400, detail=f"Signature verification failed: {str(e)}")
+        else:
+            raise HTTPException(status_code=500, detail="Proper ECDSA/EdDSA signature verification requires eth_account library")
         
         # Mark token as used
         token.used = True
