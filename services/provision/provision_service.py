@@ -23,7 +23,8 @@ try:
     from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
     from fastapi.staticfiles import StaticFiles
     from fastapi.middleware.cors import CORSMiddleware
-    from pydantic import BaseModel, Field
+    import pydantic
+    from pydantic import BaseModel
     import httpx
 except ImportError as e:
     print(f"⚠️  Missing dependency: {e}")
@@ -79,10 +80,10 @@ class InvitationToken(BaseModel):
     metadata: Dict[str, Any] = {}
 
 class InvitationRequest(BaseModel):
-    node_type: str = Field(default="validator", description="Type of node to provision")
-    duration_minutes: int = Field(default=5, ge=1, le=60, description="Token validity duration")
-    max_uses: int = Field(default=1, ge=1, le=10, description="Maximum number of uses")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    node_type: str = pydantic.Field(default="validator", description="Type of node to provision")
+    duration_minutes: int = pydantic.Field(default=5, ge=1, le=60, description="Token validity duration")
+    max_uses: int = pydantic.Field(default=1, ge=1, le=10, description="Maximum number of uses")
+    metadata: Dict[str, Any] = pydantic.Field(default_factory=dict, description="Additional metadata")
 
 class InvitationResponse(BaseModel):
     token_id: str
