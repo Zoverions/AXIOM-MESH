@@ -22,8 +22,19 @@ contract FounderShareManager is Initializable, UUPSUpgradeable {
     address public proveXWrapper;
     bool public councilAutonomyActive;
 
+    struct HandoverMilestones {
+        bool securityAudited;
+        bool financialStability;
+        bool blockchainMetricsMet;
+        bool aiAlignmentVerified;
+    }
+    HandoverMilestones public handoverMilestones;
+
+    address public stablecoin;
+
     event CouncilAutonomyActivated();
     event FullHandoverTriggered(string reason);
+    event StablecoinSwapRequested(uint256 amount, address targetStablecoin);
 
     function guardianSentinel() external view returns (address) {
         // Return founder address or treasury as guardian
@@ -77,9 +88,29 @@ contract FounderShareManager is Initializable, UUPSUpgradeable {
         emit CouncilAutonomyActivated();
     }
 
+    function setStablecoin(address _stablecoin) external {
+        require(founder.verifyFounder(""), "Unauthorized");
+        stablecoin = _stablecoin;
+    }
+
+    function claimInStablecoin() external {
+        require(founder.verifyFounder(""), "Founder verification failed");
+        require(stablecoin != address(0), "Stablecoin not set");
+        uint256 currentShare = treasury.getCurrentFounderShare();
+        uint256 percentage = currentShare / 100;
+        uint256 claimAmount = treasury.releaseFounderShare(percentage);
+        emit StablecoinSwapRequested(claimAmount, stablecoin);
+    }
+
+    function markSecurityAudited() external { require(founder.verifyFounder(""), "Unauthorized"); handoverMilestones.securityAudited = true; }
+    function markFinancialStability() external { require(founder.verifyFounder(""), "Unauthorized"); handoverMilestones.financialStability = true; }
+    function markBlockchainMetricsMet() external { require(founder.verifyFounder(""), "Unauthorized"); handoverMilestones.blockchainMetricsMet = true; }
+    function markAiAlignmentVerified() external { require(founder.verifyFounder(""), "Unauthorized"); handoverMilestones.aiAlignmentVerified = true; }
+
     function triggerFullHandover(string calldata reason) external {
         require(founder.verifyFounder(""), "Unauthorized");
         // Called by heartbeat miss (90 days) or Council 75% vote or death oracle
+        require(handoverMilestones.securityAudited && handoverMilestones.financialStability && handoverMilestones.blockchainMetricsMet && handoverMilestones.aiAlignmentVerified, "Milestones not met");
         councilAutonomyActive = true;
         emit FullHandoverTriggered(reason);
     }
