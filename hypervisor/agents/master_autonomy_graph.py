@@ -8,7 +8,6 @@ from hypervisor.resources.AutonomousResourceManager import AutonomousResourceMan
 from hypervisor.legacy.InheritanceExecutor import InheritanceExecutor
 from hypervisor.shadow.ShadowNode import ShadowNode
 from hypervisor.distribution.AutonomousDistributionManager import AutonomousDistributionManager
-from hypervisor.shadow.AirGapConsent import AirGapConsent  # for shadow
 from hypervisor.crosschain.OmnichainRelayer import OmnichainRelayer
 from hypervisor.liquidity.AutonomousLiquidityManager import AutonomousLiquidityManager
 from hypervisor.liquidity.AutomatedV3LiquidityManager import AutomatedV3LiquidityManager
