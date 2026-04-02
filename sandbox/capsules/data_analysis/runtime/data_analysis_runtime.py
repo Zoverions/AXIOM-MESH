@@ -80,8 +80,8 @@ class DataAnalysisRuntime:
         for col in data.select_dtypes(include=[np.number]).columns:
             _, p_value = stats.shapiro(data[col].dropna())
             normality_results[col] = {
-                'p_value': p_value,
-                'is_normal': p_value > 0.05
+                'p_value': float(p_value),
+                'is_normal': bool(p_value > 0.05)
             }
 
         # Outlier detection
@@ -93,8 +93,8 @@ class DataAnalysisRuntime:
             lower_bound = Q1 - 1.5 * IQR
             upper_bound = Q3 + 1.5 * IQR
             outliers[col] = {
-                'count': ((data[col] < lower_bound) | (data[col] > upper_bound)).sum(),
-                'bounds': [lower_bound, upper_bound]
+                'count': int(((data[col] < lower_bound) | (data[col] > upper_bound)).sum()),
+                'bounds': [float(lower_bound), float(upper_bound)]
             }
 
         return {
@@ -120,26 +120,42 @@ class DataAnalysisRuntime:
 
         # Correlation matrix
         corr_matrix = data.corr()
+        n = len(data.dropna())
 
-        # Significant correlations (p < 0.05)
+        corr_vals = corr_matrix.values
+        mask = np.triu(np.ones_like(corr_vals, dtype=bool), k=1)
+
+        upper_corr = corr_vals[mask]
+
+        # Simple significance test (approximate)
+        clipped_corr = np.clip(upper_corr, -0.999999999, 0.999999999)
+        t_stat = clipped_corr * np.sqrt((n - 2) / (1 - clipped_corr**2))
+        p_values = 2 * (1 - stats.t.cdf(np.abs(t_stat), n - 2))
+
+        sig_mask = p_values < 0.05
+
+        sig_corrs = upper_corr[sig_mask]
+        sig_p_values = p_values[sig_mask]
+
+        row_indices, col_indices = np.where(mask)
+        sig_row_indices = row_indices[sig_mask]
+        sig_col_indices = col_indices[sig_mask]
+
+        cols = corr_matrix.columns
+
         significant_correlations = []
-        for i in range(len(corr_matrix.columns)):
-            for j in range(i+1, len(corr_matrix.columns)):
-                col1, col2 = corr_matrix.columns[i], corr_matrix.columns[j]
-                corr_val = corr_matrix.loc[col1, col2]
+        for i in range(len(sig_corrs)):
+            val = sig_corrs[i]
+            col1 = cols[sig_row_indices[i]]
+            col2 = cols[sig_col_indices[i]]
+            pval = sig_p_values[i]
 
-                # Simple significance test (approximate)
-                n = len(data.dropna())
-                t_stat = corr_val * np.sqrt((n - 2) / (1 - corr_val**2))
-                p_value = 2 * (1 - stats.t.cdf(abs(t_stat), n - 2))
-
-                if p_value < 0.05:
-                    significant_correlations.append({
-                        'variables': [col1, col2],
-                        'correlation': corr_val,
-                        'p_value': p_value,
-                        'strength': 'strong' if abs(corr_val) > 0.7 else 'moderate' if abs(corr_val) > 0.3 else 'weak'
-                    })
+            significant_correlations.append({
+                'variables': [str(col1), str(col2)],
+                'correlation': float(val),
+                'p_value': float(pval),
+                'strength': 'strong' if abs(val) > 0.7 else 'moderate' if abs(val) > 0.3 else 'weak'
+            })
 
         return {
             'correlation_matrix': corr_matrix.to_dict(),
@@ -179,13 +195,13 @@ class DataAnalysisRuntime:
         y_pred = model.predict(X_test)
 
         # Metrics
-        r2_score = model.score(X_test, y_test)
-        mse = np.mean((y_test - y_pred) ** 2)
-        rmse = np.sqrt(mse)
+        r2_score = float(model.score(X_test, y_test))
+        mse = float(np.mean((y_test - y_pred) ** 2))
+        rmse = float(np.sqrt(mse))
 
         return {
-            'coefficients': dict(zip(feature_cols, model.coef_)),
-            'intercept': model.intercept_,
+            'coefficients': {k: float(v) for k, v in zip(feature_cols, model.coef_)},
+            'intercept': float(model.intercept_),
             'r2_score': r2_score,
             'mse': mse,
             'rmse': rmse,
@@ -217,11 +233,11 @@ class DataAnalysisRuntime:
 
         # Cluster centers and inertia
         centers = kmeans.cluster_centers_
-        inertia = kmeans.inertia_
+        inertia = float(kmeans.inertia_)
 
         # Silhouette score
         from sklearn.metrics import silhouette_score
-        silhouette_avg = silhouette_score(data, clusters)
+        silhouette_avg = float(silhouette_score(data, clusters))
 
         return {
             'n_clusters': k,
@@ -252,8 +268,11 @@ class DataAnalysisRuntime:
         data['ma_forecast'] = data['value'].rolling(window=window).mean()
 
         # Forecast next 10 periods
-        last_ma = data['ma_forecast'].iloc[-1]
+        last_ma = float(data['ma_forecast'].iloc[-1])
         forecast_values = [last_ma] * 10
+
+        # Replace NaN with None for JSON serialization
+        data = data.where(pd.notnull(data), None)
 
         return {
             'historical_data': data.to_dict('records'),
