@@ -2,7 +2,6 @@ import os
 import json
 import base64
 import time
-from hypervisor.src.memory.crdt_sync import pin_to_meshstore
 from cryptography.fernet import Fernet  # reuse existing encryption
 
 class RecoveryBundleManager:
