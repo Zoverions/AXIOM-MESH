@@ -1,21 +1,4 @@
 ```
-# Compiled and build artifacts
-*.pyc
-__pycache__/
-*.o
-*.obj
-dist/
-build/
-target/
-
-# Dependencies
-.venv/
-venv/
-node_modules/
-.mypy_cache/
-.pytest_cache/
-.gradle/
-
 # Logs and temp files
 *.log
 *.tmp
@@ -24,32 +7,27 @@ node_modules/
 # Environment
 .env
 .env.local
-*.env.*
+.env.
 
 # Editors
 .vscode/
 .idea/
 
-# Coverage
-coverage/
-htmlcov/
-.coverage
+# Dependencies
+.venv/
+venv/
+__pycache__/
+*.pyc
 
-# System files
+# Build artifacts
+dist/
+build/
+target/
+
+# OS generated files
 .DS_Store
 Thumbs.db
-```
-# mTLS material (must come from secret manager at runtime)
-certs/*.crt
-certs/*.key
-certs/*.csr
-certs/*.srl
-!certs/.gitkeep
-!certs/README.md
 
-# Hypervisor Data Artifacts
-hypervisor/data/*.json
-hypervisor/data/*.pem
-hypervisor/data/*.db
-hypervisor/data/*.key
-hypervisor/data/*.log
+# Original rules preserved
+*.log
+```
