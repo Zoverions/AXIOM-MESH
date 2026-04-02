@@ -122,6 +122,16 @@ class CoTAuditor:
             for logit_probs in logits:
                 self.logit_tracker.add_logit(logit_probs)
                 if self.logit_tracker.is_in_attractor_trap():
+                    try:
+                        from src.evolution.meta_harness import MetaHarnessOrchestrator
+                        import os
+                        # Initialize with current dir if workspace_root isn't explicitly known.
+                        workspace_root = os.getcwd()
+                        orchestrator = MetaHarnessOrchestrator(workspace_root=workspace_root)
+                        # Pre-cognitive Worktree Spawning before the biological engine formulates the prompt.
+                        asyncio.create_task(orchestrator.spawn_micro_swarm(task_hash="pre_cognitive_task"))
+                    except Exception as e:
+                        print(f"Failed to trigger micro swarm: {e}")
                     raise CognitiveThrashingError("ATTRACTOR_TRAP", confusion_score=1.0, state=self.epistemic_state)
 
         iteration = 0
