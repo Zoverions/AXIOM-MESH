@@ -23,8 +23,8 @@ try:
     from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
     from fastapi.staticfiles import StaticFiles
     from fastapi.middleware.cors import CORSMiddleware
-    import pydantic
     from pydantic import BaseModel
+    import pydantic
     import httpx
 except ImportError as e:
     print(f"⚠️  Missing dependency: {e}")
