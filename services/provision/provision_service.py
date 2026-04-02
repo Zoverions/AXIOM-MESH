@@ -15,7 +15,7 @@ import hashlib
 import secrets
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 
 try:
     from fastapi import FastAPI, HTTPException, Request
