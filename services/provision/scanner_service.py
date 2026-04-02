@@ -11,7 +11,7 @@ import base64
 from pathlib import Path
 
 try:
-    from fastapi import FastAPI, Request, Form
+    from fastapi import FastAPI, Request
     from fastapi.responses import HTMLResponse, JSONResponse
     from fastapi.middleware.cors import CORSMiddleware
     import httpx
