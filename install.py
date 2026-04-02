@@ -277,6 +277,7 @@ def main():
     parser.add_argument("--region", type=str, default=DEFAULT_REGION, help="Regional curriculum focus (e.g. ontario)")
     parser.add_argument("--auto", action="store_true", help="Run non-interactively with safe defaults")
     parser.add_argument("--skip-launch", action="store_true", help="Generate configuration without starting services")
+    parser.add_argument("--adaptive-node", action="store_true", help="Enable Adaptive Variable Node dynamic role switching")
     args, unknown = parser.parse_known_args()
     supported_regions = load_supported_regions()
     selected_region = (args.region or DEFAULT_REGION).strip().lower()
@@ -467,7 +468,8 @@ def main():
         "REWARD_MODE": args.reward_mode,
         "ENHANCE_PULSECHAIN": "1" if args.enhance_pulsechain == "true" else "0",
         "PULSECHAIN_MODE": args.pulsechain_mode,
-        "VALIDATOR_SHARE": str(args.validator_share)
+        "VALIDATOR_SHARE": str(args.validator_share),
+        "ADAPTIVE_NODE": "1" if args.adaptive_node else "0"
     }
 
     if default_policy_cid:

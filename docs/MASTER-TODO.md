@@ -681,3 +681,10 @@ Once authority flow is mechanically frozen, this system becomes:
 - `grid/contracts/contracts/CrossChainBridge.sol:12`: `// TODO ID: Top-Level To Do 7 - Multi-Chain Bridging & Rating System`
 - `grid/contracts/contracts/DonationCampaign.sol:9`: `// TODO ID: Top-Level To Do 6 - DonationCampaign + Self-Funding Loop`
 - `grid/contracts/contracts/core/Genesis.sol:14`: `// TODO ID: Top-Level To Do 8 - Mainnet Genesis + Bug Bounty`
+
+### Adaptive Variable Node Sprint (April 2 2026)
+- [ ] Add AdaptiveVariableNode class in hypervisor/core/adaptive_node.py
+- [ ] Wire Pulse System to broadcast shortage signals
+- [ ] Extend PoUW reward logic with dynamic multiplier for adaptive switches
+- [ ] Ensure Revenue Generation / Financial Capsule inherits the same adaptive logic
+- [ ] Add --adaptive-node flag to all installers

@@ -35,6 +35,7 @@ for arg in "$@"; do
     --validator-share=*) VALIDATOR_SHARE="${arg#*=}" ;;
     --platform=*) PLATFORM="${arg#*=}" ;;
     --no-monitor) NO_MONITOR="1" ;;
+    --adaptive-node) ADAPTIVE_NODE="1" ;;
   esac
 done
 
