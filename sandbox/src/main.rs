@@ -6,8 +6,10 @@ use std::thread;
 
 pub mod network;
 pub mod wasm_engine;
+pub mod carbonyl_driver;
 
 use wasm_engine::{WasmSandbox, WasmExecutionResult};
+use carbonyl_driver::{CarbonylDriver, WebAutomationSession, WebAction, ScrollDirection};
 
 #[derive(Debug)]
 pub struct OpenShellPolicy {
