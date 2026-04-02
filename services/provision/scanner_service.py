@@ -7,7 +7,6 @@ Mobile-friendly web interface for scanning QR codes and joining mesh networks
 import os
 import sys
 import json
-from pathlib import Path
 
 try:
     from fastapi import FastAPI, Request
