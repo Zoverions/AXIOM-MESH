@@ -184,6 +184,7 @@ def generate_qr_code(data: str, token_id: str) -> str:
 
 def save_config_file(filepath: Path, content: str):
     """Write configuration file to disk (synchronous)"""
+    filepath.parent.mkdir(parents=True, exist_ok=True)
     with open(filepath, 'w') as f:
         f.write(content)
 
@@ -572,7 +573,6 @@ async def generate_invitation(request: InvitationRequest):
     
     # Create temporary config file for download
     config_dir = Path("/tmp/axiom_configs")
-    config_dir.mkdir(exist_ok=True)
     config_filepath = config_dir / f"{token_id}.env"
     await run_in_threadpool(save_config_file, config_filepath, config_content)
     
