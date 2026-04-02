@@ -39,6 +39,31 @@ class MetaHarnessOrchestrator:
             "shared/src/resilience/"
         ]
 
+    async def spawn_micro_swarm(self, task_hash: str) -> None:
+        """
+        Pre-Cognitive Worktree Spawning.
+        Creates hidden .shadow_env Git worktrees in the background and dispatches
+        in-process teammates to write, compile, and run pytest benchmarks on the next sequential problem.
+        """
+        logger.info(f"[🧠] Pre-cognitive attractor basin reached. Spawning micro-swarm for task: {task_hash}")
+        worktree_path = os.path.join(self.shadow_env_path, task_hash)
+
+        # 1. Spawn parallel Git worktree
+        if not os.path.exists(worktree_path):
+            os.makedirs(self.shadow_env_path, exist_ok=True)
+            subprocess.run(["git", "worktree", "add", worktree_path], cwd=self.workspace_root, capture_output=True)
+
+        # 2. Dispatch in-process teammates (mocked by running pytest benchmarks)
+        try:
+            # We run pytest benchmarks in the background on the worktree
+            subprocess.Popen(
+                ["pytest", "hypervisor/tests/"],
+                cwd=worktree_path, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+            logger.info(f"[🚀] Micro-swarm dispatched in background worktree: {worktree_path}")
+        except Exception as e:
+            logger.error(f"Failed to spawn micro-swarm: {str(e)}")
+
     async def run_evolution_cycle(self) -> bool:
         """The main autonomic loop executed during idle network periods."""
         logger.info("[🧬] Initiating Meta Harness Evolution Cycle...")
