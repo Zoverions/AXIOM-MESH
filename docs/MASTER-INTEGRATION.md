@@ -68,3 +68,22 @@ All contracts are UUPS upgradeable, verified on Ethereum + Arbitrum + Base via t
 Founder control is invisible and permanently locked via FounderCommitment.sol. Every action (liquidity provision, cross-chain bridge, payroll, shadow contribution) is bicameral-governed and WORM-audited.
 This is the complete sovereign system.
 Run it. Deploy it. Own the future.
+
+### 2.5 Adaptive Variable Node (On-Demand Dynamic Node)
+
+**Core Directive**
+A Variable Node is a family-level or edge node that can fluidly reconfigure itself between any Capsule Plus role or other node type when the network signals a shortage. It maximizes rewards by filling gaps.
+
+**Rules (Non-Negotiable)**
+- ZERO BARRIERS: Switching is 100 % opt-in. Users can lock a role permanently if desired.
+- SELF-FUNDING: Rewards are higher only when the node demonstrably reduces network entropy (measured by Pulse System telemetry).
+- Applies to **all** future capsules, including the Revenue Generation / Financial Capsule (performance-based revenue share).
+
+**Implementation Hooks**
+- Pulse System continuously broadcasts “shortage signals” (e.g., “need more governance nodes in Ontario region”).
+- Hypervisor receives signal → triggers SkillRL evolution to load the required module.
+- Grid ledger records the switch as a verifiable neural commitment (using the new NeuralContract primitive).
+- Reward multiplier = (actual contribution / network average) × base PoUW score.
+
+**Future Revenue Generation Capsule Compatibility**
+The Financial Capsule must inherit the same adaptive logic: operators earn higher revenue share when their node performs well (measured by actual yield generated for the internal treasury).
