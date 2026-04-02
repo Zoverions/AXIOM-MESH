@@ -8,3 +8,4 @@ rich
 psutil
 docker
 pyyaml
+eth-account

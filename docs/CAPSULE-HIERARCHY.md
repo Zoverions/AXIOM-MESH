@@ -30,7 +30,7 @@ This document formalizes the package hierarchy requested for operations and inst
 - Regional curricula (primary focus Ontario → expand):
   - Ontario Education Capsule Plus (implemented)
   - Canadian Government Capsule Plus (implemented)
-  - US Government Capsule Plus (planned)
+  - US Government Capsule Plus (implemented)
   - UK Government Capsule Plus (planned)
   - China Governance Capsule Plus (planned – pull-not-push philosophy)
 - RAM target: 800 MB – 2 GB (full-system mode)

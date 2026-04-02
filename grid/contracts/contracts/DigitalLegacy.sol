@@ -21,6 +21,18 @@ contract DigitalLegacy is Initializable, UUPSUpgradeable {
 
     event DeathVerified(uint256 tokenId);
     event LegacyExecuted(uint256 tokenId);
+    address public upgradeTimelock;
+
+    function setUpgradeTimelock(address _timelock) external {
+        if (upgradeTimelock == address(0)) {
+            require(founder.verifyFounder(""), "Founder verification failed");
+        } else {
+            require(msg.sender == upgradeTimelock, "Unauthorized: not upgrade timelock");
+        }
+        upgradeTimelock = _timelock;
+    }
+
+
 
     constructor(address _citizenship, address _founder) {
         citizenship = CitizenshipNFT(_citizenship);
@@ -49,6 +61,6 @@ contract DigitalLegacy is Initializable, UUPSUpgradeable {
     }
 
     function _authorizeUpgrade(address) internal override {
-        require(founder.verifyFounder(""), "Founder verification failed");
+        require(msg.sender == upgradeTimelock, "Unauthorized: not upgrade timelock");
     }
 }

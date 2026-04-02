@@ -7,11 +7,10 @@ Mobile-friendly web interface for scanning QR codes and joining mesh networks
 import os
 import sys
 import json
-import base64
 from pathlib import Path
 
 try:
-    from fastapi import FastAPI, Request, Form
+    from fastapi import FastAPI, Request
     from fastapi.responses import HTMLResponse, JSONResponse
     from fastapi.middleware.cors import CORSMiddleware
     import httpx
@@ -236,6 +235,7 @@ async def scanner_ui():
                         timestamp: Math.floor(Date.now() / 1000)
                     }
                 });
+                const timestamp = JSON.parse(msgParams).message.timestamp;
                 
                 signature = await window.ethereum.request({
                     method: 'eth_signTypedData_v4',
@@ -249,7 +249,8 @@ async def scanner_ui():
                     body: JSON.stringify({
                         token_id: scannedData.token_id,
                         wallet_address: walletAddress,
-                        signature: signature
+                        signature: signature,
+                        timestamp: timestamp
                     })
                 });
                 

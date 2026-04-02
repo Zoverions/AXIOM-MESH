@@ -13,17 +13,18 @@ import uuid
 import base64
 import hashlib
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
 try:
-    from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
+    from fastapi import FastAPI, HTTPException, Request
     from fastapi.concurrency import run_in_threadpool
     from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
     from fastapi.staticfiles import StaticFiles
     from fastapi.middleware.cors import CORSMiddleware
-    from pydantic import BaseModel, Field
+    from pydantic import BaseModel
+    import pydantic
     import httpx
 except ImportError as e:
     print(f"⚠️  Missing dependency: {e}")
@@ -31,14 +32,19 @@ except ImportError as e:
     sys.exit(1)
 
 try:
+    from eth_account import Account
+    from eth_account.messages import encode_typed_data
+    HAS_ETH_ACCOUNT = True
+except ImportError:
+    HAS_ETH_ACCOUNT = False
+
+try:
     import qrcode
-    from qrcode.image.styledpil import StyledPilImage
     from qrcode.constants import ERROR_CORRECT_H
 except ImportError:
     print("⚠️  Installing qrcode library...")
     os.system(f"{sys.executable} -m pip install qrcode[pil]")
     import qrcode
-    from qrcode.image.styledpil import StyledPilImage
     from qrcode.constants import ERROR_CORRECT_H
 
 # Configuration
@@ -74,10 +80,10 @@ class InvitationToken(BaseModel):
     metadata: Dict[str, Any] = {}
 
 class InvitationRequest(BaseModel):
-    node_type: str = Field(default="validator", description="Type of node to provision")
-    duration_minutes: int = Field(default=5, ge=1, le=60, description="Token validity duration")
-    max_uses: int = Field(default=1, ge=1, le=10, description="Maximum number of uses")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    node_type: str = pydantic.Field(default="validator", description="Type of node to provision")
+    duration_minutes: int = pydantic.Field(default=5, ge=1, le=60, description="Token validity duration")
+    max_uses: int = pydantic.Field(default=1, ge=1, le=10, description="Maximum number of uses")
+    metadata: Dict[str, Any] = pydantic.Field(default_factory=dict, description="Additional metadata")
 
 class InvitationResponse(BaseModel):
     token_id: str
@@ -647,9 +653,36 @@ async def join_mesh(request: Request):
         if token.used or token.uses_count >= token.max_uses:
             raise HTTPException(status_code=400, detail="Token already used")
         
-        # TODO: Verify wallet signature here
-        # For now, we'll accept any valid signature format
-        # In production, implement proper ECDSA/EdDSA verification
+        # Verify wallet signature
+        if HAS_ETH_ACCOUNT:
+            timestamp = data.get("timestamp")
+            if timestamp is None:
+                raise HTTPException(status_code=400, detail="Missing timestamp for signature verification")
+
+            domain_data = {
+                "name": "AXIOM-MESH",
+                "version": "1",
+                "chainId": 1
+            }
+            message_types = {
+                "JoinMesh": [
+                    {"name": "token_id", "type": "string"},
+                    {"name": "node_address", "type": "address"},
+                    {"name": "timestamp", "type": "uint256"}
+                ]
+            }
+            message_data = {
+                "token_id": token_id,
+                "node_address": wallet_address,
+                "timestamp": int(timestamp)
+            }
+            try:
+                signable_message = encode_typed_data(domain_data=domain_data, message_types=message_types, message_data=message_data)
+                recovered_address = Account.recover_message(signable_message, signature=signature)
+                if recovered_address.lower() != wallet_address.lower():
+                    raise HTTPException(status_code=400, detail="Invalid wallet signature")
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Signature verification failed: {str(e)}")
         
         # Mark token as used
         token.used = True
