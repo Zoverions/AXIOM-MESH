@@ -1,4 +1,4 @@
-from typing import TypedDict, Annotated, Optional
+from typing import TypedDict, Optional
 from langgraph.graph import StateGraph, START, END
 import httpx
 import os
