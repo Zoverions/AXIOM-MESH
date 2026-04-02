@@ -20,14 +20,17 @@ AxiomMesh relies on a four-pillar runtime structure to ensure scalable, secure, 
 - **Sandbox (TypeScript + Docker):** Provides isolated code execution for true sandbox isolation and network safety
 - **Grid (Go):** Functions as the ledger and verification layer, ensuring governance-aligned coordination and causal DAG tracking
 
-## 3. Enterprise-Grade zkML Infrastructure
+## 3. Enterprise-Grade zkML Infrastructure & Novel Innovations
 
 Every high-stakes inference in AXIOM-MESH is verifiable on-chain, ensuring trustless execution and privacy-first agent meshes.
-- **Hybrid Proving:** Utilizes EZKL, Halo2, and RISC Zero
-- **NemoClaw Routing:** Integrated for enhanced isolation
-- **On-chain Verification:** Handled via `ZKMLVerifier.sol`
-- **Proof of Execution & Reliability (PoER):** Boosts rewards for valid zkML proofs
-- **Causal Proof-of-Reasoning (CPoR):** Extends verification to include causal reasoning lineage, attention-weighted consensus scoring, and federated memory contribution attestation
+
+**Key Innovations:**
+- **Hybrid Proving:** Utilizes EZKL, Halo2, and RISC Zero.
+- **On-chain Verification:** Handled via `ZKMLVerifier.sol`.
+- **Proof of Entropy Reduction (PoER):** Replaces pure Proof-of-Work with useful AI computation. Rewards are boosted for cryptographically proven reductions in uncertainty.
+- **Causal Proof-of-Reasoning (CPoR):** Extends verification to include causal reasoning lineage. It relies on the mathematical constraint where `DAG_Integrity = Hash(Parent_State || Action || Hash(zkML_Proof))`.
+- **Dual-Purpose Hardware Mode:** AXIOM-MESH supports a `validator` mode where nodes run a PulseChain validator alongside their Capsule node, co-funded 32,000,000 PLS from the platform treasury to maximize capital efficiency and decentralization.
+- **Grid Scope Firewall:** A strict topological invariant where the Grid (ledger) is mathematically incapable of deciding intent; it can only verify execution boundaries enforced by Capability Manifests.
 
 ## 4. Tokenomics & Treasury Mechanics (Implemented vs Policy)
 
@@ -54,7 +57,7 @@ Token/economic flows are deterministic, traceable, and support full reconciliati
 - Slashed bonds from misbehaving nodes are seized
 - Protocol reserves right to implement targeted fee burning via `ZoverionsDAO.sol` governance proposals
 
-## 5. Ecosystem & Integration
+## 5. Ecosystem, Integration & Strategic Differentiators
 
 AXIOM-MESH is deeply integrated with the broader ecosystem, ensuring robust interconnectivity and automation:
 
@@ -88,6 +91,11 @@ AXIOM-MESH is deeply integrated with the broader ecosystem, ensuring robust inte
 - Transparent tracking in `docs/MASTER-TODO.md`
 - Central authority for roadmap execution, audit findings, and technical risk management
 - Clear visibility into project trajectory for all ecosystem participants
+
+**Strategic Differentiators:**
+1. **Composability of Sovereign Guilds:** Unlike generic subnets, Sovereign Guilds inherit laws (policies) natively from parent DAOs.
+2. **Pull-Not-Push Privacy:** Governments and corporations do not broadcast state. End users query and provide ZK-proofs of eligibility, solving GDPR at the architecture level.
+3. **Truth-Weighted Quadratic Voting:** Defeats pure capital-based governance (whale dominance) by multiplying quadratic token weight by an on-chain oracle-verified Truth Score.
 
 ## 6. Decentralized Storage as Core Network Infrastructure
 

@@ -32,26 +32,27 @@ The installer automatically detects your platform and installs all dependencies 
 ## 1) Canonical Documents by Domain
 
 ## Foundations
-- **Architecture:** `docs/ARCHITECTURE.md`
+- **Architecture:** `docs/architecture/ARCHITECTURE.md`
 - **Technical Specification:** `docs/TECHNICAL-SPECIFICATION.md`
-- **Interface Contracts:** `docs/INTERFACE-CONTROL-DOCUMENT.md`
-- **Foundations Summary:** `docs/FOUNDATIONS.md`
-- **Causal Proof-of-Reasoning blueprint:** `docs/CAUSAL-PROOF-OF-REASONING.md`
+- **Interface Contracts:** `docs/architecture/INTERFACE-CONTROL-DOCUMENT.md`
+- **Foundations Summary:** `docs/architecture/FOUNDATIONS.md`
+- **Causal Proof-of-Reasoning blueprint:** `docs/whitepapers_and_research/CAUSAL-PROOF-OF-REASONING.md`
+- **RADM (Requirements, Architecture, Design, Methodology):** `docs/whitepapers_and_research/RADM.md`
 
 ## Security & Reliability
-- **Security posture and controls:** `docs/SECURITY-HARDENING.md`
-- **Operational playbooks:** `docs/OPERATIONS.md`
-- **Testing and quality gates:** `docs/TEST-STRATEGY.md`
-- **Cryptography posture matrix:** `docs/CRYPTOGRAPHY-POSTURE-MATRIX.md`
-- **Threat models:** `docs/COORDINATED-BEHAVIOR-THREAT-MODEL.md`
+- **Security posture and controls:** `docs/security/SECURITY-HARDENING.md`
+- **Operational playbooks:** `docs/operations/OPERATIONS.md`
+- **Testing and quality gates:** `docs/developer_guides/TEST-STRATEGY.md`
+- **Cryptography posture matrix:** `docs/security/CRYPTOGRAPHY-POSTURE-MATRIX.md`
+- **Threat models:** `docs/security/COORDINATED-BEHAVIOR-THREAT-MODEL.md`
 
 ## Governance & Economics
-- **Governance model:** `docs/GOVERNANCE.md`
-- **Control map:** `docs/GOVERNANCE-CONTROL-MAP.md`
-- **Tokenomics (canonical):** `docs/TOKENOMICS.md`
-- **Treasury split details:** `docs/TREASURY-SPLIT.md`
-- **ERC20 compatibility:** `docs/ERC20-COMPATIBILITY.md`
-- **Financial controls evidence:** `docs/FINANCIAL-CONTROLS-EVIDENCE.md`
+- **Governance model:** `docs/governance/GOVERNANCE.md`
+- **Control map:** `docs/governance/GOVERNANCE-CONTROL-MAP.md`
+- **Tokenomics (canonical):** `docs/tokenomics/TOKENOMICS.md`
+- **Treasury split details:** `docs/tokenomics/TREASURY-SPLIT.md`
+- **ERC20 compatibility:** `docs/tokenomics/ERC20-COMPATIBILITY.md`
+- **Financial controls evidence:** `docs/tokenomics/FINANCIAL-CONTROLS-EVIDENCE.md`
 
 ## Execution Program
 - **Master to-do queue (canonical):** `docs/MASTER-TODO.md`
@@ -63,13 +64,13 @@ The installer automatically detects your platform and installs all dependencies 
 - **Strategic assessment response:** `docs/STRATEGIC-AUDIT-RESPONSE.md`
 
 ## Deployment & Operations
-- **Deployment cost analysis:** `docs/DEPLOYMENT_COST_ANALYSIS.md`
-- **Hardware profile matrix:** `docs/HARDWARE-PROFILE-MATRIX.md`
-- **Resource balancer policy:** `docs/RESOURCE-BALANCER-POLICY.md`
+- **Deployment cost analysis:** `docs/tokenomics/DEPLOYMENT_COST_ANALYSIS.md`
+- **Hardware profile matrix:** `docs/operations/HARDWARE-PROFILE-MATRIX.md`
+- **Resource balancer policy:** `docs/operations/RESOURCE-BALANCER-POLICY.md`
 - **Network efficiency strategy backlog:** `docs/subtasks/NETWORK-EFFICIENCY-NOVEL-STRATEGIES.md`
 - **Mainnet contract addresses:** `docs/MAINNET_ADDRESSES.md`
 - **Skill capsule specification:** `docs/SKILL-CAPSULE-SPEC.md`
-- **SSI technical implementation:** `docs/SSI-TECHNICAL-IMPLEMENTATION.md`
+- **SSI technical implementation:** `docs/whitepapers_and_research/SSI-TECHNICAL-IMPLEMENTATION.md`
 
 ## Audit Reports
 See `docs/audits/` directory for comprehensive security audits:
