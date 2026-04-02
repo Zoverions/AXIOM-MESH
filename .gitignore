@@ -32,4 +32,5 @@ Thumbs.db
 
 # Rust
 Cargo.lock
-```
+```sandbox/node_modules/
+sandbox/node_modules/
