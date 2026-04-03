@@ -1,326 +1,89 @@
 import pytest
 import os
+import torch
+import numpy as np
 from unittest.mock import AsyncMock, patch, MagicMock
-import httpx
 
 from src.llm.provider import LLMProvider
 
 @pytest.fixture
-def mock_hardware_scanner():
-    with patch("src.llm.provider.HardwareScanner") as mock_scanner_class:
-        mock_scanner = MagicMock()
-        mock_scanner.scan.return_value = {"has_gpu": False, "total_ram_gb": 8, "vram_mb": 0}
-        mock_scanner.recommend_models.return_value = {
-            "default": "llama3:1b",
-            "coding": "llama3:1b",
-            "reasoning": "llama3:1b"
-        }
-        mock_scanner_class.return_value = mock_scanner
-        yield mock_scanner
+def mock_transformers():
+    with patch("src.llm.provider.AutoModelForCausalLM") as mock_model_class, \
+         patch("src.llm.provider.AutoTokenizer") as mock_tokenizer_class:
 
-def test_init(mock_hardware_scanner):
-    with patch.dict(os.environ, {
-        "OPENAI_API_KEY": "test_openai_key",
-        "ANTHROPIC_API_KEY": "test_anthropic_key",
-        "ALLOW_CLOUD_LLM": "true",
-        "LLM_PROVIDER": "openai",
-        "LOCAL_MODEL_FALLBACK": "custom-model"
-    }):
-        provider = LLMProvider()
-        assert provider.openai_key == "test_openai_key"
-        assert provider.anthropic_key == "test_anthropic_key"
-        assert provider.allow_cloud is True
-        assert provider.provider_preference == "openai"
-        assert provider.local_model == "custom-model"
+        mock_tokenizer = MagicMock()
 
-@pytest.mark.asyncio
-async def test_process_routes_to_local_by_default(mock_hardware_scanner):
-    with patch.dict(os.environ, {"ALLOW_CLOUD_LLM": "false"}):
-        provider = LLMProvider()
-        provider._call_local = AsyncMock(return_value="local_response")
+        # BatchEncoding behaves like a dict but also has attribute access
+        mock_inputs = MagicMock()
+        mock_inputs.input_ids.shape = (1, 5)
+        # We need it to unpack like a dict when passed to **inputs
+        mock_inputs.keys.return_value = ["input_ids"]
+        mock_inputs.__getitem__.side_effect = lambda k: mock_inputs.input_ids if k == "input_ids" else None
 
-        response = await provider.process("test context")
+        mock_tokenizer.return_value.to.return_value = mock_inputs
+        mock_tokenizer.decode.return_value = "mock_response"
+        mock_tokenizer_class.from_pretrained.return_value = mock_tokenizer
 
-        assert response == "local_response"
-        provider._call_local.assert_called_once_with("test context", temperature=0.7)
+        mock_model = MagicMock()
+        mock_outputs = MagicMock()
+        mock_outputs.sequences = [[1, 2, 3, 4, 5, 6, 7]]
+        mock_outputs.past_key_values = {"cache": "mock"}
+        mock_model.generate.return_value = mock_outputs
+
+        mock_embeddings = MagicMock()
+        # Create a mock weight tensor that can be converted to numpy
+        mock_weights = MagicMock()
+        mock_weights.cpu.return_value.numpy.return_value = np.array([1, 0, -1])
+        mock_embeddings.weight.__getitem__.return_value = mock_weights
+        mock_model.get_input_embeddings.return_value = mock_embeddings
+
+        mock_model_class.from_pretrained.return_value = mock_model
+
+        yield mock_model_class, mock_tokenizer_class
 
 @pytest.mark.asyncio
-async def test_process_routes_to_openai(mock_hardware_scanner):
-    with patch.dict(os.environ, {
-        "ALLOW_CLOUD_LLM": "true",
-        "LLM_PROVIDER": "openai",
-        "OPENAI_API_KEY": "key"
-    }):
-        provider = LLMProvider()
-        provider._call_openai = AsyncMock(return_value="openai_response")
+async def test_llm_provider_initialization(mock_transformers):
+    provider = LLMProvider()
+    assert provider.model_id == "1bitLLM/bitnet_b1_58-large"
+    assert provider.device in ["cuda", "cpu"]
+    assert provider.local_model == "1bitLLM/bitnet_b1_58-large"
 
-        response = await provider.process("test context")
-
-        assert response == "openai_response"
-        provider._call_openai.assert_called_once_with("test context", temperature=0.7, frequency_penalty=0.0, presence_penalty=0.0)
-
-@pytest.mark.asyncio
-async def test_process_passes_penalties_to_openai(mock_hardware_scanner):
-    with patch.dict(os.environ, {
-        "ALLOW_CLOUD_LLM": "true",
-        "LLM_PROVIDER": "openai",
-        "OPENAI_API_KEY": "key"
-    }):
-        provider = LLMProvider()
-        provider._call_openai = AsyncMock(return_value="openai_response_penalties")
-
-        response = await provider.process("test context", frequency_penalty=0.8, presence_penalty=0.4)
-
-        assert response == "openai_response_penalties"
-        provider._call_openai.assert_called_once_with("test context", temperature=0.7, frequency_penalty=0.8, presence_penalty=0.4)
+    mock_model_class, mock_tokenizer_class = mock_transformers
+    mock_tokenizer_class.from_pretrained.assert_called_once_with("1bitLLM/bitnet_b1_58-large")
+    mock_model_class.from_pretrained.assert_called_once_with(
+        "1bitLLM/bitnet_b1_58-large",
+        device_map="auto",
+        torch_dtype=torch.int8,
+        low_cpu_mem_usage=True
+    )
 
 @pytest.mark.asyncio
-async def test_process_routes_to_anthropic(mock_hardware_scanner):
-    with patch.dict(os.environ, {
-        "ALLOW_CLOUD_LLM": "true",
-        "LLM_PROVIDER": "anthropic",
-        "ANTHROPIC_API_KEY": "key"
-    }):
-        provider = LLMProvider()
-        provider._call_anthropic = AsyncMock(return_value="anthropic_response")
+async def test_generate_with_cache(mock_transformers):
+    provider = LLMProvider()
+    result_text, cache = await provider.generate_with_cache("Test prompt")
 
-        response = await provider.process("test context")
+    assert result_text == "mock_response"
+    assert cache == {"cache": "mock"}
 
-        assert response == "anthropic_response"
-        provider._call_anthropic.assert_called_once_with("test context", temperature=0.7)
-
-@pytest.mark.asyncio
-async def test_process_large_context_temperature_0_0(mock_hardware_scanner):
-    with patch.dict(os.environ, {"ALLOW_CLOUD_LLM": "false"}):
-        provider = LLMProvider()
-        provider._call_local = AsyncMock(return_value="local_response")
-
-        context = "a" * 128001
-        await provider.process(context)
-
-        provider._call_local.assert_called_once_with(context, temperature=0.0)
+    provider.model.generate.assert_called_once()
+    kwargs = provider.model.generate.call_args.kwargs
+    assert kwargs["max_new_tokens"] == 512
+    assert kwargs["do_sample"] is False
+    assert kwargs["temperature"] == 0.0
 
 @pytest.mark.asyncio
-async def test_process_large_context_temperature_0_2(mock_hardware_scanner):
-    with patch.dict(os.environ, {"ALLOW_CLOUD_LLM": "false"}):
-        provider = LLMProvider()
-        provider._call_local = AsyncMock(return_value="local_response")
+async def test_process(mock_transformers):
+    provider = LLMProvider()
 
-        context = "a" * 64001
-        await provider.process(context)
+    # Process is a wrapper around generate_with_cache
+    result = await provider.process("Test context")
+    assert result == "mock_response"
 
-        provider._call_local.assert_called_once_with(context, temperature=0.2)
+    kwargs = provider.model.generate.call_args.kwargs
+    assert kwargs["use_cache"] is False
 
-@pytest.mark.asyncio
-async def test_process_large_context_temperature_0_4(mock_hardware_scanner):
-    with patch.dict(os.environ, {"ALLOW_CLOUD_LLM": "false"}):
-        provider = LLMProvider()
-        provider._call_local = AsyncMock(return_value="local_response")
-
-        context = "a" * 32001
-        await provider.process(context)
-
-        provider._call_local.assert_called_once_with(context, temperature=0.4)
-
-@pytest.mark.asyncio
-async def test_process_extremely_large_context_forces_cloud(mock_hardware_scanner):
-    with patch.dict(os.environ, {
-        "ALLOW_CLOUD_LLM": "true",
-        "OPENAI_API_KEY": "key"
-    }):
-        provider = LLMProvider()
-        provider._call_openai = AsyncMock(return_value="openai_large_context")
-
-        context = "a" * 10001
-        response = await provider.process(context)
-
-        assert response == "openai_large_context"
-        provider._call_openai.assert_called_once_with(context, model="gpt-4-turbo", temperature=0.7, frequency_penalty=0.0, presence_penalty=0.0)
-
-@pytest.mark.asyncio
-async def test_call_local_success_code(mock_hardware_scanner):
-    with patch.dict(os.environ, {"LOCAL_MODEL_FALLBACK": "llama3:1b"}):
-        provider = LLMProvider()
-
-        mock_response = MagicMock()
-        mock_response.raise_for_status = MagicMock()
-        mock_response.json.return_value = {"response": "local_coding_success"}
-
-        mock_post = AsyncMock(return_value=mock_response)
-
-        with patch("httpx.AsyncClient.post", mock_post):
-            response = await provider._call_local("write python code", temperature=0.5)
-            assert response == "local_coding_success"
-
-            mock_post.assert_called_once_with(
-                "http://localhost:11434/api/generate",
-                json={
-                    "model": "llama3:1b",
-                    "prompt": "write python code",
-                    "stream": False,
-                    "options": {
-                        "temperature": 0.5
-                    }
-                },
-                timeout=30.0
-            )
-
-@pytest.mark.asyncio
-async def test_call_local_success_reason(mock_hardware_scanner):
-    with patch.dict(os.environ, {"LOCAL_MODEL_FALLBACK": "llama3:1b"}):
-        provider = LLMProvider()
-
-        mock_response = MagicMock()
-        mock_response.raise_for_status = MagicMock()
-        mock_response.json.return_value = {"response": "local_reasoning_success"}
-
-        mock_post = AsyncMock(return_value=mock_response)
-
-        with patch("httpx.AsyncClient.post", mock_post):
-            response = await provider._call_local("explain this")
-            assert response == "local_reasoning_success"
-
-            mock_post.assert_called_once_with(
-                "http://localhost:11434/api/generate",
-                json={
-                    "model": "llama3:1b",
-                    "prompt": "explain this",
-                    "stream": False,
-                    "options": {
-                        "temperature": 0.7
-                    }
-                },
-                timeout=30.0
-            )
-
-@pytest.mark.asyncio
-async def test_call_local_exception(mock_hardware_scanner):
-    with patch.dict(os.environ, {"LOCAL_MODEL_FALLBACK": "llama3:1b"}):
-        provider = LLMProvider()
-
-        mock_post = AsyncMock(side_effect=httpx.RequestError("Connection failed"))
-
-        with patch("httpx.AsyncClient.post", mock_post):
-            response = await provider._call_local("test")
-            assert "[Local llama3:1b Error] Failed to process intelligently: Connection failed" in response
-
-@pytest.mark.asyncio
-async def test_call_openai_success(mock_hardware_scanner):
-    with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}):
-        provider = LLMProvider()
-
-        mock_response = MagicMock()
-        mock_response.raise_for_status = MagicMock()
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "openai_success"}}]
-        }
-
-        mock_post = AsyncMock(return_value=mock_response)
-
-        with patch("httpx.AsyncClient.post", mock_post):
-            # Test that 0.0 values are filtered out
-            response = await provider._call_openai("test", model="gpt-4o", temperature=0.7, frequency_penalty=0.0, presence_penalty=0.0)
-            assert response == "openai_success"
-
-            mock_post.assert_called_once_with(
-                "https://api.openai.com/v1/chat/completions",
-                headers={
-                    "Authorization": "Bearer key",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": "gpt-4o",
-                    "messages": [{"role": "user", "content": "test"}],
-                    "temperature": 0.7
-                },
-                timeout=30.0
-            )
-
-@pytest.mark.asyncio
-async def test_call_openai_success_with_penalties(mock_hardware_scanner):
-    with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}):
-        provider = LLMProvider()
-
-        mock_response = MagicMock()
-        mock_response.raise_for_status = MagicMock()
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "openai_success_penalties"}}]
-        }
-
-        mock_post = AsyncMock(return_value=mock_response)
-
-        with patch("httpx.AsyncClient.post", mock_post):
-            # Test that non-zero values are preserved
-            response = await provider._call_openai("test", model="gpt-4o", temperature=0.7, frequency_penalty=0.5, presence_penalty=0.2)
-            assert response == "openai_success_penalties"
-
-            mock_post.assert_called_once_with(
-                "https://api.openai.com/v1/chat/completions",
-                headers={
-                    "Authorization": "Bearer key",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": "gpt-4o",
-                    "messages": [{"role": "user", "content": "test"}],
-                    "temperature": 0.7,
-                    "frequency_penalty": 0.5,
-                    "presence_penalty": 0.2
-                },
-                timeout=30.0
-            )
-
-@pytest.mark.asyncio
-async def test_call_openai_exception(mock_hardware_scanner):
-    with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}):
-        provider = LLMProvider()
-
-        mock_post = AsyncMock(side_effect=Exception("API Error"))
-
-        with patch("httpx.AsyncClient.post", mock_post):
-            response = await provider._call_openai("test")
-            assert "[Cloud gpt-4o-mini Error] Failed to process intelligently using OpenAI: API Error" in response
-
-@pytest.mark.asyncio
-async def test_call_anthropic_success(mock_hardware_scanner):
-    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "key"}):
-        provider = LLMProvider()
-
-        mock_response = MagicMock()
-        mock_response.raise_for_status = MagicMock()
-        mock_response.json.return_value = {
-            "content": [{"text": "anthropic_success"}]
-        }
-
-        mock_post = AsyncMock(return_value=mock_response)
-
-        with patch("httpx.AsyncClient.post", mock_post):
-            response = await provider._call_anthropic("test", temperature=0.5)
-            assert response == "anthropic_success"
-
-            mock_post.assert_called_once_with(
-                "https://api.anthropic.com/v1/messages",
-                headers={
-                    "x-api-key": "key",
-                    "anthropic-version": "2023-06-01",
-                    "content-type": "application/json"
-                },
-                json={
-                    "model": "claude-3-haiku-20240307",
-                    "max_tokens": 1024,
-                    "messages": [{"role": "user", "content": "test"}],
-                    "temperature": 0.5
-                },
-                timeout=30.0
-            )
-
-@pytest.mark.asyncio
-async def test_call_anthropic_exception(mock_hardware_scanner):
-    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "key"}):
-        provider = LLMProvider()
-
-        mock_post = AsyncMock(side_effect=Exception("API Error"))
-
-        with patch("httpx.AsyncClient.post", mock_post):
-            response = await provider._call_anthropic("test")
-            assert "[Cloud Claude-3 Error] Failed to process intelligently using Anthropic: API Error" in response
+def test_get_weights_hash(mock_transformers):
+    provider = LLMProvider()
+    hash_val = provider.get_weights_hash()
+    assert isinstance(hash_val, str)
+    assert len(hash_val) == 64  # SHA-256 hash length
