@@ -1,38 +1,71 @@
-```
 # Dependencies
 target/
 node_modules/
 sandbox/node_modules/
+gateway/node_modules/
+grid/vendor/
 
 # Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.venv/
+env/
+venv/
+.pytest_cache/
+.mypy_cache/
 
 # Logs
 *.log
+logs/
 
 # Environment
 .env
 .env.local
-*.env.*
+.env.*
+!.env.example
 
 # Coverage
 .coverage
 coverage/
 htmlcov/
+.nyc_output/
 
 # Temporary files
 *.tmp
 *.swp
 *.swo
+*.bak
+*.orig
 
 # OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
 # Rust
 Cargo.lock
-```sandbox/node_modules/
-sandbox/node_modules/
+
+# Certificates and Secrets
+certs/*.crt
+certs/*.key
+certs/*.pem
+certs/*.pfx
+certs/*.p12
+!certs/.gitkeep
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Build outputs
+dist/
+build/
+out/

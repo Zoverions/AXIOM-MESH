@@ -99,3 +99,14 @@ Primary control documents:
 ## Notes on Scope and Accuracy
 
 This top-level README is intentionally kept as a **current orientation guide** (what exists, how to run it, where authoritative docs live). Detailed roadmap, tokenomics, and deployment claims are maintained in the canonical documents under `docs/`.
+
+---
+
+## Security
+
+AXIOM-MESH is built with a "security-first" mindset. All inter-service communication is secured via mTLS, and execution is isolated within sandboxes.
+
+- **Vulnerability Reporting:** Please refer to our [Security Policy](.github/SECURITY.md) for instructions on how to report vulnerabilities.
+- **Configuration:** See [Configuration Guide](docs/CONFIGURATION.md) for environment variable setup and security best practices.
+- **Hardening:** Use the provided `scripts/harden-before-public.sh` to verify your local repository configuration before deployment.
+- **CI/CD:** Automated security scanning (Secret scanning, Trivy, CodeQL) is integrated into our GitHub Actions workflows.

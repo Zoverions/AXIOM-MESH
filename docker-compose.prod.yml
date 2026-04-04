@@ -1,0 +1,101 @@
+version: '3.8'
+
+services:
+  gateway:
+    image: axiom-mesh/gateway:latest
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile.prod
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./certs:/app/certs:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  hypervisor:
+    image: axiom-mesh/hypervisor:latest
+    build:
+      context: ./hypervisor
+      dockerfile: Dockerfile.prod
+    restart: always
+    environment:
+      - PYTHON_ENV=production
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./certs:/app/certs:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  grid:
+    image: axiom-mesh/grid:latest
+    build:
+      context: ./grid
+      dockerfile: Dockerfile.prod
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "4000:4000"
+      - "50051:50051"
+    volumes:
+      - ./certs:/app/certs:ro
+      - grid-data:/app/data
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "/app/grid", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  sandbox:
+    image: axiom-mesh/sandbox:latest
+    build:
+      context: ./sandbox
+      dockerfile: Dockerfile.prod
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./certs:/app/certs:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+
+volumes:
+  grid-data:
