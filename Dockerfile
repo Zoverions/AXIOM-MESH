@@ -1,4 +1,4 @@
-FROM python:3.12-slim AS hypervisor
+FROM python:3.14-slim AS hypervisor
 WORKDIR /app
 COPY hypervisor/ /app/hypervisor
 COPY hypervisor/requirements.txt .
