@@ -124,7 +124,6 @@ class DataAnalysisRuntime:
 
         corr_vals = corr_matrix.values
         mask = np.triu(np.ones_like(corr_vals, dtype=bool), k=1)
-
         upper_corr = corr_vals[mask]
 
         # Simple significance test (approximate)
@@ -142,20 +141,22 @@ class DataAnalysisRuntime:
         sig_col_indices = col_indices[sig_mask]
 
         cols = corr_matrix.columns
+        cols_array = cols.to_numpy()
+        col1_arr = cols_array[sig_row_indices]
+        col2_arr = cols_array[sig_col_indices]
 
-        significant_correlations = []
-        for i in range(len(sig_corrs)):
-            val = sig_corrs[i]
-            col1 = cols[sig_row_indices[i]]
-            col2 = cols[sig_col_indices[i]]
-            pval = sig_p_values[i]
+        abs_corrs = np.abs(sig_corrs)
+        strength_arr = np.where(abs_corrs > 0.7, 'strong', np.where(abs_corrs > 0.3, 'moderate', 'weak'))
 
-            significant_correlations.append({
-                'variables': [str(col1), str(col2)],
-                'correlation': float(val),
-                'p_value': float(pval),
-                'strength': 'strong' if abs(val) > 0.7 else 'moderate' if abs(val) > 0.3 else 'weak'
-            })
+        significant_correlations = [
+            {
+                'variables': [str(c1), str(c2)],
+                'correlation': float(v),
+                'p_value': float(p),
+                'strength': s
+            }
+            for c1, c2, v, p, s in zip(col1_arr, col2_arr, sig_corrs, sig_p_values, strength_arr)
+        ]
 
         return {
             'correlation_matrix': corr_matrix.to_dict(),
