@@ -1,11 +1,9 @@
 from mcp.server.fastmcp import FastMCP
-from pydantic import BaseModel
 import os
 import httpx
 import ast
 import uuid
 import re
-import uuid
 from src.core.secrets import SecretManager
 
 # Initialize the FastMCP server
