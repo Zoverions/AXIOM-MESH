@@ -658,33 +658,34 @@ async def join_mesh(request: Request):
         if timestamp is None:
             raise HTTPException(status_code=400, detail="Missing timestamp for signature verification")
 
-        if HAS_ETH_ACCOUNT:
-            domain_data = {
-                "name": "AXIOM-MESH",
-                "version": "1",
-                "chainId": 1
-            }
-            message_types = {
-                "JoinMesh": [
-                    {"name": "token_id", "type": "string"},
-                    {"name": "node_address", "type": "address"},
-                    {"name": "timestamp", "type": "uint256"}
-                ]
-            }
-            message_data = {
-                "token_id": token_id,
-                "node_address": wallet_address,
-                "timestamp": int(timestamp)
-            }
-            try:
-                signable_message = encode_typed_data(domain_data=domain_data, message_types=message_types, message_data=message_data)
-                recovered_address = Account.recover_message(signable_message, signature=signature)
-                if recovered_address.lower() != wallet_address.lower():
-                    raise HTTPException(status_code=400, detail="Invalid wallet signature")
-            except Exception as e:
-                raise HTTPException(status_code=400, detail=f"Signature verification failed: {str(e)}")
-        else:
+        # Ensure we have the library required
+        if not HAS_ETH_ACCOUNT:
             raise HTTPException(status_code=500, detail="Proper ECDSA/EdDSA signature verification requires eth_account library")
+
+        domain_data = {
+            "name": "AXIOM-MESH",
+            "version": "1",
+            "chainId": 1
+        }
+        message_types = {
+            "JoinMesh": [
+                {"name": "token_id", "type": "string"},
+                {"name": "node_address", "type": "address"},
+                {"name": "timestamp", "type": "uint256"}
+            ]
+        }
+        message_data = {
+            "token_id": token_id,
+            "node_address": wallet_address,
+            "timestamp": int(timestamp)
+        }
+        try:
+            signable_message = encode_typed_data(domain_data=domain_data, message_types=message_types, message_data=message_data)
+            recovered_address = Account.recover_message(signable_message, signature=signature)
+            if recovered_address.lower() != wallet_address.lower():
+                raise HTTPException(status_code=400, detail="Invalid wallet signature")
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Signature verification failed: {str(e)}")
         
         # Mark token as used
         token.used = True

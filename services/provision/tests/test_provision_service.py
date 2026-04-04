@@ -5,7 +5,11 @@ from pathlib import Path
 # Add the parent directory to the path so we can import provision_service
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from provision_service import verify_signature, sign_payload
+from provision_service import verify_signature, sign_payload, app, token_store, InvitationToken
+from fastapi.testclient import TestClient
+import time
+from eth_account import Account
+from eth_account.messages import encode_typed_data
 
 def test_verify_signature_valid():
     payload = {"test": "data", "token_id": "123"}
@@ -19,6 +23,81 @@ def test_verify_signature_valid():
 
     # Assert the result is the same as the original payload
     assert result == payload
+
+def test_join_mesh():
+    # We need to clear and initialize token store
+    token_store.clear()
+
+    test_token_id = "test-token-123"
+    token_store[test_token_id] = InvitationToken(
+        token_id=test_token_id,
+        mesh_id="test-mesh",
+        coordinator_url="http://test-coordinator",
+        expires_at=time.time() + 3600,
+        created_at=time.time(),
+        max_uses=1,
+    )
+
+    client = TestClient(app)
+
+    # Generate a fresh account
+    acct = Account.create()
+    wallet_address = acct.address
+    timestamp = int(time.time())
+
+    # Missing timestamp
+    response = client.post("/api/join", json={
+        "token_id": test_token_id,
+        "wallet_address": wallet_address,
+        "signature": "fake_sig"
+    })
+    assert response.status_code == 400
+    assert "Missing timestamp" in response.json()["detail"]
+
+    # Invalid signature
+    response = client.post("/api/join", json={
+        "token_id": test_token_id,
+        "wallet_address": wallet_address,
+        "signature": "0x1234",
+        "timestamp": timestamp
+    })
+    assert response.status_code == 400
+    assert "Signature verification failed" in response.json()["detail"] or "Invalid wallet signature" in response.json()["detail"]
+
+    # Valid signature
+    domain_data = {
+        "name": "AXIOM-MESH",
+        "version": "1",
+        "chainId": 1
+    }
+    message_types = {
+        "JoinMesh": [
+            {"name": "token_id", "type": "string"},
+            {"name": "node_address", "type": "address"},
+            {"name": "timestamp", "type": "uint256"}
+        ]
+    }
+    message_data = {
+        "token_id": test_token_id,
+        "node_address": wallet_address,
+        "timestamp": timestamp
+    }
+
+    signable_message = encode_typed_data(domain_data=domain_data, message_types=message_types, message_data=message_data)
+    signed_message = acct.sign_message(signable_message)
+    signature = signed_message.signature.hex()
+
+    response = client.post("/api/join", json={
+        "token_id": test_token_id,
+        "wallet_address": wallet_address,
+        "signature": signature,
+        "timestamp": timestamp
+    })
+    assert response.status_code == 200
+    assert response.json()["success"] is True
+
+    # Verify token is marked as used
+    assert token_store[test_token_id].used is True
 
 def test_verify_signature_invalid():
     payload = {"test": "data", "token_id": "123"}
