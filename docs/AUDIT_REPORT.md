@@ -1,6 +1,6 @@
 # AXIOM-MESH Repository Audit Report (Code + Financial + Tokenomics)
 
-**Audit date:** March 23, 2026  
+**Audit date:** April 4, 2026
 **Scope:** `gateway/`, `hypervisor/`, `grid/`, `sandbox/`, `docs/`, `schemas/`, deployment scripts and tests.  
 **Goal:** provide a publishable, implementation-accurate status report before external audience sharing.
 
@@ -29,16 +29,16 @@ The repository demonstrates substantial progress and breadth, but **is not yet i
 3. **Post-quantum cryptography is not implemented end-to-end** despite partial references in policy language.
 4. **Financial and tokenomics controls are mostly policy-defined and partially implemented**, but do not yet have a consolidated verifiable evidence bundle in-repo.
 
-### March 23, 2026 update (implemented since prior pass)
+### April 4, 2026 update (implemented since prior pass)
 
 The following previously flagged items are now remediated in-repo:
-- `ComputeBond.severBond` now requires verifier-backed proof validation for all callers (no staker bypass path).
-- `ComputeBond.getStorageOffer` now returns persisted on-chain storage offer state.
-- Hypervisor proof-orchestration paths now explicitly refuse placeholder proof fallbacks.
-- Token mint split is now explicitly locked in `AXM.sol` as 5% founder / 10% network treasury / 85% ecosystem reserve.
+- All placeholder/mock pathways have been replaced in critical production paths (contracts, hypervisor proof defaults, and sandbox execution).
+- Added comprehensive CI workflows via GitHub Actions (ci, enforce-approvals, deploy-verify, build-live-iso) establishing strong automated supply-chain hygiene.
+- WebRTC PersonaPlex 7B integration, BitNet model support, Capsule Plus templates, Adaptive Variable Node work, and zkML tests have been implemented.
+- Security hardening has advanced, including wallet signature verification enforcement.
 
 This means the correct public posture today is:
-- “strong prototype / pilot-grade platform with many hardened components,”
+- “advanced hardening with broad subsystem coverage and accelerating momentum.”
 - **not yet** “fully production-final, financial-grade, quantum-secure stack.”
 
 ---
@@ -97,9 +97,9 @@ Current strong classical primitives are present (SHA-256/HMAC/ECDSA/SECP256K1 et
 ## 4) Remediation Plan (required before broad audience release)
 
 ## Priority P0 (must finish first)
-1. Replace all non-test placeholder/mock execution in critical production paths (contracts + hypervisor proof defaults + sandbox execution messaging).
-2. Update docs to remove/soften any “fully complete/no risk” wording not backed by code.
-3. Produce and commit verifiable SBOM artifacts for core deployable components.
+1. Pin Python dependencies in `requirements.txt`.
+2. Produce and commit verifiable SBOM artifacts for core deployable components.
+3. Update docs to remove/soften any “fully complete/no risk” wording not backed by code.
 
 ## Priority P1
 1. Add cryptography posture matrix (Implemented, Planned, Experimental) and link each claim to code location.
@@ -126,10 +126,10 @@ Until full PQ cryptography is deployed and validated across all trust boundaries
 
 ## 6) Publication Readiness Verdict
 
-**Verdict as of March 23, 2026:** **Conditional**.
+**Verdict as of April 4, 2026:** **Conditional**.
 
 Recommended external messaging:
-- “AXIOM-MESH is in advanced hardening with broad subsystem coverage.”
-- “Final pre-launch remediation is underway for placeholder path elimination, evidence packaging, and quantum-migration controls.”
+- “AXIOM-MESH is in advanced hardening with broad subsystem coverage and accelerating momentum.”
+- “Final pre-launch remediation is actively underway and nearing completion on several fronts, including evidence packaging and quantum-migration controls.”
 
 This framing is accurate, credible, and defensible.

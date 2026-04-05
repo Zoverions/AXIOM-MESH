@@ -19,8 +19,8 @@ class AdaptiveVariableNode:
             self.current_role = needed_role
 
             # Record switch as neural commitment (new primitive)
-            self.ledger.record_adaptive_switch(self.current_role, signal["shortage_score"])
+            self.ledger.record_adaptive_switch(self.current_role, signal.get("shortage_score", 1.0))
 
             # Higher reward multiplier for filling gap
-            reward_multiplier = 1.0 + (signal["shortage_score"] * 0.5)
+            reward_multiplier = 1.0 + (signal.get("shortage_score", 1.0) * 0.5)
             print(f"[💰] Reward multiplier applied: {reward_multiplier}x")

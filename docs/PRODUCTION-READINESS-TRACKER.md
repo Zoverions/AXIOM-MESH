@@ -1,6 +1,6 @@
 # Production Readiness Tracker (Execution Board)
 
-**Last Updated:** 2026-03-29  
+**Last Updated:** 2026-04-04
 **Purpose:** Detailed readiness board linked from the canonical task queue in `docs/MASTER-TODO.md`.
 
 ---
@@ -37,25 +37,25 @@
 
 ## 3) In Progress (Critical Path)
 
-- [ ] Interface freeze applied and compatibility checks enforced in CI.
+- [x] Interface freeze applied and compatibility checks enforced in CI.
 - [ ] Security route authZ parity audit completed.
 - [ ] Ledger↔chain reconciliation baseline completed.
 - [ ] Recovery drill automation completed with measured RTO/RPO.
-- [ ] RC evidence package assembled and reviewed.
+- [x] RC evidence package assembled and reviewed.
 
 ---
 
 ## 4) Next 10 Execution Tasks (Priority Ordered)
 
 1. [ ] Publish owner + deputy roster for all roles above.
-2. [ ] Freeze API/schema/ABI baseline and tag release baseline.
+2. [x] Freeze API/schema/ABI baseline and tag release baseline.
 3. [ ] Turn WBS IDs into tracked issues and sprint assignments.
-4. [ ] Enable compatibility checks in CI for interface changes.
+4. [x] Enable compatibility checks in CI for interface changes.
 5. [ ] Run authZ parity audit and produce remediation tickets.
 6. [ ] Run first reconciliation replay window and capture variance report.
 7. [ ] Execute restart/partial-outage drill and record RTO/RPO.
-8. [ ] Build first RC evidence folder using HOWTO format.
-9. [ ] Validate RC folder with `make validate-release-evidence`.
+8. [x] Build first RC evidence folder using HOWTO format.
+9. [x] Validate RC folder with `make validate-release-evidence`.
 10. [ ] Hold Gate Sync review and capture decision log.
 
 ---

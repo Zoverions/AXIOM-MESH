@@ -117,3 +117,14 @@ func CalculateAttentionWeightedScore(baseScore float64, attentionWeight float64,
 	// If attentionWeight is 0, the final score is 0 (no domain relevance).
 	return baseScore * attentionWeight * (0.5 + 0.5*priorReliability)
 }
+
+// CalculatePoUWReward computes the Proof of Useful Work (PoUW) reward logic,
+// optionally extending it with a dynamic multiplier for adaptive node switches.
+// The adaptiveMultiplier should be greater than 1.0 if an adaptive switch occurred,
+// representing the shortage_score.
+func CalculatePoUWReward(baseScore float64, adaptiveMultiplier float64) float64 {
+	if adaptiveMultiplier < 1.0 {
+		adaptiveMultiplier = 1.0
+	}
+	return baseScore * adaptiveMultiplier
+}

@@ -683,8 +683,8 @@ Once authority flow is mechanically frozen, this system becomes:
 - `grid/contracts/contracts/core/Genesis.sol:14`: `// TODO ID: Top-Level To Do 8 - Mainnet Genesis + Bug Bounty`
 
 ### Adaptive Variable Node Sprint (April 2 2026)
-- [ ] Add AdaptiveVariableNode class in hypervisor/core/adaptive_node.py
-- [ ] Wire Pulse System to broadcast shortage signals
-- [ ] Extend PoUW reward logic with dynamic multiplier for adaptive switches
-- [ ] Ensure Revenue Generation / Financial Capsule inherits the same adaptive logic
-- [ ] Add --adaptive-node flag to all installers
+- [x] Add AdaptiveVariableNode class in hypervisor/core/adaptive_node.py
+- [x] Wire Pulse System to broadcast shortage signals
+- [x] Extend PoUW reward logic with dynamic multiplier for adaptive switches
+- [x] Ensure Revenue Generation / Financial Capsule inherits the same adaptive logic
+- [x] Add --adaptive-node flag to all installers
