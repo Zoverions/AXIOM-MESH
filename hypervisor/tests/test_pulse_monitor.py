@@ -35,8 +35,12 @@ async def test_cot_auditor_kill_switch_for_eval_hacking():
             async for _ in auditor.stream():
                 pass
 
-        with open(log_path, "r", encoding="utf-8") as handle:
-            contents = handle.read()
+        def read_file(path):
+            with open(path, "r", encoding="utf-8") as handle:
+                return handle.read()
+
+        import asyncio
+        contents = await asyncio.to_thread(read_file, log_path)
 
     assert "Evaluation awareness" in contents
 
