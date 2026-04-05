@@ -15,6 +15,7 @@ echo ==========================================================
 ::   --validator-share=85
 ::   --platform=windows|linux|android|live-usb
 ::   --launch-mode=local-mesh|single-node|launch-testnet|launch-network
+::   --adaptive-node
 
 :: Auto-install Chocolatey if missing
 choco -v >nul 2>&1

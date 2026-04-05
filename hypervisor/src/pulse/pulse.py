@@ -119,3 +119,23 @@ class BehavioralDriftDetector:
             pass # Grid offline or unreachable
         except Exception as e:
             print(f"Failed to gossip drift report: {e}")
+
+
+class NetworkShortageBroadcaster:
+    """Broadcasts shortage signals to adaptive nodes to trigger role switches."""
+    def __init__(self, adaptive_nodes=None):
+        self.adaptive_nodes = adaptive_nodes or []
+
+    def register_node(self, node):
+        self.adaptive_nodes.append(node)
+
+    def broadcast_shortage_signal(self, required_role: str, shortage_score: float):
+        """Broadcast the shortage to all registered AdaptiveVariableNode instances."""
+        signal = {
+            "required_role": required_role,
+            "shortage_score": shortage_score
+        }
+        print(f"[PULSE] Broadcasting network shortage: role={required_role}, score={shortage_score}")
+        for node in self.adaptive_nodes:
+            if hasattr(node, 'receive_network_signal'):
+                node.receive_network_signal(signal)
