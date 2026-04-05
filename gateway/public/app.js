@@ -85,7 +85,16 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Session ID Management ---
     let sessionId = localStorage.getItem('axiom_session_id');
     if (!sessionId) {
-        sessionId = 'sess_' + Math.random().toString(36).substring(2, 15);
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+            sessionId = 'sess_' + crypto.randomUUID();
+        } else if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+            const array = new Uint8Array(16);
+            crypto.getRandomValues(array);
+            sessionId = 'sess_' + Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+        } else {
+            // Fallback for extremely legacy environments (not expected in AxiomMesh)
+            sessionId = 'sess_' + Date.now() + Math.floor(Math.random() * 1000);
+        }
         localStorage.setItem('axiom_session_id', sessionId);
     }
 
@@ -273,6 +282,13 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     function pickRandom(items) {
+        if (!items || items.length === 0) return null;
+        if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+            const array = new Uint32Array(1);
+            crypto.getRandomValues(array);
+            const index = array[0] % items.length;
+            return items[index];
+        }
         return items[Math.floor(Math.random() * items.length)];
     }
 
