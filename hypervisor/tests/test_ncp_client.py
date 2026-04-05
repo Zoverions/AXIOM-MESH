@@ -34,7 +34,7 @@ async def test_ncp_fetch_context_success(mock_post, ncp_client):
     # Assert that subprocess was called and the result was handled
     assert mock_post.called
     assert result is not None
-    assert type(result) == str
+    assert isinstance(result, str)
     assert "mocked external ncp context" in result
 
 @pytest.mark.asyncio
@@ -51,7 +51,7 @@ async def test_ncp_fetch_context_timeout(mock_post, ncp_client):
 
     assert mock_post.called
     assert result is not None
-    assert type(result) == str
+    assert isinstance(result, str)
     assert "Offline or Unreachable" in result
 
 @pytest.mark.asyncio
@@ -68,11 +68,5 @@ async def test_ncp_fetch_context_subprocess_failure(mock_post, ncp_client):
 
     assert mock_post.called
     assert result is not None
-    assert type(result) == str
-    # When status_code != 200, it doesn't append to aggregated_context in current implementation,
-    # or if we want it raises Exception and catches "Offline or Unreachable".
-    # Wait, looking at src code:
-    # if res.status_code == 200: ...
-    # else: it just silently skips!
-    # Let's assert it returns empty string.
+    assert isinstance(result, str)
     assert result == ""
