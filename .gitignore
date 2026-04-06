@@ -1,71 +1,40 @@
+```
 # Dependencies
-target/
-node_modules/
-sandbox/node_modules/
-gateway/node_modules/
-grid/vendor/
-
-# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Virtual environments
+venv/
 .venv/
 env/
-venv/
-.pytest_cache/
-.mypy_cache/
+.ENV/
 
 # Logs
 *.log
-logs/
-
-# Environment
-.env
-.env.local
-.env.*
-!.env.example
-
-# Coverage
-.coverage
-coverage/
-htmlcov/
-.nyc_output/
-
-# Temporary files
-*.tmp
-*.swp
-*.swo
-*.bak
-*.orig
 
 # OS generated files
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
-# Rust
-Cargo.lock
-
-# Certificates and Secrets
-certs/*.crt
-certs/*.key
-certs/*.pem
-certs/*.pfx
-certs/*.p12
-!certs/.gitkeep
-
-# IDEs
+# Editor files
 .vscode/
 .idea/
-*.sublime-project
-*.sublime-workspace
+*.swp
+*.swo
 
-# Build outputs
-dist/
-build/
-out/
+# Coverage reports
+.coverage
+coverage/
+htmlcov/
+
+# Temporary files
+*.tmp
+*.temp
+```
