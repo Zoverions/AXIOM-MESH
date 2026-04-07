@@ -26,7 +26,7 @@ class LRUTieredCache:
     def _get_disk_path(self, key: str) -> str:
         # Simplistic mapping. In prod, hash the key to avoid filename issues
         import hashlib
-        safe_key = hashlib.md5(key.encode('utf-8')).hexdigest()
+        safe_key = hashlib.sha256(key.encode('utf-8')).hexdigest()
         return os.path.join(self.directory, f"{safe_key}.json.gz")
 
     def _evict_lru(self) -> None:

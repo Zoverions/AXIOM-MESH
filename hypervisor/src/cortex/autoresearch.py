@@ -184,7 +184,7 @@ class AutoResearchDaemon:
         unique_sources = []
         seen_hashes = set()
         for source in sources:
-            content_hash = hashlib.md5(source["content"].encode('utf-8')).hexdigest()
+            content_hash = hashlib.sha256(source["content"].encode('utf-8')).hexdigest()
             if content_hash not in seen_hashes:
                 seen_hashes.add(content_hash)
                 unique_sources.append(source)
