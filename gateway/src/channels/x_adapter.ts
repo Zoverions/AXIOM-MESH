@@ -10,7 +10,7 @@
 
 import axios, { AxiosInstance } from 'axios';
 import { BaseChannel } from './base';
-import { DeliveryReceipt, ReliabilityPolicy } from './registry';
+import { ChannelOpts, DeliveryReceipt, ReliabilityPolicy, registerChannel } from './registry';
 
 // X API configuration
 interface XConfig {
@@ -349,3 +349,7 @@ export class XAdapter extends BaseChannel {
 export function createXAdapter(): XAdapter {
     return new XAdapter();
 }
+
+registerChannel('x-twitter', (_opts: ChannelOpts) => {
+    return createXAdapter();
+});

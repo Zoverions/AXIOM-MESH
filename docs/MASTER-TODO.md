@@ -26,9 +26,9 @@ Update format example:
 
 - [x] **P0** Phase 2: Wire Graphify pipeline to XMCP ingestion (fetch X posts in `detect()/extract()`). — 2026-04-07 — @agent — GraphMemory directory pipeline now merges XMCP ingestion extractions before graph build.
 - [x] **P0** Phase 2: Update evidence schemas with XMCP provenance fields (`source`, `xurl`, `cached`, `tool_name`). — 2026-04-07 — @agent — updated intent response schema + XMCP ingestion edge/node provenance payloads.
-- [ ] **P1** Phase 3: Route XMCP calls through `shared/security/graph_safe.py` (`validate_url`, `sanitize_label`).
-- [ ] **P1** Phase 3: Add mock XMCP server to `docker-compose.yml` for local development.
-- [ ] **P1** Phase 3: Register X adapter in gateway channel registry (`gateway/src/channels/index.ts`).
+- [x] **P1** Phase 3: Route XMCP calls through `shared/security/graph_safe.py` (`validate_url`, `sanitize_label`). — 2026-04-07 — @agent — `XMCPClient.call_tool()` now sanitizes string params and validates generated xurl before execution/caching.
+- [x] **P1** Phase 3: Add mock XMCP server to `docker-compose.yml` for local development. — 2026-04-07 — @agent — confirmed `xmcp-mock` service in compose for local X MCP testing.
+- [x] **P1** Phase 3: Register X adapter in gateway channel registry (`gateway/src/channels/index.ts`). — 2026-04-07 — @agent — added `registerChannel('x-twitter', ...)` bootstrap in `x_adapter.ts`.
 - [ ] **P1** M6.4 Deploy transformer foundation contracts on PulseChain testnet and publish deployment evidence bundle.
 - [ ] **P2** M12.1 Add docs↔code traceability matrix (feature claim → file path → test/evidence command).
 - [ ] **P2** M12.2 Add quarterly evidence freshness audit for security, performance, and reliability artifacts.
@@ -73,9 +73,9 @@ Update format example:
 - [x] Write integration documentation (`docs/XMCP_INTEGRATION.md`) — 2026-04-07 — @agent — architecture, API reference, configuration, testing guide
 - [x] Phase 2: Wire Graphify pipeline to XMCP ingestion (fetch X posts in detect()/extract()) — 2026-04-07 — @agent — GraphMemory detect/extract flow now appends XMCP extraction artifacts before build_graph.
 - [x] Phase 2: Update evidence schemas with xmcp provenance fields (source, xurl, cached, tool_name) — 2026-04-07 — @agent — normalized schema fields and propagated cached/tool_name provenance in XMCP ingestion output.
-- [ ] Phase 3: Route XMCP calls through shared/security/graph_safe.py (validate_url, sanitize_label)
-- [ ] Phase 3: Add mock XMCP server to docker-compose.yml for local dev
-- [ ] Phase 3: Register X adapter in gateway channel registry (gateway/src/channels/index.ts)
+- [x] Phase 3: Route XMCP calls through shared/security/graph_safe.py (validate_url, sanitize_label) — 2026-04-07 — @agent — applied validation/sanitization in `XMCPClient`.
+- [x] Phase 3: Add mock XMCP server to docker-compose.yml for local dev — 2026-04-07 — @agent — `xmcp-mock` compose service available for local testing.
+- [x] Phase 3: Register X adapter in gateway channel registry (gateway/src/channels/index.ts) — 2026-04-07 — @agent — added channel registry binding for `x-twitter`.
 - [x] Ship one-time blockchain code + QR login E2E flow — 2026-03-29 — @agent — implemented one-time QR auth session init/complete/status endpoints with nonce, expiry, and one-time consumption semantics
 - [x] Implement Secure Election Node (Governance+ paper ballot fallback + ZK verification) — 2026-03-29 — @agent — added election session init/verify routes with fail-closed digest checks and paper fallback code path
 - [x] Live USB polish pass (preloaded model bundles + capsule selector UX) — 2026-03-29 — @agent — added capsule-tier selector + offline model bundle selector to live USB launcher and passed capsule tier into auto-installer

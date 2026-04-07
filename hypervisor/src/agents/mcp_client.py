@@ -47,6 +47,12 @@ try:
 except ImportError:
     CACHE_AVAILABLE = False
 
+try:
+    from shared.src.security.graph_safe import validate_url, sanitize_label
+    SECURITY_HELPERS_AVAILABLE = True
+except ImportError:
+    SECURITY_HELPERS_AVAILABLE = False
+
 
 @dataclass
 class XMCPConfig:
@@ -331,8 +337,26 @@ class XMCPClient:
         xurl = tool_def.xurl_pattern
         for key, value in params.items():
             xurl = xurl.replace(f"{{{key}}}", str(value))
-        
+        if SECURITY_HELPERS_AVAILABLE:
+            return validate_url(xurl)
         return xurl
+
+    def _sanitize_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Sanitize string parameters before tool invocation."""
+        if not SECURITY_HELPERS_AVAILABLE:
+            return params
+        sanitized: Dict[str, Any] = {}
+        for key, value in params.items():
+            if isinstance(value, str):
+                sanitized[key] = sanitize_label(value)
+            elif isinstance(value, list):
+                sanitized[key] = [
+                    sanitize_label(item) if isinstance(item, str) else item
+                    for item in value
+                ]
+            else:
+                sanitized[key] = value
+        return sanitized
     
     def _execute_mock_call(self, tool_name: str, params: Dict[str, Any]) -> Any:
         """Execute mock tool call for testing/development."""
@@ -451,11 +475,13 @@ class XMCPClient:
                 provenance={"error": "rate_limit_exceeded"},
             )
         
+        safe_params = self._sanitize_params(params)
+
         # Build xurl for provenance
-        xurl = self._build_xurl(tool_name, params)
+        xurl = self._build_xurl(tool_name, safe_params)
         
         # Check cache (unless forced refresh)
-        cache_key = self._compute_cache_key(tool_name, params)
+        cache_key = self._compute_cache_key(tool_name, safe_params)
         if not force_refresh:
             cached = self._get_cached_response(cache_key)
             if cached:
@@ -477,9 +503,9 @@ class XMCPClient:
         # Execute tool call
         try:
             if os.getenv("X_MOCK_MODE", "false").lower() == "true":
-                result = self._execute_mock_call(tool_name, params)
+                result = self._execute_mock_call(tool_name, safe_params)
             else:
-                result = self._execute_real_call(tool_name, params)
+                result = self._execute_real_call(tool_name, safe_params)
             
             # Cache the response
             self._save_to_cache(cache_key, result)
