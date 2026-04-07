@@ -184,6 +184,20 @@ class XMCPClient:
             xurl_pattern="https://api.x.com/2/users/by/username/{username}",
             rate_limit_per_15min=300,
         ),
+        XToolDefinition(
+            name="reasoning_expert",
+            description="Route request to a framework reasoning map (e.g. Getting-to-Yes) to get structured guidance + provenance.",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "framework": {"type": "string", "description": "Reasoning framework to apply"},
+                    "query": {"type": "string", "description": "Specific query within the framework context"},
+                },
+                "required": ["framework"],
+            },
+            xurl_pattern="axiom://reasoning_expert/{framework}?query={query}",
+            rate_limit_per_15min=1000,
+        ),
     ]
     
     def __init__(self, config: Optional[XMCPConfig] = None):
