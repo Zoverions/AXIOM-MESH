@@ -119,3 +119,60 @@ async def test_scheduler_defers_non_local_route(monkeypatch):
     await global_scheduler.tasks["deferred_task"]["func"]()
     tasks_router.evaluate_route.assert_awaited()
     global_scheduler.remove_task("deferred_task")
+
+
+@pytest.mark.asyncio
+async def test_scheduler_rejects_high_risk_without_required_approvals():
+    os.environ["TASK_SCHEDULER_SIGNING_KEY"] = "test-signing-key"
+    nonce = str(uuid.uuid4())
+    timestamp_ms = int(time.time() * 1000)
+    command = "echo high-risk"
+    signature = build_schedule_signature("high_risk_task", 60, False, command, timestamp_ms, nonce, os.environ["TASK_SCHEDULER_SIGNING_KEY"])
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        response = await ac.post("/tasks/schedule", json={
+            "name": "high_risk_task",
+            "interval": 60,
+            "is_recurring": False,
+            "command": command,
+            "risk_class": "high",
+            "required_approvals": 1,
+            "autonomy_level": "autonomous",
+            "fleet_scope": "business",
+            "timestamp_ms": timestamp_ms,
+            "nonce": nonce,
+            "signature": signature,
+        })
+        assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_scheduler_accepts_high_risk_with_required_approvals(monkeypatch):
+    os.environ["TASK_SCHEDULER_SIGNING_KEY"] = "test-signing-key"
+    nonce = str(uuid.uuid4())
+    timestamp_ms = int(time.time() * 1000)
+    command = "echo approved"
+    signature = build_schedule_signature("approved_task", 60, False, command, timestamp_ms, nonce, os.environ["TASK_SCHEDULER_SIGNING_KEY"])
+
+    monkeypatch.setattr(tasks_router, "analyze_metrics", lambda state: {"metrics": {"local_load": 0.3, "memory_pressure": 0.2}})
+    monkeypatch.setattr(tasks_router, "evaluate_route", AsyncMock(return_value={"selected_route": "p2p"}))
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        response = await ac.post("/tasks/schedule", json={
+            "name": "approved_task",
+            "interval": 60,
+            "is_recurring": False,
+            "command": command,
+            "risk_class": "high",
+            "required_approvals": 2,
+            "autonomy_level": "autonomous",
+            "fleet_scope": "business",
+            "timestamp_ms": timestamp_ms,
+            "nonce": nonce,
+            "signature": signature,
+        })
+        assert response.status_code == 200
+
+    global_scheduler.remove_task("approved_task")

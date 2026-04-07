@@ -1,7 +1,7 @@
 # AXIOM-MESH Governance (Canonical)
 
 **Document role:** Canonical governance model and decision-rights map.
-**Last updated:** 2026-03-30.
+**Last updated:** 2026-04-07.
 **Scope:** Governance structure, authority transitions, controls, and emergency mechanisms.
 
 ---
@@ -54,6 +54,23 @@ Documentation changes are governance-relevant when they alter:
 - Claimed implementation status.
 - Security guarantees.
 - Economic commitments.
+
+### 3.4 Embodied Fleet Governance Decisions
+Embodied and high-autonomy workloads follow federated authority overlays:
+
+1. **Global/Community Baseline**
+   - Defines non-negotiable safety floor and audit requirements across all deployments.
+   - Controls baseline guardrail keys and minimum approval counts for high-risk autonomous tasks.
+2. **National Overlay**
+   - Adds jurisdiction-specific constraints (safety regulations, labor boundaries, data locality).
+   - Can tighten baseline controls; cannot weaken them.
+3. **Business/Municipal/Community Overlay**
+   - Applies mission/site-specific restrictions (facility geofence, shift windows, approved tools).
+   - Can tighten national/global policy; cannot loosen either.
+
+Conflict handling rule:
+- The effective policy is the strictest combined result of baseline + national + local overlay.
+- A local policy cannot override higher-layer deny constraints.
 
 ---
 
@@ -110,5 +127,6 @@ Use these documents together:
 - `docs/OPERATIONS.md` — incident/change runbook execution.
 - `docs/MASTER-TODO.md` — active execution truth.
 - `docs/ROADMAP.md` — strategic direction and milestones.
+- `docs/governance/FLEET-GOVERNANCE-POLICY-REGISTRY.md` — federated fleet policy keys and contract-facing identifiers.
 
 If conflicts exist, active execution truth is in `docs/MASTER-TODO.md`; governance policy intent is defined here.
