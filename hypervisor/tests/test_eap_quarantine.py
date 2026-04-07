@@ -2,6 +2,7 @@ import pytest
 import os
 import json
 import uuid
+import asyncio
 from datetime import datetime, timezone
 from src.pulse.pulse_monitor import CoTAuditor, CognitiveThrashingError
 from src.immune.quarantine_sandbox import QuarantineSandboxManager
@@ -34,8 +35,11 @@ async def test_formal_quarantine_activation(auditor, temp_audit_file):
     assert result.epistemic_state["protocol"] == "EAP-v1"
 
     # Verify events written to audit
-    with open(temp_audit_file, "r") as f:
-        events = [json.loads(line) for line in f]
+    def read_events():
+        with open(temp_audit_file, "r") as f:
+            return [json.loads(line) for line in f]
+
+    events = await asyncio.to_thread(read_events)
 
     assert len(events) == 2
     assert events[0]["event"] == "quarantine_forked"
