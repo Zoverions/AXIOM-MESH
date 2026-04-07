@@ -4,7 +4,7 @@ import os
 import pytest
 
 from src.engine.alignment import AlignmentProfile
-from src.graph.resource_balancer import resource_balancer_app
+from src.graph.resource_balancer import resource_balancer_app, SystemMetrics
 
 
 @pytest.mark.asyncio
@@ -103,3 +103,36 @@ async def test_resource_balancer_dedicated_machine_keeps_local(tmp_path, monkeyp
 
     final_state = await resource_balancer_app.ainvoke(initial_state)
     assert final_state["selected_route"] == "local"
+
+
+def test_get_local_load_normal(monkeypatch):
+    monkeypatch.setattr(os, "getloadavg", lambda: (2.0, 1.5, 1.0))
+    monkeypatch.setattr(os, "cpu_count", lambda: 4)
+    assert SystemMetrics.get_local_load() == 0.5
+
+
+def test_get_local_load_capped(monkeypatch):
+    monkeypatch.setattr(os, "getloadavg", lambda: (8.0, 6.0, 4.0))
+    monkeypatch.setattr(os, "cpu_count", lambda: 4)
+    assert SystemMetrics.get_local_load() == 1.0
+
+
+def test_get_local_load_missing_cpu_count(monkeypatch):
+    monkeypatch.setattr(os, "getloadavg", lambda: (0.5, 0.4, 0.3))
+    monkeypatch.setattr(os, "cpu_count", lambda: None)
+    assert SystemMetrics.get_local_load() == 0.5
+
+
+def test_get_local_load_zero_cpu_count(monkeypatch):
+    monkeypatch.setattr(os, "getloadavg", lambda: (0.5, 0.4, 0.3))
+    monkeypatch.setattr(os, "cpu_count", lambda: 0)
+    assert SystemMetrics.get_local_load() == 0.5
+
+
+def test_get_local_load_oserror(monkeypatch):
+    def mock_getloadavg():
+        raise OSError("Load average not available")
+
+    monkeypatch.setattr(os, "getloadavg", mock_getloadavg)
+    monkeypatch.setattr(os, "cpu_count", lambda: 4)
+    assert SystemMetrics.get_local_load() == 0.7
