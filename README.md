@@ -9,6 +9,14 @@ AXIOM-MESH is a multi-service runtime built around four core services:
 - **Sandbox** (TypeScript/Node + Docker): isolated code execution with security controls.
 - **Grid** (Go + Solidity): ledger, consensus components, and contract integration.
 
+## Pillar Clarification (Runtime vs Platform)
+
+To avoid ambiguity in downstream docs:
+- **Runtime architecture = 4 pillars** (Gateway, Hypervisor, Sandbox, Grid).
+- **Platform sovereignty program = 8 pillars** (see `docs/MASTER-INTEGRATION.md`).
+
+Both descriptions are intentional and refer to different abstraction layers.
+
 > **Current repository status (March 2026):** AXIOM-MESH is in repository/staging hardening. The codebase includes implementation across all four services, but this repository is **not declaring live testnet/mainnet deployment** from this README.
 
 ---

@@ -10,6 +10,8 @@
 
 AXIOM-MESH is composed of four runtime pillars plus on-chain governance/economic contracts.
 
+> Terminology: repository docs also reference an eight-pillar sovereignty model for platform capability planning (`docs/MASTER-INTEGRATION.md`). This architecture document remains the canonical runtime topology view.
+
 1. **Gateway (TypeScript)**
    - External ingress for user/API traffic.
    - Authentication, authorization, request shaping/rate limits, and workflow dispatch.

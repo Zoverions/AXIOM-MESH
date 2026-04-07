@@ -9,6 +9,14 @@ This index consolidates documentation ownership, reduces overlap, and defines wh
 
 ---
 
+## Pillar Model (Canonical Clarification)
+- **Runtime Pillars (4):** Gateway, Hypervisor, Sandbox, Grid.
+- **Sovereignty Capability Pillars (8):** program-level autonomy/economic pillars listed in `docs/MASTER-INTEGRATION.md`.
+
+Use runtime pillars for architecture/execution docs and 8-pillar framing for sovereignty roadmap and capability communications.
+
+---
+
 ## 🚀 New Users Start Here
 
 ### Quick Installation
@@ -125,3 +133,9 @@ Every production-impacting PR must update:
 - testing/validation evidence references.
 
 A documentation change is incomplete if the corresponding HOWTO steps are not executable.
+
+
+## 5) Continuous Documentation Assurance
+- **Documentation coverage assessment (2026-04-07):** `docs/assessments/DOCS-COVERAGE-ASSESSMENT-2026-04-07.md`
+- Every operator-facing feature must have a linked HOWTO from `docs/HOWTO/index.md`.
+- Execution status remains canonical in `docs/MASTER-TODO.md` with pending tasks listed first.

@@ -4,11 +4,21 @@ This document is the foundation-level orientation for how AXIOM-MESH is designed
 
 ## 1) System Pillars
 
-AXIOM-MESH is organized into four runtime pillars and supporting contracts/tooling:
+AXIOM-MESH is organized as **four runtime pillars** plus a broader sovereignty capability program.
+
+Runtime pillars and supporting contracts/tooling:
 - **Gateway (TypeScript):** ingress, auth, routing, channel adapters.
 - **Hypervisor (Python):** orchestration, context synthesis, policy decisions, agent loops.
 - **Sandbox (TypeScript + Docker):** constrained execution and runtime isolation.
 - **Grid (Go):** ledger/state movement, p2p synchronization, chain integrations.
+
+
+
+### Pillar taxonomy note
+- **4 runtime pillars** define executable system topology (Gateway, Hypervisor, Sandbox, Grid).
+- **8 sovereignty pillars** define higher-level autonomy/economic capabilities (documented in `docs/MASTER-INTEGRATION.md`).
+
+These are complementary, not conflicting.
 
 ## 2) Trust and Control Principles
 

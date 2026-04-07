@@ -72,3 +72,10 @@ For future pruning:
 2. Prefer **archive over delete** for strategic documents unless clearly obsolete.
 3. Avoid duplicate strategy/audit trackers at repository root.
 4. Keep exactly one canonical roadmap and one canonical audit report.
+
+
+## Documentation alignment update (2026-04-07)
+- Clarified platform framing: 4 runtime pillars vs 8 sovereignty capability pillars.
+- Normalized HOWTO index coverage so all existing runbooks are discoverable.
+- Promoted open items to top of `docs/MASTER-TODO.md` and added documentation assurance tasks (traceability matrix, evidence freshness audit, HOWTO coverage CI check).
+- Added assessment record: `docs/assessments/DOCS-COVERAGE-ASSESSMENT-2026-04-07.md`.

@@ -19,7 +19,22 @@ Update format example:
 
 ---
 
-## 2) Priority Lanes (Now)
+
+## 2) Active Pending Queue (Top Priority)
+
+> This section is the canonical short-list of incomplete items. Completed history remains below for auditability.
+
+- [ ] **P0** Phase 2: Wire Graphify pipeline to XMCP ingestion (fetch X posts in `detect()/extract()`).
+- [ ] **P0** Phase 2: Update evidence schemas with XMCP provenance fields (`source`, `xurl`, `cached`, `tool_name`).
+- [ ] **P1** Phase 3: Route XMCP calls through `shared/security/graph_safe.py` (`validate_url`, `sanitize_label`).
+- [ ] **P1** Phase 3: Add mock XMCP server to `docker-compose.yml` for local development.
+- [ ] **P1** Phase 3: Register X adapter in gateway channel registry (`gateway/src/channels/index.ts`).
+- [ ] **P1** M6.4 Deploy transformer foundation contracts on PulseChain testnet and publish deployment evidence bundle.
+- [ ] **P2** M12.1 Add docs↔code traceability matrix (feature claim → file path → test/evidence command).
+- [ ] **P2** M12.2 Add quarterly evidence freshness audit for security, performance, and reliability artifacts.
+- [ ] **P2** M12.3 Add CI check to ensure operator-facing features link to at least one HOWTO entry.
+
+## 3) Priority Lanes (Execution History and Detailed Planning)
 
 ### NEW – Tokenomics Hardening & Sustainability (2026-03-29)
 - [x] Fix networkSharePercentage default (10 → 60) in UniversalDistributionPool.sol — 2026-03-29 — @agent — aligned contract default with published 60/40 policy; uncommented __UUPSUpgradeable_init()
