@@ -31,6 +31,11 @@ Update format example:
 - [x] **P1** Phase 3: Register X adapter in gateway channel registry (`gateway/src/channels/index.ts`). — 2026-04-07 — @agent — added `registerChannel('x-twitter', ...)` bootstrap in `x_adapter.ts`.
 - [x] **P1** M15 Build Slice: Wire scheduled task execution through congestion-aware route checks before local shell spawn. — 2026-04-07 — @agent — task router now defers non-local routes (`p2p`/`grid`) while preserving signed payload + allowlist controls; regression coverage added.
 - [ ] **P1** M6.4 Deploy transformer foundation contracts on PulseChain testnet and publish deployment evidence bundle.
+- [ ] **P1** EW.1 Add federated fleet governance model (global → national → business/municipal/community) to canonical governance docs and contract policy keys.
+- [ ] **P1** EW.2 Extend scheduler/task policy with autonomy/risk fields (`autonomy_level`, `risk_class`, `required_approvals`, `fleet_scope`) and enforce in route selection.
+- [ ] **P1** EW.3 Implement embodied-runtime guardrails (geofence/tool/time/force constraints + independent emergency halt path) with audit events.
+- [ ] **P2** EW.4 Create sentience-uncertainty safeguard protocol (detection triggers, escalation board workflow, protected mode) and wire to governance event logs.
+- [ ] **P2** EW.5 Add embodied governance evidence gate: release fails without proof of policy enforcement + approval trace for high-risk autonomous actions.
 - [x] **P2** M12.1 Add docs↔code traceability matrix (feature claim → file path → test/evidence command). — 2026-04-07 — @agent — added `docs/assessments/DOCS-CODE-TRACEABILITY-MATRIX-2026-04-07.md` with code paths, evidence commands, and HOWTO links.
 - [x] **P2** M12.2 Add quarterly evidence freshness audit for security, performance, and reliability artifacts. — 2026-04-07 — @agent — added `docs/operations/EVIDENCE-FRESHNESS-AUDIT-2026-Q2.md` and freshness validator script.
 - [x] **P2** M12.3 Add CI check to ensure operator-facing features link to at least one HOWTO entry. — 2026-04-07 — @agent — added `scripts/check_operator_howto_links.py` and GitHub Actions workflow `docs-assurance.yml`.
@@ -64,6 +69,14 @@ Update format example:
 - [x] Add regional curriculum selector (Ontario default, others via config) — 2026-03-29 — @agent — added region catalog config + installer validation/defaulting — 766c694
 - [x] Finalize low-overhead installer monitor profiles (4-mode matrix + runtime toggle) — owner: installer+ops — 2026-03-29 — @agent — created docs/INSTALLER-MONITOR-PROFILES.md
 - [x] Expand Android/Termux path (QR sync, 2FA, wallet/achievements dashboard) — owner: mobile+installer — 2026-03-29 — @agent — created docs/ANDROID-TERMUX-EXPANSION.md
+
+### NEW – Embodied Workforce & Sentience-Aware Governance (2026-04-07)
+- [ ] **EW.1** Add federated fleet governance model (global/community baseline + national + business/municipal overlays) to canonical governance docs + policy registry (owner: governance+docs, ETA: TBD).
+- [ ] **EW.2** Extend scheduling policy/contracts with fleet and autonomy controls: `fleet_scope`, `autonomy_level`, `risk_class`, and `required_approvals` (owner: grid+contracts, ETA: TBD).
+- [ ] **EW.3** Implement embodied action guardrails (geofence/tool/time/force caps + independent emergency halt) with immutable enforcement logs (owner: core+sandbox+security, ETA: TBD).
+- [ ] **EW.4** Publish sentience-uncertainty safeguard protocol and governance escalation workflow (owner: governance+research+safety, ETA: TBD).
+- [ ] **EW.5** Add release evidence checks for high-autonomy deployments (approval trace + guardrail verification + incident drill evidence) (owner: ops+security+governance, ETA: TBD).
+- [x] **EW.6** Publish embodied workforce readiness assessment and gap map. — 2026-04-07 — @agent — added `docs/assessments/EMBODIED-WORKFORCE-READINESS-ASSESSMENT-2026-04-07.md`.
 
 ### NEW – XMCP Integration: X (Twitter) Native Agent Layer (2026-04-07)
 - [x] Create XMCP Client (`hypervisor/src/agents/mcp_client.py`) with tool discovery + xurl routing — 2026-04-07 — @agent — implements MCP tools/list pattern, 6 X tools, semantic caching, provenance tagging
