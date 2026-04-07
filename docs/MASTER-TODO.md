@@ -30,9 +30,9 @@ Update format example:
 - [x] **P1** Phase 3: Add mock XMCP server to `docker-compose.yml` for local development. — 2026-04-07 — @agent — confirmed `xmcp-mock` service in compose for local X MCP testing.
 - [x] **P1** Phase 3: Register X adapter in gateway channel registry (`gateway/src/channels/index.ts`). — 2026-04-07 — @agent — added `registerChannel('x-twitter', ...)` bootstrap in `x_adapter.ts`.
 - [ ] **P1** M6.4 Deploy transformer foundation contracts on PulseChain testnet and publish deployment evidence bundle.
-- [ ] **P2** M12.1 Add docs↔code traceability matrix (feature claim → file path → test/evidence command).
-- [ ] **P2** M12.2 Add quarterly evidence freshness audit for security, performance, and reliability artifacts.
-- [ ] **P2** M12.3 Add CI check to ensure operator-facing features link to at least one HOWTO entry.
+- [x] **P2** M12.1 Add docs↔code traceability matrix (feature claim → file path → test/evidence command). — 2026-04-07 — @agent — added `docs/assessments/DOCS-CODE-TRACEABILITY-MATRIX-2026-04-07.md` with code paths, evidence commands, and HOWTO links.
+- [x] **P2** M12.2 Add quarterly evidence freshness audit for security, performance, and reliability artifacts. — 2026-04-07 — @agent — added `docs/operations/EVIDENCE-FRESHNESS-AUDIT-2026-Q2.md` and freshness validator script.
+- [x] **P2** M12.3 Add CI check to ensure operator-facing features link to at least one HOWTO entry. — 2026-04-07 — @agent — added `scripts/check_operator_howto_links.py` and GitHub Actions workflow `docs-assurance.yml`.
 
 ## 3) Priority Lanes (Execution History and Detailed Planning)
 
