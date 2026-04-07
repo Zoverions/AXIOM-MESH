@@ -503,3 +503,27 @@ def extend_graphify_with_x(
     memory._build_from_directory(root_dir, incremental=incremental)
     
     return memory.graph
+
+
+def ingest_reasoning_map(json_data: Dict[str, Any], builder=None) -> Dict[str, Any]:
+    """
+    Ingest a reasoning map (ontology import pattern, Wiki-link style, or JSON export)
+    as a post-processing stage for the Graphify pipeline.
+
+    Args:
+        json_data: The framework reasoning map data.
+        builder: Optional ReasoningMapBuilder instance.
+
+    Returns:
+        Extraction dict compatible with Graphify.
+    """
+    if builder is None:
+        try:
+            from hypervisor.src.reasoning.map_builder import ReasoningMapBuilder
+            builder = ReasoningMapBuilder()
+        except ImportError:
+            logger.error("ReasoningMapBuilder not found. Cannot ingest reasoning map.")
+            return {}
+
+    # Convert framework description into nodes and edges
+    return builder.build_from_json(json_data)

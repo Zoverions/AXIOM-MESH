@@ -14,16 +14,28 @@ class AdaptiveVariableNode:
         pulse_system,
         grid_ledger,
         xmcp_tools: Optional[List[str]] = None,
+        reasoning_map_ref: Optional[str] = None,
     ):
         self.hypervisor = hypervisor
         self.pulse = pulse_system
         self.ledger = grid_ledger
         self.current_role = "base"  # skill-pill, education-plus, governance-plus, financial, etc.
         self.xmcp_tools = xmcp_tools or []  # X MCP tools available to this node
+        self.reasoning_map_ref = reasoning_map_ref  # Reference to a framework reasoning map
     
     def receive_network_signal(self, signal: dict):
         """Pulse System calls this when a shortage is detected."""
         needed_role = signal["required_role"]
+
+        # Query relevant map -> inject navigation rules into context
+        if self.reasoning_map_ref:
+            print(f"[🧠] Injecting reasoning rules from: {self.reasoning_map_ref}")
+            # Inject into the signal context for the planner
+            if "context" not in signal:
+                signal["context"] = {}
+            signal["context"]["reasoning_map_ref"] = self.reasoning_map_ref
+            signal["context"]["navigation_rules"] = f"Apply framework rules from {self.reasoning_map_ref}"
+
         if needed_role != self.current_role:
             print(f"[🔄] Adaptive Node switching from {self.current_role} → {needed_role}")
             self.hypervisor.load_capsule_module(needed_role)  # reconfigures SkillRL vectors
