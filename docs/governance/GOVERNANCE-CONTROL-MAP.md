@@ -20,6 +20,13 @@ The following key interoperability knobs are subject to governance control:
 *   **`policy` (per peer class)**: Overrides the `default_policy` for specific known peer classes (e.g., `deny`, `allow_with_review`, `allow`).
 *   **Alignment Profile Priority Tags**: System-level tags (e.g., `critical`, `system`, `override`) that dictate routing and resource allocation.
 
+Federated embodied fleet governance also uses contract-facing policy keys (see `FLEET-GOVERNANCE-POLICY-REGISTRY.md`):
+
+*   **`fleet.scope`**: Deployment governance layer (`community` → `municipal`/`business` → `national` → `global`).
+*   **`fleet.autonomy.level`**: Task autonomy class (`manual`, `assisted`, `supervised`, `autonomous`).
+*   **`fleet.risk.class`**: Risk class for route/approval gating (`low`, `medium`, `high`, `critical`).
+*   **`fleet.required.approvals`**: Minimum approval threshold enforced prior to task execution.
+
 ---
 
 ## 2. Governance Bodies and Authority Scopes

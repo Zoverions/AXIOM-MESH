@@ -31,8 +31,8 @@ Update format example:
 - [x] **P1** Phase 3: Register X adapter in gateway channel registry (`gateway/src/channels/index.ts`). — 2026-04-07 — @agent — added `registerChannel('x-twitter', ...)` bootstrap in `x_adapter.ts`.
 - [x] **P1** M15 Build Slice: Wire scheduled task execution through congestion-aware route checks before local shell spawn. — 2026-04-07 — @agent — task router now defers non-local routes (`p2p`/`grid`) while preserving signed payload + allowlist controls; regression coverage added.
 - [ ] **P1** M6.4 Deploy transformer foundation contracts on PulseChain testnet and publish deployment evidence bundle.
-- [ ] **P1** EW.1 Add federated fleet governance model (global → national → business/municipal/community) to canonical governance docs and contract policy keys.
-- [ ] **P1** EW.2 Extend scheduler/task policy with autonomy/risk fields (`autonomy_level`, `risk_class`, `required_approvals`, `fleet_scope`) and enforce in route selection.
+- [x] **P1** EW.1 Add federated fleet governance model (global → national → business/municipal/community) to canonical governance docs and contract policy keys. — 2026-04-07 — @agent — updated canonical governance docs and added federated fleet policy key registry.
+- [x] **P1** EW.2 Extend scheduler/task policy with autonomy/risk fields (`autonomy_level`, `risk_class`, `required_approvals`, `fleet_scope`) and enforce in route selection. — 2026-04-07 — @agent — scheduler now validates autonomy/risk/approval/fleet_scope policy and injects fields into route selection state.
 - [ ] **P1** EW.3 Implement embodied-runtime guardrails (geofence/tool/time/force constraints + independent emergency halt path) with audit events.
 - [ ] **P2** EW.4 Create sentience-uncertainty safeguard protocol (detection triggers, escalation board workflow, protected mode) and wire to governance event logs.
 - [ ] **P2** EW.5 Add embodied governance evidence gate: release fails without proof of policy enforcement + approval trace for high-risk autonomous actions.
@@ -71,8 +71,8 @@ Update format example:
 - [x] Expand Android/Termux path (QR sync, 2FA, wallet/achievements dashboard) — owner: mobile+installer — 2026-03-29 — @agent — created docs/ANDROID-TERMUX-EXPANSION.md
 
 ### NEW – Embodied Workforce & Sentience-Aware Governance (2026-04-07)
-- [ ] **EW.1** Add federated fleet governance model (global/community baseline + national + business/municipal overlays) to canonical governance docs + policy registry (owner: governance+docs, ETA: TBD).
-- [ ] **EW.2** Extend scheduling policy/contracts with fleet and autonomy controls: `fleet_scope`, `autonomy_level`, `risk_class`, and `required_approvals` (owner: grid+contracts, ETA: TBD).
+- [x] **EW.1** Add federated fleet governance model (global/community baseline + national + business/municipal overlays) to canonical governance docs + policy registry (owner: governance+docs, ETA: TBD). — 2026-04-07 — @agent — added federated governance overlays and contract policy key registry in canonical governance docs.
+- [x] **EW.2** Extend scheduling policy/contracts with fleet and autonomy controls: `fleet_scope`, `autonomy_level`, `risk_class`, and `required_approvals` (owner: grid+contracts, ETA: TBD). — 2026-04-07 — @agent — implemented scheduler policy fields and route-gating enforcement for high-risk/autonomous/fleet-scoped tasks.
 - [ ] **EW.3** Implement embodied action guardrails (geofence/tool/time/force caps + independent emergency halt) with immutable enforcement logs (owner: core+sandbox+security, ETA: TBD).
 - [ ] **EW.4** Publish sentience-uncertainty safeguard protocol and governance escalation workflow (owner: governance+research+safety, ETA: TBD).
 - [ ] **EW.5** Add release evidence checks for high-autonomy deployments (approval trace + guardrail verification + incident drill evidence) (owner: ops+security+governance, ETA: TBD).

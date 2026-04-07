@@ -20,6 +20,11 @@ ALLOWED_SCHEDULED_COMMANDS = {
     for cmd in os.getenv("ALLOWED_SCHEDULED_COMMANDS", "echo,python3,python").split(",")
     if cmd.strip()
 }
+ALLOWED_AUTONOMY_LEVELS = {"manual", "assisted", "supervised", "autonomous"}
+ALLOWED_RISK_CLASSES = {"low", "medium", "high", "critical"}
+HIGH_RISK_CLASSES = {"high", "critical"}
+GLOBAL_FLEET_SCOPES = {"global", "national"}
+HIGH_RISK_APPROVAL_MIN = int(os.getenv("HIGH_RISK_APPROVAL_MIN", "2"))
 
 
 def _get_scheduler_signing_key() -> str:
@@ -61,12 +66,42 @@ class ScheduleRequest(BaseModel):
     timestamp_ms: Optional[int] = None
     nonce: Optional[str] = None
     signature: Optional[str] = None
+    autonomy_level: str = "manual"
+    risk_class: str = "low"
+    required_approvals: int = 0
+    fleet_scope: str = "community"
+
+
+def _enforce_fleet_autonomy_policy(request: "ScheduleRequest") -> None:
+    if request.autonomy_level not in ALLOWED_AUTONOMY_LEVELS:
+        raise HTTPException(status_code=400, detail=f"Invalid autonomy_level '{request.autonomy_level}'")
+
+    if request.risk_class not in ALLOWED_RISK_CLASSES:
+        raise HTTPException(status_code=400, detail=f"Invalid risk_class '{request.risk_class}'")
+
+    if request.required_approvals < 0:
+        raise HTTPException(status_code=400, detail="required_approvals must be >= 0")
+
+    if request.risk_class in HIGH_RISK_CLASSES and request.required_approvals < HIGH_RISK_APPROVAL_MIN:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                f"risk_class '{request.risk_class}' requires at least {HIGH_RISK_APPROVAL_MIN} approvals"
+            ),
+        )
+
+    if request.autonomy_level == "autonomous" and request.required_approvals == 0:
+        raise HTTPException(status_code=403, detail="autonomous tasks require non-zero required_approvals")
 
 
 async def _resolve_execution_route(request: "ScheduleRequest") -> tuple[str, dict]:
     state = {
         "intent": request.command or request.name,
         "priority_tag": request.priority_tag,
+        "fleet_scope": request.fleet_scope,
+        "autonomy_level": request.autonomy_level,
+        "risk_class": request.risk_class,
+        "required_approvals": request.required_approvals,
         "selected_route": "local",
         "metrics": {},
     }
@@ -80,6 +115,7 @@ async def _resolve_execution_route(request: "ScheduleRequest") -> tuple[str, dic
 async def schedule_task(request: ScheduleRequest):
     try:
         _verify_schedule_signature(request)
+        _enforce_fleet_autonomy_policy(request)
         # Define a closure that will execute the requested command
         async def dynamic_task():
             if not request.command:
@@ -87,11 +123,20 @@ async def schedule_task(request: ScheduleRequest):
                 return
 
             selected_route, metrics = await _resolve_execution_route(request)
+            if request.fleet_scope in GLOBAL_FLEET_SCOPES and selected_route == "local":
+                print(
+                    f"[TaskScheduler] Blocking task '{request.name}': fleet_scope={request.fleet_scope} "
+                    "must not execute on local route"
+                )
+                return
+
             if selected_route != "local":
                 print(
                     f"[TaskScheduler] Deferring task '{request.name}' to route '{selected_route}'. "
                     f"local_load={metrics.get('local_load')} memory_pressure={metrics.get('memory_pressure')} "
-                    f"priority_tag={request.priority_tag}"
+                    f"priority_tag={request.priority_tag} fleet_scope={request.fleet_scope} "
+                    f"autonomy_level={request.autonomy_level} risk_class={request.risk_class} "
+                    f"required_approvals={request.required_approvals}"
                 )
                 return
 
