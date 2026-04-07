@@ -4,7 +4,7 @@ import os
 import pytest
 
 from src.engine.alignment import AlignmentProfile
-from src.graph.resource_balancer import resource_balancer_app
+from src.graph.resource_balancer import resource_balancer_app, SystemMetrics
 
 
 @pytest.mark.asyncio
