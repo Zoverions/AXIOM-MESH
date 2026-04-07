@@ -176,3 +176,76 @@ async def test_scheduler_accepts_high_risk_with_required_approvals(monkeypatch):
         assert response.status_code == 200
 
     global_scheduler.remove_task("approved_task")
+
+
+@pytest.mark.asyncio
+async def test_scheduler_rejects_task_outside_geofence():
+    os.environ["TASK_SCHEDULER_SIGNING_KEY"] = "test-signing-key"
+    nonce = str(uuid.uuid4())
+    timestamp_ms = int(time.time() * 1000)
+    command = "echo geofence"
+    signature = build_schedule_signature("geo_task", 60, False, command, timestamp_ms, nonce, os.environ["TASK_SCHEDULER_SIGNING_KEY"])
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        response = await ac.post("/tasks/schedule", json={
+            "name": "geo_task",
+            "interval": 60,
+            "is_recurring": False,
+            "command": command,
+            "allowed_geofences": ["us-west", "ca-central"],
+            "current_geofence": "eu-central",
+            "timestamp_ms": timestamp_ms,
+            "nonce": nonce,
+            "signature": signature,
+        })
+        assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_scheduler_rejects_task_exceeding_force_limit():
+    os.environ["TASK_SCHEDULER_SIGNING_KEY"] = "test-signing-key"
+    nonce = str(uuid.uuid4())
+    timestamp_ms = int(time.time() * 1000)
+    command = "echo force"
+    signature = build_schedule_signature("force_task", 60, False, command, timestamp_ms, nonce, os.environ["TASK_SCHEDULER_SIGNING_KEY"])
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        response = await ac.post("/tasks/schedule", json={
+            "name": "force_task",
+            "interval": 60,
+            "is_recurring": False,
+            "command": command,
+            "requested_force_newtons": 20.0,
+            "max_force_newtons": 10.0,
+            "timestamp_ms": timestamp_ms,
+            "nonce": nonce,
+            "signature": signature,
+        })
+        assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_scheduler_rejects_when_emergency_halt_enabled():
+    os.environ["TASK_SCHEDULER_SIGNING_KEY"] = "test-signing-key"
+    os.environ["EMBODIED_EMERGENCY_HALT"] = "true"
+    nonce = str(uuid.uuid4())
+    timestamp_ms = int(time.time() * 1000)
+    command = "echo halt"
+    signature = build_schedule_signature("halt_task", 60, False, command, timestamp_ms, nonce, os.environ["TASK_SCHEDULER_SIGNING_KEY"])
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        response = await ac.post("/tasks/schedule", json={
+            "name": "halt_task",
+            "interval": 60,
+            "is_recurring": False,
+            "command": command,
+            "timestamp_ms": timestamp_ms,
+            "nonce": nonce,
+            "signature": signature,
+        })
+        assert response.status_code == 503
+
+    os.environ.pop("EMBODIED_EMERGENCY_HALT", None)
