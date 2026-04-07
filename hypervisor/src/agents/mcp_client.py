@@ -47,6 +47,19 @@ try:
 except ImportError:
     CACHE_AVAILABLE = False
 
+# Import security helpers for routing XMCP calls through graph_safe
+try:
+    import sys
+    SHARED_PATH = Path(__file__).parent.parent.parent.parent / "shared" / "src"
+    if str(SHARED_PATH) not in sys.path:
+        sys.path.insert(0, str(SHARED_PATH))
+    from security.graph_safe import validate_url, sanitize_label
+    SECURITY_AVAILABLE = True
+except ImportError:
+    SECURITY_AVAILABLE = False
+    validate_url = lambda x: x  # passthrough
+    sanitize_label = lambda x: x  # passthrough
+
 
 @dataclass
 class XMCPConfig:
@@ -322,6 +335,41 @@ class XMCPClient:
         
         return True
     
+    def _sanitize_tool_params(self, tool_name: str, params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Sanitize tool parameters using graph_safe helpers (Phase 3 security hardening).
+        
+        Routes all string parameters through validate_url() and sanitize_label()
+        to prevent SSRF, XSS, and path traversal attacks.
+        
+        Args:
+            tool_name: Name of the tool being called
+            params: Original parameters
+            
+        Returns:
+            Sanitized parameter dict
+        """
+        if not SECURITY_AVAILABLE:
+            return params
+        
+        sanitized = {}
+        for key, value in params.items():
+            if isinstance(value, str):
+                # Check if it looks like a URL
+                if value.startswith(('http://', 'https://', 'xurl://')):
+                    try:
+                        sanitized[key] = validate_url(value)
+                    except ValueError as e:
+                        logger.warning(f"Blocked unsafe URL in {tool_name}.{key}: {e}")
+                        sanitized[key] = ""  # Safe default
+                else:
+                    # Sanitize as label (strip control chars, HTML escape, cap length)
+                    sanitized[key] = sanitize_label(value)[:500]
+            else:
+                sanitized[key] = value
+        
+        return sanitized
+    
     def _build_xurl(self, tool_name: str, params: Dict[str, Any]) -> str:
         """Build xurl from tool name and parameters."""
         tool_def = next((t for t in self.X_TOOLS if t.name == tool_name), None)
@@ -440,6 +488,9 @@ class XMCPClient:
         Returns:
             XMCPToolResponse with data, provenance, and rate limit info
         """
+        # Apply security sanitization to all string params (Phase 3 hardening)
+        sanitized_params = self._sanitize_tool_params(tool_name, params)
+        
         # Check rate limits first
         if not self._check_rate_limit(tool_name):
             return XMCPToolResponse(
@@ -452,10 +503,10 @@ class XMCPClient:
             )
         
         # Build xurl for provenance
-        xurl = self._build_xurl(tool_name, params)
+        xurl = self._build_xurl(tool_name, sanitized_params)
         
         # Check cache (unless forced refresh)
-        cache_key = self._compute_cache_key(tool_name, params)
+        cache_key = self._compute_cache_key(tool_name, sanitized_params)
         if not force_refresh:
             cached = self._get_cached_response(cache_key)
             if cached:
@@ -477,9 +528,9 @@ class XMCPClient:
         # Execute tool call
         try:
             if os.getenv("X_MOCK_MODE", "false").lower() == "true":
-                result = self._execute_mock_call(tool_name, params)
+                result = self._execute_mock_call(tool_name, sanitized_params)
             else:
-                result = self._execute_real_call(tool_name, params)
+                result = self._execute_real_call(tool_name, sanitized_params)
             
             # Cache the response
             self._save_to_cache(cache_key, result)
