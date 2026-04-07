@@ -26,6 +26,9 @@ crewai
 guardrails-ai
 llama-index
 
+# X (Twitter) integration - Official XDK
+tweepy>=4.14.0
+
 # Test dependencies
 pytest
 pytest-asyncio

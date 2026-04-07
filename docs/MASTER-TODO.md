@@ -48,6 +48,19 @@ Update format example:
 - [x] Add regional curriculum selector (Ontario default, others via config) — 2026-03-29 — @agent — added region catalog config + installer validation/defaulting — 766c694
 - [x] Finalize low-overhead installer monitor profiles (4-mode matrix + runtime toggle) — owner: installer+ops — 2026-03-29 — @agent — created docs/INSTALLER-MONITOR-PROFILES.md
 - [x] Expand Android/Termux path (QR sync, 2FA, wallet/achievements dashboard) — owner: mobile+installer — 2026-03-29 — @agent — created docs/ANDROID-TERMUX-EXPANSION.md
+
+### NEW – XMCP Integration: X (Twitter) Native Agent Layer (2026-04-07)
+- [x] Create XMCP Client (`hypervisor/src/agents/mcp_client.py`) with tool discovery + xurl routing — 2026-04-07 — @agent — implements MCP tools/list pattern, 6 X tools, semantic caching, provenance tagging
+- [x] Add Planning Orchestrator (`hypervisor/src/orchestrator/planner.py`) with XMCP tool injection — 2026-04-07 — @agent — filters tools by intent keywords, mirrors Cloudflare Code Mode pattern for <1k token context
+- [x] Extend AdaptiveVariableNode (`hypervisor/core/adaptive_node.py`) with xmcp_tools field — 2026-04-07 — @agent — added set_xmcp_tools()/get_xmcp_tools() methods
+- [x] Create X Channel Adapter (`gateway/src/channels/x_adapter.ts`) — 2026-04-07 — @agent — extends BaseChannel, xurl patterns, rate limit tracking, mock mode
+- [x] Add official XDKs to dependencies — 2026-04-07 — @agent — tweepy>=4.14.0 (Python), twitter-api-v2@^1.22.0 (TypeScript)
+- [x] Write integration documentation (`docs/XMCP_INTEGRATION.md`) — 2026-04-07 — @agent — architecture, API reference, configuration, testing guide
+- [ ] Phase 2: Wire Graphify pipeline to XMCP ingestion (fetch X posts in detect()/extract())
+- [ ] Phase 2: Update evidence schemas with xmcp provenance fields (source, xurl, cached, tool_name)
+- [ ] Phase 3: Route XMCP calls through shared/security/graph_safe.py (validate_url, sanitize_label)
+- [ ] Phase 3: Add mock XMCP server to docker-compose.yml for local dev
+- [ ] Phase 3: Register X adapter in gateway channel registry (gateway/src/channels/index.ts)
 - [x] Ship one-time blockchain code + QR login E2E flow — 2026-03-29 — @agent — implemented one-time QR auth session init/complete/status endpoints with nonce, expiry, and one-time consumption semantics
 - [x] Implement Secure Election Node (Governance+ paper ballot fallback + ZK verification) — 2026-03-29 — @agent — added election session init/verify routes with fail-closed digest checks and paper fallback code path
 - [x] Live USB polish pass (preloaded model bundles + capsule selector UX) — 2026-03-29 — @agent — added capsule-tier selector + offline model bundle selector to live USB launcher and passed capsule tier into auto-installer

@@ -1,15 +1,26 @@
 # hypervisor/core/adaptive_node.py
+from typing import List, Dict, Any, Optional
+
 class AdaptiveVariableNode:
     """
     Dynamically switches Capsule Plus modules or node types based on Pulse signals.
     Higher rewards for filling network gaps.
+    
+    Phase 2 Update: Added xmcp_tools field for X (Twitter) integration.
     """
-    def __init__(self, hypervisor, pulse_system, grid_ledger):
+    def __init__(
+        self,
+        hypervisor,
+        pulse_system,
+        grid_ledger,
+        xmcp_tools: Optional[List[str]] = None,
+    ):
         self.hypervisor = hypervisor
         self.pulse = pulse_system
         self.ledger = grid_ledger
         self.current_role = "base"  # skill-pill, education-plus, governance-plus, financial, etc.
-
+        self.xmcp_tools = xmcp_tools or []  # X MCP tools available to this node
+    
     def receive_network_signal(self, signal: dict):
         """Pulse System calls this when a shortage is detected."""
         needed_role = signal["required_role"]
@@ -24,3 +35,19 @@ class AdaptiveVariableNode:
             # Higher reward multiplier for filling gap
             reward_multiplier = 1.0 + (signal.get("shortage_score", 1.0) * 0.5)
             print(f"[💰] Reward multiplier applied: {reward_multiplier}x")
+    
+    def set_xmcp_tools(self, tools: List[str]) -> None:
+        """
+        Set available X MCP tools for this node.
+        
+        Called by planner after xmcp_discover() injects relevant tools.
+        
+        Args:
+            tools: List of tool names (e.g., ["search_posts", "get_trends"])
+        """
+        self.xmcp_tools = tools
+        print(f"[🔧] XMCP tools configured: {tools}")
+    
+    def get_xmcp_tools(self) -> List[str]:
+        """Get currently configured X MCP tools."""
+        return self.xmcp_tools
