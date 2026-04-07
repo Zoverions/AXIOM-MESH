@@ -56,11 +56,11 @@ Update format example:
 - [x] Create X Channel Adapter (`gateway/src/channels/x_adapter.ts`) — 2026-04-07 — @agent — extends BaseChannel, xurl patterns, rate limit tracking, mock mode
 - [x] Add official XDKs to dependencies — 2026-04-07 — @agent — tweepy>=4.14.0 (Python), twitter-api-v2@^1.22.0 (TypeScript)
 - [x] Write integration documentation (`docs/XMCP_INTEGRATION.md`) — 2026-04-07 — @agent — architecture, API reference, configuration, testing guide
-- [x] Phase 2: Wire Graphify pipeline to XMCP ingestion — 2026-04-07 — @agent — created `hypervisor/src/memory/xmcp_ingestion.py` with XMCPIngester class, XPostNode/XUserNode dataclasses, extend_graphify_with_x() wrapper
-- [x] Phase 2: Update evidence schemas with xmcp provenance fields — 2026-04-07 — @agent — updated `schemas/intent_response.v1.json` with structured provenance objects (source, xurl, tool_call, timestamp, cache_hit, edge_type)
-- [x] Phase 3: Route XMCP calls through shared/security/graph_safe.py — 2026-04-07 — @agent — added _sanitize_tool_params() to mcp_client.py using validate_url() and sanitize_label()
-- [x] Phase 3: Add mock XMCP server to docker-compose.yml — 2026-04-07 — @agent — added xmcp-mock service + `hypervisor/src/agents/xmcp_mock_server.py` Flask app
-- [x] Phase 3: Register X adapter in gateway channel registry — 2026-04-07 — @agent — updated `gateway/src/channels/index.ts` to import and export XAdapter
+- [ ] Phase 2: Wire Graphify pipeline to XMCP ingestion (fetch X posts in detect()/extract())
+- [ ] Phase 2: Update evidence schemas with xmcp provenance fields (source, xurl, cached, tool_name)
+- [ ] Phase 3: Route XMCP calls through shared/security/graph_safe.py (validate_url, sanitize_label)
+- [ ] Phase 3: Add mock XMCP server to docker-compose.yml for local dev
+- [ ] Phase 3: Register X adapter in gateway channel registry (gateway/src/channels/index.ts)
 - [x] Ship one-time blockchain code + QR login E2E flow — 2026-03-29 — @agent — implemented one-time QR auth session init/complete/status endpoints with nonce, expiry, and one-time consumption semantics
 - [x] Implement Secure Election Node (Governance+ paper ballot fallback + ZK verification) — 2026-03-29 — @agent — added election session init/verify routes with fail-closed digest checks and paper fallback code path
 - [x] Live USB polish pass (preloaded model bundles + capsule selector UX) — 2026-03-29 — @agent — added capsule-tier selector + offline model bundle selector to live USB launcher and passed capsule tier into auto-installer
