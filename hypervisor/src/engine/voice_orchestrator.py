@@ -21,7 +21,6 @@ class PersonaPlexOrchestrator:
 
         logger.info("[🎙️] Booting PersonaPlex 7B (1.58-bit Quantized)...")
         # In production, this loads the specific audio-native checkpoints
-        # self.audio_model = AudioLanguageModel.from_pretrained("nvidia/personaplex-7b-1.58bit", device_map="auto")
         self.is_speaking = False
         self.current_task_pid = None
 
@@ -43,7 +42,6 @@ class PersonaPlexOrchestrator:
                         continue
 
                 # 2. Feed audio into the model's rolling KV-Cache
-                # result_audio_chunk = self.audio_model.forward_audio(input_chunk)
 
                 # Mock audio response trigger
                 if b"trigger_response" in input_chunk: # Simplified condition
@@ -58,8 +56,6 @@ class PersonaPlexOrchestrator:
         Uses PersonaPlex's native overlap detection.
         Differentiates between background noise and a human attempting to interrupt.
         """
-        # score = self.audio_model.calculate_interruption_logit(audio_chunk)
-        # return score > 0.85
         return False # Mock
 
     async def _handle_thermodynamic_veto(self, stream_id: str):
@@ -87,6 +83,4 @@ class PersonaPlexOrchestrator:
 
     async def _stream_response(self, audio_out_queue: asyncio.Queue):
         """Streams generated audio chunks back to the Gateway."""
-        # async for out_chunk in self.audio_model.generate_audio_stream():
-        #     await audio_out_queue.put(out_chunk)
         self.is_speaking = False
