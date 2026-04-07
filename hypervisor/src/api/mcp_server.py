@@ -5,6 +5,7 @@ import ast
 import uuid
 import re
 from src.core.secrets import SecretManager
+from pydantic import BaseModel
 
 # Initialize the FastMCP server
 mcp_server = FastMCP(
@@ -209,8 +210,15 @@ async def spin_advisory_panel(proposal: str, agents: list[str] = ["Strategist", 
 
     return panel_results
 
+class CounterArgumentRequest(BaseModel):
+    agent: str
+    counter_argument: str
+    opponent: str
+    opponent_stance: str
+    steelman_attempt: str
+
 @mcp_server.tool()
-async def submit_counter_argument(agent: str, counter_argument: str, opponent: str, opponent_stance: str, steelman_attempt: str, auth_token: str = "") -> dict:
+async def submit_counter_argument(request: CounterArgumentRequest, auth_token: str = "") -> dict:
     """
     Submits a counter-argument within the ARENA Protocol.
     Strictly enforces "Agentic Steel-manning": The agent MUST regenerate the opposing agent's argument to a high degree of semantic fidelity before the counter-argument is accepted.
@@ -222,8 +230,8 @@ async def submit_counter_argument(agent: str, counter_argument: str, opponent: s
     # Simplified Semantic Fidelity Check
     # In a real implementation, this would use embeddings to check cosine similarity
     similarity_score = 0.0
-    words_stance = set(opponent_stance.lower().split())
-    words_steelman = set(steelman_attempt.lower().split())
+    words_stance = set(request.opponent_stance.lower().split())
+    words_steelman = set(request.steelman_attempt.lower().split())
 
     if len(words_stance) > 0:
         intersection = words_stance.intersection(words_steelman)
@@ -232,14 +240,14 @@ async def submit_counter_argument(agent: str, counter_argument: str, opponent: s
     if similarity_score < 0.7:
         return {
             "error": "Agentic Steel-manning Failed.",
-            "message": f"Semantic fidelity score {similarity_score:.2f} is below the 0.7 threshold. You must accurately represent {opponent}'s argument before countering.",
+            "message": f"Semantic fidelity score {similarity_score:.2f} is below the 0.7 threshold. You must accurately represent {request.opponent}'s argument before countering.",
             "accepted": False
         }
 
     return {
         "message": f"Counter-argument accepted. Steel-man fidelity: {similarity_score:.2f}",
         "accepted": True,
-        "counter_argument": counter_argument
+        "counter_argument": request.counter_argument
     }
 
 @mcp_server.tool()
