@@ -40,18 +40,26 @@
             "type": "string",
             "description": "X URL pattern used for XMCP-sourced data"
           },
-          "tool_call": {
+          "tool_name": {
             "type": "string",
             "description": "MCP tool name (e.g., search_posts, get_user_info)"
+          },
+          "tool_call": {
+            "type": "string",
+            "description": "Deprecated alias for tool_name"
           },
           "timestamp": {
             "type": "string",
             "format": "date-time",
             "description": "ISO8601 timestamp of data fetch"
           },
-          "cache_hit": {
+          "cached": {
             "type": "boolean",
             "description": "Whether this was served from semantic cache"
+          },
+          "cache_hit": {
+            "type": "boolean",
+            "description": "Deprecated alias for cached"
           },
           "edge_type": {
             "type": "string",

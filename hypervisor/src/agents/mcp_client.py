@@ -37,7 +37,7 @@ except ImportError:
 
 # Import graphify cache for semantic caching
 import sys
-GRAPHIFY_PATH = Path(__file__).parent.parent.parent.parent / "graphify_external"
+GRAPHIFY_PATH = Path(__file__).resolve().parents[3] / "graphify_external"
 if str(GRAPHIFY_PATH) not in sys.path:
     sys.path.insert(0, str(GRAPHIFY_PATH))
 

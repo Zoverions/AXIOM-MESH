@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
@@ -20,7 +21,7 @@ import networkx as nx
 
 # Import graphify modules (vendored in /workspace/graphify_external/graphify/)
 import sys
-GRAPHIFY_PATH = Path(__file__).parent.parent.parent.parent / "graphify_external"
+GRAPHIFY_PATH = Path(__file__).resolve().parents[3] / "graphify_external"
 if str(GRAPHIFY_PATH) not in sys.path:
     sys.path.insert(0, str(GRAPHIFY_PATH))
 
@@ -33,6 +34,8 @@ from graphify.report import generate as generate_report
 from graphify.export import to_json, to_html, to_cypher
 from graphify.cache import load_cached, save_cached, check_semantic_cache, save_semantic_cache
 from graphify.security import sanitize_label, validate_graph_path
+
+logger = logging.getLogger(__name__)
 
 
 # Semantic extraction stub - in full integration this calls LLM
@@ -64,6 +67,10 @@ class GraphMemoryConfig:
     enable_clustering: bool = True
     max_nodes_for_viz: int = 5000
     cache_enabled: bool = True
+    xmcp_queries: List[str] = field(default_factory=list)
+    xmcp_usernames: List[str] = field(default_factory=list)
+    xmcp_hashtags: List[str] = field(default_factory=list)
+    xmcp_mock_mode: bool = True
 
 
 @dataclass
@@ -193,6 +200,22 @@ class GraphMemory:
                     for p in paths:
                         save_cached(p, ast_result, root)
         
+        # Stage 2b: Ingest XMCP X data into the same extraction stream
+        if self.config.xmcp_queries or self.config.xmcp_usernames or self.config.xmcp_hashtags:
+            try:
+                from .xmcp_ingestion import ingest_x_data
+                x_extractions = ingest_x_data(
+                    queries=self.config.xmcp_queries,
+                    usernames=self.config.xmcp_usernames,
+                    hashtags=self.config.xmcp_hashtags,
+                    mock_mode=self.config.xmcp_mock_mode,
+                )
+                if x_extractions:
+                    extractions.extend(x_extractions)
+            except Exception as exc:
+                # Fail-open: local graphify extraction still proceeds
+                logger.warning(f"XMCP ingestion skipped due to error: {exc}")
+
         # Stage 3: Build graph
         if not extractions:
             # Return empty graph if nothing to process
