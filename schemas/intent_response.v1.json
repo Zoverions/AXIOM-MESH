@@ -28,8 +28,40 @@
     },
     "provenance": {
       "type": "array",
-      "items": { "type": "string" },
-      "description": "Data/model provenance sources used for this response."
+      "items": { 
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": ["graphify", "xmcp", "manual", "inferred"],
+            "description": "Source system for this provenance entry"
+          },
+          "xurl": {
+            "type": "string",
+            "description": "X URL pattern used for XMCP-sourced data"
+          },
+          "tool_call": {
+            "type": "string",
+            "description": "MCP tool name (e.g., search_posts, get_user_info)"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO8601 timestamp of data fetch"
+          },
+          "cache_hit": {
+            "type": "boolean",
+            "description": "Whether this was served from semantic cache"
+          },
+          "edge_type": {
+            "type": "string",
+            "enum": ["EXTRACTED", "INFERRED", "AMBIGUOUS"],
+            "description": "Confidence level for graph edges"
+          }
+        },
+        "required": ["source"]
+      },
+      "description": "Data/model provenance sources with XMCP support"
     },
     "trace_id": {
       "type": "string",

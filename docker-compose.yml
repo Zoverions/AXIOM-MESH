@@ -38,6 +38,20 @@ services:
     networks:
       - zero-trust-grid
 
+  # XMCP Mock Server for X API testing (Phase 3)
+  xmcp-mock:
+    image: python:3.12-slim
+    command: >
+      sh -c "pip install flask &&
+             python /app/xmcp_mock_server.py"
+    volumes: ["./hypervisor/src/agents:/app"]
+    ports: ["8001:8001"]
+    environment:
+      - FLASK_ENV=development
+      - X_MOCK_MODE=true
+    networks:
+      - zero-trust-grid
+
   # Optional: Cross-chain relayer service (new)
   crosschain-relayer:
     build:
