@@ -5,9 +5,11 @@ import hmac
 import hashlib
 import time
 import uuid
+from unittest.mock import AsyncMock
 from httpx import AsyncClient, ASGITransport
 from src.api.server import app
 from src.orchestrator.task_scheduler import global_scheduler
+from src.api.routers import tasks as tasks_router
 
 def build_schedule_signature(name: str, interval: int, is_recurring: bool, command: str, timestamp_ms: int, nonce: str, key: str) -> str:
     canonical = f"{name}:{interval}:{is_recurring}:{command}:{timestamp_ms}:{nonce}"
@@ -86,3 +88,34 @@ async def test_m73_scheduler_rejects_invalid_signature_and_raw_commands():
         })
         # Should be rejected because it lacks a valid signature
         assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_scheduler_defers_non_local_route(monkeypatch):
+    os.environ["TASK_SCHEDULER_SIGNING_KEY"] = "test-signing-key"
+    nonce = str(uuid.uuid4())
+    timestamp_ms = int(time.time() * 1000)
+    command = "echo deferred"
+    signature = build_schedule_signature("deferred_task", 3600, True, command, timestamp_ms, nonce, os.environ["TASK_SCHEDULER_SIGNING_KEY"])
+
+    monkeypatch.setattr(tasks_router, "analyze_metrics", lambda state: {"metrics": {"local_load": 0.92, "memory_pressure": 0.81}})
+    monkeypatch.setattr(tasks_router, "evaluate_route", AsyncMock(return_value={"selected_route": "p2p"}))
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        response = await ac.post("/tasks/schedule", json={
+            "name": "deferred_task",
+            "interval": 3600,
+            "is_recurring": True,
+            "command": command,
+            "priority_tag": "background",
+            "timestamp_ms": timestamp_ms,
+            "nonce": nonce,
+            "signature": signature,
+        })
+        assert response.status_code == 200
+
+    assert "deferred_task" in global_scheduler.tasks
+    await global_scheduler.tasks["deferred_task"]["func"]()
+    tasks_router.evaluate_route.assert_awaited()
+    global_scheduler.remove_task("deferred_task")

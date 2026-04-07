@@ -29,6 +29,7 @@ Update format example:
 - [x] **P1** Phase 3: Route XMCP calls through `shared/security/graph_safe.py` (`validate_url`, `sanitize_label`). — 2026-04-07 — @agent — `XMCPClient.call_tool()` now sanitizes string params and validates generated xurl before execution/caching.
 - [x] **P1** Phase 3: Add mock XMCP server to `docker-compose.yml` for local development. — 2026-04-07 — @agent — confirmed `xmcp-mock` service in compose for local X MCP testing.
 - [x] **P1** Phase 3: Register X adapter in gateway channel registry (`gateway/src/channels/index.ts`). — 2026-04-07 — @agent — added `registerChannel('x-twitter', ...)` bootstrap in `x_adapter.ts`.
+- [x] **P1** M15 Build Slice: Wire scheduled task execution through congestion-aware route checks before local shell spawn. — 2026-04-07 — @agent — task router now defers non-local routes (`p2p`/`grid`) while preserving signed payload + allowlist controls; regression coverage added.
 - [ ] **P1** M6.4 Deploy transformer foundation contracts on PulseChain testnet and publish deployment evidence bundle.
 - [x] **P2** M12.1 Add docs↔code traceability matrix (feature claim → file path → test/evidence command). — 2026-04-07 — @agent — added `docs/assessments/DOCS-CODE-TRACEABILITY-MATRIX-2026-04-07.md` with code paths, evidence commands, and HOWTO links.
 - [x] **P2** M12.2 Add quarterly evidence freshness audit for security, performance, and reliability artifacts. — 2026-04-07 — @agent — added `docs/operations/EVIDENCE-FRESHNESS-AUDIT-2026-Q2.md` and freshness validator script.

@@ -187,3 +187,13 @@ Faster innovation cycles with safer production evolution.
 - 40% reduction in p99 intent routing latency under 2x load.
 - 50% reduction in invalid traffic CPU burn.
 - No increase in privacy incident rate or policy violation rate.
+
+---
+
+## Active Build Slice (2026-04-07)
+
+### Congestion-Aware Scheduled Task Routing (Started)
+- Wire Hypervisor scheduled command execution to `resource_balancer` route evaluation before local process spawn.
+- If route resolves to `p2p` or `grid`, defer local execution (fail-safe for shared-machine performance).
+- Preserve existing command allowlist + signed payload controls to avoid security regressions.
+- Add regression tests proving non-local route decisions do not execute local shell commands.

@@ -9,6 +9,7 @@ import shlex
 import time
 import uuid
 from src.orchestrator.task_scheduler import global_scheduler
+from src.graph.resource_balancer import analyze_metrics, evaluate_route
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 NONCE_CACHE: set[str] = set()
@@ -56,9 +57,24 @@ class ScheduleRequest(BaseModel):
     interval: int
     is_recurring: bool = True
     command: Optional[str] = None
+    priority_tag: str = "default"
     timestamp_ms: Optional[int] = None
     nonce: Optional[str] = None
     signature: Optional[str] = None
+
+
+async def _resolve_execution_route(request: "ScheduleRequest") -> tuple[str, dict]:
+    state = {
+        "intent": request.command or request.name,
+        "priority_tag": request.priority_tag,
+        "selected_route": "local",
+        "metrics": {},
+    }
+    metrics_update = analyze_metrics(state)
+    state.update(metrics_update)
+    route_update = await evaluate_route(state)
+    selected_route = route_update.get("selected_route", "local")
+    return selected_route, state.get("metrics", {})
 
 @router.post("/schedule")
 async def schedule_task(request: ScheduleRequest):
@@ -68,6 +84,15 @@ async def schedule_task(request: ScheduleRequest):
         async def dynamic_task():
             if not request.command:
                 print(f"[TaskScheduler] Executing dynamically scheduled task '{request.name}' (no command provided)")
+                return
+
+            selected_route, metrics = await _resolve_execution_route(request)
+            if selected_route != "local":
+                print(
+                    f"[TaskScheduler] Deferring task '{request.name}' to route '{selected_route}'. "
+                    f"local_load={metrics.get('local_load')} memory_pressure={metrics.get('memory_pressure')} "
+                    f"priority_tag={request.priority_tag}"
+                )
                 return
 
             print(f"[TaskScheduler] Executing dynamically scheduled task '{request.name}': {request.command}")
