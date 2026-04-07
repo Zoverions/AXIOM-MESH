@@ -4,24 +4,30 @@ This directory contains step-by-step guides for operating and developing AXIOM-M
 
 ## Core Operations
 - [Run Local Stack](run-local-stack.md) - Set up and run the full AXIOM-MESH stack locally
-- [Submit Intent](submit-intent.md) - How to submit intents to the hypervisor
-- [ZKML Inference](zkml-infer.md) - Perform zero-knowledge machine learning inference
+- [Submit Intent](submit-intent.md) - Submit intents through gateway/hypervisor flow
 - [Swarm Join](swarm-join.md) - Join or create a mesh swarm
+- [Add Nodes via QR](add-nodes-via-qr.md) - Onboard nodes through QR bootstrap flow
+- [ZKML Inference](zkml-infer.md) - Perform zero-knowledge machine-learning inference
 
-## Governance & Tokens
-- [Founder Claim](founder-claim.md) - Claim founder tokens
+## Governance, Policies, and Claims
+- [Founder Claim](founder-claim.md) - Claim founder allocations
 - [MeshStore Claim](meshstore-claim.md) - Claim mesh store rewards
-- [Contracts Local](contracts-local.md) - Interact with contracts locally
+- [NemoClaw Policy](nemoclaw-policy.md) - Manage policy updates and guardrails
+- [Contracts Local](contracts-local.md) - Compile/test/deploy contracts locally
 
-## Security & Recovery
-- [Recovery 2FA](recovery-2fa.md) - Two-factor authentication for recovery
-- [NemoClaw Policy](nemoclaw-policy.md) - Policy management for NemoClaw
+## Security, Recovery, and Emergency Procedures
+- [Recovery 2FA](recovery-2fa.md) - Two-factor recovery workflow
+- [Secret Management](secret-management.md) - Rotation and secure material handling
+- [Bridge Emergency Runbooks](bridge-emergency-runbooks.md) - Incident response for bridge/finality issues
 
-## Development & Deployment
+## Delivery, Release, and Installer Operations
 - [Release Gate Evidence](release-gate-evidence.md) - Prepare evidence for release gates
-- [Transformer Foundation PulseChain Testnet Deployment](transformer-foundation-pulsechain.md) - Deploy transformer package and publish on-chain evidence
+- [Transformer Foundation PulseChain](transformer-foundation-pulsechain.md) - Deploy transformer package and publish on-chain evidence
+- [Create Bootable USB](create-bootable-usb.md) - Build and validate bootable media
+- [Custom GUIs](custom-guis.md) - Customize and validate node GUIs
 
 ## Quick Checklist for Common Tasks
-- **New Developer Setup**: Follow [Run Local Stack](run-local-stack.md) then [Submit Intent](submit-intent.md)
-- **Token Claims**: See [Founder Claim](founder-claim.md) and [MeshStore Claim](meshstore-claim.md)
-- **Production Deployment**: Review [Release Gate Evidence](release-gate-evidence.md) requirements
+- **New developer setup:** [Run Local Stack](run-local-stack.md) → [Submit Intent](submit-intent.md)
+- **Security posture maintenance:** [Secret Management](secret-management.md) + [Recovery 2FA](recovery-2fa.md)
+- **Claims + governance operations:** [Founder Claim](founder-claim.md) / [MeshStore Claim](meshstore-claim.md) / [NemoClaw Policy](nemoclaw-policy.md)
+- **Release promotion:** [Release Gate Evidence](release-gate-evidence.md) + [Bridge Emergency Runbooks](bridge-emergency-runbooks.md)
