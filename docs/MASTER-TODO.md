@@ -24,8 +24,8 @@ Update format example:
 
 > This section is the canonical short-list of incomplete items. Completed history remains below for auditability.
 
-- [ ] **P0** Phase 2: Wire Graphify pipeline to XMCP ingestion (fetch X posts in `detect()/extract()`).
-- [ ] **P0** Phase 2: Update evidence schemas with XMCP provenance fields (`source`, `xurl`, `cached`, `tool_name`).
+- [x] **P0** Phase 2: Wire Graphify pipeline to XMCP ingestion (fetch X posts in `detect()/extract()`). — 2026-04-07 — @agent — GraphMemory directory pipeline now merges XMCP ingestion extractions before graph build.
+- [x] **P0** Phase 2: Update evidence schemas with XMCP provenance fields (`source`, `xurl`, `cached`, `tool_name`). — 2026-04-07 — @agent — updated intent response schema + XMCP ingestion edge/node provenance payloads.
 - [ ] **P1** Phase 3: Route XMCP calls through `shared/security/graph_safe.py` (`validate_url`, `sanitize_label`).
 - [ ] **P1** Phase 3: Add mock XMCP server to `docker-compose.yml` for local development.
 - [ ] **P1** Phase 3: Register X adapter in gateway channel registry (`gateway/src/channels/index.ts`).
@@ -71,8 +71,8 @@ Update format example:
 - [x] Create X Channel Adapter (`gateway/src/channels/x_adapter.ts`) — 2026-04-07 — @agent — extends BaseChannel, xurl patterns, rate limit tracking, mock mode
 - [x] Add official XDKs to dependencies — 2026-04-07 — @agent — tweepy>=4.14.0 (Python), twitter-api-v2@^1.22.0 (TypeScript)
 - [x] Write integration documentation (`docs/XMCP_INTEGRATION.md`) — 2026-04-07 — @agent — architecture, API reference, configuration, testing guide
-- [ ] Phase 2: Wire Graphify pipeline to XMCP ingestion (fetch X posts in detect()/extract())
-- [ ] Phase 2: Update evidence schemas with xmcp provenance fields (source, xurl, cached, tool_name)
+- [x] Phase 2: Wire Graphify pipeline to XMCP ingestion (fetch X posts in detect()/extract()) — 2026-04-07 — @agent — GraphMemory detect/extract flow now appends XMCP extraction artifacts before build_graph.
+- [x] Phase 2: Update evidence schemas with xmcp provenance fields (source, xurl, cached, tool_name) — 2026-04-07 — @agent — normalized schema fields and propagated cached/tool_name provenance in XMCP ingestion output.
 - [ ] Phase 3: Route XMCP calls through shared/security/graph_safe.py (validate_url, sanitize_label)
 - [ ] Phase 3: Add mock XMCP server to docker-compose.yml for local dev
 - [ ] Phase 3: Register X adapter in gateway channel registry (gateway/src/channels/index.ts)

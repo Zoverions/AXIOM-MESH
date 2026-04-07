@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import asyncio
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
@@ -21,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 # Import graphify modules
 import sys
-GRAPHIFY_PATH = Path(__file__).parent.parent.parent.parent / "graphify_external"
+GRAPHIFY_PATH = Path(__file__).resolve().parents[3] / "graphify_external"
 if str(GRAPHIFY_PATH) not in sys.path:
     sys.path.insert(0, str(GRAPHIFY_PATH))
 
@@ -77,6 +78,8 @@ class XPostNode:
     entities: Dict[str, Any] = field(default_factory=dict)
     source: str = "xmcp"
     xurl: str = ""
+    cached: bool = False
+    tool_name: str = ""
     edge_type: str = "EXTRACTED"  # EXTRACTED or INFERRED
 
 
@@ -94,6 +97,8 @@ class XUserNode:
     description: str = ""
     source: str = "xmcp"
     xurl: str = ""
+    cached: bool = False
+    tool_name: str = ""
 
 
 class XMCPIngester:
@@ -111,7 +116,7 @@ class XMCPIngester:
         self.config = config or XIngestionConfig()
         self.mcp_client = mcp_client
         if not self.mcp_client and XMCP_AVAILABLE:
-            self.mcp_client = XMCPClient(XMCPConfig(mock_mode=self.config.mock_mode))
+            self.mcp_client = XMCPClient(XMCPConfig())
         
         self._posts: List[XPostNode] = []
         self._users: Dict[str, XUserNode] = {}
@@ -136,6 +141,13 @@ class XMCPIngester:
         
         # Stage 3: Build extraction dict for Graphify
         return self._build_extraction_dict()
+
+    def _call_tool(self, tool_name: str, params: Dict[str, Any]) -> Any:
+        """Call MCP tool for both sync and async client implementations."""
+        result = self.mcp_client.call_tool(tool_name, params)
+        if asyncio.iscoroutine(result):
+            return asyncio.run(result)
+        return result
     
     def _fetch_posts(self) -> None:
         """Fetch posts from X using XMCP client."""
@@ -152,7 +164,7 @@ class XMCPIngester:
                 else:
                     safe_query = query[:500]
                 
-                result = self.mcp_client.call_tool(
+                result = self._call_tool(
                     "search_posts",
                     {"query": safe_query, "max_results": self.config.max_posts_per_query}
                 )
@@ -160,7 +172,12 @@ class XMCPIngester:
                 if result.success:
                     posts = result.data.get("data", [])
                     for post_data in posts:
-                        self._parse_post(post_data, result.xurl)
+                        self._parse_post(
+                            post_data,
+                            result.xurl,
+                            cached=result.cached,
+                            tool_name=result.provenance.get("tool_name", "search_posts"),
+                        )
                     
                     logger.info(f"Fetched {len(posts)} posts for query: {query}")
                 else:
@@ -178,7 +195,7 @@ class XMCPIngester:
                 else:
                     safe_query = query[:500]
                 
-                result = self.mcp_client.call_tool(
+                result = self._call_tool(
                     "search_posts",
                     {"query": safe_query, "max_results": self.config.max_posts_per_query}
                 )
@@ -186,7 +203,12 @@ class XMCPIngester:
                 if result.success:
                     posts = result.data.get("data", [])
                     for post_data in posts:
-                        self._parse_post(post_data, result.xurl)
+                        self._parse_post(
+                            post_data,
+                            result.xurl,
+                            cached=result.cached,
+                            tool_name=result.provenance.get("tool_name", "search_posts"),
+                        )
                     
                     logger.info(f"Fetched {len(posts)} posts for hashtag: {hashtag}")
                     
@@ -207,14 +229,19 @@ class XMCPIngester:
                 else:
                     safe_username = username[:50]
                 
-                result = self.mcp_client.call_tool(
+                result = self._call_tool(
                     "get_user_info",
                     {"username": safe_username}
                 )
                 
                 if result.success:
                     user_data = result.data.get("data", {})
-                    self._parse_user(user_data, result.xurl)
+                    self._parse_user(
+                        user_data,
+                        result.xurl,
+                        cached=result.cached,
+                        tool_name=result.provenance.get("tool_name", "get_user_info"),
+                    )
                     logger.info(f"Fetched user info for: {username}")
                 else:
                     logger.warning(f"Failed to fetch user '{username}': {result.data}")
@@ -222,7 +249,7 @@ class XMCPIngester:
             except Exception as e:
                 logger.error(f"Error fetching user '{username}': {e}")
     
-    def _parse_post(self, data: Dict, xurl: str) -> None:
+    def _parse_post(self, data: Dict, xurl: str, cached: bool = False, tool_name: str = "") -> None:
         """Parse raw X API post data into XPostNode."""
         post = XPostNode(
             id=data.get("id", ""),
@@ -235,10 +262,12 @@ class XMCPIngester:
             in_reply_to=data.get("in_reply_to_user_id"),
             entities=data.get("entities", {}),
             xurl=xurl,
+            cached=cached,
+            tool_name=tool_name,
         )
         self._posts.append(post)
-    
-    def _parse_user(self, data: Dict, xurl: str) -> None:
+
+    def _parse_user(self, data: Dict, xurl: str, cached: bool = False, tool_name: str = "") -> None:
         """Parse raw X API user data into XUserNode."""
         user = XUserNode(
             id=data.get("id", ""),
@@ -251,6 +280,8 @@ class XMCPIngester:
             created_at=data.get("created_at", ""),
             description=data.get("description", ""),
             xurl=xurl,
+            cached=cached,
+            tool_name=tool_name,
         )
         self._users[user.id] = user
     
@@ -283,6 +314,8 @@ class XMCPIngester:
                     "description": user.description,
                     "source": user.source,
                     "xurl": user.xurl,
+                    "cached": user.cached,
+                    "tool_name": user.tool_name,
                 },
             })
         
@@ -299,6 +332,8 @@ class XMCPIngester:
                     "metrics": post.metrics,
                     "source": post.source,
                     "xurl": post.xurl,
+                    "cached": post.cached,
+                    "tool_name": post.tool_name,
                     "edge_type": post.edge_type,
                 },
             })
@@ -315,6 +350,8 @@ class XMCPIngester:
                     "provenance": {
                         "source": "xmcp",
                         "xurl": post.xurl,
+                        "cached": post.cached,
+                        "tool_name": post.tool_name,
                         "timestamp": post.created_at,
                     },
                 })
@@ -331,6 +368,8 @@ class XMCPIngester:
                     "provenance": {
                         "source": "xmcp",
                         "xurl": post.xurl,
+                        "cached": post.cached,
+                        "tool_name": post.tool_name,
                         "timestamp": post.created_at,
                     },
                 })
