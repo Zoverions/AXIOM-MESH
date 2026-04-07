@@ -103,3 +103,14 @@ async def test_resource_balancer_dedicated_machine_keeps_local(tmp_path, monkeyp
 
     final_state = await resource_balancer_app.ainvoke(initial_state)
     assert final_state["selected_route"] == "local"
+
+
+def test_system_metrics_get_local_load_oserror(monkeypatch):
+    def mock_getloadavg():
+        raise OSError("Mocked OSError")
+
+    monkeypatch.setattr(os, "getloadavg", mock_getloadavg)
+
+    from src.graph.resource_balancer import SystemMetrics
+
+    assert SystemMetrics.get_local_load() == 0.7
