@@ -45,9 +45,9 @@ Update format example:
 - [x] **P1** M20.4 Draft Polkadot integration plan covering XCM sender/receiver boundaries, trust assumptions, and staged activation gates. — 2026-04-08 — @agent — added sender/receiver boundary model, trust register, and staged activation control gates.
 - [x] **P1** M20.5 Define parachain readiness workstream (Agile Coretime strategy, treasury/governance impacts, and rollout prerequisites). — 2026-04-08 — @agent — documented Coretime strategy track, treasury/governance impacts, prerequisites, and milestone exit criteria.
 - [x] **P1** M20.6 Add distributed cache design track (Redis/Dragonfly primary + persistent fallback) across Hypervisor, Grid, and Sandbox. — 2026-04-08 — @agent — authored distributed cache architecture track with data classes, fallback policy, and rollout phases.
-- [ ] **P1** M20.7 Extend tokenomics modeling for cross-network execution (burn/mint flows, staking/slashing, external compute settlement).
-- [ ] **P1** M20.8 Add governance-closure modeling tasks for evidence-weighted referenda and partnership-risk controls.
-- [ ] **P2** M20.9 Prepare partnership pitch assets (Render + Polkadot augmentation matrix, pilot scope, and success metrics).
+- [x] **P1** M20.7 Extend tokenomics modeling for cross-network execution (burn/mint flows, staking/slashing, external compute settlement). — 2026-04-08 — @agent — added cross-network execution tokenomics model with burn/mint corridors, risk-weighted staking/slashing, and settlement controls.
+- [x] **P1** M20.8 Add governance-closure modeling tasks for evidence-weighted referenda and partnership-risk controls. — 2026-04-08 — @agent — published evidence-weighted referendum scoring model, partnership-risk bands, closure gates, and implementation backlog.
+- [x] **P2** M20.9 Prepare partnership pitch assets (Render + Polkadot augmentation matrix, pilot scope, and success metrics). — 2026-04-08 — @agent — created partnership pilot asset pack with augmentation matrix, scoped phases, KPI scorecard, and go/no-go rubric.
 
 ## 3) Priority Lanes (Execution History and Detailed Planning)
 
