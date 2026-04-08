@@ -1,0 +1,61 @@
+version: '3.9'
+
+services:
+  gateway:
+    environment:
+      - NODE_ENV=development
+      - GATEWAY_REST_PORT=3000
+      - GATEWAY_WS_PORT=3001
+    command: sh -c "npm install && npm run dev"
+    working_dir: /workspace/AXIOM-MESH/gateway
+    volumes:
+      - ./:/workspace/AXIOM-MESH
+      - gateway_node_modules:/workspace/AXIOM-MESH/gateway/node_modules
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+
+  hypervisor:
+    environment:
+      - NODE_ENV=development
+      - PYTHONUNBUFFERED=1
+      - SANDBOX_URL=http://sandbox:4000/execute
+    command: sh -c "pip install -r hypervisor/requirements.txt && PYTHONPATH=. uvicorn hypervisor.src.api.server:app --host 0.0.0.0 --port 8000 --reload"
+    working_dir: /workspace/AXIOM-MESH
+    volumes:
+      - ./:/workspace/AXIOM-MESH
+
+  grid:
+    command: sh -c "cd /workspace/AXIOM-MESH && go run ./grid/cmd/grid/main.go"
+    working_dir: /workspace/AXIOM-MESH
+    volumes:
+      - ./:/workspace/AXIOM-MESH
+
+  sandbox:
+    image: node:20-bullseye
+    command: sh -c "cd /workspace/AXIOM-MESH/sandbox && npm install && npm run dev"
+    working_dir: /workspace/AXIOM-MESH
+    volumes:
+      - ./:/workspace/AXIOM-MESH
+      - sandbox_node_modules:/workspace/AXIOM-MESH/sandbox/node_modules
+    ports:
+      - "4000:4000"
+
+  redis:
+    image: redis:7.2-alpine
+    ports:
+      - "6379:6379"
+
+  seed-fixtures:
+    image: python:3.12-slim
+    depends_on:
+      - redis
+    working_dir: /workspace/AXIOM-MESH
+    volumes:
+      - ./:/workspace/AXIOM-MESH
+    command: sh -c "python3 scripts/seed_dev_fixtures.py"
+    restart: 'no'
+
+volumes:
+  gateway_node_modules:
+  sandbox_node_modules:

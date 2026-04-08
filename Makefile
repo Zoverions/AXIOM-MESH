@@ -147,5 +147,8 @@ verify-formal:
 	cd grid/contracts && slither . --compile-force-framework hardhat
 	forge test --match-test "testFuzz|invariant_" -vv
 
+dev-parity-check:
+	python3 scripts/check_devcontainer_parity.py
+
 steering-index:
 	python3 scripts/generate_agent_steering_index.py
