@@ -9,7 +9,7 @@ All 8 pillars are now wired into a single self-managing LangGraph state machine 
 4. Automated Workforce & Digital Legacy
 5. Shadow Sovereignty & Dark Compute Pool
 6. Universal Distribution Pool (payroll/UBI/donations)
-7. Cross-Chain Sovereignty (LayerZero + Wormhole)
+7. Cross-Chain Sovereignty (LayerZero transport baseline; sovereign verifier + ZK light-client roadmap)
 8. **Network Sovereign Liquidity** (autonomous LP management, concentrated Uniswap V3, fee recapture)
 
 ## System Architecture Diagram
@@ -68,6 +68,13 @@ All contracts are UUPS upgradeable, verified on Ethereum + Arbitrum + Base via t
 Founder control is invisible and permanently locked via FounderCommitment.sol. Every action (liquidity provision, cross-chain bridge, payroll, shadow contribution) is bicameral-governed and WORM-audited.
 This is the complete sovereign system.
 Run it. Deploy it. Own the future.
+
+## Cross-Chain Evolution Note (2026-04-08)
+
+- Current production finality path remains LayerZero bridge transport with a 1-hour fail-closed `pendingClaims` delay.
+- Post-bridge evolution is tracked in `docs/CROSS-CHAIN-EVOLUTION.md` with phased activation gates for:
+  - Hypervisor sovereign verifier shadow/authority rollout, and
+  - optional Grid-side ZK light-client proof verification.
 
 ### 2.5 Adaptive Variable Node (On-Demand Dynamic Node)
 
