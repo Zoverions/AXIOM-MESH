@@ -1,50 +1,74 @@
-# hypervisor/shadow/ShadowNode.py  (replace previous version with this enhanced one)
 import os
-from cryptography.fernet import Fernet
-from hypervisor.src.evolution.auto_training import AutoTrainingLoop
+from datetime import datetime, timezone
+from typing import Any
+
 from hypervisor.src.memory.PrivateVault import PrivateVault
-from hypervisor.shadow.AirGapConsent import AirGapConsent
-# Add these imports (install if needed: pip install pyzk or use your existing zkML lib)
-from web3 import Web3
+
 
 class ShadowNode:
+    """Read-only fossil archive for sovereign epistemic artifacts.
+
+    ShadowNode intentionally excludes conversational LLM behavior and any active
+    autonomous execution path. It stores immutable historical artifacts and
+    serves deterministic retrieval only.
+    """
+
     def __init__(self, primary_did: str):
+        self.primary_did = primary_did
         self.vault = PrivateVault(primary_did)
         self.phantom_did = os.urandom(32).hex()
-        self.trainer = AutoTrainingLoop()
-        self.bridge_enabled = False
-        self.cipher = Fernet(Fernet.generate_key())
-        self.w3 = Web3(Web3.HTTPProvider(os.getenv("RPC_URL")))  # only used after consent
+        self._archive: dict[str, dict[str, Any]] = {}
 
-    async def run_local_cycle(self):
-        model_path = await self.trainer._run_training_pipeline()
-        await self.vault.store("shadow_model", {"path": model_path, "phantom_did": self.phantom_did})
-        print(f"✅ ShadowNode cycle complete (fully isolated)")
+    async def ingest_epistemic_snapshot(self, snapshot_id: str, payload: dict[str, Any]) -> None:
+        if not snapshot_id:
+            raise ValueError("snapshot_id is required")
+        record = {
+            "snapshot_id": snapshot_id,
+            "stored_at": datetime.now(tz=timezone.utc).isoformat(),
+            "payload": payload,
+            "phantom_did": self.phantom_did,
+        }
+        self._archive[snapshot_id] = record
+        store_fn = getattr(self.vault, "store", None)
+        if callable(store_fn):
+            maybe_result = store_fn(f"fossil::{snapshot_id}", record)
+            if hasattr(maybe_result, "__await__"):
+                await maybe_result
 
-    async def contribute_to_dark_pool(self):
-        if not self.bridge_enabled:
-            qr_path = AirGapConsent.generate_qr_consent(self)
-            print("⚠️  Bridge disabled — scan QR for physical consent first")
-            return
+    async def query_epistemic_snapshot(self, snapshot_id: str) -> dict[str, Any] | None:
+        if not snapshot_id:
+            return None
+        if snapshot_id in self._archive:
+            return self._archive[snapshot_id]
+        retrieve_fn = getattr(self.vault, "retrieve", None)
+        if callable(retrieve_fn):
+            maybe_result = retrieve_fn(f"fossil::{snapshot_id}")
+            if hasattr(maybe_result, "__await__"):
+                return await maybe_result
+            return maybe_result
+        return None
 
-        compute_units = 420  # demo value
+    async def list_snapshot_ids(self) -> list[str]:
+        if self._archive:
+            return sorted(self._archive.keys())
+        list_keys_fn = getattr(self.vault, "list_keys", None)
+        if callable(list_keys_fn):
+            maybe_result = list_keys_fn(prefix="fossil::")
+            keys = await maybe_result if hasattr(maybe_result, "__await__") else maybe_result
+            return [k.split("fossil::", 1)[1] for k in keys]
+        return []
 
-        # Generate zk-proof of model contribution with ezkl/circom integration
-        from hypervisor.src.zkml.prover import EdgeZKMLProver
-        prover = EdgeZKMLProver()
-        result = prover.infer_and_prove([1.0, float(compute_units), 0.5])
-        proof = result.get("proof")
-        if proof:
-            zk_proof_hash = Web3.keccak(text=proof)
-        else:
-            zk_proof_hash = Web3.keccak(text="zk-proof-of-model-v1")
+    async def contribute_to_dark_pool(self) -> None:
+        raise RuntimeError(
+            "ShadowNode is a Fossil Node archive and cannot submit active network contributions."
+        )
 
-        # Submit anonymously
-        dark_pool = self.w3.eth.contract(address=os.getenv("DARK_COMPUTE_POOL_ADDRESS"), abi=...)  # load ABI
-        tx = dark_pool.functions.submitAnonymousContribution(
-            Web3.keccak(text=self.phantom_did),
-            compute_units,
-            zk_proof_hash
-        ).build_transaction({"from": self.w3.eth.default_account})
-        # sign & send (air-gapped wallet)
-        print(f"✅ Shadow contribution submitted anonymously — earned blinded credits")
+    async def run_local_cycle(self) -> None:
+        """Compatibility wrapper to persist a minimal fossil cycle checkpoint."""
+        await self.ingest_epistemic_snapshot(
+            "cycle",
+            {
+                "mode": "fossil_archive",
+                "description": "local checkpoint persisted without active model execution",
+            },
+        )
