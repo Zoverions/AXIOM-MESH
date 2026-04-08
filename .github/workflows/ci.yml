@@ -173,6 +173,13 @@ jobs:
       run: |
         make verify-cpor-schema
 
+    - name: Verify cross-chain evidence bundle schema v2
+      env:
+        CAPABILITY_TOKEN_SECRET: "mock"
+        PYTHONPATH: "hypervisor"
+      run: |
+        make verify-cross-chain-evidence-schema
+
   integration-matrix:
     runs-on: ubuntu-latest
     needs:

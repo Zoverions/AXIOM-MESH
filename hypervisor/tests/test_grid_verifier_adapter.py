@@ -48,7 +48,10 @@ def test_queues_bridge_delay_when_zk_missing_for_high_risk(tmp_path: Path):
 
     payload = json.loads(delay_path.read_text(encoding="utf-8"))
     assert payload["reason"] == "missing_zk_light_client_proof"
-    assert payload["schema_version"] == "cross_chain_bridge_delay_queue.v1"
+    assert payload["schema_version"] == "cross_chain_evidence_bundle.v2"
+    assert payload["bundle_type"] == "bridge_delay_queue"
+    assert payload["provenance_signature"]["algorithm"] == "hmac-sha256"
+    assert payload["provenance_signature"]["signer_id"] == "grid-verifier-adapter"
 
 
 def test_bridge_only_accepts_when_zk_feature_disabled(tmp_path: Path):
