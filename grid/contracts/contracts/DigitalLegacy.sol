@@ -11,6 +11,21 @@ interface IUniversalConsentProtocol {
 }
 
 contract DigitalLegacy is Initializable, UUPSUpgradeable {
+    enum LegacyMode {
+        PURGE,
+        FOSSIL,
+        SNAPSHOT,
+        ASCENSION
+    }
+
+    struct IntentTimelock {
+        bytes32 encryptedIntentHash;
+        uint64 unlockTimestamp;
+        bytes32 oracleCondition;
+        bool unlocked;
+        address designatedBeneficiary;
+    }
+
     CitizenshipNFT public immutable citizenship;
     FounderCommitment public immutable founder;
 
@@ -34,10 +49,13 @@ contract DigitalLegacy is Initializable, UUPSUpgradeable {
         bool expired;
         bool executed;
         uint64 lastLivenessPing;
+        LegacyMode mode;
     }
 
     mapping(uint256 => Will) public wills; // tokenId => sovereign will envelope
     mapping(uint256 => mapping(address => BeneficiaryAccess)) public beneficiaryPolicies;
+    mapping(uint256 => mapping(uint256 => IntentTimelock)) public intentTimelocks;
+    mapping(uint256 => uint256) public intentTimelockCount;
 
     event EpistemicAnchorDefined(uint256 indexed tokenId, bytes32 indexed tmaHash);
     event BeneficiaryAccessSet(
@@ -60,6 +78,22 @@ contract DigitalLegacy is Initializable, UUPSUpgradeable {
     );
     event EmergencyBurn(uint256 indexed tokenId, bytes32 burnReasonHash);
     event AscensionEntityDeploymentRequested(uint256 indexed tokenId, address indexed identity, address indexed wallet);
+    event LegacyModeConfigured(uint256 indexed tokenId, LegacyMode mode);
+    event IntentTimelockCreated(
+        uint256 indexed tokenId,
+        uint256 indexed intentId,
+        bytes32 indexed encryptedIntentHash,
+        uint64 unlockTimestamp,
+        bytes32 oracleCondition,
+        address beneficiary
+    );
+    event IntentUnlocked(
+        uint256 indexed tokenId,
+        uint256 indexed intentId,
+        bytes32 indexed encryptedIntentHash,
+        address beneficiary,
+        uint256 timestamp
+    );
 
     address public upgradeTimelock;
     address public universalConsentProtocol;
@@ -109,6 +143,7 @@ contract DigitalLegacy is Initializable, UUPSUpgradeable {
         if (w.sovereign == address(0)) {
             w.sovereign = msg.sender;
             w.lastLivenessPing = uint64(block.timestamp);
+            w.mode = continueEntity ? LegacyMode.ASCENSION : LegacyMode.SNAPSHOT;
         }
 
         for (uint256 i = 0; i < heirs.length; i++) {
@@ -119,6 +154,79 @@ contract DigitalLegacy is Initializable, UUPSUpgradeable {
 
         w.dataAccessHash = dataAccessHash;
         w.digitalEntityContinues = continueEntity;
+    }
+
+    function setLegacyMode(uint256 tokenId, LegacyMode mode) external onlySovereign(tokenId) activeWill(tokenId) {
+        Will storage w = wills[tokenId];
+        if (w.sovereign == address(0)) {
+            w.sovereign = msg.sender;
+            w.lastLivenessPing = uint64(block.timestamp);
+        }
+
+        w.mode = mode;
+        w.digitalEntityContinues = mode == LegacyMode.ASCENSION;
+
+        if (mode == LegacyMode.PURGE) {
+            w.tmaHash = bytes32(0);
+            w.dataAccessHash = bytes32(0);
+        }
+
+        emit LegacyModeConfigured(tokenId, mode);
+    }
+
+    function getLegacyMode(uint256 tokenId) external view returns (LegacyMode) {
+        Will storage w = wills[tokenId];
+        if (w.sovereign == address(0)) {
+            return LegacyMode.PURGE;
+        }
+        return w.mode;
+    }
+
+    function createIntentTimelock(
+        uint256 tokenId,
+        bytes32 encryptedIntentHash,
+        uint64 unlockTimestamp,
+        bytes32 oracleCondition,
+        address beneficiary
+    ) external onlySovereign(tokenId) activeWill(tokenId) returns (uint256 intentId) {
+        require(encryptedIntentHash != bytes32(0), "Invalid intent hash");
+        require(beneficiary != address(0), "Invalid beneficiary");
+        require(unlockTimestamp > block.timestamp || oracleCondition != bytes32(0), "Invalid unlock condition");
+
+        intentId = intentTimelockCount[tokenId];
+        intentTimelockCount[tokenId] = intentId + 1;
+        intentTimelocks[tokenId][intentId] = IntentTimelock({
+            encryptedIntentHash: encryptedIntentHash,
+            unlockTimestamp: unlockTimestamp,
+            oracleCondition: oracleCondition,
+            unlocked: false,
+            designatedBeneficiary: beneficiary
+        });
+
+        emit IntentTimelockCreated(tokenId, intentId, encryptedIntentHash, unlockTimestamp, oracleCondition, beneficiary);
+    }
+
+    function unlockIntent(
+        uint256 tokenId,
+        uint256 intentId,
+        bytes32 oracleConditionProof
+    ) external returns (bytes32 unlockedHash) {
+        Will storage w = wills[tokenId];
+        require(w.expired, "Legacy not active");
+        require(w.mode == LegacyMode.SNAPSHOT || w.mode == LegacyMode.ASCENSION, "Mode does not support intents");
+
+        IntentTimelock storage intent = intentTimelocks[tokenId][intentId];
+        require(intent.encryptedIntentHash != bytes32(0), "Intent not found");
+        require(!intent.unlocked, "Intent already unlocked");
+
+        bool timeConditionMet = intent.unlockTimestamp != 0 && block.timestamp >= intent.unlockTimestamp;
+        bool oracleConditionMet = intent.oracleCondition != bytes32(0) && intent.oracleCondition == oracleConditionProof;
+        require(timeConditionMet || oracleConditionMet, "Unlock condition unmet");
+
+        intent.unlocked = true;
+        unlockedHash = intent.encryptedIntentHash;
+
+        emit IntentUnlocked(tokenId, intentId, unlockedHash, intent.designatedBeneficiary, block.timestamp);
     }
 
     /// @notice Sets the canonical epistemic anchor for the Shadow Node.
@@ -196,7 +304,13 @@ contract DigitalLegacy is Initializable, UUPSUpgradeable {
         w.expired = true;
         w.executed = true;
 
-        if (w.digitalEntityContinues && w.sovereign != address(0) && citizenshipNFTToWallet(tokenId) != address(0)) {
+        if (w.mode == LegacyMode.PURGE) {
+            w.tmaHash = bytes32(0);
+            w.dataAccessHash = bytes32(0);
+            w.digitalEntityContinues = false;
+        }
+
+        if (w.mode == LegacyMode.ASCENSION && w.sovereign != address(0) && citizenshipNFTToWallet(tokenId) != address(0)) {
             deployAscensionEntity(tokenId, w.sovereign, citizenshipNFTToWallet(tokenId));
         }
 
@@ -218,6 +332,7 @@ contract DigitalLegacy is Initializable, UUPSUpgradeable {
         returns (bytes32 requestId)
     {
         require(wills[tokenId].expired, "Shadow not active");
+        require(wills[tokenId].mode == LegacyMode.SNAPSHOT, "Only snapshot mode supports bounded advice");
         require(msg.sender == beneficiary, "Signature/beneficiary mismatch");
 
         BeneficiaryAccess storage policy = beneficiaryPolicies[tokenId][beneficiary];
@@ -242,6 +357,7 @@ contract DigitalLegacy is Initializable, UUPSUpgradeable {
     function deployAscensionEntity(uint256 tokenId, address identity, address nodeWallet) public {
         Will storage w = wills[tokenId];
         require(w.expired, "Legacy not yet expired");
+        require(w.mode == LegacyMode.ASCENSION, "Legacy mode is not ascension");
         require(w.digitalEntityContinues, "Digital continuation disabled");
         require(identity != address(0) && nodeWallet != address(0), "Invalid ascension addresses");
         require(universalConsentProtocol != address(0), "Consent protocol not configured");
@@ -264,6 +380,7 @@ contract DigitalLegacy is Initializable, UUPSUpgradeable {
         w.tmaHash = bytes32(0);
         w.dataAccessHash = bytes32(0);
         w.digitalEntityContinues = false;
+        w.mode = LegacyMode.PURGE;
         w.executed = true;
 
         emit EmergencyBurn(tokenId, burnReasonHash);
