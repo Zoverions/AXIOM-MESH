@@ -41,10 +41,10 @@ Update format example:
 - [x] **P2** M12.3 Add CI check to ensure operator-facing features link to at least one HOWTO entry. — 2026-04-07 — @agent — added `scripts/check_operator_howto_links.py` and GitHub Actions workflow `docs-assurance.yml`.
 - [x] **P0** M20.1 Multi-chain partnership brief: finalize Render integration narrative focused on AXIOM augmentation (ZKML verification, policy orchestration, fail-closed evidence paths). — 2026-04-08 — @agent — added `docs/partnerships/RENDER-AUGMENTATION-BRIEF-2026-04-08.md`.
 - [x] **P0** M20.2 Build Hypervisor Render adapter spike (external GPU job submission + callback ingestion + signed evidence hooks). — 2026-04-08 — @agent — added Hypervisor Render submission/callback router + signed evidence adapter spike with tests/docs. — fe1eaf5
-- [ ] **P0** M20.3 Specify ZKML attestation envelope for third-party compute outputs and bind Grid verifier acceptance/rejection criteria.
-- [ ] **P1** M20.4 Draft Polkadot integration plan covering XCM sender/receiver boundaries, trust assumptions, and staged activation gates.
-- [ ] **P1** M20.5 Define parachain readiness workstream (Agile Coretime strategy, treasury/governance impacts, and rollout prerequisites).
-- [ ] **P1** M20.6 Add distributed cache design track (Redis/Dragonfly primary + persistent fallback) across Hypervisor, Grid, and Sandbox.
+- [x] **P0** M20.3 Specify ZKML attestation envelope for third-party compute outputs and bind Grid verifier acceptance/rejection criteria. — 2026-04-08 — @agent — published canonical envelope schema, fail-closed verifier acceptance gates, and deterministic rejection taxonomy.
+- [x] **P1** M20.4 Draft Polkadot integration plan covering XCM sender/receiver boundaries, trust assumptions, and staged activation gates. — 2026-04-08 — @agent — added sender/receiver boundary model, trust register, and staged activation control gates.
+- [x] **P1** M20.5 Define parachain readiness workstream (Agile Coretime strategy, treasury/governance impacts, and rollout prerequisites). — 2026-04-08 — @agent — documented Coretime strategy track, treasury/governance impacts, prerequisites, and milestone exit criteria.
+- [x] **P1** M20.6 Add distributed cache design track (Redis/Dragonfly primary + persistent fallback) across Hypervisor, Grid, and Sandbox. — 2026-04-08 — @agent — authored distributed cache architecture track with data classes, fallback policy, and rollout phases.
 - [ ] **P1** M20.7 Extend tokenomics modeling for cross-network execution (burn/mint flows, staking/slashing, external compute settlement).
 - [ ] **P1** M20.8 Add governance-closure modeling tasks for evidence-weighted referenda and partnership-risk controls.
 - [ ] **P2** M20.9 Prepare partnership pitch assets (Render + Polkadot augmentation matrix, pilot scope, and success metrics).
