@@ -8,6 +8,7 @@
 	test-mtls test-sandbox-identity test-zero-trust test-telemetry-alerts test-fail-closed-chaos \
 	verify-external-audit-artifacts verify-zkml-audit-pack verify-bridge-audit-pack \
 	verify-gas-target verify-sbom verify-genesis-ceremony verify-formal verify-supply-chain-attestations \
+	lint-all test-matrix sbom chaos-test verify-cpor-schema \
 	generate-docs steering-index
 
 generate-docs:
@@ -156,3 +157,26 @@ dev-parity-check:
 
 steering-index:
 	python3 scripts/generate_agent_steering_index.py
+
+
+lint-all:
+	cd grid && go vet ./...
+	cd gateway && npm ci && npx tsc --noEmit
+	cd sandbox && npm ci && npx tsc --noEmit
+	cd hypervisor && python3 -m pip install -r requirements.txt && python3 -m compileall src tests
+
+test-matrix:
+	cd grid && go test ./...
+	cd hypervisor && python3 -m pip install -r requirements.txt && PYTHONPATH=.:src python3 -m pytest tests/
+	cd gateway && npm ci && npm test
+	cd sandbox && npm ci && npm test
+
+sbom:
+	./scripts/generate_sbom.sh
+
+chaos-test:
+	python3 scripts/run_fail_closed_chaos_suite.py
+
+verify-cpor-schema:
+	cd hypervisor && python3 -m pip install -r requirements.txt
+	PYTHONPATH=.:hypervisor python3 scripts/verify_cpor_schema.py

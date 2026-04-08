@@ -55,8 +55,8 @@ Update format example:
 - [x] **P1** M21.5 OpenTelemetry unification: emit correlated traces/metrics/log context across Gateway/Hypervisor/Sandbox/Grid and document dashboard SLO panels (owner: observability, ETA: 2026-04-24). — 2026-04-08 — @agent — published canonical OTEL correlation context + SLO dashboard panel spec and operator HOWTO linkage.
 - [x] **P1** M21.6 Reproducible dev environments: add `.devcontainer/devcontainer.json` and `docker-compose.dev.yml` (hot reload + seeded fixtures) with parity checks (owner: devx, ETA: 2026-04-19). — 2026-04-08 — @agent — added devcontainer + compose dev overlay, deterministic fixture seeding, and parity validation script/make target.
 - [x] **P1** M21.7 Supply-chain attestations: generate signed SBOM + provenance attestations and target SLSA L3-compatible workflow controls (owner: security+release, ETA: 2026-04-26). — 2026-04-08 — @agent — added signed SBOM/provenance generation script, CI attestation workflow, and runbook. — cfe7611
-- [ ] **P2** M21.8 Expand top-level Makefile with `lint-all`, `test-matrix`, `sbom`, and `chaos-test` targets wired to CI (owner: infra, ETA: 2026-04-21).
-- [ ] **P2** M21.9 Threat-boundary diagram refresh: add Mermaid trust-boundary + mTLS flow view to architecture docs and link from README/docs index (owner: architecture+docs, ETA: 2026-04-17).
+- [x] **P2** M21.8 Expand top-level Makefile with `lint-all`, `test-matrix`, `sbom`, and `chaos-test` targets wired to CI (owner: infra, ETA: 2026-04-21). — 2026-04-08 — @agent — added top-level make targets and CI workflow job matrix to execute them on push/PR.
+- [x] **P2** M21.9 Threat-boundary diagram refresh: add Mermaid trust-boundary + mTLS flow view to architecture docs and link from README/docs index (owner: architecture+docs, ETA: 2026-04-17). — 2026-04-08 — @agent — added Mermaid trust-boundary/mTLS flow diagrams in canonical architecture doc and linked from top-level README + docs index.
 
 ## 3) Priority Lanes (Execution History and Detailed Planning)
 
