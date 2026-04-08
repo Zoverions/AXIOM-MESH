@@ -58,7 +58,7 @@ Update format example:
 - [x] **P2** M21.8 Expand top-level Makefile with `lint-all`, `test-matrix`, `sbom`, and `chaos-test` targets wired to CI (owner: infra, ETA: 2026-04-21). — 2026-04-08 — @agent — added top-level make targets and CI workflow job matrix to execute them on push/PR.
 - [x] **P2** M21.9 Threat-boundary diagram refresh: add Mermaid trust-boundary + mTLS flow view to architecture docs and link from README/docs index (owner: architecture+docs, ETA: 2026-04-17). — 2026-04-08 — @agent — added Mermaid trust-boundary/mTLS flow diagrams in canonical architecture doc and linked from top-level README + docs index.
 - [x] **P1** M22.1 Publish canonical cross-chain evolution strategy (bridge baseline, sovereign verifier path, ZK light-client path, activation gates). — 2026-04-08 — @agent — added `docs/CROSS-CHAIN-EVOLUTION.md` with phased migration plan and architecture diagrams.
-- [ ] **P1** M22.2 Implement Hypervisor sovereign cross-chain verifier module in shadow mode with signed evidence bundle outputs.
+- [x] **P1** M22.2 Implement Hypervisor sovereign cross-chain verifier module in shadow mode with signed evidence bundle outputs. — 2026-04-08 — @agent — added `hypervisor/src/verifiers/custom_chain_verifier.py` with fail-closed checks, replay detection, and signed shadow evidence bundle output + pytest coverage.
 - [ ] **P1** M22.3 Add Grid verifier adapter for optional ZK light-client proof acceptance with fail-closed fallback to bridge delay queue.
 - [ ] **P1** M22.4 Ship cross-chain evidence bundle schema v2 + CI validation gate for replay identifiers and provenance signatures.
 - [ ] **P2** M22.5 Publish governance activation + rollback runbook for hybrid transport/verification mode and drill quarterly.
