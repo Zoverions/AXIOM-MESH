@@ -100,7 +100,7 @@ Hypervisor validates cross-chain evidence off-chain (headers, signatures, proof 
 ### Phase 0 — Baseline hardening (Now to July 2026)
 - Keep LayerZero as production transport.
 - Retain mandatory 1-hour pending-claim delay.
-- Standardize cross-chain evidence bundle schema and replay identifiers.
+- Standardize cross-chain evidence bundle schema and replay identifiers. ✅ Implemented as `schemas/cross_chain_evidence_bundle.v2.json` with signed provenance requirements.
 
 ### Phase 1 — Sovereign verifier beta (August to October 2026)
 - Add `hypervisor/verifiers/custom_chain_verifier.py` module and policy hooks.
@@ -172,7 +172,7 @@ This plan is tracked in `docs/MASTER-TODO.md` via M22.* items:
 - M22.1 Cross-chain evolution strategy doc (this file).
 - M22.2 Hypervisor sovereign verifier module (shadow mode).
 - M22.3 Grid verifier contract adapter for optional ZK proof validation.
-- M22.4 Cross-chain evidence bundle schema v2 + CI gate.
+- M22.4 Cross-chain evidence bundle schema v2 + CI gate. ✅ `make verify-cross-chain-evidence-schema` added and wired to CI.
 - M22.5 Governance activation/rollback runbook for hybrid mode.
 
 ---

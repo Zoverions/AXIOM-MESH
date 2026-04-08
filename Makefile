@@ -8,7 +8,7 @@
 	test-mtls test-sandbox-identity test-zero-trust test-telemetry-alerts test-fail-closed-chaos \
 	verify-external-audit-artifacts verify-zkml-audit-pack verify-bridge-audit-pack \
 	verify-gas-target verify-sbom verify-genesis-ceremony verify-formal verify-supply-chain-attestations \
-	lint-all test-matrix sbom chaos-test verify-cpor-schema \
+	lint-all test-matrix sbom chaos-test verify-cpor-schema verify-cross-chain-evidence-schema \
 	generate-docs steering-index
 
 generate-docs:
@@ -180,3 +180,7 @@ chaos-test:
 verify-cpor-schema:
 	cd hypervisor && python3 -m pip install -r requirements.txt
 	PYTHONPATH=.:hypervisor python3 scripts/verify_cpor_schema.py
+
+
+verify-cross-chain-evidence-schema:
+	python3 scripts/verify_cross_chain_evidence_schema.py

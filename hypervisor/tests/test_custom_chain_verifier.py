@@ -33,8 +33,11 @@ def test_shadow_mode_emits_signed_evidence_bundle(tmp_path: Path):
     evidence_path = Path(result["evidence_path"])
     assert evidence_path.exists()
     bundle = json.loads(evidence_path.read_text(encoding="utf-8"))
+    assert bundle["schema_version"] == "cross_chain_evidence_bundle.v2"
+    assert bundle["bundle_type"] == "sovereign_shadow"
     assert bundle["decision"]["status"] == "shadow_accept"
     assert bundle["provenance_signature"]["algorithm"] == "hmac-sha256"
+    assert bundle["provenance_signature"]["signer_id"] == "hypervisor-sovereign-verifier"
     assert len(bundle["provenance_signature"]["signature"]) == 64
 
 

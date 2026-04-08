@@ -60,7 +60,7 @@ Update format example:
 - [x] **P1** M22.1 Publish canonical cross-chain evolution strategy (bridge baseline, sovereign verifier path, ZK light-client path, activation gates). — 2026-04-08 — @agent — added `docs/CROSS-CHAIN-EVOLUTION.md` with phased migration plan and architecture diagrams.
 - [x] **P1** M22.2 Implement Hypervisor sovereign cross-chain verifier module in shadow mode with signed evidence bundle outputs. — 2026-04-08 — @agent — added `hypervisor/src/verifiers/custom_chain_verifier.py` with fail-closed checks, replay detection, and signed shadow evidence bundle output + pytest coverage.
 - [x] **P1** M22.3 Add Grid verifier adapter for optional ZK light-client proof acceptance with fail-closed fallback to bridge delay queue. — 2026-04-08 — @agent — added `GridVerifierAdapter` with deterministic bridge-delay queue artifacts + pytest coverage.
-- [ ] **P1** M22.4 Ship cross-chain evidence bundle schema v2 + CI validation gate for replay identifiers and provenance signatures.
+- [x] **P1** M22.4 Ship cross-chain evidence bundle schema v2 + CI validation gate for replay identifiers and provenance signatures. — 2026-04-08 — @agent — added `schemas/cross_chain_evidence_bundle.v2.json`, signed provenance fields in cross-chain verifiers, and CI gate `make verify-cross-chain-evidence-schema`.
 - [ ] **P2** M22.5 Publish governance activation + rollback runbook for hybrid transport/verification mode and drill quarterly.
 
 ## 3) Priority Lanes (Execution History and Detailed Planning)

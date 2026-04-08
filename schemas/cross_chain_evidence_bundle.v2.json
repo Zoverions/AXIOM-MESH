@@ -1,0 +1,84 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://axiom-mesh.local/schemas/cross_chain_evidence_bundle.v2.json",
+  "title": "Cross-Chain Evidence Bundle v2",
+  "description": "Canonical schema for sovereign-shadow verification and bridge-delay queue artifacts with replay identifiers and provenance signatures.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "bundle_type",
+    "replay_id",
+    "provenance_signature"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "cross_chain_evidence_bundle.v2"
+    },
+    "bundle_type": {
+      "type": "string",
+      "enum": [
+        "sovereign_shadow",
+        "bridge_delay_queue"
+      ]
+    },
+    "replay_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "provenance_signature": {
+      "type": "object",
+      "required": ["algorithm", "signer_id", "signature"],
+      "properties": {
+        "algorithm": {"const": "hmac-sha256"},
+        "signer_id": {"type": "string", "minLength": 1},
+        "signature": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      },
+      "additionalProperties": false
+    },
+    "generated_at_utc": {"type": "string", "format": "date-time"},
+    "queued_at_utc": {"type": "string", "format": "date-time"},
+    "reason": {"type": "string"},
+    "claim": {"type": "object"},
+    "policy_context": {"type": "object"},
+    "evidence_bundle": {"type": "object"},
+    "bridge_payload": {"type": "object"},
+    "zk_light_client_proof": {
+      "oneOf": [
+        {"type": "object"},
+        {"type": "null"}
+      ]
+    },
+    "decision": {"type": "object"},
+    "shadow_mode": {"type": "boolean"}
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"bundle_type": {"const": "sovereign_shadow"}},
+        "required": ["bundle_type"]
+      },
+      "then": {
+        "required": [
+          "generated_at_utc",
+          "shadow_mode",
+          "evidence_bundle",
+          "decision"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {"bundle_type": {"const": "bridge_delay_queue"}},
+        "required": ["bundle_type"]
+      },
+      "then": {
+        "required": [
+          "queued_at_utc",
+          "reason",
+          "bridge_payload"
+        ]
+      }
+    }
+  ],
+  "additionalProperties": true
+}

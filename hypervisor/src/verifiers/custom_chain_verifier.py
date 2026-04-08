@@ -82,7 +82,8 @@ class SovereignCrossChainVerifier:
         decision = self._compute_decision(reasons)
 
         record: Dict[str, Any] = {
-            "schema_version": "cross_chain_sovereign_shadow.v1",
+            "schema_version": "cross_chain_evidence_bundle.v2",
+            "bundle_type": "sovereign_shadow",
             "generated_at_utc": now.isoformat(),
             "shadow_mode": self.shadow_mode,
             "signer_id": self.signer_id,
@@ -100,6 +101,7 @@ class SovereignCrossChainVerifier:
         signature = self._sign_record(record)
         record["provenance_signature"] = {
             "algorithm": "hmac-sha256",
+            "signer_id": self.signer_id,
             "signature": signature,
         }
 

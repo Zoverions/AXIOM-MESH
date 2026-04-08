@@ -8,11 +8,14 @@ when policy requires one) are routed to a deterministic bridge delay queue.
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
+
+from src.core.secrets import SecretManager
 
 
 @dataclass
@@ -33,12 +36,14 @@ class GridVerifierAdapter:
         zk_light_client_enabled: bool = False,
         require_zk_for_high_risk: bool = True,
         proof_validator: Optional[Callable[[Dict[str, Any], Dict[str, Any]], bool]] = None,
+        signer_id: str = "grid-verifier-adapter",
     ) -> None:
         self.bridge_delay_dir = Path(bridge_delay_dir)
         self.bridge_delay_dir.mkdir(parents=True, exist_ok=True)
         self.zk_light_client_enabled = zk_light_client_enabled
         self.require_zk_for_high_risk = require_zk_for_high_risk
         self.proof_validator = proof_validator or self._default_proof_validator
+        self.signer_id = signer_id
 
     def evaluate_claim(
         self,
@@ -139,7 +144,8 @@ class GridVerifierAdapter:
     ) -> Dict[str, Any]:
         now = datetime.now(timezone.utc)
         delay_record = {
-            "schema_version": "cross_chain_bridge_delay_queue.v1",
+            "schema_version": "cross_chain_evidence_bundle.v2",
+            "bundle_type": "bridge_delay_queue",
             "queued_at_utc": now.isoformat(),
             "replay_id": replay_id,
             "reason": reason,
@@ -147,6 +153,13 @@ class GridVerifierAdapter:
             "policy_context": policy_context,
             "bridge_payload": bridge_payload,
             "zk_light_client_proof": zk_proof,
+        }
+
+        signature = self._sign_record(delay_record)
+        delay_record["provenance_signature"] = {
+            "algorithm": "hmac-sha256",
+            "signer_id": self.signer_id,
+            "signature": signature,
         }
 
         filename = f"{now.strftime('%Y%m%dT%H%M%S%fZ')}_{replay_id[:16]}.json"
@@ -162,6 +175,21 @@ class GridVerifierAdapter:
                 bridge_delay_path=str(output_path),
             )
         )
+
+    def _sign_record(self, record: Dict[str, Any]) -> str:
+        key = self._resolve_signing_key()
+        payload = json.dumps(record, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        return hmac.new(key.encode("utf-8"), payload, hashlib.sha256).hexdigest()
+
+    @staticmethod
+    def _resolve_signing_key() -> str:
+        key = SecretManager.get_secret("GRID_VERIFIER_SIGNING_KEY", default="")
+        if key:
+            return key
+        fallback = SecretManager.get_secret("CAPABILITY_TOKEN_SECRET", default="")
+        if fallback:
+            return fallback
+        raise ValueError("Missing signing key for grid verifier adapter evidence output")
 
     @staticmethod
     def _to_result(result: GridVerifierAdapterResult) -> Dict[str, Any]:
