@@ -1,0 +1,273 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom-mesh.dev/schemas/network_service_policy.v1.json",
+  "title": "AXIOM MESH Network Service Policy v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "policy_id",
+    "version",
+    "status",
+    "scope",
+    "domains",
+    "risk_routing",
+    "governance",
+    "economics",
+    "automation",
+    "overlays",
+    "audit"
+  ],
+  "properties": {
+    "policy_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9._:-]{3,128}$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^v[0-9]+(\\.[0-9]+){0,2}$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "active", "deprecated", "retired"]
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["service_classes", "participant_types"],
+      "properties": {
+        "service_classes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": ["foundation", "managed_infra", "trust_services", "governance_services"]
+          },
+          "uniqueItems": true
+        },
+        "participant_types": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": ["biological", "digital", "hybrid"]
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "domains": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "description"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": ["biological", "digital", "mixed"]
+          },
+          "description": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "risk_routing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["levels", "default_action"],
+      "properties": {
+        "default_action": {
+          "type": "string",
+          "enum": ["deny", "manual_review"]
+        },
+        "levels": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["risk", "execution_mode", "challenge_window_seconds"],
+            "properties": {
+              "risk": {
+                "type": "string",
+                "enum": ["low", "moderate", "high", "critical"]
+              },
+              "execution_mode": {
+                "type": "string",
+                "enum": ["automatic", "delayed", "governance_required", "emergency_only"]
+              },
+              "challenge_window_seconds": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "governance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["weights", "thresholds", "anti_capture"],
+      "properties": {
+        "weights": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["stake", "reputation", "expertise", "affectedness"],
+          "properties": {
+            "stake": { "type": "number", "minimum": 0, "maximum": 1 },
+            "reputation": { "type": "number", "minimum": 0, "maximum": 1 },
+            "expertise": { "type": "number", "minimum": 0, "maximum": 1 },
+            "affectedness": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "thresholds": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["quorum", "supermajority", "constitutional_supermajority"],
+          "properties": {
+            "quorum": { "type": "number", "minimum": 0, "maximum": 1 },
+            "supermajority": { "type": "number", "minimum": 0, "maximum": 1 },
+            "constitutional_supermajority": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "anti_capture": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["max_single_factor_weight", "delegate_concentration_limit"],
+          "properties": {
+            "max_single_factor_weight": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1
+            },
+            "delegate_concentration_limit": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1
+            }
+          }
+        }
+      }
+    },
+    "economics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fee_transparency", "non_discrimination", "reinvestment"],
+      "properties": {
+        "fee_transparency": { "type": "boolean" },
+        "non_discrimination": { "type": "boolean" },
+        "reinvestment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["infra", "security", "ecosystem", "reserve"],
+          "properties": {
+            "infra": { "type": "number", "minimum": 0, "maximum": 1 },
+            "security": { "type": "number", "minimum": 0, "maximum": 1 },
+            "ecosystem": { "type": "number", "minimum": 0, "maximum": 1 },
+            "reserve": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        }
+      }
+    },
+    "automation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["auto_eligible", "governance_required", "safeguards"],
+      "properties": {
+        "auto_eligible": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "governance_required": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "safeguards": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["timelock", "rollback", "kill_switch", "canary", "postmortem_required"]
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "overlays": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["global", "national", "local", "composition_rule"],
+      "properties": {
+        "global": { "$ref": "#/$defs/overlay" },
+        "national": { "$ref": "#/$defs/overlay" },
+        "local": { "$ref": "#/$defs/overlay" },
+        "composition_rule": {
+          "type": "string",
+          "enum": ["strictest_wins", "deny_overrides_allow"]
+        }
+      }
+    },
+    "audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence_required", "retention_days", "appeal_window_days"],
+      "properties": {
+        "evidence_required": { "type": "boolean" },
+        "retention_days": { "type": "integer", "minimum": 1 },
+        "appeal_window_days": { "type": "integer", "minimum": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "overlay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy_refs", "can_tighten", "can_weaken"],
+      "properties": {
+        "policy_refs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "can_tighten": { "type": "boolean" },
+        "can_weaken": { "type": "boolean" }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "overlays": {
+            "properties": {
+              "national": {
+                "properties": {
+                  "can_weaken": { "const": true }
+                }
+              }
+            }
+          }
+        }
+      },
+      "then": false
+    },
+    {
+      "if": {
+        "properties": {
+          "overlays": {
+            "properties": {
+              "local": {
+                "properties": {
+                  "can_weaken": { "const": true }
+                }
+              }
+            }
+          }
+        }
+      },
+      "then": false
+    }
+  ]
+}

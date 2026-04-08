@@ -58,6 +58,8 @@ The installer automatically detects your platform and installs all dependencies 
 ## Governance & Economics
 - **Governance model:** `docs/governance/GOVERNANCE.md`
 - **Control map:** `docs/governance/GOVERNANCE-CONTROL-MAP.md`
+- **Network service charter (public one-pager):** `docs/governance/NETWORK-SERVICE-CHARTER-ONE-PAGER-2026-04-08.md`
+- **Network service constitution (draft):** `docs/governance/NETWORK-SERVICE-CONSTITUTION-v1-DRAFT-2026-04-08.md`
 - **Tokenomics (canonical):** `docs/tokenomics/TOKENOMICS.md`
 - **Treasury split details:** `docs/tokenomics/TREASURY-SPLIT.md`
 - **ERC20 compatibility:** `docs/tokenomics/ERC20-COMPATIBILITY.md`
@@ -93,6 +95,7 @@ See `docs/audits/` directory for comprehensive security audits:
 See `docs/assessments/` for non-audit strategic assessments and integration planning:
 - **Ontario education capsule integration plan:** `docs/assessments/ONTARIO_EDUCATION_CAPSULE_INTEGRATION_PLAN.md`
 - **Repository automation + vetting + dashboard plan:** `docs/assessments/REPOSITORY_AUTOMATION_VETTING_AND_DASHBOARD_PLAN.md`
+- **Machine-readable network service policy schema:** `schemas/network_service_policy.v1.json`
 
 ---
 
