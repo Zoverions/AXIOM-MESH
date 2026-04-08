@@ -1,6 +1,6 @@
 # Production Readiness Tracker (Execution Board)
 
-**Last Updated:** 2026-04-04
+**Last Updated:** 2026-04-08
 **Purpose:** Detailed readiness board linked from the canonical task queue in `docs/MASTER-TODO.md`.
 
 ---
@@ -35,38 +35,42 @@
 
 ---
 
-## 3) In Progress (Critical Path)
+## 3) Critical Path Status (Synced to Canonical Queue)
 
 - [x] Interface freeze applied and compatibility checks enforced in CI.
-- [ ] Security route authZ parity audit completed.
-- [ ] Ledger↔chain reconciliation baseline completed.
-- [ ] Recovery drill automation completed with measured RTO/RPO.
+- [x] Security route authZ parity audit completed.
+- [x] Ledger↔chain reconciliation baseline completed.
+- [x] Recovery drill automation completed with measured RTO/RPO.
 - [x] RC evidence package assembled and reviewed.
+- [x] Gate sync held and go/no-go decision recorded.
+
+> Sync source: `docs/MASTER-TODO.md` (M1 lane entries marked complete). Any mismatch should be treated as tracker drift and corrected in favor of MASTER-TODO.
 
 ---
 
 ## 4) Next 10 Execution Tasks (Priority Ordered)
 
-1. [ ] Publish owner + deputy roster for all roles above.
+1. [x] Publish owner + deputy roster for all roles above.
 2. [x] Freeze API/schema/ABI baseline and tag release baseline.
-3. [ ] Turn WBS IDs into tracked issues and sprint assignments.
+3. [ ] Turn WBS IDs into tracked issues and sprint assignments (superseded by canonical queue governance; retain only if issue-level tracking is reintroduced).
 4. [x] Enable compatibility checks in CI for interface changes.
-5. [ ] Run authZ parity audit and produce remediation tickets.
-6. [ ] Run first reconciliation replay window and capture variance report.
-7. [ ] Execute restart/partial-outage drill and record RTO/RPO.
+5. [x] Run authZ parity audit and produce remediation tickets.
+6. [x] Run first reconciliation replay window and capture variance report.
+7. [x] Execute restart/partial-outage drill and record RTO/RPO.
 8. [x] Build first RC evidence folder using HOWTO format.
 9. [x] Validate RC folder with `make validate-release-evidence`.
-10. [ ] Hold Gate Sync review and capture decision log.
+10. [x] Hold Gate Sync review and capture decision log.
+
+> These checklist rows are retained as historical trace; active execution ordering now lives in `docs/MASTER-TODO.md`.
 
 ---
 
 ## 5) Exit Conditions for Production Promotion
 
 All must be checked:
-- [ ] Security gate pass/approved exception.
-- [ ] Financial gate pass/approved exception.
-- [ ] Reliability gate pass/approved exception.
-- [ ] Ecosystem gate pass/approved exception.
-- [ ] Governance/audit gate pass/approved exception.
-- [ ] Documentation parity confirmed for all merged changes.
-
+- [x] Security gate pass/approved exception.
+- [x] Financial gate pass/approved exception.
+- [x] Reliability gate pass/approved exception.
+- [x] Ecosystem gate pass/approved exception.
+- [x] Governance/audit gate pass/approved exception.
+- [x] Documentation parity confirmed for all merged changes.
