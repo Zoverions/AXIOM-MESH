@@ -1,0 +1,34 @@
+{
+  "name": "AxiomMesh Dev",
+  "dockerComposeFile": [
+    "../docker-compose.yml",
+    "../docker-compose.dev.yml"
+  ],
+  "service": "gateway",
+  "workspaceFolder": "/workspace/AXIOM-MESH",
+  "runServices": [
+    "gateway",
+    "hypervisor",
+    "grid",
+    "sandbox",
+    "xmcp-mock",
+    "redis"
+  ],
+  "shutdownAction": "stopCompose",
+  "overrideCommand": false,
+  "remoteEnv": {
+    "NODE_ENV": "development",
+    "PYTHONUNBUFFERED": "1"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-azuretools.vscode-docker",
+        "ms-python.python",
+        "golang.Go",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  },
+  "postCreateCommand": "bash -lc 'npm --prefix gateway install && npm --prefix sandbox install && python3 -m pip install -r hypervisor/requirements.txt'"
+}

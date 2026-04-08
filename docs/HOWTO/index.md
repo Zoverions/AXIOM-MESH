@@ -26,6 +26,7 @@ This directory contains step-by-step guides for operating and developing AXIOM-M
 - [Transformer Foundation PulseChain](transformer-foundation-pulsechain.md) - Deploy transformer package and publish on-chain evidence
 - [Create Bootable USB](create-bootable-usb.md) - Build and validate bootable media
 - [Custom GUIs](custom-guis.md) - Customize and validate node GUIs
+- [Devcontainer Parity](devcontainer-parity.md) - Verify reproducible development environment parity
 
 ## Quick Checklist for Common Tasks
 - **New developer setup:** [Run Local Stack](run-local-stack.md) → [Submit Intent](submit-intent.md)
