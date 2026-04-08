@@ -96,6 +96,7 @@ See `docs/assessments/` for non-audit strategic assessments and integration plan
 - **Societal OS / everything-app audit playbook:** `docs/assessments/SOCIETAL-OS-EVERYTHING-APP-AUDIT-PLAYBOOK-2026-04-08.md`
 - **Ontario education capsule integration plan:** `docs/assessments/ONTARIO_EDUCATION_CAPSULE_INTEGRATION_PLAN.md`
 - **Repository automation + vetting + dashboard plan:** `docs/assessments/REPOSITORY_AUTOMATION_VETTING_AND_DASHBOARD_PLAN.md`
+- **Audit controls manifest (M23.5):** `schemas/audit-controls.json` — Machine-readable control registry for operationalizing the Societal OS Audit Playbook
 - **Machine-readable network service policy schema:** `schemas/network_service_policy.v1.json`
 
 ---

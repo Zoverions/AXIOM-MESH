@@ -16,6 +16,7 @@ This directory contains versioned JSON Schema definitions that define the contra
 * `CapabilityManifest` (Node -> Grid): Hardware-aware capability and benchmark profile for dynamic routing.
 * `CausalReasoningAttestation` (Hypervisor/Grid -> Verifier): Binds inference outputs to an auditable causal DAG, consensus context, and proof bundle for CPoR verification.
 * `NetworkServicePolicy` (Governance -> Runtime policy engine): Defines machine-readable constitutional controls for participant domains, risk routing, weighted governance, overlays, economics, and audit obligations.
+* `AuditControls` (M23.5 - Audit Operations): Machine-readable control manifest for operationalizing the Societal OS Audit Playbook with domain controls, owners, evidence commands, freshness SLOs, and CI release gate bindings.
 
 ## Versioning
 These schemas are versioned. Each schema has a `$schema` and `id` representing its version. For example: `intent_object.v1.json`.

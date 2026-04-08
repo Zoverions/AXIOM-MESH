@@ -8,6 +8,10 @@ This folder contains strategic and technical assessments that are not external a
 - `ONTARIO_EDUCATION_CAPSULE_INTEGRATION_PLAN.md` — Ontario education capsule integration scope, data architecture, and phased implementation plan.
 - `REPOSITORY_AUTOMATION_VETTING_AND_DASHBOARD_PLAN.md` — GitHub/system automation strategy, security update flow, and hybrid vetting process.
 
+## Related Artifacts
+
+- **Audit Controls Manifest (M23.5):** `../../schemas/audit-controls.json` — Machine-readable control registry with owners, evidence commands, freshness SLOs, and CI release gate bindings to operationalize the Societal OS Audit Playbook.
+
 ## Placement Rules
 
 - Put **external and formal audit reports** in `docs/audits/`.

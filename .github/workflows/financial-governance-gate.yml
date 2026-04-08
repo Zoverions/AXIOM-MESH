@@ -1,0 +1,38 @@
+name: Financial/Governance Release Gate
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - 'grid/contracts/**/*.sol'
+      - 'schemas/audit-controls.json'
+      - 'scripts/verify_financial_governance_release.py'
+      - 'scripts/verify_tokenomics_controls.py'
+      - '.github/workflows/financial-governance-gate.yml'
+  workflow_dispatch:
+
+jobs:
+  financial-governance-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run M23.6 financial/governance verification
+        run: |
+          python3 scripts/verify_financial_governance_release.py
+
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m23-6-financial-governance-evidence
+          path: schemas/audit-controls.json
+          if-no-files-found: error
