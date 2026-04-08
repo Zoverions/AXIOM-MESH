@@ -93,6 +93,7 @@ See `docs/audits/` directory for comprehensive security audits:
 
 ## Assessments & Integration Plans
 See `docs/assessments/` for non-audit strategic assessments and integration planning:
+- **Societal OS / everything-app audit playbook:** `docs/assessments/SOCIETAL-OS-EVERYTHING-APP-AUDIT-PLAYBOOK-2026-04-08.md`
 - **Ontario education capsule integration plan:** `docs/assessments/ONTARIO_EDUCATION_CAPSULE_INTEGRATION_PLAN.md`
 - **Repository automation + vetting + dashboard plan:** `docs/assessments/REPOSITORY_AUTOMATION_VETTING_AND_DASHBOARD_PLAN.md`
 - **Machine-readable network service policy schema:** `schemas/network_service_policy.v1.json`

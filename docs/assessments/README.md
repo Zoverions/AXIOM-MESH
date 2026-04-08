@@ -4,6 +4,7 @@ This folder contains strategic and technical assessments that are not external a
 
 ## Included Assessments
 
+- `SOCIETAL-OS-EVERYTHING-APP-AUDIT-PLAYBOOK-2026-04-08.md` — End-to-end audit operating model for network, blockchain, tokenomics, revenue, workforce, governance, education, and expansion controls.
 - `ONTARIO_EDUCATION_CAPSULE_INTEGRATION_PLAN.md` — Ontario education capsule integration scope, data architecture, and phased implementation plan.
 - `REPOSITORY_AUTOMATION_VETTING_AND_DASHBOARD_PLAN.md` — GitHub/system automation strategy, security update flow, and hybrid vetting process.
 
