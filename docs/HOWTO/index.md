@@ -20,6 +20,7 @@ This directory contains step-by-step guides for operating and developing AXIOM-M
 - [Secret Management](secret-management.md) - Rotation and secure material handling
 - [mTLS Bootstrap & Rotation](mtls-bootstrap-rotation.md) - Node-join, CA rotation, revocation, and clock-skew response
 - [Bridge Emergency Runbooks](bridge-emergency-runbooks.md) - Incident response for bridge/finality issues
+- [Hybrid Cross-Chain Governance Activation & Rollback](hybrid-cross-chain-governance-activation-rollback.md) - Activation controls, rollback triggers, and quarterly drills for hybrid mode
 
 ## Delivery, Release, and Installer Operations
 - [Release Gate Evidence](release-gate-evidence.md) - Prepare evidence for release gates

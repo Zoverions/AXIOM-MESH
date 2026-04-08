@@ -173,7 +173,7 @@ This plan is tracked in `docs/MASTER-TODO.md` via M22.* items:
 - M22.2 Hypervisor sovereign verifier module (shadow mode).
 - M22.3 Grid verifier contract adapter for optional ZK proof validation.
 - M22.4 Cross-chain evidence bundle schema v2 + CI gate. ✅ `make verify-cross-chain-evidence-schema` added and wired to CI.
-- M22.5 Governance activation/rollback runbook for hybrid mode.
+- M22.5 Governance activation/rollback runbook for hybrid mode. ✅ `docs/HOWTO/hybrid-cross-chain-governance-activation-rollback.md` published with quarterly drill requirements.
 
 ---
 
