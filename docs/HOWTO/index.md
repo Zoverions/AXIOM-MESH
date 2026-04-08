@@ -18,6 +18,7 @@ This directory contains step-by-step guides for operating and developing AXIOM-M
 ## Security, Recovery, and Emergency Procedures
 - [Recovery 2FA](recovery-2fa.md) - Two-factor recovery workflow
 - [Secret Management](secret-management.md) - Rotation and secure material handling
+- [mTLS Bootstrap & Rotation](mtls-bootstrap-rotation.md) - Node-join, CA rotation, revocation, and clock-skew response
 - [Bridge Emergency Runbooks](bridge-emergency-runbooks.md) - Incident response for bridge/finality issues
 
 ## Delivery, Release, and Installer Operations

@@ -33,6 +33,60 @@ export interface ResourceLimits {
     gpu?: boolean;
 }
 
+type RuntimeProfile = 'gvisor' | 'kata';
+
+interface RuntimeSelection {
+    runtime: string;
+    profile: RuntimeProfile;
+}
+
+function normalizeRuntimeProfile(raw?: string): RuntimeProfile {
+    const value = (raw || 'gvisor').trim().toLowerCase();
+    if (value === 'gvisor' || value === 'runsc') {
+        return 'gvisor';
+    }
+    if (value === 'kata' || value === 'kata-containers') {
+        return 'kata';
+    }
+    throw new Error(`Unsupported SANDBOX_RUNTIME_PROFILE: ${raw}`);
+}
+
+function selectRuntimeWithFallback(): RuntimeSelection {
+    const primary = normalizeRuntimeProfile(process.env.SANDBOX_RUNTIME_PROFILE);
+    const fallbackRaw = process.env.SANDBOX_RUNTIME_FALLBACK_PROFILE;
+    const disableFallback = process.env.SANDBOX_DISABLE_RUNTIME_FALLBACK === '1';
+
+    const toRuntime = (profile: RuntimeProfile): string => profile === 'kata' ? 'kata-runtime' : 'runsc';
+    const preferredRuntime = toRuntime(primary);
+
+    const availableRuntimes = new Set(
+        (process.env.SANDBOX_AVAILABLE_RUNTIMES || preferredRuntime)
+            .split(',')
+            .map((entry) => entry.trim())
+            .filter(Boolean)
+    );
+
+    if (availableRuntimes.has(preferredRuntime)) {
+        return { runtime: preferredRuntime, profile: primary };
+    }
+
+    if (disableFallback || !fallbackRaw) {
+        throw new Error(
+            `Sandbox runtime profile ${primary} (${preferredRuntime}) is unavailable and fallback is disabled`
+        );
+    }
+
+    const fallbackProfile = normalizeRuntimeProfile(fallbackRaw);
+    const fallbackRuntime = toRuntime(fallbackProfile);
+    if (!availableRuntimes.has(fallbackRuntime)) {
+        throw new Error(
+            `Sandbox runtime fallback ${fallbackProfile} (${fallbackRuntime}) is unavailable; failing closed`
+        );
+    }
+
+    return { runtime: fallbackRuntime, profile: fallbackProfile };
+}
+
 export async function runCode(language: string, code: string, limitsOrUseTee?: ResourceLimits | boolean, useTeeParam?: boolean): Promise<{ stdout: string; stderr: string }> {
     let limits: ResourceLimits | undefined;
     let useTee: boolean = false;
@@ -64,6 +118,8 @@ export async function runCode(language: string, code: string, limitsOrUseTee?: R
         throw new Error('Production sandbox requires digest-pinned SANDBOX_PYTHON_IMAGE and SANDBOX_NODE_IMAGE');
     }
 
+    const runtimeSelection = selectRuntimeWithFallback();
+
     return new Promise(async (resolve, reject) => {
         let command: string;
         let args: string[];
@@ -73,7 +129,7 @@ export async function runCode(language: string, code: string, limitsOrUseTee?: R
         const commonArgs = [
             'run',
             '--rm',
-            '--runtime=runsc',
+            `--runtime=${runtimeSelection.runtime}`,
             '--network=none',
             `--memory=${memoryMb}m`,
             `--memory-swap=${memoryMb}m`,
@@ -92,6 +148,7 @@ export async function runCode(language: string, code: string, limitsOrUseTee?: R
 
         commonArgs.push('--label=sandbox_execution=true');
         commonArgs.push('--label=monitor_syscalls=falco');
+        commonArgs.push(`--label=sandbox_runtime_profile=${runtimeSelection.profile}`);
 
         // SUB-S.4 Sandbox: GPU acceleration for compute-heavy workloads
         if (limits !== undefined && limits.gpu === true) {

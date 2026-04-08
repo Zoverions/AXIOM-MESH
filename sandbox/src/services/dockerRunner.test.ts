@@ -9,10 +9,12 @@ jest.mock('child_process', () => ({
 describe('dockerRunner', () => {
     let mockProcess: any;
     let mockSpawn: jest.Mock;
+    const originalEnv = { ...process.env };
 
     beforeEach(() => {
         jest.clearAllMocks();
         jest.useFakeTimers();
+        process.env = { ...originalEnv };
 
         mockProcess = new EventEmitter();
         mockProcess.stdout = new EventEmitter();
@@ -26,6 +28,7 @@ describe('dockerRunner', () => {
     afterEach(() => {
         jest.useRealTimers();
         jest.clearAllTimers();
+        process.env = { ...originalEnv };
     });
 
     it('should reject for unsupported languages', async () => {
@@ -92,7 +95,6 @@ describe('dockerRunner', () => {
     });
 
     it('should use axiom-sandbox apparmor profile in production', async () => {
-        const originalEnv = process.env.NODE_ENV;
         process.env.NODE_ENV = 'production';
 
         const runPromise = runCode('python', 'print("prod")');
@@ -105,8 +107,48 @@ describe('dockerRunner', () => {
         const args = mockSpawn.mock.calls[0][1];
         expect(args).toContain('--security-opt=apparmor=axiom-sandbox');
         expect(result).toEqual({ stdout: 'prod\n', stderr: '' });
+    });
 
-        process.env.NODE_ENV = originalEnv;
+    it('should use kata runtime when SANDBOX_RUNTIME_PROFILE=kata', async () => {
+        process.env.SANDBOX_RUNTIME_PROFILE = 'kata';
+        process.env.SANDBOX_AVAILABLE_RUNTIMES = 'runsc,kata-runtime';
+        const runPromise = runCode('python', 'print("kata")');
+
+        mockProcess.stdout.emit('data', 'kata\n');
+        mockProcess.emit('close', 0);
+
+        const result = await runPromise;
+        const args = mockSpawn.mock.calls[0][1];
+        expect(args).toContain('--runtime=kata-runtime');
+        expect(args).toContain('--label=sandbox_runtime_profile=kata');
+        expect(result).toEqual({ stdout: 'kata\n', stderr: '' });
+    });
+
+    it('should fail closed when primary runtime is unavailable and fallback is disabled', async () => {
+        process.env.SANDBOX_RUNTIME_PROFILE = 'kata';
+        process.env.SANDBOX_AVAILABLE_RUNTIMES = 'runsc';
+        process.env.SANDBOX_DISABLE_RUNTIME_FALLBACK = '1';
+
+        await expect(runCode('python', 'print("x")')).rejects.toThrow(
+            'Sandbox runtime profile kata (kata-runtime) is unavailable and fallback is disabled'
+        );
+        expect(mockSpawn).not.toHaveBeenCalled();
+    });
+
+    it('should use configured fallback runtime when primary runtime is unavailable', async () => {
+        process.env.SANDBOX_RUNTIME_PROFILE = 'kata';
+        process.env.SANDBOX_RUNTIME_FALLBACK_PROFILE = 'gvisor';
+        process.env.SANDBOX_AVAILABLE_RUNTIMES = 'runsc';
+        const runPromise = runCode('python', 'print("fallback")');
+
+        mockProcess.stdout.emit('data', 'fallback\n');
+        mockProcess.emit('close', 0);
+
+        const result = await runPromise;
+        const args = mockSpawn.mock.calls[0][1];
+        expect(args).toContain('--runtime=runsc');
+        expect(args).toContain('--label=sandbox_runtime_profile=gvisor');
+        expect(result).toEqual({ stdout: 'fallback\n', stderr: '' });
     });
 
     it('should handle process spawn error', async () => {
