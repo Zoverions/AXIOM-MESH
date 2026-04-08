@@ -52,6 +52,10 @@ SANDBOX_HOST=0.0.0.0
 # Optional
 SANDBOX_TIMEOUT_DEFAULT=30000  # 30 seconds
 SANDBOX_MEMORY_LIMIT=512       # MB
+SANDBOX_RUNTIME_PROFILE=gvisor # gvisor|kata (aliases: runsc|kata-containers)
+SANDBOX_RUNTIME_FALLBACK_PROFILE=gvisor # optional fallback runtime profile
+SANDBOX_DISABLE_RUNTIME_FALLBACK=0      # set to 1 for strict fail-closed mode
+SANDBOX_AVAILABLE_RUNTIMES=runsc,kata-runtime # comma-separated availability signal
 ```
 
 ## Execution Model
@@ -103,10 +107,12 @@ npm run lint         # Run ESLint
 
 - **Security layers:**
   - Docker isolation (--rm removes container after execution)
+  - Runtime profile isolation (`--runtime=runsc` gVisor default, optional `--runtime=kata-runtime`)
   - seccomp policy (blocks dangerous syscalls)
   - AppArmor profile (file system access restrictions)
   - Network isolation (--network=none)
   - Resource limits (CPU, memory)
+  - Fail-closed runtime selection when configured runtime/fallback are unavailable
 
 - **Timeouts:** Default 30 seconds; configurable per request
 - **Error handling:** Timeouts return HTTP 408; resource exhaustion returns 429
