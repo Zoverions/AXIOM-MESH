@@ -64,6 +64,9 @@ Update format example:
 - [x] **P1** M22.3 Add Grid verifier adapter for optional ZK light-client proof acceptance with fail-closed fallback to bridge delay queue. — 2026-04-08 — @agent — added `GridVerifierAdapter` with deterministic bridge-delay queue artifacts + pytest coverage.
 - [x] **P1** M22.4 Ship cross-chain evidence bundle schema v2 + CI validation gate for replay identifiers and provenance signatures. — 2026-04-08 — @agent — added `schemas/cross_chain_evidence_bundle.v2.json`, signed provenance fields in cross-chain verifiers, and CI gate `make verify-cross-chain-evidence-schema`.
 - [x] **P2** M22.5 Publish governance activation + rollback runbook for hybrid transport/verification mode and drill quarterly. — 2026-04-08 — @agent — added `docs/HOWTO/hybrid-cross-chain-governance-activation-rollback.md` and linked M22.5 closure in cross-chain strategy docs.
+- [x] **P1** M23.1 Publish one-page public-facing network service charter for cross-network partners, builders, and community stakeholders. — 2026-04-08 — @agent — added `docs/governance/NETWORK-SERVICE-CHARTER-ONE-PAGER-2026-04-08.md`.
+- [x] **P1** M23.2 Publish constitutional governance draft covering participant rights, risk routing, weighted governance, overlays, emergency powers, and amendment flow. — 2026-04-08 — @agent — added `docs/governance/NETWORK-SERVICE-CONSTITUTION-v1-DRAFT-2026-04-08.md`.
+- [x] **P1** M23.3 Define machine-readable network service policy schema for automation/governance interoperability. — 2026-04-08 — @agent — added `schemas/network_service_policy.v1.json` and linked schema catalog/docs index entries.
 
 ## 3) Priority Lanes (Execution History and Detailed Planning)
 
