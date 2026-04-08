@@ -2,7 +2,8 @@
 
 <img src="logo.png" alt="Axiom Mesh Logo" width="150" align="right">
 
-AXIOM-MESH is a multi-service runtime built around four core services:
+AXIOM-MESH is a multi-service runtime built around four core services. **Current milestone:** ![Status](https://img.shields.io/badge/status-staging%20hardening-blue) (see `docs/PROJECT-STATUS-2026.md`).
+
 
 - **Gateway** (TypeScript/Node): API ingress, UX delivery, and channel adapters.
 - **Hypervisor** (Python/FastAPI): orchestration, policy routing, context/memory, and execution planning.
@@ -101,6 +102,13 @@ Primary control documents:
 - **`docs/PROJECT-STATUS-2026.md`** — project/repo status snapshot.
 - **`docs/AUDIT_REPORT.md`** and `docs/audits/` — audit and remediation material.
 - **`docs/ARCHITECTURE.md`** and **`docs/TECHNICAL-SPECIFICATION.md`** — architecture/spec baseline.
+- **`docs/GRID-CONSENSUS-SPEC.md`** — Grid consensus, finality semantics, and upgrade controls baseline.
+
+---
+
+## Branch Naming Note
+
+This repository currently uses `Main` (capital **M**) as the primary branch name. Prefer relative documentation links inside the repo to avoid case-sensitive URL issues in external tooling.
 
 ---
 
