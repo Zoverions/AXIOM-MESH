@@ -42,6 +42,7 @@ The installer automatically detects your platform and installs all dependencies 
 ## Foundations
 - **Architecture:** `docs/architecture/ARCHITECTURE.md`
 - **Technical Specification:** `docs/TECHNICAL-SPECIFICATION.md`
+- **Grid consensus baseline:** `docs/GRID-CONSENSUS-SPEC.md`
 - **Interface Contracts:** `docs/architecture/INTERFACE-CONTROL-DOCUMENT.md`
 - **Foundations Summary:** `docs/architecture/FOUNDATIONS.md`
 - **Causal Proof-of-Reasoning blueprint:** `docs/whitepapers_and_research/CAUSAL-PROOF-OF-REASONING.md`
