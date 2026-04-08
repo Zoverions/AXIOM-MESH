@@ -5,7 +5,7 @@
 	verify-transformer-toolchains transformer-grid-e2e transformer-hypervisor-e2e transformer-gate \
 	validate-release-evidence verify-evidence-bundles verify-tokenomics-controls \
 	test-reconciliation test-grid-authz verify-change-control test-provex-wrapper \
-	test-mtls test-sandbox-identity test-zero-trust test-telemetry-alerts \
+	test-mtls test-sandbox-identity test-zero-trust test-telemetry-alerts test-fail-closed-chaos \
 	verify-external-audit-artifacts verify-zkml-audit-pack verify-bridge-audit-pack \
 	verify-gas-target verify-sbom verify-genesis-ceremony \
 	generate-docs steering-index
@@ -118,6 +118,9 @@ test-zero-trust:
 
 test-telemetry-alerts:
 	python3 scripts/test_telemetry_alerts.py
+
+test-fail-closed-chaos:
+	python3 scripts/run_fail_closed_chaos_suite.py
 
 verify-external-audit-artifacts:
 	python3 scripts/verify_external_audit_artifacts.py

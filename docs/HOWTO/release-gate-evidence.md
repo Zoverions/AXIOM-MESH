@@ -34,6 +34,7 @@ release-evidence/
 - SLO report including P95 latency and error budget status.
 - Recovery drill outputs with measured RTO/RPO.
 - Replay/reorg test evidence for chain event handling.
+- M21.3 fail-closed chaos suite evidence for partition, hypervisor-crash, and finality-delay deny-by-default scenarios.
 
 ### Ecosystem gate
 - API/schema/ABI compatibility check logs.
@@ -77,6 +78,7 @@ Before final gate approval, confirm:
 After assembling a package, run:
 
 ```bash
+python3 scripts/run_fail_closed_chaos_suite.py
 make validate-release-evidence RC_PATH=release-evidence/RC-<date>-<tag>
 ```
 
