@@ -28,7 +28,10 @@ HIGH_RISK_CLASSES = {"high", "critical"}
 GLOBAL_FLEET_SCOPES = {"global", "national"}
 HIGH_RISK_APPROVAL_MIN = int(os.getenv("HIGH_RISK_APPROVAL_MIN", "2"))
 EMBODIED_GUARDRAIL_AUDIT_LOG = os.getenv("EMBODIED_GUARDRAIL_AUDIT_LOG", "logs/embodied_guardrails.audit.log")
+GOVERNANCE_EVENT_AUDIT_LOG = os.getenv("GOVERNANCE_EVENT_AUDIT_LOG", "logs/governance_events.audit.log")
 EMERGENCY_HALT_FILE = os.getenv("EMERGENCY_HALT_FILE", "/tmp/axiom_emergency_halt")
+SENTIENCE_UNCERTAINTY_THRESHOLD = float(os.getenv("SENTIENCE_UNCERTAINTY_THRESHOLD", "0.7"))
+ESCALATION_BOARD_MIN_MEMBERS = int(os.getenv("ESCALATION_BOARD_MIN_MEMBERS", "3"))
 
 
 def _get_scheduler_signing_key() -> str:
@@ -81,6 +84,13 @@ class ScheduleRequest(BaseModel):
     allowed_time_windows_utc: list[str] = []
     requested_force_newtons: Optional[float] = None
     max_force_newtons: Optional[float] = None
+    sentience_uncertainty_score: Optional[float] = None
+    sentience_trigger: Optional[str] = None
+    escalation_board: list[str] = []
+    protected_mode: bool = False
+    approval_trace_id: Optional[str] = None
+    policy_evidence_ref: Optional[str] = None
+    incident_drill_id: Optional[str] = None
 
 
 def _emit_guardrail_audit_event(event_type: str, task_name: str, status: str, details: dict) -> None:
@@ -99,6 +109,24 @@ def _emit_guardrail_audit_event(event_type: str, task_name: str, status: str, de
             audit_file.write(json.dumps(event, sort_keys=True) + "\n")
     except Exception as exc:
         print(f"[EmbodiedGuardrails] audit-log-write-failed task={task_name} error={exc}")
+
+
+def _emit_governance_event(event_type: str, task_name: str, status: str, details: dict) -> None:
+    event = {
+        "event_id": str(uuid.uuid4()),
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "event_type": event_type,
+        "task_name": task_name,
+        "status": status,
+        "details": details,
+    }
+    print(f"[GovernanceEvents] {json.dumps(event, sort_keys=True)}")
+    try:
+        os.makedirs(os.path.dirname(GOVERNANCE_EVENT_AUDIT_LOG), exist_ok=True)
+        with open(GOVERNANCE_EVENT_AUDIT_LOG, "a", encoding="utf-8") as audit_file:
+            audit_file.write(json.dumps(event, sort_keys=True) + "\n")
+    except Exception as exc:
+        print(f"[GovernanceEvents] audit-log-write-failed task={task_name} error={exc}")
 
 
 def _is_emergency_halt_triggered() -> bool:
@@ -221,6 +249,72 @@ def _enforce_embodied_guardrails(request: "ScheduleRequest") -> None:
     )
 
 
+def _enforce_sentience_uncertainty_protocol(request: "ScheduleRequest") -> None:
+    if request.sentience_uncertainty_score is not None:
+        if request.sentience_uncertainty_score < 0 or request.sentience_uncertainty_score > 1:
+            raise HTTPException(status_code=400, detail="sentience_uncertainty_score must be between 0 and 1")
+
+    score_triggered = (
+        request.sentience_uncertainty_score is not None
+        and request.sentience_uncertainty_score >= SENTIENCE_UNCERTAINTY_THRESHOLD
+    )
+    explicit_triggered = bool(request.sentience_trigger and request.sentience_trigger.strip())
+    if not score_triggered and not explicit_triggered:
+        return
+
+    details = {
+        "sentience_uncertainty_score": request.sentience_uncertainty_score,
+        "sentience_trigger": request.sentience_trigger,
+        "threshold": SENTIENCE_UNCERTAINTY_THRESHOLD,
+        "protected_mode": request.protected_mode,
+        "escalation_board_size": len(request.escalation_board),
+    }
+    if not request.protected_mode:
+        _emit_governance_event("sentience_uncertainty", request.name, "blocked", details)
+        raise HTTPException(
+            status_code=403,
+            detail="Sentience-uncertainty trigger requires protected_mode and escalation board workflow",
+        )
+
+    if len(request.escalation_board) < ESCALATION_BOARD_MIN_MEMBERS:
+        _emit_governance_event("sentience_uncertainty", request.name, "blocked", details)
+        raise HTTPException(
+            status_code=403,
+            detail=f"escalation_board must include at least {ESCALATION_BOARD_MIN_MEMBERS} members",
+        )
+
+    _emit_governance_event("sentience_uncertainty", request.name, "escalated", details)
+
+
+def _enforce_embodied_evidence_gate(request: "ScheduleRequest") -> None:
+    high_autonomy_task = request.autonomy_level == "autonomous" and request.risk_class in HIGH_RISK_CLASSES
+    if not high_autonomy_task:
+        return
+
+    missing_fields = []
+    if not request.approval_trace_id:
+        missing_fields.append("approval_trace_id")
+    if not request.policy_evidence_ref:
+        missing_fields.append("policy_evidence_ref")
+    if not request.incident_drill_id:
+        missing_fields.append("incident_drill_id")
+
+    details = {
+        "autonomy_level": request.autonomy_level,
+        "risk_class": request.risk_class,
+        "required_approvals": request.required_approvals,
+        "missing_fields": missing_fields,
+    }
+    if missing_fields:
+        _emit_governance_event("embodied_evidence_gate", request.name, "blocked", details)
+        raise HTTPException(
+            status_code=403,
+            detail=f"High-risk autonomous task requires evidence fields: {', '.join(missing_fields)}",
+        )
+
+    _emit_governance_event("embodied_evidence_gate", request.name, "passed", details)
+
+
 async def _resolve_execution_route(request: "ScheduleRequest") -> tuple[str, dict]:
     state = {
         "intent": request.command or request.name,
@@ -243,7 +337,9 @@ async def schedule_task(request: ScheduleRequest):
     try:
         _verify_schedule_signature(request)
         _enforce_fleet_autonomy_policy(request)
+        _enforce_sentience_uncertainty_protocol(request)
         _enforce_embodied_guardrails(request)
+        _enforce_embodied_evidence_gate(request)
         # Define a closure that will execute the requested command
         async def dynamic_task():
             if not request.command:

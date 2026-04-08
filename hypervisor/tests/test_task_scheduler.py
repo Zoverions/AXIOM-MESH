@@ -249,3 +249,52 @@ async def test_scheduler_rejects_when_emergency_halt_enabled():
         assert response.status_code == 503
 
     os.environ.pop("EMBODIED_EMERGENCY_HALT", None)
+
+
+@pytest.mark.asyncio
+async def test_scheduler_sentience_uncertainty_requires_protected_mode():
+    os.environ["TASK_SCHEDULER_SIGNING_KEY"] = "test-signing-key"
+    nonce = str(uuid.uuid4())
+    timestamp_ms = int(time.time() * 1000)
+    command = "echo sentience"
+    signature = build_schedule_signature("sentience_task", 60, False, command, timestamp_ms, nonce, os.environ["TASK_SCHEDULER_SIGNING_KEY"])
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        response = await ac.post("/tasks/schedule", json={
+            "name": "sentience_task",
+            "interval": 60,
+            "is_recurring": False,
+            "command": command,
+            "sentience_uncertainty_score": 0.91,
+            "timestamp_ms": timestamp_ms,
+            "nonce": nonce,
+            "signature": signature,
+        })
+        assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_scheduler_high_risk_autonomous_requires_evidence_fields():
+    os.environ["TASK_SCHEDULER_SIGNING_KEY"] = "test-signing-key"
+    nonce = str(uuid.uuid4())
+    timestamp_ms = int(time.time() * 1000)
+    command = "echo evidence"
+    signature = build_schedule_signature("evidence_task", 60, False, command, timestamp_ms, nonce, os.environ["TASK_SCHEDULER_SIGNING_KEY"])
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        response = await ac.post("/tasks/schedule", json={
+            "name": "evidence_task",
+            "interval": 60,
+            "is_recurring": False,
+            "command": command,
+            "risk_class": "high",
+            "required_approvals": 2,
+            "autonomy_level": "autonomous",
+            "fleet_scope": "business",
+            "timestamp_ms": timestamp_ms,
+            "nonce": nonce,
+            "signature": signature,
+        })
+        assert response.status_code == 403
