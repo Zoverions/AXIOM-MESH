@@ -48,6 +48,15 @@ Update format example:
 - [x] **P1** M20.7 Extend tokenomics modeling for cross-network execution (burn/mint flows, staking/slashing, external compute settlement). — 2026-04-08 — @agent — added cross-network execution tokenomics model with burn/mint corridors, risk-weighted staking/slashing, and settlement controls.
 - [x] **P1** M20.8 Add governance-closure modeling tasks for evidence-weighted referenda and partnership-risk controls. — 2026-04-08 — @agent — published evidence-weighted referendum scoring model, partnership-risk bands, closure gates, and implementation backlog.
 - [x] **P2** M20.9 Prepare partnership pitch assets (Render + Polkadot augmentation matrix, pilot scope, and success metrics). — 2026-04-08 — @agent — created partnership pilot asset pack with augmentation matrix, scoped phases, KPI scorecard, and go/no-go rubric.
+- [ ] **P0** M21.1 Sandbox isolation hardening: add gVisor/Kata runtime profile with policy toggle and fail-closed fallback tests (owner: sandbox+security, ETA: 2026-04-22).
+- [ ] **P0** M21.2 mTLS trust bootstrap/rotation runbook: publish node-join, CA rotation, revocation, and clock-skew response procedure with automation hooks (owner: security+ops, ETA: 2026-04-18).
+- [ ] **P0** M21.3 Fail-closed chaos suite: add partition/hypervisor-crash/grid-finality-delay scenarios and gate release on deterministic deny-by-default behavior (owner: ops+reliability, ETA: 2026-04-25).
+- [ ] **P1** M21.4 Formal contract verification gate: integrate Slither + Foundry invariant/fuzz checks into CI and expose `make verify-formal` target (owner: contracts+infra, ETA: 2026-04-20).
+- [ ] **P1** M21.5 OpenTelemetry unification: emit correlated traces/metrics/log context across Gateway/Hypervisor/Sandbox/Grid and document dashboard SLO panels (owner: observability, ETA: 2026-04-24).
+- [ ] **P1** M21.6 Reproducible dev environments: add `.devcontainer/devcontainer.json` and `docker-compose.dev.yml` (hot reload + seeded fixtures) with parity checks (owner: devx, ETA: 2026-04-19).
+- [ ] **P1** M21.7 Supply-chain attestations: generate signed SBOM + provenance attestations and target SLSA L3-compatible workflow controls (owner: security+release, ETA: 2026-04-26).
+- [ ] **P2** M21.8 Expand top-level Makefile with `lint-all`, `test-matrix`, `sbom`, and `chaos-test` targets wired to CI (owner: infra, ETA: 2026-04-21).
+- [ ] **P2** M21.9 Threat-boundary diagram refresh: add Mermaid trust-boundary + mTLS flow view to architecture docs and link from README/docs index (owner: architecture+docs, ETA: 2026-04-17).
 
 ## 3) Priority Lanes (Execution History and Detailed Planning)
 
