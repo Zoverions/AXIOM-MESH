@@ -232,6 +232,7 @@ Detailed references:
   - 2026-03-27 — @agent — Mock evidence bundle generated; awaiting manual funding of deployer wallet for live testnet deployment
   - 2026-03-26 — @agent — updated deploy script to generate testnet wallet and halt for manual funding; awaiting faucet funding to execute the live testnet run
   - 2026-03-24 — @agent — added PulseChain testnet deployment + evidence-generation automation (`pulsechainTestnet` network config, deployment script output bundle, and verification command); pending funded deployer key + live run.
+  - 2026-04-08 — @agent — deferred for this execution pass per user instruction to ignore testnet/mainnet deployment items; all other checklist items remain complete.
 - [x] **M6.5** Extend deploy pipeline for simultaneous Ethereum/Base/Arbitrum deployments with bridge-path rating/polling/quorum oracle hooks (owner: crosschain, ETA: TBD). — 2026-03-27 — @agent — updated CrossChainBridge with oracle hooks and created deploy-multichain.cjs
 - [x] **M6.6** Enforce PulseChain-only final redemption path for bridged assets and document invariants + runbooks (owner: core+ops, ETA: TBD). — 2026-03-27 — @agent — enforced in CrossChainBridge and documented runbook
 - [x] **M6.7** Complete external security review scope for Transformer Foundation (PoER, Cognitive Friction, optimistic challenge windows) and queue Zellic/ToB handoff package (owner: security, ETA: TBD). — 2026-03-27 — @agent — created handoff package in docs/audits/transformer-foundation-security-review.md
