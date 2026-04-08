@@ -67,6 +67,10 @@ Update format example:
 - [x] **P1** M23.1 Publish one-page public-facing network service charter for cross-network partners, builders, and community stakeholders. — 2026-04-08 — @agent — added `docs/governance/NETWORK-SERVICE-CHARTER-ONE-PAGER-2026-04-08.md`.
 - [x] **P1** M23.2 Publish constitutional governance draft covering participant rights, risk routing, weighted governance, overlays, emergency powers, and amendment flow. — 2026-04-08 — @agent — added `docs/governance/NETWORK-SERVICE-CONSTITUTION-v1-DRAFT-2026-04-08.md`.
 - [x] **P1** M23.3 Define machine-readable network service policy schema for automation/governance interoperability. — 2026-04-08 — @agent — added `schemas/network_service_policy.v1.json` and linked schema catalog/docs index entries.
+- [x] **P1** M23.4 Publish a unified societal OS / everything-app audit playbook spanning network, blockchain, tokenomics, revenue, workforce, governance, education, and expansion gates. — 2026-04-08 — @agent — added `docs/assessments/SOCIETAL-OS-EVERYTHING-APP-AUDIT-PLAYBOOK-2026-04-08.md` with phased method, score model, and release-gate artifacts.
+- [ ] **P1** M23.5 Build `audit-controls.json` control manifest (owner + evidence + freshness SLO + status) to operationalize the societal OS audit playbook.
+- [ ] **P1** M23.6 Wire financial/governance verification scripts into CI release gates for tokenomics and treasury claim validation.
+- [ ] **P2** M23.7 Publish executive audit dashboard (domain scorecards, P0 blockers, evidence freshness aging) and link it in docs index.
 
 ## 3) Priority Lanes (Execution History and Detailed Planning)
 
