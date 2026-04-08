@@ -6,6 +6,10 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "./CitizenshipNFT.sol";
 import "./FounderCommitment.sol";
 
+interface IUniversalConsentProtocol {
+    function isAscensionEntity(address actor) external view returns (bool);
+}
+
 contract DigitalLegacy is Initializable, UUPSUpgradeable {
     CitizenshipNFT public immutable citizenship;
     FounderCommitment public immutable founder;
@@ -55,8 +59,10 @@ contract DigitalLegacy is Initializable, UUPSUpgradeable {
         uint16 queryLimit
     );
     event EmergencyBurn(uint256 indexed tokenId, bytes32 burnReasonHash);
+    event AscensionEntityDeploymentRequested(uint256 indexed tokenId, address indexed identity, address indexed wallet);
 
     address public upgradeTimelock;
+    address public universalConsentProtocol;
 
     constructor(address _citizenship, address _founder) {
         citizenship = CitizenshipNFT(_citizenship);
@@ -75,6 +81,11 @@ contract DigitalLegacy is Initializable, UUPSUpgradeable {
         require(!wills[tokenId].expired, "Will is expired");
         require(!wills[tokenId].executed, "Will already executed");
         _;
+    }
+
+    function setUniversalConsentProtocol(address _universalConsentProtocol) external {
+        require(msg.sender == upgradeTimelock || founder.verifyFounder(""), "Unauthorized");
+        universalConsentProtocol = _universalConsentProtocol;
     }
 
     function setUpgradeTimelock(address _timelock) external {
@@ -185,6 +196,10 @@ contract DigitalLegacy is Initializable, UUPSUpgradeable {
         w.expired = true;
         w.executed = true;
 
+        if (w.digitalEntityContinues && w.sovereign != address(0) && citizenshipNFTToWallet(tokenId) != address(0)) {
+            deployAscensionEntity(tokenId, w.sovereign, citizenshipNFTToWallet(tokenId));
+        }
+
         emit StateTransitionExecuted(tokenId);
         emit LegacyExecuted(tokenId);
     }
@@ -223,6 +238,20 @@ contract DigitalLegacy is Initializable, UUPSUpgradeable {
         emit HeuristicAdviceRequested(tokenId, beneficiary, promptHash, policy.queriesUsed, policy.queryLimit);
     }
 
+    /// @notice Requests post-biological ascension deployment after oracle-verified expiration.
+    function deployAscensionEntity(uint256 tokenId, address identity, address nodeWallet) public {
+        Will storage w = wills[tokenId];
+        require(w.expired, "Legacy not yet expired");
+        require(w.digitalEntityContinues, "Digital continuation disabled");
+        require(identity != address(0) && nodeWallet != address(0), "Invalid ascension addresses");
+        require(universalConsentProtocol != address(0), "Consent protocol not configured");
+
+        bool consented = IUniversalConsentProtocol(universalConsentProtocol).isAscensionEntity(identity);
+        require(consented, "Ascension consent missing");
+
+        emit AscensionEntityDeploymentRequested(tokenId, identity, nodeWallet);
+    }
+
     /// @notice Catastrophic anti-commodification safeguard.
     function emergencyBurn(uint256 tokenId, bytes32 burnReasonHash) external {
         Will storage w = wills[tokenId];
@@ -238,6 +267,10 @@ contract DigitalLegacy is Initializable, UUPSUpgradeable {
         w.executed = true;
 
         emit EmergencyBurn(tokenId, burnReasonHash);
+    }
+
+    function citizenshipNFTToWallet(uint256 tokenId) internal view returns (address) {
+        return citizenship.ownerOf(tokenId);
     }
 
     function _authorizeUpgrade(address) internal override {
