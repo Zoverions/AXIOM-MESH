@@ -1,5 +1,10 @@
 [profile.default]
 src = "grid/contracts/contracts"
+test = "grid/contracts/test"
+script = "grid/contracts/script"
 out = "out"
-libs = ["lib"]
-remappings = ["@openzeppelin/=node_modules/@openzeppelin/"]
+libs = ["grid/contracts/lib", "grid/contracts/node_modules"]
+remappings = [
+  "@openzeppelin/=grid/contracts/node_modules/@openzeppelin/",
+  "forge-std/=grid/contracts/lib/forge-std/src/"
+]
