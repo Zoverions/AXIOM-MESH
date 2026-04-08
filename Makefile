@@ -7,7 +7,7 @@
 	test-reconciliation test-grid-authz verify-change-control test-provex-wrapper \
 	test-mtls test-sandbox-identity test-zero-trust test-telemetry-alerts test-fail-closed-chaos \
 	verify-external-audit-artifacts verify-zkml-audit-pack verify-bridge-audit-pack \
-	verify-gas-target verify-sbom verify-genesis-ceremony \
+	verify-gas-target verify-sbom verify-genesis-ceremony verify-formal \
 	generate-docs steering-index
 
 generate-docs:
@@ -140,6 +140,12 @@ verify-sbom:
 
 verify-genesis-ceremony:
 	python3 scripts/test_genesis_ceremony.py
+
+verify-formal:
+	@command -v slither >/dev/null 2>&1 || (echo "slither CLI not installed"; exit 1)
+	@command -v forge >/dev/null 2>&1 || (echo "forge CLI not installed"; exit 1)
+	cd grid/contracts && slither . --compile-force-framework hardhat
+	forge test --match-test "testFuzz|invariant_" -vv
 
 steering-index:
 	python3 scripts/generate_agent_steering_index.py

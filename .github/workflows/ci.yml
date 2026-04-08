@@ -110,10 +110,11 @@ jobs:
         # mythril is often installed via docker or requires specific python versions
         # we'll use the docker container to run it.
 
-    - name: Run Slither
-      run: |
-        cd grid/contracts
-        slither . --compile-force-framework hardhat || true
+    - name: Set up Foundry
+      uses: foundry-rs/foundry-toolchain@v1
+
+    - name: Run formal verification gate (Slither + Foundry fuzz/invariant)
+      run: make verify-formal
 
     - name: Run Mythril
       run: |
