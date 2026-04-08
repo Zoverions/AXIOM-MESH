@@ -9,6 +9,7 @@ import hashlib
 import asyncio
 from torch import nn
 
+
 class SimpleModel(nn.Module):
     def __init__(self, weights, bias):
         super(SimpleModel, self).__init__()
@@ -20,20 +21,21 @@ class SimpleModel(nn.Module):
     def forward(self, x):
         return self.linear(x)
 
+
 class EdgeZKMLProver:
     """
-    Generates an actual zero-knowledge proof of a machine learning inference
-    pass at the edge using ezkl.
+    Generates zero-knowledge proofs of edge inference with anti-drift metadata
+    for Soul Snapshot enforcement.
     """
 
-    def __init__(self, weights: list[float] = None, bias: float = 0.0):
-        # We use a simple linear/perceptron model.
+    def __init__(self, weights: list[float] = None, bias: float = 0.0, frozen_log_hashes: list[str] | None = None):
         self.weights = weights if weights is not None else [0.5, -0.2, 0.8]
         self.bias = bias
+        self.frozen_log_hashes = sorted(frozen_log_hashes or [])
         self.model_commitment = self._generate_commitment()
 
     def _generate_commitment(self) -> str:
-        model_data = json.dumps({"weights": self.weights, "bias": self.bias})
+        model_data = json.dumps({"weights": self.weights, "bias": self.bias, "frozen_logs": self.frozen_log_hashes})
         return hashlib.sha256(model_data.encode()).hexdigest()
 
     def _prepare_input(self, input_vector: list[float]) -> np.ndarray:
@@ -66,11 +68,11 @@ class EdgeZKMLProver:
             do_constant_folding=True,
             input_names=["input"],
             output_names=["output"],
-            dynamic_axes={"input": {0: "batch_size"}, "output": {0: "batch_size"}}
+            dynamic_axes={"input": {0: "batch_size"}, "output": {0: "batch_size"}},
         )
 
         data = dict(input_data=[[x.item() for x in x.flatten()]], output_data=[[y.item() for y in y.flatten()]])
-        with open(input_path, "w") as f:
+        with open(input_path, "w", encoding="utf-8") as f:
             json.dump(data, f)
 
         return output_vector, onnx_path, input_path, settings_path
@@ -103,11 +105,13 @@ class EdgeZKMLProver:
 
         if loop.is_running():
             import threading
+
             def run_in_thread():
                 new_loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(new_loop)
                 new_loop.run_until_complete(run_ezkl_commands())
                 new_loop.close()
+
             thread = threading.Thread(target=run_in_thread)
             thread.start()
             thread.join()
@@ -117,18 +121,24 @@ class EdgeZKMLProver:
         return proof_path, vk_path
 
     def _extract_assets(self, proof_path: str, settings_path: str, vk_path: str) -> tuple[str, str, str]:
-        with open(proof_path, "r") as f:
+        with open(proof_path, "r", encoding="utf-8") as f:
             proof_data = f.read()
-        with open(settings_path, "r") as f:
+        with open(settings_path, "r", encoding="utf-8") as f:
             settings_data = f.read()
         with open(vk_path, "rb") as f:
-            vk_data = base64.b64encode(f.read()).decode('utf-8')
+            vk_data = base64.b64encode(f.read()).decode("utf-8")
         return proof_data, settings_data, vk_data
 
-    def infer_and_prove(self, input_vector: list[float]) -> dict:
-        """
-        Executes the forward pass and generates the accompanying zk-proof.
-        """
+    def infer_and_prove(
+        self,
+        input_vector: list[float],
+        context_hashes: list[str] | None = None,
+        allow_external_context: bool = False,
+    ) -> dict:
+        """Execute forward pass and emit anti-hallucination proof metadata."""
+        used_context_hashes = sorted(context_hashes or self.frozen_log_hashes)
+        external_context_injected = any(h not in self.frozen_log_hashes for h in used_context_hashes)
+
         x_np = self._prepare_input(input_vector)
 
         with tempfile.TemporaryDirectory() as tempdir:
@@ -136,11 +146,19 @@ class EdgeZKMLProver:
             proof_path, vk_path = self._generate_zk_proof(onnx_path, input_path, settings_path, tempdir)
             proof_data, settings_data, vk_data = self._extract_assets(proof_path, settings_path, vk_path)
 
+        anti_hallucination_claim = {
+            "frozen_log_commitment": hashlib.sha256("".join(self.frozen_log_hashes).encode()).hexdigest(),
+            "used_context_commitment": hashlib.sha256("".join(used_context_hashes).encode()).hexdigest(),
+            "external_context_injected": external_context_injected,
+            "allow_external_context": allow_external_context,
+        }
+
         return {
             "model_commitment": self.model_commitment,
             "input": x_np.tolist(),
             "output": output_vector,
             "proof": proof_data,
             "vk": vk_data,
-            "settings": settings_data
+            "settings": settings_data,
+            "anti_hallucination_claim": anti_hallucination_claim,
         }
