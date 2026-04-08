@@ -40,7 +40,7 @@ Update format example:
 - [x] **P2** M12.2 Add quarterly evidence freshness audit for security, performance, and reliability artifacts. — 2026-04-07 — @agent — added `docs/operations/EVIDENCE-FRESHNESS-AUDIT-2026-Q2.md` and freshness validator script.
 - [x] **P2** M12.3 Add CI check to ensure operator-facing features link to at least one HOWTO entry. — 2026-04-07 — @agent — added `scripts/check_operator_howto_links.py` and GitHub Actions workflow `docs-assurance.yml`.
 - [x] **P0** M20.1 Multi-chain partnership brief: finalize Render integration narrative focused on AXIOM augmentation (ZKML verification, policy orchestration, fail-closed evidence paths). — 2026-04-08 — @agent — added `docs/partnerships/RENDER-AUGMENTATION-BRIEF-2026-04-08.md`.
-- [ ] **P0** M20.2 Build Hypervisor Render adapter spike (external GPU job submission + callback ingestion + signed evidence hooks).
+- [x] **P0** M20.2 Build Hypervisor Render adapter spike (external GPU job submission + callback ingestion + signed evidence hooks). — 2026-04-08 — @agent — added Hypervisor Render submission/callback router + signed evidence adapter spike with tests/docs. — fe1eaf5
 - [ ] **P0** M20.3 Specify ZKML attestation envelope for third-party compute outputs and bind Grid verifier acceptance/rejection criteria.
 - [ ] **P1** M20.4 Draft Polkadot integration plan covering XCM sender/receiver boundaries, trust assumptions, and staged activation gates.
 - [ ] **P1** M20.5 Define parachain readiness workstream (Agile Coretime strategy, treasury/governance impacts, and rollout prerequisites).
