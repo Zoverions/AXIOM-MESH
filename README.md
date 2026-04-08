@@ -101,7 +101,8 @@ Primary control documents:
 - **`docs/MASTER-TODO.md`** — canonical execution queue.
 - **`docs/PROJECT-STATUS-2026.md`** — project/repo status snapshot.
 - **`docs/AUDIT_REPORT.md`** and `docs/audits/` — audit and remediation material.
-- **`docs/ARCHITECTURE.md`** and **`docs/TECHNICAL-SPECIFICATION.md`** — architecture/spec baseline.
+- **`docs/architecture/ARCHITECTURE.md`** and **`docs/TECHNICAL-SPECIFICATION.md`** — architecture/spec baseline.
+- **Trust-boundary + mTLS flow diagrams:** `docs/architecture/ARCHITECTURE.md#34-trust-boundary-diagram-mermaid`
 - **`docs/GRID-CONSENSUS-SPEC.md`** — Grid consensus, finality semantics, and upgrade controls baseline.
 
 ---

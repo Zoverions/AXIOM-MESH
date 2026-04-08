@@ -1,7 +1,7 @@
 # AXIOM-MESH Architecture (Canonical)
 
 **Document role:** Canonical architecture baseline for AXIOM-MESH.
-**Last updated:** 2026-03-30.
+**Last updated:** 2026-04-08.
 **Scope:** Runtime topology, control/data planes, trust boundaries, and release architecture constraints.
 
 ---
@@ -57,6 +57,59 @@ Includes user intents, execution payloads, model/tool inputs/outputs, and persis
 - **Gateway ↔ Hypervisor** (authenticated internal calls; policy-aware handoff).
 - **Hypervisor ↔ Sandbox** (least-privilege execution tokens/profiles).
 - **Grid ↔ chain/external systems** (finality/reconciliation-aware integration).
+
+### 3.4 Trust-Boundary Diagram (Mermaid)
+```mermaid
+flowchart LR
+    public[Public Clients / Partners]
+    gw[Gateway
+API ingress + authn/authz]
+    hv[Hypervisor
+Policy + orchestration]
+    sb[Sandbox
+Isolated execution]
+    grid[Grid
+State sync + consensus]
+    chain[(Contracts / External Chains)]
+
+    public -->|HTTPS (WAF + rate limits)| gw
+    gw -->|mTLS + JWT claims| hv
+    hv -->|mTLS + scoped exec token| sb
+    hv -->|mTLS service RPC| grid
+    grid -->|Signed tx + finality checks| chain
+
+    classDef trust fill:#fff4d6,stroke:#d48a00,stroke-width:2px;
+    classDef core fill:#e7f0ff,stroke:#1f5fbf,stroke-width:1px;
+    class public trust;
+    class gw,hv,sb,grid,chain core;
+```
+
+### 3.5 mTLS Service Identity & Rotation Flow (Mermaid)
+```mermaid
+sequenceDiagram
+    autonumber
+    participant CA as Mesh CA
+    participant GW as Gateway
+    participant HV as Hypervisor
+    participant SB as Sandbox
+    participant GR as Grid
+
+    CA->>GW: Issue short-lived cert + trust bundle
+    CA->>HV: Issue short-lived cert + trust bundle
+    CA->>SB: Issue short-lived cert + trust bundle
+    CA->>GR: Issue short-lived cert + trust bundle
+
+    GW->>HV: mTLS handshake (SPIFFE/SAN identity)
+    HV->>SB: mTLS handshake (scoped capability token)
+    HV->>GR: mTLS handshake (policy + routing metadata)
+
+    CA-->>GW: Rotate cert / publish CRL
+    CA-->>HV: Rotate cert / publish CRL
+    CA-->>SB: Rotate cert / publish CRL
+    CA-->>GR: Rotate cert / publish CRL
+
+    Note over GW,GR: Fail-closed on expired/revoked certs or skew beyond policy
+```
 
 ---
 

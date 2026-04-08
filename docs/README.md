@@ -40,7 +40,7 @@ The installer automatically detects your platform and installs all dependencies 
 ## 1) Canonical Documents by Domain
 
 ## Foundations
-- **Architecture:** `docs/architecture/ARCHITECTURE.md`
+- **Architecture:** `docs/architecture/ARCHITECTURE.md` (includes trust-boundary and mTLS Mermaid views)
 - **Technical Specification:** `docs/TECHNICAL-SPECIFICATION.md`
 - **Grid consensus baseline:** `docs/GRID-CONSENSUS-SPEC.md`
 - **Interface Contracts:** `docs/architecture/INTERFACE-CONTROL-DOCUMENT.md`
