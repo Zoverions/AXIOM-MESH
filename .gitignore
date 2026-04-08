@@ -1,20 +1,26 @@
 ```
-# Dependencies
-node_modules/
-venv/
-.venv/
+# Compiled and build artifacts
+*.pyc
 __pycache__/
-.mypy_cache/
-.pytest_cache/
-.julia/
-zig*/
+*.o
+*.obj
+dist/
+build/
 target/
+
+# Dependencies
+.venv/
+venv/
+node_modules/
+.julia/
+.zig-cache/
 .gradle/
 
 # Logs and temp files
 *.log
 *.tmp
 *.swp
+*.swo
 
 # Environment
 .env
@@ -24,13 +30,30 @@ target/
 # Editors
 .vscode/
 .idea/
+*.swp
+*.swo
 
-# Build artifacts
-dist/
-build/
+# System files
+.DS_Store
+Thumbs.db
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# Python specific
 *.pyc
-*.class
-*.o
-*.obj
-*.out
+__pycache__/
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg-info/
+.eggs/
+
+# Cache directories
+.mypy_cache/
+.pytest_cache/
+.tox/
 ```
