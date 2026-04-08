@@ -2,7 +2,7 @@
 
 <img src="../logo.png" alt="Axiom Mesh Logo" width="150" align="right">
 
-**Status Date:** 2026-03-27  
+**Status Date:** 2026-04-08  
 **Reality Statement:** AXIOM-MESH is currently in repository/staging hardening and is not live on testnet/mainnet.
 
 This index consolidates documentation ownership, reduces overlap, and defines which documents are canonical for each domain.
@@ -138,5 +138,6 @@ A documentation change is incomplete if the corresponding HOWTO steps are not ex
 
 ## 5) Continuous Documentation Assurance
 - **Documentation coverage assessment (2026-04-07):** `docs/assessments/DOCS-COVERAGE-ASSESSMENT-2026-04-07.md`
+- **MASTER-TODO + docs integrity audit (2026-04-08):** `docs/assessments/MASTER-TODO-DOCS-INTEGRITY-AUDIT-2026-04-08.md`
 - Every operator-facing feature must have a linked HOWTO from `docs/HOWTO/index.md`.
 - Execution status remains canonical in `docs/MASTER-TODO.md` with pending tasks listed first.
