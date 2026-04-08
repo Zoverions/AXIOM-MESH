@@ -128,5 +128,6 @@ Use these documents together:
 - `docs/MASTER-TODO.md` — active execution truth.
 - `docs/ROADMAP.md` — strategic direction and milestones.
 - `docs/governance/FLEET-GOVERNANCE-POLICY-REGISTRY.md` — federated fleet policy keys and contract-facing identifiers.
+- `docs/governance/SENTIENCE-UNCERTAINTY-SAFEGUARD-PROTOCOL.md` — sentience trigger, protected-mode, escalation board, and governance event logging protocol.
 
 If conflicts exist, active execution truth is in `docs/MASTER-TODO.md`; governance policy intent is defined here.
