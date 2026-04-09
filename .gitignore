@@ -1,39 +1,32 @@
 ```
-# Compiled and build artifacts
-*.pyc
-__pycache__/
-*.o
-*.obj
-dist/
+# Build artifacts
 build/
-target/
+dist/
+*.solc_artifacts
+*.abi
+*.bin
+*.hex
 
 # Dependencies
-.venv/
-venv/
 node_modules/
-.julia/
-.zig-cache/
-.gradle/
-
-# Logs and temp files
-*.log
-*.tmp
-*.swp
-*.swo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Environment
 .env
 .env.local
-*.env.*
+.env.*
+!.env.example
 
 # Editors
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
-# System files
+# OS
 .DS_Store
 Thumbs.db
 
@@ -41,19 +34,23 @@ Thumbs.db
 coverage/
 htmlcov/
 .coverage
+*.coverage
 
-# Python specific
-*.pyc
+# Cache
 __pycache__/
+*.pyc
 *.pyo
 *.pyd
 .Python
 *.so
+
+# Testing
+.pytest_cache/
+.mypy_cache/
+.hypothesis/
+
+# Distribution
+*.tar.gz
 *.egg-info/
 .eggs/
-
-# Cache directories
-.mypy_cache/
-.pytest_cache/
-.tox/
 ```
