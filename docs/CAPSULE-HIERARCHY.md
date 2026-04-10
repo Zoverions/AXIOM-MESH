@@ -34,6 +34,7 @@ This document formalizes the package hierarchy requested for operations and inst
   - UK Government Capsule Plus (planned)
   - China Governance Capsule Plus (planned – pull-not-push philosophy)
   - Business / Digital Agency Capsule Plus (planned – autonomous revenue generation and portfolio management)
+  - Health / Longevity Capsule Plus (planned – deterministic unit privacy, individual control, longevity, and quality of life)
 - RAM target: 800 MB – 2 GB (full-system mode)
 
 ## Installer Mapping
