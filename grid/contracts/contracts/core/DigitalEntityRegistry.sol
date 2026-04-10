@@ -43,7 +43,13 @@ contract DigitalEntityRegistry is Ownable {
 
     function registerEntity() external {
         require(!entities[msg.sender].exists, "Entity already exists");
-        entities[msg.sender] = DigitalEntity(msg.sender, true, "", LegacyMode.FOSSIL, false, false);
+        DigitalEntity storage entity = entities[msg.sender];
+        entity.userWallet = msg.sender;
+        entity.exists = true;
+        entity.shareableProfileHash = "";
+        entity.legacyMode = LegacyMode.FOSSIL;
+        entity.kycStripped = false;
+        entity.daoProxyAuthorized = false;
         emit EntityRegistered(msg.sender, LegacyMode.FOSSIL);
     }
 

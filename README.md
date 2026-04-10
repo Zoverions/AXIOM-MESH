@@ -98,7 +98,8 @@ Start with:
 
 Primary control documents:
 
-- **`docs/MASTER-TODO.md`** — canonical execution queue.
+- **The Sovereign Execution Queue** — on-chain execution queue replacing MASTER-TODO.md. The network is governed by math and thermodynamics from Day 1, not a developer roadmap.
+- **Genesis Decay** — Mathematical protocol for automatic phase-out of centralized founder permissions over time.
 - **`docs/PROJECT-STATUS-2026.md`** — project/repo status snapshot.
 - **`docs/AUDIT_REPORT.md`** and `docs/audits/` — audit and remediation material.
 - **`docs/assessments/SOCIETAL-OS-EVERYTHING-APP-AUDIT-PLAYBOOK-2026-04-08.md`** — integrated audit operating playbook for the societal OS / everything-app program.

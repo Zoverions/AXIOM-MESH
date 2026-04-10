@@ -28,7 +28,7 @@ contract EducationalNode is Ownable {
 
     // EducationalNode tracks symbiote learning sessions and triggers PoER growth
     function recordLearningSession(address symbiote, string calldata topic, uint256 boostAmount) external onlyOwner {
-        (, bool exists, ) = registry.entities(symbiote);
+        (, bool exists, , , , , ) = registry.entities(symbiote);
         require(exists, "Symbiote must have a digital entity");
 
         sessions[symbiote].push(LearningSession({

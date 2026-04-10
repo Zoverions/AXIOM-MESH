@@ -61,6 +61,12 @@ async function main() {
   await FounderCommitment.waitForDeployment();
   const founderCommitmentTarget = await FounderCommitment.getAddress();
 
+  // Genesis Decay Governance deployment
+  // maturityHorizonBlocks equivalent to approx 2 years on PulseChain (10s blocks: ~6,307,200)
+  const GenesisDecayGovernance = await hre.ethers.deployContract("GenesisDecayGovernance", [6307200, 1000, [deployer.address]]);
+  await GenesisDecayGovernance.waitForDeployment();
+  const genesisDecayGovernanceTarget = await GenesisDecayGovernance.getAddress();
+
   const ComputeBond = await hre.ethers.deployContract("ComputeBond", [axmTarget, deployer.address]);
   await ComputeBond.waitForDeployment();
   const computeBondTarget = await ComputeBond.getAddress();
@@ -99,6 +105,7 @@ async function main() {
     contracts: {
       AXMToken: axmTarget,
       FounderCommitment: founderCommitmentTarget,
+      GenesisDecayGovernance: genesisDecayGovernanceTarget,
       ComputeBond: computeBondTarget,
       FounderShareManager: founderShareManagerTarget,
       CognitiveFrictionVerifier: cognitiveVerifierTarget,
