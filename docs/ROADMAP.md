@@ -16,19 +16,12 @@
 
 ## 2) Strategic Phases
 
-## Phase A — Stabilize Core Runtime (Completed / Hardening)
-
-**Outcome target:** Four-pillar runtime reliability with documented controls.
-
-Focus areas:
-- Interface consistency and compatibility checks.
-- Security hardening and threat-model alignment.
-- Operational runbooks and drill baseline.
-- Canonical documentation alignment.
-
-Exit signals:
-- Gate evidence automation in place.
-- Recovery and degraded-mode playbooks validated.
+### Phase 1: Deep Hardening (COMPLETE — April 10, 2026)
+- [x] Genesis Decay Governance v2 deployed (exponential thermodynamic decay)
+- [x] Sovereign Execution Queue live on-chain (ProposalRegistry)
+- [x] MASTER-TODO.md and Founder Multi-Sig fully abolished
+- [x] Network now governed by math and thermodynamics from Genesis block 0
+→ Constitutional maturation achieved. The Mesh belongs to the Mesh.
 
 ## Phase B — Governance & Economic Integrity (In Progress)
 

@@ -1,3 +1,14 @@
+## Current Status — April 10, 2026 (Genesis Handoff Complete)
+
+The fatal "Benevolent Dictator" flaw in Article V has been eliminated forever.
+- Genesis Decay Governance v2 with exponential half-life decay is live.
+- Sovereign Execution Queue is the sole arbiter of all network tasks.
+- No human roadmap exists. All future execution flows from on-chain Senate-weighted proposals.
+- Decentralization is now guaranteed by physics, not by founder goodwill.
+
+Milestone achieved: "Ultimate architectural maturation of the AXIOM-MESH."
+Next: M6.4 private testnet under the new constitutional rules.
+
 # AXIOM-MESH Project Status (March 2026, updated March 23)
 
 This document is the single source of truth for repository health, implementation status, and cleanup posture.
