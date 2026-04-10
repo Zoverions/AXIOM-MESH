@@ -49,6 +49,26 @@ Exit signals:
 - Verified cross-chain runbooks and replay safety checks.
 - Repeatable deployment evidence artifacts for supported networks.
 
+### XION Integration Steps (4-Week Plan)
+
+**Environment Setup (Week 1)**
+- Install xiond daemon + CosmWasm toolchain (official guide: docs.burnt.com/xion/developers/computation/local-development).
+- Run local XION testnet node.
+
+**Port Core Contracts (Week 1–2)**
+- Translate GenesisDecayGovernance.sol + ProposalRegistry.sol into CosmWasm (Rust) smart contracts.
+- Use XION’s native ZK Module if you want to add zero-knowledge verification later.
+
+**Hypervisor Adapter (Week 2–3)**
+- Add XION ChainAdapter in hypervisor/src/blockchain/ (similar to your existing PulseChain adapter).
+- Wire SovereignExecutionQueue to poll XION’s ProposalRegistry via xiond or the JS/Go SDK.
+
+**Cross-Chain + Testnet Launch (Week 3–4)**
+- Leverage XION’s Package Forwarding Middleware + IBC for native PulseChain ↔ XION flows.
+- Deploy a parallel Grid instance on XION testnet.
+- Run end-to-end capability execution (Gateway → Hypervisor → XION Sandbox).
+- Publish evidence bundle + update CONSTITUTION.md.
+
 ## Phase D — Sovereign Service/Guild Expansion (Design→Pilot)
 
 **Outcome target:** Deployable governance guild and public-service capsule patterns.
