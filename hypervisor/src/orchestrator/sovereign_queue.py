@@ -39,9 +39,10 @@ class SovereignExecutionQueue:
                             {"internalType": "string", "name": "title", "type": "string"},
                             {"internalType": "string", "name": "content", "type": "string"},
                             {"internalType": "uint256", "name": "rankWeight", "type": "uint256"},
-                            {"internalType": "bool", "name": "executed", "type": "bool"}
+                            {"internalType": "bool", "name": "executed", "type": "bool"},
+                            {"internalType": "uint256", "name": "timestamp", "type": "uint256"}
                         ],
-                        "internalType": "struct GenesisDecayGovernance.ProposalResponse",
+                        "internalType": "struct ProposalRegistry.Proposal",
                         "name": "",
                         "type": "tuple"
                     }
@@ -70,13 +71,14 @@ class SovereignExecutionQueue:
             # We call the real contract
             top_proposal = await asyncio.to_thread(self.contract.functions.getHighestRankedProposal().call)
 
-            if top_proposal and len(top_proposal) >= 5 and top_proposal[0]:
+            if top_proposal and len(top_proposal) >= 6 and top_proposal[0]:
                 proposal_data = {
                     "id": top_proposal[0],
                     "title": top_proposal[1],
                     "proposal_content": top_proposal[2],
                     "rankWeight": top_proposal[3],
-                    "executed": top_proposal[4]
+                    "executed": top_proposal[4],
+                    "timestamp": top_proposal[5]
                 }
 
                 if not proposal_data["executed"]:
