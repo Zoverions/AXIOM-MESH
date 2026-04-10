@@ -281,7 +281,7 @@ contract DigitalLegacy is Initializable, UUPSUpgradeable {
     }
 
     /// @notice Oracle/dead-man switch marks expiration intent.
-    function triggerExpirationOracle(uint256 tokenId) external {
+    function triggerExpirationOracle(uint256 tokenId) public {
         Will storage w = wills[tokenId];
         require(!w.expired, "Already expired");
 
@@ -296,7 +296,7 @@ contract DigitalLegacy is Initializable, UUPSUpgradeable {
     }
 
     /// @notice Final, irreversible transition to read-only Shadow Node state.
-    function executeStateTransition(uint256 tokenId) external {
+    function executeStateTransition(uint256 tokenId) public {
         Will storage w = wills[tokenId];
         require(w.expirationTriggered, "Oracle not triggered");
         require(!w.expired, "Already transitioned");

@@ -3,6 +3,9 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../treasury/GuildTreasuryFactory.sol";
 
+/**
+ * @custom:deprecated Replaced by GenesisDecayGovernance in v3.0.
+ */
 contract FounderEntity is Ownable {
     uint256 public constant MAX_RESOURCE_PERCENT = 5;
     address public immutable guildFactory;

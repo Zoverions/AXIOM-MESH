@@ -3,6 +3,9 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
+/**
+ * @custom:deprecated Replaced by GenesisDecayGovernance in v3.0.
+ */
 contract FounderMultiSig is IERC721Receiver {
     event Deposit(address indexed sender, uint amount, uint balance);
     event SubmitTransaction(
