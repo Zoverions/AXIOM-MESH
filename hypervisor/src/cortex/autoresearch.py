@@ -19,7 +19,7 @@ class AutoResearchDaemon:
     def start(self):
         if not self.running:
             self.running = True
-            self.thread = threading.Thread(target=self._run_loop, daemon=True)
+            self.thread = threading.Thread(target=lambda: asyncio.run(self._run_loop()), daemon=True)
             self.thread.start()
 
     def stop(self):
@@ -27,9 +27,9 @@ class AutoResearchDaemon:
         if self.thread:
             self.thread.join()
 
-    def _run_loop(self):
+    async def _run_loop(self):
         while self.running:
-            time.sleep(10) # Simulate idle time/waiting for idle compute
+            await asyncio.sleep(10) # Simulate idle time/waiting for idle compute
             self._forage()
 
     async def _fetch_with_retry(self, url, headers=None, follow_redirects=False):
