@@ -29,6 +29,32 @@ describe('auth utils', () => {
         expect(token).toBe('bearer-key');
     });
 
+    it('handles edge cases for token extraction', () => {
+        // Empty source
+        expect(extractApiKeyToken({})).toBeUndefined();
+
+        // Whitespace only values
+        expect(extractApiKeyToken({ queryApiKey: '   ' })).toBeUndefined();
+        expect(extractApiKeyToken({ xApiKeyHeader: '\t\n' })).toBeUndefined();
+
+        // Case sensitivity for Bearer prefix
+        expect(extractApiKeyToken({ authorizationHeader: 'bearer lowercase-key' })).toBeUndefined();
+
+        // Bearer prefix without token
+        expect(extractApiKeyToken({ authorizationHeader: 'Bearer ' })).toBeUndefined();
+        expect(extractApiKeyToken({ authorizationHeader: 'Bearer   ' })).toBeUndefined();
+
+        // Bearer with multiple spaces
+        expect(extractApiKeyToken({ authorizationHeader: 'Bearer  extra-spaces' })).toBe('extra-spaces');
+
+        // Mixed fields with empty values
+        expect(extractApiKeyToken({
+            queryApiKey: '  ',
+            xApiKeyHeader: '',
+            authorizationHeader: 'Bearer actual-token'
+        })).toBe('actual-token');
+    });
+
     it('validates configured key', () => {
         expect(validateGatewayApiKey('ok', 'ok').ok).toBe(true);
         expect(validateGatewayApiKey(undefined, 'ok')).toMatchObject({ ok: false, code: 401 });
