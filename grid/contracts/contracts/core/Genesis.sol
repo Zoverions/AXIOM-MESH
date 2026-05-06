@@ -5,33 +5,42 @@ import "../token/FounderNFT.sol";
 import "../token/GenesisNFT.sol";
 import "../token/BootstrapInitiatorNFT.sol";
 import "../finance/BootstrapIncentive.sol";
-import "./FounderEntity.sol";
+import "../finance/TeamVesting.sol";
+import "../governance/GenesisDecayGovernance.sol";
+import "../governance/ProposalRegistry.sol";
 import "../token/AXM.sol";
 import "../treasury/NetworkTreasury.sol";
 import "../treasury/GuildTreasuryFactory.sol";
-
-address constant FOUNDER = 0x1c2cBabF75e1938ED2f2c59e734e83aa5FBe1B73;
 
 // TODO ID: Top-Level To Do 8 - Mainnet Genesis + Bug Bounty
 contract Genesis {
     address public immutable founder;
     address public immutable axmToken;
-    address public immutable founderEntity;
+    address public immutable governance;
+    address public immutable proposalRegistry;
     address public immutable mainTreasury;
     address public immutable ecosystemReserveTreasury;
     address public immutable guildFactory;
     address public immutable bootstrapNFT;
     address public immutable bootstrapIncentive;
 
-    constructor(address[] memory owners, uint numConfirmationsRequired) {
-
+    constructor(address[] memory owners, uint256 halfLifeBlocks, uint256 initialFounderCoefficient) {
         founder = owners[0];
 
+        uint64 start = uint64(block.timestamp);
+        uint64 duration = 1460 days; // 4 years
+
         address guildF = address(new GuildTreasuryFactory());
-        founderEntity = address(new FounderEntity(founder, guildF));
         mainTreasury = address(new NetworkTreasury(founder));
         ecosystemReserveTreasury = address(new NetworkTreasury(founder));
-        axmToken = address(new AXM(founderEntity, mainTreasury, ecosystemReserveTreasury));
+
+        address founderVesting = address(new TeamVesting(founder, start, duration));
+        address treasuryVesting = address(new TeamVesting(mainTreasury, start, duration));
+
+        axmToken = address(new AXM(founderVesting, treasuryVesting, ecosystemReserveTreasury));
+
+        governance = address(new GenesisDecayGovernance(halfLifeBlocks, initialFounderCoefficient, owners));
+        proposalRegistry = address(new ProposalRegistry(governance));
 
         guildFactory = guildF;
 
