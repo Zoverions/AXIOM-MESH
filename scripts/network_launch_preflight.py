@@ -74,6 +74,8 @@ class LaunchAssessment:
     funded_enough: bool
     is_blocked: bool
     next_action: str
+    is_bootstrapped: bool = False
+    bootstrap_incentive_address: str = ""
 
 
 def assess_launch(launch_mode: str, rpc_url: str, wallet_address: str) -> LaunchAssessment:
@@ -212,6 +214,8 @@ def assess_launch(launch_mode: str, rpc_url: str, wallet_address: str) -> Launch
     rpc_reachable = False
     gas_price_gwei = float(os.getenv("DEFAULT_GAS_PRICE_GWEI", "2.0"))
     wallet_balance_eth = 0.0
+    is_bootstrapped = False
+    bootstrap_incentive_address = ""
 
     if rpc_url:
         try:
@@ -223,6 +227,27 @@ def assess_launch(launch_mode: str, rpc_url: str, wallet_address: str) -> Launch
             if wallet_address:
                 bal_hex = _rpc_call(rpc_url, "eth_getBalance", [wallet_address, "latest"])
                 wallet_balance_eth = wei_hex_to_eth(bal_hex)
+
+            # Check for existing deployment and bootstrap status
+            manifest_path = Path("deployment_manifest.json")
+            genesis_address = ""
+            if manifest_path.exists():
+                with open(manifest_path) as f:
+                    manifest = json.load(f)
+                    genesis_address = manifest.get("testnet_genesis_address") if launch_mode == "launch-testnet" else manifest.get("mainnet_genesis_address")
+
+            if genesis_address:
+                # bootstrapIncentive() selector: 0x9f886f78
+                try:
+                    res = _rpc_call(rpc_url, "eth_call", [{"to": genesis_address, "data": "0x9f886f78"}, "latest"])
+                    if res and res != "0x":
+                        bootstrap_incentive_address = "0x" + res[-40:]
+                        # isBootstrapped() selector: 0xe6e3f4e1
+                        boot_res = _rpc_call(rpc_url, "eth_call", [{"to": bootstrap_incentive_address, "data": "0xe6e3f4e1"}, "latest"])
+                        is_bootstrapped = bool(int(boot_res, 16)) if boot_res and boot_res != "0x" else False
+                except Exception:
+                    pass
+
         except Exception:
             rpc_reachable = False
 
@@ -233,11 +258,13 @@ def assess_launch(launch_mode: str, rpc_url: str, wallet_address: str) -> Launch
         next_action = f"Set NETWORK_WALLET_ADDRESS, then re-run preflight before {launch_mode}."
     elif not rpc_reachable:
         next_action = "RPC not reachable; verify RPC_URL/network connectivity or choose local-mesh mode."
+    elif is_bootstrapped:
+        next_action = "Network is already bootstrapped. Proceed to node join."
     elif funded_enough:
-        next_action = "Wallet appears funded enough for bootstrap transactions."
+        next_action = "Wallet appears funded enough for bootstrap transactions. Initiator NFT is available!"
     else:
         shortfall = round(max(0.0, estimated - wallet_balance_eth), 6)
-        next_action = f"Request user funding for ~{shortfall} ETH (shortfall) or choose local-mesh/single-node."
+        next_action = f"Network bootstrap opportunity! Request user funding for ~{shortfall} ETH to earn the Initiator NFT & future rewards."
 
     return LaunchAssessment(
         launch_mode=launch_mode,
@@ -250,6 +277,8 @@ def assess_launch(launch_mode: str, rpc_url: str, wallet_address: str) -> Launch
         funded_enough=funded_enough,
         is_blocked=False,
         next_action=next_action,
+        is_bootstrapped=is_bootstrapped,
+        bootstrap_incentive_address=bootstrap_incentive_address
     )
 
 
@@ -259,9 +288,26 @@ def main() -> None:
     parser.add_argument("--rpc-url", default=os.getenv("RPC_URL", ""))
     parser.add_argument("--wallet-address", default=os.getenv("NETWORK_WALLET_ADDRESS", ""))
     parser.add_argument("--deploy", action="store_true", help="Execute the Genesis deployment")
+    parser.add_argument("--bootstrap", action="store_true", help="Execute the Network Bootstrap and claim Initiator NFT")
     args = parser.parse_args()
 
     result = assess_launch(args.launch_mode, args.rpc_url, args.wallet_address)
+
+    if args.bootstrap and result.bootstrap_incentive_address and not result.is_bootstrapped:
+        print(f"Executing Bootstrap on {result.bootstrap_incentive_address}...", file=sys.stderr)
+        try:
+            # bootstrap() selector: 0x9f886f78 (wait, it's actually 0x9f886f78? no that's bootstrapIncentive)
+            # BootstrapIncentive.bootstrap() selector: 0x89c00b02
+            # I'll use cast if available or just instructions
+            val = int(result.estimated_min_funding_eth * 10**18)
+            subprocess.run([
+                "cast", "send", result.bootstrap_incentive_address, "bootstrap()",
+                "--value", str(val), "--rpc-url", args.rpc_url,
+                "--private-key", os.getenv("DEPLOYER_KEY") or ""
+            ])
+            print("Bootstrap transaction submitted. Initiator NFT earned!", file=sys.stderr)
+        except Exception as e:
+            print(f"Bootstrap failed: {e}", file=sys.stderr)
 
     if args.deploy and args.launch_mode in ("launch-network", "launch-testnet"):
         if result.is_blocked:

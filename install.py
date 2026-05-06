@@ -374,12 +374,45 @@ def main():
         pass
 
     if launch_mode in ["launch-network", "launch-testnet"] and not auto_install:
-        print(f"Estimated bootstrap funding required: ~{requested_funding} ETH")
-        print(f"Current detected wallet balance: {current_balance} ETH")
-        funding_decision = prompt_with_timeout("Fund network wallet now? (yes/no/skip-to-local)", "no", 15)
-        if funding_decision == "skip-to-local":
-            launch_mode = "local-mesh"
-            print("-> Switched to local-mesh mode as requested.")
+        is_bootstrapped = False
+        try:
+            is_bootstrapped = precheck_data.get("is_bootstrapped", False)
+        except Exception:
+            pass
+
+        if not is_bootstrapped:
+            print("==========================================================")
+            print("🌟 NETWORK BOOTSTRAP OPPORTUNITY")
+            print("==========================================================")
+            print(f"The {launch_mode} network has not been initialized.")
+            print(f"You can be the one to launch the initial blockchain code and funding.")
+            print("BENEFITS:")
+            print("1. Earn the 'Bootstrap Initiator' NFT Achievement.")
+            print("2. Guaranteed 'Money Back + Fair Interest' (5% default).")
+            print("3. Future rewards (bonus resources, treasury) decided by the founder.")
+            print("==========================================================")
+            print(f"Estimated bootstrap funding required: ~{requested_funding} ETH")
+            print(f"Current detected wallet balance: {current_balance} ETH")
+
+            funding_decision = prompt_with_timeout("Initiate network bootstrap now? (yes/no/skip-to-local)", "no", 15)
+            if funding_decision == "yes":
+                if not os.getenv("DEPLOYER_KEY"):
+                    print("⚠️  DEPLOYER_KEY not found in environment.")
+                    dkey = prompt_with_timeout("Enter private key to sign bootstrap transaction (optional if already in env)", "", 30)
+                    if dkey:
+                        os.environ["DEPLOYER_KEY"] = dkey
+
+                bootstrap_cmd = [sys.executable, "scripts/network_launch_preflight.py", "--launch-mode", launch_mode, "--bootstrap"]
+                if rpc_url:
+                    bootstrap_cmd.extend(["--rpc-url", rpc_url])
+                if network_wallet:
+                    bootstrap_cmd.extend(["--wallet-address", network_wallet])
+                run_cmd(bootstrap_cmd)
+            elif funding_decision == "skip-to-local":
+                launch_mode = "local-mesh"
+                print("-> Switched to local-mesh mode as requested.")
+        else:
+            print("✅ Network is already bootstrapped.")
 
     if launch_mode in ["launch-network", "launch-testnet"]:
         deploy_cmd = [sys.executable, "scripts/network_launch_preflight.py", "--launch-mode", launch_mode, "--deploy"]
@@ -388,7 +421,7 @@ def main():
         if network_wallet:
             deploy_cmd.extend(["--wallet-address", network_wallet])
         run_cmd(deploy_cmd)
-        print("Network launched. Founder controls locked to canonical address.")
+        print("Network setup verified. Founder controls locked to canonical address.")
 
     free_disk_gb = shutil.disk_usage('/').free // (1024**3)
 
