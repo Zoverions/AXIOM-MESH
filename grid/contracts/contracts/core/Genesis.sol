@@ -3,6 +3,8 @@ pragma solidity ^0.8.24;
 
 import "../token/FounderNFT.sol";
 import "../token/GenesisNFT.sol";
+import "../token/BootstrapInitiatorNFT.sol";
+import "../finance/BootstrapIncentive.sol";
 import "./FounderEntity.sol";
 import "../token/AXM.sol";
 import "../treasury/NetworkTreasury.sol";
@@ -18,6 +20,8 @@ contract Genesis {
     address public immutable mainTreasury;
     address public immutable ecosystemReserveTreasury;
     address public immutable guildFactory;
+    address public immutable bootstrapNFT;
+    address public immutable bootstrapIncentive;
 
     constructor(address[] memory owners, uint numConfirmationsRequired) {
 
@@ -30,6 +34,15 @@ contract Genesis {
         axmToken = address(new AXM(founderEntity, mainTreasury, ecosystemReserveTreasury));
 
         guildFactory = guildF;
+
+        // Deploy Bootstrap Incentive system
+        BootstrapInitiatorNFT bint = new BootstrapInitiatorNFT();
+        BootstrapIncentive bincentive = new BootstrapIncentive(address(bint), payable(mainTreasury));
+        bint.transferOwnership(address(bincentive));
+        bincentive.transferOwnership(founder);
+
+        bootstrapNFT = address(bint);
+        bootstrapIncentive = address(bincentive);
 
         // Deploy NFTs to multi-sig founder
         new FounderNFT(founder);
