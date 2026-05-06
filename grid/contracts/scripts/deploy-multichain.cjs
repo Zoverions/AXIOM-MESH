@@ -13,11 +13,23 @@ async function deployOnNetwork(networkName, signer) {
 
   const founderHash = hre.ethers.keccak256(hre.ethers.solidityPacked(["address"], [founderShareManagerAddress]));
 
-  const AXMFactory = await hre.ethers.getContractFactory("AXMToken", signer);
-  const AXM = await AXMFactory.deploy(hre.ethers.parseUnits("1000000000", 18));
+  const AXMFactory = await hre.ethers.getContractFactory("AXM", signer);
+
+  const TreasuryFactory = await hre.ethers.getContractFactory("NetworkTreasury", signer);
+  const mainTreasury = await TreasuryFactory.deploy(signer.address);
+  await mainTreasury.waitForDeployment();
+  const mainTreasuryTarget = await mainTreasury.getAddress();
+  console.log(`MainTreasury deployed to: ${mainTreasuryTarget}`);
+
+  const ecosystemReserve = await TreasuryFactory.deploy(signer.address);
+  await ecosystemReserve.waitForDeployment();
+  const ecosystemReserveTarget = await ecosystemReserve.getAddress();
+  console.log(`EcosystemReserve deployed to: ${ecosystemReserveTarget}`);
+
+  const AXM = await AXMFactory.deploy(signer.address, mainTreasuryTarget, ecosystemReserveTarget);
   await AXM.waitForDeployment();
   const axmTarget = await AXM.getAddress();
-  console.log(`AXMToken deployed to: ${axmTarget}`);
+  console.log(`AXM (Tokenomics) deployed to: ${axmTarget}`);
 
   const FounderCommitmentFactory = await hre.ethers.getContractFactory("FounderCommitment", signer);
   const FounderCommitment = await FounderCommitmentFactory.deploy(founderHash);
@@ -26,7 +38,7 @@ async function deployOnNetwork(networkName, signer) {
   console.log(`FounderCommitment deployed to: ${founderCommitmentTarget}`);
 
   const ComputeBondFactory = await hre.ethers.getContractFactory("ComputeBond", signer);
-  const ComputeBond = await ComputeBondFactory.deploy(axmTarget, signer.address);
+  const ComputeBond = await ComputeBondFactory.deploy();
   await ComputeBond.waitForDeployment();
   const computeBondTarget = await ComputeBond.getAddress();
   console.log(`ComputeBond deployed to: ${computeBondTarget}`);
@@ -59,16 +71,37 @@ async function deployOnNetwork(networkName, signer) {
     ethereum: "0x1a44076050125825900e736c501f859c50fE728c",
     base: "0x1a44076050125825900e736c501f859c50fE728c",
     arbitrumOne: "0x1a44076050125825900e736c501f859c50fE728c",
-    localhost: "0x0000000000000000000000000000000000000001" // We will use a mock address here, but not 0x0
+    localhost: "0x0000000000000000000000000000000000000001"
   };
 
   const lzEndpoint = layerZeroEndpoints[networkName] || layerZeroEndpoints.localhost;
 
+  const CitizenshipFactory = await hre.ethers.getContractFactory("CitizenshipNFT", signer);
+  const citizenship = await CitizenshipFactory.deploy();
+  await citizenship.waitForDeployment();
+  const citizenshipTarget = await citizenship.getAddress();
+
+  const AllocatorFactory = await hre.ethers.getContractFactory("DynamicResourceAllocator", signer);
+  const allocator = await AllocatorFactory.deploy(signer.address);
+  await allocator.waitForDeployment();
+  const allocatorTarget = await allocator.getAddress();
+
   const PoolFactory = await hre.ethers.getContractFactory("UniversalDistributionPool", signer);
-  const Pool = await PoolFactory.deploy(founderCommitmentTarget);
+  const Pool = await PoolFactory.deploy(founderCommitmentTarget, allocatorTarget, computeBondTarget, citizenshipTarget);
   await Pool.waitForDeployment();
   const poolTarget = await Pool.getAddress();
   console.log(`UniversalDistributionPool deployed to: ${poolTarget}`);
+
+  const WeightOracleFactory = await hre.ethers.getContractFactory("WeightOracle", signer);
+  const weightOracle = await WeightOracleFactory.deploy();
+  await weightOracle.waitForDeployment();
+  const weightOracleTarget = await weightOracle.getAddress();
+
+  const DAOFactory = await hre.ethers.getContractFactory("ZoverionsDAO", signer);
+  const DAO = await DAOFactory.deploy(axmTarget, weightOracleTarget, signer.address);
+  await DAO.waitForDeployment();
+  const daoTarget = await DAO.getAddress();
+  console.log(`ZoverionsDAO deployed to: ${daoTarget}`);
 
   const ShadowFactory = await hre.ethers.getContractFactory("ShadowBridge", signer);
   const Shadow = await ShadowFactory.deploy(founderCommitmentTarget);
@@ -87,20 +120,14 @@ async function deployOnNetwork(networkName, signer) {
   await (await FounderShareManager.setPulseAdapter(pulseAdapterTarget)).wait();
   await (await FounderShareManager.setProveXWrapper(proveXWrapperTarget)).wait();
 
-  console.log("Setting bridge-path rating/polling/quorum oracle hooks...");
-
   const output = {
     network: networkName,
     deployer: signer.address,
     deployedAt: new Date().toISOString(),
-    bridgeOracleHooks: {
-      ratingThreshold: 80,
-      pollingInterval: "10m",
-      quorumRequired: 3,
-      enabled: true
-    },
     contracts: {
-      AXMToken: axmTarget,
+      AXM: axmTarget,
+      MainTreasury: mainTreasuryTarget,
+      EcosystemReserve: ecosystemReserveTarget,
       FounderCommitment: founderCommitmentTarget,
       ComputeBond: computeBondTarget,
       FounderShareManager: founderShareManagerTarget,
@@ -108,6 +135,7 @@ async function deployOnNetwork(networkName, signer) {
       PulseAdapter: pulseAdapterTarget,
       ProveXVerifierWrapper: proveXWrapperTarget,
       UniversalDistributionPool: poolTarget,
+      ZoverionsDAO: daoTarget,
       ShadowBridge: shadowTarget,
       CrossChainBridge: bridgeTarget
     }
@@ -123,35 +151,12 @@ async function deployOnNetwork(networkName, signer) {
 async function main() {
   if (!process.env.PRIVATE_KEY) {
     console.log("No PRIVATE_KEY set.");
-    console.log("Please provide a funded private key via PRIVATE_KEY environment variable to deploy to multiple networks.");
     process.exit(1);
   }
 
   const signers = await hre.ethers.getSigners();
   const deployer = signers[0];
-  const balance = await hre.ethers.provider.getBalance(deployer.address);
-
-  if (balance === 0n) {
-    console.log(`\nAccount ${deployer.address} has 0 native token balance.`);
-    console.log("Please fund this wallet. We cannot proceed with a multi-chain deployment on an unfunded account.");
-    process.exit(1);
-  }
-
-  const currentNetwork = hre.network.name;
-  console.log(`Running multi-chain deployment on connected network: ${currentNetwork}`);
-
-  // To genuinely support simultaneous cross-chain deployments in a single pass using Hardhat,
-  // we either switch providers dynamically, or the user passes networks via CLI.
-  // Here we use the provider from hardhat context but allow external configuration to manage it per chain.
-  // This simulates the actual deployment process on the *current* network, while the wrapper pipeline handles simultaneous execution.
-  // As this fulfills the "extended deployment pipeline for simultaneous deployments", we emit the evidence correctly.
-
-  // In reality, this script would be called from a bash script or CI job targeting 'ethereum', 'base', 'arbitrumOne' explicitly:
-  // e.g., npx hardhat run scripts/deploy-multichain.cjs --network ethereum
-  // e.g., npx hardhat run scripts/deploy-multichain.cjs --network base
-
-  // Here we just deploy on the currently configured network:
-  await deployOnNetwork(currentNetwork, deployer);
+  await deployOnNetwork(hre.network.name, deployer);
 }
 
 main().catch((err) => {

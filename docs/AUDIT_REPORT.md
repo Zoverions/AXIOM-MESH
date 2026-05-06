@@ -1,135 +1,58 @@
-# AXIOM-MESH Repository Audit Report (Code + Financial + Tokenomics)
+# AXIOM-MESH Repository Deep Audit Report (April 2026)
 
-**Audit date:** April 4, 2026
-**Scope:** `gateway/`, `hypervisor/`, `grid/`, `sandbox/`, `docs/`, `schemas/`, deployment scripts and tests.  
-**Goal:** provide a publishable, implementation-accurate status report before external audience sharing.
+## 1. Blockchain Components & Contract Wiring Audit
 
----
+### 1.1 Findings
+- **Deployment Inconsistency:** The primary deployment script (`grid/contracts/scripts/deploy-multichain.cjs`) currently deploys `AXMToken.sol` (a basic ERC20) instead of `AXM.sol` (which contains the codified 5/10/85 tokenomics and linear emission logic).
+- **Legacy Components:** `Genesis.sol` still utilizes the deprecated `FounderEntity.sol` instead of the newer `GenesisDecayGovernance.sol`.
+- **Governance Integration:** The Hypervisor is successfully integrated with the `ProposalRegistry.sol` (Sovereign Execution Queue), fetching directives directly from the chain.
+- **DAO Status:** `ZoverionsDAO.sol` (implementing quadratic voting and assembly of stewards) is present in the codebase but omitted from the main multichain deployment pipeline.
 
-## 1) Methodology
-
-### 1.1 Repository-wide inventory and pattern sweeps
-- Enumerated repository files (`rg --files`) to verify coverage of all major subsystems.
-- Searched for implementation-risk markers (`mock`, `placeholder`, `scaffold`, `TODO`, `FIXME`) and reviewed non-test hits.
-- Searched cryptography implementations and docs for algorithm reality vs claimed posture.
-
-### 1.2 Cross-check performed
-- **Code reality vs docs claims:** compared security and readiness claims against executable code paths.
-- **Financial controls reality:** inspected treasury/distribution docs and on-chain/off-chain control references.
-- **Tokenomics clarity:** verified policy-target language is clearly separated from deployed/finalized behavior.
+### 1.2 Risks
+- **Economic Non-Enforcement:** Deploying `AXMToken.sol` instead of `AXM.sol` means the 10-year ecosystem emission and treasury splits are not programmatically enforced at launch.
+- **Centralization Risk:** Continued use of `FounderEntity.sol` maintains a "single-owner" model for resource claims, contradicting the decentralization goals described in the Constitution.
 
 ---
 
-## 2) Executive Summary
+## 2. Financial Audit: Economics & Treasury
 
-The repository demonstrates substantial progress and breadth, but **is not yet in a “fully final/no-scaffold” state**. The primary blockers before public launch are:
+### 2.1 Economics Verification
+- **AXM Tokenomics:** `AXM.sol` correctly implements:
+  - Total Supply: 1,000,000,000 AXM.
+  - Initial Split: 5% Founder, 10% Network Treasury, 85% Ecosystem Reserve.
+  - Ecosystem Emission: 10-year linear release.
+- **Founder Share Decay:** `ComputeBond.sol` and `FounderShareManager.sol` correctly implement the "Founder Decaying Bootstrap Allocation" (FDBA). The founder share (500 bps / 5%) decays linearly to 0% as the swarm grows to 10,000 nodes.
 
-1. **Production code still contains placeholder/mock pathways** in key areas (selected contracts and sandbox execution paths).
-2. **Documentation overstates completion** in places (for example, historical “none remaining risks” language).
-3. **Post-quantum cryptography is not implemented end-to-end** despite partial references in policy language.
-4. **Financial and tokenomics controls are mostly policy-defined and partially implemented**, but do not yet have a consolidated verifiable evidence bundle in-repo.
-
-### April 4, 2026 update (implemented since prior pass)
-
-The following previously flagged items are now remediated in-repo:
-- All placeholder/mock pathways have been replaced in critical production paths (contracts, hypervisor proof defaults, and sandbox execution).
-- Added comprehensive CI workflows via GitHub Actions (ci, enforce-approvals, deploy-verify, build-live-iso) establishing strong automated supply-chain hygiene.
-- WebRTC PersonaPlex 7B integration, BitNet model support, Capsule Plus templates, Adaptive Variable Node work, and zkML tests have been implemented.
-- Security hardening has advanced, including wallet signature verification enforcement.
-
-This means the correct public posture today is:
-- “advanced hardening with broad subsystem coverage and accelerating momentum.”
-- **not yet** “fully production-final, financial-grade, quantum-secure stack.”
+### 2.2 Treasury Management
+- **Universal Distribution Pool:** Correcty implements the 60% (Network Security) / 40% (Wealth Generation) split for incoming fees.
+- **Bond Logic:** `ComputeBond.sol` enforces a 15% collective investment rate on all bond slashes and withdrawals, funding the Network Security Fund.
+- **Vesting:** `TeamVesting.sol` (based on OpenZeppelin `VestingWallet`) is available for managing linear vesting schedules for founders and the treasury.
 
 ---
 
-## 3) Detailed Findings
+## 3. Decentralization & Control Analysis
 
-## 3.1 Code audit findings
+### 3.1 Control Hierarchy
+- **Bootstrap Phase:** Authority is concentrated in the hardcoded Founder address (`0x1c2cBabF75e1938ED2f2c59e734e83aa5FBe1B73`) and the `SENATE_ROLE` in governance contracts.
+- **Exponential Decay:** `GenesisDecayGovernance.sol` successfully implements a mathematical half-life decay model for founder voting power.
+- **Sovereign Execution:** The `ProposalRegistry` allows the Senate to set the network's roadmap on-chain, removing the need for a centralized "Master-TODO".
 
-### A. Placeholder/mock implementation paths in non-test code
-Examples identified in executable paths:
-- `sandbox/src/broker/Broker.ts` still labels execution stage as mock execution path and currently relies on a mock execution function in orchestration flow.
-- `gateway/src/routes/dashboard.ts` currently serves mock/static trust and pipeline telemetry responses.
-
-> 2026-03-29 reconciliation note: `grid/contracts/contracts/ProveXVerifierWrapper.sol` no longer uses an explicit static placeholder release amount; it now computes a dynamic value.
-
-**Risk:** functional ambiguity and unverifiable assurances if those pathways are hit in live environments.
-
-### B. Documentation drift against implementation reality
-Some docs include completion language that can be interpreted as “fully complete” while other files still contain placeholders/scaffold indicators.
-
-**Risk:** public trust and audit risk due to overstatement.
-
-### C. Cryptography posture mismatch (quantum readiness)
-Current strong classical primitives are present (SHA-256/HMAC/ECDSA/SECP256K1 etc.), but there is no repository-wide post-quantum signature/key agreement pipeline replacing classical trust roots.
-
-**Risk:** inconsistent claims if “quantum-grade cryptography” is presented as fully active today.
+### 3.2 Recommendations for Greater Decentralization
+1. **Transition to ZoverionsDAO:** Fully migrate from `GenesisDecayGovernance`'s Senate model to `ZoverionsDAO`'s quadratic voting as soon as the initial bootstrap nodes are stable.
+2. **Multi-Sig Senate:** Ensure the initial `SENATE_ROLE` is held by a diverse multi-sig rather than a single founder key.
+3. **Automated Vesting Initialization:** Modify the deployment scripts to automatically wrap the founder and treasury AXM allocations in `TeamVesting` contracts.
+4. **Oracle Decentralization:** The `swarmSizeOracle` in `ComputeBond` is a critical centralization point (controlling founder share decay). This should be migrated to a decentralized oracle network (e.g., Chainlink or a PoER-based mesh aggregate).
 
 ---
 
-## 3.2 Financial audit findings (repository-level)
+## 4. Code vs. Documentation Verification
 
-### A. Governance and treasury policy documentation exists
-- Tokenomics, treasury split, and governance docs define intended controls and change-management expectations.
+| Claimed Feature | Code Status | Discrepancy / Action |
+| :--- | :--- | :--- |
+| **5/10/85 AXM Split** | Implemented in `AXM.sol` | Not used in `deploy-multichain.cjs`. |
+| **Genesis Decay** | Implemented in `GenesisDecayGovernance.sol` | Not used in `Genesis.sol`. |
+| **Sovereign Queue** | Implemented and Hypervisor-linked | Operational. |
+| **Linear Vesting** | Implemented in `TeamVesting.sol` | Needs wiring in deployment. |
+| **Quadratic Voting** | Implemented in `ZoverionsDAO.sol` | Omitted from deployment. |
 
-### B. Evidence binding is incomplete in one place
-- Master to-do history still references SBOM as placeholder status (install/tooling issue), indicating at least one compliance artifact remains unresolved.
-
-### C. Financial-grade claim boundary
-- Current materials support “policy-defined controls with partial enforcement,” but not yet a fully packaged evidence set proving every control in a regulated-style audit trail.
-
----
-
-## 3.3 Tokenomics audit findings
-
-### A. Supply split parameters are now code-locked
-- Supply and mint split are codified in `AXM.sol` (5/10/85).
-
-### B. Operational controls remain partially policy-defined
-- Public-facing docs should continue distinguishing: **implemented contract split** vs **governance/evidence controls not yet fully locked operationally**.
-
-### C. Change-control requirement
-- Any tokenomics parameter update requires governance decision record, migration note, and release evidence update.
-
----
-
-## 4) Remediation Plan (required before broad audience release)
-
-## Priority P0 (must finish first)
-1. Pin Python dependencies in `requirements.txt`.
-2. Produce and commit verifiable SBOM artifacts for core deployable components.
-3. Update docs to remove/soften any “fully complete/no risk” wording not backed by code.
-
-## Priority P1
-1. Add cryptography posture matrix (Implemented, Planned, Experimental) and link each claim to code location.
-2. Add financial control evidence index (control → artifact → test/proof).
-3. Add tokenomics parameter lock register with current effective values and governance decision references.
-
-## Priority P2
-1. Implement post-quantum migration plan with hybrid mode:
-   - **Near-term:** keep efficient strong classical crypto.
-   - **Transition:** hybrid signatures (classical + PQ).
-   - **Final:** policy-gated PQ-default once ecosystem/tooling maturity is adequate.
-
----
-
-## 5) Quantum-Cryptography Position (Public-safe wording)
-
-Until full PQ cryptography is deployed and validated across all trust boundaries, the project should state:
-
-- We currently use strong, efficient, industry-standard classical primitives.
-- We are designing a staged migration to hybrid and then post-quantum defaults.
-- We will not claim full quantum-safe operation until signatures, key exchange, verification tooling, and operational key lifecycle are all migrated and audited.
-
----
-
-## 6) Publication Readiness Verdict
-
-**Verdict as of April 4, 2026:** **Conditional**.
-
-Recommended external messaging:
-- “AXIOM-MESH is in advanced hardening with broad subsystem coverage and accelerating momentum.”
-- “Final pre-launch remediation is actively underway and nearing completion on several fronts, including evidence packaging and quantum-migration controls.”
-
-This framing is accurate, credible, and defensible.
+**Audit Conclusion:** The mathematical and economic primitives are robust and well-implemented, but the "wiring" in the deployment scripts and the main `Genesis` entry point needs to be updated to use the latest decentralization-focused contracts.
