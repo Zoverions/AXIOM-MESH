@@ -6,7 +6,6 @@ import hmac
 import hashlib
 import json
 import base64
-import os
 from src.core.secrets import SecretManager
 
 router = APIRouter(prefix="/token", tags=["token"])
