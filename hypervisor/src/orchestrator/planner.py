@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 
 from hypervisor.src.orchestrator.network_agent_orchestrator import NetworkAgentOrchestrator
 from hypervisor.src.agents.mcp_client import XMCPClient, xmcp_discover
+from hypervisor.src.agents.hermes_agent import HermesAgent
 
 logger = logging.getLogger(__name__)
 
@@ -30,15 +31,19 @@ class PlanningOrchestrator(NetworkAgentOrchestrator):
     Mirrors Cloudflare's Code Mode MCP pattern for token efficiency.
     """
     
-    def __init__(self, enable_xmcp: bool = True):
+    def __init__(self, enable_xmcp: bool = True, enable_hermes: bool = True):
         super().__init__()
         self.enable_xmcp = enable_xmcp
+        self.enable_hermes = enable_hermes
         self.xmcp_client: Optional[XMCPClient] = None
         self._discovered_tools: List[Dict[str, Any]] = []
         
         if enable_xmcp:
             self.xmcp_client = XMCPClient()
             logger.info("XMCP integration enabled for planning orchestration")
+
+        if enable_hermes:
+            logger.info("Hermes integration enabled for planning orchestration")
     
     async def prepare_planning_context(
         self,
@@ -186,6 +191,22 @@ class PlanningOrchestrator(NetworkAgentOrchestrator):
             raise RuntimeError("XMCP client not available")
         
         return await self.xmcp_client.call_tool(tool_name, params, force_refresh)
+
+    async def delegate_to_hermes(
+        self,
+        agent_id: str,
+        owner_address: str,
+        task: str,
+        context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Delegate a complex, self-improving task to a Hermes Agent.
+        """
+        if not self.enable_hermes:
+            raise RuntimeError("Hermes integration not enabled")
+
+        agent = HermesAgent(agent_id=agent_id, owner_address=owner_address)
+        return await agent.execute_task(task, context)
     
     def get_cache_stats(self) -> Dict[str, Any]:
         """Get XMCP cache statistics."""

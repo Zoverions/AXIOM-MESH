@@ -1,25 +1,57 @@
 # Dockerfile for Hermes Agent integration into AXIOM-MESH
-# Based on Nous Research Hermes Agent
+# Hardened production-ready container based on Nous Research Hermes Agent
 
-FROM python:3.11-slim
+FROM python:3.11-slim as builder
 
-# Install dependencies
+# Install build dependencies
 RUN apt-get update && apt-get install -y \
     git \
     curl \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Set up user
-RUN useradd -m hermes
-USER hermes
+# Set up virtual environment
+RUN python -m venv /opt/hermes-venv
+ENV PATH="/opt/hermes-venv/bin:$PATH"
+
+# Install Hermes Agent and dependencies
+# Using a specific version for production stability
+RUN pip install --no-cache-dir \
+    hermes-agent==0.12.0 \
+    httpx \
+    pydantic \
+    fastapi \
+    uvicorn
+
+# Final stage: minimal runtime image
+FROM python:3.11-slim
+
+# Create non-root user for security
+RUN useradd -m -u 1000 hermes
+
+# Copy virtual environment from builder
+COPY --from=builder /opt/hermes-venv /opt/hermes-venv
+ENV PATH="/opt/hermes-venv/bin:$PATH"
+
+# Set up working directory
 WORKDIR /home/hermes
+USER hermes
 
-# Placeholder for Hermes installation
-# In a real scenario, we would clone or pip install hermes-agent
-# RUN pip install hermes-agent
+# Create configuration and data directories
+RUN mkdir -p /home/hermes/.hermes /home/hermes/skills /home/hermes/data
 
-# Configuration directory
-RUN mkdir -p /home/hermes/.hermes
+# Environment variables for AXIOM-MESH integration
+ENV HERMES_HOME=/home/hermes/.hermes
+ENV AXIOM_MODE=true
 
-# Default command
-CMD ["python", "-m", "hermes"]
+# Expose internal API for Hypervisor communication
+EXPOSE 8000
+
+# Healthcheck for orchestration
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Start the Hermes integration server (handles task execution and policy adherence)
+# Note: In a real deployment, this would be a wrapper script that starts both
+# the Hermes engine and the FastAPI mediator.
+CMD ["python", "-m", "hermes.api.server", "--host", "0.0.0.0", "--port", "8000"]
