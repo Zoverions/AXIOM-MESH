@@ -111,6 +111,7 @@ from src.api.routers.tokens import router as tokens_router
 from src.api.routers.backup import router as backup_router
 from src.api.routers.tasks import router as tasks_router
 from src.api.routers.render import router as render_router
+from src.api.routers.hermes import router as hermes_router
 from src.orchestrator.task_scheduler import global_scheduler
 from src.core.secrets import SecretManager
 
@@ -198,6 +199,7 @@ app.include_router(tokens_router)
 app.include_router(backup_router)
 app.include_router(tasks_router)
 app.include_router(render_router)
+app.include_router(hermes_router)
 
 # Mount MCP Server SSE and Messages endpoints
 app.mount("/mcp", mcp_server.sse_app())
