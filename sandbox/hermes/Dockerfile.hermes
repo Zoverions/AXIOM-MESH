@@ -1,0 +1,25 @@
+# Dockerfile for Hermes Agent integration into AXIOM-MESH
+# Based on Nous Research Hermes Agent
+
+FROM python:3.11-slim
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up user
+RUN useradd -m hermes
+USER hermes
+WORKDIR /home/hermes
+
+# Placeholder for Hermes installation
+# In a real scenario, we would clone or pip install hermes-agent
+# RUN pip install hermes-agent
+
+# Configuration directory
+RUN mkdir -p /home/hermes/.hermes
+
+# Default command
+CMD ["python", "-m", "hermes"]
