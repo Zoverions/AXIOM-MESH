@@ -55,7 +55,12 @@ def extract_semantic(path: Path) -> Optional[Dict]:
     """
     # TODO: Integrate with PersonaPlex or BitNet for semantic extraction
     # For now, return empty result - AST extraction handles code files
-    return None
+    return {
+        "nodes": [],
+        "edges": [],
+        "hyperedges": [],
+        "token_cost": {"input": 0, "output": 0}
+    }
 
 
 @dataclass
@@ -107,6 +112,7 @@ class GraphMemory:
         self.communities: Dict[int, List[str]] = {}
         self.community_labels: Dict[int, str] = {}
         self._last_analysis: Dict[str, Any] = {}
+        self._token_cost: Dict[str, int] = {"input": 0, "output": 0}
         
     def build_persistent_graph(
         self,
@@ -128,9 +134,21 @@ class GraphMemory:
         else:
             return self._build_from_artifacts(directory_or_artifacts)
     
+    def _accumulate_token_cost(self, extraction_result: Dict[str, Any] | List[Dict[str, Any]]) -> None:
+        """Accumulate token costs from extraction results."""
+        if isinstance(extraction_result, list):
+            for res in extraction_result:
+                self._accumulate_token_cost(res)
+            return
+
+        cost = extraction_result.get("token_cost", {})
+        self._token_cost["input"] += cost.get("input", 0)
+        self._token_cost["output"] += cost.get("output", 0)
+
     def _build_from_directory(self, root: Path, incremental: bool) -> nx.Graph:
         """Build graph from directory scan using full graphify pipeline."""
         root = root.resolve()
+        self._token_cost = {"input": 0, "output": 0}
         
         # Stage 1: Detect
         if incremental:
@@ -182,6 +200,7 @@ class GraphMemory:
                 semantic_result = extract_semantic(p)
                 if semantic_result:
                     extractions.append(semantic_result)
+                    self._accumulate_token_cost(semantic_result)
                     if self.config.cache_enabled:
                         save_semantic_cache(
                             semantic_result.get("nodes", []),
@@ -196,6 +215,7 @@ class GraphMemory:
                 ast_result = extract_ast(paths)
                 if ast_result and "error" not in ast_result:
                     extractions.append(ast_result)
+                    self._accumulate_token_cost(ast_result)
                     # Cache each file individually
                     for p in paths:
                         save_cached(p, ast_result, root)
@@ -212,6 +232,7 @@ class GraphMemory:
                 )
                 if x_extractions:
                     extractions.extend(x_extractions)
+                    self._accumulate_token_cost(x_extractions)
             except Exception as exc:
                 # Fail-open: local graphify extraction still proceeds
                 logger.warning(f"XMCP ingestion skipped due to error: {exc}")
@@ -244,6 +265,8 @@ class GraphMemory:
     
     def _build_from_artifacts(self, artifacts: List[Dict]) -> nx.Graph:
         """Build graph from pre-extracted artifact dicts."""
+        self._token_cost = {"input": 0, "output": 0}
+        self._accumulate_token_cost(artifacts)
         self.graph = build(artifacts)
         
         if self.config.enable_clustering and self.graph.number_of_nodes() > 0:
@@ -379,7 +402,7 @@ class GraphMemory:
             god_nodes=self._last_analysis.get("god_nodes", []),
             surprising_connections=self._last_analysis.get("surprising_connections", []),
             suggested_questions=self._last_analysis.get("suggested_questions", []),
-            token_cost={"input": 0, "output": 0},  # TODO: track from extraction
+            token_cost=self._token_cost.copy(),
         )
     
     def get_context_for_planning(
