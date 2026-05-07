@@ -1,3 +1,4 @@
+import os
 import threading
 import time
 import random
@@ -35,7 +36,13 @@ class AutoResearchDaemon:
     async def _fetch_with_retry(self, url, headers=None, follow_redirects=False):
         max_retries = 3
         base_delay = 1.0
-        async with httpx.AsyncClient() as client:
+
+        # M12.8: Support environment-configured proxies (HTTP/HTTPS/SOCKS)
+        # httpx automatically uses HTTP_PROXY/HTTPS_PROXY/ALL_PROXY if set.
+        # We explicitly ensure we pick up ANY proxy if configured.
+        proxies = os.getenv("ALL_PROXY") or os.getenv("HTTPS_PROXY") or os.getenv("HTTP_PROXY")
+
+        async with httpx.AsyncClient(proxies=proxies) as client:
             for attempt in range(max_retries):
                 try:
                     res = await client.get(url, headers=headers, timeout=5.0, follow_redirects=follow_redirects)

@@ -6,7 +6,7 @@ requests
 openai-whisper
 ffmpeg-python
 python-multipart
-httpx
+httpx[socks]
 websockets
 fastapi
 uvicorn
