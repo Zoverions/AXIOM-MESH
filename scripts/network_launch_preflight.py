@@ -289,6 +289,8 @@ def main() -> None:
     parser.add_argument("--wallet-address", default=os.getenv("NETWORK_WALLET_ADDRESS", ""))
     parser.add_argument("--deploy", action="store_true", help="Execute the Genesis deployment")
     parser.add_argument("--bootstrap", action="store_true", help="Execute the Network Bootstrap and claim Initiator NFT")
+    parser.add_argument("--mark-github-handover", action="store_true", help="Mark GitHub handover as completed on-chain")
+    parser.add_argument("--fsm-address", help="FounderShareManager contract address")
     args = parser.parse_args()
 
     result = assess_launch(args.launch_mode, args.rpc_url, args.wallet_address)
@@ -308,6 +310,24 @@ def main() -> None:
             print("Bootstrap transaction submitted. Initiator NFT earned!", file=sys.stderr)
         except Exception as e:
             print(f"Bootstrap failed: {e}", file=sys.stderr)
+
+    if args.mark_github_handover:
+        fsm_address = args.fsm_address or os.getenv("FOUNDER_SHARE_MANAGER_ADDRESS")
+        if fsm_address:
+            print(f"Marking GitHub handover completed on {fsm_address}...", file=sys.stderr)
+            try:
+                # markGithubHandoverCompleted() selector: 0x8a95610b (manual calculation needed or use cast)
+                # I'll use cast if available
+                subprocess.run([
+                    "cast", "send", fsm_address, "markGithubHandoverCompleted()",
+                    "--rpc-url", args.rpc_url,
+                    "--private-key", os.getenv("DEPLOYER_KEY") or ""
+                ])
+                print("GitHub handover marked as completed on-chain.", file=sys.stderr)
+            except Exception as e:
+                print(f"Failed to mark GitHub handover: {e}", file=sys.stderr)
+        else:
+            print("FounderShareManager address missing. Cannot mark GitHub handover.", file=sys.stderr)
 
     if args.deploy and args.launch_mode in ("launch-network", "launch-testnet"):
         if result.is_blocked:

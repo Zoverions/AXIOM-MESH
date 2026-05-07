@@ -361,9 +361,25 @@ def main():
 
     print(f"-> Recommended local model: {recommended_model}")
 
+    github_handover = "none"
+    github_token = ""
     if launch_mode in ["launch-network", "launch-testnet"] and not auto_install:
         rpc_url = prompt_with_timeout("Enter RPC URL for funding checks (e.g. https://rpc.pulsechain.com) [optional]", "", 15)
         network_wallet = prompt_with_timeout("Enter network wallet address for funding checks (optional)", "", 15)
+
+        print("\n--- GitHub Repository Handover ---")
+        print("As the founder, you can authorize the protocol to manage the GitHub repository.")
+        print("Options:")
+        print(" - full: Full Transfer of ownership to the protocol DAO (once launched).")
+        print(" - editor: Protocol Authorization (Editor/Maintainer access for agents).")
+        print(" - none: Postpone handover (default).")
+        github_handover = prompt_with_timeout("GitHub handover mode (full/editor/none)", "none", 20)
+        github_handover = normalize_choice(github_handover, ["full", "editor", "none"], "none", "github handover mode")
+
+        if github_handover != "none":
+            github_token = prompt_with_timeout("Enter GitHub Personal Access Token (for protocol automation)", "", 30)
+            if github_handover == "full":
+                print("💡 Note: For 'full' transfer, you will also need to initiate the transfer in GitHub settings to the DAO organization once it is formed.")
     else:
         rpc_url = ""
         network_wallet = ""
@@ -519,7 +535,9 @@ def main():
         "ENHANCE_PULSECHAIN": "1" if args.enhance_pulsechain == "true" else "0",
         "PULSECHAIN_MODE": args.pulsechain_mode,
         "VALIDATOR_SHARE": str(args.validator_share),
-        "ADAPTIVE_NODE": "1" if args.adaptive_node else "0"
+        "ADAPTIVE_NODE": "1" if args.adaptive_node else "0",
+        "GITHUB_TOKEN": github_token,
+        "GITHUB_HANDOVER_TYPE": github_handover
     }
 
     if default_policy_cid:
