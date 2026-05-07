@@ -6,8 +6,6 @@ before planning steps, mirroring Cloudflare's Code Mode MCP pattern.
 
 Integration: Phase 1 - XMCP Server + xurl as Native Agent Tool Layer
 """
-from __future__ import annotations
-
 import logging
 from typing import Any, Dict, List, Optional
 
