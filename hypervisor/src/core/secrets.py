@@ -13,6 +13,7 @@ class SecretManager:
         elif provider == "vault":
             return SecretManager._get_vault_secret(secret_name) or default
         else:
+            # Standard ENV provider (includes GITHUB_TOKEN and GITHUB_HANDOVER_TYPE)
             return os.environ.get(secret_name, default)
 
     @staticmethod

@@ -27,6 +27,7 @@ contract FounderShareManager is Initializable, UUPSUpgradeable {
         bool financialStability;
         bool blockchainMetricsMet;
         bool aiAlignmentVerified;
+        bool githubHandoverCompleted;
     }
     HandoverMilestones public handoverMilestones;
 
@@ -106,11 +107,19 @@ contract FounderShareManager is Initializable, UUPSUpgradeable {
     function markFinancialStability() external { require(founder.verifyFounder(""), "Unauthorized"); handoverMilestones.financialStability = true; }
     function markBlockchainMetricsMet() external { require(founder.verifyFounder(""), "Unauthorized"); handoverMilestones.blockchainMetricsMet = true; }
     function markAiAlignmentVerified() external { require(founder.verifyFounder(""), "Unauthorized"); handoverMilestones.aiAlignmentVerified = true; }
+    function markGithubHandoverCompleted() external { require(founder.verifyFounder(""), "Unauthorized"); handoverMilestones.githubHandoverCompleted = true; }
 
     function triggerFullHandover(string calldata reason) external {
         require(founder.verifyFounder(""), "Unauthorized");
         // Called by heartbeat miss (90 days) or Council 75% vote or death oracle
-        require(handoverMilestones.securityAudited && handoverMilestones.financialStability && handoverMilestones.blockchainMetricsMet && handoverMilestones.aiAlignmentVerified, "Milestones not met");
+        require(
+            handoverMilestones.securityAudited &&
+            handoverMilestones.financialStability &&
+            handoverMilestones.blockchainMetricsMet &&
+            handoverMilestones.aiAlignmentVerified &&
+            handoverMilestones.githubHandoverCompleted,
+            "Milestones not met"
+        );
         councilAutonomyActive = true;
         emit FullHandoverTriggered(reason);
     }
