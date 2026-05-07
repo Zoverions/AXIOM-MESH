@@ -1,4 +1,5 @@
 import os
+import ast
 import pytest
 from unittest.mock import patch, MagicMock
 from cryptography.fernet import Fernet
@@ -43,7 +44,7 @@ def test_generate_qr_consent(mock_qrcode, mock_node):
     # Verify the encrypted data
     f = Fernet(mock_node.cipher.key)
     decrypted_str = f.decrypt(bytes.fromhex(added_data)).decode()
-    data = eval(decrypted_str)
+    data = ast.literal_eval(decrypted_str)
 
     assert data["action"] == "ENABLE_SHADOW_BRIDGE"
     assert data["phantomDIDHash"] == mock_node.phantom_did
