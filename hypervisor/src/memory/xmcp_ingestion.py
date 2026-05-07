@@ -393,6 +393,7 @@ class XMCPIngester:
             "nodes": nodes,
             "edges": edges,
             "hyperedges": [],
+            "token_cost": {"input": 0, "output": 0},
             "metadata": {
                 "source": "xmcp_ingestion",
                 "queries": self.config.queries,
