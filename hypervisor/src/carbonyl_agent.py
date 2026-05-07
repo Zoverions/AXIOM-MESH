@@ -196,7 +196,7 @@ class CarbonylIPCClient:
             }
         elif command == "spawn":
             return {"success": True, "pid": 12345}
-        elif command in ["click", "type", "navigate", "scroll"]:
+        elif command in {"click", "type", "navigate", "scroll"}:
             return {"success": True, "message": f"Command {command} executed"}
         
         return {"success": True}
