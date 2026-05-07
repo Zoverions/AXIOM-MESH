@@ -36,13 +36,15 @@ def log(msg, level="INFO"):
              f"{Colors.OKBLUE}[•]{Colors.ENDC}"
     print(f"{prefix} {msg}")
 
-def run_command(cmd, shell=False, capture=False):
+def run_command(cmd, capture=False):
+    """Runs a command securely without using shell=True."""
     try:
-        if isinstance(cmd, str) and not shell:
-            cmd = cmd.split()
-        result = subprocess.run(cmd, shell=shell, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if isinstance(cmd, str):
+            import shlex
+            cmd = shlex.split(cmd)
+        result = subprocess.run(cmd, shell=False, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         return result.stdout.strip() if capture else None
-    except subprocess.CalledProcessError as e:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         return None
 
 def detect_os():
@@ -60,14 +62,20 @@ def detect_os():
 
 def install_package_linux(pkg):
     log(f"Installing {pkg} via apt...", "INFO")
-    run_command(f"sudo apt update -qq && sudo apt install -y {pkg}", shell=True)
+    run_command(["sudo", "apt", "update", "-qq"])
+    run_command(["sudo", "apt", "install", "-y", pkg])
 
 def install_package_macos(pkg):
     if not shutil.which("brew"):
         log("Homebrew not found. Installing Homebrew...", "WARN")
-        run_command('/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"', shell=True)
+        try:
+            curl_proc = subprocess.run(["curl", "-fsSL", "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"],
+                                       check=True, stdout=subprocess.PIPE)
+            subprocess.run(["/bin/bash"], input=curl_proc.stdout, check=True)
+        except Exception as e:
+            log(f"Failed to install Homebrew: {e}", "ERR")
     log(f"Installing {pkg} via brew...", "INFO")
-    run_command(f"brew install {pkg}", shell=True)
+    run_command(["brew", "install", pkg])
 
 def install_package_windows(pkg):
     log(f"Installing {pkg} via Chocolatey...", "INFO")
@@ -75,11 +83,12 @@ def install_package_windows(pkg):
     if not shutil.which("choco"):
         log("Chocolatey not found. Please install manually or run this script in an Admin PowerShell with Choco installed.", "ERR")
         return False
-    run_command(f"choco install -y {pkg}", shell=True)
+    run_command(["choco", "install", "-y", pkg])
 
 def install_package_android(pkg):
     log(f"Installing {pkg} via pkg (Termux)...", "INFO")
-    run_command(f"pkg update -y && pkg install -y {pkg}", shell=True)
+    run_command(["pkg", "update", "-y"])
+    run_command(["pkg", "install", "-y", pkg])
 
 def ensure_dependencies(os_type):
     missing = []
@@ -125,10 +134,10 @@ def ensure_dependencies(os_type):
 def clone_or_update_repo():
     if os.path.exists(INSTALL_DIR):
         log("Existing installation found. Updating...", "INFO")
-        run_command(f"git -C {INSTALL_DIR} pull", shell=True)
+        run_command(["git", "-C", INSTALL_DIR, "pull"])
     else:
         log(f"Cloning repository to {INSTALL_DIR}...", "INFO")
-        run_command(f"git clone {REPO_URL} {INSTALL_DIR}", shell=True)
+        run_command(["git", "clone", REPO_URL, INSTALL_DIR])
 
 def run_setup_script():
     setup_script = os.path.join(INSTALL_DIR, "install.sh")
