@@ -41,9 +41,13 @@ def load_supported_regions():
     except Exception:
         return {DEFAULT_REGION: {"name": "Ontario", "capsule_layer": "capsule-plus"}}
 
-def run_cmd(cmd, shell=False, check=True, capture_output=False):
+def run_cmd(cmd, check=True, capture_output=False):
+    """Runs a command securely without using shell=True."""
     try:
-        res = subprocess.run(cmd, shell=shell, check=check, capture_output=capture_output, text=True)
+        if isinstance(cmd, str):
+            import shlex
+            cmd = shlex.split(cmd)
+        res = subprocess.run(cmd, shell=False, check=check, capture_output=capture_output, text=True)
         if capture_output:
             return res.stdout.strip()
         return True
@@ -109,19 +113,28 @@ def install_prereqs(os_type):
         elif os_type == 'linux':
             pm = detect_linux_package_manager()
             if pm == "apt-get":
-                run_cmd("sudo apt-get update -qq", shell=True)
+                run_cmd(["sudo", "apt-get", "update", "-qq"])
                 if "docker" in missing:
-                    run_cmd("curl -fsSL https://get.docker.com | sh", shell=True)
-                    run_cmd("sudo usermod -aG docker $USER", shell=True)
+                    try:
+                        curl_proc = subprocess.run(["curl", "-fsSL", "https://get.docker.com"], check=True, stdout=subprocess.PIPE)
+                        subprocess.run(["sudo", "sh"], input=curl_proc.stdout, check=True)
+                        run_cmd(["sudo", "usermod", "-aG", "docker", os.environ.get("USER", "root")])
+                    except Exception as e:
+                        print(f"⚠️  Failed to install Docker: {e}")
                 if "make" in missing or "nodejs" in missing:
                     run_cmd(["sudo", "apt-get", "install", "-y", "make", "curl"])
                 if "nodejs" in missing:
-                    run_cmd("curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-get install -y nodejs", shell=True)
+                    try:
+                        curl_proc = subprocess.run(["curl", "-fsSL", "https://deb.nodesource.com/setup_20.x"], check=True, stdout=subprocess.PIPE)
+                        subprocess.run(["sudo", "-E", "bash", "-"], input=curl_proc.stdout, check=True)
+                        run_cmd(["sudo", "apt-get", "install", "-y", "nodejs"])
+                    except Exception as e:
+                        print(f"⚠️  Failed to install Node.js: {e}")
             elif pm in ["dnf", "yum"]:
                 if "docker" in missing:
                     run_cmd(["sudo", pm, "install", "-y", "docker"])
                     run_cmd(["sudo", "systemctl", "enable", "--now", "docker"], check=False)
-                    run_cmd("sudo usermod -aG docker $USER", shell=True, check=False)
+                    run_cmd(["sudo", "usermod", "-aG", "docker", os.environ.get("USER", "root")], check=False)
                 if "make" in missing:
                     run_cmd(["sudo", pm, "install", "-y", "make"])
                 if "nodejs" in missing:
@@ -130,7 +143,7 @@ def install_prereqs(os_type):
                 if "docker" in missing:
                     run_cmd(["sudo", "pacman", "-Sy", "--noconfirm", "docker"])
                     run_cmd(["sudo", "systemctl", "enable", "--now", "docker"], check=False)
-                    run_cmd("sudo usermod -aG docker $USER", shell=True, check=False)
+                    run_cmd(["sudo", "usermod", "-aG", "docker", os.environ.get("USER", "root")], check=False)
                 if "make" in missing or "nodejs" in missing:
                     packages = ["base-devel"] if "make" in missing else []
                     if "nodejs" in missing:
@@ -141,7 +154,7 @@ def install_prereqs(os_type):
                 if "docker" in missing:
                     run_cmd(["sudo", "zypper", "--non-interactive", "install", "docker"])
                     run_cmd(["sudo", "systemctl", "enable", "--now", "docker"], check=False)
-                    run_cmd("sudo usermod -aG docker $USER", shell=True, check=False)
+                    run_cmd(["sudo", "usermod", "-aG", "docker", os.environ.get("USER", "root")], check=False)
                 if "make" in missing:
                     run_cmd(["sudo", "zypper", "--non-interactive", "install", "make"])
                 if "nodejs" in missing:
@@ -165,7 +178,11 @@ def install_prereqs(os_type):
         elif os_type == 'macos':
             if not shutil.which("brew"):
                 print("Homebrew not found. Installing...")
-                run_cmd('/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"', shell=True)
+                try:
+                    curl_proc = subprocess.run(["curl", "-fsSL", "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"], check=True, stdout=subprocess.PIPE)
+                    subprocess.run(["/bin/bash"], input=curl_proc.stdout, check=True)
+                except Exception as e:
+                    print(f"⚠️  Failed to install Homebrew: {e}")
             if "docker" in missing:
                 run_cmd(["brew", "install", "--cask", "docker"])
             if "make" in missing:
