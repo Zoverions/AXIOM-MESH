@@ -89,6 +89,17 @@ def setup_node():
     with open(".env", "a") as f:
         f.write(f"MESHSTORE_QUOTA_GB={quota}\n")
 
+    # Scaffolding Import
+    do_import = input("📂 Search and import legacy scaffolding (OpenClaw, Agent Zero)? (y/N) ") or "n"
+    if do_import.lower() == 'y':
+        search_path = input("Enter path to search (default: current directory): ") or "."
+        import sys
+        sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+        from scripts.scaffolding_importer import run_import
+        print(f"🚀 Importing legacy scaffolding from {search_path}...")
+        results = run_import(search_path)
+        print(f"✅ Imported {len(results)} capabilities as AXIOM capsules.")
+
     # Phase 2: 2FA + Recovery (MeshStore bundle)
     enable_2fa = input("🔐 Enable 2FA (TOTP + Passkey) for recovery? (y/n) [y]: ") or "y"
     if enable_2fa.lower() == "y":
@@ -193,6 +204,15 @@ if __name__ == "__main__":
             totp_code = input("Enter TOTP code: ")
             # Passkey handled in browser if needed
             recover_from_meshstore(node_id, totp_code)
+            sys.exit(0)
+        elif sys.argv[1] == "import":
+            search_path = input("Enter path to search (default: current directory): ") or "."
+            import sys
+            sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+            from scripts.scaffolding_importer import run_import
+            print(f"🚀 Importing legacy scaffolding from {search_path}...")
+            results = run_import(search_path)
+            print(f"✅ Imported {len(results)} capabilities as AXIOM capsules.")
             sys.exit(0)
         elif sys.argv[1] == "nft" and len(sys.argv) > 2:
             if sys.argv[2] == "mint":
