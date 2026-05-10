@@ -38,9 +38,11 @@ class PrivateVault:
             system_secret = SecretManager.get_secret("VAULT_MASTER_KEY")
             if system_secret:
                 return f"{owner_did}:{system_secret}"
+
         fallback_secret = os.getenv("VAULT_MASTER_KEY")
         if not fallback_secret:
-            fallback_secret = "development-only-insecure-vault-key"
+            raise RuntimeError("CRITICAL: VAULT_MASTER_KEY must be securely configured")
+
         return f"{owner_did}:{fallback_secret}"
 
     def store(self, key: str, value: dict[str, Any], pre_mortem: bool = True) -> None:
