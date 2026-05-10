@@ -1,6 +1,7 @@
 from mcp.server.fastmcp import FastMCP
 import os
 import httpx
+import math
 import ast
 import uuid
 import re
@@ -41,6 +42,17 @@ def apply_mcp_security_requirements(payload_content: str, risk_score: float = 0.
     Applies the mandatory security checks defined in AGENT-ENHANCEMENTS.md.
     Returns an error message if failed, or None if passed.
     """
+    # Fail-closed: Validate input types
+    if not isinstance(payload_content, str):
+        return "Security Halt: Invalid payload type. Expected string."
+
+    if not isinstance(risk_score, (int, float)):
+        return "Security Halt: Invalid risk score type. Expected float/int."
+
+    if math.isnan(risk_score) or math.isinf(risk_score):
+        return "Security Halt: Invalid risk score value (NaN/Inf)."
+
+    # M7.1 - Ensure strict prompt bounds check and fail-closed mechanism.
     if "<|" in payload_content or "|>" in payload_content:
          return "Security Halt: Prompt injection delimiters detected in payload."
 
