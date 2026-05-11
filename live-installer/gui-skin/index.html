@@ -474,7 +474,10 @@
                 'validator-node': 'Validator Node',
                 'storage-node': 'Storage Node',
                 'compute-node': 'Compute Node',
-                'relay-node': 'Relay Node'
+                'relay-node': 'Relay Node',
+                'dedicated-mesh': 'Dedicated Mesh Node',
+                'shared-machine': 'Shared Machine Node',
+                'minimal-edge': 'Minimal Edge Node'
             };
             document.getElementById('node-type-display').textContent = typeNames[nodeType] || 'Node Interface';
         }
@@ -485,6 +488,51 @@
             const icon = document.getElementById('node-specific-icon');
 
             const nodeConfigs = {
+
+                'dedicated-mesh': {
+                    title: 'Mesh Network Progress',
+                    icon: '🌐',
+                    content: `
+                        <div class="metric">
+                            <div class="metric-label">Nodes Connected</div>
+                            <div class="metric-value" id="nodes-connected">0</div>
+                            <div class="metric-sub">Network health: <span id="network-health">100%</span></div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Data Relayed</div>
+                            <div class="metric-value" id="data-relayed">0 GB</div>
+                        </div>
+                    `
+                },
+                'shared-machine': {
+                    title: 'Resource Sharing Progress',
+                    icon: '💻',
+                    content: `
+                        <div class="metric">
+                            <div class="metric-label">Tasks Processed</div>
+                            <div class="metric-value" id="tasks-processed">0</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Resource Allocation</div>
+                            <div class="metric-value" id="resource-allocation">Low</div>
+                        </div>
+                    `
+                },
+                'minimal-edge': {
+                    title: 'Edge Processing Progress',
+                    icon: '📱',
+                    content: `
+                        <div class="metric">
+                            <div class="metric-label">Edge Tasks Completed</div>
+                            <div class="metric-value" id="edge-tasks-completed">0</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Battery Level</div>
+                            <div class="metric-value" id="battery-level">100%</div>
+                        </div>
+                    `
+                },
+
                 'education-node': {
                     title: 'Learning Progress',
                     icon: '🎓',
