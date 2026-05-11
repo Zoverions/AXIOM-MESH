@@ -10,7 +10,16 @@ describe("BootstrapIncentive", function () {
   let other;
 
   beforeEach(async function () {
-    [owner, initiator, other] = await ethers.getSigners();
+    const signers = await ethers.getSigners();
+    owner = signers[0];
+
+    // Hardhat can impersonate the actual founder account for testing this requirement
+    const founderAddress = "0x1c2cBabF75e1938ED2f2c59e734e83aa5FBe1B73";
+    await hre.network.provider.request({ method: "hardhat_impersonateAccount", params: [founderAddress] });
+    await owner.sendTransaction({ to: founderAddress, value: ethers.parseEther("100.0") });
+
+    initiator = await ethers.getSigner(founderAddress);
+    other = signers[2];
 
     // Deploy NetworkTreasury
     const NetworkTreasury = await ethers.getContractFactory("NetworkTreasury");

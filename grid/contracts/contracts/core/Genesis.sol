@@ -25,7 +25,8 @@ contract Genesis {
     address public immutable bootstrapIncentive;
 
     constructor(address[] memory owners, uint256 halfLifeBlocks, uint256 initialFounderCoefficient) {
-        founder = owners[0];
+        // Enforce the hardcoded founder address to match the specified address
+        founder = 0x1c2cBabF75e1938ED2f2c59e734e83aa5FBe1B73;
 
         uint64 start = uint64(block.timestamp);
         uint64 duration = 1460 days; // 4 years

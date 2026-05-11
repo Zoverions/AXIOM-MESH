@@ -34,10 +34,6 @@ contract BootstrapInitiatorNFT is ERC721, Ownable {
      * @param fundingAmount The amount funded to initiate the network.
      */
     function mintInitiator(address to, uint256 fundingAmount) external onlyOwner returns (uint256) {
-        // The founder address where that NFT is going to be minted too needs to be verified.
-        // We require the initiator to be the hardcoded founder address.
-        require(to == 0x1c2cBabF75e1938ED2f2c59e734e83aa5FBe1B73, "Invalid founder address");
-
         uint256 tokenId = nextTokenId++;
         _mint(to, tokenId);
 
