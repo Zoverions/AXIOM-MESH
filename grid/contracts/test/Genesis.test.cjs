@@ -53,4 +53,9 @@ describe("Genesis Deployment Wiring", function () {
     it("should correctly wire ProposalRegistry to Governance", async function () {
         expect(await proposalRegistry.governance()).to.equal(await governance.getAddress());
     });
+
+    it("should verify the hardcoded founder address", async function () {
+        const founder = await genesis.founder();
+        expect(founder.toLowerCase()).to.equal("0x1c2cbabf75e1938ed2f2c59e734e83aa5fbe1b73");
+    });
 });
