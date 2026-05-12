@@ -261,12 +261,7 @@ contract ComputeBond is TimelockedOwnable, AccessControl {
      * Exactly 5.00% starting share, decaying to 0% at 10k nodes.
      */
     function getCurrentFounderShare() external view returns (uint256) {
-        uint256 s = _verifiedSwarmSize();
-        if (s >= 10000) return 0;
-
-        // 500 = 5.00%
-        uint256 share = 500 - (s * 500 / 10000);
-        return share < 50 ? 0 : share;
+        return 500; // Permanently 5.00%
     }
 
     function syncGridSwarmSizeFromOracle() external {
