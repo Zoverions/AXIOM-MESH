@@ -4,6 +4,49 @@ import time
 from typing import Any
 from ecdsa import SigningKey, VerifyingKey, NIST256p
 
+
+class VectorClock:
+    def __init__(self, clock=None):
+        self.clock = clock or {}
+
+    def increment(self, node_id):
+        self.clock[node_id] = self.clock.get(node_id, 0) + 1
+        return self
+
+    def merge(self, other_clock):
+        for node, count in other_clock.items():
+            self.clock[node] = max(self.clock.get(node, 0), count)
+
+    def compare(self, other_clock):
+        """
+        Returns:
+        1 if self > other (self happened after)
+        -1 if self < other (self happened before)
+        0 if concurrent or equal
+        """
+        if self.clock == other_clock: return 0
+
+        self_greater = False
+        other_greater = False
+
+        all_nodes = set(self.clock.keys()).union(other_clock.keys())
+        for node in all_nodes:
+            self_val = self.clock.get(node, 0)
+            other_val = other_clock.get(node, 0)
+            if self_val > other_val:
+                self_greater = True
+            elif other_val > self_val:
+                other_greater = True
+
+        if self_greater and not other_greater:
+            return 1
+        if other_greater and not self_greater:
+            return -1
+        return 0
+
+    def copy(self):
+        return VectorClock(self.clock.copy())
+
 class CRDTState:
     """
     Offline-first CRDT (Last-Write-Wins Map) for Spectrum Devices.
@@ -12,7 +55,8 @@ class CRDTState:
     """
     def __init__(self, node_id: str, private_key_pem: bytes = None):
         self.node_id = node_id
-        self.state = {} # key -> {"value": any, "timestamp": float}
+        self.state = {} # key -> {"value": any, "timestamp": float, "vector_clock": dict}
+        self.vector_clock = VectorClock()
 
         if private_key_pem:
             self.private_key = SigningKey.from_pem(private_key_pem)
@@ -23,16 +67,30 @@ class CRDTState:
 
     def update(self, key: str, value: Any):
         """Updates the local CRDT state."""
+        self.vector_clock.increment(self.node_id)
         self.state[key] = {
             "value": value,
-            "timestamp": time.time()
+            "timestamp": time.time(),
+            "vector_clock": self.vector_clock.clock.copy()
+        }
+
+
+    def delete(self, key: str):
+        """Marks a key as deleted (tombstone) to propagate deletions across the mesh."""
+        self.vector_clock.increment(self.node_id)
+        self.state[key] = {
+            "value": None,
+            "deleted": True,
+            "timestamp": time.time(),
+            "vector_clock": self.vector_clock.clock.copy()
         }
 
     def get(self, key: str) -> Any:
         entry = self.state.get(key)
-        if entry:
+        if entry and not entry.get("deleted", False):
             return entry["value"]
         return None
+
 
     def generate_delta(self) -> dict:
         """
@@ -48,6 +106,7 @@ class CRDTState:
             "node_id": self.node_id,
             "public_key": self.public_key_hex,
             "state": self.state,
+            "vector_clock": self.vector_clock.clock.copy(),
             "signature": signature.hex()
         }
         self._gossip_shard(delta_payload, state_hash.hex())
@@ -95,7 +154,7 @@ class CRDTState:
     def verify_and_merge(self, delta: dict) -> bool:
         """
         Verifies the incoming delta's signature (zk-private simulation).
-        If valid, merges it using LWW rules.
+        If valid, merges it using LWW rules with Vector Clocks.
         """
         try:
             pub_key_bytes = bytes.fromhex(delta["public_key"])
@@ -112,13 +171,54 @@ class CRDTState:
         except Exception:
             return False
 
-        # Merge Phase (Last Write Wins)
+        # Merge Vector Clocks
+        incoming_vc = delta.get("vector_clock", {})
+        self.vector_clock.merge(incoming_vc)
+
+        # Merge Phase (Vector Clock + LWW Fallback)
         for key, incoming_entry in incoming_state.items():
             local_entry = self.state.get(key)
-            if not local_entry or incoming_entry["timestamp"] > local_entry["timestamp"]:
+            if not local_entry:
                 self.state[key] = incoming_entry
+            else:
+                local_vc = VectorClock(local_entry.get("vector_clock", {}))
+                inc_vc = VectorClock(incoming_entry.get("vector_clock", {}))
+
+                cmp = inc_vc.compare(local_vc.clock)
+                if cmp == 1:
+                    # Incoming happened after
+                    self.state[key] = incoming_entry
+                elif cmp == 0:
+                    # Concurrent, fallback to timestamp LWW
+                    if incoming_entry["timestamp"] > local_entry["timestamp"]:
+                        self.state[key] = incoming_entry
 
         return True
+
+    def publish_device_resources(self, resources: dict):
+        """
+        Publishes the current device's resources (CPU, Memory, Battery, etc.)
+        to the CRDT mesh state to enable resource sharing and topology mapping.
+        """
+        key = f"__mesh_devices__:{self.node_id}"
+        self.update(key, {
+            "node_id": self.node_id,
+            "resources": resources,
+            "last_seen": time.time()
+        })
+
+    def get_mesh_topology(self) -> dict:
+        """
+        Aggregates all known devices and their published capabilities from the CRDT state.
+        Returns a dictionary mapping node_id -> device_info.
+        """
+        topology = {}
+        for key, entry in self.state.items():
+            if key.startswith("__mesh_devices__:"):
+                node_id = key.split(":")[1]
+                topology[node_id] = entry["value"]
+        return topology
+
 
 if __name__ == "__main__":
     import sys
