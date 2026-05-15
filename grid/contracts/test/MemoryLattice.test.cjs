@@ -55,8 +55,27 @@ describe("MemoryLattice", function () {
   });
 
   it("Should add an attention edge successfully", async function () {
-    const fromNode = ethers.keccak256(ethers.toUtf8Bytes("from"));
-    const toNode = ethers.keccak256(ethers.toUtf8Bytes("to"));
+
+    const coder = ethers.AbiCoder.defaultAbiCoder();
+    const zkProof = coder.encode(
+      ["uint256[2]", "uint256[2][2]", "uint256[2]"],
+      [
+        [1, 2],
+        [[3, 4], [5, 6]],
+        [7, 8]
+      ]
+    );
+
+    const fromDomain = ethers.keccak256(ethers.toUtf8Bytes("fromDomain"));
+    const fromContext = ethers.keccak256(ethers.toUtf8Bytes("fromContext"));
+    await lattice.addAttentionNode(fromDomain, fromContext, zkProof);
+    const fromNode = ethers.keccak256(ethers.solidityPacked(["bytes32", "bytes32"], [fromDomain, fromContext]));
+
+    const toDomain = ethers.keccak256(ethers.toUtf8Bytes("toDomain"));
+    const toContext = ethers.keccak256(ethers.toUtf8Bytes("toContext"));
+    await lattice.addAttentionNode(toDomain, toContext, zkProof);
+    const toNode = ethers.keccak256(ethers.solidityPacked(["bytes32", "bytes32"], [toDomain, toContext]));
+
     const weight = 100;
     const horizonProof = "0x";
 

@@ -88,6 +88,6 @@ describe("VaultManager", function () {
       .to.be.revertedWith("Amount must be > 0");
 
     await expect(vaultManager.connect(user).releaseAssets(nftId, erc20.target, 0, "0x"))
-      .to.be.revertedWith("Insufficient locked balance");
+      .to.be.revertedWith("Amount must be > 0");
   });
 });

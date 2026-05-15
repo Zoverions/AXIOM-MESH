@@ -42,6 +42,8 @@ describe("Community Treasury & Ecosystem Fund", function () {
 
         const CommunityTreasury = await hre.ethers.getContractFactory("CommunityTreasury", owner);
         treasury = await CommunityTreasury.deploy();
+        await treasury.setGovernanceMultisig(owner.address);
+        await treasury.setGovernanceMultisig(owner.address);
     });
 
     it("should allow ether allocation by owner", async function () {
