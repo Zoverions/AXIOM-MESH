@@ -127,7 +127,9 @@ def generate_secure_token() -> str:
 def sign_payload(payload: Dict[str, Any], secret: Optional[str] = None) -> str:
     """Sign payload with HMAC-SHA256"""
     if not secret:
-        secret = os.environ.get("AXIOM_MESH_SECRET", "axiom-default-secret-change-in-production")
+        secret = os.environ.get("AXIOM_MESH_SECRET")
+        if not secret:
+            raise RuntimeError("AXIOM_MESH_SECRET environment variable is not set. Hardcoded fallbacks are prohibited for security.")
     
     payload_str = json.dumps(payload, sort_keys=True)
     signature = hashlib.sha256(f"{secret}{payload_str}".encode()).hexdigest()
@@ -135,10 +137,11 @@ def sign_payload(payload: Dict[str, Any], secret: Optional[str] = None) -> str:
 
 def verify_signature(signed_data: str, secret: Optional[str] = None) -> Optional[Dict[str, Any]]:
     """Verify and decode signed payload"""
-    try:
+    if not secret:
+        secret = os.environ.get("AXIOM_MESH_SECRET")
         if not secret:
-            secret = os.environ.get("AXIOM_MESH_SECRET", "axiom-default-secret-change-in-production")
-        
+            raise RuntimeError("AXIOM_MESH_SECRET environment variable is not set. Hardcoded fallbacks are prohibited for security.")
+    try:
         encoded_payload, signature = signed_data.rsplit('.', 1)
         payload_str = base64.urlsafe_b64decode(encoded_payload.encode()).decode()
         

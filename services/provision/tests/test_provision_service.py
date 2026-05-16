@@ -24,6 +24,20 @@ def test_verify_signature_valid():
     # Assert the result is the same as the original payload
     assert result == payload
 
+def test_missing_secret_raises_error(monkeypatch):
+    payload = {"test": "data"}
+
+    # Ensure the environment variable is not set
+    monkeypatch.delenv("AXIOM_MESH_SECRET", raising=False)
+
+    # Sign without specifying a secret should raise RuntimeError
+    with pytest.raises(RuntimeError, match="AXIOM_MESH_SECRET environment variable is not set"):
+        sign_payload(payload)
+
+    # Verify without specifying a secret should raise RuntimeError
+    with pytest.raises(RuntimeError, match="AXIOM_MESH_SECRET environment variable is not set"):
+        verify_signature("some.signed.data")
+
 def test_join_mesh():
     # We need to clear and initialize token store
     token_store.clear()
