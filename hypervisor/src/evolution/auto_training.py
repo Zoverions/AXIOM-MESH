@@ -5,8 +5,26 @@ import requests
 import json
 import os
 import ast
+import hmac
+import hashlib
+import uuid
+from datetime import datetime, timezone
 
 SANDBOX_URL = os.environ.get("SANDBOX_URL", "http://localhost:4000/execute")
+
+def build_signed_headers(api_key: str, payload: dict) -> dict:
+    timestamp_ms = str(int(datetime.now(timezone.utc).timestamp() * 1000))
+    nonce = str(uuid.uuid4())
+    payload_bytes = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    body_hash = hashlib.sha256(payload_bytes).hexdigest()
+    signature_payload = f"{timestamp_ms}:{nonce}:{body_hash}"
+    signature = hmac.new(api_key.encode("utf-8"), signature_payload.encode("utf-8"), hashlib.sha256).hexdigest()
+    return {
+        "Authorization": f"Bearer {api_key}",
+        "X-Axiom-Timestamp": timestamp_ms,
+        "X-Axiom-Nonce": nonce,
+        "X-Axiom-Signature": signature,
+    }
 
 class ModificationPolicy:
     """
@@ -137,8 +155,17 @@ print(f"loss={train()}")
             return
 
         try:
+            sandbox_api_key = os.environ.get("SANDBOX_API_KEY")
+            if not sandbox_api_key:
+                print("[AutoTraining] Experiment failed: SANDBOX_API_KEY is not configured")
+                return
+
+            sandbox_payload = {"language": "python", "code": proposed_code}
+            headers = build_signed_headers(sandbox_api_key, sandbox_payload)
+
             # Execute in the secure Node.js Sandbox container
-            res = requests.post(SANDBOX_URL, json={"language": "python", "code": proposed_code})
+            res = requests.post(SANDBOX_URL, json=sandbox_payload, headers=headers)
+            res.raise_for_status()
             result_data = res.json()
             stdout = result_data.get("result", {}).get("stdout", "")
 
