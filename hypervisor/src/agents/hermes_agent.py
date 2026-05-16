@@ -5,7 +5,7 @@ import os
 import httpx
 import json
 import hashlib
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 from datetime import datetime
 
 from hypervisor.policies.hermes_policy import HERMES_POLICY, validate_hermes_action
