@@ -1,5 +1,5 @@
 import os
-import ast
+import json
 import pytest
 from unittest.mock import patch, MagicMock
 from cryptography.fernet import Fernet
@@ -44,7 +44,7 @@ def test_generate_qr_consent(mock_qrcode, mock_node):
     # Verify the encrypted data
     f = Fernet(mock_node.cipher.key)
     decrypted_str = f.decrypt(bytes.fromhex(added_data)).decode()
-    data = ast.literal_eval(decrypted_str)
+    data = json.loads(decrypted_str)
 
     assert data["action"] == "ENABLE_SHADOW_BRIDGE"
     assert data["phantomDIDHash"] == mock_node.phantom_did
@@ -59,7 +59,7 @@ def test_verify_usb_consent_success(mock_node):
         "timestamp": 1234567890,
         "nonce": "testnonce"
     }
-    encrypted = f.encrypt(str(consent_data).encode()).hex()
+    encrypted = f.encrypt(json.dumps(consent_data).encode('utf-8')).hex()
 
     result = AirGapConsent.verify_usb_consent(encrypted, mock_node)
 
@@ -74,7 +74,7 @@ def test_verify_usb_consent_invalid_action(mock_node):
         "timestamp": 1234567890,
         "nonce": "testnonce"
     }
-    encrypted = f.encrypt(str(consent_data).encode()).hex()
+    encrypted = f.encrypt(json.dumps(consent_data).encode('utf-8')).hex()
 
     result = AirGapConsent.verify_usb_consent(encrypted, mock_node)
 
@@ -93,7 +93,7 @@ def test_verify_usb_consent_invalid_encryption(mock_node):
         "action": "ENABLE_SHADOW_BRIDGE",
         "phantomDIDHash": mock_node.phantom_did,
     }
-    encrypted = f.encrypt(str(consent_data).encode()).hex()
+    encrypted = f.encrypt(json.dumps(consent_data).encode('utf-8')).hex()
 
     # Trying to decrypt with mock_node's key should fail
     with pytest.raises(InvalidToken):

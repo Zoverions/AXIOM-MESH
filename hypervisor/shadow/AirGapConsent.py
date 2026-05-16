@@ -1,6 +1,5 @@
 import qrcode
 import os
-import ast
 import json
 import time
 from cryptography.fernet import Fernet
@@ -30,7 +29,7 @@ class AirGapConsent:
             "timestamp": int(os.times()[0]),
             "nonce": os.urandom(16).hex()
         }
-        encrypted = Fernet(shadow_node_instance.cipher.key).encrypt(str(consent_data).encode())
+        encrypted = Fernet(shadow_node_instance.cipher.key).encrypt(json.dumps(consent_data).encode('utf-8'))
 
         qr = qrcode.QRCode(version=1, box_size=10, border=5)
         qr.add_data(encrypted.hex())
@@ -44,7 +43,7 @@ class AirGapConsent:
     def verify_usb_consent(scanned_hex: str, shadow_node_instance):
         """Called after user scans QR or plugs USB with signed file"""
         decrypted = Fernet(shadow_node_instance.cipher.key).decrypt(bytes.fromhex(scanned_hex))
-        data = ast.literal_eval(decrypted.decode())
+        data = json.loads(decrypted.decode('utf-8'))
         if data.get("action") == "ENABLE_SHADOW_BRIDGE":
             shadow_node_instance.bridge_enabled = True
             print("🔓 ShadowBridge activated via physical air-gap consent")
