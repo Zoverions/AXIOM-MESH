@@ -369,7 +369,9 @@ async def schedule_task(request: ScheduleRequest):
                 args = shlex.split(request.command)
                 if not args:
                     raise ValueError("Empty command")
-                binary = os.path.basename(args[0])
+                binary = args[0]
+                if '/' in binary or '\\' in binary:
+                    raise ValueError("Command paths are not allowed, use command name only")
                 if binary not in ALLOWED_SCHEDULED_COMMANDS:
                     raise ValueError(f"Command '{binary}' is not allowlisted")
 
