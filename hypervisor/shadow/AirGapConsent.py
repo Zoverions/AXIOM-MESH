@@ -1,7 +1,6 @@
 import qrcode
 import os
 import ast
-import json
 import time
 from cryptography.fernet import Fernet
 
