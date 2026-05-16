@@ -1,6 +1,5 @@
 import asyncio
 import time
-import uuid
 import os
 import secrets
 from pathlib import Path
