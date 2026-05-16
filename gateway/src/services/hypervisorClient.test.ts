@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { sendToHypervisor } from './hypervisorClient';
+import { sendToHypervisor, getBackpressureLimit } from './hypervisorClient';
 import { IntentObject, IntentResponse } from '../types';
 
 jest.mock('axios');
@@ -7,6 +7,33 @@ const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('hypervisorClient', () => {
     const FIXED_TIMESTAMP = 1234567890;
+
+    describe('getBackpressureLimit', () => {
+        const originalEnv = process.env.HYPERVISOR_BACKPRESSURE_LIMIT;
+
+        afterEach(() => {
+            if (originalEnv === undefined) {
+                delete process.env.HYPERVISOR_BACKPRESSURE_LIMIT;
+            } else {
+                process.env.HYPERVISOR_BACKPRESSURE_LIMIT = originalEnv;
+            }
+        });
+
+        it('should return default limit of 50 when env var is not set', () => {
+            delete process.env.HYPERVISOR_BACKPRESSURE_LIMIT;
+            expect(getBackpressureLimit()).toBe(50);
+        });
+
+        it('should return parsed integer from env var', () => {
+            process.env.HYPERVISOR_BACKPRESSURE_LIMIT = '100';
+            expect(getBackpressureLimit()).toBe(100);
+        });
+
+        it('should return NaN if env var is not a number', () => {
+            process.env.HYPERVISOR_BACKPRESSURE_LIMIT = 'invalid';
+            expect(getBackpressureLimit()).toBeNaN();
+        });
+    });
 
     beforeAll(() => {
         jest.useFakeTimers();
@@ -20,6 +47,9 @@ describe('hypervisorClient', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         process.env.HYPERVISOR_RETRIES = '1';
+        process.env.MTLS_CA_CERT = 'mock-ca-cert';
+        process.env.MTLS_CLIENT_CERT = 'mock-client-cert';
+        process.env.MTLS_CLIENT_KEY = 'mock-client-key';
     });
 
     describe('sendToHypervisor', () => {

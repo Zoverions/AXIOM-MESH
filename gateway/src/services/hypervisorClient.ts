@@ -10,7 +10,7 @@ function getMaxRetries(): number {
     return Number(process.env.HYPERVISOR_RETRIES || 3);
 }
 
-function getBackpressureLimit(): number {
+export function getBackpressureLimit(): number {
     return Number(process.env.HYPERVISOR_BACKPRESSURE_LIMIT || 50);
 }
 
