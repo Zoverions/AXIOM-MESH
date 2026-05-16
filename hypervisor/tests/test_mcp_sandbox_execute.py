@@ -148,3 +148,11 @@ async def test_sandbox_execute_http_exception(auth_setup, mock_mcp_modules):
     with patch("httpx.AsyncClient", return_value=mock_client_context):
         result = await mock_mcp_modules.sandbox_execute(code, sig, "python", auth_setup)
         assert "Sandbox execution failed: Connection Refused" in result
+
+@pytest.mark.asyncio
+async def test_sandbox_execute_invalid_language(auth_setup, mock_mcp_modules):
+    code = "print('hello')"
+    sig = generate_signature(code)
+
+    result = await mock_mcp_modules.sandbox_execute(code, sig, "bash", auth_setup)
+    assert "Security Halt: Invalid input type or language" in result

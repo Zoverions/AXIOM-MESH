@@ -6,7 +6,8 @@ import ast
 import uuid
 import re
 from src.core.secrets import SecretManager
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ValidationError
+from typing import Literal
 
 # Initialize the FastMCP server
 mcp_server = FastMCP(
@@ -75,6 +76,10 @@ def verify_signature(payload: str, signature: str) -> bool:
     expected_sig = hmac.new(secret, payload.encode(), hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected_sig, signature)
 
+class SandboxExecutionRequest(BaseModel):
+    code: str = Field(..., max_length=100000)
+    language: Literal["python", "javascript", "node", "python3"]
+
 @mcp_server.tool()
 async def sandbox_execute(code: str, signature: str, language: str = "python", auth_token: str = "") -> str:
     """
@@ -123,10 +128,15 @@ async def sandbox_execute(code: str, signature: str, language: str = "python", a
     if language == "python" and not is_safe_code(code):
          return "Security Halt: Code execution contains forbidden operations (e.g., os, sys, eval, open)."
 
+    try:
+        req = SandboxExecutionRequest(code=code, language=language)
+    except ValidationError as e:
+        return f"Security Halt: Invalid input type or language - {e}"
+
     SANDBOX_URL = os.environ.get("SANDBOX_URL", "http://localhost:4000/execute")
     try:
         async with httpx.AsyncClient() as client:
-            sandbox_res = await client.post(SANDBOX_URL, json={"language": language, "code": code})
+            sandbox_res = await client.post(SANDBOX_URL, json={"language": req.language, "code": req.code})
             if sandbox_res.status_code == 200:
                 result = sandbox_res.json()
                 return f"Execution result:\n{result}"
