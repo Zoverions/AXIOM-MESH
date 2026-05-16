@@ -6,7 +6,7 @@ require (
 	capnproto.org/go/capnp/v3 v3.1.0-alpha.2
 	github.com/cloudflare/circl v1.6.3
 	github.com/dgraph-io/badger/v4 v4.9.1
-	github.com/ethereum/go-ethereum v1.17.2
+	github.com/ethereum/go-ethereum v1.17.3
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/hashicorp/golang-lru v1.0.2
