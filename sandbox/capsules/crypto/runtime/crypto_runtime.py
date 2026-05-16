@@ -172,7 +172,7 @@ class CryptoRuntime:
         return {
             'encrypted_data': encrypted.hex(),
             'algorithm': 'aes-256-gcm-demo',
-            'key_used': key.hex()[:16] + '...',  # Partial key for logging
+            'key_used': '<REDACTED>',  # Redacted key for logging
             'data_length': len(data),
             'operation_type': 'encryption'
         }
