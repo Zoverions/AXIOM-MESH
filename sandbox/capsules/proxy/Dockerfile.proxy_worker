@@ -1,0 +1,21 @@
+# Dockerfile for Proxy Worker execution environments
+FROM node:20-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Configure secure environment
+ENV NODE_ENV=production
+# Force application to only communicate through the granted proxy capabilities
+ENV HTTP_PROXY=""
+ENV HTTPS_PROXY=""
+
+# Install core runtime dependencies (lightweight)
+COPY package.json ./
+RUN npm install --only=production
+
+# Copy sandbox proxy execution handlers
+COPY ./proxy_runtime ./proxy_runtime
+
+# The executor runs dynamically injected proxy tasks
+ENTRYPOINT ["node", "proxy_runtime/executor.js"]

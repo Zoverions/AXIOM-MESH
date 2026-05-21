@@ -20,3 +20,11 @@ export interface IntentResponse {
     trace_id?: string;
     audit_trail?: Record<string, any>;
 }
+
+export interface ProxyCapability {
+    id: string;
+    targetNetworkType: 'residential' | 'mobile';
+    geoConstraints?: string[];
+    sessionSticky: boolean;
+    bandwidthQuotaBytes?: number;
+}
