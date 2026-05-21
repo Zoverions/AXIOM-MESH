@@ -1,4 +1,5 @@
 import { ProxyCapability } from '../types';
+import { randomBytes } from 'crypto';
 
 export class AnyIPConnector {
     /**
@@ -16,7 +17,7 @@ export class AnyIPConnector {
             zone += `-${capability.geoConstraints[0].toLowerCase()}`;
         }
 
-        const sessionId = capability.sessionSticky ? capability.id : Math.random().toString(36).substring(7);
+        const sessionId = capability.sessionSticky ? capability.id : randomBytes(8).toString('hex');
 
         return {
             username: `customer-axiom-zone-${zone}-session-${sessionId}`,
