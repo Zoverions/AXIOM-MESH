@@ -20,9 +20,11 @@ container policy are implemented.
 
 The image build and composed container drill pass in
 [GitHub run 30375390450](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30375390450).
-Capacity, SLO, external telemetry, credential rotation, deployment-host
-recovery, deny-egress enforcement, incident response, and independent security
-review remain open.
+The protected workflow also produces signed disposable-host recovery,
+SLO/restart, and coordinated service/API credential-rotation evidence.
+Dedicated pilot capacity and availability, external telemetry, scheduled
+pilot-media recovery, data-key re-encryption, deny-egress enforcement,
+incident response, and independent security review remain open.
 The current decision is recorded in the
 [readiness tracker](PRODUCTION-READINESS-TRACKER.md).
 
@@ -63,6 +65,8 @@ Production promotion requires:
   high-risk effects;
 - no credential generation during production startup;
 - file-backed secret loading with restrictive ownership and mode checks;
+- offline, coordinated service/API credential rotation with active-key
+  acceptance, retired-key rejection, and authenticated exact rollback;
 - authenticated encryption for durable protected state;
 - structured-log redaction and bounded telemetry labels;
 - an inventory proving deprecated-history credentials are not trusted;
@@ -138,6 +142,32 @@ operator-run recovery using pilot-owned media and key custody.
 Loss of the data key can make protected data unrecoverable. Key custody and
 encrypted recovery copies are therefore part of availability, not merely
 security.
+
+## Credential lifecycle
+
+The supported candidate rotates the four service Ed25519 identities, matching
+trust records, and production operator API token while the runtime is stopped.
+The Grid runtime lock excludes a competing startup. A fixed-target transaction
+self-restores on ordinary failure and leaves a fail-closed maintenance marker
+for authenticated recovery after interruption.
+
+Before replacement, the original credential set is authenticated-encrypted
+with the existing data-protection key. The public transition manifest is
+attested by both retiring and successor Grid identities. Grid follows only
+connected, dual-signed key transitions when verifying its evidence history, so
+new events use the successor private key while old records remain verifiable.
+Rollback validates every target, retains an encrypted forward package, and
+restores the exact original service identities, trust set, registry, and
+operator token.
+
+Protected CI proves the lifecycle against the real four-process supervisor:
+the active token and identities succeed, the inactive set fails, rollback
+restores the original set, the rotated set then fails, and the data-protection
+key is byte-for-byte unchanged. This closes candidate-host service/API
+rotation. It does not close external historic-credential revocation or
+data-protection-key rotation; the latter requires a separately reviewed
+re-encryption migration for Grid state, backups, and retained recovery
+packages.
 
 ## Observability requirements
 

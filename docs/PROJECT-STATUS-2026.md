@@ -56,9 +56,13 @@ recovery evidence with a measured recovery point and recovery time. It also
 runs a fixed authenticated load profile against the real four-process
 production supervisor, records latency, error rate, throughput, CPU/memory
 observations and peak concurrency, then measures a graceful restart and
-post-restart intent. Dedicated pilot-hardware capacity and availability
-validation, enforced deny-egress deployment policy, credential-history
-revocation, credential rotation, and independent security review are still
+post-restart intent. It also performs offline coordinated rotation of all four
+service identities and the operator token, proves active and inactive trust in
+both directions, preserves Grid evidence through a dual-signed key transition,
+and restores the exact original set from an authenticated-encrypted rollback
+package. Dedicated pilot-hardware capacity and availability validation,
+enforced deny-egress deployment policy, data-key re-encryption,
+credential-history revocation, and independent security review are still
 required before production promotion.
 
 See:
@@ -99,7 +103,8 @@ repository is not implementation or deployment evidence.
 
 ## Immediate next milestone
 
-The next milestone is credential-history revocation evidence and the
-recovery, SLO, deny-egress, incident-response, and independent-security work
-required for a controlled single-node pilot. Work is ordered in
+The next milestone is external credential-history revocation evidence,
+pilot-owned secret custody and scheduled recovery, data-key re-encryption,
+deny-egress, incident response, and independent security review for a
+controlled single-node pilot. Work is ordered in
 [`docs/MASTER-TODO.md`](MASTER-TODO.md).

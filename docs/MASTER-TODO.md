@@ -49,14 +49,14 @@ evidence-chain integrity, or unauthorized effects.
 
 ## P1 - single-node production pilot
 
-| ID | Work | Acceptance evidence |
-|---|---|---|
-| PILOT-001 | Deploy one isolated non-public pilot using external secret custody | Deployment manifest and trust-root inventory |
-| PILOT-002 | Add authenticated external metrics collection without exposing sensitive labels | Collector integration tests and label-cardinality report |
-| PILOT-003 | Add alert routing with bounded retry, redaction, and delivery audit | Negative-path tests and delivery receipts |
-| PILOT-004 | Automate credential rotation with coordinated trust updates | Rotation and rollback drill |
-| PILOT-005 | Automate encrypted backup retention and restore verification | Scheduled restore evidence |
-| PILOT-006 | Document incident command, severity, containment, and recovery roles | Tabletop exercise record |
+| ID | Status | Work | Acceptance evidence |
+|---|---|---|---|
+| PILOT-001 | Pending | Deploy one isolated non-public pilot using external secret custody | Deployment manifest and trust-root inventory |
+| PILOT-002 | Pending | Add authenticated external metrics collection without exposing sensitive labels | Collector integration tests and label-cardinality report |
+| PILOT-003 | Pending | Add alert routing with bounded retry, redaction, and delivery audit | Negative-path tests and delivery receipts |
+| PILOT-004 | Complete for candidate host | Automate four-service identity and operator-token rotation with coordinated trust updates and exact rollback | Protected CI uploads signed, secret-free `axiom-credential-rotation-evidence-<commit>` after active/inactive trust and token rejection checks; data-key re-encryption remains separate |
+| PILOT-005 | Pending | Automate encrypted backup retention and restore verification | Scheduled restore evidence |
+| PILOT-006 | Pending | Document incident command, severity, containment, and recovery roles | Tabletop exercise record |
 
 ## P2 - multi-host foundations
 

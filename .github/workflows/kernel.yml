@@ -83,6 +83,19 @@ jobs:
           path: ${{ runner.temp }}/axiom-slo-baseline-evidence.json
           if-no-files-found: error
           retention-days: 90
+      - name: Run coordinated credential rotation drill
+        working-directory: mesh
+        run: |
+          node src/credential-rotation-drill.mjs \
+            "$RUNNER_TEMP/axiom-credential-rotation-drill" \
+            > "$RUNNER_TEMP/axiom-credential-rotation-evidence.json"
+      - name: Upload signed credential rotation evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: axiom-credential-rotation-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/axiom-credential-rotation-evidence.json
+          if-no-files-found: error
+          retention-days: 90
 
   container:
     runs-on: ubuntu-latest

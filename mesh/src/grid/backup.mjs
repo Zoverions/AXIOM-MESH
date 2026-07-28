@@ -319,6 +319,45 @@ export async function releaseGridRuntimeLock(lock) {
   }
 }
 
+export async function recoverStaleGridRuntimeLock(dataDir) {
+  const path = join(dataDir, LOCK_FILE);
+  let current;
+  try {
+    current = JSON.parse(await readFile(path, 'utf8'));
+  } catch (error) {
+    if (error.code === 'ENOENT') return null;
+    throw new ValidationError('Grid runtime lock is invalid and requires operator review');
+  }
+  if (
+    !Number.isSafeInteger(current.pid)
+    || current.pid < 1
+    || typeof current.token !== 'string'
+    || current.token.length < 1
+    || current.token.length > 160
+  ) {
+    throw new ValidationError('Grid runtime lock is invalid and requires operator review');
+  }
+  if (processIsAlive(current.pid)) {
+    throw new AxiomError(
+      'grid_is_running',
+      'Grid runtime lock belongs to a live process',
+      409
+    );
+  }
+  const quarantineDirectory = join(dataDir, 'recovery', 'stale-runtime-locks');
+  await mkdir(quarantineDirectory, { recursive: true, mode: 0o700 });
+  const quarantinePath = join(
+    quarantineDirectory,
+    `${new Date().toISOString().replaceAll(':', '-')}-${current.pid}.json`
+  );
+  await rename(path, quarantinePath);
+  return {
+    recovered: true,
+    stale_pid: current.pid,
+    quarantine_path: quarantinePath
+  };
+}
+
 export async function assertGridStopped(dataDir) {
   try {
     await readFile(join(dataDir, LOCK_FILE), 'utf8');
@@ -330,6 +369,15 @@ export async function assertGridStopped(dataDir) {
   } catch (error) {
     if (error.code === 'ENOENT') return true;
     throw error;
+  }
+}
+
+function processIsAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error.code !== 'ESRCH';
   }
 }
 

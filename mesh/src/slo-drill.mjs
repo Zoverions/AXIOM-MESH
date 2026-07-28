@@ -1,18 +1,21 @@
 import { createPublicKey, randomUUID } from 'node:crypto';
-import { spawn } from 'node:child_process';
-import { once } from 'node:events';
 import { mkdir, readdir, readFile } from 'node:fs/promises';
-import net from 'node:net';
 import { join, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { pathToFileURL } from 'node:url';
 import { ValidationError } from './lib/canonical.mjs';
 import { ensureMeshIdentity, verifyObjectSignature } from './lib/identity.mjs';
+import {
+  findProductionPortBlock,
+  operationsReportIsReady,
+  productionHostEnvironment,
+  startProductionHost,
+  stopProductionHost
+} from './lib/production-host.mjs';
 import { provisionProduction } from './provision-production.mjs';
 
 const EVIDENCE_FORMAT = 'axiom-slo-baseline-evidence.v1';
 const REVISION = /^[a-f0-9]{40}$/;
-const MESH_ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const CANDIDATE_MEMORY_CEILING_BYTES = 512 * 1024 * 1024;
 const CANDIDATE_CPU_CEILING_CORES = 2;
 const BASELINE_PROFILE = Object.freeze({
@@ -46,13 +49,21 @@ export async function runSloBaseline({
     { create: false }
   );
   const token = (await readFile(provisioned.operator_token_file, 'utf8')).trim();
-  const basePort = await findPortBlock();
+  const basePort = await findProductionPortBlock('SLO drill');
   const gateway = `http://127.0.0.1:${basePort}`;
-  const environment = productionEnvironment(provisioned, basePort);
+  const environment = productionHostEnvironment(provisioned, basePort, {
+    rateLimitCapacity: BASELINE_PROFILE.rate_limit_capacity,
+    rateLimitRefillPerSecond: BASELINE_PROFILE.rate_limit_refill_per_second
+  });
   let runtime;
 
   try {
-    const firstStart = await startSupervisor({ environment, gateway });
+    const firstStart = await startProductionHost({
+      environment,
+      gateway,
+      startupTimeoutMs: BASELINE_PROFILE.startup_ceiling_ms,
+      drill: 'SLO drill'
+    });
     runtime = firstStart;
     const initialOperations = await fetchOperations(gateway, token);
     const warmup = await runIntentProfile({
@@ -84,9 +95,14 @@ export async function runSloBaseline({
     );
 
     const restartStartedAt = performance.now();
-    const firstStop = await stopSupervisor(runtime.child);
+    const firstStop = await stopProductionHost(runtime.child);
     runtime = null;
-    const secondStart = await startSupervisor({ environment, gateway });
+    const secondStart = await startProductionHost({
+      environment,
+      gateway,
+      startupTimeoutMs: BASELINE_PROFILE.startup_ceiling_ms,
+      drill: 'SLO drill'
+    });
     runtime = secondStart;
     const restartDurationMs = elapsedMilliseconds(restartStartedAt);
     const restartProbe = await performIntent({
@@ -96,7 +112,7 @@ export async function runSloBaseline({
       label: 'restart'
     });
     const afterRestart = await fetchOperations(gateway, token);
-    const finalStop = await stopSupervisor(runtime.child);
+    const finalStop = await stopProductionHost(runtime.child);
     runtime = null;
 
     const checks = {
@@ -206,7 +222,7 @@ export async function runSloBaseline({
     verifySloBaselineEvidence(evidence);
     return evidence;
   } finally {
-    if (runtime) await stopSupervisor(runtime.child);
+    if (runtime) await stopProductionHost(runtime.child);
   }
 }
 
@@ -260,83 +276,6 @@ export function verifySloBaselineEvidence(evidence) {
     error_rate: evidence.results.error_rate,
     restart_ms: evidence.results.restart.total_ms
   };
-}
-
-async function startSupervisor({ environment, gateway }) {
-  const startedAt = performance.now();
-  const child = spawn(process.execPath, ['src/supervisor.mjs'], {
-    cwd: MESH_ROOT,
-    stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
-    env: environment
-  });
-  let diagnostics = '';
-  const collect = chunk => {
-    if (diagnostics.length < 32_768) diagnostics += chunk;
-  };
-  child.stdout.on('data', collect);
-  child.stderr.on('data', collect);
-  try {
-    await waitForReady(`${gateway}/ready`, child);
-  } catch (error) {
-    await stopSupervisor(child);
-    throw new ValidationError(
-      'Production supervisor failed the SLO drill startup check: '
-      + `${error.code ?? error.name}; ${startupDiagnosticSummary(diagnostics)}`
-    );
-  }
-  return {
-    child,
-    startup_duration_ms: elapsedMilliseconds(startedAt)
-  };
-}
-
-async function stopSupervisor(child) {
-  const startedAt = performance.now();
-  if (child.exitCode !== null || child.signalCode !== null) {
-    return {
-      code: child.exitCode,
-      signal: child.signalCode,
-      duration_ms: elapsedMilliseconds(startedAt)
-    };
-  }
-  const exited = once(child, 'exit');
-  if (child.connected) child.send({ type: 'axiom.supervisor.stop' });
-  else child.kill('SIGTERM');
-  const timer = setTimeout(() => {
-    if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
-  }, 10_000);
-  timer.unref();
-  const [code, signal] = await exited;
-  clearTimeout(timer);
-  return {
-    code,
-    signal,
-    duration_ms: elapsedMilliseconds(startedAt)
-  };
-}
-
-async function waitForReady(url, child) {
-  const deadline = Date.now() + BASELINE_PROFILE.startup_ceiling_ms;
-  while (Date.now() < deadline) {
-    if (child.exitCode !== null || child.signalCode !== null) {
-      const error = new Error('Supervisor exited before readiness');
-      error.code = 'supervisor_exited';
-      throw error;
-    }
-    try {
-      const response = await fetch(url, {
-        redirect: 'error',
-        signal: AbortSignal.timeout(1_000)
-      });
-      if (response.ok && (await response.json()).status === 'ready') return;
-    } catch {
-      // Bounded polling retains child exit and the shared deadline as authority.
-    }
-    await new Promise(resolvePromise => setTimeout(resolvePromise, 100));
-  }
-  const error = new Error('Supervisor readiness timed out');
-  error.code = 'startup_timeout';
-  throw error;
 }
 
 async function runIntentProfile({
@@ -527,49 +466,13 @@ function countFailures(results) {
 }
 
 function reportIsReady(report) {
-  return (
-    report?.format === 'axiom-operations.v1'
-    && report.status === 'ready'
-    && Array.isArray(report.services)
-    && report.services.length === 4
-    && report.services.every(service => service.readiness?.status === 'ready')
-  );
+  return operationsReportIsReady(report);
 }
 
 function serviceByName(report, name) {
   const service = report.services.find(item => item.service === name);
   if (!service) throw new ValidationError(`SLO operations report is missing ${name}`);
   return service;
-}
-
-function productionEnvironment(provisioned, basePort) {
-  return {
-    ...process.env,
-    NODE_ENV: 'production',
-    AXIOM_AUTO_BOOTSTRAP: 'false',
-    AXIOM_DATA_DIR: provisioned.data_dir,
-    AXIOM_DATA_KEY: '',
-    AXIOM_DATA_KEY_FILE: provisioned.data_key_file,
-    AXIOM_API_TOKENS: '',
-    AXIOM_API_TOKENS_FILE: provisioned.api_tokens_file,
-    AXIOM_GATEWAY_HOST: '127.0.0.1',
-    AXIOM_INTERNAL_HOST: '127.0.0.1',
-    AXIOM_GATEWAY_PORT: String(basePort),
-    AXIOM_HYPERVISOR_PORT: String(basePort + 1),
-    AXIOM_SANDBOX_PORT: String(basePort + 2),
-    AXIOM_GRID_PORT: String(basePort + 3),
-    AXIOM_HYPERVISOR_URL: `http://127.0.0.1:${basePort + 1}`,
-    AXIOM_SANDBOX_URL: `http://127.0.0.1:${basePort + 2}`,
-    AXIOM_GRID_URL: `http://127.0.0.1:${basePort + 3}`,
-    AXIOM_POLICY_PATH: join(MESH_ROOT, 'config', 'policy.json'),
-    AXIOM_POLICY_PATHS: '',
-    AXIOM_CAPABILITIES_PATH: join(MESH_ROOT, 'config', 'capabilities.json'),
-    AXIOM_RATE_LIMIT_CAPACITY: String(BASELINE_PROFILE.rate_limit_capacity),
-    AXIOM_RATE_LIMIT_REFILL_PER_SECOND: String(
-      BASELINE_PROFILE.rate_limit_refill_per_second
-    ),
-    AXIOM_LOG_REQUESTS: 'false'
-  };
 }
 
 async function prepareDisposableWorkspace(value) {
@@ -584,62 +487,11 @@ async function prepareDisposableWorkspace(value) {
   return workspace;
 }
 
-async function findPortBlock() {
-  for (let attempt = 0; attempt < 50; attempt += 1) {
-    const base = 20_000 + Math.floor(Math.random() * 20_000);
-    const servers = [];
-    try {
-      for (let port = base; port < base + 4; port += 1) {
-        const server = net.createServer();
-        await new Promise((resolvePromise, reject) => {
-          server.once('error', reject);
-          server.listen(port, '127.0.0.1', resolvePromise);
-        });
-        servers.push(server);
-      }
-      await Promise.all(
-        servers.map(server => new Promise(resolvePromise => server.close(resolvePromise)))
-      );
-      return base;
-    } catch {
-      await Promise.all(
-        servers.map(server => new Promise(resolvePromise => server.close(resolvePromise)))
-      );
-    }
-  }
-  throw new ValidationError('Unable to reserve a local port block for SLO drill');
-}
-
 function boundedErrorCode(value) {
   return (
     typeof value === 'string'
     && /^[a-z][a-z0-9_]{0,63}$/.test(value)
   ) ? value : 'request_rejected';
-}
-
-function startupDiagnosticSummary(value) {
-  const summaries = [];
-  for (const line of value.split(/\r?\n/).filter(Boolean).slice(-20)) {
-    try {
-      const parsed = JSON.parse(line);
-      summaries.push([
-        parsed.service,
-        parsed.event,
-        parsed.error?.code,
-        parsed.status
-      ].filter(Boolean).join(':'));
-    } catch {
-      for (const code of [
-        'EADDRINUSE',
-        'grid_already_running',
-        'SQLITE_BUSY',
-        'authentication failed'
-      ]) {
-        if (line.includes(code)) summaries.push(code);
-      }
-    }
-  }
-  return summaries.filter(Boolean).slice(-6).join(',') || 'no-structured-diagnostic';
 }
 
 function normalizeRevision(value) {

@@ -80,7 +80,9 @@ backed up, restored, and contained.
 
 Milestones:
 
-- external secret custody and coordinated service-key rotation;
+- coordinated service/API rotation and rollback are implemented for the
+  candidate host; repeat them under external pilot secret custody and add
+  data-key re-encryption;
 - scheduled encrypted snapshots and disposable-host restore verification;
 - external metrics collection and bounded alert delivery;
 - controlled load profile and initial latency/error/saturation baseline;
