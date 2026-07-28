@@ -1,7 +1,9 @@
 import {
+  createHmac,
   createPrivateKey,
   createPublicKey,
   generateKeyPairSync,
+  hkdfSync,
   randomBytes
 } from 'node:crypto';
 import {
@@ -101,7 +103,10 @@ export async function rotateProductionCredentials({
     const beforeState = validateCredentialSnapshot(before);
     const next = createRotatedSnapshot(before, beforeState);
     const afterState = validateCredentialSnapshot(next);
-    const protector = await loadRotationProtector(roots.secret);
+    const {
+      protector,
+      stateAuthenticationKey
+    } = await loadRotationProtector(roots.secret);
     const rotationRoot = join(roots.data, 'credential-rotations', rotationId);
     await createRotationDirectory(rotationRoot);
     const rollbackContext = `axiom:credential-rotation:${rotationId}:rollback`;
@@ -130,8 +135,8 @@ export async function rotateProductionCredentials({
         key_id: signer.keyId,
         public_key_pem: publicPemFromSnapshot(before, 'grid')
       },
-      before: publicState(before, beforeState),
-      after: publicState(next, afterState),
+      before: publicState(before, beforeState, stateAuthenticationKey),
+      after: publicState(next, afterState, stateAuthenticationKey),
       rollback: {
         name: ROLLBACK_FILE,
         format: 'axiom-protected.v1',
@@ -212,14 +217,22 @@ export async function rollbackProductionCredentials({
   const rollbackPath = join(dirname(resolvedManifestPath), ROLLBACK_FILE);
   const rollbackEnvelope = await readBoundedFile(rollbackPath);
   verifyCredentialRotationManifest({ manifest, rollbackEnvelope });
-  const protector = await loadRotationProtector(roots.secret);
+  const {
+    protector,
+    stateAuthenticationKey
+  } = await loadRotationProtector(roots.secret);
   const rollbackPayload = protector.open(
     rollbackEnvelope.toString('utf8'),
     manifest.rollback.context
   );
   const original = snapshotFromRollbackPayload(rollbackPayload, manifest.rotation_id);
   validateCredentialSnapshot(original);
-  assertSnapshotPublicState(original, manifest.before, 'Rollback payload');
+  assertSnapshotPublicState(
+    original,
+    manifest.before,
+    'Rollback payload',
+    stateAuthenticationKey
+  );
 
   const pendingBeforeLock = await readPendingRotation(roots.data);
   let staleRuntimeLockRecovered = false;
@@ -249,7 +262,12 @@ export async function rollbackProductionCredentials({
     if (!pending) {
       const current = await readCredentialSnapshot(roots);
       validateCredentialSnapshot(current);
-      assertSnapshotPublicState(current, manifest.after, 'Current credentials');
+      assertSnapshotPublicState(
+        current,
+        manifest.after,
+        'Current credentials',
+        stateAuthenticationKey
+      );
       const forwardContext = `axiom:credential-rotation:${manifest.rotation_id}:forward`;
       const forwardEnvelope = Buffer.from(
         `${protector.seal(
@@ -280,7 +298,12 @@ export async function rollbackProductionCredentials({
     });
     const restored = await readCredentialSnapshot(roots);
     const restoredState = validateCredentialSnapshot(restored);
-    assertSnapshotPublicState(restored, manifest.before, 'Restored credentials');
+    assertSnapshotPublicState(
+      restored,
+      manifest.before,
+      'Restored credentials',
+      stateAuthenticationKey
+    );
     await Promise.all([
       rm(join(roots.data, PENDING_MARKER), { force: true }),
       rm(join(dirname(resolvedManifestPath), 'transaction'), {
@@ -296,7 +319,11 @@ export async function rollbackProductionCredentials({
       rotation_id: manifest.rotation_id,
       rolled_back_at: new Date().toISOString(),
       restored_key_ids: restoredState.key_ids,
-      restored_target_set_digest: publicState(restored, restoredState).target_set_digest,
+      restored_target_set_digest: publicState(
+        restored,
+        restoredState,
+        stateAuthenticationKey
+      ).target_set_digest,
       interrupted_rotation_recovered: Boolean(pending),
       stale_runtime_lock_recovered: staleRuntimeLockRecovered,
       forward,
@@ -355,7 +382,12 @@ export function verifyCredentialRotationManifest({
     }
   }
   if (
-    manifest.before.api_registry_sha256 === manifest.after.api_registry_sha256
+    targetAuthentication(manifest.before, 'api-token-registry') === (
+      targetAuthentication(manifest.after, 'api-token-registry')
+    )
+    || targetAuthentication(manifest.before, 'operator-token') === (
+      targetAuthentication(manifest.after, 'operator-token')
+    )
     || manifest.before.target_set_digest === manifest.after.target_set_digest
   ) {
     throw new ValidationError('Credential rotation did not replace the API credential set');
@@ -561,21 +593,26 @@ function validateCredentialSnapshot(snapshot) {
   };
 }
 
-function publicState(snapshot, state) {
-  const targets = snapshot.map(item => ({
-    id: item.id,
-    root: item.root,
-    relative_path: item.relative_path,
-    bytes: item.content.length,
-    sha256: sha256(item.content)
-  }));
+function publicState(snapshot, state, stateAuthenticationKey) {
+  const targets = snapshot.map(item => {
+    const secret = item.root === 'secret';
+    return {
+      id: item.id,
+      root: item.root,
+      relative_path: item.relative_path,
+      bytes: item.content.length,
+      authentication: secret ? 'HMAC-SHA256' : 'SHA-256',
+      digest: secret
+        ? authenticateSecretTarget(item, stateAuthenticationKey)
+        : sha256(item.content)
+    };
+  });
   return {
     key_ids: state.key_ids,
     public_keys: Object.fromEntries(SERVICES.map(service => [
       service,
       publicPemFromSnapshot(snapshot, service)
     ])),
-    api_registry_sha256: sha256(snapshotContent(snapshot, 'api-token-registry')),
     targets,
     target_set_digest: digestObject(targets)
   };
@@ -593,7 +630,6 @@ function validatePublicState(state, label) {
       || typeof state.public_keys?.[service] !== 'string'
       || keyId(service, state.public_keys[service]) !== state.key_ids[service]
     ))
-    || !DIGEST.test(state.api_registry_sha256 ?? '')
     || !DIGEST.test(state.target_set_digest ?? '')
     || !Array.isArray(state.targets)
   ) {
@@ -619,7 +655,8 @@ function validatePublicState(state, label) {
     root: item.root,
     relative_path: item.relative_path,
     bytes: item.bytes,
-    sha256: item.sha256
+    authentication: item.authentication,
+    digest: item.digest
   }));
   if (
     descriptor.length !== TARGETS.length
@@ -630,7 +667,10 @@ function validatePublicState(state, label) {
       || !Number.isSafeInteger(item.bytes)
       || item.bytes < 1
       || item.bytes > MAX_CREDENTIAL_BYTES
-      || !DIGEST.test(item.sha256 ?? '')
+      || item.authentication !== (
+        TARGETS[index].root === 'secret' ? 'HMAC-SHA256' : 'SHA-256'
+      )
+      || !DIGEST.test(item.digest ?? '')
     ))
     || digestObject(descriptor) !== state.target_set_digest
   ) {
@@ -638,11 +678,19 @@ function validatePublicState(state, label) {
   }
 }
 
-function assertSnapshotPublicState(snapshot, expected, label) {
-  const actual = publicState(snapshot, validateCredentialSnapshot(snapshot));
+function assertSnapshotPublicState(
+  snapshot,
+  expected,
+  label,
+  stateAuthenticationKey
+) {
+  const actual = publicState(
+    snapshot,
+    validateCredentialSnapshot(snapshot),
+    stateAuthenticationKey
+  );
   if (
     actual.target_set_digest !== expected.target_set_digest
-    || actual.api_registry_sha256 !== expected.api_registry_sha256
     || canonicalJson(actual.key_ids) !== canonicalJson(expected.key_ids)
   ) {
     throw new ValidationError(`${label} do not match the signed rotation manifest`);
@@ -669,7 +717,6 @@ function rollbackPayloadFor(rotationId, snapshot, direction = 'rollback') {
       relative_path: item.relative_path,
       mode: item.mode,
       bytes: item.content.length,
-      sha256: sha256(item.content),
       content_base64: item.content.toString('base64')
     }))
   };
@@ -700,7 +747,7 @@ function snapshotFromRollbackPayload(payload, rotationId) {
       || item.relative_path !== target.relative_path
       || item.mode !== target.mode
       || item.bytes !== content.length
-      || item.sha256 !== sha256(content)
+      || item.content_base64 !== content.toString('base64')
       || content.length < 1
       || content.length > MAX_CREDENTIAL_BYTES
     ) {
@@ -796,7 +843,17 @@ async function loadRotationProtector(secretDir) {
   if (key.length !== 32) {
     throw new ValidationError('Production data-protection key is invalid');
   }
-  return new DataProtector(key);
+  const stateAuthenticationKey = Buffer.from(hkdfSync(
+    'sha256',
+    key,
+    Buffer.from('axiom-credential-rotation.v1', 'utf8'),
+    Buffer.from('manifest-target-authentication', 'utf8'),
+    32
+  ));
+  return {
+    protector: new DataProtector(key),
+    stateAuthenticationKey
+  };
 }
 
 function identityFromSnapshot(snapshot, service) {
@@ -815,6 +872,35 @@ function snapshotContent(snapshot, id) {
   const item = snapshot.find(candidate => candidate.id === id);
   if (!item) throw new ValidationError(`Credential snapshot is missing ${id}`);
   return item.content;
+}
+
+function targetAuthentication(state, id) {
+  const target = state.targets.find(item => item.id === id);
+  if (!target) {
+    throw new ValidationError(`Credential rotation state is missing ${id}`);
+  }
+  return target.digest;
+}
+
+function authenticateSecretTarget(item, stateAuthenticationKey) {
+  const key = Buffer.from(stateAuthenticationKey ?? []);
+  if (key.length !== 32) {
+    throw new ValidationError(
+      'Credential rotation state-authentication key is invalid'
+    );
+  }
+  const context = canonicalJson({
+    format: 'axiom-credential-target-authentication.v1',
+    id: item.id,
+    root: item.root,
+    relative_path: item.relative_path,
+    bytes: item.content.length
+  });
+  return createHmac('sha256', key)
+    .update(context, 'utf8')
+    .update('\n', 'utf8')
+    .update(item.content)
+    .digest('hex');
 }
 
 function assertExactTargetSet(snapshot) {

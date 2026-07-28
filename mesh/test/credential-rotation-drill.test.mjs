@@ -67,6 +67,15 @@ test('credential rotation drill proves replacement, rejection, and exact rollbac
     ...evidence.rotation.manifest_path.split('/')
   );
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  for (const state of [manifest.before, manifest.after]) {
+    const secretTargets = state.targets.filter(target => target.root === 'secret');
+    assert.equal(secretTargets.length, 2);
+    assert.ok(secretTargets.every(target => (
+      target.authentication === 'HMAC-SHA256'
+      && /^[a-f0-9]{64}$/.test(target.digest)
+      && !Object.hasOwn(target, 'sha256')
+    )));
+  }
   const rollbackEnvelope = await readFile(
     join(manifestPath, '..', manifest.rollback.name)
   );

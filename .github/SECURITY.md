@@ -37,9 +37,11 @@ evidence to remain verifiable without retaining retired private keys.
 
 An authenticated-encrypted rollback package is created before replacement.
 Rollback verifies the signed target set, preserves the rotated credentials in
-an encrypted forward package, and restores the exact original set. Signed drill
-evidence must contain only public identifiers and outcomes, never tokens,
-private keys, or absolute secret paths.
+an encrypted forward package, and restores the exact original set. Public
+identity files use SHA-256 digests; token-bearing files use HMAC-SHA256 with an
+HKDF-derived secret key so the manifest is not a token-hash oracle. Signed
+drill evidence must contain only public identifiers and outcomes, never
+tokens, private keys, or absolute secret paths.
 
 The data-protection key is outside this operation. Its rotation requires a
 separate re-encryption migration for Grid data, backups, and retained

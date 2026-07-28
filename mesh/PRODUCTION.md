@@ -172,12 +172,14 @@ maintenance marker protects interrupted multi-file changes; ordinary write
 failures restore the original files automatically.
 
 The manifest is attested by both the retiring and successor Grid identities.
-It records public keys and target digests without credential values. Grid uses
-that dual-signed lineage to verify evidence written on either side of a
-rotation; retired private keys are not retained. Restart the complete stack
-and verify `/ready`, authenticated `/v1/operations`, and an authorized intent.
-Distribute the new operator token only through the approved secret channel.
-The retired token must return `401`.
+It records public keys and target authentication values without credential
+values. Token-bearing files use HMAC-SHA256 with a dedicated key derived from
+the data-protection key through HKDF; the public manifest therefore does not
+publish an offline token-hash oracle. Grid uses the dual-signed lineage to
+verify evidence written on either side of a rotation; retired private keys are
+not retained. Restart the complete stack and verify `/ready`, authenticated
+`/v1/operations`, and an authorized intent. Distribute the new operator token
+only through the approved secret channel. The retired token must return `401`.
 
 If post-change validation fails, stop the stack and use the exact manifest
 path printed by the rotation:
