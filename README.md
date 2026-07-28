@@ -273,6 +273,11 @@ supported entrypoints.
 - Authenticated bounded-cardinality operations and OpenMetrics surfaces cover
   all four services without placing principals, prompts, payloads, tokens, or
   object identifiers in metric labels.
+- Deterministic incident severity, independent command roles,
+  authority-reducing containment, evidence-first chronology, bounded
+  communications, and closure conditions are machine-readable. Protected CI
+  signs an automated tabletop bound to five same-revision control artifacts;
+  a facilitated named-roster pilot exercise remains required.
 
 Report vulnerabilities using [`.github/SECURITY.md`](.github/SECURITY.md).
 

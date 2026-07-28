@@ -93,7 +93,9 @@ Milestones:
 - resource exhaustion and dependency-loss drills;
 - candidate-container deny-egress with preserved loopback ingress is
   implemented; repeat and independently inspect it on the pilot platform;
-- incident command, severity, containment, and communication playbooks;
+- incident command, deterministic severity, authority-reducing containment,
+  communication, and signed automated tabletop evidence are implemented;
+  repeat as a facilitated exercise with the named pilot roster;
 - independent security review of the supported kernel and container policy;
 - signed pilot deployment and release dossiers.
 
@@ -102,7 +104,7 @@ Exit criteria:
 - measured pilot SLO, RPO, and RTO targets pass;
 - rotation and recovery drills pass twice;
 - critical/high findings are remediated or have approved expiring exceptions;
-- operators complete a tabletop incident exercise;
+- pilot operators complete a facilitated tabletop incident exercise;
 - the capability registry is updated only for evidenced promotions.
 
 ## Phase 3 - multi-host foundations

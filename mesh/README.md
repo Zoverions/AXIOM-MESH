@@ -48,6 +48,15 @@ default route. Protected CI runs `npm run network-boundary:verify` inside the
 provisioned container, establishes an outside positive control, verifies the
 socket ingress path, and retains signed secret-free evidence.
 
+Incident response is also release-gated. The policy in
+[`config/incident-response.json`](config/incident-response.json) selects the
+highest matching severity, requires independently assigned command roles,
+allows no authority-expanding action, and defines evidence, communication,
+recovery, closure, and retrospective requirements. Protected CI signs an
+automated tabletop only after five same-revision operational control artifacts
+verify. See the
+[incident-response runbook](../docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md).
+
 Verify an export without a running AXIOM-MESH process:
 
 ```bash

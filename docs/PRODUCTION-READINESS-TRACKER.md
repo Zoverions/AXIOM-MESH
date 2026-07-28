@@ -29,7 +29,7 @@ artifact is reproducible and tied to the release commit or image digest.
 | Data-key rotation | Pass for candidate-host lifecycle | Protected CI re-encrypts the live Grid, nested backup state, retained credential packages, and recovery database copies; proves wrong-key rejection, rotated-key restore, killed-cutover journal recovery, exact key restoration, and post-rotation state preservation | Repeat with pilot secret-manager versioning, escrow, approval, and destruction evidence |
 | Deprecated credential trust | Pass for repository boundary; external evidence pending | Keyed ledger covers 32 conservative candidates across the locked deprecated graph; protected CI checks exact coverage and rejects reuse in the supported tip without exposing values | Dispose all 32 external attestations as verified or independently justified not-applicable |
 | Independent security review | Pending | Internal evidence only | Commission scoped review |
-| Incident response | Partial | Security and rollback policies exist | Run tabletop exercise |
+| Incident response | Pass for automated candidate exercise | Machine-readable severity/action/closure policy; protected CI verifies five same-revision control artifacts and uploads signed secret-free tabletop evidence | Run a facilitated pilot exercise with named roster, notification tree, corrective owners, and independent human review |
 | Release governance | Pass | Protected `main`, release verifier, and [v0.11.0 dossier](https://github.com/Zoverions/AXIOM-MESH/releases/tag/v0.11.0) | Maintain for every release |
 
 ## Promotion blockers
@@ -41,7 +41,9 @@ The following block production promotion:
    pilot-owned media;
 3. no independent review of the supported kernel and deployment policy;
 4. all 32 deprecated-history entries still require provider, custodian, or
-   independently reviewed not-applicable attestations.
+   independently reviewed not-applicable attestations;
+5. no facilitated pilot incident exercise with a named roster and
+   deployment-specific notification decision tree.
 
 ## Gate owners
 

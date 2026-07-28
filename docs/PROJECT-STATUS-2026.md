@@ -119,6 +119,8 @@ repository is not implementation or deployment evidence.
 The next milestone is disposing the 32 external credential-history
 attestations,
 pilot-owned secret and media custody with scheduled on-media recovery,
-incident response, pilot-platform network-policy repetition, and independent security review for a
-controlled single-node pilot. Work is ordered in
+a facilitated named-roster incident exercise, pilot-platform network-policy
+repetition, and independent security review for a controlled single-node
+pilot. The automated candidate tabletop is implemented and signs a
+same-revision composition of five real control drills. Work is ordered in
 [`docs/MASTER-TODO.md`](MASTER-TODO.md).

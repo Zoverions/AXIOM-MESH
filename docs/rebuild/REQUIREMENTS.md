@@ -176,6 +176,15 @@ The machine-readable capability registry remains authoritative. Kernel
   candidate.
   Equivalent pilot orchestrator policy and immutable deployment evidence
   remain pending.
+- a machine-readable incident-response policy with deterministic highest-signal
+  severity, independently assigned command roles, authority-reducing
+  containment, evidence preservation before remediation, bounded
+  communications, verified recovery, independent closure review, and a
+  retrospective due within seven days. Protected CI MUST sign an automated
+  tabletop record only after recovery, backup-lifecycle, restart,
+  credential-rotation, and data-key-rotation evidence from the same source
+  revision verifies. A named-roster pilot exercise remains mandatory before
+  production promotion.
 
 ## Capability coverage
 

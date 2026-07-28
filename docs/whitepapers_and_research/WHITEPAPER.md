@@ -375,6 +375,10 @@ for unexpected dependencies. Release verification binds:
 - rollback documentation;
 - container and workflow policy;
 - signed candidate-container deny-egress route and connection evidence;
+- machine-readable incident severity, role, containment, communication, and
+  closure policy;
+- signed automated incident-tabletop evidence bound to same-revision
+  recovery, backup, restart, credential-rotation, and data-key controls;
 - deprecated credential-history ledger and protected reuse policy;
 - canonical documentation;
 - SPDX SBOM and provenance inputs.

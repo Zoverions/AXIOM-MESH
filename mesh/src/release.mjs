@@ -15,6 +15,7 @@ import {
 } from './status.mjs';
 import { CANONICAL_DOCUMENTS, verifyCanonicalDocumentation } from './check-docs.mjs';
 import { validateCredentialRevocationLedger } from './credential-history-audit.mjs';
+import { validateIncidentResponsePolicy } from './incident-response.mjs';
 
 const REPOSITORY_ROOT = dirname(MESH_ROOT);
 const SUPPORTED_DEPENDENCY_MANIFESTS = new Set([
@@ -59,6 +60,11 @@ export async function verifyReleaseReadiness() {
       'config',
       'credential-revocations.json'
     ),
+    incidentResponsePolicy: join(
+      MESH_ROOT,
+      'config',
+      'incident-response.json'
+    ),
     package: join(MESH_ROOT, 'package.json'),
     lock: join(MESH_ROOT, 'package-lock.json'),
     rootPackage: join(REPOSITORY_ROOT, 'package.json'),
@@ -78,6 +84,7 @@ export async function verifyReleaseReadiness() {
     policy,
     backupRetentionPolicy,
     credentialRevocations,
+    incidentResponsePolicy,
     packageJson,
     lock,
     rootPackage,
@@ -96,6 +103,7 @@ export async function verifyReleaseReadiness() {
     readJson(paths.policy),
     readJson(paths.backupRetentionPolicy),
     readJson(paths.credentialRevocations),
+    readJson(paths.incidentResponsePolicy),
     readJson(paths.package),
     readJson(paths.lock),
     readJson(paths.rootPackage),
@@ -115,6 +123,9 @@ export async function verifyReleaseReadiness() {
   validateBackupRetentionPolicy(backupRetentionPolicy);
   const credentialRevocation = validateCredentialRevocationLedger(
     credentialRevocations
+  );
+  const incidentResponse = validateIncidentResponsePolicy(
+    incidentResponsePolicy
   );
   if (packageJson.version !== registry.kernel_version || lock.version !== packageJson.version) {
     throw new ValidationError('Package, lockfile, and capability registry versions must match');
@@ -162,6 +173,7 @@ export async function verifyReleaseReadiness() {
     packageJson,
     backupRetentionPolicy,
     credentialRevocations,
+    incidentResponsePolicy,
     workflow,
     repositoryIgnore
   });
@@ -271,6 +283,7 @@ export async function verifyReleaseReadiness() {
     },
     policy_digest: digestObject(policy),
     credential_revocation: credentialRevocation,
+    incident_response: incidentResponse,
     operator_surface_digest: digestObject(operatorSurface),
     deployment,
     migrations: migrationEvidence,
@@ -304,11 +317,13 @@ export function verifyProductionDeployment({
   packageJson,
   backupRetentionPolicy,
   credentialRevocations,
+  incidentResponsePolicy,
   workflow,
   repositoryIgnore
 }) {
   validateBackupRetentionPolicy(backupRetentionPolicy);
   validateCredentialRevocationLedger(credentialRevocations);
+  validateIncidentResponsePolicy(incidentResponsePolicy);
   const pinnedBase = dockerfile.match(
     /^FROM (node:24\.18\.0-alpine3\.23)@(sha256:[a-f0-9]{64})$/m
   );
@@ -390,7 +405,8 @@ export function verifyProductionDeployment({
     'does **not** rotate',
     'not evidence of a live deployment',
     'recoverable quarantine',
-    'credential-history audit'
+    'credential-history audit',
+    'automated incident tabletop'
   ]) {
     if (!productionDocs.includes(boundary)) {
       throw new ValidationError(`Production operator documentation is missing boundary: ${boundary}`);
@@ -416,12 +432,14 @@ export function verifyProductionDeployment({
     'node src/slo-drill.mjs',
     'node src/credential-rotation-drill.mjs',
     'node src/data-key-rotation-drill.mjs',
+    'node src/incident-tabletop-drill.mjs',
     'actions/upload-artifact@v7',
     'axiom-recovery-drill-evidence-${{ github.sha }}',
     'axiom-backup-lifecycle-evidence-${{ github.sha }}',
     'axiom-slo-baseline-evidence-${{ github.sha }}',
     'axiom-credential-rotation-evidence-${{ github.sha }}',
     'axiom-data-key-rotation-evidence-${{ github.sha }}',
+    'axiom-incident-tabletop-evidence-${{ github.sha }}',
     `docker build --pull=false --tag axiom-mesh-kernel:${packageJson.version} .`,
     'docker compose -f compose.production.yml up --detach --no-build',
     'docker compose -f compose.production.yml down --volumes --remove-orphans'
@@ -439,6 +457,7 @@ export function verifyProductionDeployment({
     compose_sha256: sha256(compose),
     backup_retention_policy_sha256: digestObject(backupRetentionPolicy),
     credential_revocation_ledger_sha256: digestObject(credentialRevocations),
+    incident_response_policy_sha256: digestObject(incidentResponsePolicy),
     deny_egress: {
       compose_network_mode_none: true,
       unix_domain_ingress: true,

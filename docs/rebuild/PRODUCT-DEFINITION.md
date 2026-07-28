@@ -176,6 +176,15 @@ labels. Liveness is process-local; readiness follows the service dependency
 graph and Grid integrity state. Detailed operations and OpenMetrics output are
 authenticated and require `operations:read`.
 
+Incident response is an executable candidate gate. A machine-readable policy
+selects the highest matching severity, requires independent command roles,
+permits only authority-reducing, preservation, recovery, communication, or
+review actions, and fails closure without verified containment, recovery,
+evidence, communications, retrospective scheduling, and independent review.
+The protected automated tabletop binds five independently signed operational
+control artifacts from the same revision. A facilitated pilot exercise and
+live roster remain external promotion requirements.
+
 The container source policy and supervisor are verified, and the real
 four-process stack passes a host-mode production drill. Image-build and
 container-runtime evidence remain mandatory before the container package

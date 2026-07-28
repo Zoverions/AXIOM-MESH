@@ -1,7 +1,7 @@
 # AXIOM-MESH Operations (Canonical)
 
 **Document role:** Canonical operations runbook baseline for reliability, incident response, and release controls.
-**Last updated:** 2026-03-30.
+**Last updated:** 2026-07-28.
 
 ---
 
@@ -74,6 +74,7 @@ The following are required baseline scenarios:
 Detailed scenario playbooks live in:
 - `docs/DEGRADED-MODE-PLAYBOOK.md`
 - `docs/RESILIENCE-DRILLS-AND-PENTEST-RUNBOOK-2026-03-29.md`
+- `docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md`
 
 ---
 
