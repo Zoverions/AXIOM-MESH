@@ -18,7 +18,10 @@ cd mesh
 node src/provision-production.mjs \
   /srv/axiom-mesh/data \
   /srv/axiom-mesh/secrets
-chown -R 10001:10001 /srv/axiom-mesh/data /srv/axiom-mesh/secrets
+chown -R 10001:10001 /srv/axiom-mesh/data
+chown 10001:10001 \
+  /srv/axiom-mesh/secrets/data-protection.key \
+  /srv/axiom-mesh/secrets/api-tokens.json
 chmod 700 /srv/axiom-mesh/data /srv/axiom-mesh/secrets
 chmod 600 /srv/axiom-mesh/secrets/*
 ```
@@ -26,7 +29,10 @@ chmod 600 /srv/axiom-mesh/secrets/*
 Provisioning creates four distinct Ed25519 service identities, their trust
 records, a 32-byte data-protection key, an API principal registry, and a
 separate operator-token file. It never prints secret values. A partial secret
-set is rejected rather than silently repaired or rotated.
+set is rejected rather than silently repaired or rotated. Keep
+`operator.token` owned by the host operator; it is not mounted into the
+container. Only the data-protection key and API registry need to be readable by
+container UID `10001`.
 
 Store an encrypted offline recovery copy before first launch. Losing the data
 key makes protected Grid data unrecoverable. Replacing any service key without

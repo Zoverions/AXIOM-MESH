@@ -34,14 +34,8 @@ services:
     secrets:
       - source: axiom_data_key
         target: data-protection.key
-        uid: "10001"
-        gid: "10001"
-        mode: 0400
       - source: axiom_api_tokens
         target: api-tokens.json
-        uid: "10001"
-        gid: "10001"
-        mode: 0400
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev,size=64m,uid=10001,gid=10001
     healthcheck:
