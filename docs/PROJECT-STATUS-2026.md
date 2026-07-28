@@ -40,10 +40,11 @@ experimental, 4 specified, 9 adapter-required, and 4 disabled capabilities.
 
 ## Production package state
 
-The repository contains a digest-pinned, non-root, read-only, no-egress
-container candidate with mounted secrets, resource ceilings, bounded logs, and
-readiness checks. Static deployment policy and a real host-mode four-process
-drill are implemented.
+The repository contains a digest-pinned, non-root, read-only container
+candidate with mounted secrets, resource ceilings, bounded logs, loopback-only
+host publication, and readiness checks. Static deployment policy and a real
+host-mode four-process drill are implemented. Host- or orchestrator-enforced
+deny-egress remains required before pilot promotion.
 
 The container capability remains experimental until a published CI run builds
 the image and passes the composed runtime drill. After that, a disposable-host

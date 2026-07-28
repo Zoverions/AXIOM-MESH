@@ -47,8 +47,11 @@ docker compose -f compose.production.yml up -d
 
 The compose policy uses a read-only root filesystem, a non-root numeric user,
 all Linux capabilities dropped, no-new-privileges, bounded memory/CPU/PIDs,
-explicit secrets, an internal no-egress network, loopback-only host
-publication, bounded logs, and readiness-based health checks.
+explicit secrets, loopback-only host publication, bounded logs, and
+readiness-based health checks. Compose does not enforce deny-egress while also
+publishing Gateway to the host. Before a pilot, enforce outbound-deny policy
+with the host firewall or orchestrator and allow only explicitly approved
+adapter destinations.
 
 ## 3. Verify readiness
 

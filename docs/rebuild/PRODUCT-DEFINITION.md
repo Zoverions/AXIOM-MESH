@@ -164,8 +164,10 @@ supervised processes inside one container. This is a deliberate interim trust
 boundary: only Gateway binds externally, while Hypervisor, Sandbox, and Grid
 remain on loopback until an audited mTLS transport adapter exists. The package
 must use a digest-pinned base, non-root identity, read-only root filesystem,
-dropped Linux capabilities, explicit secrets and resource ceilings, no-egress
-networking, bounded logs, and readiness-based health checks.
+dropped Linux capabilities, explicit secrets and resource ceilings,
+loopback-only host publication, bounded logs, and readiness-based health
+checks. Pilot and production environments must add host- or
+orchestrator-enforced deny-egress policy.
 
 Operational telemetry is bounded-cardinality and excludes user-controlled
 labels. Liveness is process-local; readiness follows the service dependency

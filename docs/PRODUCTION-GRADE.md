@@ -38,10 +38,12 @@ Gateway -> Hypervisor -> Sandbox -> Grid
 ```
 
 Only Gateway is externally reachable. Internal plaintext HTTP remains on
-loopback. The container has no egress network, runs as UID/GID 10001, uses a
-read-only root filesystem, drops Linux capabilities, sets
-`no-new-privileges`, applies resource ceilings, and mounts data and secrets
-from explicit host paths.
+loopback. Gateway is published only on host loopback. The container runs as
+UID/GID 10001, uses a read-only root filesystem, drops Linux capabilities,
+sets `no-new-privileges`, applies resource ceilings, and mounts data and
+secrets from explicit host paths. Compose does not enforce deny-egress;
+pilot and production environments must supply that control through the host
+firewall or orchestrator.
 
 This boundary does not authorize remote internal traffic, multiple hosts,
 arbitrary code, external AI, chain settlement, or regulated domain workloads.

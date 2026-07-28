@@ -81,8 +81,10 @@ The candidate production package is
 [`mesh/compose.production.yml`](mesh/compose.production.yml), with its
 provisioning and verification runbook in
 [`mesh/PRODUCTION.md`](mesh/PRODUCTION.md). It runs the four responsibilities
-as independent supervised processes in one hardened, no-egress container so
-internal plaintext traffic remains loopback-only.
+as independent supervised processes in one hardened container. Internal
+plaintext traffic remains loopback-only, Gateway is published only on host
+loopback, and pilot promotion requires a host or orchestrator deny-egress
+policy.
 
 The machine-readable
 [`mesh/config/capabilities.json`](mesh/config/capabilities.json) file is the

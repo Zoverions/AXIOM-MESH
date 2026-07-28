@@ -292,9 +292,14 @@ The production candidate uses:
 - explicit CPU, memory, and process ceilings;
 - bounded logs;
 - mounted data and secret files;
-- a no-egress internal network;
+- Gateway publication restricted to host loopback;
 - readiness-based health checking;
 - a supervisor that terminates partial startup.
+
+Compose cannot both isolate the kernel on an internal network and publish
+Gateway to the host. The candidate therefore treats deny-egress as a required
+host or orchestrator policy for pilot promotion, not as a property already
+enforced by the Compose file.
 
 Provisioning creates four service identities, trust records, an API principal
 registry, operator token, and data-protection key without printing secrets.

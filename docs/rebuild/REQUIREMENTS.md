@@ -162,9 +162,11 @@ The machine-readable capability registry remains authoritative. Kernel
   digest-pinned container candidate with four supervised processes,
   loopback-only internals, non-root execution, read-only root, dropped
   capabilities, mounted secrets, resource ceilings, bounded logs, health
-  checks, and no-egress networking. The real four-process stack passes a
-  host-mode production drill; image-build and container-runtime evidence remain
-  pending.
+  checks, and loopback-only host publication. Deny-egress MUST be enforced by
+  the pilot host or orchestrator because the Compose candidate cannot combine
+  an internal network with published host ingress. The real four-process stack
+  passes a host-mode production drill; image-build and container-runtime
+  evidence remain pending.
 
 ## Capability coverage
 

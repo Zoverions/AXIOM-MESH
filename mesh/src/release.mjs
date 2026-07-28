@@ -300,7 +300,8 @@ export function verifyProductionDeployment({
     'AXIOM_DATA_KEY_FILE: /run/secrets/data-protection.key',
     'AXIOM_API_TOKENS_FILE: /run/secrets/api-tokens.json',
     'healthcheck:',
-    'internal: true'
+    'driver: bridge',
+    'com.docker.network.bridge.host_binding_ipv4: "127.0.0.1"'
   ]) {
     if (!compose.includes(required)) {
       throw new ValidationError(`Production compose policy is missing: ${required}`);
@@ -316,6 +317,7 @@ export function verifyProductionDeployment({
   for (const boundary of [
     'four supervised Node.js processes',
     '`operations:read`',
+    'Compose does not enforce deny-egress',
     'not evidence of a live deployment'
   ]) {
     if (!productionDocs.includes(boundary)) {
