@@ -58,7 +58,7 @@ export async function runProductionSupervisor({
       const child = spawnImpl(process.execPath, [spec.module], {
         cwd: fileURLToPath(new URL('..', import.meta.url)),
         env: process.env,
-        stdio: ['ignore', 'inherit', 'inherit']
+        stdio: ['ignore', 'inherit', 'inherit', 'ipc']
       });
       const record = { ...spec, child };
       children.push(record);
@@ -141,7 +141,21 @@ async function stopChildren(children) {
   const pending = [];
   for (const { child } of [...children].reverse()) {
     if (child.exitCode !== null || child.signalCode !== null) continue;
-    child.kill('SIGTERM');
+    if (child.connected && typeof child.send === 'function') {
+      try {
+        child.send({ type: 'axiom.service.stop' }, error => {
+          if (
+            error
+            && child.exitCode === null
+            && child.signalCode === null
+          ) child.kill('SIGTERM');
+        });
+      } catch {
+        child.kill('SIGTERM');
+      }
+    } else {
+      child.kill('SIGTERM');
+    }
     pending.push(waitForExit(child, 5_000));
   }
   await Promise.all(pending);

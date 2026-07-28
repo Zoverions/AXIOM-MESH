@@ -23,7 +23,7 @@ artifact is reproducible and tied to the release commit or image digest.
 | Dependency audit | Pass | Root and kernel lock audits in the same run | Maintain required check |
 | Backup and restore | Pass | Protected CI provisions a disposable production workspace, exercises encrypted backup, tamper/live-lock/exact-digest rejection, restore and rollback, and uploads signed evidence | Repeat on every runtime change; add scheduled pilot-media restoration |
 | Observability | Implemented locally | Bounded metrics and authenticated operations tests | Integrate external collector |
-| SLO and capacity | Pending | No controlled load baseline | Define profile and measure |
+| SLO and capacity | Pass for initial CI baseline | Signed protected-CI evidence records a fixed authenticated load profile, latency percentiles, zero-error requirement, throughput, CPU/memory observations, peak concurrency, and graceful restart | Repeat on dedicated pilot hardware under enforced resource limits and expected traffic |
 | Credential rotation | Pending | Provisioning is implemented | Run trust-update and rollback drill |
 | Independent security review | Pending | Internal evidence only | Commission scoped review |
 | Incident response | Partial | Security and rollback policies exist | Run tabletop exercise |
@@ -33,7 +33,7 @@ artifact is reproducible and tied to the release commit or image digest.
 
 The following block production promotion:
 
-1. no measured load, latency, saturation, or restart baseline;
+1. no dedicated pilot-hardware capacity validation or 30-day availability observation;
 2. no deployment-host credential-rotation drill or scheduled pilot-media restore;
 3. no independent review of the supported kernel and deployment policy;
 4. no host- or orchestrator-enforced deny-egress evidence;

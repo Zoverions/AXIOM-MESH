@@ -8,6 +8,7 @@ import { ValidationError, assertPlainObject, assertString } from '../lib/canonic
 import { operationsReport, readinessState, ServiceTelemetry } from '../lib/observability.mjs';
 import { GridStore } from './store.mjs';
 import { loadDataProtector } from '../lib/protector.mjs';
+import { runServiceProcess } from '../lib/service-lifecycle.mjs';
 import {
   acquireGridRuntimeLock,
   createGridBackup,
@@ -247,13 +248,5 @@ export async function createGridService(config = meshConfig()) {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const service = await createGridService();
-  const address = await service.start();
-  process.stdout.write(`${JSON.stringify({ service: 'grid', status: 'listening', address })}\n`);
-  for (const signal of ['SIGINT', 'SIGTERM']) {
-    process.once(signal, async () => {
-      await service.stop();
-      process.exit(0);
-    });
-  }
+  await runServiceProcess(createGridService);
 }

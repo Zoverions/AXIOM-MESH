@@ -26,7 +26,8 @@ test('operational telemetry is bounded, alertable, and OpenMetrics compatible', 
   let now = Date.parse('2026-07-26T12:00:00.000Z');
   const telemetry = new ServiceTelemetry('gateway', {
     now: () => now,
-    memoryUsage: () => ({ rss: 1_024, heapUsed: 512, external: 128 })
+    memoryUsage: () => ({ rss: 1_024, heapUsed: 512, external: 128 }),
+    cpuUsage: () => ({ user: 2_000, system: 1_000 })
   });
   telemetry.beginRequest();
   now += 25;
@@ -70,6 +71,7 @@ test('operational telemetry is bounded, alertable, and OpenMetrics compatible', 
   assert.match(metrics, /axiom_service_ready\{service="gateway"\} 0/);
   assert.match(metrics, /axiom_http_requests_total\{service="gateway",status_class="4xx"\} 6/);
   assert.match(metrics, /axiom_http_request_duration_seconds_bucket\{service="gateway",le="\+Inf"\} 7/);
+  assert.match(metrics, /axiom_process_cpu_seconds_total\{service="gateway",mode="user"\} 0\.002/);
   assert.match(metrics, /# EOF\n$/);
   assert.doesNotMatch(metrics, /principal|intent_id|query|prompt|payload|token/);
   assert.equal(reportHasReadyServices(report, ['gateway']), false);
