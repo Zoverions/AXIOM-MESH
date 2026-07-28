@@ -35,8 +35,12 @@ without making deprecated parents ancestors of the new default branch.
   `deprecated/legacy-main-pre-clean-room` at
   `e65041cb6828a8923e87a3678a104ac40bbf0970`.
 - Kernel and container evidence:
-  [GitHub run 30375390450](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30375390450),
+  [GitHub run 30376178779](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30376178779),
   with both `verify` and `container` successful.
+- Release:
+  [v0.11.0 clean-room production candidate](https://github.com/Zoverions/AXIOM-MESH/releases/tag/v0.11.0)
+  with an exact source archive, SPDX SBOM, provenance, and published SHA-256
+  checksums.
 - `main` is protected with strict required `verify`, `container`, CodeQL
   Actions, and CodeQL JavaScript/TypeScript checks; pull requests, linear
   history, and conversation resolution are required; force pushes and branch

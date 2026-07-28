@@ -90,7 +90,7 @@ repository is not implementation or deployment evidence.
 
 ## Immediate next milestone
 
-The next milestone is a published 0.11 release dossier, credential-history
-revocation evidence, and the recovery/SLO/security work required for a
-controlled single-node pilot. Work is ordered in
+The next milestone is credential-history revocation evidence and the
+recovery, SLO, deny-egress, incident-response, and independent-security work
+required for a controlled single-node pilot. Work is ordered in
 [`docs/MASTER-TODO.md`](MASTER-TODO.md).
