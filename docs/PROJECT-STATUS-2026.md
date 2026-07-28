@@ -52,10 +52,14 @@ which built the digest-pinned image and passed composed readiness,
 authenticated operations, and teardown. That workflow now also provisions a
 disposable production workspace and exercises encrypted backup, tamper and
 unsafe-restore rejection, exact restore, rollback preservation, and signed
-recovery evidence with a measured recovery point and recovery time. An SLO
-baseline, enforced deny-egress deployment policy, credential-history
-revocation record, credential-rotation drill, and independent security review
-are still required before production promotion.
+recovery evidence with a measured recovery point and recovery time. It also
+runs a fixed authenticated load profile against the real four-process
+production supervisor, records latency, error rate, throughput, CPU/memory
+observations and peak concurrency, then measures a graceful restart and
+post-restart intent. Dedicated pilot-hardware capacity and availability
+validation, enforced deny-egress deployment policy, credential-history
+revocation, credential rotation, and independent security review are still
+required before production promotion.
 
 See:
 

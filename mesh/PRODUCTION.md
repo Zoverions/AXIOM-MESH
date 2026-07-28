@@ -113,9 +113,42 @@ runner and retains the signed evidence artifact for 90 days. This validates
 the recovery mechanism; it does not replace scheduled restoration using
 pilot-owned backup media, keys, retention policy, and operator approval.
 
+## 5. Establish the controlled SLO baseline
+
+Use a different explicitly empty workspace for the short host-mode load and
+restart profile:
+
+```bash
+mkdir -m 700 /tmp/axiom-slo-drill
+npm run slo:drill -- /tmp/axiom-slo-drill \
+  > /tmp/axiom-slo-baseline-evidence.json
+```
+
+The fixed profile uses the production supervisor, file-backed credentials,
+the production rate-limit configuration, four warmup requests, and 40 measured
+requests for `system.echo` at concurrency 4. It requires zero measured request
+errors, ready state before and after load, no 5xx or internal-error increase,
+p95 latency at or below the initial two-second candidate target, a complete
+stop/start cycle within 20 seconds, and a successful post-restart intent.
+
+The signed evidence reports cold-start and restart time, min/mean/p50/p95/p99/
+max latency, throughput, per-service request and error deltas, process-lifetime
+peak in-flight requests, post-load memory, and process CPU time. The protected
+Clean Kernel workflow retains
+`axiom-slo-baseline-evidence-<commit>` for 90 days.
+
+The drill compares post-load resident memory with the candidate container's
+512 MiB ceiling. Host mode does not enforce the candidate two-CPU ceiling, so
+CPU utilization is recorded for diagnosis and sizing rather than used as a
+container-limit claim. The short disposable-runner profile is not dedicated
+pilot hardware, a remote network path, an external-adapter profile, or a
+30-day availability measurement. Repeat it under the actual pilot resource
+policy and expected traffic mix before production promotion.
+
 This package is a production container specification and local deployment
 surface. Its source and fail-closed supervisor are statically verified, and the
 real four-process stack, digest-pinned image build, composed container
-readiness, and disposable-host recovery drill are protected CI gates. This is
-not evidence of a live deployment, federated discovery, BFT consensus, audited
-arbitrary-code isolation, or external settlement.
+readiness, disposable-host recovery drill, and controlled SLO/restart baseline
+are protected CI gates. This is not evidence of a live deployment, federated
+discovery, BFT consensus, audited arbitrary-code isolation, or external
+settlement.

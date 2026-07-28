@@ -347,6 +347,8 @@ export function verifyProductionDeployment({
     'four supervised Node.js processes',
     '`operations:read`',
     'Compose does not enforce deny-egress',
+    '40 measured',
+    'Host mode does not enforce the candidate two-CPU ceiling',
     'not evidence of a live deployment'
   ]) {
     if (!productionDocs.includes(boundary)) {
@@ -358,8 +360,10 @@ export function verifyProductionDeployment({
     'node-version: "24.18.0"',
     'npm ci --ignore-scripts',
     'node src/recovery-drill.mjs',
+    'node src/slo-drill.mjs',
     'actions/upload-artifact@v7',
     'axiom-recovery-drill-evidence-${{ github.sha }}',
+    'axiom-slo-baseline-evidence-${{ github.sha }}',
     `docker build --pull=false --tag axiom-mesh-kernel:${packageJson.version} .`,
     'docker compose -f compose.production.yml up --detach --no-build',
     'docker compose -f compose.production.yml down --volumes --remove-orphans'

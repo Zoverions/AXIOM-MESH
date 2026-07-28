@@ -103,6 +103,16 @@ claims:
 
 Targets must be revised from measured pilot data before broader promotion.
 
+Protected CI establishes a repeatable initial baseline using the real
+four-process production supervisor: four warmup and 40 measured low-risk
+intents at concurrency 4, zero accepted errors, the two-second p95 candidate
+target, process CPU and memory observations, and a bounded graceful restart
+with a post-restart intent. Its signed evidence is commit-bound and retained
+for 90 days. This short disposable-runner profile closes the missing initial
+baseline; dedicated pilot hardware, the expected traffic mix, enforced CPU
+and memory controls, external paths, and a 30-day availability window must
+still be measured before production promotion.
+
 ## Data durability and recovery
 
 Grid is authoritative for kernel-owned durable state. Production procedures

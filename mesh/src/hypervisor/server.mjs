@@ -19,6 +19,7 @@ import {
   newId
 } from '../lib/canonical.mjs';
 import { signedFetch } from '../lib/client.mjs';
+import { runServiceProcess } from '../lib/service-lifecycle.mjs';
 import {
   dependencyFailure,
   operationsReport,
@@ -395,13 +396,5 @@ async function denyIntent(commit, traceId, intent, error) {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const service = await createHypervisorService();
-  const address = await service.start();
-  process.stdout.write(`${JSON.stringify({ service: 'hypervisor', status: 'listening', address })}\n`);
-  for (const signal of ['SIGINT', 'SIGTERM']) {
-    process.once(signal, async () => {
-      await service.stop();
-      process.exit(0);
-    });
-  }
+  await runServiceProcess(createHypervisorService);
 }

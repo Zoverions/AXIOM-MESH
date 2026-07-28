@@ -10,6 +10,7 @@ import {
 import { Router, createServiceServer, listen, parseJsonBody } from '../lib/http.mjs';
 import { AxiomError, assertPlainObject, digestObject } from '../lib/canonical.mjs';
 import { operationsReport, readinessState, ServiceTelemetry } from '../lib/observability.mjs';
+import { runServiceProcess } from '../lib/service-lifecycle.mjs';
 import { planDigest, validatePlan } from '../lib/plan.mjs';
 import { executeBuiltin } from './executor.mjs';
 
@@ -120,13 +121,5 @@ export async function createSandboxService(config = meshConfig()) {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const service = await createSandboxService();
-  const address = await service.start();
-  process.stdout.write(`${JSON.stringify({ service: 'sandbox', status: 'listening', address })}\n`);
-  for (const signal of ['SIGINT', 'SIGTERM']) {
-    process.once(signal, async () => {
-      await service.stop();
-      process.exit(0);
-    });
-  }
+  await runServiceProcess(createSandboxService);
 }

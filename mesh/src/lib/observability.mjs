@@ -26,12 +26,14 @@ const AUTHORIZATION_ERRORS = new Set([
 export class ServiceTelemetry {
   constructor(service, {
     now = () => Date.now(),
-    memoryUsage = () => process.memoryUsage()
+    memoryUsage = () => process.memoryUsage(),
+    cpuUsage = () => process.cpuUsage()
   } = {}) {
     if (!SERVICE_NAME.test(service)) throw new ValidationError('Telemetry service name is invalid');
     this.service = service;
     this.now = now;
     this.memoryUsage = memoryUsage;
+    this.cpuUsage = cpuUsage;
     this.startedAtMs = now();
     this.inFlight = 0;
     this.maxInFlight = 0;
@@ -91,6 +93,7 @@ export class ServiceTelemetry {
 
   snapshot(readiness = readinessState(this.service, [])) {
     const memory = this.memoryUsage();
+    const cpu = this.cpuUsage();
     return {
       service: this.service,
       started_at: new Date(this.startedAtMs).toISOString(),
@@ -125,7 +128,9 @@ export class ServiceTelemetry {
       process: {
         resident_memory_bytes: safeMetric(memory.rss),
         heap_used_bytes: safeMetric(memory.heapUsed),
-        external_memory_bytes: safeMetric(memory.external)
+        external_memory_bytes: safeMetric(memory.external),
+        cpu_user_microseconds: safeMetric(cpu.user),
+        cpu_system_microseconds: safeMetric(cpu.system)
       }
     };
   }
@@ -199,7 +204,9 @@ export function renderOpenMetrics(report) {
     '# HELP axiom_reliability_events_total Bounded reliability event counters.',
     '# TYPE axiom_reliability_events_total counter',
     '# HELP axiom_process_resident_memory_bytes Resident process memory.',
-    '# TYPE axiom_process_resident_memory_bytes gauge'
+    '# TYPE axiom_process_resident_memory_bytes gauge',
+    '# HELP axiom_process_cpu_seconds_total Process CPU time by mode.',
+    '# TYPE axiom_process_cpu_seconds_total counter'
   ];
   for (const service of services) {
     const label = `service="${service.service}"`;
@@ -238,6 +245,14 @@ export function renderOpenMetrics(report) {
     lines.push(
       `axiom_process_resident_memory_bytes{${label}} `
       + `${safeMetric(service.process.resident_memory_bytes)}`
+    );
+    lines.push(
+      `axiom_process_cpu_seconds_total{${label},mode="user"} `
+      + `${metricNumber(service.process.cpu_user_microseconds / 1_000_000)}`
+    );
+    lines.push(
+      `axiom_process_cpu_seconds_total{${label},mode="system"} `
+      + `${metricNumber(service.process.cpu_system_microseconds / 1_000_000)}`
     );
   }
   lines.push('# EOF', '');
@@ -354,7 +369,9 @@ function validateServiceSnapshot(value) {
   const processMetrics = normalizeCounterGroup(value.process, [
     'resident_memory_bytes',
     'heap_used_bytes',
-    'external_memory_bytes'
+    'external_memory_bytes',
+    'cpu_user_microseconds',
+    'cpu_system_microseconds'
   ], value.service);
   return {
     service: value.service,

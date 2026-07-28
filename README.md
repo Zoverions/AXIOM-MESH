@@ -74,6 +74,20 @@ tamper and unsafe-restore rejection, exact-digest restore, rollback
 preservation, evidence-chain verification, and measured recovery time. Never
 point it at a live or non-empty directory.
 
+Run the controlled production SLO baseline in a different empty disposable
+workspace:
+
+```bash
+npm run slo:drill -- /tmp/axiom-slo-drill
+```
+
+That drill starts the real four-process production supervisor, exercises 40
+authenticated low-risk intents at concurrency 4, measures latency, error rate,
+throughput, process CPU and memory, performs a graceful full-stack restart,
+verifies a post-restart intent, and emits signed, secret-free JSON evidence.
+It is a short host-mode baseline, not a 30-day availability claim or a
+substitute for measurement on pilot hardware.
+
 ## Canonical documentation
 
 - [Technical white paper](docs/whitepapers_and_research/WHITEPAPER.md)

@@ -11,6 +11,7 @@
     "dev": "node src/dev.mjs",
     "provision:production": "node src/provision-production.mjs",
     "recovery:drill": "node src/recovery-drill.mjs",
+    "slo:drill": "node src/slo-drill.mjs",
     "start:production": "node src/supervisor.mjs",
     "verify-export": "node src/verify-export.mjs",
     "verify-sync": "node src/verify-sync.mjs",
