@@ -21,7 +21,7 @@
     "@slack/bolt": "^4.6.0",
     "@types/acorn": "^6.0.4",
     "@types/estree": "^1.0.8",
-    "@whiskeysockets/baileys": "^7.0.0-rc.9",
+    "@whiskeysockets/baileys": "^7.0.0-rc13",
     "acorn": "^8.16.0",
     "axios": "^1.13.6",
     "body-parser": "^2.2.2",
