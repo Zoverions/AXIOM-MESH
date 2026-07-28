@@ -165,6 +165,19 @@ automatic identity generation and refuses remote plaintext internal URLs.
 Credentials from deprecated repository history are permanently untrusted.
 Restoring an old key is a security incident, not a recovery procedure.
 
+The candidate supports an offline, coordinated replacement of all four service
+identities and the operator API token. A Grid runtime lock excludes concurrent
+startup. The retiring and successor Grid identities both attest a public
+transition manifest, allowing the evidence verifier to follow authorized key
+lineage in either direction without retaining a retired private key. The prior
+credential set is authenticated-encrypted before replacement, and exact
+rollback preserves the rotated set in a second encrypted package.
+
+This lifecycle does not replace external revocation evidence for credentials
+from deprecated history. It also excludes the data-protection key: changing
+that key requires re-encryption of durable Grid state, backups, and retained
+recovery packages rather than a file-only credential swap.
+
 ## 6. Policy and approvals
 
 Policy rules name the action decision, risk, required scopes, confirmations,
@@ -208,7 +221,10 @@ storage context fails authentication.
 
 Each evidence record includes the previous record hash, forming a
 transactional SHA-256 linked sequence. Startup verifies continuity and fails
-closed on a mismatch. Schema migrations are contiguous and checksum-verified.
+closed if a record signature cannot be resolved through the current Grid key
+or a connected dual-signed rotation transition. Thus a supported key change
+does not require resigning or weakening historical evidence.
+Schema migrations are contiguous and checksum-verified.
 
 Implemented Grid-owned families include:
 

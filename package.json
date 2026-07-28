@@ -9,6 +9,8 @@
   "scripts": {
     "dev": "npm --prefix mesh run dev",
     "provision:production": "npm --prefix mesh run provision:production --",
+    "rotate:production": "npm --prefix mesh run rotate:production --",
+    "credential-rotation:drill": "npm --prefix mesh run credential-rotation:drill --",
     "recovery:drill": "npm --prefix mesh run recovery:drill --",
     "slo:drill": "npm --prefix mesh run slo:drill --",
     "start:production": "npm --prefix mesh run start:production",

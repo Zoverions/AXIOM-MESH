@@ -145,10 +145,88 @@ pilot hardware, a remote network path, an external-adapter profile, or a
 30-day availability measurement. Repeat it under the actual pilot resource
 policy and expected traffic mix before production promotion.
 
+## 6. Rotate service and operator credentials
+
+Credential rotation is an offline maintenance operation. Stop the production
+supervisor or Compose deployment first. The command acquires the Grid runtime
+lock before reading or changing credentials, so a running Grid or a competing
+startup makes the operation fail closed.
+
+Make an encrypted, access-controlled backup of both host directories before
+the change. Then rotate all four Ed25519 service identities, their coordinated
+trust records, and the production operator API token:
+
+```bash
+npm run rotate:production -- rotate \
+  /srv/axiom-mesh/data \
+  /srv/axiom-mesh/secrets
+```
+
+The command never prints a token, private key, or data-protection key. It
+prints the rotation identifier, old and new public key identifiers, and the
+path to a signed manifest under
+`data/credential-rotations/<rotation-id>/manifest.json`. Before installing the
+new files, it encrypts the exact prior credential set with AES-256-GCM using
+the existing data-protection key and writes `rollback.axr`. A persisted
+maintenance marker protects interrupted multi-file changes; ordinary write
+failures restore the original files automatically.
+
+The manifest is attested by both the retiring and successor Grid identities.
+It records public keys and target authentication values without credential
+values. Token-bearing files use HMAC-SHA256 with a dedicated key derived from
+the data-protection key through HKDF; the public manifest therefore does not
+publish an offline token-hash oracle. Grid uses the dual-signed lineage to
+verify evidence written on either side of a rotation; retired private keys are
+not retained. Restart the complete stack and verify `/ready`, authenticated
+`/v1/operations`, and an authorized intent. Distribute the new operator token
+only through the approved secret channel. The retired token must return `401`.
+
+If post-change validation fails, stop the stack and use the exact manifest
+path printed by the rotation:
+
+```bash
+npm run rotate:production -- rollback \
+  /srv/axiom-mesh/data/credential-rotations/<rotation-id>/manifest.json \
+  /srv/axiom-mesh/data \
+  /srv/axiom-mesh/secrets
+```
+
+Rollback authenticates and decrypts `rollback.axr`, verifies every fixed target
+against the signed manifest, preserves the rotated set as encrypted
+`forward.axr`, restores the original identities, trust records, registry, and
+operator token, and writes an attested `rollback-result.json`. It rejects a
+different pending rotation or drift from the signed rotated state. Only when a
+matching pending marker exists, rollback may prove that the recorded runtime
+process no longer exists and quarantine its stale lock under
+`data/recovery/stale-runtime-locks/`; a live or ambiguous owner still blocks
+the operation.
+
+This operation deliberately does **not** rotate
+`data-protection.key`. That key protects Grid state and the rollback package;
+replacing it requires a separately reviewed database and artifact
+re-encryption migration. This procedure also does not prove revocation of
+credentials exposed in deprecated repository history; that requires an
+external custody and trust-inventory record.
+
+Exercise the complete sequence only in an explicitly empty disposable
+workspace:
+
+```bash
+mkdir -m 700 /tmp/axiom-credential-rotation-drill
+npm run credential-rotation:drill -- /tmp/axiom-credential-rotation-drill \
+  > /tmp/axiom-credential-rotation-evidence.json
+```
+
+The drill starts the real four-process stack before rotation, after rotation,
+and after rollback. It proves successful intents with the active credential
+set, `401` rejection of the retired and rolled-back tokens, acceptance of each
+active service identity, rejection of each inactive service identity, exact
+credential restoration, unchanged data-key custody, and clean shutdown. Its
+secret-free JSON is Ed25519-attested and retained by protected CI for 90 days.
+
 This package is a production container specification and local deployment
 surface. Its source and fail-closed supervisor are statically verified, and the
 real four-process stack, digest-pinned image build, composed container
-readiness, disposable-host recovery drill, and controlled SLO/restart baseline
-are protected CI gates. This is not evidence of a live deployment, federated
-discovery, BFT consensus, audited arbitrary-code isolation, or external
-settlement.
+readiness, disposable-host recovery drill, controlled SLO/restart baseline,
+and coordinated credential-rotation drill are protected CI gates. This is not evidence of a live deployment, federated discovery, BFT consensus, audited
+arbitrary-code isolation, or external settlement.

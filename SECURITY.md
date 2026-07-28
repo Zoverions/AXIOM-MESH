@@ -26,6 +26,29 @@ The clean-room production path provisions new Ed25519 service identities, API
 tokens, and data-protection keys outside the repository. Promotion requires
 evidence that deployments trust only newly provisioned identities.
 
+## Supported credential lifecycle
+
+The supported offline rotation procedure replaces the Gateway, Hypervisor,
+Sandbox, and Grid Ed25519 identities, updates all four trust records, and
+replaces the production operator API token as one maintenance transaction.
+The Grid runtime lock excludes a live or competing startup. The retiring and
+successor Grid keys both attest the public transition, allowing historical
+evidence to remain verifiable without retaining retired private keys.
+
+An authenticated-encrypted rollback package is created before replacement.
+Rollback verifies the signed target set, preserves the rotated credentials in
+an encrypted forward package, and restores the exact original set. Public
+identity files use SHA-256 digests; token-bearing files use HMAC-SHA256 with an
+HKDF-derived secret key so the manifest is not a token-hash oracle. Signed
+drill evidence must contain only public identifiers and outcomes, never
+tokens, private keys, or absolute secret paths.
+
+The data-protection key is outside this operation. Its rotation requires a
+separate re-encryption migration for Grid data, backups, and retained
+credential packages. Local rotation evidence also does not substitute for an
+external record that credentials exposed in deprecated history have been
+revoked at every prior custodian and deployment.
+
 ## Reporting a vulnerability
 
 Do not open a public issue for a suspected vulnerability.

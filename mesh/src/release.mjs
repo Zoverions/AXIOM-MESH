@@ -349,6 +349,9 @@ export function verifyProductionDeployment({
     'Compose does not enforce deny-egress',
     '40 measured',
     'Host mode does not enforce the candidate two-CPU ceiling',
+    'all four Ed25519 service identities',
+    'dual-signed lineage',
+    'does **not** rotate',
     'not evidence of a live deployment'
   ]) {
     if (!productionDocs.includes(boundary)) {
@@ -361,9 +364,11 @@ export function verifyProductionDeployment({
     'npm ci --ignore-scripts',
     'node src/recovery-drill.mjs',
     'node src/slo-drill.mjs',
+    'node src/credential-rotation-drill.mjs',
     'actions/upload-artifact@v7',
     'axiom-recovery-drill-evidence-${{ github.sha }}',
     'axiom-slo-baseline-evidence-${{ github.sha }}',
+    'axiom-credential-rotation-evidence-${{ github.sha }}',
     `docker build --pull=false --tag axiom-mesh-kernel:${packageJson.version} .`,
     'docker compose -f compose.production.yml up --detach --no-build',
     'docker compose -f compose.production.yml down --volumes --remove-orphans'

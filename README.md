@@ -88,6 +88,20 @@ verifies a post-restart intent, and emits signed, secret-free JSON evidence.
 It is a short host-mode baseline, not a 30-day availability claim or a
 substitute for measurement on pilot hardware.
 
+Run the coordinated service and API credential lifecycle drill in another
+empty disposable workspace:
+
+```bash
+npm run credential-rotation:drill -- /tmp/axiom-credential-rotation-drill
+```
+
+It boots the real stack before rotation, with four rotated Ed25519 identities
+and a new operator token, and again after authenticated rollback. The drill
+proves active credentials work, inactive service identities and API tokens
+fail, historical Grid evidence remains valid through a dual-signed key
+transition, and the original set is restored exactly. It does not rotate the
+data-protection key or prove external revocation of historic credentials.
+
 ## Canonical documentation
 
 - [Technical white paper](docs/whitepapers_and_research/WHITEPAPER.md)
@@ -176,6 +190,10 @@ supported entrypoints.
 - Encrypted signed Grid snapshots support exact-digest offline restore,
   tamper detection, preservation of the replaced database, and signed recovery
   evidence on restart.
+- Offline credential rotation replaces all four service identities, coordinated
+  trust records, and the operator API token; dual-signed Grid key lineage keeps
+  historical evidence verifiable, and an authenticated-encrypted package
+  supports exact rollback without retaining retired private keys.
 - Owner-bound admitted nodes can exchange independently verifiable signed
   causal-update bundles. Version vectors preserve concurrent heads, replays and
   node-counter equivocation fail closed, and conflict resolution must name
@@ -192,7 +210,7 @@ supported entrypoints.
 - The production container uses a digest-pinned Node.js base, a non-root user,
   read-only root filesystem, dropped capabilities, explicit resource ceilings,
   mounted secrets, and readiness-based health checks. Its source policy is
-  verified; image-build and runtime-drill evidence remain pending.
+  verified by protected image-build and composed-runtime checks.
 - Authenticated bounded-cardinality operations and OpenMetrics surfaces cover
   all four services without placing principals, prompts, payloads, tokens, or
   object identifiers in metric labels.

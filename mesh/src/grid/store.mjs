@@ -1,4 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
+import { createPublicKey } from 'node:crypto';
+import { lstatSync, readFileSync, readdirSync } from 'node:fs';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import {
@@ -36,6 +38,7 @@ export class GridStore {
     this.path = path;
     this.dataDir = dataDir;
     this.identity = identity;
+    this.verificationKeys = loadGridVerificationKeys(dataDir, identity);
     if (!protector) throw new ValidationError('GridStore requires a data protector');
     this.protector = protector;
     this.db = new DatabaseSync(path);
@@ -1785,7 +1788,15 @@ export class GridStore {
       };
       if (digestObject(envelope) !== row.event_hash) return { valid: false, seq: row.seq, reason: 'event_hash_mismatch' };
       const signature = JSON.parse(row.signature_json);
-      if (!verifyObjectSignature({ event_hash: row.event_hash }, signature, this.identity.publicKey)) {
+      const verificationKey = this.verificationKeys.get(signature.key_id);
+      if (
+        !verificationKey
+        || !verifyObjectSignature(
+          { event_hash: row.event_hash },
+          signature,
+          verificationKey
+        )
+      ) {
         return { valid: false, seq: row.seq, reason: 'signature_mismatch' };
       }
       previous = row.event_hash;
@@ -2462,6 +2473,143 @@ function normalizeStoredGovernanceAction(action) {
     rollback: { description: 'Legacy non-executable proposal record' },
     legacy: true
   };
+}
+
+function loadGridVerificationKeys(dataDir, identity) {
+  const known = new Map([[identity.keyId, identity.publicKey]]);
+  const rotationRoot = join(dataDir, 'credential-rotations');
+  let entries;
+  try {
+    entries = readdirSync(rotationRoot, { withFileTypes: true });
+  } catch (error) {
+    if (error.code === 'ENOENT') return known;
+    throw error;
+  }
+  const transitions = [];
+  for (const entry of entries) {
+    if (entry.isSymbolicLink()) {
+      throw new ValidationError('Credential rotation history may not contain symbolic links');
+    }
+    if (!entry.isDirectory() || !ID.test(entry.name)) continue;
+    const manifestPath = join(rotationRoot, entry.name, 'manifest.json');
+    let metadata;
+    try {
+      metadata = lstatSync(manifestPath);
+    } catch (error) {
+      if (error.code === 'ENOENT') continue;
+      throw error;
+    }
+    if (
+      metadata.isSymbolicLink()
+      || !metadata.isFile()
+      || metadata.size < 1
+      || metadata.size > 1024 * 1024
+    ) {
+      throw new ValidationError('Credential rotation history manifest is invalid');
+    }
+    let manifest;
+    try {
+      manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    } catch {
+      throw new ValidationError('Credential rotation history manifest is invalid JSON');
+    }
+    transitions.push(parseGridKeyTransition(manifest));
+  }
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const transition of transitions) {
+      if (known.has(transition.before.id)) {
+        assertSamePublicKey(
+          known.get(transition.before.id),
+          transition.before.key,
+          transition.before.id
+        );
+        changed = addVerificationKey(known, transition.after) || changed;
+      }
+      if (known.has(transition.after.id)) {
+        assertSamePublicKey(
+          known.get(transition.after.id),
+          transition.after.key,
+          transition.after.id
+        );
+        changed = addVerificationKey(known, transition.before) || changed;
+      }
+    }
+  }
+  return known;
+}
+
+function parseGridKeyTransition(manifest) {
+  if (
+    manifest?.format !== 'axiom-credential-rotation.v1'
+    || manifest?.schema_version !== 1
+    || manifest.scope?.data_protection_key !== false
+    || manifest.scope?.requires_stopped_runtime !== true
+    || typeof manifest.before?.public_keys?.grid !== 'string'
+    || typeof manifest.after?.public_keys?.grid !== 'string'
+  ) {
+    throw new ValidationError('Credential rotation history scope is invalid');
+  }
+  let beforeKey;
+  let afterKey;
+  try {
+    beforeKey = createPublicKey(manifest.before.public_keys.grid);
+    afterKey = createPublicKey(manifest.after.public_keys.grid);
+  } catch {
+    throw new ValidationError('Credential rotation history Grid key is invalid');
+  }
+  const beforeId = `grid:${sha256(manifest.before.public_keys.grid).slice(0, 16)}`;
+  const afterId = `grid:${sha256(manifest.after.public_keys.grid).slice(0, 16)}`;
+  if (
+    beforeKey.asymmetricKeyType !== 'ed25519'
+    || afterKey.asymmetricKeyType !== 'ed25519'
+    || beforeId !== manifest.before.key_ids?.grid
+    || afterId !== manifest.after.key_ids?.grid
+    || beforeId === afterId
+    || manifest.attestation?.key_id !== beforeId
+    || manifest.successor_attestation?.key_id !== afterId
+  ) {
+    throw new ValidationError('Credential rotation history key transition is invalid');
+  }
+  const unsigned = structuredClone(manifest);
+  delete unsigned.attestation;
+  delete unsigned.successor_attestation;
+  if (
+    !verifyObjectSignature(unsigned, manifest.attestation, beforeKey)
+    || !verifyObjectSignature(
+      unsigned,
+      manifest.successor_attestation,
+      afterKey
+    )
+  ) {
+    throw new ValidationError('Credential rotation history transition attestation is invalid');
+  }
+  return {
+    before: { id: beforeId, key: beforeKey },
+    after: { id: afterId, key: afterKey }
+  };
+}
+
+function addVerificationKey(known, candidate) {
+  const existing = known.get(candidate.id);
+  if (existing) {
+    assertSamePublicKey(existing, candidate.key, candidate.id);
+    return false;
+  }
+  known.set(candidate.id, candidate.key);
+  return true;
+}
+
+function assertSamePublicKey(left, right, keyId) {
+  const leftDer = left.export({ type: 'spki', format: 'der' });
+  const rightDer = right.export({ type: 'spki', format: 'der' });
+  if (!Buffer.from(leftDer).equals(Buffer.from(rightDer))) {
+    throw new ValidationError(
+      `Credential rotation history contains conflicting key ${keyId}`
+    );
+  }
 }
 
 async function atomicWrite(path, content, mode) {
