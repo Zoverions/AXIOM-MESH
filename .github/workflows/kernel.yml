@@ -64,7 +64,7 @@ jobs:
             "$RUNNER_TEMP/axiom-recovery-drill" \
             > "$RUNNER_TEMP/axiom-recovery-drill-evidence.json"
       - name: Upload signed recovery evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: axiom-recovery-drill-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/axiom-recovery-drill-evidence.json
