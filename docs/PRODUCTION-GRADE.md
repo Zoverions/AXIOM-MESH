@@ -117,6 +117,14 @@ must:
 7. emit signed recovery evidence;
 8. test restoration on a disposable host on a schedule.
 
+The protected Clean Kernel workflow runs the executable disposable-host drill
+for every supported runtime change and retains its signed, secret-free JSON
+evidence. The artifact binds the kernel version and source revision to
+encrypted-backup digests, fail-closed negative checks, the deliberately
+injected recovery-point loss, measured recovery time, rollback preservation,
+and the restored evidence head. Pilot promotion still requires scheduled
+operator-run recovery using pilot-owned media and key custody.
+
 Loss of the data key can make protected data unrecoverable. Key custody and
 encrypted recovery copies are therefore part of availability, not merely
 security.

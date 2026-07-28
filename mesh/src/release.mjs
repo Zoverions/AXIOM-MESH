@@ -357,6 +357,9 @@ export function verifyProductionDeployment({
     'branches: ["main"]',
     'node-version: "24.18.0"',
     'npm ci --ignore-scripts',
+    'node src/recovery-drill.mjs',
+    'actions/upload-artifact@v4',
+    'axiom-recovery-drill-evidence-${{ github.sha }}',
     `docker build --pull=false --tag axiom-mesh-kernel:${packageJson.version} .`,
     'docker compose -f compose.production.yml up --detach --no-build',
     'docker compose -f compose.production.yml down --volumes --remove-orphans'

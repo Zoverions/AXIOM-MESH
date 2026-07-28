@@ -86,10 +86,36 @@ prompt, payload, token, or object identifier becomes a metric label.
 Grid deep integrity results are cached for 30 seconds by default, so frequent
 health probes do not repeatedly scan an unbounded evidence history.
 
+## 4. Exercise recovery on a disposable host
+
+The recovery drill accepts only an explicitly named empty workspace. It
+provisions independent file-backed production credentials, creates and
+attests an encrypted Grid backup, rejects a tampered snapshot, proves that a
+live restore and an incorrect expected digest fail closed, restores the exact
+snapshot, preserves the replaced database for rollback, reopens Grid, and
+verifies the signed evidence chain.
+
+```bash
+mkdir -m 700 /tmp/axiom-recovery-drill
+npm run recovery:drill -- /tmp/axiom-recovery-drill \
+  > /tmp/axiom-recovery-drill-evidence.json
+```
+
+The JSON evidence includes the kernel version, source revision when supplied
+by CI, backup and database digests, a relative rollback-artifact path, the
+deliberately injected one-business-event recovery point, measured backup and
+recovery durations, all pass/fail assertions, an ephemeral Grid public key,
+and an Ed25519 attestation. It excludes the generated data key, operator
+token, private keys, and absolute host paths.
+
+The protected Clean Kernel workflow repeats this exercise on a fresh GitHub
+runner and retains the signed evidence artifact for 90 days. This validates
+the recovery mechanism; it does not replace scheduled restoration using
+pilot-owned backup media, keys, retention policy, and operator approval.
+
 This package is a production container specification and local deployment
 surface. Its source and fail-closed supervisor are statically verified, and the
-real four-process stack passes a host-mode production drill. An actual image
-build and container runtime drill remain required before the capability can be
-marked implemented. It is not evidence of a live deployment, federated
-discovery, BFT consensus, audited arbitrary-code isolation, or external
-settlement.
+real four-process stack, digest-pinned image build, composed container
+readiness, and disposable-host recovery drill are protected CI gates. This is
+not evidence of a live deployment, federated discovery, BFT consensus, audited
+arbitrary-code isolation, or external settlement.

@@ -57,6 +57,19 @@ jobs:
           npm audit --omit=dev
           npm run check
           npm run release:verify
+      - name: Run disposable-host recovery drill
+        working-directory: mesh
+        run: |
+          node src/recovery-drill.mjs \
+            "$RUNNER_TEMP/axiom-recovery-drill" \
+            > "$RUNNER_TEMP/axiom-recovery-drill-evidence.json"
+      - name: Upload signed recovery evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: axiom-recovery-drill-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/axiom-recovery-drill-evidence.json
+          if-no-files-found: error
+          retention-days: 90
 
   container:
     runs-on: ubuntu-latest
