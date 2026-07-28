@@ -3,8 +3,8 @@
 
 Registry schema: `axiom-capabilities.v1`
 Kernel version: `0.11.0`
-Evidence verified: `2026-07-26`
-Registry digest: `db91ef1a2e6cd23ef0f374fb88704235fdd66c4ce18c3f93627a4e638681da8d`
+Evidence verified: `2026-07-28`
+Registry digest: `1f594f2f77e0e9522de152b10d181b766b2510ed318cfc70ac659bc9d6e48b1c`
 
 Only **implemented** capabilities are runnable claims.
 
@@ -40,7 +40,7 @@ Only **implemented** capabilities are runnable claims.
 | `identity.ssi` | identity | **specified** | DIDs, credentials, selective disclosure, reputation, and portable identity require an approved credential profile. |
 | `offline.causal-sync` | mesh | **implemented** | Independently verifiable admitted-node bundles use contiguous dependency-checked version vectors, replay and equivocation rejection, visible concurrent heads, and explicit complete conflict resolution. |
 | `nodes.discovery-scheduling` | mesh | **specified** | Federated discovery, capability-aware scheduling, resource balancing, adaptive roles, renewal, and quarantine are specified. |
-| `storage.backup-restore` | storage | **implemented** | Encrypted signed Grid snapshots support tamper detection, stopped-Grid exact-digest restore, rollback preservation, and signed restart recovery evidence. |
+| `storage.backup-restore` | storage | **implemented** | Encrypted signed Grid snapshots support tamper detection, stopped-Grid exact-digest restore, signed policy-derived retention into recoverable quarantine, interruption recovery, and recurring restore evidence. |
 | `domains.education` | domains | **adapter_required** | Education runs as a strict-consent capsule; curriculum and learner systems are not part of the trusted kernel. |
 | `domains.health` | domains | **adapter_required** | Health runs as a strict-consent capsule and requires clinical/regulatory governance. |
 | `domains.government` | domains | **adapter_required** | Public-service workflows require jurisdiction-specific identity, appeal, records, and legal controls. |

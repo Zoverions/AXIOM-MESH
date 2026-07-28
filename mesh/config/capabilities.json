@@ -1,6 +1,6 @@
 {
   "schema": "axiom-capabilities.v1",
-  "verified_at": "2026-07-26",
+  "verified_at": "2026-07-28",
   "kernel_version": "0.11.0",
   "capabilities": [
     {
@@ -142,8 +142,12 @@
       "id": "storage.backup-restore",
       "family": "storage",
       "status": "implemented",
-      "summary": "Encrypted signed Grid snapshots support tamper detection, stopped-Grid exact-digest restore, rollback preservation, and signed restart recovery evidence.",
-      "evidence": ["mesh/test/kernel.test.mjs"]
+      "summary": "Encrypted signed Grid snapshots support tamper detection, stopped-Grid exact-digest restore, signed policy-derived retention into recoverable quarantine, interruption recovery, and recurring restore evidence.",
+      "evidence": [
+        "mesh/test/kernel.test.mjs",
+        "mesh/test/backup-maintenance.test.mjs",
+        "mesh/test/backup-lifecycle-drill.test.mjs"
+      ]
     },
     {
       "id": "domains.education",

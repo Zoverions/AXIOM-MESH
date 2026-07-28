@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=db91ef1a2e6cd23ef0f374fb88704235fdd66c4ce18c3f93627a4e638681da8d -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=1f594f2f77e0e9522de152b10d181b766b2510ed318cfc70ac659bc9d6e48b1c -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -73,6 +73,17 @@ provisions isolated production credentials, exercises encrypted backup,
 tamper and unsafe-restore rejection, exact-digest restore, rollback
 preservation, evidence-chain verification, and measured recovery time. Never
 point it at a live or non-empty directory.
+
+Exercise signed retention planning, recoverable retirement, and restoration of
+a retained backup in another empty disposable workspace:
+
+```bash
+npm run backup-lifecycle:drill -- /tmp/axiom-backup-lifecycle-drill
+```
+
+The protected workflow also runs this drill every Monday and retains
+commit-bound signed evidence for 90 days. That recurring disposable-runner
+proof is not a claim about pilot-owned media or external key custody.
 
 Run the controlled production SLO baseline in a different empty disposable
 workspace:
@@ -203,6 +214,11 @@ supported entrypoints.
 - Encrypted signed Grid snapshots support exact-digest offline restore,
   tamper detection, preservation of the replaced database, and signed recovery
   evidence on restart.
+- Signed, policy-derived retention plans verify every encrypted backup before
+  selection, require a stopped and unchanged inventory to apply, retain a
+  configured minimum, and atomically move excess media into recoverable
+  quarantine. A recurring drill restores a retained snapshot and emits signed
+  evidence; permanent media destruction remains an external approval.
 - Offline credential rotation replaces all four service identities, coordinated
   trust records, and the operator API token; dual-signed Grid key lineage keeps
   historical evidence verifiable, and an authenticated-encrypted package

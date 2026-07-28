@@ -26,6 +26,8 @@ on:
       - ".gitattributes"
       - ".github/workflows/kernel.yml"
   workflow_dispatch:
+  schedule:
+    - cron: "17 4 * * 1"
 
 permissions:
   contents: read
@@ -68,6 +70,19 @@ jobs:
         with:
           name: axiom-recovery-drill-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/axiom-recovery-drill-evidence.json
+          if-no-files-found: error
+          retention-days: 90
+      - name: Run encrypted-backup lifecycle and restore drill
+        working-directory: mesh
+        run: |
+          node src/backup-lifecycle-drill.mjs \
+            "$RUNNER_TEMP/axiom-backup-lifecycle-drill" \
+            > "$RUNNER_TEMP/axiom-backup-lifecycle-evidence.json"
+      - name: Upload signed backup lifecycle evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: axiom-backup-lifecycle-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/axiom-backup-lifecycle-evidence.json
           if-no-files-found: error
           retention-days: 90
       - name: Run controlled SLO and restart drill

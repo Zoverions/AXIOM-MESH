@@ -113,6 +113,68 @@ runner and retains the signed evidence artifact for 90 days. This validates
 the recovery mechanism; it does not replace scheduled restoration using
 pilot-owned backup media, keys, retention policy, and operator approval.
 
+### Retain and re-verify encrypted backups
+
+The supported retention workflow is plan-first and never immediately deletes
+media. `config/backup-retention.json` requires at least two verified backups,
+keeps the latest seven, and makes older backups eligible after 30 days. Create
+a signed plan while the service is available:
+
+```bash
+npm run backup:maintain -- plan \
+  /srv/axiom-mesh/data \
+  /srv/axiom-mesh/secrets/data-protection.key \
+  config/backup-retention.json \
+  /srv/axiom-mesh/retention-plan.json
+```
+
+The planner authenticates and decrypts every candidate, verifies its signed
+manifest, schema and complete Grid evidence chain, and derives the decision
+from policy. Review and retain the plan as change evidence. Stop the supervisor
+or Compose deployment, then apply exactly that file:
+
+```bash
+npm run backup:maintain -- apply \
+  /srv/axiom-mesh/data \
+  /srv/axiom-mesh/secrets/data-protection.key \
+  /srv/axiom-mesh/retention-plan.json
+```
+
+Apply rejects a running Grid, altered plan, changed inventory, unsafe path,
+invalid artifact, or minimum-count violation. Excess backups are atomically
+moved—not deleted—to
+`data/backups/.retired/<backup-retention-plan-id>/`. The signed receipt is
+written under `data/recovery/backup-retention/receipts/` and copied into the
+quarantine directory. If power or process loss interrupts the move, keep Grid
+stopped and rerun `apply`, or resume from the signed on-host journal:
+
+```bash
+npm run backup:maintain -- recover \
+  /srv/axiom-mesh/data \
+  /srv/axiom-mesh/secrets/data-protection.key
+```
+
+Quarantined backup envelopes and their protected SQLite columns participate in
+later data-key rotation and rollback. Do not remove quarantine until the
+pilot's independent-media copy, retention window, restore result, destruction
+authorization, and change record are complete.
+
+Use the disposable lifecycle drill to prove planning, live-lock and tamper
+rejection, minimum retention, recoverable quarantine, receipt verification,
+idempotency, and exact restore of a retained backup:
+
+```bash
+mkdir -m 700 /tmp/axiom-backup-lifecycle-drill
+npm run backup-lifecycle:drill -- /tmp/axiom-backup-lifecycle-drill \
+  > /tmp/axiom-backup-lifecycle-evidence.json
+```
+
+Protected CI runs it on every relevant change and on a weekly schedule,
+uploading `axiom-backup-lifecycle-evidence-<commit>` for 90 days. This closes
+the candidate-host mechanism and recurring disposable verification only. A
+scheduled operator restore from pilot-owned media and pilot-owned keys remains
+a production-promotion gate.
+
 ## 5. Establish the controlled SLO baseline
 
 Use a different explicitly empty workspace for the short host-mode load and

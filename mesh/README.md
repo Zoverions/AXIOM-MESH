@@ -259,6 +259,41 @@ digest, schema migrations, and evidence chain before replacement. The previous
 database is preserved under `.data/recovery/rollback/`, and the next Grid start
 commits a signed `backup.restored` recovery event.
 
+Backup retention is a signed two-phase offline operation. First create a plan
+against the complete verified active inventory:
+
+```bash
+npm run backup:maintain -- plan \
+  .data \
+  /srv/axiom-mesh/secrets/data-protection.key \
+  config/backup-retention.json \
+  /srv/axiom-mesh/retention-plan.json
+```
+
+Review and retain that plan, stop Grid, then apply the exact signed content:
+
+```bash
+npm run backup:maintain -- apply \
+  .data \
+  /srv/axiom-mesh/secrets/data-protection.key \
+  /srv/axiom-mesh/retention-plan.json
+```
+
+Apply fails if Grid is live, any backup is corrupt, the inventory changed, the
+plan was altered, or the verified minimum would be violated. Selected backups
+move atomically to `.data/backups/.retired/<plan-id>/`; none are deleted. If
+the process is killed mid-move, rerun `apply` or use:
+
+```bash
+npm run backup:maintain -- recover \
+  .data \
+  /srv/axiom-mesh/secrets/data-protection.key
+```
+
+Quarantined media remains covered by later data-key rotation and rollback.
+Deletion or transfer from quarantine requires the deployment's separate media
+custody, retention, and destruction approval.
+
 Local governance is also lifecycle-bound. A proposal receives human-chamber
 votes, finalizes only after voting closes, waits through its activation
 timelock, and then requires an independently approved activation. Executable

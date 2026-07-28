@@ -21,7 +21,7 @@ artifact is reproducible and tied to the release commit or image digest.
 | Container image build | Pass | Digest-pinned build in [GitHub run 30376178779](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30376178779) | Publish immutable image digest before pilot |
 | Composed container drill | Pass | Readiness, authenticated operations, and teardown in the same run | Repeat for future release commits |
 | Dependency audit | Pass | Root and kernel lock audits in the same run | Maintain required check |
-| Backup and restore | Pass | Protected CI provisions a disposable production workspace, exercises encrypted backup, tamper/live-lock/exact-digest rejection, restore and rollback, and uploads signed evidence | Repeat on every runtime change; add scheduled pilot-media restoration |
+| Backup and restore | Pass for candidate-host lifecycle | Protected CI exercises encrypted backup, signed policy-derived retention, corrupt/live-lock/inventory-drift rejection, recoverable quarantine, killed-move recovery, exact restore and rollback; it also runs weekly and uploads signed evidence | Run the schedule against pilot-owned media and custody; authorize quarantine destruction separately |
 | Observability | Implemented locally | Bounded metrics and authenticated operations tests | Integrate external collector |
 | SLO and capacity | Pass for initial CI baseline | Signed protected-CI evidence records a fixed authenticated load profile, latency percentiles, zero-error requirement, throughput, CPU/memory observations, peak concurrency, and graceful restart | Repeat on dedicated pilot hardware under enforced resource limits and expected traffic |
 | Credential rotation | Pass for service/API candidate lifecycle | Protected CI rotates all four Ed25519 identities, coordinated trust records, and the operator token against the real stack; proves inactive-credential rejection, dual-signed Grid key lineage, exact encrypted rollback, and unchanged data-key custody | Repeat under pilot secret custody |
@@ -35,8 +35,8 @@ artifact is reproducible and tied to the release commit or image digest.
 The following block production promotion:
 
 1. no dedicated pilot-hardware capacity validation or 30-day availability observation;
-2. no pilot-secret-custody rotation repetition or scheduled pilot-media
-   restore;
+2. no pilot-secret-custody rotation repetition or scheduled restore from
+   pilot-owned media;
 3. no independent review of the supported kernel and deployment policy;
 4. no host- or orchestrator-enforced deny-egress evidence;
 5. no documented revocation inventory for credentials exposed in deprecated

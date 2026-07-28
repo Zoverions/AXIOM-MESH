@@ -7,6 +7,7 @@ import { MESH_ROOT } from './lib/config.mjs';
 import { validateCapabilityRegistry } from './check-registry.mjs';
 import { MIGRATIONS, migrationChecksum } from './grid/migrations.mjs';
 import { validatePolicy } from './lib/policy.mjs';
+import { validateBackupRetentionPolicy } from './backup-maintenance.mjs';
 import {
   normalizeLineEndings,
   renderCapabilityStatus,
@@ -47,6 +48,11 @@ export async function verifyReleaseReadiness() {
   const paths = {
     registry: join(MESH_ROOT, 'config', 'capabilities.json'),
     policy: join(MESH_ROOT, 'config', 'policy.json'),
+    backupRetentionPolicy: join(
+      MESH_ROOT,
+      'config',
+      'backup-retention.json'
+    ),
     package: join(MESH_ROOT, 'package.json'),
     lock: join(MESH_ROOT, 'package-lock.json'),
     rootPackage: join(REPOSITORY_ROOT, 'package.json'),
@@ -64,6 +70,7 @@ export async function verifyReleaseReadiness() {
   const [
     registry,
     policy,
+    backupRetentionPolicy,
     packageJson,
     lock,
     rootPackage,
@@ -80,6 +87,7 @@ export async function verifyReleaseReadiness() {
   ] = await Promise.all([
     readJson(paths.registry),
     readJson(paths.policy),
+    readJson(paths.backupRetentionPolicy),
     readJson(paths.package),
     readJson(paths.lock),
     readJson(paths.rootPackage),
@@ -96,6 +104,7 @@ export async function verifyReleaseReadiness() {
   ]);
   const registryResult = validateCapabilityRegistry(registry);
   validatePolicy(policy);
+  validateBackupRetentionPolicy(backupRetentionPolicy);
   if (packageJson.version !== registry.kernel_version || lock.version !== packageJson.version) {
     throw new ValidationError('Package, lockfile, and capability registry versions must match');
   }
@@ -140,6 +149,7 @@ export async function verifyReleaseReadiness() {
     compose,
     productionDocs,
     packageJson,
+    backupRetentionPolicy,
     workflow,
     repositoryIgnore
   });
@@ -279,9 +289,11 @@ export function verifyProductionDeployment({
   compose,
   productionDocs,
   packageJson,
+  backupRetentionPolicy,
   workflow,
   repositoryIgnore
 }) {
+  validateBackupRetentionPolicy(backupRetentionPolicy);
   const pinnedBase = dockerfile.match(
     /^FROM (node:24\.18\.0-alpine3\.23)@(sha256:[a-f0-9]{64})$/m
   );
@@ -352,7 +364,8 @@ export function verifyProductionDeployment({
     'all four Ed25519 service identities',
     'dual-signed lineage',
     'does **not** rotate',
-    'not evidence of a live deployment'
+    'not evidence of a live deployment',
+    'recoverable quarantine'
   ]) {
     if (!productionDocs.includes(boundary)) {
       throw new ValidationError(`Production operator documentation is missing boundary: ${boundary}`);
@@ -360,14 +373,17 @@ export function verifyProductionDeployment({
   }
   for (const required of [
     'branches: ["main"]',
+    'cron: "17 4 * * 1"',
     'node-version: "24.18.0"',
     'npm ci --ignore-scripts',
     'node src/recovery-drill.mjs',
+    'node src/backup-lifecycle-drill.mjs',
     'node src/slo-drill.mjs',
     'node src/credential-rotation-drill.mjs',
     'node src/data-key-rotation-drill.mjs',
     'actions/upload-artifact@v7',
     'axiom-recovery-drill-evidence-${{ github.sha }}',
+    'axiom-backup-lifecycle-evidence-${{ github.sha }}',
     'axiom-slo-baseline-evidence-${{ github.sha }}',
     'axiom-credential-rotation-evidence-${{ github.sha }}',
     'axiom-data-key-rotation-evidence-${{ github.sha }}',
@@ -386,6 +402,7 @@ export function verifyProductionDeployment({
     dockerfile_sha256: sha256(dockerfile),
     dockerignore_sha256: sha256(dockerignore),
     compose_sha256: sha256(compose),
+    backup_retention_policy_sha256: digestObject(backupRetentionPolicy),
     documentation_sha256: sha256(productionDocs),
     workflow_sha256: sha256(workflow)
   };

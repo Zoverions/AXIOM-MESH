@@ -11,6 +11,8 @@
     "provision:production": "npm --prefix mesh run provision:production --",
     "rotate:production": "npm --prefix mesh run rotate:production --",
     "rotate:data-key": "npm --prefix mesh run rotate:data-key --",
+    "backup:maintain": "npm --prefix mesh run backup:maintain --",
+    "backup-lifecycle:drill": "npm --prefix mesh run backup-lifecycle:drill --",
     "credential-rotation:drill": "npm --prefix mesh run credential-rotation:drill --",
     "data-key-rotation:drill": "npm --prefix mesh run data-key-rotation:drill --",
     "recovery:drill": "npm --prefix mesh run recovery:drill --",
