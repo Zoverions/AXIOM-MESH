@@ -9,8 +9,9 @@ bounded runtime, and emits portable cryptographically linked evidence.
 
 **Current status:** version 0.11 clean-room production candidate. The kernel is
 not production-promoted and no live deployment is claimed. The previous
-multi-language implementation and iterative design corpus remain as historical
-input, but they are not the supported runtime or deployment/audit evidence.
+multi-language implementation is retained on the explicitly deprecated legacy
+branch. Its iterative design corpus remains as historical input, but neither
+is the supported runtime or deployment/audit evidence.
 
 ## Supported runtime
 

@@ -65,9 +65,11 @@ See:
 The former GitHub `Main` line is preserved as
 `deprecated/legacy-main-pre-clean-room`. Credentials found anywhere in that
 history are permanently untrusted. Lowercase `main` is now the GitHub default
-and the only supported development branch. The 0.11 release package and
-original rebuilt checkpoints remain provenance artifacts, not alternate
-production branches.
+and the only supported development branch. Unsupported legacy runtime trees
+and their dependency manifests were removed from the supported tip; they
+remain recoverable from Git history and the deprecated branch. The 0.11
+release package and original rebuilt checkpoints remain provenance artifacts,
+not alternate production branches.
 
 ## What is not claimed
 

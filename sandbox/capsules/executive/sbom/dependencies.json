@@ -1,8 +1,0 @@
-{
-  "spdxVersion": "SPDX-2.3",
-  "dataLicense": "CC0-1.0",
-  "SPDXID": "SPDXRef-DOCUMENT",
-  "name": "executive-capsule-sbom",
-  "documentNamespace": "http://spdx.org/spdxdocs/executive-capsule-sbom-1.0.0",
-  "packages": []
-}

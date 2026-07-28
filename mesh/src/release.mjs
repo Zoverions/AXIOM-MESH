@@ -15,8 +15,35 @@ import {
 import { CANONICAL_DOCUMENTS, verifyCanonicalDocumentation } from './check-docs.mjs';
 
 const REPOSITORY_ROOT = dirname(MESH_ROOT);
+const SUPPORTED_DEPENDENCY_MANIFESTS = new Set([
+  'package.json',
+  'package-lock.json',
+  'mesh/package.json',
+  'mesh/package-lock.json'
+]);
+const UNSUPPORTED_RUNTIME_PREFIXES = [
+  'certs/',
+  'cli/',
+  'config/',
+  'evidence/',
+  'gateway/',
+  'grid/',
+  'hypervisor/',
+  'kernel/',
+  'live-installer/',
+  'sandbox/',
+  'schemas/',
+  'scripts/',
+  'services/',
+  'shared/',
+  'skills/',
+  'tests/',
+  'website/'
+];
 
 export async function verifyReleaseReadiness() {
+  const trackedPaths = git(['ls-files']).split(/\r?\n/).filter(Boolean);
+  const sourceBoundary = validateSupportedSourceBoundary(trackedPaths);
   const paths = {
     registry: join(MESH_ROOT, 'config', 'capabilities.json'),
     policy: join(MESH_ROOT, 'config', 'policy.json'),
@@ -213,6 +240,7 @@ export async function verifyReleaseReadiness() {
       command: 'npm run check',
       required_before_evidence_write: true
     },
+    source_boundary: sourceBoundary,
     documentation,
     registry: {
       digest: registryResult.digest,
@@ -237,6 +265,7 @@ export async function verifyReleaseReadiness() {
     registry: registryResult,
     deployment,
     documentation,
+    source_boundary: sourceBoundary,
     migrations: migrationEvidence.length,
     inputs: inputs.length,
     sbom,
@@ -404,6 +433,39 @@ function assertUnique(values, label) {
     throw new ValidationError(`${label} contain an invalid value`);
   }
   if (new Set(values).size !== values.length) throw new ValidationError(`${label} contain duplicates`);
+}
+
+export function validateSupportedSourceBoundary(trackedPaths) {
+  if (!Array.isArray(trackedPaths) || trackedPaths.some(path => typeof path !== 'string')) {
+    throw new ValidationError('Tracked source paths must be an array of strings');
+  }
+  const unsupported = trackedPaths.filter(path => (
+    UNSUPPORTED_RUNTIME_PREFIXES.some(prefix => path.startsWith(prefix))
+    || (isDependencyManifest(path) && !SUPPORTED_DEPENDENCY_MANIFESTS.has(path))
+  ));
+  if (unsupported.length) {
+    throw new ValidationError(
+      `Unsupported legacy runtime or dependency paths are tracked: ${unsupported.slice(0, 10).join(', ')}`
+    );
+  }
+  return {
+    valid: true,
+    tracked_paths: trackedPaths.length,
+    dependency_manifests: [...SUPPORTED_DEPENDENCY_MANIFESTS].sort()
+  };
+}
+
+function isDependencyManifest(path) {
+  const name = path.split('/').at(-1);
+  return (
+    name === 'package.json'
+    || name === 'package-lock.json'
+    || name === 'go.mod'
+    || name === 'go.sum'
+    || name === 'Cargo.toml'
+    || name === 'Cargo.lock'
+    || /^requirements(?:[-_.].*)?\.txt$/i.test(name)
+  );
 }
 
 async function sourceInputs(entries) {

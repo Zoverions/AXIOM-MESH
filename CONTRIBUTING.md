@@ -1,36 +1,58 @@
 # Contributing to AXIOM-MESH
 
-First off, thank you for considering contributing to AXIOM-MESH! It's people like you that make AXIOM-MESH such a great tool.
+AXIOM-MESH accepts changes to the supported clean-room Node.js kernel in
+`mesh/`, its canonical documentation, and its production/release controls.
+The former multi-language runtime is retained only on the deprecated Git
+branch and is not a target for new pull requests.
 
-## Code of Conduct
+## Development requirements
 
-By participating in this project, you agree to abide by our Code of Conduct. We expect all contributors to maintain a welcoming and inclusive environment.
+- Node.js `>=24.14.0 <25`; CI and the container pin 24.18.0.
+- npm for lockfile verification and the repository command surface.
+- Docker with Compose only when changing the container package.
 
-## Getting Started
+Install from the committed dependency-free locks:
 
-1.  **Fork the repository** on GitHub.
-2.  **Clone your fork** locally: `git clone https://github.com/your-username/AXIOM-MESH.git`
-3.  **Create a new branch** for your feature or bug fix: `git checkout -b feature/your-feature-name`
-4.  **Install dependencies**:
-    *   For the Hypervisor (Python), run `cd hypervisor && pip install uv && uv pip install -r requirements.txt --system`.
-    *   For Gateway/Sandbox (TypeScript), run `npm install` in the respective directories.
-    *   For Grid (Go), ensure Go is installed and run `go build ./...`.
-    *   For Contracts (Solidity), run `cd grid/contracts && npm install && npx hardhat compile`.
+```bash
+npm ci --ignore-scripts
+npm --prefix mesh ci --ignore-scripts
+```
 
-## Development Setup
+Do not add a runtime dependency without a threat, licensing, maintenance,
+lockfile, and removal-path review.
 
-We have four core pillars: Gateway, Hypervisor, Sandbox, and Grid. Refer to `docs/HOWTO/run-local-stack.md` to set up and run the full stack locally.
+## Required checks
 
-## Pull Request Process
+Before opening a pull request:
 
-1.  **Update documentation**: Ensure any changes to APIs, contracts, or interfaces are reflected in the relevant documentation under `docs/`.
-2.  **Add tests**: Write tests for your changes. Ensure they pass locally before submitting.
-3.  **Update `MASTER-TODO.md`**: If your PR relates to an active task in `docs/MASTER-TODO.md`, update the list.
-4.  **Submit your PR**: Open a Pull Request from your branch to the main AXIOM-MESH repository.
-5.  **Code Review**: A maintainer will review your PR. You may need to make changes based on their feedback.
+```bash
+npm run check
+npm run release:verify
+```
 
-## Reporting Bugs
+Container-impacting changes must also build the digest-pinned image and pass
+the composed readiness and authenticated operations drill in the `Clean
+Kernel` workflow.
 
-If you find a bug, please create an issue on GitHub with a clear description, steps to reproduce, and any relevant logs or error messages.
+## Change requirements
 
-Thank you for contributing!
+1. Keep privileged behavior fail-closed and add negative-path tests.
+2. Update `mesh/config/capabilities.json` when runnable claims change.
+3. Regenerate `docs/rebuild/STATUS.md` and governing claim markers with
+   `npm --prefix mesh run status:generate`.
+4. Update the affected canonical document, operator runbook, and
+   `docs/MASTER-TODO.md`.
+5. Never commit private keys, tokens, data-protection keys, production data, or
+   evidence containing secret values.
+6. Target lowercase `main`; do not target
+   `deprecated/legacy-main-pre-clean-room`.
+
+## Pull requests
+
+Keep changes narrowly scoped, describe the security and rollback impact, link
+the requirement or roadmap item, and attach reproducible verification
+evidence. A capability is not promoted merely because code exists.
+
+Report security issues through the private process in `SECURITY.md`. Use public
+issues for non-sensitive defects with reproduction steps and expected
+behavior.

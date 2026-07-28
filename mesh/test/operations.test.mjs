@@ -16,7 +16,10 @@ import {
 } from '../src/lib/observability.mjs';
 import { loadDataProtector } from '../src/lib/protector.mjs';
 import { provisionProduction } from '../src/provision-production.mjs';
-import { verifyProductionDeployment } from '../src/release.mjs';
+import {
+  validateSupportedSourceBoundary,
+  verifyProductionDeployment
+} from '../src/release.mjs';
 import { runProductionSupervisor } from '../src/supervisor.mjs';
 
 test('operational telemetry is bounded, alertable, and OpenMetrics compatible', () => {
@@ -200,6 +203,26 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
     workflow,
     repositoryIgnore
   }), /read_only/);
+});
+
+test('release source boundary rejects legacy runtimes and dependency manifests', () => {
+  const valid = validateSupportedSourceBoundary([
+    'README.md',
+    'package.json',
+    'package-lock.json',
+    'mesh/package.json',
+    'mesh/package-lock.json',
+    'mesh/src/release.mjs'
+  ]);
+  assert.equal(valid.valid, true);
+  assert.throws(
+    () => validateSupportedSourceBoundary(['mesh/package.json', 'gateway/package-lock.json']),
+    /Unsupported legacy runtime or dependency paths/
+  );
+  assert.throws(
+    () => validateSupportedSourceBoundary(['mesh/package.json', 'docs/historical/requirements.txt']),
+    /Unsupported legacy runtime or dependency paths/
+  );
 });
 
 test('production supervisor rejects unsafe mode and terminates partial startup', async () => {

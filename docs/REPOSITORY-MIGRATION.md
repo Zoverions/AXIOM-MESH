@@ -39,6 +39,9 @@ without making deprecated parents ancestors of the new default branch.
   with both `verify` and `container` successful.
 - The 35 open pull requests that targeted former `Main` were retargeted by
   GitHub to the deprecated branch; none were merged during cutover.
+- Unsupported legacy runtime trees and dependency manifests were removed from
+  the supported tip after cutover. Their source remains recoverable from the
+  clean baseline history and deprecated branch.
 - Clean public root `4082d9349a949879e75fe6b0763e8408c5cfec77`
   has no parent.
 
