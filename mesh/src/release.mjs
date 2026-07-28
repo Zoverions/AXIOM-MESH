@@ -7,7 +7,12 @@ import { MESH_ROOT } from './lib/config.mjs';
 import { validateCapabilityRegistry } from './check-registry.mjs';
 import { MIGRATIONS, migrationChecksum } from './grid/migrations.mjs';
 import { validatePolicy } from './lib/policy.mjs';
-import { renderCapabilityStatus, verifyRegistryMarkers } from './status.mjs';
+import {
+  normalizeLineEndings,
+  renderCapabilityStatus,
+  verifyRegistryMarkers
+} from './status.mjs';
+import { CANONICAL_DOCUMENTS, verifyCanonicalDocumentation } from './check-docs.mjs';
 
 const REPOSITORY_ROOT = dirname(MESH_ROOT);
 
@@ -84,6 +89,7 @@ export async function verifyReleaseReadiness() {
     executorSource: await readFile(join(MESH_ROOT, 'src', 'sandbox', 'executor.mjs'), 'utf8'),
     operatorDocs: await readFile(join(MESH_ROOT, 'README.md'), 'utf8')
   });
+  const documentation = await verifyCanonicalDocumentation(REPOSITORY_ROOT);
   const dependencies = Object.keys(lock.packages ?? {}).filter(key => key !== '');
   if (dependencies.length) {
     throw new ValidationError(`Kernel runtime lock contains unexpected packages: ${dependencies.join(', ')}`);
@@ -94,7 +100,7 @@ export async function verifyReleaseReadiness() {
       `Repository command-surface lock contains unexpected packages: ${rootDependencies.join(', ')}`
     );
   }
-  if (status !== renderCapabilityStatus(registry)) {
+  if (normalizeLineEndings(status) !== normalizeLineEndings(renderCapabilityStatus(registry))) {
     throw new ValidationError('Generated capability status is stale');
   }
   await verifyRegistryMarkers(REPOSITORY_ROOT, registry);
@@ -151,7 +157,8 @@ export async function verifyReleaseReadiness() {
     paths.compose,
     paths.productionDocs,
     paths.workflow,
-    paths.repositoryIgnore
+    paths.repositoryIgnore,
+    ...CANONICAL_DOCUMENTS.map(path => join(REPOSITORY_ROOT, path))
   ]);
   const commit = git(['rev-parse', 'HEAD']);
   const dirty = git(['status', '--porcelain']).length > 0;
@@ -206,6 +213,7 @@ export async function verifyReleaseReadiness() {
       command: 'npm run check',
       required_before_evidence_write: true
     },
+    documentation,
     registry: {
       digest: registryResult.digest,
       verified_at: registry.verified_at,
@@ -228,6 +236,7 @@ export async function verifyReleaseReadiness() {
     dirty,
     registry: registryResult,
     deployment,
+    documentation,
     migrations: migrationEvidence.length,
     inputs: inputs.length,
     sbom,
@@ -314,6 +323,7 @@ export function verifyProductionDeployment({
     }
   }
   for (const required of [
+    'branches: ["main"]',
     'node-version: "24.18.0"',
     'npm ci --ignore-scripts',
     `docker build --pull=false --tag axiom-mesh-kernel:${packageJson.version} .`,

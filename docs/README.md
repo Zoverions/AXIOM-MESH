@@ -1,148 +1,79 @@
-# AXIOM-MESH Documentation Hub (Canonical Index)
+# AXIOM-MESH Documentation
 
-<img src="../logo.png" alt="Axiom Mesh Logo" width="150" align="right">
+**Status:** canonical index
 
-**Status Date:** 2026-04-08  
-**Reality Statement:** AXIOM-MESH is currently in repository/staging hardening and is not live on testnet/mainnet.
+**Updated:** 2026-07-28
 
-This index consolidates documentation ownership, reduces overlap, and defines which documents are canonical for each domain.
+**Supported runtime:** [`mesh/`](../mesh/README.md)
 
----
+AXIOM-MESH contains a clean-room kernel and a much larger historical design
+corpus. This index separates documents that govern the supported runtime from
+documents retained as research, traceability, or migration input.
 
-## Pillar Model (Canonical Clarification)
-- **Runtime Pillars (4):** Gateway, Hypervisor, Sandbox, Grid.
-- **Sovereignty Capability Pillars (8):** program-level autonomy/economic pillars listed in `docs/MASTER-INTEGRATION.md`.
+## Canonical documents
 
-Use runtime pillars for architecture/execution docs and 8-pillar framing for sovereignty roadmap and capability communications.
+When documents disagree, use this order:
 
----
+1. [`mesh/config/capabilities.json`](../mesh/config/capabilities.json) for
+   runnable capability claims.
+2. [`docs/rebuild/REQUIREMENTS.md`](rebuild/REQUIREMENTS.md) for normative
+   requirements and security boundaries.
+3. [`docs/rebuild/PRODUCT-DEFINITION.md`](rebuild/PRODUCT-DEFINITION.md) for
+   supported product scope.
+4. [`docs/PROJECT-STATUS-2026.md`](PROJECT-STATUS-2026.md) for the current
+   release and deployment state.
+5. [`docs/MASTER-TODO.md`](MASTER-TODO.md) for active execution priority.
+6. [`docs/ROADMAP.md`](ROADMAP.md) for phased outcomes and promotion gates.
 
-## 🚀 New Users Start Here
+The main technical and operational references are:
 
-### Quick Installation
-- **📖 Comprehensive Installation Guide:** [`docs/INSTALLATION-GUIDE.md`](INSTALLATION-GUIDE.md) — Step-by-step installation with auto-detected platform support
-- **💿 Live USB/ISO Builder:** [`live-installer/README.md`](../live-installer/README.md) — Create bootable AXIOM-MESH USB drives
-- **🎨 Custom Node GUIs:** Each node type gets a dedicated dashboard at `http://localhost:8080`
+- [Technical white paper](whitepapers_and_research/WHITEPAPER.md)
+- [Production-grade definition](PRODUCTION-GRADE.md)
+- [Production readiness tracker](PRODUCTION-READINESS-TRACKER.md)
+- [Repository migration record](REPOSITORY-MIGRATION.md)
+- [0.11 release notes](releases/0.11.0.md)
+- [Runtime architecture](architecture/ARCHITECTURE.md)
+- [Production deployment runbook](../mesh/PRODUCTION.md)
+- [Rollback runbook](rebuild/ROLLBACK.md)
+- [Generated capability status](rebuild/STATUS.md)
+- [Security policy](../SECURITY.md)
 
-### One-Command Install
-```bash
-# Windows
-.\install.bat
+## Documentation classes
 
-# macOS/Linux
-./install.sh
-```
+| Class | Meaning | May support a release claim? |
+|---|---|---|
+| Canonical | Bound to current code, registry, and release gates | Yes |
+| Operational | Executable runbook for the supported kernel | Yes, after verification |
+| Specification | Required behavior not necessarily implemented | No |
+| Research | Design exploration or hypothesis | No |
+| Historical | Superseded implementation or narrative | No |
 
-The installer automatically detects your platform and installs all dependencies (Docker, Node.js, Python packages, etc.).
+Files outside the canonical list must not override current code, the capability
+registry, or generated release evidence.
 
----
+## Contributor path
 
-## 1) Canonical Documents by Domain
+For a production-impacting change:
 
-## Foundations
-- **Architecture:** `docs/architecture/ARCHITECTURE.md` (includes trust-boundary and mTLS Mermaid views)
-- **Technical Specification:** `docs/TECHNICAL-SPECIFICATION.md`
-- **Grid consensus baseline:** `docs/GRID-CONSENSUS-SPEC.md`
-- **Interface Contracts:** `docs/architecture/INTERFACE-CONTROL-DOCUMENT.md`
-- **Foundations Summary:** `docs/architecture/FOUNDATIONS.md`
-- **Causal Proof-of-Reasoning blueprint:** `docs/whitepapers_and_research/CAUSAL-PROOF-OF-REASONING.md`
-- **RADM (Requirements, Architecture, Design, Methodology):** `docs/whitepapers_and_research/RADM.md`
+1. update code and negative-path tests;
+2. update the capability registry if status or evidence changes;
+3. update the affected canonical document and operator runbook;
+4. run the kernel check and release verifier;
+5. attach CI and runtime evidence before promoting a capability.
 
-## Security & Reliability
-- **Security posture and controls:** `docs/security/SECURITY-HARDENING.md`
-- **Operational playbooks:** `docs/operations/OPERATIONS.md`
-- **Testing and quality gates:** `docs/developer_guides/TEST-STRATEGY.md`
-- **Cryptography posture matrix:** `docs/security/CRYPTOGRAPHY-POSTURE-MATRIX.md`
-- **Threat models:** `docs/security/COORDINATED-BEHAVIOR-THREAT-MODEL.md`
+The documentation checker validates required canonical documents, minimum
+content, security-policy parity, and local links. A link or claim that cannot
+be kept current should be removed from canonical documents or moved into a
+clearly labeled research/historical file.
 
-## Governance & Economics
-- **Governance model:** `docs/governance/GOVERNANCE.md`
-- **Control map:** `docs/governance/GOVERNANCE-CONTROL-MAP.md`
-- **Network service charter (public one-pager):** `docs/governance/NETWORK-SERVICE-CHARTER-ONE-PAGER-2026-04-08.md`
-- **Network service constitution (draft):** `docs/governance/NETWORK-SERVICE-CONSTITUTION-v1-DRAFT-2026-04-08.md`
-- **Tokenomics (canonical):** `docs/tokenomics/TOKENOMICS.md`
-- **Treasury split details:** `docs/tokenomics/TREASURY-SPLIT.md`
-- **ERC20 compatibility:** `docs/tokenomics/ERC20-COMPATIBILITY.md`
-- **Financial controls evidence:** `docs/tokenomics/FINANCIAL-CONTROLS-EVIDENCE.md`
+## Historical documents
 
-## Execution Program
-- **Master to-do queue (canonical):** `docs/MASTER-TODO.md`
-- **Canonical roadmap:** `docs/ROADMAP.md`
-- **Execution plan (supporting reference):** `docs/PARALLEL-DELIVERY-PLAN-2026.md`
-- **Task-level backlog (supporting reference):** `docs/PRODUCTION-EXECUTION-BACKLOG.md`
-- **Live readiness board (supporting reference):** `docs/PRODUCTION-READINESS-TRACKER.md`
-- **Current status snapshot:** `docs/PROJECT-STATUS-2026.md`
-- **Strategic assessment response:** `docs/STRATEGIC-AUDIT-RESPONSE.md`
+The legacy Gateway, Hypervisor, Sandbox, Grid, contracts, installers,
+dashboards, and multi-domain plans remain useful for requirement extraction.
+They are not supported deployment surfaces. In particular, historical
+documents may describe tokens, bridges, BFT consensus, zkML, autonomous
+research, universal installers, or domain systems that the current capability
+registry marks disabled, specified, experimental, or adapter-required.
 
-## Deployment & Operations
-- **Deployment cost analysis:** `docs/tokenomics/DEPLOYMENT_COST_ANALYSIS.md`
-- **Hardware profile matrix:** `docs/operations/HARDWARE-PROFILE-MATRIX.md`
-- **Resource balancer policy:** `docs/operations/RESOURCE-BALANCER-POLICY.md`
-- **Network efficiency strategy backlog:** `docs/subtasks/NETWORK-EFFICIENCY-NOVEL-STRATEGIES.md`
-- **Mainnet contract addresses:** `docs/MAINNET_ADDRESSES.md`
-- **Skill capsule specification:** `docs/SKILL-CAPSULE-SPEC.md`
-- **SSI technical implementation:** `docs/whitepapers_and_research/SSI-TECHNICAL-IMPLEMENTATION.md`
-
-## Audit Reports
-See `docs/audits/` directory for comprehensive security audits:
-- **External audit report:** `docs/audits/AUDIT_REPORT_EXTERNAL.md`
-- **Smart contract audit:** `docs/audits/smart-contract-audit-report.md`
-- **Transformer Foundation review:** `docs/audits/transformer-foundation-security-review.md`
-- **State channel deep dive:** `docs/audits/stigmergic-state-channel-v4-deep-dive.md`
-- **Remediation plan:** `docs/audits/remediation-plan.md`
-
-## Assessments & Integration Plans
-See `docs/assessments/` for non-audit strategic assessments and integration planning:
-- **Societal OS / everything-app audit playbook:** `docs/assessments/SOCIETAL-OS-EVERYTHING-APP-AUDIT-PLAYBOOK-2026-04-08.md`
-- **Ontario education capsule integration plan:** `docs/assessments/ONTARIO_EDUCATION_CAPSULE_INTEGRATION_PLAN.md`
-- **Repository automation + vetting + dashboard plan:** `docs/assessments/REPOSITORY_AUTOMATION_VETTING_AND_DASHBOARD_PLAN.md`
-- **Audit controls manifest (M23.5):** `schemas/audit-controls.json` — Machine-readable control registry for operationalizing the Societal OS Audit Playbook
-- **Machine-readable network service policy schema:** `schemas/network_service_policy.v1.json`
-
----
-
-## 2) HOWTO Coverage
-
-See `docs/HOWTO/README.md` for the full operational runbook index.
-
-**New Users Start Here:** [`docs/INSTALLATION-GUIDE.md`](INSTALLATION-GUIDE.md) — comprehensive step-by-step installation instructions.
-
-Minimum operational HOWTO set now includes:
-- Local stack bring-up and health checks
-- Intent submission and tracing
-- Local contract compile/test/deploy loop
-- Swarm join and zkML inference
-- 2FA recovery, founder claims, policy update flow
-- Release-gate evidence assembly and validation
-- Secret management and rotation
-- Emergency bridge procedures
-
----
-
-## 3) Overlap Resolution Rules
-
-1. If multiple docs discuss the same topic, prefer the canonical document listed above.
-2. Strategy docs may coexist, but active execution is governed by `docs/MASTER-TODO.md` and supported by:
-   - `docs/PARALLEL-DELIVERY-PLAN-2026.md`
-   - `docs/PRODUCTION-EXECUTION-BACKLOG.md`
-   - `docs/PRODUCTION-READINESS-TRACKER.md`
-3. Launch messaging docs are draft-only until official testnet/mainnet deployment.
-4. Any new document must declare its domain and link back to this index.
-
----
-
-## 4) Documentation Quality Standard
-
-Every production-impacting PR must update:
-- affected technical/interface docs,
-- relevant HOWTO/runbook,
-- testing/validation evidence references.
-
-A documentation change is incomplete if the corresponding HOWTO steps are not executable.
-
-
-## 5) Continuous Documentation Assurance
-- **Documentation coverage assessment (2026-04-07):** `docs/assessments/DOCS-COVERAGE-ASSESSMENT-2026-04-07.md`
-- **MASTER-TODO + docs integrity audit (2026-04-08):** `docs/assessments/MASTER-TODO-DOCS-INTEGRITY-AUDIT-2026-04-08.md`
-- Every operator-facing feature must have a linked HOWTO from `docs/HOWTO/index.md`.
-- Execution status remains canonical in `docs/MASTER-TODO.md` with pending tasks listed first.
+Historical Git ancestry may contain removed credentials. Any credential that
+ever appeared there is revoked by policy and must never be reused.

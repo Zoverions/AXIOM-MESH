@@ -7,10 +7,10 @@ AXIOM-MESH is a local-first capability network: it turns a human or agent
 intent into a policy-authorized plan, executes each approved effect inside a
 bounded runtime, and emits portable cryptographically linked evidence.
 
-**Current status:** pre-alpha clean-room kernel. The previous multi-language
-implementation and the full iterative design corpus remain in this repository
-as historical input, but they are not the supported runtime and must not be
-interpreted as deployment or audit evidence.
+**Current status:** version 0.11 clean-room production candidate. The kernel is
+not production-promoted and no live deployment is claimed. The previous
+multi-language implementation and iterative design corpus remain as historical
+input, but they are not the supported runtime or deployment/audit evidence.
 
 ## Supported runtime
 
@@ -59,6 +59,23 @@ Run all clean-kernel checks:
 npm run check
 npm run release:verify
 ```
+
+## Canonical documentation
+
+- [Technical white paper](docs/whitepapers_and_research/WHITEPAPER.md)
+- [Current project status](docs/PROJECT-STATUS-2026.md)
+- [Production-grade definition](docs/PRODUCTION-GRADE.md)
+- [Production readiness tracker](docs/PRODUCTION-READINESS-TRACKER.md)
+- [Active execution queue](docs/MASTER-TODO.md)
+- [Phased roadmap](docs/ROADMAP.md)
+- [Documentation authority and index](docs/README.md)
+- [Security policy](SECURITY.md)
+
+When documents conflict, the executable
+[`mesh/config/capabilities.json`](mesh/config/capabilities.json) registry and
+the governing rebuild requirements control. Historical documents are research
+or traceability inputs unless a current capability and its evidence say
+otherwise.
 
 The candidate production package is
 [`mesh/compose.production.yml`](mesh/compose.production.yml), with its

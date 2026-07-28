@@ -4,6 +4,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import net from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
 import {
@@ -62,7 +63,7 @@ test('canonical JSON is stable and rejects non-finite values', () => {
 
 test('capability registry covers every product family and gates runnable claims', async () => {
   const registry = JSON.parse(await readFile(join(
-    new URL('../config', import.meta.url).pathname,
+    fileURLToPath(new URL('../config', import.meta.url)),
     'capabilities.json'
   ), 'utf8'));
   const result = validateCapabilityRegistry(registry);
@@ -620,7 +621,6 @@ test('encrypted Grid backups verify, exclude live restore, preserve rollback, an
 
 test('full four-service path enforces auth, idempotency, consent, export, and audit', async t => {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-e2e-'));
-  t.after(() => rm(dataDir, { recursive: true, force: true }));
   const basePort = await findPortBlock();
   const operatorToken = `operator-${'o'.repeat(40)}`;
   const approverToken = `approver-${'a'.repeat(40)}`;
@@ -653,7 +653,13 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
     }
   };
   let stack = await startDevelopmentStack(overrides);
-  t.after(() => stack.stop());
+  t.after(async () => {
+    try {
+      await stack.stop();
+    } finally {
+      await rm(dataDir, { recursive: true, force: true });
+    }
+  });
   const gateway = `http://127.0.0.1:${basePort}`;
   const token = operatorToken;
 
@@ -1834,7 +1840,9 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
   });
   const invalidHeaders = {
     ...signedHeaders,
-    'x-axiom-signature': `A${signedHeaders['x-axiom-signature'].slice(1)}`
+    'x-axiom-signature': `${
+      signedHeaders['x-axiom-signature'][0] === 'A' ? 'B' : 'A'
+    }${signedHeaders['x-axiom-signature'].slice(1)}`
   };
   const invalidSignature = await fetch(gridUrl, { headers: invalidHeaders });
   assert.equal(invalidSignature.status, 401);

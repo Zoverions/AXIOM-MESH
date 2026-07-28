@@ -1,124 +1,190 @@
-# AXIOM-MESH Roadmap (Canonical)
+# AXIOM-MESH Roadmap
 
-**Document role:** Canonical strategic roadmap.
-**Last updated:** 2026-03-30.
-**Scope:** Strategic phases and milestone outcomes. For day-to-day task execution, use `docs/MASTER-TODO.md`.
+**Status:** canonical strategic roadmap
 
----
+**Updated:** 2026-07-28
 
-## 1) Roadmap Usage Rules
+**Planning horizon:** clean-room kernel 0.11 through evidence-gated 1.0
 
-1. This file defines **strategic direction and milestone outcomes**.
-2. `docs/MASTER-TODO.md` defines **active executable tasks**.
-3. If conflicts exist, execute according to `docs/MASTER-TODO.md` and update this roadmap on next planning pass.
+This roadmap advances only the supported kernel. Historical token, bridge,
+multi-chain, installer, domain, and autonomous-agent plans are research input,
+not inherited commitments.
 
----
+## Promotion rules
 
-## 2) Strategic Phases
+Roadmap phases are evidence gates, not date promises. A phase advances when:
 
-### Phase 1: Deep Hardening (COMPLETE — April 10, 2026)
-- [x] Genesis Decay Governance v2 deployed (exponential thermodynamic decay)
-- [x] Sovereign Execution Queue live on-chain (ProposalRegistry)
-- [x] MASTER-TODO.md and Founder Multi-Sig fully abolished
-- [x] Network now governed by math and thermodynamics from Genesis block 0
-→ Constitutional maturation achieved. The Mesh belongs to the Mesh.
+- acceptance criteria are executable and green;
+- capability claims match `mesh/config/capabilities.json`;
+- security and recovery negative paths pass;
+- operator documentation matches the deployed behavior;
+- release evidence is tied to a protected commit and immutable artifacts;
+- no critical/high finding lacks an approved, owned, expiring exception.
 
-## Phase B — Governance & Economic Integrity (In Progress)
+The active task order is maintained in
+[`docs/MASTER-TODO.md`](MASTER-TODO.md). The current production decision is in
+the [readiness tracker](PRODUCTION-READINESS-TRACKER.md).
 
-**Outcome target:** Controlled, auditable protocol/economic change management.
+## Baseline - clean-room kernel 0.11
 
-Focus areas:
-- Governance decision-right clarity and control map alignment.
-- Tokenomics parameter governance and evidence trails.
-- Upgrade-path safeguards (timelock/proposal controls).
+**State:** code complete; release publication and container CI evidence in
+progress.
 
-Exit signals:
-- Parameter provenance and approval trails complete.
-- Governance-critical changes demonstrably fail closed.
+Delivered:
 
-## Phase C — Multi-Chain and Settlement Resilience (In Progress)
+- four-process Gateway, Hypervisor, Sandbox, and Grid runtime;
+- authenticated intent-to-evidence pipeline;
+- deny-dominant policy and independent high-risk approval;
+- encrypted durable state and signed evidence;
+- consent, capsules, memory, local accounting, governance records, admitted
+  nodes, storage offers, export/import, backup/restore, and offline causal sync;
+- operator API and CLI;
+- bounded telemetry, readiness, operations report, and metrics;
+- production provisioning, supervisor, and hardened container candidate.
 
-**Outcome target:** Robust cross-chain behavior with explicit finality and redemption safety.
+Boundary: single-node local authority and transparency log. No federation, BFT,
+external settlement, arbitrary code, or regulated-domain claim.
 
-Focus areas:
-- Bridge-path invariants and finality-aware flows.
-- Deployment evidence quality and reproducibility.
-- Incident runbooks for chain/RPC degradation.
+## Phase 1 - repository and container evidence
 
-Exit signals:
-- Verified cross-chain runbooks and replay safety checks.
-- Repeatable deployment evidence artifacts for supported networks.
+**Target:** 0.11.x
 
-### XION Integration Steps (4-Week Plan)
+**Outcome:** the clean-room line becomes the protected GitHub default and the
+container candidate has reproducible public CI evidence.
 
-**Environment Setup (Week 1)**
-- Install xiond daemon + CosmWasm toolchain (official guide: docs.burnt.com/xion/developers/computation/local-development).
-- Run local XION testnet node.
+Milestones:
 
-**Port Core Contracts (Week 1–2)**
-- Translate GenesisDecayGovernance.sol + ProposalRegistry.sol into CosmWasm (Rust) smart contracts.
-- Use XION’s native ZK Module if you want to add zero-knowledge verification later.
+1. publish lowercase `main` from a clean root;
+2. archive and mark the former `Main` unsupported;
+3. enforce canonical documentation and supply-chain checks;
+4. protect `main` and require verification/container checks;
+5. build the digest-pinned image in GitHub Actions;
+6. pass the composed readiness and authenticated operations probe;
+7. publish the 0.11 release dossier, checksums, SBOM, and provenance;
+8. document revocation of all credentials exposed in deprecated history.
 
-**Hypervisor Adapter (Week 2–3)**
-- Add XION ChainAdapter in hypervisor/src/blockchain/ (similar to your existing PulseChain adapter).
-- Wire SovereignExecutionQueue to poll XION’s ProposalRegistry via xiond or the JS/Go SDK.
+Exit criteria:
 
-**Cross-Chain + Testnet Launch (Week 3–4)**
-- Leverage XION’s Package Forwarding Middleware + IBC for native PulseChain ↔ XION flows.
-- Deploy a parallel Grid instance on XION testnet.
-- Run end-to-end capability execution (Gateway → Hypervisor → XION Sandbox).
-- Publish evidence bundle + update CONSTITUTION.md.
+- protected `main` is the default;
+- kernel and container jobs pass at the release commit;
+- image and base digests are recorded;
+- no legacy credential is trusted;
+- rollback and compatibility notes are published.
 
-## Phase D — Sovereign Service/Guild Expansion (Design→Pilot)
+## Phase 2 - single-node production pilot
 
-**Outcome target:** Deployable governance guild and public-service capsule patterns.
+**Target:** 0.12
 
-Focus areas:
-- Template governance structures.
-- Consent/identity and policy encoding flows.
-- Pilot integrations with strict fail-closed controls.
+**Outcome:** one controlled deployment can be operated, measured, rotated,
+backed up, restored, and contained.
 
-Exit signals:
-- Pilot evidence bundles with revocation/recovery tests.
-- Governance transition rules documented and exercised.
+Milestones:
 
-## Phase E — Mainnet Promotion Readiness (Open)
+- external secret custody and coordinated service-key rotation;
+- scheduled encrypted snapshots and disposable-host restore verification;
+- external metrics collection and bounded alert delivery;
+- controlled load profile and initial latency/error/saturation baseline;
+- resource exhaustion and dependency-loss drills;
+- incident command, severity, containment, and communication playbooks;
+- independent security review of the supported kernel and container policy;
+- signed pilot deployment and release dossiers.
 
-**Outcome target:** Promotion gate based on measurable evidence, not narrative claims.
+Exit criteria:
 
-Focus areas:
-- Security and reliability gate closure.
-- Financial/economic reconciliation confidence.
-- Release governance sign-off.
-- Documentation parity and operator readiness.
+- measured pilot SLO, RPO, and RTO targets pass;
+- rotation and recovery drills pass twice;
+- critical/high findings are remediated or have approved expiring exceptions;
+- operators complete a tabletop incident exercise;
+- the capability registry is updated only for evidenced promotions.
 
-Exit signals:
-- Complete gate dossier and approval logs.
-- No unresolved blocker in canonical execution queue.
+## Phase 3 - multi-host foundations
 
----
+**Target:** 0.13
 
-## 3) Milestone Anchors
+**Outcome:** four services may be deployed separately over mutually
+authenticated transport without claiming distributed consensus.
 
-The following milestone anchors should remain synchronized with `docs/MASTER-TODO.md` lanes:
+Milestones:
 
-- **M6/M8:** Transformer foundation and cross-chain integration closure.
-- **M9:** Mainnet hardening and governance safeguards.
-- **M10:** Sovereign governance guild framework delivery.
-- **M11:** Causal proof-of-reasoning architecture maturity.
+- mTLS service identity and certificate lifecycle;
+- explicit network policy and per-service ingress/egress allowlists;
+- independent deployment units and failure isolation;
+- remote dependency readiness and bounded retry/idempotency contracts;
+- admitted-node discovery, renewal, expiry, and quarantine;
+- capability-aware scheduling with bounded resource claims;
+- online causal exchange with defined partition/rejoin behavior.
 
----
+Exit criteria:
 
-## 4) Non-Canonical Historical Plans
+- remote plaintext is impossible in production mode;
+- identity rotation does not create an authorization gap;
+- partition/rejoin and duplicate delivery do not corrupt state;
+- loss of one non-Grid service does not silently authorize effects;
+- multi-host runbooks and rollback are independently exercised.
 
-Historical plans are retained for traceability only and do not override this roadmap:
-- None. Legacy roadmap artifacts were consolidated into this file and `docs/MASTER-TODO.md`.
+## Phase 4 - controlled adapters and operator experience
 
----
+**Target:** 0.14
 
-## 5) Canonical Cross-References
+**Outcome:** selected external capabilities can be added without enlarging
+ambient authority.
 
-- Architecture: `docs/ARCHITECTURE.md`
-- Governance: `docs/GOVERNANCE.md`
-- Operations: `docs/OPERATIONS.md`
-- Execution queue: `docs/MASTER-TODO.md`
+Candidate work:
+
+- signed provider-capsule contract and conformance kit;
+- one least-privilege AI provider adapter;
+- one messaging adapter with consent, retention, and rate controls;
+- read-only operator dashboard using the authenticated operator API;
+- portable governance delegation;
+- content-transfer adapter for admitted storage offers;
+- named zk verifier adapter with circuit, key, input schema, and test vectors.
+
+Each adapter requires a threat model, credential boundary, egress policy,
+budget, cancellation, audit trail, failure mode, and uninstall/rollback path.
+
+## Phase 5 - distributed authority research
+
+**Target:** no version commitment
+
+**Outcome:** determine whether a secure distributed control plane is justified.
+
+Research areas:
+
+- Sybil-resistant membership;
+- replicated evidence and conflict semantics;
+- BFT safety/liveness under realistic network and operator assumptions;
+- governance capture and emergency authority;
+- privacy-preserving verification;
+- supply-chain transparency across independently operated nodes.
+
+No consensus or federation capability is promoted from research without a
+formal protocol specification, adversarial testing, independent review, and
+measured operations.
+
+## Phase 6 - external settlement and regulated domains
+
+**Target:** post-1.0 research, if approved
+
+**Outcome:** evaluate narrowly scoped adapters only after the kernel is a
+stable, independently reviewed platform.
+
+Tokens, bridges, liquidity, public chains, health, education, government,
+finance, workforce, and embodied systems each require separate legal,
+security, economic, identity, consent, dispute, and operational governance.
+Repository history describing those systems does not satisfy those gates.
+
+## 1.0 criteria
+
+Version 1.0 requires:
+
+- a stable supported scope and compatibility policy;
+- multiple successful production-pilot release cycles;
+- independent security review with no unresolved critical/high finding;
+- measured availability, capacity, recovery, and incident performance;
+- protected release governance and reproducible supply-chain evidence;
+- documented data lifecycle, credential lifecycle, and decommissioning;
+- clear non-claims for everything outside the supported boundary.
+
+Distributed consensus, public settlement, and regulated-domain operation are
+not mandatory for 1.0. A smaller system with defensible evidence is preferred
+to a larger system whose authority or claims cannot be verified.

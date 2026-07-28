@@ -1,238 +1,412 @@
-# AXIOM-MESH Whitepaper
+# AXIOM-MESH Technical White Paper
 
-## 1. Executive Summary
+**Version:** 0.11
 
-AXIOM-MESH is a multi-service agent runtime featuring a four-pillar structure for autonomous agent orchestration, secure sandbox execution, and deterministic governance. It combines cryptographic verification pathways (zkML + contract-level verification hooks) with explicit governance controls and deterministic accounting.
+**Updated:** 2026-07-28
 
-**Latest Features (March 2026):**
-- **Universal Auto-Installer:** Zero-friction installation across Windows/macOS/Linux/Android-Termux with automatic dependency detection
-- **Live USB/ISO Builder:** Bootable Ubuntu-based distribution that auto-installs on first boot
-- **Custom Node GUIs:** Dedicated dashboard skins for Education, Validator, Storage, and Compute nodes
-- **Sovereign Governance Guilds:** Hierarchical DAO structures with SSI-first identity
-- **Causal Proof-of-Reasoning (CPoR):** Verifiable causal reasoning lineage and coalition safety
-- **Transformer Foundation:** Multi-chain deployment with PulseChain integration and optimistic challenge windows
+**Status:** implementation-grounded description of the clean-room kernel
 
-## 2. Architecture: The Four Pillars
+**Deployment status:** production candidate; no live production claim
 
-AxiomMesh relies on a four-pillar runtime structure to ensure scalable, secure, and verifiable execution:
-- **Gateway (TypeScript):** Handles ingress APIs, channels, and dashboard delivery including custom node-type-specific GUIs
-- **Hypervisor (Python):** Manages orchestration, context engines, policy, routing logic, and CPoR attestation validation
-- **Sandbox (TypeScript + Docker):** Provides isolated code execution for true sandbox isolation and network safety
-- **Grid (Go):** Functions as the ledger and verification layer, ensuring governance-aligned coordination and causal DAG tracking
+## Abstract
 
-## 3. Enterprise-Grade zkML Infrastructure & Novel Innovations
+AXIOM-MESH is a local-first capability network for converting an authenticated
+human or agent intent into a policy-authorized plan, executing approved effects
+inside a bounded runtime, and recording portable cryptographic evidence.
 
-Every high-stakes inference in AXIOM-MESH is verifiable on-chain, ensuring trustless execution and privacy-first agent meshes.
+The kernel separates public ingress, policy and planning, execution, and
+durable evidence into four supervised services: Gateway, Hypervisor, Sandbox,
+and Grid. Its security model relies on explicit principals, signed
+audience-bound service requests, short-lived single-use execution grants,
+deny-dominant policy, deterministic built-in tools, authenticated encryption,
+and a signed hash-linked evidence log.
 
-**Key Innovations:**
-- **Hybrid Proving:** Utilizes EZKL, Halo2, and RISC Zero.
-- **On-chain Verification:** Handled via `ZKMLVerifier.sol`.
-- **Proof of Entropy Reduction (PoER):** Replaces pure Proof-of-Work with useful AI computation. Rewards are boosted for cryptographically proven reductions in uncertainty.
-- **Causal Proof-of-Reasoning (CPoR):** Extends verification to include causal reasoning lineage. It relies on the mathematical constraint where `DAG_Integrity = Hash(Parent_State || Action || Hash(zkML_Proof))`.
-- **Dual-Purpose Hardware Mode:** AXIOM-MESH supports a `validator` mode where nodes run a PulseChain validator alongside their Capsule node, co-funded 32,000,000 PLS from the platform treasury to maximize capital efficiency and decentralization.
-- **Grid Scope Firewall:** A strict topological invariant where the Grid (ledger) is mathematically incapable of deciding intent; it can only verify execution boundaries enforced by Capability Manifests.
+Version 0.11 implements a single-node authority and transparency system. It
+does not claim BFT consensus, arbitrary-code isolation, public settlement,
+external AI, regulatory compliance, or proof that a model's private reasoning
+is true. Capability status is machine-readable and evidence-gated.
 
-## 4. Tokenomics & Treasury Mechanics (Implemented vs Policy)
+## 1. Motivation
 
-The economic model is designed for long-term sustainability and deterministic accounting.
+Agent systems often combine model prompts, tools, credentials, storage, and
+external effects in one process. That design makes it difficult to answer:
 
-**Core Parameters:**
-- **Token Symbol:** AXM
-- **Target Total Supply:** 1,000,000,000 AXM (Fixed)
-- **Implemented in code (`AXM.sol`):**
-  - Founder allocation mint: **5%** (linear 4-year vesting via `TeamVesting.sol`)
-  - Network treasury mint: **10%** (linear 4-year vesting via `TeamVesting.sol`)
-  - Ecosystem reserve mint: **85%** (dynamically emitted based on network utilization)
-- **Fee Distribution (`UniversalDistributionPool.sol`):**
-  - Network Security Fund: **60%** of all execution fees
-  - Wealth Generation Pool: **40%** allocated to performing nodes and delegators
-- **Policy-governed (not fully operationally locked):**
-  - Treasury inflow-class routing details
-  - Release evidence packaging and control attestations
-  - Targeted fee burning mechanisms (subject to bicameral governance proposals)
+- who requested an effect;
+- which policy authorized it;
+- which exact plan and tool were approved;
+- whether authority was reused or broadened;
+- what durable state changed;
+- how an operator can verify, export, restore, or dispute the result.
 
-Token/economic flows are deterministic, traceable, and support full reconciliation between off-chain ledgers and on-chain state, covering protocol inflows, distribution outflows (payroll, incentives), staker reward flows, and cross-chain transfer-related fee flows.
+AXIOM-MESH treats those questions as the product boundary. Intelligence is not
+trusted merely because it produced plausible text. An effect is accepted only
+when explicit authority, validation, execution constraints, and evidence agree.
 
-**Deflationary Mechanics:**
-- Slashed bonds from misbehaving nodes are seized
-- Protocol reserves right to implement targeted fee burning via `ZoverionsDAO.sol` governance proposals
+The design favors a smaller verifiable kernel over an expansive collection of
+nominal integrations. Historical repository material remains useful for
+requirements and research, but does not become a supported capability without
+production-path evidence.
 
-## 5. Ecosystem, Integration & Strategic Differentiators
+## 2. Design principles
 
-AXIOM-MESH is deeply integrated with the broader ecosystem, ensuring robust interconnectivity and automation:
+### 2.1 Intent is data, not authority
 
-**PulseChain Integration:**
-- Core infrastructure leverages PulseChain (chain IDs 369, 943) via `PulseAdapter` and `ProveXVerifierWrapper` contracts
-- Uses PLS for execution gas, PulseX for native liquidity
-- Pump.tires integration for permissionless skill capsule token launches
-- ProveX for guarded P2P fiat-crypto settlements
+An intent expresses a requested outcome. It is validated and normalized, but
+does not itself grant permission to execute an effect.
 
-**Multi-Chain Bridge:**
-- Cross-chain bridge supporting Ethereum, Base, Arbitrum with oracle hooks
-- PulseChain-only final redemption path for bridged assets
-- 1-hour finality invariant with fail-closed mechanisms
-- Bridge-path rating/polling/quorum oracle system
+### 2.2 Planning and execution are separate
 
-**Agentic Repository Management:**
-- Repository managed by human and digital entities
-- Agents capable of approving/denying changes via bicameral governance
-- Automated CI/CD with Live ISO builds on every release
+Hypervisor constructs an explicit plan and issues narrowly bound authority.
+Sandbox executes only an approved deterministic tool under that authority.
+Grid records the result but does not decide what the requester wanted.
 
-**Skill Capsules:**
-- Physics research (gpd adapter with production-ready runtime)
-- Mathematical computation (SymPy integration)
-- Web search and information retrieval
-- Code analysis, debugging, and generation
-- Data analysis and visualization (pandas, sklearn, matplotlib)
-- Cryptographic operations and security proofs
-- Localized gamified education with psychology, NFT badges, and DAO capabilities
+### 2.3 Authority is explicit and expiring
 
-**Roadmap & Hardening:**
-- Transparent tracking in `docs/MASTER-TODO.md`
-- Central authority for roadmap execution, audit findings, and technical risk management
-- Clear visibility into project trajectory for all ecosystem participants
+Service requests and capability grants identify issuer, audience, principal,
+intent, plan, policy, tool, constraints, time bounds, and one-use identifiers.
+Ambient credentials and reusable broad authority are rejected.
 
-**Strategic Differentiators:**
-1. **Composability of Sovereign Guilds:** Unlike generic subnets, Sovereign Guilds inherit laws (policies) natively from parent DAOs.
-2. **Pull-Not-Push Privacy:** Governments and corporations do not broadcast state. End users query and provide ZK-proofs of eligibility, solving GDPR at the architecture level.
-3. **Truth-Weighted Quadratic Voting:** Defeats pure capital-based governance (whale dominance) by multiplying quadratic token weight by an on-chain oracle-verified Truth Score.
+### 2.4 Policy can only become stricter through composition
 
-## 6. Decentralized Storage as Core Network Infrastructure
+Global, owner, user, and request policy layers merge deny-dominantly. A lower
+layer cannot turn a denial into permission, reduce risk, remove required
+scopes, or reduce required confirmations.
 
-Storage is a first-class network primitive in AXIOM-MESH, not an accessory service:
+### 2.5 Evidence is part of execution
 
-- **On-chain storage commitments:** `ComputeBond.offerStorage(...)` records stake-backed storage offers and `getStorageOffer(...)` returns persisted offer state
-- **Decentralized data plane:** MeshStore/IPFS for CID-addressed persistence and recovery payload pinning
-- **Multi-provider continuity backups:** Supports MeshStore/IPFS, AWS S3 (presigned URLs), Google Drive, and OneDrive
-- **No placeholder storage returns:** All storage offer reads are persisted and queryable
+A successful effect is incomplete until Grid commits the state mutation and
+its evidence transactionally. Evidence includes cryptographic linkage to the
+previous record and is verified on startup and through operator checks.
 
-## 7. Custom Node-Type-Specific GUIs
+### 2.6 Claims follow executable evidence
 
-Each node type automatically receives a dedicated GUI skin served at `http://localhost:8080`:
+The [capability registry](../../mesh/config/capabilities.json) classifies each
+capability as implemented, experimental, specified, adapter-required, or
+disabled. Only `implemented` is a runnable claim.
 
-**Education Nodes:**
-- Interactive learning dashboard with student progress tracking
-- Regional curriculum alignment metrics
-- NFT badge display and gamification statistics
-- Psychology-driven engagement analytics
+## 3. System model
 
-**Validator Nodes:**
-- Real-time validation metrics and consensus participation
-- Slashing protection alerts
-- Validator performance and uptime statistics
-- Multi-chain validation status (PulseChain, Ethereum, Base, Arbitrum)
+### 3.1 Four services
 
-**Storage Nodes:**
-- Capacity monitoring and utilization graphs
-- Retrieval performance analytics
-- IPFS/MeshStore pinning status
-- Multi-provider backup health indicators
+| Service | Responsibility | Explicitly excluded authority |
+|---|---|---|
+| Gateway | Public authentication, request validation, abuse controls, idempotency, operator API | May not invent execution authority |
+| Hypervisor | Intent normalization, deny-dominant policy, plan construction, approval checks, grant issuance | May not execute arbitrary effects or mutate Grid directly without authorized flows |
+| Sandbox | Validate a grant and run a named deterministic built-in tool | No ambient network, shell, package, filesystem, or container authority |
+| Grid | Durable encrypted state, evidence, registries, consent, governance, accounting, portability, recovery | May not decide intent or silently authorize an effect |
 
-**Compute Nodes:**
-- GPU utilization graphs and workload queue
-- zkML proof generation status
-- Hardware temperature and power metrics
-- Proving task priority and estimated completion times
+The normal mutation path is:
 
-The GUI is automatically detected and served based on the node's configured role during installation.
+```text
+principal
+   |
+   v
+Gateway -> Hypervisor -> Sandbox -> Grid
+   |           |            |         |
+ auth      plan/policy     grant     state+evidence
+```
 
-## 8. Universal Installation System
+Each hop is independently authenticated. A service cannot substitute a valid
+signature for a different body, audience, time window, or nonce.
 
-**Zero-Friction Cross-Platform Installer:**
-- **Windows:** Auto-installs Chocolatey → Docker Desktop → Make → Node.js v20 LTS → Python dependencies
-- **macOS:** Auto-installs Homebrew → Docker Desktop → Make → Node.js v20 LTS → Python dependencies
-- **Linux:** Auto-installs Docker Engine → Make → Node.js via apt-get/dnf
-- **Android/Termux:** Minimal-edge mode with pkg package manager
+### 3.2 Trust boundary
 
-**Live USB/ISO Builder:**
-- Full Ubuntu 24.04 Desktop environment with pre-configured AXIOM-MESH
-- Auto-detection of existing installations on internal drives
-- Smart boot logic: runs automated installer only if no installation found
-- Build command: `cd live-installer && ./build-axiom-live.sh`
-- GitHub Actions workflow for automatic ISO builds on every release
+In the 0.11 production candidate, all four services are separate Node.js
+processes inside one container. Gateway binds to loopback on the host; the
+internal services bind only to container loopback. The interim topology avoids
+remote plaintext without claiming an mTLS adapter that does not yet exist.
 
-## 9. Sovereign Governance Guild Framework
+The operating system, container engine, host administrator, mounted secret
+paths, and data-protection key remain trusted components. The candidate is not
+a defense against a fully compromised host.
 
-**Hierarchical DAO Structure:**
-- Federal/Provincial/Municipal/Citizen guild templates
-- Canonical parent-child policy inheritance
-- SSI technical implementation with DID registry and consent receipts
-- Citizen vault interface with ZK selective disclosure
+## 4. Intent-to-evidence lifecycle
 
-**Governance Transition Mechanism:**
-- Phase transitions: Founder control → Founders Council → Subcommittees → Nation State Guilds
-- Implemented in `GovernanceTransition.sol` with comprehensive tests
+1. **Authenticate.** Gateway maps an API token to a principal and scopes.
+2. **Validate.** Request schema, size, action, and idempotency are checked.
+3. **Normalize.** Hypervisor produces the canonical intent representation.
+4. **Evaluate policy.** Deny-dominant layers determine whether planning may
+   continue and whether independent confirmation is required.
+5. **Build a plan.** The plan names a supported action, ordered steps,
+   constraints, dependencies, and public rationale without storing private
+   model reasoning.
+6. **Approve high risk.** A different authenticated principal provides the
+   required one-use approval.
+7. **Issue a grant.** Hypervisor signs a short-lived, single-use,
+   Sandbox-audience capability bound to principal, intent digest, plan digest,
+   policy digest, tool, and constraints.
+8. **Execute.** Sandbox verifies the grant and invokes only the named built-in
+   deterministic tool.
+9. **Commit.** Grid applies the authorized mutation and evidence in one
+   transaction.
+10. **Return and observe.** Gateway returns structured results while telemetry
+    records bounded status and error classes rather than sensitive values.
 
-**Specialized Governance Structures:**
-- **Defense Fund (DoD):** Defensive technologies allocation to neutralize global threats
-- **Scarcity-as-a-Service:** Opt-in extreme experience contracts with instant revocation
-- **Ontario Health Guild:** Pilot migration demo with testnet evidence and fail-closed mechanisms
-- **Ontario Education Capsule:** Regional education framework integrating with Ontario Health Guild for cross-domain governance, implementing EDI-compliant maturity assessments, NFT badge systems aligned with Ontario credit values, and parental oversight mechanisms for minor students. Features the **EducationTomeRegistry** smart contract for multi-agent interactions (childhood psychologist, guidance counselor, expert agents), tracking student sessions with trust scores and session outcomes, integrated with credential attestation systems.
+A failure at any step produces no success claim for later steps.
 
-## 10. Trust, Control, Governance, and Security Principles
+## 5. Identity, requests, and replay defense
 
-AXIOM-MESH adheres to strict principles to ensure the integrity of the network:
-- **Least Privilege:** Privileged actions are authenticated, authorized, and auditable
-- **Deterministic Interfaces:** Contracts, APIs, and schemas are strictly versioned
-- **Recovery-First Reliability:** Every stateful subsystem implements replay/recovery drills
-- **Evidence-Backed Promotion:** All release decisions require auditable gate evidence
-- **Multi-Sig Governance:** Repository changes require 2+ reviewer approvals
-- **Timelock Protection:** All smart contract upgrades governed by timelock + voting
+Service identities use Ed25519 keys. Production identities are provisioned
+outside the repository and stored in mounted secret paths. Trust records bind a
+service name to its public key.
 
-**Security Posture:**
-- Ingress hardening with Cloudflare WAF
-- Strict sandbox isolation with deny-profile verification
-- Inter-service authentication via mTLS/JWT
-- Immutable WORM audit trails for all state changes
-- Persistent nonce layers preventing replay attacks
-- Formal verification of EAP quarantine+antibody flow logic
-- Immunefi-style bug bounty program with tiered rewards
+Signed requests include:
 
-Governance utilizes layered artifacts, supporting explicit approval trails, emergency rollback mechanisms, and parameter change logging to ensure the network remains adaptable yet secure.
+- issuer and audience;
+- timestamp and validity window;
+- one-use nonce;
+- method and route context;
+- request-body digest.
 
-## 11. March 27, 2026 Implementation Addendum
+Verification rejects an unknown issuer, wrong audience, stale request, body
+change, signature failure, or nonce replay. Production startup refuses
+automatic identity generation and refuses remote plaintext internal URLs.
 
-The following hardening changes are now implemented in repository code:
+Credentials from deprecated repository history are permanently untrusted.
+Restoring an old key is a security incident, not a recovery procedure.
 
-**Installation & Deployment:**
-- Universal auto-installer with platform detection (Windows/macOS/Linux/Android)
-- Live USB/ISO builder with smart boot detection
-- Custom node-type-specific GUI system
-- GitHub Actions workflow for automated ISO builds
+## 6. Policy and approvals
 
-**Governance & Tokenomics:**
-- Bicameral governance with skill staking implemented in Grid
-- Tokenomics split lock: 5/10/85 mint allocation enforced in `AXM.sol`
-- Governance transition mechanism from Founder to Nation State Guilds
-- Defense Fund and Scarcity-as-a-Service contracts deployed
+Policy rules name the action decision, risk, required scopes, confirmations,
+and constraints. Composition applies the strictest result:
 
-**Security Hardening:**
-- mTLS certificates moved to secret management (env variable injection)
-- Persistent nonce manager preventing replay attacks
-- Timelock + governance voting for all UUPS proxy upgrades
-- Multi-sig repository protection with CODEOWNERS enforcement
-- WORM immutable audit trails for all logs and state changes
+- any denial wins;
+- the highest risk wins;
+- required scopes are accumulated;
+- required confirmations cannot decrease;
+- numerical and categorical constraints can only narrow authority.
 
-**Causal Proof-of-Reasoning:**
-- CPoR attestation schema frozen with CI validation
-- Grid causal DAG builder with bounded-depth controls
-- Hypervisor `/verify/reasoning` endpoint in dry-run mode
-- Attention-weighted consensus scoring integrated with slashing policy
-- EMERGENCE_ALERT event generation for coalition anomaly signatures
+High-risk effects that remain permitted require independent approval. Approval
+is bound to the specific intent/plan context, expires, and cannot be replayed
+for another request.
 
-**Multi-Chain Integration:**
-- Transformer Foundation contracts deployed on PulseChain testnet (mock evidence bundle generated)
-- Cross-chain bridge with oracle hooks for Ethereum/Base/Arbitrum
-- PulseChain-only final redemption path with 1-hour finality invariant
-- StigmergicStateChannel v4 with authorized challengers and dual-stake funding
+Local governance can activate authority-reducing policy overlays after voting,
+finalization, timelock, and independent approval. Rollback, emergency review,
+and appeal records are retained. Portable delegation remains outside the
+implemented boundary.
 
-**Audit Response:**
-- All High/Critical static analysis findings resolved
-- SlowAPI rate limiting on public routes
-- OpenZeppelin guards (ReentrancyGuard, Pausable) added to contracts
-- Inter-service authZ with mTLS/JWT implemented
-- Finality-aware chain replay safety verified
-- Chaos engineering baseline with RIKER hallucination probes
-- STRIDE threat model documented per component
+## 7. Execution boundary
 
-These implementation upgrades improve auditability and operational resilience, but AXIOM-MESH still does **not** claim full post-quantum, financial-grade finality at this time.
+The supported Sandbox is not a general-purpose code runner. It contains a
+small registry of deterministic built-in tools whose inputs and outputs are
+validated. A valid grant for one tool cannot authorize another.
+
+Historical Docker and capsule runtimes do not establish arbitrary-code
+security. A rootless OCI adapter remains adapter-required until digest
+allowlisting, deny-by-default egress, resource enforcement, cancellation,
+artifact handling, and escape testing are independently evidenced.
+
+This constrained boundary is intentional: deterministic useful behavior with
+defensible authority is preferred to broad execution with unverifiable
+isolation.
+
+## 8. Grid, evidence, and durability
+
+Grid owns the kernel database and signed evidence log. Durable payloads are
+authenticated-encrypted with context binding. A ciphertext copied into another
+storage context fails authentication.
+
+Each evidence record includes the previous record hash, forming a
+transactional SHA-256 linked sequence. Startup verifies continuity and fails
+closed on a mismatch. Schema migrations are contiguous and checksum-verified.
+
+Implemented Grid-owned families include:
+
+- principals and identity-related state;
+- consent receipts;
+- capsule manifests and revocation;
+- memory objects and edges;
+- governance proposals and policy activation records;
+- admitted nodes and storage offers;
+- balanced local accounting journals;
+- import/export records;
+- causal updates and conflict-resolution records;
+- recovery evidence.
+
+Grid is a single-node transparency log, not distributed consensus.
+
+## 9. Consent, memory, and accounting
+
+Consent receipts bind purpose, scope, subject, controller, expiry, and
+revocation. Memory objects are content-addressed, encrypted, owner-bound, and
+selectively disclosable only under compatible consent.
+
+Local accounting uses owner- and unit-bound accounts and transactional balanced
+double-entry journals with safe integer amounts. It does not authorize a token,
+bridge, treasury, exchange, payroll, or external settlement claim.
+
+## 10. Portability and recovery
+
+### 10.1 Export
+
+Canonical JSONL exports can be scoped by time, record family, owned object, and
+capsule. Manifests are signed and independently verifiable. Optional X25519
+recipient encryption makes records opaque to the transport/storage layer while
+retaining a verifiable manifest.
+
+### 10.2 Import
+
+An import is first cryptographically verified and staged. The operator receives
+a deterministic diff. Independent approval is required before applying records
+to an isolated foreign-provenance store. Imported data cannot overwrite native
+state or impersonate local evidence.
+
+### 10.3 Offline causal sync
+
+Admitted nodes can exchange signed bundles with version vectors. The kernel
+rejects replay, noncontiguous author counters, equivocation, missing
+dependencies, and incomplete conflict resolution. Concurrent heads remain
+visible until a resolution names every current head.
+
+This is offline exchange, not peer discovery, transport, federation, or BFT.
+
+### 10.4 Backup and restore
+
+Grid snapshots are encrypted, signed, context-bound, and exact-digest
+verified. Restore requires a stopped Grid, preserves the replaced database,
+and records pending recovery so the next trusted startup emits signed recovery
+evidence.
+
+## 11. Observability and operations
+
+Every service emits bounded-cardinality telemetry. Readiness includes required
+dependencies and Grid evidence integrity. Authenticated operator endpoints
+return a four-service operations report and OpenMetrics-compatible output.
+
+Metrics and alerts do not use principals, prompts, payloads, tokens, query
+strings, object identifiers, or intent identifiers as labels. Static alert
+states cover authentication failures, replay rejection, integrity failure,
+server errors, and service unavailability.
+
+External storage for metrics and alert delivery are future adapters because
+they introduce egress, credentials, retention, and delivery failure modes.
+
+## 12. Production candidate
+
+The production candidate uses:
+
+- Node.js 24.18.0 in a digest-pinned Alpine base;
+- a non-root numeric identity;
+- a read-only root filesystem;
+- dropped Linux capabilities and `no-new-privileges`;
+- explicit CPU, memory, and process ceilings;
+- bounded logs;
+- mounted data and secret files;
+- a no-egress internal network;
+- readiness-based health checking;
+- a supervisor that terminates partial startup.
+
+Provisioning creates four service identities, trust records, an API principal
+registry, operator token, and data-protection key without printing secrets.
+Partial secret sets are rejected rather than silently repaired.
+
+The host-mode four-process drill is implemented. Image build and composed
+runtime evidence must pass in published CI before the container capability is
+promoted. The full promotion criteria are defined in
+[Production Grade](../PRODUCTION-GRADE.md).
+
+## 13. Supply chain and claim governance
+
+The kernel has no third-party runtime packages. Committed lockfiles are checked
+for unexpected dependencies. Release verification binds:
+
+- source commit and dirty state;
+- capability-registry and policy digests;
+- operator-surface digest;
+- migration checksums;
+- rollback documentation;
+- container and workflow policy;
+- canonical documentation;
+- SPDX SBOM and provenance inputs.
+
+Generated status and governing claim documents carry the registry schema,
+kernel version, and digest. Documentation is part of the release surface:
+missing canonical documents, broken local links, stale generated output, or
+security-policy drift fail the release gate.
+
+## 14. Threat model
+
+The kernel explicitly addresses:
+
+- forged or replayed service requests;
+- wrong-audience and expired grants;
+- policy weakening through lower-precedence configuration;
+- approval reuse or self-approval;
+- payload and evidence tampering;
+- wrong data-protection keys;
+- partial credential provisioning;
+- service dependency loss and partial startup;
+- secret leakage through logs, metrics, images, or release files;
+- native-state overwrite by imported records;
+- causal replay, equivocation, and incomplete conflict resolution.
+
+Residual risks include:
+
+- compromised host or container engine;
+- operator credential theft;
+- denial of service beyond configured ceilings;
+- unreviewed cryptographic implementation defects;
+- single-node loss of availability or authority compromise;
+- operational mistakes in secret custody and recovery;
+- vulnerabilities in future adapters.
+
+## 15. Governance and evolution
+
+The kernel evolves through evidence-gated capability changes. The
+[roadmap](../ROADMAP.md) prioritizes repository control, container evidence, a
+single-node pilot, multi-host authenticated transport, and narrowly scoped
+adapters.
+
+External domains do not inherit trust from the kernel. Education, health,
+government, finance, messaging, AI, chain, token, bridge, and embodied systems
+each require separate identity, consent, authorization, retention, dispute,
+legal, safety, and operational evidence.
+
+## Non-claims
+
+Version 0.11 does not claim:
+
+- live public deployment;
+- decentralized or BFT consensus;
+- automatic peer discovery or multi-host scheduling;
+- arbitrary-code sandbox security;
+- proof that model reasoning or output is true;
+- operational zk verification without a named verifier adapter;
+- token, bridge, liquidity, staking, or chain settlement;
+- universal installation or production browser dashboards;
+- production AI-provider or messaging integrations;
+- clinical, educational, governmental, or financial compliance;
+- embodied autonomy;
+- end-to-end post-quantum security;
+- independent external audit.
+
+Descriptions of those systems in historical documents are specifications or
+research unless the current registry says otherwise.
+
+## Reproducibility
+
+Use an allowed Node.js 24 runtime. From the repository root:
+
+```bash
+npm ci --ignore-scripts
+npm run check
+npm run release:verify
+```
+
+For the production candidate, follow the
+[container runbook](../../mesh/PRODUCTION.md). A valid result must identify the
+source commit, registry digest, policy digest, migrations, deployment policy,
+and clean/dirty state. Production promotion additionally requires immutable CI
+image/runtime evidence and the gates in the
+[readiness tracker](../PRODUCTION-READINESS-TRACKER.md).
+
+## Conclusion
+
+AXIOM-MESH 0.11 is an authority-minimizing kernel, not a claim that every
+historical vision is implemented. Its core contribution is a verifiable
+intent-to-evidence boundary in which authentication, policy, planning,
+execution, durable state, and operator claims can be inspected independently.
+
+The path forward is deliberately evidence-first: prove the container, operate
+one recoverable pilot, measure it, secure the repository and supply chain, then
+expand authority only through narrowly reviewed adapters.

@@ -47,7 +47,11 @@ export async function runProductionSupervisor({
     ['SIGINT', () => requestStop(0)],
     ['SIGTERM', () => requestStop(0)]
   ]);
+  const messageHandler = message => {
+    if (message?.type === 'axiom.supervisor.stop') requestStop(0);
+  };
   for (const [signal, handler] of signalHandlers) process.once(signal, handler);
+  if (process.connected) process.once('message', messageHandler);
 
   try {
     for (const spec of STARTUP_ORDER) {
@@ -104,6 +108,7 @@ export async function runProductionSupervisor({
   } finally {
     stopping = true;
     for (const [signal, handler] of signalHandlers) process.removeListener(signal, handler);
+    process.removeListener('message', messageHandler);
     await stopChildren(children);
   }
   return requestedExitCode;

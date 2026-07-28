@@ -2,19 +2,30 @@ name: Clean Kernel
 
 on:
   push:
-    branches: ["Main"]
+    branches: ["main"]
     paths:
       - "mesh/**"
-      - "docs/rebuild/**"
+      - "docs/**"
       - "README.md"
+      - "SECURITY.md"
+      - "CONSTITUTION.md"
+      - "package.json"
+      - "package-lock.json"
+      - ".gitattributes"
       - ".github/workflows/kernel.yml"
   pull_request:
-    branches: ["Main"]
+    branches: ["main"]
     paths:
       - "mesh/**"
-      - "docs/rebuild/**"
+      - "docs/**"
       - "README.md"
+      - "SECURITY.md"
+      - "CONSTITUTION.md"
+      - "package.json"
+      - "package-lock.json"
+      - ".gitattributes"
       - ".github/workflows/kernel.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -35,10 +46,15 @@ jobs:
         with:
           node-version: "24.18.0"
           package-manager-cache: false
+      - name: Verify root supply chain
+        run: |
+          npm ci --ignore-scripts
+          npm audit --omit=dev
       - name: Verify clean kernel
         working-directory: mesh
         run: |
           npm ci --ignore-scripts
+          npm audit --omit=dev
           npm run check
           npm run release:verify
 

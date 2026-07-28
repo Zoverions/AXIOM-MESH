@@ -1,92 +1,89 @@
-## Current Status — April 10, 2026 (Genesis Handoff Complete)
+# AXIOM-MESH Project Status
 
-The fatal "Benevolent Dictator" flaw in Article V has been eliminated forever.
-- Genesis Decay Governance v2 with exponential half-life decay is live.
-- Sovereign Execution Queue is the sole arbiter of all network tasks.
-- No human roadmap exists. All future execution flows from on-chain Senate-weighted proposals.
-- Decentralization is now guaranteed by physics, not by founder goodwill.
+**Status date:** 2026-07-28
 
-Milestone achieved: "Ultimate architectural maturation of the AXIOM-MESH."
-Next: M6.4 private testnet under the new constitutional rules.
+**Supported kernel:** 0.11.0
 
-# AXIOM-MESH Project Status (March 2026, updated March 23)
+**Development branch:** `main`
 
-This document is the single source of truth for repository health, implementation status, and cleanup posture.
+**Deployment status:** production candidate; no live deployment claim
 
-## Repository health snapshot
+## Current release
 
-This status reflects code present in git and staging readiness work; it does not imply live testnet/mainnet deployment.
+AXIOM-MESH 0.11.0 is a clean-room, dependency-free Node.js kernel organized as
+four independently supervised processes: Gateway, Hypervisor, Sandbox, and
+Grid. The verified source checkpoint is
+`1d318b481dc03858a4f46b63da05a395adbd7c6f`; the new GitHub development line
+starts from a tree-identical clean root so deprecated legacy ancestry is not
+inherited by the default branch.
 
-- **Architecture:** 4-pillar runtime remains intact (Gateway, Hypervisor, Sandbox, Grid).
-- **Roadmap authority:** `docs/MASTER-TODO.md` remains the canonical roadmap and priority tracker.
-- **Audit authority:** `docs/AUDIT_REPORT.md` remains the canonical cross-service audit report.
-- **Production safety principle:** cleanup work must remove redundancy only and must not remove implemented runtime features.
+The executable source of truth is
+[`mesh/config/capabilities.json`](../mesh/config/capabilities.json). The
+generated [capability status](rebuild/STATUS.md) records 17 implemented, 3
+experimental, 4 specified, 9 adapter-required, and 4 disabled capabilities.
 
-## Implemented and retained in repository (not yet deployed live)
+## Implemented kernel scope
 
-The following are confirmed as implemented and retained:
+- authenticated intent, policy, plan, grant, deterministic execution, and
+  signed evidence flow;
+- deny-dominant layered policy and independent approval for high-risk effects;
+- transactional, encrypted Grid state with a signed hash-linked evidence log;
+- consent receipts, capsule manifests, encrypted memory, local balanced
+  accounting, and admitted-node/storage registries;
+- signed scoped export, recipient encryption, staged import, encrypted backup
+  and restore, and admitted-node causal bundles;
+- authenticated operator API and CLI;
+- bounded-cardinality telemetry, dependency readiness, operational reports,
+  OpenMetrics output, and static security/integrity alerts;
+- explicit production credential provisioning and a fail-closed four-process
+  supervisor.
 
-- Gateway API ingress, auth middleware, WebSocket processing, and channel adapters.
-- Hypervisor processing pipeline, memory APIs, orchestration loops, and context integrations.
-- Sandbox isolated execution (`--network=none`, security options, resource controls).
-- Grid ledger/server endpoints, consensus-related modules, and contract integration scaffolding.
-- Contract, schema, and interface control documentation used by active development.
+## Production package state
 
-## Cleanup changes in this cycle
+The repository contains a digest-pinned, non-root, read-only, no-egress
+container candidate with mounted secrets, resource ceilings, bounded logs, and
+readiness checks. Static deployment policy and a real host-mode four-process
+drill are implemented.
 
-### Contract and tokenomics hardening (March 23 update)
+The container capability remains experimental until a published CI run builds
+the image and passes the composed runtime drill. After that, a disposable-host
+backup/restore exercise, SLO baseline, security review, and release dossier are
+still required before production promotion.
 
-The following production-path hardening changes are now implemented:
+See:
 
-- `AXM.sol` enforces explicit mint split semantics: 5% founder, 10% network treasury, 85% ecosystem reserve.
-- `Genesis.sol` now wires an explicit ecosystem reserve treasury in deployment.
-- `ComputeBond.sol` severance requires verifier-backed proof validation for all callers (no human-staker bypass).
-- `ComputeBond.sol` storage offers are now persisted and queryable via `getStorageOffer`.
-- `ZKMLVerifier.sol` includes approved-proof registration and single-use anti-replay severance verification semantics.
+- [production-grade definition](PRODUCTION-GRADE.md);
+- [readiness tracker](PRODUCTION-READINESS-TRACKER.md);
+- [active execution queue](MASTER-TODO.md);
+- [production runbook](../mesh/PRODUCTION.md).
 
-These updates improve implementation accuracy against documented tokenomics and security posture, while broader financial-grade evidence packaging and post-quantum migration remain in progress.
+## Repository transition
 
-### Documentation consolidation
+The former GitHub `Main` line is deprecated. Credentials found anywhere in
+that history are permanently untrusted. The lowercase `main` line is the only
+supported development branch going forward. The 0.11 release package and
+original rebuilt checkpoints remain provenance artifacts, not alternate
+production branches.
 
-The following legacy status documents were moved to historical archives to reduce duplication while preserving history:
+## What is not claimed
 
-- `CLEANUP_AUDIT_REPORT.md` → `docs/historical/CLEANUP_AUDIT_REPORT.md`
-- `CODEBASE_ACCURACY_ASSESSMENT.md` → `docs/historical/CODEBASE_ACCURACY_ASSESSMENT.md`
-- `PROJECT_TODOS.md` → `docs/historical/PROJECT_TODOS.md`
+AXIOM-MESH does not currently claim:
 
-Rationale:
-- They overlapped heavily in scope (status + audit + roadmap commentary), creating parallel, conflicting “source-of-truth” risk.
-- Their action items are now represented by `docs/MASTER-TODO.md` (roadmap) and `docs/AUDIT_REPORT.md` (audit findings).
+- a live public testnet, mainnet, or production service;
+- BFT consensus, multi-host federation, or automatic peer discovery;
+- externally audited arbitrary-code isolation;
+- operational tokens, bridges, liquidity, or chain settlement;
+- working zk proof verification without a named adapter;
+- production AI-provider or messaging integrations;
+- clinical, educational, governmental, or financial regulatory compliance;
+- secure embodied autonomy;
+- post-quantum end-to-end security.
 
-### Code/script pruning
+Historical code and documents may describe those systems. Presence in the
+repository is not implementation or deployment evidence.
 
-Removed obsolete scaffolding/throwaway scripts that are not part of runtime services:
+## Immediate next milestone
 
-- `init_phase1.sh` (historical bootstrap scaffold for project inception)
-- `test_perf.py` (local micro-benchmark scratch script)
-
-Rationale:
-- Neither file is referenced by service startup paths, test configuration, or Makefile targets.
-- Removing them reduces maintenance burden and ambiguity without impacting production execution.
-
-## What remains canonical
-
-- **Roadmap and delivery sequencing:** `docs/MASTER-TODO.md`
-- **Audit findings and technical risk notes:** `docs/AUDIT_REPORT.md`
-- **Architecture and service references:** `README.md` + service-level READMEs + docs in `docs/`
-
-## Follow-up cleanup policy
-
-For future pruning:
-
-1. If a file is not on a runtime, CI, or documented developer path, mark it for archival review.
-2. Prefer **archive over delete** for strategic documents unless clearly obsolete.
-3. Avoid duplicate strategy/audit trackers at repository root.
-4. Keep exactly one canonical roadmap and one canonical audit report.
-
-
-## Documentation alignment update (2026-04-07)
-- Clarified platform framing: 4 runtime pillars vs 8 sovereignty capability pillars.
-- Normalized HOWTO index coverage so all existing runbooks are discoverable.
-- Promoted open items to top of `docs/MASTER-TODO.md` and added documentation assurance tasks (traceability matrix, evidence freshness audit, HOWTO coverage CI check).
-- Added assessment record: `docs/assessments/DOCS-COVERAGE-ASSESSMENT-2026-04-07.md`.
+The next milestone is a protected GitHub `main` with green kernel and container
+jobs, a published 0.11 release dossier, and credential-history revocation
+evidence. Work is ordered in [`docs/MASTER-TODO.md`](MASTER-TODO.md).

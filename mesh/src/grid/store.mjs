@@ -39,7 +39,16 @@ export class GridStore {
     if (!protector) throw new ValidationError('GridStore requires a data protector');
     this.protector = protector;
     this.db = new DatabaseSync(path);
-    this.initialize();
+    try {
+      this.initialize();
+    } catch (error) {
+      try {
+        this.db.close();
+      } catch {
+        // Preserve the initialization failure as the authoritative error.
+      }
+      throw error;
+    }
   }
 
   initialize() {

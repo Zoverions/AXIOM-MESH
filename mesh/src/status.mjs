@@ -47,6 +47,10 @@ export function renderRegistryMarker(registry) {
   return `<!-- axiom-capability-registry: schema=${validation.schema}; kernel=${registry.kernel_version}; digest=${validation.digest} -->`;
 }
 
+export function normalizeLineEndings(value) {
+  return String(value).replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+}
+
 async function main() {
   const config = meshConfig();
   const registry = JSON.parse(await readFile(config.capabilitiesPath, 'utf8'));
@@ -60,7 +64,9 @@ async function main() {
     return;
   }
   const existing = await readFile(outputPath, 'utf8');
-  if (existing !== rendered) throw new Error('docs/rebuild/STATUS.md is stale; run npm run status:generate');
+  if (normalizeLineEndings(existing) !== normalizeLineEndings(rendered)) {
+    throw new Error('docs/rebuild/STATUS.md is stale; run npm run status:generate');
+  }
   await verifyRegistryMarkers(repositoryRoot, registry);
   process.stdout.write(`${JSON.stringify({ valid: true, path: outputPath })}\n`);
 }
@@ -80,7 +86,7 @@ async function synchronizeRegistryMarkers(repositoryRoot, registry) {
   for (const relativePath of GOVERNING_CLAIM_DOCUMENTS) {
     const path = join(repositoryRoot, relativePath);
     const content = await readFile(path, 'utf8');
-    const next = content.match(/^<!-- axiom-capability-registry: [^\n]+ -->\n/)
+    const next = content.match(/^<!-- axiom-capability-registry: [^\r\n]+ -->\r?\n/)
       ? content.replace(/^<!-- axiom-capability-registry: [^\n]+ -->/, marker)
       : `${marker}\n${content}`;
     await writeFile(path, next);

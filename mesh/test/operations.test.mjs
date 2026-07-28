@@ -95,10 +95,10 @@ test('production provisioning is explicit, restrictive, idempotent, and file-bac
   assert.deepEqual(second.identities, first.identities);
   assert.equal(await readFile(second.operator_token_file, 'utf8'), firstToken);
   assert.equal(await readFile(second.api_tokens_file, 'utf8'), firstRegistry);
-  assert.equal((await stat(first.data_key_file)).mode & 0o077, 0);
-  assert.equal((await stat(first.api_tokens_file)).mode & 0o077, 0);
-  assert.equal((await stat(first.operator_token_file)).mode & 0o077, 0);
   if (process.platform !== 'win32') {
+    assert.equal((await stat(first.data_key_file)).mode & 0o077, 0);
+    assert.equal((await stat(first.api_tokens_file)).mode & 0o077, 0);
+    assert.equal((await stat(first.operator_token_file)).mode & 0o077, 0);
     await chmod(first.api_tokens_file, 0o644);
     await assert.rejects(
       () => provisionProduction({ dataDir, secretDir }),
@@ -254,7 +254,6 @@ test('production supervisor rejects unsafe mode and terminates partial startup',
 
 test('production supervisor boots the real four-process stack from provisioned secrets', async t => {
   const root = await mkdtemp(join(tmpdir(), 'axiom-production-runtime-'));
-  t.after(() => rm(root, { recursive: true, force: true }));
   const provisioned = await provisionProduction({
     dataDir: join(root, 'data'),
     secretDir: join(root, 'secrets')
@@ -262,7 +261,7 @@ test('production supervisor boots the real four-process stack from provisioned s
   const basePort = await findPortBlock();
   const child = spawn(process.execPath, ['src/supervisor.mjs'], {
     cwd: new URL('../', import.meta.url),
-    stdio: ['ignore', 'pipe', 'pipe'],
+    stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
     env: {
       ...process.env,
       NODE_ENV: 'production',
@@ -291,10 +290,13 @@ test('production supervisor boots the real four-process stack from provisioned s
     if (output.length < 16_384) output += chunk;
   });
   t.after(async () => {
-    if (child.exitCode === null && child.signalCode === null) {
-      child.kill('SIGKILL');
-      await once(child, 'exit').catch(() => {});
-    }
+    await stopSupervisor(child);
+    await rm(root, {
+      recursive: true,
+      force: true,
+      maxRetries: process.platform === 'win32' ? 5 : 0,
+      retryDelay: 100
+    });
   });
   const gateway = `http://127.0.0.1:${basePort}`;
   await waitForReady(`${gateway}/ready`, child, () => output);
@@ -310,11 +312,20 @@ test('production supervisor boots the real four-process stack from provisioned s
     report.services.map(service => service.service),
     ['gateway', 'grid', 'hypervisor', 'sandbox']
   );
-  child.kill('SIGTERM');
-  const [code, signal] = await once(child, 'exit');
+  const [code, signal] = await stopSupervisor(child);
   assert.equal(code, 0, output);
   assert.equal(signal, null);
 });
+
+async function stopSupervisor(child) {
+  if (child.exitCode !== null || child.signalCode !== null) {
+    return [child.exitCode, child.signalCode];
+  }
+  const exited = once(child, 'exit');
+  if (child.connected) child.send({ type: 'axiom.supervisor.stop' });
+  else child.kill('SIGTERM');
+  return exited;
+}
 
 async function waitForReady(url, child, diagnostics) {
   const deadline = Date.now() + 15_000;

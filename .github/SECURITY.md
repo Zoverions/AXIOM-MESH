@@ -1,59 +1,86 @@
-# Security Policy
+# AXIOM-MESH Security Policy
 
-## Supported Versions
+## Supported versions
 
-AXIOM-MESH follows a rolling-release model for the default branch.
+AXIOM-MESH uses a rolling support model for the clean-room kernel.
 
-| Version/Branch | Supported |
-| --- | --- |
-| `Main` / latest clean-kernel release | ✅ |
-| Older commits/tags | ⚠️ Best effort only |
+| Version or branch | Support status |
+|---|---|
+| `main` | Supported development line |
+| Latest published `0.11.x` release | Supported production candidate |
+| Deprecated `Main` and legacy branches | Unsupported |
+| Historical contracts, installers, and runtimes | Unsupported |
 
-## Reporting a Vulnerability
+The supported runtime is the dependency-free kernel in
+[`mesh/`](https://github.com/Zoverions/AXIOM-MESH/tree/main/mesh). Code retained
+elsewhere for traceability is not automatically in the security support
+boundary.
 
-Please **do not** open public GitHub issues for suspected vulnerabilities.
+## Legacy-history credential boundary
 
-Use one of the following private channels:
+Credentials, signing keys, tokens, or secrets that ever appeared in deprecated
+Git history must be treated as permanently compromised. They must not be
+restored, trusted, or reused.
 
-1. Open a **GitHub Security Advisory** draft for this repository.
-2. If advisory flow is unavailable, contact maintainers through the project’s private coordination channel and include "SECURITY" in the subject.
+The clean-room production path provisions new Ed25519 service identities, API
+tokens, and data-protection keys outside the repository. Promotion requires
+evidence that deployments trust only newly provisioned identities.
 
-When reporting, include:
+## Reporting a vulnerability
 
-- Affected clean-kernel component(s) (Gateway, Hypervisor, Sandbox, Grid, or release process)
-- Reproduction steps or proof-of-concept
-- Impact assessment (confidentiality, integrity, availability)
-- Suggested fix or mitigation (if known)
+Do not open a public issue for a suspected vulnerability.
 
-## Response Targets
+1. Open a private GitHub Security Advisory for this repository.
+2. If that is unavailable, contact the maintainers through an established
+   private channel and place `SECURITY` in the subject.
 
-- Initial acknowledgement: **within 72 hours**
-- Triage decision and severity assignment: **within 7 days**
-- Coordinated remediation and disclosure timeline shared after triage
+Include:
 
-## Coordinated Disclosure
+- affected supported component or release;
+- reproduction steps or a minimal proof of concept;
+- confidentiality, integrity, and availability impact;
+- required privileges and environmental assumptions;
+- suggested mitigation, if known.
 
-We follow coordinated disclosure:
+Do not include real credentials, personal data, or production data.
 
-- Report is validated privately
-- Fix is prepared and reviewed
-- Release notes are published with remediation guidance
-- Credit is provided to reporters who want attribution
+## Response targets
 
-## Scope Priorities
+These are operating targets, not guarantees:
 
-Highest-priority findings include:
+- acknowledge a report within 72 hours;
+- assign severity and an owner within 7 days;
+- communicate containment and disclosure plans after validation;
+- publish remediation and rotation guidance with a fixed release.
 
-- Sandbox isolation escapes or container breakout paths
-- Authentication/authorization bypass in Gateway or Hypervisor
-- Ledger/governance tampering paths in Grid
-- Authenticated-encryption, export/import, consent, memory, or accounting leaks
-- Release-evidence or capability-registry claim bypasses
+## Priority scope
 
-Out-of-scope (unless chained to real impact):
+Highest-priority reports include:
 
-- Missing best-practice headers without exploit path
-- Denial-of-service requiring unrealistic local-only privileges
-- Vulnerabilities in unsupported historical commits
-- Historical contracts, installers, containers, and archived workflows unless
-  they can affect the supported `mesh/` runtime
+- authentication or authorization bypass in Gateway or Hypervisor;
+- capability-grant forgery, replay, audience confusion, or policy weakening;
+- Sandbox escape or unauthorized effect execution;
+- Grid evidence, migration, governance, accounting, backup, or recovery
+  tampering;
+- authenticated-encryption, consent, memory, import, export, or causal-sync
+  confidentiality failures;
+- secret exposure in images, logs, release artifacts, or source history;
+- release-evidence, capability-registry, or documentation-claim bypasses;
+- production container or supervisor behavior that violates the documented
+  fail-closed boundary.
+
+Unsupported historical code is normally out of scope unless it can affect
+`main`, a supported release, current credentials, or a supported deployment.
+
+## Coordinated disclosure
+
+Validated reports are handled privately while containment and a fix are
+prepared. Public disclosure should identify affected versions, mitigations,
+rotation requirements, fixed versions, and residual risk. Reporter credit is
+provided when requested and safe.
+
+## Safe testing
+
+Use isolated test data and infrastructure you own or are authorized to test.
+Do not degrade public services, access other users' data, exfiltrate secrets,
+or perform persistence after demonstrating impact.
