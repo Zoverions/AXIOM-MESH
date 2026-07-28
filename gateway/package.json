@@ -17,7 +17,7 @@
     "@aws-sdk/client-secrets-manager": "^3.1013.0",
     "@hapi/boom": "^10.0.1",
     "@simplewebauthn/browser": "^13.3.0",
-    "@simplewebauthn/server": "^13.3.0",
+    "@simplewebauthn/server": "^13.3.2",
     "@slack/bolt": "^4.6.0",
     "@types/acorn": "^6.0.4",
     "@types/estree": "^1.0.8",
