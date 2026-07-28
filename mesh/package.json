@@ -12,6 +12,8 @@
     "provision:production": "node src/provision-production.mjs",
     "rotate:production": "node src/rotate-production.mjs",
     "rotate:data-key": "node src/rotate-data-key.mjs",
+    "backup:maintain": "node src/backup-maintenance.mjs",
+    "backup-lifecycle:drill": "node src/backup-lifecycle-drill.mjs",
     "credential-rotation:drill": "node src/credential-rotation-drill.mjs",
     "data-key-rotation:drill": "node src/data-key-rotation-drill.mjs",
     "recovery:drill": "node src/recovery-drill.mjs",

@@ -62,11 +62,15 @@ both directions, preserves Grid evidence through a dual-signed key transition,
 and restores the exact original set from an authenticated-encrypted rollback
 package. The workflow also re-encrypts and rotates the data-protection key
 across live and retained recovery state, proves wrong-key rejection in both
-directions, restores a backup under the rotated key, and preserves later
-evidence through rollback. Dedicated pilot-hardware capacity and availability
-validation, enforced deny-egress deployment policy, pilot-owned secret
-custody, credential-history revocation, and independent security review are
-still required before production promotion.
+  directions, restores a backup under the rotated key, and preserves later
+  evidence through rollback. Signed policy-derived backup retention now
+  verifies the full inventory, keeps a minimum, moves excess media to
+  recoverable quarantine with killed-process recovery, and restores a retained
+  backup in protected CI on every relevant change and weekly. Dedicated
+  pilot-hardware capacity and availability validation, enforced deny-egress
+  deployment policy, pilot-owned secret/media custody, credential-history
+  revocation, and independent security review are still required before
+  production promotion.
 
 See:
 
@@ -107,7 +111,7 @@ repository is not implementation or deployment evidence.
 ## Immediate next milestone
 
 The next milestone is external credential-history revocation evidence,
-pilot-owned secret custody and scheduled recovery, deny-egress, incident
-response, and independent security review for a controlled single-node pilot.
-Work is ordered in
+pilot-owned secret and media custody with scheduled on-media recovery,
+deny-egress, incident response, and independent security review for a
+controlled single-node pilot. Work is ordered in
 [`docs/MASTER-TODO.md`](MASTER-TODO.md).

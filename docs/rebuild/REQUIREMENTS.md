@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=db91ef1a2e6cd23ef0f374fb88704235fdd66c4ce18c3f93627a4e638681da8d -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=1f594f2f77e0e9522de152b10d181b766b2510ed318cfc70ac659bc9d6e48b1c -->
 # AXIOM-MESH Rebuild Requirements
 
 **Normative language:** MUST, MUST NOT, SHOULD, and MAY are used in their usual
@@ -58,6 +58,7 @@ requirements sense.
 | GRID-06 | Node admission MUST bind identity, security profile, capabilities, software digest, and expiry. | Admission and renewal tests. |
 | GRID-07 | Storage offers MUST bind the owning admitted node key and MUST become unavailable when that node is expired or quarantined. | Wrong-key rejection and quarantine propagation tests. |
 | GRID-08 | Data-key rotation MUST re-encrypt every supported durable and recovery context while stopped, reject mismatched keys, recover an interrupted cutover, and preserve post-rotation evidence on rollback. | Unit fault injection plus signed real-stack rotation, restore, rejection, and rollback evidence. |
+| GRID-09 | Backup retention MUST verify every candidate, derive selection from signed policy, preserve a configured minimum, reject live or changed inventory, recover interruption, and keep retired media recoverable until separate destruction approval. | Negative-path and kill tests plus signed recurring lifecycle/restore evidence. |
 
 ## Governance and societal safety
 
@@ -142,6 +143,10 @@ The machine-readable capability registry remains authoritative. Kernel
   snapshot and evidence-chain tamper detection, preservation of the replaced
   database, signed restart recovery evidence, and release-gated endpoint/action
   documentation parity.
+- signed policy-derived backup retention over a fully verified exact inventory,
+  stopped-runtime and drift rejection, configured minimum preservation,
+  journaled recoverable quarantine, data-key lifecycle interoperability, and
+  recurring exact-restore evidence.
 - PORT-01/02/03/05 export coverage across kernel-owned identity, receipt,
   capsule, governance, memory, accounting, and signed causal-sync records;
   strict time/object/capsule selection; canonical signed continuity manifests;
@@ -166,8 +171,8 @@ The machine-readable capability registry remains authoritative. Kernel
   checks, and loopback-only host publication. Deny-egress MUST be enforced by
   the pilot host or orchestrator because the Compose candidate cannot combine
   an internal network with published host ingress. The real four-process stack
-  passes a host-mode production drill; image-build and container-runtime
-  evidence remain pending.
+  passes host-mode and composed-container production drills in protected CI;
+  immutable pilot image publication and deployment evidence remain pending.
 
 ## Capability coverage
 

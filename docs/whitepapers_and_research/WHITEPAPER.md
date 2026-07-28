@@ -294,6 +294,17 @@ evidence. When data-key rotation changes snapshot ciphertext or nested
 protected columns, a trusted Grid-signed rewrap chain maps the active storage
 digest back to the original backup manifest and preserves its evidence head.
 
+Retention is also evidence-bound. A Grid-signed plan covers an exact inventory
+only after every backup decrypts and its manifest, schema, and evidence chain
+verify. The policy preserves a minimum and selects excess media by age and
+newest-first rank. Apply requires Grid to be stopped and the inventory to be
+unchanged, then journals atomic moves into recoverable quarantine rather than
+deleting data. A signed receipt binds the retained and retired sets. Interrupted
+moves resume from their signed journal, and quarantined snapshots remain in
+data-key rotation scope. Protected CI repeats the lifecycle and restores a
+retained backup weekly; this is mechanism evidence, not pilot-media custody or
+destruction authorization.
+
 ## 11. Observability and operations
 
 Every service emits bounded-cardinality telemetry. Readiness includes required

@@ -83,7 +83,9 @@ Milestones:
 - coordinated service/API and data-protection-key rotation, rejection, and
   rollback are implemented for the candidate host; repeat both under external
   pilot secret custody;
-- scheduled encrypted snapshots and disposable-host restore verification;
+- signed encrypted-backup retention and weekly disposable-host restore
+  verification are implemented for the candidate host; repeat against
+  pilot-owned media and key custody;
 - external metrics collection and bounded alert delivery;
 - controlled load profile and initial latency/error/saturation baseline;
 - resource exhaustion and dependency-loss drills;

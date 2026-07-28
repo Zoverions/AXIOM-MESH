@@ -1,0 +1,6 @@
+{
+  "format": "axiom-backup-retention-policy.v1",
+  "minimum_verified_backups": 2,
+  "retain_latest": 7,
+  "retire_after_days": 30
+}

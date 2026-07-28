@@ -145,6 +145,87 @@ export function verifyGridBackup({
   });
 }
 
+export async function verifyGridBackupArtifact({
+  manifestPath,
+  dataDir,
+  identity,
+  protector,
+  expectedDatabaseDigest,
+  artifactRelativePath
+}) {
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  const snapshotName = manifest.snapshot?.name;
+  if (snapshotName !== basename(snapshotName ?? '') || snapshotName !== BACKUP_FILE) {
+    throw new ValidationError('Grid backup snapshot path is invalid');
+  }
+  const snapshotPath = join(dirname(manifestPath), snapshotName);
+  const verificationKeys = loadGridVerificationKeys(dataDir, identity);
+  const resolvedSnapshot = await openProtectedArtifact({
+    artifactPath: snapshotPath,
+    relativePath: artifactRelativePath
+      ?? relative(dataDir, snapshotPath).replaceAll('\\', '/'),
+    context: manifest.snapshot.context,
+    encoding: 'bytes',
+    expected: {
+      bytes: manifest.snapshot.bytes,
+      sha256: manifest.snapshot.sha256
+    },
+    expectedPlaintext: {
+      bytes: manifest.database.bytes,
+      sha256: manifest.database.sha256
+    },
+    protector,
+    verificationKeys
+  });
+  const gridPublicKey = verificationKeys.get(manifest.attestation?.key_id);
+  if (!gridPublicKey) {
+    throw new ValidationError('Grid backup signer is not in the trusted key history');
+  }
+  const verified = verifyGridBackupDatabase({
+    manifest,
+    database: resolvedSnapshot.value,
+    databaseMetadata: resolvedSnapshot.plaintext_metadata,
+    gridPublicKey,
+    expectedDatabaseDigest
+  });
+
+  const recoveryRoot = join(dataDir, 'recovery');
+  await mkdir(recoveryRoot, { recursive: true, mode: 0o700 });
+  const validationDirectory = await mkdtemp(join(recoveryRoot, 'verify-'));
+  const validationPath = join(validationDirectory, 'grid.sqlite');
+  let chain;
+  try {
+    await writeFile(validationPath, verified.database, { mode: 0o600, flag: 'wx' });
+    const { GridStore } = await import('./store.mjs');
+    const candidate = new GridStore({
+      path: validationPath,
+      dataDir,
+      identity,
+      protector
+    });
+    try {
+      chain = candidate.verifyChain();
+    } finally {
+      candidate.close();
+    }
+    if (!chain.valid) throw new ValidationError(`Restored Grid evidence is invalid: ${chain.reason}`);
+    if (
+      chain.events !== manifest.database.evidence_events
+      || chain.head !== manifest.database.evidence_head
+    ) throw new ValidationError('Restored Grid evidence head does not match the signed manifest');
+  } finally {
+    await rm(validationDirectory, { recursive: true, force: true });
+  }
+
+  return {
+    ...verified,
+    manifest,
+    manifest_path: manifestPath,
+    snapshot_path: snapshotPath,
+    evidence_chain: chain
+  };
+}
+
 function verifyGridBackupDatabase({
   manifest,
   database,
@@ -194,65 +275,16 @@ export async function restoreGridBackup({
   if (!DIGEST.test(expectedDatabaseDigest ?? '')) {
     throw new ValidationError('Restore requires an exact expected database digest');
   }
-  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
-  const snapshotName = manifest.snapshot?.name;
-  if (snapshotName !== basename(snapshotName ?? '') || snapshotName !== BACKUP_FILE) {
-    throw new ValidationError('Grid backup snapshot path is invalid');
-  }
-  const snapshotPath = join(dirname(manifestPath), snapshotName);
-  const verificationKeys = loadGridVerificationKeys(dataDir, identity);
-  const resolvedSnapshot = await openProtectedArtifact({
-    artifactPath: snapshotPath,
-    relativePath: relative(dataDir, snapshotPath).replaceAll('\\', '/'),
-    context: manifest.snapshot.context,
-    encoding: 'bytes',
-    expected: {
-      bytes: manifest.snapshot.bytes,
-      sha256: manifest.snapshot.sha256
-    },
-    expectedPlaintext: {
-      bytes: manifest.database.bytes,
-      sha256: manifest.database.sha256
-    },
+  const verified = await verifyGridBackupArtifact({
+    manifestPath,
+    dataDir,
+    identity,
     protector,
-    verificationKeys
-  });
-  const gridPublicKey = verificationKeys.get(manifest.attestation?.key_id);
-  if (!gridPublicKey) {
-    throw new ValidationError('Grid backup signer is not in the trusted key history');
-  }
-  const verified = verifyGridBackupDatabase({
-    manifest,
-    database: resolvedSnapshot.value,
-    databaseMetadata: resolvedSnapshot.plaintext_metadata,
-    gridPublicKey,
     expectedDatabaseDigest
   });
 
+  const { manifest } = verified;
   const recoveryRoot = join(dataDir, 'recovery');
-  await mkdir(recoveryRoot, { recursive: true, mode: 0o700 });
-  const validationDirectory = await mkdtemp(join(recoveryRoot, 'verify-'));
-  const validationPath = join(validationDirectory, 'grid.sqlite');
-  try {
-    await writeFile(validationPath, verified.database, { mode: 0o600, flag: 'wx' });
-    const { GridStore } = await import('./store.mjs');
-    const candidate = new GridStore({
-      path: validationPath,
-      dataDir,
-      identity,
-      protector
-    });
-    const chain = candidate.verifyChain();
-    candidate.close();
-    if (!chain.valid) throw new ValidationError(`Restored Grid evidence is invalid: ${chain.reason}`);
-    if (
-      chain.events !== manifest.database.evidence_events
-      || chain.head !== manifest.database.evidence_head
-    ) throw new ValidationError('Restored Grid evidence head does not match the signed manifest');
-  } finally {
-    await rm(validationDirectory, { recursive: true, force: true });
-  }
-
   const replacedDigest = await digestFile(dbPath);
   const rollbackDirectory = join(
     recoveryRoot,

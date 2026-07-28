@@ -134,13 +134,21 @@ must:
 7. emit signed recovery evidence;
 8. test restoration on a disposable host on a schedule.
 
-The protected Clean Kernel workflow runs the executable disposable-host drill
-for every supported runtime change and retains its signed, secret-free JSON
-evidence. The artifact binds the kernel version and source revision to
-encrypted-backup digests, fail-closed negative checks, the deliberately
-injected recovery-point loss, measured recovery time, rollback preservation,
-and the restored evidence head. Pilot promotion still requires scheduled
-operator-run recovery using pilot-owned media and key custody.
+The protected Clean Kernel workflow runs executable disposable-host recovery
+and backup-lifecycle drills for every supported runtime change and every week.
+It retains signed, secret-free JSON evidence for 90 days. The artifacts bind
+the kernel version and source revision to encrypted-backup digests,
+fail-closed negative checks, policy-derived retention, recoverable quarantine,
+the deliberately injected recovery-point loss, measured recovery time,
+rollback preservation, and the restored evidence head.
+
+Retention is a two-phase stopped-runtime operation. The signed plan covers an
+exact fully verified inventory and preserves a configured minimum. Apply
+rejects drift and atomically moves excess backups to recoverable quarantine
+under a journal; killed moves roll forward from that signed record. It never
+deletes media. Quarantined snapshots remain in data-key rotation scope.
+Pilot promotion still requires scheduled operator-run recovery using
+pilot-owned media and key custody, plus separately approved media destruction.
 
 Loss of the data key can make protected data unrecoverable. Key custody and
 encrypted recovery copies are therefore part of availability, not merely

@@ -185,7 +185,7 @@ export async function rotateDataProtectionKey({
         ...artifact,
         prepared: await prepareProtectedArtifactRewrap({
           artifactPath: artifact.path,
-          relativePath: artifact.relative_path,
+          relativePath: artifact.logical_path,
           context: artifact.context,
           encoding: artifact.encoding,
           expected: artifact.expected,
@@ -304,6 +304,7 @@ export async function rotateDataProtectionKey({
         kind: artifact.kind,
         path: artifact.relative_path,
         sidecar_path: `${artifact.relative_path}${SIDECAR_SUFFIX}`,
+        logical_path: artifact.logical_path,
         context: artifact.context,
         encoding: artifact.encoding,
         before: artifact.prepared.before,
@@ -690,7 +691,7 @@ export async function rollbackDataProtectionKey({
         ...artifact,
         prepared: await prepareProtectedArtifactRewrap({
           artifactPath: artifact.path,
-          relativePath: artifact.relative_path,
+          relativePath: artifact.logical_path,
           context: artifact.context,
           encoding: artifact.encoding,
           expected: artifact.expected,
@@ -930,6 +931,7 @@ export function verifyDataKeyRotationManifest({ manifest }) {
     throw new ValidationError('Data-key rotation database evidence is invalid');
   }
   const paths = new Set();
+  const logicalPaths = new Set();
   for (const database of manifest.recovery_databases) {
     assertPortablePath(database.path);
     assertMetadata(database.before, 'Data-key source recovery database');
@@ -952,8 +954,10 @@ export function verifyDataKeyRotationManifest({ manifest }) {
     paths.add(database.path);
   }
   for (const artifact of manifest.artifacts) {
+    const logicalPath = artifact.logical_path ?? artifact.path;
     assertPortablePath(artifact.path);
     assertPortablePath(artifact.sidecar_path);
+    assertPortablePath(logicalPath);
     assertMetadata(artifact.before, 'Data-key source artifact');
     assertMetadata(artifact.after, 'Data-key target artifact');
     if (artifact.kind === 'backup') {
@@ -984,10 +988,13 @@ export function verifyDataKeyRotationManifest({ manifest }) {
         && artifact.plaintext.source.sha256 === artifact.plaintext.target.sha256
       )
       || paths.has(artifact.path)
+      || logicalPaths.has(logicalPath)
+      || artifact.sidecar_path !== `${artifact.path}${SIDECAR_SUFFIX}`
     ) {
       throw new ValidationError('Data-key rotation artifact evidence is invalid');
     }
     paths.add(artifact.path);
+    logicalPaths.add(logicalPath);
   }
   for (const [name, envelope] of [
     [PRIOR_KEY_FILE, manifest.key_history?.prior_key],
@@ -1132,51 +1139,27 @@ async function discoverProtectedArtifacts(dataDir, verificationKeys) {
   const backupsRoot = join(dataDir, 'backups');
   for (const entry of await readDirectories(backupsRoot)) {
     if (entry === '.tmp') continue;
-    const directory = join(backupsRoot, entry);
-    const manifest = JSON.parse((await readBoundedFile(
-      join(directory, MANIFEST_FILE),
-      MAX_MANIFEST_BYTES
-    )).toString('utf8'));
-    if (
-      manifest?.format !== 'axiom-grid-backup.v1'
-      || manifest.snapshot?.name !== 'snapshot.axb'
-    ) {
-      throw new ValidationError('Unsupported backup artifact during data-key rotation');
-    }
-    const backupSigner = verificationKeys.get(
-      manifest.attestation?.key_id
-    );
-    const unsigned = structuredClone(manifest);
-    delete unsigned.attestation;
-    if (
-      !backupSigner
-      || !verifyObjectSignature(unsigned, manifest.attestation, backupSigner)
-    ) {
-      throw new ValidationError(
-        'Backup artifact attestation is invalid during data-key rotation'
-      );
-    }
-    const path = join(directory, manifest.snapshot.name);
-    artifacts.push({
-      kind: 'backup',
-      path,
-      relative_path: portableRelative(dataDir, path),
-      context: manifest.snapshot.context,
-      encoding: 'bytes',
-      expected: {
-        bytes: manifest.snapshot.bytes,
-        sha256: manifest.snapshot.sha256
-      },
-      expected_plaintext: {
-        bytes: manifest.database.bytes,
-        sha256: manifest.database.sha256
-      },
-      database: {
-        schema_version: manifest.database.schema_version,
-        evidence_events: manifest.database.evidence_events,
-        evidence_head: manifest.database.evidence_head
+    if (entry === '.retired') {
+      const retiredRoot = join(backupsRoot, entry);
+      for (const planId of await readDirectories(retiredRoot)) {
+        const planRoot = join(retiredRoot, planId);
+        for (const backupId of await readDirectories(planRoot)) {
+          artifacts.push(await discoverBackupArtifact({
+            dataDir,
+            directory: join(planRoot, backupId),
+            expectedBackupId: backupId,
+            verificationKeys
+          }));
+        }
       }
-    });
+      continue;
+    }
+    artifacts.push(await discoverBackupArtifact({
+      dataDir,
+      directory: join(backupsRoot, entry),
+      expectedBackupId: entry,
+      verificationKeys
+    }));
   }
 
   const credentialRoot = join(dataDir, 'credential-rotations');
@@ -1201,6 +1184,7 @@ async function discoverProtectedArtifacts(dataDir, verificationKeys) {
       kind: 'credential-rollback',
       path: rollbackPath,
       relative_path: portableRelative(dataDir, rollbackPath),
+      logical_path: portableRelative(dataDir, rollbackPath),
       context: manifest.rollback.context,
       encoding: 'json',
       expected: {
@@ -1241,6 +1225,7 @@ async function discoverProtectedArtifacts(dataDir, verificationKeys) {
         kind: 'credential-forward',
         path: forwardPath,
         relative_path: portableRelative(dataDir, forwardPath),
+        logical_path: portableRelative(dataDir, forwardPath),
         context: result.forward.context,
         encoding: 'json',
         expected: {
@@ -1253,10 +1238,74 @@ async function discoverProtectedArtifacts(dataDir, verificationKeys) {
   artifacts.sort((left, right) => (
     left.relative_path.localeCompare(right.relative_path)
   ));
+  if (
+    new Set(artifacts.map(item => item.logical_path)).size
+    !== artifacts.length
+  ) {
+    throw new ValidationError(
+      'Protected artifact inventory contains duplicate logical paths'
+    );
+  }
   if (artifacts.length > MAX_ARTIFACTS) {
     throw new ValidationError('Protected artifact inventory exceeds the rotation limit');
   }
   return artifacts;
+}
+
+async function discoverBackupArtifact({
+  dataDir,
+  directory,
+  expectedBackupId,
+  verificationKeys
+}) {
+  const manifest = JSON.parse((await readBoundedFile(
+    join(directory, MANIFEST_FILE),
+    MAX_MANIFEST_BYTES
+  )).toString('utf8'));
+  if (
+    manifest?.format !== 'axiom-grid-backup.v1'
+    || manifest.snapshot?.name !== 'snapshot.axb'
+    || manifest.backup_id !== expectedBackupId
+  ) {
+    throw new ValidationError(
+      'Unsupported backup artifact during data-key rotation'
+    );
+  }
+  const backupSigner = verificationKeys.get(
+    manifest.attestation?.key_id
+  );
+  const unsigned = structuredClone(manifest);
+  delete unsigned.attestation;
+  if (
+    !backupSigner
+    || !verifyObjectSignature(unsigned, manifest.attestation, backupSigner)
+  ) {
+    throw new ValidationError(
+      'Backup artifact attestation is invalid during data-key rotation'
+    );
+  }
+  const path = join(directory, manifest.snapshot.name);
+  return {
+    kind: 'backup',
+    path,
+    relative_path: portableRelative(dataDir, path),
+    logical_path: `backups/${manifest.backup_id}/snapshot.axb`,
+    context: manifest.snapshot.context,
+    encoding: 'bytes',
+    expected: {
+      bytes: manifest.snapshot.bytes,
+      sha256: manifest.snapshot.sha256
+    },
+    expected_plaintext: {
+      bytes: manifest.database.bytes,
+      sha256: manifest.database.sha256
+    },
+    database: {
+      schema_version: manifest.database.schema_version,
+      evidence_events: manifest.database.evidence_events,
+      evidence_head: manifest.database.evidence_head
+    }
+  };
 }
 
 async function reencryptBackupDatabase({
@@ -1338,11 +1387,11 @@ async function snapshotArtifactFiles(artifacts, previousPointerContent) {
 
 function assertArtifactInventory(expected, actual) {
   const actualByPath = new Map(actual.map(item => [
-    item.relative_path,
+    item.logical_path,
     item
   ]));
   const missingOrChanged = expected.some(item => {
-    const current = actualByPath.get(item.path);
+    const current = actualByPath.get(item.logical_path ?? item.path);
     return (
       !current
       || current.kind !== item.kind

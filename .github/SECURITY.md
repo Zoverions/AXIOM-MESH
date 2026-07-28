@@ -54,6 +54,13 @@ state-preserving rollback. Rollback retains an encrypted derived
 credential-manifest authentication key when needed for later verification,
 not the retired data-encryption key.
 
+Backup retention authenticates and decrypts every candidate before a signed
+policy-derived plan can be applied. Apply requires Grid to be stopped and the
+inventory unchanged, preserves a configured minimum, and journals atomic moves
+into recoverable quarantine rather than deleting media. Quarantined snapshots
+remain in data-key rotation and rollback scope. Permanent deletion requires a
+separate deployment-owned media-destruction authorization.
+
 Neither local rotation workflow substitutes for external revocation,
 secret-manager versioning, or destruction evidence at prior custodians and
 deployments.
