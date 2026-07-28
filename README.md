@@ -61,6 +61,19 @@ npm run check
 npm run release:verify
 ```
 
+Run the production recovery exercise against an explicitly empty disposable
+workspace:
+
+```bash
+npm run recovery:drill -- /tmp/axiom-recovery-drill
+```
+
+The command writes signed, secret-free JSON evidence to standard output. It
+provisions isolated production credentials, exercises encrypted backup,
+tamper and unsafe-restore rejection, exact-digest restore, rollback
+preservation, evidence-chain verification, and measured recovery time. Never
+point it at a live or non-empty directory.
+
 ## Canonical documentation
 
 - [Technical white paper](docs/whitepapers_and_research/WHITEPAPER.md)

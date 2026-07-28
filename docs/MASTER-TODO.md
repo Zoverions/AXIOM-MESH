@@ -29,7 +29,7 @@ evidence-chain integrity, or unauthorized effects.
 
 | ID | Status | Work | Acceptance evidence |
 |---|---|---|---|
-| REP-001 | Complete | Make clean-room `main` the GitHub default and preserve the old line as deprecated | Default is `main`; legacy branch is `deprecated/legacy-main-pre-clean-room` |
+| REP-001 | Complete | Make clean-room `main` the GitHub default and preserve the old line as deprecated | Default is `main`; the legacy branch is locked and read-only at `deprecated/legacy-main-pre-clean-room` |
 | REP-002 | Complete | Enforce canonical documentation and lowercase-`main` CI | Documentation checks and [workflow run 30376178779](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30376178779) |
 | REP-004 | Complete | Remove unsupported legacy runtimes and dependency manifests from the supported branch | Legacy source remains recoverable from Git history and the deprecated branch |
 | REP-003 | Complete | Protect `main` against deletion and force pushes; require green verification | Required kernel/container/CodeQL checks; deletion and force pushes disabled |
@@ -42,7 +42,7 @@ evidence-chain integrity, or unauthorized effects.
 | ID | Status | Work | Acceptance evidence |
 |---|---|---|---|
 | OPS-001 | Complete | Promote the container package only after CI image/runtime evidence passes | Registry promotion tied to workflow run 30376178779 |
-| OPS-002 | Pending | Exercise backup, tamper rejection, restore, and rollback on a disposable production host | Encrypted drill artifact with measured RPO/RTO |
+| OPS-002 | Complete | Exercise backup, tamper rejection, exact restore, and rollback on a disposable production host | Protected CI uploads signed, secret-free `axiom-recovery-drill-evidence-<commit>` artifacts with measured recovery point and recovery time |
 | OPS-003 | Pending | Establish an initial latency, error-rate, saturation, and restart baseline | Versioned SLO report from a controlled load profile |
 | SEC-002 | Pending | Perform an independent threat-model and configuration review of the supported kernel | Findings ledger with severity and remediation owners |
 | SUP-001 | Complete | Produce a reproducible release dossier without embedding secrets | v0.11.0 checksums, SPDX SBOM, provenance, policy and registry digests |

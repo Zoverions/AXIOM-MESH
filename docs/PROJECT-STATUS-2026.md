@@ -46,12 +46,16 @@ host publication, and readiness checks. Static deployment policy and a real
 host-mode four-process drill are implemented. Host- or orchestrator-enforced
 deny-egress remains required before pilot promotion.
 
-The container package is implemented and verified by
-[GitHub run 30375390450](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30375390450),
+The container package is implemented and verified by the protected
+[Clean Kernel workflow](https://github.com/Zoverions/AXIOM-MESH/actions/workflows/kernel.yml),
 which built the digest-pinned image and passed composed readiness,
-authenticated operations, and teardown. A disposable-host backup/restore
-exercise, SLO baseline, deny-egress deployment policy, security review, and
-release dossier are still required before production promotion.
+authenticated operations, and teardown. That workflow now also provisions a
+disposable production workspace and exercises encrypted backup, tamper and
+unsafe-restore rejection, exact restore, rollback preservation, and signed
+recovery evidence with a measured recovery point and recovery time. An SLO
+baseline, enforced deny-egress deployment policy, credential-history
+revocation record, credential-rotation drill, and independent security review
+are still required before production promotion.
 
 See:
 
@@ -65,7 +69,8 @@ See:
 The former GitHub `Main` line is preserved as
 `deprecated/legacy-main-pre-clean-room`. Credentials found anywhere in that
 history are permanently untrusted. Lowercase `main` is now the GitHub default
-and the only supported development branch. Unsupported legacy runtime trees
+and the only supported development branch. The deprecated branch is locked
+against pushes, force pushes, and deletion. Unsupported legacy runtime trees
 and their dependency manifests were removed from the supported tip; they
 remain recoverable from Git history and the deprecated branch. The 0.11
 release package and original rebuilt checkpoints remain provenance artifacts,
