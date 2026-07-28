@@ -218,6 +218,31 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
   assert.throws(() => verifyProductionDeployment({
     dockerfile,
     dockerignore,
+    compose: compose.replace('network_mode: "none"', 'network_mode: "host"'),
+    productionDocs,
+    packageJson,
+    backupRetentionPolicy,
+    credentialRevocations,
+    workflow,
+    repositoryIgnore
+  }), /network_mode: "none"/);
+  assert.throws(() => verifyProductionDeployment({
+    dockerfile,
+    dockerignore,
+    compose: compose.replace(
+      'network_mode: "none"',
+      'network_mode: "none"\n    ports:\n      - "127.0.0.1:8080:8080"'
+    ),
+    productionDocs,
+    packageJson,
+    backupRetentionPolicy,
+    credentialRevocations,
+    workflow,
+    repositoryIgnore
+  }), /must not publish ports/);
+  assert.throws(() => verifyProductionDeployment({
+    dockerfile,
+    dockerignore,
     compose,
     productionDocs,
     packageJson,
@@ -258,6 +283,16 @@ test('production supervisor rejects unsafe mode and terminates partial startup',
       autoBootstrap: true
     }
   }), /production supervisor/);
+  await assert.rejects(() => runProductionSupervisor({
+    config: {
+      environment: 'production',
+      autoBootstrap: false,
+      requireDenyEgress: true
+    },
+    denyEgressCheck: async () => {
+      throw new Error('deny-egress-boundary-rejected');
+    }
+  }), /deny-egress-boundary-rejected/);
 
   const children = [];
   const spawnImpl = () => {

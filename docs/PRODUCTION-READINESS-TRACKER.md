@@ -20,6 +20,7 @@ artifact is reproducible and tied to the release commit or image digest.
 | Container source policy | Pass | Dockerfile/Compose static release gate | Maintain digest pin |
 | Container image build | Pass | Digest-pinned build in [GitHub run 30376178779](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30376178779) | Publish immutable image digest before pilot |
 | Composed container drill | Pass | Readiness, authenticated operations, and teardown in the same run | Repeat for future release commits |
+| Container network boundary | Pass for candidate topology | Compose `network_mode: none`; permission-restricted Unix socket ingress; startup rejects non-loopback and IPv4/IPv6 default routes; protected CI proves local ingress and blocked public TCP egress in signed evidence | Repeat on the pilot platform and independently review host/daemon policy |
 | Dependency audit | Pass | Root and kernel lock audits in the same run | Maintain required check |
 | Backup and restore | Pass for candidate-host lifecycle | Protected CI exercises encrypted backup, signed policy-derived retention, corrupt/live-lock/inventory-drift rejection, recoverable quarantine, killed-move recovery, exact restore and rollback; it also runs weekly and uploads signed evidence | Run the schedule against pilot-owned media and custody; authorize quarantine destruction separately |
 | Observability | Implemented locally | Bounded metrics and authenticated operations tests | Integrate external collector |
@@ -39,8 +40,7 @@ The following block production promotion:
 2. no pilot-secret-custody rotation repetition or scheduled restore from
    pilot-owned media;
 3. no independent review of the supported kernel and deployment policy;
-4. no host- or orchestrator-enforced deny-egress evidence;
-5. all 32 deprecated-history entries still require provider, custodian, or
+4. all 32 deprecated-history entries still require provider, custodian, or
    independently reviewed not-applicable attestations.
 
 ## Gate owners

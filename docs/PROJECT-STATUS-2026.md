@@ -41,10 +41,11 @@ experimental, 4 specified, 9 adapter-required, and 4 disabled capabilities.
 ## Production package state
 
 The repository contains a digest-pinned, non-root, read-only container
-candidate with mounted secrets, resource ceilings, bounded logs, loopback-only
-host publication, and readiness checks. Static deployment policy and a real
-host-mode four-process drill are implemented. Host- or orchestrator-enforced
-deny-egress remains required before pilot promotion.
+candidate with mounted secrets, resource ceilings, bounded logs, local
+Unix-domain socket ingress, and readiness checks. Static deployment policy and
+a real host-mode four-process drill are implemented. Compose attaches no
+network; startup rejects active non-loopback and IPv4/IPv6 default routes while
+retaining explicit host-local Gateway ingress.
 
 The container package is implemented and verified by the protected
 [Clean Kernel workflow](https://github.com/Zoverions/AXIOM-MESH/actions/workflows/kernel.yml),
@@ -66,9 +67,11 @@ across live and retained recovery state, proves wrong-key rejection in both
   evidence through rollback. Signed policy-derived backup retention now
   verifies the full inventory, keeps a minimum, moves excess media to
   recoverable quarantine with killed-process recovery, and restores a retained
-  backup in protected CI on every relevant change and weekly. Dedicated
-  pilot-hardware capacity and availability validation, enforced deny-egress
-  deployment policy, pilot-owned secret/media custody, external
+  backup in protected CI on every relevant change and weekly. The container
+  job also establishes that its public TCP probe is runner-reachable, then
+  proves it is unreachable from the candidate namespace and uploads signed
+  evidence. Dedicated pilot-hardware capacity and availability validation,
+  pilot-owned secret/media custody, external
   credential-history attestations, and independent security review are still
   required before production promotion. The repository-side history audit is
   implemented: a secret-free keyed ledger covers 32 conservative candidates,
@@ -116,6 +119,6 @@ repository is not implementation or deployment evidence.
 The next milestone is disposing the 32 external credential-history
 attestations,
 pilot-owned secret and media custody with scheduled on-media recovery,
-deny-egress, incident response, and independent security review for a
+incident response, pilot-platform network-policy repetition, and independent security review for a
 controlled single-node pilot. Work is ordered in
 [`docs/MASTER-TODO.md`](MASTER-TODO.md).

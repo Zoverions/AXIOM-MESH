@@ -165,9 +165,11 @@ boundary: only Gateway binds externally, while Hypervisor, Sandbox, and Grid
 remain on loopback until an audited mTLS transport adapter exists. The package
 must use a digest-pinned base, non-root identity, read-only root filesystem,
 dropped Linux capabilities, explicit secrets and resource ceilings,
-loopback-only host publication, bounded logs, and readiness-based health
-checks. Pilot and production environments must add host- or
-orchestrator-enforced deny-egress policy.
+permission-restricted local ingress, bounded logs, and readiness-based health
+checks. The Compose candidate must attach no network, fail startup when an
+active non-loopback or IPv4/IPv6 default route exists, preserve only explicit
+Unix-domain Gateway ingress, and emit protected negative-path evidence.
+Other orchestrators must reproduce and independently verify this policy.
 
 Operational telemetry is bounded-cardinality and excludes user-controlled
 labels. Liveness is process-local; readiness follows the service dependency

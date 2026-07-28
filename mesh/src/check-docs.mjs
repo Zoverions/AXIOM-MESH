@@ -16,6 +16,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/PROJECT-STATUS-2026.md',
   'docs/REPOSITORY-MIGRATION.md',
   'docs/security/CREDENTIAL-HISTORY-REVOCATION.md',
+  'docs/security/DENY-EGRESS-BOUNDARY.md',
   'docs/releases/0.11.0.md',
   'docs/whitepapers_and_research/WHITEPAPER.md',
   'mesh/PRODUCTION.md'
@@ -37,6 +38,10 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Repository trust result',
     '## External attestation procedure'
   ],
+  'docs/security/DENY-EGRESS-BOUNDARY.md': [
+    '## Enforced topology',
+    '## Protected CI proof'
+  ],
   'docs/releases/0.11.0.md': ['## Container status', '## Security action'],
   'docs/whitepapers_and_research/WHITEPAPER.md': ['## Non-claims', '## Reproducibility'],
   'mesh/PRODUCTION.md': ['not evidence of a live deployment']
@@ -48,6 +53,7 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/PRODUCTION-GRADE.md': 3_000,
   'docs/PROJECT-STATUS-2026.md': 1_500,
   'docs/security/CREDENTIAL-HISTORY-REVOCATION.md': 2_500,
+  'docs/security/DENY-EGRESS-BOUNDARY.md': 2_500,
   'docs/whitepapers_and_research/WHITEPAPER.md': 7_000
 });
 

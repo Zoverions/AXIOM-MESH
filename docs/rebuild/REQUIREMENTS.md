@@ -168,11 +168,14 @@ The machine-readable capability registry remains authoritative. Kernel
   digest-pinned container candidate with four supervised processes,
   loopback-only internals, non-root execution, read-only root, dropped
   capabilities, mounted secrets, resource ceilings, bounded logs, health
-  checks, and loopback-only host publication. Deny-egress MUST be enforced by
-  the pilot host or orchestrator because the Compose candidate cannot combine
-  an internal network with published host ingress. The real four-process stack
-  passes host-mode and composed-container production drills in protected CI;
-  immutable pilot image publication and deployment evidence remain pending.
+  checks, permission-restricted Unix-domain host ingress, and
+  `network_mode: none`. Startup MUST fail before child services launch if the
+  effective container namespace has any non-loopback or IPv4/IPv6 default
+  route. Protected CI MUST prove runner reachability of a public control
+  target, preserved Gateway ingress, and blocked egress from the running
+  candidate.
+  Equivalent pilot orchestrator policy and immutable deployment evidence
+  remain pending.
 
 ## Capability coverage
 

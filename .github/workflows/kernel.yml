@@ -159,11 +159,15 @@ jobs:
             "$RUNNER_TEMP/axiom-secrets"
           sudo chown -R 10001:10001 \
             "$RUNNER_TEMP/axiom-data"
+          mkdir -p "$RUNNER_TEMP/axiom-ingress"
+          sudo chown 10001:10001 \
+            "$RUNNER_TEMP/axiom-ingress"
           sudo chown 10001:10001 \
             "$RUNNER_TEMP/axiom-secrets/data-protection.key" \
             "$RUNNER_TEMP/axiom-secrets/api-tokens.json"
           {
             echo "AXIOM_DATA_DIR_HOST=$RUNNER_TEMP/axiom-data"
+            echo "AXIOM_GATEWAY_SOCKET_DIR_HOST=$RUNNER_TEMP/axiom-ingress"
             echo "AXIOM_DATA_KEY_FILE_HOST=$RUNNER_TEMP/axiom-secrets/data-protection.key"
             echo "AXIOM_API_TOKENS_FILE_HOST=$RUNNER_TEMP/axiom-secrets/api-tokens.json"
           } >> "$GITHUB_ENV"
@@ -175,7 +179,9 @@ jobs:
         run: |
           docker compose -f compose.production.yml up --detach --no-build
           for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:8080/ready >/dev/null; then
+            if sudo curl --fail --silent \
+              --unix-socket "$RUNNER_TEMP/axiom-ingress/gateway.sock" \
+              http://localhost/ready >/dev/null; then
               break
             fi
             if [ "$attempt" -eq 30 ]; then
@@ -185,12 +191,34 @@ jobs:
             sleep 2
           done
           token="$(tr -d '\n' <"$RUNNER_TEMP/axiom-secrets/operator.token")"
-          curl --fail --silent \
+          sudo curl --fail --silent \
+            --unix-socket "$RUNNER_TEMP/axiom-ingress/gateway.sock" \
             -H "Authorization: Bearer $token" \
-            http://127.0.0.1:8080/v1/operations \
+            http://localhost/v1/operations \
             > "$RUNNER_TEMP/operations.json"
           node -e "const fs=require('node:fs');const report=JSON.parse(fs.readFileSync(process.argv[1]));if(report.status!=='ready'||report.services.length!==4)process.exit(1)" \
             "$RUNNER_TEMP/operations.json"
+          echo "AXIOM_HOST_INGRESS_VERIFIED=true" >> "$GITHUB_ENV"
+      - name: Prove public probe target is reachable from the runner
+        run: |
+          node -e "const net=require('node:net');const socket=net.createConnection({host:'1.1.1.1',port:443});const timer=setTimeout(()=>{socket.destroy();process.exit(1)},5000);socket.once('connect',()=>{clearTimeout(timer);socket.destroy()});socket.once('close',()=>process.exit(0));socket.once('error',()=>process.exit(1))"
+          echo "AXIOM_RUNNER_PUBLIC_CONTROL_VERIFIED=true" >> "$GITHUB_ENV"
+      - name: Verify container deny-egress boundary
+        working-directory: mesh
+        run: |
+          docker compose -f compose.production.yml exec -T \
+            -e GITHUB_SHA="$GITHUB_SHA" \
+            -e AXIOM_HOST_INGRESS_VERIFIED="$AXIOM_HOST_INGRESS_VERIFIED" \
+            -e AXIOM_RUNNER_PUBLIC_CONTROL_VERIFIED="$AXIOM_RUNNER_PUBLIC_CONTROL_VERIFIED" \
+            kernel node src/network-boundary.mjs \
+            > "$RUNNER_TEMP/axiom-deny-egress-evidence.json"
+      - name: Upload signed deny-egress evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: axiom-deny-egress-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/axiom-deny-egress-evidence.json
+          if-no-files-found: error
+          retention-days: 90
       - name: Stop container
         if: always()
         working-directory: mesh
