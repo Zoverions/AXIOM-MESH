@@ -13,13 +13,13 @@ artifact is reproducible and tied to the release commit or image digest.
 
 | Gate | Status | Evidence | Remaining action |
 |---|---|---|---|
-| Source integrity | Pass | Verified clean-room tree and package checksums | Publish release provenance |
+| Source integrity | Pass | Verified clean-room tree, source checksum, SBOM, and provenance | Maintain for every release |
 | Capability claims | Pass | Registry, generated status, claim-marker checks | Maintain on every change |
-| Kernel tests | Pass | 31-test suite in [GitHub run 30375390450](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30375390450) | Require on protected `main` |
+| Kernel tests | Pass | 31-test suite in [GitHub run 30376178779](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30376178779) | Require on protected `main` |
 | Host production drill | Pass | Real four-process supervisor test in the same run | Preserve on every runtime change |
 | Container source policy | Pass | Dockerfile/Compose static release gate | Maintain digest pin |
-| Container image build | Pass | Digest-pinned build in [GitHub run 30375390450](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30375390450) | Record released image digest |
-| Composed container drill | Pass | Readiness, authenticated operations, and teardown in the same run | Repeat for release commit |
+| Container image build | Pass | Digest-pinned build in [GitHub run 30376178779](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30376178779) | Publish immutable image digest before pilot |
+| Composed container drill | Pass | Readiness, authenticated operations, and teardown in the same run | Repeat for future release commits |
 | Dependency audit | Pass | Root and kernel lock audits in the same run | Maintain required check |
 | Backup and restore | Implemented, drill pending | Unit/integration coverage | Run disposable-host exercise |
 | Observability | Implemented locally | Bounded metrics and authenticated operations tests | Integrate external collector |
@@ -27,7 +27,7 @@ artifact is reproducible and tied to the release commit or image digest.
 | Credential rotation | Pending | Provisioning is implemented | Run trust-update and rollback drill |
 | Independent security review | Pending | Internal evidence only | Commission scoped review |
 | Incident response | Partial | Security and rollback policies exist | Run tabletop exercise |
-| Release governance | Partial | `main` is default and protected; legacy line renamed; clean release verifier exists | Approve and publish dossier |
+| Release governance | Pass | Protected `main`, release verifier, and [v0.11.0 dossier](https://github.com/Zoverions/AXIOM-MESH/releases/tag/v0.11.0) | Maintain for every release |
 
 ## Promotion blockers
 
@@ -37,8 +37,7 @@ The following block production promotion:
 2. no deployment-host backup/restore and credential-rotation drill;
 3. no independent review of the supported kernel and deployment policy;
 4. no host- or orchestrator-enforced deny-egress evidence;
-5. no approved release dossier;
-6. no documented revocation inventory for credentials exposed in deprecated
+5. no documented revocation inventory for credentials exposed in deprecated
    history.
 
 ## Gate owners

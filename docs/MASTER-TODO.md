@@ -30,22 +30,22 @@ evidence-chain integrity, or unauthorized effects.
 | ID | Status | Work | Acceptance evidence |
 |---|---|---|---|
 | REP-001 | Complete | Make clean-room `main` the GitHub default and preserve the old line as deprecated | Default is `main`; legacy branch is `deprecated/legacy-main-pre-clean-room` |
-| REP-002 | Complete | Enforce canonical documentation and lowercase-`main` CI | Documentation checks and [workflow run 30375390450](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30375390450) |
+| REP-002 | Complete | Enforce canonical documentation and lowercase-`main` CI | Documentation checks and [workflow run 30376178779](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30376178779) |
 | REP-004 | Complete | Remove unsupported legacy runtimes and dependency manifests from the supported branch | Legacy source remains recoverable from Git history and the deprecated branch |
 | REP-003 | Complete | Protect `main` against deletion and force pushes; require green verification | Required kernel/container/CodeQL checks; deletion and force pushes disabled |
-| REL-001 | Pending | Publish the verified 0.11.0 clean-room baseline | Signed release notes, source checksum, SBOM, provenance |
-| REL-002 | Complete | Run the GitHub image build and composed container readiness drill | [Workflow run 30375390450](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30375390450) passed both jobs |
+| REL-001 | Complete | Publish the verified 0.11.0 clean-room baseline | [v0.11.0 prerelease](https://github.com/Zoverions/AXIOM-MESH/releases/tag/v0.11.0) with source checksum, SPDX SBOM, and provenance |
+| REL-002 | Complete | Run the GitHub image build and composed container readiness drill | [Workflow run 30376178779](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30376178779) passed both jobs |
 | SEC-001 | Pending | Record revocation of every credential from deprecated history | Rotation inventory and trust-store comparison |
 
 ## P0 - production candidate closure
 
 | ID | Status | Work | Acceptance evidence |
 |---|---|---|---|
-| OPS-001 | Complete | Promote the container package only after CI image/runtime evidence passes | Registry promotion tied to workflow run 30375390450 |
+| OPS-001 | Complete | Promote the container package only after CI image/runtime evidence passes | Registry promotion tied to workflow run 30376178779 |
 | OPS-002 | Pending | Exercise backup, tamper rejection, restore, and rollback on a disposable production host | Encrypted drill artifact with measured RPO/RTO |
 | OPS-003 | Pending | Establish an initial latency, error-rate, saturation, and restart baseline | Versioned SLO report from a controlled load profile |
 | SEC-002 | Pending | Perform an independent threat-model and configuration review of the supported kernel | Findings ledger with severity and remediation owners |
-| SUP-001 | Pending | Produce a reproducible release dossier without embedding secrets | Checksums, SPDX SBOM, provenance, policy and registry digests |
+| SUP-001 | Complete | Produce a reproducible release dossier without embedding secrets | v0.11.0 checksums, SPDX SBOM, provenance, policy and registry digests |
 
 ## P1 - single-node production pilot
 
