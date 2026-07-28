@@ -40,13 +40,13 @@ For the candidate hardened container package and explicit production
 provisioning flow, see [PRODUCTION.md](PRODUCTION.md). Runtime startup never
 generates production identities, API tokens, or data-protection keys.
 
-The candidate Compose network is internal and retains only explicit
-host-loopback Gateway ingress. With `AXIOM_REQUIRE_DENY_EGRESS=true`, the
-supervisor fails before launching services if the Linux namespace has an
-active IPv4 or IPv6 default route or lacks the isolated link. Protected CI
-runs `npm run network-boundary:verify` inside the provisioned container,
-establishes an outside positive control, and retains signed secret-free
-evidence.
+The candidate container uses `network_mode: "none"` and retains only explicit
+host-local Gateway ingress through a bind-mounted Unix-domain socket. With
+`AXIOM_REQUIRE_DENY_EGRESS=true`, the supervisor fails before launching
+services if the Linux namespace has any active non-loopback or IPv4/IPv6
+default route. Protected CI runs `npm run network-boundary:verify` inside the
+provisioned container, establishes an outside positive control, verifies the
+socket ingress path, and retains signed secret-free evidence.
 
 Verify an export without a running AXIOM-MESH process:
 

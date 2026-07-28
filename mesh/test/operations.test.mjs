@@ -218,14 +218,28 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
   assert.throws(() => verifyProductionDeployment({
     dockerfile,
     dockerignore,
-    compose: compose.replace('internal: true', 'internal: false'),
+    compose: compose.replace('network_mode: "none"', 'network_mode: "host"'),
     productionDocs,
     packageJson,
     backupRetentionPolicy,
     credentialRevocations,
     workflow,
     repositoryIgnore
-  }), /internal: true/);
+  }), /network_mode: "none"/);
+  assert.throws(() => verifyProductionDeployment({
+    dockerfile,
+    dockerignore,
+    compose: compose.replace(
+      'network_mode: "none"',
+      'network_mode: "none"\n    ports:\n      - "127.0.0.1:8080:8080"'
+    ),
+    productionDocs,
+    packageJson,
+    backupRetentionPolicy,
+    credentialRevocations,
+    workflow,
+    repositoryIgnore
+  }), /must not publish ports/);
   assert.throws(() => verifyProductionDeployment({
     dockerfile,
     dockerignore,

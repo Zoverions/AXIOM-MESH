@@ -45,25 +45,27 @@ Set absolute host paths explicitly:
 
 ```bash
 export AXIOM_DATA_DIR_HOST=/srv/axiom-mesh/data
+export AXIOM_GATEWAY_SOCKET_DIR_HOST=/srv/axiom-mesh/run
 export AXIOM_DATA_KEY_FILE_HOST=/srv/axiom-mesh/secrets/data-protection.key
 export AXIOM_API_TOKENS_FILE_HOST=/srv/axiom-mesh/secrets/api-tokens.json
+sudo install -d -o 10001 -g 10001 -m 0750 \
+  "${AXIOM_GATEWAY_SOCKET_DIR_HOST}"
 docker compose -f compose.production.yml build --pull=false
 docker compose -f compose.production.yml up -d
 ```
 
 The compose policy uses a read-only root filesystem, a non-root numeric user,
 all Linux capabilities dropped, no-new-privileges, bounded memory/CPU/PIDs,
-explicit secrets, loopback-only host publication, bounded logs, and
-readiness-based health checks. Compose enforces deny-egress with an
-`internal: true` bridge network while preserving the explicit host-loopback
-Gateway publication. The production supervisor requires a non-loopback
-isolated link with no active IPv4 or IPv6 default route before it launches any
-service.
+explicit secrets, permission-restricted Unix-domain host ingress, bounded
+logs, and readiness-based health checks. Compose enforces deny-egress with
+`network_mode: "none"` and no attached Docker network. The production
+supervisor rejects every active non-loopback or IPv4/IPv6 default route before
+it launches any service.
 
 Do not disable `AXIOM_REQUIRE_DENY_EGRESS` to accommodate another runtime.
-Equivalent orchestrator deployments must reproduce the default-route
-rejection and retain explicit ingress. The Docker daemon and host remain
-trusted. See
+Equivalent orchestrator deployments must reproduce the route rejection and
+retain explicit ingress. The Docker daemon, host, bind mount, and access to the
+socket-owning group remain trusted. See
 [`docs/security/DENY-EGRESS-BOUNDARY.md`](../docs/security/DENY-EGRESS-BOUNDARY.md)
 for the proof, rollback rule, and adapter boundary.
 
@@ -72,8 +74,12 @@ for the proof, rollback rule, and adapter boundary.
 Liveness discloses only process state:
 
 ```bash
-curl --fail http://127.0.0.1:8080/health
-curl --fail http://127.0.0.1:8080/ready
+sudo curl --fail \
+  --unix-socket /srv/axiom-mesh/run/gateway.sock \
+  http://localhost/health
+sudo curl --fail \
+  --unix-socket /srv/axiom-mesh/run/gateway.sock \
+  http://localhost/ready
 ```
 
 Operational details and OpenMetrics require a principal with
@@ -81,10 +87,14 @@ Operational details and OpenMetrics require a principal with
 
 ```bash
 TOKEN="$(tr -d '\n' </srv/axiom-mesh/secrets/operator.token)"
-curl --fail -H "Authorization: Bearer ${TOKEN}" \
-  http://127.0.0.1:8080/v1/operations
-curl --fail -H "Authorization: Bearer ${TOKEN}" \
-  http://127.0.0.1:8080/v1/metrics
+sudo curl --fail \
+  --unix-socket /srv/axiom-mesh/run/gateway.sock \
+  -H "Authorization: Bearer ${TOKEN}" \
+  http://localhost/v1/operations
+sudo curl --fail \
+  --unix-socket /srv/axiom-mesh/run/gateway.sock \
+  -H "Authorization: Bearer ${TOKEN}" \
+  http://localhost/v1/metrics
 ```
 
 Readiness fails when Grid, Hypervisor, or Sandbox is unavailable or when Grid

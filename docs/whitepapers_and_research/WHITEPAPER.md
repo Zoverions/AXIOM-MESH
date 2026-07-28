@@ -343,13 +343,15 @@ The production candidate uses:
 - readiness-based health checking;
 - a supervisor that terminates partial startup.
 
-Compose places the kernel on a single internal bridge network while publishing
-Gateway only to host loopback. The production supervisor reads the effective
-Linux IPv4 and IPv6 route tables before launching children, requires an
-isolated non-loopback link, and rejects every active default route. Protected
+Compose gives the kernel no attached network. A permission-restricted,
+bind-mounted Unix-domain socket carries explicit host-local Gateway ingress
+while all four services remain on container loopback. The production
+supervisor reads the effective Linux IPv4 and IPv6 route tables before
+launching children and rejects every non-loopback or default route. Protected
 CI first proves its public TCP target is reachable from the runner, then proves
-the running container cannot connect while loopback readiness and published
-authenticated ingress remain functional. The Docker daemon and host remain
+the running container cannot connect while loopback readiness and
+authenticated Unix-socket ingress remain functional. The Docker daemon and
+host remain
 trusted, and other orchestrators require equivalent independent evidence.
 
 Provisioning creates four service identities, trust records, an API principal

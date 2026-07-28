@@ -46,15 +46,16 @@ Gateway -> Hypervisor -> Sandbox -> Grid
  public      loopback     loopback   loopback
 ```
 
-Only Gateway is externally reachable. Internal plaintext HTTP remains on
-loopback. Gateway is published only on host loopback. The container runs as
+Only Gateway is reachable from an authorized local host operator. Internal
+plaintext HTTP remains on loopback. Gateway crosses a permission-restricted
+Unix-domain socket rather than a published port. The container runs as
 UID/GID 10001, uses a read-only root filesystem, drops Linux capabilities,
 sets `no-new-privileges`, applies resource ceilings, and mounts data and
-secrets from explicit host paths. Compose uses a single `internal: true`
-network with explicit host-loopback Gateway publication. Production startup
-requires an isolated non-loopback link and rejects active IPv4 or IPv6 default
-routes. Protected CI proves intended ingress and blocked public TCP egress;
-other orchestrators must supply equivalent evidence.
+secrets from explicit host paths. Compose uses `network_mode: "none"` with no
+attached Docker network. Production startup rejects every active non-loopback
+or IPv4/IPv6 default route. Protected CI proves intended Unix-socket ingress
+and blocked public TCP egress; other orchestrators must supply equivalent
+evidence.
 
 This boundary does not authorize remote internal traffic, multiple hosts,
 arbitrary code, external AI, chain settlement, or regulated domain workloads.

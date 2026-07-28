@@ -3,6 +3,7 @@ import { once } from 'node:events';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { ValidationError } from './lib/canonical.mjs';
 import { meshConfig } from './lib/config.mjs';
+import { startLocalIngressBridge } from './local-ingress.mjs';
 import { assertDenyEgressBoundary } from './network-boundary.mjs';
 
 const STARTUP_ORDER = Object.freeze([
@@ -23,6 +24,7 @@ export async function runProductionSupervisor({
   spawnImpl = spawn,
   fetchImpl = fetch,
   denyEgressCheck = assertDenyEgressBoundary,
+  ingressBridgeStart = startLocalIngressBridge,
   startupTimeoutMs = 20_000,
   stdout = value => process.stdout.write(value),
   stderr = value => process.stderr.write(value)
@@ -32,6 +34,7 @@ export async function runProductionSupervisor({
   }
   if (config.requireDenyEgress) await denyEgressCheck();
   const children = [];
+  let ingressBridge;
   let stopping = false;
   let resolveStop;
   let requestedExitCode = 0;
@@ -88,6 +91,13 @@ export async function runProductionSupervisor({
         timeoutMs: startupTimeoutMs
       });
     }
+    if (config.gatewaySocket) {
+      ingressBridge = await ingressBridgeStart({
+        socketPath: config.gatewaySocket,
+        targetHost: '127.0.0.1',
+        targetPort: config.ports.gateway
+      });
+    }
     stdout(`${JSON.stringify({
       timestamp: new Date().toISOString(),
       level: 'info',
@@ -112,7 +122,11 @@ export async function runProductionSupervisor({
     stopping = true;
     for (const [signal, handler] of signalHandlers) process.removeListener(signal, handler);
     process.removeListener('message', messageHandler);
-    await stopChildren(children);
+    try {
+      await ingressBridge?.close();
+    } finally {
+      await stopChildren(children);
+    }
   }
   return requestedExitCode;
 }

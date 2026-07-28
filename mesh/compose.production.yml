@@ -15,6 +15,7 @@ services:
     pids_limit: 128
     mem_limit: 512m
     cpus: 2.0
+    network_mode: "none"
     stop_grace_period: 15s
     environment:
       NODE_ENV: production
@@ -23,15 +24,17 @@ services:
       AXIOM_DATA_DIR: /var/lib/axiom-mesh
       AXIOM_DATA_KEY_FILE: /run/secrets/data-protection.key
       AXIOM_API_TOKENS_FILE: /run/secrets/api-tokens.json
-      AXIOM_GATEWAY_HOST: 0.0.0.0
+      AXIOM_GATEWAY_HOST: 127.0.0.1
+      AXIOM_GATEWAY_SOCKET: /run/axiom-mesh/gateway.sock
       AXIOM_INTERNAL_HOST: 127.0.0.1
       AXIOM_LOG_REQUESTS: "true"
-    ports:
-      - "127.0.0.1:${AXIOM_GATEWAY_PORT_HOST:-8080}:8080"
     volumes:
       - type: bind
         source: ${AXIOM_DATA_DIR_HOST:?set AXIOM_DATA_DIR_HOST}
         target: /var/lib/axiom-mesh
+      - type: bind
+        source: ${AXIOM_GATEWAY_SOCKET_DIR_HOST:?set AXIOM_GATEWAY_SOCKET_DIR_HOST}
+        target: /run/axiom-mesh
     secrets:
       - source: axiom_data_key
         target: data-protection.key
@@ -45,8 +48,6 @@ services:
       timeout: 5s
       start_period: 20s
       retries: 3
-    networks:
-      - ingress
     logging:
       driver: json-file
       options:
@@ -58,10 +59,3 @@ secrets:
     file: ${AXIOM_DATA_KEY_FILE_HOST:?set AXIOM_DATA_KEY_FILE_HOST}
   axiom_api_tokens:
     file: ${AXIOM_API_TOKENS_FILE_HOST:?set AXIOM_API_TOKENS_FILE_HOST}
-
-networks:
-  ingress:
-    driver: bridge
-    internal: true
-    driver_opts:
-      com.docker.network.bridge.host_binding_ipv4: "127.0.0.1"

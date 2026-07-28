@@ -3,7 +3,7 @@ import { generateKeyPairSync, sign, verify } from 'node:crypto';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import net from 'node:net';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
@@ -150,11 +150,19 @@ test('ECON-02 deterministic journals remain integer-balanced under generated loa
 });
 
 test('production configuration rejects generated credentials and remote plaintext internals', () => {
-  assert.equal(meshConfig({
+  const enforced = meshConfig({
     environment: 'production',
     autoBootstrap: false,
-    requireDenyEgress: true
-  }).requireDenyEgress, true);
+    requireDenyEgress: true,
+    gatewaySocket: resolve('/run/axiom-mesh/gateway.sock')
+  });
+  assert.equal(enforced.requireDenyEgress, true);
+  assert.match(enforced.gatewaySocket, /gateway\.sock$/);
+  assert.throws(() => meshConfig({
+    environment: 'production',
+    autoBootstrap: false,
+    gatewaySocket: 'relative/gateway.sock'
+  }), /absolute path/);
   assert.throws(() => meshConfig({
     environment: 'production',
     autoBootstrap: true

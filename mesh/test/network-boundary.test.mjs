@@ -13,7 +13,11 @@ import {
   verifyDenyEgressEvidence
 } from '../src/network-boundary.mjs';
 
-const IPV4_ISOLATED = [
+const IPV4_LOOPBACK_ONLY = [
+  'Iface Destination Gateway Flags RefCnt Use Metric Mask MTU Window IRTT'
+].join('\n');
+
+const IPV4_WITH_LINK = [
   'Iface Destination Gateway Flags RefCnt Use Metric Mask MTU Window IRTT',
   'eth0 000011AC 00000000 0001 0 0 0 0000FFFF 0 0 0'
 ].join('\n');
@@ -28,21 +32,25 @@ const IPV6_WITH_DEFAULT = [
   `${'0'.repeat(32)} 00 ${'0'.repeat(32)} 00 ${'0'.repeat(32)} 00000064 00000000 00000000 00000001 eth0`
 ].join('\n');
 
-test('Linux route inspection requires an isolated non-loopback link', async () => {
+test('Linux route inspection requires a loopback-only namespace', async () => {
   const isolated = inspectLinuxRouteTables({
-    ipv4: IPV4_ISOLATED,
+    ipv4: IPV4_LOOPBACK_ONLY,
     ipv6: ''
   });
   assert.equal(isolated.valid, true);
   assert.equal(isolated.ipv4.default_routes, 0);
-  assert.equal(isolated.non_loopback_link_routes, 1);
+  assert.equal(isolated.non_loopback_link_routes, 0);
 
   assert.equal(inspectLinuxRouteTables({
     ipv4: IPV4_WITH_DEFAULT,
     ipv6: ''
   }).valid, false);
   assert.equal(inspectLinuxRouteTables({
-    ipv4: IPV4_ISOLATED,
+    ipv4: IPV4_WITH_LINK,
+    ipv6: ''
+  }).valid, false);
+  assert.equal(inspectLinuxRouteTables({
+    ipv4: IPV4_LOOPBACK_ONLY,
     ipv6: IPV6_WITH_DEFAULT
   }).valid, false);
   assert.throws(
@@ -56,7 +64,7 @@ test('Linux route inspection requires an isolated non-loopback link', async () =
   await assert.rejects(
     () => assertDenyEgressBoundary({
       platform: 'win32',
-      readFileImpl: async () => IPV4_ISOLATED
+      readFileImpl: async () => IPV4_LOOPBACK_ONLY
     }),
     /Linux network namespace/
   );
@@ -67,7 +75,7 @@ test('Linux route inspection requires an isolated non-loopback link', async () =
         path.endsWith('ipv6_route') ? '' : IPV4_WITH_DEFAULT
       )
     }),
-    /no IPv4 or IPv6 default route/
+    /loopback-only namespace/
   );
 });
 
@@ -94,13 +102,14 @@ test('deny-egress drill emits tamper-evident secret-free evidence', async t => {
   t.after(() => rm(dataDir, { recursive: true, force: true }));
   const signer = await ensureMeshIdentity(dataDir, 'grid', { create: true });
   const routeInspection = inspectLinuxRouteTables({
-    ipv4: IPV4_ISOLATED,
+    ipv4: IPV4_LOOPBACK_ONLY,
     ipv6: ''
   });
   const config = {
     environment: 'production',
     requireDenyEgress: true,
     dataDir,
+    gatewaySocket: '/run/axiom-mesh/gateway.sock',
     ports: { gateway: 8080 }
   };
   const evidence = await runDenyEgressDrill({
@@ -110,6 +119,8 @@ test('deny-egress drill emits tamper-evident secret-free evidence', async t => {
     sourceRevision: 'a'.repeat(40),
     generatedAt: '2026-07-28T20:00:00.000Z',
     platform: 'linux',
+    hostIngressVerified: true,
+    runnerPublicControlVerified: true,
     readinessProbe: async () => ({
       status: 200,
       service: 'gateway',
@@ -124,6 +135,11 @@ test('deny-egress drill emits tamper-evident secret-free evidence', async t => {
   assert.ok(Object.values(evidence.checks).every(Boolean));
   assert.equal(evidence.boundary.ipv4_default_routes, 0);
   assert.equal(evidence.boundary.ipv6_default_routes, 0);
+  assert.equal(evidence.boundary.non_loopback_link_routes, 0);
+  assert.equal(
+    evidence.boundary.local_ingress_transport,
+    'unix-domain-socket'
+  );
   assert.equal(evidence.probes.public_tcp_connected, false);
   assert.equal(verifyDenyEgressEvidence(evidence).valid, true);
   assert.doesNotMatch(JSON.stringify(evidence), /PRIVATE KEY/);
@@ -140,6 +156,26 @@ test('deny-egress drill emits tamper-evident secret-free evidence', async t => {
       config,
       signer,
       routeInspection,
+      readinessProbe: async () => ({
+        status: 200,
+        service: 'gateway',
+        state: 'ready'
+      }),
+      outboundProbe: async () => ({
+        connected: false,
+        outcome: 'enetunreach'
+      })
+    }),
+    /host_unix_ingress_verified, runner_public_control_verified/
+  );
+
+  await assert.rejects(
+    () => runDenyEgressDrill({
+      config,
+      signer,
+      routeInspection,
+      hostIngressVerified: true,
+      runnerPublicControlVerified: true,
       readinessProbe: async () => ({
         status: 200,
         service: 'gateway',

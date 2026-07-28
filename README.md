@@ -163,10 +163,10 @@ The candidate production package is
 provisioning and verification runbook in
 [`mesh/PRODUCTION.md`](mesh/PRODUCTION.md). It runs the four responsibilities
 as independent supervised processes in one hardened container. Internal
-plaintext traffic remains loopback-only, Gateway is published only on host
-loopback, and the only attached Docker network is internal with no IPv4 or
-IPv6 default route. Startup and protected CI fail if effective deny-egress is
-absent. See the
+plaintext traffic remains loopback-only, the container uses
+`network_mode: "none"`, and explicit host-local Gateway access crosses a
+bind-mounted Unix-domain socket rather than a published port. Startup and
+protected CI fail if effective deny-egress is absent. See the
 [candidate network boundary](docs/security/DENY-EGRESS-BOUNDARY.md).
 
 The machine-readable
@@ -266,10 +266,10 @@ supported entrypoints.
   read-only root filesystem, dropped capabilities, explicit resource ceilings,
   mounted secrets, and readiness-based health checks. Its source policy is
   verified by protected image-build and composed-runtime checks.
-- The candidate Compose network is internal and preserves only explicit
-  host-loopback Gateway ingress. Production startup rejects an IPv4 or IPv6
-  default route, and protected CI proves a runner-reachable public TCP target
-  is unreachable from the container in signed evidence.
+- The candidate container has no attached Docker network and preserves only
+  explicit Unix-domain Gateway ingress. Production startup rejects every
+  non-loopback or default route, and protected CI proves a runner-reachable
+  public TCP target is unreachable from the container in signed evidence.
 - Authenticated bounded-cardinality operations and OpenMetrics surfaces cover
   all four services without placing principals, prompts, payloads, tokens, or
   object identifiers in metric labels.

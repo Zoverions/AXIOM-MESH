@@ -6,7 +6,7 @@ ENV NODE_ENV=production \
     AXIOM_AUTO_BOOTSTRAP=false \
     AXIOM_REQUIRE_DENY_EGRESS=true \
     AXIOM_DATA_DIR=/var/lib/axiom-mesh \
-    AXIOM_GATEWAY_HOST=0.0.0.0 \
+    AXIOM_GATEWAY_HOST=127.0.0.1 \
     AXIOM_INTERNAL_HOST=127.0.0.1
 
 COPY --chown=10001:10001 package.json package-lock.json ./

@@ -353,14 +353,15 @@ export function verifyProductionDeployment({
     'pids_limit:',
     'mem_limit:',
     'cpus:',
-    '127.0.0.1:${AXIOM_GATEWAY_PORT_HOST:-8080}:8080',
+    'network_mode: "none"',
     'AXIOM_DATA_KEY_FILE: /run/secrets/data-protection.key',
     'AXIOM_API_TOKENS_FILE: /run/secrets/api-tokens.json',
     'AXIOM_REQUIRE_DENY_EGRESS: "true"',
+    'AXIOM_GATEWAY_HOST: 127.0.0.1',
+    'AXIOM_GATEWAY_SOCKET: /run/axiom-mesh/gateway.sock',
+    'source: ${AXIOM_GATEWAY_SOCKET_DIR_HOST:?set AXIOM_GATEWAY_SOCKET_DIR_HOST}',
+    'target: /run/axiom-mesh',
     'healthcheck:',
-    'driver: bridge',
-    'internal: true',
-    'com.docker.network.bridge.host_binding_ipv4: "127.0.0.1"'
   ]) {
     if (!compose.includes(required)) {
       throw new ValidationError(`Production compose policy is missing: ${required}`);
@@ -372,6 +373,11 @@ export function verifyProductionDeployment({
     || /pid:\s*host/.test(compose)
   ) {
     throw new ValidationError('Production compose policy contains a forbidden host-privilege setting');
+  }
+  if (/^\s*ports:\s*$/m.test(compose) || /^\s*networks:\s*$/m.test(compose)) {
+    throw new ValidationError(
+      'Production compose policy must not publish ports or attach networks'
+    );
   }
   for (const boundary of [
     'four supervised Node.js processes',
@@ -400,6 +406,9 @@ export function verifyProductionDeployment({
     'npm run credential-history:audit',
     'axiom-credential-history-audit-evidence-${{ github.sha }}',
     'Prove public probe target is reachable from the runner',
+    '--unix-socket "$RUNNER_TEMP/axiom-ingress/gateway.sock"',
+    'AXIOM_HOST_INGRESS_VERIFIED="$AXIOM_HOST_INGRESS_VERIFIED"',
+    'AXIOM_RUNNER_PUBLIC_CONTROL_VERIFIED="$AXIOM_RUNNER_PUBLIC_CONTROL_VERIFIED"',
     'node src/network-boundary.mjs',
     'axiom-deny-egress-evidence-${{ github.sha }}',
     'node src/recovery-drill.mjs',
@@ -431,7 +440,8 @@ export function verifyProductionDeployment({
     backup_retention_policy_sha256: digestObject(backupRetentionPolicy),
     credential_revocation_ledger_sha256: digestObject(credentialRevocations),
     deny_egress: {
-      compose_internal_network: true,
+      compose_network_mode_none: true,
+      unix_domain_ingress: true,
       runtime_route_check: true,
       signed_ci_probe: true
     },

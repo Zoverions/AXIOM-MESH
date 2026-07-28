@@ -25,16 +25,14 @@ export function inspectLinuxRouteTables({ ipv4, ipv6 = '' }) {
   const ipv6Routes = parseIpv6Routes(ipv6);
   const ipv4Default = ipv4Routes.filter(route => route.up && route.default);
   const ipv6Default = ipv6Routes.filter(route => route.up && route.default);
-  const nonLoopbackLinkRoutes = ipv4Routes.filter(route => (
-    route.up
-    && !route.default
-    && route.interface !== 'lo'
+  const nonLoopbackLinkRoutes = [...ipv4Routes, ...ipv6Routes].filter(route => (
+    route.up && route.interface !== 'lo'
   ));
   return {
     valid: (
       ipv4Default.length === 0
       && ipv6Default.length === 0
-      && nonLoopbackLinkRoutes.length > 0
+      && nonLoopbackLinkRoutes.length === 0
     ),
     ipv4: {
       routes: ipv4Routes.length,
@@ -70,7 +68,7 @@ export async function assertDenyEgressBoundary({
   const inspection = inspectLinuxRouteTables({ ipv4, ipv6 });
   if (!inspection.valid) {
     throw new ValidationError(
-      'Production deny-egress boundary requires a non-loopback link and no IPv4 or IPv6 default route'
+      'Production deny-egress boundary requires a loopback-only namespace with no IPv4 or IPv6 default route'
     );
   }
   return inspection;
@@ -131,6 +129,10 @@ export async function runDenyEgressDrill({
   generatedAt = new Date().toISOString(),
   platform = process.platform,
   routeInspection,
+  hostIngressVerified = process.env.AXIOM_HOST_INGRESS_VERIFIED === 'true',
+  runnerPublicControlVerified = (
+    process.env.AXIOM_RUNNER_PUBLIC_CONTROL_VERIFIED === 'true'
+  ),
   readinessProbe = probeReadiness,
   outboundProbe = probeTcpConnection,
   signer
@@ -155,13 +157,15 @@ export async function runDenyEgressDrill({
   const checks = {
     ipv4_default_route_absent: routes.ipv4?.default_routes === 0,
     ipv6_default_route_absent: routes.ipv6?.default_routes === 0,
-    isolated_link_present: routes.non_loopback_link_routes > 0,
+    non_loopback_routes_absent: routes.non_loopback_link_routes === 0,
     loopback_gateway_ready: (
       readiness?.status === 200
       && readiness?.service === 'gateway'
       && readiness?.state === 'ready'
     ),
     public_tcp_egress_blocked: outbound?.connected === false,
+    host_unix_ingress_verified: hostIngressVerified === true,
+    runner_public_control_verified: runnerPublicControlVerified === true,
     secret_values_omitted: true
   };
   const failed = Object.entries(checks)
@@ -202,8 +206,11 @@ export async function runDenyEgressDrill({
       public_key_pem: publicKeyPem
     },
     boundary: {
-      compose_internal_network_required: true,
-      loopback_ingress_target: config.ports.gateway,
+      compose_network_mode_none_required: true,
+      local_ingress_transport: config.gatewaySocket
+        ? 'unix-domain-socket'
+        : 'loopback-tcp',
+      loopback_gateway_port: config.ports.gateway,
       ipv4_routes_observed: routes.ipv4.routes,
       ipv6_routes_observed: routes.ipv6.routes,
       non_loopback_link_routes: routes.non_loopback_link_routes,
@@ -212,13 +219,15 @@ export async function runDenyEgressDrill({
     },
     probes: {
       loopback_gateway_status: readiness.status,
+      host_unix_ingress_verified: hostIngressVerified,
+      runner_public_control_verified: runnerPublicControlVerified,
       public_tcp_target: 'public-ipv4:443',
       public_tcp_connected: outbound.connected,
       public_tcp_outcome: boundedErrorCode(outbound.outcome)
     },
     checks,
     limitations: [
-      'single-container network-namespace evidence, not a multi-host network policy',
+      'single-container loopback-only namespace evidence, not a multi-host network policy',
       'the container host and Docker daemon remain trusted',
       'future external adapters require explicit destination allowlists and separate evidence'
     ]
@@ -242,11 +251,13 @@ export function verifyDenyEgressEvidence(evidence) {
   if (
     evidence.execution?.platform !== 'linux'
     || evidence.execution?.network_namespace !== true
-    || evidence.boundary?.compose_internal_network_required !== true
+    || evidence.boundary?.compose_network_mode_none_required !== true
     || evidence.boundary?.ipv4_default_routes !== 0
     || evidence.boundary?.ipv6_default_routes !== 0
-    || !(evidence.boundary?.non_loopback_link_routes > 0)
+    || evidence.boundary?.non_loopback_link_routes !== 0
     || evidence.probes?.loopback_gateway_status !== 200
+    || evidence.probes?.host_unix_ingress_verified !== true
+    || evidence.probes?.runner_public_control_verified !== true
     || evidence.probes?.public_tcp_connected !== false
     || !evidence.checks
     || Object.values(evidence.checks).some(value => value !== true)

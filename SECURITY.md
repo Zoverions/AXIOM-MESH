@@ -72,12 +72,13 @@ into recoverable quarantine rather than deleting media. Quarantined snapshots
 remain in data-key rotation and rollback scope. Permanent deletion requires a
 separate deployment-owned media-destruction authorization.
 
-The candidate container uses one internal bridge network and publishes only
-Gateway on host loopback. When enforcement is required, the supervisor rejects
-non-Linux execution, any active IPv4 or IPv6 default route, or a missing
-isolated link before launching services. Protected CI proves public TCP
-reachability from the runner and rejection from the container in signed
-evidence. The Docker daemon and host remain trusted; alternative orchestrators
+The candidate container uses `network_mode: "none"` and exposes Gateway
+locally through a permission-restricted, bind-mounted Unix-domain socket. When
+enforcement is required, the supervisor rejects non-Linux execution and every
+active non-loopback or IPv4/IPv6 default route before launching services.
+Protected CI proves public TCP reachability from the runner and rejection from
+the container in signed evidence. The Docker daemon and host remain trusted;
+alternative orchestrators
 must provide equivalent policy and evidence. See the
 [deny-egress boundary](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/security/DENY-EGRESS-BOUNDARY.md).
 

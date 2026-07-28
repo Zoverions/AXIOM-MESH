@@ -1,5 +1,5 @@
 import { readFile, stat } from 'node:fs/promises';
-import { resolve, join } from 'node:path';
+import { isAbsolute, resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sha256, ValidationError } from './canonical.mjs';
 
@@ -35,12 +35,17 @@ export function meshConfig(overrides = {}) {
   const autoBootstrap = overrides.autoBootstrap ?? envBoolean('AXIOM_AUTO_BOOTSTRAP', environment !== 'production');
   const requireDenyEgress = overrides.requireDenyEgress
     ?? envBoolean('AXIOM_REQUIRE_DENY_EGRESS', false);
+  const gatewaySocket = optionalAbsolutePath(
+    'AXIOM_GATEWAY_SOCKET',
+    overrides.gatewaySocket ?? process.env.AXIOM_GATEWAY_SOCKET
+  );
   const internalHost = overrides.internalHost ?? process.env.AXIOM_INTERNAL_HOST ?? '127.0.0.1';
   const config = {
     environment,
     dataDir,
     autoBootstrap,
     requireDenyEgress,
+    gatewaySocket,
     hosts: {
       gateway: overrides.gatewayHost ?? process.env.AXIOM_GATEWAY_HOST ?? '127.0.0.1',
       internal: internalHost
@@ -89,6 +94,14 @@ export function meshConfig(overrides = {}) {
     }
   }
   return config;
+}
+
+function optionalAbsolutePath(name, value) {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value !== 'string' || !isAbsolute(value)) {
+    throw new ValidationError(`${name} must be an absolute path`);
+  }
+  return value;
 }
 
 function normalizePolicyPaths(overrides) {

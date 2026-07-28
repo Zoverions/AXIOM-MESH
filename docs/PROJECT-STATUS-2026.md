@@ -41,11 +41,11 @@ experimental, 4 specified, 9 adapter-required, and 4 disabled capabilities.
 ## Production package state
 
 The repository contains a digest-pinned, non-root, read-only container
-candidate with mounted secrets, resource ceilings, bounded logs, loopback-only
-host publication, and readiness checks. Static deployment policy and a real
-host-mode four-process drill are implemented. Its only Compose network is
-internal; startup rejects active IPv4 and IPv6 default routes while retaining
-host-loopback Gateway ingress.
+candidate with mounted secrets, resource ceilings, bounded logs, local
+Unix-domain socket ingress, and readiness checks. Static deployment policy and
+a real host-mode four-process drill are implemented. Compose attaches no
+network; startup rejects active non-loopback and IPv4/IPv6 default routes while
+retaining explicit host-local Gateway ingress.
 
 The container package is implemented and verified by the protected
 [Clean Kernel workflow](https://github.com/Zoverions/AXIOM-MESH/actions/workflows/kernel.yml),

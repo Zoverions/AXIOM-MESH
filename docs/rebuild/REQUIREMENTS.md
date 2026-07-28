@@ -168,11 +168,12 @@ The machine-readable capability registry remains authoritative. Kernel
   digest-pinned container candidate with four supervised processes,
   loopback-only internals, non-root execution, read-only root, dropped
   capabilities, mounted secrets, resource ceilings, bounded logs, health
-  checks, loopback-only host publication, and an internal network without an
-  IPv4 or IPv6 default route. Startup MUST fail before child services launch
-  if the effective container namespace does not satisfy that boundary.
-  Protected CI MUST prove runner reachability of a public control target,
-  preserved Gateway ingress, and blocked egress from the running candidate.
+  checks, permission-restricted Unix-domain host ingress, and
+  `network_mode: none`. Startup MUST fail before child services launch if the
+  effective container namespace has any non-loopback or IPv4/IPv6 default
+  route. Protected CI MUST prove runner reachability of a public control
+  target, preserved Gateway ingress, and blocked egress from the running
+  candidate.
   Equivalent pilot orchestrator policy and immutable deployment evidence
   remain pending.
 
