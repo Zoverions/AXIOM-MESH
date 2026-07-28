@@ -37,6 +37,10 @@ without making deprecated parents ancestors of the new default branch.
 - Kernel and container evidence:
   [GitHub run 30375390450](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30375390450),
   with both `verify` and `container` successful.
+- `main` is protected with strict required `verify`, `container`, CodeQL
+  Actions, and CodeQL JavaScript/TypeScript checks; pull requests, linear
+  history, and conversation resolution are required; force pushes and branch
+  deletion are disabled.
 - The 35 open pull requests that targeted former `Main` were retargeted by
   GitHub to the deprecated branch; none were merged during cutover.
 - Unsupported legacy runtime trees and dependency manifests were removed from

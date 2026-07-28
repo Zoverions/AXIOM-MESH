@@ -27,7 +27,7 @@ artifact is reproducible and tied to the release commit or image digest.
 | Credential rotation | Pending | Provisioning is implemented | Run trust-update and rollback drill |
 | Independent security review | Pending | Internal evidence only | Commission scoped review |
 | Incident response | Partial | Security and rollback policies exist | Run tabletop exercise |
-| Release governance | Partial | `main` is default; legacy line renamed; clean release verifier exists | Protect branch and approve dossier |
+| Release governance | Partial | `main` is default and protected; legacy line renamed; clean release verifier exists | Approve and publish dossier |
 
 ## Promotion blockers
 
@@ -37,7 +37,7 @@ The following block production promotion:
 2. no deployment-host backup/restore and credential-rotation drill;
 3. no independent review of the supported kernel and deployment policy;
 4. no host- or orchestrator-enforced deny-egress evidence;
-5. no protected default branch or approved release dossier;
+5. no approved release dossier;
 6. no documented revocation inventory for credentials exposed in deprecated
    history.
 
