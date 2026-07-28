@@ -3,6 +3,7 @@ import http from 'node:http';
 import { mkdir, readdir, readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
+import { setTimeout as delay } from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
 import {
   canonicalJson,
@@ -106,6 +107,12 @@ export async function runTelemetryRelayDrill({
     });
     runtime = started;
 
+    const authorizedMetricsStatus = await waitForSocketStatus(
+      socketPath,
+      '/v1/metrics',
+      relayToken,
+      200
+    );
     const unauthenticatedMetricsStatus = await socketStatus(
       socketPath,
       '/v1/metrics'
@@ -118,11 +125,6 @@ export async function runTelemetryRelayDrill({
     for (let index = 0; index < 5; index += 1) {
       await socketStatus(socketPath, '/v1/operations', `invalid-${index}-${'x'.repeat(32)}`);
     }
-    const authorizedMetricsStatus = await socketStatus(
-      socketPath,
-      '/v1/metrics',
-      relayToken
-    );
 
     const observedAt = new Date().toISOString();
     let state = createTelemetryRelayState(policy);
@@ -484,6 +486,19 @@ async function socketStatus(socketPath, path, token) {
     request.once('error', () => resolveStatus(0));
     request.end();
   });
+}
+
+async function waitForSocketStatus(socketPath, path, token, expectedStatus) {
+  const deadline = Date.now() + REQUEST_TIMEOUT_MS;
+  let status = 0;
+  while (Date.now() < deadline) {
+    status = await socketStatus(socketPath, path, token);
+    if (status === expectedStatus) return status;
+    await delay(25);
+  }
+  throw new ValidationError(
+    `Gateway Unix-domain telemetry endpoint did not return ${expectedStatus}; last status ${status}`
+  );
 }
 
 function destinationRejected(policy) {
