@@ -90,6 +90,7 @@ repository is not implementation or deployment evidence.
 
 ## Immediate next milestone
 
-The next milestone is branch protection for the now-green GitHub `main`, a
-published 0.11 release dossier, and credential-history revocation evidence.
-Work is ordered in [`docs/MASTER-TODO.md`](MASTER-TODO.md).
+The next milestone is a published 0.11 release dossier, credential-history
+revocation evidence, and the recovery/SLO/security work required for a
+controlled single-node pilot. Work is ordered in
+[`docs/MASTER-TODO.md`](MASTER-TODO.md).
