@@ -28,12 +28,12 @@ authority-reducing containment, evidence-first chronology, communications,
 closure, and five linked control artifacts. Its credential-history audit also
 reconstructs a 32-entry keyed ledger from the locked deprecated graph and
 proves that no candidate appears in the supported tip.
-Dedicated pilot capacity and availability, external telemetry, scheduled
+Dedicated pilot capacity and availability, pilot-owned telemetry receivers, scheduled
 pilot-media recovery, pilot-owned secret-manager rotation, external
 deprecated-credential attestations, a named-roster pilot incident exercise,
-and independent security review remain open. Candidate-container deny-egress
-and the automated incident tabletop are implemented and remain subject to
-pilot-platform repetition.
+and independent security review remain open. Candidate-container deny-egress,
+the host-side telemetry relay, and the automated incident tabletop are
+implemented and remain subject to pilot-platform repetition.
 The current decision is recorded in the
 [readiness tracker](PRODUCTION-READINESS-TRACKER.md).
 
@@ -219,6 +219,28 @@ The runtime must expose:
 An external collector or alert destination is an adapter with its own
 credentials and egress authority. It must have bounded retry, queue limits,
 redaction, failure visibility, and a disable/rollback path.
+
+The candidate host-side telemetry relay implements that adapter without
+changing the kernel network boundary. A dedicated `telemetry:collect`
+principal is confined to the authenticated operations and metrics routes on
+the permission-restricted Unix socket. The relay requires the exact
+four-service topology, produces 68 fixed OTLP/HTTP JSON points, and maps only
+the fixed alert vocabulary to Alertmanager v2. It requires exact allowlisted
+HTTPS origins and private file-backed receiver credentials, rejects redirects,
+reserves queue capacity for alerts, coalesces stale metrics, bounds items,
+bytes, attempts, response bodies, and audit history, uses stable idempotency
+keys, and records delivered, retry, and dead-letter outcomes without bodies or
+credentials.
+
+Protected CI performs a real host-mode Unix-socket scrape, proves the relay identity
+cannot access a non-telemetry route, injects a bounded authentication alert,
+forces one 503 and one 429, drains the persisted queue, records two receiver
+receipts, and signs the result. This closes the automated candidate mechanism.
+The separate same-revision container artifact proves deny-egress; the relay
+drill does not substitute for that container-network proof.
+Pilot promotion still requires operator-owned HTTPS receivers, external
+credential custody, retention decisions, receiver deduplication, outage
+measurement, and a named human acknowledgement.
 
 ## Supply-chain requirements
 

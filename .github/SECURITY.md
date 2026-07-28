@@ -41,7 +41,8 @@ attestation. See the
 
 The supported offline rotation procedure replaces the Gateway, Hypervisor,
 Sandbox, and Grid Ed25519 identities, updates all four trust records, and
-replaces the production operator API token as one maintenance transaction.
+replaces the production operator API token and least-privilege telemetry relay
+token as one maintenance transaction.
 The Grid runtime lock excludes a live or competing startup. The retiring and
 successor Grid keys both attest the public transition, allowing historical
 evidence to remain verifiable without retaining retired private keys.
@@ -81,6 +82,17 @@ the container in signed evidence. The Docker daemon and host remain trusted;
 alternative orchestrators
 must provide equivalent policy and evidence. See the
 [deny-egress boundary](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/security/DENY-EGRESS-BOUNDARY.md).
+
+External telemetry uses a separate host-side relay so the kernel keeps
+deny-egress. Its `telemetry:collect` credential is confined to the two
+authenticated telemetry routes over the Unix socket. The relay accepts only
+the exact four-service topology, fixed OTLP/HTTP JSON attributes, fixed
+Alertmanager v2 labels, and exact allowlisted HTTPS origins. It rejects
+redirects, insecure or symlinked credentials, oversized state, digest drift,
+and malformed receiver responses. Alert-reserved queue capacity, bounded
+retry, idempotency keys, receipt/dead-letter audit, and forbidden-term checks
+limit data exposure and delivery failure. See the
+[external telemetry runbook](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md).
 
 Neither local rotation workflow substitutes for external revocation,
 secret-manager versioning, or destruction evidence at prior custodians and

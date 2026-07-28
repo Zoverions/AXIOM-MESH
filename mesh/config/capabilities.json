@@ -234,10 +234,13 @@
       "id": "operations.observability",
       "family": "operations",
       "status": "implemented",
-      "summary": "Bounded-cardinality service telemetry, dependency-aware readiness, authenticated operational reports, OpenMetrics output, and static integrity/security alerts cover the four-process runtime without exposing sensitive labels.",
+      "summary": "Bounded four-service telemetry is scraped over least-privilege Unix-socket access and relayed as OTLP/HTTP JSON with fixed attributes; static alerts route through Alertmanager v2 using HTTPS allowlists, reserved queue capacity, bounded retry, redaction, and delivery audit.",
       "evidence": [
         "mesh/test/operations.test.mjs",
-        "mesh/test/kernel.test.mjs"
+        "mesh/test/kernel.test.mjs",
+        "mesh/test/telemetry-relay.test.mjs",
+        "mesh/test/telemetry-relay-drill.test.mjs",
+        ".github/workflows/kernel.yml"
       ]
     },
     {
@@ -254,7 +257,7 @@
       "id": "operations.installer-observability-release",
       "family": "operations",
       "status": "experimental",
-      "summary": "Release tooling, observability, and container verification are executable; legacy installer replacement, external alert delivery, and independently evidenced live deployment remain incomplete."
+      "summary": "Release tooling, bounded external telemetry and alert routing, and container verification are executable; legacy installer replacement and independently evidenced live deployment remain incomplete."
     }
   ]
 }

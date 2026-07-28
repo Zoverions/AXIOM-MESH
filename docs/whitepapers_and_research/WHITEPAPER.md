@@ -325,8 +325,17 @@ strings, object identifiers, or intent identifiers as labels. Static alert
 states cover authentication failures, replay rejection, integrity failure,
 server errors, and service unavailability.
 
-External storage for metrics and alert delivery are future adapters because
-they introduce egress, credentials, retention, and delivery failure modes.
+External storage is reached only by a host-side relay; the kernel retains
+deny-egress. A route-restricted `telemetry:collect` credential can read only
+the two telemetry surfaces over the Gateway Unix socket. The relay transforms
+the exact four-service report into 68 fixed OTLP/HTTP JSON metric points and a
+fixed Alertmanager v2 vocabulary. Exact HTTPS origin allowlists, no redirects,
+private file-backed receiver credentials, item and queue byte ceilings,
+alert-reserved capacity, exponential retry, stable idempotency keys, bounded
+resolution replay, dead-letter visibility, and secret-free delivery audit
+contain the adapter's additional authority. Protected CI signs a real
+Unix-socket scrape and forced 503/429 retry exercise; pilot-owned endpoints,
+receiver retention, and human acknowledgement remain deployment evidence.
 
 ## 12. Production candidate
 

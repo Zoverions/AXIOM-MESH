@@ -138,15 +138,29 @@ export async function createGatewayService(config = meshConfig()) {
   });
 
   router.add('GET', '/v1/operations', async ({ traceId, principal }) => {
-    if (!hasScope(principal, 'operations:read')) {
-      throw new AxiomError('forbidden', 'operations:read scope is required', 403);
+    if (
+      !hasScope(principal, 'operations:read')
+      && !hasScope(principal, 'telemetry:collect')
+    ) {
+      throw new AxiomError(
+        'forbidden',
+        'operations:read or telemetry:collect scope is required',
+        403
+      );
     }
     return currentOperations(traceId);
   });
 
   router.add('GET', '/v1/metrics', async ({ traceId, principal }) => {
-    if (!hasScope(principal, 'operations:read')) {
-      throw new AxiomError('forbidden', 'operations:read scope is required', 403);
+    if (
+      !hasScope(principal, 'operations:read')
+      && !hasScope(principal, 'telemetry:collect')
+    ) {
+      throw new AxiomError(
+        'forbidden',
+        'operations:read or telemetry:collect scope is required',
+        403
+      );
     }
     return {
       buffer: Buffer.from(renderOpenMetrics(await currentOperations(traceId))),
@@ -309,6 +323,7 @@ export async function createGatewayService(config = meshConfig()) {
       const key = sha256(args.req.socket.remoteAddress ?? 'unknown');
       if (!ipLimiter.take(key)) throw new AxiomError('rate_limited', 'IP request rate limit exceeded', 429);
       const principal = await bearerAuth(args);
+      enforceTelemetryCollectionBoundary(args.req, principal);
       if (!principalLimiter.take(principal.id)) {
         throw new AxiomError('rate_limited', 'Principal request rate limit exceeded', 429);
       }
@@ -333,6 +348,25 @@ export async function createGatewayService(config = meshConfig()) {
 
 function hasScope(principal, scope) {
   return principal.scopes?.includes('*') || principal.scopes?.includes(scope);
+}
+
+function enforceTelemetryCollectionBoundary(req, principal) {
+  if (
+    !principal.scopes?.includes('telemetry:collect')
+    || principal.scopes.includes('*')
+  ) return;
+  const url = new URL(req.url, 'http://127.0.0.1');
+  if (
+    req.method !== 'GET'
+    || url.search
+    || !['/v1/metrics', '/v1/operations'].includes(url.pathname)
+  ) {
+    throw new AxiomError(
+      'forbidden',
+      'telemetry:collect is limited to the telemetry endpoints',
+      403
+    );
+  }
 }
 
 function renderIndex(registry) {

@@ -16,6 +16,7 @@ import {
 import { CANONICAL_DOCUMENTS, verifyCanonicalDocumentation } from './check-docs.mjs';
 import { validateCredentialRevocationLedger } from './credential-history-audit.mjs';
 import { validateIncidentResponsePolicy } from './incident-response.mjs';
+import { validateTelemetryRoutingPolicy } from './telemetry-relay.mjs';
 
 const REPOSITORY_ROOT = dirname(MESH_ROOT);
 const SUPPORTED_DEPENDENCY_MANIFESTS = new Set([
@@ -65,6 +66,11 @@ export async function verifyReleaseReadiness() {
       'config',
       'incident-response.json'
     ),
+    telemetryRoutingPolicy: join(
+      MESH_ROOT,
+      'config',
+      'telemetry-routing.json'
+    ),
     package: join(MESH_ROOT, 'package.json'),
     lock: join(MESH_ROOT, 'package-lock.json'),
     rootPackage: join(REPOSITORY_ROOT, 'package.json'),
@@ -85,6 +91,7 @@ export async function verifyReleaseReadiness() {
     backupRetentionPolicy,
     credentialRevocations,
     incidentResponsePolicy,
+    telemetryRoutingPolicy,
     packageJson,
     lock,
     rootPackage,
@@ -104,6 +111,7 @@ export async function verifyReleaseReadiness() {
     readJson(paths.backupRetentionPolicy),
     readJson(paths.credentialRevocations),
     readJson(paths.incidentResponsePolicy),
+    readJson(paths.telemetryRoutingPolicy),
     readJson(paths.package),
     readJson(paths.lock),
     readJson(paths.rootPackage),
@@ -126,6 +134,9 @@ export async function verifyReleaseReadiness() {
   );
   const incidentResponse = validateIncidentResponsePolicy(
     incidentResponsePolicy
+  );
+  const telemetryRouting = validateTelemetryRoutingPolicy(
+    telemetryRoutingPolicy
   );
   if (packageJson.version !== registry.kernel_version || lock.version !== packageJson.version) {
     throw new ValidationError('Package, lockfile, and capability registry versions must match');
@@ -174,6 +185,7 @@ export async function verifyReleaseReadiness() {
     backupRetentionPolicy,
     credentialRevocations,
     incidentResponsePolicy,
+    telemetryRoutingPolicy,
     workflow,
     repositoryIgnore
   });
@@ -284,6 +296,7 @@ export async function verifyReleaseReadiness() {
     policy_digest: digestObject(policy),
     credential_revocation: credentialRevocation,
     incident_response: incidentResponse,
+    telemetry_routing: telemetryRouting,
     operator_surface_digest: digestObject(operatorSurface),
     deployment,
     migrations: migrationEvidence,
@@ -318,12 +331,14 @@ export function verifyProductionDeployment({
   backupRetentionPolicy,
   credentialRevocations,
   incidentResponsePolicy,
+  telemetryRoutingPolicy,
   workflow,
   repositoryIgnore
 }) {
   validateBackupRetentionPolicy(backupRetentionPolicy);
   validateCredentialRevocationLedger(credentialRevocations);
   validateIncidentResponsePolicy(incidentResponsePolicy);
+  validateTelemetryRoutingPolicy(telemetryRoutingPolicy);
   const pinnedBase = dockerfile.match(
     /^FROM (node:24\.18\.0-alpine3\.23)@(sha256:[a-f0-9]{64})$/m
   );
@@ -352,7 +367,11 @@ export function verifyProductionDeployment({
     'production-data/',
     'production-secrets/',
     'api-tokens.json',
-    'operator.token'
+    'operator.token',
+    'telemetry-relay.token',
+    'telemetry-destinations.json',
+    '*.token',
+    'telemetry-relay-state/'
   ]) {
     if (!repositoryIgnore.split(/\r?\n/).includes(excluded)) {
       throw new ValidationError(`Repository ignore policy does not exclude: ${excluded}`);
@@ -406,7 +425,8 @@ export function verifyProductionDeployment({
     'not evidence of a live deployment',
     'recoverable quarantine',
     'credential-history audit',
-    'automated incident tabletop'
+    'automated incident tabletop',
+    'host-side telemetry relay'
   ]) {
     if (!productionDocs.includes(boundary)) {
       throw new ValidationError(`Production operator documentation is missing boundary: ${boundary}`);
@@ -433,6 +453,7 @@ export function verifyProductionDeployment({
     'node src/credential-rotation-drill.mjs',
     'node src/data-key-rotation-drill.mjs',
     'node src/incident-tabletop-drill.mjs',
+    'node src/telemetry-relay-drill.mjs',
     'actions/upload-artifact@v7',
     'axiom-recovery-drill-evidence-${{ github.sha }}',
     'axiom-backup-lifecycle-evidence-${{ github.sha }}',
@@ -440,6 +461,7 @@ export function verifyProductionDeployment({
     'axiom-credential-rotation-evidence-${{ github.sha }}',
     'axiom-data-key-rotation-evidence-${{ github.sha }}',
     'axiom-incident-tabletop-evidence-${{ github.sha }}',
+    'axiom-telemetry-relay-evidence-${{ github.sha }}',
     `docker build --pull=false --tag axiom-mesh-kernel:${packageJson.version} .`,
     'docker compose -f compose.production.yml up --detach --no-build',
     'docker compose -f compose.production.yml down --volumes --remove-orphans'
@@ -458,6 +480,7 @@ export function verifyProductionDeployment({
     backup_retention_policy_sha256: digestObject(backupRetentionPolicy),
     credential_revocation_ledger_sha256: digestObject(credentialRevocations),
     incident_response_policy_sha256: digestObject(incidentResponsePolicy),
+    telemetry_routing_policy_sha256: digestObject(telemetryRoutingPolicy),
     deny_egress: {
       compose_network_mode_none: true,
       unix_domain_ingress: true,

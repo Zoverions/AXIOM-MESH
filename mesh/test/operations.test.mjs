@@ -48,6 +48,7 @@ test('operational telemetry is bounded, alertable, and OpenMetrics compatible', 
   });
   telemetry.markIntegrityFailure('evidence-head-mismatch');
   telemetry.markIntegrityFailure('evidence-head-mismatch');
+  telemetry.recordDependencyFailure();
   const snapshot = telemetry.snapshot(readinessState('gateway', [
     { name: 'identity', ok: true },
     { name: 'grid', ok: false, code: 'dependency_unavailable' }
@@ -64,7 +65,8 @@ test('operational telemetry is bounded, alertable, and OpenMetrics compatible', 
       'authentication-failures:gateway',
       'integrity-failure:gateway',
       'replay-rejected:gateway',
-      'service-not-ready:gateway'
+      'service-not-ready:gateway',
+      'upstream-unavailable:gateway'
     ]
   );
   const metrics = renderOpenMetrics(report);
@@ -95,15 +97,21 @@ test('production provisioning is explicit, restrictive, idempotent, and file-bac
   const secretDir = join(root, 'secrets');
   const first = await provisionProduction({ dataDir, secretDir });
   const firstToken = await readFile(first.operator_token_file, 'utf8');
+  const firstTelemetryToken = await readFile(first.telemetry_relay_token_file, 'utf8');
   const firstRegistry = await readFile(first.api_tokens_file, 'utf8');
   const second = await provisionProduction({ dataDir, secretDir });
   assert.deepEqual(second.identities, first.identities);
   assert.equal(await readFile(second.operator_token_file, 'utf8'), firstToken);
+  assert.equal(
+    await readFile(second.telemetry_relay_token_file, 'utf8'),
+    firstTelemetryToken
+  );
   assert.equal(await readFile(second.api_tokens_file, 'utf8'), firstRegistry);
   if (process.platform !== 'win32') {
     assert.equal((await stat(first.data_key_file)).mode & 0o077, 0);
     assert.equal((await stat(first.api_tokens_file)).mode & 0o077, 0);
     assert.equal((await stat(first.operator_token_file)).mode & 0o077, 0);
+    assert.equal((await stat(first.telemetry_relay_token_file)).mode & 0o077, 0);
     await chmod(first.api_tokens_file, 0o644);
     await assert.rejects(
       () => provisionProduction({ dataDir, secretDir }),
@@ -127,8 +135,15 @@ test('production provisioning is explicit, restrictive, idempotent, and file-bac
       dataDir
     });
     const principals = await loadApiPrincipals(productionConfig);
-    assert.equal(principals.size, 1);
-    assert.equal([...principals.values()][0].id, 'production-operator');
+    assert.equal(principals.size, 2);
+    assert.deepEqual(
+      [...principals.values()].map(item => item.id).sort(),
+      ['production-operator', 'production-telemetry-relay']
+    );
+    const relayPrincipal = [...principals.values()].find(
+      item => item.id === 'production-telemetry-relay'
+    );
+    assert.deepEqual(relayPrincipal.scopes, ['telemetry:collect']);
     const protector = await loadDataProtector(productionConfig);
     const sealed = protector.seal({ value: 'protected' }, 'production-file-secret-test');
     assert.deepEqual(
@@ -168,6 +183,7 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
     backupRetentionPolicy,
     credentialRevocations,
     incidentResponsePolicy,
+    telemetryRoutingPolicy,
     workflow,
     repositoryIgnore
   ] = await Promise.all([
@@ -179,6 +195,7 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
     readFile(new URL('config/backup-retention.json', root), 'utf8').then(JSON.parse),
     readFile(new URL('config/credential-revocations.json', root), 'utf8').then(JSON.parse),
     readFile(new URL('config/incident-response.json', root), 'utf8').then(JSON.parse),
+    readFile(new URL('config/telemetry-routing.json', root), 'utf8').then(JSON.parse),
     readFile(new URL('../.github/workflows/kernel.yml', root), 'utf8'),
     readFile(new URL('../.gitignore', root), 'utf8')
   ]);
@@ -191,6 +208,7 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
     backupRetentionPolicy,
     credentialRevocations,
     incidentResponsePolicy,
+    telemetryRoutingPolicy,
     workflow,
     repositoryIgnore
   });
@@ -205,6 +223,7 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
     backupRetentionPolicy,
     credentialRevocations,
     incidentResponsePolicy,
+    telemetryRoutingPolicy,
     workflow,
     repositoryIgnore
   }), /digest-pinned/);
@@ -217,6 +236,7 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
     backupRetentionPolicy,
     credentialRevocations,
     incidentResponsePolicy,
+    telemetryRoutingPolicy,
     workflow,
     repositoryIgnore
   }), /read_only/);
@@ -229,6 +249,7 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
     backupRetentionPolicy,
     credentialRevocations,
     incidentResponsePolicy,
+    telemetryRoutingPolicy,
     workflow,
     repositoryIgnore
   }), /network_mode: "none"/);
@@ -244,6 +265,7 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
     backupRetentionPolicy,
     credentialRevocations,
     incidentResponsePolicy,
+    telemetryRoutingPolicy,
     workflow,
     repositoryIgnore
   }), /must not publish ports/);
@@ -259,6 +281,7 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
     },
     credentialRevocations,
     incidentResponsePolicy,
+    telemetryRoutingPolicy,
     workflow,
     repositoryIgnore
   }), /minimum_verified_backups/);
@@ -274,9 +297,29 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
       ...incidentResponsePolicy,
       severity_order: ['SEV-4', 'SEV-3', 'SEV-2', 'SEV-1']
     },
+    telemetryRoutingPolicy,
     workflow,
     repositoryIgnore
   }), /severity order/);
+  assert.throws(() => verifyProductionDeployment({
+    dockerfile,
+    dockerignore,
+    compose,
+    productionDocs,
+    packageJson,
+    backupRetentionPolicy,
+    credentialRevocations,
+    incidentResponsePolicy,
+    telemetryRoutingPolicy: {
+      ...telemetryRoutingPolicy,
+      scrape: {
+        ...telemetryRoutingPolicy.scrape,
+        scope: 'operations:read'
+      }
+    },
+    workflow,
+    repositoryIgnore
+  }), /scrape boundary/);
 });
 
 test('release source boundary rejects legacy runtimes and dependency manifests', () => {
@@ -419,6 +462,27 @@ test('production supervisor boots the real four-process stack from provisioned s
     report.services.map(service => service.service),
     ['gateway', 'grid', 'hypervisor', 'sandbox']
   );
+  const relayToken = (
+    await readFile(provisioned.telemetry_relay_token_file, 'utf8')
+  ).trim();
+  const relayMetrics = await fetch(`${gateway}/v1/metrics`, {
+    headers: { authorization: `Bearer ${relayToken}` },
+    signal: AbortSignal.timeout(3_000)
+  });
+  assert.equal(relayMetrics.status, 200);
+  await relayMetrics.arrayBuffer();
+  const relayOutOfScope = await fetch(`${gateway}/v1/status`, {
+    headers: { authorization: `Bearer ${relayToken}` },
+    signal: AbortSignal.timeout(3_000)
+  });
+  assert.equal(relayOutOfScope.status, 403);
+  await relayOutOfScope.arrayBuffer();
+  const relayQueryRejected = await fetch(`${gateway}/v1/operations?extra=1`, {
+    headers: { authorization: `Bearer ${relayToken}` },
+    signal: AbortSignal.timeout(3_000)
+  });
+  assert.equal(relayQueryRejected.status, 403);
+  await relayQueryRejected.arrayBuffer();
   const [code, signal] = await stopSupervisor(child);
   assert.equal(code, 0, output);
   assert.equal(signal, null);

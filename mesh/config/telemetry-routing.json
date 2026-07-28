@@ -1,0 +1,76 @@
+{
+  "schema": "axiom-telemetry-routing-policy.v1",
+  "version": 1,
+  "scrape": {
+    "transport": "unix-domain-http",
+    "scope": "telemetry:collect",
+    "operations_path": "/v1/operations",
+    "metrics_path": "/v1/metrics",
+    "interval_seconds": 30,
+    "timeout_ms": 3000,
+    "max_response_bytes": 262144
+  },
+  "destinations": {
+    "metrics": {
+      "protocol": "otlp-http-json",
+      "required_path": "/v1/metrics"
+    },
+    "alerts": {
+      "protocol": "alertmanager-v2",
+      "required_path": "/api/v2/alerts"
+    }
+  },
+  "delivery": {
+    "request_timeout_ms": 5000,
+    "max_queue_items": 64,
+    "alert_reserve_items": 16,
+    "max_queue_bytes": 1048576,
+    "max_item_bytes": 131072,
+    "max_attempts": 5,
+    "initial_retry_delay_ms": 1000,
+    "max_retry_delay_ms": 30000,
+    "audit_history_items": 256,
+    "resolution_replay_seconds": 300,
+    "retryable_statuses": [
+      408,
+      425,
+      429,
+      500,
+      502,
+      503,
+      504
+    ]
+  },
+  "privacy": {
+    "services": [
+      "gateway",
+      "grid",
+      "hypervisor",
+      "sandbox"
+    ],
+    "max_metric_points": 96,
+    "max_alerts": 20,
+    "allowed_metric_attribute_keys": [
+      "kind",
+      "mode",
+      "service",
+      "status_class"
+    ],
+    "allowed_alert_label_keys": [
+      "alertname",
+      "service",
+      "severity",
+      "source"
+    ],
+    "forbidden_terms": [
+      "approval",
+      "intent_id",
+      "object_id",
+      "payload",
+      "principal",
+      "prompt",
+      "query",
+      "token"
+    ]
+  }
+}

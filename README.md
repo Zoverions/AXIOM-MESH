@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=1f594f2f77e0e9522de152b10d181b766b2510ed318cfc70ac659bc9d6e48b1c -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=caeec760adf3f79760ec38a92302a3cac1d2550b3ffb4aa1df663f7f2470e6c0 -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -99,6 +99,20 @@ verifies a post-restart intent, and emits signed, secret-free JSON evidence.
 It is a short host-mode baseline, not a 30-day availability claim or a
 substitute for measurement on pilot hardware.
 
+Exercise the host-side external telemetry and alert path on Linux:
+
+```bash
+npm run telemetry-relay:drill -- /tmp/axiom-telemetry-relay-drill
+```
+
+The drill keeps the kernel deny-egress, scrapes its Unix socket with a
+dedicated `telemetry:collect` credential, converts 68 fixed points to
+OTLP/HTTP JSON, routes bounded Alertmanager v2 alerts, forces transient 503
+and 429 responses, verifies retry and receipts, and signs secret-free
+evidence. Production destinations remain exact-origin HTTPS and require
+pilot-owned receivers. See the
+[external telemetry and alerting runbook](docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md).
+
 Run the coordinated service and API credential lifecycle drill in another
 empty disposable workspace:
 
@@ -107,7 +121,7 @@ npm run credential-rotation:drill -- /tmp/axiom-credential-rotation-drill
 ```
 
 It boots the real stack before rotation, with four rotated Ed25519 identities
-and a new operator token, and again after authenticated rollback. The drill
+and new operator and telemetry-relay tokens, and again after authenticated rollback. The drill
 proves active credentials work, inactive service identities and API tokens
 fail, historical Grid evidence remains valid through a dual-signed key
 transition, and the original set is restored exactly. It does not rotate the
@@ -237,9 +251,14 @@ supported entrypoints.
   quarantine. A recurring drill restores a retained snapshot and emits signed
   evidence; permanent media destruction remains an external approval.
 - Offline credential rotation replaces all four service identities, coordinated
-  trust records, and the operator API token; dual-signed Grid key lineage keeps
+  trust records, the operator API token, and the least-privilege telemetry
+  relay token; dual-signed Grid key lineage keeps
   historical evidence verifiable, and an authenticated-encrypted package
   supports exact rollback without retaining retired private keys.
+- The host-side relay preserves kernel deny-egress, admits only an exact
+  four-service Unix-socket scrape, emits 68 fixed OTLP points, and sends a
+  bounded alert vocabulary through exact-origin HTTPS with alert-reserved
+  queues, exponential retry, stable idempotency, redaction, and delivery audit.
 - The deprecated-history audit records keyed HMAC identifiers for 32
   credential candidates, requires their revocation from supported repository
   trust, and fails protected CI if the ledger drifts or a candidate returns to

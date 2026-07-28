@@ -36,6 +36,15 @@
 - Controlled rollout and rollback strategy.
 - Immutable release summary artifacts.
 
+### 2.5 External Observability
+- Keep the kernel deny-egress and run the relay as an unprivileged host service.
+- Scrape only the authenticated Gateway Unix socket with `telemetry:collect`.
+- Require exact HTTPS receiver origins, fixed OTLP/Alertmanager schemas, and
+  private receiver credentials.
+- Monitor retry, alert-reserved queue, receipt, dead-letter, and stale-cycle
+  state. Follow
+  [`EXTERNAL-TELEMETRY-AND-ALERTING.md`](EXTERNAL-TELEMETRY-AND-ALERTING.md).
+
 ---
 
 ## 3) Standard Operational Cadence
@@ -75,6 +84,7 @@ Detailed scenario playbooks live in:
 - `docs/DEGRADED-MODE-PLAYBOOK.md`
 - `docs/RESILIENCE-DRILLS-AND-PENTEST-RUNBOOK-2026-03-29.md`
 - `docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md`
+- `docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md`
 
 ---
 
