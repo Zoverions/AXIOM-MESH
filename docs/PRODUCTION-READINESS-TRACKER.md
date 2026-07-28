@@ -15,10 +15,10 @@ artifact is reproducible and tied to the release commit or image digest.
 |---|---|---|---|
 | Source integrity | Pass | Verified clean-room tree and package checksums | Publish release provenance |
 | Capability claims | Pass | Registry, generated status, claim-marker checks | Maintain on every change |
-| Kernel tests | Pass | 30-test suite in [GitHub run 30374587847](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30374587847) | Require on protected `main` |
+| Kernel tests | Pass | 31-test suite in [GitHub run 30375390450](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30375390450) | Require on protected `main` |
 | Host production drill | Pass | Real four-process supervisor test in the same run | Preserve on every runtime change |
 | Container source policy | Pass | Dockerfile/Compose static release gate | Maintain digest pin |
-| Container image build | Pass | Digest-pinned build in [GitHub run 30374587847](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30374587847) | Record released image digest |
+| Container image build | Pass | Digest-pinned build in [GitHub run 30375390450](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30375390450) | Record released image digest |
 | Composed container drill | Pass | Readiness, authenticated operations, and teardown in the same run | Repeat for release commit |
 | Dependency audit | Pass | Root and kernel lock audits in the same run | Maintain required check |
 | Backup and restore | Implemented, drill pending | Unit/integration coverage | Run disposable-host exercise |

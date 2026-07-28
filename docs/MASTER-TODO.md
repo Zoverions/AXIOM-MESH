@@ -30,18 +30,18 @@ evidence-chain integrity, or unauthorized effects.
 | ID | Status | Work | Acceptance evidence |
 |---|---|---|---|
 | REP-001 | Complete | Make clean-room `main` the GitHub default and preserve the old line as deprecated | Default is `main`; legacy branch is `deprecated/legacy-main-pre-clean-room` |
-| REP-002 | Complete | Enforce canonical documentation and lowercase-`main` CI | Documentation checks and [workflow run 30374587847](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30374587847) |
+| REP-002 | Complete | Enforce canonical documentation and lowercase-`main` CI | Documentation checks and [workflow run 30375390450](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30375390450) |
 | REP-004 | Complete | Remove unsupported legacy runtimes and dependency manifests from the supported branch | Legacy source remains recoverable from Git history and the deprecated branch |
 | REP-003 | Pending | Protect `main` against deletion and force pushes; require green verification | Branch-protection API result |
 | REL-001 | Pending | Publish the verified 0.11.0 clean-room baseline | Signed release notes, source checksum, SBOM, provenance |
-| REL-002 | Complete | Run the GitHub image build and composed container readiness drill | [Workflow run 30374587847](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30374587847) passed both jobs |
+| REL-002 | Complete | Run the GitHub image build and composed container readiness drill | [Workflow run 30375390450](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30375390450) passed both jobs |
 | SEC-001 | Pending | Record revocation of every credential from deprecated history | Rotation inventory and trust-store comparison |
 
 ## P0 - production candidate closure
 
 | ID | Status | Work | Acceptance evidence |
 |---|---|---|---|
-| OPS-001 | Complete | Promote the container package only after CI image/runtime evidence passes | Registry promotion tied to workflow run 30374587847 |
+| OPS-001 | Complete | Promote the container package only after CI image/runtime evidence passes | Registry promotion tied to workflow run 30375390450 |
 | OPS-002 | Pending | Exercise backup, tamper rejection, restore, and rollback on a disposable production host | Encrypted drill artifact with measured RPO/RTO |
 | OPS-003 | Pending | Establish an initial latency, error-rate, saturation, and restart baseline | Versioned SLO report from a controlled load profile |
 | SEC-002 | Pending | Perform an independent threat-model and configuration review of the supported kernel | Findings ledger with severity and remediation owners |

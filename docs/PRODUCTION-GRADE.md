@@ -19,7 +19,7 @@ observability, explicit secret provisioning, supervisor, host-mode drill, and
 container policy are implemented.
 
 The image build and composed container drill pass in
-[GitHub run 30374587847](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30374587847).
+[GitHub run 30375390450](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30375390450).
 Capacity, SLO, external telemetry, credential rotation, deployment-host
 recovery, deny-egress enforcement, incident response, and independent security
 review remain open.

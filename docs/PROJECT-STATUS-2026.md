@@ -47,7 +47,7 @@ host-mode four-process drill are implemented. Host- or orchestrator-enforced
 deny-egress remains required before pilot promotion.
 
 The container package is implemented and verified by
-[GitHub run 30374587847](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30374587847),
+[GitHub run 30375390450](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30375390450),
 which built the digest-pinned image and passed composed readiness,
 authenticated operations, and teardown. A disposable-host backup/restore
 exercise, SLO baseline, deny-egress deployment policy, security review, and
