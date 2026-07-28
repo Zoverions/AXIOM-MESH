@@ -21,9 +21,10 @@ container policy are implemented.
 The image build and composed container drill pass in
 [GitHub run 30375390450](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30375390450).
 The protected workflow also produces signed disposable-host recovery,
-SLO/restart, and coordinated service/API credential-rotation evidence.
+SLO/restart, coordinated service/API credential-rotation, and
+data-protection-key rotation evidence.
 Dedicated pilot capacity and availability, external telemetry, scheduled
-pilot-media recovery, data-key re-encryption, deny-egress enforcement,
+pilot-media recovery, pilot-owned secret-manager rotation, deny-egress enforcement,
 incident response, and independent security review remain open.
 The current decision is recorded in the
 [readiness tracker](PRODUCTION-READINESS-TRACKER.md).
@@ -67,6 +68,8 @@ Production promotion requires:
 - file-backed secret loading with restrictive ownership and mode checks;
 - offline, coordinated service/API credential rotation with active-key
   acceptance, retired-key rejection, and authenticated exact rollback;
+- offline data-key re-encryption across every supported recovery context with
+  wrong-key rejection, interruption recovery, and state-preserving rollback;
 - authenticated encryption for durable protected state;
 - structured-log redaction and bounded telemetry labels;
 - an inventory proving deprecated-history credentials are not trusted;
@@ -143,6 +146,17 @@ Loss of the data key can make protected data unrecoverable. Key custody and
 encrypted recovery copies are therefore part of availability, not merely
 security.
 
+The supported candidate can replace that key while Grid is stopped. It
+re-encrypts the live database, recovery rollback databases, backup outer
+envelopes and nested protected columns, and credential recovery packages.
+Signed rewrap sidecars anchor changed ciphertext and backup plaintext digests
+to their original signed manifests. The key file is the last installed target
+in a journaled transaction; a killed cutover can restore its recorded
+originals, while a completed rotation can roll back by re-encrypting current
+state so later evidence is not discarded. Protected CI proves this path, but
+pilot promotion still requires external secret-manager custody, approval,
+escrow/versioning, and retired-key destruction evidence.
+
 ## Credential lifecycle
 
 The supported candidate rotates the four service Ed25519 identities, matching
@@ -164,10 +178,9 @@ Protected CI proves the lifecycle against the real four-process supervisor:
 the active token and identities succeed, the inactive set fails, rollback
 restores the original set, the rotated set then fails, and the data-protection
 key is byte-for-byte unchanged. This closes candidate-host service/API
-rotation. It does not close external historic-credential revocation or
-data-protection-key rotation; the latter requires a separately reviewed
-re-encryption migration for Grid state, backups, and retained recovery
-packages.
+rotation. It does not close external historic-credential revocation. The
+separate data-key workflow closes candidate-host re-encryption mechanics but
+not pilot-owned custody or destruction evidence.
 
 ## Observability requirements
 

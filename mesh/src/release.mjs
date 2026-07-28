@@ -365,10 +365,12 @@ export function verifyProductionDeployment({
     'node src/recovery-drill.mjs',
     'node src/slo-drill.mjs',
     'node src/credential-rotation-drill.mjs',
+    'node src/data-key-rotation-drill.mjs',
     'actions/upload-artifact@v7',
     'axiom-recovery-drill-evidence-${{ github.sha }}',
     'axiom-slo-baseline-evidence-${{ github.sha }}',
     'axiom-credential-rotation-evidence-${{ github.sha }}',
+    'axiom-data-key-rotation-evidence-${{ github.sha }}',
     `docker build --pull=false --tag axiom-mesh-kernel:${packageJson.version} .`,
     'docker compose -f compose.production.yml up --detach --no-build',
     'docker compose -f compose.production.yml down --volumes --remove-orphans'

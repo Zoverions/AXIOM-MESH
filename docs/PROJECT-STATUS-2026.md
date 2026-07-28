@@ -60,10 +60,13 @@ post-restart intent. It also performs offline coordinated rotation of all four
 service identities and the operator token, proves active and inactive trust in
 both directions, preserves Grid evidence through a dual-signed key transition,
 and restores the exact original set from an authenticated-encrypted rollback
-package. Dedicated pilot-hardware capacity and availability validation,
-enforced deny-egress deployment policy, data-key re-encryption,
-credential-history revocation, and independent security review are still
-required before production promotion.
+package. The workflow also re-encrypts and rotates the data-protection key
+across live and retained recovery state, proves wrong-key rejection in both
+directions, restores a backup under the rotated key, and preserves later
+evidence through rollback. Dedicated pilot-hardware capacity and availability
+validation, enforced deny-egress deployment policy, pilot-owned secret
+custody, credential-history revocation, and independent security review are
+still required before production promotion.
 
 See:
 
@@ -104,7 +107,7 @@ repository is not implementation or deployment evidence.
 ## Immediate next milestone
 
 The next milestone is external credential-history revocation evidence,
-pilot-owned secret custody and scheduled recovery, data-key re-encryption,
-deny-egress, incident response, and independent security review for a
-controlled single-node pilot. Work is ordered in
+pilot-owned secret custody and scheduled recovery, deny-egress, incident
+response, and independent security review for a controlled single-node pilot.
+Work is ordered in
 [`docs/MASTER-TODO.md`](MASTER-TODO.md).

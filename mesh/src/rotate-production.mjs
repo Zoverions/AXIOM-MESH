@@ -3,7 +3,6 @@ import {
   createPrivateKey,
   createPublicKey,
   generateKeyPairSync,
-  hkdfSync,
   randomBytes
 } from 'node:crypto';
 import {
@@ -32,14 +31,20 @@ import {
 } from './lib/canonical.mjs';
 import {
   MeshIdentity,
+  ensureMeshIdentity,
   verifyObjectSignature
 } from './lib/identity.mjs';
 import { DataProtector } from './lib/protector.mjs';
+import {
+  loadCredentialStateAuthenticationKeys
+} from './lib/data-key-history.mjs';
+import { openProtectedArtifact } from './lib/protected-artifact.mjs';
 import {
   acquireGridRuntimeLock,
   recoverStaleGridRuntimeLock,
   releaseGridRuntimeLock
 } from './grid/backup.mjs';
+import { loadGridVerificationKeys } from './grid/store.mjs';
 
 const ROTATION_FORMAT = 'axiom-credential-rotation.v1';
 const ROLLBACK_FORMAT = 'axiom-credential-rollback.v1';
@@ -103,10 +108,15 @@ export async function rotateProductionCredentials({
     const beforeState = validateCredentialSnapshot(before);
     const next = createRotatedSnapshot(before, beforeState);
     const afterState = validateCredentialSnapshot(next);
+    const signer = identityFromSnapshot(before, 'grid');
     const {
       protector,
       stateAuthenticationKey
-    } = await loadRotationProtector(roots.secret);
+    } = await loadRotationProtector(
+      roots.secret,
+      roots.data,
+      loadGridVerificationKeys(roots.data, signer)
+    );
     const rotationRoot = join(roots.data, 'credential-rotations', rotationId);
     await createRotationDirectory(rotationRoot);
     const rollbackContext = `axiom:credential-rotation:${rotationId}:rollback`;
@@ -118,7 +128,6 @@ export async function rotateProductionCredentials({
     const rollbackPath = join(rotationRoot, ROLLBACK_FILE);
     await writeExclusive(rollbackPath, rollbackEnvelope, 0o600);
 
-    const signer = identityFromSnapshot(before, 'grid');
     const unsigned = {
       format: ROTATION_FORMAT,
       schema_version: 1,
@@ -215,23 +224,44 @@ export async function rollbackProductionCredentials({
   const manifestDigest = sha256(Buffer.from(serializedManifest, 'utf8'));
   assertRotationManifestLocation(manifest, resolvedManifestPath, roots.data);
   const rollbackPath = join(dirname(resolvedManifestPath), ROLLBACK_FILE);
-  const rollbackEnvelope = await readBoundedFile(rollbackPath);
-  verifyCredentialRotationManifest({ manifest, rollbackEnvelope });
+  verifyCredentialRotationManifest({ manifest });
+  const currentGridIdentity = await ensureMeshIdentity(
+    roots.data,
+    'grid',
+    { create: false }
+  );
+  const verificationKeys = loadGridVerificationKeys(
+    roots.data,
+    currentGridIdentity
+  );
   const {
     protector,
-    stateAuthenticationKey
-  } = await loadRotationProtector(roots.secret);
-  const rollbackPayload = protector.open(
-    rollbackEnvelope.toString('utf8'),
-    manifest.rollback.context
+    stateAuthenticationKeys
+  } = await loadRotationProtector(
+    roots.secret,
+    roots.data,
+    verificationKeys
   );
+  const rollbackArtifact = await openProtectedArtifact({
+    artifactPath: rollbackPath,
+    relativePath: portableRelative(roots.data, rollbackPath),
+    context: manifest.rollback.context,
+    encoding: 'json',
+    expected: {
+      bytes: manifest.rollback.bytes,
+      sha256: manifest.rollback.sha256
+    },
+    protector,
+    verificationKeys
+  });
+  const rollbackPayload = rollbackArtifact.value;
   const original = snapshotFromRollbackPayload(rollbackPayload, manifest.rotation_id);
   validateCredentialSnapshot(original);
   assertSnapshotPublicState(
     original,
     manifest.before,
     'Rollback payload',
-    stateAuthenticationKey
+    stateAuthenticationKeys
   );
 
   const pendingBeforeLock = await readPendingRotation(roots.data);
@@ -266,7 +296,7 @@ export async function rollbackProductionCredentials({
         current,
         manifest.after,
         'Current credentials',
-        stateAuthenticationKey
+        stateAuthenticationKeys
       );
       const forwardContext = `axiom:credential-rotation:${manifest.rotation_id}:forward`;
       const forwardEnvelope = Buffer.from(
@@ -298,11 +328,11 @@ export async function rollbackProductionCredentials({
     });
     const restored = await readCredentialSnapshot(roots);
     const restoredState = validateCredentialSnapshot(restored);
-    assertSnapshotPublicState(
+    const restoredPublicState = assertSnapshotPublicState(
       restored,
       manifest.before,
       'Restored credentials',
-      stateAuthenticationKey
+      stateAuthenticationKeys
     );
     await Promise.all([
       rm(join(roots.data, PENDING_MARKER), { force: true }),
@@ -319,11 +349,7 @@ export async function rollbackProductionCredentials({
       rotation_id: manifest.rotation_id,
       rolled_back_at: new Date().toISOString(),
       restored_key_ids: restoredState.key_ids,
-      restored_target_set_digest: publicState(
-        restored,
-        restoredState,
-        stateAuthenticationKey
-      ).target_set_digest,
+      restored_target_set_digest: restoredPublicState.target_set_digest,
       interrupted_rotation_recovered: Boolean(pending),
       stale_runtime_lock_recovered: staleRuntimeLockRecovered,
       forward,
@@ -682,19 +708,22 @@ function assertSnapshotPublicState(
   snapshot,
   expected,
   label,
-  stateAuthenticationKey
+  stateAuthenticationKeys
 ) {
-  const actual = publicState(
-    snapshot,
-    validateCredentialSnapshot(snapshot),
-    stateAuthenticationKey
-  );
-  if (
-    actual.target_set_digest !== expected.target_set_digest
-    || canonicalJson(actual.key_ids) !== canonicalJson(expected.key_ids)
-  ) {
-    throw new ValidationError(`${label} do not match the signed rotation manifest`);
+  const state = validateCredentialSnapshot(snapshot);
+  const keys = Array.isArray(stateAuthenticationKeys)
+    ? stateAuthenticationKeys
+    : [stateAuthenticationKeys];
+  for (const stateAuthenticationKey of keys) {
+    const actual = publicState(snapshot, state, stateAuthenticationKey);
+    if (
+      actual.target_set_digest === expected.target_set_digest
+      && canonicalJson(actual.key_ids) === canonicalJson(expected.key_ids)
+    ) {
+      return actual;
+    }
   }
+  throw new ValidationError(`${label} do not match the signed rotation manifest`);
 }
 
 function assertSnapshotMatches(actual, expected, label) {
@@ -835,7 +864,11 @@ async function applyCredentialSnapshot({
   await rm(transactionDir, { recursive: true, force: true });
 }
 
-async function loadRotationProtector(secretDir) {
+async function loadRotationProtector(
+  secretDir,
+  dataDir,
+  verificationKeys
+) {
   const encoded = (
     await readBoundedFile(join(secretDir, 'data-protection.key'), 'utf8')
   ).trim();
@@ -843,16 +876,15 @@ async function loadRotationProtector(secretDir) {
   if (key.length !== 32) {
     throw new ValidationError('Production data-protection key is invalid');
   }
-  const stateAuthenticationKey = Buffer.from(hkdfSync(
-    'sha256',
-    key,
-    Buffer.from('axiom-credential-rotation.v1', 'utf8'),
-    Buffer.from('manifest-target-authentication', 'utf8'),
-    32
-  ));
+  const stateAuthenticationKeys = await loadCredentialStateAuthenticationKeys({
+    dataDir,
+    currentKey: key,
+    verificationKeys
+  });
   return {
     protector: new DataProtector(key),
-    stateAuthenticationKey
+    stateAuthenticationKey: stateAuthenticationKeys[0],
+    stateAuthenticationKeys
   };
 }
 
@@ -880,6 +912,10 @@ function targetAuthentication(state, id) {
     throw new ValidationError(`Credential rotation state is missing ${id}`);
   }
   return target.digest;
+}
+
+function portableRelative(from, to) {
+  return relative(from, to).replaceAll('\\', '/');
 }
 
 function authenticateSecretTarget(item, stateAuthenticationKey) {

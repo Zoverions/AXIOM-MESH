@@ -57,6 +57,7 @@ requirements sense.
 | GRID-05 | State-mutating behavior MUST become read-only or unavailable when required quorum/finality is absent. | Quorum-loss scenario. |
 | GRID-06 | Node admission MUST bind identity, security profile, capabilities, software digest, and expiry. | Admission and renewal tests. |
 | GRID-07 | Storage offers MUST bind the owning admitted node key and MUST become unavailable when that node is expired or quarantined. | Wrong-key rejection and quarantine propagation tests. |
+| GRID-08 | Data-key rotation MUST re-encrypt every supported durable and recovery context while stopped, reject mismatched keys, recover an interrupted cutover, and preserve post-rotation evidence on rollback. | Unit fault injection plus signed real-stack rotation, restore, rejection, and rollback evidence. |
 
 ## Governance and societal safety
 

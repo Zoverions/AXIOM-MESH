@@ -17,6 +17,8 @@ import {
   sha256
 } from '../lib/canonical.mjs';
 import { verifyObjectSignature } from '../lib/identity.mjs';
+import { openProtectedArtifact } from '../lib/protected-artifact.mjs';
+import { loadGridVerificationKeys } from './store.mjs';
 
 const BACKUP_FORMAT = 'axiom-grid-backup.v1';
 const BACKUP_FILE = 'snapshot.axb';
@@ -130,23 +132,44 @@ export function verifyGridBackup({
     manifest.snapshot.bytes !== protectedSnapshot.length
     || manifest.snapshot.sha256 !== sha256(protectedSnapshot)
   ) throw new ValidationError('Grid backup snapshot digest or byte count does not match');
+  const database = protector.openBytes(
+    protectedSnapshot.toString('utf8'),
+    manifest.snapshot.context
+  );
+  return verifyGridBackupDatabase({
+    manifest,
+    database,
+    databaseMetadata: manifest.database,
+    gridPublicKey,
+    expectedDatabaseDigest
+  });
+}
+
+function verifyGridBackupDatabase({
+  manifest,
+  database,
+  databaseMetadata,
+  gridPublicKey,
+  expectedDatabaseDigest
+}) {
+  if (manifest?.format !== BACKUP_FORMAT) throw new ValidationError('Unsupported Grid backup format');
+  if (manifest.schema_versions?.manifest !== 1 || manifest.schema_versions?.evidence !== 1) {
+    throw new ValidationError('Unsupported Grid backup schema version');
+  }
+  if (!ID.test(manifest.backup_id ?? '')) throw new ValidationError('Grid backup id is invalid');
   const unsigned = structuredClone(manifest);
   delete unsigned.attestation;
   if (!verifyObjectSignature(unsigned, manifest.attestation, gridPublicKey)) {
     throw new ValidationError('Grid backup attestation is invalid');
   }
-  const database = protector.openBytes(
-    protectedSnapshot.toString('utf8'),
-    manifest.snapshot.context
-  );
   const databaseDigest = sha256(database);
   if (
-    manifest.database?.bytes !== database.length
-    || manifest.database?.sha256 !== databaseDigest
+    databaseMetadata?.bytes !== database.length
+    || databaseMetadata?.sha256 !== databaseDigest
   ) throw new ValidationError('Grid backup database digest or byte count does not match');
   if (expectedDatabaseDigest !== undefined) {
     if (!DIGEST.test(expectedDatabaseDigest)) throw new ValidationError('Expected database digest is invalid');
-    if (databaseDigest !== expectedDatabaseDigest) {
+    if (manifest.database?.sha256 !== expectedDatabaseDigest) {
       throw new ValidationError('Grid backup does not match the exact expected database digest');
     }
   }
@@ -154,6 +177,7 @@ export function verifyGridBackup({
     valid: true,
     backup_id: manifest.backup_id,
     database_digest: databaseDigest,
+    source_database_digest: manifest.database.sha256,
     database
   };
 }
@@ -176,12 +200,32 @@ export async function restoreGridBackup({
     throw new ValidationError('Grid backup snapshot path is invalid');
   }
   const snapshotPath = join(dirname(manifestPath), snapshotName);
-  const protectedSnapshot = await readFile(snapshotPath);
-  const verified = verifyGridBackup({
-    manifest,
-    protectedSnapshot,
-    gridPublicKey: identity.publicKey,
+  const verificationKeys = loadGridVerificationKeys(dataDir, identity);
+  const resolvedSnapshot = await openProtectedArtifact({
+    artifactPath: snapshotPath,
+    relativePath: relative(dataDir, snapshotPath).replaceAll('\\', '/'),
+    context: manifest.snapshot.context,
+    encoding: 'bytes',
+    expected: {
+      bytes: manifest.snapshot.bytes,
+      sha256: manifest.snapshot.sha256
+    },
+    expectedPlaintext: {
+      bytes: manifest.database.bytes,
+      sha256: manifest.database.sha256
+    },
     protector,
+    verificationKeys
+  });
+  const gridPublicKey = verificationKeys.get(manifest.attestation?.key_id);
+  if (!gridPublicKey) {
+    throw new ValidationError('Grid backup signer is not in the trusted key history');
+  }
+  const verified = verifyGridBackupDatabase({
+    manifest,
+    database: resolvedSnapshot.value,
+    databaseMetadata: resolvedSnapshot.plaintext_metadata,
+    gridPublicKey,
     expectedDatabaseDigest
   });
 

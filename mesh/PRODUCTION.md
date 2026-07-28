@@ -203,8 +203,7 @@ the operation.
 
 This operation deliberately does **not** rotate
 `data-protection.key`. That key protects Grid state and the rollback package;
-replacing it requires a separately reviewed database and artifact
-re-encryption migration. This procedure also does not prove revocation of
+use the separate stopped-runtime procedure below. This procedure also does not prove revocation of
 credentials exposed in deprecated repository history; that requires an
 external custody and trust-inventory record.
 
@@ -224,9 +223,87 @@ active service identity, rejection of each inactive service identity, exact
 credential restoration, unchanged data-key custody, and clean shutdown. Its
 secret-free JSON is Ed25519-attested and retained by protected CI for 90 days.
 
+## 7. Rotate the data-protection key
+
+Data-key rotation is a separate offline maintenance transaction. Stop the
+complete supervisor or Compose deployment and preserve access-controlled
+copies of both host directories. Use a unique external change record and run:
+
+```bash
+npm run rotate:data-key -- rotate \
+  /srv/axiom-mesh/data \
+  /srv/axiom-mesh/secrets
+```
+
+The command acquires the Grid runtime lock, creates a new 256-bit key, and
+re-encrypts every supported context: protected columns in the live Grid,
+recovery rollback databases, backup snapshot envelopes and their nested
+protected columns, and retained credential rollback/forward packages. It does
+not rotate service identities or API tokens.
+
+Each changed protected artifact receives a Grid-signed
+`.key-rotation.json` sidecar. The recursive sidecar chain binds current
+ciphertext to the original signed artifact metadata; for backup databases it
+also binds each transformed plaintext digest while preserving the signed
+schema and evidence head. The rotation manifest under
+`data/data-key-rotations/<rotation-id>/manifest.json` records public digests,
+counts, evidence state, encrypted recovery envelopes, and the prior active
+rotation pointer. It contains no data key.
+
+The multi-file cutover stages and verifies all replacements, records an
+on-disk transaction journal, replaces the key file last, and automatically
+restores originals after ordinary failures. If the process is killed during
+the cutover, the matching pending marker authorizes rollback to prove and
+quarantine only a stale runtime lock and unwind the recorded file operations.
+A live lock owner remains authoritative.
+
+Restart the complete stack and verify readiness, operations, one pre-rotation
+intent, one new intent, and at least one backup restore under the new key.
+Starting the same database with the retired key must fail authentication.
+Retain the old key only in the approved offline escrow until the acceptance
+window closes; later destruction or revocation must be evidenced by the
+external secret custodian.
+
+Only the active data-key rotation can be rolled back:
+
+```bash
+npm run rotate:data-key -- rollback \
+  /srv/axiom-mesh/data/data-key-rotations/<rotation-id>/manifest.json \
+  /srv/axiom-mesh/data \
+  /srv/axiom-mesh/secrets
+```
+
+Rollback authenticates the manifest and prior-key envelope, re-encrypts the
+current live Grid and supported recovery contexts under the prior key, and
+preserves evidence written after rotation. New backups or credential recovery
+packages created during the acceptance window are included; an artifact that
+existed at rotation may not disappear or change identity silently. The active
+pointer moves back one transition and an attested `rollback-result.json` is
+written. To keep credential manifests created during the acceptance window
+verifiable after data-key rollback, the result retains only their derived
+state-authentication key encrypted under the restored key; it does not retain
+the retired data-encryption key.
+
+Exercise the full real-stack path in an explicitly empty disposable workspace:
+
+```bash
+mkdir -m 700 /tmp/axiom-data-key-rotation-drill
+npm run data-key-rotation:drill -- /tmp/axiom-data-key-rotation-drill \
+  > /tmp/axiom-data-key-rotation-evidence.json
+```
+
+The drill proves both wrong-key rejection directions, nested backup
+re-encryption and restore, post-rotation evidence preservation, recovery-copy
+re-encryption, exact original-key restoration, and clean four-process
+shutdown. Separate fault-injection tests kill both rotation and rollback
+cutovers, including the boundary after rollback installation but before
+evidence finalization. Protected CI retains the signed,
+secret-free drill evidence for 90 days.
+
 This package is a production container specification and local deployment
 surface. Its source and fail-closed supervisor are statically verified, and the
 real four-process stack, digest-pinned image build, composed container
 readiness, disposable-host recovery drill, controlled SLO/restart baseline,
-and coordinated credential-rotation drill are protected CI gates. This is not evidence of a live deployment, federated discovery, BFT consensus, audited
+coordinated credential-rotation drill, and data-key rotation drill are
+protected CI gates. This is not evidence of a live deployment, federated discovery, BFT consensus, audited
 arbitrary-code isolation, or external settlement.

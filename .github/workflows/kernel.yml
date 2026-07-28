@@ -96,6 +96,19 @@ jobs:
           path: ${{ runner.temp }}/axiom-credential-rotation-evidence.json
           if-no-files-found: error
           retention-days: 90
+      - name: Run data-protection-key rotation drill
+        working-directory: mesh
+        run: |
+          node src/data-key-rotation-drill.mjs \
+            "$RUNNER_TEMP/axiom-data-key-rotation-drill" \
+            > "$RUNNER_TEMP/axiom-data-key-rotation-evidence.json"
+      - name: Upload signed data-key rotation evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: axiom-data-key-rotation-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/axiom-data-key-rotation-evidence.json
+          if-no-files-found: error
+          retention-days: 90
 
   container:
     runs-on: ubuntu-latest
