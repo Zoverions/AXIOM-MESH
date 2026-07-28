@@ -39,7 +39,8 @@ Delivered:
 - consent, capsules, memory, local accounting, governance records, admitted
   nodes, storage offers, export/import, backup/restore, and offline causal sync;
 - operator API and CLI;
-- bounded telemetry, readiness, operations report, and metrics;
+- bounded telemetry, readiness, operations report, metrics, and a host-side
+  OTLP/Alertmanager relay with exact HTTPS routing;
 - production provisioning, supervisor, and hardened container candidate.
 
 Boundary: single-node local authority and transparency log. No federation, BFT,
@@ -88,7 +89,9 @@ Milestones:
 - signed encrypted-backup retention and weekly disposable-host restore
   verification are implemented for the candidate host; repeat against
   pilot-owned media and key custody;
-- external metrics collection and bounded alert delivery;
+- external metrics collection and bounded alert delivery are implemented for
+  the automated candidate; repeat against pilot-owned HTTPS receivers and
+  measure named human acknowledgement;
 - controlled load profile and initial latency/error/saturation baseline;
 - resource exhaustion and dependency-loss drills;
 - candidate-container deny-egress with preserved loopback ingress is

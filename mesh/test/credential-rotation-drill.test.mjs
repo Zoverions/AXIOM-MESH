@@ -27,10 +27,17 @@ test('credential rotation drill proves replacement, rejection, and exact rollbac
   assert.ok(Object.values(evidence.checks).every(Boolean));
   assert.equal(evidence.rotation.all_four_service_identities_rotated, true);
   assert.equal(evidence.rotation.operator_api_token_rotated, true);
+  assert.equal(evidence.rotation.telemetry_relay_token_rotated, true);
   assert.equal(evidence.rotation.data_protection_key_rotated, false);
   assert.equal(evidence.rollback.exact_original_key_set_restored, true);
   assert.equal(evidence.rollback.exact_original_operator_token_restored, true);
+  assert.equal(
+    evidence.rollback.exact_original_telemetry_relay_token_restored,
+    true
+  );
   assert.equal(evidence.authorization.retired_operator_token_status, 401);
+  assert.equal(evidence.authorization.retired_telemetry_token_status, 401);
+  assert.equal(evidence.authorization.telemetry_scope_boundary_status, 403);
   assert.equal(
     evidence.authorization.rotated_operator_token_after_rollback_status,
     401
@@ -59,8 +66,12 @@ test('credential rotation drill proves replacement, rejection, and exact rollbac
   const operatorToken = (
     await readFile(join(workspace, 'secrets', 'operator.token'), 'utf8')
   ).trim();
+  const telemetryToken = (
+    await readFile(join(workspace, 'secrets', 'telemetry-relay.token'), 'utf8')
+  ).trim();
   assert.equal(serialized.includes(dataKey), false);
   assert.equal(serialized.includes(operatorToken), false);
+  assert.equal(serialized.includes(telemetryToken), false);
 
   const manifestPath = join(
     workspace,
@@ -69,7 +80,7 @@ test('credential rotation drill proves replacement, rejection, and exact rollbac
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
   for (const state of [manifest.before, manifest.after]) {
     const secretTargets = state.targets.filter(target => target.root === 'secret');
-    assert.equal(secretTargets.length, 2);
+    assert.equal(secretTargets.length, 3);
     assert.ok(secretTargets.every(target => (
       target.authentication === 'HMAC-SHA256'
       && /^[a-f0-9]{64}$/.test(target.digest)

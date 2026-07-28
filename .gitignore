@@ -33,6 +33,10 @@ production-data/
 production-secrets/
 api-tokens.json
 operator.token
+telemetry-relay.token
+telemetry-destinations.json
+*.token
+telemetry-relay-state/
 
 # Editors
 .vscode/

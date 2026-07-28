@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=1f594f2f77e0e9522de152b10d181b766b2510ed318cfc70ac659bc9d6e48b1c -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=caeec760adf3f79760ec38a92302a3cac1d2550b3ffb4aa1df663f7f2470e6c0 -->
 # AXIOM-MESH Rebuild Requirements
 
 **Normative language:** MUST, MUST NOT, SHOULD, and MAY are used in their usual
@@ -101,7 +101,8 @@ requirements sense.
 | OPS-03 | Secrets, private keys, binaries, generated docs, caches, and build artifacts MUST NOT be tracked. | Repository hygiene gate. |
 | OPS-04 | Logs MUST be structured, redact secrets/PII, and include trace IDs without storing raw sensitive prompts by default. | Log-redaction tests. |
 | OPS-05 | Releases MUST include tests, SBOM, provenance, migration/rollback plan, status matrix, and evidence freshness timestamps. | Release verifier. |
-| OPS-06 | Public claims MUST be generated from the machine-readable feature-status registry. | Docs/status consistency test. |
+| OPS-06 | External telemetry MUST preserve kernel deny-egress, use a route-restricted scrape identity, fixed low-cardinality OTLP and Alertmanager schemas, exact HTTPS origin allowlists, no redirects, bounded persistent retry with alert-reserved capacity, idempotency, redaction, delivery receipts, and visible dead letters. | Unit negative paths plus signed real Unix-socket scrape and forced-retry drill evidence. |
+| OPS-07 | Public claims MUST be generated from the machine-readable feature-status registry. | Docs/status consistency test. |
 
 ## Verified implementation checkpoint
 
@@ -164,6 +165,11 @@ The machine-readable capability registry remains authoritative. Kernel
 - bounded-cardinality four-service telemetry, dependency-aware readiness,
   authenticated operations/OpenMetrics surfaces, and static alert states for
   integrity, availability, replay, authentication, and server-error signals.
+- a host-side telemetry relay that leaves the kernel deny-egress, exports 68
+  fixed OTLP/HTTP JSON points, routes a fixed Alertmanager v2 vocabulary, and
+  fails closed on credential, topology, cardinality, origin, queue, digest,
+  redirect, or receiver-response drift. Protected CI MUST retain signed
+  least-privilege scrape, transient retry, and receipt evidence.
 - an explicit idempotent production provisioning workflow and statically gated
   digest-pinned container candidate with four supervised processes,
   loopback-only internals, non-root execution, read-only root, dropped

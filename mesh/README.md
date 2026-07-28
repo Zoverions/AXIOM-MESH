@@ -138,10 +138,15 @@ node src/verify-sync.mjs \
   availability, integrity, and process-memory metrics. Metric labels never
   contain principals, intents, routes with parameters, queries, prompts,
   payloads, tokens, capsules, or object identifiers.
+- A separate host-side relay uses a dedicated `telemetry:collect` token over
+  the permission-restricted Gateway socket. It exports fixed OTLP/HTTP JSON
+  metrics and Alertmanager v2 alerts only to exact allowlisted HTTPS origins,
+  with bounded persistent retry, alert-reserved capacity, and secret-free
+  delivery audit. The kernel retains deny-egress.
 - Liveness is process-local. Readiness follows the actual dependency graph and
   fails when a critical downstream service or Grid evidence verification is
   unavailable. Detailed operations and OpenMetrics surfaces require
-  `operations:read`.
+  `operations:read` or the route-restricted `telemetry:collect` scope.
 - Grid deep integrity readiness is cached for 30 seconds by default to keep
   probes bounded as the evidence log grows. Set
   `AXIOM_INTEGRITY_PROBE_INTERVAL_SECONDS` between 5 and 3600 when an operator

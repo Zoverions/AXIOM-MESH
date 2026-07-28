@@ -113,6 +113,19 @@ jobs:
           path: ${{ runner.temp }}/axiom-slo-baseline-evidence.json
           if-no-files-found: error
           retention-days: 90
+      - name: Run host-side telemetry and alert relay drill
+        working-directory: mesh
+        run: |
+          node src/telemetry-relay-drill.mjs \
+            "$RUNNER_TEMP/axiom-telemetry-relay-drill" \
+            > "$RUNNER_TEMP/axiom-telemetry-relay-evidence.json"
+      - name: Upload signed telemetry relay evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: axiom-telemetry-relay-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/axiom-telemetry-relay-evidence.json
+          if-no-files-found: error
+          retention-days: 90
       - name: Run coordinated credential rotation drill
         working-directory: mesh
         run: |

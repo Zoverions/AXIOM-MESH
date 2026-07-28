@@ -28,11 +28,13 @@ chmod 600 /srv/axiom-mesh/secrets/*
 
 Provisioning creates four distinct Ed25519 service identities, their trust
 records, a 32-byte data-protection key, an API principal registry, and a
-separate operator-token file. It never prints secret values. A partial secret
+separate operator-token file plus a route-restricted
+`telemetry-relay.token`. It never prints secret values. A partial secret
 set is rejected rather than silently repaired or rotated. Keep
 `operator.token` owned by the host operator; it is not mounted into the
-container. Only the data-protection key and API registry need to be readable by
-container UID `10001`.
+container. Keep `telemetry-relay.token` readable only by the dedicated host
+relay account. Only the data-protection key and API registry need to be
+readable by container UID `10001`.
 
 Store an encrypted offline recovery copy before first launch. Losing the data
 key makes protected Grid data unrecoverable. Replacing any service key without
@@ -83,7 +85,9 @@ sudo curl --fail \
 ```
 
 Operational details and OpenMetrics require a principal with
-`operations:read` (the initial production operator has `*`):
+`operations:read` (the initial production operator has `*`). The separately
+provisioned relay principal has `telemetry:collect`, which Gateway accepts only
+on `/v1/operations` and `/v1/metrics`:
 
 ```bash
 TOKEN="$(tr -d '\n' </srv/axiom-mesh/secrets/operator.token)"
@@ -225,7 +229,51 @@ pilot hardware, a remote network path, an external-adapter profile, or a
 30-day availability measurement. Repeat it under the actual pilot resource
 policy and expected traffic mix before production promotion.
 
-## 6. Rotate service and operator credentials
+## 5.1 Run the host-side telemetry relay
+
+The host-side telemetry relay keeps the four-process container deny-egress.
+It scrapes only the permission-restricted Gateway Unix socket, validates the
+exact four-service topology, exports 68 fixed OTLP/HTTP JSON metric points, and
+routes a fixed Alertmanager v2 vocabulary. Create an untracked destination
+file with exact HTTPS origins and absolute private receiver-credential files,
+following
+[`docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md`](../docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md).
+
+Run the relay as a dedicated unprivileged host account:
+
+```bash
+npm run telemetry-relay:start -- \
+  /srv/axiom-mesh/run/gateway.sock \
+  /srv/axiom-mesh/secrets/telemetry-relay.token \
+  /etc/axiom-mesh/telemetry-destinations.json \
+  /var/lib/axiom-telemetry-relay
+```
+
+The destination adapter requires exact allowlisted HTTPS origins, fixed
+protocol paths, no redirects, private file-backed credentials, bounded
+receiver responses, and verified TLS. Its persistent state limits the queue to
+64 items and 1 MiB, reserves 16 positions for alerts, coalesces stale metrics,
+retries transient failures at most five times with bounded exponential delay,
+uses stable idempotency keys, and records secret-free delivery, retry, receipt,
+and dead-letter outcomes. Stop the relay to disable external delivery without
+changing kernel isolation.
+
+Protected CI runs the real host-mode Unix-socket telemetry relay drill:
+
+```bash
+npm run telemetry-relay:drill -- /tmp/axiom-telemetry-relay-drill \
+  > /tmp/axiom-telemetry-relay-evidence.json
+```
+
+It proves missing authentication returns `401`, the relay token receives `403`
+outside its two routes, bounded OTLP and alerts are produced, a 503 and 429
+are retried, the queue drains after two receiver receipts, and credential
+material is absent from Grid-signed evidence. This is candidate evidence, not
+evidence of operator-owned external receivers or a human acknowledgement.
+The separate same-revision container job proves deny-egress; this host-mode
+drill does not replace that network-policy proof.
+
+## 6. Rotate service, operator, and telemetry credentials
 
 Credential rotation is an offline maintenance operation. Stop the production
 supervisor or Compose deployment first. The command acquires the Grid runtime
@@ -234,7 +282,8 @@ startup makes the operation fail closed.
 
 Make an encrypted, access-controlled backup of both host directories before
 the change. Then rotate all four Ed25519 service identities, their coordinated
-trust records, and the production operator API token:
+trust records, the production operator API token, and the least-privilege
+telemetry relay token:
 
 ```bash
 npm run rotate:production -- rotate \
@@ -258,8 +307,10 @@ the data-protection key through HKDF; the public manifest therefore does not
 publish an offline token-hash oracle. Grid uses the dual-signed lineage to
 verify evidence written on either side of a rotation; retired private keys are
 not retained. Restart the complete stack and verify `/ready`, authenticated
-`/v1/operations`, and an authorized intent. Distribute the new operator token
-only through the approved secret channel. The retired token must return `401`.
+`/v1/operations`, and an authorized intent. Distribute the new operator and
+telemetry relay tokens only through approved secret channels. Each retired
+token must return `401`, and the active relay token must still receive `403`
+from non-telemetry routes.
 
 If post-change validation fails, stop the stack and use the exact manifest
 path printed by the rotation:
@@ -274,7 +325,8 @@ npm run rotate:production -- rollback \
 Rollback authenticates and decrypts `rollback.axr`, verifies every fixed target
 against the signed manifest, preserves the rotated set as encrypted
 `forward.axr`, restores the original identities, trust records, registry, and
-operator token, and writes an attested `rollback-result.json`. It rejects a
+operator and telemetry relay tokens, and writes an attested
+`rollback-result.json`. It rejects a
 different pending rotation or drift from the signed rotated state. Only when a
 matching pending marker exists, rollback may prove that the recorded runtime
 process no longer exists and quarantine its stale lock under
@@ -299,8 +351,9 @@ npm run credential-rotation:drill -- /tmp/axiom-credential-rotation-drill \
 The drill starts the real four-process stack before rotation, after rotation,
 and after rollback. It proves successful intents with the active credential
 set, `401` rejection of the retired and rolled-back tokens, acceptance of each
-active service identity, rejection of each inactive service identity, exact
-credential restoration, unchanged data-key custody, and clean shutdown. Its
+active service identity, rejection of each inactive service identity,
+route-limited relay access, exact credential restoration, unchanged data-key
+custody, and clean shutdown. Its
 secret-free JSON is Ed25519-attested and retained by protected CI for 90 days.
 
 ## 6.1 Verify the deprecated credential boundary
@@ -446,6 +499,6 @@ surface. Its source and fail-closed supervisor are statically verified, and the
 real four-process stack, digest-pinned image build, composed container
 readiness, disposable-host recovery drill, controlled SLO/restart baseline,
 coordinated credential-rotation drill, data-key rotation drill, signed
-deny-egress probe, and automated incident tabletop are
+deny-egress probe, host-side telemetry relay drill, and automated incident tabletop are
 protected CI gates. This is not evidence of a live deployment, federated discovery, BFT consensus, audited
 arbitrary-code isolation, or external settlement.

@@ -4,7 +4,7 @@
 Registry schema: `axiom-capabilities.v1`
 Kernel version: `0.11.0`
 Evidence verified: `2026-07-28`
-Registry digest: `1f594f2f77e0e9522de152b10d181b766b2510ed318cfc70ac659bc9d6e48b1c`
+Registry digest: `caeec760adf3f79760ec38a92302a3cac1d2550b3ffb4aa1df663f7f2470e6c0`
 
 Only **implemented** capabilities are runnable claims.
 
@@ -54,6 +54,6 @@ Only **implemented** capabilities are runnable claims.
 | `ui.operator-api` | operations | **implemented** | Authenticated operator API for intent submission, status, audit, recovery, and governed state inspection. |
 | `ui.cli` | operations | **implemented** | Command-line operator client with explicit input validation and fail-closed API error handling. |
 | `ui.dashboard` | operations | **specified** | A browser operator dashboard is specified but is not part of the supported runtime. |
-| `operations.observability` | operations | **implemented** | Bounded-cardinality service telemetry, dependency-aware readiness, authenticated operational reports, OpenMetrics output, and static integrity/security alerts cover the four-process runtime without exposing sensitive labels. |
+| `operations.observability` | operations | **implemented** | Bounded four-service telemetry is scraped over least-privilege Unix-socket access and relayed as OTLP/HTTP JSON with fixed attributes; static alerts route through Alertmanager v2 using HTTPS allowlists, reserved queue capacity, bounded retry, redaction, and delivery audit. |
 | `operations.container-package` | operations | **implemented** | A digest-pinned non-root container package is statically release-gated, passes the four-process host drill, and is built and exercised through the published composed readiness workflow. |
-| `operations.installer-observability-release` | operations | **experimental** | Release tooling, observability, and container verification are executable; legacy installer replacement, external alert delivery, and independently evidenced live deployment remain incomplete. |
+| `operations.installer-observability-release` | operations | **experimental** | Release tooling, bounded external telemetry and alert routing, and container verification are executable; legacy installer replacement and independently evidenced live deployment remain incomplete. |

@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=1f594f2f77e0e9522de152b10d181b766b2510ed318cfc70ac659bc9d6e48b1c -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=caeec760adf3f79760ec38a92302a3cac1d2550b3ffb4aa1df663f7f2470e6c0 -->
 # AXIOM-MESH Product Definition
 
 **Status:** Canonical rebuild definition
@@ -174,7 +174,15 @@ Other orchestrators must reproduce and independently verify this policy.
 Operational telemetry is bounded-cardinality and excludes user-controlled
 labels. Liveness is process-local; readiness follows the service dependency
 graph and Grid integrity state. Detailed operations and OpenMetrics output are
-authenticated and require `operations:read`.
+authenticated and require `operations:read` or a dedicated
+`telemetry:collect` principal that Gateway confines to those two routes. A
+separate host-side relay preserves kernel deny-egress, requires the exact four
+services, emits a fixed 68-point OTLP/HTTP JSON set, and routes only the fixed
+Alertmanager v2 vocabulary. Exact HTTPS origins, private receiver credentials,
+no redirects, bounded persistent queue and retry, alert-reserved capacity,
+idempotency, redaction, receipts, and dead-letter audit are release-gated.
+Pilot-owned destinations and live acknowledgement measurements remain
+promotion evidence.
 
 Incident response is an executable candidate gate. A machine-readable policy
 selects the highest matching severity, requires independent command roles,

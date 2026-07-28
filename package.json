@@ -17,6 +17,8 @@
     "credential-rotation:drill": "npm --prefix mesh run credential-rotation:drill --",
     "data-key-rotation:drill": "npm --prefix mesh run data-key-rotation:drill --",
     "incident-tabletop:drill": "npm --prefix mesh run incident-tabletop:drill --",
+    "telemetry-relay:start": "npm --prefix mesh run telemetry-relay:start --",
+    "telemetry-relay:drill": "npm --prefix mesh run telemetry-relay:drill --",
     "network-boundary:verify": "npm --prefix mesh run network-boundary:verify --",
     "recovery:drill": "npm --prefix mesh run recovery:drill --",
     "slo:drill": "npm --prefix mesh run slo:drill --",

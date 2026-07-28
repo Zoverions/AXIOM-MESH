@@ -25,31 +25,47 @@ export async function provisionProduction({
   const dataKeyPath = `${resolvedSecretDir}/data-protection.key`;
   const apiTokensPath = `${resolvedSecretDir}/api-tokens.json`;
   const operatorTokenPath = `${resolvedSecretDir}/operator.token`;
+  const telemetryRelayTokenPath = `${resolvedSecretDir}/telemetry-relay.token`;
   const existing = await Promise.all([
     readOptional(dataKeyPath),
     readOptional(apiTokensPath),
-    readOptional(operatorTokenPath)
+    readOptional(operatorTokenPath),
+    readOptional(telemetryRelayTokenPath)
   ]);
   const existingCount = existing.filter(value => value !== undefined).length;
   if (existingCount !== 0 && existingCount !== existing.length) {
     throw new ValidationError('Production secret directory is incomplete; no credentials were changed');
   }
   let operatorToken;
+  let telemetryRelayToken;
   if (existingCount === 0) {
     operatorToken = randomBytes(32).toString('base64url');
+    telemetryRelayToken = randomBytes(32).toString('base64url');
     await atomicWrite(dataKeyPath, `${randomBytes(32).toString('base64url')}\n`, 0o600);
     await atomicWrite(operatorTokenPath, `${operatorToken}\n`, 0o600);
+    await atomicWrite(
+      telemetryRelayTokenPath,
+      `${telemetryRelayToken}\n`,
+      0o600
+    );
     const tokenRegistry = {
       [operatorToken]: {
         id: 'production-operator',
         type: 'human',
         roles: ['administrator'],
         scopes: ['*']
+      },
+      [telemetryRelayToken]: {
+        id: 'production-telemetry-relay',
+        type: 'service',
+        roles: ['telemetry-relay'],
+        scopes: ['telemetry:collect']
       }
     };
     await atomicWrite(apiTokensPath, `${canonicalJson(tokenRegistry)}\n`, 0o600);
   } else {
     operatorToken = existing[2].trim();
+    telemetryRelayToken = existing[3].trim();
     if (Buffer.from(existing[0].trim(), 'base64url').length !== 32) {
       throw new ValidationError('Existing production data-protection key is invalid');
     }
@@ -61,6 +77,17 @@ export async function provisionProduction({
     }
     if (!Object.hasOwn(registry, operatorToken)) {
       throw new ValidationError('Existing operator token is not present in the API token registry');
+    }
+    if (
+      !Object.hasOwn(registry, telemetryRelayToken)
+      || registry[telemetryRelayToken]?.id !== 'production-telemetry-relay'
+      || canonicalJson(registry[telemetryRelayToken]?.scopes) !== (
+        canonicalJson(['telemetry:collect'])
+      )
+    ) {
+      throw new ValidationError(
+        'Existing telemetry relay token is not least-privilege in the API token registry'
+      );
     }
   }
   const identities = {};
@@ -76,7 +103,8 @@ export async function provisionProduction({
   await Promise.all([
     assertPrivatePath(dataKeyPath, 'Data-protection key'),
     assertPrivatePath(apiTokensPath, 'API token registry'),
-    assertPrivatePath(operatorTokenPath, 'Operator token')
+    assertPrivatePath(operatorTokenPath, 'Operator token'),
+    assertPrivatePath(telemetryRelayTokenPath, 'Telemetry relay token')
   ]);
   return {
     data_dir: resolvedDataDir,
@@ -84,7 +112,8 @@ export async function provisionProduction({
     identities,
     data_key_file: dataKeyPath,
     api_tokens_file: apiTokensPath,
-    operator_token_file: operatorTokenPath
+    operator_token_file: operatorTokenPath,
+    telemetry_relay_token_file: telemetryRelayTokenPath
   };
 }
 

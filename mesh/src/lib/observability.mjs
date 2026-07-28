@@ -351,6 +351,15 @@ function validateServiceSnapshot(value) {
     }
     return { le: bucket.le, count: requireCounter(bucket.count, value.service) };
   });
+  if (
+    buckets.some((bucket, index) => (
+      index > 0 && bucket.count < buckets[index - 1].count
+    ))
+  ) {
+    throw new ValidationError(
+      `Service telemetry duration buckets are not cumulative for ${value.service}`
+    );
+  }
   const responses = Object.fromEntries(['2xx', '3xx', '4xx', '5xx'].map(statusClass => [
     statusClass,
     requireCounter(value.http.responses_total?.[statusClass], value.service)
@@ -429,6 +438,22 @@ function evaluateAlerts(services) {
         severity: 'warning',
         service: service.service,
         condition: 'authentication failure count reached the static alert threshold'
+      });
+    }
+    if (service.reliability.upstream_unavailable_total > 0) {
+      alerts.push({
+        id: `upstream-unavailable:${service.service}`,
+        severity: 'warning',
+        service: service.service,
+        condition: 'one or more required upstream requests were unavailable'
+      });
+    }
+    if (service.http.max_in_flight >= 48) {
+      alerts.push({
+        id: `service-saturated:${service.service}`,
+        severity: 'warning',
+        service: service.service,
+        condition: 'maximum in-flight requests reached the static saturation threshold'
       });
     }
     const requests = service.http.requests_total;

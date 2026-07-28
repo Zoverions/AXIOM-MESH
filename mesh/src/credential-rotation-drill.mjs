@@ -44,6 +44,9 @@ export async function runCredentialRotationDrill({
   const originalToken = (
     await readFile(provisioned.operator_token_file, 'utf8')
   ).trim();
+  const originalTelemetryToken = (
+    await readFile(provisioned.telemetry_relay_token_file, 'utf8')
+  ).trim();
   const originalIdentities = await loadIdentities(provisioned.data_dir);
   const originalKeyIds = keyIds(originalIdentities);
   const dataKeyBefore = await readFile(provisioned.data_key_file);
@@ -61,6 +64,15 @@ export async function runCredentialRotationDrill({
     });
     runtime = initialStart;
     const baselineIntent = await performEcho(gateway, originalToken, 'before-rotation');
+    const baselineTelemetryStatus = await authorizationStatus(
+      gateway,
+      originalTelemetryToken
+    );
+    const baselineTelemetryBoundary = await routeStatus(
+      gateway,
+      originalTelemetryToken,
+      '/v1/status'
+    );
     const initialStop = await stopProductionHost(runtime.child);
     runtime = null;
 
@@ -72,6 +84,9 @@ export async function runCredentialRotationDrill({
     const rotationDurationMs = elapsedMilliseconds(rotationStartedAt);
     const rotatedToken = (
       await readFile(provisioned.operator_token_file, 'utf8')
+    ).trim();
+    const rotatedTelemetryToken = (
+      await readFile(provisioned.telemetry_relay_token_file, 'utf8')
     ).trim();
     const rotatedIdentities = await loadIdentities(provisioned.data_dir);
     const rotatedKeyIds = keyIds(rotatedIdentities);
@@ -98,6 +113,14 @@ export async function runCredentialRotationDrill({
     runtime = rotatedStart;
     const rotatedIntent = await performEcho(gateway, rotatedToken, 'after-rotation');
     const originalTokenRejection = await authorizationStatus(gateway, originalToken);
+    const rotatedTelemetryStatus = await authorizationStatus(
+      gateway,
+      rotatedTelemetryToken
+    );
+    const originalTelemetryTokenRejection = await authorizationStatus(
+      gateway,
+      originalTelemetryToken
+    );
     const rotatedStop = await stopProductionHost(runtime.child);
     runtime = null;
 
@@ -110,6 +133,9 @@ export async function runCredentialRotationDrill({
     const rollbackDurationMs = elapsedMilliseconds(rollbackStartedAt);
     const restoredToken = (
       await readFile(provisioned.operator_token_file, 'utf8')
+    ).trim();
+    const restoredTelemetryToken = (
+      await readFile(provisioned.telemetry_relay_token_file, 'utf8')
     ).trim();
     const restoredIdentities = await loadIdentities(provisioned.data_dir);
     const restoredKeyIds = keyIds(restoredIdentities);
@@ -131,6 +157,14 @@ export async function runCredentialRotationDrill({
     runtime = restoredStart;
     const restoredIntent = await performEcho(gateway, restoredToken, 'after-rollback');
     const rotatedTokenRejection = await authorizationStatus(gateway, rotatedToken);
+    const restoredTelemetryStatus = await authorizationStatus(
+      gateway,
+      restoredTelemetryToken
+    );
+    const rotatedTelemetryTokenRejection = await authorizationStatus(
+      gateway,
+      rotatedTelemetryToken
+    );
     const finalStop = await stopProductionHost(runtime.child);
     runtime = null;
 
@@ -142,16 +176,26 @@ export async function runCredentialRotationDrill({
         service => originalKeyIds[service] !== rotatedKeyIds[service]
       ),
       operator_token_rotated: originalToken !== rotatedToken,
+      telemetry_relay_token_rotated: (
+        originalTelemetryToken !== rotatedTelemetryToken
+      ),
       new_service_trust_accepted: rotatedTrust.accepted,
       retired_service_trust_rejected: rotatedTrust.rejected,
       rotated_runtime_started: rotatedStart.startup_duration_ms <= STARTUP_TIMEOUT_MS,
       rotated_intent_succeeded: rotatedIntent.status === 200 && rotatedIntent.completed,
       retired_operator_token_rejected: originalTokenRejection === 401,
+      original_telemetry_access_succeeded: baselineTelemetryStatus === 200,
+      telemetry_scope_was_route_limited: baselineTelemetryBoundary === 403,
+      rotated_telemetry_access_succeeded: rotatedTelemetryStatus === 200,
+      retired_telemetry_token_rejected: originalTelemetryTokenRejection === 401,
       rotated_runtime_stopped: cleanStop(rotatedStop),
       rollback_restored_service_identities: canonicalJson(restoredKeyIds) === (
         canonicalJson(originalKeyIds)
       ),
       rollback_restored_operator_token: restoredToken === originalToken,
+      rollback_restored_telemetry_token: (
+        restoredTelemetryToken === originalTelemetryToken
+      ),
       restored_service_trust_accepted: restoredTrust.accepted,
       rotated_service_trust_rejected: restoredTrust.rejected,
       data_protection_key_unchanged: dataKeyBefore.equals(dataKeyAfter),
@@ -159,6 +203,8 @@ export async function runCredentialRotationDrill({
       restored_runtime_started: restoredStart.startup_duration_ms <= STARTUP_TIMEOUT_MS,
       restored_intent_succeeded: restoredIntent.status === 200 && restoredIntent.completed,
       rotated_operator_token_rejected: rotatedTokenRejection === 401,
+      restored_telemetry_access_succeeded: restoredTelemetryStatus === 200,
+      rotated_telemetry_token_rejected: rotatedTelemetryTokenRejection === 401,
       final_runtime_stopped: cleanStop(finalStop)
     };
     const failedChecks = Object.entries(checks)
@@ -205,6 +251,7 @@ export async function runCredentialRotationDrill({
         encrypted_rollback_available: rotation.rollback_available,
         all_four_service_identities_rotated: true,
         operator_api_token_rotated: true,
+        telemetry_relay_token_rotated: true,
         data_protection_key_rotated: false
       },
       rollback: {
@@ -212,7 +259,8 @@ export async function runCredentialRotationDrill({
         encrypted_forward_recovery_available: rollback.forward_recovery_available,
         interrupted_rotation_recovered: rollback.interrupted_rotation_recovered,
         exact_original_key_set_restored: true,
-        exact_original_operator_token_restored: true
+        exact_original_operator_token_restored: true,
+        exact_original_telemetry_relay_token_restored: true
       },
       key_ids: {
         before: originalKeyIds,
@@ -225,6 +273,14 @@ export async function runCredentialRotationDrill({
         restored_intent_status: restoredIntent.status,
         retired_operator_token_status: originalTokenRejection,
         rotated_operator_token_after_rollback_status: rotatedTokenRejection,
+        baseline_telemetry_status: baselineTelemetryStatus,
+        telemetry_scope_boundary_status: baselineTelemetryBoundary,
+        rotated_telemetry_status: rotatedTelemetryStatus,
+        retired_telemetry_token_status: originalTelemetryTokenRejection,
+        restored_telemetry_status: restoredTelemetryStatus,
+        rotated_telemetry_token_after_rollback_status: (
+          rotatedTelemetryTokenRejection
+        ),
         rotated_trust: rotatedTrust,
         restored_trust: restoredTrust
       },
@@ -242,7 +298,7 @@ export async function runCredentialRotationDrill({
       checks,
       limitations: [
         'disposable single-host proof, not a live deployment rotation',
-        'operator API token and four Ed25519 service identities only',
+        'operator and telemetry relay API tokens plus four Ed25519 service identities',
         'data-protection-key re-encryption is a separate migration',
         'external historic credential revocation requires operator confirmation'
       ]
@@ -256,6 +312,8 @@ export async function runCredentialRotationDrill({
     for (const secret of [
       originalToken,
       rotatedToken,
+      originalTelemetryToken,
+      rotatedTelemetryToken,
       dataKeyBefore.toString('utf8').trim()
     ]) {
       if (serializedEvidence.includes(secret)) {
@@ -289,12 +347,14 @@ export function verifyCredentialRotationDrillEvidence(evidence) {
   if (
     evidence.rotation?.all_four_service_identities_rotated !== true
     || evidence.rotation?.operator_api_token_rotated !== true
+    || evidence.rotation?.telemetry_relay_token_rotated !== true
     || evidence.rotation?.data_protection_key_rotated !== false
     || evidence.rotation?.encrypted_rollback_available !== true
     || !DIGEST.test(evidence.rotation?.manifest_sha256 ?? '')
     || evidence.rollback?.encrypted_forward_recovery_available !== true
     || evidence.rollback?.exact_original_key_set_restored !== true
     || evidence.rollback?.exact_original_operator_token_restored !== true
+    || evidence.rollback?.exact_original_telemetry_relay_token_restored !== true
   ) {
     throw new ValidationError('Credential rotation drill scope or rollback proof is invalid');
   }
@@ -304,6 +364,12 @@ export function verifyCredentialRotationDrillEvidence(evidence) {
     || evidence.authorization?.restored_intent_status !== 200
     || evidence.authorization?.retired_operator_token_status !== 401
     || evidence.authorization?.rotated_operator_token_after_rollback_status !== 401
+    || evidence.authorization?.baseline_telemetry_status !== 200
+    || evidence.authorization?.telemetry_scope_boundary_status !== 403
+    || evidence.authorization?.rotated_telemetry_status !== 200
+    || evidence.authorization?.retired_telemetry_token_status !== 401
+    || evidence.authorization?.restored_telemetry_status !== 200
+    || evidence.authorization?.rotated_telemetry_token_after_rollback_status !== 401
     || evidence.authorization?.rotated_trust?.accepted !== true
     || evidence.authorization?.rotated_trust?.rejected !== true
     || evidence.authorization?.restored_trust?.accepted !== true
@@ -430,8 +496,12 @@ async function performEcho(gateway, token, label) {
 }
 
 async function authorizationStatus(gateway, token) {
+  return routeStatus(gateway, token, '/v1/operations');
+}
+
+async function routeStatus(gateway, token, path) {
   try {
-    const response = await fetch(`${gateway}/v1/operations`, {
+    const response = await fetch(`${gateway}${path}`, {
       headers: {
         authorization: `Bearer ${token}`,
         accept: 'application/json'

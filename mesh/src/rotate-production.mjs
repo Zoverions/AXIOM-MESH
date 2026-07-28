@@ -91,6 +91,12 @@ const TARGETS = Object.freeze([
     root: 'secret',
     relative_path: 'operator.token',
     mode: 0o600
+  },
+  {
+    id: 'telemetry-relay-token',
+    root: 'secret',
+    relative_path: 'telemetry-relay.token',
+    mode: 0o600
   }
 ]);
 
@@ -136,6 +142,7 @@ export async function rotateProductionCredentials({
       scope: {
         service_identities: [...SERVICES],
         operator_api_token: true,
+        telemetry_relay_token: true,
         data_protection_key: false,
         requires_stopped_runtime: true
       },
@@ -395,6 +402,7 @@ export function verifyCredentialRotationManifest({
   if (
     manifest.scope?.data_protection_key !== false
     || manifest.scope?.operator_api_token !== true
+    || manifest.scope?.telemetry_relay_token !== true
     || manifest.scope?.requires_stopped_runtime !== true
     || canonicalJson(manifest.scope?.service_identities) !== canonicalJson(SERVICES)
   ) {
@@ -413,6 +421,9 @@ export function verifyCredentialRotationManifest({
     )
     || targetAuthentication(manifest.before, 'operator-token') === (
       targetAuthentication(manifest.after, 'operator-token')
+    )
+    || targetAuthentication(manifest.before, 'telemetry-relay-token') === (
+      targetAuthentication(manifest.after, 'telemetry-relay-token')
     )
     || manifest.before.target_set_digest === manifest.after.target_set_digest
   ) {
@@ -516,14 +527,28 @@ function createRotatedSnapshot(before, beforeState) {
   do {
     nextToken = randomBytes(32).toString('base64url');
   } while (Object.hasOwn(registry, nextToken));
+  let nextTelemetryToken;
+  do {
+    nextTelemetryToken = randomBytes(32).toString('base64url');
+  } while (
+    Object.hasOwn(registry, nextTelemetryToken)
+    || nextTelemetryToken === nextToken
+  );
   const principal = registry[beforeState.operator_token];
+  const telemetryPrincipal = registry[beforeState.telemetry_relay_token];
   delete registry[beforeState.operator_token];
+  delete registry[beforeState.telemetry_relay_token];
   registry[nextToken] = principal;
+  registry[nextTelemetryToken] = telemetryPrincipal;
   contents.set(
     'api-token-registry',
     Buffer.from(`${canonicalJson(registry)}\n`, 'utf8')
   );
   contents.set('operator-token', Buffer.from(`${nextToken}\n`, 'utf8'));
+  contents.set(
+    'telemetry-relay-token',
+    Buffer.from(`${nextTelemetryToken}\n`, 'utf8')
+  );
   return TARGETS.map(target => ({
     ...target,
     content: contents.get(target.id)
@@ -596,6 +621,17 @@ function validateCredentialSnapshot(snapshot) {
   ) {
     throw new ValidationError('Operator token is invalid');
   }
+  const telemetry_relay_token = snapshotContent(snapshot, 'telemetry-relay-token')
+    .toString('utf8')
+    .trim();
+  if (
+    telemetry_relay_token.length < 32
+    || telemetry_relay_token.length > 512
+    || !/^[A-Za-z0-9_-]+$/.test(telemetry_relay_token)
+    || telemetry_relay_token === operator_token
+  ) {
+    throw new ValidationError('Telemetry relay token is invalid');
+  }
   let registry;
   try {
     registry = JSON.parse(
@@ -609,12 +645,22 @@ function validateCredentialSnapshot(snapshot) {
     || typeof registry !== 'object'
     || Array.isArray(registry)
     || !Object.hasOwn(registry, operator_token)
+    || !Object.hasOwn(registry, telemetry_relay_token)
   ) {
-    throw new ValidationError('Operator token is absent from the API token registry');
+    throw new ValidationError('Required API token is absent from the API token registry');
+  }
+  if (
+    registry[telemetry_relay_token]?.id !== 'production-telemetry-relay'
+    || canonicalJson(registry[telemetry_relay_token]?.scopes) !== (
+      canonicalJson(['telemetry:collect'])
+    )
+  ) {
+    throw new ValidationError('Telemetry relay token does not have the required least privilege');
   }
   return {
     key_ids,
     operator_token,
+    telemetry_relay_token,
     registry
   };
 }

@@ -34,7 +34,9 @@ experimental, 4 specified, 9 adapter-required, and 4 disabled capabilities.
   and restore, and admitted-node causal bundles;
 - authenticated operator API and CLI;
 - bounded-cardinality telemetry, dependency readiness, operational reports,
-  OpenMetrics output, and static security/integrity alerts;
+  OpenMetrics output, static security/integrity alerts, and a host-side
+  least-privilege OTLP/Alertmanager relay with exact HTTPS origins, bounded
+  persistent retry, redaction, receipts, and delivery audit;
 - explicit production credential provisioning and a fail-closed four-process
   supervisor.
 
@@ -57,8 +59,12 @@ recovery evidence with a measured recovery point and recovery time. It also
 runs a fixed authenticated load profile against the real four-process
 production supervisor, records latency, error rate, throughput, CPU/memory
 observations and peak concurrency, then measures a graceful restart and
-post-restart intent. It also performs offline coordinated rotation of all four
-service identities and the operator token, proves active and inactive trust in
+post-restart intent. It also performs an authenticated Unix-socket scrape
+with a route-limited relay identity, exports 68 fixed OTLP points and bounded
+Alertmanager alerts, forces transient failures, drains the alert-reserved
+queue, and records signed delivery receipts. It also performs offline
+coordinated rotation of all four service identities and the operator and
+telemetry relay tokens, proves active and inactive trust in
 both directions, preserves Grid evidence through a dual-signed key transition,
 and restores the exact original set from an authenticated-encrypted rollback
 package. The workflow also re-encrypts and rotates the data-protection key
@@ -71,7 +77,7 @@ across live and retained recovery state, proves wrong-key rejection in both
   job also establishes that its public TCP probe is runner-reachable, then
   proves it is unreachable from the candidate namespace and uploads signed
   evidence. Dedicated pilot-hardware capacity and availability validation,
-  pilot-owned secret/media custody, external
+  pilot-owned receiver/secret/media custody, external
   credential-history attestations, and independent security review are still
   required before production promotion. The repository-side history audit is
   implemented: a secret-free keyed ledger covers 32 conservative candidates,
@@ -118,9 +124,11 @@ repository is not implementation or deployment evidence.
 
 The next milestone is disposing the 32 external credential-history
 attestations,
-pilot-owned secret and media custody with scheduled on-media recovery,
+pilot-owned secret, telemetry-receiver, and media custody with scheduled
+on-media recovery,
 a facilitated named-roster incident exercise, pilot-platform network-policy
 repetition, and independent security review for a controlled single-node
-pilot. The automated candidate tabletop is implemented and signs a
+pilot. The automated external telemetry/alert relay and candidate tabletop
+are implemented; protected CI signs bounded delivery evidence and a
 same-revision composition of five real control drills. Work is ordered in
 [`docs/MASTER-TODO.md`](MASTER-TODO.md).
