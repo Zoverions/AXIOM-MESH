@@ -167,6 +167,7 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
     packageJson,
     backupRetentionPolicy,
     credentialRevocations,
+    incidentResponsePolicy,
     workflow,
     repositoryIgnore
   ] = await Promise.all([
@@ -177,6 +178,7 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
     readFile(new URL('package.json', root), 'utf8').then(JSON.parse),
     readFile(new URL('config/backup-retention.json', root), 'utf8').then(JSON.parse),
     readFile(new URL('config/credential-revocations.json', root), 'utf8').then(JSON.parse),
+    readFile(new URL('config/incident-response.json', root), 'utf8').then(JSON.parse),
     readFile(new URL('../.github/workflows/kernel.yml', root), 'utf8'),
     readFile(new URL('../.gitignore', root), 'utf8')
   ]);
@@ -188,6 +190,7 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
     packageJson,
     backupRetentionPolicy,
     credentialRevocations,
+    incidentResponsePolicy,
     workflow,
     repositoryIgnore
   });
@@ -201,6 +204,7 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
     packageJson,
     backupRetentionPolicy,
     credentialRevocations,
+    incidentResponsePolicy,
     workflow,
     repositoryIgnore
   }), /digest-pinned/);
@@ -212,6 +216,7 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
     packageJson,
     backupRetentionPolicy,
     credentialRevocations,
+    incidentResponsePolicy,
     workflow,
     repositoryIgnore
   }), /read_only/);
@@ -223,6 +228,7 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
     packageJson,
     backupRetentionPolicy,
     credentialRevocations,
+    incidentResponsePolicy,
     workflow,
     repositoryIgnore
   }), /network_mode: "none"/);
@@ -237,6 +243,7 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
     packageJson,
     backupRetentionPolicy,
     credentialRevocations,
+    incidentResponsePolicy,
     workflow,
     repositoryIgnore
   }), /must not publish ports/);
@@ -251,9 +258,25 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
       minimum_verified_backups: 1
     },
     credentialRevocations,
+    incidentResponsePolicy,
     workflow,
     repositoryIgnore
   }), /minimum_verified_backups/);
+  assert.throws(() => verifyProductionDeployment({
+    dockerfile,
+    dockerignore,
+    compose,
+    productionDocs,
+    packageJson,
+    backupRetentionPolicy,
+    credentialRevocations,
+    incidentResponsePolicy: {
+      ...incidentResponsePolicy,
+      severity_order: ['SEV-4', 'SEV-3', 'SEV-2', 'SEV-1']
+    },
+    workflow,
+    repositoryIgnore
+  }), /severity order/);
 });
 
 test('release source boundary rejects legacy runtimes and dependency manifests', () => {

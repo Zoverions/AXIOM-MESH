@@ -113,6 +113,14 @@ These are operating targets, not guarantees:
 - communicate containment and disclosure plans after validation;
 - publish remediation and rotation guidance with a fixed release.
 
+Those targets govern incoming vulnerability reports, not active operational
+incidents. Active incidents use the deterministic SEV-1 through SEV-4
+activation, containment, communication, evidence, recovery, and closure policy
+in the
+[incident-response runbook](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md).
+Protected CI produces a signed automated tabletop; a named-roster pilot
+exercise remains required before production promotion.
+
 ## Priority scope
 
 Highest-priority reports include:

@@ -1,0 +1,172 @@
+{
+  "schema": "axiom-incident-response-policy.v1",
+  "version": 1,
+  "frameworks": [
+    "NIST SP 800-61 Rev. 3",
+    "NIST Cybersecurity Framework 2.0",
+    "CISA Federal Government Cybersecurity Incident and Vulnerability Response Playbooks"
+  ],
+  "severity_order": [
+    "SEV-1",
+    "SEV-2",
+    "SEV-3",
+    "SEV-4"
+  ],
+  "required_roles": [
+    "incident_commander",
+    "security_lead",
+    "operations_lead",
+    "communications_lead",
+    "evidence_custodian",
+    "independent_reviewer"
+  ],
+  "closure_requirements": [
+    "containment_verified",
+    "recovery_verified",
+    "evidence_manifested",
+    "communications_recorded",
+    "retrospective_scheduled",
+    "independent_review_required"
+  ],
+  "severities": {
+    "SEV-1": {
+      "label": "critical",
+      "activation_minutes": 15,
+      "containment_target_minutes": 60,
+      "update_interval_minutes": 30,
+      "triggers": [
+        "confirmed_service_identity_compromise",
+        "evidence_integrity_failure",
+        "sandbox_boundary_failure",
+        "unauthorized_high_risk_effect"
+      ],
+      "required_actions": [
+        "declare_incident",
+        "disable_gateway",
+        "revoke_api_principals",
+        "rotate_service_identities",
+        "preserve_forensic_state",
+        "restore_verified_backup",
+        "rotate_data_key",
+        "notify_stakeholders",
+        "schedule_retrospective"
+      ]
+    },
+    "SEV-2": {
+      "label": "high",
+      "activation_minutes": 30,
+      "containment_target_minutes": 240,
+      "update_interval_minutes": 60,
+      "triggers": [
+        "data_key_exposure",
+        "supply_chain_compromise",
+        "suspected_credential_exposure",
+        "sustained_candidate_outage",
+        "verified_backup_failure"
+      ],
+      "required_actions": [
+        "declare_incident",
+        "disable_gateway",
+        "preserve_forensic_state",
+        "notify_stakeholders",
+        "schedule_retrospective"
+      ]
+    },
+    "SEV-3": {
+      "label": "moderate",
+      "activation_minutes": 240,
+      "containment_target_minutes": 480,
+      "update_interval_minutes": 240,
+      "triggers": [
+        "dependency_unavailability",
+        "failed_rotation",
+        "resource_exhaustion",
+        "single_service_degradation"
+      ],
+      "required_actions": [
+        "declare_incident",
+        "preserve_forensic_state",
+        "monitor_degraded_service",
+        "schedule_retrospective"
+      ]
+    },
+    "SEV-4": {
+      "label": "low",
+      "activation_minutes": 1440,
+      "containment_target_minutes": 7200,
+      "update_interval_minutes": 1440,
+      "triggers": [
+        "documentation_gap",
+        "policy_near_miss",
+        "rejected_attack"
+      ],
+      "required_actions": [
+        "declare_incident",
+        "preserve_forensic_state",
+        "schedule_retrospective"
+      ]
+    }
+  },
+  "actions": {
+    "declare_incident": {
+      "category": "coordinate",
+      "authority_effect": "preserve",
+      "owner_role": "incident_commander"
+    },
+    "disable_gateway": {
+      "category": "contain",
+      "authority_effect": "reduce",
+      "owner_role": "operations_lead"
+    },
+    "revoke_api_principals": {
+      "category": "contain",
+      "authority_effect": "reduce",
+      "owner_role": "security_lead"
+    },
+    "rotate_service_identities": {
+      "category": "contain",
+      "authority_effect": "reduce",
+      "owner_role": "security_lead"
+    },
+    "preserve_forensic_state": {
+      "category": "preserve",
+      "authority_effect": "preserve",
+      "owner_role": "evidence_custodian"
+    },
+    "restore_verified_backup": {
+      "category": "recover",
+      "authority_effect": "recover",
+      "owner_role": "operations_lead"
+    },
+    "rotate_data_key": {
+      "category": "contain",
+      "authority_effect": "reduce",
+      "owner_role": "security_lead"
+    },
+    "notify_stakeholders": {
+      "category": "communicate",
+      "authority_effect": "communicate",
+      "owner_role": "communications_lead"
+    },
+    "schedule_retrospective": {
+      "category": "review",
+      "authority_effect": "review",
+      "owner_role": "independent_reviewer"
+    },
+    "monitor_degraded_service": {
+      "category": "observe",
+      "authority_effect": "preserve",
+      "owner_role": "operations_lead"
+    },
+    "quarantine_node": {
+      "category": "contain",
+      "authority_effect": "reduce",
+      "owner_role": "security_lead"
+    },
+    "rollback_signed_release": {
+      "category": "recover",
+      "authority_effect": "recover",
+      "owner_role": "operations_lead"
+    }
+  }
+}

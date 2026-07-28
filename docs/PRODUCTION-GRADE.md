@@ -21,15 +21,19 @@ container policy are implemented.
 The image build and composed container drill pass in
 [GitHub run 30375390450](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30375390450).
 The protected workflow also produces signed disposable-host recovery,
-SLO/restart, coordinated service/API credential-rotation, and
-data-protection-key rotation evidence. Its credential-history audit also
+SLO/restart, coordinated service/API credential-rotation,
+data-protection-key rotation, and automated incident-tabletop evidence. The
+tabletop verifies deterministic severity, role independence,
+authority-reducing containment, evidence-first chronology, communications,
+closure, and five linked control artifacts. Its credential-history audit also
 reconstructs a 32-entry keyed ledger from the locked deprecated graph and
 proves that no candidate appears in the supported tip.
 Dedicated pilot capacity and availability, external telemetry, scheduled
 pilot-media recovery, pilot-owned secret-manager rotation, external
-deprecated-credential attestations, incident response, and independent
-security review remain open. Candidate-container deny-egress is implemented
-and remains subject to pilot-platform repetition.
+deprecated-credential attestations, a named-roster pilot incident exercise,
+and independent security review remain open. Candidate-container deny-egress
+and the automated incident tabletop are implemented and remain subject to
+pilot-platform repetition.
 The current decision is recorded in the
 [readiness tracker](PRODUCTION-READINESS-TRACKER.md).
 
@@ -268,6 +272,21 @@ communicate an incident. Minimum playbooks cover:
 Containment may include disabling Gateway, revoking API principals, replacing
 service identities and trust records, quarantining nodes, preserving the data
 directory, and rolling back to a compatible signed release.
+
+The machine-readable incident policy defines four deterministic severities,
+six independently assigned roles, bounded activation/containment/update
+targets, authority-reducing actions, and mandatory closure conditions.
+Protected CI runs an automated incident tabletop that cryptographically
+verifies and binds the recovery, backup-lifecycle, SLO/restart,
+credential-rotation, and data-key-rotation evidence from the same commit.
+Missing roles or actions, severity drift, expanding authority, late
+containment, broken communications cadence, stale evidence, premature
+closure, or signature tampering fails the gate. See
+[incident response and automated tabletop](security/INCIDENT-RESPONSE-AND-TABLETOP.md).
+
+This candidate exercise does not replace a facilitated pilot exercise with
+named primaries and deputies, deployment-specific notification decisions, and
+independent human review.
 
 ## Production promotion gates
 

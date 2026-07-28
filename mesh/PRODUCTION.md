@@ -406,11 +406,46 @@ cutovers, including the boundary after rollback installation but before
 evidence finalization. Protected CI retains the signed,
 secret-free drill evidence for 90 days.
 
+## 12. Coordinated incident tabletop
+
+The machine-readable
+[`config/incident-response.json`](config/incident-response.json) policy defines
+four severities, six independently assigned response roles,
+authority-reducing actions, activation and containment targets, communication
+cadence, and mandatory closure conditions. Unknown signals fail
+classification instead of defaulting to low severity.
+
+After producing recovery, backup-lifecycle, SLO/restart,
+credential-rotation, and data-key-rotation evidence for one commit, compose
+the same-revision records into the automated incident tabletop:
+
+```bash
+export GITHUB_SHA=<40-character-source-revision>
+npm run incident-tabletop:drill -- \
+  /tmp/axiom-incident-tabletop \
+  /tmp/axiom-recovery-drill-evidence.json \
+  /tmp/axiom-backup-lifecycle-evidence.json \
+  /tmp/axiom-slo-baseline-evidence.json \
+  /tmp/axiom-credential-rotation-evidence.json \
+  /tmp/axiom-data-key-rotation-evidence.json \
+  > /tmp/axiom-incident-tabletop-evidence.json
+```
+
+The drill independently verifies every companion signature and revision,
+classifies an evidence-integrity and suspected-credential scenario as SEV-1,
+checks evidence-first chronology and response targets, and signs a secret-free
+composition record. Protected CI retains
+`axiom-incident-tabletop-evidence-<commit>` for 90 days. This automated
+incident tabletop is candidate evidence; production promotion still requires
+a facilitated pilot exercise with named responders, deployment-specific
+notification decisions, corrective owners, and independent human review. See
+[`docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md`](../docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md).
+
 This package is a production container specification and local deployment
 surface. Its source and fail-closed supervisor are statically verified, and the
 real four-process stack, digest-pinned image build, composed container
 readiness, disposable-host recovery drill, controlled SLO/restart baseline,
-coordinated credential-rotation drill, data-key rotation drill, and signed
-deny-egress probe are
+coordinated credential-rotation drill, data-key rotation drill, signed
+deny-egress probe, and automated incident tabletop are
 protected CI gates. This is not evidence of a live deployment, federated discovery, BFT consensus, audited
 arbitrary-code isolation, or external settlement.
