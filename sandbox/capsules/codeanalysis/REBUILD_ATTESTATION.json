@@ -1,0 +1,19 @@
+{
+  "capsule_id": "cap-codeanalysis-001",
+  "mode": "compile",
+  "compiler_version": "1.0",
+  "changes": [
+    {
+      "component": "Core",
+      "action": "add_code_analyzer",
+      "reason": "enable code analysis operations"
+    }
+  ],
+  "security_findings": [
+    {
+      "severity": "low",
+      "summary": "No specific vulnerabilities detected in code analysis operations."
+    }
+  ],
+  "compiled_at": "2026-03-22T00:00:00Z"
+}

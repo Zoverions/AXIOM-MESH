@@ -1,0 +1,24 @@
+{
+  "name": "@axiom-mesh/kernel",
+  "version": "0.11.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.14.0 <25"
+  },
+  "scripts": {
+    "bootstrap": "node src/bootstrap.mjs",
+    "dev": "node src/dev.mjs",
+    "provision:production": "node src/provision-production.mjs",
+    "start:production": "node src/supervisor.mjs",
+    "verify-export": "node src/verify-export.mjs",
+    "verify-sync": "node src/verify-sync.mjs",
+    "check-registry": "node src/check-registry.mjs",
+    "status:generate": "node src/status.mjs --write",
+    "status:check": "node src/status.mjs",
+    "release:verify": "node src/release.mjs",
+    "release:evidence": "npm run check && node src/release.mjs --write",
+    "test": "node --test --test-reporter=spec",
+    "check": "node src/check-registry.mjs && node src/status.mjs && node --test --test-reporter=spec"
+  }
+}

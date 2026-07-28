@@ -1,0 +1,51 @@
+name: Enforce Multi-Sig Governance
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  pull_request_review:
+    types: [submitted, dismissed]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  check-approvals:
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify 2+ Approvals
+        uses: actions/github-script@v8
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pull_number = context.payload.pull_request?.number ?? context.issue.number;
+
+            const reviews = await github.paginate(github.rest.pulls.listReviews, {
+              owner,
+              repo,
+              pull_number,
+              per_page: 100,
+            });
+
+            // Only each reviewer's latest review should count toward approval policy.
+            const latestReviewByUser = new Map();
+            for (const review of reviews) {
+              const key = review.user?.id;
+              if (!key) continue;
+
+              const existing = latestReviewByUser.get(key);
+              if (!existing || new Date(review.submitted_at) > new Date(existing.submitted_at)) {
+                latestReviewByUser.set(key, review);
+              }
+            }
+
+            const approvers = [...latestReviewByUser.values()].filter((review) => review.state === 'APPROVED');
+
+            if (approvers.length < 2) {
+              core.setFailed(`Requires 2+ approvals, found ${approvers.length}.`);
+              return;
+            }
+
+            core.notice(`Approval requirement satisfied with ${approvers.length} unique current approvals.`);

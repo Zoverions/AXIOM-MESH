@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom-mesh.org/schemas/data-analysis-intent.v1.json",
+  "title": "Data Analysis Intent Schema",
+  "description": "Schema for data analysis and visualization intents",
+  "type": "object",
+  "properties": {
+    "operation": {
+      "type": "string",
+      "enum": ["analyze", "visualize", "model", "predict"],
+      "description": "The primary data analysis operation"
+    },
+    "data_type": {
+      "type": "string",
+      "enum": ["tabular", "time_series", "spatial", "text"],
+      "description": "Type of data to analyze"
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "columns": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Column names to analyze"
+        },
+        "sample_size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000,
+          "description": "Number of samples to process"
+        },
+        "n_clusters": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 20,
+          "description": "Number of clusters for clustering analysis"
+        },
+        "window": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 100,
+          "description": "Window size for time series analysis"
+        }
+      },
+      "additionalProperties": true
+    },
+    "constraints": {
+      "type": "object",
+      "properties": {
+        "max_samples": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000
+        },
+        "timeout": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 3600
+        },
+        "memory_limit": {
+          "type": "integer",
+          "minimum": 1048576
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "required": ["operation", "data_type", "parameters"]
+}

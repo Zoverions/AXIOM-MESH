@@ -1,0 +1,259 @@
+import { mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { meshConfig } from '../lib/config.mjs';
+import { ensureMeshIdentity, ReplayGuard, verifySignedRequest } from '../lib/identity.mjs';
+import { Router, createServiceServer, listen, parseJsonBody } from '../lib/http.mjs';
+import { ValidationError, assertPlainObject, assertString } from '../lib/canonical.mjs';
+import { operationsReport, readinessState, ServiceTelemetry } from '../lib/observability.mjs';
+import { GridStore } from './store.mjs';
+import { loadDataProtector } from '../lib/protector.mjs';
+import {
+  acquireGridRuntimeLock,
+  createGridBackup,
+  recordPendingRecovery,
+  releaseGridRuntimeLock
+} from './backup.mjs';
+
+export async function createGridService(config = meshConfig()) {
+  await mkdir(config.dataDir, { recursive: true, mode: 0o700 });
+  const runtimeLock = await acquireGridRuntimeLock(config.dataDir);
+  let identity;
+  let protector;
+  let store;
+  try {
+    identity = await ensureMeshIdentity(config.dataDir, 'grid', { create: config.autoBootstrap });
+    protector = await loadDataProtector(config);
+    store = new GridStore({
+      path: join(config.dataDir, 'grid.sqlite'),
+      dataDir: config.dataDir,
+      identity,
+      protector
+    });
+    await recordPendingRecovery({ store, dataDir: config.dataDir, identity });
+  } catch (error) {
+    if (store) store.close();
+    await releaseGridRuntimeLock(runtimeLock);
+    throw error;
+  }
+  const replayGuard = new ReplayGuard();
+  const router = new Router();
+  const telemetry = new ServiceTelemetry('grid');
+  let cachedChain = { valid: true };
+  let nextIntegrityProbeAt = 0;
+
+  function currentOperations() {
+    if (Date.now() >= nextIntegrityProbeAt) {
+      try {
+        cachedChain = store.verifyChain();
+      } catch {
+        cachedChain = { valid: false, reason: 'verification_error' };
+      }
+      nextIntegrityProbeAt = Date.now() + config.integrityProbeIntervalSeconds * 1_000;
+    }
+    if (!cachedChain.valid) telemetry.markIntegrityFailure(cachedChain.reason);
+    const readiness = readinessState('grid', [
+      {
+        name: 'evidence-chain',
+        ok: cachedChain.valid,
+        code: cachedChain.valid ? undefined : 'integrity_verification_failed'
+      },
+      { name: 'database', ok: true }
+    ]);
+    return operationsReport([telemetry.snapshot(readiness)]);
+  }
+
+  router.add('GET', '/health', async () => ({
+    httpStatus: 200,
+    body: { service: 'grid', status: 'live' }
+  }), { auth: false });
+
+  router.add('GET', '/internal/v1/operations', async () => currentOperations());
+
+  router.add('POST', '/internal/v1/commit', async ({ body, traceId, principal }) => {
+    if (principal.service !== 'hypervisor') {
+      throw new ValidationError('Only Hypervisor may commit state transitions');
+    }
+    const input = assertPlainObject(parseJsonBody(body), 'commit');
+    const actor = assertString(input.actor, 'actor', { max: 160, pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/ });
+    const claimedPrincipal = assertString(input.principal, 'principal', {
+      max: 160,
+      pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
+    });
+    if (actor !== claimedPrincipal) throw new ValidationError('Commit actor does not match the claimed principal');
+    const exports = Array.isArray(input.events)
+      ? input.events.filter(event => event?.kind === 'export.requested')
+      : [];
+    const backups = Array.isArray(input.events)
+      ? input.events.filter(event => event?.kind === 'backup.requested')
+      : [];
+    for (const event of exports) store.preflightExportRequest(actor, event);
+    const appended = store.appendEvents({ traceId, actor, events: input.events });
+    const completedExports = [];
+    const completedBackups = [];
+    for (const event of exports) {
+      completedExports.push(await store.createExport(event.payload.export_id, traceId));
+    }
+    for (const event of backups) {
+      completedBackups.push(await createGridBackup({
+        store,
+        dataDir: config.dataDir,
+        identity,
+        protector,
+        backupId: event.payload.backup_id,
+        traceId
+      }));
+    }
+    return {
+      httpStatus: 201,
+      body: { events: appended, exports: completedExports, backups: completedBackups }
+    };
+  });
+
+  router.add('GET', '/internal/v1/status', async () => store.getStatus());
+  router.add('GET', '/internal/v1/verify-chain', async () => store.verifyChain());
+  router.add('GET', '/internal/v1/events', async ({ url }) => ({
+    events: store.listEvents({
+      after: Number(url.searchParams.get('after') ?? 0),
+      limit: Number(url.searchParams.get('limit') ?? 100),
+      actor: url.searchParams.get('actor') ?? undefined
+    })
+  }));
+  router.add('GET', '/internal/v1/intents/:id', async ({ params }) => store.getIntent(params.id));
+  router.add('GET', '/internal/v1/capsules', async () => ({ capsules: store.listCapsules() }));
+  router.add('GET', '/internal/v1/proposals', async () => ({ proposals: store.listProposals() }));
+  router.add('GET', '/internal/v1/nodes', async () => ({ nodes: store.listNodes() }));
+  router.add('GET', '/internal/v1/consents/:principal', async ({ params }) => ({
+    consents: store.listConsents(params.principal)
+  }));
+  router.add('GET', '/internal/v1/approvals/:principal', async ({ params }) => ({
+    approvals: store.listApprovals(params.principal)
+  }));
+  router.add('GET', '/internal/v1/approval/:id', async ({ params }) => store.getApproval(params.id));
+  router.add('GET', '/internal/v1/memory/:owner', async ({ params, url }) => {
+    const owner = assertString(params.owner, 'owner', {
+      max: 160,
+      pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
+    });
+    const requester = assertString(url.searchParams.get('requester'), 'requester', {
+      max: 160,
+      pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
+    });
+    return store.listMemory(requester, owner);
+  });
+  router.add('GET', '/internal/v1/accounting/:owner', async ({ params }) => {
+    const owner = assertString(params.owner, 'owner', {
+      max: 160,
+      pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
+    });
+    return store.listAccounting(owner);
+  });
+  router.add('GET', '/internal/v1/imports/:principal', async ({ params }) => ({
+    imports: store.listImports(params.principal)
+  }));
+  router.add('GET', '/internal/v1/import/:id', async ({ params, url }) => {
+    const principal = assertString(url.searchParams.get('principal'), 'principal', {
+      max: 160,
+      pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
+    });
+    return store.getImport(params.id, principal);
+  });
+  router.add('GET', '/internal/v1/policy-overlays', async () => ({
+    overlays: store.listActivePolicyOverlays()
+  }));
+  router.add('GET', '/internal/v1/appeals/:principal', async ({ params }) => ({
+    appeals: store.listGovernanceAppeals(params.principal)
+  }));
+  router.add('GET', '/internal/v1/storage-offers/:owner', async ({ params }) => ({
+    offers: store.listStorageOffers(params.owner)
+  }));
+  router.add('GET', '/internal/v1/sync/:owner', async ({ params, url }) => {
+    const owner = assertString(params.owner, 'owner', {
+      max: 160,
+      pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
+    });
+    const namespace = url.searchParams.get('namespace') ?? undefined;
+    const recordId = url.searchParams.get('record_id') ?? undefined;
+    if (namespace !== undefined) {
+      assertString(namespace, 'namespace', {
+        max: 128,
+        pattern: /^[a-z][a-z0-9.-]{0,127}$/
+      });
+    }
+    if (recordId !== undefined) {
+      assertString(recordId, 'record_id', {
+        max: 160,
+        pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
+      });
+    }
+    return store.listCausalSync(owner, { namespace, recordId });
+  });
+  router.add('GET', '/internal/v1/backups/:principal', async ({ params }) => ({
+    backups: store.listBackups(params.principal)
+  }));
+  router.add('GET', '/internal/v1/backup/:id', async ({ params, url }) => {
+    const principal = assertString(url.searchParams.get('principal'), 'principal', {
+      max: 160,
+      pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
+    });
+    return store.getBackupRecord(params.id, principal);
+  });
+  router.add('GET', '/internal/v1/exports/:id', async ({ params, url }) => {
+    const principal = assertString(url.searchParams.get('principal'), 'principal', {
+      max: 160,
+      pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
+    });
+    return store.getExport(params.id, principal);
+  });
+  router.add('GET', '/internal/v1/exports/:id/bundle', async ({ params, url }) => {
+    const principal = assertString(url.searchParams.get('principal'), 'principal', {
+      max: 160,
+      pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
+    });
+    return store.getExportBundle(params.id, principal);
+  });
+
+  const server = createServiceServer({
+    name: 'grid',
+    router,
+    maxBodyBytes: config.maxBodyBytes,
+    telemetry,
+    authenticate: ({ req, body }) => verifySignedRequest({
+      req,
+      body,
+      audience: 'grid',
+      dataDir: config.dataDir,
+      allowedCallers: ['gateway', 'hypervisor'],
+      replayGuard,
+      clockSkewSeconds: config.clockSkewSeconds
+    })
+  });
+  return {
+    name: 'grid',
+    server,
+    store,
+    identity,
+    telemetry,
+    operations: currentOperations,
+    async start() {
+      return listen(server, { host: config.hosts.internal, port: config.ports.grid });
+    },
+    async stop() {
+      if (server.listening) await new Promise(resolve => server.close(resolve));
+      store.close();
+      await releaseGridRuntimeLock(runtimeLock);
+    }
+  };
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const service = await createGridService();
+  const address = await service.start();
+  process.stdout.write(`${JSON.stringify({ service: 'grid', status: 'listening', address })}\n`);
+  for (const signal of ['SIGINT', 'SIGTERM']) {
+    process.once(signal, async () => {
+      await service.stop();
+      process.exit(0);
+    });
+  }
+}

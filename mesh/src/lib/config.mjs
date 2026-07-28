@@ -1,0 +1,190 @@
+import { readFile, stat } from 'node:fs/promises';
+import { resolve, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { sha256, ValidationError } from './canonical.mjs';
+
+const MESH_ROOT = resolve(fileURLToPath(new URL('../..', import.meta.url)));
+
+function envInteger(name, fallback, { min = 0, max = 65535 } = {}) {
+  const raw = process.env[name];
+  const value = raw === undefined || raw === '' ? fallback : Number(raw);
+  if (!Number.isSafeInteger(value) || value < min || value > max) {
+    throw new ValidationError(`${name} must be an integer between ${min} and ${max}`);
+  }
+  return value;
+}
+
+function envBoolean(name, fallback = false) {
+  const raw = process.env[name];
+  if (raw === undefined) return fallback;
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  throw new ValidationError(`${name} must be true or false`);
+}
+
+function serviceUrl(name, fallback) {
+  const value = process.env[name] ?? fallback;
+  const url = new URL(value);
+  if (!['http:', 'https:'].includes(url.protocol)) throw new ValidationError(`${name} must use http or https`);
+  return url.toString().replace(/\/$/, '');
+}
+
+export function meshConfig(overrides = {}) {
+  const environment = overrides.environment ?? process.env.NODE_ENV ?? 'development';
+  const dataDir = resolve(overrides.dataDir ?? process.env.AXIOM_DATA_DIR ?? join(MESH_ROOT, '.data'));
+  const autoBootstrap = overrides.autoBootstrap ?? envBoolean('AXIOM_AUTO_BOOTSTRAP', environment !== 'production');
+  const internalHost = overrides.internalHost ?? process.env.AXIOM_INTERNAL_HOST ?? '127.0.0.1';
+  const config = {
+    environment,
+    dataDir,
+    autoBootstrap,
+    hosts: {
+      gateway: overrides.gatewayHost ?? process.env.AXIOM_GATEWAY_HOST ?? '127.0.0.1',
+      internal: internalHost
+    },
+    maxBodyBytes: overrides.maxBodyBytes ?? envInteger('AXIOM_MAX_BODY_BYTES', 1_048_576, { min: 1024, max: 10_485_760 }),
+    clockSkewSeconds: overrides.clockSkewSeconds ?? envInteger('AXIOM_CLOCK_SKEW_SECONDS', 30, { min: 5, max: 300 }),
+    capabilityTtlSeconds: overrides.capabilityTtlSeconds ?? envInteger('AXIOM_CAPABILITY_TTL_SECONDS', 30, { min: 5, max: 300 }),
+    integrityProbeIntervalSeconds: overrides.integrityProbeIntervalSeconds
+      ?? envInteger('AXIOM_INTEGRITY_PROBE_INTERVAL_SECONDS', 30, { min: 5, max: 3_600 }),
+    rateLimitCapacity: overrides.rateLimitCapacity
+      ?? envInteger('AXIOM_RATE_LIMIT_CAPACITY', 60, { min: 10, max: 10_000 }),
+    rateLimitRefillPerSecond: overrides.rateLimitRefillPerSecond
+      ?? envInteger('AXIOM_RATE_LIMIT_REFILL_PER_SECOND', 1, { min: 1, max: 1_000 }),
+    ports: {
+      gateway: overrides.gatewayPort ?? envInteger('AXIOM_GATEWAY_PORT', 8080),
+      hypervisor: overrides.hypervisorPort ?? envInteger('AXIOM_HYPERVISOR_PORT', 8081),
+      sandbox: overrides.sandboxPort ?? envInteger('AXIOM_SANDBOX_PORT', 8082),
+      grid: overrides.gridPort ?? envInteger('AXIOM_GRID_PORT', 8083)
+    },
+    urls: {
+      hypervisor: overrides.hypervisorUrl ?? serviceUrl('AXIOM_HYPERVISOR_URL', 'http://127.0.0.1:8081'),
+      sandbox: overrides.sandboxUrl ?? serviceUrl('AXIOM_SANDBOX_URL', 'http://127.0.0.1:8082'),
+      grid: overrides.gridUrl ?? serviceUrl('AXIOM_GRID_URL', 'http://127.0.0.1:8083')
+    },
+    policyPath: resolve(overrides.policyPath ?? process.env.AXIOM_POLICY_PATH ?? join(MESH_ROOT, 'config', 'policy.json')),
+    policyPaths: normalizePolicyPaths(overrides),
+    capabilitiesPath: resolve(
+      overrides.capabilitiesPath ?? process.env.AXIOM_CAPABILITIES_PATH ?? join(MESH_ROOT, 'config', 'capabilities.json')
+    ),
+    apiTokens: overrides.apiTokens ?? null
+  };
+  if (environment === 'production' && autoBootstrap) {
+    throw new ValidationError('AXIOM_AUTO_BOOTSTRAP must be false in production');
+  }
+  if (environment === 'production' && !isLoopbackHost(internalHost)) {
+    throw new ValidationError(
+      'Production internal services must bind to loopback until the audited mTLS transport adapter is enabled'
+    );
+  }
+  if (environment === 'production') {
+    for (const [service, value] of Object.entries(config.urls)) {
+      const url = new URL(value);
+      if (url.protocol !== 'https:' && !isLoopbackHost(url.hostname)) {
+        throw new ValidationError(`Production ${service} URL must use HTTPS unless it is loopback`);
+      }
+    }
+  }
+  return config;
+}
+
+function normalizePolicyPaths(overrides) {
+  if (overrides.policyPaths !== undefined) {
+    if (!Array.isArray(overrides.policyPaths) || !overrides.policyPaths.length) {
+      throw new ValidationError('policyPaths must contain at least one path');
+    }
+    return overrides.policyPaths.map(path => resolve(path));
+  }
+  const raw = process.env.AXIOM_POLICY_PATHS;
+  if (raw) {
+    let paths;
+    try {
+      paths = JSON.parse(raw);
+    } catch {
+      throw new ValidationError('AXIOM_POLICY_PATHS must be a JSON array');
+    }
+    if (!Array.isArray(paths) || !paths.length || paths.some(path => typeof path !== 'string')) {
+      throw new ValidationError('AXIOM_POLICY_PATHS must contain at least one path');
+    }
+    return paths.map(path => resolve(path));
+  }
+  return [resolve(overrides.policyPath ?? process.env.AXIOM_POLICY_PATH ?? join(MESH_ROOT, 'config', 'policy.json'))];
+}
+
+function isLoopbackHost(value) {
+  const host = String(value).replace(/^\[|\]$/g, '').toLowerCase();
+  return host === '127.0.0.1' || host === 'localhost' || host === '::1';
+}
+
+export async function loadApiPrincipals(config) {
+  if (config.apiTokens) return normalizePrincipals(config.apiTokens);
+  const raw = process.env.AXIOM_API_TOKENS;
+  const configuredPath = process.env.AXIOM_API_TOKENS_FILE;
+  if (raw && configuredPath) {
+    throw new ValidationError('Configure only one of AXIOM_API_TOKENS or AXIOM_API_TOKENS_FILE');
+  }
+  if (raw) return normalizePrincipals(parsePrincipalRegistry(raw, 'AXIOM_API_TOKENS'));
+  if (configuredPath) {
+    const path = resolve(configuredPath);
+    if ((await stat(path)).size > 1_048_576) {
+      throw new ValidationError('AXIOM_API_TOKENS_FILE exceeds the 1 MiB limit');
+    }
+    const serialized = await readFile(path, 'utf8');
+    return normalizePrincipals(parsePrincipalRegistry(serialized, 'AXIOM_API_TOKENS_FILE'));
+  }
+  const tokenPath = join(config.dataDir, 'dev-admin.token');
+  if (config.environment === 'production') {
+    throw new ValidationError('AXIOM_API_TOKENS is required in production');
+  }
+  const token = (await readFile(tokenPath, 'utf8')).trim();
+  return normalizePrincipals({
+    [token]: {
+      id: 'local-operator',
+      type: 'human',
+      roles: ['administrator'],
+      scopes: ['*']
+    }
+  });
+}
+
+function parsePrincipalRegistry(serialized, source) {
+  try {
+    return JSON.parse(serialized);
+  } catch {
+    throw new ValidationError(`${source} must contain valid JSON`);
+  }
+}
+
+function normalizePrincipals(entries) {
+  if (!entries || typeof entries !== 'object' || Array.isArray(entries)) {
+    throw new ValidationError('API token registry must be an object');
+  }
+  const principals = new Map();
+  for (const [token, principal] of Object.entries(entries)) {
+    if (typeof token !== 'string' || token.length < 32 || token.length > 512) {
+      throw new ValidationError('API tokens must contain 32-512 characters');
+    }
+    if (
+      !principal
+      || typeof principal.id !== 'string'
+      || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/.test(principal.id)
+      || !['human', 'agent', 'service'].includes(principal.type ?? 'human')
+      || !Array.isArray(principal.roles ?? [])
+      || !Array.isArray(principal.scopes)
+      || (principal.roles ?? []).some(value => typeof value !== 'string' || value.length > 64)
+      || principal.scopes.some(value => typeof value !== 'string' || value.length > 160)
+    ) {
+      throw new ValidationError('Each API token must map to a valid principal, type, roles, and scopes');
+    }
+    principals.set(sha256(token), {
+      id: principal.id,
+      type: principal.type ?? 'human',
+      roles: [...new Set(principal.roles ?? [])].sort(),
+      scopes: [...new Set(principal.scopes)].sort()
+    });
+  }
+  if (!principals.size) throw new ValidationError('At least one API principal is required');
+  return principals;
+}
+
+export { MESH_ROOT };

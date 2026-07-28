@@ -1,0 +1,383 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://axiom-mesh.io/sandbox/capsules/government/schemas/bid.schema.json",
+  "title": "Government Contract Bid Schema",
+  "description": "Schema for bids submitted by contractors or their agent representatives for government proposals",
+  "type": "object",
+  "required": [
+    "proposalId",
+    "bidder",
+    "amount",
+    "deliverables",
+    "timeline"
+  ],
+  "properties": {
+    "proposalId": {
+      "type": "string",
+      "description": "ID of the proposal being bid on",
+      "pattern": "^[a-zA-Z0-9_-]+$"
+    },
+    "bidder": {
+      "type": "object",
+      "required": ["address", "type"],
+      "properties": {
+        "address": {
+          "type": "string",
+          "pattern": "^0x[a-fA-F0-9]{40}$",
+          "description": "Address of the bidder (contractor or agent)"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["individual", "company", "consortium", "agent"],
+          "description": "Type of bidder"
+        },
+        "agentId": {
+          "type": "string",
+          "description": "If bidder is an agent, the agent identifier"
+        },
+        "companyId": {
+          "type": "string",
+          "description": "If bidder is a company, the company registration number"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the bidder"
+        }
+      }
+    },
+    "amount": {
+      "type": "number",
+      "description": "Total bid amount",
+      "minimum": 0.0001,
+      "exclusiveMinimum": true
+    },
+    "token": {
+      "type": "string",
+      "description": "Token address for payment (0x0 for native token)",
+      "pattern": "^0x[a-fA-F0-9]{40}$|^0x0$"
+    },
+    "deliverables": {
+      "type": "string",
+      "description": "Detailed description of what will be delivered",
+      "minLength": 50,
+      "maxLength": 50000
+    },
+    "timeline": {
+      "type": "object",
+      "required": ["startDate", "endDate"],
+      "properties": {
+        "startDate": {
+          "type": "string",
+          "format": "date",
+          "description": "Proposed start date"
+        },
+        "endDate": {
+          "type": "string",
+          "format": "date",
+          "description": "Proposed completion date"
+        },
+        "totalDays": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Total project duration in days"
+        },
+        "phases": {
+          "type": "array",
+          "description": "Project phases with timelines",
+          "items": {
+            "type": "object",
+            "required": ["name", "duration", "deliverable"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Phase name"
+              },
+              "duration": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Duration in days"
+              },
+              "deliverable": {
+                "type": "string",
+                "description": "Deliverable for this phase"
+              },
+              "dependencies": {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                },
+                "description": "Indices of dependent phases"
+              }
+            }
+          }
+        }
+      }
+    },
+    "milestones": {
+      "type": "array",
+      "description": "Payment milestones tied to deliverables",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["description", "amount", "criteria"],
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Milestone description"
+          },
+          "amount": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Payment amount for this milestone"
+          },
+          "percentage": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Percentage of total amount"
+          },
+          "criteria": {
+            "type": "string",
+            "description": "Acceptance criteria for this milestone"
+          },
+          "verificationMethod": {
+            "type": "string",
+            "enum": ["manual", "automated", "zkml_proof", "third_party_audit"],
+            "description": "How milestone completion will be verified"
+          },
+          "estimatedDate": {
+            "type": "string",
+            "format": "date",
+            "description": "Estimated completion date"
+          }
+        }
+      }
+    },
+    "qualifications": {
+      "type": "object",
+      "description": "Bidder qualifications and credentials",
+      "properties": {
+        "experience": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "project": {
+                "type": "string",
+                "description": "Previous project name"
+              },
+              "role": {
+                "type": "string",
+                "description": "Role in the project"
+              },
+              "year": {
+                "type": "integer",
+                "description": "Year of completion"
+              },
+              "value": {
+                "type": "number",
+                "description": "Project value"
+              },
+              "reference": {
+                "type": "string",
+                "description": "Reference contact or URL"
+              }
+            }
+          }
+        },
+        "certifications": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Relevant certifications"
+        },
+        "teamSize": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of team members"
+        },
+        "keyPersonnel": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string"
+              },
+              "qualifications": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "reputation": {
+      "type": "object",
+      "description": "Reputation metrics",
+      "properties": {
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Overall reputation score"
+        },
+        "completedProjects": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of completed projects"
+        },
+        "averageRating": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5,
+          "description": "Average rating from past clients"
+        },
+        "onTimeDeliveryRate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Percentage of projects delivered on time"
+        },
+        "disputes": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of disputes in past projects"
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "description": "Resources allocated to the project",
+      "properties": {
+        "equipment": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Equipment to be used"
+        },
+        "technology": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Technology stack or tools"
+        },
+        "partnerships": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Strategic partnerships for this project"
+        }
+      }
+    },
+    "riskAssessment": {
+      "type": "object",
+      "description": "Risk assessment and mitigation strategies",
+      "properties": {
+        "identifiedRisks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "risk": {
+                "type": "string",
+                "description": "Description of the risk"
+              },
+              "probability": {
+                "type": "string",
+                "enum": ["low", "medium", "high"],
+                "description": "Probability of occurrence"
+              },
+              "impact": {
+                "type": "string",
+                "enum": ["low", "medium", "high"],
+                "description": "Impact if risk occurs"
+              },
+              "mitigation": {
+                "type": "string",
+                "description": "Mitigation strategy"
+              }
+            }
+          }
+        },
+        "contingencyPlan": {
+          "type": "string",
+          "description": "Overall contingency plan"
+        },
+        "contingencyBudget": {
+          "type": "number",
+          "description": "Contingency budget amount"
+        }
+      }
+    },
+    "supportingDocuments": {
+      "type": "array",
+      "description": "IPFS hashes or URLs of supporting documents",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["proposal", "portfolio", "certification", "reference", "technical_spec", "other"]
+          },
+          "ipfsHash": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9]+$",
+            "description": "IPFS hash of the document"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to the document"
+          },
+          "description": {
+            "type": "string",
+            "description": "Document description"
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "submittedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Bid submission timestamp"
+        },
+        "version": {
+          "type": "string",
+          "description": "Schema version"
+        },
+        "validUntil": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Bid validity expiration"
+        },
+        "amendments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "timestamp": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "changes": {
+                "type": "string"
+              }
+            }
+          },
+          "description": "History of amendments to this bid"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Business Portfolio Schema",
+  "description": "Tracks the investment portfolio and treasury allocation for a Business Capsule.",
+  "type": "object",
+  "properties": {
+    "portfolioId": {
+      "type": "string",
+      "description": "Unique identifier for the investment portfolio."
+    },
+    "totalValueUsd": {
+      "type": "number",
+      "description": "Total estimated value of all assets in USD."
+    },
+    "allocations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "assetSymbol": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "strategy": {
+            "type": "string",
+            "enum": ["staking", "liquidity_provision", "hold", "active_trading"]
+          }
+        },
+        "required": ["assetSymbol", "amount", "strategy"]
+      }
+    },
+    "platformContributionRate": {
+      "type": "number",
+      "description": "Percentage (0.0 to 1.0) of revenue automatically routed to the global UniversalDistributionPool.",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "lastRebalanceTimestamp": {
+      "type": "integer",
+      "description": "Unix timestamp of the last portfolio rebalance."
+    }
+  },
+  "required": [
+    "portfolioId",
+    "totalValueUsd",
+    "allocations",
+    "platformContributionRate"
+  ]
+}

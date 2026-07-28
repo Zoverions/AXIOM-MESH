@@ -1,0 +1,33 @@
+{
+  "default_region": "ontario",
+  "regions": {
+    "ontario": {
+      "name": "Ontario",
+      "country": "Canada",
+      "capsule_layer": "capsule-plus",
+      "status": "implemented",
+      "curriculum_standard": "Ontario Curriculum, Grades 9-12"
+    },
+    "us": {
+      "name": "United States",
+      "country": "United States",
+      "capsule_layer": "capsule-plus",
+      "status": "implemented",
+      "curriculum_standard": "State standards + Common Core alignment"
+    },
+    "uk": {
+      "name": "United Kingdom",
+      "country": "United Kingdom",
+      "capsule_layer": "capsule-plus",
+      "status": "planned",
+      "curriculum_standard": "National Curriculum (Key Stages 3-5)"
+    },
+    "china": {
+      "name": "China",
+      "country": "China",
+      "capsule_layer": "capsule-plus",
+      "status": "planned",
+      "curriculum_standard": "National Compulsory Education Curriculum"
+    }
+  }
+}

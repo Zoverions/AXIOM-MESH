@@ -1,0 +1,97 @@
+name: Clean Kernel
+
+on:
+  push:
+    branches: ["Main"]
+    paths:
+      - "mesh/**"
+      - "docs/rebuild/**"
+      - "README.md"
+      - ".github/workflows/kernel.yml"
+  pull_request:
+    branches: ["Main"]
+    paths:
+      - "mesh/**"
+      - "docs/rebuild/**"
+      - "README.md"
+      - ".github/workflows/kernel.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kernel-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.18.0"
+          package-manager-cache: false
+      - name: Verify clean kernel
+        working-directory: mesh
+        run: |
+          npm ci --ignore-scripts
+          npm run check
+          npm run release:verify
+
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.18.0"
+          package-manager-cache: false
+      - name: Provision ephemeral production credentials
+        working-directory: mesh
+        run: |
+          node src/provision-production.mjs \
+            "$RUNNER_TEMP/axiom-data" \
+            "$RUNNER_TEMP/axiom-secrets"
+          sudo chown -R 10001:10001 \
+            "$RUNNER_TEMP/axiom-data" \
+            "$RUNNER_TEMP/axiom-secrets"
+          {
+            echo "AXIOM_DATA_DIR_HOST=$RUNNER_TEMP/axiom-data"
+            echo "AXIOM_DATA_KEY_FILE_HOST=$RUNNER_TEMP/axiom-secrets/data-protection.key"
+            echo "AXIOM_API_TOKENS_FILE_HOST=$RUNNER_TEMP/axiom-secrets/api-tokens.json"
+          } >> "$GITHUB_ENV"
+      - name: Build digest-pinned image
+        working-directory: mesh
+        run: docker build --pull=false --tag axiom-mesh-kernel:0.11.0 .
+      - name: Run container readiness drill
+        working-directory: mesh
+        run: |
+          docker compose -f compose.production.yml up --detach --no-build
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8080/ready >/dev/null; then
+              break
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              docker compose -f compose.production.yml logs
+              exit 1
+            fi
+            sleep 2
+          done
+          token="$(tr -d '\n' <"$RUNNER_TEMP/axiom-secrets/operator.token")"
+          curl --fail --silent \
+            -H "Authorization: Bearer $token" \
+            http://127.0.0.1:8080/v1/operations \
+            > "$RUNNER_TEMP/operations.json"
+          node -e "const fs=require('node:fs');const report=JSON.parse(fs.readFileSync(process.argv[1]));if(report.status!=='ready'||report.services.length!==4)process.exit(1)" \
+            "$RUNNER_TEMP/operations.json"
+      - name: Stop container
+        if: always()
+        working-directory: mesh
+        run: docker compose -f compose.production.yml down --volumes --remove-orphans

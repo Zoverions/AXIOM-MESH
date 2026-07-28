@@ -1,0 +1,253 @@
+{
+  "schema": "axiom-capabilities.v1",
+  "verified_at": "2026-07-26",
+  "kernel_version": "0.11.0",
+  "capabilities": [
+    {
+      "id": "core.intent-loop",
+      "family": "core",
+      "status": "implemented",
+      "summary": "Authenticated intent-to-plan-to-grant-to-execution-to-evidence pipeline.",
+      "evidence": ["mesh/test/kernel.test.mjs"]
+    },
+    {
+      "id": "core.evidence-chain",
+      "family": "audit",
+      "status": "implemented",
+      "summary": "Transactional SHA-256 hash-linked evidence log with restart verification.",
+      "evidence": ["mesh/test/kernel.test.mjs"]
+    },
+    {
+      "id": "core.layered-policy",
+      "family": "governance",
+      "status": "implemented",
+      "summary": "Runtime policy stacks merge global-to-user constraints deny-dominantly and require independent approval for every permitted high-risk effect.",
+      "evidence": ["mesh/test/kernel.test.mjs"]
+    },
+    {
+      "id": "capsules.registry",
+      "family": "capsules",
+      "status": "implemented",
+      "summary": "Immutable digest-addressed capsule manifests with signature verification, schemas, SBOM digest, and revocation state.",
+      "evidence": ["mesh/test/kernel.test.mjs"]
+    },
+    {
+      "id": "portability.export",
+      "family": "portability",
+      "status": "implemented",
+      "summary": "Signed canonical JSONL export supports time, type, object, and capsule scopes plus optional X25519 recipient encryption and independent verification.",
+      "evidence": ["mesh/test/kernel.test.mjs"]
+    },
+    {
+      "id": "governance.local-records",
+      "family": "governance",
+      "status": "implemented",
+      "summary": "Local proposals use human-chamber voting, finalization, timelocked activation, live authority-reducing policy overlays, verification, rollback metadata, expiring emergencies, and appeal records.",
+      "evidence": ["mesh/test/kernel.test.mjs"]
+    },
+    {
+      "id": "consent.receipts",
+      "family": "identity",
+      "status": "implemented",
+      "summary": "Purpose-, scope-, subject-, controller-, expiry-, and revocation-bound consent receipts.",
+      "evidence": ["mesh/test/kernel.test.mjs"]
+    },
+    {
+      "id": "nodes.registry",
+      "family": "mesh",
+      "status": "implemented",
+      "summary": "Local Ed25519 node admission, owner and key binding, capability renewal, expiry, and quarantine are enforced; federated discovery remains separate.",
+      "evidence": ["mesh/test/kernel.test.mjs"]
+    },
+    {
+      "id": "storage.offers",
+      "family": "storage",
+      "status": "implemented",
+      "summary": "Local signed storage offers are bound to active admitted nodes and quarantined with them; object-transfer adapters remain unavailable.",
+      "evidence": ["mesh/test/kernel.test.mjs"]
+    },
+    {
+      "id": "sandbox.container",
+      "family": "execution",
+      "status": "adapter_required",
+      "summary": "Rootless OCI runtime adapter with digest allowlist and deny-by-default egress is specified but not enabled."
+    },
+    {
+      "id": "ai.providers",
+      "family": "ai",
+      "status": "adapter_required",
+      "summary": "Model provider routing requires an explicitly configured provider capsule."
+    },
+    {
+      "id": "memory.graph",
+      "family": "memory",
+      "status": "implemented",
+      "summary": "Content-addressed encrypted memory objects and edges support owner access, consent-scoped selective disclosure, tombstoning, and scoped export.",
+      "evidence": ["mesh/test/kernel.test.mjs"]
+    },
+    {
+      "id": "portability.import",
+      "family": "portability",
+      "status": "implemented",
+      "summary": "Signed canonical export bundles can be cryptographically validated, staged with a deterministic record diff, and applied to a provenance-preserving foreign-record store only after independent approval.",
+      "evidence": ["mesh/test/kernel.test.mjs"]
+    },
+    {
+      "id": "research.autonomy",
+      "family": "ai",
+      "status": "disabled",
+      "summary": "Autonomous research/training loops remain disabled until budgets, cancellation, provenance, and evaluation gates are implemented."
+    },
+    {
+      "id": "tools.scientific",
+      "family": "capsules",
+      "status": "adapter_required",
+      "summary": "Math, physics, cryptography, data, code, web, and research tools use signed provider capsules."
+    },
+    {
+      "id": "channels.messaging",
+      "family": "communications",
+      "status": "adapter_required",
+      "summary": "Discord, Slack, Telegram, WhatsApp, X, email, and other channel providers require separate least-privilege adapters."
+    },
+    {
+      "id": "capsules.marketplace",
+      "family": "capsules",
+      "status": "specified",
+      "summary": "Marketplace metadata, quarantine, review, trust scoring, and install-without-authority semantics are specified."
+    },
+    {
+      "id": "identity.ssi",
+      "family": "identity",
+      "status": "specified",
+      "summary": "DIDs, credentials, selective disclosure, reputation, and portable identity require an approved credential profile."
+    },
+    {
+      "id": "offline.causal-sync",
+      "family": "mesh",
+      "status": "implemented",
+      "summary": "Independently verifiable admitted-node bundles use contiguous dependency-checked version vectors, replay and equivocation rejection, visible concurrent heads, and explicit complete conflict resolution.",
+      "evidence": [
+        "mesh/test/causal-sync.test.mjs",
+        "mesh/test/kernel.test.mjs"
+      ]
+    },
+    {
+      "id": "nodes.discovery-scheduling",
+      "family": "mesh",
+      "status": "specified",
+      "summary": "Federated discovery, capability-aware scheduling, resource balancing, adaptive roles, renewal, and quarantine are specified."
+    },
+    {
+      "id": "storage.backup-restore",
+      "family": "storage",
+      "status": "implemented",
+      "summary": "Encrypted signed Grid snapshots support tamper detection, stopped-Grid exact-digest restore, rollback preservation, and signed restart recovery evidence.",
+      "evidence": ["mesh/test/kernel.test.mjs"]
+    },
+    {
+      "id": "domains.education",
+      "family": "domains",
+      "status": "adapter_required",
+      "summary": "Education runs as a strict-consent capsule; curriculum and learner systems are not part of the trusted kernel."
+    },
+    {
+      "id": "domains.health",
+      "family": "domains",
+      "status": "adapter_required",
+      "summary": "Health runs as a strict-consent capsule and requires clinical/regulatory governance."
+    },
+    {
+      "id": "domains.government",
+      "family": "domains",
+      "status": "adapter_required",
+      "summary": "Public-service workflows require jurisdiction-specific identity, appeal, records, and legal controls."
+    },
+    {
+      "id": "domains.business-finance",
+      "family": "domains",
+      "status": "adapter_required",
+      "summary": "Business and financial workflows require audited accounting and settlement adapters."
+    },
+    {
+      "id": "governance.delegation-emergency-appeals",
+      "family": "governance",
+      "status": "experimental",
+      "summary": "Timelocked activation, rollback, authority-reducing expiring emergencies, protected recovery actions, mandatory review records, and appeals run locally; portable delegation remains specified."
+    },
+    {
+      "id": "workforce.task-market-payroll-legacy",
+      "family": "workforce",
+      "status": "disabled",
+      "summary": "Task markets, autonomous workforce, payroll, and digital legacy are disabled pending accounting, identity, dispute, inheritance, and labor-policy controls."
+    },
+    {
+      "id": "workforce.embodied",
+      "family": "workforce",
+      "status": "disabled",
+      "summary": "Embodied execution is denied until device-specific safety, approval, geofence, force, and halt controls are audited."
+    },
+    {
+      "id": "economics.accounting",
+      "family": "economics",
+      "status": "implemented",
+      "summary": "Local accounting uses owner- and unit-bound accounts with transactional balanced double-entry journals and safe integer amounts; external settlement remains disabled.",
+      "evidence": ["mesh/test/kernel.test.mjs"]
+    },
+    {
+      "id": "economics.token-bridge-liquidity",
+      "family": "economics",
+      "status": "disabled",
+      "summary": "AXM, bonds, rewards, treasury, bridges, and liquidity remain disabled pending reconciled policy, tests, deployment evidence, and external audit."
+    },
+    {
+      "id": "zk.proof-verifiers",
+      "family": "verification",
+      "status": "adapter_required",
+      "summary": "A proof is accepted only with a named circuit, verification key, public-input schema, and verifier adapter."
+    },
+    {
+      "id": "ui.operator-api",
+      "family": "operations",
+      "status": "implemented",
+      "summary": "Authenticated operator API for intent submission, status, audit, recovery, and governed state inspection.",
+      "evidence": ["mesh/test/kernel.test.mjs"]
+    },
+    {
+      "id": "ui.cli",
+      "family": "operations",
+      "status": "implemented",
+      "summary": "Command-line operator client with explicit input validation and fail-closed API error handling.",
+      "evidence": ["mesh/test/kernel.test.mjs"]
+    },
+    {
+      "id": "ui.dashboard",
+      "family": "operations",
+      "status": "specified",
+      "summary": "A browser operator dashboard is specified but is not part of the supported runtime."
+    },
+    {
+      "id": "operations.observability",
+      "family": "operations",
+      "status": "implemented",
+      "summary": "Bounded-cardinality service telemetry, dependency-aware readiness, authenticated operational reports, OpenMetrics output, and static integrity/security alerts cover the four-process runtime without exposing sensitive labels.",
+      "evidence": [
+        "mesh/test/operations.test.mjs",
+        "mesh/test/kernel.test.mjs"
+      ]
+    },
+    {
+      "id": "operations.container-package",
+      "family": "operations",
+      "status": "experimental",
+      "summary": "A digest-pinned non-root container package statically verifies hardening and passes a real four-process host-mode production drill; an actual image build and container runtime drill are still required.",
+      "evidence": ["mesh/test/operations.test.mjs"]
+    },
+    {
+      "id": "operations.installer-observability-release",
+      "family": "operations",
+      "status": "experimental",
+      "summary": "Release tooling and observability are executable, while the candidate container package is statically gated and host-runtime tested; legacy installer replacement, external alert delivery, image/container drills, and independently evidenced live deployment remain incomplete."
+    }
+  ]
+}

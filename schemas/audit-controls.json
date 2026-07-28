@@ -1,0 +1,292 @@
+{
+  "version": "1.0.0",
+  "generated": "2026-04-08",
+  "description": "AXIOM-MESH audit control manifest for operationalizing the Societal OS Audit Playbook",
+  "domains": {
+    "network_infrastructure": {
+      "name": "Network and Infrastructure Controls",
+      "weight": 0.15,
+      "controls": [
+        {
+          "id": "NET-001",
+          "name": "Node Identity and Authentication",
+          "owner": "security",
+          "evidence_command": "python3 scripts/network_launch_preflight.py",
+          "freshness_slo_days": 30,
+          "status": "implemented",
+          "last_verified": "2026-04-08"
+        },
+        {
+          "id": "NET-002",
+          "name": "mTLS Service Auth Coverage",
+          "owner": "security",
+          "evidence_command": "cat docs/HOWTO/mtls-bootstrap-rotation.md",
+          "freshness_slo_days": 30,
+          "status": "implemented",
+          "last_verified": "2026-04-08"
+        },
+        {
+          "id": "NET-003",
+          "name": "Fail-Closed Chaos Suite",
+          "owner": "ops+reliability",
+          "evidence_command": "python3 scripts/run_fail_closed_chaos_suite.py",
+          "freshness_slo_days": 30,
+          "status": "implemented",
+          "last_verified": "2026-04-08"
+        },
+        {
+          "id": "NET-004",
+          "name": "Observability SLO Panels",
+          "owner": "observability",
+          "evidence_command": "cat docs/HOWTO/otel-slo-dashboards.md",
+          "freshness_slo_days": 30,
+          "status": "implemented",
+          "last_verified": "2026-04-08"
+        }
+      ]
+    },
+    "blockchain_contract_safety": {
+      "name": "Blockchain and Contract Safety Controls",
+      "weight": 0.20,
+      "controls": [
+        {
+          "id": "BCS-001",
+          "name": "Economic Loop Completeness",
+          "owner": "contracts",
+          "evidence_command": "cd grid/contracts && forge test --match-path test/UniversalDistributionPool.t.sol",
+          "freshness_slo_days": 14,
+          "status": "implemented",
+          "last_verified": "2026-04-08"
+        },
+        {
+          "id": "BCS-002",
+          "name": "Privilege Boundaries Verification",
+          "owner": "contracts+security",
+          "evidence_command": "make verify-formal",
+          "freshness_slo_days": 14,
+          "status": "implemented",
+          "last_verified": "2026-04-08"
+        },
+        {
+          "id": "BCS-003",
+          "name": "Upgradeability and Timelock Guarantees",
+          "owner": "contracts",
+          "evidence_command": "cd grid/contracts && forge test --match-contract DigitalLegacy",
+          "freshness_slo_days": 14,
+          "status": "implemented",
+          "last_verified": "2026-04-08"
+        },
+        {
+          "id": "BCS-004",
+          "name": "Cross-Contract Interface Compatibility",
+          "owner": "contracts",
+          "evidence_command": "cd grid/contracts && forge test --match-path test/integration/",
+          "freshness_slo_days": 14,
+          "status": "implemented",
+          "last_verified": "2026-04-08"
+        }
+      ]
+    },
+    "tokenomics_treasury": {
+      "name": "Tokenomics and Treasury Controls",
+      "weight": 0.20,
+      "controls": [
+        {
+          "id": "TT-001",
+          "name": "Supply and Allocation Math Conformance",
+          "owner": "tokenomics",
+          "evidence_command": "python3 scripts/verify_tokenomics_controls.py",
+          "freshness_slo_days": 7,
+          "status": "implemented",
+          "last_verified": "2026-04-08"
+        },
+        {
+          "id": "TT-002",
+          "name": "Fee Routing to Distribution Pool",
+          "owner": "contracts",
+          "evidence_command": "cd grid/contracts && forge test --match-contract RevenueModel",
+          "freshness_slo_days": 7,
+          "status": "implemented",
+          "last_verified": "2026-04-08"
+        },
+        {
+          "id": "TT-003",
+          "name": "Slashing/Burning Accounting",
+          "owner": "contracts",
+          "evidence_command": "cd grid/contracts && forge test --match-contract ComputeBond",
+          "freshness_slo_days": 7,
+          "status": "implemented",
+          "last_verified": "2026-04-08"
+        },
+        {
+          "id": "TT-004",
+          "name": "Treasury Reconciliation Automation",
+          "owner": "finance",
+          "evidence_command": "python3 scripts/verify_tokenomics_controls.py",
+          "freshness_slo_days": 7,
+          "status": "pending_ci_wire",
+          "last_verified": null
+        }
+      ]
+    },
+    "revenue_creation": {
+      "name": "Revenue Creation and Unit-Economics Controls",
+      "weight": 0.10,
+      "controls": [
+        {
+          "id": "RC-001",
+          "name": "Revenue Stream Catalog",
+          "owner": "tokenomics",
+          "evidence_command": "cat docs/tokenomics/REVENUE-MODEL.md",
+          "freshness_slo_days": 30,
+          "status": "implemented",
+          "last_verified": "2026-04-08"
+        },
+        {
+          "id": "RC-002",
+          "name": "Distribution Pool Transfer Logs",
+          "owner": "contracts",
+          "evidence_command": "cd grid/contracts && forge test --match-contract UniversalDistributionPool",
+          "freshness_slo_days": 14,
+          "status": "implemented",
+          "last_verified": "2026-04-08"
+        }
+      ]
+    },
+    "automated_workforce": {
+      "name": "Automated Workforce Controls",
+      "weight": 0.15,
+      "controls": [
+        {
+          "id": "AW-001",
+          "name": "Agent Identity and Accountability Chain",
+          "owner": "hypervisor",
+          "evidence_command": "python3 scripts/generate_agent_steering_index.py",
+          "freshness_slo_days": 14,
+          "status": "implemented",
+          "last_verified": "2026-04-08"
+        },
+        {
+          "id": "AW-002",
+          "name": "Embodied Governance Evidence Gate",
+          "owner": "scheduler",
+          "evidence_command": "python3 scripts/check_embodied_governance_evidence.py",
+          "freshness_slo_days": 14,
+          "status": "implemented",
+          "last_verified": "2026-04-08"
+        },
+        {
+          "id": "AW-003",
+          "name": "Emergency Halt Enforcement",
+          "owner": "scheduler",
+          "evidence_command": "python3 scripts/run_fail_closed_chaos_suite.py",
+          "freshness_slo_days": 14,
+          "status": "implemented",
+          "last_verified": "2026-04-08"
+        }
+      ]
+    },
+    "governance_constitutional": {
+      "name": "Governance and Constitutional Controls",
+      "weight": 0.15,
+      "controls": [
+        {
+          "id": "GC-001",
+          "name": "Proposal Lifecycle Integrity",
+          "owner": "governance",
+          "evidence_command": "cd grid/contracts && forge test --match-contract GovernanceCapsule",
+          "freshness_slo_days": 14,
+          "status": "implemented",
+          "last_verified": "2026-04-08"
+        },
+        {
+          "id": "GC-002",
+          "name": "Constitutional Alignment",
+          "owner": "governance",
+          "evidence_command": "cat docs/governance/NETWORK-SERVICE-CONSTITUTION-v1-DRAFT-2026-04-08.md",
+          "freshness_slo_days": 30,
+          "status": "implemented",
+          "last_verified": "2026-04-08"
+        },
+        {
+          "id": "GC-003",
+          "name": "Evidence-Weighted Referendum Scoring",
+          "owner": "governance",
+          "evidence_command": "cat docs/partnerships/GOVERNANCE-CLOSURE-MODELING-2026-04-08.md",
+          "freshness_slo_days": 30,
+          "status": "implemented",
+          "last_verified": "2026-04-08"
+        }
+      ]
+    },
+    "education_human_development": {
+      "name": "Education and Human Development Controls",
+      "weight": 0.05,
+      "controls": [
+        {
+          "id": "ED-001",
+          "name": "Credential Issuance Authenticity",
+          "owner": "education",
+          "evidence_command": "cat sandbox/capsules/education/ontario/schemas/ontario_badge.schema.json",
+          "freshness_slo_days": 30,
+          "status": "implemented",
+          "last_verified": "2026-04-08"
+        },
+        {
+          "id": "ED-002",
+          "name": "Curriculum Version Traceability",
+          "owner": "education",
+          "evidence_command": "cat docs/assessments/ONTARIO_EDUCATION_CAPSULE_INTEGRATION_PLAN.md",
+          "freshness_slo_days": 30,
+          "status": "implemented",
+          "last_verified": "2026-04-08"
+        }
+      ]
+    }
+  },
+  "release_gates": {
+    "pre_merge": [
+      {
+        "id": "RG-001",
+        "name": "Operator HOWTO Links Check",
+        "script": "scripts/check_operator_howto_links.py",
+        "required_for": ["operator-facing features"]
+      },
+      {
+        "id": "RG-002",
+        "name": "Formal Contract Verification",
+        "script": "make verify-formal",
+        "required_for": ["contract changes"]
+      }
+    ],
+    "pre_release": [
+      {
+        "id": "RG-101",
+        "name": "Tokenomics Controls Verification",
+        "script": "scripts/verify_tokenomics_controls.py",
+        "required_for": ["all releases"]
+      },
+      {
+        "id": "RG-102",
+        "name": "Embodied Governance Evidence",
+        "script": "scripts/check_embodied_governance_evidence.py",
+        "required_for": ["scheduler changes"]
+      },
+      {
+        "id": "RG-103",
+        "name": "Fail-Closed Chaos Suite",
+        "script": "scripts/run_fail_closed_chaos_suite.py",
+        "required_for": ["infrastructure changes"]
+      },
+      {
+        "id": "RG-104",
+        "name": "Cross-Chain Evidence Schema",
+        "script": "make verify-cross-chain-evidence-schema",
+        "required_for": ["cross-chain changes"]
+      }
+    ]
+  },
+  "audit_playbook_reference": "docs/assessments/SOCIETAL-OS-EVERYTHING-APP-AUDIT-PLAYBOOK-2026-04-08.md",
+  "next_review_date": "2026-07-08",
+  "review_cadence": "quarterly"
+}

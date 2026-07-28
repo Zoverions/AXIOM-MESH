@@ -1,0 +1,70 @@
+# Build artifacts
+build/
+dist/
+*.solc_artifacts
+*.abi
+*.bin
+*.hex
+*.map
+*.orig
+*.zip
+/grid/grid
+
+# Dependencies
+node_modules/
+.data/
+mesh/.data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.local
+.env.*
+!.env.example
+private.pem
+*.private.pem
+*.key
+production-data/
+production-secrets/
+api-tokens.json
+operator.token
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+*.coverage
+
+# Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Testing
+.pytest_cache/
+.mypy_cache/
+.hypothesis/
+
+# Distribution
+*.tar.gz
+*.egg-info/
+.eggs/

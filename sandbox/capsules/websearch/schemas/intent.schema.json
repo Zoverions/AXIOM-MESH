@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "id": "websearch-intent.schema.json",
+  "title": "Web Search Intent Schema",
+  "type": "object",
+  "required": ["task"],
+  "properties": {
+    "task": {
+      "type": "string",
+      "enum": ["search", "scrape"]
+    },
+    "query": {
+      "type": "string"
+    },
+    "url": {
+      "type": "string"
+    },
+    "parameters": {
+      "type": "object"
+    },
+    "constraints": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false
+}

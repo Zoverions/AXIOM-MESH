@@ -1,0 +1,6 @@
+{
+  "name": "proxy_worker",
+  "version": "1.0.0",
+  "main": "proxy_runtime/executor.js",
+  "dependencies": {}
+}

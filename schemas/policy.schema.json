@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "NemoClaw OpenShell Policy",
+  "type": "object",
+  "properties": {
+    "sandbox": {
+      "type": "object",
+      "properties": {
+        "filesystem": { "type": "array", "items": { "type": "string" } },
+        "network": { "type": "array", "items": { "type": "string" } },
+        "privacy": {
+          "type": "object",
+          "properties": {
+            "level": { "enum": ["local-only", "safe-external"] },
+            "location_services": { "type": "boolean", "description": "Opt-in to regional alignment settings" }
+          }
+        }
+      }
+    }
+  },
+  "required": ["sandbox"]
+}

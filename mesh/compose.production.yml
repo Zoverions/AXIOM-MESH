@@ -1,0 +1,70 @@
+services:
+  kernel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: axiom-mesh-kernel:0.11.0
+    init: true
+    restart: unless-stopped
+    user: "10001:10001"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 512m
+    cpus: 2.0
+    stop_grace_period: 15s
+    environment:
+      NODE_ENV: production
+      AXIOM_AUTO_BOOTSTRAP: "false"
+      AXIOM_DATA_DIR: /var/lib/axiom-mesh
+      AXIOM_DATA_KEY_FILE: /run/secrets/data-protection.key
+      AXIOM_API_TOKENS_FILE: /run/secrets/api-tokens.json
+      AXIOM_GATEWAY_HOST: 0.0.0.0
+      AXIOM_INTERNAL_HOST: 127.0.0.1
+      AXIOM_LOG_REQUESTS: "true"
+    ports:
+      - "127.0.0.1:${AXIOM_GATEWAY_PORT_HOST:-8080}:8080"
+    volumes:
+      - type: bind
+        source: ${AXIOM_DATA_DIR_HOST:?set AXIOM_DATA_DIR_HOST}
+        target: /var/lib/axiom-mesh
+    secrets:
+      - source: axiom_data_key
+        target: data-protection.key
+        uid: "10001"
+        gid: "10001"
+        mode: 0400
+      - source: axiom_api_tokens
+        target: api-tokens.json
+        uid: "10001"
+        gid: "10001"
+        mode: 0400
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m,uid=10001,gid=10001
+    healthcheck:
+      test: ["CMD", "node", "src/healthcheck.mjs"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    networks:
+      - ingress
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+secrets:
+  axiom_data_key:
+    file: ${AXIOM_DATA_KEY_FILE_HOST:?set AXIOM_DATA_KEY_FILE_HOST}
+  axiom_api_tokens:
+    file: ${AXIOM_API_TOKENS_FILE_HOST:?set AXIOM_API_TOKENS_FILE_HOST}
+
+networks:
+  ingress:
+    driver: bridge
+    internal: true

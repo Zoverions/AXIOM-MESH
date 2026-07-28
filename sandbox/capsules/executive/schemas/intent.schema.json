@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "id": "executive-intent.schema.json",
+  "title": "Executive Intent Schema",
+  "type": "object",
+  "required": ["task"],
+  "properties": {
+    "task": {
+      "type": "string",
+      "enum": ["market_analysis", "swot_analysis", "strategic_planning"]
+    },
+    "subject": {
+      "type": "string",
+      "description": "The company, product, or market being analyzed"
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "timeframe": { "type": "string" },
+        "competitors": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "properties": {
+        "max_time": { "type": "number" }
+      }
+    }
+  },
+  "additionalProperties": false
+}

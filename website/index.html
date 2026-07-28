@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AXIOM-MESH Whitepaper</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <img src="logo.png" alt="Axiom Mesh Logo" class="logo">
+            <h1>AXIOM-MESH Whitepaper</h1>
+            <p>The Master Lockdown Architecture Specification for Secure, Autonomous Multi-Service Agent Runtimes</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <section id="executive-summary">
+            <h2>1. Executive Summary</h2>
+            <p>AXIOM-MESH is a multi-service agent runtime featuring a unique architectural approach that integrates a four-pillar structure for autonomous agent orchestration, secure sandbox execution, and deterministic governance. It establishes a novel paradigm by combining decaying founder control with Zero-Knowledge Machine Learning (zkML) as a self-regulating bootstrap primitive, scaling back securely to 0% reliance by 10k nodes.</p>
+        </section>
+
+        <section id="funding-campaign">
+            <div class="card bg-secondary mt-4">
+              <div class="card-body">
+                <h4>Support the Mesh – Join the Sacrifice Campaign</h4>
+                <p><strong>"I sacrifice to AXIOM-MESH for freedom, open source, collective benefit, and system stability. No expectation of return."</strong></p>
+                <p>Every voluntary donation helps grow infrastructure, nodes, and digital entities. Funds are automatically allocated to UniversalDistributionPool (UBI) and Guardian Reserve.</p>
+                <p>Sacrificers are recorded on-chain and receive an optional, privacy-controlled <b>Sacrificer Recognition NFT</b> to display on their shareable profile.</p>
+                <div id="campaign-address" class="font-monospace bg-dark p-3 rounded"></div>
+                <button onclick="copyCampaignAddress()" class="btn btn-success mt-3">Copy Donation Address (PulseChain)</button>
+                <small class="d-block mt-2">Donors receive Recognition NFT, PoER boost, and priority Vault access.</small>
+              </div>
+            </div>
+        </section>
+
+        <section id="architecture">
+            <h2>2. Architecture: The Four Pillars</h2>
+            <p>AxiomMesh relies on a four-pillar runtime structure to ensure scalable, secure, and verifiable execution:</p>
+            <ul>
+                <li><strong>Gateway (TypeScript):</strong> Handles ingress APIs, channels, and dashboard delivery.</li>
+                <li><strong>Hypervisor (Python):</strong> Manages orchestration, context engines, policy, and routing logic.</li>
+                <li><strong>Sandbox (TypeScript + Docker):</strong> Provides isolated code execution for true sandbox isolation and network safety.</li>
+                <li><strong>Grid (Go):</strong> Functions as the ledger and verification layer, ensuring governance-aligned coordination.</li>
+            </ul>
+        </section>
+
+        <section id="zkml-infrastructure">
+            <h2>3. Enterprise-Grade zkML Infrastructure</h2>
+            <p>Every high-stakes inference in AXIOM-MESH is verifiable on-chain, ensuring trustless execution and privacy-first agent meshes.</p>
+            <ul>
+                <li><strong>Hybrid Proving:</strong> Utilizes EZKL, Halo2, and RISC Zero.</li>
+                <li><strong>NemoClaw Routing:</strong> Integrated for enhanced isolation.</li>
+                <li><strong>On-chain Verification:</strong> Handled via <code>ZKMLVerifier.sol</code>.</li>
+                <li><strong>Proof of Execution & Reliability (PoER):</strong> Boosts rewards for valid zkML proofs.</li>
+            </ul>
+        </section>
+
+        <section id="tokenomics">
+            <h2>4. Tokenomics & Treasury Mechanics</h2>
+            <p>The economic model is designed for long-term sustainability and deterministic accounting.</p>
+            <ul>
+                <li><strong>Token Symbol:</strong> AXM</li>
+                <li><strong>Target Total Supply:</strong> 1,000,000,000 AXM</li>
+                <li><strong>Founder Allocation:</strong> Permanently set to 5% with claims up to 5% dynamic resources.</li>
+                <li><strong>Network Treasury:</strong> 10% on defined inflow classes as specified by governance.</li>
+            </ul>
+            <p>Token/economic flows are deterministic, traceable, and support full reconciliation between off-chain ledgers and on-chain state, covering protocol inflows, distribution outflows, staker reward flows, and cross-chain transfer-related fee flows.</p>
+        </section>
+
+        <section id="principles">
+            <h2>5. Trust, Control, Governance, and Security Principles</h2>
+            <p>AXIOM-MESH adheres to strict principles to ensure the integrity of the network:</p>
+            <ul>
+                <li><strong>Least Privilege:</strong> Privileged actions are authenticated, authorized, and auditable.</li>
+                <li><strong>Deterministic Interfaces:</strong> Contracts, APIs, and schemas are strictly versioned.</li>
+                <li><strong>Recovery-First Reliability:</strong> Every stateful subsystem implements replay/recovery drills.</li>
+                <li><strong>Evidence-Backed Promotion:</strong> All release decisions require auditable gate evidence.</li>
+            </ul>
+            <p>Governance utilizes layered artifacts, supporting explicit approval trails, emergency rollback mechanisms, and parameter change logging to ensure the network remains adaptable yet secure. Security posture spans from ingress hardening to strict sandbox isolation, inter-service authentication (mTLS), and immutable audit trails.</p>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 AXIOM-MESH. All Rights Reserved.</p>
+        </div>
+    </footer>
+    <script src="donate.js"></script>
+</body>
+</html>

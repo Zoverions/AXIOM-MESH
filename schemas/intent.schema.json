@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://axiommesh.io/schemas/intent_object.v1.json",
+  "title": "IntentObject",
+  "description": "Represents an intent sent from the Gateway to the Hypervisor.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the intent."
+    },
+    "session_id": {
+      "type": "string",
+      "description": "Unique identifier for the session."
+    },
+    "conversation_id": {
+      "type": "string",
+      "description": "Cross-channel conversation identifier for entity continuity."
+    },
+    "actor_id": {
+      "type": "string",
+      "description": "Stable sender identity within a conversation/session."
+    },
+    "channel": {
+      "type": "string",
+      "description": "The communication channel (e.g., telegram, discord, slack)."
+    },
+    "content": {
+      "type": "string",
+      "description": "The raw message content."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional channel-specific metadata.",
+      "properties": {
+        "intent_type": {
+          "type": "string",
+          "enum": ["GOV_MINT_CITIZENSHIP", "MEMORY_VAULT_ACCESS"]
+        }
+      }
+    },
+    "timestamp": {
+      "type": "integer",
+      "description": "Unix timestamp of the intent creation."
+    },
+    "trace_id": {
+      "type": "string",
+      "description": "Optional trace ID for request propagation."
+    }
+  },
+  "required": ["id", "session_id", "channel", "content", "metadata", "timestamp"],
+  "additionalProperties": false
+}

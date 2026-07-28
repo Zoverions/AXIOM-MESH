@@ -1,0 +1,13 @@
+sandbox:
+  privacy:
+    level: dynamic
+    nft-clarity: "obfuscated|partial|full"
+  inference:
+    tiers:
+      local: priority=1, privacy=max
+      swarm: priority=2, min_devices=2
+      zkml: priority=3, verifiable=true
+      external: priority=4, providers=["grok","openai","mcp"]
+    security:
+      always_zkml_when_external: true
+      authorization_nft_required: true

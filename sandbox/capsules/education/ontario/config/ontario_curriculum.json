@@ -1,0 +1,212 @@
+{
+  "ontario_curriculum": {
+    "version": "2026.1",
+    "region": "Ontario, Canada",
+    "last_updated": "2026-03-28",
+    "grade_levels": [
+      "9",
+      "10",
+      "11",
+      "12"
+    ],
+    "credit_system": {
+      "total_credits_required": 30,
+      "compulsory_credits": 18,
+      "optional_credits": 12,
+      "credit_values": [
+        0.5,
+        1.0,
+        1.5,
+        2.0
+      ]
+    },
+    "subject_areas": [
+      {
+        "name": "Mathematics",
+        "codes": [
+          "MTH1W",
+          "MPM2D",
+          "MHF4U",
+          "MCV4U"
+        ],
+        "edi_integration": true
+      },
+      {
+        "name": "Science",
+        "codes": [
+          "SNC1W",
+          "SNC2D",
+          "SBI3U",
+          "SCH4U"
+        ],
+        "edi_integration": true
+      },
+      {
+        "name": "English",
+        "codes": [
+          "ENG1W",
+          "ENG2D",
+          "ENG3U",
+          "ENG4U"
+        ],
+        "edi_integration": true
+      },
+      {
+        "name": "Canadian Geography",
+        "codes": [
+          "CGC1W"
+        ],
+        "edi_integration": true
+      },
+      {
+        "name": "Canadian History",
+        "codes": [
+          "CHC2D"
+        ],
+        "edi_integration": true
+      },
+      {
+        "name": "Arts",
+        "codes": [
+          "ATC1O",
+          "AMU2O",
+          "ADA3M"
+        ],
+        "edi_integration": true
+      },
+      {
+        "name": "Health and Physical Education",
+        "codes": [
+          "PPL1O",
+          "PAF3O"
+        ],
+        "edi_integration": true
+      },
+      {
+        "name": "French as a Second Language",
+        "codes": [
+          "FSF1O",
+          "FSF2O"
+        ],
+        "edi_integration": true
+      },
+      {
+        "name": "Social Sciences and Humanities",
+        "codes": [
+          "HIF1O",
+          "HSP3U"
+        ],
+        "edi_integration": true
+      }
+    ],
+    "edi_principles": {
+      "equity": {
+        "description": "Ensuring fair treatment and equal opportunity for all students",
+        "implementation": [
+          "Differentiated assessment methods",
+          "Accessible learning materials",
+          "Bias-free evaluation criteria"
+        ]
+      },
+      "diversity": {
+        "description": "Recognizing and celebrating diverse backgrounds and perspectives",
+        "implementation": [
+          "Multicultural content integration",
+          "Indigenous perspectives inclusion",
+          "Multiple achievement pathways"
+        ]
+      },
+      "inclusion": {
+        "description": "Creating welcoming environments for all learners",
+        "implementation": [
+          "Universal Design for Learning (UDL)",
+          "Accommodation protocols",
+          "Student voice in decision-making"
+        ]
+      }
+    },
+    "maturity_framework": {
+      "levels": [
+        {
+          "level": 1,
+          "name": "Foundational",
+          "description": "Basic self-awareness and task completion",
+          "dao_access": false
+        },
+        {
+          "level": 2,
+          "name": "Developing",
+          "description": "Growing independence and collaborative skills",
+          "dao_access": "observer"
+        },
+        {
+          "level": 3,
+          "name": "Proficient",
+          "description": "Self-directed learning and leadership emergence",
+          "dao_access": "junior_council"
+        },
+        {
+          "level": 4,
+          "name": "Advanced",
+          "description": "Independent project management and mentoring",
+          "dao_access": "council_member"
+        },
+        {
+          "level": 5,
+          "name": "Exemplary",
+          "description": "Innovation, community impact, and peer leadership",
+          "dao_access": "senior_council"
+        }
+      ]
+    },
+    "parental_involvement": {
+      "required_for_minors": true,
+      "consent_areas": [
+        "DAO participation",
+        "NFT badge issuance",
+        "Data sharing",
+        "Advanced project enrollment"
+      ],
+      "review_frequency": "monthly",
+      "communication_channels": [
+        "Parent Advisor Agent",
+        "Progress reports",
+        "Achievement notifications"
+      ]
+    },
+    "blockchain_integration": {
+      "attestation_contract": "OntarioEducationAttestor",
+      "governance_oversight": "OntarioHealthGuild",
+      "supported_networks": [
+        "ethereum",
+        "polygon",
+        "optimism"
+      ],
+      "fail_closed_mechanism": true
+    },
+    "curriculum_standards": {
+      "issuing_authority": "Ontario Ministry of Education",
+      "framework": "Ontario Curriculum (Grades 9-12)",
+      "compliance_cycle": "semester",
+      "strands": [
+        "Knowledge and Understanding",
+        "Thinking",
+        "Communication",
+        "Application"
+      ],
+      "graduation_requirements": {
+        "osslt_required": true,
+        "community_involvement_hours": 40,
+        "literacy_pathways": [
+          "OSSLT",
+          "OLC4O"
+        ]
+      },
+      "evidence_requirements": [
+        "course expectation traceability",
+        "assessment artifact retention",
+        "parental consent receipts for minors"
+      ]
+    }
+  }
+}

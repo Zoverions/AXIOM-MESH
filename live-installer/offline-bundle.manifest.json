@@ -1,0 +1,48 @@
+{
+  "linux_packages": [
+    "build-essential",
+    "clang",
+    "cmake",
+    "python3-venv",
+    "python3-dev",
+    "golang-go",
+    "openjdk-21-jre",
+    "qemu-system-x86",
+    "qemu-utils",
+    "libvirt-daemon-system",
+    "libvirt-clients"
+  ],
+  "python_packages": [
+    "numpy",
+    "pandas",
+    "torch",
+    "transformers",
+    "accelerate",
+    "sentencepiece",
+    "onnxruntime"
+  ],
+  "node_global_packages": [
+    "pnpm",
+    "yarn",
+    "typescript"
+  ],
+  "model_artifacts": [
+    {
+      "tag": "llama3:8b",
+      "source_path": "live-installer/offline/models/llama3-8b.gguf",
+      "target_path": "/opt/axiom-mesh/live-installer/offline/models/llama3-8b.gguf",
+      "required": false
+    },
+    {
+      "tag": "qwen2.5-coder:7b",
+      "source_path": "live-installer/offline/models/qwen2.5-coder-7b.gguf",
+      "target_path": "/opt/axiom-mesh/live-installer/offline/models/qwen2.5-coder-7b.gguf",
+      "required": false
+    }
+  ],
+  "platform_payloads": {
+    "windows": "live-installer/offline/platforms/windows",
+    "linux": "live-installer/offline/platforms/linux",
+    "macos": "live-installer/offline/platforms/macos"
+  }
+}

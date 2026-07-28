@@ -1,0 +1,47 @@
+{
+  "capsule_id": "cap-business-001",
+  "name": "business-digital-agency",
+  "version": "1.0.0",
+  "issuer": {
+    "mesh_issuer": "hypervisor",
+    "key_id": "key-001"
+  },
+  "capabilities": [
+    "portfolio-management",
+    "digital-service-provisioning",
+    "treasury-allocation",
+    "contract-negotiation"
+  ],
+  "constraints": {
+    "proof_carrying_intents": true,
+    "intent_canonicalization": true,
+    "max_risk_score": 0.5
+  },
+  "runtime": {
+    "cpu_limit": 2.0,
+    "memory_limit_mb": 1024,
+    "timeout_ms": 60000
+  },
+  "token_policy": {
+    "scope": {
+      "tools": [
+        "defi-connector",
+        "contract-generator"
+      ],
+      "data": [
+        "/workspace/business"
+      ]
+    },
+    "ttl_seconds": 3600,
+    "revocation_handle_required": true,
+    "proof_strictness": "high"
+  },
+  "personality": {
+    "style": "pragmatic",
+    "heuristics": [
+      "maximize_roi",
+      "ensure_compliance",
+      "sustain_platform_contribution"
+    ]
+  }
+}

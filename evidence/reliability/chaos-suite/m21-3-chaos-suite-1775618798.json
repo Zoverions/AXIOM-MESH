@@ -1,0 +1,39 @@
+{
+  "control": "M21.3",
+  "run_id": "46a5c990-05af-4d0b-8bd7-0e77bb7c1971",
+  "timestamp": 1775618798,
+  "status": "pass",
+  "assertion": "all_degraded_modes_must_deny_by_default",
+  "scenario_results": [
+    {
+      "scenario_id": "partition",
+      "scenario_name": "Network partition",
+      "failure_mode": "peer-mesh quorum split",
+      "expected_policy": "deny_by_default",
+      "decision": "deny",
+      "rationale": "degraded_system_state_detected",
+      "deterministic": true,
+      "passed": true
+    },
+    {
+      "scenario_id": "hypervisor_crash",
+      "scenario_name": "Hypervisor crash",
+      "failure_mode": "orchestrator process unavailable",
+      "expected_policy": "deny_by_default",
+      "decision": "deny",
+      "rationale": "degraded_system_state_detected",
+      "deterministic": true,
+      "passed": true
+    },
+    {
+      "scenario_id": "grid_finality_delay",
+      "scenario_name": "Grid finality delay",
+      "failure_mode": "finality checkpoint lag above threshold",
+      "expected_policy": "deny_by_default",
+      "decision": "deny",
+      "rationale": "finality_not_confirmed",
+      "deterministic": true,
+      "passed": true
+    }
+  ]
+}

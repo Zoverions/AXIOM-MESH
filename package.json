@@ -1,0 +1,19 @@
+{
+  "name": "axiom-mesh",
+  "version": "0.11.0",
+  "private": true,
+  "description": "Root command surface for the supported AXIOM-MESH kernel",
+  "engines": {
+    "node": ">=24.14.0 <25"
+  },
+  "scripts": {
+    "dev": "npm --prefix mesh run dev",
+    "provision:production": "npm --prefix mesh run provision:production --",
+    "start:production": "npm --prefix mesh run start:production",
+    "test": "npm --prefix mesh test",
+    "check": "npm --prefix mesh run check",
+    "status": "npm --prefix mesh run status:check",
+    "release:verify": "npm --prefix mesh run release:verify",
+    "release:evidence": "npm --prefix mesh run release:evidence"
+  }
+}

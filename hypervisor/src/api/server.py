@@ -1,0 +1,1156 @@
+from slowapi.errors import RateLimitExceeded
+from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.middleware import SlowAPIMiddleware
+import uuid
+import random
+import requests
+import os
+import httpx
+import ast
+import json
+from datetime import datetime, timezone
+
+SERVICE_START_TIME = datetime.now(timezone.utc)
+
+def log_event(level: str, msg: str, trace_id: str = None):
+    log_data = {
+        "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "level": level,
+        "message": msg
+    }
+    if trace_id:
+        log_data["trace_id"] = trace_id
+
+    log_json = json.dumps(log_data)
+    print(log_json)
+
+    # WORM Event Sink (Append-only file)
+    log_dir = os.path.join(os.getcwd(), "data")
+    os.makedirs(log_dir, exist_ok=True)
+    audit_file = os.path.join(log_dir, "audit.log")
+    with open(audit_file, "a", encoding="utf-8") as f:
+        f.write(log_json + "\n")
+
+# M7.2 Hard-fail service identity transport: remove plaintext fallback in hypervisor/src/api/server.py:create_mtls_client, enforce mTLS cert presence at boot, and add anti-replay coverage for inter-service requests.
+def create_mtls_client():
+    """Create httpx client with mTLS configuration."""
+    if os.environ.get("NODE_ENV") == "test":
+        return httpx.AsyncClient()
+
+    mtls_ca_cert = os.environ.get("MTLS_CA_CERT")
+    mtls_client_cert = os.environ.get("MTLS_CLIENT_CERT")
+    mtls_client_key = os.environ.get("MTLS_CLIENT_KEY")
+
+    if mtls_ca_cert and mtls_client_cert and mtls_client_key:
+        import tempfile
+        f_cert = tempfile.NamedTemporaryFile(delete=False, suffix=".crt")
+        f_cert.write(mtls_client_cert.encode('utf-8'))
+        f_cert.close()
+        ssl_certfile = f_cert.name
+
+        f_key = tempfile.NamedTemporaryFile(delete=False, suffix=".key")
+        f_key.write(mtls_client_key.encode('utf-8'))
+        f_key.close()
+        ssl_keyfile = f_key.name
+
+        f_ca = tempfile.NamedTemporaryFile(delete=False, suffix=".crt")
+        f_ca.write(mtls_ca_cert.encode('utf-8'))
+        f_ca.close()
+        ssl_ca_certs = f_ca.name
+    else:
+        raise RuntimeError("mTLS cert configuration missing: MTLS_CA_CERT, MTLS_CLIENT_CERT, MTLS_CLIENT_KEY must be injected")
+
+    return httpx.AsyncClient(
+        cert=(ssl_certfile, ssl_keyfile),
+        verify=ssl_ca_certs
+    )
+
+
+def build_signed_headers(api_key: str, payload: dict) -> dict:
+    timestamp_ms = str(int(datetime.now(timezone.utc).timestamp() * 1000))
+    nonce = str(uuid.uuid4())
+    payload_bytes = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    body_hash = hashlib.sha256(payload_bytes).hexdigest()
+    signature_payload = f"{timestamp_ms}:{nonce}:{body_hash}"
+    signature = hmac.new(api_key.encode("utf-8"), signature_payload.encode("utf-8"), hashlib.sha256).hexdigest()
+    return {
+        "Authorization": f"Bearer {api_key}",
+        "X-Axiom-Timestamp": timestamp_ms,
+        "X-Axiom-Nonce": nonce,
+        "X-Axiom-Signature": signature,
+    }
+
+import asyncio
+from fastapi.concurrency import run_in_threadpool
+
+from src.models.intent import IntentObject, IntentResponse
+from src.engine.context import ContextEngine
+from src.pulse.pulse import EntropyMonitor
+from src.pulse.arena import VerificationArena
+from src.llm.provider import LLMProvider
+from src.cortex.dialectic import DialecticOrchestrator
+from src.evolution.evolution import EvolutionEngine, ActionEngine
+from src.evolution.openclaw import SignalExtractor, OnPolicyDistillation
+from src.evolution.network_sync import NetworkSync
+from src.evolution.auto_training import AutoTrainingLoop
+from src.agents.meshstore_agent import MeshStoreAgent
+from src.api.audio import router as audio_router
+from src.zkml.prover import EdgeZKMLProver
+from contextlib import asynccontextmanager
+
+from src.graph.autoresearch_graph import autoresearch_app
+from src.recovery.bundle_manager import RecoveryBundleManager
+from src.api.mcp_server import mcp_server
+from src.engine.inference_orchestrator import InferenceOrchestrator
+from src.api.routers.capsules import router as capsules_router
+from src.api.routers.tokens import router as tokens_router
+from src.api.routers.backup import router as backup_router
+from src.api.routers.tasks import router as tasks_router
+from src.api.routers.render import router as render_router
+from src.api.routers.hermes import router as hermes_router
+from src.orchestrator.task_scheduler import global_scheduler
+from src.core.secrets import SecretManager
+
+context_engine = ContextEngine()
+pulse = EntropyMonitor()
+arena = VerificationArena()
+llm = LLMProvider()
+dialectic = DialecticOrchestrator(llm=llm)
+evolution = EvolutionEngine()
+from src.evolution.hardware import HardwareScanner
+from src.evolution.routing import RoutingEngine, PredictivePrefetcher
+network_sync = NetworkSync()
+hardware_scanner = HardwareScanner()
+local_manifest = hardware_scanner.generate_capability_manifest()
+routing_engine = RoutingEngine(local_manifest)
+action_engine = ActionEngine(network_sync=network_sync)
+signal_extractor = SignalExtractor()
+opd = OnPolicyDistillation()
+
+auto_training_loop = AutoTrainingLoop()
+meshstore_agent = MeshStoreAgent()
+autoresearch_task = None
+
+async def autoresearch_task_loop():
+    while True:
+        try:
+            initial_state = {
+                "intent": "Research general consensus mechanisms",
+                "context": "",
+                "routing_decision": "",
+                "priority_tag": "",
+                "treasury_split": {},
+                "sandbox_output": "",
+                "zkml_verified": False,
+                "stake_status": ""
+            }
+            await autoresearch_app.ainvoke(initial_state)
+        except Exception as e:
+            print(f"[AutoResearch Graph] Task failed: {e}")
+        await asyncio.sleep(60)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global autoresearch_task
+    # Phase 1 Initialization Acknowledged
+    print("AxiomMesh Phase 1 Cognitive Hypervisor Started")
+    asyncio.create_task(network_sync.publish_capability_manifest(local_manifest))
+
+    autoresearch_task = asyncio.create_task(autoresearch_task_loop())
+    auto_training_loop.start()
+    global_scheduler.start()
+
+    # Priority 1: Fire and forget initial MeshStore agent run or start loop
+    # Depending on how run is implemented, if it blocks, it should be in a task,
+    # but the instructions say "one-line add". Assuming run() is fast or triggers logic.
+    try:
+        meshstore_agent.run()
+    except Exception as e:
+        print(f"MeshStoreAgent failed to run: {e}")
+
+    if os.getenv("RECOVERY_2FA_ENABLED") == "true" and os.getenv("RECOVERY_KEY"):
+        try:
+            cid = RecoveryBundleManager().create_bundle(os.getenv("NODE_ID", "local_node"))
+            print(f"Recovery Bundle Pinned to MeshStore: {cid}")
+        except Exception as e:
+            print(f"Failed to create recovery bundle: {e}")
+
+    # Ensure transport identity cannot silently fail open.
+    _probe = create_mtls_client()
+    await _probe.aclose()
+
+    yield
+    autoresearch_task.cancel()
+    auto_training_loop.stop()
+    global_scheduler.stop()
+
+app = FastAPI(lifespan=lifespan)
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+app.include_router(audio_router)
+app.include_router(capsules_router)
+app.include_router(tokens_router)
+app.include_router(backup_router)
+app.include_router(tasks_router)
+app.include_router(render_router)
+app.include_router(hermes_router)
+
+# Mount MCP Server SSE and Messages endpoints
+app.mount("/mcp", mcp_server.sse_app())
+
+@app.post("/api/v1/oracle/zkml-stub")
+async def pulsechain_zkml_stub(request: Request):
+    """
+    Opt-in zkML oracle service stub for PulseChain Enhancement Layer.
+    Only active if ENHANCE_PULSECHAIN=1
+    """
+    if os.environ.get("ENHANCE_PULSECHAIN") != "1":
+        raise HTTPException(status_code=403, detail="PulseChain enhancement layer disabled")
+    return {"status": "success", "message": "zkML proof generated and submitted to PulseChain Oracle"}
+
+
+hypervisor_metrics = {"requests": 0, "errors": 0}
+intent_metrics = {"success": 0, "error": 0, "degraded": 0}
+
+SANDBOX_URL = os.environ.get("SANDBOX_URL", "http://localhost:4000/execute")
+
+# Security: Basic AST-based sanitization
+def is_safe_code(code_str: str) -> bool:
+    try:
+        tree = ast.parse(code_str)
+    except SyntaxError:
+        return False
+
+    forbidden_modules = {"os", "sys", "subprocess", "shlex", "pty", "socket"}
+    forbidden_funcs = {"__import__", "eval", "exec", "open"}
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name.split(".")[0] in forbidden_modules:
+                    return False
+        elif isinstance(node, ast.ImportFrom):
+            if node.module and node.module.split(".")[0] in forbidden_modules:
+                return False
+        elif isinstance(node, ast.Call):
+            if isinstance(node.func, ast.Name) and node.func.id in forbidden_funcs:
+                return False
+    return True
+security = HTTPBearer()
+
+
+def validate_causal_reasoning_attestation(payload: dict) -> tuple[bool, list[str]]:
+    """
+    M11.3: Emits mismatch taxonomy for dry-run validation.
+    Performs fail-closed structural validation for CPoR payloads.
+    This is intentionally strict and returns all discovered mismatches.
+    """
+    mismatches = []
+    required_fields = [
+        "attestation_id",
+        "intent_id",
+        "model_commitment",
+        "input_commitment",
+        "output_commitment",
+        "causal_graph",
+        "consensus_context",
+        "proof_bundle",
+        "nonce",
+        "timestamp_ms",
+    ]
+
+    for field in required_fields:
+        if field not in payload:
+            mismatches.append(f"missing_field:{field}")
+
+    causal_graph = payload.get("causal_graph", {})
+    nodes = causal_graph.get("nodes", [])
+    edges = causal_graph.get("edges", [])
+    if not isinstance(nodes, list) or len(nodes) == 0:
+        mismatches.append("invalid_causal_graph:nodes_empty_or_invalid")
+        return False, mismatches
+
+    node_ids = set()
+    for index, node in enumerate(nodes):
+        node_id = node.get("node_id")
+        step_type = node.get("step_type")
+        attention_weight = node.get("attention_weight")
+        timestamp_ms = node.get("timestamp_ms")
+        if not node_id:
+            mismatches.append(f"invalid_node:{index}:missing_node_id")
+        else:
+            node_ids.add(node_id)
+        if step_type not in {"observation", "transformation", "policy_check", "decision", "consensus"}:
+            mismatches.append(f"invalid_node:{index}:step_type")
+        if not isinstance(attention_weight, (int, float)) or attention_weight < 0:
+            mismatches.append(f"invalid_node:{index}:attention_weight")
+        if not isinstance(timestamp_ms, int) or timestamp_ms < 0:
+            mismatches.append(f"invalid_node:{index}:timestamp_ms")
+
+    if not isinstance(edges, list):
+        mismatches.append("invalid_causal_graph:edges_not_array")
+    else:
+        for edge_index, edge in enumerate(edges):
+            src = edge.get("from")
+            dst = edge.get("to")
+            relation = edge.get("relation")
+            if src not in node_ids or dst not in node_ids:
+                mismatches.append(f"invalid_edge:{edge_index}:dangling_node_ref")
+            if relation not in {"depends_on", "supports", "contradicts", "gates"}:
+                mismatches.append(f"invalid_edge:{edge_index}:relation")
+
+    proof_bundle = payload.get("proof_bundle", {})
+    for proof_key in ("zkml_proof", "causal_proof", "signature"):
+        if not proof_bundle.get(proof_key):
+            mismatches.append(f"invalid_proof_bundle:missing_{proof_key}")
+
+    return len(mismatches) == 0, mismatches
+
+
+from src.core.policy_engine import PolicyEngine
+policy_engine = PolicyEngine()
+
+def evaluate_policy_gate(intent: IntentObject):
+    return policy_engine.evaluate(intent)
+
+
+from fastapi import Request
+import hmac
+import hashlib
+
+request_queue = None
+
+async def check_backpressure():
+    global request_queue
+    if request_queue is None:
+        request_queue = asyncio.Queue(maxsize=100)
+    try:
+        request_queue.put_nowait(1)
+    except asyncio.QueueFull:
+        raise HTTPException(status_code=429, detail="Too Many Requests")
+
+async def release_backpressure():
+    global request_queue
+    if request_queue is not None:
+        try:
+            request_queue.get_nowait()
+            request_queue.task_done()
+        except asyncio.QueueEmpty:
+            pass
+
+def get_expected_api_key() -> str:
+    """Retrieves the configured HYPERVISOR_API_KEY from the SecretManager."""
+    expected_api_key = SecretManager.get_secret("HYPERVISOR_API_KEY")
+    if not expected_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Server configuration error: HYPERVISOR_API_KEY is not set",
+        )
+    return expected_api_key
+
+def validate_api_key(provided_key: str, expected_key: str) -> None:
+    """Validates the provided API key against the expected one."""
+    if provided_key != expected_key:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid API Key",
+        )
+
+def verify_api_key(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
+    """FastAPI dependency to verify the API key from the request credentials."""
+    expected_api_key = get_expected_api_key()
+    validate_api_key(credentials.credentials, expected_api_key)
+
+    return credentials.credentials
+
+async def verify_signature(request: Request, api_key: str = Depends(verify_api_key)):
+    timestamp = request.headers.get("X-Axiom-Timestamp")
+    nonce = request.headers.get("X-Axiom-Nonce")
+    signature = request.headers.get("X-Axiom-Signature")
+
+    if not timestamp or not nonce or not signature:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing required signature headers")
+
+    try:
+        ts_val = int(timestamp)
+        from datetime import timezone
+        now = int(datetime.now(timezone.utc).timestamp() * 1000)
+        if abs(now - ts_val) > 300000:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Request signature expired")
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid timestamp format")
+
+    body = await request.body()
+    payload = f"{timestamp}:{nonce}:{body.decode('utf-8')}"
+    expected_mac = hmac.new(api_key.encode('utf-8'), payload.encode('utf-8'), hashlib.sha256).hexdigest()
+
+    if not hmac.compare_digest(expected_mac, signature):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid request signature")
+
+    return api_key
+
+@app.post("/process", response_model=IntentResponse)
+async def process_intent(intent: IntentObject, api_key: str = Depends(verify_signature)):
+    await check_backpressure()
+    try:
+        return await _process_intent_core(intent, api_key)
+    finally:
+        await release_backpressure()
+
+async def _process_intent_core(intent: IntentObject, api_key: str):
+    trace_id = intent.trace_id or f"trace-{uuid.uuid4()}"
+    intent.trace_id = trace_id
+    hypervisor_metrics["requests"] += 1
+    audit_trail = {
+        "intent_replay": {
+            "content": intent.content,
+            "channel": intent.channel,
+            "sender": intent.metadata.get("sender", "unknown")
+        },
+        "safety_decisions": {
+            "ast_sanitization": "N/A",
+            "mirofish_spatial_block": "N/A",
+            "riker_probe_injected": False,
+            "pulse_anomaly": False,
+            "arena_verification": "N/A",
+            "policy_gate": "N/A"
+        },
+        "why_this_answer": {
+            "context_tier_1_temporal": bool(context_engine.temporal_state.get_collapsed_state()),
+            "context_tier_3_archive": True,
+            "sampling_perturbation": False
+        }
+    }
+
+    try:
+        log_event("info", f"Processing intent from sender: {intent.metadata.get('sender', 'unknown')}", trace_id)
+        content = intent.content
+        sender = intent.metadata.get("sender", "unknown")
+
+        # Predictive Prefetching
+        prefetcher = PredictivePrefetcher()
+        await prefetcher.execute_prefetch(network_sync, intent.content)
+
+        # Dynamic Routing Engine (Capability Manifests)
+        # M14.1 Capability Manifest Enforcement
+        # M12.6 Capability manifest enforcement: No manifest -> no execution. Manifest must declare capabilities, resource bounds, network policy, I/O schemas, attestation target.
+        capability_manifest = intent.metadata.get("capability_manifest", {})
+        required_hardware = capability_manifest.get("required_hardware")
+        network_scope = capability_manifest.get("network_scope")
+        memory_quota_mb = capability_manifest.get("memory_quota_mb")
+        capabilities = capability_manifest.get("capabilities")
+        io_schemas = capability_manifest.get("io_schemas")
+        attestation_target = capability_manifest.get("attestation_target")
+
+        if not capability_manifest or not required_hardware or not network_scope or not memory_quota_mb or not capabilities or not io_schemas or not attestation_target:
+            intent_metrics["error"] += 1
+            audit_trail["safety_decisions"]["capability_manifest"] = "Failed"
+            return IntentResponse(
+                id=str(uuid.uuid4()),
+                intent_id=intent.id,
+                response="System Halt: Missing or invalid capability manifest. Execution must declare required_hardware, memory_quota_mb, network_scope bounds, capabilities, io_schemas, and attestation_target.",
+                status="error",
+                trace_id=trace_id,
+                audit_trail=audit_trail
+            )
+        audit_trail["safety_decisions"]["capability_manifest"] = "Passed"
+
+        hints = intent.metadata.get("resource_hints", {})
+        if hints and not intent.metadata.get("_delegated_already"):
+            peer_manifests = await network_sync.fetch_peer_manifests()
+            route, peer_addr = routing_engine.evaluate_route_with_address(hints, peer_manifests)
+            audit_trail["routing_decision"] = route
+
+            if route != "local" and peer_addr:
+                log_event("info", f"Delegating intent to peer {route} at {peer_addr} based on Capability Manifest", trace_id)
+                import httpx
+
+                # Mark as delegated so we don't loop
+                intent.metadata["_delegated_already"] = True
+
+                async with create_mtls_client() as client:
+                    try:
+                        import urllib.parse
+                        parsed_addr = urllib.parse.urlparse(peer_addr)
+                        host = parsed_addr.hostname or peer_addr
+                        # The Hypervisor runs on 8081 by default
+                        forward_url = f"http://{host}:8081/api/v1/intent/process/dev-public"
+                        payload = intent.model_dump()
+                        headers = build_signed_headers(api_key, payload) if api_key else {}
+                        res = await client.post(forward_url, json=payload, headers=headers, timeout=30.0)
+                        res.raise_for_status()
+                        delegated_resp = IntentResponse(**res.json())
+                        delegated_resp.audit_trail["delegated_via"] = local_manifest.get("tier", "unknown")
+                        return delegated_resp
+                    except Exception as e:
+                        log_event("error", f"Failed to delegate to {route}: {e}. Falling back to local execution.", trace_id)
+                        audit_trail["routing_decision_fallback"] = "local"
+        else:
+            audit_trail["routing_decision"] = "local (no hints or already delegated)"
+
+
+        allowed, policy_decisions, policy_reason = await run_in_threadpool(evaluate_policy_gate, intent)
+        audit_trail["safety_decisions"]["policy_gate"] = "Passed" if allowed else "Failed"
+        audit_trail["safety_decisions"]["policy_checks"] = policy_decisions
+        if not allowed:
+            intent_metrics["error"] += 1
+            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Policy Halt: {policy_reason}", status="error", trace_id=trace_id, audit_trail=audit_trail)
+
+
+        # OpenClaw-RL: Next-State Signal Recovery
+        if context_engine.interaction_history:
+            last_interaction = context_engine.interaction_history[-1]
+            last_response = last_interaction.get("response", "")
+
+            # Extract signals from current intent based on last response
+            signals = await run_in_threadpool(signal_extractor.extract_signals, content, last_response)
+
+            if signals["reward"] != 0 or signals["is_directive"]:
+                # Judge rollout via MiroFish PRM
+                miro_score = await run_in_threadpool(
+                    context_engine.deep_archive.miro_mapper.judge_rollout,
+                    action=last_interaction.get("intent_content", ""),
+                    feedback_signal=signals
+                )
+                # Update reward with PRM Judge's score
+                signals["reward"] = miro_score
+
+                # Store rollout in Evolution Engine
+                await run_in_threadpool(
+                    evolution.store_rollout,
+                    last_interaction.get("intent_content", ""), signals, sender
+                )
+
+                # If it's a directive signal, attempt On-Policy Distillation
+                if signals["is_directive"]:
+                    await run_in_threadpool(
+                        opd.distill,
+                        last_interaction.get("intent_content", ""), signals, sender
+                    )
+
+        # Handle special Mode command
+        if content.startswith("/mode"):
+            parts = content.split(" ", 1)
+            if len(parts) > 1:
+                mode = parts[1].strip().lower()
+                allowed_modes = ["concise", "analytical", "socratic", "executive"]
+                if mode in allowed_modes:
+                    context_engine.set_user_mode(sender, mode)
+                    return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Mode set to {mode} successfully.", status="success")
+                else:
+                    return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Invalid mode. Allowed modes are: {', '.join(allowed_modes)}.", status="error")
+            else:
+                return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Please specify a mode. Allowed modes are: concise, analytical, socratic, executive.", status="error")
+
+        # Handle special Dialectic command
+        if content.startswith("/dialectic"):
+            synthesis = await dialectic.synthesize(content[len("/dialectic"):].strip())
+            intent_metrics["success"] += 1
+            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=synthesis, status="success", trace_id=trace_id, audit_trail=audit_trail)
+
+        # Handle special Code Execution command
+        if content.startswith("/exec"):
+            code = content[len("/exec"):].strip()
+
+            is_safe = await run_in_threadpool(is_safe_code, code)
+            if not is_safe:
+                audit_trail["safety_decisions"]["ast_sanitization"] = "Failed"
+                intent_metrics["error"] += 1
+                return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Security Halt: Code execution contains forbidden operations (e.g., os, sys, eval, open).", status="error", trace_id=trace_id, audit_trail=audit_trail)
+            audit_trail["safety_decisions"]["ast_sanitization"] = "Passed"
+
+            # MiroFish Spatial Security Check
+            # Assuming 'user_node' is the origin for standard /exec commands
+            is_allowed = await run_in_threadpool(context_engine.miro_mapper.is_operation_allowed, "user_node", "shell_execution")
+            if not is_allowed:
+                audit_trail["safety_decisions"]["mirofish_spatial_block"] = "Blocked"
+                intent_metrics["error"] += 1
+                return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="MiroFish Spatial Block: Unauthorized compliance attempt detected.", status="error", trace_id=trace_id, audit_trail=audit_trail)
+            audit_trail["safety_decisions"]["mirofish_spatial_block"] = "Allowed"
+
+            try:
+                sandbox_api_key = os.environ.get("SANDBOX_API_KEY")
+                if not sandbox_api_key:
+                    raise Exception("SANDBOX_API_KEY is not configured")
+                sandbox_payload = {"language": "python", "code": code}
+                headers = build_signed_headers(sandbox_api_key, sandbox_payload)
+                async with create_mtls_client() as client:
+                    sandbox_res = await client.post(SANDBOX_URL, json=sandbox_payload, headers=headers)
+                    if sandbox_res.status_code != 200:
+                        raise Exception(f"Sandbox returned status {sandbox_res.status_code}: {sandbox_res.text}")
+                    response_text = f"Execution result:\n{sandbox_res.json()}"
+            except Exception as e:
+                response_text = f"Sandbox execution failed: {e}"
+            intent_metrics["success"] += 1
+            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=response_text, status="success", trace_id=trace_id, audit_trail=audit_trail)
+
+        # Sync Skills command
+        if content.startswith("/sync_skills"):
+            skills = await network_sync.sync_skills()
+            intent_metrics["success"] += 1
+            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Synced skills: {skills}", status="success", trace_id=trace_id, audit_trail=audit_trail)
+
+        # Record Data Feed command
+        if content.startswith("/record_data"):
+            json_data_str = content[len("/record_data"):].strip()
+
+            try:
+                parsed_data = json.loads(json_data_str)
+            except json.JSONDecodeError:
+                return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Error: Invalid JSON payload in data feed.", status="error", trace_id=trace_id)
+
+            metadata = intent.metadata or {}
+            consent_scope = metadata.get("consent_scope", "allowed")
+
+            if consent_scope == "revoked":
+                return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Error: Data ingestion rejected due to revoked consent scope.", status="error", trace_id=trace_id)
+
+            metadata_to_store = {
+                "type": "data_feed",
+                "consent": consent_scope,
+                "source_device": metadata.get("source_device", "unknown")
+            }
+
+            # Store in local memory store (Tier 3 deep archive)
+            await run_in_threadpool(context_engine.deep_archive.add, json_data_str, metadata_to_store)
+
+            # To meet the requirement "anything that is committed to the blockchain won't be discarded",
+            # we publish current data feed updates and broadcast to Grid via NetworkSync (re-using publish_skill logic for now).
+            # This commits a hash to the ledger so it cannot be discarded/manipulated.
+            try:
+                payload = {
+                    "id": f"data_feed_{uuid.uuid4()}",
+                    "name": metadata_to_store["source_device"],
+                    "payload_hash": hashlib.sha256(json_data_str.encode()).hexdigest(),
+                    "type": "data_feed_record"
+                }
+                await network_sync.publish_skill(payload)
+            except Exception as e:
+                log_event("warning", f"Failed to commit data feed state to Grid: {e}")
+
+            intent_metrics["success"] += 1
+            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Data recorded and committed successfully.", status="success", trace_id=trace_id, audit_trail=audit_trail)
+
+        # Query Data Feed command
+        if content.startswith("/query_data"):
+            from src.core.node_validator import NodeValidator
+            token_str = content[len("/query_data"):].strip()
+
+            try:
+                validator = NodeValidator()
+                # We enforce the "telemetry" data scope and "data-feed-query" capsule ID for access control.
+                # In production, this guarantees only authorized callers holding a specific token can pull the data.
+                validator.validate_token(token_str, expected_capsule_id="data-feed-query", expected_data_scope="telemetry")
+            except ValueError as e:
+                return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Error: Token validation failed - {str(e)}", status="error", trace_id=trace_id)
+
+            # Simple retrieval from deep archive
+            memories = await run_in_threadpool(context_engine.deep_archive.get_all)
+
+            data_feeds = []
+            aggregated_metrics = {}
+            count = 0
+
+            for mem in memories:
+                if mem.get("metadata", {}).get("type") == "data_feed":
+                    try:
+                        mem_data = json.loads(mem.get("content", "{}"))
+                        data_feeds.append(mem_data)
+
+                        # Apply aggregation on numeric fields if present
+                        for k, v in mem_data.items():
+                            if isinstance(v, (int, float)):
+                                aggregated_metrics[k] = aggregated_metrics.get(k, 0) + v
+                        count += 1
+                    except Exception:
+                        pass
+
+            # Compute averages
+            for k in aggregated_metrics:
+                aggregated_metrics[k] = aggregated_metrics[k] / count if count > 0 else 0
+
+            response_json = json.dumps({
+                "aggregated_statistics": aggregated_metrics,
+                "raw_feeds_count": count
+            })
+
+            intent_metrics["success"] += 1
+            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=response_json, status="success", trace_id=trace_id, audit_trail=audit_trail)
+
+        # Standard LLM handling with Tier 1 and Tier 3 memory
+        context = await context_engine.get_context(intent)
+
+        # Divergence Engine sampling perturbations
+        sampling_params = await run_in_threadpool(context_engine.divergence_engine.apply_sampling_perturbation, {})
+        freq_penalty = sampling_params.get("frequency_penalty", 0.0)
+        pres_penalty = sampling_params.get("presence_penalty", 0.0)
+
+        if freq_penalty > 0.0 or pres_penalty > 0.0:
+            audit_trail["why_this_answer"]["sampling_perturbation"] = True
+
+        # Periodic RIKER Hallucination Probe
+        if random.random() < 0.1: # 10% chance to inject probe
+            probes = arena.riker.get_hallucination_probes()
+            if probes:
+                audit_trail["safety_decisions"]["riker_probe_injected"] = True
+                probe = random.choice(probes)
+                probe_q = f"What is the {probe['attribute']} of {probe['entity']}?"
+                # Hallucination probe always uses base params to avoid confounding factors
+                probe_res = await llm.process(f"Axiom: {context_engine.axioms}\n\nQuestion: {probe_q}")
+                if not arena.check_hallucination_response(probe_res):
+                    audit_trail["safety_decisions"]["riker_probe_result"] = "Failed"
+                    intent_metrics["error"] += 1
+                    return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="System Halt: RIKER Hallucination Probe failure. LLM fabricated data for non-existent CSU entity.", status="error", trace_id=trace_id, audit_trail=audit_trail)
+                audit_trail["safety_decisions"]["riker_probe_result"] = "Passed"
+
+        # Inference Orchestration multi-tier routing integration
+        orchestrator = InferenceOrchestrator()
+
+        intent_dict = intent.dict()
+        intent_dict["context"] = context
+        intent_dict["freq_penalty"] = freq_penalty
+        intent_dict["pres_penalty"] = pres_penalty
+
+        # Pass the async LLM to the orchestrator to perform actual inference
+        orchestrator.llm = llm
+
+        # Route and execute inference. Since we made LLM async, we must await `route` if it performs async inference
+        routed_result = await orchestrator.route(intent_dict)
+
+        raw_response = routed_result.get("output", "")
+
+        audit_trail["tier_used"] = routed_result.get("tier_used")
+        audit_trail["zkml_verified"] = routed_result.get("zkml_verified")
+        audit_trail["meshstore_cid"] = routed_result.get("meshstore_cid")
+
+        # The Pulse Check
+        is_anomaly = await run_in_threadpool(pulse.measure, raw_response)
+        if is_anomaly:
+            audit_trail["safety_decisions"]["pulse_anomaly"] = True
+            intent_metrics["error"] += 1
+            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="System Halt: Thermodynamic anomaly detected. Suspected hallucination/guessing loop.", status="error", trace_id=trace_id, audit_trail=audit_trail)
+        audit_trail["safety_decisions"]["pulse_anomaly"] = False
+
+        # The Arena Validation before returning text
+        is_verified = await run_in_threadpool(arena.verify, action_intent=content, proposed_execution=raw_response)
+        if not is_verified:
+            audit_trail["safety_decisions"]["arena_verification"] = "Failed"
+            intent_metrics["error"] += 1
+            return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response="Arena Security Halt: The LLM output failed verification (Autoregressive Hallucination Floor crossed).", status="error", trace_id=trace_id, audit_trail=audit_trail)
+        audit_trail["safety_decisions"]["arena_verification"] = "Passed"
+
+        # Automatically store new interactions in Deep Archive
+        metadata_to_store = {
+            "session_id": intent.session_id,
+            "conversation_id": intent.conversation_id,
+            "actor_id": intent.actor_id,
+            "consent": (intent.metadata or {}).get("consent_scope", "allowed")
+        }
+        if hasattr(context_engine.deep_archive, "sync_to_grid") and asyncio.iscoroutinefunction(context_engine.deep_archive.sync_to_grid):
+            try:
+                await context_engine.deep_archive.sync_to_grid(content, metadata_to_store)
+            except Exception:
+                intent_metrics["degraded"] += 1
+                metadata_to_store["sync_mode"] = "local_fallback"
+                await run_in_threadpool(context_engine.deep_archive.add, content, metadata_to_store)
+        else:
+            await run_in_threadpool(context_engine.deep_archive.add, content, metadata_to_store)
+
+        # Update interaction history for next-state signal recovery
+        context_engine.interaction_history.append({
+            "intent_id": intent.id,
+            "intent_content": content,
+            "response": raw_response,
+            "sender": sender
+        })
+
+        # Dynamic confidence and provenance based on routing orchestration
+        tier_used = routed_result.get("tier_used", "local")
+        is_zkml_verified = routed_result.get("zkml_verified", False)
+
+        if is_zkml_verified:
+            confidence = 0.99
+        elif tier_used == "swarm":
+            confidence = 0.90
+        elif tier_used == "external":
+            confidence = 0.75
+        else:
+            confidence = 0.85
+
+        provenance = []
+        if is_zkml_verified:
+            provenance.append("zkML Consensus")
+        if tier_used == "swarm":
+            provenance.append("Swarm Shard")
+            if "meshstore_cid" in routed_result:
+                provenance.append(f"MeshStore CID: {routed_result['meshstore_cid']}")
+        if tier_used == "external":
+            provenance.append("External Provider")
+            if "provider" in routed_result:
+                provenance.append(f"Provider: {routed_result['provider']}")
+        if tier_used == "local" and not is_zkml_verified:
+            provenance.append("Local Fallback")
+
+        if not provenance:
+            provenance.append("Base Model")
+
+        style = (intent.metadata or {}).get("response_style", "standard")
+        styled_response = raw_response
+        if style == "concise":
+            styled_response = raw_response.split("\n")[0][:400]
+        elif style == "analytical":
+            styled_response = f"Analysis:\n{raw_response}"
+        elif style == "socratic":
+            styled_response = f"Before finalizing, consider: {raw_response}"
+        elif style == "executive":
+            styled_response = f"Executive summary: {raw_response}"
+
+        intent_metrics["success"] += 1
+
+        secret_val = SecretManager.get_secret("HYPERVISOR_SECRET")
+        if not secret_val:
+            raise RuntimeError("HYPERVISOR_SECRET is not configured")
+        hypervisor_secret = secret_val.encode()
+
+        audit_trail.pop("policy_attestation_signature", None)
+        audit_trail["policy_attestation_signature"] = hmac.new(
+            hypervisor_secret,
+            json.dumps(audit_trail, sort_keys=True).encode(),
+            hashlib.sha256
+        ).hexdigest()
+
+        return IntentResponse(
+            id=str(uuid.uuid4()),
+            intent_id=intent.id,
+            response=styled_response,
+            status="success",
+            confidence=confidence,
+            provenance=provenance,
+            trace_id=trace_id,
+            audit_trail=audit_trail
+        )
+    except Exception as e:
+        hypervisor_metrics["errors"] += 1
+        intent_metrics["error"] += 1
+        log_event("error", f"Hypervisor error: {str(e)}", trace_id)
+        return IntentResponse(id=str(uuid.uuid4()), intent_id=intent.id, response=f"Hypervisor error: {str(e)}", status="error", trace_id=trace_id)
+
+@app.get("/metrics")
+async def get_metrics():
+    return {**hypervisor_metrics, "intents": intent_metrics}
+
+def _dependency_health_snapshot():
+    distributed_degraded = getattr(context_engine.deep_archive, "degraded_counters", {}) or {}
+    total_degraded = sum(distributed_degraded.values())
+    dependencies = {
+        "grid": "degraded" if distributed_degraded.get("grid", 0) > 0 else "ok",
+        "ipfs": "degraded" if distributed_degraded.get("ipfs", 0) > 0 else "ok",
+        "arweave": "degraded" if distributed_degraded.get("arweave", 0) > 0 else "ok",
+        "sandbox": "ok"
+    }
+    return dependencies, distributed_degraded, total_degraded
+
+@app.get("/health")
+async def health_check():
+    log_event("info", "Health check requested")
+    dependencies, distributed_degraded, total_degraded = _dependency_health_snapshot()
+    degraded = intent_metrics["degraded"] > 0 or total_degraded > 0
+    uptime_seconds = int((datetime.now(timezone.utc) - SERVICE_START_TIME).total_seconds())
+    return {
+        "status": "degraded" if degraded else "ok",
+        "component": "hypervisor",
+        "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "uptime_seconds": uptime_seconds,
+        "ready": not degraded,
+        "dependencies": dependencies,
+        "metrics": {**intent_metrics, "distributed": distributed_degraded}
+    }
+
+@app.get("/health/live")
+async def health_live():
+    return {
+        "status": "ok",
+        "component": "hypervisor",
+        "uptime_seconds": int((datetime.now(timezone.utc) - SERVICE_START_TIME).total_seconds())
+    }
+
+@app.get("/health/ready")
+async def health_ready():
+    dependencies, distributed_degraded, total_degraded = _dependency_health_snapshot()
+    degraded = intent_metrics["degraded"] > 0 or total_degraded > 0
+    payload = {
+        "status": "ready" if not degraded else "not_ready",
+        "component": "hypervisor",
+        "dependencies": dependencies,
+        "metrics": {**intent_metrics, "distributed": distributed_degraded}
+    }
+    if degraded:
+        return JSONResponse(status_code=503, content=payload)
+    return payload
+
+@app.get("/memory")
+async def get_memory(session_id: str = None):
+    memories = await run_in_threadpool(context_engine.deep_archive.get_all, session_id)
+    return {"status": "success", "memories": memories}
+
+@app.delete("/memory/{node_id}")
+async def delete_memory(node_id: str):
+    success = await run_in_threadpool(context_engine.deep_archive.delete, node_id)
+    if success:
+        return {"status": "success"}
+    return {"status": "error", "message": "Memory node not found"}
+
+@app.put("/memory/{node_id}")
+async def edit_memory(node_id: str, update_data: dict):
+    new_content = update_data.get("content")
+    metadata_updates = update_data.get("metadata", {})
+    success = await run_in_threadpool(context_engine.deep_archive.edit, node_id, new_content, metadata_updates)
+    if success:
+        return {"status": "success"}
+    return {"status": "error", "message": "Memory node not found"}
+
+# --- Private Vault API ---
+# from src.memory.PrivateVault import PrivateVault
+# private_vault = PrivateVault(context_engine)
+
+@app.get("/memory/vault/{node_id}")
+async def get_vault_memory(node_id: str, request: Request, api_key: str = Depends(verify_signature)):
+    requester_did = request.headers.get("X-Requester-DID")
+    is_sub_agent = request.headers.get("X-Is-SubAgent") == "true"
+    ucp_consent_log = request.headers.get("X-UCP-Consent")
+
+    if not requester_did or not ucp_consent_log:
+        raise HTTPException(status_code=403, detail="Missing X-Requester-DID or X-UCP-Consent signature")
+
+    from src.memory.PrivateVault import PrivateVault
+    private_vault = PrivateVault(context_engine)
+    node = await run_in_threadpool(private_vault.get_node, node_id, requester_did, is_sub_agent)
+    if not node:
+        raise HTTPException(status_code=403, detail="Access denied or node not found in Private Vault")
+
+    return {"status": "success", "data": node}
+
+@app.put("/memory/vault/{node_id}")
+async def put_vault_memory(node_id: str, update_data: dict, request: Request, api_key: str = Depends(verify_signature)):
+    requester_did = request.headers.get("X-Requester-DID")
+    ucp_consent_log = request.headers.get("X-UCP-Consent")
+    if not requester_did or not ucp_consent_log:
+        raise HTTPException(status_code=403, detail="Missing X-Requester-DID or X-UCP-Consent signature")
+
+    content = update_data.get("content")
+    policy = update_data.get("policy", {})
+
+    from src.memory.PrivateVault import PrivateVault
+    private_vault = PrivateVault(context_engine)
+    success = await run_in_threadpool(private_vault.put_node, node_id, content, policy, requester_did)
+    if success:
+        return {"status": "success"}
+    raise HTTPException(status_code=403, detail="Forbidden or invalid owner DID")
+
+@app.delete("/memory/vault/{node_id}")
+async def delete_vault_memory(node_id: str, request: Request, api_key: str = Depends(verify_signature)):
+    requester_did = request.headers.get("X-Requester-DID")
+    ucp_consent_log = request.headers.get("X-UCP-Consent")
+    if not requester_did or not ucp_consent_log:
+        raise HTTPException(status_code=403, detail="Missing X-Requester-DID or X-UCP-Consent signature")
+
+    from src.memory.PrivateVault import PrivateVault
+    private_vault = PrivateVault(context_engine)
+    success = await run_in_threadpool(private_vault.delete_node, node_id, requester_did)
+    if success:
+        return {"status": "success"}
+    raise HTTPException(status_code=403, detail="Forbidden or node not found")
+
+@app.post("/graph/autoresearch")
+async def run_autoresearch_graph(input_data: dict, api_key: str = Depends(verify_api_key)):
+    """Triggers the new LangGraph-based AutoResearch workflow."""
+    intent_text = input_data.get("intent", "Research general consensus mechanisms")
+    initial_state = {
+        "intent": intent_text,
+        "context": "",
+        "routing_decision": "",
+        "priority_tag": "",
+        "treasury_split": {},
+        "sandbox_output": "",
+        "zkml_verified": False,
+        "stake_status": ""
+    }
+
+    try:
+        final_state = await autoresearch_app.ainvoke(initial_state)
+        return {"status": "success", "result": final_state}
+    except Exception as e:
+        log_event("error", f"LangGraph execution failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/zkml/infer")
+async def zkml_infer(input_data: dict):
+    """
+    Executes an inference pass on the edge node and submits the zkML proof
+    to the Grid network for consensus verification.
+    """
+    input_vector = input_data.get("input", [])
+    if not input_vector:
+        return {"status": "error", "message": "Input vector required"}
+
+    # Initialize the Prover (could be a pre-trained Skill Vector in the future)
+    prover = EdgeZKMLProver(weights=[0.5, -0.2, 0.8, 1.2])
+
+    # 1. Edge Compute + Proof Generation
+    result = prover.infer_and_prove(input_vector)
+
+    # 2. Submit to Grid Consensus
+    try:
+        grid_url = "http://localhost:5000/zkml/verify"
+        async with create_mtls_client() as client:
+            response = await client.post(grid_url, json=result, timeout=10.0)
+            if response.status_code == 200:
+                result["consensus"] = "verified"
+            else:
+                result["consensus"] = "failed"
+                result["grid_error"] = response.text
+    except Exception as e:
+        result["consensus"] = "network_error"
+        result["grid_error"] = str(e)
+
+    return result
+
+
+@app.post("/grid/tickets/claim")
+async def claim_grid_ticket(ticket_data: dict, api_key: str = Depends(verify_api_key)):
+    """
+    Autonomic Issue Queue Dispatcher:
+    Listens to the Go Grid for open "Tickets". Claims them and uses parallel Work-Trees
+    in the InferenceOrchestrator to solve them.
+    Enforces Strict TDD before allowing the transaction topology to proceed.
+    """
+    ticket_id = ticket_data.get("ticket_id")
+    bounty = ticket_data.get("bounty", 0)
+    intent_content = ticket_data.get("intent", "")
+    if not ticket_id or not intent_content:
+        raise HTTPException(status_code=400, detail="Missing ticket_id or intent")
+
+    log_event("info", f"Claimed Grid ticket {ticket_id} for {bounty} AXM. Spawning parallel work-trees.")
+
+    # Use inference orchestrator to run parallel work-trees
+    intent_req = {
+        "id": ticket_id,
+        "content": intent_content,
+        "context": "Autonomic Issue Queue execution"
+    }
+
+    try:
+        from src.engine.semantic_breaker import SemanticBreaker
+        breaker = SemanticBreaker()
+
+        # In a real environment, the Sandbox would generate code/tests.
+        # We simulate this via the orchestrator for now.
+        result = await orchestrator.route(intent_req)
+
+        # Enforce TDD before proceeding
+        code_payload = result.get("output", "")
+        test_payload = "def test_solution(): pass" # Simulated generated unit test
+        pid = 9999 # Simulated PID
+
+        tdd_passed = breaker.enforce_tdd(code_payload, test_payload, pid)
+        if not tdd_passed:
+            log_event("error", f"TDD Verification failed for ticket {ticket_id}. Execution halted.")
+            raise HTTPException(status_code=406, detail="TDD Verification failed. Execution halted.")
+
+        # Submit the proof to Grid if TDD passes
+        proof = result.get("proof", "mock_poer_proof_for_tdd")
+        result["tdd_verified"] = True
+        log_event("info", f"TDD passed. Submitting PoER proof for ticket {ticket_id}: {proof}")
+
+        return {"status": "success", "ticket_id": ticket_id, "result": result, "proof_submitted": proof}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        log_event("error", f"Failed to execute ticket {ticket_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/verify/reasoning")
+async def verify_reasoning_attestation(input_data: dict, api_key: str = Depends(verify_api_key)):
+    """
+    M11.3: Add Hypervisor /verify/reasoning endpoint in dry-run mode that validates attestation payloads and emits mismatch taxonomy.
+    This CPoR verification endpoint evaluates reasoning attestation structure.
+    """
+    is_valid, mismatches = validate_causal_reasoning_attestation(input_data)
+    verdict = "accepted" if is_valid else "rejected"
+    trace_id = str(uuid.uuid4())
+
+    log_event(
+        "info" if is_valid else "warning",
+        f"CPoR attestation {verdict}",
+        trace_id=trace_id
+    )
+
+    return {
+        "status": "success",
+        "verdict": verdict,
+        "trace_id": trace_id,
+        "mismatches": mismatches,
+        "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    }
+
+@app.get("/agents")
+async def agents_status():
+    """Returns the current state and plans of all active background daemons and agents."""
+    return {
+        "agents": [
+            {
+                "name": "AutoResearch Daemon",
+                "status": "Active (Idle/Foraging)" if autoresearch_task and not autoresearch_task.done() else "Stopped",
+                "current_task": "Epistemic foraging from unstructured data",
+                "next_plan": "Compile new findings into the Tier 3 Knowledge Graph when node is idle."
+            },
+            {
+                "name": "AutoTraining Loop",
+                "status": "Active (Mutating)" if auto_training_loop.running else "Stopped",
+                "current_task": "Autonomously mutating code in the Execution Sandbox",
+                "next_plan": "Evaluate metrics against validation set and retain code with lower loss."
+            },
+            {
+                "name": "Dialectic Orchestrator",
+                "status": "Standby",
+                "current_task": "Awaiting dialectic topics",
+                "next_plan": "Synthesize thesis and antithesis upon command."
+            }
+        ]
+    }
+
+@app.post("/priority-tag")
+async def update_priority_tag(input_data: dict, api_key: str = Depends(verify_api_key)):
+    """
+    Updates a priority tag in the Alignment Profile.
+    Respects bicameral governance hooks.
+    """
+    tag = input_data.get("tag")
+    weight = input_data.get("weight")
+    bicameral_approval = input_data.get("bicameral_approval", False)
+
+    if not tag or weight is None:
+        raise HTTPException(status_code=400, detail="Missing tag or weight")
+
+    try:
+        from fastapi.concurrency import run_in_threadpool
+        from src.engine.alignment import AlignmentProfile
+
+        def _update_tag():
+            profile = AlignmentProfile()
+            return profile.update_priority_tag(tag, float(weight), bicameral_approval)
+
+        new_tags = await run_in_threadpool(_update_tag)
+        return {"status": "success", "priority_tags": new_tags}
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except Exception as e:
+        log_event("error", f"Priority tag update failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

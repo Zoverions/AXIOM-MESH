@@ -1,0 +1,33 @@
+name: Fail-Closed Chaos Suite
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    branches: ["main"]
+  push:
+    branches: ["main"]
+
+jobs:
+  fail-closed-chaos-suite:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run M21.3 chaos suite gate
+        run: python3 scripts/run_fail_closed_chaos_suite.py
+
+      - name: Upload chaos suite evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m21-3-chaos-suite-evidence
+          path: evidence/reliability/chaos-suite/*.json
+          if-no-files-found: error

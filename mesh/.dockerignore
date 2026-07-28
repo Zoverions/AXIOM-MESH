@@ -1,0 +1,9 @@
+.data
+coverage
+node_modules
+test
+*.log
+*.sqlite
+*.zip
+production-data
+production-secrets
