@@ -27,8 +27,9 @@ reconstructs a 32-entry keyed ledger from the locked deprecated graph and
 proves that no candidate appears in the supported tip.
 Dedicated pilot capacity and availability, external telemetry, scheduled
 pilot-media recovery, pilot-owned secret-manager rotation, external
-deprecated-credential attestations, deny-egress enforcement, incident
-response, and independent security review remain open.
+deprecated-credential attestations, incident response, and independent
+security review remain open. Candidate-container deny-egress is implemented
+and remains subject to pilot-platform repetition.
 The current decision is recorded in the
 [readiness tracker](PRODUCTION-READINESS-TRACKER.md).
 
@@ -49,9 +50,11 @@ Only Gateway is externally reachable. Internal plaintext HTTP remains on
 loopback. Gateway is published only on host loopback. The container runs as
 UID/GID 10001, uses a read-only root filesystem, drops Linux capabilities,
 sets `no-new-privileges`, applies resource ceilings, and mounts data and
-secrets from explicit host paths. Compose does not enforce deny-egress;
-pilot and production environments must supply that control through the host
-firewall or orchestrator.
+secrets from explicit host paths. Compose uses a single `internal: true`
+network with explicit host-loopback Gateway publication. Production startup
+requires an isolated non-loopback link and rejects active IPv4 or IPv6 default
+routes. Protected CI proves intended ingress and blocked public TCP egress;
+other orchestrators must supply equivalent evidence.
 
 This boundary does not authorize remote internal traffic, multiple hosts,
 arbitrary code, external AI, chain settlement, or regulated domain workloads.

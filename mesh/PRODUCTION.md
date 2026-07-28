@@ -54,10 +54,18 @@ docker compose -f compose.production.yml up -d
 The compose policy uses a read-only root filesystem, a non-root numeric user,
 all Linux capabilities dropped, no-new-privileges, bounded memory/CPU/PIDs,
 explicit secrets, loopback-only host publication, bounded logs, and
-readiness-based health checks. Compose does not enforce deny-egress while also
-publishing Gateway to the host. Before a pilot, enforce outbound-deny policy
-with the host firewall or orchestrator and allow only explicitly approved
-adapter destinations.
+readiness-based health checks. Compose enforces deny-egress with an
+`internal: true` bridge network while preserving the explicit host-loopback
+Gateway publication. The production supervisor requires a non-loopback
+isolated link with no active IPv4 or IPv6 default route before it launches any
+service.
+
+Do not disable `AXIOM_REQUIRE_DENY_EGRESS` to accommodate another runtime.
+Equivalent orchestrator deployments must reproduce the default-route
+rejection and retain explicit ingress. The Docker daemon and host remain
+trusted. See
+[`docs/security/DENY-EGRESS-BOUNDARY.md`](../docs/security/DENY-EGRESS-BOUNDARY.md)
+for the proof, rollback rule, and adapter boundary.
 
 ## 3. Verify readiness
 
@@ -392,6 +400,7 @@ This package is a production container specification and local deployment
 surface. Its source and fail-closed supervisor are statically verified, and the
 real four-process stack, digest-pinned image build, composed container
 readiness, disposable-host recovery drill, controlled SLO/restart baseline,
-coordinated credential-rotation drill, and data-key rotation drill are
+coordinated credential-rotation drill, data-key rotation drill, and signed
+deny-egress probe are
 protected CI gates. This is not evidence of a live deployment, federated discovery, BFT consensus, audited
 arbitrary-code isolation, or external settlement.

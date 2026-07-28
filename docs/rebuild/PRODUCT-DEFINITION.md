@@ -166,8 +166,10 @@ remain on loopback until an audited mTLS transport adapter exists. The package
 must use a digest-pinned base, non-root identity, read-only root filesystem,
 dropped Linux capabilities, explicit secrets and resource ceilings,
 loopback-only host publication, bounded logs, and readiness-based health
-checks. Pilot and production environments must add host- or
-orchestrator-enforced deny-egress policy.
+checks. The Compose candidate must use an internal network, fail startup when
+an active IPv4 or IPv6 default route exists, preserve only explicit
+host-loopback Gateway ingress, and emit protected negative-path evidence.
+Other orchestrators must reproduce and independently verify this policy.
 
 Operational telemetry is bounded-cardinality and excludes user-controlled
 labels. Liveness is process-local; readiness follows the service dependency

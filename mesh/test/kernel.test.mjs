@@ -150,6 +150,11 @@ test('ECON-02 deterministic journals remain integer-balanced under generated loa
 });
 
 test('production configuration rejects generated credentials and remote plaintext internals', () => {
+  assert.equal(meshConfig({
+    environment: 'production',
+    autoBootstrap: false,
+    requireDenyEgress: true
+  }).requireDenyEgress, true);
   assert.throws(() => meshConfig({
     environment: 'production',
     autoBootstrap: true

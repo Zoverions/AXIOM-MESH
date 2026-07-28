@@ -91,6 +91,8 @@ Milestones:
 - external metrics collection and bounded alert delivery;
 - controlled load profile and initial latency/error/saturation baseline;
 - resource exhaustion and dependency-loss drills;
+- candidate-container deny-egress with preserved loopback ingress is
+  implemented; repeat and independently inspect it on the pilot platform;
 - incident command, severity, containment, and communication playbooks;
 - independent security review of the supported kernel and container policy;
 - signed pilot deployment and release dossiers.

@@ -19,6 +19,7 @@ services:
     environment:
       NODE_ENV: production
       AXIOM_AUTO_BOOTSTRAP: "false"
+      AXIOM_REQUIRE_DENY_EGRESS: "true"
       AXIOM_DATA_DIR: /var/lib/axiom-mesh
       AXIOM_DATA_KEY_FILE: /run/secrets/data-protection.key
       AXIOM_API_TOKENS_FILE: /run/secrets/api-tokens.json
@@ -61,5 +62,6 @@ secrets:
 networks:
   ingress:
     driver: bridge
+    internal: true
     driver_opts:
       com.docker.network.bridge.host_binding_ipv4: "127.0.0.1"

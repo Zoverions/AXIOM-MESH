@@ -318,6 +318,7 @@ export function verifyProductionDeployment({
   for (const required of [
     'USER 10001:10001',
     'HEALTHCHECK ',
+    'AXIOM_REQUIRE_DENY_EGRESS=true',
     'ENTRYPOINT ["node", "src/supervisor.mjs"]'
   ]) {
     if (!dockerfile.includes(required)) {
@@ -355,8 +356,10 @@ export function verifyProductionDeployment({
     '127.0.0.1:${AXIOM_GATEWAY_PORT_HOST:-8080}:8080',
     'AXIOM_DATA_KEY_FILE: /run/secrets/data-protection.key',
     'AXIOM_API_TOKENS_FILE: /run/secrets/api-tokens.json',
+    'AXIOM_REQUIRE_DENY_EGRESS: "true"',
     'healthcheck:',
     'driver: bridge',
+    'internal: true',
     'com.docker.network.bridge.host_binding_ipv4: "127.0.0.1"'
   ]) {
     if (!compose.includes(required)) {
@@ -373,7 +376,7 @@ export function verifyProductionDeployment({
   for (const boundary of [
     'four supervised Node.js processes',
     '`operations:read`',
-    'Compose does not enforce deny-egress',
+    'Compose enforces deny-egress',
     '40 measured',
     'Host mode does not enforce the candidate two-CPU ceiling',
     'all four Ed25519 service identities',
@@ -396,6 +399,9 @@ export function verifyProductionDeployment({
     'AXIOM_CREDENTIAL_AUDIT_KEY: ${{ secrets.AXIOM_CREDENTIAL_AUDIT_KEY }}',
     'npm run credential-history:audit',
     'axiom-credential-history-audit-evidence-${{ github.sha }}',
+    'Prove public probe target is reachable from the runner',
+    'node src/network-boundary.mjs',
+    'axiom-deny-egress-evidence-${{ github.sha }}',
     'node src/recovery-drill.mjs',
     'node src/backup-lifecycle-drill.mjs',
     'node src/slo-drill.mjs',
@@ -424,6 +430,11 @@ export function verifyProductionDeployment({
     compose_sha256: sha256(compose),
     backup_retention_policy_sha256: digestObject(backupRetentionPolicy),
     credential_revocation_ledger_sha256: digestObject(credentialRevocations),
+    deny_egress: {
+      compose_internal_network: true,
+      runtime_route_check: true,
+      signed_ci_probe: true
+    },
     documentation_sha256: sha256(productionDocs),
     workflow_sha256: sha256(workflow)
   };

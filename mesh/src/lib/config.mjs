@@ -33,11 +33,14 @@ export function meshConfig(overrides = {}) {
   const environment = overrides.environment ?? process.env.NODE_ENV ?? 'development';
   const dataDir = resolve(overrides.dataDir ?? process.env.AXIOM_DATA_DIR ?? join(MESH_ROOT, '.data'));
   const autoBootstrap = overrides.autoBootstrap ?? envBoolean('AXIOM_AUTO_BOOTSTRAP', environment !== 'production');
+  const requireDenyEgress = overrides.requireDenyEgress
+    ?? envBoolean('AXIOM_REQUIRE_DENY_EGRESS', false);
   const internalHost = overrides.internalHost ?? process.env.AXIOM_INTERNAL_HOST ?? '127.0.0.1';
   const config = {
     environment,
     dataDir,
     autoBootstrap,
+    requireDenyEgress,
     hosts: {
       gateway: overrides.gatewayHost ?? process.env.AXIOM_GATEWAY_HOST ?? '127.0.0.1',
       internal: internalHost

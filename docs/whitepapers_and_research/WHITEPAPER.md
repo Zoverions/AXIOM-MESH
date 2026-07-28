@@ -343,10 +343,14 @@ The production candidate uses:
 - readiness-based health checking;
 - a supervisor that terminates partial startup.
 
-Compose cannot both isolate the kernel on an internal network and publish
-Gateway to the host. The candidate therefore treats deny-egress as a required
-host or orchestrator policy for pilot promotion, not as a property already
-enforced by the Compose file.
+Compose places the kernel on a single internal bridge network while publishing
+Gateway only to host loopback. The production supervisor reads the effective
+Linux IPv4 and IPv6 route tables before launching children, requires an
+isolated non-loopback link, and rejects every active default route. Protected
+CI first proves its public TCP target is reachable from the runner, then proves
+the running container cannot connect while loopback readiness and published
+authenticated ingress remain functional. The Docker daemon and host remain
+trusted, and other orchestrators require equivalent independent evidence.
 
 Provisioning creates four service identities, trust records, an API principal
 registry, operator token, and data-protection key without printing secrets.
@@ -368,6 +372,7 @@ for unexpected dependencies. Release verification binds:
 - migration checksums;
 - rollback documentation;
 - container and workflow policy;
+- signed candidate-container deny-egress route and connection evidence;
 - deprecated credential-history ledger and protected reuse policy;
 - canonical documentation;
 - SPDX SBOM and provenance inputs.

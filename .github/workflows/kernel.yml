@@ -191,6 +191,23 @@ jobs:
             > "$RUNNER_TEMP/operations.json"
           node -e "const fs=require('node:fs');const report=JSON.parse(fs.readFileSync(process.argv[1]));if(report.status!=='ready'||report.services.length!==4)process.exit(1)" \
             "$RUNNER_TEMP/operations.json"
+      - name: Prove public probe target is reachable from the runner
+        run: |
+          node -e "const net=require('node:net');const socket=net.createConnection({host:'1.1.1.1',port:443});const timer=setTimeout(()=>{socket.destroy();process.exit(1)},5000);socket.once('connect',()=>{clearTimeout(timer);socket.destroy()});socket.once('close',()=>process.exit(0));socket.once('error',()=>process.exit(1))"
+      - name: Verify container deny-egress boundary
+        working-directory: mesh
+        run: |
+          docker compose -f compose.production.yml exec -T \
+            -e GITHUB_SHA="$GITHUB_SHA" \
+            kernel node src/network-boundary.mjs \
+            > "$RUNNER_TEMP/axiom-deny-egress-evidence.json"
+      - name: Upload signed deny-egress evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: axiom-deny-egress-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/axiom-deny-egress-evidence.json
+          if-no-files-found: error
+          retention-days: 90
       - name: Stop container
         if: always()
         working-directory: mesh

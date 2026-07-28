@@ -44,6 +44,7 @@ evidence-chain integrity, or unauthorized effects.
 | OPS-001 | Complete | Promote the container package only after CI image/runtime evidence passes | Registry promotion tied to workflow run 30376178779 |
 | OPS-002 | Complete | Exercise backup, tamper rejection, exact restore, and rollback on a disposable production host | Protected CI uploads signed, secret-free `axiom-recovery-drill-evidence-<commit>` artifacts with measured recovery point and recovery time |
 | OPS-003 | Complete | Establish an initial latency, error-rate, saturation, and restart baseline | Protected CI uploads signed `axiom-slo-baseline-evidence-<commit>` from a fixed 40-request, concurrency-4 production profile |
+| OPS-004 | Complete for candidate container | Enforce deny-egress while preserving explicit host-loopback Gateway ingress | Internal Compose network, fail-closed IPv4/IPv6 route check, runner positive control, in-container negative probe, and signed protected-CI evidence |
 | SEC-002 | Pending | Perform an independent threat-model and configuration review of the supported kernel | Findings ledger with severity and remediation owners |
 | SUP-001 | Complete | Produce a reproducible release dossier without embedding secrets | v0.11.0 checksums, SPDX SBOM, provenance, policy and registry digests |
 

@@ -3,6 +3,7 @@ import { once } from 'node:events';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { ValidationError } from './lib/canonical.mjs';
 import { meshConfig } from './lib/config.mjs';
+import { assertDenyEgressBoundary } from './network-boundary.mjs';
 
 const STARTUP_ORDER = Object.freeze([
   { service: 'grid', module: 'src/grid/server.mjs', port: 'grid', probe: '/health', expected: 'live' },
@@ -21,6 +22,7 @@ export async function runProductionSupervisor({
   config = meshConfig(),
   spawnImpl = spawn,
   fetchImpl = fetch,
+  denyEgressCheck = assertDenyEgressBoundary,
   startupTimeoutMs = 20_000,
   stdout = value => process.stdout.write(value),
   stderr = value => process.stderr.write(value)
@@ -28,6 +30,7 @@ export async function runProductionSupervisor({
   if (config.environment !== 'production' || config.autoBootstrap) {
     throw new ValidationError('The production supervisor requires NODE_ENV=production and disabled auto-bootstrap');
   }
+  if (config.requireDenyEgress) await denyEgressCheck();
   const children = [];
   let stopping = false;
   let resolveStop;
