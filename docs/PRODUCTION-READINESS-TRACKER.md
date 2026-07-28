@@ -24,7 +24,8 @@ artifact is reproducible and tied to the release commit or image digest.
 | Backup and restore | Pass | Protected CI provisions a disposable production workspace, exercises encrypted backup, tamper/live-lock/exact-digest rejection, restore and rollback, and uploads signed evidence | Repeat on every runtime change; add scheduled pilot-media restoration |
 | Observability | Implemented locally | Bounded metrics and authenticated operations tests | Integrate external collector |
 | SLO and capacity | Pass for initial CI baseline | Signed protected-CI evidence records a fixed authenticated load profile, latency percentiles, zero-error requirement, throughput, CPU/memory observations, peak concurrency, and graceful restart | Repeat on dedicated pilot hardware under enforced resource limits and expected traffic |
-| Credential rotation | Pass for service/API candidate lifecycle | Protected CI rotates all four Ed25519 identities, coordinated trust records, and the operator token against the real stack; proves inactive-credential rejection, dual-signed Grid key lineage, exact encrypted rollback, and unchanged data-key custody | Repeat under pilot secret custody; implement a separate data-key re-encryption migration |
+| Credential rotation | Pass for service/API candidate lifecycle | Protected CI rotates all four Ed25519 identities, coordinated trust records, and the operator token against the real stack; proves inactive-credential rejection, dual-signed Grid key lineage, exact encrypted rollback, and unchanged data-key custody | Repeat under pilot secret custody |
+| Data-key rotation | Pass for candidate-host lifecycle | Protected CI re-encrypts the live Grid, nested backup state, retained credential packages, and recovery database copies; proves wrong-key rejection, rotated-key restore, killed-cutover journal recovery, exact key restoration, and post-rotation state preservation | Repeat with pilot secret-manager versioning, escrow, approval, and destruction evidence |
 | Independent security review | Pending | Internal evidence only | Commission scoped review |
 | Incident response | Partial | Security and rollback policies exist | Run tabletop exercise |
 | Release governance | Pass | Protected `main`, release verifier, and [v0.11.0 dossier](https://github.com/Zoverions/AXIOM-MESH/releases/tag/v0.11.0) | Maintain for every release |
@@ -34,8 +35,8 @@ artifact is reproducible and tied to the release commit or image digest.
 The following block production promotion:
 
 1. no dedicated pilot-hardware capacity validation or 30-day availability observation;
-2. no pilot-secret-custody rotation repetition, data-key re-encryption drill,
-   or scheduled pilot-media restore;
+2. no pilot-secret-custody rotation repetition or scheduled pilot-media
+   restore;
 3. no independent review of the supported kernel and deployment policy;
 4. no host- or orchestrator-enforced deny-egress evidence;
 5. no documented revocation inventory for credentials exposed in deprecated

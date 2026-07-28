@@ -94,6 +94,10 @@ node src/verify-sync.mjs \
   authenticated encryption. Production requires an externally provisioned
   32-byte `AXIOM_DATA_KEY` or protected key file; development bootstrap creates
   a mode-0600 local key.
+- The stopped-runtime data-key lifecycle re-encrypts the live Grid, backup
+  envelopes and nested protected columns, credential recovery packages, and
+  recovery database copies. Signed rewrap history, key-last journaled cutover,
+  wrong-key rejection, and state-preserving rollback are exercised in CI.
 - Grid verifies the signed evidence chain before accepting traffic and
   transactionally rebuilds all derived tables from that log on restart, so
   direct edits to balances, consents, approvals, memory, or registries do not

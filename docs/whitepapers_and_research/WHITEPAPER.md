@@ -174,9 +174,18 @@ credential set is authenticated-encrypted before replacement, and exact
 rollback preserves the rotated set in a second encrypted package.
 
 This lifecycle does not replace external revocation evidence for credentials
-from deprecated history. It also excludes the data-protection key: changing
-that key requires re-encryption of durable Grid state, backups, and retained
-recovery packages rather than a file-only credential swap.
+from deprecated history. The data-protection key uses a separate offline
+protocol because it cannot be changed as a file-only credential swap. The
+protocol re-encrypts the live Grid, recovery database copies, backup envelopes
+and their nested protected columns, and retained credential packages. Signed
+rewrap nodes bind each new ciphertext—and each transformed backup plaintext
+digest—to the prior signed state. The new key is committed last through a
+recoverable multi-file journal. A completed rotation can be rolled back by
+re-encrypting the current evidence state rather than restoring a stale
+database, while an interrupted cutover restores its recorded originals.
+If service credentials were rotated during the new-key window, rollback
+retains only the derived credential-manifest authentication key, encrypted
+under the restored data key; the retired data-encryption key is not retained.
 
 ## 6. Policy and approvals
 
@@ -281,7 +290,9 @@ This is offline exchange, not peer discovery, transport, federation, or BFT.
 Grid snapshots are encrypted, signed, context-bound, and exact-digest
 verified. Restore requires a stopped Grid, preserves the replaced database,
 and records pending recovery so the next trusted startup emits signed recovery
-evidence.
+evidence. When data-key rotation changes snapshot ciphertext or nested
+protected columns, a trusted Grid-signed rewrap chain maps the active storage
+digest back to the original backup manifest and preserves its evidence head.
 
 ## 11. Observability and operations
 

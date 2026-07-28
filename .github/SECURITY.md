@@ -43,11 +43,20 @@ HKDF-derived secret key so the manifest is not a token-hash oracle. Signed
 drill evidence must contain only public identifiers and outcomes, never
 tokens, private keys, or absolute secret paths.
 
-The data-protection key is outside this operation. Its rotation requires a
-separate re-encryption migration for Grid data, backups, and retained
-credential packages. Local rotation evidence also does not substitute for an
-external record that credentials exposed in deprecated history have been
-revoked at every prior custodian and deployment.
+The data-protection key remains outside the service/API operation and has its
+own stopped-runtime lifecycle. That transaction re-encrypts the live Grid,
+recovery database copies, encrypted backup snapshots including their nested
+protected columns, and retained credential rollback/forward packages. Signed
+rewrap chains remain anchored to the original manifests. The replacement key
+is installed last; an on-disk journal supports recovery from a killed
+multi-file cutover, and only the active rotation can perform a
+state-preserving rollback. Rollback retains an encrypted derived
+credential-manifest authentication key when needed for later verification,
+not the retired data-encryption key.
+
+Neither local rotation workflow substitutes for external revocation,
+secret-manager versioning, or destruction evidence at prior custodians and
+deployments.
 
 ## Reporting a vulnerability
 

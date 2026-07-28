@@ -102,6 +102,19 @@ fail, historical Grid evidence remains valid through a dual-signed key
 transition, and the original set is restored exactly. It does not rotate the
 data-protection key or prove external revocation of historic credentials.
 
+Exercise the separate data-protection-key lifecycle in another empty
+workspace:
+
+```bash
+npm run data-key-rotation:drill -- /tmp/axiom-data-key-rotation-drill
+```
+
+This drill boots the real stack, rotates and re-encrypts the live Grid,
+encrypted backups, retained credential packages, and recovery database copies,
+proves the retired key fails, restores a backup under the new key, rolls back
+without losing later evidence, and proves the rolled-back key then fails. Its
+signed JSON contains outcomes and digests, never key material.
+
 ## Canonical documentation
 
 - [Technical white paper](docs/whitepapers_and_research/WHITEPAPER.md)
@@ -194,6 +207,10 @@ supported entrypoints.
   trust records, and the operator API token; dual-signed Grid key lineage keeps
   historical evidence verifiable, and an authenticated-encrypted package
   supports exact rollback without retaining retired private keys.
+- Offline data-key rotation re-encrypts the live Grid and every supported
+  recovery context, chains signed ciphertext/plaintext transitions to original
+  manifests, switches the key last, and supports journaled interruption
+  recovery plus state-preserving rollback.
 - Owner-bound admitted nodes can exchange independently verifiable signed
   causal-update bundles. Version vectors preserve concurrent heads, replays and
   node-counter equivocation fail closed, and conflict resolution must name

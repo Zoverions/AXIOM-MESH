@@ -32,6 +32,40 @@ const GENESIS_HASH = '0'.repeat(64);
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const CAPSULE_ID = /^[a-z][a-z0-9.-]{2,127}$/;
 const VERSION = /^[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?$/;
+const PROTECTED_COLUMN_MAPPINGS = Object.freeze([
+  ['events', 'event_id', ['payload_json']],
+  ['intents', 'intent_id', ['result_json', 'error_json']],
+  ['capsules', 'digest', ['manifest_json']],
+  ['consents', 'consent_id', ['scopes_json']],
+  ['proposals', 'proposal_id', ['action_json', 'rollback_json']],
+  ['nodes', 'node_id', [
+    'capabilities_json',
+    'public_key_json',
+    'quarantine_reason_json'
+  ]],
+  ['storage_offers', 'offer_id', ['regions_json', 'signature_json']],
+  ['exports', 'export_id', ['scope_json', 'manifest_json']],
+  ['backups', 'backup_id', ['manifest_json']],
+  ['memory_objects', 'object_id', ['payload_json']],
+  ['memory_edges', 'edge_id', ['metadata_json']],
+  ['accounting_journals', 'journal_id', ['memo_json']],
+  ['accounting_entries', "journal_id || ':' || line_no", ['metadata_json']],
+  ['imports', 'import_id', ['manifest_json', 'diff_json']],
+  [
+    'import_records',
+    "import_id || ':' || record_type || ':' || record_key",
+    ['record_json']
+  ],
+  ['policy_overlays', 'overlay_id', ['policy_json', 'rollback_reason_json']],
+  ['governance_appeals', 'appeal_id', ['grounds_json']],
+  ['sync_bundles', 'bundle_digest', ['result_json']],
+  ['sync_updates', 'update_id', [
+    'value_json',
+    'vector_json',
+    'resolves_json',
+    'signature_json'
+  ]]
+]);
 
 export class GridStore {
   constructor({ path, dataDir, identity, protector }) {
@@ -249,43 +283,17 @@ export class GridStore {
   }
 
   migrateProtectedColumns() {
-    const mappings = [
-      ['events', 'event_id', ['payload_json']],
-      ['intents', 'intent_id', ['result_json', 'error_json']],
-      ['capsules', 'digest', ['manifest_json']],
-      ['consents', 'consent_id', ['scopes_json']],
-      ['proposals', 'proposal_id', ['action_json', 'rollback_json']],
-      ['nodes', 'node_id', ['capabilities_json', 'public_key_json', 'quarantine_reason_json']],
-      ['storage_offers', 'offer_id', ['regions_json', 'signature_json']],
-      ['exports', 'export_id', ['scope_json', 'manifest_json']],
-      ['backups', 'backup_id', ['manifest_json']],
-      ['memory_objects', 'object_id', ['payload_json']],
-      ['memory_edges', 'edge_id', ['metadata_json']],
-      ['accounting_journals', 'journal_id', ['memo_json']],
-      ['accounting_entries', 'journal_id || \':\' || line_no', ['metadata_json']],
-      ['imports', 'import_id', ['manifest_json', 'diff_json']],
-      ['import_records', 'import_id || \':\' || record_type || \':\' || record_key', ['record_json']],
-      ['policy_overlays', 'overlay_id', ['policy_json', 'rollback_reason_json']],
-      ['governance_appeals', 'appeal_id', ['grounds_json']],
-      ['sync_bundles', 'bundle_digest', ['result_json']],
-      ['sync_updates', 'update_id', [
-        'value_json',
-        'vector_json',
-        'resolves_json',
-        'signature_json'
-      ]]
-    ];
     this.transaction(() => {
-      for (const [table, keyColumn, columns] of mappings) {
+      for (const [table, keyExpression, columns] of PROTECTED_COLUMN_MAPPINGS) {
         const rows = this.db.prepare(
-          `SELECT ${[keyColumn, ...columns].join(', ')} FROM ${table}`
+          `SELECT ${keyExpression} AS protection_key, ${columns.join(', ')} FROM ${table}`
         ).all();
         for (const row of rows) {
           for (const column of columns) {
             const serialized = row[column];
             if (serialized === null || serialized === undefined) continue;
             if (this.protector.isProtected(serialized)) {
-              this.openJson(table, column, row[keyColumn], serialized);
+              this.openJson(table, column, row.protection_key, serialized);
               continue;
             }
             let value;
@@ -294,9 +302,9 @@ export class GridStore {
             } catch {
               throw new ValidationError(`Legacy ${table}.${column} value is not valid JSON`);
             }
-            this.db.prepare(`UPDATE ${table} SET ${column} = ? WHERE ${keyColumn} = ?`).run(
-              this.protectJson(table, column, row[keyColumn], value),
-              row[keyColumn]
+            this.db.prepare(`UPDATE ${table} SET ${column} = ? WHERE ${keyExpression} = ?`).run(
+              this.protectJson(table, column, row.protection_key, value),
+              row.protection_key
             );
           }
         }
@@ -2475,7 +2483,7 @@ function normalizeStoredGovernanceAction(action) {
   };
 }
 
-function loadGridVerificationKeys(dataDir, identity) {
+export function loadGridVerificationKeys(dataDir, identity) {
   const known = new Map([[identity.keyId, identity.publicKey]]);
   const rotationRoot = join(dataDir, 'credential-rotations');
   let entries;
@@ -2539,6 +2547,52 @@ function loadGridVerificationKeys(dataDir, identity) {
     }
   }
   return known;
+}
+
+export function reencryptGridProtectedColumns({
+  db,
+  sourceProtector,
+  targetProtector
+}) {
+  if (!db || !sourceProtector || !targetProtector) {
+    throw new ValidationError('Grid re-encryption dependencies are missing');
+  }
+  let values = 0;
+  const tables = {};
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    for (const [table, keyExpression, columns] of PROTECTED_COLUMN_MAPPINGS) {
+      let tableValues = 0;
+      const rows = db.prepare(
+        `SELECT ${keyExpression} AS protection_key, ${columns.join(', ')} FROM ${table}`
+      ).all();
+      for (const row of rows) {
+        const protectionKey = row.protection_key;
+        for (const column of columns) {
+          const serialized = row[column];
+          if (serialized === null || serialized === undefined) continue;
+          const context = `axiom:${table}.${column}:${protectionKey}`;
+          const value = sourceProtector.open(serialized, context);
+          const reencrypted = targetProtector.seal(value, context);
+          targetProtector.open(reencrypted, context);
+          db.prepare(
+            `UPDATE ${table} SET ${column} = ? WHERE ${keyExpression} = ?`
+          ).run(reencrypted, protectionKey);
+          tableValues += 1;
+          values += 1;
+        }
+      }
+      tables[table] = tableValues;
+    }
+    db.exec('COMMIT');
+  } catch (error) {
+    db.exec('ROLLBACK');
+    throw error;
+  }
+  return {
+    protected_values: values,
+    tables
+  };
 }
 
 function parseGridKeyTransition(manifest) {
