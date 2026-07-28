@@ -27,8 +27,8 @@ the [readiness tracker](PRODUCTION-READINESS-TRACKER.md).
 
 ## Baseline - clean-room kernel 0.11
 
-**State:** code complete; release publication and container CI evidence in
-progress.
+**State:** code complete; protected repository, release, container, recovery,
+rotation, retention, and repository-credential evidence are operational.
 
 Delivered:
 
@@ -61,7 +61,9 @@ Milestones:
 5. build the digest-pinned image in GitHub Actions;
 6. pass the composed readiness and authenticated operations probe;
 7. publish the 0.11 release dossier, checksums, SBOM, and provenance;
-8. document revocation of all credentials exposed in deprecated history.
+8. inventory and revoke 32 conservative deprecated-history credential
+   candidates from supported repository trust, with signed protected-CI
+   evidence and an explicit queue for outside-provider attestations.
 
 Exit criteria:
 

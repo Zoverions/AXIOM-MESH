@@ -68,9 +68,12 @@ across live and retained recovery state, proves wrong-key rejection in both
   recoverable quarantine with killed-process recovery, and restores a retained
   backup in protected CI on every relevant change and weekly. Dedicated
   pilot-hardware capacity and availability validation, enforced deny-egress
-  deployment policy, pilot-owned secret/media custody, credential-history
-  revocation, and independent security review are still required before
-  production promotion.
+  deployment policy, pilot-owned secret/media custody, external
+  credential-history attestations, and independent security review are still
+  required before production promotion. The repository-side history audit is
+  implemented: a secret-free keyed ledger covers 32 conservative candidates,
+  revokes each from supported trust, and makes supported-tip reuse a protected
+  CI failure.
 
 See:
 
@@ -110,7 +113,8 @@ repository is not implementation or deployment evidence.
 
 ## Immediate next milestone
 
-The next milestone is external credential-history revocation evidence,
+The next milestone is disposing the 32 external credential-history
+attestations,
 pilot-owned secret and media custody with scheduled on-media recovery,
 deny-egress, incident response, and independent security review for a
 controlled single-node pilot. Work is ordered in

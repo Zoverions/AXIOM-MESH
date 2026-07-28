@@ -166,6 +166,7 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
     productionDocs,
     packageJson,
     backupRetentionPolicy,
+    credentialRevocations,
     workflow,
     repositoryIgnore
   ] = await Promise.all([
@@ -175,6 +176,7 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
     readFile(new URL('PRODUCTION.md', root), 'utf8'),
     readFile(new URL('package.json', root), 'utf8').then(JSON.parse),
     readFile(new URL('config/backup-retention.json', root), 'utf8').then(JSON.parse),
+    readFile(new URL('config/credential-revocations.json', root), 'utf8').then(JSON.parse),
     readFile(new URL('../.github/workflows/kernel.yml', root), 'utf8'),
     readFile(new URL('../.gitignore', root), 'utf8')
   ]);
@@ -185,6 +187,7 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
     productionDocs,
     packageJson,
     backupRetentionPolicy,
+    credentialRevocations,
     workflow,
     repositoryIgnore
   });
@@ -197,6 +200,7 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
     productionDocs,
     packageJson,
     backupRetentionPolicy,
+    credentialRevocations,
     workflow,
     repositoryIgnore
   }), /digest-pinned/);
@@ -207,6 +211,7 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
     productionDocs,
     packageJson,
     backupRetentionPolicy,
+    credentialRevocations,
     workflow,
     repositoryIgnore
   }), /read_only/);
@@ -220,6 +225,7 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
       ...backupRetentionPolicy,
       minimum_verified_backups: 1
     },
+    credentialRevocations,
     workflow,
     repositoryIgnore
   }), /minimum_verified_backups/);

@@ -15,6 +15,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/PRODUCTION-READINESS-TRACKER.md',
   'docs/PROJECT-STATUS-2026.md',
   'docs/REPOSITORY-MIGRATION.md',
+  'docs/security/CREDENTIAL-HISTORY-REVOCATION.md',
   'docs/releases/0.11.0.md',
   'docs/whitepapers_and_research/WHITEPAPER.md',
   'mesh/PRODUCTION.md'
@@ -32,6 +33,10 @@ const REQUIRED_CONTENT = Object.freeze({
   'docs/PRODUCTION-READINESS-TRACKER.md': ['## Current gate status', 'Not production-promoted'],
   'docs/PROJECT-STATUS-2026.md': ['## Current release', '## What is not claimed'],
   'docs/REPOSITORY-MIGRATION.md': ['## Provenance map', '## Credential boundary'],
+  'docs/security/CREDENTIAL-HISTORY-REVOCATION.md': [
+    '## Repository trust result',
+    '## External attestation procedure'
+  ],
   'docs/releases/0.11.0.md': ['## Container status', '## Security action'],
   'docs/whitepapers_and_research/WHITEPAPER.md': ['## Non-claims', '## Reproducibility'],
   'mesh/PRODUCTION.md': ['not evidence of a live deployment']
@@ -42,6 +47,7 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/ROADMAP.md': 2_000,
   'docs/PRODUCTION-GRADE.md': 3_000,
   'docs/PROJECT-STATUS-2026.md': 1_500,
+  'docs/security/CREDENTIAL-HISTORY-REVOCATION.md': 2_500,
   'docs/whitepapers_and_research/WHITEPAPER.md': 7_000
 });
 

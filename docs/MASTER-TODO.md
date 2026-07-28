@@ -35,7 +35,7 @@ evidence-chain integrity, or unauthorized effects.
 | REP-003 | Complete | Protect `main` against deletion and force pushes; require green verification | Required kernel/container/CodeQL checks; deletion and force pushes disabled |
 | REL-001 | Complete | Publish the verified 0.11.0 clean-room baseline | [v0.11.0 prerelease](https://github.com/Zoverions/AXIOM-MESH/releases/tag/v0.11.0) with source checksum, SPDX SBOM, and provenance |
 | REL-002 | Complete | Run the GitHub image build and composed container readiness drill | [Workflow run 30376178779](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30376178779) passed both jobs |
-| SEC-001 | Pending | Record revocation of every credential from deprecated history | Rotation inventory and trust-store comparison |
+| SEC-001 | Complete for repository trust | Record revocation of every credential candidate from deprecated history | Keyed 32-entry ledger, exact-history rescan, supported-tip comparison, and protected signed evidence; external attestations remain a promotion gate |
 
 ## P0 - production candidate closure
 

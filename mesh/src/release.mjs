@@ -14,6 +14,7 @@ import {
   verifyRegistryMarkers
 } from './status.mjs';
 import { CANONICAL_DOCUMENTS, verifyCanonicalDocumentation } from './check-docs.mjs';
+import { validateCredentialRevocationLedger } from './credential-history-audit.mjs';
 
 const REPOSITORY_ROOT = dirname(MESH_ROOT);
 const SUPPORTED_DEPENDENCY_MANIFESTS = new Set([
@@ -53,6 +54,11 @@ export async function verifyReleaseReadiness() {
       'config',
       'backup-retention.json'
     ),
+    credentialRevocations: join(
+      MESH_ROOT,
+      'config',
+      'credential-revocations.json'
+    ),
     package: join(MESH_ROOT, 'package.json'),
     lock: join(MESH_ROOT, 'package-lock.json'),
     rootPackage: join(REPOSITORY_ROOT, 'package.json'),
@@ -71,6 +77,7 @@ export async function verifyReleaseReadiness() {
     registry,
     policy,
     backupRetentionPolicy,
+    credentialRevocations,
     packageJson,
     lock,
     rootPackage,
@@ -88,6 +95,7 @@ export async function verifyReleaseReadiness() {
     readJson(paths.registry),
     readJson(paths.policy),
     readJson(paths.backupRetentionPolicy),
+    readJson(paths.credentialRevocations),
     readJson(paths.package),
     readJson(paths.lock),
     readJson(paths.rootPackage),
@@ -105,6 +113,9 @@ export async function verifyReleaseReadiness() {
   const registryResult = validateCapabilityRegistry(registry);
   validatePolicy(policy);
   validateBackupRetentionPolicy(backupRetentionPolicy);
+  const credentialRevocation = validateCredentialRevocationLedger(
+    credentialRevocations
+  );
   if (packageJson.version !== registry.kernel_version || lock.version !== packageJson.version) {
     throw new ValidationError('Package, lockfile, and capability registry versions must match');
   }
@@ -150,6 +161,7 @@ export async function verifyReleaseReadiness() {
     productionDocs,
     packageJson,
     backupRetentionPolicy,
+    credentialRevocations,
     workflow,
     repositoryIgnore
   });
@@ -258,6 +270,7 @@ export async function verifyReleaseReadiness() {
       counts: registryResult.counts
     },
     policy_digest: digestObject(policy),
+    credential_revocation: credentialRevocation,
     operator_surface_digest: digestObject(operatorSurface),
     deployment,
     migrations: migrationEvidence,
@@ -290,10 +303,12 @@ export function verifyProductionDeployment({
   productionDocs,
   packageJson,
   backupRetentionPolicy,
+  credentialRevocations,
   workflow,
   repositoryIgnore
 }) {
   validateBackupRetentionPolicy(backupRetentionPolicy);
+  validateCredentialRevocationLedger(credentialRevocations);
   const pinnedBase = dockerfile.match(
     /^FROM (node:24\.18\.0-alpine3\.23)@(sha256:[a-f0-9]{64})$/m
   );
@@ -365,7 +380,8 @@ export function verifyProductionDeployment({
     'dual-signed lineage',
     'does **not** rotate',
     'not evidence of a live deployment',
-    'recoverable quarantine'
+    'recoverable quarantine',
+    'credential-history audit'
   ]) {
     if (!productionDocs.includes(boundary)) {
       throw new ValidationError(`Production operator documentation is missing boundary: ${boundary}`);
@@ -376,6 +392,10 @@ export function verifyProductionDeployment({
     'cron: "17 4 * * 1"',
     'node-version: "24.18.0"',
     'npm ci --ignore-scripts',
+    'fetch-depth: 0',
+    'AXIOM_CREDENTIAL_AUDIT_KEY: ${{ secrets.AXIOM_CREDENTIAL_AUDIT_KEY }}',
+    'npm run credential-history:audit',
+    'axiom-credential-history-audit-evidence-${{ github.sha }}',
     'node src/recovery-drill.mjs',
     'node src/backup-lifecycle-drill.mjs',
     'node src/slo-drill.mjs',
@@ -403,6 +423,7 @@ export function verifyProductionDeployment({
     dockerignore_sha256: sha256(dockerignore),
     compose_sha256: sha256(compose),
     backup_retention_policy_sha256: digestObject(backupRetentionPolicy),
+    credential_revocation_ledger_sha256: digestObject(credentialRevocations),
     documentation_sha256: sha256(productionDocs),
     workflow_sha256: sha256(workflow)
   };

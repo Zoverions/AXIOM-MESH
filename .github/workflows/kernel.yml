@@ -43,6 +43,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@v7
         with:
@@ -59,6 +60,20 @@ jobs:
           npm audit --omit=dev
           npm run check
           npm run release:verify
+      - name: Verify deprecated credential inventory and supported trust
+        working-directory: mesh
+        env:
+          AXIOM_CREDENTIAL_AUDIT_KEY: ${{ secrets.AXIOM_CREDENTIAL_AUDIT_KEY }}
+        run: |
+          npm run credential-history:audit \
+            > "$RUNNER_TEMP/axiom-credential-history-audit-evidence.json"
+      - name: Upload signed credential-history audit evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: axiom-credential-history-audit-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/axiom-credential-history-audit-evidence.json
+          if-no-files-found: error
+          retention-days: 90
       - name: Run disposable-host recovery drill
         working-directory: mesh
         run: |
