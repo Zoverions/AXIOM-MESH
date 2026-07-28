@@ -15,28 +15,28 @@ artifact is reproducible and tied to the release commit or image digest.
 |---|---|---|---|
 | Source integrity | Pass | Verified clean-room tree and package checksums | Publish release provenance |
 | Capability claims | Pass | Registry, generated status, claim-marker checks | Maintain on every change |
-| Kernel tests | Pass at packaged checkpoint | 28-test release evidence | Re-run on protected GitHub `main` |
-| Host production drill | Pass at packaged checkpoint | Real four-process supervisor test | Preserve CI evidence |
+| Kernel tests | Pass | 30-test suite in [GitHub run 30374587847](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30374587847) | Require on protected `main` |
+| Host production drill | Pass | Real four-process supervisor test in the same run | Preserve on every runtime change |
 | Container source policy | Pass | Dockerfile/Compose static release gate | Maintain digest pin |
-| Container image build | Pending | No published workflow run | Run GitHub container job |
-| Composed container drill | Pending | No published workflow run | Run readiness and operations probe |
-| Dependency audit | Pass at packaged checkpoint | Dependency-free locks; zero-vulnerability audits | Re-run in CI |
+| Container image build | Pass | Digest-pinned build in [GitHub run 30374587847](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30374587847) | Record released image digest |
+| Composed container drill | Pass | Readiness, authenticated operations, and teardown in the same run | Repeat for release commit |
+| Dependency audit | Pass | Root and kernel lock audits in the same run | Maintain required check |
 | Backup and restore | Implemented, drill pending | Unit/integration coverage | Run disposable-host exercise |
 | Observability | Implemented locally | Bounded metrics and authenticated operations tests | Integrate external collector |
 | SLO and capacity | Pending | No controlled load baseline | Define profile and measure |
 | Credential rotation | Pending | Provisioning is implemented | Run trust-update and rollback drill |
 | Independent security review | Pending | Internal evidence only | Commission scoped review |
 | Incident response | Partial | Security and rollback policies exist | Run tabletop exercise |
-| Release governance | Pending | Local release verifier exists | Protect branch and approve dossier |
+| Release governance | Partial | `main` is default; legacy line renamed; clean release verifier exists | Protect branch and approve dossier |
 
 ## Promotion blockers
 
 The following block production promotion:
 
-1. no published container build/readiness evidence;
-2. no measured load, latency, saturation, or restart baseline;
-3. no deployment-host backup/restore and credential-rotation drill;
-4. no independent review of the supported kernel and deployment policy;
+1. no measured load, latency, saturation, or restart baseline;
+2. no deployment-host backup/restore and credential-rotation drill;
+3. no independent review of the supported kernel and deployment policy;
+4. no host- or orchestrator-enforced deny-egress evidence;
 5. no protected default branch or approved release dossier;
 6. no documented revocation inventory for credentials exposed in deprecated
    history.

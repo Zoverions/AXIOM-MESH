@@ -19,7 +19,7 @@ inherited by the default branch.
 
 The executable source of truth is
 [`mesh/config/capabilities.json`](../mesh/config/capabilities.json). The
-generated [capability status](rebuild/STATUS.md) records 17 implemented, 3
+generated [capability status](rebuild/STATUS.md) records 18 implemented, 2
 experimental, 4 specified, 9 adapter-required, and 4 disabled capabilities.
 
 ## Implemented kernel scope
@@ -46,10 +46,12 @@ host publication, and readiness checks. Static deployment policy and a real
 host-mode four-process drill are implemented. Host- or orchestrator-enforced
 deny-egress remains required before pilot promotion.
 
-The container capability remains experimental until a published CI run builds
-the image and passes the composed runtime drill. After that, a disposable-host
-backup/restore exercise, SLO baseline, security review, and release dossier are
-still required before production promotion.
+The container package is implemented and verified by
+[GitHub run 30374587847](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30374587847),
+which built the digest-pinned image and passed composed readiness,
+authenticated operations, and teardown. A disposable-host backup/restore
+exercise, SLO baseline, deny-egress deployment policy, security review, and
+release dossier are still required before production promotion.
 
 See:
 
@@ -60,9 +62,10 @@ See:
 
 ## Repository transition
 
-The former GitHub `Main` line is deprecated. Credentials found anywhere in
-that history are permanently untrusted. The lowercase `main` line is the only
-supported development branch going forward. The 0.11 release package and
+The former GitHub `Main` line is preserved as
+`deprecated/legacy-main-pre-clean-room`. Credentials found anywhere in that
+history are permanently untrusted. Lowercase `main` is now the GitHub default
+and the only supported development branch. The 0.11 release package and
 original rebuilt checkpoints remain provenance artifacts, not alternate
 production branches.
 
@@ -85,6 +88,6 @@ repository is not implementation or deployment evidence.
 
 ## Immediate next milestone
 
-The next milestone is a protected GitHub `main` with green kernel and container
-jobs, a published 0.11 release dossier, and credential-history revocation
-evidence. Work is ordered in [`docs/MASTER-TODO.md`](MASTER-TODO.md).
+The next milestone is branch protection for the now-green GitHub `main`, a
+published 0.11 release dossier, and credential-history revocation evidence.
+Work is ordered in [`docs/MASTER-TODO.md`](MASTER-TODO.md).

@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=9e444ef8312f142fd5233d3ef26df315411628a0eb1cea33b7d49a1f1e4f49cb -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=db91ef1a2e6cd23ef0f374fb88704235fdd66c4ce18c3f93627a4e638681da8d -->
 # AXIOM-MESH Rebuild Requirements
 
 **Normative language:** MUST, MUST NOT, SHOULD, and MAY are used in their usual

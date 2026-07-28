@@ -239,15 +239,18 @@
     {
       "id": "operations.container-package",
       "family": "operations",
-      "status": "experimental",
-      "summary": "A digest-pinned non-root container package statically verifies hardening and passes a real four-process host-mode production drill; an actual image build and container runtime drill are still required.",
-      "evidence": ["mesh/test/operations.test.mjs"]
+      "status": "implemented",
+      "summary": "A digest-pinned non-root container package is statically release-gated, passes the four-process host drill, and is built and exercised through the published composed readiness workflow.",
+      "evidence": [
+        "mesh/test/operations.test.mjs",
+        ".github/workflows/kernel.yml"
+      ]
     },
     {
       "id": "operations.installer-observability-release",
       "family": "operations",
       "status": "experimental",
-      "summary": "Release tooling and observability are executable, while the candidate container package is statically gated and host-runtime tested; legacy installer replacement, external alert delivery, image/container drills, and independently evidenced live deployment remain incomplete."
+      "summary": "Release tooling, observability, and container verification are executable; legacy installer replacement, external alert delivery, and independently evidenced live deployment remain incomplete."
     }
   ]
 }

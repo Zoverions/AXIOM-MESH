@@ -18,9 +18,11 @@ The intent pipeline, local encrypted state, evidence chain, operator surfaces,
 observability, explicit secret provisioning, supervisor, host-mode drill, and
 container policy are implemented.
 
-The image build and composed container drill still need published CI evidence.
+The image build and composed container drill pass in
+[GitHub run 30374587847](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30374587847).
 Capacity, SLO, external telemetry, credential rotation, deployment-host
-recovery, incident response, and independent security review remain open.
+recovery, deny-egress enforcement, incident response, and independent security
+review remain open.
 The current decision is recorded in the
 [readiness tracker](PRODUCTION-READINESS-TRACKER.md).
 

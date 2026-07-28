@@ -4,7 +4,7 @@
 Registry schema: `axiom-capabilities.v1`
 Kernel version: `0.11.0`
 Evidence verified: `2026-07-26`
-Registry digest: `9e444ef8312f142fd5233d3ef26df315411628a0eb1cea33b7d49a1f1e4f49cb`
+Registry digest: `db91ef1a2e6cd23ef0f374fb88704235fdd66c4ce18c3f93627a4e638681da8d`
 
 Only **implemented** capabilities are runnable claims.
 
@@ -12,8 +12,8 @@ Only **implemented** capabilities are runnable claims.
 
 - adapter_required: 9
 - disabled: 4
-- experimental: 3
-- implemented: 17
+- experimental: 2
+- implemented: 18
 - specified: 4
 
 ## Registry
@@ -55,5 +55,5 @@ Only **implemented** capabilities are runnable claims.
 | `ui.cli` | operations | **implemented** | Command-line operator client with explicit input validation and fail-closed API error handling. |
 | `ui.dashboard` | operations | **specified** | A browser operator dashboard is specified but is not part of the supported runtime. |
 | `operations.observability` | operations | **implemented** | Bounded-cardinality service telemetry, dependency-aware readiness, authenticated operational reports, OpenMetrics output, and static integrity/security alerts cover the four-process runtime without exposing sensitive labels. |
-| `operations.container-package` | operations | **experimental** | A digest-pinned non-root container package statically verifies hardening and passes a real four-process host-mode production drill; an actual image build and container runtime drill are still required. |
-| `operations.installer-observability-release` | operations | **experimental** | Release tooling and observability are executable, while the candidate container package is statically gated and host-runtime tested; legacy installer replacement, external alert delivery, image/container drills, and independently evidenced live deployment remain incomplete. |
+| `operations.container-package` | operations | **implemented** | A digest-pinned non-root container package is statically release-gated, passes the four-process host drill, and is built and exercised through the published composed readiness workflow. |
+| `operations.installer-observability-release` | operations | **experimental** | Release tooling, observability, and container verification are executable; legacy installer replacement, external alert delivery, and independently evidenced live deployment remain incomplete. |

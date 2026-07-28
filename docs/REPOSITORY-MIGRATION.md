@@ -11,7 +11,7 @@ and design history. Version 0.11 introduced a verified clean-room kernel, but
 its distribution packages intentionally excluded deprecated ancestry in which
 removed credential material remained reachable.
 
-The repository is moving to lowercase `main` as the only supported development
+The repository now uses lowercase `main` as its only supported development
 line. The new line starts from a clean root whose source tree is byte-identical
 to the verified 0.11 checkpoint.
 
@@ -27,11 +27,26 @@ The tree object for the verified checkpoint and clean public baseline is
 `9cb841672dc3049f9fbc594b818af8a18e56ba0c`. This proves source-tree identity
 without making deprecated parents ancestors of the new default branch.
 
+## Cutover evidence
+
+- GitHub default branch: `main`.
+- Supported tip at cutover: `7a89a88b622a7bf042ba310d2eb3cee0260e35f2`.
+- Preserved legacy branch:
+  `deprecated/legacy-main-pre-clean-room` at
+  `e65041cb6828a8923e87a3678a104ac40bbf0970`.
+- Kernel and container evidence:
+  [GitHub run 30374587847](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30374587847),
+  with both `verify` and `container` successful.
+- The 35 open pull requests that targeted former `Main` were retargeted by
+  GitHub to the deprecated branch; none were merged during cutover.
+- Clean public root `4082d9349a949879e75fe6b0763e8408c5cfec77`
+  has no parent.
+
 ## Branch policy
 
 - `main`: supported, protected development and release line.
-- deprecated legacy branch: retained only for historical reference during the
-  transition and explicitly unsupported.
+- `deprecated/legacy-main-pre-clean-room`: retained only for historical
+  reference and explicitly unsupported.
 - local `rebuild-history/0.11.0`: exact checkpoint sequence used to verify the
   release; not the supported public development line.
 - local `release-package/0.11.0`: commit containing the complete distribution
