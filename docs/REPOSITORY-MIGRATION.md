@@ -71,10 +71,19 @@ lowercase `main`.
 Every credential that ever appeared in deprecated ancestry is permanently
 revoked by policy. The cutover does not make an exposed key safe.
 
+The repository-side portion is now executable. A keyed ledger records 32
+conservative candidates from every reachable object at the locked deprecated
+tip, and protected CI fails on inventory drift or reuse in the supported tree.
+The HMAC key and candidate values remain outside Git. All 32 external
+dispositions remain `attestation-required`; this is not a claim that a former
+provider or deployment has completed revocation.
+
 Before a pilot deployment:
 
-1. inventory service identities, API principals, deploy keys, Actions secrets,
-   package credentials, and external provider credentials;
+1. dispose every entry in the
+   [credential-history ledger](../mesh/config/credential-revocations.json)
+   using the
+   [external attestation procedure](security/CREDENTIAL-HISTORY-REVOCATION.md);
 2. create new values through the supported production provisioner or the
    relevant external secret system;
 3. update trust records atomically with service-key rotation;

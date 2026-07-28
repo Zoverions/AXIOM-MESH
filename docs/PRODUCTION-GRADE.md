@@ -22,10 +22,13 @@ The image build and composed container drill pass in
 [GitHub run 30375390450](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30375390450).
 The protected workflow also produces signed disposable-host recovery,
 SLO/restart, coordinated service/API credential-rotation, and
-data-protection-key rotation evidence.
+data-protection-key rotation evidence. Its credential-history audit also
+reconstructs a 32-entry keyed ledger from the locked deprecated graph and
+proves that no candidate appears in the supported tip.
 Dedicated pilot capacity and availability, external telemetry, scheduled
-pilot-media recovery, pilot-owned secret-manager rotation, deny-egress enforcement,
-incident response, and independent security review remain open.
+pilot-media recovery, pilot-owned secret-manager rotation, external
+deprecated-credential attestations, deny-egress enforcement, incident
+response, and independent security review remain open.
 The current decision is recorded in the
 [readiness tracker](PRODUCTION-READINESS-TRACKER.md).
 
@@ -72,7 +75,9 @@ Production promotion requires:
   wrong-key rejection, interruption recovery, and state-preserving rollback;
 - authenticated encryption for durable protected state;
 - structured-log redaction and bounded telemetry labels;
-- an inventory proving deprecated-history credentials are not trusted;
+- an exact keyed inventory proving deprecated-history credentials are not
+  trusted by the supported repository, plus custodian/provider dispositions
+  before production promotion;
 - negative-path tests for replay, tamper, wrong audience, expired authority,
   missing approval, key mismatch, partial provisioning, and dependency loss.
 

@@ -285,6 +285,32 @@ active service identity, rejection of each inactive service identity, exact
 credential restoration, unchanged data-key custody, and clean shutdown. Its
 secret-free JSON is Ed25519-attested and retained by protected CI for 90 days.
 
+## 6.1 Verify the deprecated credential boundary
+
+The credential-history audit is a release and protected-CI control, not a
+runtime command. It requires the external 32-byte audit HMAC key and a checkout
+that includes the locked
+`origin/deprecated/legacy-main-pre-clean-room` ref:
+
+```bash
+export AXIOM_CREDENTIAL_AUDIT_KEY='<base64url value from approved custody>'
+npm run credential-history:audit \
+  > /tmp/axiom-credential-history-audit-evidence.json
+```
+
+Never paste the audit key into a ticket, log, checked-in environment file, or
+command argument. The command rescans all reachable deprecated objects,
+requires exact agreement with the 32-entry secret-free ledger, checks that all
+entries are revoked from supported repository trust, and rejects a matching
+value in the supported tip. Its signed evidence contains only HMAC
+identifiers, counts, digests, and outcomes.
+
+This check does not close the external revocation gate. Before production
+promotion, follow
+[`docs/security/CREDENTIAL-HISTORY-REVOCATION.md`](../docs/security/CREDENTIAL-HISTORY-REVOCATION.md)
+to record a provider/custodian receipt or an independently reviewed
+not-applicable rationale for each pending entry.
+
 ## 7. Rotate the data-protection key
 
 Data-key rotation is a separate offline maintenance transaction. Stop the

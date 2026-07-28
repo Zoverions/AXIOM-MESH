@@ -31,6 +31,7 @@ The main technical and operational references are:
 - [Production-grade definition](PRODUCTION-GRADE.md)
 - [Production readiness tracker](PRODUCTION-READINESS-TRACKER.md)
 - [Repository migration record](REPOSITORY-MIGRATION.md)
+- [Deprecated credential-history revocation](security/CREDENTIAL-HISTORY-REVOCATION.md)
 - [0.11 release notes](releases/0.11.0.md)
 - [Runtime architecture](architecture/ARCHITECTURE.md)
 - [Production deployment runbook](../mesh/PRODUCTION.md)
@@ -76,4 +77,7 @@ research, universal installers, or domain systems that the current capability
 registry marks disabled, specified, experimental, or adapter-required.
 
 Historical Git ancestry may contain removed credentials. Any credential that
-ever appeared there is revoked by policy and must never be reused.
+ever appeared there is revoked by policy and must never be reused. The
+canonical keyed inventory, supported-tip gate, and external disposition
+procedure are documented in
+[`security/CREDENTIAL-HISTORY-REVOCATION.md`](security/CREDENTIAL-HISTORY-REVOCATION.md).

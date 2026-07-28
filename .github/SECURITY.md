@@ -26,6 +26,17 @@ The clean-room production path provisions new Ed25519 service identities, API
 tokens, and data-protection keys outside the repository. Promotion requires
 evidence that deployments trust only newly provisioned identities.
 
+The keyed
+[`mesh/config/credential-revocations.json`](https://github.com/Zoverions/AXIOM-MESH/blob/main/mesh/config/credential-revocations.json)
+ledger covers 32 conservative credential candidates from every reachable
+object at the locked deprecated tip. Each is revoked from the supported
+repository trust boundary. Protected CI reconstructs the inventory with an
+external HMAC key, checks exact ledger coverage, and rejects reuse in the
+supported tip without exposing values. This repository result is complete;
+all entries remain explicitly pending external-provider or prior-deployment
+attestation. See the
+[revocation procedure](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/security/CREDENTIAL-HISTORY-REVOCATION.md).
+
 ## Supported credential lifecycle
 
 The supported offline rotation procedure replaces the Gateway, Hypervisor,

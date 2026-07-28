@@ -113,6 +113,21 @@ fail, historical Grid evidence remains valid through a dual-signed key
 transition, and the original set is restored exactly. It does not rotate the
 data-protection key or prove external revocation of historic credentials.
 
+The locked deprecated branch also has a keyed, secret-free credential
+inventory and revocation ledger:
+
+```bash
+npm run credential-history:audit
+```
+
+This operator/CI command requires the external 32-byte
+`AXIOM_CREDENTIAL_AUDIT_KEY`. It rescans every reachable deprecated object,
+requires exact coverage of 32 conservative credential candidates, and rejects
+reuse in the supported tip. Protected CI retains signed evidence. All 32 are
+revoked from repository trust; external provider or prior-deployment
+attestations remain required and are not claimed by this check. See the
+[credential-history revocation record](docs/security/CREDENTIAL-HISTORY-REVOCATION.md).
+
 Exercise the separate data-protection-key lifecycle in another empty
 workspace:
 
@@ -223,6 +238,11 @@ supported entrypoints.
   trust records, and the operator API token; dual-signed Grid key lineage keeps
   historical evidence verifiable, and an authenticated-encrypted package
   supports exact rollback without retaining retired private keys.
+- The deprecated-history audit records keyed HMAC identifiers for 32
+  credential candidates, requires their revocation from supported repository
+  trust, and fails protected CI if the ledger drifts or a candidate returns to
+  the supported tip. Provider and former-deployment attestations remain
+  separate promotion evidence.
 - Offline data-key rotation re-encrypts the live Grid and every supported
   recovery context, chains signed ciphertext/plaintext transitions to original
   manifests, switches the key last, and supports journaled interruption

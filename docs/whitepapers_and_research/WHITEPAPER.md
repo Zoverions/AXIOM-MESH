@@ -165,6 +165,15 @@ automatic identity generation and refuses remote plaintext internal URLs.
 Credentials from deprecated repository history are permanently untrusted.
 Restoring an old key is a security incident, not a recovery procedure.
 
+That boundary is executable rather than narrative. A secret-free ledger
+contains keyed HMAC identifiers for 32 conservative candidates found across
+the locked deprecated object graph. Protected CI reconstructs the exact
+inventory using a separately held 256-bit audit key and fails if an identifier
+is missing from the ledger or reappears in the supported tip. The committed
+identifiers do not form an offline password oracle, and the evidence contains
+no candidate values. Repository trust revocation is complete; external
+provider or prior-deployment attestations remain explicitly incomplete.
+
 The candidate supports an offline, coordinated replacement of all four service
 identities and the operator API token. A Grid runtime lock excludes concurrent
 startup. The retiring and successor Grid identities both attest a public
@@ -359,6 +368,7 @@ for unexpected dependencies. Release verification binds:
 - migration checksums;
 - rollback documentation;
 - container and workflow policy;
+- deprecated credential-history ledger and protected reuse policy;
 - canonical documentation;
 - SPDX SBOM and provenance inputs.
 
