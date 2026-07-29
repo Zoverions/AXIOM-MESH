@@ -190,7 +190,7 @@ function parsePrincipalRegistry(serialized, source) {
   }
 }
 
-function normalizePrincipals(entries) {
+export function normalizePrincipals(entries) {
   if (!entries || typeof entries !== 'object' || Array.isArray(entries)) {
     throw new ValidationError('API token registry must be an object');
   }

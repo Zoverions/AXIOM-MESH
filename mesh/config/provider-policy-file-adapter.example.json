@@ -1,0 +1,18 @@
+{
+  "schema": "axiom-file-provider-adapter.v1",
+  "provider_id": "pilot-policy-provider",
+  "private_key_file": "/run/axiom-provider-custody/policy-provider.private.pem",
+  "public_key_file": "/etc/axiom-provider/trust/policy-provider-current.pem",
+  "resources": {
+    "policy/base": {
+      "path": "/etc/axiom-provider/policy/base.json",
+      "classification": "policy",
+      "media_type": "application/vnd.axiom.policy+json"
+    },
+    "policy/capabilities": {
+      "path": "/etc/axiom-provider/policy/capabilities.json",
+      "classification": "policy",
+      "media_type": "application/vnd.axiom.capabilities+json"
+    }
+  }
+}

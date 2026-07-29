@@ -674,7 +674,53 @@ absorption without approval. See
 This is causal record transport, not replicated Grid consensus, BFT, workload
 dispatch, or independently hosted WAN evidence.
 
-## 14. Coordinated incident tabletop
+## 14. Deployment-independent provider startup
+
+The existing file-backed path remains supported. A pilot may instead set the
+private `AXIOM_PROVIDER_CONFIG` path and start:
+
+```bash
+npm run provider:start
+```
+
+In provider mode, direct data-key, API-token, transport, policy, and
+capability-registry variables must be unset. The wrapper executes separate
+secret and policy providers with absolute digest-pinned commands, no shell,
+bounded time and output, and only explicitly allowlisted workload-identity
+environment. Their Ed25519 provider IDs and trust keys must be independent.
+
+Every provider response is short-lived and bound to a random startup nonce,
+deployment ID, request ID, exact resource set, media types, byte limits, and
+content digests. The broker validates the data key, API principals, policy
+layers, capability registry, and all five active internal TLS identities
+before it starts the ordinary supervisor. It materializes only one private
+`session-<uuid>` generation under the configured ephemeral runtime directory
+and removes it on normal shutdown or failed validation.
+
+Use the examples in
+[`config/provider-runtime.example.json`](config/provider-runtime.example.json),
+[`config/provider-secret-file-adapter.example.json`](config/provider-secret-file-adapter.example.json),
+and
+[`config/provider-policy-file-adapter.example.json`](config/provider-policy-file-adapter.example.json).
+The zero digests are non-authorizing placeholders; replace them with the exact
+installed executable and artifact digests.
+
+Run the real-stack conformance proof:
+
+```bash
+npm run provider:drill -- /tmp/axiom-provider-conformance \
+  > /tmp/axiom-provider-conformance-evidence.json
+```
+
+It proves baseline startup, API-principal and policy rotation across restart,
+retired-token rejection, deny-policy activation, exact generation cleanup,
+and invalid-signer rejection before runtime. The reference file adapter proves
+the protocol, not the pilot's Vault, cloud secret manager, HSM/KMS, CSI,
+workload identity, backend availability, or live refresh. Repeat with the
+pilot-owned adapter and ephemeral runtime storage. See
+[`docs/operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md`](../docs/operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md).
+
+## 15. Coordinated incident tabletop
 
 The machine-readable
 [`config/incident-response.json`](config/incident-response.json) policy defines
@@ -684,9 +730,9 @@ cadence, and mandatory closure conditions. Unknown signals fail
 classification instead of defaulting to low severity.
 
 After producing recovery, backup-lifecycle, SLO/restart, resilience,
-service-unit, node-scheduling, online-causal-sync, transport,
+service-unit, node-scheduling, online-causal-sync, provider-runtime, transport,
 credential-rotation, and data-key-rotation evidence for one commit, compose
-the ten same-revision
+the eleven same-revision
 records into the automated
 incident tabletop:
 
@@ -701,6 +747,7 @@ npm run incident-tabletop:drill -- \
   /tmp/axiom-service-unit-drill-evidence.json \
   /tmp/axiom-node-scheduling-drill-evidence.json \
   /tmp/axiom-online-causal-sync-drill-evidence.json \
+  /tmp/axiom-provider-conformance-evidence.json \
   /tmp/axiom-transport-drill-evidence.json \
   /tmp/axiom-credential-rotation-evidence.json \
   /tmp/axiom-data-key-rotation-evidence.json \
@@ -724,7 +771,8 @@ readiness, disposable-host recovery drill, controlled SLO/restart baseline,
 request-pressure and dependency-loss drill, coordinated credential-rotation
 drill, mutually authenticated transport lifecycle drill, data-key rotation
 drill, admitted-node discovery and scheduling drill, operator-approved online
-causal exchange drill, signed deny-egress probe, host-side telemetry relay
+causal exchange drill, signed provider conformance drill, signed deny-egress
+probe, host-side telemetry relay
 drill, and
 automated incident tabletop are protected CI gates. This is
 not evidence of a live deployment, remote node execution, federated discovery,

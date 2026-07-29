@@ -39,6 +39,7 @@ The main technical and operational references are:
 - [Independent service units and failure isolation](operations/INDEPENDENT-SERVICE-UNITS.md)
 - [Admitted-node discovery and capability-aware scheduling](operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md)
 - [Operator-approved online causal exchange](operations/ONLINE-CAUSAL-EXCHANGE.md)
+- [Deployment-independent secret and policy providers](operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md)
 - [Incident response and automated tabletop](security/INCIDENT-RESPONSE-AND-TABLETOP.md)
 - [0.11 release notes](releases/0.11.0.md)
 - [Runtime architecture](architecture/ARCHITECTURE.md)

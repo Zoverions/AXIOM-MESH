@@ -38,7 +38,8 @@ Delivered:
 - encrypted durable state and signed evidence;
 - consent, capsules, memory, local accounting, governance records, admitted
   nodes, storage offers, export/import, backup/restore, offline causal sync,
-  and operator-approved two-Grid online causal exchange;
+  operator-approved two-Grid online causal exchange, and independently signed
+  deployment-provider startup;
 - operator API and CLI;
 - bounded telemetry, readiness, operations report, metrics, and a host-side
   OTLP/Alertmanager relay with exact HTTPS routing;
@@ -109,6 +110,11 @@ Milestones:
 - authenticated signed admitted-node discovery and deterministic placement
   reservations are implemented in the single Grid; repeat with measured
   pilot-node resources and identity review before remote dispatch is added;
+- independently signed deployment-provider startup is implemented with
+  digest-pinned adapters, exact secret/policy inventories, private ephemeral
+  generations, rotation/restart proof, and fail-closed invalid-signer
+  rejection; repeat with the pilot's actual vault or orchestrator custody
+  adapter and workload identity;
 - independent security review of the supported kernel and container policy;
 - signed pilot deployment and release dossiers.
 
@@ -147,6 +153,10 @@ Milestones:
   Grids with pinned source evidence, encrypted ordered staging, duplicate
   preflight, visible concurrent heads, and explicit all-head convergence;
   repeat under independent-host WAN conditions.
+- deployment-independent secret and policy provider contracts are implemented
+  for the single-host supervisor with separate pinned signers, bounded
+  nonce-bound responses, and signed conformance evidence; multi-unit rollout
+  coordination and a pilot-owned backend adapter remain.
 
 Exit criteria:
 
@@ -164,6 +174,12 @@ does not contact scheduled nodes, authorize workloads, replicate the Grid log,
 or provide consensus. Phase 3 remains open until a dispatcher, measured
 resources, independently hosted partition/rejoin evidence, and
 deployment-specific identity controls exist.
+
+The provider runtime can now start the existing supervisor from a complete
+signed secret and policy generation without embedding a vault SDK in the
+kernel. It does not prove any vendor backend, live refresh, multi-host rollout,
+or external custody configuration. Phase 3 therefore still requires
+pilot-owned adapter and workload-identity evidence.
 
 ## Phase 4 - controlled adapters and operator experience
 

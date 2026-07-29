@@ -30,11 +30,12 @@ artifact is reproducible and tied to the release commit or image digest.
 | Independent service units | Pass for single-host candidate | Four per-unit application/TLS private-key projections, Grid-only state/key, Gateway-only API registry, Docker internal network, signed independent-process Sandbox-loss/state-preservation drill, and protected four-container survivor/recovery proof | Repeat network policy, secret custody, rotation, resource limits, upgrade, and rollback on the pilot orchestrator |
 | Node discovery and scheduling | Pass for single-Grid reservation candidate | Signed v2 admission binds HTTPS origin, failure domain, roles and resource ceilings; authenticated Grid-signed discovery and policy-controlled deterministic leases enforce security, capability, capacity, concurrency, owner/domain diversity, expiry and quarantine; protected drill covers copied-key rejection, missed renewal and restart | Add an authenticated remote dispatcher and result provenance, measure claimed resources and endpoint health, repeat live multi-host partition/recovery, and define stronger membership identity before any distributed-compute promotion |
 | Online causal exchange | Pass for two-Grid candidate | Exact origins, pinned Grid-signed owner event streams, node-signed causal bundles, encrypted atomic ordered queues, bounded retry, owner-scoped duplicate preflight, and one-use independent apply approval; protected two-real-stack drill proves partition cursor preservation, bidirectional rejoin, visible concurrent heads, explicit all-head convergence, reload persistence, and duplicate absorption | Repeat on independently operated hosts with external key custody, real WAN loss/latency/clock faults, data-residency review, sustained backlog measurements, and independent security review |
+| Secret and policy providers | Pass for signed protocol and reference adapter | Independent Ed25519 provider identities; digest-pinned executable/artifact chain; nonce-bound short-lived exact inventories; private per-start materialization; policy, registry, principal, key, and transport semantic validation; restart rotation and invalid-signer rejection; signed protected-CI evidence | Implement and independently review the pilot's actual vault/orchestrator adapter, workload identity, backend authorization, ephemeral runtime storage, availability, rotation, rollback, and audit retention |
 | Credential rotation | Pass for service/API candidate lifecycle | Protected CI rotates all four Ed25519 identities, coordinated trust records, operator token, and least-privilege telemetry relay token against the real stack; proves inactive-credential rejection, scope confinement, dual-signed Grid key lineage, exact encrypted rollback, and unchanged data-key custody | Repeat under pilot secret custody |
 | Data-key rotation | Pass for candidate-host lifecycle | Protected CI re-encrypts the live Grid, nested backup state, retained credential packages, and recovery database copies; proves wrong-key rejection, rotated-key restore, killed-cutover journal recovery, exact key restoration, and post-rotation state preservation | Repeat with pilot secret-manager versioning, escrow, approval, and destruction evidence |
 | Deprecated credential trust | Pass for repository boundary; external evidence pending | Keyed ledger covers 32 conservative candidates across the locked deprecated graph; protected CI checks exact coverage and rejects reuse in the supported tip without exposing values | Dispose all 32 external attestations as verified or independently justified not-applicable |
 | Independent security review | Pending | Internal evidence only | Commission scoped review |
-| Incident response | Pass for automated candidate exercise | Machine-readable severity/action/closure policy; protected CI verifies ten same-revision control artifacts, including online causal partition/rejoin evidence, and uploads signed secret-free tabletop evidence | Run a facilitated pilot exercise with named roster, notification tree, corrective owners, and independent human review |
+| Incident response | Pass for automated candidate exercise | Machine-readable severity/action/closure policy; protected CI verifies eleven same-revision control artifacts, including online causal partition/rejoin and provider fail-closed evidence, and uploads signed secret-free tabletop evidence | Run a facilitated pilot exercise with named roster, notification tree, corrective owners, and independent human review |
 | Release governance | Pass | Protected `main`, release verifier, and [v0.11.0 dossier](https://github.com/Zoverions/AXIOM-MESH/releases/tag/v0.11.0) | Maintain for every release |
 
 ## Promotion blockers
@@ -42,8 +43,8 @@ artifact is reproducible and tied to the release commit or image digest.
 The following block production promotion:
 
 1. no dedicated pilot-hardware capacity validation or 30-day availability observation;
-2. no pilot-secret-custody rotation repetition or scheduled restore from
-   pilot-owned media;
+2. no pilot-owned provider adapter/workload-identity review, custody rotation
+   repetition, or scheduled restore from pilot-owned media;
 3. no independent review of the supported kernel and deployment policy;
 4. all 32 deprecated-history entries still require provider, custodian, or
    independently reviewed not-applicable attestations;
@@ -73,7 +74,8 @@ Promotion evidence must identify:
 - capability-registry, policy, operator-surface, and documentation digests;
 - test and workflow identifiers;
 - deployment configuration without secret values;
-- backup/restore, rotation, telemetry-relay, and incident-drill timestamps;
+- backup/restore, rotation, provider-conformance, telemetry-relay, and
+  incident-drill timestamps;
 - approvers, exceptions, and exception expiries.
 
 Secret values, private keys, production tokens, and unencrypted user data must

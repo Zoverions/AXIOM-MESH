@@ -217,6 +217,19 @@ jobs:
           path: ${{ runner.temp }}/axiom-data-key-rotation-evidence.json
           if-no-files-found: error
           retention-days: 90
+      - name: Run signed secret and policy provider conformance drill
+        working-directory: mesh
+        run: |
+          node src/provider-conformance-drill.mjs \
+            "$RUNNER_TEMP/axiom-provider-conformance-drill" \
+            > "$RUNNER_TEMP/axiom-provider-conformance-evidence.json"
+      - name: Upload signed provider conformance evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: axiom-provider-conformance-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/axiom-provider-conformance-evidence.json
+          if-no-files-found: error
+          retention-days: 90
       - name: Run coordinated incident tabletop
         working-directory: mesh
         run: |
@@ -229,6 +242,7 @@ jobs:
             "$RUNNER_TEMP/axiom-service-unit-drill-evidence.json" \
             "$RUNNER_TEMP/axiom-node-scheduling-drill-evidence.json" \
             "$RUNNER_TEMP/axiom-online-causal-sync-drill-evidence.json" \
+            "$RUNNER_TEMP/axiom-provider-conformance-evidence.json" \
             "$RUNNER_TEMP/axiom-transport-drill-evidence.json" \
             "$RUNNER_TEMP/axiom-credential-rotation-evidence.json" \
             "$RUNNER_TEMP/axiom-data-key-rotation-evidence.json" \

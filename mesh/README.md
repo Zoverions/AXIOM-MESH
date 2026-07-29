@@ -53,7 +53,7 @@ Incident response is also release-gated. The policy in
 highest matching severity, requires independently assigned command roles,
 allows no authority-expanding action, and defines evidence, communication,
 recovery, closure, and retrospective requirements. Protected CI signs an
-automated tabletop only after ten same-revision operational control artifacts
+automated tabletop only after eleven same-revision operational control artifacts
 verify. See the
 [incident-response runbook](../docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md).
 
@@ -91,6 +91,14 @@ ordered state, bounded retry, duplicate preflight, and destination independent
 approval preserve the local authority boundary across partition and rejoin.
 This is not replicated Grid consensus. See the
 [online causal exchange runbook](../docs/operations/ONLINE-CAUSAL-EXCHANGE.md).
+
+Production can also start from two independently pinned provider identities
+instead of direct secret and policy paths. The broker verifies digest-pinned
+commands, nonce-bound short-lived Ed25519 responses, exact resources, and all
+production semantics before creating one private per-start generation. It
+removes that generation after shutdown and rejects ambiguous direct/provider
+configuration. Run `npm run provider:drill -- <empty-workspace>` and see the
+[provider runbook](../docs/operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md).
 
 Verify an export without a running AXIOM-MESH process:
 

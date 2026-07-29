@@ -27,6 +27,9 @@ import { verifyNodeSchedulingDrillEvidence } from './node-scheduling-drill.mjs';
 import {
   verifyOnlineCausalSyncDrillEvidence
 } from './online-causal-sync-drill.mjs';
+import {
+  verifyProviderConformanceEvidence
+} from './provider-conformance-drill.mjs';
 import { verifyServiceUnitDrillEvidence } from './service-unit-drill.mjs';
 import { verifySloBaselineEvidence } from './slo-drill.mjs';
 import { verifyTransportDrillEvidence } from './transport-drill.mjs';
@@ -54,6 +57,10 @@ const CONTROL_DEFINITIONS = Object.freeze({
   online_causal_sync: Object.freeze({
     verifier: verifyOnlineCausalSyncDrillEvidence,
     artifact: 'axiom-online-causal-sync-drill-evidence'
+  }),
+  provider_runtime: Object.freeze({
+    verifier: verifyProviderConformanceEvidence,
+    artifact: 'axiom-provider-conformance-evidence'
   }),
   recovery: Object.freeze({
     verifier: verifyRecoveryDrillEvidence,
@@ -375,6 +382,7 @@ async function main() {
     serviceUnitsPath,
     nodeSchedulingPath,
     onlineCausalSyncPath,
+    providerRuntimePath,
     transportPath,
     credentialRotationPath,
     dataKeyRotationPath
@@ -388,6 +396,7 @@ async function main() {
     service_units: serviceUnitsPath,
     node_scheduling: nodeSchedulingPath,
     online_causal_sync: onlineCausalSyncPath,
+    provider_runtime: providerRuntimePath,
     transport: transportPath,
     credential_rotation: credentialRotationPath,
     data_key_rotation: dataKeyRotationPath

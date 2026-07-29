@@ -24,10 +24,11 @@ The protected workflow also produces signed disposable-host recovery,
 SLO/restart, request-pressure and dependency-loss, mutually authenticated
 transport rotation, coordinated service/API credential-rotation,
 data-protection-key rotation, admitted-node discovery/scheduling, and automated
-online causal partition/rejoin, and incident-tabletop evidence. The
+online causal partition/rejoin, signed secret/policy provider conformance, and
+incident-tabletop evidence. The
 tabletop verifies deterministic severity, role independence,
 authority-reducing containment, evidence-first chronology, communications,
-closure, and ten linked control artifacts. Its credential-history audit also
+closure, and eleven linked control artifacts. Its credential-history audit also
 reconstructs a 32-entry keyed ledger from the locked deprecated graph and
 proves that no candidate appears in the supported tip.
 Dedicated pilot capacity and availability, pilot-owned telemetry receivers, scheduled
@@ -352,6 +353,56 @@ approval. This is two-Grid causal data exchange, not replicated event-log
 consensus, BFT, workload dispatch, arbitrary federation, or independently
 hosted WAN evidence. See the
 [online causal exchange runbook](operations/ONLINE-CAUSAL-EXCHANGE.md).
+
+## Deployment-independent secret and policy providers
+
+The single-host candidate may start through two independently identified
+provider processes instead of direct credential and policy path settings. The
+secret provider supplies the data-protection key, API principal registry, and
+complete five-service runtime transport generation. The policy provider
+supplies one to eight ordered policy layers and the capability registry. Their
+provider IDs and pinned Ed25519 key sets must be distinct.
+
+Each provider command uses an absolute executable with a required SHA-256
+digest. Adapter scripts and private adapter configuration can be independently
+artifact-pinned. The broker uses no shell, inherits only an explicit
+workload-identity/proxy allowlist, discards provider standard error, applies a
+fixed timeout and response limit, and never places secret values in arguments
+or evidence.
+
+Every request has a unique ID, random 32-byte nonce, deployment and provider
+audience, canonical short expiry, and an exact resource inventory. A response
+must echo the complete request digest, return exactly the requested aliases,
+bind byte counts and SHA-256 digests to canonical base64url content, expire
+within sixty seconds, and carry an Ed25519 signature from a pinned provider
+key. Missing, extra, replayed, expired, oversized, misclassified, malformed,
+or wrongly signed resources reject startup.
+
+Only after both responses verify does the broker acquire an exclusive
+cross-process runtime-root lease and reject stale content, then create a
+private `session-<uuid>` generation. It writes fixed broker-chosen paths, validates the
+32-byte data key, API principal registry, every policy layer, the capability
+registry, and every active TLS identity/manifest binding, then launches the
+ordinary production supervisor. Direct secret/policy variables are mutually
+exclusive with provider mode. Normal shutdown and failed validation remove
+the exact private generation. Production must place the runtime root on
+owner-only bounded ephemeral storage so process-manager cleanup covers
+ungraceful host termination.
+
+Protected CI runs a real four-service provider-supervised host twice. It proves
+baseline execution, rotates the API registry and policy, rejects the retired
+token, accepts the replacement, activates a new deny rule, observes changed
+resource versions, removes both private generations, and rejects an invalid
+policy-provider signer before service readiness. Grid signs secret-free
+`axiom-provider-conformance-evidence.v1`, and the incident tabletop verifies
+that artifact as its eleventh same-revision control.
+
+The bundled file adapter is a protocol reference and a bridge for
+deployment-mounted custody. It is not evidence for Vault, a cloud secret
+manager, KMS/HSM, CSI driver, workload identity, provider availability, live
+refresh, multi-host rollout, or independent custody review. Those require the
+pilot's actual adapter and authorization policy. See the
+[provider runbook](operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md).
 
 ## Observability requirements
 

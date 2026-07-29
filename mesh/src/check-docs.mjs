@@ -24,6 +24,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/operations/INDEPENDENT-SERVICE-UNITS.md',
   'docs/operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md',
   'docs/operations/ONLINE-CAUSAL-EXCHANGE.md',
+  'docs/operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md',
   'docs/releases/0.11.0.md',
   'docs/whitepapers_and_research/WHITEPAPER.md',
   'mesh/PRODUCTION.md'
@@ -85,6 +86,13 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Signed partition/rejoin drill',
     '## Pilot repetition and non-claims'
   ],
+  'docs/operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md': [
+    '## Trust and authority boundary',
+    '## Request and response protocol',
+    '## Signed conformance drill',
+    '## Provider adapter conformance',
+    '## Pilot repetition and non-claims'
+  ],
   'docs/releases/0.11.0.md': ['## Container status', '## Security action'],
   'docs/whitepapers_and_research/WHITEPAPER.md': ['## Non-claims', '## Reproducibility'],
   'mesh/PRODUCTION.md': ['not evidence of a live deployment']
@@ -104,6 +112,7 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/operations/INDEPENDENT-SERVICE-UNITS.md': 5_000,
   'docs/operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md': 5_000,
   'docs/operations/ONLINE-CAUSAL-EXCHANGE.md': 6_000,
+  'docs/operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md': 8_000,
   'docs/whitepapers_and_research/WHITEPAPER.md': 7_000
 });
 
