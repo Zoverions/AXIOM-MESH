@@ -1,5 +1,7 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=faf55c2577410a419fed1b589eb8ba50efe0ebfedd47277184031c6bbb5d2f60 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=55cec8448e10a018f957a7ed7289cbe68e266b58ba3630afd28410fadd08e1ae -->
 # AXIOM-MESH CONSTITUTION
+
+**Build:** `0.12.0-dev.0`
 
 **Status:** Constitutional direction for the clean-room kernel. Executable
 authority and public claims remain subordinate to the signed policy stack,

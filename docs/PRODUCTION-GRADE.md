@@ -4,7 +4,8 @@
 
 **Updated:** 2026-07-29
 
-**Applies to:** the supported clean-room kernel in [`mesh/`](../mesh/README.md)
+**Applies to:** `0.12.0-dev.0` supported clean-room kernel in
+[`mesh/`](../mesh/README.md)
 
 “Production grade” is not a synonym for feature-rich, containerized, or tested
 once. For AXIOM-MESH it means a precisely bounded service can be deployed,
@@ -13,7 +14,9 @@ failing closed at every authority boundary.
 
 ## Current readiness
 
-Version 0.11.0 is a production candidate, not a production-promoted release.
+Build `0.12.0-dev.0` is a production candidate under active development, not a
+published or production-promoted release. Immutable `v0.11.0` remains the last
+published production-candidate baseline.
 The intent pipeline, local encrypted state, evidence chain, operator surfaces,
 observability, explicit secret provisioning, supervisor, host-mode drill, and
 container policy are implemented.
@@ -29,7 +32,8 @@ incident-tabletop evidence. The
 tabletop verifies deterministic severity, role independence,
 authority-reducing containment, evidence-first chronology, communications,
 closure, and eleven linked control artifacts. Its credential-history audit also
-reconstructs a 32-entry keyed ledger from the locked deprecated graph and
+reconstructs a 32-entry keyed ledger from the immutable pre-clean-room archive
+graph and
 proves that no candidate appears in the supported tip.
 Dedicated pilot capacity and availability, pilot-owned telemetry receivers, scheduled
 pilot-media recovery, pilot-owned secret-manager rotation, external

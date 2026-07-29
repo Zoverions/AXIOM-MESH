@@ -4,11 +4,15 @@
 
 **Updated:** 2026-07-29
 
+**Active build:** `0.12.0-dev.0`
+
 **Supported runtime:** [`mesh/`](../mesh/README.md)
 
-AXIOM-MESH contains a clean-room kernel and a much larger historical design
-corpus. This index separates documents that govern the supported runtime from
-documents retained as research, traceability, or migration input.
+This index is the complete documentation boundary for the supported
+development build. Every document present under `docs/` on `main` supports the
+current kernel, its operation, its security boundary, or its provenance.
+Superseded and aspirational material is retained only on the locked
+`deprecated/pre-0.12-documentation-corpus` branch.
 
 ## Canonical documents
 
@@ -41,25 +45,34 @@ The main technical and operational references are:
 - [Operator-approved online causal exchange](operations/ONLINE-CAUSAL-EXCHANGE.md)
 - [Deployment-independent secret and policy providers](operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md)
 - [Incident response and automated tabletop](security/INCIDENT-RESPONSE-AND-TABLETOP.md)
-- [0.11 release notes](releases/0.11.0.md)
-- [Runtime architecture](architecture/ARCHITECTURE.md)
+- [0.12.0-dev.0 build notes](releases/0.12.0-dev.0.md)
 - [Production deployment runbook](../mesh/PRODUCTION.md)
 - [Rollback runbook](rebuild/ROLLBACK.md)
+- [Current source traceability](rebuild/SOURCE-TRACEABILITY.md)
 - [Generated capability status](rebuild/STATUS.md)
 - [Security policy](../SECURITY.md)
 
-## Documentation classes
+## Supported documentation boundary
 
-| Class | Meaning | May support a release claim? |
-|---|---|---|
-| Canonical | Bound to current code, registry, and release gates | Yes |
-| Operational | Executable runbook for the supported kernel | Yes, after verification |
-| Specification | Required behavior not necessarily implemented | No |
-| Research | Design exploration or hypothesis | No |
-| Historical | Superseded implementation or narrative | No |
+`mesh/src/check-docs.mjs` contains the exact allowlist for current
+documentation. Protected CI fails when:
 
-Files outside the canonical list must not override current code, the capability
-registry, or generated release evidence.
+- a file exists under `docs/` but is not in that allowlist;
+- a required current-build document is absent;
+- a local link points to a removed or missing file;
+- root and GitHub security policies differ;
+- a required section or minimum content boundary is missing.
+
+The published `v0.11.0` release remains immutable and is not redefined by the
+current build. Its release page contains its original notes and artifacts. The
+active `main` build is `0.12.0-dev.0`, and its version-specific state is recorded
+in the current build notes.
+
+The deprecated documentation branch is read-only, rejects force pushes, and
+cannot be deleted. Material on that branch is provenance, not a supported API,
+runbook, product promise, or release claim. The older pre-clean-room
+implementation is separately preserved by the immutable
+`archive/legacy-main-pre-clean-room-2026-05-21` tag.
 
 ## Contributor path
 
@@ -71,22 +84,8 @@ For a production-impacting change:
 4. run the kernel check and release verifier;
 5. attach CI and runtime evidence before promoting a capability.
 
-The documentation checker validates required canonical documents, minimum
-content, security-policy parity, and local links. A link or claim that cannot
-be kept current should be removed from canonical documents or moved into a
-clearly labeled research/historical file.
-
-## Historical documents
-
-The legacy Gateway, Hypervisor, Sandbox, Grid, contracts, installers,
-dashboards, and multi-domain plans remain useful for requirement extraction.
-They are not supported deployment surfaces. In particular, historical
-documents may describe tokens, bridges, BFT consensus, zkML, autonomous
-research, universal installers, or domain systems that the current capability
-registry marks disabled, specified, experimental, or adapter-required.
-
-Historical Git ancestry may contain removed credentials. Any credential that
-ever appeared there is revoked by policy and must never be reused. The
-canonical keyed inventory, supported-tip gate, and external disposition
-procedure are documented in
-[`security/CREDENTIAL-HISTORY-REVOCATION.md`](security/CREDENTIAL-HISTORY-REVOCATION.md).
+Claims that cannot be kept current must be removed from `main`, not merely
+labeled historical beside supported material. If provenance must be preserved,
+it belongs on the locked deprecated documentation branch. Security records
+needed to prove the current trust boundary remain current documentation even
+when they refer to archived objects.

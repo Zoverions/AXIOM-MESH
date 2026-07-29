@@ -1,6 +1,9 @@
 # Admitted-node discovery and capability-aware scheduling
 
+**Updated:** 2026-07-29
+
 **Status:** implemented for the single-Grid production candidate  
+**Applies to:** AXIOM-MESH `0.12.0-dev.0` supported development build
 **Scope:** authenticated discovery metadata and deterministic placement leases  
 **Non-claim:** this control does not connect to, launch work on, or federate remote nodes
 

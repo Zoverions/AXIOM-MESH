@@ -1,7 +1,7 @@
 {
   "schema": "axiom-capabilities.v1",
   "verified_at": "2026-07-29",
-  "kernel_version": "0.11.0",
+  "kernel_version": "0.12.0-dev.0",
   "capabilities": [
     {
       "id": "core.intent-loop",

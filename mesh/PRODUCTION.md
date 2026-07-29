@@ -1,5 +1,7 @@
 # AXIOM-MESH candidate production runtime
 
+**Applies to:** `0.12.0-dev.0`
+
 The candidate production package runs Gateway, Hypervisor, Sandbox, and Grid as
 four supervised Node.js processes inside one hardened container. Only Gateway
 binds outside the container. The three internal services remain on loopback,
@@ -492,8 +494,8 @@ secret-free JSON is Ed25519-attested and retained by protected CI for 90 days.
 
 The credential-history audit is a release and protected-CI control, not a
 runtime command. It requires the external 32-byte audit HMAC key and a checkout
-that includes the locked
-`origin/deprecated/legacy-main-pre-clean-room` ref:
+that includes immutable tag
+`archive/legacy-main-pre-clean-room-2026-05-21`:
 
 ```bash
 export AXIOM_CREDENTIAL_AUDIT_KEY='<base64url value from approved custody>'

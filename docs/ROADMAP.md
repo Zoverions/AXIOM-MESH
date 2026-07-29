@@ -4,7 +4,7 @@
 
 **Updated:** 2026-07-29
 
-**Planning horizon:** clean-room kernel 0.11 through evidence-gated 1.0
+**Planning horizon:** active build `0.12.0-dev.0` through evidence-gated 1.0
 
 This roadmap advances only the supported kernel. Historical token, bridge,
 multi-chain, installer, domain, and autonomous-agent plans are research input,
@@ -25,7 +25,7 @@ The active task order is maintained in
 [`docs/MASTER-TODO.md`](MASTER-TODO.md). The current production decision is in
 the [readiness tracker](PRODUCTION-READINESS-TRACKER.md).
 
-## Baseline - clean-room kernel 0.11
+## Published baseline - clean-room kernel 0.11.0
 
 **State:** code complete; protected repository, release, container, recovery,
 rotation, retention, and repository-credential evidence are operational.
@@ -48,9 +48,9 @@ Delivered:
 Boundary: single-node local authority and transparency log. No federation, BFT,
 external settlement, arbitrary code, or regulated-domain claim.
 
-## Phase 1 - repository and container evidence
+## Completed Phase 1 - repository and container evidence
 
-**Target:** 0.11.x
+**Delivered in:** published `v0.11.0`
 
 **Outcome:** the clean-room line becomes the protected GitHub default and the
 container candidate has reproducible public CI evidence.
@@ -76,9 +76,9 @@ Exit criteria:
 - no legacy credential is trusted;
 - rollback and compatibility notes are published.
 
-## Phase 2 - single-node production pilot
+## Current Phase 2 - single-node production pilot
 
-**Target:** 0.12
+**Target line:** `0.12.x`; active build `0.12.0-dev.0`
 
 **Outcome:** one controlled deployment can be operated, measured, rotated,
 backed up, restored, and contained.

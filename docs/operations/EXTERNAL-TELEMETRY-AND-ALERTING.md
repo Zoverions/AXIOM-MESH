@@ -3,9 +3,9 @@
 **Status:** implemented for the automated production candidate; pilot
 destinations and live operating evidence remain pending
 
-**Updated:** 2026-07-28
+**Updated:** 2026-07-29
 
-**Applies to:** AXIOM-MESH 0.11.0 clean-room kernel
+**Applies to:** AXIOM-MESH `0.12.0-dev.0` supported development build
 
 This runbook defines the supported external observability boundary. The
 four-process kernel continues to run with no network interface and no egress.

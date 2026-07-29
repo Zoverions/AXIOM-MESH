@@ -1445,8 +1445,10 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
   assert.equal(accounting.journals.length, 1);
   assert.equal(accounting.balances.reduce((sum, item) => sum + item.balance, 0), 0);
 
-  const votingEndsAt = new Date(Date.now() + 500).toISOString();
-  const activateAfter = new Date(Date.now() + 800).toISOString();
+  // Keep the governance window valid even when the full parallel suite places
+  // the host under provider, transport, and recovery-drill load.
+  const votingEndsAt = new Date(Date.now() + 5_000).toISOString();
+  const activateAfter = new Date(Date.now() + 6_000).toISOString();
   const proposal = await independentlyApprovedIntent({
     gateway,
     requesterToken: token,

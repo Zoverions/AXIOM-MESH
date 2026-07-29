@@ -17,7 +17,7 @@ import {
 
 const GIT = process.env.AXIOM_GIT_EXECUTABLE || 'git';
 const AUDIT_KEY = Buffer.alloc(32, 0x5a);
-const DEPRECATED_REF = 'deprecated/legacy-main-pre-clean-room';
+const DEPRECATED_REF = 'archive/legacy-main-pre-clean-room-2026-05-21';
 const FIXTURE_TOKEN = 'fixture-operator-token-123456789';
 
 test('credential history scanner emits keyed identifiers without secret values', () => {
@@ -55,7 +55,7 @@ test('credential revocation ledger covers deprecated history and blocks reuse', 
   await writeFile(join(repositoryRoot, 'certs', 'gateway.key'), privatePem);
   git(repositoryRoot, ['add', '.']);
   git(repositoryRoot, ['commit', '-m', 'legacy fixture credentials']);
-  git(repositoryRoot, ['branch', DEPRECATED_REF]);
+  git(repositoryRoot, ['tag', DEPRECATED_REF]);
 
   git(repositoryRoot, ['switch', '--orphan', 'main']);
   await writeFile(join(repositoryRoot, 'README.md'), 'clean supported root\n');

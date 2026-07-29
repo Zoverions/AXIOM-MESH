@@ -8,10 +8,12 @@ on:
       - "docs/**"
       - "README.md"
       - "SECURITY.md"
+      - "CONTRIBUTING.md"
       - "CONSTITUTION.md"
       - "package.json"
       - "package-lock.json"
       - ".gitattributes"
+      - ".github/SECURITY.md"
       - ".github/workflows/kernel.yml"
   pull_request:
     branches: ["main"]
@@ -20,10 +22,12 @@ on:
       - "docs/**"
       - "README.md"
       - "SECURITY.md"
+      - "CONTRIBUTING.md"
       - "CONSTITUTION.md"
       - "package.json"
       - "package-lock.json"
       - ".gitattributes"
+      - ".github/SECURITY.md"
       - ".github/workflows/kernel.yml"
   workflow_dispatch:
   schedule:
@@ -297,7 +301,7 @@ jobs:
           } >> "$GITHUB_ENV"
       - name: Build digest-pinned image
         working-directory: mesh
-        run: docker build --pull=false --tag axiom-mesh-kernel:0.11.0 .
+        run: docker build --pull=false --tag axiom-mesh-kernel:0.12.0-dev.0 .
       - name: Run container readiness drill
         working-directory: mesh
         run: |

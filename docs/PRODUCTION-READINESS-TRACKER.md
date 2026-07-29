@@ -2,7 +2,9 @@
 
 **Updated:** 2026-07-29
 
-**Release candidate:** 0.11.0
+**Active build:** `0.12.0-dev.0`
+
+**Last published candidate:** `v0.11.0`
 
 **Overall decision:** **Not production-promoted**
 
@@ -33,10 +35,10 @@ artifact is reproducible and tied to the release commit or image digest.
 | Secret and policy providers | Pass for signed protocol and reference adapter | Independent Ed25519 provider identities; digest-pinned executable/artifact chain; nonce-bound short-lived exact inventories; private per-start materialization; policy, registry, principal, key, and transport semantic validation; restart rotation and invalid-signer rejection; signed protected-CI evidence | Implement and independently review the pilot's actual vault/orchestrator adapter, workload identity, backend authorization, ephemeral runtime storage, availability, rotation, rollback, and audit retention |
 | Credential rotation | Pass for service/API candidate lifecycle | Protected CI rotates all four Ed25519 identities, coordinated trust records, operator token, and least-privilege telemetry relay token against the real stack; proves inactive-credential rejection, scope confinement, dual-signed Grid key lineage, exact encrypted rollback, and unchanged data-key custody | Repeat under pilot secret custody |
 | Data-key rotation | Pass for candidate-host lifecycle | Protected CI re-encrypts the live Grid, nested backup state, retained credential packages, and recovery database copies; proves wrong-key rejection, rotated-key restore, killed-cutover journal recovery, exact key restoration, and post-rotation state preservation | Repeat with pilot secret-manager versioning, escrow, approval, and destruction evidence |
-| Deprecated credential trust | Pass for repository boundary; external evidence pending | Keyed ledger covers 32 conservative candidates across the locked deprecated graph; protected CI checks exact coverage and rejects reuse in the supported tip without exposing values | Dispose all 32 external attestations as verified or independently justified not-applicable |
+| Deprecated credential trust | Pass for repository boundary; external evidence pending | Keyed ledger covers 32 conservative candidates across the immutable pre-clean-room archive graph; protected CI checks exact coverage and rejects reuse in the supported tip without exposing values | Dispose all 32 external attestations as verified or independently justified not-applicable |
 | Independent security review | Pending | Internal evidence only | Commission scoped review |
 | Incident response | Pass for automated candidate exercise | Machine-readable severity/action/closure policy; protected CI verifies eleven same-revision control artifacts, including online causal partition/rejoin and provider fail-closed evidence, and uploads signed secret-free tabletop evidence | Run a facilitated pilot exercise with named roster, notification tree, corrective owners, and independent human review |
-| Release governance | Pass | Protected `main`, release verifier, and [v0.11.0 dossier](https://github.com/Zoverions/AXIOM-MESH/releases/tag/v0.11.0) | Maintain for every release |
+| Release governance | Pass for development line | Protected `main`, current-build release verifier, exact documentation boundary, and immutable [v0.11.0 baseline dossier](https://github.com/Zoverions/AXIOM-MESH/releases/tag/v0.11.0) | Publish a new immutable dossier only when 0.12 is promoted from development |
 
 ## Promotion blockers
 

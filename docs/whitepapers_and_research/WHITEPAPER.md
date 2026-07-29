@@ -1,8 +1,8 @@
 # AXIOM-MESH Technical White Paper
 
-**Version:** 0.11
+**Version:** `0.12.0-dev.0`
 
-**Updated:** 2026-07-28
+**Updated:** 2026-07-29
 
 **Status:** implementation-grounded description of the clean-room kernel
 
@@ -21,7 +21,8 @@ audience-bound service requests, short-lived single-use execution grants,
 deny-dominant policy, deterministic built-in tools, authenticated encryption,
 and a signed hash-linked evidence log.
 
-Version 0.11 implements a single-node authority and transparency system. It
+The current 0.12 development build implements a single-node authority and
+transparency system. It
 does not claim BFT consensus, arbitrary-code isolation, public settlement,
 external AI, regulatory compliance, or proof that a model's private reasoning
 is true. Capability status is machine-readable and evidence-gated.
@@ -111,7 +112,7 @@ signature for a different body, audience, time window, or nonce.
 
 ### 3.2 Trust boundary
 
-In the 0.11 production candidate, all four services are separate Node.js
+In the current production candidate, all four services are separate Node.js
 processes. The compact topology supervises them inside one container. The
 independent-unit topology runs four containers on a Docker internal network,
 with Gateway preserving permission-restricted Unix-domain host ingress. Both
@@ -569,7 +570,7 @@ legal, safety, and operational evidence.
 
 ## Non-claims
 
-Version 0.11 does not claim:
+The `0.12.0-dev.0` build does not claim:
 
 - live public deployment;
 - decentralized or BFT consensus;
@@ -585,8 +586,8 @@ Version 0.11 does not claim:
 - end-to-end post-quantum security;
 - independent external audit.
 
-Descriptions of those systems in historical documents are specifications or
-research unless the current registry says otherwise.
+Descriptions preserved on the deprecated documentation branch are not current
+specifications and cannot override the capability registry.
 
 ## Reproducibility
 
@@ -615,8 +616,8 @@ conformance contract, and vendor non-claims are specified in the
 
 ## Conclusion
 
-AXIOM-MESH 0.11 is an authority-minimizing kernel, not a claim that every
-historical vision is implemented. Its core contribution is a verifiable
+AXIOM-MESH `0.12.0-dev.0` is an authority-minimizing kernel, not a claim that
+every archived vision is implemented. Its core contribution is a verifiable
 intent-to-evidence boundary in which authentication, policy, planning,
 execution, durable state, and operator claims can be inspected independently.
 

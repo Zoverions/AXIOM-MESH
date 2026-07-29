@@ -1,4 +1,4 @@
-import { readFile, stat } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { MESH_ROOT } from './lib/config.mjs';
@@ -8,6 +8,8 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'README.md',
   'SECURITY.md',
   '.github/SECURITY.md',
+  'CONSTITUTION.md',
+  'CONTRIBUTING.md',
   'docs/README.md',
   'docs/MASTER-TODO.md',
   'docs/ROADMAP.md',
@@ -15,6 +17,11 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/PRODUCTION-READINESS-TRACKER.md',
   'docs/PROJECT-STATUS-2026.md',
   'docs/REPOSITORY-MIGRATION.md',
+  'docs/rebuild/PRODUCT-DEFINITION.md',
+  'docs/rebuild/REQUIREMENTS.md',
+  'docs/rebuild/ROLLBACK.md',
+  'docs/rebuild/SOURCE-TRACEABILITY.md',
+  'docs/rebuild/STATUS.md',
   'docs/security/CREDENTIAL-HISTORY-REVOCATION.md',
   'docs/security/DENY-EGRESS-BOUNDARY.md',
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md',
@@ -25,8 +32,9 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md',
   'docs/operations/ONLINE-CAUSAL-EXCHANGE.md',
   'docs/operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md',
-  'docs/releases/0.11.0.md',
+  'docs/releases/0.12.0-dev.0.md',
   'docs/whitepapers_and_research/WHITEPAPER.md',
+  'mesh/README.md',
   'mesh/PRODUCTION.md'
 ]);
 
@@ -35,13 +43,21 @@ const REQUIRED_CONTENT = Object.freeze({
     'mesh/config/capabilities.json',
     'docs/whitepapers_and_research/WHITEPAPER.md'
   ],
-  'docs/README.md': ['## Canonical documents', '## Historical documents'],
+  'docs/README.md': [
+    '## Canonical documents',
+    '## Supported documentation boundary',
+    'deprecated/pre-0.12-documentation-corpus'
+  ],
   'docs/MASTER-TODO.md': ['## P0', '## Promotion rules'],
-  'docs/ROADMAP.md': ['## Promotion rules', '## Phase 1'],
+  'docs/ROADMAP.md': ['## Promotion rules', '## Current Phase 2'],
   'docs/PRODUCTION-GRADE.md': ['## Current readiness', '## Production promotion gates'],
   'docs/PRODUCTION-READINESS-TRACKER.md': ['## Current gate status', 'Not production-promoted'],
-  'docs/PROJECT-STATUS-2026.md': ['## Current release', '## What is not claimed'],
+  'docs/PROJECT-STATUS-2026.md': ['## Current build', '## What is not claimed'],
   'docs/REPOSITORY-MIGRATION.md': ['## Provenance map', '## Credential boundary'],
+  'docs/rebuild/SOURCE-TRACEABILITY.md': [
+    '## Current implementation trace',
+    '## Archived source boundary'
+  ],
   'docs/security/CREDENTIAL-HISTORY-REVOCATION.md': [
     '## Repository trust result',
     '## External attestation procedure'
@@ -93,7 +109,12 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Provider adapter conformance',
     '## Pilot repetition and non-claims'
   ],
-  'docs/releases/0.11.0.md': ['## Container status', '## Security action'],
+  'docs/releases/0.12.0-dev.0.md': [
+    '## Version boundary',
+    '## Current implementation',
+    '## Validation',
+    '## Non-claims'
+  ],
   'docs/whitepapers_and_research/WHITEPAPER.md': ['## Non-claims', '## Reproducibility'],
   'mesh/PRODUCTION.md': ['not evidence of a live deployment']
 });
@@ -133,6 +154,8 @@ export function markdownLocalTargets(markdown) {
 }
 
 export async function verifyCanonicalDocumentation(repositoryRoot = dirname(MESH_ROOT)) {
+  await verifyRepositoryMarkdownBoundary(repositoryRoot);
+  await verifySupportedDocumentationBoundary(repositoryRoot);
   const contents = new Map();
   for (const relativePath of CANONICAL_DOCUMENTS) {
     const fullPath = resolve(repositoryRoot, relativePath);
@@ -185,6 +208,69 @@ export async function verifyCanonicalDocumentation(repositoryRoot = dirname(MESH
     documents: CANONICAL_DOCUMENTS.length,
     links: checkedLinks
   };
+}
+
+async function verifyRepositoryMarkdownBoundary(repositoryRoot) {
+  const expected = CANONICAL_DOCUMENTS
+    .filter(path => path.toLowerCase().endsWith('.md'))
+    .sort();
+  const actual = await repositoryMarkdownFiles(repositoryRoot);
+  const unexpected = actual.filter(path => !expected.includes(path));
+  const missing = expected.filter(path => !actual.includes(path));
+  if (unexpected.length || missing.length) {
+    throw new ValidationError(
+      `Repository Markdown boundary drifted; unexpected=${unexpected.join(',') || 'none'}; missing=${missing.join(',') || 'none'}`
+    );
+  }
+}
+
+async function verifySupportedDocumentationBoundary(repositoryRoot) {
+  const expected = CANONICAL_DOCUMENTS
+    .filter(path => path.startsWith('docs/'))
+    .sort();
+  const actual = await documentationFiles(resolve(repositoryRoot, 'docs'));
+  const unexpected = actual.filter(path => !expected.includes(path));
+  const missing = expected.filter(path => !actual.includes(path));
+  if (unexpected.length || missing.length) {
+    throw new ValidationError(
+      `Supported documentation boundary drifted; unexpected=${unexpected.join(',') || 'none'}; missing=${missing.join(',') || 'none'}`
+    );
+  }
+}
+
+async function repositoryMarkdownFiles(directory, prefix = '') {
+  const files = [];
+  const excludedDirectories = new Set(['.git', '.data', 'node_modules']);
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      if (!excludedDirectories.has(entry.name)) {
+        files.push(...await repositoryMarkdownFiles(
+          resolve(directory, entry.name),
+          relativePath
+        ));
+      }
+    } else if (entry.name.toLowerCase().endsWith('.md')) {
+      files.push(relativePath);
+    }
+  }
+  return files.sort();
+}
+
+async function documentationFiles(directory, prefix = 'docs') {
+  const files = [];
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const relativePath = `${prefix}/${entry.name}`;
+    if (entry.isDirectory()) {
+      files.push(...await documentationFiles(
+        resolve(directory, entry.name),
+        relativePath
+      ));
+    } else {
+      files.push(relativePath);
+    }
+  }
+  return files.sort();
 }
 
 function normalize(value) {

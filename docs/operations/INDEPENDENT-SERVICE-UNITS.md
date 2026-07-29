@@ -1,6 +1,8 @@
 # Independent service units and failure isolation
 
-**Applies to:** AXIOM-MESH 0.11.0 production candidate  
+**Updated:** 2026-07-29
+
+**Applies to:** AXIOM-MESH `0.12.0-dev.0` supported development build
 **Evidence schema:** `axiom-service-unit-drill-evidence.v1`  
 **Deployment definition:** `mesh/compose.units.yml`
 

@@ -1,7 +1,0 @@
-global:
-  scrape_interval: 15s
-
-scrape_configs:
-  - job_name: 'hypervisor'
-    static_configs:
-      - targets: ['hypervisor:8000']
