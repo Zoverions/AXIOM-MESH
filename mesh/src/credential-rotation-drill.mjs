@@ -10,7 +10,7 @@ import {
   verifyObjectSignature
 } from './lib/identity.mjs';
 import {
-  findProductionPortBlock,
+  reserveProductionPortBlock,
   productionHostEnvironment,
   startProductionHost,
   stopProductionHost
@@ -50,7 +50,10 @@ export async function runCredentialRotationDrill({
   const originalIdentities = await loadIdentities(provisioned.data_dir);
   const originalKeyIds = keyIds(originalIdentities);
   const dataKeyBefore = await readFile(provisioned.data_key_file);
-  const basePort = await findProductionPortBlock('credential rotation drill');
+  const portLease = await reserveProductionPortBlock(
+    'credential rotation drill'
+  );
+  const basePort = portLease.base_port;
   const gateway = `http://127.0.0.1:${basePort}`;
   const environment = productionHostEnvironment(provisioned, basePort);
   let runtime;
@@ -325,6 +328,7 @@ export async function runCredentialRotationDrill({
     return evidence;
   } finally {
     if (runtime) await stopProductionHost(runtime.child);
+    await portLease.release();
   }
 }
 

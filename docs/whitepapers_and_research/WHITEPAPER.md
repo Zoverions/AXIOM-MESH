@@ -397,6 +397,13 @@ preserve pre-fault Grid state. Grid signs a secret-free record of the profile
 and outcomes. This does not model cgroup OOM, disk exhaustion, or pilot
 orchestrator recovery, which remain deployment-specific experiments.
 
+Host-side evidence drills coordinate their loopback endpoints with atomic,
+aligned four-port leases visible across test processes. Ownership spans
+stopped-runtime transitions and restarts, while an independent socket probe
+rejects externally occupied candidates. This separates orchestration of
+concurrent evidence jobs from the production network trust model and prevents
+one drill from invalidating another through a check-then-bind race.
+
 ## 12. Production candidate
 
 The production candidate uses:

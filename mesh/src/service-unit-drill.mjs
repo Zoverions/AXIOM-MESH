@@ -12,7 +12,7 @@ import {
 import { MESH_ROOT } from './lib/config.mjs';
 import { ensureMeshIdentity, verifyObjectSignature } from './lib/identity.mjs';
 import {
-  findProductionPortBlock,
+  reserveProductionPortBlock,
   operationsReportIsReady
 } from './lib/production-host.mjs';
 import {
@@ -57,7 +57,8 @@ export async function runServiceUnitDrill({
     'grid',
     { create: false }
   );
-  const basePort = await findProductionPortBlock('service-unit drill');
+  const portLease = await reserveProductionPortBlock('service-unit drill');
+  const basePort = portLease.base_port;
   const gateway = `http://127.0.0.1:${basePort}`;
   const children = new Map();
   let restartedSandbox;
@@ -246,6 +247,7 @@ export async function runServiceUnitDrill({
     return evidence;
   } finally {
     await Promise.all([...children.values()].map(stopUnit));
+    await portLease.release();
   }
 }
 

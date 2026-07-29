@@ -507,6 +507,7 @@ export function verifyProductionDeployment({
     'automated incident tabletop',
     'host-side telemetry relay',
     'request-pressure and dependency-loss',
+    'cross-process port-block lease',
     'mutually authenticated TLS 1.3',
     'independently deployable units',
     'admitted-node discovery and scheduling'

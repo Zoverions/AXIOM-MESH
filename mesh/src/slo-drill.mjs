@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url';
 import { ValidationError } from './lib/canonical.mjs';
 import { ensureMeshIdentity, verifyObjectSignature } from './lib/identity.mjs';
 import {
-  findProductionPortBlock,
+  reserveProductionPortBlock,
   operationsReportIsReady,
   productionHostEnvironment,
   startProductionHost,
@@ -49,7 +49,8 @@ export async function runSloBaseline({
     { create: false }
   );
   const token = (await readFile(provisioned.operator_token_file, 'utf8')).trim();
-  const basePort = await findProductionPortBlock('SLO drill');
+  const portLease = await reserveProductionPortBlock('SLO drill');
+  const basePort = portLease.base_port;
   const gateway = `http://127.0.0.1:${basePort}`;
   const environment = productionHostEnvironment(provisioned, basePort, {
     rateLimitCapacity: BASELINE_PROFILE.rate_limit_capacity,
@@ -223,6 +224,7 @@ export async function runSloBaseline({
     return evidence;
   } finally {
     if (runtime) await stopProductionHost(runtime.child);
+    await portLease.release();
   }
 }
 

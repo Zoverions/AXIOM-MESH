@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=4d143d985aa25e0258bfe36026667ca6dcf7f3403ae0f5b99efbc2e2b46e5f20 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=a86cf647c83f0579fdfd9d89b3f3da9e595b9ae4c3b604cdda1f8da70a7a291b -->
 # AXIOM-MESH Rebuild Requirements
 
 **Normative language:** MUST, MUST NOT, SHOULD, and MAY are used in their usual
@@ -108,6 +108,7 @@ requirements sense.
 | OPS-08 | The production supervisor MUST reject oversized requests before idempotency reservation, bound concurrent request pressure, propagate required-dependency loss into readiness, exit fail-closed after a child dies, and preserve Grid state through clean restart. | Signed Linux drill evidence covering body/rate pressure, real Sandbox suspension and loss, degradation, supervisor exit, restart, and state preservation. |
 | OPS-09 | Every production internal edge MUST use mutually authenticated TLS 1.3, bind the certificate peer to the signed caller, reject inactive leaves, and support bounded offline rotation and exact rollback. | Certificate profile and negative-path tests plus signed real-stack rotation, retired-leaf rejection, restart, intent, and rollback evidence. |
 | OPS-10 | Gateway, Grid, Hypervisor, and Sandbox MUST be independently deployable with one application private key and one TLS leaf per unit, Grid-only durable state, dependency-aware readiness, survivor continuity after non-Grid loss, and fail-closed network policy. | Projection isolation/staleness tests, signed independent-process Sandbox-loss and state-preservation drill, and protected four-container Sandbox-only restart plus public-egress rejection. |
+| OPS-11 | Concurrent host-side real-stack drills MUST hold non-overlapping cross-process endpoint leases through every runtime and stopped/restart interval, while independently rejecting an externally occupied candidate port. | Forced same-candidate concurrency, alignment, external occupancy, idempotent release/reuse, and full parallel CI tests. |
 
 ## Verified implementation checkpoint
 

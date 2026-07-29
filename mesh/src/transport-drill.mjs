@@ -13,7 +13,7 @@ import {
   verifyObjectSignature
 } from './lib/identity.mjs';
 import {
-  findProductionPortBlock,
+  reserveProductionPortBlock,
   operationsReportIsReady,
   productionHostEnvironment,
   startProductionHost,
@@ -70,7 +70,8 @@ export async function runTransportDrill({
     transportDir: before.transport_dir,
     service: 'gateway'
   });
-  const basePort = await findProductionPortBlock('transport drill');
+  const portLease = await reserveProductionPortBlock('transport drill');
+  const basePort = portLease.base_port;
   const gateway = `http://127.0.0.1:${basePort}`;
   const hypervisor = `https://127.0.0.1:${basePort + 1}`;
   const environment = productionHostEnvironment(provisioned, basePort);
@@ -308,6 +309,7 @@ export async function runTransportDrill({
     return evidence;
   } finally {
     if (runtime) await stopProductionHost(runtime.child);
+    await portLease.release();
   }
 }
 

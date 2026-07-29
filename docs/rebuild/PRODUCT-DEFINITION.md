@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=4d143d985aa25e0258bfe36026667ca6dcf7f3403ae0f5b99efbc2e2b46e5f20 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=a86cf647c83f0579fdfd9d89b3f3da9e595b9ae4c3b604cdda1f8da70a7a291b -->
 # AXIOM-MESH Product Definition
 
 **Status:** Canonical rebuild definition
@@ -203,6 +203,12 @@ restart, and Grid-state preservation. Signed evidence excludes request bodies,
 intent identifiers, process identifiers, host paths, and secrets. Cgroup,
 disk, pilot-traffic, and orchestrator replacement behavior remain separate
 deployment evidence.
+
+Host evidence generation is safe under the concurrent test runner. Every
+real-stack drill owns one aligned four-port lease across startup, runtime,
+stopped maintenance, and restart. Atomic cross-process ownership prevents
+partial or complete overlap, while an independent bind probe rejects external
+occupancy. This test coordination does not grant production network authority.
 
 Incident response is an executable candidate gate. A machine-readable policy
 selects the highest matching severity, requires independent command roles,
