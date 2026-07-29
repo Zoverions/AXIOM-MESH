@@ -10,6 +10,7 @@ import {
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { canonicalJson, sha256, AxiomError } from './canonical.mjs';
+import { assertTransportPeer } from './transport-credentials.mjs';
 
 const KEY_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
 
@@ -168,6 +169,7 @@ export async function verifySignedRequest({
   dataDir,
   allowedCallers,
   replayGuard,
+  transportPeers,
   clockSkewSeconds = 30,
   now = Date.now()
 }) {
@@ -193,6 +195,17 @@ export async function verifySignedRequest({
   }
   if (claimedAudience !== audience) throw new AxiomError('wrong_audience', 'Service request audience is invalid', 401);
   if (!allowedCallers.includes(service)) throw new AxiomError('caller_not_allowed', 'Calling service is not allowed', 403);
+  if (transportPeers) {
+    try {
+      assertTransportPeer(req.socket, service, transportPeers);
+    } catch {
+      throw new AxiomError(
+        'invalid_transport_peer',
+        'Transport peer identity does not match the signed caller',
+        401
+      );
+    }
+  }
   const timestampSeconds = Number(timestamp);
   const nowSeconds = Math.floor(now / 1000);
   if (!Number.isSafeInteger(timestampSeconds) || Math.abs(nowSeconds - timestampSeconds) > clockSkewSeconds) {

@@ -1,10 +1,16 @@
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
+import https from 'node:https';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { ValidationError } from './lib/canonical.mjs';
 import { meshConfig } from './lib/config.mjs';
 import { startLocalIngressBridge } from './local-ingress.mjs';
 import { assertDenyEgressBoundary } from './network-boundary.mjs';
+import {
+  loadTransportRuntime,
+  serviceDnsName,
+  verifyTransportServerIdentity
+} from './lib/transport-credentials.mjs';
 
 const STARTUP_ORDER = Object.freeze([
   { service: 'grid', module: 'src/grid/server.mjs', port: 'grid', probe: '/health', expected: 'live' },
@@ -33,6 +39,12 @@ export async function runProductionSupervisor({
     throw new ValidationError('The production supervisor requires NODE_ENV=production and disabled auto-bootstrap');
   }
   if (config.requireDenyEgress) await denyEgressCheck();
+  const supervisorTransport = config.transport?.enabled
+    ? await loadTransportRuntime({
+        transportDir: config.transport.directory,
+        service: 'supervisor'
+      })
+    : null;
   const children = [];
   let ingressBridge;
   let stopping = false;
@@ -85,9 +97,12 @@ export async function runProductionSupervisor({
       await waitForHealthy({
         child,
         service: spec.service,
-        url: `http://127.0.0.1:${config.ports[spec.port]}${spec.probe}`,
+        url: serviceHealthUrl(config, spec),
         expected: spec.expected,
         fetchImpl,
+        transport: spec.service === 'gateway'
+          ? null
+          : supervisorTransport,
         timeoutMs: startupTimeoutMs
       });
     }
@@ -144,17 +159,27 @@ export async function runProductionSupervisor({
   return requestedExitCode;
 }
 
-async function waitForHealthy({ child, service, url, expected, fetchImpl, timeoutMs }) {
+async function waitForHealthy({
+  child,
+  service,
+  url,
+  expected,
+  fetchImpl,
+  transport,
+  timeoutMs
+}) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (child.exitCode !== null || child.signalCode !== null) {
       throw new Error(`${service} exited before becoming healthy`);
     }
     try {
-      const response = await fetchImpl(url, {
-        redirect: 'error',
-        signal: AbortSignal.timeout(1_000)
-      });
+      const response = transport
+        ? await secureHealthProbe({ url, service, transport })
+        : await fetchImpl(url, {
+            redirect: 'error',
+            signal: AbortSignal.timeout(1_000)
+          });
       if (response.ok) {
         const payload = await response.json();
         if (payload?.service === service && payload?.status === expected) return;
@@ -165,6 +190,68 @@ async function waitForHealthy({ child, service, url, expected, fetchImpl, timeou
     await new Promise(resolve => setTimeout(resolve, 250));
   }
   throw new Error(`${service} did not become healthy before the startup deadline`);
+}
+
+function serviceHealthUrl(config, spec) {
+  if (spec.service === 'gateway') {
+    return `http://127.0.0.1:${config.ports.gateway}${spec.probe}`;
+  }
+  const configured = config.urls?.[spec.service];
+  if (configured) return `${configured}${spec.probe}`;
+  return `http://127.0.0.1:${config.ports[spec.port]}${spec.probe}`;
+}
+
+async function secureHealthProbe({ url, service, transport }) {
+  const target = new URL(url);
+  return new Promise((resolve, reject) => {
+    const request = https.request({
+      protocol: target.protocol,
+      hostname: target.hostname,
+      port: target.port,
+      path: `${target.pathname}${target.search}`,
+      method: 'GET',
+      key: transport.key,
+      cert: transport.cert,
+      ca: transport.ca,
+      rejectUnauthorized: true,
+      minVersion: 'TLSv1.3',
+      maxVersion: 'TLSv1.3',
+      servername: serviceDnsName(service),
+      checkServerIdentity: (_hostname, peer) => (
+        verifyTransportServerIdentity(transport, service, peer)
+      ),
+      agent: false
+    }, response => {
+      const chunks = [];
+      let size = 0;
+      response.on('data', chunk => {
+        size += chunk.length;
+        if (size > 65_536) {
+          request.destroy(new Error('Health response exceeds the byte limit'));
+          return;
+        }
+        chunks.push(chunk);
+      });
+      response.once('end', () => {
+        const serialized = Buffer.concat(chunks).toString('utf8');
+        resolve({
+          ok: (
+            Number.isInteger(response.statusCode)
+            && response.statusCode >= 200
+            && response.statusCode < 300
+          ),
+          async json() {
+            return JSON.parse(serialized);
+          }
+        });
+      });
+    });
+    request.setTimeout(1_000, () => {
+      request.destroy(new Error(`${service} health probe timed out`));
+    });
+    request.once('error', reject);
+    request.end();
+  });
 }
 
 async function stopChildren(children) {

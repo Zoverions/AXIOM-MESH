@@ -53,7 +53,7 @@ Incident response is also release-gated. The policy in
 highest matching severity, requires independently assigned command roles,
 allows no authority-expanding action, and defines evidence, communication,
 recovery, closure, and retrospective requirements. Protected CI signs an
-automated tabletop only after six same-revision operational control artifacts
+automated tabletop only after seven same-revision operational control artifacts
 verify. See the
 [incident-response runbook](../docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md).
 
@@ -62,6 +62,13 @@ request pressure, then suspends and kills the actual Sandbox child process. It
 requires dependency-aware degradation, fail-closed supervisor exit, clean
 restart, persisted pre-fault evidence, and signed secret-free output. See the
 [request-pressure and dependency-loss runbook](../docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md).
+
+Production internal calls use mutually authenticated TLS 1.3 with distinct
+Ed25519 leaves, DNS and SPIFFE-style URI identities, exact active-certificate
+pinning, and the existing signed/replay-protected request envelope. Offline
+atomic leaf rotation and exact rollback are exercised against the real stack.
+See the
+[transport lifecycle runbook](../docs/operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md).
 
 Verify an export without a running AXIOM-MESH process:
 

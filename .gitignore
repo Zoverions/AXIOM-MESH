@@ -29,6 +29,9 @@ yarn-error.log*
 private.pem
 *.private.pem
 *.key
+*.key.pem
+transport-previous/
+transport-forward/
 production-data/
 production-secrets/
 api-tokens.json

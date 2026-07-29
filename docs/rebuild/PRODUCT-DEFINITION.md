@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=5a9aedefab571b835eb6496c27beaa9c778cbd18e77f12fcc3b2fc7a471c8fb0 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=2999698cb0c5a01ee29d0c756c3880eeb286d43fa78723ef5d23ddaafba1bebd -->
 # AXIOM-MESH Product Definition
 
 **Status:** Canonical rebuild definition
@@ -162,7 +162,9 @@ evidence at the next trusted startup.
 The candidate production package keeps all four services as independent
 supervised processes inside one container. This is a deliberate interim trust
 boundary: only Gateway binds externally, while Hypervisor, Sandbox, and Grid
-remain on loopback until an audited mTLS transport adapter exists. The package
+remain on loopback. Every internal edge uses mutually authenticated TLS 1.3,
+distinct Ed25519 leaves, DNS and SPIFFE-style URI identities, exact active
+certificate pinning, and the signed/replay-protected request envelope. The package
 must use a digest-pinned base, non-root identity, read-only root filesystem,
 dropped Linux capabilities, explicit secrets and resource ceilings,
 permission-restricted local ingress, bounded logs, and readiness-based health
@@ -197,7 +199,7 @@ selects the highest matching severity, requires independent command roles,
 permits only authority-reducing, preservation, recovery, communication, or
 review actions, and fails closure without verified containment, recovery,
 evidence, communications, retrospective scheduling, and independent review.
-The protected automated tabletop binds six independently signed operational
+The protected automated tabletop binds seven independently signed operational
 control artifacts from the same revision. A facilitated pilot exercise and
 live roster remain external promotion requirements.
 

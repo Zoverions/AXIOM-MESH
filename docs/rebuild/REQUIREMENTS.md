@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=5a9aedefab571b835eb6496c27beaa9c778cbd18e77f12fcc3b2fc7a471c8fb0 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=2999698cb0c5a01ee29d0c756c3880eeb286d43fa78723ef5d23ddaafba1bebd -->
 # AXIOM-MESH Rebuild Requirements
 
 **Normative language:** MUST, MUST NOT, SHOULD, and MAY are used in their usual
@@ -19,7 +19,7 @@ requirements sense.
 | ID | Requirement | Acceptance evidence |
 |---|---|---|
 | IAM-01 | Public and service identities MUST be distinct. | Service credentials cannot call public-user-only or operator-only actions. |
-| IAM-02 | Service requests MUST be mutually authenticated and replay resistant. | Signed-request tests cover expiry, nonce reuse, body mutation, and wrong audience. |
+| IAM-02 | Service requests MUST be mutually authenticated and replay resistant. | TLS 1.3 peer-chain, DNS/URI identity, exact active-leaf, signed-caller binding, expiry, nonce reuse, body mutation, and wrong-audience tests. |
 | IAM-03 | Capability grants MUST be short-lived, single-use, audience-, intent-, tool-, and resource-bound. | Sandbox negative-path suite. |
 | IAM-04 | Policy inheritance MUST be deny-dominant: lower layers can tighten but cannot loosen higher layers. | Property tests across global/national/local/user policies. |
 | IAM-05 | Consent MUST identify subject, controller, purpose, data scope, expiry, and revocation handle. | Revoked/expired/wrong-purpose requests fail. |
@@ -104,6 +104,7 @@ requirements sense.
 | OPS-06 | External telemetry MUST preserve kernel deny-egress, use a route-restricted scrape identity, fixed low-cardinality OTLP and Alertmanager schemas, exact HTTPS origin allowlists, no redirects, bounded persistent retry with alert-reserved capacity, idempotency, redaction, delivery receipts, and visible dead letters. | Unit negative paths plus signed real Unix-socket scrape and forced-retry drill evidence. |
 | OPS-07 | Public claims MUST be generated from the machine-readable feature-status registry. | Docs/status consistency test. |
 | OPS-08 | The production supervisor MUST reject oversized requests before idempotency reservation, bound concurrent request pressure, propagate required-dependency loss into readiness, exit fail-closed after a child dies, and preserve Grid state through clean restart. | Signed Linux drill evidence covering body/rate pressure, real Sandbox suspension and loss, degradation, supervisor exit, restart, and state preservation. |
+| OPS-09 | Every production internal edge MUST use mutually authenticated TLS 1.3, bind the certificate peer to the signed caller, reject inactive leaves, and support bounded offline rotation and exact rollback. | Certificate profile and negative-path tests plus signed real-stack rotation, retired-leaf rejection, restart, intent, and rollback evidence. |
 
 ## Verified implementation checkpoint
 
@@ -178,6 +179,12 @@ The machine-readable capability registry remains authoritative. Kernel
   supervisor exit after Sandbox loss, clean restart, and Grid-state
   preservation. Cgroup, disk, and pilot-orchestrator resource controls remain
   deployment evidence.
+- mutually authenticated TLS 1.3 on every production internal edge with
+  Ed25519 CA-issued leaves, DNS and SPIFFE-style URI identities, exact active
+  fingerprint pinning, and the signed/replay-protected request above TLS.
+  Protected CI MUST reject no-certificate, wrong-server, caller/certificate
+  mismatch, expired, drifted, and retired peers and retain signed rotation and
+  exact-rollback evidence.
 - an explicit idempotent production provisioning workflow and statically gated
   digest-pinned container candidate with four supervised processes,
   loopback-only internals, non-root execution, read-only root, dropped
@@ -196,9 +203,9 @@ The machine-readable capability registry remains authoritative. Kernel
   communications, verified recovery, independent closure review, and a
   retrospective due within seven days. Protected CI MUST sign an automated
   tabletop record only after recovery, backup-lifecycle, restart, resilience,
-  credential-rotation, and data-key-rotation evidence from the same source
-  revision verifies. A named-roster pilot exercise remains mandatory before
-  production promotion.
+  transport, credential-rotation, and data-key-rotation evidence from the same
+  source revision verifies. A named-roster pilot exercise remains mandatory
+  before production promotion.
 
 ## Capability coverage
 

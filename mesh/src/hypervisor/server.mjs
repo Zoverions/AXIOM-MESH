@@ -30,11 +30,21 @@ import {
 } from '../lib/observability.mjs';
 import { loadPolicyStack, mergeDenyDominantPolicy, PolicyEngine } from '../lib/policy.mjs';
 import { buildPlan, planDigest } from '../lib/plan.mjs';
+import {
+  loadTransportRuntime,
+  transportServerOptions
+} from '../lib/transport-credentials.mjs';
 
 const PRINCIPAL_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 
 export async function createHypervisorService(config = meshConfig()) {
   const identity = await ensureMeshIdentity(config.dataDir, 'hypervisor', { create: config.autoBootstrap });
+  identity.transport = config.transport.enabled
+    ? await loadTransportRuntime({
+        transportDir: config.transport.directory,
+        service: 'hypervisor'
+      })
+    : null;
   const sandboxKey = await loadTrustedKey(config.dataDir, 'sandbox');
   const requestReplay = new ReplayGuard();
   const basePolicy = await loadPolicyStack(config.policyPaths);
@@ -306,12 +316,20 @@ export async function createHypervisorService(config = meshConfig()) {
     router,
     maxBodyBytes: config.maxBodyBytes,
     telemetry,
+    tls: identity.transport
+      ? transportServerOptions(identity.transport)
+      : undefined,
+    transportPeers: identity.transport?.peers,
+    allowedTransportPeers: identity.transport
+      ? ['gateway', 'supervisor']
+      : undefined,
     authenticate: ({ req, body }) => verifySignedRequest({
       req,
       body,
       audience: 'hypervisor',
       dataDir: config.dataDir,
       allowedCallers: ['gateway'],
+      transportPeers: identity.transport?.peers,
       replayGuard: requestReplay,
       clockSkewSeconds: config.clockSkewSeconds
     })

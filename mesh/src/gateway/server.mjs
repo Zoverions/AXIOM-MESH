@@ -25,11 +25,18 @@ import {
   ServiceTelemetry
 } from '../lib/observability.mjs';
 import { createBearerAuthenticator } from '../lib/public-auth.mjs';
+import { loadTransportRuntime } from '../lib/transport-credentials.mjs';
 
 const PRINCIPAL_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 
 export async function createGatewayService(config = meshConfig()) {
   const identity = await ensureMeshIdentity(config.dataDir, 'gateway', { create: config.autoBootstrap });
+  identity.transport = config.transport.enabled
+    ? await loadTransportRuntime({
+        transportDir: config.transport.directory,
+        service: 'gateway'
+      })
+    : null;
   const principals = await loadApiPrincipals(config);
   const bearerAuth = createBearerAuthenticator(principals);
   const ipLimiter = new TokenBucketLimiter({
@@ -62,7 +69,7 @@ export async function createGatewayService(config = meshConfig()) {
         identity,
         'hypervisor',
         `${config.urls.hypervisor}/internal/v1/operations`,
-        { traceId, timeoutMs: 3_000 }
+        { traceId, timeoutMs: 5_000 }
       ),
       signedFetch(
         identity,

@@ -20,6 +20,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md',
   'docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md',
   'docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md',
+  'docs/operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md',
   'docs/releases/0.11.0.md',
   'docs/whitepapers_and_research/WHITEPAPER.md',
   'mesh/PRODUCTION.md'
@@ -60,6 +61,11 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Dependency-loss and recovery sequence',
     '## Pilot repetition and non-claims'
   ],
+  'docs/operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md': [
+    '## Trust and peer-identity model',
+    '## Offline leaf rotation',
+    '## Pilot repetition and non-claims'
+  ],
   'docs/releases/0.11.0.md': ['## Container status', '## Security action'],
   'docs/whitepapers_and_research/WHITEPAPER.md': ['## Non-claims', '## Reproducibility'],
   'mesh/PRODUCTION.md': ['not evidence of a live deployment']
@@ -75,6 +81,7 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md': 4_000,
   'docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md': 4_500,
   'docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md': 4_500,
+  'docs/operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md': 5_000,
   'docs/whitepapers_and_research/WHITEPAPER.md': 7_000
 });
 

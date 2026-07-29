@@ -113,8 +113,8 @@ signature for a different body, audience, time window, or nonce.
 
 In the 0.11 production candidate, all four services are separate Node.js
 processes inside one container. Gateway binds to loopback on the host; the
-internal services bind only to container loopback. The interim topology avoids
-remote plaintext without claiming an mTLS adapter that does not yet exist.
+internal services bind only to container loopback and use mutually
+authenticated TLS 1.3 on every edge.
 
 The operating system, container engine, host administrator, mounted secret
 paths, and data-protection key remain trusted components. The candidate is not
@@ -161,6 +161,21 @@ Signed requests include:
 Verification rejects an unknown issuer, wrong audience, stale request, body
 change, signature failure, or nonce replay. Production startup refuses
 automatic identity generation and refuses remote plaintext internal URLs.
+
+TLS uses a locally provisioned Ed25519 CA and distinct service leaves whose
+DNS SAN and SPIFFE-style URI name Gateway, Hypervisor, Sandbox, Grid, or the
+supervisor probe. Both peers validate the CA and TLS 1.3; clients additionally
+pin the expected active server fingerprint, while servers bind the active
+client fingerprint to the caller in the signed request. This preserves
+message-level audience, body, timestamp, and replay guarantees above channel
+authentication.
+
+Offline rotation stages a complete leaf generation, atomically swaps the
+active directory, and retains the previous generation for exact rollback.
+Active-leaf pinning rejects a retired but still CA-valid credential without
+adding an OCSP network dependency. Protected CI exercises initial, rotated,
+and restored real stacks. External CA custody, per-service mounts,
+orchestrator rollout, and CA-compromise recovery remain pilot controls.
 
 Credentials from deprecated repository history are permanently untrusted.
 Restoring an old key is a security incident, not a recovery procedure.
@@ -398,8 +413,8 @@ for unexpected dependencies. Release verification binds:
 - machine-readable incident severity, role, containment, communication, and
   closure policy;
 - signed automated incident-tabletop evidence bound to same-revision
-  recovery, backup, restart, resilience, credential-rotation, and data-key
-  controls;
+  recovery, backup, restart, resilience, transport, credential-rotation, and
+  data-key controls;
 - deprecated credential-history ledger and protected reuse policy;
 - canonical documentation;
 - SPDX SBOM and provenance inputs.

@@ -24,6 +24,8 @@ services:
       AXIOM_DATA_DIR: /var/lib/axiom-mesh
       AXIOM_DATA_KEY_FILE: /run/secrets/data-protection.key
       AXIOM_API_TOKENS_FILE: /run/secrets/api-tokens.json
+      AXIOM_INTERNAL_TLS: "true"
+      AXIOM_TRANSPORT_DIR: /run/secrets/transport
       AXIOM_GATEWAY_HOST: 127.0.0.1
       AXIOM_GATEWAY_SOCKET: /run/axiom-mesh/gateway.sock
       AXIOM_INTERNAL_HOST: 127.0.0.1
@@ -35,6 +37,18 @@ services:
       - type: bind
         source: ${AXIOM_GATEWAY_SOCKET_DIR_HOST:?set AXIOM_GATEWAY_SOCKET_DIR_HOST}
         target: /run/axiom-mesh
+      - type: bind
+        source: ${AXIOM_TRANSPORT_DIR_HOST:?set AXIOM_TRANSPORT_DIR_HOST}/ca-cert.pem
+        target: /run/secrets/transport/ca-cert.pem
+        read_only: true
+      - type: bind
+        source: ${AXIOM_TRANSPORT_DIR_HOST:?set AXIOM_TRANSPORT_DIR_HOST}/manifest.json
+        target: /run/secrets/transport/manifest.json
+        read_only: true
+      - type: bind
+        source: ${AXIOM_TRANSPORT_DIR_HOST:?set AXIOM_TRANSPORT_DIR_HOST}/services
+        target: /run/secrets/transport/services
+        read_only: true
     secrets:
       - source: axiom_data_key
         target: data-protection.key

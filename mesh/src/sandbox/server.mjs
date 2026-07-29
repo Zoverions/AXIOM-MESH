@@ -11,11 +11,21 @@ import { Router, createServiceServer, listen, parseJsonBody } from '../lib/http.
 import { AxiomError, assertPlainObject, digestObject } from '../lib/canonical.mjs';
 import { operationsReport, readinessState, ServiceTelemetry } from '../lib/observability.mjs';
 import { runServiceProcess } from '../lib/service-lifecycle.mjs';
+import {
+  loadTransportRuntime,
+  transportServerOptions
+} from '../lib/transport-credentials.mjs';
 import { planDigest, validatePlan } from '../lib/plan.mjs';
 import { executeBuiltin } from './executor.mjs';
 
 export async function createSandboxService(config = meshConfig()) {
   const identity = await ensureMeshIdentity(config.dataDir, 'sandbox', { create: config.autoBootstrap });
+  identity.transport = config.transport.enabled
+    ? await loadTransportRuntime({
+        transportDir: config.transport.directory,
+        service: 'sandbox'
+      })
+    : null;
   const hypervisorKey = await loadTrustedKey(config.dataDir, 'hypervisor');
   const requestReplay = new ReplayGuard();
   const capabilityReplay = new ReplayGuard();
@@ -95,12 +105,20 @@ export async function createSandboxService(config = meshConfig()) {
     router,
     maxBodyBytes: config.maxBodyBytes,
     telemetry,
+    tls: identity.transport
+      ? transportServerOptions(identity.transport)
+      : undefined,
+    transportPeers: identity.transport?.peers,
+    allowedTransportPeers: identity.transport
+      ? ['hypervisor', 'supervisor']
+      : undefined,
     authenticate: ({ req, body }) => verifySignedRequest({
       req,
       body,
       audience: 'sandbox',
       dataDir: config.dataDir,
       allowedCallers: ['hypervisor'],
+      transportPeers: identity.transport?.peers,
       replayGuard: requestReplay,
       clockSkewSeconds: config.clockSkewSeconds
     })

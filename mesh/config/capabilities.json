@@ -245,6 +245,17 @@
       ]
     },
     {
+      "id": "operations.mutual-transport",
+      "family": "operations",
+      "status": "implemented",
+      "summary": "Production internal calls use TLS 1.3 with CA-issued Ed25519 leaves, DNS and SPIFFE-style URI identity, exact active-certificate pinning, signed-caller binding, offline atomic rotation, retired-leaf rejection, and exact rollback.",
+      "evidence": [
+        "mesh/test/transport-credentials.test.mjs",
+        "mesh/src/transport-drill.mjs",
+        ".github/workflows/kernel.yml"
+      ]
+    },
+    {
       "id": "operations.container-package",
       "family": "operations",
       "status": "implemented",

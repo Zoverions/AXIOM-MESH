@@ -59,17 +59,17 @@ evidence-chain integrity, or unauthorized effects.
 | PILOT-004 | Complete for candidate host | Automate four-service identity and operator/telemetry-token rotation with coordinated trust updates and exact rollback | Protected CI uploads signed, secret-free `axiom-credential-rotation-evidence-<commit>` after active/inactive trust and token rejection checks |
 | PILOT-005 | Complete for candidate host | Re-encrypt and rotate the data-protection key across live state and retained recovery contexts with interruption recovery and rollback | Protected CI uploads signed `axiom-data-key-rotation-evidence-<commit>` after real-stack wrong-key rejection, backup restore, state-preserving rollback, and recovery-copy checks |
 | PILOT-006 | Complete for candidate host | Automate encrypted backup retention and restore verification | Signed policy-derived plan/receipt, kill recovery, data-key interoperability, and weekly protected-CI restore evidence; repeat from pilot-owned media |
-| PILOT-007 | Complete for automated candidate; pilot exercise pending | Enforce incident command, deterministic severity, authority-reducing containment, evidence preservation, communication, recovery, and closure | Protected CI uploads signed `axiom-incident-tabletop-evidence-<commit>` bound to six verified control artifacts; repeat with named pilot roster and independent human review |
+| PILOT-007 | Complete for automated candidate; pilot exercise pending | Enforce incident command, deterministic severity, authority-reducing containment, evidence preservation, communication, recovery, and closure | Protected CI uploads signed `axiom-incident-tabletop-evidence-<commit>` bound to seven verified control artifacts; repeat with named pilot roster and independent human review |
 
 ## P2 - multi-host foundations
 
-| ID | Work | Acceptance evidence |
-|---|---|---|
-| NET-001 | Specify and implement mutually authenticated service transport | Certificate lifecycle and peer-identity tests |
-| NET-002 | Separate four services into independently deployable units | Failure-isolation and dependency-readiness drill |
-| NET-003 | Implement admitted-node discovery and capability-aware scheduling | Sybil, expiry, quarantine, and partition tests |
-| NET-004 | Define consistency and conflict behavior for online causal exchange | Partition/rejoin evidence and bounded state tests |
-| NET-005 | Add deployment-independent secret and policy providers | Provider conformance and fail-closed startup tests |
+| ID | Status | Work | Acceptance evidence |
+|---|---|---|---|
+| NET-001 | Complete for single-host candidate; multi-host custody pending | Specify and implement mutually authenticated service transport | TLS 1.3, CA and exact active-leaf validation, signed-caller/certificate binding, expiry, offline atomic rotation, retired-leaf rejection, exact rollback, real-stack drill, and signed protected-CI evidence |
+| NET-002 | Pending | Separate four services into independently deployable units | Failure-isolation and dependency-readiness drill |
+| NET-003 | Pending | Implement admitted-node discovery and capability-aware scheduling | Sybil, expiry, quarantine, and partition tests |
+| NET-004 | Pending | Define consistency and conflict behavior for online causal exchange | Partition/rejoin evidence and bounded state tests |
+| NET-005 | Pending | Add deployment-independent secret and policy providers | Provider conformance and fail-closed startup tests |
 
 ## P3 - adapter and domain expansion
 

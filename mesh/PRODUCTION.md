@@ -3,8 +3,8 @@
 The candidate production package runs Gateway, Hypervisor, Sandbox, and Grid as
 four supervised Node.js processes inside one hardened container. Only Gateway
 binds outside the container. The three internal services remain on loopback,
-which preserves the current no-remote-plaintext boundary until a separately
-audited mTLS transport adapter exists.
+and every internal call uses mutually authenticated TLS 1.3 with exact active
+certificate pinning plus the existing signed/replay-protected request.
 
 ## 1. Provision outside the repository
 
@@ -22,19 +22,25 @@ chown -R 10001:10001 /srv/axiom-mesh/data
 chown 10001:10001 \
   /srv/axiom-mesh/secrets/data-protection.key \
   /srv/axiom-mesh/secrets/api-tokens.json
+chown -R 10001:10001 /srv/axiom-mesh/secrets/transport
 chmod 700 /srv/axiom-mesh/data /srv/axiom-mesh/secrets
-chmod 600 /srv/axiom-mesh/secrets/*
+chmod 700 /srv/axiom-mesh/secrets/transport
 ```
 
 Provisioning creates four distinct Ed25519 service identities, their trust
 records, a 32-byte data-protection key, an API principal registry, and a
 separate operator-token file plus a route-restricted
 `telemetry-relay.token`. It never prints secret values. A partial secret
-set is rejected rather than silently repaired or rotated. Keep
+set is rejected rather than silently repaired or rotated. It also creates an
+Ed25519 transport CA, five distinct 30-day service/probe leaves, URI service
+identities, and an exact active-certificate registry under `transport/`. Keep
 `operator.token` owned by the host operator; it is not mounted into the
 container. Keep `telemetry-relay.token` readable only by the dedicated host
 relay account. Only the data-protection key and API registry need to be
 readable by container UID `10001`.
+The complete single-container candidate also reads the transport directory;
+independently deployed units must receive only their own leaf key and public
+trust material.
 
 Store an encrypted offline recovery copy before first launch. Losing the data
 key makes protected Grid data unrecoverable. Replacing any service key without
@@ -50,6 +56,7 @@ export AXIOM_DATA_DIR_HOST=/srv/axiom-mesh/data
 export AXIOM_GATEWAY_SOCKET_DIR_HOST=/srv/axiom-mesh/run
 export AXIOM_DATA_KEY_FILE_HOST=/srv/axiom-mesh/secrets/data-protection.key
 export AXIOM_API_TOKENS_FILE_HOST=/srv/axiom-mesh/secrets/api-tokens.json
+export AXIOM_TRANSPORT_DIR_HOST=/srv/axiom-mesh/secrets/transport
 sudo install -d -o 10001 -g 10001 -m 0750 \
   "${AXIOM_GATEWAY_SOCKET_DIR_HOST}"
 docker compose -f compose.production.yml build --pull=false
@@ -63,6 +70,10 @@ logs, and readiness-based health checks. Compose enforces deny-egress with
 `network_mode: "none"` and no attached Docker network. The production
 supervisor rejects every active non-loopback or IPv4/IPv6 default route before
 it launches any service.
+Only the public CA certificate, active manifest, and service-leaf directory
+are mounted read-only; the CA signing key remains host-only. Internal URLs
+require HTTPS and TLS is fixed to 1.3. CA-valid but inactive leaves are
+rejected by exact fingerprint, DNS SAN, and SPIFFE-style URI checks.
 
 Do not disable `AXIOM_REQUIRE_DENY_EGRESS` to accommodate another runtime.
 Equivalent orchestrator deployments must reproduce the route rejection and
@@ -107,6 +118,42 @@ categories only: no principal, intent, capsule, route parameter, query string,
 prompt, payload, token, or object identifier becomes a metric label.
 Grid deep integrity results are cached for 30 seconds by default, so frequent
 health probes do not repeatedly scan an unbounded evidence history.
+
+### 3.1 Verify and rotate internal transport credentials
+
+Inspect public transport metadata:
+
+```bash
+npm run rotate:transport -- verify /srv/axiom-mesh/secrets
+```
+
+For a scheduled leaf rotation, stop the complete runtime and run:
+
+```bash
+npm run rotate:transport -- rotate /srv/axiom-mesh/secrets
+```
+
+The command stages and validates one complete generation before an atomic
+directory swap. Restart the complete runtime, verify readiness, and exercise a
+low-risk intent. A retired CA-valid leaf is rejected by the active pin
+registry. If verification fails, stop the runtime and restore the exact prior
+generation:
+
+```bash
+npm run rotate:transport -- rollback /srv/axiom-mesh/secrets
+```
+
+The current lifecycle is offline and single-host. External CA custody,
+per-unit secret mounts, orchestrator rollout, and CA-compromise recovery
+remain pilot gates. Run the signed disposable exercise with:
+
+```bash
+npm run transport:drill -- /tmp/axiom-transport-drill \
+  > /tmp/axiom-transport-drill-evidence.json
+```
+
+See
+[`docs/operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md`](../docs/operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md).
 
 ## 4. Exercise recovery on a disposable host
 
@@ -502,8 +549,8 @@ cadence, and mandatory closure conditions. Unknown signals fail
 classification instead of defaulting to low severity.
 
 After producing recovery, backup-lifecycle, SLO/restart, resilience,
-credential-rotation, and data-key-rotation evidence for one commit, compose
-the six same-revision records into the automated incident tabletop:
+transport, credential-rotation, and data-key-rotation evidence for one commit,
+compose the seven same-revision records into the automated incident tabletop:
 
 ```bash
 export GITHUB_SHA=<40-character-source-revision>
@@ -513,6 +560,7 @@ npm run incident-tabletop:drill -- \
   /tmp/axiom-backup-lifecycle-evidence.json \
   /tmp/axiom-slo-baseline-evidence.json \
   /tmp/axiom-resilience-drill-evidence.json \
+  /tmp/axiom-transport-drill-evidence.json \
   /tmp/axiom-credential-rotation-evidence.json \
   /tmp/axiom-data-key-rotation-evidence.json \
   > /tmp/axiom-incident-tabletop-evidence.json
@@ -533,7 +581,8 @@ surface. Its source and fail-closed supervisor are statically verified, and the
 real four-process stack, digest-pinned image build, composed container
 readiness, disposable-host recovery drill, controlled SLO/restart baseline,
 request-pressure and dependency-loss drill, coordinated credential-rotation
-drill, data-key rotation drill, signed deny-egress probe, host-side telemetry
-relay drill, and automated incident tabletop are protected CI gates. This is
+drill, mutually authenticated transport lifecycle drill, data-key rotation
+drill, signed deny-egress probe, host-side telemetry relay drill, and
+automated incident tabletop are protected CI gates. This is
 not evidence of a live deployment, federated discovery, BFT consensus, audited
 arbitrary-code isolation, or external settlement.

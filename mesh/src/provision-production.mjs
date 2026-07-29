@@ -4,6 +4,7 @@ import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { canonicalJson, ValidationError } from './lib/canonical.mjs';
 import { ensureMeshIdentity } from './lib/identity.mjs';
+import { provisionTransportCredentials } from './lib/transport-credentials.mjs';
 
 export async function provisionProduction({
   dataDir,
@@ -100,6 +101,9 @@ export async function provisionProduction({
       `${service} private identity`
     );
   }
+  const transport = await provisionTransportCredentials({
+    secretDir: resolvedSecretDir
+  });
   await Promise.all([
     assertPrivatePath(dataKeyPath, 'Data-protection key'),
     assertPrivatePath(apiTokensPath, 'API token registry'),
@@ -113,7 +117,8 @@ export async function provisionProduction({
     data_key_file: dataKeyPath,
     api_tokens_file: apiTokensPath,
     operator_token_file: operatorTokenPath,
-    telemetry_relay_token_file: telemetryRelayTokenPath
+    telemetry_relay_token_file: telemetryRelayTokenPath,
+    transport
   };
 }
 

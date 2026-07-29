@@ -67,6 +67,10 @@ request-pressure and real dependency-loss checks: oversized requests
 cannot reserve idempotency keys, concurrent bursts rate-limit predictably,
 Sandbox suspension propagates dependency-not-ready state, Sandbox loss exits
 the supervisor fail-closed, and a clean restart preserves Grid state. It also
+provisions mutually authenticated TLS 1.3 for every internal service edge,
+binds active leaf certificates to signed caller identities, rotates all leaves,
+rejects a retired CA-valid peer, and restores the prior generation exactly. It
+also
 performs offline
 coordinated rotation of all four service identities and the operator and
 telemetry relay tokens, proves active and inactive trust in
@@ -133,8 +137,9 @@ pilot-owned secret, telemetry-receiver, and media custody with scheduled
 on-media recovery,
 a facilitated named-roster incident exercise, pilot-platform network-policy
 repetition, and independent security review for a controlled single-node
-pilot. The automated external telemetry/alert relay, request-path resilience
-drill, and candidate tabletop are implemented; protected CI signs bounded
-delivery evidence and a same-revision composition of six real control drills.
+pilot. The automated external telemetry/alert relay, request-path resilience,
+transport lifecycle, and candidate tabletop are implemented; protected CI
+signs bounded delivery evidence and a same-revision composition of seven real
+control drills.
 Work is ordered in
 [`docs/MASTER-TODO.md`](MASTER-TODO.md).
