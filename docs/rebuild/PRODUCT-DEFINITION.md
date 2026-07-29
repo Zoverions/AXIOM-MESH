@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=55cec8448e10a018f957a7ed7289cbe68e266b58ba3630afd28410fadd08e1ae -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=88e6896ed6819ba489d22dfe04403aaa79b6c00f348dc4725634c8e866658ffa -->
 # AXIOM-MESH Product Definition
 
 **Status:** Canonical rebuild definition
@@ -221,6 +221,16 @@ evidence, communications, retrospective scheduling, and independent review.
 The protected automated tabletop binds eleven independently signed operational
 control artifacts from the same revision. A facilitated pilot exercise and
 live roster remain external promotion requirements.
+
+The pilot evidence package is now an implemented verification surface, not a
+deployment claim. A separately anchored authority-signed policy pins one
+kernel version, source revision, image digest, the current 30-day and SLO/
+recovery thresholds, and five distinct reviewer keys. One exact dossier binds
+measurements, non-exportable custody receipts, four trust roots, and 13
+external artifact hashes to that build. Every role signs the common dossier
+digest. Success admits the package to a separate promotion review and cannot
+set production status. Synthetic verifier conformance cannot replace authentic
+pilot evidence.
 
 Admitted-node discovery and placement reservation are implemented inside the
 single authoritative Grid. Signed v2 admissions bind the node identity,

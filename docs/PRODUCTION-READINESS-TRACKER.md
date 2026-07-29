@@ -38,6 +38,7 @@ artifact is reproducible and tied to the release commit or image digest.
 | Deprecated credential trust | Pass for repository boundary; external evidence pending | Keyed ledger covers 32 conservative candidates across the immutable pre-clean-room archive graph; protected CI checks exact coverage and rejects reuse in the supported tip without exposing values | Dispose all 32 external attestations as verified or independently justified not-applicable |
 | Independent security review | Pending | Internal evidence only | Commission scoped review |
 | Incident response | Pass for automated candidate exercise | Machine-readable severity/action/closure policy; protected CI verifies eleven same-revision control artifacts, including online causal partition/rejoin and provider fail-closed evidence, and uploads signed secret-free tabletop evidence | Run a facilitated pilot exercise with named roster, notification tree, corrective owners, and independent human review |
+| Pilot dossier intake | Pass for verifier; authentic evidence pending | Authority-signed policy, separate authority trust anchor, five distinct reviewer keys, exact build/image, 720-hour/SLO/custody/13-artifact contract, secret rejection, negative tests, and signed synthetic CI conformance evidence | Collect the authentic pilot artifacts, obtain all independent signatures, run intake, then record a separate promotion decision |
 | Release governance | Pass for development line | Protected `main`, current-build release verifier, exact documentation boundary, and immutable [v0.11.0 baseline dossier](https://github.com/Zoverions/AXIOM-MESH/releases/tag/v0.11.0) | Publish a new immutable dossier only when 0.12 is promoted from development |
 
 ## Promotion blockers
@@ -54,6 +55,10 @@ The following block production promotion:
    deployment-specific notification decision tree;
 6. no operator-owned OTLP/Alertmanager receivers, receiver-side retention
    decision, or measured named-person alert acknowledgement.
+
+The repository now has a strict intake format for all six blockers. Its
+synthetic conformance artifact proves only verifier behavior; it supplies none
+of the missing external facts and does not change this decision.
 
 ## Gate owners
 
@@ -82,6 +87,10 @@ Promotion evidence must identify:
 
 Secret values, private keys, production tokens, and unencrypted user data must
 never enter the evidence package.
+
+The exact policy, evidence inventory, custody fields, signature model, and
+operator command are defined in the
+[pilot deployment dossier runbook](operations/PILOT-DEPLOYMENT-DOSSIER.md).
 
 ## Reassessment rule
 

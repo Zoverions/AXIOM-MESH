@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=55cec8448e10a018f957a7ed7289cbe68e266b58ba3630afd28410fadd08e1ae -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=88e6896ed6819ba489d22dfe04403aaa79b6c00f348dc4725634c8e866658ffa -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -182,6 +182,25 @@ the private per-start generations, and rejects an invalid provider signer
 before service startup. The included file adapter is a protocol reference, not
 evidence for a vendor vault or cloud custody backend. See the
 [provider runbook](docs/operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md).
+
+Verify a separately reviewed pilot evidence package without granting
+production status:
+
+```bash
+npm run pilot:dossier:verify -- \
+  pilot-dossier.json \
+  pilot-review-policy.json \
+  pilot-policy-authority-public.pem
+```
+
+The authority-signed policy pins one source revision and image digest, current
+30-day/SLO/recovery requirements, and five distinct reviewer keys. The exact
+13-item dossier rejects stale, cross-build, incomplete, altered, or
+secret-bearing evidence metadata. A valid result is accepted only for a
+separate promotion review and always reports `production_promoted: false`.
+Protected CI exercises this verifier with synthetic inputs that explicitly do
+not claim a live pilot. See the
+[pilot deployment dossier runbook](docs/operations/PILOT-DEPLOYMENT-DOSSIER.md).
 
 Exercise the host-side external telemetry and alert path on Linux:
 
@@ -404,6 +423,10 @@ code, the capability registry, or release evidence.
   node-scheduling, online causal partition/rejoin, and provider fail-closed
   evidence;
   a facilitated named-roster pilot exercise remains required.
+- Pilot evidence intake uses a separately distributed policy-authority key,
+  five distinct role signatures, an exact build and image, 30-day
+  measurements, custody receipts, and 13 deployment-specific evidence
+  digests. Passing intake does not promote production.
 
 Report vulnerabilities using [`.github/SECURITY.md`](.github/SECURITY.md).
 

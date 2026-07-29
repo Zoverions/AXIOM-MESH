@@ -115,8 +115,13 @@ Milestones:
   generations, rotation/restart proof, and fail-closed invalid-signer
   rejection; repeat with the pilot's actual vault or orchestrator custody
   adapter and workload identity;
+- fail-closed pilot dossier intake is implemented with a separately pinned
+  policy authority, five distinct review roles, exact build/image binding,
+  current 30-day/SLO/recovery/custody requirements, and 13 evidence digests;
+  collect and independently review the authentic deployment artifacts;
 - independent security review of the supported kernel and container policy;
-- signed pilot deployment and release dossiers.
+- an authentic signed pilot deployment dossier and later immutable release
+  dossier.
 
 Exit criteria:
 

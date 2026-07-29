@@ -102,6 +102,22 @@ removes that generation after shutdown and rejects ambiguous direct/provider
 configuration. Run `npm run provider:drill -- <empty-workspace>` and see the
 [provider runbook](../docs/operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md).
 
+Pilot evidence has a separate fail-closed intake command:
+
+```bash
+npm run pilot:dossier:verify -- \
+  pilot-dossier.json \
+  pilot-review-policy.json \
+  pilot-policy-authority-public.pem
+```
+
+It verifies an authority-pinned policy, one exact build/image, 30-day
+measurements, custody and evidence digests, and five distinct reviewer
+approvals. Success means accepted for a separate promotion review, never
+production-promoted. `npm run pilot:dossier:drill` exercises only synthetic
+schema and signature conformance. See the
+[pilot dossier runbook](../docs/operations/PILOT-DEPLOYMENT-DOSSIER.md).
+
 Verify an export without a running AXIOM-MESH process:
 
 ```bash

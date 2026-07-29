@@ -766,6 +766,32 @@ a facilitated pilot exercise with named responders, deployment-specific
 notification decisions, corrective owners, and independent human review. See
 [`docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md`](../docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md).
 
+## 16. Pilot dossier verification
+
+After the actual pilot observation and independent reviews—not during
+candidate CI—verify the secret-free evidence envelope:
+
+```bash
+npm run pilot:dossier:verify -- \
+  /secure-review/pilot-dossier.json \
+  /secure-review/pilot-review-policy.json \
+  /secure-review/pilot-policy-authority-public.pem
+```
+
+Pilot dossier verification requires a separately distributed policy-authority
+key, five distinct review identities, the exact source revision and immutable
+image digest, at least 720 continuous observation hours, current SLO and
+recovery results, four trust roots, five non-exportable custody controls, and
+13 unique deployment-specific evidence digests. Private keys, direct
+credentials, secret values, stale records, weak measurements, missing
+artifacts, and changed approvals fail closed.
+
+`npm run pilot:dossier:drill` creates signed synthetic verifier-conformance
+evidence only. It declares that no live pilot was observed. Even an authentic
+dossier verifies only as accepted for a separate promotion review and always
+reports `production_promoted: false`. See
+[`docs/operations/PILOT-DEPLOYMENT-DOSSIER.md`](../docs/operations/PILOT-DEPLOYMENT-DOSSIER.md).
+
 This package is a production container specification and local deployment
 surface. Its source and fail-closed supervisor are statically verified, and the
 real four-process stack, digest-pinned image build, composed container
@@ -774,8 +800,7 @@ request-pressure and dependency-loss drill, coordinated credential-rotation
 drill, mutually authenticated transport lifecycle drill, data-key rotation
 drill, admitted-node discovery and scheduling drill, operator-approved online
 causal exchange drill, signed provider conformance drill, signed deny-egress
-probe, host-side telemetry relay
-drill, and
-automated incident tabletop are protected CI gates. This is
+probe, host-side telemetry relay drill, automated incident tabletop, and
+synthetic pilot dossier verifier conformance are protected CI gates. This is
 not evidence of a live deployment, remote node execution, federated discovery,
 BFT consensus, audited arbitrary-code isolation, or external settlement.

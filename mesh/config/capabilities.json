@@ -299,6 +299,18 @@
       ]
     },
     {
+      "id": "operations.pilot-dossier-verification",
+      "family": "operations",
+      "status": "implemented",
+      "summary": "A separately authority-pinned, five-role review policy verifies exact build, 30-day observation, SLO, custody, external evidence, and independent approval metadata while explicitly refusing to claim production promotion.",
+      "evidence": [
+        "mesh/test/pilot-dossier.test.mjs",
+        "mesh/src/pilot-dossier.mjs",
+        "mesh/src/pilot-dossier-conformance-drill.mjs",
+        ".github/workflows/kernel.yml"
+      ]
+    },
+    {
       "id": "operations.container-package",
       "family": "operations",
       "status": "implemented",

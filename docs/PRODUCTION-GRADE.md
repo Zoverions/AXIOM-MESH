@@ -39,6 +39,11 @@ Dedicated pilot capacity and availability, pilot-owned telemetry receivers, sche
 pilot-media recovery, pilot-owned secret-manager rotation, external
 deprecated-credential attestations, a named-roster pilot incident exercise,
 and independent security review remain open.
+The repository now implements signed pilot dossier verification: a separately
+anchored policy authority pins one build and image, current 30-day/SLO gates,
+five distinct reviewers, custody receipts, and 13 external evidence digests.
+Protected CI proves only the verifier's fail-closed behavior with a labeled
+synthetic fixture; it supplies none of the open pilot evidence.
 The request-path resilience control, container deny-egress, host-side telemetry
 relay, and automated incident tabletop are implemented and remain subject to
 pilot-platform repetition. The current decision is recorded in the
@@ -517,6 +522,31 @@ This candidate exercise does not replace a facilitated pilot exercise with
 named primaries and deputies, deployment-specific notification decisions, and
 independent human review.
 
+## Pilot evidence intake and independent approval
+
+Pilot promotion evidence must be submitted through the build-bound
+`axiom-pilot-deployment-dossier.v1` contract. A separately distributed
+Ed25519 policy-authority public key anchors an authority-signed review policy.
+That policy fixes one kernel version, source revision, image digest, validity
+window, the current 720-hour and SLO/recovery thresholds, and distinct keys for
+release manager, platform operator, security reviewer, data/recovery reviewer,
+and independent reviewer.
+
+The dossier contains the isolated non-public four-unit deployment declaration,
+four distinct trust-root digests, five non-exportable custody controls,
+deployment measurements, and 13 exact evidence references and SHA-256
+digests. All evidence binds the policy-pinned revision and image. All five
+roles sign the same dossier digest after the observation. Missing, extra,
+stale, cross-build, reordered, altered, secret-bearing, or inadequately
+measured input fails closed.
+
+The supported verifier returns only
+`accepted-for-promotion-review` and `production_promoted: false`. Reviewers
+must inspect and hash the referenced source artifacts before signing, and the
+promotion body must record a later independent decision. The synthetic CI
+conformance drill cannot be used as deployment evidence. See
+[pilot deployment dossier verification](operations/PILOT-DEPLOYMENT-DOSSIER.md).
+
 ## Production promotion gates
 
 All gates must pass:
@@ -534,6 +564,9 @@ All gates must pass:
 9. **Governance:** protected branch, independent approval, and release dossier
    are complete.
 10. **Claims:** public documentation states remaining limitations.
+
+The pilot dossier is the intake envelope for these gates, not an eleventh gate
+and not an automatic decision. Every underlying gate must be evidenced.
 
 No single test, review, or approval substitutes for the full gate set.
 

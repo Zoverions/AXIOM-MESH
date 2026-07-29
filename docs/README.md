@@ -44,6 +44,7 @@ The main technical and operational references are:
 - [Admitted-node discovery and capability-aware scheduling](operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md)
 - [Operator-approved online causal exchange](operations/ONLINE-CAUSAL-EXCHANGE.md)
 - [Deployment-independent secret and policy providers](operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md)
+- [Pilot deployment dossier verification](operations/PILOT-DEPLOYMENT-DOSSIER.md)
 - [Incident response and automated tabletop](security/INCIDENT-RESPONSE-AND-TABLETOP.md)
 - [0.12.0-dev.0 build notes](releases/0.12.0-dev.0.md)
 - [Production deployment runbook](../mesh/PRODUCTION.md)

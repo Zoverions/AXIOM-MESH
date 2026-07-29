@@ -29,7 +29,7 @@ prose and executable status differ.
 
 | Current concern | Governing source | Executable evidence | Current boundary |
 |---|---|---|---|
-| Product scope and claims | `docs/rebuild/PRODUCT-DEFINITION.md`, `mesh/config/capabilities.json` | `mesh/src/check-registry.mjs`, generated status | 41 capabilities: 23 implemented; all others explicitly experimental, specified, adapter-required, or disabled |
+| Product scope and claims | `docs/rebuild/PRODUCT-DEFINITION.md`, `mesh/config/capabilities.json` | `mesh/src/check-registry.mjs`, generated status | 42 capabilities: 24 implemented; all others explicitly experimental, specified, adapter-required, or disabled |
 | Intent-to-evidence path | Gateway, Hypervisor, Sandbox, and Grid source under `mesh/src/` | kernel and end-to-end tests | Every privileged effect follows authenticated intent, deny-dominant authorization, a bounded grant, deterministic execution, and signed evidence |
 | Runtime policy | `mesh/config/policy.json`, layered policy loader | policy and IAM property tests | Lower layers can only restrict; high-risk work requires independent approval |
 | Durable state and evidence | Grid store, migrations, identity and protection libraries | restart, migration, tamper, wrong-key, backup, and rotation tests | Encrypted single-Grid state and signed hash-linked evidence; no replicated consensus claim |
@@ -39,6 +39,7 @@ prose and executable status differ.
 | Backup and recovery | backup, retention, recovery, credential and data-key rotation modules | signed lifecycle drills and interruption tests | Candidate-host lifecycle implemented; pilot-owned custody and media repetition pending |
 | Observability and resilience | operations, telemetry relay, SLO and resilience policies | operations, telemetry, SLO, dependency-loss, and deny-egress drills | Bounded privacy vocabulary, authenticated collection, exact HTTPS relay routes, candidate pressure and recovery evidence |
 | Incident response | incident policy and tabletop drill | signed tabletop bound to eleven control artifacts | Automated candidate exercise implemented; facilitated pilot roster and independent review pending |
+| Pilot evidence intake | pilot dossier verifier and authority-pinned review policy | negative tests and signed synthetic conformance drill | Exact build, 720-hour/SLO/custody/13-artifact metadata and five distinct approvals verify; no live-pilot or production-promotion claim |
 | Node admission and scheduling | Grid node registry and scheduler | node scheduling tests and signed drill | Authenticated admission and deterministic encrypted leases; no remote workload dispatch |
 | Causal exchange | online causal-sync modules and policy | two-real-stack partition/rejoin drill | Encrypted, ordered, independently approved exchange with visible conflicts; no federation or consensus |
 | Portability and consent | Grid consent, export, import, and recipient encryption | end-to-end and kernel tests | Scoped signed export and staged import implemented; external identity adapters not implemented |
@@ -80,8 +81,8 @@ ledger and supported-tip reuse check.
 Current traceability covers the complete supported four-service kernel,
 production-candidate packaging, service transport, backup and recovery,
 telemetry, resilience, admitted-node scheduling, causal exchange, signed
-provider startup, incident evidence, portability, security, and release
-governance.
+provider startup, incident evidence, pilot dossier verification, portability,
+security, and release governance.
 
 Capabilities without current implementation evidence remain explicitly
 non-runnable. No archive, roadmap statement, release note, or white-paper

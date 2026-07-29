@@ -1,0 +1,340 @@
+# Pilot Deployment Dossier Verification
+
+**Build:** `0.12.0-dev.0`
+
+**Status:** implemented evidence-intake control; no live pilot or production
+promotion is claimed
+
+**Updated:** 2026-07-29
+
+This runbook defines the supported way to submit deployment-specific evidence
+for the controlled AXIOM-MESH pilot. The verifier in
+`mesh/src/pilot-dossier.mjs` accepts one authority-signed review policy, one
+exact pilot dossier, and the policy authority's independently distributed
+Ed25519 public key. It rejects incomplete, stale, altered, cross-build, or
+secret-bearing input.
+
+Verification is an intake decision. A successful result is
+`accepted-for-promotion-review` and always includes
+`production_promoted: false`. It does not deploy AXIOM-MESH, inspect a remote
+platform, retrieve evidence artifacts, approve an exception, publish a
+release, or change the readiness decision. The accountable promotion body
+must still inspect the referenced artifacts and record a separate decision.
+
+## Current-build boundary
+
+The command and schemas in this document apply only to the supported
+`0.12.0-dev.0` development line. A policy pins:
+
+- the exact semantic kernel version;
+- one 40-character source revision;
+- one immutable `sha256:` container image digest;
+- a validity period no longer than 120 days;
+- the current SLO, recovery, custody, evidence, and review requirements;
+- five distinct reviewer identities.
+
+The dossier must repeat the exact policy-pinned build tuple. A source revision
+or image rebuilt after the policy was signed requires a new policy and a new
+dossier. Evidence from `v0.11.0`, an archived source tree, another image, or a
+dirty local build cannot be mixed into a current dossier.
+
+The policy schema is `axiom-pilot-review-policy.v1`. The submitted dossier
+schema is `axiom-pilot-deployment-dossier.v1`. Individual approvals sign
+`axiom-pilot-dossier-approval.v1` payloads. CI produces only
+`axiom-pilot-dossier-verifier-conformance-evidence.v1`, which exercises the
+parser, signatures, and rejection paths with synthetic identities. That
+conformance artifact is never admissible as live-pilot evidence.
+
+## Trust and signature model
+
+Trust starts outside the dossier. The promotion authority creates an Ed25519
+policy-authority key using the organization's approved custody system. Its
+public key is distributed separately from the policy and dossier. The
+authority signs the canonical policy object after all reviewer public keys,
+requirements, dates, and build identifiers are fixed.
+
+The policy names these roles in this exact order:
+
+1. `release_manager`;
+2. `platform_operator`;
+3. `security_reviewer`;
+4. `data_recovery_reviewer`;
+5. `independent_reviewer`.
+
+Every role must have a distinct reviewer identifier, Ed25519 public key, and
+key identifier. A reviewer key cannot be reused by another role or by the
+policy authority. The verifier derives the public-key fingerprint and rejects
+a key identifier that does not match it.
+
+The five reviewers sign the same dossier digest, but each signature also binds
+the reviewer's role, reviewer identifier, decision, and timestamp. Approval is
+therefore not transferable between roles. Removing or changing a measurement,
+custody receipt, evidence digest, deployment flag, build identity, or other
+dossier field after review invalidates every approval.
+
+The authority public key, reviewer public keys, signed policy, and dossier may
+be retained with the evidence package. Private keys, API tokens, provider
+responses containing secret values, data-protection keys, passwords, and
+unencrypted user data must not be present. The verifier rejects private-key
+PEM data, bearer material, and direct secret-bearing fields before evaluating
+the submission.
+
+## Review policy requirements
+
+The signed policy contains the following minimums. It may be stricter, but it
+cannot weaken them:
+
+| Requirement | Current minimum or maximum |
+|---|---|
+| Continuous observation | at least 720 hours |
+| Gateway availability and submitted intent success ratio | each at least 99.5 percent |
+| Successful low-risk intents | at least 1,000 |
+| Low-risk intent latency | p95 no more than 2,000 milliseconds |
+| Evidence loss after an acknowledged mutation | exactly zero |
+| Backup recovery point | no more than 1,440 minutes |
+| Restore recovery time | no more than 240 minutes |
+| Critical alert acknowledgement | no more than 30 minutes |
+| Deprecated-history dispositions | exactly 32 entries |
+| Dossier age after the observation ends | no more than 30 days |
+
+The 720-hour window is the current 30-day pilot target. Short protected-CI
+load tests and disposable recovery drills remain useful candidate controls,
+but they do not satisfy this window. Measurements must come from the
+policy-pinned pilot deployment and declared traffic profile.
+
+The policy must be issued before it is used, must not be expired, and may not
+be backdated beyond its allowed duration. Reviewers must sign after the
+observation ends and no later than dossier generation. Dossier generation
+must occur after the observation and within the policy's evidence-age limit.
+
+## Deployment declaration
+
+The dossier describes one `isolated-non-public-pilot` deployment using the
+`independent-service-units` topology. The service inventory is exactly
+Gateway, Grid, Hypervisor, and Sandbox. It also asserts all of the following:
+
+- no public ingress;
+- enforced deny-egress policy;
+- enforced CPU and memory resource limits;
+- pilot-owned telemetry and alert receivers;
+- the pilot's actual provider adapter rather than the repository reference
+  adapter;
+- scheduled restore from pilot-owned media.
+
+The platform and region identifiers must be non-secret operational labels.
+The deployment time must precede the measurement window. If a topology,
+provider adapter, resource policy, public boundary, or image changes during
+the window, close that observation and start a new policy-bound observation.
+Do not merge separate deployment generations into one availability result.
+
+These fields are reviewer-attested declarations, not remote discovery. The
+verifier cannot determine whether a cloud firewall, container runtime, host
+route table, HSM policy, receiver retention rule, or resource limit was
+actually enforced. Reviewers must validate those facts against the hashed
+source artifacts before signing.
+
+## Required evidence inventory
+
+The dossier contains these 13 entries in exact order:
+
+| Type | Required schema | Purpose |
+|---|---|---|
+| `deployment_manifest` | `axiom-pilot-deployment-manifest.v1` | Immutable topology, platform policy, and non-secret configuration |
+| `image_provenance` | `axiom-release-evidence.v1` | Source, image, SBOM, and build provenance |
+| `availability_observation` | `axiom-pilot-availability-evidence.v1` | Continuous 30-day availability calculation |
+| `capacity_measurement` | `axiom-pilot-capacity-evidence.v1` | Declared traffic, resource enforcement, throughput, errors, and latency |
+| `external_telemetry` | `axiom-pilot-telemetry-evidence.v1` | Pilot-owned collection, retention, alert delivery, and acknowledgement |
+| `provider_assessment` | `axiom-pilot-provider-assessment.v1` | Actual adapter, workload identity, backend authorization, rotation, and rollback |
+| `custody_assessment` | `axiom-pilot-custody-assessment.v1` | External key custody and non-exportability review |
+| `scheduled_restore` | `axiom-pilot-scheduled-restore-evidence.v1` | Restore from pilot-owned media with measured RPO and RTO |
+| `credential_rotation` | `axiom-credential-rotation-drill-evidence.v1` | Pilot-custody service and operator credential lifecycle |
+| `data_key_rotation` | `axiom-data-key-rotation-drill-evidence.v1` | Pilot secret-manager re-encryption, rollback, and retirement |
+| `credential_history_attestations` | `axiom-credential-history-attestations.v1` | Disposition of all 32 deprecated-history candidates |
+| `incident_tabletop` | `axiom-incident-tabletop-evidence.v1` | Facilitated named-roster exercise and deployment notification decisions |
+| `independent_security_review` | `axiom-pilot-independent-security-review.v1` | Independent review scope, findings, dispositions, and residual risks |
+
+Each entry records a stable reference, unique SHA-256 digest, observation
+timestamp, exact source revision, exact image digest, `passed` disposition,
+and `independently_verified: true`. References may point to an approved
+evidence store; they must not embed credentials. The verifier checks metadata,
+uniqueness, build binding, chronology, inventory, and reviewer signatures. It
+does not download or parse the referenced artifact.
+
+Before signing, reviewers must retrieve every artifact from the authoritative
+store, recompute its SHA-256 digest, validate its own schema and signature
+where applicable, and compare it with the deployment. An inaccessible
+artifact, unexplained redaction, unresolved finding, altered digest, or
+unknown signer is not `passed`.
+
+The existing protected-CI artifacts can support provenance and show how the
+candidate controls behave. They cannot replace deployment-specific
+availability, capacity, provider, custody, telemetry, scheduled recovery,
+credential-history, facilitated incident, or independent-review evidence.
+
+## Custody and trust-root inventory
+
+The dossier names four distinct public trust-root digests:
+
+- Grid;
+- transport CA;
+- secret-provider signer;
+- policy-provider signer.
+
+It also requires five custody controls:
+
+- data-protection key;
+- transport CA;
+- service identities;
+- secret-provider signer;
+- policy-provider signer.
+
+Each custody item identifies the approved backend, accountable custodian,
+workload identity, rotation observation, and a unique receipt reference and
+digest. `exportable` must be `false`, and `rotation_observed` must be `true`.
+Receipt timestamps must fall within the observation and review interval.
+
+The provider secret and policy signers remain separate trust identities. The
+inventory of four trust roots must use unique digests. If a backend permits
+plaintext export, if one identity can impersonate two reviewer or provider
+roles, if custody depends on a repository file adapter, or if rotation was not
+observed against the pilot, the dossier is not admissible.
+
+Custody receipts should describe key generation location, authorization
+policy, workload-identity binding, version/rotation event, recovery or escrow
+decision, audit-retention location, and retirement disposition without
+revealing key material.
+
+## Authoring and verification procedure
+
+Use a controlled evidence workspace outside the repository and outside the
+runtime's mounted secret directories.
+
+1. The release manager fixes the source revision and immutable image digest.
+2. The policy authority records current thresholds and five reviewer public
+   identities, signs the policy, and distributes the authority public key
+   through a separate trusted channel.
+3. The platform operator deploys only the pinned image to the isolated,
+   non-public pilot and records the manifest digest.
+4. Operators collect the 30-day observation and all deployment-specific
+   evidence. Restarted observations are not joined across a material build or
+   policy change.
+5. The release manager composes only hashes, references, measurements, public
+   trust-root digests, and non-secret declarations into the dossier.
+6. Each reviewer independently retrieves and validates the applicable source
+   artifacts, then signs the shared dossier digest.
+7. A verifier obtains the policy authority key separately and runs the
+   supported command.
+
+From the repository root:
+
+```bash
+npm run pilot:dossier:verify -- \
+  /secure-review/pilot-dossier.json \
+  /secure-review/pilot-review-policy.json \
+  /secure-review/pilot-policy-authority-public.pem
+```
+
+From `mesh/`, the equivalent command is:
+
+```bash
+node src/pilot-dossier.mjs verify \
+  /secure-review/pilot-dossier.json \
+  /secure-review/pilot-review-policy.json \
+  /secure-review/pilot-policy-authority-public.pem
+```
+
+A valid result identifies the dossier, policy, source revision, image digest,
+13 evidence entries, five approvals, and the
+`accepted-for-promotion-review` intake status. Archive the command output with
+the input objects and referenced evidence. Do not modify the signed files to
+add notes; record review minutes and the eventual promotion decision as
+separate artifacts.
+
+## Fail-closed verification sequence
+
+The verifier performs these checks in order:
+
+1. exact policy fields, schema, identifiers, dates, and current validity;
+2. build tuple and thresholds that do not weaken current promotion gates;
+3. exact ordered reviewer roster with distinct reviewer and public-key
+   identities;
+4. reviewer public-key fingerprints and separately supplied authority key;
+5. authority signature over the complete policy;
+6. secret-material rejection and exact dossier fields;
+7. exact policy, claim, build, generation, deployment, and observation
+   binding;
+8. SLO, recovery, alert, evidence-loss, and credential-history measurements;
+9. unique trust-root inventory and non-exportable rotated custody receipts;
+10. exact 13-item evidence inventory, schema, unique hash, build, time, and
+    independent-verification declarations;
+11. exact five-role approval inventory and Ed25519 signature over the common
+    dossier digest;
+12. explicit non-promotion output.
+
+Unknown or extra fields fail instead of being ignored. This prevents a
+producer and reviewer from assigning different meanings to an extension.
+Schemas must be revised deliberately if the contract changes.
+
+No exception switch, warning-only mode, synthetic-success fallback, embedded
+default authority, or self-authorizing reviewer exists. Operational urgency
+does not bypass missing evidence, bad chronology, expired policy, inadequate
+measurements, or a signature failure.
+
+## Conformance drill and protected CI
+
+Run the repository-owned conformance exercise with:
+
+```bash
+npm run pilot:dossier:drill \
+  > /tmp/axiom-pilot-dossier-verifier-conformance-evidence.json
+```
+
+The drill creates ephemeral synthetic identities and synthetic metadata in
+memory. It proves that an internally consistent fixture verifies and that a
+wrong image, altered approval, missing evidence entry, and forbidden secret
+field fail closed. It signs a secret-free result declaring:
+
+- `synthetic_fixture: true`;
+- `live_pilot_observed: false`;
+- `production_promotion_claimed: false`.
+
+Protected CI retains
+`axiom-pilot-dossier-verifier-conformance-evidence-<commit>` for 90 days. This
+artifact establishes that the verifier behaves consistently at the commit. It
+is not one of the 13 pilot evidence entries, cannot satisfy the 720-hour
+window, and must not be relabeled as deployment evidence.
+
+## Reassessment and retention
+
+Any change to authentication, layered policy, grants, Sandbox authority, Grid
+schema, encryption, backups, transport trust, provider protocol, service
+topology, container base, secret handling, evidence schemas, SLO thresholds,
+or release gates invalidates the affected policy and reopens review. A prior
+dossier never promotes a later source revision or image.
+
+Retain the signed policy, separately distributed authority public key,
+dossier, five reviewer public keys, verifier output, all referenced artifacts,
+hash-verification logs, review minutes, findings, exceptions, and final
+decision under the organization's evidence-retention and access policy. The
+repository's 90-day CI retention is not a default for pilot or audit records.
+
+If evidence must be redacted, hash and review the preserved authoritative
+artifact, then publish a separately identified redacted derivative. Do not
+replace the artifact behind an existing reference or reuse its digest.
+
+## Pilot repetition and non-claims
+
+This implementation closes the repository-owned evidence-intake gap. It gives
+operators a strict, signed, build-bound package for the pilot work already
+required by the readiness tracker.
+
+It does not claim that the pilot exists, that any external provider or receiver
+has been configured, that 720 hours have elapsed, that 32 external credential
+dispositions are complete, that a restore or facilitated incident exercise
+occurred, that an independent reviewer approved the system, or that production
+promotion is warranted. Those facts can be supplied only by accountable
+operators and reviewers using the actual deployment and external systems.
+
+Until an authentic dossier and its source artifacts pass both technical intake
+and the separate promotion decision, the project remains **not
+production-promoted**.

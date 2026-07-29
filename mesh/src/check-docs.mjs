@@ -32,6 +32,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md',
   'docs/operations/ONLINE-CAUSAL-EXCHANGE.md',
   'docs/operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md',
+  'docs/operations/PILOT-DEPLOYMENT-DOSSIER.md',
   'docs/releases/0.12.0-dev.0.md',
   'docs/whitepapers_and_research/WHITEPAPER.md',
   'mesh/README.md',
@@ -109,6 +110,14 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Provider adapter conformance',
     '## Pilot repetition and non-claims'
   ],
+  'docs/operations/PILOT-DEPLOYMENT-DOSSIER.md': [
+    '## Current-build boundary',
+    '## Trust and signature model',
+    '## Required evidence inventory',
+    '## Fail-closed verification sequence',
+    '## Conformance drill and protected CI',
+    '## Pilot repetition and non-claims'
+  ],
   'docs/releases/0.12.0-dev.0.md': [
     '## Version boundary',
     '## Current implementation',
@@ -134,6 +143,7 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md': 5_000,
   'docs/operations/ONLINE-CAUSAL-EXCHANGE.md': 6_000,
   'docs/operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md': 8_000,
+  'docs/operations/PILOT-DEPLOYMENT-DOSSIER.md': 8_000,
   'docs/whitepapers_and_research/WHITEPAPER.md': 7_000
 });
 
