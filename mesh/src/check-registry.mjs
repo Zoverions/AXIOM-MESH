@@ -39,6 +39,7 @@ const REQUIRED_CAPABILITIES = new Set([
   'ui.operator-api',
   'ui.cli',
   'ui.dashboard',
+  'operations.independent-service-units',
   'operations.installer-observability-release'
 ]);
 

@@ -4,7 +4,7 @@
 Registry schema: `axiom-capabilities.v1`
 Kernel version: `0.11.0`
 Evidence verified: `2026-07-29`
-Registry digest: `2999698cb0c5a01ee29d0c756c3880eeb286d43fa78723ef5d23ddaafba1bebd`
+Registry digest: `229023a02fd2569ca23dabb86a9f34a438a36685aa096ff2aed0fac8054f33ca`
 
 Only **implemented** capabilities are runnable claims.
 
@@ -13,7 +13,7 @@ Only **implemented** capabilities are runnable claims.
 - adapter_required: 9
 - disabled: 4
 - experimental: 2
-- implemented: 19
+- implemented: 20
 - specified: 4
 
 ## Registry
@@ -56,5 +56,6 @@ Only **implemented** capabilities are runnable claims.
 | `ui.dashboard` | operations | **specified** | A browser operator dashboard is specified but is not part of the supported runtime. |
 | `operations.observability` | operations | **implemented** | Bounded four-service telemetry is scraped over least-privilege Unix-socket access and relayed as OTLP/HTTP JSON with fixed attributes; static alerts route through Alertmanager v2 using HTTPS allowlists, reserved queue capacity, bounded retry, redaction, and delivery audit; signed request-pressure and dependency-loss evidence proves bounded rejection, degradation, fail-closed exit, restart, and state preservation. |
 | `operations.mutual-transport` | operations | **implemented** | Production internal calls use TLS 1.3 with CA-issued Ed25519 leaves, DNS and SPIFFE-style URI identity, exact active-certificate pinning, signed-caller binding, offline atomic rotation, retired-leaf rejection, and exact rollback. |
+| `operations.independent-service-units` | operations | **implemented** | Gateway, Grid, Hypervisor, and Sandbox can run as independently restartable units with per-unit application and TLS private keys, Grid-only durable state, an internal deny-egress network, dependency-aware degradation, Sandbox-only recovery, and signed state-preservation evidence. |
 | `operations.container-package` | operations | **implemented** | A digest-pinned non-root container package is statically release-gated, passes the four-process host drill, and is built and exercised through the published composed readiness workflow. |
 | `operations.installer-observability-release` | operations | **experimental** | Release tooling, bounded external telemetry and alert routing, and container verification are executable; legacy installer replacement and independently evidenced live deployment remain incomplete. |

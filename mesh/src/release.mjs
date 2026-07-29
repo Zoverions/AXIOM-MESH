@@ -87,6 +87,7 @@ export async function verifyReleaseReadiness() {
     dockerfile: join(MESH_ROOT, 'Dockerfile'),
     dockerignore: join(MESH_ROOT, '.dockerignore'),
     compose: join(MESH_ROOT, 'compose.production.yml'),
+    unitCompose: join(MESH_ROOT, 'compose.units.yml'),
     productionDocs: join(MESH_ROOT, 'PRODUCTION.md'),
     workflow: join(REPOSITORY_ROOT, '.github', 'workflows', 'kernel.yml'),
     repositoryIgnore: join(REPOSITORY_ROOT, '.gitignore')
@@ -109,6 +110,7 @@ export async function verifyReleaseReadiness() {
     dockerfile,
     dockerignore,
     compose,
+    unitCompose,
     productionDocs,
     workflow,
     repositoryIgnore
@@ -130,6 +132,7 @@ export async function verifyReleaseReadiness() {
     readFile(paths.dockerfile, 'utf8'),
     readFile(paths.dockerignore, 'utf8'),
     readFile(paths.compose, 'utf8'),
+    readFile(paths.unitCompose, 'utf8'),
     readFile(paths.productionDocs, 'utf8'),
     readFile(paths.workflow, 'utf8'),
     readFile(paths.repositoryIgnore, 'utf8')
@@ -191,6 +194,7 @@ export async function verifyReleaseReadiness() {
     dockerfile,
     dockerignore,
     compose,
+    unitCompose,
     productionDocs,
     packageJson,
     backupRetentionPolicy,
@@ -240,6 +244,7 @@ export async function verifyReleaseReadiness() {
     paths.dockerfile,
     paths.dockerignore,
     paths.compose,
+    paths.unitCompose,
     paths.productionDocs,
     paths.workflow,
     paths.repositoryIgnore,
@@ -339,6 +344,7 @@ export function verifyProductionDeployment({
   dockerfile,
   dockerignore,
   compose,
+  unitCompose,
   productionDocs,
   packageJson,
   backupRetentionPolicy,
@@ -437,6 +443,50 @@ export function verifyProductionDeployment({
       'Production compose policy contains a forbidden host-privilege or read_only setting'
     );
   }
+  for (const required of [
+    `image: axiom-mesh-kernel:${packageJson.version}`,
+    'gateway:',
+    'grid:',
+    'hypervisor:',
+    'sandbox:',
+    'entrypoint: ["node", "src/gateway-unit.mjs"]',
+    'entrypoint: ["node", "src/grid/server.mjs"]',
+    'entrypoint: ["node", "src/hypervisor/server.mjs"]',
+    'entrypoint: ["node", "src/sandbox/server.mjs"]',
+    'user: "10001:10001"',
+    'read_only: true',
+    'cap_drop:',
+    '- ALL',
+    'no-new-privileges:true',
+    'AXIOM_INTERNAL_TLS: "true"',
+    'AXIOM_HYPERVISOR_URL: https://hypervisor:8081',
+    'AXIOM_SANDBOX_URL: https://sandbox:8082',
+    'AXIOM_GRID_URL: https://grid:8083',
+    'source: ${AXIOM_UNITS_DIR_HOST:?set AXIOM_UNITS_DIR_HOST}/gateway/data',
+    'source: ${AXIOM_UNITS_DIR_HOST:?set AXIOM_UNITS_DIR_HOST}/grid/data',
+    'source: ${AXIOM_UNITS_DIR_HOST:?set AXIOM_UNITS_DIR_HOST}/hypervisor/data',
+    'source: ${AXIOM_UNITS_DIR_HOST:?set AXIOM_UNITS_DIR_HOST}/sandbox/data',
+    'AXIOM_DATA_KEY_FILE: /run/secrets/data-protection.key',
+    'AXIOM_API_TOKENS_FILE: /run/secrets/api-tokens.json',
+    'internal: true',
+    'driver: bridge'
+  ]) {
+    if (!unitCompose.includes(required)) {
+      throw new ValidationError(
+        `Independent-unit compose policy is missing: ${required}`
+      );
+    }
+  }
+  if (
+    /privileged:\s*true/.test(unitCompose)
+    || /network_mode:\s*host/.test(unitCompose)
+    || /pid:\s*host/.test(unitCompose)
+    || /^\s*ports:\s*$/m.test(unitCompose)
+  ) {
+    throw new ValidationError(
+      'Independent-unit compose policy contains a forbidden host boundary'
+    );
+  }
   if (/^\s*ports:\s*$/m.test(compose) || /^\s*networks:\s*$/m.test(compose)) {
     throw new ValidationError(
       'Production compose policy must not publish ports or attach networks'
@@ -457,7 +507,8 @@ export function verifyProductionDeployment({
     'automated incident tabletop',
     'host-side telemetry relay',
     'request-pressure and dependency-loss',
-    'mutually authenticated TLS 1.3'
+    'mutually authenticated TLS 1.3',
+    'independently deployable units'
   ]) {
     if (!productionDocs.includes(boundary)) {
       throw new ValidationError(`Production operator documentation is missing boundary: ${boundary}`);
@@ -486,6 +537,7 @@ export function verifyProductionDeployment({
     'node src/incident-tabletop-drill.mjs',
     'node src/resilience-drill.mjs',
     'node src/transport-drill.mjs',
+    'node src/service-unit-drill.mjs',
     'node src/telemetry-relay-drill.mjs',
     'actions/upload-artifact@v7',
     'axiom-recovery-drill-evidence-${{ github.sha }}',
@@ -496,10 +548,15 @@ export function verifyProductionDeployment({
     'axiom-incident-tabletop-evidence-${{ github.sha }}',
     'axiom-resilience-drill-evidence-${{ github.sha }}',
     'axiom-transport-drill-evidence-${{ github.sha }}',
+    'axiom-service-unit-drill-evidence-${{ github.sha }}',
     'axiom-telemetry-relay-evidence-${{ github.sha }}',
     `docker build --pull=false --tag axiom-mesh-kernel:${packageJson.version} .`,
     'docker compose -f compose.production.yml up --detach --no-build',
-    'docker compose -f compose.production.yml down --volumes --remove-orphans'
+    'docker compose -f compose.production.yml down --volumes --remove-orphans',
+    'docker compose -f compose.units.yml up --detach --no-build',
+    'docker compose -f compose.units.yml stop sandbox',
+    'docker compose -f compose.units.yml start sandbox',
+    'docker compose -f compose.units.yml down --volumes --remove-orphans'
   ]) {
     if (!workflow.includes(required)) {
       throw new ValidationError(`Kernel CI workflow is missing: ${required}`);
@@ -512,6 +569,7 @@ export function verifyProductionDeployment({
     dockerfile_sha256: sha256(dockerfile),
     dockerignore_sha256: sha256(dockerignore),
     compose_sha256: sha256(compose),
+    independent_units_compose_sha256: sha256(unitCompose),
     backup_retention_policy_sha256: digestObject(backupRetentionPolicy),
     credential_revocation_ledger_sha256: digestObject(credentialRevocations),
     incident_response_policy_sha256: digestObject(incidentResponsePolicy),
@@ -528,6 +586,12 @@ export function verifyProductionDeployment({
       unix_domain_ingress: true,
       runtime_route_check: true,
       signed_ci_probe: true
+    },
+    independent_units: {
+      services: 4,
+      internal_network: true,
+      per_unit_private_identity: true,
+      failure_isolation_ci: true
     },
     documentation_sha256: sha256(productionDocs),
     workflow_sha256: sha256(workflow)

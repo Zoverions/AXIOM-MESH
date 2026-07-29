@@ -109,7 +109,7 @@ The exercise must prove:
 7. recovery verification before closure;
 8. a retrospective due after closure and within seven days;
 9. every closure condition recorded as true;
-10. seven independently signed control artifacts verify and match the same
+10. eight independently signed control artifacts verify and match the same
     source revision.
 
 The linked controls are:
@@ -120,6 +120,7 @@ The linked controls are:
 | Backup lifecycle drill | verified retained media, recoverable quarantine, restore from retained backup |
 | SLO/restart drill | controlled stop, restart, readiness, and post-restart service verification |
 | Resilience drill | bounded request pressure, dependency degradation, fail-closed process loss, restart, and state preservation |
+| Independent service-unit drill | per-unit private-key isolation, Sandbox-only loss, survivor continuity, readiness degradation/recovery, and Grid-state preservation |
 | Transport lifecycle drill | mutual TLS peer identity, retired-leaf rejection, rotation, runtime verification, and exact rollback |
 | Credential-rotation drill | service-identity and operator-token replacement, retired-token rejection, rollback |
 | Data-key-rotation drill | protected-state re-encryption, wrong-key rejection, restore, interruption recovery, rollback |
@@ -131,7 +132,7 @@ records.
 
 ## Signed evidence and CI gate
 
-`mesh/src/incident-tabletop-drill.mjs` cryptographically verifies all seven
+`mesh/src/incident-tabletop-drill.mjs` cryptographically verifies all eight
 companion artifacts before evaluating the tabletop. A disposable Grid
 Ed25519 identity signs
 `axiom-incident-tabletop-evidence.v1`. Verification recomputes the severity,

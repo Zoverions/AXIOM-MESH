@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=2999698cb0c5a01ee29d0c756c3880eeb286d43fa78723ef5d23ddaafba1bebd -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=229023a02fd2569ca23dabb86a9f34a438a36685aa096ff2aed0fac8054f33ca -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -125,6 +125,21 @@ drill rotates all leaves offline, rejects a retired CA-valid leaf, proves the
 new generation, restores the prior generation exactly, and signs secret-free
 evidence. External CA custody and multi-host rollout remain pilot work.
 
+Exercise the independently restartable four-unit topology:
+
+```bash
+npm run service-units:drill -- /tmp/axiom-service-unit-drill
+```
+
+The drill projects exactly one application private key and one TLS leaf per
+unit, starts Gateway, Grid, Hypervisor, and Sandbox without the supervisor,
+kills Sandbox, proves the other three processes survive while readiness
+degrades to `503`, restarts Sandbox alone, and verifies preserved Grid state.
+Protected CI separately repeats the failure against
+[`mesh/compose.units.yml`](mesh/compose.units.yml) and proves its internal
+network cannot reach a public TCP target. See the
+[independent-service runbook](docs/operations/INDEPENDENT-SERVICE-UNITS.md).
+
 Exercise the host-side external telemetry and alert path on Linux:
 
 ```bash
@@ -208,6 +223,13 @@ plaintext traffic remains loopback-only, the container uses
 bind-mounted Unix-domain socket rather than a published port. Startup and
 protected CI fail if effective deny-egress is absent. See the
 [candidate network boundary](docs/security/DENY-EGRESS-BOUNDARY.md).
+
+The alternate single-host
+[`mesh/compose.units.yml`](mesh/compose.units.yml) runs the same four services
+as independently restartable containers with per-unit private credentials,
+Grid-only durable state, and a Docker internal network. It preserves the same
+Unix-domain Gateway ingress and makes no multi-host or automatic-failover
+claim.
 
 The machine-readable
 [`mesh/config/capabilities.json`](mesh/config/capabilities.json) file is the
@@ -294,6 +316,10 @@ supported entrypoints.
   recovery context, chains signed ciphertext/plaintext transitions to original
   manifests, switches the key last, and supports journaled interruption
   recovery plus state-preserving rollback.
+- Independent service-unit projection gives each runtime only its own
+  application and TLS private keys. Signed host evidence and protected
+  four-container checks prove Sandbox-only loss, dependency-aware degradation,
+  survivor continuity, state preservation, and Sandbox-only recovery.
 - Owner-bound admitted nodes can exchange independently verifiable signed
   causal-update bundles. Version vectors preserve concurrent heads, replays and
   node-counter equivocation fail closed, and conflict resolution must name
@@ -321,7 +347,7 @@ supported entrypoints.
 - Deterministic incident severity, independent command roles,
   authority-reducing containment, evidence-first chronology, bounded
   communications, and closure conditions are machine-readable. Protected CI
-  signs an automated tabletop bound to seven same-revision control artifacts,
+  signs an automated tabletop bound to eight same-revision control artifacts,
   including request-pressure, dependency-loss, and transport-lifecycle
   evidence;
   a facilitated named-roster pilot exercise remains required.

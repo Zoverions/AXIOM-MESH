@@ -56,6 +56,7 @@ const REQUIRED_CONTROL_TYPES = Object.freeze([
   'data_key_rotation',
   'recovery',
   'resilience',
+  'service_units',
   'slo_restart',
   'transport'
 ]);
@@ -65,6 +66,7 @@ const CONTROL_SCHEMAS = Object.freeze({
   data_key_rotation: 'axiom-data-key-rotation-drill-evidence.v1',
   recovery: 'axiom-recovery-drill-evidence.v1',
   resilience: 'axiom-resilience-drill-evidence.v1',
+  service_units: 'axiom-service-unit-drill-evidence.v1',
   slo_restart: 'axiom-slo-baseline-evidence.v1',
   transport: 'axiom-transport-drill-evidence.v1'
 });
@@ -474,6 +476,7 @@ function artifactPrefix(type) {
     data_key_rotation: 'axiom-data-key-rotation-evidence',
     recovery: 'axiom-recovery-drill-evidence',
     resilience: 'axiom-resilience-drill-evidence',
+    service_units: 'axiom-service-unit-drill-evidence',
     slo_restart: 'axiom-slo-baseline-evidence',
     transport: 'axiom-transport-drill-evidence'
   }[type];

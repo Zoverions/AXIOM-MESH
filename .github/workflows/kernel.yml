@@ -139,6 +139,19 @@ jobs:
           path: ${{ runner.temp }}/axiom-transport-drill-evidence.json
           if-no-files-found: error
           retention-days: 90
+      - name: Run independent service-unit failure-isolation drill
+        working-directory: mesh
+        run: |
+          node src/service-unit-drill.mjs \
+            "$RUNNER_TEMP/axiom-service-unit-drill" \
+            > "$RUNNER_TEMP/axiom-service-unit-drill-evidence.json"
+      - name: Upload signed service-unit evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: axiom-service-unit-drill-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/axiom-service-unit-drill-evidence.json
+          if-no-files-found: error
+          retention-days: 90
       - name: Run host-side telemetry and alert relay drill
         working-directory: mesh
         run: |
@@ -187,6 +200,7 @@ jobs:
             "$RUNNER_TEMP/axiom-backup-lifecycle-evidence.json" \
             "$RUNNER_TEMP/axiom-slo-baseline-evidence.json" \
             "$RUNNER_TEMP/axiom-resilience-drill-evidence.json" \
+            "$RUNNER_TEMP/axiom-service-unit-drill-evidence.json" \
             "$RUNNER_TEMP/axiom-transport-drill-evidence.json" \
             "$RUNNER_TEMP/axiom-credential-rotation-evidence.json" \
             "$RUNNER_TEMP/axiom-data-key-rotation-evidence.json" \
@@ -216,8 +230,13 @@ jobs:
           node src/provision-production.mjs \
             "$RUNNER_TEMP/axiom-data" \
             "$RUNNER_TEMP/axiom-secrets"
+          node src/provision-service-units.mjs \
+            "$RUNNER_TEMP/axiom-data" \
+            "$RUNNER_TEMP/axiom-secrets/transport" \
+            "$RUNNER_TEMP/axiom-units"
           sudo chown -R 10001:10001 \
-            "$RUNNER_TEMP/axiom-data"
+            "$RUNNER_TEMP/axiom-data" \
+            "$RUNNER_TEMP/axiom-units"
           mkdir -p "$RUNNER_TEMP/axiom-ingress"
           sudo chown 10001:10001 \
             "$RUNNER_TEMP/axiom-ingress"
@@ -232,6 +251,7 @@ jobs:
             echo "AXIOM_DATA_KEY_FILE_HOST=$RUNNER_TEMP/axiom-secrets/data-protection.key"
             echo "AXIOM_API_TOKENS_FILE_HOST=$RUNNER_TEMP/axiom-secrets/api-tokens.json"
             echo "AXIOM_TRANSPORT_DIR_HOST=$RUNNER_TEMP/axiom-secrets/transport"
+            echo "AXIOM_UNITS_DIR_HOST=$RUNNER_TEMP/axiom-units"
           } >> "$GITHUB_ENV"
       - name: Build digest-pinned image
         working-directory: mesh
@@ -281,7 +301,79 @@ jobs:
           path: ${{ runner.temp }}/axiom-deny-egress-evidence.json
           if-no-files-found: error
           retention-days: 90
-      - name: Stop container
+      - name: Stop supervised container
         if: always()
         working-directory: mesh
         run: docker compose -f compose.production.yml down --volumes --remove-orphans
+      - name: Run four-container failure-isolation drill
+        working-directory: mesh
+        run: |
+          docker compose -f compose.units.yml up --detach --no-build
+          for attempt in $(seq 1 45); do
+            status="$(sudo curl --silent --output /dev/null \
+              --write-out '%{http_code}' \
+              --unix-socket "$RUNNER_TEMP/axiom-ingress/gateway.sock" \
+              http://localhost/ready || true)"
+            if [ "$status" = "200" ]; then
+              break
+            fi
+            if [ "$attempt" -eq 45 ]; then
+              docker compose -f compose.units.yml logs
+              exit 1
+            fi
+            sleep 2
+          done
+          token="$(tr -d '\n' <"$RUNNER_TEMP/axiom-secrets/operator.token")"
+          sudo curl --fail --silent \
+            --unix-socket "$RUNNER_TEMP/axiom-ingress/gateway.sock" \
+            -H "Authorization: Bearer $token" \
+            http://localhost/v1/operations \
+            > "$RUNNER_TEMP/unit-operations-before.json"
+          node -e "const fs=require('node:fs');const report=JSON.parse(fs.readFileSync(process.argv[1]));if(report.status!=='ready'||report.services.length!==4)process.exit(1)" \
+            "$RUNNER_TEMP/unit-operations-before.json"
+          gateway_id="$(docker compose -f compose.units.yml ps -q gateway)"
+          grid_id="$(docker compose -f compose.units.yml ps -q grid)"
+          hypervisor_id="$(docker compose -f compose.units.yml ps -q hypervisor)"
+          docker compose -f compose.units.yml stop sandbox
+          for attempt in $(seq 1 30); do
+            status="$(sudo curl --silent --output /dev/null \
+              --write-out '%{http_code}' \
+              --unix-socket "$RUNNER_TEMP/axiom-ingress/gateway.sock" \
+              http://localhost/ready || true)"
+            if [ "$status" = "503" ]; then
+              break
+            fi
+            if [ "$attempt" -eq 30 ]; then exit 1; fi
+            sleep 1
+          done
+          test "$(docker compose -f compose.units.yml ps -q gateway)" = "$gateway_id"
+          test "$(docker compose -f compose.units.yml ps -q grid)" = "$grid_id"
+          test "$(docker compose -f compose.units.yml ps -q hypervisor)" = "$hypervisor_id"
+          test "$(docker compose -f compose.units.yml ps --status running --services | wc -l)" -eq 3
+          docker compose -f compose.units.yml start sandbox
+          for attempt in $(seq 1 45); do
+            status="$(sudo curl --silent --output /dev/null \
+              --write-out '%{http_code}' \
+              --unix-socket "$RUNNER_TEMP/axiom-ingress/gateway.sock" \
+              http://localhost/ready || true)"
+            if [ "$status" = "200" ]; then break; fi
+            if [ "$attempt" -eq 45 ]; then
+              docker compose -f compose.units.yml logs
+              exit 1
+            fi
+            sleep 2
+          done
+          test "$(docker compose -f compose.units.yml ps -q gateway)" = "$gateway_id"
+          test "$(docker compose -f compose.units.yml ps -q grid)" = "$grid_id"
+          test "$(docker compose -f compose.units.yml ps -q hypervisor)" = "$hypervisor_id"
+          echo "AXIOM_UNIT_TOPOLOGY_VERIFIED=true" >> "$GITHUB_ENV"
+      - name: Prove service units cannot reach the public network
+        working-directory: mesh
+        run: |
+          docker compose -f compose.units.yml exec -T gateway \
+            node -e "const net=require('node:net');const socket=net.createConnection({host:'1.1.1.1',port:443});const timer=setTimeout(()=>{socket.destroy();process.exit(0)},3000);socket.once('connect',()=>{clearTimeout(timer);socket.destroy();process.exit(1)});socket.once('error',()=>{clearTimeout(timer);process.exit(0)})"
+          test "$AXIOM_UNIT_TOPOLOGY_VERIFIED" = "true"
+      - name: Stop service units
+        if: always()
+        working-directory: mesh
+        run: docker compose -f compose.units.yml down --volumes --remove-orphans

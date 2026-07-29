@@ -234,7 +234,7 @@ export async function createGridService(config = meshConfig()) {
       : undefined,
     transportPeers: identity.transport?.peers,
     allowedTransportPeers: identity.transport
-      ? ['gateway', 'hypervisor', 'supervisor']
+      ? ['gateway', 'grid', 'hypervisor', 'supervisor']
       : undefined,
     authenticate: ({ req, body }) => verifySignedRequest({
       req,

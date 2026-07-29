@@ -71,7 +71,9 @@ custodian and readable by the service account only. The CA signing authority
 is needed for leaf rotation but must not be mounted into independently
 deployed service units. The current single-container candidate bind-mounts the
 complete directory because all processes still share one OS identity;
-separating those mounts is part of the independent-service milestone.
+the implemented `compose.units.yml` topology instead projects and mounts only
+one service leaf plus public trust per unit. See
+[independent service units](INDEPENDENT-SERVICE-UNITS.md).
 
 Verify the generation and public identity metadata without printing keys:
 
@@ -223,7 +225,7 @@ single-host offline leaf lifecycle for the candidate. It does not claim:
 - pilot behavior under network latency, partitions, or clock drift.
 
 Before pilot promotion, place the CA authority under named external custody,
-mount only each unit's leaf key and public trust material, repeat rotation and
+repeat the per-unit leaf projection and mount policy, repeat rotation and
 rollback on the target orchestrator, measure expiry alerting and clock
 behavior, exercise CA-compromise recovery, and obtain independent review of
 the certificate profiles and deployment permissions.

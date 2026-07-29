@@ -27,7 +27,7 @@ data-protection-key rotation, and automated
 incident-tabletop evidence. The
 tabletop verifies deterministic severity, role independence,
 authority-reducing containment, evidence-first chronology, communications,
-closure, and seven linked control artifacts. Its credential-history audit also
+closure, and eight linked control artifacts. Its credential-history audit also
 reconstructs a 32-entry keyed ledger from the locked deprecated graph and
 proves that no candidate appears in the supported tip.
 Dedicated pilot capacity and availability, pilot-owned telemetry receivers, scheduled
@@ -38,6 +38,14 @@ The request-path resilience control, container deny-egress, host-side telemetry
 relay, and automated incident tabletop are implemented and remain subject to
 pilot-platform repetition. The current decision is recorded in the
 [readiness tracker](PRODUCTION-READINESS-TRACKER.md).
+
+The four-unit candidate is also implemented. It projects one application
+private key and one TLS leaf per service, gives durable state and the
+data-protection key only to Grid, gives API credentials only to Gateway, and
+uses a Docker internal network with no public port. Signed host evidence and a
+protected four-container check prove that Sandbox loss degrades readiness
+without restarting Gateway, Grid, or Hypervisor, and that Sandbox-only
+recovery preserves Grid state. Pilot-orchestrator repetition remains open.
 
 ## Supported production boundary
 
@@ -65,6 +73,13 @@ evidence.
 
 This boundary does not authorize remote internal traffic, multiple hosts,
 arbitrary code, external AI, chain settlement, or regulated domain workloads.
+
+An alternate single-host boundary runs the four responsibilities as separate
+containers through `mesh/compose.units.yml`. The internal network permits only
+service connectivity and has no external route; Gateway preserves the same
+Unix-domain host ingress. Each unit mounts only its own projected application
+and TLS private keys. See
+[independent service units](operations/INDEPENDENT-SERVICE-UNITS.md).
 
 ## Security requirements
 
@@ -244,9 +259,25 @@ rotation, rejects the retired Gateway leaf, accepts the active leaf, executes
 intents, rolls back, restarts, and signs secret-free evidence.
 
 This closes the single-host transport and leaf lifecycle. Pilot promotion
-still requires external CA custody, per-unit secret mounts, orchestrator
+still requires external CA custody, pilot per-unit secret mounts, orchestrator
 rollout and CA-compromise recovery, clock/expiry alert measurement, and
 independent cryptographic and deployment review.
+
+## Independent service deployment and failure isolation
+
+The unit projection is atomic and refuses overwrite. Its manifest binds the
+four unit directories to the source identity key IDs, trust digests, transport
+generation, CA fingerprint, and active TLS fingerprints. Validation rejects
+cross-unit private keys, a CA signing key, shared secret files, non-Grid
+durable state, or a stale projection.
+
+Protected CI starts the same four entrypoints without the supervisor, writes
+state, kills Sandbox, requires HTTP `503` readiness while the three survivors
+remain unchanged, restarts Sandbox alone, then proves readiness and both
+pre-fault and post-recovery intents. Grid signs the secret-free result. A
+second Compose exercise checks actual container identity continuity and
+blocked public TCP connectivity. This is failure isolation, not automatic
+failover, replicated Grid, consensus, or zero-downtime upgrade.
 
 ## Observability requirements
 
@@ -345,8 +376,9 @@ six independently assigned roles, bounded activation/containment/update
 targets, authority-reducing actions, and mandatory closure conditions.
 Protected CI runs an automated incident tabletop that cryptographically
 verifies and binds the recovery, backup-lifecycle, SLO/restart,
-request-pressure/dependency-loss, transport-lifecycle, credential-rotation,
-and data-key-rotation evidence from the same commit.
+request-pressure/dependency-loss, independent-service-unit,
+transport-lifecycle, credential-rotation, and data-key-rotation evidence from
+the same commit.
 Missing roles or actions, severity drift, expanding authority, late
 containment, broken communications cadence, stale evidence, premature
 closure, or signature tampering fails the gate. See
