@@ -209,7 +209,7 @@ export function verifyPilotDossier(
   { now = Date.now() } = {}
 ) {
   validatePilotReviewPolicy(policy, authorityPublicKey, { now });
-  assertNoSecretMaterial(dossier);
+  assertPilotSecretFree(dossier);
   exactObject(dossier, 'Pilot dossier', [
     'schema',
     'version',
@@ -571,7 +571,7 @@ function validateApprovals(dossier, policy, observationEndedAt, generatedAt) {
   }
 }
 
-function assertNoSecretMaterial(value) {
+export function assertPilotSecretFree(value) {
   const serialized = JSON.stringify(value);
   if (
     /-----BEGIN (?:ENCRYPTED )?PRIVATE KEY-----/.test(serialized)

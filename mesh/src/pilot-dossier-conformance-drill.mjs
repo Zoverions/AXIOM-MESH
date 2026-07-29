@@ -150,6 +150,7 @@ export function createSyntheticPilotFixture({ now = Date.now() } = {}) {
   return {
     authority,
     authorityPublicKey: publicPem(authority),
+    reviewerIdentities: reviewers,
     policy,
     dossier
   };

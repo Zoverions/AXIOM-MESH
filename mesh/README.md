@@ -111,11 +111,22 @@ npm run pilot:dossier:verify -- \
   pilot-policy-authority-public.pem
 ```
 
-It verifies an authority-pinned policy, one exact build/image, 30-day
-measurements, custody and evidence digests, and five distinct reviewer
-approvals. Success means accepted for a separate promotion review, never
-production-promoted. `npm run pilot:dossier:drill` exercises only synthetic
-schema and signature conformance. See the
+That command is a metadata preflight. Authentic intake verifies the exact
+offline package:
+
+```bash
+npm run pilot:package:verify -- \
+  pilot-evidence-package \
+  pilot-policy-authority-public.pem
+```
+
+Package verification requires the canonical policy and dossier plus exactly
+13 canonical local evidence envelopes. It rejects unexpected files, symlinks,
+secret material, digest or build drift, and signatures from any role other
+than the policy-assigned producer. Success means accepted for a separate
+promotion review, never production-promoted. `npm run pilot:dossier:drill`
+and `npm run pilot:package:drill` exercise only synthetic verifier
+conformance. See the
 [pilot dossier runbook](../docs/operations/PILOT-DEPLOYMENT-DOSSIER.md).
 
 Verify an export without a running AXIOM-MESH process:

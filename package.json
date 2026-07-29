@@ -32,6 +32,8 @@
     "provider:drill": "npm --prefix mesh run provider:drill --",
     "pilot:dossier:verify": "npm --prefix mesh run pilot:dossier:verify --",
     "pilot:dossier:drill": "npm --prefix mesh run pilot:dossier:drill",
+    "pilot:package:verify": "npm --prefix mesh run pilot:package:verify --",
+    "pilot:package:drill": "npm --prefix mesh run pilot:package:drill",
     "recovery:drill": "npm --prefix mesh run recovery:drill --",
     "slo:drill": "npm --prefix mesh run slo:drill --",
     "start:production": "npm --prefix mesh run start:production",

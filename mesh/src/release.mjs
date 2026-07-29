@@ -513,7 +513,8 @@ export function verifyProductionDeployment({
     'admitted-node discovery and scheduling',
     'operator-approved online causal exchange',
     'Deployment-independent provider startup',
-    'Pilot dossier verification'
+    'Pilot dossier verification',
+    'Offline pilot evidence package verification'
   ]) {
     if (!productionDocs.includes(boundary)) {
       throw new ValidationError(`Production operator documentation is missing boundary: ${boundary}`);
@@ -547,6 +548,7 @@ export function verifyProductionDeployment({
     'node src/online-causal-sync-drill.mjs',
     'node src/provider-conformance-drill.mjs',
     'node src/pilot-dossier-conformance-drill.mjs',
+    'node src/pilot-evidence-package-drill.mjs',
     'node src/telemetry-relay-drill.mjs',
     'actions/upload-artifact@v7',
     'axiom-recovery-drill-evidence-${{ github.sha }}',
@@ -562,6 +564,7 @@ export function verifyProductionDeployment({
     'axiom-online-causal-sync-drill-evidence-${{ github.sha }}',
     'axiom-provider-conformance-evidence-${{ github.sha }}',
     'axiom-pilot-dossier-verifier-conformance-evidence-${{ github.sha }}',
+    'axiom-pilot-evidence-package-verifier-conformance-evidence-${{ github.sha }}',
     'axiom-telemetry-relay-evidence-${{ github.sha }}',
     `docker build --pull=false --tag axiom-mesh-kernel:${packageJson.version} .`,
     'docker compose -f compose.production.yml up --detach --no-build',

@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=88e6896ed6819ba489d22dfe04403aaa79b6c00f348dc4725634c8e866658ffa -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=66f97dad1b414be4d7442d0b2afed8e29b49898d60dc42d3373ee6535ce56a78 -->
 # AXIOM-MESH Rebuild Requirements
 
 **Current build:** `0.12.0-dev.0`
@@ -245,16 +245,21 @@ The active `0.12.0-dev.0` build additionally verifies:
   data-key-rotation evidence from the same source revision verifies. A
   named-roster pilot exercise remains mandatory
   before production promotion.
-- a pilot dossier verifier that MUST require a separately supplied Ed25519
+- pilot intake verifiers that MUST require a separately supplied Ed25519
   policy-authority trust anchor, an authority-signed exact build/image and
   threshold policy, distinct release/platform/security/data-recovery/
   independent reviewer keys, at least 720 continuous hours, current SLO and
   recovery results, non-exportable rotated custody controls, and the exact
-  deployment-specific evidence inventory. It MUST reject unknown fields,
-  secret material, stale or cross-build evidence, reused identities, missing
-  artifacts, inadequate measurements, and altered approvals. A successful
-  intake MUST state that production is not promoted; synthetic conformance
-  MUST state that it is not live-pilot evidence.
+  deployment-specific evidence inventory. Authentic intake MUST require
+  canonical policy and dossier files and exactly 13 canonical local evidence
+  envelopes at fixed paths. Each envelope MUST match its dossier raw-byte
+  digest, deployment, build, schema, observation time, and policy-assigned
+  reviewer signature. It MUST reject unknown fields, noncanonical JSON,
+  symbolic links, unexpected files, secret material, stale or cross-build
+  evidence, reused identities, missing artifacts, inadequate measurements,
+  wrong producer roles, and altered approvals. A successful intake MUST state
+  that production is not promoted; synthetic conformance MUST state that it
+  is not live-pilot evidence.
 
 ## Capability coverage
 

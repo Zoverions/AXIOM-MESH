@@ -769,7 +769,8 @@ notification decisions, corrective owners, and independent human review. See
 ## 16. Pilot dossier verification
 
 After the actual pilot observation and independent reviews—not during
-candidate CI—verify the secret-free evidence envelope:
+candidate CI—use the dossier-only command for a secret-free metadata
+preflight:
 
 ```bash
 npm run pilot:dossier:verify -- \
@@ -792,6 +793,29 @@ dossier verifies only as accepted for a separate promotion review and always
 reports `production_promoted: false`. See
 [`docs/operations/PILOT-DEPLOYMENT-DOSSIER.md`](../docs/operations/PILOT-DEPLOYMENT-DOSSIER.md).
 
+### Offline pilot evidence package verification
+
+Authentic intake must verify the complete offline package:
+
+```bash
+npm run pilot:package:verify -- \
+  /secure-review/pilot-evidence-package \
+  /separate-trust/pilot-policy-authority-public.pem
+```
+
+The package root must contain only canonical `policy.json`, canonical
+`dossier.json`, and an `evidence/` directory with the exact 13 canonical
+evidence envelopes. Every envelope must be a bounded regular file, match its
+dossier digest and build, contain no secret material, and carry the valid
+signature of the policy-pinned reviewer role assigned to that evidence type.
+Unexpected, missing, noncanonical, cross-build, wrongly signed, or symlinked
+input fails closed.
+
+`npm run pilot:package:drill` creates separately signed synthetic package
+conformance evidence and proves accepted exact inventory plus rejection of
+unexpected files, missing files, noncanonical JSON, wrong producer roles, and
+secret fields. It observes no live pilot and cannot promote production.
+
 This package is a production container specification and local deployment
 surface. Its source and fail-closed supervisor are statically verified, and the
 real four-process stack, digest-pinned image build, composed container
@@ -801,6 +825,7 @@ drill, mutually authenticated transport lifecycle drill, data-key rotation
 drill, admitted-node discovery and scheduling drill, operator-approved online
 causal exchange drill, signed provider conformance drill, signed deny-egress
 probe, host-side telemetry relay drill, automated incident tabletop, and
-synthetic pilot dossier verifier conformance are protected CI gates. This is
-not evidence of a live deployment, remote node execution, federated discovery,
-BFT consensus, audited arbitrary-code isolation, or external settlement.
+synthetic pilot dossier and exact-package verifier conformance are protected
+CI gates. This is not evidence of a live deployment, remote node execution,
+federated discovery, BFT consensus, audited arbitrary-code isolation, or
+external settlement.
