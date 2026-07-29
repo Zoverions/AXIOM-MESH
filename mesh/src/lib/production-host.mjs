@@ -1,7 +1,17 @@
 import { spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { once } from 'node:events';
+import {
+  mkdir,
+  readFile,
+  rename,
+  rm,
+  stat,
+  writeFile
+} from 'node:fs/promises';
 import net from 'node:net';
-import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { ValidationError } from './canonical.mjs';
 import { MESH_ROOT } from './config.mjs';
@@ -119,30 +129,218 @@ export async function stopProductionHost(child, timeoutMs = 10_000) {
   };
 }
 
-export async function findProductionPortBlock(label = 'production drill') {
-  for (let attempt = 0; attempt < 50; attempt += 1) {
-    const base = 20_000 + Math.floor(Math.random() * 20_000);
-    const servers = [];
-    try {
-      for (let port = base; port < base + 4; port += 1) {
-        const server = net.createServer();
-        await new Promise((resolvePromise, reject) => {
-          server.once('error', reject);
-          server.listen(port, '127.0.0.1', resolvePromise);
-        });
-        servers.push(server);
-      }
-      await Promise.all(
-        servers.map(server => new Promise(resolvePromise => server.close(resolvePromise)))
-      );
-      return base;
-    } catch {
-      await Promise.all(
-        servers.map(server => new Promise(resolvePromise => server.close(resolvePromise)))
+const PORT_BLOCK_SIZE = 4;
+const PORT_BLOCK_MINIMUM = 20_000;
+const PORT_BLOCK_COUNT = 5_000;
+const PORT_LEASE_SCHEMA = 'axiom-production-port-lease.v1';
+const PORT_LEASE_STALE_MS = 5 * 60_000;
+
+export async function reserveProductionPortBlock(
+  label = 'production drill',
+  {
+    lockRoot = join(tmpdir(), 'axiom-mesh-production-port-leases-v1'),
+    random = Math.random,
+    now = () => Date.now()
+  } = {}
+) {
+  const normalizedLabel = normalizeLeaseLabel(label);
+  const root = resolve(lockRoot);
+  await mkdir(root, { recursive: true, mode: 0o700 });
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const sample = random();
+    if (!Number.isFinite(sample) || sample < 0 || sample >= 1) {
+      throw new ValidationError('Production port lease random source is invalid');
+    }
+    const basePort = (
+      PORT_BLOCK_MINIMUM
+      + Math.floor(sample * PORT_BLOCK_COUNT) * PORT_BLOCK_SIZE
+    );
+    const lockPath = join(root, `${basePort}-${basePort + PORT_BLOCK_SIZE - 1}`);
+    const acquired = await acquirePortLeaseLock(lockPath, {
+      basePort,
+      label: normalizedLabel,
+      now
+    });
+    if (!acquired) continue;
+    const portsAvailable = await probePortBlock(basePort);
+    if (!portsAvailable) {
+      await acquired.release();
+      continue;
+    }
+    return Object.freeze({
+      schema: PORT_LEASE_SCHEMA,
+      base_port: basePort,
+      ports: Object.freeze(
+        Array.from({ length: PORT_BLOCK_SIZE }, (_, index) => basePort + index)
+      ),
+      release: acquired.release
+    });
+  }
+  throw new ValidationError(
+    `Unable to reserve a local port block for ${normalizedLabel}`
+  );
+}
+
+async function acquirePortLeaseLock(lockPath, {
+  basePort,
+  label,
+  now,
+  allowReclaim = true
+}) {
+  try {
+    await mkdir(lockPath, { mode: 0o700 });
+  } catch (error) {
+    if (error?.code !== 'EEXIST') {
+      throw new ValidationError(
+        `Production port lease lock cannot be created: ${error?.code ?? 'unknown'}`
       );
     }
+    if (
+      allowReclaim
+      && await reclaimStalePortLease(lockPath, now)
+    ) {
+      return acquirePortLeaseLock(lockPath, {
+        basePort,
+        label,
+        now,
+        allowReclaim: false
+      });
+    }
+    return null;
   }
-  throw new ValidationError(`Unable to reserve a local port block for ${label}`);
+  const nonce = randomUUID();
+  const ownerPath = join(lockPath, 'owner.json');
+  const owner = {
+    schema: PORT_LEASE_SCHEMA,
+    pid: process.pid,
+    base_port: basePort,
+    created_at: new Date(now()).toISOString(),
+    label,
+    nonce
+  };
+  try {
+    await writeFile(ownerPath, `${JSON.stringify(owner)}\n`, {
+      encoding: 'utf8',
+      mode: 0o600,
+      flag: 'wx'
+    });
+  } catch (error) {
+    await rm(lockPath, { recursive: true, force: true });
+    throw new ValidationError(
+      `Production port lease owner cannot be recorded: ${error?.code ?? 'unknown'}`
+    );
+  }
+  let active = true;
+  return {
+    async release() {
+      if (!active) return;
+      let current;
+      try {
+        current = JSON.parse(await readFile(ownerPath, 'utf8'));
+      } catch (error) {
+        if (error?.code === 'ENOENT') {
+          active = false;
+          return;
+        }
+        throw new ValidationError('Production port lease owner cannot be verified');
+      }
+      if (
+        current?.schema !== PORT_LEASE_SCHEMA
+        || current?.nonce !== nonce
+        || current?.pid !== process.pid
+        || current?.base_port !== basePort
+      ) {
+        throw new ValidationError('Production port lease ownership changed');
+      }
+      const retiredPath = `${lockPath}.released-${nonce}`;
+      try {
+        await rename(lockPath, retiredPath);
+      } catch (error) {
+        if (error?.code === 'ENOENT') {
+          active = false;
+          return;
+        }
+        throw new ValidationError(
+          `Production port lease cannot be released: ${error?.code ?? 'unknown'}`
+        );
+      }
+      active = false;
+      await rm(retiredPath, { recursive: true, force: true });
+    }
+  };
+}
+
+async function reclaimStalePortLease(lockPath, now) {
+  let owner;
+  let ageMs;
+  try {
+    owner = JSON.parse(await readFile(join(lockPath, 'owner.json'), 'utf8'));
+    ageMs = now() - Date.parse(owner.created_at);
+  } catch {
+    try {
+      ageMs = now() - (await stat(lockPath)).mtimeMs;
+    } catch {
+      return false;
+    }
+  }
+  if (
+    !Number.isFinite(ageMs)
+    || ageMs < PORT_LEASE_STALE_MS
+    || processIsActive(owner?.pid)
+  ) return false;
+  const stalePath = `${lockPath}.stale-${randomUUID()}`;
+  try {
+    await rename(lockPath, stalePath);
+  } catch {
+    return false;
+  }
+  await rm(stalePath, { recursive: true, force: true });
+  return true;
+}
+
+function processIsActive(pid) {
+  if (!Number.isSafeInteger(pid) || pid < 1) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error?.code === 'EPERM';
+  }
+}
+
+async function probePortBlock(basePort) {
+  const servers = [];
+  try {
+    for (
+      let port = basePort;
+      port < basePort + PORT_BLOCK_SIZE;
+      port += 1
+    ) {
+      const server = net.createServer();
+      await new Promise((resolvePromise, reject) => {
+        server.once('error', reject);
+        server.listen(port, '127.0.0.1', resolvePromise);
+      });
+      servers.push(server);
+    }
+    return true;
+  } catch {
+    return false;
+  } finally {
+    await Promise.all(servers.map(server => new Promise(resolvePromise => {
+      server.close(resolvePromise);
+    })));
+  }
+}
+
+function normalizeLeaseLabel(value) {
+  if (
+    typeof value !== 'string'
+    || !/^[A-Za-z0-9][A-Za-z0-9 .:_-]{0,95}$/.test(value)
+  ) {
+    throw new ValidationError('Production port lease label is invalid');
+  }
+  return value;
 }
 
 export function operationsReportIsReady(report) {

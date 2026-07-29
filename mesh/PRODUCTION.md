@@ -319,6 +319,15 @@ pilot hardware, a remote network path, an external-adapter profile, or a
 30-day availability measurement. Repeat it under the actual pilot resource
 policy and expected traffic mix before production promotion.
 
+All host-side real-stack drills hold a cross-process port-block lease for their
+complete lifetime, including stopped-runtime rotation and restart windows.
+Four-port candidates are aligned so leases cannot partially overlap,
+atomically coordinated through the operating-system temporary directory, and
+independently checked for socket availability. A dead owner can be reclaimed
+only after the bounded stale interval; active ownership cannot be replaced.
+Lease paths and process identifiers are not included in signed release
+evidence. This is drill coordination, not production network authority.
+
 ## 5.1 Exercise request-pressure and dependency-loss
 
 Use another explicitly empty Linux workspace for the bounded resilience

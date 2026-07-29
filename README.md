@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=4d143d985aa25e0258bfe36026667ca6dcf7f3403ae0f5b99efbc2e2b46e5f20 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=a86cf647c83f0579fdfd9d89b3f3da9e595b9ae4c3b604cdda1f8da70a7a291b -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -96,6 +96,8 @@ That drill starts the real four-process production supervisor, exercises 40
 authenticated low-risk intents at concurrency 4, measures latency, error rate,
 throughput, process CPU and memory, performs a graceful full-stack restart,
 verifies a post-restart intent, and emits signed, secret-free JSON evidence.
+Concurrent real-stack drills retain separate aligned four-port leases through
+their complete runtime and restart windows, preventing parallel bind races.
 It is a short host-mode baseline, not a 30-day availability claim or a
 substitute for measurement on pilot hardware.
 

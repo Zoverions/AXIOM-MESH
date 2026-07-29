@@ -150,6 +150,13 @@ baseline; dedicated pilot hardware, the expected traffic mix, enforced CPU
 and memory controls, external paths, and a 30-day availability window must
 still be measured before production promotion.
 
+Parallel real-stack tests use aligned, atomic cross-process leases for each
+four-port loopback block. A lease spans startup, runtime, stopped maintenance,
+and restart; actual socket occupancy remains a separate negative check.
+Collision, external-occupancy, idempotent-release, and reuse regressions are
+tested. This removes a check-then-bind race from release evidence generation
+without treating temporary port ownership as a production network control.
+
 ### Request-pressure and dependency-loss resilience
 
 Protected CI also runs a fixed Linux resilience profile against the real

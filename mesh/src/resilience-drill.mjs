@@ -15,7 +15,7 @@ import {
   verifyObjectSignature
 } from './lib/identity.mjs';
 import {
-  findProductionPortBlock,
+  reserveProductionPortBlock,
   operationsReportIsReady,
   productionHostEnvironment,
   startProductionHost,
@@ -101,7 +101,8 @@ export async function runResilienceDrill({
   const token = (
     await readFile(provisioned.operator_token_file, 'utf8')
   ).trim();
-  const basePort = await findProductionPortBlock('resilience drill');
+  const portLease = await reserveProductionPortBlock('resilience drill');
+  const basePort = portLease.base_port;
   const gateway = `http://127.0.0.1:${basePort}`;
   const environment = productionHostEnvironment(provisioned, basePort, {
     maxBodyBytes: activePolicy.request_pressure.max_body_bytes,
@@ -450,6 +451,7 @@ export async function runResilienceDrill({
       }
     }
     if (runtime) await stopProductionHost(runtime.child);
+    await portLease.release();
   }
 }
 

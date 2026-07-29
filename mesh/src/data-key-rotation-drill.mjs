@@ -19,7 +19,7 @@ import {
 } from './lib/identity.mjs';
 import { DataProtector } from './lib/protector.mjs';
 import {
-  findProductionPortBlock,
+  reserveProductionPortBlock,
   productionHostEnvironment,
   startProductionHost,
   stopProductionHost
@@ -64,7 +64,10 @@ export async function runDataKeyRotationDrill({
     'grid',
     { create: false }
   );
-  const basePort = await findProductionPortBlock('data-key rotation drill');
+  const portLease = await reserveProductionPortBlock(
+    'data-key rotation drill'
+  );
+  const basePort = portLease.base_port;
   const gateway = `http://127.0.0.1:${basePort}`;
   const environment = productionHostEnvironment(provisioned, basePort);
   let runtime;
@@ -377,6 +380,7 @@ export async function runDataKeyRotationDrill({
     return evidence;
   } finally {
     if (runtime) await stopProductionHost(runtime.child);
+    await portLease.release();
   }
 }
 

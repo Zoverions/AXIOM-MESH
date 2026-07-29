@@ -199,6 +199,32 @@ Repeated child loss is not solved by an infinite restart loop. Apply an
 orchestrator restart budget, backoff, and human escalation appropriate to the
 pilot platform.
 
+## Parallel drill endpoint leases
+
+The production test runner executes independent real-stack drills
+concurrently. Each launch therefore acquires an atomic cross-process lease for
+one aligned block of four loopback ports before closing its availability
+probes. The lease remains held while the supervisor is running and across
+deliberate stopped-runtime rotation or restart gaps. Another drill that selects
+the same block must choose a different block rather than racing the next
+service bind.
+
+Blocks begin on a four-port boundary, so two different lease names cannot
+partially overlap. Actual loopback sockets are still probed after acquisition;
+an externally occupied port causes the complete lease to be released and
+another candidate selected. The owner record binds process, block, creation
+time, purpose, and a random nonce. It is permission restricted, released only
+by the matching owner, and idempotent. A dead owner is reclaimable only after a
+bounded stale interval. This coordination is a test/drill reliability control,
+not a production service-discovery or network-authorization mechanism.
+
+Regression tests force two callers to select the same initial block, verify
+that their assigned ports do not overlap, prove idempotent release and reuse,
+and bind an external listener inside a candidate block to prove rejection.
+Protected CI then exercises the SLO, resilience, telemetry, transport,
+credential-rotation, data-key-rotation, and independent-unit drills under the
+normal concurrent test runner.
+
 ## Pilot repetition and non-claims
 
 Before production promotion, repeat the request-pressure and dependency-loss

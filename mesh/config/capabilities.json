@@ -247,6 +247,7 @@
         "mesh/test/telemetry-relay.test.mjs",
         "mesh/test/telemetry-relay-drill.test.mjs",
         "mesh/test/resilience-drill.test.mjs",
+        "mesh/test/production-host.test.mjs",
         ".github/workflows/kernel.yml"
       ]
     },

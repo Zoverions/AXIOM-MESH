@@ -16,7 +16,7 @@ import {
   verifyObjectSignature
 } from './lib/identity.mjs';
 import {
-  findProductionPortBlock,
+  reserveProductionPortBlock,
   productionHostEnvironment,
   startProductionHost,
   stopProductionHost
@@ -65,7 +65,10 @@ export async function runTelemetryRelayDrill({
     await readFile(provisioned.operator_token_file, 'utf8')
   ).trim();
   const socketPath = join(workspace, 'gateway.sock');
-  const basePort = await findProductionPortBlock('telemetry relay drill');
+  const portLease = await reserveProductionPortBlock(
+    'telemetry relay drill'
+  );
+  const basePort = portLease.base_port;
   const gateway = `http://127.0.0.1:${basePort}`;
   const environment = {
     ...productionHostEnvironment(provisioned, basePort, {
@@ -287,6 +290,7 @@ export async function runTelemetryRelayDrill({
   } finally {
     if (runtime) await stopProductionHost(runtime.child);
     await receiver.close();
+    await portLease.release();
   }
 }
 
