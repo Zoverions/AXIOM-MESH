@@ -58,19 +58,26 @@ export async function startProductionHost({
   drill = 'production'
 }) {
   const startedAt = performance.now();
-  const child = spawn(process.execPath, ['src/supervisor.mjs'], {
+  const supervisorModule = environment.AXIOM_PROVIDER_CONFIG
+    ? 'src/provider-supervisor.mjs'
+    : 'src/supervisor.mjs';
+  const child = spawn(process.execPath, [supervisorModule], {
     cwd: MESH_ROOT,
     stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
     env: environment
   });
   let diagnostics = '';
   let supervisorProcesses = null;
+  let providerReceipt = null;
   const collect = chunk => {
     if (diagnostics.length < 32_768) diagnostics += chunk;
   };
   const collectMessage = message => {
     if (message?.type === 'axiom.supervisor.ready') {
       supervisorProcesses = normalizeSupervisorProcesses(message.processes);
+    }
+    if (message?.type === 'axiom.provider.prepared') {
+      providerReceipt = structuredClone(message.receipt);
     }
   };
   child.stdout.on('data', collect);
@@ -88,6 +95,12 @@ export async function startProductionHost({
         { code: 'process_inventory_unavailable' }
       );
     }
+    if (environment.AXIOM_PROVIDER_CONFIG && !providerReceipt) {
+      throw Object.assign(
+        new Error('Provider supervisor did not publish its receipt'),
+        { code: 'provider_receipt_unavailable' }
+      );
+    }
   } catch (error) {
     await stopProductionHost(child);
     throw new ValidationError(
@@ -100,6 +113,7 @@ export async function startProductionHost({
   return {
     child,
     processes: supervisorProcesses,
+    provider_receipt: providerReceipt,
     startup_duration_ms: elapsedMilliseconds(startedAt)
   };
 }

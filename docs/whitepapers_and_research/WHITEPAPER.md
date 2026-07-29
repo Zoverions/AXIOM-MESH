@@ -368,7 +368,32 @@ uses two real production supervisors and a controlled bidirectional partition.
 This proves causal record transfer and conflict semantics, not replicated Grid
 consensus, BFT, leader election, arbitrary federation, or WAN performance.
 
-### 10.6 Backup and restore
+### 10.6 Deployment-independent provider startup
+
+Production services retain a deliberately narrow path-based input boundary.
+A host broker can populate that boundary from separate secret and policy
+providers without linking a vendor vault or cloud SDK into the kernel. The
+operator pins each provider's absolute executable, executable digest,
+supporting artifact digests, provider ID, and Ed25519 trust set. Secret and
+policy identities must be disjoint.
+
+A startup request binds a random nonce, short expiry, deployment and provider
+audiences, and an exact resource inventory. The response binds the full
+request digest, exact aliases, immutable versions, media types, byte counts,
+content digests, and values under a provider signature. Bounded execution,
+output, and environment prevent the adapter process from creating ambient
+kernel authority. Any missing, extra, replayed, expired, oversized, invalid,
+or wrongly signed resource rejects the complete startup.
+
+Verified values are written into one private ephemeral generation at
+broker-chosen paths. The broker validates the data key, API principals,
+ordered deny-dominant policies, capability registry, and active internal TLS
+generation before launching the existing supervisor. The generation is
+removed after shutdown. This proves a custody-neutral protocol and reference
+adapter, not a vendor backend, workload-identity configuration, live refresh,
+high availability, multi-host rollout, or secure deletion from durable media.
+
+### 10.7 Backup and restore
 
 Grid snapshots are encrypted, signed, context-bound, and exact-digest
 verified. Restore requires a stopped Grid, preserves the replaced database,
@@ -584,6 +609,9 @@ The independent-unit mechanism and its limitations are specified in the
 The online causal transport, approval, partition, conflict, and non-consensus
 boundary is specified in the
 [online exchange runbook](../operations/ONLINE-CAUSAL-EXCHANGE.md).
+The signed startup-provider protocol, private generation lifecycle, adapter
+conformance contract, and vendor non-claims are specified in the
+[provider runbook](../operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md).
 
 ## Conclusion
 

@@ -20,7 +20,7 @@ inherited by the default branch.
 
 The executable source of truth is
 [`mesh/config/capabilities.json`](../mesh/config/capabilities.json). The
-generated [capability status](rebuild/STATUS.md) records 22 implemented, 2
+generated [capability status](rebuild/STATUS.md) records 23 implemented, 2
 experimental, 3 specified, 9 adapter-required, and 4 disabled capabilities.
 
 ## Implemented kernel scope
@@ -49,6 +49,10 @@ experimental, 3 specified, 9 adapter-required, and 4 disabled capabilities.
 - bidirectional operator-approved online causal exchange with pinned
   Grid-signed event evidence, encrypted ordered queues, bounded retry,
   owner-scoped duplicate preflight, and explicit conflict convergence.
+- deployment-independent startup from separate Ed25519-pinned secret and
+  policy providers with digest-pinned command artifacts, nonce-bound
+  short-lived exact inventories, private per-start materialization, semantic
+  validation, cleanup, and fail-closed rejection.
 
 ## Production package state
 
@@ -108,8 +112,12 @@ across live and retained recovery state, proves wrong-key rejection in both
   supervisors, injects a two-direction causal-exchange partition, preserves
   encrypted cursors, rejoins through exact independent approvals, exposes two
   concurrent heads on both Grids, converges through explicit all-head
-  resolution, and absorbs duplicate replay before approval. Dedicated
-  pilot-hardware capacity and availability validation,
+  resolution, and absorbs duplicate replay before approval. It also starts the
+  real four-service host twice through independent signed
+  secret and policy providers, activates rotated API and policy resources,
+  rejects the retired token and an invalid provider signer, removes each
+  private runtime generation, and binds that proof into the incident tabletop.
+  Dedicated pilot-hardware capacity and availability validation,
   pilot-owned receiver/secret/media custody, external
   credential-history attestations, and independent security review are still
   required before production promotion. The repository-side history audit is
@@ -144,6 +152,8 @@ AXIOM-MESH does not currently claim:
 - BFT consensus, multi-host federation, or federated network peer discovery;
 - independently hosted WAN causal-exchange performance or replicated Grid
   consensus;
+- a live vendor-backed vault, cloud secret manager, HSM/KMS, workload
+  identity, or provider high-availability deployment;
 - remote workload dispatch, resource measurement, or result provenance from
   scheduled nodes;
 - externally audited arbitrary-code isolation;
@@ -159,18 +169,17 @@ repository is not implementation or deployment evidence.
 
 ## Immediate next milestone
 
-The next milestone is deployment-independent secret and policy providers,
-disposing the 32 external credential-history
+The next milestone is disposing the 32 external credential-history
 attestations,
-pilot-owned secret, telemetry-receiver, and media custody with scheduled
+pilot-owned provider, telemetry-receiver, and media custody with scheduled
 on-media recovery,
 a facilitated named-roster incident exercise, pilot-platform network-policy
 repetition, and independent security review for a controlled single-node
 pilot. The automated external telemetry/alert relay, request-path resilience,
 transport lifecycle, independent service failure isolation, admitted-node
 discovery/scheduling reservations, operator-approved two-Grid causal exchange,
-and candidate tabletop are implemented;
+signed secret/policy provider startup, and candidate tabletop are implemented;
 protected CI signs bounded delivery evidence and a same-revision composition
-of ten real control drills.
+of eleven real control drills.
 Work is ordered in
 [`docs/MASTER-TODO.md`](MASTER-TODO.md).

@@ -94,7 +94,7 @@ test('incident tabletop emits signed evidence linked to all control drills', asy
   const verification = verifyIncidentTabletopEvidence(evidence, policy);
   assert.equal(verification.valid, true);
   assert.equal(verification.severity, 'SEV-1');
-  assert.equal(verification.linked_controls, 10);
+  assert.equal(verification.linked_controls, 11);
   assert.ok(Object.values(evidence.checks).every(Boolean));
   assert.doesNotMatch(JSON.stringify(evidence), /PRIVATE KEY|operator\.token/i);
 
@@ -184,6 +184,12 @@ function controlSummaries(revision) {
       'axiom-online-causal-sync-drill-evidence.v1',
       'axiom-online-causal-sync-drill-evidence',
       'a',
+      revision
+    ),
+    provider_runtime: control(
+      'axiom-provider-conformance-evidence.v1',
+      'axiom-provider-conformance-evidence',
+      'b',
       revision
     ),
     recovery: control(

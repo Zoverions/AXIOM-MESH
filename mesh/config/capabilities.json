@@ -287,6 +287,18 @@
       ]
     },
     {
+      "id": "operations.provider-runtime",
+      "family": "operations",
+      "status": "implemented",
+      "summary": "Independent Ed25519-pinned secret and policy providers deliver nonce-bound short-lived startup resources through a bounded process protocol; the broker verifies exact inventories and content, materializes one private generation, launches the unchanged production supervisor, and removes that generation on shutdown.",
+      "evidence": [
+        "mesh/test/provider-runtime.test.mjs",
+        "mesh/test/provider-conformance-drill.test.mjs",
+        "mesh/src/provider-conformance-drill.mjs",
+        ".github/workflows/kernel.yml"
+      ]
+    },
+    {
       "id": "operations.container-package",
       "family": "operations",
       "status": "implemented",

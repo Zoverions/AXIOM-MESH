@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=0533527610172fb5d19bb485687b6a70aa7361e562ac1b7b4e1eb9c520142ae1 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=faf55c2577410a419fed1b589eb8ba50efe0ebfedd47277184031c6bbb5d2f60 -->
 # AXIOM-MESH Product Definition
 
 **Status:** Canonical rebuild definition
@@ -216,7 +216,7 @@ selects the highest matching severity, requires independent command roles,
 permits only authority-reducing, preservation, recovery, communication, or
 review actions, and fails closure without verified containment, recovery,
 evidence, communications, retrospective scheduling, and independent review.
-The protected automated tabletop binds ten independently signed operational
+The protected automated tabletop binds eleven independently signed operational
 control artifacts from the same revision. A facilitated pilot exercise and
 live roster remain external promotion requirements.
 
@@ -260,3 +260,14 @@ approval, and partition rejoin preserves visible concurrent heads until an
 explicit all-head resolution reaches both Grids. This is transport and
 convergence of signed causal records, not replicated Grid consensus,
 federation, or automatic authority.
+
+Production startup may also be populated by separate deployment-independent
+secret and policy providers. Their IDs and pinned Ed25519 keys are independent;
+their absolute commands and supporting artifacts are digest-pinned. Each
+one-shot response is short-lived and bound to a random request nonce,
+deployment, exact resource IDs, aliases, classifications, media types, byte
+limits, and content digests. The broker validates the complete data-key,
+principal, transport, ordered-policy, and capability generation before
+starting the unchanged supervisor, and removes the private per-start
+generation on shutdown. The reference file adapter is protocol evidence, not
+a live vault, cloud custody, workload-identity, or live-refresh claim.

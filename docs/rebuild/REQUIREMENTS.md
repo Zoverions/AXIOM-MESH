@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=0533527610172fb5d19bb485687b6a70aa7361e562ac1b7b4e1eb9c520142ae1 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=faf55c2577410a419fed1b589eb8ba50efe0ebfedd47277184031c6bbb5d2f60 -->
 # AXIOM-MESH Rebuild Requirements
 
 **Normative language:** MUST, MUST NOT, SHOULD, and MAY are used in their usual
@@ -110,6 +110,7 @@ requirements sense.
 | OPS-09 | Every production internal edge MUST use mutually authenticated TLS 1.3, bind the certificate peer to the signed caller, reject inactive leaves, and support bounded offline rotation and exact rollback. | Certificate profile and negative-path tests plus signed real-stack rotation, retired-leaf rejection, restart, intent, and rollback evidence. |
 | OPS-10 | Gateway, Grid, Hypervisor, and Sandbox MUST be independently deployable with one application private key and one TLS leaf per unit, Grid-only durable state, dependency-aware readiness, survivor continuity after non-Grid loss, and fail-closed network policy. | Projection isolation/staleness tests, signed independent-process Sandbox-loss and state-preservation drill, and protected four-container Sandbox-only restart plus public-egress rejection. |
 | OPS-11 | Concurrent host-side real-stack drills MUST hold non-overlapping cross-process endpoint leases through every runtime and stopped/restart interval, while independently rejecting an externally occupied candidate port. | Forced same-candidate concurrency, alignment, external occupancy, idempotent release/reuse, and full parallel CI tests. |
+| OPS-12 | Provider-supervised production startup MUST use independent pinned secret and policy signers, digest-pinned absolute command chains, nonce-bound short-lived exact resource inventories, bounded execution and output, semantic validation, private ephemeral materialization, unambiguous configuration, and fail-closed cleanup before launching any service. | Unit conformance and negative paths plus signed real-stack startup, secret/policy rotation, retired-token rejection, deny-policy activation, generation cleanup, and invalid-signer rejection evidence. |
 
 ## Verified implementation checkpoint
 
@@ -182,6 +183,14 @@ The machine-readable capability registry remains authoritative. Kernel
   explicit all-head convergence. Protected CI MUST retain signed evidence from
   two real production supervisors and MUST NOT describe the result as
   replicated Grid consensus.
+- deployment-independent one-shot startup providers with separate secret and
+  policy identities, disjoint pinned Ed25519 trust, digest-pinned executables
+  and artifacts, bounded environment/time/output, nonce and request-digest
+  binding, exact media-typed resource sets, semantic validation, and private
+  per-start generation cleanup. Protected CI MUST rotate API and policy
+  resources through a real supervisor restart, reject the retired token and an
+  invalid provider signer, and MUST NOT claim a vendor custody backend, live
+  refresh, or multi-host rollout.
 - bounded-cardinality four-service telemetry, dependency-aware readiness,
   authenticated operations/OpenMetrics surfaces, and static alert states for
   integrity, availability, replay, authentication, and server-error signals.

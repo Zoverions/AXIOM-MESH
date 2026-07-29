@@ -1,0 +1,91 @@
+{
+  "schema": "axiom-provider-runtime-config.v1",
+  "deployment_id": "pilot-host-01",
+  "runtime_directory": "/run/axiom-provider-runtime",
+  "providers": {
+    "secret": {
+      "provider_id": "pilot-secret-provider",
+      "executable": "/usr/local/bin/node",
+      "executable_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "arguments": [
+        "/opt/axiom-mesh/src/file-provider-adapter.mjs",
+        "/etc/axiom-provider/secret-adapter.json"
+      ],
+      "artifacts": [
+        {
+          "path": "/opt/axiom-mesh/src/file-provider-adapter.mjs",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        {
+          "path": "/etc/axiom-provider/secret-adapter.json",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      ],
+      "public_key_files": [
+        "/etc/axiom-provider/trust/secret-provider-current.pem"
+      ],
+      "inherit_environment": [],
+      "timeout_ms": 10000,
+      "maximum_response_bytes": 16777216
+    },
+    "policy": {
+      "provider_id": "pilot-policy-provider",
+      "executable": "/usr/local/bin/node",
+      "executable_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "arguments": [
+        "/opt/axiom-mesh/src/file-provider-adapter.mjs",
+        "/etc/axiom-provider/policy-adapter.json"
+      ],
+      "artifacts": [
+        {
+          "path": "/opt/axiom-mesh/src/file-provider-adapter.mjs",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        {
+          "path": "/etc/axiom-provider/policy-adapter.json",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      ],
+      "public_key_files": [
+        "/etc/axiom-provider/trust/policy-provider-current.pem"
+      ],
+      "inherit_environment": [],
+      "timeout_ms": 10000,
+      "maximum_response_bytes": 16777216
+    }
+  },
+  "resources": {
+    "data_key": "secret/data-key",
+    "api_tokens": "secret/api-tokens",
+    "transport": {
+      "manifest": "secret/transport-manifest",
+      "ca_certificate": "secret/transport-ca",
+      "services": {
+        "gateway": {
+          "certificate": "secret/transport/gateway/certificate",
+          "private_key": "secret/transport/gateway/private-key"
+        },
+        "grid": {
+          "certificate": "secret/transport/grid/certificate",
+          "private_key": "secret/transport/grid/private-key"
+        },
+        "hypervisor": {
+          "certificate": "secret/transport/hypervisor/certificate",
+          "private_key": "secret/transport/hypervisor/private-key"
+        },
+        "sandbox": {
+          "certificate": "secret/transport/sandbox/certificate",
+          "private_key": "secret/transport/sandbox/private-key"
+        },
+        "supervisor": {
+          "certificate": "secret/transport/supervisor/certificate",
+          "private_key": "secret/transport/supervisor/private-key"
+        }
+      }
+    },
+    "policy_layers": [
+      "policy/base"
+    ],
+    "capabilities": "policy/capabilities"
+  }
+}

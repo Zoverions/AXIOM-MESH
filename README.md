@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=0533527610172fb5d19bb485687b6a70aa7361e562ac1b7b4e1eb9c520142ae1 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=faf55c2577410a419fed1b589eb8ba50efe0ebfedd47277184031c6bbb5d2f60 -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -168,6 +168,20 @@ concurrent heads on both Grids, converges through explicit complete
 resolution, and absorbs duplicate replay before approval. It does not claim
 replicated Grid consensus or arbitrary federation. See the
 [online causal exchange runbook](docs/operations/ONLINE-CAUSAL-EXCHANGE.md).
+
+Exercise signed deployment-independent provider startup:
+
+```bash
+npm run provider:drill -- /tmp/axiom-provider-conformance
+```
+
+The drill starts the real four-service supervisor from independent
+Ed25519-signed secret and policy providers, rotates both resource classes
+across restart, proves retired-token rejection and policy activation, removes
+the private per-start generations, and rejects an invalid provider signer
+before service startup. The included file adapter is a protocol reference, not
+evidence for a vendor vault or cloud custody backend. See the
+[provider runbook](docs/operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md).
 
 Exercise the host-side external telemetry and alert path on Linux:
 
@@ -368,10 +382,17 @@ supported entrypoints.
   closed.
 - Production startup rejects local credential bootstrap and non-loopback
   plaintext internal transport.
+- Production may instead start from independent, digest-pinned secret and
+  policy providers using nonce-bound short-lived signed responses, an exact
+  validated resource inventory, and one private generation removed at
+  shutdown. Vendor custody adapters still require pilot evidence.
 - The production container uses a digest-pinned Node.js base, a non-root user,
   read-only root filesystem, dropped capabilities, explicit resource ceilings,
   mounted secrets, and readiness-based health checks. Its source policy is
   verified by protected image-build and composed-runtime checks.
+- The signed provider protocol does not claim that any vendor vault, cloud
+  secret manager, HSM/KMS, workload identity, live-refresh path, or
+  high-availability custody deployment has been independently validated.
 - The candidate container has no attached Docker network and preserves only
   explicit Unix-domain Gateway ingress. Production startup rejects every
   non-loopback or default route, and protected CI proves a runner-reachable
@@ -382,9 +403,10 @@ supported entrypoints.
 - Deterministic incident severity, independent command roles,
   authority-reducing containment, evidence-first chronology, bounded
   communications, and closure conditions are machine-readable. Protected CI
-  signs an automated tabletop bound to ten same-revision control artifacts,
+  signs an automated tabletop bound to eleven same-revision control artifacts,
   including request-pressure, dependency-loss, transport-lifecycle, and
-  node-scheduling and online causal partition/rejoin evidence;
+  node-scheduling, online causal partition/rejoin, and provider fail-closed
+  evidence;
   a facilitated named-roster pilot exercise remains required.
 
 Report vulnerabilities using [`.github/SECURITY.md`](.github/SECURITY.md).
