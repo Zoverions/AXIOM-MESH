@@ -18,6 +18,7 @@ import { validateCredentialRevocationLedger } from './credential-history-audit.m
 import { validateIncidentResponsePolicy } from './incident-response.mjs';
 import { validateResilienceDrillPolicy } from './resilience-drill.mjs';
 import { validateTelemetryRoutingPolicy } from './telemetry-relay.mjs';
+import { validateSourceSetupState } from './setup.mjs';
 
 const REPOSITORY_ROOT = dirname(MESH_ROOT);
 const SUPPORTED_DEPENDENCY_MANIFESTS = new Set([
@@ -77,6 +78,8 @@ export async function verifyReleaseReadiness() {
       'config',
       'resilience-drill.json'
     ),
+    setupPolicy: join(MESH_ROOT, 'config', 'setup.json'),
+    nodeVersionPin: join(MESH_ROOT, '.node-version'),
     package: join(MESH_ROOT, 'package.json'),
     lock: join(MESH_ROOT, 'package-lock.json'),
     rootPackage: join(REPOSITORY_ROOT, 'package.json'),
@@ -100,6 +103,8 @@ export async function verifyReleaseReadiness() {
     incidentResponsePolicy,
     telemetryRoutingPolicy,
     resilienceDrillPolicy,
+    setupPolicy,
+    nodeVersionPin,
     packageJson,
     lock,
     rootPackage,
@@ -122,6 +127,8 @@ export async function verifyReleaseReadiness() {
     readJson(paths.incidentResponsePolicy),
     readJson(paths.telemetryRoutingPolicy),
     readJson(paths.resilienceDrillPolicy),
+    readJson(paths.setupPolicy),
+    readFile(paths.nodeVersionPin, 'utf8'),
     readJson(paths.package),
     readJson(paths.lock),
     readJson(paths.rootPackage),
@@ -152,6 +159,18 @@ export async function verifyReleaseReadiness() {
   const resilienceDrill = validateResilienceDrillPolicy(
     resilienceDrillPolicy
   );
+  const setup = validateSourceSetupState({
+    policy: setupPolicy,
+    nodeVersion: setupPolicy.runtime.ci_version,
+    npmVersion: setupPolicy.package_manager.minimum_version,
+    nodeVersionPin,
+    rootPackage,
+    rootLock,
+    kernelPackage: packageJson,
+    kernelLock: lock,
+    dockerfile,
+    workflow
+  });
   if (packageJson.version !== registry.kernel_version || lock.version !== packageJson.version) {
     throw new ValidationError('Package, lockfile, and capability registry versions must match');
   }
@@ -315,6 +334,7 @@ export async function verifyReleaseReadiness() {
     incident_response: incidentResponse,
     telemetry_routing: telemetryRouting,
     resilience_drill: resilienceDrill,
+    setup,
     operator_surface_digest: digestObject(operatorSurface),
     deployment,
     migrations: migrationEvidence,
@@ -330,6 +350,7 @@ export async function verifyReleaseReadiness() {
     commit,
     dirty,
     registry: registryResult,
+    setup,
     deployment,
     documentation,
     source_boundary: sourceBoundary,
@@ -513,6 +534,7 @@ export function verifyProductionDeployment({
     'admitted-node discovery and scheduling',
     'operator-approved online causal exchange',
     'Deployment-independent provider startup',
+    'Automated source setup',
     'Pilot dossier verification',
     'Offline pilot evidence package verification',
     'type-specific detail contract'
@@ -525,7 +547,7 @@ export function verifyProductionDeployment({
     'branches: ["main"]',
     'cron: "17 4 * * 1"',
     'node-version: "24.18.0"',
-    'npm ci --ignore-scripts',
+    'npm run setup:install',
     'fetch-depth: 0',
     'AXIOM_CREDENTIAL_AUDIT_KEY: ${{ secrets.AXIOM_CREDENTIAL_AUDIT_KEY }}',
     'npm run credential-history:audit',

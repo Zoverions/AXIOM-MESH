@@ -339,6 +339,19 @@
       ]
     },
     {
+      "id": "operations.setup-automation",
+      "family": "operations",
+      "status": "implemented",
+      "summary": "An exact current-build setup policy verifies Node.js and npm ranges, CI and container pins, both zero-dependency locks, fixed script-disabled installation, and the full kernel and release commands without creating production credentials.",
+      "evidence": [
+        "mesh/test/setup.test.mjs",
+        "mesh/src/setup.mjs",
+        "mesh/config/setup.json",
+        ".github/workflows/kernel.yml",
+        "docs/operations/AUTOMATED-SOURCE-SETUP.md"
+      ]
+    },
+    {
       "id": "operations.installer-observability-release",
       "family": "operations",
       "status": "experimental",

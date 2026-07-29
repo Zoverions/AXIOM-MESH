@@ -634,10 +634,15 @@ specifications and cannot override the capability registry.
 Use an allowed Node.js 24 runtime. From the repository root:
 
 ```bash
-npm ci --ignore-scripts
-npm run check
-npm run release:verify
+npm run setup
 ```
+
+The command validates the Node.js/npm policy and CI/container pins, installs
+both exact zero-dependency locks with lifecycle scripts disabled, proves the
+locks unchanged, and runs the clean-kernel and release gates. It does not
+provision production credentials. The complete trust, receipt, and non-claim
+boundary is specified in the
+[automated source setup runbook](../operations/AUTOMATED-SOURCE-SETUP.md).
 
 For the production candidate, follow the
 [container runbook](../../mesh/PRODUCTION.md). A valid result must identify the

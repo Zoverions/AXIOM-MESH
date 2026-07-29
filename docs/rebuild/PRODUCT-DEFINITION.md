@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=69788e11d0291bea931eff290765ceee95e4c5ce98099c03f8374fa70ce9b804 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=58b9fb3086613cc41559240ab389cbc2e87ef0f51456c3c70453e1ae5a97f124 -->
 # AXIOM-MESH Product Definition
 
 **Status:** Canonical rebuild definition
@@ -155,6 +155,15 @@ Anything else is explicitly `adapter-required`, `experimental`, `specified`, or
 The operator API and command-line client are separate implemented capability
 claims. A browser dashboard is not implied by those claims and remains
 specified until it independently satisfies this acceptance rule.
+
+Current-build source setup is a separate implemented operations capability.
+`npm run setup` verifies the supported Node.js/npm range, exact CI and
+candidate-container runtime pins, both zero-dependency package locks, absence
+of install lifecycle scripts, and the fixed verification commands. It installs
+from the committed locks with scripts disabled, proves the locks remain
+unchanged, and runs the kernel and release gates. The setup does not acquire a
+toolchain, provision production credentials, deploy a runtime, or revive the
+deprecated installer.
 
 Backup creation follows the normal privileged effect path. Restore is a
 stopped-Grid recovery operation: it must verify the signed encrypted snapshot,

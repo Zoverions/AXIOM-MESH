@@ -20,7 +20,7 @@ that tag are identified only as the current 0.12 development build.
 
 The executable source of truth is
 [`mesh/config/capabilities.json`](../mesh/config/capabilities.json). The
-generated [capability status](rebuild/STATUS.md) records 25 implemented, 2
+generated [capability status](rebuild/STATUS.md) records 26 implemented, 2
 experimental, 3 specified, 9 adapter-required, and 4 disabled capabilities.
 
 ## Implemented kernel scope
@@ -34,6 +34,9 @@ experimental, 3 specified, 9 adapter-required, and 4 disabled capabilities.
 - signed scoped export, recipient encryption, staged import, encrypted backup
   and restore, and admitted-node causal bundles;
 - authenticated operator API and CLI;
+- one-command current-build source setup with exact Node.js/npm policy,
+  zero-dependency lock verification, disabled and prohibited install
+  lifecycle scripts, unchanged-lock proof, and full kernel/release gates;
 - bounded-cardinality telemetry, dependency readiness, operational reports,
   OpenMetrics output, static security/integrity alerts, and a host-side
   least-privilege OTLP/Alertmanager relay with exact HTTPS origins, bounded

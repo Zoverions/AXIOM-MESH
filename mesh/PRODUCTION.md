@@ -8,6 +8,21 @@ binds outside the container. The three internal services remain on loopback,
 and every internal call uses mutually authenticated TLS 1.3 with exact active
 certificate pinning plus the existing signed/replay-protected request.
 
+## Automated source setup
+
+From a clean current-build checkout, `npm run setup` verifies the supported
+Node.js/npm range, installs the root and kernel zero-dependency locks with
+lifecycle scripts disabled, proves the locks remain unchanged, and runs the
+full clean-kernel and release gates. Protected CI uses
+`npm run setup:install` before those gates. The machine-readable setup policy
+also binds `.node-version`, the workflow pin, and the candidate Dockerfile to
+Node.js 24.18.0.
+
+Source setup does not provision the credentials or state required below. It
+does not start or deploy the runtime. See
+[`docs/operations/AUTOMATED-SOURCE-SETUP.md`](../docs/operations/AUTOMATED-SOURCE-SETUP.md)
+for its exact dependency, receipt, failure, and non-claim boundary.
+
 ## 1. Provision outside the repository
 
 Choose two empty, access-controlled host directories. The data directory must

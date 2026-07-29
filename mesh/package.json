@@ -7,6 +7,9 @@
     "node": ">=24.14.0 <25"
   },
   "scripts": {
+    "setup": "node src/setup.mjs install --verify",
+    "setup:install": "node src/setup.mjs install",
+    "setup:check": "node src/setup.mjs check",
     "bootstrap": "node src/bootstrap.mjs",
     "dev": "node src/dev.mjs",
     "provision:production": "node src/provision-production.mjs",
@@ -50,6 +53,6 @@
     "release:verify": "node src/release.mjs",
     "release:evidence": "npm run check && node src/release.mjs --write",
     "test": "node --test --test-reporter=spec",
-    "check": "node src/check-registry.mjs && node src/status.mjs && node src/check-docs.mjs && node --test --test-reporter=spec"
+    "check": "node src/setup.mjs check && node src/check-registry.mjs && node src/status.mjs && node src/check-docs.mjs && node --test --test-reporter=spec"
   }
 }

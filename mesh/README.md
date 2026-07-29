@@ -7,8 +7,23 @@ four independent Node.js processes and no third-party runtime dependencies.
 
 ## Run locally
 
-Local requirements: Node.js `>=24.14.0 <25`; `.node-version` and the candidate
-production image pin Node.js 24.18.0.
+Local requirements: Node.js `>=24.14.0 <25` and npm `>=11.0.0 <12`;
+`.node-version`, protected CI, and the candidate production image pin Node.js
+24.18.0. From the repository root, a clean checkout has one setup and
+verification command:
+
+```bash
+npm run setup
+```
+
+It installs both committed zero-dependency locks with lifecycle scripts
+disabled, proves the locks did not change, and runs the clean-kernel and
+release gates without creating production credentials. Read-only preflight is
+`npm run setup:check`; installation without the full suite is
+`npm run setup:install`. See
+[automated current-build source setup](../docs/operations/AUTOMATED-SOURCE-SETUP.md).
+
+Start the local development runtime:
 
 ```bash
 cd mesh
@@ -32,6 +47,7 @@ node src/cli.mjs audit
 Repository-root aliases provide the supported one-command surface:
 
 ```bash
+npm run setup
 npm run dev
 npm test
 npm run check

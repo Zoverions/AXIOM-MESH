@@ -7,6 +7,9 @@
     "node": ">=24.14.0 <25"
   },
   "scripts": {
+    "setup": "node mesh/src/setup.mjs install --verify",
+    "setup:install": "node mesh/src/setup.mjs install",
+    "setup:check": "node mesh/src/setup.mjs check",
     "dev": "npm --prefix mesh run dev",
     "provision:production": "npm --prefix mesh run provision:production --",
     "provision:units": "npm --prefix mesh run provision:units --",

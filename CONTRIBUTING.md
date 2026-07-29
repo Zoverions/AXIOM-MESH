@@ -10,18 +10,25 @@ Neither archive is a target for new pull requests.
 ## Development requirements
 
 - Node.js `>=24.14.0 <25`; CI and the container pin 24.18.0.
-- npm for lockfile verification and the repository command surface.
+- npm `>=11.0.0 <12` for lockfile verification and the repository command
+  surface.
 - Docker with Compose only when changing the container package.
 
-Install from the committed dependency-free locks:
+From a clean checkout, install both committed dependency-free locks and run
+the required kernel and release gates:
 
 ```bash
-npm ci --ignore-scripts
-npm --prefix mesh ci --ignore-scripts
+npm run setup
 ```
 
-Do not add a runtime dependency without a threat, licensing, maintenance,
-lockfile, and removal-path review.
+Use `npm run setup:check` for read-only runtime, policy, lock, lifecycle-script,
+and CI/container-pin validation. Use `npm run setup:install` for the exact
+script-disabled lock installation without running the full suite. The setup
+does not provision credentials or deploy the runtime; see the
+[automated source setup boundary](docs/operations/AUTOMATED-SOURCE-SETUP.md).
+
+Do not add a dependency without a threat, licensing, maintenance, integrity,
+lockfile, setup-policy, and removal-path review.
 
 ## Required checks
 

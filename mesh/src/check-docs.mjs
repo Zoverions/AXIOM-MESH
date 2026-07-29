@@ -27,6 +27,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/security/DENY-EGRESS-BOUNDARY.md',
   'docs/security/INDEPENDENT-SECURITY-REVIEW.md',
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md',
+  'docs/operations/AUTOMATED-SOURCE-SETUP.md',
   'docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md',
   'docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md',
   'docs/operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md',
@@ -44,8 +45,10 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
 const REQUIRED_CONTENT = Object.freeze({
   'README.md': [
     'mesh/config/capabilities.json',
-    'docs/whitepapers_and_research/WHITEPAPER.md'
+    'docs/whitepapers_and_research/WHITEPAPER.md',
+    'npm run setup'
   ],
+  'CONTRIBUTING.md': ['npm run setup', 'npm run setup:check'],
   'docs/README.md': [
     '## Canonical documents',
     '## Supported documentation boundary',
@@ -85,6 +88,13 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Severity and activation',
     '## Signed evidence and CI gate',
     '## Residual limitations and pilot repetition'
+  ],
+  'docs/operations/AUTOMATED-SOURCE-SETUP.md': [
+    '## Current-build setup boundary',
+    '## One-command setup',
+    '## Dependency and lifecycle policy',
+    '## CI and production separation',
+    '## Failure behavior and non-claims'
   ],
   'docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md': [
     '## Enforced relay boundary',
@@ -138,10 +148,19 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Version boundary',
     '## Current implementation',
     '## Validation',
-    '## Non-claims'
+    '## Non-claims',
+    'npm run setup'
   ],
-  'docs/whitepapers_and_research/WHITEPAPER.md': ['## Non-claims', '## Reproducibility'],
-  'mesh/PRODUCTION.md': ['not evidence of a live deployment']
+  'docs/whitepapers_and_research/WHITEPAPER.md': [
+    '## Non-claims',
+    '## Reproducibility',
+    'npm run setup'
+  ],
+  'mesh/README.md': ['npm run setup', 'AUTOMATED-SOURCE-SETUP.md'],
+  'mesh/PRODUCTION.md': [
+    '## Automated source setup',
+    'not evidence of a live deployment'
+  ]
 });
 
 const MINIMUM_LENGTH = Object.freeze({
@@ -154,6 +173,7 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/security/DENY-EGRESS-BOUNDARY.md': 2_500,
   'docs/security/INDEPENDENT-SECURITY-REVIEW.md': 5_000,
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md': 4_000,
+  'docs/operations/AUTOMATED-SOURCE-SETUP.md': 5_000,
   'docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md': 4_500,
   'docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md': 4_500,
   'docs/operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md': 5_000,

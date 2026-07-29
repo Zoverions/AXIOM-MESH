@@ -1,0 +1,43 @@
+{
+  "schema": "axiom-source-setup-policy.v1",
+  "version": 1,
+  "kernel_version": "0.12.0-dev.0",
+  "runtime": {
+    "name": "node",
+    "engine": ">=24.14.0 <25",
+    "minimum_version": "24.14.0",
+    "maximum_major_exclusive": 25,
+    "ci_version": "24.18.0",
+    "production_version": "24.18.0"
+  },
+  "package_manager": {
+    "name": "npm",
+    "minimum_version": "11.0.0",
+    "maximum_major_exclusive": 12,
+    "lockfile_version": 3,
+    "install_arguments": [
+      "ci",
+      "--ignore-scripts",
+      "--no-audit",
+      "--no-fund"
+    ]
+  },
+  "workspaces": [
+    {
+      "id": "command_surface",
+      "path": ".",
+      "package_name": "axiom-mesh"
+    },
+    {
+      "id": "kernel",
+      "path": "mesh",
+      "package_name": "@axiom-mesh/kernel"
+    }
+  ],
+  "verification": {
+    "check_command": "npm run check",
+    "release_command": "npm run release:verify",
+    "requires_clean_locks": true,
+    "expected_dependency_packages": 0
+  }
+}
