@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=58b9fb3086613cc41559240ab389cbc2e87ef0f51456c3c70453e1ae5a97f124 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=d55a62d01d734daa6f15bcd06bd9d1d12d58d42b78e444fcab105bbd2517c375 -->
 # AXIOM-MESH Rebuild Requirements
 
 **Current build:** `0.12.0-dev.0`
@@ -115,6 +115,7 @@ requirements sense.
 | OPS-10 | Gateway, Grid, Hypervisor, and Sandbox MUST be independently deployable with one application private key and one TLS leaf per unit, Grid-only durable state, dependency-aware readiness, survivor continuity after non-Grid loss, and fail-closed network policy. | Projection isolation/staleness tests, signed independent-process Sandbox-loss and state-preservation drill, and protected four-container Sandbox-only restart plus public-egress rejection. |
 | OPS-11 | Concurrent host-side real-stack drills MUST hold non-overlapping cross-process endpoint leases through every runtime and stopped/restart interval, while independently rejecting an externally occupied candidate port. | Forced same-candidate concurrency, alignment, external occupancy, idempotent release/reuse, and full parallel CI tests. |
 | OPS-12 | Provider-supervised production startup MUST use independent pinned secret and policy signers, digest-pinned absolute command chains, nonce-bound short-lived exact resource inventories, bounded execution and output, semantic validation, private ephemeral materialization, unambiguous configuration, and fail-closed cleanup before launching any service. | Unit conformance and negative paths plus signed real-stack startup, secret/policy rotation, retired-token rejection, deny-policy activation, generation cleanup, and invalid-signer rejection evidence. |
+| OPS-13 | Internal service communication MUST default deny, authorize an exact caller, destination, method, and route before request signing or network I/O, derive active mTLS peers from the same policy, keep plaintext development traffic on loopback, and remove unrelated unit-network adjacency. | Policy/route/Compose negative tests, protected required-path readiness, selected forbidden-edge container probes, and release-provenance binding. |
 
 ## Verified implementation checkpoint
 

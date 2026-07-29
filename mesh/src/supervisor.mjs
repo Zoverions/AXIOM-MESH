@@ -11,6 +11,7 @@ import {
   serviceDnsName,
   verifyTransportServerIdentity
 } from './lib/transport-credentials.mjs';
+import { authorizeServiceRequest } from './lib/service-network-policy.mjs';
 
 const STARTUP_ORDER = Object.freeze([
   { service: 'grid', module: 'src/grid/server.mjs', port: 'grid', probe: '/health', expected: 'live' },
@@ -202,6 +203,12 @@ function serviceHealthUrl(config, spec) {
 }
 
 async function secureHealthProbe({ url, service, transport }) {
+  authorizeServiceRequest({
+    source: 'supervisor',
+    destination: service,
+    method: 'GET',
+    url
+  });
   const target = new URL(url);
   return new Promise((resolve, reject) => {
     const request = https.request({

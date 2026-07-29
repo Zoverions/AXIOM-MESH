@@ -28,6 +28,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/security/INDEPENDENT-SECURITY-REVIEW.md',
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md',
   'docs/operations/AUTOMATED-SOURCE-SETUP.md',
+  'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md',
   'docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md',
   'docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md',
   'docs/operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md',
@@ -96,6 +97,14 @@ const REQUIRED_CONTENT = Object.freeze({
     '## CI and production separation',
     '## Failure behavior and non-claims'
   ],
+  'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md': [
+    '## Enforced policy boundary',
+    '## Exact communication graph',
+    '## Four-segment unit topology',
+    '## Runtime and protected-CI proof',
+    '## Operator verification and rollback',
+    '## Pilot repetition and non-claims'
+  ],
   'docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md': [
     '## Enforced relay boundary',
     '## Queue, retry, and delivery audit',
@@ -159,6 +168,7 @@ const REQUIRED_CONTENT = Object.freeze({
   'mesh/README.md': ['npm run setup', 'AUTOMATED-SOURCE-SETUP.md'],
   'mesh/PRODUCTION.md': [
     '## Automated source setup',
+    'npm run network-policy:check',
     'not evidence of a live deployment'
   ]
 });
@@ -174,6 +184,7 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/security/INDEPENDENT-SECURITY-REVIEW.md': 5_000,
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md': 4_000,
   'docs/operations/AUTOMATED-SOURCE-SETUP.md': 5_000,
+  'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md': 6_000,
   'docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md': 4_500,
   'docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md': 4_500,
   'docs/operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md': 5_000,

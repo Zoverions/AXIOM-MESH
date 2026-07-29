@@ -29,12 +29,13 @@ prose and executable status differ.
 
 | Current concern | Governing source | Executable evidence | Current boundary |
 |---|---|---|---|
-| Product scope and claims | `docs/rebuild/PRODUCT-DEFINITION.md`, `mesh/config/capabilities.json` | `mesh/src/check-registry.mjs`, generated status | 44 capabilities: 26 implemented; all others explicitly experimental, specified, adapter-required, or disabled |
+| Product scope and claims | `docs/rebuild/PRODUCT-DEFINITION.md`, `mesh/config/capabilities.json` | `mesh/src/check-registry.mjs`, generated status | 45 capabilities: 27 implemented; all others explicitly experimental, specified, adapter-required, or disabled |
 | Current-build source setup | `mesh/config/setup.json`, root and kernel package/lock files | setup negative tests, `npm run setup`, protected workflow | Exact Node.js/npm and CI/container pins, two zero-dependency locks, no install lifecycle scripts, unchanged-lock proof, no production credential creation |
 | Intent-to-evidence path | Gateway, Hypervisor, Sandbox, and Grid source under `mesh/src/` | kernel and end-to-end tests | Every privileged effect follows authenticated intent, deny-dominant authorization, a bounded grant, deterministic execution, and signed evidence |
 | Runtime policy | `mesh/config/policy.json`, layered policy loader | policy and IAM property tests | Lower layers can only restrict; high-risk work requires independent approval |
 | Durable state and evidence | Grid store, migrations, identity and protection libraries | restart, migration, tamper, wrong-key, backup, and rotation tests | Encrypted single-Grid state and signed hash-linked evidence; no replicated consensus claim |
 | Service transport | transport runtime and provisioning | mutual-TLS and rotation drill | TLS 1.3, separate Ed25519 leaves, exact active-leaf pinning, signed caller binding, offline rotation |
+| Service network policy | exact network-policy config, request authorizer, segmented unit Compose | policy negative tests and protected required/forbidden-edge container checks | Default deny, 38 exact routes, policy-derived mTLS peers, four internal segments; pilot-orchestrator enforcement pending |
 | Deployment topology | production supervisor, compact and unit Compose policies | host drill, independent-service drill, container job | One hardened host or four independently restartable single-host units; no multi-host production claim |
 | Secrets and policy custody | provider runtime, provider supervisor, reference adapter | provider runtime tests and signed conformance drill | Separate pinned signers, exact request-bound inventories, private immutable startup generation; no vendor custody or live refresh claim |
 | Backup and recovery | backup, retention, recovery, credential and data-key rotation modules | signed lifecycle drills and interruption tests | Candidate-host lifecycle implemented; pilot-owned custody and media repetition pending |

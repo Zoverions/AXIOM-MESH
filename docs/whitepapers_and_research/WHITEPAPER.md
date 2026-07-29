@@ -114,9 +114,13 @@ signature for a different body, audience, time window, or nonce.
 
 In the current production candidate, all four services are separate Node.js
 processes. The compact topology supervises them inside one container. The
-independent-unit topology runs four containers on a Docker internal network,
-with Gateway preserving permission-restricted Unix-domain host ingress. Both
-use mutually authenticated TLS 1.3 on every internal edge.
+independent-unit topology runs four containers across four exact Docker
+internal segments, with Gateway preserving permission-restricted Unix-domain
+host ingress. Both use mutually authenticated TLS 1.3 on every internal edge.
+A default-deny service policy authorizes only 38 exact current-build caller,
+destination, method, and route combinations before request signing, and
+derives each destination's active mTLS peers. Segmentation removes unrelated
+adjacency; transport and application checks impose direction.
 
 The unit projection gives each runtime only its own application private key
 and TLS leaf. Grid alone receives durable state and the data-protection key;

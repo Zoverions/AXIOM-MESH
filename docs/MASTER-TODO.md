@@ -38,7 +38,7 @@ credential compromise, evidence-chain integrity, or unauthorized effects.
 | REL-001 | Complete | Publish the verified 0.11.0 clean-room baseline | [v0.11.0 prerelease](https://github.com/Zoverions/AXIOM-MESH/releases/tag/v0.11.0) with source checksum, SPDX SBOM, and provenance |
 | REL-002 | Complete | Run the GitHub image build and composed container readiness drill | [Workflow run 30376178779](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30376178779) passed both jobs |
 | SEC-001 | Complete for repository trust | Record revocation of every credential candidate from deprecated history | Keyed 32-entry ledger, exact-history rescan, supported-tip comparison, and protected signed evidence; external attestations remain a promotion gate |
-| DOC-001 | Complete | Make every document on `main` specific to the current build | Exact 28-file `docs/` allowlist, local-link verification, current build notes, and locked deprecated documentation branch |
+| DOC-001 | Complete | Make every document on `main` specific to the current build | Exact 29-file `docs/` allowlist, local-link verification, current build notes, and locked deprecated documentation branch |
 
 ## P0 - production candidate closure
 
@@ -74,6 +74,7 @@ credential compromise, evidence-chain integrity, or unauthorized effects.
 | NET-003 | Complete for single-Grid reservation candidate; remote dispatch and multi-host evidence pending | Implement admitted-node discovery and capability-aware scheduling | Signed v2 metadata, authenticated signed discovery, deterministic encrypted leases, copied-key/owner/domain/resource controls, expiry/quarantine/partition-by-missed-renewal tests, restart persistence, and protected signed drill evidence |
 | NET-004 | Complete for two-Grid candidate; independent-host pilot pending | Define consistency and conflict behavior for online causal exchange | Pinned Grid-signed source events, node-signed bundles, encrypted ordered staging, bounded retry, owner-scoped duplicate preflight, exact independent apply approval, two-real-stack partition/rejoin/conflict/resolution drill, and protected signed evidence |
 | NET-005 | Complete for signed provider protocol and reference adapter; pilot custody adapter pending | Add deployment-independent secret and policy providers | Independent Ed25519 signers, digest-pinned command chains, nonce-bound short-lived exact inventories, private per-start materialization, semantic validation, cleanup, rotation/restart proof, invalid-signer fail-closed startup, and signed protected-CI conformance evidence |
+| NET-006 | Complete for reference single-host topology; pilot orchestrator pending | Enforce an explicit per-service ingress/egress graph | Default-deny 38-route application policy, policy-derived mTLS peer allowlists, four exact internal network segments, loopback-only plaintext development, release provenance, and protected required/forbidden-edge proof |
 
 ## P3 - adapter and domain expansion
 

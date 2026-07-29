@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=58b9fb3086613cc41559240ab389cbc2e87ef0f51456c3c70453e1ae5a97f124 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=d55a62d01d734daa6f15bcd06bd9d1d12d58d42b78e444fcab105bbd2517c375 -->
 # AXIOM-MESH Product Definition
 
 **Status:** Canonical rebuild definition
@@ -174,7 +174,7 @@ evidence at the next trusted startup.
 The candidate production package supports two single-host topologies. The
 compact topology keeps all four services as independent supervised processes
 inside one container. The isolated topology runs four independently
-restartable containers on an internal network. Only Gateway crosses the
+restartable containers across four exact internal network segments. Only Gateway crosses the
 permission-restricted Unix-domain host ingress in either topology. Every
 internal edge uses mutually authenticated TLS 1.3,
 distinct Ed25519 leaves, DNS and SPIFFE-style URI identities, exact active
@@ -186,6 +186,14 @@ checks. The Compose candidate must attach no network, fail startup when an
 active non-loopback or IPv4/IPv6 default route exists, preserve only explicit
 Unix-domain Gateway ingress, and emit protected negative-path evidence.
 Other orchestrators must reproduce and independently verify this policy.
+
+The current service graph is separately machine-readable and default-deny.
+Only 38 exact source, destination, method, and route combinations are
+authorized. The policy derives inbound mTLS peers, and the isolated topology
+removes Gateway/Sandbox and Grid/Sandbox adjacency. Grid and Sandbox have no
+application egress permission. Plaintext development URLs remain loopback-
+only. This is a reference single-host enforcement claim, not proof of a pilot
+or multi-host orchestrator policy.
 
 The isolated topology receives an atomically projected credential tree:
 exactly one application private identity and one transport private leaf per

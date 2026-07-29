@@ -275,6 +275,20 @@
       ]
     },
     {
+      "id": "operations.service-network-policy",
+      "family": "operations",
+      "status": "implemented",
+      "summary": "A default-deny current-build policy permits only 38 exact internal caller, destination, method, and route combinations; four isolated internal Compose segments remove unrelated service adjacency, while mTLS peer allowlists and protected forbidden-edge probes enforce direction and segmentation.",
+      "evidence": [
+        "mesh/test/service-network-policy.test.mjs",
+        "mesh/src/lib/service-network-policy.mjs",
+        "mesh/config/service-network-policy.json",
+        "mesh/compose.units.yml",
+        ".github/workflows/kernel.yml",
+        "docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md"
+      ]
+    },
+    {
       "id": "operations.independent-service-units",
       "family": "operations",
       "status": "implemented",

@@ -46,6 +46,9 @@ and SPIFFE-style URI service identity, and the signed request envelope.
 Container DNS is only address discovery; the cryptographic peer name comes
 from the expected service audience. A network-reachable process with the wrong
 leaf, an inactive leaf, or the wrong signed caller is rejected.
+The exact source/destination/method/route graph and policy-derived mTLS peer
+sets are documented in the
+[explicit service network policy](EXPLICIT-SERVICE-NETWORK-POLICY.md).
 
 ## Provision and start
 
@@ -85,9 +88,11 @@ docker compose -f compose.units.yml up -d
 
 The Compose definition publishes no TCP port. Gateway listens on loopback
 inside its unit and exposes the existing permission-restricted Unix-domain
-socket through a bind mount. The other units listen only on the internal
-Compose network. That network is declared `internal: true`, so it permits the
-three required service edges but has no external connectivity.
+socket through a bind mount. The other units listen only on four exact
+`internal: true` bridge segments: `gateway-hypervisor`, `gateway-grid`,
+`hypervisor-grid`, and `hypervisor-sandbox`. Gateway/Sandbox and Grid/Sandbox
+have no shared network. The segments permit required adjacency but have no
+external connectivity.
 
 Every unit runs as numeric UID/GID `10001`, uses a read-only root filesystem,
 drops all Linux capabilities, enables `no-new-privileges`, bounds process,
@@ -99,11 +104,12 @@ mount.
 The single-container supervisor uses `network_mode: none` and performs a route
 inspection before launch. That exact inspection cannot be enabled in the
 four-unit topology because the units require an internal route to one another.
-The four-unit boundary instead relies on the Docker `internal` network and a
-protected-CI negative public TCP probe from a running unit. An alternate
-orchestrator must provide and independently test an equivalent default-deny
-egress policy; setting `AXIOM_REQUIRE_DENY_EGRESS=false` without that external
-policy is not an approved deployment.
+The four-unit boundary instead relies on segmented Docker internal networks,
+the exact application request policy, policy-derived mTLS peers, and protected
+negative network probes from running units. An alternate orchestrator must
+provide and independently test equivalent adjacency, direction, route, and
+default-deny egress controls; setting `AXIOM_REQUIRE_DENY_EGRESS=false`
+without that external policy is not an approved deployment.
 
 ## Dependency graph and readiness
 
@@ -216,7 +222,9 @@ metadata, and a valid signature over the canonical unsigned record.
 Protected CI retains that artifact for 90 days and links it into the
 same-revision incident tabletop. A separate four-container exercise verifies
 the actual Compose topology, survivor container identity, Sandbox-only
-restart, readiness recovery, and blocked public TCP connectivity.
+restart, readiness recovery, required service paths, Gateway-to-Sandbox,
+Sandbox-to-Grid, and Grid-to-Sandbox connection denial, and blocked public TCP
+connectivity.
 
 ## Rotation, rollback, and upgrades
 

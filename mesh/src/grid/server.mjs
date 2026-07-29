@@ -19,6 +19,7 @@ import {
   loadTransportRuntime,
   transportServerOptions
 } from '../lib/transport-credentials.mjs';
+import { allowedInboundTransportPeers } from '../lib/service-network-policy.mjs';
 
 export async function createGridService(config = meshConfig()) {
   await mkdir(config.dataDir, { recursive: true, mode: 0o700 });
@@ -293,7 +294,7 @@ export async function createGridService(config = meshConfig()) {
       : undefined,
     transportPeers: identity.transport?.peers,
     allowedTransportPeers: identity.transport
-      ? ['gateway', 'grid', 'hypervisor', 'supervisor']
+      ? allowedInboundTransportPeers('grid')
       : undefined,
     authenticate: ({ req, body }) => verifySignedRequest({
       req,

@@ -4,7 +4,7 @@
 Registry schema: `axiom-capabilities.v1`
 Kernel version: `0.12.0-dev.0`
 Evidence verified: `2026-07-29`
-Registry digest: `58b9fb3086613cc41559240ab389cbc2e87ef0f51456c3c70453e1ae5a97f124`
+Registry digest: `d55a62d01d734daa6f15bcd06bd9d1d12d58d42b78e444fcab105bbd2517c375`
 
 Only **implemented** capabilities are runnable claims.
 
@@ -13,7 +13,7 @@ Only **implemented** capabilities are runnable claims.
 - adapter_required: 9
 - disabled: 4
 - experimental: 2
-- implemented: 26
+- implemented: 27
 - specified: 3
 
 ## Registry
@@ -57,6 +57,7 @@ Only **implemented** capabilities are runnable claims.
 | `ui.dashboard` | operations | **specified** | A browser operator dashboard is specified but is not part of the supported runtime. |
 | `operations.observability` | operations | **implemented** | Bounded four-service telemetry is scraped over least-privilege Unix-socket access and relayed as OTLP/HTTP JSON with fixed attributes; static alerts route through Alertmanager v2 using HTTPS allowlists, reserved queue capacity, bounded retry, redaction, and delivery audit; signed request-pressure and dependency-loss evidence proves bounded rejection, degradation, fail-closed exit, restart, and state preservation. |
 | `operations.mutual-transport` | operations | **implemented** | Production internal calls use TLS 1.3 with CA-issued Ed25519 leaves, DNS and SPIFFE-style URI identity, exact active-certificate pinning, signed-caller binding, offline atomic rotation, retired-leaf rejection, and exact rollback. |
+| `operations.service-network-policy` | operations | **implemented** | A default-deny current-build policy permits only 38 exact internal caller, destination, method, and route combinations; four isolated internal Compose segments remove unrelated service adjacency, while mTLS peer allowlists and protected forbidden-edge probes enforce direction and segmentation. |
 | `operations.independent-service-units` | operations | **implemented** | Gateway, Grid, Hypervisor, and Sandbox can run as independently restartable units with per-unit application and TLS private keys, Grid-only durable state, an internal deny-egress network, dependency-aware degradation, Sandbox-only recovery, and signed state-preservation evidence. |
 | `operations.provider-runtime` | operations | **implemented** | Independent Ed25519-pinned secret and policy providers deliver nonce-bound short-lived startup resources through a bounded process protocol; the broker verifies exact inventories and content, materializes one private generation, launches the unchanged production supervisor, and removes that generation on shutdown. |
 | `operations.pilot-dossier-verification` | operations | **implemented** | A separately authority-pinned, five-role review policy verifies exact build, 30-day observation, SLO, custody, and approval metadata; an offline exact-inventory package verifier additionally enforces 13 canonical role-signed v2 evidence envelopes with type-specific detail contracts while explicitly refusing to claim production promotion. |

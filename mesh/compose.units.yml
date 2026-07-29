@@ -11,8 +11,6 @@ x-unit: &unit
   pids_limit: 64
   mem_limit: 256m
   cpus: 1.0
-  networks:
-    - mesh-internal
   stop_grace_period: 15s
   environment: &unit-environment
     NODE_ENV: production
@@ -64,6 +62,9 @@ services:
     secrets:
       - source: axiom_api_tokens
         target: api-tokens.json
+    networks:
+      - gateway-hypervisor
+      - gateway-grid
     healthcheck:
       test: ["CMD", "node", "src/healthcheck.mjs"]
       interval: 10s
@@ -97,6 +98,9 @@ services:
     secrets:
       - source: axiom_data_key
         target: data-protection.key
+    networks:
+      - gateway-grid
+      - hypervisor-grid
     healthcheck:
       test: ["CMD", "node", "src/unit-healthcheck.mjs", "grid"]
       interval: 10s
@@ -122,6 +126,10 @@ services:
         source: ${AXIOM_UNITS_DIR_HOST:?set AXIOM_UNITS_DIR_HOST}/hypervisor/transport
         target: /run/secrets/transport
         read_only: true
+    networks:
+      - gateway-hypervisor
+      - hypervisor-grid
+      - hypervisor-sandbox
     healthcheck:
       test: ["CMD", "node", "src/unit-healthcheck.mjs", "hypervisor"]
       interval: 10s
@@ -152,6 +160,8 @@ services:
         source: ${AXIOM_UNITS_DIR_HOST:?set AXIOM_UNITS_DIR_HOST}/sandbox/transport
         target: /run/secrets/transport
         read_only: true
+    networks:
+      - hypervisor-sandbox
     healthcheck:
       test: ["CMD", "node", "src/unit-healthcheck.mjs", "sandbox"]
       interval: 10s
@@ -160,7 +170,16 @@ services:
       retries: 3
 
 networks:
-  mesh-internal:
+  gateway-hypervisor:
+    internal: true
+    driver: bridge
+  gateway-grid:
+    internal: true
+    driver: bridge
+  hypervisor-grid:
+    internal: true
+    driver: bridge
+  hypervisor-sandbox:
     internal: true
     driver: bridge
 

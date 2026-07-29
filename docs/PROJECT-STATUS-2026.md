@@ -20,7 +20,7 @@ that tag are identified only as the current 0.12 development build.
 
 The executable source of truth is
 [`mesh/config/capabilities.json`](../mesh/config/capabilities.json). The
-generated [capability status](rebuild/STATUS.md) records 26 implemented, 2
+generated [capability status](rebuild/STATUS.md) records 27 implemented, 2
 experimental, 3 specified, 9 adapter-required, and 4 disabled capabilities.
 
 ## Implemented kernel scope
@@ -44,7 +44,8 @@ experimental, 3 specified, 9 adapter-required, and 4 disabled capabilities.
 - explicit production credential provisioning and a fail-closed four-process
   supervisor;
 - per-unit private identity/TLS projection, Grid-only durable state, an
-  internal deny-egress network, and signed Sandbox-only failure/recovery
+  exact four-segment internal topology, a default-deny 38-route application
+  policy with derived mTLS peers, and signed Sandbox-only failure/recovery
   evidence;
 - signed admitted-node v2 discovery metadata, authenticated Grid-signed
   discovery, and deterministic encrypted placement leases with resource,
@@ -76,9 +77,10 @@ a real host-mode four-process drill are implemented. Compose attaches no
 network; startup rejects active non-loopback and IPv4/IPv6 default routes while
 retaining explicit host-local Gateway ingress.
 
-The alternate `compose.units.yml` topology uses a Docker internal network,
-publishes no port, and preserves the Unix socket. Protected CI stops only
-Sandbox, verifies Gateway, Grid, and Hypervisor retain their container
+The alternate `compose.units.yml` topology uses four exact Docker internal
+segments, publishes no port, and preserves the Unix socket. Protected CI
+proves required application paths and selected forbidden network edges, then
+stops only Sandbox, verifies Gateway, Grid, and Hypervisor retain their container
 identities while readiness degrades, starts Sandbox alone, verifies recovery,
 and proves a public TCP target remains unreachable from a unit.
 

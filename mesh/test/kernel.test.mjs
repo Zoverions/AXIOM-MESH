@@ -187,6 +187,11 @@ test('production configuration rejects generated credentials and remote plaintex
     autoBootstrap: false,
     internalTlsEnabled: false
   }), /mutually authenticated TLS/);
+  assert.throws(() => meshConfig({
+    environment: 'development',
+    internalTlsEnabled: false,
+    gridUrl: 'http://untrusted.example:8083'
+  }), /loopback-only/);
 });
 
 test('capability tokens are signed, audience-bound, expiring, and replay guardable', async t => {

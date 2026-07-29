@@ -102,8 +102,9 @@ for the proof, rollback rule, and adapter boundary.
 ### 2.1 Run as independently deployable units
 
 The repository also includes `compose.units.yml`, which runs Gateway, Grid,
-Hypervisor, and Sandbox as independently deployable units on a Docker
-`internal: true` network. Create isolated unit projections before startup:
+Hypervisor, and Sandbox as independently deployable units across four exact
+Docker `internal: true` network segments. Create isolated unit projections
+before startup:
 
 ```bash
 node src/provision-service-units.mjs \
@@ -120,11 +121,27 @@ identity and private TLS leaf, public trust material, and no CA signing key.
 Only Grid receives durable state and the data-protection key. Only Gateway
 receives the API token registry. The operator token stays on the host.
 
-The unit network permits required service traffic but has no external route.
-Because an internal route must exist, this topology does not use the
-single-container supervisor's `network_mode: none` route check; the
-orchestrator's internal network is the enforced deny-egress control. Protected
-CI proves public TCP failure from a running unit.
+The unit topology permits required service traffic but has no external route.
+`gateway-hypervisor`, `gateway-grid`, `hypervisor-grid`, and
+`hypervisor-sandbox` remove unrelated adjacency. The bundled default-deny
+policy additionally authorizes only 38 exact caller/destination/method/route
+combinations and derives inbound mTLS peer allowlists. Because internal routes
+must exist, this topology does not use the single-container supervisor's
+`network_mode: none` route check; segmented internal networks plus the
+application and transport allowlists are the enforced boundary. Protected CI
+proves the required path, Gateway-to-Sandbox denial, Sandbox-to-Grid denial,
+Grid-to-Sandbox denial, and public TCP failure from a running unit.
+
+Verify the exact policy and Compose membership before startup:
+
+```bash
+npm run network-policy:check
+```
+
+See the
+[explicit service-network runbook](../docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md)
+for the route inventory, runtime enforcement, negative probes, rollback, and
+orchestrator equivalence requirements.
 
 The signed host drill starts all four services without the supervisor, kills
 only Sandbox, requires Gateway readiness to degrade to HTTP `503`, proves

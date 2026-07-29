@@ -10,6 +10,7 @@
     "setup": "node mesh/src/setup.mjs install --verify",
     "setup:install": "node mesh/src/setup.mjs install",
     "setup:check": "node mesh/src/setup.mjs check",
+    "network-policy:check": "node mesh/src/check-service-network-policy.mjs",
     "dev": "npm --prefix mesh run dev",
     "provision:production": "npm --prefix mesh run provision:production --",
     "provision:units": "npm --prefix mesh run provision:units --",

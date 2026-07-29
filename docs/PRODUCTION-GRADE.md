@@ -67,10 +67,13 @@ pilot-platform repetition. The current decision is recorded in the
 The four-unit candidate is also implemented. It projects one application
 private key and one TLS leaf per service, gives durable state and the
 data-protection key only to Grid, gives API credentials only to Gateway, and
-uses a Docker internal network with no public port. Signed host evidence and a
-protected four-container check prove that Sandbox loss degrades readiness
-without restarting Gateway, Grid, or Hypervisor, and that Sandbox-only
-recovery preserves Grid state. Pilot-orchestrator repetition remains open.
+uses four exact Docker internal segments with no public port. A machine-
+readable default-deny policy permits only 38 current internal
+caller/destination/method/route combinations and derives mTLS peer allowlists.
+Signed host evidence and a protected four-container check prove required-path
+operation, selected forbidden edges, Sandbox-loss readiness degradation
+without restarting Gateway, Grid, or Hypervisor, and state-preserving
+Sandbox-only recovery. Pilot-orchestrator repetition remains open.
 
 ## Supported production boundary
 
@@ -100,11 +103,13 @@ This boundary does not authorize remote internal traffic, multiple hosts,
 arbitrary code, external AI, chain settlement, or regulated domain workloads.
 
 An alternate single-host boundary runs the four responsibilities as separate
-containers through `mesh/compose.units.yml`. The internal network permits only
-service connectivity and has no external route; Gateway preserves the same
-Unix-domain host ingress. Each unit mounts only its own projected application
-and TLS private keys. See
-[independent service units](operations/INDEPENDENT-SERVICE-UNITS.md).
+containers through `mesh/compose.units.yml`. Four internal network segments
+remove unrelated adjacency and have no external route; Gateway preserves the
+same Unix-domain host ingress. Directional application and health traffic is
+restricted by the exact service-network policy and active mTLS peer identity.
+Each unit mounts only its own projected application and TLS private keys. See
+[independent service units](operations/INDEPENDENT-SERVICE-UNITS.md) and the
+[explicit service network policy](operations/EXPLICIT-SERVICE-NETWORK-POLICY.md).
 
 ## Security requirements
 

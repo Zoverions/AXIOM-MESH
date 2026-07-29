@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=58b9fb3086613cc41559240ab389cbc2e87ef0f51456c3c70453e1ae5a97f124 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=d55a62d01d734daa6f15bcd06bd9d1d12d58d42b78e444fcab105bbd2517c375 -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -340,9 +340,13 @@ protected CI fail if effective deny-egress is absent. See the
 The alternate single-host
 [`mesh/compose.units.yml`](mesh/compose.units.yml) runs the same four services
 as independently restartable containers with per-unit private credentials,
-Grid-only durable state, and a Docker internal network. It preserves the same
-Unix-domain Gateway ingress and makes no multi-host or automatic-failover
-claim.
+Grid-only durable state, and four exact internal network segments. A
+machine-readable default-deny policy permits only 38 current internal
+caller/destination/method/route combinations, derives mTLS peer allowlists,
+and removes Gateway-to-Sandbox and Grid-to-Sandbox adjacency. It preserves the
+same Unix-domain Gateway ingress and makes no multi-host or automatic-failover
+claim. See the
+[explicit service network policy](docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md).
 
 The machine-readable
 [`mesh/config/capabilities.json`](mesh/config/capabilities.json) file is the
