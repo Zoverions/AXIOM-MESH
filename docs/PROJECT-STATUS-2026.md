@@ -2,21 +2,21 @@
 
 **Status date:** 2026-07-29
 
-**Supported kernel:** 0.11.0
+**Supported build:** `0.12.0-dev.0`
 
 **Development branch:** `main`
 
 **Deployment status:** production candidate; no live deployment claim
 
-## Current release
+## Current build
 
-AXIOM-MESH 0.11.0 is a clean-room, dependency-free Node.js kernel organized as
+AXIOM-MESH `0.12.0-dev.0` is a clean-room, dependency-free Node.js kernel organized as
 four services: Gateway, Hypervisor, Sandbox, and Grid. They run as supervised
 processes in one hardened container or as independently restartable
-single-host units with isolated private credentials. The verified source checkpoint is
-`1d318b481dc03858a4f46b63da05a395adbd7c6f`; the new GitHub development line
-starts from a tree-identical clean root so deprecated legacy ancestry is not
-inherited by the default branch.
+single-host units with isolated private credentials. It is the supported
+development line, not a published release or a production promotion. The last
+published production-candidate release is immutable `v0.11.0`; changes after
+that tag are identified only as the current 0.12 development build.
 
 The executable source of truth is
 [`mesh/config/capabilities.json`](../mesh/config/capabilities.json). The
@@ -134,15 +134,17 @@ See:
 
 ## Repository transition
 
-The former GitHub `Main` line is preserved as
-`deprecated/legacy-main-pre-clean-room`. Credentials found anywhere in that
-history are permanently untrusted. Lowercase `main` is now the GitHub default
-and the only supported development branch. The deprecated branch is locked
-against pushes, force pushes, and deletion. Unsupported legacy runtime trees
-and their dependency manifests were removed from the supported tip; they
-remain recoverable from Git history and the deprecated branch. The 0.11
-release package and original rebuilt checkpoints remain provenance artifacts,
-not alternate production branches.
+The former GitHub `Main` tip is preserved by immutable tag
+`archive/legacy-main-pre-clean-room-2026-05-21`. Credentials found anywhere in
+that object graph are permanently untrusted. Lowercase `main` is the GitHub
+default and the only supported development branch.
+
+Unsupported legacy runtime trees and dependency manifests are absent from the
+supported tip. Superseded documentation is also absent from `main`; its exact
+pre-cleanup state is preserved on locked, read-only branch
+`deprecated/pre-0.12-documentation-corpus`. The published 0.11 package,
+archived source objects, and rebuilt checkpoints are provenance artifacts, not
+alternate production branches.
 
 ## What is not claimed
 

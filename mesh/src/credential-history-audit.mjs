@@ -19,7 +19,7 @@ import { MESH_ROOT } from './lib/config.mjs';
 const REPOSITORY_ROOT = dirname(MESH_ROOT);
 const LEDGER_SCHEMA = 'axiom-credential-revocation-ledger.v1';
 const EVIDENCE_SCHEMA = 'axiom-credential-history-audit-evidence.v1';
-const DEFAULT_DEPRECATED_REF = 'origin/deprecated/legacy-main-pre-clean-room';
+const DEFAULT_DEPRECATED_REF = 'archive/legacy-main-pre-clean-room-2026-05-21';
 const MAX_BLOB_BYTES = 64 * 1024 * 1024;
 const MAX_BATCH_BYTES = 8 * 1024 * 1024;
 const MAX_BATCH_OBJECTS = 128;

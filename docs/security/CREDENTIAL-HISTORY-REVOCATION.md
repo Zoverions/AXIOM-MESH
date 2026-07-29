@@ -1,10 +1,10 @@
 # Deprecated Credential-History Revocation
 
-**Status date:** 2026-07-28
+**Status date:** 2026-07-29
 
-**Scope:** repository trust for the 0.11 clean-room production candidate
+**Scope:** repository trust for the `0.12.0-dev.0` supported development build
 
-**Deprecated boundary:** `origin/deprecated/legacy-main-pre-clean-room` at
+**Archived boundary:** `archive/legacy-main-pre-clean-room-2026-05-21` at
 `e65041cb6828a8923e87a3678a104ac40bbf0970`
 
 This record separates a result that the repository can prove from work that
@@ -19,8 +19,9 @@ or deployment, nor can it manufacture that provider's revocation receipt.
 The versioned
 [`credential-revocations.json`](../../mesh/config/credential-revocations.json)
 ledger covers 32 distinct credential-candidate fingerprints across every
-reachable object in the locked deprecated branch. The scan inspected all 3,466
-blobs, including provider-token pattern checks in historical binaries. No
+reachable object in the immutable pre-clean-room archive graph. The scan
+inspected 9,630 objects, including the annotated archive tag, and all 3,466
+blobs, including provider-token pattern checks in archived binaries. No
 reachable blob exceeds the 64-MiB content bound; an oversized high-risk path
 would fail the audit rather than be silently skipped.
 
@@ -76,7 +77,7 @@ npm run credential-history:audit
 The command fails closed when:
 
 - the audit key is missing, malformed, or different from the ledger key;
-- the deprecated branch or recorded tip cannot be resolved;
+- the immutable archive tag or recorded tip cannot be resolved;
 - a high-risk blob exceeds the scanner's safe size bound;
 - a candidate is missing, added, reordered, or has changed metadata;
 - an entry is not revoked from repository trust;
@@ -147,6 +148,6 @@ or unknown credential formats. GitHub secret scanning and independent review
 remain complementary controls.
 
 The current result is therefore precise: repository trust revocation is
-complete for the locked deprecated inventory; outside-provider and
+complete for the immutable archived inventory; outside-provider and
 prior-deployment revocation is not complete while any entry remains
 `attestation-required`.

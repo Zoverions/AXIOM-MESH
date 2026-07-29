@@ -1,5 +1,9 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=faf55c2577410a419fed1b589eb8ba50efe0ebfedd47277184031c6bbb5d2f60 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=55cec8448e10a018f957a7ed7289cbe68e266b58ba3630afd28410fadd08e1ae -->
 # AXIOM-MESH Rebuild Requirements
+
+**Current build:** `0.12.0-dev.0`
+
+**Updated:** 2026-07-29
 
 **Normative language:** MUST, MUST NOT, SHOULD, and MAY are used in their usual
 requirements sense.
@@ -115,7 +119,7 @@ requirements sense.
 ## Verified implementation checkpoint
 
 The machine-readable capability registry remains authoritative. Kernel
-`0.11.0` additionally verifies:
+The active `0.12.0-dev.0` build additionally verifies:
 
 - ordered runtime policy stacks whose lower layers cannot add an allowed
   action, replace its tool, lower its risk, or weaken its constraints;

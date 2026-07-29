@@ -15,6 +15,7 @@ import {
   ensureMeshIdentity,
   verifyObjectSignature
 } from './lib/identity.mjs';
+import { MESH_ROOT } from './lib/config.mjs';
 import {
   reserveProductionPortBlock,
   productionHostEnvironment,
@@ -34,6 +35,9 @@ import {
 } from './telemetry-relay.mjs';
 
 const EVIDENCE_SCHEMA = 'axiom-telemetry-relay-drill-evidence.v1';
+const KERNEL_VERSION = JSON.parse(
+  await readFile(join(MESH_ROOT, 'package.json'), 'utf8')
+).version;
 const REVISION = /^[a-f0-9]{40}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
 const REQUEST_TIMEOUT_MS = 5_000;
@@ -203,7 +207,7 @@ export async function runTelemetryRelayDrill({
       status: 'passed',
       generated_at: generatedAt,
       source: {
-        kernel_version: '0.11.0',
+        kernel_version: KERNEL_VERSION,
         revision
       },
       policy: {

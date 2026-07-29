@@ -6,10 +6,10 @@ AXIOM-MESH uses a rolling support model for the clean-room kernel.
 
 | Version or branch | Support status |
 |---|---|
-| `main` | Supported development line |
-| Latest published `0.11.x` release | Supported production candidate |
-| Deprecated `Main` and legacy branches | Unsupported |
-| Historical contracts, installers, and runtimes | Unsupported |
+| `0.12.0-dev.0` on `main` | Supported development line |
+| Published `v0.11.0` | Supported production candidate |
+| `deprecated/pre-0.12-documentation-corpus` | Unsupported read-only documentation archive |
+| `archive/legacy-main-pre-clean-room-2026-05-21` | Unsupported immutable code archive |
 
 The supported runtime is the dependency-free kernel in
 [`mesh/`](https://github.com/Zoverions/AXIOM-MESH/tree/main/mesh). Code retained
@@ -29,7 +29,7 @@ evidence that deployments trust only newly provisioned identities.
 The keyed
 [`mesh/config/credential-revocations.json`](https://github.com/Zoverions/AXIOM-MESH/blob/main/mesh/config/credential-revocations.json)
 ledger covers 32 conservative credential candidates from every reachable
-object at the locked deprecated tip. Each is revoked from the supported
+object at the immutable pre-clean-room archive tip. Each is revoked from the supported
 repository trust boundary. Protected CI reconstructs the inventory with an
 external HMAC key, checks exact ledger coverage, and rejects reuse in the
 supported tip without exposing values. This repository result is complete;

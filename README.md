@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=faf55c2577410a419fed1b589eb8ba50efe0ebfedd47277184031c6bbb5d2f60 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=55cec8448e10a018f957a7ed7289cbe68e266b58ba3630afd28410fadd08e1ae -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -7,11 +7,11 @@ AXIOM-MESH is a local-first capability network: it turns a human or agent
 intent into a policy-authorized plan, executes each approved effect inside a
 bounded runtime, and emits portable cryptographically linked evidence.
 
-**Current status:** version 0.11 clean-room production candidate. The kernel is
-not production-promoted and no live deployment is claimed. The previous
-multi-language implementation is retained on the explicitly deprecated legacy
-branch. Its iterative design corpus remains as historical input, but neither
-is the supported runtime or deployment/audit evidence.
+**Current status:** `0.12.0-dev.0`, the supported development build on `main`.
+It is not production-promoted and no live deployment is claimed. The last
+published production-candidate release is immutable `v0.11.0`; current build
+notes are maintained in
+[`docs/releases/0.12.0-dev.0.md`](docs/releases/0.12.0-dev.0.md).
 
 ## Supported runtime
 
@@ -211,7 +211,7 @@ fail, historical Grid evidence remains valid through a dual-signed key
 transition, and the original set is restored exactly. It does not rotate the
 data-protection key or prove external revocation of historic credentials.
 
-The locked deprecated branch also has a keyed, secret-free credential
+The immutable pre-clean-room archive also has a keyed, secret-free credential
 inventory and revocation ledger:
 
 ```bash
@@ -298,20 +298,16 @@ and release evidence as the API.
 - [`docs/rebuild/REQUIREMENTS.md`](docs/rebuild/REQUIREMENTS.md) — normative
   security, functionality, portability, governance, and operations
   requirements.
-- [`docs/rebuild/BASELINE-AUDIT.md`](docs/rebuild/BASELINE-AUDIT.md) — evidence,
-  contradictions, security findings, and the rebuild decision.
 - [`docs/rebuild/SOURCE-TRACEABILITY.md`](docs/rebuild/SOURCE-TRACEABILITY.md) —
-  source groups, extracted requirements, conflict resolution, and feature
-  coverage across the iterative document corpus.
+  current requirements-to-code and requirements-to-evidence mapping.
+- [`docs/rebuild/ROLLBACK.md`](docs/rebuild/ROLLBACK.md) — supported kernel
+  rollback procedure.
 
-Historical documents remain valuable design sources. Where they conflict with
-the rebuild documents or executable capability registry, the rebuild sources
-control.
-
-Former root installers, Compose files, dev-container setup, contract tooling,
-monitoring configuration, test runners, and CI/deployment workflows are
-archived under `docs/historical/`. They are inert reference material, not
-supported entrypoints.
+Every file under `docs/` on `main` is part of the enforced current-build
+documentation boundary. Superseded generated APIs, installers, research,
+audits, and implementation narratives exist only on the locked
+`deprecated/pre-0.12-documentation-corpus` branch and cannot override current
+code, the capability registry, or release evidence.
 
 ## Security
 
@@ -411,10 +407,11 @@ supported entrypoints.
 
 Report vulnerabilities using [`.github/SECURITY.md`](.github/SECURITY.md).
 
-## Legacy code
+## Archived material
 
-The historical `gateway/`, `hypervisor/`, `sandbox/`, `grid/`, contracts,
-root Compose files, and installers are retained for traceability while migration
-continues. They are not part of the supported launch path. No production,
-mainnet, regulatory, BFT, post-quantum, “proof of truth,” or independent-audit
-claim should be inferred from their presence.
+Unsupported legacy code and superseded documentation are absent from `main`.
+The pre-0.12 documentation corpus is preserved on the locked, read-only
+`deprecated/pre-0.12-documentation-corpus` branch. The divergent pre-clean-room
+implementation is preserved by the immutable
+`archive/legacy-main-pre-clean-room-2026-05-21` tag. Neither archive is a
+supported runtime, deployment target, or product claim.

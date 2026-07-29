@@ -2,8 +2,10 @@
 
 AXIOM-MESH accepts changes to the supported clean-room Node.js kernel in
 `mesh/`, its canonical documentation, and its production/release controls.
-The former multi-language runtime is retained only on the deprecated Git
-branch and is not a target for new pull requests.
+The former multi-language runtime is retained only at immutable archive tag
+`archive/legacy-main-pre-clean-room-2026-05-21`. Superseded documentation is
+retained only on locked branch `deprecated/pre-0.12-documentation-corpus`.
+Neither archive is a target for new pull requests.
 
 ## Development requirements
 
@@ -45,7 +47,8 @@ Kernel` workflow.
 5. Never commit private keys, tokens, data-protection keys, production data, or
    evidence containing secret values.
 6. Target lowercase `main`; do not target
-   `deprecated/legacy-main-pre-clean-room`.
+   `deprecated/pre-0.12-documentation-corpus` or the immutable
+   `archive/legacy-main-pre-clean-room-2026-05-21` tag.
 
 ## Pull requests
 

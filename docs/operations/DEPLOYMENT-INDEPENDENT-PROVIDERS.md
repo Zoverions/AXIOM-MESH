@@ -1,6 +1,10 @@
 # Deployment-independent secret and policy providers
 
+**Updated:** 2026-07-29
+
 **Status:** implemented for the single-host production candidate
+
+**Applies to:** AXIOM-MESH `0.12.0-dev.0` supported development build
 
 **Scope:** signed one-shot retrieval of data protection, API principal, internal
 transport, policy-stack, and capability-registry resources before the

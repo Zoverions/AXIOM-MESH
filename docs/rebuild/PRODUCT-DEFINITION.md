@@ -1,9 +1,11 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=faf55c2577410a419fed1b589eb8ba50efe0ebfedd47277184031c6bbb5d2f60 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=55cec8448e10a018f957a7ed7289cbe68e266b58ba3630afd28410fadd08e1ae -->
 # AXIOM-MESH Product Definition
 
 **Status:** Canonical rebuild definition
-**Source baseline:** `e65041c` plus the full tracked documentation history
-**Reconciled:** 2026-07-25
+**Current build:** `0.12.0-dev.0`
+**Archived inputs:** locked branch `deprecated/pre-0.12-documentation-corpus`
+and immutable tag `archive/legacy-main-pre-clean-room-2026-05-21`
+**Reconciled:** 2026-07-29
 
 ## One-sentence definition
 

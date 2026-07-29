@@ -14,6 +14,9 @@ import {
 } from './lib/observability.mjs';
 import { MESH_ROOT } from './lib/config.mjs';
 
+const KERNEL_VERSION = JSON.parse(
+  await readFile(join(MESH_ROOT, 'package.json'), 'utf8')
+).version;
 const POLICY_SCHEMA = 'axiom-telemetry-routing-policy.v1';
 const DESTINATIONS_SCHEMA = 'axiom-telemetry-destinations.v1';
 const STATE_SCHEMA = 'axiom-telemetry-relay-state.v1';
@@ -398,7 +401,7 @@ export function buildOtlpMetricsRequest(report, policy, observedAt = new Date().
       scopeMetrics: [{
         scope: {
           name: 'axiom-mesh.telemetry-relay',
-          version: '0.11.0'
+          version: KERNEL_VERSION
         },
         metrics
       }]

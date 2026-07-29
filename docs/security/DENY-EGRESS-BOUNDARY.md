@@ -1,8 +1,8 @@
 # Candidate Container Deny-Egress Boundary
 
-**Status date:** 2026-07-28
+**Status date:** 2026-07-29
 
-**Scope:** single-container AXIOM-MESH 0.11 production candidate
+**Scope:** single-container AXIOM-MESH `0.12.0-dev.0` production candidate
 
 **Deployment claim:** candidate evidence only; no live deployment claim
 

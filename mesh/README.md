@@ -1,5 +1,7 @@
 # AXIOM-MESH Kernel
 
+**Build:** `0.12.0-dev.0`
+
 This directory is the clean-room rebuild of the AXIOM-MESH runtime. It uses
 four independent Node.js processes and no third-party runtime dependencies.
 
