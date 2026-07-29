@@ -2000,6 +2000,26 @@ export class GridStore {
     };
   }
 
+  getCausalSyncBundle(owner, bundleDigest) {
+    const row = this.db.prepare(`
+      SELECT * FROM sync_bundles
+      WHERE owner = ? AND bundle_digest = ?
+    `).get(owner, bundleDigest);
+    if (!row) {
+      throw new AxiomError(
+        'sync_bundle_not_found',
+        'Causal sync bundle was not found',
+        404
+      );
+    }
+    return this.decodeProtectedRow(
+      'sync_bundles',
+      'bundle_digest',
+      row,
+      ['result_json']
+    );
+  }
+
   listBackups(principal) {
     return this.db.prepare(`
       SELECT * FROM backups WHERE principal = ? ORDER BY requested_at DESC

@@ -242,6 +242,22 @@ export async function createGridService(config = meshConfig()) {
     }
     return store.listCausalSync(owner, { namespace, recordId });
   });
+  router.add(
+    'GET',
+    '/internal/v1/sync/:owner/bundles/:digest',
+    async ({ params }) => {
+      const owner = assertString(params.owner, 'owner', {
+        max: 160,
+        pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
+      });
+      const bundleDigest = assertString(params.digest, 'bundle digest', {
+        min: 64,
+        max: 64,
+        pattern: /^[a-f0-9]{64}$/
+      });
+      return store.getCausalSyncBundle(owner, bundleDigest);
+    }
+  );
   router.add('GET', '/internal/v1/backups/:principal', async ({ params }) => ({
     backups: store.listBackups(params.principal)
   }));

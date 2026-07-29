@@ -25,6 +25,7 @@
     "GET /v1/appeals",
     "GET /v1/storage-offers",
     "GET /v1/sync",
+    "GET /v1/sync/bundles/:digest",
     "GET /v1/backups",
     "GET /v1/backups/:id",
     "GET /v1/exports/:id",

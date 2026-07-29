@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=a86cf647c83f0579fdfd9d89b3f3da9e595b9ae4c3b604cdda1f8da70a7a291b -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=0533527610172fb5d19bb485687b6a70aa7361e562ac1b7b4e1eb9c520142ae1 -->
 # AXIOM-MESH Product Definition
 
 **Status:** Canonical rebuild definition
@@ -111,7 +111,8 @@ model rather than bespoke privileged paths:
 - storage, backup, recovery, and distributed synchronization
 - education, health, government/public-service, business, and finance capsules
 - task markets, automated workforce, payroll, and embodied-device control
-- node discovery, scheduling, capability-aware routing, and offline operation
+- node discovery, scheduling, capability-aware routing, and offline/approved
+  online causal operation
 - governance proposals, voting/delegation, emergency controls, and policy
   inheritance
 - auditable accounting, staking/bonds, rewards, treasury routing, and optional
@@ -215,7 +216,7 @@ selects the highest matching severity, requires independent command roles,
 permits only authority-reducing, preservation, recovery, communication, or
 review actions, and fails closure without verified containment, recovery,
 evidence, communications, retrospective scheduling, and independent review.
-The protected automated tabletop binds nine independently signed operational
+The protected automated tabletop binds ten independently signed operational
 control artifacts from the same revision. A facilitated pilot exercise and
 live roster remain external promotion requirements.
 
@@ -248,3 +249,14 @@ version vector, timestamp, nonce, and any explicit conflict heads it resolves.
 Grid rejects unadmitted, expired, quarantined, wrong-owner, wrong-key, replayed,
 or equivocating sources. Concurrent non-commutative heads remain visible until
 a later update causally dominates and explicitly names every current head.
+
+Online causal exchange is implemented as a separate host relay between two
+exact Gateway origins for one matching owner. It verifies each source event
+against a pinned Grid key, re-verifies every node bundle, and stores ordered
+pending data in bounded authenticated-encrypted state. Polling cannot apply
+data: the destination still requires an exact one-use approval from an
+independent principal. Owner-scoped preflight absorbs duplicates before
+approval, and partition rejoin preserves visible concurrent heads until an
+explicit all-head resolution reaches both Grids. This is transport and
+convergence of signed causal records, not replicated Grid consensus,
+federation, or automatic authority.

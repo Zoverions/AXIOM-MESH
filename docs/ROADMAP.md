@@ -37,7 +37,8 @@ Delivered:
 - deny-dominant policy and independent high-risk approval;
 - encrypted durable state and signed evidence;
 - consent, capsules, memory, local accounting, governance records, admitted
-  nodes, storage offers, export/import, backup/restore, and offline causal sync;
+  nodes, storage offers, export/import, backup/restore, offline causal sync,
+  and operator-approved two-Grid online causal exchange;
 - operator API and CLI;
 - bounded telemetry, readiness, operations report, metrics, and a host-side
   OTLP/Alertmanager relay with exact HTTPS routing;
@@ -142,7 +143,10 @@ Milestones:
 - capability-aware deterministic reservations with bounded resource,
   concurrency, owner, failure-domain, security, and lease constraints are
   implemented; authenticated remote dispatch and result provenance remain;
-- online causal exchange with defined partition/rejoin behavior.
+- operator-approved online causal exchange is implemented for two candidate
+  Grids with pinned source evidence, encrypted ordered staging, duplicate
+  preflight, visible concurrent heads, and explicit all-head convergence;
+  repeat under independent-host WAN conditions.
 
 Exit criteria:
 
@@ -154,8 +158,11 @@ Exit criteria:
 
 Current boundary: the single-Grid scheduler records complete, encrypted,
 auditable placement leases and fails closed on capacity, expiry, or quarantine.
-It does not contact nodes or authorize workloads. Phase 3 remains open until a
-dispatcher, measured resources, live partition/rejoin evidence, and
+The separate online causal relay exchanges already node-signed owner data
+between two Gateways while preserving destination independent approval. It
+does not contact scheduled nodes, authorize workloads, replicate the Grid log,
+or provide consensus. Phase 3 remains open until a dispatcher, measured
+resources, independently hosted partition/rejoin evidence, and
 deployment-specific identity controls exist.
 
 ## Phase 4 - controlled adapters and operator experience
