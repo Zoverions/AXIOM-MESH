@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=a86cf647c83f0579fdfd9d89b3f3da9e595b9ae4c3b604cdda1f8da70a7a291b -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=0533527610172fb5d19bb485687b6a70aa7361e562ac1b7b4e1eb9c520142ae1 -->
 # AXIOM-MESH CONSTITUTION
 
 **Status:** Constitutional direction for the clean-room kernel. Executable

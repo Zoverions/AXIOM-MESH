@@ -627,7 +627,54 @@ contact node endpoints, measure their resources, transport workloads,
 authenticate results, solve global Sybil resistance, or provide federation,
 replicated Grid, or consensus.
 
-## 13. Coordinated incident tabletop
+## 13. Operator-approved online causal exchange
+
+The operator-approved online causal exchange host relay moves existing
+node-signed causal bundles between two
+exact Gateway origins for one matching owner. It verifies each source event
+against a pinned Grid Ed25519 key, independently verifies each node bundle,
+and stores its cursor, ordered pending queue, retry state, and receipts in an
+AES-256-GCM authenticated-encrypted atomic file. Production configuration is
+based on
+[`config/online-causal-sync.example.json`](config/online-causal-sync.example.json);
+tokens and the separate 32-byte state key remain private external files.
+
+Polling or continuous `run` mode only stages data. The relay has no approver
+credential. Applying the first pending descriptor requires an ordinary
+one-use approval from a different destination principal, bound to the status
+record's exact request digest:
+
+```bash
+npm run online-sync -- poll /etc/axiom-mesh/source-to-destination.json
+npm run online-sync -- status /etc/axiom-mesh/source-to-destination.json
+npm run online-sync -- apply \
+  /etc/axiom-mesh/source-to-destination.json \
+  <bundle_digest> \
+  <approval_id>
+```
+
+Configure the reverse direction with a different state file and key.
+Owner-scoped destination preflight absorbs echo and ambiguous post-commit
+responses before another approval is consumed. Invalid evidence, unavailable
+origins, response overflow, queue saturation, and partition preserve the
+affected cursor and enter bounded backoff.
+
+Exercise both directions against two real production supervisors:
+
+```bash
+npm run online-sync:drill -- /tmp/axiom-online-causal-sync-drill \
+  > /tmp/axiom-online-causal-sync-drill-evidence.json
+```
+
+The signed evidence covers encrypted-state reload, two-direction partition
+and rejoin, source-order apply, exact independent approvals, visible
+concurrent heads on both Grids, explicit all-head convergence, and duplicate
+absorption without approval. See
+[`docs/operations/ONLINE-CAUSAL-EXCHANGE.md`](../docs/operations/ONLINE-CAUSAL-EXCHANGE.md).
+This is causal record transport, not replicated Grid consensus, BFT, workload
+dispatch, or independently hosted WAN evidence.
+
+## 14. Coordinated incident tabletop
 
 The machine-readable
 [`config/incident-response.json`](config/incident-response.json) policy defines
@@ -637,8 +684,9 @@ cadence, and mandatory closure conditions. Unknown signals fail
 classification instead of defaulting to low severity.
 
 After producing recovery, backup-lifecycle, SLO/restart, resilience,
-service-unit, node-scheduling, transport, credential-rotation, and
-data-key-rotation evidence for one commit, compose the nine same-revision
+service-unit, node-scheduling, online-causal-sync, transport,
+credential-rotation, and data-key-rotation evidence for one commit, compose
+the ten same-revision
 records into the automated
 incident tabletop:
 
@@ -652,6 +700,7 @@ npm run incident-tabletop:drill -- \
   /tmp/axiom-resilience-drill-evidence.json \
   /tmp/axiom-service-unit-drill-evidence.json \
   /tmp/axiom-node-scheduling-drill-evidence.json \
+  /tmp/axiom-online-causal-sync-drill-evidence.json \
   /tmp/axiom-transport-drill-evidence.json \
   /tmp/axiom-credential-rotation-evidence.json \
   /tmp/axiom-data-key-rotation-evidence.json \
@@ -674,8 +723,9 @@ real four-process stack, digest-pinned image build, composed container
 readiness, disposable-host recovery drill, controlled SLO/restart baseline,
 request-pressure and dependency-loss drill, coordinated credential-rotation
 drill, mutually authenticated transport lifecycle drill, data-key rotation
-drill, admitted-node discovery and scheduling drill, signed deny-egress probe,
-host-side telemetry relay drill, and
+drill, admitted-node discovery and scheduling drill, operator-approved online
+causal exchange drill, signed deny-egress probe, host-side telemetry relay
+drill, and
 automated incident tabletop are protected CI gates. This is
 not evidence of a live deployment, remote node execution, federated discovery,
 BFT consensus, audited arbitrary-code isolation, or external settlement.

@@ -1113,6 +1113,21 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
   assert.equal(syncState.conflicts, 0);
   assert.equal(syncState.records[0].status, 'active');
   assert.equal(syncState.records[0].heads[0].value.title, 'first offline value');
+  const firstSyncRecord = await api(
+    gateway,
+    token,
+    `/v1/sync/bundles/${firstSyncResult.bundle_digest}`
+  );
+  assert.equal(firstSyncRecord.owner, 'local-operator');
+  assert.equal(firstSyncRecord.update_count, 1);
+  const ownerIsolatedSyncRecord = await api(
+    gateway,
+    approverToken,
+    `/v1/sync/bundles/${firstSyncResult.bundle_digest}`,
+    {},
+    404
+  );
+  assert.equal(ownerIsolatedSyncRecord.error.code, 'sync_bundle_not_found');
 
   const peerKeys = generateKeyPairSync('ed25519');
   const peerPublicKey = peerKeys.publicKey.export({ type: 'spki', format: 'pem' });

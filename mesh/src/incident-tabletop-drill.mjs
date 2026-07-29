@@ -24,6 +24,9 @@ import {
 import { verifyRecoveryDrillEvidence } from './recovery-drill.mjs';
 import { verifyResilienceDrillEvidence } from './resilience-drill.mjs';
 import { verifyNodeSchedulingDrillEvidence } from './node-scheduling-drill.mjs';
+import {
+  verifyOnlineCausalSyncDrillEvidence
+} from './online-causal-sync-drill.mjs';
 import { verifyServiceUnitDrillEvidence } from './service-unit-drill.mjs';
 import { verifySloBaselineEvidence } from './slo-drill.mjs';
 import { verifyTransportDrillEvidence } from './transport-drill.mjs';
@@ -47,6 +50,10 @@ const CONTROL_DEFINITIONS = Object.freeze({
   node_scheduling: Object.freeze({
     verifier: verifyNodeSchedulingDrillEvidence,
     artifact: 'axiom-node-scheduling-drill-evidence'
+  }),
+  online_causal_sync: Object.freeze({
+    verifier: verifyOnlineCausalSyncDrillEvidence,
+    artifact: 'axiom-online-causal-sync-drill-evidence'
   }),
   recovery: Object.freeze({
     verifier: verifyRecoveryDrillEvidence,
@@ -196,7 +203,7 @@ export async function runIncidentTabletopDrill({
         'select only authority-reducing or recovery actions',
         'preserve evidence before containment changes',
         'exercise communication cadence and independent closure review',
-        'bind recovery, resilience, scheduling, transport, and rotation controls to the same source revision'
+        'bind recovery, resilience, scheduling, online causal exchange, transport, and rotation controls to the same source revision'
       ]
     },
     plan,
@@ -367,6 +374,7 @@ async function main() {
     resiliencePath,
     serviceUnitsPath,
     nodeSchedulingPath,
+    onlineCausalSyncPath,
     transportPath,
     credentialRotationPath,
     dataKeyRotationPath
@@ -379,6 +387,7 @@ async function main() {
     resilience: resiliencePath,
     service_units: serviceUnitsPath,
     node_scheduling: nodeSchedulingPath,
+    online_causal_sync: onlineCausalSyncPath,
     transport: transportPath,
     credential_rotation: credentialRotationPath,
     data_key_rotation: dataKeyRotationPath

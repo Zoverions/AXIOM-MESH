@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=a86cf647c83f0579fdfd9d89b3f3da9e595b9ae4c3b604cdda1f8da70a7a291b -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=0533527610172fb5d19bb485687b6a70aa7361e562ac1b7b4e1eb9c520142ae1 -->
 # AXIOM-MESH Rebuild Requirements
 
 **Normative language:** MUST, MUST NOT, SHOULD, and MAY are used in their usual
@@ -61,6 +61,7 @@ requirements sense.
 | GRID-09 | Backup retention MUST verify every candidate, derive selection from signed policy, preserve a configured minimum, reject live or changed inventory, recover interruption, and keep retired media recoverable until separate destruction approval. | Negative-path and kill tests plus signed recurring lifecycle/restore evidence. |
 | GRID-10 | Discovery-capable node admission MUST bind an HTTPS origin, failure domain, roles, resource ceilings, owner, unique active signing key, and expiry; discovery MUST exclude ineligible nodes and return Grid-signed bounded results. | Signature, copied-key, owner-limit, query, expiry, quarantine, downgrade, and attestation tests. |
 | GRID-11 | Node scheduling MUST follow the normal policy/grant/evidence path, reserve only a complete deterministic placement within declared capacity/concurrency/security/owner/domain/lease constraints, encrypt records at rest, and degrade on eligibility loss. | Pure determinism/capacity tests, four-service API test, restart test, and signed drill evidence. |
+| GRID-12 | Online causal exchange MUST verify a pinned Grid-signed owner event stream and every node-signed bundle, persist bounded encrypted ordered state, preserve cursors across partition, detect destination duplicates before approval, and retain exact one-use independent destination approval plus explicit all-head conflict resolution. It MUST NOT imply replicated consensus or automatic authority. | Tamper, partition/backoff, order, encryption, duplicate, owner-isolation, and exact-approval tests plus a signed two-real-stack bidirectional partition/rejoin/conflict/convergence drill. |
 
 ## Governance and societal safety
 
@@ -174,6 +175,13 @@ The machine-readable capability registry remains authoritative. Kernel
   version-vector ordering, replay rejection, visible concurrent heads,
   independently approved application, and explicit all-head conflict
   resolution without last-write-wins.
+- exact-origin online causal relay directions with pinned Grid event
+  attestations, encrypted atomic cursor/queue state, bounded retry and backlog,
+  owner-scoped destination duplicate preflight, source-ordered one-use
+  independent approval, visible bidirectional partition conflicts, and
+  explicit all-head convergence. Protected CI MUST retain signed evidence from
+  two real production supervisors and MUST NOT describe the result as
+  replicated Grid consensus.
 - bounded-cardinality four-service telemetry, dependency-aware readiness,
   authenticated operations/OpenMetrics surfaces, and static alert states for
   integrity, availability, replay, authentication, and server-error signals.

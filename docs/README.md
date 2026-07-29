@@ -38,6 +38,7 @@ The main technical and operational references are:
 - [Mutually authenticated service transport](operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md)
 - [Independent service units and failure isolation](operations/INDEPENDENT-SERVICE-UNITS.md)
 - [Admitted-node discovery and capability-aware scheduling](operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md)
+- [Operator-approved online causal exchange](operations/ONLINE-CAUSAL-EXCHANGE.md)
 - [Incident response and automated tabletop](security/INCIDENT-RESPONSE-AND-TABLETOP.md)
 - [0.11 release notes](releases/0.11.0.md)
 - [Runtime architecture](architecture/ARCHITECTURE.md)

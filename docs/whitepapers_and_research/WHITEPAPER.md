@@ -343,7 +343,32 @@ transport a workload, authenticate a result, solve global Sybil resistance, or
 provide federation or consensus. The signed control drill uses missed renewal
 as the conservative partition model and does not claim a live WAN experiment.
 
-### 10.5 Backup and restore
+### 10.5 Online causal exchange
+
+Online exchange is a host-side, operator-approved extension of the signed
+causal package protocol. One direction binds a matching owner, exact source
+and destination Gateway HTTPS origins, and a pinned source Grid Ed25519 key.
+The relay verifies source event payloads, hashes, and Grid attestations before
+independently verifying each node-signed bundle. Cursor, pending bodies, retry
+state, and receipts are bounded and authenticated-encrypted with a separate
+state key.
+
+Connectivity does not become authority. Polling can stage but cannot apply a
+bundle, and the relay holds no approver token. The destination still requires
+one exact, expiring, single-use approval from another principal through the
+normal intent, policy, plan, grant, Sandbox, and Grid path. An owner-isolated
+receipt lookup detects duplicates before approval and makes ambiguous
+post-commit recovery idempotent.
+
+Partitions preserve the cursor and enter bounded backoff. Rejoin applies in
+source-event order. Concurrent heads remain visible on both Grids; the relay
+does not select a clock-based or last-write winner. A new signed update must
+causally dominate and name every head before convergence. Protected evidence
+uses two real production supervisors and a controlled bidirectional partition.
+This proves causal record transfer and conflict semantics, not replicated Grid
+consensus, BFT, leader election, arbitrary federation, or WAN performance.
+
+### 10.6 Backup and restore
 
 Grid snapshots are encrypted, signed, context-bound, and exact-digest
 verified. Restore requires a stopped Grid, preserves the replaced database,
@@ -464,7 +489,8 @@ for unexpected dependencies. Release verification binds:
   closure policy;
 - signed automated incident-tabletop evidence bound to same-revision
   recovery, backup, restart, resilience, independent-service-unit, transport,
-  node-scheduling, credential-rotation, and data-key controls;
+  node-scheduling, online-causal-partition/rejoin, credential-rotation, and
+  data-key controls;
 - signed independent-process failure-isolation evidence and protected
   four-container Sandbox-only recovery and blocked-public-egress checks;
 - deprecated credential-history ledger and protected reuse policy;
@@ -491,6 +517,8 @@ The kernel explicitly addresses:
 - secret leakage through logs, metrics, images, or release files;
 - native-state overwrite by imported records;
 - causal replay, equivocation, and incomplete conflict resolution.
+- forged source-Grid exchange evidence, reordered online delivery, ambiguous
+  post-commit response, queue overflow, and approval bypass.
 
 Residual risks include:
 
@@ -553,6 +581,9 @@ image/runtime evidence and the gates in the
 [readiness tracker](../PRODUCTION-READINESS-TRACKER.md).
 The independent-unit mechanism and its limitations are specified in the
 [service-unit runbook](../operations/INDEPENDENT-SERVICE-UNITS.md).
+The online causal transport, approval, partition, conflict, and non-consensus
+boundary is specified in the
+[online exchange runbook](../operations/ONLINE-CAUSAL-EXCHANGE.md).
 
 ## Conclusion
 

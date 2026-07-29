@@ -27,6 +27,8 @@
     "transport:drill": "node src/transport-drill.mjs",
     "network-boundary:verify": "node src/network-boundary.mjs",
     "node-scheduling:drill": "node src/node-scheduling-drill.mjs",
+    "online-sync": "node src/online-causal-sync.mjs",
+    "online-sync:drill": "node src/online-causal-sync-drill.mjs",
     "recovery:drill": "node src/recovery-drill.mjs",
     "slo:drill": "node src/slo-drill.mjs",
     "start:production": "node src/supervisor.mjs",

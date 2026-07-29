@@ -133,6 +133,18 @@
       ]
     },
     {
+      "id": "online.causal-sync",
+      "family": "mesh",
+      "status": "implemented",
+      "summary": "Pinned Grid-signed event streams transfer node-signed causal bundles between exact Gateway origins through encrypted ordered queues; destination application retains one-use independent approval, duplicate preflight, visible concurrent heads, and explicit all-head convergence without claiming replicated consensus.",
+      "evidence": [
+        "mesh/test/online-causal-sync.test.mjs",
+        "mesh/test/online-causal-sync-drill.test.mjs",
+        "mesh/src/online-causal-sync-drill.mjs",
+        ".github/workflows/kernel.yml"
+      ]
+    },
+    {
       "id": "nodes.discovery-scheduling",
       "family": "mesh",
       "status": "implemented",

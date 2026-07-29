@@ -53,7 +53,7 @@ Incident response is also release-gated. The policy in
 highest matching severity, requires independently assigned command roles,
 allows no authority-expanding action, and defines evidence, communication,
 recovery, closure, and retrospective requirements. Protected CI signs an
-automated tabletop only after nine same-revision operational control artifacts
+automated tabletop only after ten same-revision operational control artifacts
 verify. See the
 [incident-response runbook](../docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md).
 
@@ -84,6 +84,13 @@ encrypted placement reservations subject to capability, security, capacity,
 concurrency, owner, domain, expiry, and quarantine constraints. It does not
 authorize remote execution or claim federation. See the
 [node discovery and scheduling runbook](../docs/operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md).
+
+Two Gateways can exchange one owner's existing node-signed causal bundles
+through an exact-origin host relay. Pinned Grid event evidence, encrypted
+ordered state, bounded retry, duplicate preflight, and destination independent
+approval preserve the local authority boundary across partition and rejoin.
+This is not replicated Grid consensus. See the
+[online causal exchange runbook](../docs/operations/ONLINE-CAUSAL-EXCHANGE.md).
 
 Verify an export without a running AXIOM-MESH process:
 
@@ -207,6 +214,7 @@ The Gateway exposes:
 - `GET /v1/appeals`
 - `GET /v1/storage-offers`
 - `GET /v1/sync`
+- `GET /v1/sync/bundles/:digest`
 - `GET /v1/backups`
 - `GET /v1/backups/:id`
 - `GET /v1/exports/:id`
@@ -291,8 +299,11 @@ current causal heads. Concurrent non-commutative values remain visible as a
 conflict; no winner is selected by wall-clock time. A resolving update must
 causally dominate and name every current head. Sync updates are included in
 selective portability exports and remain foreign-provenance records on import.
-This local package-exchange protocol does not claim peer discovery, transport,
-federated consensus, or automatic application-layer merge semantics.
+`GET /v1/sync/bundles/:digest` returns only that owner's materialized receipt,
+allowing the online relay to absorb duplicate delivery without exposing the
+bundle or consuming another approval. The separate exact-origin relay provides
+operator-approved transport but does not claim arbitrary peer discovery,
+replicated consensus, or automatic application-layer merge semantics.
 
 `backup.create` is a high-risk operation and therefore requires explicit
 confirmation plus one independently issued one-use approval. Grid snapshots

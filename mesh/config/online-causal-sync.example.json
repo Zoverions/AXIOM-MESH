@@ -1,0 +1,28 @@
+{
+  "schema": "axiom-online-causal-sync-config.v1",
+  "owner": "pilot-operator",
+  "source": {
+    "origin": "https://source-grid.example.net",
+    "token_file": "/run/axiom-online-sync/source.token",
+    "grid_public_key_files": [
+      "/run/axiom-online-sync/source-grid-current.pem",
+      "/run/axiom-online-sync/source-grid-retired-transition.pem"
+    ]
+  },
+  "destination": {
+    "origin": "https://destination-grid.example.net",
+    "token_file": "/run/axiom-online-sync/destination.token"
+  },
+  "state_file": "/var/lib/axiom-online-sync/source-to-destination.state",
+  "state_key_file": "/run/axiom-online-sync/state.key",
+  "poll_interval_ms": 5000,
+  "request_timeout_ms": 10000,
+  "max_events_per_poll": 100,
+  "max_pending_bundles": 128,
+  "max_pending_bytes": 8388608,
+  "retry": {
+    "base_ms": 1000,
+    "maximum_ms": 60000,
+    "maximum_attempts": 10
+  }
+}

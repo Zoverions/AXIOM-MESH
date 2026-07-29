@@ -510,7 +510,8 @@ export function verifyProductionDeployment({
     'cross-process port-block lease',
     'mutually authenticated TLS 1.3',
     'independently deployable units',
-    'admitted-node discovery and scheduling'
+    'admitted-node discovery and scheduling',
+    'operator-approved online causal exchange'
   ]) {
     if (!productionDocs.includes(boundary)) {
       throw new ValidationError(`Production operator documentation is missing boundary: ${boundary}`);
@@ -541,6 +542,7 @@ export function verifyProductionDeployment({
     'node src/transport-drill.mjs',
     'node src/service-unit-drill.mjs',
     'node src/node-scheduling-drill.mjs',
+    'node src/online-causal-sync-drill.mjs',
     'node src/telemetry-relay-drill.mjs',
     'actions/upload-artifact@v7',
     'axiom-recovery-drill-evidence-${{ github.sha }}',
@@ -553,6 +555,7 @@ export function verifyProductionDeployment({
     'axiom-transport-drill-evidence-${{ github.sha }}',
     'axiom-service-unit-drill-evidence-${{ github.sha }}',
     'axiom-node-scheduling-drill-evidence-${{ github.sha }}',
+    'axiom-online-causal-sync-drill-evidence-${{ github.sha }}',
     'axiom-telemetry-relay-evidence-${{ github.sha }}',
     `docker build --pull=false --tag axiom-mesh-kernel:${packageJson.version} .`,
     'docker compose -f compose.production.yml up --detach --no-build',
@@ -602,6 +605,12 @@ export function verifyProductionDeployment({
       deterministic_leases: true,
       signed_ci_evidence: true,
       remote_execution_authorized: false
+    },
+    online_causal_sync: {
+      encrypted_ordered_state: true,
+      independent_apply_approval: true,
+      signed_ci_evidence: true,
+      replicated_consensus_claimed: false
     },
     documentation_sha256: sha256(productionDocs),
     workflow_sha256: sha256(workflow)

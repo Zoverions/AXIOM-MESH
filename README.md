@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=a86cf647c83f0579fdfd9d89b3f3da9e595b9ae4c3b604cdda1f8da70a7a291b -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=0533527610172fb5d19bb485687b6a70aa7361e562ac1b7b4e1eb9c520142ae1 -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -154,6 +154,20 @@ degrades a reservation after quarantine, expires a missed-renewal node, and
 proves restart persistence. This is authenticated placement reservation, not
 remote workload execution or multi-host federation. See the
 [discovery and scheduling runbook](docs/operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md).
+
+Exercise operator-approved bidirectional causal exchange:
+
+```bash
+npm run online-sync:drill -- /tmp/axiom-online-causal-sync-drill
+```
+
+The drill starts two real production supervisors, injects a two-direction
+transport partition, stages node-signed bundles in encrypted ordered state,
+requires an independent destination approval for every apply, exposes
+concurrent heads on both Grids, converges through explicit complete
+resolution, and absorbs duplicate replay before approval. It does not claim
+replicated Grid consensus or arbitrary federation. See the
+[online causal exchange runbook](docs/operations/ONLINE-CAUSAL-EXCHANGE.md).
 
 Exercise the host-side external telemetry and alert path on Linux:
 
@@ -340,8 +354,11 @@ supported entrypoints.
   node-counter equivocation fail closed, and conflict resolution must name
   every current head. Separately, signed v2 node metadata supports
   authenticated discovery and deterministic capacity-aware placement leases
-  with owner/domain constraints, expiry, and quarantine degradation. No remote
-  execution, automatic transport, or federation is claimed.
+  with owner/domain constraints, expiry, and quarantine degradation. A
+  two-Grid relay can verify pinned Grid event evidence, stage encrypted ordered
+  bundles, preserve destination independent approval, recover from partition,
+  and absorb duplicates without silently choosing a conflict winner. No remote
+  execution, replicated Grid consensus, or arbitrary federation is claimed.
 - Local governance now drives live but authority-reducing policy overlays
   through human voting, finalization, timelock, independently approved
   activation, verification, rollback, expiring emergency review, and appeal.
@@ -365,9 +382,9 @@ supported entrypoints.
 - Deterministic incident severity, independent command roles,
   authority-reducing containment, evidence-first chronology, bounded
   communications, and closure conditions are machine-readable. Protected CI
-  signs an automated tabletop bound to nine same-revision control artifacts,
+  signs an automated tabletop bound to ten same-revision control artifacts,
   including request-pressure, dependency-loss, transport-lifecycle, and
-  node-scheduling evidence;
+  node-scheduling and online causal partition/rejoin evidence;
   a facilitated named-roster pilot exercise remains required.
 
 Report vulnerabilities using [`.github/SECURITY.md`](.github/SECURITY.md).

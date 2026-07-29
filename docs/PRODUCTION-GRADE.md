@@ -24,10 +24,10 @@ The protected workflow also produces signed disposable-host recovery,
 SLO/restart, request-pressure and dependency-loss, mutually authenticated
 transport rotation, coordinated service/API credential-rotation,
 data-protection-key rotation, admitted-node discovery/scheduling, and automated
-incident-tabletop evidence. The
+online causal partition/rejoin, and incident-tabletop evidence. The
 tabletop verifies deterministic severity, role independence,
 authority-reducing containment, evidence-first chronology, communications,
-closure, and nine linked control artifacts. Its credential-history audit also
+closure, and ten linked control artifacts. Its credential-history audit also
 reconstructs a 32-entry keyed ledger from the locked deprecated graph and
 proves that no candidate appears in the supported tip.
 Dedicated pilot capacity and availability, pilot-owned telemetry receivers, scheduled
@@ -318,6 +318,41 @@ partition, or provide federation/consensus. Those are separate promotion gates
 described in the
 [operating runbook](operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md).
 
+## Operator-approved online causal exchange
+
+The candidate can exchange already node-signed causal bundles between two
+Gateway deployments for one matching authenticated owner. A host relay reads
+the owner-filtered source event stream over an exact HTTPS origin, recomputes
+each payload and event hash, verifies its attestation against a pinned source
+Grid Ed25519 key, and independently verifies every node-signed bundle and
+update. It stores cursor, pending bodies, retry state, and receipts in a
+bounded AES-256-GCM authenticated-encrypted file with atomic replacement and a
+cross-process ownership lock.
+
+Polling cannot authorize destination state. The relay has no approver token.
+Every oldest-pending bundle requires a normal `sync.apply` confirmation plus
+one active approval from a different destination principal bound to the exact
+action, bundle, purpose, and namespace scopes. An owner-isolated destination
+receipt endpoint detects committed bundles before approval, preventing
+bidirectional echo and safely recovering a lost post-commit response.
+
+Source unavailability, invalid evidence, response overflow, destination
+failure, or queue saturation does not advance the affected cursor. Backoff,
+attempts, pending count, pending bytes, and receipt history are bounded.
+Concurrent version-vector heads remain visible on both Grids; neither relay
+chooses a wall-clock or last-write winner. Convergence requires a new signed
+update that causally dominates and explicitly names every head.
+
+Protected CI starts two real four-process production supervisors, admits the
+same signed nodes, injects a two-direction transport partition, accepts
+different concurrent updates, preserves both encrypted cursors, rejoins in
+source order through exact independent approvals, proves two visible heads,
+applies a complete resolution, and absorbs a fresh duplicate replay without
+approval. This is two-Grid causal data exchange, not replicated event-log
+consensus, BFT, workload dispatch, arbitrary federation, or independently
+hosted WAN evidence. See the
+[online causal exchange runbook](operations/ONLINE-CAUSAL-EXCHANGE.md).
+
 ## Observability requirements
 
 The runtime must expose:
@@ -416,8 +451,8 @@ targets, authority-reducing actions, and mandatory closure conditions.
 Protected CI runs an automated incident tabletop that cryptographically
 verifies and binds the recovery, backup-lifecycle, SLO/restart,
 request-pressure/dependency-loss, independent-service-unit,
-transport-lifecycle, credential-rotation, and data-key-rotation evidence from
-the same commit.
+node-scheduling, online-causal-partition/rejoin, transport-lifecycle,
+credential-rotation, and data-key-rotation evidence from the same commit.
 Missing roles or actions, severity drift, expanding authority, late
 containment, broken communications cadence, stale evidence, premature
 closure, or signature tampering fails the gate. See

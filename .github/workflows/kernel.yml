@@ -165,6 +165,19 @@ jobs:
           path: ${{ runner.temp }}/axiom-node-scheduling-drill-evidence.json
           if-no-files-found: error
           retention-days: 90
+      - name: Run bidirectional online causal exchange drill
+        working-directory: mesh
+        run: |
+          node src/online-causal-sync-drill.mjs \
+            "$RUNNER_TEMP/axiom-online-causal-sync-drill" \
+            > "$RUNNER_TEMP/axiom-online-causal-sync-drill-evidence.json"
+      - name: Upload signed online causal sync evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: axiom-online-causal-sync-drill-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/axiom-online-causal-sync-drill-evidence.json
+          if-no-files-found: error
+          retention-days: 90
       - name: Run host-side telemetry and alert relay drill
         working-directory: mesh
         run: |
@@ -215,6 +228,7 @@ jobs:
             "$RUNNER_TEMP/axiom-resilience-drill-evidence.json" \
             "$RUNNER_TEMP/axiom-service-unit-drill-evidence.json" \
             "$RUNNER_TEMP/axiom-node-scheduling-drill-evidence.json" \
+            "$RUNNER_TEMP/axiom-online-causal-sync-drill-evidence.json" \
             "$RUNNER_TEMP/axiom-transport-drill-evidence.json" \
             "$RUNNER_TEMP/axiom-credential-rotation-evidence.json" \
             "$RUNNER_TEMP/axiom-data-key-rotation-evidence.json" \

@@ -23,6 +23,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md',
   'docs/operations/INDEPENDENT-SERVICE-UNITS.md',
   'docs/operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md',
+  'docs/operations/ONLINE-CAUSAL-EXCHANGE.md',
   'docs/releases/0.11.0.md',
   'docs/whitepapers_and_research/WHITEPAPER.md',
   'mesh/PRODUCTION.md'
@@ -78,6 +79,12 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Deterministic scheduling and resource leases',
     '## Pilot repetition and non-claims'
   ],
+  'docs/operations/ONLINE-CAUSAL-EXCHANGE.md': [
+    '## Trust and authority boundary',
+    '## Consistency and conflict behavior',
+    '## Signed partition/rejoin drill',
+    '## Pilot repetition and non-claims'
+  ],
   'docs/releases/0.11.0.md': ['## Container status', '## Security action'],
   'docs/whitepapers_and_research/WHITEPAPER.md': ['## Non-claims', '## Reproducibility'],
   'mesh/PRODUCTION.md': ['not evidence of a live deployment']
@@ -96,6 +103,7 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md': 5_000,
   'docs/operations/INDEPENDENT-SERVICE-UNITS.md': 5_000,
   'docs/operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md': 5_000,
+  'docs/operations/ONLINE-CAUSAL-EXCHANGE.md': 6_000,
   'docs/whitepapers_and_research/WHITEPAPER.md': 7_000
 });
 
