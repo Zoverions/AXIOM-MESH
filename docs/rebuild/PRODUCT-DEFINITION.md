@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=229023a02fd2569ca23dabb86a9f34a438a36685aa096ff2aed0fac8054f33ca -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=4d143d985aa25e0258bfe36026667ca6dcf7f3403ae0f5b99efbc2e2b46e5f20 -->
 # AXIOM-MESH Product Definition
 
 **Status:** Canonical rebuild definition
@@ -209,9 +209,20 @@ selects the highest matching severity, requires independent command roles,
 permits only authority-reducing, preservation, recovery, communication, or
 review actions, and fails closure without verified containment, recovery,
 evidence, communications, retrospective scheduling, and independent review.
-The protected automated tabletop binds eight independently signed operational
+The protected automated tabletop binds nine independently signed operational
 control artifacts from the same revision. A facilitated pilot exercise and
 live roster remain external promotion requirements.
+
+Admitted-node discovery and placement reservation are implemented inside the
+single authoritative Grid. Signed v2 admissions bind the node identity,
+authenticated owner, HTTPS origin, failure domain, roles, resource ceilings,
+capabilities, security profile, software digest, and expiry. Grid signs
+filtered discovery results. A policy-controlled schedule intent selects only a
+complete deterministic capacity-aware placement, encrypts the requirements
+and result, and degrades it after quarantine, expiry, or loss of the original
+eligibility contract. This feature does not contact the node, enforce remote
+resources, authorize a workload, authenticate a result, prove globally unique
+owners, or provide multi-host federation.
 
 The container source policy and supervisor are verified, and the real
 four-process stack passes a host-mode production drill. Image-build and

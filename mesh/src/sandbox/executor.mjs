@@ -18,6 +18,7 @@ import {
 } from '../lib/nodes.mjs';
 import { recipientKeyMetadata } from '../lib/recipient-encryption.mjs';
 import { verifyCausalBundle } from '../lib/causal-sync.mjs';
+import { normalizeNodeScheduleRequest } from '../lib/node-scheduling.mjs';
 
 const PRINCIPAL_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
@@ -85,6 +86,8 @@ function mutationFor(action, input, principal) {
       return renewNode(input, principalId);
     case 'node.quarantine':
       return quarantineNode(input, principalId);
+    case 'node.schedule':
+      return scheduleNodes(input, principalId);
     case 'storage.offer':
       return createStorageOffer(input, principalId);
     case 'sync.apply':
@@ -651,6 +654,27 @@ function quarantineNode(input, quarantinedBy) {
       kind: 'node.quarantined',
       subject: nodeId,
       payload: { node_id: nodeId, quarantined_by: quarantinedBy, reason }
+    }
+  };
+}
+
+function scheduleNodes(input, requester) {
+  const normalized = normalizeNodeScheduleRequest(input, requester);
+  return {
+    output: {
+      schedule_id: normalized.schedule_id,
+      request_digest: normalized.request_digest,
+      status: 'scheduled'
+    },
+    mutation: {
+      kind: 'node.schedule.requested',
+      subject: normalized.schedule_id,
+      payload: {
+        requester,
+        schedule_id: normalized.schedule_id,
+        request_digest: normalized.request_digest,
+        request: normalized.request
+      }
     }
   };
 }

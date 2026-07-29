@@ -243,6 +243,60 @@ export async function createGatewayService(config = meshConfig()) {
   router.add('GET', '/v1/capsules', async ({ traceId }) => gridGet('/internal/v1/capsules', traceId));
   router.add('GET', '/v1/proposals', async ({ traceId }) => gridGet('/internal/v1/proposals', traceId));
   router.add('GET', '/v1/nodes', async ({ traceId }) => gridGet('/internal/v1/nodes', traceId));
+  router.add('GET', '/v1/node-discovery', async ({
+    url,
+    traceId,
+    principal
+  }) => {
+    if (!hasScope(principal, 'node:read')) {
+      throw new AxiomError(
+        'forbidden',
+        'node:read scope is required',
+        403
+      );
+    }
+    const query = new URLSearchParams();
+    for (const capability of url.searchParams.getAll('capability')) {
+      query.append('capability', assertString(
+        capability,
+        'capability',
+        { max: 160, pattern: PRINCIPAL_ID }
+      ));
+    }
+    for (const role of url.searchParams.getAll('role')) {
+      query.append('role', assertString(
+        role,
+        'role',
+        { max: 128, pattern: PRINCIPAL_ID }
+      ));
+    }
+    for (const name of [
+      'minimum_security_level',
+      'minimum_lease_seconds',
+      'limit'
+    ]) {
+      const value = url.searchParams.get(name);
+      if (value !== null) query.set(name, value);
+    }
+    const suffix = query.size ? `?${query}` : '';
+    return gridGet(`/internal/v1/node-discovery${suffix}`, traceId);
+  });
+  router.add('GET', '/v1/node-schedules', async ({
+    traceId,
+    principal
+  }) => {
+    if (!hasScope(principal, 'node:read')) {
+      throw new AxiomError(
+        'forbidden',
+        'node:read scope is required',
+        403
+      );
+    }
+    return gridGet(
+      `/internal/v1/node-schedules/${encodeURIComponent(principal.id)}`,
+      traceId
+    );
+  });
   router.add('GET', '/v1/consents', async ({ traceId, principal }) => gridGet(
     `/internal/v1/consents/${encodeURIComponent(principal.id)}`,
     traceId

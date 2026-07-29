@@ -27,6 +27,13 @@ import {
   compareVersionVectors,
   verifyCausalBundle
 } from '../lib/causal-sync.mjs';
+import {
+  discoverAdmittedNodes,
+  effectiveScheduleStatus,
+  normalizeNodeDiscoveryQuery,
+  normalizeNodeScheduleRequest,
+  selectNodePlacements
+} from '../lib/node-scheduling.mjs';
 
 const GENESIS_HASH = '0'.repeat(64);
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
@@ -40,6 +47,7 @@ const PROTECTED_COLUMN_MAPPINGS = Object.freeze([
   ['proposals', 'proposal_id', ['action_json', 'rollback_json']],
   ['nodes', 'node_id', [
     'capabilities_json',
+    'discovery_json',
     'public_key_json',
     'quarantine_reason_json'
   ]],
@@ -64,6 +72,10 @@ const PROTECTED_COLUMN_MAPPINGS = Object.freeze([
     'vector_json',
     'resolves_json',
     'signature_json'
+  ]],
+  ['node_schedules', 'schedule_id', [
+    'requirements_json',
+    'placements_json'
   ]]
 ]);
 
@@ -331,6 +343,7 @@ export class GridStore {
         'votes',
         'proposals',
         'storage_offers',
+        'node_schedules',
         'nodes',
         'approvals',
         'consents',
@@ -701,12 +714,41 @@ export class GridStore {
           if (admission && statement.expires_at <= event.occurred_at) {
             throw new ValidationError('Node admission expired before it was recorded');
           }
+          if (admission) {
+            const duplicateKey = this.db.prepare(`
+              SELECT node_id FROM nodes
+              WHERE public_key_digest = ? AND status = 'active'
+                AND expires_at > ? AND node_id != ?
+            `).get(
+              admission.public_key_digest,
+              event.occurred_at,
+              statement.node_id
+            );
+            if (duplicateKey) {
+              throw new AxiomError(
+                'node_identity_conflict',
+                'An active admitted node already uses this signing identity',
+                409
+              );
+            }
+            const ownerCount = this.db.prepare(`
+              SELECT COUNT(*) AS count FROM nodes
+              WHERE owner = ? AND status = 'active' AND expires_at > ?
+            `).get(p.owner, event.occurred_at).count;
+            if (ownerCount >= 64) {
+              throw new AxiomError(
+                'node_owner_limit',
+                'The authenticated owner has reached the active-node limit',
+                409
+              );
+            }
+          }
         this.db.prepare(`
           INSERT INTO nodes(
             node_id, public_key_digest, security_profile, capabilities_json,
             software_digest, expires_at, status, registered_at, owner,
-            public_key_json, admission_digest
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            public_key_json, admission_digest, discovery_json
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           statement.node_id,
           admission?.public_key_digest ?? p.public_key_digest,
@@ -720,7 +762,15 @@ export class GridStore {
           admission
             ? this.protectJson('nodes', 'public_key_json', statement.node_id, statement.public_key)
             : null,
-          admission?.admission_digest ?? null
+          admission?.admission_digest ?? null,
+          statement.discovery
+            ? this.protectJson(
+              'nodes',
+              'discovery_json',
+              statement.node_id,
+              statement.discovery
+            )
+            : null
         );
         }
         break;
@@ -734,10 +784,30 @@ export class GridStore {
           if (renewal.statement.expires_at <= event.occurred_at) {
             throw new ValidationError('Node renewal expired before it was recorded');
           }
+          const renewable = this.db.prepare(`
+            SELECT discovery_json, expires_at FROM nodes
+            WHERE node_id = ? AND owner = ? AND public_key_digest = ?
+              AND status != 'quarantined'
+          `).get(
+            renewal.statement.node_id,
+            p.owner,
+            renewal.public_key_digest
+          );
+          if (!renewable) {
+            throw new ValidationError('Renewable node admission was not found');
+          }
+          if (renewable.discovery_json && !renewal.statement.discovery) {
+            throw new ValidationError(
+              'Discovery-capable node renewal cannot downgrade to v1'
+            );
+          }
+          if (renewable.expires_at <= event.occurred_at) {
+            this.degradeNodeSchedules(renewal.statement.node_id);
+          }
           if (this.db.prepare(`
             UPDATE nodes
             SET capabilities_json = ?, software_digest = ?, expires_at = ?,
-                status = 'active', renewed_at = ?
+                status = 'active', renewed_at = ?, discovery_json = ?
             WHERE node_id = ? AND owner = ? AND public_key_digest = ?
               AND status != 'quarantined'
           `).run(
@@ -750,10 +820,22 @@ export class GridStore {
             renewal.statement.software_digest,
             renewal.statement.expires_at,
             event.occurred_at,
+            renewal.statement.discovery
+              ? this.protectJson(
+                'nodes',
+                'discovery_json',
+                renewal.statement.node_id,
+                renewal.statement.discovery
+              )
+              : null,
             renewal.statement.node_id,
             p.owner,
             renewal.public_key_digest
           ).changes !== 1) throw new ValidationError('Renewable node admission was not found');
+          this.degradeIneligibleNodeSchedules(
+            renewal.statement.node_id,
+            event.occurred_at
+          );
         }
         break;
       case 'node.quarantined':
@@ -773,6 +855,58 @@ export class GridStore {
           UPDATE storage_offers SET status = 'quarantined'
           WHERE node_id = ? AND status = 'active'
         `).run(p.node_id);
+        this.degradeNodeSchedules(p.node_id);
+        break;
+      case 'node.schedule.requested':
+        {
+          if (p.requester !== event.actor) {
+            throw new ValidationError(
+              'Node schedule requester must match the authenticated actor'
+            );
+          }
+          const normalized = normalizeNodeScheduleRequest(
+            p.request,
+            p.requester
+          );
+          if (
+            normalized.schedule_id !== p.schedule_id
+            || normalized.request_digest !== p.request_digest
+            || event.subject !== p.schedule_id
+          ) {
+            throw new ValidationError('Node schedule request binding is invalid');
+          }
+          const schedule = selectNodePlacements({
+            nodes: this.decodedNodes(),
+            schedules: this.decodedSchedules(),
+            normalizedRequest: normalized,
+            occurredAt: event.occurred_at
+          });
+          this.db.prepare(`
+            INSERT INTO node_schedules(
+              schedule_id, requester, request_digest, requirements_json,
+              placements_json, status, created_at, expires_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `).run(
+            schedule.schedule_id,
+            schedule.requester,
+            schedule.request_digest,
+            this.protectJson(
+              'node_schedules',
+              'requirements_json',
+              schedule.schedule_id,
+              schedule.requirements
+            ),
+            this.protectJson(
+              'node_schedules',
+              'placements_json',
+              schedule.schedule_id,
+              schedule.placements
+            ),
+            schedule.status,
+            schedule.created_at,
+            schedule.expires_at
+          );
+        }
         break;
       case 'storage.offered':
         {
@@ -1395,18 +1529,60 @@ export class GridStore {
     return output;
   }
 
-  listNodes() {
-    const now = new Date().toISOString();
-    return this.db.prepare('SELECT * FROM nodes ORDER BY registered_at DESC').all().map(row => {
-      const decoded = this.decodeProtectedRow(
-        'nodes',
-        'node_id',
-        row,
-        ['capabilities_json', 'public_key_json', 'quarantine_reason_json']
-      );
-      if (decoded.status === 'active' && decoded.expires_at <= now) decoded.status = 'expired';
-      return decoded;
+  listNodes({ asOf = new Date().toISOString() } = {}) {
+    return this.decodedNodes().map(node => {
+      if (node.status === 'active' && node.expires_at <= asOf) {
+        node.status = 'expired';
+      }
+      return node;
     });
+  }
+
+  discoverNodes(query, { asOf = new Date().toISOString() } = {}) {
+    return discoverAdmittedNodes(
+      this.listNodes({ asOf }),
+      normalizeNodeDiscoveryQuery(query),
+      { asOf }
+    );
+  }
+
+  getNodeSchedule(scheduleId, requester, {
+    asOf = new Date().toISOString()
+  } = {}) {
+    const schedules = this.decodedSchedules();
+    const schedule = schedules.find(
+      item => (
+        item.schedule_id === scheduleId
+        && item.requester === requester
+      )
+    );
+    if (!schedule) {
+      throw new AxiomError(
+        'node_schedule_not_found',
+        'Node schedule was not found',
+        404
+      );
+    }
+    schedule.status = effectiveScheduleStatus(
+      schedule,
+      this.listNodes({ asOf }),
+      { asOf, schedules }
+    );
+    return schedule;
+  }
+
+  listNodeSchedules(requester, {
+    asOf = new Date().toISOString()
+  } = {}) {
+    const nodes = this.listNodes({ asOf });
+    const schedules = this.decodedSchedules();
+    return schedules
+      .filter(schedule => schedule.requester === requester)
+      .map(schedule => ({
+        ...schedule,
+        status: effectiveScheduleStatus(schedule, nodes, { asOf, schedules })
+      }))
+      .sort((left, right) => right.created_at.localeCompare(left.created_at));
   }
 
   listStorageOffers(owner) {
@@ -1423,6 +1599,82 @@ export class GridStore {
       if (decoded.status === 'active' && decoded.expires_at <= now) decoded.status = 'expired';
       return decoded;
     });
+  }
+
+  decodedNodes() {
+    return this.db.prepare(
+      'SELECT * FROM nodes ORDER BY registered_at DESC'
+    ).all().map(row => {
+      const decoded = this.decodeProtectedRow(
+        'nodes',
+        'node_id',
+        row,
+        [
+          'capabilities_json',
+          'discovery_json',
+          'public_key_json',
+          'quarantine_reason_json'
+        ]
+      );
+      decoded.capabilities = decoded.capabilities_json;
+      decoded.discovery = decoded.discovery_json;
+      return decoded;
+    });
+  }
+
+  decodedSchedules() {
+    return this.db.prepare(
+      'SELECT * FROM node_schedules ORDER BY created_at DESC'
+    ).all().map(row => {
+      const decoded = this.decodeProtectedRow(
+        'node_schedules',
+        'schedule_id',
+        row,
+        ['requirements_json', 'placements_json']
+      );
+      decoded.requirements = decoded.requirements_json;
+      decoded.placements = decoded.placements_json;
+      delete decoded.requirements_json;
+      delete decoded.placements_json;
+      return decoded;
+    });
+  }
+
+  degradeNodeSchedules(nodeId) {
+    for (const schedule of this.decodedSchedules()) {
+      if (
+        schedule.status !== 'active'
+        || !schedule.placements.some(
+          placement => placement.node_id === nodeId
+        )
+      ) continue;
+      this.db.prepare(`
+        UPDATE node_schedules SET status = 'degraded'
+        WHERE schedule_id = ? AND status = 'active'
+      `).run(schedule.schedule_id);
+    }
+  }
+
+  degradeIneligibleNodeSchedules(nodeId, asOf) {
+    const schedules = this.decodedSchedules();
+    const nodes = this.listNodes({ asOf });
+    for (const schedule of schedules) {
+      if (
+        schedule.status !== 'active'
+        || !schedule.placements.some(
+          placement => placement.node_id === nodeId
+        )
+        || effectiveScheduleStatus(
+          schedule,
+          nodes,
+          { asOf, schedules }
+        ) !== 'degraded'
+      ) continue;
+      this.db.prepare(`
+        UPDATE node_schedules SET status = 'degraded'
+        WHERE schedule_id = ? AND status = 'active'
+      `).run(schedule.schedule_id);
+    }
   }
 
   applyCausalSyncBundle(p, receivedAt) {
@@ -2318,6 +2570,21 @@ function validateMaterializedPayload(kind, p) {
       assertString(p[field], field, { max: 160, pattern: ID });
     }
     assertString(p.reason, 'reason', { max: 2000 });
+  } else if (kind === 'node.schedule.requested') {
+    assertString(p.requester, 'requester', { max: 160, pattern: ID });
+    assertString(p.schedule_id, 'schedule_id', { max: 160, pattern: ID });
+    assertString(p.request_digest, 'request_digest', {
+      min: 64,
+      max: 64,
+      pattern: /^[a-f0-9]{64}$/
+    });
+    const normalized = normalizeNodeScheduleRequest(p.request, p.requester);
+    if (
+      normalized.schedule_id !== p.schedule_id
+      || normalized.request_digest !== p.request_digest
+    ) {
+      throw new ValidationError('Node schedule request digest is invalid');
+    }
   } else if (kind === 'storage.offered') {
     if (p.offer) {
       assertString(p.owner, 'owner', { max: 160, pattern: ID });

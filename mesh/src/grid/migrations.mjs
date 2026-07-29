@@ -209,6 +209,29 @@ const CAUSAL_SYNC_SQL = `
   ON sync_heads(owner, namespace, record_id);
 `;
 
+const NODE_SCHEDULING_TABLES_SQL = `
+  CREATE TABLE IF NOT EXISTS node_schedules (
+    schedule_id TEXT PRIMARY KEY,
+    requester TEXT NOT NULL,
+    request_digest TEXT NOT NULL,
+    requirements_json TEXT NOT NULL,
+    placements_json TEXT NOT NULL,
+    status TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL
+  ) STRICT;
+
+  CREATE INDEX IF NOT EXISTS node_schedules_requester_idx
+  ON node_schedules(requester, created_at);
+
+  CREATE INDEX IF NOT EXISTS node_schedules_active_idx
+  ON node_schedules(status, expires_at);
+`;
+
+const NODE_SCHEDULING_SQL = `
+  ALTER TABLE nodes ADD COLUMN discovery_json TEXT;
+${NODE_SCHEDULING_TABLES_SQL}`;
+
 const MIGRATIONS = Object.freeze([
   {
     version: 1,
@@ -306,6 +329,17 @@ ALTER proposals ADD lifecycle timestamps, verification digest, and rollback meta
     source: CAUSAL_SYNC_SQL,
     up(db) {
       db.exec(CAUSAL_SYNC_SQL);
+    }
+  },
+  {
+    version: 10,
+    name: 'admitted-node-discovery-and-scheduling',
+    source: NODE_SCHEDULING_SQL,
+    up(db) {
+      addColumns(db, 'nodes', [
+        ['discovery_json', 'TEXT']
+      ]);
+      db.exec(NODE_SCHEDULING_TABLES_SQL);
     }
   }
 ]);

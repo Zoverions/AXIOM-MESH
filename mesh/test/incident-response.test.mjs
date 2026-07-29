@@ -94,7 +94,7 @@ test('incident tabletop emits signed evidence linked to all control drills', asy
   const verification = verifyIncidentTabletopEvidence(evidence, policy);
   assert.equal(verification.valid, true);
   assert.equal(verification.severity, 'SEV-1');
-  assert.equal(verification.linked_controls, 8);
+  assert.equal(verification.linked_controls, 9);
   assert.ok(Object.values(evidence.checks).every(Boolean));
   assert.doesNotMatch(JSON.stringify(evidence), /PRIVATE KEY|operator\.token/i);
 
@@ -172,6 +172,12 @@ function controlSummaries(revision) {
       'axiom-data-key-rotation-drill-evidence.v1',
       'axiom-data-key-rotation-evidence',
       '3',
+      revision
+    ),
+    node_scheduling: control(
+      'axiom-node-scheduling-drill-evidence.v1',
+      'axiom-node-scheduling-drill-evidence',
+      '9',
       revision
     ),
     recovery: control(

@@ -276,7 +276,7 @@ Implemented Grid-owned families include:
 - capsule manifests and revocation;
 - memory objects and edges;
 - governance proposals and policy activation records;
-- admitted nodes and storage offers;
+- admitted nodes, encrypted scheduling reservations, and storage offers;
 - balanced local accounting journals;
 - import/export records;
 - causal updates and conflict-resolution records;
@@ -319,7 +319,31 @@ visible until a resolution names every current head.
 
 This is offline exchange, not peer discovery, transport, federation, or BFT.
 
-### 10.4 Backup and restore
+### 10.4 Admitted-node discovery and scheduling
+
+A v2 node admission extends the signed identity statement with an exact HTTPS
+origin, failure domain, roles, bounded resource ceilings, and assignment
+concurrency. Grid also binds the statement to the authenticated owner, rejects
+an active signing key reused under another node identifier, and bounds active
+admissions per owner. Renewal, expiry, and quarantine determine whether the
+node is eligible.
+
+Authenticated discovery filters the signed set by capability, role, security,
+and minimum remaining lease, then Grid signs the canonical response. A
+policy-controlled schedule intent deterministically chooses only a complete
+placement satisfying per-replica resources, existing lease load, concurrency,
+owner caps, exclusions, and optional failure-domain separation. Requirements
+and placements are encrypted in Grid. Quarantine or loss of the original
+identity/capability/resource contract degrades an existing reservation; lease
+expiry releases it from effective load.
+
+This mechanism allocates evidence-backed reservations inside one Grid. It does
+not contact an endpoint, attest resource truth, authorize remote execution,
+transport a workload, authenticate a result, solve global Sybil resistance, or
+provide federation or consensus. The signed control drill uses missed renewal
+as the conservative partition model and does not claim a live WAN experiment.
+
+### 10.5 Backup and restore
 
 Grid snapshots are encrypted, signed, context-bound, and exact-digest
 verified. Restore requires a stopped Grid, preserves the replaced database,
@@ -433,7 +457,7 @@ for unexpected dependencies. Release verification binds:
   closure policy;
 - signed automated incident-tabletop evidence bound to same-revision
   recovery, backup, restart, resilience, independent-service-unit, transport,
-  credential-rotation, and data-key controls;
+  node-scheduling, credential-rotation, and data-key controls;
 - signed independent-process failure-isolation evidence and protected
   four-container Sandbox-only recovery and blocked-public-egress checks;
 - deprecated credential-history ledger and protected reuse policy;
@@ -489,7 +513,7 @@ Version 0.11 does not claim:
 
 - live public deployment;
 - decentralized or BFT consensus;
-- automatic peer discovery or multi-host scheduling;
+- federated peer discovery, remote dispatch, or multi-host scheduling;
 - arbitrary-code sandbox security;
 - proof that model reasoning or output is true;
 - operational zk verification without a named verifier adapter;

@@ -53,7 +53,7 @@ Incident response is also release-gated. The policy in
 highest matching severity, requires independently assigned command roles,
 allows no authority-expanding action, and defines evidence, communication,
 recovery, closure, and retrospective requirements. Protected CI signs an
-automated tabletop only after eight same-revision operational control artifacts
+automated tabletop only after nine same-revision operational control artifacts
 verify. See the
 [incident-response runbook](../docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md).
 
@@ -76,6 +76,14 @@ leaf, gives durable state only to Grid, and leaves shared credentials with
 their sole consumer. Protected CI proves Sandbox-only failure and recovery
 without restarting Gateway, Grid, or Hypervisor. See the
 [independent-unit runbook](../docs/operations/INDEPENDENT-SERVICE-UNITS.md).
+
+Admitted-node v2 statements bind HTTPS origins, failure domains, roles,
+resource ceilings, and leases to the node's Ed25519 identity. Authenticated
+discovery is signed by Grid, and `node.schedule` creates deterministic,
+encrypted placement reservations subject to capability, security, capacity,
+concurrency, owner, domain, expiry, and quarantine constraints. It does not
+authorize remote execution or claim federation. See the
+[node discovery and scheduling runbook](../docs/operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md).
 
 Verify an export without a running AXIOM-MESH process:
 
@@ -188,6 +196,8 @@ The Gateway exposes:
 - `GET /v1/capsules`
 - `GET /v1/proposals`
 - `GET /v1/nodes`
+- `GET /v1/node-discovery`
+- `GET /v1/node-schedules`
 - `GET /v1/consents`
 - `GET /v1/approvals`
 - `GET /v1/memory`
@@ -241,6 +251,7 @@ Mutation examples:
 - `node.register`
 - `node.renew`
 - `node.quarantine`
+- `node.schedule`
 - `storage.offer`
 - `sync.apply`
 - `backup.create`

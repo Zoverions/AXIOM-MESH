@@ -582,7 +582,43 @@ cutovers, including the boundary after rollback installation but before
 evidence finalization. Protected CI retains the signed,
 secret-free drill evidence for 90 days.
 
-## 12. Coordinated incident tabletop
+## 12. Admitted-node discovery and scheduling
+
+The candidate implements admitted-node discovery and scheduling as an
+authenticated Grid reservation control. A signed v2 admission binds the node
+identity, owner, capability/security/software statement, HTTPS origin, failure
+domain, roles, resource ceilings, and expiry. `GET /v1/node-discovery`
+requires `node:read`, applies bounded filters, excludes expired or quarantined
+nodes, omits raw node keys, and returns a Grid-signed result.
+
+The `node.schedule` intent follows Gateway, Hypervisor, Sandbox, and Grid. It
+creates only a complete deterministic placement within remaining admission
+lease, declared CPU/memory/storage, assignment concurrency, minimum security,
+capabilities, roles, exclusions, optional failure-domain separation, and
+per-owner limits. Grid encrypts both the requirements and placements.
+Quarantine degrades affected schedules immediately; reads also derive
+degradation or expiry from the current admission contract.
+
+Exercise the signed control in an explicitly empty disposable workspace:
+
+```bash
+npm run node-scheduling:drill -- /tmp/axiom-node-scheduling-drill \
+  > /tmp/axiom-node-scheduling-drill-evidence.json
+```
+
+The Grid-signed evidence covers copied-key alias rejection, distinct
+owner/domain placement, capacity exhaustion, quarantine degradation,
+partition-by-missed-renewal expiry, schedule expiry, and restart persistence.
+Protected CI retains it for 90 days and includes it in the same-revision
+incident composition. See
+[`docs/operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md`](../docs/operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md).
+
+This is an auditable reservation, not a remote-execution grant. It does not
+contact node endpoints, measure their resources, transport workloads,
+authenticate results, solve global Sybil resistance, or provide federation,
+replicated Grid, or consensus.
+
+## 13. Coordinated incident tabletop
 
 The machine-readable
 [`config/incident-response.json`](config/incident-response.json) policy defines
@@ -592,8 +628,9 @@ cadence, and mandatory closure conditions. Unknown signals fail
 classification instead of defaulting to low severity.
 
 After producing recovery, backup-lifecycle, SLO/restart, resilience,
-service-unit, transport, credential-rotation, and data-key-rotation evidence
-for one commit, compose the eight same-revision records into the automated
+service-unit, node-scheduling, transport, credential-rotation, and
+data-key-rotation evidence for one commit, compose the nine same-revision
+records into the automated
 incident tabletop:
 
 ```bash
@@ -605,6 +642,7 @@ npm run incident-tabletop:drill -- \
   /tmp/axiom-slo-baseline-evidence.json \
   /tmp/axiom-resilience-drill-evidence.json \
   /tmp/axiom-service-unit-drill-evidence.json \
+  /tmp/axiom-node-scheduling-drill-evidence.json \
   /tmp/axiom-transport-drill-evidence.json \
   /tmp/axiom-credential-rotation-evidence.json \
   /tmp/axiom-data-key-rotation-evidence.json \
@@ -627,7 +665,8 @@ real four-process stack, digest-pinned image build, composed container
 readiness, disposable-host recovery drill, controlled SLO/restart baseline,
 request-pressure and dependency-loss drill, coordinated credential-rotation
 drill, mutually authenticated transport lifecycle drill, data-key rotation
-drill, signed deny-egress probe, host-side telemetry relay drill, and
+drill, admitted-node discovery and scheduling drill, signed deny-egress probe,
+host-side telemetry relay drill, and
 automated incident tabletop are protected CI gates. This is
-not evidence of a live deployment, federated discovery, BFT consensus, audited
-arbitrary-code isolation, or external settlement.
+not evidence of a live deployment, remote node execution, federated discovery,
+BFT consensus, audited arbitrary-code isolation, or external settlement.

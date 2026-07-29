@@ -98,10 +98,16 @@ export async function createGridService(config = meshConfig()) {
     const backups = Array.isArray(input.events)
       ? input.events.filter(event => event?.kind === 'backup.requested')
       : [];
+    const schedules = Array.isArray(input.events)
+      ? input.events.filter(
+        event => event?.kind === 'node.schedule.requested'
+      )
+      : [];
     for (const event of exports) store.preflightExportRequest(actor, event);
     const appended = store.appendEvents({ traceId, actor, events: input.events });
     const completedExports = [];
     const completedBackups = [];
+    const completedSchedules = [];
     for (const event of exports) {
       completedExports.push(await store.createExport(event.payload.export_id, traceId));
     }
@@ -115,9 +121,20 @@ export async function createGridService(config = meshConfig()) {
         traceId
       }));
     }
+    for (const event of schedules) {
+      completedSchedules.push(store.getNodeSchedule(
+        event.payload.schedule_id,
+        actor
+      ));
+    }
     return {
       httpStatus: 201,
-      body: { events: appended, exports: completedExports, backups: completedBackups }
+      body: {
+        events: appended,
+        exports: completedExports,
+        backups: completedBackups,
+        schedules: completedSchedules
+      }
     };
   });
 
@@ -134,6 +151,32 @@ export async function createGridService(config = meshConfig()) {
   router.add('GET', '/internal/v1/capsules', async () => ({ capsules: store.listCapsules() }));
   router.add('GET', '/internal/v1/proposals', async () => ({ proposals: store.listProposals() }));
   router.add('GET', '/internal/v1/nodes', async () => ({ nodes: store.listNodes() }));
+  router.add('GET', '/internal/v1/node-discovery', async ({ url }) => {
+    const discovery = store.discoverNodes({
+      required_capabilities: url.searchParams.getAll('capability'),
+      required_roles: url.searchParams.getAll('role'),
+      minimum_security_level: integerQuery(
+        url.searchParams.get('minimum_security_level'),
+        0
+      ),
+      minimum_lease_seconds: integerQuery(
+        url.searchParams.get('minimum_lease_seconds'),
+        0
+      ),
+      limit: integerQuery(url.searchParams.get('limit'), 100)
+    });
+    return {
+      ...discovery,
+      attestation: identity.signObject(discovery)
+    };
+  });
+  router.add(
+    'GET',
+    '/internal/v1/node-schedules/:principal',
+    async ({ params }) => ({
+      schedules: store.listNodeSchedules(params.principal)
+    })
+  );
   router.add('GET', '/internal/v1/consents/:principal', async ({ params }) => ({
     consents: store.listConsents(params.principal)
   }));
@@ -267,4 +310,13 @@ export async function createGridService(config = meshConfig()) {
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   await runServiceProcess(createGridService);
+}
+
+function integerQuery(value, fallback) {
+  if (value === null || value === '') return fallback;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed)) {
+    throw new ValidationError('Node discovery integer query is invalid');
+  }
+  return parsed;
 }

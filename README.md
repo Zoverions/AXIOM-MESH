@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=229023a02fd2569ca23dabb86a9f34a438a36685aa096ff2aed0fac8054f33ca -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=4d143d985aa25e0258bfe36026667ca6dcf7f3403ae0f5b99efbc2e2b46e5f20 -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -139,6 +139,19 @@ Protected CI separately repeats the failure against
 [`mesh/compose.units.yml`](mesh/compose.units.yml) and proves its internal
 network cannot reach a public TCP target. See the
 [independent-service runbook](docs/operations/INDEPENDENT-SERVICE-UNITS.md).
+
+Exercise signed admitted-node discovery and deterministic scheduling:
+
+```bash
+npm run node-scheduling:drill -- /tmp/axiom-node-scheduling-drill
+```
+
+The drill admits signed v2 nodes, rejects a copied signing identity and
+resource exhaustion, selects replicas across owners and failure domains,
+degrades a reservation after quarantine, expires a missed-renewal node, and
+proves restart persistence. This is authenticated placement reservation, not
+remote workload execution or multi-host federation. See the
+[discovery and scheduling runbook](docs/operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md).
 
 Exercise the host-side external telemetry and alert path on Linux:
 
@@ -323,7 +336,10 @@ supported entrypoints.
 - Owner-bound admitted nodes can exchange independently verifiable signed
   causal-update bundles. Version vectors preserve concurrent heads, replays and
   node-counter equivocation fail closed, and conflict resolution must name
-  every current head; no peer discovery, transport, or federation is claimed.
+  every current head. Separately, signed v2 node metadata supports
+  authenticated discovery and deterministic capacity-aware placement leases
+  with owner/domain constraints, expiry, and quarantine degradation. No remote
+  execution, automatic transport, or federation is claimed.
 - Local governance now drives live but authority-reducing policy overlays
   through human voting, finalization, timelock, independently approved
   activation, verification, rollback, expiring emergency review, and appeal.
@@ -347,9 +363,9 @@ supported entrypoints.
 - Deterministic incident severity, independent command roles,
   authority-reducing containment, evidence-first chronology, bounded
   communications, and closure conditions are machine-readable. Protected CI
-  signs an automated tabletop bound to eight same-revision control artifacts,
-  including request-pressure, dependency-loss, and transport-lifecycle
-  evidence;
+  signs an automated tabletop bound to nine same-revision control artifacts,
+  including request-pressure, dependency-loss, transport-lifecycle, and
+  node-scheduling evidence;
   a facilitated named-roster pilot exercise remains required.
 
 Report vulnerabilities using [`.github/SECURITY.md`](.github/SECURITY.md).

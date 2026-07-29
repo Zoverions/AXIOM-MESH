@@ -142,6 +142,12 @@
       "requires_independent_approval": true,
       "tool": "builtin.validate-mutation"
     },
+    "node.schedule": {
+      "decision": "allow",
+      "risk": "medium",
+      "required_scopes": ["node:schedule"],
+      "tool": "builtin.validate-mutation"
+    },
     "storage.offer": {
       "decision": "allow",
       "risk": "medium",

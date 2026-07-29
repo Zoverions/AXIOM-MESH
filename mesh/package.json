@@ -26,6 +26,7 @@
     "telemetry-relay:drill": "node src/telemetry-relay-drill.mjs",
     "transport:drill": "node src/transport-drill.mjs",
     "network-boundary:verify": "node src/network-boundary.mjs",
+    "node-scheduling:drill": "node src/node-scheduling-drill.mjs",
     "recovery:drill": "node src/recovery-drill.mjs",
     "slo:drill": "node src/slo-drill.mjs",
     "start:production": "node src/supervisor.mjs",

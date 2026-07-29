@@ -56,7 +56,7 @@
       "id": "nodes.registry",
       "family": "mesh",
       "status": "implemented",
-      "summary": "Local Ed25519 node admission, owner and key binding, capability renewal, expiry, and quarantine are enforced; federated discovery remains separate.",
+      "summary": "Local Ed25519 node admission binds authenticated owners, unique active signing keys, capabilities, software digest, expiry, quarantine, and optional v2 discovery metadata; federation remains separate.",
       "evidence": ["mesh/test/kernel.test.mjs"]
     },
     {
@@ -135,8 +135,14 @@
     {
       "id": "nodes.discovery-scheduling",
       "family": "mesh",
-      "status": "specified",
-      "summary": "Federated discovery, capability-aware scheduling, resource balancing, adaptive roles, renewal, and quarantine are specified."
+      "status": "implemented",
+      "summary": "Admitted-node v2 statements bind signed HTTPS origins, failure domains, roles, resource ceilings, and leases; authenticated discovery and policy-controlled deterministic scheduling enforce capability, security, capacity, concurrency, owner, domain, expiry, and quarantine constraints without claiming remote execution or federation.",
+      "evidence": [
+        "mesh/test/node-scheduling.test.mjs",
+        "mesh/test/kernel.test.mjs",
+        "mesh/src/node-scheduling-drill.mjs",
+        ".github/workflows/kernel.yml"
+      ]
     },
     {
       "id": "storage.backup-restore",
