@@ -154,29 +154,39 @@ test('production configuration rejects generated credentials and remote plaintex
     environment: 'production',
     autoBootstrap: false,
     requireDenyEgress: true,
-    gatewaySocket: resolve('/run/axiom-mesh/gateway.sock')
+    gatewaySocket: resolve('/run/axiom-mesh/gateway.sock'),
+    transportDir: resolve('/run/secrets/transport')
   });
   assert.equal(enforced.requireDenyEgress, true);
+  assert.equal(enforced.transport.enabled, true);
   assert.match(enforced.gatewaySocket, /gateway\.sock$/);
   assert.throws(() => meshConfig({
     environment: 'production',
     autoBootstrap: false,
+    transportDir: resolve('/run/secrets/transport'),
     gatewaySocket: 'relative/gateway.sock'
   }), /absolute path/);
   assert.throws(() => meshConfig({
     environment: 'production',
-    autoBootstrap: true
+    autoBootstrap: true,
+    transportDir: resolve('/run/secrets/transport')
   }), /must be false/);
   assert.throws(() => meshConfig({
     environment: 'production',
     autoBootstrap: false,
+    transportDir: resolve('/run/secrets/transport'),
     hypervisorUrl: 'http://mesh.internal:8081'
   }), /must use HTTPS/);
   assert.throws(() => meshConfig({
     environment: 'production',
     autoBootstrap: false,
-    internalHost: '0.0.0.0'
-  }), /must bind to loopback/);
+    transportDir: 'relative/transport'
+  }), /absolute path/);
+  assert.throws(() => meshConfig({
+    environment: 'production',
+    autoBootstrap: false,
+    internalTlsEnabled: false
+  }), /mutually authenticated TLS/);
 });
 
 test('capability tokens are signed, audience-bound, expiring, and replay guardable', async t => {

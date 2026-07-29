@@ -98,6 +98,20 @@ Neither local rotation workflow substitutes for external revocation,
 secret-manager versioning, or destruction evidence at prior custodians and
 deployments.
 
+## Internal transport identity
+
+Production internal calls require mutually authenticated TLS 1.3 and retain
+the signed, timestamped, nonce-protected request envelope above TLS. Distinct
+Ed25519 leaves carry DNS and SPIFFE-style URI identities. Both CA validity and
+the exact active certificate fingerprint are required, so a retired but
+unexpired leaf fails closed.
+
+Leaf rotation is an offline atomic generation swap with an exact rollback
+directory. Suspected CA compromise is a SEV-1 identity incident and requires a
+new trust root, every leaf replaced, evidence preserved, and independent
+review. See the
+[transport lifecycle runbook](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md).
+
 ## Reporting a vulnerability
 
 Do not open a public issue for a suspected vulnerability.

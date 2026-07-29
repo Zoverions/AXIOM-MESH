@@ -1,5 +1,11 @@
 # AXIOM-MESH Configuration Reference
 
+> **Historical specification:** this page describes the deprecated
+> multi-language line and is not the 0.11 clean-room runtime configuration.
+> Use [`mesh/PRODUCTION.md`](../mesh/PRODUCTION.md) and the
+> [transport runbook](operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md) for the
+> supported production environment.
+
 This document outlines the environment variables required to configure each service within the AXIOM-MESH architecture.
 
 ## Global Configurations

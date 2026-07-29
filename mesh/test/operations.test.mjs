@@ -132,7 +132,8 @@ test('production provisioning is explicit, restrictive, idempotent, and file-bac
     const productionConfig = meshConfig({
       environment: 'production',
       autoBootstrap: false,
-      dataDir
+      dataDir,
+      transportDir: first.transport.transport_dir
     });
     const principals = await loadApiPrincipals(productionConfig);
     assert.equal(principals.size, 2);
@@ -217,6 +218,12 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
   });
   assert.equal(result.schema, 'axiom-deployment-policy.v1');
   assert.match(result.base_digest, /^sha256:[a-f0-9]{64}$/);
+  assert.deepEqual(result.transport, {
+    protocol: 'TLSv1.3',
+    mutually_authenticated: true,
+    exact_active_leaf_pinning: true,
+    offline_atomic_rotation: true
+  });
   assert.throws(() => verifyProductionDeployment({
     dockerfile: dockerfile.replace(/@sha256:[a-f0-9]{64}/, ''),
     dockerignore,
@@ -245,6 +252,23 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
     workflow,
     repositoryIgnore
   }), /read_only/);
+  assert.throws(() => verifyProductionDeployment({
+    dockerfile,
+    dockerignore,
+    compose: compose.replace(
+      'AXIOM_INTERNAL_TLS: "true"',
+      'AXIOM_INTERNAL_TLS: "false"'
+    ),
+    productionDocs,
+    packageJson,
+    backupRetentionPolicy,
+    credentialRevocations,
+    incidentResponsePolicy,
+    telemetryRoutingPolicy,
+    resilienceDrillPolicy,
+    workflow,
+    repositoryIgnore
+  }), /AXIOM_INTERNAL_TLS/);
   assert.throws(() => verifyProductionDeployment({
     dockerfile,
     dockerignore,
@@ -451,15 +475,17 @@ test('production supervisor boots the real four-process stack from provisioned s
       AXIOM_DATA_KEY_FILE: provisioned.data_key_file,
       AXIOM_API_TOKENS: '',
       AXIOM_API_TOKENS_FILE: provisioned.api_tokens_file,
+      AXIOM_INTERNAL_TLS: 'true',
+      AXIOM_TRANSPORT_DIR: provisioned.transport.transport_dir,
       AXIOM_GATEWAY_HOST: '127.0.0.1',
       AXIOM_INTERNAL_HOST: '127.0.0.1',
       AXIOM_GATEWAY_PORT: String(basePort),
       AXIOM_HYPERVISOR_PORT: String(basePort + 1),
       AXIOM_SANDBOX_PORT: String(basePort + 2),
       AXIOM_GRID_PORT: String(basePort + 3),
-      AXIOM_HYPERVISOR_URL: `http://127.0.0.1:${basePort + 1}`,
-      AXIOM_SANDBOX_URL: `http://127.0.0.1:${basePort + 2}`,
-      AXIOM_GRID_URL: `http://127.0.0.1:${basePort + 3}`
+      AXIOM_HYPERVISOR_URL: `https://127.0.0.1:${basePort + 1}`,
+      AXIOM_SANDBOX_URL: `https://127.0.0.1:${basePort + 2}`,
+      AXIOM_GRID_URL: `https://127.0.0.1:${basePort + 3}`
     }
   });
   let output = '';

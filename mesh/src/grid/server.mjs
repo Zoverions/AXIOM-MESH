@@ -15,6 +15,10 @@ import {
   recordPendingRecovery,
   releaseGridRuntimeLock
 } from './backup.mjs';
+import {
+  loadTransportRuntime,
+  transportServerOptions
+} from '../lib/transport-credentials.mjs';
 
 export async function createGridService(config = meshConfig()) {
   await mkdir(config.dataDir, { recursive: true, mode: 0o700 });
@@ -24,6 +28,12 @@ export async function createGridService(config = meshConfig()) {
   let store;
   try {
     identity = await ensureMeshIdentity(config.dataDir, 'grid', { create: config.autoBootstrap });
+    identity.transport = config.transport.enabled
+      ? await loadTransportRuntime({
+          transportDir: config.transport.directory,
+          service: 'grid'
+        })
+      : null;
     protector = await loadDataProtector(config);
     store = new GridStore({
       path: join(config.dataDir, 'grid.sqlite'),
@@ -219,12 +229,20 @@ export async function createGridService(config = meshConfig()) {
     router,
     maxBodyBytes: config.maxBodyBytes,
     telemetry,
+    tls: identity.transport
+      ? transportServerOptions(identity.transport)
+      : undefined,
+    transportPeers: identity.transport?.peers,
+    allowedTransportPeers: identity.transport
+      ? ['gateway', 'hypervisor', 'supervisor']
+      : undefined,
     authenticate: ({ req, body }) => verifySignedRequest({
       req,
       body,
       audience: 'grid',
       dataDir: config.dataDir,
       allowedCallers: ['gateway', 'hypervisor'],
+      transportPeers: identity.transport?.peers,
       replayGuard,
       clockSkewSeconds: config.clockSkewSeconds
     })

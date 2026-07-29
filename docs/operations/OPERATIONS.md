@@ -53,6 +53,14 @@
 - Follow
   [`REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md`](REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md).
 
+### 2.7 Mutually Authenticated Service Transport
+- Require TLS 1.3, CA validation, exact active-leaf pinning, URI identity, and
+  the existing signed/replay-protected request envelope.
+- Rotate leaves only while the complete runtime is stopped and preserve the
+  immediate rollback generation under secret custody.
+- Follow
+  [`MUTUALLY-AUTHENTICATED-TRANSPORT.md`](MUTUALLY-AUTHENTICATED-TRANSPORT.md).
+
 ---
 
 ## 3) Standard Operational Cadence
@@ -94,6 +102,7 @@ Detailed scenario playbooks live in:
 - `docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md`
 - `docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md`
 - `docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md`
+- `docs/operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md`
 
 ---
 

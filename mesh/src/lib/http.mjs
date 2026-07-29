@@ -1,7 +1,9 @@
 import http from 'node:http';
+import https from 'node:https';
 import { once } from 'node:events';
 import { AxiomError, ValidationError, newId } from './canonical.mjs';
 import { createStructuredLogger } from './logger.mjs';
+import { identifyActiveTransportPeer } from './transport-credentials.mjs';
 
 const SECURITY_HEADERS = Object.freeze({
   'cache-control': 'no-store',
@@ -127,16 +129,34 @@ export function createServiceServer({
   context = {},
   authenticate,
   onError,
-  telemetry
+  telemetry,
+  tls,
+  transportPeers,
+  allowedTransportPeers
 }) {
   const logger = createStructuredLogger(name);
-  const server = http.createServer(async (req, res) => {
+  const handleRequest = async (req, res) => {
     const started = performance.now();
     const traceId = validTraceId(req.headers['x-trace-id']) ? req.headers['x-trace-id'] : newId('trace');
     let requestError;
     telemetry?.beginRequest();
     res.setHeader('x-trace-id', traceId);
     try {
+      if (tls) {
+        try {
+          identifyActiveTransportPeer(
+            req.socket,
+            transportPeers,
+            allowedTransportPeers
+          );
+        } catch {
+          throw new AxiomError(
+            'invalid_transport_peer',
+            'An active allowed transport peer is required',
+            401
+          );
+        }
+      }
       const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
       const route = router.match(req.method, url.pathname);
       if (!route) throw new AxiomError('not_found', 'Route not found', 404);
@@ -210,7 +230,10 @@ export function createServiceServer({
         });
       }
     }
-  });
+  };
+  const server = tls
+    ? https.createServer(tls, handleRequest)
+    : http.createServer(handleRequest);
   server.requestTimeout = 15_000;
   server.headersTimeout = 10_000;
   server.keepAliveTimeout = 5_000;

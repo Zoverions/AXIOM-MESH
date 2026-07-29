@@ -121,7 +121,9 @@ authenticated transport without claiming distributed consensus.
 
 Milestones:
 
-- mTLS service identity and certificate lifecycle;
+- mutually authenticated TLS 1.3 service identity and offline certificate
+  lifecycle are implemented for the single-host candidate; repeat with
+  per-unit mounts, external CA custody, and orchestrator rollout;
 - explicit network policy and per-service ingress/egress allowlists;
 - independent deployment units and failure isolation;
 - remote dependency readiness and bounded retry/idempotency contracts;

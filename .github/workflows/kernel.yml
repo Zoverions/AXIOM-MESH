@@ -126,6 +126,19 @@ jobs:
           path: ${{ runner.temp }}/axiom-resilience-drill-evidence.json
           if-no-files-found: error
           retention-days: 90
+      - name: Run mutually authenticated transport lifecycle drill
+        working-directory: mesh
+        run: |
+          node src/transport-drill.mjs \
+            "$RUNNER_TEMP/axiom-transport-drill" \
+            > "$RUNNER_TEMP/axiom-transport-drill-evidence.json"
+      - name: Upload signed transport evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: axiom-transport-drill-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/axiom-transport-drill-evidence.json
+          if-no-files-found: error
+          retention-days: 90
       - name: Run host-side telemetry and alert relay drill
         working-directory: mesh
         run: |
@@ -174,6 +187,7 @@ jobs:
             "$RUNNER_TEMP/axiom-backup-lifecycle-evidence.json" \
             "$RUNNER_TEMP/axiom-slo-baseline-evidence.json" \
             "$RUNNER_TEMP/axiom-resilience-drill-evidence.json" \
+            "$RUNNER_TEMP/axiom-transport-drill-evidence.json" \
             "$RUNNER_TEMP/axiom-credential-rotation-evidence.json" \
             "$RUNNER_TEMP/axiom-data-key-rotation-evidence.json" \
             > "$RUNNER_TEMP/axiom-incident-tabletop-evidence.json"
@@ -210,11 +224,14 @@ jobs:
           sudo chown 10001:10001 \
             "$RUNNER_TEMP/axiom-secrets/data-protection.key" \
             "$RUNNER_TEMP/axiom-secrets/api-tokens.json"
+          sudo chown -R 10001:10001 \
+            "$RUNNER_TEMP/axiom-secrets/transport"
           {
             echo "AXIOM_DATA_DIR_HOST=$RUNNER_TEMP/axiom-data"
             echo "AXIOM_GATEWAY_SOCKET_DIR_HOST=$RUNNER_TEMP/axiom-ingress"
             echo "AXIOM_DATA_KEY_FILE_HOST=$RUNNER_TEMP/axiom-secrets/data-protection.key"
             echo "AXIOM_API_TOKENS_FILE_HOST=$RUNNER_TEMP/axiom-secrets/api-tokens.json"
+            echo "AXIOM_TRANSPORT_DIR_HOST=$RUNNER_TEMP/axiom-secrets/transport"
           } >> "$GITHUB_ENV"
       - name: Build digest-pinned image
         working-directory: mesh

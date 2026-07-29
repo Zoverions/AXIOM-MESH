@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=5a9aedefab571b835eb6496c27beaa9c778cbd18e77f12fcc3b2fc7a471c8fb0 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=2999698cb0c5a01ee29d0c756c3880eeb286d43fa78723ef5d23ddaafba1bebd -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -111,6 +111,19 @@ suspends and kills the real Sandbox process, verifies dependency-aware
 degradation and supervisor failure, restarts the full stack, and emits signed,
 secret-free evidence. It covers request-path pressure and dependency loss, not
 cgroup OOM/CPU enforcement or pilot-platform behavior.
+
+Exercise mutually authenticated transport rotation and rollback:
+
+```bash
+npm run transport:drill -- /tmp/axiom-transport-drill
+```
+
+The real production supervisor uses TLS 1.3 on every internal edge, validates
+CA signatures, DNS and SPIFFE-style URI identities, and exact active leaf
+fingerprints, then retains the signed one-use request envelope above TLS. The
+drill rotates all leaves offline, rejects a retired CA-valid leaf, proves the
+new generation, restores the prior generation exactly, and signs secret-free
+evidence. External CA custody and multi-host rollout remain pilot work.
 
 Exercise the host-side external telemetry and alert path on Linux:
 
@@ -308,8 +321,9 @@ supported entrypoints.
 - Deterministic incident severity, independent command roles,
   authority-reducing containment, evidence-first chronology, bounded
   communications, and closure conditions are machine-readable. Protected CI
-  signs an automated tabletop bound to six same-revision control artifacts,
-  including request-pressure and dependency-loss evidence;
+  signs an automated tabletop bound to seven same-revision control artifacts,
+  including request-pressure, dependency-loss, and transport-lifecycle
+  evidence;
   a facilitated named-roster pilot exercise remains required.
 
 Report vulnerabilities using [`.github/SECURITY.md`](.github/SECURITY.md).

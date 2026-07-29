@@ -21,12 +21,13 @@ container policy are implemented.
 The image build and composed container drill pass in
 [GitHub run 30375390450](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30375390450).
 The protected workflow also produces signed disposable-host recovery,
-SLO/restart, request-pressure and dependency-loss, coordinated service/API
-credential-rotation, data-protection-key rotation, and automated
+SLO/restart, request-pressure and dependency-loss, mutually authenticated
+transport rotation, coordinated service/API credential-rotation,
+data-protection-key rotation, and automated
 incident-tabletop evidence. The
 tabletop verifies deterministic severity, role independence,
 authority-reducing containment, evidence-first chronology, communications,
-closure, and six linked control artifacts. Its credential-history audit also
+closure, and seven linked control artifacts. Its credential-history audit also
 reconstructs a 32-entry keyed ledger from the locked deprecated graph and
 proves that no candidate appears in the supported tip.
 Dedicated pilot capacity and availability, pilot-owned telemetry receivers, scheduled
@@ -225,6 +226,28 @@ rotation. It does not close external historic-credential revocation. The
 separate data-key workflow closes candidate-host re-encryption mechanics but
 not pilot-owned custody or destruction evidence.
 
+## Mutually authenticated internal transport
+
+Every production internal edge requires TLS 1.3. Provisioning creates an
+Ed25519 internal CA and distinct Gateway, Hypervisor, Sandbox, Grid, and
+supervisor-probe leaves with DNS and SPIFFE-style URI identities. Clients
+validate the expected server identity and exact active SHA-256 certificate
+fingerprint. Servers validate the CA chain and bind the TLS peer to the caller
+named by the existing signed, timestamped, nonce-protected request. A CA-valid
+certificate for another service is insufficient.
+
+The active fingerprint registry rejects retired leaves without an OCSP
+dependency. Offline rotation validates a complete staged leaf generation
+before an atomic directory swap, retains the prior generation, and supports
+exact rollback. Protected CI starts the real supervisor before and after
+rotation, rejects the retired Gateway leaf, accepts the active leaf, executes
+intents, rolls back, restarts, and signs secret-free evidence.
+
+This closes the single-host transport and leaf lifecycle. Pilot promotion
+still requires external CA custody, per-unit secret mounts, orchestrator
+rollout and CA-compromise recovery, clock/expiry alert measurement, and
+independent cryptographic and deployment review.
+
 ## Observability requirements
 
 The runtime must expose:
@@ -322,8 +345,8 @@ six independently assigned roles, bounded activation/containment/update
 targets, authority-reducing actions, and mandatory closure conditions.
 Protected CI runs an automated incident tabletop that cryptographically
 verifies and binds the recovery, backup-lifecycle, SLO/restart,
-request-pressure/dependency-loss, credential-rotation, and data-key-rotation
-evidence from the same commit.
+request-pressure/dependency-loss, transport-lifecycle, credential-rotation,
+and data-key-rotation evidence from the same commit.
 Missing roles or actions, severity drift, expanding authority, late
 containment, broken communications cadence, stale evidence, premature
 closure, or signature tampering fails the gate. See

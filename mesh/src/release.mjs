@@ -364,6 +364,8 @@ export function verifyProductionDeployment({
     'USER 10001:10001',
     'HEALTHCHECK ',
     'AXIOM_REQUIRE_DENY_EGRESS=true',
+    'AXIOM_INTERNAL_TLS=true',
+    'AXIOM_TRANSPORT_DIR=/run/secrets/transport',
     'ENTRYPOINT ["node", "src/supervisor.mjs"]'
   ]) {
     if (!dockerfile.includes(required)) {
@@ -385,6 +387,7 @@ export function verifyProductionDeployment({
     'operator.token',
     'telemetry-relay.token',
     'telemetry-destinations.json',
+    '*.key.pem',
     '*.token',
     'telemetry-relay-state/'
   ]) {
@@ -405,11 +408,19 @@ export function verifyProductionDeployment({
     'network_mode: "none"',
     'AXIOM_DATA_KEY_FILE: /run/secrets/data-protection.key',
     'AXIOM_API_TOKENS_FILE: /run/secrets/api-tokens.json',
+    'AXIOM_INTERNAL_TLS: "true"',
+    'AXIOM_TRANSPORT_DIR: /run/secrets/transport',
     'AXIOM_REQUIRE_DENY_EGRESS: "true"',
     'AXIOM_GATEWAY_HOST: 127.0.0.1',
     'AXIOM_GATEWAY_SOCKET: /run/axiom-mesh/gateway.sock',
     'source: ${AXIOM_GATEWAY_SOCKET_DIR_HOST:?set AXIOM_GATEWAY_SOCKET_DIR_HOST}',
     'target: /run/axiom-mesh',
+    'source: ${AXIOM_TRANSPORT_DIR_HOST:?set AXIOM_TRANSPORT_DIR_HOST}/ca-cert.pem',
+    'target: /run/secrets/transport/ca-cert.pem',
+    'source: ${AXIOM_TRANSPORT_DIR_HOST:?set AXIOM_TRANSPORT_DIR_HOST}/manifest.json',
+    'target: /run/secrets/transport/manifest.json',
+    'source: ${AXIOM_TRANSPORT_DIR_HOST:?set AXIOM_TRANSPORT_DIR_HOST}/services',
+    'target: /run/secrets/transport/services',
     'healthcheck:',
   ]) {
     if (!compose.includes(required)) {
@@ -418,10 +429,13 @@ export function verifyProductionDeployment({
   }
   if (
     /privileged:\s*true/.test(compose)
+    || /^\s{4}read_only:\s*false\s*$/m.test(compose)
     || /network_mode:\s*host/.test(compose)
     || /pid:\s*host/.test(compose)
   ) {
-    throw new ValidationError('Production compose policy contains a forbidden host-privilege setting');
+    throw new ValidationError(
+      'Production compose policy contains a forbidden host-privilege or read_only setting'
+    );
   }
   if (/^\s*ports:\s*$/m.test(compose) || /^\s*networks:\s*$/m.test(compose)) {
     throw new ValidationError(
@@ -442,7 +456,8 @@ export function verifyProductionDeployment({
     'credential-history audit',
     'automated incident tabletop',
     'host-side telemetry relay',
-    'request-pressure and dependency-loss'
+    'request-pressure and dependency-loss',
+    'mutually authenticated TLS 1.3'
   ]) {
     if (!productionDocs.includes(boundary)) {
       throw new ValidationError(`Production operator documentation is missing boundary: ${boundary}`);
@@ -470,6 +485,7 @@ export function verifyProductionDeployment({
     'node src/data-key-rotation-drill.mjs',
     'node src/incident-tabletop-drill.mjs',
     'node src/resilience-drill.mjs',
+    'node src/transport-drill.mjs',
     'node src/telemetry-relay-drill.mjs',
     'actions/upload-artifact@v7',
     'axiom-recovery-drill-evidence-${{ github.sha }}',
@@ -479,6 +495,7 @@ export function verifyProductionDeployment({
     'axiom-data-key-rotation-evidence-${{ github.sha }}',
     'axiom-incident-tabletop-evidence-${{ github.sha }}',
     'axiom-resilience-drill-evidence-${{ github.sha }}',
+    'axiom-transport-drill-evidence-${{ github.sha }}',
     'axiom-telemetry-relay-evidence-${{ github.sha }}',
     `docker build --pull=false --tag axiom-mesh-kernel:${packageJson.version} .`,
     'docker compose -f compose.production.yml up --detach --no-build',
@@ -500,6 +517,12 @@ export function verifyProductionDeployment({
     incident_response_policy_sha256: digestObject(incidentResponsePolicy),
     telemetry_routing_policy_sha256: digestObject(telemetryRoutingPolicy),
     resilience_drill_policy_sha256: digestObject(resilienceDrillPolicy),
+    transport: {
+      protocol: 'TLSv1.3',
+      mutually_authenticated: true,
+      exact_active_leaf_pinning: true,
+      offline_atomic_rotation: true
+    },
     deny_egress: {
       compose_network_mode_none: true,
       unix_domain_ingress: true,

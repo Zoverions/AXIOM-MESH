@@ -33,6 +33,12 @@ export function meshConfig(overrides = {}) {
   const environment = overrides.environment ?? process.env.NODE_ENV ?? 'development';
   const dataDir = resolve(overrides.dataDir ?? process.env.AXIOM_DATA_DIR ?? join(MESH_ROOT, '.data'));
   const autoBootstrap = overrides.autoBootstrap ?? envBoolean('AXIOM_AUTO_BOOTSTRAP', environment !== 'production');
+  const internalTlsEnabled = overrides.internalTlsEnabled
+    ?? envBoolean('AXIOM_INTERNAL_TLS', environment === 'production');
+  const transportDir = optionalAbsolutePath(
+    'AXIOM_TRANSPORT_DIR',
+    overrides.transportDir ?? process.env.AXIOM_TRANSPORT_DIR
+  );
   const requireDenyEgress = overrides.requireDenyEgress
     ?? envBoolean('AXIOM_REQUIRE_DENY_EGRESS', false);
   const gatewaySocket = optionalAbsolutePath(
@@ -46,6 +52,10 @@ export function meshConfig(overrides = {}) {
     autoBootstrap,
     requireDenyEgress,
     gatewaySocket,
+    transport: {
+      enabled: internalTlsEnabled,
+      directory: transportDir
+    },
     hosts: {
       gateway: overrides.gatewayHost ?? process.env.AXIOM_GATEWAY_HOST ?? '127.0.0.1',
       internal: internalHost
@@ -66,9 +76,18 @@ export function meshConfig(overrides = {}) {
       grid: overrides.gridPort ?? envInteger('AXIOM_GRID_PORT', 8083)
     },
     urls: {
-      hypervisor: overrides.hypervisorUrl ?? serviceUrl('AXIOM_HYPERVISOR_URL', 'http://127.0.0.1:8081'),
-      sandbox: overrides.sandboxUrl ?? serviceUrl('AXIOM_SANDBOX_URL', 'http://127.0.0.1:8082'),
-      grid: overrides.gridUrl ?? serviceUrl('AXIOM_GRID_URL', 'http://127.0.0.1:8083')
+      hypervisor: overrides.hypervisorUrl ?? serviceUrl(
+        'AXIOM_HYPERVISOR_URL',
+        `${internalTlsEnabled ? 'https' : 'http'}://127.0.0.1:8081`
+      ),
+      sandbox: overrides.sandboxUrl ?? serviceUrl(
+        'AXIOM_SANDBOX_URL',
+        `${internalTlsEnabled ? 'https' : 'http'}://127.0.0.1:8082`
+      ),
+      grid: overrides.gridUrl ?? serviceUrl(
+        'AXIOM_GRID_URL',
+        `${internalTlsEnabled ? 'https' : 'http'}://127.0.0.1:8083`
+      )
     },
     policyPath: resolve(overrides.policyPath ?? process.env.AXIOM_POLICY_PATH ?? join(MESH_ROOT, 'config', 'policy.json')),
     policyPaths: normalizePolicyPaths(overrides),
@@ -80,16 +99,21 @@ export function meshConfig(overrides = {}) {
   if (environment === 'production' && autoBootstrap) {
     throw new ValidationError('AXIOM_AUTO_BOOTSTRAP must be false in production');
   }
-  if (environment === 'production' && !isLoopbackHost(internalHost)) {
+  if (environment === 'production' && !internalTlsEnabled) {
     throw new ValidationError(
-      'Production internal services must bind to loopback until the audited mTLS transport adapter is enabled'
+      'Production internal services require mutually authenticated TLS'
+    );
+  }
+  if (internalTlsEnabled && !transportDir) {
+    throw new ValidationError(
+      'AXIOM_TRANSPORT_DIR is required when internal TLS is enabled'
     );
   }
   if (environment === 'production') {
     for (const [service, value] of Object.entries(config.urls)) {
       const url = new URL(value);
-      if (url.protocol !== 'https:' && !isLoopbackHost(url.hostname)) {
-        throw new ValidationError(`Production ${service} URL must use HTTPS unless it is loopback`);
+      if (url.protocol !== 'https:') {
+        throw new ValidationError(`Production ${service} URL must use HTTPS`);
       }
     }
   }
@@ -125,11 +149,6 @@ function normalizePolicyPaths(overrides) {
     return paths.map(path => resolve(path));
   }
   return [resolve(overrides.policyPath ?? process.env.AXIOM_POLICY_PATH ?? join(MESH_ROOT, 'config', 'policy.json'))];
-}
-
-function isLoopbackHost(value) {
-  const host = String(value).replace(/^\[|\]$/g, '').toLowerCase();
-  return host === '127.0.0.1' || host === 'localhost' || host === '::1';
 }
 
 export async function loadApiPrincipals(config) {
