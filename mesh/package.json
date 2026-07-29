@@ -33,6 +33,8 @@
     "provider:drill": "node src/provider-conformance-drill.mjs",
     "pilot:dossier:verify": "node src/pilot-dossier.mjs verify",
     "pilot:dossier:drill": "node src/pilot-dossier-conformance-drill.mjs",
+    "pilot:package:verify": "node src/pilot-evidence-package.mjs verify",
+    "pilot:package:drill": "node src/pilot-evidence-package-drill.mjs",
     "recovery:drill": "node src/recovery-drill.mjs",
     "slo:drill": "node src/slo-drill.mjs",
     "start:production": "node src/supervisor.mjs",

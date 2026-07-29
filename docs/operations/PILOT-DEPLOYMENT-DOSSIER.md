@@ -156,9 +156,12 @@ The dossier contains these 13 entries in exact order:
 Each entry records a stable reference, unique SHA-256 digest, observation
 timestamp, exact source revision, exact image digest, `passed` disposition,
 and `independently_verified: true`. References may point to an approved
-evidence store; they must not embed credentials. The verifier checks metadata,
-uniqueness, build binding, chronology, inventory, and reviewer signatures. It
-does not download or parse the referenced artifact.
+evidence store during metadata preflight; they must not embed credentials.
+The dossier-only verifier checks metadata, uniqueness, build binding,
+chronology, inventory, and reviewer signatures. It does not download or parse
+the referenced artifact. Authentic promotion intake must use the offline
+package verifier below, which requires local canonical evidence files and
+checks their exact bytes and signatures.
 
 Before signing, reviewers must retrieve every artifact from the authoritative
 store, recompute its SHA-256 digest, validate its own schema and signature
@@ -170,6 +173,111 @@ The existing protected-CI artifacts can support provenance and show how the
 candidate controls behave. They cannot replace deployment-specific
 availability, capacity, provider, custody, telemetry, scheduled recovery,
 credential-history, facilitated incident, or independent-review evidence.
+
+## Offline exact-inventory package verification
+
+The supported offline package removes network retrieval and mutable-reference
+risk from final intake. The signed dossier is the package manifest; there is no
+second inventory that could disagree with it. The package directory is exact:
+
+```text
+pilot-evidence-package/
+|-- policy.json
+|-- dossier.json
+`-- evidence/
+    |-- deployment_manifest.json
+    |-- image_provenance.json
+    |-- availability_observation.json
+    |-- capacity_measurement.json
+    |-- external_telemetry.json
+    |-- provider_assessment.json
+    |-- custody_assessment.json
+    |-- scheduled_restore.json
+    |-- credential_rotation.json
+    |-- data_key_rotation.json
+    |-- credential_history_attestations.json
+    |-- incident_tabletop.json
+    `-- independent_security_review.json
+```
+
+No other file, directory, symbolic link, alternate filename, archive wrapper,
+or extra nested filesystem entry is accepted. `policy.json` and `dossier.json`
+are bounded to 4 MiB each; each evidence envelope is bounded to 8 MiB; the
+complete package is bounded to 64 MiB.
+
+All 15 JSON files must be the exact UTF-8 result of canonical JSON encoding:
+sorted object keys and no byte-order mark, indentation, comments, trailing
+newline, duplicate-key representation, or other noncanonical bytes. The
+dossier reference for each entry must be exactly
+`evidence/<evidence_type>.json`, and its `sha256:` value must match the raw
+canonical file bytes.
+
+Each evidence envelope uses its evidence-specific schema and this exact common
+shape:
+
+```json
+{
+  "attestation": {},
+  "deployment_id": "pilot_identifier",
+  "details": {},
+  "evidence_type": "deployment_manifest",
+  "observed_at": "2026-07-29T00:00:00.000Z",
+  "producer": {
+    "reviewer_id": "named_reviewer",
+    "role": "platform_operator"
+  },
+  "schema": "axiom-pilot-deployment-manifest.v1",
+  "signer": {
+    "key_id": "pilot-platform-operator:0123456789abcdef"
+  },
+  "source": {
+    "image_digest": "sha256:<64 lowercase hexadecimal characters>",
+    "kernel_version": "0.12.0-dev.0",
+    "source_revision": "<40 lowercase hexadecimal characters>"
+  },
+  "status": "passed",
+  "summary": "A concise secret-free result for independent review.",
+  "version": 1
+}
+```
+
+The example shows structure, not valid evidence or signatures. `details` holds
+the evidence-type-specific result and must be a non-empty object. The common
+envelope, including `details`, is secret-scanned and signed canonically.
+
+The policy assigns evidence signing responsibility:
+
+| Evidence | Required policy-pinned producer |
+|---|---|
+| Deployment manifest | Platform operator |
+| Image provenance | Release manager |
+| Availability, capacity, and external telemetry | Platform operator |
+| Provider and custody assessments | Security reviewer |
+| Scheduled restore, credential rotation, and data-key rotation | Data/recovery reviewer |
+| Deprecated credential-history attestations | Security reviewer |
+| Facilitated incident tabletop | Independent reviewer |
+| Independent security review | Independent reviewer |
+
+An envelope signed by another valid reviewer is still rejected. Its schema,
+type, deployment identifier, version, status, observation time, kernel
+version, source revision, image digest, producer identifier, signer key, and
+signature must all agree with the policy and dossier.
+
+Run final offline package verification with the authority public key obtained
+through the separate trusted channel:
+
+```bash
+npm run pilot:package:verify -- \
+  /secure-review/pilot-evidence-package \
+  /separate-trust/pilot-policy-authority-public.pem
+```
+
+A successful result reports two canonical control files, 13 canonical evidence
+files, the byte count, producer-role distribution, the exact build, and
+`production_promoted: false`. Package verification does not remove the need
+for reviewers to understand whether each signed `details` object actually
+supports its disposition. It makes the bytes they reviewed immutable,
+self-contained, role-authenticated, and machine-bound to the approved dossier.
 
 ## Custody and trust-root inventory
 
@@ -219,11 +327,13 @@ runtime's mounted secret directories.
    evidence. Restarted observations are not joined across a material build or
    policy change.
 5. The release manager composes only hashes, references, measurements, public
-   trust-root digests, and non-secret declarations into the dossier.
+   trust-root digests, and non-secret declarations into the dossier. For final
+   intake, references use the exact local `evidence/<type>.json` paths.
 6. Each reviewer independently retrieves and validates the applicable source
    artifacts, then signs the shared dossier digest.
-7. A verifier obtains the policy authority key separately and runs the
-   supported command.
+7. A verifier obtains the policy authority key separately, first runs the
+   dossier-only command if a metadata preflight is useful, then runs the exact
+   offline package command for authentic intake.
 
 From the repository root:
 
@@ -243,12 +353,17 @@ node src/pilot-dossier.mjs verify \
   /secure-review/pilot-policy-authority-public.pem
 ```
 
-A valid result identifies the dossier, policy, source revision, image digest,
+A valid dossier-only result identifies the dossier, policy, source revision, image digest,
 13 evidence entries, five approvals, and the
 `accepted-for-promotion-review` intake status. Archive the command output with
 the input objects and referenced evidence. Do not modify the signed files to
 add notes; record review minutes and the eventual promotion decision as
 separate artifacts.
+
+The dossier-only command accepts approved external references and remains a
+preflight tool. The package command is the stronger final-intake path because
+it also verifies exact local files, canonical encoding, raw hashes, common
+envelope fields, responsible producer roles, and each envelope signature.
 
 ## Fail-closed verification sequence
 
@@ -304,6 +419,21 @@ artifact establishes that the verifier behaves consistently at the commit. It
 is not one of the 13 pilot evidence entries, cannot satisfy the 720-hour
 window, and must not be relabeled as deployment evidence.
 
+Protected CI also runs:
+
+```bash
+npm run pilot:package:drill \
+  > /tmp/axiom-pilot-evidence-package-verifier-conformance-evidence.json
+```
+
+That drill constructs an exact synthetic package and proves rejection of an
+unexpected file, missing evidence file, noncanonical JSON, wrong producer
+role, and secret-bearing detail. The signed artifact
+`axiom-pilot-evidence-package-verifier-conformance-evidence-<commit>` declares
+that the fixture is synthetic, no live pilot was observed, and production was
+not promoted. It is verifier evidence, not one of the 13 admissible pilot
+files.
+
 ## Reassessment and retention
 
 Any change to authentication, layered policy, grants, Sandbox authority, Grid
@@ -324,9 +454,9 @@ replace the artifact behind an existing reference or reuse its digest.
 
 ## Pilot repetition and non-claims
 
-This implementation closes the repository-owned evidence-intake gap. It gives
-operators a strict, signed, build-bound package for the pilot work already
-required by the readiness tracker.
+This implementation closes the repository-owned metadata and offline-package
+evidence-intake gaps. It gives operators a strict, signed, build-bound package
+for the pilot work already required by the readiness tracker.
 
 It does not claim that the pilot exists, that any external provider or receiver
 has been configured, that 720 hours have elapsed, that 32 external credential
@@ -335,6 +465,6 @@ occurred, that an independent reviewer approved the system, or that production
 promotion is warranted. Those facts can be supplied only by accountable
 operators and reviewers using the actual deployment and external systems.
 
-Until an authentic dossier and its source artifacts pass both technical intake
-and the separate promotion decision, the project remains **not
+Until an authentic dossier and exact offline evidence package pass technical
+intake and the separate promotion decision, the project remains **not
 production-promoted**.

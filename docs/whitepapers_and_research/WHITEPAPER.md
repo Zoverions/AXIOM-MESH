@@ -538,12 +538,17 @@ role signs the same canonical dossier digest.
 
 This design prevents a repository test identity, one operator, a stale
 artifact, or a cross-build result from silently satisfying multiple promotion
-roles. It also keeps evidence payloads and secrets outside the review
-envelope. The verifier checks hashes, metadata, chronology, policy, and
-signatures; human reviewers still retrieve and inspect the source artifacts.
-Its only successful state is accepted for a later promotion review, with
-production explicitly false. Protected CI signs synthetic rejection-path
-conformance but cannot manufacture an observed pilot.
+roles. The final offline intake directory contains only canonical policy and
+dossier files plus the 13 canonical evidence envelopes at fixed local paths.
+Each secret-free envelope binds the exact deployment and build, matches the
+dossier's raw-byte digest, and carries the signature of its policy-assigned
+reviewer role. Noncanonical JSON, extra or missing files, symlinks, secret
+fields, build drift, and role substitution fail closed. Human reviewers still
+judge whether each signed evidence detail supports its disposition. The only
+successful verifier state is accepted for a later promotion review, with
+production explicitly false. Protected CI signs synthetic conformance for
+both the dossier and exact-package rejection paths but cannot manufacture an
+observed pilot.
 
 ## 14. Threat model
 
@@ -631,9 +636,9 @@ boundary is specified in the
 The signed startup-provider protocol, private generation lifecycle, adapter
 conformance contract, and vendor non-claims are specified in the
 [provider runbook](../operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md).
-The separately anchored policy, exact pilot evidence inventory, five-role
-signature model, intake command, and explicit non-promotion boundary are
-specified in the
+The separately anchored policy, exact canonical offline inventory, five-role
+signature model, dossier preflight and package-intake commands, and explicit
+non-promotion boundary are specified in the
 [pilot dossier runbook](../operations/PILOT-DEPLOYMENT-DOSSIER.md).
 
 ## Conclusion

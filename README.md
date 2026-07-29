@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=88e6896ed6819ba489d22dfe04403aaa79b6c00f348dc4725634c8e866658ffa -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=66f97dad1b414be4d7442d0b2afed8e29b49898d60dc42d3373ee6535ce56a78 -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -193,13 +193,25 @@ npm run pilot:dossier:verify -- \
   pilot-policy-authority-public.pem
 ```
 
+Use that command only for metadata preflight. Authentic intake verifies the
+complete offline package:
+
+```bash
+npm run pilot:package:verify -- \
+  pilot-evidence-package \
+  pilot-policy-authority-public.pem
+```
+
 The authority-signed policy pins one source revision and image digest, current
-30-day/SLO/recovery requirements, and five distinct reviewer keys. The exact
-13-item dossier rejects stale, cross-build, incomplete, altered, or
-secret-bearing evidence metadata. A valid result is accepted only for a
-separate promotion review and always reports `production_promoted: false`.
-Protected CI exercises this verifier with synthetic inputs that explicitly do
-not claim a live pilot. See the
+30-day/SLO/recovery requirements, and five distinct reviewer keys. The package
+must contain exactly the canonical policy, dossier, and 13 local
+evidence-specific envelopes. Each envelope is secret-free, hash-bound to the
+dossier and signed by its policy-assigned reviewer role. Stale, cross-build,
+incomplete, altered, noncanonical, unexpected, or symlinked input fails
+closed. A valid result is accepted only for a separate promotion review and
+always reports `production_promoted: false`. Protected CI exercises both
+verifiers with synthetic inputs that explicitly do not claim a live pilot. See
+the
 [pilot deployment dossier runbook](docs/operations/PILOT-DEPLOYMENT-DOSSIER.md).
 
 Exercise the host-side external telemetry and alert path on Linux:
@@ -425,8 +437,8 @@ code, the capability registry, or release evidence.
   a facilitated named-roster pilot exercise remains required.
 - Pilot evidence intake uses a separately distributed policy-authority key,
   five distinct role signatures, an exact build and image, 30-day
-  measurements, custody receipts, and 13 deployment-specific evidence
-  digests. Passing intake does not promote production.
+  measurements, custody receipts, and exactly 13 canonical, role-signed local
+  evidence envelopes. Passing intake does not promote production.
 
 Report vulnerabilities using [`.github/SECURITY.md`](.github/SECURITY.md).
 

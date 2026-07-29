@@ -246,6 +246,18 @@ jobs:
           path: ${{ runner.temp }}/axiom-pilot-dossier-verifier-conformance-evidence.json
           if-no-files-found: error
           retention-days: 90
+      - name: Exercise exact offline pilot evidence package verification
+        working-directory: mesh
+        run: |
+          node src/pilot-evidence-package-drill.mjs \
+            > "$RUNNER_TEMP/axiom-pilot-evidence-package-verifier-conformance-evidence.json"
+      - name: Upload signed pilot evidence package verifier conformance evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: axiom-pilot-evidence-package-verifier-conformance-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/axiom-pilot-evidence-package-verifier-conformance-evidence.json
+          if-no-files-found: error
+          retention-days: 90
       - name: Run coordinated incident tabletop
         working-directory: mesh
         run: |

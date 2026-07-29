@@ -114,6 +114,7 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Current-build boundary',
     '## Trust and signature model',
     '## Required evidence inventory',
+    '## Offline exact-inventory package verification',
     '## Fail-closed verification sequence',
     '## Conformance drill and protected CI',
     '## Pilot repetition and non-claims'

@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=88e6896ed6819ba489d22dfe04403aaa79b6c00f348dc4725634c8e866658ffa -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=66f97dad1b414be4d7442d0b2afed8e29b49898d60dc42d3373ee6535ce56a78 -->
 # AXIOM-MESH CONSTITUTION
 
 **Build:** `0.12.0-dev.0`

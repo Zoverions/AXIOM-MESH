@@ -4,7 +4,7 @@
 Registry schema: `axiom-capabilities.v1`
 Kernel version: `0.12.0-dev.0`
 Evidence verified: `2026-07-29`
-Registry digest: `88e6896ed6819ba489d22dfe04403aaa79b6c00f348dc4725634c8e866658ffa`
+Registry digest: `66f97dad1b414be4d7442d0b2afed8e29b49898d60dc42d3373ee6535ce56a78`
 
 Only **implemented** capabilities are runnable claims.
 
@@ -59,6 +59,6 @@ Only **implemented** capabilities are runnable claims.
 | `operations.mutual-transport` | operations | **implemented** | Production internal calls use TLS 1.3 with CA-issued Ed25519 leaves, DNS and SPIFFE-style URI identity, exact active-certificate pinning, signed-caller binding, offline atomic rotation, retired-leaf rejection, and exact rollback. |
 | `operations.independent-service-units` | operations | **implemented** | Gateway, Grid, Hypervisor, and Sandbox can run as independently restartable units with per-unit application and TLS private keys, Grid-only durable state, an internal deny-egress network, dependency-aware degradation, Sandbox-only recovery, and signed state-preservation evidence. |
 | `operations.provider-runtime` | operations | **implemented** | Independent Ed25519-pinned secret and policy providers deliver nonce-bound short-lived startup resources through a bounded process protocol; the broker verifies exact inventories and content, materializes one private generation, launches the unchanged production supervisor, and removes that generation on shutdown. |
-| `operations.pilot-dossier-verification` | operations | **implemented** | A separately authority-pinned, five-role review policy verifies exact build, 30-day observation, SLO, custody, external evidence, and independent approval metadata while explicitly refusing to claim production promotion. |
+| `operations.pilot-dossier-verification` | operations | **implemented** | A separately authority-pinned, five-role review policy verifies exact build, 30-day observation, SLO, custody, and approval metadata; an offline exact-inventory package verifier additionally checks 13 canonical role-signed evidence envelopes while explicitly refusing to claim production promotion. |
 | `operations.container-package` | operations | **implemented** | A digest-pinned non-root container package is statically release-gated, passes the four-process host drill, and is built and exercised through the published composed readiness workflow. |
 | `operations.installer-observability-release` | operations | **experimental** | Release tooling, bounded external telemetry and alert routing, and container verification are executable; legacy installer replacement and independently evidenced live deployment remain incomplete. |

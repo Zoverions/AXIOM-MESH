@@ -39,11 +39,14 @@ Dedicated pilot capacity and availability, pilot-owned telemetry receivers, sche
 pilot-media recovery, pilot-owned secret-manager rotation, external
 deprecated-credential attestations, a named-roster pilot incident exercise,
 and independent security review remain open.
-The repository now implements signed pilot dossier verification: a separately
-anchored policy authority pins one build and image, current 30-day/SLO gates,
-five distinct reviewers, custody receipts, and 13 external evidence digests.
-Protected CI proves only the verifier's fail-closed behavior with a labeled
-synthetic fixture; it supplies none of the open pilot evidence.
+The repository now implements signed pilot dossier and exact offline package
+verification: a separately anchored policy authority pins one build and image,
+current 30-day/SLO gates, five distinct reviewers, custody receipts, and
+exactly 13 canonical local evidence envelopes. Raw-byte hashes, build identity,
+assigned-role signatures, exact filenames, secret rejection, and a no-symlink
+inventory make the reviewed package immutable. Protected CI proves only the
+verifiers' fail-closed behavior with labeled synthetic fixtures; it supplies
+none of the open pilot evidence.
 The request-path resilience control, container deny-egress, host-side telemetry
 relay, and automated incident tabletop are implemented and remain subject to
 pilot-platform repetition. The current decision is recorded in the
@@ -535,16 +538,21 @@ and independent reviewer.
 The dossier contains the isolated non-public four-unit deployment declaration,
 four distinct trust-root digests, five non-exportable custody controls,
 deployment measurements, and 13 exact evidence references and SHA-256
-digests. All evidence binds the policy-pinned revision and image. All five
-roles sign the same dossier digest after the observation. Missing, extra,
-stale, cross-build, reordered, altered, secret-bearing, or inadequately
-measured input fails closed.
+digests. Authentic intake supplies those references as an exact offline
+directory containing canonical policy and dossier files plus 13 canonical
+evidence envelopes. Each envelope binds the policy-pinned revision and image
+and is signed by the policy-pinned reviewer role assigned to that evidence
+type. All five roles also sign the same dossier digest after the observation.
+Missing, extra, symlinked, stale, cross-build, reordered, noncanonical,
+altered, secret-bearing, wrongly signed, or inadequately measured input fails
+closed.
 
-The supported verifier returns only
+The supported verifiers return only
 `accepted-for-promotion-review` and `production_promoted: false`. Reviewers
-must inspect and hash the referenced source artifacts before signing, and the
-promotion body must record a later independent decision. The synthetic CI
-conformance drill cannot be used as deployment evidence. See
+must inspect the evidence details before signing, the exact-package verifier
+must authenticate the final reviewed bytes, and the promotion body must record
+a later independent decision. The synthetic CI conformance drills cannot be
+used as deployment evidence. See
 [pilot deployment dossier verification](operations/PILOT-DEPLOYMENT-DOSSIER.md).
 
 ## Production promotion gates
@@ -565,8 +573,9 @@ All gates must pass:
    are complete.
 10. **Claims:** public documentation states remaining limitations.
 
-The pilot dossier is the intake envelope for these gates, not an eleventh gate
-and not an automatic decision. Every underlying gate must be evidenced.
+The pilot dossier and its exact offline evidence package are the intake
+envelope for these gates, not an eleventh gate and not an automatic decision.
+Every underlying gate must be evidenced.
 
 No single test, review, or approval substitutes for the full gate set.
 
