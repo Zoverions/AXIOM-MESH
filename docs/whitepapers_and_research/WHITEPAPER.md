@@ -528,6 +528,23 @@ kernel version, and digest. Documentation is part of the release surface:
 missing canonical documents, broken local links, stale generated output, or
 security-policy drift fail the release gate.
 
+Pilot evidence has a separate cryptographic intake boundary. An Ed25519 policy
+authority, distributed independently from the evidence package, signs one
+source revision, immutable image digest, validity window, current 30-day/SLO/
+recovery gates, exact external evidence inventory, and five distinct reviewer
+public keys. The dossier records four trust roots, five non-exportable custody
+controls, measured results, and 13 unique artifact digests. Each accountable
+role signs the same canonical dossier digest.
+
+This design prevents a repository test identity, one operator, a stale
+artifact, or a cross-build result from silently satisfying multiple promotion
+roles. It also keeps evidence payloads and secrets outside the review
+envelope. The verifier checks hashes, metadata, chronology, policy, and
+signatures; human reviewers still retrieve and inspect the source artifacts.
+Its only successful state is accepted for a later promotion review, with
+production explicitly false. Protected CI signs synthetic rejection-path
+conformance but cannot manufacture an observed pilot.
+
 ## 14. Threat model
 
 The kernel explicitly addresses:
@@ -584,7 +601,8 @@ The `0.12.0-dev.0` build does not claim:
 - clinical, educational, governmental, or financial compliance;
 - embodied autonomy;
 - end-to-end post-quantum security;
-- independent external audit.
+- independent external audit;
+- an authentic reviewed pilot dossier or production promotion.
 
 Descriptions preserved on the deprecated documentation branch are not current
 specifications and cannot override the capability registry.
@@ -613,6 +631,10 @@ boundary is specified in the
 The signed startup-provider protocol, private generation lifecycle, adapter
 conformance contract, and vendor non-claims are specified in the
 [provider runbook](../operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md).
+The separately anchored policy, exact pilot evidence inventory, five-role
+signature model, intake command, and explicit non-promotion boundary are
+specified in the
+[pilot dossier runbook](../operations/PILOT-DEPLOYMENT-DOSSIER.md).
 
 ## Conclusion
 

@@ -41,6 +41,7 @@ const REQUIRED_CAPABILITIES = new Set([
   'ui.dashboard',
   'operations.independent-service-units',
   'operations.provider-runtime',
+  'operations.pilot-dossier-verification',
   'operations.installer-observability-release'
 ]);
 

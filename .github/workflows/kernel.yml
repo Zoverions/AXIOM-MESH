@@ -234,6 +234,18 @@ jobs:
           path: ${{ runner.temp }}/axiom-provider-conformance-evidence.json
           if-no-files-found: error
           retention-days: 90
+      - name: Exercise fail-closed pilot dossier verification
+        working-directory: mesh
+        run: |
+          node src/pilot-dossier-conformance-drill.mjs \
+            > "$RUNNER_TEMP/axiom-pilot-dossier-verifier-conformance-evidence.json"
+      - name: Upload signed pilot dossier verifier conformance evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: axiom-pilot-dossier-verifier-conformance-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/axiom-pilot-dossier-verifier-conformance-evidence.json
+          if-no-files-found: error
+          retention-days: 90
       - name: Run coordinated incident tabletop
         working-directory: mesh
         run: |

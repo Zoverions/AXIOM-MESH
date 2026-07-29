@@ -20,7 +20,7 @@ that tag are identified only as the current 0.12 development build.
 
 The executable source of truth is
 [`mesh/config/capabilities.json`](../mesh/config/capabilities.json). The
-generated [capability status](rebuild/STATUS.md) records 23 implemented, 2
+generated [capability status](rebuild/STATUS.md) records 24 implemented, 2
 experimental, 3 specified, 9 adapter-required, and 4 disabled capabilities.
 
 ## Implemented kernel scope
@@ -53,6 +53,9 @@ experimental, 3 specified, 9 adapter-required, and 4 disabled capabilities.
   policy providers with digest-pinned command artifacts, nonce-bound
   short-lived exact inventories, private per-start materialization, semantic
   validation, cleanup, and fail-closed rejection.
+- pilot evidence intake using a separately anchored policy authority, exact
+  source/image and 30-day/SLO/custody inventory, five distinct role
+  signatures, secret rejection, and an explicit non-promotion result.
 
 ## Production package state
 
@@ -117,6 +120,9 @@ across live and retained recovery state, proves wrong-key rejection in both
   secret and policy providers, activates rotated API and policy resources,
   rejects the retired token and an invalid provider signer, removes each
   private runtime generation, and binds that proof into the incident tabletop.
+  It also runs signed synthetic conformance for the pilot dossier verifier,
+  proving wrong-build, altered-approval, missing-evidence, and secret-field
+  rejection while explicitly declaring that no live pilot was observed.
   Dedicated pilot-hardware capacity and availability validation,
   pilot-owned receiver/secret/media custody, external
   credential-history attestations, and independent security review are still
@@ -181,6 +187,8 @@ pilot. The automated external telemetry/alert relay, request-path resilience,
 transport lifecycle, independent service failure isolation, admitted-node
 discovery/scheduling reservations, operator-approved two-Grid causal exchange,
 signed secret/policy provider startup, and candidate tabletop are implemented;
+the signed pilot dossier intake and independent-review contract is also
+implemented, but no authentic pilot dossier has been submitted;
 protected CI signs bounded delivery evidence and a same-revision composition
 of eleven real control drills.
 Work is ordered in
