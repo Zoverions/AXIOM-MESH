@@ -20,8 +20,8 @@ inherited by the default branch.
 
 The executable source of truth is
 [`mesh/config/capabilities.json`](../mesh/config/capabilities.json). The
-generated [capability status](rebuild/STATUS.md) records 20 implemented, 2
-experimental, 4 specified, 9 adapter-required, and 4 disabled capabilities.
+generated [capability status](rebuild/STATUS.md) records 21 implemented, 2
+experimental, 3 specified, 9 adapter-required, and 4 disabled capabilities.
 
 ## Implemented kernel scope
 
@@ -42,7 +42,10 @@ experimental, 4 specified, 9 adapter-required, and 4 disabled capabilities.
   supervisor;
 - per-unit private identity/TLS projection, Grid-only durable state, an
   internal deny-egress network, and signed Sandbox-only failure/recovery
-  evidence.
+  evidence;
+- signed admitted-node v2 discovery metadata, authenticated Grid-signed
+  discovery, and deterministic encrypted placement leases with resource,
+  concurrency, security, owner/domain, expiry, and quarantine controls.
 
 ## Production package state
 
@@ -95,7 +98,10 @@ across live and retained recovery state, proves wrong-key rejection in both
   backup in protected CI on every relevant change and weekly. The container
   job also establishes that its public TCP probe is runner-reachable, then
   proves it is unreachable from the candidate namespace and uploads signed
-  evidence. Dedicated pilot-hardware capacity and availability validation,
+  evidence. The kernel job also admits signed v2 nodes, rejects copied signing
+  identities and exhausted capacity, schedules across owners and failure
+  domains, degrades on quarantine, expires a missed-renewal node, and preserves
+  the schedule through Grid restart. Dedicated pilot-hardware capacity and availability validation,
   pilot-owned receiver/secret/media custody, external
   credential-history attestations, and independent security review are still
   required before production promotion. The repository-side history audit is
@@ -127,7 +133,9 @@ not alternate production branches.
 AXIOM-MESH does not currently claim:
 
 - a live public testnet, mainnet, or production service;
-- BFT consensus, multi-host federation, or automatic peer discovery;
+- BFT consensus, multi-host federation, or federated network peer discovery;
+- remote workload dispatch, resource measurement, or result provenance from
+  scheduled nodes;
 - externally audited arbitrary-code isolation;
 - operational tokens, bridges, liquidity, or chain settlement;
 - working zk proof verification without a named adapter;
@@ -148,8 +156,9 @@ on-media recovery,
 a facilitated named-roster incident exercise, pilot-platform network-policy
 repetition, and independent security review for a controlled single-node
 pilot. The automated external telemetry/alert relay, request-path resilience,
-transport lifecycle, independent service failure isolation, and candidate
-tabletop are implemented; protected CI signs bounded delivery evidence and a
-same-revision composition of eight real control drills.
+transport lifecycle, independent service failure isolation, admitted-node
+discovery/scheduling reservations, and candidate tabletop are implemented;
+protected CI signs bounded delivery evidence and a same-revision composition
+of nine real control drills.
 Work is ordered in
 [`docs/MASTER-TODO.md`](MASTER-TODO.md).

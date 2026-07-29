@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=229023a02fd2569ca23dabb86a9f34a438a36685aa096ff2aed0fac8054f33ca -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=4d143d985aa25e0258bfe36026667ca6dcf7f3403ae0f5b99efbc2e2b46e5f20 -->
 # AXIOM-MESH Rebuild Requirements
 
 **Normative language:** MUST, MUST NOT, SHOULD, and MAY are used in their usual
@@ -59,6 +59,8 @@ requirements sense.
 | GRID-07 | Storage offers MUST bind the owning admitted node key and MUST become unavailable when that node is expired or quarantined. | Wrong-key rejection and quarantine propagation tests. |
 | GRID-08 | Data-key rotation MUST re-encrypt every supported durable and recovery context while stopped, reject mismatched keys, recover an interrupted cutover, and preserve post-rotation evidence on rollback. | Unit fault injection plus signed real-stack rotation, restore, rejection, and rollback evidence. |
 | GRID-09 | Backup retention MUST verify every candidate, derive selection from signed policy, preserve a configured minimum, reject live or changed inventory, recover interruption, and keep retired media recoverable until separate destruction approval. | Negative-path and kill tests plus signed recurring lifecycle/restore evidence. |
+| GRID-10 | Discovery-capable node admission MUST bind an HTTPS origin, failure domain, roles, resource ceilings, owner, unique active signing key, and expiry; discovery MUST exclude ineligible nodes and return Grid-signed bounded results. | Signature, copied-key, owner-limit, query, expiry, quarantine, downgrade, and attestation tests. |
+| GRID-11 | Node scheduling MUST follow the normal policy/grant/evidence path, reserve only a complete deterministic placement within declared capacity/concurrency/security/owner/domain/lease constraints, encrypt records at rest, and degrade on eligibility loss. | Pure determinism/capacity tests, four-service API test, restart test, and signed drill evidence. |
 
 ## Governance and societal safety
 
@@ -160,6 +162,12 @@ The machine-readable capability registry remains authoritative. Kernel
 - local Ed25519 node admission, renewal, expiry, owner/key binding, and
   quarantine; signed storage offers tied to those live admissions; and
   wrong-key offer rejection.
+- signed v2 discovery metadata and Grid-attested filtered discovery;
+  deterministic all-or-nothing encrypted placement leases with capability,
+  role, security, resource, concurrency, owner, failure-domain, expiry, and
+  quarantine enforcement. Remote dispatch, endpoint/resource measurement,
+  result provenance, global Sybil resistance, and federation remain outside
+  this checkpoint.
 - independently verifiable offline-sync bundles with per-update signatures,
   contiguous node-global anti-equivocation counters, dependency-checked
   version-vector ordering, replay rejection, visible concurrent heads,
@@ -211,7 +219,7 @@ The machine-readable capability registry remains authoritative. Kernel
   communications, verified recovery, independent closure review, and a
   retrospective due within seven days. Protected CI MUST sign an automated
   tabletop record only after recovery, backup-lifecycle, restart, resilience,
-  independent-service-unit, transport, credential-rotation, and
+  independent-service-unit, node-scheduling, transport, credential-rotation, and
   data-key-rotation evidence from the same source revision verifies. A
   named-roster pilot exercise remains mandatory
   before production promotion.

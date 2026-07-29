@@ -361,7 +361,7 @@ test('Grid migration ledger is checksum verified and fails closed on drift', asy
   let store = new GridStore({ path: dbPath, dataDir, identity, protector });
   assert.deepEqual(
     store.db.prepare('SELECT version FROM schema_migrations ORDER BY version').all().map(row => row.version),
-    [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
   );
   store.db.prepare("UPDATE schema_migrations SET checksum = 'tampered' WHERE version = 2").run();
   store.close();
@@ -371,7 +371,7 @@ test('Grid migration ledger is checksum verified and fails closed on drift', asy
   );
 });
 
-test('schema 8 state migrates forward to causal sync schema 9 without evidence loss', async t => {
+test('schema 8 state migrates through scheduling schema 10 without evidence loss', async t => {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-migration-eight-'));
   t.after(() => rm(dataDir, { recursive: true, force: true }));
   const identity = await ensureMeshIdentity(dataDir, 'grid', { create: true });
@@ -402,13 +402,14 @@ test('schema 8 state migrates forward to causal sync schema 9 without evidence l
     DROP TABLE sync_heads;
     DROP TABLE sync_updates;
     DROP TABLE sync_bundles;
-    DELETE FROM schema_migrations WHERE version = 9;
+    DROP TABLE node_schedules;
+    DELETE FROM schema_migrations WHERE version IN (9, 10);
     UPDATE meta SET value = '8' WHERE key = 'schema_version';
   `);
   schemaEight.close();
 
   store = new GridStore({ path: dbPath, dataDir, identity, protector });
-  assert.equal(store.getStatus().schema_version, 9);
+  assert.equal(store.getStatus().schema_version, 10);
   assert.equal(store.getIntent('intent_migration_eight').status, 'accepted');
   assert.equal(store.verifyChain().head, evidenceHead);
   assert.deepEqual(
@@ -946,14 +947,25 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
   const nodeKeys = generateKeyPairSync('ed25519');
   const nodePublicKey = nodeKeys.publicKey.export({ type: 'spki', format: 'pem' });
   const nodeAdmission = {
-    format: 'axiom-node-admission.v1',
+    format: 'axiom-node-admission.v2',
     node_id: 'node:e2e',
     public_key: nodePublicKey,
     security_profile: 'S2_HARDENED',
-    capabilities: ['offline.causal-sync', 'storage.offer'],
+    capabilities: ['compute.batch', 'offline.causal-sync', 'storage.offer'],
     software_digest: sha256('node-software-v1'),
     expires_at: new Date(Date.now() + 86_400_000).toISOString(),
-    nonce: 'node-admission-e2e'
+    nonce: 'node-admission-e2e',
+    discovery: {
+      endpoint: 'https://node-e2e.mesh.example',
+      failure_domain: 'test-zone-a',
+      roles: ['compute', 'storage'],
+      resources: {
+        cpu_millis: 2_000,
+        memory_bytes: 1_048_576,
+        storage_bytes: 1_000_000,
+        max_concurrent_assignments: 2
+      }
+    }
   };
   const invalidAdmission = await api(gateway, token, '/v1/intents', {
     method: 'POST',
@@ -979,6 +991,56 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
   });
   assert.equal(nodeRecord.status, 'completed');
   assert.equal((await api(gateway, token, '/v1/nodes')).nodes[0].status, 'active');
+  const discovery = await api(
+    gateway,
+    token,
+    '/v1/node-discovery?capability=compute.batch&role=compute&minimum_security_level=2'
+  );
+  assert.deepEqual(
+    discovery.nodes.map(node => node.node_id),
+    ['node:e2e']
+  );
+  const discoveryStatement = structuredClone(discovery);
+  delete discoveryStatement.attestation;
+  const gridIdentity = stack.services.find(
+    service => service.name === 'grid'
+  ).identity;
+  assert.equal(
+    verifyObjectSignature(
+      discoveryStatement,
+      discovery.attestation,
+      gridIdentity.publicKey
+    ),
+    true
+  );
+  const schedule = await api(gateway, token, '/v1/intents', {
+    method: 'POST',
+    body: {
+      action: 'node.schedule',
+      input: {
+        request_id: 'node-schedule-e2e',
+        required_capabilities: ['compute.batch'],
+        required_roles: ['compute'],
+        minimum_security_level: 2,
+        resources: {
+          cpu_millis: 500,
+          memory_bytes: 1_024,
+          storage_bytes: 0
+        },
+        replicas: 1,
+        lease_seconds: 300
+      }
+    }
+  });
+  assert.equal(schedule.status, 'completed');
+  assert.deepEqual(
+    schedule.node_schedule.placements.map(item => item.node_id),
+    ['node:e2e']
+  );
+  assert.equal(
+    (await api(gateway, token, '/v1/node-schedules')).schedules[0].status,
+    'active'
+  );
 
   const rogueKeys = generateKeyPairSync('ed25519');
   const roguePublicKey = rogueKeys.publicKey.export({ type: 'spki', format: 'pem' });
@@ -1268,12 +1330,13 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
   assert.equal(storageOffer.status, 'completed');
   assert.equal((await api(gateway, token, '/v1/storage-offers')).offers[0].status, 'active');
   const renewalStatement = {
-    format: 'axiom-node-renewal.v1',
+    format: 'axiom-node-renewal.v2',
     node_id: 'node:e2e',
-    capabilities: ['offline.causal-sync', 'storage.offer'],
+    capabilities: ['compute.batch', 'offline.causal-sync', 'storage.offer'],
     software_digest: sha256('node-software-v2'),
     expires_at: new Date(Date.now() + 172_800_000).toISOString(),
-    nonce: 'node-renewal-e2e'
+    nonce: 'node-renewal-e2e',
+    discovery: nodeAdmission.discovery
   };
   await api(gateway, token, '/v1/intents', {
     method: 'POST',
@@ -1311,6 +1374,10 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
   assert.equal(
     (await api(gateway, token, '/v1/storage-offers')).offers[0].status,
     'quarantined'
+  );
+  assert.equal(
+    (await api(gateway, token, '/v1/node-schedules')).schedules[0].status,
+    'degraded'
   );
 
   const cash = await api(gateway, token, '/v1/intents', {

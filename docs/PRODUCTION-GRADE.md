@@ -2,7 +2,7 @@
 
 **Status:** normative promotion criteria
 
-**Updated:** 2026-07-28
+**Updated:** 2026-07-29
 
 **Applies to:** the supported clean-room kernel in [`mesh/`](../mesh/README.md)
 
@@ -23,11 +23,11 @@ The image build and composed container drill pass in
 The protected workflow also produces signed disposable-host recovery,
 SLO/restart, request-pressure and dependency-loss, mutually authenticated
 transport rotation, coordinated service/API credential-rotation,
-data-protection-key rotation, and automated
+data-protection-key rotation, admitted-node discovery/scheduling, and automated
 incident-tabletop evidence. The
 tabletop verifies deterministic severity, role independence,
 authority-reducing containment, evidence-first chronology, communications,
-closure, and eight linked control artifacts. Its credential-history audit also
+closure, and nine linked control artifacts. Its credential-history audit also
 reconstructs a 32-entry keyed ledger from the locked deprecated graph and
 proves that no candidate appears in the supported tip.
 Dedicated pilot capacity and availability, pilot-owned telemetry receivers, scheduled
@@ -278,6 +278,38 @@ pre-fault and post-recovery intents. Grid signs the secret-free result. A
 second Compose exercise checks actual container identity continuity and
 blocked public TCP connectivity. This is failure isolation, not automatic
 failover, replicated Grid, consensus, or zero-downtime upgrade.
+
+## Admitted-node discovery and scheduling
+
+The candidate accepts signed `axiom-node-admission.v2` statements that bind an
+Ed25519 node identity to its authenticated owner, capabilities, software
+digest, security profile, HTTPS origin, failure domain, roles, resource
+ceilings, and expiry. An active signing key cannot alias another active node,
+one owner is bounded to 64 active admissions, and a discovery-capable node
+cannot silently downgrade its renewal to v1.
+
+The `node:read` discovery surface filters capability, role, security, and
+remaining lease horizon and returns a Grid-signed result without exposing raw
+node public keys. The policy-controlled `node.schedule` action makes a
+deterministic all-or-nothing reservation. It accounts for active lease load,
+CPU, memory, storage, assignment concurrency, excluded nodes, owner caps, and
+optional failure-domain separation. Requirements and placements are encrypted
+in Grid, and the requester can inspect effective active, degraded, or expired
+state.
+
+Expiry removes a node from discovery; quarantine immediately removes it and
+degrades existing placements. Reading a schedule also degrades it if the
+selected identity, signed metadata, capabilities, security level, or declared
+resources no longer satisfy the original contract. Protected CI signs a drill
+covering copied-key admission, capacity exhaustion, owner/domain separation,
+quarantine, missed-renewal expiry, schedule expiry, and restart persistence.
+
+This closes discovery and placement reservation inside one authoritative Grid.
+It does not prove endpoint reachability, enforce remote resources, dispatch
+work, authenticate results, solve global Sybil resistance, run a live WAN
+partition, or provide federation/consensus. Those are separate promotion gates
+described in the
+[operating runbook](operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md).
 
 ## Observability requirements
 

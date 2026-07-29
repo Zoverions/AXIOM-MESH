@@ -23,6 +23,7 @@ import {
 } from './lib/identity.mjs';
 import { verifyRecoveryDrillEvidence } from './recovery-drill.mjs';
 import { verifyResilienceDrillEvidence } from './resilience-drill.mjs';
+import { verifyNodeSchedulingDrillEvidence } from './node-scheduling-drill.mjs';
 import { verifyServiceUnitDrillEvidence } from './service-unit-drill.mjs';
 import { verifySloBaselineEvidence } from './slo-drill.mjs';
 import { verifyTransportDrillEvidence } from './transport-drill.mjs';
@@ -42,6 +43,10 @@ const CONTROL_DEFINITIONS = Object.freeze({
   data_key_rotation: Object.freeze({
     verifier: verifyDataKeyRotationDrillEvidence,
     artifact: 'axiom-data-key-rotation-evidence'
+  }),
+  node_scheduling: Object.freeze({
+    verifier: verifyNodeSchedulingDrillEvidence,
+    artifact: 'axiom-node-scheduling-drill-evidence'
   }),
   recovery: Object.freeze({
     verifier: verifyRecoveryDrillEvidence,
@@ -191,7 +196,7 @@ export async function runIncidentTabletopDrill({
         'select only authority-reducing or recovery actions',
         'preserve evidence before containment changes',
         'exercise communication cadence and independent closure review',
-        'bind recovery, resilience, transport, and rotation controls to the same source revision'
+        'bind recovery, resilience, scheduling, transport, and rotation controls to the same source revision'
       ]
     },
     plan,
@@ -361,6 +366,7 @@ async function main() {
     sloPath,
     resiliencePath,
     serviceUnitsPath,
+    nodeSchedulingPath,
     transportPath,
     credentialRotationPath,
     dataKeyRotationPath
@@ -372,6 +378,7 @@ async function main() {
     slo_restart: sloPath,
     resilience: resiliencePath,
     service_units: serviceUnitsPath,
+    node_scheduling: nodeSchedulingPath,
     transport: transportPath,
     credential_rotation: credentialRotationPath,
     data_key_rotation: dataKeyRotationPath

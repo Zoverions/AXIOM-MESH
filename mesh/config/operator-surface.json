@@ -14,6 +14,8 @@
     "GET /v1/capsules",
     "GET /v1/proposals",
     "GET /v1/nodes",
+    "GET /v1/node-discovery",
+    "GET /v1/node-schedules",
     "GET /v1/consents",
     "GET /v1/approvals",
     "GET /v1/memory",
@@ -57,6 +59,7 @@
     "node.register",
     "node.renew",
     "node.quarantine",
+    "node.schedule",
     "storage.offer",
     "sync.apply",
     "backup.create"

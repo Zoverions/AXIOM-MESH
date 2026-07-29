@@ -291,6 +291,9 @@ export async function createHypervisorService(config = meshConfig()) {
       const committed = await commit(traceId, intent.principal.id, events);
       if (committed.exports?.length) result.export_manifest = committed.exports[0];
       if (committed.backups?.length) result.backup_manifest = committed.backups[0];
+      if (committed.schedules?.length) {
+        result.node_schedule = committed.schedules[0];
+      }
       return { httpStatus: 201, body: result };
     } catch (error) {
       const failure = {

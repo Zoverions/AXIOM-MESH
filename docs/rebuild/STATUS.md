@@ -4,7 +4,7 @@
 Registry schema: `axiom-capabilities.v1`
 Kernel version: `0.11.0`
 Evidence verified: `2026-07-29`
-Registry digest: `229023a02fd2569ca23dabb86a9f34a438a36685aa096ff2aed0fac8054f33ca`
+Registry digest: `4d143d985aa25e0258bfe36026667ca6dcf7f3403ae0f5b99efbc2e2b46e5f20`
 
 Only **implemented** capabilities are runnable claims.
 
@@ -13,8 +13,8 @@ Only **implemented** capabilities are runnable claims.
 - adapter_required: 9
 - disabled: 4
 - experimental: 2
-- implemented: 20
-- specified: 4
+- implemented: 21
+- specified: 3
 
 ## Registry
 
@@ -27,7 +27,7 @@ Only **implemented** capabilities are runnable claims.
 | `portability.export` | portability | **implemented** | Signed canonical JSONL export supports time, type, object, and capsule scopes plus optional X25519 recipient encryption and independent verification. |
 | `governance.local-records` | governance | **implemented** | Local proposals use human-chamber voting, finalization, timelocked activation, live authority-reducing policy overlays, verification, rollback metadata, expiring emergencies, and appeal records. |
 | `consent.receipts` | identity | **implemented** | Purpose-, scope-, subject-, controller-, expiry-, and revocation-bound consent receipts. |
-| `nodes.registry` | mesh | **implemented** | Local Ed25519 node admission, owner and key binding, capability renewal, expiry, and quarantine are enforced; federated discovery remains separate. |
+| `nodes.registry` | mesh | **implemented** | Local Ed25519 node admission binds authenticated owners, unique active signing keys, capabilities, software digest, expiry, quarantine, and optional v2 discovery metadata; federation remains separate. |
 | `storage.offers` | storage | **implemented** | Local signed storage offers are bound to active admitted nodes and quarantined with them; object-transfer adapters remain unavailable. |
 | `sandbox.container` | execution | **adapter_required** | Rootless OCI runtime adapter with digest allowlist and deny-by-default egress is specified but not enabled. |
 | `ai.providers` | ai | **adapter_required** | Model provider routing requires an explicitly configured provider capsule. |
@@ -39,7 +39,7 @@ Only **implemented** capabilities are runnable claims.
 | `capsules.marketplace` | capsules | **specified** | Marketplace metadata, quarantine, review, trust scoring, and install-without-authority semantics are specified. |
 | `identity.ssi` | identity | **specified** | DIDs, credentials, selective disclosure, reputation, and portable identity require an approved credential profile. |
 | `offline.causal-sync` | mesh | **implemented** | Independently verifiable admitted-node bundles use contiguous dependency-checked version vectors, replay and equivocation rejection, visible concurrent heads, and explicit complete conflict resolution. |
-| `nodes.discovery-scheduling` | mesh | **specified** | Federated discovery, capability-aware scheduling, resource balancing, adaptive roles, renewal, and quarantine are specified. |
+| `nodes.discovery-scheduling` | mesh | **implemented** | Admitted-node v2 statements bind signed HTTPS origins, failure domains, roles, resource ceilings, and leases; authenticated discovery and policy-controlled deterministic scheduling enforce capability, security, capacity, concurrency, owner, domain, expiry, and quarantine constraints without claiming remote execution or federation. |
 | `storage.backup-restore` | storage | **implemented** | Encrypted signed Grid snapshots support tamper detection, stopped-Grid exact-digest restore, signed policy-derived retention into recoverable quarantine, interruption recovery, and recurring restore evidence. |
 | `domains.education` | domains | **adapter_required** | Education runs as a strict-consent capsule; curriculum and learner systems are not part of the trusted kernel. |
 | `domains.health` | domains | **adapter_required** | Health runs as a strict-consent capsule and requires clinical/regulatory governance. |

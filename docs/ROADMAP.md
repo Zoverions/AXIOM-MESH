@@ -2,7 +2,7 @@
 
 **Status:** canonical strategic roadmap
 
-**Updated:** 2026-07-28
+**Updated:** 2026-07-29
 
 **Planning horizon:** clean-room kernel 0.11 through evidence-gated 1.0
 
@@ -105,6 +105,9 @@ Milestones:
   Grid-only durable state, dependency degradation, and Sandbox-only recovery
   are implemented for the single-host candidate; repeat on the pilot
   orchestrator;
+- authenticated signed admitted-node discovery and deterministic placement
+  reservations are implemented in the single Grid; repeat with measured
+  pilot-node resources and identity review before remote dispatch is added;
 - independent security review of the supported kernel and container policy;
 - signed pilot deployment and release dossiers.
 
@@ -133,8 +136,12 @@ Milestones:
   single-host candidate with signed host evidence and protected four-container
   checks; multi-host rollout remains;
 - remote dependency readiness and bounded retry/idempotency contracts;
-- admitted-node discovery, renewal, expiry, and quarantine;
-- capability-aware scheduling with bounded resource claims;
+- admitted-node v2 discovery, renewal, expiry, quarantine, and Grid-signed
+  filtered results are implemented for one Grid; multi-host endpoint health
+  and membership identity remain;
+- capability-aware deterministic reservations with bounded resource,
+  concurrency, owner, failure-domain, security, and lease constraints are
+  implemented; authenticated remote dispatch and result provenance remain;
 - online causal exchange with defined partition/rejoin behavior.
 
 Exit criteria:
@@ -144,6 +151,12 @@ Exit criteria:
 - partition/rejoin and duplicate delivery do not corrupt state;
 - loss of one non-Grid service does not silently authorize effects;
 - multi-host runbooks and rollback are independently exercised.
+
+Current boundary: the single-Grid scheduler records complete, encrypted,
+auditable placement leases and fails closed on capacity, expiry, or quarantine.
+It does not contact nodes or authorize workloads. Phase 3 remains open until a
+dispatcher, measured resources, live partition/rejoin evidence, and
+deployment-specific identity controls exist.
 
 ## Phase 4 - controlled adapters and operator experience
 

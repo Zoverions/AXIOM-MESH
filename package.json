@@ -25,6 +25,7 @@
     "telemetry-relay:drill": "npm --prefix mesh run telemetry-relay:drill --",
     "transport:drill": "npm --prefix mesh run transport:drill --",
     "network-boundary:verify": "npm --prefix mesh run network-boundary:verify --",
+    "node-scheduling:drill": "npm --prefix mesh run node-scheduling:drill --",
     "recovery:drill": "npm --prefix mesh run recovery:drill --",
     "slo:drill": "npm --prefix mesh run slo:drill --",
     "start:production": "npm --prefix mesh run start:production",
