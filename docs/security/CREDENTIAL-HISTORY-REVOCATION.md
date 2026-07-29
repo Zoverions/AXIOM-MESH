@@ -19,8 +19,9 @@ or deployment, nor can it manufacture that provider's revocation receipt.
 The versioned
 [`credential-revocations.json`](../../mesh/config/credential-revocations.json)
 ledger covers 32 distinct credential-candidate fingerprints across every
-reachable object in the immutable pre-clean-room archive graph. The scan inspected all 3,466
-blobs, including provider-token pattern checks in historical binaries. No
+reachable object in the immutable pre-clean-room archive graph. The scan
+inspected 9,630 objects, including the annotated archive tag, and all 3,466
+blobs, including provider-token pattern checks in archived binaries. No
 reachable blob exceeds the 64-MiB content bound; an oversized high-risk path
 would fail the audit rather than be silently skipped.
 
