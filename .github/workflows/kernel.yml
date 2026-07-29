@@ -53,15 +53,14 @@ jobs:
         with:
           node-version: "24.18.0"
           package-manager-cache: false
-      - name: Verify root supply chain
+      - name: Install exact current-build source setup
         run: |
-          npm ci --ignore-scripts
+          npm run setup:install
           npm audit --omit=dev
+          npm --prefix mesh audit --omit=dev
       - name: Verify clean kernel
         working-directory: mesh
         run: |
-          npm ci --ignore-scripts
-          npm audit --omit=dev
           npm run check
           npm run release:verify
       - name: Verify deprecated credential inventory and supported trust

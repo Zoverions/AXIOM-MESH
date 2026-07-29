@@ -29,7 +29,8 @@ prose and executable status differ.
 
 | Current concern | Governing source | Executable evidence | Current boundary |
 |---|---|---|---|
-| Product scope and claims | `docs/rebuild/PRODUCT-DEFINITION.md`, `mesh/config/capabilities.json` | `mesh/src/check-registry.mjs`, generated status | 43 capabilities: 25 implemented; all others explicitly experimental, specified, adapter-required, or disabled |
+| Product scope and claims | `docs/rebuild/PRODUCT-DEFINITION.md`, `mesh/config/capabilities.json` | `mesh/src/check-registry.mjs`, generated status | 44 capabilities: 26 implemented; all others explicitly experimental, specified, adapter-required, or disabled |
+| Current-build source setup | `mesh/config/setup.json`, root and kernel package/lock files | setup negative tests, `npm run setup`, protected workflow | Exact Node.js/npm and CI/container pins, two zero-dependency locks, no install lifecycle scripts, unchanged-lock proof, no production credential creation |
 | Intent-to-evidence path | Gateway, Hypervisor, Sandbox, and Grid source under `mesh/src/` | kernel and end-to-end tests | Every privileged effect follows authenticated intent, deny-dominant authorization, a bounded grant, deterministic execution, and signed evidence |
 | Runtime policy | `mesh/config/policy.json`, layered policy loader | policy and IAM property tests | Lower layers can only restrict; high-risk work requires independent approval |
 | Durable state and evidence | Grid store, migrations, identity and protection libraries | restart, migration, tamper, wrong-key, backup, and rotation tests | Encrypted single-Grid state and signed hash-linked evidence; no replicated consensus claim |
@@ -44,7 +45,7 @@ prose and executable status differ.
 | Node admission and scheduling | Grid node registry and scheduler | node scheduling tests and signed drill | Authenticated admission and deterministic encrypted leases; no remote workload dispatch |
 | Causal exchange | online causal-sync modules and policy | two-real-stack partition/rejoin drill | Encrypted, ordered, independently approved exchange with visible conflicts; no federation or consensus |
 | Portability and consent | Grid consent, export, import, and recipient encryption | end-to-end and kernel tests | Scoped signed export and staged import implemented; external identity adapters not implemented |
-| Release and documentation | release verifier, documentation checker, protected workflow | `npm run check`, `npm run release:verify`, GitHub required checks | Exact current documentation allowlist, dependency-free package boundary, deployment digests, migrations, and generated status |
+| Release and documentation | release verifier, documentation checker, protected workflow | `npm run setup`, GitHub required checks | Exact source setup and current documentation allowlists, dependency-free package boundary, deployment digests, migrations, and generated status |
 
 ## Claim precedence
 

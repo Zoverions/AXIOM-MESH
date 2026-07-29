@@ -34,10 +34,11 @@ credential compromise, evidence-chain integrity, or unauthorized effects.
 | REP-002 | Complete | Enforce canonical documentation and lowercase-`main` CI | Documentation checks and [workflow run 30376178779](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30376178779) |
 | REP-004 | Complete | Remove unsupported legacy runtimes, dependency manifests, and documentation from the supported branch | Pre-clean-room code remains at the immutable archive tag; the complete pre-0.12 documentation corpus remains on locked branch `deprecated/pre-0.12-documentation-corpus` |
 | REP-003 | Complete | Protect `main` against deletion and force pushes; require green verification | Required kernel/container/CodeQL checks; deletion and force pushes disabled |
+| REP-005 | Complete | Automate clean current-build source setup and dependency verification | Exact Node.js/npm policy, two zero-dependency locks, prohibited lifecycle scripts, unchanged-lock proof, protected-CI installation, and one command for installation plus full kernel/release verification |
 | REL-001 | Complete | Publish the verified 0.11.0 clean-room baseline | [v0.11.0 prerelease](https://github.com/Zoverions/AXIOM-MESH/releases/tag/v0.11.0) with source checksum, SPDX SBOM, and provenance |
 | REL-002 | Complete | Run the GitHub image build and composed container readiness drill | [Workflow run 30376178779](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30376178779) passed both jobs |
 | SEC-001 | Complete for repository trust | Record revocation of every credential candidate from deprecated history | Keyed 32-entry ledger, exact-history rescan, supported-tip comparison, and protected signed evidence; external attestations remain a promotion gate |
-| DOC-001 | Complete | Make every document on `main` specific to the current build | Exact 25-file `docs/` allowlist, local-link verification, current build notes, and locked deprecated documentation branch |
+| DOC-001 | Complete | Make every document on `main` specific to the current build | Exact 28-file `docs/` allowlist, local-link verification, current build notes, and locked deprecated documentation branch |
 
 ## P0 - production candidate closure
 

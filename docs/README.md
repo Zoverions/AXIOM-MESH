@@ -39,6 +39,7 @@ The main technical and operational references are:
 - [Candidate container deny-egress boundary](security/DENY-EGRESS-BOUNDARY.md)
 - [Current-build threat model](security/CURRENT-BUILD-THREAT-MODEL.md)
 - [Independent security review intake](security/INDEPENDENT-SECURITY-REVIEW.md)
+- [Automated current-build source setup](operations/AUTOMATED-SOURCE-SETUP.md)
 - [External telemetry and alert routing](operations/EXTERNAL-TELEMETRY-AND-ALERTING.md)
 - [Request pressure and dependency loss](operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md)
 - [Mutually authenticated service transport](operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md)

@@ -4,7 +4,7 @@
 Registry schema: `axiom-capabilities.v1`
 Kernel version: `0.12.0-dev.0`
 Evidence verified: `2026-07-29`
-Registry digest: `69788e11d0291bea931eff290765ceee95e4c5ce98099c03f8374fa70ce9b804`
+Registry digest: `58b9fb3086613cc41559240ab389cbc2e87ef0f51456c3c70453e1ae5a97f124`
 
 Only **implemented** capabilities are runnable claims.
 
@@ -13,7 +13,7 @@ Only **implemented** capabilities are runnable claims.
 - adapter_required: 9
 - disabled: 4
 - experimental: 2
-- implemented: 25
+- implemented: 26
 - specified: 3
 
 ## Registry
@@ -62,4 +62,5 @@ Only **implemented** capabilities are runnable claims.
 | `operations.pilot-dossier-verification` | operations | **implemented** | A separately authority-pinned, five-role review policy verifies exact build, 30-day observation, SLO, custody, and approval metadata; an offline exact-inventory package verifier additionally enforces 13 canonical role-signed v2 evidence envelopes with type-specific detail contracts while explicitly refusing to claim production promotion. |
 | `operations.security-review-intake` | operations | **implemented** | A separately authority-pinned current-build policy and independent reviewer signature verify exact threat-model and configuration scope, immutable reviewed artifacts, recomputed findings, externally verified critical/high remediation, and separately approved expiring lesser-risk exceptions while refusing to promote production. |
 | `operations.container-package` | operations | **implemented** | A digest-pinned non-root container package is statically release-gated, passes the four-process host drill, and is built and exercised through the published composed readiness workflow. |
+| `operations.setup-automation` | operations | **implemented** | An exact current-build setup policy verifies Node.js and npm ranges, CI and container pins, both zero-dependency locks, fixed script-disabled installation, and the full kernel and release commands without creating production credentials. |
 | `operations.installer-observability-release` | operations | **experimental** | Release tooling, bounded external telemetry and alert routing, and container verification are executable; legacy installer replacement and independently evidenced live deployment remain incomplete. |

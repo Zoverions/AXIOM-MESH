@@ -20,6 +20,11 @@ published production-candidate baseline.
 The intent pipeline, local encrypted state, evidence chain, operator surfaces,
 observability, explicit secret provisioning, supervisor, host-mode drill, and
 container policy are implemented.
+Clean-checkout source setup is also implemented: one command validates the
+supported Node.js/npm toolchain, installs the two exact zero-dependency locks
+with lifecycle scripts disabled, proves they did not change, and runs the
+kernel and release gates. It creates no production credentials and makes no
+deployment claim.
 
 The image build and composed container drill pass in
 [GitHub run 30375390450](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30375390450).
@@ -467,7 +472,10 @@ measurement, and a named human acknowledgement.
 Every promoted release must include:
 
 - a protected source commit;
-- reproducible dependency installation from committed locks;
+- the exact current-build setup policy, supported toolchain pins, prohibited
+  install lifecycle scripts, and reproducible installation from committed
+  locks;
+- an unchanged-lock receipt and the expected installed-package count;
 - zero unresolved dependency-audit vulnerabilities or an approved expiring
   exception;
 - a digest-pinned runtime base;

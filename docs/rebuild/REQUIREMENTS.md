@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=69788e11d0291bea931eff290765ceee95e4c5ce98099c03f8374fa70ce9b804 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=58b9fb3086613cc41559240ab389cbc2e87ef0f51456c3c70453e1ae5a97f124 -->
 # AXIOM-MESH Rebuild Requirements
 
 **Current build:** `0.12.0-dev.0`
@@ -103,7 +103,7 @@ requirements sense.
 
 | ID | Requirement | Acceptance evidence |
 |---|---|---|
-| OPS-01 | A clean checkout MUST install and run with one documented command and locked dependencies. | CI clean-room job. |
+| OPS-01 | A clean checkout MUST use one documented command to validate the supported Node.js/npm toolchain, install every workspace from exact committed locks with lifecycle scripts disabled, prove those locks unchanged, and run the kernel and release gates without provisioning production credentials. | Setup policy/state negative tests, `npm run setup`, and the protected clean-kernel job. |
 | OPS-02 | Containers MUST use non-root users, read-only filesystems where possible, health checks, pinned images, and explicit networks. | Compose policy test. |
 | OPS-03 | Secrets, private keys, binaries, generated docs, caches, and build artifacts MUST NOT be tracked. | Repository hygiene gate. |
 | OPS-04 | Logs MUST be structured, redact secrets/PII, and include trace IDs without storing raw sensitive prompts by default. | Log-redaction tests. |
@@ -146,7 +146,9 @@ The active `0.12.0-dev.0` build additionally verifies:
   rollback metadata, expiring emergencies, protected recovery actions, review
   records, and human appeal records.
 - redacted structured logs, generated claim/status consistency, a
-  dependency-free lock, release SBOM and provenance inputs, migration and
+  fail-closed source setup policy, two dependency-free locks, prohibited
+  install lifecycle scripts, exact local/CI/container runtime pins,
+  unchanged-lock proof, release SBOM and provenance inputs, migration and
   rollback gates, one active clean-kernel CI workflow, and quarantined legacy
   launch/deploy surfaces.
 - deterministic IAM-04 and ECON-02 property fixtures; a separately claimed

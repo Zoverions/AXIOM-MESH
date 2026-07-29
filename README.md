@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=69788e11d0291bea931eff290765ceee95e4c5ce98099c03f8374fa70ce9b804 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=58b9fb3086613cc41559240ab389cbc2e87ef0f51456c3c70453e1ae5a97f124 -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -38,8 +38,25 @@ disabled or adapter-required until their controls and evidence exist.
 
 ## Run and verify
 
-Local requirements: Node.js `>=24.14.0 <25`. The candidate production image
-pins Node.js 24.18.0. The kernel has no third-party runtime dependencies.
+Local requirements: Node.js `>=24.14.0 <25` and npm `>=11.0.0 <12`. Protected
+CI and the candidate production image pin Node.js 24.18.0. The kernel has no
+third-party npm packages.
+
+From a clean checkout, install both committed locks and run the full
+clean-kernel and release verification:
+
+```bash
+npm run setup
+```
+
+The command disables install lifecycle scripts, verifies that the locks remain
+unchanged, and does not create production credentials. Use
+`npm run setup:check` for a read-only prerequisite/drift check or
+`npm run setup:install` for exact lock installation without the full suite.
+See the
+[automated source setup boundary](docs/operations/AUTOMATED-SOURCE-SETUP.md).
+
+Start the local development runtime:
 
 ```bash
 npm run dev
@@ -54,7 +71,7 @@ node mesh/src/cli.mjs intent system.echo '{"message":"hello"}'
 node mesh/src/cli.mjs audit
 ```
 
-Run all clean-kernel checks:
+After subsequent source changes, rerun all clean-kernel checks:
 
 ```bash
 npm run check
@@ -336,8 +353,9 @@ advertised as runnable. Other entries are explicitly `experimental`,
 The generated [capability status](docs/rebuild/STATUS.md), Constitution, and
 governing rebuild documents must match that registry's schema, kernel version,
 and digest. The verifier checks implemented-feature evidence, migration
-checksums, the dependency-free lock, rollback coverage, governing-document
-claim markers, and that only the clean-kernel workflow is active.
+checksums, the exact setup policy and both dependency-free locks, rollback
+coverage, governing-document claim markers, and that only the clean-kernel
+workflow is active.
 
 The authenticated operator API and command-line client are implemented. The
 historical browser dashboards are not a supported control surface; a new
