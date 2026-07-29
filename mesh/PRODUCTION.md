@@ -805,16 +805,18 @@ npm run pilot:package:verify -- \
 
 The package root must contain only canonical `policy.json`, canonical
 `dossier.json`, and an `evidence/` directory with the exact 13 canonical
-evidence envelopes. Every envelope must be a bounded regular file, match its
-dossier digest and build, contain no secret material, and carry the valid
-signature of the policy-pinned reviewer role assigned to that evidence type.
-Unexpected, missing, noncanonical, cross-build, wrongly signed, or symlinked
-input fails closed.
+v2 evidence envelopes. Every envelope must be a bounded regular file, match
+its dossier digest and build, satisfy its type-specific detail contract,
+contain no secret material, and carry the valid signature of the policy-pinned
+reviewer role assigned to that evidence type. Unexpected, missing,
+semantically contradictory, noncanonical, cross-build, wrongly signed, or
+symlinked input fails closed.
 
 `npm run pilot:package:drill` creates separately signed synthetic package
 conformance evidence and proves accepted exact inventory plus rejection of
 unexpected files, missing files, noncanonical JSON, wrong producer roles, and
-secret fields. It observes no live pilot and cannot promote production.
+dossier-inconsistent detail fields or secret fields. It observes no live pilot
+and cannot promote production.
 
 This package is a production container specification and local deployment
 surface. Its source and fail-closed supervisor are statically verified, and the

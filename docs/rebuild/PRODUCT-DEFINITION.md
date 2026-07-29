@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=66f97dad1b414be4d7442d0b2afed8e29b49898d60dc42d3373ee6535ce56a78 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=f3c82320ad56b36237512804293de992b40cb221a3fb45ce3d3b8b2ac7026743 -->
 # AXIOM-MESH Product Definition
 
 **Status:** Canonical rebuild definition
@@ -229,11 +229,13 @@ recovery thresholds, and five distinct reviewer keys. One exact dossier binds
 measurements, non-exportable custody receipts, four trust roots, and 13
 evidence hashes to that build. Authentic intake requires canonical policy and
 dossier files plus exactly 13 canonical local evidence envelopes. Each
-envelope is secret-free, raw-byte hash-bound, and signed by its assigned
-policy-pinned reviewer role; extra files and symlinks fail closed. Every role
-also signs the common dossier digest. Success admits the package to a separate
-promotion review and cannot set production status. Synthetic verifier
-conformance cannot replace authentic pilot evidence.
+v2 envelope is secret-free, raw-byte hash-bound, checked against an exact
+type-specific semantic contract, and signed by its assigned policy-pinned
+reviewer role; unknown fields, contradictory measurements, extra files, and
+symlinks fail closed. Every role also signs the common dossier digest. Success
+admits the package to a separate promotion review and cannot set production
+status. Synthetic verifier conformance cannot replace authentic pilot
+evidence.
 
 Admitted-node discovery and placement reservation are implemented inside the
 single authoritative Grid. Signed v2 admissions bind the node identity,

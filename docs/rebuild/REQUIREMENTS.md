@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=66f97dad1b414be4d7442d0b2afed8e29b49898d60dc42d3373ee6535ce56a78 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=f3c82320ad56b36237512804293de992b40cb221a3fb45ce3d3b8b2ac7026743 -->
 # AXIOM-MESH Rebuild Requirements
 
 **Current build:** `0.12.0-dev.0`
@@ -252,14 +252,18 @@ The active `0.12.0-dev.0` build additionally verifies:
   recovery results, non-exportable rotated custody controls, and the exact
   deployment-specific evidence inventory. Authentic intake MUST require
   canonical policy and dossier files and exactly 13 canonical local evidence
-  envelopes at fixed paths. Each envelope MUST match its dossier raw-byte
-  digest, deployment, build, schema, observation time, and policy-assigned
-  reviewer signature. It MUST reject unknown fields, noncanonical JSON,
-  symbolic links, unexpected files, secret material, stale or cross-build
-  evidence, reused identities, missing artifacts, inadequate measurements,
-  wrong producer roles, and altered approvals. A successful intake MUST state
-  that production is not promoted; synthetic conformance MUST state that it
-  is not live-pilot evidence.
+  v2 envelopes at fixed paths. Each envelope MUST match its dossier raw-byte
+  digest, deployment, build, schema, observation time, policy-assigned
+  reviewer signature, and exact evidence-type detail contract. Detail
+  contracts MUST bind dossier measurements and inventories where applicable
+  and MUST fail unresolved critical/high findings, pending credential-history
+  dispositions, exportable custody, or unverified recovery and rotation
+  controls. Intake MUST reject unknown fields, noncanonical JSON, symbolic
+  links, unexpected files, secret material, stale or cross-build evidence,
+  reused identities, missing artifacts, inadequate measurements, wrong
+  producer roles, and altered approvals. A successful intake MUST state that
+  production is not promoted; synthetic conformance MUST state that it is not
+  live-pilot evidence.
 
 ## Capability coverage
 

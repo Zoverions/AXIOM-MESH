@@ -23,6 +23,9 @@ import {
   verifyPilotEvidencePackage
 } from './pilot-evidence-package.mjs';
 import {
+  PILOT_EVIDENCE_DETAIL_CONTRACT_VERSION
+} from './pilot-evidence-contracts.mjs';
+import {
   PILOT_EVIDENCE_TYPES,
   PILOT_REVIEW_ROLES,
   pilotApprovalPayload
@@ -32,7 +35,7 @@ import {
 } from './pilot-dossier-conformance-drill.mjs';
 
 const EVIDENCE_SCHEMA =
-  'axiom-pilot-evidence-package-verifier-conformance-evidence.v1';
+  'axiom-pilot-evidence-package-verifier-conformance-evidence.v2';
 const REVISION = /^[a-f0-9]{40}$/;
 const KERNEL_VERSION = JSON.parse(
   await readFile(new URL('../package.json', import.meta.url), 'utf8')
@@ -70,11 +73,13 @@ export async function createSyntheticPilotEvidencePackage({
         reviewer_id: reviewer.reviewer_id
       },
       summary: `Synthetic ${type.replaceAll('_', ' ')} package conformance record.`,
-      details: {
-        synthetic_fixture: true,
-        sequence: index + 1,
-        live_system_observed: false
-      },
+      details: syntheticEvidenceDetails({
+        type,
+        metadata,
+        dossier: fixture.dossier,
+        policy: fixture.policy,
+        index
+      }),
       signer: {
         key_id: reviewer.key_id
       }
@@ -164,6 +169,26 @@ export async function runPilotEvidencePackageConformanceDrill({
     await writeFile(rolePath, roleOriginal, { encoding: 'utf8' });
     await bindEvidenceDigestAndResign(root, fixture, roleType);
 
+    const detailType = 'availability_observation';
+    const detailPath = join(root, 'evidence', `${detailType}.json`);
+    const detailOriginal = await readFile(detailPath, 'utf8');
+    const invalidDetailEnvelope = JSON.parse(detailOriginal);
+    invalidDetailEnvelope.details.availability_percent -= 0.1;
+    resignEnvelope(fixture, detailType, invalidDetailEnvelope);
+    await writeFile(detailPath, canonicalJson(invalidDetailEnvelope), {
+      encoding: 'utf8'
+    });
+    await bindEvidenceDigestAndResign(root, fixture, detailType);
+    const invalidDetailContractRejected = await rejects(
+      () => verifyPilotEvidencePackage({
+        packageDir: root,
+        authorityPublicKey: fixture.authorityPublicKey,
+        now
+      })
+    );
+    await writeFile(detailPath, detailOriginal, { encoding: 'utf8' });
+    await bindEvidenceDigestAndResign(root, fixture, detailType);
+
     const missingType = 'independent_security_review';
     const missingPath = join(root, 'evidence', `${missingType}.json`);
     const missingOriginal = await readFile(missingPath);
@@ -182,6 +207,7 @@ export async function runPilotEvidencePackageConformanceDrill({
       missing_file_rejected: missingFileRejected,
       noncanonical_json_rejected: noncanonicalJsonRejected,
       wrong_producer_role_rejected: wrongRoleRejected,
+      invalid_detail_contract_rejected: invalidDetailContractRejected,
       secret_field_rejected: secretFieldRejected
     };
     if (Object.values(checks).some(value => value !== true)) {
@@ -206,6 +232,8 @@ export async function runPilotEvidencePackageConformanceDrill({
       results: {
         canonical_control_files: valid.canonical_control_files,
         canonical_evidence_files: valid.canonical_evidence_files,
+        evidence_detail_contract_version:
+          valid.evidence_detail_contract_version,
         producer_roles: Object.keys(valid.producer_roles).length,
         fixture_policy_digest: digestObject(fixture.policy),
         fixture_dossier_digest: digestObject(fixture.dossier)
@@ -253,11 +281,13 @@ export function verifyPilotEvidencePackageConformanceEvidence(evidence) {
     'missing_file_rejected',
     'noncanonical_json_rejected',
     'wrong_producer_role_rejected',
+    'invalid_detail_contract_rejected',
     'secret_field_rejected'
   ]);
   exactObject(evidence.results, 'Pilot package conformance results', [
     'canonical_control_files',
     'canonical_evidence_files',
+    'evidence_detail_contract_version',
     'producer_roles',
     'fixture_policy_digest',
     'fixture_dossier_digest'
@@ -288,6 +318,8 @@ export function verifyPilotEvidencePackageConformanceEvidence(evidence) {
     || Object.values(evidence.checks).some(value => value !== true)
     || evidence.results.canonical_control_files !== 2
     || evidence.results.canonical_evidence_files !== PILOT_EVIDENCE_TYPES.length
+    || evidence.results.evidence_detail_contract_version
+      !== PILOT_EVIDENCE_DETAIL_CONTRACT_VERSION
     || evidence.results.producer_roles !== PILOT_REVIEW_ROLES.length
     || !/^[a-f0-9]{64}$/.test(evidence.results.fixture_policy_digest ?? '')
     || !/^[a-f0-9]{64}$/.test(evidence.results.fixture_dossier_digest ?? '')
@@ -312,6 +344,221 @@ export function verifyPilotEvidencePackageConformanceEvidence(evidence) {
     live_pilot_observed: false,
     production_promotion_claimed: false
   };
+}
+
+function syntheticEvidenceDetails({
+  type,
+  metadata,
+  dossier,
+  policy,
+  index
+}) {
+  const digest = offset => syntheticPackageDigest((index * 10) + offset);
+  switch (type) {
+    case 'deployment_manifest':
+      return {
+        environment: dossier.deployment.environment,
+        platform: dossier.deployment.platform,
+        region: dossier.deployment.region,
+        topology: dossier.deployment.topology,
+        service_units: [...dossier.deployment.service_units],
+        non_public: dossier.deployment.non_public,
+        public_ingress: dossier.deployment.public_ingress,
+        deny_egress: dossier.deployment.deny_egress,
+        resource_limits_enforced:
+          dossier.deployment.resource_limits_enforced,
+        pilot_owned_receivers: dossier.deployment.pilot_owned_receivers,
+        actual_provider_adapter: dossier.deployment.actual_provider_adapter,
+        scheduled_restore_from_pilot_media:
+          dossier.deployment.scheduled_restore_from_pilot_media
+      };
+    case 'image_provenance':
+      return {
+        source_revision: dossier.build.source_revision,
+        image_digest: dossier.build.image_digest,
+        source_archive_sha256: digest(1),
+        sbom_sha256: digest(2),
+        provenance_sha256: digest(3),
+        container_manifest_sha256: digest(4),
+        reproducible_source_verified: true,
+        image_signature_verified: true
+      };
+    case 'availability_observation':
+      return {
+        ...dossier.observation,
+        availability_percent: dossier.measurements.availability_percent,
+        successful_intents: dossier.measurements.successful_intents,
+        failed_intents: dossier.measurements.failed_intents,
+        acknowledged_mutation_evidence_loss:
+          dossier.measurements.acknowledged_mutation_evidence_loss
+      };
+    case 'capacity_measurement':
+      return {
+        profile_id: 'synthetic_capacity_profile',
+        peak_concurrency: 4,
+        successful_intents: dossier.measurements.successful_intents,
+        failed_intents: dossier.measurements.failed_intents,
+        p95_intent_latency_ms:
+          dossier.measurements.p95_intent_latency_ms,
+        resource_limits_enforced:
+          dossier.deployment.resource_limits_enforced,
+        overload_rejection_verified: true,
+        dependency_loss_recovery_verified: true,
+        saturation_within_limits: true
+      };
+    case 'external_telemetry':
+      return {
+        receiver_owner: 'synthetic_pilot_operator',
+        retention_policy_id: 'synthetic_retention_policy',
+        metrics_transport_authenticated: true,
+        alert_transport_authenticated: true,
+        fixed_vocabulary_enforced: true,
+        sensitive_values_omitted: true,
+        critical_alert_ack_minutes:
+          dossier.measurements.critical_alert_ack_minutes,
+        delivery_receipts_verified: true
+      };
+    case 'provider_assessment': {
+      const custody = dossier.custody.find(
+        item => item.control === 'provider_secret_signer'
+      );
+      return {
+        adapter_id: 'synthetic_provider_adapter',
+        adapter_sha256: digest(1),
+        backend: custody.backend,
+        workload_identity: custody.workload_identity,
+        backend_authorization_least_privilege: true,
+        provider_signer_pinned: true,
+        nonce_freshness_verified: true,
+        rotation_observed: true,
+        rollback_verified: true,
+        private_runtime_cleanup_verified: true
+      };
+    }
+    case 'custody_assessment':
+      return {
+        controls: dossier.custody.map(item => ({
+          control: item.control,
+          backend: item.backend,
+          custodian: item.custodian,
+          workload_identity: item.workload_identity,
+          exportable: item.exportable,
+          rotation_observed: item.rotation_observed,
+          receipt_sha256: item.receipt_sha256
+        })),
+        all_non_exportable: true,
+        separation_of_duties_verified: true
+      };
+    case 'scheduled_restore':
+      return {
+        media_owner: 'synthetic_pilot_operator',
+        backup_id: 'synthetic_pilot_backup',
+        backup_sha256: digest(1),
+        restored_at: metadata.observed_at,
+        rpo_minutes: dossier.measurements.backup_rpo_minutes,
+        rto_minutes: dossier.measurements.restore_rto_minutes,
+        pilot_owned_media: true,
+        wrong_key_rejected: true,
+        state_integrity_verified: true,
+        rollback_verified: true
+      };
+    case 'credential_rotation':
+      return {
+        custody_backend: dossier.custody.find(
+          item => item.control === 'service_identities'
+        ).backend,
+        rotated_service_identities: [
+          'gateway',
+          'grid',
+          'hypervisor',
+          'sandbox'
+        ],
+        operator_token_rotated: true,
+        telemetry_token_rotated: true,
+        retired_credentials_rejected: true,
+        trust_lineage_verified: true,
+        rollback_verified: true,
+        secret_values_omitted: true
+      };
+    case 'data_key_rotation':
+      return {
+        custody_backend: dossier.custody.find(
+          item => item.control === 'data_protection_key'
+        ).backend,
+        live_state_reencrypted: true,
+        retained_backups_reencrypted: true,
+        recovery_copies_reencrypted: true,
+        wrong_key_rejected: true,
+        restore_verified: true,
+        interruption_recovery_verified: true,
+        rollback_verified: true,
+        old_key_retired: true
+      };
+    case 'credential_history_attestations':
+      return {
+        expected_entries:
+          policy.requirements.expected_deprecated_history_entries,
+        verified_entries:
+          policy.requirements.expected_deprecated_history_entries,
+        not_applicable_entries: 0,
+        pending_entries: 0,
+        repository_reintroduced: 0,
+        external_dispositions_complete: true,
+        disposition_ledger_sha256: digest(1)
+      };
+    case 'incident_tabletop':
+      return {
+        exercise_id: 'synthetic_facilitated_tabletop',
+        facilitated: true,
+        named_responders: [
+          'synthetic_incident_commander',
+          'synthetic_operations_lead'
+        ],
+        independent_reviewer_id: policy.reviewers.find(
+          item => item.role === 'independent_reviewer'
+        ).reviewer_id,
+        notification_decisions_recorded: true,
+        evidence_preserved: true,
+        containment_verified: true,
+        recovery_verified: true,
+        communications_verified: true,
+        closure_verified: true,
+        unresolved_critical_findings: 0,
+        unresolved_high_findings: 0
+      };
+    case 'independent_security_review':
+      return {
+        review_id: 'synthetic_independent_review',
+        reviewer_organization: 'synthetic_review_organization',
+        reviewer_id: policy.reviewers.find(
+          item => item.role === 'independent_reviewer'
+        ).reviewer_id,
+        completed_at: metadata.observed_at,
+        scope: [
+          'container_policy',
+          'kernel',
+          'pilot_evidence_intake',
+          'provider_boundary'
+        ],
+        report_sha256: digest(1),
+        findings: {
+          critical: 0,
+          high: 0,
+          medium: 0,
+          low: 0
+        },
+        unresolved_critical_findings: 0,
+        unresolved_high_findings: 0,
+        remediation_owners_assigned: true,
+        residual_risk_documented: true
+      };
+    default:
+      throw new ValidationError(`Unsupported synthetic pilot evidence: ${type}`);
+  }
+}
+
+function syntheticPackageDigest(seed) {
+  return `sha256:${String(seed + 1).padStart(64, '0')}`;
 }
 
 async function writeCanonicalControlFiles(root, fixture) {

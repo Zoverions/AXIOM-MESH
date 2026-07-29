@@ -38,19 +38,21 @@ export const PILOT_EVIDENCE_TYPES = Object.freeze([
 ]);
 
 export const PILOT_EVIDENCE_SCHEMAS = Object.freeze({
-  deployment_manifest: 'axiom-pilot-deployment-manifest.v1',
-  image_provenance: 'axiom-release-evidence.v1',
-  availability_observation: 'axiom-pilot-availability-evidence.v1',
-  capacity_measurement: 'axiom-pilot-capacity-evidence.v1',
-  external_telemetry: 'axiom-pilot-telemetry-evidence.v1',
-  provider_assessment: 'axiom-pilot-provider-assessment.v1',
-  custody_assessment: 'axiom-pilot-custody-assessment.v1',
-  scheduled_restore: 'axiom-pilot-scheduled-restore-evidence.v1',
-  credential_rotation: 'axiom-credential-rotation-drill-evidence.v1',
-  data_key_rotation: 'axiom-data-key-rotation-drill-evidence.v1',
-  credential_history_attestations: 'axiom-credential-history-attestations.v1',
-  incident_tabletop: 'axiom-incident-tabletop-evidence.v1',
-  independent_security_review: 'axiom-pilot-independent-security-review.v1'
+  deployment_manifest: 'axiom-pilot-deployment-manifest.v2',
+  image_provenance: 'axiom-pilot-image-provenance.v2',
+  availability_observation: 'axiom-pilot-availability-evidence.v2',
+  capacity_measurement: 'axiom-pilot-capacity-evidence.v2',
+  external_telemetry: 'axiom-pilot-telemetry-evidence.v2',
+  provider_assessment: 'axiom-pilot-provider-assessment.v2',
+  custody_assessment: 'axiom-pilot-custody-assessment.v2',
+  scheduled_restore: 'axiom-pilot-scheduled-restore-evidence.v2',
+  credential_rotation: 'axiom-pilot-credential-rotation-evidence.v2',
+  data_key_rotation: 'axiom-pilot-data-key-rotation-evidence.v2',
+  credential_history_attestations:
+    'axiom-pilot-credential-history-attestations.v2',
+  incident_tabletop: 'axiom-pilot-incident-tabletop-evidence.v2',
+  independent_security_review:
+    'axiom-pilot-independent-security-review.v2'
 });
 
 export const PILOT_CUSTODY_CONTROLS = Object.freeze([
