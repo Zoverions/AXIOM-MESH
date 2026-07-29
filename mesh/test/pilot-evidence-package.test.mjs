@@ -13,6 +13,12 @@ import {
   verifyPilotEvidencePackage
 } from '../src/pilot-evidence-package.mjs';
 import { canonicalJson } from '../src/lib/canonical.mjs';
+import {
+  validatePilotEvidenceDetails
+} from '../src/pilot-evidence-contracts.mjs';
+import {
+  PILOT_EVIDENCE_TYPES
+} from '../src/pilot-dossier.mjs';
 
 test('offline pilot package verifies exact canonical role-signed evidence', async t => {
   const root = await mkdtemp(join(tmpdir(), 'axiom-pilot-package-test-'));
@@ -26,9 +32,10 @@ test('offline pilot package verifies exact canonical role-signed evidence', asyn
   });
 
   assert.equal(result.valid, true);
-  assert.equal(result.schema, 'axiom-pilot-evidence-package-verification.v1');
+  assert.equal(result.schema, 'axiom-pilot-evidence-package-verification.v2');
   assert.equal(result.canonical_control_files, 2);
   assert.equal(result.canonical_evidence_files, 13);
+  assert.equal(result.evidence_detail_contract_version, 2);
   assert.equal(Object.keys(result.producer_roles).length, 5);
   assert.equal(result.intake_status, 'accepted-for-promotion-review');
   assert.equal(result.production_promoted, false);
@@ -82,6 +89,79 @@ test('pilot evidence envelope rejects build, producer, detail, and signature dri
   const alteredSignature = structuredClone(envelope);
   alteredSignature.summary = `${alteredSignature.summary} Altered.`;
   assert.throws(() => verify(alteredSignature), /signature is invalid/);
+});
+
+test('all pilot evidence detail contracts reject unknown and semantic drift', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'axiom-pilot-contract-test-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const now = Date.parse('2026-07-29T15:00:00.000Z');
+  const fixture = await createSyntheticPilotEvidencePackage({ root, now });
+  const mutate = {
+    deployment_manifest: value => {
+      value.platform = 'different_platform';
+    },
+    image_provenance: value => {
+      value.reproducible_source_verified = false;
+    },
+    availability_observation: value => {
+      value.availability_percent -= 0.1;
+    },
+    capacity_measurement: value => {
+      value.saturation_within_limits = false;
+    },
+    external_telemetry: value => {
+      value.delivery_receipts_verified = false;
+    },
+    provider_assessment: value => {
+      value.rollback_verified = false;
+    },
+    custody_assessment: value => {
+      value.controls[0].exportable = true;
+    },
+    scheduled_restore: value => {
+      value.rto_minutes += 1;
+    },
+    credential_rotation: value => {
+      value.retired_credentials_rejected = false;
+    },
+    data_key_rotation: value => {
+      value.old_key_retired = false;
+    },
+    credential_history_attestations: value => {
+      value.pending_entries = 1;
+    },
+    incident_tabletop: value => {
+      value.unresolved_high_findings = 1;
+    },
+    independent_security_review: value => {
+      value.scope.pop();
+    }
+  };
+
+  for (const type of PILOT_EVIDENCE_TYPES) {
+    const metadata = fixture.dossier.evidence.find(item => item.type === type);
+    const envelope = JSON.parse(
+      await readFile(join(root, 'evidence', `${type}.json`), 'utf8')
+    );
+    assert.equal(envelope.version, 2, type);
+    assert.match(envelope.schema, /\.v2$/, type);
+    const verify = details => validatePilotEvidenceDetails({
+      type,
+      details,
+      dossier: fixture.dossier,
+      policy: fixture.policy,
+      metadata
+    });
+    assert.equal(verify(envelope.details).valid, true, type);
+
+    const unknown = structuredClone(envelope.details);
+    unknown.unexpected_field = true;
+    assert.throws(() => verify(unknown), /details fields are invalid/, type);
+
+    const drifted = structuredClone(envelope.details);
+    mutate[type](drifted);
+    assert.throws(() => verify(drifted), /details are invalid/, type);
+  }
 });
 
 test('signed package conformance proves exact inventory without claiming a pilot', async () => {

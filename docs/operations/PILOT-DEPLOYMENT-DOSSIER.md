@@ -139,19 +139,19 @@ The dossier contains these 13 entries in exact order:
 
 | Type | Required schema | Purpose |
 |---|---|---|
-| `deployment_manifest` | `axiom-pilot-deployment-manifest.v1` | Immutable topology, platform policy, and non-secret configuration |
-| `image_provenance` | `axiom-release-evidence.v1` | Source, image, SBOM, and build provenance |
-| `availability_observation` | `axiom-pilot-availability-evidence.v1` | Continuous 30-day availability calculation |
-| `capacity_measurement` | `axiom-pilot-capacity-evidence.v1` | Declared traffic, resource enforcement, throughput, errors, and latency |
-| `external_telemetry` | `axiom-pilot-telemetry-evidence.v1` | Pilot-owned collection, retention, alert delivery, and acknowledgement |
-| `provider_assessment` | `axiom-pilot-provider-assessment.v1` | Actual adapter, workload identity, backend authorization, rotation, and rollback |
-| `custody_assessment` | `axiom-pilot-custody-assessment.v1` | External key custody and non-exportability review |
-| `scheduled_restore` | `axiom-pilot-scheduled-restore-evidence.v1` | Restore from pilot-owned media with measured RPO and RTO |
-| `credential_rotation` | `axiom-credential-rotation-drill-evidence.v1` | Pilot-custody service and operator credential lifecycle |
-| `data_key_rotation` | `axiom-data-key-rotation-drill-evidence.v1` | Pilot secret-manager re-encryption, rollback, and retirement |
-| `credential_history_attestations` | `axiom-credential-history-attestations.v1` | Disposition of all 32 deprecated-history candidates |
-| `incident_tabletop` | `axiom-incident-tabletop-evidence.v1` | Facilitated named-roster exercise and deployment notification decisions |
-| `independent_security_review` | `axiom-pilot-independent-security-review.v1` | Independent review scope, findings, dispositions, and residual risks |
+| `deployment_manifest` | `axiom-pilot-deployment-manifest.v2` | Immutable topology, platform policy, and non-secret configuration |
+| `image_provenance` | `axiom-pilot-image-provenance.v2` | Source, image, SBOM, and build provenance |
+| `availability_observation` | `axiom-pilot-availability-evidence.v2` | Continuous 30-day availability calculation |
+| `capacity_measurement` | `axiom-pilot-capacity-evidence.v2` | Declared traffic, resource enforcement, throughput, errors, and latency |
+| `external_telemetry` | `axiom-pilot-telemetry-evidence.v2` | Pilot-owned collection, retention, alert delivery, and acknowledgement |
+| `provider_assessment` | `axiom-pilot-provider-assessment.v2` | Actual adapter, workload identity, backend authorization, rotation, and rollback |
+| `custody_assessment` | `axiom-pilot-custody-assessment.v2` | External key custody and non-exportability review |
+| `scheduled_restore` | `axiom-pilot-scheduled-restore-evidence.v2` | Restore from pilot-owned media with measured RPO and RTO |
+| `credential_rotation` | `axiom-pilot-credential-rotation-evidence.v2` | Pilot-custody service and operator credential lifecycle |
+| `data_key_rotation` | `axiom-pilot-data-key-rotation-evidence.v2` | Pilot secret-manager re-encryption, rollback, and retirement |
+| `credential_history_attestations` | `axiom-pilot-credential-history-attestations.v2` | Disposition of all 32 deprecated-history candidates |
+| `incident_tabletop` | `axiom-pilot-incident-tabletop-evidence.v2` | Facilitated named-roster exercise and deployment notification decisions |
+| `independent_security_review` | `axiom-pilot-independent-security-review.v2` | Independent review scope, findings, dispositions, and residual risks |
 
 Each entry records a stable reference, unique SHA-256 digest, observation
 timestamp, exact source revision, exact image digest, `passed` disposition,
@@ -226,7 +226,7 @@ shape:
     "reviewer_id": "named_reviewer",
     "role": "platform_operator"
   },
-  "schema": "axiom-pilot-deployment-manifest.v1",
+  "schema": "axiom-pilot-deployment-manifest.v2",
   "signer": {
     "key_id": "pilot-platform-operator:0123456789abcdef"
   },
@@ -237,13 +237,15 @@ shape:
   },
   "status": "passed",
   "summary": "A concise secret-free result for independent review.",
-  "version": 1
+  "version": 2
 }
 ```
 
-The example shows structure, not valid evidence or signatures. `details` holds
-the evidence-type-specific result and must be a non-empty object. The common
-envelope, including `details`, is secret-scanned and signed canonically.
+The example shows common structure, not valid evidence or signatures.
+`details` is governed by the exact type-specific v2 contract below. Unknown,
+missing, mistyped, reordered-inventory, threshold-drifted, or contradictory
+detail fields fail before signature acceptance. The complete envelope,
+including `details`, is secret-scanned and signed canonically.
 
 The policy assigns evidence signing responsibility:
 
@@ -263,6 +265,28 @@ type, deployment identifier, version, status, observation time, kernel
 version, source revision, image digest, producer identifier, signer key, and
 signature must all agree with the policy and dossier.
 
+### Exact v2 detail contracts
+
+Every `details` object has an exact field inventory. These contracts bind
+human-reviewed claims to the dossier instead of accepting an arbitrary signed
+object:
+
+| Evidence | Enforced detail relationship |
+|---|---|
+| Deployment manifest | Environment, platform, region, topology, four service units, network boundary, resource limits, receivers, provider, and restore declarations equal the dossier deployment |
+| Image provenance | Exact source revision and image digest plus four distinct SHA-256 source/SBOM/provenance/container records; reproducibility and image signature are verified |
+| Availability observation | Observation timestamps, duration, continuity, availability, intent counts, and zero acknowledged evidence loss equal the dossier |
+| Capacity measurement | Profile is identified and peak concurrency is positive; intent counts, p95 latency, and resource enforcement equal the dossier; overload, dependency recovery, and saturation checks pass |
+| External telemetry | Named owner and retention policy, authenticated metrics and alert transport, fixed vocabulary, secret omission, dossier-bound acknowledgement time, and delivery receipts |
+| Provider assessment | Identified digest-pinned adapter, dossier-custodied backend and workload identity, least privilege, pinned signer, nonce freshness, rotation, rollback, and private-generation cleanup |
+| Custody assessment | All five custody controls exactly repeat the dossier backend, custodian, workload identity, exportability, rotation, and receipt digests; non-exportability and duty separation pass |
+| Scheduled restore | Identified pilot-owned media and backup digest, exact observation timestamp, dossier-bound RPO/RTO, wrong-key rejection, restored-state integrity, and rollback |
+| Credential rotation | Dossier-custodied identity backend, exact four service identities, operator and telemetry token rotation, retired-credential rejection, signer lineage, rollback, and secret omission |
+| Data-key rotation | Dossier-custodied data-key backend; live state, retained backups, and recovery copies are re-encrypted; wrong-key rejection, restore, interruption recovery, rollback, and old-key retirement pass |
+| Credential-history attestations | The policy-pinned 32 entries are all verified or independently not-applicable, none remain pending or reintroduced, and the external disposition ledger is complete |
+| Incident tabletop | Facilitated exercise, at least two unique named responders, policy-pinned independent reviewer, notification decisions, evidence, containment, recovery, communications, closure, and zero unresolved critical/high findings |
+| Independent security review | Policy-pinned reviewer and organization, exact review scope, report digest, finding counts, zero unresolved critical/high findings, remediation ownership, and documented residual risk |
+
 Run final offline package verification with the authority public key obtained
 through the separate trusted channel:
 
@@ -273,10 +297,11 @@ npm run pilot:package:verify -- \
 ```
 
 A successful result reports two canonical control files, 13 canonical evidence
-files, the byte count, producer-role distribution, the exact build, and
-`production_promoted: false`. Package verification does not remove the need
-for reviewers to understand whether each signed `details` object actually
-supports its disposition. It makes the bytes they reviewed immutable,
+files, detail-contract version 2, the byte count, producer-role distribution,
+the exact build, the `axiom-pilot-evidence-package-verification.v2` result
+schema, and `production_promoted: false`. Package verification does not remove
+the need for reviewers to understand whether each signed `details` object
+actually supports its disposition. It makes the bytes they reviewed immutable,
 self-contained, role-authenticated, and machine-bound to the approved dossier.
 
 ## Custody and trust-root inventory
@@ -428,11 +453,12 @@ npm run pilot:package:drill \
 
 That drill constructs an exact synthetic package and proves rejection of an
 unexpected file, missing evidence file, noncanonical JSON, wrong producer
-role, and secret-bearing detail. The signed artifact
-`axiom-pilot-evidence-package-verifier-conformance-evidence-<commit>` declares
-that the fixture is synthetic, no live pilot was observed, and production was
-not promoted. It is verifier evidence, not one of the 13 admissible pilot
-files.
+role, dossier-inconsistent v2 detail contract, and secret-bearing detail. The
+signed artifact
+`axiom-pilot-evidence-package-verifier-conformance-evidence-<commit>` uses
+`axiom-pilot-evidence-package-verifier-conformance-evidence.v2` and declares a
+synthetic fixture, no live pilot observation, and no production promotion. It
+is verifier evidence, not one of the 13 admissible pilot files.
 
 ## Reassessment and retention
 

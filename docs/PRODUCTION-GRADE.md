@@ -42,9 +42,10 @@ and independent security review remain open.
 The repository now implements signed pilot dossier and exact offline package
 verification: a separately anchored policy authority pins one build and image,
 current 30-day/SLO gates, five distinct reviewers, custody receipts, and
-exactly 13 canonical local evidence envelopes. Raw-byte hashes, build identity,
-assigned-role signatures, exact filenames, secret rejection, and a no-symlink
-inventory make the reviewed package immutable. Protected CI proves only the
+exactly 13 canonical local v2 evidence envelopes. Raw-byte hashes, build
+identity, assigned-role signatures, exact filenames, type-specific semantic
+contracts, secret rejection, and a no-symlink inventory make the reviewed
+package immutable and structurally meaningful. Protected CI proves only the
 verifiers' fail-closed behavior with labeled synthetic fixtures; it supplies
 none of the open pilot evidence.
 The request-path resilience control, container deny-egress, host-side telemetry
@@ -540,12 +541,13 @@ four distinct trust-root digests, five non-exportable custody controls,
 deployment measurements, and 13 exact evidence references and SHA-256
 digests. Authentic intake supplies those references as an exact offline
 directory containing canonical policy and dossier files plus 13 canonical
-evidence envelopes. Each envelope binds the policy-pinned revision and image
-and is signed by the policy-pinned reviewer role assigned to that evidence
-type. All five roles also sign the same dossier digest after the observation.
-Missing, extra, symlinked, stale, cross-build, reordered, noncanonical,
-altered, secret-bearing, wrongly signed, or inadequately measured input fails
-closed.
+v2 evidence envelopes. Each envelope binds the policy-pinned revision and
+image, must satisfy the exact semantic contract for its evidence type, and is
+signed by the policy-pinned reviewer role assigned to that evidence type. All
+five roles also sign the same dossier digest after the observation. Missing,
+extra, symlinked, stale, cross-build, reordered, semantically contradictory,
+noncanonical, altered, secret-bearing, wrongly signed, or inadequately
+measured input fails closed.
 
 The supported verifiers return only
 `accepted-for-promotion-review` and `production_promoted: false`. Reviewers

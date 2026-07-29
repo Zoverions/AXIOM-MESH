@@ -56,7 +56,8 @@ experimental, 3 specified, 9 adapter-required, and 4 disabled capabilities.
 - pilot evidence intake using a separately anchored policy authority, exact
   source/image and 30-day/SLO/custody inventory, five distinct role
   signatures, and an exact offline package of 13 canonical, secret-free,
-  role-signed evidence envelopes with an explicit non-promotion result.
+  role-signed v2 evidence envelopes with exact per-type semantic contracts and
+  an explicit non-promotion result.
 
 ## Production package state
 
@@ -124,9 +125,9 @@ across live and retained recovery state, proves wrong-key rejection in both
   It also runs signed synthetic conformance for both pilot intake boundaries.
   The dossier drill proves wrong-build, altered-approval, missing-evidence,
   and secret-field rejection. The package drill proves exact canonical
-  inventory plus missing, extra, wrongly signed, noncanonical, and
-  secret-bearing file rejection. Both explicitly declare that no live pilot
-  was observed.
+  inventory plus missing, extra, wrongly signed, noncanonical,
+  dossier-inconsistent detail, and secret-bearing file rejection. Both
+  explicitly declare that no live pilot was observed.
   Dedicated pilot-hardware capacity and availability validation,
   pilot-owned receiver/secret/media custody, external
   credential-history attestations, and independent security review are still

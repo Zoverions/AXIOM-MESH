@@ -302,12 +302,13 @@
       "id": "operations.pilot-dossier-verification",
       "family": "operations",
       "status": "implemented",
-      "summary": "A separately authority-pinned, five-role review policy verifies exact build, 30-day observation, SLO, custody, and approval metadata; an offline exact-inventory package verifier additionally checks 13 canonical role-signed evidence envelopes while explicitly refusing to claim production promotion.",
+      "summary": "A separately authority-pinned, five-role review policy verifies exact build, 30-day observation, SLO, custody, and approval metadata; an offline exact-inventory package verifier additionally enforces 13 canonical role-signed v2 evidence envelopes with type-specific detail contracts while explicitly refusing to claim production promotion.",
       "evidence": [
         "mesh/test/pilot-dossier.test.mjs",
         "mesh/test/pilot-evidence-package.test.mjs",
         "mesh/src/pilot-dossier.mjs",
         "mesh/src/pilot-dossier-conformance-drill.mjs",
+        "mesh/src/pilot-evidence-contracts.mjs",
         "mesh/src/pilot-evidence-package.mjs",
         "mesh/src/pilot-evidence-package-drill.mjs",
         ".github/workflows/kernel.yml"

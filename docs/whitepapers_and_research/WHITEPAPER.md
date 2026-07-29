@@ -541,14 +541,18 @@ artifact, or a cross-build result from silently satisfying multiple promotion
 roles. The final offline intake directory contains only canonical policy and
 dossier files plus the 13 canonical evidence envelopes at fixed local paths.
 Each secret-free envelope binds the exact deployment and build, matches the
-dossier's raw-byte digest, and carries the signature of its policy-assigned
-reviewer role. Noncanonical JSON, extra or missing files, symlinks, secret
-fields, build drift, and role substitution fail closed. Human reviewers still
-judge whether each signed evidence detail supports its disposition. The only
-successful verifier state is accepted for a later promotion review, with
-production explicitly false. Protected CI signs synthetic conformance for
-both the dossier and exact-package rejection paths but cannot manufacture an
-observed pilot.
+dossier's raw-byte digest, satisfies an exact evidence-type v2 semantic
+contract, and carries the signature of its policy-assigned reviewer role.
+These contracts bind observation and capacity values back to the dossier,
+repeat the five custody controls, require complete credential dispositions,
+and prohibit unresolved critical/high review findings. Noncanonical JSON,
+unknown detail fields, contradictory values, extra or missing files, symlinks,
+secret fields, build drift, and role substitution fail closed. Human reviewers
+still judge whether the evidence supports its disposition. The only successful
+verifier state is accepted for a later promotion review, with production
+explicitly false. Protected CI signs synthetic conformance for both the
+dossier and exact-package rejection paths but cannot manufacture an observed
+pilot.
 
 ## 14. Threat model
 

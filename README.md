@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=66f97dad1b414be4d7442d0b2afed8e29b49898d60dc42d3373ee6535ce56a78 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=f3c82320ad56b36237512804293de992b40cb221a3fb45ce3d3b8b2ac7026743 -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -205,13 +205,14 @@ npm run pilot:package:verify -- \
 The authority-signed policy pins one source revision and image digest, current
 30-day/SLO/recovery requirements, and five distinct reviewer keys. The package
 must contain exactly the canonical policy, dossier, and 13 local
-evidence-specific envelopes. Each envelope is secret-free, hash-bound to the
-dossier and signed by its policy-assigned reviewer role. Stale, cross-build,
-incomplete, altered, noncanonical, unexpected, or symlinked input fails
-closed. A valid result is accepted only for a separate promotion review and
-always reports `production_promoted: false`. Protected CI exercises both
-verifiers with synthetic inputs that explicitly do not claim a live pilot. See
-the
+evidence-specific v2 envelopes. Each envelope is secret-free, hash-bound to
+the dossier, signed by its policy-assigned reviewer role, and checked against
+an exact type-specific detail contract. Stale, cross-build, incomplete,
+structurally meaningless, altered, noncanonical, unexpected, or symlinked
+input fails closed. A valid result is accepted only for a separate promotion
+review and always reports `production_promoted: false`. Protected CI exercises
+both verifiers with synthetic inputs that explicitly do not claim a live
+pilot. See the
 [pilot deployment dossier runbook](docs/operations/PILOT-DEPLOYMENT-DOSSIER.md).
 
 Exercise the host-side external telemetry and alert path on Linux:
@@ -438,7 +439,8 @@ code, the capability registry, or release evidence.
 - Pilot evidence intake uses a separately distributed policy-authority key,
   five distinct role signatures, an exact build and image, 30-day
   measurements, custody receipts, and exactly 13 canonical, role-signed local
-  evidence envelopes. Passing intake does not promote production.
+  v2 evidence envelopes with type-specific detail contracts. Passing intake
+  does not promote production.
 
 Report vulnerabilities using [`.github/SECURITY.md`](.github/SECURITY.md).
 

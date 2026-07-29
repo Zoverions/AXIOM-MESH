@@ -121,12 +121,13 @@ npm run pilot:package:verify -- \
 ```
 
 Package verification requires the canonical policy and dossier plus exactly
-13 canonical local evidence envelopes. It rejects unexpected files, symlinks,
-secret material, digest or build drift, and signatures from any role other
-than the policy-assigned producer. Success means accepted for a separate
-promotion review, never production-promoted. `npm run pilot:dossier:drill`
-and `npm run pilot:package:drill` exercise only synthetic verifier
-conformance. See the
+13 canonical local v2 evidence envelopes. It enforces a different exact
+detail contract for every evidence type and rejects unexpected fields or
+files, symlinks, secret material, threshold or dossier drift, and signatures
+from any role other than the policy-assigned producer. Success means accepted
+for a separate promotion review, never production-promoted.
+`npm run pilot:dossier:drill` and `npm run pilot:package:drill` exercise only
+synthetic verifier conformance. See the
 [pilot dossier runbook](../docs/operations/PILOT-DEPLOYMENT-DOSSIER.md).
 
 Verify an export without a running AXIOM-MESH process:

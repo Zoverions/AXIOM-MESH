@@ -14,10 +14,14 @@ import {
   PILOT_EVIDENCE_TYPES,
   verifyPilotDossier
 } from './pilot-dossier.mjs';
+import {
+  PILOT_EVIDENCE_DETAIL_CONTRACT_VERSION,
+  validatePilotEvidenceDetails
+} from './pilot-evidence-contracts.mjs';
 
-export const PILOT_EVIDENCE_ENVELOPE_VERSION = 1;
+export const PILOT_EVIDENCE_ENVELOPE_VERSION = 2;
 export const PILOT_PACKAGE_RESULT_SCHEMA =
-  'axiom-pilot-evidence-package-verification.v1';
+  'axiom-pilot-evidence-package-verification.v2';
 
 export const PILOT_EVIDENCE_PRODUCER_ROLES = Object.freeze({
   deployment_manifest: 'platform_operator',
@@ -142,6 +146,8 @@ export async function verifyPilotEvidencePackage({
     image_digest: dossierResult.image_digest,
     canonical_control_files: 2,
     canonical_evidence_files: PILOT_EVIDENCE_TYPES.length,
+    evidence_detail_contract_version:
+      PILOT_EVIDENCE_DETAIL_CONTRACT_VERSION,
     total_bytes: totalBytes,
     producer_roles: producerCounts,
     intake_status: 'accepted-for-promotion-review',
@@ -193,11 +199,16 @@ export function verifyPilotEvidenceEnvelope({
     || envelope.summary.length < 20
     || envelope.summary.length > 1_000
     || /[\r\n]/.test(envelope.summary)
-    || !plainObject(envelope.details)
-    || Object.keys(envelope.details).length === 0
     || envelope.attestation.key_id !== reviewer.key_id
   ) throw new ValidationError(`Pilot evidence envelope is invalid: ${type}`);
 
+  validatePilotEvidenceDetails({
+    type,
+    details: envelope.details,
+    dossier,
+    policy,
+    metadata
+  });
   const publicKey = parseReviewerKey(
     reviewer.public_key_pem,
     `Pilot evidence reviewer ${expectedRole}`

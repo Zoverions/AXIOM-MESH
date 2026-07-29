@@ -514,7 +514,8 @@ export function verifyProductionDeployment({
     'operator-approved online causal exchange',
     'Deployment-independent provider startup',
     'Pilot dossier verification',
-    'Offline pilot evidence package verification'
+    'Offline pilot evidence package verification',
+    'type-specific detail contract'
   ]) {
     if (!productionDocs.includes(boundary)) {
       throw new ValidationError(`Production operator documentation is missing boundary: ${boundary}`);
