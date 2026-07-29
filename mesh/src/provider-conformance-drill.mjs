@@ -413,7 +413,8 @@ async function createProviderFixture(workspace) {
   const runtimeDirectory = join(workspace, 'runtime');
   await mkdir(runtimeDirectory, { mode: 0o700 });
   const runtimeConfigPath = join(workspace, 'provider-runtime.json');
-  const executableDigest = await fileDigest(process.execPath);
+  const providerExecutable = await secureProviderExecutable(workspace);
+  const executableDigest = await fileDigest(providerExecutable);
   const adapterDigest = await fileDigest(ADAPTER_PATH);
   const runtimeConfig = {
     schema: 'axiom-provider-runtime-config.v1',
@@ -423,6 +424,7 @@ async function createProviderFixture(workspace) {
       secret: providerConfig({
         identity: secretIdentity,
         adapterConfigPath: secretAdapterPath,
+        providerExecutable,
         executableDigest,
         adapterDigest,
         adapterConfigDigest: await fileDigest(secretAdapterPath)
@@ -430,6 +432,7 @@ async function createProviderFixture(workspace) {
       policy: providerConfig({
         identity: policyIdentity,
         adapterConfigPath: policyAdapterPath,
+        providerExecutable,
         executableDigest,
         adapterDigest,
         adapterConfigDigest: await fileDigest(policyAdapterPath)
@@ -549,13 +552,14 @@ function resourceBindings() {
 function providerConfig({
   identity,
   adapterConfigPath,
+  providerExecutable,
   executableDigest,
   adapterDigest,
   adapterConfigDigest
 }) {
   return {
     provider_id: identity.providerId,
-    executable: process.execPath,
+    executable: providerExecutable,
     executable_sha256: executableDigest,
     arguments: [ADAPTER_PATH, adapterConfigPath],
     artifacts: [
@@ -567,6 +571,15 @@ function providerConfig({
     timeout_ms: 10_000,
     maximum_response_bytes: 16_777_216
   };
+}
+
+async function secureProviderExecutable(workspace) {
+  if (process.platform === 'win32') return process.execPath;
+  const executable = join(workspace, 'provider-executable', 'node');
+  await mkdir(dirname(executable), { recursive: true, mode: 0o700 });
+  await cp(process.execPath, executable);
+  await chmod(executable, 0o700);
+  return executable;
 }
 
 function resource(path, classification, mediaType) {
