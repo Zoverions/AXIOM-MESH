@@ -69,7 +69,7 @@ export async function createGatewayService(config = meshConfig()) {
         identity,
         'hypervisor',
         `${config.urls.hypervisor}/internal/v1/operations`,
-        { traceId, timeoutMs: 3_000 }
+        { traceId, timeoutMs: 5_000 }
       ),
       signedFetch(
         identity,
