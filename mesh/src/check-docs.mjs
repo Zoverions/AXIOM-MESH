@@ -23,7 +23,9 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/rebuild/SOURCE-TRACEABILITY.md',
   'docs/rebuild/STATUS.md',
   'docs/security/CREDENTIAL-HISTORY-REVOCATION.md',
+  'docs/security/CURRENT-BUILD-THREAT-MODEL.md',
   'docs/security/DENY-EGRESS-BOUNDARY.md',
+  'docs/security/INDEPENDENT-SECURITY-REVIEW.md',
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md',
   'docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md',
   'docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md',
@@ -63,9 +65,21 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Repository trust result',
     '## External attestation procedure'
   ],
+  'docs/security/CURRENT-BUILD-THREAT-MODEL.md': [
+    '## Supported system and trust boundary',
+    '## Assets and security objectives',
+    '## Threat analysis',
+    '## Residual risk and non-claims'
+  ],
   'docs/security/DENY-EGRESS-BOUNDARY.md': [
     '## Enforced topology',
     '## Protected CI proof'
+  ],
+  'docs/security/INDEPENDENT-SECURITY-REVIEW.md': [
+    '## Review policy and trust model',
+    '## Findings and disposition contract',
+    '## Fail-closed verification',
+    '## Conformance evidence and non-claims'
   ],
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md': [
     '## Severity and activation',
@@ -136,7 +150,9 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/PRODUCTION-GRADE.md': 3_000,
   'docs/PROJECT-STATUS-2026.md': 1_500,
   'docs/security/CREDENTIAL-HISTORY-REVOCATION.md': 2_500,
+  'docs/security/CURRENT-BUILD-THREAT-MODEL.md': 5_000,
   'docs/security/DENY-EGRESS-BOUNDARY.md': 2_500,
+  'docs/security/INDEPENDENT-SECURITY-REVIEW.md': 5_000,
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md': 4_000,
   'docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md': 4_500,
   'docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md': 4_500,

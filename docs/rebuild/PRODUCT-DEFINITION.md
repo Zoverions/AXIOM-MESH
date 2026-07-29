@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=f3c82320ad56b36237512804293de992b40cb221a3fb45ce3d3b8b2ac7026743 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=69788e11d0291bea931eff290765ceee95e4c5ce98099c03f8374fa70ce9b804 -->
 # AXIOM-MESH Product Definition
 
 **Status:** Canonical rebuild definition
@@ -236,6 +236,16 @@ symlinks fail closed. Every role also signs the common dossier digest. Success
 admits the package to a separate promotion review and cannot set production
 status. Synthetic verifier conformance cannot replace authentic pilot
 evidence.
+
+Independent security review is also an implemented intake surface, not an
+audit claim. The current-build threat model and an authority-signed policy pin
+one exact build, eight-part scope, eight reviewed artifact digests, an external
+reviewer, and a distinct exception approver. The exact signed ledger assigns
+every finding an owner and disposition, recomputes all counts, requires
+reviewer-verified closure of critical/high findings, and accepts only
+separately approved, contained, expiring medium/low exceptions. Protected
+synthetic conformance explicitly states that it performed no independent
+review and cannot promote production.
 
 Admitted-node discovery and placement reservation are implemented inside the
 single authoritative Grid. Signed v2 admissions bind the node identity,

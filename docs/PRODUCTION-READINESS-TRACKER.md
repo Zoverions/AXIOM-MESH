@@ -36,7 +36,7 @@ artifact is reproducible and tied to the release commit or image digest.
 | Credential rotation | Pass for service/API candidate lifecycle | Protected CI rotates all four Ed25519 identities, coordinated trust records, operator token, and least-privilege telemetry relay token against the real stack; proves inactive-credential rejection, scope confinement, dual-signed Grid key lineage, exact encrypted rollback, and unchanged data-key custody | Repeat under pilot secret custody |
 | Data-key rotation | Pass for candidate-host lifecycle | Protected CI re-encrypts the live Grid, nested backup state, retained credential packages, and recovery database copies; proves wrong-key rejection, rotated-key restore, killed-cutover journal recovery, exact key restoration, and post-rotation state preservation | Repeat with pilot secret-manager versioning, escrow, approval, and destruction evidence |
 | Deprecated credential trust | Pass for repository boundary; external evidence pending | Keyed ledger covers 32 conservative candidates across the immutable pre-clean-room archive graph; protected CI checks exact coverage and rejects reuse in the supported tip without exposing values | Dispose all 32 external attestations as verified or independently justified not-applicable |
-| Independent security review | Pending | Internal evidence only | Commission scoped review |
+| Independent security review | Pass for intake contract; authentic review pending | Canonical current-build threat model; separately authority-pinned current build, scope, artifact digests, reviewer and exception approver; signed exact findings ledger; recomputed counts; independently verified critical/high remediation; separately approved expiring medium/low exceptions; negative tests and signed synthetic non-review/non-promotion conformance | Commission an independent organization, pin the authentic source/image/deployment artifacts, resolve findings, and verify its canonical signed ledger with the separately obtained authority key |
 | Incident response | Pass for automated candidate exercise | Machine-readable severity/action/closure policy; protected CI verifies eleven same-revision control artifacts, including online causal partition/rejoin and provider fail-closed evidence, and uploads signed secret-free tabletop evidence | Run a facilitated pilot exercise with named roster, notification tree, corrective owners, and independent human review |
 | Pilot evidence intake | Pass for dossier and exact-package verifiers; authentic evidence pending | Authority-signed policy, separate authority trust anchor, five distinct reviewer keys, exact build/image, 720-hour/SLO/custody contract, exact canonical 13-envelope v2 package, type-specific semantic contracts, raw-byte digest binding, secret/symlink/unexpected-field/file rejection, negative tests, and separately signed synthetic CI conformance evidence | Collect the authentic pilot package, obtain all role signatures, run offline package verification with the separately obtained authority key, then record a separate promotion decision |
 | Release governance | Pass for development line | Protected `main`, current-build release verifier, exact documentation boundary, and immutable [v0.11.0 baseline dossier](https://github.com/Zoverions/AXIOM-MESH/releases/tag/v0.11.0) | Publish a new immutable dossier only when 0.12 is promoted from development |
@@ -48,7 +48,9 @@ The following block production promotion:
 1. no dedicated pilot-hardware capacity validation or 30-day availability observation;
 2. no pilot-owned provider adapter/workload-identity review, custody rotation
    repetition, or scheduled restore from pilot-owned media;
-3. no independent review of the supported kernel and deployment policy;
+3. no authentic independent findings ledger for the supported kernel and
+   deployment policy; only the fail-closed intake and labeled synthetic
+   verifier conformance exist;
 4. all 32 deprecated-history entries still require provider, custodian, or
    independently reviewed not-applicable attestations;
 5. no facilitated pilot incident exercise with a named roster and
@@ -91,6 +93,9 @@ never enter the evidence package.
 The exact policy, evidence inventory, custody fields, signature model, and
 operator command are defined in the
 [pilot deployment dossier runbook](operations/PILOT-DEPLOYMENT-DOSSIER.md).
+The independent threat-model/configuration scope, findings/remediation
+contract, exception policy, and offline command are defined in the
+[independent security review runbook](security/INDEPENDENT-SECURITY-REVIEW.md).
 
 ## Reassessment rule
 

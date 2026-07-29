@@ -130,6 +130,25 @@ for a separate promotion review, never production-promoted.
 synthetic verifier conformance. See the
 [pilot dossier runbook](../docs/operations/PILOT-DEPLOYMENT-DOSSIER.md).
 
+Independent security review has a separate signed intake:
+
+```bash
+npm run security-review:verify -- \
+  findings.json \
+  review-policy.json \
+  review-policy-authority-public.pem
+```
+
+The policy pins the current build, exact threat-model/configuration scope,
+artifact digests, external reviewer, and distinct exception approver.
+Critical/high findings must be closed and reverified; only medium/low findings
+may have separately signed, contained, expiring exceptions. A successful
+intake remains `production_promoted: false`. The synthetic
+`npm run security-review:drill` proves the verifier and explicitly claims
+neither an independent review nor promotion. See the
+[current-build threat model](../docs/security/CURRENT-BUILD-THREAT-MODEL.md)
+and [review runbook](../docs/security/INDEPENDENT-SECURITY-REVIEW.md).
+
 Verify an export without a running AXIOM-MESH process:
 
 ```bash

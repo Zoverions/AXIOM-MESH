@@ -828,6 +828,20 @@ drill, admitted-node discovery and scheduling drill, operator-approved online
 causal exchange drill, signed provider conformance drill, signed deny-egress
 probe, host-side telemetry relay drill, automated incident tabletop, and
 synthetic pilot dossier and exact-package verifier conformance are protected
-CI gates. This is not evidence of a live deployment, remote node execution,
+CI gates. Protected CI also signs synthetic independent-security-review
+verifier conformance, proving rejection of build, scope, owner, finding,
+exception, summary, secret, and signature drift while explicitly declaring
+that no independent review was performed. Authentic review intake uses:
+
+```bash
+npm run security-review:verify -- \
+  findings.json \
+  review-policy.json \
+  review-policy-authority-public.pem
+```
+
+The exact contract and required current-build threat model are in the
+[independent security review runbook](../docs/security/INDEPENDENT-SECURITY-REVIEW.md).
+Verifier conformance is not evidence of a live deployment, remote node execution,
 federated discovery, BFT consensus, audited arbitrary-code isolation, or
 external settlement.

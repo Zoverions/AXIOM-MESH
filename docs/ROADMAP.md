@@ -19,7 +19,8 @@ Roadmap phases are evidence gates, not date promises. A phase advances when:
 - security and recovery negative paths pass;
 - operator documentation matches the deployed behavior;
 - release evidence is tied to a protected commit and immutable artifacts;
-- no critical/high finding lacks an approved, owned, expiring exception.
+- no critical/high finding remains unresolved; any medium/low exception is
+  approved by a separate identity, owned, contained, and expiring.
 
 The active task order is maintained in
 [`docs/MASTER-TODO.md`](MASTER-TODO.md). The current production decision is in
@@ -121,7 +122,9 @@ Milestones:
   13 canonical role-signed v2 evidence envelopes with exact type-specific
   detail contracts; collect, independently review, and run the package
   verifier over the authentic deployment artifacts;
-- independent security review of the supported kernel and container policy;
+- the current-build threat model and fail-closed independent-review intake are
+  implemented; commission the authentic review of the pinned kernel,
+  container/deployment policy, and external pilot configuration;
 - an authentic signed pilot deployment dossier and later immutable release
   dossier.
 
@@ -129,7 +132,9 @@ Exit criteria:
 
 - measured pilot SLO, RPO, and RTO targets pass;
 - rotation and recovery drills pass twice;
-- critical/high findings are remediated or have approved expiring exceptions;
+- critical/high findings are remediated and independently reverified; any
+  medium/low exception has separate approval, ownership, containment, and
+  expiry;
 - pilot operators complete a facilitated tabletop incident exercise;
 - the capability registry is updated only for evidenced promotions.
 

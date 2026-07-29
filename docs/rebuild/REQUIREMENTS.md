@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=f3c82320ad56b36237512804293de992b40cb221a3fb45ce3d3b8b2ac7026743 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=69788e11d0291bea931eff290765ceee95e4c5ce98099c03f8374fa70ce9b804 -->
 # AXIOM-MESH Rebuild Requirements
 
 **Current build:** `0.12.0-dev.0`
@@ -264,6 +264,19 @@ The active `0.12.0-dev.0` build additionally verifies:
   producer roles, and altered approvals. A successful intake MUST state that
   production is not promoted; synthetic conformance MUST state that it is not
   live-pilot evidence.
+- an independent-security-review intake verifier that MUST require a
+  separately supplied Ed25519 policy-authority trust anchor and an
+  authority-signed exact current build, eight-part security scope, immutable
+  artifact inventory, declared independent reviewer, and distinct exception
+  approver. The exact signed findings ledger MUST assign every finding an
+  owner, recompute severity/disposition counts, require independent
+  remediation verification for all closed findings, reject unresolved
+  critical/high findings, and permit only separately approved, contained,
+  expiring medium/low exceptions. Intake MUST reject unknown fields,
+  noncanonical or symbolic-link files, stale/cross-build review, altered
+  artifacts, secret material, self-approved risk, and invalid signatures.
+  Success MUST remain a non-promotion intake result; synthetic conformance MUST
+  state that no independent review occurred.
 
 ## Capability coverage
 

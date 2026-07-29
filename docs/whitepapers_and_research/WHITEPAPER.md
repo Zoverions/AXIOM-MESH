@@ -554,6 +554,19 @@ explicitly false. Protected CI signs synthetic conformance for both the
 dossier and exact-package rejection paths but cannot manufacture an observed
 pilot.
 
+Independent security-review evidence has a separate exact intake. A
+separately supplied authority key authenticates one current build, eight-part
+threat/configuration scope, eight immutable reviewed artifact digests, an
+independent reviewer, and a distinct exception approver. The reviewer signs
+the complete findings ledger. Counts are recomputed; critical/high findings
+must have closed remediation reverified by that reviewer; medium/low
+exceptions require separate approval, containment, ownership, and bounded
+expiry. Synthetic CI proves rejection behavior while declaring that it
+performed no independent review and promoted nothing. The canonical threat
+model and exact procedure are maintained in the
+[current-build threat model](../security/CURRENT-BUILD-THREAT-MODEL.md) and
+[review intake runbook](../security/INDEPENDENT-SECURITY-REVIEW.md).
+
 ## 14. Threat model
 
 The kernel explicitly addresses:
@@ -644,6 +657,9 @@ The separately anchored policy, exact canonical offline inventory, five-role
 signature model, dossier preflight and package-intake commands, and explicit
 non-promotion boundary are specified in the
 [pilot dossier runbook](../operations/PILOT-DEPLOYMENT-DOSSIER.md).
+The independent-review scope, signed findings/remediation/exception contract,
+and explicit non-promotion boundary are specified in the
+[independent security review runbook](../security/INDEPENDENT-SECURITY-REVIEW.md).
 
 ## Conclusion
 

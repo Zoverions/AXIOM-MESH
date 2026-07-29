@@ -315,6 +315,20 @@
       ]
     },
     {
+      "id": "operations.security-review-intake",
+      "family": "operations",
+      "status": "implemented",
+      "summary": "A separately authority-pinned current-build policy and independent reviewer signature verify exact threat-model and configuration scope, immutable reviewed artifacts, recomputed findings, externally verified critical/high remediation, and separately approved expiring lesser-risk exceptions while refusing to promote production.",
+      "evidence": [
+        "mesh/test/independent-security-review.test.mjs",
+        "mesh/src/independent-security-review.mjs",
+        "mesh/src/independent-security-review-drill.mjs",
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/security/INDEPENDENT-SECURITY-REVIEW.md",
+        ".github/workflows/kernel.yml"
+      ]
+    },
+    {
       "id": "operations.container-package",
       "family": "operations",
       "status": "implemented",

@@ -42,6 +42,7 @@ const REQUIRED_CAPABILITIES = new Set([
   'operations.independent-service-units',
   'operations.provider-runtime',
   'operations.pilot-dossier-verification',
+  'operations.security-review-intake',
   'operations.installer-observability-release'
 ]);
 

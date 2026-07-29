@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=f3c82320ad56b36237512804293de992b40cb221a3fb45ce3d3b8b2ac7026743 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=69788e11d0291bea931eff290765ceee95e4c5ce98099c03f8374fa70ce9b804 -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -211,9 +211,30 @@ an exact type-specific detail contract. Stale, cross-build, incomplete,
 structurally meaningless, altered, noncanonical, unexpected, or symlinked
 input fails closed. A valid result is accepted only for a separate promotion
 review and always reports `production_promoted: false`. Protected CI exercises
-both verifiers with synthetic inputs that explicitly do not claim a live
+both pilot verifiers with synthetic inputs that explicitly do not claim a live
 pilot. See the
 [pilot deployment dossier runbook](docs/operations/PILOT-DEPLOYMENT-DOSSIER.md).
+
+Verify an independently produced current-build security findings ledger:
+
+```bash
+npm run security-review:verify -- \
+  findings.json \
+  review-policy.json \
+  review-policy-authority-public.pem
+```
+
+The separately supplied policy-authority key authenticates one current source
+revision, image digest, exact threat-model/configuration scope, eight reviewed
+artifact digests, an independent reviewer, and a distinct exception approver.
+The signed ledger must have owned findings and recomputed counts.
+Critical/high findings require closed remediation reverified by the reviewer;
+only medium/low findings may use separately signed, contained, expiring
+exceptions. Success is intake for a later promotion review and always reports
+`production_promoted: false`. Protected CI exercises only synthetic verifier
+conformance and explicitly states that it did not perform an independent
+review. See the [current threat model](docs/security/CURRENT-BUILD-THREAT-MODEL.md)
+and [review intake runbook](docs/security/INDEPENDENT-SECURITY-REVIEW.md).
 
 Exercise the host-side external telemetry and alert path on Linux:
 

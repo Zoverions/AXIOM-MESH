@@ -287,6 +287,16 @@ object:
 | Incident tabletop | Facilitated exercise, at least two unique named responders, policy-pinned independent reviewer, notification decisions, evidence, containment, recovery, communications, closure, and zero unresolved critical/high findings |
 | Independent security review | Policy-pinned reviewer and organization, exact review scope, report digest, finding counts, zero unresolved critical/high findings, remediation ownership, and documented residual risk |
 
+For current-build authentic evidence, `report_sha256` is the
+`ledger_sha256` returned after successful verification of the canonical signed
+findings ledger. The envelope finding counts and unresolved fields must match
+that ledger. The authoritative ledger, review policy, separately obtained
+policy-authority key, remediation/verification evidence, and exceptions remain
+outside the exact 13-file pilot package under the engagement's controlled
+retention. See the
+[current-build threat model](../security/CURRENT-BUILD-THREAT-MODEL.md) and
+[independent security review intake](../security/INDEPENDENT-SECURITY-REVIEW.md).
+
 Run final offline package verification with the authority public key obtained
 through the separate trusted channel:
 
@@ -459,6 +469,11 @@ signed artifact
 `axiom-pilot-evidence-package-verifier-conformance-evidence.v2` and declares a
 synthetic fixture, no live pilot observation, and no production promotion. It
 is verifier evidence, not one of the 13 admissible pilot files.
+
+Protected CI separately runs `npm run security-review:drill`. That signed
+synthetic artifact exercises the authoritative findings-ledger intake used to
+produce `report_sha256`; it explicitly states that no independent security
+review was performed and cannot satisfy the pilot evidence entry.
 
 ## Reassessment and retention
 
