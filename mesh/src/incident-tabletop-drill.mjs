@@ -23,6 +23,7 @@ import {
 } from './lib/identity.mjs';
 import { verifyRecoveryDrillEvidence } from './recovery-drill.mjs';
 import { verifyResilienceDrillEvidence } from './resilience-drill.mjs';
+import { verifyServiceUnitDrillEvidence } from './service-unit-drill.mjs';
 import { verifySloBaselineEvidence } from './slo-drill.mjs';
 import { verifyTransportDrillEvidence } from './transport-drill.mjs';
 
@@ -49,6 +50,10 @@ const CONTROL_DEFINITIONS = Object.freeze({
   resilience: Object.freeze({
     verifier: verifyResilienceDrillEvidence,
     artifact: 'axiom-resilience-drill-evidence'
+  }),
+  service_units: Object.freeze({
+    verifier: verifyServiceUnitDrillEvidence,
+    artifact: 'axiom-service-unit-drill-evidence'
   }),
   slo_restart: Object.freeze({
     verifier: verifySloBaselineEvidence,
@@ -355,6 +360,7 @@ async function main() {
     backupLifecyclePath,
     sloPath,
     resiliencePath,
+    serviceUnitsPath,
     transportPath,
     credentialRotationPath,
     dataKeyRotationPath
@@ -365,6 +371,7 @@ async function main() {
     backup_lifecycle: backupLifecyclePath,
     slo_restart: sloPath,
     resilience: resiliencePath,
+    service_units: serviceUnitsPath,
     transport: transportPath,
     credential_rotation: credentialRotationPath,
     data_key_rotation: dataKeyRotationPath

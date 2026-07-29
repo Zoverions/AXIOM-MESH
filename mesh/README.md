@@ -53,7 +53,7 @@ Incident response is also release-gated. The policy in
 highest matching severity, requires independently assigned command roles,
 allows no authority-expanding action, and defines evidence, communication,
 recovery, closure, and retrospective requirements. Protected CI signs an
-automated tabletop only after seven same-revision operational control artifacts
+automated tabletop only after eight same-revision operational control artifacts
 verify. See the
 [incident-response runbook](../docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md).
 
@@ -69,6 +69,13 @@ pinning, and the existing signed/replay-protected request envelope. Offline
 atomic leaf rotation and exact rollback are exercised against the real stack.
 See the
 [transport lifecycle runbook](../docs/operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md).
+
+The four services can also run as independently restartable single-host units.
+The projection gives each unit only its own application private key and TLS
+leaf, gives durable state only to Grid, and leaves shared credentials with
+their sole consumer. Protected CI proves Sandbox-only failure and recovery
+without restarting Gateway, Grid, or Hypervisor. See the
+[independent-unit runbook](../docs/operations/INDEPENDENT-SERVICE-UNITS.md).
 
 Verify an export without a running AXIOM-MESH process:
 

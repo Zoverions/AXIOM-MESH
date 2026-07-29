@@ -110,7 +110,7 @@ export async function createSandboxService(config = meshConfig()) {
       : undefined,
     transportPeers: identity.transport?.peers,
     allowedTransportPeers: identity.transport
-      ? ['hypervisor', 'supervisor']
+      ? ['hypervisor', 'sandbox', 'supervisor']
       : undefined,
     authenticate: ({ req, body }) => verifySignedRequest({
       req,

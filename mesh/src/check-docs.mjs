@@ -21,6 +21,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md',
   'docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md',
   'docs/operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md',
+  'docs/operations/INDEPENDENT-SERVICE-UNITS.md',
   'docs/releases/0.11.0.md',
   'docs/whitepapers_and_research/WHITEPAPER.md',
   'mesh/PRODUCTION.md'
@@ -66,6 +67,11 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Offline leaf rotation',
     '## Pilot repetition and non-claims'
   ],
+  'docs/operations/INDEPENDENT-SERVICE-UNITS.md': [
+    '## Enforced unit and trust boundary',
+    '## Failure-isolation and recovery sequence',
+    '## Pilot repetition and non-claims'
+  ],
   'docs/releases/0.11.0.md': ['## Container status', '## Security action'],
   'docs/whitepapers_and_research/WHITEPAPER.md': ['## Non-claims', '## Reproducibility'],
   'mesh/PRODUCTION.md': ['not evidence of a live deployment']
@@ -82,6 +88,7 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md': 4_500,
   'docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md': 4_500,
   'docs/operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md': 5_000,
+  'docs/operations/INDEPENDENT-SERVICE-UNITS.md': 5_000,
   'docs/whitepapers_and_research/WHITEPAPER.md': 7_000
 });
 

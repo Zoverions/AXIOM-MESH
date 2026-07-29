@@ -321,7 +321,7 @@ export async function createHypervisorService(config = meshConfig()) {
       : undefined,
     transportPeers: identity.transport?.peers,
     allowedTransportPeers: identity.transport
-      ? ['gateway', 'supervisor']
+      ? ['gateway', 'hypervisor', 'supervisor']
       : undefined,
     authenticate: ({ req, body }) => verifySignedRequest({
       req,

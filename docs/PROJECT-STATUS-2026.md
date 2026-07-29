@@ -1,6 +1,6 @@
 # AXIOM-MESH Project Status
 
-**Status date:** 2026-07-28
+**Status date:** 2026-07-29
 
 **Supported kernel:** 0.11.0
 
@@ -11,15 +11,16 @@
 ## Current release
 
 AXIOM-MESH 0.11.0 is a clean-room, dependency-free Node.js kernel organized as
-four independently supervised processes: Gateway, Hypervisor, Sandbox, and
-Grid. The verified source checkpoint is
+four services: Gateway, Hypervisor, Sandbox, and Grid. They run as supervised
+processes in one hardened container or as independently restartable
+single-host units with isolated private credentials. The verified source checkpoint is
 `1d318b481dc03858a4f46b63da05a395adbd7c6f`; the new GitHub development line
 starts from a tree-identical clean root so deprecated legacy ancestry is not
 inherited by the default branch.
 
 The executable source of truth is
 [`mesh/config/capabilities.json`](../mesh/config/capabilities.json). The
-generated [capability status](rebuild/STATUS.md) records 18 implemented, 2
+generated [capability status](rebuild/STATUS.md) records 20 implemented, 2
 experimental, 4 specified, 9 adapter-required, and 4 disabled capabilities.
 
 ## Implemented kernel scope
@@ -38,7 +39,10 @@ experimental, 4 specified, 9 adapter-required, and 4 disabled capabilities.
   least-privilege OTLP/Alertmanager relay with exact HTTPS origins, bounded
   persistent retry, redaction, receipts, and delivery audit;
 - explicit production credential provisioning and a fail-closed four-process
-  supervisor.
+  supervisor;
+- per-unit private identity/TLS projection, Grid-only durable state, an
+  internal deny-egress network, and signed Sandbox-only failure/recovery
+  evidence.
 
 ## Production package state
 
@@ -48,6 +52,12 @@ Unix-domain socket ingress, and readiness checks. Static deployment policy and
 a real host-mode four-process drill are implemented. Compose attaches no
 network; startup rejects active non-loopback and IPv4/IPv6 default routes while
 retaining explicit host-local Gateway ingress.
+
+The alternate `compose.units.yml` topology uses a Docker internal network,
+publishes no port, and preserves the Unix socket. Protected CI stops only
+Sandbox, verifies Gateway, Grid, and Hypervisor retain their container
+identities while readiness degrades, starts Sandbox alone, verifies recovery,
+and proves a public TCP target remains unreachable from a unit.
 
 The container package is implemented and verified by the protected
 [Clean Kernel workflow](https://github.com/Zoverions/AXIOM-MESH/actions/workflows/kernel.yml),
@@ -138,8 +148,8 @@ on-media recovery,
 a facilitated named-roster incident exercise, pilot-platform network-policy
 repetition, and independent security review for a controlled single-node
 pilot. The automated external telemetry/alert relay, request-path resilience,
-transport lifecycle, and candidate tabletop are implemented; protected CI
-signs bounded delivery evidence and a same-revision composition of seven real
-control drills.
+transport lifecycle, independent service failure isolation, and candidate
+tabletop are implemented; protected CI signs bounded delivery evidence and a
+same-revision composition of eight real control drills.
 Work is ordered in
 [`docs/MASTER-TODO.md`](MASTER-TODO.md).

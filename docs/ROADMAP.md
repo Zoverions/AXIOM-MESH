@@ -101,6 +101,10 @@ Milestones:
 - incident command, deterministic severity, authority-reducing containment,
   communication, and signed automated tabletop evidence are implemented;
   repeat as a facilitated exercise with the named pilot roster;
+- four independently restartable service units, isolated private identities,
+  Grid-only durable state, dependency degradation, and Sandbox-only recovery
+  are implemented for the single-host candidate; repeat on the pilot
+  orchestrator;
 - independent security review of the supported kernel and container policy;
 - signed pilot deployment and release dossiers.
 
@@ -125,7 +129,9 @@ Milestones:
   lifecycle are implemented for the single-host candidate; repeat with
   per-unit mounts, external CA custody, and orchestrator rollout;
 - explicit network policy and per-service ingress/egress allowlists;
-- independent deployment units and failure isolation;
+- independent deployment units and failure isolation are implemented for the
+  single-host candidate with signed host evidence and protected four-container
+  checks; multi-host rollout remains;
 - remote dependency readiness and bounded retry/idempotency contracts;
 - admitted-node discovery, renewal, expiry, and quarantine;
 - capability-aware scheduling with bounded resource claims;

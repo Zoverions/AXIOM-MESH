@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=2999698cb0c5a01ee29d0c756c3880eeb286d43fa78723ef5d23ddaafba1bebd -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=229023a02fd2569ca23dabb86a9f34a438a36685aa096ff2aed0fac8054f33ca -->
 # AXIOM-MESH Product Definition
 
 **Status:** Canonical rebuild definition
@@ -159,10 +159,12 @@ exact expected database digest, schema, and evidence head before atomically
 replacing state, and it must preserve the replaced database and emit recovery
 evidence at the next trusted startup.
 
-The candidate production package keeps all four services as independent
-supervised processes inside one container. This is a deliberate interim trust
-boundary: only Gateway binds externally, while Hypervisor, Sandbox, and Grid
-remain on loopback. Every internal edge uses mutually authenticated TLS 1.3,
+The candidate production package supports two single-host topologies. The
+compact topology keeps all four services as independent supervised processes
+inside one container. The isolated topology runs four independently
+restartable containers on an internal network. Only Gateway crosses the
+permission-restricted Unix-domain host ingress in either topology. Every
+internal edge uses mutually authenticated TLS 1.3,
 distinct Ed25519 leaves, DNS and SPIFFE-style URI identities, exact active
 certificate pinning, and the signed/replay-protected request envelope. The package
 must use a digest-pinned base, non-root identity, read-only root filesystem,
@@ -172,6 +174,14 @@ checks. The Compose candidate must attach no network, fail startup when an
 active non-loopback or IPv4/IPv6 default route exists, preserve only explicit
 Unix-domain Gateway ingress, and emit protected negative-path evidence.
 Other orchestrators must reproduce and independently verify this policy.
+
+The isolated topology receives an atomically projected credential tree:
+exactly one application private identity and one transport private leaf per
+unit, public trust records, Grid-only durable state/data key, and Gateway-only
+API registry. Protected CI must prove Sandbox-only loss, three unchanged
+survivors, `503` dependency readiness, Sandbox-only restart, state
+preservation, and blocked public TCP connectivity. No replicated Grid,
+automatic failover, or zero-downtime upgrade is implied.
 
 Operational telemetry is bounded-cardinality and excludes user-controlled
 labels. Liveness is process-local; readiness follows the service dependency
@@ -199,7 +209,7 @@ selects the highest matching severity, requires independent command roles,
 permits only authority-reducing, preservation, recovery, communication, or
 review actions, and fails closure without verified containment, recovery,
 evidence, communications, retrospective scheduling, and independent review.
-The protected automated tabletop binds seven independently signed operational
+The protected automated tabletop binds eight independently signed operational
 control artifacts from the same revision. A facilitated pilot exercise and
 live roster remain external promotion requirements.
 

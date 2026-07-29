@@ -256,6 +256,18 @@
       ]
     },
     {
+      "id": "operations.independent-service-units",
+      "family": "operations",
+      "status": "implemented",
+      "summary": "Gateway, Grid, Hypervisor, and Sandbox can run as independently restartable units with per-unit application and TLS private keys, Grid-only durable state, an internal deny-egress network, dependency-aware degradation, Sandbox-only recovery, and signed state-preservation evidence.",
+      "evidence": [
+        "mesh/test/service-units.test.mjs",
+        "mesh/src/service-unit-drill.mjs",
+        "mesh/compose.units.yml",
+        ".github/workflows/kernel.yml"
+      ]
+    },
+    {
       "id": "operations.container-package",
       "family": "operations",
       "status": "implemented",

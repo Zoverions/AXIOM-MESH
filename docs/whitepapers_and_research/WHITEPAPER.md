@@ -112,9 +112,18 @@ signature for a different body, audience, time window, or nonce.
 ### 3.2 Trust boundary
 
 In the 0.11 production candidate, all four services are separate Node.js
-processes inside one container. Gateway binds to loopback on the host; the
-internal services bind only to container loopback and use mutually
-authenticated TLS 1.3 on every edge.
+processes. The compact topology supervises them inside one container. The
+independent-unit topology runs four containers on a Docker internal network,
+with Gateway preserving permission-restricted Unix-domain host ingress. Both
+use mutually authenticated TLS 1.3 on every internal edge.
+
+The unit projection gives each runtime only its own application private key
+and TLS leaf. Grid alone receives durable state and the data-protection key;
+Gateway alone receives the API principal registry. Protected failure evidence
+terminates Sandbox, requires readiness degradation while the other three
+processes remain unchanged, restarts only Sandbox, and verifies preserved
+Grid state. This is single-host failure isolation, not replicated state or
+automatic failover.
 
 The operating system, container engine, host administrator, mounted secret
 paths, and data-protection key remain trusted components. The candidate is not
@@ -174,7 +183,8 @@ Offline rotation stages a complete leaf generation, atomically swaps the
 active directory, and retains the previous generation for exact rollback.
 Active-leaf pinning rejects a retired but still CA-valid credential without
 adding an OCSP network dependency. Protected CI exercises initial, rotated,
-and restored real stacks. External CA custody, per-service mounts,
+and restored real stacks. Per-service mounts are implemented in the
+single-host unit topology. External CA custody,
 orchestrator rollout, and CA-compromise recovery remain pilot controls.
 
 Credentials from deprecated repository history are permanently untrusted.
@@ -389,6 +399,15 @@ authenticated Unix-socket ingress remain functional. The Docker daemon and
 host remain
 trusted, and other orchestrators require equivalent independent evidence.
 
+The alternate four-container Compose definition uses an `internal: true`
+network rather than `network_mode: none`, because the services require three
+authenticated network edges. It publishes no TCP port, retains the Unix
+socket, and has no public route. Protected CI stops Sandbox alone, checks
+survivor container identity and `503` readiness, starts Sandbox alone, checks
+recovery, and proves a runner-reachable public TCP target is unreachable from
+a unit. Each topology has a different executable deny-egress control; neither
+permits ambient external network access.
+
 Provisioning creates four service identities, trust records, an API principal
 registry, operator token, and data-protection key without printing secrets.
 Partial secret sets are rejected rather than silently repaired.
@@ -413,8 +432,10 @@ for unexpected dependencies. Release verification binds:
 - machine-readable incident severity, role, containment, communication, and
   closure policy;
 - signed automated incident-tabletop evidence bound to same-revision
-  recovery, backup, restart, resilience, transport, credential-rotation, and
-  data-key controls;
+  recovery, backup, restart, resilience, independent-service-unit, transport,
+  credential-rotation, and data-key controls;
+- signed independent-process failure-isolation evidence and protected
+  four-container Sandbox-only recovery and blocked-public-egress checks;
 - deprecated credential-history ledger and protected reuse policy;
 - canonical documentation;
 - SPDX SBOM and provenance inputs.
@@ -499,6 +520,8 @@ source commit, registry digest, policy digest, migrations, deployment policy,
 and clean/dirty state. Production promotion additionally requires immutable CI
 image/runtime evidence and the gates in the
 [readiness tracker](../PRODUCTION-READINESS-TRACKER.md).
+The independent-unit mechanism and its limitations are specified in the
+[service-unit runbook](../operations/INDEPENDENT-SERVICE-UNITS.md).
 
 ## Conclusion
 

@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=2999698cb0c5a01ee29d0c756c3880eeb286d43fa78723ef5d23ddaafba1bebd -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=229023a02fd2569ca23dabb86a9f34a438a36685aa096ff2aed0fac8054f33ca -->
 # AXIOM-MESH Rebuild Requirements
 
 **Normative language:** MUST, MUST NOT, SHOULD, and MAY are used in their usual
@@ -105,6 +105,7 @@ requirements sense.
 | OPS-07 | Public claims MUST be generated from the machine-readable feature-status registry. | Docs/status consistency test. |
 | OPS-08 | The production supervisor MUST reject oversized requests before idempotency reservation, bound concurrent request pressure, propagate required-dependency loss into readiness, exit fail-closed after a child dies, and preserve Grid state through clean restart. | Signed Linux drill evidence covering body/rate pressure, real Sandbox suspension and loss, degradation, supervisor exit, restart, and state preservation. |
 | OPS-09 | Every production internal edge MUST use mutually authenticated TLS 1.3, bind the certificate peer to the signed caller, reject inactive leaves, and support bounded offline rotation and exact rollback. | Certificate profile and negative-path tests plus signed real-stack rotation, retired-leaf rejection, restart, intent, and rollback evidence. |
+| OPS-10 | Gateway, Grid, Hypervisor, and Sandbox MUST be independently deployable with one application private key and one TLS leaf per unit, Grid-only durable state, dependency-aware readiness, survivor continuity after non-Grid loss, and fail-closed network policy. | Projection isolation/staleness tests, signed independent-process Sandbox-loss and state-preservation drill, and protected four-container Sandbox-only restart plus public-egress rejection. |
 
 ## Verified implementation checkpoint
 
@@ -185,6 +186,13 @@ The machine-readable capability registry remains authoritative. Kernel
   Protected CI MUST reject no-certificate, wrong-server, caller/certificate
   mismatch, expired, drifted, and retired peers and retain signed rotation and
   exact-rollback evidence.
+- four independently restartable service units with atomically projected
+  per-unit private identities and TLS leaves, Grid-only durable state and
+  data-protection key, Gateway-only API registry, an internal deny-egress
+  network, and no published TCP port. Protected CI MUST terminate only
+  Sandbox, retain unchanged Gateway/Grid/Hypervisor processes, observe
+  dependency-not-ready state and HTTP `503`, restart only Sandbox, prove
+  readiness and pre-fault Grid state, and reject public TCP egress.
 - an explicit idempotent production provisioning workflow and statically gated
   digest-pinned container candidate with four supervised processes,
   loopback-only internals, non-root execution, read-only root, dropped
@@ -203,8 +211,9 @@ The machine-readable capability registry remains authoritative. Kernel
   communications, verified recovery, independent closure review, and a
   retrospective due within seven days. Protected CI MUST sign an automated
   tabletop record only after recovery, backup-lifecycle, restart, resilience,
-  transport, credential-rotation, and data-key-rotation evidence from the same
-  source revision verifies. A named-roster pilot exercise remains mandatory
+  independent-service-unit, transport, credential-rotation, and
+  data-key-rotation evidence from the same source revision verifies. A
+  named-roster pilot exercise remains mandatory
   before production promotion.
 
 ## Capability coverage

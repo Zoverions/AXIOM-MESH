@@ -82,6 +82,49 @@ socket-owning group remain trusted. See
 [`docs/security/DENY-EGRESS-BOUNDARY.md`](../docs/security/DENY-EGRESS-BOUNDARY.md)
 for the proof, rollback rule, and adapter boundary.
 
+### 2.1 Run as independently deployable units
+
+The repository also includes `compose.units.yml`, which runs Gateway, Grid,
+Hypervisor, and Sandbox as independently deployable units on a Docker
+`internal: true` network. Create isolated unit projections before startup:
+
+```bash
+node src/provision-service-units.mjs \
+  /srv/axiom-mesh/data \
+  /srv/axiom-mesh/secrets/transport \
+  /srv/axiom-mesh/units
+chown -R 10001:10001 /srv/axiom-mesh/units
+export AXIOM_UNITS_DIR_HOST=/srv/axiom-mesh/units
+docker compose -f compose.units.yml up -d
+```
+
+Each projected directory contains exactly that service's private application
+identity and private TLS leaf, public trust material, and no CA signing key.
+Only Grid receives durable state and the data-protection key. Only Gateway
+receives the API token registry. The operator token stays on the host.
+
+The unit network permits required service traffic but has no external route.
+Because an internal route must exist, this topology does not use the
+single-container supervisor's `network_mode: none` route check; the
+orchestrator's internal network is the enforced deny-egress control. Protected
+CI proves public TCP failure from a running unit.
+
+The signed host drill starts all four services without the supervisor, kills
+only Sandbox, requires Gateway readiness to degrade to HTTP `503`, proves
+Gateway, Grid, and Hypervisor remain the same live processes, restarts Sandbox
+alone, then verifies readiness and pre-fault Grid state:
+
+```bash
+npm run service-units:drill -- /tmp/axiom-service-unit-drill \
+  > /tmp/axiom-service-unit-drill-evidence.json
+```
+
+See the
+[independent-service runbook](../docs/operations/INDEPENDENT-SERVICE-UNITS.md)
+for projection, rotation, recovery, network-policy, and non-claim details. The
+four-unit topology remains a single-host candidate. It does not claim Grid
+replication, automatic failover, or a live deployment.
+
 ## 3. Verify readiness
 
 Liveness discloses only process state:
@@ -549,8 +592,9 @@ cadence, and mandatory closure conditions. Unknown signals fail
 classification instead of defaulting to low severity.
 
 After producing recovery, backup-lifecycle, SLO/restart, resilience,
-transport, credential-rotation, and data-key-rotation evidence for one commit,
-compose the seven same-revision records into the automated incident tabletop:
+service-unit, transport, credential-rotation, and data-key-rotation evidence
+for one commit, compose the eight same-revision records into the automated
+incident tabletop:
 
 ```bash
 export GITHUB_SHA=<40-character-source-revision>
@@ -560,6 +604,7 @@ npm run incident-tabletop:drill -- \
   /tmp/axiom-backup-lifecycle-evidence.json \
   /tmp/axiom-slo-baseline-evidence.json \
   /tmp/axiom-resilience-drill-evidence.json \
+  /tmp/axiom-service-unit-drill-evidence.json \
   /tmp/axiom-transport-drill-evidence.json \
   /tmp/axiom-credential-rotation-evidence.json \
   /tmp/axiom-data-key-rotation-evidence.json \
