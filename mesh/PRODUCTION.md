@@ -229,7 +229,40 @@ pilot hardware, a remote network path, an external-adapter profile, or a
 30-day availability measurement. Repeat it under the actual pilot resource
 policy and expected traffic mix before production promotion.
 
-## 5.1 Run the host-side telemetry relay
+## 5.1 Exercise request-pressure and dependency-loss
+
+Use another explicitly empty Linux workspace for the bounded resilience
+profile:
+
+```bash
+mkdir -m 700 /tmp/axiom-resilience-drill
+npm run resilience:drill -- /tmp/axiom-resilience-drill \
+  > /tmp/axiom-resilience-drill-evidence.json
+```
+
+The fixed policy starts the real four-process production supervisor with a
+4 KiB request-body ceiling and a capacity-10, refill-one-per-second token
+bucket. It proves that an 8 KiB request returns `413` without reserving its
+idempotency key, and that a 24-request concurrent burst produces only accepted
+or `429` outcomes while the service remains recoverable.
+
+The same run uses the supervisor's private parent-process inventory to suspend
+the actual Sandbox process. Authenticated operations must report Gateway,
+Hypervisor, and Sandbox degradation, `/ready` must return `503`, and bounded
+dependency alerts must appear. Killing Sandbox must make the supervisor exit
+fail-closed within ten seconds. A clean full-stack restart must preserve the
+pre-fault Grid record and accept a new authenticated intent.
+
+Protected CI retains Grid-signed,
+`axiom-resilience-drill-evidence-<commit>` for 90 days and binds it into the
+same-revision incident tabletop. The artifact excludes process identifiers,
+host paths, request bodies, intent identifiers, and secrets. This is
+request-path and dependency-process evidence; it is not cgroup OOM/CPU,
+disk-pressure, orchestrator rescheduling, pilot-platform, or human-response
+evidence. Repeat those controls under the pilot resource policy. See
+[`docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md`](../docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md).
+
+## 5.2 Run the host-side telemetry relay
 
 The host-side telemetry relay keeps the four-process container deny-egress.
 It scrapes only the permission-restricted Gateway Unix socket, validates the
@@ -468,9 +501,9 @@ authority-reducing actions, activation and containment targets, communication
 cadence, and mandatory closure conditions. Unknown signals fail
 classification instead of defaulting to low severity.
 
-After producing recovery, backup-lifecycle, SLO/restart,
+After producing recovery, backup-lifecycle, SLO/restart, resilience,
 credential-rotation, and data-key-rotation evidence for one commit, compose
-the same-revision records into the automated incident tabletop:
+the six same-revision records into the automated incident tabletop:
 
 ```bash
 export GITHUB_SHA=<40-character-source-revision>
@@ -479,6 +512,7 @@ npm run incident-tabletop:drill -- \
   /tmp/axiom-recovery-drill-evidence.json \
   /tmp/axiom-backup-lifecycle-evidence.json \
   /tmp/axiom-slo-baseline-evidence.json \
+  /tmp/axiom-resilience-drill-evidence.json \
   /tmp/axiom-credential-rotation-evidence.json \
   /tmp/axiom-data-key-rotation-evidence.json \
   > /tmp/axiom-incident-tabletop-evidence.json
@@ -498,7 +532,8 @@ This package is a production container specification and local deployment
 surface. Its source and fail-closed supervisor are statically verified, and the
 real four-process stack, digest-pinned image build, composed container
 readiness, disposable-host recovery drill, controlled SLO/restart baseline,
-coordinated credential-rotation drill, data-key rotation drill, signed
-deny-egress probe, host-side telemetry relay drill, and automated incident tabletop are
-protected CI gates. This is not evidence of a live deployment, federated discovery, BFT consensus, audited
+request-pressure and dependency-loss drill, coordinated credential-rotation
+drill, data-key rotation drill, signed deny-egress probe, host-side telemetry
+relay drill, and automated incident tabletop are protected CI gates. This is
+not evidence of a live deployment, federated discovery, BFT consensus, audited
 arbitrary-code isolation, or external settlement.

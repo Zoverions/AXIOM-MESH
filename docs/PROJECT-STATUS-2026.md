@@ -62,7 +62,12 @@ observations and peak concurrency, then measures a graceful restart and
 post-restart intent. It also performs an authenticated Unix-socket scrape
 with a route-limited relay identity, exports 68 fixed OTLP points and bounded
 Alertmanager alerts, forces transient failures, drains the alert-reserved
-queue, and records signed delivery receipts. It also performs offline
+queue, and records signed delivery receipts. It also performs bounded
+request-pressure and real dependency-loss checks: oversized requests
+cannot reserve idempotency keys, concurrent bursts rate-limit predictably,
+Sandbox suspension propagates dependency-not-ready state, Sandbox loss exits
+the supervisor fail-closed, and a clean restart preserves Grid state. It also
+performs offline
 coordinated rotation of all four service identities and the operator and
 telemetry relay tokens, proves active and inactive trust in
 both directions, preserves Grid evidence through a dual-signed key transition,
@@ -128,7 +133,8 @@ pilot-owned secret, telemetry-receiver, and media custody with scheduled
 on-media recovery,
 a facilitated named-roster incident exercise, pilot-platform network-policy
 repetition, and independent security review for a controlled single-node
-pilot. The automated external telemetry/alert relay and candidate tabletop
-are implemented; protected CI signs bounded delivery evidence and a
-same-revision composition of five real control drills. Work is ordered in
+pilot. The automated external telemetry/alert relay, request-path resilience
+drill, and candidate tabletop are implemented; protected CI signs bounded
+delivery evidence and a same-revision composition of six real control drills.
+Work is ordered in
 [`docs/MASTER-TODO.md`](MASTER-TODO.md).

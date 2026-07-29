@@ -93,7 +93,9 @@ Milestones:
   the automated candidate; repeat against pilot-owned HTTPS receivers and
   measure named human acknowledgement;
 - controlled load profile and initial latency/error/saturation baseline;
-- resource exhaustion and dependency-loss drills;
+- bounded request-body/rate-limit pressure and real dependency-process loss are
+  implemented with signed restart evidence; repeat under cgroup, disk, traffic,
+  and pilot-orchestrator resource controls;
 - candidate-container deny-egress with preserved loopback ingress is
   implemented; repeat and independently inspect it on the pilot platform;
 - incident command, deterministic severity, authority-reducing containment,

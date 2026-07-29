@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=caeec760adf3f79760ec38a92302a3cac1d2550b3ffb4aa1df663f7f2470e6c0 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=5a9aedefab571b835eb6496c27beaa9c778cbd18e77f12fcc3b2fc7a471c8fb0 -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -98,6 +98,19 @@ throughput, process CPU and memory, performs a graceful full-stack restart,
 verifies a post-restart intent, and emits signed, secret-free JSON evidence.
 It is a short host-mode baseline, not a 30-day availability claim or a
 substitute for measurement on pilot hardware.
+
+Exercise bounded request pressure and real dependency process loss on Linux:
+
+```bash
+npm run resilience:drill -- /tmp/axiom-resilience-drill
+```
+
+The drill rejects an oversized authenticated request without reserving its
+idempotency key, proves bounded rate limiting under a concurrent burst,
+suspends and kills the real Sandbox process, verifies dependency-aware
+degradation and supervisor failure, restarts the full stack, and emits signed,
+secret-free evidence. It covers request-path pressure and dependency loss, not
+cgroup OOM/CPU enforcement or pilot-platform behavior.
 
 Exercise the host-side external telemetry and alert path on Linux:
 
@@ -295,7 +308,8 @@ supported entrypoints.
 - Deterministic incident severity, independent command roles,
   authority-reducing containment, evidence-first chronology, bounded
   communications, and closure conditions are machine-readable. Protected CI
-  signs an automated tabletop bound to five same-revision control artifacts;
+  signs an automated tabletop bound to six same-revision control artifacts,
+  including request-pressure and dependency-loss evidence;
   a facilitated named-roster pilot exercise remains required.
 
 Report vulnerabilities using [`.github/SECURITY.md`](.github/SECURITY.md).

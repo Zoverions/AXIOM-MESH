@@ -1,6 +1,6 @@
 # AXIOM-MESH Production Readiness Tracker
 
-**Updated:** 2026-07-28
+**Updated:** 2026-07-29
 
 **Release candidate:** 0.11.0
 
@@ -25,11 +25,12 @@ artifact is reproducible and tied to the release commit or image digest.
 | Backup and restore | Pass for candidate-host lifecycle | Protected CI exercises encrypted backup, signed policy-derived retention, corrupt/live-lock/inventory-drift rejection, recoverable quarantine, killed-move recovery, exact restore and rollback; it also runs weekly and uploads signed evidence | Run the schedule against pilot-owned media and custody; authorize quarantine destruction separately |
 | Observability | Pass for automated candidate relay | Dedicated route-limited scrape identity; exact four-service Unix-socket collection; 68 fixed OTLP points; Alertmanager v2 fixed vocabulary; exact HTTPS origin policy; alert-reserved queue; bounded retry/dead-letter audit; forced 503/429 and signed delivery receipts in protected CI | Repeat with pilot-owned HTTPS collector/on-call route, receiver retention, credential custody, and named acknowledgement |
 | SLO and capacity | Pass for initial CI baseline | Signed protected-CI evidence records a fixed authenticated load profile, latency percentiles, zero-error requirement, throughput, CPU/memory observations, peak concurrency, and graceful restart | Repeat on dedicated pilot hardware under enforced resource limits and expected traffic |
+| Resilience and fault tolerance | Pass for automated request-path candidate | Signed protected-CI evidence covers oversized-body rejection without idempotency reservation, concurrent rate limiting, real Sandbox suspension and loss, dependency-aware degradation, fail-closed supervisor exit, clean restart, and state preservation | Repeat cgroup OOM/CPU, disk, traffic, and dependency replacement scenarios under the pilot orchestrator |
 | Credential rotation | Pass for service/API candidate lifecycle | Protected CI rotates all four Ed25519 identities, coordinated trust records, operator token, and least-privilege telemetry relay token against the real stack; proves inactive-credential rejection, scope confinement, dual-signed Grid key lineage, exact encrypted rollback, and unchanged data-key custody | Repeat under pilot secret custody |
 | Data-key rotation | Pass for candidate-host lifecycle | Protected CI re-encrypts the live Grid, nested backup state, retained credential packages, and recovery database copies; proves wrong-key rejection, rotated-key restore, killed-cutover journal recovery, exact key restoration, and post-rotation state preservation | Repeat with pilot secret-manager versioning, escrow, approval, and destruction evidence |
 | Deprecated credential trust | Pass for repository boundary; external evidence pending | Keyed ledger covers 32 conservative candidates across the locked deprecated graph; protected CI checks exact coverage and rejects reuse in the supported tip without exposing values | Dispose all 32 external attestations as verified or independently justified not-applicable |
 | Independent security review | Pending | Internal evidence only | Commission scoped review |
-| Incident response | Pass for automated candidate exercise | Machine-readable severity/action/closure policy; protected CI verifies five same-revision control artifacts and uploads signed secret-free tabletop evidence | Run a facilitated pilot exercise with named roster, notification tree, corrective owners, and independent human review |
+| Incident response | Pass for automated candidate exercise | Machine-readable severity/action/closure policy; protected CI verifies six same-revision control artifacts and uploads signed secret-free tabletop evidence | Run a facilitated pilot exercise with named roster, notification tree, corrective owners, and independent human review |
 | Release governance | Pass | Protected `main`, release verifier, and [v0.11.0 dossier](https://github.com/Zoverions/AXIOM-MESH/releases/tag/v0.11.0) | Maintain for every release |
 
 ## Promotion blockers

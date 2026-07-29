@@ -18,6 +18,7 @@
     "credential-rotation:drill": "node src/credential-rotation-drill.mjs",
     "data-key-rotation:drill": "node src/data-key-rotation-drill.mjs",
     "incident-tabletop:drill": "node src/incident-tabletop-drill.mjs",
+    "resilience:drill": "node src/resilience-drill.mjs",
     "telemetry-relay:start": "node src/telemetry-relay.mjs run",
     "telemetry-relay:drill": "node src/telemetry-relay-drill.mjs",
     "network-boundary:verify": "node src/network-boundary.mjs",

@@ -7,6 +7,7 @@ import { ValidationError } from './canonical.mjs';
 import { MESH_ROOT } from './config.mjs';
 
 export function productionHostEnvironment(provisioned, basePort, {
+  maxBodyBytes = 1_048_576,
   rateLimitCapacity = 60,
   rateLimitRefillPerSecond = 1
 } = {}) {
@@ -31,6 +32,7 @@ export function productionHostEnvironment(provisioned, basePort, {
     AXIOM_POLICY_PATH: join(MESH_ROOT, 'config', 'policy.json'),
     AXIOM_POLICY_PATHS: '',
     AXIOM_CAPABILITIES_PATH: join(MESH_ROOT, 'config', 'capabilities.json'),
+    AXIOM_MAX_BODY_BYTES: String(maxBodyBytes),
     AXIOM_RATE_LIMIT_CAPACITY: String(rateLimitCapacity),
     AXIOM_RATE_LIMIT_REFILL_PER_SECOND: String(rateLimitRefillPerSecond),
     AXIOM_LOG_REQUESTS: 'false'
@@ -50,22 +52,42 @@ export async function startProductionHost({
     env: environment
   });
   let diagnostics = '';
+  let supervisorProcesses = null;
   const collect = chunk => {
     if (diagnostics.length < 32_768) diagnostics += chunk;
   };
+  const collectMessage = message => {
+    if (message?.type === 'axiom.supervisor.ready') {
+      supervisorProcesses = normalizeSupervisorProcesses(message.processes);
+    }
+  };
   child.stdout.on('data', collect);
   child.stderr.on('data', collect);
+  child.on('message', collectMessage);
   try {
     await waitForReady(`${gateway}/ready`, child, startupTimeoutMs);
+    const processDeadline = Date.now() + 1_000;
+    while (!supervisorProcesses && Date.now() < processDeadline) {
+      await new Promise(resolvePromise => setTimeout(resolvePromise, 10));
+    }
+    if (!supervisorProcesses) {
+      throw Object.assign(
+        new Error('Supervisor did not publish its process inventory'),
+        { code: 'process_inventory_unavailable' }
+      );
+    }
   } catch (error) {
     await stopProductionHost(child);
     throw new ValidationError(
       `Production supervisor failed the ${drill} startup check: `
       + `${error.code ?? error.name}; ${startupDiagnosticSummary(diagnostics)}`
     );
+  } finally {
+    child.removeListener('message', collectMessage);
   }
   return {
     child,
+    processes: supervisorProcesses,
     startup_duration_ms: elapsedMilliseconds(startedAt)
   };
 }
@@ -182,6 +204,24 @@ function startupDiagnosticSummary(value) {
     }
   }
   return summaries.filter(Boolean).slice(-6).join(',') || 'no-structured-diagnostic';
+}
+
+function normalizeSupervisorProcesses(value) {
+  if (!Array.isArray(value) || value.length !== 4) return null;
+  const expected = ['gateway', 'grid', 'hypervisor', 'sandbox'];
+  const normalized = value.map(item => ({
+    service: item?.service,
+    pid: item?.pid
+  })).sort((left, right) => left.service?.localeCompare(right.service));
+  if (
+    normalized.some((item, index) => (
+      item.service !== expected[index]
+      || !Number.isSafeInteger(item.pid)
+      || item.pid < 1
+    ))
+    || new Set(normalized.map(item => item.pid)).size !== normalized.length
+  ) return null;
+  return normalized;
 }
 
 function elapsedMilliseconds(startedAt) {

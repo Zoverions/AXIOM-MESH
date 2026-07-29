@@ -45,6 +45,14 @@
   state. Follow
   [`EXTERNAL-TELEMETRY-AND-ALERTING.md`](EXTERNAL-TELEMETRY-AND-ALERTING.md).
 
+### 2.6 Request Pressure and Dependency Loss
+- Exercise bounded body rejection, rate-limit exhaustion and recovery, stalled
+  dependency readiness, child-loss shutdown, and full-stack recovery.
+- Keep process fault injection on the private parent IPC boundary; do not add a
+  public fault endpoint.
+- Follow
+  [`REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md`](REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md).
+
 ---
 
 ## 3) Standard Operational Cadence
@@ -85,6 +93,7 @@ Detailed scenario playbooks live in:
 - `docs/RESILIENCE-DRILLS-AND-PENTEST-RUNBOOK-2026-03-29.md`
 - `docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md`
 - `docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md`
+- `docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md`
 
 ---
 
