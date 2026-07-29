@@ -37,6 +37,8 @@ The main technical and operational references are:
 - [Repository migration record](REPOSITORY-MIGRATION.md)
 - [Deprecated credential-history revocation](security/CREDENTIAL-HISTORY-REVOCATION.md)
 - [Candidate container deny-egress boundary](security/DENY-EGRESS-BOUNDARY.md)
+- [Current-build threat model](security/CURRENT-BUILD-THREAT-MODEL.md)
+- [Independent security review intake](security/INDEPENDENT-SECURITY-REVIEW.md)
 - [External telemetry and alert routing](operations/EXTERNAL-TELEMETRY-AND-ALERTING.md)
 - [Request pressure and dependency loss](operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md)
 - [Mutually authenticated service transport](operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md)

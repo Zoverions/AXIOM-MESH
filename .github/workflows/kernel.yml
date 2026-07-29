@@ -258,6 +258,18 @@ jobs:
           path: ${{ runner.temp }}/axiom-pilot-evidence-package-verifier-conformance-evidence.json
           if-no-files-found: error
           retention-days: 90
+      - name: Exercise independent security review intake
+        working-directory: mesh
+        run: |
+          node src/independent-security-review-drill.mjs \
+            > "$RUNNER_TEMP/axiom-independent-security-review-verifier-conformance-evidence.json"
+      - name: Upload signed independent security review verifier evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: axiom-independent-security-review-verifier-conformance-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/axiom-independent-security-review-verifier-conformance-evidence.json
+          if-no-files-found: error
+          retention-days: 90
       - name: Run coordinated incident tabletop
         working-directory: mesh
         run: |

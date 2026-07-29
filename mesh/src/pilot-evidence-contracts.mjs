@@ -3,6 +3,7 @@ import {
   PILOT_CUSTODY_CONTROLS,
   PILOT_EVIDENCE_TYPES
 } from './pilot-dossier.mjs';
+import { SECURITY_REVIEW_SCOPE } from './independent-security-review.mjs';
 
 export const PILOT_EVIDENCE_DETAIL_CONTRACT_VERSION = 2;
 
@@ -14,13 +15,6 @@ const SERVICE_UNITS = Object.freeze([
   'hypervisor',
   'sandbox'
 ]);
-const SECURITY_REVIEW_SCOPE = Object.freeze([
-  'container_policy',
-  'kernel',
-  'pilot_evidence_intake',
-  'provider_boundary'
-]);
-
 export function validatePilotEvidenceDetails({
   type,
   details,

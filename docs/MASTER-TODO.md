@@ -21,9 +21,10 @@ A capability may move to `implemented` only when it has:
 
 Production promotion additionally requires green protected-branch CI, an
 independently reviewed release dossier, a rollback target, and measured
-deployment evidence. Exceptions require an owner, rationale, containment,
-expiry, and approval; an exception cannot waive credential compromise,
-evidence-chain integrity, or unauthorized effects.
+deployment evidence. Critical/high security findings require independently
+verified closure. Medium/low exceptions require an owner, rationale,
+containment, expiry, and separate approval; an exception cannot waive
+credential compromise, evidence-chain integrity, or unauthorized effects.
 
 ## P0 - repository and release control
 
@@ -47,7 +48,7 @@ evidence-chain integrity, or unauthorized effects.
 | OPS-003 | Complete | Establish an initial latency, error-rate, saturation, and restart baseline | Protected CI uploads signed `axiom-slo-baseline-evidence-<commit>` from a fixed 40-request, concurrency-4 production profile |
 | OPS-004 | Complete for candidate container | Enforce deny-egress while preserving explicit host-local Gateway ingress | Compose `network_mode: none`, permission-restricted Unix socket ingress, fail-closed route check, runner positive control, in-container negative probe, and signed protected-CI evidence |
 | OPS-005 | Complete for automated request-path candidate; pilot resource limits pending | Exercise bounded request pressure and dependency process loss against the real production supervisor | Protected CI uploads signed `axiom-resilience-drill-evidence-<commit>` after oversized-body, concurrent rate-limit, dependency degradation, fail-closed exit, clean restart, and state-preservation checks |
-| SEC-002 | Pending | Perform an independent threat-model and configuration review of the supported kernel | Findings ledger with severity and remediation owners |
+| SEC-002 | Complete for review intake; authentic independent review pending | Perform an independent threat-model and configuration review of the supported kernel | Canonical current-build threat model plus authority-pinned, build/artifact-bound signed findings ledger; critical/high findings require independently verified closure, lesser exceptions require separate owned expiring approval, and synthetic conformance explicitly cannot claim a review or promotion |
 | SUP-001 | Complete | Produce reproducible release verification without embedding secrets | Current `0.12.0-dev.0` source, registry, documentation, deployment, and migration verification; immutable v0.11.0 checksums, SPDX SBOM, and provenance remain on the published release |
 
 ## P1 - single-node production pilot

@@ -38,7 +38,13 @@ proves that no candidate appears in the supported tip.
 Dedicated pilot capacity and availability, pilot-owned telemetry receivers, scheduled
 pilot-media recovery, pilot-owned secret-manager rotation, external
 deprecated-credential attestations, a named-roster pilot incident exercise,
-and independent security review remain open.
+and an authentic independent security review remain open. The supported tree
+now includes a canonical current-build threat model and a fail-closed review
+intake: a separate policy authority pins the exact build, artifact digests,
+scope, reviewer, and exception approver; the reviewer signs the exact findings
+ledger; critical/high remediation requires independent re-verification; and
+only medium/low risks can receive separately signed bounded exceptions.
+Protected synthetic conformance proves the verifier, not an external review.
 The repository now implements signed pilot dossier and exact offline package
 verification: a separately anchored policy authority pins one build and image,
 current 30-day/SLO gates, five distinct reviewers, custody receipts, and
@@ -562,8 +568,9 @@ used as deployment evidence. See
 All gates must pass:
 
 1. **Scope:** capability registry and operator documentation agree.
-2. **Security:** threat model, negative paths, credentials, and open findings
-   meet policy.
+2. **Security:** the current threat model, negative paths, credentials, and an
+   authentic build-bound independent findings ledger meet policy with no
+   unresolved critical/high finding.
 3. **Correctness:** kernel and property tests pass from clean locks.
 4. **Container:** image builds and composed readiness drill pass in CI.
 5. **Recovery:** backup, restore, rollback, and migration drills pass.
@@ -578,6 +585,13 @@ All gates must pass:
 The pilot dossier and its exact offline evidence package are the intake
 envelope for these gates, not an eleventh gate and not an automatic decision.
 Every underlying gate must be evidenced.
+
+Independent security-review intake is similarly a verifier, not the review.
+Its authentic ledger digest binds the pilot package's
+`independent_security_review` evidence, while the separate promotion body
+retains the decision. See the
+[current-build threat model](security/CURRENT-BUILD-THREAT-MODEL.md) and
+[independent review runbook](security/INDEPENDENT-SECURITY-REVIEW.md).
 
 No single test, review, or approval substitutes for the full gate set.
 

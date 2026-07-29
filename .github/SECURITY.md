@@ -147,6 +147,16 @@ in the
 Protected CI produces a signed automated tabletop; a named-roster pilot
 exercise remains required before production promotion.
 
+The supported source includes a
+[current-build threat model](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/security/CURRENT-BUILD-THREAT-MODEL.md)
+and a fail-closed
+[independent-review intake](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/security/INDEPENDENT-SECURITY-REVIEW.md).
+Its separately authorized signed findings ledger requires independently
+verified closure for critical/high findings and separate owned, contained,
+expiring approval for medium/low exceptions. Protected CI exercises only
+labeled synthetic verifier conformance; an authentic independent review
+remains a production-promotion gate.
+
 ## Priority scope
 
 Highest-priority reports include:

@@ -20,7 +20,7 @@ that tag are identified only as the current 0.12 development build.
 
 The executable source of truth is
 [`mesh/config/capabilities.json`](../mesh/config/capabilities.json). The
-generated [capability status](rebuild/STATUS.md) records 24 implemented, 2
+generated [capability status](rebuild/STATUS.md) records 25 implemented, 2
 experimental, 3 specified, 9 adapter-required, and 4 disabled capabilities.
 
 ## Implemented kernel scope
@@ -58,6 +58,11 @@ experimental, 3 specified, 9 adapter-required, and 4 disabled capabilities.
   signatures, and an exact offline package of 13 canonical, secret-free,
   role-signed v2 evidence envelopes with exact per-type semantic contracts and
   an explicit non-promotion result.
+- independent security-review intake using the canonical current-build threat
+  model, a separately anchored exact build/scope/artifact policy, distinct
+  reviewer and exception approver, an exact signed findings ledger, verified
+  critical/high closure, bounded lesser-risk exceptions, and an explicit
+  non-review/non-promotion synthetic conformance boundary.
 
 ## Production package state
 
@@ -122,16 +127,23 @@ across live and retained recovery state, proves wrong-key rejection in both
   secret and policy providers, activates rotated API and policy resources,
   rejects the retired token and an invalid provider signer, removes each
   private runtime generation, and binds that proof into the incident tabletop.
-  It also runs signed synthetic conformance for both pilot intake boundaries.
+  It also runs signed synthetic conformance for both pilot intake boundaries
+  and the independent-security-review intake.
   The dossier drill proves wrong-build, altered-approval, missing-evidence,
   and secret-field rejection. The package drill proves exact canonical
   inventory plus missing, extra, wrongly signed, noncanonical,
   dossier-inconsistent detail, and secret-bearing file rejection. Both
-  explicitly declare that no live pilot was observed.
+  explicitly declare that no live pilot was observed. The security-review
+  drill proves current-build/scope/artifact binding, owned findings,
+  independently verified critical/high remediation, separate bounded
+  medium/low exception approval, and tamper rejection while explicitly
+  declaring that it performed no independent review and promoted nothing.
   Dedicated pilot-hardware capacity and availability validation,
   pilot-owned receiver/secret/media custody, external
-  credential-history attestations, and independent security review are still
-  required before production promotion. The repository-side history audit is
+  credential-history attestations, and an authentic independent security
+  review are still required before production promotion. The repository now
+  supplies the canonical current-build threat model and strict signed findings
+  intake; no external reviewer ledger has been submitted. The repository-side history audit is
   implemented: a secret-free keyed ledger covers 32 conservative candidates,
   revokes each from supported trust, and makes supported-tip reuse a protected
   CI failure.
@@ -187,14 +199,14 @@ attestations,
 pilot-owned provider, telemetry-receiver, and media custody with scheduled
 on-media recovery,
 a facilitated named-roster incident exercise, pilot-platform network-policy
-repetition, and independent security review for a controlled single-node
-pilot. The automated external telemetry/alert relay, request-path resilience,
+repetition, and an authentic independent security review for a controlled
+single-node pilot. The automated external telemetry/alert relay, request-path resilience,
 transport lifecycle, independent service failure isolation, admitted-node
 discovery/scheduling reservations, operator-approved two-Grid causal exchange,
 signed secret/policy provider startup, and candidate tabletop are implemented;
-the signed pilot dossier, exact offline evidence package intake, and
-independent-review contract are also implemented, but no authentic pilot
-package has been submitted;
+the signed pilot dossier, exact offline evidence package intake, canonical
+threat model, and independent-review intake contract are also implemented, but
+no authentic pilot package or external findings ledger has been submitted;
 protected CI signs bounded delivery evidence and a same-revision composition
 of eleven real control drills.
 Work is ordered in

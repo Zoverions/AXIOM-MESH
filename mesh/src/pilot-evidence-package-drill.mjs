@@ -25,6 +25,7 @@ import {
 import {
   PILOT_EVIDENCE_DETAIL_CONTRACT_VERSION
 } from './pilot-evidence-contracts.mjs';
+import { SECURITY_REVIEW_SCOPE } from './independent-security-review.mjs';
 import {
   PILOT_EVIDENCE_TYPES,
   PILOT_REVIEW_ROLES,
@@ -534,12 +535,7 @@ function syntheticEvidenceDetails({
           item => item.role === 'independent_reviewer'
         ).reviewer_id,
         completed_at: metadata.observed_at,
-        scope: [
-          'container_policy',
-          'kernel',
-          'pilot_evidence_intake',
-          'provider_boundary'
-        ],
+        scope: [...SECURITY_REVIEW_SCOPE],
         report_sha256: digest(1),
         findings: {
           critical: 0,

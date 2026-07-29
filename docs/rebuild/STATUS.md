@@ -4,7 +4,7 @@
 Registry schema: `axiom-capabilities.v1`
 Kernel version: `0.12.0-dev.0`
 Evidence verified: `2026-07-29`
-Registry digest: `f3c82320ad56b36237512804293de992b40cb221a3fb45ce3d3b8b2ac7026743`
+Registry digest: `69788e11d0291bea931eff290765ceee95e4c5ce98099c03f8374fa70ce9b804`
 
 Only **implemented** capabilities are runnable claims.
 
@@ -13,7 +13,7 @@ Only **implemented** capabilities are runnable claims.
 - adapter_required: 9
 - disabled: 4
 - experimental: 2
-- implemented: 24
+- implemented: 25
 - specified: 3
 
 ## Registry
@@ -60,5 +60,6 @@ Only **implemented** capabilities are runnable claims.
 | `operations.independent-service-units` | operations | **implemented** | Gateway, Grid, Hypervisor, and Sandbox can run as independently restartable units with per-unit application and TLS private keys, Grid-only durable state, an internal deny-egress network, dependency-aware degradation, Sandbox-only recovery, and signed state-preservation evidence. |
 | `operations.provider-runtime` | operations | **implemented** | Independent Ed25519-pinned secret and policy providers deliver nonce-bound short-lived startup resources through a bounded process protocol; the broker verifies exact inventories and content, materializes one private generation, launches the unchanged production supervisor, and removes that generation on shutdown. |
 | `operations.pilot-dossier-verification` | operations | **implemented** | A separately authority-pinned, five-role review policy verifies exact build, 30-day observation, SLO, custody, and approval metadata; an offline exact-inventory package verifier additionally enforces 13 canonical role-signed v2 evidence envelopes with type-specific detail contracts while explicitly refusing to claim production promotion. |
+| `operations.security-review-intake` | operations | **implemented** | A separately authority-pinned current-build policy and independent reviewer signature verify exact threat-model and configuration scope, immutable reviewed artifacts, recomputed findings, externally verified critical/high remediation, and separately approved expiring lesser-risk exceptions while refusing to promote production. |
 | `operations.container-package` | operations | **implemented** | A digest-pinned non-root container package is statically release-gated, passes the four-process host drill, and is built and exercised through the published composed readiness workflow. |
 | `operations.installer-observability-release` | operations | **experimental** | Release tooling, bounded external telemetry and alert routing, and container verification are executable; legacy installer replacement and independently evidenced live deployment remain incomplete. |
