@@ -1,7 +1,7 @@
 # AXIOM-MESH Production Execution Queue
 
 **Status:** canonical active queue
-**Updated:** 2026-07-28
+**Updated:** 2026-07-29
 **Current kernel:** 0.11.0
 **Current stage:** production candidate; not production-promoted
 
@@ -45,6 +45,7 @@ evidence-chain integrity, or unauthorized effects.
 | OPS-002 | Complete | Exercise backup, tamper rejection, exact restore, and rollback on a disposable production host | Protected CI uploads signed, secret-free `axiom-recovery-drill-evidence-<commit>` artifacts with measured recovery point and recovery time |
 | OPS-003 | Complete | Establish an initial latency, error-rate, saturation, and restart baseline | Protected CI uploads signed `axiom-slo-baseline-evidence-<commit>` from a fixed 40-request, concurrency-4 production profile |
 | OPS-004 | Complete for candidate container | Enforce deny-egress while preserving explicit host-local Gateway ingress | Compose `network_mode: none`, permission-restricted Unix socket ingress, fail-closed route check, runner positive control, in-container negative probe, and signed protected-CI evidence |
+| OPS-005 | Complete for automated request-path candidate; pilot resource limits pending | Exercise bounded request pressure and dependency process loss against the real production supervisor | Protected CI uploads signed `axiom-resilience-drill-evidence-<commit>` after oversized-body, concurrent rate-limit, dependency degradation, fail-closed exit, clean restart, and state-preservation checks |
 | SEC-002 | Pending | Perform an independent threat-model and configuration review of the supported kernel | Findings ledger with severity and remediation owners |
 | SUP-001 | Complete | Produce a reproducible release dossier without embedding secrets | v0.11.0 checksums, SPDX SBOM, provenance, policy and registry digests |
 
@@ -58,7 +59,7 @@ evidence-chain integrity, or unauthorized effects.
 | PILOT-004 | Complete for candidate host | Automate four-service identity and operator/telemetry-token rotation with coordinated trust updates and exact rollback | Protected CI uploads signed, secret-free `axiom-credential-rotation-evidence-<commit>` after active/inactive trust and token rejection checks |
 | PILOT-005 | Complete for candidate host | Re-encrypt and rotate the data-protection key across live state and retained recovery contexts with interruption recovery and rollback | Protected CI uploads signed `axiom-data-key-rotation-evidence-<commit>` after real-stack wrong-key rejection, backup restore, state-preserving rollback, and recovery-copy checks |
 | PILOT-006 | Complete for candidate host | Automate encrypted backup retention and restore verification | Signed policy-derived plan/receipt, kill recovery, data-key interoperability, and weekly protected-CI restore evidence; repeat from pilot-owned media |
-| PILOT-007 | Complete for automated candidate; pilot exercise pending | Enforce incident command, deterministic severity, authority-reducing containment, evidence preservation, communication, recovery, and closure | Protected CI uploads signed `axiom-incident-tabletop-evidence-<commit>` bound to five verified control artifacts; repeat with named pilot roster and independent human review |
+| PILOT-007 | Complete for automated candidate; pilot exercise pending | Enforce incident command, deterministic severity, authority-reducing containment, evidence preservation, communication, recovery, and closure | Protected CI uploads signed `axiom-incident-tabletop-evidence-<commit>` bound to six verified control artifacts; repeat with named pilot roster and independent human review |
 
 ## P2 - multi-host foundations
 

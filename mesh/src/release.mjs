@@ -16,6 +16,7 @@ import {
 import { CANONICAL_DOCUMENTS, verifyCanonicalDocumentation } from './check-docs.mjs';
 import { validateCredentialRevocationLedger } from './credential-history-audit.mjs';
 import { validateIncidentResponsePolicy } from './incident-response.mjs';
+import { validateResilienceDrillPolicy } from './resilience-drill.mjs';
 import { validateTelemetryRoutingPolicy } from './telemetry-relay.mjs';
 
 const REPOSITORY_ROOT = dirname(MESH_ROOT);
@@ -71,6 +72,11 @@ export async function verifyReleaseReadiness() {
       'config',
       'telemetry-routing.json'
     ),
+    resilienceDrillPolicy: join(
+      MESH_ROOT,
+      'config',
+      'resilience-drill.json'
+    ),
     package: join(MESH_ROOT, 'package.json'),
     lock: join(MESH_ROOT, 'package-lock.json'),
     rootPackage: join(REPOSITORY_ROOT, 'package.json'),
@@ -92,6 +98,7 @@ export async function verifyReleaseReadiness() {
     credentialRevocations,
     incidentResponsePolicy,
     telemetryRoutingPolicy,
+    resilienceDrillPolicy,
     packageJson,
     lock,
     rootPackage,
@@ -112,6 +119,7 @@ export async function verifyReleaseReadiness() {
     readJson(paths.credentialRevocations),
     readJson(paths.incidentResponsePolicy),
     readJson(paths.telemetryRoutingPolicy),
+    readJson(paths.resilienceDrillPolicy),
     readJson(paths.package),
     readJson(paths.lock),
     readJson(paths.rootPackage),
@@ -137,6 +145,9 @@ export async function verifyReleaseReadiness() {
   );
   const telemetryRouting = validateTelemetryRoutingPolicy(
     telemetryRoutingPolicy
+  );
+  const resilienceDrill = validateResilienceDrillPolicy(
+    resilienceDrillPolicy
   );
   if (packageJson.version !== registry.kernel_version || lock.version !== packageJson.version) {
     throw new ValidationError('Package, lockfile, and capability registry versions must match');
@@ -186,6 +197,7 @@ export async function verifyReleaseReadiness() {
     credentialRevocations,
     incidentResponsePolicy,
     telemetryRoutingPolicy,
+    resilienceDrillPolicy,
     workflow,
     repositoryIgnore
   });
@@ -297,6 +309,7 @@ export async function verifyReleaseReadiness() {
     credential_revocation: credentialRevocation,
     incident_response: incidentResponse,
     telemetry_routing: telemetryRouting,
+    resilience_drill: resilienceDrill,
     operator_surface_digest: digestObject(operatorSurface),
     deployment,
     migrations: migrationEvidence,
@@ -332,6 +345,7 @@ export function verifyProductionDeployment({
   credentialRevocations,
   incidentResponsePolicy,
   telemetryRoutingPolicy,
+  resilienceDrillPolicy,
   workflow,
   repositoryIgnore
 }) {
@@ -339,6 +353,7 @@ export function verifyProductionDeployment({
   validateCredentialRevocationLedger(credentialRevocations);
   validateIncidentResponsePolicy(incidentResponsePolicy);
   validateTelemetryRoutingPolicy(telemetryRoutingPolicy);
+  validateResilienceDrillPolicy(resilienceDrillPolicy);
   const pinnedBase = dockerfile.match(
     /^FROM (node:24\.18\.0-alpine3\.23)@(sha256:[a-f0-9]{64})$/m
   );
@@ -426,7 +441,8 @@ export function verifyProductionDeployment({
     'recoverable quarantine',
     'credential-history audit',
     'automated incident tabletop',
-    'host-side telemetry relay'
+    'host-side telemetry relay',
+    'request-pressure and dependency-loss'
   ]) {
     if (!productionDocs.includes(boundary)) {
       throw new ValidationError(`Production operator documentation is missing boundary: ${boundary}`);
@@ -453,6 +469,7 @@ export function verifyProductionDeployment({
     'node src/credential-rotation-drill.mjs',
     'node src/data-key-rotation-drill.mjs',
     'node src/incident-tabletop-drill.mjs',
+    'node src/resilience-drill.mjs',
     'node src/telemetry-relay-drill.mjs',
     'actions/upload-artifact@v7',
     'axiom-recovery-drill-evidence-${{ github.sha }}',
@@ -461,6 +478,7 @@ export function verifyProductionDeployment({
     'axiom-credential-rotation-evidence-${{ github.sha }}',
     'axiom-data-key-rotation-evidence-${{ github.sha }}',
     'axiom-incident-tabletop-evidence-${{ github.sha }}',
+    'axiom-resilience-drill-evidence-${{ github.sha }}',
     'axiom-telemetry-relay-evidence-${{ github.sha }}',
     `docker build --pull=false --tag axiom-mesh-kernel:${packageJson.version} .`,
     'docker compose -f compose.production.yml up --detach --no-build',
@@ -481,6 +499,7 @@ export function verifyProductionDeployment({
     credential_revocation_ledger_sha256: digestObject(credentialRevocations),
     incident_response_policy_sha256: digestObject(incidentResponsePolicy),
     telemetry_routing_policy_sha256: digestObject(telemetryRoutingPolicy),
+    resilience_drill_policy_sha256: digestObject(resilienceDrillPolicy),
     deny_egress: {
       compose_network_mode_none: true,
       unix_domain_ingress: true,

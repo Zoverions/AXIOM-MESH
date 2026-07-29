@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=caeec760adf3f79760ec38a92302a3cac1d2550b3ffb4aa1df663f7f2470e6c0 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.11.0; digest=5a9aedefab571b835eb6496c27beaa9c778cbd18e77f12fcc3b2fc7a471c8fb0 -->
 # AXIOM-MESH Product Definition
 
 **Status:** Canonical rebuild definition
@@ -184,12 +184,20 @@ idempotency, redaction, receipts, and dead-letter audit are release-gated.
 Pilot-owned destinations and live acknowledgement measurements remain
 promotion evidence.
 
+The protected Linux resilience profile applies bounded body and concurrent
+request pressure, suspends and kills the actual Sandbox child process, and
+requires dependency-aware degradation, fail-closed supervisor exit, clean
+restart, and Grid-state preservation. Signed evidence excludes request bodies,
+intent identifiers, process identifiers, host paths, and secrets. Cgroup,
+disk, pilot-traffic, and orchestrator replacement behavior remain separate
+deployment evidence.
+
 Incident response is an executable candidate gate. A machine-readable policy
 selects the highest matching severity, requires independent command roles,
 permits only authority-reducing, preservation, recovery, communication, or
 review actions, and fails closure without verified containment, recovery,
 evidence, communications, retrospective scheduling, and independent review.
-The protected automated tabletop binds five independently signed operational
+The protected automated tabletop binds six independently signed operational
 control artifacts from the same revision. A facilitated pilot exercise and
 live roster remain external promotion requirements.
 

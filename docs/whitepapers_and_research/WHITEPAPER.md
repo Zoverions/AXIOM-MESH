@@ -337,6 +337,17 @@ contain the adapter's additional authority. Protected CI signs a real
 Unix-socket scrape and forced 503/429 retry exercise; pilot-owned endpoints,
 receiver retention, and human acknowledgement remain deployment evidence.
 
+The candidate resilience profile constrains two failure classes without adding
+a remote administrative surface. Request-body limits are enforced before
+idempotency reservation, concurrent demand is bounded by a fixed token bucket,
+and rejection telemetry remains low-cardinality. A supervisor-private child
+inventory lets the Linux drill suspend and kill the real Sandbox process.
+Required-dependency loss propagates through Hypervisor and Gateway readiness;
+child death terminates the supervisor fail-closed; and a fresh stack must
+preserve pre-fault Grid state. Grid signs a secret-free record of the profile
+and outcomes. This does not model cgroup OOM, disk exhaustion, or pilot
+orchestrator recovery, which remain deployment-specific experiments.
+
 ## 12. Production candidate
 
 The production candidate uses:
@@ -387,7 +398,8 @@ for unexpected dependencies. Release verification binds:
 - machine-readable incident severity, role, containment, communication, and
   closure policy;
 - signed automated incident-tabletop evidence bound to same-revision
-  recovery, backup, restart, credential-rotation, and data-key controls;
+  recovery, backup, restart, resilience, credential-rotation, and data-key
+  controls;
 - deprecated credential-history ledger and protected reuse policy;
 - canonical documentation;
 - SPDX SBOM and provenance inputs.

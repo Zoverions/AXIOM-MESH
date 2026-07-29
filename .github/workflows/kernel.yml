@@ -113,6 +113,19 @@ jobs:
           path: ${{ runner.temp }}/axiom-slo-baseline-evidence.json
           if-no-files-found: error
           retention-days: 90
+      - name: Run request-pressure and dependency-loss resilience drill
+        working-directory: mesh
+        run: |
+          node src/resilience-drill.mjs \
+            "$RUNNER_TEMP/axiom-resilience-drill" \
+            > "$RUNNER_TEMP/axiom-resilience-drill-evidence.json"
+      - name: Upload signed resilience evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: axiom-resilience-drill-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/axiom-resilience-drill-evidence.json
+          if-no-files-found: error
+          retention-days: 90
       - name: Run host-side telemetry and alert relay drill
         working-directory: mesh
         run: |
@@ -160,6 +173,7 @@ jobs:
             "$RUNNER_TEMP/axiom-recovery-drill-evidence.json" \
             "$RUNNER_TEMP/axiom-backup-lifecycle-evidence.json" \
             "$RUNNER_TEMP/axiom-slo-baseline-evidence.json" \
+            "$RUNNER_TEMP/axiom-resilience-drill-evidence.json" \
             "$RUNNER_TEMP/axiom-credential-rotation-evidence.json" \
             "$RUNNER_TEMP/axiom-data-key-rotation-evidence.json" \
             > "$RUNNER_TEMP/axiom-incident-tabletop-evidence.json"

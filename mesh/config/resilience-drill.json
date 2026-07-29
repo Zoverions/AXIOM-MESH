@@ -1,0 +1,21 @@
+{
+  "schema": "axiom-resilience-drill-policy.v1",
+  "version": 1,
+  "request_pressure": {
+    "max_body_bytes": 4096,
+    "oversized_body_bytes": 8192,
+    "rate_limit_capacity": 10,
+    "rate_limit_refill_per_second": 1,
+    "burst_requests": 24,
+    "recovery_wait_ms": 1200,
+    "request_timeout_ms": 8000
+  },
+  "dependency_loss": {
+    "service": "sandbox",
+    "suspend_signal": "SIGSTOP",
+    "terminate_signal": "SIGKILL",
+    "degraded_response_timeout_ms": 8000,
+    "supervisor_shutdown_ceiling_ms": 10000,
+    "restart_ceiling_ms": 20000
+  }
+}

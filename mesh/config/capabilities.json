@@ -1,6 +1,6 @@
 {
   "schema": "axiom-capabilities.v1",
-  "verified_at": "2026-07-28",
+  "verified_at": "2026-07-29",
   "kernel_version": "0.11.0",
   "capabilities": [
     {
@@ -234,12 +234,13 @@
       "id": "operations.observability",
       "family": "operations",
       "status": "implemented",
-      "summary": "Bounded four-service telemetry is scraped over least-privilege Unix-socket access and relayed as OTLP/HTTP JSON with fixed attributes; static alerts route through Alertmanager v2 using HTTPS allowlists, reserved queue capacity, bounded retry, redaction, and delivery audit.",
+      "summary": "Bounded four-service telemetry is scraped over least-privilege Unix-socket access and relayed as OTLP/HTTP JSON with fixed attributes; static alerts route through Alertmanager v2 using HTTPS allowlists, reserved queue capacity, bounded retry, redaction, and delivery audit; signed request-pressure and dependency-loss evidence proves bounded rejection, degradation, fail-closed exit, restart, and state preservation.",
       "evidence": [
         "mesh/test/operations.test.mjs",
         "mesh/test/kernel.test.mjs",
         "mesh/test/telemetry-relay.test.mjs",
         "mesh/test/telemetry-relay-drill.test.mjs",
+        "mesh/test/resilience-drill.test.mjs",
         ".github/workflows/kernel.yml"
       ]
     },

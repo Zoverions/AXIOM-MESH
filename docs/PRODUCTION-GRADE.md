@@ -21,20 +21,21 @@ container policy are implemented.
 The image build and composed container drill pass in
 [GitHub run 30375390450](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30375390450).
 The protected workflow also produces signed disposable-host recovery,
-SLO/restart, coordinated service/API credential-rotation,
-data-protection-key rotation, and automated incident-tabletop evidence. The
+SLO/restart, request-pressure and dependency-loss, coordinated service/API
+credential-rotation, data-protection-key rotation, and automated
+incident-tabletop evidence. The
 tabletop verifies deterministic severity, role independence,
 authority-reducing containment, evidence-first chronology, communications,
-closure, and five linked control artifacts. Its credential-history audit also
+closure, and six linked control artifacts. Its credential-history audit also
 reconstructs a 32-entry keyed ledger from the locked deprecated graph and
 proves that no candidate appears in the supported tip.
 Dedicated pilot capacity and availability, pilot-owned telemetry receivers, scheduled
 pilot-media recovery, pilot-owned secret-manager rotation, external
 deprecated-credential attestations, a named-roster pilot incident exercise,
-and independent security review remain open. Candidate-container deny-egress,
-the host-side telemetry relay, and the automated incident tabletop are
-implemented and remain subject to pilot-platform repetition.
-The current decision is recorded in the
+and independent security review remain open.
+The request-path resilience control, container deny-egress, host-side telemetry
+relay, and automated incident tabletop are implemented and remain subject to
+pilot-platform repetition. The current decision is recorded in the
 [readiness tracker](PRODUCTION-READINESS-TRACKER.md).
 
 ## Supported production boundary
@@ -132,6 +133,27 @@ for 90 days. This short disposable-runner profile closes the missing initial
 baseline; dedicated pilot hardware, the expected traffic mix, enforced CPU
 and memory controls, external paths, and a 30-day availability window must
 still be measured before production promotion.
+
+### Request-pressure and dependency-loss resilience
+
+Protected CI also runs a fixed Linux resilience profile against the real
+production supervisor. A 4 KiB body ceiling must reject an 8 KiB authenticated
+request without reserving its idempotency key. A 24-request concurrent burst
+must produce only accepted or bounded `429` outcomes, expose the rejection in
+telemetry, and recover after the declared refill interval.
+
+The drill then suspends the real Sandbox child process. Dependency-aware
+operations must report Gateway, Hypervisor, and Sandbox as not ready, `/ready`
+must return `503`, and bounded service/dependency alerts must be present.
+Killing Sandbox must terminate the supervisor fail-closed within ten seconds.
+A clean restart must preserve a pre-fault Grid record and accept a new intent.
+Grid signs the secret-free evidence, and release verification binds the exact
+policy and protected workflow.
+
+This closes an automated request-path and dependency-process candidate control.
+It does not exercise cgroup OOM/CPU throttling, disk exhaustion, pilot traffic,
+or orchestrator replacement. Those must be repeated and measured under the
+pilot deployment's actual resource policy.
 
 ## Data durability and recovery
 
@@ -300,7 +322,8 @@ six independently assigned roles, bounded activation/containment/update
 targets, authority-reducing actions, and mandatory closure conditions.
 Protected CI runs an automated incident tabletop that cryptographically
 verifies and binds the recovery, backup-lifecycle, SLO/restart,
-credential-rotation, and data-key-rotation evidence from the same commit.
+request-pressure/dependency-loss, credential-rotation, and data-key-rotation
+evidence from the same commit.
 Missing roles or actions, severity drift, expanding authority, late
 containment, broken communications cadence, stale evidence, premature
 closure, or signature tampering fails the gate. See
@@ -320,7 +343,8 @@ All gates must pass:
 3. **Correctness:** kernel and property tests pass from clean locks.
 4. **Container:** image builds and composed readiness drill pass in CI.
 5. **Recovery:** backup, restore, rollback, and migration drills pass.
-6. **Reliability:** declared load profile meets measured SLO/RPO/RTO targets.
+6. **Reliability:** declared load and resilience profiles meet measured
+   SLO/RPO/RTO and fail-closed recovery targets.
 7. **Supply chain:** SBOM, provenance, image digest, audits, and checksums exist.
 8. **Operations:** monitoring, alerts, incident roles, and runbooks are tested.
 9. **Governance:** protected branch, independent approval, and release dossier

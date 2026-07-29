@@ -34,6 +34,7 @@ The main technical and operational references are:
 - [Deprecated credential-history revocation](security/CREDENTIAL-HISTORY-REVOCATION.md)
 - [Candidate container deny-egress boundary](security/DENY-EGRESS-BOUNDARY.md)
 - [External telemetry and alert routing](operations/EXTERNAL-TELEMETRY-AND-ALERTING.md)
+- [Request pressure and dependency loss](operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md)
 - [Incident response and automated tabletop](security/INCIDENT-RESPONSE-AND-TABLETOP.md)
 - [0.11 release notes](releases/0.11.0.md)
 - [Runtime architecture](architecture/ARCHITECTURE.md)

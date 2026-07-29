@@ -105,6 +105,19 @@ export async function runProductionSupervisor({
       event: 'runtime.ready',
       processes: STARTUP_ORDER.map(item => item.service)
     })}\n`);
+    if (process.connected && typeof process.send === 'function') {
+      try {
+        process.send({
+          type: 'axiom.supervisor.ready',
+          processes: children.map(item => ({
+            service: item.service,
+            pid: item.child.pid
+          }))
+        });
+      } catch {
+        // The runtime does not depend on an optional parent observation channel.
+      }
+    }
     await stopRequested;
   } catch (error) {
     requestedExitCode = 1;

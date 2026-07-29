@@ -55,6 +55,7 @@ const REQUIRED_CONTROL_TYPES = Object.freeze([
   'credential_rotation',
   'data_key_rotation',
   'recovery',
+  'resilience',
   'slo_restart'
 ]);
 const CONTROL_SCHEMAS = Object.freeze({
@@ -62,6 +63,7 @@ const CONTROL_SCHEMAS = Object.freeze({
   credential_rotation: 'axiom-credential-rotation-drill-evidence.v1',
   data_key_rotation: 'axiom-data-key-rotation-drill-evidence.v1',
   recovery: 'axiom-recovery-drill-evidence.v1',
+  resilience: 'axiom-resilience-drill-evidence.v1',
   slo_restart: 'axiom-slo-baseline-evidence.v1'
 });
 const IDENTIFIER = /^[a-z][a-z0-9_]{2,63}$/;
@@ -469,6 +471,7 @@ function artifactPrefix(type) {
     credential_rotation: 'axiom-credential-rotation-evidence',
     data_key_rotation: 'axiom-data-key-rotation-evidence',
     recovery: 'axiom-recovery-drill-evidence',
+    resilience: 'axiom-resilience-drill-evidence',
     slo_restart: 'axiom-slo-baseline-evidence'
   }[type];
 }

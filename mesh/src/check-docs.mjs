@@ -19,6 +19,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/security/DENY-EGRESS-BOUNDARY.md',
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md',
   'docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md',
+  'docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md',
   'docs/releases/0.11.0.md',
   'docs/whitepapers_and_research/WHITEPAPER.md',
   'mesh/PRODUCTION.md'
@@ -54,6 +55,11 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Queue, retry, and delivery audit',
     '## Pilot repetition and non-claims'
   ],
+  'docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md': [
+    '## Enforced resilience profile',
+    '## Dependency-loss and recovery sequence',
+    '## Pilot repetition and non-claims'
+  ],
   'docs/releases/0.11.0.md': ['## Container status', '## Security action'],
   'docs/whitepapers_and_research/WHITEPAPER.md': ['## Non-claims', '## Reproducibility'],
   'mesh/PRODUCTION.md': ['not evidence of a live deployment']
@@ -68,6 +74,7 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/security/DENY-EGRESS-BOUNDARY.md': 2_500,
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md': 4_000,
   'docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md': 4_500,
+  'docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md': 4_500,
   'docs/whitepapers_and_research/WHITEPAPER.md': 7_000
 });
 

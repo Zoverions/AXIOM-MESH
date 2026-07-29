@@ -53,9 +53,15 @@ Incident response is also release-gated. The policy in
 highest matching severity, requires independently assigned command roles,
 allows no authority-expanding action, and defines evidence, communication,
 recovery, closure, and retrospective requirements. Protected CI signs an
-automated tabletop only after five same-revision operational control artifacts
+automated tabletop only after six same-revision operational control artifacts
 verify. See the
 [incident-response runbook](../docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md).
+
+The Linux resilience drill applies bounded oversized-body and concurrent
+request pressure, then suspends and kills the actual Sandbox child process. It
+requires dependency-aware degradation, fail-closed supervisor exit, clean
+restart, persisted pre-fault evidence, and signed secret-free output. See the
+[request-pressure and dependency-loss runbook](../docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md).
 
 Verify an export without a running AXIOM-MESH process:
 

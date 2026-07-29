@@ -22,6 +22,7 @@ import {
   verifyObjectSignature
 } from './lib/identity.mjs';
 import { verifyRecoveryDrillEvidence } from './recovery-drill.mjs';
+import { verifyResilienceDrillEvidence } from './resilience-drill.mjs';
 import { verifySloBaselineEvidence } from './slo-drill.mjs';
 
 const EVIDENCE_SCHEMA = 'axiom-incident-tabletop-evidence.v1';
@@ -43,6 +44,10 @@ const CONTROL_DEFINITIONS = Object.freeze({
   recovery: Object.freeze({
     verifier: verifyRecoveryDrillEvidence,
     artifact: 'axiom-recovery-drill-evidence'
+  }),
+  resilience: Object.freeze({
+    verifier: verifyResilienceDrillEvidence,
+    artifact: 'axiom-resilience-drill-evidence'
   }),
   slo_restart: Object.freeze({
     verifier: verifySloBaselineEvidence,
@@ -111,6 +116,7 @@ export async function runIncidentTabletopDrill({
     declaredAt: generated,
     signals: [
       'evidence_integrity_failure',
+      'resource_exhaustion',
       'suspected_credential_exposure'
     ],
     affectedAssetClasses: [
@@ -174,7 +180,7 @@ export async function runIncidentTabletopDrill({
         'select only authority-reducing or recovery actions',
         'preserve evidence before containment changes',
         'exercise communication cadence and independent closure review',
-        'bind recovery and rotation controls to the same source revision'
+        'bind recovery, resilience, and rotation controls to the same source revision'
       ]
     },
     plan,
@@ -342,6 +348,7 @@ async function main() {
     recoveryPath,
     backupLifecyclePath,
     sloPath,
+    resiliencePath,
     credentialRotationPath,
     dataKeyRotationPath
   ] = process.argv.slice(2);
@@ -350,6 +357,7 @@ async function main() {
     recovery: recoveryPath,
     backup_lifecycle: backupLifecyclePath,
     slo_restart: sloPath,
+    resilience: resiliencePath,
     credential_rotation: credentialRotationPath,
     data_key_rotation: dataKeyRotationPath
   }, { sourceRevision });
