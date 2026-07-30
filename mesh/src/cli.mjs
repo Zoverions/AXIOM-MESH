@@ -17,9 +17,11 @@ export function parseCliArguments(argv) {
   if (!Array.isArray(argv)) throw new TypeError('CLI arguments must be an array');
   const positional = [];
   let json = false;
+  let human = false;
   let help = false;
   for (const argument of argv) {
     if (argument === '--json') json = true;
+    else if (argument === '--human') human = true;
     else if (argument === '--help' || argument === '-h') help = true;
     else positional.push(argument);
   }
@@ -27,16 +29,22 @@ export function parseCliArguments(argv) {
   return {
     command: help ? 'help' : command,
     args,
-    json
+    json,
+    human
   };
 }
 
 export function cliHelp() {
-  return `AXIOM-MESH command line\n\nUsage:\n  npm run axiom -- <command> [arguments] [--json]\n\nCommands:\n  status                              Show the current kernel and capability summary\n  capabilities                        Print the signed capability registry view\n  intent <action> [json-input]         Submit one authenticated intent\n  audit                               Verify the current evidence chain\n  backup list                         List encrypted backups\n  backup show <backup-id>             Show one backup manifest\n  backup restore <path> <sha256>      Restore with an exact expected database digest\n\nOptions:\n  --json                              Emit the complete JSON response\n  -h, --help                          Show this help\n\nFirst run:\n  npm run dev\n  npm run axiom -- status\n`;
+  return `AXIOM-MESH command line\n\nUsage:\n  npm run axiom -- <command> [arguments] [--json]\n\nCommands:\n  status                              Show the current kernel and capability summary\n  capabilities                        Print the signed capability registry view\n  intent <action> [json-input]         Submit one authenticated intent\n  audit                               Verify the current evidence chain\n  backup list                         List encrypted backups\n  backup show <backup-id>             Show one backup manifest\n  backup restore <path> <sha256>      Restore with an exact expected database digest\n\nOptions:\n  --json                              Emit the complete JSON response\n  --human                             Render a concise status summary\n  -h, --help                          Show this help\n\nFirst run:\n  npm run dev\n  npm run axiom -- status\n`;
 }
 
-export function formatCliResult(command, result, { json = false } = {}) {
-  if (json || command !== 'status') return `${JSON.stringify(result, null, 2)}\n`;
+export function formatCliResult(command, result, {
+  json = false,
+  human = false
+} = {}) {
+  if (json || !human || command !== 'status') {
+    return `${JSON.stringify(result, null, 2)}\n`;
+  }
   const counts = result?.capability_counts ?? {};
   const orderedStatuses = [
     'implemented',
@@ -191,7 +199,10 @@ async function main() {
     return;
   }
   const result = await runCli([parsed.command, ...parsed.args]);
-  process.stdout.write(formatCliResult(parsed.command, result, { json: parsed.json }));
+  process.stdout.write(formatCliResult(parsed.command, result, {
+    json: parsed.json,
+    human: parsed.human
+  }));
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
