@@ -31,6 +31,7 @@
     "telemetry-relay:drill": "npm --prefix mesh run telemetry-relay:drill --",
     "transport:drill": "npm --prefix mesh run transport:drill --",
     "network-boundary:verify": "npm --prefix mesh run network-boundary:verify --",
+    "audit:verify-full": "npm --prefix mesh run audit:verify-full --",
     "node-scheduling:drill": "npm --prefix mesh run node-scheduling:drill --",
     "online-sync": "npm --prefix mesh run online-sync --",
     "online-sync:drill": "npm --prefix mesh run online-sync:drill --",

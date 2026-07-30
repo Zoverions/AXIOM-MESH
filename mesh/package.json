@@ -29,6 +29,7 @@
     "telemetry-relay:drill": "node src/telemetry-relay-drill.mjs",
     "transport:drill": "node src/transport-drill.mjs",
     "network-boundary:verify": "node src/network-boundary.mjs",
+    "audit:verify-full": "node src/verify-grid-chain.mjs",
     "node-scheduling:drill": "node src/node-scheduling-drill.mjs",
     "online-sync": "node src/online-causal-sync.mjs",
     "online-sync:drill": "node src/online-causal-sync-drill.mjs",
