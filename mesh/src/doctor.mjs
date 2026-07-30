@@ -3,6 +3,7 @@
 import { createServer } from 'node:net';
 import { pathToFileURL } from 'node:url';
 import { meshConfig } from './lib/config.mjs';
+import { recoverStaleGridRuntimeLock } from './grid/backup.mjs';
 import { verifyRepositorySetup } from './setup.mjs';
 
 const SERVICES = Object.freeze(['gateway', 'hypervisor', 'sandbox', 'grid']);
@@ -35,12 +36,53 @@ export async function checkPortAvailable({ host, port }) {
   });
 }
 
+export async function checkGridRuntimeLock({
+  dataDir,
+  recoverLock = recoverStaleGridRuntimeLock
+}) {
+  try {
+    const recovery = await recoverLock(dataDir);
+    if (!recovery) {
+      return {
+        ready: true,
+        state: 'absent',
+        error_code: null,
+        stale_pid: null,
+        quarantine_path: null,
+        remedy: null
+      };
+    }
+    return {
+      ready: true,
+      state: 'stale_recovered',
+      error_code: null,
+      stale_pid: recovery.stale_pid,
+      quarantine_path: recovery.quarantine_path,
+      remedy: null
+    };
+  } catch (error) {
+    if (error?.code === 'grid_is_running') {
+      return {
+        ready: false,
+        state: 'live',
+        error_code: error.code,
+        stale_pid: null,
+        quarantine_path: null,
+        remedy: 'Stop the running Grid process before starting another stack.'
+      };
+    }
+    throw error;
+  }
+}
+
 export async function runDoctor({
   config = meshConfig(),
   verifySetup = verifyRepositorySetup,
-  checkPort = checkPortAvailable
+  checkPort = checkPortAvailable,
+  checkGridLock = checkGridRuntimeLock
 } = {}) {
   const setup = await verifySetup();
+  const gridRuntimeLock = await checkGridLock({ dataDir: config.dataDir });
   const ports = await Promise.all(SERVICES.map(async service => {
     const host = config.hosts[service];
     const port = config.ports[service];
@@ -55,8 +97,13 @@ export async function runDoctor({
   }));
   return {
     schema: 'axiom-doctor.v1',
-    ready: setup.valid === true && ports.every(item => item.available),
+    ready: (
+      setup.valid === true
+      && gridRuntimeLock.ready === true
+      && ports.every(item => item.available)
+    ),
     setup,
+    grid_runtime_lock: gridRuntimeLock,
     ports,
     production_credentials_created: false
   };
@@ -64,10 +111,17 @@ export async function runDoctor({
 
 export function formatDoctorResult(result, { json = false } = {}) {
   if (json) return `${JSON.stringify(result, null, 2)}\n`;
+  const lock = result.grid_runtime_lock;
+  const lockDescription = lock.state === 'stale_recovered'
+    ? `stale lock recovered (PID ${lock.stale_pid}; quarantined at ${lock.quarantine_path})`
+    : lock.state === 'live'
+      ? `blocked (${lock.error_code}): ${lock.remedy}`
+      : 'clear';
   const lines = [
     'AXIOM-MESH doctor',
     `Toolchain: ${result.setup.valid ? 'ready' : 'blocked'} (Node ${result.setup.runtime.node}, npm ${result.setup.runtime.npm})`,
-    `Locks: verified (${result.setup.dependency_packages} dependency packages)`
+    `Locks: verified (${result.setup.dependency_packages} dependency packages)`,
+    `Grid runtime lock: ${lockDescription}`
   ];
   for (const item of result.ports) {
     lines.push(

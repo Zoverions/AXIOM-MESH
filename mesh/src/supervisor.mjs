@@ -4,6 +4,7 @@ import https from 'node:https';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { ValidationError } from './lib/canonical.mjs';
 import { meshConfig } from './lib/config.mjs';
+import { recoverStaleGridRuntimeLock } from './grid/backup.mjs';
 import { startLocalIngressBridge } from './local-ingress.mjs';
 import { assertDenyEgressBoundary } from './network-boundary.mjs';
 import {
@@ -31,6 +32,7 @@ export async function runProductionSupervisor({
   fetchImpl = fetch,
   denyEgressCheck = assertDenyEgressBoundary,
   ingressBridgeStart = startLocalIngressBridge,
+  recoverGridLock = recoverStaleGridRuntimeLock,
   startupTimeoutMs = 20_000,
   stdout = value => process.stdout.write(value),
   stderr = value => process.stderr.write(value)
@@ -72,6 +74,19 @@ export async function runProductionSupervisor({
   if (process.connected) process.once('message', messageHandler);
 
   try {
+    const lockRecovery = config.dataDir
+      ? await recoverGridLock(config.dataDir)
+      : null;
+    if (lockRecovery) {
+      stdout(`${JSON.stringify({
+        timestamp: new Date().toISOString(),
+        level: 'warn',
+        service: 'supervisor',
+        event: 'grid.runtime_lock.recovered',
+        stale_pid: lockRecovery.stale_pid,
+        quarantine_path: lockRecovery.quarantine_path
+      })}\n`);
+    }
     for (const spec of STARTUP_ORDER) {
       const child = spawnImpl(process.execPath, [spec.module], {
         cwd: fileURLToPath(new URL('..', import.meta.url)),
