@@ -8,6 +8,7 @@ import test from 'node:test';
 
 import { checkGridRuntimeLock } from '../src/doctor.mjs';
 import { recoverStaleGridRuntimeLock } from '../src/grid/backup.mjs';
+import { GridStore } from '../src/grid/store.mjs';
 import { Router } from '../src/lib/http.mjs';
 import { PolicyEngine, mergeDenyDominantPolicy } from '../src/lib/policy.mjs';
 
@@ -63,6 +64,40 @@ test('malformed percent-encoding is a validation error', () => {
     () => router.match('GET', '/v1/intents/%zz'),
     error => error?.code === 'validation_error' && error?.status === 400
   );
+});
+
+test('Grid chain verification streams event rows without materializing the table', () => {
+  let iterateCalls = 0;
+  let allCalls = 0;
+  const genesis = '0'.repeat(64);
+  const eventStatement = {
+    *iterate() {
+      iterateCalls += 1;
+    },
+    all() {
+      allCalls += 1;
+      throw new Error('event verification must not materialize the event table');
+    }
+  };
+  const store = {
+    db: {
+      prepare(sql) {
+        if (sql === 'SELECT * FROM events ORDER BY seq') return eventStatement;
+        if (sql.includes("key = 'last_hash'")) {
+          return { get: () => ({ value: genesis }) };
+        }
+        if (sql.includes("key = 'last_seq'")) {
+          return { get: () => ({ value: '0' }) };
+        }
+        throw new Error(`Unexpected verification query: ${sql}`);
+      }
+    }
+  };
+
+  const result = GridStore.prototype.verifyChain.call(store);
+  assert.deepEqual(result, { valid: true, events: 0, head: genesis });
+  assert.equal(iterateCalls, 1);
+  assert.equal(allCalls, 0);
 });
 
 test('stale Grid runtime locks are quarantined before restart', async () => {
