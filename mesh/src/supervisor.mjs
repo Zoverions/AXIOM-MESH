@@ -32,6 +32,7 @@ export async function runProductionSupervisor({
   fetchImpl = fetch,
   denyEgressCheck = assertDenyEgressBoundary,
   ingressBridgeStart = startLocalIngressBridge,
+  recoverGridLock = recoverStaleGridRuntimeLock,
   startupTimeoutMs = 20_000,
   stdout = value => process.stdout.write(value),
   stderr = value => process.stderr.write(value)
@@ -73,7 +74,9 @@ export async function runProductionSupervisor({
   if (process.connected) process.once('message', messageHandler);
 
   try {
-    const lockRecovery = await recoverStaleGridRuntimeLock(config.dataDir);
+    const lockRecovery = config.dataDir
+      ? await recoverGridLock(config.dataDir)
+      : null;
     if (lockRecovery) {
       stdout(`${JSON.stringify({
         timestamp: new Date().toISOString(),
