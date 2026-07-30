@@ -7,6 +7,48 @@ AXIOM-MESH is a local-first capability network: it turns a human or agent
 intent into a policy-authorized plan, executes each approved effect inside a
 bounded runtime, and emits portable cryptographically linked evidence.
 
+## First 5 Minutes
+
+Requirements: Node.js `>=24.14.0 <25` and npm `>=11.0.0 <12`. The supported
+pin is Node.js `24.18.0`. From a clean terminal:
+
+```bash
+git clone https://github.com/Zoverions/AXIOM-MESH.git
+cd AXIOM-MESH
+npm run doctor
+npm run setup
+npm run dev
+```
+
+A successful start prints `"message": "AXIOM-MESH ready"`, the local Gateway
+endpoint, and the next command. In a second terminal:
+
+```bash
+npm run axiom -- status
+npm run axiom -- intent system.echo '{"message":"hello"}'
+```
+
+Use `npm run axiom -- --help` to discover commands and append `--json` when
+you need the complete machine-readable response. The documented local command
+uses the checked-out source directly; it does not ask `npx` to resolve a
+similarly named registry package.
+
+Docker is **not required** for this local development path. On Windows, use a
+short checkout path and PowerShell or a terminal that preserves the JSON quotes
+shown above. Run `npm run doctor` first when diagnosing Node, npm, lock, or port
+problems.
+
+## Choose Your Path
+
+| Level | Goal | Minimum command path |
+|---|---|---|
+| **Local Play** | Start the kernel and submit one intent | `npm run doctor` → `npm run setup` → `npm run dev` → `npm run axiom -- status` |
+| **Verify** | Re-run source, test, documentation, and release gates | `npm run check` → `npm run release:verify` |
+| **Operator / Pilot** | Exercise recovery, resilience, transport, evidence, and promotion controls | Use the bounded drills below and their linked runbooks |
+
+You do not need to understand or run every production drill to evaluate the
+local intent path.
+
 **Current status:** `0.12.0-dev.0`, the supported development build on `main`.
 It is not production-promoted and no live deployment is claimed. The last
 published production-candidate release is immutable `v0.11.0`; current build
@@ -36,46 +78,23 @@ Blockchain settlement, bridges, tokens, arbitrary containers, external AI,
 messaging, health, education, government, finance, and embodied systems are
 disabled or adapter-required until their controls and evidence exist.
 
-## Run and verify
+## Verification and operator drills
 
-Local requirements: Node.js `>=24.14.0 <25` and npm `>=11.0.0 <12`. Protected
-CI and the candidate production image pin Node.js 24.18.0. The kernel has no
-third-party npm packages.
+The first-run path above uses the same fail-closed source setup used by the
+verification boundary. The setup command disables install lifecycle scripts,
+verifies that both committed locks remain unchanged, runs the clean-kernel and
+release gates, and does not create production credentials.
 
-From a clean checkout, install both committed locks and run the full
-clean-kernel and release verification:
+Use `npm run setup:check` for a read-only prerequisite and drift check or
+`npm run setup:install` for exact lock installation without the full suite. See
+the [automated source setup boundary](docs/operations/AUTOMATED-SOURCE-SETUP.md).
 
-```bash
-npm run setup
-```
-
-The command disables install lifecycle scripts, verifies that the locks remain
-unchanged, and does not create production credentials. Use
-`npm run setup:check` for a read-only prerequisite/drift check or
-`npm run setup:install` for exact lock installation without the full suite.
-See the
-[automated source setup boundary](docs/operations/AUTOMATED-SOURCE-SETUP.md).
-
-Start the local development runtime:
-
-```bash
-npm run dev
-```
-
-In a second terminal:
-
-```bash
-node mesh/src/cli.mjs status
-node mesh/src/cli.mjs capabilities
-node mesh/src/cli.mjs intent system.echo '{"message":"hello"}'
-node mesh/src/cli.mjs audit
-```
-
-After subsequent source changes, rerun all clean-kernel checks:
+After source changes, rerun:
 
 ```bash
 npm run check
 npm run release:verify
+npm run axiom -- audit
 ```
 
 Run the production recovery exercise against an explicitly empty disposable
