@@ -9,7 +9,7 @@ import {
 test('chain verification benchmark emits signed comparable process evidence', async () => {
   const evidence = await runChainVerificationBenchmark({
     eventCount: 1_200,
-    batchSize: 100,
+    batchSize: 32,
     checkpointInterval: 500,
     sourceRevision: 'a'.repeat(40),
     generatedAt: '2026-07-30T17:00:00.000Z'
@@ -28,5 +28,16 @@ test('chain verification benchmark emits signed comparable process evidence', as
   assert.throws(
     () => verifyChainVerificationBenchmarkEvidence(tampered),
     /evidence is invalid|attestation is invalid/
+  );
+});
+
+test('chain benchmark rejects fixture batches larger than the Grid commit boundary', () => {
+  assert.throws(
+    () => runChainVerificationBenchmark({
+      eventCount: 1_200,
+      batchSize: 33,
+      checkpointInterval: 500
+    }),
+    /batch size must be an integer between 1 and 32/
   );
 });
