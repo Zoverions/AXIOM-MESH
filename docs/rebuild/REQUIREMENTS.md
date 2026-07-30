@@ -3,301 +3,258 @@
 
 **Current build:** `0.12.0-dev.0`
 
-**Updated:** 2026-07-29
+**Updated:** 2026-07-30
 
 **Normative language:** MUST, MUST NOT, SHOULD, and MAY are used in their usual
 requirements sense.
+
+## Requirement-state rule
+
+Requirements define the intended system. They do not themselves establish that
+a capability is runnable or production-promoted.
+
+The implementation MUST distinguish:
+
+1. **built** code;
+2. operator-**enabled** capability;
+3. user- or network-**exposed** capability;
+4. **production-promoted** capability;
+5. publicly **marketed** capability.
+
+The machine-readable capability registry remains authoritative for runnable
+status. Public and user-facing claims MUST describe only the exact evidenced
+state.
 
 ## Core-loop requirements
 
 | ID | Requirement | Acceptance evidence |
 |---|---|---|
-| CORE-01 | All privileged effects MUST follow Gateway → Hypervisor → Sandbox → Grid. | End-to-end test rejects every direct/bypass path. |
-| CORE-02 | Every request MUST carry a trace ID and idempotency key. | Duplicate submission returns the original result without a second effect. |
-| CORE-03 | Every mutation MUST append a hash-linked evidence event. | Chain verification passes after restart and fails after tampering. |
-| CORE-04 | Services MUST fail closed when identity, policy, consent, grant, verifier, or settlement state is unavailable. | Fault-injection tests cover each dependency. |
-| CORE-05 | Interfaces MUST be versioned and incompatible changes MUST be rejected. | Schema compatibility test in CI. |
+| CORE-01 | Every privileged or externally visible effect MUST follow Gateway → Hypervisor → Sandbox → Grid. | End-to-end tests reject direct and bypass paths. |
+| CORE-02 | Every request MUST carry a trace ID, versioned schema, and idempotency key where repetition could create another effect. | Duplicate and incompatible-version tests. |
+| CORE-03 | Every mutation MUST append a signed hash-linked evidence event transactionally with the state change. | Restart verification and tamper tests. |
+| CORE-04 | Services MUST fail closed when identity, policy, consent, approval, grant, verifier, provider, destination, evidence, or required settlement state is unavailable. | Fault-injection tests for each dependency. |
+| CORE-05 | Plans MUST name every effect, provider, destination, data scope, dependency, approval, budget, timeout, cancellation rule, and evidence obligation before execution. | Plan-schema validation and negative fixtures. |
+| CORE-06 | A model, browser, adapter, administrator, autonomous loop, or settlement process MUST NOT mint or widen its own authority. | Architectural and runtime denial tests. |
+| CORE-07 | A production path MUST NOT return mock, synthetic, or fallback success when a real dependency is absent. | Provider-absence and dependency-failure tests. |
 
 ## Identity, authorization, and consent
 
 | ID | Requirement | Acceptance evidence |
 |---|---|---|
-| IAM-01 | Public and service identities MUST be distinct. | Service credentials cannot call public-user-only or operator-only actions. |
-| IAM-02 | Service requests MUST be mutually authenticated and replay resistant. | TLS 1.3 peer-chain, DNS/URI identity, exact active-leaf, signed-caller binding, expiry, nonce reuse, body mutation, and wrong-audience tests. |
-| IAM-03 | Capability grants MUST be short-lived, single-use, audience-, intent-, tool-, and resource-bound. | Sandbox negative-path suite. |
-| IAM-04 | Policy inheritance MUST be deny-dominant: lower layers can tighten but cannot loosen higher layers. | Property tests across global/national/local/user policies. |
-| IAM-05 | Consent MUST identify subject, controller, purpose, data scope, expiry, and revocation handle. | Revoked/expired/wrong-purpose requests fail. |
-| IAM-06 | Production startup MUST reject default, weak, missing, or example secrets. | Startup configuration tests. |
+| IAM-01 | Public, user, operator, service, provider, reviewer, and exception-approver identities MUST be distinct where their authority conflicts. | Cross-role denial and self-approval tests. |
+| IAM-02 | Service requests MUST be mutually authenticated, audience-bound, body-bound, time-bound, and replay-resistant. | TLS peer, signed-caller, expiry, nonce, body mutation, and wrong-audience tests. |
+| IAM-03 | Capability grants MUST be short-lived, single-use, revocable, and bound to principal, intent, plan, policy, tool, provider, destination, data, resource, constraints, and audience. | Sandbox and adapter negative-path suites. |
+| IAM-04 | Policy inheritance MUST be deny-dominant. Lower layers may tighten but MUST NOT loosen higher layers. | Property tests across policy stacks. |
+| IAM-05 | Consent MUST identify subject, controller, purpose, data scope, destination, retention, expiry, and revocation handle where applicable. | Wrong-purpose, destination, expired, and revoked tests. |
+| IAM-06 | Production startup MUST reject default, weak, missing, example, stale, or partially provisioned credentials. | Startup configuration tests. |
+| IAM-07 | Device and browser sessions MUST support expiry, idle timeout, revocation, and scope reduction without requiring destruction of the user’s underlying identity. | Session and device-revocation tests. |
+| IAM-08 | Core access and identity MUST NOT require a token, settlement account, or platform-controlled social account. | Token-disabled and offline-local onboarding tests. |
 
-## Capsules and execution
-
-| ID | Requirement | Acceptance evidence |
-|---|---|---|
-| CAP-01 | Capsules MUST be immutable, content addressed, signed, versioned, and include provenance, manifest, constraints, schemas, and SBOM. | Registry verification fixtures. |
-| CAP-02 | External capsules and MCP tools MUST never execute directly from intake. | Quarantine-state test. |
-| CAP-03 | Install MUST NOT imply execute permission. | Execution without a grant is denied. |
-| CAP-04 | Revocation MUST block new execution immediately and in-flight execution within its declared kill window. | Revocation race test. |
-| CAP-05 | Untrusted execution MUST have no ambient host authority and MUST use an explicit image digest, command allowlist, read-only root, dropped capabilities, resource limits, and deny-by-default egress. | Runtime-policy inspection and escape regression tests. |
-| CAP-06 | Missing external providers MUST return `capability_unavailable`, not mock data. | Provider-absence tests. |
-
-## Orchestration and evidence
+## Human interface and application requirements
 
 | ID | Requirement | Acceptance evidence |
 |---|---|---|
-| ORCH-01 | A plan MUST name every effect, dependency, approval, capability, timeout, and evidence obligation before execution. | Plan-schema validation. |
-| ORCH-02 | High-risk plans MUST require explicit human approval and MUST NOT be self-approved by the proposing agent. | Approval-separation tests. |
-| ORCH-03 | Decision provenance MUST record observable inputs/rules/actions, not hidden chain-of-thought. | Schema excludes free-form private reasoning. |
-| ORCH-04 | Cached results MUST be bound to canonical intent, capsule version, policy version, and proof/verifier version. | Cache invalidation tests. |
-| ORCH-05 | Autonomous loops MUST have budgets, deadlines, cancellation, bounded recursion, and an emergency halt. | Loop exhaustion and halt tests. |
+| UX-01 | Human applications MUST remain outside the trusted zero-dependency kernel and use versioned Gateway contracts. | Dependency-boundary and API compatibility checks. |
+| UX-02 | A user MUST be shown the proposed effect, provider, destination, information scope, cost or budget, retention, timeout, cancellation, reversibility, and required approval before a consequential action. | Usability fixtures and browser end-to-end tests. |
+| UX-03 | A friendly interface MUST NOT conceal denial, uncertainty, degraded state, unresolved conflict, external transfer, or the difference between integrity evidence and truth. | Content and state-parity tests. |
+| UX-04 | Local operation MUST require no advertising identifier, third-party analytics, remote font, account service, or unrelated telemetry destination. | Network inspection and static policy tests. |
+| UX-05 | Secrets MUST NOT be persisted in browser storage unless a separately reviewed local key-management design explicitly permits the exact secret class. | Browser storage inspection and negative tests. |
+| UX-06 | Browser surfaces MUST implement explicit origin, CSP, CSRF, cookie/token, clickjacking, content-type, upload, download, session, and device-revocation controls. | Browser security suite and threat-model review. |
+| UX-07 | Primary workflows MUST support keyboard navigation, screen readers, contrast, reduced motion, phone-size layouts, plain language, and recoverable errors. | Automated accessibility checks and documented human testing. |
+| UX-08 | Export, deletion, revocation, receipt inspection, and recovery guidance MUST be reachable from the primary user interface. | User-flow tests. |
+| UX-09 | A new user SHOULD reach one useful result without using the CLI or understanding the four-service topology. | Bounded onboarding study and activation evidence. |
+| UX-10 | Human-product previews MUST be labeled with their exact support, privacy, recovery, and promotion state. | Claim and release checks. |
 
-## Grid, state, and reliability
+## Capsules, tools, providers, and execution
 
 | ID | Requirement | Acceptance evidence |
 |---|---|---|
-| GRID-01 | Grid MUST be unable to originate user effects or mint its own capability grants. | Architectural import/lint rule and runtime denial. |
-| GRID-02 | Durable state MUST be transactional, restart safe, and migration versioned. | Crash/restart and migration tests. |
-| GRID-03 | Offline mutations MUST be signed, causally ordered, conflict visible, and reconciled without silent last-write loss. | Deterministic version-vector tests and a four-service concurrent-head/resolution path. |
-| GRID-04 | Consensus claims MUST match the deployed topology. Single-node mode MUST call itself a transparency log, not BFT consensus. | Runtime status and docs parity test. |
-| GRID-05 | State-mutating behavior MUST become read-only or unavailable when required quorum/finality is absent. | Quorum-loss scenario. |
-| GRID-06 | Node admission MUST bind identity, security profile, capabilities, software digest, and expiry. | Admission and renewal tests. |
-| GRID-07 | Storage offers MUST bind the owning admitted node key and MUST become unavailable when that node is expired or quarantined. | Wrong-key rejection and quarantine propagation tests. |
-| GRID-08 | Data-key rotation MUST re-encrypt every supported durable and recovery context while stopped, reject mismatched keys, recover an interrupted cutover, and preserve post-rotation evidence on rollback. | Unit fault injection plus signed real-stack rotation, restore, rejection, and rollback evidence. |
-| GRID-09 | Backup retention MUST verify every candidate, derive selection from signed policy, preserve a configured minimum, reject live or changed inventory, recover interruption, and keep retired media recoverable until separate destruction approval. | Negative-path and kill tests plus signed recurring lifecycle/restore evidence. |
-| GRID-10 | Discovery-capable node admission MUST bind an HTTPS origin, failure domain, roles, resource ceilings, owner, unique active signing key, and expiry; discovery MUST exclude ineligible nodes and return Grid-signed bounded results. | Signature, copied-key, owner-limit, query, expiry, quarantine, downgrade, and attestation tests. |
-| GRID-11 | Node scheduling MUST follow the normal policy/grant/evidence path, reserve only a complete deterministic placement within declared capacity/concurrency/security/owner/domain/lease constraints, encrypt records at rest, and degrade on eligibility loss. | Pure determinism/capacity tests, four-service API test, restart test, and signed drill evidence. |
-| GRID-12 | Online causal exchange MUST verify a pinned Grid-signed owner event stream and every node-signed bundle, persist bounded encrypted ordered state, preserve cursors across partition, detect destination duplicates before approval, and retain exact one-use independent destination approval plus explicit all-head conflict resolution. It MUST NOT imply replicated consensus or automatic authority. | Tamper, partition/backoff, order, encryption, duplicate, owner-isolation, and exact-approval tests plus a signed two-real-stack bidirectional partition/rejoin/conflict/convergence drill. |
+| CAP-01 | Capsules MUST be immutable, content-addressed, signed, versioned, and include provenance, manifest, constraints, schemas, and SBOM. | Registry verification fixtures. |
+| CAP-02 | External capsules, MCP tools, provider code, and uploaded executables MUST never execute directly from intake. | Quarantine-state tests. |
+| CAP-03 | Install, discovery, listing, invitation, or provider connection MUST NOT imply execution authority. | Execution-without-grant denial. |
+| CAP-04 | Revocation MUST block new execution immediately and bound in-flight execution by a declared kill window. | Revocation race tests. |
+| CAP-05 | Untrusted execution MUST have no ambient host authority and MUST use explicit digest, command, filesystem, capability, resource, network, timeout, cancellation, and artifact controls. | Runtime policy inspection and escape regression tests. |
+| CAP-06 | Every adapter MUST declare credentials, trust anchors, origins, egress, schemas, consent, data scope, budget, timeout, cancellation, retry, retention, deletion, evidence, failure, uninstall, and rollback. | Adapter conformance kit. |
+| CAP-07 | Missing or invalid external providers MUST return `capability_unavailable`, not mock output. | Provider-absence tests. |
+| CAP-08 | Provider results MUST remain data until a later authorized effect explicitly consumes them. | Model-to-effect separation tests. |
+| CAP-09 | Arbitrary-code execution MUST remain disabled until an independently reviewed isolation profile and adversarial escape suite are tied to the exact runtime. | Promotion gate. |
+
+## Personal AI and bounded orchestration
+
+| ID | Requirement | Acceptance evidence |
+|---|---|---|
+| AI-01 | Every AI request MUST bind a named provider, model, purpose, information scope, retention rule, budget, deadline, cancellation signal, and result receipt. | Adapter schema and negative tests. |
+| AI-02 | The provider MUST receive only the minimum approved data and MUST NOT receive unrelated memory by default. | Data-minimization and leakage tests. |
+| AI-03 | Multi-step loops MUST have budgets, deadlines, bounded recursion, cancellation, checkpoint evidence, and emergency halt. | Exhaustion, cancellation, and halt tests. |
+| AI-04 | Model output MUST NOT directly authorize external, destructive, public, financial, identity, legal, health, education, government, or embodied effects. | End-to-end denial tests. |
+| AI-05 | Useful workflows MUST retain source provenance, uncertainty, corrections, and user edits without claiming private chain-of-thought. | Workflow and receipt tests. |
+| AI-06 | Evaluation MUST measure usefulness, latency, cost, correction rate, privacy leakage, cancellation, and recovery rather than only model quality. | User and operational evidence. |
+
+## Grid, state, privacy, and reliability
+
+| ID | Requirement | Acceptance evidence |
+|---|---|---|
+| GRID-01 | Grid MUST be unable to originate user effects or mint capability grants. | Import boundary and runtime denial. |
+| GRID-02 | Durable state MUST be encrypted, transactional, restart-safe, migration-versioned, and context-bound. | Crash, wrong-key, migration, and storage inspection tests. |
+| GRID-03 | Evidence continuity MUST survive authorized key rotation through explicit signed transitions and MUST fail closed on unresolved lineage. | Rotation and verification tests. |
+| GRID-04 | Grid in single-node mode MUST describe itself as a transparency log, not BFT consensus. | Runtime and documentation parity checks. |
+| GRID-05 | Memory MUST be owner-bound, provenance-preserving, selectively disclosable, exportable, tombstonable, and deletable where the retention contract permits. | Memory, consent, export, and deletion tests. |
+| GRID-06 | Node admission MUST bind identity, owner, origin, failure domain, roles, software digest, security profile, resource ceilings, expiry, and quarantine. | Admission and renewal tests. |
+| GRID-07 | Discovery MUST exclude ineligible nodes and return bounded Grid-signed results. | Query, expiry, quarantine, and signature tests. |
+| GRID-08 | Scheduling MUST reserve only a complete deterministic placement inside declared capability, capacity, concurrency, owner, domain, security, and lease limits. | Determinism, capacity, and restart tests. |
+| GRID-09 | Scheduling MUST NOT imply resource truth, remote dispatch, result authenticity, federation, or consensus. | Claim and API tests. |
+| GRID-10 | Backup and restore MUST verify signatures, schema, exact digest, evidence head, runtime lock, retention policy, and recovery chronology. | Backup, tamper, retention, kill, restore, and rollback drills. |
+| GRID-11 | Data-key rotation MUST cover every supported live and recovery context, reject wrong keys, recover interrupted cutover, and preserve later evidence through rollback. | Signed real-stack rotation evidence. |
+| GRID-12 | Operational telemetry MUST exclude raw user content, secrets, prompts, object identifiers, and user-controlled high-cardinality labels. | Telemetry inspection tests. |
+
+## Portability, sharing, and Circles
+
+| ID | Requirement | Acceptance evidence |
+|---|---|---|
+| PORT-01 | Users MUST be able to export supported identity, consent, intent, memory, receipt, governance, accounting, and causal records. | Coverage tests against the data registry. |
+| PORT-02 | Exports MUST support time, type, object, capsule, and recipient scopes without leaking unrelated records. | Selective-export tests. |
+| PORT-03 | Bundles MUST contain canonical data, signed manifests, file digests, schema versions, continuity metadata, and explicit non-claims. | Independent verifier command. |
+| PORT-04 | Import MUST support validate-only and deterministic dry-run diff before mutation. | Round-trip and no-write tests. |
+| PORT-05 | Sensitive exports SHOULD support recipient-key encryption and MUST not weaken manifest verification. | Cryptographic tests. |
+| PORT-06 | AXIOM Verify MUST operate locally or statically and explain signer identity, integrity, continuity, scope, alteration, and non-claims. | Independent fixture suite. |
+| CIRCLE-01 | Circle membership MUST be invitation-based or otherwise explicitly admitted, role-bound, device-aware, expiring or revocable, and evidence-linked. | Membership lifecycle tests. |
+| CIRCLE-02 | Shared records MUST use selective disclosure and explicit consent compatible with every affected subject and controller. | Consent and disclosure tests. |
+| CIRCLE-03 | Concurrent non-commutative changes MUST remain visible until an explicit complete resolution. | Partition and conflict tests. |
+| CIRCLE-04 | Circle proposals, tasks, commitments, approvals, and policies MUST NOT silently enable payroll, settlement, public publication, or external effects. | Scope-separation tests. |
+| CIRCLE-05 | Members MUST be able to leave, revoke devices, export their records, and understand what shared evidence remains legitimately retained. | Exit and retention tests. |
+
+## Network and remote execution
+
+| ID | Requirement | Acceptance evidence |
+|---|---|---|
+| NET-01 | Production internal traffic MUST use mutually authenticated TLS 1.3 plus signed replay-protected request envelopes. | Transport negative paths and rotation drill. |
+| NET-02 | Services MUST be independently deployable with least-privilege identities, explicit ingress/egress, dependency-aware readiness, and Grid-only durable authority. | Unit and multi-container tests. |
+| NET-03 | Online causal exchange MUST verify pinned source evidence, preserve encrypted ordered state, require independent destination approval, and retain visible conflicts. | Two-stack partition/rejoin drill. |
+| NET-04 | Remote dispatch MUST bind exact workload digest, capsule, policy, grant, node identity, measured resources, input digest, budget, deadline, cancellation, and output provenance. | Dispatcher and remote-node negative tests. |
+| NET-05 | Remote results MUST be authenticated and evidence-linked before any downstream effect may consume them. | Forged, replayed, stale, partial, and wrong-node tests. |
+| NET-06 | Multi-host claims MUST be based on independently operated hosts and measured WAN delay, loss, partition, clock, backlog, recovery, and key-custody evidence. | External pilot evidence. |
+| NET-07 | Federation or consensus MUST NOT be inferred from causal transport or placement reservations. | Claim parity tests. |
 
 ## Governance and societal safety
 
 | ID | Requirement | Acceptance evidence |
 |---|---|---|
 | GOV-01 | Policy changes MUST use proposal → approval → timelock → activation → verification, with rollback metadata. | Governance lifecycle test. |
-| GOV-02 | Emergency action MAY only reduce authority, MUST expire, and MUST be reviewed. | Emergency-policy property test. |
+| GOV-02 | Emergency action MAY only reduce authority, MUST expire, and MUST be reviewed. | Emergency-policy property tests. |
 | GOV-03 | Automated governance MUST NOT expand its own authority or lower a safety requirement. | Negative tests. |
-| GOV-04 | Embodied/high-autonomy actions MUST bind geofence, time window, tool/force ceiling, approvals, and halt state. | Policy fixture suite. |
-| GOV-05 | Sentience uncertainty MAY trigger protected mode but MUST NOT be represented as a sentience detector. | Terminology and policy tests. |
-| GOV-06 | Education, health, government, finance, and minor-related capsules MUST default to data minimization, strict consent, and human appeal. | Domain-policy fixtures. |
-
-## Portability and privacy
-
-| ID | Requirement | Acceptance evidence |
-|---|---|---|
-| PORT-01 | Users MUST be able to export identity, consent, intents, memory metadata, receipts, governance records, and asset/accounting events. | Coverage test against the data registry. |
-| PORT-02 | Exports MUST support time, capsule, and object scopes and MUST avoid unrelated records. | Selective-export tests. |
-| PORT-03 | Bundles MUST contain canonical JSONL, a signed manifest, file digests, schema versions, and continuity proofs. | Independent verifier command. |
-| PORT-04 | Import MUST support validate-only and deterministic dry-run diff before mutation. | Round-trip and no-write dry-run tests. |
-| PORT-05 | Sensitive payloads MUST be encrypted at rest and exports SHOULD support recipient-key encryption. | Storage inspection and crypto tests. |
+| GOV-04 | Human appeal MUST exist for consequential institutional and Circle decisions. | Appeal workflow tests. |
+| GOV-05 | Embodied or high-autonomy actions MUST bind device, geofence, time, tool/force ceiling, approvals, telemetry, and halt state. | Simulation and policy fixtures. |
+| GOV-06 | Sentience uncertainty MAY trigger protected mode but MUST NOT be represented as a sentience detector. | Terminology and policy tests. |
+| GOV-07 | Governance delegation MUST be scoped, expiring, revocable, auditable, and unable to delegate more authority than the delegator possesses. | Delegation property tests. |
 
 ## Economics and settlement
 
 | ID | Requirement | Acceptance evidence |
 |---|---|---|
-| ECON-01 | Core access and identity MUST NOT require a token. | Token-disabled end-to-end test. |
-| ECON-02 | Accounting MUST use a balanced double-entry journal with integer units. | Property-based balance tests. |
-| ECON-03 | The 5/10/85 allocation and 60/40 revenue policy MUST remain disabled until one canonical schedule and deployment suite is approved. | Configuration and governance tests. |
-| ECON-04 | Useful-compute/PoER scores MAY influence rewards but MUST NOT substitute for Sybil-resistant consensus. | Architecture and configuration checks. |
-| ECON-05 | Chain and bridge effects MUST be adapter-isolated, idempotent, finality-aware, replay-safe, and disabled without verified deployment metadata. | Adapter contract tests. |
-| ECON-06 | No smart contract or tokenomics module may be called audited without an independent audit artifact tied to its exact bytecode. | Release-claim gate. |
+| ECON-01 | Core access and identity MUST NOT require a token. | Token-disabled end-to-end tests. |
+| ECON-02 | Accounting MUST use balanced double-entry journals with integer units. | Balance property tests. |
+| ECON-03 | Real-value token, reward, bond, treasury, escrow, payroll, bridge, liquidity, and settlement paths MUST remain disabled until separately promoted. | Configuration and release gates. |
+| ECON-04 | Useful-compute or reputation scores MUST NOT substitute for Sybil-resistant membership or consensus. | Architecture and adversarial tests. |
+| ECON-05 | Settlement adapters MUST be isolated, idempotent, finality-aware, replay-safe, reorganization-aware, budgeted, cancellable where possible, and disabled without exact deployment metadata. | Adapter contract and chain-simulation tests. |
+| ECON-06 | Economic invariants MUST be tested under adversarial sequencing, insolvency, oracle failure, duplicate delivery, rollback, and governance capture. | Property and model tests. |
+| ECON-07 | No contract or tokenomics module may be described as audited without an independent artifact tied to exact source and deployed bytecode. | Release-claim gate. |
+| ECON-08 | Frontier economic experiments MUST use test value only and MUST NOT custody real user funds. | Environment and key-policy checks. |
+
+## Regulated and high-impact domains
+
+| ID | Requirement | Acceptance evidence |
+|---|---|---|
+| DOM-01 | Education, health, government, legal, employment, finance, and minor-related capsules MUST default to data minimization, strict purpose-bound consent, human appeal, and domain-specific retention. | Domain-policy fixtures. |
+| DOM-02 | Technical correctness MUST NOT be represented as legal, clinical, educational, financial, or regulatory compliance. | Claim review and release gate. |
+| DOM-03 | Domain systems MUST use synthetic or separately governed test data until an exact jurisdictional deployment is independently approved. | Environment and data-provenance checks. |
+| DOM-04 | Clinical, legal, financial, eligibility, discipline, custody, or liberty-affecting decisions MUST require qualified human authority and record the decision boundary. | Workflow denial and approval tests. |
+| DOM-05 | Domain deployment MUST document jurisdiction, controller, processor, appeal, records, deletion, incident, accessibility, and decommissioning responsibilities. | Deployment dossier. |
+
+## Frontier isolation requirements
+
+| ID | Requirement | Acceptance evidence |
+|---|---|---|
+| LAB-01 | Frontier code MUST be disabled by default and isolated from production identities, secrets, data, value, and public authority. | Configuration and environment inspection. |
+| LAB-02 | Laboratory experiments MUST declare hypothesis, threat model, assumptions, data provenance, failure criteria, halt procedure, and reproducibility steps. | Experiment manifest verifier. |
+| LAB-03 | BFT or distributed-authority work MUST specify safety, liveness, membership, fault, synchrony, recovery, and governance assumptions. | Formal specification and adversarial simulation. |
+| LAB-04 | Autonomous research and agent loops MUST have explicit budgets, recursion limits, evaluation gates, artifact provenance, cancellation, and emergency halt. | Loop and fault-injection tests. |
+| LAB-05 | Embodied-system work MUST remain in simulation or separately approved hardware test environments until device-specific safety evidence exists. | Environment attestation and halt tests. |
+| LAB-06 | Post-quantum migration MUST use named algorithms, hybrid transition rules, downgrade resistance, key lifecycle, evidence compatibility, and rollback. | Interoperability and downgrade tests. |
+| LAB-07 | Laboratory code MUST NOT change the current capability or production status without the normal promotion process. | Registry and release checks. |
 
 ## Operations and supply chain
 
 | ID | Requirement | Acceptance evidence |
 |---|---|---|
-| OPS-01 | A clean checkout MUST use one documented command to validate the supported Node.js/npm toolchain, install every workspace from exact committed locks with lifecycle scripts disabled, prove those locks unchanged, and run the kernel and release gates without provisioning production credentials. | Setup policy/state negative tests, `npm run setup`, and the protected clean-kernel job. |
-| OPS-02 | Containers MUST use non-root users, read-only filesystems where possible, health checks, pinned images, and explicit networks. | Compose policy test. |
-| OPS-03 | Secrets, private keys, binaries, generated docs, caches, and build artifacts MUST NOT be tracked. | Repository hygiene gate. |
-| OPS-04 | Logs MUST be structured, redact secrets/PII, and include trace IDs without storing raw sensitive prompts by default. | Log-redaction tests. |
-| OPS-05 | Releases MUST include tests, SBOM, provenance, migration/rollback plan, status matrix, and evidence freshness timestamps. | Release verifier. |
-| OPS-06 | External telemetry MUST preserve kernel deny-egress, use a route-restricted scrape identity, fixed low-cardinality OTLP and Alertmanager schemas, exact HTTPS origin allowlists, no redirects, bounded persistent retry with alert-reserved capacity, idempotency, redaction, delivery receipts, and visible dead letters. | Unit negative paths plus signed real Unix-socket scrape and forced-retry drill evidence. |
-| OPS-07 | Public claims MUST be generated from the machine-readable feature-status registry. | Docs/status consistency test. |
-| OPS-08 | The production supervisor MUST reject oversized requests before idempotency reservation, bound concurrent request pressure, propagate required-dependency loss into readiness, exit fail-closed after a child dies, and preserve Grid state through clean restart. | Signed Linux drill evidence covering body/rate pressure, real Sandbox suspension and loss, degradation, supervisor exit, restart, and state preservation. |
-| OPS-09 | Every production internal edge MUST use mutually authenticated TLS 1.3, bind the certificate peer to the signed caller, reject inactive leaves, and support bounded offline rotation and exact rollback. | Certificate profile and negative-path tests plus signed real-stack rotation, retired-leaf rejection, restart, intent, and rollback evidence. |
-| OPS-10 | Gateway, Grid, Hypervisor, and Sandbox MUST be independently deployable with one application private key and one TLS leaf per unit, Grid-only durable state, dependency-aware readiness, survivor continuity after non-Grid loss, and fail-closed network policy. | Projection isolation/staleness tests, signed independent-process Sandbox-loss and state-preservation drill, and protected four-container Sandbox-only restart plus public-egress rejection. |
-| OPS-11 | Concurrent host-side real-stack drills MUST hold non-overlapping cross-process endpoint leases through every runtime and stopped/restart interval, while independently rejecting an externally occupied candidate port. | Forced same-candidate concurrency, alignment, external occupancy, idempotent release/reuse, and full parallel CI tests. |
-| OPS-12 | Provider-supervised production startup MUST use independent pinned secret and policy signers, digest-pinned absolute command chains, nonce-bound short-lived exact resource inventories, bounded execution and output, semantic validation, private ephemeral materialization, unambiguous configuration, and fail-closed cleanup before launching any service. | Unit conformance and negative paths plus signed real-stack startup, secret/policy rotation, retired-token rejection, deny-policy activation, generation cleanup, and invalid-signer rejection evidence. |
+| OPS-01 | A clean checkout MUST validate the supported Node.js/npm toolchain, install exact committed locks with lifecycle scripts disabled, prove locks unchanged, and run kernel/release gates without provisioning production credentials. | `npm run setup` and protected CI. |
+| OPS-02 | Containers MUST use non-root users, read-only filesystems where possible, pinned images, dropped capabilities, explicit networks, explicit resources, and health checks. | Deployment policy tests. |
+| OPS-03 | Secrets, private keys, generated credentials, binaries, caches, and build artifacts MUST NOT be tracked. | Repository hygiene gate. |
+| OPS-04 | Logs MUST be structured, redact secrets and sensitive data, and include traceability without storing raw user content by default. | Log-redaction tests. |
+| OPS-05 | Releases MUST include tests, SBOM, provenance, migrations, rollback, status, documentation, evidence freshness, and non-claims. | Release verifier. |
+| OPS-06 | External telemetry MUST preserve kernel deny-egress and use exact origins, least-privilege credentials, fixed schemas, bounded queues, retry, idempotency, redaction, receipts, and visible dead letters. | Relay tests and signed drill. |
+| OPS-07 | Claims MUST match the capability registry, current project status, and deployment evidence. | Documentation/status consistency gate. |
+| OPS-08 | Production supervisors MUST bound request pressure, propagate dependency loss, exit fail-closed after child death, and preserve Grid state through recovery. | Signed resilience drill. |
+| OPS-09 | Secret and policy providers MUST use independent signers, digest-pinned command chains, nonce-bound exact inventories, bounded execution, semantic validation, private materialization, and fail-closed cleanup. | Provider conformance drill. |
+| OPS-10 | Every user-facing and frontier component MUST have an owner, threat model, support boundary, update path, rollback, uninstall or decommissioning procedure, and incident contact before exposure. | Release checklist and deployment dossier. |
+
+## Production and marketing promotion
+
+| ID | Requirement | Acceptance evidence |
+|---|---|---|
+| PROMO-01 | A capability may be `implemented` only with production-path code, negative tests, executable evidence, matching documentation, and a protected-commit status record. | Registry and release verifier. |
+| PROMO-02 | Production promotion MUST bind the exact source, image, deployment, keys, policies, data lifecycle, SLO, recovery, incident, accessibility, and review evidence. | Signed promotion package. |
+| PROMO-03 | Critical/high findings MUST be independently reverified closed. Medium/low exceptions MUST be separately approved, owned, contained, and expiring. | Findings ledger verifier. |
+| PROMO-04 | Human products MUST pass privacy, accessibility, phone usability, export, deletion, revocation, onboarding, support, and recovery gates. | Human-product dossier. |
+| PROMO-05 | Regulated and economic systems MUST pass separate legal, domain, economic, and custody review. | Domain-specific dossier. |
+| PROMO-06 | Marketing MUST NOT describe a built, enabled, exposed, preview, synthetic, or laboratory capability as production-promoted. | Claim and publication review. |
 
 ## Verified implementation checkpoint
 
-The machine-readable capability registry remains authoritative. Kernel
-The active `0.12.0-dev.0` build additionally verifies:
+The active `0.12.0-dev.0` build currently verifies:
 
-- ordered runtime policy stacks whose lower layers cannot add an allowed
-  action, replace its tool, lower its risk, or weaken its constraints;
-- independent, expiring, request-bound, single-use approval for every
-  permitted high-risk action;
-- signed `axiom.<service>.v1` interface negotiation and incompatible-version
-  rejection;
-- validated plans with explicit effects, dependencies, approvals,
-  capabilities, timeouts, observable decision provenance, and evidence
-  obligations; and
-- checksum-verified, fail-closed database migrations.
-- context-bound AES-256-GCM protection for durable event payloads and
-  materialized JSON, including legacy plaintext migration and wrong-key
-  failure;
-- content-addressed memory objects and edges, owner isolation,
-  consent-scoped object disclosure, tombstoning, and export; and
-- owner- and unit-bound accounts with transactional, safe-integer,
-  balanced double-entry journals while all external settlement stays disabled.
-- cryptographically verified canonical import bundles, deterministic staged
-  diffs, conflict rejection, independent apply approval, and isolation of
-  foreign records from native signed state.
-- local proposal voting, post-vote finalization, timelocked independently
-  approved activation, live authority-reducing policy overlays, verification,
-  rollback metadata, expiring emergencies, protected recovery actions, review
-  records, and human appeal records.
-- redacted structured logs, generated claim/status consistency, a
-  fail-closed source setup policy, two dependency-free locks, prohibited
-  install lifecycle scripts, exact local/CI/container runtime pins,
-  unchanged-lock proof, release SBOM and provenance inputs, migration and
-  rollback gates, one active clean-kernel CI workflow, and quarantined legacy
-  launch/deploy surfaces.
-- deterministic IAM-04 and ECON-02 property fixtures; a separately claimed
-  operator API and CLI; fail-closed CLI error handling; and governing documents
-  bound to the capability-registry schema, kernel version, and digest.
-- signed context-encrypted SQLite snapshots, exact-digest stopped-Grid restore,
-  snapshot and evidence-chain tamper detection, preservation of the replaced
-  database, signed restart recovery evidence, and release-gated endpoint/action
-  documentation parity.
-- signed policy-derived backup retention over a fully verified exact inventory,
-  stopped-runtime and drift rejection, configured minimum preservation,
-  journaled recoverable quarantine, data-key lifecycle interoperability, and
-  recurring exact-restore evidence.
-- PORT-01/02/03/05 export coverage across kernel-owned identity, receipt,
-  capsule, governance, memory, accounting, and signed causal-sync records;
-  strict time/object/capsule selection; canonical signed continuity manifests;
-  and optional
-  ephemeral-X25519/HKDF-SHA-256/AES-256-GCM recipient encryption with
-  independent decryption and record verification.
-- local Ed25519 node admission, renewal, expiry, owner/key binding, and
-  quarantine; signed storage offers tied to those live admissions; and
-  wrong-key offer rejection.
-- signed v2 discovery metadata and Grid-attested filtered discovery;
-  deterministic all-or-nothing encrypted placement leases with capability,
-  role, security, resource, concurrency, owner, failure-domain, expiry, and
-  quarantine enforcement. Remote dispatch, endpoint/resource measurement,
-  result provenance, global Sybil resistance, and federation remain outside
-  this checkpoint.
-- independently verifiable offline-sync bundles with per-update signatures,
-  contiguous node-global anti-equivocation counters, dependency-checked
-  version-vector ordering, replay rejection, visible concurrent heads,
-  independently approved application, and explicit all-head conflict
-  resolution without last-write-wins.
-- exact-origin online causal relay directions with pinned Grid event
-  attestations, encrypted atomic cursor/queue state, bounded retry and backlog,
-  owner-scoped destination duplicate preflight, source-ordered one-use
-  independent approval, visible bidirectional partition conflicts, and
-  explicit all-head convergence. Protected CI MUST retain signed evidence from
-  two real production supervisors and MUST NOT describe the result as
-  replicated Grid consensus.
-- deployment-independent one-shot startup providers with separate secret and
-  policy identities, disjoint pinned Ed25519 trust, digest-pinned executables
-  and artifacts, bounded environment/time/output, nonce and request-digest
-  binding, exact media-typed resource sets, semantic validation, and private
-  per-start generation cleanup. Protected CI MUST rotate API and policy
-  resources through a real supervisor restart, reject the retired token and an
-  invalid provider signer, and MUST NOT claim a vendor custody backend, live
-  refresh, or multi-host rollout.
-- bounded-cardinality four-service telemetry, dependency-aware readiness,
-  authenticated operations/OpenMetrics surfaces, and static alert states for
-  integrity, availability, replay, authentication, and server-error signals.
-- a host-side telemetry relay that leaves the kernel deny-egress, exports 68
-  fixed OTLP/HTTP JSON points, routes a fixed Alertmanager v2 vocabulary, and
-  fails closed on credential, topology, cardinality, origin, queue, digest,
-  redirect, or receiver-response drift. Protected CI MUST retain signed
-  least-privilege scrape, transient retry, and receipt evidence.
-- a fixed Linux request-pressure and dependency-loss drill against the real
-  production supervisor. Protected CI MUST prove oversized-body rejection
-  without idempotency reservation, bounded concurrent rate limiting,
-  dependency-aware degradation during Sandbox suspension, fail-closed
-  supervisor exit after Sandbox loss, clean restart, and Grid-state
-  preservation. Cgroup, disk, and pilot-orchestrator resource controls remain
-  deployment evidence.
-- mutually authenticated TLS 1.3 on every production internal edge with
-  Ed25519 CA-issued leaves, DNS and SPIFFE-style URI identities, exact active
-  fingerprint pinning, and the signed/replay-protected request above TLS.
-  Protected CI MUST reject no-certificate, wrong-server, caller/certificate
-  mismatch, expired, drifted, and retired peers and retain signed rotation and
-  exact-rollback evidence.
-- four independently restartable service units with atomically projected
-  per-unit private identities and TLS leaves, Grid-only durable state and
-  data-protection key, Gateway-only API registry, an internal deny-egress
-  network, and no published TCP port. Protected CI MUST terminate only
-  Sandbox, retain unchanged Gateway/Grid/Hypervisor processes, observe
-  dependency-not-ready state and HTTP `503`, restart only Sandbox, prove
-  readiness and pre-fault Grid state, and reject public TCP egress.
-- an explicit idempotent production provisioning workflow and statically gated
-  digest-pinned container candidate with four supervised processes,
-  loopback-only internals, non-root execution, read-only root, dropped
-  capabilities, mounted secrets, resource ceilings, bounded logs, health
-  checks, permission-restricted Unix-domain host ingress, and
-  `network_mode: none`. Startup MUST fail before child services launch if the
-  effective container namespace has any non-loopback or IPv4/IPv6 default
-  route. Protected CI MUST prove runner reachability of a public control
-  target, preserved Gateway ingress, and blocked egress from the running
-  candidate.
-  Equivalent pilot orchestrator policy and immutable deployment evidence
-  remain pending.
-- a machine-readable incident-response policy with deterministic highest-signal
-  severity, independently assigned command roles, authority-reducing
-  containment, evidence preservation before remediation, bounded
-  communications, verified recovery, independent closure review, and a
-  retrospective due within seven days. Protected CI MUST sign an automated
-  tabletop record only after recovery, backup-lifecycle, restart, resilience,
-  independent-service-unit, node-scheduling, transport, credential-rotation, and
-  data-key-rotation evidence from the same source revision verifies. A
-  named-roster pilot exercise remains mandatory
-  before production promotion.
-- pilot intake verifiers that MUST require a separately supplied Ed25519
-  policy-authority trust anchor, an authority-signed exact build/image and
-  threshold policy, distinct release/platform/security/data-recovery/
-  independent reviewer keys, at least 720 continuous hours, current SLO and
-  recovery results, non-exportable rotated custody controls, and the exact
-  deployment-specific evidence inventory. Authentic intake MUST require
-  canonical policy and dossier files and exactly 13 canonical local evidence
-  v2 envelopes at fixed paths. Each envelope MUST match its dossier raw-byte
-  digest, deployment, build, schema, observation time, policy-assigned
-  reviewer signature, and exact evidence-type detail contract. Detail
-  contracts MUST bind dossier measurements and inventories where applicable
-  and MUST fail unresolved critical/high findings, pending credential-history
-  dispositions, exportable custody, or unverified recovery and rotation
-  controls. Intake MUST reject unknown fields, noncanonical JSON, symbolic
-  links, unexpected files, secret material, stale or cross-build evidence,
-  reused identities, missing artifacts, inadequate measurements, wrong
-  producer roles, and altered approvals. A successful intake MUST state that
-  production is not promoted; synthetic conformance MUST state that it is not
-  live-pilot evidence.
-- an independent-security-review intake verifier that MUST require a
-  separately supplied Ed25519 policy-authority trust anchor and an
-  authority-signed exact current build, eight-part security scope, immutable
-  artifact inventory, declared independent reviewer, and distinct exception
-  approver. The exact signed findings ledger MUST assign every finding an
-  owner, recompute severity/disposition counts, require independent
-  remediation verification for all closed findings, reject unresolved
-  critical/high findings, and permit only separately approved, contained,
-  expiring medium/low exceptions. Intake MUST reject unknown fields,
-  noncanonical or symbolic-link files, stale/cross-build review, altered
-  artifacts, secret material, self-approved risk, and invalid signatures.
-  Success MUST remain a non-promotion intake result; synthetic conformance MUST
-  state that no independent review occurred.
+- the authenticated Gateway → Hypervisor → Sandbox → Grid intent path;
+- version negotiation, explicit plans, deny-dominant policy, and independent
+  one-use approval for permitted high-risk effects;
+- signed replay-resistant internal requests and TLS 1.3 peer identity;
+- encrypted transactional Grid state, evidence continuity, migrations, memory,
+  consent, governance, local accounting, export/import, backup, and recovery;
+- exact source setup, zero-dependency locks, documentation, SBOM, provenance,
+  migration, rollback, and release checks;
+- bounded telemetry, alert relay, SLO, request pressure, dependency loss,
+  supervisor recovery, service-unit isolation, transport rotation, credential
+  rotation, data-key rotation, backup retention, and incident evidence;
+- signed node admissions, Grid-signed discovery, deterministic encrypted
+  placement reservations, expiry, quarantine, and restart persistence;
+- signed offline bundles and operator-approved online causal exchange with
+  visible conflicts and explicit all-head resolution;
+- signed deployment-independent secret and policy provider startup;
+- strict pilot-evidence and independent-security-review intake verifiers;
+- authenticated operator API and CLI.
+
+The current checkpoint does **not** include a supported AXIOM One browser
+application, external AI provider, AXIOM Verify, Circles, remote dispatch,
+authenticated remote results, federation, consensus, arbitrary code, tokens,
+settlement, regulated-domain deployment, embodied autonomy, or post-quantum
+security.
 
 ## Capability coverage
 
-The following feature families MUST be represented in the capability registry.
-Each entry MUST declare one of `implemented`, `adapter_required`,
-`experimental`, `specified`, or `disabled`; only `implemented` features may be
-advertised as runnable:
+Every intended feature family MUST be represented in the capability registry
+as `implemented`, `adapter_required`, `experimental`, `specified`, or
+`disabled`; only `implemented` may be advertised as runnable:
 
-- AI/provider routing and multi-step orchestration
-- memory and graph retrieval
-- research and auto-training workflows
-- web, code, data, math, physics, and cryptography tools
-- communications/channel adapters
-- identity, SSI, consent, reputation, and credentials
-- capsules, registry, signing, revocation, and marketplace metadata
-- node discovery, scheduling, resource balancing, and adaptive roles
-- storage offers, content addressing, backup, restore, and offline sync
-- governance, delegation, policy inheritance, emergency controls, and appeals
-- education, health, government, business, and finance domain capsules
-- task markets, workforce, payroll, embodied-device controls, and digital legacy
-- accounting, bonds, rewards, treasury, token, chain, bridge, and liquidity
-- dashboard, CLI, installer, export, import, audit, metrics, and release evidence
+- core intent, policy, grant, execution, and evidence;
+- operator API, CLI, AXIOM One, Verify, Circles, Studio, and managed-node tools;
+- AI providers, bounded orchestration, memory, and research tools;
+- messaging, publishing, identity, credentials, and selective disclosure;
+- capsules, signing, revocation, conformance, and catalogue metadata;
+- node discovery, scheduling, remote dispatch, result provenance, and causal
+  exchange;
+- storage, backup, recovery, content transfer, export, and import;
+- governance, delegation, emergency controls, appeals, and collaboration;
+- education, health, government, legal, employment, business, and finance;
+- task markets, workforce, payroll, embodied devices, and digital legacy;
+- accounting, rewards, bonds, treasury, tokens, settlement, bridges, and
+  liquidity;
+- zk verification, arbitrary-code isolation, BFT/distributed authority, and
+  post-quantum migration.
