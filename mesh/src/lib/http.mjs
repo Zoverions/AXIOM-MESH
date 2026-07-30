@@ -48,9 +48,13 @@ export class Router {
       const match = pathname.match(route.regex);
       if (!match) continue;
       const params = {};
-      route.keys.forEach((key, index) => {
-        params[key] = decodeURIComponent(match[index + 1]);
-      });
+      try {
+        route.keys.forEach((key, index) => {
+          params[key] = decodeURIComponent(match[index + 1]);
+        });
+      } catch {
+        throw new ValidationError('Route parameter contains invalid percent-encoding');
+      }
       return { ...route, params };
     }
     return null;
