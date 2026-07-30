@@ -1,6 +1,6 @@
 # AXIOM-MESH Production Readiness Tracker
 
-**Updated:** 2026-07-29
+**Updated:** 2026-07-30
 
 **Active build:** `0.12.0-dev.0`
 
@@ -9,7 +9,11 @@
 **Overall decision:** **Not production-promoted**
 
 This tracker records evidence, not aspiration. A gate is `Pass` only when its
-artifact is reproducible and tied to the release commit or image digest.
+artifact is reproducible and tied to the exact source commit or image digest.
+
+Human-product preview status is tracked separately from kernel production
+promotion. A useful local preview does not make the kernel, adapter, managed
+service, or network production-promoted.
 
 ## Current gate status
 
@@ -18,49 +22,88 @@ artifact is reproducible and tied to the release commit or image digest.
 | Source integrity | Pass | Verified clean-room tree, source checksum, SBOM, and provenance | Maintain for every release |
 | Capability claims | Pass | Registry, generated status, claim-marker checks | Maintain on every change |
 | Kernel tests | Pass | Protected kernel suite in the [Clean Kernel workflow](https://github.com/Zoverions/AXIOM-MESH/actions/workflows/kernel.yml) | Require on protected `main` |
-| Host production drill | Pass | Real four-process supervisor test in the same run | Preserve on every runtime change |
+| Host production drill | Pass | Real four-process supervisor test in protected CI | Preserve on every runtime change |
 | Container source policy | Pass | Dockerfile/Compose static release gate | Maintain digest pin |
-| Container image build | Pass | Digest-pinned build in [GitHub run 30376178779](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30376178779) | Publish immutable image digest before pilot |
-| Composed container drill | Pass | Readiness, authenticated operations, and teardown in the same run | Repeat for future release commits |
-| Container network boundary | Pass for candidate topology | Compose `network_mode: none`; permission-restricted Unix socket ingress; startup rejects non-loopback and IPv4/IPv6 default routes; protected CI proves local ingress and blocked public TCP egress in signed evidence | Repeat on the pilot platform and independently review host/daemon policy |
-| Source setup and dependency audit | Pass | One fail-closed command validates the Node.js/npm policy and CI/container pins, installs both exact zero-dependency locks with lifecycle scripts disabled, proves unchanged lock digests, and runs the kernel/release gates; protected CI repeats setup installation plus both root and kernel audits | Maintain the exact policy, negative tests, and required check |
-| Backup and restore | Pass for candidate-host lifecycle | Protected CI exercises encrypted backup, signed policy-derived retention, corrupt/live-lock/inventory-drift rejection, recoverable quarantine, killed-move recovery, exact restore and rollback; it also runs weekly and uploads signed evidence | Run the schedule against pilot-owned media and custody; authorize quarantine destruction separately |
-| Observability | Pass for automated candidate relay | Dedicated route-limited scrape identity; exact four-service Unix-socket collection; 68 fixed OTLP points; Alertmanager v2 fixed vocabulary; exact HTTPS origin policy; alert-reserved queue; bounded retry/dead-letter audit; forced 503/429 and signed delivery receipts in protected CI | Repeat with pilot-owned HTTPS collector/on-call route, receiver retention, credential custody, and named acknowledgement |
-| SLO and capacity | Pass for initial CI baseline | Signed protected-CI evidence records a fixed authenticated load profile, latency percentiles, zero-error requirement, throughput, CPU/memory observations, peak concurrency, and graceful restart; aligned cross-process port-block leases prevent parallel drill bind races | Repeat on dedicated pilot hardware under enforced resource limits and expected traffic |
-| Resilience and fault tolerance | Pass for automated request-path candidate | Signed protected-CI evidence covers oversized-body rejection without idempotency reservation, concurrent rate limiting, real Sandbox suspension and loss, dependency-aware degradation, fail-closed supervisor exit, clean restart, and state preservation | Repeat cgroup OOM/CPU, disk, traffic, and dependency replacement scenarios under the pilot orchestrator |
-| Internal service transport | Pass for single-host candidate | TLS 1.3 on every internal edge; distinct CA-issued Ed25519 leaves; DNS and SPIFFE-style URI identities; exact active-leaf pinning; signed caller/certificate binding; expiry, no-certificate, wrong-peer, retired-leaf, rotation, rollback, and real-stack evidence | Move CA custody outside the runtime, mount per-unit credentials, repeat rotation and CA-compromise recovery on the pilot orchestrator, and obtain independent review |
-| Independent service units | Pass for single-host candidate | Four per-unit application/TLS private-key projections, Grid-only state/key, Gateway-only API registry, Docker internal network, signed independent-process Sandbox-loss/state-preservation drill, and protected four-container survivor/recovery proof | Repeat network policy, secret custody, rotation, resource limits, upgrade, and rollback on the pilot orchestrator |
-| Node discovery and scheduling | Pass for single-Grid reservation candidate | Signed v2 admission binds HTTPS origin, failure domain, roles and resource ceilings; authenticated Grid-signed discovery and policy-controlled deterministic leases enforce security, capability, capacity, concurrency, owner/domain diversity, expiry and quarantine; protected drill covers copied-key rejection, missed renewal and restart | Add an authenticated remote dispatcher and result provenance, measure claimed resources and endpoint health, repeat live multi-host partition/recovery, and define stronger membership identity before any distributed-compute promotion |
-| Online causal exchange | Pass for two-Grid candidate | Exact origins, pinned Grid-signed owner event streams, node-signed causal bundles, encrypted atomic ordered queues, bounded retry, owner-scoped duplicate preflight, and one-use independent apply approval; protected two-real-stack drill proves partition cursor preservation, bidirectional rejoin, visible concurrent heads, explicit all-head convergence, reload persistence, and duplicate absorption | Repeat on independently operated hosts with external key custody, real WAN loss/latency/clock faults, data-residency review, sustained backlog measurements, and independent security review |
-| Secret and policy providers | Pass for signed protocol and reference adapter | Independent Ed25519 provider identities; digest-pinned executable/artifact chain; nonce-bound short-lived exact inventories; private per-start materialization; policy, registry, principal, key, and transport semantic validation; restart rotation and invalid-signer rejection; signed protected-CI evidence | Implement and independently review the pilot's actual vault/orchestrator adapter, workload identity, backend authorization, ephemeral runtime storage, availability, rotation, rollback, and audit retention |
-| Credential rotation | Pass for service/API candidate lifecycle | Protected CI rotates all four Ed25519 identities, coordinated trust records, operator token, and least-privilege telemetry relay token against the real stack; proves inactive-credential rejection, scope confinement, dual-signed Grid key lineage, exact encrypted rollback, and unchanged data-key custody | Repeat under pilot secret custody |
-| Data-key rotation | Pass for candidate-host lifecycle | Protected CI re-encrypts the live Grid, nested backup state, retained credential packages, and recovery database copies; proves wrong-key rejection, rotated-key restore, killed-cutover journal recovery, exact key restoration, and post-rotation state preservation | Repeat with pilot secret-manager versioning, escrow, approval, and destruction evidence |
-| Deprecated credential trust | Pass for repository boundary; external evidence pending | Keyed ledger covers 32 conservative candidates across the immutable pre-clean-room archive graph; protected CI checks exact coverage and rejects reuse in the supported tip without exposing values | Dispose all 32 external attestations as verified or independently justified not-applicable |
-| Independent security review | Pass for intake contract; authentic review pending | Canonical current-build threat model; separately authority-pinned current build, scope, artifact digests, reviewer and exception approver; signed exact findings ledger; recomputed counts; independently verified critical/high remediation; separately approved expiring medium/low exceptions; negative tests and signed synthetic non-review/non-promotion conformance | Commission an independent organization, pin the authentic source/image/deployment artifacts, resolve findings, and verify its canonical signed ledger with the separately obtained authority key |
-| Incident response | Pass for automated candidate exercise | Machine-readable severity/action/closure policy; protected CI verifies eleven same-revision control artifacts, including online causal partition/rejoin and provider fail-closed evidence, and uploads signed secret-free tabletop evidence | Run a facilitated pilot exercise with named roster, notification tree, corrective owners, and independent human review |
-| Pilot evidence intake | Pass for dossier and exact-package verifiers; authentic evidence pending | Authority-signed policy, separate authority trust anchor, five distinct reviewer keys, exact build/image, 720-hour/SLO/custody contract, exact canonical 13-envelope v2 package, type-specific semantic contracts, raw-byte digest binding, secret/symlink/unexpected-field/file rejection, negative tests, and separately signed synthetic CI conformance evidence | Collect the authentic pilot package, obtain all role signatures, run offline package verification with the separately obtained authority key, then record a separate promotion decision |
-| Release governance | Pass for development line | Protected `main`, current-build release verifier, exact documentation boundary, and immutable [v0.11.0 baseline dossier](https://github.com/Zoverions/AXIOM-MESH/releases/tag/v0.11.0) | Publish a new immutable dossier only when 0.12 is promoted from development |
+| Container image build | Pass for candidate | Digest-pinned build and protected image evidence | Publish immutable image digest for the promoted pilot build |
+| Composed container drill | Pass for candidate | Readiness, authenticated operations, deny-egress, and teardown | Repeat for each candidate and pilot platform |
+| Container network boundary | Pass for candidate topology | `network_mode: none`, permission-restricted Unix socket, route rejection, and blocked public TCP egress | Repeat on pilot platform and independently review host/daemon policy |
+| Source setup and dependency audit | Pass | Exact Node.js/npm policy, two zero-dependency locks, lifecycle scripts disabled, unchanged-lock proof | Maintain exact policy and negative tests |
+| Backup and restore | Pass for candidate-host lifecycle | Encrypted signed backup, retention, tamper rejection, exact restore, rollback, and weekly CI evidence | Run scheduled recovery from pilot-owned media under pilot custody |
+| Observability | Pass for automated candidate relay | Least-privilege scrape, 68 fixed OTLP points, fixed Alertmanager vocabulary, exact origins, bounded retry, receipts | Repeat with pilot-owned receivers, retention decision, and named acknowledgement |
+| SLO and capacity | Pass for initial CI baseline | Fixed authenticated load, latency/error/throughput observations, memory/CPU, restart | Repeat on dedicated pilot hardware for 30 days under expected traffic and limits |
+| Resilience and fault tolerance | Pass for automated candidate | Oversized-body rejection, bounded rate limiting, Sandbox suspension/loss, fail-closed exit, state-preserving restart | Repeat cgroup, disk, traffic, and replacement scenarios on pilot orchestrator |
+| Internal service transport | Pass for single-host candidate | TLS 1.3, Ed25519 leaves, identity binding, active-leaf pinning, rotation, retired-leaf rejection, rollback | External CA custody, pilot rollout, compromise recovery, and independent review |
+| Independent service units | Pass for single-host candidate | Per-unit private identities, Grid-only state, internal deny-egress, Sandbox-only restart and preservation | Repeat resource, network, upgrade, rollback, and custody controls on pilot orchestrator |
+| Node discovery and scheduling | Pass for single-Grid reservation candidate | Signed v2 admissions, filtered discovery, deterministic encrypted leases, capacity/security/owner/domain/expiry/quarantine controls | Add authenticated remote dispatch, measured resources, endpoint health, and result provenance |
+| Online causal exchange | Pass for two-Grid candidate | Pinned Grid evidence, node-signed bundles, encrypted ordered queues, duplicate preflight, independent approval, visible conflict convergence | Repeat on independently operated hosts under WAN loss, delay, clock, backlog, and custody faults |
+| Secret and policy providers | Pass for signed protocol and reference adapter | Independent signers, pinned commands/artifacts, nonce-bound exact inventories, private generation, invalid-signer rejection | Implement and review the pilot’s actual vault/orchestrator adapter and workload identity |
+| Credential rotation | Pass for candidate-host lifecycle | Coordinated service/API rotation, inactive credential rejection, key lineage, encrypted rollback | Repeat under pilot secret custody |
+| Data-key rotation | Pass for candidate-host lifecycle | Live and recovery re-encryption, wrong-key rejection, interrupted-cutover recovery, state-preserving rollback | Repeat with pilot secret-manager versioning, approval, escrow, and destruction evidence |
+| Deprecated credential trust | Pass for repository boundary; external evidence pending | Keyed ledger covers 32 conservative candidates and rejects supported-tip reuse | Obtain provider/custodian disposition or independent not-applicable attestation for every entry |
+| Independent security review | Pass for intake contract; authentic review pending | Canonical threat model and exact signed findings/remediation/exception verifier | Commission independent review of exact source, image, and pilot configuration |
+| Incident response | Pass for automated candidate exercise | Deterministic severity, independent roles, authority-reducing containment, eleven linked controls | Run facilitated pilot exercise with named roster and independent human review |
+| Pilot evidence intake | Pass for dossier/package verifiers; authentic package pending | Exact authority-signed policy, five roles, 720-hour contract, 13 canonical envelopes, semantic and signature checks | Collect authentic evidence, signatures, offline verification, and separate promotion decision |
+| Release governance | Pass for development line | Protected `main`, current release verifier, exact documentation boundary, immutable v0.11 baseline | Publish a new immutable dossier only after 0.12 promotion |
+
+## Human-product preview status
+
+These gates do not replace production-pilot gates.
+
+| Product gate | Current state | Required evidence before exposure or promotion |
+|---|---|---|
+| Versioned Gateway client | Planned (`UX-001`) | Compatibility schemas, explicit errors, scope tests, generated client fixtures, rollback |
+| AXIOM One browser/PWA shell | Planned (`UX-002`) | Local-only startup, no ambient authority, visible plans/approvals/receipts, export/deletion/recovery flows |
+| Browser security boundary | Planned (`UX-005`) | CSP, CSRF, origin, cookie/token, clickjacking, upload/download, session, device-revocation, storage inspection |
+| Accessibility and phone usability | Planned (`UX-006`) | Keyboard, screen reader, contrast, reduced motion, phone layouts, plain language, human testing |
+| Local packaging and onboarding | Planned (`UX-007`) | Signed package, safe updates, recovery, uninstall, no production credential creation, first-use study |
+| Bounded AI provider | Adapter required (`AI-001`) | Named provider/model, minimum data scope, budget, timeout, cancellation, retention, receipts, leakage tests |
+| Personal workflows | Planned (`AI-002`/`AI-003`) | Provenance, uncertainty, corrections, usefulness, latency, cost, cancellation, recovery, privacy evaluation |
+| AXIOM Verify | Planned (`VERIFY-001`) | Independent local/static verification, signer/integrity/scope/non-claim explanations, tamper fixtures |
+| AXIOM Circles | Planned (`CIRCLE-001`–`CIRCLE-003`) | Admission, roles, devices, revocation, selective disclosure, conflict visibility, exit/export, real consented pilot |
+| AXIOM Studio | Planned | Manifest/schema/policy/threat/rollback/conformance generation without runtime authority |
+| AXIOM Managed Node | Planned | Custody separation, encryption, operator limits, exportability, recovery, updates, decommissioning, support SLO |
+
+No human product listed above is currently an `implemented` capability claim
+unless and until the registry is updated with executable evidence.
+
+## Frontier laboratory status
+
+Frontier work is allowed to proceed, but remains disabled and isolated.
+
+| Laboratory | Current promotion state | Required before real exposure |
+|---|---|---|
+| BFT and distributed authority | Research/laboratory | Formal protocol, fault/synchrony assumptions, adversarial tests, independent review, measured operation |
+| Settlement, tokens, bridges, liquidity | Disabled | Economic invariants, test-value deployment, audits, custody, finality/reorg handling, governance and legal review |
+| Autonomous agents and research loops | Disabled | Budgets, recursion limits, evaluation, provenance, cancellation, halt, sandbox and incident evidence |
+| Regulated domains | Adapter required | Jurisdiction, qualified human authority, consent, appeal, records, deletion, accessibility, legal/domain review |
+| Embodied systems | Disabled | Simulation, device-specific safety envelope, geofence, force/tool ceilings, approvals, telemetry, emergency halt |
+| Arbitrary code | Adapter required | Independently reviewed isolation profile and adversarial escape evidence tied to exact runtime |
+| Zk verification | Adapter required | Named circuit/protocol, verification key/material, public-input schema, implementation and test vectors |
+| Post-quantum migration | Research | Named algorithms, hybrid transition, downgrade resistance, key/evidence compatibility, rollback |
+
+Laboratory completion does not change the current production decision.
 
 ## Promotion blockers
 
-The following block production promotion:
+The following block production promotion of the current kernel:
 
-1. no dedicated pilot-hardware capacity validation or 30-day availability observation;
+1. no dedicated pilot-hardware capacity validation or 30-day availability
+   observation;
 2. no pilot-owned provider adapter/workload-identity review, custody rotation
    repetition, or scheduled restore from pilot-owned media;
 3. no authentic independent findings ledger for the supported kernel and
-   deployment policy; only the fail-closed intake and labeled synthetic
-   verifier conformance exist;
+   deployment policy;
 4. all 32 deprecated-history entries still require provider, custodian, or
    independently reviewed not-applicable attestations;
 5. no facilitated pilot incident exercise with a named roster and
    deployment-specific notification decision tree;
 6. no operator-owned OTLP/Alertmanager receivers, receiver-side retention
-   decision, or measured named-person alert acknowledgement.
+   decision, or measured named-person acknowledgement;
+7. no authentic exact pilot evidence package and separate promotion decision.
 
-The repository now has a strict intake format for all six blockers. Its
-synthetic conformance artifact proves only verifier behavior; it supplies none
-of the missing external facts and does not change this decision.
+The repository has strict intake formats for these blockers. Synthetic
+conformance proves verifier behavior only and supplies none of the missing
+external facts.
 
 ## Gate owners
 
@@ -70,36 +113,40 @@ of the missing external facts and does not change this decision.
 | Runtime and reliability | Platform operator | Independent operator |
 | Security and credentials | Security owner | Maintainer not authoring the change |
 | Data and recovery | Grid/data owner | Platform operator |
+| Human product and accessibility | Product owner | Accessibility/privacy reviewer |
+| Adapters and external providers | Adapter owner | Security/data reviewer |
+| Frontier laboratory | Research owner | Independent protocol/domain reviewer |
 | Documentation and claims | Documentation owner | Release manager |
 
-Names may change; roles and independent review requirements do not.
+Names may change; roles and independence requirements do not.
 
 ## Evidence retention
 
 Promotion evidence must identify:
 
-- source commit and clean/dirty state;
-- container image digest and base-image digest;
-- capability-registry, policy, operator-surface, and documentation digests;
+- source commit, clean/dirty state, image and base-image digests;
+- capability, policy, operator-surface, application, and documentation digests;
 - test and workflow identifiers;
 - deployment configuration without secret values;
-- backup/restore, rotation, provider-conformance, telemetry-relay, and
-  incident-drill timestamps;
-- approvers, exceptions, and exception expiries.
+- backup/restore, rotation, provider, telemetry, incident, accessibility,
+  usability, and pilot timestamps;
+- approvers, reviewers, findings, exceptions, and expiry;
+- the exact built/enabled/exposed/promoted/marketed state.
 
 Secret values, private keys, production tokens, and unencrypted user data must
 never enter the evidence package.
 
-The exact policy, evidence inventory, custody fields, signature model, and
-operator command are defined in the
+The exact pilot package is defined in the
 [pilot deployment dossier runbook](operations/PILOT-DEPLOYMENT-DOSSIER.md).
-The independent threat-model/configuration scope, findings/remediation
-contract, exception policy, and offline command are defined in the
+Independent review is defined in the
 [independent security review runbook](security/INDEPENDENT-SECURITY-REVIEW.md).
 
 ## Reassessment rule
 
 Any change to authentication, policy, grants, Sandbox authority, Grid schema,
-encryption, backup, service topology, container base, secret handling, or
-release gates reopens the relevant gate. Production promotion is not permanent
-evidence for later commits.
+encryption, backup, service topology, container base, secret handling, browser
+session behavior, adapter egress, provider data scope, remote execution,
+settlement, domain authority, or release gates reopens the relevant gate.
+
+Production promotion is not permanent evidence for later commits, deployments,
+applications, adapters, or laboratories.
