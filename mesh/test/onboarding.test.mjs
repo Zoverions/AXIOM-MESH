@@ -28,22 +28,24 @@ const CONFIG = Object.freeze({
   dataDir: '/synthetic/axiom-data'
 });
 
-test('CLI exposes local-first help and accepts JSON as a global option', () => {
+test('CLI exposes local-first help and explicit output modes', () => {
   assert.deepEqual(parseCliArguments(['status', '--json']), {
     command: 'status',
     args: [],
-    json: true
+    json: true,
+    human: false
   });
-  assert.deepEqual(parseCliArguments(['--help']), {
+  assert.deepEqual(parseCliArguments(['--human', '--help']), {
     command: 'help',
     args: [],
-    json: false
+    json: false,
+    human: true
   });
   assert.match(cliHelp(), /npm run axiom -- status/);
   assert.doesNotMatch(cliHelp(), /npx axiom/);
 });
 
-test('CLI status keeps the authenticated request and adds a readable summary', async () => {
+test('CLI status keeps authenticated JSON compatibility and adds an opt-in readable summary', async () => {
   const payload = {
     kernel_version: '0.12.0-dev.0',
     claim_source_digest: 'abc123',
@@ -75,12 +77,15 @@ test('CLI status keeps the authenticated request and adds a readable summary', a
   assert.equal(requests[0].url, 'http://127.0.0.1:4010/v1/status');
   assert.equal(requests[0].options.headers.authorization, 'Bearer synthetic-token');
 
-  const human = formatCliResult('status', result);
+  const raw = `${JSON.stringify(payload, null, 2)}\n`;
+  assert.equal(formatCliResult('status', result), raw);
+  assert.equal(formatCliResult('status', result, { json: true, human: true }), raw);
+
+  const human = formatCliResult('status', result, { human: true });
   assert.match(human, /AXIOM-MESH 0\.12\.0-dev\.0/);
   assert.match(human, /Gateway API: reachable/);
   assert.match(human, /implemented=26/);
   assert.match(human, /Full response: npm run axiom -- status --json/);
-  assert.equal(formatCliResult('status', result, { json: true }), `${JSON.stringify(payload, null, 2)}\n`);
 });
 
 test('CLI rejects unknown commands before resolving credentials', async () => {
