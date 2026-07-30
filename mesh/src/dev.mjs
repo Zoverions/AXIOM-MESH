@@ -37,8 +37,11 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const stack = await startDevelopmentStack();
   process.stdout.write(`${JSON.stringify({
     status: 'ready',
+    message: 'AXIOM-MESH ready',
     gateway: `http://${stack.config.hosts.gateway}:${stack.config.ports.gateway}`,
-    token_path: stack.credentials.token_path
+    token_path: stack.credentials.token_path,
+    next_command: 'npm run axiom -- status',
+    help_command: 'npm run axiom -- --help'
   }, null, 2)}\n`);
   for (const signal of ['SIGINT', 'SIGTERM']) {
     process.once(signal, async () => {
