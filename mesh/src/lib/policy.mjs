@@ -9,6 +9,18 @@ const PROTECTED_RECOVERY_ACTIONS = new Set([
   'governance.appeal',
   'export.create'
 ]);
+const ALLOW_RULE_FIELDS = new Set([
+  'decision',
+  'risk',
+  'required_scopes',
+  'required_confirmations',
+  'required_confirmation_values',
+  'requires_independent_approval',
+  'timeout_ms',
+  'constraints',
+  'tool',
+  'effect'
+]);
 
 export async function loadPolicy(path) {
   const policy = JSON.parse(await readFile(path, 'utf8'));
@@ -109,7 +121,9 @@ export class PolicyEngine {
   }
 
   evaluate({ action, principal, intent }) {
-    const rule = this.policy.actions[action];
+    const rule = Object.hasOwn(this.policy.actions, action)
+      ? this.policy.actions[action]
+      : null;
     if (!rule) {
       return {
         allow: false,
@@ -193,7 +207,9 @@ export function mergeDenyDominantPolicy(layers) {
   for (const layer of valid.slice(1)) {
     versions.push(layer.version);
     for (const [action, incoming] of Object.entries(layer.actions ?? {})) {
-      const current = result.actions[action];
+      const current = Object.hasOwn(result.actions, action)
+        ? result.actions[action]
+        : null;
       if (!current) {
         if (incoming.decision === 'deny') result.actions[action] = structuredClone(incoming);
         continue;
@@ -207,8 +223,18 @@ export function mergeDenyDominantPolicy(layers) {
         };
         continue;
       }
+      const unsupportedFields = Object.keys(incoming)
+        .filter(field => !ALLOW_RULE_FIELDS.has(field));
+      if (unsupportedFields.length) {
+        throw new ValidationError(
+          `Policy layer contains unsupported allow fields for ${action}: ${unsupportedFields.join(', ')}`
+        );
+      }
       if (current.tool !== incoming.tool && incoming.tool !== undefined) {
         throw new ValidationError(`Policy layer cannot replace the tool for ${action}`);
+      }
+      if (current.effect !== incoming.effect && incoming.effect !== undefined) {
+        throw new ValidationError(`Policy layer cannot replace the effect for ${action}`);
       }
       const currentScopes = current.required_scopes ?? [];
       const incomingScopes = incoming.required_scopes ?? [];
@@ -216,7 +242,6 @@ export function mergeDenyDominantPolicy(layers) {
       const incomingValues = incoming.required_confirmation_values ?? [];
       result.actions[action] = {
         ...current,
-        ...incoming,
         decision: 'allow',
         risk: RISK_ORDER[current.risk] >= RISK_ORDER[incoming.risk] ? current.risk : incoming.risk,
         required_scopes: [...new Set([...currentScopes, ...incomingScopes])].sort(),
@@ -233,6 +258,12 @@ export function mergeDenyDominantPolicy(layers) {
         ),
         constraints: mergeConstraints(current.constraints ?? {}, incoming.constraints ?? {}, action)
       };
+      if (result.actions[action].tool === undefined && incoming.tool !== undefined) {
+        result.actions[action].tool = incoming.tool;
+      }
+      if (result.actions[action].effect === undefined && incoming.effect !== undefined) {
+        result.actions[action].effect = incoming.effect;
+      }
     }
   }
   result.version = versions.join('+');
