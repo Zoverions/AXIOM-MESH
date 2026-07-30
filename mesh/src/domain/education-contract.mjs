@@ -161,10 +161,6 @@ export function validateEducationPolicy(contract, policy) {
 }
 
 function validateScalarInput(field, value) {
-  if (field.endsWith('_sha256') || field === 'payload_digest') {
-    assert(typeof value === 'string' && SHA256_PATTERN.test(value), `${field} must be a lowercase SHA-256 digest`);
-    return;
-  }
   if (field === 'contract_id') {
     assert(value === EDUCATION_CONTRACT_ID, 'input contract_id mismatch');
     return;
@@ -175,6 +171,10 @@ function validateScalarInput(field, value) {
   }
   if (field === 'contract_sha256') {
     assert(value === EDUCATION_CONTRACT_SHA256, 'input contract_sha256 mismatch');
+    return;
+  }
+  if (field.endsWith('_sha256') || field === 'payload_digest') {
+    assert(typeof value === 'string' && SHA256_PATTERN.test(value), `${field} must be a lowercase SHA-256 digest`);
     return;
   }
   assert(value !== null && value !== undefined, `${field} must not be null`);
