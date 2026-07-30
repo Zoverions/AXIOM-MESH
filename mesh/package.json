@@ -40,6 +40,7 @@
     "pilot:package:drill": "node src/pilot-evidence-package-drill.mjs",
     "security-review:verify": "node src/independent-security-review.mjs verify",
     "security-review:drill": "node src/independent-security-review-drill.mjs",
+    "education-contract:check": "node src/check-education-contract.mjs",
     "recovery:drill": "node src/recovery-drill.mjs",
     "slo:drill": "node src/slo-drill.mjs",
     "start:production": "node src/supervisor.mjs",
@@ -53,6 +54,6 @@
     "release:verify": "node src/release.mjs",
     "release:evidence": "npm run check && node src/release.mjs --write",
     "test": "node --test --test-reporter=spec",
-    "check": "node src/setup.mjs check && node src/check-registry.mjs && node src/status.mjs && node src/check-docs.mjs && node --test --test-reporter=spec"
+    "check": "node src/setup.mjs check && node src/check-registry.mjs && node src/status.mjs && node src/check-docs.mjs && node src/check-education-contract.mjs && node --test --test-reporter=spec"
   }
 }
