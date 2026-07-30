@@ -132,7 +132,28 @@ test('deny-egress drill emits tamper-evident secret-free evidence', async t => {
     })
   });
   assert.equal(evidence.status, 'passed');
+  assert.equal(evidence.assurance, 'passed_with_assertions');
+  assert.deepEqual(evidence.asserted_checks, [
+    'host_unix_ingress_verified',
+    'runner_public_control_verified'
+  ]);
   assert.ok(Object.values(evidence.checks).every(Boolean));
+  assert.equal(
+    evidence.check_provenance.ipv4_default_route_absent.source,
+    'measured'
+  );
+  assert.equal(
+    evidence.check_provenance.non_loopback_routes_absent.source,
+    'derived'
+  );
+  assert.equal(
+    evidence.check_provenance.host_unix_ingress_verified.source,
+    'asserted'
+  );
+  assert.match(
+    evidence.limitations.at(-1),
+    /signed observer sub-attestations are not yet implemented/
+  );
   assert.equal(evidence.boundary.ipv4_default_routes, 0);
   assert.equal(evidence.boundary.ipv6_default_routes, 0);
   assert.equal(evidence.boundary.non_loopback_link_routes, 0);
@@ -141,7 +162,10 @@ test('deny-egress drill emits tamper-evident secret-free evidence', async t => {
     'unix-domain-socket'
   );
   assert.equal(evidence.probes.public_tcp_connected, false);
-  assert.equal(verifyDenyEgressEvidence(evidence).valid, true);
+  const verification = verifyDenyEgressEvidence(evidence);
+  assert.equal(verification.valid, true);
+  assert.equal(verification.assurance, 'passed_with_assertions');
+  assert.deepEqual(verification.provenance.asserted, evidence.asserted_checks);
   assert.doesNotMatch(JSON.stringify(evidence), /PRIVATE KEY/);
 
   const tampered = structuredClone(evidence);
@@ -149,6 +173,27 @@ test('deny-egress drill emits tamper-evident secret-free evidence', async t => {
   assert.throws(
     () => verifyDenyEgressEvidence(tampered),
     /boundary check/
+  );
+
+  const missingProvenance = structuredClone(evidence);
+  delete missingProvenance.check_provenance.public_tcp_egress_blocked;
+  assert.throws(
+    () => verifyDenyEgressEvidence(missingProvenance),
+    /provenance inventory/
+  );
+
+  const unknownProvenance = structuredClone(evidence);
+  unknownProvenance.check_provenance.host_unix_ingress_verified.source = 'trusted';
+  assert.throws(
+    () => verifyDenyEgressEvidence(unknownProvenance),
+    /provenance is invalid/
+  );
+
+  const hiddenAssertion = structuredClone(evidence);
+  hiddenAssertion.assurance = 'passed_measured';
+  assert.throws(
+    () => verifyDenyEgressEvidence(hiddenAssertion),
+    /assurance classification/
   );
 
   await assert.rejects(

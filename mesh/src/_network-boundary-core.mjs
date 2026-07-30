@@ -1,43 +1,127 @@
 import { createPublicKey } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
+import net from 'node:net';
 import { pathToFileURL } from 'node:url';
-import { ValidationError, digestObject } from './lib/canonical.mjs';
+import { ValidationError } from './lib/canonical.mjs';
 import {
   ensureMeshIdentity,
   verifyObjectSignature
 } from './lib/identity.mjs';
 import { meshConfig } from './lib/config.mjs';
-import {
-  OUTBOUND_PROBE,
-  assertDenyEgressBoundary,
-  inspectLinuxRouteTables,
-  probeTcpConnection
-} from './_network-boundary-core.mjs';
 
 const EVIDENCE_SCHEMA = 'axiom-deny-egress-evidence.v1';
 const REVISION = /^[a-f0-9]{40}$/;
-const DIGEST = /^[a-f0-9]{64}$/;
-const OBSERVER = /^[a-z][a-z0-9.-]{1,63}$/;
-const SUBJECT = /^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$/;
-const PROVENANCE_SOURCES = new Set(['measured', 'derived', 'asserted']);
-const REQUIRED_CHECKS = Object.freeze([
-  'ipv4_default_route_absent',
-  'ipv6_default_route_absent',
-  'non_loopback_routes_absent',
-  'loopback_gateway_ready',
-  'public_tcp_egress_blocked',
-  'host_unix_ingress_verified',
-  'runner_public_control_verified',
-  'secret_values_omitted'
-]);
+const OUTBOUND_PROBE = Object.freeze({
+  host: '1.1.1.1',
+  port: 443,
+  timeout_ms: 2_000
+});
 
-export {
-  EVIDENCE_SCHEMA,
-  OUTBOUND_PROBE,
-  assertDenyEgressBoundary,
-  inspectLinuxRouteTables,
-  probeTcpConnection
-};
+export function inspectLinuxRouteTables({ ipv4, ipv6 = '' }) {
+  if (typeof ipv4 !== 'string' || typeof ipv6 !== 'string') {
+    throw new ValidationError('Linux route tables must be strings');
+  }
+  const ipv4Routes = parseIpv4Routes(ipv4);
+  const ipv6Routes = parseIpv6Routes(ipv6);
+  const ipv4Default = ipv4Routes.filter(route => route.up && route.default);
+  const ipv6Default = ipv6Routes.filter(route => route.up && route.default);
+  const nonLoopbackLinkRoutes = [...ipv4Routes, ...ipv6Routes].filter(route => (
+    route.up && route.interface !== 'lo'
+  ));
+  return {
+    valid: (
+      ipv4Default.length === 0
+      && ipv6Default.length === 0
+      && nonLoopbackLinkRoutes.length === 0
+    ),
+    ipv4: {
+      routes: ipv4Routes.length,
+      default_routes: ipv4Default.length
+    },
+    ipv6: {
+      routes: ipv6Routes.length,
+      default_routes: ipv6Default.length
+    },
+    non_loopback_link_routes: nonLoopbackLinkRoutes.length
+  };
+}
+
+export async function assertDenyEgressBoundary({
+  platform = process.platform,
+  readFileImpl = readFile
+} = {}) {
+  if (platform !== 'linux') {
+    throw new ValidationError(
+      'Enforced deny-egress requires a Linux network namespace'
+    );
+  }
+  const ipv4 = await readRouteFile(
+    '/proc/net/route',
+    readFileImpl,
+    { required: true }
+  );
+  const ipv6 = await readRouteFile(
+    '/proc/net/ipv6_route',
+    readFileImpl,
+    { required: false }
+  );
+  const inspection = inspectLinuxRouteTables({ ipv4, ipv6 });
+  if (!inspection.valid) {
+    throw new ValidationError(
+      'Production deny-egress boundary requires a loopback-only namespace with no IPv4 or IPv6 default route'
+    );
+  }
+  return inspection;
+}
+
+export async function probeTcpConnection({
+  host = OUTBOUND_PROBE.host,
+  port = OUTBOUND_PROBE.port,
+  timeoutMs = OUTBOUND_PROBE.timeout_ms,
+  connectImpl = options => net.createConnection(options)
+} = {}) {
+  if (
+    typeof host !== 'string'
+    || !Number.isSafeInteger(port)
+    || port < 1
+    || port > 65_535
+    || !Number.isSafeInteger(timeoutMs)
+    || timeoutMs < 100
+    || timeoutMs > 10_000
+  ) throw new ValidationError('Outbound probe configuration is invalid');
+  return new Promise(resolve => {
+    let settled = false;
+    let socket;
+    const finish = result => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      socket?.destroy();
+      resolve(result);
+    };
+    const timer = setTimeout(
+      () => finish({ connected: false, outcome: 'timeout' }),
+      timeoutMs
+    );
+    timer.unref?.();
+    try {
+      socket = connectImpl({ host, port });
+      socket.once('connect', () => finish({
+        connected: true,
+        outcome: 'connected'
+      }));
+      socket.once('error', error => finish({
+        connected: false,
+        outcome: boundedErrorCode(error?.code)
+      }));
+    } catch (error) {
+      finish({
+        connected: false,
+        outcome: boundedErrorCode(error?.code)
+      });
+    }
+  });
+}
 
 export async function runDenyEgressDrill({
   config = meshConfig(),
@@ -92,19 +176,6 @@ export async function runDenyEgressDrill({
       `Deny-egress drill checks failed: ${failed.join(', ')}`
     );
   }
-
-  const observedAt = normalizeTimestamp(generatedAt);
-  const checkProvenance = buildCheckProvenance({
-    observedAt,
-    routes,
-    readiness,
-    outbound,
-    hostIngressVerified,
-    runnerPublicControlVerified
-  });
-  const assertedChecks = REQUIRED_CHECKS.filter(
-    name => checkProvenance[name].source === 'asserted'
-  );
   const identity = signer ?? await ensureMeshIdentity(
     config.dataDir,
     'grid',
@@ -117,20 +188,10 @@ export async function runDenyEgressDrill({
     type: 'spki',
     format: 'pem'
   }));
-  const limitations = [
-    'single-container loopback-only namespace evidence, not a multi-host network policy',
-    'the container host and Docker daemon remain trusted',
-    'future external adapters require explicit destination allowlists and separate evidence',
-    assertionLimitation(assertedChecks)
-  ];
   const unsigned = {
     schema: EVIDENCE_SCHEMA,
     status: 'passed',
-    assurance: assertedChecks.length
-      ? 'passed_with_assertions'
-      : 'passed_measured',
-    asserted_checks: assertedChecks,
-    generated_at: observedAt,
+    generated_at: normalizeTimestamp(generatedAt),
     source: {
       kernel_version: packageJson.version,
       revision: normalizeRevision(sourceRevision)
@@ -165,8 +226,11 @@ export async function runDenyEgressDrill({
       public_tcp_outcome: boundedErrorCode(outbound.outcome)
     },
     checks,
-    check_provenance: checkProvenance,
-    limitations
+    limitations: [
+      'single-container loopback-only namespace evidence, not a multi-host network policy',
+      'the container host and Docker daemon remain trusted',
+      'future external adapters require explicit destination allowlists and separate evidence'
+    ]
   };
   const evidence = {
     ...unsigned,
@@ -195,10 +259,9 @@ export function verifyDenyEgressEvidence(evidence) {
     || evidence.probes?.host_unix_ingress_verified !== true
     || evidence.probes?.runner_public_control_verified !== true
     || evidence.probes?.public_tcp_connected !== false
-    || !isPlainObject(evidence.checks)
+    || !evidence.checks
     || Object.values(evidence.checks).some(value => value !== true)
   ) throw new ValidationError('Deny-egress evidence contains a failed boundary check');
-  const provenance = verifyCheckProvenance(evidence);
   if (
     typeof evidence.signer?.public_key_pem !== 'string'
     || evidence.attestation?.key_id !== evidence.signer?.key_id
@@ -216,170 +279,11 @@ export function verifyDenyEgressEvidence(evidence) {
   }
   return {
     valid: true,
-    assurance: evidence.assurance,
     source_revision: evidence.source.revision,
     ipv4_default_routes: evidence.boundary.ipv4_default_routes,
     ipv6_default_routes: evidence.boundary.ipv6_default_routes,
-    outbound_connected: evidence.probes.public_tcp_connected,
-    provenance
+    outbound_connected: evidence.probes.public_tcp_connected
   };
-}
-
-function buildCheckProvenance({
-  observedAt,
-  routes,
-  readiness,
-  outbound,
-  hostIngressVerified,
-  runnerPublicControlVerified
-}) {
-  const routeDigest = digestObject({
-    ipv4: routes.ipv4,
-    ipv6: routes.ipv6,
-    non_loopback_link_routes: routes.non_loopback_link_routes
-  });
-  return {
-    ipv4_default_route_absent: provenanceRecord({
-      source: 'measured',
-      observer: 'network-boundary',
-      observedAt,
-      subject: 'linux:/proc/net/route',
-      inputArtifactDigest: routeDigest
-    }),
-    ipv6_default_route_absent: provenanceRecord({
-      source: 'measured',
-      observer: 'network-boundary',
-      observedAt,
-      subject: 'linux:/proc/net/ipv6_route',
-      inputArtifactDigest: routeDigest
-    }),
-    non_loopback_routes_absent: provenanceRecord({
-      source: 'derived',
-      observer: 'network-boundary',
-      observedAt,
-      subject: 'linux:combined-route-inspection',
-      inputArtifactDigest: routeDigest
-    }),
-    loopback_gateway_ready: provenanceRecord({
-      source: 'measured',
-      observer: 'network-boundary',
-      observedAt,
-      subject: 'gateway:/ready',
-      inputArtifactDigest: digestObject(readiness)
-    }),
-    public_tcp_egress_blocked: provenanceRecord({
-      source: 'measured',
-      observer: 'network-boundary',
-      observedAt,
-      subject: 'public-ipv4:443',
-      inputArtifactDigest: digestObject({
-        target: OUTBOUND_PROBE,
-        outcome: outbound
-      })
-    }),
-    host_unix_ingress_verified: provenanceRecord({
-      source: 'asserted',
-      observer: 'ci-environment',
-      observedAt,
-      subject: 'env:AXIOM_HOST_INGRESS_VERIFIED',
-      inputArtifactDigest: digestObject({ value: hostIngressVerified })
-    }),
-    runner_public_control_verified: provenanceRecord({
-      source: 'asserted',
-      observer: 'ci-environment',
-      observedAt,
-      subject: 'env:AXIOM_RUNNER_PUBLIC_CONTROL_VERIFIED',
-      inputArtifactDigest: digestObject({ value: runnerPublicControlVerified })
-    }),
-    secret_values_omitted: provenanceRecord({
-      source: 'derived',
-      observer: 'network-boundary',
-      observedAt,
-      subject: 'evidence:secret-free-projection',
-      inputArtifactDigest: digestObject({
-        schema: EVIDENCE_SCHEMA,
-        secret_fields_permitted: false
-      })
-    })
-  };
-}
-
-function provenanceRecord({
-  source,
-  observer,
-  observedAt,
-  subject,
-  inputArtifactDigest
-}) {
-  return {
-    source,
-    observer,
-    observed_at: observedAt,
-    subject,
-    input_artifact_digest: inputArtifactDigest
-  };
-}
-
-function verifyCheckProvenance(evidence) {
-  if (!isPlainObject(evidence.check_provenance)) {
-    throw new ValidationError('Deny-egress check provenance is required');
-  }
-  const checkNames = Object.keys(evidence.checks);
-  const provenanceNames = Object.keys(evidence.check_provenance);
-  if (
-    checkNames.length !== REQUIRED_CHECKS.length
-    || provenanceNames.length !== REQUIRED_CHECKS.length
-    || REQUIRED_CHECKS.some(name => (
-      !Object.hasOwn(evidence.checks, name)
-      || !Object.hasOwn(evidence.check_provenance, name)
-    ))
-    || checkNames.some(name => !REQUIRED_CHECKS.includes(name))
-    || provenanceNames.some(name => !REQUIRED_CHECKS.includes(name))
-  ) throw new ValidationError('Deny-egress check provenance inventory is invalid');
-
-  const summary = { measured: [], derived: [], asserted: [] };
-  for (const name of REQUIRED_CHECKS) {
-    const record = evidence.check_provenance[name];
-    if (
-      !isPlainObject(record)
-      || !PROVENANCE_SOURCES.has(record.source)
-      || typeof record.observer !== 'string'
-      || !OBSERVER.test(record.observer)
-      || typeof record.subject !== 'string'
-      || !SUBJECT.test(record.subject)
-      || typeof record.input_artifact_digest !== 'string'
-      || !DIGEST.test(record.input_artifact_digest)
-    ) throw new ValidationError(`Deny-egress check provenance is invalid for ${name}`);
-    normalizeTimestamp(record.observed_at);
-    summary[record.source].push(name);
-  }
-
-  const expectedAsserted = summary.asserted;
-  if (
-    !Array.isArray(evidence.asserted_checks)
-    || evidence.asserted_checks.length !== expectedAsserted.length
-    || evidence.asserted_checks.some((name, index) => name !== expectedAsserted[index])
-  ) throw new ValidationError('Deny-egress asserted-check inventory is invalid');
-  const expectedAssurance = expectedAsserted.length
-    ? 'passed_with_assertions'
-    : 'passed_measured';
-  if (evidence.assurance !== expectedAssurance) {
-    throw new ValidationError('Deny-egress assurance classification is invalid');
-  }
-  if (
-    expectedAsserted.length
-    && (
-      !Array.isArray(evidence.limitations)
-      || !evidence.limitations.includes(assertionLimitation(expectedAsserted))
-    )
-  ) throw new ValidationError('Deny-egress asserted-check limitation is missing');
-  return summary;
-}
-
-function assertionLimitation(assertedChecks) {
-  return assertedChecks.length
-    ? `required checks with asserted provenance: ${assertedChecks.join(', ')}; signed observer sub-attestations are not yet implemented`
-    : 'all required checks carry measured or derived provenance';
 }
 
 async function probeReadiness({ url, fetchImpl = fetch }) {
@@ -403,6 +307,59 @@ async function probeReadiness({ url, fetchImpl = fetch }) {
     service: payload?.service ?? null,
     state: payload?.status ?? null
   };
+}
+
+function parseIpv4Routes(serialized) {
+  const lines = serialized.trim().split(/\r?\n/).filter(Boolean);
+  if (!lines.length || !/^Iface\s+Destination\s+Gateway\s+Flags\b/.test(lines[0])) {
+    throw new ValidationError('IPv4 route table header is invalid');
+  }
+  return lines.slice(1).map(line => {
+    const fields = line.trim().split(/\s+/);
+    if (
+      fields.length < 8
+      || !/^[A-Za-z0-9_.:-]{1,32}$/.test(fields[0])
+      || !/^[A-Fa-f0-9]{8}$/.test(fields[1])
+      || !/^[A-Fa-f0-9]{4}$/.test(fields[3])
+      || !/^[A-Fa-f0-9]{8}$/.test(fields[7])
+    ) throw new ValidationError('IPv4 route table row is invalid');
+    const flags = Number.parseInt(fields[3], 16);
+    return {
+      interface: fields[0],
+      up: (flags & 0x1) === 0x1,
+      default: fields[1] === '00000000' && fields[7] === '00000000'
+    };
+  });
+}
+
+function parseIpv6Routes(serialized) {
+  const trimmed = serialized.trim();
+  if (!trimmed) return [];
+  return trimmed.split(/\r?\n/).map(line => {
+    const fields = line.trim().split(/\s+/);
+    if (
+      fields.length < 10
+      || !/^[A-Fa-f0-9]{32}$/.test(fields[0])
+      || !/^[A-Fa-f0-9]{2}$/.test(fields[1])
+      || !/^[A-Fa-f0-9]{8}$/.test(fields[8])
+      || !/^[A-Za-z0-9_.:-]{1,32}$/.test(fields[9])
+    ) throw new ValidationError('IPv6 route table row is invalid');
+    const flags = Number.parseInt(fields[8], 16);
+    return {
+      interface: fields[9],
+      up: (flags & 0x1) === 0x1,
+      default: /^0{32}$/.test(fields[0]) && fields[1] === '00'
+    };
+  });
+}
+
+async function readRouteFile(path, readFileImpl, { required }) {
+  try {
+    return await readFileImpl(path, 'utf8');
+  } catch (error) {
+    if (!required && error?.code === 'ENOENT') return '';
+    throw new ValidationError(`Cannot read required network route table: ${path}`);
+  }
 }
 
 function boundedErrorCode(value) {
@@ -429,14 +386,12 @@ function normalizeTimestamp(value) {
   return new Date(value).toISOString();
 }
 
-function isPlainObject(value) {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
 async function main() {
   const evidence = await runDenyEgressDrill();
   process.stdout.write(`${JSON.stringify(evidence, null, 2)}\n`);
 }
+
+export { EVIDENCE_SCHEMA, OUTBOUND_PROBE };
 
 if (
   process.argv[1]
