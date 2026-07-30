@@ -1,6 +1,7 @@
 import { pathToFileURL } from 'node:url';
 import { bootstrap } from './bootstrap.mjs';
 import { meshConfig } from './lib/config.mjs';
+import { recoverStaleGridRuntimeLock } from './grid/backup.mjs';
 import { createGridService } from './grid/server.mjs';
 import { createSandboxService } from './sandbox/server.mjs';
 import { createHypervisorService } from './hypervisor/server.mjs';
@@ -9,6 +10,7 @@ import { createGatewayService } from './gateway/server.mjs';
 export async function startDevelopmentStack(overrides = {}) {
   const config = meshConfig(overrides);
   const credentials = await bootstrap(config);
+  await recoverStaleGridRuntimeLock(config.dataDir);
   const services = [
     await createGridService(config),
     await createSandboxService(config),
