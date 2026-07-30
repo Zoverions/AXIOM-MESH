@@ -1,0 +1,67 @@
+name: Chain Verification Benchmark
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "mesh/src/grid/**"
+      - "mesh/src/chain-verification-benchmark*.mjs"
+      - "mesh/test/chain-verification-benchmark.test.mjs"
+      - ".github/workflows/chain-verification-benchmark.yml"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "mesh/src/grid/**"
+      - "mesh/src/chain-verification-benchmark*.mjs"
+      - "mesh/test/chain-verification-benchmark.test.mjs"
+      - ".github/workflows/chain-verification-benchmark.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "37 5 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chain-benchmark-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24.18.0"
+          package-manager-cache: false
+      - name: Install exact current-build source setup
+        run: npm run setup:install
+      - name: Generate signed 50000-event verification benchmark
+        run: |
+          node mesh/src/chain-verification-benchmark.mjs \
+            --events 50000 \
+            --batch-size 1000 \
+            --checkpoint-interval 10000 \
+            > "$RUNNER_TEMP/axiom-chain-verification-benchmark.json"
+      - name: Independently verify benchmark artifact
+        run: |
+          node --input-type=module - \
+            "$RUNNER_TEMP/axiom-chain-verification-benchmark.json" <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          import { verifyChainVerificationBenchmarkEvidence } from './mesh/src/chain-verification-benchmark.mjs';
+          const evidence = JSON.parse(await readFile(process.argv[2], 'utf8'));
+          const result = verifyChainVerificationBenchmarkEvidence(evidence);
+          if (result.valid !== true || result.events !== 50000) process.exit(1);
+          process.stdout.write(`${JSON.stringify(result)}\n`);
+          NODE
+      - name: Upload signed chain-verification benchmark
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: axiom-chain-verification-benchmark-${{ github.sha }}
+          path: ${{ runner.temp }}/axiom-chain-verification-benchmark.json
+          if-no-files-found: error
+          retention-days: 90
