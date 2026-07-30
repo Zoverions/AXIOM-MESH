@@ -3,9 +3,12 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 export const EDUCATION_CONTRACT_SCHEMA = 'axiom-domain-contract.v1';
-export const EDUCATION_CONTRACT_ID = 'education.ontarioedai';
+export const EDUCATION_CONTRACT_BRAND = 'Axiom Education';
+export const EDUCATION_CONTRACT_ID = 'axiom.education';
 export const EDUCATION_CONTRACT_VERSION = '1.0.0';
-export const EDUCATION_CONTRACT_SHA256 = '19f3fdb09352bb87694913d760562065a9a84fcd89780d541ee186be4b193254';
+export const EDUCATION_CONTRACT_SHA256 = 'a20e191a05308ef85bdc1cc74bfa0d54b98a176818f8030a172b4c3709a28fa2';
+export const EDUCATION_CONTRACT_CONTROLLER = 'capsule:axiom.education';
+export const EDUCATION_CURRICULUM_PACK_PROFILE = 'jurisdictional';
 export const EDUCATION_CONTRACT_PATH = fileURLToPath(
   new URL('../../config/domain-contracts/education.v1.json', import.meta.url)
 );
@@ -16,7 +19,7 @@ const ALLOWED_RISKS = new Set(['low', 'medium', 'high', 'critical']);
 const CONTRACT_FIELDS = Object.freeze(['contract_id', 'contract_version', 'contract_sha256']);
 
 function assert(condition, message) {
-  if (!condition) throw new Error(`Education contract invalid: ${message}`);
+  if (!condition) throw new Error(`Axiom Education contract invalid: ${message}`);
 }
 
 function isRecord(value) {
@@ -42,11 +45,16 @@ export function validateEducationContract(contract, { rawBytes } = {}) {
     assert(sha256(rawBytes) === EDUCATION_CONTRACT_SHA256, 'contract digest does not match the cross-repository pin');
   }
   assert(contract.schema === EDUCATION_CONTRACT_SCHEMA, 'unsupported schema');
+  assert(contract.brand === EDUCATION_CONTRACT_BRAND, 'unexpected brand');
   assert(contract.contract_id === EDUCATION_CONTRACT_ID, 'unexpected contract_id');
   assert(contract.contract_version === EDUCATION_CONTRACT_VERSION, 'unexpected contract_version');
   assert(contract.kernel_minimum === '0.12.0-dev.0', 'unexpected kernel minimum');
   assert(contract.domain === 'education', 'domain must be education');
-  assert(contract.controller === 'capsule:education.ontarioedai', 'unexpected controller');
+  assert(contract.controller === EDUCATION_CONTRACT_CONTROLLER, 'unexpected controller');
+  assert(
+    contract.curriculum_pack_profile === EDUCATION_CURRICULUM_PACK_PROFILE,
+    'curriculum pack profile must be jurisdictional'
+  );
   assert(contract.install_grants_authority === false, 'install must not grant authority');
 
   const gateway = contract.gateway;
@@ -134,7 +142,7 @@ export async function loadEducationContract(path = EDUCATION_CONTRACT_PATH) {
   try {
     contract = JSON.parse(rawBytes.toString('utf8'));
   } catch (error) {
-    throw new Error(`Education contract invalid: malformed JSON (${error.message})`);
+    throw new Error(`Axiom Education contract invalid: malformed JSON (${error.message})`);
   }
   return validateEducationContract(contract, { rawBytes });
 }
