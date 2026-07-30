@@ -67,7 +67,8 @@ export class GridStore extends CoreGridStore {
       initialCount: latest.statement.seq,
       verificationMode: 'checkpoint',
       checkpointCount: history.length,
-      checkpointSeq: latest.statement.seq
+      checkpointSeq: latest.statement.seq,
+      prefixAssurance: 'signed_checkpoint'
     });
   }
 
@@ -85,7 +86,8 @@ export class GridStore extends CoreGridStore {
       initialCount: 0,
       verificationMode: 'full',
       checkpointCount,
-      checkpointSeq: null
+      checkpointSeq: null,
+      prefixAssurance: 'genesis_reverified'
     });
   }
 
@@ -197,7 +199,7 @@ export class GridStore extends CoreGridStore {
       }
       if (
         !isPlainObject(record.attestation)
-        || record.attestation.key_id !== this.identity.keyId
+        || typeof record.attestation.key_id !== 'string'
         || !DIGEST.test(record.checkpoint_digest ?? '')
       ) {
         return { valid: false, reason: 'checkpoint_attestation_invalid', checkpoint_index: index };
@@ -223,6 +225,15 @@ export class GridStore extends CoreGridStore {
           };
         }
       }
+      if (!statement.verification_keys.some(
+        item => item.key_id === record.attestation.key_id
+      )) {
+        return {
+          valid: false,
+          reason: 'checkpoint_signer_not_bound',
+          checkpoint_index: index
+        };
+      }
       const checkpointKey = this.verificationKeys.get(record.attestation.key_id);
       if (
         !checkpointKey
@@ -230,11 +241,19 @@ export class GridStore extends CoreGridStore {
       ) {
         return { valid: false, reason: 'checkpoint_signature_mismatch', checkpoint_index: index };
       }
-      const event = this.db.prepare('SELECT event_hash FROM events WHERE seq = ?').get(
+      const event = this.db.prepare('SELECT * FROM events WHERE seq = ?').get(
         statement.seq
       );
       if (!event || event.event_hash !== statement.head_hash) {
         return { valid: false, reason: 'checkpoint_head_mismatch', checkpoint_index: index };
+      }
+      const eventVerification = this.verifyStoredEvent(event);
+      if (!eventVerification.valid) {
+        return {
+          ...eventVerification,
+          reason: `checkpoint_${eventVerification.reason}`,
+          checkpoint_index: index
+        };
       }
       previousDigest = record.checkpoint_digest;
       previousSeq = statement.seq;
@@ -247,6 +266,50 @@ export class GridStore extends CoreGridStore {
     };
   }
 
+  verifyStoredEvent(row) {
+    let payload;
+    try {
+      payload = this.openJson('events', 'payload_json', row.event_id, row.payload_json);
+    } catch {
+      return { valid: false, seq: row.seq, reason: 'payload_decryption_failed' };
+    }
+    if (digestObject(payload) !== row.payload_digest) {
+      return { valid: false, seq: row.seq, reason: 'payload_digest_mismatch' };
+    }
+    const envelope = {
+      seq: row.seq,
+      event_id: row.event_id,
+      trace_id: row.trace_id,
+      actor: row.actor,
+      kind: row.kind,
+      subject: row.subject,
+      occurred_at: row.occurred_at,
+      payload_digest: row.payload_digest,
+      prev_hash: row.prev_hash
+    };
+    if (digestObject(envelope) !== row.event_hash) {
+      return { valid: false, seq: row.seq, reason: 'event_hash_mismatch' };
+    }
+    let signature;
+    try {
+      signature = JSON.parse(row.signature_json);
+    } catch {
+      return { valid: false, seq: row.seq, reason: 'signature_encoding_invalid' };
+    }
+    const verificationKey = this.verificationKeys.get(signature.key_id);
+    if (
+      !verificationKey
+      || !verifyObjectSignature(
+        { event_hash: row.event_hash },
+        signature,
+        verificationKey
+      )
+    ) {
+      return { valid: false, seq: row.seq, reason: 'signature_mismatch' };
+    }
+    return { valid: true };
+  }
+
   verifyEventRange({
     rows,
     previous,
@@ -254,7 +317,8 @@ export class GridStore extends CoreGridStore {
     initialCount,
     verificationMode,
     checkpointCount,
-    checkpointSeq
+    checkpointSeq,
+    prefixAssurance
   }) {
     let eventCount = initialCount;
     let verifiedEvents = 0;
@@ -265,46 +329,8 @@ export class GridStore extends CoreGridStore {
       if (row.prev_hash !== previous) {
         return { valid: false, seq: row.seq, reason: 'previous_hash_mismatch' };
       }
-      let payload;
-      try {
-        payload = this.openJson('events', 'payload_json', row.event_id, row.payload_json);
-      } catch {
-        return { valid: false, seq: row.seq, reason: 'payload_decryption_failed' };
-      }
-      if (digestObject(payload) !== row.payload_digest) {
-        return { valid: false, seq: row.seq, reason: 'payload_digest_mismatch' };
-      }
-      const envelope = {
-        seq: row.seq,
-        event_id: row.event_id,
-        trace_id: row.trace_id,
-        actor: row.actor,
-        kind: row.kind,
-        subject: row.subject,
-        occurred_at: row.occurred_at,
-        payload_digest: row.payload_digest,
-        prev_hash: row.prev_hash
-      };
-      if (digestObject(envelope) !== row.event_hash) {
-        return { valid: false, seq: row.seq, reason: 'event_hash_mismatch' };
-      }
-      let signature;
-      try {
-        signature = JSON.parse(row.signature_json);
-      } catch {
-        return { valid: false, seq: row.seq, reason: 'signature_encoding_invalid' };
-      }
-      const verificationKey = this.verificationKeys.get(signature.key_id);
-      if (
-        !verificationKey
-        || !verifyObjectSignature(
-          { event_hash: row.event_hash },
-          signature,
-          verificationKey
-        )
-      ) {
-        return { valid: false, seq: row.seq, reason: 'signature_mismatch' };
-      }
+      const eventVerification = this.verifyStoredEvent(row);
+      if (!eventVerification.valid) return eventVerification;
       previous = row.event_hash;
       expectedSeq += 1;
       eventCount += 1;
@@ -324,11 +350,14 @@ export class GridStore extends CoreGridStore {
       events: eventCount,
       head: previous,
       verification_mode: verificationMode,
+      prefix_assurance: prefixAssurance,
       verified_events: verifiedEvents,
       verified_from_seq: verifiedEvents ? eventCount - verifiedEvents + 1 : null,
       verified_through_seq: eventCount,
       checkpoint_count: checkpointCount,
-      checkpoint_seq: checkpointSeq
+      checkpoint_seq: checkpointSeq,
+      full_verification_required_for_checkpointed_prefix_revalidation:
+        verificationMode === 'checkpoint'
     };
   }
 }

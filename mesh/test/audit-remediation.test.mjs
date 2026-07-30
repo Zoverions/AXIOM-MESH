@@ -66,7 +66,7 @@ test('malformed percent-encoding is a validation error', () => {
   );
 });
 
-test('Grid chain verification streams event rows without materializing the table', () => {
+test('full Grid chain verification streams event rows without materializing the table', () => {
   let iterateCalls = 0;
   let allCalls = 0;
   const genesis = '0'.repeat(64);
@@ -80,6 +80,11 @@ test('Grid chain verification streams event rows without materializing the table
     }
   };
   const store = {
+    readCheckpointHistory() {
+      return [];
+    },
+    verifyEventRange: GridStore.prototype.verifyEventRange,
+    verifyStoredEvent: GridStore.prototype.verifyStoredEvent,
     db: {
       prepare(sql) {
         if (sql === 'SELECT * FROM events ORDER BY seq') return eventStatement;
@@ -94,8 +99,12 @@ test('Grid chain verification streams event rows without materializing the table
     }
   };
 
-  const result = GridStore.prototype.verifyChain.call(store);
-  assert.deepEqual(result, { valid: true, events: 0, head: genesis });
+  const result = GridStore.prototype.verifyFullChain.call(store);
+  assert.equal(result.valid, true);
+  assert.equal(result.events, 0);
+  assert.equal(result.head, genesis);
+  assert.equal(result.verification_mode, 'full');
+  assert.equal(result.verified_events, 0);
   assert.equal(iterateCalls, 1);
   assert.equal(allCalls, 0);
 });
