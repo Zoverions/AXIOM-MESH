@@ -333,7 +333,7 @@ jobs:
             echo "AXIOM_API_TOKENS_FILE_HOST=$RUNNER_TEMP/axiom-secrets/api-tokens.json"
             echo "AXIOM_TRANSPORT_DIR_HOST=$RUNNER_TEMP/axiom-secrets/transport"
             echo "AXIOM_UNITS_DIR_HOST=$RUNNER_TEMP/axiom-units"
-            echo "AXIOM_BOUNDARY_EVIDENCE_CONTEXT=$(node -e 'process.stdout.write(require(\"node:crypto\").randomBytes(32).toString(\"hex\"))')"
+            echo "AXIOM_BOUNDARY_EVIDENCE_CONTEXT=$(node -e 'process.stdout.write(require(`node:crypto`).randomBytes(32).toString(`hex`))')"
           } >> "$GITHUB_ENV"
       - name: Build digest-pinned image
         working-directory: mesh
