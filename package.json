@@ -24,7 +24,7 @@
     "backup-lifecycle:drill": "npm --prefix mesh run backup-lifecycle:drill --",
     "credential-history:audit": "npm --prefix mesh run credential-history:audit --",
     "credential-rotation:drill": "npm --prefix mesh run credential-rotation:drill --",
-    "data-key-rotation:drill": "npm --prefix mesh run data-key-rotation-drill --",
+    "data-key-rotation:drill": "npm --prefix mesh run data-key-rotation:drill --",
     "incident-tabletop:drill": "npm --prefix mesh run incident-tabletop:drill --",
     "resilience:drill": "npm --prefix mesh run resilience:drill --",
     "telemetry-relay:start": "npm --prefix mesh run telemetry-relay:start --",
