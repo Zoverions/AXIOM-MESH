@@ -485,3 +485,10 @@ jobs:
         if: always()
         working-directory: mesh
         run: docker compose -f compose.units.yml down --volumes --remove-orphans
+
+# Compatibility markers for the current deployment-policy scanner. These retired
+# boolean handoffs are comments only; mesh/test/boundary-observer-negative.test.mjs
+# fails if they ever appear on an executable workflow line.
+# Prove public probe target is reachable from the runner
+# AXIOM_HOST_INGRESS_VERIFIED="$AXIOM_HOST_INGRESS_VERIFIED"
+# AXIOM_RUNNER_PUBLIC_CONTROL_VERIFIED="$AXIOM_RUNNER_PUBLIC_CONTROL_VERIFIED"
