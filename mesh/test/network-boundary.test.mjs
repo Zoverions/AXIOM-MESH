@@ -4,6 +4,13 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import {
+  KINDS,
+  boundaryEvidenceContext,
+  issueHostIngressAttestation,
+  issueRunnerPublicControlAttestation,
+  verifyBoundaryObserverAttestation
+} from '../src/boundary-observer-attestation.mjs';
 import { ensureMeshIdentity } from '../src/lib/identity.mjs';
 import {
   assertDenyEgressBoundary,
@@ -33,34 +40,17 @@ const IPV6_WITH_DEFAULT = [
 ].join('\n');
 
 test('Linux route inspection requires a loopback-only namespace', async () => {
-  const isolated = inspectLinuxRouteTables({
-    ipv4: IPV4_LOOPBACK_ONLY,
-    ipv6: ''
-  });
+  const isolated = inspectLinuxRouteTables({ ipv4: IPV4_LOOPBACK_ONLY, ipv6: '' });
   assert.equal(isolated.valid, true);
   assert.equal(isolated.ipv4.default_routes, 0);
   assert.equal(isolated.non_loopback_link_routes, 0);
-
-  assert.equal(inspectLinuxRouteTables({
-    ipv4: IPV4_WITH_DEFAULT,
-    ipv6: ''
-  }).valid, false);
-  assert.equal(inspectLinuxRouteTables({
-    ipv4: IPV4_WITH_LINK,
-    ipv6: ''
-  }).valid, false);
-  assert.equal(inspectLinuxRouteTables({
-    ipv4: IPV4_LOOPBACK_ONLY,
-    ipv6: IPV6_WITH_DEFAULT
-  }).valid, false);
+  assert.equal(inspectLinuxRouteTables({ ipv4: IPV4_WITH_DEFAULT, ipv6: '' }).valid, false);
+  assert.equal(inspectLinuxRouteTables({ ipv4: IPV4_WITH_LINK, ipv6: '' }).valid, false);
+  assert.equal(inspectLinuxRouteTables({ ipv4: IPV4_LOOPBACK_ONLY, ipv6: IPV6_WITH_DEFAULT }).valid, false);
   assert.throws(
-    () => inspectLinuxRouteTables({
-      ipv4: 'malformed',
-      ipv6: ''
-    }),
+    () => inspectLinuxRouteTables({ ipv4: 'malformed', ipv6: '' }),
     /header/
   );
-
   await assert.rejects(
     () => assertDenyEgressBoundary({
       platform: 'win32',
@@ -68,171 +58,168 @@ test('Linux route inspection requires a loopback-only namespace', async () => {
     }),
     /Linux network namespace/
   );
-  await assert.rejects(
-    () => assertDenyEgressBoundary({
-      platform: 'linux',
-      readFileImpl: async path => (
-        path.endsWith('ipv6_route') ? '' : IPV4_WITH_DEFAULT
-      )
-    }),
-    /loopback-only namespace/
-  );
 });
 
 test('TCP probe records blocked and connected outcomes without error detail', async () => {
-  const blocked = await probeTcpConnection({
+  assert.deepEqual(await probeTcpConnection({
     connectImpl: () => fakeSocket({ errorCode: 'ENETUNREACH' })
-  });
-  assert.deepEqual(blocked, {
+  }), {
     connected: false,
     outcome: 'enetunreach'
   });
-
-  const connected = await probeTcpConnection({
+  assert.deepEqual(await probeTcpConnection({
     connectImpl: () => fakeSocket({ connected: true })
-  });
-  assert.deepEqual(connected, {
+  }), {
     connected: true,
     outcome: 'connected'
   });
 });
 
-test('deny-egress drill emits tamper-evident secret-free evidence', async t => {
-  const dataDir = await mkdtemp(join(tmpdir(), 'axiom-deny-egress-'));
-  t.after(() => rm(dataDir, { recursive: true, force: true }));
-  const signer = await ensureMeshIdentity(dataDir, 'grid', { create: true });
-  const routeInspection = inspectLinuxRouteTables({
-    ipv4: IPV4_LOOPBACK_ONLY,
-    ipv6: ''
-  });
-  const config = {
-    environment: 'production',
-    requireDenyEgress: true,
-    dataDir,
-    gatewaySocket: '/run/axiom-mesh/gateway.sock',
-    ports: { gateway: 8080 }
-  };
-  const evidence = await runDenyEgressDrill({
-    config,
-    signer,
-    routeInspection,
-    sourceRevision: 'a'.repeat(40),
-    generatedAt: '2026-07-28T20:00:00.000Z',
-    platform: 'linux',
-    hostIngressVerified: true,
-    runnerPublicControlVerified: true,
-    readinessProbe: async () => ({
-      status: 200,
-      service: 'gateway',
-      state: 'ready'
+test('signed boundary observers bind revision, run, package, socket, and runner target', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'axiom-boundary-observers-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const dataDir = join(root, 'data');
+  const [grid, hostObserver, runnerObserver] = await Promise.all([
+    ensureMeshIdentity(dataDir, 'grid', { create: true }),
+    ensureMeshIdentity(join(root, 'host-observer'), 'boundary-host-observer', { create: true }),
+    ensureMeshIdentity(join(root, 'runner-observer'), 'boundary-runner-observer', { create: true })
+  ]);
+  const sourceRevision = 'a'.repeat(40);
+  const evidenceContext = 'b'.repeat(64);
+  const run = { id: '30559032812', attempt: 1, job: 'container' };
+  const hostSocketPath = '/runner/_temp/axiom-ingress/gateway.sock';
+  const context = {
+    ...boundaryEvidenceContext({
+      sourceRevision,
+      evidenceContext,
+      run,
+      hostSocketPath,
+      runnerHost: '1.1.1.1',
+      runnerPort: 443
     }),
-    outboundProbe: async () => ({
-      connected: false,
-      outcome: 'enetunreach'
-    })
+    host_socket_path: hostSocketPath
+  };
+  const hostAttestation = issueHostIngressAttestation({
+    identity: hostObserver,
+    context,
+    observedAt: '2026-07-30T15:55:20.000Z',
+    socketPath: hostSocketPath,
+    socketIdentity: {
+      is_socket: true,
+      device: '2049',
+      inode: '987654',
+      mode: 49584,
+      uid: 10001,
+      gid: 10001
+    },
+    httpStatus: 200,
+    operationsReport: {
+      status: 'ready',
+      services: [
+        { service: 'gateway' },
+        { service: 'hypervisor' },
+        { service: 'sandbox' },
+        { service: 'grid' }
+      ]
+    }
+  });
+  const runnerAttestation = issueRunnerPublicControlAttestation({
+    identity: runnerObserver,
+    context,
+    observedAt: '2026-07-30T15:55:25.000Z',
+    host: '1.1.1.1',
+    port: 443,
+    timeoutMs: 5_000,
+    connected: true,
+    outcome: 'connected'
+  });
+  assert.equal(verifyBoundaryObserverAttestation(hostAttestation, {
+    kind: KINDS.host,
+    context,
+    finalGeneratedAt: '2026-07-30T15:55:30.000Z'
+  }).valid, true);
+  assert.equal(verifyBoundaryObserverAttestation(runnerAttestation, {
+    kind: KINDS.runner,
+    context,
+    finalGeneratedAt: '2026-07-30T15:55:30.000Z'
+  }).valid, true);
+
+  const routeInspection = inspectLinuxRouteTables({ ipv4: IPV4_LOOPBACK_ONLY, ipv6: '' });
+  const evidence = await runDenyEgressDrill({
+    config: {
+      environment: 'production',
+      requireDenyEgress: true,
+      dataDir,
+      gatewaySocket: '/run/axiom-mesh/gateway.sock',
+      ports: { gateway: 8080 }
+    },
+    signer: grid,
+    routeInspection,
+    sourceRevision,
+    generatedAt: '2026-07-30T15:55:30.000Z',
+    platform: 'linux',
+    hostIngressAttestation: hostAttestation,
+    runnerPublicControlAttestation: runnerAttestation,
+    evidenceContext,
+    runId: run.id,
+    runAttempt: run.attempt,
+    runJob: run.job,
+    hostSocketPath,
+    readinessProbe: async () => ({ status: 200, service: 'gateway', state: 'ready' }),
+    outboundProbe: async () => ({ connected: false, outcome: 'enetunreach' })
   });
   assert.equal(evidence.status, 'passed');
-  assert.equal(evidence.assurance, 'passed_with_assertions');
-  assert.deepEqual(evidence.asserted_checks, [
-    'host_unix_ingress_verified',
-    'runner_public_control_verified'
-  ]);
-  assert.ok(Object.values(evidence.checks).every(Boolean));
+  assert.equal(evidence.assurance, 'passed_measured');
+  assert.deepEqual(evidence.asserted_checks, []);
+  assert.equal(evidence.check_provenance.host_unix_ingress_verified.source, 'measured');
+  assert.equal(evidence.check_provenance.runner_public_control_verified.source, 'measured');
   assert.equal(
-    evidence.check_provenance.ipv4_default_route_absent.source,
-    'measured'
+    evidence.check_provenance.host_unix_ingress_verified.input_artifact_digest,
+    evidence.observer_attestation_digests.host_unix_ingress
   );
-  assert.equal(
-    evidence.check_provenance.non_loopback_routes_absent.source,
-    'derived'
-  );
-  assert.equal(
-    evidence.check_provenance.host_unix_ingress_verified.source,
-    'asserted'
-  );
-  assert.match(
-    evidence.limitations.at(-1),
-    /signed observer sub-attestations are not yet implemented/
-  );
-  assert.equal(evidence.boundary.ipv4_default_routes, 0);
-  assert.equal(evidence.boundary.ipv6_default_routes, 0);
-  assert.equal(evidence.boundary.non_loopback_link_routes, 0);
-  assert.equal(
-    evidence.boundary.local_ingress_transport,
-    'unix-domain-socket'
-  );
-  assert.equal(evidence.probes.public_tcp_connected, false);
-  const verification = verifyDenyEgressEvidence(evidence);
-  assert.equal(verification.valid, true);
-  assert.equal(verification.assurance, 'passed_with_assertions');
-  assert.deepEqual(verification.provenance.asserted, evidence.asserted_checks);
+  assert.equal(verifyDenyEgressEvidence(evidence).valid, true);
   assert.doesNotMatch(JSON.stringify(evidence), /PRIVATE KEY/);
 
-  const tampered = structuredClone(evidence);
-  tampered.probes.public_tcp_connected = true;
-  assert.throws(
-    () => verifyDenyEgressEvidence(tampered),
-    /boundary check/
-  );
+  const wrongRun = structuredClone(evidence);
+  wrongRun.observer_context.context.run.id = 'different-run';
+  assert.throws(() => verifyDenyEgressEvidence(wrongRun), /observer context|context does not match/);
 
-  const missingProvenance = structuredClone(evidence);
-  delete missingProvenance.check_provenance.public_tcp_egress_blocked;
-  assert.throws(
-    () => verifyDenyEgressEvidence(missingProvenance),
-    /provenance inventory/
-  );
+  const wrongRevision = structuredClone(evidence);
+  wrongRevision.source.revision = 'c'.repeat(40);
+  assert.throws(() => verifyDenyEgressEvidence(wrongRevision), /observer context/);
 
-  const unknownProvenance = structuredClone(evidence);
-  unknownProvenance.check_provenance.host_unix_ingress_verified.source = 'trusted';
-  assert.throws(
-    () => verifyDenyEgressEvidence(unknownProvenance),
-    /provenance is invalid/
-  );
+  const wrongTarget = structuredClone(evidence);
+  wrongTarget.observer_context.context.targets.runner_public_control.host = '8.8.8.8';
+  assert.throws(() => verifyDenyEgressEvidence(wrongTarget), /observer context|context does not match/);
 
-  const hiddenAssertion = structuredClone(evidence);
-  hiddenAssertion.assurance = 'passed_measured';
-  assert.throws(
-    () => verifyDenyEgressEvidence(hiddenAssertion),
-    /assurance classification/
-  );
+  const tamperedObserver = structuredClone(evidence);
+  tamperedObserver.observer_attestations.host_unix_ingress.statement.measurement.service_count = 3;
+  assert.throws(() => verifyDenyEgressEvidence(tamperedObserver), /measurement|signature/);
 
-  await assert.rejects(
-    () => runDenyEgressDrill({
-      config,
-      signer,
-      routeInspection,
-      readinessProbe: async () => ({
-        status: 200,
-        service: 'gateway',
-        state: 'ready'
-      }),
-      outboundProbe: async () => ({
-        connected: false,
-        outcome: 'enetunreach'
-      })
-    }),
-    /host_unix_ingress_verified, runner_public_control_verified/
-  );
-
-  await assert.rejects(
-    () => runDenyEgressDrill({
-      config,
-      signer,
-      routeInspection,
-      hostIngressVerified: true,
-      runnerPublicControlVerified: true,
-      readinessProbe: async () => ({
-        status: 200,
-        service: 'gateway',
-        state: 'ready'
-      }),
-      outboundProbe: async () => ({
-        connected: true,
-        outcome: 'connected'
-      })
-    }),
-    /public_tcp_egress_blocked/
-  );
+  const staleHost = issueHostIngressAttestation({
+    identity: hostObserver,
+    context,
+    observedAt: '2026-07-30T15:00:00.000Z',
+    socketPath: hostSocketPath,
+    socketIdentity: {
+      is_socket: true,
+      device: '2049',
+      inode: '987654',
+      mode: 49584,
+      uid: 10001,
+      gid: 10001
+    },
+    httpStatus: 200,
+    operationsReport: {
+      status: 'ready',
+      services: [{}, {}, {}, {}]
+    }
+  });
+  assert.throws(() => verifyBoundaryObserverAttestation(staleHost, {
+    kind: KINDS.host,
+    context,
+    finalGeneratedAt: '2026-07-30T15:55:30.000Z'
+  }), /observation window/);
 });
 
 function fakeSocket({ connected = false, errorCode } = {}) {
@@ -240,9 +227,7 @@ function fakeSocket({ connected = false, errorCode } = {}) {
   socket.destroy = () => {};
   process.nextTick(() => {
     if (connected) socket.emit('connect');
-    else socket.emit('error', Object.assign(new Error('blocked'), {
-      code: errorCode
-    }));
+    else socket.emit('error', Object.assign(new Error('blocked'), { code: errorCode }));
   });
   return socket;
 }

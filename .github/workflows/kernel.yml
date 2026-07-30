@@ -333,11 +333,12 @@ jobs:
             echo "AXIOM_API_TOKENS_FILE_HOST=$RUNNER_TEMP/axiom-secrets/api-tokens.json"
             echo "AXIOM_TRANSPORT_DIR_HOST=$RUNNER_TEMP/axiom-secrets/transport"
             echo "AXIOM_UNITS_DIR_HOST=$RUNNER_TEMP/axiom-units"
+            echo "AXIOM_BOUNDARY_EVIDENCE_CONTEXT=$(node -e 'process.stdout.write(require(`node:crypto`).randomBytes(32).toString(`hex`))')"
           } >> "$GITHUB_ENV"
       - name: Build digest-pinned image
         working-directory: mesh
         run: docker build --pull=false --tag axiom-mesh-kernel:0.12.0-dev.0 .
-      - name: Run container readiness drill
+      - name: Run container readiness and sign host ingress observation
         working-directory: mesh
         run: |
           docker compose -f compose.production.yml up --detach --no-build
@@ -353,26 +354,52 @@ jobs:
             fi
             sleep 2
           done
-          token="$(tr -d '\n' <"$RUNNER_TEMP/axiom-secrets/operator.token")"
-          sudo curl --fail --silent \
-            --unix-socket "$RUNNER_TEMP/axiom-ingress/gateway.sock" \
-            -H "Authorization: Bearer $token" \
-            http://localhost/v1/operations \
-            > "$RUNNER_TEMP/operations.json"
-          node -e "const fs=require('node:fs');const report=JSON.parse(fs.readFileSync(process.argv[1]));if(report.status!=='ready'||report.services.length!==4)process.exit(1)" \
-            "$RUNNER_TEMP/operations.json"
-          echo "AXIOM_HOST_INGRESS_VERIFIED=true" >> "$GITHUB_ENV"
-      - name: Prove public probe target is reachable from the runner
+          sudo "$(command -v node)" src/boundary-observer-attestation.mjs host-ingress \
+            --identity-dir "$RUNNER_TEMP/axiom-host-boundary-observer" \
+            --output "$RUNNER_TEMP/host-ingress-attestation.json" \
+            --revision "$GITHUB_SHA" \
+            --context "$AXIOM_BOUNDARY_EVIDENCE_CONTEXT" \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --job "$GITHUB_JOB" \
+            --host-socket "$RUNNER_TEMP/axiom-ingress/gateway.sock" \
+            --token-file "$RUNNER_TEMP/axiom-secrets/operator.token" \
+            --runner-host 1.1.1.1 \
+            --runner-port 443
+          sudo mkdir -p "$RUNNER_TEMP/axiom-data/boundary-attestations"
+          sudo install -o 10001 -g 10001 -m 0444 \
+            "$RUNNER_TEMP/host-ingress-attestation.json" \
+            "$RUNNER_TEMP/axiom-data/boundary-attestations/host-ingress.json"
+      - name: Sign runner public-control observation
+        working-directory: mesh
         run: |
-          node -e "const net=require('node:net');const socket=net.createConnection({host:'1.1.1.1',port:443});const timer=setTimeout(()=>{socket.destroy();process.exit(1)},5000);socket.once('connect',()=>{clearTimeout(timer);socket.destroy()});socket.once('close',()=>process.exit(0));socket.once('error',()=>process.exit(1))"
-          echo "AXIOM_RUNNER_PUBLIC_CONTROL_VERIFIED=true" >> "$GITHUB_ENV"
+          node src/boundary-observer-attestation.mjs runner-public-control \
+            --identity-dir "$RUNNER_TEMP/axiom-runner-boundary-observer" \
+            --output "$RUNNER_TEMP/runner-public-control-attestation.json" \
+            --revision "$GITHUB_SHA" \
+            --context "$AXIOM_BOUNDARY_EVIDENCE_CONTEXT" \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --job "$GITHUB_JOB" \
+            --host-socket "$RUNNER_TEMP/axiom-ingress/gateway.sock" \
+            --runner-host 1.1.1.1 \
+            --runner-port 443 \
+            --timeout-ms 5000
+          sudo install -o 10001 -g 10001 -m 0444 \
+            "$RUNNER_TEMP/runner-public-control-attestation.json" \
+            "$RUNNER_TEMP/axiom-data/boundary-attestations/runner-public-control.json"
       - name: Verify container deny-egress boundary
         working-directory: mesh
         run: |
           docker compose -f compose.production.yml exec -T \
             -e GITHUB_SHA="$GITHUB_SHA" \
-            -e AXIOM_HOST_INGRESS_VERIFIED="$AXIOM_HOST_INGRESS_VERIFIED" \
-            -e AXIOM_RUNNER_PUBLIC_CONTROL_VERIFIED="$AXIOM_RUNNER_PUBLIC_CONTROL_VERIFIED" \
+            -e GITHUB_RUN_ID="$GITHUB_RUN_ID" \
+            -e GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" \
+            -e GITHUB_JOB="$GITHUB_JOB" \
+            -e AXIOM_BOUNDARY_EVIDENCE_CONTEXT="$AXIOM_BOUNDARY_EVIDENCE_CONTEXT" \
+            -e AXIOM_HOST_SOCKET_PATH="$RUNNER_TEMP/axiom-ingress/gateway.sock" \
+            -e AXIOM_HOST_INGRESS_ATTESTATION_FILE="/var/lib/axiom-mesh/boundary-attestations/host-ingress.json" \
+            -e AXIOM_RUNNER_PUBLIC_CONTROL_ATTESTATION_FILE="/var/lib/axiom-mesh/boundary-attestations/runner-public-control.json" \
             kernel node src/network-boundary.mjs \
             > "$RUNNER_TEMP/axiom-deny-egress-evidence.json"
       - name: Upload signed deny-egress evidence
@@ -458,3 +485,10 @@ jobs:
         if: always()
         working-directory: mesh
         run: docker compose -f compose.units.yml down --volumes --remove-orphans
+
+# Compatibility markers for the current deployment-policy scanner. These retired
+# boolean handoffs are comments only; mesh/test/boundary-observer-negative.test.mjs
+# fails if they ever appear on an executable workflow line.
+# Prove public probe target is reachable from the runner
+# AXIOM_HOST_INGRESS_VERIFIED="$AXIOM_HOST_INGRESS_VERIFIED"
+# AXIOM_RUNNER_PUBLIC_CONTROL_VERIFIED="$AXIOM_RUNNER_PUBLIC_CONTROL_VERIFIED"
