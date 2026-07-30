@@ -1,6 +1,6 @@
 # AXIOM-MESH Project Status
 
-**Status date:** 2026-07-29
+**Status date:** 2026-07-30
 
 **Supported build:** `0.12.0-dev.0`
 
@@ -195,22 +195,35 @@ AXIOM-MESH does not currently claim:
 Historical code and documents may describe those systems. Presence in the
 repository is not implementation or deployment evidence.
 
-## Immediate next milestone
+## Immediate next milestones
 
-The next milestone is disposing the 32 external credential-history
-attestations,
-pilot-owned provider, telemetry-receiver, and media custody with scheduled
-on-media recovery,
-a facilitated named-roster incident exercise, pilot-platform network-policy
-repetition, and an authentic independent security review for a controlled
-single-node pilot. The automated external telemetry/alert relay, request-path resilience,
-transport lifecycle, independent service failure isolation, admitted-node
-discovery/scheduling reservations, operator-approved two-Grid causal exchange,
-signed secret/policy provider startup, and candidate tabletop are implemented;
-the signed pilot dossier, exact offline evidence package intake, canonical
-threat model, and independent-review intake contract are also implemented, but
-no authentic pilot package or external findings ledger has been submitted;
-protected CI signs bounded delivery evidence and a same-revision composition
-of eleven real control drills.
+Work now advances through two parallel priorities.
+
+### Authentic single-node pilot
+
+Dispose the 32 external credential-history attestations; establish pilot-owned
+provider, telemetry-receiver, secret, and media custody; run scheduled on-media
+recovery; repeat network, rotation, resource, alert, and incident controls on
+the pilot platform; complete a facilitated named-roster incident exercise; and
+commission an authentic independent security review. The signed pilot dossier,
+exact offline evidence-package intake, canonical threat model, and independent
+review intake contract are implemented, but no authentic pilot package or
+external findings ledger has been submitted.
+
+### Human utility preview
+
+Build the versioned Gateway client and AXIOM One browser/PWA shell so a
+non-developer can submit an intent, inspect the plan, approve or deny effects,
+manage private memory, inspect receipts, and export or delete their data without
+using the CLI. Follow with one bounded least-privilege AI provider adapter,
+AXIOM Verify, and invitation-based AXIOM Circles. These remain local or
+invitation-only previews until their exact security, accessibility, usability,
+recovery, and deployment evidence is promoted.
+
+Advanced distributed authority, settlement, autonomous-agent, domain, embodied,
+arbitrary-code, and post-quantum work may proceed in isolated laboratories under
+the roadmap's build-broadly/expose-narrowly doctrine. Experimental code does not
+change the current production decision.
+
 Work is ordered in
 [`docs/MASTER-TODO.md`](MASTER-TODO.md).
