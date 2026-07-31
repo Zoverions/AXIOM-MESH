@@ -17,6 +17,8 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/PRODUCTION-READINESS-TRACKER.md',
   'docs/PROJECT-STATUS-2026.md',
   'docs/REPOSITORY-MIGRATION.md',
+  'docs/architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md',
+  'docs/audits/SCALABILITY-AUDIT-2026-07-30.md',
   'docs/rebuild/PRODUCT-DEFINITION.md',
   'docs/rebuild/REQUIREMENTS.md',
   'docs/rebuild/ROLLBACK.md',

@@ -49,7 +49,8 @@ test('boundary observer verification rejects forged signatures and missing attes
   });
 
   const forged = structuredClone(runnerAttestation);
-  forged.attestation.signature = `${forged.attestation.signature.slice(0, -1)}A`;
+  const replacement = forged.attestation.signature[0] === 'A' ? 'B' : 'A';
+  forged.attestation.signature = `${replacement}${forged.attestation.signature.slice(1)}`;
   assert.throws(
     () => verifyBoundaryObserverAttestation(forged, {
       kind: KINDS.runner,
