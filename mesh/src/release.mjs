@@ -93,6 +93,12 @@ export async function verifyReleaseReadiness() {
     unitCompose: join(MESH_ROOT, 'compose.units.yml'),
     productionDocs: join(MESH_ROOT, 'PRODUCTION.md'),
     workflow: join(REPOSITORY_ROOT, '.github', 'workflows', 'kernel.yml'),
+    benchmarkWorkflow: join(
+      REPOSITORY_ROOT,
+      '.github',
+      'workflows',
+      'chain-verification-benchmark.yml'
+    ),
     repositoryIgnore: join(REPOSITORY_ROOT, '.gitignore')
   };
   const [
@@ -240,7 +246,11 @@ export async function verifyReleaseReadiness() {
   const activeWorkflows = (await readdir(join(REPOSITORY_ROOT, '.github', 'workflows')))
     .filter(name => name.endsWith('.yml') || name.endsWith('.yaml'))
     .sort();
-  if (canonicalJson(activeWorkflows) !== canonicalJson(['kernel.yml'])) {
+  const governedWorkflows = [
+    'chain-verification-benchmark.yml',
+    'kernel.yml'
+  ];
+  if (canonicalJson(activeWorkflows) !== canonicalJson(governedWorkflows)) {
     throw new ValidationError('Unsupported legacy GitHub workflows are still active');
   }
   const inputs = await sourceInputs([
@@ -266,6 +276,7 @@ export async function verifyReleaseReadiness() {
     paths.unitCompose,
     paths.productionDocs,
     paths.workflow,
+    paths.benchmarkWorkflow,
     paths.repositoryIgnore,
     ...CANONICAL_DOCUMENTS.map(path => join(REPOSITORY_ROOT, path))
   ]);
