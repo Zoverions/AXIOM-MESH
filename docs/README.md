@@ -97,6 +97,7 @@ or override a current non-claim.
 - [Mutually authenticated service transport](operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md)
 - [Independent service units](operations/INDEPENDENT-SERVICE-UNITS.md)
 - [Explicit service network policy](operations/EXPLICIT-SERVICE-NETWORK-POLICY.md)
+- [Versioned Gateway client contract](operations/GATEWAY-CLIENT-CONTRACT.md)
 - [Admitted-node discovery and scheduling](operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md)
 - [Operator-approved online causal exchange](operations/ONLINE-CAUSAL-EXCHANGE.md)
 - [Deployment-independent providers](operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md)

@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=b52493c528d286863de0acb16dbf5f9f303867596c6762a3601d63c6cf911185 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=5a0f2e0dcad07c4ebc077c314b58c408a57aa71cb8d83e05a0655dabe7a48b1c -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -93,9 +93,10 @@ Build:
 - **AXIOM Managed Node** — optional supported operations without platform data
   ownership.
 
-The planned sequence is a versioned Gateway client and browser/PWA shell,
-followed by one bounded AI provider and useful personal workflows, then
-selective sharing, Verify, and Circles.
+The versioned same-origin Gateway client contract is implemented. The next
+step is the AXIOM One browser/PWA shell, followed by one bounded AI provider
+and useful personal workflows, then selective sharing, Verify, and Circles.
+See the [Gateway client contract](docs/operations/GATEWAY-CLIENT-CONTRACT.md).
 
 ### Frontier incubation
 

@@ -303,6 +303,12 @@ The Gateway exposes:
 Every authenticated endpoint requires `Authorization: Bearer ...`. Intent
 submission also requires an `Idempotency-Key` header.
 
+The current machine-readable client contract covers all 27 authenticated
+routes with relative-only targets, explicit schemas and errors, bounded
+responses/timeouts, `AbortSignal` cancellation, and stable idempotent replay.
+Run `npm run gateway-client:check` and see the
+[Gateway client contract](../docs/operations/GATEWAY-CLIENT-CONTRACT.md).
+
 `GET /health` and `GET /ready` are the only unauthenticated operational
 probes. They disclose only liveness/readiness and the kernel version.
 `GET /v1/operations` returns the dependency-aware four-service report and

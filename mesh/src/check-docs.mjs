@@ -31,6 +31,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md',
   'docs/operations/AUTOMATED-SOURCE-SETUP.md',
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md',
+  'docs/operations/GATEWAY-CLIENT-CONTRACT.md',
   'docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md',
   'docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md',
   'docs/operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md',
@@ -98,6 +99,15 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Dependency and lifecycle policy',
     '## CI and production separation',
     '## Failure behavior and non-claims'
+  ],
+  'docs/operations/GATEWAY-CLIENT-CONTRACT.md': [
+    '## Purpose and boundary',
+    '## Current route inventory',
+    '## Intent requests and idempotency',
+    '## Cancellation, timeout, and response bounds',
+    '## Error contract',
+    '## Verification and compatibility changes',
+    '## Non-claims and next application boundary'
   ],
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md': [
     '## Enforced policy boundary',
@@ -187,6 +197,7 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md': 4_000,
   'docs/operations/AUTOMATED-SOURCE-SETUP.md': 5_000,
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md': 6_000,
+  'docs/operations/GATEWAY-CLIENT-CONTRACT.md': 6_000,
   'docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md': 4_500,
   'docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md': 4_500,
   'docs/operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md': 5_000,
@@ -299,10 +310,12 @@ async function verifySupportedDocumentationBoundary(repositoryRoot) {
   }
 }
 
-async function repositoryMarkdownFiles(directory, prefix = '') {
+export async function repositoryMarkdownFiles(directory, prefix = '') {
   const files = [];
   const excludedDirectories = new Set(['.git', '.data', 'node_modules']);
-  for (const entry of await readdir(directory, { withFileTypes: true })) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  if (prefix && entries.some(entry => entry.name === '.git')) return files;
+  for (const entry of entries) {
     const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
     if (entry.isDirectory()) {
       if (!excludedDirectories.has(entry.name)) {

@@ -217,7 +217,11 @@ export async function createGatewayService(config = meshConfig()) {
           409
         );
       }
-      return { ...existing, idempotent_replay: true };
+      return {
+        ...existing,
+        ...existing.result_json,
+        idempotent_replay: true
+      };
     }
   });
 

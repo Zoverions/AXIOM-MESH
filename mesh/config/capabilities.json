@@ -236,6 +236,20 @@
       "evidence": ["mesh/test/kernel.test.mjs"]
     },
     {
+      "id": "ui.gateway-client",
+      "family": "operations",
+      "status": "implemented",
+      "summary": "A versioned same-origin Gateway client contract covers all 27 authenticated routes with exact route parity, bounded responses and timeouts, AbortSignal cancellation, stable idempotent intent results, explicit errors, and no direct internal-service access.",
+      "evidence": [
+        "mesh/test/gateway-client-contract.test.mjs",
+        "packages/axiom-client/index.mjs",
+        "mesh/src/lib/gateway-client-contract.mjs",
+        "mesh/config/gateway-client-contract.json",
+        "mesh/config/gateway-client-contract.schema.json",
+        "docs/operations/GATEWAY-CLIENT-CONTRACT.md"
+      ]
+    },
+    {
       "id": "ui.cli",
       "family": "operations",
       "status": "implemented",

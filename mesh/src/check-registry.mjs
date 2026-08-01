@@ -37,6 +37,7 @@ const REQUIRED_CAPABILITIES = new Set([
   'portability.export',
   'portability.import',
   'ui.operator-api',
+  'ui.gateway-client',
   'ui.cli',
   'ui.dashboard',
   'operations.setup-automation',

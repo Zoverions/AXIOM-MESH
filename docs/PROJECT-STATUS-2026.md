@@ -1,6 +1,6 @@
 # AXIOM-MESH Project Status
 
-**Status date:** 2026-07-30
+**Status date:** 2026-08-01
 
 **Supported build:** `0.12.0-dev.0`
 
@@ -20,7 +20,7 @@ that tag are identified only as the current 0.12 development build.
 
 The executable source of truth is
 [`mesh/config/capabilities.json`](../mesh/config/capabilities.json). The
-generated [capability status](rebuild/STATUS.md) records 27 implemented, 2
+generated [capability status](rebuild/STATUS.md) records 28 implemented, 2
 experimental, 3 specified, 9 adapter-required, and 4 disabled capabilities.
 
 ## Implemented kernel scope
@@ -214,10 +214,13 @@ external findings ledger has been submitted.
 
 ### Human utility preview
 
-Build the versioned Gateway client and AXIOM One browser/PWA shell so a
-non-developer can submit an intent, inspect the plan, approve or deny effects,
-manage private memory, inspect receipts, and export or delete their data without
-using the CLI. Follow with one bounded least-privilege AI provider adapter,
+The versioned Gateway client contract and zero-dependency same-origin client
+are implemented for all 27 authenticated routes, including schema, explicit
+error, cancellation, timeout, response-bound, idempotency, source-parity, and
+real-stack compatibility evidence. Build the AXIOM One browser/PWA shell next
+so a non-developer can submit an intent, inspect the plan, approve or deny
+effects, manage private memory, inspect receipts, and export or delete their
+data without using the CLI. Follow with one bounded least-privilege AI provider adapter,
 AXIOM Verify, and invitation-based AXIOM Circles. These remain local or
 invitation-only previews until their exact security, accessibility, usability,
 recovery, and deployment evidence is promoted.

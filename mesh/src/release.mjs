@@ -24,6 +24,11 @@ import {
   validateServiceNetworkPolicy,
   validateServiceRouteImplementation
 } from './lib/service-network-policy.mjs';
+import {
+  validateGatewayClientContract,
+  validateGatewayClientContractSchema,
+  validateGatewayClientRouteImplementation
+} from './lib/gateway-client-contract.mjs';
 
 const REPOSITORY_ROOT = dirname(MESH_ROOT);
 const SUPPORTED_DEPENDENCY_MANIFESTS = new Set([
@@ -89,6 +94,17 @@ export async function verifyReleaseReadiness() {
       'config',
       'service-network-policy.json'
     ),
+    gatewayClientContract: join(
+      MESH_ROOT,
+      'config',
+      'gateway-client-contract.json'
+    ),
+    gatewayClientSchema: join(
+      MESH_ROOT,
+      'config',
+      'gateway-client-contract.schema.json'
+    ),
+    gatewaySource: join(MESH_ROOT, 'src', 'gateway', 'server.mjs'),
     nodeVersionPin: join(MESH_ROOT, '.node-version'),
     package: join(MESH_ROOT, 'package.json'),
     lock: join(MESH_ROOT, 'package-lock.json'),
@@ -121,6 +137,9 @@ export async function verifyReleaseReadiness() {
     resilienceDrillPolicy,
     setupPolicy,
     serviceNetworkPolicy,
+    gatewayClientContract,
+    gatewayClientSchema,
+    gatewaySource,
     nodeVersionPin,
     packageJson,
     lock,
@@ -146,6 +165,9 @@ export async function verifyReleaseReadiness() {
     readJson(paths.resilienceDrillPolicy),
     readJson(paths.setupPolicy),
     readJson(paths.serviceNetworkPolicy),
+    readJson(paths.gatewayClientContract),
+    readJson(paths.gatewayClientSchema),
+    readFile(paths.gatewaySource, 'utf8'),
     readFile(paths.nodeVersionPin, 'utf8'),
     readJson(paths.package),
     readJson(paths.lock),
@@ -210,6 +232,26 @@ export async function verifyReleaseReadiness() {
       )
     }
   });
+  const gatewayClient = validateGatewayClientContract(gatewayClientContract);
+  const gatewayClientSchemaResult = validateGatewayClientContractSchema(
+    gatewayClientSchema
+  );
+  const gatewayClientRoutes = validateGatewayClientRouteImplementation({
+    contract: gatewayClientContract,
+    source: gatewaySource
+  });
+  const gatewayClientEvidence = {
+    schema: gatewayClient.schema,
+    contract_digest: gatewayClient.contract_digest,
+    json_schema_digest: gatewayClientSchemaResult.schema_digest,
+    routes: gatewayClient.routes,
+    implemented_routes: gatewayClientRoutes.implemented_routes,
+    stable_errors: gatewayClient.stable_errors,
+    same_origin_only: gatewayClientContract.boundary.request_target
+      === 'same-origin-relative-path',
+    direct_service_access: gatewayClientContract.boundary
+      .direct_internal_service_access
+  };
   if (packageJson.version !== registry.kernel_version || lock.version !== packageJson.version) {
     throw new ValidationError('Package, lockfile, and capability registry versions must match');
   }
@@ -299,6 +341,7 @@ export async function verifyReleaseReadiness() {
     throw new ValidationError('Unsupported legacy GitHub workflows are still active');
   }
   const inputs = await sourceInputs([
+    join(REPOSITORY_ROOT, 'packages'),
     join(MESH_ROOT, 'src'),
     join(MESH_ROOT, 'config'),
     join(MESH_ROOT, 'test'),
@@ -392,6 +435,7 @@ export async function verifyReleaseReadiness() {
     resilience_drill: resilienceDrill,
     setup,
     service_network: deployment.service_network_policy,
+    gateway_client: gatewayClientEvidence,
     operator_surface_digest: digestObject(operatorSurface),
     deployment,
     migrations: migrationEvidence,
@@ -409,6 +453,7 @@ export async function verifyReleaseReadiness() {
     registry: registryResult,
     setup,
     service_network: deployment.service_network_policy,
+    gateway_client: gatewayClientEvidence,
     deployment,
     documentation,
     source_boundary: sourceBoundary,

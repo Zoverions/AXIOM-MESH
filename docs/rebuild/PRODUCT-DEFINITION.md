@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=b52493c528d286863de0acb16dbf5f9f303867596c6762a3601d63c6cf911185 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=5a0f2e0dcad07c4ebc077c314b58c408a57aa71cb8d83e05a0655dabe7a48b1c -->
 # AXIOM-MESH Product Definition
 
 **Status:** canonical rebuild and product definition
@@ -364,7 +364,8 @@ current project status, or deployment evidence.
 Work proceeds in parallel:
 
 1. close authentic single-node pilot blockers;
-2. build the versioned Gateway client and AXIOM One human shell;
+2. maintain the implemented versioned Gateway client and build the AXIOM One
+   human shell;
 3. add one bounded AI provider and useful personal workflows;
 4. build AXIOM Verify and invitation-based Circles;
 5. establish remote dispatch and result provenance before distributed compute;
