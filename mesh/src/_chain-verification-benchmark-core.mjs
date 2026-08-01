@@ -10,7 +10,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   ValidationError,
   digestObject,
@@ -25,7 +25,9 @@ import { GridStore } from './grid/store.mjs';
 
 const EVIDENCE_SCHEMA = 'axiom-chain-verification-benchmark.v1';
 const REVISION = /^[a-f0-9]{40}$/;
-const WORKER = new URL('./chain-verification-benchmark-worker.mjs', import.meta.url);
+const WORKER = fileURLToPath(
+  new URL('./chain-verification-benchmark-worker.mjs', import.meta.url)
+);
 
 export async function runChainVerificationBenchmark({
   eventCount = 50_000,
@@ -235,7 +237,7 @@ function benchmarkEvent(index) {
 
 function runWorker(mode, dataDir) {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [WORKER.pathname, mode, dataDir], {
+    const child = spawn(process.execPath, [WORKER, mode, dataDir], {
       stdio: ['ignore', 'pipe', 'pipe'],
       env: process.env
     });

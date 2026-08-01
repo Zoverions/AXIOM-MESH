@@ -26,7 +26,6 @@ function acceptedEvent(index) {
 
 async function checkpointFixture(t, { checkpointInterval = 10_000 } = {}) {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-checkpoint-'));
-  t.after(() => rm(dataDir, { recursive: true, force: true }));
   const identity = await ensureMeshIdentity(dataDir, 'grid', { create: true });
   const protector = await loadDataProtector({ dataDir, autoBootstrap: true });
   const store = new GridStore({
@@ -36,12 +35,13 @@ async function checkpointFixture(t, { checkpointInterval = 10_000 } = {}) {
     protector,
     checkpointInterval
   });
-  t.after(() => {
+  t.after(async () => {
     try {
       store.close();
     } catch {
       // The test may close the store deliberately before restart.
     }
+    await rm(dataDir, { recursive: true, force: true });
   });
   return { dataDir, identity, protector, store };
 }
