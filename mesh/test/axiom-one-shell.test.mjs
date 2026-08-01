@@ -14,10 +14,10 @@ test('AXIOM One preview policy and static boundary are exact', async () => {
   const result = await checkAxiomOnePreview();
   assert.equal(result.valid, true);
   assert.equal(result.schema, 'axiom-one-preview.v1');
-  assert.equal(result.kernel_version, '0.12.0-dev.1');
+  assert.equal(result.kernel_version, '0.12.0-dev.2');
   assert.equal(result.status, 'experimental-local-preview');
   assert.equal(result.surfaces, 7);
-  assert.equal(result.gateway_routes, 12);
+  assert.equal(result.gateway_routes, 14);
   assert.equal(result.bind_host, '127.0.0.1');
   assert.equal(result.gateway_target, 'same-origin-relative-v1');
   assert.equal(result.token_persistence, 'memory-only');
@@ -25,6 +25,10 @@ test('AXIOM One preview policy and static boundary are exact', async () => {
   assert.equal(result.public_shell_cache, true);
   assert.equal(result.api_cache, false);
   assert.equal(result.remote_origins_allowed, false);
+  assert.equal(result.explained_actions, 4);
+  assert.equal(result.memory_lifecycle_status, 'experimental-bounded-lifecycle');
+  assert.equal(result.hard_delete, false);
+  assert.equal(result.restore, false);
   assert.match(result.policy_digest, /^[a-f0-9]{64}$/);
   assert.match(result.assets_digest, /^[a-f0-9]{64}$/);
 
@@ -67,7 +71,7 @@ test('AXIOM One serves a hardened shell and proxies only contract routes', async
     });
     const payload = req.url === '/v1/status'
       ? {
-          kernel_version: '0.12.0-dev.1',
+          kernel_version: '0.12.0-dev.2',
           claim_source_digest: 'a'.repeat(64),
           runtime: {},
           capability_counts: {}
@@ -120,7 +124,7 @@ test('AXIOM One serves a hardened shell and proxies only contract routes', async
   assert.deepEqual(await health.json(), {
     schema: 'axiom-one-preview.v1',
     status: 'live',
-    kernel_version: '0.12.0-dev.1',
+    kernel_version: '0.12.0-dev.2',
     support: 'experimental-local-preview'
   });
 
@@ -132,7 +136,7 @@ test('AXIOM One serves a hardened shell and proxies only contract routes', async
     }
   });
   assert.equal(status.status, 200);
-  assert.equal((await status.json()).kernel_version, '0.12.0-dev.1');
+  assert.equal((await status.json()).kernel_version, '0.12.0-dev.2');
   assert.equal(observed.length, 1);
   assert.equal(observed[0].url, '/v1/status');
   assert.equal(observed[0].authorization, 'Bearer preview-fixture-token');
@@ -196,6 +200,7 @@ test('AXIOM One preview traverses the real four-service status and intent path',
   const lease = await reserveProductionPortBlock('AXIOM One preview test');
   const basePort = lease.base_port;
   const token = `preview-${'p'.repeat(40)}`;
+  const outsiderToken = `preview-${'o'.repeat(40)}`;
   let stack;
   let preview;
   t.after(async () => {
@@ -226,6 +231,12 @@ test('AXIOM One preview traverses the real four-service status and intent path',
         type: 'human',
         roles: ['administrator'],
         scopes: ['*']
+      },
+      [outsiderToken]: {
+        id: 'axiom-one-preview-outsider',
+        type: 'human',
+        roles: ['administrator'],
+        scopes: ['*']
       }
     }
   });
@@ -233,18 +244,23 @@ test('AXIOM One preview traverses the real four-service status and intent path',
     port: 0,
     gatewayOrigin: `http://127.0.0.1:${basePort}`
   });
+  const previewRequest = (path, options) => {
+    const headers = new Headers(options.headers);
+    headers.set('origin', preview.url);
+    headers.set('sec-fetch-site', 'same-origin');
+    return fetch(`${preview.url}${path}`, { ...options, headers });
+  };
   const client = createGatewayClient({
     token,
-    request: (path, options) => {
-      const headers = new Headers(options.headers);
-      headers.set('origin', preview.url);
-      headers.set('sec-fetch-site', 'same-origin');
-      return fetch(`${preview.url}${path}`, { ...options, headers });
-    }
+    request: previewRequest
+  });
+  const outsider = createGatewayClient({
+    token: outsiderToken,
+    request: previewRequest
   });
 
   const status = await client.call('status.get');
-  assert.equal(status.kernel_version, '0.12.0-dev.1');
+  assert.equal(status.kernel_version, '0.12.0-dev.2');
   assert.equal(status.runtime.grid.mode, 'single-node-transparency-log');
   const intent = await client.call('intents.submit', {
     body: {
@@ -257,6 +273,81 @@ test('AXIOM One preview traverses the real four-service status and intent path',
   assert.equal(intent.status, 'completed');
   assert.equal(intent.message, 'AXIOM One real path');
   assert.ok(intent.evidence);
+
+  const created = await client.call('intents.submit', {
+    body: {
+      action: 'memory.put',
+      input: {
+        kind: 'note',
+        content: { title: 'AXIOM One memory', text: 'owner-scoped private record' },
+        metadata: { source: 'axiom-one-local-preview' }
+      },
+      purpose: 'private-memory-recording'
+    },
+    idempotencyKey: 'axiom-one-memory-create-0001'
+  });
+  assert.equal(created.status, 'completed');
+  assert.match(created.object_id, /^memory_[a-f0-9]{64}$/);
+  const memory = await client.call('memory.list');
+  assert.equal(memory.objects.length, 1);
+  assert.equal(memory.objects[0].object_id, created.object_id);
+  assert.equal(memory.objects[0].payload_json.content.title, 'AXIOM One memory');
+
+  const exported = await client.call('intents.submit', {
+    body: {
+      action: 'export.create',
+      input: { types: ['memory'], object_ids: [created.object_id] },
+      purpose: 'owner-selective-memory-export'
+    },
+    idempotencyKey: 'axiom-one-memory-export-0001'
+  });
+  assert.equal(exported.status, 'completed');
+  const exportRecord = await client.call('exports.get', {
+    params: { id: exported.export_id }
+  });
+  assert.equal(exportRecord.principal, 'axiom-one-preview-operator');
+  assert.deepEqual(exportRecord.scope_json.object_ids, [created.object_id]);
+  const exportBundle = await client.call('export_bundles.get', {
+    params: { id: exported.export_id }
+  });
+  assert.match(exportBundle.bundle, new RegExp(created.object_id));
+  assert.match(exportBundle.bundle, /"type":"memory_object"/);
+
+  const hiddenMemory = await outsider.call('memory.list', {
+    query: { owner: 'axiom-one-preview-operator' }
+  });
+  assert.equal(hiddenMemory.objects.length, 0);
+  await assert.rejects(
+    outsider.call('exports.get', { params: { id: exported.export_id } }),
+    error => error.code === 'export_not_found'
+  );
+  await assert.rejects(
+    outsider.call('intents.submit', {
+      body: {
+        action: 'memory.tombstone',
+        input: { object_id: created.object_id, reason: 'unauthorized removal' },
+        confirmations: ['confirm:memory.tombstone']
+      },
+      idempotencyKey: 'axiom-one-outsider-tombstone-0001'
+    }),
+    error => error.code === 'validation_error'
+  );
+
+  const tombstoned = await client.call('intents.submit', {
+    body: {
+      action: 'memory.tombstone',
+      input: {
+        object_id: created.object_id,
+        reason: 'Owner removed this record through AXIOM One local preview.'
+      },
+      confirmations: ['confirm:memory.tombstone'],
+      purpose: 'owner-memory-tombstone'
+    },
+    idempotencyKey: 'axiom-one-memory-tombstone-0001'
+  });
+  assert.equal(tombstoned.status, 'completed');
+  assert.equal(tombstoned.object_id, created.object_id);
+  assert.equal((await client.call('memory.list')).objects.length, 0);
 });
 
 function rawRequest(port, path, headers) {

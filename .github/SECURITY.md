@@ -6,7 +6,7 @@ AXIOM-MESH uses a rolling support model for the clean-room kernel.
 
 | Version or branch | Support status |
 |---|---|
-| `0.12.0-dev.1` on `main` | Supported development line |
+| `0.12.0-dev.2` on `main` | Supported development line |
 | Published `v0.11.0` | Supported production candidate |
 | `deprecated/pre-0.12-documentation-corpus` | Unsupported read-only documentation archive |
 | `archive/legacy-main-pre-clean-room-2026-05-21` | Unsupported immutable code archive |

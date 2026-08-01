@@ -26,7 +26,12 @@ test('human explanation contract exactly covers stable errors and kernel events'
   );
   assert.equal(Object.keys(contract.gateway_outcomes).length, 20);
   assert.equal(Object.keys(contract.event_kinds).length, 37);
-  assert.deepEqual(Object.keys(contract.actions), ['system.echo']);
+  assert.deepEqual(Object.keys(contract.actions).sort(), [
+    'export.create',
+    'memory.put',
+    'memory.tombstone',
+    'system.echo'
+  ]);
   assert.equal(
     contract.non_claims.includes('authoritative-pre-execution-kernel-plan'),
     true
@@ -35,6 +40,10 @@ test('human explanation contract exactly covers stable errors and kernel events'
   const weakened = structuredClone(contract);
   weakened.actions['system.echo'].external_egress = true;
   assert.throws(() => validateHumanContract(weakened), /boundary is weakened/);
+
+  const weakenedTombstone = structuredClone(contract);
+  weakenedTombstone.actions['memory.tombstone'].required_confirmations = [];
+  assert.throws(() => validateHumanContract(weakenedTombstone), /boundary is weakened/);
 
   const missingOutcome = structuredClone(contract);
   delete missingOutcome.gateway_outcomes.request_timeout;
@@ -72,6 +81,37 @@ test('request review names every bounded effect without granting authority', () 
     () => presenter.requestPreview({ action: 'system.echo', input: [] }),
     /input is invalid/
   );
+
+  const create = presenter.requestPreview({
+    action: 'memory.put',
+    input: { kind: 'note', content: { title: 'Private', text: 'Bounded' } },
+    purpose: 'private-memory-recording'
+  });
+  const createFacts = Object.fromEntries(create.facts.map(item => [item.label, item.value]));
+  assert.match(createFacts.Destination, /encrypted local Grid/);
+  assert.equal(createFacts['External transfer'], 'None');
+  assert.equal(createFacts.Confirmation, 'Not required');
+
+  const tombstone = presenter.requestPreview({
+    action: 'memory.tombstone',
+    input: { object_id: `memory_${'a'.repeat(64)}`, reason: 'owner removal' },
+    confirmations: ['confirm:memory.tombstone'],
+    purpose: 'owner-memory-tombstone'
+  });
+  const tombstoneFacts = Object.fromEntries(
+    tombstone.facts.map(item => [item.label, item.value])
+  );
+  assert.equal(tombstoneFacts.Confirmation, 'Required');
+  assert.equal(tombstoneFacts['Exact confirmation'], 'confirm:memory.tombstone');
+  assert.match(tombstoneFacts.Reversibility, /no restore action/i);
+
+  const selectiveExport = presenter.requestPreview({
+    action: 'export.create',
+    input: { types: ['memory'], object_ids: [`memory_${'a'.repeat(64)}`] },
+    purpose: 'owner-selective-memory-export'
+  });
+  assert.match(selectiveExport.summary, /not an authoritative kernel plan/);
+  assert.equal(selectiveExport.facts.some(item => item.value === 'None'), true);
 });
 
 test('completed intents require exact policy, plan, and execution evidence', () => {

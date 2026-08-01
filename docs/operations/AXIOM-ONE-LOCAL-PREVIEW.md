@@ -1,6 +1,6 @@
 # AXIOM One Local Preview
 
-**Applies to:** `0.12.0-dev.1`
+**Applies to:** `0.12.0-dev.2`
 
 **Policy schema:** `axiom-one-preview.v1`
 
@@ -13,10 +13,11 @@
 The current source includes an experimental AXIOM One browser/PWA shell under
 [`apps/axiom-one/`](../../apps/axiom-one/). It lets a developer or evaluator
 connect a browser to the local development node, see current node status,
-review and exercise one transparent bounded intent, understand stable denials
-and uncertain outcomes, distinguish approval states, read memory metadata,
-inspect a plain-language event timeline, and retain access to the exact raw
-Gateway responses without using the CLI for those interactions.
+review and exercise four explicitly bounded actions, understand stable denials
+and uncertain outcomes, distinguish approval states, create and tombstone one
+private note at a time, create a selective local export, inspect a
+plain-language event timeline, and retain access to the exact raw Gateway
+responses without using the CLI for those interactions.
 
 The preview is executable evidence that the human-product layer can remain
 outside the trusted `mesh/` kernel and consume only the versioned
@@ -28,6 +29,10 @@ device, accessibility, usability, packaging, update, and support gates have
 not been satisfied. `UX-003` is also in progress: a bounded explanation
 contract now exists, but authoritative policy-bound pre-execution plans,
 consequential approval actions, and human comprehension evidence do not.
+`UX-004` is in progress: the Vault exposes one governed owner-scoped note,
+tombstone, and selective-export path, while correction, provenance editing,
+hard deletion, restore, bulk ingestion, export deletion, and sharing remain
+unavailable.
 
 The machine-readable preview policy is
 [`apps/axiom-one/app-policy.json`](../../apps/axiom-one/app-policy.json). Its
@@ -95,12 +100,12 @@ product organization, but only the functions in this table are current.
 | Overview | Reads kernel version, runtime summary, and capability counts | `status.get`, `capabilities.list` | Authenticated read; no promotion inference |
 | Ask | Reviews one `system.echo` request before sending, exposes effect/provider/destination/information/retention/timeout/cancellation/reversibility, then presents completion or a stable fail-closed outcome | `intents.submit` | Transparent deterministic test; review is not a kernel plan or grant; same-key recovery only when outcome is uncertain |
 | Approvals | Explains active, expired, consumed, and unknown approval records visible to the principal | `approvals.list` | Read-only; cannot grant, widen, renew, revoke, or self-approve authority |
-| Vault | Lists visible memory objects, edges, and raw metadata | `memory.list` | Read-only; ingestion, tombstone, deletion, export, and recovery UI pending |
+| Vault | Lists active owner-scoped memory objects, creates one private note at a time, reviews an explicit tombstone, creates a single-object selective local export, and reveals its record or bundle only on a separate user action | `memory.list`, `intents.submit`, `exports.get`, `export_bundles.get` | Bounded lifecycle only; no hard delete, restore, bulk ingestion, sharing, browser persistence, or automatic bundle retrieval |
 | Receipts | Explains up to 50 visible integrity-linked events using an exact 37-kind vocabulary | `events.list` | Raw payload remains visible; mapped integrity evidence is not external truth |
 | Share | Displays explicit unavailable Selective Sharing and Circles states | none | Sends nothing; sharing and Circles remain disabled |
 | Explore | Reads selected raw status, registry, operations, node, capsule, import, backup, and audit data | eight contract-listed read routes | Scope denials remain visible; raw data is not reinterpreted as success |
 
-The policy lists exactly 12 client route identifiers. The checker requires
+The policy lists exactly 14 client route identifiers. The checker requires
 every identifier to exist in the active Gateway client contract. The loopback
 server independently matches method, path, and query names against that
 contract before proxying. `/internal/...`, unlisted `/v1/...`, a wrong method,
@@ -128,10 +133,13 @@ shown in the raw request details.
 This projection is deliberately described as a browser explanation, not an
 authoritative kernel plan. The current public intent API evaluates and executes
 one request atomically; it does not expose a separately bound preview/execute
-protocol. Consequential actions therefore remain unavailable in this shell.
-They must not be enabled until a policy-bound plan can be reviewed before
-execution and the eventual grant is demonstrably bound to that exact plan,
-policy, data scope, destination, provider, constraints, and approval state.
+protocol. The bounded `memory.tombstone` form therefore includes the exact
+kernel confirmation only after an explicit human review, but it does not claim
+an independently granted approval or a reusable generic consequential-action
+protocol. Broader consequential actions must not be enabled until a
+policy-bound plan can be reviewed before execution and the eventual grant is
+demonstrably bound to that exact plan, policy, data scope, destination,
+provider, constraints, and approval state.
 
 ## Human explanation and uncertainty contract
 
@@ -141,12 +149,47 @@ shell assets. They contain no token, user record, remote origin, runtime policy
 override, or executable authority. The release checker independently verifies
 their exact action, error, event, approval, and non-claim inventories.
 
-The current action inventory contains exactly `system.echo`. It is labelled a
-`non-consequential-local-test`, declares no external provider or egress, and
-requires no confirmation or independent approval. The browser cannot use the
-contract to explain or submit another action. Adding an action requires an
-explicit contract, checker, tests, documentation, and the applicable human and
-security gates; a generic or unknown action fails closed.
+The current action inventory contains exactly `system.echo`, `memory.put`,
+`memory.tombstone`, and `export.create`. The echo is labelled a
+`non-consequential-local-test`; the lifecycle actions are labelled a durable
+local memory write, durable local tombstone, or local selective-export write.
+All four declare no external provider or egress. `memory.tombstone` requires
+the exact `confirm:memory.tombstone` value; none declares an independent
+approval under the current kernel policy. The browser cannot use the contract
+to explain or submit another action. Adding an action requires an explicit
+contract, checker, tests, documentation, and the applicable human and security
+gates; a generic or unknown action fails closed.
+
+## Governed memory lifecycle
+
+The Vault implements one deliberately narrow owner-scoped path:
+
+- **Create private note** submits `memory.put` with a human-supplied title and
+  note, the fixed `note` kind, and the fixed `axiom-one-local-preview` source. The
+  browser does not supply or override the owner identity; Gateway authentication
+  and Grid authorization establish it.
+- **List** reads active objects visible to the authenticated principal. It does
+  not reveal another principal's object merely because an owner query is
+  supplied.
+- **Review removal** freezes one exact `memory.tombstone` request with a fixed
+  reason and `confirm:memory.tombstone`. A tombstone removes the object from the
+  active list; it is not a claim of physical erasure, secure deletion, or
+  restoration support.
+- **Review selective export** freezes one exact `export.create` request for the
+  selected object and `memory` type. The kernel constructs the authenticated
+  export record, bundle, identity, and evidence. It does not transfer the
+  bundle to an external recipient or background service.
+- **Inspect export record** reads owner-scoped export metadata. **Reveal bundle
+  in this page** is a separate explicit action that reads the owner-scoped
+  bundle only into the current page and raw-details view. There is no automatic
+  reveal, download button, browser database, or persistent response cache.
+
+Real-stack tests prove the create, list, selective export, record inspection,
+bundle inspection, and tombstone path through the preview proxy, Gateway,
+Hypervisor, Sandbox, and Grid. A second authenticated principal is denied the
+owner's export record and sees no owner memory when it attempts an owner query;
+it also cannot tombstone the owner's object. This is bounded evidence, not a
+claim that browser lifecycle or export controls are production complete.
 
 Every one of the 20 stable Gateway client error codes has one fixed outcome
 class and operator next step:
@@ -331,15 +374,18 @@ the active Gateway contract, the no-storage/no-injection/no-remote-origin
 browser boundary, semantic document markers, CSP server markers, service-worker
 API exclusion, reduced motion, manifest identity, exact human contract
 identity, all 20 stable outcome mappings, all 37 current event mappings, the
-one-action/no-authority boundary, and secret-free asset digests. The normal
+four-action/no-generic-authority boundary, governed lifecycle policy, and
+secret-free asset digests. The normal
 source gate also runs this checker and the focused server and human
 presentation tests.
 
 The test suite proves:
 
-- exact policy status and seven-surface/twelve-route inventory;
-- exact one-action human contract and all stable Gateway error/current event
+- exact policy status and seven-surface/fourteen-route inventory;
+- exact four-action human contract and all stable Gateway error/current event
   mappings;
+- frozen review bodies for private-note creation, exact-confirmation tombstone,
+  and single-object selective local export;
 - fail-closed completed-result evidence validation and unknown-code behavior;
 - visible confirmation and independently bound approval requirements without
   automatic confirmation or self-approval;
@@ -353,8 +399,11 @@ The test suite proves:
 - required CSP, framing, opener, and content-type headers;
 - secret-free health output;
 - exact authenticated status and intent forwarding;
-- a real status read and bounded echo intent through the preview proxy,
-  Gateway, Hypervisor, Sandbox, and Grid;
+- a real status read, bounded echo intent, private-note create/list/tombstone,
+  selective export, export-record inspection, and explicit bundle inspection
+  through the preview proxy, Gateway, Hypervisor, Sandbox, and Grid;
+- cross-principal non-disclosure of owner memory and export records, plus denial
+  of an outsider tombstone request;
 - no cookie forwarding;
 - cross-origin rejection before upstream I/O;
 - rejection of unlisted `/v1/` routes before upstream I/O.
@@ -363,11 +412,14 @@ Release verification includes the preview policy and asset digests, and the
 current-build source input digest includes `apps/`. This binds what was tested;
 it does not promote the preview.
 
-Rollback is source rollback. Stop `npm run axiom-one`, remove any installed PWA
-entry and its public shell cache through the browser, and return to the prior
-verified commit. No preview migration or user-data store exists in this
-increment. Kernel/Grid rollback and recovery procedures remain separate and
-must not be replaced by clearing browser data.
+Rollback of the shell is source rollback. Stop `npm run axiom-one`, remove any
+installed PWA entry and its public shell cache through the browser, and return
+to the prior verified commit. The preview has no browser data migration or
+persistent user-data store, but lifecycle actions write durable kernel/Grid
+records: source rollback or clearing browser data does not erase memory,
+tombstones, exports, bundles, or evidence already committed. Kernel/Grid
+backup, restore, import, and recovery procedures remain separate and must not
+be replaced by browser cleanup.
 
 Expected visible failures include invalid or retired token, missing scope,
 Gateway unavailable, request cancelled, timeout, response too large, malformed
@@ -392,11 +444,13 @@ This increment does not complete or claim:
 - secure persistent authentication, device enrolment, idle expiry, or device
   revocation;
 - an authoritative policy-bound pre-execution kernel plan/execute protocol;
-- consequential action, confirmation, independent approval, consent, or
-  revocation controls;
+- a generic consequential-action protocol, independently granted approval,
+  consent administration, or authority revocation controls;
 - completed human comprehension/usability evidence for the experimental
   explanation mappings;
-- memory ingestion, correction, tombstone, delete, export, or restore UI;
+- arbitrary or bulk memory ingestion, correction, provenance editing, hard
+  deletion, restore, export deletion, automatic bundle retrieval, or a safe
+  download workflow;
 - selective sharing, remote recipients, or AXIOM Circles;
 - an external or local AI provider;
 - useful AI workflows or model-output truth;
@@ -405,8 +459,10 @@ This increment does not complete or claim:
 - production credentials, live deployment, federation, consensus, or
   production promotion.
 
-The next work is to expose the governed memory and export/deletion lifecycle,
-design a separately bound consequential plan/execute and approval protocol,
-run keyboard/screen-reader/comprehension fixtures, and design the separate
-browser session/device boundary. Share, Circles, and AI controls must remain
-visibly unavailable until their own contracts and negative evidence exist.
+The next work is to complete the remaining governed-memory gates, including
+correction/provenance semantics, deletion and restore policy, export retention
+and deletion, and a reviewed download boundary; design a separately bound
+consequential plan/execute and approval protocol; run keyboard, screen-reader,
+and comprehension fixtures; and design the separate browser session/device
+boundary. Share, Circles, and AI controls must remain visibly unavailable until
+their own contracts and negative evidence exist.

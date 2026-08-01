@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.1; digest=3731ebf476d50318894aa09d8233572c186c2b930e5f757ab0c4c4f83e8c1a16 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.2; digest=0dde1db8fbc00f4dc8ea8252cfe163331b4fa486b1caa28819b6d2d6f5bf1f99 -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -39,7 +39,7 @@ Docker is **not required** for the basic local development path.
 
 ## Current state
 
-**Supported build:** `0.12.0-dev.1`
+**Supported build:** `0.12.0-dev.2`
 
 **Deployment decision:** production candidate; not production-promoted; no live
 public or customer deployment claim.
@@ -96,14 +96,15 @@ Build:
 
 The versioned same-origin Gateway client contract is implemented. An
 experimental loopback-only AXIOM One PWA foundation now provides node status,
-a reversible review for one transparent bounded intent, exact explanations for
-all stable Gateway outcomes and current kernel events, one-use approval states,
-same-key uncertainty recovery, vault metadata, unavailable sharing states, and
-raw evidence inspection. These explanations are experimental and are not an
-authoritative pre-execution kernel plan. The next work is the governed memory
-lifecycle, browser session, accessibility, usability, and packaging gates,
-followed by one bounded AI provider and useful personal workflows, then
-selective sharing, Verify, and Circles.
+reversible reviews for four bounded actions, exact explanations for all stable
+Gateway outcomes and current kernel events, one-use approval states, same-key
+uncertainty recovery, and an owner-scoped Vault that can create private notes,
+tombstone exact records after confirmation, create selective local exports,
+and reveal a bundle only on a separate user action. These explanations are
+experimental and are not an authoritative pre-execution kernel plan. Hard
+deletion, restore, bulk ingestion, browser session, accessibility, usability,
+and packaging gates remain next, followed by one bounded AI provider and useful
+personal workflows, then selective sharing, Verify, and Circles.
 See the [Gateway client contract](docs/operations/GATEWAY-CLIENT-CONTRACT.md).
 The [local preview runbook](docs/operations/AXIOM-ONE-LOCAL-PREVIEW.md) records
 its exact setup, security boundary, verification, rollback, and non-claims.
@@ -226,8 +227,8 @@ Start with:
 - [Documentation authority and index](docs/README.md)
 - [Security policy](SECURITY.md)
 
-Current `0.12.0-dev.1` changes are recorded in
-[`docs/releases/0.12.0-dev.1.md`](docs/releases/0.12.0-dev.1.md).
+Current `0.12.0-dev.2` changes are recorded in
+[`docs/releases/0.12.0-dev.2.md`](docs/releases/0.12.0-dev.2.md).
 
 When documents conflict, the capability registry and normative requirements
 control. Historical documents are provenance or research inputs only.

@@ -1,6 +1,6 @@
 # Pilot Deployment Dossier Verification
 
-**Build:** `0.12.0-dev.1`
+**Build:** `0.12.0-dev.2`
 
 **Status:** implemented evidence-intake control; no live pilot or production
 promotion is claimed
@@ -24,7 +24,7 @@ must still inspect the referenced artifacts and record a separate decision.
 ## Current-build boundary
 
 The command and schemas in this document apply only to the supported
-`0.12.0-dev.1` development line. A policy pins:
+`0.12.0-dev.2` development line. A policy pins:
 
 - the exact semantic kernel version;
 - one 40-character source revision;
@@ -232,7 +232,7 @@ shape:
   },
   "source": {
     "image_digest": "sha256:<64 lowercase hexadecimal characters>",
-    "kernel_version": "0.12.0-dev.1",
+    "kernel_version": "0.12.0-dev.2",
     "source_revision": "<40 lowercase hexadecimal characters>"
   },
   "status": "passed",

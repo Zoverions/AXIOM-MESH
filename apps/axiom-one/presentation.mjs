@@ -12,6 +12,24 @@ const OUTCOME_STATES = new Set([
   'uncertain'
 ]);
 const TONES = new Set(['ready', 'complete', 'pending', 'blocked', 'denied', 'uncertain']);
+const ACTION_BOUNDARIES = Object.freeze({
+  'system.echo': Object.freeze({
+    consequence: 'non-consequential-local-test',
+    confirmations: Object.freeze([])
+  }),
+  'memory.put': Object.freeze({
+    consequence: 'durable-local-memory-write',
+    confirmations: Object.freeze([])
+  }),
+  'memory.tombstone': Object.freeze({
+    consequence: 'durable-local-memory-tombstone',
+    confirmations: Object.freeze(['confirm:memory.tombstone'])
+  }),
+  'export.create': Object.freeze({
+    consequence: 'local-selective-export-write',
+    confirmations: Object.freeze([])
+  })
+});
 
 export function createHumanPresenter(contract) {
   validateHumanContract(contract);
@@ -42,41 +60,45 @@ export function validateHumanContract(contract) {
   if (
     contract.schema !== 'axiom-one-human-contract.v1'
     || contract.version !== 1
-    || contract.kernel_version !== '0.12.0-dev.1'
+    || contract.kernel_version !== '0.12.0-dev.2'
     || contract.status !== 'experimental-human-explanations'
   ) throw new TypeError('Human explanation contract identity is invalid');
-  if (!plainObject(contract.actions) || Object.keys(contract.actions).length !== 1) {
+  if (
+    !plainObject(contract.actions)
+    || !sameStrings(Object.keys(contract.actions), Object.keys(ACTION_BOUNDARIES))
+  ) {
     throw new TypeError('Human explanation action inventory is invalid');
   }
-  const echo = contract.actions['system.echo'];
-  exactObject(echo, 'system.echo explanation', [
-    'label',
-    'consequence',
-    'effect',
-    'provider',
-    'destination',
-    'information_scope',
-    'external_egress',
-    'cost',
-    'retention',
-    'timeout_ms',
-    'cancellation',
-    'reversibility',
-    'required_confirmations',
-    'independent_approval'
-  ]);
-  for (const field of [
-    'label', 'consequence', 'effect', 'provider', 'destination',
-    'information_scope', 'cost', 'retention', 'cancellation', 'reversibility'
-  ]) requireText(echo[field], `system.echo ${field}`);
-  if (
-    echo.consequence !== 'non-consequential-local-test'
-    || echo.external_egress !== false
-    || echo.timeout_ms !== 10_000
-    || !Array.isArray(echo.required_confirmations)
-    || echo.required_confirmations.length !== 0
-    || echo.independent_approval !== false
-  ) throw new TypeError('Human explanation action boundary is weakened');
+  for (const [action, boundary] of Object.entries(ACTION_BOUNDARIES)) {
+    const explanation = contract.actions[action];
+    exactObject(explanation, `${action} explanation`, [
+      'label',
+      'consequence',
+      'effect',
+      'provider',
+      'destination',
+      'information_scope',
+      'external_egress',
+      'cost',
+      'retention',
+      'timeout_ms',
+      'cancellation',
+      'reversibility',
+      'required_confirmations',
+      'independent_approval'
+    ]);
+    for (const field of [
+      'label', 'consequence', 'effect', 'provider', 'destination',
+      'information_scope', 'cost', 'retention', 'cancellation', 'reversibility'
+    ]) requireText(explanation[field], `${action} ${field}`);
+    if (
+      explanation.consequence !== boundary.consequence
+      || explanation.external_egress !== false
+      || explanation.timeout_ms !== 10_000
+      || !sameStrings(explanation.required_confirmations, boundary.confirmations)
+      || explanation.independent_approval !== false
+    ) throw new TypeError(`Human explanation action boundary is weakened: ${action}`);
+  }
   if (!plainObject(contract.gateway_outcomes) || !Object.keys(contract.gateway_outcomes).length) {
     throw new TypeError('Human explanation outcome inventory is invalid');
   }
@@ -156,6 +178,9 @@ function requestPreview(contract, request) {
       fact('Cancellation', action.cancellation),
       fact('Reversibility', action.reversibility),
       fact('Confirmation', action.required_confirmations.length ? 'Required' : 'Not required'),
+      ...(action.required_confirmations.length
+        ? [fact('Exact confirmation', action.required_confirmations.join(', '))]
+        : []),
       fact('Independent approval', action.independent_approval ? 'Required' : 'Not required')
     ],
     guidance: [
@@ -431,6 +456,15 @@ function plainObject(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const prototype = Object.getPrototypeOf(value);
   return prototype === Object.prototype || prototype === null;
+}
+
+function sameStrings(actual, expected) {
+  if (!Array.isArray(actual) || !Array.isArray(expected) || actual.length !== expected.length) {
+    return false;
+  }
+  const left = [...actual].sort();
+  const right = [...expected].sort();
+  return left.every((value, index) => value === right[index]);
 }
 
 function deepFreeze(value) {

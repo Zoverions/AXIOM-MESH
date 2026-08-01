@@ -4,7 +4,7 @@
 
 **Status:** implemented for the single-host production candidate
 
-**Applies to:** AXIOM-MESH `0.12.0-dev.1` supported development build
+**Applies to:** AXIOM-MESH `0.12.0-dev.2` supported development build
 
 **Scope:** signed one-shot retrieval of data protection, API principal, internal
 transport, policy-stack, and capability-registry resources before the

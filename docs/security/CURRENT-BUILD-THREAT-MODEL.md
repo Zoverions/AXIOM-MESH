@@ -1,6 +1,6 @@
 # AXIOM-MESH Current-Build Threat Model
 
-**Build:** `0.12.0-dev.1`
+**Build:** `0.12.0-dev.2`
 
 **Status:** canonical security-review input; not an independent assessment
 
