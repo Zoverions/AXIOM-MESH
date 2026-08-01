@@ -98,6 +98,7 @@ or override a current non-claim.
 - [Independent service units](operations/INDEPENDENT-SERVICE-UNITS.md)
 - [Explicit service network policy](operations/EXPLICIT-SERVICE-NETWORK-POLICY.md)
 - [Versioned Gateway client contract](operations/GATEWAY-CLIENT-CONTRACT.md)
+- [AXIOM One experimental local preview](operations/AXIOM-ONE-LOCAL-PREVIEW.md)
 - [Admitted-node discovery and scheduling](operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md)
 - [Operator-approved online causal exchange](operations/ONLINE-CAUSAL-EXCHANGE.md)
 - [Deployment-independent providers](operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md)

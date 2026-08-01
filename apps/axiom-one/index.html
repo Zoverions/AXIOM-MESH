@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1526">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Experimental local AXIOM One personal-node preview.">
+  <title>AXIOM One — Local Preview</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <div class="app-frame">
+    <header class="topbar">
+      <a class="brand" href="#overview" aria-label="AXIOM One overview">
+        <img src="/icon.svg" width="42" height="42" alt="">
+        <span><strong>AXIOM One</strong><small>Local preview</small></span>
+      </a>
+      <div class="connection-summary">
+        <span id="connection-dot" class="status-dot" aria-hidden="true"></span>
+        <span id="connection-label">Not connected</span>
+        <button id="disconnect-button" class="button button-quiet" type="button" hidden>Disconnect</button>
+      </div>
+    </header>
+
+    <div class="preview-banner" role="note">
+      <strong>Experimental local preview.</strong>
+      No external AI, sharing, Circles, production deployment, or completed browser-security review is claimed.
+    </div>
+
+    <nav class="primary-nav" aria-label="AXIOM One sections">
+      <a href="#overview" data-route="overview" aria-current="page">Overview</a>
+      <a href="#ask" data-route="ask">Ask</a>
+      <a href="#approvals" data-route="approvals">Approvals</a>
+      <a href="#vault" data-route="vault">Vault</a>
+      <a href="#receipts" data-route="receipts">Receipts</a>
+      <a href="#share" data-route="share">Share</a>
+      <a href="#explore" data-route="explore">Explore</a>
+    </nav>
+
+    <main id="main-content" tabindex="-1">
+      <section id="connect-panel" class="connect-panel" aria-labelledby="connect-title">
+        <div>
+          <p class="eyebrow">Private connection</p>
+          <h1 id="connect-title">Connect to this local node</h1>
+          <p>Paste a current local API token. It stays only in this open page and is cleared when you disconnect or close it.</p>
+        </div>
+        <form id="connect-form" class="connect-form">
+          <label for="token-input">Local API token</label>
+          <div class="input-row">
+            <input id="token-input" name="token" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" required maxlength="4096">
+            <button class="button button-primary" type="submit">Connect</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="view" class="view" aria-live="polite" aria-busy="false"></section>
+    </main>
+
+    <footer>
+      <span>AXIOM-MESH 0.12 development line</span>
+      <a href="#explore">Inspect node evidence</a>
+    </footer>
+  </div>
+  <div id="announcement" class="sr-only" role="status" aria-live="polite"></div>
+</body>
+</html>

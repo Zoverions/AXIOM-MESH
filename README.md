@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=5a0f2e0dcad07c4ebc077c314b58c408a57aa71cb8d83e05a0655dabe7a48b1c -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=2d5d5872f0bc85ba464e55452e42dd767b3036292186772caa13858316b05605 -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -68,9 +68,10 @@ The current kernel implements:
 - strict pilot and independent-review evidence intake;
 - authenticated operator API and CLI.
 
-The browser/PWA product layer, external AI, Verify, Circles, remote dispatch,
+The AXIOM One browser/PWA is an experimental local preview, not an implemented
+or supported product claim. External AI, Verify, Circles, remote dispatch,
 federation, tokens, settlement, regulated domains, arbitrary code, embodied
-systems, and post-quantum security are not current implemented claims.
+systems, and post-quantum security are also not current implemented claims.
 
 ## Development programme
 
@@ -93,10 +94,16 @@ Build:
 - **AXIOM Managed Node** — optional supported operations without platform data
   ownership.
 
-The versioned same-origin Gateway client contract is implemented. The next
-step is the AXIOM One browser/PWA shell, followed by one bounded AI provider
-and useful personal workflows, then selective sharing, Verify, and Circles.
+The versioned same-origin Gateway client contract is implemented. An
+experimental loopback-only AXIOM One PWA foundation now provides node status,
+a transparent bounded intent, approvals, vault metadata, receipts, unavailable
+sharing states, and raw evidence inspection. The next work is its browser
+session, lifecycle, accessibility, usability, and packaging gates, followed by
+one bounded AI provider and useful personal workflows, then selective sharing,
+Verify, and Circles.
 See the [Gateway client contract](docs/operations/GATEWAY-CLIENT-CONTRACT.md).
+The [local preview runbook](docs/operations/AXIOM-ONE-LOCAL-PREVIEW.md) records
+its exact setup, security boundary, verification, rollback, and non-claims.
 
 ### Frontier incubation
 
@@ -165,6 +172,8 @@ npm run axiom -- --help
 npm run axiom -- status
 npm run axiom -- capabilities
 npm run axiom -- audit
+npm run axiom-one
+npm run axiom-one:check
 npm run check
 npm run release:verify
 ```

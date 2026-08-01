@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title description">
+  <title id="title">AXIOM One</title>
+  <desc id="description">An interlocking local mesh mark.</desc>
+  <rect width="512" height="512" rx="112" fill="#08111f"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#72e1c2" stroke-width="28"/>
+  <path d="M152 302 256 122l104 180H152Z" fill="none" stroke="#f5c96a" stroke-linejoin="round" stroke-width="28"/>
+  <circle cx="256" cy="256" r="38" fill="#e9f5ff"/>
+</svg>

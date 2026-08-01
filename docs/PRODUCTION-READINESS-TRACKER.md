@@ -53,7 +53,7 @@ These gates do not replace production-pilot gates.
 | Product gate | Current state | Required evidence before exposure or promotion |
 |---|---|---|
 | Versioned Gateway client | Pass for current contract/library (`UX-001`): exact 27-route machine contract, hand-reviewed JSON Schema, relative-only targets, explicit errors, bounded request/response/timeout, cancellation, stable idempotent replay, source parity, and real-stack compatibility | Maintain exact compatibility evidence; require a new contract version plus migration and rollback evidence for an incompatible change |
-| AXIOM One browser/PWA shell | Planned (`UX-002`) | Local-only startup, no ambient authority, visible plans/approvals/receipts, export/deletion/recovery flows |
+| AXIOM One browser/PWA shell | Experimental local foundation (`UX-002` in progress): loopback-only server, contract-only proxy, memory-only token, public-shell-only offline cache, status/echo/approval/vault/receipt/raw-inspection views, honest unavailable Share/Circles | Complete onboarding, visible plan/denial/consent/lifecycle flows, browser session/device review, real-fixture browser tests, accessibility/usability evidence, signed packaging, update, rollback, uninstall, and support |
 | Browser security boundary | Planned (`UX-005`) | CSP, CSRF, origin, cookie/token, clickjacking, upload/download, session, device-revocation, storage inspection |
 | Accessibility and phone usability | Planned (`UX-006`) | Keyboard, screen reader, contrast, reduced motion, phone layouts, plain language, human testing |
 | Local packaging and onboarding | Planned (`UX-007`) | Signed package, safe updates, recovery, uninstall, no production credential creation, first-use study |

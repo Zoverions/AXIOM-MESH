@@ -29,6 +29,7 @@ import {
   validateGatewayClientContractSchema,
   validateGatewayClientRouteImplementation
 } from './lib/gateway-client-contract.mjs';
+import { checkAxiomOnePreview } from './check-axiom-one.mjs';
 
 const REPOSITORY_ROOT = dirname(MESH_ROOT);
 const SUPPORTED_DEPENDENCY_MANIFESTS = new Set([
@@ -252,6 +253,7 @@ export async function verifyReleaseReadiness() {
     direct_service_access: gatewayClientContract.boundary
       .direct_internal_service_access
   };
+  const axiomOne = await checkAxiomOnePreview();
   if (packageJson.version !== registry.kernel_version || lock.version !== packageJson.version) {
     throw new ValidationError('Package, lockfile, and capability registry versions must match');
   }
@@ -341,6 +343,7 @@ export async function verifyReleaseReadiness() {
     throw new ValidationError('Unsupported legacy GitHub workflows are still active');
   }
   const inputs = await sourceInputs([
+    join(REPOSITORY_ROOT, 'apps'),
     join(REPOSITORY_ROOT, 'packages'),
     join(MESH_ROOT, 'src'),
     join(MESH_ROOT, 'config'),
@@ -436,6 +439,7 @@ export async function verifyReleaseReadiness() {
     setup,
     service_network: deployment.service_network_policy,
     gateway_client: gatewayClientEvidence,
+    axiom_one: axiomOne,
     operator_surface_digest: digestObject(operatorSurface),
     deployment,
     migrations: migrationEvidence,
@@ -454,6 +458,7 @@ export async function verifyReleaseReadiness() {
     setup,
     service_network: deployment.service_network_policy,
     gateway_client: gatewayClientEvidence,
+    axiom_one: axiomOne,
     deployment,
     documentation,
     source_boundary: sourceBoundary,

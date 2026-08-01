@@ -170,7 +170,7 @@ client boundary and planned application structure are:
 
 ```text
 mesh/                    zero-dependency trusted kernel
-apps/axiom-one/          local browser/PWA user experience
+apps/axiom-one/          experimental loopback-only browser/PWA foundation
 apps/axiom-verify/       static or local evidence verification
 packages/axiom-client/   implemented versioned Gateway client contract
 adapters/                separately governed provider/channel/domain adapters
@@ -422,9 +422,9 @@ The current programme has two immediate priorities:
 1. collect authentic single-node pilot evidence, including external custody,
    scheduled media recovery, pilot telemetry, named incident response, legacy
    credential dispositions, and an independent security review;
-2. maintain the implemented Gateway client contract and build the AXIOM One
-   human shell, followed by one bounded AI adapter, AXIOM Verify, and
-   invitation-based Circles.
+2. maintain the implemented Gateway client contract and complete the
+   experimental AXIOM One human-shell gates, followed by one bounded AI
+   adapter, AXIOM Verify, and invitation-based Circles.
 
 Multi-host remote dispatch, independently operated WAN evidence, broader
 adapters, credentials, zk verification, managed nodes, and a curated capsule
