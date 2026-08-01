@@ -18,7 +18,7 @@
   "properties": {
     "schema": { "const": "axiom-gateway-client-contract.v1" },
     "version": { "const": 1 },
-    "kernel_version": { "const": "0.12.0-dev.0" },
+    "kernel_version": { "const": "0.12.0-dev.1" },
     "base_path": { "const": "/v1" },
     "boundary": {
       "type": "object",

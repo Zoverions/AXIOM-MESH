@@ -2,7 +2,7 @@
 
 **Updated:** 2026-07-29
 
-**Applies to:** AXIOM-MESH `0.12.0-dev.0` supported development build
+**Applies to:** AXIOM-MESH `0.12.0-dev.1` supported development build
 
 This runbook applies only to the supported `mesh/` kernel. Archived runtimes,
 contracts, installers, and superseded deployment evidence are not rollback

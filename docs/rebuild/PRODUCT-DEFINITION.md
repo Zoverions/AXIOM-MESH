@@ -1,9 +1,9 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=2d5d5872f0bc85ba464e55452e42dd767b3036292186772caa13858316b05605 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.1; digest=3731ebf476d50318894aa09d8233572c186c2b930e5f757ab0c4c4f83e8c1a16 -->
 # AXIOM-MESH Product Definition
 
 **Status:** canonical rebuild and product definition
 
-**Current build:** `0.12.0-dev.0`
+**Current build:** `0.12.0-dev.1`
 
 **Reconciled:** 2026-07-30
 
@@ -162,6 +162,14 @@ implemented/supported claims until complete production-path code, negative
 tests, human evidence, packaging, documentation, and independent review satisfy
 the capability acceptance rule.
 
+The current experimental human-explanation slice reviews the single
+non-consequential echo request before sending, maps all stable Gateway outcomes
+and current kernel event kinds, distinguishes active, expired, consumed, and
+unknown approvals, preserves raw evidence, and reuses the same request key when
+a browser outcome is uncertain. That browser projection is not an authoritative
+pre-execution kernel plan or a consequential-action approval flow. Those require
+a separately bound plan/execute protocol and human evidence before promotion.
+
 ### AXIOM Verify
 
 AXIOM Verify is a local or static verifier for receipts and export packages. It
@@ -298,7 +306,7 @@ operational gates.
 
 ## Current implemented boundary
 
-The `0.12.0-dev.0` kernel currently implements:
+The `0.12.0-dev.1` kernel currently implements:
 
 - authenticated intent, plan, policy, grant, deterministic execution, and
   signed evidence;

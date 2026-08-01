@@ -53,7 +53,7 @@ export class GatewayClient {
     if (typeof token !== 'string' && typeof token !== 'function') {
       throw invalidRequest('Gateway client requires an in-memory token or token provider');
     }
-    this.request = request;
+    this.request = (...args) => request(...args);
     this.tokenProvider = typeof token === 'function' ? token : () => token;
     this.contract = GATEWAY_CLIENT_CONTRACT;
     this.defaultTimeoutMs = boundedTimeout(defaultTimeoutMs, this.contract);

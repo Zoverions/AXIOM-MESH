@@ -2,7 +2,7 @@
 
 **Status date:** 2026-08-01
 
-**Supported build:** `0.12.0-dev.0`
+**Supported build:** `0.12.0-dev.1`
 
 **Development branch:** `main`
 
@@ -10,7 +10,7 @@
 
 ## Current build
 
-AXIOM-MESH `0.12.0-dev.0` is a clean-room, dependency-free Node.js kernel organized as
+AXIOM-MESH `0.12.0-dev.1` is a clean-room, dependency-free Node.js kernel organized as
 four services: Gateway, Hypervisor, Sandbox, and Grid. They run as supervised
 processes in one hardened container or as independently restartable
 single-host units with isolated private credentials. It is the supported
@@ -220,10 +220,15 @@ error, cancellation, timeout, response-bound, idempotency, source-parity, and
 real-stack compatibility evidence. A loopback-only experimental AXIOM One PWA
 foundation now uses that contract for status, one transparent echo intent,
 approval, read-only vault, receipt, explicit unavailable-sharing, and raw
-inspection surfaces. Complete onboarding, human-readable plan and denial
-flows, governed memory/export/deletion lifecycle, browser session/device
-security, accessibility/usability evidence, and preview packaging next. Follow
-with one bounded least-privilege AI provider adapter,
+inspection surfaces. Its experimental human-explanation contract adds a
+reversible request review, fail-closed explanations for all 20 stable Gateway
+outcomes and 37 current kernel event kinds, active/expired/consumed approval
+states, and same-key recovery for uncertain network outcomes. It preserves raw
+evidence and explicitly does not claim an authoritative pre-execution kernel
+plan. Complete consequential plan/approval flows, governed
+memory/export/deletion lifecycle, browser session/device security,
+accessibility/usability evidence, and preview packaging next. Follow with one
+bounded least-privilege AI provider adapter,
 AXIOM Verify, and invitation-based AXIOM Circles. These remain local or
 invitation-only previews until their exact security, accessibility, usability,
 recovery, and deployment evidence is promoted.

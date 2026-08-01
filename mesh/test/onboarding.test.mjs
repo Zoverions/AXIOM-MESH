@@ -47,7 +47,7 @@ test('CLI exposes local-first help and explicit output modes', () => {
 
 test('CLI status keeps authenticated JSON compatibility and adds an opt-in readable summary', async () => {
   const payload = {
-    kernel_version: '0.12.0-dev.0',
+    kernel_version: '0.12.0-dev.1',
     claim_source_digest: 'abc123',
     runtime: { grid: { records: 12 } },
     capability_counts: {
@@ -82,7 +82,7 @@ test('CLI status keeps authenticated JSON compatibility and adds an opt-in reada
   assert.equal(formatCliResult('status', result, { json: true, human: true }), raw);
 
   const human = formatCliResult('status', result, { human: true });
-  assert.match(human, /AXIOM-MESH 0\.12\.0-dev\.0/);
+  assert.match(human, /AXIOM-MESH 0\.12\.0-dev\.1/);
   assert.match(human, /Gateway API: reachable/);
   assert.match(human, /implemented=26/);
   assert.match(human, /Full response: npm run axiom -- status --json/);

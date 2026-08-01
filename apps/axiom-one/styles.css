@@ -418,6 +418,90 @@ textarea::placeholder {
   background: #362c18;
 }
 
+.badge.danger {
+  color: #ffd4d4;
+  border-color: #78404b;
+  background: var(--danger-deep);
+}
+
+.explanation {
+  min-width: 0;
+  padding: clamp(1rem, 2.5vw, 1.4rem);
+  border: 1px solid var(--line);
+  border-left-width: 0.3rem;
+  border-radius: 0.9rem;
+  background: rgba(7, 16, 29, 0.48);
+}
+
+.explanation.tone-ready,
+.explanation.tone-complete {
+  border-left-color: var(--mint);
+}
+
+.explanation.tone-pending,
+.explanation.tone-uncertain {
+  border-left-color: var(--gold);
+}
+
+.explanation.tone-blocked,
+.explanation.tone-denied {
+  border-left-color: var(--danger);
+}
+
+.explanation h2 {
+  margin: 0.65rem 0 0.4rem;
+  font-size: clamp(1.05rem, 3vw, 1.25rem);
+}
+
+.explanation h3 {
+  margin: 1.1rem 0 0.35rem;
+  font-size: 0.92rem;
+}
+
+.explanation > p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.fact-list {
+  display: grid;
+  grid-template-columns: minmax(8rem, 0.34fr) minmax(0, 1fr);
+  margin: 1rem 0 0;
+  border-top: 1px solid var(--line);
+}
+
+.fact-list dt,
+.fact-list dd {
+  min-width: 0;
+  margin: 0;
+  padding: 0.58rem 0;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+
+.fact-list dt {
+  padding-right: 1rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 720;
+}
+
+.fact-list dd {
+  color: var(--text);
+  font-size: 0.88rem;
+}
+
+.guidance-list {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding-left: 1.2rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
 .notice,
 .error-box,
 .empty-state {
@@ -625,6 +709,19 @@ footer {
     grid-template-columns: 1fr;
   }
 
+  .fact-list {
+    grid-template-columns: 1fr;
+  }
+
+  .fact-list dt {
+    padding-bottom: 0.1rem;
+    border-bottom: 0;
+  }
+
+  .fact-list dd {
+    padding-top: 0.1rem;
+  }
+
   .card,
   .card.wide {
     grid-column: 1 / -1;
@@ -686,7 +783,8 @@ footer {
   select,
   pre,
   .badge,
-  .data-list li {
+  .data-list li,
+  .explanation {
     color: var(--text);
     background: #f7fafb;
   }

@@ -1,9 +1,11 @@
-const CACHE_NAME = 'axiom-one-shell-v1';
+const CACHE_NAME = 'axiom-one-shell-v2';
 const SHELL_ASSETS = Object.freeze([
   '/',
   '/index.html',
   '/styles.css',
   '/app.mjs',
+  '/presentation.mjs',
+  '/human-contract.json',
   '/manifest.webmanifest',
   '/icon.svg',
   '/vendor/axiom-client.mjs',

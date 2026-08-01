@@ -18,6 +18,8 @@ const STATIC_ASSETS = new Map([
   ['/', asset('index.html', 'text/html; charset=utf-8')],
   ['/index.html', asset('index.html', 'text/html; charset=utf-8')],
   ['/app.mjs', asset('app.mjs', 'text/javascript; charset=utf-8')],
+  ['/presentation.mjs', asset('presentation.mjs', 'text/javascript; charset=utf-8')],
+  ['/human-contract.json', asset('human-contract.json', 'application/json; charset=utf-8')],
   ['/styles.css', asset('styles.css', 'text/css; charset=utf-8')],
   ['/manifest.webmanifest', asset('manifest.webmanifest', 'application/manifest+json')],
   ['/sw.mjs', asset('sw.mjs', 'text/javascript; charset=utf-8')],

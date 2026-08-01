@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=2d5d5872f0bc85ba464e55452e42dd767b3036292186772caa13858316b05605 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.1; digest=3731ebf476d50318894aa09d8233572c186c2b930e5f757ab0c4c4f83e8c1a16 -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -39,7 +39,7 @@ Docker is **not required** for the basic local development path.
 
 ## Current state
 
-**Supported build:** `0.12.0-dev.0`
+**Supported build:** `0.12.0-dev.1`
 
 **Deployment decision:** production candidate; not production-promoted; no live
 public or customer deployment claim.
@@ -96,11 +96,14 @@ Build:
 
 The versioned same-origin Gateway client contract is implemented. An
 experimental loopback-only AXIOM One PWA foundation now provides node status,
-a transparent bounded intent, approvals, vault metadata, receipts, unavailable
-sharing states, and raw evidence inspection. The next work is its browser
-session, lifecycle, accessibility, usability, and packaging gates, followed by
-one bounded AI provider and useful personal workflows, then selective sharing,
-Verify, and Circles.
+a reversible review for one transparent bounded intent, exact explanations for
+all stable Gateway outcomes and current kernel events, one-use approval states,
+same-key uncertainty recovery, vault metadata, unavailable sharing states, and
+raw evidence inspection. These explanations are experimental and are not an
+authoritative pre-execution kernel plan. The next work is the governed memory
+lifecycle, browser session, accessibility, usability, and packaging gates,
+followed by one bounded AI provider and useful personal workflows, then
+selective sharing, Verify, and Circles.
 See the [Gateway client contract](docs/operations/GATEWAY-CLIENT-CONTRACT.md).
 The [local preview runbook](docs/operations/AXIOM-ONE-LOCAL-PREVIEW.md) records
 its exact setup, security boundary, verification, rollback, and non-claims.
@@ -223,8 +226,8 @@ Start with:
 - [Documentation authority and index](docs/README.md)
 - [Security policy](SECURITY.md)
 
-Current `0.12.0-dev.0` changes are recorded in
-[`docs/releases/0.12.0-dev.0.md`](docs/releases/0.12.0-dev.0.md).
+Current `0.12.0-dev.1` changes are recorded in
+[`docs/releases/0.12.0-dev.1.md`](docs/releases/0.12.0-dev.1.md).
 
 When documents conflict, the capability registry and normative requirements
 control. Historical documents are provenance or research inputs only.

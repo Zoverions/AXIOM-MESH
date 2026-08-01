@@ -2,7 +2,7 @@
 
 **Status date:** 2026-07-29
 
-**Scope:** AXIOM-MESH `0.12.0-dev.0` production candidate and its protected CI
+**Scope:** AXIOM-MESH `0.12.0-dev.1` production candidate and its protected CI
 
 **Deployment claim:** automated candidate exercise only; no live incident,
 named on-call roster, external notification, or pilot-platform exercise is

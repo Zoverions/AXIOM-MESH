@@ -1,7 +1,7 @@
 {
   "schema": "axiom-one-preview.v1",
   "version": 1,
-  "kernel_version": "0.12.0-dev.0",
+  "kernel_version": "0.12.0-dev.1",
   "status": "experimental-local-preview",
   "network": {
     "bind_host": "127.0.0.1",
@@ -21,6 +21,15 @@
     "maximum_proxy_request_bytes": 1048576,
     "maximum_proxy_response_bytes": 2097152,
     "proxy_timeout_ms": 30000
+  },
+  "human_explanations": {
+    "contract_schema": "axiom-one-human-contract.v1",
+    "status": "experimental-human-explanations",
+    "action_previews": ["system.echo"],
+    "stable_gateway_errors": 20,
+    "event_kinds": 37,
+    "raw_evidence_always_available": true,
+    "authoritative_pre_execution_kernel_plan": false
   },
   "surfaces": [
     "overview",

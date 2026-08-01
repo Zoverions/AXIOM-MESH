@@ -2,6 +2,7 @@ import {
   createGatewayClient,
   GatewayClientError
 } from '/vendor/axiom-client.mjs';
+import { createHumanPresenter } from '/presentation.mjs';
 
 const ROUTES = new Set([
   'overview',
@@ -17,7 +18,8 @@ const state = {
   client: null,
   session: null,
   route: 'overview',
-  lastIntent: null
+  lastIntent: null,
+  pendingIntent: null
 };
 
 const view = document.querySelector('#view');
@@ -28,6 +30,7 @@ const disconnectButton = document.querySelector('#disconnect-button');
 const connectionDot = document.querySelector('#connection-dot');
 const connectionLabel = document.querySelector('#connection-label');
 const announcement = document.querySelector('#announcement');
+const human = createHumanPresenter(await loadHumanContract());
 
 connectForm.addEventListener('submit', async event => {
   event.preventDefault();
@@ -59,6 +62,7 @@ disconnectButton.addEventListener('click', () => {
   connectionDot.classList.remove('connected');
   connectionLabel.textContent = 'Not connected';
   state.lastIntent = null;
+  state.pendingIntent = null;
   announce('Disconnected and cleared the in-memory token');
   renderRoute();
   tokenInput.focus();
@@ -167,13 +171,13 @@ async function renderAsk() {
     }
   });
   form.append(
-    notice('AI is not enabled. This transparent first workflow sends system.echo through Gateway → Hypervisor → Sandbox → Grid and returns its signed evidence result.'),
+    notice('AI is not enabled. This transparent workflow reviews and sends system.echo through Gateway → Hypervisor → Sandbox → Grid, then keeps its exact evidence available.'),
     field('Message', message, 'ask-message'),
     field('Purpose', purpose, 'ask-purpose'),
     element('div', { className: 'actions' }, [
       element('button', {
         className: 'button button-primary',
-        text: 'Send bounded test',
+        text: 'Review request',
         attrs: { type: 'submit' }
       }),
       element('button', {
@@ -183,42 +187,137 @@ async function renderAsk() {
       })
     ])
   );
+  const review = element('div', { className: 'stack', attrs: { id: 'intent-review' } });
   const result = element('div', { className: 'stack', attrs: { id: 'intent-result' } });
-  if (state.lastIntent) result.append(intentResult(state.lastIntent));
-  form.addEventListener('submit', async event => {
-    event.preventDefault();
-    const submit = form.querySelector('[type="submit"]');
-    const cancel = form.querySelector('#cancel-intent');
-    const controller = new AbortController();
-    submit.disabled = true;
+  const submit = form.querySelector('[type="submit"]');
+  const cancel = form.querySelector('#cancel-intent');
+  let activeController;
+
+  const setEditingLocked = locked => {
+    message.disabled = locked;
+    purpose.disabled = locked;
+    submit.disabled = locked;
+  };
+
+  const renderLastIntent = () => {
+    result.replaceChildren();
+    if (!state.lastIntent) return;
+    const retry = state.lastIntent.model.retrySameRequest && state.pendingIntent
+      ? element('button', {
+        className: 'button button-primary',
+        text: 'Retry same request safely',
+        attrs: { type: 'button' }
+      })
+      : null;
+    retry?.addEventListener('click', () => executePending());
+    result.append(humanExplanation(
+      state.lastIntent.model,
+      'Raw result and evidence',
+      state.lastIntent.raw,
+      retry ? [retry] : []
+    ));
+  };
+
+  const renderReview = pending => {
+    const send = element('button', {
+      className: 'button button-primary',
+      text: 'Send reviewed request',
+      attrs: { type: 'button' }
+    });
+    const change = element('button', {
+      className: 'button button-secondary',
+      text: 'Change request',
+      attrs: { type: 'button' }
+    });
+    send.addEventListener('click', () => executePending());
+    change.addEventListener('click', () => {
+      state.pendingIntent = null;
+      review.replaceChildren();
+      setEditingLocked(false);
+      message.focus();
+      announce('Request review closed without sending');
+    });
+    review.replaceChildren(humanExplanation(
+      human.requestPreview(pending.body),
+      'Exact request to submit',
+      pending.body,
+      [send, change]
+    ));
+  };
+
+  const executePending = async () => {
+    const pending = state.pendingIntent;
+    if (!pending || activeController) return;
+    activeController = new AbortController();
     cancel.disabled = false;
-    cancel.addEventListener('click', () => controller.abort(), { once: true });
-    result.replaceChildren(notice('Submitting through the local policy and evidence path…'));
+    setEditingLocked(true);
+    review.replaceChildren();
+    result.replaceChildren(notice('Submitting the reviewed request through the local policy and evidence path…'));
     try {
       const response = await state.client.call('intents.submit', {
-        body: {
-          action: 'system.echo',
-          input: { message: message.value },
-          purpose: purpose.value || 'local-preview-echo'
-        },
-        idempotencyKey: `axiom-one:${crypto.randomUUID()}`,
-        signal: controller.signal
+        body: pending.body,
+        idempotencyKey: pending.idempotencyKey,
+        signal: activeController.signal
       });
-      state.lastIntent = response;
-      result.replaceChildren(intentResult(response));
+      state.lastIntent = {
+        model: human.intentSuccess({
+          request: pending.body,
+          response,
+          idempotencyKey: pending.idempotencyKey
+        }),
+        raw: response
+      };
+      state.pendingIntent = null;
+      setEditingLocked(false);
+      renderLastIntent();
       announce('Intent completed and its evidence is available');
     } catch (error) {
-      result.replaceChildren(errorBox(error, 'The intent did not complete'));
-      announce('Intent did not complete');
+      const raw = serializableError(error);
+      const model = human.intentFailure({
+        request: pending.body,
+        error: raw,
+        idempotencyKey: pending.idempotencyKey
+      });
+      state.lastIntent = { model, raw };
+      if (!model.retrySameRequest) {
+        state.pendingIntent = null;
+        setEditingLocked(false);
+      }
+      renderLastIntent();
+      announce(model.state === 'uncertain'
+        ? 'Intent outcome is not confirmed; same-request recovery is available'
+        : 'Intent did not complete');
     } finally {
-      submit.disabled = false;
+      activeController = null;
       cancel.disabled = true;
     }
+  };
+
+  cancel.addEventListener('click', () => activeController?.abort());
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    const pending = {
+      body: {
+        action: 'system.echo',
+        input: { message: message.value },
+        purpose: purpose.value || 'local-preview-echo'
+      },
+      idempotencyKey: `axiom-one:${crypto.randomUUID()}`
+    };
+    state.pendingIntent = pending;
+    setEditingLocked(true);
+    renderReview(pending);
+    announce('Request review is ready; nothing has been sent');
   });
+  if (state.pendingIntent && state.lastIntent?.model.retrySameRequest) {
+    setEditingLocked(true);
+  }
+  renderLastIntent();
   view.replaceChildren(
     header('Ask, with the boundary visible',
-      'This first preview workflow is intentionally modest: one local deterministic action with no external provider or hidden model.'),
+      'Review one local deterministic action before submission, then inspect its policy, plan, execution, and recovery evidence without a hidden model.'),
     form,
+    review,
     result
   );
 }
@@ -228,12 +327,13 @@ async function renderApprovals() {
   const approvals = response.approvals ?? [];
   view.replaceChildren(
     header('Approvals',
-      'Approval records are shown exactly as this authenticated principal may read them. Creating and explaining approvals remains a later human-workflow gate.'),
+      'Active, expired, and consumed one-use approvals are explained without adding, widening, or self-granting authority.'),
     approvals.length
-      ? list(approvals, item => ({
-        title: item.approval_id ?? item.id ?? 'Approval',
-        detail: `${item.status ?? 'unknown status'} · requester ${item.requester ?? 'unknown'}`
-      }))
+      ? element('div', { className: 'stack' }, approvals.map(item => humanExplanation(
+        human.approval(item),
+        'Raw approval evidence',
+        item
+      )))
       : empty('No approval records are visible to this principal.'),
     rawDetails('Raw approval response', response)
   );
@@ -268,12 +368,13 @@ async function renderReceipts() {
   const events = response.events ?? [];
   view.replaceChildren(
     header('Receipts and evidence timeline',
-      'These are integrity-linked node events, not a claim that an external statement is true. Trace and event identifiers remain available for inspection.'),
+      'Every current kernel event kind has a bounded plain-language mapping while raw payload, trace, and event identifiers remain available.'),
     events.length
-      ? list(events, item => ({
-        title: item.kind ?? 'Node event',
-        detail: `${item.occurred_at ?? item.created_at ?? 'time unavailable'} · ${item.event_id ?? item.id ?? 'identifier unavailable'}`
-      }))
+      ? element('div', { className: 'stack' }, events.map(item => humanExplanation(
+        human.receipt(item),
+        'Raw event evidence',
+        item
+      )))
       : empty('No events are visible to this principal.'),
     rawDetails('Raw event response', response)
   );
@@ -342,13 +443,57 @@ async function renderExplore() {
   );
 }
 
-function intentResult(response) {
-  return element('div', { className: 'card full' }, [
-    element('span', { className: 'badge good', text: response.status ?? 'completed' }),
-    element('h2', { text: response.idempotent_replay ? 'Existing result recovered' : 'Intent result' }),
-    element('p', { text: response.message ?? 'The node returned a result with evidence.' }),
-    rawDetails('Inspect result and evidence', response)
-  ]);
+function humanExplanation(model, rawLabel, raw, actions = []) {
+  const facts = element('dl', { className: 'fact-list' });
+  for (const item of model.facts) {
+    facts.append(
+      element('dt', { text: item.label }),
+      element('dd', { text: item.value })
+    );
+  }
+  const guidance = element('ul', { className: 'guidance-list' },
+    model.guidance.map(item => element('li', { text: item })));
+  const children = [
+    element('span', { className: `badge ${toneBadge(model.tone)}`, text: model.badge }),
+    element('h2', { text: model.title }),
+    element('p', { text: model.summary })
+  ];
+  if (model.facts.length) children.push(facts);
+  children.push(
+    element('h3', { text: 'Authority and next steps' }),
+    guidance
+  );
+  if (actions.length) children.push(element('div', { className: 'actions' }, actions));
+  children.push(rawDetails(rawLabel, raw));
+  return element('article', {
+    className: `explanation tone-${model.tone}`,
+    attrs: { 'data-outcome-state': model.state }
+  }, children);
+}
+
+function toneBadge(tone) {
+  if (['ready', 'complete'].includes(tone)) return 'good';
+  if (['denied', 'blocked'].includes(tone)) return 'danger';
+  return 'pending';
+}
+
+function serializableError(error) {
+  if (!(error instanceof GatewayClientError)) {
+    return {
+      code: 'unexpected_client_failure',
+      message: 'The local preview could not complete this operation.',
+      status: 0,
+      retryable: false
+    };
+  }
+  return {
+    code: error.code,
+    message: error.message,
+    status: error.status,
+    traceId: error.traceId,
+    details: error.details,
+    retryable: error.retryable
+  };
 }
 
 function renderConnectionError(error) {
@@ -474,6 +619,26 @@ function setViewBusy(busy, label = 'Loading') {
   view.setAttribute('aria-busy', String(busy));
   if (busy && !view.childElementCount) {
     view.replaceChildren(element('div', { className: 'loading', text: label }));
+  }
+}
+
+async function loadHumanContract() {
+  const response = await fetch('/human-contract.json', {
+    cache: 'no-store',
+    credentials: 'same-origin',
+    redirect: 'error'
+  });
+  if (!response.ok || response.redirected) {
+    throw new Error('AXIOM One human explanation contract is unavailable');
+  }
+  const text = await response.text();
+  if (new TextEncoder().encode(text).byteLength > 65_536) {
+    throw new Error('AXIOM One human explanation contract is too large');
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error('AXIOM One human explanation contract is invalid');
   }
 }
 

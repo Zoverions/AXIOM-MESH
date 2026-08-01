@@ -1,6 +1,6 @@
 # Explicit Service Network Policy
 
-**Applies to:** `0.12.0-dev.0`
+**Applies to:** `0.12.0-dev.1`
 
 **Status:** implemented single-host candidate control
 

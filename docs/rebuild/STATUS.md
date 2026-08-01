@@ -2,9 +2,9 @@
 # AXIOM-MESH Capability Status
 
 Registry schema: `axiom-capabilities.v1`
-Kernel version: `0.12.0-dev.0`
+Kernel version: `0.12.0-dev.1`
 Evidence verified: `2026-08-01`
-Registry digest: `2d5d5872f0bc85ba464e55452e42dd767b3036292186772caa13858316b05605`
+Registry digest: `3731ebf476d50318894aa09d8233572c186c2b930e5f757ab0c4c4f83e8c1a16`
 
 Only **implemented** capabilities are runnable claims.
 
@@ -55,7 +55,7 @@ Only **implemented** capabilities are runnable claims.
 | `ui.operator-api` | operations | **implemented** | Authenticated operator API for intent submission, status, audit, recovery, and governed state inspection. |
 | `ui.gateway-client` | operations | **implemented** | A versioned same-origin Gateway client contract covers all 27 authenticated routes with exact route parity, bounded responses and timeouts, AbortSignal cancellation, stable idempotent intent results, explicit errors, and no direct internal-service access. |
 | `ui.cli` | operations | **implemented** | Command-line operator client with explicit input validation and fail-closed API error handling. |
-| `ui.dashboard` | operations | **experimental** | A loopback-only AXIOM One PWA preview provides honest node status, bounded echo intent, approval, vault, receipt, unavailable-sharing, and raw evidence surfaces through the versioned Gateway client; it is not a supported product or completed browser-security boundary. |
+| `ui.dashboard` | operations | **experimental** | A loopback-only AXIOM One PWA preview provides node status, reversible review for one bounded echo intent, exact explanations for all stable Gateway outcomes and current kernel events, approval-state distinctions, same-key uncertainty recovery, vault, unavailable-sharing, and raw evidence surfaces; it is not a supported product, authoritative pre-execution kernel plan, or completed browser-security boundary. |
 | `operations.observability` | operations | **implemented** | Bounded four-service telemetry is scraped over least-privilege Unix-socket access and relayed as OTLP/HTTP JSON with fixed attributes; static alerts route through Alertmanager v2 using HTTPS allowlists, reserved queue capacity, bounded retry, redaction, and delivery audit; signed request-pressure and dependency-loss evidence proves bounded rejection, degradation, fail-closed exit, restart, and state preservation. |
 | `operations.mutual-transport` | operations | **implemented** | Production internal calls use TLS 1.3 with CA-issued Ed25519 leaves, DNS and SPIFFE-style URI identity, exact active-certificate pinning, signed-caller binding, offline atomic rotation, retired-leaf rejection, and exact rollback. |
 | `operations.service-network-policy` | operations | **implemented** | A default-deny current-build policy permits only 38 exact internal caller, destination, method, and route combinations; four isolated internal Compose segments remove unrelated service adjacency, while mTLS peer allowlists and protected forbidden-edge probes enforce direction and segmentation. |

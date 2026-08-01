@@ -2,7 +2,7 @@
 
 **Status date:** 2026-07-29
 
-**Scope:** repository trust for the `0.12.0-dev.0` supported development build
+**Scope:** repository trust for the `0.12.0-dev.1` supported development build
 
 **Archived boundary:** `archive/legacy-main-pre-clean-room-2026-05-21` at
 `e65041cb6828a8923e87a3678a104ac40bbf0970`
