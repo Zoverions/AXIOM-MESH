@@ -26,6 +26,13 @@ with lifecycle scripts disabled, proves they did not change, and runs the
 kernel and release gates. It creates no production credentials and makes no
 deployment claim.
 
+The authenticated Gateway surface also has a versioned 27-route client
+contract and zero-dependency same-origin client. It enforces exact route and
+input inventories, bounded timeouts and response size, cancellation,
+idempotent intent-result compatibility, explicit errors, and no direct access
+to internal services. The AXIOM One browser/PWA shell and its separate session,
+origin, storage, accessibility, and usability evidence remain pending.
+
 The image build and composed container drill pass in
 [GitHub run 30375390450](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30375390450).
 The protected workflow also produces signed disposable-host recovery,

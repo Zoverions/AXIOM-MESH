@@ -4,7 +4,7 @@
 Registry schema: `axiom-capabilities.v1`
 Kernel version: `0.12.0-dev.0`
 Evidence verified: `2026-08-01`
-Registry digest: `b52493c528d286863de0acb16dbf5f9f303867596c6762a3601d63c6cf911185`
+Registry digest: `5a0f2e0dcad07c4ebc077c314b58c408a57aa71cb8d83e05a0655dabe7a48b1c`
 
 Only **implemented** capabilities are runnable claims.
 
@@ -13,7 +13,7 @@ Only **implemented** capabilities are runnable claims.
 - adapter_required: 9
 - disabled: 4
 - experimental: 2
-- implemented: 27
+- implemented: 28
 - specified: 3
 
 ## Registry
@@ -53,6 +53,7 @@ Only **implemented** capabilities are runnable claims.
 | `economics.token-bridge-liquidity` | economics | **disabled** | AXM, bonds, rewards, treasury, bridges, and liquidity remain disabled pending reconciled policy, tests, deployment evidence, and external audit. |
 | `zk.proof-verifiers` | verification | **adapter_required** | A proof is accepted only with a named circuit, verification key, public-input schema, and verifier adapter. |
 | `ui.operator-api` | operations | **implemented** | Authenticated operator API for intent submission, status, audit, recovery, and governed state inspection. |
+| `ui.gateway-client` | operations | **implemented** | A versioned same-origin Gateway client contract covers all 27 authenticated routes with exact route parity, bounded responses and timeouts, AbortSignal cancellation, stable idempotent intent results, explicit errors, and no direct internal-service access. |
 | `ui.cli` | operations | **implemented** | Command-line operator client with explicit input validation and fail-closed API error handling. |
 | `ui.dashboard` | operations | **specified** | A browser operator dashboard is specified but is not part of the supported runtime. |
 | `operations.observability` | operations | **implemented** | Bounded four-service telemetry is scraped over least-privilege Unix-socket access and relayed as OTLP/HTTP JSON with fixed attributes; static alerts route through Alertmanager v2 using HTTPS allowlists, reserved queue capacity, bounded retry, redaction, and delivery audit; signed request-pressure and dependency-loss evidence proves bounded rejection, degradation, fail-closed exit, restart, and state preservation. |

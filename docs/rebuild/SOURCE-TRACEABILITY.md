@@ -29,9 +29,10 @@ prose and executable status differ.
 
 | Current concern | Governing source | Executable evidence | Current boundary |
 |---|---|---|---|
-| Product scope and claims | `docs/rebuild/PRODUCT-DEFINITION.md`, `mesh/config/capabilities.json` | `mesh/src/check-registry.mjs`, generated status | 45 capabilities: 27 implemented; all others explicitly experimental, specified, adapter-required, or disabled |
+| Product scope and claims | `docs/rebuild/PRODUCT-DEFINITION.md`, `mesh/config/capabilities.json` | `mesh/src/check-registry.mjs`, generated status | 46 capabilities: 28 implemented; all others explicitly experimental, specified, adapter-required, or disabled |
 | Current-build source setup | `mesh/config/setup.json`, root and kernel package/lock files | setup negative tests, `npm run setup`, protected workflow | Exact Node.js/npm and CI/container pins, two zero-dependency locks, no install lifecycle scripts, unchanged-lock proof, no production credential creation |
 | Intent-to-evidence path | Gateway, Hypervisor, Sandbox, and Grid source under `mesh/src/` | kernel and end-to-end tests | Every privileged effect follows authenticated intent, deny-dominant authorization, a bounded grant, deterministic execution, and signed evidence |
+| Gateway client contract | `mesh/config/gateway-client-contract.json`, its JSON Schema, and the same-origin client module | exact route-parity, compatibility, error, cancellation, timeout, response-bound, and real-stack tests | All 27 authenticated Gateway routes are versioned; clients have no direct internal-service target; AXIOM One browser/session boundary remains pending |
 | Runtime policy | `mesh/config/policy.json`, layered policy loader | policy and IAM property tests | Lower layers can only restrict; high-risk work requires independent approval |
 | Durable state and evidence | Grid store, migrations, identity and protection libraries | restart, migration, tamper, wrong-key, backup, and rotation tests | Encrypted single-Grid state and signed hash-linked evidence; no replicated consensus claim |
 | Service transport | transport runtime and provisioning | mutual-TLS and rotation drill | TLS 1.3, separate Ed25519 leaves, exact active-leaf pinning, signed caller binding, offline rotation |

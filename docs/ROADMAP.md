@@ -217,8 +217,9 @@ support boundaries are promoted.
 
 ### 0.12.1 - human shell
 
-- create a versioned Gateway client with explicit compatibility and error
-  contracts;
+- maintain the implemented versioned Gateway client with exact 27-route
+  compatibility, schema, error, idempotency, cancellation, and same-origin
+  boundary checks;
 - build `apps/axiom-one/` as a local browser/PWA surface outside the trusted
   zero-dependency kernel;
 - provide human onboarding, node health, intent submission, visible plans,
