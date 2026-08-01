@@ -28,6 +28,7 @@ test('human explanation contract exactly covers stable errors and kernel events'
   assert.equal(Object.keys(contract.event_kinds).length, 37);
   assert.deepEqual(Object.keys(contract.actions).sort(), [
     'export.create',
+    'memory.link',
     'memory.put',
     'memory.tombstone',
     'system.echo'
@@ -104,6 +105,24 @@ test('request review names every bounded effect without granting authority', () 
   assert.equal(tombstoneFacts.Confirmation, 'Required');
   assert.equal(tombstoneFacts['Exact confirmation'], 'confirm:memory.tombstone');
   assert.match(tombstoneFacts.Reversibility, /no restore action/i);
+
+  const provenance = presenter.requestPreview({
+    action: 'memory.link',
+    input: {
+      from_id: `memory_${'a'.repeat(64)}`,
+      to_id: `memory_${'b'.repeat(64)}`,
+      relation: 'corrects',
+      metadata: { source: 'axiom-one-local-preview' }
+    },
+    purpose: 'owner-memory-provenance'
+  });
+  const provenanceFacts = Object.fromEntries(
+    provenance.facts.map(item => [item.label, item.value])
+  );
+  assert.match(provenanceFacts.Effect, /directional provenance edge/);
+  assert.equal(provenanceFacts['External transfer'], 'None');
+  assert.equal(provenanceFacts.Confirmation, 'Not required');
+  assert.match(provenanceFacts.Reversibility, /cannot delete an edge directly/i);
 
   const selectiveExport = presenter.requestPreview({
     action: 'export.create',

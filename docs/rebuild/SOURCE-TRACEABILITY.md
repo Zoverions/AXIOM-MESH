@@ -1,6 +1,6 @@
 # AXIOM-MESH Source Traceability
 
-**Current build:** `0.12.0-dev.2`
+**Current build:** `0.12.0-dev.3`
 
 **Status:** current requirements-to-implementation trace
 
@@ -33,7 +33,7 @@ prose and executable status differ.
 | Current-build source setup | `mesh/config/setup.json`, root and kernel package/lock files | setup negative tests, `npm run setup`, protected workflow | Exact Node.js/npm and CI/container pins, two zero-dependency locks, no install lifecycle scripts, unchanged-lock proof, no production credential creation |
 | Intent-to-evidence path | Gateway, Hypervisor, Sandbox, and Grid source under `mesh/src/` | kernel and end-to-end tests | Every privileged effect follows authenticated intent, deny-dominant authorization, a bounded grant, deterministic execution, and signed evidence |
 | Gateway client contract | `mesh/config/gateway-client-contract.json`, its JSON Schema, and the same-origin client module | exact route-parity, compatibility, error, cancellation, timeout, response-bound, and real-stack tests | All 27 authenticated Gateway routes are versioned; clients have no direct internal-service target; AXIOM One browser/session boundary remains pending |
-| AXIOM One local preview | `apps/axiom-one/app-policy.json`, human explanation contract/presenter, static PWA, and loopback proxy | exact policy/static/explanation checker, four-action/all-outcome/all-event fixtures, approval/uncertainty tests, real-stack owner and cross-principal memory lifecycle tests, proxy tests, and visual inspection | Experimental contract-only shell; reversible four-action review, owner-scoped create/list, confirmation-bound tombstone, selective export with explicit bundle reveal, all stable Gateway outcomes/current kernel events, raw evidence, same-key recovery, memory-only token, no API cache/remote assets; hard delete/restore/bulk ingestion, authoritative general consequential plan/approval, full browser-security, accessibility, usability, packaging, and support gates pending |
+| AXIOM One local preview | `apps/axiom-one/app-policy.json`, human explanation contract/presenter, static PWA, and loopback proxy | exact policy/static/explanation checker, five-action/all-outcome/all-event fixtures, approval/uncertainty tests, real-stack owner and cross-principal memory lifecycle tests, proxy tests, and visual inspection | Experimental contract-only shell; reversible five-action review, owner-scoped create/list, three fixed directional provenance links with correction-without-replacement, confirmation-bound tombstone, selective export with explicit bundle reveal, all stable Gateway outcomes/current kernel events, raw evidence, same-key recovery, memory-only token, no API cache/remote assets; edge deletion/hard delete/restore/bulk ingestion, authoritative general consequential plan/approval, full browser-security, accessibility, usability, packaging, and support gates pending |
 | Runtime policy | `mesh/config/policy.json`, layered policy loader | policy and IAM property tests | Lower layers can only restrict; high-risk work requires independent approval |
 | Durable state and evidence | Grid store, migrations, identity and protection libraries | restart, migration, tamper, wrong-key, backup, and rotation tests | Encrypted single-Grid state and signed hash-linked evidence; no replicated consensus claim |
 | Service transport | transport runtime and provisioning | mutual-TLS and rotation drill | TLS 1.3, separate Ed25519 leaves, exact active-leaf pinning, signed caller binding, offline rotation |
@@ -71,7 +71,7 @@ preserved on locked branch `deprecated/pre-0.12-documentation-corpus`. The
 divergent pre-clean-room implementation is preserved by immutable tag
 `archive/legacy-main-pre-clean-room-2026-05-21`.
 
-Those archives explain provenance but do not govern `0.12.0-dev.2`. Generated
+Those archives explain provenance but do not govern `0.12.0-dev.3`. Generated
 API sites, installers, contracts, token and bridge plans, domain proposals,
 research drafts, old audits, dashboards, and superseded operational material
 were deliberately removed from `main` because they do not describe the

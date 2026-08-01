@@ -14,7 +14,7 @@ test('AXIOM One preview policy and static boundary are exact', async () => {
   const result = await checkAxiomOnePreview();
   assert.equal(result.valid, true);
   assert.equal(result.schema, 'axiom-one-preview.v1');
-  assert.equal(result.kernel_version, '0.12.0-dev.2');
+  assert.equal(result.kernel_version, '0.12.0-dev.3');
   assert.equal(result.status, 'experimental-local-preview');
   assert.equal(result.surfaces, 7);
   assert.equal(result.gateway_routes, 14);
@@ -25,8 +25,12 @@ test('AXIOM One preview policy and static boundary are exact', async () => {
   assert.equal(result.public_shell_cache, true);
   assert.equal(result.api_cache, false);
   assert.equal(result.remote_origins_allowed, false);
-  assert.equal(result.explained_actions, 4);
+  assert.equal(result.explained_actions, 5);
   assert.equal(result.memory_lifecycle_status, 'experimental-bounded-lifecycle');
+  assert.equal(result.provenance_relations, 3);
+  assert.equal(result.self_links, false);
+  assert.equal(result.correction_replaces_original, false);
+  assert.equal(result.link_deletion, false);
   assert.equal(result.hard_delete, false);
   assert.equal(result.restore, false);
   assert.match(result.policy_digest, /^[a-f0-9]{64}$/);
@@ -55,6 +59,16 @@ test('AXIOM One preview rejects non-loopback and weakened policy', async () => {
   ));
   policy.security.secret_or_user_data_storage = true;
   assert.throws(() => validateAxiomOnePolicy(policy), /security boundary is weakened/);
+
+  const weakenedLifecycle = JSON.parse(await readFile(
+    new URL('../../apps/axiom-one/app-policy.json', import.meta.url),
+    'utf8'
+  ));
+  weakenedLifecycle.memory_lifecycle.provenance_relations.push('arbitrary');
+  assert.throws(
+    () => validateAxiomOnePolicy(weakenedLifecycle),
+    /memory lifecycle boundary is weakened/
+  );
 });
 
 test('AXIOM One serves a hardened shell and proxies only contract routes', async t => {
@@ -71,7 +85,7 @@ test('AXIOM One serves a hardened shell and proxies only contract routes', async
     });
     const payload = req.url === '/v1/status'
       ? {
-          kernel_version: '0.12.0-dev.2',
+          kernel_version: '0.12.0-dev.3',
           claim_source_digest: 'a'.repeat(64),
           runtime: {},
           capability_counts: {}
@@ -124,7 +138,7 @@ test('AXIOM One serves a hardened shell and proxies only contract routes', async
   assert.deepEqual(await health.json(), {
     schema: 'axiom-one-preview.v1',
     status: 'live',
-    kernel_version: '0.12.0-dev.2',
+    kernel_version: '0.12.0-dev.3',
     support: 'experimental-local-preview'
   });
 
@@ -136,7 +150,7 @@ test('AXIOM One serves a hardened shell and proxies only contract routes', async
     }
   });
   assert.equal(status.status, 200);
-  assert.equal((await status.json()).kernel_version, '0.12.0-dev.2');
+  assert.equal((await status.json()).kernel_version, '0.12.0-dev.3');
   assert.equal(observed.length, 1);
   assert.equal(observed[0].url, '/v1/status');
   assert.equal(observed[0].authorization, 'Bearer preview-fixture-token');
@@ -260,7 +274,7 @@ test('AXIOM One preview traverses the real four-service status and intent path',
   });
 
   const status = await client.call('status.get');
-  assert.equal(status.kernel_version, '0.12.0-dev.2');
+  assert.equal(status.kernel_version, '0.12.0-dev.3');
   assert.equal(status.runtime.grid.mode, 'single-node-transparency-log');
   const intent = await client.call('intents.submit', {
     body: {
@@ -288,10 +302,42 @@ test('AXIOM One preview traverses the real four-service status and intent path',
   });
   assert.equal(created.status, 'completed');
   assert.match(created.object_id, /^memory_[a-f0-9]{64}$/);
+  const correction = await client.call('intents.submit', {
+    body: {
+      action: 'memory.put',
+      input: {
+        kind: 'note',
+        content: { title: 'AXIOM One correction', text: 'new record; original retained' },
+        metadata: { source: 'axiom-one-local-preview' }
+      },
+      purpose: 'private-memory-recording'
+    },
+    idempotencyKey: 'axiom-one-memory-create-0002'
+  });
+  assert.equal(correction.status, 'completed');
+  const linked = await client.call('intents.submit', {
+    body: {
+      action: 'memory.link',
+      input: {
+        from_id: correction.object_id,
+        to_id: created.object_id,
+        relation: 'corrects',
+        metadata: { source: 'axiom-one-local-preview' }
+      },
+      purpose: 'owner-memory-provenance'
+    },
+    idempotencyKey: 'axiom-one-memory-link-0001'
+  });
+  assert.equal(linked.status, 'completed');
+  assert.match(linked.edge_id, /^edge_[a-f0-9]{64}$/);
   const memory = await client.call('memory.list');
-  assert.equal(memory.objects.length, 1);
+  assert.equal(memory.objects.length, 2);
   assert.equal(memory.objects[0].object_id, created.object_id);
   assert.equal(memory.objects[0].payload_json.content.title, 'AXIOM One memory');
+  assert.equal(memory.edges.length, 1);
+  assert.equal(memory.edges[0].from_id, correction.object_id);
+  assert.equal(memory.edges[0].to_id, created.object_id);
+  assert.equal(memory.edges[0].relation, 'corrects');
 
   const exported = await client.call('intents.submit', {
     body: {
@@ -324,6 +370,22 @@ test('AXIOM One preview traverses the real four-service status and intent path',
   await assert.rejects(
     outsider.call('intents.submit', {
       body: {
+        action: 'memory.link',
+        input: {
+          from_id: correction.object_id,
+          to_id: created.object_id,
+          relation: 'supports',
+          metadata: { source: 'axiom-one-local-preview' }
+        },
+        purpose: 'owner-memory-provenance'
+      },
+      idempotencyKey: 'axiom-one-outsider-link-0001'
+    }),
+    error => error.code === 'validation_error'
+  );
+  await assert.rejects(
+    outsider.call('intents.submit', {
+      body: {
         action: 'memory.tombstone',
         input: { object_id: created.object_id, reason: 'unauthorized removal' },
         confirmations: ['confirm:memory.tombstone']
@@ -347,6 +409,24 @@ test('AXIOM One preview traverses the real four-service status and intent path',
   });
   assert.equal(tombstoned.status, 'completed');
   assert.equal(tombstoned.object_id, created.object_id);
+  const afterTombstone = await client.call('memory.list');
+  assert.equal(afterTombstone.objects.length, 1);
+  assert.equal(afterTombstone.objects[0].object_id, correction.object_id);
+  assert.equal(afterTombstone.edges.length, 0);
+
+  const correctionTombstoned = await client.call('intents.submit', {
+    body: {
+      action: 'memory.tombstone',
+      input: {
+        object_id: correction.object_id,
+        reason: 'Owner removed this record through AXIOM One local preview.'
+      },
+      confirmations: ['confirm:memory.tombstone'],
+      purpose: 'owner-memory-tombstone'
+    },
+    idempotencyKey: 'axiom-one-memory-tombstone-0002'
+  });
+  assert.equal(correctionTombstoned.status, 'completed');
   assert.equal((await client.call('memory.list')).objects.length, 0);
 });
 

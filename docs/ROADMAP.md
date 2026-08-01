@@ -4,7 +4,7 @@
 
 **Updated:** 2026-07-30
 
-**Planning horizon:** active build `0.12.0-dev.2` through evidence-gated 1.0 and isolated frontier incubation
+**Planning horizon:** active build `0.12.0-dev.3` through evidence-gated 1.0 and isolated frontier incubation
 
 AXIOM-MESH is being developed as both a defensible capability kernel and a
 useful human network. The roadmap therefore advances three coordinated tracks:
@@ -128,7 +128,7 @@ Exit criteria:
 
 ## Current Phase 2 - single-node production pilot
 
-**Target line:** `0.12.x`; active build `0.12.0-dev.2`
+**Target line:** `0.12.x`; active build `0.12.0-dev.3`
 
 **Outcome:** one controlled deployment can be operated, measured, rotated,
 backed up, restored, and contained.
@@ -223,18 +223,20 @@ support boundaries are promoted.
 - extend the experimental loopback-only `apps/axiom-one/` PWA foundation into
   a reviewed local human product outside the trusted zero-dependency kernel;
 - maintain the experimental exact human-explanation contract: reversible
-  review for echo plus owner-scoped memory create, confirmation-bound
-  tombstone, and selective local export; all stable Gateway outcomes; all
-  current kernel events; approval-state distinctions; raw evidence; and
-  same-key uncertain-outcome recovery, without calling it an authoritative
-  kernel plan;
+  review for echo plus owner-scoped memory create, one of three fixed
+  directional provenance links, confirmation-bound tombstone, and selective
+  local export; all stable Gateway outcomes; all current kernel events;
+  approval-state distinctions; raw evidence; and same-key uncertain-outcome
+  recovery, without calling it an authoritative kernel plan;
 - provide human onboarding, node health, intent submission, visible plans,
   approval queues, revocation, receipts, memory inspection, selective export,
   deletion, and recovery guidance;
 - complete the Vault beyond its current bounded owner create/list, exact
-  tombstone, selective export, explicit bundle reveal, and cross-principal
-  denial evidence by adding provenance editing, bulk ingestion, permitted hard
-  deletion, restore, and tested recovery guidance;
+  `derived-from`/`supports`/`corrects` links, correction-without-replacement,
+  exact tombstone, selective export, explicit bundle reveal, and
+  cross-principal denial evidence by adding justified broader provenance and
+  edge-deletion policy, bulk ingestion, permitted hard deletion, restore, and
+  tested recovery guidance;
 - present user concepts such as Ask, Plan, Approvals, Vault, Receipts, Share,
   and Circles while retaining advanced inspection of the underlying services;
 - require no third-party analytics, advertising identifier, remote font,

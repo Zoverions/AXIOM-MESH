@@ -1,6 +1,6 @@
 # Gateway Client Contract
 
-**Applies to:** `0.12.0-dev.2`
+**Applies to:** `0.12.0-dev.3`
 
 **Contract schema:** `axiom-gateway-client-contract.v1`
 

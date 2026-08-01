@@ -4,7 +4,7 @@
 
 **Updated:** 2026-07-30
 
-**Active build:** `0.12.0-dev.2`
+**Active build:** `0.12.0-dev.3`
 
 **Supported runtime:** [`mesh/`](../mesh/README.md)
 
@@ -83,7 +83,7 @@ or override a current non-claim.
   activation, and frontier incubation.
 - [Production execution queue](MASTER-TODO.md) — assigns concrete IDs,
   priorities, and acceptance evidence.
-- [0.12.0-dev.2 build notes](releases/0.12.0-dev.2.md) — describes the current
+- [0.12.0-dev.3 build notes](releases/0.12.0-dev.3.md) — describes the current
   development line and its documentation/product-programme state.
 
 ### Production and operations
@@ -135,7 +135,7 @@ The published `v0.11.0` release remains immutable and is not redefined by the
 current development line. Its release page contains its original notes and
 artifacts.
 
-The active `main` build is `0.12.0-dev.2`. Current implementation and product
+The active `main` build is `0.12.0-dev.3`. Current implementation and product
 programme changes belong in the current build notes, status, product
 definition, requirements, roadmap, execution queue, readiness tracker, and
 white paper as applicable.

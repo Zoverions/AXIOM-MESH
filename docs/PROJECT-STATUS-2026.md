@@ -2,7 +2,7 @@
 
 **Status date:** 2026-08-01
 
-**Supported build:** `0.12.0-dev.2`
+**Supported build:** `0.12.0-dev.3`
 
 **Development branch:** `main`
 
@@ -10,7 +10,7 @@
 
 ## Current build
 
-AXIOM-MESH `0.12.0-dev.2` is a clean-room, dependency-free Node.js kernel organized as
+AXIOM-MESH `0.12.0-dev.3` is a clean-room, dependency-free Node.js kernel organized as
 four services: Gateway, Hypervisor, Sandbox, and Grid. They run as supervised
 processes in one hardened container or as independently restartable
 single-host units with isolated private credentials. It is the supported
@@ -222,19 +222,21 @@ foundation now uses that contract for status, one transparent echo intent,
 approval, governed owner-scoped Vault, receipt, explicit unavailable-sharing,
 and raw inspection surfaces. Its experimental human-explanation contract adds
 reversible review for echo, private memory creation, confirmation-bound exact
-tombstoning, and selective local export; fail-closed explanations for all 20
-stable Gateway outcomes and 37 current kernel event kinds; active/expired/
-consumed approval states; and same-key recovery for uncertain network outcomes.
-The Vault fetches an export bundle only after a separate reveal action and
-real-stack tests prove a second principal cannot read, export, or tombstone the
-owner's record. It preserves raw evidence and explicitly does not claim an
-authoritative pre-execution kernel plan. Hard deletion, restore, bulk ingestion,
+tombstoning, selective local export, and one of three fixed directional
+provenance links; fail-closed explanations for all 20 stable Gateway outcomes
+and 37 current kernel event kinds; active/expired/consumed approval states; and
+same-key recovery for uncertain network outcomes. A `corrects` edge retains
+both records instead of silently replacing the target. The Vault fetches an
+export bundle only after a separate reveal action, and real-stack tests prove a
+second principal cannot read, link, export, or tombstone the owner's record. It
+preserves raw evidence and explicitly does not claim an authoritative
+pre-execution kernel plan. Edge deletion, hard deletion, restore, bulk ingestion,
 complete consequential plan/approval flows, browser session/device security,
-accessibility/usability evidence, and preview packaging remain next. Follow with one
-bounded least-privilege AI provider adapter,
-AXIOM Verify, and invitation-based AXIOM Circles. These remain local or
-invitation-only previews until their exact security, accessibility, usability,
-recovery, and deployment evidence is promoted.
+accessibility/usability evidence, and preview packaging remain next. Follow with
+one bounded least-privilege AI provider adapter, AXIOM Verify, and
+invitation-based AXIOM Circles. These remain local or invitation-only previews
+until their exact security, accessibility, usability, recovery, and deployment
+evidence is promoted.
 
 Advanced distributed authority, settlement, autonomous-agent, domain, embodied,
 arbitrary-code, and post-quantum work may proceed in isolated laboratories under

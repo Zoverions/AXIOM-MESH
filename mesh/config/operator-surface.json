@@ -1,6 +1,6 @@
 {
   "schema": "axiom-operator-surface.v1",
-  "kernel_version": "0.12.0-dev.2",
+  "kernel_version": "0.12.0-dev.3",
   "public_endpoints": [
     "GET /health",
     "GET /ready",

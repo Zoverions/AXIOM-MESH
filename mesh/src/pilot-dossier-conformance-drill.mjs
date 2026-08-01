@@ -31,7 +31,7 @@ export function createSyntheticPilotFixture({ now = Date.now() } = {}) {
   const observationEndedAt = generatedAt - HOUR;
   const observationStartedAt = observationEndedAt - (720 * HOUR);
   const build = {
-    kernel_version: '0.12.0-dev.2',
+    kernel_version: '0.12.0-dev.3',
     source_revision: 'a'.repeat(40),
     image_digest: `sha256:${'b'.repeat(64)}`
   };

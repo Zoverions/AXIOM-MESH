@@ -1,6 +1,6 @@
 # AXIOM-MESH candidate production runtime
 
-**Applies to:** `0.12.0-dev.2`
+**Applies to:** `0.12.0-dev.3`
 
 The candidate production package runs Gateway, Hypervisor, Sandbox, and Grid as
 four supervised Node.js processes inside one hardened container. Only Gateway

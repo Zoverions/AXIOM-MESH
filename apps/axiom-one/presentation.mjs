@@ -21,6 +21,10 @@ const ACTION_BOUNDARIES = Object.freeze({
     consequence: 'durable-local-memory-write',
     confirmations: Object.freeze([])
   }),
+  'memory.link': Object.freeze({
+    consequence: 'durable-local-provenance-write',
+    confirmations: Object.freeze([])
+  }),
   'memory.tombstone': Object.freeze({
     consequence: 'durable-local-memory-tombstone',
     confirmations: Object.freeze(['confirm:memory.tombstone'])
@@ -60,7 +64,7 @@ export function validateHumanContract(contract) {
   if (
     contract.schema !== 'axiom-one-human-contract.v1'
     || contract.version !== 1
-    || contract.kernel_version !== '0.12.0-dev.2'
+    || contract.kernel_version !== '0.12.0-dev.3'
     || contract.status !== 'experimental-human-explanations'
   ) throw new TypeError('Human explanation contract identity is invalid');
   if (

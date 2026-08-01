@@ -5,7 +5,7 @@ pilot hardware and cgroup pressure remain pending
 
 **Updated:** 2026-07-29
 
-**Applies to:** AXIOM-MESH `0.12.0-dev.2` supported development build
+**Applies to:** AXIOM-MESH `0.12.0-dev.3` supported development build
 
 This runbook defines the supported request-pressure and dependency-loss
 exercise. It verifies that bounded request resources fail closed, a stalled

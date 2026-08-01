@@ -348,6 +348,14 @@ async function renderApprovals() {
 async function renderVault() {
   const response = await state.client.call('memory.list');
   const objects = response.objects ?? [];
+  const edges = response.edges ?? [];
+  const objectTitle = item => typeof item.payload_json?.content?.title === 'string'
+    ? item.payload_json.content.title
+    : item.object_id ?? item.id ?? 'Memory object';
+  const objectLabels = new Map(objects.map(item => {
+    const objectId = item.object_id ?? item.id;
+    return [objectId, objectTitle(item)];
+  }));
   const form = element('form', { className: 'stack' });
   const title = element('input', {
     attrs: {
@@ -382,6 +390,72 @@ async function renderVault() {
     field('Title', title, 'memory-title'),
     field('Private note', text, 'memory-text'),
     element('div', { className: 'actions' }, [create, cancel])
+  );
+  const provenanceForm = element('form', { className: 'stack' });
+  const sourceObject = element('select', {
+    attrs: { id: 'provenance-source', name: 'source', required: '' }
+  }, [
+    element('option', {
+      text: 'Choose the source record',
+      attrs: { value: '', disabled: '', selected: '' }
+    }),
+    ...objects.map(item => {
+      const objectId = item.object_id ?? item.id ?? '';
+      return element('option', {
+        text: `${objectTitle(item)} (${objectId.slice(0, 20)}...)`,
+        attrs: { value: objectId }
+      });
+    })
+  ]);
+  const relation = element('select', {
+    attrs: { id: 'provenance-relation', name: 'relation', required: '' }
+  }, [
+    element('option', { text: 'is derived from', attrs: { value: 'derived-from' } }),
+    element('option', { text: 'supports', attrs: { value: 'supports' } }),
+    element('option', { text: 'corrects without replacing', attrs: { value: 'corrects' } })
+  ]);
+  const targetObject = element('select', {
+    attrs: { id: 'provenance-target', name: 'target', required: '' }
+  }, [
+    element('option', {
+      text: 'Choose the target record',
+      attrs: { value: '', disabled: '', selected: '' }
+    }),
+    ...objects.map(item => {
+      const objectId = item.object_id ?? item.id ?? '';
+      return element('option', {
+        text: `${objectTitle(item)} (${objectId.slice(0, 20)}...)`,
+        attrs: { value: objectId }
+      });
+    })
+  ]);
+  const linkButton = element('button', {
+    className: 'button button-primary',
+    text: 'Review provenance link',
+    attrs: { type: 'submit' }
+  });
+  provenanceForm.append(
+    notice('A provenance link records direction and context without changing, hiding, or deleting either record.'),
+    field('Source record', sourceObject, 'provenance-source'),
+    field('Relationship', relation, 'provenance-relation'),
+    field('Target record', targetObject, 'provenance-target'),
+    element('ul', { className: 'data-list' }, [
+      element('li', {}, [
+        element('strong', { text: 'Derived from' }),
+        element('span', { text: 'The source record was derived from the target record.' })
+      ]),
+      element('li', {}, [
+        element('strong', { text: 'Supports' }),
+        element('span', { text: 'The source record provides support for the target record.' })
+      ]),
+      element('li', {}, [
+        element('strong', { text: 'Corrects' }),
+        element('span', { text: 'The source record corrects the target; both records remain active and visible.' })
+      ])
+    ]),
+    objects.length < 2
+      ? empty('Create at least two active memory records before linking provenance.')
+      : element('div', { className: 'actions' }, [linkButton])
   );
   const review = element('div', { className: 'stack', attrs: { id: 'vault-review' } });
   const result = element('div', { className: 'stack', attrs: { id: 'vault-result' } });
@@ -516,6 +590,7 @@ async function renderVault() {
         return;
       }
       create.disabled = Boolean(state.vault.pending);
+      linkButton.disabled = Boolean(state.vault.pending) || objects.length < 2;
       renderLast();
       renderReview();
       announce('Lifecycle outcome is not confirmed; same-request recovery is available');
@@ -532,6 +607,7 @@ async function renderVault() {
       idempotencyKey: `axiom-one:vault:${crypto.randomUUID()}`
     };
     create.disabled = true;
+    linkButton.disabled = true;
     renderReview();
     announce('Memory lifecycle review is ready; nothing has been sent');
     review.scrollIntoView({ block: 'nearest' });
@@ -563,13 +639,30 @@ async function renderVault() {
     });
   });
   cancel.addEventListener('click', () => activeController?.abort());
+  provenanceForm.addEventListener('submit', event => {
+    event.preventDefault();
+    targetObject.setCustomValidity('');
+    if (sourceObject.value === targetObject.value) {
+      targetObject.setCustomValidity('Choose two different memory records for a provenance link.');
+      targetObject.reportValidity();
+      return;
+    }
+    startReview({
+      action: 'memory.link',
+      input: {
+        from_id: sourceObject.value,
+        to_id: targetObject.value,
+        relation: relation.value,
+        metadata: { source: 'axiom-one-local-preview' }
+      },
+      purpose: 'owner-memory-provenance'
+    });
+  });
 
   const records = objects.length
     ? element('div', { className: 'stack' }, objects.map(item => {
       const objectId = item.object_id ?? item.id;
-      const objectTitle = typeof item.payload_json?.content?.title === 'string'
-        ? item.payload_json.content.title
-        : objectId ?? 'Memory object';
+      const title = objectTitle(item);
       const remove = element('button', {
         className: 'button button-secondary',
         text: 'Review removal',
@@ -599,7 +692,7 @@ async function renderVault() {
       }));
       return element('article', { className: 'card full' }, [
         element('span', { className: 'badge good', text: 'Encrypted local record' }),
-        element('h2', { text: objectTitle }),
+        element('h2', { text: title }),
         element('p', { text: `${item.kind ?? 'record'} · ${item.created_at ?? 'time unavailable'}` }),
         element('div', { className: 'actions' }, [remove, exportButton]),
         rawDetails('Inspect exact memory record', item)
@@ -607,9 +700,27 @@ async function renderVault() {
     }))
     : empty('No active memory objects are visible to this principal.');
 
+  const provenance = edges.length
+    ? element('div', { className: 'stack' }, edges.map(item => {
+      const source = objectLabels.get(item.from_id) ?? item.from_id ?? 'Unknown source';
+      const target = objectLabels.get(item.to_id) ?? item.to_id ?? 'Unknown target';
+      const relationLabel = {
+        'derived-from': 'is derived from',
+        supports: 'supports',
+        corrects: 'corrects without replacing'
+      }[item.relation] ?? 'has an unmapped relationship with';
+      return element('article', { className: 'card full' }, [
+        element('span', { className: 'badge good', text: 'Owner-scoped provenance' }),
+        element('h2', { text: `${source} ${relationLabel} ${target}` }),
+        element('p', { text: 'Both linked records remain independently visible. This edge grants no authority and sends no data.' }),
+        rawDetails('Inspect exact provenance edge', item)
+      ]);
+    }))
+    : empty('No active provenance links are visible to this principal.');
+
   view.replaceChildren(
     header('Private vault',
-      'Create, inspect, tombstone, and selectively export owner-scoped encrypted memory through explicit reviewed local requests.'),
+      'Create, link, inspect, tombstone, and selectively export owner-scoped encrypted memory through explicit reviewed local requests.'),
     grid([
       metricCard('Objects', String(objects.length), 'Visible memory records'),
       metricCard('Links', String(response.edges?.length ?? 0), 'Visible provenance edges'),
@@ -622,15 +733,24 @@ async function renderVault() {
       element('h2', { text: 'Create a private note', attrs: { id: 'create-memory-heading' } }),
       form
     ]),
+    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'link-memory-heading' } }, [
+      element('h2', { text: 'Record provenance', attrs: { id: 'link-memory-heading' } }),
+      provenanceForm
+    ]),
     review,
     result,
     element('section', { className: 'stack', attrs: { 'aria-labelledby': 'memory-records-heading' } }, [
       element('h2', { text: 'Active memory records', attrs: { id: 'memory-records-heading' } }),
       records
     ]),
+    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'memory-links-heading' } }, [
+      element('h2', { text: 'Active provenance links', attrs: { id: 'memory-links-heading' } }),
+      provenance
+    ]),
     rawDetails('Raw memory response', response)
   );
   create.disabled = Boolean(state.vault.pending);
+  linkButton.disabled = Boolean(state.vault.pending) || objects.length < 2;
   if (state.vault.pending) renderReview();
   renderLast();
 }

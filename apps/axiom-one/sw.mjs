@@ -1,4 +1,4 @@
-const CACHE_NAME = 'axiom-one-shell-v3';
+const CACHE_NAME = 'axiom-one-shell-v4';
 const SHELL_ASSETS = Object.freeze([
   '/',
   '/index.html',

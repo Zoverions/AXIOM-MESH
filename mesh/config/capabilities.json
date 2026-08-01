@@ -1,7 +1,7 @@
 {
   "schema": "axiom-capabilities.v1",
   "verified_at": "2026-08-01",
-  "kernel_version": "0.12.0-dev.2",
+  "kernel_version": "0.12.0-dev.3",
   "capabilities": [
     {
       "id": "core.intent-loop",
@@ -260,7 +260,7 @@
       "id": "ui.dashboard",
       "family": "operations",
       "status": "experimental",
-      "summary": "A loopback-only AXIOM One PWA preview provides node status, reversible review for echo plus three governed memory lifecycle actions, exact explanations for all stable Gateway outcomes and current kernel events, approval-state distinctions, same-key uncertainty recovery, owner-scoped private-note creation, confirmation-bound tombstoning, selective local export with explicit bundle reveal, unavailable-sharing, and raw evidence surfaces; it is not a supported product, hard-delete/restore interface, authoritative pre-execution kernel plan, or completed browser-security boundary.",
+      "summary": "A loopback-only AXIOM One PWA preview provides node status, reversible review for echo plus four governed memory lifecycle actions, exact explanations for all stable Gateway outcomes and current kernel events, approval-state distinctions, same-key uncertainty recovery, owner-scoped private-note creation, three fixed directional provenance links with correction-without-replacement, confirmation-bound tombstoning, selective local export with explicit bundle reveal, unavailable-sharing, and raw evidence surfaces; it is not a supported product, edge-deletion/hard-delete/restore interface, authoritative pre-execution kernel plan, or completed browser-security boundary.",
       "evidence": [
         "apps/axiom-one/app-policy.json",
         "apps/axiom-one/human-contract.json",

@@ -20,7 +20,7 @@ test('current Gateway client contract is exact and covers every authenticated ro
   const result = await checkGatewayClientContract();
   assert.equal(result.valid, true);
   assert.equal(result.schema, 'axiom-gateway-client-contract.v1');
-  assert.equal(result.kernel_version, '0.12.0-dev.2');
+  assert.equal(result.kernel_version, '0.12.0-dev.3');
   assert.equal(result.routes, 27);
   assert.equal(result.implemented_routes, 27);
   assert.equal(result.stable_errors, 20);
@@ -39,7 +39,7 @@ test('Gateway client emits only contract-owned relative requests', async () => {
       observed.push({ path, options });
       return jsonResponse({
         schema: 'axiom-capabilities.v1',
-        kernel_version: '0.12.0-dev.2',
+        kernel_version: '0.12.0-dev.3',
         capabilities: [],
         digest: 'a'.repeat(64)
       });
@@ -48,7 +48,7 @@ test('Gateway client emits only contract-owned relative requests', async () => {
   const result = await client.call('capabilities.list', {
     traceId: 'client-trace-001'
   });
-  assert.equal(result.kernel_version, '0.12.0-dev.2');
+  assert.equal(result.kernel_version, '0.12.0-dev.3');
   assert.equal(observed.length, 1);
   assert.equal(observed[0].path, '/v1/capabilities');
   assert.equal(observed[0].path.includes('://'), false);
@@ -74,7 +74,7 @@ test('Gateway client invokes browser fetch without an object receiver', async ()
     request: function request() {
       receiver = this;
       return Promise.resolve(jsonResponse({
-        kernel_version: '0.12.0-dev.2',
+        kernel_version: '0.12.0-dev.3',
         claim_source_digest: 'a'.repeat(64),
         runtime: {},
         capability_counts: {}
@@ -246,7 +246,7 @@ test('Gateway client preserves explicit errors and rejects malformed responses',
 
   const malformed = createGatewayClient({
     token: 'fixture-token-in-memory',
-    request: async () => jsonResponse({ kernel_version: '0.12.0-dev.2' })
+    request: async () => jsonResponse({ kernel_version: '0.12.0-dev.3' })
   });
   await assert.rejects(
     () => malformed.call('status.get'),
@@ -438,7 +438,7 @@ test('Gateway client contract is compatible with the real four-service path', as
   });
 
   const status = await client.call('status.get');
-  assert.equal(status.kernel_version, '0.12.0-dev.2');
+  assert.equal(status.kernel_version, '0.12.0-dev.3');
   assert.equal(status.runtime.grid.mode, 'single-node-transparency-log');
   const idempotencyKey = 'client-contract-e2e-0001';
   const intent = await client.call('intents.submit', {
