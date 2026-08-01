@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=58b9fb3086613cc41559240ab389cbc2e87ef0f51456c3c70453e1ae5a97f124 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=b52493c528d286863de0acb16dbf5f9f303867596c6762a3601d63c6cf911185 -->
 # AXIOM-MESH Rebuild Requirements
 
 **Current build:** `0.12.0-dev.0`
@@ -196,6 +196,7 @@ state.
 | OPS-08 | Production supervisors MUST bound request pressure, propagate dependency loss, exit fail-closed after child death, and preserve Grid state through recovery. | Signed resilience drill. |
 | OPS-09 | Secret and policy providers MUST use independent signers, digest-pinned command chains, nonce-bound exact inventories, bounded execution, semantic validation, private materialization, and fail-closed cleanup. | Provider conformance drill. |
 | OPS-10 | Every user-facing and frontier component MUST have an owner, threat model, support boundary, update path, rollback, uninstall or decommissioning procedure, and incident contact before exposure. | Release checklist and deployment dossier. |
+| OPS-11 | Internal service communication MUST default deny, authorize an exact caller, destination, method, and route before request signing or network I/O, derive active mTLS peers from the same policy, keep plaintext development traffic on loopback, and remove unrelated unit-network adjacency. | Policy/route/Compose negative tests, protected required-path readiness, selected forbidden-edge container probes, and release-provenance binding. |
 
 ## Production and marketing promotion
 

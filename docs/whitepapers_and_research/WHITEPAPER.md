@@ -143,11 +143,15 @@ bypass this path.
 
 The compact candidate runs the four services as separate supervised Node.js
 processes in one hardened container. The alternate single-host topology runs
-four independently restartable containers. Only Gateway crosses the
-permission-restricted host ingress. Internal service edges use mutually
-authenticated TLS 1.3, distinct Ed25519 identities, DNS and SPIFFE-style URI
-identities, active-certificate pinning, and signed replay-protected request
-envelopes.
+four independently restartable containers across four exact internal network
+segments. Only Gateway crosses the permission-restricted host ingress.
+Internal service edges use mutually authenticated TLS 1.3, distinct Ed25519
+identities, DNS and SPIFFE-style URI identities, active-certificate pinning,
+and signed replay-protected request envelopes. A machine-readable default-deny
+policy authorizes only 38 exact current-build caller, destination, method, and
+route combinations before request signing and again at the receiving service,
+while deriving each destination's active mTLS peers. Segmentation removes
+unrelated adjacency; transport and application checks impose direction.
 
 Grid alone receives the durable database and data-protection key. Gateway alone
 receives the API principal registry. Protected evidence proves Sandbox-only

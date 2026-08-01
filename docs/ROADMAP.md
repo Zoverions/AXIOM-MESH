@@ -304,7 +304,10 @@ Milestones:
 - mutually authenticated TLS 1.3 service identity and offline certificate
   lifecycle are implemented for the single-host candidate; repeat with
   per-unit mounts, external CA custody, and orchestrator rollout;
-- explicit network policy and per-service ingress/egress allowlists;
+- exact default-deny application routes, policy-derived mTLS peers, and four
+  segmented single-host networks are implemented; reproduce per-service
+  ingress/egress enforcement on the pilot orchestrator and independently
+  hosted deployment;
 - independent deployment units and failure isolation are implemented for the
   single-host candidate with signed host evidence and protected four-container
   checks; multi-host rollout remains;

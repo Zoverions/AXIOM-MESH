@@ -15,6 +15,10 @@ import {
   loadTransportRuntime,
   transportServerOptions
 } from '../lib/transport-credentials.mjs';
+import {
+  allowedInboundTransportPeers,
+  authorizeInboundServiceRequest
+} from '../lib/service-network-policy.mjs';
 import { planDigest, validatePlan } from '../lib/plan.mjs';
 import { executeBuiltin } from './executor.mjs';
 
@@ -110,8 +114,12 @@ export async function createSandboxService(config = meshConfig()) {
       : undefined,
     transportPeers: identity.transport?.peers,
     allowedTransportPeers: identity.transport
-      ? ['hypervisor', 'sandbox', 'supervisor']
+      ? allowedInboundTransportPeers('sandbox')
       : undefined,
+    authorizeRequest: args => authorizeInboundServiceRequest({
+      ...args,
+      destination: 'sandbox'
+    }),
     authenticate: ({ req, body }) => verifySignedRequest({
       req,
       body,

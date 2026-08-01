@@ -5,6 +5,7 @@ import {
   serviceDnsName,
   verifyTransportServerIdentity
 } from './transport-credentials.mjs';
+import { authorizeServiceRequest } from './service-network-policy.mjs';
 
 export async function signedFetch(identity, audience, url, {
   method = 'GET',
@@ -13,6 +14,12 @@ export async function signedFetch(identity, audience, url, {
   timeoutMs = 10_000,
   headers = {}
 } = {}) {
+  authorizeServiceRequest({
+    source: identity?.service,
+    destination: audience,
+    method,
+    url
+  });
   const encoded = body === undefined ? Buffer.alloc(0) : Buffer.from(JSON.stringify(body));
   const authHeaders = signedRequestHeaders(identity, { method, url, audience, body: encoded });
   const requestHeaders = {

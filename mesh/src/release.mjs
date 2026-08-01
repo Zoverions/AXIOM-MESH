@@ -19,6 +19,11 @@ import { validateIncidentResponsePolicy } from './incident-response.mjs';
 import { validateResilienceDrillPolicy } from './resilience-drill.mjs';
 import { validateTelemetryRoutingPolicy } from './telemetry-relay.mjs';
 import { validateSourceSetupState } from './setup.mjs';
+import {
+  validateComposeNetworkSegmentation,
+  validateServiceNetworkPolicy,
+  validateServiceRouteImplementation
+} from './lib/service-network-policy.mjs';
 
 const REPOSITORY_ROOT = dirname(MESH_ROOT);
 const SUPPORTED_DEPENDENCY_MANIFESTS = new Set([
@@ -79,6 +84,11 @@ export async function verifyReleaseReadiness() {
       'resilience-drill.json'
     ),
     setupPolicy: join(MESH_ROOT, 'config', 'setup.json'),
+    serviceNetworkPolicy: join(
+      MESH_ROOT,
+      'config',
+      'service-network-policy.json'
+    ),
     nodeVersionPin: join(MESH_ROOT, '.node-version'),
     package: join(MESH_ROOT, 'package.json'),
     lock: join(MESH_ROOT, 'package-lock.json'),
@@ -110,6 +120,7 @@ export async function verifyReleaseReadiness() {
     telemetryRoutingPolicy,
     resilienceDrillPolicy,
     setupPolicy,
+    serviceNetworkPolicy,
     nodeVersionPin,
     packageJson,
     lock,
@@ -134,6 +145,7 @@ export async function verifyReleaseReadiness() {
     readJson(paths.telemetryRoutingPolicy),
     readJson(paths.resilienceDrillPolicy),
     readJson(paths.setupPolicy),
+    readJson(paths.serviceNetworkPolicy),
     readFile(paths.nodeVersionPin, 'utf8'),
     readJson(paths.package),
     readJson(paths.lock),
@@ -177,6 +189,27 @@ export async function verifyReleaseReadiness() {
     dockerfile,
     workflow
   });
+  const serviceNetwork = validateServiceNetworkPolicy(
+    serviceNetworkPolicy
+  );
+  const serviceNetworkDeployment = validateComposeNetworkSegmentation(
+    unitCompose,
+    serviceNetworkPolicy
+  );
+  const serviceNetworkRoutes = validateServiceRouteImplementation({
+    policy: serviceNetworkPolicy,
+    sources: {
+      grid: await readFile(join(MESH_ROOT, 'src', 'grid', 'server.mjs'), 'utf8'),
+      hypervisor: await readFile(
+        join(MESH_ROOT, 'src', 'hypervisor', 'server.mjs'),
+        'utf8'
+      ),
+      sandbox: await readFile(
+        join(MESH_ROOT, 'src', 'sandbox', 'server.mjs'),
+        'utf8'
+      )
+    }
+  });
   if (packageJson.version !== registry.kernel_version || lock.version !== packageJson.version) {
     throw new ValidationError('Package, lockfile, and capability registry versions must match');
   }
@@ -215,21 +248,33 @@ export async function verifyReleaseReadiness() {
   if (!rollback.includes('## Rollback procedure') || !rollback.includes('## Migration compatibility')) {
     throw new ValidationError('Rollback plan is incomplete');
   }
-  const deployment = verifyProductionDeployment({
-    dockerfile,
-    dockerignore,
-    compose,
-    unitCompose,
-    productionDocs,
-    packageJson,
-    backupRetentionPolicy,
-    credentialRevocations,
-    incidentResponsePolicy,
-    telemetryRoutingPolicy,
-    resilienceDrillPolicy,
-    workflow,
-    repositoryIgnore
-  });
+  const deployment = {
+    ...verifyProductionDeployment({
+      dockerfile,
+      dockerignore,
+      compose,
+      unitCompose,
+      productionDocs,
+      packageJson,
+      backupRetentionPolicy,
+      credentialRevocations,
+      incidentResponsePolicy,
+      telemetryRoutingPolicy,
+      resilienceDrillPolicy,
+      workflow,
+      repositoryIgnore
+    }),
+    service_network_policy: {
+      schema: serviceNetwork.schema,
+      policy_digest: serviceNetwork.policy_digest,
+      default_action: serviceNetwork.default_action,
+      segments: serviceNetwork.segments,
+      flows: serviceNetwork.flows,
+      routes: serviceNetwork.routes,
+      implemented_routes: serviceNetworkRoutes.implemented_routes,
+      compose_segmentation_sha256: serviceNetworkDeployment.compose_sha256
+    }
+  };
   for (const capability of registry.capabilities.filter(item => item.status === 'implemented')) {
     for (const evidence of capability.evidence) {
       await readFile(join(REPOSITORY_ROOT, evidence));
@@ -346,6 +391,7 @@ export async function verifyReleaseReadiness() {
     telemetry_routing: telemetryRouting,
     resilience_drill: resilienceDrill,
     setup,
+    service_network: deployment.service_network_policy,
     operator_surface_digest: digestObject(operatorSurface),
     deployment,
     migrations: migrationEvidence,
@@ -362,6 +408,7 @@ export async function verifyReleaseReadiness() {
     dirty,
     registry: registryResult,
     setup,
+    service_network: deployment.service_network_policy,
     deployment,
     documentation,
     source_boundary: sourceBoundary,
@@ -542,6 +589,7 @@ export function verifyProductionDeployment({
     'cross-process port-block lease',
     'mutually authenticated TLS 1.3',
     'independently deployable units',
+    '38 exact caller/destination/method/route',
     'admitted-node discovery and scheduling',
     'operator-approved online causal exchange',
     'Deployment-independent provider startup',
@@ -604,6 +652,7 @@ export function verifyProductionDeployment({
     'docker compose -f compose.production.yml up --detach --no-build',
     'docker compose -f compose.production.yml down --volumes --remove-orphans',
     'docker compose -f compose.units.yml up --detach --no-build',
+    'node src/network-policy-probe.mjs sandbox 8082',
     'docker compose -f compose.units.yml stop sandbox',
     'docker compose -f compose.units.yml start sandbox',
     'docker compose -f compose.units.yml down --volumes --remove-orphans'
@@ -639,7 +688,7 @@ export function verifyProductionDeployment({
     },
     independent_units: {
       services: 4,
-      internal_network: true,
+      internal_network_segments: 4,
       per_unit_private_identity: true,
       failure_isolation_ci: true
     },

@@ -97,7 +97,7 @@ test('mutual TLS binds the active certificate peer to the signed service caller'
   const accepted = await signedFetch(
     gatewayIdentity,
     'hypervisor',
-    `${active.origin}/internal/v1/check`
+    `${active.origin}/internal/v1/operations`
   );
   assert.equal(accepted.caller, 'gateway');
   assert.equal(accepted.protocol, 'TLSv1.3');
@@ -114,7 +114,7 @@ test('mutual TLS binds the active certificate peer to the signed service caller'
     () => signedFetch(
       gatewayIdentity,
       'hypervisor',
-      `${active.origin}/internal/v1/check`
+      `${active.origin}/internal/v1/operations`
     ),
     error => (
       error.code === 'invalid_transport_peer'
@@ -147,7 +147,7 @@ test('mutual TLS binds the active certificate peer to the signed service caller'
     () => signedFetch(
       gatewayIdentity,
       'hypervisor',
-      `${wrongServer.origin}/internal/v1/check`
+      `${wrongServer.origin}/internal/v1/operations`
     ),
     /not cert's CN|not in the cert's altnames|active peer identity/i
   );
@@ -207,7 +207,7 @@ test('offline rotation rejects retired leaf certificates and supports exact roll
     () => signedFetch(
       applicationIdentity,
       'hypervisor',
-      `${server.origin}/internal/v1/check`
+      `${server.origin}/internal/v1/operations`
     ),
     error => error.code === 'invalid_transport_peer'
   );
@@ -217,7 +217,7 @@ test('offline rotation rejects retired leaf certificates and supports exact roll
       await signedFetch(
         applicationIdentity,
         'hypervisor',
-        `${server.origin}/internal/v1/check`
+        `${server.origin}/internal/v1/operations`
       )
     ).caller,
     'gateway'
@@ -293,7 +293,7 @@ async function startAuthenticatedTestService({
     service: certificateService,
     status: 'live'
   }), { auth: false });
-  router.add('GET', '/internal/v1/check', async ({ req, principal }) => ({
+  router.add('GET', '/internal/v1/operations', async ({ req, principal }) => ({
     caller: principal.service,
     protocol: req.socket.getProtocol()
   }));

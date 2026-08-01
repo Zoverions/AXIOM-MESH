@@ -111,6 +111,7 @@ invitation-only previews, but it cannot imply production promotion.
 | NET-006 | Pending | Add authenticated remote dispatch and result provenance | Workload identity, grant/input/software binding, measured resources, timeout/cancellation, replay rejection, partial-failure semantics, compensation, signed result evidence, and malicious-node tests |
 | NET-007 | Pending | Repeat causal exchange and service operation across independently operated WAN hosts | External custody, latency/loss/clock/partition injection, sustained backlog, data residency, recovery, key rotation, and independent review evidence |
 | NET-008 | Pending | Define stronger membership identity and endpoint-health evidence before distributed-compute promotion | Threat model and tests for Sybil, copied ownership, endpoint substitution, stale measurement, collusion, quarantine, appeal, and re-admission |
+| NET-009 | Complete for reference single-host topology; pilot orchestrator pending | Enforce an explicit per-service ingress/egress graph | Default-deny 38-route application policy, policy-derived mTLS peer allowlists, four exact internal network segments, loopback-only plaintext development, release provenance, and protected required/forbidden-edge proof |
 
 ## P3 - controlled adapters and product ecosystem
 
