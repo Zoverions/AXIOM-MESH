@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=58b9fb3086613cc41559240ab389cbc2e87ef0f51456c3c70453e1ae5a97f124 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=b52493c528d286863de0acb16dbf5f9f303867596c6762a3601d63c6cf911185 -->
 # AXIOM-MESH Product Definition
 
 **Status:** canonical rebuild and product definition
@@ -89,6 +89,14 @@ Intent
 No component, product, adapter, administrator, autonomous agent, settlement
 process, or domain capsule may bypass this path for a privileged or externally
 visible effect.
+
+The current reference unit topology runs the four services across four exact
+single-host internal network segments. A machine-readable default-deny policy
+authorizes only 38 exact caller, destination, method, and route combinations
+before signing or network I/O, derives each destination's active mTLS peers,
+and removes Gateway-to-Sandbox and Grid-to-Sandbox adjacency. Plaintext
+development traffic remains loopback-only. This is a reference single-host
+enforcement claim, not evidence of a pilot or multi-host orchestrator policy.
 
 ## Product layers
 

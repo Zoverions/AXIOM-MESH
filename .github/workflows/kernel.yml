@@ -475,12 +475,23 @@ jobs:
           test "$(docker compose -f compose.units.yml ps -q grid)" = "$grid_id"
           test "$(docker compose -f compose.units.yml ps -q hypervisor)" = "$hypervisor_id"
           echo "AXIOM_UNIT_TOPOLOGY_VERIFIED=true" >> "$GITHUB_ENV"
+      - name: Prove exact service-unit network segmentation
+        working-directory: mesh
+        run: |
+          docker compose -f compose.units.yml exec -T gateway \
+            node src/network-policy-probe.mjs sandbox 8082
+          docker compose -f compose.units.yml exec -T sandbox \
+            node src/network-policy-probe.mjs grid 8083
+          docker compose -f compose.units.yml exec -T grid \
+            node src/network-policy-probe.mjs sandbox 8082
+          echo "AXIOM_UNIT_NETWORK_POLICY_VERIFIED=true" >> "$GITHUB_ENV"
       - name: Prove service units cannot reach the public network
         working-directory: mesh
         run: |
           docker compose -f compose.units.yml exec -T gateway \
             node -e "const net=require('node:net');const socket=net.createConnection({host:'1.1.1.1',port:443});const timer=setTimeout(()=>{socket.destroy();process.exit(0)},3000);socket.once('connect',()=>{clearTimeout(timer);socket.destroy();process.exit(1)});socket.once('error',()=>{clearTimeout(timer);process.exit(0)})"
           test "$AXIOM_UNIT_TOPOLOGY_VERIFIED" = "true"
+          test "$AXIOM_UNIT_NETWORK_POLICY_VERIFIED" = "true"
       - name: Stop service units
         if: always()
         working-directory: mesh

@@ -10,6 +10,7 @@
     "setup": "node mesh/src/setup.mjs install --verify",
     "setup:install": "node mesh/src/setup.mjs install",
     "setup:check": "node mesh/src/setup.mjs check",
+    "network-policy:check": "node mesh/src/check-service-network-policy.mjs",
     "doctor": "node mesh/src/doctor.mjs",
     "axiom": "node mesh/src/cli.mjs --human",
     "cli": "node mesh/src/cli.mjs --human",

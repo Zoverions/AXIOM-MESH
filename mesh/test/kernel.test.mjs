@@ -187,6 +187,11 @@ test('production configuration rejects generated credentials and remote plaintex
     autoBootstrap: false,
     internalTlsEnabled: false
   }), /mutually authenticated TLS/);
+  assert.throws(() => meshConfig({
+    environment: 'development',
+    internalTlsEnabled: false,
+    gridUrl: 'http://untrusted.example:8083'
+  }), /loopback-only/);
 });
 
 test('capability tokens are signed, audience-bound, expiring, and replay guardable', async t => {
@@ -1936,8 +1941,11 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
     },
     body: directCommitBody
   });
-  assert.equal(directCommit.status, 400);
-  assert.equal((await directCommit.json()).error.message, 'Only Hypervisor may commit state transitions');
+  assert.equal(directCommit.status, 403);
+  assert.equal(
+    (await directCommit.json()).error.code,
+    'service_network_policy_denied'
+  );
 
   const gridUrl = `http://127.0.0.1:${basePort + 3}/internal/v1/status`;
   const signedHeaders = signedRequestHeaders(gatewayIdentity, {

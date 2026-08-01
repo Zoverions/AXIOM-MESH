@@ -116,6 +116,15 @@ export function meshConfig(overrides = {}) {
         throw new ValidationError(`Production ${service} URL must use HTTPS`);
       }
     }
+  } else if (!internalTlsEnabled) {
+    for (const [service, value] of Object.entries(config.urls)) {
+      const url = new URL(value);
+      if (!['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)) {
+        throw new ValidationError(
+          `Plaintext development ${service} URL must be loopback-only`
+        );
+      }
+    }
   }
   return config;
 }

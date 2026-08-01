@@ -136,7 +136,8 @@ export function createServiceServer({
   telemetry,
   tls,
   transportPeers,
-  allowedTransportPeers
+  allowedTransportPeers,
+  authorizeRequest
 }) {
   const logger = createStructuredLogger(name);
   const handleRequest = async (req, res) => {
@@ -146,9 +147,10 @@ export function createServiceServer({
     telemetry?.beginRequest();
     res.setHeader('x-trace-id', traceId);
     try {
+      let transportPeer;
       if (tls) {
         try {
-          identifyActiveTransportPeer(
+          transportPeer = identifyActiveTransportPeer(
             req.socket,
             transportPeers,
             allowedTransportPeers
@@ -164,10 +166,28 @@ export function createServiceServer({
       const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
       const route = router.match(req.method, url.pathname);
       if (!route) throw new AxiomError('not_found', 'Route not found', 404);
+      if (transportPeer && authorizeRequest) {
+        await authorizeRequest({
+          req,
+          url,
+          route,
+          traceId,
+          transportPeer
+        });
+      }
       const body = ['GET', 'HEAD'].includes(req.method) ? Buffer.alloc(0) : await readBody(req, maxBodyBytes);
       let principal;
       if (route.options.auth !== false && authenticate) {
         principal = await authenticate({ req, body, traceId, route, url });
+      }
+      if (!transportPeer && principal && authorizeRequest) {
+        await authorizeRequest({
+          req,
+          url,
+          route,
+          traceId,
+          principal
+        });
       }
       const result = await route.handler({
         req,

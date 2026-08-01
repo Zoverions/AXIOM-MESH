@@ -91,9 +91,15 @@ See the
 The four services can also run as independently restartable single-host units.
 The projection gives each unit only its own application private key and TLS
 leaf, gives durable state only to Grid, and leaves shared credentials with
-their sole consumer. Protected CI proves Sandbox-only failure and recovery
-without restarting Gateway, Grid, or Hypervisor. See the
+their sole consumer. Four internal segments remove unrelated service
+adjacency, while a default-deny application policy permits only the current
+38 caller/destination/method/route combinations at sender and receiver and
+derives inbound mTLS peer allowlists. Protected CI proves required-path readiness, forbidden network
+edges, and Sandbox-only failure/recovery without restarting Gateway, Grid, or
+Hypervisor. See the
 [independent-unit runbook](../docs/operations/INDEPENDENT-SERVICE-UNITS.md).
+The exact graph is documented in the
+[service network policy runbook](../docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md).
 
 Admitted-node v2 statements bind HTTPS origins, failure domains, roles,
 resource ceilings, and leases to the node's Ed25519 identity. Authenticated

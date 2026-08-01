@@ -1,6 +1,6 @@
 {
   "schema": "axiom-capabilities.v1",
-  "verified_at": "2026-07-29",
+  "verified_at": "2026-08-01",
   "kernel_version": "0.12.0-dev.0",
   "capabilities": [
     {
@@ -275,10 +275,24 @@
       ]
     },
     {
+      "id": "operations.service-network-policy",
+      "family": "operations",
+      "status": "implemented",
+      "summary": "A default-deny current-build policy permits only 38 exact internal caller, destination, method, and route combinations; four isolated internal Compose segments remove unrelated service adjacency, while mTLS peer allowlists and protected forbidden-edge probes enforce direction and segmentation.",
+      "evidence": [
+        "mesh/test/service-network-policy.test.mjs",
+        "mesh/src/lib/service-network-policy.mjs",
+        "mesh/config/service-network-policy.json",
+        "mesh/compose.units.yml",
+        ".github/workflows/kernel.yml",
+        "docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md"
+      ]
+    },
+    {
       "id": "operations.independent-service-units",
       "family": "operations",
       "status": "implemented",
-      "summary": "Gateway, Grid, Hypervisor, and Sandbox can run as independently restartable units with per-unit application and TLS private keys, Grid-only durable state, an internal deny-egress network, dependency-aware degradation, Sandbox-only recovery, and signed state-preservation evidence.",
+      "summary": "Gateway, Grid, Hypervisor, and Sandbox can run as independently restartable units with per-unit application and TLS private keys, Grid-only durable state, segmented internal deny-egress networks, dependency-aware degradation, Sandbox-only recovery, and signed state-preservation evidence.",
       "evidence": [
         "mesh/test/service-units.test.mjs",
         "mesh/src/service-unit-drill.mjs",

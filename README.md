@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=58b9fb3086613cc41559240ab389cbc2e87ef0f51456c3c70453e1ae5a97f124 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=b52493c528d286863de0acb16dbf5f9f303867596c6762a3601d63c6cf911185 -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -218,6 +218,17 @@ Current `0.12.0-dev.0` changes are recorded in
 
 When documents conflict, the capability registry and normative requirements
 control. Historical documents are provenance or research inputs only.
+
+The alternate single-host
+[`mesh/compose.units.yml`](mesh/compose.units.yml) runs the four services as
+independently restartable containers with per-unit private credentials,
+Grid-only durable state, and four exact internal network segments. A
+machine-readable default-deny policy permits only 38 current internal
+caller/destination/method/route combinations at both ends, derives mTLS peer allowlists,
+and removes Gateway-to-Sandbox and Grid-to-Sandbox adjacency. It preserves the
+same Unix-domain Gateway ingress and makes no multi-host or automatic-failover
+claim. See the
+[explicit service network policy](docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md).
 
 ## Security and contribution
 

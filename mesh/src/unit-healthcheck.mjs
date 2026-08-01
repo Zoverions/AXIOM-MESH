@@ -7,6 +7,7 @@ import {
   serviceDnsName,
   verifyTransportServerIdentity
 } from './lib/transport-credentials.mjs';
+import { authorizeServiceRequest } from './lib/service-network-policy.mjs';
 
 const SERVICES = new Set(['grid', 'hypervisor', 'sandbox']);
 
@@ -20,6 +21,12 @@ export async function checkServiceUnit(service, config = meshConfig()) {
   });
   const origin = config.urls[service];
   const target = new URL(`${origin}/health`);
+  authorizeServiceRequest({
+    source: service,
+    destination: service,
+    method: 'GET',
+    url: target
+  });
   return new Promise((resolve, reject) => {
     const request = https.get({
       hostname: target.hostname,

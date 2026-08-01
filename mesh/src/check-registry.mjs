@@ -40,6 +40,7 @@ const REQUIRED_CAPABILITIES = new Set([
   'ui.cli',
   'ui.dashboard',
   'operations.setup-automation',
+  'operations.service-network-policy',
   'operations.independent-service-units',
   'operations.provider-runtime',
   'operations.pilot-dossier-verification',

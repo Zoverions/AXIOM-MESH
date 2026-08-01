@@ -34,6 +34,10 @@ import {
   loadTransportRuntime,
   transportServerOptions
 } from '../lib/transport-credentials.mjs';
+import {
+  allowedInboundTransportPeers,
+  authorizeInboundServiceRequest
+} from '../lib/service-network-policy.mjs';
 
 const PRINCIPAL_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 
@@ -324,8 +328,12 @@ export async function createHypervisorService(config = meshConfig()) {
       : undefined,
     transportPeers: identity.transport?.peers,
     allowedTransportPeers: identity.transport
-      ? ['gateway', 'hypervisor', 'supervisor']
+      ? allowedInboundTransportPeers('hypervisor')
       : undefined,
+    authorizeRequest: args => authorizeInboundServiceRequest({
+      ...args,
+      destination: 'hypervisor'
+    }),
     authenticate: ({ req, body }) => verifySignedRequest({
       req,
       body,
