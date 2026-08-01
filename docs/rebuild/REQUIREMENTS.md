@@ -1,7 +1,7 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.1; digest=3731ebf476d50318894aa09d8233572c186c2b930e5f757ab0c4c4f83e8c1a16 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.2; digest=0dde1db8fbc00f4dc8ea8252cfe163331b4fa486b1caa28819b6d2d6f5bf1f99 -->
 # AXIOM-MESH Rebuild Requirements
 
-**Current build:** `0.12.0-dev.1`
+**Current build:** `0.12.0-dev.2`
 
 **Updated:** 2026-07-30
 
@@ -211,7 +211,7 @@ state.
 
 ## Verified implementation checkpoint
 
-The active `0.12.0-dev.1` build currently verifies:
+The active `0.12.0-dev.2` build currently verifies:
 
 - the authenticated Gateway → Hypervisor → Sandbox → Grid intent path;
 - version negotiation, explicit plans, deny-dominant policy, and independent
@@ -230,15 +230,17 @@ The active `0.12.0-dev.1` build currently verifies:
   visible conflicts and explicit all-head resolution;
 - signed deployment-independent secret and policy provider startup;
 - the experimental loopback AXIOM One shell, including an exact human
-  explanation contract for one bounded action, all 20 stable Gateway outcomes,
-  all 37 current kernel event kinds, approval states, raw evidence, and
-  same-key uncertain-outcome recovery without claiming an authoritative
+  explanation contract for four bounded actions, all 20 stable Gateway
+  outcomes, all 37 current kernel event kinds, approval states, raw evidence,
+  and same-key uncertain-outcome recovery without claiming an authoritative
   pre-execution kernel plan;
 - strict pilot-evidence and independent-security-review intake verifiers;
 - authenticated operator API and CLI;
 - an experimental loopback-only AXIOM One PWA foundation with a contract-only
-  proxy, memory-only token, public-shell-only cache, and explicit unavailable
-  Share, Circles, and AI states.
+  proxy, memory-only token, public-shell-only cache, owner-scoped private-note
+  creation/listing, confirmation-bound tombstoning, selective local export,
+  explicit-only bundle reveal, cross-principal denial evidence, and explicit
+  unavailable Share, Circles, and AI states.
 
 The current checkpoint does **not** include a supported AXIOM One browser
 application, external AI provider, AXIOM Verify, Circles, remote dispatch,

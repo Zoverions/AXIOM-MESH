@@ -1,7 +1,7 @@
 {
   "schema": "axiom-one-human-contract.v1",
   "version": 1,
-  "kernel_version": "0.12.0-dev.1",
+  "kernel_version": "0.12.0-dev.2",
   "status": "experimental-human-explanations",
   "actions": {
     "system.echo": {
@@ -17,6 +17,54 @@
       "timeout_ms": 10000,
       "cancellation": "Cancel stops the browser from waiting. The node may already have completed, so recovery must reuse the same request key.",
       "reversibility": "There is no external side effect. The append-only local evidence record is not removed by this preview.",
+      "required_confirmations": [],
+      "independent_approval": false
+    },
+    "memory.put": {
+      "label": "Create a private memory record",
+      "consequence": "durable-local-memory-write",
+      "effect": "Create one content-addressed memory record owned by the authenticated local principal.",
+      "provider": "No external provider; the verified built-in memory validator is used.",
+      "destination": "The encrypted local Grid store on this node.",
+      "information_scope": "The selected record kind, title, note text, and fixed AXIOM One source marker only.",
+      "external_egress": false,
+      "cost": "No external service cost or settlement.",
+      "retention": "The active record remains encrypted on this node until it is tombstoned; integrity-linked evidence remains append-only.",
+      "timeout_ms": 10000,
+      "cancellation": "Cancel stops the browser from waiting. The node may already have completed, so recovery must reuse the same request key.",
+      "reversibility": "The record can be tombstoned, but this preview cannot erase its append-only evidence or restore a tombstoned record.",
+      "required_confirmations": [],
+      "independent_approval": false
+    },
+    "memory.tombstone": {
+      "label": "Tombstone a private memory record",
+      "consequence": "durable-local-memory-tombstone",
+      "effect": "Remove one exact owned active memory record and its links from active Vault results.",
+      "provider": "No external provider; the verified built-in memory validator is used.",
+      "destination": "The encrypted local Grid store on this node.",
+      "information_scope": "The exact memory object identifier and the displayed owner-removal reason only.",
+      "external_egress": false,
+      "cost": "No external service cost or settlement.",
+      "retention": "The record is marked tombstoned rather than physically erased; its encrypted row and integrity-linked evidence remain for audit and recovery controls outside this preview.",
+      "timeout_ms": 10000,
+      "cancellation": "Cancel stops the browser from waiting. The node may already have completed, so recovery must reuse the same request key.",
+      "reversibility": "This preview has no restore action. Recovery requires separately governed backup or import procedures and is not promised.",
+      "required_confirmations": ["confirm:memory.tombstone"],
+      "independent_approval": false
+    },
+    "export.create": {
+      "label": "Create a selective local memory export",
+      "consequence": "local-selective-export-write",
+      "effect": "Create one export containing only the selected owned memory object plus the kernel-required identity and evidence records.",
+      "provider": "No external provider; the verified built-in export validator is used.",
+      "destination": "A local export bundle on this node; AXIOM One fetches it only after a separate reveal action.",
+      "information_scope": "The exact selected memory object identifier, required identity record, and integrity evidence only.",
+      "external_egress": false,
+      "cost": "No external service cost or settlement.",
+      "retention": "The generated bundle remains in the node export directory; this preview has no export-deletion control.",
+      "timeout_ms": 10000,
+      "cancellation": "Cancel stops the browser from waiting. The node may already have completed, so recovery must reuse the same request key.",
+      "reversibility": "Creating an export does not alter the source record, but this preview cannot delete a generated bundle.",
       "required_confirmations": [],
       "independent_approval": false
     }

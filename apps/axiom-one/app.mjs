@@ -19,7 +19,11 @@ const state = {
   session: null,
   route: 'overview',
   lastIntent: null,
-  pendingIntent: null
+  pendingIntent: null,
+  vault: {
+    pending: null,
+    last: null
+  }
 };
 
 const view = document.querySelector('#view');
@@ -63,6 +67,8 @@ disconnectButton.addEventListener('click', () => {
   connectionLabel.textContent = 'Not connected';
   state.lastIntent = null;
   state.pendingIntent = null;
+  state.vault.pending = null;
+  state.vault.last = null;
   announce('Disconnected and cleared the in-memory token');
   renderRoute();
   tokenInput.focus();
@@ -342,25 +348,291 @@ async function renderApprovals() {
 async function renderVault() {
   const response = await state.client.call('memory.list');
   const objects = response.objects ?? [];
+  const form = element('form', { className: 'stack' });
+  const title = element('input', {
+    attrs: {
+      id: 'memory-title',
+      name: 'title',
+      required: '',
+      maxlength: '200',
+      placeholder: 'A short private title'
+    }
+  });
+  const text = element('textarea', {
+    attrs: {
+      id: 'memory-text',
+      name: 'text',
+      required: '',
+      maxlength: '10000',
+      placeholder: 'Write the private note that this node should retain.'
+    }
+  });
+  const create = element('button', {
+    className: 'button button-primary',
+    text: 'Review private note',
+    attrs: { type: 'submit' }
+  });
+  const cancel = element('button', {
+    className: 'button button-secondary',
+    text: 'Cancel pending lifecycle request',
+    attrs: { type: 'button', disabled: '' }
+  });
+  form.append(
+    notice('Creating a note writes encrypted local state and append-only evidence. It does not send data to an external provider.'),
+    field('Title', title, 'memory-title'),
+    field('Private note', text, 'memory-text'),
+    element('div', { className: 'actions' }, [create, cancel])
+  );
+  const review = element('div', { className: 'stack', attrs: { id: 'vault-review' } });
+  const result = element('div', { className: 'stack', attrs: { id: 'vault-result' } });
+  let activeController;
+
+  const renderLast = () => {
+    result.replaceChildren();
+    const last = state.vault.last;
+    if (!last) return;
+    const actions = [];
+    if (last.model.retrySameRequest && state.vault.pending) {
+      const retry = element('button', {
+        className: 'button button-primary',
+        text: 'Retry same request safely',
+        attrs: { type: 'button' }
+      });
+      retry.addEventListener('click', () => executePending());
+      actions.push(retry);
+    }
+    const exportId = typeof last.raw?.export_id === 'string' ? last.raw.export_id : null;
+    const inspection = element('div', { className: 'stack' });
+    if (exportId && last.model.state === 'completed') {
+      const inspect = element('button', {
+        className: 'button button-secondary',
+        text: 'Inspect export record',
+        attrs: { type: 'button' }
+      });
+      const reveal = element('button', {
+        className: 'button button-secondary',
+        text: 'Reveal bundle in this page',
+        attrs: { type: 'button' }
+      });
+      inspect.addEventListener('click', async () => {
+        inspect.disabled = true;
+        inspection.replaceChildren(notice('Loading the owner-scoped export record…'));
+        try {
+          const record = await state.client.call('exports.get', { params: { id: exportId } });
+          inspection.replaceChildren(rawDetails('Owner-scoped export record', record, true));
+          announce('Export record loaded');
+        } catch (error) {
+          inspection.replaceChildren(errorBox(error, 'Export record is unavailable'));
+        } finally {
+          inspect.disabled = false;
+        }
+      });
+      reveal.addEventListener('click', async () => {
+        reveal.disabled = true;
+        inspection.replaceChildren(notice('Loading the selected bundle into this open page only. It is not stored by AXIOM One.'));
+        try {
+          const bundle = await state.client.call('export_bundles.get', { params: { id: exportId } });
+          inspection.replaceChildren(
+            notice('Sensitive export content is visible below. AXIOM One has not saved it in browser storage.'),
+            rawDetails('Revealed local export bundle', bundle, true)
+          );
+          announce('Local export bundle revealed in this page');
+        } catch (error) {
+          inspection.replaceChildren(errorBox(error, 'Export bundle is unavailable'));
+        } finally {
+          reveal.disabled = false;
+        }
+      });
+      actions.push(inspect, reveal);
+    }
+    result.append(
+      humanExplanation(last.model, 'Raw result and evidence', last.raw, actions),
+      inspection
+    );
+  };
+
+  const renderReview = () => {
+    review.replaceChildren();
+    const pending = state.vault.pending;
+    if (!pending) return;
+    const send = element('button', {
+      className: 'button button-primary',
+      text: 'Send reviewed lifecycle request',
+      attrs: { type: 'button' }
+    });
+    const change = element('button', {
+      className: 'button button-secondary',
+      text: 'Cancel without sending',
+      attrs: { type: 'button' }
+    });
+    send.addEventListener('click', () => executePending());
+    change.addEventListener('click', async () => {
+      state.vault.pending = null;
+      announce('Memory lifecycle review closed without sending');
+      await renderVault();
+    });
+    review.append(humanExplanation(
+      human.requestPreview(pending.body),
+      'Exact lifecycle request to submit',
+      pending.body,
+      [send, change]
+    ));
+  };
+
+  const executePending = async () => {
+    const pending = state.vault.pending;
+    if (!pending || activeController) return;
+    activeController = new AbortController();
+    cancel.disabled = false;
+    review.replaceChildren();
+    result.replaceChildren(notice('Submitting the reviewed lifecycle request through the local policy and evidence path…'));
+    try {
+      const raw = await state.client.call('intents.submit', {
+        body: pending.body,
+        idempotencyKey: pending.idempotencyKey,
+        signal: activeController.signal
+      });
+      const model = human.intentSuccess({
+        request: pending.body,
+        response: raw,
+        idempotencyKey: pending.idempotencyKey
+      });
+      state.vault.last = { model, raw };
+      state.vault.pending = null;
+      announce(`${model.title}; the Vault view is refreshing`);
+      await renderVault();
+    } catch (error) {
+      const raw = serializableError(error);
+      const model = human.intentFailure({
+        request: pending.body,
+        error: raw,
+        idempotencyKey: pending.idempotencyKey
+      });
+      state.vault.last = { model, raw };
+      if (!model.retrySameRequest) {
+        state.vault.pending = null;
+        announce('Lifecycle request did not complete');
+        await renderVault();
+        return;
+      }
+      create.disabled = Boolean(state.vault.pending);
+      renderLast();
+      renderReview();
+      announce('Lifecycle outcome is not confirmed; same-request recovery is available');
+    } finally {
+      activeController = null;
+      cancel.disabled = true;
+    }
+  };
+
+  const startReview = body => {
+    if (state.vault.pending) return;
+    state.vault.pending = {
+      body,
+      idempotencyKey: `axiom-one:vault:${crypto.randomUUID()}`
+    };
+    create.disabled = true;
+    renderReview();
+    announce('Memory lifecycle review is ready; nothing has been sent');
+    review.scrollIntoView({ block: 'nearest' });
+  };
+
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    const cleanTitle = title.value.trim();
+    if (!cleanTitle) {
+      title.setCustomValidity('Enter a title containing at least one visible character.');
+      title.reportValidity();
+      return;
+    }
+    title.setCustomValidity('');
+    if (!text.value.trim()) {
+      text.setCustomValidity('Enter a private note containing at least one visible character.');
+      text.reportValidity();
+      return;
+    }
+    text.setCustomValidity('');
+    startReview({
+      action: 'memory.put',
+      input: {
+        kind: 'note',
+        content: { title: cleanTitle, text: text.value },
+        metadata: { source: 'axiom-one-local-preview' }
+      },
+      purpose: 'private-memory-recording'
+    });
+  });
+  cancel.addEventListener('click', () => activeController?.abort());
+
+  const records = objects.length
+    ? element('div', { className: 'stack' }, objects.map(item => {
+      const objectId = item.object_id ?? item.id;
+      const objectTitle = typeof item.payload_json?.content?.title === 'string'
+        ? item.payload_json.content.title
+        : objectId ?? 'Memory object';
+      const remove = element('button', {
+        className: 'button button-secondary',
+        text: 'Review removal',
+        attrs: { type: 'button' }
+      });
+      const exportButton = element('button', {
+        className: 'button button-secondary',
+        text: 'Review selective export',
+        attrs: { type: 'button' }
+      });
+      const validObject = typeof objectId === 'string' && objectId.length > 0;
+      remove.disabled = !validObject || Boolean(state.vault.pending);
+      exportButton.disabled = !validObject || Boolean(state.vault.pending);
+      remove.addEventListener('click', () => startReview({
+        action: 'memory.tombstone',
+        input: {
+          object_id: objectId,
+          reason: 'Owner removed this record through AXIOM One local preview.'
+        },
+        confirmations: ['confirm:memory.tombstone'],
+        purpose: 'owner-memory-tombstone'
+      }));
+      exportButton.addEventListener('click', () => startReview({
+        action: 'export.create',
+        input: { types: ['memory'], object_ids: [objectId] },
+        purpose: 'owner-selective-memory-export'
+      }));
+      return element('article', { className: 'card full' }, [
+        element('span', { className: 'badge good', text: 'Encrypted local record' }),
+        element('h2', { text: objectTitle }),
+        element('p', { text: `${item.kind ?? 'record'} · ${item.created_at ?? 'time unavailable'}` }),
+        element('div', { className: 'actions' }, [remove, exportButton]),
+        rawDetails('Inspect exact memory record', item)
+      ]);
+    }))
+    : empty('No active memory objects are visible to this principal.');
+
   view.replaceChildren(
     header('Private vault',
-      'Encrypted memory objects remain governed by the node. This preview reads metadata available to the current principal and does not copy it into browser storage.'),
+      'Create, inspect, tombstone, and selectively export owner-scoped encrypted memory through explicit reviewed local requests.'),
     grid([
       metricCard('Objects', String(objects.length), 'Visible memory records'),
       metricCard('Links', String(response.edges?.length ?? 0), 'Visible provenance edges'),
-      card('Lifecycle boundary', 'Create, ingestion, tombstone, deletion, export, and recovery controls are not promoted in this first shell increment.', {
+      card('Lifecycle boundary', 'Hard deletion, restore, background export, sharing, bulk ingestion, and browser persistence remain unavailable.', {
         wide: true,
-        badge: ['Read preview', 'pending']
+        badge: ['Bounded preview', 'pending']
       })
     ]),
-    objects.length
-      ? list(objects, item => ({
-        title: item.object_id ?? item.id ?? 'Memory object',
-        detail: `${item.type ?? 'record'} · ${item.created_at ?? 'time unavailable'}`
-      }))
-      : empty('No memory objects are visible to this principal.'),
+    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'create-memory-heading' } }, [
+      element('h2', { text: 'Create a private note', attrs: { id: 'create-memory-heading' } }),
+      form
+    ]),
+    review,
+    result,
+    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'memory-records-heading' } }, [
+      element('h2', { text: 'Active memory records', attrs: { id: 'memory-records-heading' } }),
+      records
+    ]),
     rawDetails('Raw memory response', response)
   );
+  create.disabled = Boolean(state.vault.pending);
+  if (state.vault.pending) renderReview();
+  renderLast();
 }
 
 async function renderReceipts() {

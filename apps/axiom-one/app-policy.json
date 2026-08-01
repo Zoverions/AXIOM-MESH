@@ -1,7 +1,7 @@
 {
   "schema": "axiom-one-preview.v1",
   "version": 1,
-  "kernel_version": "0.12.0-dev.1",
+  "kernel_version": "0.12.0-dev.2",
   "status": "experimental-local-preview",
   "network": {
     "bind_host": "127.0.0.1",
@@ -25,11 +25,22 @@
   "human_explanations": {
     "contract_schema": "axiom-one-human-contract.v1",
     "status": "experimental-human-explanations",
-    "action_previews": ["system.echo"],
+    "action_previews": ["system.echo", "memory.put", "memory.tombstone", "export.create"],
     "stable_gateway_errors": 20,
     "event_kinds": 37,
     "raw_evidence_always_available": true,
     "authoritative_pre_execution_kernel_plan": false
+  },
+  "memory_lifecycle": {
+    "status": "experimental-bounded-lifecycle",
+    "actions": ["memory.put", "memory.tombstone", "export.create"],
+    "read_route": "memory.list",
+    "export_routes": ["exports.get", "export_bundles.get"],
+    "bundle_reveal": "explicit-user-action-only",
+    "persistent_browser_storage": false,
+    "hard_delete": false,
+    "restore": false,
+    "sharing": false
   },
   "surfaces": [
     "overview",
@@ -47,6 +58,8 @@
     "intents.submit",
     "approvals.list",
     "memory.list",
+    "exports.get",
+    "export_bundles.get",
     "events.list",
     "nodes.list",
     "capsules.list",

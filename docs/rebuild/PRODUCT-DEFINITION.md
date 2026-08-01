@@ -1,9 +1,9 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.1; digest=3731ebf476d50318894aa09d8233572c186c2b930e5f757ab0c4c4f83e8c1a16 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.2; digest=0dde1db8fbc00f4dc8ea8252cfe163331b4fa486b1caa28819b6d2d6f5bf1f99 -->
 # AXIOM-MESH Product Definition
 
 **Status:** canonical rebuild and product definition
 
-**Current build:** `0.12.0-dev.1`
+**Current build:** `0.12.0-dev.2`
 
 **Reconciled:** 2026-07-30
 
@@ -162,13 +162,16 @@ implemented/supported claims until complete production-path code, negative
 tests, human evidence, packaging, documentation, and independent review satisfy
 the capability acceptance rule.
 
-The current experimental human-explanation slice reviews the single
-non-consequential echo request before sending, maps all stable Gateway outcomes
-and current kernel event kinds, distinguishes active, expired, consumed, and
-unknown approvals, preserves raw evidence, and reuses the same request key when
-a browser outcome is uncertain. That browser projection is not an authoritative
-pre-execution kernel plan or a consequential-action approval flow. Those require
-a separately bound plan/execute protocol and human evidence before promotion.
+The current experimental human-explanation slice reviews four exact actions
+before sending: the non-consequential echo, owner-scoped private memory creation,
+confirmation-bound tombstoning, and selective local memory export. It maps all
+stable Gateway outcomes and current kernel event kinds, distinguishes active,
+expired, consumed, and unknown approvals, preserves raw evidence, and reuses the
+same request key when a browser outcome is uncertain. The Vault reveals a
+generated bundle only after a separate action and retains no token or response
+in browser storage. This browser projection is not an authoritative
+pre-execution kernel plan. General consequential plan/approval, hard deletion,
+restore, bulk ingestion, and human evidence still require their own gates.
 
 ### AXIOM Verify
 
@@ -306,7 +309,7 @@ operational gates.
 
 ## Current implemented boundary
 
-The `0.12.0-dev.1` kernel currently implements:
+The `0.12.0-dev.2` kernel currently implements:
 
 - authenticated intent, plan, policy, grant, deterministic execution, and
   signed evidence;
@@ -325,7 +328,7 @@ The `0.12.0-dev.1` kernel currently implements:
 - authenticated operator API and CLI;
 - exact source setup, lock, documentation, claim, and release gates.
 
-The browser dashboard remains specified. AI, messaging, identity, storage
+The browser dashboard remains experimental. AI, messaging, identity, storage
 transfer, zk, settlement, regulated-domain, and arbitrary-code capabilities
 remain adapter-required, experimental, or disabled according to the registry.
 

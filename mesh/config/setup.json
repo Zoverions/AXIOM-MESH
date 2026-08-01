@@ -1,7 +1,7 @@
 {
   "schema": "axiom-source-setup-policy.v1",
   "version": 1,
-  "kernel_version": "0.12.0-dev.1",
+  "kernel_version": "0.12.0-dev.2",
   "runtime": {
     "name": "node",
     "engine": ">=24.14.0 <25",

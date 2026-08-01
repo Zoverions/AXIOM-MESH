@@ -49,9 +49,9 @@ const FIELD = /^[a-z][a-z0-9_]{0,63}$/;
 const ERROR_CODE = /^[a-z][a-z0-9_]{0,63}$/;
 const SCHEMA_ID = /^[a-z][a-z0-9.-]+\.v1$/;
 const EXPECTED_CONTRACT_DIGEST =
-  '683761c10bb8508ae541b4c767a1ea166ceb5c225802d464b6979ccd0d7f6986';
+  '21520b326de5fc3e68135f905c42086bf313789be2552ad4958d742998c5419b';
 const EXPECTED_JSON_SCHEMA_DIGEST =
-  '783edae2450da86569642e7179dd0f220ddeffe0d1619464a8257ec59d83cf78';
+  '31366e1820fae70e920bb37b5240e5d462c8ff10294fed3e1c76a02872349942';
 
 export const ACTIVE_GATEWAY_CLIENT_CONTRACT = deepFreeze(
   validateGatewayClientContract(contractJson).contract
@@ -72,7 +72,7 @@ export function validateGatewayClientContract(contract) {
   if (
     contract.schema !== GATEWAY_CLIENT_CONTRACT_SCHEMA
     || contract.version !== 1
-    || contract.kernel_version !== '0.12.0-dev.1'
+    || contract.kernel_version !== '0.12.0-dev.2'
     || contract.base_path !== '/v1'
     || contract.cancellation !== 'AbortSignal'
   ) throw new ValidationError('Gateway client contract identity is invalid');

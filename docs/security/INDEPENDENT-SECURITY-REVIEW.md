@@ -1,6 +1,6 @@
 # AXIOM-MESH Independent Security Review Intake
 
-**Build:** `0.12.0-dev.1`
+**Build:** `0.12.0-dev.2`
 
 **Status:** implemented review-intake contract; authentic independent review
 pending
@@ -38,7 +38,7 @@ the build, reviewer, thresholds, artifacts, or scope invalidates it.
 The policy schema is
 `axiom-independent-security-review-policy.v1`. It is exact-field,
 secret-free, valid for at most 120 days, unexpired at intake, and pins the
-current package version `0.12.0-dev.1` with:
+current package version `0.12.0-dev.2` with:
 
 - a 40-character lowercase source revision;
 - an immutable `sha256:<64 lowercase hexadecimal>` image digest;

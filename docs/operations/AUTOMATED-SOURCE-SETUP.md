@@ -1,6 +1,6 @@
 # Automated Current-Build Source Setup
 
-**Applies to:** `0.12.0-dev.1`
+**Applies to:** `0.12.0-dev.2`
 
 **Status:** implemented current-build source and verification automation
 
@@ -197,7 +197,7 @@ kernel and release gates in the caller's environment. It does not prove:
 - that production credentials, external custody, or a deployment exist;
 - that a pilot has run for the required observation window;
 - that an independent security review occurred;
-- that `0.12.0-dev.1` is production-promoted.
+- that `0.12.0-dev.2` is production-promoted.
 
 Those claims require their own signed evidence and promotion gates. Setup
 automation narrows and records the source-installation boundary; it does not

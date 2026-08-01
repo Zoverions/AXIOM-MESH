@@ -3,7 +3,7 @@
 **Updated:** 2026-07-29
 
 **Status:** implemented for the two-Grid production candidate
-**Applies to:** AXIOM-MESH `0.12.0-dev.1` supported development build
+**Applies to:** AXIOM-MESH `0.12.0-dev.2` supported development build
 **Scope:** authenticated bundle transfer, encrypted staging, ordered approval, partition/rejoin, and explicit conflict convergence
 **Non-claim:** this is not replicated Grid consensus, automatic authority, leader election, BFT, or an unrestricted peer-to-peer network
 

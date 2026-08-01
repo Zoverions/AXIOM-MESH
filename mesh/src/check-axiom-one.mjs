@@ -24,12 +24,20 @@ const EXPECTED_ROUTES = Object.freeze([
   'intents.submit',
   'approvals.list',
   'memory.list',
+  'exports.get',
+  'export_bundles.get',
   'events.list',
   'nodes.list',
   'capsules.list',
   'imports.list',
   'backups.list',
   'audit.verify'
+]);
+const EXPECTED_ACTION_PREVIEWS = Object.freeze([
+  'system.echo',
+  'memory.put',
+  'memory.tombstone',
+  'export.create'
 ]);
 const EXPECTED_NON_CLAIMS = Object.freeze([
   'supported-product',
@@ -127,6 +135,10 @@ export async function checkAxiomOnePreview() {
     human_contract_digest: digestObject(humanContract),
     explained_gateway_errors: Object.keys(humanContract.gateway_outcomes).length,
     explained_event_kinds: Object.keys(humanContract.event_kinds).length,
+    explained_actions: Object.keys(humanContract.actions).length,
+    memory_lifecycle_status: policy.memory_lifecycle.status,
+    hard_delete: policy.memory_lifecycle.hard_delete,
+    restore: policy.memory_lifecycle.restore,
     authoritative_pre_execution_kernel_plan:
       policy.human_explanations.authoritative_pre_execution_kernel_plan,
     assets_digest: digestObject({
@@ -156,6 +168,7 @@ function validatePolicy(policy) {
     'network',
     'security',
     'human_explanations',
+    'memory_lifecycle',
     'surfaces',
     'gateway_routes',
     'non_claims'
@@ -163,7 +176,7 @@ function validatePolicy(policy) {
   if (
     policy.schema !== 'axiom-one-preview.v1'
     || policy.version !== 1
-    || policy.kernel_version !== '0.12.0-dev.1'
+    || policy.kernel_version !== '0.12.0-dev.2'
     || policy.status !== 'experimental-local-preview'
   ) throw new ValidationError('AXIOM One preview identity is invalid');
   exactObject(policy.network, 'AXIOM One network policy', [
@@ -217,12 +230,36 @@ function validatePolicy(policy) {
     policy.human_explanations.contract_schema !== 'axiom-one-human-contract.v1'
     || policy.human_explanations.status !== 'experimental-human-explanations'
     || canonicalJson(policy.human_explanations.action_previews)
-      !== canonicalJson(['system.echo'])
+      !== canonicalJson(EXPECTED_ACTION_PREVIEWS)
     || policy.human_explanations.stable_gateway_errors !== 20
     || policy.human_explanations.event_kinds !== EXPECTED_EVENT_KINDS.length
     || policy.human_explanations.raw_evidence_always_available !== true
     || policy.human_explanations.authoritative_pre_execution_kernel_plan !== false
   ) throw new ValidationError('AXIOM One human explanation boundary is weakened');
+  exactObject(policy.memory_lifecycle, 'AXIOM One memory lifecycle policy', [
+    'status',
+    'actions',
+    'read_route',
+    'export_routes',
+    'bundle_reveal',
+    'persistent_browser_storage',
+    'hard_delete',
+    'restore',
+    'sharing'
+  ]);
+  if (
+    policy.memory_lifecycle.status !== 'experimental-bounded-lifecycle'
+    || canonicalJson(policy.memory_lifecycle.actions)
+      !== canonicalJson(['memory.put', 'memory.tombstone', 'export.create'])
+    || policy.memory_lifecycle.read_route !== 'memory.list'
+    || canonicalJson(policy.memory_lifecycle.export_routes)
+      !== canonicalJson(['exports.get', 'export_bundles.get'])
+    || policy.memory_lifecycle.bundle_reveal !== 'explicit-user-action-only'
+    || policy.memory_lifecycle.persistent_browser_storage !== false
+    || policy.memory_lifecycle.hard_delete !== false
+    || policy.memory_lifecycle.restore !== false
+    || policy.memory_lifecycle.sharing !== false
+  ) throw new ValidationError('AXIOM One memory lifecycle boundary is weakened');
   if (
     canonicalJson(policy.surfaces) !== canonicalJson(EXPECTED_SURFACES)
     || canonicalJson(policy.gateway_routes) !== canonicalJson(EXPECTED_ROUTES)
@@ -314,6 +351,17 @@ function validateAssets({ index, app, presentation, styles, worker, server, icon
   ];
   if (explanationMarkers.some(marker => !`${app}\n${presentation}`.includes(marker))) {
     throw new ValidationError('AXIOM One human explanation surface is incomplete');
+  }
+  const lifecycleMarkers = [
+    "action: 'memory.put'",
+    "action: 'memory.tombstone'",
+    "action: 'export.create'",
+    "state.client.call('exports.get'",
+    "state.client.call('export_bundles.get'",
+    'Reveal bundle in this page'
+  ];
+  if (lifecycleMarkers.some(marker => !app.includes(marker))) {
+    throw new ValidationError('AXIOM One memory lifecycle surface is incomplete');
   }
   if (
     !worker.includes("url.pathname.startsWith('/v1/')")

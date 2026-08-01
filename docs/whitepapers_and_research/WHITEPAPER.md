@@ -1,6 +1,6 @@
 # AXIOM-MESH Technical White Paper
 
-**Version:** `0.12.0-dev.1`
+**Version:** `0.12.0-dev.2`
 
 **Updated:** 2026-07-30
 
@@ -18,7 +18,7 @@ authority, consent, execution, data custody, recovery, and claims inspectable.
 
 The supported kernel separates public ingress, policy and planning, execution,
 and durable evidence into four services: Gateway, Hypervisor, Sandbox, and
-Grid. The current `0.12.0-dev.1` build implements a single-node authority and
+Grid. The current `0.12.0-dev.2` build implements a single-node authority and
 transparency system with deny-dominant policy, independent approval for
 permitted high-risk effects, encrypted durable state, signed hash-linked
 evidence, scoped portability, recovery, service isolation, admitted-node
@@ -370,13 +370,17 @@ revocation, recovery guidance, phone-size layouts, keyboard navigation,
 screen-reader support, contrast, reduced motion, and plain-language receipts.
 
 The current experimental slice implements an exact human-explanation contract
-for the one non-consequential echo request. It provides reversible review,
-maps every stable Gateway outcome and current kernel event kind, distinguishes
-active, expired, consumed, and unknown approvals, keeps raw evidence, and
-recovers uncertain browser outcomes with the same idempotency key. It does not
-mislabel this projection as an authoritative pre-execution kernel plan. A
-policy-bound plan/execute protocol for consequential effects and human
-comprehension evidence remain required.
+for four bounded actions: non-consequential echo, owner-scoped private memory
+creation, confirmation-bound tombstoning, and selective local memory export.
+It provides reversible review, maps every stable Gateway outcome and current
+kernel event kind, distinguishes active, expired, consumed, and unknown
+approvals, keeps raw evidence, and recovers uncertain browser outcomes with the
+same idempotency key. The Vault fetches a generated bundle only after a separate
+reveal action, stores neither token nor response in browser storage, and has
+real-stack negative evidence against cross-principal read, export, and
+tombstone. It does not mislabel this projection as an authoritative
+pre-execution kernel plan. Hard deletion, restore, bulk ingestion, general
+consequential plan/execute, and human-comprehension evidence remain required.
 
 ### 11.2 AXIOM Verify
 
@@ -459,7 +463,7 @@ Each newly exposed surface reopens the relevant threat model and release gate.
 
 ## Non-claims
 
-The `0.12.0-dev.1` build does not claim:
+The `0.12.0-dev.2` build does not claim:
 
 - a live public, customer, testnet, mainnet, or production service;
 - a completed authentic single-node pilot or independent security approval;

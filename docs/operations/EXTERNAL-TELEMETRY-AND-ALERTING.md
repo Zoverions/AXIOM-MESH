@@ -5,7 +5,7 @@ destinations and live operating evidence remain pending
 
 **Updated:** 2026-07-29
 
-**Applies to:** AXIOM-MESH `0.12.0-dev.1` supported development build
+**Applies to:** AXIOM-MESH `0.12.0-dev.2` supported development build
 
 This runbook defines the supported external observability boundary. The
 four-process kernel continues to run with no network interface and no egress.

@@ -41,7 +41,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/operations/ONLINE-CAUSAL-EXCHANGE.md',
   'docs/operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md',
   'docs/operations/PILOT-DEPLOYMENT-DOSSIER.md',
-  'docs/releases/0.12.0-dev.1.md',
+  'docs/releases/0.12.0-dev.2.md',
   'docs/whitepapers_and_research/WHITEPAPER.md',
   'mesh/README.md',
   'mesh/PRODUCTION.md'
@@ -177,7 +177,7 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Conformance drill and protected CI',
     '## Pilot repetition and non-claims'
   ],
-  'docs/releases/0.12.0-dev.1.md': [
+  'docs/releases/0.12.0-dev.2.md': [
     '## Version boundary',
     '## Current implementation',
     '## Validation',

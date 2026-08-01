@@ -2,7 +2,7 @@
 
 **Updated:** 2026-07-30
 
-**Active build:** `0.12.0-dev.1`
+**Active build:** `0.12.0-dev.2`
 
 **Last published candidate:** `v0.11.0`
 
@@ -53,8 +53,9 @@ These gates do not replace production-pilot gates.
 | Product gate | Current state | Required evidence before exposure or promotion |
 |---|---|---|
 | Versioned Gateway client | Pass for current contract/library (`UX-001`): exact 27-route machine contract, hand-reviewed JSON Schema, relative-only targets, explicit errors, bounded request/response/timeout, cancellation, stable idempotent replay, source parity, and real-stack compatibility | Maintain exact compatibility evidence; require a new contract version plus migration and rollback evidence for an incompatible change |
-| AXIOM One browser/PWA shell | Experimental local foundation (`UX-002` in progress): loopback-only server, contract-only proxy, memory-only token, public-shell-only offline cache, reviewed echo/approval/vault/receipt/raw-inspection views, honest unavailable Share/Circles | Complete onboarding, consent/lifecycle flows, browser session/device review, real-fixture browser tests, accessibility/usability evidence, signed packaging, update, rollback, uninstall, and support |
-| Human authority explanations | Experimental bounded slice (`UX-003` in progress): exact one-action review, all 20 stable Gateway outcomes, all 37 current kernel event kinds, active/expired/consumed approvals, raw evidence, and same-key uncertain-outcome recovery | Add an authoritative policy-bound pre-execution plan/execute protocol for consequential effects, separately authenticated reversible approval actions, consent/revocation journeys, accessibility and comprehension fixtures, and documented human usability evidence |
+| AXIOM One browser/PWA shell | Experimental local foundation (`UX-002` in progress): loopback-only server, contract-only proxy, memory-only token, public-shell-only offline cache, reviewed Ask/approval/Vault/receipt/raw-inspection views, honest unavailable Share/Circles | Complete onboarding, consent and remaining lifecycle flows, browser session/device review, real-fixture browser tests, accessibility/usability evidence, signed packaging, update, rollback, uninstall, and support |
+| Human authority explanations | Experimental bounded slice (`UX-003` in progress): exact four-action review, all 20 stable Gateway outcomes, all 37 current kernel event kinds, active/expired/consumed approvals, raw evidence, and same-key uncertain-outcome recovery | Add an authoritative policy-bound pre-execution plan/execute protocol for broader consequential effects, separately authenticated reversible approval actions, consent/revocation journeys, accessibility and comprehension fixtures, and documented human usability evidence |
+| Governed memory lifecycle | Experimental bounded slice (`UX-004` in progress): owner-scoped create/list, exact confirmation-bound tombstone, selective local export, explicit bundle reveal, and real-stack negative tests for cross-principal read/export/tombstone | Add provenance editing, bounded bulk ingestion, retention-authorized hard deletion, restore/recovery controls, download threat analysis, and human lifecycle/recovery evidence before promotion |
 | Browser security boundary | Planned (`UX-005`) | CSP, CSRF, origin, cookie/token, clickjacking, upload/download, session, device-revocation, storage inspection |
 | Accessibility and phone usability | Planned (`UX-006`) | Keyboard, screen reader, contrast, reduced motion, phone layouts, plain language, human testing |
 | Local packaging and onboarding | Planned (`UX-007`) | Signed package, safe updates, recovery, uninstall, no production credential creation, first-use study |
