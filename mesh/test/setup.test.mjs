@@ -23,7 +23,7 @@ test('current-build setup preflight verifies runtime pins, exact locks, and zero
 
   assert.equal(result.valid, true);
   assert.equal(result.schema, 'axiom-source-setup-policy.v1');
-  assert.equal(result.kernel_version, '0.12.0-dev.2');
+  assert.equal(result.kernel_version, '0.12.0-dev.3');
   assert.equal(result.runtime.node, '24.18.0');
   assert.equal(result.runtime.npm, '11.9.0');
   assert.equal(result.workspaces, 2);

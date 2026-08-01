@@ -1,7 +1,7 @@
 {
   "schema": "axiom-one-human-contract.v1",
   "version": 1,
-  "kernel_version": "0.12.0-dev.2",
+  "kernel_version": "0.12.0-dev.3",
   "status": "experimental-human-explanations",
   "actions": {
     "system.echo": {
@@ -33,6 +33,22 @@
       "timeout_ms": 10000,
       "cancellation": "Cancel stops the browser from waiting. The node may already have completed, so recovery must reuse the same request key.",
       "reversibility": "The record can be tombstoned, but this preview cannot erase its append-only evidence or restore a tombstoned record.",
+      "required_confirmations": [],
+      "independent_approval": false
+    },
+    "memory.link": {
+      "label": "Record a private provenance link",
+      "consequence": "durable-local-provenance-write",
+      "effect": "Create one owner-bound directional provenance edge between two exact active memory records.",
+      "provider": "No external provider; the verified built-in memory validator is used.",
+      "destination": "The encrypted local Grid store on this node.",
+      "information_scope": "The exact source and target object identifiers, one displayed relationship, and the fixed AXIOM One source marker only.",
+      "external_egress": false,
+      "cost": "No external service cost or settlement.",
+      "retention": "The active encrypted edge remains until either linked object is tombstoned; its integrity-linked evidence remains append-only.",
+      "timeout_ms": 10000,
+      "cancellation": "Cancel stops the browser from waiting. The node may already have completed, so recovery must reuse the same request key.",
+      "reversibility": "This preview cannot delete an edge directly. Tombstoning either linked object removes the edge from active Vault results but does not erase evidence.",
       "required_confirmations": [],
       "independent_approval": false
     },

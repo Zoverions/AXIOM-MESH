@@ -47,7 +47,7 @@ const EXPECTED_FLOW_IDS = Object.freeze([
   'sandbox-self-health'
 ]);
 const EXPECTED_POLICY_DIGEST =
-  '88447dc7e9db22574408220b57eec4b8d9aae56403c9cbf5be6d02f208ea0527';
+  'f2bc6c899f7f252452b191110520806d9ab21c61a07885156d69bd562c929a92';
 
 export const ACTIVE_SERVICE_NETWORK_POLICY = deepFreeze(
   validateServiceNetworkPolicy(JSON.parse(readFileSync(
@@ -69,7 +69,7 @@ export function validateServiceNetworkPolicy(policy) {
   if (
     policy.schema !== SERVICE_NETWORK_POLICY_SCHEMA
     || policy.version !== 1
-    || policy.kernel_version !== '0.12.0-dev.2'
+    || policy.kernel_version !== '0.12.0-dev.3'
     || policy.default_action !== 'deny'
   ) throw new ValidationError('Service network policy identity is invalid or weakened');
 

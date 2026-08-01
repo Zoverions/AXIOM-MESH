@@ -1,9 +1,9 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.2; digest=0dde1db8fbc00f4dc8ea8252cfe163331b4fa486b1caa28819b6d2d6f5bf1f99 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=8bcdcfd8f010d2ad5c6fb84fd6fafe8f4833c29d865b5a4181500b137104b0cb -->
 # AXIOM-MESH Product Definition
 
 **Status:** canonical rebuild and product definition
 
-**Current build:** `0.12.0-dev.2`
+**Current build:** `0.12.0-dev.3`
 
 **Reconciled:** 2026-07-30
 
@@ -162,15 +162,18 @@ implemented/supported claims until complete production-path code, negative
 tests, human evidence, packaging, documentation, and independent review satisfy
 the capability acceptance rule.
 
-The current experimental human-explanation slice reviews four exact actions
+The current experimental human-explanation slice reviews five exact actions
 before sending: the non-consequential echo, owner-scoped private memory creation,
-confirmation-bound tombstoning, and selective local memory export. It maps all
-stable Gateway outcomes and current kernel event kinds, distinguishes active,
+one of three fixed directional provenance links, confirmation-bound
+tombstoning, and selective local memory export. It maps all stable Gateway
+outcomes and current kernel event kinds, distinguishes active,
 expired, consumed, and unknown approvals, preserves raw evidence, and reuses the
-same request key when a browser outcome is uncertain. The Vault reveals a
-generated bundle only after a separate action and retains no token or response
-in browser storage. This browser projection is not an authoritative
-pre-execution kernel plan. General consequential plan/approval, hard deletion,
+same request key when a browser outcome is uncertain. A `corrects` edge retains
+the source and target as independently visible records; it is provenance, not
+silent replacement. The Vault reveals a generated bundle only after a separate
+action and retains no token or response in browser storage. This browser
+projection is not an authoritative pre-execution kernel plan. General
+consequential plan/approval, edge deletion, hard deletion,
 restore, bulk ingestion, and human evidence still require their own gates.
 
 ### AXIOM Verify
@@ -309,7 +312,7 @@ operational gates.
 
 ## Current implemented boundary
 
-The `0.12.0-dev.2` kernel currently implements:
+The `0.12.0-dev.3` kernel currently implements:
 
 - authenticated intent, plan, policy, grant, deterministic execution, and
   signed evidence;
