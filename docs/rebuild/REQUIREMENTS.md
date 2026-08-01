@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=5a0f2e0dcad07c4ebc077c314b58c408a57aa71cb8d83e05a0655dabe7a48b1c -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=2d5d5872f0bc85ba464e55452e42dd767b3036292186772caa13858316b05605 -->
 # AXIOM-MESH Rebuild Requirements
 
 **Current build:** `0.12.0-dev.0`
@@ -230,7 +230,10 @@ The active `0.12.0-dev.0` build currently verifies:
   visible conflicts and explicit all-head resolution;
 - signed deployment-independent secret and policy provider startup;
 - strict pilot-evidence and independent-security-review intake verifiers;
-- authenticated operator API and CLI.
+- authenticated operator API and CLI;
+- an experimental loopback-only AXIOM One PWA foundation with a contract-only
+  proxy, memory-only token, public-shell-only cache, and explicit unavailable
+  Share, Circles, and AI states.
 
 The current checkpoint does **not** include a supported AXIOM One browser
 application, external AI provider, AXIOM Verify, Circles, remote dispatch,

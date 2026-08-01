@@ -32,6 +32,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/operations/AUTOMATED-SOURCE-SETUP.md',
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md',
   'docs/operations/GATEWAY-CLIENT-CONTRACT.md',
+  'docs/operations/AXIOM-ONE-LOCAL-PREVIEW.md',
   'docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md',
   'docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md',
   'docs/operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md',
@@ -108,6 +109,17 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Error contract',
     '## Verification and compatibility changes',
     '## Non-claims and next application boundary'
+  ],
+  'docs/operations/AXIOM-ONE-LOCAL-PREVIEW.md': [
+    '## Purpose and exact claim',
+    '## Start and stop the local preview',
+    '## Implemented surfaces',
+    '## Browser and token boundary',
+    '## Loopback proxy and response controls',
+    '## Security headers and offline policy',
+    '## Accessibility and responsive foundation',
+    '## Verification, rollback, and failures',
+    '## Remaining gates and non-claims'
   ],
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md': [
     '## Enforced policy boundary',
@@ -198,6 +210,7 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/operations/AUTOMATED-SOURCE-SETUP.md': 5_000,
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md': 6_000,
   'docs/operations/GATEWAY-CLIENT-CONTRACT.md': 6_000,
+  'docs/operations/AXIOM-ONE-LOCAL-PREVIEW.md': 9_000,
   'docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md': 4_500,
   'docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md': 4_500,
   'docs/operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md': 5_000,

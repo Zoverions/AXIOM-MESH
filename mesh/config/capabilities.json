@@ -259,8 +259,16 @@
     {
       "id": "ui.dashboard",
       "family": "operations",
-      "status": "specified",
-      "summary": "A browser operator dashboard is specified but is not part of the supported runtime."
+      "status": "experimental",
+      "summary": "A loopback-only AXIOM One PWA preview provides honest node status, bounded echo intent, approval, vault, receipt, unavailable-sharing, and raw evidence surfaces through the versioned Gateway client; it is not a supported product or completed browser-security boundary.",
+      "evidence": [
+        "apps/axiom-one/app-policy.json",
+        "apps/axiom-one/server.mjs",
+        "apps/axiom-one/app.mjs",
+        "mesh/src/check-axiom-one.mjs",
+        "mesh/test/axiom-one-shell.test.mjs",
+        "docs/operations/AXIOM-ONE-LOCAL-PREVIEW.md"
+      ]
     },
     {
       "id": "operations.observability",

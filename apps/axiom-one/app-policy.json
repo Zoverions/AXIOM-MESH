@@ -1,0 +1,57 @@
+{
+  "schema": "axiom-one-preview.v1",
+  "version": 1,
+  "kernel_version": "0.12.0-dev.0",
+  "status": "experimental-local-preview",
+  "network": {
+    "bind_host": "127.0.0.1",
+    "default_port": 4173,
+    "default_gateway_origin": "http://127.0.0.1:8080",
+    "gateway_target": "same-origin-relative-v1",
+    "remote_origins_allowed": false
+  },
+  "security": {
+    "token_persistence": "memory-only",
+    "cookies_used": false,
+    "secret_or_user_data_storage": false,
+    "public_shell_cache": true,
+    "third_party_assets": false,
+    "analytics": false,
+    "api_cache": false,
+    "maximum_proxy_request_bytes": 1048576,
+    "maximum_proxy_response_bytes": 2097152,
+    "proxy_timeout_ms": 30000
+  },
+  "surfaces": [
+    "overview",
+    "ask",
+    "approvals",
+    "vault",
+    "receipts",
+    "share",
+    "explore"
+  ],
+  "gateway_routes": [
+    "status.get",
+    "capabilities.list",
+    "operations.get",
+    "intents.submit",
+    "approvals.list",
+    "memory.list",
+    "events.list",
+    "nodes.list",
+    "capsules.list",
+    "imports.list",
+    "backups.list",
+    "audit.verify"
+  ],
+  "non_claims": [
+    "supported-product",
+    "production-promotion",
+    "browser-session-security-complete",
+    "external-ai-enabled",
+    "sharing-enabled",
+    "circles-enabled",
+    "live-deployment"
+  ]
+}

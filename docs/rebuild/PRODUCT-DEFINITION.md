@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=5a0f2e0dcad07c4ebc077c314b58c408a57aa71cb8d83e05a0655dabe7a48b1c -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=2d5d5872f0bc85ba464e55452e42dd767b3036292186772caa13858316b05605 -->
 # AXIOM-MESH Product Definition
 
 **Status:** canonical rebuild and product definition
@@ -157,8 +157,10 @@ evidence record. It must let a non-developer:
 - export, disclose, revoke, tombstone, delete, back up, and recover data;
 - use the primary experience by phone, keyboard, and assistive technology.
 
-AXIOM One remains specified until production-path code, negative tests,
-documentation, and evidence satisfy the capability acceptance rule.
+AXIOM One has an experimental loopback-only PWA foundation. It remains outside
+implemented/supported claims until complete production-path code, negative
+tests, human evidence, packaging, documentation, and independent review satisfy
+the capability acceptance rule.
 
 ### AXIOM Verify
 
@@ -364,8 +366,8 @@ current project status, or deployment evidence.
 Work proceeds in parallel:
 
 1. close authentic single-node pilot blockers;
-2. maintain the implemented versioned Gateway client and build the AXIOM One
-   human shell;
+2. maintain the implemented versioned Gateway client and complete the
+   experimental AXIOM One human-shell gates;
 3. add one bounded AI provider and useful personal workflows;
 4. build AXIOM Verify and invitation-based Circles;
 5. establish remote dispatch and result provenance before distributed compute;

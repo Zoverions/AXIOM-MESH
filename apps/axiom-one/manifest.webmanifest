@@ -1,0 +1,21 @@
+{
+  "name": "AXIOM One Local Preview",
+  "short_name": "AXIOM One",
+  "description": "Experimental local interface for an AXIOM-MESH personal node.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#08111f",
+  "theme_color": "#0b1526",
+  "orientation": "any",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -30,8 +30,11 @@ The authenticated Gateway surface also has a versioned 27-route client
 contract and zero-dependency same-origin client. It enforces exact route and
 input inventories, bounded timeouts and response size, cancellation,
 idempotent intent-result compatibility, explicit errors, and no direct access
-to internal services. The AXIOM One browser/PWA shell and its separate session,
-origin, storage, accessibility, and usability evidence remain pending.
+to internal services. A loopback-only AXIOM One PWA foundation now exercises
+that boundary as an experimental preview with a memory-only token, exact proxy,
+public-shell-only cache, and explicit unavailable features. Its supported
+product, session/device, lifecycle, accessibility, usability, packaging, and
+support evidence remain pending.
 
 The image build and composed container drill pass in
 [GitHub run 30375390450](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30375390450).

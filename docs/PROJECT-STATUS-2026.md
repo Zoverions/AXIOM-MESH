@@ -20,8 +20,8 @@ that tag are identified only as the current 0.12 development build.
 
 The executable source of truth is
 [`mesh/config/capabilities.json`](../mesh/config/capabilities.json). The
-generated [capability status](rebuild/STATUS.md) records 28 implemented, 2
-experimental, 3 specified, 9 adapter-required, and 4 disabled capabilities.
+generated [capability status](rebuild/STATUS.md) records 28 implemented, 3
+experimental, 2 specified, 9 adapter-required, and 4 disabled capabilities.
 
 ## Implemented kernel scope
 
@@ -217,10 +217,13 @@ external findings ledger has been submitted.
 The versioned Gateway client contract and zero-dependency same-origin client
 are implemented for all 27 authenticated routes, including schema, explicit
 error, cancellation, timeout, response-bound, idempotency, source-parity, and
-real-stack compatibility evidence. Build the AXIOM One browser/PWA shell next
-so a non-developer can submit an intent, inspect the plan, approve or deny
-effects, manage private memory, inspect receipts, and export or delete their
-data without using the CLI. Follow with one bounded least-privilege AI provider adapter,
+real-stack compatibility evidence. A loopback-only experimental AXIOM One PWA
+foundation now uses that contract for status, one transparent echo intent,
+approval, read-only vault, receipt, explicit unavailable-sharing, and raw
+inspection surfaces. Complete onboarding, human-readable plan and denial
+flows, governed memory/export/deletion lifecycle, browser session/device
+security, accessibility/usability evidence, and preview packaging next. Follow
+with one bounded least-privilege AI provider adapter,
 AXIOM Verify, and invitation-based AXIOM Circles. These remain local or
 invitation-only previews until their exact security, accessibility, usability,
 recovery, and deployment evidence is promoted.

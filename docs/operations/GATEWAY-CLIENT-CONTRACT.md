@@ -4,7 +4,7 @@
 
 **Contract schema:** `axiom-gateway-client-contract.v1`
 
-**Status:** implemented client-contract boundary; browser/PWA shell pending
+**Status:** implemented client-contract boundary; experimental local PWA foundation present
 
 **Updated:** 2026-08-01
 
@@ -212,14 +212,17 @@ an explicit migration/rollback plan.
 
 ## Non-claims and next application boundary
 
-This milestone implements `UX-001`; it does not implement the AXIOM One
-browser/PWA shell (`UX-002`), browser session/device security (`UX-005`), or
-accessibility and usability gates. It does not add a remote account service,
-third-party analytics, AI provider, multi-host routing, or production pilot.
+This milestone implements `UX-001`. The separate AXIOM One local preview has
+started `UX-002`, but it does not implement a supported browser product,
+browser session/device security (`UX-005`), or completed accessibility and
+usability gates. Neither milestone adds a remote account service, third-party
+analytics, AI provider, multi-host routing, or production pilot.
 
-The next human-product task is to build the local AXIOM One shell outside the
-trusted kernel, using only this contract. That application must separately
-prove CSP, CSRF, origin and cookie/token controls, idle timeout, device
-revocation, browser-storage safety, accessible interaction, cancellation,
-plain-language authority, export/deletion/recovery flows, and a non-production
-preview boundary.
+The experimental local shell is outside the trusted kernel and uses only this
+contract. It has a loopback-only origin, strict CSP, memory-only token, and no
+API cache, remote asset, analytics, sharing, Circles, or AI. It must still
+separately prove the complete CSRF and cookie/token boundary, idle timeout,
+device revocation, browser-storage inspection, accessible interaction,
+plain-language authority, export/deletion/recovery flows, packaging, updates,
+support, and human usability before promotion. See the
+[AXIOM One local preview](AXIOM-ONE-LOCAL-PREVIEW.md).
