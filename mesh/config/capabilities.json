@@ -1,7 +1,7 @@
 {
   "schema": "axiom-capabilities.v1",
   "verified_at": "2026-08-01",
-  "kernel_version": "0.12.0-dev.0",
+  "kernel_version": "0.12.0-dev.1",
   "capabilities": [
     {
       "id": "core.intent-loop",
@@ -260,12 +260,15 @@
       "id": "ui.dashboard",
       "family": "operations",
       "status": "experimental",
-      "summary": "A loopback-only AXIOM One PWA preview provides honest node status, bounded echo intent, approval, vault, receipt, unavailable-sharing, and raw evidence surfaces through the versioned Gateway client; it is not a supported product or completed browser-security boundary.",
+      "summary": "A loopback-only AXIOM One PWA preview provides node status, reversible review for one bounded echo intent, exact explanations for all stable Gateway outcomes and current kernel events, approval-state distinctions, same-key uncertainty recovery, vault, unavailable-sharing, and raw evidence surfaces; it is not a supported product, authoritative pre-execution kernel plan, or completed browser-security boundary.",
       "evidence": [
         "apps/axiom-one/app-policy.json",
+        "apps/axiom-one/human-contract.json",
+        "apps/axiom-one/presentation.mjs",
         "apps/axiom-one/server.mjs",
         "apps/axiom-one/app.mjs",
         "mesh/src/check-axiom-one.mjs",
+        "mesh/test/axiom-one-presentation.test.mjs",
         "mesh/test/axiom-one-shell.test.mjs",
         "docs/operations/AXIOM-ONE-LOCAL-PREVIEW.md"
       ]

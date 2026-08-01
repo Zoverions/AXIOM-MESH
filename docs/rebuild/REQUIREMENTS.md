@@ -1,7 +1,7 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.0; digest=2d5d5872f0bc85ba464e55452e42dd767b3036292186772caa13858316b05605 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.1; digest=3731ebf476d50318894aa09d8233572c186c2b930e5f757ab0c4c4f83e8c1a16 -->
 # AXIOM-MESH Rebuild Requirements
 
-**Current build:** `0.12.0-dev.0`
+**Current build:** `0.12.0-dev.1`
 
 **Updated:** 2026-07-30
 
@@ -211,7 +211,7 @@ state.
 
 ## Verified implementation checkpoint
 
-The active `0.12.0-dev.0` build currently verifies:
+The active `0.12.0-dev.1` build currently verifies:
 
 - the authenticated Gateway → Hypervisor → Sandbox → Grid intent path;
 - version negotiation, explicit plans, deny-dominant policy, and independent
@@ -229,6 +229,11 @@ The active `0.12.0-dev.0` build currently verifies:
 - signed offline bundles and operator-approved online causal exchange with
   visible conflicts and explicit all-head resolution;
 - signed deployment-independent secret and policy provider startup;
+- the experimental loopback AXIOM One shell, including an exact human
+  explanation contract for one bounded action, all 20 stable Gateway outcomes,
+  all 37 current kernel event kinds, approval states, raw evidence, and
+  same-key uncertain-outcome recovery without claiming an authoritative
+  pre-execution kernel plan;
 - strict pilot-evidence and independent-security-review intake verifiers;
 - authenticated operator API and CLI;
 - an experimental loopback-only AXIOM One PWA foundation with a contract-only

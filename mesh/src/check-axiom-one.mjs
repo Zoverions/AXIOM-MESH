@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { canonicalJson, digestObject, sha256, ValidationError } from './lib/canonical.mjs';
 import { MESH_ROOT } from './lib/config.mjs';
 import { ACTIVE_GATEWAY_CLIENT_CONTRACT } from './lib/gateway-client-contract.mjs';
+import { validateHumanContract } from '../../apps/axiom-one/presentation.mjs';
 
 const REPOSITORY_ROOT = dirname(MESH_ROOT);
 const APP_ROOT = join(REPOSITORY_ROOT, 'apps', 'axiom-one');
@@ -39,21 +40,74 @@ const EXPECTED_NON_CLAIMS = Object.freeze([
   'circles-enabled',
   'live-deployment'
 ]);
+const EXPECTED_EVENT_KINDS = Object.freeze([
+  'accounting.account.created',
+  'accounting.journal.posted',
+  'approval.consumed',
+  'approval.granted',
+  'backup.completed',
+  'backup.requested',
+  'backup.restored',
+  'capsule.registered',
+  'capsule.revoked',
+  'consent.granted',
+  'consent.revoked',
+  'export.completed',
+  'export.requested',
+  'governance.activated',
+  'governance.appeal.filed',
+  'governance.emergency.activated',
+  'governance.emergency.reviewed',
+  'governance.finalized',
+  'governance.proposed',
+  'governance.rolled-back',
+  'governance.verified',
+  'governance.voted',
+  'import.applied',
+  'import.staged',
+  'intent.accepted',
+  'intent.completed',
+  'intent.denied',
+  'intent.failed',
+  'memory.linked',
+  'memory.put',
+  'memory.tombstoned',
+  'node.quarantined',
+  'node.registered',
+  'node.renewed',
+  'node.schedule.requested',
+  'storage.offered',
+  'sync.bundle.applied'
+]);
 
 export async function checkAxiomOnePreview() {
-  const [policy, manifest, index, app, styles, worker, server, icon] = await Promise.all([
+  const [
+    policy,
+    humanContract,
+    manifest,
+    index,
+    app,
+    presentation,
+    styles,
+    worker,
+    server,
+    icon
+  ] = await Promise.all([
     readJson('app-policy.json'),
+    readJson('human-contract.json'),
     readJson('manifest.webmanifest'),
     readText('index.html'),
     readText('app.mjs'),
+    readText('presentation.mjs'),
     readText('styles.css'),
     readText('sw.mjs'),
     readText('server.mjs'),
     readText('icon.svg')
   ]);
   validatePolicy(policy);
+  validateExplanations(policy, humanContract);
   validateManifest(manifest);
-  validateAssets({ index, app, styles, worker, server, icon });
+  validateAssets({ index, app, presentation, styles, worker, server, icon });
   return {
     valid: true,
     schema: policy.schema,
@@ -69,9 +123,16 @@ export async function checkAxiomOnePreview() {
     public_shell_cache: policy.security.public_shell_cache,
     api_cache: policy.security.api_cache,
     remote_origins_allowed: policy.network.remote_origins_allowed,
+    human_contract_schema: humanContract.schema,
+    human_contract_digest: digestObject(humanContract),
+    explained_gateway_errors: Object.keys(humanContract.gateway_outcomes).length,
+    explained_event_kinds: Object.keys(humanContract.event_kinds).length,
+    authoritative_pre_execution_kernel_plan:
+      policy.human_explanations.authoritative_pre_execution_kernel_plan,
     assets_digest: digestObject({
       index: sha256(index),
       app: sha256(app),
+      presentation: sha256(presentation),
       styles: sha256(styles),
       worker: sha256(worker),
       server: sha256(server),
@@ -94,6 +155,7 @@ function validatePolicy(policy) {
     'status',
     'network',
     'security',
+    'human_explanations',
     'surfaces',
     'gateway_routes',
     'non_claims'
@@ -101,7 +163,7 @@ function validatePolicy(policy) {
   if (
     policy.schema !== 'axiom-one-preview.v1'
     || policy.version !== 1
-    || policy.kernel_version !== '0.12.0-dev.0'
+    || policy.kernel_version !== '0.12.0-dev.1'
     || policy.status !== 'experimental-local-preview'
   ) throw new ValidationError('AXIOM One preview identity is invalid');
   exactObject(policy.network, 'AXIOM One network policy', [
@@ -142,6 +204,25 @@ function validatePolicy(policy) {
     || policy.security.maximum_proxy_response_bytes !== 2_097_152
     || policy.security.proxy_timeout_ms !== 30_000
   ) throw new ValidationError('AXIOM One security boundary is weakened');
+  exactObject(policy.human_explanations, 'AXIOM One human explanation policy', [
+    'contract_schema',
+    'status',
+    'action_previews',
+    'stable_gateway_errors',
+    'event_kinds',
+    'raw_evidence_always_available',
+    'authoritative_pre_execution_kernel_plan'
+  ]);
+  if (
+    policy.human_explanations.contract_schema !== 'axiom-one-human-contract.v1'
+    || policy.human_explanations.status !== 'experimental-human-explanations'
+    || canonicalJson(policy.human_explanations.action_previews)
+      !== canonicalJson(['system.echo'])
+    || policy.human_explanations.stable_gateway_errors !== 20
+    || policy.human_explanations.event_kinds !== EXPECTED_EVENT_KINDS.length
+    || policy.human_explanations.raw_evidence_always_available !== true
+    || policy.human_explanations.authoritative_pre_execution_kernel_plan !== false
+  ) throw new ValidationError('AXIOM One human explanation boundary is weakened');
   if (
     canonicalJson(policy.surfaces) !== canonicalJson(EXPECTED_SURFACES)
     || canonicalJson(policy.gateway_routes) !== canonicalJson(EXPECTED_ROUTES)
@@ -150,6 +231,26 @@ function validatePolicy(policy) {
   const contractIds = new Set(ACTIVE_GATEWAY_CLIENT_CONTRACT.routes.map(route => route.id));
   if (policy.gateway_routes.some(route => !contractIds.has(route))) {
     throw new ValidationError('AXIOM One references a route outside the Gateway client contract');
+  }
+}
+
+function validateExplanations(policy, humanContract) {
+  validateHumanContract(humanContract);
+  if (
+    humanContract.schema !== policy.human_explanations.contract_schema
+    || humanContract.status !== policy.human_explanations.status
+    || canonicalJson(Object.keys(humanContract.actions).sort())
+      !== canonicalJson([...policy.human_explanations.action_previews].sort())
+    || canonicalJson(Object.keys(humanContract.gateway_outcomes).sort())
+      !== canonicalJson([...ACTIVE_GATEWAY_CLIENT_CONTRACT.error_contract.stable_codes].sort())
+    || canonicalJson(Object.keys(humanContract.event_kinds).sort())
+      !== canonicalJson([...EXPECTED_EVENT_KINDS].sort())
+  ) throw new ValidationError('AXIOM One human explanation inventory drifted');
+  const eventSource = humanContract.event_kinds;
+  for (const kind of EXPECTED_EVENT_KINDS) {
+    if (!eventSource[kind]) {
+      throw new ValidationError(`AXIOM One event explanation is missing: ${kind}`);
+    }
   }
 }
 
@@ -166,7 +267,7 @@ function validateManifest(manifest) {
   ) throw new ValidationError('AXIOM One web manifest is invalid');
 }
 
-function validateAssets({ index, app, styles, worker, server, icon }) {
+function validateAssets({ index, app, presentation, styles, worker, server, icon }) {
   const requiredIndex = [
     '<meta name="viewport"',
     '<link rel="manifest" href="/manifest.webmanifest">',
@@ -192,13 +293,27 @@ function validateAssets({ index, app, styles, worker, server, icon }) {
     /insertAdjacentHTML/,
     /https?:\/\//
   ];
-  if (forbiddenBrowserPatterns.some(pattern => pattern.test(`${app}\n${index}\n${styles}`))) {
+  if (forbiddenBrowserPatterns.some(pattern => pattern.test(
+    `${app}\n${presentation}\n${index}\n${styles}`
+  ))) {
     throw new ValidationError('AXIOM One browser assets cross a storage, injection, or remote-origin boundary');
   }
   for (const route of EXPECTED_ROUTES) {
     if (!app.includes(`'${route}'`)) {
       throw new ValidationError(`AXIOM One browser route is missing: ${route}`);
     }
+  }
+  const explanationMarkers = [
+    "'/human-contract.json'",
+    'createHumanPresenter',
+    'requestPreview',
+    'intentSuccess',
+    'intentFailure',
+    'retrySameRequest',
+    'Raw result and evidence'
+  ];
+  if (explanationMarkers.some(marker => !`${app}\n${presentation}`.includes(marker))) {
+    throw new ValidationError('AXIOM One human explanation surface is incomplete');
   }
   if (
     !worker.includes("url.pathname.startsWith('/v1/')")
@@ -217,6 +332,12 @@ function validateAssets({ index, app, styles, worker, server, icon }) {
   if (serverMarkers.some(marker => !server.includes(marker))) {
     throw new ValidationError('AXIOM One preview server boundary is incomplete');
   }
+  if (
+    !server.includes("'/presentation.mjs'")
+    || !server.includes("'/human-contract.json'")
+    || !worker.includes("'/presentation.mjs'")
+    || !worker.includes("'/human-contract.json'")
+  ) throw new ValidationError('AXIOM One public explanation assets are not exact');
   if (!styles.includes('@media (prefers-reduced-motion: reduce)')) {
     throw new ValidationError('AXIOM One reduced-motion behavior is missing');
   }

@@ -14,7 +14,7 @@ test('AXIOM One preview policy and static boundary are exact', async () => {
   const result = await checkAxiomOnePreview();
   assert.equal(result.valid, true);
   assert.equal(result.schema, 'axiom-one-preview.v1');
-  assert.equal(result.kernel_version, '0.12.0-dev.0');
+  assert.equal(result.kernel_version, '0.12.0-dev.1');
   assert.equal(result.status, 'experimental-local-preview');
   assert.equal(result.surfaces, 7);
   assert.equal(result.gateway_routes, 12);
@@ -67,7 +67,7 @@ test('AXIOM One serves a hardened shell and proxies only contract routes', async
     });
     const payload = req.url === '/v1/status'
       ? {
-          kernel_version: '0.12.0-dev.0',
+          kernel_version: '0.12.0-dev.1',
           claim_source_digest: 'a'.repeat(64),
           runtime: {},
           capability_counts: {}
@@ -120,7 +120,7 @@ test('AXIOM One serves a hardened shell and proxies only contract routes', async
   assert.deepEqual(await health.json(), {
     schema: 'axiom-one-preview.v1',
     status: 'live',
-    kernel_version: '0.12.0-dev.0',
+    kernel_version: '0.12.0-dev.1',
     support: 'experimental-local-preview'
   });
 
@@ -132,7 +132,7 @@ test('AXIOM One serves a hardened shell and proxies only contract routes', async
     }
   });
   assert.equal(status.status, 200);
-  assert.equal((await status.json()).kernel_version, '0.12.0-dev.0');
+  assert.equal((await status.json()).kernel_version, '0.12.0-dev.1');
   assert.equal(observed.length, 1);
   assert.equal(observed[0].url, '/v1/status');
   assert.equal(observed[0].authorization, 'Bearer preview-fixture-token');
@@ -244,7 +244,7 @@ test('AXIOM One preview traverses the real four-service status and intent path',
   });
 
   const status = await client.call('status.get');
-  assert.equal(status.kernel_version, '0.12.0-dev.0');
+  assert.equal(status.kernel_version, '0.12.0-dev.1');
   assert.equal(status.runtime.grid.mode, 'single-node-transparency-log');
   const intent = await client.call('intents.submit', {
     body: {

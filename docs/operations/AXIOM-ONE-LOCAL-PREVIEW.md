@@ -1,6 +1,6 @@
 # AXIOM One Local Preview
 
-**Applies to:** `0.12.0-dev.0`
+**Applies to:** `0.12.0-dev.1`
 
 **Policy schema:** `axiom-one-preview.v1`
 
@@ -13,9 +13,10 @@
 The current source includes an experimental AXIOM One browser/PWA shell under
 [`apps/axiom-one/`](../../apps/axiom-one/). It lets a developer or evaluator
 connect a browser to the local development node, see current node status,
-exercise one transparent bounded intent, read approval and memory metadata,
-inspect the event timeline, and view selected raw Gateway responses without
-using the CLI for those interactions.
+review and exercise one transparent bounded intent, understand stable denials
+and uncertain outcomes, distinguish approval states, read memory metadata,
+inspect a plain-language event timeline, and retain access to the exact raw
+Gateway responses without using the CLI for those interactions.
 
 The preview is executable evidence that the human-product layer can remain
 outside the trusted `mesh/` kernel and consume only the versioned
@@ -24,7 +25,9 @@ claim that AXIOM One is supported, production-promoted, safe for remote
 exposure, suitable for real sensitive data, or complete. `UX-002` remains in
 progress because the full onboarding, lifecycle, Share, Circles, session,
 device, accessibility, usability, packaging, update, and support gates have
-not been satisfied.
+not been satisfied. `UX-003` is also in progress: a bounded explanation
+contract now exists, but authoritative policy-bound pre-execution plans,
+consequential approval actions, and human comprehension evidence do not.
 
 The machine-readable preview policy is
 [`apps/axiom-one/app-policy.json`](../../apps/axiom-one/app-policy.json). Its
@@ -90,10 +93,10 @@ product organization, but only the functions in this table are current.
 | Surface | Current behavior | Gateway routes | Current boundary |
 |---|---|---|---|
 | Overview | Reads kernel version, runtime summary, and capability counts | `status.get`, `capabilities.list` | Authenticated read; no promotion inference |
-| Ask | Sends one `system.echo` intent with a visible purpose and cancellation | `intents.submit` | Transparent deterministic test; no AI provider or synthetic assistant |
-| Approvals | Lists approval records visible to the principal | `approvals.list` | Read-only; approval creation/explanation flow pending |
+| Ask | Reviews one `system.echo` request before sending, exposes effect/provider/destination/information/retention/timeout/cancellation/reversibility, then presents completion or a stable fail-closed outcome | `intents.submit` | Transparent deterministic test; review is not a kernel plan or grant; same-key recovery only when outcome is uncertain |
+| Approvals | Explains active, expired, consumed, and unknown approval records visible to the principal | `approvals.list` | Read-only; cannot grant, widen, renew, revoke, or self-approve authority |
 | Vault | Lists visible memory objects, edges, and raw metadata | `memory.list` | Read-only; ingestion, tombstone, deletion, export, and recovery UI pending |
-| Receipts | Lists up to 50 visible integrity-linked events | `events.list` | Evidence timeline; integrity is not truth |
+| Receipts | Explains up to 50 visible integrity-linked events using an exact 37-kind vocabulary | `events.list` | Raw payload remains visible; mapped integrity evidence is not external truth |
 | Share | Displays explicit unavailable Selective Sharing and Circles states | none | Sends nothing; sharing and Circles remain disabled |
 | Explore | Reads selected raw status, registry, operations, node, capsule, import, backup, and audit data | eight contract-listed read routes | Scope denials remain visible; raw data is not reinterpreted as success |
 
@@ -111,6 +114,84 @@ result, status, evidence, idempotent replay indication, error code, and trace
 identifier remain inspectable. A future AI workflow must be delivered through
 the separately governed provider contract and cannot silently replace this
 explicit behavior.
+
+Before any network request, **Review request** creates a human projection from
+the exact `system.echo` entry in
+[`human-contract.json`](../../apps/axiom-one/human-contract.json). The review
+names the effect, provider boundary, local destination, information scope,
+purpose, external-transfer state, cost, retention, browser timeout,
+cancellation behavior, reversibility, confirmation requirement, and
+independent-approval requirement. **Change request** closes the review and
+sends nothing. **Send reviewed request** submits exactly the frozen request
+shown in the raw request details.
+
+This projection is deliberately described as a browser explanation, not an
+authoritative kernel plan. The current public intent API evaluates and executes
+one request atomically; it does not expose a separately bound preview/execute
+protocol. Consequential actions therefore remain unavailable in this shell.
+They must not be enabled until a policy-bound plan can be reviewed before
+execution and the eventual grant is demonstrably bound to that exact plan,
+policy, data scope, destination, provider, constraints, and approval state.
+
+## Human explanation and uncertainty contract
+
+The machine-readable `axiom-one-human-contract.v1` and zero-dependency
+[`presentation.mjs`](../../apps/axiom-one/presentation.mjs) module are public
+shell assets. They contain no token, user record, remote origin, runtime policy
+override, or executable authority. The release checker independently verifies
+their exact action, error, event, approval, and non-claim inventories.
+
+The current action inventory contains exactly `system.echo`. It is labelled a
+`non-consequential-local-test`, declares no external provider or egress, and
+requires no confirmation or independent approval. The browser cannot use the
+contract to explain or submit another action. Adding an action requires an
+explicit contract, checker, tests, documentation, and the applicable human and
+security gates; a generic or unknown action fails closed.
+
+Every one of the 20 stable Gateway client error codes has one fixed outcome
+class and operator next step:
+
+| Outcome class | Representative codes | Browser claim and action |
+|---|---|---|
+| Session | `authentication_required`, `invalid_token` | No authenticated execution claim; reconnect with a current local token |
+| Denied or blocked | `forbidden`, `policy_denied`, `approval_mismatch`, `approval_unavailable`, `rate_limited` | No success; respect policy, approval, and rate boundaries |
+| Needs explicit authority | `confirmation_required`, `independent_approval_required` | No execution; show the exact required confirmation or request digest where supplied; never auto-confirm or self-approve |
+| Unavailable | `not_found`, `capability_unavailable` | Missing route, record, provider, or adapter is not simulated |
+| Invalid or conflicting | `body_too_large`, `validation_error`, `invalid_client_request`, `idempotency_conflict` | Request was not accepted as reviewed; do not reuse a key for changed content |
+| Uncertain | `dependency_unavailable`, `request_cancelled`, `request_timeout`, `response_too_large`, `invalid_gateway_response` | Do not claim completion or denial when the browser cannot prove either |
+
+For a dependency loss, cancellation, timeout, or invalid contract response, the
+node may have accepted or completed the request before the browser lost its
+authoritative result. The UI retains the exact request body and idempotency key
+in page memory and offers **Retry same request safely** only where the human
+contract permits it. That retry sends the unchanged request with the same key,
+allowing the Gateway to return the existing result instead of creating a
+duplicate intent. The UI does not offer a changed request under the same key.
+An oversized response remains uncertain but is not automatically retried,
+because repeating it would not resolve the display boundary.
+
+The contract maps all 37 event kinds currently accepted by the Grid state
+transition layer. These include intent acceptance/completion/denial/failure;
+approval grant/consumption; consent grant/revocation; capsule
+registration/revocation; memory put/link/tombstone; governance lifecycle;
+node registration/renewal/quarantine/scheduling; import/export; backup;
+accounting; storage offers; and applied causal-sync bundles. A future or
+unknown event is labelled **Unmapped evidence event**, keeps an uncertain tone,
+and exposes its exact kind and raw record without inventing a meaning.
+
+Approval explanations use only record fields returned by the owner-scoped
+Gateway route. An `active` approval becomes locally `expired` when its exact ISO
+expiry is past; a `consumed` record shows the bound intent where available; an
+unknown status is never presented as active. The explanation repeats that the
+page is read-only and cannot grant, widen, renew, revoke, or self-approve the
+record. This is visibility into authority, not authority creation.
+
+Every explanation is rendered with `textContent`, fixed DOM construction, and
+an adjacent raw `<details>` view. Unknown Gateway codes retain the client's
+generic failure behavior and never expose an untrusted message as a new
+plain-language claim. The presentation model excludes event payload contents;
+the payload appears only in the explicit raw evidence view. No private
+chain-of-thought, synthetic reason, or inferred external truth is generated.
 
 ## Browser and token boundary
 
@@ -248,13 +329,25 @@ npm run axiom-one:check
 It verifies policy identity, exact surfaces and route inventory, membership in
 the active Gateway contract, the no-storage/no-injection/no-remote-origin
 browser boundary, semantic document markers, CSP server markers, service-worker
-API exclusion, reduced motion, manifest identity, and secret-free asset
-digests. The normal source gate also runs this checker and the focused server
-tests.
+API exclusion, reduced motion, manifest identity, exact human contract
+identity, all 20 stable outcome mappings, all 37 current event mappings, the
+one-action/no-authority boundary, and secret-free asset digests. The normal
+source gate also runs this checker and the focused server and human
+presentation tests.
 
 The test suite proves:
 
 - exact policy status and seven-surface/twelve-route inventory;
+- exact one-action human contract and all stable Gateway error/current event
+  mappings;
+- fail-closed completed-result evidence validation and unknown-code behavior;
+- visible confirmation and independently bound approval requirements without
+  automatic confirmation or self-approval;
+- active, expired, consumed, and unknown approval explanations;
+- same-key recovery for dependency loss, cancellation, timeout, and malformed
+  response uncertainty;
+- mapped receipts that exclude raw payload contents from their human claim and
+  keep unknown events explicitly unmapped;
 - rejection of a public bind or non-loopback Gateway origin;
 - rejection of a weakened storage policy;
 - required CSP, framing, opener, and content-type headers;
@@ -282,6 +375,13 @@ Gateway response, and explicit policy denial. The UI keeps the structured code
 and trace identifier visible where available. It does not replace failure with
 cached API data, a fabricated result, or a generic success state.
 
+An explicit Gateway denial is different from an uncertain client outcome. A
+denial is displayed as a stopped request. Cancellation, timeout, dependency
+loss, or an invalid response is displayed as **Outcome not confirmed** because
+the browser cannot prove whether the node committed the intent. Operators must
+use the offered same-key recovery or an exact bounded inspection path; they
+must not submit a different key merely to make the warning disappear.
+
 ## Remaining gates and non-claims
 
 This increment does not complete or claim:
@@ -291,8 +391,11 @@ This increment does not complete or claim:
 - a completed browser/session/device threat model or independent review;
 - secure persistent authentication, device enrolment, idle expiry, or device
   revocation;
-- complete plan, approval, consent, revocation, uncertainty, or denial
-  explanations;
+- an authoritative policy-bound pre-execution kernel plan/execute protocol;
+- consequential action, confirmation, independent approval, consent, or
+  revocation controls;
+- completed human comprehension/usability evidence for the experimental
+  explanation mappings;
 - memory ingestion, correction, tombstone, delete, export, or restore UI;
 - selective sharing, remote recipients, or AXIOM Circles;
 - an external or local AI provider;
@@ -302,8 +405,8 @@ This increment does not complete or claim:
 - production credentials, live deployment, federation, consensus, or
   production promotion.
 
-The next work is to run the shell against real development fixtures for each
-current read surface, add human-readable plan/denial/approval mappings, expose
-the governed memory and export/deletion lifecycle, and design the separate
+The next work is to expose the governed memory and export/deletion lifecycle,
+design a separately bound consequential plan/execute and approval protocol,
+run keyboard/screen-reader/comprehension fixtures, and design the separate
 browser session/device boundary. Share, Circles, and AI controls must remain
 visibly unavailable until their own contracts and negative evidence exist.

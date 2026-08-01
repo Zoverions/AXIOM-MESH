@@ -2,7 +2,7 @@
 
 **Status:** canonical provenance and archive record
 
-**Current build:** `0.12.0-dev.0`
+**Current build:** `0.12.0-dev.1`
 
 **Cutover date:** 2026-07-28
 
@@ -18,7 +18,7 @@ moved to a clean-root lowercase `main` line whose initial tree was identical to
 the verified 0.11 checkpoint without inheriting the former ancestry.
 
 The published `v0.11.0` release remains immutable. Development after that tag
-is identified as `0.12.0-dev.0`. Unsupported code and documentation are absent
+is identified as `0.12.0-dev.1`. Unsupported code and documentation are absent
 from `main`; specifically named immutable or locked archives preserve their
 provenance.
 
@@ -62,10 +62,10 @@ unreviewed document appears beside current documentation.
 The locked documentation archive contains generated API sites, superseded
 architecture, assessments, audits, installers, launch material, governance and
 token plans, research papers, historical runtime files, and other narratives
-that are not authoritative for `0.12.0-dev.0`.
+that are not authoritative for `0.12.0-dev.1`.
 
 The current build notes are
-[`releases/0.12.0-dev.0.md`](releases/0.12.0-dev.0.md). The prior release is
+[`releases/0.12.0-dev.1.md`](releases/0.12.0-dev.1.md). The prior release is
 described only by its immutable
 [`v0.11.0` release page](https://github.com/Zoverions/AXIOM-MESH/releases/tag/v0.11.0);
 its former in-tree rolling notes are not current-build documentation.

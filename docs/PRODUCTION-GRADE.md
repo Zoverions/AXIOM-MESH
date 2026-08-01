@@ -4,7 +4,7 @@
 
 **Updated:** 2026-07-29
 
-**Applies to:** `0.12.0-dev.0` supported clean-room kernel in
+**Applies to:** `0.12.0-dev.1` supported clean-room kernel in
 [`mesh/`](../mesh/README.md)
 
 “Production grade” is not a synonym for feature-rich, containerized, or tested
@@ -14,7 +14,7 @@ failing closed at every authority boundary.
 
 ## Current readiness
 
-Build `0.12.0-dev.0` is a production candidate under active development, not a
+Build `0.12.0-dev.1` is a production candidate under active development, not a
 published or production-promoted release. Immutable `v0.11.0` remains the last
 published production-candidate baseline.
 The intent pipeline, local encrypted state, evidence chain, operator surfaces,
@@ -32,9 +32,14 @@ input inventories, bounded timeouts and response size, cancellation,
 idempotent intent-result compatibility, explicit errors, and no direct access
 to internal services. A loopback-only AXIOM One PWA foundation now exercises
 that boundary as an experimental preview with a memory-only token, exact proxy,
-public-shell-only cache, and explicit unavailable features. Its supported
-product, session/device, lifecycle, accessibility, usability, packaging, and
-support evidence remain pending.
+public-shell-only cache, and explicit unavailable features. A separate exact
+human-explanation contract provides reversible review for the non-consequential
+echo action, fail-closed mappings for all 20 stable Gateway outcomes and 37
+current kernel event kinds, active/expired/consumed approval states, raw
+evidence, and same-key recovery when a network outcome is uncertain. It does
+not claim to be an authoritative pre-execution kernel plan. Supported product,
+consequential-action, session/device, lifecycle, accessibility, usability,
+packaging, and support evidence remain pending.
 
 The image build and composed container drill pass in
 [GitHub run 30375390450](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30375390450).

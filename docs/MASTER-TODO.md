@@ -2,7 +2,7 @@
 
 **Status:** canonical active queue
 **Updated:** 2026-07-30
-**Current kernel:** `0.12.0-dev.0`
+**Current kernel:** `0.12.0-dev.1`
 **Current stage:** production candidate; not production-promoted
 
 This queue orders concrete work across the production pilot, human-product
@@ -58,7 +58,7 @@ promotion gates pass.
 | OPS-004 | Complete for candidate container | Enforce deny-egress while preserving explicit host-local Gateway ingress | Compose `network_mode: none`, permission-restricted Unix socket ingress, fail-closed route check, runner positive control, in-container negative probe, and signed protected-CI evidence |
 | OPS-005 | Complete for automated request-path candidate; pilot resource limits pending | Exercise bounded request pressure and dependency process loss against the real production supervisor | Protected CI uploads signed `axiom-resilience-drill-evidence-<commit>` after oversized-body, concurrent rate-limit, dependency degradation, fail-closed exit, clean restart, and state-preservation checks |
 | SEC-002 | Complete for review intake; authentic independent review pending | Perform an independent threat-model and configuration review of the supported kernel | Canonical current-build threat model plus authority-pinned, build/artifact-bound signed findings ledger; critical/high findings require independently verified closure, lesser exceptions require separate owned expiring approval, and synthetic conformance explicitly cannot claim a review or promotion |
-| SUP-001 | Complete | Produce reproducible release verification without embedding secrets | Current `0.12.0-dev.0` source, registry, documentation, deployment, and migration verification; immutable v0.11.0 checksums, SPDX SBOM, and provenance remain on the published release |
+| SUP-001 | Complete | Produce reproducible release verification without embedding secrets | Current `0.12.0-dev.1` source, registry, documentation, deployment, and migration verification; immutable v0.11.0 checksums, SPDX SBOM, and provenance remain on the published release |
 
 ## P1 - single-node production pilot
 
@@ -84,8 +84,8 @@ invitation-only previews, but it cannot imply production promotion.
 | ID | Status | Work | Acceptance evidence |
 |---|---|---|---|
 | UX-001 | Complete | Define and implement a versioned browser/client contract for the authenticated Gateway API | Machine contract and hand-reviewed JSON Schema cover all 27 authenticated routes; same-origin client enforces exact inputs, explicit errors, 1 MiB requests, 2 MiB responses, 1 millisecond-30 second timeouts, AbortSignal cancellation, stable idempotent replay, source parity, real four-service compatibility, and no direct internal-service access |
-| UX-002 | In progress | Build `apps/axiom-one/` as the local personal-node browser/PWA shell outside the trusted kernel | Experimental loopback-only PWA foundation has node health, transparent bounded Ask, approval, read-only Vault, receipt, honest unavailable Share/Circles, and advanced raw inspection surfaces; full onboarding, plan/lifecycle flows, session/device review, accessibility/usability evidence, packaging, and support remain pending |
-| UX-003 | Pending | Make plans, grants, denials, uncertainty, approvals, revocations, and receipts understandable to non-developers | Usability fixtures, plain-language mappings, no hidden authority, reversible approval flows, and raw evidence inspection |
+| UX-002 | In progress | Build `apps/axiom-one/` as the local personal-node browser/PWA shell outside the trusted kernel | Experimental loopback-only PWA foundation has node health, reviewed bounded Ask, explained approval and receipt records, read-only Vault, honest unavailable Share/Circles, and advanced raw inspection surfaces; full onboarding, lifecycle flows, session/device review, accessibility/usability evidence, packaging, and support remain pending |
+| UX-003 | In progress | Make plans, grants, denials, uncertainty, approvals, revocations, and receipts understandable to non-developers | Exact experimental explanation contract maps all 20 stable Gateway outcomes and 37 current kernel event kinds, distinguishes active/expired/consumed approvals, provides reversible pre-submit review and same-key uncertain-outcome recovery, preserves raw evidence, and explicitly refuses an authoritative pre-execution kernel-plan claim; consequential-action preview/approval, human usability, and promotion evidence remain pending |
 | UX-004 | Pending | Expose encrypted memory, ownership, provenance, ingestion, tombstoning, export, deletion, and recovery through the primary interface | Positive and negative lifecycle tests proving no over-broad read, share, export, or delete behavior |
 | UX-005 | Pending | Harden the browser security boundary | Exact origins, CSP, CSRF protection, secure session/cookie policy, idle timeout, device revocation, no secret leakage to logs or browser storage, and adversarial tests |
 | UX-006 | Pending | Make phone, keyboard, screen-reader, reduced-motion, contrast, and plain-language accessibility release gates | Automated accessibility checks plus documented manual test matrix and user evidence |

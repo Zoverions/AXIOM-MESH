@@ -1,0 +1,259 @@
+{
+  "schema": "axiom-one-human-contract.v1",
+  "version": 1,
+  "kernel_version": "0.12.0-dev.1",
+  "status": "experimental-human-explanations",
+  "actions": {
+    "system.echo": {
+      "label": "Local echo test",
+      "consequence": "non-consequential-local-test",
+      "effect": "Return the submitted message unchanged through the local intent and evidence path.",
+      "provider": "No external provider; the verified built-in echo tool is used.",
+      "destination": "The local Sandbox service on this node.",
+      "information_scope": "The message text and stated purpose only.",
+      "external_egress": false,
+      "cost": "No external service cost or settlement.",
+      "retention": "The returned message is retained in the encrypted local intent result and integrity-linked evidence remains append-only.",
+      "timeout_ms": 10000,
+      "cancellation": "Cancel stops the browser from waiting. The node may already have completed, so recovery must reuse the same request key.",
+      "reversibility": "There is no external side effect. The append-only local evidence record is not removed by this preview.",
+      "required_confirmations": [],
+      "independent_approval": false
+    }
+  },
+  "gateway_outcomes": {
+    "authentication_required": {
+      "state": "session",
+      "tone": "blocked",
+      "title": "Connection required",
+      "summary": "The Gateway did not authenticate this request.",
+      "next_step": "Reconnect with a current local token before trying again.",
+      "retry_same_request": false
+    },
+    "invalid_token": {
+      "state": "session",
+      "tone": "blocked",
+      "title": "Token not accepted",
+      "summary": "The supplied local token is invalid, expired, or retired.",
+      "next_step": "Clear it, obtain a current local token, and reconnect.",
+      "retry_same_request": false
+    },
+    "forbidden": {
+      "state": "denied",
+      "tone": "denied",
+      "title": "Authority denied",
+      "summary": "The authenticated principal does not have authority for this request.",
+      "next_step": "Do not work around the denial. Review the principal and required scope.",
+      "retry_same_request": false
+    },
+    "rate_limited": {
+      "state": "blocked",
+      "tone": "blocked",
+      "title": "Request rate limited",
+      "summary": "The Gateway rejected this request before the intent handler ran.",
+      "next_step": "Wait, then retry the unchanged request with the same request key.",
+      "retry_same_request": true
+    },
+    "body_too_large": {
+      "state": "invalid",
+      "tone": "denied",
+      "title": "Request too large",
+      "summary": "The request exceeded the fixed byte limit and was not accepted.",
+      "next_step": "Reduce the input before creating a new reviewed request.",
+      "retry_same_request": false
+    },
+    "validation_error": {
+      "state": "invalid",
+      "tone": "denied",
+      "title": "Request not valid",
+      "summary": "The request did not satisfy the active input contract.",
+      "next_step": "Review the visible fields and create a corrected request.",
+      "retry_same_request": false
+    },
+    "not_found": {
+      "state": "unavailable",
+      "tone": "blocked",
+      "title": "Requested route unavailable",
+      "summary": "The exact contract route or record was not found.",
+      "next_step": "Check the current build and route contract; do not infer success.",
+      "retry_same_request": false
+    },
+    "idempotency_conflict": {
+      "state": "conflict",
+      "tone": "denied",
+      "title": "Request key conflict",
+      "summary": "This request key was already bound to different request content.",
+      "next_step": "Do not overwrite the earlier binding. Inspect its receipt before creating a new reviewed request.",
+      "retry_same_request": false
+    },
+    "confirmation_required": {
+      "state": "needs-confirmation",
+      "tone": "blocked",
+      "title": "Explicit confirmation required",
+      "summary": "Policy stopped execution until its exact confirmation value is supplied.",
+      "next_step": "Review the requested effect and confirmation value. This preview does not add it automatically.",
+      "retry_same_request": false
+    },
+    "independent_approval_required": {
+      "state": "needs-approval",
+      "tone": "blocked",
+      "title": "Independent approval required",
+      "summary": "Policy stopped execution until a different principal approves this exact request digest.",
+      "next_step": "Use a separately authenticated approval workflow. This preview cannot self-approve.",
+      "retry_same_request": false
+    },
+    "approval_mismatch": {
+      "state": "denied",
+      "tone": "denied",
+      "title": "Approval does not match",
+      "summary": "The supplied approval was not active and bound to this exact requester, action, and request digest.",
+      "next_step": "Inspect the approval record; never substitute or widen it.",
+      "retry_same_request": false
+    },
+    "approval_unavailable": {
+      "state": "denied",
+      "tone": "denied",
+      "title": "Approval unavailable",
+      "summary": "The one-use approval was expired, consumed, or otherwise unavailable.",
+      "next_step": "Obtain a new independently granted approval for the exact request.",
+      "retry_same_request": false
+    },
+    "policy_denied": {
+      "state": "denied",
+      "tone": "denied",
+      "title": "Policy denied the action",
+      "summary": "The active deny-dominant policy did not authorize execution.",
+      "next_step": "Treat the denial as authoritative; do not retry to bypass it.",
+      "retry_same_request": false
+    },
+    "capability_unavailable": {
+      "state": "unavailable",
+      "tone": "blocked",
+      "title": "Capability unavailable",
+      "summary": "This build has no verified provider or adapter for the requested capability.",
+      "next_step": "Do not simulate the missing capability or present it as completed.",
+      "retry_same_request": false
+    },
+    "dependency_unavailable": {
+      "state": "uncertain",
+      "tone": "uncertain",
+      "title": "Outcome not confirmed",
+      "summary": "The browser could not confirm whether the local node received or completed the request.",
+      "next_step": "Retry the unchanged request with the same request key so the node can recover an existing result safely.",
+      "retry_same_request": true
+    },
+    "request_cancelled": {
+      "state": "uncertain",
+      "tone": "uncertain",
+      "title": "Waiting cancelled; outcome not confirmed",
+      "summary": "Cancellation stopped the browser wait, but it cannot revoke work the node may already have completed.",
+      "next_step": "Retry the unchanged request with the same request key to recover the authoritative result.",
+      "retry_same_request": true
+    },
+    "request_timeout": {
+      "state": "uncertain",
+      "tone": "uncertain",
+      "title": "Timed out; outcome not confirmed",
+      "summary": "The bounded browser wait ended before an authoritative result arrived.",
+      "next_step": "Retry the unchanged request with the same request key; do not create a duplicate request.",
+      "retry_same_request": true
+    },
+    "response_too_large": {
+      "state": "uncertain",
+      "tone": "uncertain",
+      "title": "Result exceeded the display boundary",
+      "summary": "The client rejected an oversized response and cannot safely claim the final outcome.",
+      "next_step": "Inspect the intent through a bounded operator workflow; this preview will not display or retry the oversized result.",
+      "retry_same_request": false
+    },
+    "invalid_client_request": {
+      "state": "invalid",
+      "tone": "denied",
+      "title": "Browser request blocked",
+      "summary": "The client rejected the request before network I/O because it did not match the exact contract.",
+      "next_step": "Create a corrected reviewed request; do not bypass client validation.",
+      "retry_same_request": false
+    },
+    "invalid_gateway_response": {
+      "state": "uncertain",
+      "tone": "uncertain",
+      "title": "Gateway result could not be verified",
+      "summary": "A response arrived but did not match the exact client contract, so no outcome is claimed.",
+      "next_step": "Retry the unchanged request with the same request key and inspect the raw trace if it recurs.",
+      "retry_same_request": true
+    }
+  },
+  "approval_states": {
+    "active": {
+      "tone": "ready",
+      "title": "Approval active",
+      "summary": "A different principal granted one-use authority for one exact request until the listed expiry."
+    },
+    "consumed": {
+      "tone": "complete",
+      "title": "Approval already used",
+      "summary": "This one-use approval was consumed by the listed intent and cannot authorize another request."
+    },
+    "expired": {
+      "tone": "blocked",
+      "title": "Approval expired",
+      "summary": "The approval is past its bound expiry and cannot authorize execution."
+    },
+    "unknown": {
+      "tone": "uncertain",
+      "title": "Approval state not understood",
+      "summary": "The raw approval record is available, but this preview cannot safely interpret its state."
+    }
+  },
+  "event_kinds": {
+    "accounting.account.created": ["Account created", "A local accounting identity was recorded.", "complete"],
+    "accounting.journal.posted": ["Journal posted", "A balanced local accounting journal was committed.", "complete"],
+    "approval.consumed": ["Approval used once", "A bound independent approval was consumed by one intent.", "complete"],
+    "approval.granted": ["Approval granted", "A separate principal approved one exact request until expiry.", "ready"],
+    "backup.completed": ["Backup completed", "An encrypted backup completed and its manifest was recorded.", "complete"],
+    "backup.requested": ["Backup requested", "A governed backup request entered the evidence log.", "pending"],
+    "backup.restored": ["Backup restored", "A governed restore completed and was recorded.", "complete"],
+    "capsule.registered": ["Capsule registered", "A validated capsule manifest was admitted to the local registry.", "complete"],
+    "capsule.revoked": ["Capsule revoked", "The capsule was revoked and is no longer active.", "denied"],
+    "consent.granted": ["Consent granted", "A purpose-, scope-, subject-, controller-, and expiry-bound consent record was created.", "ready"],
+    "consent.revoked": ["Consent revoked", "The consent record was revoked and no longer authorizes new use.", "denied"],
+    "export.completed": ["Export completed", "A governed export bundle completed and its evidence was recorded.", "complete"],
+    "export.requested": ["Export requested", "A scoped local export request entered the evidence log.", "pending"],
+    "governance.activated": ["Policy activated", "A finalized governance proposal became active after its timelock.", "complete"],
+    "governance.appeal.filed": ["Appeal filed", "A governance appeal was recorded for review.", "pending"],
+    "governance.emergency.activated": ["Emergency policy activated", "A temporary authority-reducing emergency policy became active until expiry.", "pending"],
+    "governance.emergency.reviewed": ["Emergency policy reviewed", "The emergency governance action received its required review record.", "complete"],
+    "governance.finalized": ["Proposal finalized", "Voting closed and the governance outcome was finalized.", "complete"],
+    "governance.proposed": ["Proposal created", "A governance proposal was recorded for voting.", "pending"],
+    "governance.rolled-back": ["Policy rolled back", "A governed policy activation was rolled back to its recorded predecessor.", "denied"],
+    "governance.verified": ["Policy verified", "A governance activation received its verification record.", "complete"],
+    "governance.voted": ["Vote recorded", "A chamber vote was added to the proposal record.", "pending"],
+    "import.applied": ["Import applied", "An independently approved import was applied to the foreign-record store.", "complete"],
+    "import.staged": ["Import staged", "An import bundle was validated and staged without applying it.", "pending"],
+    "intent.accepted": ["Request accepted", "The node recorded the request before policy evaluation reached a final outcome.", "pending"],
+    "intent.completed": ["Request completed", "Execution completed and the result was committed to local evidence.", "complete"],
+    "intent.denied": ["Request denied", "Policy, confirmation, or approval requirements stopped execution.", "denied"],
+    "intent.failed": ["Request failed", "The node recorded a failure; inspect the raw event before inferring whether any partial work occurred.", "uncertain"],
+    "memory.linked": ["Memory linked", "A provenance edge between governed memory objects was recorded.", "complete"],
+    "memory.put": ["Memory stored", "An encrypted owner-bound memory object was recorded.", "complete"],
+    "memory.tombstoned": ["Memory tombstoned", "The memory object was marked unavailable while append-only provenance remained.", "denied"],
+    "node.quarantined": ["Node quarantined", "The admitted node was removed from eligible scheduling.", "denied"],
+    "node.registered": ["Node registered", "A signed node statement was admitted to the local registry.", "complete"],
+    "node.renewed": ["Node renewed", "An admitted node statement and lease were renewed.", "complete"],
+    "node.schedule.requested": ["Schedule requested", "A signed bounded scheduling request was recorded.", "pending"],
+    "storage.offered": ["Storage offered", "A bounded storage-capacity offer was recorded without transferring content.", "pending"],
+    "sync.bundle.applied": ["Sync bundle applied", "An independently approved causal bundle was applied with its conflict state visible.", "complete"]
+  },
+  "unknown_event": {
+    "title": "Unmapped evidence event",
+    "summary": "The exact event kind and raw record are available, but this preview makes no plain-language claim about it.",
+    "tone": "uncertain"
+  },
+  "non_claims": [
+    "authoritative-pre-execution-kernel-plan",
+    "consequential-action-approval-ui",
+    "human-usability-validation",
+    "private-reasoning-exposure",
+    "supported-product"
+  ]
+}

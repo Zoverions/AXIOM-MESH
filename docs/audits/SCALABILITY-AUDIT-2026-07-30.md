@@ -2,7 +2,7 @@
 
 **Audit date:** 2026-07-30  
 **Audited revision:** `2ab099be6c8035d73dfe8d0118a9e87afa0ef2bf`  
-**Kernel version:** `0.12.0-dev.0`  
+**Kernel version:** `0.12.0-dev.1`
 **Status:** architecture and source audit; implementation work required  
 **Scope:** supported four-service kernel, durable Grid, internal transport, public API, exports, backups, observability, and capacity evidence
 

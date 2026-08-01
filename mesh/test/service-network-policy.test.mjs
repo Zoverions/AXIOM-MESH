@@ -25,7 +25,7 @@ test('current service network policy is exact, default-deny, and segmented', asy
   );
   assert.equal(result.valid, true);
   assert.equal(result.schema, 'axiom-service-network-policy.v1');
-  assert.equal(result.kernel_version, '0.12.0-dev.0');
+  assert.equal(result.kernel_version, '0.12.0-dev.1');
   assert.equal(result.default_action, 'deny');
   assert.equal(result.segments, 4);
   assert.equal(result.flows, 10);

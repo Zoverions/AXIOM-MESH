@@ -337,7 +337,7 @@ jobs:
           } >> "$GITHUB_ENV"
       - name: Build digest-pinned image
         working-directory: mesh
-        run: docker build --pull=false --tag axiom-mesh-kernel:0.12.0-dev.0 .
+        run: docker build --pull=false --tag axiom-mesh-kernel:0.12.0-dev.1 .
       - name: Run container readiness and sign host ingress observation
         working-directory: mesh
         run: |

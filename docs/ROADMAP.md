@@ -4,7 +4,7 @@
 
 **Updated:** 2026-07-30
 
-**Planning horizon:** active build `0.12.0-dev.0` through evidence-gated 1.0 and isolated frontier incubation
+**Planning horizon:** active build `0.12.0-dev.1` through evidence-gated 1.0 and isolated frontier incubation
 
 AXIOM-MESH is being developed as both a defensible capability kernel and a
 useful human network. The roadmap therefore advances three coordinated tracks:
@@ -128,7 +128,7 @@ Exit criteria:
 
 ## Current Phase 2 - single-node production pilot
 
-**Target line:** `0.12.x`; active build `0.12.0-dev.0`
+**Target line:** `0.12.x`; active build `0.12.0-dev.1`
 
 **Outcome:** one controlled deployment can be operated, measured, rotated,
 backed up, restored, and contained.
@@ -222,6 +222,10 @@ support boundaries are promoted.
   boundary checks;
 - extend the experimental loopback-only `apps/axiom-one/` PWA foundation into
   a reviewed local human product outside the trusted zero-dependency kernel;
+- maintain the experimental exact human-explanation contract: reversible
+  review for the bounded echo action, all stable Gateway outcomes, all current
+  kernel events, approval-state distinctions, raw evidence, and same-key
+  uncertain-outcome recovery, without calling it an authoritative kernel plan;
 - provide human onboarding, node health, intent submission, visible plans,
   approval queues, revocation, receipts, memory inspection, selective export,
   deletion, and recovery guidance;
