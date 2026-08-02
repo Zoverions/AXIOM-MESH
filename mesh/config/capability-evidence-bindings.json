@@ -1,0 +1,249 @@
+{
+  "schema": "axiom-capability-evidence-bindings.v1",
+  "kernel_version": "0.12.0-dev.3",
+  "registry_digest": "8bcdcfd8f010d2ad5c6fb84fd6fafe8f4833c29d865b5a4181500b137104b0cb",
+  "bindings": [
+    {
+      "capability_id": "capsules.registry",
+      "path": "mesh/test/kernel.test.mjs",
+      "test": "full four-service path enforces auth, idempotency, consent, export, and audit",
+      "assertions": [
+        "assert.equal(capsulesAfterRevoke.capsules[0].status, 'revoked');"
+      ]
+    },
+    {
+      "capability_id": "consent.receipts",
+      "path": "mesh/test/kernel.test.mjs",
+      "test": "full four-service path enforces auth, idempotency, consent, export, and audit",
+      "assertions": [
+        "assert.equal(revokedConsents.consents[0].status, 'revoked');"
+      ]
+    },
+    {
+      "capability_id": "core.evidence-chain",
+      "path": "mesh/test/kernel.test.mjs",
+      "test": "Grid evidence survives restart and detects payload tampering",
+      "assertions": [
+        "assert.equal(verification.reason, 'payload_decryption_failed');"
+      ]
+    },
+    {
+      "capability_id": "core.intent-loop",
+      "path": "mesh/test/kernel.test.mjs",
+      "test": "full four-service path enforces auth, idempotency, consent, export, and audit",
+      "assertions": [
+        "assert.equal(replay.idempotent_replay, true);",
+        "assert.equal((await capabilityReplay.json()).error.code, 'capability_replayed');"
+      ]
+    },
+    {
+      "capability_id": "core.layered-policy",
+      "path": "mesh/test/kernel.test.mjs",
+      "test": "layered policy merging is deny-dominant and only tightens requirements",
+      "assertions": [
+        "assert.equal(merged.actions['chain.submit'].decision, 'deny');"
+      ]
+    },
+    {
+      "capability_id": "economics.accounting",
+      "path": "mesh/test/kernel.test.mjs",
+      "test": "full four-service path enforces auth, idempotency, consent, export, and audit",
+      "assertions": [
+        "assert.equal(accounting.balances.reduce((sum, item) => sum + item.balance, 0), 0);"
+      ]
+    },
+    {
+      "capability_id": "governance.local-records",
+      "path": "mesh/test/kernel.test.mjs",
+      "test": "full four-service path enforces auth, idempotency, consent, export, and audit",
+      "assertions": [
+        "assert.equal((await api(gateway, token, '/v1/appeals')).appeals.length, 1);",
+        "assert.equal(governedDenial.error.code, 'policy_denied');"
+      ]
+    },
+    {
+      "capability_id": "memory.graph",
+      "path": "mesh/test/kernel.test.mjs",
+      "test": "full four-service path enforces auth, idempotency, consent, export, and audit",
+      "assertions": [
+        "assert.deepEqual(sharedMemory.objects.map(item => item.object_id), [memoryOne.object_id]);",
+        "assert.equal(sharedMemory.edges.length, 0);"
+      ]
+    },
+    {
+      "capability_id": "nodes.discovery-scheduling",
+      "path": "mesh/test/node-scheduling.test.mjs",
+      "test": "Grid rejects node-key Sybils and preserves auditable schedule degradation",
+      "assertions": [
+        "assert.equal(active.placements.length, 2);",
+        "assert.equal(store.verifyChain().valid, true);"
+      ]
+    },
+    {
+      "capability_id": "nodes.registry",
+      "path": "mesh/test/kernel.test.mjs",
+      "test": "full four-service path enforces auth, idempotency, consent, export, and audit",
+      "assertions": [
+        "assert.equal((await api(gateway, token, '/v1/nodes')).nodes[0].status, 'active');"
+      ]
+    },
+    {
+      "capability_id": "offline.causal-sync",
+      "path": "mesh/test/causal-sync.test.mjs",
+      "test": "causal bundles bind update values, vectors, source keys, and bundle membership",
+      "assertions": [
+        "assert.equal(verified.updates[0].statement.value.title, 'offline-safe');"
+      ]
+    },
+    {
+      "capability_id": "online.causal-sync",
+      "path": "mesh/test/online-causal-sync.test.mjs",
+      "test": "online causal sync survives partition, orders approvals, and encrypts state",
+      "assertions": [
+        "assert.equal((await onlineCausalSyncStatus(fixture.runtime)).receipts.length, 2);"
+      ]
+    },
+    {
+      "capability_id": "operations.container-package",
+      "path": "mesh/test/operations.test.mjs",
+      "test": "production deployment policy is digest-pinned and fail-closed",
+      "assertions": [
+        "assert.match(result.base_digest, /^sha256:[a-f0-9]{64}$/);",
+        "assert.deepEqual(result.transport, {"
+      ]
+    },
+    {
+      "capability_id": "operations.independent-service-units",
+      "path": "mesh/test/service-units.test.mjs",
+      "test": "independent service drill signs failure isolation and exact recovery",
+      "assertions": [
+        "assert.equal(verification.unit_count, 4);",
+        "assert.ok(Object.values(evidence.checks).every(Boolean));"
+      ]
+    },
+    {
+      "capability_id": "operations.mutual-transport",
+      "path": "mesh/test/transport-credentials.test.mjs",
+      "test": "mutual TLS binds the active certificate peer to the signed service caller",
+      "assertions": [
+        "assert.equal(accepted.caller, 'gateway');",
+        "assert.equal(accepted.protocol, 'TLSv1.3');"
+      ]
+    },
+    {
+      "capability_id": "operations.observability",
+      "path": "mesh/test/operations.test.mjs",
+      "test": "operational telemetry is bounded, alertable, and OpenMetrics compatible",
+      "assertions": [
+        "assert.equal(snapshot.security.replay_rejections_total, 1);",
+        "assert.doesNotMatch(metrics, /principal|intent_id|query|prompt|payload|token/);"
+      ]
+    },
+    {
+      "capability_id": "operations.pilot-dossier-verification",
+      "path": "mesh/test/pilot-dossier.test.mjs",
+      "test": "pilot dossier accepts a complete policy-pinned submission without promoting production",
+      "assertions": [
+        "assert.equal(dossier.evidence_items, 13);",
+        "assert.equal(dossier.production_promoted, false);"
+      ]
+    },
+    {
+      "capability_id": "operations.provider-runtime",
+      "path": "mesh/test/provider-runtime.test.mjs",
+      "test": "signed secret and policy providers materialize a private exact runtime",
+      "assertions": [
+        "assert.equal(runtime.receipt.resources.length, 16);",
+        "assert.equal(receipt.includes('PRIVATE KEY'), false);"
+      ]
+    },
+    {
+      "capability_id": "operations.security-review-intake",
+      "path": "mesh/test/independent-security-review.test.mjs",
+      "test": "independent security review intake verifies a signed current-build ledger without promoting production",
+      "assertions": [
+        "assert.equal(result.review_attestation_verified, true);",
+        "assert.equal(result.production_promoted, false);"
+      ]
+    },
+    {
+      "capability_id": "operations.service-network-policy",
+      "path": "mesh/test/service-network-policy.test.mjs",
+      "test": "current service network policy is exact, default-deny, and segmented",
+      "assertions": [
+        "assert.equal(result.default_action, 'deny');",
+        "assert.equal(result.routes, 38);"
+      ]
+    },
+    {
+      "capability_id": "operations.setup-automation",
+      "path": "mesh/test/setup.test.mjs",
+      "test": "current-build setup preflight verifies runtime pins, exact locks, and zero dependencies",
+      "assertions": [
+        "assert.equal(result.dependency_packages, 0);",
+        "assert.equal(result.production_credentials_created, false);"
+      ]
+    },
+    {
+      "capability_id": "portability.export",
+      "path": "mesh/test/kernel.test.mjs",
+      "test": "full four-service path enforces auth, idempotency, consent, export, and audit",
+      "assertions": [
+        "assert.equal(sha256(bundle.bundle), bundle.manifest.files[0].sha256);",
+        "assert.equal(encryptedVerification.valid, true);"
+      ]
+    },
+    {
+      "capability_id": "portability.import",
+      "path": "mesh/test/kernel.test.mjs",
+      "test": "full four-service path enforces auth, idempotency, consent, export, and audit",
+      "assertions": [
+        "assert.equal(stagedImportRecord.diff_json.conflicts, 0);",
+        "assert.equal(importApprovalNeeded.error.code, 'independent_approval_required');"
+      ]
+    },
+    {
+      "capability_id": "storage.backup-restore",
+      "path": "mesh/test/kernel.test.mjs",
+      "test": "encrypted Grid backups verify, exclude live restore, preserve rollback, and emit recovery evidence",
+      "assertions": [
+        "assert.equal(restored.database_digest, manifest.database.sha256);",
+        "assert.equal(store.getBackupRecord(backupId).status, 'restored');"
+      ]
+    },
+    {
+      "capability_id": "storage.offers",
+      "path": "mesh/test/kernel.test.mjs",
+      "test": "full four-service path enforces auth, idempotency, consent, export, and audit",
+      "assertions": [
+        "assert.equal((await api(gateway, token, '/v1/storage-offers')).offers[0].status, 'active');"
+      ]
+    },
+    {
+      "capability_id": "ui.cli",
+      "path": "mesh/test/kernel.test.mjs",
+      "test": "CLI validates input and preserves structured Gateway failure semantics",
+      "assertions": [
+        "await assert.rejects(() => runCli(['unknown'], options), /Unknown command/);"
+      ]
+    },
+    {
+      "capability_id": "ui.gateway-client",
+      "path": "mesh/test/gateway-client-contract.test.mjs",
+      "test": "current Gateway client contract is exact and covers every authenticated route",
+      "assertions": [
+        "assert.equal(result.routes, 27);",
+        "assert.equal(result.direct_service_access, false);"
+      ]
+    },
+    {
+      "capability_id": "ui.operator-api",
+      "path": "mesh/test/kernel.test.mjs",
+      "test": "full four-service path enforces auth, idempotency, consent, export, and audit",
+      "assertions": [
+        "assert.equal(unauthenticatedOperations.status, 401);",
+        "assert.equal(operations.status, 'ready');"
+      ]
+    }
+  ]
+}
