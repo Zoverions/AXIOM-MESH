@@ -1,12 +1,13 @@
 import { lstat, readFile, realpath } from 'node:fs/promises';
 import { isAbsolute, posix, relative, resolve, sep } from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { meshConfig, MESH_ROOT } from './lib/config.mjs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { meshConfig } from './lib/config.mjs';
 import { ValidationError, digestObject } from './lib/canonical.mjs';
 
 const STATUSES = new Set(['implemented', 'adapter_required', 'experimental', 'specified', 'disabled']);
 export const CAPABILITY_REGISTRY_SCHEMA = 'axiom-capabilities.v1';
 export const CAPABILITY_EVIDENCE_BINDINGS_SCHEMA = 'axiom-capability-evidence-bindings.v1';
+const MESH_ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const REPOSITORY_ROOT = resolve(MESH_ROOT, '..');
 const DEFAULT_BINDINGS_PATH = resolve(
   MESH_ROOT,
