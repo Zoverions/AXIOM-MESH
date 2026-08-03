@@ -2,7 +2,7 @@
 
 **Status:** canonical current-build index
 
-**Updated:** 2026-07-30
+**Updated:** 2026-08-03
 
 **Active build:** `0.12.0-dev.3`
 
@@ -11,7 +11,7 @@
 This index defines the complete documentation boundary for the supported
 development build. Every document under `docs/` on `main` supports the current
 kernel, its product programme, operation, security boundary, evidence,
-promotion state, or provenance.
+promotion state, future-compatible architecture, or provenance.
 
 Superseded material remains only on the locked
 `deprecated/pre-0.12-documentation-corpus` branch. Historical material may
@@ -28,7 +28,7 @@ AXIOM-MESH is simultaneously:
    invitation-based AXIOM Circles;
 3. an isolated frontier-incubation programme for distributed authority,
    settlement, autonomy, regulated domains, embodied systems, arbitrary code,
-   zk verification, and post-quantum migration.
+   zk verification, post-quantum migration, and future plural governance.
 
 Only the capability registry establishes what is currently runnable.
 
@@ -41,6 +41,12 @@ The roadmap distinguishes five states:
 - **marketed**.
 
 These states must not be conflated.
+
+Long-horizon architecture may be documented before implementation so current
+design choices do not foreclose later assurance, Circle, institutional,
+jurisdictional, sovereign, treaty, or collective-finality requirements. Such
+documentation remains a planning constraint and non-claim until the registry,
+implementation, executable evidence, and promotion artifacts agree.
 
 ## Canonical documents
 
@@ -56,13 +62,22 @@ When documents disagree, use this order:
    deployment decision, and immediate milestones.
 5. [`docs/PRODUCTION-READINESS-TRACKER.md`](PRODUCTION-READINESS-TRACKER.md) for
    production-promotion gates and open external evidence.
-6. [`docs/MASTER-TODO.md`](MASTER-TODO.md) for executable work order.
-7. [`docs/ROADMAP.md`](ROADMAP.md) for strategic phases and frontier incubation.
-8. [`docs/whitepapers_and_research/WHITEPAPER.md`](whitepapers_and_research/WHITEPAPER.md)
-   for the implementation-grounded architectural explanation.
+6. [`docs/MASTER-TODO.md`](MASTER-TODO.md) for executable current work order.
+7. [`docs/ROADMAP.md`](ROADMAP.md) for primary strategic phases and frontier
+   incubation.
+8. [`docs/ROADMAP-EXTENSION-PLURAL-AUTHORITY.md`](ROADMAP-EXTENSION-PLURAL-AUTHORITY.md)
+   for the approved adaptive-assurance and plural-authority strategic extension.
+9. [`docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md`](rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md)
+   for the long-horizon authority and assurance architecture.
+10. [`docs/rebuild/LONG-HORIZON-CAPABILITY-MAP.md`](rebuild/LONG-HORIZON-CAPABILITY-MAP.md)
+    for traceability between current foundations and planned future families.
+11. [`docs/whitepapers_and_research/WHITEPAPER.md`](whitepapers_and_research/WHITEPAPER.md)
+    for the implementation-grounded architectural explanation.
 
 A lower-authority narrative cannot promote a capability, weaken a requirement,
-or override a current non-claim.
+or override a current non-claim. The roadmap extension and long-horizon map do
+not replace the primary roadmap, current task queue, or machine-readable
+registry.
 
 ## Document roles
 
@@ -81,8 +96,25 @@ or override a current non-claim.
   not claimed, and the two immediate priorities.
 - [Roadmap](ROADMAP.md) — coordinates trust/operations, human utility/network
   activation, and frontier incubation.
-- [Production execution queue](MASTER-TODO.md) — assigns concrete IDs,
+- [Plural-authority roadmap extension](ROADMAP-EXTENSION-PLURAL-AUTHORITY.md) —
+  preserves sequencing for adaptive assurance, Circles, institutions,
+  jurisdictions, sovereign domains, treaty interoperability, governance-pattern
+  learning, and selective collective finality.
+- [Adaptive assurance and plural authority architecture](rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md)
+  — defines authority, assurance, finality, retention, reassessment, plural
+  governance scopes, sovereignty-preserving interoperability, and non-waivable
+  technical invariants.
+- [Long-horizon capability map](rebuild/LONG-HORIZON-CAPABILITY-MAP.md) — maps
+  present foundations, future capability families, dependencies, blockers,
+  promotion artifacts, and explicit non-claims without changing registry status.
+- [Production execution queue](MASTER-TODO.md) — assigns concrete current IDs,
   priorities, and acceptance evidence.
+- [Plural-authority execution queue](MASTER-TODO-PLURAL-AUTHORITY.md) — records
+  future specification, testing, review, pilot, and promotion work subordinate
+  to current production blockers.
+- [Plural-authority architecture review](reviews/PLURAL-AUTHORITY-ARCHITECTURE-REVIEW-2026-08-03.md)
+  — records compatibility, risks, rejected shortcuts, sequencing, and claim
+  boundaries.
 - [0.12.0-dev.3 build notes](releases/0.12.0-dev.3.md) — describes the current
   development line and its documentation/product-programme state.
 
@@ -138,7 +170,9 @@ artifacts.
 The active `main` build is `0.12.0-dev.3`. Current implementation and product
 programme changes belong in the current build notes, status, product
 definition, requirements, roadmap, execution queue, readiness tracker, and
-white paper as applicable.
+white paper as applicable. Long-horizon design belongs in the approved
+architecture, roadmap extension, capability map, review, and subordinate task
+queue until implementation makes broader canonical changes necessary.
 
 ## Documentation update rule
 
@@ -152,17 +186,25 @@ A change must update every affected authority surface in the same pull request:
   definition, status, release notes, and immutable evidence;
 - security-boundary change — threat model, requirements, affected runbook,
   readiness tracker, and review scope;
+- long-horizon architecture change — architecture, roadmap extension,
+  capability map, architecture review, future task queue, and explicit current
+  non-claims;
 - claim-only change — verify that no lower-authority text exceeds the registry
   or deployment evidence.
 
-Documentation-only roadmap work does not change capability status.
+Documentation-only roadmap work does not change capability status. When a
+planned item first becomes a real specification or implementation, its pull
+request must reconcile the registry, every digest-bearing canonical document,
+requirements, product definition, primary roadmap and task queue, threat model,
+schemas, tests, status, readiness, release notes, and public claims as
+applicable.
 
 ## Contributor path
 
 For a production- or product-impacting change:
 
-1. identify the affected capability, product, requirement, threat, and
-   deployment boundary;
+1. identify the affected capability, product, requirement, threat, authority
+   domain, assurance level, and deployment boundary;
 2. update code and negative-path tests where behavior changes;
 3. update the capability registry only when executable acceptance evidence
    exists;
