@@ -12,18 +12,23 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'CONTRIBUTING.md',
   'docs/README.md',
   'docs/MASTER-TODO.md',
+  'docs/MASTER-TODO-PLURAL-AUTHORITY.md',
   'docs/ROADMAP.md',
+  'docs/ROADMAP-EXTENSION-PLURAL-AUTHORITY.md',
   'docs/PRODUCTION-GRADE.md',
   'docs/PRODUCTION-READINESS-TRACKER.md',
   'docs/PROJECT-STATUS-2026.md',
   'docs/REPOSITORY-MIGRATION.md',
   'docs/architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md',
   'docs/audits/SCALABILITY-AUDIT-2026-07-30.md',
+  'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md',
+  'docs/rebuild/LONG-HORIZON-CAPABILITY-MAP.md',
   'docs/rebuild/PRODUCT-DEFINITION.md',
   'docs/rebuild/REQUIREMENTS.md',
   'docs/rebuild/ROLLBACK.md',
   'docs/rebuild/SOURCE-TRACEABILITY.md',
   'docs/rebuild/STATUS.md',
+  'docs/reviews/PLURAL-AUTHORITY-ARCHITECTURE-REVIEW-2026-08-03.md',
   'docs/security/CREDENTIAL-HISTORY-REVOCATION.md',
   'docs/security/CURRENT-BUILD-THREAT-MODEL.md',
   'docs/security/DENY-EGRESS-BOUNDARY.md',
@@ -57,17 +62,58 @@ const REQUIRED_CONTENT = Object.freeze({
   'docs/README.md': [
     '## Canonical documents',
     '## Supported documentation boundary',
-    'deprecated/pre-0.12-documentation-corpus'
+    'deprecated/pre-0.12-documentation-corpus',
+    'ROADMAP-EXTENSION-PLURAL-AUTHORITY.md'
   ],
   'docs/MASTER-TODO.md': ['## P0', '## Promotion rules'],
+  'docs/MASTER-TODO-PLURAL-AUTHORITY.md': [
+    '## Priority 0 — Protect current truth',
+    '## Priority 6 — Circle identity and membership',
+    '## Priority 12 — Jurisdiction taxonomy and public-law laboratory',
+    '## Priority 18 — Required promotion artifacts',
+    '## Completion rule'
+  ],
   'docs/ROADMAP.md': ['## Promotion rules', '## Current Phase 2'],
+  'docs/ROADMAP-EXTENSION-PLURAL-AUTHORITY.md': [
+    '## Compatibility commitments effective immediately',
+    '## Workstream B — Assurance model specification',
+    '## Workstream C — Circle governance foundation',
+    '## Workstream E — Jurisdictional and sovereign architecture laboratory',
+    '## Workstream F — Sovereignty-preserving interoperability',
+    '## Documentation and claims maintenance'
+  ],
   'docs/PRODUCTION-GRADE.md': ['## Current readiness', '## Production promotion gates'],
   'docs/PRODUCTION-READINESS-TRACKER.md': ['## Current gate status', 'Not production-promoted'],
   'docs/PROJECT-STATUS-2026.md': ['## Current build', '## What is not claimed'],
   'docs/REPOSITORY-MIGRATION.md': ['## Provenance map', '## Credential boundary'],
+  'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md': [
+    '## 1. Four dimensions that must remain separate',
+    '## 3. Adaptive assurance profiles',
+    '## 5. Retrospective reassessment',
+    '## 6. Plural authority domains',
+    '## 8. Sovereignty-preserving interoperability',
+    '## 11. Non-waivable technical invariants',
+    '## 17. Current claims and non-claims'
+  ],
+  'docs/rebuild/LONG-HORIZON-CAPABILITY-MAP.md': [
+    '## Current authoritative surface',
+    '## Layer 2 — Circles and voluntary collective governance',
+    '## Layer 4 — Jurisdictional and sovereign domains',
+    '## Layer 5 — Treaty and cross-sovereign interoperability',
+    '## Cross-cutting capability requirements',
+    '## Documentation update rule'
+  ],
   'docs/rebuild/SOURCE-TRACEABILITY.md': [
     '## Current implementation trace',
     '## Archived source boundary'
+  ],
+  'docs/reviews/PLURAL-AUTHORITY-ARCHITECTURE-REVIEW-2026-08-03.md': [
+    '## Executive finding',
+    '## Load-bearing architectural decision',
+    '## Review of Circles',
+    '## Review of sovereign domains',
+    '## Known open gap carried into this programme',
+    '## Final assessment'
   ],
   'docs/security/CREDENTIAL-HISTORY-REVOCATION.md': [
     '## Repository trust result',
@@ -199,9 +245,14 @@ const REQUIRED_CONTENT = Object.freeze({
 
 const MINIMUM_LENGTH = Object.freeze({
   'docs/MASTER-TODO.md': 2_000,
+  'docs/MASTER-TODO-PLURAL-AUTHORITY.md': 8_000,
   'docs/ROADMAP.md': 2_000,
+  'docs/ROADMAP-EXTENSION-PLURAL-AUTHORITY.md': 8_000,
   'docs/PRODUCTION-GRADE.md': 3_000,
   'docs/PROJECT-STATUS-2026.md': 1_500,
+  'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md': 10_000,
+  'docs/rebuild/LONG-HORIZON-CAPABILITY-MAP.md': 8_000,
+  'docs/reviews/PLURAL-AUTHORITY-ARCHITECTURE-REVIEW-2026-08-03.md': 7_000,
   'docs/security/CREDENTIAL-HISTORY-REVOCATION.md': 2_500,
   'docs/security/CURRENT-BUILD-THREAT-MODEL.md': 5_000,
   'docs/security/DENY-EGRESS-BOUNDARY.md': 2_500,
