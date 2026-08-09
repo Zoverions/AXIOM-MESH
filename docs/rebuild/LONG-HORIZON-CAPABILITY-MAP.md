@@ -4,6 +4,8 @@
 
 **Adopted:** 2026-08-03
 
+**Updated:** 2026-08-09
+
 **Current registry authority:** `mesh/config/capabilities.json`
 
 **Current build:** `0.12.0-dev.3`
@@ -12,7 +14,7 @@
 
 This document preserves the complete strategic direction of AXIOM-MESH while keeping current claims exact.
 
-The machine-readable capability registry remains the sole authority for whether a capability is implemented, experimental, specified, disabled, or adapter-required in the current build. This map does not add runnable capabilities and does not change the registry digest. It connects the existing product and kernel surface to future assurance, Circle, institutional, jurisdictional, sovereign, treaty, and collective-finality work.
+The machine-readable capability registry remains the sole authority for whether a capability is implemented, experimental, specified, disabled, or adapter-required in the current build. This map does not add runnable capabilities and does not change the registry digest. It connects the existing product and kernel surface to future assurance, Circle, institutional, jurisdictional, sovereign, treaty, agent-interoperability, and collective-finality work.
 
 ## Claim rule
 
@@ -26,11 +28,12 @@ Roadmap, research, demonstrations, historical documents, architecture drafts, an
 
 ## Current authoritative surface
 
-The current registry contains 46 tracked capabilities, including 28 marked implemented in the latest completed audit of `0.12.0-dev.3`. The exact live count and status must always be recomputed from `mesh/config/capabilities.json` before publication.
+The current registry contains 47 tracked capabilities, including 29 marked implemented in `0.12.0-dev.3`. The exact live count and status must always be recomputed from `mesh/config/capabilities.json` before publication.
 
 Existing families include:
 
 - authenticated intent, policy, approval, grant, bounded execution, and evidence;
+- human-sponsored constrained machine principals with action/purpose ceilings, no delegation, and authority-bound evidence;
 - append-only evidence and provenance-preserving portability;
 - local governance records and consent receipts;
 - memory graph and selective disclosure foundations;
@@ -38,7 +41,7 @@ Existing families include:
 - encrypted backup, restore, rotation, recovery, observability, and service isolation;
 - provider, pilot-dossier, and independent-review intake;
 - Gateway client, CLI, and experimental AXIOM One human shell;
-- specified, disabled, experimental, or adapter-required AI, messaging, identity, scientific tools, domains, markets, economics, settlement, embodied systems, and proof verification.
+- specified, disabled, experimental, or adapter-required AI, messaging, identity, scientific tools, domains, markets, economics, settlement, embodied systems, agent protocols, and proof verification.
 
 Nothing in this document weakens the detailed summaries or evidence paths in the registry.
 
@@ -60,6 +63,7 @@ These labels are planning labels only. They are not valid substitutes for regist
 | Capability | Planning state | Existing foundation | Remaining work |
 |---|---|---|---|
 | Authenticated intent-to-evidence loop | current-registry | Core kernel | Capability-specific evidence binding and authentic pilot promotion |
+| Constrained machine principal | current-registry | Principal registry + Hypervisor + plan/grant/evidence binding | Dedicated machine revocation, remaining machine-specific limits, invocation envelope and adapter parity |
 | Deny-dominant layered policy | current-registry | Core kernel | Broader policy explanation, conflict and delegation semantics |
 | Scoped grants and bounded execution | current-registry | Core kernel | Adapter-specific conformance and remote-execution provenance |
 | Personal memory and provenance | current-registry | Memory graph and AXIOM One preview | Full lifecycle, restore, edge deletion, hard-delete policy, bulk ingestion |
@@ -197,6 +201,8 @@ capability-specific evidence binding
   -> collective finality only where required
 ```
 
+The agent-interoperability branch has its own subordinate sequence beginning with the now-implemented constrained machine principal, followed by the Invocation Envelope, machine discovery/Verify, MCP compatibility, bounded adapters/tasks, attenuation-only delegation, A2A, and remote execution. None of those later layers are implied by the current machine-principal claim.
+
 Research may run ahead in isolated laboratories, but activation, exposure, promotion, and marketing may not.
 
 ## Documentation update rule
@@ -218,6 +224,7 @@ When any planning item becomes a real specification or implementation, the chang
 The complete intended system is a local-first capability network in which:
 
 - people retain independently controlled nodes and portable evidence;
+- agents and services can act only through explicit, attributable and bounded machine authority;
 - actions receive assurance proportionate to consequence;
 - low-assurance history can be reassessed without being rewritten;
 - voluntary Circles coordinate through transparent charters;
