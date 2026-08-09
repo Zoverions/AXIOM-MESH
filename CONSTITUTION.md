@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=8bcdcfd8f010d2ad5c6fb84fd6fafe8f4833c29d865b5a4181500b137104b0cb -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=5fcd7d1842cbb647ad9811963905ed2ca4d87d17723f409d5b230c708e68eb99 -->
 # AXIOM-MESH CONSTITUTION
 
 **Build:** `0.12.0-dev.3`
@@ -30,12 +30,15 @@ an operator toggle is not production promotion.
 
 The present kernel is a single-node transparency log. It is not a live
 blockchain government, BFT network, proof-of-truth system, public federation,
-or mainnet economic deployment. Distributed authority, token, settlement,
-autonomous-agent, regulated-domain, embodied-system, arbitrary-code, zk, and
-post-quantum work may proceed in isolated laboratories. Laboratory work must
-remain disabled by default and separated from production identities, secrets,
-user data, real value, and public authority until separately ratified,
-implemented, tested, reviewed, and promoted.
+or mainnet economic deployment. It can authenticate constrained machine
+principals, but that primitive does not constitute an autonomous-agent runtime,
+agent federation, remote execution system, or delegated machine government.
+Distributed authority, token, settlement, autonomous-agent, regulated-domain,
+embodied-system, arbitrary-code, zk, and post-quantum work may proceed in
+isolated laboratories. Laboratory work must remain disabled by default and
+separated from production identities, secrets, user data, real value, and
+public authority until separately ratified, implemented, tested, reviewed, and
+promoted.
 
 Human-facing products must preserve rather than conceal the authority model.
 A friendly interface may simplify language, but it may not hide denial,
@@ -47,8 +50,11 @@ appeal, and recovery are product safety requirements.
 Policy inheritance is deny-dominant. Lower layers may reduce authority but may
 not weaken a higher denial, lower a risk classification, replace an authorized
 tool or provider, suppress consent, recovery, deletion, export, or appeal, or
-expand their own power. Permitted high-risk effects require explicit approval
-from an independent authenticated principal.
+expand their own power. Machine principals are additionally bounded by their
+sponsor, finite scopes, action and purpose ceilings, runtime identity, expiry,
+non-delegation and resource budgets. Those machine constraints may reduce but
+never enlarge policy authority. Permitted high-risk effects require explicit
+approval from an independent authenticated principal.
 
 Every mutation must remain attributable, signed, hash-linked, exportable within
 its lawful and consented scope, and subject to a visible recovery and dispute
