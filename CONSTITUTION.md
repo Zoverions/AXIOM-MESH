@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=5fcd7d1842cbb647ad9811963905ed2ca4d87d17723f409d5b230c708e68eb99 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=b879b07bd726ad8d674e78a5ef2e20bac4dd5b8fe62fb3c498723ab18fa1e945 -->
 # AXIOM-MESH CONSTITUTION
 
 **Build:** `0.12.0-dev.3`
@@ -52,9 +52,12 @@ not weaken a higher denial, lower a risk classification, replace an authorized
 tool or provider, suppress consent, recovery, deletion, export, or appeal, or
 expand their own power. Machine principals are additionally bounded by their
 sponsor, finite scopes, action and purpose ceilings, runtime identity, expiry,
-non-delegation and resource budgets. Those machine constraints may reduce but
-never enlarge policy authority. Permitted high-risk effects require explicit
-approval from an independent authenticated principal.
+non-delegation and the currently enforced execution-time ceiling. Additional
+machine destination, rate, concurrency, request-size, and response-size limits
+must not be described as live enforcement until their runtime paths and evidence
+exist. Machine constraints may reduce but never enlarge policy authority.
+Permitted high-risk effects require explicit approval from an independent
+authenticated principal.
 
 Every mutation must remain attributable, signed, hash-linked, exportable within
 its lawful and consented scope, and subject to a visible recovery and dispute
