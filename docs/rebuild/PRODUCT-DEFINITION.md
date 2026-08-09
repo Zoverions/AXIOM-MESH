@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=5fcd7d1842cbb647ad9811963905ed2ca4d87d17723f409d5b230c708e68eb99 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=b879b07bd726ad8d674e78a5ef2e20bac4dd5b8fe62fb3c498723ab18fa1e945 -->
 # AXIOM-MESH Product Definition
 
 **Status:** canonical rebuild and product definition
@@ -28,7 +28,10 @@ human-sponsored constrained machine principals.
 
 A constrained machine principal is an authorization primitive: an authenticated
 `agent` identity is bound to a human sponsor, finite scopes, action and purpose
-ceilings, runtime identity, expiry, non-delegation and execution budgets. A
+ceilings, runtime identity, expiry, non-delegation and a currently enforced
+execution-time ceiling. The v1 schema also reserves destination, rate,
+concurrency, request-size and response-size limits, but those are not current
+live-enforcement claims until their Gateway/runtime paths and evidence exist. A
 least-privilege infrastructure `service` keeps the existing service-principal
 contract unless it explicitly opts into that machine-authority profile.
 
@@ -329,8 +332,8 @@ The `0.12.0-dev.3` kernel currently implements:
 - authenticated intent, plan, policy, grant, deterministic execution, and
   signed evidence;
 - human-sponsored constrained agent principals with finite scopes, action and
-  purpose ceilings, runtime identity, expiry, non-delegation and execution
-  budgets;
+  purpose ceilings, runtime identity, expiry, non-delegation and an
+  execution-time ceiling;
 - deny-dominant policy and independent high-risk approval;
 - encrypted transactional Grid state and key-lineage-aware evidence;
 - consent, capsule manifests, encrypted memory, governance, local accounting,
