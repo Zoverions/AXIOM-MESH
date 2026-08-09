@@ -1,6 +1,6 @@
 {
   "schema": "axiom-capabilities.v1",
-  "verified_at": "2026-08-01",
+  "verified_at": "2026-08-09",
   "kernel_version": "0.12.0-dev.3",
   "capabilities": [
     {
@@ -8,63 +8,92 @@
       "family": "core",
       "status": "implemented",
       "summary": "Authenticated intent-to-plan-to-grant-to-execution-to-evidence pipeline.",
-      "evidence": ["mesh/test/kernel.test.mjs"]
+      "evidence": [
+        "mesh/test/kernel.test.mjs"
+      ]
+    },
+    {
+      "id": "core.machine-principals",
+      "family": "core",
+      "status": "implemented",
+      "summary": "Authenticated agent principals are human-sponsored and deny-dominantly bounded by finite scopes, action and purpose ceilings, runtime identity, expiry, non-delegation, and an execution-time ceiling; infrastructure service principals remain backward-compatible unless they opt into the same constrained profile.",
+      "evidence": [
+        "mesh/test/machine-principal.test.mjs",
+        "mesh/test/principal-registry.test.mjs",
+        "mesh/test/machine-principal-e2e.test.mjs"
+      ]
     },
     {
       "id": "core.evidence-chain",
       "family": "audit",
       "status": "implemented",
       "summary": "Transactional SHA-256 hash-linked evidence log with restart verification.",
-      "evidence": ["mesh/test/kernel.test.mjs"]
+      "evidence": [
+        "mesh/test/kernel.test.mjs"
+      ]
     },
     {
       "id": "core.layered-policy",
       "family": "governance",
       "status": "implemented",
       "summary": "Runtime policy stacks merge global-to-user constraints deny-dominantly and require independent approval for every permitted high-risk effect.",
-      "evidence": ["mesh/test/kernel.test.mjs"]
+      "evidence": [
+        "mesh/test/kernel.test.mjs"
+      ]
     },
     {
       "id": "capsules.registry",
       "family": "capsules",
       "status": "implemented",
       "summary": "Immutable digest-addressed capsule manifests with signature verification, schemas, SBOM digest, and revocation state.",
-      "evidence": ["mesh/test/kernel.test.mjs"]
+      "evidence": [
+        "mesh/test/kernel.test.mjs"
+      ]
     },
     {
       "id": "portability.export",
       "family": "portability",
       "status": "implemented",
       "summary": "Signed canonical JSONL export supports time, type, object, and capsule scopes plus optional X25519 recipient encryption and independent verification.",
-      "evidence": ["mesh/test/kernel.test.mjs"]
+      "evidence": [
+        "mesh/test/kernel.test.mjs"
+      ]
     },
     {
       "id": "governance.local-records",
       "family": "governance",
       "status": "implemented",
       "summary": "Local proposals use human-chamber voting, finalization, timelocked activation, live authority-reducing policy overlays, verification, rollback metadata, expiring emergencies, and appeal records.",
-      "evidence": ["mesh/test/kernel.test.mjs"]
+      "evidence": [
+        "mesh/test/kernel.test.mjs"
+      ]
     },
     {
       "id": "consent.receipts",
       "family": "identity",
       "status": "implemented",
       "summary": "Purpose-, scope-, subject-, controller-, expiry-, and revocation-bound consent receipts.",
-      "evidence": ["mesh/test/kernel.test.mjs"]
+      "evidence": [
+        "mesh/test/kernel.test.mjs"
+      ]
     },
     {
       "id": "nodes.registry",
       "family": "mesh",
       "status": "implemented",
       "summary": "Local Ed25519 node admission binds authenticated owners, unique active signing keys, capabilities, software digest, expiry, quarantine, and optional v2 discovery metadata; federation remains separate.",
-      "evidence": ["mesh/test/kernel.test.mjs"]
+      "evidence": [
+        "mesh/test/kernel.test.mjs"
+      ]
     },
     {
       "id": "storage.offers",
       "family": "storage",
       "status": "implemented",
       "summary": "Local signed storage offers are bound to active admitted nodes and quarantined with them; object-transfer adapters remain unavailable.",
-      "evidence": ["mesh/test/kernel.test.mjs"]
+      "evidence": [
+        "mesh/test/kernel.test.mjs"
+      ]
     },
     {
       "id": "sandbox.container",
@@ -83,14 +112,18 @@
       "family": "memory",
       "status": "implemented",
       "summary": "Content-addressed encrypted memory objects and edges support owner access, consent-scoped selective disclosure, tombstoning, and scoped export.",
-      "evidence": ["mesh/test/kernel.test.mjs"]
+      "evidence": [
+        "mesh/test/kernel.test.mjs"
+      ]
     },
     {
       "id": "portability.import",
       "family": "portability",
       "status": "implemented",
       "summary": "Signed canonical export bundles can be cryptographically validated, staged with a deterministic record diff, and applied to a provenance-preserving foreign-record store only after independent approval.",
-      "evidence": ["mesh/test/kernel.test.mjs"]
+      "evidence": [
+        "mesh/test/kernel.test.mjs"
+      ]
     },
     {
       "id": "research.autonomy",
@@ -214,7 +247,9 @@
       "family": "economics",
       "status": "implemented",
       "summary": "Local accounting uses owner- and unit-bound accounts with transactional balanced double-entry journals and safe integer amounts; external settlement remains disabled.",
-      "evidence": ["mesh/test/kernel.test.mjs"]
+      "evidence": [
+        "mesh/test/kernel.test.mjs"
+      ]
     },
     {
       "id": "economics.token-bridge-liquidity",
@@ -233,7 +268,9 @@
       "family": "operations",
       "status": "implemented",
       "summary": "Authenticated operator API for intent submission, status, audit, recovery, and governed state inspection.",
-      "evidence": ["mesh/test/kernel.test.mjs"]
+      "evidence": [
+        "mesh/test/kernel.test.mjs"
+      ]
     },
     {
       "id": "ui.gateway-client",
@@ -254,7 +291,9 @@
       "family": "operations",
       "status": "implemented",
       "summary": "Command-line operator client with explicit input validation and fail-closed API error handling.",
-      "evidence": ["mesh/test/kernel.test.mjs"]
+      "evidence": [
+        "mesh/test/kernel.test.mjs"
+      ]
     },
     {
       "id": "ui.dashboard",

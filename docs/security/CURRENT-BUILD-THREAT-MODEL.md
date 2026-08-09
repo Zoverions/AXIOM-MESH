@@ -4,7 +4,7 @@
 
 **Status:** canonical security-review input; not an independent assessment
 
-**Updated:** 2026-07-29
+**Updated:** 2026-08-09
 
 This document defines the threat model for the supported clean-room kernel on
 `main`. It replaces historical security narratives as the review baseline. An
@@ -23,14 +23,32 @@ single-host units.
   exposes it through a permission-restricted Unix-domain socket. It
   authenticates bearer principals, validates request sizes and shapes,
   rate-limits abuse, and forwards signed internal requests.
-- **Hypervisor** normalizes intent, composes deny-dominant policy, constructs an
-  explicit plan, and issues short-lived, audience-bound, single-use grants.
+- **Hypervisor** normalizes intent, composes deny-dominant policy, independently
+  revalidates constrained agent principals, intersects the machine
+  execution-time ceiling with policy, constructs an explicit plan, and issues
+  short-lived, audience-bound, single-use grants.
 - **Sandbox** accepts only authenticated Hypervisor work covered by an unused
   grant. The supported operation set is built in and deterministic. Arbitrary
   untrusted code execution is not a supported capability.
 - **Grid** owns durable encrypted state, the signed hash-linked evidence chain,
   identities, consent, governance, node records, backups, and import/export.
   It is one transparency log, not replicated consensus.
+
+Authenticated `agent` principals use `axiom-machine-principal.v1`. They require
+a configured human sponsor and are constrained by finite scopes, action and
+purpose allowlists, runtime identity, lifetime/expiry, non-delegation, and a
+currently enforced execution-time ceiling. Wildcard scope and administrator
+role are rejected. The machine authority digest is carried through request
+binding, plan provenance, capability claims, and result evidence. Existing
+least-privilege infrastructure `service` principals remain backward-compatible
+unless they explicitly opt into the constrained machine profile.
+
+The v1 machine schema also contains destination, request-rate, concurrency,
+request-size, and response-size fields. Those fields are validated as schema
+inputs but are **not** current live-enforcement claims until their Gateway and
+runtime enforcement paths and evidence are implemented. Runtime IDs and
+software digests are attribution/binding metadata; they are not hardware,
+TPM/TEE, measured-boot, or remote-attestation proof.
 
 The compact candidate container uses `network_mode: none`. Host-local Gateway
 ingress is mounted separately, and startup fails before launching children if
@@ -50,10 +68,11 @@ dependencies.
 
 Production secrets are provisioned before startup. The kernel does not
 generate replacement credentials while starting. The data-protection key,
-service identities, transport credentials, operator and telemetry tokens, and
-provider trust roots are outside source control. The included file provider is
-a protocol reference, not a production vault. An authentic pilot must supply a
-separately reviewed provider adapter and workload identity.
+service identities, transport credentials, operator and telemetry tokens,
+machine bearer credentials, and provider trust roots are outside source
+control. The included file provider is a protocol reference, not a production
+vault. An authentic pilot must supply a separately reviewed provider adapter
+and workload identity.
 
 External telemetry runs in a host-side relay so the kernel can retain deny
 egress. The relay has a dedicated read-only credential, accepts only fixed
@@ -61,18 +80,22 @@ metric and alert vocabularies, and sends to exact allowlisted HTTPS origins.
 That relay, its credential files, DNS/TLS behavior, receiver retention, and
 host networking sit outside the kernel container boundary.
 
-Admitted-node discovery, placement reservations, and operator-approved causal
-exchange are supported foundations. They do not authorize remote workload
-execution, automatic federation, or consensus. Every admitted identity,
-discovery statement, schedule, causal bundle, and apply approval remains
-signature-, owner-, scope-, expiry-, and replay-bound.
+Admitted-node discovery, placement reservations, operator-approved causal
+exchange, and local constrained machine principals are supported foundations.
+They do not authorize remote workload execution, autonomous delegation,
+MCP/A2A endpoints, automatic federation, or consensus. Every admitted identity,
+discovery statement, schedule, causal bundle, apply approval, and supported
+machine effect remains signature-, sponsor/owner-, scope-, purpose-, expiry-,
+and replay-bound as applicable.
 
 ## Assets and security objectives
 
 The primary assets are:
 
-- user and operator identities, tokens, consent, intent, and policy state;
-- service, transport, provider, reviewer, and data-protection keys;
+- user, operator, machine-principal and service identities, tokens, consent,
+  intent, sponsorship, authority digests, and policy state;
+- service, transport, provider, reviewer, machine-runtime, and data-protection
+  keys or credentials;
 - grants and approvals that can authorize effects;
 - Grid state, migrations, evidence events, indexes, and encryption metadata;
 - backup snapshots, retention receipts, rollback packages, rotation journals,
@@ -87,17 +110,17 @@ The primary assets are:
 The confidentiality objective is to prevent unauthorized disclosure of
 secrets, protected Grid data, consent-scoped information, recovery material,
 and operational metadata. The integrity objective is to prevent unauthorized
-effects, policy weakening, identity substitution, evidence alteration,
-rollback manipulation, and false capability or promotion claims. The
-availability objective is bounded: authorized local work should fail clearly
-and recoverably when a dependency is unavailable, without silently bypassing
-authorization or evidence.
+effects, policy weakening, identity or sponsor substitution, machine-authority
+widening, evidence alteration, rollback manipulation, and false capability or
+promotion claims. The availability objective is bounded: authorized local work
+should fail clearly and recoverably when a dependency is unavailable, without
+silently bypassing authorization or evidence.
 
 Evidence integrity is stricter than ordinary availability. An acknowledged
 mutation must not be reported as successful without its Grid evidence. Missing
-authorization, identity, policy, encryption, or evidence dependencies fail
-closed. Degraded readiness may preserve inspection and recovery, but it does
-not grant replacement authority.
+authorization, identity, sponsor, policy, encryption, or evidence dependencies
+fail closed. Degraded readiness may preserve inspection and recovery, but it
+does not grant replacement authority.
 
 ## Threat actors and assumptions
 
@@ -105,19 +128,25 @@ The model considers:
 
 - an unauthenticated local or proxied client sending malformed, oversized,
   replayed, or high-volume requests;
-- an authenticated principal attempting horizontal/vertical privilege
-  escalation, consent misuse, grant replay, or evidence confusion;
+- an authenticated human, agent, or service principal attempting horizontal or
+  vertical privilege escalation, consent misuse, grant replay, purpose/action
+  escalation, sponsor laundering, or evidence confusion;
+- a compromised agent runtime attempting to present the legacy unconstrained
+  `agent` shape, alter its sponsor/runtime/constraints after approval, replay an
+  approval under a new authority profile, or treat declarative metadata as
+  proof of trusted execution;
 - a malicious or compromised capsule, node, provider process, telemetry
   receiver, or causal-exchange peer;
-- theft or reuse of an active, retired, or historically exposed credential;
+- theft or reuse of an active, retired, or historically exposed human, machine,
+  or service credential;
 - one compromised service attempting to impersonate another service or exceed
   its declared role;
 - a supply-chain contributor attempting to change dependencies, deployment
   inputs, tests, capability claims, or documentation without matching review;
 - an evidence producer or reviewer attempting to omit findings, substitute a
   build, alter a signed artifact, reuse an identity, or imply promotion;
-- operational mistakes during provisioning, rotation, backup retention,
-  recovery, rollback, upgrade, or incident containment.
+- operational mistakes during provisioning, sponsorship, expiry, rotation,
+  backup retention, recovery, rollback, upgrade, or incident containment.
 
 The single-host candidate assumes the operating-system kernel, container
 engine, filesystem permissions, process account, monotonic-enough wall clock,
@@ -139,33 +168,44 @@ Reviewers must trace at least these entry points:
 
 1. Gateway liveness, readiness, authenticated API, intent, operations,
    telemetry, export, import, and administrative routes.
-2. Gateway-to-Hypervisor, Hypervisor-to-Sandbox, and service-to-Grid
-   authenticated requests.
-3. policy, principal, trust-root, transport, provider, and deployment files
+2. human, constrained-agent, and service bearer-principal registry loading,
+   sponsorship resolution, machine-profile normalization, and expiry handling;
+3. Gateway-to-Hypervisor, Hypervisor-to-Sandbox, and service-to-Grid
+   authenticated requests;
+4. machine action/purpose checks, authority-digest request binding, plan
+   provenance, approval matching, capability issuance, and execution evidence;
+5. policy, principal, trust-root, transport, provider, and deployment files
    loaded at provisioning or startup;
-4. encrypted Grid database, migrations, backups, recovery copies, rotation
+6. encrypted Grid database, migrations, backups, recovery copies, rotation
    packages, and rollback journals;
-5. node admission/renewal, storage offers, discovery, scheduling, quarantine,
+7. node admission/renewal, storage offers, discovery, scheduling, quarantine,
    causal bundles, apply approvals, and resolution;
-6. telemetry scraping, queued alert delivery, receiver responses, receipts,
+8. telemetry scraping, queued alert delivery, receiver responses, receipts,
    retry, and dead-letter state;
-7. import/export bundles and recipient encryption;
-8. source checkout, package locks, container build inputs, release verifier,
-   capability registry, documentation checker, and CI evidence;
-9. pilot policy, dossier, evidence package, independent-review policy, findings
-   ledger, remediation records, and exceptions.
+9. import/export bundles and recipient encryption;
+10. source checkout, package locks, container build inputs, release verifier,
+    capability registry, documentation checker, and CI evidence;
+11. pilot policy, dossier, evidence package, independent-review policy, findings
+    ledger, remediation records, and exceptions.
 
-No privileged effect may bypass the intent, policy, plan, grant, execution,
-evidence sequence. Stopped-runtime recovery is the documented exception to the
-online path: it requires separate signed/encrypted artifacts, exact target
-binding, Grid exclusion, and post-recovery verification rather than an online
-grant.
+No privileged effect may bypass the intent, policy, machine-authority where
+applicable, plan, grant, execution, evidence sequence. Stopped-runtime recovery
+is the documented exception to the online path: it requires separate
+signed/encrypted artifacts, exact target binding, Grid exclusion, and
+post-recovery verification rather than an online grant.
 
 ## Threat analysis
 
 | Threat | Implemented prevention or detection | Residual risk / required external evidence |
 |---|---|---|
-| Authentication bypass or token theft | Exact bearer principals, scoped telemetry identity, restrictive secret-file checks, signed service envelopes, mTLS peer identity, active-leaf pinning, replay guards | Host memory and external custodian compromise remain possible; pilot custody and token operational monitoring are pending |
+| Authentication bypass or token theft | Exact bearer principals, constrained agent profile, scoped telemetry identity, restrictive secret-file checks, signed service envelopes, mTLS peer identity, active-leaf pinning, replay guards | Bearer theft still conveys the configured principal until expiry/revocation; host memory and external custodian compromise remain possible; pilot custody and token operational monitoring are pending |
+| Legacy or forged unconstrained agent identity | Bearer registry requires `agent` principals to normalize as `axiom-machine-principal.v1`; Hypervisor independently rejects legacy `agent` shape; unknown/non-human sponsor, wildcard scope, and administrator role fail closed | A stolen valid constrained-agent bearer still needs operational revocation; runtime identity metadata is not hardware attestation |
+| Sponsor laundering or authority-profile substitution | Sponsor must resolve to a configured human principal; normalized authority digest includes sponsor, roles/scopes, lifetime, runtime and constraints; approvals bind request digest containing the machine authority digest | Human sponsor compromise and social/organizational authorization errors remain outside cryptographic proof |
+| Machine action or purpose escalation | Ordinary policy is evaluated first and machine action/purpose ceilings form a second deny-dominant layer; machine constraints can only reduce authority | Destination/rate/concurrency/request-size/response-size schema fields are not yet live machine-specific enforcement claims |
+| Machine execution-budget widening | Hypervisor intersects policy timeout with machine `max_execution_ms`; plan and capability bind the resulting authority context | CPU/memory/cost accounting beyond the supported timeout path needs later resource-meter evidence |
+| Machine delegation laundering | Machine-principal v1 validation requires delegation disabled and depth zero; no machine delegation runtime exists | Future delegation requires a separate attenuation-only design, threat model, property tests, revocation and promotion |
+| Approval reuse after machine-authority change | Request digest includes machine authority digest; plan provenance and capability claims repeat the exact digest; result/mutation evidence records it | Reviewers must verify all future adapters preserve the same request-binding semantics |
+| Runtime/software-digest overclaim | Runtime identity and optional software digest are typed and authority-bound metadata only | No TPM/TEE, measured boot, workload attestation, process isolation proof, or remote attestation is claimed |
 | Authorization or consent weakening | Deny-dominant layered policy, explicit risk classification, independent high-risk approval, purpose/scope/subject/controller-bound consent, audience-bound one-use grants | Policy correctness and all high-risk classifications require independent source/configuration review |
 | Request replay, substitution, or confused deputy | Method/path/audience/body digest, caller identity, timestamp, nonce, one-use approval and grant state | Clock failure and stolen active keys require deployment alerts, rotation, and incident response |
 | Unauthorized Sandbox effect | Fixed built-in operation registry, grant/tool/constraint binding, no ambient supported external adapters, deny egress | This is not arbitrary-code isolation; host/container escape resistance is not externally audited |
@@ -185,6 +225,12 @@ The current review must consider at minimum:
 
 - missing, expired, replayed, wrong-audience, wrong-body, or wrong-peer
   credentials and approvals;
+- unconstrained `agent` registry entries, unknown/non-human sponsors, wildcard
+  machine scopes, administrator-role injection, expired session principals, or
+  attempted machine delegation;
+- a machine request whose action or purpose is outside its profile, whose
+  authority digest changed after approval, or whose runtime metadata is
+  presented as attestation;
 - one valid identity reused for another role, node, provider, reviewer, or
   exception approver;
 - policy-layer reordering, omission, unknown fields, numeric boundary errors,
@@ -210,32 +256,46 @@ The current review must consider at minimum:
 
 Independent review should treat these as invariants, not best-effort goals:
 
-1. Missing authorization, evidence integrity, identity, or encryption material
-   cannot become success through a fallback.
-2. A denial in any applicable policy layer dominates permission.
+1. Missing authorization, evidence integrity, identity, sponsor, or encryption
+   material cannot become success through a fallback.
+2. A denial in any applicable policy or machine-authority layer dominates
+   permission.
 3. A grant or approval is exact-audience, request-bound, short-lived, and
    single-use.
-4. A privileged mutation is acknowledged only with durable linked evidence.
-5. A retired or unpinned credential is rejected even if otherwise
+4. A machine authority change changes the request/plan/capability evidence
+   binding; old approval must not authorize the new authority profile.
+5. Machine-principal v1 cannot delegate and cannot receive wildcard scope or
+   administrator role.
+6. A privileged mutation is acknowledged only with durable linked evidence.
+7. A retired or unpinned credential is rejected even if otherwise
    cryptographically valid.
-6. Only Grid owns durable runtime state; recovery operates with Grid stopped.
-7. Secrets do not enter source, images, signed public evidence, logs, dossier
+8. Only Grid owns durable runtime state; recovery operates with Grid stopped.
+9. Secrets do not enter source, images, signed public evidence, logs, dossier
    details, findings ledgers, or command output.
-8. Synthetic drills identify themselves and cannot claim live operation,
-   external review, or production promotion.
-9. No older source revision, image, release, or archived document can satisfy
-   a current-build gate.
-10. Critical/high security findings must be closed and independently
+10. Synthetic drills identify themselves and cannot claim live operation,
+    external review, or production promotion.
+11. No older source revision, image, release, or archived document can satisfy
+    a current-build gate.
+12. Critical/high security findings must be closed and independently
     reverified before review intake; lesser accepted risk needs a named owner,
     separate approval, containment, and a bounded unexpired exception.
 
 ## Residual risk and non-claims
 
 The repository does not claim defense against a malicious host administrator,
-secure arbitrary-code execution, replicated consensus, automatic federation,
-remote dispatch, Sybil resistance, externally hosted key custody, live vendor
-provider security, audited WAN behavior, post-quantum security, or regulatory
-certification.
+secure arbitrary-code execution, an autonomous-agent runtime, machine
+delegation, MCP/A2A interoperability, agent federation, remote agent/workload
+execution, TPM/TEE or measured-runtime attestation, replicated consensus,
+automatic federation, remote dispatch, Sybil resistance, externally hosted key
+custody, live vendor provider security, audited WAN behavior, post-quantum
+security, or regulatory certification.
+
+The constrained machine-principal implementation does not by itself prove that
+the named runtime is uncompromised, that its software digest corresponds to
+loaded bytes, or that the human sponsor made a socially/legally valid choice.
+It constrains and records the authority presented to the kernel. Future
+protocol adapters, remote executors, attestation systems, and delegation must
+preserve or further reduce this authority rather than bypass it.
 
 The repository-owned verifier can prove the internal consistency, signature,
 build binding, scope, disposition, and non-promotion behavior of an independent
@@ -244,10 +304,10 @@ remains pending until an accountable independent organization reviews the
 actual pinned source and configuration, signs the authentic findings ledger,
 and the ledger passes offline intake.
 
-The threat model must be reassessed when authentication, policy, grants,
-Sandbox operations, Grid schemas, encryption, backup/recovery, service
-topology, container policy, provider protocol, node/sync behavior, telemetry,
-pilot evidence, release gates, or the trusted computing base changes. A prior
-ledger cannot approve another build. The
+The threat model must be reassessed when authentication, machine-principal
+semantics, policy, grants, Sandbox operations, Grid schemas, encryption,
+backup/recovery, service topology, container policy, provider protocol,
+node/sync behavior, telemetry, pilot evidence, release gates, or the trusted
+computing base changes. A prior ledger cannot approve another build. The
 [independent security review procedure](INDEPENDENT-SECURITY-REVIEW.md)
 defines the exact current intake contract.

@@ -2,7 +2,7 @@
 
 **Status:** planning and traceability map; not the runnable capability registry
 
-**Adopted for branch review:** 2026-08-09
+**Adopted:** 2026-08-09
 
 **Current registry authority:** `mesh/config/capabilities.json`
 
@@ -10,7 +10,7 @@
 
 ## Purpose
 
-This map connects existing AXIOM foundations to the proposed digital-agent interoperability programme without promoting unimplemented features.
+This map connects existing AXIOM foundations to the digital-agent interoperability programme without promoting unimplemented features.
 
 The design goal is a stable machine capability substrate rather than a general agent runtime. Existing or future external runtimes may connect through compatibility adapters, while authority, grants, bounded execution, credentials, evidence, and revocation remain AXIOM concerns.
 
@@ -42,6 +42,7 @@ Only the capability registry establishes current runnable status.
 | Foundation | Planning state | Relevance to agents |
 |---|---|---|
 | Authenticated Gateway ingress | current-registry | common machine entry point |
+| Constrained machine principals | current-registry | human-sponsored machine authority with action/purpose ceilings and no delegation |
 | Deny-dominant policy | current-registry | prevents runtime/plugin permissions from becoming AXIOM authority |
 | Explicit plans and approvals | current-registry | supports consequential machine requests and owner review |
 | Scoped grants | current-registry | natural primitive for machine authority |
@@ -65,23 +66,29 @@ These foundations reduce how much new trusted code agent interoperability should
 
 | Capability | Planning state | Dependencies | Current claim |
 |---|---|---|---|
-| Machine principal identity | specified-next | identity/key lifecycle, Gateway auth | not-claimed |
-| Runtime instance binding | specified-next | machine principal identity | not-claimed |
-| Owner/sponsor relationship | specified-next | governance/identity records | not-claimed |
+| Machine principal identity | current-registry | bearer principal registry, Gateway auth | implemented for constrained `agent` principals |
+| Runtime instance binding | current-registry | machine principal identity | runtime ID and optional software digest are authority-bound attribution, not attestation |
+| Owner/sponsor relationship | current-registry | configured human principal | implemented human sponsorship; legal/social legitimacy not inferred |
+| Purpose/action ceilings | current-registry | Hypervisor policy/intent | implemented as a second deny-dominant layer |
+| Machine execution-time ceiling | current-registry | Hypervisor plan/grant | implemented by intersecting policy and machine timeout |
+| Machine authority evidence binding | current-registry | approval/plan/grant/evidence | authority digest bound across the supported local execution path |
+| Machine-principal revocation | specified-next | bearer lifecycle / identity records | expiry enforced; dedicated revocation lifecycle remains future work |
 | Purpose-bound machine credentials | planned | provider runtime, secret policy | not-claimed |
-| Machine-principal revocation | specified-next | identity/key lifecycle | not-claimed |
-| Resource/cost/network budgets | specified-next | policy/grant schema | not-claimed |
+| Destination/rate/concurrency/request/response limits | specified-next | Gateway + runtime enforcement | schema exists; live machine-specific enforcement not-claimed |
 | Principal-specific capability visibility | planned | discovery policy | not-claimed |
 | Machine principal in Circle | blocked | Circle identity/charter | not-claimed |
+
+Machine-principal v1 explicitly rejects wildcard scope, administrator role, and delegation. Existing infrastructure `service` identities remain compatible unless they opt into the constrained machine profile.
 
 ## Layer C — Protocol-neutral invocation semantics
 
 | Capability | Planning state | Existing foundation | Remaining work |
 |---|---|---|---|
-| Minimal invocation envelope | specified-next | intents, grants, evidence | exact v1 schema/canonicalization |
+| Minimal invocation envelope | specified-next / partial current foundation | intents, machine authority digest, grants, evidence | exact v1 schema/canonicalization across native and adapter paths |
 | Capability ID/version binding | specified-next | capability registry | adapter translation rules |
-| Purpose binding | planned | intent purpose/policy | exact mandatory fields by profile |
-| Destination binding | planned | deny-egress/adapters | schema and enforcement |
+| Purpose binding | current-registry | intent purpose + machine purpose ceilings | formalize as mandatory invocation-envelope field |
+| Machine authority binding | current-registry | request/plan/capability/evidence digests | preserve parity through every future adapter |
+| Destination binding | planned | deny-egress/adapters | schema-to-live enforcement |
 | Requested/achieved assurance binding | planned | adaptive assurance architecture | future assurance schema |
 | Causal/task parent binding | planned | causal exchange/provenance | task context schema |
 | Result/artifact digest binding | specified-next | evidence/export digests | artifact model |
@@ -108,7 +115,7 @@ The envelope is a semantic binding, not a new wire protocol.
 |---|---|---|---|
 | Read-only MCP adapter | laboratory-only | native machine discovery | not-claimed |
 | Tool discovery projection | laboratory-only | capability/schema discovery | not-claimed |
-| Consequential MCP tool translation | blocked | machine principal + intent envelope + parity tests | not-claimed |
+| Consequential MCP tool translation | blocked | machine principal + invocation envelope + parity tests | not-claimed |
 | MCP resource projection | laboratory-only | principal-scoped reads | not-claimed |
 | MCP authentication/profile | specified-next | adapter threat model | not-claimed |
 | MCP protocol parity | laboratory-only | native equivalent requests | not-claimed |
@@ -159,7 +166,8 @@ Skill instructions are content. They do not become policy merely because a frame
 
 | Capability | Planning state | Dependency | Safeguard |
 |---|---|---|---|
-| Bounded machine delegation | specified-next | machine principals/grants | explicit scope |
+| Machine delegation v1 | blocked/current denial | machine-principal validator | current v1 requires disabled / depth 0 |
+| Bounded future machine delegation | specified-next | grants + revocation | explicit attenuated scope only |
 | Delegation expiry/revocation | specified-next | Grid/governance | append-only history |
 | Delegation depth | specified-next | delegation schema | bounded chain |
 | Attenuation proof | laboratory-only | canonical delegation semantics | no scope increase |
@@ -252,9 +260,8 @@ No optimization can weaken the mandatory authority result.
 ## Dependency chain
 
 ```text
-current kernel + pilot evidence
-  -> machine principal
-  -> minimal invocation envelope
+current kernel + constrained machine principal + pilot evidence
+  -> complete invocation envelope
   -> native machine discovery + Verify
   -> read-only MCP adapter
   -> inert skill/capsule importer
@@ -284,4 +291,4 @@ When any item moves from planning into specification or implementation, update a
 
 ## Current non-claims
 
-Current `0.12.0-dev.3` does not claim MCP, A2A, machine-principal delegation, external skill execution, production agent federation, or authenticated remote task execution. This map preserves a path to those capabilities while keeping current authority exact.
+Current `0.12.0-dev.3` **does** claim the narrow constrained machine-principal authorization primitive recorded in the capability registry. It does **not** claim MCP, A2A, machine-principal delegation, dedicated machine revocation, machine-specific destination/rate/concurrency/request/response enforcement, external skill execution, production agent federation, runtime hardware attestation, or authenticated remote task execution. This map preserves a path to those capabilities while keeping current authority exact.

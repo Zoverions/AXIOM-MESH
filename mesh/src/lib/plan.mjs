@@ -10,6 +10,9 @@ const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
 
 export function buildPlan(intent, decision, { approval } = {}) {
+  const machineAuthorityDigest = intent.principal?.schema === 'axiom-machine-principal.v1'
+    ? intent.principal.authority_digest
+    : null;
   const executionStep = {
     id: 'execute',
     effect: decision.effect ?? intent.action,
@@ -35,6 +38,29 @@ export function buildPlan(intent, decision, { approval } = {}) {
     constraints: { append_only: true },
     evidence_obligations: ['event_hash', 'previous_hash', 'grid_signature']
   };
+  const observableInputs = [
+    'principal.id',
+    'principal.type',
+    'principal.roles',
+    'principal.scopes',
+    'intent.action',
+    'intent.purpose',
+    'intent.data_scopes',
+    'intent.approval_ids'
+  ];
+  const rules = [decision.rule_id ?? `policy:${intent.action}`];
+  if (machineAuthorityDigest) {
+    observableInputs.push(
+      'principal.sponsor',
+      'principal.runtime',
+      'principal.constraints.actions',
+      'principal.constraints.purposes',
+      'principal.constraints.destinations',
+      'principal.constraints.budgets',
+      'principal.authority_digest'
+    );
+    rules.push(`machine-authority:${machineAuthorityDigest}`);
+  }
   const plan = {
     version: 'axiom-plan.v1',
     intent_id: intent.intent_id,
@@ -47,17 +73,8 @@ export function buildPlan(intent, decision, { approval } = {}) {
       layers: structuredClone(decision.policy_layers ?? [])
     },
     decision_provenance: {
-      observable_inputs: [
-        'principal.id',
-        'principal.type',
-        'principal.roles',
-        'principal.scopes',
-        'intent.action',
-        'intent.purpose',
-        'intent.data_scopes',
-        'intent.approval_ids'
-      ],
-      rules: [decision.rule_id ?? `policy:${intent.action}`],
+      observable_inputs: observableInputs,
+      rules,
       decision: 'allow'
     },
     approvals: approval ? [{
@@ -70,7 +87,8 @@ export function buildPlan(intent, decision, { approval } = {}) {
       issuer: 'hypervisor',
       audience: 'sandbox',
       subject: intent.principal.id,
-      single_use: true
+      single_use: true,
+      ...(machineAuthorityDigest ? { authority_digest: machineAuthorityDigest } : {})
     },
     timeout_ms: executionStep.timeout_ms + commitStep.timeout_ms,
     steps: [executionStep, commitStep]
@@ -141,6 +159,16 @@ export function validatePlan(value) {
     || capability.single_use !== true
   ) {
     throw new ValidationError('Plan capability declaration is invalid');
+  }
+  if (capability.authority_digest !== undefined) {
+    assertString(capability.authority_digest, 'plan.capability.authority_digest', {
+      min: 64,
+      max: 64,
+      pattern: DIGEST
+    });
+    if (!rules.includes(`machine-authority:${capability.authority_digest}`)) {
+      throw new ValidationError('Machine plan authority digest is missing from decision provenance');
+    }
   }
   if (!Number.isSafeInteger(plan.timeout_ms) || plan.timeout_ms < 1 || plan.timeout_ms > 300_000) {
     throw new ValidationError('plan.timeout_ms is invalid');

@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=8bcdcfd8f010d2ad5c6fb84fd6fafe8f4833c29d865b5a4181500b137104b0cb -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=b879b07bd726ad8d674e78a5ef2e20bac4dd5b8fe62fb3c498723ab18fa1e945 -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -56,6 +56,9 @@ The current kernel implements:
 
 - authenticated intent, policy, plan, approval, grant, bounded execution, and
   signed evidence;
+- human-sponsored constrained machine principals with finite scopes, action and
+  purpose ceilings, runtime binding, expiry, non-delegation, and an
+  execution-time ceiling;
 - encrypted transactional state, consent, memory, governance, local accounting,
   export/import, backup, restore, rotation, and recovery;
 - mutually authenticated internal transport and independently restartable
@@ -68,10 +71,15 @@ The current kernel implements:
 - strict pilot and independent-review evidence intake;
 - authenticated operator API and CLI.
 
-The AXIOM One browser/PWA is an experimental local preview, not an implemented
-or supported product claim. External AI, Verify, Circles, remote dispatch,
-federation, tokens, settlement, regulated domains, arbitrary code, embodied
-systems, and post-quantum security are also not current implemented claims.
+The machine-principal capability is an authorization primitive, **not** an
+autonomous-agent runtime. Its schema already reserves additional destination,
+rate, concurrency, request-size, and response-size constraints, but those are
+not current live enforcement claims until their Gateway/execution paths and
+evidence are completed. AXIOM One remains an experimental browser/PWA preview,
+not an implemented or supported product claim. External AI, Verify, Circles,
+remote dispatch, federation, tokens, settlement, regulated domains, arbitrary
+code, embodied systems, and post-quantum security are also not current
+implemented claims.
 
 ## Development programme
 
@@ -261,6 +269,8 @@ The active build does not claim:
 
 - live production, testnet, mainnet, or public federation;
 - supported AXIOM One, Verify, Circles, Studio, or Managed Node products;
+- an autonomous-agent runtime, autonomous delegation, MCP/A2A endpoints, or
+  remote agent execution;
 - production AI, messaging, identity, payment, storage-transfer, or domain
   adapters;
 - remote workload execution or authenticated remote results;
