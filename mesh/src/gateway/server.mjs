@@ -208,7 +208,10 @@ export async function createGatewayService(config = meshConfig()) {
         action: intent.action,
         input: intent.input,
         purpose: intent.purpose,
-        data_scopes: intent.data_scopes
+        data_scopes: intent.data_scopes,
+        ...(principal.schema === 'axiom-machine-principal.v1'
+          ? { machine_authority_digest: principal.authority_digest }
+          : {})
       });
       if (existing.request_digest !== requestDigest) {
         throw new AxiomError(
