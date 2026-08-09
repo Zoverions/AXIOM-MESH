@@ -1,7 +1,7 @@
 {
   "schema": "axiom-capability-evidence-bindings.v1",
   "kernel_version": "0.12.0-dev.3",
-  "registry_digest": "8bcdcfd8f010d2ad5c6fb84fd6fafe8f4833c29d865b5a4181500b137104b0cb",
+  "registry_digest": "b879b07bd726ad8d674e78a5ef2e20bac4dd5b8fe62fb3c498723ab18fa1e945",
   "bindings": [
     {
       "capability_id": "capsules.registry",
@@ -34,6 +34,16 @@
       "assertions": [
         "assert.equal(replay.idempotent_replay, true);",
         "assert.equal((await capabilityReplay.json()).error.code, 'capability_replayed');"
+      ]
+    },
+    {
+      "capability_id": "core.machine-principals",
+      "path": "mesh/test/machine-principal-e2e.test.mjs",
+      "test": "constrained agent executes an authorized intent and returns bound authority evidence",
+      "assertions": [
+        "assert.equal(result.status, 'completed');",
+        "assert.equal(result.evidence.machine_sponsor, 'owner.machine-test');",
+        "assert.match(result.evidence.machine_authority_digest, /^[a-f0-9]{64}$/);"
       ]
     },
     {
