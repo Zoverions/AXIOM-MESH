@@ -2,7 +2,7 @@
 
 **Status:** canonical current-build index
 
-**Updated:** 2026-08-03
+**Updated:** 2026-08-09
 
 **Active build:** `0.12.0-dev.3`
 
@@ -28,7 +28,8 @@ AXIOM-MESH is simultaneously:
    invitation-based AXIOM Circles;
 3. an isolated frontier-incubation programme for distributed authority,
    settlement, autonomy, regulated domains, embodied systems, arbitrary code,
-   zk verification, post-quantum migration, and future plural governance.
+   zk verification, post-quantum migration, future plural governance, and
+   protocol-neutral digital-agent interoperability.
 
 Only the capability registry establishes what is currently runnable.
 
@@ -44,9 +45,10 @@ These states must not be conflated.
 
 Long-horizon architecture may be documented before implementation so current
 design choices do not foreclose later assurance, Circle, institutional,
-jurisdictional, sovereign, treaty, or collective-finality requirements. Such
-documentation remains a planning constraint and non-claim until the registry,
-implementation, executable evidence, and promotion artifacts agree.
+jurisdictional, sovereign, treaty, collective-finality, or machine-agent
+interoperability requirements. Such documentation remains a planning constraint
+and non-claim until the registry, implementation, executable evidence, and
+promotion artifacts agree.
 
 ## Canonical documents
 
@@ -70,12 +72,18 @@ When documents disagree, use this order:
 9. [`docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md`](rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md)
    for the long-horizon authority and assurance architecture.
 10. [`docs/rebuild/LONG-HORIZON-CAPABILITY-MAP.md`](rebuild/LONG-HORIZON-CAPABILITY-MAP.md)
-    for traceability between current foundations and planned future families.
-11. [`docs/whitepapers_and_research/WHITEPAPER.md`](whitepapers_and_research/WHITEPAPER.md)
+    for traceability between current foundations and planned future authority families.
+11. [`docs/ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md`](ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md)
+    for the machine-principal, protocol-adapter, capsule, delegation, and remote-task sequence.
+12. [`docs/rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md`](rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md)
+    for the protocol-neutral agent authority and evidence architecture.
+13. [`docs/rebuild/AGENT-INTEROPERABILITY-CAPABILITY-MAP.md`](rebuild/AGENT-INTEROPERABILITY-CAPABILITY-MAP.md)
+    for traceability from current foundations to planned machine-agent capabilities.
+14. [`docs/whitepapers_and_research/WHITEPAPER.md`](whitepapers_and_research/WHITEPAPER.md)
     for the implementation-grounded architectural explanation.
 
 A lower-authority narrative cannot promote a capability, weaken a requirement,
-or override a current non-claim. The roadmap extension and long-horizon map do
+or override a current non-claim. The roadmap extensions and long-horizon maps do
 not replace the primary roadmap, current task queue, or machine-readable
 registry.
 
@@ -105,16 +113,35 @@ registry.
   governance scopes, sovereignty-preserving interoperability, and non-waivable
   technical invariants.
 - [Long-horizon capability map](rebuild/LONG-HORIZON-CAPABILITY-MAP.md) — maps
-  present foundations, future capability families, dependencies, blockers,
-  promotion artifacts, and explicit non-claims without changing registry status.
+  present foundations, future authority capability families, dependencies,
+  blockers, promotion artifacts, and explicit non-claims without changing
+  registry status.
+- [Agent interoperability roadmap extension](ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md)
+  — sequences machine principals, native machine discovery, MCP compatibility,
+  inert skill/capsule import, bounded providers, asynchronous tasks,
+  attenuation-only delegation, A2A compatibility, remote execution, and
+  machine roles in governed products.
+- [Agent interoperability and capability substrate](rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md)
+  — defines agents as clients/principals rather than authorities, specifies the
+  proposed protocol-neutral invocation envelope, and preserves the mandatory
+  Gateway-to-Grid effect path across compatibility protocols.
+- [Agent interoperability capability map](rebuild/AGENT-INTEROPERABILITY-CAPABILITY-MAP.md)
+  — maps existing AXIOM foundations to future machine-principal, MCP, A2A,
+  capsule, task, delegation, and remote-execution families.
 - [Production execution queue](MASTER-TODO.md) — assigns concrete current IDs,
   priorities, and acceptance evidence.
 - [Plural-authority execution queue](MASTER-TODO-PLURAL-AUTHORITY.md) — records
   future specification, testing, review, pilot, and promotion work subordinate
   to current production blockers.
+- [Agent interoperability execution queue](MASTER-TODO-AGENT-INTEROPERABILITY.md)
+  — records extraction, specification, adapter, security, performance, and
+  promotion work subordinate to current production blockers.
 - [Plural-authority architecture review](reviews/PLURAL-AUTHORITY-ARCHITECTURE-REVIEW-2026-08-03.md)
   — records compatibility, risks, rejected shortcuts, sequencing, and claim
   boundaries.
+- [Agent interoperability architecture review](reviews/AGENT-INTEROPERABILITY-ARCHITECTURE-REVIEW-2026-08-09.md)
+  — records the legacy-agent disposition, protocol/authority boundary,
+  security priorities, and decision not to build another general agent runtime.
 - [0.12.0-dev.3 build notes](releases/0.12.0-dev.3.md) — describes the current
   development line and its documentation/product-programme state.
 
@@ -204,7 +231,8 @@ applicable.
 For a production- or product-impacting change:
 
 1. identify the affected capability, product, requirement, threat, authority
-   domain, assurance level, and deployment boundary;
+   domain, assurance level, deployment boundary, and machine-principal/protocol
+   profile where applicable;
 2. update code and negative-path tests where behavior changes;
 3. update the capability registry only when executable acceptance evidence
    exists;
