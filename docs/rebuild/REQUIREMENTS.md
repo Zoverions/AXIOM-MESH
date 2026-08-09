@@ -1,9 +1,9 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=8bcdcfd8f010d2ad5c6fb84fd6fafe8f4833c29d865b5a4181500b137104b0cb -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=b879b07bd726ad8d674e78a5ef2e20bac4dd5b8fe62fb3c498723ab18fa1e945 -->
 # AXIOM-MESH Rebuild Requirements
 
 **Current build:** `0.12.0-dev.3`
 
-**Updated:** 2026-07-30
+**Updated:** 2026-08-09
 
 **Normative language:** MUST, MUST NOT, SHOULD, and MAY are used in their usual
 requirements sense.
@@ -49,6 +49,8 @@ state.
 | IAM-06 | Production startup MUST reject default, weak, missing, example, stale, or partially provisioned credentials. | Startup configuration tests. |
 | IAM-07 | Device and browser sessions MUST support expiry, idle timeout, revocation, and scope reduction without requiring destruction of the user’s underlying identity. | Session and device-revocation tests. |
 | IAM-08 | Core access and identity MUST NOT require a token, settlement account, or platform-controlled social account. | Token-disabled and offline-local onboarding tests. |
+| IAM-09 | An authenticated `agent` principal MUST use the constrained machine-principal profile, MUST resolve to a configured human sponsor, MUST NOT receive wildcard scope or administrator role, and MUST bind finite action and purpose ceilings, runtime identity, lifetime/expiry, non-delegation, and a current execution-time ceiling. Machine constraints may only reduce authority granted by ordinary policy. | `machine-principal`, principal-registry, and four-service end-to-end tests. |
+| IAM-10 | Machine-principal v1 MUST NOT delegate authority. Any future machine delegation MUST be attenuation-only, explicitly scoped, expiring, revocable, chain-bound, independently evidenced, and separately promoted before use. | Non-delegation validation plus future delegation property and negative-path tests. |
 
 ## Human interface and application requirements
 
@@ -214,6 +216,10 @@ state.
 The active `0.12.0-dev.3` build currently verifies:
 
 - the authenticated Gateway → Hypervisor → Sandbox → Grid intent path;
+- human-sponsored constrained agent principals with finite scopes, action and
+  purpose ceilings, runtime identity, expiry, non-delegation, an enforced
+  execution-time ceiling, and authority digests bound into request approval,
+  plans, capability claims, and execution evidence;
 - version negotiation, explicit plans, deny-dominant policy, and independent
   one-use approval for permitted high-risk effects;
 - signed replay-resistant internal requests and TLS 1.3 peer identity;
@@ -245,10 +251,13 @@ The active `0.12.0-dev.3` build currently verifies:
   and explicit unavailable Share, Circles, and AI states.
 
 The current checkpoint does **not** include a supported AXIOM One browser
-application, external AI provider, AXIOM Verify, Circles, remote dispatch,
-authenticated remote results, federation, consensus, arbitrary code, tokens,
-settlement, regulated-domain deployment, embodied autonomy, or post-quantum
-security.
+application, autonomous-agent runtime, MCP/A2A endpoint, machine delegation,
+remote agent execution, external AI provider, AXIOM Verify, Circles, remote
+dispatch, authenticated remote results, federation, consensus, arbitrary code,
+tokens, settlement, regulated-domain deployment, embodied autonomy, or
+post-quantum security. The machine-principal schema's destination, rate,
+concurrency, request-size, and response-size fields are not live enforcement
+claims yet.
 
 ## Capability coverage
 
@@ -256,7 +265,7 @@ Every intended feature family MUST be represented in the capability registry
 as `implemented`, `adapter_required`, `experimental`, `specified`, or
 `disabled`; only `implemented` may be advertised as runnable:
 
-- core intent, policy, grant, execution, and evidence;
+- core intent, policy, machine principals, grant, execution, and evidence;
 - operator API, CLI, AXIOM One, Verify, Circles, Studio, and managed-node tools;
 - AI providers, bounded orchestration, memory, and research tools;
 - messaging, publishing, identity, credentials, and selective disclosure;
