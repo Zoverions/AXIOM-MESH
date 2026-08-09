@@ -1,8 +1,11 @@
 import { sha256, AxiomError } from './canonical.mjs';
 import { safeTextEqual } from './identity.mjs';
+import { MachineIngressGuard } from './machine-ingress.mjs';
 
-export function createBearerAuthenticator(principals) {
-  return async function authenticate({ req }) {
+export function createBearerAuthenticator(principals, {
+  machineIngress = new MachineIngressGuard()
+} = {}) {
+  return async function authenticate({ req, body = Buffer.alloc(0) }) {
     const header = req.headers.authorization;
     if (typeof header !== 'string' || !header.startsWith('Bearer ')) {
       throw new AxiomError('authentication_required', 'A bearer token is required', 401);
@@ -17,6 +20,10 @@ export function createBearerAuthenticator(principals) {
       }
     }
     if (!principal) throw new AxiomError('invalid_token', 'Bearer token is invalid', 401);
-    return structuredClone(principal);
+    const authenticated = structuredClone(principal);
+    machineIngress.enforce(authenticated, {
+      requestBytes: Buffer.isBuffer(body) ? body.length : Buffer.byteLength(String(body ?? ''))
+    });
+    return authenticated;
   };
 }
