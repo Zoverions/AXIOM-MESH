@@ -81,14 +81,16 @@ test('constrained agent executes an authorized intent and returns bound authorit
     token: AGENT_TOKEN,
     request: (path, options) => fetch(`${gateway}${path}`, options)
   });
+  const body = {
+    action: 'system.echo',
+    input: { message: 'machine-authorized' },
+    purpose: 'test.conformance'
+  };
+  const idempotencyKey = 'machine-e2e-allowed-0001';
 
   const result = await client.call('intents.submit', {
-    body: {
-      action: 'system.echo',
-      input: { message: 'machine-authorized' },
-      purpose: 'test.conformance'
-    },
-    idempotencyKey: 'machine-e2e-allowed-0001'
+    body,
+    idempotencyKey
   });
 
   assert.equal(result.status, 'completed');
@@ -96,6 +98,16 @@ test('constrained agent executes an authorized intent and returns bound authorit
   assert.equal(result.evidence.machine_sponsor, 'owner.machine-test');
   assert.match(result.evidence.machine_authority_digest, /^[a-f0-9]{64}$/);
   assert.match(result.evidence.plan_digest, /^[a-f0-9]{64}$/);
+
+  const replay = await client.call('intents.submit', {
+    body,
+    idempotencyKey
+  });
+  assert.equal(replay.idempotent_replay, true);
+  assert.equal(
+    replay.evidence.machine_authority_digest,
+    result.evidence.machine_authority_digest
+  );
 });
 
 test('constrained agent is denied when purpose or action exceeds its authority ceiling', async t => {
