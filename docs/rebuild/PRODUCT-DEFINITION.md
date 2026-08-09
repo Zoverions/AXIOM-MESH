@@ -1,11 +1,11 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=8bcdcfd8f010d2ad5c6fb84fd6fafe8f4833c29d865b5a4181500b137104b0cb -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=5fcd7d1842cbb647ad9811963905ed2ca4d87d17723f409d5b230c708e68eb99 -->
 # AXIOM-MESH Product Definition
 
 **Status:** canonical rebuild and product definition
 
 **Current build:** `0.12.0-dev.3`
 
-**Reconciled:** 2026-07-30
+**Reconciled:** 2026-08-09
 
 **Deployment status:** production candidate; no live production claim
 
@@ -23,11 +23,19 @@ The supported product today is the clean-room kernel and its authenticated
 operator surfaces. It includes the four-service intent-to-evidence path,
 encrypted durable state, policy, consent, approvals, evidence, portability,
 recovery, single-host service isolation, admitted-node reservations,
-operator-approved causal exchange, and deployment-provider protocols.
+operator-approved causal exchange, deployment-provider protocols, and
+human-sponsored constrained machine principals.
 
-It does **not** yet include a supported non-developer browser product, external
-AI provider, public network, remote workload dispatcher, token, settlement
-system, regulated-domain application, or production autonomous agent.
+A constrained machine principal is an authorization primitive: an authenticated
+`agent` identity is bound to a human sponsor, finite scopes, action and purpose
+ceilings, runtime identity, expiry, non-delegation and execution budgets. A
+least-privilege infrastructure `service` keeps the existing service-principal
+contract unless it explicitly opts into that machine-authority profile.
+
+This does **not** provide a supported autonomous-agent runtime, external AI
+provider, MCP/A2A endpoint, agent federation, remote workload dispatcher,
+delegated machine authority, token, settlement system, regulated-domain
+application, or production autonomous agent.
 
 Development now proceeds through three coordinated tracks:
 
@@ -62,8 +70,8 @@ The product has four runtime responsibilities:
    requests, applies abuse controls, handles idempotency, and exposes versioned
    user/operator APIs.
 2. **Hypervisor** — converts intent into an explicit plan; evaluates layered
-   policy, consent, risk, budgets, and approvals; issues short-lived,
-   single-use capability grants.
+   policy, consent, risk, machine-authority ceilings, budgets, and approvals;
+   issues short-lived, single-use capability grants.
 3. **Sandbox** — executes only the action, provider, destination, data, and
    resources named by a valid grant; it has no ambient network, filesystem,
    secret, package, or host authority.
@@ -77,7 +85,7 @@ The mandatory effect path is:
 Intent
   -> authenticate and validate
   -> normalize
-  -> evaluate policy, consent, and risk
+  -> evaluate policy, consent, risk, and machine authority where applicable
   -> produce an explicit plan
   -> obtain required independent approval
   -> issue a scoped grant
@@ -237,6 +245,8 @@ the service operator an undeclared right to inspect plaintext data.
   digest, timestamp, and previous-event hash.
 - Decision provenance records observable inputs, rules, providers, tool calls,
   approvals, and outcomes; it does not claim to expose private chain-of-thought.
+- Machine-originated permitted effects bind the machine authority digest and
+  sponsor into decision/evidence surfaces.
 - A missing verifier, provider, credential, destination, or settlement adapter
   is an unavailable capability, never synthetic success.
 - Cryptographic and zk claims identify their algorithm, circuit or protocol,
@@ -250,6 +260,8 @@ the service operator an undeclared right to inspect plaintext data.
   manifests, schemas, constraints, provenance, and SBOMs.
 - Runtime grants are short-lived, audience-, intent-, plan-, tool-, resource-,
   provider-, destination-, and constraint-bound.
+- Machine principals cannot use wildcard scope or administrator role, and
+  machine-principal v1 does not permit delegation.
 - External source code and tools remain quarantined until policy and evidence
   permit a named execution path.
 
@@ -316,6 +328,9 @@ The `0.12.0-dev.3` kernel currently implements:
 
 - authenticated intent, plan, policy, grant, deterministic execution, and
   signed evidence;
+- human-sponsored constrained agent principals with finite scopes, action and
+  purpose ceilings, runtime identity, expiry, non-delegation and execution
+  budgets;
 - deny-dominant policy and independent high-risk approval;
 - encrypted transactional Grid state and key-lineage-aware evidence;
 - consent, capsule manifests, encrypted memory, governance, local accounting,
@@ -331,9 +346,11 @@ The `0.12.0-dev.3` kernel currently implements:
 - authenticated operator API and CLI;
 - exact source setup, lock, documentation, claim, and release gates.
 
-The browser dashboard remains experimental. AI, messaging, identity, storage
+The browser dashboard remains experimental. Autonomous agent loops, MCP/A2A,
+agent delegation, remote agent execution, AI, messaging, identity, storage
 transfer, zk, settlement, regulated-domain, and arbitrary-code capabilities
-remain adapter-required, experimental, or disabled according to the registry.
+remain adapter-required, experimental, specified, or disabled according to the
+registry and roadmap.
 
 ## Promotion and acceptance rule
 
@@ -360,6 +377,8 @@ Until independently demonstrated, AXIOM-MESH does not claim:
 
 - that a model's reasoning or output is proven true by hashing a trace;
 - a supported AXIOM One, Verify, Circles, Studio, or Managed Node release;
+- a supported autonomous-agent runtime, MCP/A2A endpoint, machine delegation,
+  remote agent execution, or agent federation;
 - production external AI or messaging;
 - production-grade BFT, federation, remote dispatch, or Sybil resistance;
 - secure arbitrary code merely from container configuration;
@@ -382,11 +401,13 @@ Work proceeds in parallel:
 1. close authentic single-node pilot blockers;
 2. maintain the implemented versioned Gateway client and complete the
    experimental AXIOM One human-shell gates;
-3. add one bounded AI provider and useful personal workflows;
-4. build AXIOM Verify and invitation-based Circles;
-5. establish remote dispatch and result provenance before distributed compute;
-6. expand controlled adapters and managed-node operations;
-7. continue frontier laboratories behind isolation and promotion gates.
+3. mature machine-principal invocation semantics without enabling autonomous
+   delegation or remote execution;
+4. add one bounded AI provider and useful personal workflows;
+5. build AXIOM Verify and invitation-based Circles;
+6. establish remote dispatch and result provenance before distributed compute;
+7. expand controlled adapters and managed-node operations;
+8. continue frontier laboratories behind isolation and promotion gates.
 
 See the [roadmap](../ROADMAP.md), [execution queue](../MASTER-TODO.md),
 [current status](../PROJECT-STATUS-2026.md), and
