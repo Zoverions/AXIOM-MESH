@@ -1,6 +1,6 @@
 # AXIOM-MESH Project Status
 
-**Status date:** 2026-08-01
+**Status date:** 2026-08-09
 
 **Supported build:** `0.12.0-dev.3`
 
@@ -20,13 +20,19 @@ that tag are identified only as the current 0.12 development build.
 
 The executable source of truth is
 [`mesh/config/capabilities.json`](../mesh/config/capabilities.json). The
-generated [capability status](rebuild/STATUS.md) records 28 implemented, 3
+generated [capability status](rebuild/STATUS.md) records 29 implemented, 3
 experimental, 2 specified, 9 adapter-required, and 4 disabled capabilities.
 
 ## Implemented kernel scope
 
 - authenticated intent, policy, plan, grant, deterministic execution, and
   signed evidence flow;
+- human-sponsored constrained `agent` principals with finite scopes, action and
+  purpose ceilings, runtime identity, expiry, non-delegation, and an enforced
+  execution-time ceiling; machine authority digests bind request approval,
+  plan provenance, capability claims, and returned evidence;
+- backward-compatible least-privilege infrastructure `service` principals,
+  with optional explicit adoption of the same constrained machine profile;
 - deny-dominant layered policy and independent approval for high-risk effects;
 - transactional, encrypted Grid state with a signed hash-linked evidence log;
 - consent receipts, capsule manifests, encrypted memory, local balanced
@@ -52,21 +58,28 @@ experimental, 2 specified, 9 adapter-required, and 4 disabled capabilities.
   concurrency, security, owner/domain, expiry, and quarantine controls;
 - bidirectional operator-approved online causal exchange with pinned
   Grid-signed event evidence, encrypted ordered queues, bounded retry,
-  owner-scoped duplicate preflight, and explicit conflict convergence.
+  owner-scoped duplicate preflight, and explicit conflict convergence;
 - deployment-independent startup from separate Ed25519-pinned secret and
   policy providers with digest-pinned command artifacts, nonce-bound
   short-lived exact inventories, private per-start materialization, semantic
-  validation, cleanup, and fail-closed rejection.
+  validation, cleanup, and fail-closed rejection;
 - pilot evidence intake using a separately anchored policy authority, exact
   source/image and 30-day/SLO/custody inventory, five distinct role
   signatures, and an exact offline package of 13 canonical, secret-free,
   role-signed v2 evidence envelopes with exact per-type semantic contracts and
-  an explicit non-promotion result.
+  an explicit non-promotion result;
 - independent security-review intake using the canonical current-build threat
   model, a separately anchored exact build/scope/artifact policy, distinct
   reviewer and exception approver, an exact signed findings ledger, verified
   critical/high closure, bounded lesser-risk exceptions, and an explicit
   non-review/non-promotion synthetic conformance boundary.
+
+The constrained machine-principal capability is an authorization primitive,
+not an autonomous-agent runtime. The v1 schema reserves destination, rate,
+concurrency, request-size, and response-size constraints, but those are not
+current live-enforcement claims until their Gateway/runtime paths and evidence
+exist. Runtime IDs and software digests are attribution metadata rather than
+TPM/TEE or measured-runtime attestation.
 
 ## Production package state
 
@@ -105,53 +118,49 @@ the supervisor fail-closed, and a clean restart preserves Grid state. It also
 provisions mutually authenticated TLS 1.3 for every internal service edge,
 binds active leaf certificates to signed caller identities, rotates all leaves,
 rejects a retired CA-valid peer, and restores the prior generation exactly. It
-also
-performs offline
-coordinated rotation of all four service identities and the operator and
-telemetry relay tokens, proves active and inactive trust in
+also performs offline coordinated rotation of all four service identities and
+the operator and telemetry relay tokens, proves active and inactive trust in
 both directions, preserves Grid evidence through a dual-signed key transition,
 and restores the exact original set from an authenticated-encrypted rollback
 package. The workflow also re-encrypts and rotates the data-protection key
 across live and retained recovery state, proves wrong-key rejection in both
-  directions, restores a backup under the rotated key, and preserves later
-  evidence through rollback. Signed policy-derived backup retention now
-  verifies the full inventory, keeps a minimum, moves excess media to
-  recoverable quarantine with killed-process recovery, and restores a retained
-  backup in protected CI on every relevant change and weekly. The container
-  job also establishes that its public TCP probe is runner-reachable, then
-  proves it is unreachable from the candidate namespace and uploads signed
-  evidence. The kernel job also admits signed v2 nodes, rejects copied signing
-  identities and exhausted capacity, schedules across owners and failure
-  domains, degrades on quarantine, expires a missed-renewal node, and preserves
-  the schedule through Grid restart. It also starts two real production
-  supervisors, injects a two-direction causal-exchange partition, preserves
-  encrypted cursors, rejoins through exact independent approvals, exposes two
-  concurrent heads on both Grids, converges through explicit all-head
-  resolution, and absorbs duplicate replay before approval. It also starts the
-  real four-service host twice through independent signed
-  secret and policy providers, activates rotated API and policy resources,
-  rejects the retired token and an invalid provider signer, removes each
-  private runtime generation, and binds that proof into the incident tabletop.
-  It also runs signed synthetic conformance for both pilot intake boundaries
-  and the independent-security-review intake.
-  The dossier drill proves wrong-build, altered-approval, missing-evidence,
-  and secret-field rejection. The package drill proves exact canonical
-  inventory plus missing, extra, wrongly signed, noncanonical,
-  dossier-inconsistent detail, and secret-bearing file rejection. Both
-  explicitly declare that no live pilot was observed. The security-review
-  drill proves current-build/scope/artifact binding, owned findings,
-  independently verified critical/high remediation, separate bounded
-  medium/low exception approval, and tamper rejection while explicitly
-  declaring that it performed no independent review and promoted nothing.
-  Dedicated pilot-hardware capacity and availability validation,
-  pilot-owned receiver/secret/media custody, external
-  credential-history attestations, and an authentic independent security
-  review are still required before production promotion. The repository now
-  supplies the canonical current-build threat model and strict signed findings
-  intake; no external reviewer ledger has been submitted. The repository-side history audit is
-  implemented: a secret-free keyed ledger covers 32 conservative candidates,
-  revokes each from supported trust, and makes supported-tip reuse a protected
-  CI failure.
+directions, restores a backup under the rotated key, and preserves later
+evidence through rollback. Signed policy-derived backup retention now verifies
+the full inventory, keeps a minimum, moves excess media to recoverable
+quarantine with killed-process recovery, and restores a retained backup in
+protected CI on every relevant change and weekly. The container job also
+establishes that its public TCP probe is runner-reachable, then proves it is
+unreachable from the candidate namespace and uploads signed evidence. The
+kernel job also admits signed v2 nodes, rejects copied signing identities and
+exhausted capacity, schedules across owners and failure domains, degrades on
+quarantine, expires a missed-renewal node, and preserves the schedule through
+Grid restart. It also starts two real production supervisors, injects a
+two-direction causal-exchange partition, preserves encrypted cursors, rejoins
+through exact independent approvals, exposes two concurrent heads on both
+Grids, converges through explicit all-head resolution, and absorbs duplicate
+replay before approval. It also starts the real four-service host twice through
+independent signed secret and policy providers, activates rotated API and
+policy resources, rejects the retired token and an invalid provider signer,
+removes each private runtime generation, and binds that proof into the incident
+tabletop. It also runs signed synthetic conformance for both pilot intake
+boundaries and the independent-security-review intake.
+
+The dossier drill proves wrong-build, altered-approval, missing-evidence, and
+secret-field rejection. The package drill proves exact canonical inventory plus
+missing, extra, wrongly signed, noncanonical, dossier-inconsistent detail, and
+secret-bearing file rejection. Both explicitly declare that no live pilot was
+observed. The security-review drill proves current-build/scope/artifact binding,
+owned findings, independently verified critical/high remediation, separate
+bounded medium/low exception approval, and tamper rejection while explicitly
+declaring that it performed no independent review and promoted nothing.
+Dedicated pilot-hardware capacity and availability validation, pilot-owned
+receiver/secret/media custody, external credential-history attestations, and an
+authentic independent security review are still required before production
+promotion. The repository now supplies the canonical current-build threat model
+and strict signed findings intake; no external reviewer ledger has been
+submitted. The repository-side history audit is implemented: a secret-free
+keyed ledger covers 32 conservative candidates, revokes each from supported
+trust, and makes supported-tip reuse a protected CI failure.
 
 See:
 
@@ -179,6 +188,12 @@ alternate production branches.
 AXIOM-MESH does not currently claim:
 
 - a live public testnet, mainnet, or production service;
+- an autonomous-agent runtime, machine delegation, MCP/A2A endpoint, agent
+  federation, or remote agent execution;
+- machine-specific destination, rate, concurrency, request-size, or
+  response-size enforcement beyond the current global controls;
+- TPM/TEE, measured boot, or runtime software attestation from a declared
+  runtime/software digest;
 - BFT consensus, multi-host federation, or federated network peer discovery;
 - independently hosted WAN causal-exchange performance or replicated Grid
   consensus;
@@ -199,7 +214,7 @@ repository is not implementation or deployment evidence.
 
 ## Immediate next milestones
 
-Work now advances through two parallel priorities.
+Work now advances through three parallel priorities.
 
 ### Authentic single-node pilot
 
@@ -230,18 +245,29 @@ both records instead of silently replacing the target. The Vault fetches an
 export bundle only after a separate reveal action, and real-stack tests prove a
 second principal cannot read, link, export, or tombstone the owner's record. It
 preserves raw evidence and explicitly does not claim an authoritative
-pre-execution kernel plan. Edge deletion, hard deletion, restore, bulk ingestion,
-complete consequential plan/approval flows, browser session/device security,
-accessibility/usability evidence, and preview packaging remain next. Follow with
-one bounded least-privilege AI provider adapter, AXIOM Verify, and
+pre-execution kernel plan. Edge deletion, hard deletion, restore, bulk
+ ingestion, complete consequential plan/approval flows, browser session/device
+security, accessibility/usability evidence, and preview packaging remain next.
+Follow with one bounded least-privilege AI provider adapter, AXIOM Verify, and
 invitation-based AXIOM Circles. These remain local or invitation-only previews
 until their exact security, accessibility, usability, recovery, and deployment
 evidence is promoted.
 
-Advanced distributed authority, settlement, autonomous-agent, domain, embodied,
-arbitrary-code, and post-quantum work may proceed in isolated laboratories under
-the roadmap's build-broadly/expose-narrowly doctrine. Experimental code does not
-change the current production decision.
+### Machine interoperability substrate
+
+Complete the AXIOM Invocation Envelope and live enforcement for the remaining
+machine destination, rate, concurrency, request-size, and response-size limits;
+add machine-filtered capability discovery; bind credentials and artifacts to
+that envelope; then build MCP compatibility against the same native Gateway
+semantics. A2A, remote execution, asynchronous remote tasks, and attenuation-only
+delegation remain later gates and must not be enabled implicitly by protocol
+compatibility.
+
+Advanced distributed authority, settlement, autonomous-agent, domain,
+embodied, arbitrary-code, and post-quantum work may proceed in isolated
+laboratories under the roadmap's build-broadly/expose-narrowly doctrine.
+Experimental code does not change the current production decision.
 
 Work is ordered in
-[`docs/MASTER-TODO.md`](MASTER-TODO.md).
+[`docs/MASTER-TODO.md`](MASTER-TODO.md) and the subordinate agent-interoperability
+queue.
