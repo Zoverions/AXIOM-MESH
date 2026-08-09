@@ -31,6 +31,11 @@ import {
 import { loadPolicyStack, mergeDenyDominantPolicy, PolicyEngine } from '../lib/policy.mjs';
 import { buildPlan, planDigest } from '../lib/plan.mjs';
 import {
+  evaluateMachineIntent,
+  machinePrincipalAuthorityFacts,
+  normalizeMachinePrincipalDefinition
+} from '../lib/machine-principal.mjs';
+import {
   loadTransportRuntime,
   transportServerOptions
 } from '../lib/transport-credentials.mjs';
@@ -130,23 +135,52 @@ export async function createHypervisorService(config = meshConfig()) {
   router.add('POST', '/internal/v1/intents', async ({ body, traceId }) => {
     const intent = normalizeIntent(parseJsonBody(body));
     const policy = await activePolicy(traceId);
-    const decision = policy.evaluate({
+    let decision = policy.evaluate({
       action: intent.action,
       principal: intent.principal,
       intent
     });
+    const machineAuthority = intent.principal.schema === 'axiom-machine-principal.v1'
+      ? machinePrincipalAuthorityFacts(intent.principal)
+      : null;
+    if (machineAuthority) {
+      const machineDecision = evaluateMachineIntent(intent.principal, {
+        action: intent.action,
+        purpose: intent.purpose
+      });
+      if (!machineDecision.allow) {
+        decision = {
+          ...decision,
+          allow: false,
+          pending: false,
+          code: machineDecision.code,
+          reason: machineDecision.reason,
+          http_status: 403
+        };
+      } else if (decision.allow) {
+        decision = {
+          ...decision,
+          timeout_ms: Math.min(
+            Number(decision.timeout_ms ?? 10_000),
+            intent.principal.constraints.budgets.max_execution_ms
+          )
+        };
+      }
+    }
     await commit(traceId, intent.principal.id, [{
       kind: 'intent.accepted',
       subject: intent.intent_id,
       payload: {
         intent_id: intent.intent_id,
         principal: intent.principal.id,
+        principal_type: intent.principal.type,
         action: intent.action,
         risk: decision.risk,
         input_digest: digestObject(intent.input),
         request_digest: requestDigest(intent),
         policy_version: decision.policy_version,
-        policy_digest: decision.policy_digest
+        policy_digest: decision.policy_digest,
+        ...(machineAuthority ? { machine_authority: machineAuthority } : {})
       }
     }]);
     if (!decision.allow) {
@@ -240,6 +274,7 @@ export async function createHypervisorService(config = meshConfig()) {
       iss: identity.service,
       aud: 'sandbox',
       subject: intent.principal.id,
+      principal_type: intent.principal.type,
       jti: newId('cap'),
       nbf: now - 1,
       exp: now + config.capabilityTtlSeconds,
@@ -247,7 +282,12 @@ export async function createHypervisorService(config = meshConfig()) {
       tool: decision.tool,
       constraints: decision.constraints,
       policy_digest: decision.policy_digest,
-      plan_digest: boundPlanDigest
+      plan_digest: boundPlanDigest,
+      ...(machineAuthority ? {
+        sponsor: machineAuthority.sponsor,
+        authority_digest: machineAuthority.authority_digest,
+        runtime_id: machineAuthority.runtime_id
+      } : {})
     });
     try {
       const execution = await signedFetch(identity, 'sandbox', `${config.urls.sandbox}/internal/v1/execute`, {
@@ -271,7 +311,10 @@ export async function createHypervisorService(config = meshConfig()) {
             ...execution.result.mutation.payload,
             evidence: {
               plan_digest: digestObject(plan),
-              execution: execution.attestation
+              execution: execution.attestation,
+              ...(machineAuthority ? {
+                machine_authority_digest: machineAuthority.authority_digest
+              } : {})
             }
           }
         });
@@ -284,7 +327,11 @@ export async function createHypervisorService(config = meshConfig()) {
         evidence: {
           plan_digest: boundPlanDigest,
           execution_digest: statement.result_digest,
-          policy_digest: decision.policy_digest
+          policy_digest: decision.policy_digest,
+          ...(machineAuthority ? {
+            machine_authority_digest: machineAuthority.authority_digest,
+            machine_sponsor: machineAuthority.sponsor
+          } : {})
         }
       };
       events.push({
@@ -364,14 +411,20 @@ export async function createHypervisorService(config = meshConfig()) {
 function normalizeIntent(raw) {
   const value = assertPlainObject(raw, 'intent');
   const principal = assertPlainObject(value.principal, 'intent.principal');
-  const normalized = {
-    intent_id: assertString(value.intent_id, 'intent.intent_id', { max: 160, pattern: PRINCIPAL_ID }),
-    principal: {
+  let normalizedPrincipal;
+  if (principal.schema === 'axiom-machine-principal.v1') {
+    normalizedPrincipal = normalizeMachinePrincipalDefinition(principal);
+  } else {
+    const type = assertString(principal.type ?? 'human', 'intent.principal.type', {
+      max: 16,
+      pattern: /^(human|agent|service)$/
+    });
+    if (type === 'agent') {
+      throw new ValidationError('Agent principal must use axiom-machine-principal.v1');
+    }
+    normalizedPrincipal = {
       id: assertString(principal.id, 'intent.principal.id', { max: 160, pattern: PRINCIPAL_ID }),
-      type: assertString(principal.type ?? 'human', 'intent.principal.type', {
-        max: 16,
-        pattern: /^(human|agent|service)$/
-      }),
+      type,
       roles: [...new Set(assertStringArray(principal.roles ?? [], 'intent.principal.roles', {
         maxItems: 32,
         itemMax: 64
@@ -380,7 +433,11 @@ function normalizeIntent(raw) {
         maxItems: 128,
         itemMax: 160
       }))].sort()
-    },
+    };
+  }
+  const normalized = {
+    intent_id: assertString(value.intent_id, 'intent.intent_id', { max: 160, pattern: PRINCIPAL_ID }),
+    principal: normalizedPrincipal,
     action: assertString(value.action, 'intent.action', {
       max: 128,
       pattern: /^[a-z][a-z0-9.-]+$/
@@ -412,7 +469,10 @@ function requestDigest(intent) {
     action: intent.action,
     input: intent.input,
     purpose: intent.purpose,
-    data_scopes: intent.data_scopes
+    data_scopes: intent.data_scopes,
+    ...(intent.principal.schema === 'axiom-machine-principal.v1'
+      ? { machine_authority_digest: intent.principal.authority_digest }
+      : {})
   });
 }
 
