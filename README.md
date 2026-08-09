@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=5fcd7d1842cbb647ad9811963905ed2ca4d87d17723f409d5b230c708e68eb99 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=b879b07bd726ad8d674e78a5ef2e20bac4dd5b8fe62fb3c498723ab18fa1e945 -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -57,8 +57,8 @@ The current kernel implements:
 - authenticated intent, policy, plan, approval, grant, bounded execution, and
   signed evidence;
 - human-sponsored constrained machine principals with finite scopes, action and
-  purpose ceilings, runtime binding, expiry, non-delegation, and execution
-  budgets;
+  purpose ceilings, runtime binding, expiry, non-delegation, and an
+  execution-time ceiling;
 - encrypted transactional state, consent, memory, governance, local accounting,
   export/import, backup, restore, rotation, and recovery;
 - mutually authenticated internal transport and independently restartable
@@ -72,7 +72,10 @@ The current kernel implements:
 - authenticated operator API and CLI.
 
 The machine-principal capability is an authorization primitive, **not** an
-autonomous-agent runtime. AXIOM One remains an experimental browser/PWA preview,
+autonomous-agent runtime. Its schema already reserves additional destination,
+rate, concurrency, request-size, and response-size constraints, but those are
+not current live enforcement claims until their Gateway/execution paths and
+evidence are completed. AXIOM One remains an experimental browser/PWA preview,
 not an implemented or supported product claim. External AI, Verify, Circles,
 remote dispatch, federation, tokens, settlement, regulated domains, arbitrary
 code, embodied systems, and post-quantum security are also not current
