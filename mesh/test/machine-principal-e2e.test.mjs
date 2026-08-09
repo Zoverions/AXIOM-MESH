@@ -10,7 +10,7 @@ import { reserveProductionPortBlock } from '../src/lib/production-host.mjs';
 const HUMAN_TOKEN = `human-${'h'.repeat(40)}`;
 const AGENT_TOKEN = `agent-${'a'.repeat(40)}`;
 
-function apiTokens() {
+function apiTokens({ budgets = {} } = {}) {
   return {
     [HUMAN_TOKEN]: {
       id: 'owner.machine-test',
@@ -40,7 +40,8 @@ function apiTokens() {
           max_concurrent_requests: 1,
           max_execution_ms: 2_000,
           max_request_bytes: 65_536,
-          max_response_bytes: 262_144
+          max_response_bytes: 262_144,
+          ...budgets
         },
         delegation: { allowed: false, max_depth: 0 }
       }
@@ -48,9 +49,9 @@ function apiTokens() {
   };
 }
 
-test('constrained agent executes an authorized intent and returns bound authority evidence', async t => {
-  const dataDir = await mkdtemp(join(tmpdir(), 'axiom-machine-e2e-'));
-  const lease = await reserveProductionPortBlock('machine principal e2e');
+async function startMachineStack(t, prefix, tokenConfig = {}) {
+  const dataDir = await mkdtemp(join(tmpdir(), prefix));
+  const lease = await reserveProductionPortBlock(prefix);
   const basePort = lease.base_port;
   let stack;
   t.after(async () => {
@@ -74,13 +75,18 @@ test('constrained agent executes an authorized intent and returns bound authorit
     gridUrl: `http://127.0.0.1:${basePort + 3}`,
     rateLimitCapacity: 1_000,
     rateLimitRefillPerSecond: 1_000,
-    apiTokens: apiTokens()
+    apiTokens: apiTokens(tokenConfig)
   });
   const gateway = `http://127.0.0.1:${basePort}`;
   const client = createGatewayClient({
     token: AGENT_TOKEN,
     request: (path, options) => fetch(`${gateway}${path}`, options)
   });
+  return { gateway, client };
+}
+
+test('constrained agent executes an authorized intent and returns bound authority evidence', async t => {
+  const { client } = await startMachineStack(t, 'axiom-machine-e2e-');
   const body = {
     action: 'system.echo',
     input: { message: 'machine-authorized' },
@@ -111,38 +117,7 @@ test('constrained agent executes an authorized intent and returns bound authorit
 });
 
 test('constrained agent is denied when purpose or action exceeds its authority ceiling', async t => {
-  const dataDir = await mkdtemp(join(tmpdir(), 'axiom-machine-deny-'));
-  const lease = await reserveProductionPortBlock('machine principal deny e2e');
-  const basePort = lease.base_port;
-  let stack;
-  t.after(async () => {
-    try {
-      await stack?.stop();
-    } finally {
-      await lease.release();
-      await rm(dataDir, { recursive: true, force: true });
-    }
-  });
-  stack = await startDevelopmentStack({
-    dataDir,
-    environment: 'test',
-    autoBootstrap: true,
-    gatewayPort: basePort,
-    hypervisorPort: basePort + 1,
-    sandboxPort: basePort + 2,
-    gridPort: basePort + 3,
-    hypervisorUrl: `http://127.0.0.1:${basePort + 1}`,
-    sandboxUrl: `http://127.0.0.1:${basePort + 2}`,
-    gridUrl: `http://127.0.0.1:${basePort + 3}`,
-    rateLimitCapacity: 1_000,
-    rateLimitRefillPerSecond: 1_000,
-    apiTokens: apiTokens()
-  });
-  const gateway = `http://127.0.0.1:${basePort}`;
-  const client = createGatewayClient({
-    token: AGENT_TOKEN,
-    request: (path, options) => fetch(`${gateway}${path}`, options)
-  });
+  const { client } = await startMachineStack(t, 'axiom-machine-deny-');
 
   await assert.rejects(
     () => client.call('intents.submit', {
@@ -166,5 +141,37 @@ test('constrained agent is denied when purpose or action exceeds its authority c
       idempotencyKey: 'machine-e2e-action-deny-0001'
     }),
     error => error.code === 'machine_action_denied' && error.status === 403
+  );
+});
+
+test('machine request-size ceiling is enforced at authenticated Gateway ingress', async t => {
+  const { client } = await startMachineStack(t, 'axiom-machine-request-budget-', {
+    budgets: { max_request_bytes: 1_024 }
+  });
+
+  await assert.rejects(
+    () => client.call('intents.submit', {
+      body: {
+        action: 'system.echo',
+        input: { message: 'x'.repeat(2_000) },
+        purpose: 'test.conformance'
+      },
+      idempotencyKey: 'machine-e2e-request-budget-0001'
+    }),
+    error => error.code === 'machine_request_budget_exceeded' && error.status === 413
+  );
+});
+
+test('machine request-rate ceiling tightens the global Gateway rate limit', async t => {
+  const { client } = await startMachineStack(t, 'axiom-machine-rate-budget-', {
+    budgets: { max_requests_per_minute: 1 }
+  });
+
+  const first = await client.call('status.get');
+  assert.equal(first.kernel_version, '0.12.0-dev.3');
+
+  await assert.rejects(
+    () => client.call('status.get'),
+    error => error.code === 'machine_rate_budget_exceeded' && error.status === 429
   );
 });
