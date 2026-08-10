@@ -147,6 +147,29 @@ export async function createGatewayService(config = meshConfig()) {
     );
   });
 
+  router.add('GET', '/v1/machine-receipts/intents/:id/verify', async ({
+    params,
+    traceId,
+    principal
+  }) => {
+    if (principal.schema !== 'axiom-machine-principal.v1') {
+      throw new AxiomError(
+        'forbidden',
+        'Machine receipt verification requires a constrained machine principal',
+        403
+      );
+    }
+    const intentId = assertString(params.id, 'intent_id', {
+      max: 160,
+      pattern: /^intent_[a-f0-9]{64}$/
+    });
+    return gridGet(
+      `/internal/v1/machine-receipts/intents/${encodeURIComponent(intentId)}`
+        + `/verify?principal=${encodeURIComponent(principal.id)}`,
+      traceId
+    );
+  });
+
   router.add('GET', '/v1/status', async ({ traceId }) => {
     const grid = await gridGet('/internal/v1/status', traceId);
     const capabilityCounts = Object.fromEntries(
