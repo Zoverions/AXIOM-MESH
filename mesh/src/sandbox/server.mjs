@@ -20,7 +20,10 @@ import {
   authorizeInboundServiceRequest
 } from '../lib/service-network-policy.mjs';
 import { planDigest, validatePlan } from '../lib/plan.mjs';
+import { effectDestinationForTool } from '../lib/effect-destination.mjs';
 import { executeBuiltin } from './executor.mjs';
+
+const DIGEST = /^[a-f0-9]{64}$/;
 
 export async function createSandboxService(config = meshConfig()) {
   const identity = await ensureMeshIdentity(config.dataDir, 'sandbox', { create: config.autoBootstrap });
@@ -60,6 +63,35 @@ export async function createSandboxService(config = meshConfig()) {
       issuer: 'hypervisor',
       maxTtlSeconds: config.capabilityTtlSeconds
     });
+    if (
+      claims.invocation_digest !== undefined
+      && !DIGEST.test(claims.invocation_digest)
+    ) {
+      throw new AxiomError(
+        'invalid_capability_claims',
+        'Capability token invocation digest is invalid',
+        401
+      );
+    }
+    if (claims.effect_destination !== undefined) {
+      let expectedDestination;
+      try {
+        expectedDestination = effectDestinationForTool(claims.tool);
+      } catch {
+        throw new AxiomError(
+          'capability_destination_unresolved',
+          'Capability tool has no verified effect destination',
+          403
+        );
+      }
+      if (claims.effect_destination !== expectedDestination) {
+        throw new AxiomError(
+          'capability_destination_mismatch',
+          'Capability destination is not bound to the selected execution tool',
+          403
+        );
+      }
+    }
     const intentDigest = digestObject(intent);
     if (claims.intent_digest !== intentDigest) {
       throw new AxiomError('capability_intent_mismatch', 'Capability token is not bound to this intent', 403);
@@ -88,6 +120,12 @@ export async function createSandboxService(config = meshConfig()) {
       trace_id: traceId,
       intent_id: intent.intent_id,
       intent_digest: intentDigest,
+      ...(claims.invocation_digest
+        ? { invocation_digest: claims.invocation_digest }
+        : {}),
+      ...(claims.effect_destination
+        ? { effect_destination: claims.effect_destination }
+        : {}),
       capability_id: claims.jti,
       tool: claims.tool,
       policy_digest: claims.policy_digest,

@@ -31,6 +31,17 @@ import {
 import { loadPolicyStack, mergeDenyDominantPolicy, PolicyEngine } from '../lib/policy.mjs';
 import { buildPlan, planDigest } from '../lib/plan.mjs';
 import {
+  evaluateMachineIntent,
+  machinePrincipalAuthorityFacts,
+  normalizeMachinePrincipalDefinition
+} from '../lib/machine-principal.mjs';
+import { intentRequestDigest } from '../lib/intent-binding.mjs';
+import {
+  buildNativeInvocationEnvelope,
+  invocationEnvelopeDigest
+} from '../lib/invocation-envelope.mjs';
+import { effectDestinationForTool } from '../lib/effect-destination.mjs';
+import {
   loadTransportRuntime,
   transportServerOptions
 } from '../lib/transport-credentials.mjs';
@@ -130,23 +141,87 @@ export async function createHypervisorService(config = meshConfig()) {
   router.add('POST', '/internal/v1/intents', async ({ body, traceId }) => {
     const intent = normalizeIntent(parseJsonBody(body));
     const policy = await activePolicy(traceId);
-    const decision = policy.evaluate({
+    let decision = policy.evaluate({
       action: intent.action,
       principal: intent.principal,
       intent
     });
+    const machineAuthority = intent.principal.schema === 'axiom-machine-principal.v1'
+      ? machinePrincipalAuthorityFacts(intent.principal)
+      : null;
+    let effectDestination;
+    if (machineAuthority) {
+      const machineDecision = evaluateMachineIntent(intent.principal, {
+        action: intent.action,
+        purpose: intent.purpose
+      });
+      if (!machineDecision.allow) {
+        decision = {
+          ...decision,
+          allow: false,
+          pending: false,
+          code: machineDecision.code,
+          reason: machineDecision.reason,
+          http_status: 403
+        };
+      } else if (decision.allow) {
+        try {
+          effectDestination = effectDestinationForTool(decision.tool);
+        } catch {
+          decision = {
+            ...decision,
+            allow: false,
+            pending: false,
+            code: 'machine_destination_unresolved',
+            reason: 'The selected execution tool has no verified effect destination',
+            http_status: 403
+          };
+        }
+        if (
+          effectDestination
+          && !intent.principal.constraints.destinations.includes(effectDestination)
+        ) {
+          decision = {
+            ...decision,
+            allow: false,
+            pending: false,
+            code: 'machine_destination_denied',
+            reason: 'The computed effect destination exceeds machine authority',
+            http_status: 403
+          };
+        }
+        if (decision.allow) {
+          decision = {
+            ...decision,
+            timeout_ms: Math.min(
+              Number(decision.timeout_ms ?? 10_000),
+              intent.principal.constraints.budgets.max_execution_ms
+            )
+          };
+        }
+      }
+    }
+    if (effectDestination) {
+      decision = { ...decision, effect_destination: effectDestination };
+    }
+    const invocationEnvelope = buildNativeInvocationEnvelope(intent, decision);
+    const invocationDigest = invocationEnvelopeDigest(invocationEnvelope);
     await commit(traceId, intent.principal.id, [{
       kind: 'intent.accepted',
       subject: intent.intent_id,
       payload: {
         intent_id: intent.intent_id,
         principal: intent.principal.id,
+        principal_type: intent.principal.type,
         action: intent.action,
         risk: decision.risk,
         input_digest: digestObject(intent.input),
-        request_digest: requestDigest(intent),
+        request_digest: intentRequestDigest(intent),
         policy_version: decision.policy_version,
-        policy_digest: decision.policy_digest
+        policy_digest: decision.policy_digest,
+        invocation: invocationEnvelope,
+        invocation_digest: invocationDigest,
+        ...(machineAuthority ? { machine_authority: machineAuthority } : {})
       }
     }]);
     if (!decision.allow) {
@@ -173,7 +248,7 @@ export async function createHypervisorService(config = meshConfig()) {
     }
     let approval;
     if (decision.requires_independent_approval) {
-      const expectedRequestDigest = requestDigest(intent);
+      const expectedRequestDigest = intentRequestDigest(intent);
       if (intent.approval_ids.length !== 1) {
         await denyIntent(commit, traceId, intent, {
           code: 'independent_approval_required',
@@ -240,14 +315,22 @@ export async function createHypervisorService(config = meshConfig()) {
       iss: identity.service,
       aud: 'sandbox',
       subject: intent.principal.id,
+      principal_type: intent.principal.type,
       jti: newId('cap'),
       nbf: now - 1,
       exp: now + config.capabilityTtlSeconds,
       intent_digest: digestObject(intent),
+      invocation_digest: invocationDigest,
+      ...(effectDestination ? { effect_destination: effectDestination } : {}),
       tool: decision.tool,
       constraints: decision.constraints,
       policy_digest: decision.policy_digest,
-      plan_digest: boundPlanDigest
+      plan_digest: boundPlanDigest,
+      ...(machineAuthority ? {
+        sponsor: machineAuthority.sponsor,
+        authority_digest: machineAuthority.authority_digest,
+        runtime_id: machineAuthority.runtime_id
+      } : {})
     });
     try {
       const execution = await signedFetch(identity, 'sandbox', `${config.urls.sandbox}/internal/v1/execute`, {
@@ -260,7 +343,12 @@ export async function createHypervisorService(config = meshConfig()) {
       if (!statement || !verifyObjectSignature(statement, signature, sandboxKey)) {
         throw new AxiomError('invalid_sandbox_attestation', 'Sandbox returned an invalid execution attestation', 502);
       }
-      if (statement.intent_digest !== digestObject(intent) || statement.result_digest !== digestObject(execution.result)) {
+      if (
+        statement.intent_digest !== digestObject(intent)
+        || statement.invocation_digest !== invocationDigest
+        || statement.effect_destination !== effectDestination
+        || statement.result_digest !== digestObject(execution.result)
+      ) {
         throw new AxiomError('sandbox_attestation_mismatch', 'Sandbox attestation does not match the execution result', 502);
       }
       const events = [];
@@ -271,7 +359,12 @@ export async function createHypervisorService(config = meshConfig()) {
             ...execution.result.mutation.payload,
             evidence: {
               plan_digest: digestObject(plan),
-              execution: execution.attestation
+              invocation_digest: invocationDigest,
+              ...(effectDestination ? { effect_destination: effectDestination } : {}),
+              execution: execution.attestation,
+              ...(machineAuthority ? {
+                machine_authority_digest: machineAuthority.authority_digest
+              } : {})
             }
           }
         });
@@ -283,8 +376,14 @@ export async function createHypervisorService(config = meshConfig()) {
         status: 'completed',
         evidence: {
           plan_digest: boundPlanDigest,
+          invocation_digest: invocationDigest,
+          ...(effectDestination ? { effect_destination: effectDestination } : {}),
           execution_digest: statement.result_digest,
-          policy_digest: decision.policy_digest
+          policy_digest: decision.policy_digest,
+          ...(machineAuthority ? {
+            machine_authority_digest: machineAuthority.authority_digest,
+            machine_sponsor: machineAuthority.sponsor
+          } : {})
         }
       };
       events.push({
@@ -364,14 +463,20 @@ export async function createHypervisorService(config = meshConfig()) {
 function normalizeIntent(raw) {
   const value = assertPlainObject(raw, 'intent');
   const principal = assertPlainObject(value.principal, 'intent.principal');
-  const normalized = {
-    intent_id: assertString(value.intent_id, 'intent.intent_id', { max: 160, pattern: PRINCIPAL_ID }),
-    principal: {
+  let normalizedPrincipal;
+  if (principal.schema === 'axiom-machine-principal.v1') {
+    normalizedPrincipal = normalizeMachinePrincipalDefinition(principal);
+  } else {
+    const type = assertString(principal.type ?? 'human', 'intent.principal.type', {
+      max: 16,
+      pattern: /^(human|agent|service)$/
+    });
+    if (type === 'agent') {
+      throw new ValidationError('Agent principal must use axiom-machine-principal.v1');
+    }
+    normalizedPrincipal = {
       id: assertString(principal.id, 'intent.principal.id', { max: 160, pattern: PRINCIPAL_ID }),
-      type: assertString(principal.type ?? 'human', 'intent.principal.type', {
-        max: 16,
-        pattern: /^(human|agent|service)$/
-      }),
+      type,
       roles: [...new Set(assertStringArray(principal.roles ?? [], 'intent.principal.roles', {
         maxItems: 32,
         itemMax: 64
@@ -380,7 +485,11 @@ function normalizeIntent(raw) {
         maxItems: 128,
         itemMax: 160
       }))].sort()
-    },
+    };
+  }
+  const normalized = {
+    intent_id: assertString(value.intent_id, 'intent.intent_id', { max: 160, pattern: PRINCIPAL_ID }),
+    principal: normalizedPrincipal,
     action: assertString(value.action, 'intent.action', {
       max: 128,
       pattern: /^[a-z][a-z0-9.-]+$/
@@ -405,15 +514,6 @@ function normalizeIntent(raw) {
     throw new ValidationError('intent.submitted_at must be an ISO timestamp');
   }
   return normalized;
-}
-
-function requestDigest(intent) {
-  return digestObject({
-    action: intent.action,
-    input: intent.input,
-    purpose: intent.purpose,
-    data_scopes: intent.data_scopes
-  });
 }
 
 async function denyIntent(commit, traceId, intent, error) {

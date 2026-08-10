@@ -1,7 +1,8 @@
 import { readFile, stat } from 'node:fs/promises';
 import { isAbsolute, resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { sha256, ValidationError } from './canonical.mjs';
+import { ValidationError } from './canonical.mjs';
+import { normalizeApiPrincipalRegistry } from './principal-registry.mjs';
 
 const MESH_ROOT = resolve(fileURLToPath(new URL('../..', import.meta.url)));
 
@@ -200,35 +201,7 @@ function parsePrincipalRegistry(serialized, source) {
 }
 
 export function normalizePrincipals(entries) {
-  if (!entries || typeof entries !== 'object' || Array.isArray(entries)) {
-    throw new ValidationError('API token registry must be an object');
-  }
-  const principals = new Map();
-  for (const [token, principal] of Object.entries(entries)) {
-    if (typeof token !== 'string' || token.length < 32 || token.length > 512) {
-      throw new ValidationError('API tokens must contain 32-512 characters');
-    }
-    if (
-      !principal
-      || typeof principal.id !== 'string'
-      || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/.test(principal.id)
-      || !['human', 'agent', 'service'].includes(principal.type ?? 'human')
-      || !Array.isArray(principal.roles ?? [])
-      || !Array.isArray(principal.scopes)
-      || (principal.roles ?? []).some(value => typeof value !== 'string' || value.length > 64)
-      || principal.scopes.some(value => typeof value !== 'string' || value.length > 160)
-    ) {
-      throw new ValidationError('Each API token must map to a valid principal, type, roles, and scopes');
-    }
-    principals.set(sha256(token), {
-      id: principal.id,
-      type: principal.type ?? 'human',
-      roles: [...new Set(principal.roles ?? [])].sort(),
-      scopes: [...new Set(principal.scopes)].sort()
-    });
-  }
-  if (!principals.size) throw new ValidationError('At least one API principal is required');
-  return principals;
+  return normalizeApiPrincipalRegistry(entries);
 }
 
 export { MESH_ROOT };

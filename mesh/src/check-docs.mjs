@@ -13,8 +13,10 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/README.md',
   'docs/MASTER-TODO.md',
   'docs/MASTER-TODO-PLURAL-AUTHORITY.md',
+  'docs/MASTER-TODO-AGENT-INTEROPERABILITY.md',
   'docs/ROADMAP.md',
   'docs/ROADMAP-EXTENSION-PLURAL-AUTHORITY.md',
+  'docs/ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md',
   'docs/PRODUCTION-GRADE.md',
   'docs/PRODUCTION-READINESS-TRACKER.md',
   'docs/PROJECT-STATUS-2026.md',
@@ -23,12 +25,15 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/audits/SCALABILITY-AUDIT-2026-07-30.md',
   'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md',
   'docs/rebuild/LONG-HORIZON-CAPABILITY-MAP.md',
+  'docs/rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md',
+  'docs/rebuild/AGENT-INTEROPERABILITY-CAPABILITY-MAP.md',
   'docs/rebuild/PRODUCT-DEFINITION.md',
   'docs/rebuild/REQUIREMENTS.md',
   'docs/rebuild/ROLLBACK.md',
   'docs/rebuild/SOURCE-TRACEABILITY.md',
   'docs/rebuild/STATUS.md',
   'docs/reviews/PLURAL-AUTHORITY-ARCHITECTURE-REVIEW-2026-08-03.md',
+  'docs/reviews/AGENT-INTEROPERABILITY-ARCHITECTURE-REVIEW-2026-08-09.md',
   'docs/security/CREDENTIAL-HISTORY-REVOCATION.md',
   'docs/security/CURRENT-BUILD-THREAT-MODEL.md',
   'docs/security/DENY-EGRESS-BOUNDARY.md',
@@ -63,7 +68,8 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Canonical documents',
     '## Supported documentation boundary',
     'deprecated/pre-0.12-documentation-corpus',
-    'ROADMAP-EXTENSION-PLURAL-AUTHORITY.md'
+    'ROADMAP-EXTENSION-PLURAL-AUTHORITY.md',
+    'ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md'
   ],
   'docs/MASTER-TODO.md': ['## P0', '## Promotion rules'],
   'docs/MASTER-TODO-PLURAL-AUTHORITY.md': [
@@ -71,6 +77,13 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Priority 6 — Circle identity and membership',
     '## Priority 12 — Jurisdiction taxonomy and public-law laboratory',
     '## Priority 18 — Required promotion artifacts',
+    '## Completion rule'
+  ],
+  'docs/MASTER-TODO-AGENT-INTEROPERABILITY.md': [
+    '## Priority 0 — Protect the current authority boundary',
+    '## Priority 5 — Read-only MCP server laboratory',
+    '## Priority 11 — A2A-compatible laboratory',
+    '## Priority 17 — Required promotion artifacts',
     '## Completion rule'
   ],
   'docs/ROADMAP.md': ['## Promotion rules', '## Current Phase 2'],
@@ -81,6 +94,14 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Workstream E — Jurisdictional and sovereign architecture laboratory',
     '## Workstream F — Sovereignty-preserving interoperability',
     '## Documentation and claims maintenance'
+  ],
+  'docs/ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md': [
+    '## Compatibility commitments effective immediately',
+    '## Workstream C — Machine principal and invocation semantics',
+    '## Workstream E — MCP server laboratory',
+    '## Workstream K — A2A-compatible discovery and task exchange',
+    '## Documentation and claims maintenance',
+    '## Current non-claims'
   ],
   'docs/PRODUCTION-GRADE.md': ['## Current readiness', '## Production promotion gates'],
   'docs/PRODUCTION-READINESS-TRACKER.md': ['## Current gate status', 'Not production-promoted'],
@@ -103,6 +124,22 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Cross-cutting capability requirements',
     '## Documentation update rule'
   ],
+  'docs/rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md': [
+    '## 1. Agent runtimes are clients, not authorities',
+    '## 2. Protocol-neutral core, standard-compatible edges',
+    '## 3. AXIOM Invocation Envelope',
+    '## 6. Skills and capsules',
+    '## 12. Threat model additions',
+    '## 14. Current non-claims'
+  ],
+  'docs/rebuild/AGENT-INTEROPERABILITY-CAPABILITY-MAP.md': [
+    '## Layer B — Machine principals',
+    '## Layer E — MCP server compatibility',
+    '## Layer F — Skill and capsule interoperability',
+    '## Layer K — A2A compatibility',
+    '## Layer L — Authenticated remote execution',
+    '## Current non-claims'
+  ],
   'docs/rebuild/SOURCE-TRACEABILITY.md': [
     '## Current implementation trace',
     '## Archived source boundary'
@@ -113,6 +150,14 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Review of Circles',
     '## Review of sovereign domains',
     '## Known open gap carried into this programme',
+    '## Final assessment'
+  ],
+  'docs/reviews/AGENT-INTEROPERABILITY-ARCHITECTURE-REVIEW-2026-08-09.md': [
+    '## Executive finding',
+    '## Load-bearing architectural decision',
+    '## Review of the legacy agent portfolio',
+    '## Review of MCP compatibility',
+    '## Review of ethics and policy',
     '## Final assessment'
   ],
   'docs/security/CREDENTIAL-HISTORY-REVOCATION.md': [
@@ -246,13 +291,18 @@ const REQUIRED_CONTENT = Object.freeze({
 const MINIMUM_LENGTH = Object.freeze({
   'docs/MASTER-TODO.md': 2_000,
   'docs/MASTER-TODO-PLURAL-AUTHORITY.md': 8_000,
+  'docs/MASTER-TODO-AGENT-INTEROPERABILITY.md': 7_000,
   'docs/ROADMAP.md': 2_000,
   'docs/ROADMAP-EXTENSION-PLURAL-AUTHORITY.md': 8_000,
+  'docs/ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md': 7_000,
   'docs/PRODUCTION-GRADE.md': 3_000,
   'docs/PROJECT-STATUS-2026.md': 1_500,
   'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md': 10_000,
   'docs/rebuild/LONG-HORIZON-CAPABILITY-MAP.md': 8_000,
+  'docs/rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md': 9_000,
+  'docs/rebuild/AGENT-INTEROPERABILITY-CAPABILITY-MAP.md': 7_000,
   'docs/reviews/PLURAL-AUTHORITY-ARCHITECTURE-REVIEW-2026-08-03.md': 7_000,
+  'docs/reviews/AGENT-INTEROPERABILITY-ARCHITECTURE-REVIEW-2026-08-09.md': 7_000,
   'docs/security/CREDENTIAL-HISTORY-REVOCATION.md': 2_500,
   'docs/security/CURRENT-BUILD-THREAT-MODEL.md': 5_000,
   'docs/security/DENY-EGRESS-BOUNDARY.md': 2_500,

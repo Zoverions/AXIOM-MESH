@@ -1,7 +1,7 @@
 {
   "schema": "axiom-capability-evidence-bindings.v1",
   "kernel_version": "0.12.0-dev.3",
-  "registry_digest": "8bcdcfd8f010d2ad5c6fb84fd6fafe8f4833c29d865b5a4181500b137104b0cb",
+  "registry_digest": "1f61717d785b3e260d6eee36b2d772d4f1170287f6d262f24edc9fa1f412ff21",
   "bindings": [
     {
       "capability_id": "capsules.registry",
@@ -34,6 +34,20 @@
       "assertions": [
         "assert.equal(replay.idempotent_replay, true);",
         "assert.equal((await capabilityReplay.json()).error.code, 'capability_replayed');"
+      ]
+    },
+    {
+      "capability_id": "core.machine-principals",
+      "path": "mesh/test/machine-principal-e2e.test.mjs",
+      "test": "constrained agent executes an authorized intent and returns bound authority evidence",
+      "assertions": [
+        "assert.equal(result.status, 'completed');",
+        "assert.equal(result.evidence.machine_sponsor, 'owner.machine-test');",
+        "assert.match(result.evidence.machine_authority_digest, /^[a-f0-9]{64}$/);",
+        "assert.deepEqual(machineBoundary, expectedMachineBoundary);",
+        "assert.equal(error.code, 'machine_request_budget_exceeded');",
+        "assert.equal(error.code, 'machine_rate_budget_exceeded');",
+        "assert.equal(error.code, 'machine_response_budget_exceeded');"
       ]
     },
     {

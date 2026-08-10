@@ -14,6 +14,16 @@ const SECURITY_HEADERS = Object.freeze({
   'x-frame-options': 'DENY'
 });
 
+const DIRECT_RESPONSE_METHODS = new Set([
+  'write',
+  'end',
+  'writeHead',
+  'flushHeaders',
+  'writeContinue',
+  'writeEarlyHints',
+  'writeProcessing'
+]);
+
 export class Router {
   constructor() {
     this.routes = [];
@@ -91,23 +101,11 @@ export function parseJsonBody(buffer, { required = true } = {}) {
 
 export function sendJson(res, status, value, headers = {}) {
   const body = Buffer.from(JSON.stringify(value));
-  res.writeHead(status, {
-    ...SECURITY_HEADERS,
-    'content-type': 'application/json; charset=utf-8',
-    'content-length': String(body.length),
-    ...headers
-  });
-  res.end(body);
+  writeResponseBuffer(res, status, body, 'application/json; charset=utf-8', headers);
 }
 
 export function sendBuffer(res, status, body, contentType, headers = {}) {
-  res.writeHead(status, {
-    ...SECURITY_HEADERS,
-    'content-type': contentType,
-    'content-length': String(body.length),
-    ...headers
-  });
-  res.end(body);
+  writeResponseBuffer(res, status, body, contentType, headers);
 }
 
 export function errorResponse(error, traceId) {
@@ -132,6 +130,8 @@ export function createServiceServer({
   maxBodyBytes = 1_048_576,
   context = {},
   authenticate,
+  admitRequest,
+  inspectResponse,
   onError,
   telemetry,
   tls,
@@ -140,10 +140,13 @@ export function createServiceServer({
   authorizeRequest
 }) {
   const logger = createStructuredLogger(name);
+  const requestAdmission = admitRequest ?? authenticate?.admitRequest;
+  const responseInspection = inspectResponse ?? authenticate?.inspectResponse;
   const handleRequest = async (req, res) => {
     const started = performance.now();
     const traceId = validTraceId(req.headers['x-trace-id']) ? req.headers['x-trace-id'] : newId('trace');
     let requestError;
+    let releaseAdmission;
     telemetry?.beginRequest();
     res.setHeader('x-trace-id', traceId);
     try {
@@ -189,9 +192,36 @@ export function createServiceServer({
           principal
         });
       }
+      if (principal && requestAdmission) {
+        const release = await requestAdmission({
+          req,
+          body,
+          url,
+          route,
+          traceId,
+          principal
+        });
+        if (release !== undefined && typeof release !== 'function') {
+          throw new ValidationError('Request admission hook must return a release function or undefined');
+        }
+        releaseAdmission = release;
+      }
+      const boundedResponse = principal && responseInspection
+        ? responseInspection.requiresPreflight?.({
+            req,
+            body,
+            url,
+            route,
+            traceId,
+            principal
+          }) !== false
+        : false;
+      const routeResponse = boundedResponse
+        ? directWriteRejectingResponse(res)
+        : res;
       const result = await route.handler({
         req,
-        res,
+        res: routeResponse,
         body,
         url,
         params: route.params,
@@ -201,19 +231,52 @@ export function createServiceServer({
       });
       if (res.writableEnded) return;
       if (!result) {
-        sendJson(res, 204, null);
+        await sendApplicationJson(res, 204, null, undefined, {
+          boundedResponse,
+          responseInspection,
+          req,
+          url,
+          route,
+          traceId,
+          principal
+        });
       } else if (result.buffer) {
-        sendBuffer(
+        await sendApplicationBuffer(
           res,
           result.httpStatus ?? 200,
           result.buffer,
           result.contentType ?? 'application/octet-stream',
-          result.headers
+          result.headers,
+          {
+            boundedResponse,
+            responseInspection,
+            req,
+            url,
+            route,
+            traceId,
+            principal
+          }
         );
       } else if (Number.isInteger(result.httpStatus)) {
-        sendJson(res, result.httpStatus, result.body, result.headers);
+        await sendApplicationJson(res, result.httpStatus, result.body, result.headers, {
+          boundedResponse,
+          responseInspection,
+          req,
+          url,
+          route,
+          traceId,
+          principal
+        });
       } else {
-        sendJson(res, 200, result);
+        await sendApplicationJson(res, 200, result, undefined, {
+          boundedResponse,
+          responseInspection,
+          req,
+          url,
+          route,
+          traceId,
+          principal
+        });
       }
     } catch (error) {
       requestError = error;
@@ -228,9 +291,22 @@ export function createServiceServer({
       }
       if (!res.writableEnded) {
         const response = errorResponse(error, traceId);
+        // Control/error responses bypass application response budgets so a
+        // bounded machine caller can always receive the reason it was denied.
         sendJson(res, response.status, response.body);
       }
     } finally {
+      if (releaseAdmission) {
+        try {
+          releaseAdmission();
+        } catch (error) {
+          logger.error({
+            event: 'request.admission_release_failed',
+            trace_id: traceId,
+            error
+          });
+        }
+      }
       const elapsed = Math.round((performance.now() - started) * 100) / 100;
       telemetry?.finishRequest({
         status: res.statusCode,
@@ -279,6 +355,69 @@ export async function close(server) {
 
 function validTraceId(value) {
   return typeof value === 'string' && /^[A-Za-z0-9_.:-]{8,160}$/.test(value);
+}
+
+async function sendApplicationJson(res, status, value, headers, context) {
+  const body = Buffer.from(JSON.stringify(value));
+  await inspectApplicationResponse(body, context);
+  writeResponseBuffer(res, status, body, 'application/json; charset=utf-8', headers);
+}
+
+async function sendApplicationBuffer(res, status, body, contentType, headers, context) {
+  const payload = Buffer.isBuffer(body) ? body : Buffer.from(body);
+  await inspectApplicationResponse(payload, context);
+  writeResponseBuffer(res, status, payload, contentType, headers);
+}
+
+async function inspectApplicationResponse(body, {
+  boundedResponse,
+  responseInspection,
+  req,
+  url,
+  route,
+  traceId,
+  principal
+}) {
+  if (!boundedResponse || !responseInspection) return;
+  await responseInspection({
+    req,
+    url,
+    route,
+    traceId,
+    principal,
+    responseBytes: body.length
+  });
+}
+
+function writeResponseBuffer(res, status, body, contentType, headers = {}) {
+  res.writeHead(status, {
+    ...SECURITY_HEADERS,
+    'content-type': contentType,
+    'content-length': String(body.length),
+    ...headers
+  });
+  res.end(body);
+}
+
+function directWriteRejectingResponse(res) {
+  return new Proxy(res, {
+    get(target, property) {
+      if (DIRECT_RESPONSE_METHODS.has(property)) {
+        return () => {
+          throw new AxiomError(
+            'machine_direct_response_unavailable',
+            'Constrained machine responses must return through the bounded response path',
+            500
+          );
+        };
+      }
+      const value = Reflect.get(target, property, target);
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+    set(target, property, value) {
+      return Reflect.set(target, property, value, target);
+    }
+  });
 }
 
 export class TokenBucketLimiter {

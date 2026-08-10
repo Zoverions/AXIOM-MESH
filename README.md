@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=8bcdcfd8f010d2ad5c6fb84fd6fafe8f4833c29d865b5a4181500b137104b0cb -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=1f61717d785b3e260d6eee36b2d772d4f1170287f6d262f24edc9fa1f412ff21 -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -56,6 +56,9 @@ The current kernel implements:
 
 - authenticated intent, policy, plan, approval, grant, bounded execution, and
   signed evidence;
+- human-sponsored constrained machine principals with finite scopes, action and
+  purpose ceilings, runtime binding, expiry, non-delegation, an execution-time
+  ceiling, authenticated Gateway request-size, request-rate, concurrency, and response-size ceilings, and an AXIOM-computed effect destination constrained to the principal's finite destination allowlist;
 - encrypted transactional state, consent, memory, governance, local accounting,
   export/import, backup, restore, rotation, and recovery;
 - mutually authenticated internal transport and independently restartable
@@ -68,10 +71,17 @@ The current kernel implements:
 - strict pilot and independent-review evidence intake;
 - authenticated operator API and CLI.
 
-The AXIOM One browser/PWA is an experimental local preview, not an implemented
-or supported product claim. External AI, Verify, Circles, remote dispatch,
-federation, tokens, settlement, regulated domains, arbitrary code, embodied
-systems, and post-quantum security are also not current implemented claims.
+The machine-principal capability is an authorization primitive, **not** an
+autonomous-agent runtime. Authenticated Gateway request-size, request-rate, concurrency, and response-size
+ceilings are enforced and evidenced. For current built-in effects, AXIOM computes the
+effect destination as `local` from the authorized tool and requires it to remain
+inside the principal's finite destination ceiling. Unknown provider, remote, or MCP
+destination semantics remain unresolved and fail closed; this is not a claim of
+remote execution or arbitrary external-destination support. AXIOM One remains an experimental browser/PWA preview,
+not an implemented or supported product claim. External AI, Verify, Circles,
+remote dispatch, federation, tokens, settlement, regulated domains, arbitrary
+code, embodied systems, and post-quantum security are also not current
+implemented claims.
 
 ## Development programme
 
@@ -261,6 +271,8 @@ The active build does not claim:
 
 - live production, testnet, mainnet, or public federation;
 - supported AXIOM One, Verify, Circles, Studio, or Managed Node products;
+- an autonomous-agent runtime, autonomous delegation, MCP/A2A endpoints, or
+  remote agent execution;
 - production AI, messaging, identity, payment, storage-transfer, or domain
   adapters;
 - remote workload execution or authenticated remote results;
