@@ -9,9 +9,11 @@ import {
 export const INTENT_CONTRACT_SCHEMA = 'axiom-intent-contract.v1';
 export const INTENT_GRAPH_SCHEMA = 'axiom-intent-graph.v1';
 export const INTENT_ASSESSMENT_SCHEMA = 'axiom-intent-assessment.v1';
+export const INTENT_RECONCILIATION_SCHEMA = 'axiom-intent-reconciliation.v1';
 
 const REQUIREMENT_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,79}$/;
 const ACTION_PATTERN = /^[a-z][a-z0-9._:-]*(?:\.\*)?$/;
+const SHA256_HEX = /^[a-f0-9]{64}$/;
 const VERIFICATION_CLASSES = new Set([
   'deterministic',
   'empirical',
@@ -29,8 +31,19 @@ function assertSafeInteger(value, name, { min = 0, max = Number.MAX_SAFE_INTEGER
   return value;
 }
 
+function assertArray(value, name, { maxItems = 1024 } = {}) {
+  if (!Array.isArray(value) || value.length > maxItems) {
+    throw new ValidationError(`${name} must be an array with at most ${maxItems} items`);
+  }
+  return value;
+}
+
+function uniqueStrings(value, name, options = {}) {
+  return [...new Set(assertStringArray(value ?? [], name, options))];
+}
+
 function uniqueSortedStrings(value, name, options = {}) {
-  return [...new Set(assertStringArray(value ?? [], name, options))].sort();
+  return uniqueStrings(value, name, options).sort();
 }
 
 function normalizeActionPatterns(value, name) {
@@ -123,18 +136,20 @@ export function normalizeIntentContract(raw) {
   );
   const authority = assertPlainObject(value.authority ?? {}, 'intent contract.authority');
   const optimization = assertPlainObject(value.optimization ?? {}, 'intent contract.optimization');
-  const objectives = (value.objectives ?? []).map((item, index) => normalizeRequirement(
-    item,
-    'objective',
-    index,
-    defaultMinimumIndependentVerifiers
-  ));
-  const invariants = (value.invariants ?? []).map((item, index) => normalizeRequirement(
-    item,
-    'invariant',
-    index,
-    defaultMinimumIndependentVerifiers
-  ));
+  const objectives = assertArray(value.objectives ?? [], 'intent contract.objectives', { maxItems: 256 })
+    .map((item, index) => normalizeRequirement(
+      item,
+      'objective',
+      index,
+      defaultMinimumIndependentVerifiers
+    ));
+  const invariants = assertArray(value.invariants ?? [], 'intent contract.invariants', { maxItems: 256 })
+    .map((item, index) => normalizeRequirement(
+      item,
+      'invariant',
+      index,
+      defaultMinimumIndependentVerifiers
+    ));
   if (!objectives.length && !invariants.length) {
     throw new ValidationError('intent contract must define at least one objective or invariant');
   }
@@ -170,7 +185,7 @@ export function normalizeIntentContract(raw) {
       default_minimum_independent_verifiers: defaultMinimumIndependentVerifiers
     },
     optimization: {
-      priority: uniqueSortedStrings(
+      priority: uniqueStrings(
         optimization.priority ?? [],
         'intent contract.optimization.priority',
         { maxItems: 32, itemMax: 160 }
@@ -201,6 +216,32 @@ export function compileIntentContract(raw) {
     ...graph,
     graph_digest: digestObject(graph)
   };
+}
+
+export function validateIntentGraph(raw) {
+  const graph = assertPlainObject(raw, 'intent graph');
+  if (graph.schema !== INTENT_GRAPH_SCHEMA) {
+    throw new ValidationError(`intent graph.schema must be ${INTENT_GRAPH_SCHEMA}`);
+  }
+  const graphDigest = assertString(graph.graph_digest, 'intent graph.graph_digest', {
+    min: 64,
+    max: 64,
+    pattern: SHA256_HEX
+  });
+  const { graph_digest: ignoredDigest, ...body } = graph;
+  if (digestObject(body) !== graphDigest) {
+    throw new ValidationError('intent graph digest mismatch');
+  }
+  const requirements = assertArray(graph.requirements, 'intent graph.requirements', { maxItems: 512 });
+  const ids = requirements.map((item, index) => assertString(
+    assertPlainObject(item, `intent graph.requirements[${index}]`).id,
+    `intent graph.requirements[${index}].id`,
+    { max: 80, pattern: REQUIREMENT_ID }
+  ));
+  if (new Set(ids).size !== ids.length) {
+    throw new ValidationError('intent graph requirement IDs must be unique');
+  }
+  return graph;
 }
 
 function actionMatches(action, pattern) {
@@ -237,7 +278,7 @@ function normalizeObservations(raw, requirementIds) {
   const value = Array.isArray(raw)
     ? raw
     : assertPlainObject(raw ?? {}, 'intent observations').observations ?? [];
-  if (!Array.isArray(value)) throw new ValidationError('intent observations must be an array');
+  assertArray(value, 'intent observations', { maxItems: 512 });
   const normalized = value.map((item, index) => {
     const observation = assertPlainObject(item, `intent observations[${index}]`);
     const requirementId = assertString(
@@ -282,11 +323,8 @@ function normalizeObservations(raw, requirementIds) {
 }
 
 export function assessIntentGraph(rawGraph, rawObservations = []) {
-  const graph = assertPlainObject(rawGraph, 'intent graph');
-  if (graph.schema !== INTENT_GRAPH_SCHEMA) {
-    throw new ValidationError(`intent graph.schema must be ${INTENT_GRAPH_SCHEMA}`);
-  }
-  const requirements = Array.isArray(graph.requirements) ? graph.requirements : [];
+  const graph = validateIntentGraph(rawGraph);
+  const requirements = graph.requirements;
   const requirementIds = new Set(requirements.map(item => item.id));
   const observations = normalizeObservations(rawObservations, requirementIds);
   const byRequirement = new Map(observations.map(item => [item.requirement_id, item]));
@@ -298,6 +336,13 @@ export function assessIntentGraph(rawGraph, rawObservations = []) {
     if (verification.classification === 'unknown') {
       status = 'unknown';
       reason = 'verification_method_unknown';
+    } else if (
+      status === 'pass'
+      && verification.evidence_required?.length
+      && !observation.evidence_refs.length
+    ) {
+      status = 'unknown';
+      reason = 'missing_evidence_refs';
     } else if (
       status === 'pass'
       && observation.independent_verifiers < verification.minimum_independent_verifiers
@@ -337,7 +382,7 @@ export function assessIntentGraph(rawGraph, rawObservations = []) {
 }
 
 export function reconcileIntentGraph(rawGraph, rawObservations = []) {
-  const graph = assertPlainObject(rawGraph, 'intent graph');
+  const graph = validateIntentGraph(rawGraph);
   const assessment = assessIntentGraph(graph, rawObservations);
   const requirementById = new Map(graph.requirements.map(item => [item.id, item]));
   const blocked = assessment.requirements.some(item => {
@@ -352,21 +397,28 @@ export function reconcileIntentGraph(rawGraph, rawObservations = []) {
       ? 'attention_required'
       : 'converged';
   const actions = [];
-  const seenActions = new Set();
+  const actionByName = new Map();
   for (const result of assessment.requirements) {
     if (result.status === 'pass') continue;
     const requirement = requirementById.get(result.requirement_id);
     for (const action of requirement.remediation_actions ?? []) {
-      if (seenActions.has(action)) continue;
-      seenActions.add(action);
-      actions.push({
+      const existing = actionByName.get(action);
+      if (existing) {
+        existing.triggered_by.push(result.requirement_id);
+        existing.triggered_by.sort();
+        continue;
+      }
+      const proposal = {
         ...classifyIntentAuthority(graph, action),
         triggered_by: [result.requirement_id]
-      });
+      };
+      actionByName.set(action, proposal);
+      actions.push(proposal);
     }
   }
+  actions.sort((left, right) => left.action.localeCompare(right.action));
   const reconciliation = {
-    schema: 'axiom-intent-reconciliation.v1',
+    schema: INTENT_RECONCILIATION_SCHEMA,
     contract_id: graph.contract_id,
     graph_digest: graph.graph_digest,
     assessment_digest: assessment.assessment_digest,
