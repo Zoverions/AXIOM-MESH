@@ -115,6 +115,21 @@ function readdressDossier(raw) {
   };
 }
 
+function readdressReview(raw) {
+  const copy = structuredClone(raw);
+  const signature = copy.signature;
+  delete copy.signature;
+  delete copy.review_id;
+  delete copy.review_digest;
+  const digest = digestObject({ body: copy, signature });
+  return {
+    ...copy,
+    signature,
+    review_id: `intent-executor-review:${digest}`,
+    review_digest: digest
+  };
+}
+
 test('production executor registry remains byte-for-byte empty', () => {
   assert.equal(registryText, '{\n  "schema": "axiom-intent-remediation-executor-registry.v1",\n  "kernel_version": "0.12.0-dev.3",\n  "mappings": []\n}\n');
   assert.deepEqual(productionRegistry.mappings, []);
@@ -154,7 +169,7 @@ test('all required negative-path evidence is mandatory and unique', () => {
 test('wildcard, self-modifying, authority-control, unknown, denied, and tool-mismatched mappings fail admission', () => {
   assert.throws(() => dossier({
     candidate_mapping: mapping({ semantic_action: 'repo.*' })
-  }), /wildcard/);
+  }), /invalid format|wildcard/);
   assert.throws(() => dossier({
     candidate_mapping: mapping({ semantic_action: 'intent.executor.add' })
   }), /self-modifying|authority-registry/);
@@ -212,7 +227,7 @@ test('policy, capability, registry, and build drift invalidate dossier admission
   const original = dossier();
 
   const changedPolicy = structuredClone(policy);
-  changedPolicy.actions['system.echo'].timeout_ms += 1;
+  changedPolicy.v07_staleness_marker = 'changed-policy-digest';
   assert.throws(() => validateIntentExecutorAdmissionDossierCurrent(
     original,
     currentContext({ policy: changedPolicy }),
@@ -281,11 +296,14 @@ test('review attestations are signed, role-bound, current, and producer-independ
   }), /cannot review its own dossier/);
 
   const tampered = structuredClone(securityReview);
-  tampered.signature.signature = `${tampered.signature.signature.slice(0, -1)}A`;
-  assert.throws(() => verifyIntentExecutorReviewAttestation(tampered, rawDossier, {
+  const signatureBytes = Buffer.from(tampered.signature.signature, 'base64url');
+  signatureBytes[0] ^= 1;
+  tampered.signature.signature = signatureBytes.toString('base64url');
+  const readdressedTamper = readdressReview(tampered);
+  assert.throws(() => verifyIntentExecutorReviewAttestation(readdressedTamper, rawDossier, {
     public_key: bundle.security.publicKey,
     now: '2026-08-10T21:10:00.000Z'
-  }));
+  }), /signature is invalid/);
 });
 
 test('promotion requires two distinct reviewer identities and both required roles', () => {
@@ -373,7 +391,7 @@ test('stale review/dossier context invalidates an already-built promotion candid
     now: '2026-08-10T21:10:00.000Z'
   });
   const changedPolicy = structuredClone(policy);
-  changedPolicy.actions['system.echo'].timeout_ms += 1;
+  changedPolicy.v07_staleness_marker = 'changed-policy-digest';
   assert.throws(() => verifyIntentExecutorPromotionCandidate(candidate, {
     dossier: rawDossier,
     reviews: reviewBundle.entries,
