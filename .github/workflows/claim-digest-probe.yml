@@ -22,9 +22,10 @@ jobs:
           package-manager-cache: false
       - name: Print canonical capability registry digest
         run: |
-          node --input-type=module <<'NODE'
-          import { readFile } from 'node:fs/promises';
-          import { validateCapabilityRegistry } from './mesh/src/check-registry.mjs';
-          const registry = JSON.parse(await readFile('./mesh/config/capabilities.json', 'utf8'));
-          console.log(JSON.stringify(validateCapabilityRegistry(registry)));
-          NODE
+          node --input-type=module -e "
+            import { readFile } from 'node:fs/promises';
+            process.argv[1] = './claim-digest-probe.mjs';
+            const { validateCapabilityRegistry } = await import('./mesh/src/check-registry.mjs');
+            const registry = JSON.parse(await readFile('./mesh/config/capabilities.json', 'utf8'));
+            console.log(JSON.stringify(validateCapabilityRegistry(registry)));
+          "
