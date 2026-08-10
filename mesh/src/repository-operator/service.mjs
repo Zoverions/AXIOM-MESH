@@ -188,6 +188,20 @@ export async function startRepositoryOperatorService({
       }
       if (!parsed.complete) return;
       started = true;
+      // The connection-time check above cannot serialize execution on its own:
+      // two peers can both connect while the operator is idle and only then
+      // send their requests. Mutual exclusion is therefore claimed here, at the
+      // point the effect actually starts.
+      if (active) {
+        writeAndClose(socket, {
+          schema: REPOSITORY_OPERATOR_RESPONSE_SCHEMA,
+          error: {
+            code: 'repository_operator_busy',
+            message: 'Repository operator is processing another external effect'
+          }
+        });
+        return;
+      }
       active = true;
       Promise.resolve(runOperator({
         prepared_effect: parsed.request.prepared_effect,

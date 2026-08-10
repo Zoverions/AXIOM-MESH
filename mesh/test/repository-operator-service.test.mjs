@@ -4,6 +4,7 @@ import { lstat, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import net from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
 import test from 'node:test';
 
 import { digestObject, sha256 } from '../src/lib/canonical.mjs';
@@ -356,6 +357,58 @@ test('client connection loss is unresolved and client API contains no credential
   );
   const sourceKeys = Object.keys(clientArgs(socketPath, fixture));
   assert.equal(sourceKeys.some(key => /token|credential|origin/i.test(key)), false);
+});
+
+test('connections opened before either request is sent cannot run two effects at once', async t => {
+  const fixture = effectFixture();
+  const socketPath = await socketPathFor(t);
+  let concurrent = 0;
+  let peak = 0;
+  const service = await startRepositoryOperatorService({
+    socketPath,
+    runOperator: async () => {
+      concurrent += 1;
+      peak = Math.max(peak, concurrent);
+      // Hold the effect open long enough for a second admitted request to
+      // overlap it if mutual exclusion were missing.
+      await sleep(250);
+      concurrent -= 1;
+      return { receipt: { receipt_id: `receipt:${'0'.repeat(64)}` } };
+    }
+  });
+  t.after(() => service.close());
+
+  const request = `${JSON.stringify({
+    schema: REPOSITORY_OPERATOR_REQUEST_SCHEMA,
+    prepared_effect: fixture.prepared,
+    grid_prepared_event: fixture.gridEvent
+  })}\n`;
+  const connect = () => new Promise((resolve, reject) => {
+    const socket = net.createConnection({ path: socketPath });
+    socket.once('connect', () => resolve(socket));
+    socket.once('error', reject);
+  });
+  const readResponse = socket => new Promise((resolve, reject) => {
+    let buffer = '';
+    socket.on('data', chunk => { buffer += chunk.toString('utf8'); });
+    socket.once('close', () => {
+      try { resolve(JSON.parse(buffer.trim())); } catch (error) { reject(error); }
+    });
+    socket.once('error', reject);
+  });
+
+  // Both peers are connected while the operator is idle, so the
+  // connection-time admission check alone cannot serialize them.
+  const [first, second] = await Promise.all([connect(), connect()]);
+  const responses = Promise.all([readResponse(first), readResponse(second)]);
+  first.write(request);
+  second.write(request);
+  const settled = await responses;
+
+  const rejected = settled.filter(item => item.error?.code === 'repository_operator_busy');
+  assert.equal(peak, 1);
+  assert.equal(rejected.length, 1);
+  assert.equal(settled.filter(item => item.receipt).length, 1);
 });
 
 function rawSocketExchange(socketPath, payload) {

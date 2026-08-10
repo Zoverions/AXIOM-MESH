@@ -17,6 +17,11 @@ export class MachineIngressGuard {
     if (!Number.isSafeInteger(requestBytes) || requestBytes < 0) {
       throw new ValidationError('requestBytes must be a non-negative safe integer');
     }
+    // Declared lifetime is revalidated on every authenticated request. The
+    // registry only proves the principal was unexpired when the process loaded
+    // it, so without this check a session principal would keep authenticating
+    // for the remaining process lifetime.
+    this.#assertUnexpired(principal, now);
     const budgets = this.#budgets(principal);
 
     if (requestBytes > budgets.max_request_bytes) {
@@ -136,6 +141,36 @@ export class MachineIngressGuard {
       }
       this.concurrency.set(principal.id, current - 1);
     };
+  }
+
+  #assertUnexpired(principal, now) {
+    const expiresAt = principal.expires_at;
+    if (expiresAt === undefined || expiresAt === null) {
+      if (principal.lifetime !== 'persistent') {
+        throw new AxiomError(
+          'machine_authority_invalid',
+          'Machine principal lifetime requires an expiry',
+          403
+        );
+      }
+      return;
+    }
+    const expiry = Date.parse(expiresAt);
+    if (!Number.isFinite(expiry)) {
+      throw new AxiomError(
+        'machine_authority_invalid',
+        'Machine principal expiry is invalid',
+        403
+      );
+    }
+    if (expiry <= now) {
+      throw new AxiomError(
+        'machine_principal_expired',
+        'Machine principal lifetime has expired',
+        401,
+        { expires_at: new Date(expiry).toISOString() }
+      );
+    }
   }
 
   #budgets(principal) {
