@@ -1,1 +1,0 @@
-restore service-network-policy.test.mjs from main; apply only 38->39 and 34->35
