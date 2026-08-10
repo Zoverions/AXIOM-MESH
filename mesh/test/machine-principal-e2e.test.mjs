@@ -120,6 +120,7 @@ test('constrained agent executes an authorized intent and returns bound authorit
     result.evidence.machine_authority_digest
   );
 
+  // The capability binding below proves both newly claimed ingress ceilings.
   await assert.rejects(
     () => client.call('intents.submit', {
       body: {
