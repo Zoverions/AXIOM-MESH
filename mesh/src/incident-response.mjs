@@ -79,6 +79,7 @@ const CONTROL_SCHEMAS = Object.freeze({
 const IDENTIFIER = /^[a-z][a-z0-9_]{2,63}$/;
 const INCIDENT_ID = /^incident_[a-z0-9][a-z0-9_-]{7,95}$/;
 const REVISION = /^[a-f0-9]{40}$/;
+const PROTOTYPE_KEYS = new Set(Object.getOwnPropertyNames(Object.prototype));
 
 export async function loadIncidentResponsePolicy(
   path = new URL('../config/incident-response.json', import.meta.url)
@@ -121,6 +122,9 @@ export function validateIncidentResponsePolicy(policy) {
   }
   for (const [id, action] of Object.entries(policy.actions)) {
     requireIdentifier(id, 'Incident response action');
+    if (PROTOTYPE_KEYS.has(id)) {
+      throw new ValidationError(`Incident response action uses a reserved prototype identifier: ${id}`);
+    }
     if (
       !plainObject(action)
       || !IDENTIFIER.test(action.category ?? '')
@@ -283,7 +287,7 @@ export function createIncidentPlan(policy, {
     );
   }
   const plannedActions = selected.map(id => {
-    const action = policy.actions[id];
+    const action = incidentAction(policy, id);
     if (!action) throw new ValidationError(`Incident plan action is unknown: ${id}`);
     return {
       id,
@@ -335,13 +339,16 @@ export function evaluateIncidentExercise(policy, {
   const requiredActionsSelected = classification.required_actions.every(
     action => selectedActions.has(action)
   );
-  const authorityReducing = (plan.actions ?? []).every(action => (
-    ACTION_EFFECTS.has(action.authority_effect)
-    && action.authority_effect !== 'expand'
-    && policy.actions[action.id]?.authority_effect === action.authority_effect
-    && policy.actions[action.id]?.category === action.category
-    && policy.actions[action.id]?.owner_role === action.owner_role
-  ));
+  const authorityReducing = (plan.actions ?? []).every(action => {
+    const policyAction = incidentAction(policy, action.id);
+    return (
+      ACTION_EFFECTS.has(action.authority_effect)
+      && action.authority_effect !== 'expand'
+      && policyAction?.authority_effect === action.authority_effect
+      && policyAction?.category === action.category
+      && policyAction?.owner_role === action.owner_role
+    );
+  });
   const declaredAt = timestampMs(plan.declared_at, 'Incident declaration');
   const acknowledgedAt = timestampMs(timeline?.acknowledged_at, 'Incident acknowledgement');
   const classifiedAt = timestampMs(timeline?.classified_at, 'Incident classification');
@@ -489,6 +496,12 @@ function artifactPrefix(type) {
     slo_restart: 'axiom-slo-baseline-evidence',
     transport: 'axiom-transport-drill-evidence'
   }[type];
+}
+
+function incidentAction(policy, id) {
+  return Object.hasOwn(policy.actions, id)
+    ? policy.actions[id]
+    : null;
 }
 
 function uniqueIdentifiers(value, name) {
