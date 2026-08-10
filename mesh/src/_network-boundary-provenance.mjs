@@ -23,7 +23,6 @@ const NETWORK_NAMESPACE = /^net:\[\d+\]$/;
 const PROVENANCE_SOURCES = new Set(['measured', 'derived', 'asserted']);
 const REQUIRED_CHECKS = Object.freeze([
   'network_namespace_observed',
-  'compose_network_mode_none_required',
   'ipv4_default_route_absent',
   'ipv6_default_route_absent',
   'non_loopback_routes_absent',
@@ -49,9 +48,7 @@ export async function runDenyEgressDrill({
   platform = process.platform,
   routeInspection,
   networkNamespaceIdentity,
-  composePolicyText,
   readlinkImpl = readlink,
-  readFileImpl = readFile,
   hostIngressVerified = process.env.AXIOM_HOST_INGRESS_VERIFIED === 'true',
   runnerPublicControlVerified = (
     process.env.AXIOM_RUNNER_PUBLIC_CONTROL_VERIFIED === 'true'
@@ -74,13 +71,7 @@ export async function runDenyEgressDrill({
     value: networkNamespaceIdentity,
     readlinkImpl
   });
-  const composeText = await resolveComposePolicyText({
-    value: composePolicyText,
-    readFileImpl
-  });
-  const composeModeNoneRequired = /^\s*network_mode:\s*["']none["']\s*$/m.test(composeText);
   const namespaceDigest = digestObject({ identity: namespaceIdentity });
-  const composePolicyDigest = digestObject({ text: composeText });
 
   const readiness = await readinessProbe({
     url: `http://127.0.0.1:${config.ports.gateway}/ready`
@@ -92,7 +83,6 @@ export async function runDenyEgressDrill({
   });
   const checks = {
     network_namespace_observed: NETWORK_NAMESPACE.test(namespaceIdentity),
-    compose_network_mode_none_required: composeModeNoneRequired,
     ipv4_default_route_absent: routes.ipv4?.default_routes === 0,
     ipv6_default_route_absent: routes.ipv6?.default_routes === 0,
     non_loopback_routes_absent: routes.non_loopback_link_routes === 0,
@@ -122,7 +112,6 @@ export async function runDenyEgressDrill({
     readiness,
     outbound,
     namespaceDigest,
-    composePolicyDigest,
     hostIngressVerified,
     runnerPublicControlVerified
   });
@@ -143,6 +132,7 @@ export async function runDenyEgressDrill({
   }));
   const limitations = [
     'single-container loopback-only namespace evidence, not a multi-host network policy',
+    'static Compose topology is verified by release/deployment checks rather than asserted in runtime evidence',
     'the container host and Docker daemon remain trusted',
     'future external adapters require explicit destination allowlists and separate evidence',
     assertionLimitation(assertedChecks)
@@ -170,8 +160,6 @@ export async function runDenyEgressDrill({
       public_key_pem: publicKeyPem
     },
     boundary: {
-      compose_network_mode_none_required: checks.compose_network_mode_none_required,
-      compose_policy_digest: composePolicyDigest,
       local_ingress_transport: config.gatewaySocket
         ? 'unix-domain-socket'
         : 'loopback-tcp',
@@ -214,8 +202,7 @@ export function verifyDenyEgressEvidence(evidence) {
     evidence.execution?.platform !== 'linux'
     || evidence.execution?.network_namespace !== true
     || !DIGEST.test(evidence.execution?.network_namespace_identity_digest ?? '')
-    || evidence.boundary?.compose_network_mode_none_required !== true
-    || !DIGEST.test(evidence.boundary?.compose_policy_digest ?? '')
+    || Object.hasOwn(evidence.boundary ?? {}, 'compose_network_mode_none_required')
     || evidence.boundary?.ipv4_default_routes !== 0
     || evidence.boundary?.ipv6_default_routes !== 0
     || evidence.boundary?.non_loopback_link_routes !== 0
@@ -230,9 +217,7 @@ export function verifyDenyEgressEvidence(evidence) {
   if (
     evidence.check_provenance.network_namespace_observed.input_artifact_digest
       !== evidence.execution.network_namespace_identity_digest
-    || evidence.check_provenance.compose_network_mode_none_required.input_artifact_digest
-      !== evidence.boundary.compose_policy_digest
-  ) throw new ValidationError('Deny-egress boundary fact provenance binding is invalid');
+  ) throw new ValidationError('Deny-egress namespace provenance binding is invalid');
   if (
     typeof evidence.signer?.public_key_pem !== 'string'
     || evidence.attestation?.key_id !== evidence.signer?.key_id
@@ -265,7 +250,6 @@ function buildCheckProvenance({
   readiness,
   outbound,
   namespaceDigest,
-  composePolicyDigest,
   hostIngressVerified,
   runnerPublicControlVerified
 }) {
@@ -281,13 +265,6 @@ function buildCheckProvenance({
       observedAt,
       subject: 'linux:/proc/self/ns/net',
       inputArtifactDigest: namespaceDigest
-    }),
-    compose_network_mode_none_required: provenanceRecord({
-      source: 'derived',
-      observer: 'network-boundary',
-      observedAt,
-      subject: 'policy:compose.production.yml',
-      inputArtifactDigest: composePolicyDigest
     }),
     ipv4_default_route_absent: provenanceRecord({
       source: 'measured',
@@ -448,20 +425,6 @@ async function resolveNetworkNamespaceIdentity({ platform, value, readlinkImpl }
     throw new ValidationError('Deny-egress network namespace identity is invalid');
   }
   return identity;
-}
-
-async function resolveComposePolicyText({ value, readFileImpl }) {
-  if (value !== undefined) {
-    if (typeof value !== 'string') {
-      throw new ValidationError('Deny-egress Compose policy text is invalid');
-    }
-    return value;
-  }
-  try {
-    return await readFileImpl(new URL('../compose.production.yml', import.meta.url), 'utf8');
-  } catch {
-    throw new ValidationError('Deny-egress Compose policy cannot be read');
-  }
 }
 
 async function probeReadiness({ url, fetchImpl = fetch }) {
