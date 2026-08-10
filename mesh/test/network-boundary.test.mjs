@@ -39,6 +39,13 @@ const IPV6_WITH_DEFAULT = [
   `${'0'.repeat(32)} 00 ${'0'.repeat(32)} 00 ${'0'.repeat(32)} 00000064 00000000 00000000 00000001 eth0`
 ].join('\n');
 
+const TEST_NAMESPACE = 'net:[4026531993]';
+const TEST_COMPOSE = [
+  'services:',
+  '  kernel:',
+  '    network_mode: "none"'
+].join('\n');
+
 test('Linux route inspection requires a loopback-only namespace', async () => {
   const isolated = inspectLinuxRouteTables({ ipv4: IPV4_LOOPBACK_ONLY, ipv6: '' });
   assert.equal(isolated.valid, true);
@@ -155,6 +162,8 @@ test('signed boundary observers bind revision, run, package, socket, and runner 
     },
     signer: grid,
     routeInspection,
+    networkNamespaceIdentity: TEST_NAMESPACE,
+    composePolicyText: TEST_COMPOSE,
     sourceRevision,
     generatedAt: '2026-07-30T15:55:30.000Z',
     platform: 'linux',
@@ -171,6 +180,18 @@ test('signed boundary observers bind revision, run, package, socket, and runner 
   assert.equal(evidence.status, 'passed');
   assert.equal(evidence.assurance, 'passed_measured');
   assert.deepEqual(evidence.asserted_checks, []);
+  assert.equal(evidence.checks.network_namespace_observed, true);
+  assert.equal(evidence.checks.compose_network_mode_none_required, true);
+  assert.equal(evidence.check_provenance.network_namespace_observed.source, 'measured');
+  assert.equal(evidence.check_provenance.compose_network_mode_none_required.source, 'derived');
+  assert.equal(
+    evidence.check_provenance.network_namespace_observed.input_artifact_digest,
+    evidence.execution.network_namespace_identity_digest
+  );
+  assert.equal(
+    evidence.check_provenance.compose_network_mode_none_required.input_artifact_digest,
+    evidence.boundary.compose_policy_digest
+  );
   assert.equal(evidence.check_provenance.host_unix_ingress_verified.source, 'measured');
   assert.equal(evidence.check_provenance.runner_public_control_verified.source, 'measured');
   assert.equal(
@@ -179,6 +200,15 @@ test('signed boundary observers bind revision, run, package, socket, and runner 
   );
   assert.equal(verifyDenyEgressEvidence(evidence).valid, true);
   assert.doesNotMatch(JSON.stringify(evidence), /PRIVATE KEY/);
+
+  const wrongBoundaryDigest = structuredClone(evidence);
+  wrongBoundaryDigest.boundary.compose_policy_digest = 'c'.repeat(64);
+  delete wrongBoundaryDigest.attestation;
+  wrongBoundaryDigest.attestation = grid.signObject(wrongBoundaryDigest);
+  assert.throws(
+    () => verifyDenyEgressEvidence(wrongBoundaryDigest),
+    /boundary fact provenance binding/
+  );
 
   const wrongRun = structuredClone(evidence);
   wrongRun.observer_context.context.run.id = 'different-run';
