@@ -20,6 +20,12 @@ import {
   normalizeIntentRemediationProposal,
   validateIntentRemediationProposalAgainstState
 } from '../lib/intent-remediation.mjs';
+import {
+  deriveExternalEffectGridState,
+  EXTERNAL_EFFECT_COMPLETED_EVENT,
+  EXTERNAL_EFFECT_PREPARED_EVENT,
+  preflightExternalEffectCommit
+} from '../lib/external-effect-outbox.mjs';
 
 const CHECKPOINT_BOUNDARY_REASONS = new Set([
   'payload_decryption_failed',
@@ -58,9 +64,39 @@ export class GridStore extends CheckpointGridStore {
 
   appendEvents({ traceId, actor, events }) {
     if (Array.isArray(events)) {
+      if (events.some(event => typeof event?.kind === 'string' && event.kind.startsWith('external.effect.'))) {
+        this.requireIntentEvidenceChain();
+        preflightExternalEffectCommit({
+          actor,
+          events,
+          loadPersistedEvents: effectId => this.externalEffectEvents(effectId)
+        });
+      }
       for (const event of events) this.preflightIntentEvidenceEvent(event, actor);
     }
     return super.appendEvents({ traceId, actor, events });
+  }
+
+  externalEffectEvents(effectId) {
+    return this.db.prepare(`
+      SELECT * FROM events
+      WHERE subject = ?
+        AND kind IN (?, ?)
+      ORDER BY seq
+    `).all(
+      effectId,
+      EXTERNAL_EFFECT_PREPARED_EVENT,
+      EXTERNAL_EFFECT_COMPLETED_EVENT
+    ).map(row => this.decodeEventRow(row));
+  }
+
+  getExternalEffect(effectId) {
+    this.requireIntentEvidenceChain();
+    const events = this.externalEffectEvents(effectId);
+    if (!events.length) {
+      throw new AxiomError('external_effect_not_found', 'External effect was not found', 404);
+    }
+    return deriveExternalEffectGridState(events, effectId);
   }
 
   preflightIntentEvidenceEvent(rawEvent, actor) {
