@@ -47,7 +47,7 @@ const EXPECTED_FLOW_IDS = Object.freeze([
   'sandbox-self-health'
 ]);
 const EXPECTED_POLICY_DIGEST =
-  'f2bc6c899f7f252452b191110520806d9ab21c61a07885156d69bd562c929a92';
+  'f8b84ef64073607fc84512c1b05b0f3a7dd02b156a2386a7328d59c91712a3a5';
 
 export const ACTIVE_SERVICE_NETWORK_POLICY = deepFreeze(
   validateServiceNetworkPolicy(JSON.parse(readFileSync(
@@ -380,6 +380,7 @@ function validateExactCurrentRoutes(flows) {
   const required = {
     'gateway-to-hypervisor': [
       'GET /internal/v1/operations',
+      'POST /internal/v1/machine-discovery',
       'POST /internal/v1/intents'
     ],
     'hypervisor-to-grid': [
