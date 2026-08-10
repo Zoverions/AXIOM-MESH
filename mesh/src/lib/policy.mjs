@@ -115,7 +115,6 @@ function hasScope(scopes, required) {
 
 export class PolicyEngine {
   constructor(policy, { layers } = {}) {
-    validatePolicy(policy);
     this.policy = structuredClone(policy);
     this.digest = digestObject(policy);
     this.layers = structuredClone(layers ?? [{
