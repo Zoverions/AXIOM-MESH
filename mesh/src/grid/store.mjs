@@ -15,6 +15,11 @@ import {
   validateActivationSupersession,
   validateAttestationAgainstActivation
 } from '../lib/intent-grid-evidence.mjs';
+import {
+  isIntentRemediationAction,
+  normalizeIntentRemediationProposal,
+  validateIntentRemediationProposalAgainstState
+} from '../lib/intent-remediation.mjs';
 
 const CHECKPOINT_BOUNDARY_REASONS = new Set([
   'payload_decryption_failed',
@@ -62,14 +67,27 @@ export class GridStore extends CheckpointGridStore {
     if (!rawEvent || typeof rawEvent !== 'object' || Array.isArray(rawEvent)) return;
     if (rawEvent.kind === 'governance.proposed') {
       const payload = rawEvent.payload;
+      const specialAction = this.isIntentActivationAction(payload?.action)
+        || isIntentRemediationAction(payload?.action);
       if (!payload || payload.proposer !== actor) {
-        if (this.isIntentActivationAction(payload?.action)) {
-          throw new ValidationError('Intent activation proposer must match the authenticated actor');
+        if (specialAction) {
+          throw new ValidationError('Intent governance proposer must match the authenticated actor');
         }
         return;
       }
       if (this.isIntentActivationAction(payload.action)) {
         normalizeIntentActivationRecord(payload.action.payload.activation);
+      }
+      if (isIntentRemediationAction(payload.action)) {
+        this.requireIntentEvidenceChain();
+        const proposal = normalizeIntentRemediationProposal(payload.action.payload.remediation);
+        const state = this.getIntentContractAssessmentFromVerifiedState(proposal.contract_id, {
+          now: proposal.basis_evaluated_at
+        });
+        validateIntentRemediationProposalAgainstState(proposal, state, {
+          actor,
+          now: new Date().toISOString()
+        });
       }
       return;
     }
@@ -77,15 +95,31 @@ export class GridStore extends CheckpointGridStore {
     if (rawEvent.kind === 'governance.activated') {
       const proposalId = rawEvent.payload?.proposal_id;
       if (typeof proposalId !== 'string') return;
-      const proposal = this.intentActivationProposal(proposalId);
-      if (!proposal) return;
-      const current = this.currentIntentActivation(proposal.activation.contract_id, {
-        excludeProposalId: proposalId
-      });
-      validateActivationSupersession(
-        proposal.activation,
-        current?.activation ?? null
-      );
+      const activationProposal = this.intentActivationProposal(proposalId);
+      if (activationProposal) {
+        const current = this.currentIntentActivation(activationProposal.activation.contract_id, {
+          excludeProposalId: proposalId
+        });
+        validateActivationSupersession(
+          activationProposal.activation,
+          current?.activation ?? null
+        );
+        return;
+      }
+      const remediation = this.intentRemediationProposal(proposalId);
+      if (remediation) {
+        this.requireIntentEvidenceChain();
+        if (remediation.remediation.creator !== remediation.proposer) {
+          throw new ValidationError('Intent remediation creator does not match governance proposer');
+        }
+        const state = this.getIntentContractAssessmentFromVerifiedState(
+          remediation.remediation.contract_id,
+          { now: remediation.remediation.basis_evaluated_at }
+        );
+        validateIntentRemediationProposalAgainstState(remediation.remediation, state, {
+          now: new Date().toISOString()
+        });
+      }
       return;
     }
 
@@ -148,21 +182,41 @@ export class GridStore extends CheckpointGridStore {
     );
   }
 
-  intentActivationProposal(proposalId) {
+  governanceProposalAction(proposalId) {
     const row = this.db.prepare(`
       SELECT proposal_id, proposer, status, action_json, activated_at, rolled_back_at
       FROM proposals WHERE proposal_id = ?
     `).get(proposalId);
     if (!row) return null;
-    const action = this.openJson('proposals', 'action_json', row.proposal_id, row.action_json);
-    if (!this.isIntentActivationAction(action)) return null;
+    return {
+      ...row,
+      action: this.openJson('proposals', 'action_json', row.proposal_id, row.action_json)
+    };
+  }
+
+  intentActivationProposal(proposalId) {
+    const row = this.governanceProposalAction(proposalId);
+    if (!row || !this.isIntentActivationAction(row.action)) return null;
     return {
       proposal_id: row.proposal_id,
       proposer: row.proposer,
       status: row.status,
       activated_at: row.activated_at,
       rolled_back_at: row.rolled_back_at,
-      activation: normalizeIntentActivationRecord(action.payload.activation)
+      activation: normalizeIntentActivationRecord(row.action.payload.activation)
+    };
+  }
+
+  intentRemediationProposal(proposalId) {
+    const row = this.governanceProposalAction(proposalId);
+    if (!row || !isIntentRemediationAction(row.action)) return null;
+    return {
+      proposal_id: row.proposal_id,
+      proposer: row.proposer,
+      status: row.status,
+      activated_at: row.activated_at,
+      rolled_back_at: row.rolled_back_at,
+      remediation: normalizeIntentRemediationProposal(row.action.payload.remediation)
     };
   }
 
@@ -381,13 +435,65 @@ export class GridStore extends CheckpointGridStore {
     };
   }
 
+  remediationProposalState(proposal) {
+    try {
+      const state = this.getIntentContractAssessmentFromVerifiedState(proposal.contract_id, {
+        now: proposal.basis_evaluated_at
+      });
+      validateIntentRemediationProposalAgainstState(proposal, state, {
+        now: new Date().toISOString()
+      });
+      return {
+        current: true,
+        reason: 'matches_current_authenticated_intent_state',
+        execution_authorized: false
+      };
+    } catch (error) {
+      return {
+        current: false,
+        reason: error?.code ?? 'stale_or_invalid_remediation_proposal',
+        detail: error?.message ?? String(error),
+        execution_authorized: false
+      };
+    }
+  }
+
+  renderIntentRemediationState(proposal, governanceStatus) {
+    const state = this.remediationProposalState(proposal);
+    return {
+      schema: 'axiom-intent-remediation-governance-state.v1',
+      remediation_proposal_id: proposal.remediation_proposal_id,
+      remediation_proposal_digest: proposal.remediation_proposal_digest,
+      basis_digest: proposal.basis_digest,
+      contract_id: proposal.contract_id,
+      activation_digest: proposal.activation_digest,
+      source_assessment_digest: proposal.source_assessment_digest,
+      source_reconciliation_digest: proposal.source_reconciliation_digest,
+      reconciliation_state: proposal.reconciliation_state,
+      action_counts: {
+        autonomous: proposal.actions.filter(item => item.decision === 'autonomous').length,
+        approval_required: proposal.actions.filter(item => item.decision === 'approval_required').length,
+        deny: proposal.actions.filter(item => item.decision === 'deny').length
+      },
+      governance_status: governanceStatus,
+      current: state.current,
+      current_reason: state.reason,
+      ...(state.current ? {} : { current_detail: state.detail }),
+      execution_authorized: false,
+      non_claim: 'Governance status records review/ratification only; no remediation action is executed by AXIOM Intent v0.5.'
+    };
+  }
+
   listProposals(options = {}) {
     const proposals = super.listProposals(options);
     const activeIntentProposals = proposals.filter(proposal => (
       ['active', 'verified'].includes(proposal.status)
       && this.isIntentActivationAction(proposal.action_json)
     ));
-    if (!activeIntentProposals.length) return proposals;
+    const remediationProposals = proposals.filter(proposal => (
+      isIntentRemediationAction(proposal.action_json)
+    ));
+    if (!activeIntentProposals.length && !remediationProposals.length) return proposals;
 
     this.requireIntentEvidenceChain();
     const statesByProposal = new Map();
@@ -398,12 +504,24 @@ export class GridStore extends CheckpointGridStore {
       const fullState = this.getIntentContractAssessmentFromVerifiedState(contractId);
       statesByProposal.set(
         fullState.governance.proposal_id,
-        this.renderIntentGovernanceState(fullState)
+        { intent_state: this.renderIntentGovernanceState(fullState) }
       );
     }
-    return proposals.map(proposal => {
-      const intentState = statesByProposal.get(proposal.proposal_id);
-      return intentState ? { ...proposal, intent_state: intentState } : proposal;
-    });
+    for (const proposal of remediationProposals) {
+      const remediation = normalizeIntentRemediationProposal(
+        proposal.action_json.payload.remediation
+      );
+      statesByProposal.set(proposal.proposal_id, {
+        ...(statesByProposal.get(proposal.proposal_id) ?? {}),
+        intent_remediation_state: this.renderIntentRemediationState(
+          remediation,
+          proposal.status
+        )
+      });
+    }
+    return proposals.map(proposal => ({
+      ...proposal,
+      ...(statesByProposal.get(proposal.proposal_id) ?? {})
+    }));
   }
 }
