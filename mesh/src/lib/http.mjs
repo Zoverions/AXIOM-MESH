@@ -141,6 +141,7 @@ export function createServiceServer({
   authorizeRequest
 }) {
   const logger = createStructuredLogger(name);
+  const requestAdmission = admitRequest ?? authenticate?.admitRequest;
   const handleRequest = async (req, res) => {
     const started = performance.now();
     const traceId = validTraceId(req.headers['x-trace-id']) ? req.headers['x-trace-id'] : newId('trace');
@@ -191,8 +192,8 @@ export function createServiceServer({
           principal
         });
       }
-      if (principal && admitRequest) {
-        const release = await admitRequest({
+      if (principal && requestAdmission) {
+        const release = await requestAdmission({
           req,
           body,
           url,
