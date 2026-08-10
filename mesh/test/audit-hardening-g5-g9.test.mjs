@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import {
@@ -194,4 +195,20 @@ test('incident plans reject inherited action-map names after canonical validatio
     roles,
     actions: [...severity.required_actions, 'constructor']
   }), /Incident plan action is unknown: constructor/);
+});
+
+test('audit hardening reviewability and maintenance clarifications remain explicit', async () => {
+  const [product, contributing, boundaryCore, storeCore] = await Promise.all([
+    readFile(new URL('../../docs/rebuild/PRODUCT-DEFINITION.md', import.meta.url), 'utf8'),
+    readFile(new URL('../../CONTRIBUTING.md', import.meta.url), 'utf8'),
+    readFile(new URL('../src/_network-boundary-core.mjs', import.meta.url), 'utf8'),
+    readFile(new URL('../src/grid/_store-core.mjs', import.meta.url), 'utf8')
+  ]);
+
+  assert.match(product, /deterministic capability executor for the fixed built-in/);
+  assert.match(product, /general-purpose arbitrary-\s+code isolation sandbox/);
+  assert.match(contributing, /search the supported tree for equivalent/);
+  assert.match(contributing, /regression coverage for the\s+class, not only the first instance/);
+  assert.match(boundaryCore, /^\/\/ RETAINED LOWER LAYER:/);
+  assert.match(storeCore, /^\/\/ RETAINED LOWER LAYER:/);
 });
