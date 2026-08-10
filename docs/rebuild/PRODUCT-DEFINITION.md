@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=ded69f9d09f9c610a9f3345a9e24fe2ee830caad4ea28806c5641f454ebd2f1b -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=9bcf52b96437102436d3f19eaf62a65c844dbdb2f4e63c7c0613c0d7510a619d -->
 # AXIOM-MESH Product Definition
 
 **Status:** canonical rebuild and product definition

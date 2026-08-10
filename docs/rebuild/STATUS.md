@@ -4,7 +4,7 @@
 Registry schema: `axiom-capabilities.v1`
 Kernel version: `0.12.0-dev.3`
 Evidence verified: `2026-08-10`
-Registry digest: `ded69f9d09f9c610a9f3345a9e24fe2ee830caad4ea28806c5641f454ebd2f1b`
+Registry digest: `9bcf52b96437102436d3f19eaf62a65c844dbdb2f4e63c7c0613c0d7510a619d`
 
 Only **implemented** capabilities are runnable claims.
 
@@ -13,7 +13,7 @@ Only **implemented** capabilities are runnable claims.
 - adapter_required: 9
 - disabled: 4
 - experimental: 3
-- implemented: 30
+- implemented: 31
 - specified: 2
 
 ## Registry
@@ -23,6 +23,7 @@ Only **implemented** capabilities are runnable claims.
 | `core.intent-loop` | core | **implemented** | Authenticated intent-to-plan-to-grant-to-execution-to-evidence pipeline. |
 | `core.machine-principals` | core | **implemented** | Authenticated agent principals are human-sponsored and deny-dominantly bounded by finite scopes, action and purpose ceilings, runtime identity, expiry, non-delegation, an execution-time ceiling, authenticated Gateway ingress ceilings for request size, request rate, concurrency, and response size, and an AXIOM-computed effect destination that must remain within the principal's finite destination ceiling; infrastructure service principals remain backward-compatible unless they opt into the same constrained profile. |
 | `core.machine-discovery` | core | **implemented** | Authenticated constrained-machine discovery exposes a digest-bound principal-specific intersection of active deny-dominant allow rules, required scopes, finite machine actions, verified effect destinations, purposes, and budgets through the existing Gateway with an explicit non-authorization notice; actual execution still requires normal intent evaluation. |
+| `core.machine-receipts` | verification | **implemented** | Authenticated constrained machines can retrieve owner-scoped Grid-attested receipts for terminal intents; receipts bind canonical request and machine-authority digests, accepted and terminal Grid event anchors, current chain-assurance metadata, and terminal result/error digests, and can be independently verified against the trusted Grid public key without exposing raw result/error content. |
 | `core.evidence-chain` | audit | **implemented** | Transactional SHA-256 hash-linked evidence log with restart verification. |
 | `core.layered-policy` | governance | **implemented** | Runtime policy stacks merge global-to-user constraints deny-dominantly and require independent approval for every permitted high-risk effect. |
 | `capsules.registry` | capsules | **implemented** | Immutable digest-addressed capsule manifests with signature verification, schemas, SBOM digest, and revocation state. |
@@ -55,7 +56,7 @@ Only **implemented** capabilities are runnable claims.
 | `economics.token-bridge-liquidity` | economics | **disabled** | AXM, bonds, rewards, treasury, bridges, and liquidity remain disabled pending reconciled policy, tests, deployment evidence, and external audit. |
 | `zk.proof-verifiers` | verification | **adapter_required** | A proof is accepted only with a named circuit, verification key, public-input schema, and verifier adapter. |
 | `ui.operator-api` | operations | **implemented** | Authenticated operator API for intent submission, status, audit, recovery, and governed state inspection. |
-| `ui.gateway-client` | operations | **implemented** | A versioned same-origin Gateway client contract covers all 28 authenticated routes with exact route parity, bounded responses and timeouts, AbortSignal cancellation, stable idempotent intent results, explicit errors, and no direct internal-service access. |
+| `ui.gateway-client` | operations | **implemented** | A versioned same-origin Gateway client contract covers all 29 authenticated routes with exact route parity, bounded responses and timeouts, AbortSignal cancellation, stable idempotent intent results, explicit errors, and no direct internal-service access. |
 | `ui.cli` | operations | **implemented** | Command-line operator client with explicit input validation and fail-closed API error handling. |
 | `ui.dashboard` | operations | **experimental** | A loopback-only AXIOM One PWA preview provides node status, reversible review for echo plus four governed memory lifecycle actions, exact explanations for all stable Gateway outcomes and current kernel events, approval-state distinctions, same-key uncertainty recovery, owner-scoped private-note creation, three fixed directional provenance links with correction-without-replacement, confirmation-bound tombstoning, selective local export with explicit bundle reveal, unavailable-sharing, and raw evidence surfaces; it is not a supported product, edge-deletion/hard-delete/restore interface, authoritative pre-execution kernel plan, or completed browser-security boundary. |
 | `operations.observability` | operations | **implemented** | Bounded four-service telemetry is scraped over least-privilege Unix-socket access and relayed as OTLP/HTTP JSON with fixed attributes; static alerts route through Alertmanager v2 using HTTPS allowlists, reserved queue capacity, bounded retry, redaction, and delivery audit; signed request-pressure and dependency-loss evidence proves bounded rejection, degradation, fail-closed exit, restart, and state preservation. |
