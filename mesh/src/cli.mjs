@@ -132,7 +132,7 @@ export async function runCli(argv, {
       }
       const page = await request('/v1/proposals?limit=100');
       const proposal = page.proposals?.find(item => (
-        item.intent_state?.activation?.contract_id === contractId
+        item.intent_state?.contract_id === contractId
       ));
       if (!proposal?.intent_state) {
         const error = new Error(
