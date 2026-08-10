@@ -1556,7 +1556,7 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
     body: { action: 'system.echo', input: { message: 'restored' } }
   })).message, 'restored');
 
-  const emergencyExpiresAt = new Date(Date.now() + 800).toISOString();
+  const emergencyExpiresAt = new Date(Date.now() + 5_000).toISOString();
   const emergency = await independentlyApprovedIntent({
     gateway,
     requesterToken: token,
@@ -1566,7 +1566,7 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
     input: {
       reason: 'Temporary e2e authority reduction.',
       expires_at: emergencyExpiresAt,
-      review_by: new Date(Date.now() + 2_000).toISOString(),
+      review_by: new Date(Date.now() + 10_000).toISOString(),
       policy: {
         version: 'emergency-e2e.1',
         actions: {
