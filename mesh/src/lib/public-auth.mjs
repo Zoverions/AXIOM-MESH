@@ -29,5 +29,11 @@ export function createBearerAuthenticator(principals, {
   authenticate.admitRequest = ({ principal }) => (
     machineIngress.acquireConcurrency(principal)
   );
+  authenticate.inspectResponse = ({ principal, responseBytes }) => (
+    machineIngress.enforceResponse(principal, { responseBytes })
+  );
+  authenticate.inspectResponse.requiresPreflight = ({ principal }) => (
+    principal?.schema === 'axiom-machine-principal.v1'
+  );
   return authenticate;
 }
