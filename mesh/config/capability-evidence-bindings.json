@@ -44,12 +44,9 @@
         "assert.equal(result.status, 'completed');",
         "assert.equal(result.evidence.machine_sponsor, 'owner.machine-test');",
         "assert.match(result.evidence.machine_authority_digest, /^[a-f0-9]{64}$/);",
-        "assert.equal(result.evidence.effect_destination, 'local');",
-        "assert.equal(accepted.payload.invocation.authority.effect_destination, 'local');",
+        "assert.deepEqual(machineBoundary, expectedMachineBoundary);",
         "assert.equal(error.code, 'machine_request_budget_exceeded');",
         "assert.equal(error.code, 'machine_rate_budget_exceeded');",
-        "assert.equal(accepted.payload.invocation.limits.ingress.max_concurrent_requests, 1);",
-        "assert.equal(accepted.payload.invocation.limits.ingress.max_response_bytes, 262_144);",
         "assert.equal(error.code, 'machine_response_budget_exceeded');"
       ]
     },
