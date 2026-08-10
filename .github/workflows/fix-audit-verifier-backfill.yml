@@ -1,0 +1,173 @@
+name: Fix audit verifier backfill
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.head_ref == 'security/audit-remediation-g1-g4-2026-08-10'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: security/audit-remediation-g1-g4-2026-08-10
+      - name: Backfill crash fixture and release verifier
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              if new in text:
+                  return False
+              if old not in text:
+                  raise SystemExit(f'missing anchor in {path}: {old[:100]}')
+              p.write_text(text.replace(old, new, 1))
+              return True
+
+          # Existing crash-recovery fixture must explicitly opt into test-only fault injection.
+          replace_once(
+              'mesh/test/backup-maintenance.test.mjs',
+              "        ...process.env,\n        AXIOM_TEST_BACKUP_RETENTION_CRASH_AFTER_MOVE: '1'",
+              "        ...process.env,\n        NODE_ENV: 'test',\n        AXIOM_TEST_BACKUP_RETENTION_CRASH_AFTER_MOVE: '1'"
+          )
+
+          # Backfill the production operator guide missed by the first D-1 pass.
+          replace_once(
+              'mesh/PRODUCTION.md',
+              'policy additionally authorizes only 38 exact caller/destination/method/route',
+              'policy additionally authorizes only 39 exact caller/destination/method/route'
+          )
+
+          release = Path('mesh/src/release.mjs')
+          text = release.read_text()
+          text = text.replace(
+              "    '38 exact caller/destination/method/route',",
+              "    '39 exact caller/destination/method/route',"
+          )
+          text = text.replace(
+              "    'node-version: \"24.18.0\"',\n    'npm run setup:install',",
+              "    'node-version: \"24.18.0\"',\n"
+              "    'runs-on: ubuntu-24.04',\n"
+              "    'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7',\n"
+              "    'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7',\n"
+              "    'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7',\n"
+              "    '- \"apps/**\"',\n"
+              "    '- \"packages/**\"',\n"
+              "    'npm run setup:install',"
+          )
+          text = text.replace("    'actions/upload-artifact@v7',\n", '')
+          anchor = "  return {\n    schema: 'axiom-deployment-policy.v1',"
+          guard = """  for (const [required, minimum] of [
+    ['runs-on: ubuntu-24.04', 2],
+    ['- \"apps/**\"', 2],
+    ['- \"packages/**\"', 2]
+  ]) {
+    const count = workflow.split(required).length - 1;
+    if (count < minimum) {
+      throw new ValidationError(
+        `Kernel CI workflow requires ${minimum} occurrences of: ${required}`
+      );
+    }
+  }
+  if (
+    /uses:\\s+actions\\/(?:checkout|setup-node|upload-artifact)@v[0-9]+\\b/.test(workflow)
+    || workflow.includes('runs-on: ubuntu-latest')
+  ) {
+    throw new ValidationError(
+      'Kernel CI workflow contains a mutable action or runner reference'
+    );
+  }
+""" + anchor
+          if guard not in text:
+              if anchor not in text:
+                  raise SystemExit('release verifier return anchor missing')
+              text = text.replace(anchor, guard, 1)
+          release.write_text(text)
+
+          # Make mesh/PRODUCTION.md's route count part of the computed documentation parity gate.
+          docs = Path('mesh/src/check-docs.mjs')
+          text = docs.read_text()
+          old = "    ['docs/PRODUCTION-GRADE.md', `permits only ${network.routes} current internal`],\n"
+          new = old + "    ['mesh/PRODUCTION.md', `policy additionally authorizes only ${network.routes} exact caller/destination/method/route`],\n"
+          if new not in text:
+              if old not in text:
+                  raise SystemExit('check-docs production claim anchor missing')
+              text = text.replace(old, new, 1)
+          docs.write_text(text)
+
+          # Negative release-verifier tests: the old mutable pattern and partial path coverage must fail.
+          ops = Path('mesh/test/operations.test.mjs')
+          text = ops.read_text()
+          anchor = "  assert.deepEqual(result.transport, {\n    protocol: 'TLSv1.3',\n    mutually_authenticated: true,\n    exact_active_leaf_pinning: true,\n    offline_atomic_rotation: true\n  });\n"
+          addition = anchor + """  assert.throws(() => verifyProductionDeployment({
+    dockerfile,
+    dockerignore,
+    compose,
+    unitCompose,
+    productionDocs,
+    packageJson,
+    backupRetentionPolicy,
+    credentialRevocations,
+    incidentResponsePolicy,
+    telemetryRoutingPolicy,
+    resilienceDrillPolicy,
+    workflow: workflow.replace(
+      'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7',
+      'actions/upload-artifact@v7'
+    ),
+    repositoryIgnore
+  }), /mutable action|missing: actions\\/upload-artifact/);
+  assert.throws(() => verifyProductionDeployment({
+    dockerfile,
+    dockerignore,
+    compose,
+    unitCompose,
+    productionDocs,
+    packageJson,
+    backupRetentionPolicy,
+    credentialRevocations,
+    incidentResponsePolicy,
+    telemetryRoutingPolicy,
+    resilienceDrillPolicy,
+    workflow: workflow.replace('runs-on: ubuntu-24.04', 'runs-on: ubuntu-latest'),
+    repositoryIgnore
+  }), /requires 2 occurrences|mutable action or runner/);
+  assert.throws(() => verifyProductionDeployment({
+    dockerfile,
+    dockerignore,
+    compose,
+    unitCompose,
+    productionDocs,
+    packageJson,
+    backupRetentionPolicy,
+    credentialRevocations,
+    incidentResponsePolicy,
+    telemetryRoutingPolicy,
+    resilienceDrillPolicy,
+    workflow: workflow.replace('      - \"apps/**\"\\n', ''),
+    repositoryIgnore
+  }), /requires 2 occurrences of: - \"apps/);
+"""
+          if addition not in text:
+              if anchor not in text:
+                  raise SystemExit('operations transport assertion anchor missing')
+              text = text.replace(anchor, addition, 1)
+          ops.write_text(text)
+          PY
+          if git diff --quiet -- mesh; then
+            echo 'Verifier backfill already applied.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add mesh
+          git commit -m 'test: backfill security fixes into release verification'
+          git push origin HEAD:security/audit-remediation-g1-g4-2026-08-10
