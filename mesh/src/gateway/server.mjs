@@ -396,6 +396,8 @@ export async function createGatewayService(config = meshConfig()) {
     router,
     maxBodyBytes: config.maxBodyBytes,
     telemetry,
+    admitRequest: bearerAuth.admitRequest,
+    inspectResponse: bearerAuth.inspectResponse,
     authenticate: async args => {
       const key = sha256(args.req.socket.remoteAddress ?? 'unknown');
       if (!ipLimiter.take(key)) throw new AxiomError('rate_limited', 'IP request rate limit exceeded', 429);
