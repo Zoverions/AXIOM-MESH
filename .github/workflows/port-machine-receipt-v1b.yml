@@ -1,0 +1,313 @@
+name: Port machine receipt onto hardened main
+
+on:
+  push:
+    branches:
+      - "feat/machine-receipt-verification-v1b-2026-08-10"
+
+permissions:
+  contents: write
+
+jobs:
+  port:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: feat/machine-receipt-verification-v1b-2026-08-10
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24.18.0"
+          package-manager-cache: false
+      - name: Port receipt-specific changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin feat/machine-receipt-verification-v1-2026-08-10:refs/remotes/origin/receipt-old
+          python - <<'PY'
+          import json
+          import subprocess
+          from pathlib import Path
+
+          OLD = 'origin/receipt-old'
+
+          def old_file(path):
+              return subprocess.check_output(['git', 'show', f'{OLD}:{path}'], text=True)
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              if new in text:
+                  return False
+              if old not in text:
+                  raise SystemExit(f'missing anchor in {path}: {old[:140]!r}')
+              p.write_text(text.replace(old, new, 1))
+              return True
+
+          # New source/tests can be copied exactly, except the E2E cross-owner assertion
+          # is tightened below to avoid an existence oracle.
+          for path in [
+              'mesh/test/machine-receipt.test.mjs',
+              'mesh/test/machine-receipt-client.test.mjs',
+              'mesh/test/machine-receipt-network.test.mjs',
+              'mesh/test/machine-receipt-e2e.test.mjs'
+          ]:
+              Path(path).write_text(old_file(path))
+
+          # Gateway client contract: insert the receipt route into the current hardened
+          # 28-route contract without reverting #929 read scopes/limits.
+          contract_path = Path('mesh/config/gateway-client-contract.json')
+          contract = json.loads(contract_path.read_text())
+          receipt_route = {
+              'id': 'machine_receipts.verify',
+              'method': 'GET',
+              'path': '/v1/machine-receipts/intents/:id/verify',
+              'access': 'constrained-machine-owner',
+              'idempotency': 'not_applicable',
+              'path_parameters': ['id'],
+              'query_parameters': [],
+              'request_schema': None,
+              'response_schema': 'axiom-machine-intent-receipt.v1',
+              'required_response_fields': ['schema','statement','attestation','receipt_digest'],
+              'response_media_type': 'application/json'
+          }
+          if not any(route['id'] == receipt_route['id'] for route in contract['routes']):
+              index = next(i for i, route in enumerate(contract['routes']) if route['id'] == 'status.get')
+              contract['routes'].insert(index, receipt_route)
+          contract_path.write_text(json.dumps(contract, indent=2) + '\n')
+
+          # Service network: add only the exact Gateway -> Grid GET route.
+          net_path = Path('mesh/config/service-network-policy.json')
+          network = json.loads(net_path.read_text())
+          flow = next(item for item in network['flows'] if item['id'] == 'gateway-to-grid')
+          receipt_internal = {
+              'method': 'GET',
+              'path': '/internal/v1/machine-receipts/intents/:id/verify'
+          }
+          if receipt_internal not in flow['routes']:
+              anchor = next(i for i, route in enumerate(flow['routes']) if route['path'] == '/internal/v1/intents/:id')
+              flow['routes'].insert(anchor + 1, receipt_internal)
+          net_path.write_text(json.dumps(network, indent=2) + '\n')
+
+          # Gateway public route, inserted after machine discovery on hardened source.
+          gateway_route = """  router.add('GET', '/v1/machine-receipts/intents/:id/verify', async ({
+    params,
+    traceId,
+    principal
+  }) => {
+    if (principal.schema !== 'axiom-machine-principal.v1') {
+      throw new AxiomError(
+        'forbidden',
+        'Machine receipt verification requires a constrained machine principal',
+        403
+      );
+    }
+    const intentId = assertString(params.id, 'intent_id', {
+      max: 160,
+      pattern: /^intent_[a-f0-9]{64}$/
+    });
+    return gridGet(
+      `/internal/v1/machine-receipts/intents/${encodeURIComponent(intentId)}`
+        + `/verify?principal=${encodeURIComponent(principal.id)}`,
+      traceId
+    );
+  });
+
+"""
+          p = Path('mesh/src/gateway/server.mjs')
+          text = p.read_text()
+          if gateway_route not in text:
+              anchor = "  router.add('GET', '/v1/status', async ({ traceId }) => {\n"
+              if anchor not in text:
+                  raise SystemExit('gateway status anchor missing')
+              text = text.replace(anchor, gateway_route + anchor, 1)
+          p.write_text(text)
+
+          # GridStore helper on the retained hardened lower layer.
+          store_method = """  listIntentEvents(intentId) {
+    assertString(intentId, 'intent_id', { max: 160, pattern: ID });
+    return this.db.prepare(`
+      SELECT * FROM events
+      WHERE subject = ?
+        AND kind IN ('intent.accepted', 'intent.completed', 'intent.denied', 'intent.failed')
+      ORDER BY seq
+    `).all(intentId).map(row => this.decodeEventRow(row));
+  }
+
+"""
+          p = Path('mesh/src/grid/_store-core.mjs')
+          text = p.read_text()
+          if store_method not in text:
+              anchor = "  listEvents({ after = 0, limit = 100, actor } = {}) {\n"
+              if anchor not in text:
+                  raise SystemExit('GridStore listEvents anchor missing')
+              text = text.replace(anchor, store_method + anchor, 1)
+          p.write_text(text)
+
+          # Grid route. Normalize both nonexistent and foreign-owned receipt lookup to the
+          # same public-facing 404, avoiding an intent-existence oracle.
+          p = Path('mesh/src/grid/server.mjs')
+          text = p.read_text()
+          text = text.replace(
+              "import { ValidationError, assertPlainObject, assertString } from '../lib/canonical.mjs';",
+              "import { AxiomError, ValidationError, assertPlainObject, assertString } from '../lib/canonical.mjs';"
+          )
+          receipt_import = "import { buildMachineIntentReceipt } from '../lib/machine-receipt.mjs';\n"
+          if receipt_import not in text:
+              anchor = "import { runServiceProcess } from '../lib/service-lifecycle.mjs';\n"
+              if anchor not in text:
+                  raise SystemExit('Grid receipt import anchor missing')
+              text = text.replace(anchor, anchor + receipt_import, 1)
+          grid_route = """  router.add('GET', '/internal/v1/machine-receipts/intents/:id/verify', async ({ params, url }) => {
+    const intentId = assertString(params.id, 'intent_id', {
+      max: 160,
+      pattern: /^intent_[a-f0-9]{64}$/
+    });
+    const requester = assertString(url.searchParams.get('principal'), 'principal', {
+      max: 160,
+      pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
+    });
+    let intent;
+    try {
+      intent = store.getIntent(intentId);
+    } catch (error) {
+      if (error?.code === 'intent_not_found') {
+        throw new AxiomError('not_found', 'Machine intent receipt was not found', 404);
+      }
+      throw error;
+    }
+    if (intent.principal !== requester) {
+      throw new AxiomError('not_found', 'Machine intent receipt was not found', 404);
+    }
+    return buildMachineIntentReceipt({
+      intent,
+      events: store.listIntentEvents(intentId),
+      chain: store.verifyChain(),
+      identity,
+      kernelVersion: '0.12.0-dev.3'
+    });
+  });
+"""
+          if grid_route not in text:
+              anchor = "  router.add('GET', '/internal/v1/events', async ({ url }) => ({\n"
+              if anchor not in text:
+                  raise SystemExit('Grid events route anchor missing')
+              text = text.replace(anchor, grid_route + anchor, 1)
+          p.write_text(text)
+
+          # Tighten old E2E foreign-owner expectation to the normalized 404.
+          p = Path('mesh/test/machine-receipt-e2e.test.mjs')
+          text = p.read_text().replace(
+              "error => error.code === 'forbidden' && error.status === 403\n  );\n  await assert.rejects(\n    () => human.call",
+              "error => error.code === 'not_found' && error.status === 404\n  );\n  await assert.rejects(\n    () => human.call",
+              1
+          )
+          p.write_text(text)
+
+          # Existing inventory tests.
+          replace_once(
+              'mesh/test/gateway-client-contract.test.mjs',
+              "  assert.equal(result.routes, 28);\n  assert.equal(result.implemented_routes, 28);",
+              "  assert.equal(result.routes, 29);\n  assert.equal(result.implemented_routes, 29);"
+          )
+          replace_once(
+              'mesh/test/service-network-policy.test.mjs',
+              "  assert.equal(result.routes, 39);",
+              "  assert.equal(result.routes, 40);"
+          )
+          replace_once(
+              'mesh/test/service-network-policy.test.mjs',
+              "  assert.equal(implementation.implemented_routes, 35);",
+              "  assert.equal(implementation.implemented_routes, 36);"
+          )
+
+          # Route-count assertions and docs that #929 made load-bearing.
+          for path in ['README.md', 'docs/PRODUCTION-GRADE.md']:
+              replace_once(path, 'permits only 39 current internal', 'permits only 40 current internal')
+          replace_once(
+              'mesh/PRODUCTION.md',
+              'policy additionally authorizes only 39 exact caller/destination/method/route',
+              'policy additionally authorizes only 40 exact caller/destination/method/route'
+          )
+          replace_once(
+              'mesh/src/release.mjs',
+              "    '39 exact caller/destination/method/route',",
+              "    '40 exact caller/destination/method/route',"
+          )
+
+          # Gateway client operator doc: update count and add the new machine-only route.
+          doc = Path('docs/operations/GATEWAY-CLIENT-CONTRACT.md')
+          text = doc.read_text()
+          text = text.replace('28 authenticated Gateway routes', '29 authenticated Gateway routes')
+          text = text.replace('all 28 authenticated Gateway routes', 'all 29 authenticated Gateway routes')
+          receipt_line = '- `GET /v1/machine-receipts/intents/:id/verify` — constrained-machine owner only; returns a Grid-attested digest-only verification receipt.\n'
+          if receipt_line not in text:
+              anchor = '- `GET /v1/machine-discovery`'
+              pos = text.find(anchor)
+              if pos < 0:
+                  raise SystemExit('Gateway client doc machine-discovery anchor missing')
+              line_end = text.find('\n', pos)
+              text = text[:line_end+1] + receipt_line + text[line_end+1:]
+          doc.write_text(text)
+          PY
+
+          # Recompute exact digests from the hardened contract/policy, then patch validators.
+          GATEWAY_DIGEST=$(node --input-type=module - <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          import { digestObject } from './mesh/src/lib/canonical.mjs';
+          const value = JSON.parse(await readFile('./mesh/config/gateway-client-contract.json', 'utf8'));
+          process.stdout.write(digestObject(value));
+          NODE
+          )
+          NETWORK_DIGEST=$(node --input-type=module - <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          import { digestObject } from './mesh/src/lib/canonical.mjs';
+          const value = JSON.parse(await readFile('./mesh/config/service-network-policy.json', 'utf8'));
+          process.stdout.write(digestObject(value));
+          NODE
+          )
+          python - "$GATEWAY_DIGEST" "$NETWORK_DIGEST" <<'PY'
+          import re, sys
+          from pathlib import Path
+          gateway_digest, network_digest = sys.argv[1:]
+
+          p = Path('mesh/src/lib/gateway-client-contract.mjs')
+          text = p.read_text()
+          text, count = re.subn(
+              r"(const EXPECTED_CONTRACT_DIGEST =\n  ')[a-f0-9]{64}(';)",
+              rf"\g<1>{gateway_digest}\g<2>",
+              text,
+              count=1
+          )
+          if count != 1:
+              raise SystemExit('gateway digest constant not replaced')
+          text = text.replace(
+              "contract.routes.length !== 28",
+              "contract.routes.length !== 29",
+              1
+          )
+          p.write_text(text)
+
+          p = Path('mesh/src/lib/service-network-policy.mjs')
+          text = p.read_text()
+          text, count = re.subn(
+              r"(const EXPECTED_POLICY_DIGEST =\n  ')[a-f0-9]{64}(';)",
+              rf"\g<1>{network_digest}\g<2>",
+              text,
+              count=1
+          )
+          if count != 1:
+              raise SystemExit('network digest constant not replaced')
+          text = text.replace('gatewayGrid.routes.length !== 24', 'gatewayGrid.routes.length !== 25', 1)
+          p.write_text(text)
+          PY
+
+          # No historical temporary receipt probes are ported.
+          git status --short
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add README.md docs mesh
+          git commit -m 'feat: port machine receipt verification onto hardened main'
+          git push origin HEAD:feat/machine-receipt-verification-v1b-2026-08-10
