@@ -36,25 +36,27 @@
 - [ ] Complete key issuance, ownership/sponsorship, device/runtime binding, rotation, compromise, and dedicated revocation. Human sponsorship, runtime binding, lifetime and expiry are implemented; dedicated machine revocation/rotation remains open.
 - [x] Distinguish human, agent, infrastructure service, and constrained machine-service identities at bearer-registry normalization; future delegator/executor/verifier/remote-peer profiles remain separate later work.
 - [x] Define short-lived versus persistent machine principal semantics.
-- [x] Define purpose and destination restrictions. Purpose/action ceilings are live; destination is schema-only until Priority 3 enforcement.
-- [ ] Complete compute, storage, bandwidth, cost, time, request, response, rate, and concurrency budgets. Execution time is live; request/response/rate/concurrency fields are schema-only; storage/bandwidth/cost profiles remain future work.
+- [x] Define purpose and destination restrictions. Purpose/action ceilings are live; destination remains schema-only until its effect/adapter boundary is implemented.
+- [ ] Complete compute, storage, bandwidth, cost, time, request, response, rate, and concurrency budgets. Execution time, authenticated Gateway request size, and authenticated Gateway request rate are live; response size and concurrency remain schema-only machine fields, while storage/bandwidth/cost profiles remain future work.
 - [x] Define whether a principal may delegate and maximum delegation depth for v1: delegation is disabled and depth is zero.
 - [x] Prohibit universal reputation or moral scores as base authority.
-- [ ] Complete negative tests for identity substitution, credential replay, stale identity, confused ownership, and compromise. Sponsor, expiry, wildcard/admin, legacy-agent, action/purpose and authority-binding negatives are implemented; credential lifecycle attack coverage remains open.
+- [ ] Complete negative tests for identity substitution, credential replay, stale identity, confused ownership, and compromise. Sponsor, expiry, wildcard/admin, legacy-agent, action/purpose, request-size/rate, and authority-binding negatives are implemented; credential lifecycle attack coverage remains open.
 
-**Implemented checkpoint:** `core.machine-principals` is an implemented registry capability. It does not claim autonomous agent loops, machine delegation, MCP/A2A, remote execution, hardware/runtime attestation, or the still-pending machine-specific budget classes.
+**Implemented checkpoint:** `core.machine-principals` is an implemented registry capability. Its current verified bounds include sponsorship, finite scopes, action/purpose ceilings, runtime identity, expiry, non-delegation, execution time, authenticated Gateway request size, and authenticated Gateway request rate. It does not claim autonomous agent loops, machine delegation, MCP/A2A, remote execution, destination-effect enforcement, machine-specific concurrency/response-size enforcement, or hardware/runtime attestation.
 
 ## Priority 3 — Minimal AXIOM Invocation Envelope
 
-- [ ] Freeze the smallest v1 semantic envelope necessary for one native machine client and one MCP projection.
-- [ ] Bind caller principal, intent/idempotency identity, capability ID/version, purpose, policy/grant, destination, budgets, causal parent, and evidence/result identity. Current machine authority digest, sponsor, purpose, plan and result bindings are partial foundations.
-- [ ] Reuse protocol-native fields rather than duplicate them unnecessarily.
-- [ ] Define exact canonicalization and digest rules for the full envelope. Machine authority already has canonical digest binding.
-- [ ] Define version negotiation and reject ambiguous downgrade.
-- [ ] Define which fields are caller claims versus AXIOM-computed facts.
-- [ ] Ensure unsupported fields cannot silently broaden authority.
-- [ ] Preserve envelope semantics through export, evidence verification, and causal exchange.
+- [ ] Freeze the smallest v1 semantic envelope necessary for one native machine client and one MCP projection. The internal native core is now frozen as `axiom-invocation-envelope.v1` / `axiom-native-gateway.v1`; the first MCP projection remains pending.
+- [ ] Bind caller principal, intent/idempotency identity, capability ID/version, purpose, policy/grant, destination, budgets, causal parent, and evidence/result identity. The current native core binds caller, canonical request/input identity, purpose/data scopes, policy/risk/approval requirement, execution timeout, machine sponsor/runtime/authority, live ingress limits, and one invocation digest through Grid acceptance, capability, Sandbox attestation, mutation evidence, and returned result; capability/version projection, destination effects, causal parent, and fuller result/artifact semantics remain open.
+- [ ] Reuse protocol-native fields rather than duplicate them unnecessarily. No external protocol projection is promoted yet.
+- [x] Define exact canonicalization and digest rules for the current native v1 envelope. Data scopes are normalized, exact fields are validated, and policy/machine-authority changes alter the invocation digest.
+- [ ] Define version negotiation and reject ambiguous downgrade. The current native implementation pins one exact profile and rejects profile downgrade; cross-version/protocol negotiation remains future adapter work.
+- [x] Define which fields are caller claims versus AXIOM-computed facts for the native core: callers submit the normal intent, while Hypervisor computes the authority/limit/evidence envelope from authenticated principal and policy state.
+- [x] Ensure unsupported native-v1 envelope fields cannot silently broaden authority; exact-field validation fails closed.
+- [ ] Preserve envelope semantics through export, evidence verification, and causal exchange. Grid acceptance and execution/result evidence are bound now; export/selective verification/causal transport remain open.
 - [ ] Add property tests proving transport choice does not alter authorization outcome.
+
+**Implemented native checkpoint:** the native Invocation Envelope is an internal kernel invariant, not a new external protocol or capability-registry promotion. Its digest is bound across `intent.accepted` Grid evidence, the Hypervisor-signed capability, Sandbox-signed execution attestation, mutation evidence where applicable, and returned/completed intent evidence. MCP, A2A, delegation, remote execution, destination effects, async task/artifact semantics, and production promotion remain non-claims.
 
 ## Priority 4 — Native machine discovery and Verify surface
 
@@ -200,7 +202,7 @@ Current v1 machine principals cannot delegate; this priority is a future capabil
 - [ ] Hidden sub-agent spawning.
 - [ ] Cost/compute/network exhaustion.
 - [ ] Cross-agent data leakage.
-- [ ] Schema/version downgrade.
+- [ ] Schema/version downgrade. Native Invocation Envelope profile downgrade and unknown-field rejection are implemented; cross-protocol/version migration cases remain open.
 - [ ] Adapter compromise and malicious update.
 - [ ] Evidence laundering of untrusted remote outputs.
 
@@ -223,7 +225,7 @@ For every machine/agent interoperability capability promoted beyond planning:
 - [x] exact executable assertion/evidence binding for the constrained machine-principal slice;
 - [x] normative requirement and machine-principal schema/code contract for the current slice;
 - [x] positive and negative real-stack tests for sponsor/profile/action/purpose/expiry/non-delegation authority;
-- [ ] protocol-version pin and migration policy for the Invocation Envelope/adapters;
+- [ ] protocol-version pin and migration policy for the Invocation Envelope/adapters. The current native profile is exactly pinned and downgrade-rejected; migration/cross-protocol policy remains open.
 - [x] threat-model update for the current machine-principal slice;
 - [ ] dedicated machine credential/revocation privacy review beyond current bearer custody;
 - [ ] operations/rotation/revocation/recovery runbook for long-lived machine identities;
