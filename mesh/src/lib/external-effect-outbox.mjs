@@ -25,21 +25,6 @@ function digest(value, name) {
   return assertString(value, name, { min: 64, max: 64, pattern: DIGEST });
 }
 
-function persistedJson(value, name) {
-  let encoded;
-  try {
-    encoded = JSON.stringify(value);
-  } catch {
-    throw new ValidationError(`${name} is not JSON-serializable`);
-  }
-  if (encoded === undefined) throw new ValidationError(`${name} is not JSON-serializable`);
-  try {
-    return JSON.parse(encoded);
-  } catch {
-    throw new ValidationError(`${name} is not valid persisted JSON`);
-  }
-}
-
 function contentAddressed(raw, {
   name,
   schema,
@@ -316,12 +301,11 @@ export function assertExternalEffectCommitEvidence(response, expectedEvent) {
     throw new ValidationError('external effect Grid commit must return exactly one appended event');
   }
   const event = value.events[0];
-  const actualPayload = persistedJson(event.payload, 'Grid external effect payload');
-  const expectedPayload = persistedJson(expectedEvent.payload, 'expected external effect payload');
+  const expectedPayloadDigest = digestObject(expectedEvent.payload);
   if (
     event.kind !== expectedEvent.kind
     || event.subject !== expectedEvent.subject
-    || canonicalJson(actualPayload) !== canonicalJson(expectedPayload)
+    || digest(event.payload_digest, 'Grid external effect payload_digest') !== expectedPayloadDigest
   ) {
     throw new ValidationError('Grid commit evidence does not match the requested external effect transition');
   }
