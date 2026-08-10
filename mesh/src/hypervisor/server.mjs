@@ -37,6 +37,10 @@ import {
 } from '../lib/machine-principal.mjs';
 import { intentRequestDigest } from '../lib/intent-binding.mjs';
 import {
+  buildNativeInvocationEnvelope,
+  invocationEnvelopeDigest
+} from '../lib/invocation-envelope.mjs';
+import {
   loadTransportRuntime,
   transportServerOptions
 } from '../lib/transport-credentials.mjs';
@@ -168,6 +172,8 @@ export async function createHypervisorService(config = meshConfig()) {
         };
       }
     }
+    const invocationEnvelope = buildNativeInvocationEnvelope(intent, decision);
+    const invocationDigest = invocationEnvelopeDigest(invocationEnvelope);
     await commit(traceId, intent.principal.id, [{
       kind: 'intent.accepted',
       subject: intent.intent_id,
@@ -181,6 +187,8 @@ export async function createHypervisorService(config = meshConfig()) {
         request_digest: intentRequestDigest(intent),
         policy_version: decision.policy_version,
         policy_digest: decision.policy_digest,
+        invocation: invocationEnvelope,
+        invocation_digest: invocationDigest,
         ...(machineAuthority ? { machine_authority: machineAuthority } : {})
       }
     }]);
@@ -280,6 +288,7 @@ export async function createHypervisorService(config = meshConfig()) {
       nbf: now - 1,
       exp: now + config.capabilityTtlSeconds,
       intent_digest: digestObject(intent),
+      invocation_digest: invocationDigest,
       tool: decision.tool,
       constraints: decision.constraints,
       policy_digest: decision.policy_digest,
@@ -301,7 +310,11 @@ export async function createHypervisorService(config = meshConfig()) {
       if (!statement || !verifyObjectSignature(statement, signature, sandboxKey)) {
         throw new AxiomError('invalid_sandbox_attestation', 'Sandbox returned an invalid execution attestation', 502);
       }
-      if (statement.intent_digest !== digestObject(intent) || statement.result_digest !== digestObject(execution.result)) {
+      if (
+        statement.intent_digest !== digestObject(intent)
+        || statement.invocation_digest !== invocationDigest
+        || statement.result_digest !== digestObject(execution.result)
+      ) {
         throw new AxiomError('sandbox_attestation_mismatch', 'Sandbox attestation does not match the execution result', 502);
       }
       const events = [];
@@ -312,6 +325,7 @@ export async function createHypervisorService(config = meshConfig()) {
             ...execution.result.mutation.payload,
             evidence: {
               plan_digest: digestObject(plan),
+              invocation_digest: invocationDigest,
               execution: execution.attestation,
               ...(machineAuthority ? {
                 machine_authority_digest: machineAuthority.authority_digest
@@ -327,6 +341,7 @@ export async function createHypervisorService(config = meshConfig()) {
         status: 'completed',
         evidence: {
           plan_digest: boundPlanDigest,
+          invocation_digest: invocationDigest,
           execution_digest: statement.result_digest,
           policy_digest: decision.policy_digest,
           ...(machineAuthority ? {
