@@ -176,6 +176,7 @@ test('a killed retention move resumes from its signed journal', async t => {
     {
       env: {
         ...process.env,
+        NODE_ENV: 'test',
         AXIOM_TEST_BACKUP_RETENTION_CRASH_AFTER_MOVE: '1'
       },
       stdio: 'ignore'
