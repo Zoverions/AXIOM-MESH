@@ -173,9 +173,9 @@ export async function runIntentLifecycleDrill({
           weight: 1
         }
       }
-    }, 400);
-    checks.late_vote_rejected = lateVote.error?.code === 'validation_error'
-      && /Voting period is closed|not open for voting/i.test(lateVote.error?.message ?? '');
+    }, 409);
+    checks.late_vote_rejected = lateVote.error?.code === 'voting_closed'
+      && /not open for voting|Voting period is closed/i.test(lateVote.error?.message ?? '');
 
     const finalized = await independentlyApprovedIntent({
       gateway,
