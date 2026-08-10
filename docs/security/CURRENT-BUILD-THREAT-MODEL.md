@@ -25,8 +25,10 @@ single-host units.
   rate-limits abuse, enforces constrained-machine request-size, request-rate,
   concurrency, and response-size ceilings, and forwards signed internal requests.
 - **Hypervisor** normalizes intent, composes deny-dominant policy, independently
-  revalidates constrained agent principals, intersects the machine
-  execution-time ceiling with policy, constructs an explicit plan, and issues
+  revalidates constrained agent principals, computes the current built-in effect
+  destination from the policy-selected tool, enforces the principal's finite
+  destination ceiling, intersects the machine execution-time ceiling with policy,
+  constructs an explicit plan, and issues
   short-lived, audience-bound, single-use grants.
 - **Sandbox** accepts only authenticated Hypervisor work covered by an unused
   grant. The supported operation set is built in and deterministic. Arbitrary
@@ -38,17 +40,23 @@ single-host units.
 Authenticated `agent` principals use `axiom-machine-principal.v1`. They require
 a configured human sponsor and are constrained by finite scopes, action and
 purpose allowlists, runtime identity, lifetime/expiry, non-delegation, and a
-currently enforced execution-time ceiling and authenticated Gateway request-size,
-request-rate, concurrency, and response-size ceilings. Wildcard scope and administrator role
+currently enforced execution-time ceiling, authenticated Gateway request-size,
+request-rate, concurrency, and response-size ceilings, and an AXIOM-computed
+current built-in effect destination constrained to the principal's finite destination
+allowlist. Wildcard scope and administrator role
 are rejected. The machine authority digest is carried through request
 binding, plan provenance, capability claims, and result evidence. Existing
 least-privilege infrastructure `service` principals remain backward-compatible
 unless they explicitly opt into the constrained machine profile.
 
-The v1 machine schema still contains a destination field. Destination is validated
-as a schema input but is **not** a current live-enforcement claim until the
-correct effect/adapter enforcement path and evidence are implemented. Runtime IDs and
-software digests are attribution/binding metadata; they are not hardware,
+The v1 machine schema contains a finite destination ceiling. For current built-in
+effects, Hypervisor derives the destination from the policy-selected `builtin.*`
+tool, which resolves canonically to `local`, and denies the request before capability
+issuance when that computed destination is not allowed. Sandbox independently
+recomputes and verifies the signed destination before execution. Unknown provider,
+remote, or MCP destination semantics remain unresolved and fail closed; no arbitrary
+external-destination or remote-execution claim follows. Runtime IDs and software
+digests are attribution/binding metadata; they are not hardware,
 TPM/TEE, measured-boot, or remote-attestation proof.
 
 The compact candidate container uses `network_mode: none`. Host-local Gateway
@@ -202,7 +210,7 @@ post-recovery verification rather than an online grant.
 | Authentication bypass or token theft | Exact bearer principals, constrained agent profile, scoped telemetry identity, restrictive secret-file checks, signed service envelopes, mTLS peer identity, active-leaf pinning, replay guards | Bearer theft still conveys the configured principal until expiry/revocation; host memory and external custodian compromise remain possible; pilot custody and token operational monitoring are pending |
 | Legacy or forged unconstrained agent identity | Bearer registry requires `agent` principals to normalize as `axiom-machine-principal.v1`; Hypervisor independently rejects legacy `agent` shape; unknown/non-human sponsor, wildcard scope, and administrator role fail closed | A stolen valid constrained-agent bearer still needs operational revocation; runtime identity metadata is not hardware attestation |
 | Sponsor laundering or authority-profile substitution | Sponsor must resolve to a configured human principal; normalized authority digest includes sponsor, roles/scopes, lifetime, runtime and constraints; approvals bind request digest containing the machine authority digest | Human sponsor compromise and social/organizational authorization errors remain outside cryptographic proof |
-| Machine action or purpose escalation | Ordinary policy is evaluated first and machine action/purpose ceilings form a second deny-dominant layer; machine constraints can only reduce authority | The destination schema field is not yet a live machine-specific enforcement claim |
+| Machine action, purpose, or destination escalation | Ordinary policy is evaluated first; machine action/purpose ceilings form a second deny-dominant layer; current built-in effect destination is computed from the authorized tool and must remain inside the principal's finite destination ceiling | External/provider/MCP destination semantics and remote execution remain unimplemented and fail closed |
 | Machine execution-budget widening | Hypervisor intersects policy timeout with machine `max_execution_ms`; plan and capability bind the resulting authority context | CPU/memory/cost accounting beyond the supported timeout path needs later resource-meter evidence |
 | Machine delegation laundering | Machine-principal v1 validation requires delegation disabled and depth zero; no machine delegation runtime exists | Future delegation requires a separate attenuation-only design, threat model, property tests, revocation and promotion |
 | Approval reuse after machine-authority change | Request digest includes machine authority digest; plan provenance and capability claims repeat the exact digest; result/mutation evidence records it | Reviewers must verify all future adapters preserve the same request-binding semantics |
@@ -229,8 +237,8 @@ The current review must consider at minimum:
 - unconstrained `agent` registry entries, unknown/non-human sponsors, wildcard
   machine scopes, administrator-role injection, expired session principals, or
   attempted machine delegation;
-- a machine request whose action or purpose is outside its profile, whose
-  authority digest changed after approval, or whose runtime metadata is
+- a machine request whose action, purpose, or computed effect destination is outside
+  its profile, whose authority digest changed after approval, or whose runtime metadata is
   presented as attestation;
 - one valid identity reused for another role, node, provider, reviewer, or
   exception approver;

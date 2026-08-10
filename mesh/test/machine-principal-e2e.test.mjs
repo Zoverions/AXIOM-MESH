@@ -1,4 +1,4 @@
-// Final verification anchor after Gateway machine hook repair #925.
+// Final auditable verification anchor for the destination claim after Gateway hook repair #925.
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -129,8 +129,19 @@ test('constrained agent executes an authorized intent and returns bound authorit
     && event.subject === result.intent_id
   ));
   assert.ok(accepted);
-  assert.equal(accepted.payload.invocation.limits.ingress.max_concurrent_requests, 1);
-  assert.equal(accepted.payload.invocation.limits.ingress.max_response_bytes, 262_144);
+  const machineBoundary = {
+    effect_destination: result.evidence.effect_destination,
+    accepted_destination: accepted.payload.invocation.authority.effect_destination,
+    max_concurrent_requests: accepted.payload.invocation.limits.ingress.max_concurrent_requests,
+    max_response_bytes: accepted.payload.invocation.limits.ingress.max_response_bytes
+  };
+  const expectedMachineBoundary = {
+    effect_destination: 'local',
+    accepted_destination: 'local',
+    max_concurrent_requests: 1,
+    max_response_bytes: 262_144
+  };
+  assert.deepEqual(machineBoundary, expectedMachineBoundary);
 
   // Request-size denial occurs before rate consumption, so the next bounded call
   // still deterministically proves the three-request rate ceiling.

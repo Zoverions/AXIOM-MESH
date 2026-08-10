@@ -4,7 +4,7 @@
 Registry schema: `axiom-capabilities.v1`
 Kernel version: `0.12.0-dev.3`
 Evidence verified: `2026-08-09`
-Registry digest: `dd6fa83f1ad532e1df31b4bb0e4ddc4a7a521957cab7752c8f03333bd70e6bb6`
+Registry digest: `1f61717d785b3e260d6eee36b2d772d4f1170287f6d262f24edc9fa1f412ff21`
 
 Only **implemented** capabilities are runnable claims.
 
@@ -21,7 +21,7 @@ Only **implemented** capabilities are runnable claims.
 | Capability | Family | Status | Verified claim or boundary |
 |---|---|---|---|
 | `core.intent-loop` | core | **implemented** | Authenticated intent-to-plan-to-grant-to-execution-to-evidence pipeline. |
-| `core.machine-principals` | core | **implemented** | Authenticated agent principals are human-sponsored and deny-dominantly bounded by finite scopes, action and purpose ceilings, runtime identity, expiry, non-delegation, an execution-time ceiling, and authenticated Gateway ingress ceilings for request size, request rate, concurrency, and response size; infrastructure service principals remain backward-compatible unless they opt into the same constrained profile. |
+| `core.machine-principals` | core | **implemented** | Authenticated agent principals are human-sponsored and deny-dominantly bounded by finite scopes, action and purpose ceilings, runtime identity, expiry, non-delegation, an execution-time ceiling, authenticated Gateway ingress ceilings for request size, request rate, concurrency, and response size, and an AXIOM-computed effect destination that must remain within the principal's finite destination ceiling; infrastructure service principals remain backward-compatible unless they opt into the same constrained profile. |
 | `core.evidence-chain` | audit | **implemented** | Transactional SHA-256 hash-linked evidence log with restart verification. |
 | `core.layered-policy` | governance | **implemented** | Runtime policy stacks merge global-to-user constraints deny-dominantly and require independent approval for every permitted high-risk effect. |
 | `capsules.registry` | capsules | **implemented** | Immutable digest-addressed capsule manifests with signature verification, schemas, SBOM digest, and revocation state. |

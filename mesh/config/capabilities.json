@@ -16,13 +16,14 @@
       "id": "core.machine-principals",
       "family": "core",
       "status": "implemented",
-      "summary": "Authenticated agent principals are human-sponsored and deny-dominantly bounded by finite scopes, action and purpose ceilings, runtime identity, expiry, non-delegation, an execution-time ceiling, and authenticated Gateway ingress ceilings for request size, request rate, concurrency, and response size; infrastructure service principals remain backward-compatible unless they opt into the same constrained profile.",
+      "summary": "Authenticated agent principals are human-sponsored and deny-dominantly bounded by finite scopes, action and purpose ceilings, runtime identity, expiry, non-delegation, an execution-time ceiling, authenticated Gateway ingress ceilings for request size, request rate, concurrency, and response size, and an AXIOM-computed effect destination that must remain within the principal's finite destination ceiling; infrastructure service principals remain backward-compatible unless they opt into the same constrained profile.",
       "evidence": [
         "mesh/test/machine-principal.test.mjs",
         "mesh/test/principal-registry.test.mjs",
         "mesh/test/machine-principal-e2e.test.mjs",
         "mesh/test/machine-concurrency.test.mjs",
-        "mesh/test/machine-response-size.test.mjs"
+        "mesh/test/machine-response-size.test.mjs",
+        "mesh/test/machine-destination-e2e.test.mjs"
       ]
     },
     {
