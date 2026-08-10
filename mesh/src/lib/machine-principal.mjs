@@ -7,6 +7,7 @@ const HEX_DIGEST = /^[a-f0-9]{64}$/;
 const MACHINE_TYPES = new Set(['agent', 'service']);
 const MACHINE_LIFETIMES = new Set(['persistent', 'session', 'ephemeral']);
 const RUNTIME_KINDS = new Set(['local-process', 'container', 'external-runtime']);
+const PROTOTYPE_KEYS = new Set(Object.getOwnPropertyNames(Object.prototype));
 
 const DEFAULT_BUDGETS = Object.freeze({
   max_requests_per_minute: 60,
@@ -53,8 +54,8 @@ export function normalizeMachinePrincipalDefinition(value, {
     maxLength: 160,
     pattern: /^[A-Za-z0-9*][A-Za-z0-9*_.:-]{0,159}$/
   });
-  if (scopes.includes('*')) {
-    throw new ValidationError('Machine principals cannot receive wildcard scope');
+  if (scopes.some(scope => scope.includes('*'))) {
+    throw new ValidationError('Machine principals cannot receive wildcard scope syntax');
   }
 
   const lifetime = value.lifetime ?? 'persistent';
@@ -100,6 +101,9 @@ export function normalizeMachineConstraints(value = {}) {
     maxLength: 128,
     pattern: ACTION_ID
   });
+  if (actions.some(action => PROTOTYPE_KEYS.has(action))) {
+    throw new ValidationError('Machine principal actions contain a reserved prototype identifier');
+  }
   const purposes = stringSet(value.purposes ?? [], 'machine principal purposes', {
     minItems: 1,
     maxItems: 64,
