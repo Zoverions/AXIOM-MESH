@@ -8,7 +8,7 @@
     "minimum_version": "24.14.0",
     "maximum_major_exclusive": 25,
     "ci_version": "24.18.0",
-    "production_version": "24.18.0"
+    "production_version": "24.19.0"
   },
   "package_manager": {
     "name": "npm",
