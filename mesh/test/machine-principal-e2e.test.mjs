@@ -128,6 +128,7 @@ test('constrained agent executes an authorized intent and returns bound authorit
     && event.subject === result.intent_id
   ));
   assert.ok(accepted);
+  // Final claim verification anchor: the accepted invocation carries the live concurrency ceiling.
   assert.equal(accepted.payload.invocation.limits.ingress.max_concurrent_requests, 1);
 
   // The capability binding below proves all three claimed ingress ceilings.
