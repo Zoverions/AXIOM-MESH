@@ -55,7 +55,7 @@ experimental, 2 specified, 9 adapter-required, and 4 disabled capabilities.
 - explicit production credential provisioning and a fail-closed four-process
   supervisor;
 - per-unit private identity/TLS projection, Grid-only durable state, an
-  exact four-segment internal topology, a default-deny 39-route application
+  exact four-segment internal topology, a default-deny 40-route application
   policy with derived mTLS peers, and signed Sandbox-only failure/recovery
   evidence;
 - signed admitted-node v2 discovery metadata, authenticated Grid-signed
@@ -238,7 +238,7 @@ external findings ledger has been submitted.
 ### Human utility preview
 
 The versioned Gateway client contract and zero-dependency same-origin client
-are implemented for all 28 authenticated routes, including schema, explicit
+are implemented for all 29 authenticated routes, including schema, explicit
 error, cancellation, timeout, response-bound, idempotency, source-parity, and
 real-stack compatibility evidence. A loopback-only experimental AXIOM One PWA
 foundation now uses that contract for status, one transparent echo intent,

@@ -21,7 +21,7 @@ and the client is
 The client is a private source module in this repository, not a published npm
 package; applications must bind and version it with the checked-out build.
 
-The contract covers all 28 authenticated `/v1/` Gateway routes. It deliberately
+The contract covers all 29 authenticated `/v1/` Gateway routes. It deliberately
 does not include `/`, `/health`, or `/ready`, which are unauthenticated ingress
 and operator-probe routes rather than the authenticated application contract.
 

@@ -639,7 +639,7 @@ export function verifyProductionDeployment({
     'cross-process port-block lease',
     'mutually authenticated TLS 1.3',
     'independently deployable units',
-    '39 exact caller/destination/method/route',
+    '40 exact caller/destination/method/route',
     'admitted-node discovery and scheduling',
     'operator-approved online causal exchange',
     'Deployment-independent provider startup',

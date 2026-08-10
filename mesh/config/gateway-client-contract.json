@@ -97,6 +97,26 @@
       "response_media_type": "application/json"
     },
     {
+      "id": "machine_receipts.verify",
+      "method": "GET",
+      "path": "/v1/machine-receipts/intents/:id/verify",
+      "access": "constrained-machine-owner",
+      "idempotency": "not_applicable",
+      "path_parameters": [
+        "id"
+      ],
+      "query_parameters": [],
+      "request_schema": null,
+      "response_schema": "axiom-machine-intent-receipt.v1",
+      "required_response_fields": [
+        "schema",
+        "statement",
+        "attestation",
+        "receipt_digest"
+      ],
+      "response_media_type": "application/json"
+    },
+    {
       "id": "status.get",
       "method": "GET",
       "path": "/v1/status",

@@ -4,11 +4,12 @@ import { pathToFileURL } from 'node:url';
 import { meshConfig } from '../lib/config.mjs';
 import { ensureMeshIdentity, ReplayGuard, verifySignedRequest } from '../lib/identity.mjs';
 import { Router, createServiceServer, listen, parseJsonBody } from '../lib/http.mjs';
-import { ValidationError, assertPlainObject, assertString } from '../lib/canonical.mjs';
+import { AxiomError, ValidationError, assertPlainObject, assertString } from '../lib/canonical.mjs';
 import { operationsReport, readinessState, ServiceTelemetry } from '../lib/observability.mjs';
 import { GridStore } from './store.mjs';
 import { loadDataProtector } from '../lib/protector.mjs';
 import { runServiceProcess } from '../lib/service-lifecycle.mjs';
+import { buildMachineIntentReceipt } from '../lib/machine-receipt.mjs';
 import {
   acquireGridRuntimeLock,
   createGridBackup,
@@ -160,6 +161,41 @@ export async function createGridService(config = meshConfig()) {
     })
   }));
   router.add('GET', '/internal/v1/intents/:id', async ({ params }) => store.getIntent(params.id));
+  router.add('GET', '/internal/v1/machine-receipts/intents/:id/verify', async ({ params, url }) => {
+    const intentId = assertString(params.id, 'intent_id', {
+      max: 160,
+      pattern: /^intent_[a-f0-9]{64}$/
+    });
+    const requester = assertString(url.searchParams.get('principal'), 'principal', {
+      max: 160,
+      pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
+    });
+    let intent;
+    try {
+      intent = store.getIntent(intentId);
+    } catch (error) {
+      if (error?.code === 'intent_not_found') {
+        throw new AxiomError('not_found', 'Machine intent receipt was not found', 404);
+      }
+      throw error;
+    }
+    if (intent.principal !== requester) {
+      throw new AxiomError('not_found', 'Machine intent receipt was not found', 404);
+    }
+    const events = store.db.prepare(`
+      SELECT * FROM events
+      WHERE subject = ?
+        AND kind IN ('intent.accepted', 'intent.completed', 'intent.denied', 'intent.failed')
+      ORDER BY seq
+    `).all(intentId).map(row => store.decodeEventRow(row));
+    return buildMachineIntentReceipt({
+      intent,
+      events,
+      chain: store.verifyChain(),
+      identity,
+      kernelVersion: '0.12.0-dev.3'
+    });
+  });
   router.add('GET', '/internal/v1/capsules', async ({ url }) => ({
     capsules: store.listCapsules({
       limit: integerQuery(url.searchParams.get('limit'), 100, {
