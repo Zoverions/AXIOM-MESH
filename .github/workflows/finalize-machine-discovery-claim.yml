@@ -1,0 +1,235 @@
+name: Finalize machine discovery claim
+
+on:
+  push:
+    branches:
+      - feat/machine-discovery-v1-2026-08-10
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: github.ref == 'refs/heads/feat/machine-discovery-v1-2026-08-10'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/machine-discovery-v1-2026-08-10
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.18.0'
+          package-manager-cache: false
+      - name: Synchronize registry evidence status and bounded discovery claims
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+
+          function canonicalize(value) {
+            if (value === null || typeof value !== 'object') return value;
+            if (Array.isArray(value)) return value.map(canonicalize);
+            const out = {};
+            for (const key of Object.keys(value).sort()) out[key] = canonicalize(value[key]);
+            return out;
+          }
+          function digestObject(value) {
+            return crypto.createHash('sha256')
+              .update(JSON.stringify(canonicalize(value)))
+              .digest('hex');
+          }
+          function replaceExact(path, before, after) {
+            let source = fs.readFileSync(path, 'utf8');
+            if (source.includes(after)) return;
+            if (!source.includes(before)) throw new Error(`Missing exact anchor in ${path}: ${before.slice(0, 100)}`);
+            source = source.replace(before, after);
+            fs.writeFileSync(path, source);
+          }
+
+          const registryPath = 'mesh/config/capabilities.json';
+          const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+          registry.verified_at = '2026-08-10';
+          if (!registry.capabilities.some(item => item.id === 'core.machine-discovery')) {
+            const index = registry.capabilities.findIndex(item => item.id === 'core.machine-principals');
+            if (index < 0) throw new Error('core.machine-principals capability missing');
+            registry.capabilities.splice(index + 1, 0, {
+              id: 'core.machine-discovery',
+              family: 'core',
+              status: 'implemented',
+              summary: "Authenticated constrained-machine discovery exposes a digest-bound principal-specific intersection of active deny-dominant allow rules, required scopes, finite machine actions, verified effect destinations, purposes, and budgets through the existing Gateway with an explicit non-authorization notice; actual execution still requires normal intent evaluation.",
+              evidence: [
+                'mesh/test/machine-discovery.test.mjs',
+                'mesh/test/machine-discovery-e2e.test.mjs',
+                'mesh/test/machine-discovery-client.test.mjs',
+                'mesh/test/machine-discovery-network.test.mjs'
+              ]
+            });
+          }
+          const networkCapability = registry.capabilities.find(item => item.id === 'operations.service-network-policy');
+          const clientCapability = registry.capabilities.find(item => item.id === 'ui.gateway-client');
+          if (!networkCapability || !clientCapability) throw new Error('Route-count capability claims missing');
+          networkCapability.summary = networkCapability.summary.replace('38 exact', '39 exact');
+          clientCapability.summary = clientCapability.summary.replace('all 27 authenticated routes', 'all 28 authenticated routes');
+          fs.writeFileSync(registryPath, `${JSON.stringify(registry, null, 2)}\n`);
+
+          const registryDigest = digestObject(registry);
+          const bindingsPath = 'mesh/config/capability-evidence-bindings.json';
+          const bindings = JSON.parse(fs.readFileSync(bindingsPath, 'utf8'));
+          bindings.registry_digest = registryDigest;
+          const networkBinding = bindings.bindings.find(item => item.capability_id === 'operations.service-network-policy');
+          const clientBinding = bindings.bindings.find(item => item.capability_id === 'ui.gateway-client');
+          if (!networkBinding || !clientBinding) throw new Error('Route-count evidence bindings missing');
+          networkBinding.assertions = networkBinding.assertions.map(value =>
+            value === "assert.equal(result.routes, 38);" ? "assert.equal(result.routes, 39);" : value
+          );
+          clientBinding.assertions = clientBinding.assertions.map(value =>
+            value === "assert.equal(result.routes, 27);" ? "assert.equal(result.routes, 28);" : value
+          );
+          if (!bindings.bindings.some(item => item.capability_id === 'core.machine-discovery')) {
+            const index = bindings.bindings.findIndex(item => item.capability_id === 'core.machine-principals');
+            bindings.bindings.splice(index + 1, 0, {
+              capability_id: 'core.machine-discovery',
+              path: 'mesh/test/machine-discovery-e2e.test.mjs',
+              test: 'real Gateway exposes only bounded machine requestability and leaves registry discovery unchanged',
+              assertions: [
+                "assert.equal(discovery.notice, 'discovery_is_not_authorization');",
+                "assert.deepEqual(discovery.actions.map(action => action.id), ['system.echo']);",
+                "assert.equal(discovery.actions[0].effect_destination, 'local');",
+                "assert.deepEqual(Object.keys(discovery.policy).sort(), ['digest', 'version']);",
+                "assert.equal(JSON.stringify(discovery).includes('memory.put'), false);",
+                "assert.equal(JSON.stringify(discovery).includes(AGENT_TOKEN), false);",
+                "assert.equal(registry.schema, 'axiom-capabilities.v1');"
+              ]
+            });
+          }
+          fs.writeFileSync(bindingsPath, `${JSON.stringify(bindings, null, 2)}\n`);
+
+          replaceExact(
+            'README.md',
+            "  ceiling, authenticated Gateway request-size, request-rate, concurrency, and response-size ceilings, and an AXIOM-computed effect destination constrained to the principal's finite destination allowlist;\n- encrypted transactional state, consent, memory, governance, local accounting,",
+            "  ceiling, authenticated Gateway request-size, request-rate, concurrency, and response-size ceilings, and an AXIOM-computed effect destination constrained to the principal's finite destination allowlist;\n- authenticated constrained-machine discovery through `/v1/machine-discovery`, filtered by the active deny-dominant policy and the caller's own finite scopes, actions, destinations, purposes, and budgets, with discovery explicitly not granting execution authority;\n- encrypted transactional state, consent, memory, governance, local accounting,"
+          );
+          replaceExact(
+            'README.md',
+            "destination semantics remain unresolved and fail closed; this is not a claim of\nremote execution or arbitrary external-destination support. AXIOM One remains an experimental browser/PWA preview,",
+            "destination semantics remain unresolved and fail closed; this is not a claim of\nremote execution or arbitrary external-destination support. Constrained machines may query\n`/v1/machine-discovery` for a digest-bound snapshot of their own requestable\nintersection; that snapshot is not permission and every effect still undergoes\nthe normal intent and policy evaluation path. AXIOM One remains an experimental browser/PWA preview,"
+          );
+
+          replaceExact(
+            'CONSTITUTION.md',
+            "Gateway request-size, request-rate, concurrency, and response-size ceilings.\nMachine destination limits must not be described as live enforcement until the\ncorrect effect/adapter path and evidence exist. Machine constraints may reduce but\nnever enlarge policy authority.",
+            "Gateway request-size, request-rate, concurrency, and response-size ceilings,\nand current built-in effects are additionally constrained by an AXIOM-computed\ndestination that must remain inside the principal's finite destination ceiling.\nMachine discovery may expose only a principal-specific requestable intersection\nof active policy and machine constraints; discovery, listing, installation, or\nconnection never creates permission. Machine constraints may reduce but never\nenlarge policy authority."
+          );
+
+          replaceExact(
+            'docs/rebuild/PRODUCT-DEFINITION.md',
+            "execution-time ceiling, and authenticated Gateway request-size, request-rate,\nconcurrency, and response-size ceilings. The v1 schema still reserves destination\nlimits, but destination is not a current live-enforcement claim until the correct\neffect/adapter path and evidence exist. A least-privilege infrastructure `service`",
+            "execution-time ceiling, authenticated Gateway request-size, request-rate,\nconcurrency, and response-size ceilings, and a current built-in effect destination\ncomputed from the authorized tool and constrained to the principal's finite\ndestination allowlist. A constrained machine may query a digest-bound discovery\nsnapshot containing only its own requestable intersection under active policy;\nthat discovery snapshot never grants execution authority. A least-privilege infrastructure `service`"
+          );
+          replaceExact(
+            'docs/rebuild/PRODUCT-DEFINITION.md',
+            'authorizes only 38 exact caller, destination, method, and route combinations',
+            'authorizes only 39 exact caller, destination, method, and route combinations'
+          );
+          replaceExact(
+            'docs/rebuild/PRODUCT-DEFINITION.md',
+            '**Reconciled:** 2026-08-09',
+            '**Reconciled:** 2026-08-10'
+          );
+
+          replaceExact(
+            'docs/rebuild/REQUIREMENTS.md',
+            '**Updated:** 2026-08-09',
+            '**Updated:** 2026-08-10'
+          );
+          replaceExact(
+            'docs/rebuild/REQUIREMENTS.md',
+            "| IAM-09 | An authenticated `agent` principal MUST use the constrained machine-principal profile, MUST resolve to a configured human sponsor, MUST NOT receive wildcard scope or administrator role, and MUST bind finite action and purpose ceilings, runtime identity, lifetime/expiry, non-delegation, a current execution-time ceiling, and authenticated Gateway request-size, request-rate, concurrency, and response-size ceilings. Machine constraints may only reduce authority granted by ordinary policy. | `machine-principal`, principal-registry, machine-ingress, and four-service end-to-end tests. |\n| IAM-10 | Machine-principal v1 MUST NOT delegate authority. Any future machine delegation MUST be attenuation-only, explicitly scoped, expiring, revocable, chain-bound, independently evidenced, and separately promoted before use. | Non-delegation validation plus future delegation property and negative-path tests. |",
+            "| IAM-09 | An authenticated `agent` principal MUST use the constrained machine-principal profile, MUST resolve to a configured human sponsor, MUST NOT receive wildcard scope or administrator role, and MUST bind finite action and purpose ceilings, runtime identity, lifetime/expiry, non-delegation, a current execution-time ceiling, authenticated Gateway request-size, request-rate, concurrency, and response-size ceilings, and a finite destination ceiling enforced against the AXIOM-computed destination for current supported effects. Machine constraints may only reduce authority granted by ordinary policy. | `machine-principal`, principal-registry, machine-ingress, destination, and four-service end-to-end tests. |\n| IAM-10 | Machine-principal v1 MUST NOT delegate authority. Any future machine delegation MUST be attenuation-only, explicitly scoped, expiring, revocable, chain-bound, independently evidenced, and separately promoted before use. | Non-delegation validation plus future delegation property and negative-path tests. |\n| IAM-11 | Machine discovery MUST be authenticated, constrained-machine-only, filtered by the active deny-dominant policy plus the caller's own scopes, actions, purposes, destinations, and budgets, MUST minimize metadata, and MUST explicitly state that discovery does not grant execution authority. Every discovered action MUST still undergo normal intent evaluation before execution. | Machine-discovery unit, client, service-network, and four-service leakage/authorization tests. |"
+          );
+
+          replaceExact(
+            'docs/PROJECT-STATUS-2026.md',
+            'records 29 implemented, 3',
+            'records 30 implemented, 3'
+          );
+          replaceExact(
+            'docs/PROJECT-STATUS-2026.md',
+            'exact four-segment internal topology, a default-deny 38-route application',
+            'exact four-segment internal topology, a default-deny 39-route application'
+          );
+          replaceExact(
+            'docs/PROJECT-STATUS-2026.md',
+            'are implemented for all 27 authenticated routes',
+            'are implemented for all 28 authenticated routes'
+          );
+          replaceExact(
+            'docs/PROJECT-STATUS-2026.md',
+            "effect destination constrained to the principal's finite destination allowlist;\n  machine authority digests bind",
+            "effect destination constrained to the principal's finite destination allowlist;\n- authenticated machine-filtered discovery exposes only the constrained caller's\n  requestable intersection under active policy and explicitly does not grant authority;\n  machine authority digests bind"
+          );
+          replaceExact(
+            'docs/PROJECT-STATUS-2026.md',
+            "enforcement are implemented; next add machine-filtered capability discovery and bind\ncredentials and artifacts to\nthat envelope; then build MCP compatibility against the same native Gateway",
+            "enforcement and machine-filtered discovery are implemented; next bind credentials and\nartifacts to that envelope and add machine-readable receipt/evidence verification,\nthen build MCP compatibility against the same native Gateway"
+          );
+
+          replaceExact(
+            'docs/MASTER-TODO-AGENT-INTEROPERABILITY.md',
+            "- [ ] Define a compact capability-discovery response with stable IDs, versions, schemas, status, and declared constraints.\n- [ ] Expose discovery only through the existing authenticated Gateway boundary.\n- [ ] Separate discoverable/requestable capability from principal-specific authorization.\n- [ ] Add machine-readable receipt/evidence verification through AXIOM Verify foundations.\n- [ ] Add exact structured errors for unsupported capability, denied scope, expired grant, missing approval, unavailable adapter, budget exhaustion, and evidence uncertainty.\n- [ ] Add pagination/bounds so discovery cannot become metadata exfiltration.\n- [ ] Prove a low-privilege machine principal cannot infer protected capability or object metadata beyond policy.",
+            "- [ ] Define a compact capability-discovery response with stable IDs, versions, schemas, status, and declared constraints. The native `axiom-machine-discovery.v1` slice now exposes stable action IDs, risk, approval/confirmation requirements, verified destination, bounded timeout, caller purposes/destinations/budgets, and a digest; per-action versions and input/output schemas remain future work.\n- [x] Expose discovery only through the existing authenticated Gateway boundary.\n- [x] Separate discoverable/requestable capability from principal-specific authorization: `/v1/machine-discovery` declares `discovery_is_not_authorization`, and actual execution still uses normal intent evaluation.\n- [ ] Add machine-readable receipt/evidence verification through AXIOM Verify foundations.\n- [ ] Add exact structured errors for unsupported capability, denied scope, expired grant, missing approval, unavailable adapter, budget exhaustion, and evidence uncertainty.\n- [ ] Add pagination/bounds so discovery cannot become metadata exfiltration. Current v1 does not enumerate the global policy; it iterates only the principal's finite action ceiling, but general future pagination/schema bounds remain open.\n- [ ] Prove a low-privilege machine principal cannot infer protected capability or object metadata beyond policy. Current E2E coverage proves unrelated actions and bearer material are absent; broader protected-object inference remains open.\n\n**Implemented discovery checkpoint:** constrained machines can request a digest-bound `axiom-machine-discovery.v1` snapshot through the normal Gateway. Hypervisor computes it from the active deny-dominant policy and the authenticated machine profile, omits denied, out-of-scope, unresolved-destination, and out-of-destination-ceiling actions, exposes only merged policy version/digest rather than overlay structure, and never converts discovery into permission."
+          );
+
+          replaceExact(
+            'docs/security/CURRENT-BUILD-THREAT-MODEL.md',
+            '**Updated:** 2026-08-09',
+            '**Updated:** 2026-08-10'
+          );
+          replaceExact(
+            'docs/security/CURRENT-BUILD-THREAT-MODEL.md',
+            "  rate-limits abuse, enforces constrained-machine request-size, request-rate,\n  concurrency, and response-size ceilings, and forwards signed internal requests.",
+            "  rate-limits abuse, enforces constrained-machine request-size, request-rate,\n  concurrency, and response-size ceilings, exposes constrained-machine-only\n  requestability discovery, and forwards signed internal requests."
+          );
+          replaceExact(
+            'docs/security/CURRENT-BUILD-THREAT-MODEL.md',
+            "  destination ceiling, intersects the machine execution-time ceiling with policy,\n  constructs an explicit plan, and issues",
+            "  destination ceiling, computes machine discovery from the active deny-dominant\n  policy intersected with the authenticated machine profile, intersects the machine\n  execution-time ceiling with policy, constructs an explicit plan, and issues"
+          );
+          replaceExact(
+            'docs/security/CURRENT-BUILD-THREAT-MODEL.md',
+            "external-destination or remote-execution claim follows. Runtime IDs and software\ndigests are attribution/binding metadata; they are not hardware,",
+            "external-destination or remote-execution claim follows. Constrained machines may\nquery `/v1/machine-discovery`; the response contains only the caller's own\nprincipal/runtime authority facts, merged policy version/digest, purposes,\ndestinations, budgets, and the requestable action intersection. It omits denied,\nout-of-scope, unresolved-destination, and unrelated policy actions and explicitly\nstates that discovery is not authorization. Runtime IDs and software\ndigests are attribution/binding metadata; they are not hardware,"
+          );
+          replaceExact(
+            'docs/security/CURRENT-BUILD-THREAT-MODEL.md',
+            "1. Gateway liveness, readiness, authenticated API, intent, operations,\n   telemetry, export, import, and administrative routes.",
+            "1. Gateway liveness, readiness, authenticated API, constrained-machine\n   discovery, intent, operations, telemetry, export, import, and administrative routes."
+          );
+          replaceExact(
+            'docs/security/CURRENT-BUILD-THREAT-MODEL.md',
+            "| Machine action, purpose, or destination escalation | Ordinary policy is evaluated first; machine action/purpose ceilings form a second deny-dominant layer; current built-in effect destination is computed from the authorized tool and must remain inside the principal's finite destination ceiling | External/provider/MCP destination semantics and remote execution remain unimplemented and fail closed |",
+            "| Machine action, purpose, or destination escalation | Ordinary policy is evaluated first; machine action/purpose ceilings form a second deny-dominant layer; current built-in effect destination is computed from the authorized tool and must remain inside the principal's finite destination ceiling | External/provider/MCP destination semantics and remote execution remain unimplemented and fail closed |\n| Machine discovery metadata inference or discovery-as-authority | The route is constrained-machine-only; Hypervisor intersects the active deny-dominant policy with only the authenticated principal's finite actions, scopes and destinations; unresolved or denied actions are omitted; overlay structure, bearer material and unrelated actions are not returned; the response declares `discovery_is_not_authorization` | The caller intentionally learns its own authority facts plus merged policy version/digest and requestable action metadata; future provider/MCP schemas or global discovery must receive separate minimization and inference review |"
+          );
+          replaceExact(
+            'docs/security/CURRENT-BUILD-THREAT-MODEL.md',
+            "- a machine request whose action, purpose, or computed effect destination is outside\n  its profile, whose authority digest changed after approval, or whose runtime metadata is\n  presented as attestation;",
+            "- a machine request whose action, purpose, or computed effect destination is outside\n  its profile, whose authority digest changed after approval, or whose runtime metadata is\n  presented as attestation;\n- a machine treating discovery as a grant, probing discovery for unrelated policy or\n  object metadata, or attempting to recover bearer material or overlay structure;"
+          );
+          replaceExact(
+            'docs/security/CURRENT-BUILD-THREAT-MODEL.md',
+            "12. Critical/high security findings must be closed and independently\n    reverified before review intake; lesser accepted risk needs a named owner,\n    separate approval, containment, and a bounded unexpired exception.",
+            "12. Critical/high security findings must be closed and independently\n    reverified before review intake; lesser accepted risk needs a named owner,\n    separate approval, containment, and a bounded unexpired exception.\n13. Discovery, listing, installation, connection, or protocol advertisement never\n    creates execution authority; every effect still requires normal intent evaluation."
+          );
+
+          // Generate STATUS.md and synchronize the four governing registry markers
+          // using AXIOM's own generator after the registry/evidence files are coherent.
+          console.log(JSON.stringify({ registry_digest: registryDigest }));
+          NODE
+          node mesh/src/status.mjs --write
+          rm .github/workflows/finalize-machine-discovery-claim.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md CONSTITUTION.md docs mesh .github/workflows/finalize-machine-discovery-claim.yml
+          git commit -m "docs: promote bounded machine discovery claim"
+          git push origin HEAD:feat/machine-discovery-v1-2026-08-10
