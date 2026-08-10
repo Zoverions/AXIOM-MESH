@@ -1,6 +1,6 @@
 {
   "schema": "axiom-capabilities.v1",
-  "verified_at": "2026-08-09",
+  "verified_at": "2026-08-10",
   "kernel_version": "0.12.0-dev.3",
   "capabilities": [
     {
@@ -24,6 +24,18 @@
         "mesh/test/machine-concurrency.test.mjs",
         "mesh/test/machine-response-size.test.mjs",
         "mesh/test/machine-destination-e2e.test.mjs"
+      ]
+    },
+    {
+      "id": "core.machine-discovery",
+      "family": "core",
+      "status": "implemented",
+      "summary": "Authenticated constrained-machine discovery exposes a digest-bound principal-specific intersection of active deny-dominant allow rules, required scopes, finite machine actions, verified effect destinations, purposes, and budgets through the existing Gateway with an explicit non-authorization notice; actual execution still requires normal intent evaluation.",
+      "evidence": [
+        "mesh/test/machine-discovery.test.mjs",
+        "mesh/test/machine-discovery-e2e.test.mjs",
+        "mesh/test/machine-discovery-client.test.mjs",
+        "mesh/test/machine-discovery-network.test.mjs"
       ]
     },
     {
@@ -279,7 +291,7 @@
       "id": "ui.gateway-client",
       "family": "operations",
       "status": "implemented",
-      "summary": "A versioned same-origin Gateway client contract covers all 27 authenticated routes with exact route parity, bounded responses and timeouts, AbortSignal cancellation, stable idempotent intent results, explicit errors, and no direct internal-service access.",
+      "summary": "A versioned same-origin Gateway client contract covers all 28 authenticated routes with exact route parity, bounded responses and timeouts, AbortSignal cancellation, stable idempotent intent results, explicit errors, and no direct internal-service access.",
       "evidence": [
         "mesh/test/gateway-client-contract.test.mjs",
         "packages/axiom-client/index.mjs",
@@ -345,7 +357,7 @@
       "id": "operations.service-network-policy",
       "family": "operations",
       "status": "implemented",
-      "summary": "A default-deny current-build policy permits only 38 exact internal caller, destination, method, and route combinations; four isolated internal Compose segments remove unrelated service adjacency, while mTLS peer allowlists and protected forbidden-edge probes enforce direction and segmentation.",
+      "summary": "A default-deny current-build policy permits only 39 exact internal caller, destination, method, and route combinations; four isolated internal Compose segments remove unrelated service adjacency, while mTLS peer allowlists and protected forbidden-edge probes enforce direction and segmentation.",
       "evidence": [
         "mesh/test/service-network-policy.test.mjs",
         "mesh/src/lib/service-network-policy.mjs",

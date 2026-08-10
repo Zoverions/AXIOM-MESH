@@ -60,13 +60,15 @@
 
 ## Priority 4 — Native machine discovery and Verify surface
 
-- [ ] Define a compact capability-discovery response with stable IDs, versions, schemas, status, and declared constraints.
-- [ ] Expose discovery only through the existing authenticated Gateway boundary.
-- [ ] Separate discoverable/requestable capability from principal-specific authorization.
+- [ ] Define a compact capability-discovery response with stable IDs, versions, schemas, status, and declared constraints. The native `axiom-machine-discovery.v1` slice now exposes stable action IDs, risk, approval/confirmation requirements, verified destination, bounded timeout, caller purposes/destinations/budgets, and a digest; per-action versions and input/output schemas remain future work.
+- [x] Expose discovery only through the existing authenticated Gateway boundary.
+- [x] Separate discoverable/requestable capability from principal-specific authorization: `/v1/machine-discovery` declares `discovery_is_not_authorization`, and actual execution still uses normal intent evaluation.
 - [ ] Add machine-readable receipt/evidence verification through AXIOM Verify foundations.
 - [ ] Add exact structured errors for unsupported capability, denied scope, expired grant, missing approval, unavailable adapter, budget exhaustion, and evidence uncertainty.
-- [ ] Add pagination/bounds so discovery cannot become metadata exfiltration.
-- [ ] Prove a low-privilege machine principal cannot infer protected capability or object metadata beyond policy.
+- [ ] Add pagination/bounds so discovery cannot become metadata exfiltration. Current v1 does not enumerate the global policy; it iterates only the principal's finite action ceiling, but general future pagination/schema bounds remain open.
+- [ ] Prove a low-privilege machine principal cannot infer protected capability or object metadata beyond policy. Current E2E coverage proves unrelated actions and bearer material are absent; broader protected-object inference remains open.
+
+**Implemented discovery checkpoint:** constrained machines can request a digest-bound `axiom-machine-discovery.v1` snapshot through the normal Gateway. Hypervisor computes it from the active deny-dominant policy and the authenticated machine profile, omits denied, out-of-scope, unresolved-destination, and out-of-destination-ceiling actions, exposes only merged policy version/digest rather than overlay structure, and never converts discovery into permission.
 
 ## Priority 5 — Read-only MCP server laboratory
 

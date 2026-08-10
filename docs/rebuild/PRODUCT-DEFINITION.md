@@ -1,11 +1,11 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=1f61717d785b3e260d6eee36b2d772d4f1170287f6d262f24edc9fa1f412ff21 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=ded69f9d09f9c610a9f3345a9e24fe2ee830caad4ea28806c5641f454ebd2f1b -->
 # AXIOM-MESH Product Definition
 
 **Status:** canonical rebuild and product definition
 
 **Current build:** `0.12.0-dev.3`
 
-**Reconciled:** 2026-08-09
+**Reconciled:** 2026-08-10
 
 **Deployment status:** production candidate; no live production claim
 
@@ -29,10 +29,12 @@ human-sponsored constrained machine principals.
 A constrained machine principal is an authorization primitive: an authenticated
 `agent` identity is bound to a human sponsor, finite scopes, action and purpose
 ceilings, runtime identity, expiry, non-delegation, a currently enforced
-execution-time ceiling, and authenticated Gateway request-size, request-rate,
-concurrency, and response-size ceilings. The v1 schema still reserves destination
-limits, but destination is not a current live-enforcement claim until the correct
-effect/adapter path and evidence exist. A least-privilege infrastructure `service`
+execution-time ceiling, authenticated Gateway request-size, request-rate,
+concurrency, and response-size ceilings, and a current built-in effect destination
+computed from the authorized tool and constrained to the principal's finite
+destination allowlist. A constrained machine may query a digest-bound discovery
+snapshot containing only its own requestable intersection under active policy;
+that discovery snapshot never grants execution authority. A least-privilege infrastructure `service`
 keeps the existing service-principal contract unless it explicitly opts into
 that machine-authority profile.
 
@@ -104,7 +106,7 @@ visible effect.
 
 The current reference unit topology runs the four services across four exact
 single-host internal network segments. A machine-readable default-deny policy
-authorizes only 38 exact caller, destination, method, and route combinations
+authorizes only 39 exact caller, destination, method, and route combinations
 before signing or network I/O, derives each destination's active mTLS peers,
 and removes Gateway-to-Sandbox and Grid-to-Sandbox adjacency. Plaintext
 development traffic remains loopback-only. This is a reference single-host

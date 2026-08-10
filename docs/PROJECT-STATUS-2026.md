@@ -20,7 +20,7 @@ that tag are identified only as the current 0.12 development build.
 
 The executable source of truth is
 [`mesh/config/capabilities.json`](../mesh/config/capabilities.json). The
-generated [capability status](rebuild/STATUS.md) records 29 implemented, 3
+generated [capability status](rebuild/STATUS.md) records 30 implemented, 3
 experimental, 2 specified, 9 adapter-required, and 4 disabled capabilities.
 
 ## Implemented kernel scope
@@ -32,6 +32,8 @@ experimental, 2 specified, 9 adapter-required, and 4 disabled capabilities.
   execution-time ceiling, authenticated Gateway request-size, request-rate,
   concurrency, and response-size ceilings, and an AXIOM-computed current built-in
   effect destination constrained to the principal's finite destination allowlist;
+- authenticated machine-filtered discovery exposes only the constrained caller's
+  requestable intersection under active policy and explicitly does not grant authority;
   machine authority digests bind
   request approval, plan provenance, capability claims, and returned evidence;
 - backward-compatible least-privilege infrastructure `service` principals,
@@ -53,7 +55,7 @@ experimental, 2 specified, 9 adapter-required, and 4 disabled capabilities.
 - explicit production credential provisioning and a fail-closed four-process
   supervisor;
 - per-unit private identity/TLS projection, Grid-only durable state, an
-  exact four-segment internal topology, a default-deny 38-route application
+  exact four-segment internal topology, a default-deny 39-route application
   policy with derived mTLS peers, and signed Sandbox-only failure/recovery
   evidence;
 - signed admitted-node v2 discovery metadata, authenticated Grid-signed
@@ -236,7 +238,7 @@ external findings ledger has been submitted.
 ### Human utility preview
 
 The versioned Gateway client contract and zero-dependency same-origin client
-are implemented for all 27 authenticated routes, including schema, explicit
+are implemented for all 28 authenticated routes, including schema, explicit
 error, cancellation, timeout, response-bound, idempotency, source-parity, and
 real-stack compatibility evidence. A loopback-only experimental AXIOM One PWA
 foundation now uses that contract for status, one transparent echo intent,
@@ -263,9 +265,9 @@ evidence is promoted.
 
 The native Invocation Envelope and current machine action/purpose, execution-time,
 request-size, request-rate, concurrency, response-size, and local computed-destination
-enforcement are implemented; next add machine-filtered capability discovery and bind
-credentials and artifacts to
-that envelope; then build MCP compatibility against the same native Gateway
+enforcement and machine-filtered discovery are implemented; next bind credentials and
+artifacts to that envelope and add machine-readable receipt/evidence verification,
+then build MCP compatibility against the same native Gateway
 semantics. A2A, remote execution, asynchronous remote tasks, and attenuation-only
 delegation remain later gates and must not be enabled implicitly by protocol
 compatibility.
