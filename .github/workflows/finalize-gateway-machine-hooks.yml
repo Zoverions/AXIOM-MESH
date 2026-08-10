@@ -1,0 +1,217 @@
+name: Finalize Gateway machine hooks
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened]
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: github.head_ref == 'fix/gateway-machine-hooks-2026-08-09'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/gateway-machine-hooks-2026-08-09
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.18.0
+          package-manager-cache: false
+      - name: Apply exact Gateway hook repair and tests
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'mesh/src/gateway/server.mjs';
+          let src = fs.readFileSync(path, 'utf8');
+          const old = `  const server = createServiceServer({
+    name: 'gateway',
+    router,
+    maxBodyBytes: config.maxBodyBytes,
+    telemetry,
+    authenticate: async args => {
+      const key = sha256(args.req.socket.remoteAddress ?? 'unknown');
+      if (!ipLimiter.take(key)) throw new AxiomError('rate_limited', 'IP request rate limit exceeded', 429);
+      const principal = await bearerAuth(args);
+      enforceTelemetryCollectionBoundary(args.req, principal);
+      if (!principalLimiter.take(principal.id)) {
+        throw new AxiomError('rate_limited', 'Principal request rate limit exceeded', 429);
+      }
+      return principal;
+    }
+  });`;
+          const replacement = `  const authenticate = createGatewayAuthenticator({
+    bearerAuth,
+    ipLimiter,
+    principalLimiter
+  });
+  const server = createServiceServer({
+    name: 'gateway',
+    router,
+    maxBodyBytes: config.maxBodyBytes,
+    telemetry,
+    authenticate
+  });`;
+          if (!src.includes(old)) throw new Error('Gateway authentication block drifted');
+          src = src.replace(old, replacement);
+          const marker = `function hasScope(principal, scope) {`;
+          const helper = `export function createGatewayAuthenticator({ bearerAuth, ipLimiter, principalLimiter }) {
+  if (typeof bearerAuth !== 'function') throw new ValidationError('Gateway bearer authenticator is required');
+  if (!ipLimiter || typeof ipLimiter.take !== 'function') throw new ValidationError('Gateway IP limiter is required');
+  if (!principalLimiter || typeof principalLimiter.take !== 'function') {
+    throw new ValidationError('Gateway principal limiter is required');
+  }
+  const authenticate = async args => {
+    const key = sha256(args.req.socket.remoteAddress ?? 'unknown');
+    if (!ipLimiter.take(key)) throw new AxiomError('rate_limited', 'IP request rate limit exceeded', 429);
+    const principal = await bearerAuth(args);
+    enforceTelemetryCollectionBoundary(args.req, principal);
+    if (!principalLimiter.take(principal.id)) {
+      throw new AxiomError('rate_limited', 'Principal request rate limit exceeded', 429);
+    }
+    return principal;
+  };
+  authenticate.admitRequest = bearerAuth.admitRequest;
+  authenticate.inspectResponse = bearerAuth.inspectResponse;
+  return authenticate;
+}
+
+`;
+          if (!src.includes(marker)) throw new Error('Gateway helper insertion marker drifted');
+          src = src.replace(marker, helper + marker);
+          fs.writeFileSync(path, src);
+          NODE
+          cat > mesh/test/gateway-machine-hooks.test.mjs <<'TEST'
+          import assert from 'node:assert/strict';
+          import { mkdtemp, rm } from 'node:fs/promises';
+          import { tmpdir } from 'node:os';
+          import { join } from 'node:path';
+          import test from 'node:test';
+          import { createGatewayClient } from '../../packages/axiom-client/index.mjs';
+          import { startDevelopmentStack } from '../src/dev.mjs';
+          import { createGatewayAuthenticator } from '../src/gateway/server.mjs';
+          import { reserveProductionPortBlock } from '../src/lib/production-host.mjs';
+
+          test('Gateway rate-limit wrapper preserves machine admission and response hooks', async () => {
+            const admitRequest = () => () => {};
+            const inspectResponse = () => ({ constrained: true });
+            inspectResponse.requiresPreflight = () => true;
+            const bearerAuth = async () => ({
+              id: 'agent.gateway-hook-test',
+              schema: 'axiom-machine-principal.v1',
+              scopes: ['intent:execute']
+            });
+            bearerAuth.admitRequest = admitRequest;
+            bearerAuth.inspectResponse = inspectResponse;
+            const limiter = { take: () => true };
+            const authenticate = createGatewayAuthenticator({
+              bearerAuth,
+              ipLimiter: limiter,
+              principalLimiter: limiter
+            });
+
+            const principal = await authenticate({
+              req: {
+                method: 'GET',
+                url: '/v1/status',
+                socket: { remoteAddress: '127.0.0.1' }
+              }
+            });
+            assert.equal(principal.id, 'agent.gateway-hook-test');
+            assert.equal(authenticate.admitRequest, admitRequest);
+            assert.equal(authenticate.inspectResponse, inspectResponse);
+            assert.equal(authenticate.inspectResponse.requiresPreflight, inspectResponse.requiresPreflight);
+          });
+
+          test('real Gateway enforces constrained machine response size after auth wrapping', async t => {
+            const dataDir = await mkdtemp(join(tmpdir(), 'axiom-gateway-machine-hooks-'));
+            const lease = await reserveProductionPortBlock('gateway machine hooks');
+            const basePort = lease.base_port;
+            const humanToken = `gateway-hook-human-${'h'.repeat(32)}`;
+            const agentToken = `gateway-hook-agent-${'a'.repeat(32)}`;
+            let stack;
+            t.after(async () => {
+              try {
+                await stack?.stop();
+              } finally {
+                await lease.release();
+                await rm(dataDir, { recursive: true, force: true });
+              }
+            });
+            stack = await startDevelopmentStack({
+              dataDir,
+              environment: 'test',
+              autoBootstrap: true,
+              gatewayPort: basePort,
+              hypervisorPort: basePort + 1,
+              sandboxPort: basePort + 2,
+              gridPort: basePort + 3,
+              hypervisorUrl: `http://127.0.0.1:${basePort + 1}`,
+              sandboxUrl: `http://127.0.0.1:${basePort + 2}`,
+              gridUrl: `http://127.0.0.1:${basePort + 3}`,
+              rateLimitCapacity: 1_000,
+              rateLimitRefillPerSecond: 1_000,
+              apiTokens: {
+                [humanToken]: {
+                  id: 'owner.gateway-hook-test',
+                  type: 'human',
+                  roles: ['administrator'],
+                  scopes: ['*']
+                },
+                [agentToken]: {
+                  id: 'agent.gateway-hook-test',
+                  type: 'agent',
+                  sponsor: 'owner.gateway-hook-test',
+                  roles: ['researcher'],
+                  scopes: ['intent:execute'],
+                  lifetime: 'session',
+                  expires_at: '2099-01-01T00:00:00.000Z',
+                  runtime: {
+                    id: 'runtime.gateway-hook-test',
+                    kind: 'local-process',
+                    software_digest: 'a'.repeat(64)
+                  },
+                  constraints: {
+                    actions: ['system.echo'],
+                    purposes: ['test.conformance'],
+                    destinations: ['local'],
+                    budgets: {
+                      max_requests_per_minute: 30,
+                      max_concurrent_requests: 1,
+                      max_execution_ms: 2_000,
+                      max_request_bytes: 65_536,
+                      max_response_bytes: 1_024
+                    },
+                    delegation: { allowed: false, max_depth: 0 }
+                  }
+                }
+              }
+            });
+            const gateway = `http://127.0.0.1:${basePort}`;
+            const client = createGatewayClient({
+              token: agentToken,
+              request: (path, options) => fetch(`${gateway}${path}`, options)
+            });
+
+            await assert.rejects(
+              () => client.call('intents.submit', {
+                body: {
+                  action: 'system.echo',
+                  input: { message: 'r'.repeat(2_048) },
+                  purpose: 'test.conformance'
+                },
+                idempotencyKey: 'gateway-machine-response-budget-0001'
+              }),
+              error => error.code === 'machine_response_budget_exceeded' && error.status === 502
+            );
+          });
+          TEST
+          rm .github/workflows/finalize-gateway-machine-hooks.yml
+          git config user.name 'axiom-claim-sync'
+          git config user.email 'actions@users.noreply.github.com'
+          git add mesh/src/gateway/server.mjs mesh/test/gateway-machine-hooks.test.mjs .github/workflows/finalize-gateway-machine-hooks.yml
+          git commit -m 'fix: preserve machine admission hooks through Gateway auth wrapper'
+          git push origin HEAD:fix/gateway-machine-hooks-2026-08-09
