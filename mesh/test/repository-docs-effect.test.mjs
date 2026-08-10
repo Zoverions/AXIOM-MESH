@@ -225,6 +225,7 @@ test('repository operator receipt proves exact PR proposal without merge or reme
     now: '2026-08-10T22:32:00.000Z'
   });
   assert.equal(verified.external_effect_executed, true);
+  assert.equal(verified.pull_request_created_observed, true);
   assert.equal(verified.merge_performed, false);
   assert.equal(verified.base_branch_content_changed, false);
   assert.equal(verified.execution_authorized, false);
@@ -259,7 +260,10 @@ test('receipt rejects wrong post state, extra files, wrong branch, wrong identit
       observed_blob_sha: 'd'.repeat(40)
     }]
   }), /exactly cover/);
-  assert.throws(() => protocol.buildRepositoryDocsEffectReceipt({ ...valid, identity: attacker }), /signature|identity/);
+  assert.throws(
+    () => protocol.buildRepositoryDocsEffectReceipt({ ...valid, identity: attacker }),
+    /signer must match/
+  );
   assert.throws(() => protocol.buildRepositoryDocsEffectReceipt({
     ...valid,
     observed_at: '2026-08-10T22:36:00.000Z'
