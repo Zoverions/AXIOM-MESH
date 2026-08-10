@@ -9,7 +9,6 @@ import { startDevelopmentStack } from './dev.mjs';
 import {
   ValidationError,
   canonicalJson,
-  digestObject,
   sha256
 } from './lib/canonical.mjs';
 import { verifyObjectSignature } from './lib/identity.mjs';
@@ -24,6 +23,7 @@ const EVIDENCE_SCHEMA = 'axiom-intent-lifecycle-conformance-evidence.v1';
 const KERNEL_VERSION = '0.12.0-dev.3';
 const REVISION = /^[a-f0-9]{40}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
+const UNBOUND_SOURCE = `unbound-local-intent-drill:${KERNEL_VERSION}`;
 
 export async function runIntentLifecycleDrill({
   sourceRevision = process.env.GITHUB_SHA,
@@ -31,9 +31,7 @@ export async function runIntentLifecycleDrill({
 } = {}) {
   const commitBound = REVISION.test(sourceRevision ?? '');
   const normalizedRevision = commitBound ? sourceRevision : null;
-  const sourceDigest = sha256(
-    commitBound ? sourceRevision : `unbound-local-intent-drill:${KERNEL_VERSION}`
-  );
+  const sourceDigest = sha256(commitBound ? sourceRevision : UNBOUND_SOURCE);
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-intent-lifecycle-'));
   const basePort = await findPortBlock();
   const tokens = {
@@ -124,8 +122,8 @@ export async function runIntentLifecycleDrill({
     });
 
     const timingStart = now();
-    const votingEndsAt = new Date(timingStart + 1_000).toISOString();
-    const activateAfter = new Date(timingStart + 3_000).toISOString();
+    const votingEndsAt = new Date(timingStart + 2_000).toISOString();
+    const activateAfter = new Date(timingStart + 5_000).toISOString();
     const proposalInput = {
       title: 'Activate AXIOM Intent lifecycle drill contract',
       body: 'Conformance-only activation for the disposable four-service Intent lifecycle drill.',
@@ -175,10 +173,9 @@ export async function runIntentLifecycleDrill({
           weight: 1
         }
       }
-    }, 409);
-    checks.late_vote_rejected = ['proposal_closed', 'voting_closed', 'state_conflict']
-      .includes(lateVote.error?.code)
-      || /Voting period is closed|not open for voting/i.test(lateVote.error?.message ?? '');
+    }, 400);
+    checks.late_vote_rejected = lateVote.error?.code === 'validation_error'
+      && /Voting period is closed|not open for voting/i.test(lateVote.error?.message ?? '');
 
     const finalized = await independentlyApprovedIntent({
       gateway,
@@ -193,7 +190,7 @@ export async function runIntentLifecycleDrill({
     });
     checks.proposal_finalized_through_gateway = finalized.status === 'completed';
 
-    if (Date.now() < new Date(activateAfter).valueOf() - 250) {
+    if (Date.now() < new Date(activateAfter).valueOf() - 500) {
       const earlyActivation = await independentlyApprovedIntent({
         gateway,
         requesterToken: tokens.operator,
@@ -206,11 +203,10 @@ export async function runIntentLifecycleDrill({
         checks,
         checkPrefix: 'early_activation'
       });
-      checks.activation_timelock_enforced = ['proposal_timelocked', 'activation_too_early']
-        .includes(earlyActivation.error?.code)
+      checks.activation_timelock_enforced = earlyActivation.error?.code === 'proposal_timelocked'
         || /timelock|activate_after|not yet/i.test(earlyActivation.error?.message ?? '');
     } else {
-      checks.activation_timelock_enforced = true;
+      throw new ValidationError('Intent lifecycle drill reached activation window before testing timelock');
     }
 
     await waitUntil(activateAfter);
@@ -466,6 +462,12 @@ export function verifyIntentLifecycleEvidence(evidence) {
   ) {
     throw new ValidationError('Intent lifecycle source binding is invalid');
   }
+  const expectedSourceDigest = sha256(
+    evidence.source.commit_bound === true ? evidence.source.revision : UNBOUND_SOURCE
+  );
+  if (evidence.source.source_digest !== expectedSourceDigest) {
+    throw new ValidationError('Intent lifecycle source digest does not match the revision binding');
+  }
   if (!Number.isFinite(Date.parse(evidence.generated_at))) {
     throw new ValidationError('Intent lifecycle generated_at is invalid');
   }
@@ -482,6 +484,9 @@ export function verifyIntentLifecycleEvidence(evidence) {
   delete unsigned.attestation;
   if (
     evidence.signer?.service !== 'grid'
+    || !evidence.signer?.key_id?.endsWith(
+      `:${sha256(evidence.signer.public_key_pem).slice(0, 16)}`
+    )
     || evidence.attestation?.key_id !== evidence.signer?.key_id
     || !verifyObjectSignature(unsigned, evidence.attestation, publicKey)
   ) {
