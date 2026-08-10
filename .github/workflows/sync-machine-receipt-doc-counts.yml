@@ -1,0 +1,83 @@
+name: Sync machine receipt route-count docs
+
+on:
+  push:
+    branches:
+      - "feat/machine-receipt-verification-v1b-2026-08-10"
+    paths:
+      - ".github/machine-receipt-doc-sync-trigger"
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: feat/machine-receipt-verification-v1b-2026-08-10
+          persist-credentials: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.18.0
+          package-manager-cache: false
+      - name: Synchronize computed route-count prose
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              'README.md': [
+                  ('permits only 39 current internal', 'permits only 40 current internal'),
+              ],
+              'docs/PRODUCTION-GRADE.md': [
+                  ('permits only 39 current internal', 'permits only 40 current internal'),
+              ],
+              'mesh/PRODUCTION.md': [
+                  ('policy additionally authorizes only 39 exact caller/destination/method/route',
+                   'policy additionally authorizes only 40 exact caller/destination/method/route'),
+              ],
+              'docs/rebuild/PRODUCT-DEFINITION.md': [
+                  ('authorizes only 39 exact caller', 'authorizes only 40 exact caller'),
+              ],
+              'docs/PROJECT-STATUS-2026.md': [
+                  ('default-deny 39-route application', 'default-deny 40-route application'),
+                  ('implemented for all 28 authenticated routes', 'implemented for all 29 authenticated routes'),
+              ],
+              'docs/operations/GATEWAY-CLIENT-CONTRACT.md': [
+                  ('covers all 28 authenticated `/v1/` Gateway routes',
+                   'covers all 29 authenticated `/v1/` Gateway routes'),
+              ],
+          }
+
+          for path, edits in replacements.items():
+              p = Path(path)
+              text = p.read_text()
+              for old, new in edits:
+                  count = text.count(old)
+                  if count != 1:
+                      raise SystemExit(f'{path}: expected exactly one {old!r}, found {count}')
+                  text = text.replace(old, new)
+              p.write_text(text)
+          PY
+          node mesh/src/status.mjs
+          node mesh/src/check-docs.mjs
+          expected='README.md docs/PRODUCTION-GRADE.md mesh/PRODUCTION.md docs/rebuild/PRODUCT-DEFINITION.md docs/PROJECT-STATUS-2026.md docs/operations/GATEWAY-CLIENT-CONTRACT.md docs/rebuild/STATUS.md'
+          unexpected="$(git diff --name-only | while read -r f; do case " $expected " in *" $f "*) ;; *) echo "$f" ;; esac; done)"
+          test -z "$unexpected" || { echo "Unexpected generated files:"; echo "$unexpected"; exit 1; }
+      - name: Commit synchronized canonical docs
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          if git diff --quiet; then
+            echo 'No documentation changes required.'
+            exit 0
+          fi
+          git add README.md docs/PRODUCTION-GRADE.md mesh/PRODUCTION.md docs/rebuild/PRODUCT-DEFINITION.md docs/PROJECT-STATUS-2026.md docs/operations/GATEWAY-CLIENT-CONTRACT.md docs/rebuild/STATUS.md
+          git commit -m 'docs: sync receipt route-count claims'
+          git push origin HEAD:feat/machine-receipt-verification-v1b-2026-08-10
