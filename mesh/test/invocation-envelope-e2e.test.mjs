@@ -122,6 +122,8 @@ test('native invocation envelope digest binds Grid acceptance to returned machin
     accepted.payload.invocation.caller.machine.runtime_id,
     'runtime.invocation-e2e'
   );
+  assert.equal(accepted.payload.invocation.authority.effect_destination, 'local');
+  assert.equal(result.evidence.effect_destination, 'local');
   assert.deepEqual(
     accepted.payload.invocation.request.data_scopes,
     ['memory.alpha', 'memory.beta']

@@ -113,7 +113,16 @@ export function buildNativeInvocationEnvelope(intent, decision) {
         max: 64,
         pattern: RISK
       }),
-      independent_approval_required: policy.requires_independent_approval === true
+      independent_approval_required: policy.requires_independent_approval === true,
+      ...(policy.effect_destination !== undefined
+        ? {
+            effect_destination: assertString(
+              policy.effect_destination,
+              'invocation effect destination',
+              { max: 160, pattern: IDENTIFIER }
+            )
+          }
+        : {})
     },
     limits: {
       execution_timeout_ms: timeoutMs,
@@ -219,7 +228,8 @@ export function validateInvocationEnvelope(raw) {
     'policy_version',
     'policy_digest',
     'risk',
-    'independent_approval_required'
+    'independent_approval_required',
+    ...(authority.effect_destination !== undefined ? ['effect_destination'] : [])
   ], 'invocation authority');
   assertString(authority.policy_version, 'invocation policy version', { max: 128 });
   assertString(authority.policy_digest, 'invocation policy digest', {
@@ -230,6 +240,12 @@ export function validateInvocationEnvelope(raw) {
   assertString(authority.risk, 'invocation risk', { max: 64, pattern: RISK });
   if (typeof authority.independent_approval_required !== 'boolean') {
     throw new ValidationError('Invocation approval requirement must be boolean');
+  }
+  if (authority.effect_destination !== undefined) {
+    assertString(authority.effect_destination, 'invocation effect destination', {
+      max: 160,
+      pattern: IDENTIFIER
+    });
   }
 
   const limits = assertPlainObject(value.limits, 'invocation limits');

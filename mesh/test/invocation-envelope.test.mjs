@@ -13,6 +13,7 @@ function decision(overrides = {}) {
     risk: 'low',
     timeout_ms: 4_000,
     requires_independent_approval: false,
+    effect_destination: 'local',
     ...overrides
   };
 }
@@ -71,6 +72,7 @@ test('native invocation envelope binds existing human request and policy facts',
   assert.match(envelope.request.request_digest, /^[a-f0-9]{64}$/);
   assert.match(envelope.request.input_digest, /^[a-f0-9]{64}$/);
   assert.equal(envelope.authority.policy_digest, 'b'.repeat(64));
+  assert.equal(envelope.authority.effect_destination, 'local');
   assert.equal(envelope.limits.execution_timeout_ms, 4_000);
   assert.equal(envelope.limits.ingress, undefined);
   assert.match(invocationEnvelopeDigest(envelope), /^[a-f0-9]{64}$/);

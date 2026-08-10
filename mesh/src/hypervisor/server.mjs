@@ -40,6 +40,7 @@ import {
   buildNativeInvocationEnvelope,
   invocationEnvelopeDigest
 } from '../lib/invocation-envelope.mjs';
+import { effectDestinationForTool } from '../lib/effect-destination.mjs';
 import {
   loadTransportRuntime,
   transportServerOptions
@@ -148,6 +149,7 @@ export async function createHypervisorService(config = meshConfig()) {
     const machineAuthority = intent.principal.schema === 'axiom-machine-principal.v1'
       ? machinePrincipalAuthorityFacts(intent.principal)
       : null;
+    let effectDestination;
     if (machineAuthority) {
       const machineDecision = evaluateMachineIntent(intent.principal, {
         action: intent.action,
@@ -163,14 +165,44 @@ export async function createHypervisorService(config = meshConfig()) {
           http_status: 403
         };
       } else if (decision.allow) {
-        decision = {
-          ...decision,
-          timeout_ms: Math.min(
-            Number(decision.timeout_ms ?? 10_000),
-            intent.principal.constraints.budgets.max_execution_ms
-          )
-        };
+        try {
+          effectDestination = effectDestinationForTool(decision.tool);
+        } catch {
+          decision = {
+            ...decision,
+            allow: false,
+            pending: false,
+            code: 'machine_destination_unresolved',
+            reason: 'The selected execution tool has no verified effect destination',
+            http_status: 403
+          };
+        }
+        if (
+          effectDestination
+          && !intent.principal.constraints.destinations.includes(effectDestination)
+        ) {
+          decision = {
+            ...decision,
+            allow: false,
+            pending: false,
+            code: 'machine_destination_denied',
+            reason: 'The computed effect destination exceeds machine authority',
+            http_status: 403
+          };
+        }
+        if (decision.allow) {
+          decision = {
+            ...decision,
+            timeout_ms: Math.min(
+              Number(decision.timeout_ms ?? 10_000),
+              intent.principal.constraints.budgets.max_execution_ms
+            )
+          };
+        }
       }
+    }
+    if (effectDestination) {
+      decision = { ...decision, effect_destination: effectDestination };
     }
     const invocationEnvelope = buildNativeInvocationEnvelope(intent, decision);
     const invocationDigest = invocationEnvelopeDigest(invocationEnvelope);
@@ -289,6 +321,7 @@ export async function createHypervisorService(config = meshConfig()) {
       exp: now + config.capabilityTtlSeconds,
       intent_digest: digestObject(intent),
       invocation_digest: invocationDigest,
+      ...(effectDestination ? { effect_destination: effectDestination } : {}),
       tool: decision.tool,
       constraints: decision.constraints,
       policy_digest: decision.policy_digest,
@@ -313,6 +346,7 @@ export async function createHypervisorService(config = meshConfig()) {
       if (
         statement.intent_digest !== digestObject(intent)
         || statement.invocation_digest !== invocationDigest
+        || statement.effect_destination !== effectDestination
         || statement.result_digest !== digestObject(execution.result)
       ) {
         throw new AxiomError('sandbox_attestation_mismatch', 'Sandbox attestation does not match the execution result', 502);
@@ -326,6 +360,7 @@ export async function createHypervisorService(config = meshConfig()) {
             evidence: {
               plan_digest: digestObject(plan),
               invocation_digest: invocationDigest,
+              ...(effectDestination ? { effect_destination: effectDestination } : {}),
               execution: execution.attestation,
               ...(machineAuthority ? {
                 machine_authority_digest: machineAuthority.authority_digest
@@ -342,6 +377,7 @@ export async function createHypervisorService(config = meshConfig()) {
         evidence: {
           plan_digest: boundPlanDigest,
           invocation_digest: invocationDigest,
+          ...(effectDestination ? { effect_destination: effectDestination } : {}),
           execution_digest: statement.result_digest,
           policy_digest: decision.policy_digest,
           ...(machineAuthority ? {
