@@ -4,7 +4,7 @@
 Registry schema: `axiom-capabilities.v1`
 Kernel version: `0.12.0-dev.3`
 Evidence verified: `2026-08-09`
-Registry digest: `3080135f9a425a41903a23875f03bb1e95a7169b38d8cafc41ac81131e37c020`
+Registry digest: `baee0a00d61d7f87a6d742e311eb2d5e0cea9f41965d1b3148f7b6a8c7b2bb5e`
 
 Only **implemented** capabilities are runnable claims.
 
@@ -21,7 +21,7 @@ Only **implemented** capabilities are runnable claims.
 | Capability | Family | Status | Verified claim or boundary |
 |---|---|---|---|
 | `core.intent-loop` | core | **implemented** | Authenticated intent-to-plan-to-grant-to-execution-to-evidence pipeline. |
-| `core.machine-principals` | core | **implemented** | Authenticated agent principals are human-sponsored and deny-dominantly bounded by finite scopes, action and purpose ceilings, runtime identity, expiry, non-delegation, an execution-time ceiling, and authenticated Gateway ingress ceilings for request size and request rate; infrastructure service principals remain backward-compatible unless they opt into the same constrained profile. |
+| `core.machine-principals` | core | **implemented** | Authenticated agent principals are human-sponsored and deny-dominantly bounded by finite scopes, action and purpose ceilings, runtime identity, expiry, non-delegation, an execution-time ceiling, and authenticated Gateway ingress ceilings for request size, request rate, and concurrency; infrastructure service principals remain backward-compatible unless they opt into the same constrained profile. |
 | `core.evidence-chain` | audit | **implemented** | Transactional SHA-256 hash-linked evidence log with restart verification. |
 | `core.layered-policy` | governance | **implemented** | Runtime policy stacks merge global-to-user constraints deny-dominantly and require independent approval for every permitted high-risk effect. |
 | `capsules.registry` | capsules | **implemented** | Immutable digest-addressed capsule manifests with signature verification, schemas, SBOM digest, and revocation state. |

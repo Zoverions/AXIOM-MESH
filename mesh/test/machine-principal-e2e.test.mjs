@@ -89,7 +89,7 @@ test('constrained agent executes an authorized intent and returns bound authorit
   const { client } = await startMachineStack(t, 'axiom-machine-e2e-', {
     budgets: {
       max_request_bytes: 1_024,
-      max_requests_per_minute: 2
+      max_requests_per_minute: 3
     }
   });
   const body = {
@@ -120,7 +120,17 @@ test('constrained agent executes an authorized intent and returns bound authorit
     result.evidence.machine_authority_digest
   );
 
-  // The capability binding below proves both newly claimed ingress ceilings.
+  const events = await client.call('events.list', {
+    query: { after: 0, limit: 100 }
+  });
+  const accepted = events.events.find(event => (
+    event.kind === 'intent.accepted'
+    && event.subject === result.intent_id
+  ));
+  assert.ok(accepted);
+  assert.equal(accepted.payload.invocation.limits.ingress.max_concurrent_requests, 1);
+
+  // The capability binding below proves all three claimed ingress ceilings.
   await assert.rejects(
     () => client.call('intents.submit', {
       body: {
