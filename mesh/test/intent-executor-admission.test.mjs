@@ -183,12 +183,13 @@ test('wildcard, self-modifying, authority-control, unknown, denied, and tool-mis
   assert.throws(() => dossier({
     candidate_mapping: mapping({ target_action: 'missing.action' })
   }), /does not exist/);
+
+  const deniedPolicy = structuredClone(policy);
+  deniedPolicy.actions['system.echo'].decision = 'deny';
   assert.throws(() => dossier({
-    candidate_mapping: mapping({
-      target_action: 'tests.weaken-for-pass',
-      tool: 'builtin.echo'
-    })
+    current_context: currentContext({ policy: deniedPolicy })
   }), /denied/);
+
   assert.throws(() => dossier({
     candidate_mapping: mapping({ tool: 'builtin.hash' })
   }), /does not match current policy/);
