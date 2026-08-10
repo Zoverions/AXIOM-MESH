@@ -115,6 +115,7 @@ test('machine discovery exposes only requestable intersection and never grants a
   assert.deepEqual(discovery.actions[1].required_confirmation_values, ['confirm:system.hash']);
   assert.match(discovery.digest, /^[a-f0-9]{64}$/);
   assert.equal(validateMachineDiscovery(discovery), discovery);
+  assert.deepEqual(Object.keys(discovery.policy).sort(), ['digest', 'version']);
   assert.equal(JSON.stringify(discovery).includes('Bearer '), false);
   assert.equal(JSON.stringify(discovery).includes('memory.put'), false);
   assert.equal(JSON.stringify(discovery).includes('provider.openai'), false);
@@ -146,7 +147,8 @@ test('machine discovery removes actions blocked by active deny-dominant overlay'
     kernelVersion: '0.12.0-dev.3'
   });
   assert.deepEqual(discovery.actions.map(action => action.id), ['system.echo']);
-  assert.equal(discovery.policy.layers.length, 2);
+  assert.match(discovery.policy.digest, /^[a-f0-9]{64}$/);
+  assert.deepEqual(Object.keys(discovery.policy).sort(), ['digest', 'version']);
 });
 
 test('machine discovery omits actions outside scope or destination ceiling', () => {
