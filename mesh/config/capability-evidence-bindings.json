@@ -1,7 +1,7 @@
 {
   "schema": "axiom-capability-evidence-bindings.v1",
   "kernel_version": "0.12.0-dev.3",
-  "registry_digest": "9bcf52b96437102436d3f19eaf62a65c844dbdb2f4e63c7c0613c0d7510a619d",
+  "registry_digest": "90e07a5f6ad577d4733e3c7db238cc61c49e9e0d593d78a882409195cc5f5506",
   "bindings": [
     {
       "capability_id": "capsules.registry",
