@@ -51,7 +51,7 @@ export async function invokeRepositoryOperator({
   grid_prepared_event,
   hypervisorPublicKey,
   operatorPublicKey,
-  now = new Date().toISOString(),
+  now,
   timeoutMs = DEFAULT_TIMEOUT_MS
 }) {
   const path = validateSocketPath(socketPath);
@@ -125,10 +125,13 @@ export async function invokeRepositoryOperator({
     throw new AxiomError(code, message, code === 'repository_operator_busy' ? 409 : 503);
   }
 
+  // Unless a deterministic test clock is supplied, receipt freshness is evaluated
+  // when the response is actually received rather than at request-send time.
+  const verificationNow = now ?? new Date().toISOString();
   return verifyRepositoryDocsEffectReceipt(response.receipt, {
     prepared_effect,
     hypervisorPublicKey,
     operatorPublicKey,
-    now
+    now: verificationNow
   });
 }
