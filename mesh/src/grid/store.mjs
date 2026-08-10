@@ -340,6 +340,47 @@ export class GridStore extends CheckpointGridStore {
     return this.getIntentContractAssessmentFromVerifiedState(contractId, options);
   }
 
+  renderIntentGovernanceState(state) {
+    const requirements = state.assessment.requirements.map(requirement => {
+      const {
+        independent_verifiers: independentVerifiers,
+        failing_verifiers: failingVerifiers,
+        stale_verifiers: staleVerifiers,
+        future_verifiers: futureVerifiers,
+        attestation_ids: ignoredAttestationIds,
+        ...safe
+      } = requirement;
+      return {
+        ...safe,
+        independent_verifier_count: independentVerifiers.length,
+        failing_verifier_count: failingVerifiers.length,
+        stale_verifier_count: staleVerifiers.length,
+        future_verifier_count: futureVerifiers.length
+      };
+    });
+    return {
+      schema: 'axiom-intent-governance-state.v1',
+      contract_id: state.activation.contract_id,
+      activation_digest: state.activation.activation_digest,
+      contract_digest: state.activation.contract_digest,
+      graph_digest: state.activation.graph_digest,
+      build: state.activation.build,
+      chain: state.chain,
+      governance: state.governance,
+      assessment: {
+        schema: state.assessment.schema,
+        evaluated_at: state.assessment.evaluated_at,
+        summary: state.assessment.summary,
+        requirements,
+        rejected_attestation_count: state.assessment.rejected_attestations.length,
+        assessment_digest: state.assessment.assessment_digest
+      },
+      reconciliation: state.reconciliation,
+      execution_authorized: false,
+      non_claim: 'This governance view is read-only; reconciliation cannot authorize or execute an effect in AXIOM Intent v0.3.'
+    };
+  }
+
   listProposals(options = {}) {
     const proposals = super.listProposals(options);
     const activeIntentProposals = proposals.filter(proposal => (
@@ -354,8 +395,11 @@ export class GridStore extends CheckpointGridStore {
       normalizeIntentActivationRecord(proposal.action_json.payload.activation).contract_id
     )))];
     for (const contractId of contractIds) {
-      const state = this.getIntentContractAssessmentFromVerifiedState(contractId);
-      statesByProposal.set(state.governance.proposal_id, state);
+      const fullState = this.getIntentContractAssessmentFromVerifiedState(contractId);
+      statesByProposal.set(
+        fullState.governance.proposal_id,
+        this.renderIntentGovernanceState(fullState)
+      );
     }
     return proposals.map(proposal => {
       const intentState = statesByProposal.get(proposal.proposal_id);
