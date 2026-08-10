@@ -68,16 +68,17 @@ digests are attribution/binding metadata; they are not hardware,
 TPM/TEE, measured-boot, or remote-attestation proof.
 
 The compact candidate container uses `network_mode: none`. Signed deny-egress
-evidence binds the observed `/proc/self/ns/net` namespace identity by digest and
-derives the Compose `network_mode: none` requirement from the actual production
-Compose policy; both are required provenance-bearing checks. Host-local Gateway
-ingress is mounted separately, and startup fails before launching children if
-the enforced Linux namespace contains a non-loopback interface or IPv4/IPv6
-default route. The four-unit topology uses an internal service network with no
-external route. Both models trust the host kernel, container engine, mount
-policy, process owner, and deployment operator. Container configuration is a
-boundary control, not proof against a malicious host administrator or a kernel
-escape.
+runtime evidence binds the observed `/proc/self/ns/net` namespace identity by
+digest. The static `network_mode: none` requirement is intentionally not asserted
+inside runtime evidence: release/deployment verification reads the actual production
+Compose policy, requires that setting, and binds the Compose digest before the
+protected container job launches it. Host-local Gateway ingress is mounted
+separately, and startup fails before launching children if the enforced Linux
+namespace contains a non-loopback interface or IPv4/IPv6 default route. The
+four-unit topology uses an internal service network with no external route. Both
+models trust the host kernel, container engine, mount policy, process owner, and
+deployment operator. Container configuration is a boundary control, not proof
+against a malicious host administrator or a kernel escape.
 
 Every internal service edge uses TLS 1.3 with CA validation, DNS and
 SPIFFE-style URI identity, and an exact active-leaf fingerprint. The signed
