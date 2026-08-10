@@ -47,7 +47,7 @@
         "assert.equal(error.code, 'machine_request_budget_exceeded');",
         "assert.equal(error.code, 'machine_rate_budget_exceeded');",
         "assert.equal(accepted.payload.invocation.limits.ingress.max_concurrent_requests, 1);",
-        "assert.equal(accepted.payload.invocation.limits.ingress.max_response_bytes, 8_192);",
+        "assert.equal(accepted.payload.invocation.limits.ingress.max_response_bytes, 262_144);",
         "assert.equal(error.code, 'machine_response_budget_exceeded');"
       ]
     },
