@@ -1,4 +1,4 @@
-// Final verification anchor after Gateway machine hook repair #925.
+// Final auditable verification anchor for the destination claim after Gateway hook repair #925.
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
