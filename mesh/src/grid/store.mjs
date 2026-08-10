@@ -179,20 +179,46 @@ export class GridStore extends CheckpointGridStore {
       if (!this.isIntentActivationAction(action)) continue;
       const activation = normalizeIntentActivationRecord(action.payload.activation);
       if (activation.contract_id !== contractId) continue;
-      const activationEvent = this.db.prepare(`
+
+      const proposedRow = this.db.prepare(`
+        SELECT * FROM events
+        WHERE kind = 'governance.proposed' AND subject = ?
+        ORDER BY seq ASC LIMIT 1
+      `).get(row.proposal_id);
+      if (!proposedRow) {
+        throw new ValidationError('Intent governance proposal has no evidence-chain proposal event');
+      }
+      const proposedEvent = this.decodeEventRow(proposedRow);
+      if (
+        proposedEvent.actor !== row.proposer
+        || proposedEvent.payload.proposer !== row.proposer
+        || canonicalJson(proposedEvent.payload.action) !== canonicalJson(action)
+      ) {
+        throw new ValidationError('Intent governance proposal materialized state does not match signed evidence');
+      }
+
+      const activationRow = this.db.prepare(`
         SELECT * FROM events
         WHERE kind = 'governance.activated' AND subject = ?
         ORDER BY seq DESC LIMIT 1
       `).get(row.proposal_id);
-      if (!activationEvent) {
+      if (!activationRow) {
         throw new ValidationError('Active Intent governance proposal has no activation evidence event');
       }
-      const event = this.decodeEventRow(activationEvent);
+      const event = this.decodeEventRow(activationRow);
+      if (
+        event.payload.proposal_id !== row.proposal_id
+        || event.payload.activated_by !== event.actor
+      ) {
+        throw new ValidationError('Intent governance activation actor binding is invalid');
+      }
       return {
         proposal_id: row.proposal_id,
         proposer: row.proposer,
         activated_by: event.actor,
         activated_at: event.occurred_at,
+        proposal_event_id: proposedEvent.event_id,
+        proposal_event_hash: proposedEvent.event_hash,
         activation_event_id: event.event_id,
         activation_event_hash: event.event_hash,
         activation
@@ -230,8 +256,16 @@ export class GridStore extends CheckpointGridStore {
       `).get(row.object_id);
       if (!eventRow) throw new ValidationError('Intent evidence memory object has no evidence-chain event');
       const event = this.decodeEventRow(eventRow);
-      if (event.actor !== row.owner || event.payload.owner !== row.owner) {
-        throw new ValidationError('Intent evidence actor binding is invalid');
+      if (
+        event.actor !== row.owner
+        || event.payload.owner !== row.owner
+        || event.payload.object_id !== row.object_id
+        || event.payload.kind !== row.kind
+        || event.payload.content_digest !== row.content_digest
+        || canonicalJson(event.payload.content) !== canonicalJson(decoded.payload_json.content)
+        || canonicalJson(event.payload.metadata ?? {}) !== canonicalJson(decoded.payload_json.metadata ?? {})
+      ) {
+        throw new ValidationError('Intent evidence materialized state does not match signed evidence');
       }
       events.push({
         record,
@@ -247,7 +281,7 @@ export class GridStore extends CheckpointGridStore {
   }
 
   getIntentContractAssessment(contractId, { now = new Date().toISOString() } = {}) {
-    const chain = this.verifyChain();
+    const chain = this.verifyFullChain();
     if (!chain.valid) {
       throw new AxiomError(
         'integrity_verification_failed',
@@ -268,18 +302,22 @@ export class GridStore extends CheckpointGridStore {
       this.listIntentAttestationEvents(contractId),
       { now }
     );
+    const status = this.getStatus();
     return {
       schema: 'axiom-intent-grid-state.v1',
       chain: {
         valid: true,
-        last_seq: chain.last_seq,
-        last_hash: chain.last_hash
+        verification_mode: 'full',
+        last_seq: status.last_seq,
+        last_hash: status.last_hash
       },
       governance: {
         proposal_id: current.proposal_id,
         proposer: current.proposer,
         activated_by: current.activated_by,
         activated_at: current.activated_at,
+        proposal_event_id: current.proposal_event_id,
+        proposal_event_hash: current.proposal_event_hash,
         activation_event_id: current.activation_event_id,
         activation_event_hash: current.activation_event_hash
       },
