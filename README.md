@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=ded69f9d09f9c610a9f3345a9e24fe2ee830caad4ea28806c5641f454ebd2f1b -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=9bcf52b96437102436d3f19eaf62a65c844dbdb2f4e63c7c0613c0d7510a619d -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -60,6 +60,7 @@ The current kernel implements:
   purpose ceilings, runtime binding, expiry, non-delegation, an execution-time
   ceiling, authenticated Gateway request-size, request-rate, concurrency, and response-size ceilings, and an AXIOM-computed effect destination constrained to the principal's finite destination allowlist;
 - authenticated constrained-machine discovery through `/v1/machine-discovery`, filtered by the active deny-dominant policy and the caller's own finite scopes, actions, destinations, purposes, and budgets, with discovery explicitly not granting execution authority;
+- owner-scoped Grid-attested receipts for terminal constrained-machine intents, binding request and machine-authority digests, accepted/terminal evidence anchors, current chain assurance, and terminal outcome digests for independent verification with the trusted Grid public key;
 - encrypted transactional state, consent, memory, governance, local accounting,
   export/import, backup, restore, rotation, and recovery;
 - mutually authenticated internal transport and independently restartable
@@ -81,8 +82,11 @@ destination semantics remain unresolved and fail closed; this is not a claim of
 remote execution or arbitrary external-destination support. Constrained machines may query
 `/v1/machine-discovery` for a digest-bound snapshot of their own requestable
 intersection; that snapshot is not permission and every effect still undergoes
-the normal intent and policy evaluation path. AXIOM One remains an experimental browser/PWA preview,
-not an implemented or supported product claim. External AI, Verify, Circles,
+the normal intent and policy evaluation path. Terminal constrained-machine intents also expose
+owner-scoped Grid-attested, digest-only receipts that can be independently checked with the trusted
+Grid public key; this is a kernel verification primitive, not the AXIOM Verify product or proof of
+an arbitrary external side effect. AXIOM One remains an experimental browser/PWA preview,
+not an implemented or supported product claim. External AI, the AXIOM Verify product, Circles,
 remote dispatch, federation, tokens, settlement, regulated domains, arbitrary
 code, embodied systems, and post-quantum security are also not current
 implemented claims.

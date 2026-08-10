@@ -24,7 +24,7 @@ single-host units.
   authenticates bearer principals, validates request sizes and shapes,
   rate-limits abuse, enforces constrained-machine request-size, request-rate,
   concurrency, and response-size ceilings, exposes constrained-machine-only
-  requestability discovery, and forwards signed internal requests.
+  requestability discovery and owner-scoped terminal receipt retrieval, and forwards signed internal requests.
 - **Hypervisor** normalizes intent, composes deny-dominant policy, independently
   revalidates constrained agent principals, computes the current built-in effect
   destination from the policy-selected tool, enforces the principal's finite
@@ -36,8 +36,8 @@ single-host units.
   grant. The supported operation set is built in and deterministic. Arbitrary
   untrusted code execution is not a supported capability.
 - **Grid** owns durable encrypted state, the signed hash-linked evidence chain,
-  identities, consent, governance, node records, backups, and import/export.
-  It is one transparency log, not replicated consensus.
+  identities, consent, governance, node records, backups, import/export, and
+  Grid-attested terminal machine-receipt construction. It is one transparency log, not replicated consensus.
 
 Authenticated `agent` principals use `axiom-machine-principal.v1`. They require
 a configured human sponsor and are constrained by finite scopes, action and
@@ -63,7 +63,14 @@ query `/v1/machine-discovery`; the response contains only the caller's own
 principal/runtime authority facts, merged policy version/digest, purposes,
 destinations, budgets, and the requestable action intersection. It omits denied,
 out-of-scope, unresolved-destination, and unrelated policy actions and explicitly
-states that discovery is not authorization. Runtime IDs and software
+states that discovery is not authorization. After a constrained-machine intent reaches
+a terminal evidence state, the owner may request a Grid-attested receipt. The receipt binds
+the canonical request and machine-authority digests, exactly one accepted and one terminal
+Grid event, current chain-verification metadata, and a terminal result/error digest. Raw
+results and errors are omitted; foreign-owned and nonexistent identifiers deliberately
+return the same `not_found` boundary. Independent verification checks the Grid signature
+against a trusted Grid public key. This proves the signed AXIOM receipt statement and its
+recorded evidence binding, not that an arbitrary external-world effect occurred. Runtime IDs and software
 digests are attribution/binding metadata; they are not hardware,
 TPM/TEE, measured-boot, or remote-attestation proof.
 
@@ -224,6 +231,7 @@ post-recovery verification rather than an online grant.
 | Sponsor laundering or authority-profile substitution | Sponsor must resolve to a configured human principal; normalized authority digest includes sponsor, roles/scopes, lifetime, runtime and constraints; approvals bind request digest containing the machine authority digest | Human sponsor compromise and social/organizational authorization errors remain outside cryptographic proof |
 | Machine action, purpose, or destination escalation | Ordinary policy is evaluated first; machine action/purpose ceilings form a second deny-dominant layer; current built-in effect destination is computed from the authorized tool and must remain inside the principal's finite destination ceiling | External/provider/MCP destination semantics and remote execution remain unimplemented and fail closed |
 | Machine discovery metadata inference or discovery-as-authority | The route is constrained-machine-only; Hypervisor intersects the active deny-dominant policy with only the authenticated principal's finite actions, scopes and destinations; unresolved or denied actions are omitted; overlay structure, bearer material and unrelated actions are not returned; the response declares `discovery_is_not_authorization` | The caller intentionally learns its own authority facts plus merged policy version/digest and requestable action metadata; future provider/MCP schemas or global discovery must receive separate minimization and inference review |
+| Machine receipt substitution, disclosure, or intent-existence probing | Receipt construction requires terminal evidence, exact accepted/terminal event identity, verified Grid chain state and a Grid signature; the public route is constrained-machine owner-only, raw terminal content is replaced by digests, and foreign/nonexistent ids share `not_found` | A trusted Grid key proves Grid attestation, not external-world truth; key compromise, host compromise, selective evidence disclosure beyond the current receipt, and future remote verifier/product semantics require separate controls |
 | Machine execution-budget widening | Hypervisor intersects policy timeout with machine `max_execution_ms`; plan and capability bind the resulting authority context | CPU/memory/cost accounting beyond the supported timeout path needs later resource-meter evidence |
 | Machine delegation laundering | Machine-principal v1 validation requires delegation disabled and depth zero; no machine delegation runtime exists | Future delegation requires a separate attenuation-only design, threat model, property tests, revocation and promotion |
 | Approval reuse after machine-authority change | Request digest includes machine authority digest; plan provenance and capability claims repeat the exact digest; result/mutation evidence records it | Reviewers must verify all future adapters preserve the same request-binding semantics |

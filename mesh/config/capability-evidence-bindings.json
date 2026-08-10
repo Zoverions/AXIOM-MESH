@@ -1,7 +1,7 @@
 {
   "schema": "axiom-capability-evidence-bindings.v1",
   "kernel_version": "0.12.0-dev.3",
-  "registry_digest": "ded69f9d09f9c610a9f3345a9e24fe2ee830caad4ea28806c5641f454ebd2f1b",
+  "registry_digest": "9bcf52b96437102436d3f19eaf62a65c844dbdb2f4e63c7c0613c0d7510a619d",
   "bindings": [
     {
       "capability_id": "capsules.registry",
@@ -62,6 +62,21 @@
         "assert.equal(JSON.stringify(discovery).includes('memory.put'), false);",
         "assert.equal(JSON.stringify(discovery).includes(AGENT_TOKEN), false);",
         "assert.equal(registry.schema, 'axiom-capabilities.v1');"
+      ]
+    },
+    {
+      "capability_id": "core.machine-receipts",
+      "path": "mesh/test/machine-receipt-e2e.test.mjs",
+      "test": "real Gateway returns an owner-scoped Grid-attested machine receipt that verifies independently",
+      "assertions": [
+        "assert.equal(receipt.schema, 'axiom-machine-intent-receipt.v1');",
+        "assert.equal(receipt.statement.intent.principal, 'agent.receipt-e2e');",
+        "assert.equal(receipt.statement.outcome.result_digest, digestObject(result));",
+        "assert.equal(receipt.statement.authority.invocation_digest, result.evidence.invocation_digest);",
+        "assert.equal(receipt.statement.authority.machine_authority_digest, result.evidence.machine_authority_digest);",
+        "assert.equal(receipt.statement.verification.owner_bound, true);",
+        "assert.equal(JSON.stringify(receipt).includes('receipt-bound-output'), false);",
+        "assert.equal(verification.valid, true);"
       ]
     },
     {

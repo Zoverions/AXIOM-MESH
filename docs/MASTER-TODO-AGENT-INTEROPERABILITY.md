@@ -53,7 +53,7 @@
 - [ ] Define version negotiation and reject ambiguous downgrade. The current native implementation pins one exact profile and rejects profile downgrade; cross-version/protocol negotiation remains future adapter work.
 - [x] Define which fields are caller claims versus AXIOM-computed facts for the native core: callers submit the normal intent, while Hypervisor computes the authority/limit/evidence envelope from authenticated principal and policy state.
 - [x] Ensure unsupported native-v1 envelope fields cannot silently broaden authority; exact-field validation fails closed.
-- [ ] Preserve envelope semantics through export, evidence verification, and causal exchange. Grid acceptance and execution/result evidence are bound now; export/selective verification/causal transport remain open.
+- [ ] Preserve envelope semantics through export, evidence verification, and causal exchange. Grid acceptance, execution/result evidence, and owner-scoped terminal receipt verification are bound now; export/selective artifact verification and causal transport remain open.
 - [ ] Add property tests proving transport choice does not alter authorization outcome.
 
 **Implemented native checkpoint:** the native Invocation Envelope is an internal kernel invariant, not a new external protocol or capability-registry promotion. Its digest is bound across `intent.accepted` Grid evidence, the Hypervisor-signed capability, Sandbox-signed execution attestation, mutation evidence where applicable, and returned/completed intent evidence. MCP, A2A, delegation, remote execution, external/provider destination semantics, async task/artifact semantics, and production promotion remain non-claims.
@@ -63,12 +63,14 @@
 - [ ] Define a compact capability-discovery response with stable IDs, versions, schemas, status, and declared constraints. The native `axiom-machine-discovery.v1` slice now exposes stable action IDs, risk, approval/confirmation requirements, verified destination, bounded timeout, caller purposes/destinations/budgets, and a digest; per-action versions and input/output schemas remain future work.
 - [x] Expose discovery only through the existing authenticated Gateway boundary.
 - [x] Separate discoverable/requestable capability from principal-specific authorization: `/v1/machine-discovery` declares `discovery_is_not_authorization`, and actual execution still uses normal intent evaluation.
-- [ ] Add machine-readable receipt/evidence verification through AXIOM Verify foundations.
+- [x] Add machine-readable receipt/evidence verification foundations: owner-scoped terminal intent receipts are Grid-attested, digest-only, independently verifiable with the trusted Grid public key, and do not promote the separate AXIOM Verify product.
 - [ ] Add exact structured errors for unsupported capability, denied scope, expired grant, missing approval, unavailable adapter, budget exhaustion, and evidence uncertainty.
 - [ ] Add pagination/bounds so discovery cannot become metadata exfiltration. Current v1 does not enumerate the global policy; it iterates only the principal's finite action ceiling, but general future pagination/schema bounds remain open.
 - [ ] Prove a low-privilege machine principal cannot infer protected capability or object metadata beyond policy. Current E2E coverage proves unrelated actions and bearer material are absent; broader protected-object inference remains open.
 
 **Implemented discovery checkpoint:** constrained machines can request a digest-bound `axiom-machine-discovery.v1` snapshot through the normal Gateway. Hypervisor computes it from the active deny-dominant policy and the authenticated machine profile, omits denied, out-of-scope, unresolved-destination, and out-of-destination-ceiling actions, exposes only merged policy version/digest rather than overlay structure, and never converts discovery into permission.
+
+**Implemented receipt checkpoint:** `core.machine-receipts` promotes only the native verification primitive. A constrained machine can retrieve its own terminal Grid-attested receipt; the receipt binds request and machine-authority digests, accepted/terminal Grid anchors, current chain assurance and terminal outcome digests, omits raw terminal content, and verifies against the trusted Grid public key. Foreign-owned and nonexistent receipt ids are intentionally indistinguishable at the public boundary. AXIOM Verify as a product, remote verification, arbitrary external-effect truth, MCP/A2A, delegation and remote execution remain separate non-claims.
 
 ## Priority 5 — Read-only MCP server laboratory
 

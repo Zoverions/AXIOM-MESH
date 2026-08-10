@@ -39,6 +39,18 @@
       ]
     },
     {
+      "id": "core.machine-receipts",
+      "family": "verification",
+      "status": "implemented",
+      "summary": "Authenticated constrained machines can retrieve owner-scoped Grid-attested receipts for terminal intents; receipts bind canonical request and machine-authority digests, accepted and terminal Grid event anchors, current chain-assurance metadata, and terminal result/error digests, and can be independently verified against the trusted Grid public key without exposing raw result/error content.",
+      "evidence": [
+        "mesh/test/machine-receipt.test.mjs",
+        "mesh/test/machine-receipt-e2e.test.mjs",
+        "mesh/test/machine-receipt-client.test.mjs",
+        "mesh/test/machine-receipt-network.test.mjs"
+      ]
+    },
+    {
       "id": "core.evidence-chain",
       "family": "audit",
       "status": "implemented",
@@ -291,7 +303,7 @@
       "id": "ui.gateway-client",
       "family": "operations",
       "status": "implemented",
-      "summary": "A versioned same-origin Gateway client contract covers all 28 authenticated routes with exact route parity, bounded responses and timeouts, AbortSignal cancellation, stable idempotent intent results, explicit errors, and no direct internal-service access.",
+      "summary": "A versioned same-origin Gateway client contract covers all 29 authenticated routes with exact route parity, bounded responses and timeouts, AbortSignal cancellation, stable idempotent intent results, explicit errors, and no direct internal-service access.",
       "evidence": [
         "mesh/test/gateway-client-contract.test.mjs",
         "packages/axiom-client/index.mjs",

@@ -48,6 +48,7 @@ Only the capability registry establishes current runnable status.
 | Scoped grants | current-registry | natural primitive for machine authority |
 | Bounded Sandbox execution | current-registry | separates effect execution from agent planning |
 | Grid evidence chain | current-registry | durable receipts and provenance |
+| Machine intent receipts | current-registry | owner-scoped Grid-attested terminal receipt verification without promoting the AXIOM Verify product |
 | Capability registry | current-registry | machine discovery foundation |
 | Capability-to-assertion evidence bindings | current-registry | prevents prose-only capability promotion |
 | Memory graph/provenance | current-registry | machine-addressable state with owner boundary |
@@ -74,8 +75,8 @@ These foundations reduce how much new trusted code agent interoperability should
 | Machine authority evidence binding | current-registry | approval/plan/grant/evidence | authority digest bound across the supported local execution path |
 | Machine-principal revocation | specified-next | bearer lifecycle / identity records | expiry enforced; dedicated revocation lifecycle remains future work |
 | Purpose-bound machine credentials | planned | provider runtime, secret policy | not-claimed |
-| Destination/rate/concurrency/request/response limits | specified-next | Gateway + runtime enforcement | schema exists; live machine-specific enforcement not-claimed |
-| Principal-specific capability visibility | planned | discovery policy | not-claimed |
+| Destination/rate/concurrency/request/response limits | current-registry / partial | Gateway + runtime enforcement | request/rate/concurrency/response ceilings and current built-in `local` destination enforcement are live; external/provider destination semantics remain future work |
+| Principal-specific capability visibility | current-registry | discovery policy | principal-filtered requestability discovery is live and explicitly not authorization |
 | Machine principal in Circle | blocked | Circle identity/charter | not-claimed |
 
 Machine-principal v1 explicitly rejects wildcard scope, administrator role, and delegation. Existing infrastructure `service` identities remain compatible unless they opt into the constrained machine profile.
@@ -84,11 +85,11 @@ Machine-principal v1 explicitly rejects wildcard scope, administrator role, and 
 
 | Capability | Planning state | Existing foundation | Remaining work |
 |---|---|---|---|
-| Minimal invocation envelope | specified-next / partial current foundation | intents, machine authority digest, grants, evidence | exact v1 schema/canonicalization across native and adapter paths |
+| Minimal invocation envelope | current-registry / native partial | intents, machine authority digest, grants, evidence | native v1 schema/canonicalization is live; external protocol projections remain future work |
 | Capability ID/version binding | specified-next | capability registry | adapter translation rules |
 | Purpose binding | current-registry | intent purpose + machine purpose ceilings | formalize as mandatory invocation-envelope field |
 | Machine authority binding | current-registry | request/plan/capability/evidence digests | preserve parity through every future adapter |
-| Destination binding | planned | deny-egress/adapters | schema-to-live enforcement |
+| Destination binding | current-registry / partial | deny-egress/adapters | current built-in `local` destination is computed and enforced; external/provider semantics remain future work |
 | Requested/achieved assurance binding | planned | adaptive assurance architecture | future assurance schema |
 | Causal/task parent binding | planned | causal exchange/provenance | task context schema |
 | Result/artifact digest binding | specified-next | evidence/export digests | artifact model |
@@ -100,12 +101,12 @@ The envelope is a semantic binding, not a new wire protocol.
 
 | Capability | Planning state | Dependency | Safeguard |
 |---|---|---|---|
-| Capability discovery | specified-next | Gateway contract/registry | discovery does not grant permission |
+| Capability discovery | current-registry | Gateway contract/registry | principal-filtered discovery is live and does not grant permission |
 | Schema discovery | planned | stable capability schemas | protected metadata filtering |
 | Plan/approval status | planned | policy/approval records | principal-scoped visibility |
 | Grant inspection | planned | scoped grants | no self-expansion |
 | Async task status | planned | task state model | exact uncertainty/cancellation semantics |
-| Machine Verify | specified-next | signed evidence/export verifier | independent verification |
+| Machine Verify | current-registry / primitive | Grid-attested machine receipts | owner-scoped terminal receipts verify independently; the separate AXIOM Verify product remains planned |
 | Event observation | planned | events/telemetry | bounded subscription and privacy |
 | Artifact retrieval | planned | artifact model | digest/size/source/retention bounds |
 

@@ -20,7 +20,7 @@ that tag are identified only as the current 0.12 development build.
 
 The executable source of truth is
 [`mesh/config/capabilities.json`](../mesh/config/capabilities.json). The
-generated [capability status](rebuild/STATUS.md) records 30 implemented, 3
+generated [capability status](rebuild/STATUS.md) records 31 implemented, 3
 experimental, 2 specified, 9 adapter-required, and 4 disabled capabilities.
 
 ## Implemented kernel scope
@@ -34,6 +34,10 @@ experimental, 2 specified, 9 adapter-required, and 4 disabled capabilities.
   effect destination constrained to the principal's finite destination allowlist;
 - authenticated machine-filtered discovery exposes only the constrained caller's
   requestable intersection under active policy and explicitly does not grant authority;
+- owner-scoped Grid-attested receipts for terminal constrained-machine intents bind the
+  canonical request and machine-authority digests, accepted and terminal event anchors,
+  current chain-assurance metadata, and terminal result/error digests, and verify
+  independently against the trusted Grid public key without returning raw outcomes;
   machine authority digests bind
   request approval, plan provenance, capability claims, and returned evidence;
 - backward-compatible least-privilege infrastructure `service` principals,
@@ -198,6 +202,8 @@ AXIOM-MESH does not currently claim:
 - a live public testnet, mainnet, or production service;
 - an autonomous-agent runtime, machine delegation, MCP/A2A endpoint, agent
   federation, or remote agent execution;
+- a separately deployed AXIOM Verify product, remote receipt-verification service, or proof
+  that an arbitrary external side effect occurred beyond the recorded AXIOM evidence;
 - arbitrary external/provider/MCP destination semantics or remote machine effect
   execution beyond the current verified local built-in destination mapping;
 - TPM/TEE, measured boot, or runtime software attestation from a declared
@@ -265,9 +271,9 @@ evidence is promoted.
 
 The native Invocation Envelope and current machine action/purpose, execution-time,
 request-size, request-rate, concurrency, response-size, and local computed-destination
-enforcement and machine-filtered discovery are implemented; next bind credentials and
-artifacts to that envelope and add machine-readable receipt/evidence verification,
-then build MCP compatibility against the same native Gateway
+enforcement, machine-filtered discovery, and owner-scoped Grid-attested terminal
+receipt verification are implemented; next bind credentials and artifacts more fully to that
+envelope, extend selective artifact/evidence semantics, then build MCP compatibility against the same native Gateway
 semantics. A2A, remote execution, asynchronous remote tasks, and attenuation-only
 delegation remain later gates and must not be enabled implicitly by protocol
 compatibility.
