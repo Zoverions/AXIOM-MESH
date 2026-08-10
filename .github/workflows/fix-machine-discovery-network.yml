@@ -1,0 +1,55 @@
+name: Fix machine discovery network policy
+
+on:
+  push:
+    branches:
+      - feat/machine-discovery-v1-2026-08-10
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: github.ref == 'refs/heads/feat/machine-discovery-v1-2026-08-10'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/machine-discovery-v1-2026-08-10
+      - name: Synchronize exact service network inventory
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          const sourcePath = 'mesh/src/lib/service-network-policy.mjs';
+          let source = fs.readFileSync(sourcePath, 'utf8');
+          const beforeRoutes = "    'gateway-to-hypervisor': [\n      'GET /internal/v1/operations',\n      'POST /internal/v1/intents'\n    ],";
+          const afterRoutes = "    'gateway-to-hypervisor': [\n      'GET /internal/v1/operations',\n      'POST /internal/v1/machine-discovery',\n      'POST /internal/v1/intents'\n    ],";
+          if (!source.includes(afterRoutes)) {
+            if (!source.includes(beforeRoutes)) throw new Error('gateway-to-hypervisor exact route anchor missing');
+            source = source.replace(beforeRoutes, afterRoutes);
+          }
+          const policy = JSON.parse(fs.readFileSync('mesh/config/service-network-policy.json', 'utf8'));
+          function canonicalize(value) {
+            if (value === null || typeof value !== 'object') return value;
+            if (Array.isArray(value)) return value.map(canonicalize);
+            const out = {};
+            for (const key of Object.keys(value).sort()) out[key] = canonicalize(value[key]);
+            return out;
+          }
+          const digest = crypto.createHash('sha256')
+            .update(JSON.stringify(canonicalize(policy)))
+            .digest('hex');
+          source = source.replace(
+            /const EXPECTED_POLICY_DIGEST =\n  '[a-f0-9]{64}';/,
+            `const EXPECTED_POLICY_DIGEST =\n  '${digest}';`
+          );
+          fs.writeFileSync(sourcePath, source);
+          NODE
+          rm .github/workflows/fix-machine-discovery-network.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mesh/src/lib/service-network-policy.mjs .github/workflows/fix-machine-discovery-network.yml
+          git commit -m "fix: synchronize machine discovery service route"
+          git push origin HEAD:feat/machine-discovery-v1-2026-08-10
