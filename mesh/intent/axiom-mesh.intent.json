@@ -1,0 +1,169 @@
+{
+  "schema": "axiom-intent-contract.v1",
+  "contract_id": "axiom-mesh-core",
+  "title": "AXIOM-MESH Core Intent",
+  "mission": "Keep AXIOM-MESH a secure, evidence-bound, maintainable capability kernel that increases human and collective capability without creating an unaccountable execution path. Preserve compatibility where it can be done securely, fail closed when required evidence or authority is absent, and keep public claims synchronized with demonstrated capability.",
+  "objectives": [
+    {
+      "id": "OBJ-CLEAN-KERNEL",
+      "statement": "The supported source tree remains reproducibly verifiable by the Clean Kernel check suite.",
+      "priority": 100,
+      "verification": {
+        "classification": "deterministic",
+        "method": "Run npm run check from mesh/ on the exact source revision.",
+        "evidence_required": [
+          "exact source revision",
+          "successful check output"
+        ]
+      },
+      "remediation_actions": [
+        "repo.code.modify",
+        "repo.tests.add"
+      ]
+    },
+    {
+      "id": "OBJ-COMPATIBILITY",
+      "statement": "Supported APIs, stored formats, runtime contracts, and documented compatibility commitments remain backward compatible unless compatibility is no longer secure or an explicitly approved breaking change is required.",
+      "priority": 95,
+      "verification": {
+        "classification": "deterministic",
+        "method": "Run contract, migration, regression, and compatibility tests covering supported interfaces and formats.",
+        "evidence_required": [
+          "compatibility test results",
+          "migration test results"
+        ]
+      },
+      "remediation_actions": [
+        "repo.compatibility.preserve",
+        "repo.tests.add"
+      ]
+    },
+    {
+      "id": "OBJ-SUPPORTED-DEPENDENCIES",
+      "statement": "Runtime and dependency choices remain on supported, secure versions unless a documented compatibility constraint requires a bounded exception.",
+      "priority": 85,
+      "verification": {
+        "classification": "external",
+        "method": "Verify runtime and dependency support against authoritative upstream release and security information, then bind the result to the exact repository revision.",
+        "evidence_required": [
+          "authoritative support evidence",
+          "security advisory evidence",
+          "exact source revision"
+        ]
+      },
+      "remediation_actions": [
+        "repo.dependencies.safe-upgrade",
+        "repo.compatibility.preserve"
+      ]
+    }
+  ],
+  "invariants": [
+    {
+      "id": "INV-CONTROL-LOOP",
+      "statement": "No privileged or externally visible effect may bypass Gateway to Hypervisor to Sandbox to Grid authority and evidence flow.",
+      "severity": "critical",
+      "verification": {
+        "classification": "deterministic",
+        "method": "Run architectural boundary and end-to-end negative-path tests that reject direct or bypass execution paths.",
+        "evidence_required": [
+          "boundary test results",
+          "end-to-end denial results"
+        ]
+      },
+      "remediation_actions": [
+        "repo.code.modify",
+        "repo.tests.add"
+      ]
+    },
+    {
+      "id": "INV-DENY-DOMINANT",
+      "statement": "Lower policy, agent, model, adapter, or runtime layers may reduce authority but may never widen authority or weaken a higher denial.",
+      "severity": "critical",
+      "verification": {
+        "classification": "deterministic",
+        "method": "Run deny-dominant policy property tests and authority-boundary negative tests.",
+        "evidence_required": [
+          "policy property test results",
+          "authority denial test results"
+        ]
+      },
+      "remediation_actions": [
+        "repo.code.modify",
+        "repo.tests.add"
+      ]
+    },
+    {
+      "id": "INV-EVIDENCE-BOUND",
+      "statement": "Every mutation remains attributable and bound to signed, hash-linked evidence sufficient to reconstruct why the state transition was permitted.",
+      "severity": "critical",
+      "verification": {
+        "classification": "deterministic",
+        "method": "Run evidence-chain, restart, tamper, plan-binding, invocation-binding, and receipt verification tests.",
+        "evidence_required": [
+          "evidence-chain verification",
+          "tamper rejection results",
+          "binding test results"
+        ]
+      },
+      "remediation_actions": [
+        "repo.code.modify",
+        "repo.tests.add"
+      ]
+    },
+    {
+      "id": "INV-CLAIM-PARITY",
+      "statement": "Public and operator-facing claims never outrun the machine-readable capability registry and reproducible evidence for the exact build.",
+      "severity": "high",
+      "verification": {
+        "classification": "deterministic",
+        "method": "Run npm run status:check and npm run docs:check and verify governing claim documents remain bound to the capability registry digest.",
+        "evidence_required": [
+          "status check result",
+          "documentation parity result",
+          "capability registry digest"
+        ]
+      },
+      "remediation_actions": [
+        "repo.docs.update",
+        "repo.tests.add"
+      ]
+    }
+  ],
+  "authority": {
+    "autonomous": [
+      "repo.code.modify",
+      "repo.compatibility.preserve",
+      "repo.dependencies.safe-upgrade",
+      "repo.docs.update",
+      "repo.tests.add"
+    ],
+    "approval_required": [
+      "repo.api.breaking-change",
+      "repo.credential.rotate",
+      "repo.history.rewrite",
+      "repo.production.promote",
+      "repo.repository.delete"
+    ],
+    "forbidden": [
+      "authority.self-expand",
+      "evidence.fabricate",
+      "policy.safety.weaken",
+      "production.mock-success",
+      "tests.weaken-for-pass"
+    ]
+  },
+  "evidence": {
+    "default_minimum_independent_verifiers": 1
+  },
+  "optimization": {
+    "priority": [
+      "correctness",
+      "security",
+      "verifiability",
+      "compatibility",
+      "maintainability",
+      "performance",
+      "cost"
+    ]
+  }
+}
