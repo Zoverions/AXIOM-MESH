@@ -25,6 +25,20 @@ runnable capability.
   validator on the merged result, and constraint maps must use own-property
   semantics.
 
+## Backfill findings
+
+Applying G-5 as a repository-wide pattern rather than a single-line repair
+found a second inherited-property case in policy validation itself:
+`rule.risk in RISK_ORDER` accepted names inherited from `Object.prototype`.
+The validator now uses an own-property check for risk names as well as action
+maps, and a regression proves `risk: "constructor"` is rejected.
+
+The incident-response regression was also strengthened to load the canonical
+incident policy and satisfy its complete SEV-1 requirements before adding the
+inherited `constructor` action. This prevents the test from passing because of
+an unrelated incomplete fixture. The Education regression similarly uses the
+pinned domain contract and proves inherited action names remain unknown.
+
 ## Documentation and maintenance clarifications
 
 The pass also records that `_network-boundary-core.mjs` and
