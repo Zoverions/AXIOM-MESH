@@ -1,31 +1,79 @@
-name: Claim Digest Probe
+name: Finalize Machine Ingress Claim Sync
 
 on:
   push:
     branches:
       - docs/machine-ingress-claim-sync-2026-08-09
-  pull_request:
-    branches:
-      - main
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  digest:
+  finalize:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: docs/machine-ingress-claim-sync-2026-08-09
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version: 24.18.0
           package-manager-cache: false
-      - name: Print canonical capability registry digest
+      - name: Apply exact claim text and regenerate pinned status
         run: |
-          node --input-type=module -e "
-            import { readFile } from 'node:fs/promises';
-            process.argv[1] = './claim-digest-probe.mjs';
-            const { validateCapabilityRegistry } = await import('./mesh/src/check-registry.mjs');
-            const registry = JSON.parse(await readFile('./mesh/config/capabilities.json', 'utf8'));
-            console.log(JSON.stringify(validateCapabilityRegistry(registry)));
-          "
+          node --input-type=module <<'NODE'
+          import { readFile, writeFile, rm } from 'node:fs/promises';
+
+          async function replaceExact(path, oldText, newText) {
+            const content = await readFile(path, 'utf8');
+            if (!content.includes(oldText)) {
+              throw new Error(`Expected claim text not found in ${path}`);
+            }
+            const next = content.replace(oldText, newText);
+            if (next === content) throw new Error(`Claim text did not change in ${path}`);
+            await writeFile(path, next);
+          }
+
+          await replaceExact(
+            'README.md',
+            `- human-sponsored constrained machine principals with finite scopes, action and\n  purpose ceilings, runtime binding, expiry, non-delegation, and an\n  execution-time ceiling;`,
+            `- human-sponsored constrained machine principals with finite scopes, action and\n  purpose ceilings, runtime binding, expiry, non-delegation, an execution-time\n  ceiling, and authenticated Gateway request-size and request-rate ceilings;`
+          );
+          await replaceExact(
+            'README.md',
+            `The machine-principal capability is an authorization primitive, **not** an\nautonomous-agent runtime. Its schema already reserves additional destination,\nrate, concurrency, request-size, and response-size constraints, but those are\nnot current live enforcement claims until their Gateway/execution paths and\nevidence are completed.`,
+            `The machine-principal capability is an authorization primitive, **not** an\nautonomous-agent runtime. Authenticated Gateway request-size and request-rate\nceilings are enforced and evidenced. Its schema also reserves destination,\nconcurrency, and response-size constraints, but those are not current live\nenforcement claims until their correct runtime paths and evidence are completed.`
+          );
+          await replaceExact(
+            'CONSTITUTION.md',
+            `non-delegation and the currently enforced execution-time ceiling. Additional\nmachine destination, rate, concurrency, request-size, and response-size limits\nmust not be described as live enforcement until their runtime paths and evidence\nexist. Machine constraints may reduce but never enlarge policy authority.`,
+            `non-delegation, the currently enforced execution-time ceiling, and authenticated\nGateway request-size and request-rate ceilings. Additional machine destination,\nconcurrency, and response-size limits must not be described as live enforcement\nuntil their runtime paths and evidence exist. Machine constraints may reduce but\nnever enlarge policy authority.`
+          );
+          await replaceExact(
+            'docs/rebuild/REQUIREMENTS.md',
+            `| IAM-09 | An authenticated \`agent\` principal MUST use the constrained machine-principal profile, MUST resolve to a configured human sponsor, MUST NOT receive wildcard scope or administrator role, and MUST bind finite action and purpose ceilings, runtime identity, lifetime/expiry, non-delegation, and a current execution-time ceiling. Machine constraints may only reduce authority granted by ordinary policy. | \`machine-principal\`, principal-registry, and four-service end-to-end tests. |`,
+            `| IAM-09 | An authenticated \`agent\` principal MUST use the constrained machine-principal profile, MUST resolve to a configured human sponsor, MUST NOT receive wildcard scope or administrator role, and MUST bind finite action and purpose ceilings, runtime identity, lifetime/expiry, non-delegation, a current execution-time ceiling, and authenticated Gateway request-size and request-rate ceilings. Machine constraints may only reduce authority granted by ordinary policy. | \`machine-principal\`, principal-registry, machine-ingress, and four-service end-to-end tests. |`
+          );
+          await replaceExact(
+            'docs/rebuild/PRODUCT-DEFINITION.md',
+            `A constrained machine principal is an authorization primitive: an authenticated\n\`agent\` identity is bound to a human sponsor, finite scopes, action and purpose\nceilings, runtime identity, expiry, non-delegation and a currently enforced\nexecution-time ceiling. The v1 schema also reserves destination, rate,\nconcurrency, request-size and response-size limits, but those are not current\nlive-enforcement claims until their Gateway/runtime paths and evidence exist. A\nleast-privilege infrastructure \`service\` keeps the existing service-principal\ncontract unless it explicitly opts into that machine-authority profile.`,
+            `A constrained machine principal is an authorization primitive: an authenticated\n\`agent\` identity is bound to a human sponsor, finite scopes, action and purpose\nceilings, runtime identity, expiry, non-delegation, a currently enforced\nexecution-time ceiling, and authenticated Gateway request-size and request-rate\nceilings. The v1 schema also reserves destination, concurrency, and response-size\nlimits, but those are not current live-enforcement claims until their correct\nruntime paths and evidence exist. A least-privilege infrastructure \`service\`\nkeeps the existing service-principal contract unless it explicitly opts into\nthat machine-authority profile.`
+          );
+          await replaceExact(
+            'docs/rebuild/PRODUCT-DEFINITION.md',
+            `- human-sponsored constrained agent principals with finite scopes, action and\n  purpose ceilings, runtime identity, expiry, non-delegation and an\n  execution-time ceiling;`,
+            `- human-sponsored constrained agent principals with finite scopes, action and\n  purpose ceilings, runtime identity, expiry, non-delegation, an execution-time\n  ceiling, and authenticated Gateway request-size and request-rate ceilings;`
+          );
+
+          await rm('.github/workflows/claim-digest-probe.yml');
+          NODE
+          node mesh/src/status.mjs --write
+      - name: Commit generated claim synchronization
+        run: |
+          git config user.name "axiom-claim-sync"
+          git config user.email "axiom-claim-sync@users.noreply.github.com"
+          git add README.md CONSTITUTION.md docs/rebuild/PRODUCT-DEFINITION.md docs/rebuild/REQUIREMENTS.md docs/rebuild/STATUS.md .github/workflows/claim-digest-probe.yml
+          git diff --cached --check
+          git commit -m "docs: finalize machine ingress claim synchronization"
+          git push origin HEAD:docs/machine-ingress-claim-sync-2026-08-09
