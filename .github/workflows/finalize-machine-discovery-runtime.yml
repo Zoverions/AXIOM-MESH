@@ -1,0 +1,132 @@
+name: Finalize machine discovery runtime
+
+on:
+  push:
+    branches:
+      - feat/machine-discovery-v1-2026-08-10
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: github.ref == 'refs/heads/feat/machine-discovery-v1-2026-08-10'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/machine-discovery-v1-2026-08-10
+      - name: Wire discovery through Hypervisor and Gateway
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+
+          function replaceExact(path, before, after) {
+            let source = fs.readFileSync(path, 'utf8');
+            if (!source.includes(before)) throw new Error(`Missing exact anchor in ${path}`);
+            if (source.includes(after)) return;
+            source = source.replace(before, after);
+            fs.writeFileSync(path, source);
+          }
+
+          replaceExact(
+            'mesh/src/hypervisor/server.mjs',
+            "import { effectDestinationForTool } from '../lib/effect-destination.mjs';\n",
+            "import { effectDestinationForTool } from '../lib/effect-destination.mjs';\nimport { buildMachineDiscovery } from '../lib/machine-discovery.mjs';\n"
+          );
+          replaceExact(
+            'mesh/src/hypervisor/server.mjs',
+            "  router.add('GET', '/internal/v1/operations', async ({ traceId }) => currentOperations(traceId));\n\n  router.add('POST', '/internal/v1/intents', async ({ body, traceId }) => {",
+            "  router.add('GET', '/internal/v1/operations', async ({ traceId }) => currentOperations(traceId));\n\n  router.add('POST', '/internal/v1/machine-discovery', async ({ body, traceId }) => {\n    const principal = normalizeMachinePrincipalDefinition(\n      assertPlainObject(parseJsonBody(body), 'machine discovery principal')\n    );\n    return buildMachineDiscovery({\n      principal,\n      policy: await activePolicy(traceId),\n      kernelVersion: '0.12.0-dev.3'\n    });\n  });\n\n  router.add('POST', '/internal/v1/intents', async ({ body, traceId }) => {"
+          );
+
+          replaceExact(
+            'mesh/src/gateway/server.mjs',
+            "  router.add('GET', '/v1/capabilities', async () => ({\n    ...capabilities,\n    digest: capabilitiesDigest\n  }));\n\n  router.add('GET', '/v1/status', async ({ traceId }) => {",
+            "  router.add('GET', '/v1/capabilities', async () => ({\n    ...capabilities,\n    digest: capabilitiesDigest\n  }));\n\n  router.add('GET', '/v1/machine-discovery', async ({ traceId, principal }) => {\n    if (principal.schema !== 'axiom-machine-principal.v1') {\n      throw new AxiomError(\n        'forbidden',\n        'Machine discovery requires a constrained machine principal',\n        403\n      );\n    }\n    return signedFetch(\n      identity,\n      'hypervisor',\n      `${config.urls.hypervisor}/internal/v1/machine-discovery`,\n      { method: 'POST', traceId, body: principal }\n    );\n  });\n\n  router.add('GET', '/v1/status', async ({ traceId }) => {"
+          );
+
+          const networkPath = 'mesh/config/service-network-policy.json';
+          const network = JSON.parse(fs.readFileSync(networkPath, 'utf8'));
+          const gatewayHypervisor = network.flows.find(flow => flow.id === 'gateway-to-hypervisor');
+          if (!gatewayHypervisor) throw new Error('gateway-to-hypervisor flow missing');
+          if (!gatewayHypervisor.routes.some(route => route.path === '/internal/v1/machine-discovery')) {
+            const index = gatewayHypervisor.routes.findIndex(route => route.path === '/internal/v1/intents');
+            gatewayHypervisor.routes.splice(index, 0, {
+              method: 'POST',
+              path: '/internal/v1/machine-discovery'
+            });
+          }
+          fs.writeFileSync(networkPath, `${JSON.stringify(network, null, 2)}\n`);
+
+          const contractPath = 'mesh/config/gateway-client-contract.json';
+          const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8'));
+          if (!contract.routes.some(route => route.id === 'machine_discovery.get')) {
+            const index = contract.routes.findIndex(route => route.id === 'status.get');
+            contract.routes.splice(index, 0, {
+              id: 'machine_discovery.get',
+              method: 'GET',
+              path: '/v1/machine-discovery',
+              access: 'constrained-machine',
+              idempotency: 'not_applicable',
+              path_parameters: [],
+              query_parameters: [],
+              request_schema: null,
+              response_schema: 'axiom-machine-discovery.v1',
+              required_response_fields: [
+                'schema',
+                'kernel_version',
+                'notice',
+                'principal',
+                'policy',
+                'purposes',
+                'destinations',
+                'limits',
+                'actions',
+                'digest'
+              ],
+              response_media_type: 'application/json'
+            });
+          }
+          fs.writeFileSync(contractPath, `${JSON.stringify(contract, null, 2)}\n`);
+
+          function canonicalize(value) {
+            if (value === null || typeof value !== 'object') return value;
+            if (Array.isArray(value)) return value.map(canonicalize);
+            const out = {};
+            for (const key of Object.keys(value).sort()) out[key] = canonicalize(value[key]);
+            return out;
+          }
+          const digest = crypto.createHash('sha256')
+            .update(JSON.stringify(canonicalize(contract)))
+            .digest('hex');
+
+          replaceExact(
+            'mesh/src/lib/gateway-client-contract.mjs',
+            "const EXPECTED_CONTRACT_DIGEST =\n  'bdaa915dfc7cf990f9e10c87822f47cbc1638a534e33c8010931f7bee06e160f';",
+            `const EXPECTED_CONTRACT_DIGEST =\n  '${digest}';`
+          );
+          replaceExact(
+            'mesh/src/lib/gateway-client-contract.mjs',
+            'if (!Array.isArray(contract.routes) || contract.routes.length !== 27) {',
+            'if (!Array.isArray(contract.routes) || contract.routes.length !== 28) {'
+          );
+          replaceExact(
+            'mesh/test/gateway-client-contract.test.mjs',
+            '  assert.equal(result.routes, 27);\n  assert.equal(result.implemented_routes, 27);',
+            '  assert.equal(result.routes, 28);\n  assert.equal(result.implemented_routes, 28);'
+          );
+          replaceExact(
+            'mesh/test/service-network-policy.test.mjs',
+            '  assert.equal(result.routes, 38);',
+            '  assert.equal(result.routes, 39);'
+          );
+          NODE
+          rm .github/workflows/finalize-machine-discovery-runtime.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mesh .github/workflows/finalize-machine-discovery-runtime.yml
+          git commit -m "feat: wire bounded machine discovery through Gateway"
+          git push origin HEAD:feat/machine-discovery-v1-2026-08-10
