@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=3080135f9a425a41903a23875f03bb1e95a7169b38d8cafc41ac81131e37c020 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=baee0a00d61d7f87a6d742e311eb2d5e0cea9f41965d1b3148f7b6a8c7b2bb5e -->
 # AXIOM-MESH Rebuild Requirements
 
 **Current build:** `0.12.0-dev.3`
@@ -49,7 +49,7 @@ state.
 | IAM-06 | Production startup MUST reject default, weak, missing, example, stale, or partially provisioned credentials. | Startup configuration tests. |
 | IAM-07 | Device and browser sessions MUST support expiry, idle timeout, revocation, and scope reduction without requiring destruction of the user’s underlying identity. | Session and device-revocation tests. |
 | IAM-08 | Core access and identity MUST NOT require a token, settlement account, or platform-controlled social account. | Token-disabled and offline-local onboarding tests. |
-| IAM-09 | An authenticated `agent` principal MUST use the constrained machine-principal profile, MUST resolve to a configured human sponsor, MUST NOT receive wildcard scope or administrator role, and MUST bind finite action and purpose ceilings, runtime identity, lifetime/expiry, non-delegation, a current execution-time ceiling, and authenticated Gateway request-size and request-rate ceilings. Machine constraints may only reduce authority granted by ordinary policy. | `machine-principal`, principal-registry, machine-ingress, and four-service end-to-end tests. |
+| IAM-09 | An authenticated `agent` principal MUST use the constrained machine-principal profile, MUST resolve to a configured human sponsor, MUST NOT receive wildcard scope or administrator role, and MUST bind finite action and purpose ceilings, runtime identity, lifetime/expiry, non-delegation, a current execution-time ceiling, and authenticated Gateway request-size, request-rate, and concurrency ceilings. Machine constraints may only reduce authority granted by ordinary policy. | `machine-principal`, principal-registry, machine-ingress, and four-service end-to-end tests. |
 | IAM-10 | Machine-principal v1 MUST NOT delegate authority. Any future machine delegation MUST be attenuation-only, explicitly scoped, expiring, revocable, chain-bound, independently evidenced, and separately promoted before use. | Non-delegation validation plus future delegation property and negative-path tests. |
 
 ## Human interface and application requirements

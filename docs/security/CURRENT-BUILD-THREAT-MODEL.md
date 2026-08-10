@@ -22,7 +22,8 @@ single-host units.
 - **Gateway** is the only user/operator ingress. The candidate deployment
   exposes it through a permission-restricted Unix-domain socket. It
   authenticates bearer principals, validates request sizes and shapes,
-  rate-limits abuse, and forwards signed internal requests.
+  rate-limits abuse, enforces constrained-machine request-size, request-rate,
+  and concurrency ceilings, and forwards signed internal requests.
 - **Hypervisor** normalizes intent, composes deny-dominant policy, independently
   revalidates constrained agent principals, intersects the machine
   execution-time ceiling with policy, constructs an explicit plan, and issues
@@ -37,16 +38,17 @@ single-host units.
 Authenticated `agent` principals use `axiom-machine-principal.v1`. They require
 a configured human sponsor and are constrained by finite scopes, action and
 purpose allowlists, runtime identity, lifetime/expiry, non-delegation, and a
-currently enforced execution-time ceiling. Wildcard scope and administrator
-role are rejected. The machine authority digest is carried through request
+currently enforced execution-time ceiling and authenticated Gateway request-size,
+request-rate, and concurrency ceilings. Wildcard scope and administrator role
+are rejected. The machine authority digest is carried through request
 binding, plan provenance, capability claims, and result evidence. Existing
 least-privilege infrastructure `service` principals remain backward-compatible
 unless they explicitly opt into the constrained machine profile.
 
-The v1 machine schema also contains destination, request-rate, concurrency,
-request-size, and response-size fields. Those fields are validated as schema
-inputs but are **not** current live-enforcement claims until their Gateway and
-runtime enforcement paths and evidence are implemented. Runtime IDs and
+The v1 machine schema also contains destination and response-size fields. Those
+fields are validated as schema inputs but are **not** current live-enforcement
+claims until their correct effect/response enforcement paths and evidence are
+implemented. Runtime IDs and
 software digests are attribution/binding metadata; they are not hardware,
 TPM/TEE, measured-boot, or remote-attestation proof.
 
@@ -201,7 +203,7 @@ post-recovery verification rather than an online grant.
 | Authentication bypass or token theft | Exact bearer principals, constrained agent profile, scoped telemetry identity, restrictive secret-file checks, signed service envelopes, mTLS peer identity, active-leaf pinning, replay guards | Bearer theft still conveys the configured principal until expiry/revocation; host memory and external custodian compromise remain possible; pilot custody and token operational monitoring are pending |
 | Legacy or forged unconstrained agent identity | Bearer registry requires `agent` principals to normalize as `axiom-machine-principal.v1`; Hypervisor independently rejects legacy `agent` shape; unknown/non-human sponsor, wildcard scope, and administrator role fail closed | A stolen valid constrained-agent bearer still needs operational revocation; runtime identity metadata is not hardware attestation |
 | Sponsor laundering or authority-profile substitution | Sponsor must resolve to a configured human principal; normalized authority digest includes sponsor, roles/scopes, lifetime, runtime and constraints; approvals bind request digest containing the machine authority digest | Human sponsor compromise and social/organizational authorization errors remain outside cryptographic proof |
-| Machine action or purpose escalation | Ordinary policy is evaluated first and machine action/purpose ceilings form a second deny-dominant layer; machine constraints can only reduce authority | Destination/rate/concurrency/request-size/response-size schema fields are not yet live machine-specific enforcement claims |
+| Machine action or purpose escalation | Ordinary policy is evaluated first and machine action/purpose ceilings form a second deny-dominant layer; machine constraints can only reduce authority | Destination and response-size schema fields are not yet live machine-specific enforcement claims |
 | Machine execution-budget widening | Hypervisor intersects policy timeout with machine `max_execution_ms`; plan and capability bind the resulting authority context | CPU/memory/cost accounting beyond the supported timeout path needs later resource-meter evidence |
 | Machine delegation laundering | Machine-principal v1 validation requires delegation disabled and depth zero; no machine delegation runtime exists | Future delegation requires a separate attenuation-only design, threat model, property tests, revocation and promotion |
 | Approval reuse after machine-authority change | Request digest includes machine authority digest; plan provenance and capability claims repeat the exact digest; result/mutation evidence records it | Reviewers must verify all future adapters preserve the same request-binding semantics |
@@ -236,8 +238,9 @@ The current review must consider at minimum:
 - policy-layer reordering, omission, unknown fields, numeric boundary errors,
   or a lower layer attempting to expand authority;
 - accepted API work whose Grid evidence commit fails;
-- oversized bodies, rate pressure, dependency suspension/loss, partial
-  startup, stale readiness, and restart races;
+- oversized bodies, rate pressure, constrained-machine concurrency pressure,
+  dependency suspension/loss, partial startup, stale readiness, and restart
+  races;
 - retired certificate/token acceptance, partial rotation, killed cutover,
   rollback to altered files, wrong data key, corrupt backup, and changed
   retention inventory;

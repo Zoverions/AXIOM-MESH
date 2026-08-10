@@ -37,12 +37,12 @@
 - [x] Distinguish human, agent, infrastructure service, and constrained machine-service identities at bearer-registry normalization; future delegator/executor/verifier/remote-peer profiles remain separate later work.
 - [x] Define short-lived versus persistent machine principal semantics.
 - [x] Define purpose and destination restrictions. Purpose/action ceilings are live; destination remains schema-only until its effect/adapter boundary is implemented.
-- [ ] Complete compute, storage, bandwidth, cost, time, request, response, rate, and concurrency budgets. Execution time, authenticated Gateway request size, and authenticated Gateway request rate are live; response size and concurrency remain schema-only machine fields, while storage/bandwidth/cost profiles remain future work.
+- [ ] Complete compute, storage, bandwidth, cost, time, request, response, rate, and concurrency budgets. Execution time, authenticated Gateway request size, authenticated Gateway request rate, and authenticated Gateway concurrency are live; response size remains schema-only, while storage/bandwidth/cost profiles remain future work.
 - [x] Define whether a principal may delegate and maximum delegation depth for v1: delegation is disabled and depth is zero.
 - [x] Prohibit universal reputation or moral scores as base authority.
 - [ ] Complete negative tests for identity substitution, credential replay, stale identity, confused ownership, and compromise. Sponsor, expiry, wildcard/admin, legacy-agent, action/purpose, request-size/rate, and authority-binding negatives are implemented; credential lifecycle attack coverage remains open.
 
-**Implemented checkpoint:** `core.machine-principals` is an implemented registry capability. Its current verified bounds include sponsorship, finite scopes, action/purpose ceilings, runtime identity, expiry, non-delegation, execution time, authenticated Gateway request size, and authenticated Gateway request rate. It does not claim autonomous agent loops, machine delegation, MCP/A2A, remote execution, destination-effect enforcement, machine-specific concurrency/response-size enforcement, or hardware/runtime attestation.
+**Implemented checkpoint:** `core.machine-principals` is an implemented registry capability. Its current verified bounds include sponsorship, finite scopes, action/purpose ceilings, runtime identity, expiry, non-delegation, execution time, authenticated Gateway request size, authenticated Gateway request rate, and authenticated Gateway concurrency. It does not claim autonomous agent loops, machine delegation, MCP/A2A, remote execution, destination-effect enforcement, machine-specific response-size enforcement, or hardware/runtime attestation.
 
 ## Priority 3 — Minimal AXIOM Invocation Envelope
 
