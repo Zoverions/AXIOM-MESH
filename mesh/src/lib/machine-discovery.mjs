@@ -63,12 +63,7 @@ export function buildMachineDiscovery({ principal, policy, kernelVersion }) {
     },
     policy: {
       version: policy.policy.version,
-      digest: policy.digest,
-      layers: policy.layers.map(layer => ({
-        order: layer.order,
-        version: layer.version,
-        digest: layer.digest
-      }))
+      digest: policy.digest
     },
     purposes: [...constraints.purposes],
     destinations: [...constraints.destinations],
