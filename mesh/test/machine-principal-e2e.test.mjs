@@ -130,6 +130,7 @@ test('constrained agent executes an authorized intent and returns bound authorit
   ));
   assert.ok(accepted);
   assert.equal(accepted.payload.invocation.limits.ingress.max_concurrent_requests, 1);
+  // Final-head verification anchor: response-size is bound into accepted invocation evidence.
   assert.equal(accepted.payload.invocation.limits.ingress.max_response_bytes, 8_192);
 
   await assert.rejects(
