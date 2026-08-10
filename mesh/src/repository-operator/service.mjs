@@ -2,10 +2,13 @@ import net from 'node:net';
 import { chmod, lstat, unlink } from 'node:fs/promises';
 import { isAbsolute } from 'node:path';
 import { ValidationError, assertPlainObject } from '../lib/canonical.mjs';
+import { normalizeRepositoryDocsProposedChanges } from '../lib/repository-docs-planning.mjs';
 
 export const REPOSITORY_OPERATOR_SERVICE_SCHEMA = 'axiom-repository-operator-service.v1';
 export const REPOSITORY_OPERATOR_REQUEST_SCHEMA = 'axiom-repository-operator-request.v1';
 export const REPOSITORY_OPERATOR_RESPONSE_SCHEMA = 'axiom-repository-operator-response.v1';
+export const REPOSITORY_OPERATOR_PLAN_REQUEST_SCHEMA = 'axiom-repository-operator-plan-request.v1';
+export const REPOSITORY_OPERATOR_PLAN_RESPONSE_SCHEMA = 'axiom-repository-operator-plan-response.v1';
 
 const MAX_MESSAGE_BYTES = 2 * 1024 * 1024;
 const MAX_SOCKET_BYTES = 100;
@@ -32,8 +35,7 @@ function sanitizeError(error) {
   return { code, message };
 }
 
-function normalizeRequest(raw) {
-  const value = assertPlainObject(raw, 'repository operator service request');
+function normalizeExecutionRequest(value) {
   const unknown = Object.keys(value).filter(key => ![
     'schema',
     'prepared_effect',
@@ -42,21 +44,44 @@ function normalizeRequest(raw) {
   if (unknown.length) {
     throw new ValidationError(`Repository operator request contains unsupported fields: ${unknown.join(', ')}`);
   }
-  if (value.schema !== REPOSITORY_OPERATOR_REQUEST_SCHEMA) {
-    throw new ValidationError(`Repository operator request schema must be ${REPOSITORY_OPERATOR_REQUEST_SCHEMA}`);
-  }
   return {
+    type: 'execute',
     schema: REPOSITORY_OPERATOR_REQUEST_SCHEMA,
     prepared_effect: assertPlainObject(value.prepared_effect, 'prepared_effect'),
     grid_prepared_event: assertPlainObject(value.grid_prepared_event, 'grid_prepared_event')
   };
 }
 
+function normalizePlanningRequest(value) {
+  const unknown = Object.keys(value).filter(key => !['schema', 'proposed_changes'].includes(key));
+  if (unknown.length) {
+    throw new ValidationError(`Repository planning request contains unsupported fields: ${unknown.join(', ')}`);
+  }
+  return {
+    type: 'plan',
+    schema: REPOSITORY_OPERATOR_PLAN_REQUEST_SCHEMA,
+    proposed_changes: normalizeRepositoryDocsProposedChanges(value.proposed_changes)
+  };
+}
+
+function normalizeRequest(raw) {
+  const value = assertPlainObject(raw, 'repository operator service request');
+  if (value.schema === REPOSITORY_OPERATOR_REQUEST_SCHEMA) return normalizeExecutionRequest(value);
+  if (value.schema === REPOSITORY_OPERATOR_PLAN_REQUEST_SCHEMA) return normalizePlanningRequest(value);
+  throw new ValidationError('Repository operator request schema is unsupported');
+}
+
+function responseSchemaFor(type) {
+  return type === 'plan'
+    ? REPOSITORY_OPERATOR_PLAN_RESPONSE_SCHEMA
+    : REPOSITORY_OPERATOR_RESPONSE_SCHEMA;
+}
+
 function encodeResponse(value) {
   const serialized = `${JSON.stringify(value)}\n`;
   if (Buffer.byteLength(serialized, 'utf8') > MAX_MESSAGE_BYTES) {
     return `${JSON.stringify({
-      schema: REPOSITORY_OPERATOR_RESPONSE_SCHEMA,
+      schema: typeof value?.schema === 'string' ? value.schema : REPOSITORY_OPERATOR_RESPONSE_SCHEMA,
       error: {
         code: 'repository_operator_response_too_large',
         message: 'Repository operator response exceeded the transport ceiling'
@@ -120,11 +145,15 @@ function parseSingleMessage(buffer) {
 export async function startRepositoryOperatorService({
   socketPath,
   runOperator,
+  planOperator,
   timeoutMs = DEFAULT_TIMEOUT_MS,
   socketMode = 0o600
 }) {
   const path = validateSocketPath(socketPath);
   if (typeof runOperator !== 'function') throw new ValidationError('Repository operator service requires runOperator');
+  if (planOperator !== undefined && typeof planOperator !== 'function') {
+    throw new ValidationError('Repository operator service planOperator must be a function when supplied');
+  }
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1_000 || timeoutMs > 120_000) {
     throw new ValidationError('Repository operator service timeout is invalid');
   }
@@ -147,17 +176,6 @@ export async function startRepositoryOperatorService({
         }
       });
     });
-
-    if (active) {
-      writeAndClose(socket, {
-        schema: REPOSITORY_OPERATOR_RESPONSE_SCHEMA,
-        error: {
-          code: 'repository_operator_busy',
-          message: 'Repository operator is processing another external effect'
-        }
-      });
-      return;
-    }
 
     let buffer = Buffer.alloc(0);
     let started = false;
@@ -188,11 +206,37 @@ export async function startRepositoryOperatorService({
       }
       if (!parsed.complete) return;
       started = true;
+      const responseSchema = responseSchemaFor(parsed.request.type);
+      if (active) {
+        writeAndClose(socket, {
+          schema: responseSchema,
+          error: {
+            code: 'repository_operator_busy',
+            message: 'Repository operator is processing another request'
+          }
+        });
+        return;
+      }
       active = true;
-      Promise.resolve(runOperator({
-        prepared_effect: parsed.request.prepared_effect,
-        grid_prepared_event: parsed.request.grid_prepared_event
-      })).then(result => {
+
+      const operation = parsed.request.type === 'plan'
+        ? (planOperator
+            ? () => planOperator({ proposed_changes: parsed.request.proposed_changes })
+            : () => { throw new ValidationError('Repository operator planning is unavailable'); })
+        : () => runOperator({
+            prepared_effect: parsed.request.prepared_effect,
+            grid_prepared_event: parsed.request.grid_prepared_event
+          });
+
+      Promise.resolve().then(operation).then(result => {
+        if (parsed.request.type === 'plan') {
+          const plan = assertPlainObject(result, 'repository operator plan');
+          writeAndClose(socket, {
+            schema: REPOSITORY_OPERATOR_PLAN_RESPONSE_SCHEMA,
+            plan
+          });
+          return;
+        }
         const value = assertPlainObject(result, 'repository operator result');
         const receipt = assertPlainObject(value.receipt, 'repository operator receipt');
         writeAndClose(socket, {
@@ -201,7 +245,7 @@ export async function startRepositoryOperatorService({
         });
       }).catch(error => {
         writeAndClose(socket, {
-          schema: REPOSITORY_OPERATOR_RESPONSE_SCHEMA,
+          schema: responseSchema,
           error: sanitizeError(error)
         });
       }).finally(() => {
