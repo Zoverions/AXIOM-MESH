@@ -86,7 +86,12 @@ async function startMachineStack(t, prefix, tokenConfig = {}) {
 }
 
 test('constrained agent executes an authorized intent and returns bound authority evidence', async t => {
-  const { client } = await startMachineStack(t, 'axiom-machine-e2e-');
+  const { client } = await startMachineStack(t, 'axiom-machine-e2e-', {
+    budgets: {
+      max_request_bytes: 1_024,
+      max_requests_per_minute: 2
+    }
+  });
   const body = {
     action: 'system.echo',
     input: { message: 'machine-authorized' },
@@ -113,6 +118,32 @@ test('constrained agent executes an authorized intent and returns bound authorit
   assert.equal(
     replay.evidence.machine_authority_digest,
     result.evidence.machine_authority_digest
+  );
+
+  // The capability binding below proves both newly claimed ingress ceilings.
+  await assert.rejects(
+    () => client.call('intents.submit', {
+      body: {
+        action: 'system.echo',
+        input: { message: 'x'.repeat(2_000) },
+        purpose: 'test.conformance'
+      },
+      idempotencyKey: 'machine-e2e-bound-request-budget-0001'
+    }),
+    error => {
+      assert.equal(error.code, 'machine_request_budget_exceeded');
+      assert.equal(error.status, 413);
+      return true;
+    }
+  );
+
+  await assert.rejects(
+    () => client.call('status.get'),
+    error => {
+      assert.equal(error.code, 'machine_rate_budget_exceeded');
+      assert.equal(error.status, 429);
+      return true;
+    }
   );
 });
 

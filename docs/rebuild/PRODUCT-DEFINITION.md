@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=b879b07bd726ad8d674e78a5ef2e20bac4dd5b8fe62fb3c498723ab18fa1e945 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=3080135f9a425a41903a23875f03bb1e95a7169b38d8cafc41ac81131e37c020 -->
 # AXIOM-MESH Product Definition
 
 **Status:** canonical rebuild and product definition
@@ -28,12 +28,13 @@ human-sponsored constrained machine principals.
 
 A constrained machine principal is an authorization primitive: an authenticated
 `agent` identity is bound to a human sponsor, finite scopes, action and purpose
-ceilings, runtime identity, expiry, non-delegation and a currently enforced
-execution-time ceiling. The v1 schema also reserves destination, rate,
-concurrency, request-size and response-size limits, but those are not current
-live-enforcement claims until their Gateway/runtime paths and evidence exist. A
-least-privilege infrastructure `service` keeps the existing service-principal
-contract unless it explicitly opts into that machine-authority profile.
+ceilings, runtime identity, expiry, non-delegation, a currently enforced
+execution-time ceiling, and authenticated Gateway request-size and request-rate
+ceilings. The v1 schema also reserves destination, concurrency, and response-size
+limits, but those are not current live-enforcement claims until their correct
+runtime paths and evidence exist. A least-privilege infrastructure `service`
+keeps the existing service-principal contract unless it explicitly opts into
+that machine-authority profile.
 
 This does **not** provide a supported autonomous-agent runtime, external AI
 provider, MCP/A2A endpoint, agent federation, remote workload dispatcher,
@@ -332,8 +333,8 @@ The `0.12.0-dev.3` kernel currently implements:
 - authenticated intent, plan, policy, grant, deterministic execution, and
   signed evidence;
 - human-sponsored constrained agent principals with finite scopes, action and
-  purpose ceilings, runtime identity, expiry, non-delegation and an
-  execution-time ceiling;
+  purpose ceilings, runtime identity, expiry, non-delegation, an execution-time
+  ceiling, and authenticated Gateway request-size and request-rate ceilings;
 - deny-dominant policy and independent high-risk approval;
 - encrypted transactional Grid state and key-lineage-aware evidence;
 - consent, capsule manifests, encrypted memory, governance, local accounting,
