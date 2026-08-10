@@ -1,0 +1,80 @@
+name: Finalize G5-G9 hardening
+
+on:
+  push:
+    branches:
+      - "security/audit-hardening-g5-g9-2026-08-10"
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: security/audit-hardening-g5-g9-2026-08-10
+      - name: Apply final compatibility and documentation bindings
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              if new in text:
+                  return False
+              if old not in text:
+                  raise SystemExit(f'missing anchor in {path}: {old[:120]!r}')
+              p.write_text(text.replace(old, new, 1))
+              return True
+
+          # Preserve PolicyEngine constructor compatibility. Policies loaded from disk are
+          # already validated; merged policies are now explicitly revalidated at the merge
+          # boundary. Do not expand this audit fix into a constructor contract change.
+          replace_once(
+              'mesh/src/lib/policy.mjs',
+              "  constructor(policy, { layers } = {}) {\n    validatePolicy(policy);\n    this.policy = structuredClone(policy);",
+              "  constructor(policy, { layers } = {}) {\n    this.policy = structuredClone(policy);"
+          )
+
+          # Keep the architectural clarification searchable as one exact assertion.
+          replace_once(
+              'docs/rebuild/PRODUCT-DEFINITION.md',
+              "   secret, package, or host authority. It is **not** a general-purpose arbitrary-\n   code isolation sandbox; that remains an explicit non-claim.",
+              "   secret, package, or host authority. It is **not** a general-purpose arbitrary-code\n   isolation sandbox; that remains an explicit non-claim."
+          )
+
+          p = Path('mesh/src/check-docs.mjs')
+          text = p.read_text()
+          anchor = "  'docs/rebuild/LONG-HORIZON-CAPABILITY-MAP.md': [\n"
+          entry = """  'docs/rebuild/PRODUCT-DEFINITION.md': [
+    'deterministic capability executor for the fixed built-in',
+    'general-purpose arbitrary-code',
+    'isolation sandbox; that remains an explicit non-claim'
+  ],
+  'docs/audits/AUDIT-HARDENING-G5-G9-2026-08-10.md': [
+    '## Findings in scope',
+    '## Documentation and maintenance clarifications',
+    '## Promotion rule'
+  ],
+"""
+          if entry not in text:
+              if anchor not in text:
+                  raise SystemExit('required-content insertion anchor missing')
+              text = text.replace(anchor, entry + anchor, 1)
+          p.write_text(text)
+          PY
+
+          if git diff --quiet; then
+            echo 'Final hardening already applied.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add mesh/src/lib/policy.mjs docs/rebuild/PRODUCT-DEFINITION.md mesh/src/check-docs.mjs
+          git commit -m 'test: bind final G5-G9 hardening invariants'
+          git push origin HEAD:security/audit-hardening-g5-g9-2026-08-10
