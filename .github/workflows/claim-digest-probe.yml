@@ -1,0 +1,27 @@
+name: Claim Digest Probe
+
+on:
+  push:
+    branches:
+      - docs/machine-ingress-claim-sync-2026-08-09
+
+permissions:
+  contents: read
+
+jobs:
+  digest:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.18.0
+          package-manager-cache: false
+      - name: Print canonical capability registry digest
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          import { validateCapabilityRegistry } from './mesh/src/check-registry.mjs';
+          const registry = JSON.parse(await readFile('./mesh/config/capabilities.json', 'utf8'));
+          console.log(JSON.stringify(validateCapabilityRegistry(registry)));
+          NODE
