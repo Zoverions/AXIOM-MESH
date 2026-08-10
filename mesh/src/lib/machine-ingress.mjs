@@ -7,6 +7,7 @@ export class MachineIngressGuard {
     }
     this.maxPrincipals = maxPrincipals;
     this.rate = new Map();
+    this.concurrency = new Map();
   }
 
   enforce(principal, { requestBytes = 0, now = Date.now() } = {}) {
@@ -16,14 +17,7 @@ export class MachineIngressGuard {
     if (!Number.isSafeInteger(requestBytes) || requestBytes < 0) {
       throw new ValidationError('requestBytes must be a non-negative safe integer');
     }
-    const budgets = principal.constraints?.budgets;
-    if (!budgets || typeof budgets !== 'object') {
-      throw new AxiomError(
-        'machine_authority_invalid',
-        'Machine principal budgets are unavailable',
-        403
-      );
-    }
+    const budgets = this.#budgets(principal);
 
     if (requestBytes > budgets.max_request_bytes) {
       throw new AxiomError(
@@ -54,6 +48,70 @@ export class MachineIngressGuard {
     };
   }
 
+  acquireConcurrency(principal) {
+    if (principal?.schema !== 'axiom-machine-principal.v1') {
+      return () => {};
+    }
+    const budgets = this.#budgets(principal);
+    const maximum = budgets.max_concurrent_requests;
+    if (
+      !Number.isSafeInteger(maximum)
+      || maximum < 1
+      || maximum > 1_000
+    ) {
+      throw new AxiomError(
+        'machine_authority_invalid',
+        'Machine principal concurrency budget is invalid',
+        403
+      );
+    }
+
+    const active = this.concurrency.get(principal.id) ?? 0;
+    if (active >= maximum) {
+      throw new AxiomError(
+        'machine_concurrency_budget_exceeded',
+        'Machine principal concurrency budget is exceeded',
+        429,
+        {
+          active_requests: active,
+          max_concurrent_requests: maximum
+        }
+      );
+    }
+    if (!this.concurrency.has(principal.id) && this.concurrency.size >= this.maxPrincipals) {
+      throw new AxiomError(
+        'machine_concurrency_state_unavailable',
+        'Machine concurrency admission state is at its configured principal bound',
+        503
+      );
+    }
+
+    this.concurrency.set(principal.id, active + 1);
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      const current = this.concurrency.get(principal.id);
+      if (current === undefined || current <= 1) {
+        this.concurrency.delete(principal.id);
+        return;
+      }
+      this.concurrency.set(principal.id, current - 1);
+    };
+  }
+
+  #budgets(principal) {
+    const budgets = principal.constraints?.budgets;
+    if (!budgets || typeof budgets !== 'object') {
+      throw new AxiomError(
+        'machine_authority_invalid',
+        'Machine principal budgets are unavailable',
+        403
+      );
+    }
+    return budgets;
+  }
+
   #takeRate(principalId, maxRequestsPerMinute, now) {
     if (
       !Number.isSafeInteger(maxRequestsPerMinute)
@@ -81,14 +139,14 @@ export class MachineIngressGuard {
       priorTokens + (elapsed * capacity / 60_000)
     );
     if (available < 1) {
-      this.#touch(principalId, {
+      this.#touchRate(principalId, {
         tokens: available,
         at: now,
         capacity
       });
       return false;
     }
-    this.#touch(principalId, {
+    this.#touchRate(principalId, {
       tokens: available - 1,
       at: now,
       capacity
@@ -96,7 +154,7 @@ export class MachineIngressGuard {
     return true;
   }
 
-  #touch(key, value) {
+  #touchRate(key, value) {
     this.rate.delete(key);
     this.rate.set(key, value);
     while (this.rate.size > this.maxPrincipals) {
