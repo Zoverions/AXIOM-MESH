@@ -206,7 +206,6 @@ function clientArgs(socketPath, fixture) {
     grid_prepared_event: fixture.gridEvent,
     hypervisorPublicKey: fixture.hypervisor.publicKey,
     operatorPublicKey: fixture.operator.publicKey,
-    now: new Date().toISOString(),
     timeoutMs: 5_000
   };
 }
