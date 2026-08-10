@@ -63,6 +63,32 @@ Sandbox is a deterministic capability executor rather than an arbitrary-code
 isolation product, and adds a maintenance requirement to backfill a security
 fix across every equivalent pattern in the supported tree.
 
+## Verification provenance
+
+The verification history is preserved rather than collapsed into the final
+green state:
+
+- Diagnostic Clean Kernel run `31383155359` reached the documentation gate with
+  the container/security job green but failed because the new canonical phrase
+  `regression coverage for the class` crossed a Markdown line break. The
+  canonical sentence was rewrapped; the checker was not weakened. Its separate
+  50,000-event benchmark run `31383155379` passed.
+- Exact-head Clean Kernel run `31384181300` on
+  `b47373098b0025eb30c65d659c6308b0e397dd28` had a fully green
+  container/security job and passed every substantive G-5 through G-9 test,
+  but the reviewability regression itself expected a literal space after
+  `class,` where canonical Markdown used a newline. The regex was corrected to
+  accept whitespace at the real wrap point. The corresponding benchmark run
+  `31384181407` passed.
+- Repaired head `1edaa8229a3038feb7bc88b3aaaf0ed78453f364` passed the complete
+  Clean Kernel `verify` and `container` jobs in run `31384408767` and the
+  independent signed 50,000-event benchmark in run `31384408757`.
+
+Because this provenance-only append changes the source revision, the commit
+containing this section must itself pass the same three exact-head gates before
+merge; the prior green runs are evidence for their respective heads, not a
+substitute for final-head verification.
+
 ## Promotion rule
 
 No item in this note is complete merely because source exists. The branch must
