@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: security/audit-remediation-g1-g4-2026-08-10
-      - name: Execute the staged remediation payload once
+      - name: Execute source, test, and documentation remediation only
         shell: bash
         run: |
           awk '
@@ -24,16 +24,23 @@ jobs:
             /^        run: \|$/ { found=1; next }
           ' .github/workflows/apply-audit-remediation-g1-g4.yml > /tmp/apply-audit-remediation.sh
           test -s /tmp/apply-audit-remediation.sh
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          path = Path('/tmp/apply-audit-remediation.sh')
+          text = path.read_text()
+          text, count = re.subn(
+              r"\n// G-4: pin the actual load-bearing workflow.*?\nfs\.writeFileSync\(kernelPath, kernel\);\n",
+              "\n",
+              text,
+              flags=re.S,
+          )
+          if count != 1:
+              raise SystemExit(f'expected one G-4 workflow mutation block, found {count}')
+          old = 'rm -f .github/audit-remediation-trigger .github/workflows/apply-audit-remediation-g1-g4.yml'
+          if old not in text:
+              raise SystemExit('helper cleanup anchor not found')
+          text = text.replace(old, 'rm -f .github/audit-remediation-trigger')
+          path.write_text(text)
+          PY
           bash /tmp/apply-audit-remediation.sh
-      - name: Remove bootstrap workflow from the remediated branch
-        shell: bash
-        run: |
-          git pull --ff-only origin security/audit-remediation-g1-g4-2026-08-10
-          rm -f .github/workflows/bootstrap-audit-remediation-pr.yml
-          if ! git diff --quiet -- .github/workflows/bootstrap-audit-remediation-pr.yml; then
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add .github/workflows/bootstrap-audit-remediation-pr.yml
-            git commit -m 'chore: remove audit remediation bootstrap'
-            git push origin HEAD:security/audit-remediation-g1-g4-2026-08-10
-          fi
