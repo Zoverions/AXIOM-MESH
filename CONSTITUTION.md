@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=baee0a00d61d7f87a6d742e311eb2d5e0cea9f41965d1b3148f7b6a8c7b2bb5e -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=dd6fa83f1ad532e1df31b4bb0e4ddc4a7a521957cab7752c8f03333bd70e6bb6 -->
 # AXIOM-MESH CONSTITUTION
 
 **Build:** `0.12.0-dev.3`
@@ -53,9 +53,9 @@ tool or provider, suppress consent, recovery, deletion, export, or appeal, or
 expand their own power. Machine principals are additionally bounded by their
 sponsor, finite scopes, action and purpose ceilings, runtime identity, expiry,
 non-delegation, the currently enforced execution-time ceiling, and authenticated
-Gateway request-size, request-rate, and concurrency ceilings. Additional machine
-destination and response-size limits must not be described as live enforcement
-until their runtime paths and evidence exist. Machine constraints may reduce but
+Gateway request-size, request-rate, concurrency, and response-size ceilings.
+Machine destination limits must not be described as live enforcement until the
+correct effect/adapter path and evidence exist. Machine constraints may reduce but
 never enlarge policy authority.
 Permitted high-risk effects require explicit approval from an independent
 authenticated principal.

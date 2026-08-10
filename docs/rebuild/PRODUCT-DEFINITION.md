@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=baee0a00d61d7f87a6d742e311eb2d5e0cea9f41965d1b3148f7b6a8c7b2bb5e -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=dd6fa83f1ad532e1df31b4bb0e4ddc4a7a521957cab7752c8f03333bd70e6bb6 -->
 # AXIOM-MESH Product Definition
 
 **Status:** canonical rebuild and product definition
@@ -29,10 +29,10 @@ human-sponsored constrained machine principals.
 A constrained machine principal is an authorization primitive: an authenticated
 `agent` identity is bound to a human sponsor, finite scopes, action and purpose
 ceilings, runtime identity, expiry, non-delegation, a currently enforced
-execution-time ceiling, and authenticated Gateway request-size, request-rate, and
-concurrency ceilings. The v1 schema also reserves destination and response-size
-limits, but those are not current live-enforcement claims until their correct
-runtime paths and evidence exist. A least-privilege infrastructure `service`
+execution-time ceiling, and authenticated Gateway request-size, request-rate,
+concurrency, and response-size ceilings. The v1 schema still reserves destination
+limits, but destination is not a current live-enforcement claim until the correct
+effect/adapter path and evidence exist. A least-privilege infrastructure `service`
 keeps the existing service-principal contract unless it explicitly opts into
 that machine-authority profile.
 
@@ -334,7 +334,7 @@ The `0.12.0-dev.3` kernel currently implements:
   signed evidence;
 - human-sponsored constrained agent principals with finite scopes, action and
   purpose ceilings, runtime identity, expiry, non-delegation, an execution-time
-  ceiling, and authenticated Gateway request-size, request-rate, and concurrency ceilings;
+  ceiling, and authenticated Gateway request-size, request-rate, concurrency, and response-size ceilings;
 - deny-dominant policy and independent high-risk approval;
 - encrypted transactional Grid state and key-lineage-aware evidence;
 - consent, capsule manifests, encrypted memory, governance, local accounting,

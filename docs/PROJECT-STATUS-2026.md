@@ -28,9 +28,10 @@ experimental, 2 specified, 9 adapter-required, and 4 disabled capabilities.
 - authenticated intent, policy, plan, grant, deterministic execution, and
   signed evidence flow;
 - human-sponsored constrained `agent` principals with finite scopes, action and
-  purpose ceilings, runtime identity, expiry, non-delegation, and an enforced
-  execution-time ceiling; machine authority digests bind request approval,
-  plan provenance, capability claims, and returned evidence;
+  purpose ceilings, runtime identity, expiry, non-delegation, an enforced
+  execution-time ceiling, and authenticated Gateway request-size, request-rate,
+  concurrency, and response-size ceilings; machine authority digests bind
+  request approval, plan provenance, capability claims, and returned evidence;
 - backward-compatible least-privilege infrastructure `service` principals,
   with optional explicit adoption of the same constrained machine profile;
 - deny-dominant layered policy and independent approval for high-risk effects;
@@ -75,10 +76,10 @@ experimental, 2 specified, 9 adapter-required, and 4 disabled capabilities.
   non-review/non-promotion synthetic conformance boundary.
 
 The constrained machine-principal capability is an authorization primitive,
-not an autonomous-agent runtime. The v1 schema reserves destination, rate,
-concurrency, request-size, and response-size constraints, but those are not
-current live-enforcement claims until their Gateway/runtime paths and evidence
-exist. Runtime IDs and software digests are attribution metadata rather than
+not an autonomous-agent runtime. Request size, request rate, concurrency, and
+response size are enforced at authenticated Gateway boundaries. The v1 schema
+still reserves destination, but destination is not a live-enforcement claim
+until the correct effect/adapter path and evidence exist. Runtime IDs and software digests are attribution metadata rather than
 TPM/TEE or measured-runtime attestation.
 
 ## Production package state
