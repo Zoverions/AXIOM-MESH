@@ -68,15 +68,20 @@ async function storeFixture(t) {
   return store;
 }
 
-function appendApprovedProposal(store, {
+function sleep(milliseconds) {
+  return new Promise(resolve => setTimeout(resolve, milliseconds));
+}
+
+async function appendApprovedProposal(store, {
   proposalId,
   proposer,
   action,
   voter = 'human:reviewer',
   activator = 'human:activator'
 }) {
-  const votingEndsAt = new Date(Date.now() - 2_000).toISOString();
-  const activateAfter = new Date(Date.now() - 1_000).toISOString();
+  const now = Date.now();
+  const votingEndsAt = new Date(now + 60).toISOString();
+  const activateAfter = new Date(now + 120).toISOString();
   store.appendEvents({
     traceId: `trace:${proposalId}:propose`,
     actor: proposer,
@@ -109,6 +114,7 @@ function appendApprovedProposal(store, {
       }
     }]
   });
+  await sleep(Math.max(0, new Date(votingEndsAt).valueOf() - Date.now() + 15));
   store.appendEvents({
     traceId: `trace:${proposalId}:finalize`,
     actor: proposer,
@@ -118,6 +124,7 @@ function appendApprovedProposal(store, {
       payload: { proposal_id: proposalId, finalized_by: proposer }
     }]
   });
+  await sleep(Math.max(0, new Date(activateAfter).valueOf() - Date.now() + 15));
   store.appendEvents({
     traceId: `trace:${proposalId}:activate`,
     actor: activator,
@@ -164,7 +171,7 @@ test('current active Intent proposal exposes minimized full-chain verified read-
     kernel_version: '0.12.0-dev.3',
     source_digest: sha256('intent-read-source')
   });
-  appendApprovedProposal(store, {
+  await appendApprovedProposal(store, {
     proposalId: 'proposal:intent-read',
     proposer: 'human:proposer',
     action: activationGovernanceAction(activation)
@@ -189,7 +196,7 @@ test('current active Intent proposal exposes minimized full-chain verified read-
 
 test('ordinary governance proposals remain unextended', async t => {
   const store = await storeFixture(t);
-  appendApprovedProposal(store, {
+  await appendApprovedProposal(store, {
     proposalId: 'proposal:ordinary',
     proposer: 'human:ordinary',
     action: {
@@ -210,7 +217,7 @@ test('superseded Intent proposal does not expose current state as its own', asyn
     kernel_version: '0.12.0-dev.3',
     source_digest: sha256('intent-read-v1')
   });
-  appendApprovedProposal(store, {
+  await appendApprovedProposal(store, {
     proposalId: 'proposal:intent-v1',
     proposer: 'human:proposer',
     action: activationGovernanceAction(first)
@@ -221,7 +228,7 @@ test('superseded Intent proposal does not expose current state as its own', asyn
   }, {
     supersedesActivationDigest: first.activation_digest
   });
-  appendApprovedProposal(store, {
+  await appendApprovedProposal(store, {
     proposalId: 'proposal:intent-v2',
     proposer: 'human:proposer',
     action: activationGovernanceAction(second)
