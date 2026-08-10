@@ -29,8 +29,10 @@ experimental, 2 specified, 9 adapter-required, and 4 disabled capabilities.
   signed evidence flow;
 - human-sponsored constrained `agent` principals with finite scopes, action and
   purpose ceilings, runtime identity, expiry, non-delegation, an enforced
-  execution-time ceiling, and authenticated Gateway request-size, request-rate,
-  concurrency, and response-size ceilings; machine authority digests bind
+  execution-time ceiling, authenticated Gateway request-size, request-rate,
+  concurrency, and response-size ceilings, and an AXIOM-computed current built-in
+  effect destination constrained to the principal's finite destination allowlist;
+  machine authority digests bind
   request approval, plan provenance, capability claims, and returned evidence;
 - backward-compatible least-privilege infrastructure `service` principals,
   with optional explicit adoption of the same constrained machine profile;
@@ -77,10 +79,13 @@ experimental, 2 specified, 9 adapter-required, and 4 disabled capabilities.
 
 The constrained machine-principal capability is an authorization primitive,
 not an autonomous-agent runtime. Request size, request rate, concurrency, and
-response size are enforced at authenticated Gateway boundaries. The v1 schema
-still reserves destination, but destination is not a live-enforcement claim
-until the correct effect/adapter path and evidence exist. Runtime IDs and software digests are attribution metadata rather than
-TPM/TEE or measured-runtime attestation.
+response size are enforced at authenticated Gateway boundaries. For current
+built-in effects, AXIOM computes the effect destination from the authorized tool,
+resolves `builtin.*` to `local`, and requires that destination to remain inside the
+principal's finite destination ceiling before capability issuance/execution. Unknown
+provider, remote, or MCP destination semantics remain unresolved and fail closed.
+Runtime IDs and software digests are attribution metadata rather than TPM/TEE or
+measured-runtime attestation.
 
 ## Production package state
 
@@ -191,8 +196,8 @@ AXIOM-MESH does not currently claim:
 - a live public testnet, mainnet, or production service;
 - an autonomous-agent runtime, machine delegation, MCP/A2A endpoint, agent
   federation, or remote agent execution;
-- machine-specific destination, rate, concurrency, request-size, or
-  response-size enforcement beyond the current global controls;
+- arbitrary external/provider/MCP destination semantics or remote machine effect
+  execution beyond the current verified local built-in destination mapping;
 - TPM/TEE, measured boot, or runtime software attestation from a declared
   runtime/software digest;
 - BFT consensus, multi-host federation, or federated network peer discovery;
@@ -256,9 +261,10 @@ evidence is promoted.
 
 ### Machine interoperability substrate
 
-Complete the AXIOM Invocation Envelope and live enforcement for the remaining
-machine destination, rate, concurrency, request-size, and response-size limits;
-add machine-filtered capability discovery; bind credentials and artifacts to
+The native Invocation Envelope and current machine action/purpose, execution-time,
+request-size, request-rate, concurrency, response-size, and local computed-destination
+enforcement are implemented; next add machine-filtered capability discovery and bind
+credentials and artifacts to
 that envelope; then build MCP compatibility against the same native Gateway
 semantics. A2A, remote execution, asynchronous remote tasks, and attenuation-only
 delegation remain later gates and must not be enabled implicitly by protocol
