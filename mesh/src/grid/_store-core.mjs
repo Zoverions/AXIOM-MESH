@@ -1149,6 +1149,16 @@ export class GridStore {
     return this.decodeProtectedRow('intents', 'intent_id', row, ['result_json', 'error_json']);
   }
 
+  listIntentEvents(intentId) {
+    assertString(intentId, 'intent_id', { max: 160, pattern: ID });
+    return this.db.prepare(`
+      SELECT * FROM events
+      WHERE subject = ?
+        AND kind IN ('intent.accepted', 'intent.completed', 'intent.denied', 'intent.failed')
+      ORDER BY seq
+    `).all(intentId).map(row => this.decodeEventRow(row));
+  }
+
   listEvents({ after = 0, limit = 100, actor } = {}) {
     const safeLimit = Math.max(1, Math.min(500, Number(limit) || 100));
     const rows = actor

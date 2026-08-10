@@ -196,7 +196,7 @@ function terminalOutcome(intent, payload, acceptedPayload) {
     return {
       kind: 'intent.completed',
       result_digest: materializedDigest,
-      terminal_payload_digest: eventDigest
+      terminal_payload_digest: digestObject(payload)
     };
   }
 

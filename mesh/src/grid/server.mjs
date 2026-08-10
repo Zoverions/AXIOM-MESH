@@ -4,11 +4,12 @@ import { pathToFileURL } from 'node:url';
 import { meshConfig } from '../lib/config.mjs';
 import { ensureMeshIdentity, ReplayGuard, verifySignedRequest } from '../lib/identity.mjs';
 import { Router, createServiceServer, listen, parseJsonBody } from '../lib/http.mjs';
-import { ValidationError, assertPlainObject, assertString } from '../lib/canonical.mjs';
+import { AxiomError, ValidationError, assertPlainObject, assertString } from '../lib/canonical.mjs';
 import { operationsReport, readinessState, ServiceTelemetry } from '../lib/observability.mjs';
 import { GridStore } from './store.mjs';
 import { loadDataProtector } from '../lib/protector.mjs';
 import { runServiceProcess } from '../lib/service-lifecycle.mjs';
+import { buildMachineIntentReceipt } from '../lib/machine-receipt.mjs';
 import {
   acquireGridRuntimeLock,
   createGridBackup,
@@ -144,6 +145,27 @@ export async function createGridService(config = meshConfig()) {
 
   router.add('GET', '/internal/v1/status', async () => store.getStatus());
   router.add('GET', '/internal/v1/verify-chain', async () => store.verifyChain());
+  router.add('GET', '/internal/v1/machine-receipts/intents/:id/verify', async ({ params, url }) => {
+    const intentId = assertString(params.id, 'intent_id', {
+      max: 160,
+      pattern: /^intent_[a-f0-9]{64}$/
+    });
+    const requester = assertString(url.searchParams.get('principal'), 'principal', {
+      max: 160,
+      pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
+    });
+    const intent = store.getIntent(intentId);
+    if (intent.principal !== requester) {
+      throw new AxiomError('forbidden', 'Intent receipt belongs to another principal', 403);
+    }
+    return buildMachineIntentReceipt({
+      intent,
+      events: store.listIntentEvents(intentId),
+      chain: store.verifyChain(),
+      identity,
+      kernelVersion: '0.12.0-dev.3'
+    });
+  });
   router.add('GET', '/internal/v1/events', async ({ url }) => ({
     events: store.listEvents({
       after: Number(url.searchParams.get('after') ?? 0),
