@@ -1,7 +1,7 @@
 {
   "schema": "axiom-capability-evidence-bindings.v1",
   "kernel_version": "0.12.0-dev.3",
-  "registry_digest": "baee0a00d61d7f87a6d742e311eb2d5e0cea9f41965d1b3148f7b6a8c7b2bb5e",
+  "registry_digest": "dd6fa83f1ad532e1df31b4bb0e4ddc4a7a521957cab7752c8f03333bd70e6bb6",
   "bindings": [
     {
       "capability_id": "capsules.registry",
@@ -46,7 +46,9 @@
         "assert.match(result.evidence.machine_authority_digest, /^[a-f0-9]{64}$/);",
         "assert.equal(error.code, 'machine_request_budget_exceeded');",
         "assert.equal(error.code, 'machine_rate_budget_exceeded');",
-        "assert.equal(accepted.payload.invocation.limits.ingress.max_concurrent_requests, 1);"
+        "assert.equal(accepted.payload.invocation.limits.ingress.max_concurrent_requests, 1);",
+        "assert.equal(accepted.payload.invocation.limits.ingress.max_response_bytes, 262_144);",
+        "assert.equal(error.code, 'machine_response_budget_exceeded');"
       ]
     },
     {

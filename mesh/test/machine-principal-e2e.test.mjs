@@ -1,3 +1,4 @@
+// Final verification anchor after Gateway machine hook repair #925.
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -128,10 +129,11 @@ test('constrained agent executes an authorized intent and returns bound authorit
     && event.subject === result.intent_id
   ));
   assert.ok(accepted);
-  // Final claim verification anchor: the accepted invocation carries the live concurrency ceiling.
   assert.equal(accepted.payload.invocation.limits.ingress.max_concurrent_requests, 1);
+  assert.equal(accepted.payload.invocation.limits.ingress.max_response_bytes, 262_144);
 
-  // The capability binding below proves all three claimed ingress ceilings.
+  // Request-size denial occurs before rate consumption, so the next bounded call
+  // still deterministically proves the three-request rate ceiling.
   await assert.rejects(
     () => client.call('intents.submit', {
       body: {
@@ -153,6 +155,31 @@ test('constrained agent executes an authorized intent and returns bound authorit
     error => {
       assert.equal(error.code, 'machine_rate_budget_exceeded');
       assert.equal(error.status, 429);
+      return true;
+    }
+  );
+
+  // Final claim anchor: response-size enforcement uses an isolated stack so the
+  // proof is independent of event-page bytes and rate-budget sequencing above.
+  // A 2 KiB echo request is beneath this stack's default 64 KiB request ceiling,
+  // while its returned JSON necessarily exceeds the explicit 1 KiB response ceiling.
+  const { client: responseBoundClient } = await startMachineStack(
+    t,
+    'axiom-machine-response-bound-e2e-',
+    { budgets: { max_response_bytes: 1_024 } }
+  );
+  await assert.rejects(
+    () => responseBoundClient.call('intents.submit', {
+      body: {
+        action: 'system.echo',
+        input: { message: 'r'.repeat(2_048) },
+        purpose: 'test.conformance'
+      },
+      idempotencyKey: 'machine-e2e-response-budget-0001'
+    }),
+    error => {
+      assert.equal(error.code, 'machine_response_budget_exceeded');
+      assert.equal(error.status, 502);
       return true;
     }
   );
