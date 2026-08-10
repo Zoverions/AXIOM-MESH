@@ -911,14 +911,22 @@ async function writeNewJson(path, value) {
 }
 
 function maybeCrashAfterRetirement(count) {
-  const configured = process.env.AXIOM_TEST_BACKUP_RETENTION_CRASH_AFTER_MOVE;
-  if (configured === undefined) return;
+  if (shouldCrashAfterRetirementForTest(count)) {
+    process.kill(process.pid, 'SIGKILL');
+  }
+}
+
+export function shouldCrashAfterRetirementForTest(count, {
+  environment = process.env.NODE_ENV,
+  configured = process.env.AXIOM_TEST_BACKUP_RETENTION_CRASH_AFTER_MOVE
+} = {}) {
+  if (environment !== 'test' || configured === undefined) return false;
   if (!/^[1-9][0-9]{0,3}$/.test(configured)) {
     throw new ValidationError(
       'AXIOM_TEST_BACKUP_RETENTION_CRASH_AFTER_MOVE is invalid'
     );
   }
-  if (count === Number(configured)) process.kill(process.pid, 'SIGKILL');
+  return count === Number(configured);
 }
 
 async function loadMaintenanceDependencies(dataDir, keyFile) {

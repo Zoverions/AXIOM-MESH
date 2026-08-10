@@ -146,15 +146,47 @@ export async function createGridService(config = meshConfig()) {
   router.add('GET', '/internal/v1/verify-chain', async () => store.verifyChain());
   router.add('GET', '/internal/v1/events', async ({ url }) => ({
     events: store.listEvents({
-      after: Number(url.searchParams.get('after') ?? 0),
-      limit: Number(url.searchParams.get('limit') ?? 100),
+      after: integerQuery(url.searchParams.get('after'), 0, {
+        label: 'events after',
+        min: 0,
+        max: Number.MAX_SAFE_INTEGER
+      }),
+      limit: integerQuery(url.searchParams.get('limit'), 100, {
+        label: 'events limit',
+        min: 1,
+        max: 500
+      }),
       actor: url.searchParams.get('actor') ?? undefined
     })
   }));
   router.add('GET', '/internal/v1/intents/:id', async ({ params }) => store.getIntent(params.id));
-  router.add('GET', '/internal/v1/capsules', async () => ({ capsules: store.listCapsules() }));
-  router.add('GET', '/internal/v1/proposals', async () => ({ proposals: store.listProposals() }));
-  router.add('GET', '/internal/v1/nodes', async () => ({ nodes: store.listNodes() }));
+  router.add('GET', '/internal/v1/capsules', async ({ url }) => ({
+    capsules: store.listCapsules({
+      limit: integerQuery(url.searchParams.get('limit'), 100, {
+        label: 'capsules limit',
+        min: 1,
+        max: 100
+      })
+    })
+  }));
+  router.add('GET', '/internal/v1/proposals', async ({ url }) => ({
+    proposals: store.listProposals({
+      limit: integerQuery(url.searchParams.get('limit'), 100, {
+        label: 'proposals limit',
+        min: 1,
+        max: 100
+      })
+    })
+  }));
+  router.add('GET', '/internal/v1/nodes', async ({ url }) => ({
+    nodes: store.listNodes({
+      limit: integerQuery(url.searchParams.get('limit'), 100, {
+        label: 'nodes limit',
+        min: 1,
+        max: 100
+      })
+    })
+  }));
   router.add('GET', '/internal/v1/node-discovery', async ({ url }) => {
     const discovery = store.discoverNodes({
       required_capabilities: url.searchParams.getAll('capability'),
@@ -336,11 +368,18 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   await runServiceProcess(createGridService);
 }
 
-function integerQuery(value, fallback) {
+function integerQuery(value, fallback, {
+  label = 'integer query',
+  min = 0,
+  max = Number.MAX_SAFE_INTEGER
+} = {}) {
   if (value === null || value === '') return fallback;
+  if (!/^(0|[1-9][0-9]*)$/.test(value)) {
+    throw new ValidationError(`${label} is invalid`);
+  }
   const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed)) {
-    throw new ValidationError('Node discovery integer query is invalid');
+  if (!Number.isSafeInteger(parsed) || parsed < min || parsed > max) {
+    throw new ValidationError(`${label} is invalid`);
   }
   return parsed;
 }

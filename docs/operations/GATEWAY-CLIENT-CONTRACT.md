@@ -6,7 +6,7 @@
 
 **Status:** implemented client-contract boundary; experimental local PWA foundation present
 
-**Updated:** 2026-08-01
+**Updated:** 2026-08-10
 
 ## Purpose and boundary
 
@@ -21,7 +21,7 @@ and the client is
 The client is a private source module in this repository, not a published npm
 package; applications must bind and version it with the checked-out build.
 
-The contract covers all 27 authenticated `/v1/` Gateway routes. It deliberately
+The contract covers all 28 authenticated `/v1/` Gateway routes. It deliberately
 does not include `/`, `/health`, or `/ready`, which are unauthenticated ingress
 and operator-probe routes rather than the authenticated application contract.
 
@@ -47,15 +47,16 @@ client.
 | Client route ID | HTTP route | Access | Query or path inputs |
 |---|---|---|---|
 | `capabilities.list` | `GET /v1/capabilities` | authenticated | none |
+| `machine_discovery.get` | `GET /v1/machine-discovery` | constrained machine | none |
 | `status.get` | `GET /v1/status` | authenticated | none |
 | `operations.get` | `GET /v1/operations` | `operations:read` or `telemetry:collect` | none |
 | `metrics.get` | `GET /v1/metrics` | `operations:read` or `telemetry:collect` | none |
 | `intents.submit` | `POST /v1/intents` | authenticated | intent body and required idempotency key |
 | `intents.get` | `GET /v1/intents/:id` | owner or `audit:read` | `id` |
 | `events.list` | `GET /v1/events` | owner or `audit:read` | `actor`, `after`, `limit` |
-| `capsules.list` | `GET /v1/capsules` | authenticated | none |
-| `proposals.list` | `GET /v1/proposals` | authenticated | none |
-| `nodes.list` | `GET /v1/nodes` | authenticated | none |
+| `capsules.list` | `GET /v1/capsules` | `capsule:read` | optional `limit` (1-100; default 100) |
+| `proposals.list` | `GET /v1/proposals` | `governance:read` | optional `limit` (1-100; default 100) |
+| `nodes.list` | `GET /v1/nodes` | `node:read` | optional `limit` (1-100; default 100) |
 | `nodes.discover` | `GET /v1/node-discovery` | `node:read` | capability, role, security, lease, and limit filters |
 | `node_schedules.list` | `GET /v1/node-schedules` | `node:read` | none |
 | `consents.list` | `GET /v1/consents` | owner | none |
@@ -73,6 +74,8 @@ client.
 | `exports.get` | `GET /v1/exports/:id` | owner | `id` |
 | `export_bundles.get` | `GET /v1/exports/:id/bundle` | owner | `id` |
 | `audit.verify` | `GET /v1/audit/verify` | `audit:read` | none |
+
+The three global registry/history reads are explicitly scoped and bounded to at most 100 rows per call; malformed numeric query values fail with HTTP 400 rather than silently changing meaning.
 
 The checker parses every literal Gateway `router.add()` declaration and
 requires the ordered `/v1/` inventory to equal the contract. Adding, removing,

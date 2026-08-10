@@ -248,17 +248,49 @@ export async function createGatewayService(config = meshConfig()) {
   router.add('GET', '/v1/events', async ({ url, traceId, principal }) => {
     const requestedActor = url.searchParams.get('actor');
     const actor = hasScope(principal, 'audit:read') && requestedActor ? requestedActor : principal.id;
-    const after = Math.max(0, Number(url.searchParams.get('after') ?? 0));
-    const limit = Math.max(1, Math.min(500, Number(url.searchParams.get('limit') ?? 100)));
+    const after = boundedIntegerQuery(url.searchParams.get('after'), 0, {
+      label: 'events after',
+      min: 0,
+      max: Number.MAX_SAFE_INTEGER
+    });
+    const limit = boundedIntegerQuery(url.searchParams.get('limit'), 100, {
+      label: 'events limit',
+      min: 1,
+      max: 500
+    });
     return gridGet(
       `/internal/v1/events?actor=${encodeURIComponent(actor)}&after=${after}&limit=${limit}`,
       traceId
     );
   });
 
-  router.add('GET', '/v1/capsules', async ({ traceId }) => gridGet('/internal/v1/capsules', traceId));
-  router.add('GET', '/v1/proposals', async ({ traceId }) => gridGet('/internal/v1/proposals', traceId));
-  router.add('GET', '/v1/nodes', async ({ traceId }) => gridGet('/internal/v1/nodes', traceId));
+  router.add('GET', '/v1/capsules', async ({ url, traceId, principal }) => {
+    requireScope(principal, 'capsule:read');
+    const limit = boundedIntegerQuery(url.searchParams.get('limit'), 100, {
+      label: 'capsules limit',
+      min: 1,
+      max: 100
+    });
+    return gridGet(`/internal/v1/capsules?limit=${limit}`, traceId);
+  });
+  router.add('GET', '/v1/proposals', async ({ url, traceId, principal }) => {
+    requireScope(principal, 'governance:read');
+    const limit = boundedIntegerQuery(url.searchParams.get('limit'), 100, {
+      label: 'proposals limit',
+      min: 1,
+      max: 100
+    });
+    return gridGet(`/internal/v1/proposals?limit=${limit}`, traceId);
+  });
+  router.add('GET', '/v1/nodes', async ({ url, traceId, principal }) => {
+    requireScope(principal, 'node:read');
+    const limit = boundedIntegerQuery(url.searchParams.get('limit'), 100, {
+      label: 'nodes limit',
+      min: 1,
+      max: 100
+    });
+    return gridGet(`/internal/v1/nodes?limit=${limit}`, traceId);
+  });
   router.add('GET', '/v1/node-discovery', async ({
     url,
     traceId,
@@ -443,6 +475,24 @@ export async function createGatewayService(config = meshConfig()) {
 
 function hasScope(principal, scope) {
   return principal.scopes?.includes('*') || principal.scopes?.includes(scope);
+}
+
+function requireScope(principal, scope) {
+  if (!hasScope(principal, scope)) {
+    throw new AxiomError('forbidden', `${scope} scope is required`, 403);
+  }
+}
+
+function boundedIntegerQuery(value, fallback, { label, min, max }) {
+  if (value === null || value === '') return fallback;
+  if (!/^(0|[1-9][0-9]*)$/.test(value)) {
+    throw new ValidationError(`${label} must be an integer between ${min} and ${max}`);
+  }
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < min || parsed > max) {
+    throw new ValidationError(`${label} must be an integer between ${min} and ${max}`);
+  }
+  return parsed;
 }
 
 function enforceTelemetryCollectionBoundary(req, principal) {
