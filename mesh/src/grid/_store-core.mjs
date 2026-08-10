@@ -1,3 +1,9 @@
+// RETAINED LOWER LAYER: this file contains the baseline GridStore implementation.
+// The supported GridStore exported by store.mjs subclasses this layer with signed checkpoint
+// and streaming chain verification. The baseline verifyChain remains intentionally reachable
+// only for compatibility/tests and benchmark comparison; it is not the current production
+// verification path when store.mjs is used.
+
 import { DatabaseSync } from 'node:sqlite';
 import { createPublicKey } from 'node:crypto';
 import { lstatSync, readFileSync, readdirSync } from 'node:fs';

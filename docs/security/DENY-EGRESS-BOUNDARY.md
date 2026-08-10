@@ -82,14 +82,20 @@ The container job performs complementary positive and negative controls:
    verifies loopback Gateway readiness, and attempts the same public TCP
    destination.
 5. Any non-loopback route or successful container connection fails the job.
-6. Grid signs a secret-free evidence object. Protected CI retains
+6. The drill also reads `/proc/self/ns/net` and binds its namespace identity
+   by digest, then derives the required `network_mode: "none"` fact from the
+   actual `compose.production.yml` text and binds that policy digest. Both facts
+   are members of the same required-check/provenance inventory as the route and
+   probe checks rather than literal booleans outside assurance accounting.
+7. Grid signs a secret-free evidence object. Protected CI retains
    `axiom-deny-egress-evidence-<commit>` for 90 days.
 
 The evidence records only the source revision, kernel version, route counts,
-absence of default and non-loopback routes, successful runner and Unix-socket
-control flags, public-probe outcome class, loopback status, local-ingress
-transport class, public Grid key, and Ed25519 attestation. The protected
-workflow passes the two control flags only after their steps succeed. The
+absence of default and non-loopback routes, namespace and Compose-policy
+digests, successful runner and Unix-socket control measurements, public-probe
+outcome class, loopback status, local-ingress transport class, public Grid key,
+and Ed25519 attestation. After signed observer substitution, every required
+check has measured or derived provenance and `asserted_checks` is empty. The
 artifact contains no tokens, private keys, route addresses, host paths, or
 request payloads.
 

@@ -78,9 +78,11 @@ The product has four runtime responsibilities:
 2. **Hypervisor** — converts intent into an explicit plan; evaluates layered
    policy, consent, risk, machine-authority ceilings, budgets, and approvals;
    issues short-lived, single-use capability grants.
-3. **Sandbox** — executes only the action, provider, destination, data, and
-   resources named by a valid grant; it has no ambient network, filesystem,
-   secret, package, or host authority.
+3. **Sandbox** — a deterministic capability executor for the fixed built-in
+   operation set. It executes only the action, provider, destination, data, and
+   resources named by a valid grant and has no ambient network, filesystem,
+   secret, package, or host authority. It is **not** a general-purpose arbitrary-
+   code isolation sandbox; that remains an explicit non-claim.
 4. **Grid** — owns durable encrypted state, the append-only evidence chain,
    consent, memory, registries, governance, accounting, portability, recovery,
    admission, scheduling reservations, and conflict records.

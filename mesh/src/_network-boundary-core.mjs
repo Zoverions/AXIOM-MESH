@@ -1,3 +1,9 @@
+// RETAINED LOWER LAYER: this file provides route parsing/probe primitives and the
+// pre-provenance drill retained for compatibility and historical comparison. The supported
+// deny-egress evidence entry point is network-boundary.mjs -> _network-boundary-signed.mjs
+// -> _network-boundary-provenance.mjs. Do not audit runDenyEgressDrill in this file as the
+// current assurance surface in isolation.
+
 import { createPublicKey } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import net from 'node:net';

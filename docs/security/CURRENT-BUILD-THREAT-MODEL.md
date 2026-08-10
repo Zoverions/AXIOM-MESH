@@ -45,8 +45,9 @@ purpose allowlists, runtime identity, lifetime/expiry, non-delegation, and a
 currently enforced execution-time ceiling, authenticated Gateway request-size,
 request-rate, concurrency, and response-size ceilings, and an AXIOM-computed
 current built-in effect destination constrained to the principal's finite destination
-allowlist. Wildcard scope and administrator role
-are rejected. The machine authority digest is carried through request
+allowlist. Wildcard or glob scope syntax and administrator role
+are rejected; machine scopes therefore use the same exact-match grammar as the
+authorization evaluator. The machine authority digest is carried through request
 binding, plan provenance, capability claims, and result evidence. Existing
 least-privilege infrastructure `service` principals remain backward-compatible
 unless they explicitly opt into the constrained machine profile.
@@ -66,7 +67,10 @@ states that discovery is not authorization. Runtime IDs and software
 digests are attribution/binding metadata; they are not hardware,
 TPM/TEE, measured-boot, or remote-attestation proof.
 
-The compact candidate container uses `network_mode: none`. Host-local Gateway
+The compact candidate container uses `network_mode: none`. Signed deny-egress
+evidence binds the observed `/proc/self/ns/net` namespace identity by digest and
+derives the Compose `network_mode: none` requirement from the actual production
+Compose policy; both are required provenance-bearing checks. Host-local Gateway
 ingress is mounted separately, and startup fails before launching children if
 the enforced Linux namespace contains a non-loopback interface or IPv4/IPv6
 default route. The four-unit topology uses an internal service network with no
