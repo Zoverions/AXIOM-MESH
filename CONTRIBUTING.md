@@ -88,11 +88,15 @@ data, failure criteria, halt procedure, and reproducibility steps.
 5. Update every affected canonical document, including product definition,
    requirements, status, roadmap, execution queue, readiness tracker, release
    notes, white paper, threat model, and operator/user runbook as applicable.
-6. Add or update rollback, uninstall, migration, recovery, and decommissioning
+6. For every defect or security fix, search the supported tree for equivalent
+   patterns and either backfill the fix everywhere it applies or record why a
+   matching site is intentionally different; add regression coverage for the class,
+   not only the first instance.
+7. Add or update rollback, uninstall, migration, recovery, and decommissioning
    procedures for every exposed component.
-7. Never commit private keys, tokens, data-protection keys, production data,
+8. Never commit private keys, tokens, data-protection keys, production data,
    plaintext user data, or evidence containing secret values.
-8. Target lowercase `main`; do not target the deprecated branch or immutable
+9. Target lowercase `main`; do not target the deprecated branch or immutable
    archive tag.
 
 ## Documentation matrix

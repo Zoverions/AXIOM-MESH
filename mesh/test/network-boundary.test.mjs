@@ -39,6 +39,8 @@ const IPV6_WITH_DEFAULT = [
   `${'0'.repeat(32)} 00 ${'0'.repeat(32)} 00 ${'0'.repeat(32)} 00000064 00000000 00000000 00000001 eth0`
 ].join('\n');
 
+const TEST_NAMESPACE = 'net:[4026531993]';
+
 test('Linux route inspection requires a loopback-only namespace', async () => {
   const isolated = inspectLinuxRouteTables({ ipv4: IPV4_LOOPBACK_ONLY, ipv6: '' });
   assert.equal(isolated.valid, true);
@@ -75,7 +77,7 @@ test('TCP probe records blocked and connected outcomes without error detail', as
   });
 });
 
-test('signed boundary observers bind revision, run, package, socket, and runner target', async t => {
+test('signed boundary observers bind revision, run, package, socket, and measured namespace', async t => {
   const root = await mkdtemp(join(tmpdir(), 'axiom-boundary-observers-'));
   t.after(() => rm(root, { recursive: true, force: true }));
   const dataDir = join(root, 'data');
@@ -155,6 +157,7 @@ test('signed boundary observers bind revision, run, package, socket, and runner 
     },
     signer: grid,
     routeInspection,
+    networkNamespaceIdentity: TEST_NAMESPACE,
     sourceRevision,
     generatedAt: '2026-07-30T15:55:30.000Z',
     platform: 'linux',
@@ -171,6 +174,20 @@ test('signed boundary observers bind revision, run, package, socket, and runner 
   assert.equal(evidence.status, 'passed');
   assert.equal(evidence.assurance, 'passed_measured');
   assert.deepEqual(evidence.asserted_checks, []);
+  assert.equal(evidence.checks.network_namespace_observed, true);
+  assert.equal(evidence.check_provenance.network_namespace_observed.source, 'measured');
+  assert.equal(
+    evidence.check_provenance.network_namespace_observed.input_artifact_digest,
+    evidence.execution.network_namespace_identity_digest
+  );
+  assert.equal(
+    Object.hasOwn(evidence.boundary, 'compose_network_mode_none_required'),
+    false
+  );
+  assert.match(
+    evidence.limitations.join('\n'),
+    /static Compose topology is verified by release\/deployment checks/
+  );
   assert.equal(evidence.check_provenance.host_unix_ingress_verified.source, 'measured');
   assert.equal(evidence.check_provenance.runner_public_control_verified.source, 'measured');
   assert.equal(
@@ -179,6 +196,24 @@ test('signed boundary observers bind revision, run, package, socket, and runner 
   );
   assert.equal(verifyDenyEgressEvidence(evidence).valid, true);
   assert.doesNotMatch(JSON.stringify(evidence), /PRIVATE KEY/);
+
+  const wrongNamespaceDigest = structuredClone(evidence);
+  wrongNamespaceDigest.execution.network_namespace_identity_digest = 'c'.repeat(64);
+  delete wrongNamespaceDigest.attestation;
+  wrongNamespaceDigest.attestation = grid.signObject(wrongNamespaceDigest);
+  assert.throws(
+    () => verifyDenyEgressEvidence(wrongNamespaceDigest),
+    /namespace provenance binding/
+  );
+
+  const reintroducedStaticClaim = structuredClone(evidence);
+  reintroducedStaticClaim.boundary.compose_network_mode_none_required = true;
+  delete reintroducedStaticClaim.attestation;
+  reintroducedStaticClaim.attestation = grid.signObject(reintroducedStaticClaim);
+  assert.throws(
+    () => verifyDenyEgressEvidence(reintroducedStaticClaim),
+    /failed boundary check/
+  );
 
   const wrongRun = structuredClone(evidence);
   wrongRun.observer_context.context.run.id = 'different-run';

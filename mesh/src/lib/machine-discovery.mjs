@@ -19,9 +19,12 @@ export function buildMachineDiscovery({ principal, policy, kernelVersion }) {
   const machine = machinePrincipalAuthorityFacts(principal);
   const constraints = principal.constraints;
   const actions = [];
+  const policyActions = policy.policy.actions;
 
   for (const action of constraints.actions) {
-    const rule = policy.policy.actions?.[action];
+    const rule = Object.hasOwn(policyActions, action)
+      ? policyActions[action]
+      : null;
     if (!rule || rule.decision !== 'allow') continue;
     const requiredScopes = [...new Set(rule.required_scopes ?? [])].sort();
     if (requiredScopes.some(scope => !principal.scopes.includes(scope))) continue;

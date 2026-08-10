@@ -79,19 +79,32 @@ The container job performs complementary positive and negative controls:
    the bind-mounted Unix socket, proving that intended ingress and the
    four-service path still work without port publication.
 4. Inside the running container, the drill re-inspects both route tables,
+   reads `/proc/self/ns/net`, binds the observed namespace identity by digest,
    verifies loopback Gateway readiness, and attempts the same public TCP
    destination.
-5. Any non-loopback route or successful container connection fails the job.
-6. Grid signs a secret-free evidence object. Protected CI retains
+5. Any invalid namespace observation, non-loopback route, or successful
+   container connection fails the job.
+6. Grid signs a secret-free runtime evidence object. Protected CI retains
    `axiom-deny-egress-evidence-<commit>` for 90 days.
 
-The evidence records only the source revision, kernel version, route counts,
-absence of default and non-loopback routes, successful runner and Unix-socket
-control flags, public-probe outcome class, loopback status, local-ingress
-transport class, public Grid key, and Ed25519 attestation. The protected
-workflow passes the two control flags only after their steps succeed. The
-artifact contains no tokens, private keys, route addresses, host paths, or
-request payloads.
+The runtime evidence records only the source revision, kernel version, route
+counts, absence of default and non-loopback routes, the namespace-identity
+digest, successful runner and Unix-socket control measurements, public-probe
+outcome class, loopback status, local-ingress transport class, public Grid key,
+and Ed25519 attestation. After signed observer substitution, every runtime
+required check has measured or derived provenance and `asserted_checks` is
+empty. The artifact contains no tokens, private keys, route addresses, host
+paths, or request payloads.
+
+The static Compose requirement is intentionally **not** asserted inside that
+runtime evidence. The runtime image does not contain `compose.production.yml`,
+and pretending otherwise would turn a source-policy fact into a false runtime
+measurement. Instead, release/deployment verification reads the actual checked-
+out Compose file, requires `network_mode: "none"`, binds its digest into release
+evidence, and the protected container job uses that same file to create the
+candidate before the in-container measurements run. This separation keeps
+static policy verification and runtime observation truthful while closing the
+previous literal-boolean ambiguity.
 
 ## Verification and rollback
 

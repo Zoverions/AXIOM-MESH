@@ -1,5 +1,5 @@
 import { createPublicKey } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { readFile, readlink } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { ValidationError, digestObject } from './lib/canonical.mjs';
 import {
@@ -19,8 +19,10 @@ const REVISION = /^[a-f0-9]{40}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
 const OBSERVER = /^[a-z][a-z0-9.-]{1,63}$/;
 const SUBJECT = /^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$/;
+const NETWORK_NAMESPACE = /^net:\[\d+\]$/;
 const PROVENANCE_SOURCES = new Set(['measured', 'derived', 'asserted']);
 const REQUIRED_CHECKS = Object.freeze([
+  'network_namespace_observed',
   'ipv4_default_route_absent',
   'ipv6_default_route_absent',
   'non_loopback_routes_absent',
@@ -45,6 +47,8 @@ export async function runDenyEgressDrill({
   generatedAt = new Date().toISOString(),
   platform = process.platform,
   routeInspection,
+  networkNamespaceIdentity,
+  readlinkImpl = readlink,
   hostIngressVerified = process.env.AXIOM_HOST_INGRESS_VERIFIED === 'true',
   runnerPublicControlVerified = (
     process.env.AXIOM_RUNNER_PUBLIC_CONTROL_VERIFIED === 'true'
@@ -62,6 +66,13 @@ export async function runDenyEgressDrill({
   if (routes?.valid !== true) {
     throw new ValidationError('Deny-egress route inspection did not pass');
   }
+  const namespaceIdentity = await resolveNetworkNamespaceIdentity({
+    platform,
+    value: networkNamespaceIdentity,
+    readlinkImpl
+  });
+  const namespaceDigest = digestObject({ identity: namespaceIdentity });
+
   const readiness = await readinessProbe({
     url: `http://127.0.0.1:${config.ports.gateway}/ready`
   });
@@ -71,6 +82,7 @@ export async function runDenyEgressDrill({
     timeoutMs: OUTBOUND_PROBE.timeout_ms
   });
   const checks = {
+    network_namespace_observed: NETWORK_NAMESPACE.test(namespaceIdentity),
     ipv4_default_route_absent: routes.ipv4?.default_routes === 0,
     ipv6_default_route_absent: routes.ipv6?.default_routes === 0,
     non_loopback_routes_absent: routes.non_loopback_link_routes === 0,
@@ -99,6 +111,7 @@ export async function runDenyEgressDrill({
     routes,
     readiness,
     outbound,
+    namespaceDigest,
     hostIngressVerified,
     runnerPublicControlVerified
   });
@@ -119,6 +132,7 @@ export async function runDenyEgressDrill({
   }));
   const limitations = [
     'single-container loopback-only namespace evidence, not a multi-host network policy',
+    'static Compose topology is verified by release/deployment checks rather than asserted in runtime evidence',
     'the container host and Docker daemon remain trusted',
     'future external adapters require explicit destination allowlists and separate evidence',
     assertionLimitation(assertedChecks)
@@ -138,14 +152,14 @@ export async function runDenyEgressDrill({
     execution: {
       platform,
       architecture: process.arch,
-      network_namespace: true
+      network_namespace: checks.network_namespace_observed,
+      network_namespace_identity_digest: namespaceDigest
     },
     signer: {
       key_id: identity.keyId,
       public_key_pem: publicKeyPem
     },
     boundary: {
-      compose_network_mode_none_required: true,
       local_ingress_transport: config.gatewaySocket
         ? 'unix-domain-socket'
         : 'loopback-tcp',
@@ -187,7 +201,8 @@ export function verifyDenyEgressEvidence(evidence) {
   if (
     evidence.execution?.platform !== 'linux'
     || evidence.execution?.network_namespace !== true
-    || evidence.boundary?.compose_network_mode_none_required !== true
+    || !DIGEST.test(evidence.execution?.network_namespace_identity_digest ?? '')
+    || Object.hasOwn(evidence.boundary ?? {}, 'compose_network_mode_none_required')
     || evidence.boundary?.ipv4_default_routes !== 0
     || evidence.boundary?.ipv6_default_routes !== 0
     || evidence.boundary?.non_loopback_link_routes !== 0
@@ -199,6 +214,10 @@ export function verifyDenyEgressEvidence(evidence) {
     || Object.values(evidence.checks).some(value => value !== true)
   ) throw new ValidationError('Deny-egress evidence contains a failed boundary check');
   const provenance = verifyCheckProvenance(evidence);
+  if (
+    evidence.check_provenance.network_namespace_observed.input_artifact_digest
+      !== evidence.execution.network_namespace_identity_digest
+  ) throw new ValidationError('Deny-egress namespace provenance binding is invalid');
   if (
     typeof evidence.signer?.public_key_pem !== 'string'
     || evidence.attestation?.key_id !== evidence.signer?.key_id
@@ -230,6 +249,7 @@ function buildCheckProvenance({
   routes,
   readiness,
   outbound,
+  namespaceDigest,
   hostIngressVerified,
   runnerPublicControlVerified
 }) {
@@ -239,6 +259,13 @@ function buildCheckProvenance({
     non_loopback_link_routes: routes.non_loopback_link_routes
   });
   return {
+    network_namespace_observed: provenanceRecord({
+      source: 'measured',
+      observer: 'network-boundary',
+      observedAt,
+      subject: 'linux:/proc/self/ns/net',
+      inputArtifactDigest: namespaceDigest
+    }),
     ipv4_default_route_absent: provenanceRecord({
       source: 'measured',
       observer: 'network-boundary',
@@ -380,6 +407,24 @@ function assertionLimitation(assertedChecks) {
   return assertedChecks.length
     ? `required checks with asserted provenance: ${assertedChecks.join(', ')}; signed observer sub-attestations are not yet implemented`
     : 'all required checks carry measured or derived provenance';
+}
+
+async function resolveNetworkNamespaceIdentity({ platform, value, readlinkImpl }) {
+  if (platform !== 'linux') {
+    throw new ValidationError('Deny-egress namespace observation requires Linux');
+  }
+  let identity = value;
+  if (identity === undefined) {
+    try {
+      identity = await readlinkImpl('/proc/self/ns/net');
+    } catch {
+      throw new ValidationError('Deny-egress network namespace identity cannot be observed');
+    }
+  }
+  if (typeof identity !== 'string' || !NETWORK_NAMESPACE.test(identity)) {
+    throw new ValidationError('Deny-egress network namespace identity is invalid');
+  }
+  return identity;
 }
 
 async function probeReadiness({ url, fetchImpl = fetch }) {

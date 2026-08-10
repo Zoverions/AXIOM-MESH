@@ -45,8 +45,9 @@ purpose allowlists, runtime identity, lifetime/expiry, non-delegation, and a
 currently enforced execution-time ceiling, authenticated Gateway request-size,
 request-rate, concurrency, and response-size ceilings, and an AXIOM-computed
 current built-in effect destination constrained to the principal's finite destination
-allowlist. Wildcard scope and administrator role
-are rejected. The machine authority digest is carried through request
+allowlist. Wildcard or glob scope syntax and administrator role
+are rejected; machine scopes therefore use the same exact-match grammar as the
+authorization evaluator. The machine authority digest is carried through request
 binding, plan provenance, capability claims, and result evidence. Existing
 least-privilege infrastructure `service` principals remain backward-compatible
 unless they explicitly opt into the constrained machine profile.
@@ -66,14 +67,18 @@ states that discovery is not authorization. Runtime IDs and software
 digests are attribution/binding metadata; they are not hardware,
 TPM/TEE, measured-boot, or remote-attestation proof.
 
-The compact candidate container uses `network_mode: none`. Host-local Gateway
-ingress is mounted separately, and startup fails before launching children if
-the enforced Linux namespace contains a non-loopback interface or IPv4/IPv6
-default route. The four-unit topology uses an internal service network with no
-external route. Both models trust the host kernel, container engine, mount
-policy, process owner, and deployment operator. Container configuration is a
-boundary control, not proof against a malicious host administrator or a kernel
-escape.
+The compact candidate container uses `network_mode: none`. Signed deny-egress
+runtime evidence binds the observed `/proc/self/ns/net` namespace identity by
+digest. The static `network_mode: none` requirement is intentionally not asserted
+inside runtime evidence: release/deployment verification reads the actual production
+Compose policy, requires that setting, and binds the Compose digest before the
+protected container job launches it. Host-local Gateway ingress is mounted
+separately, and startup fails before launching children if the enforced Linux
+namespace contains a non-loopback interface or IPv4/IPv6 default route. The
+four-unit topology uses an internal service network with no external route. Both
+models trust the host kernel, container engine, mount policy, process owner, and
+deployment operator. Container configuration is a boundary control, not proof
+against a malicious host administrator or a kernel escape.
 
 Every internal service edge uses TLS 1.3 with CA validation, DNS and
 SPIFFE-style URI identity, and an exact active-leaf fingerprint. The signed

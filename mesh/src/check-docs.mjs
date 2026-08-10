@@ -28,6 +28,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/REPOSITORY-MIGRATION.md',
   'docs/architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md',
   'docs/audits/SCALABILITY-AUDIT-2026-07-30.md',
+  'docs/audits/AUDIT-HARDENING-G5-G9-2026-08-10.md',
   'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md',
   'docs/rebuild/LONG-HORIZON-CAPABILITY-MAP.md',
   'docs/rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md',
@@ -68,7 +69,12 @@ const REQUIRED_CONTENT = Object.freeze({
     'docs/whitepapers_and_research/WHITEPAPER.md',
     'npm run setup'
   ],
-  'CONTRIBUTING.md': ['npm run setup', 'npm run setup:check'],
+  'CONTRIBUTING.md': [
+    'npm run setup',
+    'npm run setup:check',
+    'search the supported tree for equivalent',
+    'regression coverage for the class'
+  ],
   'docs/README.md': [
     '## Canonical documents',
     '## Supported documentation boundary',

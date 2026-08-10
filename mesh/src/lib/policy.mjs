@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { digestObject, ValidationError } from './canonical.mjs';
 
 const RISK_ORDER = Object.freeze({ low: 0, medium: 1, high: 2, critical: 3 });
+const PROTOTYPE_KEYS = new Set(Object.getOwnPropertyNames(Object.prototype));
 const PROTECTED_RECOVERY_ACTIONS = new Set([
   'approval.grant',
   'governance.rollback',
@@ -55,8 +56,11 @@ export function validatePolicy(policy) {
   }
   for (const [action, rule] of Object.entries(policy.actions)) {
     if (!/^[a-z][a-z0-9.-]{1,127}$/.test(action)) throw new ValidationError(`Invalid policy action: ${action}`);
+    if (PROTOTYPE_KEYS.has(action)) {
+      throw new ValidationError(`Policy action uses a reserved prototype identifier: ${action}`);
+    }
     if (!['allow', 'deny'].includes(rule.decision)) throw new ValidationError(`Invalid decision for ${action}`);
-    if (!(rule.risk in RISK_ORDER)) throw new ValidationError(`Invalid risk for ${action}`);
+    if (!Object.hasOwn(RISK_ORDER, rule.risk)) throw new ValidationError(`Invalid risk for ${action}`);
     if (
       rule.http_status !== undefined
       && (!Number.isSafeInteger(rule.http_status) || rule.http_status < 400 || rule.http_status > 599)
@@ -135,6 +139,18 @@ export class PolicyEngine {
         policy_layers: this.layers
       };
     }
+    if (rule.decision !== 'allow') {
+      return {
+        allow: false,
+        risk: rule.risk,
+        code: rule.code ?? 'policy_denied',
+        http_status: rule.http_status,
+        reason: rule.reason ?? 'The active policy denies this action.',
+        policy_version: this.policy.version,
+        policy_digest: this.digest,
+        policy_layers: this.layers
+      };
+    }
     const requiredScopes = rule.required_scopes ?? [];
     const principalScopes = principal.scopes ?? [];
     const missingScopes = requiredScopes.filter(scope => !hasScope(principalScopes, scope));
@@ -145,18 +161,6 @@ export class PolicyEngine {
         code: 'insufficient_scope',
         reason: `Missing required scopes: ${missingScopes.join(', ')}`,
         missing_scopes: missingScopes,
-        policy_version: this.policy.version,
-        policy_digest: this.digest,
-        policy_layers: this.layers
-      };
-    }
-    if (rule.decision !== 'allow') {
-      return {
-        allow: false,
-        risk: rule.risk,
-        code: rule.code ?? 'policy_denied',
-        http_status: rule.http_status,
-        reason: rule.reason ?? 'The active policy denies this action.',
         policy_version: this.policy.version,
         policy_digest: this.digest,
         policy_layers: this.layers
@@ -267,13 +271,14 @@ export function mergeDenyDominantPolicy(layers) {
     }
   }
   result.version = versions.join('+');
+  validatePolicy(result);
   return result;
 }
 
 function mergeConstraints(current, incoming, action) {
   const result = structuredClone(current);
   for (const [key, value] of Object.entries(incoming)) {
-    if (!(key in result)) {
+    if (!Object.hasOwn(result, key)) {
       result[key] = structuredClone(value);
       continue;
     }
