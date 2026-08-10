@@ -26,6 +26,8 @@ test('current-build setup preflight verifies runtime pins, exact locks, and zero
   assert.equal(result.kernel_version, '0.12.0-dev.3');
   assert.equal(result.runtime.node, '24.18.0');
   assert.equal(result.runtime.npm, '11.9.0');
+  assert.equal(result.runtime.ci_pin, '24.18.0');
+  assert.equal(result.runtime.production_pin, '24.19.0');
   assert.equal(result.workspaces, 2);
   assert.equal(result.dependency_packages, 0);
   assert.equal(result.install_scripts_allowed, false);
@@ -135,8 +137,8 @@ test('setup state binds local, CI, and production runtime pins', async () => {
     () => validateSourceSetupState({
       ...input,
       dockerfile: input.dockerfile.replace(
-        'FROM node:24.18.0-',
-        'FROM node:24.19.0-'
+        'FROM node:24.19.0-',
+        'FROM node:24.20.0-'
       )
     }),
     /runtime setup pins have drifted/
