@@ -4,11 +4,8 @@ import { pathToFileURL } from 'node:url';
 import { ValidationError, assertString } from './lib/canonical.mjs';
 import { ensureMeshIdentity, loadTrustedKey } from './lib/identity.mjs';
 import { readRepositoryOperatorToken, runGitHubRepositoryDocsOperator } from './repository-operator/github-docs-operator.mjs';
+import { planGitHubRepositoryDocsEffect } from './repository-operator/github-docs-planner.mjs';
 import { startRepositoryOperatorService } from './repository-operator/service.mjs';
-
-function requiredEnv(name, max = 4096) {
-  return assertString(process.env[name], name, { min: 1, max });
-}
 
 export async function runRepositoryOperatorService({
   env = process.env,
@@ -60,6 +57,11 @@ export async function runRepositoryOperatorService({
         hypervisorPublicKey,
         gridPublicKey,
         token
+      }),
+      planOperator: request => planGitHubRepositoryDocsEffect({
+        ...request,
+        operatorIdentity,
+        token
       })
     });
     stdout(`${JSON.stringify({
@@ -68,7 +70,8 @@ export async function runRepositoryOperatorService({
       service: 'repository-operator',
       event: 'runtime.ready',
       transport: 'unix-domain-socket',
-      credential_scope: 'repository-operator-only'
+      credential_scope: 'repository-operator-only',
+      read_only_planning: true
     })}\n`);
     if (process.connected && typeof process.send === 'function') {
       try { process.send({ type: 'axiom.repository-operator.ready' }); } catch {}
