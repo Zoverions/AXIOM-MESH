@@ -1,0 +1,28 @@
+name: Machine Receipt Runtime Probe
+
+on:
+  push:
+    branches:
+      - feat/machine-receipt-verification-v1-2026-08-10
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.18.0'
+          package-manager-cache: false
+      - name: Install exact source setup
+        run: npm run setup:install
+      - name: Run machine receipt proof suite
+        run: >-
+          node --test --test-reporter=spec
+          mesh/test/machine-receipt.test.mjs
+          mesh/test/machine-receipt-client.test.mjs
+          mesh/test/machine-receipt-network.test.mjs
+          mesh/test/machine-receipt-e2e.test.mjs
