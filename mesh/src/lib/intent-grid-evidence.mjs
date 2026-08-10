@@ -2,12 +2,12 @@ import {
   ValidationError,
   assertPlainObject,
   assertString,
-  assertStringArray,
   canonicalJson,
   digestObject
 } from './canonical.mjs';
 import {
   compileIntentContract,
+  normalizeIntentContract,
   reconcileIntentGraph,
   validateIntentGraph
 } from './intent-contract.mjs';
@@ -83,9 +83,9 @@ function normalizeEvidence(raw) {
 export function buildIntentActivationRecord(rawContract, rawBuild, {
   supersedesActivationDigest = null
 } = {}) {
-  const graph = compileIntentContract(rawContract);
+  const contract = normalizeIntentContract(rawContract);
+  const graph = compileIntentContract(contract);
   const build = normalizeBuild(rawBuild);
-  const contract = normalizeContractFromGraph(rawContract, graph);
   const body = {
     schema: INTENT_ACTIVATION_SCHEMA,
     record_kind: INTENT_ACTIVATION_RECORD_KIND,
@@ -105,21 +105,6 @@ export function buildIntentActivationRecord(rawContract, rawBuild, {
   };
 }
 
-function normalizeContractFromGraph(rawContract, graph) {
-  const recompiled = compileIntentContract(rawContract);
-  if (recompiled.graph_digest !== graph.graph_digest) {
-    throw new ValidationError('Intent Contract compilation is not deterministic');
-  }
-  const contract = structuredClone(rawContract);
-  const normalizedGraph = compileIntentContract(contract);
-  if (normalizedGraph.contract_digest !== graph.contract_digest) {
-    throw new ValidationError('Intent Contract digest changed during normalization');
-  }
-  // The compiler's normalized contract is not exposed separately. Reconstruct the
-  // exact digest-bound form by preserving input then validating it on every read.
-  return contract;
-}
-
 export function normalizeIntentActivationRecord(raw) {
   const value = assertPlainObject(raw, 'intent activation record');
   if (value.schema !== INTENT_ACTIVATION_SCHEMA) {
@@ -128,9 +113,13 @@ export function normalizeIntentActivationRecord(raw) {
   if (value.record_kind !== INTENT_ACTIVATION_RECORD_KIND) {
     throw new ValidationError(`intent activation record_kind must be ${INTENT_ACTIVATION_RECORD_KIND}`);
   }
-  const contract = structuredClone(assertPlainObject(value.contract, 'activation.contract'));
+  const contract = normalizeIntentContract(
+    structuredClone(assertPlainObject(value.contract, 'activation.contract'))
+  );
   const graph = compileIntentContract(contract);
-  const suppliedGraph = validateIntentGraph(structuredClone(assertPlainObject(value.graph, 'activation.graph')));
+  const suppliedGraph = validateIntentGraph(
+    structuredClone(assertPlainObject(value.graph, 'activation.graph'))
+  );
   if (suppliedGraph.graph_digest !== graph.graph_digest) {
     throw new ValidationError('activation.graph does not match activation.contract');
   }
@@ -369,11 +358,14 @@ export function deriveIntentGridAssessment(rawActivation, rawAttestationEvents, 
   const current = [...latest.values()];
   const results = activation.graph.requirements.map(requirement => {
     const candidates = current.filter(item => item.record.requirement_id === requirement.id);
-    const fresh = candidates.filter(item => item.record.expires_at > evaluatedAt);
-    const stale = candidates.filter(item => item.record.expires_at <= evaluatedAt);
+    const effective = candidates.filter(item => item.occurred_at <= evaluatedAt);
+    const future = candidates.filter(item => item.occurred_at > evaluatedAt);
+    const fresh = effective.filter(item => item.record.expires_at > evaluatedAt);
+    const stale = effective.filter(item => item.record.expires_at <= evaluatedAt);
     const pass = fresh.filter(item => item.record.verdict === 'pass');
     const fail = fresh.filter(item => item.record.verdict === 'fail');
-    const requiredVerifiers = requirement.verification.minimum_independent_verifiers ?? 0;
+    const configuredVerifiers = requirement.verification.minimum_independent_verifiers ?? 0;
+    const requiredVerifiers = Math.max(1, configuredVerifiers);
     const requiredEvidence = requirement.verification.evidence_required ?? [];
     const coverage = new Set(pass.flatMap(item => item.record.evidence.map(e => e.obligation)));
     const missingEvidence = requiredEvidence.filter(obligation => !coverage.has(obligation));
@@ -389,11 +381,13 @@ export function deriveIntentGridAssessment(rawActivation, rawAttestationEvents, 
       reason = 'attested_failure';
     } else if (!pass.length && stale.length) {
       reason = 'stale_attestations';
+    } else if (!pass.length && future.length) {
+      reason = 'future_attestations_not_effective';
     } else if (pass.length < requiredVerifiers) {
       reason = 'insufficient_independent_verifiers';
     } else if (missingEvidence.length) {
       reason = 'missing_evidence_obligations';
-    } else if (pass.length || requiredVerifiers === 0) {
+    } else if (pass.length) {
       status = 'pass';
       reason = 'authenticated_attestations_satisfied';
     }
@@ -406,10 +400,12 @@ export function deriveIntentGridAssessment(rawActivation, rawAttestationEvents, 
       verification_class: requirement.verification.classification,
       status,
       reason,
+      configured_independent_verifiers: configuredVerifiers,
       required_independent_verifiers: requiredVerifiers,
       independent_verifiers: pass.map(item => item.actor).sort(),
       failing_verifiers: fail.map(item => item.actor).sort(),
       stale_verifiers: stale.map(item => item.actor).sort(),
+      future_verifiers: future.map(item => item.actor).sort(),
       required_evidence: requiredEvidence,
       covered_evidence: [...coverage].sort(),
       missing_evidence: missingEvidence,
