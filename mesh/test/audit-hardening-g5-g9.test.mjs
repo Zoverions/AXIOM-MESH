@@ -208,7 +208,7 @@ test('audit hardening reviewability and maintenance clarifications remain explic
   assert.match(product, /deterministic capability executor for the fixed built-in/);
   assert.match(product, /general-purpose arbitrary-\s+code isolation sandbox/);
   assert.match(contributing, /search the supported tree for equivalent/);
-  assert.match(contributing, /regression coverage for the\s+class, not only the first instance/);
+  assert.match(contributing, /regression coverage for the\s+class,\s+not only the first instance/);
   assert.match(boundaryCore, /^\/\/ RETAINED LOWER LAYER:/);
   assert.match(storeCore, /^\/\/ RETAINED LOWER LAYER:/);
 });
