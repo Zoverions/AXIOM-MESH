@@ -85,7 +85,8 @@ test('machine invocation envelope binds sponsor runtime authority and live ingre
   assert.deepEqual(envelope.limits.ingress, {
     max_request_bytes: 8_192,
     max_requests_per_minute: 12,
-    max_concurrent_requests: 1
+    max_concurrent_requests: 1,
+    max_response_bytes: 65_536
   });
 });
 
