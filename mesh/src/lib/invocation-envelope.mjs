@@ -71,6 +71,11 @@ export function buildNativeInvocationEnvelope(intent, decision) {
         budgets.max_requests_per_minute,
         'machine max_requests_per_minute',
         10_000
+      ),
+      max_concurrent_requests: normalizePositiveInteger(
+        budgets.max_concurrent_requests,
+        'machine max_concurrent_requests',
+        1_000
       )
     };
   }
@@ -233,9 +238,14 @@ export function validateInvocationEnvelope(raw) {
       throw new ValidationError('Only a machine caller may carry machine ingress limits');
     }
     const ingress = assertPlainObject(limits.ingress, 'invocation ingress limits');
-    assertExactKeys(ingress, ['max_request_bytes', 'max_requests_per_minute'], 'invocation ingress limits');
+    assertExactKeys(
+      ingress,
+      ['max_request_bytes', 'max_requests_per_minute', 'max_concurrent_requests'],
+      'invocation ingress limits'
+    );
     normalizePositiveInteger(ingress.max_request_bytes, 'invocation max_request_bytes', 16_777_216);
     normalizePositiveInteger(ingress.max_requests_per_minute, 'invocation max_requests_per_minute', 10_000);
+    normalizePositiveInteger(ingress.max_concurrent_requests, 'invocation max_concurrent_requests', 1_000);
   }
 
   return structuredClone(value);
