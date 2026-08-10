@@ -1,0 +1,124 @@
+name: Apply Machine Effect Destination V1
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'feat/machine-effect-destination-v1-2026-08-09'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/machine-effect-destination-v1-2026-08-09
+          fetch-depth: 0
+      - name: Bind computed local destination through authorization and evidence
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile, writeFile, rm } from 'node:fs/promises';
+
+          async function replaceOnce(path, oldText, newText) {
+            const content = await readFile(path, 'utf8');
+            const first = content.indexOf(oldText);
+            const last = content.lastIndexOf(oldText);
+            if (first < 0 || first !== last) throw new Error(`Expected exactly one match in ${path}: ${oldText.slice(0, 100)}`);
+            await writeFile(path, content.slice(0, first) + newText + content.slice(first + oldText.length));
+          }
+
+          await replaceOnce(
+            'mesh/src/hypervisor/server.mjs',
+            `import {\n  buildNativeInvocationEnvelope,\n  invocationEnvelopeDigest\n} from '../lib/invocation-envelope.mjs';`,
+            `import {\n  buildNativeInvocationEnvelope,\n  invocationEnvelopeDigest\n} from '../lib/invocation-envelope.mjs';\nimport { effectDestinationForTool } from '../lib/effect-destination.mjs';`
+          );
+
+          await replaceOnce(
+            'mesh/src/hypervisor/server.mjs',
+            `    if (machineAuthority) {\n      const machineDecision = evaluateMachineIntent(intent.principal, {\n        action: intent.action,\n        purpose: intent.purpose\n      });\n      if (!machineDecision.allow) {\n        decision = {\n          ...decision,\n          allow: false,\n          pending: false,\n          code: machineDecision.code,\n          reason: machineDecision.reason,\n          http_status: 403\n        };\n      } else if (decision.allow) {\n        decision = {\n          ...decision,\n          timeout_ms: Math.min(\n            Number(decision.timeout_ms ?? 10_000),\n            intent.principal.constraints.budgets.max_execution_ms\n          )\n        };\n      }\n    }\n    const invocationEnvelope = buildNativeInvocationEnvelope(intent, decision);`,
+            `    let effectDestination;\n    if (machineAuthority) {\n      const machineDecision = evaluateMachineIntent(intent.principal, {\n        action: intent.action,\n        purpose: intent.purpose\n      });\n      if (!machineDecision.allow) {\n        decision = {\n          ...decision,\n          allow: false,\n          pending: false,\n          code: machineDecision.code,\n          reason: machineDecision.reason,\n          http_status: 403\n        };\n      } else if (decision.allow) {\n        try {\n          effectDestination = effectDestinationForTool(decision.tool);\n        } catch {\n          decision = {\n            ...decision,\n            allow: false,\n            pending: false,\n            code: 'machine_destination_unresolved',\n            reason: 'The selected execution tool has no verified effect destination',\n            http_status: 403\n          };\n        }\n        if (\n          effectDestination\n          && !intent.principal.constraints.destinations.includes(effectDestination)\n        ) {\n          decision = {\n            ...decision,\n            allow: false,\n            pending: false,\n            code: 'machine_destination_denied',\n            reason: 'The computed effect destination exceeds machine authority',\n            http_status: 403\n          };\n        }\n        if (decision.allow) {\n          decision = {\n            ...decision,\n            timeout_ms: Math.min(\n              Number(decision.timeout_ms ?? 10_000),\n              intent.principal.constraints.budgets.max_execution_ms\n            )\n          };\n        }\n      }\n    }\n    if (effectDestination) {\n      decision = { ...decision, effect_destination: effectDestination };\n    }\n    const invocationEnvelope = buildNativeInvocationEnvelope(intent, decision);`
+          );
+
+          await replaceOnce(
+            'mesh/src/hypervisor/server.mjs',
+            `      invocation_digest: invocationDigest,\n      tool: decision.tool,`,
+            `      invocation_digest: invocationDigest,\n      ...(effectDestination ? { effect_destination: effectDestination } : {}),\n      tool: decision.tool,`
+          );
+          await replaceOnce(
+            'mesh/src/hypervisor/server.mjs',
+            `        statement.intent_digest !== digestObject(intent)\n        || statement.invocation_digest !== invocationDigest\n        || statement.result_digest !== digestObject(execution.result)`,
+            `        statement.intent_digest !== digestObject(intent)\n        || statement.invocation_digest !== invocationDigest\n        || statement.effect_destination !== effectDestination\n        || statement.result_digest !== digestObject(execution.result)`
+          );
+          await replaceOnce(
+            'mesh/src/hypervisor/server.mjs',
+            `              invocation_digest: invocationDigest,\n              execution: execution.attestation,`,
+            `              invocation_digest: invocationDigest,\n              ...(effectDestination ? { effect_destination: effectDestination } : {}),\n              execution: execution.attestation,`
+          );
+          await replaceOnce(
+            'mesh/src/hypervisor/server.mjs',
+            `          invocation_digest: invocationDigest,\n          execution_digest: statement.result_digest,`,
+            `          invocation_digest: invocationDigest,\n          ...(effectDestination ? { effect_destination: effectDestination } : {}),\n          execution_digest: statement.result_digest,`
+          );
+
+          await replaceOnce(
+            'mesh/src/sandbox/server.mjs',
+            `import { planDigest, validatePlan } from '../lib/plan.mjs';\nimport { executeBuiltin } from './executor.mjs';`,
+            `import { planDigest, validatePlan } from '../lib/plan.mjs';\nimport { effectDestinationForTool } from '../lib/effect-destination.mjs';\nimport { executeBuiltin } from './executor.mjs';`
+          );
+          await replaceOnce(
+            'mesh/src/sandbox/server.mjs',
+            `    const intentDigest = digestObject(intent);`,
+            `    if (claims.effect_destination !== undefined) {\n      let expectedDestination;\n      try {\n        expectedDestination = effectDestinationForTool(claims.tool);\n      } catch {\n        throw new AxiomError(\n          'capability_destination_unresolved',\n          'Capability tool has no verified effect destination',\n          403\n        );\n      }\n      if (claims.effect_destination !== expectedDestination) {\n        throw new AxiomError(\n          'capability_destination_mismatch',\n          'Capability destination is not bound to the selected execution tool',\n          403\n        );\n      }\n    }\n    const intentDigest = digestObject(intent);`
+          );
+          await replaceOnce(
+            'mesh/src/sandbox/server.mjs',
+            `      ...(claims.invocation_digest\n        ? { invocation_digest: claims.invocation_digest }\n        : {}),\n      capability_id: claims.jti,`,
+            `      ...(claims.invocation_digest\n        ? { invocation_digest: claims.invocation_digest }\n        : {}),\n      ...(claims.effect_destination\n        ? { effect_destination: claims.effect_destination }\n        : {}),\n      capability_id: claims.jti,`
+          );
+
+          await replaceOnce(
+            'mesh/src/lib/invocation-envelope.mjs',
+            `      independent_approval_required: policy.requires_independent_approval === true\n    },`,
+            `      independent_approval_required: policy.requires_independent_approval === true,\n      ...(policy.effect_destination !== undefined\n        ? {\n            effect_destination: assertString(\n              policy.effect_destination,\n              'invocation effect destination',\n              { max: 160, pattern: IDENTIFIER }\n            )\n          }\n        : {})\n    },`
+          );
+          await replaceOnce(
+            'mesh/src/lib/invocation-envelope.mjs',
+            `  assertExactKeys(authority, [\n    'policy_version',\n    'policy_digest',\n    'risk',\n    'independent_approval_required'\n  ], 'invocation authority');`,
+            `  assertExactKeys(authority, [\n    'policy_version',\n    'policy_digest',\n    'risk',\n    'independent_approval_required',\n    ...(authority.effect_destination !== undefined ? ['effect_destination'] : [])\n  ], 'invocation authority');`
+          );
+          await replaceOnce(
+            'mesh/src/lib/invocation-envelope.mjs',
+            `  if (typeof authority.independent_approval_required !== 'boolean') {\n    throw new ValidationError('Invocation approval requirement must be boolean');\n  }`,
+            `  if (typeof authority.independent_approval_required !== 'boolean') {\n    throw new ValidationError('Invocation approval requirement must be boolean');\n  }\n  if (authority.effect_destination !== undefined) {\n    assertString(authority.effect_destination, 'invocation effect destination', {\n      max: 160,\n      pattern: IDENTIFIER\n    });\n  }`
+          );
+
+          await replaceOnce(
+            'mesh/test/invocation-envelope.test.mjs',
+            `    requires_independent_approval: false,`,
+            `    requires_independent_approval: false,\n    effect_destination: 'local',`
+          );
+          await replaceOnce(
+            'mesh/test/invocation-envelope.test.mjs',
+            `  assert.equal(envelope.authority.policy_digest, 'b'.repeat(64));`,
+            `  assert.equal(envelope.authority.policy_digest, 'b'.repeat(64));\n  assert.equal(envelope.authority.effect_destination, 'local');`
+          );
+
+          await replaceOnce(
+            'mesh/test/invocation-envelope-e2e.test.mjs',
+            `  assert.equal(\n    accepted.payload.invocation.caller.machine.runtime_id,\n    'runtime.invocation-e2e'\n  );`,
+            `  assert.equal(\n    accepted.payload.invocation.caller.machine.runtime_id,\n    'runtime.invocation-e2e'\n  );\n  assert.equal(accepted.payload.invocation.authority.effect_destination, 'local');\n  assert.equal(result.evidence.effect_destination, 'local');`
+          );
+
+          await rm('.github/workflows/apply-machine-destination-v1.yml');
+          NODE
+      - name: Commit destination integration
+        run: |
+          git config user.name "axiom-machine-destination"
+          git config user.email "axiom-machine-destination@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "feat: enforce computed machine effect destination"
+          git push origin HEAD:feat/machine-effect-destination-v1-2026-08-09
