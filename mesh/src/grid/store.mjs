@@ -373,7 +373,7 @@ export class GridStore extends CheckpointGridStore {
         summary: state.assessment.summary,
         requirements,
         rejected_attestation_count: state.assessment.rejected_attestations.length,
-        assessment_digest: state.assessment.assessment_digest
+        source_assessment_digest: state.assessment.assessment_digest
       },
       reconciliation: state.reconciliation,
       execution_authorized: false,
