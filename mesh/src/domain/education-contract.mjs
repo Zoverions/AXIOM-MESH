@@ -152,7 +152,9 @@ export function validateEducationPolicy(contract, policy) {
   assert(isRecord(policy), 'policy must be an object');
   assert(isRecord(policy.actions), 'policy actions must be an object');
   for (const [actionName, definition] of Object.entries(contract.actions)) {
-    const rule = policy.actions[actionName];
+    const rule = Object.hasOwn(policy.actions, actionName)
+      ? policy.actions[actionName]
+      : null;
     assert(isRecord(rule), `policy is missing ${actionName}`);
     assert(rule.decision === 'deny', `${actionName} must remain denied without an adapter`);
     assert(rule.risk === definition.risk, `${actionName} policy risk differs from contract`);
@@ -191,7 +193,9 @@ function validateScalarInput(field, value) {
 export function validateEducationIntent(contract, actionName, input) {
   validateEducationContract(contract);
   assert(isRecord(input), 'intent input must be an object');
-  const definition = contract.actions[actionName];
+  const definition = Object.hasOwn(contract.actions, actionName)
+    ? contract.actions[actionName]
+    : null;
   assert(isRecord(definition), `unknown education action ${actionName}`);
   const allowed = new Set([...definition.required_input, ...definition.optional_input]);
   for (const field of Object.keys(input)) {
