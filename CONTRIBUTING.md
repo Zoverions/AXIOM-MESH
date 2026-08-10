@@ -90,8 +90,8 @@ data, failure criteria, halt procedure, and reproducibility steps.
    notes, white paper, threat model, and operator/user runbook as applicable.
 6. For every defect or security fix, search the supported tree for equivalent
    patterns and either backfill the fix everywhere it applies or record why a
-   matching site is intentionally different; add regression coverage for the
-   class, not only the first instance.
+   matching site is intentionally different; add regression coverage for the class,
+   not only the first instance.
 7. Add or update rollback, uninstall, migration, recovery, and decommissioning
    procedures for every exposed component.
 8. Never commit private keys, tokens, data-protection keys, production data,
