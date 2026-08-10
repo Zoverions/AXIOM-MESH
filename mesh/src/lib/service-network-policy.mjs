@@ -374,8 +374,12 @@ export function validateServiceRouteImplementation({
 function validateExactCurrentRoutes(flows) {
   const gatewayGrid = flows.find(flow => flow.id === 'gateway-to-grid');
   if (
-    gatewayGrid.routes.length !== 24
+    gatewayGrid.routes.length !== 25
     || !gatewayGrid.routes.some(route => route.path === '/internal/v1/verify-chain')
+    || !gatewayGrid.routes.some(route => (
+      route.method === 'GET'
+      && route.path === '/internal/v1/machine-receipts/intents/:id/verify'
+    ))
   ) throw new ValidationError('Gateway-to-Grid route allowlist drifted');
   const required = {
     'gateway-to-hypervisor': [
