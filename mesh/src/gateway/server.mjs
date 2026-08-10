@@ -25,6 +25,7 @@ import {
   ServiceTelemetry
 } from '../lib/observability.mjs';
 import { createBearerAuthenticator } from '../lib/public-auth.mjs';
+import { intentRequestDigest } from '../lib/intent-binding.mjs';
 import { loadTransportRuntime } from '../lib/transport-credentials.mjs';
 
 const PRINCIPAL_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
@@ -204,15 +205,7 @@ export async function createGatewayService(config = meshConfig()) {
       if (error.code !== 'intent_already_exists') throw error;
       const existing = await gridGet(`/internal/v1/intents/${encodeURIComponent(intentId)}`, traceId);
       if (existing.principal !== principal.id) throw new AxiomError('forbidden', 'Intent belongs to another principal', 403);
-      const requestDigest = digestObject({
-        action: intent.action,
-        input: intent.input,
-        purpose: intent.purpose,
-        data_scopes: intent.data_scopes,
-        ...(principal.schema === 'axiom-machine-principal.v1'
-          ? { machine_authority_digest: principal.authority_digest }
-          : {})
-      });
+      const requestDigest = intentRequestDigest(intent);
       if (existing.request_digest !== requestDigest) {
         throw new AxiomError(
           'idempotency_conflict',
