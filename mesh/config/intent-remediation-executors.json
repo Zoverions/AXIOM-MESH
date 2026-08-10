@@ -1,0 +1,5 @@
+{
+  "schema": "axiom-intent-remediation-executor-registry.v1",
+  "kernel_version": "0.12.0-dev.3",
+  "mappings": []
+}
