@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - docs/machine-ingress-claim-sync-2026-08-09
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
