@@ -35,6 +35,7 @@ import {
   machinePrincipalAuthorityFacts,
   normalizeMachinePrincipalDefinition
 } from '../lib/machine-principal.mjs';
+import { intentRequestDigest } from '../lib/intent-binding.mjs';
 import {
   loadTransportRuntime,
   transportServerOptions
@@ -177,7 +178,7 @@ export async function createHypervisorService(config = meshConfig()) {
         action: intent.action,
         risk: decision.risk,
         input_digest: digestObject(intent.input),
-        request_digest: requestDigest(intent),
+        request_digest: intentRequestDigest(intent),
         policy_version: decision.policy_version,
         policy_digest: decision.policy_digest,
         ...(machineAuthority ? { machine_authority: machineAuthority } : {})
@@ -207,7 +208,7 @@ export async function createHypervisorService(config = meshConfig()) {
     }
     let approval;
     if (decision.requires_independent_approval) {
-      const expectedRequestDigest = requestDigest(intent);
+      const expectedRequestDigest = intentRequestDigest(intent);
       if (intent.approval_ids.length !== 1) {
         await denyIntent(commit, traceId, intent, {
           code: 'independent_approval_required',
@@ -462,18 +463,6 @@ function normalizeIntent(raw) {
     throw new ValidationError('intent.submitted_at must be an ISO timestamp');
   }
   return normalized;
-}
-
-function requestDigest(intent) {
-  return digestObject({
-    action: intent.action,
-    input: intent.input,
-    purpose: intent.purpose,
-    data_scopes: intent.data_scopes,
-    ...(intent.principal.schema === 'axiom-machine-principal.v1'
-      ? { machine_authority_digest: intent.principal.authority_digest }
-      : {})
-  });
 }
 
 async function denyIntent(commit, traceId, intent, error) {
