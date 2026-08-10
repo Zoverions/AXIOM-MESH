@@ -160,13 +160,22 @@ test('constrained agent executes an authorized intent and returns bound authorit
 
   // Final claim anchor: response-size enforcement uses an isolated stack so the
   // proof is independent of event-page bytes and rate-budget sequencing above.
+  // A 2 KiB echo request is beneath this stack's default 64 KiB request ceiling,
+  // while its returned JSON necessarily exceeds the explicit 1 KiB response ceiling.
   const { client: responseBoundClient } = await startMachineStack(
     t,
     'axiom-machine-response-bound-e2e-',
     { budgets: { max_response_bytes: 1_024 } }
   );
   await assert.rejects(
-    () => responseBoundClient.call('capabilities.list'),
+    () => responseBoundClient.call('intents.submit', {
+      body: {
+        action: 'system.echo',
+        input: { message: 'r'.repeat(2_048) },
+        purpose: 'test.conformance'
+      },
+      idempotencyKey: 'machine-e2e-response-budget-0001'
+    }),
     error => {
       assert.equal(error.code, 'machine_response_budget_exceeded');
       assert.equal(error.status, 502);
