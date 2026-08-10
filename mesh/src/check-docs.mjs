@@ -3,6 +3,11 @@ import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { MESH_ROOT } from './lib/config.mjs';
 import { ValidationError } from './lib/canonical.mjs';
+import {
+  ACTIVE_SERVICE_NETWORK_POLICY,
+  validateServiceNetworkPolicy
+} from './lib/service-network-policy.mjs';
+import { ACTIVE_GATEWAY_CLIENT_CONTRACT } from './lib/gateway-client-contract.mjs';
 
 export const CANONICAL_DOCUMENTS = Object.freeze([
   'README.md',
@@ -367,6 +372,7 @@ export async function verifyCanonicalDocumentation(repositoryRoot = dirname(MESH
   if (normalize(contents.get('SECURITY.md')) !== normalize(contents.get('.github/SECURITY.md'))) {
     throw new ValidationError('Root and GitHub security policies have drifted');
   }
+  verifyComputedDocumentationClaims(contents);
 
   let checkedLinks = 0;
   for (const [relativePath, content] of contents) {
@@ -394,6 +400,27 @@ export async function verifyCanonicalDocumentation(repositoryRoot = dirname(MESH
     documents: CANONICAL_DOCUMENTS.length,
     links: checkedLinks
   };
+}
+
+function verifyComputedDocumentationClaims(contents) {
+  const network = validateServiceNetworkPolicy(ACTIVE_SERVICE_NETWORK_POLICY);
+  const gatewayRoutes = ACTIVE_GATEWAY_CLIENT_CONTRACT.routes.length;
+  const claims = [
+    ['README.md', `permits only ${network.routes} current internal`],
+    ['docs/PRODUCTION-GRADE.md', `permits only ${network.routes} current internal`],
+    ['mesh/PRODUCTION.md', `policy additionally authorizes only ${network.routes} exact caller/destination/method/route`],
+    ['docs/rebuild/PRODUCT-DEFINITION.md', `authorizes only ${network.routes} exact caller`],
+    ['docs/PROJECT-STATUS-2026.md', `default-deny ${network.routes}-route application`],
+    ['docs/operations/GATEWAY-CLIENT-CONTRACT.md', `covers all ${gatewayRoutes} authenticated \`/v1/\` Gateway routes`],
+    ['docs/PROJECT-STATUS-2026.md', `implemented for all ${gatewayRoutes} authenticated routes`]
+  ];
+  for (const [path, expected] of claims) {
+    if (!contents.get(path)?.includes(expected)) {
+      throw new ValidationError(
+        `Canonical documentation numeric claim drifted: ${path} -> ${expected}`
+      );
+    }
+  }
 }
 
 async function verifyRepositoryMarkdownBoundary(repositoryRoot) {

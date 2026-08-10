@@ -228,6 +228,54 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
     offline_atomic_rotation: true
   });
   assert.throws(() => verifyProductionDeployment({
+    dockerfile,
+    dockerignore,
+    compose,
+    unitCompose,
+    productionDocs,
+    packageJson,
+    backupRetentionPolicy,
+    credentialRevocations,
+    incidentResponsePolicy,
+    telemetryRoutingPolicy,
+    resilienceDrillPolicy,
+    workflow: workflow.replace(
+      'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7',
+      'actions/upload-artifact@v7'
+    ),
+    repositoryIgnore
+  }), /mutable action|missing: actions\/upload-artifact/);
+  assert.throws(() => verifyProductionDeployment({
+    dockerfile,
+    dockerignore,
+    compose,
+    unitCompose,
+    productionDocs,
+    packageJson,
+    backupRetentionPolicy,
+    credentialRevocations,
+    incidentResponsePolicy,
+    telemetryRoutingPolicy,
+    resilienceDrillPolicy,
+    workflow: workflow.replace('runs-on: ubuntu-24.04', 'runs-on: ubuntu-latest'),
+    repositoryIgnore
+  }), /requires 2 occurrences|mutable action or runner/);
+  assert.throws(() => verifyProductionDeployment({
+    dockerfile,
+    dockerignore,
+    compose,
+    unitCompose,
+    productionDocs,
+    packageJson,
+    backupRetentionPolicy,
+    credentialRevocations,
+    incidentResponsePolicy,
+    telemetryRoutingPolicy,
+    resilienceDrillPolicy,
+    workflow: workflow.replace('      - "apps/**"\n', ''),
+    repositoryIgnore
+  }), /requires 2 occurrences of: - "apps/);
+  assert.throws(() => verifyProductionDeployment({
     dockerfile: dockerfile.replace(/@sha256:[a-f0-9]{64}/, ''),
     dockerignore,
     compose,

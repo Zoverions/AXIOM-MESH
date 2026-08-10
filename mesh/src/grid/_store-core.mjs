@@ -1150,21 +1150,30 @@ export class GridStore {
   }
 
   listEvents({ after = 0, limit = 100, actor } = {}) {
-    const safeLimit = Math.max(1, Math.min(500, Number(limit) || 100));
+    const safeAfter = boundedInteger(after, 'event after', 0, Number.MAX_SAFE_INTEGER);
+    const safeLimit = boundedInteger(limit, 'event limit', 1, 500);
     const rows = actor
-      ? this.db.prepare('SELECT * FROM events WHERE seq > ? AND actor = ? ORDER BY seq LIMIT ?').all(after, actor, safeLimit)
-      : this.db.prepare('SELECT * FROM events WHERE seq > ? ORDER BY seq LIMIT ?').all(after, safeLimit);
+      ? this.db.prepare('SELECT * FROM events WHERE seq > ? AND actor = ? ORDER BY seq LIMIT ?').all(safeAfter, actor, safeLimit)
+      : this.db.prepare('SELECT * FROM events WHERE seq > ? ORDER BY seq LIMIT ?').all(safeAfter, safeLimit);
     return rows.map(row => this.decodeEventRow(row));
   }
 
-  listCapsules() {
-    return this.db.prepare('SELECT * FROM capsules ORDER BY registered_at DESC').all().map(
+  listCapsules({ limit } = {}) {
+    const rows = limit === undefined
+      ? this.db.prepare('SELECT * FROM capsules ORDER BY registered_at DESC').all()
+      : this.db.prepare('SELECT * FROM capsules ORDER BY registered_at DESC LIMIT ?').all(
+          boundedInteger(limit, 'capsule list limit', 1, 100)
+        );
+    return rows.map(
       row => this.decodeProtectedRow('capsules', 'digest', row, ['manifest_json'])
     );
   }
 
-  listProposals() {
-    return this.db.prepare(`
+  listProposals({ limit } = {}) {
+    const safeLimit = limit === undefined
+      ? null
+      : boundedInteger(limit, 'proposal list limit', 1, 100);
+    const sql = `
       SELECT
         p.*,
         COALESCE(SUM(CASE WHEN v.chamber = 'human' AND v.choice = 'for' THEN v.weight ELSE 0 END), 0) AS human_for,
@@ -1175,7 +1184,12 @@ export class GridStore {
       LEFT JOIN votes v ON v.proposal_id = p.proposal_id
       GROUP BY p.proposal_id
       ORDER BY p.created_at DESC
-    `).all().map(row => this.decodeProtectedRow(
+      ${safeLimit === null ? '' : 'LIMIT ?'}
+    `;
+    const rows = safeLimit === null
+      ? this.db.prepare(sql).all()
+      : this.db.prepare(sql).all(safeLimit);
+    return rows.map(row => this.decodeProtectedRow(
       'proposals',
       'proposal_id',
       row,
@@ -1529,8 +1543,8 @@ export class GridStore {
     return output;
   }
 
-  listNodes({ asOf = new Date().toISOString() } = {}) {
-    return this.decodedNodes().map(node => {
+  listNodes({ asOf = new Date().toISOString(), limit } = {}) {
+    return this.decodedNodes({ limit }).map(node => {
       if (node.status === 'active' && node.expires_at <= asOf) {
         node.status = 'expired';
       }
@@ -1601,10 +1615,13 @@ export class GridStore {
     });
   }
 
-  decodedNodes() {
-    return this.db.prepare(
-      'SELECT * FROM nodes ORDER BY registered_at DESC'
-    ).all().map(row => {
+  decodedNodes({ limit } = {}) {
+    const rows = limit === undefined
+      ? this.db.prepare('SELECT * FROM nodes ORDER BY registered_at DESC').all()
+      : this.db.prepare('SELECT * FROM nodes ORDER BY registered_at DESC LIMIT ?').all(
+          boundedInteger(limit, 'node list limit', 1, 100)
+        );
+    return rows.map(row => {
       const decoded = this.decodeProtectedRow(
         'nodes',
         'node_id',
@@ -2743,6 +2760,13 @@ function validateMaterializedPayload(kind, p) {
     }
     assertString(p.rollback_path, 'rollback_path', { max: 1000 });
   }
+}
+
+function boundedInteger(value, label, min, max) {
+  if (!Number.isSafeInteger(value) || value < min || value > max) {
+    throw new ValidationError(`${label} must be an integer between ${min} and ${max}`);
+  }
+  return value;
 }
 
 function validDate(value) {
