@@ -41,6 +41,7 @@ import {
   invocationEnvelopeDigest
 } from '../lib/invocation-envelope.mjs';
 import { effectDestinationForTool } from '../lib/effect-destination.mjs';
+import { buildMachineDiscovery } from '../lib/machine-discovery.mjs';
 import {
   loadTransportRuntime,
   transportServerOptions
@@ -137,6 +138,17 @@ export async function createHypervisorService(config = meshConfig()) {
   }), { auth: false });
 
   router.add('GET', '/internal/v1/operations', async ({ traceId }) => currentOperations(traceId));
+
+  router.add('POST', '/internal/v1/machine-discovery', async ({ body, traceId }) => {
+    const principal = normalizeMachinePrincipalDefinition(
+      assertPlainObject(parseJsonBody(body), 'machine discovery principal')
+    );
+    return buildMachineDiscovery({
+      principal,
+      policy: await activePolicy(traceId),
+      kernelVersion: '0.12.0-dev.3'
+    });
+  });
 
   router.add('POST', '/internal/v1/intents', async ({ body, traceId }) => {
     const intent = normalizeIntent(parseJsonBody(body));

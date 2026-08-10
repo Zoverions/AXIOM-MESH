@@ -1,9 +1,9 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=1f61717d785b3e260d6eee36b2d772d4f1170287f6d262f24edc9fa1f412ff21 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=ded69f9d09f9c610a9f3345a9e24fe2ee830caad4ea28806c5641f454ebd2f1b -->
 # AXIOM-MESH Rebuild Requirements
 
 **Current build:** `0.12.0-dev.3`
 
-**Updated:** 2026-08-09
+**Updated:** 2026-08-10
 
 **Normative language:** MUST, MUST NOT, SHOULD, and MAY are used in their usual
 requirements sense.
@@ -49,8 +49,9 @@ state.
 | IAM-06 | Production startup MUST reject default, weak, missing, example, stale, or partially provisioned credentials. | Startup configuration tests. |
 | IAM-07 | Device and browser sessions MUST support expiry, idle timeout, revocation, and scope reduction without requiring destruction of the user’s underlying identity. | Session and device-revocation tests. |
 | IAM-08 | Core access and identity MUST NOT require a token, settlement account, or platform-controlled social account. | Token-disabled and offline-local onboarding tests. |
-| IAM-09 | An authenticated `agent` principal MUST use the constrained machine-principal profile, MUST resolve to a configured human sponsor, MUST NOT receive wildcard scope or administrator role, and MUST bind finite action and purpose ceilings, runtime identity, lifetime/expiry, non-delegation, a current execution-time ceiling, and authenticated Gateway request-size, request-rate, concurrency, and response-size ceilings. Machine constraints may only reduce authority granted by ordinary policy. | `machine-principal`, principal-registry, machine-ingress, and four-service end-to-end tests. |
+| IAM-09 | An authenticated `agent` principal MUST use the constrained machine-principal profile, MUST resolve to a configured human sponsor, MUST NOT receive wildcard scope or administrator role, and MUST bind finite action and purpose ceilings, runtime identity, lifetime/expiry, non-delegation, a current execution-time ceiling, authenticated Gateway request-size, request-rate, concurrency, and response-size ceilings, and a finite destination ceiling enforced against the AXIOM-computed destination for current supported effects. Machine constraints may only reduce authority granted by ordinary policy. | `machine-principal`, principal-registry, machine-ingress, destination, and four-service end-to-end tests. |
 | IAM-10 | Machine-principal v1 MUST NOT delegate authority. Any future machine delegation MUST be attenuation-only, explicitly scoped, expiring, revocable, chain-bound, independently evidenced, and separately promoted before use. | Non-delegation validation plus future delegation property and negative-path tests. |
+| IAM-11 | Machine discovery MUST be authenticated, constrained-machine-only, filtered by the active deny-dominant policy plus the caller's own scopes, actions, purposes, destinations, and budgets, MUST minimize metadata, and MUST explicitly state that discovery does not grant execution authority. Every discovered action MUST still undergo normal intent evaluation before execution. | Machine-discovery unit, client, service-network, and four-service leakage/authorization tests. |
 
 ## Human interface and application requirements
 

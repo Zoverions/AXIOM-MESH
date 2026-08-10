@@ -51,6 +51,10 @@
         },
         {
           "method": "POST",
+          "path": "/internal/v1/machine-discovery"
+        },
+        {
+          "method": "POST",
           "path": "/internal/v1/intents"
         }
       ]

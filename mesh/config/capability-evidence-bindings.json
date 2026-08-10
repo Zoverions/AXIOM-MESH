@@ -1,7 +1,7 @@
 {
   "schema": "axiom-capability-evidence-bindings.v1",
   "kernel_version": "0.12.0-dev.3",
-  "registry_digest": "1f61717d785b3e260d6eee36b2d772d4f1170287f6d262f24edc9fa1f412ff21",
+  "registry_digest": "ded69f9d09f9c610a9f3345a9e24fe2ee830caad4ea28806c5641f454ebd2f1b",
   "bindings": [
     {
       "capability_id": "capsules.registry",
@@ -48,6 +48,20 @@
         "assert.equal(error.code, 'machine_request_budget_exceeded');",
         "assert.equal(error.code, 'machine_rate_budget_exceeded');",
         "assert.equal(error.code, 'machine_response_budget_exceeded');"
+      ]
+    },
+    {
+      "capability_id": "core.machine-discovery",
+      "path": "mesh/test/machine-discovery-e2e.test.mjs",
+      "test": "real Gateway exposes only bounded machine requestability and leaves registry discovery unchanged",
+      "assertions": [
+        "assert.equal(discovery.notice, 'discovery_is_not_authorization');",
+        "assert.deepEqual(discovery.actions.map(action => action.id), ['system.echo']);",
+        "assert.equal(discovery.actions[0].effect_destination, 'local');",
+        "assert.deepEqual(Object.keys(discovery.policy).sort(), ['digest', 'version']);",
+        "assert.equal(JSON.stringify(discovery).includes('memory.put'), false);",
+        "assert.equal(JSON.stringify(discovery).includes(AGENT_TOKEN), false);",
+        "assert.equal(registry.schema, 'axiom-capabilities.v1');"
       ]
     },
     {
@@ -186,7 +200,7 @@
       "test": "current service network policy is exact, default-deny, and segmented",
       "assertions": [
         "assert.equal(result.default_action, 'deny');",
-        "assert.equal(result.routes, 38);"
+        "assert.equal(result.routes, 39);"
       ]
     },
     {
@@ -246,7 +260,7 @@
       "path": "mesh/test/gateway-client-contract.test.mjs",
       "test": "current Gateway client contract is exact and covers every authenticated route",
       "assertions": [
-        "assert.equal(result.routes, 27);",
+        "assert.equal(result.routes, 28);",
         "assert.equal(result.direct_service_access, false);"
       ]
     },

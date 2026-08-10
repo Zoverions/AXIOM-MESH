@@ -64,7 +64,36 @@
       "query_parameters": [],
       "request_schema": null,
       "response_schema": "axiom-capabilities.v1",
-      "required_response_fields": ["schema", "kernel_version", "capabilities", "digest"],
+      "required_response_fields": [
+        "schema",
+        "kernel_version",
+        "capabilities",
+        "digest"
+      ],
+      "response_media_type": "application/json"
+    },
+    {
+      "id": "machine_discovery.get",
+      "method": "GET",
+      "path": "/v1/machine-discovery",
+      "access": "constrained-machine",
+      "idempotency": "not_applicable",
+      "path_parameters": [],
+      "query_parameters": [],
+      "request_schema": null,
+      "response_schema": "axiom-machine-discovery.v1",
+      "required_response_fields": [
+        "schema",
+        "kernel_version",
+        "notice",
+        "principal",
+        "policy",
+        "purposes",
+        "destinations",
+        "limits",
+        "actions",
+        "digest"
+      ],
       "response_media_type": "application/json"
     },
     {
@@ -77,7 +106,12 @@
       "query_parameters": [],
       "request_schema": null,
       "response_schema": "axiom-gateway-status.v1",
-      "required_response_fields": ["kernel_version", "claim_source_digest", "runtime", "capability_counts"],
+      "required_response_fields": [
+        "kernel_version",
+        "claim_source_digest",
+        "runtime",
+        "capability_counts"
+      ],
       "response_media_type": "application/json"
     },
     {
@@ -90,7 +124,11 @@
       "query_parameters": [],
       "request_schema": null,
       "response_schema": "axiom-operations.v1",
-      "required_response_fields": ["format", "status", "services"],
+      "required_response_fields": [
+        "format",
+        "status",
+        "services"
+      ],
       "response_media_type": "application/json"
     },
     {
@@ -116,7 +154,12 @@
       "query_parameters": [],
       "request_schema": "axiom-intent-request.v1",
       "response_schema": "axiom-intent-result.v1",
-      "required_response_fields": ["intent_id", "trace_id", "status", "evidence"],
+      "required_response_fields": [
+        "intent_id",
+        "trace_id",
+        "status",
+        "evidence"
+      ],
       "response_media_type": "application/json"
     },
     {
@@ -125,11 +168,17 @@
       "path": "/v1/intents/:id",
       "access": "owner|audit:read",
       "idempotency": "not_applicable",
-      "path_parameters": ["id"],
+      "path_parameters": [
+        "id"
+      ],
       "query_parameters": [],
       "request_schema": null,
       "response_schema": "axiom-intent-record.v1",
-      "required_response_fields": ["intent_id", "principal", "status"],
+      "required_response_fields": [
+        "intent_id",
+        "principal",
+        "status"
+      ],
       "response_media_type": "application/json"
     },
     {
@@ -139,10 +188,16 @@
       "access": "owner|audit:read",
       "idempotency": "not_applicable",
       "path_parameters": [],
-      "query_parameters": ["actor", "after", "limit"],
+      "query_parameters": [
+        "actor",
+        "after",
+        "limit"
+      ],
       "request_schema": null,
       "response_schema": "axiom-event-page.v1",
-      "required_response_fields": ["events"],
+      "required_response_fields": [
+        "events"
+      ],
       "response_media_type": "application/json"
     },
     {
@@ -155,7 +210,9 @@
       "query_parameters": [],
       "request_schema": null,
       "response_schema": "axiom-capsule-list.v1",
-      "required_response_fields": ["capsules"],
+      "required_response_fields": [
+        "capsules"
+      ],
       "response_media_type": "application/json"
     },
     {
@@ -168,7 +225,9 @@
       "query_parameters": [],
       "request_schema": null,
       "response_schema": "axiom-proposal-list.v1",
-      "required_response_fields": ["proposals"],
+      "required_response_fields": [
+        "proposals"
+      ],
       "response_media_type": "application/json"
     },
     {
@@ -181,7 +240,9 @@
       "query_parameters": [],
       "request_schema": null,
       "response_schema": "axiom-node-list.v1",
-      "required_response_fields": ["nodes"],
+      "required_response_fields": [
+        "nodes"
+      ],
       "response_media_type": "application/json"
     },
     {
@@ -191,10 +252,19 @@
       "access": "node:read",
       "idempotency": "not_applicable",
       "path_parameters": [],
-      "query_parameters": ["capability", "role", "minimum_security_level", "minimum_lease_seconds", "limit"],
+      "query_parameters": [
+        "capability",
+        "role",
+        "minimum_security_level",
+        "minimum_lease_seconds",
+        "limit"
+      ],
       "request_schema": null,
       "response_schema": "axiom-node-discovery.v1",
-      "required_response_fields": ["nodes", "attestation"],
+      "required_response_fields": [
+        "nodes",
+        "attestation"
+      ],
       "response_media_type": "application/json"
     },
     {
@@ -207,7 +277,9 @@
       "query_parameters": [],
       "request_schema": null,
       "response_schema": "axiom-node-schedule-list.v1",
-      "required_response_fields": ["schedules"],
+      "required_response_fields": [
+        "schedules"
+      ],
       "response_media_type": "application/json"
     },
     {
@@ -220,7 +292,9 @@
       "query_parameters": [],
       "request_schema": null,
       "response_schema": "axiom-consent-list.v1",
-      "required_response_fields": ["consents"],
+      "required_response_fields": [
+        "consents"
+      ],
       "response_media_type": "application/json"
     },
     {
@@ -233,7 +307,9 @@
       "query_parameters": [],
       "request_schema": null,
       "response_schema": "axiom-approval-list.v1",
-      "required_response_fields": ["approvals"],
+      "required_response_fields": [
+        "approvals"
+      ],
       "response_media_type": "application/json"
     },
     {
@@ -243,10 +319,15 @@
       "access": "owner|consented-share",
       "idempotency": "not_applicable",
       "path_parameters": [],
-      "query_parameters": ["owner"],
+      "query_parameters": [
+        "owner"
+      ],
       "request_schema": null,
       "response_schema": "axiom-memory-graph.v1",
-      "required_response_fields": ["objects", "edges"],
+      "required_response_fields": [
+        "objects",
+        "edges"
+      ],
       "response_media_type": "application/json"
     },
     {
@@ -259,7 +340,10 @@
       "query_parameters": [],
       "request_schema": null,
       "response_schema": "axiom-accounting-ledger.v1",
-      "required_response_fields": ["accounts", "journals"],
+      "required_response_fields": [
+        "accounts",
+        "journals"
+      ],
       "response_media_type": "application/json"
     },
     {
@@ -272,7 +356,9 @@
       "query_parameters": [],
       "request_schema": null,
       "response_schema": "axiom-import-list.v1",
-      "required_response_fields": ["imports"],
+      "required_response_fields": [
+        "imports"
+      ],
       "response_media_type": "application/json"
     },
     {
@@ -281,11 +367,17 @@
       "path": "/v1/imports/:id",
       "access": "owner",
       "idempotency": "not_applicable",
-      "path_parameters": ["id"],
+      "path_parameters": [
+        "id"
+      ],
       "query_parameters": [],
       "request_schema": null,
       "response_schema": "axiom-import-record.v1",
-      "required_response_fields": ["import_id", "principal", "status"],
+      "required_response_fields": [
+        "import_id",
+        "principal",
+        "status"
+      ],
       "response_media_type": "application/json"
     },
     {
@@ -298,7 +390,9 @@
       "query_parameters": [],
       "request_schema": null,
       "response_schema": "axiom-appeal-list.v1",
-      "required_response_fields": ["appeals"],
+      "required_response_fields": [
+        "appeals"
+      ],
       "response_media_type": "application/json"
     },
     {
@@ -311,7 +405,9 @@
       "query_parameters": [],
       "request_schema": null,
       "response_schema": "axiom-storage-offer-list.v1",
-      "required_response_fields": ["offers"],
+      "required_response_fields": [
+        "offers"
+      ],
       "response_media_type": "application/json"
     },
     {
@@ -321,10 +417,16 @@
       "access": "owner",
       "idempotency": "not_applicable",
       "path_parameters": [],
-      "query_parameters": ["namespace", "record_id"],
+      "query_parameters": [
+        "namespace",
+        "record_id"
+      ],
       "request_schema": null,
       "response_schema": "axiom-causal-sync-state.v1",
-      "required_response_fields": ["records", "conflicts"],
+      "required_response_fields": [
+        "records",
+        "conflicts"
+      ],
       "response_media_type": "application/json"
     },
     {
@@ -333,11 +435,17 @@
       "path": "/v1/sync/bundles/:digest",
       "access": "owner",
       "idempotency": "not_applicable",
-      "path_parameters": ["digest"],
+      "path_parameters": [
+        "digest"
+      ],
       "query_parameters": [],
       "request_schema": null,
       "response_schema": "axiom-causal-sync-bundle-record.v1",
-      "required_response_fields": ["bundle_digest", "owner", "update_count"],
+      "required_response_fields": [
+        "bundle_digest",
+        "owner",
+        "update_count"
+      ],
       "response_media_type": "application/json"
     },
     {
@@ -350,7 +458,9 @@
       "query_parameters": [],
       "request_schema": null,
       "response_schema": "axiom-backup-list.v1",
-      "required_response_fields": ["backups"],
+      "required_response_fields": [
+        "backups"
+      ],
       "response_media_type": "application/json"
     },
     {
@@ -359,11 +469,17 @@
       "path": "/v1/backups/:id",
       "access": "owner",
       "idempotency": "not_applicable",
-      "path_parameters": ["id"],
+      "path_parameters": [
+        "id"
+      ],
       "query_parameters": [],
       "request_schema": null,
       "response_schema": "axiom-backup-record.v1",
-      "required_response_fields": ["backup_id", "principal", "status"],
+      "required_response_fields": [
+        "backup_id",
+        "principal",
+        "status"
+      ],
       "response_media_type": "application/json"
     },
     {
@@ -372,11 +488,17 @@
       "path": "/v1/exports/:id",
       "access": "owner",
       "idempotency": "not_applicable",
-      "path_parameters": ["id"],
+      "path_parameters": [
+        "id"
+      ],
       "query_parameters": [],
       "request_schema": null,
       "response_schema": "axiom-export-record.v1",
-      "required_response_fields": ["export_id", "principal", "status"],
+      "required_response_fields": [
+        "export_id",
+        "principal",
+        "status"
+      ],
       "response_media_type": "application/json"
     },
     {
@@ -385,11 +507,15 @@
       "path": "/v1/exports/:id/bundle",
       "access": "owner",
       "idempotency": "not_applicable",
-      "path_parameters": ["id"],
+      "path_parameters": [
+        "id"
+      ],
       "query_parameters": [],
       "request_schema": null,
       "response_schema": "axiom-export-bundle-response.v1",
-      "required_response_fields": ["bundle"],
+      "required_response_fields": [
+        "bundle"
+      ],
       "response_media_type": "application/json"
     },
     {
@@ -402,7 +528,11 @@
       "query_parameters": [],
       "request_schema": null,
       "response_schema": "axiom-audit-verification.v1",
-      "required_response_fields": ["valid", "events", "head"],
+      "required_response_fields": [
+        "valid",
+        "events",
+        "head"
+      ],
       "response_media_type": "application/json"
     }
   ]

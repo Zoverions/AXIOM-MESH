@@ -3,8 +3,8 @@
 
 Registry schema: `axiom-capabilities.v1`
 Kernel version: `0.12.0-dev.3`
-Evidence verified: `2026-08-09`
-Registry digest: `1f61717d785b3e260d6eee36b2d772d4f1170287f6d262f24edc9fa1f412ff21`
+Evidence verified: `2026-08-10`
+Registry digest: `ded69f9d09f9c610a9f3345a9e24fe2ee830caad4ea28806c5641f454ebd2f1b`
 
 Only **implemented** capabilities are runnable claims.
 
@@ -13,7 +13,7 @@ Only **implemented** capabilities are runnable claims.
 - adapter_required: 9
 - disabled: 4
 - experimental: 3
-- implemented: 29
+- implemented: 30
 - specified: 2
 
 ## Registry
@@ -22,6 +22,7 @@ Only **implemented** capabilities are runnable claims.
 |---|---|---|---|
 | `core.intent-loop` | core | **implemented** | Authenticated intent-to-plan-to-grant-to-execution-to-evidence pipeline. |
 | `core.machine-principals` | core | **implemented** | Authenticated agent principals are human-sponsored and deny-dominantly bounded by finite scopes, action and purpose ceilings, runtime identity, expiry, non-delegation, an execution-time ceiling, authenticated Gateway ingress ceilings for request size, request rate, concurrency, and response size, and an AXIOM-computed effect destination that must remain within the principal's finite destination ceiling; infrastructure service principals remain backward-compatible unless they opt into the same constrained profile. |
+| `core.machine-discovery` | core | **implemented** | Authenticated constrained-machine discovery exposes a digest-bound principal-specific intersection of active deny-dominant allow rules, required scopes, finite machine actions, verified effect destinations, purposes, and budgets through the existing Gateway with an explicit non-authorization notice; actual execution still requires normal intent evaluation. |
 | `core.evidence-chain` | audit | **implemented** | Transactional SHA-256 hash-linked evidence log with restart verification. |
 | `core.layered-policy` | governance | **implemented** | Runtime policy stacks merge global-to-user constraints deny-dominantly and require independent approval for every permitted high-risk effect. |
 | `capsules.registry` | capsules | **implemented** | Immutable digest-addressed capsule manifests with signature verification, schemas, SBOM digest, and revocation state. |
@@ -54,12 +55,12 @@ Only **implemented** capabilities are runnable claims.
 | `economics.token-bridge-liquidity` | economics | **disabled** | AXM, bonds, rewards, treasury, bridges, and liquidity remain disabled pending reconciled policy, tests, deployment evidence, and external audit. |
 | `zk.proof-verifiers` | verification | **adapter_required** | A proof is accepted only with a named circuit, verification key, public-input schema, and verifier adapter. |
 | `ui.operator-api` | operations | **implemented** | Authenticated operator API for intent submission, status, audit, recovery, and governed state inspection. |
-| `ui.gateway-client` | operations | **implemented** | A versioned same-origin Gateway client contract covers all 27 authenticated routes with exact route parity, bounded responses and timeouts, AbortSignal cancellation, stable idempotent intent results, explicit errors, and no direct internal-service access. |
+| `ui.gateway-client` | operations | **implemented** | A versioned same-origin Gateway client contract covers all 28 authenticated routes with exact route parity, bounded responses and timeouts, AbortSignal cancellation, stable idempotent intent results, explicit errors, and no direct internal-service access. |
 | `ui.cli` | operations | **implemented** | Command-line operator client with explicit input validation and fail-closed API error handling. |
 | `ui.dashboard` | operations | **experimental** | A loopback-only AXIOM One PWA preview provides node status, reversible review for echo plus four governed memory lifecycle actions, exact explanations for all stable Gateway outcomes and current kernel events, approval-state distinctions, same-key uncertainty recovery, owner-scoped private-note creation, three fixed directional provenance links with correction-without-replacement, confirmation-bound tombstoning, selective local export with explicit bundle reveal, unavailable-sharing, and raw evidence surfaces; it is not a supported product, edge-deletion/hard-delete/restore interface, authoritative pre-execution kernel plan, or completed browser-security boundary. |
 | `operations.observability` | operations | **implemented** | Bounded four-service telemetry is scraped over least-privilege Unix-socket access and relayed as OTLP/HTTP JSON with fixed attributes; static alerts route through Alertmanager v2 using HTTPS allowlists, reserved queue capacity, bounded retry, redaction, and delivery audit; signed request-pressure and dependency-loss evidence proves bounded rejection, degradation, fail-closed exit, restart, and state preservation. |
 | `operations.mutual-transport` | operations | **implemented** | Production internal calls use TLS 1.3 with CA-issued Ed25519 leaves, DNS and SPIFFE-style URI identity, exact active-certificate pinning, signed-caller binding, offline atomic rotation, retired-leaf rejection, and exact rollback. |
-| `operations.service-network-policy` | operations | **implemented** | A default-deny current-build policy permits only 38 exact internal caller, destination, method, and route combinations; four isolated internal Compose segments remove unrelated service adjacency, while mTLS peer allowlists and protected forbidden-edge probes enforce direction and segmentation. |
+| `operations.service-network-policy` | operations | **implemented** | A default-deny current-build policy permits only 39 exact internal caller, destination, method, and route combinations; four isolated internal Compose segments remove unrelated service adjacency, while mTLS peer allowlists and protected forbidden-edge probes enforce direction and segmentation. |
 | `operations.independent-service-units` | operations | **implemented** | Gateway, Grid, Hypervisor, and Sandbox can run as independently restartable units with per-unit application and TLS private keys, Grid-only durable state, segmented internal deny-egress networks, dependency-aware degradation, Sandbox-only recovery, and signed state-preservation evidence. |
 | `operations.provider-runtime` | operations | **implemented** | Independent Ed25519-pinned secret and policy providers deliver nonce-bound short-lived startup resources through a bounded process protocol; the broker verifies exact inventories and content, materializes one private generation, launches the unchanged production supervisor, and removes that generation on shutdown. |
 | `operations.pilot-dossier-verification` | operations | **implemented** | A separately authority-pinned, five-role review policy verifies exact build, 30-day observation, SLO, custody, and approval metadata; an offline exact-inventory package verifier additionally enforces 13 canonical role-signed v2 evidence envelopes with type-specific detail contracts while explicitly refusing to claim production promotion. |

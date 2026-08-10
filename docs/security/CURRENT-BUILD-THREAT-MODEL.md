@@ -4,7 +4,7 @@
 
 **Status:** canonical security-review input; not an independent assessment
 
-**Updated:** 2026-08-09
+**Updated:** 2026-08-10
 
 This document defines the threat model for the supported clean-room kernel on
 `main`. It replaces historical security narratives as the review baseline. An
@@ -23,12 +23,14 @@ single-host units.
   exposes it through a permission-restricted Unix-domain socket. It
   authenticates bearer principals, validates request sizes and shapes,
   rate-limits abuse, enforces constrained-machine request-size, request-rate,
-  concurrency, and response-size ceilings, and forwards signed internal requests.
+  concurrency, and response-size ceilings, exposes constrained-machine-only
+  requestability discovery, and forwards signed internal requests.
 - **Hypervisor** normalizes intent, composes deny-dominant policy, independently
   revalidates constrained agent principals, computes the current built-in effect
   destination from the policy-selected tool, enforces the principal's finite
-  destination ceiling, intersects the machine execution-time ceiling with policy,
-  constructs an explicit plan, and issues
+  destination ceiling, computes machine discovery from the active deny-dominant
+  policy intersected with the authenticated machine profile, intersects the machine
+  execution-time ceiling with policy, constructs an explicit plan, and issues
   short-lived, audience-bound, single-use grants.
 - **Sandbox** accepts only authenticated Hypervisor work covered by an unused
   grant. The supported operation set is built in and deterministic. Arbitrary
@@ -55,7 +57,12 @@ tool, which resolves canonically to `local`, and denies the request before capab
 issuance when that computed destination is not allowed. Sandbox independently
 recomputes and verifies the signed destination before execution. Unknown provider,
 remote, or MCP destination semantics remain unresolved and fail closed; no arbitrary
-external-destination or remote-execution claim follows. Runtime IDs and software
+external-destination or remote-execution claim follows. Constrained machines may
+query `/v1/machine-discovery`; the response contains only the caller's own
+principal/runtime authority facts, merged policy version/digest, purposes,
+destinations, budgets, and the requestable action intersection. It omits denied,
+out-of-scope, unresolved-destination, and unrelated policy actions and explicitly
+states that discovery is not authorization. Runtime IDs and software
 digests are attribution/binding metadata; they are not hardware,
 TPM/TEE, measured-boot, or remote-attestation proof.
 
@@ -175,8 +182,8 @@ has the same controls.
 
 Reviewers must trace at least these entry points:
 
-1. Gateway liveness, readiness, authenticated API, intent, operations,
-   telemetry, export, import, and administrative routes.
+1. Gateway liveness, readiness, authenticated API, constrained-machine
+   discovery, intent, operations, telemetry, export, import, and administrative routes.
 2. human, constrained-agent, and service bearer-principal registry loading,
    sponsorship resolution, machine-profile normalization, and expiry handling;
 3. Gateway-to-Hypervisor, Hypervisor-to-Sandbox, and service-to-Grid
@@ -211,6 +218,7 @@ post-recovery verification rather than an online grant.
 | Legacy or forged unconstrained agent identity | Bearer registry requires `agent` principals to normalize as `axiom-machine-principal.v1`; Hypervisor independently rejects legacy `agent` shape; unknown/non-human sponsor, wildcard scope, and administrator role fail closed | A stolen valid constrained-agent bearer still needs operational revocation; runtime identity metadata is not hardware attestation |
 | Sponsor laundering or authority-profile substitution | Sponsor must resolve to a configured human principal; normalized authority digest includes sponsor, roles/scopes, lifetime, runtime and constraints; approvals bind request digest containing the machine authority digest | Human sponsor compromise and social/organizational authorization errors remain outside cryptographic proof |
 | Machine action, purpose, or destination escalation | Ordinary policy is evaluated first; machine action/purpose ceilings form a second deny-dominant layer; current built-in effect destination is computed from the authorized tool and must remain inside the principal's finite destination ceiling | External/provider/MCP destination semantics and remote execution remain unimplemented and fail closed |
+| Machine discovery metadata inference or discovery-as-authority | The route is constrained-machine-only; Hypervisor intersects the active deny-dominant policy with only the authenticated principal's finite actions, scopes and destinations; unresolved or denied actions are omitted; overlay structure, bearer material and unrelated actions are not returned; the response declares `discovery_is_not_authorization` | The caller intentionally learns its own authority facts plus merged policy version/digest and requestable action metadata; future provider/MCP schemas or global discovery must receive separate minimization and inference review |
 | Machine execution-budget widening | Hypervisor intersects policy timeout with machine `max_execution_ms`; plan and capability bind the resulting authority context | CPU/memory/cost accounting beyond the supported timeout path needs later resource-meter evidence |
 | Machine delegation laundering | Machine-principal v1 validation requires delegation disabled and depth zero; no machine delegation runtime exists | Future delegation requires a separate attenuation-only design, threat model, property tests, revocation and promotion |
 | Approval reuse after machine-authority change | Request digest includes machine authority digest; plan provenance and capability claims repeat the exact digest; result/mutation evidence records it | Reviewers must verify all future adapters preserve the same request-binding semantics |
@@ -240,6 +248,8 @@ The current review must consider at minimum:
 - a machine request whose action, purpose, or computed effect destination is outside
   its profile, whose authority digest changed after approval, or whose runtime metadata is
   presented as attestation;
+- a machine treating discovery as a grant, probing discovery for unrelated policy or
+  object metadata, or attempting to recover bearer material or overlay structure;
 - one valid identity reused for another role, node, provider, reviewer, or
   exception approver;
 - policy-layer reordering, omission, unknown fields, numeric boundary errors,
@@ -289,6 +299,8 @@ Independent review should treat these as invariants, not best-effort goals:
 12. Critical/high security findings must be closed and independently
     reverified before review intake; lesser accepted risk needs a named owner,
     separate approval, containment, and a bounded unexpired exception.
+13. Discovery, listing, installation, connection, or protocol advertisement never
+    creates execution authority; every effect still requires normal intent evaluation.
 
 ## Residual risk and non-claims
 
