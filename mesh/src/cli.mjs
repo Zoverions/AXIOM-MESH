@@ -9,6 +9,7 @@ const COMMAND_ORDER = Object.freeze([
   'status',
   'capabilities',
   'intent',
+  'intent-state',
   'audit',
   'backup'
 ]);
@@ -35,7 +36,7 @@ export function parseCliArguments(argv) {
 }
 
 export function cliHelp() {
-  return `AXIOM-MESH command line\n\nUsage:\n  npm run axiom -- <command> [arguments] [--json]\n\nCommands:\n  status                              Show the current kernel and capability summary\n  capabilities                        Print the signed capability registry view\n  intent <action> [json-input]         Submit one authenticated intent\n  audit                               Verify the current evidence chain\n  backup list                         List encrypted backups\n  backup show <backup-id>             Show one backup manifest\n  backup restore <path> <sha256>      Restore with an exact expected database digest\n\nOptions:\n  --json                              Emit the complete JSON response\n  --human                             Render a concise status summary\n  -h, --help                          Show this help\n\nFirst run:\n  npm run dev\n  npm run axiom -- status\n`;
+  return `AXIOM-MESH command line\n\nUsage:\n  npm run axiom -- <command> [arguments] [--json]\n\nCommands:\n  status                              Show the current kernel and capability summary\n  capabilities                        Print the signed capability registry view\n  intent <action> [json-input]         Submit one authenticated intent\n  intent-state <contract-id>           Read Grid-authenticated Intent state via governance\n  audit                               Verify the current evidence chain\n  backup list                         List encrypted backups\n  backup show <backup-id>             Show one backup manifest\n  backup restore <path> <sha256>      Restore with an exact expected database digest\n\nOptions:\n  --json                              Emit the complete JSON response\n  --human                             Render a concise status summary\n  -h, --help                          Show this help\n\nFirst run:\n  npm run dev\n  npm run axiom -- status\n`;
 }
 
 export function formatCliResult(command, result, {
@@ -121,6 +122,28 @@ export async function runCli(argv, {
     status: () => request('/v1/status'),
     capabilities: () => request('/v1/capabilities'),
     audit: () => request('/v1/audit/verify'),
+    'intent-state': async () => {
+      const contractId = args[0];
+      if (!contractId) {
+        throw new Error('Usage: npm run axiom -- intent-state <contract-id>');
+      }
+      if (!/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/.test(contractId)) {
+        throw new Error('Intent Contract ID has an invalid format');
+      }
+      const page = await request('/v1/proposals?limit=100');
+      const proposal = page.proposals?.find(item => (
+        item.intent_state?.contract_id === contractId
+      ));
+      if (!proposal?.intent_state) {
+        const error = new Error(
+          `Active Intent Contract was not found in the bounded governance view: ${contractId}`
+        );
+        error.code = 'intent_contract_not_active';
+        error.status = 404;
+        throw error;
+      }
+      return proposal.intent_state;
+    },
     backup: async () => {
       const [subcommand = 'list', target, expectedDigest] = args;
       if (subcommand === 'list') return request('/v1/backups');
