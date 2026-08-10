@@ -132,6 +132,7 @@ export function createServiceServer({
   maxBodyBytes = 1_048_576,
   context = {},
   authenticate,
+  admitRequest,
   onError,
   telemetry,
   tls,
@@ -140,10 +141,12 @@ export function createServiceServer({
   authorizeRequest
 }) {
   const logger = createStructuredLogger(name);
+  const requestAdmission = admitRequest ?? authenticate?.admitRequest;
   const handleRequest = async (req, res) => {
     const started = performance.now();
     const traceId = validTraceId(req.headers['x-trace-id']) ? req.headers['x-trace-id'] : newId('trace');
     let requestError;
+    let releaseAdmission;
     telemetry?.beginRequest();
     res.setHeader('x-trace-id', traceId);
     try {
@@ -189,6 +192,20 @@ export function createServiceServer({
           principal
         });
       }
+      if (principal && requestAdmission) {
+        const release = await requestAdmission({
+          req,
+          body,
+          url,
+          route,
+          traceId,
+          principal
+        });
+        if (release !== undefined && typeof release !== 'function') {
+          throw new ValidationError('Request admission hook must return a release function or undefined');
+        }
+        releaseAdmission = release;
+      }
       const result = await route.handler({
         req,
         res,
@@ -231,6 +248,17 @@ export function createServiceServer({
         sendJson(res, response.status, response.body);
       }
     } finally {
+      if (releaseAdmission) {
+        try {
+          releaseAdmission();
+        } catch (error) {
+          logger.error({
+            event: 'request.admission_release_failed',
+            trace_id: traceId,
+            error
+          });
+        }
+      }
       const elapsed = Math.round((performance.now() - started) * 100) / 100;
       telemetry?.finishRequest({
         status: res.statusCode,

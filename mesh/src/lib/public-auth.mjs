@@ -5,7 +5,7 @@ import { MachineIngressGuard } from './machine-ingress.mjs';
 export function createBearerAuthenticator(principals, {
   machineIngress = new MachineIngressGuard()
 } = {}) {
-  return async function authenticate({ req, body = Buffer.alloc(0) }) {
+  const authenticate = async function authenticate({ req, body = Buffer.alloc(0) }) {
     const header = req.headers.authorization;
     if (typeof header !== 'string' || !header.startsWith('Bearer ')) {
       throw new AxiomError('authentication_required', 'A bearer token is required', 401);
@@ -26,4 +26,8 @@ export function createBearerAuthenticator(principals, {
     });
     return authenticated;
   };
+  authenticate.admitRequest = ({ principal }) => (
+    machineIngress.acquireConcurrency(principal)
+  );
+  return authenticate;
 }
