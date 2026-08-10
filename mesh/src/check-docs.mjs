@@ -410,7 +410,7 @@ function verifyComputedDocumentationClaims(contents) {
     ['docs/PRODUCTION-GRADE.md', `permits only ${network.routes} current internal`],
     ['docs/rebuild/PRODUCT-DEFINITION.md', `authorizes only ${network.routes} exact caller`],
     ['docs/PROJECT-STATUS-2026.md', `default-deny ${network.routes}-route application`],
-    ['docs/operations/GATEWAY-CLIENT-CONTRACT.md', `covers all ${gatewayRoutes} authenticated \/v1\/ Gateway routes`],
+    ['docs/operations/GATEWAY-CLIENT-CONTRACT.md', `covers all ${gatewayRoutes} authenticated \`/v1/\` Gateway routes`],
     ['docs/PROJECT-STATUS-2026.md', `implemented for all ${gatewayRoutes} authenticated routes`]
   ];
   for (const [path, expected] of claims) {
