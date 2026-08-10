@@ -22,6 +22,8 @@ import {
 import { planDigest, validatePlan } from '../lib/plan.mjs';
 import { executeBuiltin } from './executor.mjs';
 
+const DIGEST = /^[a-f0-9]{64}$/;
+
 export async function createSandboxService(config = meshConfig()) {
   const identity = await ensureMeshIdentity(config.dataDir, 'sandbox', { create: config.autoBootstrap });
   identity.transport = config.transport.enabled
@@ -60,6 +62,16 @@ export async function createSandboxService(config = meshConfig()) {
       issuer: 'hypervisor',
       maxTtlSeconds: config.capabilityTtlSeconds
     });
+    if (
+      claims.invocation_digest !== undefined
+      && !DIGEST.test(claims.invocation_digest)
+    ) {
+      throw new AxiomError(
+        'invalid_capability_claims',
+        'Capability token invocation digest is invalid',
+        401
+      );
+    }
     const intentDigest = digestObject(intent);
     if (claims.intent_digest !== intentDigest) {
       throw new AxiomError('capability_intent_mismatch', 'Capability token is not bound to this intent', 403);
@@ -88,6 +100,9 @@ export async function createSandboxService(config = meshConfig()) {
       trace_id: traceId,
       intent_id: intent.intent_id,
       intent_digest: intentDigest,
+      ...(claims.invocation_digest
+        ? { invocation_digest: claims.invocation_digest }
+        : {}),
       capability_id: claims.jti,
       tool: claims.tool,
       policy_digest: claims.policy_digest,
