@@ -131,7 +131,8 @@ test('native invocation envelope digest binds Grid acceptance to returned machin
     {
       max_request_bytes: 65_536,
       max_requests_per_minute: 30,
-      max_concurrent_requests: 1
+      max_concurrent_requests: 1,
+      max_response_bytes: 262_144
     }
   );
 });

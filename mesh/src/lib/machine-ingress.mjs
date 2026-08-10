@@ -48,6 +48,44 @@ export class MachineIngressGuard {
     };
   }
 
+  enforceResponse(principal, { responseBytes = 0 } = {}) {
+    if (principal?.schema !== 'axiom-machine-principal.v1') {
+      return { constrained: false };
+    }
+    if (!Number.isSafeInteger(responseBytes) || responseBytes < 0) {
+      throw new ValidationError('responseBytes must be a non-negative safe integer');
+    }
+    const budgets = this.#budgets(principal);
+    const maximum = budgets.max_response_bytes;
+    if (
+      !Number.isSafeInteger(maximum)
+      || maximum < 1_024
+      || maximum > 20_971_520
+    ) {
+      throw new AxiomError(
+        'machine_authority_invalid',
+        'Machine principal response-size budget is invalid',
+        403
+      );
+    }
+    if (responseBytes > maximum) {
+      throw new AxiomError(
+        'machine_response_budget_exceeded',
+        'Machine principal response-size budget is exceeded',
+        502,
+        {
+          response_bytes: responseBytes,
+          max_response_bytes: maximum
+        }
+      );
+    }
+    return {
+      constrained: true,
+      response_bytes: responseBytes,
+      max_response_bytes: maximum
+    };
+  }
+
   acquireConcurrency(principal) {
     if (principal?.schema !== 'axiom-machine-principal.v1') {
       return () => {};
