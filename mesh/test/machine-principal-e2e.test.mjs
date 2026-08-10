@@ -110,7 +110,6 @@ test('constrained agent executes an authorized intent and returns bound authorit
   assert.equal(result.evidence.machine_sponsor, 'owner.machine-test');
   assert.match(result.evidence.machine_authority_digest, /^[a-f0-9]{64}$/);
   assert.match(result.evidence.plan_digest, /^[a-f0-9]{64}$/);
-  assert.equal(result.evidence.effect_destination, 'local');
 
   const replay = await client.call('intents.submit', {
     body,
@@ -130,9 +129,19 @@ test('constrained agent executes an authorized intent and returns bound authorit
     && event.subject === result.intent_id
   ));
   assert.ok(accepted);
-  assert.equal(accepted.payload.invocation.authority.effect_destination, 'local');
-  assert.equal(accepted.payload.invocation.limits.ingress.max_concurrent_requests, 1);
-  assert.equal(accepted.payload.invocation.limits.ingress.max_response_bytes, 262_144);
+  const machineBoundary = {
+    effect_destination: result.evidence.effect_destination,
+    accepted_destination: accepted.payload.invocation.authority.effect_destination,
+    max_concurrent_requests: accepted.payload.invocation.limits.ingress.max_concurrent_requests,
+    max_response_bytes: accepted.payload.invocation.limits.ingress.max_response_bytes
+  };
+  const expectedMachineBoundary = {
+    effect_destination: 'local',
+    accepted_destination: 'local',
+    max_concurrent_requests: 1,
+    max_response_bytes: 262_144
+  };
+  assert.deepEqual(machineBoundary, expectedMachineBoundary);
 
   // Request-size denial occurs before rate consumption, so the next bounded call
   // still deterministically proves the three-request rate ceiling.
