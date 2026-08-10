@@ -261,7 +261,7 @@ test('high-risk mappings preserve confirmation and independent approval gates', 
         activate_after: '2026-08-10T22:00:00.000Z'
       },
       constraints: { conformance_only: true }
-    }],
+    }]),
     principal: { id: 'intent-operator', scopes: ['governance:write'] }
   });
   assert.equal(result.decision, 'eligible');
