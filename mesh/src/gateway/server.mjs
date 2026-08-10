@@ -131,6 +131,22 @@ export async function createGatewayService(config = meshConfig()) {
     digest: capabilitiesDigest
   }));
 
+  router.add('GET', '/v1/machine-discovery', async ({ traceId, principal }) => {
+    if (principal.schema !== 'axiom-machine-principal.v1') {
+      throw new AxiomError(
+        'forbidden',
+        'Machine discovery requires a constrained machine principal',
+        403
+      );
+    }
+    return signedFetch(
+      identity,
+      'hypervisor',
+      `${config.urls.hypervisor}/internal/v1/machine-discovery`,
+      { method: 'POST', traceId, body: principal }
+    );
+  });
+
   router.add('GET', '/v1/status', async ({ traceId }) => {
     const grid = await gridGet('/internal/v1/status', traceId);
     const capabilityCounts = Object.fromEntries(
