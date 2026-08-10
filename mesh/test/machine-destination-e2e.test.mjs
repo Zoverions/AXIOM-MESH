@@ -1,3 +1,4 @@
+// Final verification anchor after Gateway hook repair and response-size claim promotion.
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -121,10 +122,11 @@ test('computed local destination is allowed only when present in machine authori
       },
       idempotencyKey: 'machine-destination-remote-deny-0001'
     }),
-    error => (
-      error.code === 'machine_destination_denied'
-      && error.status === 403
-    )
+    error => {
+      assert.equal(error.code, 'machine_destination_denied');
+      assert.equal(error.status, 403);
+      return true;
+    }
   );
 
   const deniedEvents = await remoteOnlyClient.call('events.list', {
