@@ -19,6 +19,7 @@
     "intent:reconcile": "node src/intentctl.mjs reconcile",
     "intent:prepare-activation": "node src/intentctl.mjs prepare-activation",
     "intent:prepare-attestation": "node src/intentctl.mjs prepare-attestation",
+    "intent:lifecycle:drill": "node src/intent-lifecycle-drill.mjs",
     "bootstrap": "node src/bootstrap.mjs",
     "dev": "node src/dev.mjs",
     "provision:production": "node src/provision-production.mjs",
