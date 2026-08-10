@@ -158,7 +158,7 @@ function appendPassingAttestation(store, activation) {
   });
 }
 
-test('current active Intent proposal exposes full-chain verified read-only state', async t => {
+test('current active Intent proposal exposes minimized full-chain verified read-only state', async t => {
   const store = await storeFixture(t);
   const activation = buildIntentActivationRecord(contractFixture(), {
     kernel_version: '0.12.0-dev.3',
@@ -174,9 +174,15 @@ test('current active Intent proposal exposes full-chain verified read-only state
   const page = store.listProposals({ limit: 100 });
   const proposal = page.find(item => item.proposal_id === 'proposal:intent-read');
   assert.ok(proposal.intent_state);
-  assert.equal(proposal.intent_state.activation.contract_id, 'intent-read-fixture');
+  assert.equal(proposal.intent_state.schema, 'axiom-intent-governance-state.v1');
+  assert.equal(proposal.intent_state.contract_id, 'intent-read-fixture');
+  assert.equal(proposal.intent_state.activation_digest, activation.activation_digest);
   assert.equal(proposal.intent_state.chain.verification_mode, 'full');
-  assert.equal(proposal.intent_state.assessment.requirements[0].status, 'pass');
+  const requirement = proposal.intent_state.assessment.requirements[0];
+  assert.equal(requirement.status, 'pass');
+  assert.equal(requirement.independent_verifier_count, 1);
+  assert.equal('independent_verifiers' in requirement, false);
+  assert.equal('attestation_ids' in requirement, false);
   assert.equal(proposal.intent_state.reconciliation.state, 'converged');
   assert.equal(proposal.intent_state.execution_authorized, false);
 });
@@ -225,14 +231,15 @@ test('superseded Intent proposal does not expose current state as its own', asyn
   const oldProposal = page.find(item => item.proposal_id === 'proposal:intent-v1');
   const currentProposal = page.find(item => item.proposal_id === 'proposal:intent-v2');
   assert.equal('intent_state' in oldProposal, false);
-  assert.equal(currentProposal.intent_state.activation.activation_digest, second.activation_digest);
+  assert.equal(currentProposal.intent_state.activation_digest, second.activation_digest);
   assert.equal(currentProposal.intent_state.execution_authorized, false);
 });
 
 test('intent-state CLI reads existing governance route and preserves authorization failures', async () => {
   const state = {
-    schema: 'axiom-intent-grid-state.v1',
-    activation: { contract_id: 'intent-read-fixture' },
+    schema: 'axiom-intent-governance-state.v1',
+    contract_id: 'intent-read-fixture',
+    activation_digest: 'a'.repeat(64),
     execution_authorized: false
   };
   const options = {
