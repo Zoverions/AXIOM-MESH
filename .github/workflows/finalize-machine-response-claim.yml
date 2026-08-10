@@ -74,8 +74,8 @@ jobs:
           );
           await replaceOnce(
             'README.md',
-            'Authenticated Gateway request-size, request-rate, and concurrency ceilings are enforced and evidenced. Its schema also reserves destination and response-size constraints, but those are not current live enforcement claims until their correct runtime paths and evidence are completed.',
-            'Authenticated Gateway request-size, request-rate, concurrency, and response-size ceilings are enforced and evidenced. Its schema still reserves destination constraints, but destination is not a current live enforcement claim until the correct effect/adapter path and evidence are completed.'
+            'Authenticated Gateway request-size, request-rate, and\nconcurrency ceilings are enforced and evidenced. Its schema also reserves\ndestination and response-size constraints, but those are not current live\nenforcement claims until their correct runtime paths and evidence are completed.',
+            'Authenticated Gateway request-size, request-rate, concurrency, and response-size\nceilings are enforced and evidenced. Its schema still reserves destination\nconstraints, but destination is not a current live enforcement claim until the\ncorrect effect/adapter path and evidence are completed.'
           );
           await replaceOnce(
             'CONSTITUTION.md',
