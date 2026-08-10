@@ -460,7 +460,7 @@ function receiptBody(raw, { prepared, observedAt }) {
     'schema', 'operator', 'effect_id', 'effect_digest', 'plan_id', 'plan_digest',
     'repository', 'base_branch', 'base_sha', 'branch', 'head_sha', 'pull_request_number',
     'pull_request_id', 'applied_files', 'observed_at', 'already_applied',
-    'external_effect_executed', 'mapping_installed_observed', 'merge_performed',
+    'external_effect_executed', 'pull_request_created_observed', 'merge_performed',
     'base_branch_content_changed', 'execution_authorized', 'remediation_converged'
   ]), 'external effect receipt body');
   if (value.schema !== EXTERNAL_EFFECT_RECEIPT_SCHEMA) {
@@ -484,7 +484,7 @@ function receiptBody(raw, { prepared, observedAt }) {
   if (value.branch !== expectedBranch) throw new ValidationError('repository effect receipt branch is not deterministic');
   if (
     value.external_effect_executed !== true
-    || value.mapping_installed_observed !== true
+    || value.pull_request_created_observed !== true
     || value.merge_performed !== false
     || value.base_branch_content_changed !== false
     || value.execution_authorized !== false
@@ -517,7 +517,7 @@ function receiptBody(raw, { prepared, observedAt }) {
     observed_at: observed,
     already_applied: value.already_applied === true,
     external_effect_executed: true,
-    mapping_installed_observed: true,
+    pull_request_created_observed: true,
     merge_performed: false,
     base_branch_content_changed: false,
     execution_authorized: false,
@@ -545,6 +545,9 @@ export function buildRepositoryDocsEffectReceipt({
     operatorPublicKey,
     now: observed_at
   });
+  if (identity.keyId !== prepared.plan.attestation.key_id) {
+    throw new ValidationError('repository effect receipt signer must match the operator that signed the plan');
+  }
   const body = receiptBody({
     schema: EXTERNAL_EFFECT_RECEIPT_SCHEMA,
     operator: 'repository-operator',
@@ -563,7 +566,7 @@ export function buildRepositoryDocsEffectReceipt({
     observed_at,
     already_applied,
     external_effect_executed: true,
-    mapping_installed_observed: true,
+    pull_request_created_observed: true,
     merge_performed: false,
     base_branch_content_changed: false,
     execution_authorized: false,
