@@ -60,7 +60,7 @@ export function validatePolicy(policy) {
       throw new ValidationError(`Policy action uses a reserved prototype identifier: ${action}`);
     }
     if (!['allow', 'deny'].includes(rule.decision)) throw new ValidationError(`Invalid decision for ${action}`);
-    if (!(rule.risk in RISK_ORDER)) throw new ValidationError(`Invalid risk for ${action}`);
+    if (!Object.hasOwn(RISK_ORDER, rule.risk)) throw new ValidationError(`Invalid risk for ${action}`);
     if (
       rule.http_status !== undefined
       && (!Number.isSafeInteger(rule.http_status) || rule.http_status < 400 || rule.http_status > 599)
