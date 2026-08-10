@@ -8,7 +8,14 @@ import {
 } from '../src/lib/policy.mjs';
 import { normalizeMachinePrincipalDefinition } from '../src/lib/machine-principal.mjs';
 import { buildMachineDiscovery } from '../src/lib/machine-discovery.mjs';
-import { createIncidentPlan } from '../src/incident-response.mjs';
+import {
+  createIncidentPlan,
+  loadIncidentResponsePolicy
+} from '../src/incident-response.mjs';
+import {
+  loadEducationContract,
+  validateEducationIntent
+} from '../src/domain/education-contract.mjs';
 
 function allowedRule(overrides = {}) {
   return {
@@ -20,8 +27,8 @@ function allowedRule(overrides = {}) {
   };
 }
 
-function machine(overrides = {}) {
-  return normalizeMachinePrincipalDefinition({
+function machineDefinition(overrides = {}) {
+  return {
     id: 'agent.audit-hardening',
     type: 'agent',
     sponsor: 'owner.audit-hardening',
@@ -48,7 +55,11 @@ function machine(overrides = {}) {
       delegation: { allowed: false, max_depth: 0 }
     },
     ...overrides
-  });
+  };
+}
+
+function machine(overrides = {}) {
+  return normalizeMachinePrincipalDefinition(machineDefinition(overrides));
 }
 
 test('policy and machine action identifiers reject prototype collisions', () => {
@@ -59,35 +70,34 @@ test('policy and machine action identifiers reject prototype collisions', () => 
     }
   }), /prototype|reserved|action/i);
 
-  assert.throws(() => machine({
-    constraints: {
-      ...machine().constraints,
-      actions: ['constructor']
+  const definition = machineDefinition();
+  definition.constraints.actions = ['constructor'];
+  assert.throws(
+    () => normalizeMachinePrincipalDefinition(definition),
+    /prototype|reserved|actions/i
+  );
+});
+
+test('policy risk validation rejects inherited Object prototype names', () => {
+  assert.throws(() => validatePolicy({
+    version: 'prototype-risk',
+    actions: {
+      'system.echo': allowedRule({ risk: 'constructor' })
     }
-  }), /prototype|reserved|actions/i);
+  }), /Invalid risk/);
 });
 
 test('machine scope grammar rejects unsupported glob syntax', () => {
-  assert.throws(() => normalizeMachinePrincipalDefinition({
-    id: 'agent.glob-scope',
-    type: 'agent',
-    sponsor: 'owner.glob-scope',
-    roles: ['researcher'],
-    scopes: ['audit:*'],
-    lifetime: 'session',
-    expires_at: '2099-01-01T00:00:00.000Z',
-    runtime: {
-      id: 'runtime.glob-scope',
-      kind: 'local-process',
-      software_digest: 'b'.repeat(64)
-    },
-    constraints: {
-      actions: ['system.echo'],
-      purposes: ['test.conformance'],
-      destinations: ['local'],
-      delegation: { allowed: false, max_depth: 0 }
-    }
-  }), /wildcard scope|glob/i);
+  const definition = machineDefinition();
+  definition.id = 'agent.glob-scope';
+  definition.sponsor = 'owner.glob-scope';
+  definition.runtime.id = 'runtime.glob-scope';
+  definition.runtime.software_digest = 'b'.repeat(64);
+  definition.scopes = ['audit:*'];
+  assert.throws(
+    () => normalizeMachinePrincipalDefinition(definition),
+    /wildcard scope|glob/i
+  );
 });
 
 test('explicit policy denial precedes missing-scope diagnostics', () => {
@@ -141,13 +151,15 @@ test('deny-dominant merge returns a policy that passes full validation', () => {
 
 test('machine discovery never resolves inherited policy action properties', () => {
   const principal = machine();
-  const policyObject = {
+  const engine = new PolicyEngine({
     version: 'discovery-own-only',
     actions: {
       'system.echo': allowedRule()
     }
-  };
-  const engine = new PolicyEngine(policyObject);
+  });
+
+  // Simulate a corrupted already-normalized principal so this test exercises
+  // discovery's own-property boundary rather than only principal validation.
   principal.constraints.actions = ['constructor', 'system.echo'];
   const discovery = buildMachineDiscovery({
     principal,
@@ -157,62 +169,29 @@ test('machine discovery never resolves inherited policy action properties', () =
   assert.deepEqual(discovery.actions.map(item => item.id), ['system.echo']);
 });
 
-test('incident plans reject inherited action-map names', () => {
-  const policy = {
-    schema: 'axiom-incident-response-policy.v1',
-    version: 1,
-    severity_order: ['SEV-1', 'SEV-2', 'SEV-3', 'SEV-4'],
-    required_roles: [
-      'incident_commander',
-      'security_lead',
-      'operations_lead',
-      'communications_lead',
-      'evidence_custodian',
-      'independent_reviewer'
-    ],
-    closure_requirements: [
-      'containment_verified',
-      'recovery_verified',
-      'evidence_manifested',
-      'communications_recorded',
-      'retrospective_scheduled',
-      'independent_review_required'
-    ],
-    actions: {
-      declare_incident: {
-        category: 'communicate',
-        authority_effect: 'communicate',
-        owner_role: 'incident_commander'
-      }
-    },
-    severities: {
-      'SEV-1': { label: 'critical', activation_minutes: 1, containment_target_minutes: 1, update_interval_minutes: 1, triggers: ['evidence_integrity_failure'], required_actions: ['declare_incident'] },
-      'SEV-2': { label: 'high', activation_minutes: 2, containment_target_minutes: 2, update_interval_minutes: 2, triggers: ['sev2_signal'], required_actions: ['declare_incident'] },
-      'SEV-3': { label: 'moderate', activation_minutes: 3, containment_target_minutes: 3, update_interval_minutes: 3, triggers: ['sev3_signal'], required_actions: ['declare_incident'] },
-      'SEV-4': { label: 'low', activation_minutes: 4, containment_target_minutes: 4, update_interval_minutes: 4, triggers: ['sev4_signal'], required_actions: ['declare_incident'] }
-    },
-    frameworks: {
-      nist: 'NIST CSF 2.0',
-      iso: 'ISO/IEC 27035'
-    }
-  };
+test('education intent validation rejects inherited contract action properties', async () => {
+  const contract = await loadEducationContract();
+  assert.throws(
+    () => validateEducationIntent(contract, 'constructor', {}),
+    /unknown education action constructor/
+  );
+});
 
-  // This fixture is deliberately incomplete for the full policy validator; the
-  // assertion targets the map-access rule directly through createIncidentPlan.
+test('incident plans reject inherited action-map names after canonical validation', async () => {
+  const policy = await loadIncidentResponsePolicy();
+  const severity = policy.severities['SEV-1'];
+  const roles = Object.fromEntries(policy.required_roles.map(role => [
+    role,
+    `exercise-role:${role.replaceAll('_', '-')}`
+  ]));
+
   assert.throws(() => createIncidentPlan(policy, {
     incidentId: 'incident_abcdefgh',
     sourceRevision: 'a'.repeat(40),
     declaredAt: '2026-08-10T00:00:00.000Z',
-    signals: ['evidence_integrity_failure'],
+    signals: [severity.triggers[0]],
     affectedAssetClasses: ['service_identity'],
-    roles: {
-      incident_commander: 'exercise-role:commander',
-      security_lead: 'exercise-role:security',
-      operations_lead: 'exercise-role:operations',
-      communications_lead: 'exercise-role:communications',
-      evidence_custodian: 'exercise-role:evidence',
-      independent_reviewer: 'exercise-role:reviewer'
-    },
-    actions: ['constructor']
-  }), /unknown|missing required actions|invalid/i);
+    roles,
+    actions: [...severity.required_actions, 'constructor']
+  }), /Incident plan action is unknown: constructor/);
 });
