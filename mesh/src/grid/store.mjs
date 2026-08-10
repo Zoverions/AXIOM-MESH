@@ -280,7 +280,7 @@ export class GridStore extends CheckpointGridStore {
     return events;
   }
 
-  getIntentContractAssessment(contractId, { now = new Date().toISOString() } = {}) {
+  requireIntentEvidenceChain() {
     const chain = this.verifyFullChain();
     if (!chain.valid) {
       throw new AxiomError(
@@ -289,6 +289,12 @@ export class GridStore extends CheckpointGridStore {
         503
       );
     }
+    return chain;
+  }
+
+  getIntentContractAssessmentFromVerifiedState(contractId, {
+    now = new Date().toISOString()
+  } = {}) {
     const current = this.currentIntentActivation(contractId);
     if (!current) {
       throw new AxiomError(
@@ -327,5 +333,33 @@ export class GridStore extends CheckpointGridStore {
       execution_authorized: false,
       non_claim: 'Reconciliation is advisory and cannot authorize or execute an effect in AXIOM Intent v0.2.'
     };
+  }
+
+  getIntentContractAssessment(contractId, options = {}) {
+    this.requireIntentEvidenceChain();
+    return this.getIntentContractAssessmentFromVerifiedState(contractId, options);
+  }
+
+  listProposals(options = {}) {
+    const proposals = super.listProposals(options);
+    const activeIntentProposals = proposals.filter(proposal => (
+      ['active', 'verified'].includes(proposal.status)
+      && this.isIntentActivationAction(proposal.action_json)
+    ));
+    if (!activeIntentProposals.length) return proposals;
+
+    this.requireIntentEvidenceChain();
+    const statesByProposal = new Map();
+    const contractIds = [...new Set(activeIntentProposals.map(proposal => (
+      normalizeIntentActivationRecord(proposal.action_json.payload.activation).contract_id
+    )))];
+    for (const contractId of contractIds) {
+      const state = this.getIntentContractAssessmentFromVerifiedState(contractId);
+      statesByProposal.set(state.governance.proposal_id, state);
+    }
+    return proposals.map(proposal => {
+      const intentState = statesByProposal.get(proposal.proposal_id);
+      return intentState ? { ...proposal, intent_state: intentState } : proposal;
+    });
   }
 }
