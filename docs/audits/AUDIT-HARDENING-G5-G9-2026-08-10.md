@@ -15,9 +15,9 @@ runnable capability.
 - **G-6:** constrained-machine scope syntax must match the exact-match scope
   evaluator; unsupported glob syntax must fail validation rather than silently
   matching nothing.
-- **G-7:** deny-egress evidence must bind the network-namespace and Compose
-  `network_mode: none` facts to measured/derived provenance rather than literal
-  booleans outside the required-check inventory.
+- **G-7:** deny-egress runtime evidence must replace literal namespace claims
+  with measured provenance, while static Compose topology remains verified by
+  the release/deployment gate that has access to the actual Compose source.
 - **G-8:** an explicit policy deny must be evaluated before missing-scope
   diagnostics so audit evidence records the governing denial and does not leak
   irrelevant scope names.
@@ -38,6 +38,21 @@ incident policy and satisfy its complete SEV-1 requirements before adding the
 inherited `constructor` action. This prevents the test from passing because of
 an unrelated incomplete fixture. The Education regression similarly uses the
 pinned domain contract and proves inherited action names remain unknown.
+
+## G-7 resolution boundary
+
+Review of the candidate image found that `compose.production.yml` is not
+present inside the runtime container. The first hardening draft would therefore
+have turned a source-policy fact into an impossible runtime read. That draft was
+rejected before final verification.
+
+The final design measures `/proc/self/ns/net` in runtime evidence, binds the
+observed namespace identity by digest, and removes
+`compose_network_mode_none_required` from runtime evidence entirely. The actual
+Compose requirement remains enforced by the release/deployment verifier, which
+has access to the checked-out Compose source, requires `network_mode: "none"`,
+and binds the Compose digest. Tests reject both a forged namespace binding and
+reintroduction of the old static Compose boolean into runtime evidence.
 
 ## Documentation and maintenance clarifications
 
