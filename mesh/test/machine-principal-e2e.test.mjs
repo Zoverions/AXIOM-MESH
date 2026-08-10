@@ -158,8 +158,8 @@ test('constrained agent executes an authorized intent and returns bound authorit
     }
   );
 
-  // Response-size evidence uses a separate stack, so its proof is independent
-  // of the byte size of the event page and the rate-budget sequence above.
+  // Final claim anchor: response-size enforcement uses an isolated stack so the
+  // proof is independent of event-page bytes and rate-budget sequencing above.
   const { client: responseBoundClient } = await startMachineStack(
     t,
     'axiom-machine-response-bound-e2e-',
