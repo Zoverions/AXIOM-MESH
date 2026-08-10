@@ -89,7 +89,8 @@ test('constrained agent executes an authorized intent and returns bound authorit
   const { client } = await startMachineStack(t, 'axiom-machine-e2e-', {
     budgets: {
       max_request_bytes: 1_024,
-      max_requests_per_minute: 3
+      max_requests_per_minute: 4,
+      max_response_bytes: 8_192
     }
   });
   const body = {
@@ -128,10 +129,19 @@ test('constrained agent executes an authorized intent and returns bound authorit
     && event.subject === result.intent_id
   ));
   assert.ok(accepted);
-  // Final claim verification anchor: the accepted invocation carries the live concurrency ceiling.
   assert.equal(accepted.payload.invocation.limits.ingress.max_concurrent_requests, 1);
+  assert.equal(accepted.payload.invocation.limits.ingress.max_response_bytes, 8_192);
 
-  // The capability binding below proves all three claimed ingress ceilings.
+  await assert.rejects(
+    () => client.call('capabilities.list'),
+    error => {
+      assert.equal(error.code, 'machine_response_budget_exceeded');
+      assert.equal(error.status, 502);
+      return true;
+    }
+  );
+
+  // The capability binding below proves all four claimed ingress ceilings.
   await assert.rejects(
     () => client.call('intents.submit', {
       body: {
