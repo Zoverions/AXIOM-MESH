@@ -7,11 +7,17 @@ import {
 } from '../src/intent-lifecycle-drill.mjs';
 
 const REVISION = /^[a-f0-9]{40}$/;
+let evidencePromise;
 
-test('AXIOM Intent lifecycle traverses the real four-service stack and emits signed evidence', async () => {
-  const evidence = await runIntentLifecycleDrill({
+function lifecycleEvidence() {
+  evidencePromise ??= runIntentLifecycleDrill({
     sourceRevision: process.env.GITHUB_SHA
   });
+  return evidencePromise;
+}
+
+test('AXIOM Intent lifecycle traverses the real four-service stack and emits signed evidence', async () => {
+  const evidence = await lifecycleEvidence();
   const verified = verifyIntentLifecycleEvidence(evidence);
   assert.equal(verified.valid, true);
   assert.equal(verified.commit_bound, REVISION.test(process.env.GITHUB_SHA ?? ''));
@@ -31,9 +37,7 @@ test('AXIOM Intent lifecycle traverses the real four-service stack and emits sig
 });
 
 test('Intent lifecycle evidence rejects tampering and false execution/promotion claims', async () => {
-  const evidence = await runIntentLifecycleDrill({
-    sourceRevision: process.env.GITHUB_SHA
-  });
+  const evidence = await lifecycleEvidence();
 
   const tamperedCheck = structuredClone(evidence);
   tamperedCheck.checks.grid_chain_verified_after_lifecycle = false;
