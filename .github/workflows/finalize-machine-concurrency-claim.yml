@@ -83,13 +83,13 @@ jobs:
 
           await replaceExact(
             'README.md',
-            `  execution-time ceiling, and authenticated Gateway request-size and request-rate ceilings;`,
-            `  execution-time ceiling, and authenticated Gateway request-size, request-rate, and concurrency ceilings;`
+            `  purpose ceilings, runtime binding, expiry, non-delegation, an execution-time\n  ceiling, and authenticated Gateway request-size and request-rate ceilings;`,
+            `  purpose ceilings, runtime binding, expiry, non-delegation, an execution-time\n  ceiling, and authenticated Gateway request-size, request-rate, and concurrency ceilings;`
           );
           await replaceExact(
             'README.md',
-            `Authenticated Gateway request-size and request-rate ceilings are enforced and evidenced. Its schema also reserves destination, concurrency, and response-size constraints, but those are not current live enforcement claims until their correct runtime paths and evidence are completed.`,
-            `Authenticated Gateway request-size, request-rate, and concurrency ceilings are enforced and evidenced. Its schema also reserves destination and response-size constraints, but those are not current live enforcement claims until their correct runtime paths and evidence are completed.`
+            `autonomous-agent runtime. Authenticated Gateway request-size and request-rate\nceilings are enforced and evidenced. Its schema also reserves destination,\nconcurrency, and response-size constraints, but those are not current live\nenforcement claims until their correct runtime paths and evidence are completed.`,
+            `autonomous-agent runtime. Authenticated Gateway request-size, request-rate, and\nconcurrency ceilings are enforced and evidenced. Its schema also reserves\ndestination and response-size constraints, but those are not current live\nenforcement claims until their correct runtime paths and evidence are completed.`
           );
           await replaceExact(
             'CONSTITUTION.md',
