@@ -105,6 +105,7 @@ test('real Gateway exposes only bounded machine requestability and leaves regist
   assert.equal(discovery.limits.max_concurrent_requests, 2);
   assert.equal(discovery.limits.delegation_allowed, false);
   assert.match(discovery.digest, /^[a-f0-9]{64}$/);
+  assert.deepEqual(Object.keys(discovery.policy).sort(), ['digest', 'version']);
   assert.equal(JSON.stringify(discovery).includes('memory.put'), false);
   assert.equal(JSON.stringify(discovery).includes('system.hash'), false);
   assert.equal(JSON.stringify(discovery).includes(AGENT_TOKEN), false);
