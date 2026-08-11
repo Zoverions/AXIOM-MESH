@@ -2,9 +2,9 @@
 # AXIOM-MESH Capability Status
 
 Registry schema: `axiom-capabilities.v1`
-Kernel version: `0.12.0-dev.3`
+Kernel version: `0.12.0-dev.4`
 Evidence verified: `2026-08-10`
-Registry digest: `90e07a5f6ad577d4733e3c7db238cc61c49e9e0d593d78a882409195cc5f5506`
+Registry digest: `ccde830a01ad85ffe6a4c6904e45973ef914477e534430e52c083ac997e84dd1`
 
 Only **implemented** capabilities are runnable claims.
 
