@@ -26,7 +26,7 @@ with lifecycle scripts disabled, proves they did not change, and runs the
 kernel and release gates. It creates no production credentials and makes no
 deployment claim.
 
-The authenticated Gateway surface also has a versioned 27-route client
+The authenticated Gateway surface also has a versioned 29-route client
 contract and zero-dependency same-origin client. It enforces exact route and
 input inventories, bounded timeouts and response size, cancellation,
 idempotent intent-result compatibility, explicit errors, and no direct access

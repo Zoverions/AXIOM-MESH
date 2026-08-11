@@ -120,6 +120,7 @@ export async function verifyReleaseReadiness() {
     unitCompose: join(MESH_ROOT, 'compose.units.yml'),
     productionDocs: join(MESH_ROOT, 'PRODUCTION.md'),
     workflow: join(REPOSITORY_ROOT, '.github', 'workflows', 'kernel.yml'),
+    windowsWorkflow: join(REPOSITORY_ROOT, '.github', 'workflows', 'windows.yml'),
     benchmarkWorkflow: join(
       REPOSITORY_ROOT,
       '.github',
@@ -155,6 +156,7 @@ export async function verifyReleaseReadiness() {
     unitCompose,
     productionDocs,
     workflow,
+    windowsWorkflow,
     repositoryIgnore
   ] = await Promise.all([
     readJson(paths.registry),
@@ -183,6 +185,7 @@ export async function verifyReleaseReadiness() {
     readFile(paths.unitCompose, 'utf8'),
     readFile(paths.productionDocs, 'utf8'),
     readFile(paths.workflow, 'utf8'),
+    readFile(paths.windowsWorkflow, 'utf8'),
     readFile(paths.repositoryIgnore, 'utf8')
   ]);
   const registryResult = validateCapabilityRegistry(registry);
@@ -308,6 +311,7 @@ export async function verifyReleaseReadiness() {
       workflow,
       repositoryIgnore
     }),
+    windows_compatibility: verifyWindowsWorkflow(windowsWorkflow),
     service_network_policy: {
       schema: serviceNetwork.schema,
       policy_digest: serviceNetwork.policy_digest,
@@ -337,7 +341,8 @@ export async function verifyReleaseReadiness() {
     .sort();
   const governedWorkflows = [
     'chain-verification-benchmark.yml',
-    'kernel.yml'
+    'kernel.yml',
+    'windows.yml'
   ];
   if (canonicalJson(activeWorkflows) !== canonicalJson(governedWorkflows)) {
     throw new ValidationError('Unsupported legacy GitHub workflows are still active');
@@ -367,6 +372,7 @@ export async function verifyReleaseReadiness() {
     paths.unitCompose,
     paths.productionDocs,
     paths.workflow,
+    paths.windowsWorkflow,
     paths.benchmarkWorkflow,
     paths.repositoryIgnore,
     ...CANONICAL_DOCUMENTS.map(path => join(REPOSITORY_ROOT, path))
@@ -466,6 +472,43 @@ export async function verifyReleaseReadiness() {
     inputs: inputs.length,
     sbom,
     provenance
+  };
+}
+
+export function verifyWindowsWorkflow(workflow) {
+  if (typeof workflow !== 'string') {
+    throw new ValidationError('Windows compatibility workflow is missing');
+  }
+  for (const required of [
+    'runs-on: windows-2025',
+    'node-version: "24.18.0"',
+    'permissions:',
+    'contents: read',
+    'persist-credentials: false',
+    'npm ci --ignore-scripts',
+    'npm --prefix mesh ci --ignore-scripts',
+    'npm run check'
+  ]) {
+    if (!workflow.includes(required)) {
+      throw new ValidationError(`Windows compatibility workflow is missing: ${required}`);
+    }
+  }
+  const actionReferences = [...workflow.matchAll(/^\s*-\s+uses:\s+([^\s#]+)/gm)]
+    .map(match => match[1]);
+  if (
+    actionReferences.length === 0
+    || actionReferences.some(reference => !/@[a-f0-9]{40}$/.test(reference))
+    || workflow.includes('runs-on: windows-latest')
+  ) {
+    throw new ValidationError(
+      'Windows compatibility workflow contains a mutable action or runner reference'
+    );
+  }
+  return {
+    runner: 'windows-2025',
+    node_version: '24.18.0',
+    install_scripts_allowed: false,
+    workflow_sha256: sha256(workflow)
   };
 }
 

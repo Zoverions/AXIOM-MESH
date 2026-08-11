@@ -18,7 +18,8 @@ import { loadDataProtector } from '../src/lib/protector.mjs';
 import { provisionProduction } from '../src/provision-production.mjs';
 import {
   validateSupportedSourceBoundary,
-  verifyProductionDeployment
+  verifyProductionDeployment,
+  verifyWindowsWorkflow
 } from '../src/release.mjs';
 import { runProductionSupervisor } from '../src/supervisor.mjs';
 
@@ -434,6 +435,27 @@ test('production deployment policy is digest-pinned and fail-closed', async () =
     workflow,
     repositoryIgnore
   }), /invalid or weakened/);
+});
+
+test('Windows compatibility workflow is immutable and release-governed', async () => {
+  const workflow = await readFile(
+    new URL('../../.github/workflows/windows.yml', import.meta.url),
+    'utf8'
+  );
+  const result = verifyWindowsWorkflow(workflow);
+  assert.equal(result.runner, 'windows-2025');
+  assert.equal(result.node_version, '24.18.0');
+  assert.equal(result.install_scripts_allowed, false);
+  assert.match(result.workflow_sha256, /^[a-f0-9]{64}$/);
+  assert.throws(
+    () => verifyWindowsWorkflow(
+      workflow.replace(
+        'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020',
+        'actions/setup-node@v7'
+      )
+    ),
+    /mutable action or runner/
+  );
 });
 
 test('release source boundary rejects legacy runtimes and dependency manifests', () => {

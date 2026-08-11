@@ -2,7 +2,7 @@
 
 **Status:** canonical strategic roadmap
 
-**Updated:** 2026-07-30
+**Updated:** 2026-08-11
 
 **Planning horizon:** active build `0.12.0-dev.3` through evidence-gated 1.0 and isolated frontier incubation
 
@@ -217,7 +217,7 @@ support boundaries are promoted.
 
 ### 0.12.1 - human shell
 
-- maintain the implemented versioned Gateway client with exact 27-route
+- maintain the implemented versioned Gateway client with exact 29-route
   compatibility, schema, error, idempotency, cancellation, and same-origin
   boundary checks;
 - extend the experimental loopback-only `apps/axiom-one/` PWA foundation into

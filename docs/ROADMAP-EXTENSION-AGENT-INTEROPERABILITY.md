@@ -1,6 +1,6 @@
 # AXIOM-MESH Roadmap Extension — Agent Interoperability and Capability Substrate
 
-**Status:** canonical candidate strategic extension to `docs/ROADMAP.md`; branch review only until merged
+**Status:** canonical strategic extension to `docs/ROADMAP.md`; included in the supported documentation corpus
 
 **Adopted for branch review:** 2026-08-09
 

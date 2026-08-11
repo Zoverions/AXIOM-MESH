@@ -8,6 +8,7 @@ import {
   validateServiceNetworkPolicy
 } from './lib/service-network-policy.mjs';
 import { ACTIVE_GATEWAY_CLIENT_CONTRACT } from './lib/gateway-client-contract.mjs';
+import { validateCapabilityRegistry } from './check-registry.mjs';
 
 export const CANONICAL_DOCUMENTS = Object.freeze([
   'README.md',
@@ -378,7 +379,11 @@ export async function verifyCanonicalDocumentation(repositoryRoot = dirname(MESH
   if (normalize(contents.get('SECURITY.md')) !== normalize(contents.get('.github/SECURITY.md'))) {
     throw new ValidationError('Root and GitHub security policies have drifted');
   }
-  verifyComputedDocumentationClaims(contents);
+  const capabilityRegistry = JSON.parse(await readFile(
+    resolve(repositoryRoot, 'mesh/config/capabilities.json'),
+    'utf8'
+  ));
+  verifyComputedDocumentationClaims(contents, capabilityRegistry);
 
   let checkedLinks = 0;
   for (const [relativePath, content] of contents) {
@@ -408,17 +413,30 @@ export async function verifyCanonicalDocumentation(repositoryRoot = dirname(MESH
   };
 }
 
-function verifyComputedDocumentationClaims(contents) {
+function verifyComputedDocumentationClaims(contents, capabilityRegistry) {
   const network = validateServiceNetworkPolicy(ACTIVE_SERVICE_NETWORK_POLICY);
   const gatewayRoutes = ACTIVE_GATEWAY_CLIENT_CONTRACT.routes.length;
+  const capabilities = validateCapabilityRegistry(capabilityRegistry);
   const claims = [
     ['README.md', `permits only ${network.routes} current internal`],
     ['docs/PRODUCTION-GRADE.md', `permits only ${network.routes} current internal`],
+    ['docs/PRODUCTION-GRADE.md', `versioned ${gatewayRoutes}-route client`],
     ['mesh/PRODUCTION.md', `policy additionally authorizes only ${network.routes} exact caller/destination/method/route`],
     ['docs/rebuild/PRODUCT-DEFINITION.md', `authorizes only ${network.routes} exact caller`],
     ['docs/PROJECT-STATUS-2026.md', `default-deny ${network.routes}-route application`],
     ['docs/operations/GATEWAY-CLIENT-CONTRACT.md', `covers all ${gatewayRoutes} authenticated \`/v1/\` Gateway routes`],
-    ['docs/PROJECT-STATUS-2026.md', `implemented for all ${gatewayRoutes} authenticated routes`]
+    ['docs/PROJECT-STATUS-2026.md', `implemented for all ${gatewayRoutes} authenticated routes`],
+    ['docs/MASTER-TODO.md', `cover all ${gatewayRoutes} authenticated routes`],
+    ['docs/MASTER-TODO.md', `Default-deny ${network.routes}-route application policy`],
+    ['docs/ROADMAP.md', `exact ${gatewayRoutes}-route`],
+    ['docs/PRODUCTION-READINESS-TRACKER.md', `Exact default-deny ${network.routes}-route policy`],
+    ['docs/PRODUCTION-READINESS-TRACKER.md', `exact ${gatewayRoutes}-route machine contract`],
+    ['docs/rebuild/SOURCE-TRACEABILITY.md', `All ${gatewayRoutes} authenticated Gateway routes are versioned`],
+    ['docs/rebuild/SOURCE-TRACEABILITY.md', `Default deny, ${network.routes} exact routes`],
+    [
+      'docs/rebuild/LONG-HORIZON-CAPABILITY-MAP.md',
+      `contains ${capabilities.capabilities} tracked capabilities, including ${capabilities.counts.implemented} marked implemented`
+    ]
   ];
   for (const [path, expected] of claims) {
     if (!contents.get(path)?.includes(expected)) {
