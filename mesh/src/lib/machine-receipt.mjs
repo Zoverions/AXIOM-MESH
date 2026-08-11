@@ -4,6 +4,7 @@ import {
   digestObject
 } from './canonical.mjs';
 import { verifyObjectSignature } from './identity.mjs';
+import { normalizeContextTaskBindingIdentity } from './context-task-binding.mjs';
 
 export const MACHINE_INTENT_RECEIPT_SCHEMA = 'axiom-machine-intent-receipt.v1';
 export const MACHINE_INTENT_RECEIPT_STATEMENT_SCHEMA = 'axiom-machine-intent-receipt-statement.v1';
@@ -89,6 +90,29 @@ export function buildMachineIntentReceipt({
       409
     );
   }
+  const contextBinding = acceptedPayload.invocation?.request?.context_binding === undefined
+    ? null
+    : normalizeContextTaskBindingIdentity(
+        acceptedPayload.invocation.request.context_binding
+      );
+  if (contextBinding && (
+    acceptedPayload.context?.context_view_digest !== contextBinding.view_digest
+    || acceptedPayload.context?.context_projection_digest !== contextBinding.projection_digest
+    || acceptedPayload.context?.context_receipt_digest !== contextBinding.receipt_digest
+  )) {
+    throw new AxiomError(
+      'receipt_evidence_mismatch',
+      'Accepted context evidence does not match the invocation context binding',
+      409
+    );
+  }
+  if (!contextBinding && acceptedPayload.context !== undefined) {
+    throw new AxiomError(
+      'receipt_evidence_mismatch',
+      'Accepted context evidence has no invocation context binding',
+      409
+    );
+  }
   if (terminal.payload?.intent_id !== intent.intent_id) {
     throw new AxiomError(
       'receipt_evidence_mismatch',
@@ -97,7 +121,7 @@ export function buildMachineIntentReceipt({
     );
   }
 
-  const outcome = terminalOutcome(intent, terminal.payload, acceptedPayload);
+  const outcome = terminalOutcome(intent, terminal.payload, acceptedPayload, contextBinding);
   const statement = {
     schema: MACHINE_INTENT_RECEIPT_STATEMENT_SCHEMA,
     kernel_version: kernelVersion,
@@ -115,7 +139,8 @@ export function buildMachineIntentReceipt({
     },
     authority: {
       invocation_digest: acceptedPayload.invocation_digest,
-      machine_authority_digest: acceptedPayload.machine_authority.authority_digest
+      machine_authority_digest: acceptedPayload.machine_authority.authority_digest,
+      ...(contextBinding ? { context: contextBinding } : {})
     },
     outcome,
     evidence_events: [accepted, terminal].map(eventAnchor),
@@ -124,6 +149,7 @@ export function buildMachineIntentReceipt({
       owner_bound: true,
       request_bound: true,
       terminal_bound: true,
+      context_bound: Boolean(contextBinding),
       event_signatures_and_hashes_verified: true,
       chain_verified: true
     }
@@ -176,7 +202,7 @@ export function verifyMachineIntentReceipt(receipt, gridPublicKey) {
   };
 }
 
-function terminalOutcome(intent, payload, acceptedPayload) {
+function terminalOutcome(intent, payload, acceptedPayload, contextBinding) {
   if (intent.status === 'completed') {
     if (!intent.result_json || !payload?.result) {
       throw new AxiomError('receipt_evidence_incomplete', 'Completed intent result evidence is missing', 409);
@@ -192,6 +218,17 @@ function terminalOutcome(intent, payload, acceptedPayload) {
         !== acceptedPayload.machine_authority.authority_digest
     ) {
       throw new AxiomError('receipt_evidence_mismatch', 'Completed result authority evidence does not match acceptance', 409);
+    }
+    if (contextBinding && (
+      payload.result.evidence?.context_view_digest !== contextBinding.view_digest
+      || payload.result.evidence?.context_projection_digest !== contextBinding.projection_digest
+      || payload.result.evidence?.context_receipt_digest !== contextBinding.receipt_digest
+    )) {
+      throw new AxiomError(
+        'receipt_evidence_mismatch',
+        'Completed result context evidence does not match acceptance',
+        409
+      );
     }
     return {
       kind: 'intent.completed',
