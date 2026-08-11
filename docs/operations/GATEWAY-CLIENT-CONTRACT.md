@@ -6,7 +6,7 @@
 
 **Status:** implemented client-contract boundary; experimental local PWA foundation present
 
-**Updated:** 2026-08-10
+**Updated:** 2026-08-11
 
 ## Purpose and boundary
 
@@ -21,7 +21,7 @@ and the client is
 The client is a private source module in this repository, not a published npm
 package; applications must bind and version it with the checked-out build.
 
-The contract covers all 29 authenticated `/v1/` Gateway routes. It deliberately
+The contract covers all 30 authenticated `/v1/` Gateway routes. It deliberately
 does not include `/`, `/health`, or `/ready`, which are unauthenticated ingress
 and operator-probe routes rather than the authenticated application contract.
 
@@ -48,6 +48,7 @@ client.
 |---|---|---|---|
 | `capabilities.list` | `GET /v1/capabilities` | authenticated | none |
 | `machine_discovery.get` | `GET /v1/machine-discovery` | constrained machine | none |
+| `machine_receipts.verify` | `GET /v1/machine-receipts/intents/:id/verify` | constrained machine owner | `id` |
 | `status.get` | `GET /v1/status` | authenticated | none |
 | `operations.get` | `GET /v1/operations` | `operations:read` or `telemetry:collect` | none |
 | `metrics.get` | `GET /v1/metrics` | `operations:read` or `telemetry:collect` | none |
@@ -62,6 +63,7 @@ client.
 | `consents.list` | `GET /v1/consents` | owner | none |
 | `approvals.list` | `GET /v1/approvals` | owner | none |
 | `memory.list` | `GET /v1/memory` | owner or consented share | optional owner |
+| `context.view` | `GET /v1/context` | finite `context:*` authority or authenticated administrator wildcard | required `purpose`; optional `owner`, `as_of`, `max_claims` |
 | `accounting.get` | `GET /v1/accounting` | owner | none |
 | `imports.list` | `GET /v1/imports` | owner | none |
 | `imports.get` | `GET /v1/imports/:id` | owner | `id` |
@@ -76,6 +78,21 @@ client.
 | `audit.verify` | `GET /v1/audit/verify` | `audit:read` | none |
 
 The three global registry/history reads are explicitly scoped and bounded to at most 100 rows per call; malformed numeric query values fail with HTTP 400 rather than silently changing meaning.
+
+`context.view` is a read-only projection over the existing memory graph, not a
+second authority system or effect route. `purpose` is mandatory. Callers may not
+provide a principal, scopes, or authorized-scope list. Gateway derives a compact
+context-authority envelope from the already authenticated bearer principal. For
+machine principals the requested purpose must already exist in the machine
+principal's purpose constraint set and the machine authority digest is bound into
+the envelope. Ordinary authenticated wildcard authority is not forwarded as `*`;
+Grid reduces it to the finite context-scope set visible in consent-filtered claims.
+The envelope is canonical, digest-bound, size-bounded, and carried in the signed
+Gateway-to-Grid request URL. Grid verifies the requester and envelope digest,
+re-verifies the full evidence chain and each context object's content address,
+then compiles the deterministic view. Existing memory consent remains an outer
+ceiling for cross-owner reads. The resulting view carries `authority_effect:
+"none"`, `view_digest`, authorization evidence, and `projection_digest`.
 
 The checker parses every literal Gateway `router.add()` declaration and
 requires the ordered `/v1/` inventory to equal the contract. Adding, removing,
@@ -145,6 +162,11 @@ fields, invalid JSON, an invalid response object, or a wrong media type become
 `invalid_gateway_response`. These checks keep malformed or incompatible
 responses from being mistaken for successful state.
 
+The internal signed context authority envelope is not a public client query
+parameter and does not relax the public 512-character query-value limit. Gateway
+constructs it only after public request validation; the complete internal target
+still has an independent 8,192-character ceiling.
+
 ## Error contract
 
 Gateway errors use this envelope and the `x-trace-id` response header:
@@ -202,6 +224,9 @@ The test suite proves:
 - stable, unknown, retryable, and malformed error behavior;
 - response byte and media-type bounds;
 - external cancellation and bounded timeout;
+- authenticated context projection derives authority from the bearer principal,
+  rejects scope/principal injection, binds machine purpose, preserves consent,
+  verifies Grid evidence, and rejects authority-envelope tampering;
 - a real status read and idempotent intent through Gateway, Hypervisor,
   Sandbox, and Grid;
 - rejection of direct-service, route, error-vocabulary, and source drift.
@@ -220,6 +245,12 @@ started `UX-002`, but it does not implement a supported browser product,
 browser session/device security (`UX-005`), or completed accessibility and
 usability gates. Neither milestone adds a remote account service, third-party
 analytics, AI provider, multi-host routing, or production pilot.
+
+The context route is an authenticated kernel read surface on this branch, not a
+production-promoted Sovereign Context Plane capability and not an MCP/A2A
+projection. It does not establish source authenticity, semantic truth, external
+personal-data ingestion, autonomous execution, or permission to act from a
+stored claim. Context writes continue through the normal governed intent path.
 
 The experimental local shell is outside the trusted kernel and uses only this
 contract. It has a loopback-only origin, strict CSP, memory-only token, and no
