@@ -4,6 +4,10 @@ import {
   EDUCATION_LEARNER_EVENT_ACTION,
   evaluateEducationLearnerEventConsent
 } from './education-learner-record.mjs';
+import {
+  EDUCATION_DELEGATED_BINDING_SCHEMA,
+  evaluateEducationDelegatedAuthorization
+} from './education-delegated-authorization.mjs';
 
 /**
  * Apply runtime education authorization facts after ordinary deny-dominant policy
@@ -20,6 +24,7 @@ export function applyEducationRuntimeGate({
   intent,
   decision,
   consents = [],
+  delegatedAuthorization = null,
   now = new Date().toISOString()
 }) {
   if (!intent.action.startsWith('education.')) return structuredClone(decision);
@@ -38,12 +43,11 @@ export function applyEducationRuntimeGate({
     };
   }
 
-  const authorization = evaluateEducationLearnerEventConsent({
-    contract,
-    intent,
-    consents,
-    now
-  });
+  const subjectId = intent.input?.subject_id;
+  const selfMode = intent.principal?.type === 'human' && subjectId === intent.principal.id;
+  const authorization = selfMode
+    ? evaluateEducationLearnerEventConsent({ contract, intent, consents, now })
+    : evaluateEducationDelegatedAuthorization({ intent, authorization: delegatedAuthorization });
   if (!authorization.allow) {
     return {
       ...decision,
@@ -61,19 +65,33 @@ export function applyEducationRuntimeGate({
   if (!constraints || typeof constraints !== 'object' || Array.isArray(constraints)) {
     throw new ValidationError('Education policy constraints must be an object');
   }
-  if (Object.hasOwn(constraints, 'education_consent')) {
-    throw new ValidationError('Static policy may not pre-populate runtime education consent facts');
+  if (
+    Object.hasOwn(constraints, 'education_consent')
+    || Object.hasOwn(constraints, 'education_delegated_consent')
+  ) {
+    throw new ValidationError('Static policy may not pre-populate runtime education authorization facts');
   }
 
+  const runtimeBinding = selfMode
+    ? {
+        education_consent: {
+          schema: 'axiom-education-consent-binding.v1',
+          facts: authorization.facts,
+          consent_digest: authorization.consent_digest
+        }
+      }
+    : {
+        education_delegated_consent: {
+          schema: EDUCATION_DELEGATED_BINDING_SCHEMA,
+          facts: authorization.facts,
+          authorization_digest: authorization.authorization_digest
+        }
+      };
   return {
     ...decision,
     constraints: {
       ...constraints,
-      education_consent: {
-        schema: 'axiom-education-consent-binding.v1',
-        facts: authorization.facts,
-        consent_digest: authorization.consent_digest
-      }
+      ...runtimeBinding
     }
   };
 }
