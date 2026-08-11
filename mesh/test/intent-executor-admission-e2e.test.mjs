@@ -176,14 +176,14 @@ test('reviewed executor promotion candidate is created on real stack without ins
     ? process.env.GITHUB_SHA
     : 'unbound-local-intent-v07-admission';
   const build = {
-    kernel_version: '0.12.0-dev.3',
+    kernel_version: '0.12.0-dev.4',
     source_digest: sha256(revision)
   };
   const buildDigest = digestObject(build);
   const synthetic = syntheticRatifiedRemediation(buildDigest);
   const testRegistry = {
     schema: 'axiom-intent-remediation-executor-registry.v1',
-    kernel_version: '0.12.0-dev.3',
+    kernel_version: '0.12.0-dev.4',
     mappings: [testOnlyMapping()]
   };
   const eligibility = evaluateIntentExecutionEligibility({
@@ -275,7 +275,7 @@ test('reviewed executor promotion candidate is created on real stack without ins
   assert.equal(after.runtime.grid.last_hash, before.runtime.grid.last_hash);
   assert.equal(
     productionRegistryText,
-    '{\n  "schema": "axiom-intent-remediation-executor-registry.v1",\n  "kernel_version": "0.12.0-dev.3",\n  "mappings": []\n}\n'
+    '{\n  "schema": "axiom-intent-remediation-executor-registry.v1",\n  "kernel_version": "0.12.0-dev.4",\n  "mappings": []\n}\n'
   );
   assert.deepEqual(productionRegistry.mappings, []);
 });
