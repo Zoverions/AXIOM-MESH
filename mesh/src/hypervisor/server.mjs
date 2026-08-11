@@ -40,6 +40,10 @@ import {
   buildNativeInvocationEnvelope,
   invocationEnvelopeDigest
 } from '../lib/invocation-envelope.mjs';
+import {
+  normalizeContextTaskBinding,
+  verifyContextTaskBinding
+} from '../lib/context-task-binding.mjs';
 import { effectDestinationForTool } from '../lib/effect-destination.mjs';
 import { buildMachineDiscovery } from '../lib/machine-discovery.mjs';
 import {
@@ -62,6 +66,7 @@ export async function createHypervisorService(config = meshConfig()) {
       })
     : null;
   const sandboxKey = await loadTrustedKey(config.dataDir, 'sandbox');
+  const gridKey = await loadTrustedKey(config.dataDir, 'grid');
   const requestReplay = new ReplayGuard();
   const basePolicy = await loadPolicyStack(config.policyPaths);
   const router = new Router();
@@ -152,6 +157,15 @@ export async function createHypervisorService(config = meshConfig()) {
 
   router.add('POST', '/internal/v1/intents', async ({ body, traceId }) => {
     const intent = normalizeIntent(parseJsonBody(body));
+    if (intent.context_binding) {
+      verifyContextTaskBinding(intent.context_binding, gridKey, {
+        principalId: intent.principal.id,
+        purpose: intent.purpose,
+        ...(intent.principal.schema === 'axiom-machine-principal.v1'
+          ? { machineAuthorityDigest: intent.principal.authority_digest }
+          : {})
+      });
+    }
     const policy = await activePolicy(traceId);
     let decision = policy.evaluate({
       action: intent.action,
@@ -218,6 +232,13 @@ export async function createHypervisorService(config = meshConfig()) {
     }
     const invocationEnvelope = buildNativeInvocationEnvelope(intent, decision);
     const invocationDigest = invocationEnvelopeDigest(invocationEnvelope);
+    const contextEvidence = intent.context_binding
+      ? {
+          context_view_digest: intent.context_binding.view_digest,
+          context_projection_digest: intent.context_binding.projection_digest,
+          context_receipt_digest: intent.context_binding.receipt_digest
+        }
+      : null;
     await commit(traceId, intent.principal.id, [{
       kind: 'intent.accepted',
       subject: intent.intent_id,
@@ -233,6 +254,7 @@ export async function createHypervisorService(config = meshConfig()) {
         policy_digest: decision.policy_digest,
         invocation: invocationEnvelope,
         invocation_digest: invocationDigest,
+        ...(contextEvidence ? { context: contextEvidence } : {}),
         ...(machineAuthority ? { machine_authority: machineAuthority } : {})
       }
     }]);
@@ -372,6 +394,7 @@ export async function createHypervisorService(config = meshConfig()) {
             evidence: {
               plan_digest: digestObject(plan),
               invocation_digest: invocationDigest,
+              ...(contextEvidence ? contextEvidence : {}),
               ...(effectDestination ? { effect_destination: effectDestination } : {}),
               execution: execution.attestation,
               ...(machineAuthority ? {
@@ -389,6 +412,7 @@ export async function createHypervisorService(config = meshConfig()) {
         evidence: {
           plan_digest: boundPlanDigest,
           invocation_digest: invocationDigest,
+          ...(contextEvidence ? contextEvidence : {}),
           ...(effectDestination ? { effect_destination: effectDestination } : {}),
           execution_digest: statement.result_digest,
           policy_digest: decision.policy_digest,
@@ -512,6 +536,9 @@ function normalizeIntent(raw) {
       maxItems: 64,
       itemMax: 160
     }))].sort(),
+    ...(value.context_binding !== undefined
+      ? { context_binding: normalizeContextTaskBinding(value.context_binding) }
+      : {}),
     confirmations: [...new Set(assertStringArray(value.confirmations ?? [], 'intent.confirmations', {
       maxItems: 8,
       itemMax: 160
