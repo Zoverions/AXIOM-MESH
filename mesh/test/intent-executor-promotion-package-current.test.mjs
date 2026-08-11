@@ -44,7 +44,7 @@ function identity(service) {
 
 function build() {
   return {
-    kernel_version: '0.12.0-dev.3',
+    kernel_version: '0.12.0-dev.4',
     source_digest: sha256('promotion-package-current-source')
   };
 }
