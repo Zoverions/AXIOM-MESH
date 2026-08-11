@@ -274,7 +274,7 @@ test('AXIOM One preview traverses the real four-service status and intent path',
   });
 
   const status = await client.call('status.get');
-  assert.equal(status.kernel_version, '0.12.0-dev.3');
+  assert.equal(status.kernel_version, '0.12.0-dev.4');
   assert.equal(status.runtime.grid.mode, 'single-node-transparency-log');
   const intent = await client.call('intents.submit', {
     body: {
