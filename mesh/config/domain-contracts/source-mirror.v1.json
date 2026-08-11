@@ -1,0 +1,46 @@
+{
+  "schema": "axiom-source-mirror-contract.v1",
+  "version": 1,
+  "status": "specified-foundation",
+  "purpose": "Define non-executing, append-only planning for retaining accepted AXIOM source states in provider-independent Git mirrors.",
+  "core_invariant": "A mirror preserves accepted source evidence; it does not choose accepted source and it does not gain write authority from transport capability.",
+  "accepted_state_refs": {
+    "namespace": "refs/axiom/accepted/<source-state-digest>",
+    "source_state_digest_derived": true,
+    "delete_allowed": false,
+    "force_update_allowed": false,
+    "mutable_provider_branch_is_authority": false
+  },
+  "v1_path": {
+    "source_transport": ["local_git", "bare_git"],
+    "target_transport": "bare_git",
+    "provider_api_required": false,
+    "network_required": false,
+    "filesystem_paths_in_signed_plan": false,
+    "source_and_target_adapters_distinct": true
+  },
+  "authority": {
+    "source_adapter_technical_operation": "mirror.publish",
+    "target_adapter_technical_operation": "mirror.fetch",
+    "technical_ceiling_is_execution_authority": false,
+    "repository_operator_signature_is_execution_authority": false,
+    "durable_grid_preparation_required_before_future_execution": true
+  },
+  "security": {
+    "one_exact_request_digest": true,
+    "one_exact_authority_digest": true,
+    "exact_source_state_commit_binding": true,
+    "content_addressed_plan": true,
+    "bounded_plan_lifetime": true,
+    "no_delete": true,
+    "no_force_update": true,
+    "provider_credentials_in_plan": false
+  },
+  "claim_boundary": [
+    "This contract does not execute git clone, fetch, push, or ref updates.",
+    "This contract does not configure a real mirror.",
+    "This contract does not prove an independent geographic or provider failure domain.",
+    "This contract does not promote any repository or mirror capability.",
+    "A verified mirror plan remains explicitly non-executing until a future durable Grid-prepared effect authorizes the exact operation."
+  ]
+}
