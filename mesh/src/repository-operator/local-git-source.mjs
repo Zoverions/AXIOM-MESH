@@ -24,6 +24,8 @@ export const LOCAL_GIT_SOURCE_MANIFEST_SCHEMA = 'axiom-local-git-source-manifest
 export const LOCAL_GIT_INSPECTION_SCHEMA = 'axiom-local-git-source-inspection.v1';
 
 const MAX_GIT_OUTPUT_BYTES = 64 * 1024 * 1024;
+const MAX_SOURCE_CONTENT_BYTES = 512 * 1024 * 1024;
+const MAX_MANIFEST_ENTRIES = 100_000;
 const MAX_REF_BYTES = 256;
 const GIT_SHA1 = /^[a-f0-9]{40}$/;
 const GIT_SHA256 = /^[a-f0-9]{64}$/;
@@ -71,6 +73,7 @@ function safeGitEnvironment() {
   env.GIT_CONFIG_GLOBAL = process.platform === 'win32' ? 'NUL' : '/dev/null';
   env.GIT_TERMINAL_PROMPT = '0';
   env.GIT_OPTIONAL_LOCKS = '0';
+  env.GIT_NO_LAZY_FETCH = '1';
   return env;
 }
 
@@ -151,6 +154,9 @@ function parseLsTree(buffer, objectFormat) {
       offset = end + 1;
       continue;
     }
+    if (records.length >= MAX_MANIFEST_ENTRIES) {
+      throw new ValidationError('local Git source manifest exceeds the entry ceiling');
+    }
     const record = buffer.subarray(offset, end);
     const tab = record.indexOf(9);
     if (tab <= 0) throw new ValidationError('local Git ls-tree record is malformed');
@@ -175,6 +181,33 @@ function parseLsTree(buffer, objectFormat) {
     offset = end + 1;
   }
   return records;
+}
+
+async function bindBlobContents(path, entries, options) {
+  const contentByOid = new Map();
+  let totalBytes = 0;
+  const bound = [];
+  for (const entry of entries) {
+    let content = contentByOid.get(entry.oid);
+    if (!content) {
+      const bytes = await executeGit(path, ['cat-file', 'blob', entry.oid], options);
+      content = {
+        content_sha256: sha256(bytes),
+        size_bytes: bytes.length
+      };
+      contentByOid.set(entry.oid, content);
+      totalBytes += bytes.length;
+      if (totalBytes > MAX_SOURCE_CONTENT_BYTES) {
+        throw new ValidationError('local Git source content exceeds the aggregate byte ceiling');
+      }
+    }
+    bound.push({ ...entry, ...content });
+  }
+  return {
+    entries: bound,
+    unique_blob_count: contentByOid.size,
+    unique_blob_bytes: totalBytes
+  };
 }
 
 export async function inspectLocalGitSource({
@@ -212,7 +245,7 @@ export async function inspectLocalGitSource({
     'local Git tree id'
   );
 
-  const entries = parseLsTree(
+  const treeEntries = parseLsTree(
     await executeGit(path, ['ls-tree', '-r', '-z', '--full-tree', commitOid], options),
     objectFormat
   );
@@ -221,12 +254,7 @@ export async function inspectLocalGitSource({
     ['fsck', '--connectivity-only', '--no-dangling', '--no-reflogs', commitOid],
     options
   );
-  const archive = await executeGit(
-    path,
-    ['archive', '--format=tar', commitOid],
-    options
-  );
-  const archiveSha256 = sha256(archive);
+  const contents = await bindBlobContents(path, treeEntries, options);
 
   const manifest = {
     schema: LOCAL_GIT_SOURCE_MANIFEST_SCHEMA,
@@ -234,8 +262,9 @@ export async function inspectLocalGitSource({
     object_format: objectFormat,
     commit_oid: commitOid,
     tree_oid: treeOid,
-    archive_sha256: archiveSha256,
-    entries
+    unique_blob_count: contents.unique_blob_count,
+    unique_blob_bytes: contents.unique_blob_bytes,
+    entries: contents.entries
   };
   return {
     schema: LOCAL_GIT_INSPECTION_SCHEMA,
@@ -244,11 +273,13 @@ export async function inspectLocalGitSource({
     ref: selectedRef,
     commit_oid: commitOid,
     tree_oid: treeOid,
-    source_archive_sha256: archiveSha256,
     source_manifest_digest: digestObject(manifest),
-    manifest_entries: entries.length,
+    manifest_entries: contents.entries.length,
+    unique_blob_count: contents.unique_blob_count,
+    unique_blob_bytes: contents.unique_blob_bytes,
     object_complete: true,
     source_bytes_independently_committed: true,
+    lazy_fetch_disabled: true,
     network_required: false,
     provider_api_required: false,
     repository_path_exposed: false
@@ -317,6 +348,7 @@ export async function observeLocalGitReplica({
     && inspection.source_manifest_digest === state.source_manifest_digest
     && inspection.object_complete === true
     && inspection.source_bytes_independently_committed === true
+    && inspection.lazy_fetch_disabled === true
   );
   return {
     inspection,
