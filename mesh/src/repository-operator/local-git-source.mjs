@@ -7,7 +7,8 @@ import {
   ValidationError,
   assertPlainObject,
   assertString,
-  digestObject
+  digestObject,
+  sha256
 } from '../lib/canonical.mjs';
 import {
   SOURCE_CONTENT_ADDRESS_PROFILE,
@@ -19,10 +20,10 @@ import {
   normalizeRepositoryAdapterDescriptor
 } from '../lib/repository-adapter.mjs';
 
-export const LOCAL_GIT_SOURCE_MANIFEST_SCHEMA = 'axiom-local-git-source-manifest.v1';
+export const LOCAL_GIT_SOURCE_MANIFEST_SCHEMA = 'axiom-local-git-source-manifest.v2';
 export const LOCAL_GIT_INSPECTION_SCHEMA = 'axiom-local-git-source-inspection.v1';
 
-const MAX_GIT_OUTPUT_BYTES = 16 * 1024 * 1024;
+const MAX_GIT_OUTPUT_BYTES = 64 * 1024 * 1024;
 const MAX_REF_BYTES = 256;
 const GIT_SHA1 = /^[a-f0-9]{40}$/;
 const GIT_SHA256 = /^[a-f0-9]{64}$/;
@@ -158,7 +159,10 @@ function parseLsTree(buffer, objectFormat) {
     if (parts.length !== 3) throw new ValidationError('local Git ls-tree metadata is malformed');
     const [mode, type, oidRaw] = parts;
     if (!/^[0-7]{6}$/.test(mode)) throw new ValidationError('local Git tree mode is invalid');
-    if (!['blob', 'tree', 'commit'].includes(type)) {
+    if (type === 'commit') {
+      throw new ValidationError('local Git source continuity v1 does not support submodule commit entries');
+    }
+    if (type !== 'blob') {
       throw new ValidationError('local Git tree object type is unsupported');
     }
     const oid = gitOid(oidRaw, objectFormat, 'local Git tree object id');
@@ -217,6 +221,12 @@ export async function inspectLocalGitSource({
     ['fsck', '--connectivity-only', '--no-dangling', '--no-reflogs', commitOid],
     options
   );
+  const archive = await executeGit(
+    path,
+    ['archive', '--format=tar', commitOid],
+    options
+  );
+  const archiveSha256 = sha256(archive);
 
   const manifest = {
     schema: LOCAL_GIT_SOURCE_MANIFEST_SCHEMA,
@@ -224,6 +234,7 @@ export async function inspectLocalGitSource({
     object_format: objectFormat,
     commit_oid: commitOid,
     tree_oid: treeOid,
+    archive_sha256: archiveSha256,
     entries
   };
   return {
@@ -233,9 +244,11 @@ export async function inspectLocalGitSource({
     ref: selectedRef,
     commit_oid: commitOid,
     tree_oid: treeOid,
+    source_archive_sha256: archiveSha256,
     source_manifest_digest: digestObject(manifest),
     manifest_entries: entries.length,
     object_complete: true,
+    source_bytes_independently_committed: true,
     network_required: false,
     provider_api_required: false,
     repository_path_exposed: false
@@ -303,6 +316,7 @@ export async function observeLocalGitReplica({
     && inspection.tree_oid === state.tree_oid
     && inspection.source_manifest_digest === state.source_manifest_digest
     && inspection.object_complete === true
+    && inspection.source_bytes_independently_committed === true
   );
   return {
     inspection,
