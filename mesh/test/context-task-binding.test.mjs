@@ -4,6 +4,12 @@ import test from 'node:test';
 
 import { digestObject } from '../src/lib/canonical.mjs';
 import { MeshIdentity } from '../src/lib/identity.mjs';
+import { intentRequestDigest } from '../src/lib/intent-binding.mjs';
+import {
+  buildNativeInvocationEnvelope,
+  invocationEnvelopeDigest
+} from '../src/lib/invocation-envelope.mjs';
+import { buildPlan, planDigest } from '../src/lib/plan.mjs';
 import {
   buildContextProjectionReceipt,
   buildContextTaskBinding,
@@ -21,7 +27,7 @@ function gridIdentity() {
   );
 }
 
-function projection({ machineAuthorityDigest } = {}) {
+function projection({ machineAuthorityDigest, viewDigest = '1'.repeat(64) } = {}) {
   const authority = {
     schema: 'axiom-context-projection-authority.v1',
     principal_id: machineAuthorityDigest ? 'agent.context-task' : 'owner.context-task',
@@ -37,7 +43,6 @@ function projection({ machineAuthorityDigest } = {}) {
       : {})
   };
   authority.authority_digest = digestObject(authority);
-  const viewDigest = '1'.repeat(64);
   const authorization = {
     ...authority,
     projected_context_scopes: ['context:project']
@@ -79,6 +84,41 @@ function projection({ machineAuthorityDigest } = {}) {
   };
 }
 
+function intent(contextBinding) {
+  return {
+    intent_id: 'intent_context_task_binding',
+    principal: {
+      id: 'owner.context-task',
+      type: 'human',
+      roles: ['operator'],
+      scopes: ['*']
+    },
+    action: 'system.echo',
+    input: { message: 'context-bound' },
+    purpose: 'project.execution',
+    data_scopes: [],
+    context_binding: contextBinding,
+    confirmations: [],
+    approval_ids: [],
+    submitted_at: '2026-08-11T22:01:00.000Z'
+  };
+}
+
+function decision() {
+  return {
+    allow: true,
+    risk: 'low',
+    tool: 'system.echo',
+    effect: 'system.echo',
+    timeout_ms: 1_000,
+    constraints: {},
+    policy_version: 'test-policy.v1',
+    policy_digest: 'd'.repeat(64),
+    policy_layers: [],
+    rule_id: 'test:context-binding'
+  };
+}
+
 test('Grid-signed context projection receipt becomes a non-authorizing task binding', () => {
   const identity = gridIdentity();
   const receipt = buildContextProjectionReceipt(projection(), identity);
@@ -98,6 +138,38 @@ test('Grid-signed context projection receipt becomes a non-authorizing task bind
     authority_digest: receipt.statement.authority_digest,
     receipt_digest: receipt.receipt_digest
   });
+});
+
+test('context receipt is causally bound through request, invocation, and plan digests', () => {
+  const identity = gridIdentity();
+  const firstBinding = buildContextTaskBinding(buildContextProjectionReceipt(
+    projection({ viewDigest: '1'.repeat(64) }),
+    identity
+  ));
+  const secondBinding = buildContextTaskBinding(buildContextProjectionReceipt(
+    projection({ viewDigest: '3'.repeat(64) }),
+    identity
+  ));
+  const firstIntent = intent(firstBinding);
+  const secondIntent = intent(secondBinding);
+  const firstInvocation = buildNativeInvocationEnvelope(firstIntent, decision());
+  const secondInvocation = buildNativeInvocationEnvelope(secondIntent, decision());
+  const firstPlan = buildPlan(firstIntent, decision());
+  const secondPlan = buildPlan(secondIntent, decision());
+
+  assert.notEqual(intentRequestDigest(firstIntent), intentRequestDigest(secondIntent));
+  assert.notEqual(
+    invocationEnvelopeDigest(firstInvocation),
+    invocationEnvelopeDigest(secondInvocation)
+  );
+  assert.notEqual(planDigest(firstPlan), planDigest(secondPlan));
+  assert.deepEqual(
+    firstInvocation.request.context_binding,
+    contextTaskBindingIdentity(firstBinding)
+  );
+  assert.equal(firstPlan.context.authority_effect, 'none');
+  assert.equal(firstPlan.context.view_digest, firstBinding.view_digest);
+  assert.ok(firstPlan.decision_provenance.observable_inputs.includes('intent.context_binding'));
 });
 
 test('context task binding rejects digest substitution and receipt tampering', () => {
