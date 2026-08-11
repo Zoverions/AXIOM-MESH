@@ -5,6 +5,7 @@ import {
   validateComposeNetworkSegmentation,
   validateServiceRouteImplementation
 } from './lib/service-network-policy.mjs';
+import { digestObject } from './lib/canonical.mjs';
 import { MESH_ROOT } from './lib/config.mjs';
 
 const result = validateComposeNetworkSegmentation(
@@ -25,8 +26,13 @@ const routeResult = validateServiceRouteImplementation({
     )
   }
 });
+const registry = JSON.parse(await readFile(
+  join(MESH_ROOT, 'config', 'capabilities.json'),
+  'utf8'
+));
 const { policy: _policy, ...receipt } = result;
 process.stdout.write(`${JSON.stringify({
   ...receipt,
-  implemented_routes: routeResult.implemented_routes
+  implemented_routes: routeResult.implemented_routes,
+  capability_registry_digest: digestObject(registry)
 }, null, 2)}\n`);
