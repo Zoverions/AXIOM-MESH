@@ -15,21 +15,26 @@ import {
   EDUCATION_SELF_AUTHORITY_MODE,
   educationGridEventId
 } from './education-learner-record.mjs';
+import {
+  EDUCATION_DELEGATED_AUTHORITY_MODE,
+  evaluateEducationDelegatedAuthorization
+} from './education-delegated-authorization.mjs';
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
 const EDUCATION_EVENT_KIND = 'education.learner.event.appended';
+const ACTION = 'education.learner.event.append';
 const PURPOSE = 'learning-progress-recording';
 const SCOPES = Object.freeze(['learning-progress:write']);
 
 /**
  * Final synchronous education-event preflight at the Grid commit boundary.
  *
- * Hypervisor already binds the observed consent facts into the signed capability
- * and plan. This check intentionally repeats the authority-sensitive facts against
- * current Grid state immediately before append so a consent revoke cannot race the
- * final authoritative record. It checks only memory metadata (owner/status), never
- * decrypts learner memory content.
+ * Hypervisor already binds the observed authorization facts into the signed
+ * capability and plan. This check intentionally repeats authority-sensitive
+ * state immediately before append. Self-consent re-reads the current consent
+ * receipt; delegated mode re-resolves current relationship, grant, conflict,
+ * and delegated consent. The check uses only memory ownership/status metadata.
  */
 export function preflightEducationGridCommit(store, actor, rawEvent, {
   now = new Date().toISOString()
@@ -66,21 +71,6 @@ export function preflightEducationGridCommit(store, actor, rawEvent, {
     max: 160,
     pattern: ID
   });
-
-  if (actor !== subjectId) {
-    throw new AxiomError(
-      'education_subject_authority_unavailable',
-      'Education learner event actor must be the directly self-authorizing subject.',
-      403
-    );
-  }
-  if (event.subject !== learnerEventId) {
-    throw new ValidationError('Education Grid event subject must equal the learner event ID');
-  }
-  if (gridEventId !== educationGridEventId(subjectId, learnerEventId)) {
-    throw new ValidationError('Education Grid event ID is not bound to subject and learner event identity');
-  }
-
   const consentId = assertString(consent.consent_id, 'education consent_id', {
     max: 160,
     pattern: ID
@@ -90,14 +80,64 @@ export function preflightEducationGridCommit(store, actor, rawEvent, {
     max: 64,
     pattern: DIGEST
   });
+
+  if (event.subject !== learnerEventId) {
+    throw new ValidationError('Education Grid event subject must equal the learner event ID');
+  }
+  if (gridEventId !== educationGridEventId(subjectId, learnerEventId)) {
+    throw new ValidationError('Education Grid event ID is not bound to subject and learner event identity');
+  }
   if (
-    consent.authority_mode !== EDUCATION_SELF_AUTHORITY_MODE
-    || consent.purpose !== PURPOSE
+    consent.purpose !== PURPOSE
     || JSON.stringify(consent.data_scopes) !== JSON.stringify(SCOPES)
   ) {
     throw new ValidationError('Education learner event consent profile is unsupported');
   }
 
+  if (consent.authority_mode === EDUCATION_SELF_AUTHORITY_MODE) {
+    preflightSelfConsent(store, actor, subjectId, consentId, consent, suppliedConsentDigest, now);
+  } else if (consent.authority_mode === EDUCATION_DELEGATED_AUTHORITY_MODE) {
+    preflightDelegatedConsent(store, actor, subjectId, consentId, consent, suppliedConsentDigest, now);
+  } else {
+    throw new ValidationError('Education learner event authority mode is unsupported');
+  }
+
+  const memory = store.db.prepare(`
+    SELECT object_id, owner, status
+    FROM memory_objects
+    WHERE object_id = ?
+  `).get(memoryObjectId);
+  if (!memory || memory.status !== 'active' || memory.owner !== subjectId) {
+    throw new AxiomError(
+      'education_memory_reference_unavailable',
+      'Education learner event must reference an active memory object owned by the learner subject.',
+      409
+    );
+  }
+
+  const {
+    record_digest: suppliedRecordDigest,
+    evidence: _executionEvidence,
+    ...record
+  } = payload;
+  const recordDigest = assertString(suppliedRecordDigest, 'education record_digest', {
+    min: 64,
+    max: 64,
+    pattern: DIGEST
+  });
+  if (recordDigest !== digestObject(record)) {
+    throw new ValidationError('Education learner event record digest is invalid at Grid commit');
+  }
+}
+
+function preflightSelfConsent(store, actor, subjectId, consentId, consent, suppliedConsentDigest, now) {
+  if (actor !== subjectId) {
+    throw new AxiomError(
+      'education_subject_authority_unavailable',
+      'Direct education self-consent requires the authenticated actor to be the learner subject.',
+      403
+    );
+  }
   const row = store.db.prepare(`
     SELECT consent_id, subject, controller, purpose, scopes_json,
            expires_at, status
@@ -160,31 +200,87 @@ export function preflightEducationGridCommit(store, actor, rawEvent, {
       403
     );
   }
+}
 
-  const memory = store.db.prepare(`
-    SELECT object_id, owner, status
-    FROM memory_objects
-    WHERE object_id = ?
-  `).get(memoryObjectId);
-  if (!memory || memory.status !== 'active' || memory.owner !== actor) {
+function preflightDelegatedConsent(
+  store,
+  actor,
+  subjectId,
+  consentId,
+  consent,
+  suppliedConsentDigest,
+  now
+) {
+  if (typeof store.resolveDelegatedConsentAuthorization !== 'function') {
     throw new AxiomError(
-      'education_memory_reference_unavailable',
-      'Education learner event must reference an active memory object owned by the subject.',
-      409
+      'education_delegated_authority_unavailable',
+      'Grid delegated authority state is unavailable at the final commit boundary.',
+      503
     );
   }
-
-  const {
-    record_digest: suppliedRecordDigest,
-    evidence: _executionEvidence,
-    ...record
-  } = payload;
-  const recordDigest = assertString(suppliedRecordDigest, 'education record_digest', {
-    min: 64,
-    max: 64,
-    pattern: DIGEST
+  const holderId = assertString(consent.holder_id, 'education delegated holder_id', {
+    max: 160,
+    pattern: ID
   });
-  if (recordDigest !== digestObject(record)) {
-    throw new ValidationError('Education learner event record digest is invalid at Grid commit');
+  if (actor !== holderId || actor === subjectId) {
+    throw new AxiomError(
+      'education_delegated_holder_mismatch',
+      'Delegated education event actor must be the distinct human authority holder.',
+      403
+    );
+  }
+  const current = store.resolveDelegatedConsentAuthorization({
+    consentId,
+    subjectId,
+    holderId,
+    controller: EDUCATION_CONTRACT_CONTROLLER,
+    purpose: PURPOSE,
+    action: ACTION,
+    dataScopes: SCOPES,
+    now
+  });
+  const authorization = evaluateEducationDelegatedAuthorization({
+    intent: {
+      principal: { id: actor, type: 'human' },
+      action: ACTION,
+      input: {
+        subject_id: subjectId,
+        consent_id: consentId,
+        purpose: PURPOSE
+      }
+    },
+    authorization: current
+  });
+  if (!authorization.allow) {
+    throw new AxiomError(
+      authorization.code ?? 'education_delegated_authority_unavailable',
+      authorization.reason ?? 'Delegated education authority is unavailable at final Grid commit.',
+      authorization.http_status ?? 403
+    );
+  }
+  const facts = authorization.facts;
+  const expected = {
+    holder_id: facts.holder_id,
+    authority_grant_id: facts.authority_grant_id,
+    relationship_claim_id: facts.relationship_claim_id,
+    authority_digest: facts.authority_digest,
+    receipt_digest: facts.receipt_digest,
+    expires_at: facts.expires_at
+  };
+  for (const [key, value] of Object.entries(expected)) {
+    if (consent[key] !== value) {
+      throw new AxiomError(
+        'education_delegated_binding_stale',
+        `Education delegated ${key} no longer matches current Grid state.`,
+        403
+      );
+    }
+  }
+  if (suppliedConsentDigest !== authorization.authorization_digest) {
+    throw new AxiomError(
+      'education_delegated_binding_stale',
+      'Education delegated authorization digest no longer matches current Grid state.',
+      403
+    );
   }
 }
