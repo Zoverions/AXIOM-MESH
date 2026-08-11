@@ -49,9 +49,9 @@ const FIELD = /^[a-z][a-z0-9_]{0,63}$/;
 const ERROR_CODE = /^[a-z][a-z0-9_]{0,63}$/;
 const SCHEMA_ID = /^[a-z][a-z0-9.-]+\.v1$/;
 const EXPECTED_CONTRACT_DIGEST =
-  'e2ccb7eb8eecc94cc7e48f9e4322c298c210cd148f9f0d3262fd5da8b7fde56d';
+  '83cc91284bfcfae105cc5930b284cdd1e695cceea1dcbf6124d051a06a7da11e';
 const EXPECTED_JSON_SCHEMA_DIGEST =
-  '90a65df24bab3299b4bab58ab15270b02aac67938923746f413285296dfa6ccf';
+  '1b3827760a67fffb933ddede15d06b346bef8a7b91440fd008fe276eb0cec6d9';
 
 export const ACTIVE_GATEWAY_CLIENT_CONTRACT = deepFreeze(
   validateGatewayClientContract(contractJson).contract
