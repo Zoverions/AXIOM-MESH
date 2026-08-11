@@ -101,7 +101,7 @@ test('allowed learner append gains only the exact Grid-observed consent binding'
   assert.match(result.constraints.education_consent.consent_digest, /^[a-f0-9]{64}$/);
 });
 
-test('guardian/delegated subject remains denied even if policy and receipt otherwise look valid', async () => {
+test('different subject requires delegated Grid authorization and cannot reuse self-consent', async () => {
   const contract = await loadEducationContract();
   const result = applyEducationRuntimeGate({
     contract,
@@ -111,7 +111,7 @@ test('guardian/delegated subject remains denied even if policy and receipt other
     now: '2026-08-11T05:10:00.000Z'
   });
   assert.equal(result.allow, false);
-  assert.equal(result.code, 'education_subject_authority_unavailable');
+  assert.equal(result.code, 'education_delegated_authorization_unavailable');
   assert.equal(result.http_status, 403);
 });
 
@@ -133,16 +133,19 @@ test('revocation between grant and intent prevents plan/capability authorization
 
 test('runtime facts cannot be injected through static policy constraints', async () => {
   const contract = await loadEducationContract();
-  assert.throws(
-    () => applyEducationRuntimeGate({
-      contract,
-      intent: request(),
-      decision: allowedDecision({
-        constraints: { education_consent: { forged: true } }
+  for (const forged of [
+    { education_consent: { forged: true } },
+    { education_delegated_consent: { forged: true } }
+  ]) {
+    assert.throws(
+      () => applyEducationRuntimeGate({
+        contract,
+        intent: request(),
+        decision: allowedDecision({ constraints: forged }),
+        consents: [consent()],
+        now: '2026-08-11T05:10:00.000Z'
       }),
-      consents: [consent()],
-      now: '2026-08-11T05:10:00.000Z'
-    }),
-    /may not pre-populate runtime education consent facts/
-  );
+      /may not pre-populate runtime education consent facts/
+    );
+  }
 });
