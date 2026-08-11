@@ -167,7 +167,8 @@ test('Gateway client encodes exact path and query inventories', async () => {
           conflicts: [],
           view_digest: 'a'.repeat(64),
           authorization: {},
-          projection_digest: 'b'.repeat(64)
+          projection_digest: 'b'.repeat(64),
+          projection_receipt: {}
         });
       }
       return jsonResponse({});
