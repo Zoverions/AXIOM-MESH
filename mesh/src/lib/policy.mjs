@@ -12,6 +12,9 @@ const DEFAULT_ASSURANCE_BY_RISK = Object.freeze({
   high: 'A3',
   critical: 'A3'
 });
+const CURRENT_RUNTIME_BASE_ASSURANCE = 'A2';
+const CURRENT_RUNTIME_APPROVED_ASSURANCE = 'A3';
+const CURRENT_RUNTIME_MAX_ASSURANCE = 'A3';
 const PROTOTYPE_KEYS = new Set(Object.getOwnPropertyNames(Object.prototype));
 const PROTECTED_RECOVERY_ACTIONS = new Set([
   'approval.grant',
@@ -183,6 +186,37 @@ export class PolicyEngine {
         policy_layers: this.layers
       };
     }
+    if (assuranceRank(assurance) > assuranceRank(CURRENT_RUNTIME_MAX_ASSURANCE)) {
+      return {
+        allow: false,
+        risk: rule.risk,
+        required_assurance: assurance,
+        runtime_max_assurance: CURRENT_RUNTIME_MAX_ASSURANCE,
+        code: 'assurance_unavailable',
+        http_status: 503,
+        reason: `The current kernel cannot satisfy required assurance ${assurance}; maximum available assurance is ${CURRENT_RUNTIME_MAX_ASSURANCE}.`,
+        policy_version: this.policy.version,
+        policy_digest: this.digest,
+        policy_layers: this.layers
+      };
+    }
+    if (
+      assuranceRank(assurance) > assuranceRank(CURRENT_RUNTIME_BASE_ASSURANCE)
+      && rule.requires_independent_approval !== true
+    ) {
+      return {
+        allow: false,
+        risk: rule.risk,
+        required_assurance: assurance,
+        runtime_max_assurance: CURRENT_RUNTIME_MAX_ASSURANCE,
+        code: 'assurance_path_unavailable',
+        http_status: 503,
+        reason: `Required assurance ${assurance} needs the current independent-approval path; this rule does not require it.`,
+        policy_version: this.policy.version,
+        policy_digest: this.digest,
+        policy_layers: this.layers
+      };
+    }
     const requiredScopes = rule.required_scopes ?? [];
     const principalScopes = principal.scopes ?? [];
     const missingScopes = requiredScopes.filter(scope => !hasScope(principalScopes, scope));
@@ -224,6 +258,9 @@ export class PolicyEngine {
       allow: true,
       risk: rule.risk,
       required_assurance: assurance,
+      achievable_assurance: rule.requires_independent_approval === true
+        ? CURRENT_RUNTIME_APPROVED_ASSURANCE
+        : CURRENT_RUNTIME_BASE_ASSURANCE,
       tool: rule.tool,
       constraints: structuredClone(rule.constraints ?? {}),
       effect: rule.effect ?? action,
