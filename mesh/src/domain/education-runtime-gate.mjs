@@ -69,7 +69,9 @@ export function applyEducationRuntimeGate({
     Object.hasOwn(constraints, 'education_consent')
     || Object.hasOwn(constraints, 'education_delegated_consent')
   ) {
-    throw new ValidationError('Static policy may not pre-populate runtime education authorization facts');
+    throw new ValidationError(
+      'Static policy may not pre-populate runtime education consent facts or delegated authorization facts'
+    );
   }
 
   const runtimeBinding = selfMode
