@@ -114,7 +114,14 @@ export async function createSandboxService(config = meshConfig()) {
       throw new AxiomError('capability_subject_mismatch', 'Capability subject does not match the intent principal', 403);
     }
     const startedAt = new Date().toISOString();
-    const result = executeBuiltin({ tool: claims.tool, intent });
+    const builtinResult = executeBuiltin({ tool: claims.tool, intent });
+    const result = {
+      ...builtinResult,
+      output: {
+        ...assertPlainObject(builtinResult.output ?? {}, 'execution output'),
+        assurance: structuredClone(plan.assurance)
+      }
+    };
     const completedAt = new Date().toISOString();
     const attested = {
       trace_id: traceId,
@@ -129,6 +136,7 @@ export async function createSandboxService(config = meshConfig()) {
       capability_id: claims.jti,
       tool: claims.tool,
       policy_digest: claims.policy_digest,
+      assurance: structuredClone(plan.assurance),
       started_at: startedAt,
       completed_at: completedAt,
       result_digest: digestObject(result)
