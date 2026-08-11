@@ -1,5 +1,6 @@
 import { AxiomError, ValidationError, assertString } from '../lib/canonical.mjs';
 import { parseContextProjectionMemoryQuery } from '../lib/context-projection-target.mjs';
+import { buildContextProjectionReceipt } from '../lib/context-task-binding.mjs';
 import { compileGridContextViewFromAuthority } from './context.mjs';
 
 const PRINCIPAL_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
@@ -7,7 +8,8 @@ const PRINCIPAL_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 export function readMemoryOrContext(store, {
   owner,
   url,
-  callerService
+  callerService,
+  signer
 }) {
   if (!store || typeof store.listMemory !== 'function') {
     throw new ValidationError('Grid memory store is invalid');
@@ -48,7 +50,7 @@ export function readMemoryOrContext(store, {
     asOf: request.as_of,
     maxClaims: request.max_claims
   });
-  return {
+  const projection = {
     ...view,
     schema: 'axiom-context-projection.v1',
     request: {
@@ -58,5 +60,9 @@ export function readMemoryOrContext(store, {
       max_claims: request.max_claims,
       authority_digest: request.authority.authority_digest
     }
+  };
+  return {
+    ...projection,
+    projection_receipt: buildContextProjectionReceipt(projection, signer)
   };
 }
