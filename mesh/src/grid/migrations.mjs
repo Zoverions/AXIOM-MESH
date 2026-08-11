@@ -398,16 +398,10 @@ ALTER proposals ADD lifecycle timestamps, verification digest, and rollback meta
       ]);
       db.exec(NODE_SCHEDULING_TABLES_SQL);
     }
-  },
-  {
-    version: 11,
-    name: 'human-delegated-authority-projections',
-    source: HUMAN_AUTHORITY_PROJECTIONS_SQL,
-    up(db) {
-      db.exec(HUMAN_AUTHORITY_PROJECTIONS_SQL);
-    }
   }
 ]);
+
+const HUMAN_AUTHORITY_PROJECTION_META_KEY = 'projection_schema:human-authority:v1';
 
 export function runMigrations(db, { now = () => new Date().toISOString() } = {}) {
   db.exec(`
@@ -452,6 +446,11 @@ export function runMigrations(db, { now = () => new Date().toISOString() } = {})
       throw error;
     }
   }
+  ensureDerivedProjectionSchema(
+    db,
+    HUMAN_AUTHORITY_PROJECTION_META_KEY,
+    HUMAN_AUTHORITY_PROJECTIONS_SQL
+  );
   return {
     version: MIGRATIONS.at(-1).version,
     applied: db.prepare('SELECT version, name, checksum, applied_at FROM schema_migrations ORDER BY version').all()
@@ -460,6 +459,18 @@ export function runMigrations(db, { now = () => new Date().toISOString() } = {})
 
 export function migrationChecksum(migration) {
   return sha256(`${migration.version}\n${migration.name}\n${migration.source}`);
+}
+
+function ensureDerivedProjectionSchema(db, key, source) {
+  const checksum = sha256(source);
+  const existing = db.prepare('SELECT value FROM meta WHERE key = ?').get(key)?.value;
+  if (existing !== undefined && existing !== checksum) {
+    throw new Error(`Derived projection schema ${key} does not match the runtime checksum`);
+  }
+  db.exec(source);
+  if (existing === undefined) {
+    db.prepare('INSERT INTO meta(key, value) VALUES (?, ?)').run(key, checksum);
+  }
 }
 
 function addColumns(db, table, definitions) {
