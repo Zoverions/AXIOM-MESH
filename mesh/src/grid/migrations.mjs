@@ -232,6 +232,63 @@ const NODE_SCHEDULING_SQL = `
   ALTER TABLE nodes ADD COLUMN discovery_json TEXT;
 ${NODE_SCHEDULING_TABLES_SQL}`;
 
+const HUMAN_AUTHORITY_PROJECTIONS_SQL = `
+  CREATE TABLE IF NOT EXISTS human_relationship_claims (
+    claim_id TEXT PRIMARY KEY,
+    subject_id TEXT NOT NULL,
+    holder_id TEXT NOT NULL,
+    issuer_id TEXT NOT NULL,
+    assurance TEXT NOT NULL,
+    jurisdiction_context_digest TEXT NOT NULL,
+    effective_from TEXT NOT NULL,
+    effective_until TEXT,
+    status TEXT NOT NULL,
+    source_event_id TEXT NOT NULL,
+    status_event_id TEXT NOT NULL,
+    status_at TEXT NOT NULL
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS human_authority_grants (
+    grant_id TEXT PRIMARY KEY,
+    subject_id TEXT NOT NULL,
+    holder_id TEXT NOT NULL,
+    relationship_claim_id TEXT NOT NULL,
+    issuer_id TEXT NOT NULL,
+    authority_source TEXT NOT NULL,
+    assurance TEXT NOT NULL,
+    jurisdiction_context_digest TEXT NOT NULL,
+    effective_from TEXT NOT NULL,
+    effective_until TEXT,
+    revocable INTEGER NOT NULL,
+    delegable INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    source_event_id TEXT NOT NULL,
+    status_event_id TEXT NOT NULL,
+    status_at TEXT NOT NULL
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS human_authority_conflicts (
+    conflict_id TEXT PRIMARY KEY,
+    subject_id TEXT NOT NULL,
+    jurisdiction_context_digest TEXT NOT NULL,
+    effective_from TEXT NOT NULL,
+    effective_until TEXT,
+    status TEXT NOT NULL,
+    source_event_id TEXT NOT NULL,
+    status_event_id TEXT NOT NULL,
+    status_at TEXT NOT NULL
+  ) STRICT;
+
+  CREATE INDEX IF NOT EXISTS human_relationship_subject_holder_idx
+  ON human_relationship_claims(subject_id, holder_id, status);
+
+  CREATE INDEX IF NOT EXISTS human_authority_subject_holder_idx
+  ON human_authority_grants(subject_id, holder_id, status);
+
+  CREATE INDEX IF NOT EXISTS human_authority_conflict_subject_idx
+  ON human_authority_conflicts(subject_id, status);
+`;
+
 const MIGRATIONS = Object.freeze([
   {
     version: 1,
@@ -340,6 +397,14 @@ ALTER proposals ADD lifecycle timestamps, verification digest, and rollback meta
         ['discovery_json', 'TEXT']
       ]);
       db.exec(NODE_SCHEDULING_TABLES_SQL);
+    }
+  },
+  {
+    version: 11,
+    name: 'human-delegated-authority-projections',
+    source: HUMAN_AUTHORITY_PROJECTIONS_SQL,
+    up(db) {
+      db.exec(HUMAN_AUTHORITY_PROJECTIONS_SQL);
     }
   }
 ]);
