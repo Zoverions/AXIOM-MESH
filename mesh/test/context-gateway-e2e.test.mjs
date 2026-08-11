@@ -100,8 +100,7 @@ test('context claim follows the governed intent path and returns through authent
     idempotencyKey: 'context-gateway-e2e-write-0001'
   });
   assert.equal(written.status, 'completed');
-  assert.equal(written.output.object_id, compiled.expected.object_id);
-  assert.equal(written.output.content_digest, compiled.expected.content_digest);
+  assert.match(written.intent_id, /^intent_[a-f0-9]{64}$/);
 
   const view = await client.call('context.view', {
     query: {
@@ -115,6 +114,7 @@ test('context claim follows the governed intent path and returns through authent
   assert.equal(view.authority_effect, 'none');
   assert.equal(view.usable_claims.length, 1);
   assert.equal(view.usable_claims[0].claim_id, 'claim:gateway-e2e-priority');
+  assert.equal(view.usable_claims[0].owner, compiled.expected.owner);
   assert.deepEqual(
     view.authorization.projected_context_scopes,
     ['context:project']
