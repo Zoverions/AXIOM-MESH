@@ -9,9 +9,11 @@ import {
  * Apply runtime education authorization facts after ordinary deny-dominant policy
  * evaluation and before a plan/capability is constructed.
  *
- * This gate never turns a denied policy decision into an allow. Its only powers
- * are validating an already policy-allowed education intent, narrowing it to a
- * supported action, attaching Grid-observed authorization facts, or denying it.
+ * This gate never turns a denied policy decision into an allow. Existing policy
+ * denial remains authoritative before contract-specific validation, preserving
+ * the current capability-unavailable behavior for disabled education actions.
+ * Its only powers for an already allowed action are validation, narrowing,
+ * attaching Grid-observed authorization facts, or denial.
  */
 export function applyEducationRuntimeGate({
   contract,
@@ -21,9 +23,9 @@ export function applyEducationRuntimeGate({
   now = new Date().toISOString()
 }) {
   if (!intent.action.startsWith('education.')) return structuredClone(decision);
+  if (!decision.allow) return structuredClone(decision);
 
   validateEducationIntent(contract, intent.action, intent.input);
-  if (!decision.allow) return structuredClone(decision);
 
   if (intent.action !== EDUCATION_LEARNER_EVENT_ACTION) {
     return {
