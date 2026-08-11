@@ -257,7 +257,7 @@ The alternate single-host
 [`mesh/compose.units.yml`](mesh/compose.units.yml) runs the four services as
 independently restartable containers with per-unit private credentials,
 Grid-only durable state, and four exact internal network segments. A
-machine-readable default-deny policy permits only 41 current internal
+machine-readable default-deny policy permits only 42 current internal
 caller/destination/method/route combinations at both ends, derives mTLS peer allowlists,
 and removes Gateway-to-Sandbox and Grid-to-Sandbox adjacency. It preserves the
 same Unix-domain Gateway ingress and makes no multi-host or automatic-failover
