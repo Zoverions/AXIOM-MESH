@@ -94,7 +94,7 @@ function learnerEventInput({ eventId, consentId, memoryObjectId, subjectId = 'le
   };
 }
 
-test('self-consent learner event reaches Grid, deduplicates by event identity, and revocation blocks the next write', async t => {
+test('self-consent learner event reaches Grid, deduplicates by event identity, validates memory, and revocation blocks the next write', async t => {
   const { client } = await startEducationStack(t);
 
   const grant = await client.call('intents.submit', {
@@ -178,6 +178,25 @@ test('self-consent learner event reaches Grid, deduplicates by event identity, a
     }),
     error => {
       assert.equal(error.code, 'state_conflict');
+      assert.equal(error.status, 409);
+      return true;
+    }
+  );
+
+  await assert.rejects(
+    () => client.call('intents.submit', {
+      body: {
+        action: 'education.learner.event.append',
+        input: learnerEventInput({
+          eventId: 'event_missing_memory_1',
+          consentId: grant.consent_id,
+          memoryObjectId: `memory_${'f'.repeat(64)}`
+        })
+      },
+      idempotencyKey: 'education-event-missing-memory-0001'
+    }),
+    error => {
+      assert.equal(error.code, 'education_memory_reference_unavailable');
       assert.equal(error.status, 409);
       return true;
     }
