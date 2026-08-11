@@ -12,6 +12,21 @@ import { contextClaimMemoryPutPayload } from '../src/lib/sovereign-context.mjs';
 
 const AS_OF = '2026-08-11T20:00:00.000Z';
 
+function diagnosticTest(name, fn) {
+  test(name, async t => {
+    try {
+      await fn(t);
+    } catch (error) {
+      const message = `${name}: ${error?.stack ?? error}`
+        .replaceAll('%', '%25')
+        .replaceAll('\r', '%0D')
+        .replaceAll('\n', '%0A');
+      console.error(`::error file=mesh/test/grid-context.test.mjs::${message}`);
+      throw error;
+    }
+  });
+}
+
 async function fixture(t) {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-grid-context-'));
   const identity = await ensureMeshIdentity(dataDir, 'grid', { create: true });
@@ -87,7 +102,7 @@ function appendContextMemory(store, claim, {
   return payload;
 }
 
-test('Grid-backed context compilation verifies the full evidence chain and memory content address', async t => {
+diagnosticTest('Grid-backed context compilation verifies the full evidence chain and memory content address', async t => {
   const store = await fixture(t);
   const payload = appendContextMemory(store, contextClaim());
 
@@ -106,7 +121,7 @@ test('Grid-backed context compilation verifies the full evidence chain and memor
   assert.equal(view.authority_effect, 'none');
 });
 
-test('Grid context compilation requires the evidence actor to match the context owner', async t => {
+diagnosticTest('Grid context compilation requires the evidence actor to match the context owner', async t => {
   const store = await fixture(t);
   appendContextMemory(store, contextClaim(), { actor: 'person:other' });
 
@@ -121,7 +136,7 @@ test('Grid context compilation requires the evidence actor to match the context 
   );
 });
 
-test('Grid context compilation rejects replayed memory.put evidence for one context object', async t => {
+diagnosticTest('Grid context compilation rejects replayed memory.put evidence for one context object', async t => {
   const store = await fixture(t);
   const claim = contextClaim();
   appendContextMemory(store, claim, { traceId: 'trace_context_first' });
@@ -138,7 +153,7 @@ test('Grid context compilation rejects replayed memory.put evidence for one cont
   );
 });
 
-test('Grid context compilation fails closed when the Grid evidence chain is corrupted', async t => {
+diagnosticTest('Grid context compilation fails closed when the Grid evidence chain is corrupted', async t => {
   const store = await fixture(t);
   appendContextMemory(store, contextClaim());
   store.db.prepare('UPDATE events SET event_hash = ? WHERE seq = 1').run('f'.repeat(64));
@@ -154,7 +169,7 @@ test('Grid context compilation fails closed when the Grid evidence chain is corr
   );
 });
 
-test('existing memory consent remains a hard ceiling on cross-owner context visibility', async t => {
+diagnosticTest('existing memory consent remains a hard ceiling on cross-owner context visibility', async t => {
   const store = await fixture(t);
   appendContextMemory(store, contextClaim({
     disclosure: { principals: ['person:context-reader'] }
