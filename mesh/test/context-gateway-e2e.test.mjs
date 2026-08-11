@@ -119,6 +119,10 @@ test('context claim follows the governed intent path and returns through authent
     view.authorization.projected_context_scopes,
     ['context:project']
   );
+  assert.equal(
+    view.request.authority_digest,
+    view.authorization.authority_digest
+  );
   assert.ok(!view.scopes.includes('*'));
   assert.match(view.view_digest, /^[a-f0-9]{64}$/);
   assert.match(view.projection_digest, /^[a-f0-9]{64}$/);
