@@ -206,6 +206,10 @@ function normalizeStandards(input) {
   };
 }
 
+export function educationGridEventId(subjectId, eventId) {
+  return `edu_evt_${digestObject({ subject_id: subjectId, event_id: eventId })}`;
+}
+
 export function executeEducationLearnerEvent({ contract, intent, capability, plan }) {
   if (intent.action !== EDUCATION_LEARNER_EVENT_ACTION) {
     throw new ValidationError(`Unsupported education learner-record action: ${intent.action}`);
@@ -284,6 +288,7 @@ export function executeEducationLearnerEvent({ contract, intent, capability, pla
       standards_bound: Boolean(standards)
     },
     mutation: {
+      event_id: educationGridEventId(subjectId, eventId),
       kind: 'education.learner.event.appended',
       subject: eventId,
       payload: {
