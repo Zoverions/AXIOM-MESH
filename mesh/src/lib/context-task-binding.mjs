@@ -121,9 +121,12 @@ export function normalizeContextTaskBindingIdentity(raw) {
     'schema', 'view_digest', 'projection_digest', 'authority_digest', 'receipt_digest'
   ];
   for (const key of Object.keys(value)) {
-    if (!allowed.includes(key) && key !== 'projection_receipt') {
+    if (!allowed.includes(key) && !['projection_receipt', 'authority_effect'].includes(key)) {
       throw new ValidationError('Context task binding identity contains unsupported fields');
     }
+  }
+  if (value.authority_effect !== undefined && value.authority_effect !== 'none') {
+    throw new ValidationError('Context task binding identity cannot carry authority');
   }
   if (value.schema !== CONTEXT_TASK_BINDING_SCHEMA) {
     throw new ValidationError('Context task binding schema is invalid');
