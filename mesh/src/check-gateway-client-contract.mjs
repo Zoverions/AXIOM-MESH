@@ -1,6 +1,10 @@
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
-import { digestObject } from './lib/canonical.mjs';
+import {
+  validateGatewayClientContract,
+  validateGatewayClientContractSchema,
+  validateGatewayClientRouteImplementation
+} from './lib/gateway-client-contract.mjs';
 
 export async function checkGatewayClientContract() {
   const root = new URL('../', import.meta.url);
@@ -9,15 +13,6 @@ export async function checkGatewayClientContract() {
     readJson(new URL('config/gateway-client-contract.schema.json', root)),
     readFile(new URL('src/gateway/server.mjs', root), 'utf8')
   ]);
-  process.stdout.write(`${JSON.stringify({
-    diagnostic_contract_digest: digestObject(contract),
-    diagnostic_json_schema_digest: digestObject(schema)
-  })}\n`);
-  const {
-    validateGatewayClientContract,
-    validateGatewayClientContractSchema,
-    validateGatewayClientRouteImplementation
-  } = await import('./lib/gateway-client-contract.mjs');
   const contractResult = validateGatewayClientContract(contract);
   const schemaResult = validateGatewayClientContractSchema(schema);
   const routes = validateGatewayClientRouteImplementation({ contract, source });
