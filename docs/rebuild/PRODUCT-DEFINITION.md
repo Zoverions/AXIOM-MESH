@@ -1,9 +1,9 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=90e07a5f6ad577d4733e3c7db238cc61c49e9e0d593d78a882409195cc5f5506 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.4; digest=ccde830a01ad85ffe6a4c6904e45973ef914477e534430e52c083ac997e84dd1 -->
 # AXIOM-MESH Product Definition
 
 **Status:** canonical rebuild and product definition
 
-**Current build:** `0.12.0-dev.3`
+**Current build:** `0.12.0-dev.4`
 
 **Reconciled:** 2026-08-10
 
@@ -332,7 +332,7 @@ operational gates.
 
 ## Current implemented boundary
 
-The `0.12.0-dev.3` kernel currently implements:
+The `0.12.0-dev.4` kernel currently implements:
 
 - authenticated intent, plan, policy, grant, deterministic execution, and
   signed evidence;
