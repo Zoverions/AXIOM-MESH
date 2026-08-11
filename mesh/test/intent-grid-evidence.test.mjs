@@ -90,16 +90,24 @@ async function storeFixture(t) {
   };
 }
 
-function sleep(milliseconds) {
-  return new Promise(resolve => setTimeout(resolve, milliseconds));
+function enableGovernanceClock(t) {
+  t.mock.timers.enable({
+    apis: ['Date'],
+    now: new Date('2026-08-11T15:30:00.000Z')
+  });
+  return t.mock.timers;
 }
 
 async function activateThroughGovernance(store, activation, {
   proposalId = `proposal:${activation.activation_digest.slice(0, 16)}`,
   proposer = 'human:proposer',
   voter = 'human:reviewer',
-  activator = 'human:activator'
+  activator = 'human:activator',
+  clock
 } = {}) {
+  if (!clock || typeof clock.tick !== 'function') {
+    throw new TypeError('activateThroughGovernance requires a deterministic test clock');
+  }
   const now = Date.now();
   const votingEndsAt = new Date(now + 250).toISOString();
   const activateAfter = new Date(now + 500).toISOString();
@@ -135,7 +143,7 @@ async function activateThroughGovernance(store, activation, {
       }
     }]
   });
-  await sleep(Math.max(0, new Date(votingEndsAt).valueOf() - Date.now() + 20));
+  clock.tick(251);
   store.appendEvents({
     traceId: `trace:${proposalId}:finalize`,
     actor: proposer,
@@ -145,7 +153,7 @@ async function activateThroughGovernance(store, activation, {
       payload: { proposal_id: proposalId, finalized_by: proposer }
     }]
   });
-  await sleep(Math.max(0, new Date(activateAfter).valueOf() - Date.now() + 20));
+  clock.tick(250);
   store.appendEvents({
     traceId: `trace:${proposalId}:activate`,
     actor: activator,
@@ -237,8 +245,9 @@ test('activation and attestation records are digest-bound and CLI-preparable', a
 test('Grid assessment requires governance activation and distinct authenticated verifiers', async t => {
   const fixture = await storeFixture(t);
   const { store } = fixture;
+  const clock = enableGovernanceClock(t);
   const activation = buildFixture();
-  await activateThroughGovernance(store, activation);
+  await activateThroughGovernance(store, activation, { clock });
 
   const initial = store.getIntentContractAssessment(activation.contract_id);
   assert.equal(initial.chain.verification_mode, 'full');
@@ -264,8 +273,9 @@ test('Grid assessment requires governance activation and distinct authenticated 
 
 test('wrong-build, actor-mismatch, duplicate, conflict, stale, and revocation paths fail closed', async t => {
   const { store } = await storeFixture(t);
+  const clock = enableGovernanceClock(t);
   const activation = buildFixture();
-  await activateThroughGovernance(store, activation);
+  await activateThroughGovernance(store, activation, { clock });
   const first = appendAttestation(store, activation, 'service:verifier-a');
   appendAttestation(store, activation, 'service:verifier-b');
 
@@ -355,8 +365,12 @@ test('wrong-build, actor-mismatch, duplicate, conflict, stale, and revocation pa
 
 test('activation supersession is linear and stale governance activation is rejected', async t => {
   const { store } = await storeFixture(t);
+  const clock = enableGovernanceClock(t);
   const first = buildFixture('source-v1');
-  await activateThroughGovernance(store, first, { proposalId: 'proposal:intent:first' });
+  await activateThroughGovernance(store, first, {
+    proposalId: 'proposal:intent:first',
+    clock
+  });
   assert.throws(
     () => validateActivationSupersession(
       buildFixture('source-v2', { supersedesActivationDigest: 'f'.repeat(64) }),
@@ -368,7 +382,10 @@ test('activation supersession is linear and stale governance activation is rejec
   const second = buildFixture('source-v2', {
     supersedesActivationDigest: first.activation_digest
   });
-  await activateThroughGovernance(store, second, { proposalId: 'proposal:intent:second' });
+  await activateThroughGovernance(store, second, {
+    proposalId: 'proposal:intent:second',
+    clock
+  });
   const current = store.getIntentContractAssessment(second.contract_id);
   assert.equal(current.activation.activation_digest, second.activation_digest);
   assert.equal(current.activation.supersedes_activation_digest, first.activation_digest);
@@ -376,8 +393,12 @@ test('activation supersession is linear and stale governance activation is rejec
 
 test('Grid-authenticated Intent state survives restart and full-chain tamper fails assessment', async t => {
   const fixture = await storeFixture(t);
+  const clock = enableGovernanceClock(t);
   const activation = buildFixture();
-  await activateThroughGovernance(fixture.store, activation, { proposalId: 'proposal:intent:restart' });
+  await activateThroughGovernance(fixture.store, activation, {
+    proposalId: 'proposal:intent:restart',
+    clock
+  });
   appendAttestation(fixture.store, activation, 'service:verifier-a');
   appendAttestation(fixture.store, activation, 'service:verifier-b');
   assert.equal(
