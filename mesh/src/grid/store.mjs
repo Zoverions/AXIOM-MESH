@@ -5,7 +5,12 @@ import {
   loadGridVerificationKeys,
   reencryptGridProtectedColumns
 } from './_store-checkpoints.mjs';
-import { AxiomError, ValidationError, canonicalJson } from '../lib/canonical.mjs';
+import {
+  AxiomError,
+  ValidationError,
+  assertString,
+  canonicalJson
+} from '../lib/canonical.mjs';
 import {
   INTENT_ACTIVATION_RECORD_KIND,
   INTENT_ATTESTATION_RECORD_KIND,
@@ -27,6 +32,7 @@ import {
   preflightExternalEffectCommit
 } from '../lib/external-effect-outbox.mjs';
 
+const GRID_EVENT_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const CHECKPOINT_BOUNDARY_REASONS = new Set([
   'payload_decryption_failed',
   'payload_digest_mismatch',
@@ -64,6 +70,20 @@ export class GridStore extends CheckpointGridStore {
 
   appendEvents({ traceId, actor, events }) {
     if (Array.isArray(events)) {
+      for (const event of events) {
+        if (
+          event
+          && typeof event === 'object'
+          && !Array.isArray(event)
+          && Object.hasOwn(event, 'event_id')
+        ) {
+          assertString(event.event_id, 'event_id', {
+            min: 1,
+            max: 160,
+            pattern: GRID_EVENT_ID
+          });
+        }
+      }
       if (events.some(event => typeof event?.kind === 'string' && event.kind.startsWith('external.effect.'))) {
         this.requireIntentEvidenceChain();
         preflightExternalEffectCommit({
