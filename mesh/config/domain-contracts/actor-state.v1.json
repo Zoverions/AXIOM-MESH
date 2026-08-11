@@ -1,0 +1,77 @@
+{
+  "schema": "axiom-actor-state-contract.v1",
+  "contract_id": "actor.state",
+  "version": 1,
+  "status": "specified",
+  "actor_types": [
+    "human",
+    "digital_agent",
+    "organization",
+    "institution",
+    "service"
+  ],
+  "lifecycle_states": [
+    "active",
+    "restricted",
+    "recovery_pending",
+    "recovered",
+    "incapacitated_delegated",
+    "ended",
+    "archived",
+    "succession_pending",
+    "succession_executed",
+    "continuity_successor_active"
+  ],
+  "credential_epoch_states": [
+    "active",
+    "revoked",
+    "compromised",
+    "retired"
+  ],
+  "state_classes": [
+    "identity",
+    "recovery",
+    "relationships",
+    "authority",
+    "consent",
+    "education",
+    "preferences",
+    "accessibility",
+    "private_memory",
+    "sensitive_inference",
+    "governance",
+    "publications",
+    "succession"
+  ],
+  "publication_attribution_modes": [
+    "public_identifiable",
+    "pseudonymous",
+    "selectively_attributable",
+    "anonymous"
+  ],
+  "invariants": [
+    "actor_identity_is_not_a_credential",
+    "actor_identity_is_not_a_device",
+    "actor_identity_is_not_a_provider_account",
+    "credentials_prove_present_control_not_personhood",
+    "recovery_proves_continuity_not_ordinary_authority",
+    "recovery_authority_is_not_ownership",
+    "relationship_is_not_authority",
+    "authority_is_not_consent",
+    "consent_is_not_permanent",
+    "attestation_is_not_authority",
+    "private_state_is_local_first_where_technically_and_legally_possible",
+    "public_state_is_an_explicit_projection_not_the_canonical_private_profile",
+    "succession_requires_explicit_scoped_policy",
+    "persona_continuity_does_not_imply_transfer_of_consciousness_or_legal_personhood",
+    "cryptographic_algorithm_is_not_identity"
+  ],
+  "claim_boundary": {
+    "implemented_runtime_capability": false,
+    "legal_identity_claim": false,
+    "legal_inheritance_claim": false,
+    "continuity_of_consciousness_claim": false,
+    "post_quantum_security_claim": false,
+    "anonymous_publication_guarantee": false
+  }
+}
