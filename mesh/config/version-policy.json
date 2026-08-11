@@ -1,0 +1,27 @@
+{
+  "schema": "axiom-version-policy.v1",
+  "current_build_version": "0.12.0-dev.3",
+  "versioning_model": "semver-prerelease",
+  "release_significant_change_classes": [
+    "trusted-kernel-runtime",
+    "security-boundary",
+    "public-gateway-contract",
+    "capability-status",
+    "persistent-state-schema",
+    "cryptographic-trust-format",
+    "supported-deployment-contract"
+  ],
+  "rules": {
+    "historical_release_artifacts_are_immutable": true,
+    "live_build_surfaces_must_share_current_version": true,
+    "release_significant_merge_requires_version_review": true,
+    "published_release_requires_exact_head_evidence": true,
+    "version_bump_does_not_imply_capability_promotion": true,
+    "development_prerelease_may_advance_without_public_release": true
+  },
+  "notes": [
+    "The current main line contains release-significant changes after 0.12.0-dev.3 and requires a coordinated next prerelease bump.",
+    "The bump must update all live version and digest bindings together; historical release notes and audit snapshots remain unchanged.",
+    "This policy file is descriptive and does not itself promote or publish a release."
+  ]
+}
