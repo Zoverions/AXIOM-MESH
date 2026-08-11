@@ -19,7 +19,6 @@ The detailed package is:
 - `docs/rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md`;
 - `docs/rebuild/AGENT-INTEROPERABILITY-CAPABILITY-MAP.md`;
 - `docs/reviews/AGENT-INTEROPERABILITY-ARCHITECTURE-REVIEW-2026-08-09.md`;
-- `docs/architecture/SOVEREIGN-CONTEXT-PLANE.md`;
 - `docs/MASTER-TODO-AGENT-INTEROPERABILITY.md`.
 
 ## Roadmap doctrine
@@ -111,7 +110,9 @@ Milestones:
 
 **Outcome:** a replaceable agent or model can receive only the provenance-bound context appropriate to its principal, purpose, scopes, and evaluation time without context becoming a second authorization system.
 
-The first library slice is defined in `docs/architecture/SOVEREIGN-CONTEXT-PLANE.md`. It deliberately reuses the existing encrypted content-addressed memory graph instead of creating parallel durable state.
+The first executable library slice lives in `mesh/src/lib/sovereign-context.mjs` with focused tests in `mesh/test/sovereign-context.test.mjs`. It deliberately reuses the existing encrypted content-addressed memory graph instead of creating parallel durable state.
+
+The context claim model is strict and provenance-bound. A claim names an owner, subject, predicate, canonical value, claim type, cardinality, confidence metadata, source reference and digest, observation time, validity interval, sensitivity, explicit disclosure principals/purposes/scopes, supersession relationships, contradiction relationships, and a mandatory `authority_effect: none`. Compiled views are deterministic and digest-addressable, with unresolved conflicts withheld rather than silently resolved.
 
 Milestones:
 
@@ -128,12 +129,14 @@ Milestones:
 - authenticated Grid-backed context persistence and retrieval;
 - Gateway projection whose disclosure ceiling is derived from AXIOM authority rather than caller assertions;
 - machine-principal and task binding to exact context-view digests;
-- red-team context injection, provenance laundering, stale-context, conflict-masking, and hidden-state enumeration;
+- red-team context injection, provenance laundering, stale-context, conflict-masking, truncation poisoning, authority confusion, and hidden-state enumeration;
 - only then consider MCP/A2A protocol projection and registry promotion.
 
 Security invariant:
 
 > **Context may inform an intent; context never authorizes an effect.**
+
+The initial slice establishes deterministic schema, selection, conflict, and memory-addressing behavior only. It does not claim source authenticity, a supported context Gateway route, third-party data ingestion, semantic truth resolution, MCP exposure, or a production-promoted context capability.
 
 ## Workstream E — MCP server laboratory
 
@@ -324,7 +327,6 @@ Every implementation step must update, as applicable:
 - product definition;
 - primary roadmap/task queue;
 - this extension and its capability map;
-- sovereign-context architecture and schema contract;
 - threat model;
 - schemas/conformance tests;
 - credential/operations/recovery runbooks;
