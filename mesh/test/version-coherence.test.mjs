@@ -32,5 +32,8 @@ test('live release metadata agrees on one kernel version', async () => {
   const marker = readme.match(/axiom-capability-registry: schema=axiom-capabilities\.v1; kernel=([^;]+); digest=/);
   assert.ok(marker, 'README capability registry marker is missing');
   assert.equal(marker[1], version, 'README capability registry marker version drifted');
-  assert.match(readme, new RegExp(`\\*\\*Supported build:\\*\\* \\`${version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}\\``));
+  assert.ok(
+    readme.includes(`**Supported build:** \`${version}\``),
+    'README supported build version drifted'
+  );
 });
