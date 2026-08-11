@@ -20,7 +20,7 @@ test('current Gateway client contract is exact and covers every authenticated ro
   const result = await checkGatewayClientContract();
   assert.equal(result.valid, true);
   assert.equal(result.schema, 'axiom-gateway-client-contract.v1');
-  assert.equal(result.kernel_version, '0.12.0-dev.3');
+  assert.equal(result.kernel_version, '0.12.0-dev.4');
   assert.equal(result.routes, 29);
   assert.equal(result.implemented_routes, 29);
   assert.equal(result.stable_errors, 20);
@@ -438,7 +438,7 @@ test('Gateway client contract is compatible with the real four-service path', as
   });
 
   const status = await client.call('status.get');
-  assert.equal(status.kernel_version, '0.12.0-dev.3');
+  assert.equal(status.kernel_version, '0.12.0-dev.4');
   assert.equal(status.runtime.grid.mode, 'single-node-transparency-log');
   const idempotencyKey = 'client-contract-e2e-0001';
   const intent = await client.call('intents.submit', {
