@@ -379,7 +379,8 @@
         "conflicts",
         "view_digest",
         "authorization",
-        "projection_digest"
+        "projection_digest",
+        "projection_receipt"
       ],
       "response_media_type": "application/json"
     },
