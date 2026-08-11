@@ -187,6 +187,9 @@ export function evaluateRecovery(policyRaw, attestationsRaw, {
     if (attestation.subject_actor_id !== subject) reasons.push('subject_mismatch');
     if (attestation.verdict !== 'pass') reasons.push('factor_failed');
     if (attestation.expires_at <= observedAt || attestation.observed_at > observedAt) reasons.push('attestation_not_current');
+    if (ASSURANCE[attestation.assurance] < ASSURANCE[policy.minimum_decision_assurance]) {
+      reasons.push('decision_assurance_too_low');
+    }
     if (profile) {
       if (profile.status !== 'active' || profile.effective_at > observedAt || (profile.expires_at && profile.expires_at <= observedAt)) reasons.push('factor_profile_inactive');
       if (profile.factor_type !== attestation.factor_type || profile.factor_class !== attestation.factor_class) reasons.push('factor_profile_mismatch');
