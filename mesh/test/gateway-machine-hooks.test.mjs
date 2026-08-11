@@ -140,5 +140,5 @@ test('real Gateway holds constrained machine concurrency for the full handler li
   assert.equal(completed.message.length, 50_000);
 
   const afterRelease = await client.call('status.get');
-  assert.equal(afterRelease.kernel_version, '0.12.0-dev.3');
+  assert.equal(afterRelease.kernel_version, '0.12.0-dev.4');
 });
