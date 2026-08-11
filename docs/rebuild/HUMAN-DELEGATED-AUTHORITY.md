@@ -1,3 +1,4 @@
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=90e07a5f6ad577d4733e3c7db238cc61c49e9e0d593d78a882409195cc5f5506 -->
 # Human Delegated Authority
 
 **Status:** architecture + executable resolver foundation; no runtime authority actions enabled
