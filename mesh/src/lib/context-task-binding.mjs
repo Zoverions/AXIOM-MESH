@@ -95,11 +95,7 @@ export function verifyContextProjectionReceipt(receipt, gridPublicKey, {
 export function buildContextTaskBinding(receipt) {
   const normalized = validateContextProjectionReceipt(receipt);
   return normalizeContextTaskBinding({
-    schema: CONTEXT_TASK_BINDING_SCHEMA,
-    view_digest: normalized.statement.view_digest,
-    projection_digest: normalized.statement.projection_digest,
-    authority_digest: normalized.statement.authority_digest,
-    receipt_digest: normalized.receipt_digest,
+    ...contextTaskBindingIdentityFromReceipt(normalized),
     projection_receipt: normalized
   });
 }
@@ -110,27 +106,35 @@ export function normalizeContextTaskBinding(raw) {
     'schema', 'view_digest', 'projection_digest', 'authority_digest',
     'receipt_digest', 'projection_receipt'
   ], 'context task binding');
-  if (binding.schema !== CONTEXT_TASK_BINDING_SCHEMA) {
-    throw new ValidationError('Context task binding schema is invalid');
-  }
+  const identity = normalizeContextTaskBindingIdentity(binding);
   const receipt = validateContextProjectionReceipt(binding.projection_receipt);
-  const normalized = {
-    schema: CONTEXT_TASK_BINDING_SCHEMA,
-    view_digest: digestField(binding.view_digest, 'context binding view_digest'),
-    projection_digest: digestField(binding.projection_digest, 'context binding projection_digest'),
-    authority_digest: digestField(binding.authority_digest, 'context binding authority_digest'),
-    receipt_digest: digestField(binding.receipt_digest, 'context binding receipt_digest'),
-    projection_receipt: receipt
-  };
-  if (
-    normalized.view_digest !== receipt.statement.view_digest
-    || normalized.projection_digest !== receipt.statement.projection_digest
-    || normalized.authority_digest !== receipt.statement.authority_digest
-    || normalized.receipt_digest !== receipt.receipt_digest
-  ) {
+  const expected = contextTaskBindingIdentityFromReceipt(receipt);
+  if (digestObject(identity) !== digestObject(expected)) {
     throw new ValidationError('Context task binding does not match its projection receipt');
   }
-  return normalized;
+  return { ...identity, projection_receipt: receipt };
+}
+
+export function normalizeContextTaskBindingIdentity(raw) {
+  const value = assertPlainObject(raw, 'context task binding identity');
+  const allowed = [
+    'schema', 'view_digest', 'projection_digest', 'authority_digest', 'receipt_digest'
+  ];
+  for (const key of Object.keys(value)) {
+    if (!allowed.includes(key) && key !== 'projection_receipt') {
+      throw new ValidationError('Context task binding identity contains unsupported fields');
+    }
+  }
+  if (value.schema !== CONTEXT_TASK_BINDING_SCHEMA) {
+    throw new ValidationError('Context task binding schema is invalid');
+  }
+  return {
+    schema: CONTEXT_TASK_BINDING_SCHEMA,
+    view_digest: digestField(value.view_digest, 'context binding view_digest'),
+    projection_digest: digestField(value.projection_digest, 'context binding projection_digest'),
+    authority_digest: digestField(value.authority_digest, 'context binding authority_digest'),
+    receipt_digest: digestField(value.receipt_digest, 'context binding receipt_digest')
+  };
 }
 
 export function verifyContextTaskBinding(binding, gridPublicKey, expected = {}) {
@@ -140,13 +144,16 @@ export function verifyContextTaskBinding(binding, gridPublicKey, expected = {}) 
 }
 
 export function contextTaskBindingIdentity(binding) {
-  const normalized = normalizeContextTaskBinding(binding);
+  return normalizeContextTaskBindingIdentity(normalizeContextTaskBinding(binding));
+}
+
+function contextTaskBindingIdentityFromReceipt(receipt) {
   return {
     schema: CONTEXT_TASK_BINDING_SCHEMA,
-    view_digest: normalized.view_digest,
-    projection_digest: normalized.projection_digest,
-    authority_digest: normalized.authority_digest,
-    receipt_digest: normalized.receipt_digest
+    view_digest: receipt.statement.view_digest,
+    projection_digest: receipt.statement.projection_digest,
+    authority_digest: receipt.statement.authority_digest,
+    receipt_digest: receipt.receipt_digest
   };
 }
 
