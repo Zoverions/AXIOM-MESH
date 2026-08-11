@@ -1,59 +1,26 @@
-import { readFileSync } from 'node:fs';
-import { canonicalJson, digestObject, AxiomError, ValidationError } from './canonical.mjs';
+import policyJson from '../../config/service-network-policy.json' with { type: 'json' };
+import { AxiomError, ValidationError, canonicalJson, digestObject } from './canonical.mjs';
 
-export const SERVICE_NETWORK_POLICY_SCHEMA =
-  'axiom-service-network-policy.v1';
-
-const SERVICES = Object.freeze([
-  'gateway',
-  'grid',
-  'hypervisor',
-  'sandbox',
-  'supervisor'
-]);
-const DEPLOYABLE_SERVICES = Object.freeze(SERVICES.slice(0, 4));
-const METHODS = new Set(['GET', 'POST']);
-const IDENTIFIER = /^[a-z][a-z0-9-]{0,63}$/;
-const PATH = /^\/[A-Za-z0-9._~!$&'()+,;=:@%/-]+$/;
-const PARAMETER = /^:[a-z][a-z0-9_]{0,63}$/;
-const EXPECTED_SEGMENTS = Object.freeze([
-  {
-    id: 'gateway-hypervisor',
-    members: ['gateway', 'hypervisor']
-  },
-  {
-    id: 'gateway-grid',
-    members: ['gateway', 'grid']
-  },
-  {
-    id: 'hypervisor-grid',
-    members: ['hypervisor', 'grid']
-  },
-  {
-    id: 'hypervisor-sandbox',
-    members: ['hypervisor', 'sandbox']
-  }
-]);
-const EXPECTED_FLOW_IDS = Object.freeze([
-  'gateway-to-hypervisor',
-  'gateway-to-grid',
-  'hypervisor-to-grid',
-  'hypervisor-to-sandbox',
-  'supervisor-to-grid-health',
-  'supervisor-to-hypervisor-health',
-  'supervisor-to-sandbox-health',
-  'grid-self-health',
-  'hypervisor-self-health',
-  'sandbox-self-health'
-]);
+export const SERVICE_NETWORK_POLICY_SCHEMA = 'axiom-service-network-policy.v1';
 const EXPECTED_POLICY_DIGEST =
-  'bc83476d5bd8479dfd336448edd0f7257a75997b2bd95ae1229ceab9a3116290';
+  'd5d87e12fc3bfe62c948a12aa8c446e7559c7a6529189141fdae7a0152243217';
+const SERVICES = Object.freeze(['gateway', 'grid', 'hypervisor', 'sandbox', 'supervisor']);
+const DEPLOYABLE_SERVICES = Object.freeze(['gateway', 'grid', 'hypervisor', 'sandbox']);
+const METHODS = new Set(['GET', 'POST']);
+const PATH = /^\/(?:[A-Za-z0-9._~-]+|:[A-Za-z][A-Za-z0-9_~-]*)(?:\/(?:[A-Za-z0-9._~-]+|:[A-Za-z][A-Za-z0-9_~-]*))*$/;
+const PARAMETER = /^:[A-Za-z][A-Za-z0-9_~-]*$/;
+const SERVICE_UNIT_SOURCE_FILES = Object.freeze({
+  gateway: ['mesh/src/gateway-unit.mjs', 'mesh/src/gateway/server.mjs'],
+  grid: ['mesh/src/grid/server.mjs'],
+  hypervisor: [
+    'mesh/src/hypervisor/server.mjs',
+    'mesh/src/hypervisor/intent-resolver-grid-prepare.mjs'
+  ],
+  sandbox: ['mesh/src/sandbox/server.mjs']
+});
 
 export const ACTIVE_SERVICE_NETWORK_POLICY = deepFreeze(
-  validateServiceNetworkPolicy(JSON.parse(readFileSync(
-    new URL('../../config/service-network-policy.json', import.meta.url),
-    'utf8'
-  ))).policy
+  validateServiceNetworkPolicy(policyJson).policy
 );
 
 export function validateServiceNetworkPolicy(policy) {
@@ -69,10 +36,9 @@ export function validateServiceNetworkPolicy(policy) {
   if (
     policy.schema !== SERVICE_NETWORK_POLICY_SCHEMA
     || policy.version !== 1
-    || policy.kernel_version !== '0.12.0-dev.3'
+    || policy.kernel_version !== '0.12.0-dev.4'
     || policy.default_action !== 'deny'
-  ) throw new ValidationError('Service network policy identity is invalid or weakened');
-
+  ) throw new ValidationError('Service network policy version is stale');
   exactObject(policy.public_ingress, 'Service network public ingress', [
     'service',
     'channel',
@@ -86,30 +52,30 @@ export function validateServiceNetworkPolicy(policy) {
     || policy.public_ingress.published_tcp_ports !== 0
   ) throw new ValidationError('Service network public ingress boundary is weakened');
 
-  if (
-    !Array.isArray(policy.network_segments)
-    || canonicalJson(policy.network_segments) !== canonicalJson(EXPECTED_SEGMENTS)
-  ) throw new ValidationError('Service network segments drifted');
-  for (const segment of policy.network_segments) {
-    exactObject(segment, `Service network segment ${segment?.id ?? 'unknown'}`, [
-      'id',
-      'members'
-    ]);
+  if (!Array.isArray(policy.network_segments) || policy.network_segments.length !== 4) {
+    throw new ValidationError('Service network segment inventory is incomplete');
+  }
+  const expectedSegments = [
+    ['gateway-hypervisor', ['gateway', 'hypervisor']],
+    ['gateway-grid', ['gateway', 'grid']],
+    ['hypervisor-grid', ['hypervisor', 'grid']],
+    ['hypervisor-sandbox', ['hypervisor', 'sandbox']]
+  ];
+  for (let index = 0; index < expectedSegments.length; index += 1) {
+    const segment = policy.network_segments[index];
+    exactObject(segment, `Service network segment ${index}`, ['id', 'members']);
     if (
-      !IDENTIFIER.test(segment.id)
-      || !Array.isArray(segment.members)
-      || segment.members.length !== 2
-      || segment.members.some(service => !DEPLOYABLE_SERVICES.includes(service))
-      || new Set(segment.members).size !== segment.members.length
-    ) throw new ValidationError(`Service network segment is invalid: ${segment?.id}`);
+      segment.id !== expectedSegments[index][0]
+      || canonicalJson(segment.members) !== canonicalJson(expectedSegments[index][1])
+    ) throw new ValidationError(`Service network segment drifted: ${segment.id}`);
   }
 
-  if (
-    !Array.isArray(policy.flows)
-    || policy.flows.length !== EXPECTED_FLOW_IDS.length
-  ) throw new ValidationError('Service network flows are incomplete');
-  const flowIds = [];
+  if (!Array.isArray(policy.flows) || policy.flows.length !== 10) {
+    throw new ValidationError('Service network flow inventory is incomplete');
+  }
+  const flowIds = new Set();
   const routeKeys = new Set();
+  let routeCount = 0;
   for (const flow of policy.flows) {
     exactObject(flow, `Service network flow ${flow?.id ?? 'unknown'}`, [
       'id',
@@ -118,247 +84,255 @@ export function validateServiceNetworkPolicy(policy) {
       'routes'
     ]);
     if (
-      !IDENTIFIER.test(flow.id)
+      typeof flow.id !== 'string'
+      || flowIds.has(flow.id)
       || !SERVICES.includes(flow.source)
-      || !DEPLOYABLE_SERVICES.includes(flow.destination)
-      || flow.destination === 'gateway'
+      || !SERVICES.includes(flow.destination)
       || !Array.isArray(flow.routes)
       || !flow.routes.length
     ) throw new ValidationError(`Service network flow is invalid: ${flow?.id}`);
-    flowIds.push(flow.id);
+    flowIds.add(flow.id);
     for (const route of flow.routes) {
       exactObject(route, `Service network route ${flow.id}`, ['method', 'path']);
-      if (
-        !METHODS.has(route.method)
-        || !validPathPattern(route.path)
-      ) throw new ValidationError(`Service network route is invalid: ${flow.id}`);
-      const key = `${flow.source}\n${flow.destination}\n${route.method}\n${route.path}`;
-      if (routeKeys.has(key)) {
-        throw new ValidationError(`Service network route is duplicated: ${flow.id}`);
+      if (!METHODS.has(route.method) || !validPathPattern(route.path)) {
+        throw new ValidationError(`Service network route is invalid: ${flow.id}`);
       }
+      const key = `${flow.source}\0${flow.destination}\0${route.method}\0${route.path}`;
+      if (routeKeys.has(key)) throw new ValidationError(`Service network route is duplicated: ${flow.id}`);
       routeKeys.add(key);
+      routeCount += 1;
     }
   }
-  if (canonicalJson(flowIds) !== canonicalJson(EXPECTED_FLOW_IDS)) {
-    throw new ValidationError('Service network flow order or identity drifted');
+  if (routeCount !== 40) throw new ValidationError('Service network route count drifted');
+  const expectedFlows = [
+    ['gateway-to-hypervisor', 'gateway', 'hypervisor'],
+    ['gateway-to-grid', 'gateway', 'grid'],
+    ['hypervisor-to-grid', 'hypervisor', 'grid'],
+    ['hypervisor-to-sandbox', 'hypervisor', 'sandbox'],
+    ['supervisor-to-grid-health', 'supervisor', 'grid'],
+    ['supervisor-to-hypervisor-health', 'supervisor', 'hypervisor'],
+    ['supervisor-to-sandbox-health', 'supervisor', 'sandbox'],
+    ['grid-self-health', 'grid', 'grid'],
+    ['hypervisor-self-health', 'hypervisor', 'hypervisor'],
+    ['sandbox-self-health', 'sandbox', 'sandbox']
+  ];
+  for (const expected of expectedFlows) {
+    const flow = policy.flows.find(candidate => candidate.id === expected[0]);
+    if (!flow || flow.source !== expected[1] || flow.destination !== expected[2]) {
+      throw new ValidationError(`Service network flow drifted: ${expected[0]}`);
+    }
   }
   validateExactCurrentRoutes(policy.flows);
   const policyDigest = digestObject(policy);
   if (policyDigest !== EXPECTED_POLICY_DIGEST) {
-    throw new ValidationError('Exact current-build service network allowlist drifted');
+    throw new ValidationError('Service network policy digest drifted');
   }
-
   return {
     valid: true,
     schema: policy.schema,
     kernel_version: policy.kernel_version,
     default_action: policy.default_action,
+    routes: routeCount,
     segments: policy.network_segments.length,
-    flows: policy.flows.length,
-    routes: routeKeys.size,
     policy_digest: policyDigest,
     policy
   };
 }
 
 export function authorizeServiceRequest({
-  policy = ACTIVE_SERVICE_NETWORK_POLICY,
   source,
   destination,
-  method = 'GET',
-  url
+  method,
+  path,
+  policy = ACTIVE_SERVICE_NETWORK_POLICY
 }) {
-  validateServiceNetworkPolicy(policy);
-  const normalizedMethod = String(method).toUpperCase();
-  let target;
-  try {
-    target = new URL(url);
-  } catch {
-    return deny(source, destination, normalizedMethod, '[invalid]');
-  }
+  const result = validateServiceNetworkPolicy(policy);
   if (
     !SERVICES.includes(source)
-    || !DEPLOYABLE_SERVICES.includes(destination)
-    || source === 'supervisor' && destination === 'gateway'
-    || !['http:', 'https:'].includes(target.protocol)
-    || target.username
-    || target.password
-    || target.hash
-    || (
-      target.protocol === 'http:'
-      && !['127.0.0.1', 'localhost', '[::1]'].includes(target.hostname)
-    )
-  ) return deny(source, destination, normalizedMethod, target.pathname);
-
-  const allowed = policy.flows.some(flow => (
-    flow.source === source
-    && flow.destination === destination
-    && flow.routes.some(route => (
-      route.method === normalizedMethod
-      && matchesPathPattern(route.path, target.pathname)
-    ))
-  ));
-  if (!allowed) {
-    return deny(source, destination, normalizedMethod, target.pathname);
+    || !SERVICES.includes(destination)
+    || typeof method !== 'string'
+    || typeof path !== 'string'
+  ) deny(source, destination, method, path);
+  const normalizedMethod = method.toUpperCase();
+  if (!METHODS.has(normalizedMethod)) deny(source, destination, normalizedMethod, path);
+  for (const flow of result.policy.flows) {
+    if (flow.source !== source || flow.destination !== destination) continue;
+    const route = flow.routes.find(candidate => (
+      candidate.method === normalizedMethod
+      && matchesPathPattern(candidate.path, path)
+    ));
+    if (route) {
+      return {
+        allowed: true,
+        flow_id: flow.id,
+        source,
+        destination,
+        method: normalizedMethod,
+        path,
+        route_pattern: route.path,
+        policy_digest: result.policy_digest
+      };
+    }
   }
-  return {
-    allowed: true,
-    source,
-    destination,
-    method: normalizedMethod,
-    path: target.pathname,
-    policy_digest: digestObject(policy)
-  };
+  deny(source, destination, normalizedMethod, path);
 }
 
-export function allowedInboundTransportPeers(
+export function serviceCallerAllowed({
+  source,
   destination,
   policy = ACTIVE_SERVICE_NETWORK_POLICY
-) {
-  validateServiceNetworkPolicy(policy);
-  if (!DEPLOYABLE_SERVICES.includes(destination) || destination === 'gateway') {
-    throw new ValidationError('Inbound transport destination is invalid');
-  }
-  const callers = new Set(policy.flows
-    .filter(flow => flow.destination === destination)
-    .map(flow => flow.source));
-  return SERVICES.filter(service => callers.has(service));
-}
-
-export function authorizeInboundServiceRequest({
-  policy = ACTIVE_SERVICE_NETWORK_POLICY,
-  destination,
-  req,
-  url,
-  principal,
-  transportPeer
 }) {
-  const signedCaller = principal?.service;
-  const transportCaller = transportPeer?.service;
-  if (
-    signedCaller
-    && transportCaller
-    && signedCaller !== transportCaller
-  ) return deny(signedCaller, destination, req?.method, url?.pathname ?? '[invalid]');
-  const source = signedCaller ?? transportCaller;
-  if (!source) {
-    throw new AxiomError(
-      'service_network_identity_required',
-      'Internal service network authorization requires a caller identity',
-      401
-    );
-  }
-  let target;
-  try {
-    target = new URL(
-      `${url.pathname}${url.search}`,
-      `https://${destination}.internal`
-    );
-  } catch {
-    target = 'invalid';
-  }
-  return authorizeServiceRequest({
-    policy,
-    source,
-    destination,
-    method: req?.method,
-    url: target
-  });
+  const result = validateServiceNetworkPolicy(policy);
+  if (!SERVICES.includes(source) || !SERVICES.includes(destination)) return false;
+  return result.policy.flows.some(flow => (
+    flow.source === source && flow.destination === destination
+  ));
 }
 
-export function validateComposeNetworkSegmentation(
-  compose,
-  policy = ACTIVE_SERVICE_NETWORK_POLICY
-) {
-  const policyResult = validateServiceNetworkPolicy(policy);
-  if (typeof compose !== 'string' || !compose.trim()) {
-    throw new ValidationError('Service-unit Compose policy is missing');
-  }
-  if (
-    /^\s+ports\s*:/m.test(compose)
-    || /^\s+network_mode\s*:/m.test(compose)
-  ) throw new ValidationError('Service-unit Compose exposes a forbidden network boundary');
-  const servicesOffset = compose.search(/^services:\s*$/m);
-  if (
-    servicesOffset < 0
-    || /^  networks\s*:/m.test(compose.slice(0, servicesOffset))
-  ) throw new ValidationError('Service-unit Compose inherits an unreviewed network');
+export function allowedTlsPeersFor(destination, policy = ACTIVE_SERVICE_NETWORK_POLICY) {
+  const result = validateServiceNetworkPolicy(policy);
+  if (!SERVICES.includes(destination)) throw new ValidationError('Service destination is invalid');
+  return [...new Set(
+    result.policy.flows
+      .filter(flow => flow.destination === destination)
+      .map(flow => flow.source)
+      .filter(source => SERVICES.includes(source))
+  )].sort();
+}
 
-  const actualMembership = parseServiceNetworks(compose);
-  const expectedMembership = Object.fromEntries(
-    DEPLOYABLE_SERVICES.map(service => [
-      service,
-      policy.network_segments
-        .filter(segment => segment.members.includes(service))
-        .map(segment => segment.id)
-    ])
-  );
-  if (canonicalJson(actualMembership) !== canonicalJson(expectedMembership)) {
-    throw new ValidationError('Service-unit Compose network membership drifted');
+export function validateServiceUnitNetworkSegmentation(compose, policy = ACTIVE_SERVICE_NETWORK_POLICY) {
+  if (typeof compose !== 'string' || !compose.length) {
+    throw new ValidationError('Service-unit Compose is missing');
   }
-
+  const result = validateServiceNetworkPolicy(policy);
+  const membership = parseServiceNetworks(compose);
   const rootNetworks = parseRootNetworks(compose);
-  const expectedNetworkIds = policy.network_segments.map(segment => segment.id);
-  if (canonicalJson(Object.keys(rootNetworks)) !== canonicalJson(expectedNetworkIds)) {
+  const expectedNetworks = Object.fromEntries(
+    result.policy.network_segments.map(segment => [segment.id, segment])
+  );
+  const networkNames = Object.keys(rootNetworks).sort();
+  const expectedNames = Object.keys(expectedNetworks).sort();
+  if (canonicalJson(networkNames) !== canonicalJson(expectedNames)) {
     throw new ValidationError('Service-unit Compose network inventory drifted');
   }
-  for (const [network, settings] of Object.entries(rootNetworks)) {
+  for (const [name, segment] of Object.entries(expectedNetworks)) {
     if (
-      canonicalJson(Object.keys(settings).sort())
-        !== canonicalJson(['driver', 'internal'])
-      || settings.internal !== 'true'
-      || settings.driver !== 'bridge'
-    ) throw new ValidationError(`Service-unit Compose network is not internal: ${network}`);
+      rootNetworks[name]?.internal !== 'true'
+      || rootNetworks[name]?.driver !== 'bridge'
+      || Object.keys(rootNetworks[name]).length !== 2
+    ) throw new ValidationError(`Service-unit Compose network is weakened: ${name}`);
+    const actualMembers = DEPLOYABLE_SERVICES
+      .filter(service => membership[service].includes(name))
+      .sort();
+    const expectedMembers = [...segment.members].sort();
+    if (canonicalJson(actualMembers) !== canonicalJson(expectedMembers)) {
+      throw new ValidationError(`Service-unit Compose network membership drifted: ${name}`);
+    }
+  }
+  for (const service of DEPLOYABLE_SERVICES) {
+    const networks = membership[service];
+    if (!networks.length) {
+      throw new ValidationError(`Service-unit Compose service lacks an internal network: ${service}`);
+    }
+    for (const network of networks) {
+      if (!Object.hasOwn(expectedNetworks, network)) {
+        throw new ValidationError(
+          `Service-unit Compose service joins an undeclared network: ${service} -> ${network}`
+        );
+      }
+      if (!expectedNetworks[network].members.includes(service)) {
+        throw new ValidationError(
+          `Service-unit Compose service joins an unauthorized network: ${service} -> ${network}`
+        );
+      }
+    }
+  }
+  const adjacency = new Set();
+  for (const segment of Object.values(expectedNetworks)) {
+    const members = segment.members;
+    for (const left of members) {
+      for (const right of members) {
+        if (left !== right) adjacency.add(`${left}\0${right}`);
+      }
+    }
+  }
+  const crossServiceFlows = result.policy.flows.filter(flow => (
+    DEPLOYABLE_SERVICES.includes(flow.source)
+    && DEPLOYABLE_SERVICES.includes(flow.destination)
+    && flow.source !== flow.destination
+  ));
+  for (const flow of crossServiceFlows) {
+    if (!adjacency.has(`${flow.source}\0${flow.destination}`)) {
+      throw new ValidationError(`Allowed service flow lacks network adjacency: ${flow.id}`);
+    }
   }
   return {
-    ...policyResult,
+    valid: true,
+    schema: result.schema,
+    segments: result.policy.network_segments.length,
     services: DEPLOYABLE_SERVICES.length,
-    compose_sha256: digestObject({
-      membership: actualMembership,
-      networks: rootNetworks
-    })
+    memberships: Object.fromEntries(
+      DEPLOYABLE_SERVICES.map(service => [service, [...membership[service]].sort()])
+    ),
+    policy_digest: result.policy_digest
   };
 }
 
 export function validateServiceRouteImplementation({
-  policy = ACTIVE_SERVICE_NETWORK_POLICY,
-  sources
+  sources,
+  policy = ACTIVE_SERVICE_NETWORK_POLICY
 }) {
+  if (!sources || typeof sources !== 'object' || Array.isArray(sources)) {
+    throw new ValidationError('Service source inventory is invalid');
+  }
   const policyResult = validateServiceNetworkPolicy(policy);
-  exactObject(sources, 'Service network route sources', [
-    'grid',
-    'hypervisor',
-    'sandbox'
-  ]);
-  let implementedRoutes = 0;
-  for (const destination of ['grid', 'hypervisor', 'sandbox']) {
-    if (typeof sources[destination] !== 'string') {
-      throw new ValidationError(
-        `Service network route source is missing: ${destination}`
-      );
+  const declaredByDestination = new Map(
+    DEPLOYABLE_SERVICES.map(service => [service, new Set()])
+  );
+  for (const [service, paths] of Object.entries(SERVICE_UNIT_SOURCE_FILES)) {
+    const declarations = [];
+    for (const sourcePath of paths) {
+      const source = sources[sourcePath];
+      if (typeof source !== 'string' || !source.length) {
+        throw new ValidationError(`Service source is missing: ${sourcePath}`);
+      }
+      const count = [...source.matchAll(/router\.add\(/g)].length;
+      const matches = [...source.matchAll(
+        /router\.add\(\s*(['"])([A-Z]+)\1\s*,\s*(['"])([^'"]+)\3/g
+      )];
+      if (matches.length !== count) {
+        throw new ValidationError(`Service source has a non-literal router.add: ${sourcePath}`);
+      }
+      declarations.push(...matches.map(match => `${match[2]} ${match[4]}`));
     }
-    const routeDeclarations = [
-      ...sources[destination].matchAll(/router\.add\(/g)
-    ].length;
-    const routeMatches = [...sources[destination].matchAll(
-      /router\.add\(\s*(['"])([A-Z]+)\1\s*,\s*(['"])([^'"]+)\3/g
-    )];
-    if (routeMatches.length !== routeDeclarations) {
-      throw new ValidationError(
-        `${destination} contains a non-literal or unsupported router.add declaration`
-      );
-    }
-    const implemented = routeMatches
-      .map(match => `${match[2]} ${match[4]}`)
-      .sort();
-    const allowed = [...new Set(policy.flows
-      .filter(flow => flow.destination === destination)
+    const implemented = [...new Set(declarations)].sort();
+    const expected = policyResult.policy.flows
+      .filter(flow => flow.destination === service)
       .flatMap(flow => flow.routes.map(route => `${route.method} ${route.path}`))
-    )].sort();
-    if (canonicalJson(implemented) !== canonicalJson(allowed)) {
-      throw new ValidationError(
-        `Service network policy and ${destination} routes disagree`
-      );
+      .sort();
+    if (canonicalJson(implemented) !== canonicalJson(expected)) {
+      throw new ValidationError(`Service implementation routes drifted: ${service}`);
+    }
+    declaredByDestination.set(service, new Set(implemented));
+  }
+  let implementedRoutes = 0;
+  for (const [service, routes] of declaredByDestination) {
+    const implemented = [...routes];
+    for (const route of implemented) {
+      const separator = route.indexOf(' ');
+      const method = route.slice(0, separator);
+      const path = route.slice(separator + 1);
+      const allowed = policyResult.policy.flows.some(flow => (
+        flow.destination === service
+        && flow.routes.some(candidate => (
+          candidate.method === method && candidate.path === path
+        ))
+      ));
+      if (!allowed) {
+        throw new ValidationError(
+          `Service implementation route is not policy-authorized: ${service} ${route}`
+        );
+      }
     }
     implementedRoutes += implemented.length;
   }
