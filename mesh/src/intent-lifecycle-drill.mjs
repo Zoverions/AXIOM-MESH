@@ -27,7 +27,8 @@ const UNBOUND_SOURCE = `unbound-local-intent-drill:${KERNEL_VERSION}`;
 
 export async function runIntentLifecycleDrill({
   sourceRevision = process.env.GITHUB_SHA,
-  now = () => Date.now()
+  now = () => Date.now(),
+  advanceClock
 } = {}) {
   const commitBound = REVISION.test(sourceRevision ?? '');
   const normalizedRevision = commitBound ? sourceRevision : null;
@@ -161,7 +162,7 @@ export async function runIntentLifecycleDrill({
     });
     checks.independent_vote_recorded = vote.status === 'completed';
 
-    await waitUntil(votingEndsAt);
+    await waitUntil(votingEndsAt, { now, advanceClock });
     const lateVote = await api(gateway, tokens.voter, '/v1/intents', {
       method: 'POST',
       body: {
@@ -190,7 +191,7 @@ export async function runIntentLifecycleDrill({
     });
     checks.proposal_finalized_through_gateway = finalized.status === 'completed';
 
-    if (Date.now() < new Date(activateAfter).valueOf() - 500) {
+    if (now() < new Date(activateAfter).valueOf() - 500) {
       const earlyActivation = await independentlyApprovedIntent({
         gateway,
         requesterToken: tokens.operator,
@@ -209,7 +210,7 @@ export async function runIntentLifecycleDrill({
       throw new ValidationError('Intent lifecycle drill reached activation window before testing timelock');
     }
 
-    await waitUntil(activateAfter);
+    await waitUntil(activateAfter, { now, advanceClock });
     const activated = await independentlyApprovedIntent({
       gateway,
       requesterToken: tokens.operator,
@@ -637,9 +638,20 @@ async function api(base, token, path, {
   return payload;
 }
 
-async function waitUntil(isoTimestamp) {
-  const delay = Math.max(0, new Date(isoTimestamp).valueOf() - Date.now() + 25);
-  if (delay) await new Promise(resolve => setTimeout(resolve, delay));
+async function waitUntil(isoTimestamp, {
+  now = () => Date.now(),
+  advanceClock
+} = {}) {
+  const delay = Math.max(0, new Date(isoTimestamp).valueOf() - now() + 25);
+  if (!delay) return;
+  if (advanceClock !== undefined) {
+    if (typeof advanceClock !== 'function') {
+      throw new TypeError('advanceClock must be a function when supplied');
+    }
+    advanceClock(delay);
+    return;
+  }
+  await new Promise(resolve => setTimeout(resolve, delay));
 }
 
 async function findPortBlock() {

@@ -9,15 +9,19 @@ import {
 const REVISION = /^[a-f0-9]{40}$/;
 let evidencePromise;
 
-function lifecycleEvidence() {
+function lifecycleEvidence(t) {
+  if (!evidencePromise) {
+    t.mock.timers.enable({ apis: ['Date'], now: new Date() });
+  }
   evidencePromise ??= runIntentLifecycleDrill({
-    sourceRevision: process.env.GITHUB_SHA
+    sourceRevision: process.env.GITHUB_SHA,
+    advanceClock: milliseconds => t.mock.timers.tick(milliseconds)
   });
   return evidencePromise;
 }
 
-test('AXIOM Intent lifecycle traverses the real four-service stack and emits signed evidence', async () => {
-  const evidence = await lifecycleEvidence();
+test('AXIOM Intent lifecycle traverses the real four-service stack and emits signed evidence', async t => {
+  const evidence = await lifecycleEvidence(t);
   const verified = verifyIntentLifecycleEvidence(evidence);
   assert.equal(verified.valid, true);
   assert.equal(verified.commit_bound, REVISION.test(process.env.GITHUB_SHA ?? ''));
@@ -36,8 +40,8 @@ test('AXIOM Intent lifecycle traverses the real four-service stack and emits sig
   assert.doesNotMatch(serialized, /intent-verifier-c-[0-9a-f-]{36}-z{24}/);
 });
 
-test('Intent lifecycle evidence rejects tampering and false execution/promotion claims', async () => {
-  const evidence = await lifecycleEvidence();
+test('Intent lifecycle evidence rejects tampering and false execution/promotion claims', async t => {
+  const evidence = await lifecycleEvidence(t);
 
   const tamperedCheck = structuredClone(evidence);
   tamperedCheck.checks.grid_chain_verified_after_lifecycle = false;

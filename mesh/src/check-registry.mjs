@@ -119,7 +119,11 @@ export async function validateCapabilityEvidenceBindings(registry, {
   repositoryRoot = REPOSITORY_ROOT,
   bindingsPath = DEFAULT_BINDINGS_PATH
 } = {}) {
-  const root = resolve(repositoryRoot);
+  // Resolve the root itself before comparing descendants. Hosted Windows
+  // runners can expose the temp directory through a short-name alias while
+  // realpath() returns its long form, which otherwise makes an in-tree file
+  // appear to escape the repository.
+  const root = await realpath(resolve(repositoryRoot));
   const bindingsFile = resolve(bindingsPath);
   const bindingsRelativePath = repositoryRelativePath(root, bindingsFile, 'Capability evidence bindings');
   await validateRepositoryFile(root, bindingsRelativePath);
