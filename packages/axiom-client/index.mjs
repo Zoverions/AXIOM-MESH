@@ -115,6 +115,26 @@ export class GatewayClient {
     }
 
     const lifecycle = requestLifecycle(signal, boundedTimeout(timeoutMs, this.contract));
+    if (lifecycle.signal.aborted) {
+      lifecycle.close();
+      if (lifecycle.externalCancelled()) {
+        throw new GatewayClientError(
+          'request_cancelled',
+          'Gateway request was cancelled'
+        );
+      }
+      if (lifecycle.timedOut()) {
+        throw new GatewayClientError(
+          'request_timeout',
+          'Gateway request exceeded its bounded timeout',
+          { retryable: true }
+        );
+      }
+      throw new GatewayClientError(
+        'request_cancelled',
+        'Gateway request was cancelled'
+      );
+    }
     let response;
     try {
       response = await this.request(path, {
