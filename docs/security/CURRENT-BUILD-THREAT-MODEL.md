@@ -39,6 +39,18 @@ single-host units.
   identities, consent, governance, node records, backups, import/export, and
   Grid-attested terminal machine-receipt construction. It is one transparency log, not replicated consensus.
 
+Local Grid chain and checkpoint verification are modification-evident: they detect
+invalid signatures, altered events, gaps, broken links, and disagreement with the
+locally stored head. Local state alone does **not** make a consistently deleted tail
+detectable if an actor can also rewrite the local head metadata and trailing local
+checkpoints. Truncation assurance therefore requires an `axiom-grid-continuity-anchor.v1`
+retained outside `AXIOM_DATA_DIR`, derived from a Grid-signed export-manifest head and
+verified with full genesis re-verification. A valid anchor proves that the current
+history equals or extends that retained head and makes truncation detectable only
+through the anchor's committed sequence. It does not prove preservation of events
+after the newest retained anchor and does not move malicious host/root or active
+signing-key compromise outside the trusted-computing-base assumptions below.
+
 Authenticated `agent` principals use `axiom-machine-principal.v1`. They require
 a configured human sponsor and are constrained by finite scopes, action and
 purpose allowlists, runtime identity, lifetime/expiry, non-delegation, and a
@@ -125,7 +137,8 @@ The primary assets are:
 - service, transport, provider, reviewer, machine-runtime, and data-protection
   keys or credentials;
 - grants and approvals that can authorize effects;
-- Grid state, migrations, evidence events, indexes, and encryption metadata;
+- Grid state, migrations, evidence events, indexes, encryption metadata, and
+  externally retained Grid continuity anchors;
 - backup snapshots, retention receipts, rollback packages, rotation journals,
   and recovery copies;
 - capsule, node, schedule, causal-exchange, governance, and import/export
@@ -148,7 +161,10 @@ Evidence integrity is stricter than ordinary availability. An acknowledged
 mutation must not be reported as successful without its Grid evidence. Missing
 authorization, identity, sponsor, policy, encryption, or evidence dependencies
 fail closed. Degraded readiness may preserve inspection and recovery, but it
-does not grant replacement authority.
+does not grant replacement authority. A local chain verification result must not
+be described as deletion evidence; a truncation-detection claim additionally
+requires a valid externally retained continuity anchor and full-chain anchor
+verification.
 
 ## Threat actors and assumptions
 
@@ -205,7 +221,8 @@ Reviewers must trace at least these entry points:
 5. policy, principal, trust-root, transport, provider, and deployment files
    loaded at provisioning or startup;
 6. encrypted Grid database, migrations, backups, recovery copies, rotation
-   packages, and rollback journals;
+   packages, rollback journals, and externally retained continuity-anchor
+   creation/verification while Grid is stopped;
 7. node admission/renewal, storage offers, discovery, scheduling, quarantine,
    causal bundles, apply approvals, and resolution;
 8. telemetry scraping, queued alert delivery, receiver responses, receipts,
@@ -240,7 +257,7 @@ post-recovery verification rather than an online grant.
 | Request replay, substitution, or confused deputy | Method/path/audience/body digest, caller identity, timestamp, nonce, one-use approval and grant state | Clock failure and stolen active keys require deployment alerts, rotation, and incident response |
 | Unauthorized Sandbox effect | Fixed built-in operation registry, grant/tool/constraint binding, no ambient supported external adapters, deny egress | This is not arbitrary-code isolation; host/container escape resistance is not externally audited |
 | Service impersonation or retired-leaf reuse | TLS 1.3 CA validation plus DNS/URI identity and exact active fingerprint; distinct service keys; signed caller/certificate binding | Pilot CA custody, compromise recovery, and orchestrator mount policy remain external gates |
-| Grid data disclosure or tamper | Authenticated encryption, signed hash-linked evidence, schema validation, transaction boundaries, wrong-key/tamper tests | Host root and active data-key compromise remain in the trusted-computing base |
+| Grid data disclosure, tamper, or local history truncation | Authenticated encryption, signed hash-linked evidence, schema validation, transaction boundaries, wrong-key/tamper tests; local full/checkpoint verification detects modification; an externally retained Grid-signed continuity anchor plus full genesis verification detects truncation through the retained sequence | Local state alone cannot detect a consistently truncated suffix with matching local head/checkpoint rewrite; external-anchor assurance ends at the newest retained anchor; host root, external-anchor custody failure, and active Grid/data-key compromise remain trusted/external risks |
 | Backup deletion, rollback substitution, or partial rotation | Signed encrypted snapshots, exact manifests, inventory recheck, recoverable quarantine, Grid locks, atomic journals, rewrap chains, rollback verification | Pilot-owned media policy, external key versioning, escrow, destruction, and operator separation remain pending |
 | Provider response injection or secret leakage | Separate pinned Ed25519 signers, digest-pinned adapter, nonce/audience/expiry-bound exact inventories, bounded process I/O, private ephemeral generation, secret scans | Reference file adapter is not vendor custody; real backend authorization, HA, audit retention, and workload identity need review |
 | Telemetry exfiltration or receiver abuse | Fixed labels/attributes, exact four-service scrape, dedicated scope, exact HTTPS origins, no redirect, bounded queue/retry, receipts and forbidden-term scans | Host relay can access collected operations data; live receiver custody, DNS/TLS policy, retention, and on-call routing remain external |
@@ -268,6 +285,9 @@ The current review must consider at minimum:
 - policy-layer reordering, omission, unknown fields, numeric boundary errors,
   or a lower layer attempting to expand authority;
 - accepted API work whose Grid evidence commit fails;
+- consistent Grid suffix deletion paired with rewritten local `last_seq`, `last_hash`,
+  or trailing checkpoint metadata; forged, re-addressed, wrong-Grid, wrong-build,
+  malformed, or locally retained-only continuity anchors;
 - oversized request/response bodies, rate pressure, constrained-machine
   concurrency pressure, dependency suspension/loss, partial startup, stale
   readiness, and restart races;
@@ -314,6 +334,10 @@ Independent review should treat these as invariants, not best-effort goals:
     separate approval, containment, and a bounded unexpired exception.
 13. Discovery, listing, installation, connection, or protocol advertisement never
     creates execution authority; every effect still requires normal intent evaluation.
+14. Local Grid chain/checkpoint verification is not deletion evidence. Any claim
+    of truncation detection requires a signed continuity anchor retained outside
+    `AXIOM_DATA_DIR`, verified against the exact source/build context with full
+    genesis chain verification; assurance stops at the newest retained anchor.
 
 ## Residual risk and non-claims
 
@@ -324,6 +348,13 @@ execution, TPM/TEE or measured-runtime attestation, replicated consensus,
 automatic federation, remote dispatch, Sybil resistance, externally hosted key
 custody, live vendor provider security, audited WAN behavior, post-quantum
 security, or regulatory certification.
+
+An externally retained continuity anchor makes a fully verified current Grid
+history truncation-detectable only through the newest retained anchor sequence.
+It does not prove that events after that anchor were preserved, does not recover a
+deleted tail, and does not defend against compromise of the host or an active Grid
+signing key capable of producing new trusted statements. Anchor custody is therefore
+an external operational dependency rather than a substitute for host security.
 
 The constrained machine-principal implementation does not by itself prove that
 the named runtime is uncompromised, that its software digest corresponds to
