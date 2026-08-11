@@ -47,6 +47,10 @@ test('local Git inspection strips inherited Git control variables and invokes no
       callback(null, Buffer.alloc(0), Buffer.alloc(0));
       return;
     }
+    if (operation === 'archive') {
+      callback(null, Buffer.from('deterministic source archive bytes'), Buffer.alloc(0));
+      return;
+    }
     callback(new Error('unexpected Git command'), Buffer.alloc(0), Buffer.alloc(0));
   };
 
@@ -56,7 +60,9 @@ test('local Git inspection strips inherited Git control variables and invokes no
   });
   assert.equal(result.provider_api_required, false);
   assert.equal(result.network_required, false);
-  assert.equal(calls.length, 5);
+  assert.equal(result.source_bytes_independently_committed, true);
+  assert.match(result.source_archive_sha256, /^[a-f0-9]{64}$/);
+  assert.equal(calls.length, 6);
 
   for (const call of calls) {
     assert.equal(call.command, 'git');
