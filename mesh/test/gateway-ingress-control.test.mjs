@@ -122,7 +122,7 @@ test('Unix-ingress readiness has no caller-spendable probe bucket', () => {
   );
 });
 
-test('readiness single-flight bounds dependency work and serves a short cache', async () => {
+test('readiness single-flight bounds dependency work and refreshes after the short cache expires', async () => {
   let clock = 1_000;
   let loads = 0;
   let release;
@@ -150,14 +150,7 @@ test('readiness single-flight bounds dependency work and serves a short cache', 
   assert.equal(loads, 1);
 
   clock += 51;
-  const refreshed = createSingleFlightCache({
-    cacheMs: 250,
-    now: () => clock,
-    load: async () => {
-      loads += 1;
-      return { status: 'ready' };
-    }
-  });
-  await refreshed('trace-new-cache');
+  const refreshed = await cached('trace-refreshed');
   assert.equal(loads, 2);
+  assert.equal(refreshed.trace_id, 'trace-refreshed');
 });
