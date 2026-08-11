@@ -1,0 +1,79 @@
+{
+  "schema": "axiom-actor-recovery-state-access-contract.v1",
+  "contract_id": "actor.recovery-state-access",
+  "version": 1,
+  "status": "specified",
+  "recovery": {
+    "policy_schema": "axiom-actor-recovery-policy.v1",
+    "attestation_schema": "axiom-actor-recovery-attestation.v1",
+    "decision_schema": "axiom-actor-recovery-decision.v1",
+    "completion_schema": "axiom-actor-recovery-completed.v1",
+    "factor_types": [
+      "hardware_key",
+      "trusted_device",
+      "trusted_human",
+      "guardian",
+      "institution_attestation",
+      "government_identity_attestation",
+      "offline_secret",
+      "recovery_service",
+      "biometric_attestation"
+    ],
+    "factor_classes": [
+      "possession",
+      "knowledge",
+      "human",
+      "institution",
+      "biometric"
+    ],
+    "threshold_required": true,
+    "ordinary_authority_granted": false
+  },
+  "state_access": {
+    "envelope_schema": "axiom-actor-state-access-envelope.v1",
+    "use_schema": "axiom-actor-state-access-use.v1",
+    "actions": [
+      "read",
+      "derive",
+      "export",
+      "publish",
+      "contribute_metric"
+    ],
+    "disclosure_profiles": [
+      "private",
+      "minimum",
+      "aggregate",
+      "pseudonymous",
+      "public"
+    ],
+    "authority_basis_types": [
+      "self_authority",
+      "delegated_authority",
+      "association_obligation",
+      "jurisdiction_requirement",
+      "succession_directive"
+    ],
+    "association_obligation_may_create_ambient_access": false,
+    "metric_contribution_requires_minimized_non_raw_disclosure": true,
+    "ordinary_authority_granted": false
+  },
+  "invariants": [
+    "recovery_restores_control_without_inheriting_control",
+    "recovery_factors_are_evidence_not_account_ownership",
+    "state_access_requires_exact_subject_requester_purpose_action_scope_and_recipient",
+    "state_access_expires",
+    "state_access_does_not_grant_ordinary_authority",
+    "association_obligation_is_not_ambient_private_state_access",
+    "mandatory_metric_contribution_is_minimized_and_non_raw",
+    "succession_directive_does_not_fabricate_current_source_consent"
+  ],
+  "claim_boundary": {
+    "runtime_persistence": false,
+    "public_api": false,
+    "legal_recovery_validity": false,
+    "legal_reporting_obligation_validity": false,
+    "biometric_recovery_enabled": false,
+    "post_quantum_security": false,
+    "capability_promoted": false
+  }
+}
