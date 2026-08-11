@@ -27,6 +27,7 @@
       "biometric"
     ],
     "threshold_required": true,
+    "accepted_factor_must_meet_decision_assurance": true,
     "ordinary_authority_granted": false
   },
   "state_access": {
@@ -60,6 +61,7 @@
   "invariants": [
     "recovery_restores_control_without_inheriting_control",
     "recovery_factors_are_evidence_not_account_ownership",
+    "recovery_approval_counts_only_factors_meeting_the_decision_assurance_floor",
     "state_access_requires_exact_subject_requester_purpose_action_scope_and_recipient",
     "state_access_expires",
     "state_access_does_not_grant_ordinary_authority",
