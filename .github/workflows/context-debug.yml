@@ -1,0 +1,43 @@
+name: Context Debug
+
+on:
+  push:
+    branches: ["feat/sovereign-context-plane"]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24.18.0"
+          package-manager-cache: false
+      - name: Run context tests
+        id: context-tests
+        working-directory: mesh
+        shell: bash
+        run: |
+          set +e
+          node --test --test-reporter=spec \
+            test/sovereign-context.test.mjs \
+            test/grid-context.test.mjs \
+            > "$RUNNER_TEMP/context-tests.txt" 2>&1
+          status=$?
+          cat "$RUNNER_TEMP/context-tests.txt"
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          exit "$status"
+      - name: Upload context test output
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: context-test-output-${{ github.sha }}
+          path: ${{ runner.temp }}/context-tests.txt
+          if-no-files-found: error
+          retention-days: 1
