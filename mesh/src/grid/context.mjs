@@ -1,8 +1,13 @@
 import {
   AxiomError,
   ValidationError,
-  canonicalJson
+  canonicalJson,
+  digestObject
 } from '../lib/canonical.mjs';
+import {
+  deriveContextProjectionAuthority,
+  finiteContextScopesForClaims
+} from '../lib/context-authority.mjs';
 import {
   CONTEXT_MEMORY_KIND,
   compileContextView,
@@ -17,6 +22,51 @@ export function compileGridContextView(store, {
   asOf = new Date().toISOString(),
   maxClaims = 64
 }) {
+  const state = verifiedGridContextState(store, requester, owner);
+  return buildGridContextView(state, {
+    requester,
+    owner,
+    purpose,
+    authorizedScopes,
+    asOf,
+    maxClaims
+  });
+}
+
+export function compileAuthorizedGridContextView(store, {
+  principal,
+  owner = principal?.id,
+  purpose,
+  asOf = new Date().toISOString(),
+  maxClaims = 64
+}) {
+  const authority = deriveContextProjectionAuthority(principal, { purpose });
+  const state = verifiedGridContextState(store, authority.principal_id, owner);
+  const finiteScopes = finiteContextScopesForClaims(authority, state.claims);
+  const compileScopes = finiteScopes.length ? finiteScopes : ['context:none'];
+  const view = buildGridContextView(state, {
+    requester: authority.principal_id,
+    owner,
+    purpose: authority.purpose,
+    authorizedScopes: compileScopes,
+    asOf,
+    maxClaims
+  });
+  const authorization = {
+    ...authority,
+    projected_context_scopes: finiteScopes
+  };
+  return {
+    ...view,
+    authorization,
+    projection_digest: digestObject({
+      view_digest: view.view_digest,
+      authorization
+    })
+  };
+}
+
+function verifiedGridContextState(store, requester, owner) {
   requireGridContextInterface(store);
   const chain = store.verifyFullChain();
   if (!chain.valid) {
@@ -31,16 +81,25 @@ export function compileGridContextView(store, {
   const claims = graph.objects
     .filter(object => object.kind === CONTEXT_MEMORY_KIND)
     .map(object => verifiedContextClaimFromMemoryObject(store, object));
+  return { claims, status: store.getStatus() };
+}
 
+function buildGridContextView(state, {
+  requester,
+  owner,
+  purpose,
+  authorizedScopes,
+  asOf,
+  maxClaims
+}) {
   const view = compileContextView({
-    claims,
+    claims: state.claims,
     principal: requester,
     purpose,
     scopes: authorizedScopes,
     asOf,
     maxClaims
   });
-  const status = store.getStatus();
 
   return {
     ...view,
@@ -49,11 +108,11 @@ export function compileGridContextView(store, {
       grid_chain: {
         valid: true,
         verification_mode: 'full',
-        last_seq: status.last_seq,
-        last_hash: status.last_hash
+        last_seq: state.status.last_seq,
+        last_hash: state.status.last_hash
       },
       memory_owner: owner,
-      visible_context_objects: claims.length
+      visible_context_objects: state.claims.length
     }
   };
 }
