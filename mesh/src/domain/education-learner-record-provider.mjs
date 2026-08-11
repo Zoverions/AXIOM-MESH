@@ -1,6 +1,6 @@
 import { digestObject, ValidationError, assertPlainObject, assertString, assertStringArray } from '../lib/canonical.mjs';
 import {
-  educationUnavailableResult,
+  loadEducationContract,
   validateEducationIntent,
 } from './education-contract.mjs';
 
@@ -138,7 +138,9 @@ function validateReadResult(result, input) {
     throw new ValidationError('learner-record progress result events must contain at most 4096 items');
   }
   const events = value.events.map(validateProgressEvent);
-  if (value.as_of !== undefined) assertString(value.as_of, 'learner-record progress result as_of', { max: 64 });
+  if (value.as_of !== undefined) {
+    assertString(value.as_of, 'learner-record progress result as_of', { max: 64 });
+  }
   if (value.next_cursor !== undefined) {
     assertString(value.next_cursor, 'learner-record progress result next_cursor', { max: 512 });
   }
@@ -159,6 +161,22 @@ function validateProvider(provider) {
     }
   }
   return value;
+}
+
+function educationUnavailableResult(actionName, action) {
+  return {
+    ok: false,
+    http_status: 503,
+    error: {
+      code: 'capability_unavailable',
+      message: `Education capability ${action.provider_capability} has no configured adapter`,
+      details: {
+        action: actionName,
+        provider_capability: action.provider_capability,
+        capability_status: 'adapter_required',
+      },
+    },
+  };
 }
 
 export function createEducationLearnerRecordProvider({
@@ -189,7 +207,9 @@ async function authorizeConsent(provider, input, { purpose, data_scope }) {
     purpose,
     data_scope,
   });
-  if (result !== true) throw new ValidationError('education learner-record consent assertion failed');
+  if (result !== true) {
+    throw new ValidationError('education learner-record consent assertion failed');
+  }
 }
 
 export async function executeEducationLearnerRecordAction(
@@ -197,11 +217,13 @@ export async function executeEducationLearnerRecordAction(
   input,
   { provider = null } = {},
 ) {
-  const action = validateEducationIntent(actionName, input);
+  const contract = await loadEducationContract();
+  validateEducationIntent(contract, actionName, input);
+  const action = contract.actions[actionName];
   if (!LEARNER_ACTIONS.has(actionName) || action.provider_capability !== 'education.learner-record') {
     throw new ValidationError(`education learner-record provider does not handle action: ${actionName}`);
   }
-  if (provider === null) return educationUnavailableResult(actionName);
+  if (provider === null) return educationUnavailableResult(actionName, action);
   const adapter = validateProvider(provider);
 
   if (actionName === 'education.learner.event.append') {
