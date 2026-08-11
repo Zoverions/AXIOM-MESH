@@ -28,6 +28,7 @@ import { createBearerAuthenticator } from '../lib/public-auth.mjs';
 import { intentRequestDigest } from '../lib/intent-binding.mjs';
 import { loadTransportRuntime } from '../lib/transport-credentials.mjs';
 import { GatewayIngressControl, createSingleFlightCache } from './ingress-control.mjs';
+import { buildGatewayContextProjection } from './context-route.mjs';
 
 const PRINCIPAL_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 
@@ -381,6 +382,14 @@ export async function createGatewayService(config = meshConfig()) {
       `/internal/v1/memory/${encodeURIComponent(owner)}?requester=${encodeURIComponent(principal.id)}`,
       traceId
     );
+  });
+  router.add('GET', '/v1/context', async ({ url, traceId, principal }) => {
+    const projection = buildGatewayContextProjection({
+      gridUrl: config.urls.grid,
+      principal,
+      url
+    });
+    return signedFetch(identity, 'grid', projection.target, { traceId });
   });
   router.add('GET', '/v1/accounting', async ({ traceId, principal }) => gridGet(
     `/internal/v1/accounting/${encodeURIComponent(principal.id)}`,
