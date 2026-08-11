@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
 import test from 'node:test';
 import { createGatewayClient } from '../../packages/axiom-client/index.mjs';
 import { startDevelopmentStack } from '../src/dev.mjs';
@@ -11,7 +12,7 @@ import { reserveProductionPortBlock } from '../src/lib/production-host.mjs';
 const HUMAN_TOKEN = `human-${'h'.repeat(40)}`;
 const AGENT_TOKEN = `agent-${'a'.repeat(40)}`;
 
-function apiTokens({ budgets = {} } = {}) {
+function apiTokens({ budgets = {}, expiresAt = '2099-01-01T00:00:00.000Z' } = {}) {
   return {
     [HUMAN_TOKEN]: {
       id: 'owner.machine-test',
@@ -26,7 +27,7 @@ function apiTokens({ budgets = {} } = {}) {
       roles: ['researcher'],
       scopes: ['intent:execute'],
       lifetime: 'session',
-      expires_at: '2099-01-01T00:00:00.000Z',
+      expires_at: expiresAt,
       runtime: {
         id: 'runtime.machine-test',
         kind: 'local-process',
@@ -254,4 +255,64 @@ test('machine request-rate ceiling tightens the global Gateway rate limit', asyn
     () => client.call('status.get'),
     error => error.code === 'machine_rate_budget_exceeded' && error.status === 429
   );
+});
+
+test('an expired constrained agent loses the whole authenticated Gateway surface', async t => {
+  const expiresAt = new Date(Date.now() + 2_500).toISOString();
+  const { gateway, client } = await startMachineStack(t, 'axiom-machine-expiry-', {
+    expiresAt
+  });
+
+  // The principal is still inside its declared lifetime here.
+  const live = await client.call('intents.submit', {
+    body: {
+      action: 'system.echo',
+      input: { message: 'before-expiry' },
+      purpose: 'test.conformance'
+    },
+    idempotencyKey: 'machine-e2e-expiry-before-0001'
+  });
+  assert.equal(live.status, 'completed');
+
+  await sleep(3_000);
+  assert.ok(new Date(expiresAt) < new Date());
+
+  const denied = async promise => {
+    const error = await promise.then(
+      () => { throw new Error('request was allowed after expiry'); },
+      failure => failure
+    );
+    assert.equal(error.code, 'machine_principal_expired');
+    assert.equal(error.status, 401);
+  };
+
+  // Hypervisor-terminated routes were already closed by intent normalization.
+  await denied(client.call('intents.submit', {
+    body: {
+      action: 'system.echo',
+      input: { message: 'after-expiry' },
+      purpose: 'test.conformance'
+    },
+    idempotencyKey: 'machine-e2e-expiry-after-00001'
+  }));
+
+  // Gateway- and Grid-terminated reads must fail closed on the same authority.
+  await denied(client.call('status.get'));
+  await denied(client.call('events.list', { query: { after: 0, limit: 10 } }));
+  await denied(client.call('intents.get', { params: { id: live.intent_id } }));
+
+  const raw = async path => {
+    const response = await fetch(`${gateway}${path}`, {
+      headers: { authorization: `Bearer ${AGENT_TOKEN}` }
+    });
+    return { status: response.status, body: await response.json() };
+  };
+  for (const path of [
+    '/v1/machine-discovery',
+    `/v1/machine-receipts/intents/${live.intent_id}/verify`
+  ]) {
+    const response = await raw(path);
+    assert.equal(response.status, 401);
+    assert.equal(response.body.error.code, 'machine_principal_expired');
+  }
 });
