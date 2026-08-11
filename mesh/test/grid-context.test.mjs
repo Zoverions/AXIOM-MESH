@@ -72,7 +72,8 @@ function contextClaim(overrides = {}) {
 
 function appendContextMemory(store, claim, {
   actor = claim.owner,
-  traceId = `trace_${claim.claim_id.replace(/[^A-Za-z0-9_.:-]/g, '_')}`
+  traceId = `trace_${claim.claim_id.replace(/[^A-Za-z0-9_.:-]/g, '_')}`,
+  executionEvidence
 } = {}) {
   const payload = contextClaimMemoryPutPayload(claim);
   store.appendEvents({
@@ -81,7 +82,9 @@ function appendContextMemory(store, claim, {
     events: [{
       kind: 'memory.put',
       subject: payload.object_id,
-      payload
+      payload: executionEvidence === undefined
+        ? payload
+        : { ...payload, evidence: executionEvidence }
     }]
   });
   return payload;
@@ -104,6 +107,52 @@ test('Grid-backed context compilation verifies the full evidence chain and memor
   assert.equal(view.usable_claims[0].claim_id, 'claim:grid-priority');
   assert.equal(payload.object_id, `memory_${payload.content_digest}`);
   assert.equal(view.authority_effect, 'none');
+});
+
+test('Grid context rebinding accepts the governed execution evidence envelope without weakening the content address', async t => {
+  const store = await fixture(t);
+  const payload = appendContextMemory(store, contextClaim(), {
+    executionEvidence: {
+      plan_digest: 'a'.repeat(64),
+      invocation_digest: 'b'.repeat(64),
+      execution: { statement: {}, signature: {} }
+    }
+  });
+
+  const view = compileGridContextView(store, {
+    requester: 'person:context-owner',
+    purpose: 'project.execution',
+    authorizedScopes: ['context:project'],
+    asOf: AS_OF
+  });
+
+  assert.equal(view.usable_claims.length, 1);
+  assert.equal(view.usable_claims[0].claim_id, payload.content.claim_id);
+});
+
+test('Grid context rebinding rejects unrelated memory.put payload fields', async t => {
+  const store = await fixture(t);
+  const claim = contextClaim();
+  const payload = contextClaimMemoryPutPayload(claim);
+  store.appendEvents({
+    traceId: 'trace_context_injected_payload',
+    actor: claim.owner,
+    events: [{
+      kind: 'memory.put',
+      subject: payload.object_id,
+      payload: { ...payload, injected: true }
+    }]
+  });
+
+  assert.throws(
+    () => compileGridContextView(store, {
+      requester: 'person:context-owner',
+      purpose: 'project.execution',
+      authorizedScopes: ['context:project'],
+      asOf: AS_OF
+    }),
+    /unsupported fields/
+  );
 });
 
 test('Grid context compilation requires the evidence actor to match the context owner', async t => {
