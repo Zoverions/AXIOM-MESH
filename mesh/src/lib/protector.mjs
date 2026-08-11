@@ -22,7 +22,7 @@ export class DataProtector {
     return this.#sealBuffer(Buffer.from(value), context, BYTES_FORMAT);
   }
 
-  open(serialized, context, { allowPlaintext = false } = {}) {
+  open(serialized, context) {
     let envelope;
     try {
       envelope = JSON.parse(serialized);
@@ -30,7 +30,6 @@ export class DataProtector {
       throw new ValidationError('Protected value is not valid JSON');
     }
     if (envelope?.format !== FORMAT) {
-      if (allowPlaintext) return envelope;
       throw new ValidationError('Protected value is stored in an unsupported format');
     }
     return JSON.parse(this.#openBuffer(envelope, context, FORMAT).toString('utf8'));
