@@ -49,8 +49,8 @@ export function readMemoryOrContext(store, {
     maxClaims: request.max_claims
   });
   return {
-    schema: 'axiom-context-projection.v1',
     ...view,
+    schema: 'axiom-context-projection.v1',
     request: {
       owner: request.owner,
       purpose: request.authority.purpose,
