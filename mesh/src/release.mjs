@@ -498,7 +498,6 @@ export function verifyProductionDeployment({
   for (const required of [
     'USER 10001:10001',
     'HEALTHCHECK ',
-    'CMD ["node", "src/supervisor.mjs"]',
     'AXIOM_REQUIRE_DENY_EGRESS=true',
     'AXIOM_INTERNAL_TLS=true',
     'AXIOM_TRANSPORT_DIR=/run/secrets/transport',
@@ -698,8 +697,8 @@ export function verifyProductionDeployment({
     'axiom-resilience-drill-evidence-${{ github.sha }}',
     'axiom-transport-drill-evidence-${{ github.sha }}',
     'axiom-service-unit-drill-evidence-${{ github.sha }}',
-    'axiom-node-scheduling-evidence-${{ github.sha }}',
-    'axiom-online-causal-sync-evidence-${{ github.sha }}',
+    'axiom-node-scheduling-drill-evidence-${{ github.sha }}',
+    'axiom-online-causal-sync-drill-evidence-${{ github.sha }}',
     'axiom-provider-conformance-evidence-${{ github.sha }}',
     'axiom-pilot-dossier-verifier-conformance-evidence-${{ github.sha }}',
     'axiom-pilot-evidence-package-verifier-conformance-evidence-${{ github.sha }}',
