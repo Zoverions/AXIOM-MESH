@@ -37,7 +37,7 @@ function currentContext(overrides = {}) {
     policy,
     capabilities,
     build: {
-      kernel_version: '0.12.0-dev.3',
+      kernel_version: '0.12.0-dev.4',
       source_digest: sha256('intent-v0.7-admission-source')
     },
     ...overrides
@@ -131,7 +131,7 @@ function readdressReview(raw) {
 }
 
 test('production executor registry remains byte-for-byte empty', () => {
-  assert.equal(registryText, '{\n  "schema": "axiom-intent-remediation-executor-registry.v1",\n  "kernel_version": "0.12.0-dev.3",\n  "mappings": []\n}\n');
+  assert.equal(registryText, '{\n  "schema": "axiom-intent-remediation-executor-registry.v1",\n  "kernel_version": "0.12.0-dev.4",\n  "mappings": []\n}\n');
   assert.deepEqual(productionRegistry.mappings, []);
 });
 
@@ -245,7 +245,7 @@ test('policy, capability, registry, and build drift invalidate dossier admission
 
   const changedRegistry = {
     schema: 'axiom-intent-remediation-executor-registry.v1',
-    kernel_version: '0.12.0-dev.3',
+    kernel_version: '0.12.0-dev.4',
     mappings: [{
       semantic_action: 'test.other',
       target_action: 'system.echo',
@@ -265,7 +265,7 @@ test('policy, capability, registry, and build drift invalidate dossier admission
     original,
     currentContext({
       build: {
-        kernel_version: '0.12.0-dev.3',
+        kernel_version: '0.12.0-dev.4',
         source_digest: sha256('different-build')
       }
     }),
