@@ -7,6 +7,7 @@ import { Router, createServiceServer, listen, parseJsonBody } from '../lib/http.
 import { AxiomError, ValidationError, assertPlainObject, assertString } from '../lib/canonical.mjs';
 import { operationsReport, readinessState, ServiceTelemetry } from '../lib/observability.mjs';
 import { GridStore } from './store.mjs';
+import { readMemoryOrContext } from './context-memory-route.mjs';
 import { loadDataProtector } from '../lib/protector.mjs';
 import { runServiceProcess } from '../lib/service-lifecycle.mjs';
 import { buildMachineIntentReceipt } from '../lib/machine-receipt.mjs';
@@ -256,17 +257,13 @@ export async function createGridService(config = meshConfig()) {
     approvals: store.listApprovals(params.principal)
   }));
   router.add('GET', '/internal/v1/approval/:id', async ({ params }) => store.getApproval(params.id));
-  router.add('GET', '/internal/v1/memory/:owner', async ({ params, url }) => {
-    const owner = assertString(params.owner, 'owner', {
-      max: 160,
-      pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
-    });
-    const requester = assertString(url.searchParams.get('requester'), 'requester', {
-      max: 160,
-      pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
-    });
-    return store.listMemory(requester, owner);
-  });
+  router.add('GET', '/internal/v1/memory/:owner', async ({ params, url, principal }) => (
+    readMemoryOrContext(store, {
+      owner: params.owner,
+      url,
+      callerService: principal?.service
+    })
+  ));
   router.add('GET', '/internal/v1/accounting/:owner', async ({ params }) => {
     const owner = assertString(params.owner, 'owner', {
       max: 160,
