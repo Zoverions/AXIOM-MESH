@@ -7,6 +7,7 @@ import test from 'node:test';
 import { createGatewayClient } from '../../packages/axiom-client/index.mjs';
 import { startDevelopmentStack } from '../src/dev.mjs';
 import { compileContextClaimMemoryIntent } from '../src/lib/context-lifecycle.mjs';
+import { buildContextTaskBinding } from '../src/lib/context-task-binding.mjs';
 import { reserveProductionPortBlock } from '../src/lib/production-host.mjs';
 
 const TOKEN = `context-gateway-${'c'.repeat(40)}`;
@@ -45,7 +46,7 @@ function claim() {
   };
 }
 
-test('context claim follows the governed intent path and returns through authenticated Gateway projection', async t => {
+test('context claim follows governed write, projection, and causally-bound execution paths', async t => {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-context-gateway-e2e-'));
   const lease = await reserveProductionPortBlock('context gateway e2e');
   const basePort = lease.base_port;
@@ -128,4 +129,48 @@ test('context claim follows the governed intent path and returns through authent
   assert.match(view.projection_digest, /^[a-f0-9]{64}$/);
   assert.equal(view.evidence.grid_chain.valid, true);
   assert.equal(view.evidence.grid_chain.verification_mode, 'full');
+  assert.equal(view.projection_receipt.statement.authority_effect, 'none');
+  assert.equal(view.projection_receipt.statement.view_digest, view.view_digest);
+  assert.equal(
+    view.projection_receipt.statement.projection_digest,
+    view.projection_digest
+  );
+
+  const contextBinding = buildContextTaskBinding(view.projection_receipt);
+  const executed = await client.call('intents.submit', {
+    body: {
+      action: 'system.echo',
+      input: { message: 'context-bound execution' },
+      purpose: 'project.execution',
+      context_binding: contextBinding
+    },
+    idempotencyKey: 'context-gateway-e2e-bound-0001'
+  });
+
+  assert.equal(executed.status, 'completed');
+  assert.equal(executed.evidence.context_view_digest, view.view_digest);
+  assert.equal(
+    executed.evidence.context_projection_digest,
+    view.projection_digest
+  );
+  assert.equal(
+    executed.evidence.context_receipt_digest,
+    view.projection_receipt.receipt_digest
+  );
+  assert.match(executed.evidence.plan_digest, /^[a-f0-9]{64}$/);
+  assert.match(executed.evidence.invocation_digest, /^[a-f0-9]{64}$/);
+
+  await assert.rejects(
+    () => client.call('intents.submit', {
+      body: {
+        action: 'system.echo',
+        input: { message: 'wrong purpose' },
+        purpose: 'project.other',
+        context_binding: contextBinding
+      },
+      idempotencyKey: 'context-gateway-e2e-bound-0002'
+    }),
+    error => error.code === 'context_receipt_purpose_mismatch'
+      && error.status === 403
+  );
 });
