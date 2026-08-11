@@ -50,6 +50,16 @@ function requireDigest(value, label) {
   return assertString(value, label, { min: 64, max: 64, pattern: DIGEST });
 }
 
+export function delegatedAuthorityStateDigest(rawFacts) {
+  const facts = assertPlainObject(rawFacts, 'authority facts');
+  if (facts.schema !== AUTHORITY_FACTS_SCHEMA) {
+    throw new ValidationError('Authority facts schema is unsupported');
+  }
+  const state = { ...facts };
+  delete state.resolved_at;
+  return digestObject(state);
+}
+
 function normalizeCurrentAuthority(raw) {
   const authority = assertPlainObject(raw, 'current authority resolution');
   if (authority.allow !== true) {
@@ -65,11 +75,16 @@ function normalizeCurrentAuthority(raw) {
   if (facts.schema !== AUTHORITY_FACTS_SCHEMA) {
     throw new ValidationError('Current authority facts schema is unsupported');
   }
-  const authorityDigest = requireDigest(authority.authority_digest, 'current authority_digest');
-  if (authorityDigest !== digestObject(facts)) {
+  const observationDigest = requireDigest(authority.authority_digest, 'current authority_digest');
+  if (observationDigest !== digestObject(facts)) {
     throw new ValidationError('Current authority digest does not match its facts');
   }
-  return { allow: true, facts, authority_digest: authorityDigest };
+  return {
+    allow: true,
+    facts,
+    authority_observation_digest: observationDigest,
+    authority_state_digest: delegatedAuthorityStateDigest(facts)
+  };
 }
 
 export function validateDelegatedConsentReceipt(raw) {
@@ -186,7 +201,7 @@ export function buildDelegatedConsentReceipt({
     holder_id: holderId,
     authority_grant_id: facts.grant_id,
     relationship_claim_id: facts.relationship_claim_id,
-    authority_digest: authority.authority_digest,
+    authority_digest: authority.authority_state_digest,
     controller: requestedController,
     purpose: requestedPurpose,
     action: requestedAction,
@@ -200,6 +215,7 @@ export function buildDelegatedConsentReceipt({
     allow: true,
     receipt,
     receipt_digest: digestObject(receipt),
+    authority_observation_digest: authority.authority_observation_digest,
     non_claims: [
       'delegated-consent-does-not-prove-legal-authority',
       'receipt-does-not-enable-domain-action-without-policy',
@@ -240,7 +256,7 @@ export function evaluateDelegatedConsent({
   if (
     receipt.authority_grant_id !== authority.facts.grant_id
     || receipt.relationship_claim_id !== authority.facts.relationship_claim_id
-    || receipt.authority_digest !== authority.authority_digest
+    || receipt.authority_digest !== authority.authority_state_digest
   ) {
     return deny('delegated_consent_authority_stale', 'Delegated consent is not bound to the current authority state.');
   }
@@ -267,7 +283,8 @@ export function evaluateDelegatedConsent({
     holder_id: holderId,
     authority_grant_id: receipt.authority_grant_id,
     relationship_claim_id: receipt.relationship_claim_id,
-    authority_digest: authority.authority_digest,
+    authority_digest: authority.authority_state_digest,
+    authority_observation_digest: authority.authority_observation_digest,
     controller,
     purpose,
     action,
