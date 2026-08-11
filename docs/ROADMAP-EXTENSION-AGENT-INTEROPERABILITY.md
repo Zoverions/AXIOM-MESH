@@ -58,7 +58,7 @@ Agent interoperability also inherits the existing distinction between authority,
 - complete current AXIOM One lifecycle/security/accessibility gates;
 - complete AXIOM Verify foundations needed for machine receipt validation;
 - do not add agent authority shortcuts to accelerate experimentation;
-- preserve current non-claims for external AI, remote execution, federation, MCP, A2A, sovereign-context APIs, and supported autonomous agents.
+- preserve current non-claims for external AI, remote execution, federation, MCP, A2A, production-promoted sovereign context, and supported autonomous agents.
 
 ## Workstream B — Legacy agent extraction
 
@@ -110,9 +110,11 @@ Milestones:
 
 **Outcome:** a replaceable agent or model can receive only the provenance-bound context appropriate to its principal, purpose, scopes, and evaluation time without context becoming a second authorization system.
 
-The first executable library slice lives in `mesh/src/lib/sovereign-context.mjs` with focused tests in `mesh/test/sovereign-context.test.mjs`. It deliberately reuses the existing encrypted content-addressed memory graph instead of creating parallel durable state.
+The executable branch slice now spans `mesh/src/lib/sovereign-context.mjs`, `mesh/src/lib/context-authority.mjs`, `mesh/src/lib/context-lifecycle.mjs`, `mesh/src/lib/context-projection-target.mjs`, `mesh/src/grid/context.mjs`, the Grid memory-route projection adapter, and the authenticated Gateway `/v1/context` route with focused tests. It deliberately reuses the existing encrypted content-addressed memory graph instead of creating parallel durable state.
 
 The context claim model is strict and provenance-bound. A claim names an owner, subject, predicate, canonical value, claim type, cardinality, confidence metadata, source reference and digest, observation time, validity interval, sensitivity, explicit disclosure principals/purposes/scopes, supersession relationships, contradiction relationships, and a mandatory `authority_effect: none`. Compiled views are deterministic and digest-addressable, with unresolved conflicts withheld rather than silently resolved.
+
+The Gateway projection derives context authority only from the authenticated bearer principal. Callers cannot submit principal or scope overrides. Machine purposes must already be present in the machine principal constraint set. A compact canonical authority envelope is carried only inside the signed Gateway-to-Grid request URL; Grid validates its digest and requester binding before using it. Basic authenticated wildcard authority is never passed through as `*`: Grid reduces it to the finite context-scope universe visible in the consent-filtered claim set.
 
 Milestones:
 
@@ -127,7 +129,9 @@ Milestones:
 - refusal of silent context truncation;
 - cross-owner/cross-slot suppression defenses;
 - authenticated Grid-backed context persistence and retrieval;
-- Gateway projection whose disclosure ceiling is derived from AXIOM authority rather than caller assertions;
+- governed lifecycle compilation into the existing `memory.put` / `memory.tombstone` intent path;
+- authenticated `GET /v1/context` projection whose disclosure ceiling is derived from AXIOM authority rather than caller assertions;
+- signed Gateway-to-Grid authority-envelope binding without widening the internal service path graph;
 - machine-principal and task binding to exact context-view digests;
 - red-team context injection, provenance laundering, stale-context, conflict-masking, truncation poisoning, authority confusion, and hidden-state enumeration;
 - only then consider MCP/A2A protocol projection and registry promotion.
@@ -136,7 +140,7 @@ Security invariant:
 
 > **Context may inform an intent; context never authorizes an effect.**
 
-The initial slice establishes deterministic schema, selection, conflict, and memory-addressing behavior only. It does not claim source authenticity, a supported context Gateway route, third-party data ingestion, semantic truth resolution, MCP exposure, or a production-promoted context capability.
+The branch now exposes an authenticated read-only Gateway context projection and a governed compiler for context writes through the existing intent path. This still does not claim source authenticity, production third-party data ingestion, semantic truth resolution, task/plan/receipt binding, MCP/A2A context exposure, or a production-promoted Sovereign Context Plane capability.
 
 ## Workstream E — MCP server laboratory
 
@@ -339,10 +343,9 @@ Every implementation step must update, as applicable:
 This roadmap does not claim current support for:
 
 - a production-promoted Sovereign Context Plane capability;
-- a supported context Gateway/MCP/A2A API;
 - production context ingestion from third-party personal data sources;
-- MCP server/client operation;
-- A2A interoperability;
+- MCP context projection or MCP server/client operation;
+- A2A context projection or A2A interoperability;
 - machine delegation;
 - third-party skill execution;
 - autonomous-agent production use;
