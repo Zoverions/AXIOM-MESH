@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=90e07a5f6ad577d4733e3c7db238cc61c49e9e0d593d78a882409195cc5f5506 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.4; digest=ccde830a01ad85ffe6a4c6904e45973ef914477e534430e52c083ac997e84dd1 -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -39,7 +39,7 @@ Docker is **not required** for the basic local development path.
 
 ## Current state
 
-**Supported build:** `0.12.0-dev.3`
+**Supported build:** `0.12.0-dev.4`
 
 **Deployment decision:** production candidate; not production-promoted; no live
 public or customer deployment claim.
@@ -247,8 +247,10 @@ Start with:
 - [Documentation authority and index](docs/README.md)
 - [Security policy](SECURITY.md)
 
-Current `0.12.0-dev.3` changes are recorded in
-[`docs/releases/0.12.0-dev.3.md`](docs/releases/0.12.0-dev.3.md).
+The prior `0.12.0-dev.3` candidate is recorded in
+[`docs/releases/0.12.0-dev.3.md`](docs/releases/0.12.0-dev.3.md). The current
+`0.12.0-dev.4` line remains a development build until its exact-head release
+gates succeed.
 
 When documents conflict, the capability registry and normative requirements
 control. Historical documents are provenance or research inputs only.
