@@ -1,7 +1,7 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=90e07a5f6ad577d4733e3c7db238cc61c49e9e0d593d78a882409195cc5f5506 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.4; digest=ccde830a01ad85ffe6a4c6904e45973ef914477e534430e52c083ac997e84dd1 -->
 # AXIOM-MESH Rebuild Requirements
 
-**Current build:** `0.12.0-dev.3`
+**Current build:** `0.12.0-dev.4`
 
 **Updated:** 2026-08-10
 
@@ -214,7 +214,7 @@ state.
 
 ## Verified implementation checkpoint
 
-The active `0.12.0-dev.3` build currently verifies:
+The active `0.12.0-dev.4` build currently verifies:
 
 - the authenticated Gateway → Hypervisor → Sandbox → Grid intent path;
 - human-sponsored constrained agent principals with finite scopes, action and
@@ -256,9 +256,10 @@ application, autonomous-agent runtime, MCP/A2A endpoint, machine delegation,
 remote agent execution, external AI provider, AXIOM Verify, Circles, remote
 dispatch, authenticated remote results, federation, consensus, arbitrary code,
 tokens, settlement, regulated-domain deployment, embodied autonomy, or
-post-quantum security. The machine-principal schema's destination, rate,
-concurrency, request-size, and response-size fields are not live enforcement
-claims yet.
+post-quantum security. The constrained machine-principal profile does enforce
+destination, rate, concurrency, request-size, and response-size ceilings for
+current supported effects; remote provider and MCP destination semantics remain
+unresolved and fail closed.
 
 ## Capability coverage
 
