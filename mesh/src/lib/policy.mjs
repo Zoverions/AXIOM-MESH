@@ -3,7 +3,7 @@ import { digestObject, ValidationError } from './canonical.mjs';
 import {
   ASSURANCE_TIER_IDS,
   getAssuranceTier
-} from '../../../packages/axiom-assertion-ladder/assurance-tiers.mjs';
+} from './assurance-tiers.mjs';
 
 const RISK_ORDER = Object.freeze({ low: 0, medium: 1, high: 2, critical: 3 });
 const DEFAULT_ASSURANCE_BY_RISK = Object.freeze({
