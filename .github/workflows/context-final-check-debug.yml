@@ -23,7 +23,7 @@ jobs:
       - name: Install exact source setup
         run: npm run setup:install
       - name: Setup checker
-        run: node mesh/src/setup.mjs check
+        run: npm --prefix mesh run setup:check
       - name: Service-network checker
         run: node mesh/src/check-service-network-policy.mjs
       - name: Gateway-client checker
