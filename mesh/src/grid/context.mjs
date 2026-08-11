@@ -157,14 +157,46 @@ function verifiedContextClaimFromMemoryObject(store, object) {
     throw new ValidationError('Context memory object must have exactly one memory.put evidence event');
   }
   const event = store.decodeEventRow(eventRows[0]);
+  const eventPayload = normalizeMemoryPutEvidencePayload(event.payload);
   if (
     event.actor !== object.owner
     || event.subject !== object.object_id
-    || canonicalJson(event.payload) !== canonicalJson(expected)
+    || canonicalJson(eventPayload.core) !== canonicalJson(expected)
   ) {
     throw new ValidationError('Context memory object is not bound to owner-authenticated Grid evidence');
   }
   return expected.content;
+}
+
+function normalizeMemoryPutEvidencePayload(payload) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw new ValidationError('Context memory evidence payload is invalid');
+  }
+  const allowed = new Set([
+    'object_id',
+    'owner',
+    'kind',
+    'content',
+    'metadata',
+    'content_digest',
+    'evidence'
+  ]);
+  for (const key of Object.keys(payload)) {
+    if (!allowed.has(key)) {
+      throw new ValidationError('Context memory evidence payload contains unsupported fields');
+    }
+  }
+  const {
+    evidence,
+    ...core
+  } = payload;
+  if (
+    evidence !== undefined
+    && (!evidence || typeof evidence !== 'object' || Array.isArray(evidence))
+  ) {
+    throw new ValidationError('Context memory execution evidence must be an object');
+  }
+  return { core, evidence };
 }
 
 function requireGridContextInterface(store) {
