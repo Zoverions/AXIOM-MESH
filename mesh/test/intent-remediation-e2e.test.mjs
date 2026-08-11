@@ -122,8 +122,8 @@ async function createRatifiableProposal({
   voterToken,
   action,
   title,
-  votingMs = 900,
-  activationMs = 1_800
+  votingMs = 5_000,
+  activationMs = 8_000
 }) {
   const start = Date.now();
   const votingEndsAt = new Date(start + votingMs).toISOString();
@@ -302,8 +302,8 @@ test('v0.5 ratifies current remediation, keeps it non-executing, and rejects sta
     voterToken: tokens.voter,
     action: activationGovernanceAction(activation),
     title: 'Activate remediation e2e Intent Contract',
-    votingMs: 1_200,
-    activationMs: 2_400
+    votingMs: 5_000,
+    activationMs: 8_000
   });
   const activatedContract = await activateProposal({
     gateway,
@@ -371,8 +371,8 @@ test('v0.5 ratifies current remediation, keeps it non-executing, and rejects sta
     voterToken: tokens.voter,
     action: remediationGovernanceAction(staleCandidate),
     title: 'Remediation proposal that will become stale',
-    votingMs: 900,
-    activationMs: 2_200
+    votingMs: 5_000,
+    activationMs: 8_000
   });
 
   await putAttestation(
