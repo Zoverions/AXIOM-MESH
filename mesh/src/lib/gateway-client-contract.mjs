@@ -49,7 +49,7 @@ const FIELD = /^[a-z][a-z0-9_]{0,63}$/;
 const ERROR_CODE = /^[a-z][a-z0-9_]{0,63}$/;
 const SCHEMA_ID = /^[a-z][a-z0-9.-]+\.v1$/;
 const EXPECTED_CONTRACT_DIGEST =
-  'f334cc1b2fcc2fd8cb3f93157053956a56a8ab5e4167739606399e7920704f5b';
+  'f66ccc3d8cff8cc0303d8e95c6de9995cf42f2ee5e2edf96aaade2877719248f';
 const EXPECTED_JSON_SCHEMA_DIGEST =
   '90a65df24bab3299b4bab58ab15270b02aac67938923746f413285296dfa6ccf';
 
@@ -72,7 +72,7 @@ export function validateGatewayClientContract(contract) {
   if (
     contract.schema !== GATEWAY_CLIENT_CONTRACT_SCHEMA
     || contract.version !== 1
-    || contract.kernel_version !== '0.12.0-dev.3'
+    || contract.kernel_version !== '0.12.0-dev.4'
     || contract.base_path !== '/v1'
     || contract.cancellation !== 'AbortSignal'
   ) throw new ValidationError('Gateway client contract identity is invalid');
