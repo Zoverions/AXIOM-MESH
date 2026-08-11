@@ -107,7 +107,7 @@ renaming, or dynamically constructing an authenticated route fails the normal
 setup and release gates until the contract, tests, schemas, and documentation
 are revised together.
 
-## Intent requests, context binding, and idempotency
+## Intent requests and idempotency
 
 `intents.submit` is the only effect-bearing Gateway route. All other contract
 routes are reads. Its request schema permits exactly:
@@ -118,6 +118,8 @@ routes are reads. Its request schema permits exactly:
 - optional string arrays with 160-character items: at most 64 `data_scopes`,
   8 `confirmations`, and 8 `approval_ids`;
 - optional `context_binding` using `axiom-context-task-binding.v1`.
+
+### Context task binding
 
 A context task binding contains the four digest anchors (`view_digest`,
 `projection_digest`, projection `authority_digest`, and `receipt_digest`) plus
