@@ -1,0 +1,58 @@
+{
+  "schema": "axiom-repository-adapter-contract.v1",
+  "version": 1,
+  "status": "specified-foundation",
+  "purpose": "Define a provider-neutral adapter boundary for observing, mirroring, and eventually applying governed repository effects without making any repository provider a source-identity or lineage authority.",
+  "core_invariant": "Repository adapters provide bounded transport and repository operations; AXIOM source identity, accepted lineage, and execution authority are determined outside the adapter.",
+  "logical_repository": {
+    "provider_independent_id_required": true,
+    "provider_locator_is_identity": false,
+    "provider_repository_id_is_identity": false,
+    "provider_account_is_identity": false,
+    "credentials_are_identity": false
+  },
+  "adapter_authority": {
+    "source_identity_authority": false,
+    "lineage_acceptance_authority": false,
+    "provider_metadata_is_authority": false,
+    "operation_capability_ceiling_is_authority": false,
+    "governed_operation_authority_required_separately": true
+  },
+  "v1_operations": [
+    "base.observe",
+    "file.observe",
+    "candidate.compare",
+    "branch.ensure",
+    "file.write",
+    "review.ensure",
+    "mirror.fetch",
+    "mirror.publish"
+  ],
+  "transport_classes": [
+    "local_git",
+    "bare_git",
+    "github",
+    "forgejo",
+    "gitlab",
+    "radicle",
+    "agent_forge",
+    "other"
+  ],
+  "security": {
+    "exact_operation_allowlist": true,
+    "operation_request_content_addressed": true,
+    "bounded_operation_lifetime": true,
+    "adapter_substitution_fails_closed": true,
+    "repository_substitution_fails_closed": true,
+    "object_format_explicit": true,
+    "cryptographic_agility_required": true,
+    "provider_credentials_replaceable": true
+  },
+  "claim_boundary": [
+    "This contract does not implement a GitHub-independent write path.",
+    "This contract does not make an adapter operation executable merely because it is within the adapter capability ceiling.",
+    "This contract does not configure or synchronize any mirror.",
+    "This contract does not promote a repository capability.",
+    "GitHub-specific v1 repository operator behavior remains unchanged in this slice."
+  ]
+}
