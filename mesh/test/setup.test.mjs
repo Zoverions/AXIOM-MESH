@@ -70,124 +70,166 @@ test('setup policy rejects weaker runtimes, package managers, install arguments,
   skippedRelease.verification.release_command = 'npm run check';
   assert.throws(
     () => validateSourceSetupPolicy(skippedRelease),
-    /release verification is invalid/
+    /verification policy weakens/
   );
 });
 
 test('setup state rejects unsupported versions, dependencies, lifecycle scripts, and lock drift', async () => {
-  const { policy, rootPackage, rootLock, kernelPackage, kernelLock } = await fixture();
+  const input = await fixture();
 
-  const oldNode = state(policy, rootPackage, rootLock, kernelPackage, kernelLock, {
-    nodeVersion: 'v24.13.9'
-  });
-  assert.throws(() => validateSourceSetupState(oldNode), /Node.js version is unsupported/);
-
-  const futureNode = state(policy, rootPackage, rootLock, kernelPackage, kernelLock, {
-    nodeVersion: 'v25.0.0'
-  });
-  assert.throws(() => validateSourceSetupState(futureNode), /Node.js version is unsupported/);
-
-  const oldNpm = state(policy, rootPackage, rootLock, kernelPackage, kernelLock, {
-    npmVersion: '10.9.0'
-  });
-  assert.throws(() => validateSourceSetupState(oldNpm), /npm version is unsupported/);
-
-  const rootDependency = structuredClone(rootLock);
-  rootDependency.packages['node_modules/example'] = { version: '1.0.0' };
   assert.throws(
-    () => validateSourceSetupState(state(policy, rootPackage, rootDependency, kernelPackage, kernelLock)),
-    /dependency packages are unsupported/
+    () => validateSourceSetupState({
+      ...input,
+      nodeVersion: '24.13.0'
+    }),
+    /Node.js .* is outside/
+  );
+  assert.throws(
+    () => validateSourceSetupState({
+      ...input,
+      npmVersion: '12.0.0'
+    }),
+    /npm .* is outside/
   );
 
-  const lifecyclePackage = structuredClone(rootPackage);
-  lifecyclePackage.scripts.preinstall = 'node bad.mjs';
+  const dependency = structuredClone(input);
+  dependency.rootPackage.dependencies = { unreviewed: '1.0.0' };
   assert.throws(
-    () => validateSourceSetupState(state(policy, lifecyclePackage, rootLock, kernelPackage, kernelLock)),
-    /lifecycle scripts are forbidden/
+    () => validateSourceSetupState(dependency),
+    /rejects dependencies/
   );
 
-  const lockDrift = structuredClone(kernelLock);
-  lockDrift.packages[''].version = '9.9.9';
+  const lifecycle = structuredClone(input);
+  lifecycle.kernelPackage.scripts.postinstall = 'node unreviewed.mjs';
   assert.throws(
-    () => validateSourceSetupState(state(policy, rootPackage, rootLock, kernelPackage, lockDrift)),
-    /package metadata is invalid/
+    () => validateSourceSetupState(lifecycle),
+    /rejects install lifecycle script/
+  );
+
+  const lock = structuredClone(input);
+  lock.kernelLock.packages['node_modules/unreviewed'] = {
+    version: '1.0.0'
+  };
+  assert.throws(
+    () => validateSourceSetupState(lock),
+    /lock is invalid/
+  );
+
+  const script = structuredClone(input);
+  script.rootPackage.scripts.setup = 'npm install';
+  assert.throws(
+    () => validateSourceSetupState(script),
+    /setup command has drifted/
   );
 });
 
 test('setup state binds local, CI, and production runtime pins', async () => {
-  const { policy, rootPackage, rootLock, kernelPackage, kernelLock } = await fixture();
-  const local = validateSourceSetupState(state(policy, rootPackage, rootLock, kernelPackage, kernelLock, {
-    nodeVersion: process.version,
-    npmVersion: '11.9.0'
-  }));
-  const ci = validateSourceSetupState(state(policy, rootPackage, rootLock, kernelPackage, kernelLock, {
-    nodeVersion: `v${policy.runtime.ci_version}`,
-    npmVersion: '11.9.0'
-  }));
-  const production = validateSourceSetupState(state(policy, rootPackage, rootLock, kernelPackage, kernelLock, {
-    nodeVersion: `v${policy.runtime.production_version}`,
-    npmVersion: '11.9.0'
-  }));
-  assert.equal(local.valid, true);
-  assert.equal(ci.valid, true);
-  assert.equal(production.valid, true);
+  const input = await fixture();
+
+  assert.throws(
+    () => validateSourceSetupState({
+      ...input,
+      nodeVersionPin: '24.19.0\n'
+    }),
+    /version pin has drifted/
+  );
+  assert.throws(
+    () => validateSourceSetupState({
+      ...input,
+      dockerfile: input.dockerfile.replace(
+        'FROM node:24.19.0-',
+        'FROM node:24.20.0-'
+      )
+    }),
+    /runtime setup pins have drifted/
+  );
+  assert.throws(
+    () => validateSourceSetupState({
+      ...input,
+      workflow: input.workflow.replace(
+        'npm run setup:install',
+        'npm ci'
+      )
+    }),
+    /runtime setup pins have drifted/
+  );
 });
 
 test('setup installer executes only fixed lock installs and optional fixed verification commands', async () => {
-  const { policy, rootPackage, rootLock, kernelPackage, kernelLock } = await fixture();
-  const commands = [];
-  const result = await installRepositorySetup({
+  const installPlans = [];
+  const installed = await installRepositorySetup({
     repositoryRoot: REPOSITORY_ROOT,
-    nodeVersion: 'v24.18.0',
     npmVersion: '11.9.0',
-    npmCliPath: 'synthetic-npm',
-    verify: true,
-    execute: async (command, args, options) => {
-      commands.push({ command, args, cwd: options.cwd });
-    },
-    sourceState: state(policy, rootPackage, rootLock, kernelPackage, kernelLock)
+    npmCliPath: 'synthetic-npm-cli',
+    execute: plan => installPlans.push(plan)
   });
-  assert.equal(result.valid, true);
-  assert.equal(result.installation, 'completed-from-committed-locks');
-  assert.equal(result.full_verification_completed, true);
-  assert.deepEqual(commands.map(item => item.args), [
-    ['ci', '--ignore-scripts', '--no-audit', '--no-fund'],
-    ['ci', '--ignore-scripts', '--no-audit', '--no-fund'],
-    ['run', 'check'],
-    ['run', 'release:verify']
-  ]);
+  assert.equal(installed.full_verification_completed, false);
+  assert.equal(installed.production_credentials_created, false);
+  assert.deepEqual(
+    installPlans.map(item => item.arguments),
+    [
+      ['ci', '--ignore-scripts', '--no-audit', '--no-fund'],
+      ['ci', '--ignore-scripts', '--no-audit', '--no-fund']
+    ]
+  );
+  assert.equal(installPlans[0].cwd, REPOSITORY_ROOT);
+  assert.equal(installPlans[1].cwd, join(REPOSITORY_ROOT, 'mesh'));
+
+  const verifiedPlans = [];
+  const verified = await installRepositorySetup({
+    repositoryRoot: REPOSITORY_ROOT,
+    verify: true,
+    npmVersion: '11.9.0',
+    npmCliPath: 'synthetic-npm-cli',
+    execute: plan => verifiedPlans.push(plan)
+  });
+  assert.equal(verified.full_verification_completed, true);
+  assert.deepEqual(
+    verifiedPlans.slice(2).map(item => item.arguments),
+    [
+      ['run', 'check'],
+      ['run', 'release:verify']
+    ]
+  );
+  assert.ok(
+    verifiedPlans.every(item => item.npmCliPath === 'synthetic-npm-cli')
+  );
 });
 
 async function fixture() {
-  const [policy, rootPackage, rootLock, kernelPackage, kernelLock] = await Promise.all([
-    json(join(MESH_ROOT, 'config', 'setup.json')),
-    json(join(REPOSITORY_ROOT, 'package.json')),
-    json(join(REPOSITORY_ROOT, 'package-lock.json')),
-    json(join(MESH_ROOT, 'package.json')),
-    json(join(MESH_ROOT, 'package-lock.json'))
+  const [
+    policy,
+    rootPackage,
+    rootLock,
+    kernelPackage,
+    kernelLock,
+    nodeVersionPin,
+    dockerfile,
+    workflow
+  ] = await Promise.all([
+    readJson(join(MESH_ROOT, 'config', 'setup.json')),
+    readJson(join(REPOSITORY_ROOT, 'package.json')),
+    readJson(join(REPOSITORY_ROOT, 'package-lock.json')),
+    readJson(join(MESH_ROOT, 'package.json')),
+    readJson(join(MESH_ROOT, 'package-lock.json')),
+    readFile(join(MESH_ROOT, '.node-version'), 'utf8'),
+    readFile(join(MESH_ROOT, 'Dockerfile'), 'utf8'),
+    readFile(join(REPOSITORY_ROOT, '.github', 'workflows', 'kernel.yml'), 'utf8')
   ]);
-  return { policy, rootPackage, rootLock, kernelPackage, kernelLock };
-}
-
-function state(policy, rootPackage, rootLock, kernelPackage, kernelLock, overrides = {}) {
   return {
     policy,
-    nodeVersion: overrides.nodeVersion ?? 'v24.18.0',
-    npmVersion: overrides.npmVersion ?? '11.9.0',
-    npmCliPath: overrides.npmCliPath ?? 'synthetic-unused',
-    workspaces: {
-      command_surface: {
-        packageJson: rootPackage,
-        packageLock: rootLock
-      },
-      kernel: {
-        packageJson: kernelPackage,
-        packageLock: kernelLock
-      }
-    }
+    nodeVersion: '24.18.0',
+    npmVersion: '11.9.0',
+    nodeVersionPin,
+    rootPackage,
+    rootLock,
+    kernelPackage,
+    kernelLock,
+    dockerfile,
+    workflow
   };
 }
 
-async function json(path) {
+async function readJson(path) {
   return JSON.parse(await readFile(path, 'utf8'));
 }
