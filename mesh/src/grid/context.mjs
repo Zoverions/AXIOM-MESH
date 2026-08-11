@@ -6,7 +6,8 @@ import {
 } from '../lib/canonical.mjs';
 import {
   deriveContextProjectionAuthority,
-  finiteContextScopesForClaims
+  finiteContextScopesForClaims,
+  normalizeContextProjectionAuthority
 } from '../lib/context-authority.mjs';
 import {
   CONTEXT_MEMORY_KIND,
@@ -41,6 +42,21 @@ export function compileAuthorizedGridContextView(store, {
   maxClaims = 64
 }) {
   const authority = deriveContextProjectionAuthority(principal, { purpose });
+  return compileGridContextViewFromAuthority(store, {
+    authority,
+    owner,
+    asOf,
+    maxClaims
+  });
+}
+
+export function compileGridContextViewFromAuthority(store, {
+  authority: rawAuthority,
+  owner,
+  asOf = new Date().toISOString(),
+  maxClaims = 64
+}) {
+  const authority = normalizeContextProjectionAuthority(rawAuthority);
   const state = verifiedGridContextState(store, authority.principal_id, owner);
   const finiteScopes = finiteContextScopesForClaims(authority, state.claims);
   const compileScopes = finiteScopes.length ? finiteScopes : ['context:none'];
