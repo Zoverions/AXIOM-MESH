@@ -184,6 +184,10 @@
           "path": "/internal/v1/approval/:id"
         },
         {
+          "method": "GET",
+          "path": "/internal/v1/consents/:principal"
+        },
+        {
           "method": "POST",
           "path": "/internal/v1/commit"
         }
