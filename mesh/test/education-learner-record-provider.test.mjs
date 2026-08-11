@@ -190,9 +190,10 @@ test('append requires consent and memory-reference assertions before provider mu
 });
 
 test('failed consent assertion blocks append before memory or storage adapter calls', async () => {
+  let consentCalls = 0;
   const { provider, calls } = providerFixture({
-    assertConsent: async request => {
-      calls.push(['consent', request]);
+    assertConsent: async () => {
+      consentCalls += 1;
       return false;
     },
   });
@@ -203,14 +204,15 @@ test('failed consent assertion blocks append before memory or storage adapter ca
       }),
     /consent assertion failed/,
   );
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0][0], 'consent');
+  assert.equal(consentCalls, 1);
+  assert.equal(calls.length, 0);
 });
 
 test('failed memory-reference assertion blocks append before storage mutation', async () => {
+  let memoryCalls = 0;
   const { provider, calls } = providerFixture({
-    assertMemoryReference: async request => {
-      calls.push(['memory', request]);
+    assertMemoryReference: async () => {
+      memoryCalls += 1;
       return false;
     },
   });
@@ -221,9 +223,10 @@ test('failed memory-reference assertion blocks append before storage mutation', 
       }),
     /memory reference assertion failed/,
   );
+  assert.equal(memoryCalls, 1);
   assert.deepEqual(
     calls.map(([kind]) => kind),
-    ['consent', 'memory'],
+    ['consent'],
   );
 });
 
@@ -339,7 +342,7 @@ test('progress result cannot claim mastery, grades, credits, or transcript state
   );
 });
 
-test('provider boundary refuses non learner-record education actions', async () => {
+test('provider boundary refuses non learner-record education actions after domain validation', async () => {
   const { provider } = providerFixture();
   await assert.rejects(
     () =>
@@ -349,7 +352,7 @@ test('provider boundary refuses non learner-record education actions', async () 
           contract_id: EDUCATION_CONTRACT_ID,
           contract_version: EDUCATION_CONTRACT_VERSION,
           contract_sha256: EDUCATION_CONTRACT_SHA256,
-          jurisdiction: 'ca:on',
+          active_pack_manifest_sha256: DIGEST_A,
           course_code: 'MTH1W',
           expectation_ids: ['MTH1W-A1.1'],
         },
