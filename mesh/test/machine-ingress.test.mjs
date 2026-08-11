@@ -144,3 +144,63 @@ test('invalid bearer token cannot consume machine ingress state', async () => {
   );
   assert.equal(calls, 0);
 });
+
+test('machine ingress rejects a principal whose declared lifetime has elapsed', () => {
+  const guard = new MachineIngressGuard();
+  const principal = machinePrincipal({
+    lifetime: 'session',
+    expires_at: '2026-08-10T00:00:00.000Z'
+  });
+  const beforeExpiry = Date.parse('2026-08-09T23:59:59.000Z');
+  const afterExpiry = Date.parse('2026-08-10T00:00:01.000Z');
+
+  assert.equal(
+    guard.enforce(principal, { requestBytes: 0, now: beforeExpiry }).constrained,
+    true
+  );
+  assert.throws(
+    () => guard.enforce(principal, { requestBytes: 0, now: afterExpiry }),
+    error => (
+      error.code === 'machine_principal_expired'
+      && error.status === 401
+      && error.details.expires_at === '2026-08-10T00:00:00.000Z'
+    )
+  );
+  // Expiry dominates every other ingress ceiling, so an expired principal can
+  // neither spend nor exhaust its request-size and request-rate budgets.
+  assert.throws(
+    () => guard.enforce(principal, { requestBytes: 65_536, now: afterExpiry }),
+    error => error.code === 'machine_principal_expired'
+  );
+});
+
+test('machine ingress rejects unexpirable non-persistent and malformed lifetimes', () => {
+  const guard = new MachineIngressGuard();
+  const { expires_at: _removed, ...sessionWithoutExpiry } = machinePrincipal();
+  assert.throws(
+    () => guard.enforce(sessionWithoutExpiry, { now: 1_000 }),
+    error => error.code === 'machine_authority_invalid' && error.status === 403
+  );
+  assert.throws(
+    () => guard.enforce(machinePrincipal({ expires_at: 'not-a-timestamp' }), { now: 1_000 }),
+    error => error.code === 'machine_authority_invalid' && error.status === 403
+  );
+  const persistent = machinePrincipal({ lifetime: 'persistent' });
+  delete persistent.expires_at;
+  assert.equal(guard.enforce(persistent, { now: 1_000 }).constrained, true);
+});
+
+test('an expired machine bearer principal cannot authenticate at Gateway ingress', async () => {
+  const expired = machinePrincipal({
+    lifetime: 'session',
+    expires_at: new Date(Date.now() - 1_000).toISOString()
+  });
+  const authenticate = createBearerAuthenticator(new Map([[sha256(TOKEN), expired]]));
+  await assert.rejects(
+    () => authenticate({
+      req: { headers: { authorization: `Bearer ${TOKEN}` } },
+      body: Buffer.alloc(0)
+    }),
+    error => error.code === 'machine_principal_expired' && error.status === 401
+  );
+});
