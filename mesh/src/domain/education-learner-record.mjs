@@ -81,7 +81,7 @@ export function evaluateEducationLearnerEventConsent({
       allow: false,
       code: 'education_subject_authority_unavailable',
       http_status: 403,
-      reason: 'Direct education self-consent requires the human learner to be the authenticated subject.'
+      reason: 'Only direct human subject self-authorization is implemented for education learner events.'
     };
   }
 
