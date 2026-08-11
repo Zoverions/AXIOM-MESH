@@ -6,7 +6,7 @@ import { ensureMeshIdentity, ReplayGuard, verifySignedRequest } from '../lib/ide
 import { Router, createServiceServer, listen, parseJsonBody } from '../lib/http.mjs';
 import { AxiomError, ValidationError, assertPlainObject, assertString } from '../lib/canonical.mjs';
 import { operationsReport, readinessState, ServiceTelemetry } from '../lib/observability.mjs';
-import { GridStore } from './store.mjs';
+import { DelegatedAuthorityGridStore } from './delegated-authority-store.mjs';
 import { loadDataProtector } from '../lib/protector.mjs';
 import { runServiceProcess } from '../lib/service-lifecycle.mjs';
 import { buildMachineIntentReceipt } from '../lib/machine-receipt.mjs';
@@ -41,7 +41,7 @@ export async function createGridService(config = meshConfig()) {
         })
       : null;
     protector = await loadDataProtector(config);
-    store = new GridStore({
+    store = new DelegatedAuthorityGridStore({
       path: join(config.dataDir, 'grid.sqlite'),
       dataDir: config.dataDir,
       identity,
@@ -259,6 +259,21 @@ export async function createGridService(config = meshConfig()) {
   router.add('GET', '/internal/v1/consents/:principal', async ({ params }) => ({
     consents: store.listConsents(params.principal)
   }));
+  router.add('POST', '/internal/v1/delegated-authorizations/resolve', async ({ body, principal }) => {
+    if (principal.service !== 'hypervisor') {
+      throw new ValidationError('Only Hypervisor may resolve delegated human authorization');
+    }
+    const input = assertPlainObject(parseJsonBody(body), 'delegated authorization request');
+    return store.resolveDelegatedConsentAuthorization({
+      consentId: input.consent_id,
+      subjectId: input.subject_id,
+      holderId: input.holder_id,
+      controller: input.controller,
+      purpose: input.purpose,
+      action: input.action,
+      dataScopes: input.data_scopes
+    });
+  });
   router.add('GET', '/internal/v1/approvals/:principal', async ({ params }) => ({
     approvals: store.listApprovals(params.principal)
   }));
