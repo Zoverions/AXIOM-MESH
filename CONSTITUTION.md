@@ -1,7 +1,7 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=90e07a5f6ad577d4733e3c7db238cc61c49e9e0d593d78a882409195cc5f5506 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.4; digest=ccde830a01ad85ffe6a4c6904e45973ef914477e534430e52c083ac997e84dd1 -->
 # AXIOM-MESH CONSTITUTION
 
-**Build:** `0.12.0-dev.3`
+**Build:** `0.12.0-dev.4`
 
 **Status:** constitutional direction for the kernel-governed product and
 network programme. Executable authority and public claims remain subordinate
