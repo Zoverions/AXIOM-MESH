@@ -35,8 +35,7 @@ function intent(overrides = {}) {
       event_type: 'claw.activity.completed',
       occurred_at: '2026-08-11T05:10:00.000Z',
       payload_digest: DIGEST,
-      memory_object_id: 'memory_bridge_1',
-      ...overrides.input
+      memory_object_id: 'memory_bridge_1'
     },
     purpose: 'operator-request',
     data_scopes: [],
@@ -44,6 +43,13 @@ function intent(overrides = {}) {
     approval_ids: [],
     submitted_at: '2026-08-11T05:10:01.000Z',
     ...overrides,
+    principal: {
+      id: 'learner.self',
+      type: 'human',
+      roles: ['learner'],
+      scopes: ['education:learner:write'],
+      ...(overrides.principal ?? {})
+    },
     input: {
       contract_id: 'axiom.education',
       contract_version: '1.0.0',
@@ -84,10 +90,13 @@ function executionBindings(authorization) {
   };
   return {
     capability: {
-      constraints: { education_consent: educationConsent }
+      constraints: { education_consent: structuredClone(educationConsent) }
     },
     plan: {
-      steps: [{ id: 'execute', constraints: { education_consent: educationConsent } }]
+      steps: [{
+        id: 'execute',
+        constraints: { education_consent: structuredClone(educationConsent) }
+      }]
     }
   };
 }
@@ -122,8 +131,23 @@ test('another subject cannot be laundered through self-consent', async () => {
     allow: false,
     code: 'education_subject_authority_unavailable',
     http_status: 403,
-    reason: 'Delegated or guardian authority for another education subject is not implemented.'
+    reason: 'Only direct human subject self-authorization is implemented for education learner events.'
   });
+});
+
+test('machine or service identity cannot silently reuse the human self-consent profile', async () => {
+  const contract = await loadEducationContract();
+  for (const type of ['agent', 'service']) {
+    const request = intent({ principal: { type } });
+    const result = evaluateEducationLearnerEventConsent({
+      contract,
+      intent: request,
+      consents: [consent()],
+      now: '2026-08-11T05:10:00.000Z'
+    });
+    assert.equal(result.allow, false);
+    assert.equal(result.code, 'education_subject_authority_unavailable');
+  }
 });
 
 test('revoked, expired, wrong-controller, wrong-purpose, and widened-scope consent fail closed', async () => {
@@ -218,7 +242,7 @@ test('official standards are all-or-none and canonical when bound', async () => 
   );
 });
 
-test('adapter refuses substituted or expired bound consent at execution', async () => {
+test('adapter refuses substituted bound consent even when plan and capability are tampered separately', async () => {
   const contract = await loadEducationContract();
   const request = intent();
   const authorization = evaluateEducationLearnerEventConsent({
@@ -232,6 +256,6 @@ test('adapter refuses substituted or expired bound consent at execution', async 
   bindings.capability.constraints.education_consent.facts.subject_id = 'other.subject';
   assert.throws(
     () => executeEducationLearnerEvent({ contract, intent: request, ...bindings }),
-    /binding digest|does not match/
+    /bindings differ|binding digest|does not match/
   );
 });
