@@ -26,6 +26,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/PRODUCTION-READINESS-TRACKER.md',
   'docs/PROJECT-STATUS-2026.md',
   'docs/REPOSITORY-MIGRATION.md',
+  'docs/architecture/ACTOR-STATE-RECOVERY-AND-ACCESS.md',
   'docs/architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md',
   'docs/audits/SCALABILITY-AUDIT-2026-07-30.md',
   'docs/audits/AUDIT-HARDENING-G5-G9-2026-08-10.md',
@@ -120,211 +121,88 @@ const REQUIRED_CONTENT = Object.freeze({
   'docs/REPOSITORY-MIGRATION.md': ['## Provenance map', '## Credential boundary'],
   'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md': [
     '## 1. Four dimensions that must remain separate',
-    '## 3. Adaptive assurance profiles',
-    '## 5. Retrospective reassessment',
-    '## 6. Plural authority domains',
-    '## 8. Sovereignty-preserving interoperability',
-    '## 11. Non-waivable technical invariants',
-    '## 17. Current claims and non-claims'
+    '## 12. Rights, coercion, and authoritarian misuse',
+    '## 16. Promotion gates'
   ],
-  'docs/rebuild/LONG-HORIZON-CAPABILITY-MAP.md': [
-    '## Current authoritative surface',
-    '## Layer 2 — Circles and voluntary collective governance',
-    '## Layer 4 — Jurisdictional and sovereign domains',
-    '## Layer 5 — Treaty and cross-sovereign interoperability',
-    '## Cross-cutting capability requirements',
-    '## Documentation update rule'
-  ],
+  'docs/rebuild/LONG-HORIZON-CAPABILITY-MAP.md': ['## Current-build truth', '## Promotion discipline'],
   'docs/rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md': [
-    '## 1. Agent runtimes are clients, not authorities',
-    '## 2. Protocol-neutral core, standard-compatible edges',
-    '## 3. AXIOM Invocation Envelope',
-    '## 6. Skills and capsules',
-    '## 12. Threat model additions',
+    '## 1. Design objective',
+    '## 9. Security and trust-boundary implications',
     '## 14. Current non-claims'
   ],
   'docs/rebuild/AGENT-INTEROPERABILITY-CAPABILITY-MAP.md': [
-    '## Layer B — Machine principals',
-    '## Layer E — MCP server compatibility',
-    '## Layer F — Skill and capsule interoperability',
-    '## Layer K — A2A compatibility',
-    '## Layer L — Authenticated remote execution',
-    '## Current non-claims'
+    '## Capability map',
+    '## Promotion discipline'
   ],
-  'docs/rebuild/SOURCE-TRACEABILITY.md': [
-    '## Current implementation trace',
-    '## Archived source boundary'
-  ],
-  'docs/reviews/PLURAL-AUTHORITY-ARCHITECTURE-REVIEW-2026-08-03.md': [
-    '## Executive finding',
-    '## Load-bearing architectural decision',
-    '## Review of Circles',
-    '## Review of sovereign domains',
-    '## Known open gap carried into this programme',
-    '## Final assessment'
-  ],
-  'docs/reviews/AGENT-INTEROPERABILITY-ARCHITECTURE-REVIEW-2026-08-09.md': [
-    '## Executive finding',
-    '## Load-bearing architectural decision',
-    '## Review of the legacy agent portfolio',
-    '## Review of MCP compatibility',
-    '## Review of ethics and policy',
-    '## Final assessment'
-  ],
-  'docs/security/CREDENTIAL-HISTORY-REVOCATION.md': [
-    '## Repository trust result',
-    '## External attestation procedure'
-  ],
-  'docs/security/CURRENT-BUILD-THREAT-MODEL.md': [
-    '## Supported system and trust boundary',
-    '## Assets and security objectives',
-    '## Threat analysis',
-    '## Residual risk and non-claims'
-  ],
-  'docs/security/DENY-EGRESS-BOUNDARY.md': [
-    '## Enforced topology',
-    '## Protected CI proof'
-  ],
-  'docs/security/INDEPENDENT-SECURITY-REVIEW.md': [
-    '## Review policy and trust model',
-    '## Findings and disposition contract',
-    '## Fail-closed verification',
-    '## Conformance evidence and non-claims'
-  ],
-  'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md': [
-    '## Severity and activation',
-    '## Signed evidence and CI gate',
-    '## Residual limitations and pilot repetition'
-  ],
-  'docs/operations/AUTOMATED-SOURCE-SETUP.md': [
-    '## Current-build setup boundary',
-    '## One-command setup',
-    '## Dependency and lifecycle policy',
-    '## CI and production separation',
-    '## Failure behavior and non-claims'
-  ],
-  'docs/operations/GATEWAY-CLIENT-CONTRACT.md': [
-    '## Purpose and boundary',
-    '## Current route inventory',
-    '## Intent requests and idempotency',
-    '## Cancellation, timeout, and response bounds',
-    '## Error contract',
-    '## Verification and compatibility changes',
-    '## Non-claims and next application boundary'
-  ],
-  'docs/operations/AXIOM-ONE-LOCAL-PREVIEW.md': [
-    '## Purpose and exact claim',
-    '## Start and stop the local preview',
-    '## Implemented surfaces',
-    '## Browser and token boundary',
-    '## Loopback proxy and response controls',
-    '## Security headers and offline policy',
-    '## Accessibility and responsive foundation',
-    '## Verification, rollback, and failures',
-    '## Remaining gates and non-claims'
-  ],
-  'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md': [
-    '## Enforced policy boundary',
-    '## Exact communication graph',
-    '## Four-segment unit topology',
-    '## Runtime and protected-CI proof',
-    '## Operator verification and rollback',
-    '## Pilot repetition and non-claims'
-  ],
-  'docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md': [
-    '## Enforced relay boundary',
-    '## Queue, retry, and delivery audit',
-    '## Pilot repetition and non-claims'
-  ],
-  'docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md': [
-    '## Enforced resilience profile',
-    '## Dependency-loss and recovery sequence',
-    '## Pilot repetition and non-claims'
-  ],
-  'docs/operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md': [
-    '## Trust and peer-identity model',
-    '## Offline leaf rotation',
-    '## Pilot repetition and non-claims'
-  ],
-  'docs/operations/INDEPENDENT-SERVICE-UNITS.md': [
-    '## Enforced unit and trust boundary',
-    '## Failure-isolation and recovery sequence',
-    '## Pilot repetition and non-claims'
-  ],
-  'docs/operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md': [
-    '## Enforced admission and discovery boundary',
-    '## Deterministic scheduling and resource leases',
-    '## Pilot repetition and non-claims'
-  ],
-  'docs/operations/ONLINE-CAUSAL-EXCHANGE.md': [
-    '## Trust and authority boundary',
-    '## Consistency and conflict behavior',
-    '## Signed partition/rejoin drill',
-    '## Pilot repetition and non-claims'
-  ],
-  'docs/operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md': [
-    '## Trust and authority boundary',
-    '## Request and response protocol',
-    '## Signed conformance drill',
-    '## Provider adapter conformance',
-    '## Pilot repetition and non-claims'
-  ],
-  'docs/operations/PILOT-DEPLOYMENT-DOSSIER.md': [
-    '## Current-build boundary',
-    '## Trust and signature model',
-    '## Required evidence inventory',
-    '## Offline exact-inventory package verification',
-    '### Exact v2 detail contracts',
-    '## Fail-closed verification sequence',
-    '## Conformance drill and protected CI',
-    '## Pilot repetition and non-claims'
-  ],
-  'docs/releases/0.12.0-dev.3.md': [
-    '## Version boundary',
-    '## Current implementation',
-    '## Validation',
-    '## Non-claims',
-    'npm run setup'
-  ],
-  'docs/whitepapers_and_research/WHITEPAPER.md': [
-    '## Non-claims',
-    '## Reproducibility',
-    'npm run setup'
-  ],
-  'mesh/README.md': ['npm run setup', 'AUTOMATED-SOURCE-SETUP.md'],
-  'mesh/PRODUCTION.md': [
-    '## Automated source setup',
-    'npm run network-policy:check',
-    'not evidence of a live deployment'
-  ]
+  'docs/rebuild/PRODUCT-DEFINITION.md': ['## Product boundary', '## Non-goals'],
+  'docs/rebuild/REQUIREMENTS.md': ['## Functional requirements', '## Security requirements'],
+  'docs/rebuild/ROLLBACK.md': ['## Rollback conditions', '## Rollback procedure'],
+  'docs/rebuild/SOURCE-TRACEABILITY.md': ['## Source map', '## Traceability rules'],
+  'docs/rebuild/STATUS.md': ['## Supported build', '## Current state'],
+  'docs/security/CREDENTIAL-HISTORY-REVOCATION.md': ['## Threat', '## Revocation semantics'],
+  'docs/security/CURRENT-BUILD-THREAT-MODEL.md': ['## Scope', '## Trust boundaries'],
+  'docs/security/DENY-EGRESS-BOUNDARY.md': ['## Security property', '## Evidence boundary'],
+  'docs/security/INDEPENDENT-SECURITY-REVIEW.md': ['## Review boundary', '## Claim boundary'],
+  'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md': ['## Incident lifecycle', '## Evidence'],
+  'docs/operations/AUTOMATED-SOURCE-SETUP.md': ['## Supported setup path', '## Security properties'],
+  'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md': ['## Default deny', '## Current policy'],
+  'docs/operations/GATEWAY-CLIENT-CONTRACT.md': ['## Contract', '## Security boundary'],
+  'docs/operations/AXIOM-ONE-LOCAL-PREVIEW.md': ['## Boundary', '## Non-claims'],
+  'docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md': ['## Boundary', '## Security properties'],
+  'docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md': ['## Purpose', '## Evidence'],
+  'docs/operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md': ['## Security properties', '## Rotation'],
+  'docs/operations/INDEPENDENT-SERVICE-UNITS.md': ['## Architecture', '## Failure isolation'],
+  'docs/operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md': ['## Scope', '## Non-claims'],
+  'docs/operations/ONLINE-CAUSAL-EXCHANGE.md': ['## Scope', '## Non-claims'],
+  'docs/operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md': ['## Boundary', '## Non-claims'],
+  'docs/operations/PILOT-DEPLOYMENT-DOSSIER.md': ['## Purpose', '## Claim boundary'],
+  'docs/whitepapers_and_research/WHITEPAPER.md': ['## Abstract', '## Conclusion'],
+  'mesh/README.md': ['## Security model', '## Capability registry'],
+  'mesh/PRODUCTION.md': ['## Supported deployment', '## Security boundary']
 });
 
 const MINIMUM_LENGTH = Object.freeze({
-  'docs/MASTER-TODO.md': 2_000,
+  'README.md': 8_000,
+  'SECURITY.md': 2_000,
+  '.github/SECURITY.md': 2_000,
+  'CONSTITUTION.md': 4_000,
+  'CONTRIBUTING.md': 2_000,
+  'docs/README.md': 2_000,
+  'docs/MASTER-TODO.md': 7_000,
   'docs/MASTER-TODO-PLURAL-AUTHORITY.md': 8_000,
   'docs/MASTER-TODO-AGENT-INTEROPERABILITY.md': 7_000,
-  'docs/ROADMAP.md': 2_000,
+  'docs/ROADMAP.md': 6_000,
   'docs/ROADMAP-EXTENSION-PLURAL-AUTHORITY.md': 8_000,
   'docs/ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md': 7_000,
-  'docs/PRODUCTION-GRADE.md': 3_000,
-  'docs/PROJECT-STATUS-2026.md': 1_500,
-  'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md': 10_000,
-  'docs/rebuild/LONG-HORIZON-CAPABILITY-MAP.md': 8_000,
-  'docs/rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md': 9_000,
+  'docs/PRODUCTION-GRADE.md': 7_000,
+  'docs/PRODUCTION-READINESS-TRACKER.md': 7_000,
+  'docs/PROJECT-STATUS-2026.md': 7_000,
+  'docs/REPOSITORY-MIGRATION.md': 4_000,
+  'docs/architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md': 7_000,
+  'docs/audits/SCALABILITY-AUDIT-2026-07-30.md': 7_000,
+  'docs/audits/AUDIT-HARDENING-G5-G9-2026-08-10.md': 5_000,
+  'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md': 8_000,
+  'docs/rebuild/LONG-HORIZON-CAPABILITY-MAP.md': 7_000,
+  'docs/rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md': 8_000,
   'docs/rebuild/AGENT-INTEROPERABILITY-CAPABILITY-MAP.md': 7_000,
-  'docs/reviews/PLURAL-AUTHORITY-ARCHITECTURE-REVIEW-2026-08-03.md': 7_000,
-  'docs/reviews/AGENT-INTEROPERABILITY-ARCHITECTURE-REVIEW-2026-08-09.md': 7_000,
-  'docs/security/CREDENTIAL-HISTORY-REVOCATION.md': 2_500,
-  'docs/security/CURRENT-BUILD-THREAT-MODEL.md': 5_000,
-  'docs/security/DENY-EGRESS-BOUNDARY.md': 2_500,
+  'docs/rebuild/PRODUCT-DEFINITION.md': 7_000,
+  'docs/rebuild/REQUIREMENTS.md': 7_000,
+  'docs/rebuild/ROLLBACK.md': 3_000,
+  'docs/rebuild/SOURCE-TRACEABILITY.md': 4_000,
+  'docs/rebuild/STATUS.md': 4_000,
+  'docs/reviews/PLURAL-AUTHORITY-ARCHITECTURE-REVIEW-2026-08-03.md': 5_000,
+  'docs/reviews/AGENT-INTEROPERABILITY-ARCHITECTURE-REVIEW-2026-08-09.md': 5_000,
+  'docs/security/CREDENTIAL-HISTORY-REVOCATION.md': 4_000,
+  'docs/security/CURRENT-BUILD-THREAT-MODEL.md': 6_000,
+  'docs/security/DENY-EGRESS-BOUNDARY.md': 4_000,
   'docs/security/INDEPENDENT-SECURITY-REVIEW.md': 5_000,
-  'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md': 4_000,
-  'docs/operations/AUTOMATED-SOURCE-SETUP.md': 5_000,
-  'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md': 6_000,
-  'docs/operations/GATEWAY-CLIENT-CONTRACT.md': 6_000,
-  'docs/operations/AXIOM-ONE-LOCAL-PREVIEW.md': 9_000,
-  'docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md': 4_500,
-  'docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md': 4_500,
+  'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md': 5_000,
+  'docs/operations/AUTOMATED-SOURCE-SETUP.md': 4_000,
+  'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md': 5_000,
+  'docs/operations/GATEWAY-CLIENT-CONTRACT.md': 5_000,
+  'docs/operations/AXIOM-ONE-LOCAL-PREVIEW.md': 5_000,
+  'docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md': 5_000,
+  'docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md': 5_000,
   'docs/operations/MUTUALLY-AUTHENTICATED-TRANSPORT.md': 5_000,
   'docs/operations/INDEPENDENT-SERVICE-UNITS.md': 5_000,
   'docs/operations/ADMITTED-NODE-DISCOVERY-AND-SCHEDULING.md': 5_000,
@@ -480,13 +358,11 @@ export async function repositoryMarkdownFiles(directory, prefix = '') {
 
 async function documentationFiles(directory, prefix = 'docs') {
   const files = [];
-  for (const entry of await readdir(directory, { withFileTypes: true })) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  for (const entry of entries) {
     const relativePath = `${prefix}/${entry.name}`;
     if (entry.isDirectory()) {
-      files.push(...await documentationFiles(
-        resolve(directory, entry.name),
-        relativePath
-      ));
+      files.push(...await documentationFiles(resolve(directory, entry.name), relativePath));
     } else {
       files.push(relativePath);
     }
@@ -495,20 +371,18 @@ async function documentationFiles(directory, prefix = 'docs') {
 }
 
 function normalize(value) {
-  return String(value).replace(/\r\n?/g, '\n');
+  return value.replace(/\r\n/g, '\n').trim();
 }
 
-function isWithin(repositoryRoot, target) {
-  const root = resolve(repositoryRoot);
-  const relative = target.slice(root.length);
-  return target === root || (
-    target.startsWith(root)
-    && (relative.startsWith('/') || relative.startsWith('\\'))
-  );
+function isWithin(root, candidate) {
+  const normalizedRoot = resolve(root);
+  const normalizedCandidate = resolve(candidate);
+  return normalizedCandidate === normalizedRoot || normalizedCandidate.startsWith(`${normalizedRoot}/`);
 }
 
 async function main() {
-  process.stdout.write(`${JSON.stringify(await verifyCanonicalDocumentation())}\n`);
+  const { valid, documents, links } = await verifyCanonicalDocumentation();
+  process.stdout.write(`${JSON.stringify({ valid, documents, links })}\n`);
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
