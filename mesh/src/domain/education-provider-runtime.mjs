@@ -1,9 +1,25 @@
 import { ValidationError } from '../lib/canonical.mjs';
 import {
-  educationUnavailableResult,
+  loadEducationContract,
   validateEducationIntent,
 } from './education-contract.mjs';
 import { executeEducationLearnerRecordAction } from './education-learner-record-provider.mjs';
+
+function educationUnavailableResult(actionName, action) {
+  return {
+    ok: false,
+    http_status: 503,
+    error: {
+      code: 'capability_unavailable',
+      message: `Education capability ${action.provider_capability} has no configured adapter`,
+      details: {
+        action: actionName,
+        provider_capability: action.provider_capability,
+        capability_status: 'adapter_required',
+      },
+    },
+  };
+}
 
 /**
  * Provider-aware education runtime seam.
@@ -18,13 +34,15 @@ export async function executeEducationAction(
   input,
   { learnerRecordProvider = null } = {},
 ) {
-  const action = validateEducationIntent(actionName, input);
+  const contract = await loadEducationContract();
+  validateEducationIntent(contract, actionName, input);
+  const action = contract.actions[actionName];
   if (action.provider_capability === 'education.learner-record') {
     return executeEducationLearnerRecordAction(actionName, input, {
       provider: learnerRecordProvider,
     });
   }
-  return educationUnavailableResult(actionName);
+  return educationUnavailableResult(actionName, action);
 }
 
 export function describeEducationProviderRuntime({ learnerRecordProvider = null } = {}) {
