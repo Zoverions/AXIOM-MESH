@@ -68,8 +68,12 @@ async function storeFixture(t) {
   return store;
 }
 
-function sleep(milliseconds) {
-  return new Promise(resolve => setTimeout(resolve, milliseconds));
+function enableGovernanceClock(t) {
+  t.mock.timers.enable({
+    apis: ['Date'],
+    now: new Date('2026-08-11T15:00:00.000Z')
+  });
+  return t.mock.timers;
 }
 
 async function appendApprovedProposal(store, {
@@ -77,8 +81,12 @@ async function appendApprovedProposal(store, {
   proposer,
   action,
   voter = 'human:reviewer',
-  activator = 'human:activator'
+  activator = 'human:activator',
+  clock
 }) {
+  if (!clock || typeof clock.tick !== 'function') {
+    throw new TypeError('appendApprovedProposal requires a deterministic test clock');
+  }
   const now = Date.now();
   const votingEndsAt = new Date(now + 60).toISOString();
   const activateAfter = new Date(now + 120).toISOString();
@@ -114,7 +122,7 @@ async function appendApprovedProposal(store, {
       }
     }]
   });
-  await sleep(Math.max(0, new Date(votingEndsAt).valueOf() - Date.now() + 15));
+  clock.tick(61);
   store.appendEvents({
     traceId: `trace:${proposalId}:finalize`,
     actor: proposer,
@@ -124,7 +132,7 @@ async function appendApprovedProposal(store, {
       payload: { proposal_id: proposalId, finalized_by: proposer }
     }]
   });
-  await sleep(Math.max(0, new Date(activateAfter).valueOf() - Date.now() + 15));
+  clock.tick(60);
   store.appendEvents({
     traceId: `trace:${proposalId}:activate`,
     actor: activator,
@@ -167,6 +175,7 @@ function appendPassingAttestation(store, activation) {
 
 test('current active Intent proposal exposes minimized full-chain verified read-only state', async t => {
   const store = await storeFixture(t);
+  const clock = enableGovernanceClock(t);
   const activation = buildIntentActivationRecord(contractFixture(), {
     kernel_version: '0.12.0-dev.3',
     source_digest: sha256('intent-read-source')
@@ -174,7 +183,8 @@ test('current active Intent proposal exposes minimized full-chain verified read-
   await appendApprovedProposal(store, {
     proposalId: 'proposal:intent-read',
     proposer: 'human:proposer',
-    action: activationGovernanceAction(activation)
+    action: activationGovernanceAction(activation),
+    clock
   });
   appendPassingAttestation(store, activation);
 
@@ -196,6 +206,7 @@ test('current active Intent proposal exposes minimized full-chain verified read-
 
 test('ordinary governance proposals remain unextended', async t => {
   const store = await storeFixture(t);
+  const clock = enableGovernanceClock(t);
   await appendApprovedProposal(store, {
     proposalId: 'proposal:ordinary',
     proposer: 'human:ordinary',
@@ -203,7 +214,8 @@ test('ordinary governance proposals remain unextended', async t => {
       type: 'record.decision',
       payload: { decision: 'ordinary-governance-record' },
       rollback: { description: 'No executable rollback.' }
-    }
+    },
+    clock
   });
   const proposal = store.listProposals({ limit: 100 })
     .find(item => item.proposal_id === 'proposal:ordinary');
@@ -213,6 +225,7 @@ test('ordinary governance proposals remain unextended', async t => {
 
 test('superseded Intent proposal does not expose current state as its own', async t => {
   const store = await storeFixture(t);
+  const clock = enableGovernanceClock(t);
   const first = buildIntentActivationRecord(contractFixture(), {
     kernel_version: '0.12.0-dev.3',
     source_digest: sha256('intent-read-v1')
@@ -220,7 +233,8 @@ test('superseded Intent proposal does not expose current state as its own', asyn
   await appendApprovedProposal(store, {
     proposalId: 'proposal:intent-v1',
     proposer: 'human:proposer',
-    action: activationGovernanceAction(first)
+    action: activationGovernanceAction(first),
+    clock
   });
   const second = buildIntentActivationRecord(contractFixture(), {
     kernel_version: '0.12.0-dev.3',
@@ -231,7 +245,8 @@ test('superseded Intent proposal does not expose current state as its own', asyn
   await appendApprovedProposal(store, {
     proposalId: 'proposal:intent-v2',
     proposer: 'human:proposer',
-    action: activationGovernanceAction(second)
+    action: activationGovernanceAction(second),
+    clock
   });
 
   const page = store.listProposals({ limit: 100 });
