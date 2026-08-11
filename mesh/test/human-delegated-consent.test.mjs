@@ -186,6 +186,6 @@ test('receipt authority and revocation bindings are tamper evident', () => {
   assert.equal(evaluate(wrongDigest).code, 'delegated_consent_authority_stale');
   assert.throws(
     () => validateDelegatedConsentReceipt({ ...receipt, revocation_handle_hash: 'bad' }),
-    /invalid format|at least 64/
+    /invalid format|at least 64|must contain 64-64 characters/
   );
 });
