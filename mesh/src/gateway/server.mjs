@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { meshConfig, loadApiPrincipals } from '../lib/config.mjs';
 import { ensureMeshIdentity } from '../lib/identity.mjs';
-import { Router, TokenBucketLimiter, createServiceServer, listen, parseJsonBody } from '../lib/http.mjs';
+import { Router, createServiceServer, listen, parseJsonBody } from '../lib/http.mjs';
 import {
   AxiomError,
   ValidationError,
@@ -27,6 +27,7 @@ import {
 import { createBearerAuthenticator } from '../lib/public-auth.mjs';
 import { intentRequestDigest } from '../lib/intent-binding.mjs';
 import { loadTransportRuntime } from '../lib/transport-credentials.mjs';
+import { GatewayIngressControl, createSingleFlightCache } from './ingress-control.mjs';
 
 const PRINCIPAL_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 
@@ -40,20 +41,11 @@ export async function createGatewayService(config = meshConfig()) {
     : null;
   const principals = await loadApiPrincipals(config);
   const bearerAuth = createBearerAuthenticator(principals);
-  const ipLimiter = new TokenBucketLimiter({
+  const localIngress = Boolean(config.gatewaySocket);
+  const ingressControl = new GatewayIngressControl({
+    localIngress,
     capacity: config.rateLimitCapacity,
-    refillPerSecond: config.rateLimitRefillPerSecond,
-    maxKeys: 10_000
-  });
-  const principalLimiter = new TokenBucketLimiter({
-    capacity: config.rateLimitCapacity,
-    refillPerSecond: config.rateLimitRefillPerSecond,
-    maxKeys: 100_000
-  });
-  const probeLimiter = new TokenBucketLimiter({
-    capacity: 10,
-    refillPerSecond: 1,
-    maxKeys: 10_000
+    refillPerSecond: config.rateLimitRefillPerSecond
   });
   const capabilities = JSON.parse(await readFile(config.capabilitiesPath, 'utf8'));
   const capabilitiesDigest = digestObject(capabilities);
@@ -102,6 +94,11 @@ export async function createGatewayService(config = meshConfig()) {
     return operationsReport(services);
   }
 
+  const currentReadiness = createSingleFlightCache({
+    load: currentOperations,
+    cacheMs: 250
+  });
+
   router.add('GET', '/', async () => ({
     buffer: Buffer.from(renderIndex(capabilities)),
     contentType: 'text/html; charset=utf-8'
@@ -113,9 +110,10 @@ export async function createGatewayService(config = meshConfig()) {
   }), { auth: false });
 
   router.add('GET', '/ready', async ({ req, traceId }) => {
-    const key = sha256(req.socket.remoteAddress ?? 'unknown');
-    if (!probeLimiter.take(key)) throw new AxiomError('rate_limited', 'Readiness probe rate limit exceeded', 429);
-    const report = await currentOperations(traceId);
+    ingressControl.admitProbe(req);
+    const report = localIngress
+      ? await currentReadiness(traceId)
+      : await currentOperations(traceId);
     return {
       httpStatus: report.status === 'ready' ? 200 : 503,
       body: {
@@ -469,16 +467,11 @@ export async function createGatewayService(config = meshConfig()) {
     telemetry,
     admitRequest: bearerAuth.admitRequest,
     inspectResponse: bearerAuth.inspectResponse,
-    authenticate: async args => {
-      const key = sha256(args.req.socket.remoteAddress ?? 'unknown');
-      if (!ipLimiter.take(key)) throw new AxiomError('rate_limited', 'IP request rate limit exceeded', 429);
-      const principal = await bearerAuth(args);
-      enforceTelemetryCollectionBoundary(args.req, principal);
-      if (!principalLimiter.take(principal.id)) {
-        throw new AxiomError('rate_limited', 'Principal request rate limit exceeded', 429);
-      }
-      return principal;
-    }
+    authenticate: args => ingressControl.authenticate(
+      args,
+      bearerAuth,
+      enforceTelemetryCollectionBoundary
+    )
   });
   return {
     name: 'gateway',
