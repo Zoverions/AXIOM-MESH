@@ -5,6 +5,7 @@ import {
   assertStringArray,
   digestObject
 } from './canonical.mjs';
+import { contextTaskBindingIdentity, normalizeContextTaskBindingIdentity } from './context-task-binding.mjs';
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
@@ -12,6 +13,9 @@ const DIGEST = /^[a-f0-9]{64}$/;
 export function buildPlan(intent, decision, { approval } = {}) {
   const machineAuthorityDigest = intent.principal?.schema === 'axiom-machine-principal.v1'
     ? intent.principal.authority_digest
+    : null;
+  const contextBinding = intent.context_binding
+    ? contextTaskBindingIdentity(intent.context_binding)
     : null;
   const executionStep = {
     id: 'execute',
@@ -49,6 +53,13 @@ export function buildPlan(intent, decision, { approval } = {}) {
     'intent.approval_ids'
   ];
   const rules = [decision.rule_id ?? `policy:${intent.action}`];
+  if (contextBinding) {
+    observableInputs.push('intent.context_binding');
+    rules.push(
+      `context-view:${contextBinding.view_digest}`,
+      `context-projection:${contextBinding.projection_digest}`
+    );
+  }
   if (machineAuthorityDigest) {
     observableInputs.push(
       'principal.sponsor',
@@ -90,6 +101,14 @@ export function buildPlan(intent, decision, { approval } = {}) {
       single_use: true,
       ...(machineAuthorityDigest ? { authority_digest: machineAuthorityDigest } : {})
     },
+    ...(contextBinding
+      ? {
+          context: {
+            ...contextBinding,
+            authority_effect: 'none'
+          }
+        }
+      : {}),
     timeout_ms: executionStep.timeout_ms + commitStep.timeout_ms,
     steps: [executionStep, commitStep]
   };
@@ -168,6 +187,20 @@ export function validatePlan(value) {
     });
     if (!rules.includes(`machine-authority:${capability.authority_digest}`)) {
       throw new ValidationError('Machine plan authority digest is missing from decision provenance');
+    }
+  }
+  if (plan.context !== undefined) {
+    const context = assertPlainObject(plan.context, 'plan.context');
+    const contextIdentity = normalizeContextTaskBindingIdentity(context);
+    if (context.authority_effect !== 'none') {
+      throw new ValidationError('Plan context must remain non-authorizing');
+    }
+    if (
+      !observableInputs.includes('intent.context_binding')
+      || !rules.includes(`context-view:${contextIdentity.view_digest}`)
+      || !rules.includes(`context-projection:${contextIdentity.projection_digest}`)
+    ) {
+      throw new ValidationError('Plan context is missing from observable decision provenance');
     }
   }
   if (!Number.isSafeInteger(plan.timeout_ms) || plan.timeout_ms < 1 || plan.timeout_ms > 300_000) {
