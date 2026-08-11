@@ -91,8 +91,15 @@ The envelope is canonical, digest-bound, size-bounded, and carried in the signed
 Gateway-to-Grid request URL. Grid verifies the requester and envelope digest,
 re-verifies the full evidence chain and each context object's content address,
 then compiles the deterministic view. Existing memory consent remains an outer
-ceiling for cross-owner reads. The resulting view carries `authority_effect:
-"none"`, `view_digest`, authorization evidence, and `projection_digest`.
+ceiling for cross-owner reads.
+
+The resulting projection carries `authority_effect: "none"`, `view_digest`,
+authorization evidence, `projection_digest`, and a required Grid-signed
+`projection_receipt`. The receipt binds the exact principal, purpose, owner,
+projection-authority digest, finite projected context scopes, Grid evidence
+anchor, `view_digest`, and `projection_digest`. It is historical evidence that
+that projection existed; it is not a capability, approval, grant, or other
+authorization token.
 
 The checker parses every literal Gateway `router.add()` declaration and
 requires the ordered `/v1/` inventory to equal the contract. Adding, removing,
@@ -100,7 +107,7 @@ renaming, or dynamically constructing an authenticated route fails the normal
 setup and release gates until the contract, tests, schemas, and documentation
 are revised together.
 
-## Intent requests and idempotency
+## Intent requests, context binding, and idempotency
 
 `intents.submit` is the only effect-bearing Gateway route. All other contract
 routes are reads. Its request schema permits exactly:
@@ -109,13 +116,31 @@ routes are reads. Its request schema permits exactly:
 - optional object `input`;
 - optional purpose of at most 512 characters;
 - optional string arrays with 160-character items: at most 64 `data_scopes`,
-  8 `confirmations`, and 8 `approval_ids`.
+  8 `confirmations`, and 8 `approval_ids`;
+- optional `context_binding` using `axiom-context-task-binding.v1`.
+
+A context task binding contains the four digest anchors (`view_digest`,
+`projection_digest`, projection `authority_digest`, and `receipt_digest`) plus
+the Grid-signed projection receipt. The public client structurally validates the
+bounded receipt shape, digest cross-links, finite sorted `context:*` scopes,
+full Grid anchor, Ed25519 attestation shape, and `authority_effect: "none"`
+before network I/O. Hypervisor performs the cryptographic Grid-signature check
+and verifies the receipt's principal, purpose, and machine-authority binding
+before policy evaluation.
+
+After successful verification, only the digest anchors are carried through the
+canonical request identity, invocation envelope, plan provenance, execution
+evidence, completed result evidence, and machine receipt. Raw context claims and
+the full signed projection receipt are not copied into Sandbox capability
+authority. Context therefore becomes causally attributable without becoming an
+authority source.
 
 An idempotency key is mandatory, 16 to 160 characters, and limited to letters,
 digits, underscore, period, colon, and hyphen. The same principal and key derive
-the same intent identifier. Reusing a key with a different effective request
-returns `idempotency_conflict`. Reusing it with the same request returns the
-same success fields as the first response plus `idempotent_replay: true`.
+the same intent identifier. Reusing a key with a different effective request,
+including a different context binding, returns `idempotency_conflict`. Reusing
+it with the same request returns the same success fields as the first response
+plus `idempotent_replay: true`.
 
 The client never retries an effect automatically. An application that retries
 after an ambiguous transport failure must reuse the original key and retain the
@@ -141,16 +166,20 @@ const result = await client.call('intents.submit', {
 });
 ```
 
-Tokens, private input, and result data must not be logged. The example assumes
-the application has already established an appropriate local session boundary;
-it does not endorse browser persistence of a bearer token.
+Tokens, private input, context claims, projection receipts, and result data must
+not be logged. The example assumes the application has already established an
+appropriate local session boundary; it does not endorse browser persistence of
+a bearer token.
 
 ## Cancellation, timeout, and response bounds
 
 Every call accepts an `AbortSignal`. External cancellation becomes
-`request_cancelled`. The default timeout is 10 seconds and a caller may select
-only 1 through 30,000 milliseconds. Timeout becomes `request_timeout`; it
-covers response-body reading as well as initial response receipt.
+`request_cancelled`. If the supplied signal is already aborted before the
+request adapter is invoked, the client fails immediately rather than depending
+on the adapter to observe an abort event that already occurred. The default
+timeout is 10 seconds and a caller may select only 1 through 30,000
+milliseconds. Timeout becomes `request_timeout`; it covers response-body
+reading as well as initial response receipt.
 
 The client rejects a serialized intent larger than the Gateway's 1 MiB request
 limit. It also limits a relative request target to 8,192 characters, at most 64
@@ -219,14 +248,20 @@ The test suite proves:
 
 - exact route and JSON Schema inventory;
 - relative-only target construction and rejection of unlisted inputs;
-- request schema and idempotency enforcement;
+- request schema and idempotency enforcement, including bounded context task bindings;
 - first-response and idempotent-replay compatibility;
 - stable, unknown, retryable, and malformed error behavior;
 - response byte and media-type bounds;
-- external cancellation and bounded timeout;
+- external cancellation, already-aborted signals, and bounded timeout;
 - authenticated context projection derives authority from the bearer principal,
   rejects scope/principal injection, binds machine purpose, preserves consent,
-  verifies Grid evidence, and rejects authority-envelope tampering;
+  verifies Grid evidence, emits a Grid-signed projection receipt, and rejects
+  authority-envelope tampering;
+- a Grid-signed context projection can be bound through canonical request,
+  invocation, plan, completed evidence, and machine receipt digests without
+  granting authority;
+- a real governed context write, signed projection, context-bound execution,
+  and wrong-purpose denial through Gateway, Hypervisor, Sandbox, and Grid;
 - a real status read and idempotent intent through Gateway, Hypervisor,
   Sandbox, and Grid;
 - rejection of direct-service, route, error-vocabulary, and source drift.
@@ -246,11 +281,14 @@ browser session/device security (`UX-005`), or completed accessibility and
 usability gates. Neither milestone adds a remote account service, third-party
 analytics, AI provider, multi-host routing, or production pilot.
 
-The context route is an authenticated kernel read surface on this branch, not a
-production-promoted Sovereign Context Plane capability and not an MCP/A2A
-projection. It does not establish source authenticity, semantic truth, external
-personal-data ingestion, autonomous execution, or permission to act from a
-stored claim. Context writes continue through the normal governed intent path.
+The context route and causal task-binding path are authenticated kernel surfaces
+on this branch, not a production-promoted Sovereign Context Plane capability and
+not an MCP/A2A projection. They do not establish source authenticity, semantic
+truth, external personal-data ingestion, autonomous authority, or permission to
+act from a stored claim. Context writes continue through the normal governed
+intent path, and every consequential effect still requires ordinary policy,
+approval where applicable, capability issuance, Sandbox execution, and Grid
+evidence.
 
 The experimental local shell is outside the trusted kernel and uses only this
 contract. It has a loopback-only origin, strict CSP, memory-only token, and no
