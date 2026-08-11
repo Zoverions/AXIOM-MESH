@@ -82,7 +82,7 @@ test('attestor profile is exact, bounded and digestable', () => {
   assert.deepEqual(value.relationship_types, ['legal-guardian']);
   assert.throws(
     () => validateHumanAuthorityAttestorProfile(profile({ relationship_types: ['*'] })),
-    /wildcards/
+    /invalid format/
   );
 });
 
@@ -144,7 +144,7 @@ test('issuer, relationship type, authority source, jurisdiction and assurance ar
     principal,
     profile: profile(),
     artifactClass: 'authority-grant',
-    artifact: grant({ authority_source: 'teacher' }),
+    artifact: grant({ authority_source: 'institution' }),
     now
   });
   assert.equal(wrongSource.code, 'authority_attestor_grant_denied');
