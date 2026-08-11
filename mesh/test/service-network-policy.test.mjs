@@ -29,7 +29,7 @@ test('current service network policy is exact, default-deny, and segmented', asy
   assert.equal(result.default_action, 'deny');
   assert.equal(result.segments, 4);
   assert.equal(result.flows, 10);
-  assert.equal(result.routes, 40);
+  assert.equal(result.routes, 41);
   assert.match(result.policy_digest, /^[a-f0-9]{64}$/);
 
   assert.deepEqual(
@@ -75,6 +75,7 @@ test('service request policy allows only exact caller, destination, method, and 
       `/internal/v1/sync/person/bundles/${'a'.repeat(64)}`
     ],
     ['hypervisor', 'grid', 'GET', '/internal/v1/approval/approval_1'],
+    ['hypervisor', 'grid', 'GET', '/internal/v1/consents/learner.self'],
     ['hypervisor', 'grid', 'POST', '/internal/v1/commit'],
     ['hypervisor', 'sandbox', 'GET', '/internal/v1/operations'],
     ['hypervisor', 'sandbox', 'POST', '/internal/v1/execute'],
@@ -176,6 +177,11 @@ test('receiving service enforces caller, method, and route policy', () => {
     destination: 'grid',
     transportPeer: { service: 'hypervisor' },
     ...request('POST', '/internal/v1/commit')
+  }).allowed, true);
+  assert.equal(authorizeInboundServiceRequest({
+    destination: 'grid',
+    transportPeer: { service: 'hypervisor' },
+    ...request('GET', '/internal/v1/consents/learner.self')
   }).allowed, true);
   assert.equal(authorizeInboundServiceRequest({
     destination: 'grid',
