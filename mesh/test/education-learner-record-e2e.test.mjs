@@ -248,7 +248,7 @@ test('self-consent learner event reaches Grid, deduplicates by event identity, v
       idempotencyKey: 'education-event-other-subject-0001'
     }),
     error => {
-      assert.equal(error.code, 'education_subject_authority_unavailable');
+      assert.equal(error.code, 'delegated_consent_unavailable');
       assert.equal(error.status, 403);
       return true;
     }
