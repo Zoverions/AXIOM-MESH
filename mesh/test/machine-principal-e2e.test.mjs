@@ -249,7 +249,7 @@ test('machine request-rate ceiling tightens the global Gateway rate limit', asyn
   });
 
   const first = await client.call('status.get');
-  assert.equal(first.kernel_version, '0.12.0-dev.3');
+  assert.equal(first.kernel_version, '0.12.0-dev.4');
 
   await assert.rejects(
     () => client.call('status.get'),
