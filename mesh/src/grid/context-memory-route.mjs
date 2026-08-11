@@ -63,6 +63,9 @@ export function readMemoryOrContext(store, {
   };
   return {
     ...projection,
-    projection_receipt: buildContextProjectionReceipt(projection, signer)
+    projection_receipt: buildContextProjectionReceipt(
+      projection,
+      signer ?? store.identity
+    )
   };
 }
