@@ -46,24 +46,36 @@ function claim() {
   };
 }
 
-test('context claim follows governed write, projection, and causally-bound execution paths', async t => {
+function diagnostic(stage) {
+  process.stderr.write(`[context-e2e] ${stage}\n`);
+}
+
+test('context claim follows governed write, projection, and causally-bound execution paths', {
+  timeout: 30_000
+}, async t => {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-context-gateway-e2e-'));
   const lease = await reserveProductionPortBlock('context gateway e2e');
   const basePort = lease.base_port;
   let stack;
   t.after(async () => {
+    diagnostic('cleanup:start');
     try {
       for (const service of stack?.services ?? []) {
         service.server?.closeIdleConnections?.();
         service.server?.closeAllConnections?.();
       }
-      await stack?.stop();
+      await Promise.race([
+        stack?.stop() ?? Promise.resolve(),
+        new Promise(resolve => setTimeout(resolve, 2_000))
+      ]);
     } finally {
       await lease.release();
       await rm(dataDir, { recursive: true, force: true });
+      diagnostic('cleanup:done');
     }
   });
 
+  diagnostic('stack:start');
   stack = await startDevelopmentStack({
     dataDir,
     environment: 'test',
@@ -86,6 +98,7 @@ test('context claim follows governed write, projection, and causally-bound execu
       }
     }
   });
+  diagnostic('stack:ready');
 
   const gateway = `http://127.0.0.1:${basePort}`;
   const client = createGatewayClient({
@@ -96,6 +109,7 @@ test('context claim follows governed write, projection, and causally-bound execu
     principalId: OWNER
   });
 
+  diagnostic('write:start');
   const written = await client.call('intents.submit', {
     body: {
       action: compiled.action,
@@ -104,14 +118,17 @@ test('context claim follows governed write, projection, and causally-bound execu
     },
     idempotencyKey: 'context-gateway-e2e-write-0001'
   });
+  diagnostic('write:done');
   assert.equal(written.status, 'completed');
   assert.match(written.intent_id, /^intent_[a-f0-9]{64}$/);
 
+  diagnostic('projection:start');
   const view = await client.call('context.view', {
     query: {
       purpose: 'project.execution'
     }
   });
+  diagnostic('projection:done');
 
   assert.equal(view.schema, 'axiom-context-projection.v1');
   assert.equal(view.principal, OWNER);
@@ -141,6 +158,7 @@ test('context claim follows governed write, projection, and causally-bound execu
   );
 
   const contextBinding = buildContextTaskBinding(view.projection_receipt);
+  diagnostic('bound-execution:start');
   const executed = await client.call('intents.submit', {
     body: {
       action: 'system.echo',
@@ -150,6 +168,7 @@ test('context claim follows governed write, projection, and causally-bound execu
     },
     idempotencyKey: 'context-gateway-e2e-bound-0001'
   });
+  diagnostic('bound-execution:done');
 
   assert.equal(executed.status, 'completed');
   assert.equal(executed.evidence.context_view_digest, view.view_digest);
@@ -164,6 +183,7 @@ test('context claim follows governed write, projection, and causally-bound execu
   assert.match(executed.evidence.plan_digest, /^[a-f0-9]{64}$/);
   assert.match(executed.evidence.invocation_digest, /^[a-f0-9]{64}$/);
 
+  diagnostic('wrong-purpose:start');
   await assert.rejects(
     () => client.call('intents.submit', {
       body: {
@@ -177,4 +197,5 @@ test('context claim follows governed write, projection, and causally-bound execu
     error => error.code === 'context_receipt_purpose_mismatch'
       && error.status === 403
   );
+  diagnostic('wrong-purpose:done');
 });
