@@ -4,7 +4,7 @@ import test from 'node:test';
 
 import { inspectLocalGitSource } from '../src/repository-operator/local-git-source.mjs';
 
-function inspector(archiveBytes, { submodule = false } = {}) {
+function inspector(blobBytes, { submodule = false } = {}) {
   return (command, args, options, callback) => {
     const operation = args[2];
     if (command !== 'git') {
@@ -37,15 +37,15 @@ function inspector(archiveBytes, { submodule = false } = {}) {
       callback(null, Buffer.alloc(0), Buffer.alloc(0));
       return;
     }
-    if (operation === 'archive') {
-      callback(null, Buffer.from(archiveBytes), Buffer.alloc(0));
+    if (operation === 'cat-file' && args[3] === 'blob') {
+      callback(null, Buffer.from(blobBytes), Buffer.alloc(0));
       return;
     }
     callback(new Error('unexpected Git operation'), Buffer.alloc(0), Buffer.alloc(0));
   };
 }
 
-test('AXIOM source manifest changes when archived source bytes change even if Git SHA-1 ids are identical', async () => {
+test('AXIOM source manifest changes when raw blob bytes change even if Git SHA-1 ids are identical', async () => {
   const first = await inspectLocalGitSource({
     repository_path: tmpdir(),
     execFileImpl: inspector('first source bytes')
@@ -59,17 +59,20 @@ test('AXIOM source manifest changes when archived source bytes change even if Gi
   assert.equal(second.object_format, 'sha1');
   assert.equal(first.commit_oid, second.commit_oid);
   assert.equal(first.tree_oid, second.tree_oid);
-  assert.notEqual(first.source_archive_sha256, second.source_archive_sha256);
+  assert.equal(first.unique_blob_count, 1);
+  assert.equal(second.unique_blob_count, 1);
   assert.notEqual(first.source_manifest_digest, second.source_manifest_digest);
   assert.equal(first.source_bytes_independently_committed, true);
   assert.equal(second.source_bytes_independently_committed, true);
+  assert.equal(first.lazy_fetch_disabled, true);
+  assert.equal(second.lazy_fetch_disabled, true);
 });
 
 test('submodule commit entries fail closed until their source content can be independently committed', async () => {
   await assert.rejects(
     inspectLocalGitSource({
       repository_path: tmpdir(),
-      execFileImpl: inspector('archive bytes', { submodule: true })
+      execFileImpl: inspector('blob bytes', { submodule: true })
     }),
     /does not support submodule commit entries/
   );
