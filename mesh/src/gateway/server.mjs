@@ -229,6 +229,9 @@ export async function createGatewayService(config = meshConfig()) {
       input: request.input ?? {},
       purpose: request.purpose ?? 'operator-request',
       data_scopes: request.data_scopes ?? [],
+      ...(request.context_binding !== undefined
+        ? { context_binding: request.context_binding }
+        : {}),
       confirmations: request.confirmations ?? [],
       approval_ids: request.approval_ids ?? [],
       submitted_at: new Date().toISOString()
