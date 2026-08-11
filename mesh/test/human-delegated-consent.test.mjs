@@ -3,6 +3,7 @@ import test from 'node:test';
 import { digestObject } from '../src/lib/canonical.mjs';
 import {
   buildDelegatedConsentReceipt,
+  delegatedAuthorityStateDigest,
   evaluateDelegatedConsent,
   loadHumanDelegatedConsentContract,
   validateDelegatedConsentReceipt
@@ -83,14 +84,16 @@ test('delegated consent contract keeps direct self-consent separate and current 
   assert.ok(contract.core_invariants.includes('current-authority-denial-dominates-unexpired-consent'));
 });
 
-test('human holder can issue a narrower receipt bound to one exact authority digest', () => {
-  const result = issue();
+test('human holder can issue a narrower receipt bound to one stable authority-state digest', () => {
+  const current = authority();
+  const result = issue({ authorityResolution: current });
   assert.equal(result.allow, true);
   assert.equal(result.receipt.subject_id, 'learner.child.1');
   assert.equal(result.receipt.holder_id, 'adult.guardian.1');
   assert.equal(result.receipt.authority_grant_id, 'authority_guardian_child_education_1');
   assert.deepEqual(result.receipt.data_scopes, ['learning-progress:write']);
-  assert.equal(result.receipt.authority_digest, authority().authority_digest);
+  assert.equal(result.receipt.authority_digest, delegatedAuthorityStateDigest(current.facts));
+  assert.notEqual(result.receipt.authority_digest, current.authority_digest);
   assert.equal(validateDelegatedConsentReceipt(result.receipt).status, 'active');
 });
 
@@ -144,12 +147,20 @@ test('current authority denial dominates an otherwise active unexpired receipt',
   assert.equal(denied.code, 'authority_grant_inactive');
 });
 
-test('stale authority digest, cross-child and cross-holder substitution fail closed', () => {
+test('fresh observation time preserves consent while changed authority state invalidates it', () => {
   const receipt = issue().receipt;
   const refreshed = authority({ resolved_at: '2026-08-12T09:59:59.000Z' });
-  const stale = evaluate(receipt, refreshed);
-  assert.equal(stale.code, 'delegated_consent_authority_stale');
+  assert.equal(evaluate(receipt, refreshed).allow, true);
 
+  const changedState = authority({
+    resolved_at: '2026-08-12T09:59:59.000Z',
+    grant_evidence_digest: '9'.repeat(64)
+  });
+  assert.equal(evaluate(receipt, changedState).code, 'delegated_consent_authority_stale');
+});
+
+test('cross-child and cross-holder substitution fail closed', () => {
+  const receipt = issue().receipt;
   const crossChild = evaluate(receipt, authority(), { subjectId: 'learner.child.2' });
   assert.equal(crossChild.code, 'delegated_consent_request_mismatch');
   const crossHolder = evaluate(receipt, authority(), { holderId: 'adult.guardian.2' });
