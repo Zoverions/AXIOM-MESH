@@ -12,13 +12,17 @@ import {
   ASSURANCE_LADDER,
   ASSURANCE_TIER_IDS
 } from '../../packages/axiom-assertion-ladder/assurance-tiers.mjs';
+import {
+  PUBLIC_ORDERING_LADDER,
+  VALUE_SETTLEMENT_LADDER,
+  composeAssuranceState
+} from '../../packages/axiom-assertion-ladder/external-effect-states.mjs';
 
-test('an assertion cannot render above the state actually achieved', () => {
+test('an assurance assertion cannot render above the state actually achieved', () => {
   assert.equal(canRenderAs(ASSURANCE_LADDER, 'A1', 'A1'), true);
   assert.equal(canRenderAs(ASSURANCE_LADDER, 'A1', 'A0'), true);
   assert.equal(canRenderAs(ASSURANCE_LADDER, 'A1', 'A2'), false);
-  assert.equal(canRenderAs(ASSURANCE_LADDER, 'A4', 'A6'), false);
-  assert.equal(canRenderAs(ASSURANCE_LADDER, 'A6', 'A3'), true);
+  assert.equal(canRenderAs(ASSURANCE_LADDER, 'A4', 'A3'), true);
 });
 
 test('events carry explicit not-yet states', () => {
@@ -26,36 +30,36 @@ test('events carry explicit not-yet states', () => {
     ladder: ASSURANCE_LADDER,
     subject_id: 'intent:test',
     state: 'A2',
-    evidence: ['receipt:approval']
+    evidence: ['receipt:policy-and-execution']
   });
 
-  assert.deepEqual(event.not_yet, ['A3', 'A4', 'A5', 'A6']);
+  assert.deepEqual(event.not_yet, ['A3', 'A4']);
   assert.equal(event.state_rank, 2);
 });
 
 test('upgrades are new monotonic events and downgrade mutation is denied', () => {
-  const local = createAssertionEvent({
+  const attributable = createAssertionEvent({
     ladder: ASSURANCE_LADDER,
     subject_id: 'record:1',
     state: 'A1'
   });
-  const anchored = createAssertionEvent({
+  const independentlyVerified = createAssertionEvent({
     ladder: ASSURANCE_LADDER,
     subject_id: 'record:1',
-    state: 'A4',
-    previous: local,
-    evidence: ['anchor:public-checkpoint']
+    state: 'A3',
+    previous: attributable,
+    evidence: ['verifier:independent-review']
   });
 
-  assert.equal(anchored.previous_state, 'A1');
-  assert.equal(anchored.state, 'A4');
+  assert.equal(independentlyVerified.previous_state, 'A1');
+  assert.equal(independentlyVerified.state, 'A3');
 
   assert.throws(
     () => createAssertionEvent({
       ladder: ASSURANCE_LADDER,
       subject_id: 'record:1',
       state: 'A2',
-      previous: anchored
+      previous: independentlyVerified
     }),
     error => error instanceof AssertionLadderError && error.code === 'NON_MONOTONIC_TRANSITION'
   );
@@ -75,6 +79,35 @@ test('policy declares assurance tier; caller override is denied', () => {
     }),
     error => error instanceof AssertionLadderError && error.code === 'CALLER_TIER_OVERRIDE_DENIED'
   );
+});
+
+test('public ordering is separate from assurance', () => {
+  assert.equal(canRenderAs(PUBLIC_ORDERING_LADDER, 'unanchored', 'anchored'), false);
+  assert.equal(canRenderAs(PUBLIC_ORDERING_LADDER, 'anchored', 'unanchored'), true);
+
+  const composed = composeAssuranceState({
+    assurance: 'A3',
+    public_ordering: 'anchored',
+    value_settlement: 'not_submitted'
+  });
+  assert.deepEqual(composed, {
+    schema: 'axiom-composed-assurance-state.v1',
+    assurance: 'A3',
+    public_ordering: 'anchored',
+    value_settlement: 'not_submitted'
+  });
+});
+
+test('a shape-correct transaction identifier cannot advance settlement state by itself', () => {
+  const local = createAssertionEvent({
+    ladder: VALUE_SETTLEMENT_LADDER,
+    subject_id: 'payment:1',
+    state: 'not_submitted',
+    metadata: { transaction_hash: '0x' + 'a'.repeat(64) }
+  });
+
+  assert.equal(canRenderAs(VALUE_SETTLEMENT_LADDER, local.state, 'confirmed'), false);
+  assert.deepEqual(local.not_yet, ['submitted', 'confirmed', 'finalized']);
 });
 
 test('the generic ladder also represents capability and evidence state machines', () => {
