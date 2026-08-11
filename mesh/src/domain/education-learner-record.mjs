@@ -64,17 +64,23 @@ export function evaluateEducationLearnerEventConsent({
     max: 160,
     pattern: ID
   });
+  const principalType = assertString(intent.principal?.type, 'intent.principal.type', {
+    max: 16,
+    pattern: /^(human|agent|service)$/
+  });
   const input = assertPlainObject(intent.input, 'intent.input');
   const subjectId = assertString(input.subject_id, 'subject_id', { max: 160, pattern: ID });
 
   // The current AXIOM consent primitive only permits a principal to grant consent
-  // for itself. Do not interpret a relationship/role as delegated authority.
-  if (subjectId !== principalId) {
+  // for itself. This initial education adapter additionally limits that authority
+  // to a human learner principal; machine/delegated authority remains a separate
+  // explicit future contract rather than being inferred from IDs or roles.
+  if (principalType !== 'human' || subjectId !== principalId) {
     return {
       allow: false,
       code: 'education_subject_authority_unavailable',
       http_status: 403,
-      reason: 'Delegated or guardian authority for another education subject is not implemented.'
+      reason: 'Only direct human subject self-authorization is implemented for education learner events.'
     };
   }
 
@@ -154,7 +160,8 @@ function validateConsentBinding(binding, intent) {
     throw new ValidationError('Education consent binding digest is invalid');
   }
   if (
-    facts.contract_id !== EDUCATION_CONTRACT_ID
+    intent.principal.type !== 'human'
+    || facts.contract_id !== EDUCATION_CONTRACT_ID
     || facts.contract_version !== EDUCATION_CONTRACT_VERSION
     || facts.contract_sha256 !== EDUCATION_CONTRACT_SHA256
     || facts.controller !== EDUCATION_CONTRACT_CONTROLLER
