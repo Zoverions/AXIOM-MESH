@@ -4,7 +4,7 @@
 
 **Adopted for branch review:** 2026-08-09
 
-**Planning horizon:** current `0.12.x` product/pilot work through machine principals, protocol adapters, bounded delegation, remote tasks, and machine participation in governed collaboration
+**Planning horizon:** current `0.12.x` product/pilot work through machine principals, sovereign context, protocol adapters, bounded delegation, remote tasks, and machine participation in governed collaboration
 
 **Authority:** `mesh/config/capabilities.json` remains authoritative for runnable capability status. This roadmap extension does not promote any capability.
 
@@ -12,18 +12,19 @@
 
 AXIOM-MESH is currently strongest as a local-first capability, policy, execution, and evidence substrate. Its product programme has naturally begun with human-facing surfaces, but the same core should be useful to digital agents, services, schedulers, local models, external agent frameworks, and future embodied systems.
 
-General agent runtimes are evolving too quickly for AXIOM to gain leverage by maintaining a competing fork. The strategic opportunity is instead to make AXIOM a stable **machine authority and interoperability substrate** that those runtimes can call.
+General agent runtimes are evolving too quickly for AXIOM to gain leverage by maintaining a competing fork. The strategic opportunity is instead to make AXIOM a stable **machine authority and interoperability substrate** that those runtimes can call while sovereign state remains independent of any replaceable model runtime.
 
 The detailed package is:
 
 - `docs/rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md`;
 - `docs/rebuild/AGENT-INTEROPERABILITY-CAPABILITY-MAP.md`;
 - `docs/reviews/AGENT-INTEROPERABILITY-ARCHITECTURE-REVIEW-2026-08-09.md`;
+- `docs/architecture/SOVEREIGN-CONTEXT-PLANE.md`;
 - `docs/MASTER-TODO-AGENT-INTEROPERABILITY.md`.
 
 ## Roadmap doctrine
 
-> **Do not build another universal agent. Build the trusted capability fabric agents can use. Protocols carry requests; AXIOM carries authority, limits, provenance, and receipts.**
+> **Do not build another universal agent. Build the trusted capability fabric agents can use. Protocols carry requests; AXIOM carries authority, limits, provenance, context boundaries, and receipts.**
 
 The existing five-state lifecycle remains unchanged:
 
@@ -46,7 +47,8 @@ Agent interoperability also inherits the existing distinction between authority,
 7. Advisory ethical/risk models may increase caution but may not silently lower mandatory policy or approval requirements.
 8. The native Gateway contract remains semantically authoritative; compatibility adapters must prove equivalent authorization outcomes.
 9. Remote output is evidence from a remote source, not local truth merely because the protocol completed successfully.
-10. No interoperability feature may be marketed before registry/evidence promotion.
+10. Context is advisory input: no stored preference, decision, inference, record, or compiled context view creates runtime authority or satisfies an approval by itself.
+11. No interoperability feature may be marketed before registry/evidence promotion.
 
 ## Workstream A — Current production-candidate protection
 
@@ -57,7 +59,7 @@ Agent interoperability also inherits the existing distinction between authority,
 - complete current AXIOM One lifecycle/security/accessibility gates;
 - complete AXIOM Verify foundations needed for machine receipt validation;
 - do not add agent authority shortcuts to accelerate experimentation;
-- preserve current non-claims for external AI, remote execution, federation, MCP, A2A, and supported autonomous agents.
+- preserve current non-claims for external AI, remote execution, federation, MCP, A2A, sovereign-context APIs, and supported autonomous agents.
 
 ## Workstream B — Legacy agent extraction
 
@@ -67,7 +69,7 @@ Agent interoperability also inherits the existing distinction between authority,
 - extract unique skills, adapters, tests, security detectors, hardware profiles, and orchestration patterns;
 - bind every extracted artifact to source provenance;
 - reject stale broad production claims;
-- use discovered fail-open/ambient-authority patterns as negative test cases;
+- use discovered fail-open/ambient-authority and context-poisoning patterns as negative test cases;
 - prefer maintained upstream interoperability over permanent general-agent forks;
 - archive/delete only after unique work and security/provenance obligations are resolved.
 
@@ -105,6 +107,34 @@ Milestones:
 - explicit unavailable/denied/uncertain states;
 - selective evidence retrieval to keep communication efficient.
 
+## Workstream D.5 — Sovereign Context Plane
+
+**Outcome:** a replaceable agent or model can receive only the provenance-bound context appropriate to its principal, purpose, scopes, and evaluation time without context becoming a second authorization system.
+
+The first library slice is defined in `docs/architecture/SOVEREIGN-CONTEXT-PLANE.md`. It deliberately reuses the existing encrypted content-addressed memory graph instead of creating parallel durable state.
+
+Milestones:
+
+- strict typed `context.claim` objects on the memory graph;
+- exact source references and source digests;
+- observation time plus explicit validity windows;
+- claim type, cardinality, sensitivity, and confidence metadata;
+- explicit principal/purpose/scope disclosure with no wildcard authority;
+- deterministic context-view compilation and digesting;
+- same-slot supersession without historical rewrite;
+- visible unresolved contradiction rather than silent answer selection;
+- refusal of silent context truncation;
+- cross-owner/cross-slot suppression defenses;
+- authenticated Grid-backed context persistence and retrieval;
+- Gateway projection whose disclosure ceiling is derived from AXIOM authority rather than caller assertions;
+- machine-principal and task binding to exact context-view digests;
+- red-team context injection, provenance laundering, stale-context, conflict-masking, and hidden-state enumeration;
+- only then consider MCP/A2A protocol projection and registry promotion.
+
+Security invariant:
+
+> **Context may inform an intent; context never authorizes an effect.**
+
 ## Workstream E — MCP server laboratory
 
 **Outcome:** one maintained external agent/client ecosystem can call a policy-selected AXIOM surface without creating a second authorization system.
@@ -118,8 +148,8 @@ Sequence:
 5. translate consequential calls into normal intents;
 6. enforce request, rate, concurrency, timeout, origin/authentication, and response bounds;
 7. prove protocol parity against the native client;
-8. red-team tool-description and prompt injection;
-9. keep credentials out of tool metadata and model-visible error paths.
+8. red-team tool-description, prompt injection, and context poisoning;
+9. keep credentials out of tool metadata, context views, and model-visible error paths.
 
 Promotion requires explicit conformance and threat-model evidence.
 
@@ -163,6 +193,7 @@ Milestones:
 
 - task state machine;
 - task/context/causal identifiers;
+- exact context-view digest where context materially shaped the task;
 - bounded progress/event observation;
 - artifact records;
 - polling and resumable observation profiles;
@@ -206,7 +237,7 @@ Milestones:
 
 ## Workstream K — A2A-compatible discovery and task exchange
 
-**Horizon:** after local machine principals, async tasks, evidence, and delegation are stable
+**Horizon:** after local machine principals, async tasks, evidence, context boundaries, and delegation are stable
 
 Outcome: remote agent ecosystems can exchange tasks/artifacts through explicit recognition without acquiring local authority.
 
@@ -223,9 +254,10 @@ Milestones:
 
 ## Workstream L — Authenticated remote execution
 
-**Horizon:** after mature multi-host identity, transport, task semantics, independent verification, and recovery
+**Horizon:** after mature multi-host identity, transport, task semantics, independent verification, context binding, and recovery
 
 - bind remote executor and exact executable/capsule digest;
+- bind any material context view by digest rather than ambient transcript state;
 - issue short-lived one-use grants;
 - encrypt/bind inputs;
 - enforce data residency/destination requirements;
@@ -252,6 +284,8 @@ Measure:
 
 - native versus adapter request latency;
 - discovery payload and cache hit rate;
+- context-view compilation latency and authorized payload size;
+- context cache hit rate without weakening freshness or disclosure checks;
 - receipt/evidence payload sizes;
 - event streaming versus polling overhead;
 - retry/idempotency cost;
@@ -259,7 +293,7 @@ Measure:
 - task throughput under fixed security constraints;
 - scheduling/resource profile usefulness.
 
-Optimization cannot silently drop authorization, attribution, or required evidence.
+Optimization cannot silently drop authorization, attribution, conflict visibility, freshness constraints, or required evidence.
 
 ## Dependency map
 
@@ -267,6 +301,7 @@ Optimization cannot silently drop authorization, attribution, or required eviden
 current kernel integrity + authentic pilot
   -> machine principal + minimal invocation envelope
   -> native machine discovery + Verify
+  -> sovereign context plane
   -> read-only MCP projection
   -> inert skill/capsule import
   -> bounded external tool/provider
@@ -289,6 +324,7 @@ Every implementation step must update, as applicable:
 - product definition;
 - primary roadmap/task queue;
 - this extension and its capability map;
+- sovereign-context architecture and schema contract;
 - threat model;
 - schemas/conformance tests;
 - credential/operations/recovery runbooks;
@@ -300,6 +336,9 @@ Every implementation step must update, as applicable:
 
 This roadmap does not claim current support for:
 
+- a production-promoted Sovereign Context Plane capability;
+- a supported context Gateway/MCP/A2A API;
+- production context ingestion from third-party personal data sources;
 - MCP server/client operation;
 - A2A interoperability;
 - machine delegation;
@@ -312,4 +351,4 @@ This roadmap does not claim current support for:
 
 ## Long-horizon outcome
 
-AXIOM-MESH should become a communication and capability substrate where humans and digital agents can use the same bounded authority model through different interfaces. Agent runtimes remain replaceable. Credentials remain scoped. Delegation remains explicit. Effects remain governed. Evidence remains portable. Protocol changes do not change who is allowed to do what.
+AXIOM-MESH should become a communication, context, and capability substrate where humans and digital agents can use the same bounded authority model through different interfaces. Agent runtimes remain replaceable. Sovereign state remains portable and provenance-bound. Context remains permissioned and non-authorizing. Credentials remain scoped. Delegation remains explicit. Effects remain governed. Evidence remains portable. Protocol changes do not change who is allowed to know or do what.
