@@ -50,7 +50,12 @@ import {
   allowedInboundTransportPeers,
   authorizeInboundServiceRequest
 } from '../lib/service-network-policy.mjs';
-import { loadEducationContract } from '../domain/education-contract.mjs';
+import {
+  EDUCATION_CONTRACT_CONTROLLER,
+  loadEducationContract,
+  validateEducationIntent
+} from '../domain/education-contract.mjs';
+import { EDUCATION_LEARNER_EVENT_ACTION } from '../domain/education-learner-record.mjs';
 import { applyEducationRuntimeGate } from '../domain/education-runtime-gate.mjs';
 
 const PRINCIPAL_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
@@ -80,6 +85,14 @@ export async function createHypervisorService(config = meshConfig()) {
 
   async function gridGet(path, traceId) {
     return signedFetch(identity, 'grid', `${config.urls.grid}${path}`, { traceId });
+  }
+
+  async function gridPost(path, traceId, body) {
+    return signedFetch(identity, 'grid', `${config.urls.grid}${path}`, {
+      method: 'POST',
+      traceId,
+      body
+    });
   }
 
   async function activePolicy(traceId) {
@@ -222,23 +235,45 @@ export async function createHypervisorService(config = meshConfig()) {
 
     if (intent.action.startsWith('education.')) {
       let consents = [];
+      let delegatedAuthorization = null;
       const subjectId = intent.input?.subject_id;
+      if (decision.allow) {
+        validateEducationIntent(educationContract, intent.action, intent.input);
+      }
       if (
         decision.allow
+        && intent.action === EDUCATION_LEARNER_EVENT_ACTION
         && typeof subjectId === 'string'
-        && subjectId === intent.principal.id
+        && intent.principal.type === 'human'
       ) {
-        const response = await gridGet(
-          `/internal/v1/consents/${encodeURIComponent(subjectId)}`,
-          traceId
-        );
-        consents = Array.isArray(response.consents) ? response.consents : [];
+        if (subjectId === intent.principal.id) {
+          const response = await gridGet(
+            `/internal/v1/consents/${encodeURIComponent(subjectId)}`,
+            traceId
+          );
+          consents = Array.isArray(response.consents) ? response.consents : [];
+        } else {
+          delegatedAuthorization = await gridPost(
+            '/internal/v1/delegated-authorizations/resolve',
+            traceId,
+            {
+              consent_id: intent.input.consent_id,
+              subject_id: subjectId,
+              holder_id: intent.principal.id,
+              controller: EDUCATION_CONTRACT_CONTROLLER,
+              purpose: intent.input.purpose,
+              action: intent.action,
+              data_scopes: educationContract.actions[intent.action].consent.data_scopes
+            }
+          );
+        }
       }
       decision = applyEducationRuntimeGate({
         contract: educationContract,
         intent,
         decision,
-        consents
+        consents,
+        delegatedAuthorization
       });
     }
 
