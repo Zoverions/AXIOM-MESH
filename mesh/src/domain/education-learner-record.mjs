@@ -12,6 +12,10 @@ import {
   EDUCATION_CONTRACT_VERSION,
   validateEducationIntent
 } from './education-contract.mjs';
+import {
+  EDUCATION_DELEGATED_AUTHORITY_MODE,
+  validateEducationDelegatedBinding
+} from './education-delegated-authorization.mjs';
 
 export const EDUCATION_LEARNER_EVENT_ACTION = 'education.learner.event.append';
 export const EDUCATION_LEARNER_RECORD_TOOL = 'adapter.education-learner-record';
@@ -71,16 +75,13 @@ export function evaluateEducationLearnerEventConsent({
   const input = assertPlainObject(intent.input, 'intent.input');
   const subjectId = assertString(input.subject_id, 'subject_id', { max: 160, pattern: ID });
 
-  // The current AXIOM consent primitive only permits a principal to grant consent
-  // for itself. This initial education adapter additionally limits that authority
-  // to a human learner principal; machine/delegated authority remains a separate
-  // explicit future contract rather than being inferred from IDs or roles.
+  // Direct self-consent remains intentionally separate from delegated authority.
   if (principalType !== 'human' || subjectId !== principalId) {
     return {
       allow: false,
       code: 'education_subject_authority_unavailable',
       http_status: 403,
-      reason: 'Only direct human subject self-authorization is implemented for education learner events.'
+      reason: 'Direct education self-consent requires the human learner to be the authenticated subject.'
     };
   }
 
@@ -144,7 +145,7 @@ export function evaluateEducationLearnerEventConsent({
   };
 }
 
-function validateConsentBinding(binding, intent) {
+function validateSelfConsentBinding(binding, intent) {
   const value = assertPlainObject(binding, 'education consent binding');
   if (value.schema !== 'axiom-education-consent-binding.v1') {
     throw new ValidationError('Education consent binding schema is unsupported');
@@ -177,8 +178,42 @@ function validateConsentBinding(binding, intent) {
     throw new AxiomError('education_consent_expired', 'Education consent expired before execution.', 403);
   }
   return {
+    mode: EDUCATION_SELF_AUTHORITY_MODE,
     facts: structuredClone(facts),
-    consent_digest: value.consent_digest
+    binding_digest: value.consent_digest
+  };
+}
+
+function validateExecutionAuthorization(capabilityConstraints, planConstraints, intent) {
+  const capabilitySelf = capabilityConstraints.education_consent;
+  const planSelf = planConstraints.education_consent;
+  const capabilityDelegated = capabilityConstraints.education_delegated_consent;
+  const planDelegated = planConstraints.education_delegated_consent;
+  const selfPresent = capabilitySelf !== undefined || planSelf !== undefined;
+  const delegatedPresent = capabilityDelegated !== undefined || planDelegated !== undefined;
+  if (selfPresent === delegatedPresent) {
+    throw new ValidationError('Execution requires exactly one education authorization mode');
+  }
+  if (selfPresent) {
+    if (capabilitySelf === undefined || planSelf === undefined) {
+      throw new ValidationError('Self education authorization must be bound in both plan and capability');
+    }
+    if (digestObject(capabilitySelf) !== digestObject(planSelf)) {
+      throw new ValidationError('Capability and plan education consent bindings differ');
+    }
+    return validateSelfConsentBinding(capabilitySelf, intent);
+  }
+  if (capabilityDelegated === undefined || planDelegated === undefined) {
+    throw new ValidationError('Delegated education authorization must be bound in both plan and capability');
+  }
+  if (digestObject(capabilityDelegated) !== digestObject(planDelegated)) {
+    throw new ValidationError('Capability and plan delegated education consent bindings differ');
+  }
+  const delegated = validateEducationDelegatedBinding(capabilityDelegated, intent);
+  return {
+    mode: EDUCATION_DELEGATED_AUTHORITY_MODE,
+    facts: delegated.facts,
+    binding_digest: delegated.authorization_digest
   };
 }
 
@@ -221,18 +256,11 @@ export function executeEducationLearnerEvent({ contract, intent, capability, pla
     ? plan.steps.find(step => step?.id === 'execute')
     : null;
   const planConstraints = assertPlainObject(executionStep?.constraints ?? {}, 'plan execution constraints');
-  const capabilityBinding = assertPlainObject(
-    capabilityConstraints.education_consent,
-    'capability education consent'
+  const authorization = validateExecutionAuthorization(
+    capabilityConstraints,
+    planConstraints,
+    intent
   );
-  const planBinding = assertPlainObject(
-    planConstraints.education_consent,
-    'plan education consent'
-  );
-  if (digestObject(capabilityBinding) !== digestObject(planBinding)) {
-    throw new ValidationError('Capability and plan education consent bindings differ');
-  }
-  const authorization = validateConsentBinding(capabilityBinding, intent);
 
   const subjectId = assertString(input.subject_id, 'subject_id', { max: 160, pattern: ID });
   const eventId = assertString(input.event_id, 'event_id', { max: 160, pattern: ID });
@@ -255,6 +283,21 @@ export function executeEducationLearnerEvent({ contract, intent, capability, pla
     throw new ValidationError('review_state is unsupported');
   }
 
+  const consent = {
+    consent_id: authorization.facts.consent_id,
+    consent_digest: authorization.binding_digest,
+    authority_mode: authorization.facts.authority_mode,
+    purpose: authorization.facts.purpose,
+    data_scopes: authorization.facts.data_scopes,
+    expires_at: authorization.facts.expires_at,
+    ...(authorization.mode === EDUCATION_DELEGATED_AUTHORITY_MODE ? {
+      holder_id: authorization.facts.holder_id,
+      authority_grant_id: authorization.facts.authority_grant_id,
+      relationship_claim_id: authorization.facts.relationship_claim_id,
+      authority_digest: authorization.facts.authority_digest,
+      receipt_digest: authorization.facts.receipt_digest
+    } : {})
+  };
   const record = {
     schema: 'axiom-education-learner-event.v1',
     contract_id: EDUCATION_CONTRACT_ID,
@@ -267,14 +310,7 @@ export function executeEducationLearnerEvent({ contract, intent, capability, pla
     payload_digest: payloadDigest,
     memory_object_id: memoryObjectId,
     review_state: reviewState,
-    consent: {
-      consent_id: authorization.facts.consent_id,
-      consent_digest: authorization.consent_digest,
-      authority_mode: authorization.facts.authority_mode,
-      purpose: authorization.facts.purpose,
-      data_scopes: authorization.facts.data_scopes,
-      expires_at: authorization.facts.expires_at
-    },
+    consent,
     ...(standards ? { standards } : {})
   };
   const recordDigest = digestObject(record);
