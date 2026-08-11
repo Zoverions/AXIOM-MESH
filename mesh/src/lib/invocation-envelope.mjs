@@ -8,6 +8,7 @@ import {
   intentRequestBinding,
   intentRequestDigest
 } from './intent-binding.mjs';
+import { normalizeContextTaskBindingIdentity } from './context-task-binding.mjs';
 
 export const INVOCATION_ENVELOPE_SCHEMA = 'axiom-invocation-envelope.v1';
 export const NATIVE_INVOCATION_PROFILE = 'axiom-native-gateway.v1';
@@ -98,7 +99,10 @@ export function buildNativeInvocationEnvelope(intent, decision) {
       input_digest: inputDigest,
       action: request.action,
       purpose: request.purpose,
-      data_scopes: request.data_scopes
+      data_scopes: request.data_scopes,
+      ...(request.context_binding
+        ? { context_binding: normalizeContextTaskBindingIdentity(request.context_binding) }
+        : {})
     },
     authority: {
       policy_version: assertString(policy.policy_version, 'invocation policy version', {
@@ -197,7 +201,8 @@ export function validateInvocationEnvelope(raw) {
     'input_digest',
     'action',
     'purpose',
-    'data_scopes'
+    'data_scopes',
+    ...(request.context_binding !== undefined ? ['context_binding'] : [])
   ], 'invocation request');
   assertString(request.intent_id, 'invocation intent id', { max: 160, pattern: IDENTIFIER });
   assertString(request.request_digest, 'invocation request digest', {
@@ -221,6 +226,9 @@ export function validateInvocationEnvelope(raw) {
     || request.data_scopes.some((item, index) => index > 0 && request.data_scopes[index - 1] >= item)
   ) {
     throw new ValidationError('Invocation data scopes must be unique sorted strings');
+  }
+  if (request.context_binding !== undefined) {
+    request.context_binding = normalizeContextTaskBindingIdentity(request.context_binding);
   }
 
   const authority = assertPlainObject(value.authority, 'invocation authority');
