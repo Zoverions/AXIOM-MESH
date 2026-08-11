@@ -53,6 +53,10 @@ test('context claim follows governed write, projection, and causally-bound execu
   let stack;
   t.after(async () => {
     try {
+      for (const service of stack?.services ?? []) {
+        service.server?.closeIdleConnections?.();
+        service.server?.closeAllConnections?.();
+      }
       await stack?.stop();
     } finally {
       await lease.release();
