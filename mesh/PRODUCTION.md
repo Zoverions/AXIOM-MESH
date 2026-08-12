@@ -10,6 +10,8 @@ binds outside the container. The three internal services remain on loopback,
 and every internal call uses mutually authenticated TLS 1.3 with exact active
 certificate pinning plus the existing signed/replay-protected request.
 
+These candidate controls are **not evidence of a live deployment**.
+
 The repository also contains production-unreachable resolver/outbox/repository-
 operator and Agent Runtime Adapter development slices. They are **not** part of
 this supported candidate runtime: production has no repository executor mapping,
