@@ -1,0 +1,52 @@
+{
+  "schema": "axiom-ci-evidence-continuity-contract.v1",
+  "version": 1,
+  "status": "specified-foundation",
+  "purpose": "Define a provider-independent, content-addressed CI evidence record so hosted CI systems can produce portable verification evidence without owning check identity, source identity, release authority, or capability promotion.",
+  "core_invariants": [
+    "CI evidence is bound to an exact AXIOM source state; a provider run URL or numeric run id is observation provenance only.",
+    "A passing CI conclusion is evidence, not governance approval, release promotion, or capability promotion.",
+    "Large logs and reports may remain separately protected or replicated; the canonical CI record retains exact byte commitments and opaque protected references.",
+    "Runner and environment facts are descriptive evidence and do not become actor identity or authority."
+  ],
+  "record": {
+    "logical_check_id_required": true,
+    "logical_workflow_id_required": true,
+    "workflow_revision_digest_required": true,
+    "source_state_digest_required": true,
+    "started_and_completed_times_required": true,
+    "conclusion_required": true,
+    "runner_facts_minimized": true,
+    "result_evidence_digest_required": true,
+    "outputs_content_addressed": true,
+    "provider_fields_allowed": false,
+    "content_addressed": true
+  },
+  "outputs": {
+    "kinds": [
+      "log",
+      "test_report",
+      "coverage_report",
+      "security_report",
+      "build_artifact",
+      "benchmark_report",
+      "other"
+    ],
+    "raw_bytes_required_inline": false,
+    "protected_reference_supported": true,
+    "sha256_and_byte_length_required": true
+  },
+  "project_event_bridge": {
+    "event_kind": "ci.check_completed",
+    "source_state_digest_must_match": true,
+    "ci_outcome_must_match": true,
+    "governance_authority_granted": false,
+    "capability_promotion": false
+  },
+  "claim_boundary": [
+    "This contract does not execute CI, fetch provider APIs, download logs, or mutate provider state.",
+    "This contract does not independently verify runner hardware, operating system, or environment claims beyond their supplied evidence commitment.",
+    "This contract does not treat a CI pass as release authority, governance approval, or capability promotion.",
+    "This contract does not require private logs or security reports to be exposed inline."
+  ]
+}
