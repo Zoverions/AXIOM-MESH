@@ -13,13 +13,32 @@ export const REPOSITORY_OPERATOR_PLAN_RESPONSE_SCHEMA = 'axiom-repository-operat
 const MAX_MESSAGE_BYTES = 2 * 1024 * 1024;
 const MAX_SOCKET_BYTES = 100;
 const DEFAULT_TIMEOUT_MS = 45_000;
+const WINDOWS_TEST_PIPE_PREFIX = '\\\\.\\pipe\\axiom-repository-operator-test-';
 
-function validateSocketPath(socketPath) {
+function isWindowsTestPipe(socketPath) {
+  return (
+    process.platform === 'win32'
+    && socketPath.startsWith(WINDOWS_TEST_PIPE_PREFIX)
+    && /^\\\\\.\\pipe\\axiom-repository-operator-test-[A-Za-z0-9._-]+$/.test(socketPath)
+  );
+}
+
+function validateSocketPath(socketPath, { allowTestOnlyWindowsNamedPipe }) {
   if (
     typeof socketPath !== 'string'
-    || !isAbsolute(socketPath)
     || Buffer.byteLength(socketPath) > MAX_SOCKET_BYTES
   ) {
+    throw new ValidationError('Repository operator socket must be an absolute path of at most 100 bytes');
+  }
+  if (process.platform === 'win32') {
+    if (!allowTestOnlyWindowsNamedPipe || !isWindowsTestPipe(socketPath)) {
+      throw new ValidationError(
+        'Repository operator production transport requires a permission-restricted Unix-domain socket; Windows named pipes are test-only'
+      );
+    }
+    return socketPath;
+  }
+  if (!isAbsolute(socketPath)) {
     throw new ValidationError('Repository operator socket must be an absolute path of at most 100 bytes');
   }
   return socketPath;
@@ -91,7 +110,8 @@ function encodeResponse(value) {
   return serialized;
 }
 
-async function removeStaleSocket(socketPath) {
+async function removeStaleSocket(socketPath, { windowsTestPipe }) {
+  if (windowsTestPipe) return;
   let metadata;
   try {
     metadata = await lstat(socketPath);
@@ -105,7 +125,8 @@ async function removeStaleSocket(socketPath) {
   await unlink(socketPath);
 }
 
-async function unlinkIfPresent(socketPath) {
+async function unlinkIfPresent(socketPath, { windowsTestPipe }) {
+  if (windowsTestPipe) return;
   try {
     await unlink(socketPath);
   } catch (error) {
@@ -147,9 +168,14 @@ export async function startRepositoryOperatorService({
   runOperator,
   planOperator,
   timeoutMs = DEFAULT_TIMEOUT_MS,
-  socketMode = 0o600
+  socketMode = 0o600,
+  allowTestOnlyWindowsNamedPipe = false
 }) {
-  const path = validateSocketPath(socketPath);
+  if (typeof allowTestOnlyWindowsNamedPipe !== 'boolean') {
+    throw new ValidationError('Repository operator Windows test transport flag must be boolean');
+  }
+  const path = validateSocketPath(socketPath, { allowTestOnlyWindowsNamedPipe });
+  const windowsTestPipe = isWindowsTestPipe(path);
   if (typeof runOperator !== 'function') throw new ValidationError('Repository operator service requires runOperator');
   if (planOperator !== undefined && typeof planOperator !== 'function') {
     throw new ValidationError('Repository operator service planOperator must be a function when supplied');
@@ -159,7 +185,7 @@ export async function startRepositoryOperatorService({
   }
   if (socketMode !== 0o600) throw new ValidationError('Repository operator service socket mode must be 0600');
 
-  await removeStaleSocket(path);
+  await removeStaleSocket(path, { windowsTestPipe });
   const connections = new Set();
   let active = false;
   let closed = false;
@@ -271,24 +297,26 @@ export async function startRepositoryOperatorService({
     server.listen(path);
   });
 
-  try {
-    await chmod(path, socketMode);
-  } catch (error) {
-    await closeServer(server, connections);
-    await unlinkIfPresent(path);
-    throw error;
+  if (!windowsTestPipe) {
+    try {
+      await chmod(path, socketMode);
+    } catch (error) {
+      await closeServer(server, connections);
+      await unlinkIfPresent(path, { windowsTestPipe });
+      throw error;
+    }
   }
 
   return {
     schema: REPOSITORY_OPERATOR_SERVICE_SCHEMA,
     socket_path: path,
-    socket_mode: '0600',
-    transport: 'unix-domain-socket',
+    socket_mode: windowsTestPipe ? 'platform-default-test-only' : '0600',
+    transport: windowsTestPipe ? 'windows-named-pipe-test-only' : 'unix-domain-socket',
     async close() {
       if (closed) return;
       closed = true;
       await closeServer(server, connections);
-      await unlinkIfPresent(path);
+      await unlinkIfPresent(path, { windowsTestPipe });
     }
   };
 }

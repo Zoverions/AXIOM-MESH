@@ -461,7 +461,7 @@ test('malformed GitHub response fails without leaking the repository token', asy
 });
 
 test('operator origin override is test-loopback only and token loader requires private file permissions', async t => {
-  assert.equal(resolveRepositoryOperatorOrigin().startsWith('https://api.github.com'), true);
+  assert.equal(new URL(resolveRepositoryOperatorOrigin()).origin, 'https://api.github.com');
   assert.throws(
     () => resolveRepositoryOperatorOrigin({ origin: 'https://example.com', environment: 'test' }),
     /loopback tests/

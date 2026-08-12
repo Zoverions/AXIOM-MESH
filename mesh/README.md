@@ -303,7 +303,7 @@ The Gateway exposes:
 Every authenticated endpoint requires `Authorization: Bearer ...`. Intent
 submission also requires an `Idempotency-Key` header.
 
-The current machine-readable client contract covers all 27 authenticated
+The current machine-readable client contract covers all 29 authenticated
 routes with relative-only targets, explicit schemas and errors, bounded
 responses/timeouts, `AbortSignal` cancellation, and stable idempotent replay.
 Run `npm run gateway-client:check` and see the

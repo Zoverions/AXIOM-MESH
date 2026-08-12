@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-10  
 **Build:** `0.12.0-dev.3`  
-**Status:** implementation branch; not a production-promotion claim
+**Status:** historical implementation audit retained on `main`; not a production-promotion claim
 
 This append-only note records the follow-up to the independent post-`#929`
 audit. It does not change the capability registry and does not promote a new

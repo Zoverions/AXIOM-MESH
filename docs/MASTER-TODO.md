@@ -1,7 +1,7 @@
 # AXIOM-MESH Production Execution Queue
 
 **Status:** canonical active queue
-**Updated:** 2026-07-30
+**Updated:** 2026-08-11
 **Current kernel:** `0.12.0-dev.3`
 **Current stage:** production candidate; not production-promoted
 
@@ -83,7 +83,7 @@ invitation-only previews, but it cannot imply production promotion.
 
 | ID | Status | Work | Acceptance evidence |
 |---|---|---|---|
-| UX-001 | Complete | Define and implement a versioned browser/client contract for the authenticated Gateway API | Machine contract and hand-reviewed JSON Schema cover all 27 authenticated routes; same-origin client enforces exact inputs, explicit errors, 1 MiB requests, 2 MiB responses, 1 millisecond-30 second timeouts, AbortSignal cancellation, stable idempotent replay, source parity, real four-service compatibility, and no direct internal-service access |
+| UX-001 | Complete | Define and implement a versioned browser/client contract for the authenticated Gateway API | Machine contract and hand-reviewed JSON Schema cover all 29 authenticated routes; same-origin client enforces exact inputs, explicit errors, 1 MiB requests, 2 MiB responses, 1 millisecond-30 second timeouts, AbortSignal cancellation, stable idempotent replay, source parity, real four-service compatibility, and no direct internal-service access |
 | UX-002 | In progress | Build `apps/axiom-one/` as the local personal-node browser/PWA shell outside the trusted kernel | Experimental loopback-only PWA foundation has node health, reviewed bounded Ask, explained approval and receipt records, governed owner-scoped Vault lifecycle, honest unavailable Share/Circles, and advanced raw inspection surfaces; full onboarding, complete lifecycle, session/device review, accessibility/usability evidence, packaging, and support remain pending |
 | UX-003 | In progress | Make plans, grants, denials, uncertainty, approvals, revocations, and receipts understandable to non-developers | Exact experimental explanation contract maps five bounded actions, all 20 stable Gateway outcomes, and all 37 current kernel event kinds; distinguishes active/expired/consumed approvals; provides reversible pre-submit review and same-key uncertain-outcome recovery; preserves raw evidence; and explicitly refuses an authoritative pre-execution kernel-plan claim; separately bound consequential plan/approval, human usability, and promotion evidence remain pending |
 | UX-004 | In progress | Expose encrypted memory, ownership, provenance, ingestion, tombstoning, export, deletion, and recovery through the primary interface | Current bounded slice creates owner-scoped private notes, lists only authorized active objects and edges, records one of three exact directional provenance relations without replacement, confirmation-binds exact tombstones, creates exact-object local exports, reveals bundles only after a separate action, and proves a second principal cannot read, link, export, or tombstone the owner's object; arbitrary relations, edge deletion, bulk ingestion, permitted hard deletion, restore, and human recovery evidence remain pending |
@@ -111,7 +111,7 @@ invitation-only previews, but it cannot imply production promotion.
 | NET-006 | Pending | Add authenticated remote dispatch and result provenance | Workload identity, grant/input/software binding, measured resources, timeout/cancellation, replay rejection, partial-failure semantics, compensation, signed result evidence, and malicious-node tests |
 | NET-007 | Pending | Repeat causal exchange and service operation across independently operated WAN hosts | External custody, latency/loss/clock/partition injection, sustained backlog, data residency, recovery, key rotation, and independent review evidence |
 | NET-008 | Pending | Define stronger membership identity and endpoint-health evidence before distributed-compute promotion | Threat model and tests for Sybil, copied ownership, endpoint substitution, stale measurement, collusion, quarantine, appeal, and re-admission |
-| NET-009 | Complete for reference single-host topology; pilot orchestrator pending | Enforce an explicit per-service ingress/egress graph | Default-deny 38-route application policy, policy-derived mTLS peer allowlists, four exact internal network segments, loopback-only plaintext development, release provenance, and protected required/forbidden-edge proof |
+| NET-009 | Complete for reference single-host topology; pilot orchestrator pending | Enforce an explicit per-service ingress/egress graph | Default-deny 40-route application policy, policy-derived mTLS peer allowlists, four exact internal network segments, loopback-only plaintext development, release provenance, and protected required/forbidden-edge proof |
 
 ## P3 - controlled adapters and product ecosystem
 

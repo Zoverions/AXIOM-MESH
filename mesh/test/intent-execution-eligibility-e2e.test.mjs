@@ -119,9 +119,12 @@ async function vote(gateway, token, proposalId) {
   assert.equal(result.status, 'completed');
 }
 
-async function waitUntil(iso) {
-  const delay = Math.max(0, new Date(iso).valueOf() - Date.now() + 40);
-  if (delay) await new Promise(resolve => setTimeout(resolve, delay));
+function enableGovernanceClock(t) {
+  t.mock.timers.enable({
+    apis: ['Date'],
+    now: new Date()
+  });
+  return t.mock.timers;
 }
 
 async function ratify({
@@ -132,9 +135,13 @@ async function ratify({
   voterToken,
   title,
   action,
+  clock,
   votingMs = 900,
   activationMs = 1_700
 }) {
+  if (!clock || typeof clock.tick !== 'function') {
+    throw new TypeError('ratify requires a deterministic test clock');
+  }
   const started = Date.now();
   const votingEndsAt = new Date(started + votingMs).toISOString();
   const activateAfter = new Date(started + activationMs).toISOString();
@@ -154,7 +161,7 @@ async function ratify({
     }
   });
   await vote(gateway, voterToken, proposed.proposal_id);
-  await waitUntil(votingEndsAt);
+  clock.tick(votingMs + 1);
   await approvedIntent({
     gateway,
     requesterToken: operatorToken,
@@ -164,7 +171,7 @@ async function ratify({
     confirmation: 'confirm:governance.finalize',
     input: { proposal_id: proposed.proposal_id }
   });
-  await waitUntil(activateAfter);
+  clock.tick(Math.max(1, activationMs - votingMs));
   const activated = await approvedIntent({
     gateway,
     requesterToken: operatorToken,
@@ -234,6 +241,7 @@ async function findPortBlock() {
 }
 
 test('v0.6 evaluates a real ratified remediation and builds no executing effect', async t => {
+  const clock = enableGovernanceClock(t);
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-intent-v06-e2e-'));
   const basePort = await findPortBlock();
   const tokens = {
@@ -286,6 +294,7 @@ test('v0.6 evaluates a real ratified remediation and builds no executing effect'
     voterToken: tokens.voter,
     title: 'Activate v0.6 execution eligibility contract',
     action: activationGovernanceAction(activation),
+    clock,
     votingMs: 1_100,
     activationMs: 2_100
   });
@@ -330,7 +339,8 @@ test('v0.6 evaluates a real ratified remediation and builds no executing effect'
     approverToken: tokens.approver,
     voterToken: tokens.voter,
     title: 'Ratify v0.6 remediation candidate',
-    action: remediationGovernanceAction(remediation)
+    action: remediationGovernanceAction(remediation),
+    clock
   });
 
   page = await api(gateway, tokens.operator, '/v1/proposals?limit=100');

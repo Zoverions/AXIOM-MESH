@@ -258,7 +258,10 @@ test('machine request-rate ceiling tightens the global Gateway rate limit', asyn
 });
 
 test('an expired constrained agent loses the whole authenticated Gateway surface', async t => {
-  const expiresAt = new Date(Date.now() + 2_500).toISOString();
+  // Give a loaded hosted runner enough time to construct the full stack before
+  // the principal expires. The assertion still waits for the exact declared
+  // lifetime instead of depending on a fixed-duration scheduling assumption.
+  const expiresAt = new Date(Date.now() + 15_000).toISOString();
   const { gateway, client } = await startMachineStack(t, 'axiom-machine-expiry-', {
     expiresAt
   });
@@ -274,7 +277,7 @@ test('an expired constrained agent loses the whole authenticated Gateway surface
   });
   assert.equal(live.status, 'completed');
 
-  await sleep(3_000);
+  await sleep(Math.max(0, new Date(expiresAt).valueOf() - Date.now()) + 250);
   assert.ok(new Date(expiresAt) < new Date());
 
   const denied = async promise => {

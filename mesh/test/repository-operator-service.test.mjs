@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { generateKeyPairSync } from 'node:crypto';
+import { generateKeyPairSync, randomUUID } from 'node:crypto';
 import { lstat, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import net from 'node:net';
 import { tmpdir } from 'node:os';
@@ -194,9 +194,16 @@ function fakeGitHub() {
 }
 
 async function socketPathFor(t) {
+  if (process.platform === 'win32') {
+    return `\\\\.\\pipe\\axiom-repository-operator-test-${process.pid}-${randomUUID()}`;
+  }
   const dir = await mkdtemp(join(tmpdir(), 'axiom-repo-operator-service-'));
   t.after(() => rm(dir, { recursive: true, force: true }));
   return join(dir, 'operator.sock');
+}
+
+function windowsTestTransport() {
+  return process.platform === 'win32' ? { allowTestOnlyWindowsNamedPipe: true } : {};
 }
 
 function clientArgs(socketPath, fixture) {
@@ -210,13 +217,14 @@ function clientArgs(socketPath, fixture) {
   };
 }
 
-test('Unix operator service composes with real operator and client without crossing repository credentials', async t => {
+test('local operator service composes with real operator and client without crossing repository credentials', async t => {
   const fixture = effectFixture();
   const fake = fakeGitHub();
   const socketPath = await socketPathFor(t);
   let observedRequest;
   const service = await startRepositoryOperatorService({
     socketPath,
+    ...windowsTestTransport(),
     runOperator: request => {
       observedRequest = structuredClone(request);
       return runGitHubRepositoryDocsOperator({
@@ -234,9 +242,14 @@ test('Unix operator service composes with real operator and client without cross
   });
   t.after(() => service.close());
 
-  const metadata = await lstat(socketPath);
-  assert.equal(metadata.isSocket(), true);
-  if (process.platform !== 'win32') assert.equal(metadata.mode & 0o777, 0o600);
+  if (process.platform === 'win32') {
+    assert.equal(service.transport, 'windows-named-pipe-test-only');
+    assert.equal(service.socket_mode, 'platform-default-test-only');
+  } else {
+    const metadata = await lstat(socketPath);
+    assert.equal(metadata.isSocket(), true);
+    assert.equal(metadata.mode & 0o777, 0o600);
+  }
 
   const receipt = await invokeRepositoryOperator(clientArgs(socketPath, fixture));
   assert.equal(receipt.pull_request_created_observed, true);
@@ -253,6 +266,7 @@ test('forged Grid proof crosses socket but causes zero GitHub calls', async t =>
   const socketPath = await socketPathFor(t);
   const service = await startRepositoryOperatorService({
     socketPath,
+    ...windowsTestTransport(),
     runOperator: request => runGitHubRepositoryDocsOperator({
       ...request,
       operatorIdentity: fixture.operator,
@@ -276,11 +290,23 @@ test('forged Grid proof crosses socket but causes zero GitHub calls', async t =>
 });
 
 test('socket path collision with ordinary file fails closed', async t => {
-  const socketPath = await socketPathFor(t);
+  const directory = await mkdtemp(join(tmpdir(), 'axiom-repo-operator-collision-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const socketPath = join(directory, 'operator.sock');
   await writeFile(socketPath, 'not a socket');
   await assert.rejects(
     () => startRepositoryOperatorService({ socketPath, runOperator: async () => ({}) }),
-    /not a Unix-domain socket/
+    process.platform === 'win32' ? /Windows named pipes are test-only/ : /not a Unix-domain socket/
+  );
+});
+
+test('Windows production transport fails closed instead of using ambient named-pipe ACLs', {
+  skip: process.platform !== 'win32'
+}, async () => {
+  const socketPath = `\\\\.\\pipe\\axiom-repository-operator-test-${process.pid}-${randomUUID()}`;
+  await assert.rejects(
+    () => startRepositoryOperatorService({ socketPath, runOperator: async () => ({}) }),
+    /permission-restricted Unix-domain socket/
   );
 });
 
@@ -290,6 +316,7 @@ test('transport rejects multiple messages and oversized requests', async t => {
   let calls = 0;
   const service = await startRepositoryOperatorService({
     socketPath,
+    ...windowsTestTransport(),
     runOperator: async () => { calls += 1; return { receipt: {} }; }
   });
   t.after(() => service.close());
@@ -330,6 +357,7 @@ test('concurrent second request is rejected while first external effect is activ
   });
   const service = await startRepositoryOperatorService({
     socketPath,
+    ...windowsTestTransport(),
     runOperator: async () => {
       startedResolve();
       await blocked;

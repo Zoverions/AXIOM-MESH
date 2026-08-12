@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { generateKeyPairSync } from 'node:crypto';
+import { generateKeyPairSync, randomUUID } from 'node:crypto';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -33,9 +33,16 @@ function identity(service) {
 }
 
 async function socketPathFor(t) {
+  if (process.platform === 'win32') {
+    return `\\\\.\\pipe\\axiom-repository-operator-test-${process.pid}-${randomUUID()}`;
+  }
   const dir = await mkdtemp(join(tmpdir(), 'axiom-repo-planner-'));
   t.after(() => rm(dir, { recursive: true, force: true }));
   return join(dir, 'planner.sock');
+}
+
+function windowsTestTransport() {
+  return process.platform === 'win32' ? { allowTestOnlyWindowsNamedPipe: true } : {};
 }
 
 function fakePlanningGitHub({
@@ -87,6 +94,7 @@ async function planningService(t, { operator, fake, now }) {
   let observedPlanningRequest = null;
   const service = await startRepositoryOperatorService({
     socketPath,
+    ...windowsTestTransport(),
     runOperator: async () => { throw new Error('execution must not be called by planning'); },
     planOperator: request => {
       observedPlanningRequest = structuredClone(request);
@@ -218,6 +226,7 @@ test('tampered planning response fails client content-address/signature verifica
   forged.base_sha = NEXT_SHA;
   const service = await startRepositoryOperatorService({
     socketPath,
+    ...windowsTestTransport(),
     runOperator: async () => { throw new Error('not execution'); },
     planOperator: async () => forged
   });

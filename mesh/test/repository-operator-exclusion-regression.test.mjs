@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import { mkdtemp, rm } from 'node:fs/promises';
 import net from 'node:net';
 import { tmpdir } from 'node:os';
@@ -13,9 +14,16 @@ import {
 } from '../src/repository-operator/service.mjs';
 
 async function socketPathFor(t) {
+  if (process.platform === 'win32') {
+    return `\\\\.\\pipe\\axiom-repository-operator-test-${process.pid}-${randomUUID()}`;
+  }
   const dir = await mkdtemp(join(tmpdir(), 'axiom-repo-operator-exclusion-'));
   t.after(() => rm(dir, { recursive: true, force: true }));
   return join(dir, 'operator.sock');
+}
+
+function windowsTestTransport() {
+  return process.platform === 'win32' ? { allowTestOnlyWindowsNamedPipe: true } : {};
 }
 
 function connect(socketPath) {
@@ -49,6 +57,7 @@ test('connections admitted while idle cannot execute two repository effects conc
 
   const service = await startRepositoryOperatorService({
     socketPath,
+    ...windowsTestTransport(),
     runOperator: async () => {
       invocations += 1;
       concurrent += 1;
