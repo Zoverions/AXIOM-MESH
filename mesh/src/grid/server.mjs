@@ -265,7 +265,13 @@ export async function createGridService(config = meshConfig()) {
       max: 160,
       pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
     });
-    return store.listMemory(requester, owner);
+    return store.listMemory(requester, owner, {
+      limit: integerQuery(url.searchParams.get('limit'), 100, {
+        label: 'memory limit',
+        min: 1,
+        max: 500
+      })
+    });
   });
   router.add('GET', '/internal/v1/accounting/:owner', async ({ params }) => {
     const owner = assertString(params.owner, 'owner', {
@@ -330,9 +336,15 @@ export async function createGridService(config = meshConfig()) {
       return store.getCausalSyncBundle(owner, bundleDigest);
     }
   );
-  router.add('GET', '/internal/v1/backups/:principal', async ({ params }) => ({
-    backups: store.listBackups(params.principal)
-  }));
+  router.add('GET', '/internal/v1/backups/:principal', async ({ params, url }) => (
+    store.listBackups(params.principal, {
+      limit: integerQuery(url.searchParams.get('limit'), 100, {
+        label: 'backup limit',
+        min: 1,
+        max: 100
+      })
+    })
+  ));
   router.add('GET', '/internal/v1/backup/:id', async ({ params, url }) => {
     const principal = assertString(url.searchParams.get('principal'), 'principal', {
       max: 160,

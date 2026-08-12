@@ -8,6 +8,13 @@
 
 **Authority:** the capability registry remains authoritative for runnable capability status. This roadmap extension preserves long-horizon intent and sequencing; it does not promote any capability.
 
+**Document role:** future governance, assurance, and sovereignty programme
+definition. The [project status](PROJECT-STATUS-2026.md) and [readiness tracker](PRODUCTION-READINESS-TRACKER.md)
+own current implementation and promotion decisions; the `rebuild/` documents
+define architecture and requirements without creating runtime authority.
+Research, simulations, and planning checkboxes remain non-claims until the
+registry and applicable evidence gates change.
+
 ## Why this extension exists
 
 The current roadmap correctly prioritizes a defensible kernel, authentic pilot evidence, human utility, Circles, multi-host foundations, controlled adapters, and isolated frontier work. This extension makes explicit a broader destination that must influence design choices now:

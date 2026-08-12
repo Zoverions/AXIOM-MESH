@@ -46,6 +46,42 @@ of which 31 are marked implemented.
 The lifecycle is explicit: **built -> enabled -> exposed -> production-promoted
 -> marketed**. Those states must not be conflated.
 
+## Documentation ownership and consolidation
+
+The corpus is intentionally split by decision type. Do not copy current-build
+counts, capability claims, promotion decisions, or non-claims into research,
+roadmap, review, or migration documents. Link to the owner instead.
+
+| Question | Owning document | What belongs there | What does not belong there |
+|---|---|---|---|
+| What can run now? | [`mesh/config/capabilities.json`](../mesh/config/capabilities.json) and generated [`rebuild/STATUS.md`](rebuild/STATUS.md) | Registry state, digest, implementation classification | Roadmap promises or test-only features |
+| What is true about this build? | [`PROJECT-STATUS-2026.md`](PROJECT-STATUS-2026.md) | Current scope, evidence boundary, blockers, and non-claims | Detailed future sequencing |
+| Can it be promoted? | [`PRODUCTION-READINESS-TRACKER.md`](PRODUCTION-READINESS-TRACKER.md) | Gate status, evidence, owner, and remaining action | Aspirational milestones |
+| How is the system designed? | [`whitepapers_and_research/WHITEPAPER.md`](whitepapers_and_research/WHITEPAPER.md) | Integrated architecture, principles, trust boundaries, and design rationale | Independent current status or release decisions |
+| What should be built next? | [`ROADMAP.md`](ROADMAP.md) and [`MASTER-TODO.md`](MASTER-TODO.md) | Sequenced outcomes, acceptance criteria, and executable queue | New capability claims |
+| How should future domains evolve? | [`ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md`](ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md), [`ROADMAP-EXTENSION-PLURAL-AUTHORITY.md`](ROADMAP-EXTENSION-PLURAL-AUTHORITY.md), and their `rebuild/` specifications | Future-compatible architecture, laboratories, and promotion gates | Current implementation status |
+| Why does a document or branch exist? | [`REPOSITORY-MIGRATION.md`](REPOSITORY-MIGRATION.md), dated audits, and dated reviews | Provenance, historical findings, and archive boundaries | Current-build authority |
+
+### Reading paths
+
+Use **status -> registry -> readiness -> white paper -> roadmap -> requirements**
+for a current technical decision. Use **white paper -> the relevant `rebuild/`
+specification -> roadmap extension -> master todo -> review** for agent
+interoperability or plural-authority design work. Use **migration -> dated audit
+or review** when the question is provenance or why a boundary exists.
+
+When two documents appear to disagree, resolve the conflict in this order:
+
+1. executable code, machine-readable policy, and the capability registry;
+2. normative requirements and generated status;
+3. project status and readiness tracker;
+4. white paper and architecture specifications;
+5. roadmaps, master todos, reviews, audits, and historical migration records.
+
+The lower item may explain or challenge the higher item, but it must not silently
+override it. A change to the current build must update the owning document and
+then its navigation links; it does not require rewriting historical reviews.
+
 ## Current evidence/authority semantics
 
 Current documentation must preserve these distinctions:

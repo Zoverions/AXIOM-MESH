@@ -923,6 +923,9 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
   const ownMemory = await api(gateway, token, '/v1/memory');
   assert.equal(ownMemory.objects.length, 2);
   assert.equal(ownMemory.edges.length, 1);
+  const boundedMemory = await api(gateway, token, '/v1/memory?limit=1');
+  assert.equal(boundedMemory.objects.length, 1);
+  assert.equal(boundedMemory.truncated, true);
   const hiddenMemory = await api(
     gateway,
     approverToken,
@@ -1794,6 +1797,7 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
   const backups = await api(gateway, token, '/v1/backups');
   assert.equal(backups.backups[0].backup_id, backup.backup_id);
   assert.equal(backups.backups[0].status, 'completed');
+  assert.equal(backups.truncated, false);
   assert.equal(
     (await api(gateway, token, `/v1/backups/${backup.backup_id}`)).database_digest,
     backup.backup_manifest.database.sha256

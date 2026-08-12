@@ -321,25 +321,29 @@ promotion.
 
 ## Documentation
 
-Start with:
+The documentation is organized by decision type rather than by feature name.
+Start with the [documentation index](docs/README.md), then use the path that
+matches the question:
 
-- [Technical white paper](docs/whitepapers_and_research/WHITEPAPER.md)
-- [Product definition](docs/rebuild/PRODUCT-DEFINITION.md)
-- [Normative requirements](docs/rebuild/REQUIREMENTS.md)
-- [Source traceability](docs/rebuild/SOURCE-TRACEABILITY.md)
 - [Current project status](docs/PROJECT-STATUS-2026.md)
-- [Current threat model](docs/security/CURRENT-BUILD-THREAT-MODEL.md)
-- [Roadmap](docs/ROADMAP.md)
-- [Production execution queue](docs/MASTER-TODO.md)
+- [Capability registry](mesh/config/capabilities.json)
 - [Production readiness tracker](docs/PRODUCTION-READINESS-TRACKER.md)
-- [Documentation index](docs/README.md)
+- [Technical white paper](docs/whitepapers_and_research/WHITEPAPER.md)
+- [Normative requirements](docs/rebuild/REQUIREMENTS.md)
+- [Roadmap and execution queue](docs/ROADMAP.md) and [master todo](docs/MASTER-TODO.md)
+- [Current threat model](docs/security/CURRENT-BUILD-THREAT-MODEL.md)
+- [Repository migration and provenance](docs/REPOSITORY-MIGRATION.md)
 - [Security policy](SECURITY.md)
 
 Current `0.12.0-dev.3` development-line changes are recorded in
 [`docs/releases/0.12.0-dev.3.md`](docs/releases/0.12.0-dev.3.md).
 
-When documents conflict, the capability registry and normative requirements
-control. Historical documents are provenance or research inputs only.
+For agent interoperability or plural authority, read the white paper first,
+then the relevant `docs/rebuild/` specification, roadmap extension, master
+todo, and dated architecture review. Research and roadmap documents do not
+promote capabilities or change readiness status. When documents conflict, the
+ownership and precedence rules in [`docs/README.md`](docs/README.md) control;
+historical documents remain provenance or research inputs only.
 
 The alternate single-host
 [`mesh/compose.units.yml`](mesh/compose.units.yml) runs the four kernel services

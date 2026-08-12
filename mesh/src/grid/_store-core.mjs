@@ -1319,12 +1319,16 @@ export class GridStore {
     return row;
   }
 
-  listMemory(requester, owner = requester) {
+  listMemory(requester, owner = requester, { limit = 100 } = {}) {
+    const safeLimit = boundedInteger(limit, 'memory limit', 1, 500);
     const objects = this.db.prepare(`
       SELECT * FROM memory_objects
       WHERE owner = ? AND status = 'active'
       ORDER BY created_at, object_id
-    `).all(owner);
+      LIMIT ?
+    `).all(owner, safeLimit + 1);
+    const truncated = objects.length > safeLimit;
+    if (truncated) objects.pop();
     const visible = owner === requester
       ? objects
       : objects.filter(row => this.hasMemoryConsent(owner, requester, row.object_id));
@@ -1342,7 +1346,7 @@ export class GridStore {
     `).all(owner)
       .filter(row => visibleIds.has(row.from_id) && visibleIds.has(row.to_id))
       .map(row => this.decodeProtectedRow('memory_edges', 'edge_id', row, ['metadata_json']));
-    return { owner, objects: decodedObjects, edges };
+    return { owner, objects: decodedObjects, edges, truncated };
   }
 
   hasMemoryConsent(owner, controller, objectId) {
@@ -2043,15 +2047,23 @@ export class GridStore {
     );
   }
 
-  listBackups(principal) {
-    return this.db.prepare(`
+  listBackups(principal, { limit = 100 } = {}) {
+    const safeLimit = boundedInteger(limit, 'backup limit', 1, 100);
+    const rows = this.db.prepare(`
       SELECT * FROM backups WHERE principal = ? ORDER BY requested_at DESC
-    `).all(principal).map(row => this.decodeProtectedRow(
+      LIMIT ?
+    `).all(principal, safeLimit + 1);
+    const truncated = rows.length > safeLimit;
+    if (truncated) rows.pop();
+    return {
+      backups: rows.map(row => this.decodeProtectedRow(
       'backups',
       'backup_id',
       row,
       ['manifest_json']
-    ));
+      )),
+      truncated
+    };
   }
 
   getBackupRecord(backupId, principal) {

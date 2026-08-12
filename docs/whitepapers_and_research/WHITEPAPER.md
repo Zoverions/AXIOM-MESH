@@ -8,6 +8,17 @@
 
 **Deployment status:** production candidate; no live production claim
 
+**Document role:** integrated architecture and research synthesis. Current
+capability status is owned by the [capability registry](../../mesh/config/capabilities.json)
+and current promotion status is owned by the [project status](../PROJECT-STATUS-2026.md)
+and [readiness tracker](../PRODUCTION-READINESS-TRACKER.md). This paper explains
+the design and its boundaries; it does not promote roadmap, laboratory, or
+test-only work.
+
+**Update rule:** update this paper when the integrated architecture or a
+load-bearing non-claim changes. Do not duplicate it as a second release tracker;
+link current counts, gates, and implementation classifications to their owners.
+
 ## Abstract
 
 AXIOM-MESH is a local-first coordination, authority, and evidence substrate. It

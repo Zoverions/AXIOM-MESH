@@ -8,6 +8,13 @@
 
 **Authority:** `mesh/config/capabilities.json` remains authoritative for runnable capability status. This roadmap extension does not promote any capability.
 
+**Document role:** future-programme sequencing and interoperability guardrails.
+The [project status](PROJECT-STATUS-2026.md) and [readiness tracker](PRODUCTION-READINESS-TRACKER.md)
+own current implementation and promotion decisions; the detailed architecture
+and capability maps provide design inputs, not alternate status registries.
+Items below remain non-claims until code, registry state, tests, review, and
+promotion evidence agree.
+
 ## Why this extension exists
 
 AXIOM-MESH is currently strongest as a local-first capability, policy, execution, and evidence substrate. Its product programme has naturally begun with human-facing surfaces, but the same core should be useful to digital agents, services, schedulers, local models, external agent frameworks, and future embodied systems.

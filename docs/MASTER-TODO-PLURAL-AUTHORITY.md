@@ -33,7 +33,7 @@
   - [ ] `docs/PRODUCTION-READINESS-TRACKER.md` only as an explicit future non-claim;
   - [ ] future release notes.
 - [ ] Add a documentation check that rejects a future governance capability being described as current without a matching registry status.
-- [ ] Add this package to the canonical document index and documentation-authority hierarchy.
+- [x] Add this package to the canonical document index and documentation-authority hierarchy.
 
 ## Priority 2 — Assurance requirements and terminology
 
