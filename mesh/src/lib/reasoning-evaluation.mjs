@@ -124,6 +124,13 @@ export function validateReasoningEvaluationSuite(input) {
     });
   });
 
+  if (loadBearingPairs === 0) {
+    throw new ValidationError('suite must include at least one load-bearing perturbation');
+  }
+  if (irrelevantPairs === 0) {
+    throw new ValidationError('suite must include at least one irrelevant perturbation');
+  }
+
   return Object.freeze({
     valid: true,
     schema: suite.schema,
@@ -168,6 +175,12 @@ function validateInference(inference) {
       'run.inference.selection_method must disclose aggregation when samples_per_item exceeds 1'
     );
   }
+  assertSha256(current.sampling_policy_sha256, 'run.inference.sampling_policy_sha256');
+  if (samples > 1) {
+    assertSha256(current.selection_policy_sha256, 'run.inference.selection_policy_sha256');
+  } else if (current.selection_policy_sha256 !== undefined) {
+    assertSha256(current.selection_policy_sha256, 'run.inference.selection_policy_sha256');
+  }
   assertNumber(current.temperature, 'run.inference.temperature', { min: 0, max: 5 });
   assertInteger(current.maximum_reasoning_steps, 'run.inference.maximum_reasoning_steps', {
     min: 1,
@@ -178,9 +191,19 @@ function validateInference(inference) {
 function validateCompute(compute) {
   const current = assertPlainObject(compute, 'run.compute');
   assertInteger(current.model_calls, 'run.compute.model_calls', { min: 1 });
+  assertInteger(current.sample_generations, 'run.compute.sample_generations', { min: 1 });
   assertInteger(current.input_units, 'run.compute.input_units', { min: 0 });
   assertInteger(current.output_units, 'run.compute.output_units', { min: 0 });
   assertInteger(current.wall_ms, 'run.compute.wall_ms', { min: 0 });
+  if (current.estimated_flops !== undefined) {
+    assertNumber(current.estimated_flops, 'run.compute.estimated_flops', {
+      min: 0,
+      max: Number.MAX_VALUE
+    });
+  }
+  if (current.peak_memory_bytes !== undefined) {
+    assertInteger(current.peak_memory_bytes, 'run.compute.peak_memory_bytes', { min: 0 });
+  }
   if (current.energy_joules !== undefined) {
     assertNumber(current.energy_joules, 'run.compute.energy_joules', {
       min: 0,
@@ -233,6 +256,12 @@ export function scoreReasoningEvaluationRun(suiteInput, runInput) {
   validateCompute(run.compute);
 
   const expected = expectedItems(suite);
+  const minimumSampleGenerations = expected.size * run.inference.samples_per_item;
+  if (run.compute.sample_generations < minimumSampleGenerations) {
+    throw new ValidationError(
+      `run.compute.sample_generations must be at least ${minimumSampleGenerations} for the declared samples_per_item`
+    );
+  }
   const observations = assertArray(run.observations, 'run.observations', {
     min: expected.size,
     max: expected.size
@@ -346,13 +375,28 @@ export function scoreReasoningEvaluationRun(suiteInput, runInput) {
     },
     compute: {
       ...structuredClone(run.compute),
+      minimum_declared_sample_generations: minimumSampleGenerations,
+      extra_sample_generations: run.compute.sample_generations - minimumSampleGenerations,
+      sample_generations_per_item: run.compute.sample_generations / expected.size,
       model_calls_per_item: run.compute.model_calls / expected.size,
       model_calls_per_jointly_correct_pair: perSuccessfulUnit(
         run.compute.model_calls,
         jointlyCorrectPairs
       ),
       input_units_per_correct_item: perSuccessfulUnit(run.compute.input_units, correctItems),
-      output_units_per_correct_item: perSuccessfulUnit(run.compute.output_units, correctItems)
+      output_units_per_correct_item: perSuccessfulUnit(run.compute.output_units, correctItems),
+      estimated_flops_per_correct_item:
+        run.compute.estimated_flops === undefined
+          ? null
+          : perSuccessfulUnit(run.compute.estimated_flops, correctItems),
+      estimated_flops_per_jointly_correct_pair:
+        run.compute.estimated_flops === undefined
+          ? null
+          : perSuccessfulUnit(run.compute.estimated_flops, jointlyCorrectPairs),
+      energy_joules_per_jointly_correct_pair:
+        run.compute.energy_joules === undefined
+          ? null
+          : perSuccessfulUnit(run.compute.energy_joules, jointlyCorrectPairs)
     },
     limitations: [
       'A relation score is not a correctness score.',
