@@ -217,7 +217,11 @@ test('CI evidence bridges exactly into portable ci.check_completed project evide
   assert.equal(event.project_object_id, evidence.check_id);
   assert.equal(event.source_state_digest, evidence.source_state_digest);
   assert.equal(event.ci_outcome, evidence.conclusion);
-  assert.deepEqual(event.content, content);
+  assert.deepEqual(event.content, {
+    ...content,
+    inline_utf8: null,
+    protected_ref: null
+  });
   assert.deepEqual(
     event.related_object_ids,
     evidence.outputs.map(item => item.output_id).sort()
