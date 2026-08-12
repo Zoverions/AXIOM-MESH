@@ -300,7 +300,9 @@
       "access": "node:read",
       "idempotency": "not_applicable",
       "path_parameters": [],
-      "query_parameters": [],
+      "query_parameters": [
+        "limit"
+      ],
       "request_schema": null,
       "response_schema": "axiom-node-schedule-list.v1",
       "required_response_fields": [

@@ -1048,9 +1048,12 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
     schedule.node_schedule.placements.map(item => item.node_id),
     ['node:e2e']
   );
+  const scheduleList = await api(gateway, token, '/v1/node-schedules');
+  assert.equal(scheduleList.schedules[0].status, 'active');
+  assert.equal(scheduleList.truncated, false);
   assert.equal(
-    (await api(gateway, token, '/v1/node-schedules')).schedules[0].status,
-    'active'
+    (await api(gateway, token, '/v1/node-schedules?limit=1')).schedules.length,
+    1
   );
 
   const rogueKeys = generateKeyPairSync('ed25519');

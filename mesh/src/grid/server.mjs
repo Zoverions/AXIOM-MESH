@@ -245,8 +245,12 @@ export async function createGridService(config = meshConfig()) {
   router.add(
     'GET',
     '/internal/v1/node-schedules/:principal',
-    async ({ params }) => ({
-      schedules: store.listNodeSchedules(params.principal)
+    async ({ params, url }) => store.listNodeSchedules(params.principal, {
+      limit: integerQuery(url.searchParams.get('limit'), 100, {
+        label: 'node schedule limit',
+        min: 1,
+        max: 100
+      })
     })
   );
   router.add('GET', '/internal/v1/consents/:principal', async ({ params }) => ({

@@ -351,6 +351,7 @@ export async function createGatewayService(config = meshConfig()) {
     return gridGet(`/internal/v1/node-discovery${suffix}`, traceId);
   });
   router.add('GET', '/v1/node-schedules', async ({
+    url,
     traceId,
     principal
   }) => {
@@ -361,8 +362,13 @@ export async function createGatewayService(config = meshConfig()) {
         403
       );
     }
+    const limit = url.searchParams.get('limit');
+    if (limit !== null && (!/^\d+$/.test(limit) || Number(limit) < 1 || Number(limit) > 100)) {
+      throw new ValidationError('Node schedule limit must be an integer between 1 and 100');
+    }
+    const query = limit === null ? '' : `?limit=${encodeURIComponent(limit)}`;
     return gridGet(
-      `/internal/v1/node-schedules/${encodeURIComponent(principal.id)}`,
+      `/internal/v1/node-schedules/${encodeURIComponent(principal.id)}${query}`,
       traceId
     );
   });

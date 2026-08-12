@@ -1601,17 +1601,24 @@ export class GridStore {
   }
 
   listNodeSchedules(requester, {
-    asOf = new Date().toISOString()
+    asOf = new Date().toISOString(),
+    limit = 100
   } = {}) {
+    const safeLimit = boundedInteger(limit, 'node schedule limit', 1, 100);
     const nodes = this.listNodes({ asOf });
     const schedules = this.decodedSchedules();
-    return schedules
-      .filter(schedule => schedule.requester === requester)
-      .map(schedule => ({
-        ...schedule,
-        status: effectiveScheduleStatus(schedule, nodes, { asOf, schedules })
-      }))
-      .sort((left, right) => right.created_at.localeCompare(left.created_at));
+    const owned = schedules.filter(schedule => schedule.requester === requester);
+    const truncated = owned.length > safeLimit;
+    return {
+      schedules: owned
+        .slice(0, safeLimit)
+        .map(schedule => ({
+          ...schedule,
+          status: effectiveScheduleStatus(schedule, nodes, { asOf, schedules })
+        }))
+        .sort((left, right) => right.created_at.localeCompare(left.created_at)),
+      truncated
+    };
   }
 
   listStorageOffers(owner) {
