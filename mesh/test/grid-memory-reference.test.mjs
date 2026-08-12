@@ -125,3 +125,23 @@ test('memory reference lookup rejects tombstoned objects', async t => {
     /Owned active memory reference was not found/,
   );
 });
+
+test('memory reference lookup rejects inconsistent content-address metadata', async t => {
+  const store = await storeFixture(t);
+  const owner = 'human:learner-001';
+  const put = memoryPut(owner);
+  appendMutation(store, owner, 'trace:memory-ref:put-corrupt', put.mutation);
+
+  const inconsistentObjectId = `memory_${'b'.repeat(64)}`;
+  store.db.prepare(`
+    UPDATE memory_objects SET object_id = ? WHERE object_id = ?
+  `).run(inconsistentObjectId, put.output.object_id);
+
+  assert.throws(
+    () => requireOwnedMemoryReference(store, {
+      object_id: inconsistentObjectId,
+      owner,
+    }),
+    /content address does not match content_digest/,
+  );
+});
