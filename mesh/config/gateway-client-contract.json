@@ -357,6 +357,34 @@
       "response_media_type": "application/json"
     },
     {
+      "id": "context.view",
+      "method": "GET",
+      "path": "/v1/context",
+      "access": "context-scope|authenticated-wildcard",
+      "idempotency": "not_applicable",
+      "path_parameters": [],
+      "query_parameters": [
+        "owner",
+        "purpose",
+        "as_of",
+        "max_claims"
+      ],
+      "request_schema": null,
+      "response_schema": "axiom-context-projection.v1",
+      "required_response_fields": [
+        "schema",
+        "principal",
+        "purpose",
+        "usable_claims",
+        "conflicts",
+        "view_digest",
+        "authorization",
+        "projection_digest",
+        "projection_receipt"
+      ],
+      "response_media_type": "application/json"
+    },
+    {
       "id": "accounting.get",
       "method": "GET",
       "path": "/v1/accounting",

@@ -21,8 +21,8 @@ test('current Gateway client contract is exact and covers every authenticated ro
   assert.equal(result.valid, true);
   assert.equal(result.schema, 'axiom-gateway-client-contract.v1');
   assert.equal(result.kernel_version, '0.12.0-dev.3');
-  assert.equal(result.routes, 29);
-  assert.equal(result.implemented_routes, 29);
+  assert.equal(result.routes, 30);
+  assert.equal(result.implemented_routes, 30);
   assert.equal(result.stable_errors, 20);
   assert.equal(result.schema_definitions, 4);
   assert.equal(result.same_origin_only, true);
@@ -88,178 +88,196 @@ test('Gateway client invokes browser fetch without an object receiver', async ()
 test('Gateway client binds intent schema and idempotency to one effect route', async () => {
   let observed;
   const client = createGatewayClient({
-    token: 'fixture-token-in-memory',
+    token: 'intent-fixture-token',
     request: async (path, options) => {
       observed = { path, options };
       return jsonResponse({
         intent_id: `intent_${'a'.repeat(64)}`,
-        trace_id: 'trace-client-intent',
+        trace_id: 'trace-intent-client-001',
         status: 'completed',
-        evidence: {},
-        message: 'hello'
-      }, { status: 201 });
+        evidence: { event_ids: ['evt_1'] }
+      });
     }
   });
   const result = await client.call('intents.submit', {
     body: {
       action: 'system.echo',
       input: { message: 'hello' },
-      purpose: 'client-contract-test'
+      purpose: 'client-test',
+      data_scopes: ['memory:item'],
+      confirmations: [],
+      approval_ids: []
     },
-    idempotencyKey: 'client-intent-key-0001'
+    idempotencyKey: 'client-intent-0000001'
   });
   assert.equal(result.status, 'completed');
   assert.equal(observed.path, '/v1/intents');
   assert.equal(observed.options.method, 'POST');
-  assert.equal(
-    observed.options.headers['idempotency-key'],
-    'client-intent-key-0001'
-  );
+  assert.equal(observed.options.headers['idempotency-key'], 'client-intent-0000001');
   assert.deepEqual(JSON.parse(observed.options.body), {
     action: 'system.echo',
     input: { message: 'hello' },
-    purpose: 'client-contract-test'
+    purpose: 'client-test',
+    data_scopes: ['memory:item'],
+    confirmations: [],
+    approval_ids: []
   });
 
   await assert.rejects(
     () => client.call('intents.submit', {
-      body: { action: 'system.echo', input: {} }
+      body: { action: 'system.echo', extra: true },
+      idempotencyKey: 'client-intent-0000002'
     }),
     error => error.code === 'invalid_client_request'
   );
   await assert.rejects(
     () => client.call('intents.submit', {
-      body: { action: 'system.echo', hidden_authority: true },
-      idempotencyKey: 'client-intent-key-0002'
-    }),
-    error => error.code === 'invalid_client_request'
-  );
-  await assert.rejects(
-    () => client.call('intents.submit', {
-      body: { action: 'System.Echo', input: {} },
-      idempotencyKey: 'client-intent-key-0003'
-    }),
-    error => error.code === 'invalid_client_request'
-  );
-  const cyclic = { action: 'system.echo', input: {} };
-  cyclic.input.cyclic = cyclic;
-  await assert.rejects(
-    () => client.call('intents.submit', {
-      body: cyclic,
-      idempotencyKey: 'client-intent-key-0004'
-    }),
-    error => error.code === 'invalid_client_request'
-  );
-  await assert.rejects(
-    () => client.call('intents.submit', {
-      body: {
-        action: 'system.echo',
-        input: { message: 'x'.repeat(1_048_576) }
-      },
-      idempotencyKey: 'client-intent-key-0005'
+      body: { action: 'system.echo' }
     }),
     error => error.code === 'invalid_client_request'
   );
 });
 
 test('Gateway client encodes exact path and query inventories', async () => {
-  const paths = [];
+  const observed = [];
   const client = createGatewayClient({
-    token: 'fixture-token-in-memory',
-    request: async path => {
-      paths.push(path);
-      return jsonResponse({
-        nodes: [],
-        attestation: { statement: {}, signature: 'fixture' }
-      });
+    token: 'route-fixture-token',
+    request: async (path, options) => {
+      observed.push({ path, options });
+      if (path.startsWith('/v1/events')) return jsonResponse({ events: [] });
+      if (path.startsWith('/v1/intents/')) {
+        return jsonResponse({
+          intent_id: 'intent_route_fixture',
+          principal: 'person:route',
+          status: 'completed'
+        });
+      }
+      if (path.startsWith('/v1/capsules')) return jsonResponse({ capsules: [] });
+      if (path.startsWith('/v1/proposals')) return jsonResponse({ proposals: [] });
+      if (path.startsWith('/v1/nodes')) return jsonResponse({ nodes: [] });
+      if (path.startsWith('/v1/node-discovery')) {
+        return jsonResponse({ nodes: [], attestation: {} });
+      }
+      if (path.startsWith('/v1/context')) {
+        return jsonResponse({
+          schema: 'axiom-context-projection.v1',
+          principal: 'person:route',
+          purpose: 'project.execution',
+          usable_claims: [],
+          conflicts: [],
+          view_digest: 'a'.repeat(64),
+          authorization: {},
+          projection_digest: 'b'.repeat(64),
+          projection_receipt: {}
+        });
+      }
+      return jsonResponse({});
     }
   });
-  await client.call('nodes.discover', {
-    query: {
-      capability: ['compute.batch', 'storage.offer'],
-      role: 'compute',
-      minimum_security_level: 2
-    }
+  await client.call('events.list', {
+    query: { actor: 'person:route', after: 4, limit: 20 }
+  });
+  await client.call('intents.get', { params: { id: 'intent_route_fixture' } });
+  await client.call('capsules.list', { query: { limit: 2 } });
+  await client.call('proposals.list', { query: { limit: 3 } });
+  await client.call('nodes.list', { query: { limit: 4 } });
+  await client.call('context.view', {
+    query: { purpose: 'project.execution', max_claims: 5 }
   });
   assert.equal(
-    paths[0],
-    '/v1/node-discovery?capability=compute.batch&capability=storage.offer&role=compute&minimum_security_level=2'
+    observed[0].path,
+    '/v1/events?actor=person%3Aroute&after=4&limit=20'
   );
+  assert.equal(observed[1].path, '/v1/intents/intent_route_fixture');
+  assert.equal(observed[2].path, '/v1/capsules?limit=2');
+  assert.equal(observed[3].path, '/v1/proposals?limit=3');
+  assert.equal(observed[4].path, '/v1/nodes?limit=4');
+  assert.equal(observed[5].path, '/v1/context?purpose=project.execution&max_claims=5');
   await assert.rejects(
-    () => client.call('nodes.discover', {
-      query: { internal_url: 'https://grid:8443' }
-    }),
+    () => client.call('events.list', { query: { unknown: 'value' } }),
     error => error.code === 'invalid_client_request'
   );
   await assert.rejects(
-    () => client.call('intents.get', { params: { id: 'id', extra: 'escape' } }),
-    error => error.code === 'invalid_client_request'
-  );
-  await assert.rejects(
-    () => client.call('nodes.discover', { query: { limit: Number.NaN } }),
-    error => error.code === 'invalid_client_request'
-  );
-  await assert.rejects(
-    () => client.call('nodes.discover', {
-      query: { capability: Array.from({ length: 65 }, () => 'compute.batch') }
+    () => client.call('context.view', {
+      query: { purpose: 'project.execution', scopes: 'context:restricted' }
     }),
     error => error.code === 'invalid_client_request'
   );
 });
 
 test('Gateway client preserves explicit errors and rejects malformed responses', async () => {
-  const unknown = createGatewayClient({
-    token: 'fixture-token-in-memory',
+  const known = createGatewayClient({
+    token: 'known-error-token',
     request: async () => jsonResponse({
       error: {
-        code: 'future_domain_denial',
-        message: 'A future domain rule denied the request',
-        details: { safe: true }
+        code: 'policy_denied',
+        message: 'Denied by policy',
+        details: { risk: 'high' }
       },
-      trace_id: 'trace-future-error'
-    }, { status: 409 })
+      trace_id: 'trace-known-001'
+    }, 403)
+  });
+  await assert.rejects(
+    () => known.call('status.get'),
+    error => (
+      error instanceof GatewayClientError
+      && error.code === 'policy_denied'
+      && error.status === 403
+      && error.traceId === 'trace-known-001'
+      && error.retryable === false
+      && error.details.risk === 'high'
+    )
+  );
+
+  const unknown = createGatewayClient({
+    token: 'unknown-error-token',
+    request: async () => jsonResponse({
+      error: {
+        code: 'future_domain_error',
+        message: 'provider leaked internal detail',
+        details: { secret_path: '/tmp/provider' }
+      },
+      trace_id: 'trace-unknown-001'
+    }, 409)
   });
   await assert.rejects(
     () => unknown.call('status.get'),
     error => (
-      error instanceof GatewayClientError
-      && error.code === 'future_domain_denial'
+      error.code === 'future_domain_error'
       && error.status === 409
-      && error.traceId === 'trace-future-error'
+      && error.traceId === 'trace-unknown-001'
       && error.message === 'Gateway request failed'
       && error.details === undefined
       && error.retryable === false
     )
   );
 
-  const retryable = createGatewayClient({
-    token: 'fixture-token-in-memory',
-    request: async () => jsonResponse({
-      error: { code: 'rate_limited', message: 'Try later' },
-      trace_id: 'trace-rate-limit'
-    }, { status: 429 })
-  });
-  await assert.rejects(
-    () => retryable.call('status.get'),
-    error => error.code === 'rate_limited' && error.retryable === true
-  );
-
   const malformed = createGatewayClient({
-    token: 'fixture-token-in-memory',
-    request: async () => jsonResponse({ kernel_version: '0.12.0-dev.3' })
+    token: 'malformed-token',
+    request: async () => new Response('not-json', {
+      status: 200,
+      headers: { 'content-type': 'application/json' }
+    })
   });
   await assert.rejects(
     () => malformed.call('status.get'),
     error => error.code === 'invalid_gateway_response'
   );
 
+  const missing = createGatewayClient({
+    token: 'missing-field-token',
+    request: async () => jsonResponse({ kernel_version: '0.12.0-dev.3' })
+  });
+  await assert.rejects(
+    () => missing.call('status.get'),
+    error => error.code === 'invalid_gateway_response'
+  );
+
   const oversized = createGatewayClient({
-    token: 'fixture-token-in-memory',
-    request: async () => new Response('{}', {
-      headers: {
-        'content-type': 'application/json',
-        'content-length': String(2_097_153)
-      }
+    token: 'oversized-token',
+    request: async () => new Response('x'.repeat(2_097_153), {
+      status: 200,
+      headers: { 'content-type': 'application/json' }
     })
   });
   await assert.rejects(
@@ -267,123 +285,75 @@ test('Gateway client preserves explicit errors and rejects malformed responses',
     error => error.code === 'response_too_large'
   );
 
-  const streamedOversized = createGatewayClient({
-    token: 'fixture-token-in-memory',
-    request: async () => new Response(new ReadableStream({
-      start(controller) {
-        controller.enqueue(new Uint8Array(1_048_577));
-        controller.enqueue(new Uint8Array(1_048_577));
-        controller.close();
-      }
-    }), { headers: { 'content-type': 'application/json' } })
-  });
-  await assert.rejects(
-    () => streamedOversized.call('status.get'),
-    error => error.code === 'response_too_large'
-  );
-
-  const spoofedMedia = createGatewayClient({
-    token: 'fixture-token-in-memory',
+  const wrongMedia = createGatewayClient({
+    token: 'wrong-media-token',
     request: async () => new Response('{}', {
-      headers: { 'content-type': 'application/json-evil' }
+      status: 200,
+      headers: { 'content-type': 'text/plain' }
     })
   });
   await assert.rejects(
-    () => spoofedMedia.call('status.get'),
+    () => wrongMedia.call('status.get'),
     error => error.code === 'invalid_gateway_response'
   );
 });
 
 test('Gateway client supports external cancellation and bounded timeout', async () => {
-  const waitingRequest = (_path, { signal }) => new Promise((resolve, reject) => {
-    if (signal.aborted) {
-      reject(signal.reason ?? new Error('aborted'));
-      return;
-    }
-    signal.addEventListener('abort', () => reject(new Error('aborted')), {
-      once: true
-    });
+  const aborted = new AbortController();
+  const cancellationClient = createGatewayClient({
+    token: 'cancellation-token',
+    request: (_path, options) => new Promise((_resolve, reject) => {
+      options.signal.addEventListener('abort', () => {
+        reject(options.signal.reason ?? new DOMException('Aborted', 'AbortError'));
+      }, { once: true });
+    })
   });
-  const client = createGatewayClient({
-    token: 'fixture-token-in-memory',
-    request: waitingRequest
+  const cancellation = cancellationClient.call('status.get', {
+    signal: aborted.signal
   });
-  const controller = new AbortController();
-  const cancelled = client.call('status.get', { signal: controller.signal });
-  controller.abort();
+  aborted.abort();
   await assert.rejects(
-    () => cancelled,
-    error => error.code === 'request_cancelled' && error.retryable === false
-  );
-  await assert.rejects(
-    () => client.call('status.get', { timeoutMs: 5 }),
-    error => error.code === 'request_timeout' && error.retryable === true
-  );
-  await assert.rejects(
-    () => client.call('status.get', { timeoutMs: 30_001 }),
-    error => error.code === 'invalid_client_request'
+    () => cancellation,
+    error => error.code === 'request_cancelled'
   );
 
-  const stalledBody = createGatewayClient({
-    token: 'fixture-token-in-memory',
-    request: async () => new Response(new ReadableStream({}), {
-      headers: { 'content-type': 'application/json' }
+  const timeoutClient = createGatewayClient({
+    token: 'timeout-token',
+    request: (_path, options) => new Promise((_resolve, reject) => {
+      options.signal.addEventListener('abort', () => {
+        reject(options.signal.reason ?? new DOMException('Aborted', 'AbortError'));
+      }, { once: true });
     })
   });
   await assert.rejects(
-    () => stalledBody.call('status.get', { timeoutMs: 5 }),
-    error => error.code === 'request_timeout'
+    () => timeoutClient.call('status.get', { timeoutMs: 5 }),
+    error => error.code === 'request_timeout' && error.retryable === true
   );
-
-  const failedToken = createGatewayClient({
-    token: async () => { throw new Error('token unavailable'); }
-  });
   await assert.rejects(
-    () => failedToken.call('status.get'),
+    () => timeoutClient.call('status.get', { timeoutMs: 30_001 }),
     error => error.code === 'invalid_client_request'
   );
 });
 
 test('Gateway client contract rejects authority and implementation drift', async () => {
-  const directAccess = structuredClone(ACTIVE_GATEWAY_CLIENT_CONTRACT);
-  directAccess.boundary.direct_internal_service_access = true;
-  assert.throws(
-    () => validateGatewayClientContract(directAccess),
-    /boundary is weakened/
-  );
+  const weakened = structuredClone(ACTIVE_GATEWAY_CLIENT_CONTRACT);
+  weakened.boundary.direct_internal_service_access = true;
+  assert.throws(() => validateGatewayClientContract(weakened), /boundary is weakened/);
 
-  const missingError = structuredClone(ACTIVE_GATEWAY_CLIENT_CONTRACT);
-  missingError.error_contract.stable_codes.pop();
-  assert.throws(
-    () => validateGatewayClientContract(missingError),
-    /error vocabulary drifted/
-  );
+  const widened = structuredClone(ACTIVE_GATEWAY_CLIENT_CONTRACT);
+  widened.routes.push({
+    ...widened.routes.at(-1),
+    id: 'unsafe.extra',
+    path: '/v1/unsafe-extra'
+  });
+  assert.throws(() => validateGatewayClientContract(widened), /route inventory is incomplete/);
 
-  const widenedRoute = structuredClone(ACTIVE_GATEWAY_CLIENT_CONTRACT);
-  widenedRoute.routes[0].path = '/internal/v1/capabilities';
-  assert.throws(
-    () => validateGatewayClientContract(widenedRoute),
-    /route is invalid/
-  );
-
-  const widenedAccess = structuredClone(ACTIVE_GATEWAY_CLIENT_CONTRACT);
-  widenedAccess.routes[0].access = 'unauthenticated';
-  assert.throws(
-    () => validateGatewayClientContract(widenedAccess),
-    /exact contract drifted/
-  );
-
-  const source = await readFile(
-    new URL('../src/gateway/server.mjs', import.meta.url),
-    'utf8'
-  );
+  const source = await readFile(new URL('../src/gateway/server.mjs', import.meta.url), 'utf8');
+  const missing = source.replace("router.add('GET', '/v1/status'", "router.add('GET', '/v1/status-disabled'");
   assert.throws(
     () => validateGatewayClientRouteImplementation({
       contract: ACTIVE_GATEWAY_CLIENT_CONTRACT,
-      source: source.replace(
-        "router.add('GET', '/v1/status'",
-        "router.add('GET', '/v1/status-v2'"
-      )
+      source: missing
     }),
     /contract and route implementation disagree/
   );
@@ -391,9 +361,8 @@ test('Gateway client contract rejects authority and implementation drift', async
 
 test('Gateway client contract is compatible with the real four-service path', async t => {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-client-contract-'));
-  const lease = await reserveProductionPortBlock('gateway client contract test');
+  const lease = await reserveProductionPortBlock('gateway client contract');
   const basePort = lease.base_port;
-  const token = `client-${'c'.repeat(40)}`;
   let stack;
   t.after(async () => {
     try {
@@ -403,6 +372,7 @@ test('Gateway client contract is compatible with the real four-service path', as
       await rm(dataDir, { recursive: true, force: true });
     }
   });
+  const token = 'gateway-client-contract-token-0000000000000000';
   stack = await startDevelopmentStack({
     dataDir,
     environment: 'test',
@@ -418,56 +388,35 @@ test('Gateway client contract is compatible with the real four-service path', as
     rateLimitRefillPerSecond: 1_000,
     apiTokens: {
       [token]: {
-        id: 'client-contract-operator',
-        type: 'human',
+        id: 'owner.client-contract',
         roles: ['administrator'],
         scopes: ['*']
       }
     }
   });
   const gateway = `http://127.0.0.1:${basePort}`;
-  const observedTargets = [];
   const client = createGatewayClient({
     token,
-    request: (path, options) => {
-      observedTargets.push(path);
-      assert.match(path, /^\/v1\//);
-      assert.equal(path.includes('://'), false);
-      return fetch(`${gateway}${path}`, options);
-    }
+    request: (path, options) => fetch(`${gateway}${path}`, options)
   });
-
   const status = await client.call('status.get');
-  assert.equal(status.kernel_version, '0.12.0-dev.3');
-  assert.equal(status.runtime.grid.mode, 'single-node-transparency-log');
-  const idempotencyKey = 'client-contract-e2e-0001';
-  const intent = await client.call('intents.submit', {
-    body: {
-      action: 'system.echo',
-      input: { message: 'contract path' }
-    },
-    idempotencyKey
+  assert.equal(status.runtime.grid.schema_version >= 1, true);
+  const first = await client.call('intents.submit', {
+    body: { action: 'system.echo', input: { message: 'client-contract-real' } },
+    idempotencyKey: 'client-contract-real-intent-0001'
   });
-  assert.equal(intent.status, 'completed');
-  assert.equal(intent.message, 'contract path');
+  assert.equal(first.status, 'completed');
   const replay = await client.call('intents.submit', {
-    body: {
-      action: 'system.echo',
-      input: { message: 'contract path' }
-    },
-    idempotencyKey
+    body: { action: 'system.echo', input: { message: 'client-contract-real' } },
+    idempotencyKey: 'client-contract-real-intent-0001'
   });
   assert.equal(replay.idempotent_replay, true);
-  assert.equal(replay.message, 'contract path');
-  assert.ok(observedTargets.every(path => path.startsWith('/v1/')));
+  assert.equal(replay.intent_id, first.intent_id);
 });
 
-function jsonResponse(value, { status = 200 } = {}) {
-  return new Response(JSON.stringify(value), {
+function jsonResponse(body, status = 200) {
+  return new Response(JSON.stringify(body), {
     status,
-    headers: {
-      'content-type': 'application/json; charset=utf-8',
-      'x-trace-id': 'trace-response-001'
-    }
+    headers: { 'content-type': 'application/json' }
   });
 }

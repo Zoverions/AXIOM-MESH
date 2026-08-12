@@ -72,6 +72,31 @@
 
 **Implemented receipt checkpoint:** `core.machine-receipts` promotes only the native verification primitive. A constrained machine can retrieve its own terminal Grid-attested receipt; the receipt binds request and machine-authority digests, accepted/terminal Grid anchors, current chain assurance and terminal outcome digests, omits raw terminal content, and verifies against the trusted Grid public key. Foreign-owned and nonexistent receipt ids are intentionally indistinguishable at the public boundary. AXIOM Verify as a product, remote verification, arbitrary external-effect truth, MCP/A2A, delegation and remote execution remain separate non-claims.
 
+## Priority 4.5 — Sovereign Context Plane
+
+- [x] Define strict `axiom-context-claim.v1` records with owner, semantic slot, canonical value, claim type/cardinality, source reference and digest, observation/validity time, sensitivity, confidence metadata, disclosure boundaries, supersession/contradiction relationships, and mandatory `authority_effect: none`.
+- [x] Reuse the encrypted content-addressed memory graph rather than create a parallel context database.
+- [x] Compile context writes into the ordinary governed `memory.put` path and context removal into `memory.tombstone`; no context-only effect shortcut exists.
+- [x] Re-bind each projected context object to its content address and exactly one owner-authenticated `memory.put` Grid evidence event after full chain verification.
+- [x] Make compiled context views deterministic and digest-addressable, with explicit temporal filtering, same-slot supersession, conflict withholding, and no silent eligible-claim truncation.
+- [x] Keep existing cross-owner memory consent as an outer disclosure ceiling before claim-level principal/purpose/scope evaluation.
+- [x] Expose authenticated read-only `GET /v1/context` through the native Gateway contract without adding a new internal service-network path.
+- [x] Derive projection principal/scopes from the authenticated bearer rather than caller query assertions; require explicit purpose and reject caller-provided principal/scope overrides.
+- [x] Bind constrained-machine context purpose to the machine principal purpose ceiling and carry the machine authority digest into the projection-authority statement.
+- [x] Keep machine wildcard context authority invalid and reduce authenticated operator wildcard authority to the finite consent-visible `context:*` scope universe before compilation.
+- [x] Carry the bounded canonical context-authority envelope only in the signed Gateway-to-Grid request target on the existing memory-read route; reject digest/requester mismatch and malformed/oversized envelopes.
+- [x] Add unit, Grid-boundary and full-stack tests covering authority derivation, tampering, governed writes, existing memory behavior, consent ceilings, machine purpose denial, and authenticated Gateway projection.
+- [x] Expand the current threat model for context authority injection, poisoning, provenance laundering, staleness, conflict masking, hidden-state enumeration, and context-to-authority conversion.
+- [ ] Bind any material context `view_digest`/`projection_digest` into the later task/plan/receipt model when context actually shapes a consequential task; do not invent ambient transcript binding.
+- [ ] Integrate selected legacy context-poisoning detectors as advisory red-team/security signals without making detector scores authorization.
+- [ ] Add external source-authentication adapters only with exact source-specific digest/authenticity rules and privacy review.
+- [ ] Add privacy/side-channel tests for repeated cross-owner queries, counts/timing/conflict-shape inference, and future selectors.
+- [ ] Benchmark view compilation, finite-scope reduction, payload size and cache behavior without weakening freshness, consent, conflict visibility or evidence verification.
+- [ ] Complete independent review and promotion evidence before adding a Sovereign Context Plane capability to the registry.
+- [ ] Project context into MCP/A2A only after native context semantics, task binding, privacy review and protocol-parity evidence are stable.
+
+**Implemented branch checkpoint:** the native Sovereign Context slice is exposed as an authenticated read-only Gateway surface and has a governed write compiler, but it is deliberately not a production-promoted registry capability. Source digests prove byte binding rather than universal truth. Semantic truth adjudication, third-party personal-data ingestion, task/plan/receipt context binding, formal hidden-state non-interference, MCP/A2A context projection and autonomous-agent production use remain non-claims.
+
 ## Priority 5 — Read-only MCP server laboratory
 
 - [ ] Pin an exact supported MCP protocol profile for the laboratory.
@@ -184,20 +209,21 @@ Current v1 machine principals cannot delegate; this priority is a future capabil
 ## Priority 14 — Communication efficiency benchmarks
 
 - [ ] Establish baseline native Gateway request/receipt sizes and latency.
+- [ ] Benchmark native context-view compilation and authenticated payload sizes before protocol projection.
 - [ ] Benchmark MCP projection overhead against native calls.
 - [ ] Benchmark async task polling versus bounded event streaming.
 - [ ] Measure evidence size with full versus selective retrieval.
 - [ ] Measure capability-discovery cache effectiveness.
 - [ ] Measure idempotent replay and retry overhead.
 - [ ] Measure credential and policy lookup cost without weakening isolation.
-- [ ] Set performance targets that cannot override authorization or evidence requirements.
+- [ ] Set performance targets that cannot override authorization, context disclosure, conflict visibility, freshness, or evidence requirements.
 
 ## Priority 15 — Threat model and red-team campaign
 
 - [x] Add malicious/constrained-runtime principal, sponsor laundering, legacy-agent shape, action/purpose escalation, approval authority-digest reuse, and runtime-attestation-overclaim cases to the current threat model.
-- [ ] Prompt/context/tool-description poisoning.
+- [ ] Prompt/context/tool-description poisoning. Context-specific authority injection, provenance laundering, staleness, conflict masking and context-to-authority abuse cases are now in the canonical threat model; reusable adversarial detector fixtures remain open.
 - [ ] Skill/capsule supply-chain attack.
-- [ ] Protocol confusion and alternate-path bypass.
+- [ ] Protocol confusion and alternate-path bypass. Native context projection now proves no new internal service-network path is required; cross-protocol alternate paths remain open.
 - [ ] Delegation laundering beyond the current v1 no-delegation denial.
 - [ ] Credential exfiltration and dedicated machine-credential lifecycle attacks.
 - [ ] Remote endpoint substitution.
@@ -205,7 +231,7 @@ Current v1 machine principals cannot delegate; this priority is a future capabil
 - [ ] Replay and duplicate external effect.
 - [ ] Hidden sub-agent spawning.
 - [ ] Cost/compute/network exhaustion.
-- [ ] Cross-agent data leakage.
+- [ ] Cross-agent data leakage. Native context consent/scope tests cover the first local projection boundary; multi-agent/protocol leakage remains open.
 - [ ] Schema/version downgrade. Native Invocation Envelope profile downgrade and unknown-field rejection are implemented; cross-protocol/version migration cases remain open.
 - [ ] Adapter compromise and malicious update.
 - [ ] Evidence laundering of untrusted remote outputs.
@@ -238,6 +264,19 @@ For every machine/agent interoperability capability promoted beyond planning:
 - [ ] bounded authentic pilot evidence for externally effective machine surfaces;
 - [ ] independent security review where externally effective;
 - [x] exact public claims and non-claims for the current constrained machine-principal slice.
+
+For the Sovereign Context Plane specifically, promotion additionally requires:
+
+- [x] strict claim/view/authority schemas and deterministic digests;
+- [x] authenticated native Gateway projection with caller principal/scope injection rejected;
+- [x] normal intent-path lifecycle compilation rather than a context-only effect route;
+- [x] full-chain/content-address/owner-evidence rebinding and consent-ceiling tests;
+- [x] canonical threat-model coverage and exact current branch non-claims;
+- [ ] task/plan/receipt binding where context materially affects a consequential task;
+- [ ] privacy and hidden-state side-channel review;
+- [ ] source-authentication semantics for any external ingestion adapter;
+- [ ] authentic pilot and independent security review evidence appropriate to the eventual promoted surface;
+- [ ] explicit registry addition/promotion only after those gates are executable and evidenced.
 
 ## Completion rule
 

@@ -1,6 +1,6 @@
 # AXIOM-MESH Project Status
 
-**Status date:** 2026-08-10
+**Status date:** 2026-08-11
 
 **Supported build:** `0.12.0-dev.3`
 
@@ -42,6 +42,15 @@ experimental, 2 specified, 9 adapter-required, and 4 disabled capabilities.
   request approval, plan provenance, capability claims, and returned evidence;
 - backward-compatible least-privilege infrastructure `service` principals,
   with optional explicit adoption of the same constrained machine profile;
+- an authenticated read-only Sovereign Context projection foundation over the
+  existing encrypted memory graph: strict provenance-bound `context.claim`
+  records, temporal validity, consent plus principal/purpose/scope disclosure,
+  same-slot supersession and conflict withholding, deterministic view and
+  projection digests, full Grid evidence/content-address rebinding, and mandatory
+  `authority_effect: none`; context writes compile into the ordinary governed
+  `memory.put`/`memory.tombstone` intent path and the native `/v1/context` read
+  derives authority from the authenticated principal instead of accepting
+  caller-supplied principal/scope overrides;
 - deny-dominant layered policy and independent approval for high-risk effects;
 - transactional, encrypted Grid state with a signed hash-linked evidence log;
 - consent receipts, capsule manifests, encrypted memory, local balanced
@@ -92,6 +101,16 @@ principal's finite destination ceiling before capability issuance/execution. Unk
 provider, remote, or MCP destination semantics remain unresolved and fail closed.
 Runtime IDs and software digests are attribution metadata rather than TPM/TEE or
 measured-runtime attestation.
+
+The native context projection is likewise an advisory/disclosure primitive, not
+an authorization primitive or a promoted context product. A context source digest
+binds bytes, not truth. Machine context purposes remain inside the authenticated
+machine-principal purpose ceiling; machine wildcard scopes are invalid. Operator
+wildcard authority is reduced by Grid to the finite consent-visible `context:*`
+scope universe before compilation. Existing memory consent remains the outer
+cross-owner ceiling, and a context view cannot create a capability, satisfy an
+approval, inject a credential, lower assurance, expand a destination, or authorize
+an effect.
 
 ## Production package state
 
@@ -200,6 +219,9 @@ alternate production branches.
 AXIOM-MESH does not currently claim:
 
 - a live public testnet, mainnet, or production service;
+- a production-promoted Sovereign Context Plane capability, universal context
+  source authenticity, semantic truth resolution, automatic third-party
+  personal-data ingestion, or MCP/A2A context projection;
 - an autonomous-agent runtime, machine delegation, MCP/A2A endpoint, agent
   federation, or remote agent execution;
 - a separately deployed AXIOM Verify product, remote receipt-verification service, or proof
@@ -244,39 +266,45 @@ external findings ledger has been submitted.
 ### Human utility preview
 
 The versioned Gateway client contract and zero-dependency same-origin client
-are implemented for all 29 authenticated routes, including schema, explicit
+are implemented for all 30 authenticated routes, including schema, explicit
 error, cancellation, timeout, response-bound, idempotency, source-parity, and
-real-stack compatibility evidence. A loopback-only experimental AXIOM One PWA
-foundation now uses that contract for status, one transparent echo intent,
-approval, governed owner-scoped Vault, receipt, explicit unavailable-sharing,
-and raw inspection surfaces. Its experimental human-explanation contract adds
-reversible review for echo, private memory creation, confirmation-bound exact
-tombstoning, selective local export, and one of three fixed directional
-provenance links; fail-closed explanations for all 20 stable Gateway outcomes
-and 37 current kernel event kinds; active/expired/consumed approval states; and
-same-key recovery for uncertain network outcomes. A `corrects` edge retains
-both records instead of silently replacing the target. The Vault fetches an
-export bundle only after a separate reveal action, and real-stack tests prove a
-second principal cannot read, link, export, or tombstone the owner's record. It
-preserves raw evidence and explicitly does not claim an authoritative
-pre-execution kernel plan. Edge deletion, hard deletion, restore, bulk
- ingestion, complete consequential plan/approval flows, browser session/device
-security, accessibility/usability evidence, and preview packaging remain next.
-Follow with one bounded least-privilege AI provider adapter, AXIOM Verify, and
-invitation-based AXIOM Circles. These remain local or invitation-only previews
-until their exact security, accessibility, usability, recovery, and deployment
-evidence is promoted.
+real-stack compatibility evidence. That contract now includes authenticated
+read-only `context.view`; the separate AXIOM One preview has not yet added a
+context UI and remains limited to its declared surfaces. A loopback-only
+experimental AXIOM One PWA foundation now uses the contract for status, one
+transparent echo intent, approval, governed owner-scoped Vault, receipt,
+explicit unavailable-sharing, and raw inspection surfaces. Its experimental
+human-explanation contract adds reversible review for echo, private memory
+creation, confirmation-bound exact tombstoning, selective local export, and one
+of three fixed directional provenance links; fail-closed explanations for all
+20 stable Gateway outcomes and 37 current kernel event kinds; active/expired/
+consumed approval states; and same-key recovery for uncertain network outcomes.
+A `corrects` edge retains both records instead of silently replacing the target.
+The Vault fetches an export bundle only after a separate reveal action, and
+real-stack tests prove a second principal cannot read, link, export, or
+tombstone the owner's record. It preserves raw evidence and explicitly does not
+claim an authoritative pre-execution kernel plan. Edge deletion, hard deletion,
+restore, bulk ingestion, complete consequential plan/approval flows, browser
+session/device security, accessibility/usability evidence, and preview packaging
+remain next. Follow with one bounded least-privilege AI provider adapter, AXIOM
+Verify, and invitation-based AXIOM Circles. These remain local or invitation-only
+previews until their exact security, accessibility, usability, recovery, and
+deployment evidence is promoted.
 
 ### Machine interoperability substrate
 
 The native Invocation Envelope and current machine action/purpose, execution-time,
 request-size, request-rate, concurrency, response-size, and local computed-destination
-enforcement, machine-filtered discovery, and owner-scoped Grid-attested terminal
-receipt verification are implemented; next bind credentials and artifacts more fully to that
-envelope, extend selective artifact/evidence semantics, then build MCP compatibility against the same native Gateway
-semantics. A2A, remote execution, asynchronous remote tasks, and attenuation-only
-delegation remain later gates and must not be enabled implicitly by protocol
-compatibility.
+enforcement, machine-filtered discovery, owner-scoped Grid-attested terminal
+receipt verification, and native Sovereign Context read/write foundation are
+implemented. The next context-specific gates are privacy/side-channel review and
+binding an exact context `view_digest`/`projection_digest` into later task/plan/
+receipt semantics where context materially shapes a consequential task. Next bind
+credentials and artifacts more fully to the Invocation Envelope and extend
+selective artifact/evidence semantics, then build MCP compatibility against the
+same native Gateway and context semantics. A2A, remote execution, asynchronous
+remote tasks, attenuation-only delegation, and MCP/A2A context projection remain
+later gates and must not be enabled implicitly by protocol compatibility.
 
 Advanced distributed authority, settlement, autonomous-agent, domain,
 embodied, arbitrary-code, and post-quantum work may proceed in isolated

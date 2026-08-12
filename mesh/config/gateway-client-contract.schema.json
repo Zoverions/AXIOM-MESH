@@ -169,6 +169,103 @@
           "maxItems": 64,
           "items": { "type": "string", "minLength": 1, "maxLength": 160 }
         },
+        "context_binding": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema",
+            "view_digest",
+            "projection_digest",
+            "authority_digest",
+            "receipt_digest",
+            "projection_receipt"
+          ],
+          "properties": {
+            "schema": { "const": "axiom-context-task-binding.v1" },
+            "view_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            "projection_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            "authority_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            "receipt_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            "projection_receipt": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "schema",
+                "statement",
+                "attestation",
+                "receipt_digest"
+              ],
+              "properties": {
+                "schema": { "const": "axiom-context-projection-receipt.v1" },
+                "receipt_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+                "statement": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "schema",
+                    "principal",
+                    "purpose",
+                    "owner",
+                    "as_of",
+                    "view_digest",
+                    "projection_digest",
+                    "authority_digest",
+                    "projected_context_scopes",
+                    "grid",
+                    "authority_effect"
+                  ],
+                  "properties": {
+                    "schema": { "const": "axiom-context-projection-receipt-statement.v1" },
+                    "principal": { "type": "string", "minLength": 1, "maxLength": 160 },
+                    "purpose": { "type": "string", "minLength": 1, "maxLength": 160 },
+                    "owner": { "type": "string", "minLength": 1, "maxLength": 160 },
+                    "as_of": { "type": "string", "format": "date-time" },
+                    "view_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+                    "projection_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+                    "authority_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+                    "machine_authority_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+                    "projected_context_scopes": {
+                      "type": "array",
+                      "maxItems": 64,
+                      "uniqueItems": true,
+                      "items": {
+                        "type": "string",
+                        "pattern": "^context:[A-Za-z0-9][A-Za-z0-9_.:-]{0,151}$"
+                      }
+                    },
+                    "grid": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["last_seq", "last_hash", "verification_mode"],
+                      "properties": {
+                        "last_seq": { "type": "integer", "minimum": 0 },
+                        "last_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+                        "verification_mode": { "const": "full" }
+                      }
+                    },
+                    "authority_effect": { "const": "none" }
+                  }
+                },
+                "attestation": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["algorithm", "key_id", "digest", "signature"],
+                  "properties": {
+                    "algorithm": { "const": "Ed25519" },
+                    "key_id": { "type": "string", "minLength": 1, "maxLength": 160 },
+                    "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+                    "signature": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 1024,
+                      "pattern": "^[A-Za-z0-9_-]+$"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
         "confirmations": {
           "type": "array",
           "maxItems": 8,

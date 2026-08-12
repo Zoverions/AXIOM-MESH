@@ -5,11 +5,15 @@ export const GATEWAY_CLIENT_CONTRACT = deepFreeze(contractJson);
 const IDEMPOTENCY_KEY = /^[A-Za-z0-9_.:-]+$/;
 const TRACE_ID = /^[A-Za-z0-9_.:-]{8,160}$/;
 const ACTION = /^[a-z][a-z0-9.-]+$/;
+const DIGEST = /^[a-f0-9]{64}$/;
+const CONTEXT_SCOPE = /^context:[A-Za-z0-9][A-Za-z0-9_.:-]{0,151}$/;
+const PRINCIPAL_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const INTENT_FIELDS = new Set([
   'action',
   'input',
   'purpose',
   'data_scopes',
+  'context_binding',
   'confirmations',
   'approval_ids'
 ]);
@@ -111,6 +115,26 @@ export class GatewayClient {
     }
 
     const lifecycle = requestLifecycle(signal, boundedTimeout(timeoutMs, this.contract));
+    if (lifecycle.signal.aborted) {
+      lifecycle.close();
+      if (lifecycle.externalCancelled()) {
+        throw new GatewayClientError(
+          'request_cancelled',
+          'Gateway request was cancelled'
+        );
+      }
+      if (lifecycle.timedOut()) {
+        throw new GatewayClientError(
+          'request_timeout',
+          'Gateway request exceeded its bounded timeout',
+          { retryable: true }
+        );
+      }
+      throw new GatewayClientError(
+        'request_cancelled',
+        'Gateway request was cancelled'
+      );
+    }
     let response;
     try {
       response = await this.request(path, {
@@ -250,7 +274,122 @@ export function validateIntentRequest(value) {
       )
     ) throw invalidRequest(`Intent ${field} must contain non-empty strings`);
   }
+  if (value.context_binding !== undefined) {
+    validateContextTaskBinding(value.context_binding);
+  }
   return value;
+}
+
+function validateContextTaskBinding(value) {
+  if (
+    !plainObject(value)
+    || !exactKeys(value, [
+      'schema',
+      'view_digest',
+      'projection_digest',
+      'authority_digest',
+      'receipt_digest',
+      'projection_receipt'
+    ])
+    || value.schema !== 'axiom-context-task-binding.v1'
+  ) throw invalidRequest('Intent context binding is invalid');
+  for (const field of [
+    'view_digest',
+    'projection_digest',
+    'authority_digest',
+    'receipt_digest'
+  ]) {
+    if (typeof value[field] !== 'string' || !DIGEST.test(value[field])) {
+      throw invalidRequest(`Intent context binding ${field} is invalid`);
+    }
+  }
+  const receipt = value.projection_receipt;
+  if (
+    !plainObject(receipt)
+    || !exactKeys(receipt, [
+      'schema',
+      'statement',
+      'attestation',
+      'receipt_digest'
+    ])
+    || receipt.schema !== 'axiom-context-projection-receipt.v1'
+    || receipt.receipt_digest !== value.receipt_digest
+  ) throw invalidRequest('Intent context projection receipt is invalid');
+  const statement = receipt.statement;
+  const statementKeys = [
+    'schema',
+    'principal',
+    'purpose',
+    'owner',
+    'as_of',
+    'view_digest',
+    'projection_digest',
+    'authority_digest',
+    'projected_context_scopes',
+    'grid',
+    'authority_effect',
+    ...(statement?.machine_authority_digest === undefined
+      ? []
+      : ['machine_authority_digest'])
+  ];
+  if (
+    !plainObject(statement)
+    || !exactKeys(statement, statementKeys)
+    || statement.schema !== 'axiom-context-projection-receipt-statement.v1'
+    || statement.authority_effect !== 'none'
+    || statement.view_digest !== value.view_digest
+    || statement.projection_digest !== value.projection_digest
+    || statement.authority_digest !== value.authority_digest
+    || !PRINCIPAL_ID.test(statement.principal ?? '')
+    || !PRINCIPAL_ID.test(statement.owner ?? '')
+    || typeof statement.purpose !== 'string'
+    || !statement.purpose.length
+    || statement.purpose.length > 160
+    || typeof statement.as_of !== 'string'
+    || !Number.isFinite(Date.parse(statement.as_of))
+  ) throw invalidRequest('Intent context projection receipt statement is invalid');
+  if (
+    statement.machine_authority_digest !== undefined
+    && (
+      typeof statement.machine_authority_digest !== 'string'
+      || !DIGEST.test(statement.machine_authority_digest)
+    )
+  ) throw invalidRequest('Intent context machine authority digest is invalid');
+  const scopes = statement.projected_context_scopes;
+  if (
+    !Array.isArray(scopes)
+    || scopes.length > 64
+    || new Set(scopes).size !== scopes.length
+    || scopes.some((scope, index) => (
+      typeof scope !== 'string'
+      || !CONTEXT_SCOPE.test(scope)
+      || (index > 0 && scopes[index - 1] >= scope)
+    ))
+  ) throw invalidRequest('Intent context receipt scopes are invalid');
+  const grid = statement.grid;
+  if (
+    !plainObject(grid)
+    || !exactKeys(grid, ['last_seq', 'last_hash', 'verification_mode'])
+    || !Number.isSafeInteger(grid.last_seq)
+    || grid.last_seq < 0
+    || typeof grid.last_hash !== 'string'
+    || !DIGEST.test(grid.last_hash)
+    || grid.verification_mode !== 'full'
+  ) throw invalidRequest('Intent context Grid anchor is invalid');
+  const attestation = receipt.attestation;
+  if (
+    !plainObject(attestation)
+    || !exactKeys(attestation, ['algorithm', 'key_id', 'digest', 'signature'])
+    || attestation.algorithm !== 'Ed25519'
+    || typeof attestation.key_id !== 'string'
+    || !attestation.key_id.length
+    || attestation.key_id.length > 160
+    || typeof attestation.digest !== 'string'
+    || !DIGEST.test(attestation.digest)
+    || typeof attestation.signature !== 'string'
+    || !/^[A-Za-z0-9_-]+$/.test(attestation.signature)
+    || attestation.signature.length > 1024
+  ) throw invalidRequest('Intent context projection attestation is invalid');
 }
 
 function routePath(route, params, query, contract) {

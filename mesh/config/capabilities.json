@@ -303,7 +303,7 @@
       "id": "ui.gateway-client",
       "family": "operations",
       "status": "implemented",
-      "summary": "A versioned same-origin Gateway client contract covers all 29 authenticated routes with exact route parity, bounded responses and timeouts, AbortSignal cancellation, stable idempotent intent results, explicit errors, and no direct internal-service access.",
+      "summary": "A versioned same-origin Gateway client contract covers all 30 authenticated routes with exact route parity, bounded responses and timeouts, AbortSignal cancellation, stable idempotent intent results, explicit errors, and no direct internal-service access.",
       "evidence": [
         "mesh/test/gateway-client-contract.test.mjs",
         "packages/axiom-client/index.mjs",
@@ -343,7 +343,7 @@
       "id": "operations.observability",
       "family": "operations",
       "status": "implemented",
-      "summary": "Bounded four-service telemetry is scraped over least-privilege Unix-socket access and relayed as OTLP/HTTP JSON with fixed attributes; static alerts route through Alertmanager v2 using HTTPS allowlists, reserved queue capacity, bounded retry, redaction, and delivery audit; signed request-pressure and dependency-loss evidence proves bounded rejection, degradation, fail-closed exit, restart, and state preservation.",
+      "summary": "Bounded four-service telemetry is scraped over least-privilege Unix-socket access and relayed as OTLP/HTTP JSON with fixed attributes; static alerts route through Alertmanager v2 using HTTPS allowlists, reserved queue capacity, bounded retry, redaction, receipts, and delivery audit; signed request-pressure and dependency-loss evidence proves bounded rejection, degradation, fail-closed exit, restart, and state preservation.",
       "evidence": [
         "mesh/test/operations.test.mjs",
         "mesh/test/kernel.test.mjs",

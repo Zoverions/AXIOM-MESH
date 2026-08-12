@@ -5,6 +5,7 @@ import {
   assertStringArray,
   digestObject
 } from './canonical.mjs';
+import { contextTaskBindingIdentity } from './context-task-binding.mjs';
 
 const ACTION = /^[a-z][a-z0-9.-]+$/;
 const DIGEST = /^[a-f0-9]{64}$/;
@@ -41,12 +42,16 @@ export function intentRequestBinding(intent) {
       { min: 64, max: 64, pattern: DIGEST }
     );
   }
+  const contextBinding = value.context_binding === undefined
+    ? undefined
+    : contextTaskBindingIdentity(value.context_binding);
 
   return {
     action,
     input,
     purpose,
     data_scopes: dataScopes,
+    ...(contextBinding ? { context_binding: contextBinding } : {}),
     ...(machineAuthorityDigest
       ? { machine_authority_digest: machineAuthorityDigest }
       : {})

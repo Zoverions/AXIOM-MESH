@@ -1,7 +1,7 @@
 {
   "schema": "axiom-capability-evidence-bindings.v1",
   "kernel_version": "0.12.0-dev.3",
-  "registry_digest": "90e07a5f6ad577d4733e3c7db238cc61c49e9e0d593d78a882409195cc5f5506",
+  "registry_digest": "8223c0c40f8aa9671b85ade6a1fa06712d583d2c68e4073c0371639fd4bf1c6e",
   "bindings": [
     {
       "capability_id": "capsules.registry",
@@ -275,7 +275,7 @@
       "path": "mesh/test/gateway-client-contract.test.mjs",
       "test": "current Gateway client contract is exact and covers every authenticated route",
       "assertions": [
-        "assert.equal(result.routes, 29);",
+        "assert.equal(result.routes, 30);",
         "assert.equal(result.direct_service_access, false);"
       ]
     },
