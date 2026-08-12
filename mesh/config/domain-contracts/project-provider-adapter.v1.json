@@ -1,0 +1,55 @@
+{
+  "schema": "axiom-project-provider-adapter-contract.v1",
+  "version": 1,
+  "status": "specified-foundation",
+  "purpose": "Convert an already-captured forge/provider observation into one canonical AXIOM project event plus one non-authoritative provider observation without deriving durable project identity, actor identity, or governance authority from the provider.",
+  "core_invariants": [
+    "Provider IDs and locators are provenance only; the canonical AXIOM project-object ID must be supplied independently of the provider.",
+    "A provider account is not an AXIOM actor unless a separate actor binding has already been verified.",
+    "Unsupported provider semantics must be reported explicitly rather than silently discarded.",
+    "Provider authenticity evidence is observation evidence, not governance authority.",
+    "Adaptation performs no network access and no provider mutation."
+  ],
+  "capture": {
+    "provider_required": true,
+    "canonical_project_id_required": true,
+    "canonical_project_object_id_required": true,
+    "provider_external_project_id_required": true,
+    "provider_external_object_id_required": true,
+    "provider_semantic_kind_required": true,
+    "provider_evidence_digest_required": true,
+    "provider_authenticity_fact_explicit": true,
+    "event_content_reproduction_fact_explicit": true,
+    "unsupported_semantics_explicit": true,
+    "credentials_allowed": false
+  },
+  "identity": {
+    "canonical_project_object_id_derived_from_provider_id": false,
+    "provider_username_is_actor_identity": false,
+    "verified_actor_binding_required_for_canonical_actor": true,
+    "provider_locator_is_canonical_identity": false
+  },
+  "content": {
+    "modes": ["digest_only", "inline_public", "protected_reference"],
+    "private_or_sensitive_inline": false,
+    "inline_public_bytes_independently_committed": true,
+    "protected_reference_must_remain_opaque": true
+  },
+  "semantics": {
+    "mapping_loss_must_be_declared": true,
+    "semantics_complete_requires_zero_unsupported_semantics": true,
+    "provider_semantic_kind_retained_in_adaptation_evidence": true
+  },
+  "authority": {
+    "provider_observation_grants_authority": false,
+    "adaptation_grants_authority": false,
+    "ci_success_promotes_capability": false
+  },
+  "claim_boundary": [
+    "This contract does not fetch from GitHub, Forgejo, GitLab, Radicle, or another provider.",
+    "This contract does not verify provider API signatures or transport authenticity; it binds caller-supplied evidence facts.",
+    "This contract does not discover or mint canonical project-object IDs from provider IDs.",
+    "This contract does not persist the adapted event; M1 Grid retention is separate.",
+    "This contract does not restore or mutate provider state."
+  ]
+}
