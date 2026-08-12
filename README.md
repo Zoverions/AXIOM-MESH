@@ -3,13 +3,15 @@
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
 
-AXIOM-MESH is a local-first capability network. It turns a human or agent
-intent into an explicit policy-authorized plan, executes only approved effects
-inside a bounded runtime, and emits portable cryptographically linked evidence.
+AXIOM-MESH is a local-first coordination, authority, and evidence substrate. It
+turns authenticated human or machine intent into an explicit policy-authorized
+plan, executes only approved effects through a bounded runtime path, and emits
+portable cryptographically linked evidence.
 
 The project is developing both a defensible kernel and useful human products:
 AXIOM One, AXIOM Verify, AXIOM Circles, AXIOM Studio, and optional managed-node
-operations.
+operations. Replaceable agent runtimes and future protocol adapters are clients
+of that authority substrate, not alternate authorities.
 
 ## First 5 Minutes
 
@@ -49,8 +51,8 @@ public or customer deployment claim.
 The machine-readable
 [`mesh/config/capabilities.json`](mesh/config/capabilities.json) registry is the
 authority for runnable capability status. Roadmap entries, demonstrations,
-laboratories, and documentation cannot promote a capability beyond that
-registry.
+laboratories, built-but-unreachable primitives, and documentation cannot
+promote a capability beyond that registry.
 
 The current kernel implements:
 
@@ -58,11 +60,22 @@ The current kernel implements:
   signed evidence;
 - human-sponsored constrained machine principals with finite scopes, action and
   purpose ceilings, runtime binding, expiry, non-delegation, an execution-time
-  ceiling, authenticated Gateway request-size, request-rate, concurrency, and response-size ceilings, and an AXIOM-computed effect destination constrained to the principal's finite destination allowlist;
-- authenticated constrained-machine discovery through `/v1/machine-discovery`, filtered by the active deny-dominant policy and the caller's own finite scopes, actions, destinations, purposes, and budgets, with discovery explicitly not granting execution authority;
-- owner-scoped Grid-attested receipts for terminal constrained-machine intents, binding request and machine-authority digests, accepted/terminal evidence anchors, current chain assurance, and terminal outcome digests for independent verification with the trusted Grid public key;
+  ceiling, authenticated Gateway request-size, request-rate, concurrency, and
+  response-size ceilings, and an AXIOM-computed effect destination constrained
+  to the principal's finite destination allowlist;
+- authenticated constrained-machine discovery through `/v1/machine-discovery`,
+  filtered by the active deny-dominant policy and the caller's own finite
+  scopes, actions, destinations, purposes, and budgets, with discovery
+  explicitly not granting execution authority;
+- owner-scoped Grid-attested receipts for terminal constrained-machine intents,
+  binding request and machine-authority digests, accepted/terminal evidence
+  anchors, current chain assurance, and terminal outcome digests for independent
+  verification with the trusted Grid public key;
 - encrypted transactional state, consent, memory, governance, local accounting,
   export/import, backup, restore, rotation, and recovery;
+- signed hash-linked Grid evidence plus externally retainable
+  `axiom-grid-continuity-anchor.v1` records for truncation assurance through the
+  newest retained anchor;
 - mutually authenticated internal transport and independently restartable
   single-host services;
 - bounded telemetry, resilience, deny-egress, SLO, and incident evidence;
@@ -74,22 +87,52 @@ The current kernel implements:
 - authenticated operator API and CLI.
 
 The machine-principal capability is an authorization primitive, **not** an
-autonomous-agent runtime. Authenticated Gateway request-size, request-rate, concurrency, and response-size
-ceilings are enforced and evidenced. For current built-in effects, AXIOM computes the
-effect destination as `local` from the authorized tool and requires it to remain
-inside the principal's finite destination ceiling. Unknown provider, remote, or MCP
-destination semantics remain unresolved and fail closed; this is not a claim of
-remote execution or arbitrary external-destination support. Constrained machines may query
-`/v1/machine-discovery` for a digest-bound snapshot of their own requestable
-intersection; that snapshot is not permission and every effect still undergoes
-the normal intent and policy evaluation path. Terminal constrained-machine intents also expose
-owner-scoped Grid-attested, digest-only receipts that can be independently checked with the trusted
-Grid public key; this is a kernel verification primitive, not the AXIOM Verify product or proof of
-an arbitrary external side effect. AXIOM One remains an experimental browser/PWA preview,
-not an implemented or supported product claim. External AI, the AXIOM Verify product, Circles,
-remote dispatch, federation, tokens, settlement, regulated domains, arbitrary
-code, embodied systems, and post-quantum security are also not current
-implemented claims.
+autonomous-agent runtime. Authenticated Gateway request-size, request-rate,
+concurrency, and response-size ceilings are enforced and evidenced. For current
+built-in effects, AXIOM computes the effect destination as `local` from the
+authorized tool and requires it to remain inside the principal's finite
+destination ceiling. Unknown provider, remote, or MCP destination semantics
+remain unresolved and fail closed; this is not a claim of remote execution or
+arbitrary external-destination support.
+
+Constrained machines may query `/v1/machine-discovery` for a digest-bound
+snapshot of their own requestable intersection; that snapshot is not permission
+and every effect still undergoes the normal intent and policy evaluation path.
+Terminal constrained-machine intents also expose owner-scoped Grid-attested,
+digest-only receipts that can be independently checked with the trusted Grid
+public key; this is a kernel verification primitive, not the AXIOM Verify
+product or proof of an arbitrary external side effect.
+
+Local Grid verification detects signatures, event modification, gaps, and
+broken links. It does not by itself prove that no suffix was consistently
+removed together with matching local head/checkpoint metadata. That stronger
+truncation claim additionally requires a valid continuity anchor retained
+outside `AXIOM_DATA_DIR`, and the assurance extends only through the newest
+retained anchor.
+
+### Built but not production-reachable
+
+The current source also contains two important future-integration boundaries
+that are deliberately excluded from the runnable production surface:
+
+- a signed resolver-backed repository-plan chain that can preserve fresh
+  eligibility, independent review, target confirmation/approval, and atomically
+  commit `approval.consumed` with `external.effect.prepared`; and
+- a byte-pinned **Agent Runtime Adapter v1** contract with a 28-case synthetic
+  reference conformance drill for replaceable external runtimes.
+
+The repository resolver remains production-unreachable: the production executor
+registry is empty, production policy has no
+`repository.docs.pull-request.create` action, no public/runtime route invokes
+it, and no repository mutation or merge occurs. The runtime-adapter reference
+loads no external runtime and certifies none. These are built safety boundaries,
+not new capability promotions.
+
+AXIOM One remains an experimental browser/PWA preview, not an implemented or
+supported product claim. External AI, the AXIOM Verify product, Circles, remote
+dispatch, federation, tokens, settlement, regulated domains, arbitrary code,
+embodied systems, and post-quantum security are also not current implemented
+claims.
 
 ## Development programme
 
@@ -99,7 +142,7 @@ Work advances through three coordinated tracks.
 
 Complete one authentic controlled pilot with external custody, scheduled
 recovery, 30-day measurements, named incident response, deprecated credential
-dispositions, and an independent security review.
+dispositions, continuity-anchor custody, and an independent security review.
 
 ### Human utility and network activation
 
@@ -114,7 +157,7 @@ Build:
 
 The versioned same-origin Gateway client contract is implemented. An
 experimental loopback-only AXIOM One PWA foundation now provides node status,
-reversible reviews for five bounded actions, exact explanations for all stable
+reversible reviews for five bounded actions, exact explanations for stable
 Gateway outcomes and current kernel events, one-use approval states, same-key
 uncertainty recovery, and an owner-scoped Vault that can create private notes,
 tombstone exact records after confirmation, record fixed-direction provenance
@@ -125,6 +168,15 @@ pre-execution kernel plan. Edge deletion, hard deletion, restore, bulk
 ingestion, browser session, accessibility, usability, and packaging gates
 remain next, followed by one bounded AI provider and useful personal workflows,
 then selective sharing, Verify, and Circles.
+
+Machine/runtime work in the same activation track must preserve native AXIOM
+authority. The next safe steps are to complete the repository-effect
+completion/provenance chain while it remains production-unreachable, then select
+one maintained external runtime for a bounded read-only Agent Runtime Adapter
+v1 integration and independently prove authorization, cancellation,
+idempotency, receipt, and uncertain-outcome parity before any MCP/A2A or remote
+execution exposure.
+
 See the [Gateway client contract](docs/operations/GATEWAY-CLIENT-CONTRACT.md).
 The [local preview runbook](docs/operations/AXIOM-ONE-LOCAL-PREVIEW.md) records
 its exact setup, security boundary, verification, rollback, and non-claims.
@@ -171,8 +223,8 @@ Every privileged or externally visible effect follows:
 Gateway -> Hypervisor -> Sandbox -> Grid
 ```
 
-No browser, provider, administrator, autonomous agent, remote node, settlement
-process, or domain capsule may bypass that path.
+No browser, provider, administrator, autonomous agent, external runtime, remote
+node, settlement process, or domain capsule may bypass that path.
 
 Grid is currently a **single-node transparency log**, not BFT consensus.
 
@@ -198,6 +250,8 @@ npm run axiom -- capabilities
 npm run axiom -- audit
 npm run axiom-one
 npm run axiom-one:check
+npm run runtime-adapter:contract
+npm run runtime-adapter:drill
 npm run check
 npm run release:verify
 ```
@@ -232,8 +286,8 @@ Pilot and independent-review intake commands are documented in:
 - [Pilot deployment dossier](docs/operations/PILOT-DEPLOYMENT-DOSSIER.md)
 - [Independent security review](docs/security/INDEPENDENT-SECURITY-REVIEW.md)
 
-Synthetic verifier fixtures do not claim a live pilot, independent review, or
-production promotion.
+Synthetic verifier fixtures do not claim a live pilot, independent review,
+external-runtime certification, repository mutation, or production promotion.
 
 ## Documentation
 
@@ -242,7 +296,9 @@ Start with:
 - [Technical white paper](docs/whitepapers_and_research/WHITEPAPER.md)
 - [Product definition](docs/rebuild/PRODUCT-DEFINITION.md)
 - [Normative requirements](docs/rebuild/REQUIREMENTS.md)
+- [Source traceability](docs/rebuild/SOURCE-TRACEABILITY.md)
 - [Current project status](docs/PROJECT-STATUS-2026.md)
+- [Current threat model](docs/security/CURRENT-BUILD-THREAT-MODEL.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Production execution queue](docs/MASTER-TODO.md)
 - [Production readiness tracker](docs/PRODUCTION-READINESS-TRACKER.md)
@@ -260,18 +316,19 @@ The alternate single-host
 independently restartable containers with per-unit private credentials,
 Grid-only durable state, and four exact internal network segments. A
 machine-readable default-deny policy permits only 40 current internal
-caller/destination/method/route combinations at both ends, derives mTLS peer allowlists,
-and removes Gateway-to-Sandbox and Grid-to-Sandbox adjacency. It preserves the
-same Unix-domain Gateway ingress and makes no multi-host or automatic-failover
-claim. See the
+caller/destination/method/route combinations at both ends, derives mTLS peer
+allowlists, and removes Gateway-to-Sandbox and Grid-to-Sandbox adjacency. It
+preserves the same Unix-domain Gateway ingress and makes no multi-host or
+automatic-failover claim. See the
 [explicit service network policy](docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md).
 
 ## Security and contribution
 
 Do not add dependencies, credentials, new egress, browser storage of secrets,
-provider authority, remote execution, settlement, or domain effects without
-the applicable threat model, negative tests, rollback, documentation, and
-promotion gates.
+provider authority, external-runtime authority, resolver activation, repository
+mutation, remote execution, settlement, or domain effects without the
+applicable threat model, negative tests, rollback, documentation, and promotion
+gates.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
@@ -283,6 +340,9 @@ The active build does not claim:
 - supported AXIOM One, Verify, Circles, Studio, or Managed Node products;
 - an autonomous-agent runtime, autonomous delegation, MCP/A2A endpoints, or
   remote agent execution;
+- certification or production conformance of any external agent runtime;
+- a production resolver mapping, repository pull-request route, direct-main
+  mutation, or merge authority;
 - production AI, messaging, identity, payment, storage-transfer, or domain
   adapters;
 - remote workload execution or authenticated remote results;
@@ -291,6 +351,8 @@ The active build does not claim:
 - regulated-domain compliance;
 - secure embodied autonomy;
 - end-to-end post-quantum security;
+- proof that local Grid state alone detects a consistently removed suffix after
+  matching local metadata rewrite;
 - an authentic completed pilot or independent security approval.
 
 The project is intentionally ambitious. Its claims remain narrow until the
