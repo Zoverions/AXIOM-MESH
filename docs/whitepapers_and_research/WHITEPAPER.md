@@ -10,121 +10,140 @@
 
 ## Abstract
 
-AXIOM-MESH is a local-first capability network that converts an authenticated
-human or agent intent into an explicit policy-authorized plan, executes only
-approved effects inside a bounded runtime, and records portable cryptographic
-evidence. Its purpose is not merely to run agents. Its purpose is to make
-authority, consent, execution, data custody, recovery, and claims inspectable.
+AXIOM-MESH is a local-first coordination, authority, and evidence substrate. It
+accepts authenticated human or machine intent, evaluates that intent against
+explicit deny-dominant policy and consent/approval requirements, performs only
+bounded authorized effects, and records cryptographically linked evidence.
 
-The supported kernel separates public ingress, policy and planning, execution,
-and durable evidence into four services: Gateway, Hypervisor, Sandbox, and
-Grid. The current `0.12.0-dev.3` build implements a single-node authority and
-transparency system with deny-dominant policy, independent approval for
-permitted high-risk effects, encrypted durable state, signed hash-linked
-evidence, scoped portability, recovery, service isolation, admitted-node
-reservations, operator-approved causal exchange, and deployment-independent
-secret and policy provider startup.
+Its purpose is not merely to run agents. Its purpose is to make authority,
+consent, execution, data custody, recovery, and claims inspectable while
+allowing human applications, machine principals, replaceable agent runtimes,
+domain systems, and eventually multi-node governance to share one fail-closed
+substrate.
 
-Development now proceeds through three coordinated tracks:
+The supported kernel separates ingress, policy/planning, bounded execution, and
+durable evidence into four responsibilities: Gateway, Hypervisor, Sandbox, and
+Grid. The current registry-backed surface implements constrained human-sponsored
+machine principals, policy-filtered machine discovery, Grid-attested terminal
+receipts, encrypted durable state, signed hash-linked evidence, externally
+retainable continuity anchors, scoped portability, recovery, service isolation,
+admitted-node reservations, operator-approved causal exchange, and signed
+provider startup.
 
-1. **Trust and operations** — collect authentic deployment, recovery, custody,
-   incident, and independent-review evidence for one controlled pilot.
-2. **Human utility and network activation** — build AXIOM One, AXIOM Verify,
-   AXIOM Circles, AXIOM Studio, and managed-node tooling without moving user
-   applications into the trusted kernel.
-3. **Frontier incubation** — develop distributed authority, settlement,
-   autonomy, regulated-domain, arbitrary-code, embodied-system, and
-   post-quantum foundations in isolated, disabled-by-default laboratories.
+The same source tree also contains two substantial **built but production-
+unreachable** integration boundaries:
 
-This roadmap does not promote unfinished capabilities. AXIOM-MESH distinguishes
-code that is built from capabilities that are enabled, exposed,
-production-promoted, or marketed. The machine-readable capability registry
-remains authoritative for runnable claims.
+1. an evidence-first repository-document chain spanning signed planning,
+   resolver admission, target authorization, durable preparation, external-
+   effect outbox, a credential-isolated docs-only GitHub operator, and signed
+   completion; and
+2. a byte-pinned Agent Runtime Adapter v1 contract with 28-case synthetic
+   conformance evidence.
+
+The repository operator can create or recover a deterministic **open draft pull
+request** in tests, but production has zero resolver mappings, no matching
+policy action, no supported route into that chain, and no merge/direct-main
+authority. The runtime-adapter reference loads and certifies no external
+runtime.
+
+The governing rule is:
+
+> **Intelligence is not authority. Connectivity is not authority. Installation is not authority. Evidence must state exactly what it proves.**
 
 ## 1. Problem and motivation
 
-Agent systems commonly combine prompts, models, tools, credentials, storage,
-network access, and external effects in one application process. When these
-concerns are fused, it becomes difficult to answer:
+Agent and automation systems often combine prompts, models, tools, credentials,
+storage, network access, side effects, and logs inside one application process.
+That fusion makes basic questions difficult to answer precisely:
 
 - who requested an effect;
-- which policy and consent authorized it;
-- which plan, provider, tool, destination, and data scope were approved;
-- whether authority was reused, widened, or silently delegated;
+- which identity and sponsor were responsible;
+- which policy, consent, confirmation, and independent approval authorized it;
+- which exact plan, tool, destination, data scope, and budget were bound;
+- whether authority was widened, substituted, replayed, or silently delegated;
+- whether the runtime executed the reviewed input rather than a later variant;
+- whether external I/O happened only after durable authorization evidence;
 - what durable state changed;
-- whether a denial, degraded state, or unresolved conflict was hidden;
-- how the user can inspect, revoke, export, delete, restore, or dispute the
-  result;
-- which claims are established by evidence and which remain aspirations.
+- whether an acknowledged outcome has corresponding evidence;
+- whether uncertainty was hidden as success;
+- whether a receipt proves integrity, provenance, an internal statement, or an
+  external-world fact;
+- how a user can inspect, revoke, export, delete, restore, dispute, or migrate
+  the result; and
+- which source-tree features are actually runnable versus deliberately gated.
 
-AXIOM-MESH treats these questions as the product boundary. Intelligence is not
-authority. A model output is data until an authenticated principal, compatible
-policy, valid consent, explicit plan, scoped grant, bounded execution path, and
-durable evidence agree.
+AXIOM-MESH treats these questions as the product boundary. A model output is
+data until an authenticated principal, valid authority profile, compatible
+policy, explicit plan, bounded grant/effect path, and durable evidence agree.
 
-The project therefore rejects two common shortcuts. First, a friendly interface
-must not conceal consequential authority. Second, experimental code must not be
-described as production merely because it exists or passes synthetic tests.
+This posture rejects two common shortcuts. A friendly user interface may
+simplify terminology, but it may not hide consequential authority. And green
+synthetic tests or source presence may not be marketed as production merely
+because code exists.
 
 ## 2. Governing development posture
 
-### 2.1 Build broadly, expose narrowly
+### 2.1 Capability lifecycle
 
-AXIOM-MESH separates five lifecycle states:
+AXIOM-MESH distinguishes five lifecycle states:
 
-1. **Built** — code and tests exist in an isolated development path.
-2. **Enabled** — an operator deliberately activates it under an explicit policy
-   and credential boundary.
-3. **Exposed** — a user, node, or external system can reach it.
-4. **Production-promoted** — the exact build and deployment pass applicable
-   security, recovery, governance, legal, usability, and operational gates.
-5. **Marketed** — public claims accurately describe only the promoted scope.
+1. **Built** — code and tests exist.
+2. **Enabled** — an operator deliberately activates the code under explicit
+   policy and credential boundaries.
+3. **Exposed** — a user, node, runtime, or external system can reach it.
+4. **Production-promoted** — the exact build and deployment satisfy applicable
+   security, recovery, governance, usability, legal, and operational gates.
+5. **Marketed** — public claims describe only the promoted scope.
 
-The doctrine is:
+A technically complete subsystem may remain production-unreachable for a long
+period while its activation path, custody, and external evidence are reviewed.
 
 > **Build broadly. Activate deliberately. Expose minimally. Promote only with evidence. Market only what is true.**
 
-A frontier implementation may be technically substantial while remaining
-disabled, isolated from production identities and data, and absent from public
-product claims.
-
 ### 2.2 Claims follow executable evidence
 
-The [capability registry](../../mesh/config/capabilities.json) classifies each
-capability as `implemented`, `experimental`, `specified`, `adapter_required`,
-or `disabled`. Only `implemented` is a current runnable claim. Documentation,
-demos, mock providers, synthetic pilot packages, and research branches cannot
-promote a capability beyond that registry.
+The machine-readable capability registry classifies tracked capabilities as
+`implemented`, `experimental`, `specified`, `adapter_required`, or `disabled`.
+The current registry tracks **49 capabilities, including 31 implemented**.
+Only registry-backed `implemented` status is a current runnable capability
+claim.
+
+This is stricter than “the code is finished.” The repository-effect outbox and
+GitHub docs operator are real source with adversarial tests, yet they are not a
+production capability because current production policy, mapping registry, and
+routes cannot reach them.
 
 ### 2.3 Human clarity is a security property
 
-A user interface may simplify terminology, but it may not hide:
+A user-facing product may use ordinary language, but it must preserve the
+ability to answer:
 
 - what will happen;
+- who or what is acting;
 - what data will leave the node;
-- which provider or destination will receive it;
-- what the cost, retention, timeout, and cancellation rules are;
-- which approval is required;
+- which provider/destination receives it;
+- which purpose, cost, retention, timeout, cancellation, and retry rules apply;
+- whether confirmation or independent approval is required;
 - whether the system is degraded or uncertain;
-- whether evidence proves integrity rather than truth;
-- whether an action can be reversed.
+- what the evidence proves and does not prove; and
+- whether the action can be reversed.
 
-Accessibility, phone usability, export, deletion, revocation, and plain-language
-receipts are therefore release requirements for human-facing products, not
-optional visual polish.
+Phone usability, keyboard/screen-reader access, reduced motion, contrast,
+plain-language receipts, export, deletion, revocation, and recovery are release
+gates for human products rather than optional polish.
 
-## 3. System architecture
+## 3. Supported architecture
 
-### 3.1 Four trusted responsibilities
+### 3.1 Four kernel responsibilities
 
 | Service | Responsibility | Authority it does not have |
 |---|---|---|
-| Gateway | Authenticates principals, validates requests, applies abuse controls, handles idempotency, and exposes versioned user/operator APIs | Cannot invent execution authority |
-| Hypervisor | Normalizes intent, composes deny-dominant policy, builds explicit plans, checks approvals, and issues short-lived grants | Cannot execute arbitrary effects or bypass Grid evidence |
-| Sandbox | Verifies one grant and invokes only its named bounded tool or adapter action | Has no ambient network, shell, package, host, secret, or filesystem authority |
-| Grid | Owns encrypted durable state, evidence, consent, governance, accounting, portability, recovery, node admissions, and conflict records | Cannot originate user intent or silently authorize effects |
+| Gateway | Authenticates principals, validates requests, applies abuse/idempotency controls, exposes versioned APIs | Cannot invent execution authority |
+| Hypervisor | Normalizes intent, composes deny-dominant policy, revalidates machine authority, constructs plans, checks approvals, issues grants | Cannot silently widen authority or bypass Grid evidence |
+| Sandbox | Verifies a grant and executes only its bounded operation | No ambient supported shell, package, host, secret, arbitrary-code, or open-network authority |
+| Grid | Owns encrypted durable state, approvals, evidence, consent, governance, accounting, portability, recovery, node/conflict records | Cannot originate intent or silently authorize effects |
 
-Every privileged or externally visible effect follows:
+The ordinary supported privileged path is:
 
 ```text
 principal
@@ -135,99 +154,193 @@ Gateway -> Hypervisor -> Sandbox -> Grid
  auth      plan/policy     grant     state+evidence
 ```
 
-No browser application, model provider, channel adapter, remote dispatcher,
-settlement process, autonomous loop, administrator, or domain capsule may
-bypass this path.
+A browser, model provider, machine runtime, repository operator, remote node,
+administrator, settlement system, autonomous loop, or domain capsule does not
+become an alternate authority merely by being connected.
 
-### 3.2 Current deployment boundary
+### 3.2 External-effect extension
 
-The compact candidate runs the four services as separate supervised Node.js
-processes in one hardened container. The alternate single-host topology runs
-four independently restartable containers across four exact internal network
-segments. Only Gateway crosses the permission-restricted host ingress.
-Internal service edges use mutually authenticated TLS 1.3, distinct Ed25519
-identities, DNS and SPIFFE-style URI identities, active-certificate pinning,
-and signed replay-protected request envelopes. A machine-readable default-deny
-policy authorizes only 40 exact current-build caller, destination, method, and
-route combinations before request signing and again at the receiving service,
-while deriving each destination's active mTLS peers. Segmentation removes
-unrelated adjacency; transport and application checks impose direction.
-
-Grid alone receives the durable database and data-protection key. Gateway alone
-receives the API principal registry. Protected evidence proves Sandbox-only
-loss, dependency-aware readiness degradation, Sandbox-only recovery, unchanged
-survivors, and preserved Grid state. This is single-host isolation, not
-replicated state or automatic failover.
-
-The operating system, container engine, host administrator, mounted secret
-paths, and data-protection key remain trusted. The candidate is not a defense
-against a fully compromised host.
-
-### 3.3 Product layer outside the kernel
-
-Human-facing applications are intentionally outside `mesh/`. The current
-client boundary and planned application structure are:
+A future external side effect may require an adapter/operator outside Sandbox's
+current deterministic built-ins. AXIOM therefore uses an evidence-first
+extension rather than giving an operator ambient authority:
 
 ```text
-mesh/                    zero-dependency trusted kernel
-apps/axiom-one/          experimental loopback-only browser/PWA foundation
-apps/axiom-verify/       static or local evidence verification
-packages/axiom-client/   implemented versioned Gateway client contract
-adapters/                separately governed provider/channel/domain adapters
-capsules/                signed capability packages and fixtures
+normal intent/policy/approval evaluation
+        |
+        v
+Grid-durable prepared effect
+        |
+        v
+external-effect outbox
+        |
+        v
+bounded operator / adapter
+        |
+        v
+signed operator receipt
+        |
+        v
+Grid completion evidence
 ```
 
-A user application receives only the API scopes, session lifetime, origin, and
-resources required for its current function. It receives no ambient Grid,
-filesystem, secret, provider, or host authority.
+The current repository prototype demonstrates this structure but is not exposed
+from production. The outbox may invoke its operator only after durable
+preparation. Uncertain operator or receipt outcomes remain durably prepared; a
+verified receipt is required before completion evidence is committed.
+
+### 3.3 Deployment boundary
+
+The compact candidate runs Gateway, Hypervisor, Sandbox, and Grid as separate
+supervised Node.js processes in one hardened container. An alternate single-host
+topology runs four independently restartable containers across four exact
+internal network segments.
+
+Internal service edges use mutually authenticated TLS 1.3, distinct Ed25519
+identities, DNS and SPIFFE-style URI identity checks, exact active-leaf
+fingerprint pinning, and signed replay-protected application envelopes. A
+machine-readable default-deny policy authorizes only 40 exact current-build
+caller, destination, method, and route combinations and derives allowed mTLS
+peers from that graph.
+
+Grid alone receives durable state and the data-protection key. Gateway alone
+receives the API principal registry. The compact candidate uses
+`network_mode: none` with permission-restricted Unix-socket host ingress. The
+four-unit topology permits only required internal adjacency and has no external
+route.
+
+This is single-host isolation, not replicated state or automatic failover. The
+host kernel, container engine, process owner, mounted secret policy, host
+administrator, clock assumptions, and data-protection key remain within the
+trusted computing base.
+
+### 3.4 Runtime/source policy
+
+The supported engine range is Node.js `>=24.14.0 <25` with npm
+`>=11.0.0 <12` and zero third-party npm dependency packages.
+
+Current machine-readable setup policy intentionally distinguishes:
+
+- protected CI and `.node-version`: **Node.js 24.18.0**;
+- candidate production image: **Node.js 24.19.0**.
+
+Both exact zero-dependency locks are installed with lifecycle scripts disabled
+and must remain unchanged.
 
 ## 4. Intent-to-evidence lifecycle
 
-1. **Authenticate.** Gateway resolves the caller and scopes.
-2. **Validate.** Schema, size, action, origin, and idempotency are checked.
-3. **Normalize.** Hypervisor creates a canonical intent.
-4. **Evaluate policy and consent.** Any denial wins; lower layers can tighten
-   but cannot loosen authority.
-5. **Build a plan.** The plan names effects, dependencies, providers, data
-   scopes, destinations, budgets, timeouts, cancellation behavior, and evidence
-   obligations.
-6. **Approve.** Permitted high-risk effects require a different authenticated
-   principal and an exact expiring approval.
-7. **Issue a grant.** Hypervisor signs a short-lived, audience-, intent-, plan-,
-   policy-, tool-, resource-, and constraint-bound single-use grant.
-8. **Execute.** Sandbox invokes only the named deterministic tool or approved
-   adapter contract.
-9. **Commit.** Grid transactionally records the mutation and evidence.
-10. **Explain.** Gateway returns a structured result suitable for a human
-    receipt without exposing secret values or private model chain-of-thought.
+The registry-backed production path is conceptually:
 
-A failure at any stage produces no synthetic success for later stages.
+1. **Authenticate.** Gateway resolves the principal and authority profile.
+2. **Validate.** Schema, action, size, origin, rate, concurrency, and
+   idempotency rules apply.
+3. **Normalize.** Hypervisor creates a canonical intent and authority binding.
+4. **Evaluate.** Deny-dominant policy, consent, purpose, confirmation, and risk
+   gates apply.
+5. **Resolve destination/constraints.** Current built-in destinations are
+   computed from the selected tool and must remain within machine/policy
+   ceilings.
+6. **Plan.** Effects, dependencies, data scope, destination, budget, timeout,
+   cancellation, and evidence obligations are explicit.
+7. **Approve.** Permitted high-risk effects require an exact expiring
+   independent approval.
+8. **Grant.** Hypervisor signs a short-lived audience-, intent-, plan-, policy-,
+   tool-, resource-, authority-, and constraint-bound one-use grant.
+9. **Execute.** Sandbox performs only the named bounded operation.
+10. **Commit.** Grid records mutation and evidence transactionally.
+11. **Explain/attest.** Gateway returns structured results; constrained-machine
+    owners may retrieve digest-only Grid-attested terminal receipts.
 
-## 5. Identity, authorization, and replay defense
+Failure at one stage cannot be converted into synthetic downstream success.
 
-Production service identities use Ed25519 keys provisioned outside the
-repository. Signed requests bind issuer, audience, validity window, nonce,
-method, route context, and body digest. Verification rejects unknown issuers,
-wrong audiences, stale requests, altered bodies, invalid signatures, and replay.
+For future external-effect paths, steps 8-10 may be extended by a separately
+reviewed prepared-effect/outbox/operator boundary, but the original authority
+facts remain the source of authorization.
 
-Internal TLS uses a locally provisioned Ed25519 CA and distinct leaves. Offline
-rotation validates a complete replacement generation before an atomic swap and
-preserves the previous generation for exact rollback. Active-leaf pinning
-rejects retired but still CA-valid credentials without introducing an online
-revocation dependency.
+## 5. Machine principals
+
+### 5.1 Human-sponsored finite authority
+
+Authenticated constrained `agent` principals require an existing human sponsor
+and finite exact scopes, actions, purposes, destinations, runtime identity,
+expiry, non-delegation, execution-time ceilings, request-size/rate ceilings,
+concurrency limits, and response-size limits.
+
+Wildcard scopes and administrator role are rejected. The machine-authority
+digest is carried through request binding, plan provenance, capability claims,
+result evidence, and receipts. Least-privilege infrastructure `service`
+principals remain backward-compatible unless opting into the same constrained
+profile.
+
+### 5.2 Destination binding
+
+For the current built-in operation set, Hypervisor derives the destination from
+the policy-selected `builtin.*` tool and canonicalizes it to `local`. Requests
+fail before grant issuance when the computed destination is outside the
+principal's finite destination ceiling. Sandbox independently verifies the
+signed destination again before execution.
+
+Unknown provider, remote, or MCP destination semantics remain unresolved and
+fail closed. A destination field is not an arbitrary external-execution claim.
+
+### 5.3 Machine discovery
+
+`/v1/machine-discovery` exposes a digest-bound snapshot of the authenticated
+machine principal's own requestable intersection under active deny-dominant
+policy: finite scopes, actions, purposes, destinations, and budgets.
+
+Denied, unrelated, unresolved-destination, and out-of-scope actions are omitted.
+The response explicitly states that discovery is **not authorization**. Actual
+effects still pass the normal intent/policy path.
+
+### 5.4 Grid-attested terminal receipts
+
+Once a constrained-machine intent reaches terminal evidence state, its owner
+may request a Grid-attested receipt binding:
+
+- canonical request digest;
+- exact machine-authority digest;
+- exactly one accepted event anchor;
+- exactly one terminal event anchor;
+- current chain-assurance metadata; and
+- terminal result/error digest.
+
+Raw terminal output is omitted. Foreign-owned and nonexistent IDs share the
+same not-found boundary. Independent verification checks the Grid signature
+against a trusted Grid public key.
+
+This proves what Grid attests about the recorded AXIOM intent. It does **not**
+independently prove an arbitrary external-world event.
+
+### 5.5 Runtime identity is not hardware attestation
+
+Runtime identifiers and optional software digests are typed authority-bound
+attribution metadata. The current build does not claim TPM/TEE, measured boot,
+workload/process attestation, or remote hardware proof.
+
+## 6. Identity, transport, replay, and key lifecycle
+
+Production service identities use Ed25519 keys provisioned outside source
+control. Signed service requests bind issuer, audience, validity window, nonce,
+method, path, caller identity, and body digest. Unknown issuers, wrong
+audiences, stale/replayed requests, altered bodies, and invalid signatures fail
+closed.
+
+Internal TLS uses a locally provisioned Ed25519 CA and distinct service leaves.
+Offline rotation validates a full replacement generation before atomic swap and
+retains the prior generation for exact rollback. Active-leaf pinning rejects a
+retired but still CA-valid leaf without requiring an online revocation service.
 
 The candidate separately supports coordinated service/API credential rotation
-and data-protection-key re-encryption. Grid evidence follows dual-signed key
-transitions rather than silently trusting replacement keys. Data-key rotation
-rewraps the live Grid and supported recovery contexts, rejects wrong keys,
-recovers interrupted cutover, and preserves later evidence through rollback.
+and data-protection-key re-encryption. Rotation evidence follows signed key
+transitions. Data-key rotation rewraps live and supported recovery state,
+rejects wrong keys, recovers interrupted cutover, and preserves later evidence
+through rollback.
 
 A secret-free keyed ledger covers 32 conservative credential candidates from
-deprecated history and makes reuse in the supported tip a protected-CI failure.
-Repository trust revocation is complete; external provider or prior-deployment
-attestations remain open promotion evidence.
+deprecated history and makes supported-tip reuse a protected-CI failure.
+External provider/custodian disposition remains a pilot promotion gate.
 
-## 6. Policy, approval, consent, and governance
+## 7. Policy, approval, consent, and governance
 
 Policy composition is deny-dominant:
 
@@ -235,184 +348,334 @@ Policy composition is deny-dominant:
 - highest risk wins;
 - required scopes accumulate;
 - required confirmations cannot decrease;
-- numerical and categorical constraints can only narrow authority.
+- numeric/categorical constraints can only narrow authority.
 
 Consent receipts bind subject, controller, purpose, data scope, expiry, and
-revocation. Installing a capsule, discovering a node, or connecting a provider
-does not grant execution authority.
+revocation. Installing a capsule, discovering a node, connecting a provider,
+installing an agent runtime, or registering an operator does not itself grant
+execution authority.
 
 Local governance supports proposals, human voting, finalization, timelocked
 activation, independently approved authority-reducing overlays, verification,
 rollback metadata, expiring emergency controls, retrospective review, and
-appeal records. Automated systems may tighten or pause authority; they may not
+appeal records. Automated systems may tighten/pause authority; they may not
 expand their own authority.
 
-Portable delegation remains an unpromoted product and protocol track.
+Machine-principal v1 is explicitly non-delegating. Portable delegation remains
+unpromoted.
 
-## 7. Execution and adapter boundary
+## 8. Execution and adapter boundary
 
-The supported Sandbox is not a general-purpose code runner. It executes a
-small registry of validated deterministic built-in tools. Arbitrary code,
-rootless OCI execution, AI providers, messaging, content transfer, settlement,
-zk verification, and regulated-domain workflows require separately named
-adapters and evidence.
+The supported Sandbox is not a general-purpose code runner. It executes a small
+registry of validated deterministic built-in operations. Arbitrary code,
+external AI, messaging, storage transfer, repository mutation, settlement, zk,
+regulated-domain, and embodied effects require separately named adapter/operator
+boundaries and evidence.
 
-Every adapter must define:
+An exposed adapter/operator must define:
 
-- exact credentials and trust anchors;
-- allowed origins and egress;
+- exact credentials/trust anchors;
+- ingress/egress/destinations;
 - input/output schemas;
-- purpose and data scope;
-- budget, timeout, cancellation, and retry;
-- retention and deletion;
-- idempotency and replay behavior;
-- audit and evidence output;
-- failure, uninstall, and rollback behavior;
-- independent test environment and threat model.
+- purpose/data scope;
+- budget, timeout, cancellation, retry, idempotency;
+- retention/deletion;
+- replay behavior;
+- evidence/receipt semantics;
+- uncertain-outcome behavior;
+- failure/uninstall/rollback; and
+- independent test environment/threat model.
 
-A missing or invalid provider returns `capability_unavailable`; it never
-returns mock success on a production path.
+A missing or invalid provider returns `capability_unavailable`; production paths
+never substitute mock success.
 
-## 8. Grid, evidence, privacy, and durability
+## 9. Grid, evidence, privacy, and durability
 
 Grid stores authenticated-encrypted state and a signed SHA-256 hash-linked
-evidence sequence. Startup verifies continuity and fails closed on unresolved
-signatures, broken transitions, migration drift, or integrity failure.
+evidence sequence. Startup verification fails closed on signature, link,
+migration, key, or integrity failure.
 
-Implemented Grid-owned families include principals, consent receipts, capsule
-manifests, encrypted memory objects and edges, governance records, admitted
-nodes, deterministic encrypted placement leases, storage offers, balanced
-local accounting, import/export records, causal updates, conflicts, approvals,
-and recovery evidence.
+Grid-owned record families include principals, consent, capsule manifests,
+encrypted memory objects/edges, governance, admitted nodes, placement leases,
+storage offers, balanced local accounting, import/export, causal updates,
+conflicts, approvals, machine terminal receipts, backup/recovery data, and
+evidence anchors.
 
 Memory is content-addressed, owner-bound, encrypted, selectively disclosable,
-exportable, and tombstonable. Operational telemetry excludes user-controlled
-labels and raw user content.
+exportable, and tombstonable. Operational telemetry excludes raw user content
+and user-controlled high-cardinality labels.
 
 Local accounting uses balanced double-entry journals with safe integer units.
-It does not itself authorize tokens, payroll, bridges, liquidity, or external
+It does not authorize tokens, payroll, bridges, liquidity, or external
 settlement.
 
-Grid remains a single-node transparency log, not BFT consensus.
+### 9.1 Modification detection versus truncation assurance
 
-## 9. Portability, synchronization, and network foundations
+A local signed hash chain detects altered events, invalid signatures, gaps,
+broken links, and disagreement with the locally stored head. That is not the
+same as proving no suffix was deleted if an attacker can also rewrite matching
+local head/trailing-checkpoint state.
 
-### 9.1 Export and import
+For the stronger retained-history claim, the current build supports
+`axiom-grid-continuity-anchor.v1` retained outside `AXIOM_DATA_DIR`. The anchor
+is derived from a Grid-signed export-manifest head and checked using full
+history verification from genesis.
 
-Canonical JSONL exports can be scoped by time, record family, owned object, and
-capsule. Signed manifests and continuity metadata support independent
-verification. Optional X25519 recipient encryption protects selected records
-in transit or storage.
+A valid anchor proves current history equals or extends the retained head
+**through the newest retained anchor**. It does not prove preservation of later
+unanchored events and does not remove malicious host/root or active Grid-signing
+key compromise from the trust assumptions.
 
-Imports are cryptographically verified and staged. The operator receives a
-deterministic diff. Independent approval is required before data enters an
-isolated foreign-provenance store. Imported records cannot overwrite native
+Grid remains one transparency log, not BFT consensus.
+
+## 10. Portability, synchronization, and network foundations
+
+### 10.1 Export/import
+
+Canonical JSONL export supports time, record-family, owned-object, and capsule
+scopes. Signed manifests and continuity metadata permit independent
+verification; optional X25519 recipient encryption protects selected records.
+
+Imports are cryptographically verified and staged. An operator receives a
+deterministic diff, and independent approval is required before records enter
+an isolated foreign-provenance store. Imported records cannot overwrite native
 signed state or impersonate local evidence.
 
-### 9.2 Causal exchange
+### 10.2 Causal exchange
 
 Admitted nodes can produce signed bundles with version vectors. Replay,
 equivocation, missing dependencies, noncontiguous counters, and incomplete
 conflict resolution are rejected. Concurrent heads remain visible until an
-explicit resolution causally dominates and names every current head.
+explicit resolution causally dominates every current head.
 
 The online relay binds exact Gateway origins, pinned source Grid evidence, one
 matching owner, encrypted ordered queues, bounded retry, duplicate preflight,
-and independent one-use destination approval. Protected tests use two real
-supervisors and controlled partitions. This proves transport and conflict
-semantics, not federation or consensus.
+and independent one-use destination approval. Protected tests exercise two real
+supervisors with controlled partitions.
 
-### 9.3 Discovery and scheduling
+This proves causal transport/conflict semantics, not federation, replicated
+consensus, or global finality.
+
+### 10.3 Discovery/scheduling
 
 Signed node admissions bind identity, owner, HTTPS origin, failure domain,
 roles, software digest, security profile, resource ceilings, expiry, and
 quarantine. Grid signs filtered discovery responses. Policy-controlled
 scheduling creates deterministic all-or-nothing encrypted reservations subject
-to capability, capacity, concurrency, owner, domain, security, and lease
+to capability, capacity, concurrency, owner/domain, security, expiry, and lease
 constraints.
 
-The current mechanism does not contact remote nodes, measure resources,
-authorize workloads, authenticate remote results, or solve global Sybil
-resistance. Remote dispatch and result provenance are planned multi-host gates.
+The current mechanism does not execute remote workloads, measure remote
+resources, authenticate remote results, or solve global Sybil resistance.
 
-## 10. Operations and production evidence
+## 11. Production-unreachable repository effect
+
+AXIOM-MESH has begun extending intent beyond registry-fixed executor inputs
+without allowing model prose or arbitrary caller JSON to become execution
+authority. The first concrete target is deliberately narrow: documentation-only
+repository remediation.
+
+### 11.1 Signed read-only planning
+
+A repository planner can construct a signed plan against an exact source
+repository, base SHA, bounded documentation paths, exact replacement content,
+and lifetime. The planning step is read-only and does not grant write authority.
+
+### 11.2 Resolver admission and non-circular promotion
+
+The dynamic input path follows a non-circular ordering:
+
+1. fresh execution eligibility identifies unresolved resolver-backed input;
+2. the signed repository plan is verified against exact resolver ceilings;
+3. content-addressed resolution/handoff evidence is signed;
+4. strict resolver admission facts are re-derived from current registry,
+   policy, capability, build, requester, scope, destination, and target gates;
+5. independent implementation-conformance and security-authority reviews bind
+   the exact candidate;
+6. an exact-one-mapping addition can be packaged without being applied;
+7. separate application observation can verify exact before/after registry
+   bytes without becoming authority;
+8. the resolved target is re-evaluated under ordinary policy, confirmation, and
+   independent approval; and
+9. the exact resolved input and authorization facts become a prepared-effect
+   binding.
+
+### 11.3 Atomic approval consumption and durable preparation
+
+The preparation coordinator reads the exact approval over authenticated
+Hypervisor -> Grid transport and atomically commits:
+
+```text
+approval.consumed
+external.effect.prepared
+```
+
+Tests force concurrent contenders to use the same one-use approval. Only one
+transaction can consume it and leave durable preparation evidence; the loser
+cannot leave a second prepared effect.
+
+### 11.4 Evidence-first external-effect outbox
+
+The current source already implements the next boundary. The outbox verifies
+the prepared effect and requires Grid-durable preparation **before operator
+invocation**.
+
+If the operator call is uncertain, if its response is malformed, or if its
+signed receipt cannot be verified, the effect remains durably prepared rather
+than being reported as completed. A valid signed operator receipt is required
+before Grid may record `external.effect.completed`. If the final completion
+commit itself fails, retry/recovery must use the same durable preparation and
+operator identity rather than synthesizing a new success.
+
+This ordering separates authorization durability from external I/O and makes
+uncertain outcomes recoverable rather than invisible.
+
+### 11.5 Credential-isolated GitHub docs operator
+
+The built GitHub operator independently verifies the Grid-durable prepared
+effect **before any GitHub request**. It is intentionally narrow:
+
+- repository fixed to `Zoverions/AXIOM-MESH`;
+- exact expected base SHA;
+- exact planned documentation paths and contents only;
+- deterministic effect branch;
+- no arbitrary shell or generic repository-write function;
+- creates or recovers an **open draft pull request**;
+- stale-main fails before mutation;
+- extra/unplanned path or wrong content/identity/branch fails closed;
+- forged Grid proof fails before GitHub I/O;
+- repeated execution reconciles idempotently;
+- simulated post-write transport loss is recovered by exact remote readback;
+- signed operator receipt binds the exact proposal outcome.
+
+The operator contains no merge operation. Its output states
+`merge_performed: false` and `base_branch_content_changed: false`.
+
+This proves a bounded evidence-first proposal mechanism. It does not authorize
+autonomous repository administration.
+
+### 11.6 Why the entire chain remains production-unreachable
+
+Despite the working draft-PR prototype:
+
+- `mesh/config/intent-remediation-executors.json` contains zero mappings;
+- production policy has no `repository.docs.pull-request.create` action;
+- no supported public/runtime route invokes the resolver/executor/operator
+  chain;
+- repository-operator credentials/egress are not part of the supported
+  production deployment; and
+- direct-main mutation and merge authority do not exist.
+
+A first production mapping would therefore be a new activation and promotion
+event requiring explicit capability/policy/registry/runtime changes, operator
+credential/egress custody, rollback, negative-path evidence, independent review,
+and protected-CI proof.
+
+## 12. Agent Runtime Adapter v1
+
+External agent frameworks evolve quickly. AXIOM-MESH therefore does not make
+one framework its authority model; it defines a replaceable-runtime contract.
+
+Agent Runtime Adapter v1 is byte-pinned and specifies:
+
+- trust bootstrap;
+- signed AXIOM grants;
+- capability translation;
+- credential references rather than raw-secret transfer;
+- one-use authorization;
+- cancellation/revocation;
+- idempotency;
+- bounded fallback;
+- uncertain-outcome handling;
+- signed receipts;
+- lifecycle/rollback; and
+- failure behavior preserving AXIOM as final authority.
+
+A 28-case synthetic reference drill exercises positive/adversarial cases and
+emits commit-bound evidence.
+
+> A runtime may plan or coordinate work, but installation, runtime approval, or a tool allowlist cannot create an alternate authority path around Gateway -> Hypervisor -> Sandbox -> Grid.
+
+The reference adapter opens no external runtime connection, resolves no real
+runtime credential, reads no user file, performs no external effect, and does
+not certify OpenClaw, Hermes, Agent Zero, MCP, A2A, or any maintained third-
+party runtime.
+
+A future integration must pin one exact upstream runtime and separately review
+source, licence, dependencies, update behavior, host/sandbox behavior,
+credential exposure, adapter implementation, and native authorization/
+cancellation/idempotency/receipt parity.
+
+## 13. Operations and production evidence
 
 The production candidate includes:
 
-- exact Node.js/npm source-setup policy and zero third-party npm packages;
+- exact source runtime/npm/dependency policy;
 - non-root, read-only, capability-dropped container policy;
-- explicit secrets and fail-closed provisioning;
-- bounded request bodies, rate limiting, logs, metrics, and queues;
-- dependency-aware liveness and readiness;
+- explicit external secrets and fail-closed provisioning;
+- bounded bodies, rate limits, concurrency, logs, metrics, and queues;
+- dependency-aware liveness/readiness;
 - signed recovery, backup-retention, restore, SLO, resilience, transport,
-  service-unit, scheduling, causal-sync, telemetry, credential-rotation,
-  data-key-rotation, provider, pilot-verifier, security-review-verifier, and
-  incident-tabletop evidence;
-- a strict offline pilot evidence package and independent-review findings
-  intake.
+  service-unit, scheduling, causal-sync, telemetry, credential/data-key
+  rotation, provider, continuity-anchor, incident, pilot-verifier,
+  security-review-verifier, and runtime-adapter evidence; and
+- hosted Windows verification for source/documentation/path and timing-sensitive
+  behavior.
 
-Protected synthetic evidence verifies mechanisms and rejection paths. It does
-not create a live pilot, external custody, a 30-day availability record, an
-independent audit, or production promotion.
+Protected synthetic evidence proves mechanisms and rejection paths. It does
+not create a live pilot, external custody, 30-day availability record, real
+operator acknowledgement trail, independent audit, external-runtime
+certification, production repository activation, or production promotion.
 
-## 11. Human product family
+## 14. Human product family
 
-### 11.1 AXIOM One
+### 14.1 AXIOM One
 
 AXIOM One is the planned private personal agent, vault, approval centre, and
-evidence record. Its primary concepts are Ask, Plan, Approvals, Vault,
-Receipts, Share, and Circles. A new user should be able to reach a useful result
-without understanding service topology or using the CLI.
+evidence record. Its concepts are Ask, Plan, Approvals, Vault, Receipts, Share,
+and Circles.
 
-The first preview must support visible plans, explicit provider/data
-boundaries, approval and denial, memory inspection, export, deletion,
-revocation, recovery guidance, phone-size layouts, keyboard navigation,
-screen-reader support, contrast, reduced motion, and plain-language receipts.
+The experimental loopback slice currently provides bounded reviewed intent,
+owner-scoped private memory, three fixed directional provenance relations,
+correction-without-replacement, confirmation-bound tombstoning, selective local
+export, explicit bundle reveal, approval-state distinctions, same-idempotency-
+key uncertainty recovery, raw evidence, and cross-principal negative tests.
 
-The current experimental slice implements an exact human-explanation contract
-for five bounded actions: non-consequential echo, owner-scoped private memory
-creation, fixed directional provenance linking, confirmation-bound
-tombstoning, and selective local memory export. It provides reversible review,
-maps every stable Gateway outcome and current kernel event kind, distinguishes
-active, expired, consumed, and unknown
-approvals, keeps raw evidence, and recovers uncertain browser outcomes with the
-same idempotency key. The Vault fetches a generated bundle only after a separate
-reveal action, stores neither token nor response in browser storage, and has
-real-stack negative evidence against cross-principal read, link, export, and
-tombstone. Provenance is restricted to `derived-from`, `supports`, and
-`corrects`; a correction retains both records and does not silently replace its
-target. The preview has no direct edge-deletion control. It does not mislabel
-this projection as an authoritative pre-execution kernel plan. Hard deletion,
-restore, bulk ingestion, general
-consequential plan/execute, and human-comprehension evidence remain required.
+It does not yet claim general consequential plan/execute, direct edge deletion,
+hard deletion, restore, bulk ingestion, completed browser-session security,
+human comprehension/accessibility/usability evidence, or supported packaging.
 
-### 11.2 AXIOM Verify
+### 14.2 AXIOM Verify
 
-AXIOM Verify is a local or static verifier for signed receipts and export
-packages. It must explain signer identity, integrity, continuity, package
-contents, alterations, and non-claims without requiring trust in an AXIOM
-operator.
+AXIOM Verify is planned as a local/static verifier for signed receipts and
+export packages. It should explain signer identity, integrity, continuity,
+scope, package contents, alterations, and non-claims without requiring trust in
+an AXIOM operator.
 
-### 11.3 AXIOM Circles
+Machine receipts and repository-operator receipts are kernel primitives, not
+the AXIOM Verify product.
 
-AXIOM Circles are invitation-based collaboration spaces for families, teams,
-community groups, researchers, creators, and organizations. Members retain
-independently owned nodes and records. Shared objects, proposals, tasks,
-commitments, approvals, and conflicts use selective disclosure and approved
-causal exchange.
+### 14.3 AXIOM Circles
+
+AXIOM Circles are planned invitation-based collaboration spaces for families,
+teams, communities, researchers, creators, and organizations. Members should
+retain independently owned nodes and records while shared objects, proposals,
+tasks, commitments, approvals, and conflicts use selective disclosure and
+approved causal exchange.
 
 Circles do not imply public federation, autonomous payroll, or settlement.
 
-### 11.4 AXIOM Studio and Managed Node
+### 14.4 AXIOM Studio and Managed Node
 
-AXIOM Studio will generate and test capsule manifests, schemas, permissions,
-threat models, policy fixtures, rollback plans, and conformance evidence.
+AXIOM Studio is intended to generate/test capsule manifests, schemas,
+permissions, threat models, policy fixtures, adapter conformance evidence, and
+rollback plans.
 
-AXIOM Managed Node will provide optional hosting, backup, updates, and support
-without transferring ownership of user information or creating a platform
-right to inspect plaintext content.
+AXIOM Managed Node is intended to offer hosting, backup, updates, and support
+without converting hosting into platform ownership or a general plaintext
+inspection right.
 
-### 11.5 Personal Compute Fabric and Local Trust Plane
+### 14.5 Personal Compute Fabric and Local Trust Plane
 
 The specified Personal Compute Fabric separates six replaceable concerns:
 endpoint, companion, Personal Agent Pack, Agent Runtime Capsule, compute/model
@@ -422,172 +685,208 @@ hold ambient Grid authority, provider secrets, raw payment credentials, or the
 root personal memory store. The initial endpoint uses a phone companion rather
 than direct cellular authority.
 
-Personal continuity is therefore not one permanent model. An exportable
-Personal Agent Pack references encrypted memory, provenance, preferences,
-policy, consent, routing, evaluation, optional model adapters, licences, and
-recovery. Agent behavior is supplied by immutable Runtime Capsules for
-deterministic workflows, a bounded single agent, planner-executor,
-orchestrator-worker, specialist-team, or critic-loop patterns. Each capsule
-binds exact code and SBOM, requested authority, budgets, cancellation, stop and
-fallback behavior, evidence, uninstall, and rollback. It can propose work but
-cannot approve it.
+Personal continuity is not one permanent model. An exportable Personal Agent
+Pack references encrypted memory, provenance, preferences, policy, consent,
+routing, evaluation, optional model adapters, licences, and recovery. Agent
+behavior is supplied by immutable Runtime Capsules that bind exact code and
+SBOM, requested authority, budgets, cancellation, stop/fallback behavior,
+evidence, uninstall, and rollback. A capsule may propose work but cannot approve
+it.
 
 Compute routing first eliminates choices that violate privacy, consent,
 destination, jurisdiction, licence, security, capability, health, freshness,
 deadline, or budget. Only eligible choices are ranked by measured usefulness,
 latency, reliability, cost, and energy. Private, Balanced, Best, and Budget are
-human-facing policy presets rather than permission to trade away a hard
-constraint.
+human-facing policy presets, not permission to trade away a hard constraint.
 
-The Local Trust Plane is a deterministic verification and immediate-
-authorization boundary for authenticators, credential presentations, policy,
-consent, budgets, confirmation, one-use mandates, and external receipts. No
-generative model participates in its allow/deny calculation. Identity proofing,
-authentication, credential verification, local authorization, external
-authorization, settlement, reversal, and recovery remain distinct. A locally
-authorized payment mandate is not evidence of funds, merchant acceptance, or
-settlement; a valid credential signature proves only the checked issuer claim
-under the named holder-binding, status, freshness, and disclosure profile.
+The Local Trust Plane is deterministic and model-independent for credential
+verification, policy, consent, budgets, confirmation, one-use mandates, and
+external receipts. Identity proofing, authentication, credential verification,
+local authorization, external authorization, settlement, reversal, and recovery
+remain distinct. A locally authorized payment mandate is not evidence of funds,
+merchant acceptance, or settlement.
 
-The architecture is versioned as `1.0.0-draft.1` with five documentation
-contracts for the Personal Agent Pack, Agent Runtime Capsule, Agent Runtime
-Adapter, Compute Node Profile, and Local Trust Envelope. The runtime loads only
-the separately byte-pinned Agent Runtime Adapter contract; it does not load the
-other four drafts, and the capability registry is unchanged. A signed no-I/O
-reference-adapter drill exercises contract and verifier behavior across 28
-cases while explicitly claiming no external runtime, effect, or production
-conformance. The phased path begins with phone-first replaceable inference,
-then a phone-relayed wearable prototype, owner-local compute, synthetic/test-
-authority identity, sandbox-value payment simulation, and finally a bounded
-non-regulated invitation-only pilot. Real identity, payments, and production
-hardware remain behind their separate security, hardware, accessibility,
-privacy, custody, legal, regulatory, and independent-review gates.
+This architecture is versioned `1.0.0-draft.1` with five documentation
+contracts. The runtime loads only the separately byte-pinned Agent Runtime
+Adapter contract; it does not load the other four drafts, and the capability
+registry is unchanged. Real identity, payments, and production hardware remain
+behind separate security, hardware, accessibility, privacy, custody, legal,
+regulatory, and independent-review gates.
 
-## 12. Frontier incubation
+## 15. Frontier incubation
 
-Frontier laboratories may implement:
+Isolated laboratories may implement:
 
-- BFT and distributed-authority protocols;
-- replicated evidence, threshold authorization, and Sybil-resistant membership;
-- tokens, treasury, staking, bonds, escrow, bridges, liquidity, and settlement;
-- bounded autonomous agents, research loops, and task markets;
-- education, health, government, finance, legal, and employment harnesses;
-- embodied-system simulation and safety envelopes;
+- BFT/distributed authority;
+- replicated evidence and threshold authorization;
+- tokens, treasury, staking, escrow, bridges, liquidity, settlement;
+- bounded autonomous/research loops and task markets;
+- education, health, government, finance, legal, employment, and other domain
+  harnesses;
+- embodied-system safety simulations;
 - arbitrary-code isolation;
-- named zk verifier adapters;
+- named zk verifier adapters; and
 - post-quantum migration.
 
-These laboratories must use synthetic or separately consented test data,
-non-production identities, no real user funds, no public authority, explicit
-kill switches, reproducible experiments, adversarial tests, and documented
-failure. They remain disabled and unmarketed until their individual promotion
-gates pass.
+Laboratory work remains separated from production identities, secrets, user
+data, real value, and public authority unless its own promotion gates pass.
 
-## 13. Current programme and promotion sequence
+## 16. Current programme
 
-The current programme has two immediate priorities:
+### 16.1 Controlled pilot
 
-1. collect authentic single-node pilot evidence, including external custody,
-   scheduled media recovery, pilot telemetry, named incident response, legacy
-   credential dispositions, and an independent security review;
-2. maintain the implemented Gateway client contract and complete the
-   experimental AXIOM One human-shell gates, followed by one bounded AI
-   adapter, a phone-first Personal Agent Pack, one single-agent Runtime Capsule,
-   policy-first routing, AXIOM Verify, and invitation-based Circles.
+Production promotion still requires authentic external evidence including:
 
-Multi-host remote dispatch, independently operated WAN evidence, broader
-adapters, credentials, zk verification, managed nodes, and a curated capsule
-catalogue follow behind their own gates. Frontier work proceeds in parallel but
-does not alter the current production decision.
+- dedicated pilot hardware;
+- 30-day availability/capacity observation;
+- pilot-owned secret/provider/workload-identity and backup-media custody;
+- scheduled restore/rotation under that custody;
+- externally retained Grid continuity-anchor cadence/custody;
+- operator-owned telemetry/alert routes and measured acknowledgement;
+- disposition of all 32 deprecated-history credential candidates;
+- named human incident exercise;
+- exact-source/image/deployment independent security review; and
+- authentic exact pilot package plus a separate promotion decision.
 
-## 14. Threat model summary
+### 16.2 Human utility
 
-The current kernel addresses forged and replayed requests, wrong audiences,
-expired grants, policy weakening, approval reuse, payload and evidence
-tampering, wrong keys, partial provisioning, dependency loss, secret leakage,
-native-state overwrite, causal replay, equivocation, queue ambiguity, and
-approval bypass.
+The parallel product path is to finish AXIOM One browser/session,
+accessibility/usability, packaging, deletion/recovery, and broader consequential
+approval boundaries; add one bounded AI provider and useful personal workflows;
+then add a phone-first Personal Agent Pack, one single-agent Runtime Capsule,
+policy-first routing, selective sharing, Verify, Circles, Studio, and Managed
+Node behind their own gates.
 
-Residual risks include compromised hosts or container engines, operator
-credential theft, unreviewed cryptographic defects, denial of service beyond
-declared ceilings, single-node authority compromise, operational custody
-mistakes, browser/session vulnerabilities in future applications, provider
-misbehavior, adapter supply-chain compromise, governance capture, economic
-exploits, and domain-specific legal or safety failures.
+### 16.3 Machine/runtime progression
+
+Machine-principal authorization, discovery, receipts, Agent Runtime Adapter v1,
+and the repository draft-PR safety prototype now exist. Near-term work is to:
+
+1. keep repository-effect production reachability closed while activation,
+   operator custody/egress, rollback, and promotion analysis are completed;
+2. select one maintained external runtime for a bounded read-only integration;
+3. prove native authorization, cancellation, idempotency, receipt, fallback,
+   uncertainty, and direct-service-denial parity; and
+4. defer MCP/A2A, remote tasks, remote execution, and delegation to their own
+   gates.
+
+Protocol compatibility must never create authority.
+
+## 17. Threat model summary
+
+The current kernel addresses forged/replayed requests, wrong audiences, expired
+grants, sponsor/authority substitution, action/purpose/destination escalation,
+policy weakening, approval reuse, payload/evidence tamper, wrong keys, partial
+provisioning, dependency loss, secret leakage, native-state overwrite, causal
+replay/equivocation, queue ambiguity, and approval bypass.
+
+The repository-effect prototype additionally defends against free-form input
+becoming executor authority, stale base substitution, unplanned path/content
+mutation, resolver constraint widening, stale registry/policy/build laundering,
+approval race/replay, external I/O before durable preparation, forged prepared
+proof, ambiguous operator outcomes, unverified receipts, duplicate execution,
+and silent merge/direct-main behavior.
+
+Agent Runtime Adapter v1 addresses capability/grant translation widening,
+raw-secret transfer, synthetic receipt success, cancellation/revocation loss,
+uncertain outcomes, and alternate runtime authority paths at the contract level.
+
+Residual risks include compromised host/container engines, operator or signing-
+key theft, cryptographic defects, denial of service beyond declared ceilings,
+single-node authority compromise, continuity-anchor custody failure, browser
+vulnerabilities, provider/runtime supply-chain compromise, governance capture,
+economic exploits, and domain-specific legal/safety failures.
 
 Each newly exposed surface reopens the relevant threat model and release gate.
 
 ## Non-claims
 
-The `0.12.0-dev.3` build does not claim:
+`0.12.0-dev.3` does **not** claim:
 
-- a live public, customer, testnet, mainnet, or production service;
-- a completed authentic single-node pilot or independent security approval;
-- a supported AXIOM One, Verify, Circles, Studio, or Managed Node release;
-- a supported wearable, companion, Personal Agent Pack, Runtime Capsule,
-  compute-routing fabric, or Local Trust Plane;
-- production AI, messaging, identity, storage-transfer, payment, or domain
-  adapters;
+- a live public/customer/testnet/mainnet/production service;
+- a completed authentic pilot or independent security approval;
+- supported AXIOM One, Verify, Circles, Studio, or Managed Node releases;
+- supported wearable/companion hardware, Personal Agent Pack, Runtime Capsule,
+  Personal Compute Fabric, or Local Trust Plane;
+- production AI, messaging, identity, storage-transfer, payment, repository, or
+  regulated-domain adapters;
 - identity proofing, KYC, age assurance, government-ID, biometric, payment-
   authorization, funds-availability, merchant-acceptance, or settlement
   assurance;
+- production conformance/certification for OpenClaw, Hermes, Agent Zero, MCP,
+  A2A, or another external runtime;
+- a production resolver mapping or supported public repository-effect route;
+- direct-main repository mutation or merge authority from the built docs
+  operator;
 - remote workload dispatch or authenticated remote-result provenance;
-- federation, BFT consensus, replicated Grid finality, or Sybil resistance;
+- federation, BFT consensus, replicated Grid finality, or global Sybil
+  resistance;
 - arbitrary-code sandbox security;
 - operational zk verification without a named verifier adapter;
-- token, staking, bridge, liquidity, treasury, payroll, or chain settlement;
+- operational token/staking/bridge/liquidity/treasury/payroll/settlement;
 - clinical, educational, governmental, legal, employment, or financial
   compliance;
 - secure embodied autonomy;
 - end-to-end post-quantum security;
-- proof that a model's reasoning or output is true.
+- proof that a model's reasoning/output is true;
+- proof that a Grid-attested machine/operator receipt establishes arbitrary
+  external-world truth;
+- proof that local Grid state alone detects a consistently truncated suffix
+  after matching local metadata rewrite; or
+- continuity assurance for events after the newest externally retained anchor.
 
-Historical and laboratory code may describe these systems. Presence in the
-repository is not promotion evidence.
+Historical and laboratory code may describe broader systems. Presence in source
+is not promotion evidence.
 
 ## Reproducibility
 
-Use an allowed Node.js 24 runtime. From the repository root:
+Use an allowed Node.js 24 runtime. From repository root:
 
 ```bash
 npm run setup
 npm run runtime-adapter:contract
 npm run runtime-adapter:drill
+npm run release:verify
 ```
 
-The command validates the Node.js/npm policy and CI/container pins, installs
-both exact zero-dependency locks with lifecycle scripts disabled, proves the
-locks unchanged, and runs the clean-kernel and release gates. It does not
-provision production credentials.
+`npm run setup` validates the exact Node/npm source policy, installs both
+zero-dependency locks with lifecycle scripts disabled, proves the locks
+unchanged, and runs clean-kernel/release gates. It does not provision production
+credentials.
 
-The runtime-adapter commands verify a byte-pinned candidate contract and a
-28-case synthetic reference boundary. The drill uses ephemeral test identities,
-loads no external runtime, performs no external effect, and is not evidence of
-production adapter or OpenClaw conformance.
+The runtime-adapter commands verify the byte-pinned candidate contract and its
+28-case synthetic reference. They do not load or certify an external runtime.
 
-Current authorities and supporting documents are:
+Current authorities/supporting documents:
 
 - [capability registry](../../mesh/config/capabilities.json);
 - [product definition](../rebuild/PRODUCT-DEFINITION.md);
 - [normative requirements](../rebuild/REQUIREMENTS.md);
+- [source traceability](../rebuild/SOURCE-TRACEABILITY.md);
 - [project status](../PROJECT-STATUS-2026.md);
 - [roadmap](../ROADMAP.md);
 - [execution queue](../MASTER-TODO.md);
 - [production readiness tracker](../PRODUCTION-READINESS-TRACKER.md);
+- [current threat model](../security/CURRENT-BUILD-THREAT-MODEL.md);
+- [runtime-adapter conformance](../architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md);
+- [Personal Compute Fabric and Local Trust Plane](../architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md);
 - [production runbook](../../mesh/PRODUCTION.md);
-- [pilot evidence runbook](../operations/PILOT-DEPLOYMENT-DOSSIER.md);
-- [independent review runbook](../security/INDEPENDENT-SECURITY-REVIEW.md);
-- [Personal Compute Fabric and Local Trust Plane specification](../architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md).
+- [pilot dossier](../operations/PILOT-DEPLOYMENT-DOSSIER.md); and
+- [independent review](../security/INDEPENDENT-SECURITY-REVIEW.md).
 
 ## Conclusion
 
-AXIOM-MESH is no longer only a kernel-reconstruction project. It is a
-kernel-governed product and network programme. The current build supplies the
-authority-minimizing substrate; the next human layer must make that substrate
-useful without hiding its controls; and frontier development may proceed
-aggressively only while isolation, evidence, and claims remain exact.
+AXIOM-MESH is developing into a sovereign coordination substrate rather than a
+monolithic agent application. Its kernel minimizes and records authority; its
+machine-principal surface makes non-human callers explicit and finite; its
+human-product layer aims to make the same controls understandable; its
+repository prototype demonstrates how an external effect can be prepared,
+executed, recovered, and evidenced without silently granting merge authority;
+and its runtime-adapter work shows how intelligence can remain replaceable
+without becoming sovereign over the substrate.
 
-The intended outcome is not maximum feature count. It is a system people can
-depend on because useful intelligence, personal data, collective coordination,
-economic mechanisms, and future autonomous capabilities remain subordinate to
-explicit human authority and verifiable boundaries.
+The intended outcome is not maximum feature count. It is a system that can
+become more capable while preserving user ownership, explicit consent,
+least-privilege execution, replaceable intelligence, recoverability, and
+evidence whose claims remain as narrow and verifiable as the mechanisms that
+produce it.

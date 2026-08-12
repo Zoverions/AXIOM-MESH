@@ -1,164 +1,174 @@
 # AXIOM-MESH Production Execution Queue
 
 **Status:** canonical active queue
-**Updated:** 2026-08-11
+**Updated:** 2026-08-12
 **Current kernel:** `0.12.0-dev.3`
 **Current stage:** production candidate; not production-promoted
 
-This queue orders concrete work across the production pilot, human-product
-layer, multi-host platform, adapter ecosystem, and isolated frontier
-laboratories. The [roadmap](ROADMAP.md) defines phase outcomes; this file defines
-the next executable items. A completed item means its acceptance evidence
-exists, not merely that code or prose was written.
+This queue orders concrete work across the controlled pilot, human-product
+layer, machine/runtime interoperability, multi-host platform, adapter ecosystem,
+and isolated frontier laboratories. [ROADMAP.md](ROADMAP.md) defines phase
+outcomes; this file defines executable work.
+
+A completed item means its acceptance evidence exists. It does not necessarily
+mean the code is enabled, exposed, production-promoted, or marketed.
 
 ## Promotion rules
 
-A capability may move to `implemented` only when it has:
+A capability may move to `implemented` only when it has production-path code,
+fail-closed authorization/negative tests, durable executable evidence, matching
+operator/user documentation, and a current registry/status record.
 
-1. production-path code without a synthetic-success fallback;
-2. fail-closed authorization and negative-path tests;
-3. durable evidence from an executable verification command;
-4. operator and user documentation that matches behavior;
-5. a current status record bound to a commit.
+Production promotion additionally requires green protected CI, an independently
+reviewed release dossier, rollback, and measured deployment evidence.
 
-Production promotion additionally requires green protected-branch CI, an
-independently reviewed release dossier, a rollback target, and measured
-deployment evidence. Critical/high security findings require independently
-verified closure. Medium/low exceptions require an owner, rationale,
-containment, expiry, and separate approval; an exception cannot waive
-credential compromise, evidence-chain integrity, or unauthorized effects.
+**Built, enabled, exposed, production-promoted, and marketed are separate
+states.** A built primitive that production policy/registry/routes cannot reach
+must remain described as production-unreachable until those gates are
+explicitly opened.
 
-`Built`, `enabled`, `exposed`, `production-promoted`, and `marketed` are separate
-states. Experimental and frontier work may be implemented in isolated paths,
-but must remain disabled by default, excluded from production credentials and
-user data, and explicitly classified in the capability registry until its own
-promotion gates pass.
-
-## P0 - repository and release control
+## P0 — repository and release control
 
 | ID | Status | Work | Acceptance evidence |
 |---|---|---|---|
-| REP-001 | Complete | Make clean-room `main` the GitHub default and preserve unsupported history outside it | Default is `main`; the pre-clean-room tip is immutable tag `archive/legacy-main-pre-clean-room-2026-05-21` |
-| REP-002 | Complete | Enforce canonical documentation and lowercase-`main` CI | Documentation checks and [workflow run 30376178779](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30376178779) |
-| REP-004 | Complete | Remove unsupported legacy runtimes, dependency manifests, and documentation from the supported branch | Pre-clean-room code remains at the immutable archive tag; the complete pre-0.12 documentation corpus remains on locked branch `deprecated/pre-0.12-documentation-corpus` |
-| REP-003 | Complete | Protect `main` against deletion and force pushes; require green verification | Required kernel/container/CodeQL checks; deletion and force pushes disabled |
-| REP-005 | Complete | Automate clean current-build source setup and dependency verification | Exact Node.js/npm policy, two zero-dependency locks, prohibited lifecycle scripts, unchanged-lock proof, protected-CI installation, and one command for installation plus full kernel/release verification |
-| REL-001 | Complete | Publish the verified 0.11.0 clean-room baseline | [v0.11.0 prerelease](https://github.com/Zoverions/AXIOM-MESH/releases/tag/v0.11.0) with source checksum, SPDX SBOM, and provenance |
-| REL-002 | Complete | Run the GitHub image build and composed container readiness drill | [Workflow run 30376178779](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30376178779) passed both jobs |
-| SEC-001 | Complete for repository trust | Record revocation of every credential candidate from deprecated history | Keyed 32-entry ledger, exact-history rescan, supported-tip comparison, and protected signed evidence; external attestations remain a promotion gate |
-| DOC-001 | Complete | Make every document on `main` specific to the current build | Exact current-build `docs/` allowlist, local-link verification, current build notes, and locked deprecated documentation branch |
+| REP-001 | Complete | Clean-room `main` + immutable legacy preservation | Default `main`; legacy tag `archive/legacy-main-pre-clean-room-2026-05-21` |
+| REP-002 | Complete | Canonical docs + protected lowercase-`main` CI | Documentation and workflow gates |
+| REP-003 | Complete | Branch protection | Force-push/deletion disabled; required verification |
+| REP-004 | Complete | Remove unsupported legacy runtime/docs from supported branch | Legacy tag + locked `deprecated/pre-0.12-documentation-corpus` branch |
+| REP-005 | Complete | Exact source setup/dependency verification | Node `>=24.14.0 <25`; CI/.node-version 24.18.0; production image 24.19.0; npm 11.x; two zero-dependency locks; lifecycle scripts disabled; unchanged-lock proof |
+| REL-001 | Complete | Publish clean-room 0.11 baseline | Immutable `v0.11.0` prerelease with checksum/SBOM/provenance |
+| REL-002 | Complete | Candidate image build/readiness | Protected container evidence |
+| SEC-001 | Complete for repository trust | Revoke deprecated-history credential candidates from supported trust | 32-entry keyed ledger + supported-tip reuse rejection; external dispositions still pending |
+| DOC-001 | Complete | Canonical current-build documentation boundary | Exact allowlist, link verification, locked deprecated corpus |
+| DOC-002 | Complete for current narrative gate | Prevent current-state authority/evidence regressions | Semantic tests for machine ceilings, Grid continuity, repository-effect reachability/draft-PR/no-merge, runtime-adapter non-certification + computed route/capability/link checks |
 
-## P0 - production candidate closure
-
-| ID | Status | Work | Acceptance evidence |
-|---|---|---|---|
-| OPS-001 | Complete | Promote the container package only after CI image/runtime evidence passes | Registry promotion tied to workflow run 30376178779 |
-| OPS-002 | Complete | Exercise backup, tamper rejection, exact restore, and rollback on a disposable production host | Protected CI uploads signed, secret-free `axiom-recovery-drill-evidence-<commit>` artifacts with measured recovery point and recovery time |
-| OPS-003 | Complete | Establish an initial latency, error-rate, saturation, and restart baseline | Protected CI uploads signed `axiom-slo-baseline-evidence-<commit>` from a fixed 40-request, concurrency-4 production profile |
-| OPS-004 | Complete for candidate container | Enforce deny-egress while preserving explicit host-local Gateway ingress | Compose `network_mode: none`, permission-restricted Unix socket ingress, fail-closed route check, runner positive control, in-container negative probe, and signed protected-CI evidence |
-| OPS-005 | Complete for automated request-path candidate; pilot resource limits pending | Exercise bounded request pressure and dependency process loss against the real production supervisor | Protected CI uploads signed `axiom-resilience-drill-evidence-<commit>` after oversized-body, concurrent rate-limit, dependency degradation, fail-closed exit, clean restart, and state-preservation checks |
-| SEC-002 | Complete for review intake; authentic independent review pending | Perform an independent threat-model and configuration review of the supported kernel | Canonical current-build threat model plus authority-pinned, build/artifact-bound signed findings ledger; critical/high findings require independently verified closure, lesser exceptions require separate owned expiring approval, and synthetic conformance explicitly cannot claim a review or promotion |
-| SUP-001 | Complete | Produce reproducible release verification without embedding secrets | Current `0.12.0-dev.3` source, registry, documentation, deployment, and migration verification; immutable v0.11.0 checksums, SPDX SBOM, and provenance remain on the published release |
-
-## P1 - single-node production pilot
+## P0 — production candidate closure
 
 | ID | Status | Work | Acceptance evidence |
 |---|---|---|---|
-| PILOT-001 | Pending | Deploy one isolated non-public pilot using external secret custody | Deployment manifest and trust-root inventory |
-| PILOT-002 | Complete for automated candidate; pilot endpoint pending | Add authenticated external metrics collection without exposing sensitive labels | Host-side relay preserves kernel deny-egress, requires the exact four-service Unix-socket scrape, emits 68 fixed OTLP/HTTP JSON points, and uploads signed least-privilege/cardinality evidence; repeat with the pilot collector |
-| PILOT-003 | Complete for automated candidate; live route pending | Add alert routing with bounded retry, redaction, and delivery audit | Alertmanager v2 fixed vocabulary, exact HTTPS allowlist, alert-reserved persistent queue, retry/dead-letter audit, idempotency, negative paths, forced 503/429, and signed receipts; repeat with named pilot on-call route |
-| PILOT-004 | Complete for candidate host | Automate four-service identity and operator/telemetry-token rotation with coordinated trust updates and exact rollback | Protected CI uploads signed, secret-free `axiom-credential-rotation-evidence-<commit>` after active/inactive trust and token rejection checks |
-| PILOT-005 | Complete for candidate host | Re-encrypt and rotate the data-protection key across live state and retained recovery contexts with interruption recovery and rollback | Protected CI uploads signed `axiom-data-key-rotation-evidence-<commit>` after real-stack wrong-key rejection, backup restore, state-preserving rollback, and recovery-copy checks |
-| PILOT-006 | Complete for candidate host | Automate encrypted backup retention and restore verification | Signed policy-derived plan/receipt, kill recovery, data-key interoperability, and weekly protected-CI restore evidence; repeat from pilot-owned media |
-| PILOT-007 | Complete for automated candidate; pilot exercise pending | Enforce incident command, deterministic severity, authority-reducing containment, evidence preservation, communication, recovery, and closure | Protected CI uploads signed `axiom-incident-tabletop-evidence-<commit>` bound to eleven verified control artifacts; repeat with named pilot roster and independent human review |
-| PILOT-008 | Complete for evidence intake; authentic package pending | Require one build-bound signed pilot package without allowing either verifier to promote production | Separately pinned policy authority, five distinct review roles, exact canonical policy/dossier/13-envelope inventory, per-type v2 detail contracts, raw-byte digest and build binding, semantic/secret/symlink/unexpected-file rejection, role signatures, chronology checks, signed CI conformance evidence, and explicit `production_promoted: false` |
-| PILOT-009 | Pending | Dispose the 32 external credential-history attestations | Provider/custodian attestations or independently reviewed not-applicable dispositions bound to the inventory |
-| PILOT-010 | Pending | Commission and complete the authentic independent security review | Authority-pinned findings ledger for the exact source, image, deployment policy, and pilot configuration, with verified remediation |
-| PILOT-011 | Pending | Complete the 30-day controlled pilot observation | Signed availability, capacity, alert acknowledgement, incident, backup, rotation, RPO, RTO, custody, and operator records |
+| OPS-001 | Complete | Candidate container package | Protected image/runtime evidence |
+| OPS-002 | Complete | Backup/tamper/restore/rollback drill | Signed recovery evidence |
+| OPS-003 | Complete | Initial SLO/load/restart baseline | Signed bounded-load evidence |
+| OPS-004 | Complete for candidate | Deny-egress + Unix-socket ingress | `network_mode:none`, route rejection, public TCP negative probe |
+| OPS-005 | Complete for candidate request path | Request pressure + dependency loss | Oversize/rate/dependency/fail-closed/restart/state evidence |
+| SEC-002 | Complete for intake; authentic review pending | Exact current-build independent-review contract | Threat model, signed findings/remediation/exception verifier |
+| SUP-001 | Complete | Reproducible release verification | Source/registry/docs/deployment/migration checks; no embedded secrets |
 
-## P1H - human utility and network activation
-
-This track runs in parallel with the controlled pilot. It may produce local and
-invitation-only previews, but it cannot imply production promotion.
+## P1 — single-node production pilot
 
 | ID | Status | Work | Acceptance evidence |
 |---|---|---|---|
-| UX-001 | Complete | Define and implement a versioned browser/client contract for the authenticated Gateway API | Machine contract and hand-reviewed JSON Schema cover all 29 authenticated routes; same-origin client enforces exact inputs, explicit errors, 1 MiB requests, 2 MiB responses, 1 millisecond-30 second timeouts, AbortSignal cancellation, stable idempotent replay, source parity, real four-service compatibility, and no direct internal-service access |
-| UX-002 | In progress | Build `apps/axiom-one/` as the local personal-node browser/PWA shell outside the trusted kernel | Experimental loopback-only PWA foundation has node health, reviewed bounded Ask, explained approval and receipt records, governed owner-scoped Vault lifecycle, honest unavailable Share/Circles, and advanced raw inspection surfaces; full onboarding, complete lifecycle, session/device review, accessibility/usability evidence, packaging, and support remain pending |
-| UX-003 | In progress | Make plans, grants, denials, uncertainty, approvals, revocations, and receipts understandable to non-developers | Exact experimental explanation contract maps five bounded actions, all 20 stable Gateway outcomes, and all 37 current kernel event kinds; distinguishes active/expired/consumed approvals; provides reversible pre-submit review and same-key uncertain-outcome recovery; preserves raw evidence; and explicitly refuses an authoritative pre-execution kernel-plan claim; separately bound consequential plan/approval, human usability, and promotion evidence remain pending |
-| UX-004 | In progress | Expose encrypted memory, ownership, provenance, ingestion, tombstoning, export, deletion, and recovery through the primary interface | Current bounded slice creates owner-scoped private notes, lists only authorized active objects and edges, records one of three exact directional provenance relations without replacement, confirmation-binds exact tombstones, creates exact-object local exports, reveals bundles only after a separate action, and proves a second principal cannot read, link, export, or tombstone the owner's object; arbitrary relations, edge deletion, bulk ingestion, permitted hard deletion, restore, and human recovery evidence remain pending |
-| UX-005 | Pending | Harden the browser security boundary | Exact origins, CSP, CSRF protection, secure session/cookie policy, idle timeout, device revocation, no secret leakage to logs or browser storage, and adversarial tests |
-| UX-006 | Pending | Make phone, keyboard, screen-reader, reduced-motion, contrast, and plain-language accessibility release gates | Automated accessibility checks plus documented manual test matrix and user evidence |
-| UX-007 | Pending | Package a non-developer local preview and safe update path | Signed artifacts, rollback, migration, uninstall, backup guidance, no production credentials, and no third-party analytics/account dependency |
+| PILOT-001 | Pending | Deploy one isolated non-public pilot with external secret custody | Deployment manifest + trust-root inventory |
+| PILOT-002 | Candidate mechanism complete; pilot endpoint pending | External metrics | Least-privilege Unix-socket scrape, bounded OTLP, signed evidence; repeat with pilot receiver |
+| PILOT-003 | Candidate mechanism complete; pilot route pending | Alert routing | Fixed vocabulary, exact HTTPS destination, bounded retry/dead-letter/idempotency/receipts; repeat with named on-call route |
+| PILOT-004 | Candidate mechanism complete | Service/API credential rotation | Active/inactive trust and exact rollback evidence; repeat under pilot custody |
+| PILOT-005 | Candidate mechanism complete | Data-protection-key rotation | Live/recovery re-encryption, wrong-key rejection, interruption recovery, rollback; repeat under pilot custody |
+| PILOT-006 | Candidate mechanism complete | Backup retention + restore | Signed plan/receipt, recoverable quarantine, protected restore; repeat from pilot-owned media |
+| PILOT-007 | Candidate mechanism complete; human exercise pending | Incident command/tabletop | Automated signed composition; repeat with named pilot roster and human review |
+| PILOT-008 | Intake contract complete; authentic package pending | Exact pilot evidence package | Five roles, 720-hour contract, exact 13-envelope package, explicit non-promotion result |
+| PILOT-009 | Pending | Resolve 32 external credential-history dispositions | Provider/custodian receipt or independently reviewed N/A per entry |
+| PILOT-010 | Pending | Authentic independent security review | Exact source/image/deployment/pilot findings ledger + verified remediation |
+| PILOT-011 | Pending | 30-day controlled observation | Availability/capacity/alerts/incidents/recovery/rotation/RPO/RTO/custody records |
+| PILOT-012 | Pending | External Grid continuity-anchor cadence/custody | Anchor outside `AXIOM_DATA_DIR`, custody/retention record, full-genesis verification, truncation negative test, explicit newest-anchor coverage boundary |
+
+## P1H — human utility and network activation
+
+| ID | Status | Work | Acceptance evidence |
+|---|---|---|---|
+| UX-001 | Complete | Versioned Gateway client contract | Machine contract and reviewed schema cover all 29 authenticated routes; relative-only targets; explicit errors; bounded request/response/timeout; cancellation/idempotency; real-stack compatibility |
+| UX-002 | In progress | AXIOM One local browser/PWA shell | Loopback-only proxy, memory-only token, bounded Ask/Vault/receipt/raw-evidence views; onboarding/session/device/accessibility/package work remains |
+| UX-003 | In progress | Human authority explanations | Five bounded actions, stable outcomes/events, approval states, raw evidence, uncertainty recovery; broader authoritative consequential plan/execute + comprehension evidence pending |
+| UX-004 | In progress | Governed memory lifecycle | Owner create/list, three exact provenance links, correction-without-replacement, tombstone, selective export, bundle reveal, cross-principal negatives; edge deletion/hard deletion/restore/bulk ingestion pending |
+| UX-005 | Pending | Browser security boundary | CSP/CSRF/origin/session/cookie/token/clickjacking/device-revocation/storage tests |
+| UX-006 | Pending | Accessibility/phone usability | Keyboard/screen-reader/contrast/reduced-motion/phone/plain-language human evidence |
+| UX-007 | Pending | Signed local packaging/onboarding | Safe update/rollback/recovery/uninstall/first-use evidence |
 | ARCH-001 | Complete for draft specification; no runtime capability | Define Personal Compute Fabric and Local Trust Plane `1.0.0-draft.1` | Canonical architecture, explicit non-claims, phased MVP, and five JSON Schemas for Personal Agent Pack, Runtime Capsule, Runtime Adapter, Compute Node Profile, and Local Trust Envelope; documentation checks only |
-| AI-001 | Pending | Implement one least-privilege AI provider adapter outside the kernel | Named provider/model, exact egress, request data scope, purpose, timeout, cancellation, cost ceiling, retention, redaction, result receipt, and failure tests |
-| AI-002 | Pending | Support local and user-supplied model providers under the same adapter contract | Conformance suite proving provider replacement, offline/degraded modes, no authority expansion, and no synthetic success |
-| AI-003 | Pending | Deliver bounded useful workflows: summarize, organize, compare, draft, plan, extract commitments, identify gaps, and prepare evidence packages | Scenario tests, usefulness evaluation, provenance, correction path, privacy leakage assessment, and human confirmation before effects |
+| AI-001 | Pending | One least-privilege AI provider | Exact provider/model/egress/data/purpose/budget/timeout/cancel/retention/receipt/failure tests |
+| AI-002 | Pending | Local/user-supplied providers under same contract | Replacement/offline/degraded/no-authority-expansion conformance |
+| AI-003 | Pending | Bounded useful personal workflows | Usefulness/provenance/correction/privacy/cost/latency/cancellation/human-confirmation evaluation |
 | PACK-001 | Pending | Implement secret-free Personal Agent Pack export/import | Supported memory, preferences, policy, consent, routing, evaluation, licences, recovery, cross-provider continuity, deletion, migration, and no plaintext credential evidence |
 | ORCH-001 | Pending | Implement one immutable bounded single-agent Runtime Capsule | Exact implementation/SBOM, interfaces, requested authority, step/call/unit/cost/time budgets, cancellation, stop, fallback, receipts, revocation, uninstall, rollback, and no self-authority expansion |
 | ROUTE-001 | Pending | Implement policy-first compute placement with Private, Balanced, Best, and Budget modes | Hard privacy/consent/destination/jurisdiction/licence/security/health/freshness/capability/deadline/budget filters, transparent ranking, forbidden-fallback tests, and local evaluation ledger |
 | DEVICE-001 | Pending | Prototype a phone-relayed push-to-talk personal endpoint | Unique revocable identity, authenticated pairing, signed firmware, physical mute, recording indication, bounded audio, update/rollback, loss/replacement, no Grid/provider/payment secrets, and honest prototype-only hardware claims |
 | TRUST-001 | Pending | Implement deterministic Local Trust access authorization with synthetic credentials | Canonical request, named verifiers, passkey/user-presence proof, status freshness, deny-dominant policy, one-use mandate, denial/uncertainty receipts, replay/tamper tests, and no model in allow/deny logic |
-| VERIFY-001 | Pending | Release AXIOM Verify as a standalone local/static verifier | Independent signature, digest, continuity, canonical-package, signer, scope, alteration, and non-claim explanations without node membership |
-| CIRCLE-001 | Pending | Implement invitation, membership, device, role, consent, policy, expiry, removal, and revocation records for small trusted Circles | Negative tests for removed/expired devices, role escalation, copied identity, stale invitations, and cross-Circle access |
-| CIRCLE-002 | Pending | Add selectively shared objects, proposals, tasks, commitments, approvals, evidence timelines, and visible conflicts | Two-node and multi-user tests proving owner scope, independent apply approval, concurrency visibility, explicit resolution, export, and exit |
-| CIRCLE-003 | Pending | Run one bounded real-world Circle pilot | Named participants, informed consent, support log, useful completed workflow, revocation/export/deletion exercise, and human trust-comprehension report |
-| MANAGED-001 | Specified | Define AXIOM Managed Node without converting hosting into data ownership | Tenant isolation, customer-controlled export and keys where practical, operator least privilege, support access receipts, migration, backup, deletion, and decommissioning design |
+| VERIFY-001 | Pending | AXIOM Verify | Independent local/static signature/digest/continuity/scope/non-claim verification |
+| CIRCLE-001 | Pending | Circle membership/device/role/consent/revocation | Escalation/stale/removed/cross-Circle negative tests |
+| CIRCLE-002 | Pending | Shared objects/proposals/tasks/commitments/approvals/conflicts | Multi-user owner scope, independent apply, concurrency, resolution, export/exit |
+| CIRCLE-003 | Pending | Bounded real Circle pilot | Consent, useful workflow, support log, revocation/export/deletion, trust-comprehension report |
+| MANAGED-001 | Specified | Managed Node design without platform data ownership | Tenant isolation, export/keys, operator least privilege, support receipts, recovery/migration/decommissioning |
 
-## P2 - multi-host foundations
+## P1M — machine principals, runtimes, and safe external effects
 
-| ID | Status | Work | Acceptance evidence |
-|---|---|---|---|
-| NET-001 | Complete for single-host candidate; multi-host custody pending | Specify and implement mutually authenticated service transport | TLS 1.3, CA and exact active-leaf validation, signed-caller/certificate binding, expiry, offline atomic rotation, retired-leaf rejection, exact rollback, real-stack drill, and signed protected-CI evidence |
-| NET-002 | Complete for single-host candidate; pilot orchestrator pending | Separate four services into independently deployable units | Per-unit application/TLS private keys, Grid-only durable state, internal deny-egress network, signed independent-process failure-isolation and state-preservation drill, and protected four-container Sandbox-only restart evidence |
-| NET-003 | Complete for single-Grid reservation candidate; remote dispatch and multi-host evidence pending | Implement admitted-node discovery and capability-aware scheduling | Signed v2 metadata, authenticated signed discovery, deterministic encrypted leases, copied-key/owner/domain/resource controls, expiry/quarantine/partition-by-missed-renewal tests, restart persistence, and protected signed drill evidence |
-| NET-004 | Complete for two-Grid candidate; independent-host pilot pending | Define consistency and conflict behavior for online causal exchange | Pinned Grid-signed source events, node-signed bundles, encrypted ordered staging, bounded retry, owner-scoped duplicate preflight, exact independent apply approval, two-real-stack partition/rejoin/conflict/resolution drill, and protected signed evidence |
-| NET-005 | Complete for signed provider protocol and reference adapter; pilot custody adapter pending | Add deployment-independent secret and policy providers | Independent Ed25519 signers, digest-pinned command chains, nonce-bound short-lived exact inventories, private per-start materialization, semantic validation, cleanup, rotation/restart proof, invalid-signer fail-closed startup, and signed protected-CI conformance evidence |
-| NET-006 | Pending | Add authenticated remote dispatch and result provenance | Workload identity, grant/input/software binding, measured resources, timeout/cancellation, replay rejection, partial-failure semantics, compensation, signed result evidence, and malicious-node tests |
-| NET-007 | Pending | Repeat causal exchange and service operation across independently operated WAN hosts | External custody, latency/loss/clock/partition injection, sustained backlog, data residency, recovery, key rotation, and independent review evidence |
-| NET-008 | Pending | Define stronger membership identity and endpoint-health evidence before distributed-compute promotion | Threat model and tests for Sybil, copied ownership, endpoint substitution, stale measurement, collusion, quarantine, appeal, and re-admission |
-| NET-009 | Complete for reference single-host topology; pilot orchestrator pending | Enforce an explicit per-service ingress/egress graph | Default-deny 40-route application policy, policy-derived mTLS peer allowlists, four exact internal network segments, loopback-only plaintext development, release provenance, and protected required/forbidden-edge proof |
-
-## P3 - controlled adapters and product ecosystem
-
-No adapter receives production authority merely because it exists. Every item
-requires a named owner, least-privilege capability contract, consent and
-retention model, failure budget, independent test environment, abuse analysis,
-and rollback plan.
+Completion in this track does **not** automatically promote or expose a
+capability.
 
 | ID | Status | Work | Acceptance evidence |
 |---|---|---|---|
-| STUDIO-001 | Pending | Build AXIOM Studio for capsule and adapter development | Manifest, schema, SBOM, permission, threat-model, fixtures, compatibility, conformance evidence, signing, revocation, and rollback generation |
-| ADAPTER-001 | Pending | Implement one consent- and rate-bounded messaging adapter | Exact account scope, recipient confirmation, impersonation protection, retention/deletion, abuse controls, retries, cancellation, receipts, and uninstall |
-| ADAPTER-002 | Specified | Implement controlled ActivityPub, email, and webhook publishing bridges | Separate adapter identities, exact destinations, content previews, moderation, deletion limits, inbound trust, rate controls, and no authority inheritance |
-| ID-001 | Specified | Add a named Verifiable Credentials profile and selective-disclosure boundary | Exact schemas, issuer/verifier trust, status/revocation, holder consent, correlation analysis, interoperability vectors, and independent review |
+| MACHINE-001 | Complete | Human-sponsored constrained machine principals | Finite scopes/actions/purposes/destinations; runtime/expiry/non-delegation; execution-time/request-size/rate/concurrency/response-size ceilings |
+| MACHINE-002 | Complete | Policy-filtered machine discovery | `/v1/machine-discovery` exposes requestability only; normal intent/policy re-evaluation remains required |
+| MACHINE-003 | Complete | Grid-attested terminal machine receipts | Request/machine-authority digests, accepted/terminal anchors, chain assurance, terminal outcome digest, independent Grid-key verification |
+| RUNTIME-001 | Complete for contract + synthetic reference | Agent Runtime Adapter v1 | Byte-pinned schema; 28-case grant/capability/credential/lifecycle/cancel/receipt/rollback drill; no external-runtime certification |
+| RUNTIME-002 | Pending | First bounded maintained external runtime integration | Exact upstream pin; source/licence/dependency/threat review; no-secret read-only Gateway path; native authorization/cancel/idempotency/receipt parity; direct-service denial; independent review |
+| INTENT-001 | Complete for production-unreachable core | Signed dynamic repository-plan resolution | Fresh eligibility, exact repo/base/path/lifetime, signed plan, content-addressed resolution/handoff, staleness/tamper/substitution rejection |
+| INTENT-002 | Complete for production-unreachable core | Resolver admission/review/package/application observation | Independent implementation/security reviews, exact-one mapping package, exact before/after observation, no installation-as-authority |
+| INTENT-003 | Complete for production-unreachable core | Preserve target policy + atomically durable preparation | Resolved target policy/confirmation/independent approval; authenticated Grid read; one transaction `approval.consumed` + `external.effect.prepared`; one-winner concurrency proof |
+| INTENT-004 | **Complete for production-unreachable core** | Evidence-first outbox + repository operator + completion binding | Durable prepare before I/O; uncertainty remains prepared; signed operator receipt before `external.effect.completed`; restart/idempotency/completion-failure tests; operator independently verifies Grid proof before any GitHub request; fixed repo; exact docs paths/content; deterministic effect branch; creates/recovers **open draft PR**; stale-main/path/content/proof/transport-loss tests; `merge_performed:false`; `base_branch_content_changed:false` |
+| INTENT-005 | Pending and explicitly gated | Consider first production resolver mapping | Exact capability/policy/registry/runtime change, public route review, operator credential/egress custody, rollback, negative tests, independent review, protected CI, separate promotion decision; **no direct-main or merge authority** |
+
+The current repository effect is therefore a **built proposal mechanism, not a
+production-reachable action**. `mesh/config/intent-remediation-executors.json`
+has zero mappings, production policy has no
+`repository.docs.pull-request.create`, and no supported runtime route activates
+the chain.
+
+Tracked resolver work remains associated with
+[issue #967](https://github.com/Zoverions/AXIOM-MESH/issues/967). Future issue
+closure should distinguish completion of the safety substrate from any later
+production activation decision.
+
+## P2 — multi-host foundations
+
+| ID | Status | Work | Acceptance evidence |
+|---|---|---|---|
+| NET-001 | Complete for single-host candidate; multi-host custody pending | Mutually authenticated service transport | TLS 1.3, CA/active-leaf validation, signed caller binding, rotation/rollback, real-stack evidence |
+| NET-002 | Complete for single-host candidate; pilot orchestrator pending | Independently deployable units | Per-unit credentials, Grid-only durable state, segmented deny-egress, failure isolation/recovery |
+| NET-003 | Complete for reservation candidate | Admitted-node discovery/scheduling | Signed v2 metadata, filtered discovery, deterministic encrypted leases, owner/domain/resource/security/expiry/quarantine tests |
+| NET-004 | Complete for two-Grid candidate | Online causal exchange | Pinned Grid evidence, signed bundles, encrypted ordered staging, independent approval, partition/rejoin/conflict/convergence tests |
+| NET-005 | Complete for provider protocol/reference adapter | Deployment-independent secret/policy providers | Independent signers, digest-pinned commands, nonce-bound exact inventories, private materialization, invalid-signer rejection |
+| NET-006 | Pending | Authenticated remote dispatch/result provenance | Workload identity, input/software binding, measured resources, timeout/cancel/replay/partial failure, compensation, signed result evidence |
+| NET-007 | Pending | Independently operated WAN hosts | External custody, latency/loss/clock/partition/backlog/residency/recovery/key-rotation evidence |
+| NET-008 | Pending | Stronger membership/endpoint-health evidence | Sybil/copied-owner/endpoint substitution/stale measurement/collusion/quarantine/appeal/re-admission tests |
+| NET-009 | Complete for reference single-host topology | Explicit service ingress/egress graph | Default-deny 40-route application policy, derived mTLS peers, four segments, required/forbidden-edge proof |
+
+## P3 — controlled adapters and product ecosystem
+
+| ID | Status | Work | Acceptance evidence |
+|---|---|---|---|
+| STUDIO-001 | Pending | AXIOM Studio | Manifest/schema/SBOM/permission/threat/fixtures/compatibility/conformance/signing/revocation/rollback generation |
+| ADAPTER-001 | Pending | One bounded messaging adapter | Account scope, recipient confirmation, impersonation/abuse controls, retention/deletion, retries/cancel/receipts/uninstall |
+| ADAPTER-002 | Specified | ActivityPub/email/webhook publishing bridges | Separate identities, exact destinations, previews/moderation/deletion limits/inbound trust/rate controls |
+| ID-001 | Specified | Named VC/selective-disclosure profile | Schemas, issuer/verifier trust, revocation, holder consent, correlation analysis, vectors, review |
 | ID-002 | Specified; synthetic/test authority only | Implement the Local Trust identity-presentation laboratory | WebAuthn, one exact credential profile, holder binding, minimum disclosure, status freshness, revocation, wrong-holder/issuer/audience/replay tests, readable non-claims, and independent AXIOM Verify reproduction |
 | PAY-001 | Specified; synthetic value and processor sandbox only | Implement payment mandate and reconciliation simulation | Tokenized credential boundary, exact payee/amount/currency/fee/purpose, confirmation, local reserve, one-use mandate, idempotency, timeout/late success, uncertain state, reconciliation, refund, reversal, dispute, balanced accounting, and no real-value claim |
-| ZK-001 | Specified | Add one named zero-knowledge proof verifier adapter | Fixed circuit, verification key, public-input schema, implementation digest, positive/negative vectors, resource limits, and no generic-proof claim |
-| STORAGE-001 | Pending | Implement controlled content transfer for admitted storage offers | Object encryption, owner scope, capacity reservation, integrity, retry, deletion, provider loss, retrieval, payment-independent operation, and receipts |
-| CATALOG-001 | Specified | Build a curated capsule catalogue before any open marketplace | Quarantine, review, signer identity, versioning, update policy, permissions diff, vulnerability response, revocation, moderation, and dispute process |
-| GOVERN-001 | Specified | Add portable governance delegation and organization policy packs | Scope, expiry, revocation, non-transferability, appeal, emergency limits, cross-node verification, and no weakening of individual/global denial floors |
-| MANAGED-002 | Specified | Implement managed-node deployment and lifecycle tooling | Provisioning, tenant isolation, updates, rollback, backup, key rotation, export, migration, support access audit, incident response, and decommissioning evidence |
+| ZK-001 | Specified | One named zk verifier adapter | Fixed circuit/key/public inputs/implementation digest/vectors/resource limits |
+| STORAGE-001 | Pending | Controlled storage transfer | Encryption/owner/capacity/integrity/retry/deletion/provider-loss/retrieval/receipts |
+| CATALOG-001 | Specified | Curated capsule catalogue | Quarantine/review/signer/version/update/permission diff/vulnerability/revocation/moderation/dispute |
+| GOVERN-001 | Specified | Portable governance delegation/policy packs | Scope/expiry/revocation/non-transferability/appeal/emergency limits/cross-node verification |
+| MANAGED-002 | Specified | Managed-node lifecycle tooling | Provisioning/isolation/update/rollback/backup/key rotation/export/migration/support audit/decommissioning |
 
-## P4 - isolated frontier incubation
-
-Frontier items may be substantially built, but only in isolated laboratories or
-disabled capability paths. They receive synthetic identities, data, value, and
-networks unless a separately promoted test environment explicitly authorizes
-otherwise.
+## P4 — isolated frontier incubation
 
 | ID | Status | Work | Acceptance evidence |
 |---|---|---|---|
-| LAB-001 | Research | Build a distributed-authority simulator and executable protocol reference | Formal state/transition specification, model checking, Byzantine fault injection, partition/liveness tests, governance-capture scenarios, and reproducible simulations |
-| LAB-002 | Research | Implement candidate BFT, replicated-evidence, threshold-authorization, and catastrophic-recovery protocols | Safety/liveness invariants, version-skew and rollback behavior, adversarial tests, independent cryptographic review, and proof that complexity is justified |
-| LAB-003 | Research | Build a test-value-only settlement laboratory | Double-entry reconciliation, token/non-token models, escrow, rewards, bonds, staking, treasury, dispute, insolvency, oracle, MEV, bridge, key-compromise, and invariant tests |
-| LAB-004 | Research | Build bounded autonomous-agent and research-loop runtimes | Budgets, cancellation, checkpoints, provenance, evaluator separation, escalation, no self-authority expansion, adversarial tool tests, and reproducible outcome scoring |
-| LAB-005 | Research | Build task-market, service-offer, compensation, payroll-simulation, and dispute primitives | Identity, labor-policy assumptions, accounting, quality evidence, cancellation, appeal, inheritance, fraud, collusion, and synthetic-value-only tests |
-| LAB-006 | Research | Build regulated-domain development harnesses for education, health, government, finance, legal, and employment capsules | Synthetic/consented data boundary, jurisdiction profiles, consent, retention, appeal, accessibility, professional responsibility, safety, audit, and domain-review templates |
-| LAB-007 | Research | Build embodied-system simulation and safety envelopes | Device identity, command grants, geofence, force/energy limits, digital twin, degraded mode, emergency halt, operator takeover, incident evidence, and no real actuation by default |
-| LAB-008 | Research | Evaluate arbitrary-code isolation without promoting it | Rootless runtime, digest allowlist, syscall/filesystem/network/device limits, secret denial, resource exhaustion, escape tests, teardown, provenance, and external isolation review |
-| LAB-009 | Research | Develop a post-quantum migration plan and hybrid test profile | Inventory, algorithm agility, compatibility, hybrid signatures/KEM experiments, performance, downgrade prevention, backup/key-history implications, and standards tracking |
+| LAB-001 | Research | Distributed-authority simulator/reference protocol | Formal state model, model checking, Byzantine/partition/liveness/governance-capture experiments |
+| LAB-002 | Research | BFT/replicated-evidence/threshold-authorization candidates | Safety/liveness/version-skew/rollback/adversarial/independent cryptographic review |
+| LAB-003 | Research | Test-value settlement laboratory | Accounting/escrow/rewards/bonds/staking/treasury/dispute/oracle/MEV/bridge/invariant tests |
+| LAB-004 | Research | Bounded autonomous/research-loop runtimes | Budgets/cancel/checkpoints/provenance/evaluator separation/escalation/no self-authority expansion |
+| LAB-005 | Research | Task-market/service/compensation simulations | Identity/accounting/quality/cancel/appeal/fraud/collusion/synthetic value |
+| LAB-006 | Research | Regulated-domain harnesses | Synthetic/consented data, jurisdiction profiles, consent/retention/appeal/accessibility/professional responsibility/domain review |
+| LAB-007 | Research | Embodied-system simulation/safety envelopes | Device identity, command grants, geofence/force limits/digital twin/degraded mode/emergency halt/operator takeover |
+| LAB-008 | Research | Arbitrary-code isolation evaluation | Rootless runtime, digest allowlist, syscall/fs/network/device/secret/resource/escape/teardown evidence |
+| LAB-009 | Research | Post-quantum migration plan | Inventory, algorithm agility, hybrid experiments, performance, downgrade resistance, backup/key-history compatibility |
 
-These laboratories create future options and reduce uncertainty. They are not
-production promises, public settlement systems, autonomous authorities, or
-regulated-domain approvals.
+Frontier completion creates options and reduces uncertainty. It is not a public
+production, settlement, autonomous-authority, or regulated-domain claim.
