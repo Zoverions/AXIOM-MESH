@@ -1,0 +1,49 @@
+{
+  "schema": "axiom-local-git-source-continuity-contract.v1",
+  "version": 1,
+  "status": "specified-foundation",
+  "purpose": "Define the minimum evidence required to derive AXIOM source identity from a local working or bare Git repository without relying on a repository-host API or on Git object identity alone.",
+  "core_invariant": "Git locates and structures the source graph; AXIOM independently commits each tracked blob's raw bytes before treating a local replica as digest-verified.",
+  "inspection": {
+    "provider_api_required": false,
+    "network_required": false,
+    "shell_allowed": false,
+    "repository_input": "absolute-local-directory",
+    "git_object_format_explicit": true,
+    "git_connectivity_verified": true,
+    "recursive_tree_inventory_required": true,
+    "raw_blob_sha256_required": true,
+    "git_lazy_fetch_disabled": true,
+    "filesystem_path_in_evidence": false
+  },
+  "sha1_boundary": {
+    "git_sha1_object_ids_sufficient_as_axiom_source_commitment": false,
+    "independent_source_byte_commitment_required": true,
+    "independent_source_byte_digest": "SHA-256",
+    "git_archive_format_used_as_source_commitment": false
+  },
+  "submodules": {
+    "supported_in_v1": false,
+    "reason": "A Git submodule commit entry refers to source outside the parent repository's blob graph. AXIOM v1 fails closed until the referenced repository and exact commit can be independently inspected and bound into the parent source state."
+  },
+  "replica_verification": {
+    "commit_oid_match_required": true,
+    "tree_oid_match_required": true,
+    "source_manifest_digest_match_required": true,
+    "object_connectivity_required": true,
+    "independent_source_byte_commitment_required": true,
+    "lazy_remote_object_fetch_allowed": false,
+    "matching_replica_is_lineage_authority": false
+  },
+  "cryptographic_agility": {
+    "git_object_format_is_permanent_identity": false,
+    "axiom_manifest_digest_profile_is_permanent_identity": false,
+    "post_quantum_migration_required": true
+  },
+  "claim_boundary": [
+    "This contract does not claim SHA-256 is post-quantum secure for digital signatures or identity continuity.",
+    "This contract does not configure a mirror or perform a repository mutation.",
+    "This contract does not make a locally verified source state an accepted AXIOM lineage state; governance acceptance remains separate.",
+    "This contract does not support submodule source continuity in v1."
+  ]
+}
