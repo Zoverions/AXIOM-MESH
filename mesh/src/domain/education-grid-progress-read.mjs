@@ -3,14 +3,16 @@ import {
   ValidationError,
   assertPlainObject,
   assertString,
-  digestObject,
 } from '../lib/canonical.mjs';
 import { createGridEducationConsentAssertion } from './education-grid-consent.mjs';
 import {
   EDUCATION_LEARNER_EVENT_RECORDED_KIND,
   validateEducationLearnerEventRecordPayload,
 } from './education-learner-append-mutation.mjs';
-import { createEducationLearnerRecordProvider } from './education-learner-record-provider.mjs';
+import {
+  createEducationLearnerRecordProvider,
+  executeEducationLearnerRecordAction,
+} from './education-learner-record-provider.mjs';
 
 const PRINCIPAL_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const MAX_PROGRESS_EVENTS = 4096;
@@ -93,7 +95,7 @@ async function readProgressFromGrid(store, input) {
     );
     const payload = { ...payloadWithEvidence };
     delete payload.evidence;
-    const { input: recordedInput, record_digest } =
+    const { input: recordedInput } =
       validateEducationLearnerEventRecordPayload(payload);
     if (recordedInput.subject_id !== input.subject_id) {
       throw new ValidationError('Native learner progress record subject mismatch');
@@ -112,8 +114,6 @@ async function readProgressFromGrid(store, input) {
     }
     selected.push({
       input: recordedInput,
-      record_digest,
-      event_hash: event.event_hash,
       occurredMillis,
     });
     if (selected.length > MAX_PROGRESS_EVENTS) {
@@ -138,10 +138,6 @@ async function readProgressFromGrid(store, input) {
     course_code: input.course_code,
     ...(input.as_of === undefined ? {} : { as_of: input.as_of }),
     events: Object.freeze(selected.map(({ input: record }) => projectedEvent(record))),
-    evidence_refs: Object.freeze(
-      selected.map(({ event_hash, record_digest }) =>
-        `grid-event:${event_hash}:learner-record:${record_digest}`),
-    ),
   });
 }
 
@@ -151,7 +147,17 @@ export function createGridNativeEducationLearnerReadProvider({
   provider_id = 'provider:grid-native-education-learner-read',
   provider_version = '0.1.0',
 } = {}) {
-  const assertConsent = createGridEducationConsentAssertion({ store, now });
+  const gridConsent = createGridEducationConsentAssertion({ store, now });
+  const assertConsent = async request => {
+    if (await gridConsent(request) !== true) {
+      throw new AxiomError(
+        'education_consent_unavailable',
+        'Active learner progress review consent was not found',
+        409,
+      );
+    }
+    return true;
+  };
   return createEducationLearnerRecordProvider({
     provider_id,
     provider_version,
@@ -187,9 +193,6 @@ export async function executeGridNativeEducationLearnerProgressRead({
     );
   }
   const provider = createGridNativeEducationLearnerReadProvider({ store, now });
-  const { executeEducationLearnerRecordAction } = await import(
-    './education-learner-record-provider.mjs'
-  );
   const executed = await executeEducationLearnerRecordAction(
     'education.learner.progress.read',
     input,
@@ -207,6 +210,6 @@ export async function executeGridNativeEducationLearnerProgressRead({
     provider_version: executed.provider_version,
     provider_capability: executed.provider_capability,
     result: executed.result,
-    result_digest: digestObject(executed.result),
+    result_digest: executed.result_digest,
   });
 }
