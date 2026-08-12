@@ -110,8 +110,8 @@ data, failure criteria, halt procedure, and reproducibility steps.
    status, roadmap, execution queue, readiness tracker, release notes, white
    paper, threat model, and operator/user runbooks as applicable.
 5. For defects/security fixes, search the supported tree for equivalent patterns
-   and fix or explicitly justify each matching site; add class-level regression
-   coverage, not only one-instance coverage.
+   and fix or explicitly justify each matching site; add regression coverage for
+   the class, not only one-instance coverage.
 6. Add/update rollback, uninstall, migration, recovery, and decommissioning for
    every exposed component.
 7. Never commit private keys, tokens, data-protection keys, production data,
