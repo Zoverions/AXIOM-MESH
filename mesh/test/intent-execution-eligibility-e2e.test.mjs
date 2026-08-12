@@ -119,12 +119,12 @@ async function vote(gateway, token, proposalId) {
   assert.equal(result.status, 'completed');
 }
 
-function enableGovernanceClock(t) {
-  t.mock.timers.enable({
-    apis: ['Date'],
-    now: new Date()
-  });
-  return t.mock.timers;
+async function waitPast(timestamp, marginMs = 50) {
+  const target = new Date(timestamp).valueOf() + marginMs;
+  const remaining = target - Date.now();
+  if (remaining > 0) {
+    await new Promise(resolve => setTimeout(resolve, remaining));
+  }
 }
 
 async function ratify({
@@ -135,13 +135,9 @@ async function ratify({
   voterToken,
   title,
   action,
-  clock,
-  votingMs = 900,
-  activationMs = 1_700
+  votingMs = 5_000,
+  activationMs = 7_000
 }) {
-  if (!clock || typeof clock.tick !== 'function') {
-    throw new TypeError('ratify requires a deterministic test clock');
-  }
   const started = Date.now();
   const votingEndsAt = new Date(started + votingMs).toISOString();
   const activateAfter = new Date(started + activationMs).toISOString();
@@ -161,7 +157,7 @@ async function ratify({
     }
   });
   await vote(gateway, voterToken, proposed.proposal_id);
-  clock.tick(votingMs + 1);
+  await waitPast(votingEndsAt);
   await approvedIntent({
     gateway,
     requesterToken: operatorToken,
@@ -171,7 +167,7 @@ async function ratify({
     confirmation: 'confirm:governance.finalize',
     input: { proposal_id: proposed.proposal_id }
   });
-  clock.tick(Math.max(1, activationMs - votingMs));
+  await waitPast(activateAfter);
   const activated = await approvedIntent({
     gateway,
     requesterToken: operatorToken,
@@ -241,7 +237,6 @@ async function findPortBlock() {
 }
 
 test('v0.6 evaluates a real ratified remediation and builds no executing effect', async t => {
-  const clock = enableGovernanceClock(t);
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-intent-v06-e2e-'));
   const basePort = await findPortBlock();
   const tokens = {
@@ -293,10 +288,7 @@ test('v0.6 evaluates a real ratified remediation and builds no executing effect'
     approverToken: tokens.approver,
     voterToken: tokens.voter,
     title: 'Activate v0.6 execution eligibility contract',
-    action: activationGovernanceAction(activation),
-    clock,
-    votingMs: 1_100,
-    activationMs: 2_100
+    action: activationGovernanceAction(activation)
   });
 
   const attestation = buildIntentAttestationRecord(activation, {
@@ -339,8 +331,7 @@ test('v0.6 evaluates a real ratified remediation and builds no executing effect'
     approverToken: tokens.approver,
     voterToken: tokens.voter,
     title: 'Ratify v0.6 remediation candidate',
-    action: remediationGovernanceAction(remediation),
-    clock
+    action: remediationGovernanceAction(remediation)
   });
 
   page = await api(gateway, tokens.operator, '/v1/proposals?limit=100');
