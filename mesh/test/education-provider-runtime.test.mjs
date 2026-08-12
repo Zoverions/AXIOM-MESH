@@ -16,6 +16,7 @@ import {
 
 const DIGEST_A = 'a'.repeat(64);
 const DIGEST_B = 'b'.repeat(64);
+const ACTOR = 'human:educator-001';
 
 function contractFields() {
   return {
@@ -88,6 +89,7 @@ test('runtime injects learner-record provider only for learner-record actions', 
   const provider = learnerRecordProvider();
   const append = await executeEducationAction('education.learner.event.append', appendInput(), {
     learnerRecordProvider: provider,
+    actor: ACTOR,
   });
   const read = await executeEducationAction('education.learner.progress.read', readInput(), {
     learnerRecordProvider: provider,
