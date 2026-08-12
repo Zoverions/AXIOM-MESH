@@ -10,6 +10,7 @@ import { GridStore } from './store.mjs';
 import { loadDataProtector } from '../lib/protector.mjs';
 import { runServiceProcess } from '../lib/service-lifecycle.mjs';
 import { buildMachineIntentReceipt } from '../lib/machine-receipt.mjs';
+import { preflightEducationGridCommit } from '../domain/education-grid-commit.mjs';
 import {
   acquireGridRuntimeLock,
   createGridBackup,
@@ -109,6 +110,12 @@ export async function createGridService(config = meshConfig()) {
       )
       : [];
     for (const event of exports) store.preflightExportRequest(actor, event);
+    if (Array.isArray(input.events)) {
+      for (const event of input.events) preflightEducationGridCommit(store, actor, event);
+    }
+    // Education preflight and append are intentionally adjacent synchronous calls:
+    // no revoke request can interleave between current-state validation and append
+    // within this Grid process.
     const appended = store.appendEvents({ traceId, actor, events: input.events });
     const completedExports = [];
     const completedBackups = [];

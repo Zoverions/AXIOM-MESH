@@ -21,6 +21,11 @@ import {
 } from '../lib/service-network-policy.mjs';
 import { planDigest, validatePlan } from '../lib/plan.mjs';
 import { effectDestinationForTool } from '../lib/effect-destination.mjs';
+import { loadEducationContract } from '../domain/education-contract.mjs';
+import {
+  EDUCATION_LEARNER_RECORD_TOOL,
+  executeEducationLearnerEvent
+} from '../domain/education-learner-record.mjs';
 import { executeBuiltin } from './executor.mjs';
 
 const DIGEST = /^[a-f0-9]{64}$/;
@@ -34,6 +39,7 @@ export async function createSandboxService(config = meshConfig()) {
       })
     : null;
   const hypervisorKey = await loadTrustedKey(config.dataDir, 'hypervisor');
+  const educationContract = await loadEducationContract();
   const requestReplay = new ReplayGuard();
   const capabilityReplay = new ReplayGuard();
   const router = new Router();
@@ -114,7 +120,14 @@ export async function createSandboxService(config = meshConfig()) {
       throw new AxiomError('capability_subject_mismatch', 'Capability subject does not match the intent principal', 403);
     }
     const startedAt = new Date().toISOString();
-    const result = executeBuiltin({ tool: claims.tool, intent });
+    const result = claims.tool === EDUCATION_LEARNER_RECORD_TOOL
+      ? executeEducationLearnerEvent({
+          contract: educationContract,
+          intent,
+          capability: claims,
+          plan
+        })
+      : executeBuiltin({ tool: claims.tool, intent });
     const completedAt = new Date().toISOString();
     const attested = {
       trace_id: traceId,

@@ -50,6 +50,8 @@ import {
   allowedInboundTransportPeers,
   authorizeInboundServiceRequest
 } from '../lib/service-network-policy.mjs';
+import { loadEducationContract } from '../domain/education-contract.mjs';
+import { applyEducationRuntimeGate } from '../domain/education-runtime-gate.mjs';
 
 const PRINCIPAL_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 
@@ -64,6 +66,7 @@ export async function createHypervisorService(config = meshConfig()) {
   const sandboxKey = await loadTrustedKey(config.dataDir, 'sandbox');
   const requestReplay = new ReplayGuard();
   const basePolicy = await loadPolicyStack(config.policyPaths);
+  const educationContract = await loadEducationContract();
   const router = new Router();
   const telemetry = new ServiceTelemetry('hypervisor');
 
@@ -216,6 +219,29 @@ export async function createHypervisorService(config = meshConfig()) {
     if (effectDestination) {
       decision = { ...decision, effect_destination: effectDestination };
     }
+
+    if (intent.action.startsWith('education.')) {
+      let consents = [];
+      const subjectId = intent.input?.subject_id;
+      if (
+        decision.allow
+        && typeof subjectId === 'string'
+        && subjectId === intent.principal.id
+      ) {
+        const response = await gridGet(
+          `/internal/v1/consents/${encodeURIComponent(subjectId)}`,
+          traceId
+        );
+        consents = Array.isArray(response.consents) ? response.consents : [];
+      }
+      decision = applyEducationRuntimeGate({
+        contract: educationContract,
+        intent,
+        decision,
+        consents
+      });
+    }
+
     const invocationEnvelope = buildNativeInvocationEnvelope(intent, decision);
     const invocationDigest = invocationEnvelopeDigest(invocationEnvelope);
     await commit(traceId, intent.principal.id, [{
