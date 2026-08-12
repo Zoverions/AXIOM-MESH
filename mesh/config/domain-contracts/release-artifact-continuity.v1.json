@@ -1,0 +1,69 @@
+{
+  "schema": "axiom-release-artifact-continuity-contract.v1",
+  "version": 1,
+  "status": "specified-foundation",
+  "purpose": "Define a provider-independent release manifest and non-authoritative artifact storage observations so an exact AXIOM release can be identified, reconstructed, and assessed for continuity without making a release page, package registry, object store, container registry, or mirror the release authority.",
+  "core_invariants": [
+    "Release identity is the content-addressed manifest bound to an exact accepted source state; a provider release page is only a location/observation.",
+    "Artifact identity is its canonical artifact id plus exact byte digest and length; a URL, registry tag, or provider object id is not artifact identity.",
+    "Replica observations prove availability of expected bytes; replica count or provider consensus does not promote a release or alter its identity.",
+    "Required reconstruction artifacts and their evidence relationships are explicit and fail closed when missing or mismatched."
+  ],
+  "manifest": {
+    "project_id_required": true,
+    "release_id_provider_independent": true,
+    "release_version_required": true,
+    "channel_required": true,
+    "source_state_digest_required": true,
+    "artifacts_content_addressed": true,
+    "artifact_kinds": [
+      "source_archive",
+      "binary",
+      "package",
+      "container_image",
+      "sbom",
+      "provenance",
+      "signature",
+      "documentation",
+      "other"
+    ],
+    "artifact_evidence_relationships_verified": true,
+    "provider_locator_allowed": false,
+    "provider_release_id_allowed": false,
+    "production_promotion_claimed": false
+  },
+  "storage_observation": {
+    "manifest_digest_binding_required": true,
+    "artifact_id_binding_required": true,
+    "expected_artifact_digest_binding_required": true,
+    "storage_classes": [
+      "local",
+      "offline_archive",
+      "object_store",
+      "forge_release",
+      "package_registry",
+      "container_registry",
+      "p2p",
+      "other"
+    ],
+    "locator_is_identity": false,
+    "latest_observation_per_artifact_replica": true,
+    "same_time_conflict_fails_closed": true,
+    "non_authoritative_required": true
+  },
+  "continuity_assessment": {
+    "required_artifacts_must_meet_minimum_verified_copies": true,
+    "required_storage_classes_must_be_observed": true,
+    "stale_future_divergent_unavailable_compromised_observations_do_not_count": true,
+    "different_urls_in_one_storage_class_do_not_satisfy_storage_class_diversity": true,
+    "release_page_alone_is_insufficient_when_archive_or_registry_classes_are_required": true,
+    "release_authority_granted": false,
+    "production_promotion_granted": false
+  },
+  "claim_boundary": [
+    "This contract does not upload, download, publish, delete, or mutate release artifacts.",
+    "This contract does not verify provider account ownership or storage failure-domain independence beyond declared storage classes.",
+    "This contract does not make a CI pass, replica majority, provider release page, or registry tag a release promotion authority.",
+    "This contract does not claim an artifact is available unless a current exact observation supports that claim."
+  ]
+}
