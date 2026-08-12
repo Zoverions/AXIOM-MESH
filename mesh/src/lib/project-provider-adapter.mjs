@@ -49,6 +49,11 @@ function stringOrNull(value, name, { max = 2048 } = {}) {
   return present(value) ? assertString(value, name, { min: 1, max }) : null;
 }
 
+function requiredBoolean(value, name) {
+  if (typeof value !== 'boolean') throw new ValidationError(`${name} must be a boolean`);
+  return value;
+}
+
 function iso(value, name) {
   const raw = assertString(value, name, { min: 1, max: 64 });
   const parsed = new Date(raw);
@@ -103,7 +108,7 @@ function normalizeActorBinding(raw) {
   }
   const value = assertPlainObject(raw, 'provider capture actor binding');
   rejectUnknown(value, new Set(['actor_id', 'binding_digest', 'verified']), 'provider capture actor binding');
-  const verified = value.verified === true;
+  const verified = requiredBoolean(value.verified, 'actor_binding.verified');
   const actorId = present(value.actor_id) ? id(value.actor_id, 'actor_binding.actor_id') : null;
   const bindingDigest = nullableDigest(value.binding_digest, 'actor_binding.binding_digest');
   if (verified && (actorId === null || bindingDigest === null)) {
@@ -130,9 +135,12 @@ function normalizeContent(raw) {
     throw new ValidationError('provider capture content mode is unsupported');
   }
 
+  const hasInline = present(value.inline_utf8);
+  const hasProtectedRef = present(value.protected_ref);
+
   if (value.mode === 'inline_public') {
-    if (typeof value.inline_utf8 !== 'string') {
-      throw new ValidationError('inline provider content requires UTF-8 text');
+    if (!hasInline || typeof value.inline_utf8 !== 'string' || hasProtectedRef) {
+      throw new ValidationError('inline provider content requires only UTF-8 inline text');
     }
     const bytes = Buffer.from(value.inline_utf8, 'utf8');
     const computedDigest = sha256(bytes);
@@ -152,6 +160,9 @@ function normalizeContent(raw) {
     };
   }
 
+  if (hasInline) {
+    throw new ValidationError('non-inline provider content cannot carry inline bytes that would be discarded');
+  }
   if (!Number.isSafeInteger(value.byte_length) || value.byte_length < 0) {
     throw new ValidationError('provider captured non-inline content requires a non-negative byte length');
   }
@@ -162,7 +173,14 @@ function normalizeContent(raw) {
     content_digest: digest(value.content_digest, 'content.content_digest'),
     byte_length: value.byte_length
   };
-  if (value.mode === 'protected_reference') output.protected_ref = value.protected_ref;
+  if (value.mode === 'protected_reference') {
+    if (!hasProtectedRef) {
+      throw new ValidationError('protected provider content requires an opaque protected reference');
+    }
+    output.protected_ref = value.protected_ref;
+  } else if (hasProtectedRef) {
+    throw new ValidationError('digest-only provider content cannot carry a protected reference that would be discarded');
+  }
   return output;
 }
 
@@ -176,6 +194,7 @@ export function adaptProjectProviderCapture(raw) {
     'object_kind',
     'event_kind',
     'occurred_at',
+    'observed_at',
     'external',
     'content',
     'source_state_digest',
@@ -199,6 +218,19 @@ export function adaptProjectProviderCapture(raw) {
     throw new ValidationError('project provider capture content-address profile is unsupported');
   }
 
+  const occurredAt = iso(value.occurred_at, 'occurred_at');
+  const observedAt = iso(value.observed_at, 'observed_at');
+  if (new Date(observedAt) < new Date(occurredAt)) {
+    throw new ValidationError('provider observation cannot precede the provider-reported event occurrence');
+  }
+  const providerAuthenticityVerified = requiredBoolean(
+    value.provider_authenticity_verified,
+    'provider_authenticity_verified'
+  );
+  const eventContentReproduced = requiredBoolean(
+    value.event_content_reproduced,
+    'event_content_reproduced'
+  );
   const external = normalizeExternal(value.external);
   const actorBinding = normalizeActorBinding(value.actor_binding);
   if (actorBinding.verified && external.actor_id === null) {
@@ -216,7 +248,7 @@ export function adaptProjectProviderCapture(raw) {
     project_object_id: id(value.project_object_id, 'project_object_id'),
     object_kind: value.object_kind,
     event_kind: value.event_kind,
-    occurred_at: iso(value.occurred_at, 'occurred_at'),
+    occurred_at: occurredAt,
     time_assurance: 'provider_reported',
     actor: actorBinding.verified
       ? {
@@ -248,9 +280,9 @@ export function adaptProjectProviderCapture(raw) {
     actor_binding_verified: actorBinding.verified,
     locator: external.locator,
     provider_evidence_digest: digest(value.provider_evidence_digest, 'provider_evidence_digest'),
-    provider_authenticity_verified: value.provider_authenticity_verified === true,
-    event_content_reproduced: value.event_content_reproduced === true,
-    observed_at: iso(value.occurred_at, 'occurred_at'),
+    provider_authenticity_verified: providerAuthenticityVerified,
+    event_content_reproduced: eventContentReproduced,
+    observed_at: observedAt,
     non_authoritative: true,
     content_address_profile: SOURCE_CONTENT_ADDRESS_PROFILE
   });
