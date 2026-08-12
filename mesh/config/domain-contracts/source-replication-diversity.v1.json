@@ -1,0 +1,55 @@
+{
+  "schema": "axiom-source-replication-diversity-contract.v1",
+  "version": 1,
+  "status": "specified-foundation",
+  "purpose": "Evaluate durability and failure-domain diversity for one already-accepted AXIOM source state without allowing replica count, mirror consensus, or placement claims to become source-lineage authority.",
+  "core_invariant": "Replication proves durability and availability. It does not decide which source state AXIOM accepts.",
+  "inputs": {
+    "accepted_source_state_required": true,
+    "latest_replica_observation_per_replica_required": true,
+    "exact_digest_verified_replica_required_for_healthy_count": true,
+    "placement_evidence_separate_from_replica_locator": true,
+    "external_placement_evidence_verification_required_before_failure_domain_claim": true
+  },
+  "policy": {
+    "minimum_verified_replicas": true,
+    "maximum_observation_age_seconds": true,
+    "maximum_unhealthy_replicas": true,
+    "required_transport_classes": true,
+    "required_availability_classes": true,
+    "minimum_placement_assurance": true,
+    "minimum_distinct_storage_domains": true,
+    "minimum_distinct_operator_domains": true,
+    "minimum_distinct_provider_domains": true,
+    "minimum_distinct_network_domains": true,
+    "minimum_distinct_jurisdiction_domains": true
+  },
+  "failure_domain_honesty": {
+    "different_urls_prove_independence": false,
+    "different_accounts_at_one_provider_prove_independence": false,
+    "different_transports_prove_storage_independence": false,
+    "opaque_domain_identifiers_allowed": true,
+    "exact_physical_location_required": false,
+    "unverified_placement_claims_count_toward_diversity": false
+  },
+  "readiness_states": [
+    "unreplicated",
+    "under_replicated",
+    "replicated_low_diversity",
+    "degraded",
+    "continuity_unverified",
+    "continuity_ready"
+  ],
+  "recovery_rule": "Loss or compromise of a replica never changes accepted lineage. Recovery finds a surviving digest-verified copy, reconstructs another replica, independently verifies it, records a new non-authoritative observation, and restores readiness without rewriting accepted history.",
+  "privacy": {
+    "raw_location_required": false,
+    "opaque_failure_domain_ids_preferred": true,
+    "private_replica_locator_is_governed_separately": true
+  },
+  "claim_boundary": [
+    "This contract does not provision, synchronize, delete, or mutate a mirror.",
+    "This contract does not verify an external placement attestation signature; it consumes only placement evidence already marked verified by a separate verifier.",
+    "This contract does not make a replica, provider, majority, or transport quorum an authority over accepted source lineage.",
+    "A continuity-ready assessment proves only that supplied current evidence satisfies the configured replication policy; it does not prove unobserved physical or organizational independence."
+  ]
+}
