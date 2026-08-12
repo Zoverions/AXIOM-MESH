@@ -11,6 +11,7 @@ const SHA_B = 'b'.repeat(64);
 const SHA_C = 'c'.repeat(64);
 const SHA_D = 'd'.repeat(64);
 const SHA_E = 'e'.repeat(64);
+const SHA_F = 'f'.repeat(64);
 
 function fixtureSuite() {
   return {
@@ -60,14 +61,19 @@ function fixtureRun(suite, answers, overrides = {}) {
     inference: {
       samples_per_item: 1,
       selection_method: 'single',
+      sampling_policy_sha256: SHA_F,
       temperature: 0,
       maximum_reasoning_steps: 32
     },
     compute: {
       model_calls: 3,
+      sample_generations: 3,
       input_units: 300,
       output_units: 30,
-      wall_ms: 120
+      wall_ms: 120,
+      estimated_flops: 300000,
+      peak_memory_bytes: 1048576,
+      energy_joules: 60
     },
     observations: [
       {
@@ -115,6 +121,8 @@ test('reasoning evaluation reports joint correctness, sensitivity, invariance, a
   assert.equal(report.metrics.wrong_load_bearing_flips, 0);
   assert.equal(report.compute.model_calls_per_item, 1);
   assert.equal(report.compute.model_calls_per_jointly_correct_pair, 1.5);
+  assert.equal(report.compute.estimated_flops_per_jointly_correct_pair, 150000);
+  assert.equal(report.compute.energy_joules_per_jointly_correct_pair, 30);
   assert.match(report.run_digest, /^[a-f0-9]{64}$/);
   assert.match(report.report_digest, /^[a-f0-9]{64}$/);
 });
@@ -169,6 +177,8 @@ test('run rejects hidden aggregation and incomplete observation coverage', () =>
       inference: {
         samples_per_item: 8,
         selection_method: 'single',
+        sampling_policy_sha256: SHA_F,
+        selection_policy_sha256: SHA_E,
         temperature: 0.7,
         maximum_reasoning_steps: 32
       }
@@ -189,4 +199,58 @@ test('run rejects hidden aggregation and incomplete observation coverage', () =>
     () => scoreReasoningEvaluationRun(suite, incomplete),
     /must contain 3-3 items/
   );
+});
+
+test('suite requires both sensitivity and invariance evidence', () => {
+  const noIrrelevant = fixtureSuite();
+  noIrrelevant.cases[0].perturbations = noIrrelevant.cases[0].perturbations.filter(
+    item => item.kind === 'load-bearing'
+  );
+  assert.throws(
+    () => validateReasoningEvaluationSuite(noIrrelevant),
+    /at least one irrelevant perturbation/
+  );
+
+  const noLoadBearing = fixtureSuite();
+  noLoadBearing.cases[0].perturbations = noLoadBearing.cases[0].perturbations.filter(
+    item => item.kind === 'irrelevant'
+  );
+  assert.throws(
+    () => validateReasoningEvaluationSuite(noLoadBearing),
+    /at least one load-bearing perturbation/
+  );
+});
+
+test('multi-sample runs bind selection policy and disclose generated samples', () => {
+  const suite = fixtureSuite();
+  const run = fixtureRun(suite, {
+    canonical: 'yes',
+    loadBearing: 'no',
+    irrelevant: 'yes'
+  });
+  run.inference = {
+    samples_per_item: 2,
+    selection_method: 'majority-vote',
+    sampling_policy_sha256: SHA_F,
+    temperature: 0.7,
+    maximum_reasoning_steps: 32
+  };
+  run.compute.sample_generations = 6;
+  assert.throws(
+    () => scoreReasoningEvaluationRun(suite, run),
+    /selection_policy_sha256/
+  );
+
+  run.inference.selection_policy_sha256 = SHA_E;
+  run.compute.sample_generations = 5;
+  assert.throws(
+    () => scoreReasoningEvaluationRun(suite, run),
+    /sample_generations must be at least 6/
+  );
+
+  run.compute.sample_generations = 7;
+  const report = scoreReasoningEvaluationRun(suite, run);
+  assert.equal(report.compute.minimum_declared_sample_generations, 6);
+  assert.equal(report.compute.extra_sample_generations, 1);
+  assert.equal(report.compute.sample_generations_per_item, 7 / 3);
 });
