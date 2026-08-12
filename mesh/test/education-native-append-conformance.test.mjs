@@ -93,25 +93,33 @@ function learnerEventInput({
   };
 }
 
-test('test-only policy proves native learner append across Gateway, Hypervisor, Sandbox, and Grid', { timeout: 60_000 }, async () => {
+function learnerProgressInput({ subject, consentId, courseCode = 'MTH1W' }) {
+  return {
+    contract_id: EDUCATION_CONTRACT_ID,
+    contract_version: EDUCATION_CONTRACT_VERSION,
+    contract_sha256: EDUCATION_CONTRACT_SHA256,
+    subject_id: subject,
+    consent_id: consentId,
+    purpose: 'learning-progress-review',
+    course_code: courseCode,
+  };
+}
+
+test('test-only policy proves native learner append and self-read across Gateway, Hypervisor, Sandbox, and Grid', { timeout: 90_000 }, async () => {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-education-native-conformance-'));
   const policyPath = join(dataDir, 'education-conformance-policy.json');
   const productionPolicy = JSON.parse(await readFile(
     new URL('../config/policy.json', import.meta.url),
     'utf8',
   ));
-  assert.equal(
-    productionPolicy.actions['education.learner.event.append'].decision,
-    'deny',
-  );
-  assert.equal(
-    productionPolicy.actions['education.learner.event.append'].code,
-    'capability_unavailable',
-  );
-  assert.equal(
-    productionPolicy.actions['education.learner.event.append'].tool,
-    undefined,
-  );
+  for (const action of [
+    'education.learner.event.append',
+    'education.learner.progress.read',
+  ]) {
+    assert.equal(productionPolicy.actions[action].decision, 'deny');
+    assert.equal(productionPolicy.actions[action].code, 'capability_unavailable');
+    assert.equal(productionPolicy.actions[action].tool, undefined);
+  }
 
   const conformancePolicy = structuredClone(productionPolicy);
   conformancePolicy.actions['education.learner.event.append'] = {
@@ -120,11 +128,20 @@ test('test-only policy proves native learner append across Gateway, Hypervisor, 
     required_scopes: ['education:learner:write'],
     tool: 'builtin.validate-mutation',
   };
+  conformancePolicy.actions['education.learner.progress.read'] = {
+    decision: 'allow',
+    risk: 'medium',
+    required_scopes: ['education:learner:read'],
+    tool: 'builtin.education-learner-progress-read',
+  };
   const changedActions = Object.keys(productionPolicy.actions).filter(
     action => canonicalJson(productionPolicy.actions[action])
       !== canonicalJson(conformancePolicy.actions[action]),
   );
-  assert.deepEqual(changedActions, ['education.learner.event.append']);
+  assert.deepEqual(changedActions, [
+    'education.learner.event.append',
+    'education.learner.progress.read',
+  ]);
   await writeFile(policyPath, JSON.stringify(conformancePolicy), 'utf8');
 
   const basePort = await findPortBlock();
@@ -158,6 +175,7 @@ test('test-only policy proves native learner append across Gateway, Hypervisor, 
           'consent:write',
           'memory:write',
           'education:learner:write',
+          'education:learner:read',
           'audit:read',
         ],
       },
@@ -175,7 +193,11 @@ test('test-only policy proves native learner append across Gateway, Hypervisor, 
         id: imposter,
         type: 'human',
         roles: ['educator'],
-        scopes: ['intent:execute', 'education:learner:write'],
+        scopes: [
+          'intent:execute',
+          'education:learner:write',
+          'education:learner:read',
+        ],
       },
     },
   };
@@ -185,7 +207,7 @@ test('test-only policy proves native learner append across Gateway, Hypervisor, 
     stack = await startDevelopmentStack(overrides);
     const gateway = `http://127.0.0.1:${basePort}`;
 
-    const consent = await api(gateway, learnerToken, '/v1/intents', {
+    const writeConsent = await api(gateway, learnerToken, '/v1/intents', {
       method: 'POST',
       body: {
         action: 'consent.grant',
@@ -197,7 +219,21 @@ test('test-only policy proves native learner append across Gateway, Hypervisor, 
         },
       },
     });
-    assert.equal(consent.status, 'completed');
+    assert.equal(writeConsent.status, 'completed');
+
+    const readConsent = await api(gateway, learnerToken, '/v1/intents', {
+      method: 'POST',
+      body: {
+        action: 'consent.grant',
+        input: {
+          controller: 'capsule:axiom.education',
+          purpose: 'learning-progress-review',
+          scopes: ['learning-progress:read'],
+          expires_at: '2099-01-01T00:00:00.000Z',
+        },
+      },
+    });
+    assert.equal(readConsent.status, 'completed');
 
     const submissionMemory = await api(gateway, learnerToken, '/v1/intents', {
       method: 'POST',
@@ -216,7 +252,7 @@ test('test-only policy proves native learner append across Gateway, Hypervisor, 
         action: 'education.learner.event.append',
         input: learnerEventInput({
           subject: learner,
-          consentId: consent.consent_id,
+          consentId: writeConsent.consent_id,
           memoryObjectId: submissionMemory.object_id,
           eventId: 'workflow-event:submission-001',
           eventType: 'submission.created',
@@ -245,7 +281,7 @@ test('test-only policy proves native learner append across Gateway, Hypervisor, 
         action: 'education.learner.event.append',
         input: learnerEventInput({
           subject: learner,
-          consentId: consent.consent_id,
+          consentId: writeConsent.consent_id,
           memoryObjectId: assignmentMemory.object_id,
           eventId: 'workflow-event:assignment-001',
           eventType: 'assignment.created',
@@ -256,13 +292,73 @@ test('test-only policy proves native learner append across Gateway, Hypervisor, 
     assert.equal(assignment.status, 'completed');
     assert.equal(assignment.learner_record_status, 'recorded');
 
+    const progress = await api(gateway, learnerToken, '/v1/intents', {
+      method: 'POST',
+      body: {
+        action: 'education.learner.progress.read',
+        input: learnerProgressInput({
+          subject: learner,
+          consentId: readConsent.consent_id,
+        }),
+      },
+    });
+    assert.equal(progress.status, 'completed');
+    assert.equal(progress.provider_result.provider_capability, 'education.learner-record');
+    assert.equal(progress.provider_result.result.status, 'available');
+    assert.equal(progress.provider_result.result.subject_id, learner);
+    assert.equal(progress.provider_result.result.course_code, 'MTH1W');
+    assert.deepEqual(
+      progress.provider_result.result.events.map(event => event.event_type),
+      ['submission.created', 'assignment.created'],
+    );
+    const progressJson = canonicalJson(progress.provider_result.result);
+    for (const forbidden of [
+      'private learner content',
+      'private educator-authored assignment',
+      '"grade"',
+      '"credit"',
+      '"transcript"',
+      '"mastery"',
+      '"automatic_mastery"',
+    ]) {
+      assert.equal(progressJson.includes(forbidden), false, `read leaked forbidden value: ${forbidden}`);
+    }
+
+    const otherCourse = await api(gateway, learnerToken, '/v1/intents', {
+      method: 'POST',
+      body: {
+        action: 'education.learner.progress.read',
+        input: learnerProgressInput({
+          subject: learner,
+          consentId: readConsent.consent_id,
+          courseCode: 'ENG1D',
+        }),
+      },
+    });
+    assert.deepEqual(otherCourse.provider_result.result.events, []);
+
+    const crossSubject = await api(gateway, imposterToken, '/v1/intents', {
+      method: 'POST',
+      body: {
+        action: 'education.learner.progress.read',
+        input: learnerProgressInput({
+          subject: learner,
+          consentId: readConsent.consent_id,
+        }),
+      },
+    }, 403);
+    assert.equal(
+      crossSubject.error?.code,
+      'education_cross_subject_read_unavailable',
+    );
+
     const wrongOwner = await api(gateway, imposterToken, '/v1/intents', {
       method: 'POST',
       body: {
         action: 'education.learner.event.append',
         input: learnerEventInput({
           subject: learner,
-          consentId: consent.consent_id,
+          consentId: writeConsent.consent_id,
           memoryObjectId: assignmentMemory.object_id,
           eventId: 'workflow-event:assignment-imposter',
           eventType: 'assignment.created',
@@ -272,17 +368,41 @@ test('test-only policy proves native learner append across Gateway, Hypervisor, 
     }, 409);
     assert.equal(wrongOwner.error?.code, 'education_memory_reference_unavailable');
 
-    const revoked = await api(gateway, learnerToken, '/v1/intents', {
+    const revokedRead = await api(gateway, learnerToken, '/v1/intents', {
       method: 'POST',
       body: {
         action: 'consent.revoke',
         input: {
-          consent_id: consent.consent_id,
-          revocation_handle: consent.revocation_handle,
+          consent_id: readConsent.consent_id,
+          revocation_handle: readConsent.revocation_handle,
         },
       },
     });
-    assert.equal(revoked.status, 'completed');
+    assert.equal(revokedRead.status, 'completed');
+
+    const readAfterRevoke = await api(gateway, learnerToken, '/v1/intents', {
+      method: 'POST',
+      body: {
+        action: 'education.learner.progress.read',
+        input: learnerProgressInput({
+          subject: learner,
+          consentId: readConsent.consent_id,
+        }),
+      },
+    }, 409);
+    assert.equal(readAfterRevoke.error?.code, 'education_consent_unavailable');
+
+    const revokedWrite = await api(gateway, learnerToken, '/v1/intents', {
+      method: 'POST',
+      body: {
+        action: 'consent.revoke',
+        input: {
+          consent_id: writeConsent.consent_id,
+          revocation_handle: writeConsent.revocation_handle,
+        },
+      },
+    });
+    assert.equal(revokedWrite.status, 'completed');
 
     const postRevokeMemory = await api(gateway, learnerToken, '/v1/intents', {
       method: 'POST',
@@ -301,7 +421,7 @@ test('test-only policy proves native learner append across Gateway, Hypervisor, 
         action: 'education.learner.event.append',
         input: learnerEventInput({
           subject: learner,
-          consentId: consent.consent_id,
+          consentId: writeConsent.consent_id,
           memoryObjectId: postRevokeMemory.object_id,
           eventId: 'workflow-event:submission-after-revoke',
           eventType: 'submission.created',
