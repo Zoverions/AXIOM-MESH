@@ -7,6 +7,7 @@ import { Router, createServiceServer, listen, parseJsonBody } from '../lib/http.
 import { AxiomError, ValidationError, assertPlainObject, assertString } from '../lib/canonical.mjs';
 import { operationsReport, readinessState, ServiceTelemetry } from '../lib/observability.mjs';
 import { GridStore } from './store.mjs';
+import { preflightEducationLearnerGridEvent } from '../domain/education-learner-grid-preflight.mjs';
 import { loadDataProtector } from '../lib/protector.mjs';
 import { runServiceProcess } from '../lib/service-lifecycle.mjs';
 import { buildMachineIntentReceipt } from '../lib/machine-receipt.mjs';
@@ -109,6 +110,11 @@ export async function createGridService(config = meshConfig()) {
       )
       : [];
     for (const event of exports) store.preflightExportRequest(actor, event);
+    if (Array.isArray(input.events)) {
+      for (const event of input.events) {
+        preflightEducationLearnerGridEvent(store, event, actor);
+      }
+    }
     const appended = store.appendEvents({ traceId, actor, events: input.events });
     const completedExports = [];
     const completedBackups = [];
