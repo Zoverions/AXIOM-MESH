@@ -32,7 +32,7 @@ function educationUnavailableResult(actionName, action) {
 export async function executeEducationAction(
   actionName,
   input,
-  { learnerRecordProvider = null } = {},
+  { learnerRecordProvider = null, actor = null } = {},
 ) {
   const contract = await loadEducationContract();
   validateEducationIntent(contract, actionName, input);
@@ -40,6 +40,7 @@ export async function executeEducationAction(
   if (action.provider_capability === 'education.learner-record') {
     return executeEducationLearnerRecordAction(actionName, input, {
       provider: learnerRecordProvider,
+      actor,
     });
   }
   return educationUnavailableResult(actionName, action);
