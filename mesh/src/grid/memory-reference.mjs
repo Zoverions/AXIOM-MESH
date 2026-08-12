@@ -42,6 +42,9 @@ export function requireOwnedMemoryReference(store, { object_id, owner }) {
     max: 64,
     pattern: DIGEST,
   });
+  if (row.object_id !== `memory_${row.content_digest}`) {
+    throw new ValidationError('Memory reference content address does not match content_digest');
+  }
 
   return Object.freeze({
     object_id: row.object_id,
