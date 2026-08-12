@@ -1,0 +1,58 @@
+{
+  "schema": "axiom-source-continuity-contract.v1",
+  "version": 1,
+  "status": "specified-foundation",
+  "purpose": "Define provider-independent source identity, accepted-lineage transitions, and non-authoritative replica observations for AXIOM source continuity.",
+  "core_invariant": "A repository host may publish or coordinate AXIOM source; it does not define AXIOM source identity or accepted lineage.",
+  "source_identity": {
+    "logical_repository_id_required": true,
+    "provider_account_is_identity": false,
+    "provider_repository_id_is_identity": false,
+    "provider_url_is_identity": false,
+    "git_object_format_is_explicit": true,
+    "canonical_content_address_profile": "axiom-canonical-json-sha256.v1",
+    "cryptographic_profile_is_replaceable": true
+  },
+  "lineage": {
+    "append_only": true,
+    "parent_state_required_after_genesis": true,
+    "rollback_is_a_new_transition": true,
+    "history_rewrite_is_not_a_transition": true,
+    "acceptance_requires_separate_authority_and_evidence": true,
+    "replica_presence_is_not_acceptance": true
+  },
+  "replicas": {
+    "multiple_failure_domains_expected": true,
+    "provider_observations_non_authoritative": true,
+    "supported_transport_classes": [
+      "local_git",
+      "bare_git",
+      "github",
+      "forgejo",
+      "gitlab",
+      "radicle",
+      "agent_forge",
+      "other"
+    ],
+    "status_values": [
+      "reachable",
+      "stale",
+      "divergent",
+      "unavailable",
+      "compromised"
+    ]
+  },
+  "security": {
+    "mirror_credentials_are_replaceable": true,
+    "private_actor_state_in_public_source_mirrors": false,
+    "provider_compromise_must_not_promote_source": true,
+    "source_lineage_must_survive_provider_loss": true,
+    "post_quantum_migration_required": true
+  },
+  "claim_boundary": [
+    "This contract does not make GitHub, Forgejo, GitLab, Radicle, or any agent-native forge an authority over AXIOM source lineage.",
+    "This contract does not yet implement Grid persistence, mirror synchronization, provider adapters, or a loss-of-provider recovery drill.",
+    "This contract does not claim current source signatures are post-quantum secure.",
+    "A content-addressed source-state or transition object is not accepted merely because it validates structurally."
+  ]
+}
