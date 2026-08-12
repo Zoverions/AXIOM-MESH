@@ -1,14 +1,9 @@
 name: Education Integration Diagnostic
 
 on:
-  pull_request:
+  push:
     branches:
-      - main
-    paths:
-      - 'mesh/**'
-      - 'docs/**'
-      - 'README.md'
-      - '.github/workflows/education-integration-diagnostic.yml'
+      - integration/education-learner-record-current-main-20260812
 
 permissions:
   contents: read
