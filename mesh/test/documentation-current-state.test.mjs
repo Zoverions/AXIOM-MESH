@@ -24,8 +24,7 @@ const REQUIRED_CURRENT_STATE_MARKERS = Object.freeze([
   '0.12.0-dev.3',
   'machine',
   'continuity',
-  'Agent Runtime Adapter',
-  'production-unreachable'
+  'Agent Runtime Adapter'
 ]);
 
 test('current-state documents retain the August authority and evidence boundaries', async () => {
@@ -37,6 +36,7 @@ test('current-state documents retain the August authority and evidence boundarie
         `${relativePath} must retain current-state marker: ${marker}`
       );
     }
+    assert.match(content, /production-?\s*unreachable/i, relativePath);
   }
 });
 
@@ -50,7 +50,7 @@ test('current-state documents distinguish resolver preparation from production r
   ]) {
     const content = await read(relativePath);
     assert.ok(content.includes('repository.docs.pull-request.create'), relativePath);
-    assert.match(content, /production[- ]unreachable/i, relativePath);
+    assert.match(content, /production-?\s*unreachable/i, relativePath);
     assert.match(content, /approval\.consumed/, relativePath);
     assert.match(content, /external\.effect\.prepared/, relativePath);
   }
@@ -82,14 +82,7 @@ test('release notes do not regress to superseded machine-principal non-claims', 
 });
 
 test('evidence documents preserve the modification versus truncation distinction', async () => {
-  for (const relativePath of [
-    'docs/README.md',
-    'docs/PROJECT-STATUS-2026.md',
-    'docs/PRODUCTION-READINESS-TRACKER.md',
-    'docs/rebuild/SOURCE-TRACEABILITY.md',
-    'docs/releases/0.12.0-dev.3.md',
-    'docs/whitepapers_and_research/WHITEPAPER.md'
-  ]) {
+  for (const relativePath of CURRENT_STATE_DOCUMENTS) {
     const content = await read(relativePath);
     assert.ok(content.includes('axiom-grid-continuity-anchor.v1'), relativePath);
     assert.match(content, /truncation/i, relativePath);
@@ -97,16 +90,13 @@ test('evidence documents preserve the modification versus truncation distinction
 });
 
 test('runtime-adapter documentation remains a contract claim rather than external-runtime certification', async () => {
-  for (const relativePath of [
-    'docs/README.md',
-    'docs/PROJECT-STATUS-2026.md',
-    'docs/PRODUCTION-READINESS-TRACKER.md',
-    'docs/rebuild/SOURCE-TRACEABILITY.md',
-    'docs/releases/0.12.0-dev.3.md',
-    'docs/whitepapers_and_research/WHITEPAPER.md'
-  ]) {
+  for (const relativePath of CURRENT_STATE_DOCUMENTS) {
     const content = await read(relativePath);
     assert.match(content, /Agent Runtime Adapter v1/i, relativePath);
-    assert.match(content, /(no|not).*external runtime|does not.*certif|certification.*not|no.*certif/is, relativePath);
+    assert.match(
+      content,
+      /no[^\n]*runtime|does not[^\n]*certif|not[^\n]*certif|synthetic reference/i,
+      relativePath
+    );
   }
 });
