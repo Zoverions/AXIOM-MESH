@@ -167,7 +167,7 @@ test('local Git inspection rejects non-absolute paths and unsupported ref syntax
     /absolute path/
   );
   await assert.rejects(
-    inspectLocalGitSource({ repository_path: '/tmp', ref: '--upload-pack=evil' }),
+    inspectLocalGitSource({ repository_path: tmpdir(), ref: '--upload-pack=evil' }),
     /Git ref/
   );
 });
