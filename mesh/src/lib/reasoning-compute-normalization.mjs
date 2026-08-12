@@ -38,6 +38,17 @@ export function normalizeReasoningCompute(reportInput, disclosureInput) {
       'report.schema must be axiom-reasoning-evaluation-report.v1'
     );
   }
+  const claimedReportDigest = assertString(
+    report.report_digest,
+    'report.report_digest',
+    { min: 64, max: 64, pattern: /^[a-f0-9]{64}$/ }
+  );
+  const unsignedReport = structuredClone(report);
+  delete unsignedReport.report_digest;
+  if (digestObject(unsignedReport) !== claimedReportDigest) {
+    throw new ValidationError('report.report_digest does not match report content');
+  }
+
   const metrics = assertPlainObject(report.metrics, 'report.metrics');
   const counts = assertPlainObject(metrics.counts, 'report.metrics.counts');
   const correctItems = assertOptionalSafeInteger(
@@ -105,11 +116,7 @@ export function normalizeReasoningCompute(reportInput, disclosureInput) {
 
   const normalized = {
     schema: 'axiom-reasoning-compute-normalization.v1',
-    evaluation_report_digest: assertString(
-      report.report_digest,
-      'report.report_digest',
-      { min: 64, max: 64, pattern: /^[a-f0-9]{64}$/ }
-    ),
+    evaluation_report_digest: claimedReportDigest,
     disclosure: {
       basis: disclosure.basis,
       source,
