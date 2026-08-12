@@ -20,6 +20,7 @@ import { executeBuiltin } from '../src/sandbox/executor.mjs';
 
 const DIGEST_A = 'a'.repeat(64);
 const DIGEST_B = 'b'.repeat(64);
+const LEARNER_MEMORY_KIND = 'education.learner-submission';
 
 async function storeFixture(t) {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-education-grid-provider-'));
@@ -58,7 +59,7 @@ function grantConsent(subject, purpose, scope) {
   });
 }
 
-function putMemory(subject, kind = 'education.workflow-event') {
+function putMemory(subject, kind = LEARNER_MEMORY_KIND) {
   return executeBuiltin({
     tool: 'builtin.validate-mutation',
     intent: {
@@ -133,7 +134,7 @@ test('Grid-authorized reference provider appends and reads bounded learner-event
   const provider = createGridEducationLearnerRecordReferenceProvider({
     store,
     index,
-    allowedMemoryKinds: ['education.workflow-event'],
+    allowedMemoryKinds: [LEARNER_MEMORY_KIND],
     now: () => '2026-08-11T20:01:00-04:00',
   });
 
@@ -176,7 +177,7 @@ test('Grid consent revocation blocks a later append before index mutation', asyn
   const provider = createGridEducationLearnerRecordReferenceProvider({
     store,
     index,
-    allowedMemoryKinds: ['education.workflow-event'],
+    allowedMemoryKinds: [LEARNER_MEMORY_KIND],
     now: () => '2026-08-11T20:01:00-04:00',
   });
 
@@ -226,7 +227,7 @@ test('tombstoned or disallowed-kind memory cannot be appended', async t => {
   const provider = createGridEducationLearnerRecordReferenceProvider({
     store,
     index,
-    allowedMemoryKinds: ['education.workflow-event'],
+    allowedMemoryKinds: [LEARNER_MEMORY_KIND],
     now: () => '2026-08-11T20:01:00-04:00',
   });
 
