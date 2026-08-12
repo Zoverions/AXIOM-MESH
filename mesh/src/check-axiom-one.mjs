@@ -326,7 +326,9 @@ function validateAssets({ index, app, presentation, styles, worker, server, icon
     'class="skip-link"',
     'id="main-content"',
     'aria-live="polite"',
-    'Experimental local preview'
+    'Experimental local preview',
+    'First run checklist',
+    'Lock session'
   ];
   if (requiredIndex.some(marker => !index.includes(marker))) {
     throw new ValidationError('AXIOM One document semantics are incomplete');
@@ -361,7 +363,9 @@ function validateAssets({ index, app, presentation, styles, worker, server, icon
     'intentSuccess',
     'intentFailure',
     'retrySameRequest',
-    'Raw result and evidence'
+    'Raw result and evidence',
+    'SESSION_IDLE_MS',
+    'lockSession'
   ];
   if (explanationMarkers.some(marker => !`${app}\n${presentation}`.includes(marker))) {
     throw new ValidationError('AXIOM One human explanation surface is incomplete');
@@ -393,7 +397,10 @@ function validateAssets({ index, app, presentation, styles, worker, server, icon
     "frame-ancestors 'none'",
     "connect-src 'self'",
     "script-src 'self'",
-    "style-src 'self'"
+    "style-src 'self'",
+    "'cross-origin-embedder-policy': 'require-corp'",
+    "'x-permitted-cross-domain-policies': 'none'",
+    '(origin === expectedOrigin)'
   ];
   if (serverMarkers.some(marker => !server.includes(marker))) {
     throw new ValidationError('AXIOM One preview server boundary is incomplete');

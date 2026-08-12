@@ -126,6 +126,8 @@ test('AXIOM One serves a hardened shell and proxies only contract routes', async
   assert.match(shell.headers.get('content-security-policy'), /frame-ancestors 'none'/);
   assert.equal(shell.headers.get('x-frame-options'), 'DENY');
   assert.equal(shell.headers.get('cross-origin-opener-policy'), 'same-origin');
+  assert.equal(shell.headers.get('cross-origin-embedder-policy'), 'require-corp');
+  assert.equal(shell.headers.get('x-permitted-cross-domain-policies'), 'none');
   assert.match(await shell.text(), /AXIOM One/);
 
   const rejectedHost = await rawRequest(preview.port, '/', {
@@ -185,6 +187,16 @@ test('AXIOM One serves a hardened shell and proxies only contract routes', async
   });
   assert.equal(crossOrigin.status, 403);
   assert.equal((await crossOrigin.json()).error.code, 'forbidden');
+  assert.equal(observed.length, 2);
+
+  const missingOrigin = await fetch(`${preview.url}/v1/status`, {
+    headers: {
+      authorization: '******',
+      'sec-fetch-site': 'same-origin'
+    }
+  });
+  assert.equal(missingOrigin.status, 403);
+  assert.equal((await missingOrigin.json()).error.code, 'forbidden');
   assert.equal(observed.length, 2);
 
   const unlisted = await fetch(`${preview.url}/v1/unlisted`, {

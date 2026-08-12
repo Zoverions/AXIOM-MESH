@@ -23,6 +23,7 @@
       <div class="connection-summary">
         <span id="connection-dot" class="status-dot" aria-hidden="true"></span>
         <span id="connection-label">Not connected</span>
+        <button id="lock-button" class="button button-quiet" type="button" hidden>Lock session</button>
         <button id="disconnect-button" class="button button-quiet" type="button" hidden>Disconnect</button>
       </div>
     </header>
@@ -56,6 +57,23 @@
             <button class="button button-primary" type="submit">Connect</button>
           </div>
         </form>
+        <section class="onboarding-panel" aria-label="First-run guidance">
+          <h2>First run checklist</h2>
+          <ul class="data-list onboarding-list">
+            <li>
+              <strong>Start the local node first</strong>
+              <span>Run the local stack and copy the current token from its terminal output path.</span>
+            </li>
+            <li>
+              <strong>Review before sending</strong>
+              <span>Ask and Vault create reviewed requests; they do not submit until you confirm send.</span>
+            </li>
+            <li>
+              <strong>Lock when stepping away</strong>
+              <span>Use Lock session to clear the in-memory token and keep this tab in a disconnected state.</span>
+            </li>
+          </ul>
+        </section>
       </section>
 
       <section id="view" class="view" aria-live="polite" aria-busy="false"></section>

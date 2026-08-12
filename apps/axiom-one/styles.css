@@ -260,6 +260,15 @@ main {
   gap: 0.45rem;
 }
 
+.onboarding-panel h2 {
+  margin: 1.15rem 0 0.5rem;
+  font-size: 1rem;
+}
+
+.onboarding-list {
+  margin: 0;
+}
+
 label {
   color: #d7e5ef;
   font-size: 0.86rem;
@@ -705,6 +714,10 @@ footer {
     flex-direction: column;
   }
 
+  .button {
+    width: 100%;
+  }
+
   .form-grid {
     grid-template-columns: 1fr;
   }
@@ -740,6 +753,26 @@ footer {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --line: #8ab1cc;
+    --muted: #d7e8f2;
+    --focus: #fff;
+  }
+
+  .card,
+  .view,
+  .connect-panel,
+  .explanation,
+  .data-list li,
+  input,
+  textarea,
+  select,
+  pre {
+    border-width: 2px;
   }
 }
 

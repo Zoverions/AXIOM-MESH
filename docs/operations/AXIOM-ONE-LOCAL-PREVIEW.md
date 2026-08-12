@@ -74,11 +74,16 @@ The preview prints a secret-free receipt with:
 - support state `experimental-local-preview`;
 - `token_created: false`.
 
-Open the printed preview URL. Paste the development token into **Local API
-token**, select **Connect**, and keep both terminal processes running. Stop the
-preview and node with `Ctrl+C` in their respective terminals. Closing or
-reloading the page clears the in-memory browser session and requires the token
-again.
+Open the printed preview URL. Use the **First run checklist** in the Connect
+panel, paste the development token into **Local API token**, and select
+**Connect**. Keep both terminal processes running. Stop the preview and node
+with `Ctrl+C` in their respective terminals. Closing or reloading the page
+clears the in-memory browser session and requires the token again.
+
+When connected, **Lock session** immediately clears the in-memory token and
+returns the shell to its disconnected state. The shell also applies an
+in-memory idle timeout and locks when the page becomes hidden so authority is
+not left open in an unattended tab.
 
 The optional environment variables are intentionally narrow:
 
@@ -291,11 +296,10 @@ authority.
 
 The preview binds only `127.0.0.1`. It rejects a Host header other than the
 active `127.0.0.1:<port>` or `localhost:<port>`, limiting DNS-rebinding and
-accidental non-loopback use. API requests with an `Origin` header must match
-the preview origin, and Fetch Metadata must be `same-origin` or `none` when
-present. The server returns no permissive CORS header. Cross-site form, fetch,
-frame, image, and script paths therefore gain no token and no authorized API
-response.
+accidental non-loopback use. API requests must include an `Origin` header that matches the preview origin,
+and Fetch Metadata must be `same-origin` or `none` when present. The server
+returns no permissive CORS header. Cross-site form, fetch, frame, image, and
+script paths therefore gain no token and no authorized API response.
 
 The proxy independently enforces:
 
@@ -345,12 +349,13 @@ worker-src 'self'
 
 There is no inline script, inline style, `eval`, remote font, remote image,
 remote stylesheet, CDN, analytics tag, advertising identifier, or third-party
-account library. The server also sends `Cross-Origin-Opener-Policy:
-same-origin`, `Cross-Origin-Resource-Policy: same-origin`,
-`Origin-Agent-Cluster: ?1`, `Referrer-Policy: no-referrer`,
-`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, and a deny-all
-Permissions Policy for camera, display capture, geolocation, microphone,
-payment, and USB.
+account library. The server also sends `Cross-Origin-Opener-Policy: same-origin`,
+`Cross-Origin-Embedder-Policy: require-corp`,
+`Cross-Origin-Resource-Policy: same-origin`, `Origin-Agent-Cluster: ?1`,
+`Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`,
+`X-Frame-Options: DENY`, `X-Permitted-Cross-Domain-Policies: none`, and a
+deny-all Permissions Policy for camera, display capture, geolocation,
+microphone, payment, and USB.
 
 The manifest describes **AXIOM One Local Preview**, uses the root scope, and
 contains a repository-native SVG icon. Installation as a PWA changes only the
@@ -362,10 +367,11 @@ live local node.
 
 The current shell provides a semantic header, navigation, main region, footer,
 status announcements, explicit labels, a skip link, keyboard-native controls,
-visible focus, responsive single-column layouts, high-contrast dark and light
-themes, and a reduced-motion media query. Browser inspection has verified the
-render at a standard desktop size and at a 375-pixel phone viewport without
-document-level horizontal overflow. Planned sections use the word
+visible focus, responsive single-column layouts, touch-size mobile buttons,
+high-contrast dark and light themes, an explicit `prefers-contrast` path, and
+a reduced-motion media query. Browser inspection has verified the render at a
+standard desktop size and at a 375-pixel phone viewport without document-level
+horizontal overflow. Planned sections use the word
 **Unavailable** rather than a deceptive enabled control.
 
 These are implementation foundations, not completion of `UX-006`. Automated

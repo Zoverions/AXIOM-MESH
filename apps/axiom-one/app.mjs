@@ -13,6 +13,7 @@ const ROUTES = new Set([
   'share',
   'explore'
 ]);
+const SESSION_IDLE_MS = 10 * 60 * 1000;
 
 const state = {
   client: null,
@@ -30,6 +31,7 @@ const view = document.querySelector('#view');
 const connectPanel = document.querySelector('#connect-panel');
 const connectForm = document.querySelector('#connect-form');
 const tokenInput = document.querySelector('#token-input');
+const lockButton = document.querySelector('#lock-button');
 const disconnectButton = document.querySelector('#disconnect-button');
 const connectionDot = document.querySelector('#connection-dot');
 const connectionLabel = document.querySelector('#connection-label');
@@ -40,15 +42,13 @@ connectForm.addEventListener('submit', async event => {
   event.preventDefault();
   const token = tokenInput.value;
   tokenInput.value = '';
-  state.session = { token };
+  state.session = { token, timeoutId: null };
   state.client = createGatewayClient({ token: () => state.session?.token ?? '' });
   setViewBusy(true, 'Connecting to the local node');
   try {
     const status = await state.client.call('status.get');
-    connectPanel.hidden = true;
-    disconnectButton.hidden = false;
-    connectionDot.classList.add('connected');
-    connectionLabel.textContent = `Connected · ${status.kernel_version}`;
+    applyConnectionUi({ connected: true, kernelVersion: status.kernel_version });
+    scheduleSessionTimeout();
     announce('Connected to the local AXIOM node');
     await renderRoute();
   } catch (error) {
@@ -59,29 +59,51 @@ connectForm.addEventListener('submit', async event => {
   }
 });
 
+lockButton.addEventListener('click', () => {
+  lockSession('Session locked and token cleared from this page memory');
+});
+
 disconnectButton.addEventListener('click', () => {
+  lockSession('Disconnected and cleared the in-memory token');
+});
+
+window.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && state.client) {
+    lockSession('Session locked because this tab is no longer visible');
+  }
+});
+
+for (const eventName of ['keydown', 'pointerdown', 'focus']) {
+  window.addEventListener(eventName, () => scheduleSessionTimeout(), { passive: true });
+}
+
+function applyConnectionUi({ connected, kernelVersion = null } = {}) {
+  connectPanel.hidden = connected;
+  disconnectButton.hidden = !connected;
+  lockButton.hidden = !connected;
+  connectionDot.classList.toggle('connected', connected);
+  connectionLabel.textContent = connected && kernelVersion
+    ? `Connected · ${kernelVersion}`
+    : 'Not connected';
+}
+
+function lockSession(message) {
   clearSession();
-  connectPanel.hidden = false;
-  disconnectButton.hidden = true;
-  connectionDot.classList.remove('connected');
-  connectionLabel.textContent = 'Not connected';
+  applyConnectionUi({ connected: false });
   state.lastIntent = null;
   state.pendingIntent = null;
   state.vault.pending = null;
   state.vault.last = null;
-  announce('Disconnected and cleared the in-memory token');
+  announce(message);
   renderRoute();
   tokenInput.focus();
-});
+}
 
 window.addEventListener('hashchange', () => renderRoute());
 window.addEventListener('pagehide', clearSession);
 window.addEventListener('pageshow', () => {
   if (state.client) return;
-  connectPanel.hidden = false;
-  disconnectButton.hidden = true;
-  connectionDot.classList.remove('connected');
-  connectionLabel.textContent = 'Not connected';
+  applyConnectionUi({ connected: false });
   renderRoute();
 });
 
@@ -128,9 +150,11 @@ function renderDisconnected() {
     header('Your local node, in one place',
       'Connect above to inspect node health, submit a bounded intent, and review private state without using the command line.'),
     grid([
+      card('First run', 'Start the local node, paste a current local token, and verify status before submitting requests.'),
       card('Local by default', 'This preview talks only to the same-origin loopback service. It loads no remote fonts, analytics, or third-party assets.'),
       card('Authority stays visible', 'Every request still passes through the authenticated Gateway and the kernel policy path. This page grants no authority.'),
-      card('No synthetic AI', 'External and local model adapters are not configured by this preview. Ask begins with a transparent echo test, not a simulated assistant.')
+      card('No synthetic AI', 'External and local model adapters are not configured by this preview. Ask begins with a transparent echo test, not a simulated assistant.'),
+      card('Session lock', 'Use Lock session to clear the in-memory token before leaving this device or handing the tab to another person.')
     ])
   );
 }
@@ -1035,9 +1059,19 @@ async function loadHumanContract() {
 }
 
 function clearSession() {
+  if (state.session?.timeoutId) clearTimeout(state.session.timeoutId);
   if (state.session) state.session.token = '';
   state.session = null;
   state.client = null;
+}
+
+function scheduleSessionTimeout() {
+  if (!state.session) return;
+  if (state.session.timeoutId) clearTimeout(state.session.timeoutId);
+  state.session.timeoutId = setTimeout(() => {
+    if (!state.client) return;
+    lockSession('Session timed out and was locked to protect local authority');
+  }, SESSION_IDLE_MS);
 }
 
 function announce(message) {

@@ -285,7 +285,7 @@ function validBrowserBoundary(req) {
   const expectedOrigin = `http://${req.headers.host}`;
   const origin = req.headers.origin;
   const fetchSite = req.headers['sec-fetch-site'];
-  return (!origin || origin === expectedOrigin)
+  return (origin === expectedOrigin)
     && (!fetchSite || ['same-origin', 'none'].includes(fetchSite));
 }
 
@@ -373,12 +373,14 @@ function securityHeaders(headers) {
       "worker-src 'self'"
     ].join('; '),
     'cross-origin-opener-policy': 'same-origin',
+    'cross-origin-embedder-policy': 'require-corp',
     'cross-origin-resource-policy': 'same-origin',
     'origin-agent-cluster': '?1',
     'permissions-policy': 'camera=(), display-capture=(), geolocation=(), microphone=(), payment=(), usb=()',
     'referrer-policy': 'no-referrer',
     'x-content-type-options': 'nosniff',
     'x-frame-options': 'DENY',
+    'x-permitted-cross-domain-policies': 'none',
     ...headers
   };
 }
