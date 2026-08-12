@@ -7,6 +7,8 @@ import { Router, createServiceServer, listen, parseJsonBody } from '../lib/http.
 import { AxiomError, ValidationError, assertPlainObject, assertString } from '../lib/canonical.mjs';
 import { operationsReport, readinessState, ServiceTelemetry } from '../lib/observability.mjs';
 import { GridStore } from './store.mjs';
+import { preflightEducationLearnerGridEvent } from '../domain/education-learner-grid-preflight.mjs';
+import { registerEducationGridRoutes } from './education-routes.mjs';
 import { loadDataProtector } from '../lib/protector.mjs';
 import { runServiceProcess } from '../lib/service-lifecycle.mjs';
 import { buildMachineIntentReceipt } from '../lib/machine-receipt.mjs';
@@ -85,6 +87,7 @@ export async function createGridService(config = meshConfig()) {
   }), { auth: false });
 
   router.add('GET', '/internal/v1/operations', async () => currentOperations());
+  registerEducationGridRoutes(router, store);
 
   router.add('POST', '/internal/v1/commit', async ({ body, traceId, principal }) => {
     if (principal.service !== 'hypervisor') {
@@ -109,6 +112,11 @@ export async function createGridService(config = meshConfig()) {
       )
       : [];
     for (const event of exports) store.preflightExportRequest(actor, event);
+    if (Array.isArray(input.events)) {
+      for (const event of input.events) {
+        preflightEducationLearnerGridEvent(store, event, actor);
+      }
+    }
     const appended = store.appendEvents({ traceId, actor, events: input.events });
     const completedExports = [];
     const completedBackups = [];
@@ -245,26 +253,16 @@ export async function createGridService(config = meshConfig()) {
   router.add(
     'GET',
     '/internal/v1/node-schedules/:principal',
-    async ({ params, url }) => store.listNodeSchedules(params.principal, {
-      limit: integerQuery(url.searchParams.get('limit'), 100, {
-        label: 'node schedule limit',
-        min: 1,
-        max: 100
-      })
+    async ({ params }) => ({
+      schedules: store.listNodeSchedules(params.principal)
     })
   );
   router.add('GET', '/internal/v1/consents/:principal', async ({ params }) => ({
     consents: store.listConsents(params.principal)
   }));
-  router.add('GET', '/internal/v1/approvals/:principal', async ({ params, url }) => (
-    store.listApprovals(params.principal, {
-      limit: integerQuery(url.searchParams.get('limit'), 100, {
-        label: 'approval limit',
-        min: 1,
-        max: 100
-      })
-    })
-  ));
+  router.add('GET', '/internal/v1/approvals/:principal', async ({ params }) => ({
+    approvals: store.listApprovals(params.principal)
+  }));
   router.add('GET', '/internal/v1/approval/:id', async ({ params }) => store.getApproval(params.id));
   router.add('GET', '/internal/v1/memory/:owner', async ({ params, url }) => {
     const owner = assertString(params.owner, 'owner', {
@@ -275,13 +273,7 @@ export async function createGridService(config = meshConfig()) {
       max: 160,
       pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
     });
-    return store.listMemory(requester, owner, {
-      limit: integerQuery(url.searchParams.get('limit'), 100, {
-        label: 'memory limit',
-        min: 1,
-        max: 500
-      })
-    });
+    return store.listMemory(requester, owner);
   });
   router.add('GET', '/internal/v1/accounting/:owner', async ({ params }) => {
     const owner = assertString(params.owner, 'owner', {
@@ -346,15 +338,9 @@ export async function createGridService(config = meshConfig()) {
       return store.getCausalSyncBundle(owner, bundleDigest);
     }
   );
-  router.add('GET', '/internal/v1/backups/:principal', async ({ params, url }) => (
-    store.listBackups(params.principal, {
-      limit: integerQuery(url.searchParams.get('limit'), 100, {
-        label: 'backup limit',
-        min: 1,
-        max: 100
-      })
-    })
-  ));
+  router.add('GET', '/internal/v1/backups/:principal', async ({ params }) => ({
+    backups: store.listBackups(params.principal)
+  }));
   router.add('GET', '/internal/v1/backup/:id', async ({ params, url }) => {
     const principal = assertString(url.searchParams.get('principal'), 'principal', {
       max: 160,

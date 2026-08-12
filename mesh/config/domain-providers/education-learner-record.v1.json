@@ -1,0 +1,100 @@
+{
+  "schema": "axiom-domain-provider-contract.v1",
+  "provider_contract_id": "axiom.education.learner-record",
+  "provider_contract_version": "1.0.0",
+  "domain_contract_id": "axiom.education",
+  "domain_contract_version": "1.0.0",
+  "provider_capability": "education.learner-record",
+  "status": "adapter-foundation-only",
+  "claim_boundary": "This contract defines the narrow provider boundary for governed learner progress reads and learner event appends. It does not configure a provider, grant authority, validate consent by itself, create a learner database, infer mastery/grades/credits, or promote domains.education beyond adapter_required.",
+  "memory_reference": {
+    "object_id_pattern": "^memory_[a-f0-9]{64}$",
+    "allowed_kinds": [
+      "education.appeal-reason",
+      "education.assignment-artifact",
+      "education.correction-evidence",
+      "education.educator-feedback",
+      "education.learner-submission"
+    ],
+    "active_required": true,
+    "content_address_integrity_required": true,
+    "payload_decryption_required_for_assertion": false,
+    "ownership_profile": {
+      "profile_id": "axiom.education.learner-memory",
+      "profile_version": "1.1.0",
+      "profile_sha256": "3763a28919d36721467160ef772e30da1d5a536a8733fd88b65f2c60c9107d78"
+    },
+    "new_content_owner_binding_required": true,
+    "unmapped_event_owner_options": ["actor", "subject"]
+  },
+  "actions": {
+    "education.learner.event.append": {
+      "operation": "append_event",
+      "mutation": true,
+      "required_authorities": [
+        "consent_assertion",
+        "memory_reference_assertion"
+      ],
+      "consent": {
+        "purpose": "learning-progress-recording",
+        "data_scopes": ["learning-progress:write"]
+      },
+      "result_required": [
+        "status",
+        "subject_id",
+        "event_id",
+        "payload_digest",
+        "memory_object_id",
+        "record_digest"
+      ],
+      "result_optional": ["evidence_refs"],
+      "forbidden_result_fields": [
+        "raw_student_work",
+        "raw_feedback",
+        "grade",
+        "credit",
+        "transcript",
+        "mastery"
+      ]
+    },
+    "education.learner.progress.read": {
+      "operation": "read_progress",
+      "mutation": false,
+      "required_authorities": ["consent_assertion"],
+      "consent": {
+        "purpose": "learning-progress-review",
+        "data_scopes": ["learning-progress:read"]
+      },
+      "result_required": ["status", "subject_id", "course_code", "events"],
+      "result_optional": ["as_of", "next_cursor", "evidence_refs"],
+      "forbidden_result_fields": [
+        "grade",
+        "credit",
+        "transcript",
+        "mastery",
+        "automatic_mastery"
+      ],
+      "event_projection_fields": [
+        "event_id",
+        "event_type",
+        "occurred_at",
+        "payload_digest",
+        "memory_object_id",
+        "expectation_ids",
+        "review_state"
+      ]
+    }
+  },
+  "invariants": {
+    "install_grants_authority": false,
+    "provider_owns_consent": false,
+    "provider_owns_identity": false,
+    "provider_may_infer_mastery": false,
+    "provider_may_issue_grade_or_credit": false,
+    "provider_may_modify_transcript": false,
+    "raw_student_work_in_provider_result": false,
+    "raw_feedback_in_provider_result": false,
+    "memory_object_is_reference_only": true,
+    "default_without_adapter": "capability_unavailable"
+  }
+}
