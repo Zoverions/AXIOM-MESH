@@ -1,13 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { normalizeReasoningCompute } from '../src/lib/reasoning-compute-normalization.mjs';
-
-const REPORT_DIGEST = 'f'.repeat(64);
+import { digestObject } from '../src/lib/canonical.mjs';
 
 function report({ correctItems = 3, jointlyCorrectPairs = 2 } = {}) {
-  return {
+  const value = {
     schema: 'axiom-reasoning-evaluation-report.v1',
-    report_digest: REPORT_DIGEST,
     metrics: {
       counts: {
         correct_items: correctItems,
@@ -15,6 +13,8 @@ function report({ correctItems = 3, jointlyCorrectPairs = 2 } = {}) {
       }
     }
   };
+  value.report_digest = digestObject(value);
+  return value;
 }
 
 test('compute normalization keeps parameter count separate from measured work', () => {
@@ -74,5 +74,19 @@ test('compute normalization rejects undisclosed basis and empty observations', (
         source: 'vendor'
       }),
     /at least one compute or model-size observation/
+  );
+});
+
+test('compute normalization rejects a report whose content no longer matches its digest', () => {
+  const tampered = report();
+  tampered.metrics.counts.correct_items = 999;
+  assert.throws(
+    () =>
+      normalizeReasoningCompute(tampered, {
+        basis: 'measured',
+        source: 'hardware-counter.synthetic',
+        inference_flops: 600000
+      }),
+    /report_digest does not match report content/
   );
 });
