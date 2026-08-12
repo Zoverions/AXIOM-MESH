@@ -158,6 +158,7 @@ test('test-only policy proves native learner append across Gateway, Hypervisor, 
           'consent:write',
           'memory:write',
           'education:learner:write',
+          'audit:read',
         ],
       },
       [educatorToken]: {
