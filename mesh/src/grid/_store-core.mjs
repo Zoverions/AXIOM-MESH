@@ -1296,12 +1296,17 @@ export class GridStore {
     );
   }
 
-  listApprovals(principal) {
-    return this.db.prepare(`
+  listApprovals(principal, { limit = 100 } = {}) {
+    const safeLimit = boundedInteger(limit, 'approval limit', 1, 100);
+    const rows = this.db.prepare(`
       SELECT * FROM approvals
       WHERE approver = ? OR requester = ?
       ORDER BY created_at DESC
-    `).all(principal, principal);
+      LIMIT ?
+    `).all(principal, principal, safeLimit + 1);
+    const truncated = rows.length > safeLimit;
+    if (truncated) rows.pop();
+    return { approvals: rows, truncated };
   }
 
   getApproval(approvalId) {

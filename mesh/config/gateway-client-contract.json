@@ -332,7 +332,9 @@
       "access": "owner",
       "idempotency": "not_applicable",
       "path_parameters": [],
-      "query_parameters": [],
+      "query_parameters": [
+        "limit"
+      ],
       "request_schema": null,
       "response_schema": "axiom-approval-list.v1",
       "required_response_fields": [

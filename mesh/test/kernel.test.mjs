@@ -843,6 +843,9 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
   });
   const approvals = await api(gateway, approverToken, '/v1/approvals');
   assert.equal(approvals.approvals[0].status, 'consumed');
+  assert.equal(approvals.truncated, false);
+  const boundedApprovals = await api(gateway, approverToken, '/v1/approvals?limit=1');
+  assert.equal(boundedApprovals.approvals.length, 1);
   const capsulesAfterRevoke = await api(gateway, token, '/v1/capsules');
   assert.equal(capsulesAfterRevoke.capsules[0].status, 'revoked');
 

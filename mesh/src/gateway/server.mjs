@@ -370,10 +370,17 @@ export async function createGatewayService(config = meshConfig()) {
     `/internal/v1/consents/${encodeURIComponent(principal.id)}`,
     traceId
   ));
-  router.add('GET', '/v1/approvals', async ({ traceId, principal }) => gridGet(
-    `/internal/v1/approvals/${encodeURIComponent(principal.id)}`,
-    traceId
-  ));
+  router.add('GET', '/v1/approvals', async ({ url, traceId, principal }) => {
+    const limit = url.searchParams.get('limit');
+    if (limit !== null && (!/^\d+$/.test(limit) || Number(limit) < 1 || Number(limit) > 100)) {
+      throw new ValidationError('Approval limit must be an integer between 1 and 100');
+    }
+    const query = limit === null ? '' : `?limit=${encodeURIComponent(limit)}`;
+    return gridGet(
+      `/internal/v1/approvals/${encodeURIComponent(principal.id)}${query}`,
+      traceId
+    );
+  });
   router.add('GET', '/v1/memory', async ({ url, traceId, principal }) => {
     const owner = url.searchParams.get('owner') ?? principal.id;
     if (!PRINCIPAL_ID.test(owner)) throw new ValidationError('Memory owner is invalid');

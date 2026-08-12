@@ -252,9 +252,15 @@ export async function createGridService(config = meshConfig()) {
   router.add('GET', '/internal/v1/consents/:principal', async ({ params }) => ({
     consents: store.listConsents(params.principal)
   }));
-  router.add('GET', '/internal/v1/approvals/:principal', async ({ params }) => ({
-    approvals: store.listApprovals(params.principal)
-  }));
+  router.add('GET', '/internal/v1/approvals/:principal', async ({ params, url }) => (
+    store.listApprovals(params.principal, {
+      limit: integerQuery(url.searchParams.get('limit'), 100, {
+        label: 'approval limit',
+        min: 1,
+        max: 100
+      })
+    })
+  ));
   router.add('GET', '/internal/v1/approval/:id', async ({ params }) => store.getApproval(params.id));
   router.add('GET', '/internal/v1/memory/:owner', async ({ params, url }) => {
     const owner = assertString(params.owner, 'owner', {
