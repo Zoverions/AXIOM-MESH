@@ -37,4 +37,4 @@ jobs:
       - name: Documentation checker
         run: node mesh/src/check-docs.mjs
       - name: Node test suite
-        run: node --test --test-reporter=spec mesh/test
+        run: npm --prefix mesh test
