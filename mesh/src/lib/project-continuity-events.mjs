@@ -54,6 +54,10 @@ function rejectUnknown(value, allowed, name) {
   }
 }
 
+function present(value) {
+  return value !== null && value !== undefined;
+}
+
 function id(value, name, { max = 256 } = {}) {
   return assertString(value, name, { min: 1, max, pattern: ID });
 }
@@ -63,7 +67,7 @@ function digest(value, name) {
 }
 
 function nullableDigest(value, name) {
-  return value === null || value === undefined ? null : digest(value, name);
+  return present(value) ? digest(value, name) : null;
 }
 
 function iso(value, name) {
@@ -73,14 +77,14 @@ function iso(value, name) {
   return parsed.toISOString();
 }
 
-function integer(value, name, { min = 0, max = Number.MAX_SAFE_INTEGER } = {}) {
-  if (!Number.isSafeInteger(value) || value < min || value > max) {
-    throw new ValidationError(`${name} must be an integer between ${min} and ${max}`);
+function boundedInteger(value, name, max) {
+  if (!Number.isSafeInteger(value) || value < 0 || value > max) {
+    throw new ValidationError(`${name} must be an integer between 0 and ${max}`);
   }
   return value;
 }
 
-function uniqueIds(raw, name, { maxItems = 64 } = {}) {
+function uniqueIds(raw, name, maxItems = 64) {
   if (!Array.isArray(raw) || raw.length > maxItems) {
     throw new ValidationError(`${name} must be an array with at most ${maxItems} items`);
   }
@@ -94,11 +98,11 @@ function uniqueIds(raw, name, { maxItems = 64 } = {}) {
 function contentAddress(body, prefix, suppliedId, suppliedDigest) {
   const objectDigest = digestObject(body);
   const objectId = `${prefix}:${objectDigest}`;
-  if (suppliedDigest !== undefined && digest(suppliedDigest, `${prefix}_digest`) !== objectDigest) {
+  if (present(suppliedDigest) && digest(suppliedDigest, `${prefix}_digest`) !== objectDigest) {
     throw new ValidationError(`${prefix} digest does not match canonical content`);
   }
   if (
-    suppliedId !== undefined
+    present(suppliedId)
     && assertString(suppliedId, `${prefix}_id`, { min: 1, max: 320 }) !== objectId
   ) {
     throw new ValidationError(`${prefix} id does not match canonical content`);
@@ -109,9 +113,7 @@ function contentAddress(body, prefix, suppliedId, suppliedDigest) {
 function normalizeActor(raw) {
   const value = assertPlainObject(raw, 'project event actor');
   rejectUnknown(value, new Set(['actor_id', 'actor_binding_digest']), 'project event actor');
-  const actorId = value.actor_id === null || value.actor_id === undefined
-    ? null
-    : id(value.actor_id, 'actor.actor_id');
+  const actorId = present(value.actor_id) ? id(value.actor_id, 'actor.actor_id') : null;
   const binding = nullableDigest(value.actor_binding_digest, 'actor.actor_binding_digest');
   if (actorId === null && binding !== null) {
     throw new ValidationError('project event cannot carry an actor binding digest without an AXIOM actor id');
@@ -145,16 +147,15 @@ function normalizeContent(raw) {
     pattern: MEDIA_TYPE
   });
   const contentDigest = digest(value.content_digest, 'content.content_digest');
-  const byteLength = integer(value.byte_length, 'content.byte_length', {
-    min: 0,
-    max: 64 * 1024 * 1024
-  });
+  const byteLength = boundedInteger(value.byte_length, 'content.byte_length', 64 * 1024 * 1024);
+  const hasInline = present(value.inline_utf8);
+  const hasProtectedRef = present(value.protected_ref);
 
   if (value.mode === 'inline_public') {
     if (value.visibility !== 'public') {
       throw new ValidationError('private or sensitive project content cannot be retained inline');
     }
-    if (typeof value.inline_utf8 !== 'string' || value.protected_ref !== undefined) {
+    if (!hasInline || typeof value.inline_utf8 !== 'string' || hasProtectedRef) {
       throw new ValidationError('inline public project content requires only inline_utf8 payload');
     }
     const bytes = Buffer.from(value.inline_utf8, 'utf8');
@@ -176,8 +177,8 @@ function normalizeContent(raw) {
   }
 
   if (value.mode === 'protected_reference') {
-    if (value.inline_utf8 !== undefined) {
-      throw new ValidationError('protected project content cannot also be retained inline');
+    if (hasInline || !hasProtectedRef) {
+      throw new ValidationError('protected project content requires only an opaque protected reference');
     }
     const protectedRef = assertString(value.protected_ref, 'content.protected_ref', {
       min: 11,
@@ -195,7 +196,7 @@ function normalizeContent(raw) {
     };
   }
 
-  if (value.inline_utf8 !== undefined || value.protected_ref !== undefined) {
+  if (hasInline || hasProtectedRef) {
     throw new ValidationError('digest-only project content cannot carry inline bytes or a protected reference');
   }
   return {
@@ -249,13 +250,14 @@ export function normalizeProjectEvent(raw) {
   if (value.content_address_profile !== SOURCE_CONTENT_ADDRESS_PROFILE) {
     throw new ValidationError('project event content-address profile is unsupported');
   }
+
   const sourceStateDigest = nullableDigest(value.source_state_digest, 'source_state_digest');
   if (SOURCE_STATE_REQUIRED.has(eventKind) && sourceStateDigest === null) {
     throw new ValidationError(`${eventKind} requires an exact source-state digest`);
   }
-  const ciOutcome = value.ci_outcome === null || value.ci_outcome === undefined
-    ? null
-    : assertString(value.ci_outcome, 'ci_outcome', { min: 1, max: 32 });
+  const ciOutcome = present(value.ci_outcome)
+    ? assertString(value.ci_outcome, 'ci_outcome', { min: 1, max: 32 })
+    : null;
   if (eventKind === 'ci.check_completed') {
     if (!CI_OUTCOMES.has(ciOutcome)) throw new ValidationError('CI completion event requires a supported outcome');
   } else if (ciOutcome !== null) {
@@ -326,9 +328,10 @@ export function normalizeProjectEventObservation(raw) {
   if (value.content_address_profile !== SOURCE_CONTENT_ADDRESS_PROFILE) {
     throw new ValidationError('project event observation content-address profile is unsupported');
   }
-  const externalActorId = value.external_actor_id === null || value.external_actor_id === undefined
-    ? null
-    : assertString(value.external_actor_id, 'external_actor_id', { min: 1, max: 256 });
+
+  const externalActorId = present(value.external_actor_id)
+    ? assertString(value.external_actor_id, 'external_actor_id', { min: 1, max: 256 })
+    : null;
   const actorBindingDigest = nullableDigest(value.actor_binding_digest, 'actor_binding_digest');
   const actorBindingVerified = value.actor_binding_verified === true;
   if (actorBindingVerified && (externalActorId === null || actorBindingDigest === null)) {
@@ -351,18 +354,18 @@ export function normalizeProjectEventObservation(raw) {
       min: 1,
       max: 256
     }),
-    external_event_id: value.external_event_id === null || value.external_event_id === undefined
-      ? null
-      : assertString(value.external_event_id, 'external_event_id', { min: 1, max: 256 }),
-    external_revision: value.external_revision === null || value.external_revision === undefined
-      ? null
-      : assertString(value.external_revision, 'external_revision', { min: 1, max: 256 }),
+    external_event_id: present(value.external_event_id)
+      ? assertString(value.external_event_id, 'external_event_id', { min: 1, max: 256 })
+      : null,
+    external_revision: present(value.external_revision)
+      ? assertString(value.external_revision, 'external_revision', { min: 1, max: 256 })
+      : null,
     external_actor_id: externalActorId,
     actor_binding_digest: actorBindingDigest,
     actor_binding_verified: actorBindingVerified,
-    locator: value.locator === null || value.locator === undefined
-      ? null
-      : assertString(value.locator, 'locator', { min: 1, max: 2048 }),
+    locator: present(value.locator)
+      ? assertString(value.locator, 'locator', { min: 1, max: 2048 })
+      : null,
     provider_evidence_digest: digest(value.provider_evidence_digest, 'provider_evidence_digest'),
     provider_authenticity_verified: value.provider_authenticity_verified === true,
     event_content_reproduced: value.event_content_reproduced === true,
