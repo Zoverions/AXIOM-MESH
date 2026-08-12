@@ -32,6 +32,14 @@ const EXPECTED_KINDS = Object.freeze([
   'education.educator-feedback',
   'education.learner-submission',
 ]);
+const EXPECTED_METADATA_FIELDS = Object.freeze([
+  'schema',
+  'workflow_id',
+  'assignment_id',
+  'event_id',
+  'event_type',
+  'workflow_payload_digest',
+]);
 
 test('learner-memory profile bytes and runtime projection are exactly pinned', async () => {
   const raw = await readFile(EDUCATION_LEARNER_MEMORY_PROFILE_PATH);
@@ -51,12 +59,33 @@ test('learner-memory profile bytes and runtime projection are exactly pinned', a
     EDUCATION_LEARNER_MEMORY_PROFILE.metadata_schema,
     'axiom-education-governed-memory-ref.v1',
   );
+  assert.deepEqual(
+    EDUCATION_LEARNER_MEMORY_PROFILE.metadata_fields,
+    EXPECTED_METADATA_FIELDS,
+  );
   assert.equal(
     EDUCATION_LEARNER_MEMORY_PROFILE.object_id_pattern,
     '^memory_[a-f0-9]{64}$',
   );
   assert.equal(
     EDUCATION_LEARNER_MEMORY_PROFILE.invariants.automatic_tombstone_on_append_failure,
+    false,
+  );
+  assert.equal(
+    EDUCATION_LEARNER_MEMORY_PROFILE.invariants.caller_selects_memory_kind,
+    false,
+  );
+  assert.equal(
+    EDUCATION_LEARNER_MEMORY_PROFILE.invariants.content_address_required,
+    true,
+  );
+  assert.equal(
+    EDUCATION_LEARNER_MEMORY_PROFILE.invariants
+      .memory_write_precedes_learner_event_for_new_content,
+    true,
+  );
+  assert.equal(
+    EDUCATION_LEARNER_MEMORY_PROFILE.invariants.raw_content_in_learner_event,
     false,
   );
 });
