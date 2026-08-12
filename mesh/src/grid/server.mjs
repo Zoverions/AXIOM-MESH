@@ -8,6 +8,7 @@ import { AxiomError, ValidationError, assertPlainObject, assertString } from '..
 import { operationsReport, readinessState, ServiceTelemetry } from '../lib/observability.mjs';
 import { GridStore } from './store.mjs';
 import { preflightEducationLearnerGridEvent } from '../domain/education-learner-grid-preflight.mjs';
+import { registerEducationGridRoutes } from './education-routes.mjs';
 import { loadDataProtector } from '../lib/protector.mjs';
 import { runServiceProcess } from '../lib/service-lifecycle.mjs';
 import { buildMachineIntentReceipt } from '../lib/machine-receipt.mjs';
@@ -86,6 +87,7 @@ export async function createGridService(config = meshConfig()) {
   }), { auth: false });
 
   router.add('GET', '/internal/v1/operations', async () => currentOperations());
+  registerEducationGridRoutes(router, store);
 
   router.add('POST', '/internal/v1/commit', async ({ body, traceId, principal }) => {
     if (principal.service !== 'hypervisor') {
