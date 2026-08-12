@@ -12,7 +12,19 @@ async function read(relativePath) {
 }
 
 const CURRENT_STATE_DOCUMENTS = Object.freeze([
+  'README.md',
   'docs/README.md',
+  'docs/MASTER-TODO.md',
+  'docs/PROJECT-STATUS-2026.md',
+  'docs/PRODUCTION-READINESS-TRACKER.md',
+  'docs/rebuild/SOURCE-TRACEABILITY.md',
+  'docs/releases/0.12.0-dev.3.md',
+  'docs/whitepapers_and_research/WHITEPAPER.md'
+]);
+
+const RESOLVER_STATE_DOCUMENTS = Object.freeze([
+  'README.md',
+  'docs/MASTER-TODO.md',
   'docs/PROJECT-STATUS-2026.md',
   'docs/PRODUCTION-READINESS-TRACKER.md',
   'docs/rebuild/SOURCE-TRACEABILITY.md',
@@ -41,13 +53,7 @@ test('current-state documents retain the August authority and evidence boundarie
 });
 
 test('current-state documents distinguish resolver preparation from production reachability', async () => {
-  for (const relativePath of [
-    'docs/PROJECT-STATUS-2026.md',
-    'docs/PRODUCTION-READINESS-TRACKER.md',
-    'docs/rebuild/SOURCE-TRACEABILITY.md',
-    'docs/releases/0.12.0-dev.3.md',
-    'docs/whitepapers_and_research/WHITEPAPER.md'
-  ]) {
+  for (const relativePath of RESOLVER_STATE_DOCUMENTS) {
     const content = await read(relativePath);
     assert.ok(content.includes('repository.docs.pull-request.create'), relativePath);
     assert.match(content, /production-?\s*unreachable/i, relativePath);
