@@ -309,7 +309,7 @@ test('test-only policy proves native learner append and self-read across Gateway
     assert.equal(progress.provider_result.result.course_code, 'MTH1W');
     assert.deepEqual(
       progress.provider_result.result.events.map(event => event.event_type),
-      ['submission.created', 'assignment.created'],
+      ['assignment.created', 'submission.created'],
     );
     const progressJson = canonicalJson(progress.provider_result.result);
     for (const forbidden of [
