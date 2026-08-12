@@ -1,0 +1,67 @@
+{
+  "schema": "axiom-project-continuity-events-contract.v1",
+  "version": 1,
+  "status": "specified-foundation",
+  "purpose": "Define provider-independent project events and separate non-authoritative forge observations so AXIOM collaboration, release, CI, security, policy, and artifact history can survive provider loss without making a forge the durable identity or authority.",
+  "core_invariants": [
+    "A forge may host project state; it does not define the durable identity of an AXIOM project object or event.",
+    "A provider observation may establish provenance and availability; it does not create governance authority.",
+    "External account identity is not AXIOM actor identity without an explicit verified binding.",
+    "Private or sensitive project content is never required to be retained inline in a portable event."
+  ],
+  "canonical_event": {
+    "provider_fields_allowed": false,
+    "content_addressed": true,
+    "logical_project_id_required": true,
+    "canonical_project_object_id_required": true,
+    "event_kind_and_object_kind_bound": true,
+    "actor_identity_optional_without_binding": true,
+    "actor_binding_digest_required_when_actor_identity_is_claimed": true,
+    "content_commitment_required": true,
+    "private_inline_content_allowed": false,
+    "source_state_binding_supported": true,
+    "source_state_binding_required_for_ci_release_merge_and_artifact_publication": true
+  },
+  "provider_observation": {
+    "separate_from_canonical_event": true,
+    "provider_external_ids_are_provenance_not_identity": true,
+    "provider_username_is_actor_identity": false,
+    "locator_is_identity": false,
+    "non_authoritative_required": true,
+    "event_digest_binding_required": true,
+    "provider_revision_supported": true
+  },
+  "content_modes": [
+    "digest_only",
+    "inline_public",
+    "protected_reference"
+  ],
+  "visibility": [
+    "public",
+    "private",
+    "sensitive"
+  ],
+  "object_kinds": [
+    "issue",
+    "change_proposal",
+    "review",
+    "release",
+    "ci_check",
+    "security_finding",
+    "repository_policy",
+    "artifact"
+  ],
+  "privacy": {
+    "private_or_sensitive_inline_content": false,
+    "protected_reference_is_opaque_identifier_not_url": true,
+    "raw_ci_log_required_in_event": false,
+    "raw_security_finding_required_in_event": false,
+    "raw_review_content_required_in_event": false
+  },
+  "claim_boundary": [
+    "This contract does not scrape, import, export, or mutate any forge.",
+    "This contract does not independently verify provider API authenticity or actor bindings.",
+    "This contract does not make a CI pass a capability promotion or a review a governance approval.",
+    "This contract does not yet persist project events in Grid or restore them into another forge."
+  ]
+}
