@@ -30,7 +30,10 @@ test('current service network policy is exact, default-deny, and segmented', asy
   assert.equal(result.segments, 4);
   assert.equal(result.flows, 10);
   assert.equal(result.routes, 41);
-  assert.match(result.policy_digest, /^[a-f0-9]{64}$/);
+  assert.equal(
+    result.policy_digest,
+    '2f0fd77a8d40f6b38376429b416498ff15d173cf7db7b0b8dadc153f88086541'
+  );
 
   assert.deepEqual(
     allowedInboundTransportPeers('grid'),
