@@ -17,9 +17,15 @@
       "education.learner-submission"
     ],
     "active_required": true,
-    "exact_subject_owner_required": true,
     "content_address_integrity_required": true,
-    "payload_decryption_required_for_assertion": false
+    "payload_decryption_required_for_assertion": false,
+    "ownership_profile": {
+      "profile_id": "axiom.education.learner-memory",
+      "profile_version": "1.1.0",
+      "profile_sha256": "3763a28919d36721467160ef772e30da1d5a536a8733fd88b65f2c60c9107d78"
+    },
+    "new_content_owner_binding_required": true,
+    "unmapped_event_owner_options": ["actor", "subject"]
   },
   "actions": {
     "education.learner.event.append": {
