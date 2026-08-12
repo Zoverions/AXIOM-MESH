@@ -88,7 +88,7 @@ The four-unit candidate is also implemented. It projects one application
 private key and one TLS leaf per service, gives durable state and the
 data-protection key only to Grid, gives API credentials only to Gateway, and
 uses four exact Docker internal segments with no public port. A machine-
-readable default-deny policy permits only 40 current internal
+readable default-deny policy permits only 41 current internal
 caller/destination/method/route combinations at both endpoints and derives
 mTLS peer allowlists.
 Signed host evidence and a protected four-container check prove required-path
