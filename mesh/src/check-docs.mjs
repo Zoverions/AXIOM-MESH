@@ -419,6 +419,7 @@ function verifyComputedDocumentationClaims(contents, capabilityRegistry) {
   const capabilities = validateCapabilityRegistry(capabilityRegistry);
   const claims = [
     ['README.md', `permits only ${network.routes} current internal`],
+    ['mesh/README.md', `covers all ${gatewayRoutes} authenticated`],
     ['docs/PRODUCTION-GRADE.md', `permits only ${network.routes} current internal`],
     ['docs/PRODUCTION-GRADE.md', `versioned ${gatewayRoutes}-route client`],
     ['mesh/PRODUCTION.md', `policy additionally authorizes only ${network.routes} exact caller/destination/method/route`],
@@ -431,6 +432,12 @@ function verifyComputedDocumentationClaims(contents, capabilityRegistry) {
     ['docs/ROADMAP.md', `exact ${gatewayRoutes}-route`],
     ['docs/PRODUCTION-READINESS-TRACKER.md', `Exact default-deny ${network.routes}-route policy`],
     ['docs/PRODUCTION-READINESS-TRACKER.md', `exact ${gatewayRoutes}-route machine contract`],
+    ['docs/releases/0.12.0-dev.3.md', `all ${gatewayRoutes} authenticated Gateway`],
+    ['docs/releases/0.12.0-dev.3.md', `default-deny ${network.routes}-route internal service policy`],
+    [
+      'docs/rebuild/SOURCE-TRACEABILITY.md',
+      `${capabilities.capabilities} capabilities: ${capabilities.counts.implemented} implemented`
+    ],
     ['docs/rebuild/SOURCE-TRACEABILITY.md', `All ${gatewayRoutes} authenticated Gateway routes are versioned`],
     ['docs/rebuild/SOURCE-TRACEABILITY.md', `Default deny, ${network.routes} exact routes`],
     [
