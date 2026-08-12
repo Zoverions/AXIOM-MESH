@@ -12,31 +12,19 @@
   "network_segments": [
     {
       "id": "gateway-hypervisor",
-      "members": [
-        "gateway",
-        "hypervisor"
-      ]
+      "members": ["gateway", "hypervisor"]
     },
     {
       "id": "gateway-grid",
-      "members": [
-        "gateway",
-        "grid"
-      ]
+      "members": ["gateway", "grid"]
     },
     {
       "id": "hypervisor-grid",
-      "members": [
-        "hypervisor",
-        "grid"
-      ]
+      "members": ["hypervisor", "grid"]
     },
     {
       "id": "hypervisor-sandbox",
-      "members": [
-        "hypervisor",
-        "sandbox"
-      ]
+      "members": ["hypervisor", "sandbox"]
     }
   ],
   "flows": [
@@ -45,18 +33,9 @@
       "source": "gateway",
       "destination": "hypervisor",
       "routes": [
-        {
-          "method": "GET",
-          "path": "/internal/v1/operations"
-        },
-        {
-          "method": "POST",
-          "path": "/internal/v1/machine-discovery"
-        },
-        {
-          "method": "POST",
-          "path": "/internal/v1/intents"
-        }
+        {"method": "GET", "path": "/internal/v1/operations"},
+        {"method": "POST", "path": "/internal/v1/machine-discovery"},
+        {"method": "POST", "path": "/internal/v1/intents"}
       ]
     },
     {
@@ -64,106 +43,31 @@
       "source": "gateway",
       "destination": "grid",
       "routes": [
-        {
-          "method": "GET",
-          "path": "/internal/v1/operations"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/status"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/intents/:id"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/machine-receipts/intents/:id/verify"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/events"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/capsules"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/proposals"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/nodes"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/node-discovery"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/node-schedules/:principal"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/consents/:principal"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/approvals/:principal"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/memory/:owner"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/accounting/:owner"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/imports/:principal"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/import/:id"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/appeals/:principal"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/storage-offers/:owner"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/sync/:owner"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/sync/:owner/bundles/:digest"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/backups/:principal"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/backup/:id"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/exports/:id"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/exports/:id/bundle"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/verify-chain"
-        }
+        {"method": "GET", "path": "/internal/v1/operations"},
+        {"method": "GET", "path": "/internal/v1/status"},
+        {"method": "GET", "path": "/internal/v1/intents/:id"},
+        {"method": "GET", "path": "/internal/v1/machine-receipts/intents/:id/verify"},
+        {"method": "GET", "path": "/internal/v1/events"},
+        {"method": "GET", "path": "/internal/v1/capsules"},
+        {"method": "GET", "path": "/internal/v1/proposals"},
+        {"method": "GET", "path": "/internal/v1/nodes"},
+        {"method": "GET", "path": "/internal/v1/node-discovery"},
+        {"method": "GET", "path": "/internal/v1/node-schedules/:principal"},
+        {"method": "GET", "path": "/internal/v1/consents/:principal"},
+        {"method": "GET", "path": "/internal/v1/approvals/:principal"},
+        {"method": "GET", "path": "/internal/v1/memory/:owner"},
+        {"method": "GET", "path": "/internal/v1/accounting/:owner"},
+        {"method": "GET", "path": "/internal/v1/imports/:principal"},
+        {"method": "GET", "path": "/internal/v1/import/:id"},
+        {"method": "GET", "path": "/internal/v1/appeals/:principal"},
+        {"method": "GET", "path": "/internal/v1/storage-offers/:owner"},
+        {"method": "GET", "path": "/internal/v1/sync/:owner"},
+        {"method": "GET", "path": "/internal/v1/sync/:owner/bundles/:digest"},
+        {"method": "GET", "path": "/internal/v1/backups/:principal"},
+        {"method": "GET", "path": "/internal/v1/backup/:id"},
+        {"method": "GET", "path": "/internal/v1/exports/:id"},
+        {"method": "GET", "path": "/internal/v1/exports/:id/bundle"},
+        {"method": "GET", "path": "/internal/v1/verify-chain"}
       ]
     },
     {
@@ -171,22 +75,11 @@
       "source": "hypervisor",
       "destination": "grid",
       "routes": [
-        {
-          "method": "GET",
-          "path": "/internal/v1/status"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/policy-overlays"
-        },
-        {
-          "method": "GET",
-          "path": "/internal/v1/approval/:id"
-        },
-        {
-          "method": "POST",
-          "path": "/internal/v1/commit"
-        }
+        {"method": "GET", "path": "/internal/v1/status"},
+        {"method": "GET", "path": "/internal/v1/policy-overlays"},
+        {"method": "GET", "path": "/internal/v1/approval/:id"},
+        {"method": "POST", "path": "/internal/v1/commit"},
+        {"method": "POST", "path": "/internal/v1/education/learner-progress"}
       ]
     },
     {
@@ -194,81 +87,45 @@
       "source": "hypervisor",
       "destination": "sandbox",
       "routes": [
-        {
-          "method": "GET",
-          "path": "/internal/v1/operations"
-        },
-        {
-          "method": "POST",
-          "path": "/internal/v1/execute"
-        }
+        {"method": "GET", "path": "/internal/v1/operations"},
+        {"method": "POST", "path": "/internal/v1/execute"}
       ]
     },
     {
       "id": "supervisor-to-grid-health",
       "source": "supervisor",
       "destination": "grid",
-      "routes": [
-        {
-          "method": "GET",
-          "path": "/health"
-        }
-      ]
+      "routes": [{"method": "GET", "path": "/health"}]
     },
     {
       "id": "supervisor-to-hypervisor-health",
       "source": "supervisor",
       "destination": "hypervisor",
-      "routes": [
-        {
-          "method": "GET",
-          "path": "/health"
-        }
-      ]
+      "routes": [{"method": "GET", "path": "/health"}]
     },
     {
       "id": "supervisor-to-sandbox-health",
       "source": "supervisor",
       "destination": "sandbox",
-      "routes": [
-        {
-          "method": "GET",
-          "path": "/health"
-        }
-      ]
+      "routes": [{"method": "GET", "path": "/health"}]
     },
     {
       "id": "grid-self-health",
       "source": "grid",
       "destination": "grid",
-      "routes": [
-        {
-          "method": "GET",
-          "path": "/health"
-        }
-      ]
+      "routes": [{"method": "GET", "path": "/health"}]
     },
     {
       "id": "hypervisor-self-health",
       "source": "hypervisor",
       "destination": "hypervisor",
-      "routes": [
-        {
-          "method": "GET",
-          "path": "/health"
-        }
-      ]
+      "routes": [{"method": "GET", "path": "/health"}]
     },
     {
       "id": "sandbox-self-health",
       "source": "sandbox",
       "destination": "sandbox",
-      "routes": [
-        {
-          "method": "GET",
-          "path": "/health"
-        }
-      ]
+      "routes": [{"method": "GET", "path": "/health"}]
     }
   ]
 }
