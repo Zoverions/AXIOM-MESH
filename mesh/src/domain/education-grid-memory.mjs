@@ -1,16 +1,13 @@
 import { ValidationError, assertPlainObject, assertString } from '../lib/canonical.mjs';
 import { requireOwnedMemoryReference } from '../grid/memory-reference.mjs';
+import {
+  EDUCATION_LEARNER_RECORD_MEMORY_KINDS,
+} from './education-learner-memory-profile.mjs';
+
+export { EDUCATION_LEARNER_RECORD_MEMORY_KINDS };
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const KIND = /^[a-z][a-z0-9.-]+$/;
-
-export const EDUCATION_LEARNER_RECORD_MEMORY_KINDS = Object.freeze([
-  'education.assignment-artifact',
-  'education.learner-submission',
-  'education.educator-feedback',
-  'education.appeal-reason',
-  'education.correction-evidence',
-]);
 const CANONICAL_KINDS = new Set(EDUCATION_LEARNER_RECORD_MEMORY_KINDS);
 
 /**
