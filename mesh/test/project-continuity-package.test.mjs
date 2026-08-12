@@ -297,7 +297,7 @@ test('event, dependency, claim-boundary, and signature tampering fail offline ve
   );
 
   const signatureTamper = structuredClone(pkg);
-  signatureTamper.signature.signature = `${signatureTamper.signature.signature.slice(0, -1)}A`;
+  signatureTamper.signature.digest = '0'.repeat(64);
   assert.throws(
     () => verifyProjectContinuityPackage(signatureTamper, { public_key: identity.publicKey }),
     /signature is invalid/
