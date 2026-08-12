@@ -79,6 +79,23 @@ export async function createHypervisorService(config = meshConfig()) {
     return signedFetch(identity, 'grid', `${config.urls.grid}${path}`, { traceId });
   }
 
+  async function executeGridQuery(traceId, principalId, query) {
+    return signedFetch(
+      identity,
+      'grid',
+      `${config.urls.grid}/internal/v1/education/learner-progress`,
+      {
+        method: 'POST',
+        traceId,
+        body: {
+          actor: principalId,
+          principal: principalId,
+          query,
+        },
+      },
+    );
+  }
+
   async function activePolicy(traceId) {
     const response = await gridGet('/internal/v1/policy-overlays', traceId);
     if (!response.overlays?.length) return basePolicy;
@@ -363,6 +380,31 @@ export async function createHypervisorService(config = meshConfig()) {
       ) {
         throw new AxiomError('sandbox_attestation_mismatch', 'Sandbox attestation does not match the execution result', 502);
       }
+      if (execution.result.mutation && execution.result.query) {
+        throw new AxiomError(
+          'sandbox_effect_ambiguous',
+          'Sandbox execution may not return both a mutation and a query effect',
+          502,
+        );
+      }
+      let queryResult = null;
+      if (execution.result.query) {
+        queryResult = await executeGridQuery(
+          traceId,
+          intent.principal.id,
+          execution.result.query,
+        );
+        if (
+          queryResult.query_input_digest !== execution.result.query.input_digest
+          || queryResult.result_digest !== digestObject(queryResult.result)
+        ) {
+          throw new AxiomError(
+            'grid_query_result_mismatch',
+            'Grid query result is not bound to the attested Sandbox query',
+            502,
+          );
+        }
+      }
       const events = [];
       if (execution.result.mutation) {
         events.push({
@@ -383,6 +425,7 @@ export async function createHypervisorService(config = meshConfig()) {
       }
       const result = {
         ...execution.result.output,
+        ...(queryResult ? { provider_result: queryResult } : {}),
         intent_id: intent.intent_id,
         trace_id: traceId,
         status: 'completed',
@@ -391,6 +434,7 @@ export async function createHypervisorService(config = meshConfig()) {
           invocation_digest: invocationDigest,
           ...(effectDestination ? { effect_destination: effectDestination } : {}),
           execution_digest: statement.result_digest,
+          ...(queryResult ? { query_result_digest: digestObject(queryResult) } : {}),
           policy_digest: decision.policy_digest,
           ...(machineAuthority ? {
             machine_authority_digest: machineAuthority.authority_digest,
