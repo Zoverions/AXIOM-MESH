@@ -5,6 +5,7 @@ import {
 } from './education-contract.mjs';
 
 const SHA256_RE = /^[a-f0-9]{64}$/;
+const PRINCIPAL_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const LEARNER_ACTIONS = new Set([
   'education.learner.event.append',
   'education.learner.progress.read',
@@ -215,7 +216,7 @@ async function authorizeConsent(provider, input, { purpose, data_scope }) {
 export async function executeEducationLearnerRecordAction(
   actionName,
   input,
-  { provider = null } = {},
+  { provider = null, actor = null } = {},
 ) {
   const contract = await loadEducationContract();
   validateEducationIntent(contract, actionName, input);
@@ -227,12 +228,18 @@ export async function executeEducationLearnerRecordAction(
   const adapter = validateProvider(provider);
 
   if (actionName === 'education.learner.event.append') {
+    const actorId = assertString(actor, 'education learner-record actor', {
+      max: 160,
+      pattern: PRINCIPAL_ID,
+    });
     await authorizeConsent(adapter, input, {
       purpose: 'learning-progress-recording',
       data_scope: 'learning-progress:write',
     });
     const memoryOk = await adapter.assertMemoryReference({
       subject_id: input.subject_id,
+      actor_id: actorId,
+      event_type: input.event_type,
       consent_id: input.consent_id,
       purpose: input.purpose,
       memory_object_id: input.memory_object_id,
