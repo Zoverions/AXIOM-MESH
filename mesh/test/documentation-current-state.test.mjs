@@ -32,6 +32,16 @@ const RESOLVER_STATE_DOCUMENTS = Object.freeze([
   'docs/whitepapers_and_research/WHITEPAPER.md'
 ]);
 
+const EVIDENCE_STATE_DOCUMENTS = Object.freeze([
+  'README.md',
+  'docs/README.md',
+  'docs/PROJECT-STATUS-2026.md',
+  'docs/PRODUCTION-READINESS-TRACKER.md',
+  'docs/rebuild/SOURCE-TRACEABILITY.md',
+  'docs/releases/0.12.0-dev.3.md',
+  'docs/whitepapers_and_research/WHITEPAPER.md'
+]);
+
 const REQUIRED_CURRENT_STATE_MARKERS = Object.freeze([
   '0.12.0-dev.3',
   'machine',
@@ -88,7 +98,7 @@ test('release notes do not regress to superseded machine-principal non-claims', 
 });
 
 test('evidence documents preserve the modification versus truncation distinction', async () => {
-  for (const relativePath of CURRENT_STATE_DOCUMENTS) {
+  for (const relativePath of EVIDENCE_STATE_DOCUMENTS) {
     const content = await read(relativePath);
     assert.ok(content.includes('axiom-grid-continuity-anchor.v1'), relativePath);
     assert.match(content, /truncation/i, relativePath);
