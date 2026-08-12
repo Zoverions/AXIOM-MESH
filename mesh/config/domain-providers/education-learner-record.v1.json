@@ -10,11 +10,11 @@
   "memory_reference": {
     "object_id_pattern": "^memory_[a-f0-9]{64}$",
     "allowed_kinds": [
-      "education.assignment-artifact",
-      "education.learner-submission",
-      "education.educator-feedback",
       "education.appeal-reason",
-      "education.correction-evidence"
+      "education.assignment-artifact",
+      "education.correction-evidence",
+      "education.educator-feedback",
+      "education.learner-submission"
     ],
     "active_required": true,
     "exact_subject_owner_required": true,
