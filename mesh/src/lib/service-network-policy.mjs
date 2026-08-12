@@ -47,7 +47,7 @@ const EXPECTED_FLOW_IDS = Object.freeze([
   'sandbox-self-health'
 ]);
 const EXPECTED_POLICY_DIGEST =
-  'bc83476d5bd8479dfd336448edd0f7257a75997b2bd95ae1229ceab9a3116290';
+  '2f0fd77a8d40f6b38376429b416498ff15d173cf7db7b0b8dadc153f88086541';
 
 export const ACTIVE_SERVICE_NETWORK_POLICY = deepFreeze(
   validateServiceNetworkPolicy(JSON.parse(readFileSync(
@@ -391,7 +391,8 @@ function validateExactCurrentRoutes(flows) {
       'GET /internal/v1/status',
       'GET /internal/v1/policy-overlays',
       'GET /internal/v1/approval/:id',
-      'POST /internal/v1/commit'
+      'POST /internal/v1/commit',
+      'POST /internal/v1/education/learner-progress'
     ],
     'hypervisor-to-sandbox': [
       'GET /internal/v1/operations',
