@@ -79,7 +79,7 @@ function exactStringSet(raw, name, { pattern = DIGEST, maxItems = 32_768, itemMa
 
 function normalizeAnchor(raw, name) {
   const value = assertPlainObject(raw, name);
-  rejectUnknown(value, new Set(['event_seq', 'event_hash', 'recorded_at']), name);
+  rejectUnknown(value, new Set(['event_seq', 'event_hash', 'recorded_at', 'event', 'observation']), name);
   return {
     event_seq: positiveInteger(value.event_seq, `${name}.event_seq`),
     event_hash: digest(value.event_hash, `${name}.event_hash`),
