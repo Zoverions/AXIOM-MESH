@@ -126,7 +126,7 @@ the capability registry or current production-readiness decision.
 - [Current-build threat model](security/CURRENT-BUILD-THREAT-MODEL.md)
 - [Independent security review](security/INDEPENDENT-SECURITY-REVIEW.md)
 - [Credential-history revocation](security/CREDENTIAL-HISTORY-REVOCATION.md)
-- [Deny-egress boundary](security/DENY-ERESS-BOUNDARY.md)
+- [Deny-egress boundary](security/DENY-EGRESS-BOUNDARY.md)
 - [Incident response and tabletop](security/INCIDENT-RESPONSE-AND-TABLETOP.md)
 
 ### Operations
