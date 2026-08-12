@@ -9,6 +9,10 @@ import {
   EDUCATION_CONTRACT_VERSION,
 } from '../src/domain/education-contract.mjs';
 import {
+  EDUCATION_LEARNER_RECORD_MEMORY_KINDS,
+  createGridEducationMemoryReferenceAssertion,
+} from '../src/domain/education-grid-memory.mjs';
+import {
   createEducationLearnerRecordProvider,
   executeEducationLearnerRecordAction,
 } from '../src/domain/education-learner-record-provider.mjs';
@@ -126,6 +130,18 @@ test('provider contract is foundation-only and domains.education remains adapter
   assert.equal(providerContract.provider_contract_id, 'axiom.education.learner-record');
   assert.equal(providerContract.provider_capability, 'education.learner-record');
   assert.equal(providerContract.status, 'adapter-foundation-only');
+  assert.deepEqual(
+    providerContract.memory_reference.allowed_kinds,
+    EDUCATION_LEARNER_RECORD_MEMORY_KINDS,
+  );
+  assert.equal(
+    providerContract.memory_reference.object_id_pattern,
+    '^memory_[a-f0-9]{64}$',
+  );
+  assert.equal(providerContract.memory_reference.active_required, true);
+  assert.equal(providerContract.memory_reference.exact_subject_owner_required, true);
+  assert.equal(providerContract.memory_reference.content_address_integrity_required, true);
+  assert.equal(providerContract.memory_reference.payload_decryption_required_for_assertion, false);
   assert.equal(providerContract.invariants.install_grants_authority, false);
   assert.equal(providerContract.invariants.provider_owns_consent, false);
   assert.equal(providerContract.invariants.provider_owns_identity, false);
@@ -136,6 +152,20 @@ test('provider contract is foundation-only and domains.education remains adapter
   assert.ok(education);
   assert.equal(education.status, 'adapter_required');
   assert.equal(Object.hasOwn(education, 'provider'), false);
+});
+
+test('Grid education memory allowlist can narrow but cannot expand provider contract kinds', () => {
+  assert.doesNotThrow(() => createGridEducationMemoryReferenceAssertion({
+    store: {},
+    allowedKinds: ['education.learner-submission'],
+  }));
+  assert.throws(
+    () => createGridEducationMemoryReferenceAssertion({
+      store: {},
+      allowedKinds: ['education.unreviewed-content'],
+    }),
+    /outside the provider contract/,
+  );
 });
 
 test('missing provider preserves capability_unavailable', async () => {
