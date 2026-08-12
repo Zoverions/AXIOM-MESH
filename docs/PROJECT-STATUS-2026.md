@@ -59,7 +59,7 @@ experimental, 2 specified, 9 adapter-required, and 4 disabled capabilities.
 - explicit production credential provisioning and a fail-closed four-process
   supervisor;
 - per-unit private identity/TLS projection, Grid-only durable state, an
-  exact four-segment internal topology, a default-deny 40-route application
+  exact four-segment internal topology, a default-deny 42-route application
   policy with derived mTLS peers, and signed Sandbox-only failure/recovery
   evidence;
 - signed admitted-node v2 discovery metadata, authenticated Grid-signed
