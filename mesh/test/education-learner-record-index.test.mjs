@@ -17,6 +17,7 @@ import {
 const DIGEST_A = 'a'.repeat(64);
 const DIGEST_B = 'b'.repeat(64);
 const DIGEST_C = 'c'.repeat(64);
+const ACTOR = 'human:educator-index';
 
 function contractFields() {
   return {
@@ -65,21 +66,21 @@ function providerFor(index) {
   });
 }
 
+function appendWith(provider, input) {
+  return executeEducationLearnerRecordAction(
+    'education.learner.event.append',
+    input,
+    { provider, actor: ACTOR },
+  );
+}
+
 test('exact append replay returns the same record digest without duplicating the index', async () => {
   const index = new InMemoryEducationLearnerRecordIndex();
   const provider = providerFor(index);
   const input = appendInput();
 
-  const first = await executeEducationLearnerRecordAction(
-    'education.learner.event.append',
-    input,
-    { provider },
-  );
-  const second = await executeEducationLearnerRecordAction(
-    'education.learner.event.append',
-    input,
-    { provider },
-  );
+  const first = await appendWith(provider, input);
+  const second = await appendWith(provider, input);
 
   assert.equal(index.size, 1);
   assert.equal(first.result.record_digest, second.result.record_digest);
@@ -89,19 +90,10 @@ test('exact append replay returns the same record digest without duplicating the
 test('same subject/event_id with substituted payload is rejected as a conflict', async () => {
   const index = new InMemoryEducationLearnerRecordIndex();
   const provider = providerFor(index);
-  await executeEducationLearnerRecordAction(
-    'education.learner.event.append',
-    appendInput(),
-    { provider },
-  );
+  await appendWith(provider, appendInput());
 
   await assert.rejects(
-    () =>
-      executeEducationLearnerRecordAction(
-        'education.learner.event.append',
-        appendInput({ payload_digest: DIGEST_B }),
-        { provider },
-      ),
+    () => appendWith(provider, appendInput({ payload_digest: DIGEST_B })),
     /event_id conflict/,
   );
   assert.equal(index.size, 1);
@@ -110,20 +102,15 @@ test('same subject/event_id with substituted payload is rejected as a conflict',
 test('same event_id may exist for a different learner subject without collision', async () => {
   const index = new InMemoryEducationLearnerRecordIndex();
   const provider = providerFor(index);
-  await executeEducationLearnerRecordAction(
-    'education.learner.event.append',
-    appendInput(),
-    { provider },
-  );
-  await executeEducationLearnerRecordAction(
-    'education.learner.event.append',
+  await appendWith(provider, appendInput());
+  await appendWith(
+    provider,
     appendInput({
       subject_id: 'subject:learner-002',
       consent_id: 'consent:learning-progress-002',
       payload_digest: DIGEST_B,
       memory_object_id: 'memory:002',
     }),
-    { provider },
   );
   assert.equal(index.size, 2);
 });
@@ -151,13 +138,7 @@ test('progress read is deterministically ordered by instant then event_id', asyn
       occurred_at: '2026-08-11T22:35:00Z',
     }),
   ];
-  for (const input of rows) {
-    await executeEducationLearnerRecordAction(
-      'education.learner.event.append',
-      input,
-      { provider },
-    );
-  }
+  for (const input of rows) await appendWith(provider, input);
 
   const result = await executeEducationLearnerRecordAction(
     'education.learner.progress.read',
@@ -195,13 +176,7 @@ test('progress read filters by subject, course, expectations, and as_of', async 
       occurred_at: '2026-08-11T19:00:00-04:00',
     }),
   ];
-  for (const input of rows) {
-    await executeEducationLearnerRecordAction(
-      'education.learner.event.append',
-      input,
-      { provider },
-    );
-  }
+  for (const input of rows) await appendWith(provider, input);
 
   const result = await executeEducationLearnerRecordAction(
     'education.learner.progress.read',
@@ -220,11 +195,7 @@ test('progress read filters by subject, course, expectations, and as_of', async 
 test('read projection contains references only and never raw learner content', async () => {
   const index = new InMemoryEducationLearnerRecordIndex();
   const provider = providerFor(index);
-  await executeEducationLearnerRecordAction(
-    'education.learner.event.append',
-    appendInput(),
-    { provider },
-  );
+  await appendWith(provider, appendInput());
 
   const result = await executeEducationLearnerRecordAction(
     'education.learner.progress.read',
@@ -248,20 +219,11 @@ test('explicit timezone is required for stored event and as_of bounds', async ()
   const index = new InMemoryEducationLearnerRecordIndex();
   const provider = providerFor(index);
   await assert.rejects(
-    () =>
-      executeEducationLearnerRecordAction(
-        'education.learner.event.append',
-        appendInput({ occurred_at: '2026-08-11T18:30:00' }),
-        { provider },
-      ),
+    () => appendWith(provider, appendInput({ occurred_at: '2026-08-11T18:30:00' })),
     /explicit timezone/,
   );
 
-  await executeEducationLearnerRecordAction(
-    'education.learner.event.append',
-    appendInput(),
-    { provider },
-  );
+  await appendWith(provider, appendInput());
   await assert.rejects(
     () =>
       executeEducationLearnerRecordAction(
