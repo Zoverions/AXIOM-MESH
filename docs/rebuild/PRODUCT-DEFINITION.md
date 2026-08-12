@@ -5,7 +5,7 @@
 
 **Current build:** `0.12.0-dev.3`
 
-**Reconciled:** 2026-08-10
+**Reconciled:** 2026-08-12
 
 **Deployment status:** production candidate; no live production claim
 
@@ -141,6 +141,21 @@ Planned human concepts are:
 - **Share** — selectively transfer objects and evidence;
 - **Circles** — coordinate with trusted people and independently owned nodes.
 
+### Personal device and compute layer
+
+Wearables, glasses, headphones, phones, personal computers, managed nodes, and
+cloud providers form a replaceable personal compute fabric outside the trusted
+kernel. A constrained wearable may capture input and express physical user
+presence, but it receives no ambient Grid, provider-secret, identity-wallet, or
+payment authority. The first wearable profile uses a phone companion for mobile
+connectivity and high-risk confirmation.
+
+Personal continuity is an exportable Personal Agent Pack of encrypted memory,
+preferences, policy, consent, runtime choices, evaluation, licences, and
+recovery references. Agent coordination is supplied by separately signed and
+versioned Agent Runtime Capsules. Neither the pack, capsule, model, nor
+placement engine may approve its own effect or bypass the kernel.
+
 ### Adapter layer
 
 AI providers, channels, storage transfer, credentials, zk verification,
@@ -198,6 +213,25 @@ projection is not an authoritative pre-execution kernel plan. General
 consequential plan/approval, edge deletion, hard deletion,
 restore, bulk ingestion, and human evidence still require their own gates.
 
+### AXIOM Link and Personal Compute Fabric
+
+AXIOM Link is the provisional name for a pendant or other constrained personal
+endpoint. Its purpose is low-friction capture, playback, physical privacy, and
+user-presence signaling while AXIOM One presents plans, confirmations,
+approvals, receipts, routing choices, device lifecycle, and recovery on an
+accessible companion surface.
+
+The Personal Compute Fabric selects only among policy-eligible phone, owner-
+local, managed-node, and provider-adapter choices. Users may choose Private,
+Balanced, Best, or Budget routing, inspect the exact capsule, model, and node
+used, pin compatible providers, and export their Personal Agent Pack without
+losing supported continuity. Commercial margin, engagement, or an unavailable
+local node may not silently weaken privacy or approval policy.
+
+This product is specified only. The current build contains no supported
+wearable, pairing protocol, Personal Agent Pack importer, Agent Runtime Capsule
+executor, inference router, remote dispatcher, or managed model service.
+
 ### AXIOM Verify
 
 AXIOM Verify is a local or static verifier for receipts and export packages. It
@@ -212,6 +246,26 @@ must explain:
 - explicit non-claims.
 
 Verification must not require trusting a hosted AXIOM service.
+
+### Local Trust Plane
+
+The Local Trust Plane is the planned deterministic verification and immediate-
+authorization boundary for device possession, passkeys, credential
+presentations, local policy, consent, budgets, exact one-use mandates, and
+external receipts. It is not an LLM and does not allow a model to participate
+in allow/deny computation.
+
+It distinguishes identity proofing, authentication, credential verification,
+local authorization, external authorization, settlement, reversal, and
+recovery. A locally authorized payment mandate is not proof of funds, merchant
+acceptance, or settlement. A valid credential signature proves only the named
+issuer claim under the checked trust, holder-binding, status, freshness, and
+disclosure profile.
+
+The current kernel's short-lived grants, exact independent approvals, balanced
+local accounting, and evidence are reusable foundations. Portable identity is
+only specified, named proof verifiers still require adapters, and real external
+settlement remains disabled.
 
 ### AXIOM Circles
 
@@ -309,6 +363,14 @@ the service operator an undeclared right to inspect plaintext data.
   unrelated private records.
 - Adapters and managed deployments require an uninstall and migration path.
 
+- Personal Agent Packs, Agent Runtime Capsules, Agent Runtime Adapters, Compute
+  Node Profiles, and Local Trust Envelopes use versioned contracts with
+  explicit compatibility, migration, rollback, licences, and secret-free
+  export behavior.
+- Synthetic adapter drills prove only their verifier and fixtures. They do not
+  establish external-runtime compatibility, live effects, or production
+  promotion.
+
 ## Capability families
 
 The platform is intended to support these families through common policy,
@@ -365,6 +427,10 @@ agent delegation, remote agent execution, AI, messaging, identity, storage
 transfer, zk, settlement, regulated-domain, and arbitrary-code capabilities
 remain adapter-required, experimental, specified, or disabled according to the
 registry and roadmap.
+The Personal Compute Fabric and Local Trust Plane contracts remain
+documentation-only. The runtime loads only the separately byte-pinned Agent
+Runtime Adapter contract; it does not load the other four drafts or create any
+implemented capability.
 
 ## Promotion and acceptance rule
 
@@ -393,11 +459,16 @@ Until independently demonstrated, AXIOM-MESH does not claim:
 - a supported AXIOM One, Verify, Circles, Studio, or Managed Node release;
 - a supported autonomous-agent runtime, MCP/A2A endpoint, machine delegation,
   remote agent execution, or agent federation;
+- a supported pendant, glasses, headphone, companion-phone, Personal Agent
+  Pack, Agent Runtime Capsule, compute fabric, or Local Trust Plane;
 - production external AI or messaging;
 - production-grade BFT, federation, remote dispatch, or Sybil resistance;
 - secure arbitrary code merely from container configuration;
 - working zk verification without a named adapter;
 - operational tokens, staking, treasury, bridges, liquidity, or settlement;
+- identity proofing, KYC, government-ID, age-assurance, biometric, payment-
+  authorization, funds-availability, merchant-acceptance, or settlement
+  assurance;
 - clinical, educational, governmental, legal, employment, or financial
   compliance;
 - secure embodied autonomy;
@@ -418,11 +489,17 @@ Work proceeds in parallel:
 3. mature machine-principal invocation semantics without enabling autonomous
    delegation or remote execution;
 4. add one bounded AI provider and useful personal workflows;
-5. build AXIOM Verify and invitation-based Circles;
-6. establish remote dispatch and result provenance before distributed compute;
-7. expand controlled adapters and managed-node operations;
-8. continue frontier laboratories behind isolation and promotion gates.
+5. implement the phone-first Personal Agent Pack and single-agent capsule slice
+   before prototyping the phone-relayed wearable endpoint;
+6. build AXIOM Verify and invitation-based Circles;
+7. establish remote dispatch and result provenance before distributed compute;
+8. develop identity and payment only with synthetic/test credentials and value
+   until their separate promotion gates pass;
+9. expand controlled adapters and managed-node operations;
+10. continue frontier laboratories behind isolation and promotion gates.
 
 See the [roadmap](../ROADMAP.md), [execution queue](../MASTER-TODO.md),
 [current status](../PROJECT-STATUS-2026.md), and
-[readiness tracker](../PRODUCTION-READINESS-TRACKER.md).
+[readiness tracker](../PRODUCTION-READINESS-TRACKER.md). The versioned device,
+compute, orchestration, and Local Trust architecture is defined in the
+[Personal Compute Fabric and Local Trust Plane specification](../architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md).

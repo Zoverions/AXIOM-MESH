@@ -125,6 +125,17 @@ pre-execution kernel plan. Edge deletion, hard deletion, restore, bulk
 ingestion, browser session, accessibility, usability, and packaging gates
 remain next, followed by one bounded AI provider and useful personal workflows,
 then selective sharing, Verify, and Circles.
+
+The documentation-only
+[Personal Compute Fabric and Local Trust Plane](docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md)
+`1.0.0-draft.1` specification extends that programme with a phone-first
+portable Personal Agent Pack, replaceable Agent Runtime Capsules, policy-first
+local/managed/cloud compute, a constrained phone-relayed wearable endpoint,
+deterministic credential and authorization verification, and sandbox-value
+payment mandates. The current runtime loads only the separately byte-pinned
+Agent Runtime Adapter contract; it does not load the other four drafts, and the
+phased MVP changes no capability status.
+
 See the [Gateway client contract](docs/operations/GATEWAY-CLIENT-CONTRACT.md).
 The [local preview runbook](docs/operations/AXIOM-ONE-LOCAL-PREVIEW.md) records
 its exact setup, security boundary, verification, rollback, and non-claims.
@@ -281,10 +292,15 @@ The active build does not claim:
 
 - live production, testnet, mainnet, or public federation;
 - supported AXIOM One, Verify, Circles, Studio, or Managed Node products;
+- supported wearable/companion hardware, Personal Agent Pack, Agent Runtime
+  Capsule executor, Personal Compute Fabric, or Local Trust Plane;
 - an autonomous-agent runtime, autonomous delegation, MCP/A2A endpoints, or
   remote agent execution;
 - production AI, messaging, identity, payment, storage-transfer, or domain
   adapters;
+- identity proofing, KYC, age assurance, government-ID, biometric, payment-
+  authorization, funds-availability, merchant-acceptance, or settlement
+  assurance;
 - remote workload execution or authenticated remote results;
 - BFT consensus, tokens, bridges, liquidity, staking, treasury, or settlement;
 - arbitrary-code isolation;

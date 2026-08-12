@@ -29,8 +29,13 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/PROJECT-STATUS-2026.md',
   'docs/REPOSITORY-MIGRATION.md',
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md',
+  'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md',
   'docs/architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md',
+  'docs/architecture/contracts/agent-runtime-capsule.v1.schema.json',
   'docs/architecture/contracts/agent-runtime-adapter.v1.schema.json',
+  'docs/architecture/contracts/compute-node-profile.v1.schema.json',
+  'docs/architecture/contracts/local-trust-envelope.v1.schema.json',
+  'docs/architecture/contracts/personal-agent-pack.v1.schema.json',
   'docs/audits/SCALABILITY-AUDIT-2026-07-30.md',
   'docs/audits/AUDIT-HARDENING-G5-G9-2026-08-10.md',
   'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md',
@@ -130,12 +135,43 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Current non-claims',
     '4954c3d1a49ea57fb0bf5a7eea29140b852e8b5fa2bb11634665f004aca2c19c'
   ],
+  'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md': [
+    '## Purpose and status',
+    '## Non-bypassable architecture',
+    '## Local Trust Plane',
+    '## Versioned contract set',
+    '## Phased MVP plan',
+    '## Promotion gates and non-claims'
+  ],
+  'docs/architecture/contracts/agent-runtime-capsule.v1.schema.json': [
+    'https://axiom.invalid/schemas/agent-runtime-capsule.v1.schema.json',
+    'axiom-agent-runtime-capsule.v1',
+    'sbom_sha256',
+    'may_grant_authority'
+  ],
   'docs/architecture/contracts/agent-runtime-adapter.v1.schema.json': [
     'urn:axiom:contract:agent-runtime-adapter:v1',
     'axiom.agent-runtime-adapter',
     'grant_signature_algorithm',
     'authorization_recheck_before_effect',
     'raw_chain_of_thought_required'
+  ],
+  'docs/architecture/contracts/compute-node-profile.v1.schema.json': [
+    'https://axiom.invalid/schemas/compute-node-profile.v1.schema.json',
+    'axiom-compute-node-profile.v1',
+    'endpoint-health'
+  ],
+  'docs/architecture/contracts/local-trust-envelope.v1.schema.json': [
+    'https://axiom.invalid/schemas/local-trust-envelope.v1.schema.json',
+    'axiom-local-trust-request.v1',
+    'axiom-local-trust-verification.v1',
+    'axiom-local-trust-mandate.v1',
+    'axiom-local-trust-external-receipt.v1'
+  ],
+  'docs/architecture/contracts/personal-agent-pack.v1.schema.json': [
+    'https://axiom.invalid/schemas/personal-agent-pack.v1.schema.json',
+    'axiom-personal-agent-pack.v1',
+    'secret_material_included'
   ],
   'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md': [
     '## 1. Four dimensions that must remain separate',
@@ -328,7 +364,12 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/PRODUCTION-GRADE.md': 3_000,
   'docs/PROJECT-STATUS-2026.md': 1_500,
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md': 8_000,
+  'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md': 25_000,
+  'docs/architecture/contracts/agent-runtime-capsule.v1.schema.json': 7_000,
   'docs/architecture/contracts/agent-runtime-adapter.v1.schema.json': 12_000,
+  'docs/architecture/contracts/compute-node-profile.v1.schema.json': 9_000,
+  'docs/architecture/contracts/local-trust-envelope.v1.schema.json': 10_000,
+  'docs/architecture/contracts/personal-agent-pack.v1.schema.json': 5_000,
   'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md': 10_000,
   'docs/rebuild/LONG-HORIZON-CAPABILITY-MAP.md': 8_000,
   'docs/rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md': 9_000,

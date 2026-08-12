@@ -127,6 +127,10 @@ registry.
 - [Agent Runtime Adapter v1 JSON Schema](architecture/contracts/agent-runtime-adapter.v1.schema.json)
   — exact byte-pinned candidate manifest contract; it does not promote a
   runtime capability.
+- [Personal Compute Fabric and Local Trust Plane](architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md)
+  defines the contract-first wearable, portable-agent, interchangeable
+  orchestration, compute-routing, local verification, identity-presentation,
+  and payment-mandate architecture plus its phased MVP and non-claims.
 - [Agent interoperability and capability substrate](rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md)
   — defines agents as clients/principals rather than authorities, specifies the
   proposed protocol-neutral invocation envelope, and preserves the mandatory
@@ -150,6 +154,18 @@ registry.
   security priorities, and decision not to build another general agent runtime.
 - [0.12.0-dev.3 build notes](releases/0.12.0-dev.3.md) — describes the current
   development line and its documentation/product-programme state.
+
+### Draft architecture contracts
+
+- [Personal Agent Pack v1](architecture/contracts/personal-agent-pack.v1.schema.json)
+- [Agent Runtime Capsule v1](architecture/contracts/agent-runtime-capsule.v1.schema.json)
+- [Agent Runtime Adapter v1](architecture/contracts/agent-runtime-adapter.v1.schema.json)
+- [Compute Node Profile v1](architecture/contracts/compute-node-profile.v1.schema.json)
+- [Local Trust Envelope v1](architecture/contracts/local-trust-envelope.v1.schema.json)
+
+These JSON Schemas are documentation contracts. The current runtime loads only
+the separately byte-pinned Agent Runtime Adapter contract; it does not load the
+other four drafts or promote any capability or external compatibility claim.
 
 ### Production and operations
 

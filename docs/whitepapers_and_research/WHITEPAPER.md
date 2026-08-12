@@ -2,7 +2,7 @@
 
 **Version:** `0.12.0-dev.3`
 
-**Updated:** 2026-07-30
+**Updated:** 2026-08-12
 
 **Status:** implementation-grounded architecture and product-development paper
 
@@ -412,6 +412,57 @@ AXIOM Managed Node will provide optional hosting, backup, updates, and support
 without transferring ownership of user information or creating a platform
 right to inspect plaintext content.
 
+### 11.5 Personal Compute Fabric and Local Trust Plane
+
+The specified Personal Compute Fabric separates six replaceable concerns:
+endpoint, companion, Personal Agent Pack, Agent Runtime Capsule, compute/model
+adapter, and kernel authority. A pendant, glasses, or headphones may provide
+capture, playback, physical privacy, and user-presence signals, but may not
+hold ambient Grid authority, provider secrets, raw payment credentials, or the
+root personal memory store. The initial endpoint uses a phone companion rather
+than direct cellular authority.
+
+Personal continuity is therefore not one permanent model. An exportable
+Personal Agent Pack references encrypted memory, provenance, preferences,
+policy, consent, routing, evaluation, optional model adapters, licences, and
+recovery. Agent behavior is supplied by immutable Runtime Capsules for
+deterministic workflows, a bounded single agent, planner-executor,
+orchestrator-worker, specialist-team, or critic-loop patterns. Each capsule
+binds exact code and SBOM, requested authority, budgets, cancellation, stop and
+fallback behavior, evidence, uninstall, and rollback. It can propose work but
+cannot approve it.
+
+Compute routing first eliminates choices that violate privacy, consent,
+destination, jurisdiction, licence, security, capability, health, freshness,
+deadline, or budget. Only eligible choices are ranked by measured usefulness,
+latency, reliability, cost, and energy. Private, Balanced, Best, and Budget are
+human-facing policy presets rather than permission to trade away a hard
+constraint.
+
+The Local Trust Plane is a deterministic verification and immediate-
+authorization boundary for authenticators, credential presentations, policy,
+consent, budgets, confirmation, one-use mandates, and external receipts. No
+generative model participates in its allow/deny calculation. Identity proofing,
+authentication, credential verification, local authorization, external
+authorization, settlement, reversal, and recovery remain distinct. A locally
+authorized payment mandate is not evidence of funds, merchant acceptance, or
+settlement; a valid credential signature proves only the checked issuer claim
+under the named holder-binding, status, freshness, and disclosure profile.
+
+The architecture is versioned as `1.0.0-draft.1` with five documentation
+contracts for the Personal Agent Pack, Agent Runtime Capsule, Agent Runtime
+Adapter, Compute Node Profile, and Local Trust Envelope. The runtime loads only
+the separately byte-pinned Agent Runtime Adapter contract; it does not load the
+other four drafts, and the capability registry is unchanged. A signed no-I/O
+reference-adapter drill exercises contract and verifier behavior across 28
+cases while explicitly claiming no external runtime, effect, or production
+conformance. The phased path begins with phone-first replaceable inference,
+then a phone-relayed wearable prototype, owner-local compute, synthetic/test-
+authority identity, sandbox-value payment simulation, and finally a bounded
+non-regulated invitation-only pilot. Real identity, payments, and production
+hardware remain behind their separate security, hardware, accessibility,
+privacy, custody, legal, regulatory, and independent-review gates.
+
 ## 12. Frontier incubation
 
 Frontier laboratories may implement:
@@ -441,7 +492,8 @@ The current programme has two immediate priorities:
    credential dispositions, and an independent security review;
 2. maintain the implemented Gateway client contract and complete the
    experimental AXIOM One human-shell gates, followed by one bounded AI
-   adapter, AXIOM Verify, and invitation-based Circles.
+   adapter, a phone-first Personal Agent Pack, one single-agent Runtime Capsule,
+   policy-first routing, AXIOM Verify, and invitation-based Circles.
 
 Multi-host remote dispatch, independently operated WAN evidence, broader
 adapters, credentials, zk verification, managed nodes, and a curated capsule
@@ -472,8 +524,13 @@ The `0.12.0-dev.3` build does not claim:
 - a live public, customer, testnet, mainnet, or production service;
 - a completed authentic single-node pilot or independent security approval;
 - a supported AXIOM One, Verify, Circles, Studio, or Managed Node release;
+- a supported wearable, companion, Personal Agent Pack, Runtime Capsule,
+  compute-routing fabric, or Local Trust Plane;
 - production AI, messaging, identity, storage-transfer, payment, or domain
   adapters;
+- identity proofing, KYC, age assurance, government-ID, biometric, payment-
+  authorization, funds-availability, merchant-acceptance, or settlement
+  assurance;
 - remote workload dispatch or authenticated remote-result provenance;
 - federation, BFT consensus, replicated Grid finality, or Sybil resistance;
 - arbitrary-code sandbox security;
@@ -519,7 +576,8 @@ Current authorities and supporting documents are:
 - [production readiness tracker](../PRODUCTION-READINESS-TRACKER.md);
 - [production runbook](../../mesh/PRODUCTION.md);
 - [pilot evidence runbook](../operations/PILOT-DEPLOYMENT-DOSSIER.md);
-- [independent review runbook](../security/INDEPENDENT-SECURITY-REVIEW.md).
+- [independent review runbook](../security/INDEPENDENT-SECURITY-REVIEW.md);
+- [Personal Compute Fabric and Local Trust Plane specification](../architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md).
 
 ## Conclusion
 
