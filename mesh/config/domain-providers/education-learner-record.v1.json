@@ -7,6 +7,20 @@
   "provider_capability": "education.learner-record",
   "status": "adapter-foundation-only",
   "claim_boundary": "This contract defines the narrow provider boundary for governed learner progress reads and learner event appends. It does not configure a provider, grant authority, validate consent by itself, create a learner database, infer mastery/grades/credits, or promote domains.education beyond adapter_required.",
+  "memory_reference": {
+    "object_id_pattern": "^memory_[a-f0-9]{64}$",
+    "allowed_kinds": [
+      "education.assignment-artifact",
+      "education.learner-submission",
+      "education.educator-feedback",
+      "education.appeal-reason",
+      "education.correction-evidence"
+    ],
+    "active_required": true,
+    "exact_subject_owner_required": true,
+    "content_address_integrity_required": true,
+    "payload_decryption_required_for_assertion": false
+  },
   "actions": {
     "education.learner.event.append": {
       "operation": "append_event",
