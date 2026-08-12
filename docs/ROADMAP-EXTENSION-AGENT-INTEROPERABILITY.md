@@ -109,6 +109,13 @@ Milestones:
 
 **Outcome:** one maintained external agent/client ecosystem can call a policy-selected AXIOM surface without creating a second authorization system.
 
+**Current contract checkpoint:** the candidate Agent Runtime Adapter v1
+manifest is byte-pinned at contract version `1.0.0`, and a 28-case synthetic
+reference drill is attached to the required `verify` workflow. This establishes
+contract, signed-grant, mapping, revocation, cancellation, idempotency,
+uncertain-outcome, and receipt-shape evidence only. It does not load or certify
+an external runtime and does not promote MCP support.
+
 Sequence:
 
 1. pin one exact MCP profile;

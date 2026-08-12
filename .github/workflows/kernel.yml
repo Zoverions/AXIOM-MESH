@@ -239,6 +239,20 @@ jobs:
           path: ${{ runner.temp }}/axiom-provider-conformance-evidence.json
           if-no-files-found: error
           retention-days: 90
+      - name: Verify runtime-adapter v1 and run commit-bound synthetic conformance
+        working-directory: mesh
+        run: |
+          node src/lib/runtime-adapter-contract.mjs
+          node src/runtime-adapter-conformance.mjs \
+            --require-commit-bound \
+            > "$RUNNER_TEMP/axiom-runtime-adapter-reference-conformance-evidence.json"
+      - name: Upload commit-bound runtime-adapter reference evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: axiom-runtime-adapter-reference-conformance-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/axiom-runtime-adapter-reference-conformance-evidence.json
+          if-no-files-found: error
+          retention-days: 90
       - name: Exercise fail-closed pilot dossier verification
         working-directory: mesh
         run: |

@@ -74,6 +74,11 @@
 
 ## Priority 5 — Read-only MCP server laboratory
 
+- [x] Freeze candidate Agent Runtime Adapter contract v1 as an exact schema,
+  semantic version, and SHA-256 without changing capability status.
+- [x] Protect a synthetic reference adapter drill in the required `verify` job;
+  it covers 28 fail-closed cases and emits commit-bound workflow evidence while
+  loading no external runtime and performing no external effect.
 - [ ] Pin an exact supported MCP protocol profile for the laboratory.
 - [ ] Implement the adapter outside the trusted kernel unless a kernel change is demonstrably necessary.
 - [ ] Start with read-only/non-consequential capabilities.
@@ -230,6 +235,9 @@ For every machine/agent interoperability capability promoted beyond planning:
 - [x] normative requirement and machine-principal schema/code contract for the current slice;
 - [x] positive and negative real-stack tests for sponsor/profile/action/purpose/expiry/non-delegation authority;
 - [ ] protocol-version pin and migration policy for the Invocation Envelope/adapters. The current native profile is exactly pinned and downgrade-rejected; migration/cross-protocol policy remains open.
+- [x] candidate Agent Runtime Adapter v1 schema, digest lock, signed synthetic
+  grant boundary, negative tests, and commit-bound CI artifact; external-runtime
+  conformance and production promotion remain open.
 - [x] threat-model update for the current machine-principal slice;
 - [ ] dedicated machine credential/revocation privacy review beyond current bearer custody;
 - [ ] operations/rotation/revocation/recovery runbook for long-lived machine identities;

@@ -60,6 +60,7 @@ These gates do not replace production-pilot gates.
 | Accessibility and phone usability | Planned (`UX-006`) | Keyboard, screen reader, contrast, reduced motion, phone layouts, plain language, human testing |
 | Local packaging and onboarding | Planned (`UX-007`) | Signed package, safe updates, recovery, uninstall, no production credential creation, first-use study |
 | Bounded AI provider | Adapter required (`AI-001`) | Named provider/model, minimum data scope, budget, timeout, cancellation, retention, receipts, leakage tests |
+| External agent runtime adapter | Candidate contract and synthetic verifier only | Pin one maintained upstream runtime, complete source/licence/dependency review, implement one read-only no-secret Gateway path, prove native parity and direct-service denial, and obtain independent review before exposure |
 | Personal workflows | Planned (`AI-002`/`AI-003`) | Provenance, uncertainty, corrections, usefulness, latency, cost, cancellation, recovery, privacy evaluation |
 | AXIOM Verify | Planned (`VERIFY-001`) | Independent local/static verification, signer/integrity/scope/non-claim explanations, tamper fixtures |
 | AXIOM Circles | Planned (`CIRCLE-001`–`CIRCLE-003`) | Admission, roles, devices, revocation, selective disclosure, conflict visibility, exit/export, real consented pilot |

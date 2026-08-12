@@ -121,6 +121,13 @@ evidence_receipt_ids
 
 The exact schema requires normative design and adversarial testing before runtime promotion.
 
+The candidate [Agent Runtime Adapter v1 contract](../architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md)
+now freezes the external-runtime manifest boundary at semantic version `1.0.0`
+and an exact schema digest. Its protected 28-case synthetic drill validates the
+contract, signed-grant trust bootstrap, mapping and grant bounds, cancellation,
+revocation, idempotency, uncertain outcomes, and receipt integrity. This is
+pre-external-runtime verifier evidence and does not promote interoperability.
+
 ## 4. First-class machine principals
 
 Agents should eventually be represented as first-class principals rather than disguised human users or generic API tokens.
@@ -331,7 +338,8 @@ Every compatibility adapter must prove that changing the protocol does not chang
 Recommended sequence:
 
 1. finish current production-candidate pilot/security gates and preserve current claims;
-2. specify machine principal and invocation-envelope semantics;
+2. maintain the byte-pinned Agent Runtime Adapter v1 contract and synthetic
+   verifier while specifying machine principal and invocation-envelope semantics;
 3. expose a read-only machine discovery/verification profile through the native Gateway contract;
 4. build one local MCP server adapter exposing only non-consequential/read-only capabilities;
 5. prove protocol-parity and negative authorization behavior;

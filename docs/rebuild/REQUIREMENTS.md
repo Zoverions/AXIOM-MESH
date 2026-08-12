@@ -80,6 +80,7 @@ state.
 | CAP-06 | Every adapter MUST declare credentials, trust anchors, origins, egress, schemas, consent, data scope, budget, timeout, cancellation, retry, retention, deletion, evidence, failure, uninstall, and rollback. | Adapter conformance kit. |
 | CAP-07 | Missing or invalid external providers MUST return `capability_unavailable`, not mock output. | Provider-absence tests. |
 | CAP-08 | Provider results MUST remain data until a later authorized effect explicitly consumes them. | Model-to-effect separation tests. |
+| CAP-09 | An external agent-runtime adapter MUST pin its exact contract, source, artifact, SBOM, Gateway compatibility, grant-verification key, operation mappings, scopes, destinations, opaque credential handles, bounds, and evidence obligations. It MUST reject unsigned, replayed, future, expired, revoked, unmapped, widened, or changed requests; reauthorize immediately before an effect; and preserve `uncertain` outcomes until reconciliation. | Byte-pinned v1 contract verifier, synthetic signed-grant negative suite, commit-bound protected-CI artifact, and separate conformance against each pinned external runtime before exposure. |
 | CAP-09 | Arbitrary-code execution MUST remain disabled until an independently reviewed isolation profile and adversarial escape suite are tied to the exact runtime. | Promotion gate. |
 
 ## Personal AI and bounded orchestration

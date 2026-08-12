@@ -202,6 +202,8 @@ AXIOM-MESH does not currently claim:
 - a live public testnet, mainnet, or production service;
 - an autonomous-agent runtime, machine delegation, MCP/A2A endpoint, agent
   federation, or remote agent execution;
+- external-runtime conformance or a production adapter based only on the
+  candidate v1 contract and synthetic reference drill;
 - a separately deployed AXIOM Verify product, remote receipt-verification service, or proof
   that an arbitrary external side effect occurred beyond the recorded AXIOM evidence;
 - arbitrary external/provider/MCP destination semantics or remote machine effect
@@ -268,6 +270,15 @@ until their exact security, accessibility, usability, recovery, and deployment
 evidence is promoted.
 
 ### Machine interoperability substrate
+
+The candidate Agent Runtime Adapter v1 manifest contract is now byte-pinned at
+version `1.0.0`. A synthetic reference implementation verifies a separately
+pinned Ed25519 grant authority, mapping and grant bounds, future/expired/revoked
+grants, pre-effect reauthorization, cancellation, idempotency, fallback,
+uncertain outcomes, tamper rejection, and secret-free receipts across 28 cases.
+The required `verify` workflow generates a commit-bound artifact. This is
+contract and synthetic verifier evidence only: no external runtime is loaded,
+no external effect occurs, and the capability registry is unchanged.
 
 The native Invocation Envelope and current machine action/purpose, execution-time,
 request-size, request-rate, concurrency, response-size, and local computed-destination

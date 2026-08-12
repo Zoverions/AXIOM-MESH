@@ -121,6 +121,12 @@ registry.
   inert skill/capsule import, bounded providers, asynchronous tasks,
   attenuation-only delegation, A2A compatibility, remote execution, and
   machine roles in governed products.
+- [Agent Runtime Adapter v1 contract and conformance](architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md)
+  — pins the candidate v1 manifest schema, signed-grant trust boundary,
+  synthetic negative suite, commit-bound CI artifact, and explicit non-claims.
+- [Agent Runtime Adapter v1 JSON Schema](architecture/contracts/agent-runtime-adapter.v1.schema.json)
+  — exact byte-pinned candidate manifest contract; it does not promote a
+  runtime capability.
 - [Agent interoperability and capability substrate](rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md)
   — defines agents as clients/principals rather than authorities, specifies the
   proposed protocol-neutral invocation envelope, and preserves the mandatory

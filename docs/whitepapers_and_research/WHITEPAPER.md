@@ -148,7 +148,7 @@ segments. Only Gateway crosses the permission-restricted host ingress.
 Internal service edges use mutually authenticated TLS 1.3, distinct Ed25519
 identities, DNS and SPIFFE-style URI identities, active-certificate pinning,
 and signed replay-protected request envelopes. A machine-readable default-deny
-policy authorizes only 38 exact current-build caller, destination, method, and
+policy authorizes only 40 exact current-build caller, destination, method, and
 route combinations before request signing and again at the receiving service,
 while deriving each destination's active mTLS peers. Segmentation removes
 unrelated adjacency; transport and application checks impose direction.
@@ -494,12 +494,19 @@ Use an allowed Node.js 24 runtime. From the repository root:
 
 ```bash
 npm run setup
+npm run runtime-adapter:contract
+npm run runtime-adapter:drill
 ```
 
 The command validates the Node.js/npm policy and CI/container pins, installs
 both exact zero-dependency locks with lifecycle scripts disabled, proves the
 locks unchanged, and runs the clean-kernel and release gates. It does not
 provision production credentials.
+
+The runtime-adapter commands verify a byte-pinned candidate contract and a
+28-case synthetic reference boundary. The drill uses ephemeral test identities,
+loads no external runtime, performs no external effect, and is not evidence of
+production adapter or OpenClaw conformance.
 
 Current authorities and supporting documents are:
 

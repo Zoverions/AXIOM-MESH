@@ -148,6 +148,12 @@ settlement, remote execution, and domain integrations are separate adapters.
 Each adapter has an exact trust, credential, egress, consent, budget, retention,
 cancellation, evidence, failure, uninstall, and rollback contract.
 
+The candidate Agent Runtime Adapter v1 contract now makes that boundary
+machine-readable and byte-pinned. Its synthetic reference drill verifies signed
+grants, mapping and grant bounds, revocation, cancellation, idempotency,
+uncertain outcomes, and secret-free receipts. It loads no external runtime,
+performs no external effect, and does not change capability status.
+
 ### Frontier laboratory layer
 
 Distributed authority, economic systems, autonomous loops, regulated domains,

@@ -45,6 +45,8 @@
     "online-sync:drill": "node src/online-causal-sync-drill.mjs",
     "provider:start": "node src/provider-supervisor.mjs",
     "provider:drill": "node src/provider-conformance-drill.mjs",
+    "runtime-adapter:contract": "node src/lib/runtime-adapter-contract.mjs",
+    "runtime-adapter:drill": "node src/runtime-adapter-conformance.mjs",
     "pilot:dossier:verify": "node src/pilot-dossier.mjs verify",
     "pilot:dossier:drill": "node src/pilot-dossier-conformance-drill.mjs",
     "pilot:package:verify": "node src/pilot-evidence-package.mjs verify",

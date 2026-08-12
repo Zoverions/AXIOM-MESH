@@ -220,6 +220,8 @@ Run drills only in explicitly empty disposable workspaces.
 | Node discovery and scheduling reservations | `npm run node-scheduling:drill -- /tmp/axiom-node-scheduling-drill` |
 | Bidirectional causal exchange | `npm run online-sync:drill -- /tmp/axiom-online-causal-sync-drill` |
 | Secret and policy provider conformance | `npm run provider:drill -- /tmp/axiom-provider-conformance` |
+| Runtime-adapter v1 contract lock | `npm run runtime-adapter:contract` |
+| Synthetic runtime-adapter conformance | `npm run runtime-adapter:drill` |
 | Telemetry and alert relay | `npm run telemetry-relay:drill -- /tmp/axiom-telemetry-relay-drill` |
 | Service/API credential rotation | `npm run credential-rotation:drill -- /tmp/axiom-credential-rotation-drill` |
 | Data-protection-key rotation | `npm run data-key-rotation:drill -- /tmp/axiom-data-key-rotation-drill` |
