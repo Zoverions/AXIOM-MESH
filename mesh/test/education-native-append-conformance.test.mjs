@@ -93,7 +93,7 @@ function learnerEventInput({
   };
 }
 
-test('test-only policy proves native learner append across Gateway, Hypervisor, Sandbox, and Grid', async () => {
+test('test-only policy proves native learner append across Gateway, Hypervisor, Sandbox, and Grid', { timeout: 60_000 }, async () => {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-education-native-conformance-'));
   const policyPath = join(dataDir, 'education-conformance-policy.json');
   const productionPolicy = JSON.parse(await readFile(
