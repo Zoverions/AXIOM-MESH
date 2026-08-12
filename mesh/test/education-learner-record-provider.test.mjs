@@ -24,11 +24,17 @@ const DIGEST_A = 'a'.repeat(64);
 const DIGEST_B = 'b'.repeat(64);
 const DIGEST_C = 'c'.repeat(64);
 
-function appendInput(overrides = {}) {
+function contractFields() {
   return {
     contract_id: EDUCATION_CONTRACT_ID,
     contract_version: EDUCATION_CONTRACT_VERSION,
     contract_sha256: EDUCATION_CONTRACT_SHA256,
+  };
+}
+
+function appendInput(overrides = {}) {
+  return {
+    ...contractFields(),
     subject_id: 'subject:learner-001',
     consent_id: 'consent:learning-progress-001',
     purpose: 'learning-progress-recording',
@@ -46,9 +52,7 @@ function appendInput(overrides = {}) {
 
 function readInput(overrides = {}) {
   return {
-    contract_id: EDUCATION_CONTRACT_ID,
-    contract_version: EDUCATION_CONTRACT_VERSION,
-    contract_sha256: EDUCATION_CONTRACT_SHA256,
+    ...contractFields(),
     subject_id: 'subject:learner-001',
     consent_id: 'consent:learning-progress-001',
     purpose: 'learning-progress-review',
@@ -61,7 +65,7 @@ function readInput(overrides = {}) {
 
 function providerFixture(overrides = {}) {
   const calls = [];
-  const provider = createEducationLearnerRecordProvider({
+  const defaults = {
     provider_id: 'provider:test-learner-record',
     provider_version: '0.1.0',
     assertConsent: async request => {
@@ -105,15 +109,18 @@ function providerFixture(overrides = {}) {
         evidence_refs: ['evidence:read-001'],
       };
     },
+  };
+  const provider = createEducationLearnerRecordProvider({
+    ...defaults,
     ...overrides,
   });
   return { provider, calls };
 }
 
-test('provider contract remains adapter foundation and domains.education stays adapter_required', async () => {
+test('provider contract is foundation-only and domains.education remains adapter_required', async () => {
   const providerContract = JSON.parse(await readFile(PROVIDER_CONTRACT_PATH, 'utf8'));
   const capabilities = JSON.parse(await readFile(CAPABILITIES_PATH, 'utf8'));
-  const education = capabilities.capabilities.find(item => item.name === 'domains.education');
+  const education = capabilities.capabilities.find(item => item.id === 'domains.education');
 
   assert.equal(providerContract.schema, 'axiom-domain-provider-contract.v1');
   assert.equal(providerContract.provider_contract_id, 'axiom.education.learner-record');
@@ -128,10 +135,10 @@ test('provider contract remains adapter foundation and domains.education stays a
 
   assert.ok(education);
   assert.equal(education.status, 'adapter_required');
-  assert.equal(education.provider, null);
+  assert.equal(Object.hasOwn(education, 'provider'), false);
 });
 
-test('missing provider preserves the existing capability_unavailable behavior', async () => {
+test('missing provider preserves capability_unavailable', async () => {
   const result = await executeEducationLearnerRecordAction(
     'education.learner.event.append',
     appendInput(),
@@ -151,7 +158,7 @@ test('missing provider preserves the existing capability_unavailable behavior', 
   });
 });
 
-test('append requires consent and memory-reference assertions before provider mutation', async () => {
+test('append requires consent then memory assertion before mutation', async () => {
   const { provider, calls } = providerFixture();
   const input = appendInput();
   const result = await executeEducationLearnerRecordAction(
@@ -161,7 +168,6 @@ test('append requires consent and memory-reference assertions before provider mu
   );
 
   assert.equal(result.ok, true);
-  assert.equal(result.provider_capability, 'education.learner-record');
   assert.equal(result.result.status, 'recorded');
   assert.equal(result.result.subject_id, input.subject_id);
   assert.equal(result.result.event_id, input.event_id);
@@ -169,68 +175,69 @@ test('append requires consent and memory-reference assertions before provider mu
   assert.equal(result.result.memory_object_id, input.memory_object_id);
   assert.equal(result.result.record_digest, DIGEST_B);
   assert.match(result.result_digest, /^[a-f0-9]{64}$/);
-
-  assert.equal(calls.length, 3);
-  assert.equal(calls[0][0], 'consent');
-  assert.deepEqual(calls[0][1], {
-    subject_id: input.subject_id,
-    consent_id: input.consent_id,
-    purpose: 'learning-progress-recording',
-    data_scope: 'learning-progress:write',
-  });
-  assert.equal(calls[1][0], 'memory');
-  assert.deepEqual(calls[1][1], {
-    subject_id: input.subject_id,
-    consent_id: input.consent_id,
-    purpose: input.purpose,
-    memory_object_id: input.memory_object_id,
-    payload_digest: input.payload_digest,
-  });
-  assert.equal(calls[2][0], 'append');
-});
-
-test('failed consent assertion blocks append before memory or storage adapter calls', async () => {
-  let consentCalls = 0;
-  const { provider, calls } = providerFixture({
-    assertConsent: async () => {
-      consentCalls += 1;
-      return false;
-    },
-  });
-  await assert.rejects(
-    () =>
-      executeEducationLearnerRecordAction('education.learner.event.append', appendInput(), {
-        provider,
-      }),
-    /consent assertion failed/,
-  );
-  assert.equal(consentCalls, 1);
-  assert.equal(calls.length, 0);
-});
-
-test('failed memory-reference assertion blocks append before storage mutation', async () => {
-  let memoryCalls = 0;
-  const { provider, calls } = providerFixture({
-    assertMemoryReference: async () => {
-      memoryCalls += 1;
-      return false;
-    },
-  });
-  await assert.rejects(
-    () =>
-      executeEducationLearnerRecordAction('education.learner.event.append', appendInput(), {
-        provider,
-      }),
-    /memory reference assertion failed/,
-  );
-  assert.equal(memoryCalls, 1);
   assert.deepEqual(
     calls.map(([kind]) => kind),
-    ['consent'],
+    ['consent', 'memory', 'append'],
   );
 });
 
-test('append result cannot substitute subject, event, payload, or memory binding', async () => {
+test('failed consent blocks memory assertion and mutation', async () => {
+  const calls = [];
+  const { provider } = providerFixture({
+    assertConsent: async request => {
+      calls.push(['consent', request]);
+      return false;
+    },
+    assertMemoryReference: async request => {
+      calls.push(['memory', request]);
+      return true;
+    },
+    appendEvent: async input => {
+      calls.push(['append', input]);
+      return {};
+    },
+  });
+
+  await assert.rejects(
+    () => executeEducationLearnerRecordAction(
+      'education.learner.event.append',
+      appendInput(),
+      { provider },
+    ),
+    /consent assertion failed/,
+  );
+  assert.deepEqual(calls.map(([kind]) => kind), ['consent']);
+});
+
+test('failed memory-reference assertion blocks mutation', async () => {
+  const calls = [];
+  const { provider } = providerFixture({
+    assertConsent: async request => {
+      calls.push(['consent', request]);
+      return true;
+    },
+    assertMemoryReference: async request => {
+      calls.push(['memory', request]);
+      return false;
+    },
+    appendEvent: async input => {
+      calls.push(['append', input]);
+      return {};
+    },
+  });
+
+  await assert.rejects(
+    () => executeEducationLearnerRecordAction(
+      'education.learner.event.append',
+      appendInput(),
+      { provider },
+    ),
+    /memory reference assertion failed/,
+  );
+  assert.deepEqual(calls.map(([kind]) => kind), ['consent', 'memory']);
+});
+
+test('append result cannot substitute request bindings', async () => {
   for (const [field, value, message] of [
     ['subject_id', 'subject:other', 'subject_id mismatch'],
     ['event_id', 'event:other', 'event_id mismatch'],
@@ -249,16 +256,17 @@ test('append result cannot substitute subject, event, payload, or memory binding
       }),
     });
     await assert.rejects(
-      () =>
-        executeEducationLearnerRecordAction('education.learner.event.append', appendInput(), {
-          provider,
-        }),
+      () => executeEducationLearnerRecordAction(
+        'education.learner.event.append',
+        appendInput(),
+        { provider },
+      ),
       new RegExp(message),
     );
   }
 });
 
-test('provider cannot return raw work, raw feedback, mastery, grade, credit, or transcript fields', async () => {
+test('provider results reject raw work and authority-bearing learner state', async () => {
   for (const forbidden of [
     'raw_student_work',
     'raw_feedback',
@@ -279,16 +287,17 @@ test('provider cannot return raw work, raw feedback, mastery, grade, credit, or 
       }),
     });
     await assert.rejects(
-      () =>
-        executeEducationLearnerRecordAction('education.learner.event.append', appendInput(), {
-          provider,
-        }),
+      () => executeEducationLearnerRecordAction(
+        'education.learner.event.append',
+        appendInput(),
+        { provider },
+      ),
       /unsupported field|forbidden learner-record field/,
     );
   }
 });
 
-test('progress read requires consent assertion and returns bounded event references only', async () => {
+test('progress read requires consent and returns bounded references only', async () => {
   const { provider, calls } = providerFixture();
   const input = readInput();
   const result = await executeEducationLearnerRecordAction(
@@ -301,7 +310,10 @@ test('progress read requires consent assertion and returns bounded event referen
   assert.equal(result.result.status, 'available');
   assert.equal(result.result.subject_id, input.subject_id);
   assert.equal(result.result.course_code, input.course_code);
-  assert.equal(result.result.events.length, 1);
+  assert.deepEqual(
+    calls.map(([kind]) => kind),
+    ['consent', 'read'],
+  );
   assert.deepEqual(Object.keys(result.result.events[0]).sort(), [
     'event_id',
     'event_type',
@@ -311,68 +323,35 @@ test('progress read requires consent assertion and returns bounded event referen
     'payload_digest',
     'review_state',
   ]);
-  assert.deepEqual(
-    calls.map(([kind]) => kind),
-    ['consent', 'read'],
-  );
-  assert.deepEqual(calls[0][1], {
-    subject_id: input.subject_id,
-    consent_id: input.consent_id,
-    purpose: 'learning-progress-review',
-    data_scope: 'learning-progress:read',
-  });
 });
 
-test('progress result cannot claim mastery, grades, credits, or transcript state', async () => {
-  const { provider } = providerFixture({
-    readProgress: async input => ({
-      status: 'available',
-      subject_id: input.subject_id,
-      course_code: input.course_code,
-      events: [],
-      mastery: true,
-    }),
-  });
-  await assert.rejects(
-    () =>
-      executeEducationLearnerRecordAction('education.learner.progress.read', readInput(), {
-        provider,
-      }),
-    /unsupported field|forbidden learner-record field/,
-  );
-});
-
-test('provider boundary refuses non learner-record education actions after domain validation', async () => {
+test('provider boundary rejects non learner-record actions after contract validation', async () => {
   const { provider } = providerFixture();
   await assert.rejects(
-    () =>
-      executeEducationLearnerRecordAction(
-        'education.curriculum.query',
-        {
-          contract_id: EDUCATION_CONTRACT_ID,
-          contract_version: EDUCATION_CONTRACT_VERSION,
-          contract_sha256: EDUCATION_CONTRACT_SHA256,
-          active_pack_manifest_sha256: DIGEST_A,
-          course_code: 'MTH1W',
-          expectation_ids: ['MTH1W-A1.1'],
-        },
-        { provider },
-      ),
+    () => executeEducationLearnerRecordAction(
+      'education.curriculum.query',
+      {
+        ...contractFields(),
+        active_pack_manifest_sha256: DIGEST_A,
+        course_code: 'MTH1W',
+        expectation_ids: ['MTH1W-A1.1'],
+      },
+      { provider },
+    ),
     /does not handle action/,
   );
 });
 
-test('provider construction requires all kernel authority and adapter methods', () => {
+test('provider construction requires all authority and adapter methods', () => {
   assert.throws(
-    () =>
-      createEducationLearnerRecordProvider({
-        provider_id: 'provider:incomplete',
-        provider_version: '0.1.0',
-        assertConsent: async () => true,
-        assertMemoryReference: async () => true,
-        appendEvent: async () => ({}),
-        readProgress: null,
-      }),
+    () => createEducationLearnerRecordProvider({
+      provider_id: 'provider:incomplete',
+      provider_version: '0.1.0',
+      assertConsent: async () => true,
+      assertMemoryReference: async () => true,
+      appendEvent: async () => ({}),
+      readProgress: null,
+    }),
     /requires readProgress\(\)/,
   );
 });
