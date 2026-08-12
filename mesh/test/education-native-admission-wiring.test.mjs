@@ -17,6 +17,16 @@ test('live Sandbox service routes builtin execution through the education-aware 
     /const result = executeSandboxBuiltin\(\{ tool: claims\.tool, intent \}\);/,
   );
   assert.doesNotMatch(text, /const result = executeBuiltin\(/);
+
+  const executor = await source('../src/sandbox/education-executor.mjs');
+  assert.match(
+    executor,
+    /tool === 'builtin\.education-learner-progress-read'/,
+  );
+  assert.match(
+    executor,
+    /createEducationLearnerProgressQuery\(intent\)/,
+  );
 });
 
 test('live Grid commit route performs education authority preflight before append', async () => {
@@ -34,4 +44,30 @@ test('live Grid commit route performs education authority preflight before appen
   assert.ok(preflight >= 0, 'education Grid preflight must be wired');
   assert.ok(append >= 0, 'Grid append seam must remain present');
   assert.ok(preflight < append, 'education Grid preflight must run before append');
+});
+
+test('native learner progress read remains Hypervisor mediated and Grid authorized', async () => {
+  const grid = await source('../src/grid/server.mjs');
+  assert.match(
+    grid,
+    /import \{ registerEducationGridRoutes \} from '\.\/education-routes\.mjs';/,
+  );
+  assert.match(grid, /registerEducationGridRoutes\(router, store\);/);
+
+  const routes = await source('../src/grid/education-routes.mjs');
+  assert.match(routes, /principal\.service !== 'hypervisor'/);
+  assert.match(routes, /executeGridNativeEducationLearnerProgressRead/);
+
+  const hypervisor = await source('../src/hypervisor/server.mjs');
+  assert.match(
+    hypervisor,
+    /\/internal\/v1\/education\/learner-progress/,
+  );
+  const attestation = hypervisor.indexOf(
+    "throw new AxiomError('sandbox_attestation_mismatch'",
+  );
+  const query = hypervisor.indexOf('queryResult = await executeGridQuery(');
+  assert.ok(attestation >= 0, 'Sandbox attestation verification must remain present');
+  assert.ok(query >= 0, 'native Grid query route must remain present');
+  assert.ok(attestation < query, 'Grid read must occur only after Sandbox attestation verification');
 });
