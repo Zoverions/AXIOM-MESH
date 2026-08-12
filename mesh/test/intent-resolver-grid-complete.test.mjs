@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { generateKeyPairSync } from 'node:crypto';
+import { generateKeyPairSync, randomUUID } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import http from 'node:http';
 import { tmpdir } from 'node:os';
@@ -295,6 +295,9 @@ function fixture() {
 }
 
 async function socketPath(t) {
+  if (process.platform === 'win32') {
+    return `\\\\.\\pipe\\axiom-repository-operator-test-resolver-${randomUUID()}`;
+  }
   const dir = await mkdtemp(join(tmpdir(), 'axiom-resolver-completion-socket-'));
   t.after(() => rm(dir, { recursive: true, force: true }));
   return join(dir, 'operator.sock');
@@ -399,6 +402,14 @@ function completionArgs(current, gridUrl, operatorSocket) {
   };
 }
 
+function repositoryOperatorTestOptions(path, runOperator) {
+  return {
+    socketPath: path,
+    runOperator,
+    allowTestOnlyWindowsNamedPipe: process.platform === 'win32'
+  };
+}
+
 test('production mapping and target policy remain closed after completion coordinator is added', () => {
   assert.equal(productionExecutors.mappings.length, 0);
   assert.equal(productionPolicy.actions[REPOSITORY_DOCS_EFFECT_POLICY.target_action], undefined);
@@ -409,13 +420,13 @@ test('exact Grid-durable preparation reaches operator once and signed receipt be
   const grid = await signedGridCompletionServer(t, current.hypervisor);
   const path = await socketPath(t);
   let operatorCalls = 0;
-  const service = await startRepositoryOperatorService({
-    socketPath: path,
-    runOperator: async ({ prepared_effect }) => {
+  const service = await startRepositoryOperatorService(repositoryOperatorTestOptions(
+    path,
+    async ({ prepared_effect }) => {
       operatorCalls += 1;
       return { receipt: receiptFor(current, prepared_effect) };
     }
-  });
+  ));
   t.after(() => service.close());
 
   const result = await executeGridPreparedResolvedRepositoryEffect(
@@ -441,13 +452,13 @@ test('forged Grid preparation signature is rejected before the operator socket i
   const grid = await signedGridCompletionServer(t, current.hypervisor);
   const path = await socketPath(t);
   let operatorCalls = 0;
-  const service = await startRepositoryOperatorService({
-    socketPath: path,
-    runOperator: async ({ prepared_effect }) => {
+  const service = await startRepositoryOperatorService(repositoryOperatorTestOptions(
+    path,
+    async ({ prepared_effect }) => {
       operatorCalls += 1;
       return { receipt: receiptFor(current, prepared_effect) };
     }
-  });
+  ));
   t.after(() => service.close());
 
   const forged = structuredClone(current.preparation);
@@ -468,15 +479,15 @@ test('invalid operator receipt cannot produce a Grid completion event', async t 
   const grid = await signedGridCompletionServer(t, current.hypervisor);
   const path = await socketPath(t);
   let operatorCalls = 0;
-  const service = await startRepositoryOperatorService({
-    socketPath: path,
-    runOperator: async ({ prepared_effect }) => {
+  const service = await startRepositoryOperatorService(repositoryOperatorTestOptions(
+    path,
+    async ({ prepared_effect }) => {
       operatorCalls += 1;
       const receipt = receiptFor(current, prepared_effect);
       receipt.attestation.signature = 'forged';
       return { receipt };
     }
-  });
+  ));
   t.after(() => service.close());
 
   await assert.rejects(
@@ -494,13 +505,13 @@ test('resolver preparation substitution fails before operator invocation', async
   const grid = await signedGridCompletionServer(t, current.hypervisor);
   const path = await socketPath(t);
   let operatorCalls = 0;
-  const service = await startRepositoryOperatorService({
-    socketPath: path,
-    runOperator: async ({ prepared_effect }) => {
+  const service = await startRepositoryOperatorService(repositoryOperatorTestOptions(
+    path,
+    async ({ prepared_effect }) => {
       operatorCalls += 1;
       return { receipt: receiptFor(current, prepared_effect) };
     }
-  });
+  ));
   t.after(() => service.close());
 
   const substituted = structuredClone(current.preparation);
