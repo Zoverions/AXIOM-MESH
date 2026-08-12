@@ -1,0 +1,51 @@
+{
+  "schema": "axiom-project-continuity-package-contract.v1",
+  "version": 1,
+  "status": "specified-foundation",
+  "purpose": "Export a bounded, signed, provider-independent snapshot of AXIOM project-continuity evidence that can be verified offline and used to plan restoration without claiming complete external-forge history or authorizing provider mutation.",
+  "core_invariants": [
+    "A project package preserves portable evidence; it does not make the exporter, import target, or provider authoritative over project history.",
+    "Package verification proves package integrity and exporter signature, not inclusion of the entire originating Grid chain.",
+    "Unmappable target-provider semantics remain retained evidence and are never silently discarded.",
+    "Private or sensitive protected content remains referenced by opaque commitments; the package does not require raw protected bytes."
+  ],
+  "package": {
+    "grid_identity_signature_required": true,
+    "canonical_events_required": true,
+    "provider_observations_supported": true,
+    "grid_event_anchors_retained": true,
+    "source_state_dependencies_exact": true,
+    "protected_references_exact": true,
+    "history_completeness_claimed": false,
+    "originating_full_grid_chain_included": false,
+    "bounded_snapshot_required": true,
+    "maximum_canonical_events": 4096,
+    "maximum_provider_observations": 16384,
+    "maximum_inline_public_bytes": 16777216
+  },
+  "verification": {
+    "canonical_event_content_addresses_reverified": true,
+    "provider_observation_bindings_reverified": true,
+    "explicit_predecessors_reverified_within_package": true,
+    "grid_anchor_sequence_uniqueness_required": true,
+    "package_content_address_reverified": true,
+    "exporter_signature_reverified": true,
+    "source_state_dependencies_recomputed": true,
+    "protected_references_recomputed": true
+  },
+  "import_plan": {
+    "target_provider_capabilities_explicit": true,
+    "supported_events_classified_as_restorable": true,
+    "unsupported_events_retained_as_unmapped_evidence": true,
+    "provider_observations_replayed_as_provider_state": false,
+    "provider_mutation_performed": false,
+    "execution_authorized": false
+  },
+  "claim_boundary": [
+    "This contract does not prove that all GitHub, Forgejo, GitLab, Radicle, or other provider history has been captured.",
+    "This contract does not embed or verify the complete originating Grid chain; Grid anchors are exporter-attested evidence references.",
+    "This contract does not include protected content bytes merely because their commitments are present.",
+    "This contract does not perform provider restoration or mutation.",
+    "Histories larger than the bounded snapshot ceilings require a later segmented/chained package format rather than silent truncation."
+  ]
+}
