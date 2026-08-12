@@ -63,6 +63,10 @@ test('native learner progress read remains Hypervisor mediated and Grid authoriz
     hypervisor,
     /\/internal\/v1\/education\/learner-progress/,
   );
+  assert.match(
+    hypervisor,
+    /signedFetch\(\s*identity,\s*'grid',\s*`\$\{config\.urls\.grid\}\/internal\/v1\/education\/learner-progress`/s,
+  );
   const attestation = hypervisor.indexOf(
     "throw new AxiomError('sandbox_attestation_mismatch'",
   );
