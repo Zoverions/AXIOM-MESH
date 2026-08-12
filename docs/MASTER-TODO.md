@@ -1,15 +1,15 @@
 # AXIOM-MESH Production Execution Queue
 
 **Status:** canonical active queue
-**Updated:** 2026-08-11
+**Updated:** 2026-08-12
 **Current kernel:** `0.12.0-dev.3`
 **Current stage:** production candidate; not production-promoted
 
 This queue orders concrete work across the production pilot, human-product
-layer, multi-host platform, adapter ecosystem, and isolated frontier
-laboratories. The [roadmap](ROADMAP.md) defines phase outcomes; this file defines
-the next executable items. A completed item means its acceptance evidence
-exists, not merely that code or prose was written.
+layer, machine/runtime interoperability, multi-host platform, adapter ecosystem,
+and isolated frontier laboratories. The [roadmap](ROADMAP.md) defines phase
+outcomes; this file defines the next executable items. A completed item means
+its acceptance evidence exists, not merely that code or prose was written.
 
 ## Promotion rules
 
@@ -32,7 +32,9 @@ credential compromise, evidence-chain integrity, or unauthorized effects.
 states. Experimental and frontier work may be implemented in isolated paths,
 but must remain disabled by default, excluded from production credentials and
 user data, and explicitly classified in the capability registry until its own
-promotion gates pass.
+promotion gates pass. Built-but-production-unreachable primitives must remain
+identified as such until their exact policy, registry, runtime, operator, and
+review gates are intentionally opened.
 
 ## P0 - repository and release control
 
@@ -47,6 +49,7 @@ promotion gates pass.
 | REL-002 | Complete | Run the GitHub image build and composed container readiness drill | [Workflow run 30376178779](https://github.com/Zoverions/AXIOM-MESH/actions/runs/30376178779) passed both jobs |
 | SEC-001 | Complete for repository trust | Record revocation of every credential candidate from deprecated history | Keyed 32-entry ledger, exact-history rescan, supported-tip comparison, and protected signed evidence; external attestations remain a promotion gate |
 | DOC-001 | Complete | Make every document on `main` specific to the current build | Exact current-build `docs/` allowlist, local-link verification, current build notes, and locked deprecated documentation branch |
+| DOC-002 | Complete for current-state narrative gate | Prevent current-state docs from regressing on machine ceilings, continuity-anchor semantics, resolver reachability, or runtime-adapter non-claims | Dedicated documentation-current-state regression tests plus existing computed route/capability/link checks; maintain on every authority/evidence change |
 
 ## P0 - production candidate closure
 
@@ -75,6 +78,7 @@ promotion gates pass.
 | PILOT-009 | Pending | Dispose the 32 external credential-history attestations | Provider/custodian attestations or independently reviewed not-applicable dispositions bound to the inventory |
 | PILOT-010 | Pending | Commission and complete the authentic independent security review | Authority-pinned findings ledger for the exact source, image, deployment policy, and pilot configuration, with verified remediation |
 | PILOT-011 | Pending | Complete the 30-day controlled pilot observation | Signed availability, capacity, alert acknowledgement, incident, backup, rotation, RPO, RTO, custody, and operator records |
+| PILOT-012 | Pending | Establish pilot custody/cadence for externally retained Grid continuity anchors | Anchor stored outside `AXIOM_DATA_DIR`, signed custody/retention record, full-genesis verification, truncation negative test, and explicit statement that assurance ends at newest retained anchor |
 
 ## P1H - human utility and network activation
 
@@ -98,6 +102,30 @@ invitation-only previews, but it cannot imply production promotion.
 | CIRCLE-002 | Pending | Add selectively shared objects, proposals, tasks, commitments, approvals, evidence timelines, and visible conflicts | Two-node and multi-user tests proving owner scope, independent apply approval, concurrency visibility, explicit resolution, export, and exit |
 | CIRCLE-003 | Pending | Run one bounded real-world Circle pilot | Named participants, informed consent, support log, useful completed workflow, revocation/export/deletion exercise, and human trust-comprehension report |
 | MANAGED-001 | Specified | Define AXIOM Managed Node without converting hosting into data ownership | Tenant isolation, customer-controlled export and keys where practical, operator least privilege, support access receipts, migration, backup, deletion, and decommissioning design |
+
+## P1M - machine principals, runtimes, and safe external-effect foundations
+
+This track records built machine/runtime work even where production reachability
+is intentionally closed. Completion here does not automatically change the
+capability registry or exposure state.
+
+| ID | Status | Work | Acceptance evidence |
+|---|---|---|---|
+| MACHINE-001 | Complete | Enforce human-sponsored constrained machine principals | Finite scopes/actions/purposes/destinations, runtime/expiry/non-delegation, execution-time, request-size/rate, concurrency and response-size ceilings with end-to-end negative tests |
+| MACHINE-002 | Complete | Expose policy-filtered machine discovery without turning discovery into authority | `/v1/machine-discovery` returns only the authenticated principal's digest-bound requestable intersection; execution still re-enters ordinary intent/policy evaluation |
+| MACHINE-003 | Complete | Provide owner-scoped Grid-attested terminal machine receipts | Digest-only receipt binds request, machine authority, accepted/terminal evidence anchors, chain assurance and terminal outcome; independent Grid-key verification and ownership/nonexistence boundary tests |
+| RUNTIME-001 | Complete for candidate contract and synthetic reference | Define Agent Runtime Adapter v1 as the replaceable-runtime boundary | Byte-pinned v1 schema, fail-closed grant/capability/credential/lifecycle/receipt/rollback semantics, 28-case synthetic drill, commit-bound evidence, no external-runtime certification |
+| RUNTIME-002 | Pending | Select one maintained external runtime for the first bounded read-only integration | Exact upstream commit/release, source/licence/dependency and threat review, no-secret read-only Gateway path, native authority/cancellation/idempotency/receipt parity, direct-service denial, independent review |
+| INTENT-001 | Complete for production-unreachable core | Resolve signed dynamic repository-plan input without allowing free-form prose/JSON to become executor authority | Fresh eligibility binding, exact repository/base/path/lifetime ceilings, signed plan verification, content-addressed resolution/handoff, substitution/staleness/tamper rejection; production registry/policy remain closed |
+| INTENT-002 | Complete for production-unreachable admission/observation | Review and package a resolver mapping without conflating review, installation, observation, or execution | Two independent review roles, exact-one-addition package, separate application verifier, exact pre/post bytes, fixed-input compatibility, no registry write authority |
+| INTENT-003 | Complete for production-unreachable preparation | Preserve target policy/confirmation/independent approval and atomically consume Grid approval with prepared-effect durability | Signed resolved-target authorization, exact prepared-effect binding, authenticated Hypervisor -> Grid approval read, one transaction for `approval.consumed` + `external.effect.prepared`, concurrent one-winner proof |
+| INTENT-004 | Pending | Bind repository operator execution and completion to the exact Grid-durable preparation | Operator accepts only verified durable prepared effect, executes exact signed plan once, emits signed completion/uncertainty receipt, Grid binds completion to the same preparation, replay/partial-failure/unknown-outcome tests |
+| INTENT-005 | Pending and explicitly gated | Consider activation of the first resolver mapping only after INTENT-004 and independent review | Explicit production policy/capability/registry change, public/runtime wiring review, rollback, operator credential/egress boundary, negative tests, protected CI and separate promotion decision; no direct-main or merge authority |
+
+Tracked design work for the resolver chain remains associated with
+[issue #967](https://github.com/Zoverions/AXIOM-MESH/issues/967). It should remain
+open until the safe completion/provenance chain is finished; production
+activation is a separate decision after that work.
 
 ## P2 - multi-host foundations
 
