@@ -9,6 +9,7 @@ import {
 } from './lib/service-network-policy.mjs';
 import { ACTIVE_GATEWAY_CLIENT_CONTRACT } from './lib/gateway-client-contract.mjs';
 import { validateCapabilityRegistry } from './check-registry.mjs';
+import { verifyRuntimeAdapterContract } from './lib/runtime-adapter-contract.mjs';
 
 export const CANONICAL_DOCUMENTS = Object.freeze([
   'README.md',
@@ -27,7 +28,9 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/PRODUCTION-READINESS-TRACKER.md',
   'docs/PROJECT-STATUS-2026.md',
   'docs/REPOSITORY-MIGRATION.md',
+  'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md',
   'docs/architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md',
+  'docs/architecture/contracts/agent-runtime-adapter.v1.schema.json',
   'docs/audits/SCALABILITY-AUDIT-2026-07-30.md',
   'docs/audits/AUDIT-HARDENING-G5-G9-2026-08-10.md',
   'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md',
@@ -119,6 +122,21 @@ const REQUIRED_CONTENT = Object.freeze({
   'docs/PRODUCTION-READINESS-TRACKER.md': ['## Current gate status', 'Not production-promoted'],
   'docs/PROJECT-STATUS-2026.md': ['## Current build', '## What is not claimed'],
   'docs/REPOSITORY-MIGRATION.md': ['## Provenance map', '## Credential boundary'],
+  'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md': [
+    '## Contract identity and versioning',
+    '## Trust bootstrap and grants',
+    '## Synthetic reference drill',
+    '## Evidence trust and limitations',
+    '## Current non-claims',
+    '4954c3d1a49ea57fb0bf5a7eea29140b852e8b5fa2bb11634665f004aca2c19c'
+  ],
+  'docs/architecture/contracts/agent-runtime-adapter.v1.schema.json': [
+    'urn:axiom:contract:agent-runtime-adapter:v1',
+    'axiom.agent-runtime-adapter',
+    'grant_signature_algorithm',
+    'authorization_recheck_before_effect',
+    'raw_chain_of_thought_required'
+  ],
   'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md': [
     '## 1. Four dimensions that must remain separate',
     '## 3. Adaptive assurance profiles',
@@ -309,6 +327,8 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md': 7_000,
   'docs/PRODUCTION-GRADE.md': 3_000,
   'docs/PROJECT-STATUS-2026.md': 1_500,
+  'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md': 8_000,
+  'docs/architecture/contracts/agent-runtime-adapter.v1.schema.json': 12_000,
   'docs/rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md': 10_000,
   'docs/rebuild/LONG-HORIZON-CAPABILITY-MAP.md': 8_000,
   'docs/rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md': 9_000,
@@ -352,6 +372,7 @@ export function markdownLocalTargets(markdown) {
 }
 
 export async function verifyCanonicalDocumentation(repositoryRoot = dirname(MESH_ROOT)) {
+  verifyRuntimeAdapterContract();
   await verifyRepositoryMarkdownBoundary(repositoryRoot);
   await verifySupportedDocumentationBoundary(repositoryRoot);
   const contents = new Map();
@@ -379,10 +400,15 @@ export async function verifyCanonicalDocumentation(repositoryRoot = dirname(MESH
   if (normalize(contents.get('SECURITY.md')) !== normalize(contents.get('.github/SECURITY.md'))) {
     throw new ValidationError('Root and GitHub security policies have drifted');
   }
-  const capabilityRegistry = JSON.parse(await readFile(
-    resolve(repositoryRoot, 'mesh/config/capabilities.json'),
-    'utf8'
-  ));
+  let capabilityRegistry;
+  try {
+    capabilityRegistry = JSON.parse(await readFile(
+      resolve(repositoryRoot, 'mesh/config/capabilities.json'),
+      'utf8'
+    ));
+  } catch {
+    throw new ValidationError('Capability registry is unavailable for documentation claims');
+  }
   verifyComputedDocumentationClaims(contents, capabilityRegistry);
 
   let checkedLinks = 0;
@@ -425,6 +451,8 @@ function verifyComputedDocumentationClaims(contents, capabilityRegistry) {
     ['mesh/PRODUCTION.md', `policy additionally authorizes only ${network.routes} exact caller/destination/method/route`],
     ['docs/rebuild/PRODUCT-DEFINITION.md', `authorizes only ${network.routes} exact caller`],
     ['docs/PROJECT-STATUS-2026.md', `default-deny ${network.routes}-route application`],
+    ['docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md', `and ${network.routes} exact route`],
+    ['docs/whitepapers_and_research/WHITEPAPER.md', `only ${network.routes} exact current-build`],
     ['docs/operations/GATEWAY-CLIENT-CONTRACT.md', `covers all ${gatewayRoutes} authenticated \`/v1/\` Gateway routes`],
     ['docs/PROJECT-STATUS-2026.md', `implemented for all ${gatewayRoutes} authenticated routes`],
     ['docs/MASTER-TODO.md', `cover all ${gatewayRoutes} authenticated routes`],

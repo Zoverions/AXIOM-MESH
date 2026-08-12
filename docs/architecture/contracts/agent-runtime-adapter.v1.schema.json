@@ -1,0 +1,682 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:axiom:contract:agent-runtime-adapter:v1",
+  "title": "AXIOM Agent Runtime Adapter v1",
+  "description": "Candidate normative manifest contract for connecting an external agent runtime without transferring AXIOM authority, credentials, or receipt ownership to that runtime. Contract presence does not promote a capability.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "contract",
+    "adapter_id",
+    "adapter_version",
+    "runtime",
+    "implementation",
+    "compatibility",
+    "authority",
+    "capability_translation",
+    "data_handling",
+    "execution",
+    "evidence",
+    "lifecycle"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-agent-runtime-adapter.v1"
+    },
+    "contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contract_id", "contract_version", "contract_sha256"],
+      "properties": {
+        "contract_id": {
+          "const": "axiom.agent-runtime-adapter"
+        },
+        "contract_version": {
+          "const": "1.0.0"
+        },
+        "contract_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "adapter_id": {
+      "$ref": "#/$defs/id"
+    },
+    "adapter_version": {
+      "$ref": "#/$defs/version"
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runtime_id",
+        "project_name",
+        "source_repository",
+        "source_commit",
+        "license_spdx",
+        "upstream_supported",
+        "integration_modes"
+      ],
+      "properties": {
+        "runtime_id": {
+          "$ref": "#/$defs/id"
+        },
+        "project_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "source_repository": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 2048
+        },
+        "source_commit": {
+          "$ref": "#/$defs/gitCommit"
+        },
+        "release_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "license_spdx": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "upstream_supported": {
+          "type": "boolean"
+        },
+        "integration_modes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "gateway-client",
+              "plugin",
+              "sidecar",
+              "tool-host",
+              "mcp-client",
+              "mcp-server",
+              "a2a-peer",
+              "container-connector",
+              "custom"
+            ]
+          }
+        }
+      }
+    },
+    "implementation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_ref",
+        "artifact_sha256",
+        "sbom_sha256",
+        "entrypoint"
+      ],
+      "properties": {
+        "artifact_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "artifact_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "sbom_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "entrypoint": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        }
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capsule_schema_ids",
+        "gateway_contracts",
+        "source_pin_required",
+        "mutable_ref_allowed"
+      ],
+      "properties": {
+        "capsule_schema_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^axiom-agent-runtime-capsule\\.v[0-9]+$"
+          }
+        },
+        "gateway_contracts": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/contractPin"
+          }
+        },
+        "source_pin_required": {
+          "const": true
+        },
+        "mutable_ref_allowed": {
+          "const": false
+        }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "principal_id",
+        "authority_source",
+        "requested_capabilities",
+        "install_grants_authority",
+        "runtime_may_self_authorize",
+        "runtime_approvals_are_authoritative",
+        "grant_required_before_effect",
+        "grant_signature_algorithm",
+        "grant_key_pin_required",
+        "grant_replay_protection",
+        "grant_single_use",
+        "maximum_grant_lifetime_ms",
+        "authorization_recheck_before_effect",
+        "revocation_preempts_runtime",
+        "deny_unknown_effects",
+        "receipts_required"
+      ],
+      "properties": {
+        "principal_id": {
+          "$ref": "#/$defs/id"
+        },
+        "authority_source": {
+          "const": "axiom-gateway"
+        },
+        "requested_capabilities": {
+          "$ref": "#/$defs/idList"
+        },
+        "install_grants_authority": {
+          "const": false
+        },
+        "runtime_may_self_authorize": {
+          "const": false
+        },
+        "runtime_approvals_are_authoritative": {
+          "const": false
+        },
+        "grant_required_before_effect": {
+          "const": true
+        },
+        "grant_signature_algorithm": {
+          "const": "Ed25519"
+        },
+        "grant_key_pin_required": {
+          "const": true
+        },
+        "grant_replay_protection": {
+          "const": true
+        },
+        "grant_single_use": {
+          "const": true
+        },
+        "maximum_grant_lifetime_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3600000
+        },
+        "authorization_recheck_before_effect": {
+          "const": true
+        },
+        "revocation_preempts_runtime": {
+          "const": true
+        },
+        "deny_unknown_effects": {
+          "const": true
+        },
+        "receipts_required": {
+          "const": true
+        }
+      }
+    },
+    "capability_translation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unmapped_behavior", "mappings"],
+      "properties": {
+        "unmapped_behavior": {
+          "const": "deny"
+        },
+        "mappings": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "runtime_operation",
+              "axiom_action",
+              "effect_class",
+              "input_schema_ref",
+              "output_schema_ref",
+              "requested_scopes",
+              "destinations",
+              "credential_handles"
+            ],
+            "properties": {
+              "runtime_operation": {
+                "$ref": "#/$defs/id"
+              },
+              "axiom_action": {
+                "$ref": "#/$defs/id"
+              },
+              "effect_class": {
+                "enum": [
+                  "read",
+                  "write",
+                  "execute",
+                  "communicate",
+                  "external-api",
+                  "memory-read",
+                  "memory-write",
+                  "inference",
+                  "runtime-management"
+                ]
+              },
+              "input_schema_ref": {
+                "$ref": "#/$defs/nonEmptyString"
+              },
+              "output_schema_ref": {
+                "$ref": "#/$defs/nonEmptyString"
+              },
+              "requested_scopes": {
+                "$ref": "#/$defs/idList"
+              },
+              "destinations": {
+                "$ref": "#/$defs/stringList"
+              },
+              "credential_handles": {
+                "$ref": "#/$defs/idList"
+              }
+            }
+          }
+        }
+      }
+    },
+    "data_handling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "accepted_data_classes",
+        "allowed_egress_destinations",
+        "secret_transport",
+        "raw_content_telemetry",
+        "cross_scope_memory",
+        "retention",
+        "deletion"
+      ],
+      "properties": {
+        "accepted_data_classes": {
+          "$ref": "#/$defs/idList"
+        },
+        "allowed_egress_destinations": {
+          "$ref": "#/$defs/stringList"
+        },
+        "secret_transport": {
+          "const": "opaque-handle-only"
+        },
+        "raw_content_telemetry": {
+          "const": false
+        },
+        "cross_scope_memory": {
+          "const": false
+        },
+        "retention": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "maximum_seconds"],
+          "properties": {
+            "mode": {
+              "enum": ["ephemeral", "bounded", "owner-controlled"]
+            },
+            "maximum_seconds": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 31536000
+            }
+          }
+        },
+        "deletion": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["supported", "maximum_completion_ms", "receipt_required"],
+          "properties": {
+            "supported": {
+              "const": true
+            },
+            "maximum_completion_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 86400000
+            },
+            "receipt_required": {
+              "const": true
+            }
+          }
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sandbox_required",
+        "direct_host_tool_access",
+        "direct_credential_access",
+        "request_timeout_ms",
+        "maximum_request_bytes",
+        "maximum_response_bytes",
+        "maximum_concurrency",
+        "cancellation",
+        "retry",
+        "failure_mode",
+        "unknown_outcome",
+        "fallback_requires_new_grant"
+      ],
+      "properties": {
+        "sandbox_required": {
+          "const": true
+        },
+        "direct_host_tool_access": {
+          "const": false
+        },
+        "direct_credential_access": {
+          "const": false
+        },
+        "request_timeout_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3600000
+        },
+        "maximum_request_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16777216
+        },
+        "maximum_response_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 33554432
+        },
+        "maximum_concurrency": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        },
+        "cancellation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["supported", "acknowledgement_deadline_ms"],
+          "properties": {
+            "supported": {
+              "const": true
+            },
+            "acknowledgement_deadline_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 30000
+            }
+          }
+        },
+        "retry": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "maximum_attempts",
+            "backoff_ms",
+            "side_effect_retry_requires_idempotency_key"
+          ],
+          "properties": {
+            "maximum_attempts": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "backoff_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 60000
+            },
+            "side_effect_retry_requires_idempotency_key": {
+              "const": true
+            }
+          }
+        },
+        "failure_mode": {
+          "const": "deny"
+        },
+        "unknown_outcome": {
+          "const": "uncertain"
+        },
+        "fallback_requires_new_grant": {
+          "const": true
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "receipt_schema_ref",
+        "bind_source_commit",
+        "bind_contract",
+        "bind_manifest",
+        "bind_artifact_digest",
+        "bind_adapter",
+        "bind_runtime",
+        "bind_grant",
+        "bind_request",
+        "bind_effect",
+        "bind_outcome",
+        "record_provider",
+        "record_model",
+        "record_cost",
+        "record_latency",
+        "record_fallback",
+        "raw_chain_of_thought_required",
+        "outcome_states"
+      ],
+      "properties": {
+        "receipt_schema_ref": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "bind_source_commit": {
+          "const": true
+        },
+        "bind_contract": {
+          "const": true
+        },
+        "bind_manifest": {
+          "const": true
+        },
+        "bind_artifact_digest": {
+          "const": true
+        },
+        "bind_adapter": {
+          "const": true
+        },
+        "bind_runtime": {
+          "const": true
+        },
+        "bind_grant": {
+          "const": true
+        },
+        "bind_request": {
+          "const": true
+        },
+        "bind_effect": {
+          "const": true
+        },
+        "bind_outcome": {
+          "const": true
+        },
+        "record_provider": {
+          "const": true
+        },
+        "record_model": {
+          "const": true
+        },
+        "record_cost": {
+          "const": true
+        },
+        "record_latency": {
+          "const": true
+        },
+        "record_fallback": {
+          "const": true
+        },
+        "raw_chain_of_thought_required": {
+          "const": false
+        },
+        "outcome_states": {
+          "type": "array",
+          "minItems": 7,
+          "uniqueItems": true,
+          "contains": {
+            "const": "uncertain"
+          },
+          "items": {
+            "enum": [
+              "completed",
+              "denied",
+              "failed",
+              "timed-out",
+              "cancelled",
+              "revoked",
+              "uncertain"
+            ]
+          }
+        }
+      }
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "revocation_supported",
+        "state_export_supported",
+        "rollback_supported",
+        "uninstall_supported",
+        "cleanup_targets",
+        "orphaned_effect_behavior"
+      ],
+      "properties": {
+        "revocation_supported": {
+          "const": true
+        },
+        "state_export_supported": {
+          "const": true
+        },
+        "rollback_supported": {
+          "const": true
+        },
+        "uninstall_supported": {
+          "const": true
+        },
+        "cleanup_targets": {
+          "type": "array",
+          "minItems": 5,
+          "uniqueItems": true,
+          "allOf": [
+            { "contains": { "const": "credential-handles" } },
+            { "contains": { "const": "network-sessions" } },
+            { "contains": { "const": "cached-data" } },
+            { "contains": { "const": "background-workers" } },
+            { "contains": { "const": "pending-effects" } }
+          ],
+          "items": {
+            "enum": [
+              "credential-handles",
+              "network-sessions",
+              "cached-data",
+              "background-workers",
+              "pending-effects"
+            ]
+          }
+        },
+        "orphaned_effect_behavior": {
+          "const": "reconcile-before-retry"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "gitCommit": {
+      "type": "string",
+      "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$"
+    },
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024
+    },
+    "idList": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    },
+    "stringList": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1024
+      }
+    },
+    "contractPin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contract_id", "contract_version", "contract_sha256"],
+      "properties": {
+        "contract_id": {
+          "$ref": "#/$defs/id"
+        },
+        "contract_version": {
+          "$ref": "#/$defs/version"
+        },
+        "contract_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    }
+  }
+}

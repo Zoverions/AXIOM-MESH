@@ -52,7 +52,14 @@ npm run dev
 npm test
 npm run check
 npm run release:verify
+npm run runtime-adapter:contract
+npm run runtime-adapter:drill
 ```
+
+The runtime-adapter commands verify the byte-pinned candidate v1 manifest and
+run a 28-case synthetic signed-grant drill. They load no external runtime,
+perform no external effect, use no real credential, and do not promote a
+capability. Protected CI additionally requires commit-bound drill evidence.
 
 For the candidate hardened container package and explicit production
 provisioning flow, see [PRODUCTION.md](PRODUCTION.md). Runtime startup never
