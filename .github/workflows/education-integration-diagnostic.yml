@@ -42,8 +42,8 @@ jobs:
           )
           replace_once(
               'mesh/test/education-native-append-conformance.test.mjs',
-              "['submission.created', 'assignment.created']",
-              "['assignment.created', 'submission.created']",
+              """    assert.deepEqual(\n      progress.provider_result.result.events.map(event => event.event_type),\n      ['submission.created', 'assignment.created'],\n    );""",
+              """    assert.deepEqual(\n      progress.provider_result.result.events.map(event => event.event_type),\n      ['assignment.created', 'submission.created'],\n    );""",
           )
           replace_once(
               'mesh/test/production-host.test.mjs',
