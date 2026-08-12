@@ -48,6 +48,9 @@ const EXPECTED_FLOW_IDS = Object.freeze([
 ]);
 const EXPECTED_POLICY_DIGEST =
   '2f0fd77a8d40f6b38376429b416498ff15d173cf7db7b0b8dadc153f88086541';
+const GRID_EDUCATION_ROUTE_IMPORT =
+  "import { registerEducationGridRoutes } from './education-routes.mjs';";
+const GRID_EDUCATION_ROUTE_CALL = 'registerEducationGridRoutes(router, store);';
 
 export const ACTIVE_SERVICE_NETWORK_POLICY = deepFreeze(
   validateServiceNetworkPolicy(JSON.parse(readFileSync(
@@ -337,10 +340,11 @@ export function validateServiceRouteImplementation({
         `Service network route source is missing: ${destination}`
       );
     }
+    const source = serviceRouteSource(destination, sources[destination]);
     const routeDeclarations = [
-      ...sources[destination].matchAll(/router\.add\(/g)
+      ...source.matchAll(/router\.add\(/g)
     ].length;
-    const routeMatches = [...sources[destination].matchAll(
+    const routeMatches = [...source.matchAll(
       /router\.add\(\s*(['"])([A-Z]+)\1\s*,\s*(['"])([^'"]+)\3/g
     )];
     if (routeMatches.length !== routeDeclarations) {
@@ -369,6 +373,21 @@ export function validateServiceRouteImplementation({
     implemented_routes: implementedRoutes,
     policy_digest: policyResult.policy_digest
   };
+}
+
+function serviceRouteSource(destination, source) {
+  if (destination !== 'grid') return source;
+  const hasImport = source.includes(GRID_EDUCATION_ROUTE_IMPORT);
+  const hasRegistration = source.includes(GRID_EDUCATION_ROUTE_CALL);
+  if (hasImport !== hasRegistration) {
+    throw new ValidationError('Grid education route registration is incomplete');
+  }
+  if (!hasImport) return source;
+  const educationRoutes = readFileSync(
+    new URL('../grid/education-routes.mjs', import.meta.url),
+    'utf8'
+  );
+  return `${source}\n${educationRoutes}`;
 }
 
 function validateExactCurrentRoutes(flows) {
