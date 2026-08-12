@@ -43,19 +43,19 @@ repository-effect resolver/outbox/operator chain, and Agent Runtime Adapter v1.
 
 | Concern | Governing source | Executable evidence | Current boundary |
 |---|---|---|---|
-| Product/capability claims | `docs/rebuild/PRODUCT-DEFINITION.md`, `mesh/config/capabilities.json` | registry/status/check-registry | 49 tracked / 31 implemented; other states remain explicit |
+| Product/capability claims | `docs/rebuild/PRODUCT-DEFINITION.md`, `mesh/config/capabilities.json` | registry/status/check-registry | 49 capabilities: 31 implemented; other states remain explicit |
 | Source runtime | `mesh/config/setup.json`, package/lock files, Dockerfile/workflows | setup checks, protected CI | Node `>=24.14.0 <25`; CI/.node-version 24.18.0; production image 24.19.0; npm 11.x; zero third-party npm dependencies |
 | Intent-to-evidence | Gateway, Hypervisor, Sandbox, Grid | kernel/e2e tests | Supported privileged effects require authenticated authority, deny-dominant policy, bounded execution, and signed evidence |
 | Machine principals | machine principal normalization, principal registry, Gateway/Hypervisor/Sandbox enforcement | machine principal/e2e/concurrency/response/destination tests | Human-sponsored finite scopes/actions/purposes/destinations, runtime/expiry/non-delegation, execution-time/request-size/rate/concurrency/response-size ceilings; runtime digest is metadata, not attestation |
 | Machine discovery | Gateway `/v1/machine-discovery`, policy evaluator | discovery unit/e2e/client/network tests | Caller-specific requestability only; explicitly not authorization |
 | Machine receipts | Grid terminal-receipt builder + verifier | receipt unit/e2e/client/network tests | Owner-scoped digest-only Grid attestation; not arbitrary external-world truth |
-| Gateway client | client contract/schema/library | route parity/compatibility/error/cancel/timeout/response-bound/real-stack tests | 29 authenticated routes; no direct internal-service target |
+| Gateway client | client contract/schema/library | route parity/compatibility/error/cancel/timeout/response-bound/real-stack tests | All 29 authenticated Gateway routes are versioned; no direct internal-service target |
 | AXIOM One | `apps/axiom-one/`, explanation contract/presenter, proxy | policy/static/explanation/approval/uncertainty/real-stack tests | Experimental bounded owner-memory/provenance shell; not supported product |
 | Policy | `mesh/config/policy.json`, layered policy | policy/IAM tests | Deny-dominant; high-risk effects require independent approval where configured |
 | Grid durability | Grid store/migrations/evidence/protection | restart/migration/tamper/wrong-key/backup/rotation tests | Encrypted single-Grid state, signed hash-linked evidence; no replicated consensus |
 | Grid continuity | continuity-anchor implementation + Grid verifier/operator flow | anchor creation/verification/negative tests | `axiom-grid-continuity-anchor.v1` retained outside `AXIOM_DATA_DIR` proves current history equals/extends retained head through that sequence only |
 | Transport | transport runtime/provisioning | mTLS/rotation drills | TLS 1.3, Ed25519 leaves, identity checks, active-leaf pinning, signed caller binding, rollback |
-| Service network policy | network policy/request authorizer/unit Compose | policy and required/forbidden-edge tests | Default deny, **40 exact routes**, derived mTLS peers, four internal segments |
+| Service network policy | network policy/request authorizer/unit Compose | policy and required/forbidden-edge tests | Default deny, 40 exact routes, derived mTLS peers, four internal segments |
 | Deployment topology | supervisor/production Compose/unit Compose | host/container/service-unit drills | Hardened single host; no multi-host/failover claim |
 | Providers | provider runtime/supervisor/reference adapter | provider tests/drill | Signed exact inventories/private startup generation; no vendor custody/live-refresh claim |
 | Agent Runtime Adapter v1 | `docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md`, v1 schema | contract verifier, negative tests, 28-case synthetic drill | Replaceable-runtime contract only; no external runtime loaded or certified |

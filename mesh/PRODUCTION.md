@@ -138,7 +138,7 @@ receives the API token registry. The operator token stays on the host.
 The unit topology permits required service traffic but has no external route.
 `gateway-hypervisor`, `gateway-grid`, `hypervisor-grid`, and
 `hypervisor-sandbox` remove unrelated adjacency. The bundled default-deny
-policy additionally authorizes only **40 exact** caller/destination/method/route
+policy additionally authorizes only 40 exact caller/destination/method/route
 combinations at both sending and receiving services and derives inbound mTLS
 peer allowlists. Because internal routes must exist, this topology does not use
 the single-container supervisor's `network_mode: none` route check; segmented
@@ -298,7 +298,8 @@ npm run backup:maintain -- apply \
 ```
 
 Apply rejects a running Grid, altered plan, changed inventory, unsafe path,
-invalid artifact, or minimum-count violation. Excess backups are atomically
+invalid artifact, or minimum-count violation. Excess backups enter recoverable quarantine
+and are atomically
 moved—not deleted—to
 `data/backups/.retired/<backup-retention-plan-id>/`. The signed receipt is
 written under `data/recovery/backup-retention/receipts/` and copied into the
@@ -346,7 +347,8 @@ successful post-restart intent.
 
 Signed evidence reports startup/restart, latency distribution, throughput,
 service request/error deltas, peak in-flight, post-load memory, and CPU time.
-Host mode records but does not enforce the candidate two-CPU ceiling. This is a
+Host mode does not enforce the candidate two-CPU ceiling, so CPU utilization is
+recorded for diagnosis and sizing. This is a
 short disposable profile, not dedicated pilot hardware or a 30-day measurement.
 
 All host-side real-stack drills hold a cross-process port-block lease for their
@@ -374,7 +376,7 @@ appear, killing Sandbox forces fail-closed supervisor exit within ten seconds,
 and clean restart preserves pre-fault Grid state and accepts a new intent.
 
 Signed evidence excludes process IDs, host paths, request bodies, intent IDs,
-and secrets. This is request/dependency evidence, not cgroup OOM/CPU,
+and secrets. This is request-pressure and dependency-loss evidence, not cgroup OOM/CPU,
 disk-pressure, orchestrator rescheduling, pilot-platform, or human-response
 proof. See
 [`docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md`](../docs/operations/REQUEST-PRESSURE-AND-DEPENDENCY-LOSS.md).
@@ -416,7 +418,9 @@ human acknowledgement. See
 Credential rotation is offline. Stop the runtime first; the command acquires
 the Grid runtime lock and fails closed against a running/competing Grid.
 
-Back up both host directories securely, then:
+Back up both host directories securely. The transaction rotates all four Ed25519 service identities
+plus their coordinated trust records, the production
+operator API token, and the telemetry relay token, then:
 
 ```bash
 npm run rotate:production -- rotate \
@@ -447,7 +451,8 @@ npm run rotate:production -- rollback \
 
 Rollback verifies/decrypts the prior set, preserves the rotated set as encrypted
 `forward.axr`, restores identities/trust/registry/tokens, and writes an attested
-result. Matching interrupted maintenance may quarantine only a provably stale
+result. Grid verifies the dual-signed lineage across the rotation boundary;
+retired private keys are not retained. Matching interrupted maintenance may quarantine only a provably stale
 runtime lock; a live/ambiguous owner still blocks the operation.
 
 This does **not** rotate the data-protection key and does not prove external
@@ -553,7 +558,7 @@ re-verification, and incident treatment before promotion.
 
 ## 12. Admitted-node discovery and scheduling
 
-The candidate implements admitted-node discovery/scheduling as an authenticated
+The candidate implements admitted-node discovery and scheduling as an authenticated
 Grid reservation control. Signed v2 admission binds node identity, owner,
 capability/security/software statement, HTTPS origin, failure domain, roles,
 resource ceilings, and expiry. `GET /v1/node-discovery` requires `node:read`,
@@ -581,7 +586,7 @@ result authentication, federation, replicated Grid, consensus, or Sybil proof.
 
 ## 13. Operator-approved online causal exchange
 
-The host relay moves existing node-signed causal bundles between exact Gateway
+The operator-approved online causal exchange host relay moves existing node-signed causal bundles between exact Gateway
 origins for one matching owner. It verifies source events against a pinned Grid
 key, verifies node bundles, and stores cursor/queue/retry/receipt state in an
 authenticated-encrypted atomic file.
@@ -650,7 +655,7 @@ secret manager/HSM/KMS/CSI/workload identity/backend availability/live refresh.
 See
 [`docs/operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md`](../docs/operations/DEPLOYMENT-INDEPENDENT-PROVIDERS.md).
 
-## 15. Coordinated incident tabletop
+## 15. Coordinated automated incident tabletop
 
 `config/incident-response.json` defines four severities, six independently
 assigned roles, authority-reducing actions, response targets, communication
@@ -708,7 +713,7 @@ digests. Secret/stale/weak/missing/changed inputs fail closed.
 and explicitly observes no live pilot. Even an authentic accepted dossier
 reports `production_promoted: false`; promotion is separate.
 
-Offline exact-package verification:
+### Offline pilot evidence package verification
 
 ```bash
 npm run pilot:package:verify -- \

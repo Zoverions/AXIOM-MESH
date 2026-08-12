@@ -120,6 +120,22 @@ the capability registry or current production-readiness decision.
 - [Scaling, distributed authority, and consensus](architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md)
 - [Agent Runtime Adapter conformance](architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md)
 - [`agent-runtime-adapter.v1` schema](architecture/contracts/agent-runtime-adapter.v1.schema.json)
+- [Personal Compute Fabric and Local Trust Plane](architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md)
+  — contract-first wearable, portable-agent, interchangeable orchestration,
+  compute-routing, local verification, identity-presentation, and
+  payment-mandate architecture with a phased MVP and explicit non-claims.
+
+#### Draft architecture contracts
+
+- [Personal Agent Pack v1](architecture/contracts/personal-agent-pack.v1.schema.json)
+- [Agent Runtime Capsule v1](architecture/contracts/agent-runtime-capsule.v1.schema.json)
+- [Agent Runtime Adapter v1](architecture/contracts/agent-runtime-adapter.v1.schema.json)
+- [Compute Node Profile v1](architecture/contracts/compute-node-profile.v1.schema.json)
+- [Local Trust Envelope v1](architecture/contracts/local-trust-envelope.v1.schema.json)
+
+These JSON Schemas are documentation contracts. The current runtime loads only
+the separately byte-pinned Agent Runtime Adapter contract; it does not load the
+other four drafts or promote any capability or external compatibility claim.
 
 ### Security
 

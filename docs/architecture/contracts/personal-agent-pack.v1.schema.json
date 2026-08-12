@@ -1,0 +1,234 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/personal-agent-pack.v1.schema.json",
+  "title": "AXIOM Personal Agent Pack v1",
+  "description": "Documentation-only draft manifest for portable personal continuity across models, runtimes, and compute providers.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "pack_id",
+    "pack_version",
+    "owner",
+    "created_at",
+    "components",
+    "runtime_preferences",
+    "portability",
+    "secret_material_included"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-personal-agent-pack.v1"
+    },
+    "pack_id": {
+      "$ref": "#/$defs/id"
+    },
+    "pack_version": {
+      "$ref": "#/$defs/version"
+    },
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subject_ref"],
+      "properties": {
+        "subject_ref": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "components": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "role",
+          "media_type",
+          "content_ref",
+          "sha256",
+          "encryption"
+        ],
+        "properties": {
+          "role": {
+            "enum": [
+              "memory",
+              "provenance",
+              "preferences",
+              "accessibility",
+              "owner-policy",
+              "consent",
+              "routing-policy",
+              "voice-configuration",
+              "model-adapter",
+              "evaluation",
+              "recovery",
+              "licence"
+            ]
+          },
+          "media_type": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 160
+          },
+          "content_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "sha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "encryption": {
+            "enum": [
+              "owner-local-encrypted",
+              "recipient-encrypted",
+              "public"
+            ]
+          },
+          "schema_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "licence_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        }
+      }
+    },
+    "runtime_preferences": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "routing_mode",
+        "allowed_capsule_ids",
+        "allowed_provider_ids"
+      ],
+      "properties": {
+        "routing_mode": {
+          "enum": ["private", "balanced", "best", "budget"]
+        },
+        "allowed_capsule_ids": {
+          "$ref": "#/$defs/idList"
+        },
+        "denied_capsule_ids": {
+          "$ref": "#/$defs/idList"
+        },
+        "allowed_provider_ids": {
+          "$ref": "#/$defs/idList"
+        },
+        "denied_provider_ids": {
+          "$ref": "#/$defs/idList"
+        },
+        "pinned_model_ids": {
+          "$ref": "#/$defs/idList"
+        },
+        "monthly_budget": {
+          "$ref": "#/$defs/money"
+        }
+      }
+    },
+    "portability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "export_format",
+        "deletion_policy_ref",
+        "recovery_policy_ref"
+      ],
+      "properties": {
+        "export_format": {
+          "const": "axiom-export-bundle"
+        },
+        "deletion_policy_ref": {
+          "$ref": "#/$defs/id"
+        },
+        "recovery_policy_ref": {
+          "$ref": "#/$defs/id"
+        },
+        "minimum_kernel_version": {
+          "$ref": "#/$defs/version"
+        }
+      }
+    },
+    "licences": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["artifact_sha256", "licence_id", "use_scope"],
+        "properties": {
+          "artifact_sha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "licence_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "use_scope": {
+            "enum": [
+              "personal",
+              "commercial",
+              "research",
+              "restricted"
+            ]
+          }
+        }
+      }
+    },
+    "secret_material_included": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "idList": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "money": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["amount_minor", "currency"],
+      "properties": {
+        "amount_minor": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        }
+      }
+    }
+  }
+}

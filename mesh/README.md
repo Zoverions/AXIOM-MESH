@@ -46,7 +46,9 @@ npm run dev
 `npm run setup` validates the exact runtime/npm policy, installs both committed
 zero-dependency locks with lifecycle scripts disabled, proves those locks remain
 unchanged, and runs the clean-kernel and release gates. It creates no production
-credential and deploys nothing.
+credential and deploys nothing. See the
+[automated current-build source setup](../docs/operations/AUTOMATED-SOURCE-SETUP.md)
+for the read-only, install-only, failure, and rollback boundaries.
 
 ## Four responsibilities
 
@@ -65,6 +67,11 @@ Gateway -> Hypervisor -> Sandbox -> Grid
 
 A browser, provider, external runtime, repository operator, remote node, or
 administrator does not gain authority merely by existing next to the kernel.
+
+The current machine-readable client contract covers all 29 authenticated
+Gateway routes with relative-only targets, explicit schemas and errors,
+bounded responses/timeouts, cancellation, stable idempotent replay, and no
+direct internal-service target.
 
 ## Machine principals
 
@@ -115,8 +122,8 @@ identities, DNS and SPIFFE-style URI checks, exact active-leaf fingerprint
 pinning, and signed replay-protected application envelopes.
 
 The alternate four-unit single-host topology uses four internal network
-segments. The machine-readable default-deny service policy authorizes **40
-exact current-build caller/destination/method/route combinations** and derives
+segments. The machine-readable default-deny service policy authorizes 40 exact
+current-build caller/destination/method/route combinations and derives
 allowed mTLS peers from that same graph. The policy removes unrelated adjacency
 and is enforced before outgoing request signing and again by the receiving
 service.
@@ -166,6 +173,79 @@ certify OpenClaw, Hermes, Agent Zero, MCP, A2A, or any third-party runtime.
 
 An external runtime may coordinate work, but it may not become an alternate
 authority path around Gateway -> Hypervisor -> Sandbox -> Grid.
+
+## API and intent surface
+
+The Gateway exposes these current operator endpoints:
+
+- `GET /health`
+- `GET /ready`
+- `GET /v1/status`
+- `GET /v1/operations`
+- `GET /v1/metrics`
+- `GET /v1/capabilities`
+- `POST /v1/intents`
+- `GET /v1/intents/:id`
+- `GET /v1/events`
+- `GET /v1/capsules`
+- `GET /v1/proposals`
+- `GET /v1/nodes`
+- `GET /v1/node-discovery`
+- `GET /v1/node-schedules`
+- `GET /v1/consents`
+- `GET /v1/approvals`
+- `GET /v1/memory`
+- `GET /v1/accounting`
+- `GET /v1/imports`
+- `GET /v1/imports/:id`
+- `GET /v1/appeals`
+- `GET /v1/storage-offers`
+- `GET /v1/sync`
+- `GET /v1/sync/bundles/:digest`
+- `GET /v1/backups`
+- `GET /v1/backups/:id`
+- `GET /v1/exports/:id`
+- `GET /v1/exports/:id/bundle`
+- `GET /v1/audit/verify`
+
+The active intent-action surface is:
+
+- `system.echo`
+- `system.hash`
+- `capsule.register`
+- `capsule.revoke`
+- `consent.grant`
+- `consent.revoke`
+- `approval.grant`
+- `memory.put`
+- `memory.link`
+- `memory.tombstone`
+- `accounting.account.create`
+- `accounting.journal.post`
+- `export.create`
+- `import.stage`
+- `import.apply`
+- `governance.propose`
+- `governance.vote`
+- `governance.finalize`
+- `governance.activate`
+- `governance.verify`
+- `governance.rollback`
+- `governance.emergency`
+- `governance.emergency.review`
+- `governance.appeal`
+- `node.register`
+- `node.renew`
+- `node.quarantine`
+- `node.schedule`
+- `storage.offer`
+- `sync.apply`
+- `backup.create`
+
+All authenticated endpoints require a bearer credential. Intent submission also
+requires an idempotency key. `GET /health` and `GET /ready` are the only
+unauthenticated operational probes, and the active policy remains deny-by-
+default.
 
 ## Production-candidate operations
 

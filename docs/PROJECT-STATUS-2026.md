@@ -82,7 +82,7 @@ The production-candidate surface includes:
 - one-command source setup with exact Node.js/npm policy, two zero-dependency
   locks, prohibited install lifecycle scripts, unchanged-lock proof, and full
   kernel/release gates;
-- a versioned Gateway client contract for all 29 authenticated routes with
+- a versioned Gateway client contract implemented for all 29 authenticated routes with
   relative-only application targets, explicit errors, timeout/cancellation,
   bounded request/response behavior, stable idempotent replay, and no direct
   Grid/Hypervisor/Sandbox target;
@@ -125,8 +125,8 @@ consistently deleted suffix can be hidden from local state alone if matching
 local head/checkpoint metadata is also rewritten. Stronger truncation assurance
 uses `axiom-grid-continuity-anchor.v1`, retained outside `AXIOM_DATA_DIR` and
 verified against the full chain from genesis. A valid anchor proves that the
-current history equals or extends the retained head through the newest retained
-anchor. It does not prove preservation of later events and does not remove
+current history equals or extends the retained head through the newest retained anchor.
+It does not prove preservation of later events and does not remove
 malicious host/root or active Grid-signing-key compromise from the trust model.
 
 Grid remains one transparency log, not replicated BFT consensus.
@@ -258,6 +258,27 @@ runtime-adapter synthetic conformance, and applicable CodeQL/Windows gates.
 These artifacts prove mechanisms and rejection behavior. They do not create the
 external facts required for production promotion.
 
+## Specified personal compute and local trust architecture
+
+The repository contains the documentation-only `1.0.0-draft.1`
+[Personal Compute Fabric and Local Trust Plane](architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md)
+architecture plus JSON Schemas for a Personal Agent Pack, Agent Runtime
+Capsule, Agent Runtime Adapter, Compute Node Profile, and Local Trust Envelope.
+
+The specification defines a phone-first path to a constrained wearable,
+replaceable local, managed, or cloud inference, policy-first routing,
+deterministic local credential and authorization checks, exact one-use
+mandates, and truthful external payment and identity states. It separates
+personal continuity from model weights, orchestration from authority, local
+authorization from external authorization, and accounting from settlement.
+
+This is product and protocol planning only. The current runtime loads only the
+separately byte-pinned Agent Runtime Adapter contract; it does not load the
+other four drafts. No wearable, pairing, agent capsule executor, Personal Agent
+Pack, inference router, compute dispatcher, identity presentation, payment
+mandate, or settlement adapter has been implemented or added to the capability
+registry.
+
 ## Promotion blockers
 
 Production promotion remains blocked by authentic external evidence, including:
@@ -290,8 +311,13 @@ The `0.12.0-dev.3` build does **not** claim:
 - a live public, customer, testnet, mainnet, or production service;
 - a completed authentic pilot or independent security approval;
 - a supported AXIOM One, Verify, Circles, Studio, or Managed Node release;
+- a supported wearable/companion product, portable Personal Agent Pack, Agent
+  Runtime Capsule executor, compute-routing fabric, or Local Trust Plane;
 - a production AI, messaging, identity, storage-transfer, payment, repository,
   or regulated-domain adapter;
+- production identity proofing, credential presentation, passkey authorization,
+  payment authorization, funds availability, merchant acceptance, or
+  settlement;
 - certification or production conformance of an external agent runtime;
 - MCP/A2A exposure, autonomous-machine delegation, remote workload execution,
   or hardware/runtime attestation;
@@ -320,7 +346,9 @@ test is not production promotion.
 1. preserve the exact authority/evidence boundary while completing the authentic
    controlled pilot;
 2. finish AXIOM One browser/security/accessibility/package gates and one bounded
-   useful provider/workflow path;
+   useful provider/workflow path, followed by one immutable single-agent Runtime
+   Capsule, a secret-free Personal Agent Pack, and transparent policy-first
+   compute routing;
 3. select and review one maintained external runtime for a deliberately bounded
    read-only Agent Runtime Adapter v1 integration;
 4. keep the repository-effect chain production-unreachable while completing any

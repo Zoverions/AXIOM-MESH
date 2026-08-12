@@ -2,7 +2,7 @@
 
 **Status:** canonical strategic roadmap
 
-**Updated:** 2026-08-11
+**Updated:** 2026-08-12
 
 **Planning horizon:** active build `0.12.0-dev.3` through evidence-gated 1.0 and isolated frontier incubation
 
@@ -215,6 +215,20 @@ support boundaries are promoted.
   organizations that need hosting, backup, updates, and operational assistance
   without transferring ownership of their information.
 
+The product family is extended by three specified, unimplemented boundaries:
+
+- **AXIOM Link** — a provisional pendant or other constrained personal endpoint
+  for capture, playback, physical privacy, and user-presence signaling;
+- **Personal Compute Fabric** — policy-first selection among companion, owner-
+  local, managed-node, and cloud/provider compute; and
+- **Local Trust Plane** — deterministic credential verification, policy,
+  confirmation, budget, one-use mandate, and external-receipt processing that
+  never delegates allow/deny decisions to a model.
+
+Their `1.0.0-draft.1` architecture and documentation contracts are defined in
+the [Personal Compute Fabric and Local Trust Plane specification](architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md).
+They change no current capability status.
+
 ### 0.12.1 - human shell
 
 - maintain the implemented versioned Gateway client with exact 29-route
@@ -258,6 +272,16 @@ support boundaries are promoted.
   extract commitments, identify missing information, and prepare shareable
   evidence packages;
 - prevent model output from directly authorizing external effects;
+- maintain the signed synthetic runtime-adapter drill as verifier-only evidence;
+  it performs no external effect and makes no runtime compatibility claim;
+- introduce one immutable single-agent Runtime Capsule with exact
+  implementation/SBOM digests, permissions, budget, stop, fallback,
+  cancellation, evidence, uninstall, and rollback contracts;
+- introduce a secret-free exportable Personal Agent Pack for supported memory,
+  policy, preferences, provider choices, evaluation, licences, and recovery;
+- implement Private, Balanced, Best, and Budget placement modes with privacy,
+  consent, destination, jurisdiction, licence, security, health, freshness,
+  capability, deadline, and budget as non-negotiable eligibility filters;
 - evaluate usefulness, latency, cost, correction rate, privacy leakage, and
   failure recovery with real users.
 
@@ -276,6 +300,37 @@ support boundaries are promoted.
   with named participants and explicit consent;
 - measure activation, successful outcomes, support burden, accessibility,
   revocation, export, deletion, and trust comprehension.
+
+### Personal compute and Local Trust MVP sequence
+
+This sequence is subordinate to the versioned specification and does not
+promote any capability merely by completing a document or laboratory:
+
+1. **MVP-0 — contracts:** maintain the architecture, five schemas, threat model,
+   privacy flow, claim matrix, validation rules, and the signed no-I/O
+   reference-adapter negative drill without promoting a runtime capability.
+2. **MVP-1 — phone-first runtime:** demonstrate one bounded single-agent capsule
+   and replaceable local/user-supplied plus managed model adapters without
+   custom hardware, identity, payments, or consequential effects.
+3. **MVP-2 — wearable endpoint:** prototype authenticated phone-relayed push-to-
+   talk hardware with physical mute, recording indication, firmware identity,
+   revocation, update/rollback, loss handling, and no camera or cellular.
+4. **MVP-3 — personal node:** add measured compute profiles, authenticated local
+   dispatch, cancellation, resource enforcement, result provenance, and
+   managed-provider-loss operation without claiming federation.
+5. **MVP-4 — identity laboratory:** use WebAuthn and one exact synthetic/test-
+   authority credential profile with holder binding, selective disclosure,
+   status/freshness, revocation, and independently reproducible receipts.
+6. **MVP-5 — payment simulation:** use synthetic value and a processor sandbox
+   for exact mandates, local reserve, external response, uncertainty,
+   reconciliation, refund, reversal, and dispute; no real payment promotion.
+7. **MVP-6 — invitation-only pilot:** measure the non-regulated wearable,
+   companion, compute, portability, verification, recovery, accessibility,
+   support, cost, and comprehension experience with named consenting adults.
+
+The first real-value or real-identity deployment remains behind separately
+qualified issuer, verifier, processor, custody, PCI, privacy, accessibility,
+consumer-protection, legal, regulatory, and jurisdictional review.
 
 ### Human-product security boundary
 

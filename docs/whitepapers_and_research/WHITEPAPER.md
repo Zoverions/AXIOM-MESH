@@ -197,10 +197,10 @@ internal network segments.
 
 Internal service edges use mutually authenticated TLS 1.3, distinct Ed25519
 identities, DNS and SPIFFE-style URI identity checks, exact active-leaf
-fingerprint pinning, and signed replay-protected application envelopes. The
-machine-readable default-deny service policy permits **only 40 current internal**
-caller/destination/method/route combinations and derives allowed mTLS peers from
-that graph.
+fingerprint pinning, and signed replay-protected application envelopes. A
+machine-readable default-deny policy authorizes only 40 exact current-build
+caller, destination, method, and route combinations and derives allowed mTLS
+peers from that graph.
 
 Grid alone receives durable state and the data-protection key. Gateway alone
 receives the API principal registry. The compact candidate uses
@@ -675,6 +675,44 @@ AXIOM Managed Node is intended to offer hosting, backup, updates, and support
 without converting hosting into platform ownership or a general plaintext
 inspection right.
 
+### 14.5 Personal Compute Fabric and Local Trust Plane
+
+The specified Personal Compute Fabric separates six replaceable concerns:
+endpoint, companion, Personal Agent Pack, Agent Runtime Capsule, compute/model
+adapter, and kernel authority. A pendant, glasses, or headphones may provide
+capture, playback, physical privacy, and user-presence signals, but may not
+hold ambient Grid authority, provider secrets, raw payment credentials, or the
+root personal memory store. The initial endpoint uses a phone companion rather
+than direct cellular authority.
+
+Personal continuity is not one permanent model. An exportable Personal Agent
+Pack references encrypted memory, provenance, preferences, policy, consent,
+routing, evaluation, optional model adapters, licences, and recovery. Agent
+behavior is supplied by immutable Runtime Capsules that bind exact code and
+SBOM, requested authority, budgets, cancellation, stop/fallback behavior,
+evidence, uninstall, and rollback. A capsule may propose work but cannot approve
+it.
+
+Compute routing first eliminates choices that violate privacy, consent,
+destination, jurisdiction, licence, security, capability, health, freshness,
+deadline, or budget. Only eligible choices are ranked by measured usefulness,
+latency, reliability, cost, and energy. Private, Balanced, Best, and Budget are
+human-facing policy presets, not permission to trade away a hard constraint.
+
+The Local Trust Plane is deterministic and model-independent for credential
+verification, policy, consent, budgets, confirmation, one-use mandates, and
+external receipts. Identity proofing, authentication, credential verification,
+local authorization, external authorization, settlement, reversal, and recovery
+remain distinct. A locally authorized payment mandate is not evidence of funds,
+merchant acceptance, or settlement.
+
+This architecture is versioned `1.0.0-draft.1` with five documentation
+contracts. The runtime loads only the separately byte-pinned Agent Runtime
+Adapter contract; it does not load the other four drafts, and the capability
+registry is unchanged. Real identity, payments, and production hardware remain
+behind separate security, hardware, accessibility, privacy, custody, legal,
+regulatory, and independent-review gates.
+
 ## 15. Frontier incubation
 
 Isolated laboratories may implement:
@@ -715,8 +753,9 @@ Production promotion still requires authentic external evidence including:
 The parallel product path is to finish AXIOM One browser/session,
 accessibility/usability, packaging, deletion/recovery, and broader consequential
 approval boundaries; add one bounded AI provider and useful personal workflows;
-then build selective sharing, Verify, Circles, Studio, and Managed Node behind
-their own gates.
+then add a phone-first Personal Agent Pack, one single-agent Runtime Capsule,
+policy-first routing, selective sharing, Verify, Circles, Studio, and Managed
+Node behind their own gates.
 
 ### 16.3 Machine/runtime progression
 
@@ -767,8 +806,13 @@ Each newly exposed surface reopens the relevant threat model and release gate.
 - a live public/customer/testnet/mainnet/production service;
 - a completed authentic pilot or independent security approval;
 - supported AXIOM One, Verify, Circles, Studio, or Managed Node releases;
+- supported wearable/companion hardware, Personal Agent Pack, Runtime Capsule,
+  Personal Compute Fabric, or Local Trust Plane;
 - production AI, messaging, identity, storage-transfer, payment, repository, or
   regulated-domain adapters;
+- identity proofing, KYC, age assurance, government-ID, biometric, payment-
+  authorization, funds-availability, merchant-acceptance, or settlement
+  assurance;
 - production conformance/certification for OpenClaw, Hermes, Agent Zero, MCP,
   A2A, or another external runtime;
 - a production resolver mapping or supported public repository-effect route;
@@ -825,6 +869,7 @@ Current authorities/supporting documents:
 - [production readiness tracker](../PRODUCTION-READINESS-TRACKER.md);
 - [current threat model](../security/CURRENT-BUILD-THREAT-MODEL.md);
 - [runtime-adapter conformance](../architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md);
+- [Personal Compute Fabric and Local Trust Plane](../architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md);
 - [production runbook](../../mesh/PRODUCTION.md);
 - [pilot dossier](../operations/PILOT-DEPLOYMENT-DOSSIER.md); and
 - [independent review](../security/INDEPENDENT-SECURITY-REVIEW.md).

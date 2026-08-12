@@ -41,7 +41,7 @@ frontier laboratories do not replace production-pilot evidence.
 | Resilience | Pass for automated candidate | Oversized-body, rate-limit, dependency suspension/loss, fail-closed exit, state-preserving restart | Pilot cgroup/disk/traffic/replacement scenarios |
 | Internal transport | Pass for single-host candidate | TLS 1.3, Ed25519 identities, active-leaf pinning, rotation, retired-leaf rejection, rollback | Pilot CA custody/rollout/compromise recovery/independent review |
 | Independent service units | Pass for single-host candidate | Per-unit identities, Grid-only state, segmented internal networks, Sandbox-only recovery | Pilot orchestrator resource/network/update/rollback evidence |
-| Service network policy | Pass for reference single-host topology | Default-deny **40-route** policy at sender/receiver, derived mTLS peers, four segments, forbidden-edge probes, release binding | Reproduce on pilot and future independent hosts |
+| Service network policy | Pass for reference single-host topology | Exact default-deny 40-route policy at sender/receiver, derived mTLS peers, four segments, forbidden-edge probes, release binding | Reproduce on pilot and future independent hosts |
 | Node discovery/scheduling | Pass for single-Grid reservation candidate | Signed admissions, filtered discovery, deterministic encrypted leases, capacity/security/owner/domain/expiry/quarantine | Remote dispatch, measured resources, endpoint health, result provenance |
 | Online causal exchange | Pass for two-Grid candidate | Pinned Grid evidence, signed bundles, encrypted ordered queues, duplicate preflight, independent approval, visible conflicts/convergence | Independent-host WAN loss/delay/clock/backlog/custody evidence |
 | Secret/policy providers | Pass for signed protocol/reference adapter | Independent signers, pinned artifacts, nonce-bound inventories, private generation, invalid-signer rejection | Pilot vault/orchestrator adapter/workload identity |
@@ -60,14 +60,14 @@ frontier laboratories do not replace production-pilot evidence.
 
 The runtime-adapter and repository-effect rows intentionally record **built
 safety mechanisms without capability promotion**. The GitHub operator can be
-real source and tests while the supported runtime has no policy/registry/route
-that can invoke it.
+real source and tests while the supported runtime has no
+`repository.docs.pull-request.create` policy/registry/route that can invoke it.
 
 ## Human-product preview status
 
 | Product gate | Current state | Required before exposure/promotion |
 |---|---|---|
-| Versioned Gateway client | Pass for current contract/library (`UX-001`): all 29 authenticated routes, reviewed schema, relative-only targets, explicit errors, bounded timeout/request/response, cancellation, stable idempotency, real-stack compatibility | Maintain exact compatibility; version/migrate/rollback incompatible changes |
+| Versioned Gateway client | Pass for current contract/library (`UX-001`): exact 29-route machine contract, reviewed schema, relative-only targets, explicit errors, bounded timeout/request/response, cancellation, stable idempotency, real-stack compatibility | Maintain exact compatibility; version/migrate/rollback incompatible changes |
 | AXIOM One browser/PWA shell | Experimental (`UX-002`): loopback-only shell, contract-only proxy, memory-only token, governed bounded Ask/Vault/receipt views | Complete onboarding, session/device security, browser fixtures, accessibility/usability, signed package/update/rollback/uninstall/support |
 | Human authority explanations | Experimental bounded slice (`UX-003`): five-action review, stable outcomes/events, approval states, raw evidence, uncertainty recovery | Authoritative policy-bound broader consequential plan/execute, reversible approval actions, consent/revocation journeys, comprehension evidence |
 | Governed memory lifecycle | Experimental (`UX-004`): owner create/list, three fixed provenance links, correction-without-replacement, tombstone, selective export, bundle reveal, cross-principal negatives | Edge deletion, bounded bulk ingest, authorized hard deletion, restore/recovery, download threat analysis, human lifecycle evidence |
@@ -76,6 +76,12 @@ that can invoke it.
 | Packaging/onboarding | Planned (`UX-007`) | Signed package, safe updates, recovery/uninstall, first-use study |
 | Bounded AI provider | Adapter required (`AI-001`) | Named provider/model, minimal data, exact egress, budget/timeout/cancellation/retention/receipts/leakage tests |
 | External agent runtime | Candidate contract only | Pin/review maintained upstream runtime; bounded read-only no-secret Gateway path; native authority/cancellation/idempotency/receipt parity; direct-service denial; independent review |
+| Personal Agent Pack and Runtime Capsule | Draft contracts only (`ARCH-001`; `PACK-001`/`ORCH-001` pending) | Secret-free cross-provider export/import, exact implementation/SBOM, permissions, budgets, cancellation, stop/fallback, revocation, licences, recovery, uninstall, rollback, and no self-authority expansion |
+| Policy-first compute routing | Draft contract only (`ROUTE-001` pending) | Private/Balanced/Best/Budget UX, hard privacy/consent/destination/jurisdiction/licence/security/health/freshness/capability/deadline/budget filters, measured evaluation, forbidden fallback, and transparent cost/provider receipts |
+| AXIOM Link wearable endpoint | Specified prototype only (`DEVICE-001` pending) | Authenticated pairing, unique revocable identity, signed firmware, physical mute, recording indication, bounded audio, update/rollback, loss/replacement, accessibility/usability, and independent RF/battery/charging/acoustic/electrical/thermal/mechanical/manufacturing review |
+| Local Trust access authorization | Draft contract only (`TRUST-001` pending) | Deterministic model-free decision, exact credential/status/policy/consent/user-presence checks, one-use mandate, replay/tamper/stale tests, denial/uncertainty receipts, recovery, and independent AXIOM Verify reproduction |
+| Identity presentation laboratory | Specified; synthetic/test authority only (`ID-001`/`ID-002`) | One exact credential/presentation profile, holder binding, issuer trust, minimum disclosure, status freshness, revocation, correlation analysis, interoperability vectors, readable non-claims, privacy/legal review, and no real identity assurance claim |
+| Payment authorization simulation | Specified; synthetic value and processor sandbox only (`PAY-001`) | Token custody boundary, exact mandate, local reserve, external response, uncertain state, reconciliation, refunds/reversals/disputes, PCI/custody/consumer/legal review, and no real-value or settlement claim |
 | AXIOM Verify | Planned | Independent local/static verification and tamper/non-claim UX |
 | AXIOM Circles | Planned | Membership/device/role/revocation/selective-disclosure/conflict/exit/export + consented pilot |
 | AXIOM Studio | Planned | Development artifact generation without runtime authority |

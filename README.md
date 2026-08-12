@@ -105,8 +105,8 @@ is rewritten with it.
 For that stronger truncation claim the build supports
 `axiom-grid-continuity-anchor.v1`, retained outside `AXIOM_DATA_DIR` and checked
 with full-chain verification. A valid external continuity anchor proves that
-the current history equals or extends the retained head **through the newest
-retained anchor**. It does not prove preservation of later events and does not
+the current history equals or extends the retained head **through the newest retained anchor**.
+It does not prove preservation of later events and does not
 remove malicious host/root or active signing-key compromise from the trust
 assumptions.
 
@@ -127,7 +127,7 @@ Its built and tested chain includes:
 3. independent resolver admission/review and exact mapping-package/application
    observation;
 4. resolved target-policy, confirmation, and independent-approval checks;
-5. atomic Grid consumption of the named approval with durable
+5. atomic Grid approval consumption with durable
    `external.effect.prepared` evidence;
 6. an evidence-first external-effect outbox that invokes an operator only after
    durable preparation, leaves uncertain outcomes durably prepared, verifies a
@@ -207,6 +207,16 @@ to preserve the existing AXIOM authorization/evidence semantics while reviewing
 one maintained external runtime for a bounded read-only integration, and to
 keep the repository-effect chain production-unreachable unless an explicit
 future policy/registry/runtime promotion is independently justified.
+
+The documentation-only
+[Personal Compute Fabric and Local Trust Plane](docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md)
+`1.0.0-draft.1` specification extends that programme with a phone-first
+portable Personal Agent Pack, replaceable Agent Runtime Capsules, policy-first
+local/managed/cloud compute, a constrained phone-relayed wearable endpoint,
+deterministic credential and authorization verification, and sandbox-value
+payment mandates. The current runtime loads only the separately byte-pinned
+Agent Runtime Adapter contract; it does not load the other four drafts, and the
+phased MVP changes no capability status.
 
 ### Frontier incubation
 
@@ -357,6 +367,8 @@ The active build does not claim:
 - live production, testnet, mainnet, or public federation;
 - a completed authentic pilot or independent security approval;
 - supported AXIOM One, Verify, Circles, Studio, or Managed Node products;
+- supported wearable/companion hardware, Personal Agent Pack, Agent Runtime
+  Capsule executor, Personal Compute Fabric, or Local Trust Plane;
 - an autonomous-agent runtime, machine delegation, MCP/A2A endpoint, or remote
   agent execution;
 - certification/production conformance of any external agent runtime;
@@ -365,6 +377,9 @@ The active build does not claim:
   operator;
 - production AI, messaging, identity, payment, storage-transfer, or regulated
   domain adapters;
+- identity proofing, KYC, age assurance, government-ID, biometric, payment-
+  authorization, funds-availability, merchant-acceptance, or settlement
+  assurance;
 - remote workload execution or authenticated remote results;
 - BFT consensus, replicated Grid finality, tokens, bridges, liquidity, staking,
   treasury, payroll, or settlement;

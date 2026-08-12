@@ -75,16 +75,22 @@ explicitly opened.
 
 | ID | Status | Work | Acceptance evidence |
 |---|---|---|---|
-| UX-001 | Complete | Versioned Gateway client contract | All 29 authenticated routes; reviewed schema; relative-only targets; explicit errors; bounded request/response/timeout; cancellation/idempotency; real-stack compatibility |
+| UX-001 | Complete | Versioned Gateway client contract | Machine contract and reviewed schema cover all 29 authenticated routes; relative-only targets; explicit errors; bounded request/response/timeout; cancellation/idempotency; real-stack compatibility |
 | UX-002 | In progress | AXIOM One local browser/PWA shell | Loopback-only proxy, memory-only token, bounded Ask/Vault/receipt/raw-evidence views; onboarding/session/device/accessibility/package work remains |
 | UX-003 | In progress | Human authority explanations | Five bounded actions, stable outcomes/events, approval states, raw evidence, uncertainty recovery; broader authoritative consequential plan/execute + comprehension evidence pending |
 | UX-004 | In progress | Governed memory lifecycle | Owner create/list, three exact provenance links, correction-without-replacement, tombstone, selective export, bundle reveal, cross-principal negatives; edge deletion/hard deletion/restore/bulk ingestion pending |
 | UX-005 | Pending | Browser security boundary | CSP/CSRF/origin/session/cookie/token/clickjacking/device-revocation/storage tests |
 | UX-006 | Pending | Accessibility/phone usability | Keyboard/screen-reader/contrast/reduced-motion/phone/plain-language human evidence |
 | UX-007 | Pending | Signed local packaging/onboarding | Safe update/rollback/recovery/uninstall/first-use evidence |
+| ARCH-001 | Complete for draft specification; no runtime capability | Define Personal Compute Fabric and Local Trust Plane `1.0.0-draft.1` | Canonical architecture, explicit non-claims, phased MVP, and five JSON Schemas for Personal Agent Pack, Runtime Capsule, Runtime Adapter, Compute Node Profile, and Local Trust Envelope; documentation checks only |
 | AI-001 | Pending | One least-privilege AI provider | Exact provider/model/egress/data/purpose/budget/timeout/cancel/retention/receipt/failure tests |
 | AI-002 | Pending | Local/user-supplied providers under same contract | Replacement/offline/degraded/no-authority-expansion conformance |
 | AI-003 | Pending | Bounded useful personal workflows | Usefulness/provenance/correction/privacy/cost/latency/cancellation/human-confirmation evaluation |
+| PACK-001 | Pending | Implement secret-free Personal Agent Pack export/import | Supported memory, preferences, policy, consent, routing, evaluation, licences, recovery, cross-provider continuity, deletion, migration, and no plaintext credential evidence |
+| ORCH-001 | Pending | Implement one immutable bounded single-agent Runtime Capsule | Exact implementation/SBOM, interfaces, requested authority, step/call/unit/cost/time budgets, cancellation, stop, fallback, receipts, revocation, uninstall, rollback, and no self-authority expansion |
+| ROUTE-001 | Pending | Implement policy-first compute placement with Private, Balanced, Best, and Budget modes | Hard privacy/consent/destination/jurisdiction/licence/security/health/freshness/capability/deadline/budget filters, transparent ranking, forbidden-fallback tests, and local evaluation ledger |
+| DEVICE-001 | Pending | Prototype a phone-relayed push-to-talk personal endpoint | Unique revocable identity, authenticated pairing, signed firmware, physical mute, recording indication, bounded audio, update/rollback, loss/replacement, no Grid/provider/payment secrets, and honest prototype-only hardware claims |
+| TRUST-001 | Pending | Implement deterministic Local Trust access authorization with synthetic credentials | Canonical request, named verifiers, passkey/user-presence proof, status freshness, deny-dominant policy, one-use mandate, denial/uncertainty receipts, replay/tamper tests, and no model in allow/deny logic |
 | VERIFY-001 | Pending | AXIOM Verify | Independent local/static signature/digest/continuity/scope/non-claim verification |
 | CIRCLE-001 | Pending | Circle membership/device/role/consent/revocation | Escalation/stale/removed/cross-Circle negative tests |
 | CIRCLE-002 | Pending | Shared objects/proposals/tasks/commitments/approvals/conflicts | Multi-user owner scope, independent apply, concurrency, resolution, export/exit |
@@ -132,7 +138,7 @@ production activation decision.
 | NET-006 | Pending | Authenticated remote dispatch/result provenance | Workload identity, input/software binding, measured resources, timeout/cancel/replay/partial failure, compensation, signed result evidence |
 | NET-007 | Pending | Independently operated WAN hosts | External custody, latency/loss/clock/partition/backlog/residency/recovery/key-rotation evidence |
 | NET-008 | Pending | Stronger membership/endpoint-health evidence | Sybil/copied-owner/endpoint substitution/stale measurement/collusion/quarantine/appeal/re-admission tests |
-| NET-009 | Complete for reference single-host topology | Explicit service ingress/egress graph | Default-deny 40-route policy, derived mTLS peers, four segments, required/forbidden-edge proof |
+| NET-009 | Complete for reference single-host topology | Explicit service ingress/egress graph | Default-deny 40-route application policy, derived mTLS peers, four segments, required/forbidden-edge proof |
 
 ## P3 — controlled adapters and product ecosystem
 
@@ -142,6 +148,8 @@ production activation decision.
 | ADAPTER-001 | Pending | One bounded messaging adapter | Account scope, recipient confirmation, impersonation/abuse controls, retention/deletion, retries/cancel/receipts/uninstall |
 | ADAPTER-002 | Specified | ActivityPub/email/webhook publishing bridges | Separate identities, exact destinations, previews/moderation/deletion limits/inbound trust/rate controls |
 | ID-001 | Specified | Named VC/selective-disclosure profile | Schemas, issuer/verifier trust, revocation, holder consent, correlation analysis, vectors, review |
+| ID-002 | Specified; synthetic/test authority only | Implement the Local Trust identity-presentation laboratory | WebAuthn, one exact credential profile, holder binding, minimum disclosure, status freshness, revocation, wrong-holder/issuer/audience/replay tests, readable non-claims, and independent AXIOM Verify reproduction |
+| PAY-001 | Specified; synthetic value and processor sandbox only | Implement payment mandate and reconciliation simulation | Tokenized credential boundary, exact payee/amount/currency/fee/purpose, confirmation, local reserve, one-use mandate, idempotency, timeout/late success, uncertain state, reconciliation, refund, reversal, dispute, balanced accounting, and no real-value claim |
 | ZK-001 | Specified | One named zk verifier adapter | Fixed circuit/key/public inputs/implementation digest/vectors/resource limits |
 | STORAGE-001 | Pending | Controlled storage transfer | Encryption/owner/capacity/integrity/retry/deletion/provider-loss/retrieval/receipts |
 | CATALOG-001 | Specified | Curated capsule catalogue | Quarantine/review/signer/version/update/permission diff/vulnerability/revocation/moderation/dispute |

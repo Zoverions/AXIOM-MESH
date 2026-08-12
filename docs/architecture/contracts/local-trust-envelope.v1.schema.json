@@ -1,0 +1,515 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/local-trust-envelope.v1.schema.json",
+  "title": "AXIOM Local Trust Envelope v1",
+  "description": "Documentation-only draft union of local trust request, verification result, one-use mandate, and external receipt records.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/request"
+    },
+    {
+      "$ref": "#/$defs/verificationResult"
+    },
+    {
+      "$ref": "#/$defs/mandate"
+    },
+    {
+      "$ref": "#/$defs/externalReceipt"
+    }
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "money": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["amount_minor", "currency"],
+      "properties": {
+        "amount_minor": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        }
+      }
+    },
+    "transaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "payee_ref",
+        "amount",
+        "maximum_fee",
+        "credential_handle",
+        "adapter_id"
+      ],
+      "properties": {
+        "payee_ref": {
+          "$ref": "#/$defs/id"
+        },
+        "amount": {
+          "$ref": "#/$defs/money"
+        },
+        "maximum_fee": {
+          "$ref": "#/$defs/money"
+        },
+        "credential_handle": {
+          "$ref": "#/$defs/id"
+        },
+        "adapter_id": {
+          "$ref": "#/$defs/id"
+        },
+        "refund_policy_ref": {
+          "$ref": "#/$defs/id"
+        },
+        "dispute_policy_ref": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "request_id",
+        "requester_ref",
+        "subject_ref",
+        "action",
+        "resource_ref",
+        "purpose",
+        "requested_claims",
+        "policy_refs",
+        "nonce",
+        "idempotency_key",
+        "created_at",
+        "expires_at"
+      ],
+      "properties": {
+        "schema": {
+          "const": "axiom-local-trust-request.v1"
+        },
+        "request_id": {
+          "$ref": "#/$defs/id"
+        },
+        "requester_ref": {
+          "$ref": "#/$defs/id"
+        },
+        "subject_ref": {
+          "$ref": "#/$defs/id"
+        },
+        "action": {
+          "enum": [
+            "access.authorize",
+            "identity.present",
+            "payment.authorize"
+          ]
+        },
+        "resource_ref": {
+          "$ref": "#/$defs/id"
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "requested_claims": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "transaction": {
+          "$ref": "#/$defs/transaction"
+        },
+        "policy_refs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "nonce": {
+          "$ref": "#/$defs/id"
+        },
+        "idempotency_key": {
+          "type": "string",
+          "minLength": 16,
+          "maxLength": 160
+        },
+        "created_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "expires_at": {
+          "$ref": "#/$defs/timestamp"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "action": {
+                "const": "payment.authorize"
+              }
+            },
+            "required": ["action"]
+          },
+          "then": {
+            "required": ["transaction"]
+          },
+          "else": {
+            "not": {
+              "required": ["transaction"]
+            }
+          }
+        }
+      ]
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "check_id",
+        "kind",
+        "result",
+        "verifier_id",
+        "verifier_digest",
+        "observed_at"
+      ],
+      "properties": {
+        "check_id": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "enum": [
+            "requester-authentication",
+            "holder-binding",
+            "credential-signature",
+            "credential-status",
+            "credential-expiry",
+            "claim-disclosure",
+            "policy",
+            "consent",
+            "budget",
+            "user-presence",
+            "user-verification",
+            "replay",
+            "external-receipt"
+          ]
+        },
+        "result": {
+          "enum": ["pass", "fail", "unknown", "stale", "not-applicable"]
+        },
+        "verifier_id": {
+          "$ref": "#/$defs/id"
+        },
+        "verifier_digest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "trust_anchor_ref": {
+          "$ref": "#/$defs/id"
+        },
+        "observed_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "fresh_until": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "detail_digest": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "verificationResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "verification_id",
+        "request_id",
+        "request_digest",
+        "state",
+        "checks",
+        "disclosed_claims",
+        "non_claims",
+        "created_at"
+      ],
+      "properties": {
+        "schema": {
+          "const": "axiom-local-trust-verification.v1"
+        },
+        "verification_id": {
+          "$ref": "#/$defs/id"
+        },
+        "request_id": {
+          "$ref": "#/$defs/id"
+        },
+        "request_digest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "state": {
+          "enum": [
+            "denied",
+            "locally_authorized",
+            "pending_external_authorization",
+            "uncertain"
+          ]
+        },
+        "checks": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 128,
+          "items": {
+            "$ref": "#/$defs/check"
+          }
+        },
+        "disclosed_claims": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "non_claims": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        },
+        "created_at": {
+          "$ref": "#/$defs/timestamp"
+        }
+      }
+    },
+    "mandate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "mandate_id",
+        "request_id",
+        "request_digest",
+        "verification_id",
+        "verification_digest",
+        "policy_set_digest",
+        "credential_evidence_digest",
+        "confirmation_digest",
+        "budget_reservation_digest",
+        "subject_ref",
+        "audience",
+        "action",
+        "resource_ref",
+        "one_use",
+        "nonce",
+        "issued_at",
+        "expires_at",
+        "signer",
+        "signature"
+      ],
+      "properties": {
+        "schema": {
+          "const": "axiom-local-trust-mandate.v1"
+        },
+        "mandate_id": {
+          "$ref": "#/$defs/id"
+        },
+        "request_id": {
+          "$ref": "#/$defs/id"
+        },
+        "request_digest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "verification_id": {
+          "$ref": "#/$defs/id"
+        },
+        "verification_digest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "policy_set_digest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "credential_evidence_digest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "confirmation_digest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "budget_reservation_digest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "subject_ref": {
+          "$ref": "#/$defs/id"
+        },
+        "audience": {
+          "$ref": "#/$defs/id"
+        },
+        "action": {
+          "enum": [
+            "access.authorize",
+            "identity.present",
+            "payment.authorize"
+          ]
+        },
+        "resource_ref": {
+          "$ref": "#/$defs/id"
+        },
+        "transaction_digest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "one_use": {
+          "const": true
+        },
+        "nonce": {
+          "$ref": "#/$defs/id"
+        },
+        "issued_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "expires_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "signer": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["key_id", "algorithm", "public_key_ref"],
+          "properties": {
+            "key_id": {
+              "$ref": "#/$defs/id"
+            },
+            "algorithm": {
+              "enum": ["Ed25519", "ES256"]
+            },
+            "public_key_ref": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            }
+          }
+        },
+        "signature": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 2048
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "action": {
+                "const": "payment.authorize"
+              }
+            },
+            "required": ["action"]
+          },
+          "then": {
+            "required": ["transaction_digest"]
+          }
+        }
+      ]
+    },
+    "externalReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "receipt_id",
+        "mandate_id",
+        "mandate_digest",
+        "adapter_id",
+        "adapter_version",
+        "adapter_digest",
+        "signer_key_id",
+        "status",
+        "provider_reference",
+        "received_at",
+        "reconciliation_required",
+        "signature"
+      ],
+      "properties": {
+        "schema": {
+          "const": "axiom-local-trust-external-receipt.v1"
+        },
+        "receipt_id": {
+          "$ref": "#/$defs/id"
+        },
+        "mandate_id": {
+          "$ref": "#/$defs/id"
+        },
+        "mandate_digest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "adapter_id": {
+          "$ref": "#/$defs/id"
+        },
+        "adapter_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "adapter_digest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "signer_key_id": {
+          "$ref": "#/$defs/id"
+        },
+        "status": {
+          "enum": [
+            "externally_authorized",
+            "declined",
+            "uncertain",
+            "settled",
+            "reversed"
+          ]
+        },
+        "provider_reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "amount": {
+          "$ref": "#/$defs/money"
+        },
+        "fee": {
+          "$ref": "#/$defs/money"
+        },
+        "received_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "reconciliation_required": {
+          "type": "boolean"
+        },
+        "reconciles_receipt_id": {
+          "$ref": "#/$defs/id"
+        },
+        "signature": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 2048
+        }
+      }
+    }
+  }
+}
