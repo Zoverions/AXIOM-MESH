@@ -1,0 +1,410 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/compute-node-profile.v1.schema.json",
+  "title": "AXIOM Compute Node Profile v1",
+  "description": "Documentation-only draft profile for declared and measured inference capabilities; it does not grant admission, placement, or execution authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "profile_id",
+    "profile_version",
+    "device_class",
+    "node_admission_ref",
+    "software",
+    "resources",
+    "runtimes",
+    "connectivity",
+    "security",
+    "privacy",
+    "observations"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-compute-node-profile.v1"
+    },
+    "profile_id": {
+      "$ref": "#/$defs/id"
+    },
+    "profile_version": {
+      "$ref": "#/$defs/version"
+    },
+    "device_class": {
+      "enum": [
+        "wearable-endpoint",
+        "companion",
+        "personal-node",
+        "managed-node",
+        "cloud-adapter"
+      ]
+    },
+    "node_admission_ref": {
+      "$ref": "#/$defs/id"
+    },
+    "software": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "platform",
+        "architecture",
+        "software_digest",
+        "update_channel"
+      ],
+      "properties": {
+        "platform": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "architecture": {
+          "enum": ["x86_64", "aarch64", "arm", "riscv64", "provider-api"]
+        },
+        "software_digest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "update_channel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "rollback_supported": {
+          "type": "boolean"
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cpu_millis",
+        "memory_bytes",
+        "storage_bytes",
+        "accelerators",
+        "maximum_concurrent_jobs"
+      ],
+      "properties": {
+        "cpu_millis": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "memory_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "storage_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maximum_concurrent_jobs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        },
+        "accelerators": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "accelerator_id",
+              "kind",
+              "memory_bytes",
+              "backends"
+            ],
+            "properties": {
+              "accelerator_id": {
+                "$ref": "#/$defs/id"
+              },
+              "kind": {
+                "enum": ["gpu", "npu", "dsp", "mcu-vector", "remote"]
+              },
+              "memory_bytes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "unified_memory": {
+                "type": "boolean"
+              },
+              "backends": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 16,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "runtimes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "runtime_id",
+          "runtime_version",
+          "runtime_digest",
+          "protocol",
+          "model_formats",
+          "modalities",
+          "capabilities"
+        ],
+        "properties": {
+          "runtime_id": {
+            "$ref": "#/$defs/id"
+          },
+          "runtime_version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "runtime_digest": {
+            "$ref": "#/$defs/sha256"
+          },
+          "protocol": {
+            "enum": [
+              "axiom-inference-v1",
+              "openai-compatible",
+              "native-local",
+              "provider-api"
+            ]
+          },
+          "model_formats": {
+            "type": "array",
+            "maxItems": 16,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          },
+          "modalities": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "uniqueItems": true,
+            "items": {
+              "enum": ["text", "audio", "image", "video", "embedding"]
+            }
+          },
+          "capabilities": {
+            "$ref": "#/$defs/idList"
+          }
+        }
+      }
+    },
+    "connectivity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["transports", "endpoint_ref", "requires_companion"],
+      "properties": {
+        "transports": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "ble",
+              "wifi",
+              "ethernet",
+              "cellular",
+              "loopback",
+              "provider-https"
+            ]
+          }
+        },
+        "endpoint_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "requires_companion": {
+          "type": "boolean"
+        },
+        "metered": {
+          "type": "boolean"
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile",
+        "secure_boot",
+        "storage_encryption",
+        "device_key_isolation",
+        "firmware_or_software_attestation",
+        "revocable"
+      ],
+      "properties": {
+        "profile": {
+          "type": "string",
+          "pattern": "^S[0-3]_[A-Z0-9_]+$"
+        },
+        "secure_boot": {
+          "type": "boolean"
+        },
+        "storage_encryption": {
+          "type": "boolean"
+        },
+        "device_key_isolation": {
+          "enum": ["none", "software", "platform-keystore", "secure-element", "remote-custody"]
+        },
+        "firmware_or_software_attestation": {
+          "type": "boolean"
+        },
+        "revocable": {
+          "const": true
+        },
+        "physical_privacy_controls": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "microphone-disconnect",
+              "camera-disconnect",
+              "recording-indicator",
+              "user-presence-button",
+              "none"
+            ]
+          }
+        }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowed_egress_classes", "raw_content_in_telemetry"],
+      "properties": {
+        "allowed_egress_classes": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "none",
+              "owner-lan",
+              "owner-vpn",
+              "managed-private",
+              "public-provider"
+            ]
+          }
+        },
+        "raw_content_in_telemetry": {
+          "const": false
+        },
+        "residency_regions": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 64
+          }
+        }
+      }
+    },
+    "energy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "power_source": {
+          "enum": ["battery", "mains", "provider", "hybrid"]
+        },
+        "declared_watts": {
+          "type": "number",
+          "minimum": 0
+        },
+        "measured_watts": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "observations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "observation_id",
+          "kind",
+          "status",
+          "observed_at",
+          "expires_at",
+          "evidence_ref"
+        ],
+        "properties": {
+          "observation_id": {
+            "$ref": "#/$defs/id"
+          },
+          "kind": {
+            "enum": [
+              "declared-capacity",
+              "measured-capacity",
+              "endpoint-health",
+              "runtime-conformance",
+              "model-benchmark",
+              "energy",
+              "security-attestation"
+            ]
+          },
+          "status": {
+            "enum": ["declared", "measured", "verified", "failed", "stale"]
+          },
+          "observed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "evidence_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "idList": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

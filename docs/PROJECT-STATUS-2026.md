@@ -1,6 +1,6 @@
 # AXIOM-MESH Project Status
 
-**Status date:** 2026-08-10
+**Status date:** 2026-08-12
 
 **Supported build:** `0.12.0-dev.3`
 
@@ -181,6 +181,27 @@ See:
 - [active execution queue](MASTER-TODO.md);
 - [production runbook](../mesh/PRODUCTION.md).
 
+## Specified personal compute and local trust architecture
+
+The repository contains the documentation-only `1.0.0-draft.1`
+[Personal Compute Fabric and Local Trust Plane](architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md)
+architecture plus JSON Schemas for a Personal Agent Pack, Agent Runtime
+Capsule, Agent Runtime Adapter, Compute Node Profile, and Local Trust Envelope.
+
+The specification defines a phone-first path to a constrained wearable,
+replaceable local, managed, or cloud inference, policy-first routing,
+deterministic local credential and authorization checks, exact one-use
+mandates, and truthful external payment and identity states. It separates
+personal continuity from model weights, orchestration from authority, local
+authorization from external authorization, and accounting from settlement.
+
+This is product and protocol planning only. The current runtime loads only the
+separately byte-pinned Agent Runtime Adapter contract; it does not load the
+other four drafts. No wearable, pairing, agent capsule executor, Personal Agent
+Pack, inference router, compute dispatcher, identity presentation, payment
+mandate, or settlement adapter has been implemented or added to the capability
+registry.
+
 ## Repository transition
 
 The former GitHub `Main` tip is preserved by immutable tag
@@ -221,6 +242,11 @@ AXIOM-MESH does not currently claim:
 - operational tokens, bridges, liquidity, or chain settlement;
 - working zk proof verification without a named adapter;
 - production AI-provider or messaging integrations;
+- a supported wearable/companion product, portable Personal Agent Pack, Agent
+  Runtime Capsule executor, compute-routing fabric, or Local Trust Plane;
+- production identity proofing, credential presentation, passkey authorization,
+  payment authorization, funds availability, merchant acceptance, or
+  settlement;
 - clinical, educational, governmental, or financial regulatory compliance;
 - secure embodied autonomy;
 - post-quantum end-to-end security.
@@ -244,6 +270,16 @@ review intake contract are implemented, but no authentic pilot package or
 external findings ledger has been submitted.
 
 ### Human utility preview
+
+The Personal Compute Fabric and Local Trust Plane architecture is complete as a
+draft specification with five machine-readable documentation contracts and a
+seven-stage MVP sequence. The signed no-I/O runtime-adapter drill validates
+contract and verifier behavior only and changes no runnable capability. The
+first real implementation slice remains phone-first: one bounded single-agent
+capsule, replaceable local, user-supplied, and managed model adapters, a secret-
+free Personal Agent Pack, and visible policy-first routing. Wearable, identity,
+and payment work follows only through prototype, synthetic-credential, and
+sandbox-value gates.
 
 The versioned Gateway client contract and zero-dependency same-origin client
 are implemented for all 29 authenticated routes, including schema, explicit

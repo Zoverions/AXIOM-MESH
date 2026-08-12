@@ -1,0 +1,337 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/agent-runtime-capsule.v1.schema.json",
+  "title": "AXIOM Agent Runtime Capsule v1",
+  "description": "Documentation-only draft manifest for a bounded, replaceable orchestration runtime that cannot grant itself authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "capsule_id",
+    "capsule_version",
+    "orchestration_pattern",
+    "implementation",
+    "interfaces",
+    "model_requirements",
+    "requested_authority",
+    "budgets",
+    "control",
+    "evidence"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-agent-runtime-capsule.v1"
+    },
+    "capsule_id": {
+      "$ref": "#/$defs/id"
+    },
+    "capsule_version": {
+      "$ref": "#/$defs/version"
+    },
+    "orchestration_pattern": {
+      "enum": [
+        "deterministic-workflow",
+        "single-agent",
+        "planner-executor",
+        "orchestrator-worker",
+        "specialist-team",
+        "critic-loop"
+      ]
+    },
+    "implementation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_ref",
+        "artifact_sha256",
+        "sbom_sha256",
+        "entrypoint"
+      ],
+      "properties": {
+        "artifact_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "artifact_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "sbom_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "entrypoint": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "licence_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        }
+      }
+    },
+    "interfaces": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input_schema_ref", "output_schema_ref"],
+      "properties": {
+        "input_schema_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "output_schema_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "checkpoint_schema_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        }
+      }
+    },
+    "model_requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modalities", "structured_output", "tool_calling"],
+      "properties": {
+        "modalities": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["text", "audio", "image", "video", "embedding"]
+          }
+        },
+        "structured_output": {
+          "type": "boolean"
+        },
+        "tool_calling": {
+          "type": "boolean"
+        },
+        "minimum_context_units": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "requested_authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tools",
+        "data_scopes",
+        "provider_capabilities",
+        "destinations",
+        "may_grant_authority"
+      ],
+      "properties": {
+        "tools": {
+          "$ref": "#/$defs/idList"
+        },
+        "data_scopes": {
+          "$ref": "#/$defs/idList"
+        },
+        "provider_capabilities": {
+          "$ref": "#/$defs/idList"
+        },
+        "destinations": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        },
+        "may_grant_authority": {
+          "const": false
+        }
+      }
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maximum_steps",
+        "maximum_model_calls",
+        "maximum_input_units",
+        "maximum_output_units",
+        "maximum_wall_ms",
+        "maximum_concurrency"
+      ],
+      "properties": {
+        "maximum_steps": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "maximum_model_calls": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "maximum_input_units": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "maximum_output_units": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "maximum_wall_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400000
+        },
+        "maximum_concurrency": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        },
+        "maximum_cost": {
+          "$ref": "#/$defs/money"
+        }
+      }
+    },
+    "control": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cancellable",
+        "checkpointed",
+        "kill_window_ms",
+        "stop_conditions",
+        "fallback"
+      ],
+      "properties": {
+        "cancellable": {
+          "const": true
+        },
+        "checkpointed": {
+          "type": "boolean"
+        },
+        "kill_window_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 30000
+        },
+        "stop_conditions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "completed",
+              "denied",
+              "budget-exhausted",
+              "deadline-reached",
+              "cancelled",
+              "provider-unavailable",
+              "invalid-output",
+              "human-escalation",
+              "emergency-halt"
+            ]
+          }
+        },
+        "fallback": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "allowed",
+            "may_cross_egress_boundary",
+            "requires_new_approval"
+          ],
+          "properties": {
+            "allowed": {
+              "type": "boolean"
+            },
+            "may_cross_egress_boundary": {
+              "type": "boolean"
+            },
+            "requires_new_approval": {
+              "type": "boolean"
+            },
+            "candidate_ids": {
+              "$ref": "#/$defs/idList"
+            }
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_steps",
+        "record_provider",
+        "record_cost",
+        "record_fallback",
+        "raw_chain_of_thought_required"
+      ],
+      "properties": {
+        "record_steps": {
+          "const": true
+        },
+        "record_provider": {
+          "const": true
+        },
+        "record_cost": {
+          "const": true
+        },
+        "record_fallback": {
+          "const": true
+        },
+        "raw_chain_of_thought_required": {
+          "const": false
+        },
+        "evaluation_profile_ref": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "idList": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "money": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["amount_minor", "currency"],
+      "properties": {
+        "amount_minor": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        }
+      }
+    }
+  }
+}
