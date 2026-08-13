@@ -193,9 +193,9 @@ jobs:
               def filemap: reduce .files[] as $file ({}; .[$file.path] = {bytes:$file.bytes, sha256:$file.sha256});
               ($before[0] | filemap) as $b | ($after[0] | filemap) as $a |
               ([((($b|keys_unsorted) + ($a|keys_unsorted)) | unique[]) | select($b[.] != $a[.])] | sort) as $changed |
-              {schema:"axiom-host-h1-boot-file-comparison.v1", scenario:"initial-boot", changed_paths:$changed, efi_seed_change_bounded:($changed == ["loader/random-seed"]), protected_boot_files_unchanged:($changed == ["loader/random-seed"])}' \
+              {schema:"axiom-host-h1-boot-file-comparison.v1", scenario:"initial-boot", changed_paths:$changed, efi_boot_entropy_change_bounded:($changed == ["loader/boot-secret-mixin","loader/random-seed"]), protected_boot_files_unchanged:($changed == ["loader/boot-secret-mixin","loader/random-seed"])}' \
             > "$RUNNER_TEMP/axiom-host-h1-evidence/initial-boot-files.json"
-          jq -e '.efi_seed_change_bounded == true and .protected_boot_files_unchanged == true' \
+          jq -e '.efi_boot_entropy_change_bounded == true and .protected_boot_files_unchanged == true' \
             "$RUNNER_TEMP/axiom-host-h1-evidence/initial-boot-files.json"
 
       - name: Replace the OS image while preserving AXIOM durable state
@@ -269,9 +269,9 @@ jobs:
               def filemap: reduce .files[] as $file ({}; .[$file.path] = {bytes:$file.bytes, sha256:$file.sha256});
               ($before[0] | filemap) as $b | ($after[0] | filemap) as $a |
               ([((($b|keys_unsorted) + ($a|keys_unsorted)) | unique[]) | select($b[.] != $a[.])] | sort) as $changed |
-              {schema:"axiom-host-h1-boot-file-comparison.v1", scenario:"replacement-boot", changed_paths:$changed, efi_seed_change_bounded:($changed == ["loader/random-seed"]), protected_boot_files_unchanged:($changed == ["loader/random-seed"])}' \
+              {schema:"axiom-host-h1-boot-file-comparison.v1", scenario:"replacement-boot", changed_paths:$changed, efi_boot_entropy_change_bounded:($changed == ["loader/boot-secret-mixin","loader/random-seed"]), protected_boot_files_unchanged:($changed == ["loader/boot-secret-mixin","loader/random-seed"])}' \
             > "$RUNNER_TEMP/axiom-host-h1-evidence/replacement-boot-files.json"
-          jq -e '.efi_seed_change_bounded == true and .protected_boot_files_unchanged == true' \
+          jq -e '.efi_boot_entropy_change_bounded == true and .protected_boot_files_unchanged == true' \
             "$RUNNER_TEMP/axiom-host-h1-evidence/replacement-boot-files.json"
 
       - name: Corrupt protected hash metadata and prove fail-closed behavior
@@ -368,7 +368,7 @@ jobs:
               issue:1053,
               source:{revision:$revision,tree:$tree},
               image:{version:"0.2.0-h1",sha256:$raw_sha256,firmware:"uefi",boot_manager:"systemd-boot",boot_artifact:"unsigned-uki",root:"read-only-ext4-dm-verity",durable_state:"separate-ext4-var"},
-              verification:{qemu_accelerator:$qemu_accelerator,clean_boot:true,setup_check_in_guest:true,full_check_in_guest:true,root_mutation_blocked:true,protected_partitions_unchanged:true,efi_seed_mutation_bounded:true,initial_boot_files:$initial_boot_files[0],replacement_boot_files:$replacement_boot_files[0],state_replacement:$replacement[0],corruption_fail_closed:$corruption[0],credential_scan_passed:$secret_scan[0].passed},
+              verification:{qemu_accelerator:$qemu_accelerator,clean_boot:true,setup_check_in_guest:true,full_check_in_guest:true,root_mutation_blocked:true,protected_partitions_unchanged:true,efi_boot_entropy_mutation_bounded:true,initial_boot_files:$initial_boot_files[0],replacement_boot_files:$replacement_boot_files[0],state_replacement:$replacement[0],corruption_fail_closed:$corruption[0],credential_scan_passed:$secret_scan[0].passed},
               authority:{normal_effect_path:"Gateway -> Hypervisor -> Sandbox -> Grid",host_grants_mesh_authority:false,host_grants_node_admission:false,host_grants_execution_authority:false},
               non_claims:{secure_boot:false,measured_boot:false,remote_attestation:false,encrypted_mutable_state:false,production_ready:false},
               github:{run_id:$run_id,run_attempt:$run_attempt}

@@ -217,9 +217,10 @@ function verifyPolicy(policy) {
   exact(policy?.appliance?.boot_partition_runtime_mutability, 'linux-read-only', 'boot partition mutability policy');
   requireValue(
     Array.isArray(policy?.appliance?.efi_boot_mutable_paths)
-      && policy.appliance.efi_boot_mutable_paths.length === 1
-      && policy.appliance.efi_boot_mutable_paths[0] === 'loader/random-seed',
-    'EFI-stage mutable path policy must contain only loader/random-seed'
+      && policy.appliance.efi_boot_mutable_paths.length === 2
+      && policy.appliance.efi_boot_mutable_paths[0] === 'loader/boot-secret-mixin'
+      && policy.appliance.efi_boot_mutable_paths[1] === 'loader/random-seed',
+    'EFI-stage mutable path policy must contain only the systemd boot entropy files'
   );
   exact(policy?.appliance?.root_runtime_mutability, 'read-only', 'root mutability policy');
   exact(policy?.appliance?.axiom_state_path, '/var/lib/axiom-host', 'AXIOM state path');
