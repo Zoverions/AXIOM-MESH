@@ -75,6 +75,7 @@ export async function verifyAxiomHostLabConfiguration({
     builder_minimum_version: value(mkosi, 'Config', 'MinimumVersion'),
     target: `${policy.target.distribution}-${policy.target.release}-${policy.target.architecture}`,
     tools_tree: `${policy.tools_tree.distribution}-${policy.tools_tree.release}`,
+    tools_tree_mirror: policy.tools_tree.mirror,
     production_base_selected: policy.target.production_base_selected,
     snapshot_locked: snapshot !== HOST_LAB_SNAPSHOT_UNRESOLVED,
     snapshot,
@@ -168,6 +169,7 @@ function verifyPolicy(policy) {
     || policy.target?.production_base_selected !== false
     || policy.tools_tree?.distribution !== 'fedora'
     || String(policy.tools_tree?.release) !== '43'
+    || policy.tools_tree?.mirror !== 'https://dl.fedoraproject.org/pub/fedora'
   ) {
     throw new ValidationError('AXIOM Host laboratory target, tools tree, or builder drifted');
   }
@@ -252,6 +254,7 @@ function verifyMkosiConfiguration(config, source, policy, snapshot) {
     ['Build', 'ToolsTree', 'yes'],
     ['Build', 'ToolsTreeDistribution', policy.tools_tree.distribution],
     ['Build', 'ToolsTreeRelease', String(policy.tools_tree.release)],
+    ['Build', 'ToolsTreeMirror', policy.tools_tree.mirror],
     ['Build', 'WithNetwork', 'no'],
     ['Runtime', 'VirtualMachineMonitor', policy.runtime.virtual_machine_monitor],
     ['Runtime', 'Firmware', policy.runtime.firmware],
