@@ -67,8 +67,10 @@ export async function verifyAxiomHostLabConfiguration({
     valid: true,
     schema: policy.schema,
     stage: policy.stage,
+    builder_minimum_version: value(mkosi, 'Config', 'MinimumVersion'),
     target: `${policy.target.distribution}-${policy.target.release}-${policy.target.architecture}`,
     image_id: value(mkosi, 'Output', 'ImageId'),
+    output_directory: value(mkosi, 'Output', 'OutputDirectory'),
     image_version: version,
     packages: splitWords(value(mkosi, 'Content', 'Packages')).length,
     bootloader: value(mkosi, 'Content', 'Bootloader'),
@@ -136,6 +138,7 @@ function verifyPolicy(policy) {
   if (
     policy.builder?.tool !== 'mkosi'
     || policy.builder?.upstream !== 'systemd/mkosi'
+    || policy.builder?.minimum_version !== '26'
     || policy.target?.distribution !== 'fedora'
     || String(policy.target?.release) !== '43'
     || policy.target?.architecture !== 'x86-64'
@@ -168,6 +171,7 @@ function verifyPolicy(policy) {
   if (
     policy.image?.format !== 'disk'
     || policy.image?.image_id !== 'axiom-host-lab'
+    || policy.image?.output_directory !== 'mkosi.output'
     || policy.image?.bootable !== true
     || policy.image?.bootloader !== 'systemd-boot'
     || policy.image?.unified_kernel_images !== 'unsigned'
@@ -197,11 +201,13 @@ function verifyPolicy(policy) {
 
 function verifyMkosiConfiguration(config, source, policy) {
   const exact = [
+    ['Config', 'MinimumVersion', policy.builder.minimum_version],
     ['Distribution', 'Distribution', policy.target.distribution],
     ['Distribution', 'Release', String(policy.target.release)],
     ['Distribution', 'Architecture', policy.target.architecture],
     ['Output', 'Format', policy.image.format],
     ['Output', 'ImageId', policy.image.image_id],
+    ['Output', 'OutputDirectory', policy.image.output_directory],
     ['Output', 'ManifestFormat', policy.image.manifest_formats.join(',')],
     ['Output', 'CompressOutput', 'no'],
     ['Content', 'WithDocs', 'no'],
