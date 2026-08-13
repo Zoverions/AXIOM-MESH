@@ -166,11 +166,12 @@ function readState() {
 function findMount(target) {
   const output = execFileSync(
     '/usr/bin/findmnt',
-    ['--json', '--output', 'SOURCE,FSTYPE,OPTIONS', '--mountpoint', target],
+    ['--json', '--output', 'TARGET,SOURCE,FSTYPE,OPTIONS', '--mountpoint', target],
     { encoding: 'utf8', timeout: 10_000 }
   );
-  const records = JSON.parse(output).filesystems;
-  assert(Array.isArray(records) && records.length === 1, `findmnt returned an invalid record count for ${target}`);
+  const records = flattenMounts(JSON.parse(output).filesystems)
+    .filter(record => record.target === target && record.fstype !== 'autofs');
+  assert(Array.isArray(records) && records.length === 1, `findmnt returned an ambiguous mounted filesystem for ${target}`);
   const [record] = records;
   assert(
     typeof record.source === 'string'
@@ -184,6 +185,11 @@ function findMount(target) {
     filesystem: record.fstype,
     options: record.options.split(',').sort()
   };
+}
+
+function flattenMounts(records) {
+  if (!Array.isArray(records)) return [];
+  return records.flatMap(record => [record, ...flattenMounts(record.children)]);
 }
 
 function observeVerityDevices() {
