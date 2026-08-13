@@ -51,6 +51,43 @@ const CHECK_FIELDS = new Set([
   'observed_at',
   'provider_evidence_digest'
 ]);
+const ASSURANCE_EVIDENCE_INPUT_FIELDS = new Set([
+  'schema',
+  'evidence_id',
+  'front_id',
+  'source_state_digest',
+  'evidence_class',
+  'basis_kind',
+  'subject',
+  'result',
+  'evidence_payload_digest',
+  'environment_digest',
+  'observed_at',
+  'current_for_front',
+  'non_authorizing',
+  'provider_observation',
+  'provider_observation_digest',
+  'evidence_digest',
+  'negative_evidence',
+  'authority_granted'
+]);
+const CHANGE_FRONT_INPUT_FIELDS = new Set([
+  'schema',
+  'front_id',
+  'repository_id',
+  'base_state_digest',
+  'head_state_digest',
+  'lifecycle',
+  'merge_eligible',
+  'depends_on',
+  'supersedes',
+  'replaces',
+  'claim_boundary_digest',
+  'provider_observations',
+  'front_digest',
+  'provider_metadata_in_authority_identity',
+  'merge_authority_granted'
+]);
 
 function rejectUnknown(value, allowed, name) {
   const unknown = Object.keys(value).filter(key => !allowed.has(key));
@@ -175,6 +212,11 @@ export function normalizeChangeFrontProviderCapture(raw) {
 
 function assuranceEvidenceInput(raw) {
   const value = assertPlainObject(raw, 'source verification evidence');
+  rejectUnknown(
+    value,
+    ASSURANCE_EVIDENCE_INPUT_FIELDS,
+    'source verification evidence'
+  );
   if (value.authority_granted !== undefined && value.authority_granted !== false) {
     throw new ValidationError('source verification evidence cannot grant authority');
   }
@@ -205,13 +247,18 @@ function assuranceEvidenceInput(raw) {
     observed_at: value.observed_at,
     current_for_front: value.current_for_front,
     non_authorizing: value.non_authorizing,
-    ...(value.provider_observation ? { provider_observation: value.provider_observation } : {}),
-    ...(value.evidence_digest ? { evidence_digest: value.evidence_digest } : {})
+    ...(value.provider_observation !== undefined && value.provider_observation !== null
+      ? { provider_observation: value.provider_observation }
+      : {}),
+    ...(value.evidence_digest !== undefined
+      ? { evidence_digest: value.evidence_digest }
+      : {})
   };
 }
 
 function changeFrontInput(raw) {
   const value = assertPlainObject(raw, 'change front');
+  rejectUnknown(value, CHANGE_FRONT_INPUT_FIELDS, 'change front');
   if (
     value.provider_metadata_in_authority_identity !== undefined
     && value.provider_metadata_in_authority_identity !== false
@@ -234,7 +281,7 @@ function changeFrontInput(raw) {
     replaces: value.replaces,
     claim_boundary_digest: value.claim_boundary_digest,
     provider_observations: value.provider_observations,
-    ...(value.front_digest ? { front_digest: value.front_digest } : {})
+    ...(value.front_digest !== undefined ? { front_digest: value.front_digest } : {})
   };
 }
 
