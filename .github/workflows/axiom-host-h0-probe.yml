@@ -27,7 +27,7 @@ jobs:
     env:
       AXIOM_HOST_LAB_ACK: I_UNDERSTAND_THIS_IS_NON_PRODUCTION
       MKOSI_V26_COMMIT: 84af20892b61c8e177e391f997ded8b4cb5514f2
-      FEDORA_RAWHIDE_COMPOSE_ID_URL: https://kojipkgs.fedoraproject.org/compose/rawhide/latest-Fedora-Rawhide/COMPOSE_ID
+      FEDORA_RAWHIDE_LATEST_COMPOSE_ID_URL: https://kojipkgs.fedoraproject.org/compose/rawhide/latest-Fedora-Rawhide/COMPOSE_ID
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -61,65 +61,72 @@ jobs:
           mkosi --version | tee "$RUNNER_TEMP/mkosi-version.txt"
           grep -Eq '^mkosi 26([ .]|$)' "$RUNNER_TEMP/mkosi-version.txt"
 
-      - name: Parse AXIOM Host H0 configuration with upstream mkosi
+      - name: Parse locked AXIOM Host H0 configuration with upstream mkosi
         run: npm run host:lab:summary
 
-      - name: Attempt mkosi Rawhide snapshot discovery on hosted runner
-        id: snapshot
-        continue-on-error: true
+      - name: Verify pinned Rawhide compose repository metadata exists
+        id: pinned
         shell: bash
         run: |
-          set -o pipefail
-          npm run host:lab:snapshot \
-            > "$RUNNER_TEMP/axiom-host-fedora-snapshot-attempt.log" 2>&1
-          status=$?
-          cat "$RUNNER_TEMP/axiom-host-fedora-snapshot-attempt.log"
-          exit "$status"
+          set -euo pipefail
+          pinned="$(tr -d '\r\n' < host/mkosi.snapshot)"
+          test -n "$pinned"
+          test "$pinned" != "UNRESOLVED"
+          printf '%s\n' "$pinned" > "$RUNNER_TEMP/fedora-rawhide-pinned-snapshot.txt"
+          repomd="https://kojipkgs.fedoraproject.org/compose/rawhide/Fedora-Rawhide-${pinned}/compose/Everything/x86_64/os/repodata/repomd.xml"
+          curl --fail --location --silent --show-error "$repomd" \
+            -o "$RUNNER_TEMP/fedora-rawhide-pinned-repomd.xml"
+          sha256sum "$RUNNER_TEMP/fedora-rawhide-pinned-repomd.xml" \
+            | awk '{print $1}' \
+            > "$RUNNER_TEMP/fedora-rawhide-pinned-repomd.sha256"
 
-      - name: Cross-check exact Rawhide compose candidate without mkosi sandbox
-        id: compose
+      - name: Observe current latest Rawhide compose without changing the lock
+        id: latest
         continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
           curl --fail --location --silent --show-error \
-            "$FEDORA_RAWHIDE_COMPOSE_ID_URL" \
-            -o "$RUNNER_TEMP/fedora-rawhide-compose-id.txt"
-          compose_id="$(tr -d '\r\n' < "$RUNNER_TEMP/fedora-rawhide-compose-id.txt")"
+            "$FEDORA_RAWHIDE_LATEST_COMPOSE_ID_URL" \
+            -o "$RUNNER_TEMP/fedora-rawhide-current-compose-id.txt"
+          compose_id="$(tr -d '\r\n' < "$RUNNER_TEMP/fedora-rawhide-current-compose-id.txt")"
           case "$compose_id" in
             Fedora-Rawhide-*) ;;
             *) echo "Unexpected Fedora Rawhide COMPOSE_ID: $compose_id" >&2; exit 1 ;;
           esac
-          candidate="${compose_id#Fedora-Rawhide-}"
-          printf '%s\n' "$candidate" > "$RUNNER_TEMP/fedora-rawhide-snapshot-candidate.txt"
-          node -e 'const fs=require("node:fs"); const v=fs.readFileSync(process.argv[1],"utf8").trim(); if(!/^[A-Za-z0-9][A-Za-z0-9._:+-]{0,159}$/.test(v)) process.exit(1)' \
-            "$RUNNER_TEMP/fedora-rawhide-snapshot-candidate.txt"
+          printf '%s\n' "${compose_id#Fedora-Rawhide-}" \
+            > "$RUNNER_TEMP/fedora-rawhide-current-snapshot.txt"
 
-      - name: Record snapshot discovery outcome
+      - name: Record H0 package-source probe
         if: always()
         shell: bash
         env:
-          SNAPSHOT_OUTCOME: ${{ steps.snapshot.outcome }}
-          COMPOSE_OUTCOME: ${{ steps.compose.outcome }}
+          LATEST_OUTCOME: ${{ steps.latest.outcome }}
         run: |
           set -euo pipefail
-          candidate=""
-          if [[ -f "$RUNNER_TEMP/fedora-rawhide-snapshot-candidate.txt" ]]; then
-            candidate="$(tr -d '\r\n' < "$RUNNER_TEMP/fedora-rawhide-snapshot-candidate.txt")"
+          pinned="$(tr -d '\r\n' < "$RUNNER_TEMP/fedora-rawhide-pinned-snapshot.txt")"
+          repomd_sha256="$(tr -d '\r\n' < "$RUNNER_TEMP/fedora-rawhide-pinned-repomd.sha256")"
+          current=""
+          if [[ -f "$RUNNER_TEMP/fedora-rawhide-current-snapshot.txt" ]]; then
+            current="$(tr -d '\r\n' < "$RUNNER_TEMP/fedora-rawhide-current-snapshot.txt")"
           fi
-          printf '{"schema":"axiom-host-h0-snapshot-probe.v1","github_sha":"%s","mkosi_commit":"%s","mkosi_latest_snapshot_outcome":"%s","direct_compose_outcome":"%s","candidate":"%s","candidate_committed":false,"gating":false,"interpretation":"The direct compose lookup mirrors the pinned mkosi v26 Fedora Rawhide latest_snapshot endpoint semantics but remains review evidence only. H0 build still requires the same reviewed candidate to be committed in mkosi.snapshot and Snapshot=."}\n' \
-            "$GITHUB_SHA" "$MKOSI_V26_COMMIT" "$SNAPSHOT_OUTCOME" "$COMPOSE_OUTCOME" "$candidate" \
-            > "$RUNNER_TEMP/axiom-host-fedora-snapshot-probe.json"
+          same_as_latest=false
+          if [[ -n "$current" && "$current" = "$pinned" ]]; then same_as_latest=true; fi
+          printf '{"schema":"axiom-host-h0-package-source-probe.v1","github_sha":"%s","mkosi_commit":"%s","pinned_snapshot":"%s","pinned_repomd_sha256":"%s","latest_lookup_outcome":"%s","latest_snapshot_observed":"%s","pinned_is_latest":%s,"lock_changed":false,"production_base_selected":false,"interpretation":"The pinned Rawhide compose repository exists and its repomd bytes are hashed for this probe. Whether a newer Rawhide compose exists does not change the committed H0 package source automatically."}\n' \
+            "$GITHUB_SHA" "$MKOSI_V26_COMMIT" "$pinned" "$repomd_sha256" "$LATEST_OUTCOME" "$current" "$same_as_latest" \
+            > "$RUNNER_TEMP/axiom-host-h0-package-source-probe.json"
 
-      - name: Upload snapshot probe evidence
+      - name: Upload H0 package-source probe evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: axiom-host-fedora-snapshot-probe-${{ github.sha }}
+          name: axiom-host-h0-package-source-probe-${{ github.sha }}
           path: |
-            ${{ runner.temp }}/axiom-host-fedora-snapshot-probe.json
-            ${{ runner.temp }}/axiom-host-fedora-snapshot-attempt.log
-            ${{ runner.temp }}/fedora-rawhide-compose-id.txt
-            ${{ runner.temp }}/fedora-rawhide-snapshot-candidate.txt
+            ${{ runner.temp }}/axiom-host-h0-package-source-probe.json
+            ${{ runner.temp }}/fedora-rawhide-pinned-snapshot.txt
+            ${{ runner.temp }}/fedora-rawhide-pinned-repomd.xml
+            ${{ runner.temp }}/fedora-rawhide-pinned-repomd.sha256
+            ${{ runner.temp }}/fedora-rawhide-current-compose-id.txt
+            ${{ runner.temp }}/fedora-rawhide-current-snapshot.txt
           if-no-files-found: warn
           retention-days: 14
