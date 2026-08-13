@@ -261,7 +261,7 @@ function verifyPolicy(policy) {
     || policy.image?.image_id !== 'axiom-host-lab'
     || policy.image?.output_directory !== 'mkosi.output'
     || policy.image?.bootable !== true
-    || policy.image?.bootloader !== 'systemd-boot'
+    || policy.image?.bootloader !== 'uki'
     || policy.image?.unified_kernel_images !== 'unsigned'
     || policy.image?.checksums !== true
     || policy.image?.fixed_partition_seed_required !== true

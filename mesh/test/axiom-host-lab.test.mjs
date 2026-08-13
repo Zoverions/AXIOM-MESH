@@ -56,7 +56,7 @@ test('AXIOM Host H0 laboratory configuration is valid, snapshot-locked, and non-
   assert.equal(result.image_version, '0.1.0-h0');
   assert.equal(result.repart_layout, 'vfat-512M,ext4-2G');
   assert.equal(result.root_filesystem, 'ext4');
-  assert.equal(result.bootloader, 'systemd-boot');
+  assert.equal(result.bootloader, 'uki');
   assert.equal(result.network, 'none');
   assert.equal(result.virtual_tpm, false);
   assert.equal(result.production_promoted, false);

@@ -71,7 +71,7 @@
     "image_id": "axiom-host-lab",
     "output_directory": "mkosi.output",
     "bootable": true,
-    "bootloader": "systemd-boot",
+    "bootloader": "uki",
     "unified_kernel_images": "unsigned",
     "checksums": true,
     "manifest_formats": [

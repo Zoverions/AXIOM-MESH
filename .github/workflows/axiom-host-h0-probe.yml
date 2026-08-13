@@ -179,7 +179,7 @@ jobs:
             host/mkosi.output/axiom-host-lab_0.1.0-h0.raw \
             "$RUNNER_TEMP/axiom-host-h0-image-diagnostics.json" \
             "$RUNNER_TEMP/axiom-host-h0-image-slices" \
-            esp:0 root-x86-64:29 \
+            esp:0 esp:8 root-x86-64:29 \
             > "$RUNNER_TEMP/axiom-host-h0-image-slices-command.json"
           test -s "$RUNNER_TEMP/axiom-host-h0-image-slices/axiom-host-h0-image-slices.json"
 
