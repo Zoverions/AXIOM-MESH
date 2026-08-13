@@ -7,25 +7,29 @@ import test from 'node:test';
 import {
   HOST_LAB_MKOSI_URL,
   HOST_LAB_POLICY_URL,
+  HOST_LAB_SNAPSHOT_URL,
   HOST_LAB_VERSION_URL,
   parseMkosiConfiguration,
   verifyAxiomHostLabConfiguration
 } from '../src/check-axiom-host-lab.mjs';
 import { laboratoryEnvironment } from '../src/axiom-host-lab.mjs';
 
-const [POLICY_TEXT, MKOSI_TEXT, VERSION_TEXT] = await Promise.all([
+const [POLICY_TEXT, MKOSI_TEXT, VERSION_TEXT, SNAPSHOT_TEXT] = await Promise.all([
   readFile(HOST_LAB_POLICY_URL, 'utf8'),
   readFile(HOST_LAB_MKOSI_URL, 'utf8'),
-  readFile(HOST_LAB_VERSION_URL, 'utf8')
+  readFile(HOST_LAB_VERSION_URL, 'utf8'),
+  readFile(HOST_LAB_SNAPSHOT_URL, 'utf8')
 ]);
 
-test('AXIOM Host H0 laboratory configuration is valid and non-promoting', async () => {
+test('AXIOM Host H0 laboratory configuration is valid, unpinned, and non-promoting', async () => {
   const result = await verifyAxiomHostLabConfiguration();
   assert.equal(result.valid, true);
   assert.equal(result.schema, 'axiom-host-lab-policy.v1');
   assert.equal(result.stage, 'H0');
   assert.equal(result.builder_minimum_version, '26');
   assert.equal(result.target, 'fedora-43-x86-64');
+  assert.equal(result.snapshot_locked, false);
+  assert.equal(result.snapshot, 'UNRESOLVED');
   assert.equal(result.image_id, 'axiom-host-lab');
   assert.equal(result.output_directory, 'mkosi.output');
   assert.equal(result.image_version, '0.1.0-h0');
@@ -42,6 +46,33 @@ test('mkosi parser preserves package continuations without accepting duplicate k
     () => parseMkosiConfiguration('[Content]\nPackages=a\nPackages=b\n'),
     /repeats \[Content] Packages/
   );
+});
+
+test('snapshot lock is exact and cannot silently use latest packages', async () => {
+  const snapshot = 'fedora-43-20260812T000000Z';
+  const lockedMkosi = MKOSI_TEXT.replace('Release=43', `Release=43\nSnapshot=${snapshot}`);
+  await withFixture({ snapshot: `${snapshot}\n`, mkosi: lockedMkosi }, async urls => {
+    const result = await verifyAxiomHostLabConfiguration(urls);
+    assert.equal(result.snapshot_locked, true);
+    assert.equal(result.snapshot, snapshot);
+  });
+
+  await withFixture({ snapshot: `${snapshot}\n` }, async urls => {
+    await assert.rejects(
+      verifyAxiomHostLabConfiguration(urls),
+      /missing \[Distribution] Snapshot/
+    );
+  });
+
+  await withFixture({
+    snapshot: 'UNRESOLVED\n',
+    mkosi: lockedMkosi
+  }, async urls => {
+    await assert.rejects(
+      verifyAxiomHostLabConfiguration(urls),
+      /must not declare Snapshot while the snapshot lock is UNRESOLVED/
+    );
+  });
 });
 
 test('H0 verifier rejects remote access, secret-bearing settings, builder downgrade, and authority promotion', async () => {
@@ -111,15 +142,18 @@ async function withFixture(overrides, callback) {
     const policyPath = join(root, 'policy.json');
     const mkosiPath = join(root, 'mkosi.conf');
     const versionPath = join(root, 'mkosi.version');
+    const snapshotPath = join(root, 'mkosi.snapshot');
     await Promise.all([
       writeFile(policyPath, overrides.policy ?? POLICY_TEXT),
       writeFile(mkosiPath, overrides.mkosi ?? MKOSI_TEXT),
-      writeFile(versionPath, overrides.version ?? VERSION_TEXT)
+      writeFile(versionPath, overrides.version ?? VERSION_TEXT),
+      writeFile(snapshotPath, overrides.snapshot ?? SNAPSHOT_TEXT)
     ]);
     await callback({
       policyUrl: pathToFileURL(policyPath),
       mkosiUrl: pathToFileURL(mkosiPath),
-      versionUrl: pathToFileURL(versionPath)
+      versionUrl: pathToFileURL(versionPath),
+      snapshotUrl: pathToFileURL(snapshotPath)
     });
   } finally {
     await rm(root, { recursive: true, force: true });
