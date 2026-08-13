@@ -1,4 +1,7 @@
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import {
+  AxiomError,
   ValidationError,
   canonicalJson,
   digestObject,
@@ -17,6 +20,8 @@ const CHECKPOINT_META_KEY = 'chain_checkpoints_v1';
 const DEFAULT_CHECKPOINT_INTERVAL = 10_000;
 const DIGEST = /^[a-f0-9]{64}$/;
 const CHECKPOINT_ID = /^gcp_[a-f0-9]{64}$/;
+const EXPORT_ID = /^export_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const EXPORT_BUNDLE_NAME = /^(bundle\.jsonl|bundle\.encrypted\.json)$/;
 
 export {
   CHECKPOINT_SCHEMA,
@@ -41,6 +46,81 @@ export class GridStore extends CoreGridStore {
     const appended = super.appendEvents(input);
     this.ensureChainCheckpoint({ minimumDistance: this.checkpointInterval });
     return appended;
+  }
+
+  async getExportBundle(exportId, principal) {
+    if (!EXPORT_ID.test(exportId)) {
+      throw new ValidationError('export_id has an invalid format');
+    }
+    const record = this.getExport(exportId, principal);
+    if (record.status !== 'completed') {
+      throw new AxiomError('export_not_ready', 'Export is not complete', 409);
+    }
+    const manifest = record.manifest_json;
+    if (
+      !isPlainObject(manifest)
+      || manifest.format !== 'axiom-export.v1'
+      || manifest.export_id !== exportId
+      || !Array.isArray(manifest.files)
+      || manifest.files.length !== 1
+      || !isPlainObject(manifest.files[0])
+      || !isPlainObject(manifest.attestation)
+    ) {
+      throw new AxiomError(
+        'export_integrity_failed',
+        'Export manifest is invalid',
+        503
+      );
+    }
+    const { attestation, ...unsigned } = manifest;
+    const verificationKey = this.verificationKeys.get(attestation.key_id);
+    if (!verificationKey || !verifyObjectSignature(unsigned, attestation, verificationKey)) {
+      throw new AxiomError(
+        'export_integrity_failed',
+        'Export manifest signature is invalid',
+        503
+      );
+    }
+    const file = manifest.files[0];
+    if (
+      typeof file.name !== 'string'
+      || !EXPORT_BUNDLE_NAME.test(file.name)
+      || !Number.isSafeInteger(file.bytes)
+      || file.bytes < 0
+      || !DIGEST.test(file.sha256 ?? '')
+    ) {
+      throw new AxiomError(
+        'export_integrity_failed',
+        'Export bundle manifest entry is invalid',
+        503
+      );
+    }
+
+    // The database bundle_path is attribution metadata only. Never dereference
+    // it. Re-derive the bounded path from the validated export identity and the
+    // signed manifest, then measure the bytes before returning them.
+    const expectedPath = join(this.dataDir, 'exports', exportId, file.name);
+    let bundle;
+    try {
+      bundle = await readFile(expectedPath);
+    } catch {
+      throw new AxiomError(
+        'export_integrity_failed',
+        'Export bundle bytes are unavailable',
+        503
+      );
+    }
+    if (bundle.length !== file.bytes || sha256(bundle) !== file.sha256) {
+      throw new AxiomError(
+        'export_integrity_failed',
+        'Export bundle bytes do not match the signed manifest',
+        503
+      );
+    }
+    return {
+      manifest,
+      bundle: bundle.toString('utf8')
+    };
   }
 
   verifyChain({ mode = 'checkpoint' } = {}) {
