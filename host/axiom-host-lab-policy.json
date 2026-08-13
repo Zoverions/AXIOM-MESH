@@ -18,6 +18,7 @@
   "image": {
     "format": "disk",
     "image_id": "axiom-host-lab",
+    "output_directory": "mkosi.output",
     "bootable": true,
     "bootloader": "systemd-boot",
     "unified_kernel_images": "unsigned",
