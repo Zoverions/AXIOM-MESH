@@ -9,6 +9,7 @@ import {
   HOST_LAB_POLICY_URL,
   HOST_LAB_SNAPSHOT_URL,
   HOST_LAB_VERSION_URL,
+  normalizeSnapshotLock,
   parseMkosiConfiguration,
   verifyAxiomHostLabConfiguration
 } from '../src/check-axiom-host-lab.mjs';
@@ -27,7 +28,9 @@ test('AXIOM Host H0 laboratory configuration is valid, unpinned, and non-promoti
   assert.equal(result.schema, 'axiom-host-lab-policy.v1');
   assert.equal(result.stage, 'H0');
   assert.equal(result.builder_minimum_version, '26');
-  assert.equal(result.target, 'fedora-43-x86-64');
+  assert.equal(result.target, 'fedora-rawhide-x86-64');
+  assert.equal(result.tools_tree, 'fedora-43');
+  assert.equal(result.production_base_selected, false);
   assert.equal(result.snapshot_locked, false);
   assert.equal(result.snapshot, 'UNRESOLVED');
   assert.equal(result.image_id, 'axiom-host-lab');
@@ -48,9 +51,9 @@ test('mkosi parser preserves package continuations without accepting duplicate k
   );
 });
 
-test('snapshot lock is exact and cannot silently use latest packages', async () => {
-  const snapshot = 'fedora-43-20260812T000000Z';
-  const lockedMkosi = MKOSI_TEXT.replace('Release=43', `Release=43\nSnapshot=${snapshot}`);
+test('Rawhide snapshot lock is exact and cannot silently use latest packages', async () => {
+  const snapshot = '20260812.n.0';
+  const lockedMkosi = MKOSI_TEXT.replace('Release=rawhide', `Release=rawhide\nSnapshot=${snapshot}`);
   await withFixture({ snapshot: `${snapshot}\n`, mkosi: lockedMkosi }, async urls => {
     const result = await verifyAxiomHostLabConfiguration(urls);
     assert.equal(result.snapshot_locked, true);
@@ -73,6 +76,11 @@ test('snapshot lock is exact and cannot silently use latest packages', async () 
       /must not declare Snapshot while the snapshot lock is UNRESOLVED/
     );
   });
+
+  assert.throws(
+    () => normalizeSnapshotLock('Fedora-Rawhide-20260812.n.0'),
+    /without Fedora-Rawhide- prefix/
+  );
 });
 
 test('H0 verifier rejects remote access, secret-bearing settings, builder downgrade, and authority promotion', async () => {
