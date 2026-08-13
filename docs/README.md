@@ -156,8 +156,9 @@ the capability registry or current production-readiness decision.
 - [Scaling, distributed authority, and consensus](architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md)
 - [Agent worktree storage plane](architecture/AGENT-WORKTREE-STORAGE-PLANE.md) —
   laboratory architecture for logically isolated agent workspaces over
-  replaceable storage-efficient backing profiles; includes an explicit
-  non-production benchmark and promotion programme.
+  replaceable storage-efficient backing profiles. The branch-level laboratory
+  harness and controlled comparison tooling remain non-production and make no
+  scheduler, runtime, capability-registry, or storage-profile promotion claim.
 - [Agent Runtime Adapter conformance](architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md)
 - [`agent-runtime-adapter.v1` schema](architecture/contracts/agent-runtime-adapter.v1.schema.json)
 - [Personal Compute Fabric and Local Trust Plane](architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md)
