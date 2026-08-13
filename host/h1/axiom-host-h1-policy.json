@@ -14,8 +14,10 @@
     "firmware": "uefi",
     "boot_artifact": "systemd-boot-with-unsigned-uki",
     "source_staging": "git-archive-exact-head",
-    "boot_partition_runtime_mutability": "read-only",
-    "boot_random_seed": "disabled-by-read-only-sentinel",
+    "boot_partition_runtime_mutability": "linux-read-only",
+    "efi_boot_mutable_paths": [
+      "loader/random-seed"
+    ],
     "root_filesystem": "ext4",
     "root_integrity": "dm-verity",
     "root_runtime_mutability": "read-only",
@@ -33,6 +35,7 @@
     "dm_verity_root",
     "root_write_refused",
     "protected_partitions_unchanged_after_boot",
+    "efi_executables_unchanged_with_only_random_seed_delta",
     "separate_durable_state",
     "state_preserved_across_clean_image_replacement",
     "corrupted_verity_metadata_fails_closed"

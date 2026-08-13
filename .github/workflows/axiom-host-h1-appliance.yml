@@ -116,8 +116,19 @@ jobs:
             | tee "$RUNNER_TEMP/axiom-host-h1-evidence/pristine-disk-layout.json"
           node mesh/src/axiom-host-h1-disk.mjs hash "$H1_RAW_IMAGE" \
             | tee "$RUNNER_TEMP/axiom-host-h1-evidence/pristine-partition-hashes.json"
+          pristine_esp="$RUNNER_TEMP/axiom-host-h1-pristine-esp.img"
+          pristine_esp_mount="$RUNNER_TEMP/axiom-host-h1-pristine-esp-mount"
+          node mesh/src/axiom-host-h1-disk.mjs export "$H1_RAW_IMAGE" esp "$pristine_esp" \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/pristine-esp-export.json"
+          mkdir -p "$pristine_esp_mount"
+          sudo mount -o loop,ro "$pristine_esp" "$pristine_esp_mount"
+          node mesh/src/axiom-host-h1-disk.mjs inventory "$pristine_esp_mount" \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/pristine-esp-files.json"
+          sudo umount "$pristine_esp_mount"
           jq -e '[.partitions[].name] | contains(["esp", "root-x86-64", "root-x86-64-verity", "var"])' \
             "$RUNNER_TEMP/axiom-host-h1-evidence/pristine-disk-layout.json"
+          jq -e 'any(.files[]; .path == "EFI/BOOT/BOOTX64.EFI") and any(.files[]; ((.path | startswith("EFI/Linux/")) and (.path | endswith(".efi")))) and any(.files[]; .path == "loader/random-seed")' \
+            "$RUNNER_TEMP/axiom-host-h1-evidence/pristine-esp-files.json"
 
       - name: Boot H1 through UEFI and execute AXIOM checks in the guest
         shell: bash
@@ -138,6 +149,15 @@ jobs:
           grep -F 'AXIOM_HOST_H1_PASS' "$RUNNER_TEMP/axiom-host-h1-initial-boot.log"
           node mesh/src/axiom-host-h1-disk.mjs hash "$disk" \
             > "$RUNNER_TEMP/axiom-host-h1-evidence/initial-after-boot-partition-hashes.json"
+          initial_esp="$RUNNER_TEMP/axiom-host-h1-initial-esp.img"
+          initial_esp_mount="$RUNNER_TEMP/axiom-host-h1-initial-esp-mount"
+          node mesh/src/axiom-host-h1-disk.mjs export "$disk" esp "$initial_esp" \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/initial-esp-export.json"
+          mkdir -p "$initial_esp_mount"
+          sudo mount -o loop,ro "$initial_esp" "$initial_esp_mount"
+          node mesh/src/axiom-host-h1-disk.mjs inventory "$initial_esp_mount" \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/initial-esp-files.json"
+          sudo umount "$initial_esp_mount"
           cp "$disk" "$RUNNER_TEMP/axiom-host-h1-initial-booted.raw"
 
       - name: Export and verify first-boot durable state
@@ -163,10 +183,20 @@ jobs:
           jq -n \
             --slurpfile before "$RUNNER_TEMP/axiom-host-h1-evidence/pristine-partition-hashes.json" \
             --slurpfile after "$RUNNER_TEMP/axiom-host-h1-evidence/initial-after-boot-partition-hashes.json" '
-              def protected: [.partitions[] | select(.name == "esp" or .name == "root-x86-64" or .name == "root-x86-64-verity") | {name, sha256}] | sort_by(.name);
+              def protected: [.partitions[] | select(.name == "root-x86-64" or .name == "root-x86-64-verity") | {name, sha256}] | sort_by(.name);
               {schema:"axiom-host-h1-protected-partition-comparison.v1", scenario:"initial-boot", unchanged:(($before[0]|protected)==($after[0]|protected)), before:($before[0]|protected), after:($after[0]|protected)}' \
             > "$RUNNER_TEMP/axiom-host-h1-evidence/initial-protected-partitions.json"
           jq -e '.unchanged == true' "$RUNNER_TEMP/axiom-host-h1-evidence/initial-protected-partitions.json"
+          jq -n \
+            --slurpfile before "$RUNNER_TEMP/axiom-host-h1-evidence/pristine-esp-files.json" \
+            --slurpfile after "$RUNNER_TEMP/axiom-host-h1-evidence/initial-esp-files.json" '
+              def filemap: reduce .files[] as $file ({}; .[$file.path] = {bytes:$file.bytes, sha256:$file.sha256});
+              ($before[0] | filemap) as $b | ($after[0] | filemap) as $a |
+              ([((($b|keys_unsorted) + ($a|keys_unsorted)) | unique[]) | select($b[.] != $a[.])] | sort) as $changed |
+              {schema:"axiom-host-h1-boot-file-comparison.v1", scenario:"initial-boot", changed_paths:$changed, efi_seed_rotated:($changed == ["loader/random-seed"]), protected_boot_files_unchanged:($changed == ["loader/random-seed"])}' \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/initial-boot-files.json"
+          jq -e '.efi_seed_rotated == true and .protected_boot_files_unchanged == true' \
+            "$RUNNER_TEMP/axiom-host-h1-evidence/initial-boot-files.json"
 
       - name: Replace the OS image while preserving AXIOM durable state
         shell: bash
@@ -197,6 +227,15 @@ jobs:
           grep -F 'AXIOM_HOST_H1_PASS' "$RUNNER_TEMP/axiom-host-h1-replacement-boot.log"
           node mesh/src/axiom-host-h1-disk.mjs hash "$replacement" \
             > "$RUNNER_TEMP/axiom-host-h1-evidence/replacement-after-boot-partition-hashes.json"
+          replacement_esp="$RUNNER_TEMP/axiom-host-h1-replacement-esp.img"
+          replacement_esp_mount="$RUNNER_TEMP/axiom-host-h1-replacement-esp-mount"
+          node mesh/src/axiom-host-h1-disk.mjs export "$replacement" esp "$replacement_esp" \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/replacement-esp-export.json"
+          mkdir -p "$replacement_esp_mount"
+          sudo mount -o loop,ro "$replacement_esp" "$replacement_esp_mount"
+          node mesh/src/axiom-host-h1-disk.mjs inventory "$replacement_esp_mount" \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/replacement-esp-files.json"
+          sudo umount "$replacement_esp_mount"
           node mesh/src/axiom-host-h1-disk.mjs export "$replacement" var "$RUNNER_TEMP/axiom-host-h1-state-after-replacement.img" \
             > "$RUNNER_TEMP/axiom-host-h1-evidence/replacement-state-export.json"
 
@@ -219,11 +258,21 @@ jobs:
             --arg state_id "$replacement_id" \
             --slurpfile before "$RUNNER_TEMP/axiom-host-h1-evidence/pristine-partition-hashes.json" \
             --slurpfile after "$RUNNER_TEMP/axiom-host-h1-evidence/replacement-after-boot-partition-hashes.json" '
-              def protected: [.partitions[] | select(.name == "esp" or .name == "root-x86-64" or .name == "root-x86-64-verity") | {name, sha256}] | sort_by(.name);
+              def protected: [.partitions[] | select(.name == "root-x86-64" or .name == "root-x86-64-verity") | {name, sha256}] | sort_by(.name);
               {schema:"axiom-host-h1-image-replacement-evidence.v1", state_id:$state_id, state_preserved:true, boot_sequence:2, fresh_firmware_variables:true, protected_partitions_match_pristine:(($before[0]|protected)==($after[0]|protected)), pristine:($before[0]|protected), replacement_after_boot:($after[0]|protected)}' \
             > "$RUNNER_TEMP/axiom-host-h1-evidence/image-replacement.json"
           jq -e '.state_preserved == true and .protected_partitions_match_pristine == true' \
             "$RUNNER_TEMP/axiom-host-h1-evidence/image-replacement.json"
+          jq -n \
+            --slurpfile before "$RUNNER_TEMP/axiom-host-h1-evidence/pristine-esp-files.json" \
+            --slurpfile after "$RUNNER_TEMP/axiom-host-h1-evidence/replacement-esp-files.json" '
+              def filemap: reduce .files[] as $file ({}; .[$file.path] = {bytes:$file.bytes, sha256:$file.sha256});
+              ($before[0] | filemap) as $b | ($after[0] | filemap) as $a |
+              ([((($b|keys_unsorted) + ($a|keys_unsorted)) | unique[]) | select($b[.] != $a[.])] | sort) as $changed |
+              {schema:"axiom-host-h1-boot-file-comparison.v1", scenario:"replacement-boot", changed_paths:$changed, efi_seed_rotated:($changed == ["loader/random-seed"]), protected_boot_files_unchanged:($changed == ["loader/random-seed"])}' \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/replacement-boot-files.json"
+          jq -e '.efi_seed_rotated == true and .protected_boot_files_unchanged == true' \
+            "$RUNNER_TEMP/axiom-host-h1-evidence/replacement-boot-files.json"
 
       - name: Corrupt protected hash metadata and prove fail-closed behavior
         shell: bash
@@ -310,6 +359,8 @@ jobs:
             --arg run_id "$GITHUB_RUN_ID" \
             --arg run_attempt "$GITHUB_RUN_ATTEMPT" \
             --slurpfile replacement "$evidence/image-replacement.json" \
+            --slurpfile initial_boot_files "$evidence/initial-boot-files.json" \
+            --slurpfile replacement_boot_files "$evidence/replacement-boot-files.json" \
             --slurpfile corruption "$evidence/corruption-fail-closed.json" \
             --slurpfile secret_scan "$evidence/secret-scan.json" '{
               schema:"axiom-host-h1-lab-result.v1",
@@ -317,7 +368,7 @@ jobs:
               issue:1053,
               source:{revision:$revision,tree:$tree},
               image:{version:"0.2.0-h1",sha256:$raw_sha256,firmware:"uefi",boot_manager:"systemd-boot",boot_artifact:"unsigned-uki",root:"read-only-ext4-dm-verity",durable_state:"separate-ext4-var"},
-              verification:{qemu_accelerator:$qemu_accelerator,clean_boot:true,setup_check_in_guest:true,full_check_in_guest:true,root_mutation_blocked:true,protected_partitions_unchanged:true,state_replacement:$replacement[0],corruption_fail_closed:$corruption[0],credential_scan_passed:$secret_scan[0].passed},
+              verification:{qemu_accelerator:$qemu_accelerator,clean_boot:true,setup_check_in_guest:true,full_check_in_guest:true,root_mutation_blocked:true,protected_partitions_unchanged:true,efi_seed_mutation_bounded:true,initial_boot_files:$initial_boot_files[0],replacement_boot_files:$replacement_boot_files[0],state_replacement:$replacement[0],corruption_fail_closed:$corruption[0],credential_scan_passed:$secret_scan[0].passed},
               authority:{normal_effect_path:"Gateway -> Hypervisor -> Sandbox -> Grid",host_grants_mesh_authority:false,host_grants_node_admission:false,host_grants_execution_authority:false},
               non_claims:{secure_boot:false,measured_boot:false,remote_attestation:false,encrypted_mutable_state:false,production_ready:false},
               github:{run_id:$run_id,run_attempt:$run_attempt}

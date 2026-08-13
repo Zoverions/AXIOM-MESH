@@ -148,8 +148,6 @@ export async function verifyAxiomHostH1Configuration(urls = FILES) {
     '$BUILDROOT/usr/lib/axiom-mesh',
     'test -f "$BUILDROOT/usr/lib/axiom-mesh/package.json"',
     'Gateway -> Hypervisor -> Sandbox -> Grid',
-    'install -D -m 0444 /dev/null "$BUILDROOT/boot/loader/random-seed"',
-    'install -D -m 0444 /dev/null "$BUILDROOT/efi/loader/random-seed"',
     'enable axiom-host-h1-check.service',
     'mask systemd-boot-random-seed.service'
   ]) {
@@ -216,8 +214,13 @@ function verifyPolicy(policy) {
   exact(policy?.appliance?.root_integrity, 'dm-verity', 'root integrity policy');
   exact(policy?.appliance?.boot_artifact, 'systemd-boot-with-unsigned-uki', 'boot artifact policy');
   exact(policy?.appliance?.source_staging, 'git-archive-exact-head', 'source staging policy');
-  exact(policy?.appliance?.boot_partition_runtime_mutability, 'read-only', 'boot partition mutability policy');
-  exact(policy?.appliance?.boot_random_seed, 'disabled-by-read-only-sentinel', 'boot random seed policy');
+  exact(policy?.appliance?.boot_partition_runtime_mutability, 'linux-read-only', 'boot partition mutability policy');
+  requireValue(
+    Array.isArray(policy?.appliance?.efi_boot_mutable_paths)
+      && policy.appliance.efi_boot_mutable_paths.length === 1
+      && policy.appliance.efi_boot_mutable_paths[0] === 'loader/random-seed',
+    'EFI-stage mutable path policy must contain only loader/random-seed'
+  );
   exact(policy?.appliance?.root_runtime_mutability, 'read-only', 'root mutability policy');
   exact(policy?.appliance?.axiom_state_path, '/var/lib/axiom-host', 'AXIOM state path');
   exact(policy?.appliance?.state_encryption, 'absent', 'H1 state encryption non-claim');

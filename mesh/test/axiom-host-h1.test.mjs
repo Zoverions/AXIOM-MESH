@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import test from 'node:test';
 import { verifyAxiomHostH1Configuration } from '../src/check-axiom-host-h1.mjs';
+import { inventoryH1Directory } from '../src/axiom-host-h1-disk.mjs';
 import { verifyAxiomHostH1Workflow } from '../src/release.mjs';
 
 test('AXIOM Host H1 appliance contract is immutable-root, state-separated, and non-promoting', async () => {
@@ -60,6 +61,31 @@ test('AXIOM Host H1 workflow is immutable and release-governed', async () => {
     ),
     /mutable action or runner reference/
   );
+});
+
+test('AXIOM Host H1 boot-file inventory binds sorted regular-file bytes', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'axiom-host-h1-inventory-'));
+  try {
+    await mkdir(join(root, 'EFI', 'BOOT'), { recursive: true });
+    await writeFile(join(root, 'EFI', 'BOOT', 'BOOTX64.EFI'), 'efi');
+    await writeFile(join(root, 'seed'), 'seed');
+    const inventory = await inventoryH1Directory(root);
+    assert.deepEqual(inventory.files, [
+      {
+        path: 'EFI/BOOT/BOOTX64.EFI',
+        bytes: 3,
+        sha256: '2ae51aec19821f26c9e68a250f067ce569a3454302107efc48d4e3f2a48efe90'
+      },
+      {
+        path: 'seed',
+        bytes: 4,
+        sha256: '19b25856e1c150ca834cffc8b59b23adbd0ec0389e58eb22b3b64768098d002b'
+      }
+    ]);
+    assert.match(inventory.inventory_sha256, /^[a-f0-9]{64}$/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 async function withFixture(callback) {

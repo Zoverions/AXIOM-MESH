@@ -14,7 +14,5 @@ printf '%s\n' "$IMAGE_VERSION" > "$BUILDROOT/usr/lib/axiom-host-image-version"
 printf '%s\n' 'Gateway -> Hypervisor -> Sandbox -> Grid' \
   > "$BUILDROOT/usr/lib/axiom-host-authority-path"
 
-install -D -m 0444 /dev/null "$BUILDROOT/boot/loader/random-seed"
-install -D -m 0444 /dev/null "$BUILDROOT/efi/loader/random-seed"
 systemctl --root="$BUILDROOT" enable axiom-host-h1-check.service
 systemctl --root="$BUILDROOT" mask systemd-boot-random-seed.service

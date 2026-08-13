@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 import { createHash } from 'node:crypto';
-import { copyFile, open, readFile, stat, writeFile } from 'node:fs/promises';
+import { copyFile, lstat, open, readdir, stat } from 'node:fs/promises';
+import { join, relative, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ValidationError } from './lib/canonical.mjs';
 
@@ -66,6 +67,19 @@ export async function hashH1Partitions(path) {
   } finally {
     await handle.close();
   }
+}
+
+export async function inventoryH1Directory(path) {
+  const root = await stat(path);
+  if (!root.isDirectory()) throw new ValidationError('AXIOM Host H1 inventory input must be a directory');
+  const files = [];
+  await inventoryDirectory(path, path, files);
+  files.sort((left, right) => left.path.localeCompare(right.path, 'en'));
+  return {
+    schema: 'axiom-host-h1-file-inventory.v1',
+    files,
+    inventory_sha256: createHash('sha256').update(JSON.stringify(files)).digest('hex')
+  };
 }
 
 async function exportPartition(rawPath, name, outputPath) {
@@ -151,6 +165,34 @@ async function hashRange(handle, offset, bytes) {
   return hash.digest('hex');
 }
 
+async function inventoryDirectory(root, directory, files) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  entries.sort((left, right) => left.name.localeCompare(right.name, 'en'));
+  for (const entry of entries) {
+    const path = join(directory, entry.name);
+    const metadata = await lstat(path);
+    if (metadata.isSymbolicLink() || (!metadata.isDirectory() && !metadata.isFile())) {
+      throw new ValidationError('AXIOM Host H1 file inventory rejects links and special files');
+    }
+    if (metadata.isDirectory()) {
+      await inventoryDirectory(root, path, files);
+      continue;
+    }
+    const handle = await open(path, 'r');
+    let digest;
+    try {
+      digest = await hashRange(handle, 0, metadata.size);
+    } finally {
+      await handle.close();
+    }
+    files.push({
+      path: relative(root, path).split(sep).join('/'),
+      bytes: metadata.size,
+      sha256: digest
+    });
+  }
+}
+
 async function readExact(handle, buffer, position) {
   const { bytesRead } = await handle.read(buffer, 0, buffer.length, position);
   if (bytesRead !== buffer.length) throw new ValidationError('AXIOM Host H1 GPT read ended early');
@@ -174,10 +216,11 @@ async function main() {
   let result;
   if (command === 'inspect' && args.length === 1) result = await inspectH1Disk(args[0]);
   else if (command === 'hash' && args.length === 1) result = await hashH1Partitions(args[0]);
+  else if (command === 'inventory' && args.length === 1) result = await inventoryH1Directory(args[0]);
   else if (command === 'export' && args.length === 3) result = await exportPartition(args[0], args[1], args[2]);
   else if (command === 'import' && args.length === 3) result = await importPartition(args[0], args[1], args[2]);
   else if (command === 'corrupt' && args.length === 3) result = await corruptPartition(args[0], args[1], args[2]);
-  else throw new ValidationError('Usage: axiom-host-h1-disk.mjs inspect RAW | hash RAW | export RAW NAME OUT | import PARTITION RAW NAME | corrupt RAW_IN RAW_OUT NAME');
+  else throw new ValidationError('Usage: axiom-host-h1-disk.mjs inspect RAW | hash RAW | inventory DIR | export RAW NAME OUT | import PARTITION RAW NAME | corrupt RAW_IN RAW_OUT NAME');
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 
