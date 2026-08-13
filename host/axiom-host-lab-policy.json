@@ -11,14 +11,20 @@
   },
   "target": {
     "distribution": "fedora",
-    "release": "43",
+    "release": "rawhide",
     "architecture": "x86-64",
     "node_major": 24,
-    "node_engine_minimum": "24.14.0"
+    "node_engine_minimum": "24.14.0",
+    "production_base_selected": false
+  },
+  "tools_tree": {
+    "distribution": "fedora",
+    "release": "43"
   },
   "package_source": {
     "snapshot_required_before_build": true,
     "snapshot_lock_file": "mkosi.snapshot",
+    "snapshot_semantics": "mkosi-v26-fedora-rawhide-compose",
     "automatic_latest_snapshot_build": false
   },
   "image": {
