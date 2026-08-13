@@ -15,6 +15,11 @@ const SECTOR_CANDIDATES = Object.freeze([512, 4096]);
 const MAX_GPT_ENTRY_BYTES = 16 * 1024 * 1024;
 const MAX_PARTITIONS = 256;
 const SAMPLE_BYTES = 1024 * 1024;
+const CHUNK_BYTES = 16 * 1024 * 1024;
+const EXT4_SUPERBLOCK_OFFSET = 1024;
+const EXT4_SUPERBLOCK_BYTES = 1024;
+const EXT4_MAGIC = 0xef53;
+const FAT_BOOT_BYTES = 512;
 const SHA256 = /^[a-f0-9]{64}$/;
 
 export async function diagnoseAxiomHostImage(rawImagePath, buildEvidence) {
@@ -56,7 +61,7 @@ export async function diagnoseAxiomHostImage(rawImagePath, buildEvidence) {
       diagnostic_only: true,
       production_promoted: false
     },
-    interpretation: 'Partition-level hashes localize H0 raw-image byte drift. They do not establish filesystem correctness, boot success, authenticity, or production readiness.'
+    interpretation: 'GPT, filesystem-header, partition, and fixed-size chunk hashes localize H0 raw-image byte drift. They do not establish filesystem correctness, boot success, authenticity, or production readiness.'
   };
   return {
     ...result,
@@ -117,7 +122,10 @@ export async function diagnoseGptImage(rawImagePath) {
           rawImagePath,
           start + bytes - lastSampleBytes,
           lastSampleBytes
-        )
+        ),
+        chunk_bytes: CHUNK_BYTES,
+        chunks: await hashChunks(rawImagePath, start, bytes, CHUNK_BYTES),
+        filesystem: await inspectFilesystem(handle, start, bytes)
       });
     }
 
@@ -148,6 +156,177 @@ export async function diagnoseGptImage(rawImagePath) {
   } finally {
     await handle.close();
   }
+}
+
+async function inspectFilesystem(handle, partitionStart, partitionBytes) {
+  if (partitionBytes >= EXT4_SUPERBLOCK_OFFSET + EXT4_SUPERBLOCK_BYTES) {
+    const superblock = await readExact(
+      handle,
+      EXT4_SUPERBLOCK_BYTES,
+      partitionStart + EXT4_SUPERBLOCK_OFFSET
+    );
+    if (superblock.readUInt16LE(0x38) === EXT4_MAGIC) {
+      return inspectExt4Superblock(superblock);
+    }
+  }
+
+  if (partitionBytes >= FAT_BOOT_BYTES) {
+    const boot = await readExact(handle, FAT_BOOT_BYTES, partitionStart);
+    if (looksLikeFat32BootSector(boot)) {
+      return inspectFat32(handle, partitionStart, partitionBytes, boot);
+    }
+  }
+
+  return {
+    kind: 'unrecognized',
+    recognized: false
+  };
+}
+
+function inspectExt4Superblock(superblock) {
+  const blockSize = 1024 * (2 ** superblock.readUInt32LE(0x18));
+  const uuid = formatRawUuid(superblock.subarray(0x68, 0x78));
+  const volumeName = decodeFixedAscii(superblock.subarray(0x78, 0x88));
+  const lastMounted = decodeFixedAscii(superblock.subarray(0x88, 0xc8));
+  return {
+    kind: 'ext4',
+    recognized: true,
+    superblock_offset_bytes: EXT4_SUPERBLOCK_OFFSET,
+    superblock_sha256: sha256(superblock),
+    magic: `0x${superblock.readUInt16LE(0x38).toString(16).padStart(4, '0')}`,
+    uuid,
+    volume_name: volumeName,
+    last_mounted: lastMounted,
+    inode_count: superblock.readUInt32LE(0x00),
+    block_count_low: superblock.readUInt32LE(0x04),
+    reserved_block_count_low: superblock.readUInt32LE(0x08),
+    free_block_count_low: superblock.readUInt32LE(0x0c),
+    free_inode_count: superblock.readUInt32LE(0x10),
+    first_data_block: superblock.readUInt32LE(0x14),
+    block_size: blockSize,
+    blocks_per_group: superblock.readUInt32LE(0x20),
+    inodes_per_group: superblock.readUInt32LE(0x28),
+    mount_time: timestampField(superblock.readUInt32LE(0x2c)),
+    write_time: timestampField(superblock.readUInt32LE(0x30)),
+    mount_count: superblock.readUInt16LE(0x34),
+    maximum_mount_count: superblock.readInt16LE(0x36),
+    filesystem_state: `0x${superblock.readUInt16LE(0x3a).toString(16).padStart(4, '0')}`,
+    error_behavior: `0x${superblock.readUInt16LE(0x3c).toString(16).padStart(4, '0')}`,
+    last_check: timestampField(superblock.readUInt32LE(0x40)),
+    check_interval_seconds: superblock.readUInt32LE(0x44),
+    creator_os: superblock.readUInt32LE(0x48),
+    revision_level: superblock.readUInt32LE(0x4c),
+    first_non_reserved_inode: superblock.readUInt32LE(0x54),
+    inode_size: superblock.readUInt16LE(0x58),
+    feature_compat: hex32(superblock.readUInt32LE(0x5c)),
+    feature_incompat: hex32(superblock.readUInt32LE(0x60)),
+    feature_ro_compat: hex32(superblock.readUInt32LE(0x64)),
+    journal_uuid: formatRawUuid(superblock.subarray(0xd0, 0xe0)),
+    journal_inode: superblock.readUInt32LE(0xe0),
+    hash_seed_hex: superblock.subarray(0xec, 0xfc).toString('hex'),
+    default_hash_version: superblock.readUInt8(0xfc),
+    descriptor_size: superblock.readUInt16LE(0xfe),
+    mkfs_time: timestampField(superblock.readUInt32LE(0x108)),
+    superblock_checksum: hex32(superblock.readUInt32LE(0x3fc))
+  };
+}
+
+async function inspectFat32(handle, partitionStart, partitionBytes, boot) {
+  const bytesPerSector = boot.readUInt16LE(11);
+  const fsInfoSector = boot.readUInt16LE(48);
+  const backupBootSector = boot.readUInt16LE(50);
+  const result = {
+    kind: 'fat32',
+    recognized: true,
+    boot_sector_sha256: sha256(boot),
+    jump_hex: boot.subarray(0, 3).toString('hex'),
+    oem_name: decodeFixedAscii(boot.subarray(3, 11)),
+    bytes_per_sector: bytesPerSector,
+    sectors_per_cluster: boot.readUInt8(13),
+    reserved_sector_count: boot.readUInt16LE(14),
+    fat_count: boot.readUInt8(16),
+    root_entry_count: boot.readUInt16LE(17),
+    total_sectors_16: boot.readUInt16LE(19),
+    media_descriptor: `0x${boot.readUInt8(21).toString(16).padStart(2, '0')}`,
+    fat_size_16: boot.readUInt16LE(22),
+    sectors_per_track: boot.readUInt16LE(24),
+    head_count: boot.readUInt16LE(26),
+    hidden_sector_count: boot.readUInt32LE(28),
+    total_sectors_32: boot.readUInt32LE(32),
+    fat_size_32: boot.readUInt32LE(36),
+    extended_flags: `0x${boot.readUInt16LE(40).toString(16).padStart(4, '0')}`,
+    filesystem_version: `0x${boot.readUInt16LE(42).toString(16).padStart(4, '0')}`,
+    root_cluster: boot.readUInt32LE(44),
+    fsinfo_sector: fsInfoSector,
+    backup_boot_sector: backupBootSector,
+    drive_number: boot.readUInt8(64),
+    extended_boot_signature: `0x${boot.readUInt8(66).toString(16).padStart(2, '0')}`,
+    volume_id: `0x${boot.readUInt32LE(67).toString(16).padStart(8, '0')}`,
+    volume_label: decodeFixedAscii(boot.subarray(71, 82)),
+    filesystem_type_label: decodeFixedAscii(boot.subarray(82, 90)),
+    boot_signature: `0x${boot.readUInt16LE(510).toString(16).padStart(4, '0')}`
+  };
+
+  if (bytesPerSector >= 512 && bytesPerSector <= 4096 && isPowerOfTwo(bytesPerSector)) {
+    const fsInfoOffset = fsInfoSector * bytesPerSector;
+    if (fsInfoSector > 0 && fsInfoOffset + bytesPerSector <= partitionBytes) {
+      const fsInfo = await readExact(handle, bytesPerSector, partitionStart + fsInfoOffset);
+      result.fsinfo_sha256 = sha256(fsInfo);
+      result.fsinfo_lead_signature = hex32(fsInfo.readUInt32LE(0));
+      result.fsinfo_structure_signature = hex32(fsInfo.readUInt32LE(484));
+      result.fsinfo_free_cluster_count = fsInfo.readUInt32LE(488);
+      result.fsinfo_next_free_cluster = fsInfo.readUInt32LE(492);
+      result.fsinfo_trail_signature = hex32(fsInfo.readUInt32LE(508));
+    }
+
+    const backupOffset = backupBootSector * bytesPerSector;
+    if (backupBootSector > 0 && backupOffset + bytesPerSector <= partitionBytes) {
+      const backup = await readExact(handle, bytesPerSector, partitionStart + backupOffset);
+      result.backup_boot_sector_sha256 = sha256(backup);
+      result.backup_matches_primary_boot_sector = backup.subarray(0, FAT_BOOT_BYTES).equals(boot);
+    }
+  }
+
+  return result;
+}
+
+function looksLikeFat32BootSector(boot) {
+  if (boot.length < FAT_BOOT_BYTES || boot.readUInt16LE(510) !== 0xaa55) return false;
+  const bytesPerSector = boot.readUInt16LE(11);
+  const sectorsPerCluster = boot.readUInt8(13);
+  const reserved = boot.readUInt16LE(14);
+  const fats = boot.readUInt8(16);
+  const rootEntries = boot.readUInt16LE(17);
+  const fat16 = boot.readUInt16LE(22);
+  const fat32 = boot.readUInt32LE(36);
+  return bytesPerSector >= 512
+    && bytesPerSector <= 4096
+    && isPowerOfTwo(bytesPerSector)
+    && sectorsPerCluster > 0
+    && isPowerOfTwo(sectorsPerCluster)
+    && reserved > 0
+    && fats > 0
+    && rootEntries === 0
+    && fat16 === 0
+    && fat32 > 0;
+}
+
+async function hashChunks(path, start, length, chunkBytes) {
+  const chunks = [];
+  let offset = 0;
+  let index = 0;
+  while (offset < length) {
+    const currentBytes = Math.min(chunkBytes, length - offset);
+    chunks.push({
+      index,
+      offset_bytes: offset,
+      bytes: currentBytes,
+      sha256: await hashRange(path, start + offset, currentBytes)
+    });
+    offset += currentBytes;
+    index += 1;
+  }
+  return chunks;
 }
 
 async function detectSectorSize(handle) {
@@ -237,6 +416,31 @@ function decodeGuid(bytes) {
   const b = Buffer.from(hex.slice(8, 12), 'hex').reverse().toString('hex');
   const c = Buffer.from(hex.slice(12, 16), 'hex').reverse().toString('hex');
   return `${a}-${b}-${c}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function formatRawUuid(bytes) {
+  if (bytes.length !== 16) throw new ValidationError('AXIOM Host H0 filesystem UUID has an invalid size');
+  const hex = bytes.toString('hex');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function decodeFixedAscii(bytes) {
+  return bytes.toString('ascii').replace(/\u0000+$/g, '').trimEnd();
+}
+
+function timestampField(seconds) {
+  return {
+    unix_seconds: seconds,
+    iso8601: seconds === 0 ? null : new Date(seconds * 1000).toISOString()
+  };
+}
+
+function hex32(value) {
+  return `0x${value.toString(16).padStart(8, '0')}`;
+}
+
+function isPowerOfTwo(value) {
+  return Number.isInteger(value) && value > 0 && (value & (value - 1)) === 0;
 }
 
 function safeOffset(lba, sectorSize) {
