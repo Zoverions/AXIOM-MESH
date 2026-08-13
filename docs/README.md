@@ -103,7 +103,7 @@ Current documentation must preserve these distinctions:
   evidence-first effect path, not current production reachability;
 - its GitHub operator independently verifies durable Grid preparation before
   any GitHub request, permits only exact planned docs changes on a deterministic
-  effect branch, and creates/recovers an **open draft PR**;
+  effect branch, and creates/recovers an **open draft pull request**;
 - that operator has **no merge/direct-main authority** and explicitly records
   `merge_performed: false` and `base_branch_content_changed: false`;
 - production activation remains closed because the executor registry has zero
@@ -154,6 +154,11 @@ the capability registry or current production-readiness decision.
 ### Architecture
 
 - [Scaling, distributed authority, and consensus](architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md)
+- [Agent worktree storage plane](architecture/AGENT-WORKTREE-STORAGE-PLANE.md) —
+  laboratory architecture for logically isolated agent workspaces over
+  replaceable storage-efficient backing profiles. Proposed branch-level
+  benchmark/comparison tooling is laboratory-only and makes no scheduler,
+  runtime, capability-registry, or storage-profile promotion claim.
 - [Agent Runtime Adapter conformance](architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md)
 - [`agent-runtime-adapter.v1` schema](architecture/contracts/agent-runtime-adapter.v1.schema.json)
 - [Personal Compute Fabric and Local Trust Plane](architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md)
