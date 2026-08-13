@@ -74,12 +74,17 @@ jobs:
         run: |
           set -euo pipefail
           source_epoch="$(git show -s --format=%ct HEAD)"
+          source_tree="$RUNNER_TEMP/axiom-host-h1-source"
+          mkdir -p "$source_tree"
+          git archive --format=tar HEAD | tar --directory="$source_tree" --extract --file=-
+          test -f "$source_tree/package.json"
           sudo env -i \
             PATH="$PATH" \
             HOME=/root USER=root LOGNAME=root LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC \
             SOURCE_DATE_EPOCH="$source_epoch" \
             E2FSPROGS_FAKE_TIME="$source_epoch" \
             SYSTEMD_REPART_MKFS_OPTIONS_VFAT='--invariant -i da2024b3' \
+            AXIOM_HOST_SOURCE_TREE="$source_tree" \
             AXIOM_HOST_LAB=1 \
             mkosi --directory host/h1 --force build \
             2>&1 | tee "$RUNNER_TEMP/axiom-host-h1-build.log"

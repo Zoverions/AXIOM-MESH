@@ -90,7 +90,7 @@ export async function verifyAxiomHostH1Configuration(urls = FILES) {
     ['Content', 'Autologin', 'no'],
     ['Validation', 'Checksum', 'yes'],
     ['Validation', 'Verity', 'hash'],
-    ['Build', 'BuildSources', '.'],
+    ['Build', 'BuildSources', '${AXIOM_HOST_SOURCE_TREE}'],
     ['Build', 'ToolsTree', 'yes'],
     ['Build', 'WithNetwork', 'no'],
     ['Runtime', 'Firmware', 'uefi'],
@@ -123,6 +123,7 @@ export async function verifyAxiomHostH1Configuration(urls = FILES) {
   const state = parseRepart(source.state, '30-var.conf');
   repartExact(esp, 'Type', 'esp', 'ESP');
   repartExact(esp, 'Format', 'vfat', 'ESP');
+  repartExact(esp, 'ReadOnly', 'yes', 'ESP');
   repartExact(root, 'Type', 'root', 'root');
   repartExact(root, 'Format', 'ext4', 'root');
   repartExact(root, 'ReadOnly', 'yes', 'root');
@@ -140,13 +141,15 @@ export async function verifyAxiomHostH1Configuration(urls = FILES) {
   for (const required of [
     '#!/bin/bash',
     'set -euo pipefail',
-    'git -c safe.directory="$SRCDIR" -C "$SRCDIR" ls-files -z',
+    'test -f "$SRCDIR/package.json"',
     'tar --directory="$SRCDIR" --create --file=-',
     '--sort=name',
-    '--mtime="@$SOURCE_DATE_EPOCH" --null --files-from=-',
+    '--mtime="@$SOURCE_DATE_EPOCH" .',
     '$BUILDROOT/usr/lib/axiom-mesh',
+    'test -f "$BUILDROOT/usr/lib/axiom-mesh/package.json"',
     'Gateway -> Hypervisor -> Sandbox -> Grid',
-    'enable axiom-host-h1-check.service'
+    'enable axiom-host-h1-check.service',
+    'mask systemd-boot-random-seed.service'
   ]) {
     requireValue(source.finalize.includes(required), `H1 finalize script is missing ${required}`);
   }
@@ -206,6 +209,8 @@ function verifyPolicy(policy) {
   exact(policy?.issue, 1053, 'issue binding');
   exact(policy?.appliance?.root_integrity, 'dm-verity', 'root integrity policy');
   exact(policy?.appliance?.boot_artifact, 'systemd-boot-with-unsigned-uki', 'boot artifact policy');
+  exact(policy?.appliance?.source_staging, 'git-archive-exact-head', 'source staging policy');
+  exact(policy?.appliance?.boot_partition_runtime_mutability, 'read-only', 'boot partition mutability policy');
   exact(policy?.appliance?.root_runtime_mutability, 'read-only', 'root mutability policy');
   exact(policy?.appliance?.axiom_state_path, '/var/lib/axiom-host', 'AXIOM state path');
   exact(policy?.appliance?.state_encryption, 'absent', 'H1 state encryption non-claim');
