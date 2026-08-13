@@ -37,6 +37,7 @@
     "network-boundary:verify": "npm --prefix mesh run network-boundary:verify --",
     "audit:verify-full": "npm --prefix mesh run audit:verify-full --",
     "node-scheduling:drill": "npm --prefix mesh run node-scheduling:drill --",
+    "storage-benchmark:lab": "npm --prefix mesh run storage-benchmark:lab --",
     "online-sync": "npm --prefix mesh run online-sync --",
     "online-sync:drill": "npm --prefix mesh run online-sync:drill --",
     "provider:start": "npm --prefix mesh run provider:start",
