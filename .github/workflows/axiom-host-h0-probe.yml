@@ -27,6 +27,7 @@ jobs:
     env:
       AXIOM_HOST_LAB_ACK: I_UNDERSTAND_THIS_IS_NON_PRODUCTION
       MKOSI_V26_COMMIT: 84af20892b61c8e177e391f997ded8b4cb5514f2
+      FEDORA_RAWHIDE_COMPOSE_ID_URL: https://kojipkgs.fedoraproject.org/compose/rawhide/latest-Fedora-Rawhide/COMPOSE_ID
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -63,7 +64,7 @@ jobs:
       - name: Parse AXIOM Host H0 configuration with upstream mkosi
         run: npm run host:lab:summary
 
-      - name: Attempt Fedora snapshot discovery on hosted runner
+      - name: Attempt mkosi Rawhide snapshot discovery on hosted runner
         id: snapshot
         continue-on-error: true
         shell: bash
@@ -75,15 +76,39 @@ jobs:
           cat "$RUNNER_TEMP/axiom-host-fedora-snapshot-attempt.log"
           exit "$status"
 
+      - name: Cross-check exact Rawhide compose candidate without mkosi sandbox
+        id: compose
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error \
+            "$FEDORA_RAWHIDE_COMPOSE_ID_URL" \
+            -o "$RUNNER_TEMP/fedora-rawhide-compose-id.txt"
+          compose_id="$(tr -d '\r\n' < "$RUNNER_TEMP/fedora-rawhide-compose-id.txt")"
+          case "$compose_id" in
+            Fedora-Rawhide-*) ;;
+            *) echo "Unexpected Fedora Rawhide COMPOSE_ID: $compose_id" >&2; exit 1 ;;
+          esac
+          candidate="${compose_id#Fedora-Rawhide-}"
+          printf '%s\n' "$candidate" > "$RUNNER_TEMP/fedora-rawhide-snapshot-candidate.txt"
+          node -e 'const fs=require("node:fs"); const v=fs.readFileSync(process.argv[1],"utf8").trim(); if(!/^[A-Za-z0-9][A-Za-z0-9._:+-]{0,159}$/.test(v)) process.exit(1)' \
+            "$RUNNER_TEMP/fedora-rawhide-snapshot-candidate.txt"
+
       - name: Record snapshot discovery outcome
         if: always()
         shell: bash
         env:
           SNAPSHOT_OUTCOME: ${{ steps.snapshot.outcome }}
+          COMPOSE_OUTCOME: ${{ steps.compose.outcome }}
         run: |
           set -euo pipefail
-          printf '{"schema":"axiom-host-h0-snapshot-probe.v1","github_sha":"%s","mkosi_commit":"%s","outcome":"%s","gating":false,"interpretation":"Hosted-runner snapshot discovery is evidence-only; a failure does not weaken the requirement to resolve and commit a reviewed snapshot before H0 build."}\n' \
-            "$GITHUB_SHA" "$MKOSI_V26_COMMIT" "$SNAPSHOT_OUTCOME" \
+          candidate=""
+          if [[ -f "$RUNNER_TEMP/fedora-rawhide-snapshot-candidate.txt" ]]; then
+            candidate="$(tr -d '\r\n' < "$RUNNER_TEMP/fedora-rawhide-snapshot-candidate.txt")"
+          fi
+          printf '{"schema":"axiom-host-h0-snapshot-probe.v1","github_sha":"%s","mkosi_commit":"%s","mkosi_latest_snapshot_outcome":"%s","direct_compose_outcome":"%s","candidate":"%s","candidate_committed":false,"gating":false,"interpretation":"The direct compose lookup mirrors the pinned mkosi v26 Fedora Rawhide latest_snapshot endpoint semantics but remains review evidence only. H0 build still requires the same reviewed candidate to be committed in mkosi.snapshot and Snapshot=."}\n' \
+            "$GITHUB_SHA" "$MKOSI_V26_COMMIT" "$SNAPSHOT_OUTCOME" "$COMPOSE_OUTCOME" "$candidate" \
             > "$RUNNER_TEMP/axiom-host-fedora-snapshot-probe.json"
 
       - name: Upload snapshot probe evidence
@@ -94,5 +119,7 @@ jobs:
           path: |
             ${{ runner.temp }}/axiom-host-fedora-snapshot-probe.json
             ${{ runner.temp }}/axiom-host-fedora-snapshot-attempt.log
-          if-no-files-found: error
+            ${{ runner.temp }}/fedora-rawhide-compose-id.txt
+            ${{ runner.temp }}/fedora-rawhide-snapshot-candidate.txt
+          if-no-files-found: warn
           retention-days: 14
