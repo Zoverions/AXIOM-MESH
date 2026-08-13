@@ -55,17 +55,19 @@ test('H0 secret scan catches a marker split across stream chunks and omits its v
   }
 });
 
-test('H0 secret scan rejects an AWS-shaped value but ignores the published AWS example ID', async () => {
+test('H0 secret scan rejects an assigned AWS secret but ignores AWS published examples and identifiers', async () => {
   const root = await mkdtemp(join(tmpdir(), 'axiom-host-secret-scan-'));
   try {
     const image = join(root, 'image.raw');
     await writeFile(image, [
       'AKIAIOSFODNN7EXAMPLE',
-      'AKIAABCDEFGHIJKLMNOP'
+      'AKIAABCDEFGHIJKLMNOP',
+      'aws_secret_access_key = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
+      `AWS_SECRET_ACCESS_KEY=${'a'.repeat(40)}`
     ].join('\n'));
     const result = await scanAxiomHostH0Secrets([{ label: 'image.raw', path: image }]);
     assert.equal(result.passed, false);
-    assert.deepEqual(result.matched_pattern_ids, ['aws-access-key-id']);
+    assert.deepEqual(result.matched_pattern_ids, ['aws-secret-access-key-assignment']);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

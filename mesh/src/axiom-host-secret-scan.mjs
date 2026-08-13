@@ -24,10 +24,10 @@ const PATTERNS = Object.freeze([
     expression: /sk-proj-[A-Za-z0-9_-]{16,}/g
   }),
   Object.freeze({
-    id: 'aws-access-key-id',
-    // AWS publishes AKIAIOSFODNN7EXAMPLE in its own documentation. It is not a
-    // credential; all other access-key-shaped values remain fail-closed.
-    expression: /AKIA(?!IOSFODNN7EXAMPLE)[A-Z0-9]{16}/g
+    id: 'aws-secret-access-key-assignment',
+    // AWS credentials have a distinct secret half. Match assignments of that
+    // secret, while excluding the example value AWS publishes in its docs.
+    expression: /(?:aws_secret_access_key|AWS_SECRET_ACCESS_KEY)\s*[:=]\s*(?!wJalrXUtnFEMI\/K7MDENG\/bPxRfiCYEXAMPLEKEY)[A-Za-z0-9/+=]{40}/gi
   }),
   Object.freeze({
     id: 'authorization-bearer-token',
