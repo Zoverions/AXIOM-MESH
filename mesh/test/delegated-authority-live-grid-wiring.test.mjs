@@ -22,7 +22,7 @@ test('live Grid maintains delegated projections and registers a dark resolution 
 });
 
 test('delegated resolution remains unreachable because service policy omits the route', async () => {
-  const policy = JSON.parse(await text('../../config/service-network-policy.json'));
+  const policy = JSON.parse(await text('../config/service-network-policy.json'));
   const flow = policy.flows.find(candidate => candidate.id === 'hypervisor-to-grid');
   assert.ok(flow, 'hypervisor-to-grid flow must exist');
   assert.equal(
