@@ -165,13 +165,13 @@ export async function verifyAxiomHostH1Configuration(urls = FILES) {
   ]) {
     requireValue(source.unit.includes(required), `H1 systemd unit is missing ${required}`);
   }
-  exact(
-    source.fstab.trim(),
-    '/dev/disk/by-partlabel/var /var ext4 rw,nosuid,nodev 0 2',
-    'immutable state mount declaration'
-  );
+  exact(source.fstab.trim(), [
+    '/dev/disk/by-partlabel/esp /boot vfat ro,nosuid,nodev,noexec,noauto,x-systemd.automount 0 0',
+    '/dev/disk/by-partlabel/var /var ext4 rw,nosuid,nodev 0 2'
+  ].join('\n'), 'immutable boot and mutable state mount declarations');
   for (const required of [
     "findMount('/')",
+    "findMount('/boot')",
     "findMount('/var')",
     "runNpm(['run', 'setup:check'])",
     "runNpm(['run', 'check'])",

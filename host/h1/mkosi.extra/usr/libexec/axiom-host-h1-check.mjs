@@ -31,10 +31,14 @@ try {
   state = readState();
   sequence = state.boots.length + 1;
 
+  readdirSync('/boot');
+  const bootPartition = findMount('/boot');
   const root = findMount('/');
   const mutableState = findMount('/var');
   const uefiRuntimeObserved = directoryExists('/sys/firmware/efi');
   assert(uefiRuntimeObserved, 'UEFI runtime state was not observed');
+  assert(bootPartition.options.includes('ro'), `boot partition is not read-only: ${bootPartition.options.join(',')}`);
+  assert(!bootPartition.options.includes('rw'), `boot partition unexpectedly reports rw: ${bootPartition.options.join(',')}`);
   assert(root.options.includes('ro'), `root mount is not read-only: ${root.options.join(',')}`);
   assert(!root.options.includes('rw'), `root mount unexpectedly reports rw: ${root.options.join(',')}`);
   assert(mutableState.options.includes('rw'), `/var mount is not writable: ${mutableState.options.join(',')}`);
@@ -62,6 +66,7 @@ try {
       uefi_runtime_observed: uefiRuntimeObserved,
       boot_manager: 'systemd-boot',
       uki: 'unsigned',
+      partition: bootPartition,
       kernel_command_line: readText('/proc/cmdline')
     },
     system_root: {

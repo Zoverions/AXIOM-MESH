@@ -1,1 +1,2 @@
+/dev/disk/by-partlabel/esp /boot vfat ro,nosuid,nodev,noexec,noauto,x-systemd.automount 0 0
 /dev/disk/by-partlabel/var /var ext4 rw,nosuid,nodev 0 2
