@@ -10,7 +10,7 @@ const SECTORS = 4096;
 const ENTRY_SIZE = 128;
 const ENTRY_COUNT = 4;
 
-test('H0 GPT diagnostics bind disk geometry and partition byte ranges', async () => {
+test('H0 GPT diagnostics bind disk, filesystem headers, chunks, and partition byte ranges', async () => {
   const root = await mkdtemp(join(tmpdir(), 'axiom-host-gpt-'));
   try {
     const path = join(root, 'image.raw');
@@ -28,15 +28,36 @@ test('H0 GPT diagnostics bind disk geometry and partition byte ranges', async ()
     assert.equal(first.partitions[1].name, 'root');
     assert.equal(first.partitions[0].bytes, 512 * SECTOR);
     assert.equal(first.partitions[1].bytes, 1024 * SECTOR);
+    assert.equal(first.partitions[0].chunks.length, 1);
+    assert.equal(first.partitions[1].chunks.length, 1);
     assert.match(first.disk_sha256, /^[a-f0-9]{64}$/);
     assert.match(first.partition_entries_sha256, /^[a-f0-9]{64}$/);
 
-    image[2048 * SECTOR + 17] ^= 0xff;
+    assert.equal(first.partitions[0].filesystem.kind, 'fat32');
+    assert.equal(first.partitions[0].filesystem.volume_id, '0x1234abcd');
+    assert.equal(first.partitions[0].filesystem.volume_label, 'AXIOMH0');
+    assert.equal(first.partitions[0].filesystem.fsinfo_sector, 1);
+    assert.equal(first.partitions[0].filesystem.backup_boot_sector, 6);
+    assert.equal(first.partitions[0].filesystem.backup_matches_primary_boot_sector, true);
+    assert.match(first.partitions[0].filesystem.fsinfo_sha256, /^[a-f0-9]{64}$/);
+
+    assert.equal(first.partitions[1].filesystem.kind, 'ext4');
+    assert.equal(first.partitions[1].filesystem.magic, '0xef53');
+    assert.equal(first.partitions[1].filesystem.uuid, '00112233-4455-6677-8899-aabbccddeeff');
+    assert.equal(first.partitions[1].filesystem.volume_name, 'axiom-root');
+    assert.equal(first.partitions[1].filesystem.block_size, 4096);
+    assert.equal(first.partitions[1].filesystem.mkfs_time.unix_seconds, 1_786_500_000);
+    assert.match(first.partitions[1].filesystem.superblock_sha256, /^[a-f0-9]{64}$/);
+
+    image[2048 * SECTOR + 8192] ^= 0xff;
     await writeFile(path, image);
     const changed = await diagnoseGptImage(path);
     assert.notEqual(changed.disk_sha256, first.disk_sha256);
     assert.notEqual(changed.partitions[0].sha256, first.partitions[0].sha256);
+    assert.notEqual(changed.partitions[0].chunks[0].sha256, first.partitions[0].chunks[0].sha256);
+    assert.equal(changed.partitions[0].filesystem.boot_sector_sha256, first.partitions[0].filesystem.boot_sector_sha256);
     assert.equal(changed.partitions[1].sha256, first.partitions[1].sha256);
+    assert.equal(changed.partitions[1].filesystem.superblock_sha256, first.partitions[1].filesystem.superblock_sha256);
     assert.equal(changed.primary_gpt_header.sha256, first.primary_gpt_header.sha256);
     assert.equal(changed.partition_entries_sha256, first.partition_entries_sha256);
   } finally {
@@ -96,6 +117,8 @@ function syntheticGptImage() {
 
   image.fill(0x11, 2048 * SECTOR, 2560 * SECTOR);
   image.fill(0x22, 2560 * SECTOR, 3584 * SECTOR);
+  writeFat32(image, 2048 * SECTOR, 512);
+  writeExt4Superblock(image, 2560 * SECTOR);
 
   const backup = image.subarray((SECTORS - 1) * SECTOR, SECTORS * SECTOR);
   Buffer.from('EFI PART', 'ascii').copy(backup, 0);
@@ -111,4 +134,78 @@ function writePartition(entry, { type, unique, first, last, name }) {
   entry.writeBigUInt64LE(BigInt(last), 40);
   entry.writeBigUInt64LE(0n, 48);
   Buffer.from(name, 'utf16le').copy(entry, 56);
+}
+
+function writeFat32(image, offset, totalSectors) {
+  const boot = image.subarray(offset, offset + SECTOR);
+  boot.fill(0);
+  Buffer.from([0xeb, 0x58, 0x90]).copy(boot, 0);
+  Buffer.from('MSDOS5.0', 'ascii').copy(boot, 3);
+  boot.writeUInt16LE(SECTOR, 11);
+  boot.writeUInt8(1, 13);
+  boot.writeUInt16LE(32, 14);
+  boot.writeUInt8(2, 16);
+  boot.writeUInt16LE(0, 17);
+  boot.writeUInt16LE(0, 19);
+  boot.writeUInt8(0xf8, 21);
+  boot.writeUInt16LE(0, 22);
+  boot.writeUInt16LE(63, 24);
+  boot.writeUInt16LE(255, 26);
+  boot.writeUInt32LE(0, 28);
+  boot.writeUInt32LE(totalSectors, 32);
+  boot.writeUInt32LE(16, 36);
+  boot.writeUInt16LE(0, 40);
+  boot.writeUInt16LE(0, 42);
+  boot.writeUInt32LE(2, 44);
+  boot.writeUInt16LE(1, 48);
+  boot.writeUInt16LE(6, 50);
+  boot.writeUInt8(0x80, 64);
+  boot.writeUInt8(0x29, 66);
+  boot.writeUInt32LE(0x1234abcd, 67);
+  Buffer.from('AXIOMH0    ', 'ascii').copy(boot, 71);
+  Buffer.from('FAT32   ', 'ascii').copy(boot, 82);
+  boot.writeUInt16LE(0xaa55, 510);
+
+  const fsInfo = image.subarray(offset + SECTOR, offset + 2 * SECTOR);
+  fsInfo.fill(0);
+  fsInfo.writeUInt32LE(0x41615252, 0);
+  fsInfo.writeUInt32LE(0x61417272, 484);
+  fsInfo.writeUInt32LE(100, 488);
+  fsInfo.writeUInt32LE(3, 492);
+  fsInfo.writeUInt32LE(0xaa550000, 508);
+
+  boot.copy(image, offset + 6 * SECTOR);
+}
+
+function writeExt4Superblock(image, partitionOffset) {
+  const superblock = image.subarray(
+    partitionOffset + 1024,
+    partitionOffset + 2048
+  );
+  superblock.fill(0);
+  superblock.writeUInt32LE(4096, 0x00);
+  superblock.writeUInt32LE(128, 0x04);
+  superblock.writeUInt32LE(64, 0x0c);
+  superblock.writeUInt32LE(2048, 0x10);
+  superblock.writeUInt32LE(0, 0x14);
+  superblock.writeUInt32LE(2, 0x18);
+  superblock.writeUInt32LE(32768, 0x20);
+  superblock.writeUInt32LE(4096, 0x28);
+  superblock.writeUInt32LE(1_786_500_000, 0x2c);
+  superblock.writeUInt32LE(1_786_500_000, 0x30);
+  superblock.writeUInt16LE(0, 0x34);
+  superblock.writeInt16LE(-1, 0x36);
+  superblock.writeUInt16LE(0xef53, 0x38);
+  superblock.writeUInt16LE(1, 0x3a);
+  superblock.writeUInt16LE(1, 0x3c);
+  superblock.writeUInt32LE(1_786_500_000, 0x40);
+  superblock.writeUInt32LE(0, 0x44);
+  superblock.writeUInt32LE(0, 0x48);
+  superblock.writeUInt32LE(1, 0x4c);
+  superblock.writeUInt32LE(11, 0x54);
+  superblock.writeUInt16LE(256, 0x58);
+  Buffer.from('00112233445566778899aabbccddeeff', 'hex').copy(superblock, 0x68);
+  Buffer.from('axiom-root', 'ascii').copy(superblock, 0x78);
+  superblock.writeUInt32LE(1_786_500_000, 0x108);
+  superblock.writeUInt32LE(0xdeadbeef, 0x3fc);
 }
