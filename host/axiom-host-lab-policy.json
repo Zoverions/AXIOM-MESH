@@ -1,0 +1,59 @@
+{
+  "schema": "axiom-host-lab-policy.v1",
+  "status": "laboratory-only",
+  "stage": "H0",
+  "builder": {
+    "tool": "mkosi",
+    "upstream": "systemd/mkosi",
+    "configuration_assurance": "static-validated",
+    "image_assurance": "unbuilt-until-lab-execution"
+  },
+  "target": {
+    "distribution": "fedora",
+    "release": "43",
+    "architecture": "x86-64",
+    "node_major": 24,
+    "node_engine_minimum": "24.14.0"
+  },
+  "image": {
+    "format": "disk",
+    "image_id": "axiom-host-lab",
+    "bootable": true,
+    "bootloader": "systemd-boot",
+    "unified_kernel_images": "unsigned",
+    "checksums": true,
+    "manifest_formats": [
+      "json",
+      "changelog"
+    ],
+    "fixed_partition_seed_required": true,
+    "source_date_epoch_from_exact_git_commit": true
+  },
+  "runtime": {
+    "virtual_machine_monitor": "qemu",
+    "firmware": "uefi",
+    "virtual_tpm": false,
+    "network": "none",
+    "ephemeral": true,
+    "cpus": 2,
+    "ram": "2G"
+  },
+  "security": {
+    "ssh_enabled": false,
+    "autologin_enabled": false,
+    "production_credentials_embedded": false,
+    "secure_boot_claimed": false,
+    "remote_attestation_claimed": false,
+    "host_grants_mesh_authority": false,
+    "cross_owner_private_deduplication": false,
+    "hard_capacity_depends_on_dedupe": false
+  },
+  "authority": {
+    "capability_registry_changed": false,
+    "production_policy_changed": false,
+    "node_admission_changed": false,
+    "scheduler_authority_changed": false,
+    "remote_execution_promoted": false,
+    "production_host_profile_promoted": false
+  }
+}
