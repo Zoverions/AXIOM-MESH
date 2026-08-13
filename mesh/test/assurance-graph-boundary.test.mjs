@@ -73,6 +73,52 @@ test('provider observation collection type errors are named validation failures'
   );
 });
 
+test('nested front collections are bounded', () => {
+  assert.throws(
+    () => normalizeChangeFront(front({
+      depends_on: Array.from({ length: 257 }, (_, index) => ({
+        front_id: `front.dependency.${index}`,
+        expected_head_state_digest: D0
+      }))
+    })),
+    /depends_on must be an array with at most 256 items/
+  );
+
+  assert.throws(
+    () => normalizeChangeFront(front({
+      provider_observations: Array.from({ length: 257 }, provider)
+    })),
+    /provider_observations must be an array with at most 256 items/
+  );
+});
+
+test('maximum-depth dependency cycles fail with a validation error, not stack exhaustion', () => {
+  const frontCount = 10_000;
+  const fronts = Array.from({ length: frontCount }, (_, index) => {
+    const next = (index + 1) % frontCount;
+    const nextHead = next % 2 === 0 ? D1 : D2;
+    return front({
+      front_id: `front.deep.${index}`,
+      head_state_digest: index % 2 === 0 ? D1 : D2,
+      lifecycle: 'stack-child',
+      depends_on: [{
+        front_id: `front.deep.${next}`,
+        expected_head_state_digest: nextHead
+      }]
+    });
+  });
+
+  assert.throws(
+    () => verifyAssuranceGraph({
+      schema: ASSURANCE_GRAPH_SCHEMA,
+      repository_id: 'axiom-mesh',
+      fronts,
+      evidence: []
+    }),
+    error => error instanceof ValidationError && /dependency cycle/.test(error.message)
+  );
+});
+
 test('provider metadata cannot be attached to non-provider evidence bases', () => {
   assert.throws(
     () => normalizeAssuranceEvidence(evidence({ provider_observation: provider() })),

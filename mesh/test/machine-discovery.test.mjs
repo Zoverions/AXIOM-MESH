@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { digestObject } from '../src/lib/canonical.mjs';
 import { normalizeMachinePrincipalDefinition } from '../src/lib/machine-principal.mjs';
 import {
   buildMachineDiscovery,
@@ -140,8 +141,8 @@ test('machine discovery removes actions blocked by active deny-dominant overlay'
     principal: machine(),
     policy: new PolicyEngine(merged, {
       layers: [
-        { order: 0, version: base.version, digest: 'b'.repeat(64) },
-        { order: 1, version: overlay.version, digest: 'c'.repeat(64) }
+        { order: 0, version: base.version, digest: digestObject(base) },
+        { order: 1, version: overlay.version, digest: digestObject(overlay) }
       ]
     }),
     kernelVersion: '0.12.0-dev.3'

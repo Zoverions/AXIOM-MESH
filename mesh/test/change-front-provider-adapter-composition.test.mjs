@@ -139,3 +139,37 @@ test('A1 rejects tampered derived authority markers on normalized A0 artifacts',
     capture: capture()
   }), /evidence digest does not match/);
 });
+
+test('A1 rejects unknown projected fields and malformed supplied A0 digests', () => {
+  const sourceState = state();
+  const front = normalizedFront(sourceState);
+  const evidence = normalizedEvidence(sourceState);
+
+  assert.throws(() => adaptChangeFrontProviderCapture({
+    front: { ...front, capability_promotion_granted: true },
+    source_state: sourceState,
+    source_evidence: evidence,
+    capture: capture()
+  }), /change front contains unsupported fields/);
+
+  assert.throws(() => adaptChangeFrontProviderCapture({
+    front,
+    source_state: sourceState,
+    source_evidence: { ...evidence, merge_authority_granted: true },
+    capture: capture()
+  }), /source verification evidence contains unsupported fields/);
+
+  assert.throws(() => adaptChangeFrontProviderCapture({
+    front: { ...front, front_digest: '' },
+    source_state: sourceState,
+    source_evidence: evidence,
+    capture: capture()
+  }), /front_digest/);
+
+  assert.throws(() => adaptChangeFrontProviderCapture({
+    front,
+    source_state: sourceState,
+    source_evidence: { ...evidence, evidence_digest: '' },
+    capture: capture()
+  }), /evidence_digest/);
+});
