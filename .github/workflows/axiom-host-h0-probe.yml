@@ -1,0 +1,64 @@
+name: AXIOM Host H0 Probe
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "host/**"
+      - "mesh/src/axiom-host-*.mjs"
+      - "mesh/src/check-axiom-host-lab.mjs"
+      - "mesh/test/axiom-host-*.test.mjs"
+      - "package.json"
+      - "mesh/package.json"
+      - ".github/workflows/axiom-host-h0-probe.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: axiom-host-h0-probe-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mkosi-summary:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      AXIOM_HOST_LAB_ACK: I_UNDERSTAND_THIS_IS_NON_PRODUCTION
+      MKOSI_V26_COMMIT: 84af20892b61c8e177e391f997ded8b4cb5514f2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24.18.0"
+          package-manager-cache: false
+
+      - name: Verify static H0 contract
+        run: npm run host:lab:check
+
+      - name: Fetch exact upstream mkosi v26 commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          MKOSI_DIR="$RUNNER_TEMP/mkosi-v26"
+          git init "$MKOSI_DIR"
+          git -C "$MKOSI_DIR" remote add origin https://github.com/systemd/mkosi.git
+          git -C "$MKOSI_DIR" fetch --depth=1 origin "$MKOSI_V26_COMMIT"
+          git -C "$MKOSI_DIR" checkout --detach FETCH_HEAD
+          test "$(git -C "$MKOSI_DIR" rev-parse HEAD)" = "$MKOSI_V26_COMMIT"
+          printf '%s/bin\n' "$MKOSI_DIR" >> "$GITHUB_PATH"
+
+      - name: Verify exact mkosi version
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkosi --version | tee "$RUNNER_TEMP/mkosi-version.txt"
+          grep -Eq '^mkosi 26([ .]|$)' "$RUNNER_TEMP/mkosi-version.txt"
+
+      - name: Parse AXIOM Host H0 configuration with upstream mkosi
+        run: npm run host:lab:summary
