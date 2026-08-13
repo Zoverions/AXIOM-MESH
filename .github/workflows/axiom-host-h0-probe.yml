@@ -116,7 +116,7 @@ jobs:
             "$GITHUB_SHA" "$MKOSI_V26_COMMIT" "$pinned" "$repomd_sha256" "$LATEST_OUTCOME" "$current" "$same_as_latest" \
             > "$RUNNER_TEMP/axiom-host-h0-package-source-probe.json"
 
-      - name: Install exact mkosi host dependencies for H0 build
+      - name: Install mkosi host and Fedora cross-build dependencies
         shell: bash
         run: |
           set -euo pipefail
@@ -124,6 +124,16 @@ jobs:
           test -s "$RUNNER_TEMP/mkosi-dependencies.txt"
           sudo apt-get update
           xargs -r -d '\n' sudo apt-get install -y --no-install-recommends < "$RUNNER_TEMP/mkosi-dependencies.txt"
+          # mkosi's generic host dependency list does not include the target
+          # distribution package manager on an Ubuntu host. Fedora's mkosi v26
+          # installer explicitly invokes dnf/dnf5 for Fedora targets, so add the
+          # Ubuntu-packaged cross-distribution RPM stack rather than modifying
+          # the image configuration or disabling repository verification.
+          sudo apt-get install -y --no-install-recommends dnf rpm
+          command -v dnf
+          command -v rpm
+          dnf --version | head -n 1 > "$RUNNER_TEMP/dnf-version.txt"
+          rpm --version > "$RUNNER_TEMP/rpm-version.txt"
 
       - name: Build first content-addressed AXIOM Host H0 image
         shell: bash
@@ -140,7 +150,12 @@ jobs:
             npm run host:lab:build \
             | tee "$RUNNER_TEMP/axiom-host-h0-build-command.json"
           test -s host/mkosi.output/axiom-host-h0-build-evidence.json
-          sudo chown -R "$(id -u):$(id -g)" host/mkosi.output host/.mkosi-private || true
+
+      - name: Restore runner ownership of H0 laboratory paths
+        if: always()
+        shell: bash
+        run: |
+          sudo chown -R "$(id -u):$(id -g)" host/mkosi.output host/.mkosi-private 2>/dev/null || true
 
       - name: Upload H0 package-source probe evidence
         if: always()
@@ -156,6 +171,8 @@ jobs:
             ${{ runner.temp }}/fedora-rawhide-current-snapshot.txt
             ${{ runner.temp }}/mkosi-version.txt
             ${{ runner.temp }}/mkosi-dependencies.txt
+            ${{ runner.temp }}/dnf-version.txt
+            ${{ runner.temp }}/rpm-version.txt
           if-no-files-found: warn
           retention-days: 14
 
