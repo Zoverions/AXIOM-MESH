@@ -86,7 +86,6 @@ export async function verifyAxiomHostH1Configuration(urls = FILES) {
     ['Content', 'UnifiedKernelImages', 'unsigned'],
     ['Content', 'Ssh', 'never'],
     ['Content', 'Autologin', 'no'],
-    ['Content', 'FinalizeScripts', 'mkosi.finalize'],
     ['Validation', 'Checksum', 'yes'],
     ['Validation', 'Verity', 'hash'],
     ['Build', 'ToolsTree', 'yes'],
@@ -111,6 +110,7 @@ export async function verifyAxiomHostH1Configuration(urls = FILES) {
   for (const key of FORBIDDEN_KEYS) {
     requireValue(!hasKey(config, key), `H1 mkosi configuration contains forbidden setting ${key}`);
   }
+  requireValue(!hasKey(config, 'FinalizeScripts'), 'must use exactly one auto-discovered finalize script');
   requireValue(!/production[-_ ]?(secret|credential|key)/i.test(source.config), 'H1 configuration references production credentials');
   requireValue(/console=ttyS0/.test(value(config, 'Content', 'KernelCommandLine')), 'H1 kernel command line must expose the laboratory serial console');
 
@@ -135,8 +135,10 @@ export async function verifyAxiomHostH1Configuration(urls = FILES) {
   repartExact(state, 'ReadOnly', 'no', 'mutable state');
 
   for (const required of [
-    'git -c safe.directory="$SRCDIR"',
-    'ls-files -z',
+    'tar --directory="$SRCDIR" --create --file=-',
+    '--sort=name',
+    '.env.example .gitattributes .github .gitignore .node-version',
+    'mesh package.json package-lock.json packages README.md SECURITY.md',
     '$BUILDROOT/usr/lib/axiom-mesh',
     'Gateway -> Hypervisor -> Sandbox -> Grid',
     'enable axiom-host-h1-check.service'

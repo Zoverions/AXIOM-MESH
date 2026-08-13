@@ -3,9 +3,14 @@ set -eu
 
 install -d -m 0755 "$BUILDROOT/usr/lib/axiom-mesh"
 
-git -c safe.directory="$SRCDIR" -C "$SRCDIR" ls-files -z \
-  | tar --null --files-from=- --directory="$SRCDIR" --create --file=- \
-      --owner=0 --group=0 --numeric-owner --mtime="@$SOURCE_DATE_EPOCH" \
+tar --directory="$SRCDIR" --create --file=- \
+      --sort=name --owner=0 --group=0 --numeric-owner \
+      --mtime="@$SOURCE_DATE_EPOCH" \
+      --exclude=host/mkosi.output --exclude=host/h1/mkosi.output \
+      --exclude=host/.mkosi-private --exclude=host/h1/.mkosi-private \
+      .env.example .gitattributes .github .gitignore .node-version \
+      apps CONSTITUTION.md CONTRIBUTING.md docs host LICENSE logo.png \
+      mesh package.json package-lock.json packages README.md SECURITY.md \
   | tar --directory="$BUILDROOT/usr/lib/axiom-mesh" --extract --file=-
 
 printf '%s\n' "$IMAGE_VERSION" > "$BUILDROOT/usr/lib/axiom-host-image-version"
