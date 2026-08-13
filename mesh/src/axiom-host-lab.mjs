@@ -2,7 +2,7 @@
 
 import { createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
-import { access, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
@@ -12,6 +12,10 @@ import {
   normalizeSnapshotLock,
   verifyAxiomHostLabConfiguration
 } from './check-axiom-host-lab.mjs';
+import {
+  assertEmptyAxiomHostOutput,
+  inventoryAxiomHostArtifacts
+} from './axiom-host-artifact-inventory.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -196,20 +200,17 @@ export async function runAxiomHostLab({ action = 'summary', acknowledgement = ''
       );
     }
 
-    await mkdir(OUTPUT_DIRECTORY, { recursive: true });
+    await assertEmptyAxiomHostOutput(OUTPUT_DIRECTORY);
+    await mkdir(OUTPUT_DIRECTORY, { recursive: true, mode: 0o700 });
     await execProgram('mkosi', ['--directory', HOST_DIRECTORY, 'build'], {
       cwd: REPOSITORY_ROOT,
       env: environment,
       maxBuffer: 32 * 1024 * 1024
     });
 
-    const outputFiles = (await readdir(OUTPUT_DIRECTORY, { withFileTypes: true }))
-      .filter(entry => entry.isFile())
-      .map(entry => entry.name)
-      .sort();
-    if (outputFiles.length === 0) {
-      throw new ValidationError('AXIOM Host laboratory build produced no files in the declared output directory');
-    }
+    const artifacts = await inventoryAxiomHostArtifacts(OUTPUT_DIRECTORY, {
+      exclude: ['axiom-host-h0-build-evidence.json']
+    });
 
     const evidence = {
       schema: HOST_LAB_BUILD_SCHEMA,
@@ -221,7 +222,8 @@ export async function runAxiomHostLab({ action = 'summary', acknowledgement = ''
         mkosi_version: mkosiVersion,
         summary_validated: true,
         image_built: true,
-        output_files: outputFiles
+        artifact_inventory: artifacts.inventory,
+        artifact_set_sha256: artifacts.digest
       },
       controls: {
         linux_host_required: true,
@@ -230,6 +232,8 @@ export async function runAxiomHostLab({ action = 'summary', acknowledgement = ''
         exact_commit_bound: true,
         source_date_epoch_from_commit: true,
         package_snapshot_locked: true,
+        clean_output_directory_required: true,
+        artifact_bytes_hashed: true,
         build_environment_sanitized: true,
         builder_home_isolated: true,
         implicit_mkosi_secret_files_rejected: true,
@@ -245,7 +249,7 @@ export async function runAxiomHostLab({ action = 'summary', acknowledgement = ''
         'A successful image build is laboratory evidence only and does not establish production readiness.',
         'H0 does not claim Secure Boot, measured boot, remote attestation, dm-verity, encrypted mutable state, or H1 isolation properties.',
         'Reproducibility requires a second independent clean build and comparison; this evidence records only one build.',
-        'The build output inventory records file names, while mkosi-generated checksums remain the artifact-integrity source for this stage.'
+        'Artifact SHA-256 values bind produced bytes but do not establish authenticity, boot success, or runtime correctness.'
       ]
     };
 
