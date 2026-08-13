@@ -26,6 +26,7 @@ const REPOSITORY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..'
 const HOST_DIRECTORY = resolve(REPOSITORY_ROOT, 'host');
 const OUTPUT_DIRECTORY = resolve(HOST_DIRECTORY, 'mkosi.output');
 const PRIVATE_DIRECTORY = resolve(HOST_DIRECTORY, '.mkosi-private');
+const BUILD_LOG_PATH = resolve(PRIVATE_DIRECTORY, 'mkosi-build.log');
 const FORBIDDEN_LOCAL_INPUTS = Object.freeze([
   'mkosi.key',
   'mkosi.crt',
@@ -202,10 +203,12 @@ export async function runAxiomHostLab({ action = 'summary', acknowledgement = ''
 
     await assertEmptyAxiomHostOutput(OUTPUT_DIRECTORY);
     await mkdir(OUTPUT_DIRECTORY, { recursive: true, mode: 0o700 });
+    await rm(BUILD_LOG_PATH, { force: true });
     await execProgram('mkosi', ['--directory', HOST_DIRECTORY, 'build'], {
       cwd: REPOSITORY_ROOT,
       env: environment,
-      maxBuffer: 32 * 1024 * 1024
+      maxBuffer: 32 * 1024 * 1024,
+      captureLogPath: BUILD_LOG_PATH
     });
 
     const artifacts = await inventoryAxiomHostArtifacts(OUTPUT_DIRECTORY, {
@@ -321,12 +324,28 @@ async function execProgram(program, args, options = {}) {
       windowsHide: true,
       maxBuffer: options.maxBuffer ?? 4 * 1024 * 1024
     });
+    if (options.captureLogPath) {
+      await writeCommandLog(options.captureLogPath, result.stdout, result.stderr);
+    }
     return result.stdout;
   } catch (error) {
+    if (options.captureLogPath) {
+      await writeCommandLog(options.captureLogPath, error?.stdout, error?.stderr);
+    }
     const stderr = String(error?.stderr ?? '').trim();
-    const suffix = stderr ? `: ${stderr.slice(0, 2000)}` : '';
+    const suffix = stderr ? `: ${stderr.slice(-4000)}` : '';
     throw new ValidationError(`AXIOM Host laboratory command failed: ${program} ${args.join(' ')}${suffix}`);
   }
+}
+
+async function writeCommandLog(path, stdout, stderr) {
+  const content = [
+    '=== stdout ===',
+    String(stdout ?? ''),
+    '=== stderr ===',
+    String(stderr ?? '')
+  ].join('\n');
+  await writeFile(path, content, { mode: 0o600 });
 }
 
 function sha256(value) {
