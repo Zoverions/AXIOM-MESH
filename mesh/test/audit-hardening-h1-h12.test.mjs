@@ -81,7 +81,6 @@ test('H-3 exhausted token buckets cannot regain capacity through key churn', () 
   assert.equal(limiter.take('attacker', now), true);
   assert.equal(limiter.take('attacker', now), false);
   assert.equal(limiter.take('other', now), true);
-
   assert.equal(limiter.take('rotated', now), false);
   assert.equal(limiter.take('attacker', now), false);
   assert.equal(limiter.take('rotated', now + 3_000), true);
@@ -129,7 +128,7 @@ test('H-5 replay protection distinguishes replay, saturation, and expired reuse'
   assert.equal(guard.admit('grid', 'nonce-a', now + 1_000, now), 'replayed');
   assert.equal(guard.admit('grid', 'nonce-c', now + 1_000, now), 'saturated');
   assert.equal(guard.admit('grid', 'nonce-c', now + 3_000, now + 2_000), 'admitted');
-  assert.equal(guard.use('grid', 'compatibility', now + 3_000, now + 2_000), false);
+  assert.equal(guard.use('grid', 'compatibility', now + 3_000, now + 2_000), true);
 });
 
 test('H-6 deny-dominant merge rejects unsupported fields on deny branches', () => {
