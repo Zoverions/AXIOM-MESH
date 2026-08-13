@@ -387,15 +387,16 @@ async function observeBuilderTools(environment) {
     'set -eu',
     "printf 'AXIOM_TOOL_BEGIN:systemd_repart\\n'",
     'systemd-repart --version',
+    "rpm -qf --qf '%{NEVRA}\\n' \"$(command -v systemd-repart)\"",
     "printf 'AXIOM_TOOL_END:systemd_repart\\n'",
     "printf 'AXIOM_TOOL_BEGIN:mkfs_ext4\\n'",
-    'mkfs.ext4 -V 2>&1',
+    "rpm -qf --qf '%{NEVRA}\\n' \"$(command -v mkfs.ext4)\"",
     "printf 'AXIOM_TOOL_END:mkfs_ext4\\n'",
     "printf 'AXIOM_TOOL_BEGIN:mkfs_vfat\\n'",
-    'mkfs.vfat --version 2>&1',
+    "rpm -qf --qf '%{NEVRA}\\n' \"$(command -v mkfs.vfat)\"",
     "printf 'AXIOM_TOOL_END:mkfs_vfat\\n'",
     "printf 'AXIOM_TOOL_BEGIN:mcopy\\n'",
-    'mcopy -V 2>&1',
+    "rpm -qf --qf '%{NEVRA}\\n' \"$(command -v mcopy)\"",
     "printf 'AXIOM_TOOL_END:mcopy\\n'"
   ].join('\n');
   const output = await execProgram(
