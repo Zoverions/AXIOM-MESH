@@ -174,8 +174,73 @@ export function normalizeChangeFrontProviderCapture(raw) {
   return { ...body, capture_digest: captureDigest };
 }
 
+function assuranceEvidenceInput(raw) {
+  const value = assertPlainObject(raw, 'source verification evidence');
+  if (value.authority_granted !== undefined && value.authority_granted !== false) {
+    throw new ValidationError('source verification evidence cannot grant authority');
+  }
+  if (
+    value.negative_evidence !== undefined
+    && value.negative_evidence !== (value.result === 'fail' || value.result === 'unknown')
+  ) {
+    throw new ValidationError('source verification negative-evidence marker is inconsistent');
+  }
+  if (
+    value.provider_observation_digest !== undefined
+    && value.provider_observation_digest !== null
+    && value.provider_observation?.observation_digest !== value.provider_observation_digest
+  ) {
+    throw new ValidationError('source verification provider observation digest is inconsistent');
+  }
+  return {
+    schema: value.schema,
+    evidence_id: value.evidence_id,
+    front_id: value.front_id,
+    source_state_digest: value.source_state_digest,
+    evidence_class: value.evidence_class,
+    basis_kind: value.basis_kind,
+    subject: value.subject,
+    result: value.result,
+    evidence_payload_digest: value.evidence_payload_digest,
+    environment_digest: value.environment_digest,
+    observed_at: value.observed_at,
+    current_for_front: value.current_for_front,
+    non_authorizing: value.non_authorizing,
+    ...(value.provider_observation ? { provider_observation: value.provider_observation } : {}),
+    ...(value.evidence_digest ? { evidence_digest: value.evidence_digest } : {})
+  };
+}
+
+function changeFrontInput(raw) {
+  const value = assertPlainObject(raw, 'change front');
+  if (
+    value.provider_metadata_in_authority_identity !== undefined
+    && value.provider_metadata_in_authority_identity !== false
+  ) {
+    throw new ValidationError('change front cannot include provider metadata in authority identity');
+  }
+  if (value.merge_authority_granted !== undefined && value.merge_authority_granted !== false) {
+    throw new ValidationError('change front cannot grant merge authority');
+  }
+  return {
+    schema: value.schema,
+    front_id: value.front_id,
+    repository_id: value.repository_id,
+    base_state_digest: value.base_state_digest,
+    head_state_digest: value.head_state_digest,
+    lifecycle: value.lifecycle,
+    merge_eligible: value.merge_eligible,
+    depends_on: value.depends_on,
+    supersedes: value.supersedes,
+    replaces: value.replaces,
+    claim_boundary_digest: value.claim_boundary_digest,
+    provider_observations: value.provider_observations,
+    ...(value.front_digest ? { front_digest: value.front_digest } : {})
+  };
+}
+
 function assertSourceEvidence({ front, sourceState, sourceEvidence }) {
-  const evidence = normalizeAssuranceEvidence(sourceEvidence);
+  const evidence = normalizeAssuranceEvidence(assuranceEvidenceInput(sourceEvidence));
   if (evidence.front_id !== front.front_id) {
     throw new ValidationError('source verification evidence belongs to another change front');
   }
@@ -219,7 +284,7 @@ export function adaptChangeFrontProviderCapture({
   source_evidence: rawSourceEvidence,
   capture: rawCapture
 }) {
-  const front = normalizeChangeFront(rawFront);
+  const front = normalizeChangeFront(changeFrontInput(rawFront));
   const sourceState = normalizeSourceState(rawSourceState);
   const capture = normalizeChangeFrontProviderCapture(rawCapture);
 
