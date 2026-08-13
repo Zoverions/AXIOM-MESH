@@ -90,6 +90,7 @@ export async function verifyAxiomHostH1Configuration(urls = FILES) {
     ['Content', 'Autologin', 'no'],
     ['Validation', 'Checksum', 'yes'],
     ['Validation', 'Verity', 'hash'],
+    ['Build', 'BuildSources', '.'],
     ['Build', 'ToolsTree', 'yes'],
     ['Build', 'WithNetwork', 'no'],
     ['Runtime', 'Firmware', 'uefi'],
@@ -137,10 +138,12 @@ export async function verifyAxiomHostH1Configuration(urls = FILES) {
   repartExact(state, 'ReadOnly', 'no', 'mutable state');
 
   for (const required of [
+    '#!/bin/bash',
+    'set -euo pipefail',
+    'git -c safe.directory="$SRCDIR" -C "$SRCDIR" ls-files -z',
     'tar --directory="$SRCDIR" --create --file=-',
     '--sort=name',
-    '.env.example .gitattributes .github .gitignore .node-version',
-    'mesh package.json package-lock.json packages README.md SECURITY.md',
+    '--mtime="@$SOURCE_DATE_EPOCH" --null --files-from=-',
     '$BUILDROOT/usr/lib/axiom-mesh',
     'Gateway -> Hypervisor -> Sandbox -> Grid',
     'enable axiom-host-h1-check.service'

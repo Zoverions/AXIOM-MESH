@@ -18,6 +18,7 @@ host/h1/mkosi.output/
 host/h1/mkosi.cache/
 host/h1/mkosi.pkgcache/
 host/h1/mkosi.builddir/
+host/h1/mkosi.tools/
 host/h1/.mkosi-private/
 
 # Dependencies
