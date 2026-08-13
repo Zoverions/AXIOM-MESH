@@ -22,7 +22,7 @@ const [POLICY_TEXT, MKOSI_TEXT, VERSION_TEXT, SNAPSHOT_TEXT] = await Promise.all
   readFile(HOST_LAB_SNAPSHOT_URL, 'utf8')
 ]);
 
-test('AXIOM Host H0 laboratory configuration is valid, unpinned, and non-promoting', async () => {
+test('AXIOM Host H0 laboratory configuration is valid, snapshot-locked, and non-promoting', async () => {
   const result = await verifyAxiomHostLabConfiguration();
   assert.equal(result.valid, true);
   assert.equal(result.schema, 'axiom-host-lab-policy.v1');
@@ -31,8 +31,8 @@ test('AXIOM Host H0 laboratory configuration is valid, unpinned, and non-promoti
   assert.equal(result.target, 'fedora-rawhide-x86-64');
   assert.equal(result.tools_tree, 'fedora-43');
   assert.equal(result.production_base_selected, false);
-  assert.equal(result.snapshot_locked, false);
-  assert.equal(result.snapshot, 'UNRESOLVED');
+  assert.equal(result.snapshot_locked, true);
+  assert.equal(result.snapshot, SNAPSHOT_TEXT.trim());
   assert.equal(result.image_id, 'axiom-host-lab');
   assert.equal(result.output_directory, 'mkosi.output');
   assert.equal(result.image_version, '0.1.0-h0');
@@ -53,14 +53,15 @@ test('mkosi parser preserves package continuations without accepting duplicate k
 
 test('Rawhide snapshot lock is exact and cannot silently use latest packages', async () => {
   const snapshot = '20260812.n.0';
-  const lockedMkosi = MKOSI_TEXT.replace('Release=rawhide', `Release=rawhide\nSnapshot=${snapshot}`);
+  const lockedMkosi = MKOSI_TEXT.replace(/^Snapshot=.*$/m, `Snapshot=${snapshot}`);
   await withFixture({ snapshot: `${snapshot}\n`, mkosi: lockedMkosi }, async urls => {
     const result = await verifyAxiomHostLabConfiguration(urls);
     assert.equal(result.snapshot_locked, true);
     assert.equal(result.snapshot, snapshot);
   });
 
-  await withFixture({ snapshot: `${snapshot}\n` }, async urls => {
+  const withoutSnapshot = MKOSI_TEXT.replace(/^Snapshot=.*\n/m, '');
+  await withFixture({ snapshot: `${snapshot}\n`, mkosi: withoutSnapshot }, async urls => {
     await assert.rejects(
       verifyAxiomHostLabConfiguration(urls),
       /missing \[Distribution] Snapshot/
