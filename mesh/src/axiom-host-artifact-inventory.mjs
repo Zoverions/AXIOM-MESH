@@ -1,36 +1,37 @@
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { lstat, readdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, posix, relative, sep } from 'node:path';
 import { canonicalJson, sha256, ValidationError } from './lib/canonical.mjs';
 
 const SHA256 = /^[a-f0-9]{64}$/;
+const ARTIFACT_COMPONENT = /^[A-Za-z0-9][A-Za-z0-9._+-]{0,255}$/;
+const MAX_ARTIFACTS = 256;
+const MAX_DEPTH = 8;
 
 export async function inventoryAxiomHostArtifacts(directory, { exclude = [] } = {}) {
   const excluded = new Set(exclude);
-  const entries = await readdir(directory, { withFileTypes: true });
-  const selected = entries
-    .filter(entry => !excluded.has(entry.name))
-    .sort((left, right) => left.name.localeCompare(right.name));
+  const files = [];
+  await collectRegularFiles(directory, directory, files, excluded, 0);
+  files.sort((left, right) => left.name.localeCompare(right.name));
 
-  if (selected.length === 0) {
+  if (files.length === 0) {
     throw new ValidationError('AXIOM Host H0 artifact directory is empty');
+  }
+  if (files.length > MAX_ARTIFACTS) {
+    throw new ValidationError(`AXIOM Host H0 artifact directory exceeds ${MAX_ARTIFACTS} regular files`);
   }
 
   const inventory = [];
-  for (const entry of selected) {
-    if (!entry.isFile()) {
-      throw new ValidationError(`AXIOM Host H0 output contains unsupported non-file artifact ${entry.name}`);
-    }
-    const path = join(directory, entry.name);
-    const metadata = await lstat(path);
+  for (const artifact of files) {
+    const metadata = await lstat(artifact.path);
     if (!metadata.isFile() || metadata.isSymbolicLink()) {
-      throw new ValidationError(`AXIOM Host H0 output artifact is not a regular file: ${entry.name}`);
+      throw new ValidationError(`AXIOM Host H0 output artifact is not a regular file: ${artifact.name}`);
     }
     inventory.push({
-      name: entry.name,
+      name: artifact.name,
       bytes: metadata.size,
-      sha256: await hashFile(path)
+      sha256: await hashFile(artifact.path)
     });
   }
 
@@ -42,7 +43,7 @@ export async function inventoryAxiomHostArtifacts(directory, { exclude = [] } = 
 }
 
 export function verifyAxiomHostArtifactInventory(inventory) {
-  if (!Array.isArray(inventory) || inventory.length < 1 || inventory.length > 64) {
+  if (!Array.isArray(inventory) || inventory.length < 1 || inventory.length > MAX_ARTIFACTS) {
     throw new ValidationError('AXIOM Host H0 artifact inventory has invalid cardinality');
   }
 
@@ -53,8 +54,7 @@ export function verifyAxiomHostArtifactInventory(inventory) {
       !artifact
       || typeof artifact !== 'object'
       || Array.isArray(artifact)
-      || typeof artifact.name !== 'string'
-      || !/^[A-Za-z0-9][A-Za-z0-9._+-]{0,255}$/.test(artifact.name)
+      || !validArtifactName(artifact.name)
       || !Number.isSafeInteger(artifact.bytes)
       || artifact.bytes < 0
       || !SHA256.test(artifact.sha256 ?? '')
@@ -84,6 +84,43 @@ export async function assertEmptyAxiomHostOutput(directory) {
     if (error?.code !== 'ENOENT') throw error;
   }
   return true;
+}
+
+async function collectRegularFiles(root, directory, files, excluded, depth) {
+  if (depth > MAX_DEPTH) {
+    throw new ValidationError(`AXIOM Host H0 output nesting exceeds ${MAX_DEPTH} directories`);
+  }
+  const entries = (await readdir(directory, { withFileTypes: true }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+  for (const entry of entries) {
+    const path = join(directory, entry.name);
+    const relativeName = relative(root, path).split(sep).join(posix.sep);
+    if (excluded.has(relativeName)) continue;
+    if (!validArtifactName(relativeName)) {
+      throw new ValidationError(`AXIOM Host H0 output contains unsupported artifact path ${relativeName}`);
+    }
+    if (entry.isDirectory()) {
+      await collectRegularFiles(root, path, files, excluded, depth + 1);
+      continue;
+    }
+    if (!entry.isFile()) {
+      throw new ValidationError(`AXIOM Host H0 output contains unsupported non-file artifact ${relativeName}`);
+    }
+    files.push({ name: relativeName, path });
+    if (files.length > MAX_ARTIFACTS) {
+      throw new ValidationError(`AXIOM Host H0 artifact directory exceeds ${MAX_ARTIFACTS} regular files`);
+    }
+  }
+}
+
+function validArtifactName(name) {
+  if (typeof name !== 'string' || name.length < 1 || name.length > 1024 || name.includes('\\')) {
+    return false;
+  }
+  const components = name.split('/');
+  return components.length >= 1
+    && components.length <= MAX_DEPTH + 1
+    && components.every(component => ARTIFACT_COMPONENT.test(component));
 }
 
 async function hashFile(path) {
