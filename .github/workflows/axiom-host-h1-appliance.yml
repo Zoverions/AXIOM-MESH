@@ -147,7 +147,7 @@ jobs:
           state_root="$export_dir/lib/axiom-host"
           jq -e '.schema == "axiom-host-h1-state.v1" and (.boots | length == 1) and .boots[0].scenario == "initial-boot"' \
             "$state_root/state-contract.json"
-          jq -e '.status == "pass" and .boot.uefi_runtime_observed == true and .system_root.integrity_mode == "dm-verity" and .system_root.mutation_probe.blocked == true and .mutable_state.separate_from_system_root == true and .checks.setup_check.status == "pass" and .checks.full_check.status == "pass"' \
+          jq -e '.status == "pass" and .boot.uefi_runtime_observed == true and .system_root.integrity_mode == "dm-verity" and .system_root.mutation_probe.blocked == true and .mutable_state.separate_from_system_root == true and .checks.source_package.name == "axiom-mesh" and .checks.setup_check.status == "pass" and .checks.full_check.status == "pass"' \
             "$state_root/evidence/boot-0001.json"
           jq -n \
             --slurpfile before "$RUNNER_TEMP/axiom-host-h1-evidence/pristine-partition-hashes.json" \

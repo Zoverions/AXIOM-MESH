@@ -45,6 +45,7 @@ try {
   assert(/\/dev\/mapper\//.test(root.source), `root is not backed by a device-mapper path: ${root.source}`);
 
   const mutation = verifyRootMutationRefused();
+  const sourcePackage = verifySourcePackage();
   const setup = runNpm(['run', 'setup:check']);
   const check = runNpm(['run', 'check']);
 
@@ -77,6 +78,7 @@ try {
       encryption: 'absent'
     },
     checks: {
+      source_package: sourcePackage,
       setup_check: summarizeCheck(setup),
       full_check: summarizeCheck(check)
     },
@@ -196,8 +198,9 @@ function verifyRootMutationRefused() {
 
 function runNpm(args) {
   const started = Date.now();
+  const commandArgs = ['--prefix', SOURCE_ROOT, ...args];
   try {
-    const output = execFileSync('/usr/bin/npm', args, {
+    const output = execFileSync('/usr/bin/npm', commandArgs, {
       cwd: SOURCE_ROOT,
       encoding: 'utf8',
       timeout: 15 * 60 * 1000,
@@ -215,8 +218,17 @@ function runNpm(args) {
     return { status: 'pass', duration_ms: Date.now() - started, output };
   } catch (error) {
     const output = `${String(error?.stdout ?? '')}\n${String(error?.stderr ?? '')}`;
-    throw new Error(`npm ${args.join(' ')} failed after ${Date.now() - started}ms: ${output.slice(-12000)}`);
+    throw new Error(`npm ${commandArgs.join(' ')} failed after ${Date.now() - started}ms: ${output.slice(-12000)}`);
   }
+}
+
+function verifySourcePackage() {
+  const path = `${SOURCE_ROOT}/package.json`;
+  const content = readFileSync(path, 'utf8');
+  const parsed = JSON.parse(content);
+  assert(parsed.name === 'axiom-mesh', 'protected AXIOM source package name is invalid');
+  assert(parsed.private === true, 'protected AXIOM source package must remain private');
+  return { path, name: parsed.name, version: parsed.version, sha256: sha256(content) };
 }
 
 function summarizeCheck(result) {

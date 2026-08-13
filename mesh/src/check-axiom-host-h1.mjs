@@ -30,6 +30,7 @@ const REQUIRED_PACKAGES = Object.freeze([
   'device-mapper',
   'cryptsetup-libs',
   'util-linux-core',
+  'dbus-broker',
   'nodejs24',
   'nodejs24-bin',
   'nodejs24-npm',
@@ -167,6 +168,8 @@ export async function verifyAxiomHostH1Configuration(urls = FILES) {
     "findMount('/var')",
     "runNpm(['run', 'setup:check'])",
     "runNpm(['run', 'check'])",
+    "const commandArgs = ['--prefix', SOURCE_ROOT, ...args]",
+    'verifySourcePackage()',
     "integrity_mode: 'dm-verity'",
     'host_grants_mesh_authority: false',
     'AXIOM_HOST_H1_PASS'
