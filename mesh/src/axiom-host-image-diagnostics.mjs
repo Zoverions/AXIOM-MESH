@@ -50,6 +50,8 @@ export async function diagnoseAxiomHostImage(rawImagePath, buildEvidence) {
     configuration: {
       policy_sha256: buildEvidence.configuration.policy_sha256,
       mkosi_config_sha256: buildEvidence.configuration.mkosi_config_sha256,
+      tools_config_sha256: buildEvidence.configuration.tools_config_sha256,
+      repart_definitions_sha256: buildEvidence.configuration.repart_definitions_sha256,
       snapshot_lock_sha256: buildEvidence.configuration.snapshot_lock_sha256,
       snapshot: buildEvidence.configuration.snapshot,
       image_version: buildEvidence.configuration.image_version,

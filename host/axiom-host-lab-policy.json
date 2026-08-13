@@ -19,14 +19,44 @@
   },
   "tools_tree": {
     "distribution": "fedora",
-    "release": "43",
-    "mirror": "https://dl.fedoraproject.org/pub/fedora"
+    "release": "rawhide",
+    "snapshot_lock_file": "mkosi.snapshot",
+    "mirror": "https://kojipkgs.fedoraproject.org"
   },
   "package_source": {
     "snapshot_required_before_build": true,
     "snapshot_lock_file": "mkosi.snapshot",
     "snapshot_semantics": "mkosi-v26-fedora-rawhide-compose",
+    "mirror": "https://kojipkgs.fedoraproject.org",
     "automatic_latest_snapshot_build": false
+  },
+  "filesystem_layout": {
+    "definitions_directory": "mkosi.repart",
+    "explicit_definitions_required": true,
+    "esp": {
+      "filesystem": "vfat",
+      "size": "512M"
+    },
+    "root": {
+      "filesystem": "ext4",
+      "size": "2G",
+      "minimize": false
+    }
+  },
+  "reproducibility": {
+    "source_date_epoch_environment": "SOURCE_DATE_EPOCH",
+    "ext4_fake_time_environment": "E2FSPROGS_FAKE_TIME",
+    "ext4_mkfs_options_environment": "SYSTEMD_REPART_MKFS_OPTIONS_EXT4",
+    "ext4_hash_seed": "6e56f338-f1f4-5cc8-a7fb-3dc1c107485c",
+    "timezone": "UTC"
+  },
+  "evidence": {
+    "sbom_format": "CycloneDX-1.6",
+    "draft_host_profile": "axiom-host-profile.v1",
+    "scan_raw_image_for_credentials": true,
+    "scan_build_log_for_credentials": true,
+    "matched_secret_values_omitted": true,
+    "record_builder_tool_versions": true
   },
   "image": {
     "format": "disk",

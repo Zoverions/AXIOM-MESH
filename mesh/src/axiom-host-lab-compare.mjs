@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { canonicalJson, sha256, ValidationError } from './lib/canonical.mjs';
 import { HOST_LAB_BUILD_SCHEMA } from './axiom-host-lab.mjs';
 import { verifyAxiomHostArtifactInventory } from './axiom-host-artifact-inventory.mjs';
+import { HOST_LAB_SECRET_SCAN_SCHEMA } from './axiom-host-secret-scan.mjs';
 
 export const HOST_LAB_COMPARISON_SCHEMA = 'axiom-host-h0-reproducibility-comparison.v1';
 const SHA256 = /^[a-f0-9]{64}$/;
@@ -23,6 +24,8 @@ export function verifyAxiomHostH0BuildEvidence(evidence) {
     || evidence.source.source_date_epoch <= 0
     || !SHA256.test(evidence.configuration?.policy_sha256 ?? '')
     || !SHA256.test(evidence.configuration?.mkosi_config_sha256 ?? '')
+    || !SHA256.test(evidence.configuration?.tools_config_sha256 ?? '')
+    || !SHA256.test(evidence.configuration?.repart_definitions_sha256 ?? '')
     || !SHA256.test(evidence.configuration?.snapshot_lock_sha256 ?? '')
     || evidence.configuration?.snapshot_locked !== true
     || typeof evidence.configuration?.snapshot !== 'string'
@@ -32,16 +35,20 @@ export function verifyAxiomHostH0BuildEvidence(evidence) {
     || evidence.builder_observation?.image_built !== true
     || typeof evidence.builder_observation?.mkosi_version !== 'string'
     || evidence.builder_observation.mkosi_version.length < 1
+    || !SHA256.test(evidence.builder_observation?.tool_versions_sha256 ?? '')
     || !SHA256.test(evidence.builder_observation?.artifact_set_sha256 ?? '')
   ) {
     throw new ValidationError('AXIOM Host H0 build evidence is invalid');
   }
 
   verifyAxiomHostArtifactInventory(evidence.builder_observation.artifact_inventory);
+  verifyToolVersions(evidence.builder_observation.tool_versions, evidence.builder_observation.tool_versions_sha256);
   const recomputed = sha256(canonicalJson(evidence.builder_observation.artifact_inventory));
   if (recomputed !== evidence.builder_observation.artifact_set_sha256) {
     throw new ValidationError('AXIOM Host H0 artifact-set digest does not match its inventory');
   }
+  verifyArtifactMetadata(evidence.builder_observation.artifact_metadata, evidence.builder_observation.artifact_inventory);
+  verifySecretScan(evidence.builder_observation.secret_scan, evidence.builder_observation.artifact_inventory);
 
   const requiredTrue = [
     'linux_host_required',
@@ -50,6 +57,14 @@ export function verifyAxiomHostH0BuildEvidence(evidence) {
     'exact_commit_bound',
     'source_date_epoch_from_commit',
     'package_snapshot_locked',
+    'tools_tree_snapshot_locked',
+    'explicit_repart_layout',
+    'deterministic_ext4_time',
+    'deterministic_ext4_hash_seed',
+    'machine_readable_sbom_generated',
+    'draft_host_profile_generated',
+    'image_and_build_log_secret_scan_passed',
+    'exact_builder_tool_versions_recorded',
     'clean_output_directory_required',
     'artifact_bytes_hashed',
     'build_environment_sanitized',
@@ -81,6 +96,74 @@ export function verifyAxiomHostH0BuildEvidence(evidence) {
   return true;
 }
 
+function verifyArtifactMetadata(metadata, inventory) {
+  if (
+    !metadata
+    || typeof metadata !== 'object'
+    || metadata.sbom_name !== 'axiom-host-h0-sbom.cdx.json'
+    || metadata.profile_name !== 'axiom-host-profile.h0-draft.json'
+    || !Number.isSafeInteger(metadata.package_count)
+    || metadata.package_count < 1
+    || typeof metadata.kernel_version !== 'string'
+    || metadata.kernel_version.length < 1
+    || !SHA256.test(metadata.image_sha256 ?? '')
+    || !SHA256.test(metadata.uki_sha256 ?? '')
+    || !SHA256.test(metadata.kernel_sha256 ?? '')
+  ) {
+    throw new ValidationError('AXIOM Host H0 artifact metadata observation is invalid');
+  }
+  const byName = new Map(inventory.map(item => [item.name, item]));
+  const raw = inventory.find(item => item.link_target === undefined && item.name.endsWith('.raw'));
+  const uki = inventory.find(item => item.link_target === undefined && item.name.endsWith('.efi'));
+  const kernel = inventory.find(item => item.link_target === undefined && item.name.endsWith('.vmlinuz'));
+  if (
+    !byName.has(metadata.sbom_name)
+    || !byName.has(metadata.profile_name)
+    || raw?.sha256 !== metadata.image_sha256
+    || uki?.sha256 !== metadata.uki_sha256
+    || kernel?.sha256 !== metadata.kernel_sha256
+  ) {
+    throw new ValidationError('AXIOM Host H0 artifact metadata does not bind the inventoried image artifacts');
+  }
+}
+
+function verifySecretScan(scan, inventory) {
+  if (
+    !scan
+    || typeof scan !== 'object'
+    || scan.schema !== HOST_LAB_SECRET_SCAN_SCHEMA
+    || scan.status !== 'passed'
+    || scan.passed !== true
+    || !Array.isArray(scan.files)
+    || scan.files.length !== 2
+    || !Array.isArray(scan.matched_pattern_ids)
+    || scan.matched_pattern_ids.length !== 0
+    || scan.method?.matched_values_omitted !== true
+    || scan.authority?.production_promoted !== false
+    || !SHA256.test(scan.scan_sha256 ?? '')
+  ) {
+    throw new ValidationError('AXIOM Host H0 secret-scan observation is invalid');
+  }
+  const { scan_sha256: recorded, ...body } = scan;
+  if (sha256(canonicalJson(body)) !== recorded) {
+    throw new ValidationError('AXIOM Host H0 secret-scan digest does not match its observation');
+  }
+  const raw = inventory.find(item => item.link_target === undefined && item.name.endsWith('.raw'));
+  const rawScan = scan.files.find(item => item.label === raw?.name);
+  const logScan = scan.files.find(item => item.label === 'mkosi-build.log');
+  if (
+    rawScan?.bytes !== raw?.bytes
+    || rawScan?.sha256 !== raw?.sha256
+    || !Number.isSafeInteger(logScan?.bytes)
+    || logScan.bytes < 1
+    || !SHA256.test(logScan.sha256 ?? '')
+    || rawScan.matched_pattern_ids?.length !== 0
+    || logScan.matched_pattern_ids?.length !== 0
+  ) {
+    throw new ValidationError('AXIOM Host H0 secret scan does not bind the raw image and build log');
+  }
+}
+
 export function compareAxiomHostH0BuildEvidence(first, second) {
   verifyAxiomHostH0BuildEvidence(first);
   verifyAxiomHostH0BuildEvidence(second);
@@ -91,10 +174,13 @@ export function compareAxiomHostH0BuildEvidence(first, second) {
     ['source.source_date_epoch', first.source.source_date_epoch, second.source.source_date_epoch],
     ['configuration.policy_sha256', first.configuration.policy_sha256, second.configuration.policy_sha256],
     ['configuration.mkosi_config_sha256', first.configuration.mkosi_config_sha256, second.configuration.mkosi_config_sha256],
+    ['configuration.tools_config_sha256', first.configuration.tools_config_sha256, second.configuration.tools_config_sha256],
+    ['configuration.repart_definitions_sha256', first.configuration.repart_definitions_sha256, second.configuration.repart_definitions_sha256],
     ['configuration.snapshot_lock_sha256', first.configuration.snapshot_lock_sha256, second.configuration.snapshot_lock_sha256],
     ['configuration.snapshot', first.configuration.snapshot, second.configuration.snapshot],
     ['configuration.image_version', first.configuration.image_version, second.configuration.image_version],
-    ['builder_observation.mkosi_version', first.builder_observation.mkosi_version, second.builder_observation.mkosi_version]
+    ['builder_observation.mkosi_version', first.builder_observation.mkosi_version, second.builder_observation.mkosi_version],
+    ['builder_observation.tool_versions_sha256', first.builder_observation.tool_versions_sha256, second.builder_observation.tool_versions_sha256]
   ];
   const bindingDrift = comparableBindings
     .filter(([, left, right]) => left !== right)
@@ -135,10 +221,13 @@ export function compareAxiomHostH0BuildEvidence(first, second) {
     configuration: {
       policy_sha256: first.configuration.policy_sha256,
       mkosi_config_sha256: first.configuration.mkosi_config_sha256,
+      tools_config_sha256: first.configuration.tools_config_sha256,
+      repart_definitions_sha256: first.configuration.repart_definitions_sha256,
       snapshot_lock_sha256: first.configuration.snapshot_lock_sha256,
       snapshot: first.configuration.snapshot,
       image_version: first.configuration.image_version,
-      mkosi_version: first.builder_observation.mkosi_version
+      mkosi_version: first.builder_observation.mkosi_version,
+      tool_versions_sha256: first.builder_observation.tool_versions_sha256
     },
     artifacts: {
       first_set_sha256: first.builder_observation.artifact_set_sha256,
@@ -154,13 +243,27 @@ export function compareAxiomHostH0BuildEvidence(first, second) {
       scheduler_authority_changed: false
     },
     interpretation: byteIdentical
-      ? 'The two H0 builds produced the same inventoried artifact bytes under the same bound source, configuration, package snapshot, and mkosi version. This is reproducibility evidence, not production or runtime correctness evidence.'
+      ? 'The two H0 builds produced the same inventoried artifact bytes under the same bound source, configuration, package snapshot, mkosi version, and filesystem-tool versions. This is reproducibility evidence, not production or runtime correctness evidence.'
       : 'The two otherwise comparable H0 builds produced different artifact bytes. The drift must be explained or removed before a byte-reproducibility claim.'
   };
   return {
     ...comparison,
     comparison_sha256: sha256(canonicalJson(comparison))
   };
+}
+
+function verifyToolVersions(versions, recordedDigest) {
+  const required = ['systemd_repart', 'mkfs_ext4', 'mkfs_vfat', 'mcopy'];
+  if (
+    !versions
+    || typeof versions !== 'object'
+    || Array.isArray(versions)
+    || Object.keys(versions).sort().join(',') !== [...required].sort().join(',')
+    || required.some(key => typeof versions[key] !== 'string' || versions[key].length < 1 || versions[key].length > 4096)
+    || sha256(canonicalJson(versions)) !== recordedDigest
+  ) {
+    throw new ValidationError('AXIOM Host H0 builder tool-version observation is invalid');
+  }
 }
 
 async function main() {

@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
-import { ValidationError } from './lib/canonical.mjs';
+import { canonicalJson, ValidationError } from './lib/canonical.mjs';
 import {
   HOST_LAB_SNAPSHOT_UNRESOLVED,
   normalizeSnapshotLock,
@@ -17,11 +17,21 @@ import {
   assertEmptyAxiomHostOutput,
   inventoryAxiomHostArtifacts
 } from './axiom-host-artifact-inventory.mjs';
+import { generateAxiomHostH0ArtifactMetadata } from './axiom-host-artifact-metadata.mjs';
+import { scanAxiomHostH0Secrets } from './axiom-host-secret-scan.mjs';
 
 const execFileAsync = promisify(execFile);
 
 export const HOST_LAB_ACKNOWLEDGEMENT = 'I_UNDERSTAND_THIS_IS_NON_PRODUCTION';
 export const HOST_LAB_BUILD_SCHEMA = 'axiom-host-h0-build-evidence.v1';
+export const HOST_LAB_EXT4_HASH_SEED = '6e56f338-f1f4-5cc8-a7fb-3dc1c107485c';
+
+const REQUIRED_TOOL_OBSERVATIONS = Object.freeze([
+  'systemd_repart',
+  'mkfs_ext4',
+  'mkfs_vfat',
+  'mcopy'
+]);
 
 const REPOSITORY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const HOST_DIRECTORY = resolve(REPOSITORY_ROOT, 'host');
@@ -76,8 +86,19 @@ export async function createAxiomHostLabPlan({ repositoryRoot = REPOSITORY_ROOT 
     throw new ValidationError('AXIOM Host laboratory requires a clean Git worktree');
   }
 
-  const [mkosiConfig, policy, version, snapshotLock] = await Promise.all([
+  const [
+    mkosiConfig,
+    toolsConfig,
+    espRepart,
+    rootRepart,
+    policy,
+    version,
+    snapshotLock
+  ] = await Promise.all([
     readFile(resolve(HOST_DIRECTORY, 'mkosi.conf'), 'utf8'),
+    readFile(resolve(HOST_DIRECTORY, 'mkosi.tools.conf'), 'utf8'),
+    readFile(resolve(HOST_DIRECTORY, 'mkosi.repart', '00-esp.conf'), 'utf8'),
+    readFile(resolve(HOST_DIRECTORY, 'mkosi.repart', '10-root.conf'), 'utf8'),
     readFile(resolve(HOST_DIRECTORY, 'axiom-host-lab-policy.json'), 'utf8'),
     readFile(resolve(HOST_DIRECTORY, 'mkosi.version'), 'utf8'),
     readFile(resolve(HOST_DIRECTORY, 'mkosi.snapshot'), 'utf8')
@@ -95,6 +116,8 @@ export async function createAxiomHostLabPlan({ repositoryRoot = REPOSITORY_ROOT 
     configuration: {
       policy_sha256: sha256(policy),
       mkosi_config_sha256: sha256(mkosiConfig),
+      tools_config_sha256: sha256(toolsConfig),
+      repart_definitions_sha256: sha256(`${espRepart}\0${rootRepart}`),
       snapshot_lock_sha256: sha256(snapshotLock),
       snapshot: staticVerification.snapshot,
       snapshot_locked: staticVerification.snapshot_locked,
@@ -204,6 +227,8 @@ export async function runAxiomHostLab({ action = 'summary', acknowledgement = ''
     }
 
     await assertEmptyAxiomHostOutput(OUTPUT_DIRECTORY);
+    const toolVersions = await observeBuilderTools(environment);
+    await assertEmptyAxiomHostOutput(OUTPUT_DIRECTORY);
     await mkdir(OUTPUT_DIRECTORY, { recursive: true, mode: 0o700 });
     await rm(BUILD_LOG_PATH, { force: true });
     await execProgram('mkosi', ['--directory', HOST_DIRECTORY, 'build'], {
@@ -213,6 +238,31 @@ export async function runAxiomHostLab({ action = 'summary', acknowledgement = ''
       captureLogPath: BUILD_LOG_PATH
     });
 
+    const preliminaryArtifacts = await inventoryAxiomHostArtifacts(OUTPUT_DIRECTORY, {
+      exclude: ['axiom-host-h0-build-evidence.json']
+    });
+    const artifactMetadata = await generateAxiomHostH0ArtifactMetadata({
+      outputDirectory: OUTPUT_DIRECTORY,
+      artifactInventory: preliminaryArtifacts.inventory,
+      source: plan.source,
+      imageVersion: plan.configuration.image_version,
+      snapshot: plan.configuration.snapshot
+    });
+    const rawArtifact = preliminaryArtifacts.inventory.find(item => (
+      item.link_target === undefined && item.name.endsWith('.raw')
+    ));
+    if (!rawArtifact) {
+      throw new ValidationError('AXIOM Host H0 build did not produce a raw disk image');
+    }
+    const secretScan = await scanAxiomHostH0Secrets([
+      { label: rawArtifact.name, path: resolve(OUTPUT_DIRECTORY, rawArtifact.name) },
+      { label: 'mkosi-build.log', path: BUILD_LOG_PATH }
+    ]);
+    if (!secretScan.passed) {
+      throw new ValidationError(
+        `AXIOM Host H0 image or build log matched forbidden credential patterns: ${secretScan.matched_pattern_ids.join(', ')}`
+      );
+    }
     const artifacts = await inventoryAxiomHostArtifacts(OUTPUT_DIRECTORY, {
       exclude: ['axiom-host-h0-build-evidence.json']
     });
@@ -225,8 +275,12 @@ export async function runAxiomHostLab({ action = 'summary', acknowledgement = ''
       configuration: plan.configuration,
       builder_observation: {
         mkosi_version: mkosiVersion,
+        tool_versions: toolVersions,
+        tool_versions_sha256: sha256(canonicalJson(toolVersions)),
         summary_validated: true,
         image_built: true,
+        artifact_metadata: artifactMetadata,
+        secret_scan: secretScan,
         artifact_inventory: artifacts.inventory,
         artifact_set_sha256: artifacts.digest
       },
@@ -236,7 +290,15 @@ export async function runAxiomHostLab({ action = 'summary', acknowledgement = ''
         clean_git_worktree_required: true,
         exact_commit_bound: true,
         source_date_epoch_from_commit: true,
-        package_snapshot_locked: true,
+      package_snapshot_locked: true,
+      tools_tree_snapshot_locked: true,
+      explicit_repart_layout: true,
+        deterministic_ext4_time: true,
+        deterministic_ext4_hash_seed: true,
+        machine_readable_sbom_generated: true,
+        draft_host_profile_generated: true,
+        image_and_build_log_secret_scan_passed: true,
+        exact_builder_tool_versions_recorded: true,
         clean_output_directory_required: true,
         artifact_bytes_hashed: true,
         build_environment_sanitized: true,
@@ -284,8 +346,63 @@ export function laboratoryEnvironment(sourceDateEpoch, source = process.env, { p
     environment.XDG_RUNTIME_DIR = join(home, 'runtime');
   }
   environment.SOURCE_DATE_EPOCH = String(sourceDateEpoch);
+  environment.E2FSPROGS_FAKE_TIME = String(sourceDateEpoch);
+  environment.SYSTEMD_REPART_MKFS_OPTIONS_EXT4 = `-E hash_seed=${HOST_LAB_EXT4_HASH_SEED}`;
+  environment.TZ = 'UTC';
   environment.AXIOM_HOST_LAB = '1';
   return environment;
+}
+
+export function parseAxiomHostToolObservations(text) {
+  const normalized = String(text).replace(/\r\n?/g, '\n');
+  const observations = {};
+  for (const name of REQUIRED_TOOL_OBSERVATIONS) {
+    const begin = `AXIOM_TOOL_BEGIN:${name}\n`;
+    const end = `\nAXIOM_TOOL_END:${name}`;
+    const start = normalized.indexOf(begin);
+    if (start < 0 || normalized.indexOf(begin, start + begin.length) >= 0) {
+      throw new ValidationError(`AXIOM Host H0 tool observation is missing or repeats ${name}`);
+    }
+    const contentStart = start + begin.length;
+    const finish = normalized.indexOf(end, contentStart);
+    if (finish < 0 || normalized.indexOf(end, finish + end.length) >= 0) {
+      throw new ValidationError(`AXIOM Host H0 tool observation has an invalid end marker for ${name}`);
+    }
+    const value = normalized.slice(contentStart, finish).trim();
+    if (!value || value.length > 4096 || /AXIOM_TOOL_(?:BEGIN|END):/.test(value)) {
+      throw new ValidationError(`AXIOM Host H0 tool observation is invalid for ${name}`);
+    }
+    observations[name] = value;
+  }
+  return observations;
+}
+
+async function observeBuilderTools(environment) {
+  const script = [
+    'set -eu',
+    "printf 'AXIOM_TOOL_BEGIN:systemd_repart\\n'",
+    'systemd-repart --version',
+    "printf 'AXIOM_TOOL_END:systemd_repart\\n'",
+    "printf 'AXIOM_TOOL_BEGIN:mkfs_ext4\\n'",
+    'mkfs.ext4 -V 2>&1',
+    "printf 'AXIOM_TOOL_END:mkfs_ext4\\n'",
+    "printf 'AXIOM_TOOL_BEGIN:mkfs_vfat\\n'",
+    'mkfs.vfat --version 2>&1',
+    "printf 'AXIOM_TOOL_END:mkfs_vfat\\n'",
+    "printf 'AXIOM_TOOL_BEGIN:mcopy\\n'",
+    'mcopy -V 2>&1',
+    "printf 'AXIOM_TOOL_END:mcopy\\n'"
+  ].join('\n');
+  const output = await execProgram(
+    'mkosi',
+    ['--directory', HOST_DIRECTORY, 'box', '--', '/bin/sh', '-c', script],
+    {
+      cwd: REPOSITORY_ROOT,
+      env: environment,
+      maxBuffer: 4 * 1024 * 1024
+    }
+  );
+  return parseAxiomHostToolObservations(output);
 }
 
 async function assertNoImplicitMkosiSecrets() {

@@ -7,6 +7,9 @@ import { ValidationError } from './lib/canonical.mjs';
 export const HOST_LAB_POLICY_SCHEMA = 'axiom-host-lab-policy.v1';
 export const HOST_LAB_POLICY_URL = new URL('../../host/axiom-host-lab-policy.json', import.meta.url);
 export const HOST_LAB_MKOSI_URL = new URL('../../host/mkosi.conf', import.meta.url);
+export const HOST_LAB_TOOLS_URL = new URL('../../host/mkosi.tools.conf', import.meta.url);
+export const HOST_LAB_ESP_REPART_URL = new URL('../../host/mkosi.repart/00-esp.conf', import.meta.url);
+export const HOST_LAB_ROOT_REPART_URL = new URL('../../host/mkosi.repart/10-root.conf', import.meta.url);
 export const HOST_LAB_VERSION_URL = new URL('../../host/mkosi.version', import.meta.url);
 export const HOST_LAB_SNAPSHOT_URL = new URL('../../host/mkosi.snapshot', import.meta.url);
 export const HOST_LAB_SNAPSHOT_UNRESOLVED = 'UNRESOLVED';
@@ -41,12 +44,26 @@ const FORBIDDEN_MKOSI_KEYS = Object.freeze([
 export async function verifyAxiomHostLabConfiguration({
   policyUrl = HOST_LAB_POLICY_URL,
   mkosiUrl = HOST_LAB_MKOSI_URL,
+  toolsUrl = HOST_LAB_TOOLS_URL,
+  espRepartUrl = HOST_LAB_ESP_REPART_URL,
+  rootRepartUrl = HOST_LAB_ROOT_REPART_URL,
   versionUrl = HOST_LAB_VERSION_URL,
   snapshotUrl = HOST_LAB_SNAPSHOT_URL
 } = {}) {
-  const [policyText, mkosiText, versionText, snapshotText] = await Promise.all([
+  const [
+    policyText,
+    mkosiText,
+    toolsText,
+    espRepartText,
+    rootRepartText,
+    versionText,
+    snapshotText
+  ] = await Promise.all([
     readFile(policyUrl, 'utf8'),
     readFile(mkosiUrl, 'utf8'),
+    readFile(toolsUrl, 'utf8'),
+    readFile(espRepartUrl, 'utf8'),
+    readFile(rootRepartUrl, 'utf8'),
     readFile(versionUrl, 'utf8'),
     readFile(snapshotUrl, 'utf8')
   ]);
@@ -61,7 +78,10 @@ export async function verifyAxiomHostLabConfiguration({
   verifyPolicy(policy);
   const snapshot = normalizeSnapshotLock(snapshotText);
   const mkosi = parseMkosiConfiguration(mkosiText);
+  const tools = parseMkosiConfiguration(toolsText);
   verifyMkosiConfiguration(mkosi, mkosiText, policy, snapshot);
+  verifyToolsConfiguration(tools, toolsText, policy, snapshot);
+  verifyRepartDefinitions(espRepartText, rootRepartText, policy);
 
   const version = versionText.trim();
   if (version !== '0.1.0-h0') {
@@ -76,12 +96,15 @@ export async function verifyAxiomHostLabConfiguration({
     target: `${policy.target.distribution}-${policy.target.release}-${policy.target.architecture}`,
     tools_tree: `${policy.tools_tree.distribution}-${policy.tools_tree.release}`,
     tools_tree_mirror: policy.tools_tree.mirror,
+    tools_tree_snapshot_locked: true,
     production_base_selected: policy.target.production_base_selected,
     snapshot_locked: snapshot !== HOST_LAB_SNAPSHOT_UNRESOLVED,
     snapshot,
     image_id: value(mkosi, 'Output', 'ImageId'),
     output_directory: value(mkosi, 'Output', 'OutputDirectory'),
     image_version: version,
+    repart_layout: 'vfat-512M,ext4-2G',
+    root_filesystem: policy.filesystem_layout.root.filesystem,
     packages: splitWords(value(mkosi, 'Content', 'Packages')).length,
     bootloader: value(mkosi, 'Content', 'Bootloader'),
     network: value(mkosi, 'Runtime', 'RuntimeNetwork'),
@@ -168,8 +191,9 @@ function verifyPolicy(policy) {
     || policy.target?.node_engine_minimum !== '24.14.0'
     || policy.target?.production_base_selected !== false
     || policy.tools_tree?.distribution !== 'fedora'
-    || String(policy.tools_tree?.release) !== '43'
-    || policy.tools_tree?.mirror !== 'https://dl.fedoraproject.org/pub/fedora'
+    || policy.tools_tree?.release !== 'rawhide'
+    || policy.tools_tree?.snapshot_lock_file !== 'mkosi.snapshot'
+    || policy.tools_tree?.mirror !== 'https://kojipkgs.fedoraproject.org'
   ) {
     throw new ValidationError('AXIOM Host laboratory target, tools tree, or builder drifted');
   }
@@ -177,9 +201,32 @@ function verifyPolicy(policy) {
     policy.package_source?.snapshot_required_before_build !== true
     || policy.package_source?.snapshot_lock_file !== 'mkosi.snapshot'
     || policy.package_source?.snapshot_semantics !== 'mkosi-v26-fedora-rawhide-compose'
+    || policy.package_source?.mirror !== 'https://kojipkgs.fedoraproject.org'
     || policy.package_source?.automatic_latest_snapshot_build !== false
   ) {
     throw new ValidationError('AXIOM Host laboratory package-source policy drifted');
+  }
+  if (
+    policy.filesystem_layout?.definitions_directory !== 'mkosi.repart'
+    || policy.filesystem_layout?.explicit_definitions_required !== true
+    || policy.filesystem_layout?.esp?.filesystem !== 'vfat'
+    || policy.filesystem_layout?.esp?.size !== '512M'
+    || policy.filesystem_layout?.root?.filesystem !== 'ext4'
+    || policy.filesystem_layout?.root?.size !== '2G'
+    || policy.filesystem_layout?.root?.minimize !== false
+    || policy.reproducibility?.source_date_epoch_environment !== 'SOURCE_DATE_EPOCH'
+    || policy.reproducibility?.ext4_fake_time_environment !== 'E2FSPROGS_FAKE_TIME'
+    || policy.reproducibility?.ext4_mkfs_options_environment !== 'SYSTEMD_REPART_MKFS_OPTIONS_EXT4'
+    || policy.reproducibility?.ext4_hash_seed !== '6e56f338-f1f4-5cc8-a7fb-3dc1c107485c'
+    || policy.reproducibility?.timezone !== 'UTC'
+    || policy.evidence?.sbom_format !== 'CycloneDX-1.6'
+    || policy.evidence?.draft_host_profile !== 'axiom-host-profile.v1'
+    || policy.evidence?.scan_raw_image_for_credentials !== true
+    || policy.evidence?.scan_build_log_for_credentials !== true
+    || policy.evidence?.matched_secret_values_omitted !== true
+    || policy.evidence?.record_builder_tool_versions !== true
+  ) {
+    throw new ValidationError('AXIOM Host laboratory filesystem or reproducibility policy drifted');
   }
 
   const requiredFalse = [
@@ -238,6 +285,7 @@ function verifyMkosiConfiguration(config, source, policy, snapshot) {
     ['Config', 'MinimumVersion', policy.builder.minimum_version],
     ['Distribution', 'Distribution', policy.target.distribution],
     ['Distribution', 'Release', policy.target.release],
+    ['Distribution', 'Mirror', policy.package_source.mirror ?? policy.tools_tree.mirror],
     ['Distribution', 'Architecture', policy.target.architecture],
     ['Output', 'Format', policy.image.format],
     ['Output', 'ImageId', policy.image.image_id],
@@ -255,6 +303,11 @@ function verifyMkosiConfiguration(config, source, policy, snapshot) {
     ['Build', 'ToolsTreeDistribution', policy.tools_tree.distribution],
     ['Build', 'ToolsTreeRelease', String(policy.tools_tree.release)],
     ['Build', 'ToolsTreeMirror', policy.tools_tree.mirror],
+    [
+      'Build',
+      'Environment',
+      `${policy.reproducibility.ext4_fake_time_environment} ${policy.reproducibility.ext4_mkfs_options_environment}`
+    ],
     ['Build', 'WithNetwork', 'no'],
     ['Runtime', 'VirtualMachineMonitor', policy.runtime.virtual_machine_monitor],
     ['Runtime', 'Firmware', policy.runtime.firmware],
@@ -304,6 +357,88 @@ function verifyMkosiConfiguration(config, source, policy, snapshot) {
   if (/\bAXIOM_DATA_DIR\b/.test(source) || /production[-_ ]?(secret|credential|key)/i.test(source)) {
     throw new ValidationError('mkosi H0 configuration must not reference AXIOM production state or credentials');
   }
+}
+
+function verifyToolsConfiguration(config, source, policy, snapshot) {
+  const exact = [
+    ['Distribution', 'Distribution', policy.tools_tree.distribution],
+    ['Distribution', 'Release', policy.tools_tree.release],
+    ['Distribution', 'Snapshot', snapshot],
+    ['Distribution', 'Mirror', policy.tools_tree.mirror],
+    ['Distribution', 'Architecture', policy.target.architecture]
+  ];
+  for (const [section, key, expected] of exact) {
+    if (value(config, section, key) !== expected) {
+      throw new ValidationError(`mkosi H0 tools-tree invariant drifted: [${section}] ${key} must equal ${expected}`);
+    }
+  }
+  if (/\bAXIOM_DATA_DIR\b/.test(source) || /production[-_ ]?(secret|credential|key)/i.test(source)) {
+    throw new ValidationError('mkosi H0 tools-tree configuration must not reference AXIOM production state or credentials');
+  }
+}
+
+function verifyRepartDefinitions(espText, rootText, policy) {
+  const esp = parseRepartDefinition(espText, '00-esp.conf');
+  const root = parseRepartDefinition(rootText, '10-root.conf');
+  const exact = [
+    ['00-esp.conf Type', singleRepartValue(esp, 'Type'), 'esp'],
+    ['00-esp.conf Format', singleRepartValue(esp, 'Format'), policy.filesystem_layout.esp.filesystem],
+    ['00-esp.conf SizeMinBytes', singleRepartValue(esp, 'SizeMinBytes'), policy.filesystem_layout.esp.size],
+    ['00-esp.conf SizeMaxBytes', singleRepartValue(esp, 'SizeMaxBytes'), policy.filesystem_layout.esp.size],
+    ['10-root.conf Type', singleRepartValue(root, 'Type'), 'root'],
+    ['10-root.conf Format', singleRepartValue(root, 'Format'), policy.filesystem_layout.root.filesystem],
+    ['10-root.conf SizeMinBytes', singleRepartValue(root, 'SizeMinBytes'), policy.filesystem_layout.root.size],
+    ['10-root.conf SizeMaxBytes', singleRepartValue(root, 'SizeMaxBytes'), policy.filesystem_layout.root.size]
+  ];
+  for (const [name, current, expected] of exact) {
+    if (current !== expected) {
+      throw new ValidationError(`mkosi H0 repart invariant drifted: ${name} must equal ${expected}`);
+    }
+  }
+  if (esp.get('CopyFiles')?.join(',') !== '/boot:/,/efi:/') {
+    throw new ValidationError('mkosi H0 repart invariant drifted: ESP CopyFiles must contain only /boot:/ and /efi:/');
+  }
+  if (root.get('CopyFiles')?.join(',') !== '/') {
+    throw new ValidationError('mkosi H0 repart invariant drifted: root CopyFiles must equal /');
+  }
+  if (esp.has('Minimize') || root.has('Minimize')) {
+    throw new ValidationError('mkosi H0 repart definitions must not use filesystem-dependent Minimize sizing');
+  }
+}
+
+function parseRepartDefinition(text, filename) {
+  const values = new Map();
+  let partitionSection = false;
+  for (const [index, rawLine] of String(text).replace(/\r\n?/g, '\n').split('\n').entries()) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#') || line.startsWith(';')) continue;
+    if (line === '[Partition]') {
+      if (partitionSection) throw new ValidationError(`mkosi H0 repart ${filename} repeats [Partition]`);
+      partitionSection = true;
+      continue;
+    }
+    if (!partitionSection) {
+      throw new ValidationError(`mkosi H0 repart ${filename} has content outside [Partition] at line ${index + 1}`);
+    }
+    const assignment = line.match(/^([A-Za-z][A-Za-z0-9]*)=(.*)$/);
+    if (!assignment) {
+      throw new ValidationError(`mkosi H0 repart ${filename} has an unsupported line ${index + 1}`);
+    }
+    const [, key, rawValue] = assignment;
+    const current = values.get(key) ?? [];
+    current.push(rawValue.trim());
+    values.set(key, current);
+  }
+  if (!partitionSection) throw new ValidationError(`mkosi H0 repart ${filename} is missing [Partition]`);
+  return values;
+}
+
+function singleRepartValue(config, key) {
+  const current = config.get(key);
+  if (!current || current.length !== 1) {
+    throw new ValidationError(`mkosi H0 repart definition must contain exactly one ${key}`);
+  }
+  return current[0];
 }
 
 function value(config, section, key) {
