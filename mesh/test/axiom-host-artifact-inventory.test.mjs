@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { sha256 } from '../src/lib/canonical.mjs';
 import {
   assertEmptyAxiomHostOutput,
   inventoryAxiomHostArtifacts,
@@ -43,7 +44,7 @@ test('AXIOM Host H0 artifact inventory binds exact sorted bytes including nested
   }
 });
 
-test('H0 output must begin empty and rejects symlinks or unsupported nested state', async () => {
+test('H0 output accepts only bounded internal symlink aliases and binds their exact targets', async () => {
   const root = await mkdtemp(join(tmpdir(), 'axiom-host-output-'));
   try {
     assert.equal(await assertEmptyAxiomHostOutput(root), true);
@@ -56,13 +57,25 @@ test('H0 output must begin empty and rejects symlinks or unsupported nested stat
     await rm(join(root, 'stale.raw'));
     await mkdir(join(root, 'nested'));
     await writeFile(join(root, 'nested', 'payload.raw'), 'payload');
-    const nested = await inventoryAxiomHostArtifacts(root);
-    assert.deepEqual(nested.inventory.map(item => item.name), ['nested/payload.raw']);
+    await symlink('nested/payload.raw', join(root, 'linked.raw'));
 
-    await symlink(join(root, 'nested', 'payload.raw'), join(root, 'linked.raw'));
+    const inventory = await inventoryAxiomHostArtifacts(root);
+    assert.deepEqual(inventory.inventory.map(item => item.name), [
+      'linked.raw',
+      'nested/payload.raw'
+    ]);
+    assert.equal(inventory.inventory[0].link_target, 'nested/payload.raw');
+    assert.equal(inventory.inventory[0].bytes, Buffer.byteLength('nested/payload.raw'));
+    assert.equal(
+      inventory.inventory[0].sha256,
+      sha256(Buffer.from('nested/payload.raw', 'utf8'))
+    );
+
+    await rm(join(root, 'linked.raw'));
+    await symlink('../escape.raw', join(root, 'linked.raw'));
     await assert.rejects(
       inventoryAxiomHostArtifacts(root),
-      /unsupported non-file artifact linked.raw/
+      /symlink escapes or has an invalid target/
     );
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -88,5 +101,18 @@ test('artifact inventory verification rejects duplicate, unsorted, forged, and u
   assert.throws(
     () => verifyAxiomHostArtifactInventory([{ ...a, name: '../escape.raw' }]),
     /invalid entry/
+  );
+
+  const linkTarget = 'versioned/image.raw';
+  const link = {
+    name: 'image.raw',
+    bytes: Buffer.byteLength(linkTarget),
+    sha256: sha256(Buffer.from(linkTarget, 'utf8')),
+    link_target: linkTarget
+  };
+  assert.equal(verifyAxiomHostArtifactInventory([link]), true);
+  assert.throws(
+    () => verifyAxiomHostArtifactInventory([{ ...link, sha256: 'f'.repeat(64) }]),
+    /symlink digest does not match/
   );
 });
