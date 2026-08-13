@@ -47,10 +47,14 @@ const EXPECTED_FLOW_IDS = Object.freeze([
   'sandbox-self-health'
 ]);
 const EXPECTED_POLICY_DIGEST =
-  '2f0fd77a8d40f6b38376429b416498ff15d173cf7db7b0b8dadc153f88086541';
+  '2a960219e1b3ecf8ca16d8321103db915116fa13b3d029724c4b082219ead68e';
 const GRID_EDUCATION_ROUTE_IMPORT =
   "import { registerEducationGridRoutes } from './education-routes.mjs';";
 const GRID_EDUCATION_ROUTE_CALL = 'registerEducationGridRoutes(router, store);';
+const GRID_DELEGATED_AUTHORIZATION_ROUTE_IMPORT =
+  "import { registerDelegatedAuthorizationGridRoute } from './delegated-authorization-route.mjs';";
+const GRID_DELEGATED_AUTHORIZATION_ROUTE_CALL =
+  'registerDelegatedAuthorizationGridRoute(router, store);';
 
 export const ACTIVE_SERVICE_NETWORK_POLICY = deepFreeze(
   validateServiceNetworkPolicy(JSON.parse(readFileSync(
@@ -377,17 +381,33 @@ export function validateServiceRouteImplementation({
 
 function serviceRouteSource(destination, source) {
   if (destination !== 'grid') return source;
-  const hasImport = source.includes(GRID_EDUCATION_ROUTE_IMPORT);
-  const hasRegistration = source.includes(GRID_EDUCATION_ROUTE_CALL);
-  if (hasImport !== hasRegistration) {
-    throw new ValidationError('Grid education route registration is incomplete');
+  const registrations = [
+    {
+      label: 'education',
+      importText: GRID_EDUCATION_ROUTE_IMPORT,
+      callText: GRID_EDUCATION_ROUTE_CALL,
+      sourceUrl: new URL('../grid/education-routes.mjs', import.meta.url)
+    },
+    {
+      label: 'delegated authorization',
+      importText: GRID_DELEGATED_AUTHORIZATION_ROUTE_IMPORT,
+      callText: GRID_DELEGATED_AUTHORIZATION_ROUTE_CALL,
+      sourceUrl: new URL('../grid/delegated-authorization-route.mjs', import.meta.url)
+    }
+  ];
+  let combined = source;
+  for (const registration of registrations) {
+    const hasImport = source.includes(registration.importText);
+    const hasRegistration = source.includes(registration.callText);
+    if (hasImport !== hasRegistration) {
+      throw new ValidationError(
+        `Grid ${registration.label} route registration is incomplete`
+      );
+    }
+    if (!hasImport) continue;
+    combined += `\n${readFileSync(registration.sourceUrl, 'utf8')}`;
   }
-  if (!hasImport) return source;
-  const educationRoutes = readFileSync(
-    new URL('../grid/education-routes.mjs', import.meta.url),
-    'utf8'
-  );
-  return `${source}\n${educationRoutes}`;
+  return combined;
 }
 
 function validateExactCurrentRoutes(flows) {
@@ -410,6 +430,7 @@ function validateExactCurrentRoutes(flows) {
       'GET /internal/v1/status',
       'GET /internal/v1/policy-overlays',
       'GET /internal/v1/approval/:id',
+      'POST /internal/v1/delegated-authorizations/resolve',
       'POST /internal/v1/commit',
       'POST /internal/v1/education/learner-progress'
     ],

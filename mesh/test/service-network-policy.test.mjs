@@ -29,10 +29,10 @@ test('current service network policy is exact, default-deny, and segmented', asy
   assert.equal(result.default_action, 'deny');
   assert.equal(result.segments, 4);
   assert.equal(result.flows, 10);
-  assert.equal(result.routes, 41);
+  assert.equal(result.routes, 42);
   assert.equal(
     result.policy_digest,
-    '2f0fd77a8d40f6b38376429b416498ff15d173cf7db7b0b8dadc153f88086541'
+    '2a960219e1b3ecf8ca16d8321103db915116fa13b3d029724c4b082219ead68e'
   );
 
   assert.deepEqual(
@@ -62,7 +62,7 @@ test('current service network policy is exact, default-deny, and segmented', asy
   const implementation = validateServiceRouteImplementation({ sources });
   assert.equal(implementation.valid, true);
   assert.equal(implementation.destinations, 3);
-  assert.equal(implementation.implemented_routes, 37);
+  assert.equal(implementation.implemented_routes, 38);
 });
 
 test('service request policy allows only exact caller, destination, method, and route', () => {
@@ -78,6 +78,12 @@ test('service request policy allows only exact caller, destination, method, and 
       `/internal/v1/sync/person/bundles/${'a'.repeat(64)}`
     ],
     ['hypervisor', 'grid', 'GET', '/internal/v1/approval/approval_1'],
+    [
+      'hypervisor',
+      'grid',
+      'POST',
+      '/internal/v1/delegated-authorizations/resolve'
+    ],
     ['hypervisor', 'grid', 'POST', '/internal/v1/commit'],
     [
       'hypervisor',
@@ -111,6 +117,7 @@ test('service request policy allows only exact caller, destination, method, and 
     ['gateway', 'grid', 'POST', '/internal/v1/status'],
     ['gateway', 'grid', 'GET', '/internal/v1/unknown'],
     ['hypervisor', 'grid', 'GET', '/internal/v1/commit'],
+    ['hypervisor', 'grid', 'GET', '/internal/v1/delegated-authorizations/resolve'],
     ['hypervisor', 'grid', 'GET', '/internal/v1/education/learner-progress'],
     ['supervisor', 'gateway', 'GET', '/health'],
     ['unknown', 'grid', 'GET', '/internal/v1/status']
@@ -186,6 +193,11 @@ test('receiving service enforces caller, method, and route policy', () => {
     destination: 'grid',
     transportPeer: { service: 'hypervisor' },
     ...request('POST', '/internal/v1/commit')
+  }).allowed, true);
+  assert.equal(authorizeInboundServiceRequest({
+    destination: 'grid',
+    transportPeer: { service: 'hypervisor' },
+    ...request('POST', '/internal/v1/delegated-authorizations/resolve')
   }).allowed, true);
   assert.equal(authorizeInboundServiceRequest({
     destination: 'grid',
@@ -294,6 +306,18 @@ test('service network policy exactly covers implemented internal and health rout
   assert.throws(
     () => validateServiceRouteImplementation({ sources: detachedEducationRoutes }),
     /Grid education route registration is incomplete/
+  );
+
+  const detachedDelegatedRoutes = {
+    ...sources,
+    grid: sources.grid.replace(
+      'registerDelegatedAuthorizationGridRoute(router, store);',
+      ''
+    )
+  };
+  assert.throws(
+    () => validateServiceRouteImplementation({ sources: detachedDelegatedRoutes }),
+    /Grid delegated authorization route registration is incomplete/
   );
 
   const added = {
