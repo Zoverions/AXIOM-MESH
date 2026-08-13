@@ -1,37 +1,69 @@
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { lstat, readdir } from 'node:fs/promises';
-import { join, posix, relative, sep } from 'node:path';
+import { lstat, readlink, readdir } from 'node:fs/promises';
+import { dirname, isAbsolute, join, posix, relative, resolve, sep } from 'node:path';
 import { canonicalJson, sha256, ValidationError } from './lib/canonical.mjs';
 
 const SHA256 = /^[a-f0-9]{64}$/;
 const ARTIFACT_COMPONENT = /^[A-Za-z0-9][A-Za-z0-9._+-]{0,255}$/;
+const LINK_TARGET = /^[A-Za-z0-9._+\/-]{1,1024}$/;
 const MAX_ARTIFACTS = 256;
 const MAX_DEPTH = 8;
 
 export async function inventoryAxiomHostArtifacts(directory, { exclude = [] } = {}) {
   const excluded = new Set(exclude);
-  const files = [];
-  await collectRegularFiles(directory, directory, files, excluded, 0);
-  files.sort((left, right) => left.name.localeCompare(right.name));
+  const artifacts = [];
+  await collectArtifacts(directory, directory, artifacts, excluded, 0);
+  artifacts.sort((left, right) => left.name.localeCompare(right.name));
 
-  if (files.length === 0) {
+  if (artifacts.length === 0) {
     throw new ValidationError('AXIOM Host H0 artifact directory is empty');
   }
-  if (files.length > MAX_ARTIFACTS) {
-    throw new ValidationError(`AXIOM Host H0 artifact directory exceeds ${MAX_ARTIFACTS} regular files`);
+  if (artifacts.length > MAX_ARTIFACTS) {
+    throw new ValidationError(`AXIOM Host H0 artifact directory exceeds ${MAX_ARTIFACTS} artifacts`);
   }
 
   const inventory = [];
-  for (const artifact of files) {
+  for (const artifact of artifacts) {
     const metadata = await lstat(artifact.path);
-    if (!metadata.isFile() || metadata.isSymbolicLink()) {
-      throw new ValidationError(`AXIOM Host H0 output artifact is not a regular file: ${artifact.name}`);
+    if (artifact.kind === 'file') {
+      if (!metadata.isFile() || metadata.isSymbolicLink()) {
+        throw new ValidationError(`AXIOM Host H0 output artifact is not a regular file: ${artifact.name}`);
+      }
+      inventory.push({
+        name: artifact.name,
+        bytes: metadata.size,
+        sha256: await hashFile(artifact.path)
+      });
+      continue;
+    }
+
+    if (!metadata.isSymbolicLink()) {
+      throw new ValidationError(`AXIOM Host H0 output artifact is not the expected symlink: ${artifact.name}`);
+    }
+    const linkTarget = await readlink(artifact.path, 'utf8');
+    const resolvedTarget = resolve(dirname(artifact.path), linkTarget);
+    if (
+      !validLinkTarget(linkTarget)
+      || !isWithin(directory, resolvedTarget)
+      || resolve(resolvedTarget) === resolve(artifact.path)
+    ) {
+      throw new ValidationError(`AXIOM Host H0 output symlink escapes or has an invalid target: ${artifact.name}`);
+    }
+    let targetMetadata;
+    try {
+      targetMetadata = await lstat(resolvedTarget);
+    } catch {
+      throw new ValidationError(`AXIOM Host H0 output symlink target is missing: ${artifact.name}`);
+    }
+    if (targetMetadata.isSymbolicLink() || (!targetMetadata.isFile() && !targetMetadata.isDirectory())) {
+      throw new ValidationError(`AXIOM Host H0 output symlink target has an unsupported type: ${artifact.name}`);
     }
     inventory.push({
       name: artifact.name,
-      bytes: metadata.size,
-      sha256: await hashFile(artifact.path)
+      bytes: Buffer.byteLength(linkTarget),
+      sha256: sha256(Buffer.from(linkTarget, 'utf8')),
+      link_target: linkTarget
     });
   }
 
@@ -58,8 +90,19 @@ export function verifyAxiomHostArtifactInventory(inventory) {
       || !Number.isSafeInteger(artifact.bytes)
       || artifact.bytes < 0
       || !SHA256.test(artifact.sha256 ?? '')
+      || (
+        artifact.link_target !== undefined
+        && (!validLinkTarget(artifact.link_target) || artifact.bytes !== Buffer.byteLength(artifact.link_target))
+      )
+      || Object.keys(artifact).some(key => !['name', 'bytes', 'sha256', 'link_target'].includes(key))
     ) {
       throw new ValidationError('AXIOM Host H0 artifact inventory contains an invalid entry');
+    }
+    if (artifact.link_target !== undefined) {
+      const expected = sha256(Buffer.from(artifact.link_target, 'utf8'));
+      if (expected !== artifact.sha256) {
+        throw new ValidationError(`AXIOM Host H0 symlink digest does not match its target: ${artifact.name}`);
+      }
     }
     if (names.has(artifact.name)) {
       throw new ValidationError(`AXIOM Host H0 artifact inventory repeats ${artifact.name}`);
@@ -86,7 +129,7 @@ export async function assertEmptyAxiomHostOutput(directory) {
   return true;
 }
 
-async function collectRegularFiles(root, directory, files, excluded, depth) {
+async function collectArtifacts(root, directory, artifacts, excluded, depth) {
   if (depth > MAX_DEPTH) {
     throw new ValidationError(`AXIOM Host H0 output nesting exceeds ${MAX_DEPTH} directories`);
   }
@@ -100,15 +143,18 @@ async function collectRegularFiles(root, directory, files, excluded, depth) {
       throw new ValidationError(`AXIOM Host H0 output contains unsupported artifact path ${relativeName}`);
     }
     if (entry.isDirectory()) {
-      await collectRegularFiles(root, path, files, excluded, depth + 1);
+      await collectArtifacts(root, path, artifacts, excluded, depth + 1);
       continue;
     }
-    if (!entry.isFile()) {
+    if (entry.isFile()) {
+      artifacts.push({ name: relativeName, path, kind: 'file' });
+    } else if (entry.isSymbolicLink()) {
+      artifacts.push({ name: relativeName, path, kind: 'symlink' });
+    } else {
       throw new ValidationError(`AXIOM Host H0 output contains unsupported non-file artifact ${relativeName}`);
     }
-    files.push({ name: relativeName, path });
-    if (files.length > MAX_ARTIFACTS) {
-      throw new ValidationError(`AXIOM Host H0 artifact directory exceeds ${MAX_ARTIFACTS} regular files`);
+    if (artifacts.length > MAX_ARTIFACTS) {
+      throw new ValidationError(`AXIOM Host H0 artifact directory exceeds ${MAX_ARTIFACTS} artifacts`);
     }
   }
 }
@@ -121,6 +167,19 @@ function validArtifactName(name) {
   return components.length >= 1
     && components.length <= MAX_DEPTH + 1
     && components.every(component => ARTIFACT_COMPONENT.test(component));
+}
+
+function validLinkTarget(target) {
+  return typeof target === 'string'
+    && LINK_TARGET.test(target)
+    && !isAbsolute(target)
+    && !target.includes('\\')
+    && !target.includes('//');
+}
+
+function isWithin(root, target) {
+  const rel = relative(resolve(root), resolve(target));
+  return rel === '' || (!isAbsolute(rel) && rel !== '..' && !rel.startsWith(`..${sep}`));
 }
 
 async function hashFile(path) {
