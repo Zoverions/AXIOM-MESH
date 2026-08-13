@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { realpath, readFile, stat } from 'node:fs/promises';
+import { lstat, realpath, readFile, stat } from 'node:fs/promises';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 
 import {
@@ -44,6 +44,7 @@ function safeGitEnvironment() {
   env.GIT_TERMINAL_PROMPT = '0';
   env.GIT_OPTIONAL_LOCKS = '0';
   env.GIT_NO_LAZY_FETCH = '1';
+  env.GIT_NO_REPLACE_OBJECTS = '1';
   return env;
 }
 
@@ -160,9 +161,25 @@ function ensureWithinRepository(repositoryPath, targetPath) {
   }
 }
 
-async function workflowDigest(repositoryPath, workflowPath) {
+async function workflowDigest(repositoryPath, workflowPath, testedRevision, options) {
   const absolute = resolve(repositoryPath, ...workflowPath.split('/'));
   ensureWithinRepository(repositoryPath, absolute);
+  let metadata;
+  try {
+    metadata = await lstat(absolute);
+  } catch {
+    throw new AxiomError(
+      'ci_checkout_workflow_unavailable',
+      'CI checkout workflow file is unavailable',
+      404
+    );
+  }
+  if (!metadata.isFile() || metadata.isSymbolicLink()) {
+    throw new ValidationError('CI checkout workflow must be a regular file, not a link');
+  }
+  if (metadata.size > MAX_GIT_OUTPUT_BYTES) {
+    throw new ValidationError('CI checkout workflow exceeds the configured byte ceiling');
+  }
   let bytes;
   try {
     bytes = await readFile(absolute);
@@ -171,6 +188,16 @@ async function workflowDigest(repositoryPath, workflowPath) {
       'ci_checkout_workflow_unavailable',
       'CI checkout workflow file is unavailable',
       404
+    );
+  }
+  const committedBytes = await executeGit(
+    repositoryPath,
+    ['cat-file', 'blob', `${testedRevision}:${workflowPath}`],
+    options
+  );
+  if (!bytes.equals(committedBytes)) {
+    throw new ValidationError(
+      'CI checkout workflow bytes do not match the exact tested revision'
     );
   }
   return {
@@ -276,7 +303,12 @@ export async function verifyCiCheckoutFreshness({
   const testedParents = parentsText
     ? parentsText.split(/\s+/).map(parent => oid(parent, objectFormat, 'tested parent revision'))
     : [];
-  const workflow = await workflowDigest(repositoryPath, workflowPath);
+  const workflow = await workflowDigest(
+    repositoryPath,
+    workflowPath,
+    testedRevision,
+    options
+  );
   const observedAt = new Date(observed_at);
   if (Number.isNaN(observedAt.valueOf())) {
     throw new ValidationError('observed_at must be an ISO timestamp');

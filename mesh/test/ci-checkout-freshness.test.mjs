@@ -198,10 +198,24 @@ test('workflow path is content-bound and constrained to governed workflow direct
     join(repo.directory, '.github', 'workflows', 'kernel.yml'),
     'name: Changed Kernel\n'
   );
+  await assert.rejects(
+    () => verifyCiCheckoutFreshness({
+      repository_path: repo.directory,
+      event_name: 'push',
+      event_revision: repo.merge,
+      workflow_path: '.github/workflows/kernel.yml',
+      observed_at: '2026-08-13T08:30:00.000Z'
+    }),
+    /workflow bytes do not match the exact tested revision/
+  );
+
+  git(repo.directory, ['add', '.github/workflows/kernel.yml']);
+  git(repo.directory, ['commit', '-m', 'change workflow']);
+  const changedRevision = git(repo.directory, ['rev-parse', 'HEAD']);
   const second = await verifyCiCheckoutFreshness({
     repository_path: repo.directory,
     event_name: 'push',
-    event_revision: repo.merge,
+    event_revision: changedRevision,
     workflow_path: '.github/workflows/kernel.yml',
     observed_at: '2026-08-13T08:30:00.000Z'
   });
@@ -216,6 +230,24 @@ test('workflow path is content-bound and constrained to governed workflow direct
       workflow_path: '../outside.yml'
     }),
     /workflow_path/
+  );
+});
+
+test('Git replacement refs cannot manufacture a pull-request parent relationship', async t => {
+  const repo = await repository(t);
+  git(repo.directory, ['checkout', 'feature']);
+  git(repo.directory, ['replace', '--graft', repo.head, repo.base, repo.base]);
+
+  await assert.rejects(
+    () => verifyCiCheckoutFreshness({
+      repository_path: repo.directory,
+      event_name: 'pull_request',
+      event_revision: repo.head,
+      proposal_head_revision: repo.base,
+      base_revision: repo.base,
+      workflow_path: '.github/workflows/kernel.yml'
+    }),
+    /exact two-parent merge candidate/
   );
 });
 
