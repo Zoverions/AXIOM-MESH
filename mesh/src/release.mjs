@@ -120,6 +120,7 @@ export async function verifyReleaseReadiness() {
     unitCompose: join(MESH_ROOT, 'compose.units.yml'),
     productionDocs: join(MESH_ROOT, 'PRODUCTION.md'),
     workflow: join(REPOSITORY_ROOT, '.github', 'workflows', 'kernel.yml'),
+    h1Workflow: join(REPOSITORY_ROOT, '.github', 'workflows', 'axiom-host-h1-appliance.yml'),
     windowsWorkflow: join(REPOSITORY_ROOT, '.github', 'workflows', 'windows.yml'),
     benchmarkWorkflow: join(
       REPOSITORY_ROOT,
@@ -156,6 +157,7 @@ export async function verifyReleaseReadiness() {
     unitCompose,
     productionDocs,
     workflow,
+    h1Workflow,
     windowsWorkflow,
     repositoryIgnore
   ] = await Promise.all([
@@ -185,6 +187,7 @@ export async function verifyReleaseReadiness() {
     readFile(paths.unitCompose, 'utf8'),
     readFile(paths.productionDocs, 'utf8'),
     readFile(paths.workflow, 'utf8'),
+    readFile(paths.h1Workflow, 'utf8'),
     readFile(paths.windowsWorkflow, 'utf8'),
     readFile(paths.repositoryIgnore, 'utf8')
   ]);
@@ -203,6 +206,7 @@ export async function verifyReleaseReadiness() {
   const resilienceDrill = validateResilienceDrillPolicy(
     resilienceDrillPolicy
   );
+  const h1Appliance = verifyAxiomHostH1Workflow(h1Workflow);
   const setup = validateSourceSetupState({
     policy: setupPolicy,
     nodeVersion: setupPolicy.runtime.ci_version,
@@ -311,6 +315,7 @@ export async function verifyReleaseReadiness() {
       workflow,
       repositoryIgnore
     }),
+    axiom_host_h1_appliance: h1Appliance,
     windows_compatibility: verifyWindowsWorkflow(windowsWorkflow),
     service_network_policy: {
       schema: serviceNetwork.schema,
@@ -341,6 +346,7 @@ export async function verifyReleaseReadiness() {
     .sort();
   const governedWorkflows = [
     'axiom-host-h0-probe.yml',
+    'axiom-host-h1-appliance.yml',
     'chain-verification-benchmark.yml',
     'kernel.yml',
     'windows.yml'
@@ -373,6 +379,7 @@ export async function verifyReleaseReadiness() {
     paths.unitCompose,
     paths.productionDocs,
     paths.workflow,
+    paths.h1Workflow,
     paths.windowsWorkflow,
     paths.benchmarkWorkflow,
     paths.repositoryIgnore,
@@ -443,6 +450,7 @@ export async function verifyReleaseReadiness() {
     incident_response: incidentResponse,
     telemetry_routing: telemetryRouting,
     resilience_drill: resilienceDrill,
+    axiom_host_h1_appliance: h1Appliance,
     setup,
     service_network: deployment.service_network_policy,
     gateway_client: gatewayClientEvidence,
@@ -466,6 +474,7 @@ export async function verifyReleaseReadiness() {
     service_network: deployment.service_network_policy,
     gateway_client: gatewayClientEvidence,
     axiom_one: axiomOne,
+    axiom_host_h1_appliance: h1Appliance,
     deployment,
     documentation,
     source_boundary: sourceBoundary,
@@ -510,6 +519,50 @@ export function verifyWindowsWorkflow(workflow) {
     node_version: '24.18.0',
     install_scripts_allowed: false,
     workflow_sha256: sha256(workflow)
+  };
+}
+
+export function verifyAxiomHostH1Workflow(workflow) {
+  if (typeof workflow !== 'string') {
+    throw new ValidationError('AXIOM Host H1 workflow is missing');
+  }
+  for (const required of [
+    'runs-on: ubuntu-24.04',
+    'permissions:',
+    'contents: read',
+    'persist-credentials: false',
+    'node-version: "24.18.0"',
+    'MKOSI_V26_COMMIT: 84af20892b61c8e177e391f997ded8b4cb5514f2',
+    'git archive --format=tar HEAD',
+    'AXIOM_HOST_SOURCE_TREE="$source_tree"',
+    'AXIOM_QEMU_ACCEL=kvm',
+    'AXIOM_QEMU_ACCEL=tcg',
+    'npm run host:h1:check',
+    '-net none',
+    'Corrupt protected hash metadata and prove fail-closed behavior'
+  ]) {
+    if (!workflow.includes(required)) {
+      throw new ValidationError(`AXIOM Host H1 workflow is missing: ${required}`);
+    }
+  }
+  const actionReferences = [...workflow.matchAll(/^\s*-\s+uses:\s+([^\s#]+)/gm)]
+    .map(match => match[1]);
+  if (
+    actionReferences.length === 0
+    || actionReferences.some(reference => !/@[a-f0-9]{40}$/.test(reference))
+    || workflow.includes('runs-on: ubuntu-latest')
+  ) {
+    throw new ValidationError(
+      'AXIOM Host H1 workflow contains a mutable action or runner reference'
+    );
+  }
+  return {
+    status: 'laboratory-only',
+    runner: 'ubuntu-24.04',
+    node_version: '24.18.0',
+    mkosi_revision: '84af20892b61c8e177e391f997ded8b4cb5514f2',
+    workflow_sha256: sha256(workflow),
+    production_promoted: false
   };
 }
 

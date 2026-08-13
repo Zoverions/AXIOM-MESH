@@ -68,6 +68,12 @@ jobs:
           command -v qemu-system-x86_64
           test -f /usr/share/OVMF/OVMF_CODE_4M.fd
           test -f /usr/share/OVMF/OVMF_VARS_4M.fd
+          if [[ -c /dev/kvm ]]; then
+            sudo chmod 0666 /dev/kvm
+            printf '%s\n' 'AXIOM_QEMU_ACCEL=kvm' 'AXIOM_QEMU_CPU=host' >> "$GITHUB_ENV"
+          else
+            printf '%s\n' 'AXIOM_QEMU_ACCEL=tcg' 'AXIOM_QEMU_CPU=max' >> "$GITHUB_ENV"
+          fi
 
       - name: Build the H1 disk appliance
         shell: bash
@@ -121,9 +127,9 @@ jobs:
           vars="$RUNNER_TEMP/axiom-host-h1-initial-vars.fd"
           cp --reflink=auto "$H1_RAW_IMAGE" "$disk"
           cp /usr/share/OVMF/OVMF_VARS_4M.fd "$vars"
-          timeout --signal=TERM --kill-after=30s 8m \
+          timeout --signal=TERM --kill-after=30s 22m \
             qemu-system-x86_64 \
-              -machine q35,accel=tcg -cpu max -smp 2 -m 3072 \
+              -machine "q35,accel=$AXIOM_QEMU_ACCEL" -cpu "$AXIOM_QEMU_CPU" -smp 2 -m 3072 \
               -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd \
               -drive if=pflash,format=raw,file="$vars" \
               -drive if=virtio,format=raw,file="$disk" \
@@ -180,9 +186,9 @@ jobs:
           node mesh/src/axiom-host-h1-disk.mjs import "$state_image" "$replacement" var \
             > "$RUNNER_TEMP/axiom-host-h1-evidence/replacement-state-import.json"
           cp /usr/share/OVMF/OVMF_VARS_4M.fd "$vars"
-          timeout --signal=TERM --kill-after=30s 8m \
+          timeout --signal=TERM --kill-after=30s 22m \
             qemu-system-x86_64 \
-              -machine q35,accel=tcg -cpu max -smp 2 -m 3072 \
+              -machine "q35,accel=$AXIOM_QEMU_ACCEL" -cpu "$AXIOM_QEMU_CPU" -smp 2 -m 3072 \
               -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd \
               -drive if=pflash,format=raw,file="$vars" \
               -drive if=virtio,format=raw,file="$replacement" \
@@ -240,7 +246,7 @@ jobs:
           set +e
           timeout --signal=TERM --kill-after=30s 180s \
             qemu-system-x86_64 \
-              -machine q35,accel=tcg -cpu max -smp 2 -m 3072 \
+              -machine "q35,accel=$AXIOM_QEMU_ACCEL" -cpu "$AXIOM_QEMU_CPU" -smp 2 -m 3072 \
               -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd \
               -drive if=pflash,format=raw,file="$vars" \
               -drive if=virtio,format=raw,file="$corrupt" \
@@ -300,6 +306,7 @@ jobs:
             --arg revision "$source_revision" \
             --arg tree "$source_tree" \
             --arg raw_sha256 "$raw_sha" \
+            --arg qemu_accelerator "$AXIOM_QEMU_ACCEL" \
             --arg run_id "$GITHUB_RUN_ID" \
             --arg run_attempt "$GITHUB_RUN_ATTEMPT" \
             --slurpfile replacement "$evidence/image-replacement.json" \
@@ -310,7 +317,7 @@ jobs:
               issue:1053,
               source:{revision:$revision,tree:$tree},
               image:{version:"0.2.0-h1",sha256:$raw_sha256,firmware:"uefi",boot_manager:"systemd-boot",boot_artifact:"unsigned-uki",root:"read-only-ext4-dm-verity",durable_state:"separate-ext4-var"},
-              verification:{clean_boot:true,setup_check_in_guest:true,full_check_in_guest:true,root_mutation_blocked:true,protected_partitions_unchanged:true,state_replacement:$replacement[0],corruption_fail_closed:$corruption[0],credential_scan_passed:$secret_scan[0].passed},
+              verification:{qemu_accelerator:$qemu_accelerator,clean_boot:true,setup_check_in_guest:true,full_check_in_guest:true,root_mutation_blocked:true,protected_partitions_unchanged:true,state_replacement:$replacement[0],corruption_fail_closed:$corruption[0],credential_scan_passed:$secret_scan[0].passed},
               authority:{normal_effect_path:"Gateway -> Hypervisor -> Sandbox -> Grid",host_grants_mesh_authority:false,host_grants_node_admission:false,host_grants_execution_authority:false},
               non_claims:{secure_boot:false,measured_boot:false,remote_attestation:false,encrypted_mutable_state:false,production_ready:false},
               github:{run_id:$run_id,run_attempt:$run_attempt}

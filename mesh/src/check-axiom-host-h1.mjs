@@ -160,6 +160,7 @@ export async function verifyAxiomHostH1Configuration(urls = FILES) {
     'WorkingDirectory=/usr/lib/axiom-mesh',
     'AXIOM_DATA_DIR=/var/lib/axiom-host/data',
     'ExecStart=/usr/bin/node /usr/libexec/axiom-host-h1-check.mjs',
+    'TimeoutStartSec=20min',
     'WantedBy=multi-user.target'
   ]) {
     requireValue(source.unit.includes(required), `H1 systemd unit is missing ${required}`);

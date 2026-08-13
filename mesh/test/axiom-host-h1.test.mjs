@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import test from 'node:test';
 import { verifyAxiomHostH1Configuration } from '../src/check-axiom-host-h1.mjs';
+import { verifyAxiomHostH1Workflow } from '../src/release.mjs';
 
 test('AXIOM Host H1 appliance contract is immutable-root, state-separated, and non-promoting', async () => {
   const result = await verifyAxiomHostH1Configuration();
@@ -39,6 +40,26 @@ test('AXIOM Host H1 rejects a mutable root and authority promotion', async () =>
       /authority.host_grants_mesh_authority must equal false/
     );
   });
+});
+
+test('AXIOM Host H1 workflow is immutable and release-governed', async () => {
+  const workflow = await readFile(
+    new URL('../../.github/workflows/axiom-host-h1-appliance.yml', import.meta.url),
+    'utf8'
+  );
+  const result = verifyAxiomHostH1Workflow(workflow);
+  assert.equal(result.status, 'laboratory-only');
+  assert.equal(result.production_promoted, false);
+  assert.match(result.workflow_sha256, /^[a-f0-9]{64}$/);
+  assert.throws(
+    () => verifyAxiomHostH1Workflow(
+      workflow.replace(
+        'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
+        'actions/checkout@v7'
+      )
+    ),
+    /mutable action or runner reference/
+  );
 });
 
 async function withFixture(callback) {
