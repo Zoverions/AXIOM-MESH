@@ -29,10 +29,12 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/PROJECT-STATUS-2026.md',
   'docs/REPOSITORY-MIGRATION.md',
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md',
+  'docs/architecture/AXIOM-HOST-OPERATING-ENVIRONMENT.md',
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md',
   'docs/architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md',
   'docs/architecture/contracts/agent-runtime-capsule.v1.schema.json',
   'docs/architecture/contracts/agent-runtime-adapter.v1.schema.json',
+  'docs/architecture/contracts/axiom-host-profile.v1.schema.json',
   'docs/architecture/contracts/compute-node-profile.v1.schema.json',
   'docs/architecture/contracts/local-trust-envelope.v1.schema.json',
   'docs/architecture/contracts/personal-agent-pack.v1.schema.json',
@@ -135,6 +137,14 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Current non-claims',
     '4954c3d1a49ea57fb0bf5a7eea29140b852e8b5fa2bb11634665f004aca2c19c'
   ],
+  'docs/architecture/AXIOM-HOST-OPERATING-ENVIRONMENT.md': [
+    '## Purpose and boundary',
+    '## Boot and root-of-trust model',
+    '## Update, rollback, and recovery',
+    '## Host profile contract',
+    '## Reference build stages',
+    '## Promotion gates and non-claims'
+  ],
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md': [
     '## Purpose and status',
     '## Non-bypassable architecture',
@@ -155,6 +165,13 @@ const REQUIRED_CONTENT = Object.freeze({
     'grant_signature_algorithm',
     'authorization_recheck_before_effect',
     'raw_chain_of_thought_required'
+  ],
+  'docs/architecture/contracts/axiom-host-profile.v1.schema.json': [
+    'https://axiom.invalid/schemas/axiom-host-profile.v1.schema.json',
+    'axiom-host-profile.v1',
+    'production_credentials_embedded',
+    'cross_owner_private_dedupe',
+    'grants_mesh_capability'
   ],
   'docs/architecture/contracts/compute-node-profile.v1.schema.json': [
     'https://axiom.invalid/schemas/compute-node-profile.v1.schema.json',
@@ -437,7 +454,6 @@ export async function verifyCanonicalDocumentation(repositoryRoot = dirname(MESH
       }
     }
   }
-
   if (normalize(contents.get('SECURITY.md')) !== normalize(contents.get('.github/SECURITY.md'))) {
     throw new ValidationError('Root and GitHub security policies have drifted');
   }
