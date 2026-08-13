@@ -2,8 +2,8 @@
 
 import { createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
-import { access, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
-import { dirname, relative, resolve, sep } from 'node:path';
+import { access, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 import { ValidationError } from './lib/canonical.mjs';
@@ -21,6 +21,7 @@ export const HOST_LAB_BUILD_SCHEMA = 'axiom-host-h0-build-evidence.v1';
 const REPOSITORY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const HOST_DIRECTORY = resolve(REPOSITORY_ROOT, 'host');
 const OUTPUT_DIRECTORY = resolve(HOST_DIRECTORY, 'mkosi.output');
+const PRIVATE_DIRECTORY = resolve(HOST_DIRECTORY, '.mkosi-private');
 const FORBIDDEN_LOCAL_INPUTS = Object.freeze([
   'mkosi.key',
   'mkosi.crt',
@@ -39,8 +40,6 @@ const SAFE_ENVIRONMENT_KEYS = Object.freeze([
   'TMPDIR',
   'TMP',
   'TEMP',
-  'XDG_CACHE_HOME',
-  'XDG_RUNTIME_DIR',
   'LANG',
   'LC_ALL',
   'TERM'
@@ -102,6 +101,7 @@ export async function createAxiomHostLabPlan({ repositoryRoot = REPOSITORY_ROOT 
       builder: 'mkosi',
       builder_minimum_version: staticVerification.builder_minimum_version,
       build_environment_sanitized: true,
+      builder_home_isolated: true,
       production_credentials_forwarded: false,
       network_profile: staticVerification.network,
       virtual_tpm: staticVerification.virtual_tpm
@@ -129,125 +129,149 @@ export async function runAxiomHostLab({ action = 'summary', acknowledgement = ''
   }
 
   const plan = await createAxiomHostLabPlan();
-  const environment = laboratoryEnvironment(plan.source.source_date_epoch);
-  const mkosiVersion = (await execProgram('mkosi', ['--version'], {
-    cwd: HOST_DIRECTORY,
-    env: environment
-  })).trim();
+  await mkdir(PRIVATE_DIRECTORY, { recursive: true, mode: 0o700 });
+  const privateHome = await mkdtemp(join(PRIVATE_DIRECTORY, 'run-'));
+  await Promise.all([
+    mkdir(join(privateHome, 'config'), { recursive: true, mode: 0o700 }),
+    mkdir(join(privateHome, 'cache'), { recursive: true, mode: 0o700 }),
+    mkdir(join(privateHome, 'runtime'), { recursive: true, mode: 0o700 })
+  ]);
+  const environment = laboratoryEnvironment(
+    plan.source.source_date_epoch,
+    process.env,
+    { privateHome }
+  );
 
-  if (action === 'snapshot') {
-    if (plan.configuration.snapshot_locked) {
-      throw new ValidationError('AXIOM Host snapshot discovery is disabled after a snapshot has been committed');
+  try {
+    const mkosiVersion = (await execProgram('mkosi', ['--version'], {
+      cwd: HOST_DIRECTORY,
+      env: environment
+    })).trim();
+
+    if (action === 'snapshot') {
+      if (plan.configuration.snapshot_locked) {
+        throw new ValidationError('AXIOM Host snapshot discovery is disabled after a snapshot has been committed');
+      }
+      const candidateText = await execProgram('mkosi', ['--directory', HOST_DIRECTORY, 'latest-snapshot'], {
+        cwd: REPOSITORY_ROOT,
+        env: environment,
+        maxBuffer: 4 * 1024 * 1024
+      });
+      const candidate = normalizeSnapshotLock(candidateText);
+      if (candidate === HOST_LAB_SNAPSHOT_UNRESOLVED) {
+        throw new ValidationError('mkosi latest-snapshot did not resolve a concrete Fedora snapshot');
+      }
+      return {
+        ...plan,
+        builder_observation: {
+          mkosi_version: mkosiVersion,
+          latest_snapshot_candidate: candidate,
+          snapshot_committed: false,
+          image_built: false
+        },
+        next_action: 'Review the candidate, commit it to host/mkosi.snapshot, and add the exact same Snapshot= value under [Distribution] in host/mkosi.conf.'
+      };
     }
-    const candidateText = await execProgram('mkosi', ['--directory', HOST_DIRECTORY, 'latest-snapshot'], {
+
+    await execProgram('mkosi', ['--directory', HOST_DIRECTORY, 'summary'], {
       cwd: REPOSITORY_ROOT,
       env: environment,
-      maxBuffer: 4 * 1024 * 1024
+      maxBuffer: 16 * 1024 * 1024
     });
-    const candidate = normalizeSnapshotLock(candidateText);
-    if (candidate === HOST_LAB_SNAPSHOT_UNRESOLVED) {
-      throw new ValidationError('mkosi latest-snapshot did not resolve a concrete Fedora snapshot');
+
+    if (action === 'summary') {
+      return {
+        ...plan,
+        builder_observation: {
+          mkosi_version: mkosiVersion,
+          summary_validated: true,
+          image_built: false
+        }
+      };
     }
-    return {
-      ...plan,
-      builder_observation: {
-        mkosi_version: mkosiVersion,
-        latest_snapshot_candidate: candidate,
-        snapshot_committed: false,
-        image_built: false
-      },
-      next_action: 'Review the candidate, commit it to host/mkosi.snapshot, and add the exact same Snapshot= value under [Distribution] in host/mkosi.conf.'
-    };
-  }
 
-  await execProgram('mkosi', ['--directory', HOST_DIRECTORY, 'summary'], {
-    cwd: REPOSITORY_ROOT,
-    env: environment,
-    maxBuffer: 16 * 1024 * 1024
-  });
+    if (!plan.configuration.snapshot_locked) {
+      throw new ValidationError(
+        'AXIOM Host H0 build is blocked until host/mkosi.snapshot and [Distribution] Snapshot are pinned to the same reviewed snapshot'
+      );
+    }
 
-  if (action === 'summary') {
-    return {
-      ...plan,
+    await mkdir(OUTPUT_DIRECTORY, { recursive: true });
+    await execProgram('mkosi', ['--directory', HOST_DIRECTORY, 'build'], {
+      cwd: REPOSITORY_ROOT,
+      env: environment,
+      maxBuffer: 32 * 1024 * 1024
+    });
+
+    const outputFiles = (await readdir(OUTPUT_DIRECTORY, { withFileTypes: true }))
+      .filter(entry => entry.isFile())
+      .map(entry => entry.name)
+      .sort();
+    if (outputFiles.length === 0) {
+      throw new ValidationError('AXIOM Host laboratory build produced no files in the declared output directory');
+    }
+
+    const evidence = {
+      schema: HOST_LAB_BUILD_SCHEMA,
+      status: 'built-not-promoted',
+      generated_at: new Date().toISOString(),
+      source: plan.source,
+      configuration: plan.configuration,
       builder_observation: {
         mkosi_version: mkosiVersion,
         summary_validated: true,
-        image_built: false
-      }
+        image_built: true,
+        output_files: outputFiles
+      },
+      controls: {
+        linux_host_required: true,
+        explicit_non_production_acknowledgement: true,
+        clean_git_worktree_required: true,
+        exact_commit_bound: true,
+        source_date_epoch_from_commit: true,
+        package_snapshot_locked: true,
+        build_environment_sanitized: true,
+        builder_home_isolated: true,
+        implicit_mkosi_secret_files_rejected: true,
+        production_credentials_forwarded: false,
+        capability_registry_changed: false,
+        production_policy_changed: false,
+        node_admission_changed: false,
+        scheduler_authority_changed: false,
+        remote_execution_promoted: false,
+        production_host_profile_promoted: false
+      },
+      limitations: [
+        'A successful image build is laboratory evidence only and does not establish production readiness.',
+        'H0 does not claim Secure Boot, measured boot, remote attestation, dm-verity, encrypted mutable state, or H1 isolation properties.',
+        'Reproducibility requires a second independent clean build and comparison; this evidence records only one build.',
+        'The build output inventory records file names, while mkosi-generated checksums remain the artifact-integrity source for this stage.'
+      ]
     };
-  }
 
-  if (!plan.configuration.snapshot_locked) {
-    throw new ValidationError(
-      'AXIOM Host H0 build is blocked until host/mkosi.snapshot and [Distribution] Snapshot are pinned to the same reviewed snapshot'
+    await writeFile(
+      resolve(OUTPUT_DIRECTORY, 'axiom-host-h0-build-evidence.json'),
+      `${JSON.stringify(evidence, null, 2)}\n`,
+      { mode: 0o600 }
     );
+    return evidence;
+  } finally {
+    await rm(privateHome, { recursive: true, force: true });
   }
-
-  await mkdir(OUTPUT_DIRECTORY, { recursive: true });
-  await execProgram('mkosi', ['--directory', HOST_DIRECTORY, 'build'], {
-    cwd: REPOSITORY_ROOT,
-    env: environment,
-    maxBuffer: 32 * 1024 * 1024
-  });
-
-  const outputFiles = (await readdir(OUTPUT_DIRECTORY, { withFileTypes: true }))
-    .filter(entry => entry.isFile())
-    .map(entry => entry.name)
-    .sort();
-  if (outputFiles.length === 0) {
-    throw new ValidationError('AXIOM Host laboratory build produced no files in the declared output directory');
-  }
-
-  const evidence = {
-    schema: HOST_LAB_BUILD_SCHEMA,
-    status: 'built-not-promoted',
-    generated_at: new Date().toISOString(),
-    source: plan.source,
-    configuration: plan.configuration,
-    builder_observation: {
-      mkosi_version: mkosiVersion,
-      summary_validated: true,
-      image_built: true,
-      output_files: outputFiles
-    },
-    controls: {
-      linux_host_required: true,
-      explicit_non_production_acknowledgement: true,
-      clean_git_worktree_required: true,
-      exact_commit_bound: true,
-      source_date_epoch_from_commit: true,
-      package_snapshot_locked: true,
-      build_environment_sanitized: true,
-      implicit_mkosi_secret_files_rejected: true,
-      production_credentials_forwarded: false,
-      capability_registry_changed: false,
-      production_policy_changed: false,
-      node_admission_changed: false,
-      scheduler_authority_changed: false,
-      remote_execution_promoted: false,
-      production_host_profile_promoted: false
-    },
-    limitations: [
-      'A successful image build is laboratory evidence only and does not establish production readiness.',
-      'H0 does not claim Secure Boot, measured boot, remote attestation, dm-verity, encrypted mutable state, or H1 isolation properties.',
-      'Reproducibility requires a second independent clean build and comparison; this evidence records only one build.',
-      'The build output inventory records file names, while mkosi-generated checksums remain the artifact-integrity source for this stage.'
-    ]
-  };
-
-  await writeFile(
-    resolve(OUTPUT_DIRECTORY, 'axiom-host-h0-build-evidence.json'),
-    `${JSON.stringify(evidence, null, 2)}\n`,
-    { mode: 0o600 }
-  );
-  return evidence;
 }
 
-export function laboratoryEnvironment(sourceDateEpoch, source = process.env) {
+export function laboratoryEnvironment(sourceDateEpoch, source = process.env, { privateHome } = {}) {
   const environment = {};
   for (const key of SAFE_ENVIRONMENT_KEYS) {
     const current = source[key];
     if (typeof current === 'string' && current.length > 0) environment[key] = current;
+  }
+  if (privateHome) {
+    const home = resolve(privateHome);
+    environment.HOME = home;
+    environment.XDG_CONFIG_HOME = join(home, 'config');
+    environment.XDG_CACHE_HOME = join(home, 'cache');
+    environment.XDG_RUNTIME_DIR = join(home, 'runtime');
   }
   environment.SOURCE_DATE_EPOCH = String(sourceDateEpoch);
   environment.AXIOM_HOST_LAB = '1';
