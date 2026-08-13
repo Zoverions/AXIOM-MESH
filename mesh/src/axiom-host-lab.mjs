@@ -3,6 +3,7 @@
 import { createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
@@ -107,6 +108,7 @@ export async function createAxiomHostLabPlan({ repositoryRoot = REPOSITORY_ROOT 
       builder_minimum_version: staticVerification.builder_minimum_version,
       build_environment_sanitized: true,
       builder_home_isolated: true,
+      builder_workspace_outside_source_tree: true,
       production_credentials_forwarded: false,
       network_profile: staticVerification.network,
       virtual_tpm: staticVerification.virtual_tpm
@@ -135,7 +137,7 @@ export async function runAxiomHostLab({ action = 'summary', acknowledgement = ''
 
   const plan = await createAxiomHostLabPlan();
   await mkdir(PRIVATE_DIRECTORY, { recursive: true, mode: 0o700 });
-  const privateHome = await mkdtemp(join(PRIVATE_DIRECTORY, 'run-'));
+  const privateHome = await mkdtemp(join(tmpdir(), 'axiom-host-lab-'));
   await Promise.all([
     mkdir(join(privateHome, 'config'), { recursive: true, mode: 0o700 }),
     mkdir(join(privateHome, 'cache'), { recursive: true, mode: 0o700 }),
@@ -239,6 +241,7 @@ export async function runAxiomHostLab({ action = 'summary', acknowledgement = ''
         artifact_bytes_hashed: true,
         build_environment_sanitized: true,
         builder_home_isolated: true,
+        builder_workspace_outside_source_tree: true,
         implicit_mkosi_secret_files_rejected: true,
         production_credentials_forwarded: false,
         capability_registry_changed: false,
