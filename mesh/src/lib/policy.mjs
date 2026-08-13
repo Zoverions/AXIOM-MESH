@@ -22,6 +22,12 @@ const ALLOW_RULE_FIELDS = new Set([
   'tool',
   'effect'
 ]);
+const DENY_RULE_FIELDS = new Set([
+  ...ALLOW_RULE_FIELDS,
+  'code',
+  'http_status',
+  'reason'
+]);
 
 export async function loadPolicy(path) {
   const policy = JSON.parse(await readFile(path, 'utf8'));
@@ -59,6 +65,9 @@ export function validatePolicy(policy) {
     if (PROTOTYPE_KEYS.has(action)) {
       throw new ValidationError(`Policy action uses a reserved prototype identifier: ${action}`);
     }
+    if (!rule || typeof rule !== 'object' || Array.isArray(rule)) {
+      throw new ValidationError(`Invalid policy rule for ${action}`);
+    }
     if (!['allow', 'deny'].includes(rule.decision)) throw new ValidationError(`Invalid decision for ${action}`);
     if (!Object.hasOwn(RISK_ORDER, rule.risk)) throw new ValidationError(`Invalid risk for ${action}`);
     if (
@@ -66,6 +75,14 @@ export function validatePolicy(policy) {
       && (!Number.isSafeInteger(rule.http_status) || rule.http_status < 400 || rule.http_status > 599)
     ) {
       throw new ValidationError(`Invalid HTTP status for ${action}`);
+    }
+    if (
+      rule.required_confirmations !== undefined
+      && (!Number.isSafeInteger(rule.required_confirmations)
+        || rule.required_confirmations < 0
+        || rule.required_confirmations > 16)
+    ) {
+      throw new ValidationError(`Invalid required confirmations for ${action}`);
     }
     if (
       rule.required_confirmation_values !== undefined
@@ -107,6 +124,56 @@ export function validateAuthorityReducingPolicy(policy) {
     throw new ValidationError(`Policy overlays cannot block recovery action: ${blockedRecovery.join(', ')}`);
   }
   return policy;
+}
+
+export function createOverlayPolicyResolver(basePolicy) {
+  if (!(basePolicy instanceof PolicyEngine)) {
+    throw new ValidationError('Overlay policy resolver requires a validated base PolicyEngine');
+  }
+  let cachedKey = null;
+  let cachedPolicy = null;
+
+  return overlays => {
+    if (!Array.isArray(overlays)) {
+      throw new ValidationError('Policy overlays must be an array');
+    }
+    if (!overlays.length) return basePolicy;
+
+    const measured = overlays.map((overlay, index) => {
+      if (!overlay || typeof overlay !== 'object' || Array.isArray(overlay)) {
+        throw new ValidationError(`Policy overlay ${index} is invalid`);
+      }
+      const policy = validateAuthorityReducingPolicy(overlay.policy_json);
+      const digest = digestObject(policy);
+      if (overlay.policy_digest !== undefined && overlay.policy_digest !== digest) {
+        throw new ValidationError(`Policy overlay ${index} digest does not match measured policy bytes`);
+      }
+      return {
+        policy,
+        layer: {
+          order: basePolicy.layers.length + index,
+          version: policy.version,
+          digest
+        }
+      };
+    });
+
+    const key = digestObject(measured.map(item => item.layer));
+    if (cachedPolicy && cachedKey === key) return cachedPolicy;
+
+    const merged = mergeDenyDominantPolicy([
+      basePolicy.policy,
+      ...measured.map(item => item.policy)
+    ]);
+    cachedPolicy = new PolicyEngine(merged, {
+      layers: [
+        ...basePolicy.layers,
+        ...measured.map(item => item.layer)
+      ]
+    });
+    cachedKey = key;
+    return cachedPolicy;
+  };
 }
 
 function hasScope(scopes, required) {
@@ -166,7 +233,14 @@ export class PolicyEngine {
         policy_layers: this.layers
       };
     }
-    const requiredConfirmations = Number(rule.required_confirmations ?? 0);
+    const requiredConfirmations = rule.required_confirmations ?? 0;
+    if (
+      !Number.isSafeInteger(requiredConfirmations)
+      || requiredConfirmations < 0
+      || requiredConfirmations > 16
+    ) {
+      throw new ValidationError(`Invalid required confirmations for ${action}`);
+    }
     const confirmations = Array.isArray(intent.confirmations)
       ? [...new Set(intent.confirmations.filter(value => typeof value === 'string'))]
       : [];
@@ -211,6 +285,7 @@ export function mergeDenyDominantPolicy(layers) {
   for (const layer of valid.slice(1)) {
     versions.push(layer.version);
     for (const [action, incoming] of Object.entries(layer.actions ?? {})) {
+      assertMergeRuleFields(incoming, action);
       const current = Object.hasOwn(result.actions, action)
         ? result.actions[action]
         : null;
@@ -226,13 +301,6 @@ export function mergeDenyDominantPolicy(layers) {
           risk: RISK_ORDER[current.risk] >= RISK_ORDER[incoming.risk] ? current.risk : incoming.risk
         };
         continue;
-      }
-      const unsupportedFields = Object.keys(incoming)
-        .filter(field => !ALLOW_RULE_FIELDS.has(field));
-      if (unsupportedFields.length) {
-        throw new ValidationError(
-          `Policy layer contains unsupported allow fields for ${action}: ${unsupportedFields.join(', ')}`
-        );
       }
       if (current.tool !== incoming.tool && incoming.tool !== undefined) {
         throw new ValidationError(`Policy layer cannot replace the tool for ${action}`);
@@ -250,8 +318,8 @@ export function mergeDenyDominantPolicy(layers) {
         risk: RISK_ORDER[current.risk] >= RISK_ORDER[incoming.risk] ? current.risk : incoming.risk,
         required_scopes: [...new Set([...currentScopes, ...incomingScopes])].sort(),
         required_confirmations: Math.max(
-          Number(current.required_confirmations ?? 0),
-          Number(incoming.required_confirmations ?? 0)
+          current.required_confirmations ?? 0,
+          incoming.required_confirmations ?? 0
         ),
         required_confirmation_values: [...new Set([...currentValues, ...incomingValues])].sort(),
         requires_independent_approval:
@@ -275,6 +343,16 @@ export function mergeDenyDominantPolicy(layers) {
   return result;
 }
 
+function assertMergeRuleFields(rule, action) {
+  const allowed = rule.decision === 'deny' ? DENY_RULE_FIELDS : ALLOW_RULE_FIELDS;
+  const unsupportedFields = Object.keys(rule).filter(field => !allowed.has(field));
+  if (unsupportedFields.length) {
+    throw new ValidationError(
+      `Policy layer contains unsupported ${rule.decision} fields for ${action}: ${unsupportedFields.join(', ')}`
+    );
+  }
+}
+
 function mergeConstraints(current, incoming, action) {
   const result = structuredClone(current);
   for (const [key, value] of Object.entries(incoming)) {
@@ -286,7 +364,15 @@ function mergeConstraints(current, incoming, action) {
     if (typeof existing === 'boolean' && typeof value === 'boolean') {
       result[key] = existing && value;
     } else if (Number.isFinite(existing) && Number.isFinite(value)) {
-      result[key] = Math.min(existing, value);
+      if (/^(?:max_|maximum_)/.test(key) || /_(?:max|maximum)$/.test(key)) {
+        result[key] = Math.min(existing, value);
+      } else if (/^(?:min_|minimum_)/.test(key) || /_(?:min|minimum)$/.test(key)) {
+        result[key] = Math.max(existing, value);
+      } else {
+        throw new ValidationError(
+          `Numeric policy constraint direction is undeclared for ${action}.${key}`
+        );
+      }
     } else if (Array.isArray(existing) && Array.isArray(value)) {
       const allowed = new Set(value.map(item => JSON.stringify(item)));
       result[key] = existing.filter(item => allowed.has(JSON.stringify(item)));
