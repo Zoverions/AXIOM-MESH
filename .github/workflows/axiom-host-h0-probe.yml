@@ -23,7 +23,7 @@ concurrency:
 jobs:
   mkosi-summary:
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 30
     env:
       AXIOM_HOST_LAB_ACK: I_UNDERSTAND_THIS_IS_NON_PRODUCTION
       MKOSI_V26_COMMIT: 84af20892b61c8e177e391f997ded8b4cb5514f2
@@ -116,6 +116,22 @@ jobs:
             "$GITHUB_SHA" "$MKOSI_V26_COMMIT" "$pinned" "$repomd_sha256" "$LATEST_OUTCOME" "$current" "$same_as_latest" \
             > "$RUNNER_TEMP/axiom-host-h0-package-source-probe.json"
 
+      - name: Install exact mkosi host dependencies for H0 build
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkosi dependencies > "$RUNNER_TEMP/mkosi-dependencies.txt"
+          test -s "$RUNNER_TEMP/mkosi-dependencies.txt"
+          sudo apt-get update
+          xargs -r -d '\n' sudo apt-get install -y --no-install-recommends < "$RUNNER_TEMP/mkosi-dependencies.txt"
+
+      - name: Build first content-addressed AXIOM Host H0 image
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run host:lab:build | tee "$RUNNER_TEMP/axiom-host-h0-build-command.json"
+          test -s host/mkosi.output/axiom-host-h0-build-evidence.json
+
       - name: Upload H0 package-source probe evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -128,5 +144,18 @@ jobs:
             ${{ runner.temp }}/fedora-rawhide-pinned-repomd.sha256
             ${{ runner.temp }}/fedora-rawhide-current-compose-id.txt
             ${{ runner.temp }}/fedora-rawhide-current-snapshot.txt
+            ${{ runner.temp }}/mkosi-version.txt
+            ${{ runner.temp }}/mkosi-dependencies.txt
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Upload first H0 build evidence and artifacts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: axiom-host-h0-first-build-${{ github.sha }}
+          path: |
+            host/mkosi.output/**
+            ${{ runner.temp }}/axiom-host-h0-build-command.json
+          if-no-files-found: warn
+          retention-days: 7
