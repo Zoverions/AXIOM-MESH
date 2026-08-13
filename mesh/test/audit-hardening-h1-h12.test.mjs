@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import { generateKeyPairSync } from 'node:crypto';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import http from 'node:http';
 import { once } from 'node:events';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import test from 'node:test';
 
-import { digestObject, ValidationError } from '../src/lib/canonical.mjs';
+import { digestObject, sha256, ValidationError } from '../src/lib/canonical.mjs';
 import { MeshIdentity, ReplayGuard } from '../src/lib/identity.mjs';
 import {
   Router,
@@ -20,6 +20,7 @@ import {
   mergeDenyDominantPolicy,
   validatePolicy
 } from '../src/lib/policy.mjs';
+import { GridStore as CheckpointGridStore } from '../src/grid/_store-checkpoints.mjs';
 
 function allowRule(overrides = {}) {
   return {
@@ -168,6 +169,30 @@ test('H-7 numeric policy constraints require an explicit monotonic direction', (
   ]), /direction is undeclared/i);
 });
 
+test('H-8 Gateway collection and discovery integers use the canonical bounded validator', async () => {
+  const source = await readFile(new URL('../src/gateway/server.mjs', import.meta.url), 'utf8');
+  for (const marker of [
+    "label: 'node discovery minimum_security_level'",
+    "label: 'node discovery minimum_lease_seconds'",
+    "label: 'node discovery limit'",
+    "label: 'node schedules limit'",
+    "label: 'approvals limit'",
+    "label: 'memory limit'",
+    "label: 'backups limit'"
+  ]) {
+    assert.equal(source.includes(marker), true, `missing canonical validation marker: ${marker}`);
+  }
+  for (const retired of [
+    'Approval limit must be an integer between 1 and 100',
+    'Memory limit must be an integer between 1 and 500',
+    'Backup limit must be an integer between 1 and 100',
+    'Node schedule limit must be an integer between 1 and 100'
+  ]) {
+    assert.equal(source.includes(retired), false, `retired ad-hoc validator remains: ${retired}`);
+  }
+  assert.match(source, /\^\(0\|\[1-9\]\[0-9\]\*\)\$/);
+});
+
 test('H-9 service key IDs are stable across equivalent SPKI PEM text formatting', () => {
   const pair = generateKeyPairSync('ed25519');
   const privatePem = pair.privateKey.export({ type: 'pkcs8', format: 'pem' });
@@ -179,6 +204,68 @@ test('H-9 service key IDs are stable across equivalent SPKI PEM text formatting'
     publicPem.replaceAll('\n', '\r\n')
   );
   assert.equal(reformatted.keyId, canonical.keyId);
+});
+
+test('H-10 export reads ignore stored bundle paths and verify signed manifest bytes', async t => {
+  const dataDir = await mkdtemp(join(tmpdir(), 'axiom-export-h10-'));
+  t.after(() => rm(dataDir, { recursive: true, force: true }));
+  const exportId = 'export_123e4567-e89b-42d3-a456-426614174000';
+  const exportDir = join(dataDir, 'exports', exportId);
+  await mkdir(exportDir, { recursive: true });
+  const expectedBytes = Buffer.from('{"safe":true}\n');
+  await writeFile(join(exportDir, 'bundle.jsonl'), expectedBytes);
+  const attackerPath = join(dataDir, 'attacker-controlled.txt');
+  await writeFile(attackerPath, 'attacker-controlled');
+
+  const pair = generateKeyPairSync('ed25519');
+  const privatePem = pair.privateKey.export({ type: 'pkcs8', format: 'pem' });
+  const publicPem = pair.publicKey.export({ type: 'spki', format: 'pem' });
+  const identity = new MeshIdentity('grid', privatePem, publicPem);
+  const unsigned = {
+    format: 'axiom-export.v1',
+    export_id: exportId,
+    files: [{
+      name: 'bundle.jsonl',
+      media_type: 'application/x-ndjson',
+      bytes: expectedBytes.length,
+      sha256: sha256(expectedBytes)
+    }]
+  };
+  const manifest = {
+    ...unsigned,
+    attestation: identity.signObject(unsigned)
+  };
+  const fakeStore = {
+    dataDir,
+    verificationKeys: new Map([[identity.keyId, identity.publicKey]]),
+    getExport(id, principal) {
+      assert.equal(id, exportId);
+      assert.equal(principal, 'owner.audit');
+      return {
+        status: 'completed',
+        bundle_path: attackerPath,
+        manifest_json: manifest
+      };
+    }
+  };
+
+  const result = await CheckpointGridStore.prototype.getExportBundle.call(
+    fakeStore,
+    exportId,
+    'owner.audit'
+  );
+  assert.equal(result.bundle, expectedBytes.toString('utf8'));
+  assert.notEqual(result.bundle, 'attacker-controlled');
+
+  await writeFile(join(exportDir, 'bundle.jsonl'), 'tampered');
+  await assert.rejects(
+    () => CheckpointGridStore.prototype.getExportBundle.call(
+      fakeStore,
+      exportId,
+      'owner.audit'
+    ),
+    error => error?.code === 'export_integrity_failed'
+  );
 });
 
 test('H-11 overlay evidence rejects an asserted digest that does not match measured policy bytes', async t => {
