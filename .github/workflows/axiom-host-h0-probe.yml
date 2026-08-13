@@ -176,6 +176,15 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+      - name: Upload compact H0 build evidence envelope
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: axiom-host-h0-build-evidence-${{ github.sha }}
+          path: host/mkosi.output/axiom-host-h0-build-evidence.json
+          if-no-files-found: warn
+          retention-days: 30
+
       - name: Upload first H0 build evidence and artifacts
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
