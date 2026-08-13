@@ -19,6 +19,7 @@
     "host:lab:summary": "npm --prefix mesh run host:lab:summary",
     "host:lab:snapshot": "npm --prefix mesh run host:lab:snapshot",
     "host:lab:build": "npm --prefix mesh run host:lab:build",
+    "host:lab:compare": "npm --prefix mesh run host:lab:compare --",
     "doctor": "node mesh/src/doctor.mjs",
     "axiom": "node mesh/src/cli.mjs --human",
     "cli": "node mesh/src/cli.mjs --human",
