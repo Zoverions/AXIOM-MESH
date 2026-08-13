@@ -8,7 +8,7 @@ import {
 
 const BASE_ARTIFACTS = Object.freeze([
   { name: 'axiom-host-lab.raw', bytes: 1024, sha256: 'a'.repeat(64) },
-  { name: 'axiom-host-lab.raw.sha256', bytes: 96, sha256: 'b'.repeat(64) }
+  { name: 'axiom-host-lab_0.1.0-h0/manifest.json', bytes: 96, sha256: 'b'.repeat(64) }
 ]);
 
 test('two identically bound H0 builds can prove byte reproducibility', () => {
@@ -53,12 +53,19 @@ test('source, configuration, snapshot, or builder drift makes H0 builds non-comp
   );
 });
 
-test('artifact-set digest tampering is rejected before comparison', () => {
+test('artifact-set or external-workspace control tampering is rejected before comparison', () => {
   const forged = evidence();
   forged.builder_observation.artifact_set_sha256 = 'f'.repeat(64);
   assert.throws(
     () => verifyAxiomHostH0BuildEvidence(forged),
     /artifact-set digest does not match/
+  );
+
+  const weakened = evidence();
+  weakened.controls.builder_workspace_outside_source_tree = false;
+  assert.throws(
+    () => verifyAxiomHostH0BuildEvidence(weakened),
+    /builder_workspace_outside_source_tree/
   );
 });
 
@@ -77,7 +84,7 @@ function evidence({ artifacts = BASE_ARTIFACTS, generatedAt = '2026-08-13T02:00:
       policy_sha256: '3'.repeat(64),
       mkosi_config_sha256: '4'.repeat(64),
       snapshot_lock_sha256: '5'.repeat(64),
-      snapshot: 'fedora-43-20260812T000000Z',
+      snapshot: '20260813.n.0',
       snapshot_locked: true,
       image_version: '0.1.0-h0'
     },
@@ -99,6 +106,7 @@ function evidence({ artifacts = BASE_ARTIFACTS, generatedAt = '2026-08-13T02:00:
       artifact_bytes_hashed: true,
       build_environment_sanitized: true,
       builder_home_isolated: true,
+      builder_workspace_outside_source_tree: true,
       implicit_mkosi_secret_files_rejected: true,
       production_credentials_forwarded: false,
       capability_registry_changed: false,
