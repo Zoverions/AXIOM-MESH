@@ -1,0 +1,62 @@
+{
+  "schema": "axiom-human-authority-attestor-contract.v1",
+  "contract_id": "axiom.human-authority.attestor",
+  "contract_version": "1.0.0",
+  "kernel_minimum": "0.12.0-dev.0",
+  "status": "foundation-not-runtime-enabled",
+  "purpose": "Bound which identified human or service attestors may submit relationship, authority, or conflict evidence for specific jurisdiction contexts and assurance ceilings.",
+  "profile_schema": "axiom-human-authority-attestor-profile.v1",
+  "profile_required_fields": [
+    "profile_id",
+    "attestor_id",
+    "attestor_type",
+    "artifact_classes",
+    "relationship_types",
+    "authority_sources",
+    "jurisdiction_context_digests",
+    "maximum_assurance",
+    "policy_digest",
+    "evidence_digest",
+    "effective_from",
+    "effective_until",
+    "status"
+  ],
+  "attestor_types": ["human", "service"],
+  "artifact_classes": [
+    "relationship-claim",
+    "authority-grant",
+    "authority-conflict"
+  ],
+  "statuses": ["active", "revoked", "superseded"],
+  "core_invariants": [
+    "artifact-issuer-is-not-self-authorizing",
+    "role-does-not-create-attestor-authority",
+    "one-exact-attestor-profile-required",
+    "wildcards-forbidden",
+    "profile-is-effective-dated",
+    "profile-does-not-create-domain-authority",
+    "profile-does-not-create-consent",
+    "profile-must-be-anchored-by-separate-policy-evidence"
+  ],
+  "resolution": {
+    "principal_id_must_equal_attestor_id": true,
+    "principal_type_must_equal_attestor_type": true,
+    "exact_profile_id_required": true,
+    "artifact_class_must_be_granted": true,
+    "artifact_jurisdiction_context_must_be_granted": true,
+    "artifact_assurance_must_not_exceed_profile_maximum": true,
+    "relationship_type_must_be_granted_for_relationship_claim": true,
+    "authority_source_must_be_granted_for_authority_grant": true,
+    "artifact_issuer_id_must_equal_attestor_for_relationship_and_grant": true,
+    "inactive_profile_denies": true,
+    "wildcard_value_denies": true,
+    "attestor_profile_digest_required": true
+  },
+  "non_claims": [
+    "attestor-profile-does-not-prove-legal-jurisdiction",
+    "attestor-profile-does-not-grant-subject-authority",
+    "attestor-profile-does-not-create-consent",
+    "attestor-contract-does-not-enable-runtime-ingestion",
+    "policy-anchor-verification-is-a-separate-runtime-gate"
+  ]
+}

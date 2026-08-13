@@ -1,0 +1,115 @@
+{
+  "schema": "axiom-human-authority-contract.v1",
+  "contract_id": "axiom.human-authority",
+  "contract_version": "1.0.0",
+  "kernel_minimum": "0.12.0-dev.0",
+  "status": "foundation-not-runtime-enabled",
+  "purpose": "Represent evidence-backed human relationships and separately scoped delegated authority without treating relationship, role, or consent as authority.",
+  "core_invariants": [
+    "relationship-is-not-authority",
+    "authority-is-not-consent",
+    "consent-is-not-permanent",
+    "role-does-not-grant-authority",
+    "install-does-not-grant-authority",
+    "delegation-is-not-transitive-in-v1",
+    "unresolved-conflict-fails-closed",
+    "authority-is-effective-dated",
+    "jurisdiction-context-is-evidence-bound",
+    "revocation-affects-future-use-not-history"
+  ],
+  "assurance_levels": ["A0", "A1", "A2", "A3", "A4"],
+  "minimum_delegated_authority_assurance": "A2",
+  "relationship_claim": {
+    "schema": "axiom-human-relationship-claim.v1",
+    "required_fields": [
+      "claim_id",
+      "subject_id",
+      "holder_id",
+      "relationship_type",
+      "issuer_id",
+      "assurance",
+      "evidence_digest",
+      "jurisdiction_context_digest",
+      "effective_from",
+      "effective_until",
+      "status"
+    ],
+    "authority_fields_forbidden": [
+      "actions",
+      "controllers",
+      "data_scopes",
+      "purposes"
+    ],
+    "statuses": ["active", "revoked", "superseded"]
+  },
+  "authority_grant": {
+    "schema": "axiom-human-authority-grant.v1",
+    "required_fields": [
+      "grant_id",
+      "subject_id",
+      "holder_id",
+      "relationship_claim_id",
+      "issuer_id",
+      "authority_source",
+      "controllers",
+      "purposes",
+      "data_scopes",
+      "actions",
+      "assurance",
+      "evidence_digest",
+      "jurisdiction_context_digest",
+      "effective_from",
+      "effective_until",
+      "revocable",
+      "delegable",
+      "status"
+    ],
+    "authority_sources": [
+      "subject",
+      "guardian",
+      "institution",
+      "law",
+      "court",
+      "other"
+    ],
+    "statuses": ["active", "revoked", "superseded"],
+    "delegable_v1": false
+  },
+  "authority_conflict": {
+    "schema": "axiom-human-authority-conflict.v1",
+    "required_fields": [
+      "conflict_id",
+      "subject_id",
+      "grant_ids",
+      "evidence_digest",
+      "jurisdiction_context_digest",
+      "effective_from",
+      "effective_until",
+      "status"
+    ],
+    "statuses": ["unresolved", "resolved", "superseded"]
+  },
+  "resolution": {
+    "holder_must_be_human": true,
+    "exact_grant_id_required": true,
+    "relationship_must_be_active": true,
+    "relationship_and_grant_subject_holder_must_match": true,
+    "relationship_and_grant_jurisdiction_context_must_match": true,
+    "requested_controller_must_be_granted": true,
+    "requested_purpose_must_be_granted": true,
+    "requested_action_must_be_granted": true,
+    "requested_data_scopes_must_be_subset_of_one_grant": true,
+    "unresolved_conflict_for_grant_denies": true,
+    "revoked_or_expired_relationship_denies": true,
+    "revoked_or_expired_grant_denies": true,
+    "lower_than_minimum_assurance_denies": true,
+    "authority_facts_digest_required": true
+  },
+  "non_claims": [
+    "relationship-claim-does-not-prove-legal-authority",
+    "authority-grant-does-not-create-consent",
+    "contract-does-not-encode-jurisdiction-law",
+    "contract-does-not-authorize-machine-delegation",
+    "contract-does-not-enable-runtime-actions-by-itself"
+  ]
+}
