@@ -135,7 +135,7 @@ jobs:
           dnf --version | head -n 1 > "$RUNNER_TEMP/dnf-version.txt"
           rpm --version > "$RUNNER_TEMP/rpm-version.txt"
 
-      - name: Build first content-addressed AXIOM Host H0 image
+      - name: Build content-addressed AXIOM Host H0 image
         shell: bash
         run: |
           set -euo pipefail
@@ -149,7 +149,7 @@ jobs:
             env HOME=/root USER=root LOGNAME=root LANG=C.UTF-8 \
             npm run host:lab:build \
             | tee "$RUNNER_TEMP/axiom-host-h0-build-command.json"
-          test -s host/mkosi.output/axiom-host-h0-build-evidence.json
+          sudo test -s host/mkosi.output/axiom-host-h0-build-evidence.json
 
       - name: Restore runner ownership of H0 laboratory paths
         if: always()
@@ -161,7 +161,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: axiom-host-h0-package-source-probe-${{ github.sha }}
+          name: axiom-host-h0-package-source-probe-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/axiom-host-h0-package-source-probe.json
             ${{ runner.temp }}/fedora-rawhide-pinned-snapshot.txt
@@ -180,16 +180,16 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: axiom-host-h0-build-evidence-${{ github.sha }}
+          name: axiom-host-h0-build-evidence-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: host/mkosi.output/axiom-host-h0-build-evidence.json
           if-no-files-found: warn
           retention-days: 30
 
-      - name: Upload first H0 build evidence and artifacts
+      - name: Upload H0 build evidence and artifacts
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: axiom-host-h0-first-build-${{ github.sha }}
+          name: axiom-host-h0-build-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: |
             host/mkosi.output/**
             host/.mkosi-private/mkosi-build.log
