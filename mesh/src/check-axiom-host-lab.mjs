@@ -220,6 +220,11 @@ function verifyPolicy(policy) {
     || policy.reproducibility?.ext4_mkfs_options_environment !== 'SYSTEMD_REPART_MKFS_OPTIONS_EXT4'
     || policy.reproducibility?.ext4_hash_seed !== '6e56f338-f1f4-5cc8-a7fb-3dc1c107485c'
     || policy.reproducibility?.ext4_disable_journal !== true
+    || policy.reproducibility?.vfat_mkfs_options_environment !== 'SYSTEMD_REPART_MKFS_OPTIONS_VFAT'
+    || policy.reproducibility?.vfat_invariant !== true
+    || policy.reproducibility?.vfat_volume_id !== 'da2024b3'
+    || !Array.isArray(policy.reproducibility?.removed_nondeterministic_paths)
+    || policy.reproducibility.removed_nondeterministic_paths.join(',') !== '/var/cache/ldconfig/aux-cache'
     || policy.reproducibility?.timezone !== 'UTC'
     || policy.evidence?.sbom_format !== 'CycloneDX-1.6'
     || policy.evidence?.draft_host_profile !== 'axiom-host-profile.v1'
@@ -300,6 +305,7 @@ function verifyMkosiConfiguration(config, source, policy, snapshot) {
     ['Content', 'UnifiedKernelImages', policy.image.unified_kernel_images],
     ['Content', 'Ssh', 'never'],
     ['Content', 'Autologin', 'no'],
+    ['Content', 'RemoveFiles', policy.reproducibility.removed_nondeterministic_paths.join(',')],
     ['Validation', 'Checksum', 'yes'],
     ['Build', 'ToolsTree', 'yes'],
     ['Build', 'ToolsTreeDistribution', policy.tools_tree.distribution],
@@ -308,7 +314,7 @@ function verifyMkosiConfiguration(config, source, policy, snapshot) {
     [
       'Build',
       'Environment',
-      `${policy.reproducibility.ext4_fake_time_environment} ${policy.reproducibility.ext4_mkfs_options_environment}`
+      `${policy.reproducibility.ext4_fake_time_environment} ${policy.reproducibility.ext4_mkfs_options_environment} ${policy.reproducibility.vfat_mkfs_options_environment}`
     ],
     ['Build', 'WithNetwork', 'no'],
     ['Runtime', 'VirtualMachineMonitor', policy.runtime.virtual_machine_monitor],

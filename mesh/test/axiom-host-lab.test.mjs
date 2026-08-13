@@ -193,6 +193,7 @@ test('laboratory environment does not forward arbitrary host secrets', () => {
     AXIOM_DATA_KEY: 'must-not-pass',
     E2FSPROGS_FAKE_TIME: '1',
     SYSTEMD_REPART_MKFS_OPTIONS_EXT4: '-E hash_seed=attacker-controlled',
+    SYSTEMD_REPART_MKFS_OPTIONS_VFAT: '--invariant -i attacker-controlled',
     TZ: 'Pacific/Kiritimati'
   });
 
@@ -204,6 +205,7 @@ test('laboratory environment does not forward arbitrary host secrets', () => {
     environment.SYSTEMD_REPART_MKFS_OPTIONS_EXT4,
     '-O ^has_journal -E hash_seed=6e56f338-f1f4-5cc8-a7fb-3dc1c107485c'
   );
+  assert.equal(environment.SYSTEMD_REPART_MKFS_OPTIONS_VFAT, '--invariant -i da2024b3');
   assert.equal(environment.TZ, 'UTC');
   assert.equal(environment.AXIOM_HOST_LAB, '1');
   assert.equal(environment.AWS_SECRET_ACCESS_KEY, undefined);

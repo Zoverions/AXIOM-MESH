@@ -237,6 +237,11 @@ function inspectExt4Superblock(superblock) {
 
 async function inspectFat32(handle, partitionStart, partitionBytes, boot) {
   const bytesPerSector = boot.readUInt16LE(11);
+  const sectorsPerCluster = boot.readUInt8(13);
+  const reservedSectorCount = boot.readUInt16LE(14);
+  const fatCount = boot.readUInt8(16);
+  const fatSize32 = boot.readUInt32LE(36);
+  const rootCluster = boot.readUInt32LE(44);
   const fsInfoSector = boot.readUInt16LE(48);
   const backupBootSector = boot.readUInt16LE(50);
   const result = {
@@ -246,9 +251,9 @@ async function inspectFat32(handle, partitionStart, partitionBytes, boot) {
     jump_hex: boot.subarray(0, 3).toString('hex'),
     oem_name: decodeFixedAscii(boot.subarray(3, 11)),
     bytes_per_sector: bytesPerSector,
-    sectors_per_cluster: boot.readUInt8(13),
-    reserved_sector_count: boot.readUInt16LE(14),
-    fat_count: boot.readUInt8(16),
+    sectors_per_cluster: sectorsPerCluster,
+    reserved_sector_count: reservedSectorCount,
+    fat_count: fatCount,
     root_entry_count: boot.readUInt16LE(17),
     total_sectors_16: boot.readUInt16LE(19),
     media_descriptor: `0x${boot.readUInt8(21).toString(16).padStart(2, '0')}`,
@@ -257,10 +262,10 @@ async function inspectFat32(handle, partitionStart, partitionBytes, boot) {
     head_count: boot.readUInt16LE(26),
     hidden_sector_count: boot.readUInt32LE(28),
     total_sectors_32: boot.readUInt32LE(32),
-    fat_size_32: boot.readUInt32LE(36),
+    fat_size_32: fatSize32,
     extended_flags: `0x${boot.readUInt16LE(40).toString(16).padStart(4, '0')}`,
     filesystem_version: `0x${boot.readUInt16LE(42).toString(16).padStart(4, '0')}`,
-    root_cluster: boot.readUInt32LE(44),
+    root_cluster: rootCluster,
     fsinfo_sector: fsInfoSector,
     backup_boot_sector: backupBootSector,
     drive_number: boot.readUInt8(64),
@@ -288,6 +293,28 @@ async function inspectFat32(handle, partitionStart, partitionBytes, boot) {
       const backup = await readExact(handle, bytesPerSector, partitionStart + backupOffset);
       result.backup_boot_sector_sha256 = sha256(backup);
       result.backup_matches_primary_boot_sector = backup.subarray(0, FAT_BOOT_BYTES).equals(boot);
+    }
+
+    const rootOffset = (
+      reservedSectorCount
+      + fatCount * fatSize32
+      + (rootCluster - 2) * sectorsPerCluster
+    ) * bytesPerSector;
+    if (rootCluster >= 2 && rootOffset >= 0 && rootOffset + 32 <= partitionBytes) {
+      const entry = await readExact(handle, 32, partitionStart + rootOffset);
+      if (entry[0] !== 0x00 && entry[0] !== 0xe5 && (entry[11] & 0x08) !== 0) {
+        result.volume_label_entry = {
+          offset_bytes: rootOffset,
+          sha256: sha256(entry),
+          name: decodeFixedAscii(entry.subarray(0, 11)),
+          attributes: `0x${entry[11].toString(16).padStart(2, '0')}`,
+          creation: fatTimestampField(entry.readUInt16LE(14), entry.readUInt16LE(16)),
+          access_date: fatDateField(entry.readUInt16LE(18)),
+          write: fatTimestampField(entry.readUInt16LE(22), entry.readUInt16LE(24)),
+          first_cluster: entry.readUInt16LE(20) * 65_536 + entry.readUInt16LE(26),
+          bytes: entry.readUInt32LE(28)
+        };
+      }
     }
   }
 
@@ -436,6 +463,28 @@ function timestampField(seconds) {
   return {
     unix_seconds: seconds,
     iso8601: seconds === 0 ? null : new Date(seconds * 1000).toISOString()
+  };
+}
+
+function fatTimestampField(time, date) {
+  return {
+    time_raw: `0x${time.toString(16).padStart(4, '0')}`,
+    date_raw: `0x${date.toString(16).padStart(4, '0')}`,
+    year: 1980 + (date >> 9),
+    month: (date >> 5) & 0x0f,
+    day: date & 0x1f,
+    hour: time >> 11,
+    minute: (time >> 5) & 0x3f,
+    second: (time & 0x1f) * 2
+  };
+}
+
+function fatDateField(date) {
+  return {
+    date_raw: `0x${date.toString(16).padStart(4, '0')}`,
+    year: 1980 + (date >> 9),
+    month: (date >> 5) & 0x0f,
+    day: date & 0x1f
   };
 }
 

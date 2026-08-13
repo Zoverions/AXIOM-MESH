@@ -62,6 +62,8 @@ export function verifyAxiomHostH0BuildEvidence(evidence) {
     'deterministic_ext4_time',
     'deterministic_ext4_hash_seed',
     'ext4_journal_disabled_for_h0',
+    'deterministic_vfat_metadata',
+    'volatile_loader_aux_cache_removed',
     'machine_readable_sbom_generated',
     'draft_host_profile_generated',
     'image_and_build_log_secret_scan_passed',

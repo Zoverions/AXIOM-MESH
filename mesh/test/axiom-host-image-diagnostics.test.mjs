@@ -44,6 +44,9 @@ test('H0 GPT diagnostics bind disk, filesystem headers, chunks, and partition by
     assert.equal(first.partitions[0].filesystem.fsinfo_sector, 1);
     assert.equal(first.partitions[0].filesystem.backup_boot_sector, 6);
     assert.equal(first.partitions[0].filesystem.backup_matches_primary_boot_sector, true);
+    assert.equal(first.partitions[0].filesystem.volume_label_entry.name, 'AXIOMH0');
+    assert.equal(first.partitions[0].filesystem.volume_label_entry.creation.time_raw, '0x4b5a');
+    assert.equal(first.partitions[0].filesystem.volume_label_entry.creation.date_raw, '0x466e');
     assert.match(first.partitions[0].filesystem.fsinfo_sha256, /^[a-f0-9]{64}$/);
 
     assert.equal(first.partitions[1].filesystem.kind, 'ext4');
@@ -222,6 +225,16 @@ function writeFat32(image, offset, totalSectors) {
   fsInfo.writeUInt32LE(0xaa550000, 508);
 
   boot.copy(image, offset + 6 * SECTOR);
+
+  const rootEntry = image.subarray(offset + 64 * SECTOR, offset + 64 * SECTOR + 32);
+  rootEntry.fill(0);
+  Buffer.from('AXIOMH0    ', 'ascii').copy(rootEntry, 0);
+  rootEntry.writeUInt8(0x08, 11);
+  rootEntry.writeUInt16LE(0x4b5a, 14);
+  rootEntry.writeUInt16LE(0x466e, 16);
+  rootEntry.writeUInt16LE(0x466e, 18);
+  rootEntry.writeUInt16LE(0x4b5a, 22);
+  rootEntry.writeUInt16LE(0x466e, 24);
 }
 
 function writeExt4Superblock(image, partitionOffset) {

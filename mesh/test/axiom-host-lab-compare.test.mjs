@@ -156,6 +156,8 @@ function evidence({ artifacts = BASE_ARTIFACTS, generatedAt = '2026-08-13T02:00:
       deterministic_ext4_time: true,
       deterministic_ext4_hash_seed: true,
       ext4_journal_disabled_for_h0: true,
+      deterministic_vfat_metadata: true,
+      volatile_loader_aux_cache_removed: true,
       machine_readable_sbom_generated: true,
       draft_host_profile_generated: true,
       image_and_build_log_secret_scan_passed: true,

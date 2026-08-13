@@ -301,6 +301,8 @@ export async function runAxiomHostLab({ action = 'summary', acknowledgement = ''
         deterministic_ext4_time: true,
         deterministic_ext4_hash_seed: true,
         ext4_journal_disabled_for_h0: true,
+        deterministic_vfat_metadata: true,
+        volatile_loader_aux_cache_removed: true,
         machine_readable_sbom_generated: true,
         draft_host_profile_generated: true,
         image_and_build_log_secret_scan_passed: true,
@@ -354,6 +356,7 @@ export function laboratoryEnvironment(sourceDateEpoch, source = process.env, { p
   environment.SOURCE_DATE_EPOCH = String(sourceDateEpoch);
   environment.E2FSPROGS_FAKE_TIME = String(sourceDateEpoch);
   environment.SYSTEMD_REPART_MKFS_OPTIONS_EXT4 = `-O ^has_journal -E hash_seed=${HOST_LAB_EXT4_HASH_SEED}`;
+  environment.SYSTEMD_REPART_MKFS_OPTIONS_VFAT = '--invariant -i da2024b3';
   environment.TZ = 'UTC';
   environment.AXIOM_HOST_LAB = '1';
   return environment;

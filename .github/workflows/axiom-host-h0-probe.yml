@@ -168,6 +168,8 @@ jobs:
           test -s "$RUNNER_TEMP/axiom-host-h0-image-diagnostics.json"
           jq -e '[.image.partitions[] | select(.name == "root-x86-64" and .filesystem.kind == "ext4" and .filesystem.has_journal == false)] | length == 1' \
             "$RUNNER_TEMP/axiom-host-h0-image-diagnostics.json"
+          jq -e '[.image.partitions[] | select(.name == "esp" and .filesystem.kind == "fat32" and .filesystem.volume_id == "0xda2024b3" and .filesystem.volume_label_entry.name == "ESP" and .filesystem.volume_label_entry.creation.time_raw == "0x4b5a" and .filesystem.volume_label_entry.creation.date_raw == "0x466e" and .filesystem.volume_label_entry.write.time_raw == "0x4b5a" and .filesystem.volume_label_entry.write.date_raw == "0x466e")] | length == 1' \
+            "$RUNNER_TEMP/axiom-host-h0-image-diagnostics.json"
 
       - name: Export bounded H0 nondeterminism slices
         shell: bash

@@ -50,6 +50,12 @@
     "ext4_mkfs_options_environment": "SYSTEMD_REPART_MKFS_OPTIONS_EXT4",
     "ext4_hash_seed": "6e56f338-f1f4-5cc8-a7fb-3dc1c107485c",
     "ext4_disable_journal": true,
+    "vfat_mkfs_options_environment": "SYSTEMD_REPART_MKFS_OPTIONS_VFAT",
+    "vfat_invariant": true,
+    "vfat_volume_id": "da2024b3",
+    "removed_nondeterministic_paths": [
+      "/var/cache/ldconfig/aux-cache"
+    ],
     "timezone": "UTC"
   },
   "evidence": {
