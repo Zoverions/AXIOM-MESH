@@ -209,7 +209,7 @@ internal network segments.
 Internal service edges use mutually authenticated TLS 1.3, distinct Ed25519
 identities, DNS and SPIFFE-style URI identity checks, exact active-leaf
 fingerprint pinning, and signed replay-protected application envelopes. A
-machine-readable default-deny policy authorizes only 41 exact current-build
+machine-readable default-deny policy authorizes only 42 exact current-build
 caller, destination, method, and route combinations and derives allowed mTLS
 peers from that graph.
 

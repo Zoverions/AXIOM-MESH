@@ -185,6 +185,10 @@
         },
         {
           "method": "POST",
+          "path": "/internal/v1/delegated-authorizations/resolve"
+        },
+        {
+          "method": "POST",
           "path": "/internal/v1/commit"
         },
         {

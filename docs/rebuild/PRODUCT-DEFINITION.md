@@ -108,7 +108,7 @@ visible effect.
 
 The current reference unit topology runs the four services across four exact
 single-host internal network segments. A machine-readable default-deny policy
-authorizes only 41 exact caller, destination, method, and route combinations
+authorizes only 42 exact caller, destination, method, and route combinations
 before signing or network I/O, derives each destination's active mTLS peers,
 and removes Gateway-to-Sandbox and Grid-to-Sandbox adjacency. Plaintext
 development traffic remains loopback-only. This is a reference single-host
