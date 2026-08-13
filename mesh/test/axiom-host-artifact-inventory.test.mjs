@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -9,31 +9,41 @@ import {
   verifyAxiomHostArtifactInventory
 } from '../src/axiom-host-artifact-inventory.mjs';
 
-test('AXIOM Host H0 artifact inventory binds exact sorted bytes', async () => {
+test('AXIOM Host H0 artifact inventory binds exact sorted bytes including nested mkosi output', async () => {
   const root = await mkdtemp(join(tmpdir(), 'axiom-host-artifacts-'));
   try {
     await writeFile(join(root, 'z.raw'), Buffer.from('image-bytes'));
     await writeFile(join(root, 'a.sha256'), Buffer.from('checksum-bytes'));
+    await mkdir(join(root, 'axiom-host-lab_0.1.0-h0'));
+    await writeFile(
+      join(root, 'axiom-host-lab_0.1.0-h0', 'manifest.json'),
+      Buffer.from('nested-manifest')
+    );
 
     const first = await inventoryAxiomHostArtifacts(root);
     const second = await inventoryAxiomHostArtifacts(root);
     assert.deepEqual(first, second);
-    assert.deepEqual(first.inventory.map(item => item.name), ['a.sha256', 'z.raw']);
+    assert.deepEqual(first.inventory.map(item => item.name), [
+      'a.sha256',
+      'axiom-host-lab_0.1.0-h0/manifest.json',
+      'z.raw'
+    ]);
     assert.equal(first.inventory[0].bytes, 14);
-    assert.equal(first.inventory[1].bytes, 11);
+    assert.equal(first.inventory[1].bytes, 15);
+    assert.equal(first.inventory[2].bytes, 11);
     assert.match(first.digest, /^[a-f0-9]{64}$/);
     assert.equal(verifyAxiomHostArtifactInventory(first.inventory), true);
 
     await writeFile(join(root, 'z.raw'), Buffer.from('changed-image-bytes'));
     const changed = await inventoryAxiomHostArtifacts(root);
     assert.notEqual(changed.digest, first.digest);
-    assert.notEqual(changed.inventory[1].sha256, first.inventory[1].sha256);
+    assert.notEqual(changed.inventory[2].sha256, first.inventory[2].sha256);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
 });
 
-test('H0 output must begin empty and cannot hide nested output state', async () => {
+test('H0 output must begin empty and rejects symlinks or unsupported nested state', async () => {
   const root = await mkdtemp(join(tmpdir(), 'axiom-host-output-'));
   try {
     assert.equal(await assertEmptyAxiomHostOutput(root), true);
@@ -45,18 +55,23 @@ test('H0 output must begin empty and cannot hide nested output state', async () 
 
     await rm(join(root, 'stale.raw'));
     await mkdir(join(root, 'nested'));
+    await writeFile(join(root, 'nested', 'payload.raw'), 'payload');
+    const nested = await inventoryAxiomHostArtifacts(root);
+    assert.deepEqual(nested.inventory.map(item => item.name), ['nested/payload.raw']);
+
+    await symlink(join(root, 'nested', 'payload.raw'), join(root, 'linked.raw'));
     await assert.rejects(
       inventoryAxiomHostArtifacts(root),
-      /unsupported non-file artifact nested/
+      /unsupported non-file artifact linked.raw/
     );
   } finally {
     await rm(root, { recursive: true, force: true });
   }
 });
 
-test('artifact inventory verification rejects duplicate, unsorted, and forged entries', () => {
+test('artifact inventory verification rejects duplicate, unsorted, forged, and unsafe paths', () => {
   const a = { name: 'a.raw', bytes: 1, sha256: 'a'.repeat(64) };
-  const b = { name: 'b.raw', bytes: 2, sha256: 'b'.repeat(64) };
+  const b = { name: 'nested/b.raw', bytes: 2, sha256: 'b'.repeat(64) };
   assert.equal(verifyAxiomHostArtifactInventory([a, b]), true);
   assert.throws(
     () => verifyAxiomHostArtifactInventory([b, a]),
@@ -68,6 +83,10 @@ test('artifact inventory verification rejects duplicate, unsorted, and forged en
   );
   assert.throws(
     () => verifyAxiomHostArtifactInventory([{ ...a, sha256: 'not-a-digest' }]),
+    /invalid entry/
+  );
+  assert.throws(
+    () => verifyAxiomHostArtifactInventory([{ ...a, name: '../escape.raw' }]),
     /invalid entry/
   );
 });
