@@ -15,6 +15,7 @@
     "boot_artifact": "systemd-boot-with-unsigned-uki",
     "source_staging": "git-archive-exact-head",
     "boot_partition_runtime_mutability": "read-only",
+    "boot_random_seed": "disabled-by-read-only-sentinel",
     "root_filesystem": "ext4",
     "root_integrity": "dm-verity",
     "root_runtime_mutability": "read-only",

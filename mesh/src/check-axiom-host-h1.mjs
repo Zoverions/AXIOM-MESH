@@ -123,7 +123,7 @@ export async function verifyAxiomHostH1Configuration(urls = FILES) {
   const state = parseRepart(source.state, '30-var.conf');
   repartExact(esp, 'Type', 'esp', 'ESP');
   repartExact(esp, 'Format', 'vfat', 'ESP');
-  repartExact(esp, 'ReadOnly', 'yes', 'ESP');
+  requireValue(!esp.has('ReadOnly'), 'ESP must not rely on an unsupported GPT read-only attribute');
   repartExact(root, 'Type', 'root', 'root');
   repartExact(root, 'Format', 'ext4', 'root');
   repartExact(root, 'ReadOnly', 'yes', 'root');
@@ -148,6 +148,8 @@ export async function verifyAxiomHostH1Configuration(urls = FILES) {
     '$BUILDROOT/usr/lib/axiom-mesh',
     'test -f "$BUILDROOT/usr/lib/axiom-mesh/package.json"',
     'Gateway -> Hypervisor -> Sandbox -> Grid',
+    'install -D -m 0444 /dev/null "$BUILDROOT/boot/loader/random-seed"',
+    'install -D -m 0444 /dev/null "$BUILDROOT/efi/loader/random-seed"',
     'enable axiom-host-h1-check.service',
     'mask systemd-boot-random-seed.service'
   ]) {
@@ -215,6 +217,7 @@ function verifyPolicy(policy) {
   exact(policy?.appliance?.boot_artifact, 'systemd-boot-with-unsigned-uki', 'boot artifact policy');
   exact(policy?.appliance?.source_staging, 'git-archive-exact-head', 'source staging policy');
   exact(policy?.appliance?.boot_partition_runtime_mutability, 'read-only', 'boot partition mutability policy');
+  exact(policy?.appliance?.boot_random_seed, 'disabled-by-read-only-sentinel', 'boot random seed policy');
   exact(policy?.appliance?.root_runtime_mutability, 'read-only', 'root mutability policy');
   exact(policy?.appliance?.axiom_state_path, '/var/lib/axiom-host', 'AXIOM state path');
   exact(policy?.appliance?.state_encryption, 'absent', 'H1 state encryption non-claim');
