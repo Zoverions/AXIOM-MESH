@@ -202,7 +202,7 @@ test('laboratory environment does not forward arbitrary host secrets', () => {
   assert.equal(environment.E2FSPROGS_FAKE_TIME, '1786500000');
   assert.equal(
     environment.SYSTEMD_REPART_MKFS_OPTIONS_EXT4,
-    '-E hash_seed=6e56f338-f1f4-5cc8-a7fb-3dc1c107485c'
+    '-O ^has_journal -E hash_seed=6e56f338-f1f4-5cc8-a7fb-3dc1c107485c'
   );
   assert.equal(environment.TZ, 'UTC');
   assert.equal(environment.AXIOM_HOST_LAB, '1');

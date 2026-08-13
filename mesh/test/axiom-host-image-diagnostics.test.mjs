@@ -1,9 +1,14 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { diagnoseGptImage } from '../src/axiom-host-image-diagnostics.mjs';
+import {
+  diagnoseGptImage,
+  HOST_IMAGE_DIAGNOSTIC_SCHEMA
+} from '../src/axiom-host-image-diagnostics.mjs';
+import { exportDiagnosticSlices } from '../src/axiom-host-image-slices.mjs';
+import { canonicalJson, sha256 } from '../src/lib/canonical.mjs';
 
 const SECTOR = 512;
 const SECTORS = 4096;
@@ -46,6 +51,7 @@ test('H0 GPT diagnostics bind disk, filesystem headers, chunks, and partition by
     assert.equal(first.partitions[1].filesystem.uuid, '00112233-4455-6677-8899-aabbccddeeff');
     assert.equal(first.partitions[1].filesystem.volume_name, 'axiom-root');
     assert.equal(first.partitions[1].filesystem.block_size, 4096);
+    assert.equal(first.partitions[1].filesystem.has_journal, false);
     assert.equal(first.partitions[1].filesystem.mkfs_time.unix_seconds, 1_786_500_000);
     assert.match(first.partitions[1].filesystem.superblock_sha256, /^[a-f0-9]{64}$/);
 
@@ -73,6 +79,47 @@ test('H0 GPT diagnostics reject non-GPT input', async () => {
     await assert.rejects(
       diagnoseGptImage(path),
       /does not expose a GPT header/
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('H0 diagnostic slice export is bounded by the digest-bound diagnostic chunk map', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'axiom-host-gpt-slices-'));
+  try {
+    const path = join(root, 'image.raw');
+    await writeFile(path, syntheticGptImage());
+    const image = await diagnoseGptImage(path);
+    const unsigned = {
+      schema: HOST_IMAGE_DIAGNOSTIC_SCHEMA,
+      status: 'diagnostic-only',
+      source: { revision: 'a'.repeat(40), tree: 'b'.repeat(40), source_date_epoch: 1_786_500_000 },
+      configuration: {},
+      image,
+      controls: {
+        raw_image_bound_to_build_evidence: true,
+        diagnostic_only: true,
+        production_promoted: false
+      },
+      interpretation: 'test fixture'
+    };
+    const diagnostic = {
+      ...unsigned,
+      diagnostic_sha256: sha256(canonicalJson(unsigned))
+    };
+    const output = join(root, 'slices');
+    const result = await exportDiagnosticSlices(path, diagnostic, output, ['ESP:0', 'root:0']);
+
+    assert.equal(result.slices.length, 2);
+    assert.equal(result.slices[0].sha256, image.partitions[0].chunks[0].sha256);
+    assert.equal(result.slices[1].sha256, image.partitions[1].chunks[0].sha256);
+    assert.equal((await readFile(join(output, 'ESP-chunk-0.bin'))).length, 512 * SECTOR);
+    assert.equal((await readFile(join(output, 'root-chunk-0.bin'))).length, 1024 * SECTOR);
+
+    await assert.rejects(
+      exportDiagnosticSlices(path, diagnostic, output, ['ESP:1']),
+      /outside the recorded partition/
     );
   } finally {
     await rm(root, { recursive: true, force: true });

@@ -295,11 +295,12 @@ export async function runAxiomHostLab({ action = 'summary', acknowledgement = ''
         clean_git_worktree_required: true,
         exact_commit_bound: true,
         source_date_epoch_from_commit: true,
-      package_snapshot_locked: true,
-      tools_tree_snapshot_locked: true,
-      explicit_repart_layout: true,
+        package_snapshot_locked: true,
+        tools_tree_snapshot_locked: true,
+        explicit_repart_layout: true,
         deterministic_ext4_time: true,
         deterministic_ext4_hash_seed: true,
+        ext4_journal_disabled_for_h0: true,
         machine_readable_sbom_generated: true,
         draft_host_profile_generated: true,
         image_and_build_log_secret_scan_passed: true,
@@ -352,7 +353,7 @@ export function laboratoryEnvironment(sourceDateEpoch, source = process.env, { p
   }
   environment.SOURCE_DATE_EPOCH = String(sourceDateEpoch);
   environment.E2FSPROGS_FAKE_TIME = String(sourceDateEpoch);
-  environment.SYSTEMD_REPART_MKFS_OPTIONS_EXT4 = `-E hash_seed=${HOST_LAB_EXT4_HASH_SEED}`;
+  environment.SYSTEMD_REPART_MKFS_OPTIONS_EXT4 = `-O ^has_journal -E hash_seed=${HOST_LAB_EXT4_HASH_SEED}`;
   environment.TZ = 'UTC';
   environment.AXIOM_HOST_LAB = '1';
   return environment;

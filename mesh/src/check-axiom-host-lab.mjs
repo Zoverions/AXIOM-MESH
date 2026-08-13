@@ -214,10 +214,12 @@ function verifyPolicy(policy) {
     || policy.filesystem_layout?.root?.filesystem !== 'ext4'
     || policy.filesystem_layout?.root?.size !== '2G'
     || policy.filesystem_layout?.root?.minimize !== false
+    || policy.filesystem_layout?.root?.journal !== false
     || policy.reproducibility?.source_date_epoch_environment !== 'SOURCE_DATE_EPOCH'
     || policy.reproducibility?.ext4_fake_time_environment !== 'E2FSPROGS_FAKE_TIME'
     || policy.reproducibility?.ext4_mkfs_options_environment !== 'SYSTEMD_REPART_MKFS_OPTIONS_EXT4'
     || policy.reproducibility?.ext4_hash_seed !== '6e56f338-f1f4-5cc8-a7fb-3dc1c107485c'
+    || policy.reproducibility?.ext4_disable_journal !== true
     || policy.reproducibility?.timezone !== 'UTC'
     || policy.evidence?.sbom_format !== 'CycloneDX-1.6'
     || policy.evidence?.draft_host_profile !== 'axiom-host-profile.v1'

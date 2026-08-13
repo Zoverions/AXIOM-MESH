@@ -187,6 +187,7 @@ async function inspectFilesystem(handle, partitionStart, partitionBytes) {
 
 function inspectExt4Superblock(superblock) {
   const blockSize = 1024 * (2 ** superblock.readUInt32LE(0x18));
+  const featureCompat = superblock.readUInt32LE(0x5c);
   const uuid = formatRawUuid(superblock.subarray(0x68, 0x78));
   const volumeName = decodeFixedAscii(superblock.subarray(0x78, 0x88));
   const lastMounted = decodeFixedAscii(superblock.subarray(0x88, 0xc8));
@@ -220,7 +221,8 @@ function inspectExt4Superblock(superblock) {
     revision_level: superblock.readUInt32LE(0x4c),
     first_non_reserved_inode: superblock.readUInt32LE(0x54),
     inode_size: superblock.readUInt16LE(0x58),
-    feature_compat: hex32(superblock.readUInt32LE(0x5c)),
+    feature_compat: hex32(featureCompat),
+    has_journal: (featureCompat & 0x00000004) !== 0,
     feature_incompat: hex32(superblock.readUInt32LE(0x60)),
     feature_ro_compat: hex32(superblock.readUInt32LE(0x64)),
     journal_uuid: formatRawUuid(superblock.subarray(0xd0, 0xe0)),
