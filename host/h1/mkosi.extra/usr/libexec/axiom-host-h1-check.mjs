@@ -166,12 +166,24 @@ function readState() {
 function findMount(target) {
   const output = execFileSync(
     '/usr/bin/findmnt',
-    ['--noheadings', '--raw', '--output', 'SOURCE,FSTYPE,OPTIONS', '--target', target],
+    ['--json', '--output', 'SOURCE,FSTYPE,OPTIONS', '--mountpoint', target],
     { encoding: 'utf8', timeout: 10_000 }
-  ).trim();
-  const match = output.match(/^(\S+)\s+(\S+)\s+(\S+)$/);
-  assert(match, `findmnt returned an invalid record for ${target}`);
-  return { target, source: match[1], filesystem: match[2], options: match[3].split(',').sort() };
+  );
+  const records = JSON.parse(output).filesystems;
+  assert(Array.isArray(records) && records.length === 1, `findmnt returned an invalid record count for ${target}`);
+  const [record] = records;
+  assert(
+    typeof record.source === 'string'
+      && typeof record.fstype === 'string'
+      && typeof record.options === 'string',
+    `findmnt returned invalid fields for ${target}`
+  );
+  return {
+    target,
+    source: record.source,
+    filesystem: record.fstype,
+    options: record.options.split(',').sort()
+  };
 }
 
 function observeVerityDevices() {

@@ -173,6 +173,8 @@ export async function verifyAxiomHostH1Configuration(urls = FILES) {
     "findMount('/')",
     "findMount('/boot')",
     "findMount('/var')",
+    "['--json', '--output', 'SOURCE,FSTYPE,OPTIONS', '--mountpoint', target]",
+    'JSON.parse(output).filesystems',
     "runNpm(['run', 'setup:check'])",
     "runNpm(['run', 'check'])",
     "const commandArgs = ['--prefix', SOURCE_ROOT, ...args]",
