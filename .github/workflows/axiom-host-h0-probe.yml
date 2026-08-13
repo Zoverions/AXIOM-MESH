@@ -157,6 +157,16 @@ jobs:
         run: |
           sudo chown -R "$(id -u):$(id -g)" host/mkosi.output host/.mkosi-private 2>/dev/null || true
 
+      - name: Diagnose raw image by GPT and partition byte ranges
+        shell: bash
+        run: |
+          set -euo pipefail
+          node mesh/src/axiom-host-image-diagnostics.mjs \
+            host/mkosi.output/axiom-host-lab_0.1.0-h0.raw \
+            host/mkosi.output/axiom-host-h0-build-evidence.json \
+            > "$RUNNER_TEMP/axiom-host-h0-image-diagnostics.json"
+          test -s "$RUNNER_TEMP/axiom-host-h0-image-diagnostics.json"
+
       - name: Upload H0 package-source probe evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -182,6 +192,15 @@ jobs:
         with:
           name: axiom-host-h0-build-evidence-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: host/mkosi.output/axiom-host-h0-build-evidence.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload compact H0 image diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: axiom-host-h0-image-diagnostics-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/axiom-host-h0-image-diagnostics.json
           if-no-files-found: warn
           retention-days: 30
 
