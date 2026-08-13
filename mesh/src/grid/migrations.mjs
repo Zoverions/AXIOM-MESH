@@ -232,6 +232,63 @@ const NODE_SCHEDULING_SQL = `
   ALTER TABLE nodes ADD COLUMN discovery_json TEXT;
 ${NODE_SCHEDULING_TABLES_SQL}`;
 
+const HUMAN_AUTHORITY_PROJECTIONS_SQL = `
+  CREATE TABLE IF NOT EXISTS human_relationship_claims (
+    claim_id TEXT PRIMARY KEY,
+    subject_id TEXT NOT NULL,
+    holder_id TEXT NOT NULL,
+    issuer_id TEXT NOT NULL,
+    assurance TEXT NOT NULL,
+    jurisdiction_context_digest TEXT NOT NULL,
+    effective_from TEXT NOT NULL,
+    effective_until TEXT,
+    status TEXT NOT NULL,
+    source_event_id TEXT NOT NULL,
+    status_event_id TEXT NOT NULL,
+    status_at TEXT NOT NULL
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS human_authority_grants (
+    grant_id TEXT PRIMARY KEY,
+    subject_id TEXT NOT NULL,
+    holder_id TEXT NOT NULL,
+    relationship_claim_id TEXT NOT NULL,
+    issuer_id TEXT NOT NULL,
+    authority_source TEXT NOT NULL,
+    assurance TEXT NOT NULL,
+    jurisdiction_context_digest TEXT NOT NULL,
+    effective_from TEXT NOT NULL,
+    effective_until TEXT,
+    revocable INTEGER NOT NULL,
+    delegable INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    source_event_id TEXT NOT NULL,
+    status_event_id TEXT NOT NULL,
+    status_at TEXT NOT NULL
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS human_authority_conflicts (
+    conflict_id TEXT PRIMARY KEY,
+    subject_id TEXT NOT NULL,
+    jurisdiction_context_digest TEXT NOT NULL,
+    effective_from TEXT NOT NULL,
+    effective_until TEXT,
+    status TEXT NOT NULL,
+    source_event_id TEXT NOT NULL,
+    status_event_id TEXT NOT NULL,
+    status_at TEXT NOT NULL
+  ) STRICT;
+
+  CREATE INDEX IF NOT EXISTS human_relationship_subject_holder_idx
+  ON human_relationship_claims(subject_id, holder_id, status);
+
+  CREATE INDEX IF NOT EXISTS human_authority_subject_holder_idx
+  ON human_authority_grants(subject_id, holder_id, status);
+
+  CREATE INDEX IF NOT EXISTS human_authority_conflict_subject_idx
+  ON human_authority_conflicts(subject_id, status);
+`;
+
 const MIGRATIONS = Object.freeze([
   {
     version: 1,
@@ -344,6 +401,8 @@ ALTER proposals ADD lifecycle timestamps, verification digest, and rollback meta
   }
 ]);
 
+const HUMAN_AUTHORITY_PROJECTION_META_KEY = 'projection_schema:human-authority:v1';
+
 export function runMigrations(db, { now = () => new Date().toISOString() } = {}) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -387,6 +446,11 @@ export function runMigrations(db, { now = () => new Date().toISOString() } = {})
       throw error;
     }
   }
+  ensureDerivedProjectionSchema(
+    db,
+    HUMAN_AUTHORITY_PROJECTION_META_KEY,
+    HUMAN_AUTHORITY_PROJECTIONS_SQL
+  );
   return {
     version: MIGRATIONS.at(-1).version,
     applied: db.prepare('SELECT version, name, checksum, applied_at FROM schema_migrations ORDER BY version').all()
@@ -395,6 +459,18 @@ export function runMigrations(db, { now = () => new Date().toISOString() } = {})
 
 export function migrationChecksum(migration) {
   return sha256(`${migration.version}\n${migration.name}\n${migration.source}`);
+}
+
+function ensureDerivedProjectionSchema(db, key, source) {
+  const checksum = sha256(source);
+  const existing = db.prepare('SELECT value FROM meta WHERE key = ?').get(key)?.value;
+  if (existing !== undefined && existing !== checksum) {
+    throw new Error(`Derived projection schema ${key} does not match the runtime checksum`);
+  }
+  db.exec(source);
+  if (existing === undefined) {
+    db.prepare('INSERT INTO meta(key, value) VALUES (?, ?)').run(key, checksum);
+  }
 }
 
 function addColumns(db, table, definitions) {
