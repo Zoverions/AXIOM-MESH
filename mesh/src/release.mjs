@@ -340,6 +340,7 @@ export async function verifyReleaseReadiness() {
     .filter(name => name.endsWith('.yml') || name.endsWith('.yaml'))
     .sort();
   const governedWorkflows = [
+    'axiom-host-h0-probe.yml',
     'chain-verification-benchmark.yml',
     'kernel.yml',
     'windows.yml'
