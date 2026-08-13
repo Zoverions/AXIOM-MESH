@@ -46,6 +46,7 @@ const BASIS_KINDS = new Set([
   'declaration'
 ]);
 const RESULTS = new Set(['pass', 'fail', 'unknown', 'observed']);
+const MAX_FRONT_RELATIONS = 256;
 
 const CHANGE_FRONT_FIELDS = new Set([
   'schema',
@@ -220,8 +221,13 @@ export function normalizeChangeFront(raw) {
     throw new ValidationError('non-main change front must change source state');
   }
 
-  if (!Array.isArray(value.depends_on ?? [])) {
-    throw new ValidationError('change front depends_on must be an array');
+  if (
+    !Array.isArray(value.depends_on ?? [])
+    || (value.depends_on ?? []).length > MAX_FRONT_RELATIONS
+  ) {
+    throw new ValidationError(
+      `change front depends_on must be an array with at most ${MAX_FRONT_RELATIONS} items`
+    );
   }
   const dependencies = (value.depends_on ?? [])
     .map(normalizeDependency)
@@ -230,8 +236,13 @@ export function normalizeChangeFront(raw) {
     throw new ValidationError('change front dependencies must not contain duplicates');
   }
 
-  if (!Array.isArray(value.provider_observations ?? [])) {
-    throw new ValidationError('change front provider_observations must be an array');
+  if (
+    !Array.isArray(value.provider_observations ?? [])
+    || (value.provider_observations ?? []).length > MAX_FRONT_RELATIONS
+  ) {
+    throw new ValidationError(
+      `change front provider_observations must be an array with at most ${MAX_FRONT_RELATIONS} items`
+    );
   }
   const providerObservations = (value.provider_observations ?? [])
     .map(normalizeChangeFrontProviderObservation);
@@ -355,22 +366,33 @@ function assertUnique(items, key, name) {
 }
 
 function assertAcyclic(frontsById) {
-  const visiting = new Set();
-  const visited = new Set();
+  const state = new Map();
 
-  function visit(frontId) {
-    if (visited.has(frontId)) return;
-    if (visiting.has(frontId)) {
-      throw new ValidationError(`change-front dependency cycle includes ${frontId}`);
+  for (const rootId of frontsById.keys()) {
+    if (state.get(rootId) === 'visited') continue;
+
+    state.set(rootId, 'visiting');
+    const stack = [{ front_id: rootId, dependency_index: 0 }];
+    while (stack.length) {
+      const frame = stack.at(-1);
+      const dependencies = frontsById.get(frame.front_id).depends_on;
+      if (frame.dependency_index >= dependencies.length) {
+        state.set(frame.front_id, 'visited');
+        stack.pop();
+        continue;
+      }
+
+      const dependencyId = dependencies[frame.dependency_index].front_id;
+      frame.dependency_index += 1;
+      if (state.get(dependencyId) === 'visiting') {
+        throw new ValidationError(`change-front dependency cycle includes ${dependencyId}`);
+      }
+      if (state.get(dependencyId) === 'visited') continue;
+
+      state.set(dependencyId, 'visiting');
+      stack.push({ front_id: dependencyId, dependency_index: 0 });
     }
-    visiting.add(frontId);
-    const front = frontsById.get(frontId);
-    for (const dependency of front.depends_on) visit(dependency.front_id);
-    visiting.delete(frontId);
-    visited.add(frontId);
   }
-
-  for (const frontId of frontsById.keys()) visit(frontId);
 }
 
 export function verifyAssuranceGraph(raw) {
