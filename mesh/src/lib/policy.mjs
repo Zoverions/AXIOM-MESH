@@ -3,6 +3,8 @@ import { digestObject, ValidationError } from './canonical.mjs';
 
 const RISK_ORDER = Object.freeze({ low: 0, medium: 1, high: 2, critical: 3 });
 const PROTOTYPE_KEYS = new Set(Object.getOwnPropertyNames(Object.prototype));
+const BASE_POLICY_OBJECTS = new WeakSet();
+const MERGED_POLICY_METADATA = new WeakMap();
 const PROTECTED_RECOVERY_ACTIONS = new Set([
   'approval.grant',
   'governance.rollback',
@@ -22,11 +24,19 @@ const ALLOW_RULE_FIELDS = new Set([
   'tool',
   'effect'
 ]);
+const DENY_RULE_FIELDS = new Set([
+  ...ALLOW_RULE_FIELDS,
+  'code',
+  'http_status',
+  'reason'
+]);
 
 export async function loadPolicy(path) {
   const policy = JSON.parse(await readFile(path, 'utf8'));
   validatePolicy(policy);
-  return new PolicyEngine(policy);
+  const engine = new PolicyEngine(policy);
+  BASE_POLICY_OBJECTS.add(engine.policy);
+  return engine;
 }
 
 export async function loadPolicyStack(paths) {
@@ -38,13 +48,15 @@ export async function loadPolicyStack(paths) {
     validatePolicy(policy);
     return policy;
   }));
-  return new PolicyEngine(mergeDenyDominantPolicy(layers), {
+  const engine = new PolicyEngine(mergeDenyDominantPolicy(layers), {
     layers: layers.map((layer, index) => ({
       order: index,
       version: layer.version,
       digest: digestObject(layer)
     }))
   });
+  BASE_POLICY_OBJECTS.add(engine.policy);
+  return engine;
 }
 
 export function validatePolicy(policy) {
@@ -59,6 +71,9 @@ export function validatePolicy(policy) {
     if (PROTOTYPE_KEYS.has(action)) {
       throw new ValidationError(`Policy action uses a reserved prototype identifier: ${action}`);
     }
+    if (!rule || typeof rule !== 'object' || Array.isArray(rule)) {
+      throw new ValidationError(`Invalid policy rule for ${action}`);
+    }
     if (!['allow', 'deny'].includes(rule.decision)) throw new ValidationError(`Invalid decision for ${action}`);
     if (!Object.hasOwn(RISK_ORDER, rule.risk)) throw new ValidationError(`Invalid risk for ${action}`);
     if (
@@ -66,6 +81,14 @@ export function validatePolicy(policy) {
       && (!Number.isSafeInteger(rule.http_status) || rule.http_status < 400 || rule.http_status > 599)
     ) {
       throw new ValidationError(`Invalid HTTP status for ${action}`);
+    }
+    if (
+      rule.required_confirmations !== undefined
+      && (!Number.isSafeInteger(rule.required_confirmations)
+        || rule.required_confirmations < 0
+        || rule.required_confirmations > 16)
+    ) {
+      throw new ValidationError(`Invalid required confirmations for ${action}`);
     }
     if (
       rule.required_confirmation_values !== undefined
@@ -109,19 +132,73 @@ export function validateAuthorityReducingPolicy(policy) {
   return policy;
 }
 
+export function createOverlayPolicyResolver(basePolicy) {
+  if (!(basePolicy instanceof PolicyEngine)) {
+    throw new ValidationError('Overlay policy resolver requires a validated base PolicyEngine');
+  }
+  let cachedKey = null;
+  let cachedPolicy = null;
+
+  return overlays => {
+    if (!Array.isArray(overlays)) {
+      throw new ValidationError('Policy overlays must be an array');
+    }
+    if (!overlays.length) return basePolicy;
+
+    const measured = overlays.map((overlay, index) => {
+      if (!overlay || typeof overlay !== 'object' || Array.isArray(overlay)) {
+        throw new ValidationError(`Policy overlay ${index} is invalid`);
+      }
+      const policy = validateAuthorityReducingPolicy(overlay.policy_json);
+      const digest = digestObject(policy);
+      if (overlay.policy_digest !== undefined && overlay.policy_digest !== digest) {
+        throw new ValidationError(`Policy overlay ${index} digest does not match measured policy bytes`);
+      }
+      return {
+        policy,
+        layer: {
+          order: basePolicy.layers.length + index,
+          version: policy.version,
+          digest
+        }
+      };
+    });
+
+    const key = digestObject(measured.map(item => item.layer));
+    if (cachedPolicy && cachedKey === key) return cachedPolicy;
+
+    const merged = mergeDenyDominantPolicy([
+      basePolicy.policy,
+      ...measured.map(item => item.policy)
+    ]);
+    cachedPolicy = new PolicyEngine(merged, {
+      layers: [
+        ...basePolicy.layers,
+        ...measured.map(item => item.layer)
+      ]
+    });
+    cachedKey = key;
+    return cachedPolicy;
+  };
+}
+
 function hasScope(scopes, required) {
   return scopes.includes('*') || scopes.includes(required);
 }
 
 export class PolicyEngine {
   constructor(policy, { layers } = {}) {
+    const metadata = MERGED_POLICY_METADATA.get(policy);
     this.policy = structuredClone(policy);
     this.digest = digestObject(policy);
-    this.layers = structuredClone(layers ?? [{
-      order: 0,
-      version: policy.version,
-      digest: this.digest
-    }]);
+    this.layers = normalizeMeasuredLayers(
+      layers ?? [{
+        order: 0,
+        version: policy.version,
+        digest: this.digest
+      }],
+      metadata
+    );
   }
 
   evaluate({ action, principal, intent }) {
@@ -166,7 +243,14 @@ export class PolicyEngine {
         policy_layers: this.layers
       };
     }
-    const requiredConfirmations = Number(rule.required_confirmations ?? 0);
+    const requiredConfirmations = rule.required_confirmations ?? 0;
+    if (
+      !Number.isSafeInteger(requiredConfirmations)
+      || requiredConfirmations < 0
+      || requiredConfirmations > 16
+    ) {
+      throw new ValidationError(`Invalid required confirmations for ${action}`);
+    }
     const confirmations = Array.isArray(intent.confirmations)
       ? [...new Set(intent.confirmations.filter(value => typeof value === 'string'))]
       : [];
@@ -206,11 +290,14 @@ export function mergeDenyDominantPolicy(layers) {
   const valid = layers.filter(Boolean);
   if (!valid.length) throw new ValidationError('At least one policy layer is required');
   valid.forEach(validatePolicy);
+  const overlayMode = BASE_POLICY_OBJECTS.has(valid[0]);
+  if (overlayMode) valid.slice(1).forEach(validateAuthorityReducingPolicy);
   const result = structuredClone(valid[0]);
   const versions = [valid[0].version];
   for (const layer of valid.slice(1)) {
     versions.push(layer.version);
     for (const [action, incoming] of Object.entries(layer.actions ?? {})) {
+      assertMergeRuleFields(incoming, action);
       const current = Object.hasOwn(result.actions, action)
         ? result.actions[action]
         : null;
@@ -226,13 +313,6 @@ export function mergeDenyDominantPolicy(layers) {
           risk: RISK_ORDER[current.risk] >= RISK_ORDER[incoming.risk] ? current.risk : incoming.risk
         };
         continue;
-      }
-      const unsupportedFields = Object.keys(incoming)
-        .filter(field => !ALLOW_RULE_FIELDS.has(field));
-      if (unsupportedFields.length) {
-        throw new ValidationError(
-          `Policy layer contains unsupported allow fields for ${action}: ${unsupportedFields.join(', ')}`
-        );
       }
       if (current.tool !== incoming.tool && incoming.tool !== undefined) {
         throw new ValidationError(`Policy layer cannot replace the tool for ${action}`);
@@ -250,8 +330,8 @@ export function mergeDenyDominantPolicy(layers) {
         risk: RISK_ORDER[current.risk] >= RISK_ORDER[incoming.risk] ? current.risk : incoming.risk,
         required_scopes: [...new Set([...currentScopes, ...incomingScopes])].sort(),
         required_confirmations: Math.max(
-          Number(current.required_confirmations ?? 0),
-          Number(incoming.required_confirmations ?? 0)
+          current.required_confirmations ?? 0,
+          incoming.required_confirmations ?? 0
         ),
         required_confirmation_values: [...new Set([...currentValues, ...incomingValues])].sort(),
         requires_independent_approval:
@@ -272,7 +352,60 @@ export function mergeDenyDominantPolicy(layers) {
   }
   result.version = versions.join('+');
   validatePolicy(result);
+  MERGED_POLICY_METADATA.set(result, {
+    overlayMode,
+    measuredLayers: valid.map(layer => ({
+      version: layer.version,
+      digest: digestObject(layer)
+    }))
+  });
   return result;
+}
+
+function normalizeMeasuredLayers(layers, metadata) {
+  const output = structuredClone(layers);
+  if (!metadata) return output;
+  const measured = metadata.measuredLayers;
+  if (!metadata.overlayMode) {
+    if (output.length !== measured.length) {
+      throw new ValidationError('Policy layer evidence does not match the measured merge inputs');
+    }
+    for (let index = 0; index < measured.length; index += 1) {
+      assertMeasuredLayer(output[index], measured[index], index);
+      output[index].version = measured[index].version;
+      output[index].digest = measured[index].digest;
+    }
+    return output;
+  }
+
+  const overlayCount = measured.length - 1;
+  if (output.length < overlayCount + 1) {
+    throw new ValidationError('Policy overlay evidence is incomplete');
+  }
+  for (let index = 0; index < overlayCount; index += 1) {
+    const outputIndex = output.length - overlayCount + index;
+    const measuredLayer = measured[index + 1];
+    assertMeasuredLayer(output[outputIndex], measuredLayer, outputIndex);
+    output[outputIndex].version = measuredLayer.version;
+    output[outputIndex].digest = measuredLayer.digest;
+  }
+  return output;
+}
+
+function assertMeasuredLayer(supplied, measured, index) {
+  if (!supplied || supplied.version !== measured.version || supplied.digest !== measured.digest) {
+    throw new ValidationError(`Policy layer ${index} evidence does not match measured policy bytes`);
+  }
+}
+
+function assertMergeRuleFields(rule, action) {
+  const allowed = rule.decision === 'deny' ? DENY_RULE_FIELDS : ALLOW_RULE_FIELDS;
+  const unsupportedFields = Object.keys(rule).filter(field => !allowed.has(field));
+  if (unsupportedFields.length) {
+    throw new ValidationError(
+      `Policy layer contains unsupported ${rule.decision} fields for ${action}: ${unsupportedFields.join(', ')}`
+    );
+  }
 }
 
 function mergeConstraints(current, incoming, action) {
@@ -286,7 +419,15 @@ function mergeConstraints(current, incoming, action) {
     if (typeof existing === 'boolean' && typeof value === 'boolean') {
       result[key] = existing && value;
     } else if (Number.isFinite(existing) && Number.isFinite(value)) {
-      result[key] = Math.min(existing, value);
+      if (/^(?:max_|maximum_)/.test(key) || /_(?:max|maximum)$/.test(key)) {
+        result[key] = Math.min(existing, value);
+      } else if (/^(?:min_|minimum_)/.test(key) || /_(?:min|minimum)$/.test(key)) {
+        result[key] = Math.max(existing, value);
+      } else {
+        throw new ValidationError(
+          `Numeric policy constraint direction is undeclared for ${action}.${key}`
+        );
+      }
     } else if (Array.isArray(existing) && Array.isArray(value)) {
       const allowed = new Set(value.map(item => JSON.stringify(item)));
       result[key] = existing.filter(item => allowed.has(JSON.stringify(item)));
