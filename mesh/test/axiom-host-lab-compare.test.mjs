@@ -70,7 +70,9 @@ test('artifact-set or external-workspace control tampering is rejected before co
 });
 
 function evidence({ artifacts = BASE_ARTIFACTS, generatedAt = '2026-08-13T02:00:00.000Z' } = {}) {
-  const inventory = artifacts.map(item => ({ ...item }));
+  const inventory = artifacts
+    .map(item => ({ ...item }))
+    .sort((left, right) => left.name.localeCompare(right.name));
   return {
     schema: 'axiom-host-h0-build-evidence.v1',
     status: 'built-not-promoted',
