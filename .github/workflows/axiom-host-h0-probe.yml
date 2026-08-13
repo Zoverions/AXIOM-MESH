@@ -63,17 +63,36 @@ jobs:
       - name: Parse AXIOM Host H0 configuration with upstream mkosi
         run: npm run host:lab:summary
 
-      - name: Discover Fedora snapshot candidate without committing it
+      - name: Attempt Fedora snapshot discovery on hosted runner
+        id: snapshot
+        continue-on-error: true
         shell: bash
         run: |
-          set -euo pipefail
+          set -o pipefail
           npm run host:lab:snapshot \
-            | tee "$RUNNER_TEMP/axiom-host-fedora-snapshot-candidate.json"
+            > "$RUNNER_TEMP/axiom-host-fedora-snapshot-attempt.log" 2>&1
+          status=$?
+          cat "$RUNNER_TEMP/axiom-host-fedora-snapshot-attempt.log"
+          exit "$status"
 
-      - name: Upload snapshot candidate evidence
+      - name: Record snapshot discovery outcome
+        if: always()
+        shell: bash
+        env:
+          SNAPSHOT_OUTCOME: ${{ steps.snapshot.outcome }}
+        run: |
+          set -euo pipefail
+          printf '{"schema":"axiom-host-h0-snapshot-probe.v1","github_sha":"%s","mkosi_commit":"%s","outcome":"%s","gating":false,"interpretation":"Hosted-runner snapshot discovery is evidence-only; a failure does not weaken the requirement to resolve and commit a reviewed snapshot before H0 build."}\n' \
+            "$GITHUB_SHA" "$MKOSI_V26_COMMIT" "$SNAPSHOT_OUTCOME" \
+            > "$RUNNER_TEMP/axiom-host-fedora-snapshot-probe.json"
+
+      - name: Upload snapshot probe evidence
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: axiom-host-fedora-snapshot-candidate-${{ github.sha }}
-          path: ${{ runner.temp }}/axiom-host-fedora-snapshot-candidate.json
+          name: axiom-host-fedora-snapshot-probe-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/axiom-host-fedora-snapshot-probe.json
+            ${{ runner.temp }}/axiom-host-fedora-snapshot-attempt.log
           if-no-files-found: error
           retention-days: 14
