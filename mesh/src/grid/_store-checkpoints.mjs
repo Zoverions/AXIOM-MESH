@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { lstat, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
   AxiomError,
@@ -98,15 +98,35 @@ export class GridStore extends CoreGridStore {
 
     // The database bundle_path is attribution metadata only. Never dereference
     // it. Re-derive the bounded path from the validated export identity and the
-    // signed manifest, then measure the bytes before returning them.
-    const expectedPath = join(this.dataDir, 'exports', exportId, file.name);
+    // signed manifest. Every path component beneath the trusted data directory
+    // must also be a real filesystem object of the expected type: a symlinked
+    // exports root, export directory, or bundle file is rejected before bytes
+    // are read.
+    const exportsRoot = join(this.dataDir, 'exports');
+    const exportDir = join(exportsRoot, exportId);
+    const expectedPath = join(exportDir, file.name);
     let bundle;
     try {
+      const [rootStat, dirStat, fileStat] = await Promise.all([
+        lstat(exportsRoot),
+        lstat(exportDir),
+        lstat(expectedPath)
+      ]);
+      if (
+        rootStat.isSymbolicLink()
+        || !rootStat.isDirectory()
+        || dirStat.isSymbolicLink()
+        || !dirStat.isDirectory()
+        || fileStat.isSymbolicLink()
+        || !fileStat.isFile()
+      ) {
+        throw new Error('export path contains an invalid filesystem object');
+      }
       bundle = await readFile(expectedPath);
     } catch {
       throw new AxiomError(
         'export_integrity_failed',
-        'Export bundle bytes are unavailable',
+        'Export bundle bytes are unavailable or path integrity failed',
         503
       );
     }
