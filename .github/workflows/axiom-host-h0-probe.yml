@@ -183,6 +183,7 @@ jobs:
           name: axiom-host-h0-first-build-${{ github.sha }}
           path: |
             host/mkosi.output/**
+            host/.mkosi-private/mkosi-build.log
             ${{ runner.temp }}/axiom-host-h0-build-command.json
           if-no-files-found: warn
           retention-days: 7
