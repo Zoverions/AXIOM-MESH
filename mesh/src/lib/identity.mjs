@@ -109,7 +109,14 @@ export class ReplayGuard {
     this.usesSinceSweep = 0;
   }
 
+  // Compatibility surface retained for existing callers/tests that only need
+  // admitted vs not-admitted semantics. Security-sensitive callers that must
+  // distinguish replay from capacity exhaustion use admit().
   use(service, nonce, expiresAtMs, now = Date.now()) {
+    return this.admit(service, nonce, expiresAtMs, now) === 'admitted';
+  }
+
+  admit(service, nonce, expiresAtMs, now = Date.now()) {
     const key = `${service}:${nonce}`;
     const existingExpiry = this.nonces.get(key);
     if (existingExpiry !== undefined) {
@@ -248,7 +255,7 @@ export async function verifySignedRequest({
   if (!verify(null, Buffer.from(input), key, fromB64url(signature))) {
     throw new AxiomError('invalid_service_signature', 'Service request signature is invalid', 401);
   }
-  const replayAdmission = replayGuard.use(
+  const replayAdmission = replayGuard.admit(
     service,
     nonce,
     (timestampSeconds + clockSkewSeconds + 1) * 1000,
