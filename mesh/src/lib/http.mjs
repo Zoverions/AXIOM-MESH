@@ -166,7 +166,15 @@ export function createServiceServer({
           );
         }
       }
-      const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
+      let url;
+      try {
+        url = new URL(req.url, 'http://127.0.0.1');
+      } catch {
+        throw new ValidationError('Request target is invalid');
+      }
+      if (url.origin !== 'http://127.0.0.1') {
+        throw new ValidationError('Request target must use origin-form addressing');
+      }
       const route = router.match(req.method, url.pathname);
       if (!route) throw new AxiomError('not_found', 'Route not found', 404);
       if (transportPeer && authorizeRequest) {
@@ -429,16 +437,35 @@ export class TokenBucketLimiter {
   }
 
   take(key, now = Date.now()) {
-    const previous = this.buckets.get(key) ?? { tokens: this.capacity, at: now };
+    let previous = this.buckets.get(key);
+    if (!previous) {
+      if (this.buckets.size >= this.maxKeys && !this.evictRefilledBucket(now)) {
+        return false;
+      }
+      previous = { tokens: this.capacity, at: now };
+    }
     const elapsed = Math.max(0, (now - previous.at) / 1000);
     const available = Math.min(this.capacity, previous.tokens + elapsed * this.refillPerSecond);
+    this.buckets.delete(key);
     if (available < 1) {
       this.buckets.set(key, { tokens: available, at: now });
       return false;
     }
-    this.buckets.delete(key);
     this.buckets.set(key, { tokens: available - 1, at: now });
-    while (this.buckets.size > this.maxKeys) this.buckets.delete(this.buckets.keys().next().value);
     return true;
+  }
+
+  evictRefilledBucket(now) {
+    for (const [key, bucket] of this.buckets) {
+      const elapsed = Math.max(0, (now - bucket.at) / 1000);
+      const available = Math.min(
+        this.capacity,
+        bucket.tokens + elapsed * this.refillPerSecond
+      );
+      if (available < this.capacity) continue;
+      this.buckets.delete(key);
+      return true;
+    }
+    return false;
   }
 }
