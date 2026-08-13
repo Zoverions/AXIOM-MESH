@@ -5,7 +5,6 @@ import {
   digestObject
 } from './canonical.mjs';
 import {
-  ASSURANCE_EVIDENCE_SCHEMA,
   CHANGE_FRONT_PROVIDER_OBSERVATION_SCHEMA,
   normalizeAssuranceEvidence,
   normalizeChangeFront,
@@ -307,25 +306,13 @@ export function adaptChangeFrontProviderCapture({
   const observation = providerObservation(capture);
   const headMatchesFront = sourceState.state_digest === front.head_state_digest;
 
-  const providerEvidence = capture.provider_authenticity_verified
-    ? normalizeAssuranceEvidence({
-        schema: ASSURANCE_EVIDENCE_SCHEMA,
-        evidence_id: `provider:${capture.provider}:${capture.capture_digest}`,
-        front_id: front.front_id,
-        source_state_digest: sourceState.state_digest,
-        evidence_class: 'authenticated_assertion',
-        basis_kind: 'provider_report',
-        subject: 'provider.change-front-observation',
-        result: 'observed',
-        evidence_payload_digest: capture.capture_digest,
-        environment_digest: null,
-        observed_at: capture.observed_at,
-        current_for_front: headMatchesFront,
-        non_authorizing: true,
-        provider_observation: observation
-      })
-    : null;
-
+  // This pure adapter can normalize a caller-supplied statement that a provider
+  // interaction was authenticated, but it cannot independently prove that
+  // transport/authentication event itself. Therefore the boolean remains part
+  // of the non-authoritative capture and MUST NOT be upgraded into A0
+  // authenticated-assertion evidence here. A later read-only transport observer
+  // may emit that stronger evidence only after verifying the provider response
+  // against its configured trust boundary.
   const body = {
     schema: CHANGE_FRONT_PROVIDER_ADAPTATION_SCHEMA,
     front_id: front.front_id,
@@ -335,9 +322,12 @@ export function adaptChangeFrontProviderCapture({
     source_evidence_digest: sourceEvidence.evidence_digest,
     provider: capture.provider,
     provider_capture_digest: capture.capture_digest,
+    provider_capture_evidence_digest: capture.provider_evidence_digest,
     provider_observation_digest: observation.observation_digest,
-    provider_evidence_digest: providerEvidence?.evidence_digest ?? null,
-    provider_authenticity_verified: capture.provider_authenticity_verified,
+    provider_assurance_evidence_digest: null,
+    provider_authenticity_reported: capture.provider_authenticity_verified,
+    provider_authenticity_is_observation_only: true,
+    authenticated_provider_assertion_emitted: false,
     external_revision: capture.external_revision,
     head_matches_front: headMatchesFront,
     checks_all_success: capture.checks.length > 0
@@ -362,6 +352,6 @@ export function adaptChangeFrontProviderCapture({
     source_evidence: sourceEvidence,
     provider_capture: capture,
     provider_observation: observation,
-    provider_evidence: providerEvidence
+    provider_evidence: null
   };
 }
