@@ -19,7 +19,8 @@
   },
   "tools_tree": {
     "distribution": "fedora",
-    "release": "43"
+    "release": "43",
+    "mirror": "https://dl.fedoraproject.org/pub/fedora"
   },
   "package_source": {
     "snapshot_required_before_build": true,
