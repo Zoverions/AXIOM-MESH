@@ -6,8 +6,9 @@ import { ensureMeshIdentity, ReplayGuard, verifySignedRequest } from '../lib/ide
 import { Router, createServiceServer, listen, parseJsonBody } from '../lib/http.mjs';
 import { AxiomError, ValidationError, assertPlainObject, assertString } from '../lib/canonical.mjs';
 import { operationsReport, readinessState, ServiceTelemetry } from '../lib/observability.mjs';
-import { GridStore } from './store.mjs';
+import { DelegatedAuthorityGridStore } from './delegated-authority-store.mjs';
 import { registerEducationGridRoutes } from './education-routes.mjs';
+import { registerDelegatedAuthorizationGridRoute } from './delegated-authorization-route.mjs';
 import { preflightEducationLearnerGridEvent } from '../domain/education-learner-grid-preflight.mjs';
 import { loadDataProtector } from '../lib/protector.mjs';
 import { runServiceProcess } from '../lib/service-lifecycle.mjs';
@@ -42,7 +43,7 @@ export async function createGridService(config = meshConfig()) {
         })
       : null;
     protector = await loadDataProtector(config);
-    store = new GridStore({
+    store = new DelegatedAuthorityGridStore({
       path: join(config.dataDir, 'grid.sqlite'),
       dataDir: config.dataDir,
       identity,
@@ -89,6 +90,7 @@ export async function createGridService(config = meshConfig()) {
   router.add('GET', '/internal/v1/operations', async () => currentOperations());
 
   registerEducationGridRoutes(router, store);
+  registerDelegatedAuthorizationGridRoute(router, store);
 
   router.add('POST', '/internal/v1/commit', async ({ body, traceId, principal }) => {
     if (principal.service !== 'hypervisor') {
