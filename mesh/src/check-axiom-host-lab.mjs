@@ -80,7 +80,7 @@ export async function verifyAxiomHostLabConfiguration({
   const mkosi = parseMkosiConfiguration(mkosiText);
   const tools = parseMkosiConfiguration(toolsText);
   verifyMkosiConfiguration(mkosi, mkosiText, policy, snapshot);
-  verifyToolsConfiguration(tools, toolsText, policy, snapshot);
+  verifyToolsConfiguration(tools, toolsText, snapshot);
   verifyRepartDefinitions(espRepartText, rootRepartText, policy);
 
   const version = versionText.trim();
@@ -359,18 +359,15 @@ function verifyMkosiConfiguration(config, source, policy, snapshot) {
   }
 }
 
-function verifyToolsConfiguration(config, source, policy, snapshot) {
-  const exact = [
-    ['Distribution', 'Distribution', policy.tools_tree.distribution],
-    ['Distribution', 'Release', policy.tools_tree.release],
-    ['Distribution', 'Snapshot', snapshot],
-    ['Distribution', 'Mirror', policy.tools_tree.mirror],
-    ['Distribution', 'Architecture', policy.target.architecture]
-  ];
-  for (const [section, key, expected] of exact) {
-    if (value(config, section, key) !== expected) {
-      throw new ValidationError(`mkosi H0 tools-tree invariant drifted: [${section}] ${key} must equal ${expected}`);
-    }
+function verifyToolsConfiguration(config, source, snapshot) {
+  if (
+    config.size !== 1
+    || config.get('Distribution')?.size !== 1
+    || value(config, 'Distribution', 'Snapshot') !== snapshot
+  ) {
+    throw new ValidationError(
+      `mkosi H0 tools-tree invariant drifted: [Distribution] Snapshot must be the only setting and equal ${snapshot}`
+    );
   }
   if (/\bAXIOM_DATA_DIR\b/.test(source) || /production[-_ ]?(secret|credential|key)/i.test(source)) {
     throw new ValidationError('mkosi H0 tools-tree configuration must not reference AXIOM production state or credentials');
