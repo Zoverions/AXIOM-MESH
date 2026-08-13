@@ -7,7 +7,11 @@ import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 import { ValidationError } from './lib/canonical.mjs';
-import { verifyAxiomHostLabConfiguration } from './check-axiom-host-lab.mjs';
+import {
+  HOST_LAB_SNAPSHOT_UNRESOLVED,
+  normalizeSnapshotLock,
+  verifyAxiomHostLabConfiguration
+} from './check-axiom-host-lab.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -67,10 +71,11 @@ export async function createAxiomHostLabPlan({ repositoryRoot = REPOSITORY_ROOT 
     throw new ValidationError('AXIOM Host laboratory requires a clean Git worktree');
   }
 
-  const [mkosiConfig, policy, version] = await Promise.all([
+  const [mkosiConfig, policy, version, snapshotLock] = await Promise.all([
     readFile(resolve(HOST_DIRECTORY, 'mkosi.conf'), 'utf8'),
     readFile(resolve(HOST_DIRECTORY, 'axiom-host-lab-policy.json'), 'utf8'),
-    readFile(resolve(HOST_DIRECTORY, 'mkosi.version'), 'utf8')
+    readFile(resolve(HOST_DIRECTORY, 'mkosi.version'), 'utf8'),
+    readFile(resolve(HOST_DIRECTORY, 'mkosi.snapshot'), 'utf8')
   ]);
 
   return {
@@ -85,6 +90,9 @@ export async function createAxiomHostLabPlan({ repositoryRoot = REPOSITORY_ROOT 
     configuration: {
       policy_sha256: sha256(policy),
       mkosi_config_sha256: sha256(mkosiConfig),
+      snapshot_lock_sha256: sha256(snapshotLock),
+      snapshot: staticVerification.snapshot,
+      snapshot_locked: staticVerification.snapshot_locked,
       image_version: version.trim(),
       static_verification: staticVerification
     },
@@ -92,6 +100,7 @@ export async function createAxiomHostLabPlan({ repositoryRoot = REPOSITORY_ROOT 
       directory: 'host',
       output_directory: 'host/mkosi.output',
       builder: 'mkosi',
+      builder_minimum_version: staticVerification.builder_minimum_version,
       build_environment_sanitized: true,
       production_credentials_forwarded: false,
       network_profile: staticVerification.network,
@@ -109,8 +118,8 @@ export async function createAxiomHostLabPlan({ repositoryRoot = REPOSITORY_ROOT 
 }
 
 export async function runAxiomHostLab({ action = 'summary', acknowledgement = '' } = {}) {
-  if (!['summary', 'build'].includes(action)) {
-    throw new ValidationError('AXIOM Host laboratory action must be summary or build');
+  if (!['summary', 'snapshot', 'build'].includes(action)) {
+    throw new ValidationError('AXIOM Host laboratory action must be summary, snapshot, or build');
   }
   if (process.platform !== 'linux') {
     throw new ValidationError('AXIOM Host image construction is restricted to a Linux laboratory host');
@@ -125,6 +134,31 @@ export async function runAxiomHostLab({ action = 'summary', acknowledgement = ''
     cwd: HOST_DIRECTORY,
     env: environment
   })).trim();
+
+  if (action === 'snapshot') {
+    if (plan.configuration.snapshot_locked) {
+      throw new ValidationError('AXIOM Host snapshot discovery is disabled after a snapshot has been committed');
+    }
+    const candidateText = await execProgram('mkosi', ['--directory', HOST_DIRECTORY, 'latest-snapshot'], {
+      cwd: REPOSITORY_ROOT,
+      env: environment,
+      maxBuffer: 4 * 1024 * 1024
+    });
+    const candidate = normalizeSnapshotLock(candidateText);
+    if (candidate === HOST_LAB_SNAPSHOT_UNRESOLVED) {
+      throw new ValidationError('mkosi latest-snapshot did not resolve a concrete Fedora snapshot');
+    }
+    return {
+      ...plan,
+      builder_observation: {
+        mkosi_version: mkosiVersion,
+        latest_snapshot_candidate: candidate,
+        snapshot_committed: false,
+        image_built: false
+      },
+      next_action: 'Review the candidate, commit it to host/mkosi.snapshot, and add the exact same Snapshot= value under [Distribution] in host/mkosi.conf.'
+    };
+  }
 
   await execProgram('mkosi', ['--directory', HOST_DIRECTORY, 'summary'], {
     cwd: REPOSITORY_ROOT,
@@ -141,6 +175,12 @@ export async function runAxiomHostLab({ action = 'summary', acknowledgement = ''
         image_built: false
       }
     };
+  }
+
+  if (!plan.configuration.snapshot_locked) {
+    throw new ValidationError(
+      'AXIOM Host H0 build is blocked until host/mkosi.snapshot and [Distribution] Snapshot are pinned to the same reviewed snapshot'
+    );
   }
 
   await mkdir(OUTPUT_DIRECTORY, { recursive: true });
@@ -176,6 +216,7 @@ export async function runAxiomHostLab({ action = 'summary', acknowledgement = ''
       clean_git_worktree_required: true,
       exact_commit_bound: true,
       source_date_epoch_from_commit: true,
+      package_snapshot_locked: true,
       build_environment_sanitized: true,
       implicit_mkosi_secret_files_rejected: true,
       production_credentials_forwarded: false,
@@ -270,12 +311,12 @@ async function main() {
     process.stdout.write(`${JSON.stringify(await createAxiomHostLabPlan())}\n`);
     return;
   }
-  if (command === 'summary' || command === 'build') {
+  if (command === 'summary' || command === 'snapshot' || command === 'build') {
     const acknowledgement = process.env.AXIOM_HOST_LAB_ACK ?? '';
     process.stdout.write(`${JSON.stringify(await runAxiomHostLab({ action: command, acknowledgement }))}\n`);
     return;
   }
-  throw new ValidationError('Usage: axiom-host-lab.mjs plan|summary|build');
+  throw new ValidationError('Usage: axiom-host-lab.mjs plan|summary|snapshot|build');
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
