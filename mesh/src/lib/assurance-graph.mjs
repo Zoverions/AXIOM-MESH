@@ -112,6 +112,10 @@ function digest(value, name) {
   return assertString(value, name, { min: 64, max: 64, pattern: DIGEST });
 }
 
+function optionalDigest(value, name) {
+  return value === null || value === undefined ? null : digest(value, name);
+}
+
 function iso(value, name) {
   const raw = assertString(value, name, { min: 1, max: 64 });
   const parsed = new Date(raw);
@@ -121,7 +125,7 @@ function iso(value, name) {
   return parsed.toISOString();
 }
 
-function optionalIdList(value, name) {
+function normalizedIdList(value, name) {
   if (value === undefined) return [];
   if (!Array.isArray(value) || value.length > 256) {
     throw new ValidationError(`${name} must be an array with at most 256 items`);
@@ -133,17 +137,9 @@ function optionalIdList(value, name) {
   return normalized.sort();
 }
 
-function optionalDigest(value, name) {
-  return value === null || value === undefined ? null : digest(value, name);
-}
-
 export function normalizeChangeFrontProviderObservation(raw) {
   const value = assertPlainObject(raw, 'change-front provider observation');
-  rejectUnknown(
-    value,
-    PROVIDER_OBSERVATION_FIELDS,
-    'change-front provider observation'
-  );
+  rejectUnknown(value, PROVIDER_OBSERVATION_FIELDS, 'change-front provider observation');
   if (value.schema !== CHANGE_FRONT_PROVIDER_OBSERVATION_SCHEMA) {
     throw new ValidationError(
       `change-front provider observation schema must be ${CHANGE_FRONT_PROVIDER_OBSERVATION_SCHEMA}`
@@ -177,10 +173,7 @@ export function normalizeChangeFrontProviderObservation(raw) {
   ) {
     throw new ValidationError('change-front provider observation digest is invalid');
   }
-  return {
-    ...body,
-    observation_digest: observationDigest
-  };
+  return { ...body, observation_digest: observationDigest };
 }
 
 function normalizeDependency(raw, index) {
@@ -237,12 +230,11 @@ export function normalizeChangeFront(raw) {
     throw new ValidationError('change front dependencies must not contain duplicates');
   }
 
-  const providerObservations = (value.provider_observations ?? []).map(
-    normalizeChangeFrontProviderObservation
-  );
   if (!Array.isArray(value.provider_observations ?? [])) {
     throw new ValidationError('change front provider_observations must be an array');
   }
+  const providerObservations = (value.provider_observations ?? [])
+    .map(normalizeChangeFrontProviderObservation);
 
   const authoritativeBody = {
     schema: CHANGE_FRONT_SCHEMA,
@@ -253,8 +245,8 @@ export function normalizeChangeFront(raw) {
     lifecycle: value.lifecycle,
     merge_eligible: value.merge_eligible,
     depends_on: dependencies,
-    supersedes: optionalIdList(value.supersedes, 'supersedes'),
-    replaces: optionalIdList(value.replaces, 'replaces'),
+    supersedes: normalizedIdList(value.supersedes, 'supersedes'),
+    replaces: normalizedIdList(value.replaces, 'replaces'),
     claim_boundary_digest: digest(value.claim_boundary_digest, 'claim_boundary_digest')
   };
   const frontDigest = digestObject(authoritativeBody);
@@ -276,7 +268,7 @@ export function normalizeChangeFront(raw) {
 function validateEvidenceBasis(evidenceClass, basisKind) {
   const allowed = {
     measured: new Set(['local_bytes']),
-    authenticated_assertion: new Set(['signed_artifact']),
+    authenticated_assertion: new Set(['signed_artifact', 'provider_report']),
     independently_verified: new Set(['local_bytes', 'signed_artifact']),
     inference: new Set(['derived']),
     declaration: new Set(['declaration'])
@@ -318,6 +310,9 @@ export function normalizeAssuranceEvidence(raw) {
     : normalizeChangeFrontProviderObservation(value.provider_observation);
   if (value.basis_kind === 'provider_report' && providerObservation === null) {
     throw new ValidationError('provider_report evidence requires provider observation metadata');
+  }
+  if (value.basis_kind !== 'provider_report' && providerObservation !== null) {
+    throw new ValidationError('provider observation metadata is only valid for provider_report evidence');
   }
 
   const body = {
@@ -450,10 +445,7 @@ export function verifyAssuranceGraph(raw) {
   }
 
   const canonicalFronts = fronts
-    .map(front => ({
-      front_id: front.front_id,
-      front_digest: front.front_digest
-    }))
+    .map(front => ({ front_id: front.front_id, front_digest: front.front_digest }))
     .sort((left, right) => left.front_id.localeCompare(right.front_id));
   const canonicalEvidence = evidence
     .map(item => ({
