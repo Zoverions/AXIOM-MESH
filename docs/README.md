@@ -160,6 +160,10 @@ the capability registry or current production-readiness decision.
   — contract-first wearable, portable-agent, interchangeable orchestration,
   compute-routing, local verification, identity-presentation, and
   payment-mandate architecture with a phased MVP and explicit non-claims.
+- [AXIOM Host Operating Environment](architecture/AXIOM-HOST-OPERATING-ENVIRONMENT.md)
+  — future-compatible Linux-based reference host with immutable-image,
+  update/rollback, host-isolation, storage, hardware-evidence, and sovereignty
+  boundaries; it is not a current OS release or runtime capability.
 
 #### Draft architecture contracts
 
@@ -167,11 +171,12 @@ the capability registry or current production-readiness decision.
 - [Agent Runtime Capsule v1](architecture/contracts/agent-runtime-capsule.v1.schema.json)
 - [Agent Runtime Adapter v1](architecture/contracts/agent-runtime-adapter.v1.schema.json)
 - [Compute Node Profile v1](architecture/contracts/compute-node-profile.v1.schema.json)
+- [AXIOM Host Profile v1](architecture/contracts/axiom-host-profile.v1.schema.json)
 - [Local Trust Envelope v1](architecture/contracts/local-trust-envelope.v1.schema.json)
 
 These JSON Schemas are documentation contracts. The current runtime loads only
 the separately byte-pinned Agent Runtime Adapter contract; it does not load the
-other four drafts or promote any capability or external compatibility claim.
+other drafts or promote any capability or external compatibility claim.
 
 ### Security
 
