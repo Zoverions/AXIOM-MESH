@@ -7,11 +7,13 @@ import { canonicalJson, sha256, ValidationError } from './lib/canonical.mjs';
 
 export const HOST_LAB_SECRET_SCAN_SCHEMA = 'axiom-host-h0-secret-scan.v1';
 
-const OVERLAP_BYTES = 512;
+const OVERLAP_BYTES = 256 * 1024;
 const PATTERNS = Object.freeze([
+  // A header literal alone is common in crypto implementations. Require a
+  // bounded base64 body and matching footer before classifying a PEM key.
   Object.freeze({
     id: 'pem-private-key',
-    expression: /-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----/g
+    expression: /-----BEGIN ((?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY)-----[\r\n]+[A-Za-z0-9+/=\r\n]{128,131072}-----END \1-----/g
   }),
   Object.freeze({
     id: 'github-classic-pat',
@@ -23,7 +25,9 @@ const PATTERNS = Object.freeze([
   }),
   Object.freeze({
     id: 'aws-access-key-id',
-    expression: /AKIA[A-Z0-9]{16}/g
+    // AWS publishes AKIAIOSFODNN7EXAMPLE in its own documentation. It is not a
+    // credential; all other access-key-shaped values remain fail-closed.
+    expression: /AKIA(?!IOSFODNN7EXAMPLE)[A-Z0-9]{16}/g
   }),
   Object.freeze({
     id: 'authorization-bearer-token',

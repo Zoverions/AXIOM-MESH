@@ -34,7 +34,11 @@ test('H0 secret scan catches a marker split across stream chunks and omits its v
   const root = await mkdtemp(join(tmpdir(), 'axiom-host-secret-scan-'));
   try {
     const image = join(root, 'image.raw');
-    const marker = '-----BEGIN OPENSSH PRIVATE KEY-----';
+    const marker = [
+      '-----BEGIN OPENSSH PRIVATE KEY-----',
+      'QUFB'.repeat(64),
+      '-----END OPENSSH PRIVATE KEY-----'
+    ].join('\n');
     const bytes = Buffer.concat([
       Buffer.alloc(1024 * 1024 - 8, 0x41),
       Buffer.from(marker),
@@ -46,6 +50,22 @@ test('H0 secret scan catches a marker split across stream chunks and omits its v
     assert.equal(result.passed, false);
     assert.deepEqual(result.matched_pattern_ids, ['pem-private-key']);
     assert.equal(JSON.stringify(result).includes(marker), false);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('H0 secret scan rejects an AWS-shaped value but ignores the published AWS example ID', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'axiom-host-secret-scan-'));
+  try {
+    const image = join(root, 'image.raw');
+    await writeFile(image, [
+      'AKIAIOSFODNN7EXAMPLE',
+      'AKIAABCDEFGHIJKLMNOP'
+    ].join('\n'));
+    const result = await scanAxiomHostH0Secrets([{ label: 'image.raw', path: image }]);
+    assert.equal(result.passed, false);
+    assert.deepEqual(result.matched_pattern_ids, ['aws-access-key-id']);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
