@@ -55,7 +55,7 @@ repository-effect resolver/outbox/operator chain, and Agent Runtime Adapter v1.
 | Grid durability | Grid store/migrations/evidence/protection | restart/migration/tamper/wrong-key/backup/rotation tests | Encrypted single-Grid state, signed hash-linked evidence; no replicated consensus |
 | Grid continuity | continuity-anchor implementation + Grid verifier/operator flow | anchor creation/verification/negative tests | `axiom-grid-continuity-anchor.v1` retained outside `AXIOM_DATA_DIR` proves current history equals/extends retained head through that sequence only |
 | Transport | transport runtime/provisioning | mTLS/rotation drills | TLS 1.3, Ed25519 leaves, identity checks, active-leaf pinning, signed caller binding, rollback |
-| Service network policy | network policy/request authorizer/unit Compose | policy and required/forbidden-edge tests | Default deny, 41 exact routes, derived mTLS peers, four internal segments |
+| Service network policy | network policy/request authorizer/unit Compose | policy and required/forbidden-edge tests | Default deny, 42 exact routes, derived mTLS peers, four internal segments |
 | Deployment topology | supervisor/production Compose/unit Compose | host/container/service-unit drills | Hardened single host; no multi-host/failover claim |
 | Providers | provider runtime/supervisor/reference adapter | provider tests/drill | Signed exact inventories/private startup generation; no vendor custody/live-refresh claim |
 | Agent Runtime Adapter v1 | `docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md`, v1 schema | contract verifier, negative tests, 28-case synthetic drill | Replaceable-runtime contract only; no external runtime loaded or certified |
@@ -73,7 +73,7 @@ repository-effect resolver/outbox/operator chain, and Agent Runtime Adapter v1.
 | Node scheduling | node registry/scheduler | scheduling tests/drill | Signed admission + deterministic reservations; no remote dispatch |
 | Causal exchange | online causal sync | two-real-stack partition/rejoin drill | Approved encrypted causal record transport; no federation/consensus |
 | Portability/consent | consent/export/import/encryption | kernel/e2e tests | Scoped signed export/staged foreign-provenance import |
-| Release/documentation | release verifier/check-docs/current-state doc tests/workflows | `npm run setup`, `npm run release:verify`, protected CI | Canonical docs/links, 29 Gateway routes, 41 network routes, capability counts, runtime-adapter lock, current narrative invariants |
+| Release/documentation | release verifier/check-docs/current-state doc tests/workflows | `npm run setup`, `npm run release:verify`, protected CI | Canonical docs/links, 29 Gateway routes, 42 network routes, capability counts, runtime-adapter lock, current narrative invariants |
 
 ## Repository-effect activation boundary
 

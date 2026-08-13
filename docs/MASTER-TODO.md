@@ -138,7 +138,7 @@ production activation decision.
 | NET-006 | Pending | Authenticated remote dispatch/result provenance | Workload identity, input/software binding, measured resources, timeout/cancel/replay/partial failure, compensation, signed result evidence |
 | NET-007 | Pending | Independently operated WAN hosts | External custody, latency/loss/clock/partition/backlog/residency/recovery/key-rotation evidence |
 | NET-008 | Pending | Stronger membership/endpoint-health evidence | Sybil/copied-owner/endpoint substitution/stale measurement/collusion/quarantine/appeal/re-admission tests |
-| NET-009 | Complete for reference single-host topology | Explicit service ingress/egress graph | Default-deny 41-route application policy, derived mTLS peers, four segments, required/forbidden-edge proof |
+| NET-009 | Complete for reference single-host topology | Explicit service ingress/egress graph | Default-deny 42-route application policy, derived mTLS peers, four segments, required/forbidden-edge proof |
 
 ## P3 — controlled adapters and product ecosystem
 
