@@ -210,7 +210,9 @@ function verifyManifest(manifest) {
       item?.type !== 'rpm'
       || !safePackagePart(item.name)
       || !safePackagePart(item.version)
-      || !safePackagePart(item.architecture)
+      || typeof item.architecture !== 'string'
+      || item.architecture.length > 512
+      || /[\r\n\0]/.test(item.architecture)
     ) {
       throw new ValidationError('AXIOM Host H0 mkosi package manifest contains an invalid package');
     }
@@ -218,7 +220,7 @@ function verifyManifest(manifest) {
       type: item.type,
       name: item.name,
       version: item.version,
-      architecture: item.architecture
+      architecture: item.architecture || 'none'
     };
   });
   return packages.sort((left, right) => (

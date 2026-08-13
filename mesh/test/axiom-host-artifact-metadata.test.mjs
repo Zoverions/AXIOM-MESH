@@ -24,6 +24,7 @@ test('H0 metadata derives a deterministic SBOM and non-authorizing draft profile
         release: 'rawhide'
       },
       packages: [
+        { type: 'rpm', name: 'gpg-pubkey', version: 'abc123-123456', architecture: '' },
         { type: 'rpm', name: 'kernel-core', version: '6.17.0-0.rc1', architecture: 'x86_64' },
         { type: 'rpm', name: 'systemd', version: '258.10-1', architecture: 'x86_64' }
       ],
@@ -47,12 +48,16 @@ test('H0 metadata derives a deterministic SBOM and non-authorizing draft profile
       imageVersion: '0.1.0-h0',
       snapshot: '20260813.n.0'
     });
-    assert.equal(result.package_count, 2);
+    assert.equal(result.package_count, 3);
 
     const sbom = JSON.parse(await readFile(join(root, HOST_LAB_SBOM_NAME), 'utf8'));
     assert.equal(sbom.bomFormat, 'CycloneDX');
     assert.equal(sbom.specVersion, '1.6');
-    assert.equal(sbom.components.length, 2);
+    assert.equal(sbom.components.length, 3);
+    assert.equal(
+      sbom.components.find(component => component.name === 'gpg-pubkey').properties[1].value,
+      'none'
+    );
     assert.match(sbom.serialNumber, /^urn:uuid:/);
 
     const profile = JSON.parse(await readFile(join(root, HOST_LAB_PROFILE_NAME), 'utf8'));
