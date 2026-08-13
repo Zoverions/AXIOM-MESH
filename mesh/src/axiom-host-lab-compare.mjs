@@ -54,6 +54,7 @@ export function verifyAxiomHostH0BuildEvidence(evidence) {
     'artifact_bytes_hashed',
     'build_environment_sanitized',
     'builder_home_isolated',
+    'builder_workspace_outside_source_tree',
     'implicit_mkosi_secret_files_rejected'
   ];
   for (const key of requiredTrue) {
