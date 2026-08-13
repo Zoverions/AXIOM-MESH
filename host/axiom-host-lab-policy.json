@@ -5,6 +5,7 @@
   "builder": {
     "tool": "mkosi",
     "upstream": "systemd/mkosi",
+    "minimum_version": "26",
     "configuration_assurance": "static-validated",
     "image_assurance": "unbuilt-until-lab-execution"
   },
