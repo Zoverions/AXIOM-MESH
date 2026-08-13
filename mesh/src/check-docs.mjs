@@ -29,6 +29,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/PROJECT-STATUS-2026.md',
   'docs/REPOSITORY-MIGRATION.md',
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md',
+  'docs/architecture/AGENT-WORKTREE-STORAGE-PLANE.md',
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md',
   'docs/architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md',
   'docs/architecture/contracts/agent-runtime-capsule.v1.schema.json',
