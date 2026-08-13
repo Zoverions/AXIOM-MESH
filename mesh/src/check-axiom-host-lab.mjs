@@ -74,6 +74,8 @@ export async function verifyAxiomHostLabConfiguration({
     stage: policy.stage,
     builder_minimum_version: value(mkosi, 'Config', 'MinimumVersion'),
     target: `${policy.target.distribution}-${policy.target.release}-${policy.target.architecture}`,
+    tools_tree: `${policy.tools_tree.distribution}-${policy.tools_tree.release}`,
+    production_base_selected: policy.target.production_base_selected,
     snapshot_locked: snapshot !== HOST_LAB_SNAPSHOT_UNRESOLVED,
     snapshot,
     image_id: value(mkosi, 'Output', 'ImageId'),
@@ -91,7 +93,10 @@ export function normalizeSnapshotLock(text) {
   const snapshot = String(text).trim();
   if (snapshot === HOST_LAB_SNAPSHOT_UNRESOLVED) return snapshot;
   if (!/^[A-Za-z0-9][A-Za-z0-9._:+-]{0,159}$/.test(snapshot)) {
-    throw new ValidationError('AXIOM Host Fedora snapshot lock has an invalid format');
+    throw new ValidationError('AXIOM Host Fedora Rawhide snapshot lock has an invalid format');
+  }
+  if (/^Fedora-Rawhide-/i.test(snapshot)) {
+    throw new ValidationError('AXIOM Host Rawhide snapshot lock must use mkosi snapshot identity without Fedora-Rawhide- prefix');
   }
   return snapshot;
 }
@@ -156,16 +161,20 @@ function verifyPolicy(policy) {
     || policy.builder?.upstream !== 'systemd/mkosi'
     || policy.builder?.minimum_version !== '26'
     || policy.target?.distribution !== 'fedora'
-    || String(policy.target?.release) !== '43'
+    || policy.target?.release !== 'rawhide'
     || policy.target?.architecture !== 'x86-64'
     || policy.target?.node_major !== 24
     || policy.target?.node_engine_minimum !== '24.14.0'
+    || policy.target?.production_base_selected !== false
+    || policy.tools_tree?.distribution !== 'fedora'
+    || String(policy.tools_tree?.release) !== '43'
   ) {
-    throw new ValidationError('AXIOM Host laboratory target or builder drifted');
+    throw new ValidationError('AXIOM Host laboratory target, tools tree, or builder drifted');
   }
   if (
     policy.package_source?.snapshot_required_before_build !== true
     || policy.package_source?.snapshot_lock_file !== 'mkosi.snapshot'
+    || policy.package_source?.snapshot_semantics !== 'mkosi-v26-fedora-rawhide-compose'
     || policy.package_source?.automatic_latest_snapshot_build !== false
   ) {
     throw new ValidationError('AXIOM Host laboratory package-source policy drifted');
@@ -226,7 +235,7 @@ function verifyMkosiConfiguration(config, source, policy, snapshot) {
   const exact = [
     ['Config', 'MinimumVersion', policy.builder.minimum_version],
     ['Distribution', 'Distribution', policy.target.distribution],
-    ['Distribution', 'Release', String(policy.target.release)],
+    ['Distribution', 'Release', policy.target.release],
     ['Distribution', 'Architecture', policy.target.architecture],
     ['Output', 'Format', policy.image.format],
     ['Output', 'ImageId', policy.image.image_id],
@@ -241,8 +250,8 @@ function verifyMkosiConfiguration(config, source, policy, snapshot) {
     ['Content', 'Autologin', 'no'],
     ['Validation', 'Checksum', 'yes'],
     ['Build', 'ToolsTree', 'yes'],
-    ['Build', 'ToolsTreeDistribution', policy.target.distribution],
-    ['Build', 'ToolsTreeRelease', String(policy.target.release)],
+    ['Build', 'ToolsTreeDistribution', policy.tools_tree.distribution],
+    ['Build', 'ToolsTreeRelease', String(policy.tools_tree.release)],
     ['Build', 'WithNetwork', 'no'],
     ['Runtime', 'VirtualMachineMonitor', policy.runtime.virtual_machine_monitor],
     ['Runtime', 'Firmware', policy.runtime.firmware],
