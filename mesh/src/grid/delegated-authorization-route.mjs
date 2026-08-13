@@ -104,7 +104,7 @@ export function registerDelegatedAuthorizationGridRoute(router, store) {
   }
   router.add(
     'POST',
-    DELEGATED_AUTHORIZATION_RESOLVE_ROUTE,
+    '/internal/v1/delegated-authorizations/resolve',
     createDelegatedAuthorizationResolveHandler(store),
   );
 }
