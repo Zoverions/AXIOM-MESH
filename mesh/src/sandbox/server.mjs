@@ -107,7 +107,7 @@ export async function createSandboxService(config = meshConfig()) {
     ) {
       throw new AxiomError('plan_intent_mismatch', 'Plan is not bound to the supplied intent and policy', 403);
     }
-    const replayAdmission = capabilityReplay.use('capability', claims.jti, claims.exp * 1000);
+    const replayAdmission = capabilityReplay.admit('capability', claims.jti, claims.exp * 1000);
     if (replayAdmission === 'replayed') {
       throw new AxiomError('capability_replayed', 'Capability token has already been used', 409);
     }
