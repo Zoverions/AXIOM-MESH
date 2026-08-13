@@ -24,8 +24,10 @@ test('AXIOM Host H0 laboratory configuration is valid and non-promoting', async 
   assert.equal(result.valid, true);
   assert.equal(result.schema, 'axiom-host-lab-policy.v1');
   assert.equal(result.stage, 'H0');
+  assert.equal(result.builder_minimum_version, '26');
   assert.equal(result.target, 'fedora-43-x86-64');
   assert.equal(result.image_id, 'axiom-host-lab');
+  assert.equal(result.output_directory, 'mkosi.output');
   assert.equal(result.image_version, '0.1.0-h0');
   assert.equal(result.bootloader, 'systemd-boot');
   assert.equal(result.network, 'none');
@@ -42,7 +44,7 @@ test('mkosi parser preserves package continuations without accepting duplicate k
   );
 });
 
-test('H0 verifier rejects remote access, secret-bearing settings, and authority promotion', async () => {
+test('H0 verifier rejects remote access, secret-bearing settings, builder downgrade, and authority promotion', async () => {
   await withFixture({
     mkosi: MKOSI_TEXT.replace('Autologin=no', 'Autologin=yes')
   }, async urls => {
@@ -58,6 +60,15 @@ test('H0 verifier rejects remote access, secret-bearing settings, and authority 
     await assert.rejects(
       verifyAxiomHostLabConfiguration(urls),
       /must not contain secret-bearing or remote-access setting SecureBootKey/
+    );
+  });
+
+  await withFixture({
+    mkosi: MKOSI_TEXT.replace('MinimumVersion=26', 'MinimumVersion=25')
+  }, async urls => {
+    await assert.rejects(
+      verifyAxiomHostLabConfiguration(urls),
+      /MinimumVersion must equal 26/
     );
   });
 
