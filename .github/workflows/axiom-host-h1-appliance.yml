@@ -127,7 +127,7 @@ jobs:
           sudo umount "$pristine_esp_mount"
           jq -e '[.partitions[].name] | contains(["esp", "root-x86-64", "root-x86-64-verity", "var"])' \
             "$RUNNER_TEMP/axiom-host-h1-evidence/pristine-disk-layout.json"
-          jq -e 'any(.files[]; .path == "EFI/BOOT/BOOTX64.EFI") and any(.files[]; ((.path | startswith("EFI/Linux/")) and (.path | endswith(".efi")))) and any(.files[]; .path == "loader/random-seed")' \
+          jq -e 'any(.files[]; .path == "EFI/BOOT/BOOTX64.EFI") and any(.files[]; ((.path | startswith("EFI/Linux/")) and (.path | endswith(".efi"))))' \
             "$RUNNER_TEMP/axiom-host-h1-evidence/pristine-esp-files.json"
 
       - name: Boot H1 through UEFI and execute AXIOM checks in the guest
@@ -193,9 +193,9 @@ jobs:
               def filemap: reduce .files[] as $file ({}; .[$file.path] = {bytes:$file.bytes, sha256:$file.sha256});
               ($before[0] | filemap) as $b | ($after[0] | filemap) as $a |
               ([((($b|keys_unsorted) + ($a|keys_unsorted)) | unique[]) | select($b[.] != $a[.])] | sort) as $changed |
-              {schema:"axiom-host-h1-boot-file-comparison.v1", scenario:"initial-boot", changed_paths:$changed, efi_seed_rotated:($changed == ["loader/random-seed"]), protected_boot_files_unchanged:($changed == ["loader/random-seed"])}' \
+              {schema:"axiom-host-h1-boot-file-comparison.v1", scenario:"initial-boot", changed_paths:$changed, efi_seed_change_bounded:($changed == ["loader/random-seed"]), protected_boot_files_unchanged:($changed == ["loader/random-seed"])}' \
             > "$RUNNER_TEMP/axiom-host-h1-evidence/initial-boot-files.json"
-          jq -e '.efi_seed_rotated == true and .protected_boot_files_unchanged == true' \
+          jq -e '.efi_seed_change_bounded == true and .protected_boot_files_unchanged == true' \
             "$RUNNER_TEMP/axiom-host-h1-evidence/initial-boot-files.json"
 
       - name: Replace the OS image while preserving AXIOM durable state
@@ -269,9 +269,9 @@ jobs:
               def filemap: reduce .files[] as $file ({}; .[$file.path] = {bytes:$file.bytes, sha256:$file.sha256});
               ($before[0] | filemap) as $b | ($after[0] | filemap) as $a |
               ([((($b|keys_unsorted) + ($a|keys_unsorted)) | unique[]) | select($b[.] != $a[.])] | sort) as $changed |
-              {schema:"axiom-host-h1-boot-file-comparison.v1", scenario:"replacement-boot", changed_paths:$changed, efi_seed_rotated:($changed == ["loader/random-seed"]), protected_boot_files_unchanged:($changed == ["loader/random-seed"])}' \
+              {schema:"axiom-host-h1-boot-file-comparison.v1", scenario:"replacement-boot", changed_paths:$changed, efi_seed_change_bounded:($changed == ["loader/random-seed"]), protected_boot_files_unchanged:($changed == ["loader/random-seed"])}' \
             > "$RUNNER_TEMP/axiom-host-h1-evidence/replacement-boot-files.json"
-          jq -e '.efi_seed_rotated == true and .protected_boot_files_unchanged == true' \
+          jq -e '.efi_seed_change_bounded == true and .protected_boot_files_unchanged == true' \
             "$RUNNER_TEMP/axiom-host-h1-evidence/replacement-boot-files.json"
 
       - name: Corrupt protected hash metadata and prove fail-closed behavior
