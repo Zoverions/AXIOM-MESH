@@ -3,6 +3,8 @@ import { digestObject, ValidationError } from './canonical.mjs';
 
 const RISK_ORDER = Object.freeze({ low: 0, medium: 1, high: 2, critical: 3 });
 const PROTOTYPE_KEYS = new Set(Object.getOwnPropertyNames(Object.prototype));
+const BASE_POLICY_OBJECTS = new WeakSet();
+const MERGED_POLICY_METADATA = new WeakMap();
 const PROTECTED_RECOVERY_ACTIONS = new Set([
   'approval.grant',
   'governance.rollback',
@@ -32,7 +34,9 @@ const DENY_RULE_FIELDS = new Set([
 export async function loadPolicy(path) {
   const policy = JSON.parse(await readFile(path, 'utf8'));
   validatePolicy(policy);
-  return new PolicyEngine(policy);
+  const engine = new PolicyEngine(policy);
+  BASE_POLICY_OBJECTS.add(engine.policy);
+  return engine;
 }
 
 export async function loadPolicyStack(paths) {
@@ -44,13 +48,15 @@ export async function loadPolicyStack(paths) {
     validatePolicy(policy);
     return policy;
   }));
-  return new PolicyEngine(mergeDenyDominantPolicy(layers), {
+  const engine = new PolicyEngine(mergeDenyDominantPolicy(layers), {
     layers: layers.map((layer, index) => ({
       order: index,
       version: layer.version,
       digest: digestObject(layer)
     }))
   });
+  BASE_POLICY_OBJECTS.add(engine.policy);
+  return engine;
 }
 
 export function validatePolicy(policy) {
@@ -182,13 +188,17 @@ function hasScope(scopes, required) {
 
 export class PolicyEngine {
   constructor(policy, { layers } = {}) {
+    const metadata = MERGED_POLICY_METADATA.get(policy);
     this.policy = structuredClone(policy);
     this.digest = digestObject(policy);
-    this.layers = structuredClone(layers ?? [{
-      order: 0,
-      version: policy.version,
-      digest: this.digest
-    }]);
+    this.layers = normalizeMeasuredLayers(
+      layers ?? [{
+        order: 0,
+        version: policy.version,
+        digest: this.digest
+      }],
+      metadata
+    );
   }
 
   evaluate({ action, principal, intent }) {
@@ -280,6 +290,8 @@ export function mergeDenyDominantPolicy(layers) {
   const valid = layers.filter(Boolean);
   if (!valid.length) throw new ValidationError('At least one policy layer is required');
   valid.forEach(validatePolicy);
+  const overlayMode = BASE_POLICY_OBJECTS.has(valid[0]);
+  if (overlayMode) valid.slice(1).forEach(validateAuthorityReducingPolicy);
   const result = structuredClone(valid[0]);
   const versions = [valid[0].version];
   for (const layer of valid.slice(1)) {
@@ -340,7 +352,50 @@ export function mergeDenyDominantPolicy(layers) {
   }
   result.version = versions.join('+');
   validatePolicy(result);
+  MERGED_POLICY_METADATA.set(result, {
+    overlayMode,
+    measuredLayers: valid.map(layer => ({
+      version: layer.version,
+      digest: digestObject(layer)
+    }))
+  });
   return result;
+}
+
+function normalizeMeasuredLayers(layers, metadata) {
+  const output = structuredClone(layers);
+  if (!metadata) return output;
+  const measured = metadata.measuredLayers;
+  if (!metadata.overlayMode) {
+    if (output.length !== measured.length) {
+      throw new ValidationError('Policy layer evidence does not match the measured merge inputs');
+    }
+    for (let index = 0; index < measured.length; index += 1) {
+      assertMeasuredLayer(output[index], measured[index], index);
+      output[index].version = measured[index].version;
+      output[index].digest = measured[index].digest;
+    }
+    return output;
+  }
+
+  const overlayCount = measured.length - 1;
+  if (output.length < overlayCount + 1) {
+    throw new ValidationError('Policy overlay evidence is incomplete');
+  }
+  for (let index = 0; index < overlayCount; index += 1) {
+    const outputIndex = output.length - overlayCount + index;
+    const measuredLayer = measured[index + 1];
+    assertMeasuredLayer(output[outputIndex], measuredLayer, outputIndex);
+    output[outputIndex].version = measuredLayer.version;
+    output[outputIndex].digest = measuredLayer.digest;
+  }
+  return output;
+}
+
+function assertMeasuredLayer(supplied, measured, index) {
+  if (!supplied || supplied.version !== measured.version || supplied.digest !== measured.digest) {
+    throw new ValidationError(`Policy layer ${index} evidence does not match measured policy bytes`);
+  }
 }
 
 function assertMergeRuleFields(rule, action) {
