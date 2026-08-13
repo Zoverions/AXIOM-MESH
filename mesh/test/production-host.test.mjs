@@ -18,11 +18,11 @@ test('production port leases serialize overlapping drill candidates', async t =>
 
   const firstSample = 0.125;
   const randomWithFallback = fallback => {
-    let first = true;
+    let attempt = 0;
     return () => {
-      if (!first) return fallback;
-      first = false;
-      return firstSample;
+      attempt += 1;
+      if (attempt === 1) return firstSample;
+      return (fallback + (attempt - 2) * 0.071) % 1;
     };
   };
   const [first, second] = await Promise.all([
@@ -46,19 +46,18 @@ test('production port leases serialize overlapping drill candidates', async t =>
     false
   );
 
-  const initialBase = basePortForSample(firstSample);
-  const initialLease = [first, second].find(
-    lease => lease.base_port === initialBase
+  const reusableLease = first;
+  const reusableSample = (
+    ((reusableLease.base_port - 20_000) / 4 + 0.5) / 5_000
   );
-  assert.ok(initialLease);
-  await initialLease.release();
-  await initialLease.release();
+  await reusableLease.release();
+  await reusableLease.release();
   const replacement = await reserveProductionPortBlock('replacement drill', {
     lockRoot,
-    random: () => firstSample
+    random: () => reusableSample
   });
   leases.push(replacement);
-  assert.equal(replacement.base_port, initialBase);
+  assert.equal(replacement.base_port, reusableLease.base_port);
 });
 
 test('production port leases reject an externally occupied candidate block', async t => {

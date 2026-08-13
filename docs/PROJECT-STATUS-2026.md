@@ -90,7 +90,7 @@ The production-candidate surface includes:
   and a host-side least-privilege OTLP/Alertmanager relay;
 - explicit production credential provisioning and fail-closed supervision;
 - per-unit private identity/TLS projection, Grid-only durable state, four exact
-  internal network segments, a default-deny 40-route application policy,
+  internal network segments, a default-deny 41-route application policy,
   policy-derived mTLS peers, and signed failure/recovery evidence;
 - TLS 1.3 internal transport with Ed25519 identities, DNS and SPIFFE-style URI
   identity, active-leaf pinning, offline rotation, retired-leaf rejection, and
