@@ -8,6 +8,8 @@ export const HOST_LAB_POLICY_SCHEMA = 'axiom-host-lab-policy.v1';
 export const HOST_LAB_POLICY_URL = new URL('../../host/axiom-host-lab-policy.json', import.meta.url);
 export const HOST_LAB_MKOSI_URL = new URL('../../host/mkosi.conf', import.meta.url);
 export const HOST_LAB_VERSION_URL = new URL('../../host/mkosi.version', import.meta.url);
+export const HOST_LAB_SNAPSHOT_URL = new URL('../../host/mkosi.snapshot', import.meta.url);
+export const HOST_LAB_SNAPSHOT_UNRESOLVED = 'UNRESOLVED';
 
 const REQUIRED_PACKAGES = Object.freeze([
   'kernel-core',
@@ -39,12 +41,14 @@ const FORBIDDEN_MKOSI_KEYS = Object.freeze([
 export async function verifyAxiomHostLabConfiguration({
   policyUrl = HOST_LAB_POLICY_URL,
   mkosiUrl = HOST_LAB_MKOSI_URL,
-  versionUrl = HOST_LAB_VERSION_URL
+  versionUrl = HOST_LAB_VERSION_URL,
+  snapshotUrl = HOST_LAB_SNAPSHOT_URL
 } = {}) {
-  const [policyText, mkosiText, versionText] = await Promise.all([
+  const [policyText, mkosiText, versionText, snapshotText] = await Promise.all([
     readFile(policyUrl, 'utf8'),
     readFile(mkosiUrl, 'utf8'),
-    readFile(versionUrl, 'utf8')
+    readFile(versionUrl, 'utf8'),
+    readFile(snapshotUrl, 'utf8')
   ]);
 
   let policy;
@@ -55,8 +59,9 @@ export async function verifyAxiomHostLabConfiguration({
   }
 
   verifyPolicy(policy);
+  const snapshot = normalizeSnapshotLock(snapshotText);
   const mkosi = parseMkosiConfiguration(mkosiText);
-  verifyMkosiConfiguration(mkosi, mkosiText, policy);
+  verifyMkosiConfiguration(mkosi, mkosiText, policy, snapshot);
 
   const version = versionText.trim();
   if (version !== '0.1.0-h0') {
@@ -69,6 +74,8 @@ export async function verifyAxiomHostLabConfiguration({
     stage: policy.stage,
     builder_minimum_version: value(mkosi, 'Config', 'MinimumVersion'),
     target: `${policy.target.distribution}-${policy.target.release}-${policy.target.architecture}`,
+    snapshot_locked: snapshot !== HOST_LAB_SNAPSHOT_UNRESOLVED,
+    snapshot,
     image_id: value(mkosi, 'Output', 'ImageId'),
     output_directory: value(mkosi, 'Output', 'OutputDirectory'),
     image_version: version,
@@ -78,6 +85,15 @@ export async function verifyAxiomHostLabConfiguration({
     virtual_tpm: value(mkosi, 'Runtime', 'TPM') === 'yes',
     production_promoted: false
   };
+}
+
+export function normalizeSnapshotLock(text) {
+  const snapshot = String(text).trim();
+  if (snapshot === HOST_LAB_SNAPSHOT_UNRESOLVED) return snapshot;
+  if (!/^[A-Za-z0-9][A-Za-z0-9._:+-]{0,159}$/.test(snapshot)) {
+    throw new ValidationError('AXIOM Host Fedora snapshot lock has an invalid format');
+  }
+  return snapshot;
 }
 
 export function parseMkosiConfiguration(text) {
@@ -147,6 +163,13 @@ function verifyPolicy(policy) {
   ) {
     throw new ValidationError('AXIOM Host laboratory target or builder drifted');
   }
+  if (
+    policy.package_source?.snapshot_required_before_build !== true
+    || policy.package_source?.snapshot_lock_file !== 'mkosi.snapshot'
+    || policy.package_source?.automatic_latest_snapshot_build !== false
+  ) {
+    throw new ValidationError('AXIOM Host laboratory package-source policy drifted');
+  }
 
   const requiredFalse = [
     ['security.production_credentials_embedded', policy.security?.production_credentials_embedded],
@@ -199,7 +222,7 @@ function verifyPolicy(policy) {
   }
 }
 
-function verifyMkosiConfiguration(config, source, policy) {
+function verifyMkosiConfiguration(config, source, policy, snapshot) {
   const exact = [
     ['Config', 'MinimumVersion', policy.builder.minimum_version],
     ['Distribution', 'Distribution', policy.target.distribution],
@@ -234,6 +257,14 @@ function verifyMkosiConfiguration(config, source, policy) {
     if (value(config, section, key) !== expected) {
       throw new ValidationError(`mkosi H0 invariant drifted: [${section}] ${key} must equal ${expected}`);
     }
+  }
+
+  if (snapshot === HOST_LAB_SNAPSHOT_UNRESOLVED) {
+    if (config.get('Distribution')?.has('Snapshot')) {
+      throw new ValidationError('mkosi H0 must not declare Snapshot while the snapshot lock is UNRESOLVED');
+    }
+  } else if (value(config, 'Distribution', 'Snapshot') !== snapshot) {
+    throw new ValidationError('mkosi H0 Snapshot must exactly match mkosi.snapshot');
   }
 
   const seed = value(config, 'Output', 'Seed');
