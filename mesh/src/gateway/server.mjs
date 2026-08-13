@@ -339,13 +339,29 @@ export async function createGatewayService(config = meshConfig()) {
         { max: 128, pattern: PRINCIPAL_ID }
       ));
     }
-    for (const name of [
-      'minimum_security_level',
-      'minimum_lease_seconds',
-      'limit'
-    ]) {
-      const value = url.searchParams.get(name);
-      if (value !== null) query.set(name, value);
+    const minimumSecurityLevel = url.searchParams.get('minimum_security_level');
+    if (minimumSecurityLevel !== null) {
+      query.set('minimum_security_level', String(boundedIntegerQuery(
+        minimumSecurityLevel,
+        0,
+        { label: 'node discovery minimum_security_level', min: 0, max: 3 }
+      )));
+    }
+    const minimumLeaseSeconds = url.searchParams.get('minimum_lease_seconds');
+    if (minimumLeaseSeconds !== null) {
+      query.set('minimum_lease_seconds', String(boundedIntegerQuery(
+        minimumLeaseSeconds,
+        0,
+        { label: 'node discovery minimum_lease_seconds', min: 0, max: 86_400 }
+      )));
+    }
+    const discoveryLimit = url.searchParams.get('limit');
+    if (discoveryLimit !== null) {
+      query.set('limit', String(boundedIntegerQuery(
+        discoveryLimit,
+        100,
+        { label: 'node discovery limit', min: 1, max: 500 }
+      )));
     }
     const suffix = query.size ? `?${query}` : '';
     return gridGet(`/internal/v1/node-discovery${suffix}`, traceId);
@@ -362,11 +378,13 @@ export async function createGatewayService(config = meshConfig()) {
         403
       );
     }
-    const limit = url.searchParams.get('limit');
-    if (limit !== null && (!/^\d+$/.test(limit) || Number(limit) < 1 || Number(limit) > 100)) {
-      throw new ValidationError('Node schedule limit must be an integer between 1 and 100');
-    }
-    const query = limit === null ? '' : `?limit=${encodeURIComponent(limit)}`;
+    const rawLimit = url.searchParams.get('limit');
+    const limit = rawLimit === null ? null : boundedIntegerQuery(rawLimit, 100, {
+      label: 'node schedules limit',
+      min: 1,
+      max: 100
+    });
+    const query = limit === null ? '' : `?limit=${limit}`;
     return gridGet(
       `/internal/v1/node-schedules/${encodeURIComponent(principal.id)}${query}`,
       traceId
@@ -377,11 +395,13 @@ export async function createGatewayService(config = meshConfig()) {
     traceId
   ));
   router.add('GET', '/v1/approvals', async ({ url, traceId, principal }) => {
-    const limit = url.searchParams.get('limit');
-    if (limit !== null && (!/^\d+$/.test(limit) || Number(limit) < 1 || Number(limit) > 100)) {
-      throw new ValidationError('Approval limit must be an integer between 1 and 100');
-    }
-    const query = limit === null ? '' : `?limit=${encodeURIComponent(limit)}`;
+    const rawLimit = url.searchParams.get('limit');
+    const limit = rawLimit === null ? null : boundedIntegerQuery(rawLimit, 100, {
+      label: 'approvals limit',
+      min: 1,
+      max: 100
+    });
+    const query = limit === null ? '' : `?limit=${limit}`;
     return gridGet(
       `/internal/v1/approvals/${encodeURIComponent(principal.id)}${query}`,
       traceId
@@ -390,13 +410,15 @@ export async function createGatewayService(config = meshConfig()) {
   router.add('GET', '/v1/memory', async ({ url, traceId, principal }) => {
     const owner = url.searchParams.get('owner') ?? principal.id;
     if (!PRINCIPAL_ID.test(owner)) throw new ValidationError('Memory owner is invalid');
-    const limit = url.searchParams.get('limit');
-    if (limit !== null && (!/^\d+$/.test(limit) || Number(limit) < 1 || Number(limit) > 500)) {
-      throw new ValidationError('Memory limit must be an integer between 1 and 500');
-    }
+    const rawLimit = url.searchParams.get('limit');
+    const limit = rawLimit === null ? null : boundedIntegerQuery(rawLimit, 100, {
+      label: 'memory limit',
+      min: 1,
+      max: 500
+    });
     const query = new URLSearchParams({
       requester: principal.id,
-      ...(limit === null ? {} : { limit })
+      ...(limit === null ? {} : { limit: String(limit) })
     });
     return gridGet(
       `/internal/v1/memory/${encodeURIComponent(owner)}?${query}`,
@@ -461,11 +483,13 @@ export async function createGatewayService(config = meshConfig()) {
       );
   });
   router.add('GET', '/v1/backups', async ({ url, traceId, principal }) => {
-    const limit = url.searchParams.get('limit');
-    if (limit !== null && (!/^\d+$/.test(limit) || Number(limit) < 1 || Number(limit) > 100)) {
-      throw new ValidationError('Backup limit must be an integer between 1 and 100');
-    }
-    const query = limit === null ? '' : `?limit=${encodeURIComponent(limit)}`;
+    const rawLimit = url.searchParams.get('limit');
+    const limit = rawLimit === null ? null : boundedIntegerQuery(rawLimit, 100, {
+      label: 'backups limit',
+      min: 1,
+      max: 100
+    });
+    const query = limit === null ? '' : `?limit=${limit}`;
     return gridGet(
       `/internal/v1/backups/${encodeURIComponent(principal.id)}${query}`,
       traceId
