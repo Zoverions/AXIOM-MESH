@@ -119,16 +119,18 @@ test('provider capture binds an external revision to independently verified loca
   assert.equal(adapted.head_matches_front, true);
   assert.equal(adapted.checks_all_success, true);
   assert.equal(adapted.checks_complete, true);
-  assert.equal(adapted.provider_authenticity_verified, true);
+  assert.equal(adapted.provider_authenticity_reported, true);
+  assert.equal(adapted.provider_authenticity_is_observation_only, true);
+  assert.equal(adapted.authenticated_provider_assertion_emitted, false);
+  assert.equal(adapted.provider_assurance_evidence_digest, null);
+  assert.equal(adapted.provider_evidence, null);
+  assert.equal(adapted.provider_capture_evidence_digest, D3);
   assert.equal(adapted.provider_metadata_authoritative, false);
   assert.equal(adapted.source_identity_derived_from_provider, false);
   assert.equal(adapted.merge_authority_granted, false);
   assert.equal(adapted.capability_promotion_granted, false);
   assert.equal(adapted.provider_mutation_performed, false);
   assert.equal(adapted.network_access_performed_by_adapter, false);
-  assert.equal(adapted.provider_evidence.evidence_class, 'authenticated_assertion');
-  assert.equal(adapted.provider_evidence.basis_kind, 'provider_report');
-  assert.equal(adapted.provider_evidence.authority_granted, false);
   assert.equal(adapted.provider_observation.non_authoritative, true);
   assert.match(adapted.adaptation_digest, /^[a-f0-9]{64}$/);
 });
@@ -156,22 +158,27 @@ test('provider checks must be bound to the captured exact revision', () => {
   })), /not bound to the captured external revision/);
 });
 
-test('unverified provider capture remains observation only and cannot manufacture provider evidence', () => {
+test('reported provider authenticity remains observation-only and cannot manufacture assurance evidence', () => {
   const state = sourceState();
-  const adapted = adaptChangeFrontProviderCapture({
-    front: front(state),
-    source_state: state,
-    source_evidence: sourceEvidence(state),
-    capture: capture({ provider_authenticity_verified: false })
-  });
+  for (const reported of [false, true]) {
+    const adapted = adaptChangeFrontProviderCapture({
+      front: front(state),
+      source_state: state,
+      source_evidence: sourceEvidence(state),
+      capture: capture({ provider_authenticity_verified: reported })
+    });
 
-  assert.equal(adapted.provider_evidence, null);
-  assert.equal(adapted.provider_authenticity_verified, false);
-  assert.equal(adapted.provider_metadata_authoritative, false);
-  assert.equal(adapted.merge_authority_granted, false);
+    assert.equal(adapted.provider_evidence, null);
+    assert.equal(adapted.provider_authenticity_reported, reported);
+    assert.equal(adapted.provider_authenticity_is_observation_only, true);
+    assert.equal(adapted.authenticated_provider_assertion_emitted, false);
+    assert.equal(adapted.provider_assurance_evidence_digest, null);
+    assert.equal(adapted.provider_metadata_authoritative, false);
+    assert.equal(adapted.merge_authority_granted, false);
+  }
 });
 
-test('stale but verified source/provider observation is retained as non-current evidence', () => {
+test('stale but verified source/provider observation is retained without becoming current authority', () => {
   const state = sourceState();
   const staleFront = front(state, { head_state_digest: 'f'.repeat(64) });
   const adapted = adaptChangeFrontProviderCapture({
@@ -182,8 +189,9 @@ test('stale but verified source/provider observation is retained as non-current 
   });
 
   assert.equal(adapted.head_matches_front, false);
-  assert.equal(adapted.provider_evidence.current_for_front, false);
-  assert.equal(adapted.provider_evidence.authority_granted, false);
+  assert.equal(adapted.provider_evidence, null);
+  assert.equal(adapted.provider_observation.non_authoritative, true);
+  assert.equal(adapted.merge_authority_granted, false);
 });
 
 test('source evidence must prove local bytes and exact current-head semantics', () => {
