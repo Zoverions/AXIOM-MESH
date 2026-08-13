@@ -331,7 +331,7 @@ jobs:
           retention-days: 30
 
       - name: Upload H1 appliance build artifacts
-        if: always()
+        if: success()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: axiom-host-h1-appliance-${{ github.sha }}-attempt-${{ github.run_attempt }}

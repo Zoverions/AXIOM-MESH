@@ -18,6 +18,7 @@ const FILES = Object.freeze({
   state: new URL('mkosi.repart/30-var.conf', H1_ROOT),
   finalize: new URL('mkosi.finalize', H1_ROOT),
   unit: new URL('mkosi.extra/usr/lib/systemd/system/axiom-host-h1-check.service', H1_ROOT),
+  fstab: new URL('mkosi.extra/etc/fstab', H1_ROOT),
   guestCheck: new URL('mkosi.extra/usr/libexec/axiom-host-h1-check.mjs', H1_ROOT)
 });
 
@@ -147,6 +148,8 @@ export async function verifyAxiomHostH1Configuration(urls = FILES) {
   }
   for (const required of [
     'After=local-fs.target',
+    'RequiresMountsFor=/var',
+    'FailureAction=poweroff-force',
     'WorkingDirectory=/usr/lib/axiom-mesh',
     'AXIOM_DATA_DIR=/var/lib/axiom-host/data',
     'ExecStart=/usr/bin/node /usr/libexec/axiom-host-h1-check.mjs',
@@ -154,6 +157,11 @@ export async function verifyAxiomHostH1Configuration(urls = FILES) {
   ]) {
     requireValue(source.unit.includes(required), `H1 systemd unit is missing ${required}`);
   }
+  exact(
+    source.fstab.trim(),
+    '/dev/disk/by-partlabel/var /var ext4 rw,nosuid,nodev 0 2',
+    'immutable state mount declaration'
+  );
   for (const required of [
     "findMount('/')",
     "findMount('/var')",

@@ -1,0 +1,1 @@
+/dev/disk/by-partlabel/var /var ext4 rw,nosuid,nodev 0 2

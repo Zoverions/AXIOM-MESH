@@ -3,6 +3,8 @@ Description=AXIOM Host H1 appliance verification
 Documentation=https://github.com/Zoverions/AXIOM-MESH/issues/1053
 After=local-fs.target
 Wants=local-fs.target
+RequiresMountsFor=/var
+FailureAction=poweroff-force
 
 [Service]
 Type=oneshot

@@ -19,14 +19,13 @@ const SOURCE_ROOT = '/usr/lib/axiom-mesh';
 const IMAGE_VERSION = readText('/usr/lib/axiom-host-image-version');
 const AUTHORITY_PATH = readText('/usr/lib/axiom-host-authority-path');
 
-mkdirSync(`${STATE_ROOT}/home`, { recursive: true, mode: 0o700 });
-mkdirSync(`${STATE_ROOT}/data`, { recursive: true, mode: 0o700 });
-mkdirSync(EVIDENCE_ROOT, { recursive: true, mode: 0o700 });
-
 let state;
 let sequence = 1;
 let scenario = 'initial-boot';
 try {
+  mkdirSync(`${STATE_ROOT}/home`, { recursive: true, mode: 0o700 });
+  mkdirSync(`${STATE_ROOT}/data`, { recursive: true, mode: 0o700 });
+  mkdirSync(EVIDENCE_ROOT, { recursive: true, mode: 0o700 });
   const requestedScenario = readText(`${STATE_ROOT}/lab-scenario`, { optional: true });
   if (requestedScenario) scenario = requestedScenario;
   state = readState();

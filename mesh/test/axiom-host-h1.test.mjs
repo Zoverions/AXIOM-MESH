@@ -55,6 +55,7 @@ async function withFixture(callback) {
     state: 'mkosi.repart/30-var.conf',
     finalize: 'mkosi.finalize',
     unit: 'mkosi.extra/usr/lib/systemd/system/axiom-host-h1-check.service',
+    fstab: 'mkosi.extra/etc/fstab',
     guestCheck: 'mkosi.extra/usr/libexec/axiom-host-h1-check.mjs'
   };
   const root = await mkdtemp(join(tmpdir(), 'axiom-host-h1-'));
