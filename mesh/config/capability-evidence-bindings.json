@@ -215,7 +215,7 @@
       "test": "current service network policy is exact, default-deny, and segmented",
       "assertions": [
         "assert.equal(result.default_action, 'deny');",
-        "assert.equal(result.routes, 41);"
+        "assert.equal(result.routes, 42);"
       ]
     },
     {
