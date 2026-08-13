@@ -12,7 +12,7 @@
     "distribution": "fedora-rawhide",
     "architecture": "x86-64",
     "firmware": "uefi",
-    "boot_artifact": "unsigned-uki",
+    "boot_artifact": "systemd-boot-with-unsigned-uki",
     "root_filesystem": "ext4",
     "root_integrity": "dm-verity",
     "root_runtime_mutability": "read-only",

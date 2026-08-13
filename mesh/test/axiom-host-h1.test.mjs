@@ -12,7 +12,7 @@ test('AXIOM Host H1 appliance contract is immutable-root, state-separated, and n
   assert.equal(result.stage, 'H1');
   assert.equal(result.issue, 1053);
   assert.equal(result.firmware, 'uefi');
-  assert.equal(result.boot_artifact, 'unsigned-uki');
+  assert.equal(result.boot_artifact, 'systemd-boot-with-unsigned-uki');
   assert.equal(result.root, 'read-only-ext4-dm-verity');
   assert.equal(result.durable_state, 'separate-ext4-var');
   assert.deepEqual(result.guest_checks, ['npm run setup:check', 'npm run check']);

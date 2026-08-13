@@ -60,6 +60,7 @@ try {
     boot: {
       firmware: 'uefi',
       uefi_runtime_observed: uefiRuntimeObserved,
+      boot_manager: 'systemd-boot',
       uki: 'unsigned',
       kernel_command_line: readText('/proc/cmdline')
     },

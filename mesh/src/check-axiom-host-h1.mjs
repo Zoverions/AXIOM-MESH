@@ -82,7 +82,7 @@ export async function verifyAxiomHostH1Configuration(urls = FILES) {
     ['Output', 'ImageId', 'axiom-host-h1'],
     ['Output', 'OutputDirectory', 'mkosi.output'],
     ['Content', 'Bootable', 'yes'],
-    ['Content', 'Bootloader', 'uki'],
+    ['Content', 'Bootloader', 'systemd-boot'],
     ['Content', 'UnifiedKernelImages', 'unsigned'],
     ['Content', 'Ssh', 'never'],
     ['Content', 'Autologin', 'no'],
@@ -176,7 +176,7 @@ export async function verifyAxiomHostH1Configuration(urls = FILES) {
     image_version: version,
     snapshot,
     firmware: 'uefi',
-    boot_artifact: 'unsigned-uki',
+    boot_artifact: 'systemd-boot-with-unsigned-uki',
     root: 'read-only-ext4-dm-verity',
     durable_state: 'separate-ext4-var',
     guest_checks: [...policy.required_guest_checks],
@@ -191,6 +191,7 @@ function verifyPolicy(policy) {
   exact(policy?.stage, 'H1', 'policy stage');
   exact(policy?.issue, 1053, 'issue binding');
   exact(policy?.appliance?.root_integrity, 'dm-verity', 'root integrity policy');
+  exact(policy?.appliance?.boot_artifact, 'systemd-boot-with-unsigned-uki', 'boot artifact policy');
   exact(policy?.appliance?.root_runtime_mutability, 'read-only', 'root mutability policy');
   exact(policy?.appliance?.axiom_state_path, '/var/lib/axiom-host', 'AXIOM state path');
   exact(policy?.appliance?.state_encryption, 'absent', 'H1 state encryption non-claim');

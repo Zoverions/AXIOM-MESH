@@ -14,7 +14,7 @@ ExecStart=/usr/bin/node /usr/libexec/axiom-host-h1-check.mjs
 ExecStartPost=/usr/bin/systemctl --no-block poweroff
 StandardOutput=journal+console
 StandardError=journal+console
-TimeoutStartSec=20min
+TimeoutStartSec=7min
 
 [Install]
 WantedBy=multi-user.target
