@@ -13,6 +13,7 @@ import { canonicalJson, sha256, AxiomError } from './canonical.mjs';
 import { assertTransportPeer } from './transport-credentials.mjs';
 
 const KEY_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
+const REPLAY_SWEEP_INTERVAL = 64;
 
 function b64url(input) {
   return Buffer.from(input).toString('base64url');
@@ -76,7 +77,7 @@ export class MeshIdentity {
     this.service = service;
     this.privateKey = createPrivateKey(privatePem);
     this.publicKey = createPublicKey(publicPem);
-    this.keyId = `${service}:${sha256(publicPem).slice(0, 16)}`;
+    this.keyId = keyIdFor(service, this.publicKey);
   }
 
   signBytes(bytes) {
@@ -105,18 +106,35 @@ export class ReplayGuard {
   constructor({ maxEntries = 10_000 } = {}) {
     this.maxEntries = maxEntries;
     this.nonces = new Map();
+    this.usesSinceSweep = 0;
   }
 
-  use(service, nonce, expiresAtMs) {
-    const now = Date.now();
+  use(service, nonce, expiresAtMs, now = Date.now()) {
+    const key = `${service}:${nonce}`;
+    const existingExpiry = this.nonces.get(key);
+    if (existingExpiry !== undefined) {
+      if (existingExpiry > now) return 'replayed';
+      this.nonces.delete(key);
+    }
+
+    this.usesSinceSweep += 1;
+    if (
+      this.usesSinceSweep >= REPLAY_SWEEP_INTERVAL
+      || this.nonces.size >= this.maxEntries
+    ) {
+      this.sweepExpired(now);
+      this.usesSinceSweep = 0;
+    }
+
+    if (this.nonces.size >= this.maxEntries) return 'saturated';
+    this.nonces.set(key, expiresAtMs);
+    return 'admitted';
+  }
+
+  sweepExpired(now = Date.now()) {
     for (const [key, expiry] of this.nonces) {
       if (expiry <= now) this.nonces.delete(key);
     }
-    const key = `${service}:${nonce}`;
-    if (this.nonces.has(key)) return false;
-    if (this.nonces.size >= this.maxEntries) return false;
-    this.nonces.set(key, expiresAtMs);
-    return true;
   }
 }
 
@@ -230,8 +248,24 @@ export async function verifySignedRequest({
   if (!verify(null, Buffer.from(input), key, fromB64url(signature))) {
     throw new AxiomError('invalid_service_signature', 'Service request signature is invalid', 401);
   }
-  if (!replayGuard.use(service, nonce, (timestampSeconds + clockSkewSeconds + 1) * 1000)) {
+  const replayAdmission = replayGuard.use(
+    service,
+    nonce,
+    (timestampSeconds + clockSkewSeconds + 1) * 1000,
+    now
+  );
+  if (replayAdmission === 'replayed') {
     throw new AxiomError('replayed_request', 'Service request nonce has already been used', 409);
+  }
+  if (replayAdmission === 'saturated') {
+    throw new AxiomError(
+      'replay_guard_saturated',
+      'Service replay protection is temporarily saturated',
+      503
+    );
+  }
+  if (replayAdmission !== 'admitted') {
+    throw new AxiomError('replay_guard_unavailable', 'Service replay protection is unavailable', 503);
   }
   return { service };
 }
