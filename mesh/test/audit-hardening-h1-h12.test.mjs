@@ -82,12 +82,8 @@ test('H-3 exhausted token buckets cannot regain capacity through key churn', () 
   assert.equal(limiter.take('attacker', now), false);
   assert.equal(limiter.take('other', now), true);
 
-  // Both retained buckets are still in debt. A fresh identity cannot evict
-  // either one and thereby manufacture a full bucket.
   assert.equal(limiter.take('rotated', now), false);
   assert.equal(limiter.take('attacker', now), false);
-
-  // Once buckets have genuinely refilled, bounded eviction may proceed.
   assert.equal(limiter.take('rotated', now + 3_000), true);
 });
 
@@ -128,11 +124,12 @@ test('H-4 request routing does not trust a malformed Host header as URL authorit
 test('H-5 replay protection distinguishes replay, saturation, and expired reuse', () => {
   const guard = new ReplayGuard({ maxEntries: 2 });
   const now = 10_000;
-  assert.equal(guard.use('grid', 'nonce-a', now + 1_000, now), 'admitted');
-  assert.equal(guard.use('grid', 'nonce-b', now + 1_000, now), 'admitted');
-  assert.equal(guard.use('grid', 'nonce-a', now + 1_000, now), 'replayed');
-  assert.equal(guard.use('grid', 'nonce-c', now + 1_000, now), 'saturated');
-  assert.equal(guard.use('grid', 'nonce-c', now + 3_000, now + 2_000), 'admitted');
+  assert.equal(guard.admit('grid', 'nonce-a', now + 1_000, now), 'admitted');
+  assert.equal(guard.admit('grid', 'nonce-b', now + 1_000, now), 'admitted');
+  assert.equal(guard.admit('grid', 'nonce-a', now + 1_000, now), 'replayed');
+  assert.equal(guard.admit('grid', 'nonce-c', now + 1_000, now), 'saturated');
+  assert.equal(guard.admit('grid', 'nonce-c', now + 3_000, now + 2_000), 'admitted');
+  assert.equal(guard.use('grid', 'compatibility', now + 3_000, now + 2_000), false);
 });
 
 test('H-6 deny-dominant merge rejects unsupported fields on deny branches', () => {
