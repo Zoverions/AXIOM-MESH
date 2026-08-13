@@ -16,6 +16,11 @@
     "node_major": 24,
     "node_engine_minimum": "24.14.0"
   },
+  "package_source": {
+    "snapshot_required_before_build": true,
+    "snapshot_lock_file": "mkosi.snapshot",
+    "automatic_latest_snapshot_build": false
+  },
   "image": {
     "format": "disk",
     "image_id": "axiom-host-lab",
