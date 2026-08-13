@@ -41,8 +41,12 @@ export async function inventoryAxiomHostArtifacts(directory, { exclude = [] } = 
     if (!metadata.isSymbolicLink()) {
       throw new ValidationError(`AXIOM Host H0 output artifact is not the expected symlink: ${artifact.name}`);
     }
-    const linkTarget = await readlink(artifact.path, 'utf8');
-    const resolvedTarget = resolve(dirname(artifact.path), linkTarget);
+    const rawLinkTarget = await readlink(artifact.path, 'utf8');
+    if (isAbsolute(rawLinkTarget)) {
+      throw new ValidationError(`AXIOM Host H0 output symlink escapes or has an invalid target: ${artifact.name}`);
+    }
+    const linkTarget = normalizeRelativeLinkTarget(rawLinkTarget);
+    const resolvedTarget = resolve(dirname(artifact.path), rawLinkTarget);
     if (
       !validLinkTarget(linkTarget)
       || !isWithin(directory, resolvedTarget)
@@ -169,10 +173,14 @@ function validArtifactName(name) {
     && components.every(component => ARTIFACT_COMPONENT.test(component));
 }
 
+function normalizeRelativeLinkTarget(target) {
+  return String(target).replaceAll('\\', '/');
+}
+
 function validLinkTarget(target) {
   return typeof target === 'string'
     && LINK_TARGET.test(target)
-    && !isAbsolute(target)
+    && !target.startsWith('/')
     && !target.includes('\\')
     && !target.includes('//');
 }
