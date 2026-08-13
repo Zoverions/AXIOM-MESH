@@ -129,8 +129,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npm run host:lab:build | tee "$RUNNER_TEMP/axiom-host-h0-build-command.json"
+          # GitHub-hosted runners block the unprivileged namespace/capability path
+          # mkosi v26 uses during Fedora repository setup. H0 therefore performs
+          # the image-construction command as root on this disposable runner only.
+          # Checkout credentials are not persisted and the AXIOM lab wrapper still
+          # replaces HOME/XDG state and forwards only its fixed safe environment.
+          sudo git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          sudo --preserve-env=PATH,AXIOM_HOST_LAB_ACK \
+            env HOME=/root USER=root LOGNAME=root LANG=C.UTF-8 \
+            npm run host:lab:build \
+            | tee "$RUNNER_TEMP/axiom-host-h0-build-command.json"
           test -s host/mkosi.output/axiom-host-h0-build-evidence.json
+          sudo chown -R "$(id -u):$(id -g)" host/mkosi.output host/.mkosi-private || true
 
       - name: Upload H0 package-source probe evidence
         if: always()
