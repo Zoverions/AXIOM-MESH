@@ -227,8 +227,6 @@ export async function runAxiomHostLab({ action = 'summary', acknowledgement = ''
     }
 
     await assertEmptyAxiomHostOutput(OUTPUT_DIRECTORY);
-    const toolVersions = await observeBuilderTools(environment);
-    await assertEmptyAxiomHostOutput(OUTPUT_DIRECTORY);
     await mkdir(OUTPUT_DIRECTORY, { recursive: true, mode: 0o700 });
     await rm(BUILD_LOG_PATH, { force: true });
     await execProgram('mkosi', ['--directory', HOST_DIRECTORY, 'build'], {
@@ -238,9 +236,16 @@ export async function runAxiomHostLab({ action = 'summary', acknowledgement = ''
       captureLogPath: BUILD_LOG_PATH
     });
 
+    const beforeToolObservation = await inventoryAxiomHostArtifacts(OUTPUT_DIRECTORY, {
+      exclude: ['axiom-host-h0-build-evidence.json']
+    });
+    const toolVersions = await observeBuilderTools(environment);
     const preliminaryArtifacts = await inventoryAxiomHostArtifacts(OUTPUT_DIRECTORY, {
       exclude: ['axiom-host-h0-build-evidence.json']
     });
+    if (beforeToolObservation.digest !== preliminaryArtifacts.digest) {
+      throw new ValidationError('AXIOM Host H0 tool observation mutated the built artifact set');
+    }
     const artifactMetadata = await generateAxiomHostH0ArtifactMetadata({
       outputDirectory: OUTPUT_DIRECTORY,
       artifactInventory: preliminaryArtifacts.inventory,
