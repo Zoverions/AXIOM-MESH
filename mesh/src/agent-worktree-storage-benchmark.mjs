@@ -5,13 +5,19 @@ import { spawn } from 'node:child_process';
 import {
   lstat,
   mkdir,
+  open,
   readdir,
   readFile,
   rm,
-  statfs,
-  writeFile
+  statfs
 } from 'node:fs/promises';
-import { basename, join, relative, resolve, sep } from 'node:path';
+import {
+  basename,
+  isAbsolute,
+  join,
+  relative,
+  resolve
+} from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { pathToFileURL } from 'node:url';
 import {
@@ -24,10 +30,13 @@ export const STORAGE_BENCHMARK_SCHEMA = 'axiom-agent-worktree-storage-benchmark-
 export const LAB_ACKNOWLEDGEMENT = 'I_UNDERSTAND_THIS_IS_NON_PRODUCTION';
 
 const REVISION = /^[a-f0-9]{40}$/;
+const TREE_DIGEST = /^[a-f0-9]{40}$/;
 const PROFILE_ID = /^[a-z0-9][a-z0-9._-]{1,63}$/;
 const MAX_WORKERS = 500;
 const MAX_PARALLELISM = 32;
 const MAX_MUTATION_BYTES_PER_WORKER = 256 * 1024 * 1024;
+const WRITE_CHUNK_BYTES = 1024 * 1024;
+const MAX_COMMAND_OUTPUT_BYTES = 16 * 1024 * 1024;
 const SAFE_ENV_KEYS = [
   'PATH',
   'HOME',
@@ -130,254 +139,300 @@ export async function runAgentWorktreeStorageBenchmark(options = {}) {
   await prepareEmptyWorkspace(config.workspace);
   const controlDir = join(config.workspace, 'control');
   const worktreesDir = join(config.workspace, 'worktrees');
-  await mkdir(controlDir, { recursive: true, mode: 0o700 });
-  await mkdir(worktreesDir, { recursive: true, mode: 0o700 });
-
-  const sourceRevision = (
-    await execProgram('git', ['-C', config.sourceRepo, 'rev-parse', '--verify', `${config.revision}^{commit}`])
-  ).stdout.trim().toLowerCase();
-  if (sourceRevision !== config.revision) {
-    throw new ValidationError('Storage benchmark source revision resolution drifted');
-  }
-
   const controlRepo = join(controlDir, 'source');
-  await execProgram('git', [
-    'clone',
-    '--no-checkout',
-    '--local',
-    config.sourceRepo,
-    controlRepo
-  ]);
-  const controlRevision = (
-    await execProgram('git', ['-C', controlRepo, 'rev-parse', '--verify', `${config.revision}^{commit}`])
-  ).stdout.trim().toLowerCase();
-  if (controlRevision !== config.revision) {
-    throw new ValidationError('Storage benchmark control clone does not contain the exact source revision');
-  }
-  const sourceTree = (
-    await execProgram('git', ['-C', controlRepo, 'rev-parse', `${config.revision}^{tree}`])
-  ).stdout.trim().toLowerCase();
-  const trackedFiles = countLines((
-    await execProgram('git', [
-      '-C',
-      controlRepo,
-      'ls-tree',
-      '-r',
-      '--name-only',
-      config.revision
-    ])
-  ).stdout);
-  const gitVersion = (
-    await execProgram('git', ['--version'])
-  ).stdout.trim();
-
-  const beforeFs = await filesystemSnapshot(config.workspace);
-  const beforePhysical = await runPhysicalObserver(config, 'before');
   const workerPaths = Array.from({ length: config.workers }, (_, index) => (
     join(worktreesDir, `worker-${String(index + 1).padStart(4, '0')}`)
   ));
+  let completed = false;
 
-  const creationStarted = performance.now();
-  const creationResults = await mapWithConcurrency(
-    workerPaths,
-    config.parallelism,
-    async (workerPath, index) => {
-      const started = performance.now();
+  try {
+    await mkdir(controlDir, { recursive: true, mode: 0o700 });
+    await mkdir(worktreesDir, { recursive: true, mode: 0o700 });
+
+    const sourceRevision = (
+      await execProgram('git', [
+        '-C',
+        config.sourceRepo,
+        'rev-parse',
+        '--verify',
+        `${config.revision}^{commit}`
+      ])
+    ).stdout.trim().toLowerCase();
+    if (sourceRevision !== config.revision) {
+      throw new ValidationError('Storage benchmark source revision resolution drifted');
+    }
+
+    await execProgram('git', [
+      'clone',
+      '--no-checkout',
+      '--local',
+      config.sourceRepo,
+      controlRepo
+    ]);
+    const controlRevision = (
       await execProgram('git', [
         '-C',
         controlRepo,
-        'worktree',
-        'add',
-        '--detach',
-        workerPath,
-        config.revision
-      ]);
-      const resolved = (
-        await execProgram('git', ['-C', workerPath, 'rev-parse', 'HEAD'])
-      ).stdout.trim().toLowerCase();
-      if (resolved !== config.revision) {
-        throw new ValidationError(`Worker ${index + 1} did not resolve to the exact source revision`);
-      }
-      return {
-        worker: index + 1,
-        duration_ms: elapsed(started)
-      };
+        'rev-parse',
+        '--verify',
+        `${config.revision}^{commit}`
+      ])
+    ).stdout.trim().toLowerCase();
+    if (controlRevision !== config.revision) {
+      throw new ValidationError(
+        'Storage benchmark control clone does not contain the exact source revision'
+      );
     }
-  );
-  const creationWallMs = elapsed(creationStarted);
+    const sourceTree = (
+      await execProgram('git', [
+        '-C',
+        controlRepo,
+        'rev-parse',
+        `${config.revision}^{tree}`
+      ])
+    ).stdout.trim().toLowerCase();
+    if (!TREE_DIGEST.test(sourceTree)) {
+      throw new ValidationError('Storage benchmark source tree digest is invalid');
+    }
+    const trackedFiles = countLines((
+      await execProgram('git', [
+        '-C',
+        controlRepo,
+        'ls-tree',
+        '-r',
+        '--name-only',
+        config.revision
+      ])
+    ).stdout);
+    const gitVersion = (
+      await execProgram('git', ['--version'])
+    ).stdout.trim();
 
-  let workloadResults = [];
-  let workloadWallMs = 0;
-  if (config.workload) {
-    const workloadStarted = performance.now();
-    workloadResults = await mapWithConcurrency(
+    const beforeFs = await filesystemSnapshot(config.workspace);
+    const beforePhysical = await runPhysicalObserver(config, 'before');
+
+    const creationStarted = performance.now();
+    const creationResults = await mapWithConcurrency(
       workerPaths,
       config.parallelism,
       async (workerPath, index) => {
         const started = performance.now();
-        await execProgram(
-          config.workload.program,
-          config.workload.args,
-          {
-            cwd: workerPath,
-            env: laboratoryEnvironment({
-              AXIOM_STORAGE_BENCHMARK: '1',
-              AXIOM_STORAGE_BENCHMARK_WORKER: String(index + 1)
-            })
-          }
-        );
+        await execProgram('git', [
+          '-C',
+          controlRepo,
+          'worktree',
+          'add',
+          '--detach',
+          workerPath,
+          config.revision
+        ]);
+        const resolved = (
+          await execProgram('git', ['-C', workerPath, 'rev-parse', 'HEAD'])
+        ).stdout.trim().toLowerCase();
+        if (resolved !== config.revision) {
+          throw new ValidationError(
+            `Worker ${index + 1} did not resolve to the exact source revision`
+          );
+        }
         return {
           worker: index + 1,
           duration_ms: elapsed(started)
         };
       }
     );
-    workloadWallMs = elapsed(workloadStarted);
-  }
+    const creationWallMs = elapsed(creationStarted);
 
-  let mutationWallMs = 0;
-  if (config.mutationBytesPerWorker > 0) {
-    const mutationStarted = performance.now();
-    await mapWithConcurrency(
-      workerPaths,
-      config.parallelism,
-      async (workerPath, index) => {
-        const output = join(workerPath, '.axiom-storage-benchmark-unique.bin');
-        await writeUniqueFile(output, config.mutationBytesPerWorker, index + 1);
-      }
-    );
-    mutationWallMs = elapsed(mutationStarted);
-  }
-
-  const treeMetrics = await aggregateTreeMetrics(workerPaths);
-  const afterFs = await filesystemSnapshot(config.workspace);
-  const afterPhysical = await runPhysicalObserver(config, 'after');
-  const filesystemUsedDeltaBytes = Math.max(
-    0,
-    afterFs.used_bytes - beforeFs.used_bytes
-  );
-  const observerDeltaBytes = (
-    beforePhysical && afterPhysical
-      ? Math.max(0, afterPhysical.physical_used_bytes - beforePhysical.physical_used_bytes)
-      : null
-  );
-
-  const sourcePackage = JSON.parse(
-    await readFile(new URL('../package.json', import.meta.url), 'utf8')
-  );
-  const configForDigest = {
-    profile_id: config.profileId,
-    workers: config.workers,
-    parallelism: config.parallelism,
-    mutation_bytes_per_worker: config.mutationBytesPerWorker,
-    workload: config.workload
-      ? {
-          program: basename(config.workload.program),
-          args: config.workload.args
+    let workloadResults = [];
+    let workloadWallMs = 0;
+    if (config.workload) {
+      const workloadStarted = performance.now();
+      workloadResults = await mapWithConcurrency(
+        workerPaths,
+        config.parallelism,
+        async (workerPath, index) => {
+          const started = performance.now();
+          await execProgram(
+            config.workload.program,
+            config.workload.args,
+            {
+              cwd: workerPath,
+              env: laboratoryEnvironment({
+                AXIOM_STORAGE_BENCHMARK: '1',
+                AXIOM_STORAGE_BENCHMARK_WORKER: String(index + 1)
+              })
+            }
+          );
+          return {
+            worker: index + 1,
+            duration_ms: elapsed(started)
+          };
         }
-      : null,
-    physical_observer_configured: Boolean(config.physicalObserver),
-    retain_workspace: config.retainWorkspace
-  };
-  const evidence = {
-    schema: STORAGE_BENCHMARK_SCHEMA,
-    status: 'passed',
-    generated_at: config.generatedAt,
-    source: {
-      kernel_version: sourcePackage.version,
-      repository_path_recorded: false,
-      revision: config.revision,
-      tree: sourceTree,
-      tracked_files: trackedFiles,
-      git_version: gitVersion
-    },
-    profile: {
+      );
+      workloadWallMs = elapsed(workloadStarted);
+    }
+
+    let mutationWallMs = 0;
+    if (config.mutationBytesPerWorker > 0) {
+      const mutationStarted = performance.now();
+      await mapWithConcurrency(
+        workerPaths,
+        config.parallelism,
+        async (workerPath, index) => {
+          const output = join(workerPath, '.axiom-storage-benchmark-unique.bin');
+          await writeUniqueFile(output, config.mutationBytesPerWorker, index + 1);
+        }
+      );
+      mutationWallMs = elapsed(mutationStarted);
+    }
+
+    const treeMetrics = await aggregateTreeMetrics(workerPaths);
+    const afterFs = await filesystemSnapshot(config.workspace);
+    const afterPhysical = await runPhysicalObserver(config, 'after');
+    const filesystemUsedDeltaBytes = Math.max(
+      0,
+      afterFs.used_bytes - beforeFs.used_bytes
+    );
+    const observerDeltaBytes = (
+      beforePhysical && afterPhysical
+        ? Math.max(
+            0,
+            afterPhysical.physical_used_bytes - beforePhysical.physical_used_bytes
+          )
+        : null
+    );
+
+    const sourcePackage = JSON.parse(
+      await readFile(new URL('../package.json', import.meta.url), 'utf8')
+    );
+    const configForDigest = {
       profile_id: config.profileId,
-      materialization: 'git-linked-worktree-from-disposable-control-clone',
-      filesystem_type: afterFs.type,
-      filesystem_block_size: afterFs.block_size,
-      physical_observer: config.physicalObserver
-        ? {
-            configured: true,
-            command_digest: sha256(canonicalJson([
-              config.physicalObserver.program,
-              ...config.physicalObserver.args
-            ]))
-          }
-        : {
-            configured: false,
-            command_digest: null
-          }
-    },
-    workload: {
       workers: config.workers,
       parallelism: config.parallelism,
       mutation_bytes_per_worker: config.mutationBytesPerWorker,
-      post_materialization_command: config.workload
+      workload: config.workload
         ? {
             program: basename(config.workload.program),
-            args: config.workload.args,
-            inherited_secret_environment: false
+            args: config.workload.args
           }
-        : null
-    },
-    measurements: {
-      creation: summarizeDurations(creationResults, creationWallMs),
-      post_materialization: config.workload
-        ? summarizeDurations(workloadResults, workloadWallMs)
         : null,
-      mutation_wall_ms: mutationWallMs,
-      worktree_tree: treeMetrics,
-      filesystem: {
-        before: beforeFs,
-        after: afterFs,
-        used_delta_bytes: filesystemUsedDeltaBytes,
-        interpretation: 'filesystem allocation delta; not guaranteed to equal backing-device physical use'
+      physical_observer_configured: Boolean(config.physicalObserver),
+      retain_workspace: config.retainWorkspace
+    };
+    const evidence = {
+      schema: STORAGE_BENCHMARK_SCHEMA,
+      status: 'passed',
+      generated_at: config.generatedAt,
+      source: {
+        kernel_version: sourcePackage.version,
+        repository_path_recorded: false,
+        revision: config.revision,
+        tree: sourceTree,
+        tracked_files: trackedFiles,
+        git_version: gitVersion
       },
-      backing_observer: (
-        beforePhysical && afterPhysical
+      profile: {
+        profile_id: config.profileId,
+        materialization: 'git-linked-worktree-from-disposable-control-clone',
+        filesystem_type: afterFs.type,
+        filesystem_block_size: afterFs.block_size,
+        physical_observer: config.physicalObserver
           ? {
-              before_physical_used_bytes: beforePhysical.physical_used_bytes,
-              after_physical_used_bytes: afterPhysical.physical_used_bytes,
-              physical_used_delta_bytes: observerDeltaBytes
+              configured: true,
+              command_digest: sha256(canonicalJson([
+                config.physicalObserver.program,
+                ...config.physicalObserver.args
+              ]))
+            }
+          : {
+              configured: false,
+              command_digest: null
+            }
+      },
+      workload: {
+        workers: config.workers,
+        parallelism: config.parallelism,
+        mutation_bytes_per_worker: config.mutationBytesPerWorker,
+        post_materialization_command: config.workload
+          ? {
+              program: basename(config.workload.program),
+              args: config.workload.args,
+              inherited_secret_environment: false
             }
           : null
-      )
-    },
-    controls: {
-      config_digest: sha256(canonicalJson(configForDigest)),
-      exact_commit_required: true,
-      disposable_control_clone: true,
-      explicit_empty_workspace_required: true,
-      axiom_data_dir_overlap_rejected: true,
-      shell_execution_used: false,
-      package_manager_lifecycle_scripts_allowed: false,
-      production_runtime_changed: false,
-      capability_registry_changed: false,
-      scheduler_authority_changed: false,
-      storage_profile_promoted: false
-    },
-    limitations: [
-      'This is laboratory evidence and does not promote a storage profile or runtime capability.',
-      'Filesystem allocation deltas can include unrelated host activity and do not expose dm-vdo backing allocation by themselves.',
-      'A configured physical observer is operator-supplied and must be independently reviewed for the target storage stack.',
-      'Git linked worktrees share repository administration inside the disposable control clone and are not an adversarial sandbox boundary.',
-      'The harness does not create or configure XFS, ext4, OverlayFS, reflink, dm-vdo, encryption, integrity, quotas, or mounts; those are externally prepared test profiles.',
-      'The harness does not block network access for an optional workload command; run that command inside the intended laboratory network boundary.'
-    ],
-    cleanup: {
-      retained: config.retainWorkspace,
-      completed: false
+      },
+      measurements: {
+        creation: summarizeDurations(creationResults, creationWallMs),
+        post_materialization: config.workload
+          ? summarizeDurations(workloadResults, workloadWallMs)
+          : null,
+        mutation_wall_ms: mutationWallMs,
+        worktree_tree: treeMetrics,
+        filesystem: {
+          before: beforeFs,
+          after: afterFs,
+          used_delta_bytes: filesystemUsedDeltaBytes,
+          interpretation: (
+            'filesystem allocation delta; not guaranteed to equal backing-device physical use'
+          )
+        },
+        backing_observer: (
+          beforePhysical && afterPhysical
+            ? {
+                before_physical_used_bytes: beforePhysical.physical_used_bytes,
+                after_physical_used_bytes: afterPhysical.physical_used_bytes,
+                physical_used_delta_bytes: observerDeltaBytes
+              }
+            : null
+        )
+      },
+      controls: {
+        config_digest: sha256(canonicalJson(configForDigest)),
+        exact_commit_required: true,
+        disposable_control_clone: true,
+        explicit_empty_workspace_required: true,
+        axiom_data_dir_overlap_rejected: true,
+        shell_execution_used: false,
+        package_manager_lifecycle_scripts_allowed: false,
+        production_runtime_changed: false,
+        capability_registry_changed: false,
+        scheduler_authority_changed: false,
+        storage_profile_promoted: false
+      },
+      limitations: [
+        'This is laboratory evidence and does not promote a storage profile or runtime capability.',
+        'Filesystem allocation deltas can include unrelated host activity and do not expose dm-vdo backing allocation by themselves.',
+        'A configured physical observer is operator-supplied and must be independently reviewed for the target storage stack.',
+        'Git linked worktrees share repository administration inside the disposable control clone and are not an adversarial sandbox boundary.',
+        'The harness does not create or configure XFS, ext4, OverlayFS, reflink, dm-vdo, encryption, integrity, quotas, or mounts; those are externally prepared test profiles.',
+        'The harness does not block network access for an optional workload command; run that command inside the intended laboratory network boundary.'
+      ],
+      cleanup: {
+        retained: config.retainWorkspace,
+        completed: false
+      }
+    };
+
+    verifyAgentWorktreeStorageBenchmarkEvidence(evidence);
+
+    if (!config.retainWorkspace) {
+      await cleanupBenchmarkWorkspace({
+        controlRepo,
+        workerPaths,
+        workspace: config.workspace
+      });
+      evidence.cleanup.completed = true;
     }
-  };
-
-  verifyAgentWorktreeStorageBenchmarkEvidence(evidence);
-
-  if (!config.retainWorkspace) {
-    await cleanupBenchmarkWorkspace({ controlRepo, workerPaths, workspace: config.workspace });
-    evidence.cleanup.completed = true;
+    completed = true;
+    return evidence;
+  } finally {
+    if (!completed && !config.retainWorkspace) {
+      await cleanupBenchmarkWorkspace({
+        controlRepo,
+        workerPaths,
+        workspace: config.workspace
+      });
+    }
   }
-  return evidence;
 }
 
 export function verifyAgentWorktreeStorageBenchmarkEvidence(evidence) {
@@ -388,10 +443,17 @@ export function verifyAgentWorktreeStorageBenchmarkEvidence(evidence) {
     || evidence.schema !== STORAGE_BENCHMARK_SCHEMA
     || evidence.status !== 'passed'
     || !REVISION.test(evidence.source?.revision ?? '')
-    || !/^[a-f0-9]{40}$/.test(evidence.source?.tree ?? '')
+    || !TREE_DIGEST.test(evidence.source?.tree ?? '')
+    || !Number.isSafeInteger(evidence.source?.tracked_files)
+    || evidence.source.tracked_files < 0
+    || !PROFILE_ID.test(evidence.profile?.profile_id ?? '')
     || !Number.isSafeInteger(evidence.workload?.workers)
     || evidence.workload.workers < 1
     || evidence.workload.workers > MAX_WORKERS
+    || !Number.isSafeInteger(evidence.workload?.parallelism)
+    || evidence.workload.parallelism < 1
+    || evidence.workload.parallelism > MAX_PARALLELISM
+    || evidence.workload.parallelism > evidence.workload.workers
     || evidence.controls?.exact_commit_required !== true
     || evidence.controls?.disposable_control_clone !== true
     || evidence.controls?.explicit_empty_workspace_required !== true
@@ -453,28 +515,45 @@ async function runPhysicalObserver(config, phase) {
   try {
     parsed = JSON.parse(result.stdout);
   } catch {
-    throw new ValidationError('Physical observer must emit one JSON object on stdout');
+    throw new ValidationError(
+      'Physical observer must emit one JSON object on stdout'
+    );
   }
   const value = Number(parsed?.physical_used_bytes);
   if (!Number.isSafeInteger(value) || value < 0) {
-    throw new ValidationError('Physical observer physical_used_bytes must be a non-negative safe integer');
+    throw new ValidationError(
+      'Physical observer physical_used_bytes must be a non-negative safe integer'
+    );
   }
   return { physical_used_bytes: value };
 }
 
 async function filesystemSnapshot(path) {
   const snapshot = await statfs(path, { bigint: true });
-  const blockSize = Number(snapshot.bsize);
-  const blocks = Number(snapshot.blocks);
-  const freeBlocks = Number(snapshot.bfree);
-  const availableBlocks = Number(snapshot.bavail);
+  const blockSize = safeBigIntToNumber(snapshot.bsize, 'filesystem block size');
+  const blocks = safeBigIntToNumber(snapshot.blocks, 'filesystem block count');
+  const freeBlocks = safeBigIntToNumber(snapshot.bfree, 'filesystem free block count');
+  const availableBlocks = safeBigIntToNumber(
+    snapshot.bavail,
+    'filesystem available block count'
+  );
+  const type = typeof snapshot.type === 'bigint'
+    ? `0x${snapshot.type.toString(16)}`
+    : String(snapshot.type);
+  const totalBytes = safeProduct(blocks, blockSize, 'filesystem total bytes');
+  const freeBytes = safeProduct(freeBlocks, blockSize, 'filesystem free bytes');
+  const availableBytes = safeProduct(
+    availableBlocks,
+    blockSize,
+    'filesystem available bytes'
+  );
   return {
-    type: `0x${snapshot.type.toString(16)}`,
+    type,
     block_size: blockSize,
-    total_bytes: blocks * blockSize,
-    free_bytes: freeBlocks * blockSize,
-    available_bytes: availableBlocks * blockSize,
-    used_bytes: (blocks - freeBlocks) * blockSize
+    total_bytes: totalBytes,
+    free_bytes: freeBytes,
+    available_bytes: availableBytes,
+    used_bytes: totalBytes - freeBytes
   };
 }
 
@@ -504,6 +583,9 @@ async function treeMetrics(root) {
   const visit = async path => {
     const stats = await lstat(path);
     const allocated = Number(stats.blocks ?? 0) * 512;
+    if (!Number.isSafeInteger(allocated) || allocated < 0) {
+      throw new ValidationError('Filesystem-visible allocation exceeded safe integer range');
+    }
     totals.allocated_bytes_visible_to_filesystem += allocated;
     if (stats.isSymbolicLink()) {
       totals.symlinks += 1;
@@ -523,20 +605,28 @@ async function treeMetrics(root) {
 }
 
 async function writeUniqueFile(path, bytes, worker) {
-  const chunkSize = 1024 * 1024;
-  const chunks = [];
-  let remaining = bytes;
-  while (remaining > 0) {
-    const size = Math.min(chunkSize, remaining);
-    const chunk = randomBytes(size);
-    if (chunks.length === 0 && size >= 8) {
-      chunk.writeUInt32BE(worker >>> 0, 0);
-      chunk.writeUInt32BE(bytes >>> 0, 4);
+  const file = await open(path, 'wx', 0o600);
+  try {
+    let remaining = bytes;
+    let offset = 0;
+    let chunkIndex = 0;
+    while (remaining > 0) {
+      const size = Math.min(WRITE_CHUNK_BYTES, remaining);
+      const chunk = randomBytes(size);
+      if (size >= 12) {
+        chunk.writeUInt32BE(worker >>> 0, 0);
+        chunk.writeUInt32BE(chunkIndex >>> 0, 4);
+        chunk.writeUInt32BE(bytes >>> 0, 8);
+      }
+      await file.write(chunk, 0, chunk.length, offset);
+      offset += chunk.length;
+      remaining -= chunk.length;
+      chunkIndex += 1;
     }
-    chunks.push(chunk);
-    remaining -= size;
+    await file.sync();
+  } finally {
+    await file.close();
   }
-  await writeFile(path, Buffer.concat(chunks));
 }
 
 function summarizeDurations(results, wallMs) {
@@ -553,21 +643,27 @@ function summarizeDurations(results, wallMs) {
 
 function percentile(values, fraction) {
   if (!values.length) return 0;
-  const index = Math.min(values.length - 1, Math.ceil(values.length * fraction) - 1);
+  const index = Math.min(
+    values.length - 1,
+    Math.ceil(values.length * fraction) - 1
+  );
   return Number(values[index].toFixed(3));
 }
 
 async function mapWithConcurrency(items, limit, worker) {
   const results = new Array(items.length);
   let cursor = 0;
-  const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (true) {
-      const index = cursor;
-      cursor += 1;
-      if (index >= items.length) return;
-      results[index] = await worker(items[index], index);
+  const runners = Array.from(
+    { length: Math.min(limit, items.length) },
+    async () => {
+      while (true) {
+        const index = cursor;
+        cursor += 1;
+        if (index >= items.length) return;
+        results[index] = await worker(items[index], index);
+      }
     }
-  });
+  );
   await Promise.all(runners);
   return results;
 }
@@ -589,15 +685,22 @@ function normalizeOptionalCommand(value, name) {
     throw new ValidationError(`${name}.program must be a non-empty string`);
   }
   if (!Array.isArray(value.args) || value.args.length > 64) {
-    throw new ValidationError(`${name}.args must be an array with at most 64 items`);
+    throw new ValidationError(
+      `${name}.args must be an array with at most 64 items`
+    );
   }
   const args = value.args.map((item, index) => {
     if (typeof item !== 'string' || item.length > 4096) {
-      throw new ValidationError(`${name}.args[${index}] must be a bounded string`);
+      throw new ValidationError(
+        `${name}.args[${index}] must be a bounded string`
+      );
     }
     return item;
   });
-  return Object.freeze({ program: value.program, args: Object.freeze(args) });
+  return Object.freeze({
+    program: value.program,
+    args: Object.freeze(args)
+  });
 }
 
 function looksLikePackageManager(program) {
@@ -623,18 +726,31 @@ async function execProgram(program, args, { cwd, env = laboratoryEnvironment() }
     });
     let stdout = '';
     let stderr = '';
+    let outputLimitExceeded = false;
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
     child.stdout.on('data', chunk => {
       stdout += chunk;
-      if (stdout.length > 16 * 1024 * 1024) child.kill();
+      if (stdout.length > MAX_COMMAND_OUTPUT_BYTES) {
+        outputLimitExceeded = true;
+        child.kill();
+      }
     });
     child.stderr.on('data', chunk => {
       stderr += chunk;
-      if (stderr.length > 16 * 1024 * 1024) child.kill();
+      if (stderr.length > MAX_COMMAND_OUTPUT_BYTES) {
+        outputLimitExceeded = true;
+        child.kill();
+      }
     });
     child.once('error', error => rejectPromise(error));
     child.once('close', code => {
+      if (outputLimitExceeded) {
+        rejectPromise(new ValidationError(
+          `Storage benchmark command exceeded output limit: ${basename(program)}`
+        ));
+        return;
+      }
       if (code !== 0) {
         rejectPromise(new ValidationError(
           `Storage benchmark command failed: ${basename(program)} (${code})`,
@@ -660,15 +776,37 @@ function pathsOverlap(a, b) {
 
 function isWithin(parent, child) {
   const rel = relative(resolve(parent), resolve(child));
-  return rel === '' || (!rel.startsWith(`..${sep}`) && rel !== '..' && !resolve(rel).startsWith(sep));
+  return rel === '' || (
+    rel !== '..'
+    && !rel.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`)
+    && !isAbsolute(rel)
+  );
 }
 
 function normalizeInteger(value, name, minimum, maximum) {
   const number = Number(value);
   if (!Number.isSafeInteger(number) || number < minimum || number > maximum) {
-    throw new ValidationError(`${name} must be an integer between ${minimum} and ${maximum}`);
+    throw new ValidationError(
+      `${name} must be an integer between ${minimum} and ${maximum}`
+    );
   }
   return number;
+}
+
+function safeBigIntToNumber(value, name) {
+  const number = Number(value);
+  if (!Number.isSafeInteger(number) || number < 0) {
+    throw new ValidationError(`${name} exceeded safe integer range`);
+  }
+  return number;
+}
+
+function safeProduct(a, b, name) {
+  const product = a * b;
+  if (!Number.isSafeInteger(product) || product < 0) {
+    throw new ValidationError(`${name} exceeded safe integer range`);
+  }
+  return product;
 }
 
 function normalizeTimestamp(value) {
@@ -695,7 +833,9 @@ function parseArgs(argv) {
     const flag = argv[index];
     const value = argv[index + 1];
     if (!flag?.startsWith('--') || value === undefined) {
-      throw new ValidationError('Storage benchmark arguments must be --name value pairs');
+      throw new ValidationError(
+        'Storage benchmark arguments must be --name value pairs'
+      );
     }
     output[flag.slice(2)] = value;
   }
@@ -725,13 +865,18 @@ async function main() {
     profileId: args['profile-id'],
     workers: Number(args.workers ?? 8),
     parallelism: Number(args.parallelism ?? 8),
-    mutationBytesPerWorker: Number(args['mutation-bytes-per-worker'] ?? 0),
+    mutationBytesPerWorker: Number(
+      args['mutation-bytes-per-worker'] ?? 0
+    ),
     acknowledgement: args.ack,
     retainWorkspace: args.retain === 'true',
     workload: args['workload-program']
       ? {
           program: args['workload-program'],
-          args: parseJsonArray(args['workload-args-json'], 'workload-args-json')
+          args: parseJsonArray(
+            args['workload-args-json'],
+            'workload-args-json'
+          )
         }
       : null,
     physicalObserver: args['physical-observer-program']
