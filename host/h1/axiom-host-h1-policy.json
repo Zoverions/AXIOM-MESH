@@ -1,0 +1,58 @@
+{
+  "schema": "axiom-host-h1-lab-policy.v1",
+  "status": "laboratory-only",
+  "stage": "H1",
+  "issue": 1053,
+  "builder": {
+    "tool": "mkosi",
+    "minimum_version": "26",
+    "snapshot_lock": "20260813.n.0"
+  },
+  "appliance": {
+    "distribution": "fedora-rawhide",
+    "architecture": "x86-64",
+    "firmware": "uefi",
+    "boot_artifact": "unsigned-uki",
+    "root_filesystem": "ext4",
+    "root_integrity": "dm-verity",
+    "root_runtime_mutability": "read-only",
+    "durable_state_mount": "/var",
+    "axiom_state_path": "/var/lib/axiom-host",
+    "state_encryption": "absent",
+    "network": "none"
+  },
+  "required_guest_checks": [
+    "npm run setup:check",
+    "npm run check"
+  ],
+  "required_lab_proofs": [
+    "uefi_boot",
+    "dm_verity_root",
+    "root_write_refused",
+    "protected_partitions_unchanged_after_boot",
+    "separate_durable_state",
+    "state_preserved_across_clean_image_replacement",
+    "corrupted_verity_metadata_fails_closed"
+  ],
+  "security_non_claims": {
+    "secure_boot": false,
+    "measured_boot": false,
+    "remote_attestation": false,
+    "encrypted_mutable_state": false,
+    "production_ready": false,
+    "production_credentials_embedded": false
+  },
+  "authority": {
+    "host_grants_mesh_authority": false,
+    "host_grants_node_admission": false,
+    "host_grants_execution_authority": false,
+    "capability_registry_changed": false,
+    "production_policy_changed": false,
+    "scheduler_authority_changed": false,
+    "normal_effect_path": "Gateway -> Hypervisor -> Sandbox -> Grid"
+  },
+  "capacity": {
+    "hard_capacity_independent_of_dedupe": true,
+    "cross_owner_private_dedupe": false
+  }
+}

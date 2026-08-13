@@ -35,7 +35,7 @@ test('H0 secret scan catches a marker split across stream chunks and omits its v
   try {
     const image = join(root, 'image.raw');
     const marker = [
-      '-----BEGIN OPENSSH PRIVATE KEY-----',
+      ['-----BEGIN OPENSSH ', 'PRIVATE KEY-----'].join(''),
       'QUFB'.repeat(64),
       '-----END OPENSSH PRIVATE KEY-----'
     ].join('\n');

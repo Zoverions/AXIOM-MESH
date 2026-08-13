@@ -19,6 +19,7 @@
     "host:lab:snapshot": "node src/axiom-host-lab.mjs snapshot",
     "host:lab:build": "node src/axiom-host-lab.mjs build",
     "host:lab:compare": "node src/axiom-host-lab-compare.mjs",
+    "host:h1:check": "node src/check-axiom-host-h1.mjs",
     "axiom": "node src/cli.mjs",
     "intent:compile": "node src/intentctl.mjs compile",
     "intent:assess": "node src/intentctl.mjs assess",
