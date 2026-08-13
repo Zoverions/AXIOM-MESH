@@ -62,3 +62,18 @@ jobs:
 
       - name: Parse AXIOM Host H0 configuration with upstream mkosi
         run: npm run host:lab:summary
+
+      - name: Discover Fedora snapshot candidate without committing it
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run host:lab:snapshot \
+            | tee "$RUNNER_TEMP/axiom-host-fedora-snapshot-candidate.json"
+
+      - name: Upload snapshot candidate evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: axiom-host-fedora-snapshot-candidate-${{ github.sha }}
+          path: ${{ runner.temp }}/axiom-host-fedora-snapshot-candidate.json
+          if-no-files-found: error
+          retention-days: 14
