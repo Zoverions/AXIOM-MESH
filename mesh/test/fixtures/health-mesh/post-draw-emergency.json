@@ -1,0 +1,107 @@
+{
+  "schema": "axiom-health-mesh-workflow.v0.1",
+  "workflow_id": "health:booth.post-draw-emergency.v0.1",
+  "workflow_class": "EMERGENCY_ESCALATION",
+  "jurisdiction": {
+    "country": "CA",
+    "region": "ON",
+    "regulatory_profile": "planning-only-ontario-v0.1"
+  },
+  "maximum_autonomy_level": "H5",
+  "subject_binding_required": true,
+  "encounter_binding_required": true,
+  "consent_required": true,
+  "steps": [
+    {
+      "step_id": "observe",
+      "kind": "OBSERVATION",
+      "autonomy_level": "H2",
+      "effect_class": "CLINICAL_DATA_CAPTURE",
+      "required_inputs": ["video_observation", "vital_signs"],
+      "required_evidence": ["sensor_identity", "observation_digest", "vital_signs_binding"],
+      "failure_behavior": "REQUIRE_REMOTE_CLINICIAN",
+      "retry_policy": "IDEMPOTENT_ONLY",
+      "success_next": "prompt",
+      "failure_next": "remote-review"
+    },
+    {
+      "step_id": "prompt",
+      "kind": "PATIENT_PROMPT",
+      "autonomy_level": "H2",
+      "effect_class": "INFORMATIONAL",
+      "required_inputs": ["anomaly_signal"],
+      "required_evidence": ["prompt_record", "response_state"],
+      "failure_behavior": "REQUIRE_REMOTE_CLINICIAN",
+      "retry_policy": "IDEMPOTENT_ONLY",
+      "success_next": "remote-review",
+      "failure_next": "remote-review"
+    },
+    {
+      "step_id": "remote-review",
+      "kind": "REMOTE_ESCALATION",
+      "autonomy_level": "H3",
+      "effect_class": "EXTERNAL_CLINICAL",
+      "required_inputs": ["bounded_emergency_context"],
+      "required_capabilities": ["health.remote-clinician.request"],
+      "required_supervision": {
+        "mode": "REMOTE_AVAILABLE",
+        "credential_class": "authorized-emergency-clinical-reviewer",
+        "loss_behavior": "HALT_BEFORE_NEXT_EFFECT"
+      },
+      "required_evidence": ["reviewer_request_receipt", "minimum_necessary_context_digest"],
+      "failure_behavior": "REQUEST_EMERGENCY_EVALUATION",
+      "retry_policy": "IDEMPOTENT_ONLY",
+      "success_next": "emergency-request",
+      "failure_next": "emergency-request"
+    },
+    {
+      "step_id": "emergency-request",
+      "kind": "EMERGENCY_REQUEST",
+      "autonomy_level": "H5",
+      "effect_class": "EMERGENCY_EXTERNAL",
+      "required_inputs": ["event_specific_emergency_trigger", "minimum_necessary_dispatch_context"],
+      "required_capabilities": ["health.emergency.request.v0"],
+      "required_evidence": ["emergency_trigger_binding", "emergency_capability_grant", "dispatch_request_receipt", "expiry"],
+      "failure_behavior": "SAFE_LOCAL_STATE",
+      "retry_policy": "IDEMPOTENT_ONLY",
+      "success_next": "safe-state",
+      "failure_next": "safe-state"
+    },
+    {
+      "step_id": "safe-state",
+      "kind": "HALT",
+      "autonomy_level": "H0",
+      "effect_class": "PHYSICAL_NON_INVASIVE",
+      "required_inputs": ["local_safety_state"],
+      "required_evidence": ["safe_state_receipt", "continuing_observation_state"],
+      "failure_behavior": "SAFE_LOCAL_STATE",
+      "retry_policy": "NO_RETRY",
+      "success_next": null,
+      "failure_next": null
+    }
+  ],
+  "escalation_policy": {
+    "supervision_loss_cannot_raise_autonomy": true,
+    "emergency_authority_is_separate": true,
+    "uncertain_physical_effects_are_not_retried": true,
+    "ordinary_escalation_target": "authorized-emergency-clinical-reviewer",
+    "emergency_capability_class": "health.emergency.request.v0"
+  },
+  "evidence_requirements": {
+    "bind_subject": true,
+    "bind_encounter": true,
+    "bind_device": true,
+    "bind_model": true,
+    "bind_policy": true,
+    "bind_result": true,
+    "record_uncertainty": true,
+    "raw_sensitive_media_retention": "PURPOSE_BOUND"
+  },
+  "runtime_authority_granted": false,
+  "clinical_authorization_claimed": false,
+  "non_claims": [
+    "H5 is a contract classification, not currently runnable AXIOM authority.",
+    "Emergency dispatch criteria are jurisdiction and regulator dependent.",
+    "This fixture does not claim video-only emergency diagnosis is adequate."
+  ]
+}
