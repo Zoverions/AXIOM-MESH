@@ -1,0 +1,162 @@
+{
+  "schema": "axiom-health-mesh-endpoint-profile.v0.1",
+  "endpoint_id": "health-endpoint:ontario.planning-booth.v0.1",
+  "endpoint_class": "HEALTH_BOOTH",
+  "jurisdiction": {
+    "country": "CA",
+    "region": "ON",
+    "locality": null
+  },
+  "operator": {
+    "operator_id": "research-operator:planning-only",
+    "operator_class": "RESEARCH_OPERATOR",
+    "facility_authorization_ref": null
+  },
+  "modules": [
+    {
+      "module_id": "vitals",
+      "module_class": "VITAL_SIGNS",
+      "hardware_identity": {
+        "manufacturer": "fixture-manufacturer",
+        "model": "fixture-vitals",
+        "hardware_version": "0.0-test",
+        "serial_or_asset_ref": "fixture:vitals:001"
+      },
+      "software_identity": {
+        "software_id": "fixture.vitals.capture",
+        "version": "0.0-test",
+        "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "model_id": null,
+        "model_version": null
+      },
+      "data_classes": ["STRUCTURED_HEALTH_DATA", "PHYSIOLOGICAL_SIGNAL", "DEVICE_TELEMETRY"],
+      "planning_autonomy_ceiling": "H2",
+      "intended_use": "Planning fixture for bounded vital-sign capture.",
+      "regulatory_eligibility_refs": [],
+      "calibration_or_qc": {
+        "required": true,
+        "state": "UNKNOWN",
+        "last_verified_at": null,
+        "evidence_ref": null
+      },
+      "planned_action_identifiers": ["health.vitals.capture.planning"],
+      "runnable_clinical_action_granted": false
+    },
+    {
+      "module_id": "retinal-camera",
+      "module_class": "RETINAL_CAMERA",
+      "hardware_identity": {
+        "manufacturer": "fixture-manufacturer",
+        "model": "fixture-retinal-camera",
+        "hardware_version": "0.0-test",
+        "serial_or_asset_ref": "fixture:retina:001"
+      },
+      "software_identity": {
+        "software_id": "fixture.retina.analysis",
+        "version": "0.0-test",
+        "digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "model_id": "fixture.retina.model",
+        "model_version": "0.0-test"
+      },
+      "data_classes": ["CLINICAL_IMAGE", "STRUCTURED_HEALTH_DATA", "DEVICE_TELEMETRY"],
+      "planning_autonomy_ceiling": "H4",
+      "intended_use": "Planning fixture only; no diagnostic authorization.",
+      "regulatory_eligibility_refs": [],
+      "calibration_or_qc": {
+        "required": true,
+        "state": "UNKNOWN",
+        "last_verified_at": null,
+        "evidence_ref": null
+      },
+      "planned_action_identifiers": ["health.retina.capture.planning", "health.retina.screen.planning"],
+      "runnable_clinical_action_granted": false
+    },
+    {
+      "module_id": "venipuncture-robot",
+      "module_class": "VENIPUNCTURE_ROBOT",
+      "hardware_identity": {
+        "manufacturer": "fixture-manufacturer",
+        "model": "fixture-venipuncture-robot",
+        "hardware_version": "0.0-test",
+        "serial_or_asset_ref": "fixture:venipuncture:001"
+      },
+      "software_identity": {
+        "software_id": "fixture.venipuncture.controller",
+        "version": "0.0-test",
+        "digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "model_id": "fixture.vein.model",
+        "model_version": "0.0-test"
+      },
+      "data_classes": ["CLINICAL_IMAGE", "SPECIMEN_METADATA", "DEVICE_TELEMETRY", "SAFETY_EVENT"],
+      "planning_autonomy_ceiling": "H3",
+      "intended_use": "Research planning for supervised robotic venipuncture only.",
+      "regulatory_eligibility_refs": ["health-reg:ontario.supervised-robotic-venipuncture.research.v0.1"],
+      "calibration_or_qc": {
+        "required": true,
+        "state": "UNKNOWN",
+        "last_verified_at": null,
+        "evidence_ref": null
+      },
+      "planned_action_identifiers": ["health.specimen.position.supervised", "health.specimen.venipuncture.supervised"],
+      "runnable_clinical_action_granted": false
+    },
+    {
+      "module_id": "safety-monitor",
+      "module_class": "SAFETY_MONITOR",
+      "hardware_identity": {
+        "manufacturer": "fixture-manufacturer",
+        "model": "fixture-safety-monitor",
+        "hardware_version": "0.0-test",
+        "serial_or_asset_ref": "fixture:safety:001"
+      },
+      "software_identity": {
+        "software_id": "fixture.safety.monitor",
+        "version": "0.0-test",
+        "digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "model_id": "fixture.safety.model",
+        "model_version": "0.0-test"
+      },
+      "data_classes": ["TRANSIENT_SENSITIVE_VIDEO", "PHYSIOLOGICAL_SIGNAL", "SAFETY_EVENT"],
+      "planning_autonomy_ceiling": "H2",
+      "intended_use": "Planning fixture for post-procedure anomaly detection and escalation.",
+      "regulatory_eligibility_refs": [],
+      "calibration_or_qc": {
+        "required": true,
+        "state": "UNKNOWN",
+        "last_verified_at": null,
+        "evidence_ref": null
+      },
+      "planned_action_identifiers": ["health.safety.observe.planning"],
+      "runnable_clinical_action_granted": false
+    }
+  ],
+  "data_governance": {
+    "minimum_necessary": true,
+    "transient_media_default": "LOCAL_EPHEMERAL",
+    "raw_media_export_default": "DENY",
+    "patient_identity_separation": true,
+    "retention_policy_ref": null
+  },
+  "local_safety": {
+    "model_independent_stop": true,
+    "physical_fail_safe": true,
+    "supervision_loss_state": "HALT_BEFORE_NEXT_EFFECT",
+    "safety_controller_identity": "fixture:safety-controller"
+  },
+  "emergency_interface": {
+    "may_request_help": true,
+    "may_directly_dispatch_resources": false,
+    "minimum_necessary_payload": true,
+    "request_capability_identifier": "health.emergency.request.v0"
+  },
+  "registration_grants_authority": false,
+  "runtime_authority_granted": false,
+  "clinical_authorization_claimed": false,
+  "secret_material_included": false,
+  "non_claims": [
+    "All module identities are synthetic fixtures.",
+    "No module is clinically authorized or runnable.",
+    "Endpoint registration does not create capability authority.",
+    "The venipuncture module remains subject to external Ontario regulatory eligibility evidence."
+  ]
+}
