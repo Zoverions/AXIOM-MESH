@@ -1,0 +1,243 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom-mesh.invalid/contracts/health-mesh-clinical-envelope.v0.1.schema.json",
+  "title": "AXIOM Health Mesh Clinical Capability Envelope v0.1",
+  "description": "Documentation-only draft contract for bounded healthcare authority. Not loaded by the current runtime and does not promote any capability.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "envelope_id",
+    "principal",
+    "subject_scope",
+    "action",
+    "purpose",
+    "autonomy_level",
+    "jurisdiction",
+    "issued_at",
+    "expires_at",
+    "data_access",
+    "assurance",
+    "evidence_requirements",
+    "revocation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-health-clinical-envelope.v0.1"
+    },
+    "envelope_id": {
+      "type": "string",
+      "minLength": 16,
+      "maxLength": 256
+    },
+    "principal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["principal_id", "principal_type"],
+      "properties": {
+        "principal_id": {"type": "string", "minLength": 1, "maxLength": 256},
+        "principal_type": {
+          "enum": ["patient", "clinical_human", "machine", "device", "organization"]
+        },
+        "runtime_id": {"type": "string", "maxLength": 256},
+        "software_digest": {"type": "string", "pattern": "^[a-fA-F0-9]{64}$"},
+        "credential_refs": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {"type": "string", "maxLength": 512},
+          "uniqueItems": true
+        }
+      }
+    },
+    "subject_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subject_binding_mode"],
+      "properties": {
+        "subject_binding_mode": {
+          "enum": ["encounter_pseudonym", "patient_principal", "authorized_cohort"]
+        },
+        "subject_ref": {"type": "string", "maxLength": 512},
+        "encounter_id": {"type": "string", "maxLength": 256},
+        "cohort_constraints": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {"type": "string", "maxLength": 512}
+        }
+      }
+    },
+    "action": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)+$",
+      "maxLength": 160
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "autonomy_level": {
+      "enum": ["H0", "H1", "H2", "H3", "H4", "H5"]
+    },
+    "jurisdiction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["country"],
+      "properties": {
+        "country": {"type": "string", "minLength": 2, "maxLength": 64},
+        "region": {"type": "string", "maxLength": 128},
+        "facility": {"type": "string", "maxLength": 256}
+      }
+    },
+    "issued_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "destinations": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {"type": "string", "maxLength": 512},
+      "uniqueItems": true
+    },
+    "data_access": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["read_classes", "write_classes", "retention_policy"],
+      "properties": {
+        "read_classes": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {"type": "string", "maxLength": 160},
+          "uniqueItems": true
+        },
+        "write_classes": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {"type": "string", "maxLength": 160},
+          "uniqueItems": true
+        },
+        "retention_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["policy_id"],
+          "properties": {
+            "policy_id": {"type": "string", "maxLength": 256},
+            "raw_media_ttl_seconds": {"type": "integer", "minimum": 0, "maximum": 315360000},
+            "derived_data_ttl_seconds": {"type": "integer", "minimum": 0, "maximum": 315360000},
+            "legal_hold_permitted": {"type": "boolean"}
+          }
+        }
+      }
+    },
+    "consent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "consent_refs": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {"type": "string", "maxLength": 512},
+          "uniqueItems": true
+        },
+        "representative_ref": {"type": "string", "maxLength": 512},
+        "break_glass_eligible": {"type": "boolean"}
+      }
+    },
+    "clinical_constraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "eligibility": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {"type": "string", "maxLength": 512}
+        },
+        "contraindications": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {"type": "string", "maxLength": 512}
+        },
+        "max_attempts": {"type": "integer", "minimum": 0, "maximum": 100},
+        "max_duration_seconds": {"type": "integer", "minimum": 0, "maximum": 86400},
+        "human_review_required": {"type": "boolean"},
+        "supervision_mode": {
+          "enum": ["none", "available_remote", "active_remote", "onsite", "dual_control"]
+        }
+      }
+    },
+    "device_bindings": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["device_id"],
+        "properties": {
+          "device_id": {"type": "string", "maxLength": 256},
+          "software_digest": {"type": "string", "pattern": "^[a-fA-F0-9]{64}$"},
+          "calibration_ref": {"type": "string", "maxLength": 512},
+          "maintenance_ref": {"type": "string", "maxLength": 512},
+          "authorization_ref": {"type": "string", "maxLength": 512}
+        }
+      }
+    },
+    "model_bindings": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["model_id", "artifact_digest", "intended_use"],
+        "properties": {
+          "model_id": {"type": "string", "maxLength": 256},
+          "artifact_digest": {"type": "string", "pattern": "^[a-fA-F0-9]{64}$"},
+          "intended_use": {"type": "string", "maxLength": 512},
+          "validation_ref": {"type": "string", "maxLength": 512},
+          "authorization_ref": {"type": "string", "maxLength": 512},
+          "required_review_tier": {"enum": ["none", "human_check", "qualified_clinician", "independent_second_review"]}
+        }
+      }
+    },
+    "assurance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fail_closed", "uncertain_external_effect_policy"],
+      "properties": {
+        "fail_closed": {"const": true},
+        "uncertain_external_effect_policy": {
+          "enum": ["halt_and_review", "same_idempotency_recover", "safe_local_fallback"]
+        },
+        "required_freshness_seconds": {"type": "integer", "minimum": 0, "maximum": 86400},
+        "continuity_anchor_required": {"type": "boolean"}
+      }
+    },
+    "emergency": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "break_glass_permitted": {"type": "boolean"},
+        "trigger_policy_ref": {"type": "string", "maxLength": 512},
+        "maximum_break_glass_seconds": {"type": "integer", "minimum": 0, "maximum": 3600},
+        "emergency_destination": {"type": "string", "maxLength": 512},
+        "after_action_review_required": {"type": "boolean"}
+      }
+    },
+    "evidence_requirements": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {"type": "string", "maxLength": 256},
+      "uniqueItems": true
+    },
+    "revocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revocable", "on_revocation"],
+      "properties": {
+        "revocable": {"const": true},
+        "revocation_ref": {"type": "string", "maxLength": 512},
+        "on_revocation": {
+          "enum": ["halt_before_next_effect", "safe_local_shutdown", "complete_current_atomic_step_then_halt"]
+        }
+      }
+    }
+  }
+}
