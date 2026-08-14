@@ -1,0 +1,124 @@
+{
+  "schema": "axiom-health-mesh-workflow.v0.1",
+  "workflow_id": "health:booth.non-invasive-assessment.v0.1",
+  "workflow_class": "NON_INVASIVE_ASSESSMENT",
+  "jurisdiction": {
+    "country": "CA",
+    "region": "ON",
+    "regulatory_profile": "planning-only-ontario-v0.1"
+  },
+  "maximum_autonomy_level": "H2",
+  "subject_binding_required": true,
+  "encounter_binding_required": true,
+  "consent_required": true,
+  "steps": [
+    {
+      "step_id": "identity",
+      "kind": "IDENTITY",
+      "autonomy_level": "H1",
+      "effect_class": "INFORMATIONAL",
+      "required_inputs": ["presented_identity"],
+      "required_evidence": ["subject_binding"],
+      "failure_behavior": "HALT",
+      "retry_policy": "IDEMPOTENT_ONLY",
+      "success_next": "consent",
+      "failure_next": "halt"
+    },
+    {
+      "step_id": "consent",
+      "kind": "CONSENT",
+      "autonomy_level": "H1",
+      "effect_class": "INFORMATIONAL",
+      "required_inputs": ["purpose", "data_scope", "retention_policy"],
+      "required_evidence": ["consent_record", "purpose_binding"],
+      "failure_behavior": "HALT",
+      "retry_policy": "IDEMPOTENT_ONLY",
+      "success_next": "capture",
+      "failure_next": "halt"
+    },
+    {
+      "step_id": "capture",
+      "kind": "SENSOR_CAPTURE",
+      "autonomy_level": "H1",
+      "effect_class": "CLINICAL_DATA_CAPTURE",
+      "required_inputs": ["approved_sensor_set", "calibration_status"],
+      "required_evidence": ["device_identity", "calibration_reference", "capture_digest"],
+      "failure_behavior": "REQUIRE_HUMAN",
+      "retry_policy": "IDEMPOTENT_ONLY",
+      "success_next": "analysis",
+      "failure_next": "human-review"
+    },
+    {
+      "step_id": "analysis",
+      "kind": "MODEL_ANALYSIS",
+      "autonomy_level": "H2",
+      "effect_class": "INFORMATIONAL",
+      "required_inputs": ["capture_digest", "approved_model"],
+      "required_evidence": ["model_identity", "model_version", "input_binding", "result_digest", "uncertainty"],
+      "failure_behavior": "REQUIRE_HUMAN",
+      "retry_policy": "IDEMPOTENT_ONLY",
+      "success_next": "record",
+      "failure_next": "human-review"
+    },
+    {
+      "step_id": "record",
+      "kind": "RECORD_WRITE",
+      "autonomy_level": "H2",
+      "effect_class": "EXTERNAL_CLINICAL",
+      "required_inputs": ["result_digest", "minimum_necessary_record_scope"],
+      "required_evidence": ["policy_binding", "record_write_receipt"],
+      "failure_behavior": "REQUIRE_HUMAN",
+      "retry_policy": "IDEMPOTENT_ONLY",
+      "success_next": null,
+      "failure_next": "human-review"
+    },
+    {
+      "step_id": "human-review",
+      "kind": "HUMAN_REVIEW",
+      "autonomy_level": "H1",
+      "effect_class": "INFORMATIONAL",
+      "required_inputs": ["exception_context"],
+      "required_evidence": ["reviewer_identity", "review_disposition"],
+      "failure_behavior": "HALT",
+      "retry_policy": "NO_RETRY",
+      "success_next": null,
+      "failure_next": "halt"
+    },
+    {
+      "step_id": "halt",
+      "kind": "HALT",
+      "autonomy_level": "H0",
+      "effect_class": "NO_EFFECT",
+      "required_inputs": [],
+      "required_evidence": ["halt_reason"],
+      "failure_behavior": "HALT",
+      "retry_policy": "NO_RETRY",
+      "success_next": null,
+      "failure_next": null
+    }
+  ],
+  "escalation_policy": {
+    "supervision_loss_cannot_raise_autonomy": true,
+    "emergency_authority_is_separate": true,
+    "uncertain_physical_effects_are_not_retried": true,
+    "ordinary_escalation_target": "authorized-clinical-review",
+    "emergency_capability_class": null
+  },
+  "evidence_requirements": {
+    "bind_subject": true,
+    "bind_encounter": true,
+    "bind_device": true,
+    "bind_model": true,
+    "bind_policy": true,
+    "bind_result": true,
+    "record_uncertainty": true,
+    "raw_sensitive_media_retention": "PURPOSE_BOUND"
+  },
+  "runtime_authority_granted": false,
+  "clinical_authorization_claimed": false,
+  "non_claims": [
+    "No diagnosis authority is granted.",
+    "No medical-device authorization is claimed.",
+    "This fixture proves contract shape only."
+  ]
+}
