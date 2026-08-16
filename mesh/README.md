@@ -2,7 +2,7 @@
 
 **Build:** `0.12.0-dev.3`
 
-**Updated:** 2026-08-12
+**Updated:** 2026-08-16
 
 This directory contains the supported clean-room AXIOM-MESH kernel. It is a
 zero-third-party-npm-dependency Node.js runtime with four security
@@ -68,7 +68,7 @@ Gateway -> Hypervisor -> Sandbox -> Grid
 A browser, provider, external runtime, repository operator, remote node, or
 administrator does not gain authority merely by existing next to the kernel.
 
-The current machine-readable client contract covers all 29 authenticated
+The current machine-readable client contract covers all 30 authenticated
 Gateway routes with relative-only targets, explicit schemas and errors,
 bounded responses/timeouts, cancellation, stable idempotent replay, and no
 direct internal-service target.
@@ -187,6 +187,7 @@ The Gateway exposes these current operator endpoints:
 - `POST /v1/intents`
 - `GET /v1/intents/:id`
 - `GET /v1/events`
+- `GET /v1/social`
 - `GET /v1/capsules`
 - `GET /v1/proposals`
 - `GET /v1/nodes`
@@ -208,6 +209,12 @@ The Gateway exposes these current operator endpoints:
 - `GET /v1/exports/:id/bundle`
 - `GET /v1/audit/verify`
 
+`GET /v1/social` is an authenticated owner-local snapshot. Gateway derives the
+owner from the authenticated principal; the route has no contract-owned owner
+override. It reconstructs bounded actor/persona/local-publication state from the
+owner's signed Grid history, strips execution/state-access provenance from the
+response, and performs no network distribution or federation.
+
 The active intent-action surface is:
 
 - `system.echo`
@@ -220,6 +227,11 @@ The active intent-action surface is:
 - `memory.put`
 - `memory.link`
 - `memory.tombstone`
+- `social.actor.create`
+- `social.persona.create`
+- `social.publication.create`
+- `social.publication.supersede`
+- `social.publication.retract`
 - `accounting.account.create`
 - `accounting.journal.post`
 - `export.create`
