@@ -8,6 +8,7 @@ import {
   intentRequestBinding,
   intentRequestDigest
 } from './intent-binding.mjs';
+import { ASSURANCE_TIER_IDS } from './assurance-tiers.mjs';
 
 export const INVOCATION_ENVELOPE_SCHEMA = 'axiom-invocation-envelope.v1';
 export const NATIVE_INVOCATION_PROFILE = 'axiom-native-gateway.v1';
@@ -16,6 +17,19 @@ export const INVOCATION_EVIDENCE_PROFILE = 'axiom-grid-hash-linked.v1';
 const DIGEST = /^[a-f0-9]{64}$/;
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const RISK = /^[a-z][a-z0-9._-]{0,63}$/;
+const DEFAULT_ASSURANCE_BY_RISK = Object.freeze({
+  low: 'A1',
+  medium: 'A2',
+  high: 'A3',
+  critical: 'A3'
+});
+
+function normalizeAssurance(value, label) {
+  if (!ASSURANCE_TIER_IDS.includes(value)) {
+    throw new ValidationError(`${label} must be one of ${ASSURANCE_TIER_IDS.join(', ')}`);
+  }
+  return value;
+}
 
 export function buildNativeInvocationEnvelope(intent, decision) {
   const value = assertPlainObject(intent, 'invocation intent');
@@ -85,6 +99,11 @@ export function buildNativeInvocationEnvelope(intent, decision) {
     };
   }
 
+  const requiredAssurance = normalizeAssurance(
+    policy.required_assurance ?? DEFAULT_ASSURANCE_BY_RISK[policy.risk],
+    'invocation required assurance'
+  );
+
   const envelope = {
     schema: INVOCATION_ENVELOPE_SCHEMA,
     protocol_profile: NATIVE_INVOCATION_PROFILE,
@@ -113,6 +132,7 @@ export function buildNativeInvocationEnvelope(intent, decision) {
         max: 64,
         pattern: RISK
       }),
+      required_assurance: requiredAssurance,
       independent_approval_required: policy.requires_independent_approval === true,
       ...(policy.effect_destination !== undefined
         ? {
@@ -228,6 +248,7 @@ export function validateInvocationEnvelope(raw) {
     'policy_version',
     'policy_digest',
     'risk',
+    'required_assurance',
     'independent_approval_required',
     ...(authority.effect_destination !== undefined ? ['effect_destination'] : [])
   ], 'invocation authority');
@@ -238,6 +259,7 @@ export function validateInvocationEnvelope(raw) {
     pattern: DIGEST
   });
   assertString(authority.risk, 'invocation risk', { max: 64, pattern: RISK });
+  normalizeAssurance(authority.required_assurance, 'invocation required assurance');
   if (typeof authority.independent_approval_required !== 'boolean') {
     throw new ValidationError('Invocation approval requirement must be boolean');
   }
