@@ -1,6 +1,6 @@
 # AXIOM-MESH Project Status
 
-**Status date:** 2026-08-12
+**Status date:** 2026-08-16
 
 **Supported build:** `0.12.0-dev.3`
 
@@ -82,10 +82,14 @@ The production-candidate surface includes:
 - one-command source setup with exact Node.js/npm policy, two zero-dependency
   locks, prohibited install lifecycle scripts, unchanged-lock proof, and full
   kernel/release gates;
-- a versioned Gateway client contract implemented for all 29 authenticated routes with
+- a versioned Gateway client contract implemented for all 30 authenticated routes with
   relative-only application targets, explicit errors, timeout/cancellation,
   bounded request/response behavior, stable idempotent replay, and no direct
   Grid/Hypervisor/Sandbox target;
+- an owner-derived `GET /v1/social` local snapshot that reconstructs bounded
+  actor/persona/publication state from the authenticated principal's signed
+  Grid history, strips execution/state-access provenance, rejects a
+  contract-level owner override, and performs no network distribution;
 - bounded-cardinality telemetry, readiness, operations reports, OpenMetrics,
   and a host-side least-privilege OTLP/Alertmanager relay;
 - explicit production credential provisioning and fail-closed supervision;
@@ -225,6 +229,12 @@ recovery, and an owner-scoped Vault that can create/list private notes, add one
 of three directional provenance links (`derived-from`, `supports`, `corrects`),
 tombstone an exact record after confirmation, create a selective local export,
 and reveal its bundle only after a separate action.
+
+The kernel now also supports local social actor/persona/publication state and an
+owner-only `/v1/social` read contract. This is a local corpus substrate, not a
+public social network: no federation, remote Following feed, public profile
+hosting, recommendation layer, messaging, or external distribution is claimed.
+AXIOM One UI integration remains separately gated.
 
 Corrections are new linked records; they do not silently replace their target.
 Cross-principal read/link/export/tombstone paths are denied in real-stack tests.
