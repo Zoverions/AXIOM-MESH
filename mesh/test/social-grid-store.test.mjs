@@ -24,7 +24,10 @@ import {
   createSocialPublicationRetraction,
   createSupersedingSocialPublication
 } from '../src/lib/social-publication.mjs';
-import { reencryptGridProtectedColumns } from '../src/grid/store.mjs';
+import {
+  GridStore,
+  reencryptGridProtectedColumns
+} from '../src/grid/store.mjs';
 import { SocialGridStore } from '../src/grid/social-store.mjs';
 
 function times() {
@@ -104,7 +107,7 @@ function fixtures(t = times()) {
     authority_basis: {
       type: 'self_authority',
       source_id: actorId,
-      basis_digest: digestObject({ actor_id: actorId, purpose: 'social-publish' })
+      basis_digest: digestObject(actorState)
     },
     consent: { required: false, receipt_digest: null },
     required_assurance: 'A2',
@@ -184,13 +187,23 @@ async function createStore(t) {
   return { root, dataDir, identity, key, protector, path, store, t };
 }
 
-test('migration v11 creates first-class actor/persona/social tables', async t => {
+test('social schema 1 creates local corpus tables without changing core schema 10', async t => {
   const setup = await createStore(t);
   t.after(async () => {
     setup.store.close();
     await rm(setup.root, { recursive: true, force: true });
   });
-  assert.equal(setup.store.getStatus().schema_version, 11);
+  const status = setup.store.getStatus();
+  assert.equal(status.schema_version, 10);
+  assert.equal(status.social_schema_version, 1);
+  const socialLedger = setup.store.db.prepare(`
+    SELECT version, name, checksum FROM social_schema_migrations ORDER BY version
+  `).all();
+  assert.equal(socialLedger.length, 1);
+  assert.equal(socialLedger[0].version, 1);
+  assert.equal(socialLedger[0].name, 'actor-custody-and-local-social-corpus');
+  assert.match(socialLedger[0].checksum, /^[a-f0-9]{64}$/);
+
   const tables = new Set(setup.store.db.prepare(`
     SELECT name FROM sqlite_master WHERE type = 'table'
   `).all().map(row => row.name));
@@ -200,6 +213,30 @@ test('migration v11 creates first-class actor/persona/social tables', async t =>
     'social_publications',
     'social_transitions'
   ]) assert.equal(tables.has(table), true, `${table} missing`);
+});
+
+test('ordinary GridStore does not opt into the experimental social schema', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'axiom-core-grid-no-social-'));
+  const dataDir = join(root, 'data');
+  const identity = await ensureMeshIdentity(dataDir, 'grid', { create: true });
+  const protector = new DataProtector(randomBytes(32));
+  const store = new GridStore({
+    path: join(dataDir, 'grid.sqlite'),
+    dataDir,
+    identity,
+    protector
+  });
+  t.after(async () => {
+    store.close();
+    await rm(root, { recursive: true, force: true });
+  });
+  assert.equal(store.getStatus().schema_version, 10);
+  assert.equal(store.db.prepare(`
+    SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'actor_states'
+  `).get(), undefined);
+  assert.equal(store.db.prepare(`
+    SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'social_schema_migrations'
+  `).get(), undefined);
 });
 
 test('custodian principal remains distinct from stable actor identity', async t => {
@@ -286,6 +323,31 @@ test('owner scoping denies another custodian from protected actor and persona re
     error => error?.code === 'publication_persona_not_found'
   );
   assert.equal(setup.store.listSocialCorpus('principal-other').publications.length, 0);
+});
+
+test('publication self authority must bind the current custodied actor-state digest', async t => {
+  const f = fixtures();
+  const setup = await createStore(t);
+  t.after(async () => {
+    setup.store.close();
+    await rm(setup.root, { recursive: true, force: true });
+  });
+  const events = initialEvents(f);
+  events[2].payload.state_access_envelope = {
+    ...f.envelope,
+    authority_basis: {
+      ...f.envelope.authority_basis,
+      basis_digest: digestObject({ actor_id: f.actorId, stale: true })
+    }
+  };
+  assert.throws(
+    () => setup.store.appendEvents({
+      traceId: 'trace-social-stale-self-authority',
+      actor: f.owner,
+      events
+    }),
+    /self authority to the current custodied actor state/
+  );
 });
 
 test('revision and retraction remain append-only materialized history', async t => {
@@ -420,8 +482,13 @@ test('supported data-key rotation re-encrypts social columns and reopens with th
     reopened.close();
     await rm(setup.root, { recursive: true, force: true });
   });
+  assert.equal(reopened.getStatus().schema_version, 10);
+  assert.equal(reopened.getStatus().social_schema_version, 1);
   assert.equal(reopened.getActorState(f.owner, f.actorId).state_json.actor_id, f.actorId);
-  assert.equal(reopened.listSocialCorpus(f.owner).publications[0].projection_json.projection_digest, f.publication.projection_digest);
+  assert.equal(
+    reopened.listSocialCorpus(f.owner).publications[0].projection_json.projection_digest,
+    f.publication.projection_digest
+  );
   assert.equal(reopened.verifyFullChain().valid, true);
 });
 
