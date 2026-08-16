@@ -6,7 +6,7 @@
 
 **Status:** implemented client-contract boundary; experimental local PWA foundation present
 
-**Updated:** 2026-08-10
+**Updated:** 2026-08-16
 
 ## Purpose and boundary
 
@@ -21,7 +21,7 @@ and the client is
 The client is a private source module in this repository, not a published npm
 package; applications must bind and version it with the checked-out build.
 
-The contract covers all 29 authenticated `/v1/` Gateway routes. It deliberately
+The contract covers all 30 authenticated `/v1/` Gateway routes. It deliberately
 does not include `/`, `/health`, or `/ready`, which are unauthenticated ingress
 and operator-probe routes rather than the authenticated application contract.
 
@@ -48,12 +48,14 @@ client.
 |---|---|---|---|
 | `capabilities.list` | `GET /v1/capabilities` | authenticated | none |
 | `machine_discovery.get` | `GET /v1/machine-discovery` | constrained machine | none |
+| `machine_receipts.verify` | `GET /v1/machine-receipts/intents/:id/verify` | constrained machine owner | `id` |
 | `status.get` | `GET /v1/status` | authenticated | none |
 | `operations.get` | `GET /v1/operations` | `operations:read` or `telemetry:collect` | none |
 | `metrics.get` | `GET /v1/metrics` | `operations:read` or `telemetry:collect` | none |
 | `intents.submit` | `POST /v1/intents` | authenticated | intent body and required idempotency key |
 | `intents.get` | `GET /v1/intents/:id` | owner or `audit:read` | `id` |
 | `events.list` | `GET /v1/events` | owner or `audit:read` | `actor`, `after`, `limit` |
+| `social.get` | `GET /v1/social` | owner | optional `publication_limit` (1-100; default 100) |
 | `capsules.list` | `GET /v1/capsules` | `capsule:read` | optional `limit` (1-100; default 100) |
 | `proposals.list` | `GET /v1/proposals` | `governance:read` | optional `limit` (1-100; default 100) |
 | `nodes.list` | `GET /v1/nodes` | `node:read` | optional `limit` (1-100; default 100) |
@@ -74,6 +76,14 @@ client.
 | `exports.get` | `GET /v1/exports/:id` | owner | `id` |
 | `export_bundles.get` | `GET /v1/exports/:id/bundle` | owner | `id` |
 | `audit.verify` | `GET /v1/audit/verify` | `audit:read` | none |
+
+`social.get` is deliberately owner-derived. The Gateway ignores any raw
+`owner=` query text and derives the snapshot owner only from the authenticated
+principal. Contract-aware clients can send only `publication_limit`; an owner
+override is rejected before a request is issued. The snapshot reconstructs
+bounded actor, persona, and local publication state from the owner's signed
+Grid history and strips execution and state-access provenance from the response.
+Reading it creates no network distribution or federation.
 
 The three global registry/history reads are explicitly scoped and bounded to at most 100 rows per call; malformed numeric query values fail with HTTP 400 rather than silently changing meaning.
 
@@ -202,6 +212,8 @@ The test suite proves:
 - stable, unknown, retryable, and malformed error behavior;
 - response byte and media-type bounds;
 - external cancellation and bounded timeout;
+- owner-derived local social snapshot isolation and rejection of a contract
+  owner override;
 - a real status read and idempotent intent through Gateway, Hypervisor,
   Sandbox, and Grid;
 - rejection of direct-service, route, error-vocabulary, and source drift.
