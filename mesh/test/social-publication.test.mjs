@@ -122,7 +122,8 @@ test('edits append a new projection naming the exact prior digest', () => {
       media_type: 'text/plain',
       text: 'An edited publication is a new signed projection, never a silent rewrite.'
     },
-    created_at: '2026-08-16T16:21:00.000Z'
+    created_at: '2026-08-16T16:21:00.000Z',
+    supersedes_digest: undefined
   }));
 
   assert.equal(edited.supersedes_digest, original.projection_digest);
@@ -137,7 +138,8 @@ test('supersession cannot silently change persona or point at another prior obje
     () => createSupersedingSocialPublication(original, publication({
       publication_id: 'publication:alpha:revision:2',
       persona_id: 'persona:other',
-      created_at: '2026-08-16T16:21:00.000Z'
+      created_at: '2026-08-16T16:21:00.000Z',
+      supersedes_digest: undefined
     })),
     /persona cannot change/i
   );
@@ -157,7 +159,8 @@ test('supersession and retraction must occur after the prior projection', () => 
   assert.throws(
     () => createSupersedingSocialPublication(original, publication({
       publication_id: 'publication:alpha:revision:2',
-      created_at: original.created_at
+      created_at: original.created_at,
+      supersedes_digest: undefined
     })),
     /created after/i
   );
