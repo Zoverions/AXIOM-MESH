@@ -44,6 +44,7 @@
       "request_cancelled",
       "request_timeout",
       "response_too_large",
+      "social_history_limit_reached",
       "invalid_client_request",
       "invalid_gateway_response"
     ],
@@ -217,6 +218,28 @@
       "response_schema": "axiom-event-page.v1",
       "required_response_fields": [
         "events"
+      ],
+      "response_media_type": "application/json"
+    },
+    {
+      "id": "social.get",
+      "method": "GET",
+      "path": "/v1/social",
+      "access": "owner",
+      "idempotency": "not_applicable",
+      "path_parameters": [],
+      "query_parameters": [
+        "publication_limit"
+      ],
+      "request_schema": null,
+      "response_schema": "axiom-local-social-snapshot.v1",
+      "required_response_fields": [
+        "schema",
+        "owner",
+        "actors",
+        "personas",
+        "corpus",
+        "network_effect"
       ],
       "response_media_type": "application/json"
     },
