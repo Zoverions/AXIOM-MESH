@@ -232,6 +232,70 @@ const NODE_SCHEDULING_SQL = `
   ALTER TABLE nodes ADD COLUMN discovery_json TEXT;
 ${NODE_SCHEDULING_TABLES_SQL}`;
 
+const SOCIAL_LOCAL_CORPUS_SQL = `
+  CREATE TABLE IF NOT EXISTS actor_states (
+    actor_id TEXT PRIMARY KEY,
+    owner TEXT NOT NULL,
+    state_digest TEXT NOT NULL,
+    state_json TEXT NOT NULL,
+    status TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS publication_personas (
+    persona_id TEXT PRIMARY KEY,
+    owner TEXT NOT NULL,
+    actor_id TEXT NOT NULL REFERENCES actor_states(actor_id),
+    public_projection_digest TEXT NOT NULL,
+    protected_json TEXT NOT NULL,
+    public_projection_json TEXT NOT NULL,
+    status TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS social_publications (
+    projection_digest TEXT PRIMARY KEY,
+    owner TEXT NOT NULL,
+    actor_id TEXT NOT NULL REFERENCES actor_states(actor_id),
+    publication_id TEXT NOT NULL,
+    persona_id TEXT NOT NULL REFERENCES publication_personas(persona_id),
+    persona_projection_digest TEXT NOT NULL,
+    supersedes_digest TEXT REFERENCES social_publications(projection_digest),
+    projection_json TEXT NOT NULL,
+    access_envelope_json TEXT NOT NULL,
+    access_use_json TEXT NOT NULL,
+    status TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS social_transitions (
+    transition_digest TEXT PRIMARY KEY,
+    owner TEXT NOT NULL,
+    actor_id TEXT NOT NULL REFERENCES actor_states(actor_id),
+    publication_digest TEXT NOT NULL REFERENCES social_publications(projection_digest),
+    persona_id TEXT NOT NULL REFERENCES publication_personas(persona_id),
+    transition_json TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  ) STRICT;
+
+  CREATE INDEX IF NOT EXISTS actor_states_owner_idx
+  ON actor_states(owner, created_at, actor_id);
+
+  CREATE INDEX IF NOT EXISTS publication_personas_owner_idx
+  ON publication_personas(owner, actor_id, created_at, persona_id);
+
+  CREATE INDEX IF NOT EXISTS social_publications_owner_idx
+  ON social_publications(owner, created_at DESC, projection_digest);
+
+  CREATE INDEX IF NOT EXISTS social_publications_lineage_idx
+  ON social_publications(owner, publication_id, created_at, projection_digest);
+
+  CREATE INDEX IF NOT EXISTS social_transitions_owner_idx
+  ON social_transitions(owner, created_at, transition_digest);
+`;
+
 const MIGRATIONS = Object.freeze([
   {
     version: 1,
@@ -340,6 +404,14 @@ ALTER proposals ADD lifecycle timestamps, verification digest, and rollback meta
         ['discovery_json', 'TEXT']
       ]);
       db.exec(NODE_SCHEDULING_TABLES_SQL);
+    }
+  },
+  {
+    version: 11,
+    name: 'actor-custody-and-local-social-corpus',
+    source: SOCIAL_LOCAL_CORPUS_SQL,
+    up(db) {
+      db.exec(SOCIAL_LOCAL_CORPUS_SQL);
     }
   }
 ]);
