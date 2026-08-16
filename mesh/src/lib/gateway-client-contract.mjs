@@ -135,7 +135,7 @@ export function validateGatewayClientContract(contract) {
     throw new ValidationError('Gateway client error code is invalid');
   }
 
-  if (!Array.isArray(contract.routes) || contract.routes.length !== 29) {
+  if (!Array.isArray(contract.routes) || contract.routes.length !== 30) {
     throw new ValidationError('Gateway client route inventory is incomplete');
   }
   const ids = new Set();
@@ -198,7 +198,7 @@ export function validateGatewayClientContract(contract) {
 
   const contractDigest = digestObject(contract);
   if (contractDigest !== EXPECTED_CONTRACT_DIGEST) {
-    throw new ValidationError('Gateway client exact contract drifted');
+    throw new ValidationError(`Gateway client exact contract drifted: ${contractDigest}`);
   }
   return {
     valid: true,
