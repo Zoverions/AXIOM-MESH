@@ -3,8 +3,11 @@ import {
   DEFAULT_CHECKPOINT_INTERVAL,
   GridStore as CheckpointGridStore,
   loadGridVerificationKeys,
-  reencryptGridProtectedColumns
+  reencryptGridProtectedColumns as reencryptCoreGridProtectedColumns
 } from './_store-checkpoints.mjs';
+import {
+  reencryptSocialProtectedColumns
+} from './social-protection.mjs';
 import {
   AxiomError,
   ValidationError,
@@ -41,11 +44,23 @@ const CHECKPOINT_BOUNDARY_REASONS = new Set([
   'signature_mismatch'
 ]);
 
+export function reencryptGridProtectedColumns(args) {
+  const core = reencryptCoreGridProtectedColumns(args);
+  const social = reencryptSocialProtectedColumns(args);
+  return {
+    ...core,
+    protected_values: Number(core.protected_values ?? 0) + social.protected_values,
+    tables: {
+      ...(core.tables ?? {}),
+      ...social.tables
+    }
+  };
+}
+
 export {
   CHECKPOINT_SCHEMA,
   DEFAULT_CHECKPOINT_INTERVAL,
-  loadGridVerificationKeys,
-  reencryptGridProtectedColumns
+  loadGridVerificationKeys
 };
 
 export class GridStore extends CheckpointGridStore {
