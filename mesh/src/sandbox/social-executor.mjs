@@ -111,11 +111,12 @@ function createLocalActor(owner, input) {
 }
 
 function createLocalPersona(owner, input) {
-  exactKeys(input, [
-    'actor_id',
-    'attribution_mode',
-    'selective_link_commitment'
-  ], 'social persona create input', { optional: ['selective_link_commitment'] });
+  exactKeys(
+    input,
+    ['actor_id', 'attribution_mode'],
+    'social persona create input',
+    { optional: ['selective_link_commitment'] }
+  );
   const actorId = id(input.actor_id, 'social persona actor_id');
   const mode = assertString(input.attribution_mode, 'social persona attribution_mode', { max: 64 });
   if (![
@@ -172,16 +173,20 @@ function createLocalPersona(owner, input) {
 }
 
 function createLocalPublication(owner, input, assurance) {
-  exactKeys(input, [
-    'actor_id',
-    'actor_state_digest',
-    'protected_persona',
-    'content',
-    'attachment_digests',
-    'audience',
-    'discoverability',
-    'authorship_mode'
-  ], 'social publication create input', { optional: ['attachment_digests'] });
+  exactKeys(
+    input,
+    [
+      'actor_id',
+      'actor_state_digest',
+      'protected_persona',
+      'content',
+      'audience',
+      'discoverability',
+      'authorship_mode'
+    ],
+    'social publication create input',
+    { optional: ['attachment_digests'] }
+  );
   const actorId = id(input.actor_id, 'social publication actor_id');
   const actorStateDigest = digest(input.actor_state_digest, 'social publication actor_state_digest');
   const persona = normalizePublicationPersona(input.protected_persona);
@@ -202,17 +207,21 @@ function createLocalPublication(owner, input, assurance) {
 }
 
 function supersedeLocalPublication(owner, input, assurance) {
-  exactKeys(input, [
-    'actor_id',
-    'actor_state_digest',
-    'protected_persona',
-    'previous_publication',
-    'content',
-    'attachment_digests',
-    'audience',
-    'discoverability',
-    'authorship_mode'
-  ], 'social publication supersede input', { optional: ['attachment_digests'] });
+  exactKeys(
+    input,
+    [
+      'actor_id',
+      'actor_state_digest',
+      'protected_persona',
+      'previous_publication',
+      'content',
+      'audience',
+      'discoverability',
+      'authorship_mode'
+    ],
+    'social publication supersede input',
+    { optional: ['attachment_digests'] }
+  );
   const actorId = id(input.actor_id, 'social publication actor_id');
   const actorStateDigest = digest(input.actor_state_digest, 'social publication actor_state_digest');
   const persona = normalizePublicationPersona(input.protected_persona);
