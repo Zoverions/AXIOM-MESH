@@ -11,15 +11,26 @@ export const SOCIAL_PROTECTED_COLUMN_MAPPINGS = Object.freeze([
   ['social_transitions', 'transition_digest', ['transition_json']]
 ]);
 
+function tableExists(db, table) {
+  return Boolean(db.prepare(`
+    SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?
+  `).get(table));
+}
+
 export function reencryptSocialProtectedColumns({ db, sourceProtector, targetProtector }) {
   if (!db || !sourceProtector || !targetProtector) {
     throw new ValidationError('Social Grid re-encryption dependencies are missing');
   }
+  const presentMappings = SOCIAL_PROTECTED_COLUMN_MAPPINGS.filter(([table]) => tableExists(db, table));
+  if (!presentMappings.length) {
+    return { protected_values: 0, tables: {} };
+  }
+
   let values = 0;
   const tables = {};
   db.exec('BEGIN IMMEDIATE');
   try {
-    for (const [table, keyExpression, columns] of SOCIAL_PROTECTED_COLUMN_MAPPINGS) {
+    for (const [table, keyExpression, columns] of presentMappings) {
       let tableValues = 0;
       const rows = db.prepare(
         `SELECT ${keyExpression} AS protection_key, ${columns.join(', ')} FROM ${table}`
