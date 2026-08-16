@@ -49,7 +49,7 @@ const FIELD = /^[a-z][a-z0-9_]{0,63}$/;
 const ERROR_CODE = /^[a-z][a-z0-9_]{0,63}$/;
 const SCHEMA_ID = /^[a-z][a-z0-9.-]+\.v1$/;
 const EXPECTED_CONTRACT_DIGEST =
-  'b6c40dee92cb0e0c9894bd4426f2d7cfedb8808262545175e037b8756f97c387';
+  '809550c97ef83424e8d798664ea2f7fd256f3ef109463ebe9d90be6bd559f36f';
 const EXPECTED_JSON_SCHEMA_DIGEST =
   '90a65df24bab3299b4bab58ab15270b02aac67938923746f413285296dfa6ccf';
 
