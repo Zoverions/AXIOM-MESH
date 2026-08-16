@@ -6,7 +6,7 @@ import { ensureMeshIdentity, ReplayGuard, verifySignedRequest } from '../lib/ide
 import { Router, createServiceServer, listen, parseJsonBody } from '../lib/http.mjs';
 import { AxiomError, ValidationError, assertPlainObject, assertString } from '../lib/canonical.mjs';
 import { operationsReport, readinessState, ServiceTelemetry } from '../lib/observability.mjs';
-import { GridStore } from './store.mjs';
+import { SocialGridStore } from './social-store.mjs';
 import { loadDataProtector } from '../lib/protector.mjs';
 import { runServiceProcess } from '../lib/service-lifecycle.mjs';
 import { buildMachineIntentReceipt } from '../lib/machine-receipt.mjs';
@@ -40,7 +40,7 @@ export async function createGridService(config = meshConfig()) {
         })
       : null;
     protector = await loadDataProtector(config);
-    store = new GridStore({
+    store = new SocialGridStore({
       path: join(config.dataDir, 'grid.sqlite'),
       dataDir: config.dataDir,
       identity,

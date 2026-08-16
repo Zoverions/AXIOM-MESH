@@ -21,7 +21,7 @@ import {
 } from '../lib/service-network-policy.mjs';
 import { planDigest, validatePlan } from '../lib/plan.mjs';
 import { effectDestinationForTool } from '../lib/effect-destination.mjs';
-import { executeBuiltin } from './executor.mjs';
+import { executeBuiltin } from './social-executor.mjs';
 
 const DIGEST = /^[a-f0-9]{64}$/;
 
@@ -129,7 +129,11 @@ export async function createSandboxService(config = meshConfig()) {
       throw new AxiomError('capability_subject_mismatch', 'Capability subject does not match the intent principal', 403);
     }
     const startedAt = new Date().toISOString();
-    const builtinResult = executeBuiltin({ tool: claims.tool, intent });
+    const builtinResult = executeBuiltin({
+      tool: claims.tool,
+      intent,
+      assurance: plan.assurance
+    });
     const result = {
       ...builtinResult,
       output: {
