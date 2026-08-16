@@ -52,8 +52,12 @@ function migrateProtectedMapping(store, mappings) {
 
 export class SocialGridStore extends GridStore {
   initialize() {
+    this.socialReady = false;
+    super.initialize();
     this.socialMigrations = runSocialMigrations(this.db);
-    return super.initialize();
+    migrateProtectedMapping(this, SOCIAL_PROTECTED_COLUMN_MAPPINGS);
+    this.socialReady = true;
+    this.rebuildSocialMaterializedState();
   }
 
   getStatus() {
@@ -65,21 +69,39 @@ export class SocialGridStore extends GridStore {
 
   migrateProtectedColumns() {
     super.migrateProtectedColumns();
-    migrateProtectedMapping(this, SOCIAL_PROTECTED_COLUMN_MAPPINGS);
+    if (this.socialReady) {
+      migrateProtectedMapping(this, SOCIAL_PROTECTED_COLUMN_MAPPINGS);
+    }
   }
 
   rebuildMaterializedState() {
+    if (!this.socialReady) return super.rebuildMaterializedState();
+    this.transaction(() => this.clearSocialMaterializedState());
+    return super.rebuildMaterializedState();
+  }
+
+  rebuildSocialMaterializedState() {
+    const rows = this.db.prepare('SELECT * FROM events ORDER BY seq').all();
     this.transaction(() => {
-      for (const table of [
-        'social_transitions',
-        'social_publications',
-        'publication_personas',
-        'actor_states'
-      ]) {
-        this.db.exec(`DELETE FROM ${table}`);
+      this.clearSocialMaterializedState();
+      for (const row of rows) {
+        const event = this.decodeEventRow(row);
+        if (Object.values(SOCIAL_GRID_EVENT_KINDS).includes(event.kind)) {
+          this.applySocialMaterializedEvent(event);
+        }
       }
     });
-    return super.rebuildMaterializedState();
+  }
+
+  clearSocialMaterializedState() {
+    for (const table of [
+      'social_transitions',
+      'social_publications',
+      'publication_personas',
+      'actor_states'
+    ]) {
+      this.db.exec(`DELETE FROM ${table}`);
+    }
   }
 
   appendEvents({ traceId, actor, events }) {
@@ -94,8 +116,11 @@ export class SocialGridStore extends GridStore {
 
   applyMaterializedEvent(event) {
     super.applyMaterializedEvent(event);
-    if (!Object.values(SOCIAL_GRID_EVENT_KINDS).includes(event.kind)) return;
+    if (!this.socialReady || !Object.values(SOCIAL_GRID_EVENT_KINDS).includes(event.kind)) return;
+    this.applySocialMaterializedEvent(event);
+  }
 
+  applySocialMaterializedEvent(event) {
     const payload = validateSocialGridEvent(event, event.actor, { now: event.occurred_at });
 
     if (event.kind === SOCIAL_GRID_EVENT_KINDS.actorCreated) {
