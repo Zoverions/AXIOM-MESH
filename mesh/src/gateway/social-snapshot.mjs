@@ -1,7 +1,8 @@
 import {
   ValidationError,
   assertPlainObject,
-  assertString
+  assertString,
+  digestObject
 } from '../lib/canonical.mjs';
 import {
   createPublicPersonaProjection,
@@ -67,6 +68,9 @@ export function buildLocalSocialSnapshot(events, owner, {
         'social snapshot actor_state_digest',
         { min: 64, max: 64, pattern: DIGEST }
       );
+      if (actorStateDigest !== digestObject(actorState)) {
+        throw new ValidationError('Social snapshot actor state digest is invalid');
+      }
       if (event.subject !== actorState.actor_id) {
         throw new ValidationError('Social snapshot actor subject is invalid');
       }
