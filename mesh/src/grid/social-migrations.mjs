@@ -64,15 +64,6 @@ const SOCIAL_LOCAL_CORPUS_SQL = `
   ON social_transitions(owner, created_at, transition_digest);
 `;
 
-const SOCIAL_INITIAL_CUSTODY_LIMITS_SQL = `
-  CREATE UNIQUE INDEX IF NOT EXISTS actor_states_single_owner_idx
-  ON actor_states(owner);
-
-  CREATE UNIQUE INDEX IF NOT EXISTS publication_personas_single_active_actor_idx
-  ON publication_personas(owner, actor_id)
-  WHERE status = 'active';
-`;
-
 const SOCIAL_MIGRATIONS = Object.freeze([
   {
     version: 1,
@@ -80,14 +71,6 @@ const SOCIAL_MIGRATIONS = Object.freeze([
     source: SOCIAL_LOCAL_CORPUS_SQL,
     up(db) {
       db.exec(SOCIAL_LOCAL_CORPUS_SQL);
-    }
-  },
-  {
-    version: 2,
-    name: 'initial-single-actor-and-active-persona-custody',
-    source: SOCIAL_INITIAL_CUSTODY_LIMITS_SQL,
-    up(db) {
-      db.exec(SOCIAL_INITIAL_CUSTODY_LIMITS_SQL);
     }
   }
 ]);
