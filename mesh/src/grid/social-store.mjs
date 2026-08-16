@@ -135,6 +135,16 @@ export class SocialGridStore extends GridStore {
   }
 
   materializeActorCreated(event, payload) {
+    const existing = this.db.prepare(`
+      SELECT actor_id FROM actor_states WHERE owner = ? LIMIT 1
+    `).get(payload.owner);
+    if (existing) {
+      throw new AxiomError(
+        'actor_custody_limit_reached',
+        'Current local social runtime permits one actor per custodian principal',
+        409
+      );
+    }
     this.db.prepare(`
       INSERT INTO actor_states(
         actor_id, owner, state_digest, state_json, status, created_at, updated_at
@@ -168,6 +178,18 @@ export class SocialGridStore extends GridStore {
     }
     if (payload.protected_persona.status !== 'active') {
       throw new ValidationError('new local publication persona must be active');
+    }
+    const existing = this.db.prepare(`
+      SELECT persona_id FROM publication_personas
+      WHERE owner = ? AND actor_id = ? AND status = 'active'
+      LIMIT 1
+    `).get(payload.owner, payload.actor_id);
+    if (existing) {
+      throw new AxiomError(
+        'publication_persona_limit_reached',
+        'Current local social runtime permits one active publication persona per actor',
+        409
+      );
     }
     this.db.prepare(`
       INSERT INTO publication_personas(
