@@ -1,29 +1,14 @@
 import {
   AxiomError,
-  ValidationError,
-  canonicalJson
+  ValidationError
 } from '../lib/canonical.mjs';
 import { GridStore } from './store.mjs';
 import {
   SOCIAL_GRID_EVENT_KINDS,
-  normalizeActorCreatedPayload,
-  normalizePersonaSavedPayload,
-  normalizePublicationRetractedPayload,
-  normalizePublicationSavedPayload,
   validateSocialGridEvent
 } from './social-state.mjs';
 import { validateSocialPublicationPersonaBinding } from '../lib/social-publication.mjs';
-
-const SOCIAL_PROTECTED_COLUMN_MAPPINGS = Object.freeze([
-  ['actor_states', 'actor_id', ['state_json']],
-  ['publication_personas', 'persona_id', ['protected_json', 'public_projection_json']],
-  ['social_publications', 'projection_digest', [
-    'projection_json',
-    'access_envelope_json',
-    'access_use_json'
-  ]],
-  ['social_transitions', 'transition_digest', ['transition_json']]
-]);
+import { SOCIAL_PROTECTED_COLUMN_MAPPINGS } from './social-protection.mjs';
 
 function boundedInteger(value, label, min, max) {
   if (!Number.isSafeInteger(value) || value < min || value > max) {
@@ -64,44 +49,6 @@ function migrateProtectedMapping(store, mappings) {
   });
 }
 
-export function reencryptSocialProtectedColumns({ db, sourceProtector, targetProtector }) {
-  if (!db || !sourceProtector || !targetProtector) {
-    throw new ValidationError('Social Grid re-encryption dependencies are missing');
-  }
-  let values = 0;
-  const tables = {};
-  db.exec('BEGIN IMMEDIATE');
-  try {
-    for (const [table, keyExpression, columns] of SOCIAL_PROTECTED_COLUMN_MAPPINGS) {
-      let tableValues = 0;
-      const rows = db.prepare(
-        `SELECT ${keyExpression} AS protection_key, ${columns.join(', ')} FROM ${table}`
-      ).all();
-      for (const row of rows) {
-        for (const column of columns) {
-          const serialized = row[column];
-          if (serialized === null || serialized === undefined) continue;
-          const context = `axiom:${table}.${column}:${row.protection_key}`;
-          const value = sourceProtector.open(serialized, context);
-          const reencrypted = targetProtector.seal(value, context);
-          targetProtector.open(reencrypted, context);
-          db.prepare(
-            `UPDATE ${table} SET ${column} = ? WHERE ${keyExpression} = ?`
-          ).run(reencrypted, row.protection_key);
-          values += 1;
-          tableValues += 1;
-        }
-      }
-      tables[table] = tableValues;
-    }
-    db.exec('COMMIT');
-  } catch (error) {
-    db.exec('ROLLBACK');
-    throw error;
-  }
-  return { protected_values: values, tables };
-}
-
 export class SocialGridStore extends GridStore {
   migrateProtectedColumns() {
     super.migrateProtectedColumns();
@@ -135,6 +82,10 @@ export class SocialGridStore extends GridStore {
   applyMaterializedEvent(event) {
     super.applyMaterializedEvent(event);
     if (!Object.values(SOCIAL_GRID_EVENT_KINDS).includes(event.kind)) return;
+
+    // Validate exactly once at the materialization boundary. The returned payload
+    // contains normalized state-access evidence, so re-validating it as if it were
+    // the raw use request would reject our own canonical representation.
     const payload = validateSocialGridEvent(event, event.actor, { now: event.occurred_at });
 
     if (event.kind === SOCIAL_GRID_EVENT_KINDS.actorCreated) {
@@ -148,8 +99,7 @@ export class SocialGridStore extends GridStore {
     }
   }
 
-  materializeActorCreated(event, payloadRaw) {
-    const payload = normalizeActorCreatedPayload(payloadRaw);
+  materializeActorCreated(event, payload) {
     this.db.prepare(`
       INSERT INTO actor_states(
         actor_id, owner, state_digest, state_json, status, created_at, updated_at
@@ -170,8 +120,7 @@ export class SocialGridStore extends GridStore {
     );
   }
 
-  materializePersonaSaved(event, payloadRaw) {
-    const payload = normalizePersonaSavedPayload(payloadRaw);
+  materializePersonaSaved(event, payload) {
     const actor = this.db.prepare(`
       SELECT actor_id, owner, status FROM actor_states
       WHERE actor_id = ? AND owner = ?
@@ -213,8 +162,7 @@ export class SocialGridStore extends GridStore {
     );
   }
 
-  materializePublicationSaved(event, payloadRaw) {
-    const payload = normalizePublicationSavedPayload(payloadRaw, { now: event.occurred_at });
+  materializePublicationSaved(event, payload) {
     const actor = this.db.prepare(`
       SELECT actor_id, owner, status FROM actor_states
       WHERE actor_id = ? AND owner = ?
@@ -304,8 +252,7 @@ export class SocialGridStore extends GridStore {
     );
   }
 
-  materializePublicationRetracted(event, payloadRaw) {
-    const payload = normalizePublicationRetractedPayload(payloadRaw);
+  materializePublicationRetracted(event, payload) {
     const publication = this.db.prepare(`
       SELECT * FROM social_publications
       WHERE projection_digest = ? AND owner = ? AND actor_id = ?
@@ -454,5 +401,3 @@ export class SocialGridStore extends GridStore {
     return { publications, transitions, truncated };
   }
 }
-
-export { SOCIAL_PROTECTED_COLUMN_MAPPINGS };
