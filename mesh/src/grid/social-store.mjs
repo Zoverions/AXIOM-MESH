@@ -8,6 +8,7 @@ import {
   validateSocialGridEvent
 } from './social-state.mjs';
 import { validateSocialPublicationPersonaBinding } from '../lib/social-publication.mjs';
+import { runSocialMigrations } from './social-migrations.mjs';
 import { SOCIAL_PROTECTED_COLUMN_MAPPINGS } from './social-protection.mjs';
 
 function boundedInteger(value, label, min, max) {
@@ -50,6 +51,18 @@ function migrateProtectedMapping(store, mappings) {
 }
 
 export class SocialGridStore extends GridStore {
+  initialize() {
+    this.socialMigrations = runSocialMigrations(this.db);
+    return super.initialize();
+  }
+
+  getStatus() {
+    return {
+      ...super.getStatus(),
+      social_schema_version: this.socialMigrations?.version ?? 0
+    };
+  }
+
   migrateProtectedColumns() {
     super.migrateProtectedColumns();
     migrateProtectedMapping(this, SOCIAL_PROTECTED_COLUMN_MAPPINGS);
@@ -83,9 +96,6 @@ export class SocialGridStore extends GridStore {
     super.applyMaterializedEvent(event);
     if (!Object.values(SOCIAL_GRID_EVENT_KINDS).includes(event.kind)) return;
 
-    // Validate exactly once at the materialization boundary. The returned payload
-    // contains normalized state-access evidence, so re-validating it as if it were
-    // the raw use request would reject our own canonical representation.
     const payload = validateSocialGridEvent(event, event.actor, { now: event.occurred_at });
 
     if (event.kind === SOCIAL_GRID_EVENT_KINDS.actorCreated) {
@@ -164,11 +174,19 @@ export class SocialGridStore extends GridStore {
 
   materializePublicationSaved(event, payload) {
     const actor = this.db.prepare(`
-      SELECT actor_id, owner, status FROM actor_states
+      SELECT actor_id, owner, state_digest, status FROM actor_states
       WHERE actor_id = ? AND owner = ?
     `).get(payload.actor_id, payload.owner);
     if (!actor || !['active', 'recovered'].includes(actor.status)) {
       throw new AxiomError('actor_custody_unavailable', 'Active local actor custody was not found', 409);
+    }
+    const authority = payload.state_access_envelope.authority_basis;
+    if (
+      authority.type !== 'self_authority'
+      || authority.source_id !== payload.actor_id
+      || authority.basis_digest !== actor.state_digest
+    ) {
+      throw new ValidationError('local social publication must bind self authority to the current custodied actor state');
     }
     const personaRow = this.db.prepare(`
       SELECT * FROM publication_personas
