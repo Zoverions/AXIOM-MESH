@@ -154,9 +154,13 @@ function normalizeAudience(raw) {
   return Object.freeze({ mode });
 }
 
-function normalizePublicationBody(raw) {
+function normalizePublicationBody(raw, { projection = false } = {}) {
   const input = assertPlainObject(raw, 'social publication');
-  assertExactKeys(input, PUBLICATION_KEYS, 'social publication');
+  assertExactKeys(
+    input,
+    projection ? PUBLICATION_OUTPUT_KEYS : PUBLICATION_KEYS,
+    'social publication'
+  );
   if (input.schema !== undefined && input.schema !== SOCIAL_PUBLICATION_SCHEMA) {
     throw new ValidationError('unsupported social publication schema');
   }
@@ -205,11 +209,6 @@ function normalizePublicationBody(raw) {
   });
 }
 
-function publicationDigestBody(publication) {
-  const { projection_digest: _ignored, ...body } = publication;
-  return body;
-}
-
 export function createSocialPublicationProjection(raw) {
   const body = normalizePublicationBody(raw);
   return Object.freeze({
@@ -231,13 +230,12 @@ export function validateSocialPublicationProjection(raw) {
     throw new ValidationError('social publication projection cannot perform network effects');
   }
 
-  const body = normalizePublicationBody(publication);
+  const body = normalizePublicationBody(publication, { projection: true });
   const projectionDigest = digest(
     publication.projection_digest,
     'social publication projection_digest'
   );
-  const expectedDigest = digestObject(publicationDigestBody(body));
-  if (projectionDigest !== expectedDigest) {
+  if (projectionDigest !== digestObject(body)) {
     throw new ValidationError('social publication projection digest does not match canonical content');
   }
   return Object.freeze({
@@ -249,7 +247,10 @@ export function validateSocialPublicationProjection(raw) {
 export function createSupersedingSocialPublication(previousRaw, nextRaw) {
   const previous = validateSocialPublicationProjection(previousRaw);
   const nextInput = assertPlainObject(nextRaw, 'superseding social publication');
-  if (nextInput.supersedes_digest !== undefined && nextInput.supersedes_digest !== previous.projection_digest) {
+  if (
+    nextInput.supersedes_digest !== undefined
+    && nextInput.supersedes_digest !== previous.projection_digest
+  ) {
     throw new ValidationError('superseding social publication must name the exact previous projection digest');
   }
   if (nextInput.persona_id !== previous.persona_id) {
@@ -301,10 +302,16 @@ export function createSocialPublicationRetraction(previousRaw, {
 export function validateSocialPublicationRetraction(raw) {
   const transition = assertPlainObject(raw, 'social publication transition');
   assertExactKeys(transition, TRANSITION_KEYS, 'social publication transition');
-  if (transition.schema !== SOCIAL_PUBLICATION_TRANSITION_SCHEMA || transition.action !== 'retract') {
+  if (
+    transition.schema !== SOCIAL_PUBLICATION_TRANSITION_SCHEMA
+    || transition.action !== 'retract'
+  ) {
     throw new ValidationError('unsupported social publication transition');
   }
-  if (transition.stop_serving_requested !== true || transition.third_party_deletion_claimed !== false) {
+  if (
+    transition.stop_serving_requested !== true
+    || transition.third_party_deletion_claimed !== false
+  ) {
     throw new ValidationError('social publication retraction must preserve truthful third-party deletion semantics');
   }
   if (transition.authority_effect !== 'none' || transition.network_effect !== 'none') {
