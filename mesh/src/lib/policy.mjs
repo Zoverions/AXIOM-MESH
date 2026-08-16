@@ -1,7 +1,20 @@
 import { readFile } from 'node:fs/promises';
 import { digestObject, ValidationError } from './canonical.mjs';
+import {
+  ASSURANCE_TIER_IDS,
+  getAssuranceTier
+} from './assurance-tiers.mjs';
 
 const RISK_ORDER = Object.freeze({ low: 0, medium: 1, high: 2, critical: 3 });
+const DEFAULT_ASSURANCE_BY_RISK = Object.freeze({
+  low: 'A1',
+  medium: 'A2',
+  high: 'A3',
+  critical: 'A3'
+});
+const CURRENT_RUNTIME_BASE_ASSURANCE = 'A2';
+const CURRENT_RUNTIME_APPROVED_ASSURANCE = 'A3';
+const CURRENT_RUNTIME_MAX_ASSURANCE = 'A3';
 const PROTOTYPE_KEYS = new Set(Object.getOwnPropertyNames(Object.prototype));
 const BASE_POLICY_OBJECTS = new WeakSet();
 const MERGED_POLICY_METADATA = new WeakMap();
@@ -19,6 +32,7 @@ const ALLOW_RULE_FIELDS = new Set([
   'required_confirmations',
   'required_confirmation_values',
   'requires_independent_approval',
+  'required_assurance',
   'timeout_ms',
   'constraints',
   'tool',
@@ -30,6 +44,18 @@ const DENY_RULE_FIELDS = new Set([
   'http_status',
   'reason'
 ]);
+
+function assuranceRank(tier) {
+  return getAssuranceTier(tier).rank;
+}
+
+function requiredAssurance(rule) {
+  return rule.required_assurance ?? DEFAULT_ASSURANCE_BY_RISK[rule.risk];
+}
+
+function maxAssurance(left, right) {
+  return assuranceRank(left) >= assuranceRank(right) ? left : right;
+}
 
 export async function loadPolicy(path) {
   const policy = JSON.parse(await readFile(path, 'utf8'));
@@ -76,6 +102,12 @@ export function validatePolicy(policy) {
     }
     if (!['allow', 'deny'].includes(rule.decision)) throw new ValidationError(`Invalid decision for ${action}`);
     if (!Object.hasOwn(RISK_ORDER, rule.risk)) throw new ValidationError(`Invalid risk for ${action}`);
+    if (
+      rule.required_assurance !== undefined
+      && !ASSURANCE_TIER_IDS.includes(rule.required_assurance)
+    ) {
+      throw new ValidationError(`Invalid required assurance for ${action}`);
+    }
     if (
       rule.http_status !== undefined
       && (!Number.isSafeInteger(rule.http_status) || rule.http_status < 400 || rule.http_status > 599)
@@ -209,6 +241,7 @@ export class PolicyEngine {
       return {
         allow: false,
         risk: 'critical',
+        required_assurance: DEFAULT_ASSURANCE_BY_RISK.critical,
         code: 'unknown_action',
         reason: 'The action is not present in the active policy.',
         policy_version: this.policy.version,
@@ -216,13 +249,46 @@ export class PolicyEngine {
         policy_layers: this.layers
       };
     }
+    const assurance = requiredAssurance(rule);
     if (rule.decision !== 'allow') {
       return {
         allow: false,
         risk: rule.risk,
+        required_assurance: assurance,
         code: rule.code ?? 'policy_denied',
         http_status: rule.http_status,
         reason: rule.reason ?? 'The active policy denies this action.',
+        policy_version: this.policy.version,
+        policy_digest: this.digest,
+        policy_layers: this.layers
+      };
+    }
+    if (assuranceRank(assurance) > assuranceRank(CURRENT_RUNTIME_MAX_ASSURANCE)) {
+      return {
+        allow: false,
+        risk: rule.risk,
+        required_assurance: assurance,
+        runtime_max_assurance: CURRENT_RUNTIME_MAX_ASSURANCE,
+        code: 'assurance_unavailable',
+        http_status: 503,
+        reason: `The current kernel cannot satisfy required assurance ${assurance}; maximum available assurance is ${CURRENT_RUNTIME_MAX_ASSURANCE}.`,
+        policy_version: this.policy.version,
+        policy_digest: this.digest,
+        policy_layers: this.layers
+      };
+    }
+    if (
+      assuranceRank(assurance) > assuranceRank(CURRENT_RUNTIME_BASE_ASSURANCE)
+      && rule.requires_independent_approval !== true
+    ) {
+      return {
+        allow: false,
+        risk: rule.risk,
+        required_assurance: assurance,
+        runtime_max_assurance: CURRENT_RUNTIME_MAX_ASSURANCE,
+        code: 'assurance_path_unavailable',
+        http_status: 503,
+        reason: `Required assurance ${assurance} needs the current independent-approval path; this rule does not require it.`,
         policy_version: this.policy.version,
         policy_digest: this.digest,
         policy_layers: this.layers
@@ -235,6 +301,7 @@ export class PolicyEngine {
       return {
         allow: false,
         risk: rule.risk,
+        required_assurance: assurance,
         code: 'insufficient_scope',
         reason: `Missing required scopes: ${missingScopes.join(', ')}`,
         missing_scopes: missingScopes,
@@ -261,6 +328,7 @@ export class PolicyEngine {
         allow: false,
         pending: true,
         risk: rule.risk,
+        required_assurance: assurance,
         code: 'confirmation_required',
         reason: `This action requires ${requiredConfirmations} explicit confirmation(s).`,
         required_confirmations: requiredConfirmations,
@@ -273,6 +341,10 @@ export class PolicyEngine {
     return {
       allow: true,
       risk: rule.risk,
+      required_assurance: assurance,
+      achievable_assurance: rule.requires_independent_approval === true
+        ? CURRENT_RUNTIME_APPROVED_ASSURANCE
+        : CURRENT_RUNTIME_BASE_ASSURANCE,
       tool: rule.tool,
       constraints: structuredClone(rule.constraints ?? {}),
       effect: rule.effect ?? action,
@@ -310,7 +382,8 @@ export function mergeDenyDominantPolicy(layers) {
           ...current,
           ...incoming,
           decision: 'deny',
-          risk: RISK_ORDER[current.risk] >= RISK_ORDER[incoming.risk] ? current.risk : incoming.risk
+          risk: RISK_ORDER[current.risk] >= RISK_ORDER[incoming.risk] ? current.risk : incoming.risk,
+          required_assurance: maxAssurance(requiredAssurance(current), requiredAssurance(incoming))
         };
         continue;
       }
@@ -336,6 +409,7 @@ export function mergeDenyDominantPolicy(layers) {
         required_confirmation_values: [...new Set([...currentValues, ...incomingValues])].sort(),
         requires_independent_approval:
           current.requires_independent_approval === true || incoming.requires_independent_approval === true,
+        required_assurance: maxAssurance(requiredAssurance(current), requiredAssurance(incoming)),
         timeout_ms: Math.min(
           Number(current.timeout_ms ?? 10_000),
           Number(incoming.timeout_ms ?? 10_000)
