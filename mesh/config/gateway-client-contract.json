@@ -44,7 +44,6 @@
       "request_cancelled",
       "request_timeout",
       "response_too_large",
-      "social_history_limit_reached",
       "invalid_client_request",
       "invalid_gateway_response"
     ],
