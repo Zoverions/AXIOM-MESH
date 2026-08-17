@@ -29,7 +29,8 @@ test('infrastructure discovery points only to existing bounded contracts', async
     discovery.executor_conformance_receipt_contract,
     discovery.executor_durable_state_record_contract,
     discovery.executor_durable_state_receipt_contract,
-    discovery.executor_isolation_profile_contract
+    discovery.executor_isolation_profile_contract,
+    discovery.linux_isolation_conformance_receipt_contract
   ];
   for (const path of contractPaths) {
     assert.equal(typeof path, 'string');
@@ -49,7 +50,8 @@ test('infrastructure discovery points only to existing bounded contracts', async
     [discovery.executor_conformance_receipt_contract, 'agent-executor-conformance-receipt.v1.schema.json', 'axiom-agent-executor-conformance-receipt.v1'],
     [discovery.executor_durable_state_record_contract, 'agent-executor-durable-state-record.v1.schema.json', 'axiom-agent-executor-durable-state-record.v1'],
     [discovery.executor_durable_state_receipt_contract, 'agent-executor-durable-state-receipt.v1.schema.json', 'axiom-agent-executor-durable-state-receipt.v1'],
-    [discovery.executor_isolation_profile_contract, 'agent-executor-isolation-profile.v1.schema.json', 'axiom-agent-executor-isolation-profile.v1']
+    [discovery.executor_isolation_profile_contract, 'agent-executor-isolation-profile.v1.schema.json', 'axiom-agent-executor-isolation-profile.v1'],
+    [discovery.linux_isolation_conformance_receipt_contract, 'agent-linux-isolation-conformance-receipt.v1.schema.json', 'axiom-agent-linux-isolation-conformance-receipt.v1']
   ];
   for (const [path, idSuffix, schema] of identities) {
     const contract = await readJson(path);
@@ -115,6 +117,26 @@ test('infrastructure discovery points only to existing bounded contracts', async
     assert.equal(isolationThreatModel.boundaries[key], false, `isolation threat-model boundary ${key} must remain false`);
   }
 
+  const linuxIsolationThreatModel = await readJson(discovery.linux_isolation_adapter_threat_model);
+  assert.equal(linuxIsolationThreatModel.schema, 'axiom-agent-linux-isolation-adapter-threat-model.v1');
+  assert.equal(linuxIsolationThreatModel.phase, 'fixed-probe-linux-kernel-isolation');
+  assert.equal(linuxIsolationThreatModel.effect_scope.disposable_local_container_create_start_kill_remove, true);
+  assert.equal(linuxIsolationThreatModel.effect_scope.fixed_probe_process_execution, true);
+  assert.equal(linuxIsolationThreatModel.effect_scope.disposable_container_tmpfs_mutation, true);
+  assert.equal(linuxIsolationThreatModel.effect_scope.caller_supplied_image_or_command, false);
+  assert.equal(linuxIsolationThreatModel.effect_scope.repository_bind_mount, false);
+  assert.equal(linuxIsolationThreatModel.effect_scope.host_root_bind_mount, false);
+  assert.equal(linuxIsolationThreatModel.effect_scope.docker_socket_mount, false);
+  assert.equal(linuxIsolationThreatModel.effect_scope.credential_or_secret_mount, false);
+  assert.equal(linuxIsolationThreatModel.effect_scope.probe_network_connectivity, false);
+  assert.ok(Array.isArray(linuxIsolationThreatModel.attack_classes));
+  assert.ok(linuxIsolationThreatModel.attack_classes.length >= 16);
+  assert.ok(Array.isArray(linuxIsolationThreatModel.promotion_blockers));
+  assert.ok(linuxIsolationThreatModel.promotion_blockers.length >= 8);
+  for (const key of Object.keys(linuxIsolationThreatModel.boundaries)) {
+    assert.equal(linuxIsolationThreatModel.boundaries[key], false, `Linux isolation threat-model boundary ${key} must remain false`);
+  }
+
   assert.deepEqual(discovery.challenge_classes, [
     'hardware-validation',
     'test-node-provisioning',
@@ -131,6 +153,10 @@ test('infrastructure discovery points only to existing bounded contracts', async
   assert.equal(discovery.executor_conformance_virtual_sandbox_available, true);
   assert.equal(discovery.executor_durable_state_lab_available, true);
   assert.equal(discovery.executor_isolation_profile_validation_available, true);
+  assert.equal(discovery.linux_isolation_fixed_probe_conformance_available, true);
+  assert.equal(discovery.linux_isolation_hosted_ci_evidence_available, true);
+  assert.equal(discovery.linux_isolation_fixed_probe_real_process_effects_enabled, true);
+  assert.equal(discovery.linux_isolation_fixed_probe_disposable_filesystem_effects_enabled, true);
   assert.equal(discovery.executor_durable_control_state_filesystem_write_enabled, true);
 
   for (const key of [
@@ -140,6 +166,8 @@ test('infrastructure discovery points only to existing bounded contracts', async
     'executor_isolation_real_effects_reachable',
     'platform_isolation_verified',
     'hosted_ci_physical_device_proof',
+    'arbitrary_repository_code_isolation_verified',
+    'compiled_plan_effect_admission_enabled',
     'test_session_effects_reachable',
     'production_lifecycle_persistence_enabled',
     'production_executor_persistence_enabled',
