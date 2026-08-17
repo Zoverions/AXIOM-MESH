@@ -375,8 +375,7 @@ a public publication may later be superseded, retracted, or stopped from being
 served, but the earlier public form must not be silently replaced while still
 being represented as the original.
 
-The current executable laboratories remain non-networking and outside supported
-Grid authority:
+The current executable laboratories remain outside supported Grid authority:
 
 - `mesh/src/lib/public-witness.mjs` defines persona-key public journal
   attestations, exact predecessor continuity, independent witness receipts, and
@@ -397,9 +396,23 @@ Grid authority:
   journal-sequence equivocation, late and already-known stale-key evidence,
   revocation contradiction, fail-closed capacity exhaustion, replay, and
   signed-evidence tamper rejection;
-- no HTTP listener, peer discovery, outbound fetcher, relay, Gateway,
+- `mesh/src/lib/public-witness-durable-store.mjs` adds the W2b local durable
+  evidence journal with witness-signed canonical records, exact predecessor
+  chaining, deterministic full replay, bounded state, and fail-closed restart;
+- `mesh/src/public-witness-service.mjs` exposes W2b as a separately runnable
+  process using exact configuration and bounded JSON-line stdin/stdout IPC;
+- `mesh/test/public-witness-durable-store.test.mjs`,
+  `mesh/test/public-witness-process.test.mjs`, and
+  `mesh/test/public-witness-process-hardening.test.mjs` cover restart,
+  deterministic replay, conflict persistence, tamper/truncation/noncanonical
+  rejection, external-state drift, private internal state, bounded files, and
+  per-request input bounds;
+- `npm run public-witness:start -- <config.json>` and
+  `npm run public-witness:verify -- <config.json>` operate this standalone
+  laboratory without adding it to the four-process Grid runtime;
+- no HTTP or socket listener, peer discovery, outbound fetcher, relay, Gateway,
   Hypervisor, Sandbox, Grid mutation, archive, consensus, finality, or capability
-  promotion is activated by these helpers;
+  promotion is activated by this work; and
 - the accepted no-egress social storage composition remains unchanged.
 
 A persona journal attestation binds the exact social entry digest, persona and
@@ -473,13 +486,46 @@ arrival order, popularity, application preference, or lexical digest order.
 The witness is an evidence observer, not a truth oracle, identity authority,
 moderator, consensus member, or finality provider.
 
-The W2a service core is intentionally in-memory and no-I/O. Bounded artifact and
-conflict capacities fail closed before partial commit. This is not yet the
-independently deployable witness service promised by the full W2 phase. Process
-isolation, durable append-only storage, restart/recovery behavior, bounded
-transport, key discovery, peer discovery, rate limits, abuse handling, and
-independent-host operation remain separate W2 work and MUST NOT be inferred from
-the current core.
+W2b adds local process and restart durability without adding remote witnessing.
+Each accepted observation operation is replayed first against a clean trial
+state. The resulting exact observation and conflict digests are bound into a
+canonical JSONL record signed by the witness key and chained by contiguous
+sequence plus exact predecessor-record digest. The record is written and the
+file is `fsync`ed before the trial state becomes the active in-memory state.
+Exact replay remains idempotent and does not append a duplicate durable record.
+
+Startup verifies every durable record's schema, canonical encoding, witness
+signature, request digest, sequence, predecessor, and deterministically
+reproduced observation/conflict result before reconstructing active witness
+state. Tampering, wrong witness keys, noncanonical records, truncation,
+duplicate durable operations, chain discontinuity, or result divergence fail
+closed. The active store also compares on-disk record digests with its private
+in-memory record chain before each new commit so detectable external file drift
+cannot be silently extended.
+
+The W2b process uses a separate witness-key file and state file. Those paths are
+resolved from an exact configuration, the config and key inputs are bounded and
+must be regular non-symlink files when loaded, and the durable-store object does
+not expose its private key, state path, mutable record array, or W2a core as
+public fields. Stdin/stdout JSON-line IPC is bounded per request; one transport
+chunk may carry multiple independently bounded requests without being copied
+into one unbounded pending request buffer.
+
+These are local integrity properties, not availability or hardware-durability
+claims. The durable journal may contain the public artifacts necessary to
+reproduce its observations, but every record and snapshot continues to declare
+`data_availability_claimed: false`. File `fsync` does not prove independent
+replication, media survival, backup, or W3 archive availability. W2b also assumes
+a trusted local state directory and one active writer for the state file; it
+detects observable external drift but does not claim a cross-process locking or
+hostile-local-filesystem security protocol.
+
+W2b is therefore an independently runnable **local** witness process, not yet a
+remote witness network. It opens no HTTP/socket listener and performs no peer
+discovery or outbound fetch. Remote transport, source admission, discovery,
+rate limiting, abuse resistance, independent-host deployment evidence, and
+multi-witness exchange remain W2 work and MUST be reviewed separately before
+any such claim is made.
 
 A witness receipt means that the named witness key observed and verified one
 exact signed journal artifact. It does not prove content truth, legal identity,
@@ -509,12 +555,14 @@ The staged roadmap is:
    privacy-preserving root/key binding, operational-key epochs, rotation,
    revocation, recovery transitions, stale-key rejection when relevant evidence
    is supplied, and credential-aware journal v2 continuity;
-3. **W2 — witness service laboratory (W2a evidence core implemented; deployment
-   pending):** the current core provides signed observation, idempotent replay,
-   credential/journal equivocation preservation, stale-key-use evidence, bounded
-   fail-closed state, and no global-currentness claim. Remaining W2 work is an
-   independently operated process with durable state, restart/recovery,
-   transport/discovery limits, abuse controls, and independent-host evidence;
+3. **W2 — witness service laboratory (W2a evidence core and W2b durable local
+   process implemented; remote operation pending):** the current work provides
+   signed observation, idempotent replay, equivocation/stale-key evidence,
+   witness-signed append-only local state, deterministic fail-closed restart,
+   bounded stdin/stdout IPC, and no global-currentness claim. Remaining W2 work
+   includes separately reviewed remote transport/source admission, discovery,
+   replay/rate/abuse controls at that boundary, independently operated hosts,
+   and multi-witness evidence exchange without Grid authority;
 4. **W3 — archive and availability laboratory:** independently operated public
    object retention with explicit availability and legal-removal semantics;
 5. **W4 — optional checkpoint agreement adapter:** evaluate threshold/BFT
@@ -522,16 +570,17 @@ The staged roadmap is:
    censorship, version-skew, and key-compromise conditions;
 6. **W5 — AXIOM Verify:** independently verify content digests, persona journal
    signatures, credential epochs, revocations, continuity, witness receipts,
-   witness observations/conflicts, checkpoints, availability, and any optional
-   finality certificate while preserving explicit non-claims; and
+   witness observations/conflicts, durable witness records, checkpoints,
+   availability, and any optional finality certificate while preserving
+   explicit non-claims; and
 7. **W6 — promotion:** only after applicable protocol, security, privacy,
    operational, scale, governance, and independent-review gates pass.
 
 A persona can still sign two conflicting journal entries at the same continuity
 position. That is equivocation, not something cryptography can prohibit. W2a
-retains and exposes conflicting valid artifacts and signed conflict evidence
-rather than silently choosing one. Future multi-witness and agreement protocols
-must preserve that property.
+and W2b retain and expose conflicting valid artifacts and signed conflict
+evidence rather than silently choosing one. Future multi-witness and agreement
+protocols must preserve that property.
 
 ## Required future agreement interface
 
