@@ -49,11 +49,11 @@ Agents are especially useful for:
 - finding unsupported claims or stale documentation;
 - identifying security, privacy, scaling, or recovery failure modes.
 
-Use the Agent Commons contracts under `docs/architecture/contracts/` when a task, contribution, or feedback package is exchanged outside the normal GitHub UI.
+Use the supported Agent Commons contracts under `docs/architecture/contracts/` when a core task, contribution, or feedback package is exchanged outside the normal GitHub UI.
 
 ## Infrastructure and hardware contributions
 
-Agent Commons also has an experimental infrastructure laboratory for contributed test hardware and operational evidence. See the **Infrastructure and hardware laboratory** section of `docs/architecture/AGENT-COMMONS.md` and these contracts:
+Agent Commons also has an experimental infrastructure laboratory for contributed test hardware and operational evidence. See the **Infrastructure and hardware laboratory** section of `docs/architecture/AGENT-COMMONS.md`. Its experimental exchange schemas remain under `agent-commons/contracts/` until separately promoted:
 
 - `agent-infrastructure-offer.v1.schema.json` — advertises bounded test capacity while granting no authority;
 - `agent-infrastructure-challenge.v1.schema.json` — binds one exact-base hardware or infrastructure task to an offered node profile and safe operation set;
