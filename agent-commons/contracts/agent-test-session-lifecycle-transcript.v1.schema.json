@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/agent-test-session-lifecycle-transcript.v1.schema.json",
+  "title": "AXIOM Agent Test Session Lifecycle Transcript v1",
+  "description": "Bounded portable transcript for a signed test-session lifecycle chain. Persisting this object can preserve replay/revocation evidence across process restart, but this contract does not itself provide a production persistence service.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "ledger_id", "ledger_key_id", "events", "transcript_digest", "production_persistence_claimed"],
+  "properties": {
+    "schema": { "const": "axiom-agent-test-session-lifecycle-transcript.v1" },
+    "ledger_id": { "$ref": "#/$defs/id" },
+    "ledger_key_id": { "$ref": "#/$defs/sha256" },
+    "events": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": { "$ref": "agent-test-session-lifecycle-event.v1.schema.json" }
+    },
+    "transcript_digest": { "$ref": "#/$defs/sha256" },
+    "production_persistence_claimed": { "const": false }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$" },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}
