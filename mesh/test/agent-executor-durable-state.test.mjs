@@ -336,11 +336,23 @@ test('durable filesystem effect is isolated to state format; no process/network/
   assert.equal(controllerSource.includes('node:fs'), false, 'controller should delegate control-state persistence to format module');
   assert.equal(formatSource.includes("from 'node:fs'"), true, 'format module must make its local state filesystem effect explicit');
   for (const source of [controllerSource, formatSource]) {
-    for (const forbidden of [
-      'node:child_process', 'node:dns', 'node:http', 'node:https', 'node:net', 'node:dgram',
-      'node:tls', 'spawn(', 'exec(', 'execfile(', 'fetch(', 'ssh ', 'keychain', 'credential-manager'
+    for (const forbiddenModule of [
+      'node:child_process', 'node:dns', 'node:http', 'node:https', 'node:net', 'node:dgram', 'node:tls'
     ]) {
-      assert.equal(source.includes(forbidden), false, `durable control-state lab must not contain ${forbidden}`);
+      assert.equal(source.includes(forbiddenModule), false, `durable control-state lab must not import ${forbiddenModule}`);
+    }
+    assert.doesNotMatch(
+      source,
+      /(^|[^.\w])(?:spawn|spawnsync|exec|execsync|execfile|execfilesync)\s*\(/m,
+      'durable control-state lab must not directly call a host process API'
+    );
+    assert.doesNotMatch(
+      source,
+      /(^|[^.\w])fetch\s*\(/m,
+      'durable control-state lab must not directly call live fetch'
+    );
+    for (const forbiddenToken of ['ssh ', 'keychain', 'credential-manager']) {
+      assert.equal(source.includes(forbiddenToken), false, `durable control-state lab must not contain ${forbiddenToken}`);
     }
   }
 });
