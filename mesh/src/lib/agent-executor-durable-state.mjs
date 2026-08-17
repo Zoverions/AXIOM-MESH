@@ -410,14 +410,33 @@ export class AgentExecutorDurableConformanceController {
     });
   }
 
-  admit(rawRequest) {
-    try {
-      this.sandbox._validateRequest(rawRequest);
-    } catch {
-      return this.sandbox.admit(rawRequest);
+  _persistSandboxDenial(result) {
+    if (result.decision !== 'denied' || this.store.status !== 'consumed') return result;
+    const observation = result.observation;
+    const durable = this.store.interrupt({
+      eventId: `executor-interrupt:${observation.sequence}`,
+      occurredAt: observation.observed_at,
+      reasonCode: 'executor-policy-denied'
+    });
+    const virtualHead = verifyAgentTestSessionLifecycleTranscript(
+      this.sandbox.lifecycleLedger.exportTranscript(),
+      { trustedLedgerPublicKey: this.store.lifecyclePublicKey }
+    );
+    if (virtualHead.head_event_digest !== durable.record.statement.lifecycle_head_event_digest) {
+      this.store.failed = true;
+      throw new ValidationError('durable and virtual interruption diverged');
     }
+    return result;
+  }
 
-    if (!this.sandbox.lifecycleConsumptionEventDigest) {
+  admit(rawRequest) {
+    if (this.store.status === 'issued') {
+      try {
+        this.sandbox._validateRequest(rawRequest);
+      } catch {
+        return this.sandbox.admit(rawRequest);
+      }
+
       const eventId = `executor-consume:${this.store.plan.plan_digest.slice(0, 24)}`;
       const durable = this.store.consume({
         eventId,
@@ -442,24 +461,11 @@ export class AgentExecutorDurableConformanceController {
       return result;
     }
 
-    const result = this.sandbox.admit(rawRequest);
-    if (result.decision === 'denied' && this.store.status === 'consumed') {
-      const observation = result.observation;
-      const durable = this.store.interrupt({
-        eventId: `executor-interrupt:${observation.sequence}`,
-        occurredAt: observation.observed_at,
-        reasonCode: 'executor-policy-denied'
-      });
-      const virtualHead = verifyAgentTestSessionLifecycleTranscript(
-        this.sandbox.lifecycleLedger.exportTranscript(),
-        { trustedLedgerPublicKey: this.store.lifecyclePublicKey }
-      );
-      if (virtualHead.head_event_digest !== durable.record.statement.lifecycle_head_event_digest) {
-        this.store.failed = true;
-        throw new ValidationError('durable and virtual interruption diverged');
-      }
+    if (this.store.status !== 'consumed') {
+      throw new ValidationError(`durable controller cannot admit from ${this.store.recoveryClassification}`);
     }
-    return result;
+
+    return this._persistSandboxDenial(this.sandbox.admit(rawRequest));
   }
 
   interrupt({ eventId, occurredAt, reasonCode = 'executor-conformance-interrupted' } = {}) {
