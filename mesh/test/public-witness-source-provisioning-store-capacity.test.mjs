@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { generateKeyPairSync } from 'node:crypto';
-import { mkdtemp } from 'node:fs/promises';
+import { mkdtemp, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -24,12 +24,6 @@ test('known local linkage-capacity exhaustion fails before W2c2 mutation', async
   const operator = keys();
   const provisioner = keys();
   const source = keys();
-  const receiver = await openPublicWitnessReceiverStore({
-    statePath: join(dir, 'receiver.jsonl'),
-    domainId: 'axiom.social.public.v1',
-    witnessId: 'capacity-witness',
-    witnessPrivateKey: witness.privateKey
-  });
   const admission = createPublicWitnessSourceAdmission({
     domainId: 'axiom.social.public.v1',
     sourceId: 'capacity-source',
@@ -47,7 +41,38 @@ test('known local linkage-capacity exhaustion fails before W2c2 mutation', async
     expiresAt: '2026-08-17T23:10:00.000Z'
   });
 
+  // First measure one complete three-record application with the same wire shapes.
+  // The actual link_mode (`direct`) is shorter than the reservation preview
+  // (`restart-reconciliation`), so one byte below the completed size is still
+  // guaranteed to be insufficient for the conservative pre-effect reservation.
+  const probeReceiver = await openPublicWitnessReceiverStore({
+    statePath: join(dir, 'probe-receiver.jsonl'),
+    domainId: 'axiom.social.public.v1',
+    witnessId: 'capacity-probe-witness',
+    witnessPrivateKey: witness.privateKey
+  });
+  const probeStatePath = join(dir, 'probe-application.jsonl');
+  const probeStore = await openPublicWitnessSourceProvisioningApplicationStore({
+    statePath: probeStatePath,
+    receiverStore: probeReceiver,
+    domainId: 'axiom.social.public.v1',
+    operatorId: 'capacity-operator',
+    trustedOperatorPublicKey: operator.publicKey,
+    provisionerId: 'capacity-provisioner',
+    provisionerPrivateKey: provisioner.privateKey
+  });
+  await probeStore.apply(command, { appliedAt: '2026-08-17T23:01:00.000Z' });
+  const completedBytes = (await stat(probeStatePath)).size;
+  assert.ok(completedBytes > 1);
+
+  const receiver = await openPublicWitnessReceiverStore({
+    statePath: join(dir, 'receiver.jsonl'),
+    domainId: 'axiom.social.public.v1',
+    witnessId: 'capacity-witness',
+    witnessPrivateKey: witness.privateKey
+  });
   const statePath = join(dir, 'application.jsonl');
+  const maxStateBytes = completedBytes - 1;
   const store = await openPublicWitnessSourceProvisioningApplicationStore({
     statePath,
     receiverStore: receiver,
@@ -56,14 +81,16 @@ test('known local linkage-capacity exhaustion fails before W2c2 mutation', async
     trustedOperatorPublicKey: operator.publicKey,
     provisionerId: 'capacity-provisioner',
     provisionerPrivateKey: provisioner.privateKey,
-    maxStateBytes: 7000,
-    maxRecordBytes: 6000
+    maxStateBytes,
+    maxRecordBytes: maxStateBytes
   });
   const before = receiver.snapshot().durable_record_count;
   await assert.rejects(
     store.apply(command, { appliedAt: '2026-08-17T23:01:00.000Z' }),
-    /lacks reserved capacity for linkage|state capacity is exhausted/
+    /lacks reserved capacity for linkage/
   );
   assert.equal(receiver.snapshot().durable_record_count, before);
   assert.equal(receiver.getSourceAdmission(admission.admission_digest), null);
+  assert.equal(store.snapshot().durable_record_count, 2);
+  assert.equal(store.snapshot().ready_pending_count, 1);
 });
