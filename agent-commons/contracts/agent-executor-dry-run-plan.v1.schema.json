@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/agent-executor-dry-run-plan.v1.schema.json",
+  "title": "AXIOM Agent Executor Dry-Run Plan v1",
+  "description": "Experimental deterministic inert projection of one validated Agent Commons test-session authorization. It describes bounded future executor intent but is structurally non-executing and grants no effect, credential, persistence, production, deployment, or capability authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "compiler", "bindings", "platform", "workspace", "network", "environment", "resources", "steps", "lifecycle", "evidence", "cleanup", "effects", "plan_digest"],
+  "properties": {
+    "schema": { "const": "axiom-agent-executor-dry-run-plan.v1" },
+    "compiler": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "policy_digest", "process_spawn_available", "filesystem_mutation_available", "network_io_available", "secret_lookup_available"],
+      "properties": {
+        "id": { "const": "agent-commons.pre-executor-dry-run" },
+        "version": { "const": 1 },
+        "policy_digest": { "$ref": "#/$defs/sha256" },
+        "process_spawn_available": { "const": false },
+        "filesystem_mutation_available": { "const": false },
+        "network_io_available": { "const": false },
+        "secret_lookup_available": { "const": false }
+      }
+    },
+    "bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authorization_id", "authorization_digest", "sponsor_id", "subject_id", "challenge_id", "offer_id", "node_profile_sha256", "attestation_id", "key_fingerprint_sha256", "lifecycle_ledger_id", "lifecycle_key_id", "lifecycle_head_event_digest", "lifecycle_receipt_digest", "platform_profile_digest"],
+      "properties": {
+        "authorization_id": { "$ref": "#/$defs/id" },
+        "authorization_digest": { "$ref": "#/$defs/sha256" },
+        "sponsor_id": { "$ref": "#/$defs/id" },
+        "subject_id": { "$ref": "#/$defs/id" },
+        "challenge_id": { "$ref": "#/$defs/id" },
+        "offer_id": { "$ref": "#/$defs/id" },
+        "node_profile_sha256": { "$ref": "#/$defs/sha256" },
+        "attestation_id": { "$ref": "#/$defs/id" },
+        "key_fingerprint_sha256": { "$ref": "#/$defs/sha256" },
+        "lifecycle_ledger_id": { "$ref": "#/$defs/id" },
+        "lifecycle_key_id": { "$ref": "#/$defs/sha256" },
+        "lifecycle_head_event_digest": { "$ref": "#/$defs/sha256" },
+        "lifecycle_receipt_digest": { "$ref": "#/$defs/sha256" },
+        "platform_profile_digest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile_id", "operating_system", "architecture", "fact_status", "platform_trust_inferred"],
+      "properties": {
+        "profile_id": { "$ref": "#/$defs/id" },
+        "operating_system": { "enum": ["linux", "windows", "macos"] },
+        "architecture": { "enum": ["x64", "arm64"] },
+        "fact_status": { "enum": ["declared", "measured", "reproduced", "externally-verified"] },
+        "platform_trust_inferred": { "const": false }
+      }
+    },
+    "workspace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root", "relative_only", "traversal_allowed", "symlink_following_allowed", "host_root_access_allowed", "disposable_required"],
+      "properties": {
+        "root": { "const": "work/session" },
+        "relative_only": { "const": true },
+        "traversal_allowed": { "const": false },
+        "symlink_following_allowed": { "const": false },
+        "host_root_access_allowed": { "const": false },
+        "disposable_required": { "const": true }
+      }
+    },
+    "network": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "allowed_origins", "methods", "redirects_allowed", "credentials_allowed", "dynamic_origin_discovery_allowed", "dns_rebinding_protection_required", "resolution_policy"],
+      "properties": {
+        "mode": { "enum": ["none", "bounded-public-read", "owner-lan"] },
+        "allowed_origins": { "type": "array", "maxItems": 32, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 512 } },
+        "methods": { "type": "array", "maxItems": 2, "uniqueItems": true, "items": { "enum": ["GET", "HEAD"] } },
+        "redirects_allowed": { "const": false },
+        "credentials_allowed": { "const": false },
+        "dynamic_origin_discovery_allowed": { "const": false },
+        "dns_rebinding_protection_required": { "type": "boolean" },
+        "resolution_policy": { "enum": ["none", "resolve-and-pin-public", "resolve-and-pin-owner-lan"] }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowed_names", "values_embedded", "path_override_allowed", "secret_values_allowed"],
+      "properties": {
+        "allowed_names": { "type": "array", "uniqueItems": true, "items": { "enum": ["CI", "NO_COLOR"] } },
+        "values_embedded": { "const": false },
+        "path_override_allowed": { "const": false },
+        "secret_values_allowed": { "const": false }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_steps", "max_processes", "max_process_runtime_seconds", "max_total_runtime_seconds", "max_output_bytes", "max_memory_mib"],
+      "properties": {
+        "max_steps": { "type": "integer", "minimum": 1, "maximum": 32 },
+        "max_processes": { "type": "integer", "minimum": 0, "maximum": 8 },
+        "max_process_runtime_seconds": { "type": "integer", "minimum": 1, "maximum": 300 },
+        "max_total_runtime_seconds": { "type": "integer", "minimum": 1, "maximum": 900 },
+        "max_output_bytes": { "type": "integer", "minimum": 1, "maximum": 16777216 },
+        "max_memory_mib": { "type": "integer", "minimum": 1, "maximum": 4096 }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sequence", "step_id", "operation_id", "kind", "executable_id", "arguments", "working_directory", "repository_code_execution", "tool_may_invoke_repository_shell", "package_lifecycle_scripts_allowed", "direct_shell_requested", "elevated_privileges_requested", "persistent_process_requested", "absolute_executable_resolution_required", "network_mode"],
+        "properties": {
+          "sequence": { "type": "integer", "minimum": 1, "maximum": 32 },
+          "step_id": { "$ref": "#/$defs/id" },
+          "operation_id": { "$ref": "#/$defs/id" },
+          "kind": { "enum": ["builtin", "process-template"] },
+          "executable_id": { "type": ["string", "null"], "maxLength": 160 },
+          "arguments": { "type": "array", "maxItems": 16, "items": { "type": "string", "maxLength": 1024 } },
+          "working_directory": { "type": "string", "minLength": 1, "maxLength": 160 },
+          "repository_code_execution": { "type": "boolean" },
+          "tool_may_invoke_repository_shell": { "type": "boolean" },
+          "package_lifecycle_scripts_allowed": { "const": false },
+          "direct_shell_requested": { "const": false },
+          "elevated_privileges_requested": { "const": false },
+          "persistent_process_requested": { "const": false },
+          "absolute_executable_resolution_required": { "const": true },
+          "network_mode": { "enum": ["none", "session-policy"] }
+        }
+      }
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["known_head_only", "global_currentness_claimed", "status_required", "consume_before_first_effect", "completion_requires_executor_receipt", "terminal_on_uncertainty"],
+      "properties": {
+        "known_head_only": { "const": true },
+        "global_currentness_claimed": { "const": false },
+        "status_required": { "const": "issued" },
+        "consume_before_first_effect": { "const": true },
+        "completion_requires_executor_receipt": { "const": true },
+        "terminal_on_uncertainty": { "const": "interrupted" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sanitized_logs_required", "raw_secret_capture_allowed", "stdout_stderr_max_bytes", "task_success_claimed"],
+      "properties": {
+        "sanitized_logs_required": { "const": true },
+        "raw_secret_capture_allowed": { "const": false },
+        "stdout_stderr_max_bytes": { "type": "integer", "minimum": 1, "maximum": 16777216 },
+        "task_success_claimed": { "const": false }
+      }
+    },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workspace_disposal_required", "on_success", "on_failure", "on_interrupt", "persistent_artifacts_allowed"],
+      "properties": {
+        "workspace_disposal_required": { "const": true },
+        "on_success": { "const": true },
+        "on_failure": { "const": true },
+        "on_interrupt": { "const": true },
+        "persistent_artifacts_allowed": { "const": false }
+      }
+    },
+    "effects": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["effect_reachable", "remote_execution", "process_spawned", "filesystem_mutated", "network_performed", "credentials_retrieved", "secrets_retrieved", "service_controlled", "package_installed", "production_enrollment", "firmware_changed", "boot_chain_changed", "purchase_performed", "destructive_action_performed", "deployment_authority", "capability_promoted"],
+      "properties": {
+        "effect_reachable": { "const": false },
+        "remote_execution": { "const": false },
+        "process_spawned": { "const": false },
+        "filesystem_mutated": { "const": false },
+        "network_performed": { "const": false },
+        "credentials_retrieved": { "const": false },
+        "secrets_retrieved": { "const": false },
+        "service_controlled": { "const": false },
+        "package_installed": { "const": false },
+        "production_enrollment": { "const": false },
+        "firmware_changed": { "const": false },
+        "boot_chain_changed": { "const": false },
+        "purchase_performed": { "const": false },
+        "destructive_action_performed": { "const": false },
+        "deployment_authority": { "const": false },
+        "capability_promoted": { "const": false }
+      }
+    },
+    "plan_digest": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$" },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}
