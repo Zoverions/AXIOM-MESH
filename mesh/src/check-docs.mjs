@@ -499,8 +499,8 @@ function verifyComputedDocumentationClaims(contents, capabilityRegistry) {
   const claims = [
     ['README.md', `permits only ${network.routes} current internal`],
     ['mesh/README.md', `covers all ${gatewayRoutes} authenticated`],
-    ['docs/PRODUCTION-GRADE.md', `permits only ${network.routes} current internal`],
-    ['docs/PRODUCTION-GRADE.md', `versioned ${gatewayRoutes}-route client`],
+    ['docs/PRODUCTION-GRADE.md', `default-deny ${network.routes}-route policy`],
+    ['docs/PRODUCTION-GRADE.md', `${gatewayRoutes} authenticated Gateway routes`],
     ['mesh/PRODUCTION.md', `policy additionally authorizes only ${network.routes} exact caller/destination/method/route`],
     ['docs/rebuild/PRODUCT-DEFINITION.md', `authorizes only ${network.routes} exact caller`],
     ['docs/PROJECT-STATUS-2026.md', `default-deny ${network.routes}-route application`],
