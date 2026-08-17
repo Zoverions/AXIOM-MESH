@@ -53,7 +53,7 @@ Use the Agent Commons contracts under `docs/architecture/contracts/` when a task
 
 ## Infrastructure and hardware contributions
 
-Agent Commons also has an experimental infrastructure laboratory for contributed test hardware and operational evidence. See `docs/architecture/AGENT-COMMONS-INFRASTRUCTURE-LAB.md` and these contracts:
+Agent Commons also has an experimental infrastructure laboratory for contributed test hardware and operational evidence. See the **Infrastructure and hardware laboratory** section of `docs/architecture/AGENT-COMMONS.md` and these contracts:
 
 - `agent-infrastructure-offer.v1.schema.json` — advertises bounded test capacity while granting no authority;
 - `agent-infrastructure-challenge.v1.schema.json` — binds one exact-base hardware or infrastructure task to an offered node profile and safe operation set;
@@ -100,4 +100,4 @@ Installation of an agent runtime, plugin, skill, MCP server, A2A peer, external 
 
 Agent Commons is an architecture and contribution-interface initiative. It does **not** currently claim a deployed agent federation, autonomous merge bot, production A2A endpoint, production MCP collaboration endpoint, portable cross-network reputation system, production remote-administration service, automatic hardware enrollment, or permission for external agents to execute consequential AXIOM effects.
 
-See `docs/architecture/AGENT-COMMONS.md` for the design boundary and promotion plan, and `docs/architecture/AGENT-COMMONS-INFRASTRUCTURE-LAB.md` for the hardware/testing boundary.
+See `docs/architecture/AGENT-COMMONS.md` for the design boundary, hardware/testing laboratory, and promotion plan.
