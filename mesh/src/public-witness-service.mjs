@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { lstat, readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -17,6 +17,8 @@ const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
 const DEFAULT_MAX_REQUEST_BYTES = 2 * 1024 * 1024;
 const HARD_MAX_REQUEST_BYTES = 16 * 1024 * 1024;
+const MAX_CONFIG_FILE_BYTES = 64 * 1024;
+const MAX_WITNESS_KEY_FILE_BYTES = 64 * 1024;
 const OPERATIONS = new Set([
   'observe-credential',
   'observe-revocation',
@@ -49,7 +51,9 @@ function digest(value, label) {
 
 function optionalPositiveInteger(value, label) {
   if (value === null) return undefined;
-  if (!Number.isSafeInteger(value) || value < 1) throw new ValidationError(`${label} must be a positive safe integer or null`);
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new ValidationError(`${label} must be a positive safe integer or null`);
+  }
   return value;
 }
 
@@ -59,6 +63,21 @@ function boundedInteger(value, label, fallback, max) {
     throw new ValidationError(`${label} must be a positive safe integer no greater than ${max}`);
   }
   return normalized;
+}
+
+async function readBoundedRegularTextFile(path, label, maxBytes) {
+  const info = await lstat(path);
+  if (info.isSymbolicLink() || !info.isFile()) {
+    throw new ValidationError(`${label} must be a regular non-symlink file`);
+  }
+  if (info.size > maxBytes) {
+    throw new ValidationError(`${label} exceeds configured byte limit`);
+  }
+  const text = await readFile(path, 'utf8');
+  if (Buffer.byteLength(text, 'utf8') > maxBytes) {
+    throw new ValidationError(`${label} exceeds configured byte limit`);
+  }
+  return text;
 }
 
 export function normalizePublicWitnessProcessConfig(raw, configPath = '.') {
@@ -80,7 +99,9 @@ export function normalizePublicWitnessProcessConfig(raw, configPath = '.') {
   const base = dirname(resolve(configPath));
   const privateKeyPath = resolve(base, assertString(value.witness_private_key_path, 'witness_private_key_path', { min: 1, max: 4096 }));
   const statePath = resolve(base, assertString(value.state_path, 'state_path', { min: 1, max: 4096 }));
-  if (privateKeyPath === statePath) throw new ValidationError('public witness key path and state path must be distinct');
+  if (privateKeyPath === statePath) {
+    throw new ValidationError('public witness key path and state path must be distinct');
+  }
   return Object.freeze({
     schema: PUBLIC_WITNESS_PROCESS_CONFIG_SCHEMA,
     domain_id: identifier(value.domain_id, 'domain_id'),
@@ -99,13 +120,23 @@ export async function loadPublicWitnessProcessRuntime(configPath) {
   const path = resolve(assertString(configPath, 'public witness config path', { min: 1, max: 4096 }));
   let parsed;
   try {
-    parsed = JSON.parse(await readFile(path, 'utf8'));
+    parsed = JSON.parse(await readBoundedRegularTextFile(
+      path,
+      'public witness process config file',
+      MAX_CONFIG_FILE_BYTES
+    ));
   } catch (error) {
-    if (error instanceof SyntaxError) throw new ValidationError('public witness process config is not valid JSON');
+    if (error instanceof SyntaxError) {
+      throw new ValidationError('public witness process config is not valid JSON');
+    }
     throw error;
   }
   const config = normalizePublicWitnessProcessConfig(parsed, path);
-  const witnessPrivateKey = await readFile(config.witness_private_key_path, 'utf8');
+  const witnessPrivateKey = await readBoundedRegularTextFile(
+    config.witness_private_key_path,
+    'public witness private key file',
+    MAX_WITNESS_KEY_FILE_BYTES
+  );
   const store = await openPublicWitnessDurableStore({
     statePath: config.state_path,
     domainId: config.domain_id,
@@ -125,7 +156,9 @@ function normalizeRequest(raw) {
     throw new ValidationError('public witness process request schema is unsupported');
   }
   const operation = assertString(value.operation, 'public witness process operation');
-  if (!OPERATIONS.has(operation)) throw new ValidationError('public witness process operation is unsupported');
+  if (!OPERATIONS.has(operation)) {
+    throw new ValidationError('public witness process operation is unsupported');
+  }
   if (!value.payload || typeof value.payload !== 'object' || Array.isArray(value.payload)) {
     throw new ValidationError('public witness process payload must be an object');
   }
@@ -148,7 +181,11 @@ function response(requestId, ok, body) {
 
 function normalizeObservePayload(operation, payload) {
   if (operation === 'observe-credential') {
-    const value = exactKeys(payload, ['credential', 'trusted_persona_root_public_key', 'observed_at'], 'public witness process credential payload');
+    const value = exactKeys(payload, [
+      'credential',
+      'trusted_persona_root_public_key',
+      'observed_at'
+    ], 'public witness process credential payload');
     return {
       credential: value.credential,
       trusted_persona_root_public_key: value.trusted_persona_root_public_key,
@@ -156,7 +193,12 @@ function normalizeObservePayload(operation, payload) {
     };
   }
   if (operation === 'observe-revocation') {
-    const value = exactKeys(payload, ['revocation', 'credential', 'trusted_persona_root_public_key', 'observed_at'], 'public witness process revocation payload');
+    const value = exactKeys(payload, [
+      'revocation',
+      'credential',
+      'trusted_persona_root_public_key',
+      'observed_at'
+    ], 'public witness process revocation payload');
     return {
       revocation: value.revocation,
       credential: value.credential,
@@ -243,20 +285,33 @@ async function* boundedLines(input, maxBytes) {
   let pending = Buffer.alloc(0);
   for await (const chunk of input) {
     const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-    pending = Buffer.concat([pending, bytes]);
-    if (pending.length > maxBytes && pending.indexOf(0x0a) === -1) {
-      throw new ValidationError('public witness process request exceeds configured byte limit');
+    let offset = 0;
+    while (offset < bytes.length) {
+      const newline = bytes.indexOf(0x0a, offset);
+      if (newline === -1) {
+        const tail = bytes.subarray(offset);
+        if (pending.length + tail.length > maxBytes) {
+          throw new ValidationError('public witness process request exceeds configured byte limit');
+        }
+        if (tail.length > 0) {
+          pending = pending.length === 0
+            ? Buffer.from(tail)
+            : Buffer.concat([pending, tail], pending.length + tail.length);
+        }
+        break;
+      }
+
+      const segment = bytes.subarray(offset, newline);
+      if (pending.length + segment.length > maxBytes) {
+        throw new ValidationError('public witness process request exceeds configured byte limit');
+      }
+      const line = pending.length === 0
+        ? segment
+        : Buffer.concat([pending, segment], pending.length + segment.length);
+      pending = Buffer.alloc(0);
+      if (line.length > 0) yield line.toString('utf8');
+      offset = newline + 1;
     }
-    while (true) {
-      const newline = pending.indexOf(0x0a);
-      if (newline === -1) break;
-      const line = pending.subarray(0, newline);
-      pending = pending.subarray(newline + 1);
-      if (line.length === 0) continue;
-      if (line.length > maxBytes) throw new ValidationError('public witness process request exceeds configured byte limit');
-      yield line.toString('utf8');
-    }
-    if (pending.length > maxBytes) throw new ValidationError('public witness process request exceeds configured byte limit');
   }
   if (pending.length !== 0) {
     throw new ValidationError('public witness process input ended with an incomplete request');
@@ -287,7 +342,10 @@ export async function runPublicWitnessStdio(runtime, {
       const requestId = typeof parsed?.request_id === 'string' && IDENTIFIER.test(parsed.request_id)
         ? parsed.request_id
         : 'invalid-request';
-      handled = response(requestId, false, Object.freeze({ code: error.code, message: error.message }));
+      handled = response(requestId, false, Object.freeze({
+        code: error.code,
+        message: error.message
+      }));
     }
     output.write(`${JSON.stringify(handled)}\n`);
   }
@@ -303,7 +361,9 @@ export async function runPublicWitnessServiceCommand(argv, io = {}) {
     await runPublicWitnessStdio(runtime, io);
     return runtime.store.snapshot();
   }
-  const result = command === 'verify' ? await runtime.store.verifyState() : runtime.store.snapshot();
+  const result = command === 'verify'
+    ? await runtime.store.verifyState()
+    : runtime.store.snapshot();
   (io.output ?? process.stdout).write(`${JSON.stringify(result)}\n`);
   return result;
 }
