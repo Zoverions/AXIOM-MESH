@@ -184,10 +184,10 @@ test('credential equivocation and signed conflict evidence survive durable resta
   }, { committedAt: T2 });
   assert.equal(conflict.status, 'observed-with-conflict');
   assert.equal(conflict.conflicts[0].statement.conflict_kind, 'credential-epoch');
-  const digest = conflict.conflicts[0].conflict_digest;
+  const conflictDigest = conflict.conflicts[0].conflict_digest;
   const reopened = await storeAt(statePath, witness);
   assert.equal(reopened.listConflicts().length, 1);
-  assert.equal(reopened.listConflicts()[0].conflict_digest, digest);
+  assert.equal(reopened.listConflicts()[0].conflict_digest, conflictDigest);
   assert.equal((await reopened.verifyState()).valid, true);
 });
 
@@ -243,7 +243,7 @@ test('commit timestamps cannot predate observations or move backward', async () 
   );
   await store.commit('observe-credential', credentialRequest(data, T1), { committedAt: T2 });
   await assert.rejects(
-    () => store.commit('observe-journal', journalRequest(data, T2), { committedAt: T1 }),
+    () => store.commit('observe-journal', journalRequest(data, T1), { committedAt: T1 }),
     /cannot move backward/
   );
 });
