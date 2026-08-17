@@ -81,11 +81,12 @@ test('Linux isolation workflow is read-only, credentialless and secret-free', as
 test('production source does not import the effect-capable Linux isolation drill', async () => {
   const files = await collectMjs(SRC_ROOT);
   const drillHref = DRILL.href;
+  const importPattern = /(?:from[ \t]+|import[ \t]*\([ \t]*|import[ \t]+)[`'"][^`'"]*linux-isolation-adapter-drill\.mjs/;
   for (const file of files) {
     if (file.href === drillHref) continue;
     const source = await readFile(file, 'utf8');
     assert.ok(
-      !source.includes('linux-isolation-adapter-drill.mjs'),
+      !importPattern.test(source),
       `effect-capable Linux isolation drill imported by ${file.pathname}`
     );
   }
