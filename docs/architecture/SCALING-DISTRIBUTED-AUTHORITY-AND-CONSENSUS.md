@@ -489,6 +489,18 @@ The current executable laboratories remain outside supported Grid authority:
   combined. A resolver result is independently normalized and must exactly
   match the presented certificate digest, source ID, and source epoch before the
   request can reach W2c2;
+- `mesh/src/lib/public-witness-source-provisioning.mjs` adds W2c4d1 as a pure,
+  short-lived source-provisioning authorization artifact. A trusted local
+  Ed25519 operator key signs one exact W2c1 source admission, source epoch,
+  predecessor-admission digest, command ID, and bounded authorization window.
+  The artifact names only the future W2c2 action `admit-exact-source-epoch`; it
+  does not call `admitSource()` or otherwise mutate receiver state;
+- `mesh/test/public-witness-source-provisioning.test.mjs` verifies exact
+  admission/predecessor binding, operator-key and signature substitution
+  rejection, source/admission/statement tamper rejection, not-yet-active and
+  expired authorization, configured and hard lifetime ceilings, source-
+  admission validity bounds, source-key non-substitutability, and rejection of
+  remote self-provisioning or widened authority claims;
 - `npm run public-witness:start -- <config.json>` and
   `npm run public-witness:verify -- <config.json>` operate the W2b standalone
   local laboratory without adding it to the four-process Grid runtime;
@@ -497,7 +509,7 @@ The current executable laboratories remain outside supported Grid authority:
   DNS/peer discovery or outbound fetch and exposes no source-admission or
   persona-root enrollment endpoint; and
 - the accepted no-egress social storage composition remains unchanged. W2c3,
-  W2c4a, W2c4b, and W2c4c are not imported into the supported
+  W2c4a, W2c4b, W2c4c, and W2c4d1 are not imported into the supported
   Grid/Gateway/Hypervisor/Sandbox runtime and do not promote federation, archive
   availability, quorum, consensus, finality, social mutation, or any capability-
   registry claim.
@@ -818,6 +830,38 @@ perform discovery or outbound acquisition, expose a public deployment wrapper,
 or claim globally current source status, federation, archive availability,
 quorum, consensus, or finality.
 
+W2c4d1 adds a **pure source-provisioning authorization laboratory** before any
+new W2c2 admission effect path is introduced. A trusted local Ed25519 operator
+key signs a short-lived command binding one exact W2c1 source admission, domain,
+source ID/key, source epoch, admission digest, command ID, authorization window,
+and the predecessor-admission digest for non-genesis epochs. Epoch 1 requires a
+null predecessor; later epochs require one exact predecessor digest. The command
+is valid only during its authorization window, that window must remain within
+the source admission's own validity, the caller-configured lifetime ceiling is
+enforced even for an explicit expiry, and the protocol also imposes a hard
+one-hour maximum.
+
+Unlike the prior W2c4 trust/control layers, source admission is itself a real
+local trust mutation. W2c4d1 therefore does not falsely label the authorization
+as authority-free: it declares the narrow `authority_effect` of
+`w2c2-source-admission-only` and `source_trust_effect` of
+`authorize-exact-local-source-admission`. At the same time it explicitly grants
+no persona-root trust, social authority, capability promotion, finality, or
+network effect. Possession of the source's own signing key is not provisioning
+authority and cannot substitute for the separately trusted local operator key.
+The operator signature proves only that the configured local operator key signed
+the exact command; it is not legal-identity evidence or independent proof of
+human approval.
+
+W2c4d1 remains **inert authorization evidence**. It does not call
+`admitSource()`, append a W2c2 receiver record, expose a provisioning endpoint,
+or retroactively authorize an admission that already exists. W2c2 remains the
+final source-epoch, exact-predecessor, activation-time, validity, capacity, and
+restart-state oracle. A separate W2c4d2 must durably retain authorization before
+the receiver effect, apply only the exact authorized admission, and reconcile a
+crash after W2c2 commit but before application linkage without manufacturing a
+second admission or silently backdating authorization.
+
 A witness receipt means that the named witness key observed and verified one
 exact signed journal artifact. It does not prove content truth, legal identity,
 human authorship, endorsement, quorum, consensus, or finality. Witnesses are
@@ -849,22 +893,24 @@ The staged roadmap is:
 3. **W2 — witness service laboratory (W2a evidence core, W2b durable local
    process, W2c1 source-transfer protocol, W2c2 durable receiver/reconciliation,
    W2c3 receive-only authenticated mTLS ingress, W2c4a local ingress trust
-   bundles, W2c4b local source-control history, and W2c4c durable applied source
-   control implemented):** the current work provides signed observations,
-   idempotent replay, equivocation/stale-key evidence, witness-signed append-only
-   local state, deterministic fail-closed restart, bounded stdin/stdout IPC,
-   explicit local source admission, source-signed transfer continuity, source-
-   equivocation evidence, separate persona-root trust, historically auditable
-   transfer receipts, restart-safe receiver source-chain/replay state, verified
-   replay, pending-observation separation, crash-window receiver↔witness
-   reconciliation, exact certificate-to-source-epoch transport binding, bounded
-   HTTPS intake, mTLS socket fault evidence, content-addressed generation-chained
-   local ingress trust bindings that cannot mint receiver source trust, content-
-   addressed source-control history for certificate rotation/next-epoch source
-   rotation/disable trust contraction, operator-signed durable control
-   application, and live fail-closed source-binding resolution for subsequent
-   requests. Remaining W2 work includes explicit W2c2 source-admission
-   provisioning/activation, operator-key lifecycle/rotation and stronger host
+   bundles, W2c4b local source-control history, W2c4c durable applied source
+   control, and W2c4d1 source-provisioning authorization implemented):** the
+   current work provides signed observations, idempotent replay,
+   equivocation/stale-key evidence, witness-signed append-only local state,
+   deterministic fail-closed restart, bounded stdin/stdout IPC, explicit local
+   source admission, source-signed transfer continuity, source-equivocation
+   evidence, separate persona-root trust, historically auditable transfer
+   receipts, restart-safe receiver source-chain/replay state, verified replay,
+   pending-observation separation, crash-window receiver↔witness reconciliation,
+   exact certificate-to-source-epoch transport binding, bounded HTTPS intake,
+   mTLS socket fault evidence, content-addressed generation-chained local ingress
+   trust bindings that cannot mint receiver source trust, content-addressed
+   source-control history for certificate rotation/next-epoch source rotation/
+   disable trust contraction, operator-signed durable control application, live
+   fail-closed source-binding resolution for subsequent requests, and short-lived
+   operator-signed authorization for one exact future W2c2 source-admission
+   effect. Remaining W2 work includes W2c4d2 durable crash-safe provisioning
+   application/reconciliation, operator-key lifecycle/rotation and stronger host
    trust if required, a separately reviewed public deployment wrapper if
    justified, discovery/outbound acquisition policy if justified, independently
    operated hosts, broader remote abuse/resource testing, and multi-witness
@@ -880,8 +926,9 @@ The staged roadmap is:
    source transfer chains/equivocation, package-verification receipts, durable
    receiver intake/linkage records, authenticated transport bindings, ingress
    trust-bundle generations, source-control histories, operator-signed applied
-   source-control records, checkpoints, availability, and any optional finality
-   certificate while preserving explicit non-claims; and
+   source-control records, source-provisioning authorization commands,
+   checkpoints, availability, and any optional finality certificate while
+   preserving explicit non-claims; and
 7. **W6 — promotion:** only after applicable protocol, security, privacy,
    operational, scale, governance, and independent-review gates pass.
 
@@ -892,10 +939,11 @@ conflict evidence rather than silently choosing one. W2c1, W2c2, and W2c3 apply
 the same rule to an admitted source that signs competing transfer packages at
 one source position, with W2c2 durably retaining the conflict across restart and
 W2c3 proving the same result survives authenticated socket delivery. W2c4a,
-W2c4b, and W2c4c cannot resolve or suppress that conflict because they bind and
-apply local ingress trust/control only; they do not select a preferred source
-artifact. Future multi-witness and agreement protocols must preserve both forms
-of conflict rather than silently select a winner.
+W2c4b, W2c4c, and W2c4d1 cannot resolve or suppress that conflict: the first
+three bind/apply local ingress trust/control, while d1 only authorizes one exact
+future source-admission effect. None selects a preferred source artifact.
+Future multi-witness and agreement protocols must preserve both forms of
+conflict rather than silently select a winner.
 
 ## Required future agreement interface
 
