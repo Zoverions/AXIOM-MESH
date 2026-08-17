@@ -45,7 +45,7 @@ test('accepted social storage descriptor activates local schemas without mutatio
   assert.equal(ACCEPTED_SOCIAL_STORAGE.authority_effect, 'none');
 });
 
-test('accepted store initializes remote review schemas but no transport schema', async t => {
+test('accepted store initializes exact remote review schemas but no transport schema', async t => {
   const setup = await storeFixture();
   t.after(async () => {
     setup.store.close();
@@ -54,6 +54,11 @@ test('accepted store initializes remote review schemas but no transport schema',
 
   const status = setup.store.getStatus();
   assert.deepEqual(status.accepted_social_storage, ACCEPTED_SOCIAL_STORAGE);
+  assert.equal(status.remote_social_schema_version, 1);
+  assert.equal(status.remote_social_admission_schema_version, 1);
+  assert.equal(status.remote_social_following_schema_version, 1);
+  assert.equal(status.remote_social_retention_schema_version, 1);
+  assert.equal(status.remote_social_abuse_schema_version, 1);
   assert.equal(status.remote_social_runtime_store.activation_state, 'accepted-local-storage');
   assert.equal(status.remote_social_runtime_store.public_routes, true);
   assert.equal(status.remote_social_runtime_store.public_mutation_routes, false);
@@ -65,7 +70,7 @@ test('accepted store initializes remote review schemas but no transport schema',
     SELECT name FROM sqlite_master WHERE type = 'table'
   `).all().map(row => row.name));
   for (const name of [
-    'remote_social_packages',
+    'remote_social_staging',
     'remote_social_admissions',
     'remote_social_observations',
     'remote_social_follows',
