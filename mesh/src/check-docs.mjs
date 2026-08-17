@@ -51,6 +51,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/reviews/AGENT-INTEROPERABILITY-ARCHITECTURE-REVIEW-2026-08-09.md',
   'docs/security/CREDENTIAL-HISTORY-REVOCATION.md',
   'docs/security/CURRENT-BUILD-THREAT-MODEL.md',
+  'docs/security/REMOTE-SOCIAL-THREAT-REVIEW.md',
   'docs/security/DENY-EGRESS-BOUNDARY.md',
   'docs/security/INDEPENDENT-SECURITY-REVIEW.md',
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md',
@@ -232,9 +233,18 @@ const REQUIRED_CONTENT = Object.freeze({
   ],
   'docs/security/CURRENT-BUILD-THREAT-MODEL.md': [
     '## Supported system and trust boundary',
+    'REMOTE-SOCIAL-THREAT-REVIEW.md',
     '## Assets and security objectives',
     '## Threat analysis',
     '## Residual risk and non-claims'
+  ],
+  'docs/security/REMOTE-SOCIAL-THREAT-REVIEW.md': [
+    '## Current activation boundary',
+    '## Trust statements that must not be collapsed',
+    '## Required security properties by layer',
+    '## Future relay review boundary',
+    '## Independent review scope',
+    '## Non-claims'
   ],
   'docs/security/DENY-EGRESS-BOUNDARY.md': [
     '## Enforced topology',
@@ -378,6 +388,7 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/reviews/AGENT-INTEROPERABILITY-ARCHITECTURE-REVIEW-2026-08-09.md': 7_000,
   'docs/security/CREDENTIAL-HISTORY-REVOCATION.md': 2_500,
   'docs/security/CURRENT-BUILD-THREAT-MODEL.md': 5_000,
+  'docs/security/REMOTE-SOCIAL-THREAT-REVIEW.md': 5_000,
   'docs/security/DENY-EGRESS-BOUNDARY.md': 2_500,
   'docs/security/INDEPENDENT-SECURITY-REVIEW.md': 5_000,
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md': 4_000,
