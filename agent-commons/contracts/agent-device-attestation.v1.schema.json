@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/agent-device-attestation.v1.schema.json",
+  "title": "AXIOM Agent Device Attestation v1",
+  "description": "Experimental key-possession attestation for contributed test hardware. It binds a fresh offer/profile statement to an Ed25519 key but does not prove physical ownership, secure-element custody, boot integrity, platform trust, production admission, or execution authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "statement", "key", "signature_base64", "evidence_refs", "boundaries"],
+  "properties": {
+    "schema": { "const": "axiom-agent-device-attestation.v1" },
+    "statement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attestation_id", "repository", "offer_id", "node_profile_sha256", "nonce", "issued_at", "expires_at", "claims"],
+      "properties": {
+        "attestation_id": { "$ref": "#/$defs/id" },
+        "repository": { "const": "Zoverions/AXIOM-MESH" },
+        "offer_id": { "$ref": "#/$defs/id" },
+        "node_profile_sha256": { "$ref": "#/$defs/sha256" },
+        "nonce": { "type": "string", "pattern": "^[A-Za-z0-9_-]{22,128}$" },
+        "issued_at": { "type": "string", "format": "date-time" },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "claims": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["physical_ownership_verified", "platform_backed_key_verified", "secure_element_verified", "boot_integrity_verified", "external_verifier_confirmed"],
+          "properties": {
+            "physical_ownership_verified": { "const": false },
+            "platform_backed_key_verified": { "const": false },
+            "secure_element_verified": { "const": false },
+            "boot_integrity_verified": { "const": false },
+            "external_verifier_confirmed": { "const": false }
+          }
+        }
+      }
+    },
+    "key": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "public_key_spki_der_base64", "fingerprint_sha256"],
+      "properties": {
+        "algorithm": { "const": "ed25519" },
+        "public_key_spki_der_base64": { "type": "string", "minLength": 40, "maxLength": 512 },
+        "fingerprint_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "signature_base64": { "type": "string", "minLength": 80, "maxLength": 128 },
+    "evidence_refs": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 1024 }
+    },
+    "boundaries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["production_enrollment_allowed", "remote_execution_allowed", "credential_issuance_allowed", "secret_access_allowed", "firmware_changes_allowed", "platform_trust_inferred", "authority_granted"],
+      "properties": {
+        "production_enrollment_allowed": { "const": false },
+        "remote_execution_allowed": { "const": false },
+        "credential_issuance_allowed": { "const": false },
+        "secret_access_allowed": { "const": false },
+        "firmware_changes_allowed": { "const": false },
+        "platform_trust_inferred": { "const": false },
+        "authority_granted": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$" },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

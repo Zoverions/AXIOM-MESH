@@ -7,6 +7,8 @@
   "offer_contract": "agent-commons/contracts/agent-infrastructure-offer.v1.schema.json",
   "challenge_contract": "agent-commons/contracts/agent-infrastructure-challenge.v1.schema.json",
   "result_contract": "agent-commons/contracts/agent-infrastructure-result.v1.schema.json",
+  "device_attestation_contract": "agent-commons/contracts/agent-device-attestation.v1.schema.json",
+  "test_session_authorization_contract": "agent-commons/contracts/agent-test-session-authorization.v1.schema.json",
   "challenge_classes": [
     "hardware-validation",
     "test-node-provisioning",
@@ -15,6 +17,8 @@
     "support-assistance",
     "device-lab-capacity"
   ],
+  "device_key_possession_verification_available": true,
+  "test_session_effects_reachable": false,
   "remote_execution_enabled": false,
   "production_node_enrollment_enabled": false,
   "credential_issuance_enabled": false,
