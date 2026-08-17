@@ -67,11 +67,13 @@ The draft object family is deliberately explicit:
 11. `axiom-agent-test-session-lifecycle-transcript.v1` — a bounded portable lifecycle chain for replay/recovery verification when retained externally;
 12. `axiom-agent-executor-platform-profile.v1` — explicit OS/architecture facts with declared/measured/reproduced/externally-verified status and no inferred platform trust;
 13. `axiom-agent-executor-dry-run-plan.v1` — a deterministic inert projection of one exact issued authorization into fixed future-executor templates, limits, evidence obligations, and cleanup requirements;
-14. `axiom-agent-executor-conformance-receipt.v1` — an Ed25519-signed virtual-only observation receipt bound to one exact dry-run plan, lifecycle transition, sandbox policy, and ordered synthetic admissions/denials.
+14. `axiom-agent-executor-conformance-receipt.v1` — an Ed25519-signed virtual-only observation receipt bound to one exact dry-run plan, lifecycle transition, sandbox policy, and ordered synthetic admissions/denials;
+15. `axiom-agent-executor-durable-state-record.v1` — one immutable Ed25519-signed local control-state generation bound to the exact plan and lifecycle head, with no global-currentness, production-persistence, or executor-effect claim;
+16. `axiom-agent-executor-durable-state-receipt.v1` — a separately retainable signed commitment to one exact locally committed durable generation for rollback comparison.
 
 The supported core contribution schemas live under `docs/architecture/contracts/`. Experimental infrastructure-lab exchange schemas remain under `agent-commons/contracts/` until that layer is separately promoted into the supported documentation boundary.
 
-These are exchange and evidence contracts. They do not prove that an external agent, runtime, identity, network, offered device, lifecycle signer, platform profile, compiler, virtual sandbox, or future executor is trustworthy beyond the evidence actually verified.
+These are exchange and evidence contracts. They do not prove that an external agent, runtime, identity, network, offered device, lifecycle signer, platform profile, compiler, virtual sandbox, durable local state store, or future executor is trustworthy beyond the evidence actually verified.
 
 ## Challenge model
 
@@ -158,11 +160,18 @@ Relevant threats include:
 - compiler version, policy digest, platform profile, lifecycle head, or plan substitution;
 - executor-conformance request replay, step reordering, executable/argv substitution, or hazard-marker laundering;
 - synthetic resolution-snapshot substitution, public/owner-LAN address-class confusion, or effect-time address changes presented as stable resolution;
-- executor-conformance receipt tampering, signer substitution, or elevation of virtual observations into real-effect, task-success, deployment, or capability claims.
+- executor-conformance receipt tampering, signer substitution, or elevation of virtual observations into real-effect, task-success, deployment, or capability claims;
+- concurrent durable writers extending one authorization state;
+- expired or forged writer leases, stale-writer resurrection, or event-time backdating used to bypass lease expiry;
+- crash after durable consumption but before virtual admission being misrepresented as an unused authorization;
+- abandoned temporary records, truncated committed records, generation gaps, same-generation conflicts, predecessor substitution, or local record rollback;
+- store-key or lifecycle-key substitution during recovery;
+- an authentic older durable prefix being presented as current after a newer externally committed head existed;
+- durable local control-state evidence being upgraded into power-loss/media durability, global currentness, distributed consensus, production persistence, or execution authority.
 
 Required controls include exact-base binding, bounded inputs, protected CI, provenance capture, secret isolation, security-report routing, independent review for consequential changes, and no merge or infrastructure authority for external agents merely from participation.
 
-The machine-readable pre-executor threat ledger is `agent-commons/pre-executor-threat-model.json`. The machine-readable virtual executor-conformance threat ledger is `agent-commons/executor-conformance-threat-model.json`. Neither threat ledger is itself an effect capability.
+The machine-readable pre-executor threat ledger is `agent-commons/pre-executor-threat-model.json`. The machine-readable virtual executor-conformance threat ledger is `agent-commons/executor-conformance-threat-model.json`. The machine-readable durable executor-state threat ledger is `agent-commons/executor-durable-state-threat-model.json`. None of these threat ledgers is itself an effect capability.
 
 ## GitHub integration
 
@@ -326,12 +335,54 @@ A valid conformance receipt therefore proves only that this virtual laboratory c
 
 The machine-readable threat ledger for this gate is `agent-commons/executor-conformance-threat-model.json`. It keeps the remaining promotion blockers explicit: no real process launcher, no OS sandbox, no live DNS pinning, no durable atomic executor/lifecycle store, no real package/build/test execution, and no remote hardware or credential broker.
 
+### Durable atomic executor lifecycle state laboratory
+
+`mesh/src/lib/agent-executor-durable-format.mjs` and `mesh/src/lib/agent-executor-durable-state.mjs` add the next deliberately narrow gate: crash/restart-resistant **local lifecycle-control persistence** around the still-virtual executor-conformance sandbox.
+
+Core durability invariant:
+
+> **A restart may lose availability; it must not restore spendable authorization, erase a known revocation or terminal state, or convert uncertainty into permission.**
+
+Unlike the virtual conformance sandbox, this laboratory intentionally performs one real local effect: it writes signed control-state evidence inside a caller-supplied absolute state root and a hash-derived per-store directory. That filesystem effect is explicit. It does not mutate the repository workspace, accept arbitrary destination paths, create processes, open live network connections, retrieve credentials or secrets, control services, install packages, open a remote shell, or act on contributed hardware.
+
+The durable store uses immutable canonical generations. Each generation binds:
+
+- exact durable-store key and policy digest;
+- monotonic generation number and predecessor record digest;
+- exact authorization and dry-run plan digests;
+- exact lifecycle ledger/key/status/event count/head digest/receipt digest;
+- optional virtual conformance receipt digest;
+- hard-false global-currentness, production-persistence, effect-reachability, and authority claims.
+
+A generation is written to a unique temporary file, file-`fsync`ed, then atomically renamed to `gNNNNNNNN-<digest>.json`; the record directory is synchronized where the host filesystem supports it. Abandoned temporary files are not committed generations. Startup fails closed on malformed, truncated, noncanonical, oversized, signature-invalid, filename/digest-mismatched, missing-generation, same-generation-conflict, predecessor-drift, key-substituted, or lifecycle-binding-invalid committed records.
+
+One signed writer lease binds the store, plan, authorization, owner, opaque owner-token digest, acquisition time, and bounded expiry. Every transition rechecks the exact on-disk lease and rereads the committed head. An active competing writer fails closed. An expired lock cannot be recovered over an existing state chain unless the recovering process supplies a separately retained signed durable-head receipt that exactly matches the local committed head. Successful stale-lock recovery archives the old lock; a still-running old writer is then fenced by lock/token mismatch. Lease freshness is evaluated from the store's trusted clock rather than a caller-controlled lifecycle event timestamp, so backdating an event cannot resurrect an expired writer.
+
+For the first policy-admissible virtual request, the durable controller orders state as:
+
+```text
+virtual policy preflight
+  -> durable lifecycle consume generation committed
+  -> virtual sandbox admission
+  -> exact consume-event digest parity check
+```
+
+Therefore a crash after durable consumption but before virtual admission recovers as `consumed-uncertain-no-resume`, never `issued`. The laboratory deliberately prefers lost availability to replayable authority. A denial before consumption leaves the durable lifecycle `issued`. A denial after consumption must be mirrored as durable terminal `interrupted` state, and the durable/virtual interruption head digests must match. Manual completion or interruption is also produced independently by the virtual and durable lifecycle clones and requires exact event-digest parity.
+
+A terminal virtual conformance receipt may be attached only when it binds the exact already committed lifecycle status, head digest, and lifecycle receipt digest. The durable attachment generation reuses that committed lifecycle evidence rather than minting a merely equivalent new head receipt.
+
+The durable store can produce `axiom-agent-executor-durable-state-receipt.v1`, a signed commitment to one exact locally committed generation. That receipt is designed for **separate retention** so a later recovery can detect rollback to an authentic older local prefix. The store itself does not claim to retain the receipt independently. Without an external head commitment, an authentic older local prefix remains authentic and cannot honestly prove that a later suffix never existed.
+
+The current durability evidence is scoped to process-restart and local filesystem commit ordering. File `fsync`, directory synchronization where supported, and atomic rename are not represented as proof of storage-media survival across sudden power loss, controller/drive-cache behavior, filesystem corruption, hardware monotonicity, independent replication, distributed consensus, or global revocation currentness. Those remain separate promotion problems.
+
+The machine-readable threat ledger for this gate is `agent-commons/executor-durable-state-threat-model.json`. Passing this laboratory does not create a production database, replicated state service, distributed writer lease, hardware-backed monotonic counter, HSM/TPM/Secure Enclave persistence layer, OS sandbox, live network executor, credential broker, production node enrollment path, or real hardware executor.
+
 ### Future executor promotion boundary
 
 An effect-reachable executor remains a separate promotion problem. At minimum it would require:
 
 - authenticated sponsor identity and current authorization verification;
-- durable one-time lifecycle consumption and revocation/head retention;
+- production-grade durable one-time lifecycle consumption and revocation/head retention, including an explicit currentness/replication model rather than only this local laboratory;
 - pinned absolute executable resolution without ambient PATH authority;
 - isolated disposable sandboxing for repository code;
 - filesystem/root/symlink enforcement independent of repository code;
@@ -341,7 +392,7 @@ An effect-reachable executor remains a separate promotion problem. At minimum it
 - executor-originated effect receipts bound to the compiled plan and lifecycle transition;
 - independent threat/security review and protected promotion.
 
-The virtual executor-conformance sandbox reduces ambiguity about those enforcement semantics, but it satisfies none of the operating-system, live-network, durable-currentness, package-execution, or remote-hardware requirements by simulation alone.
+The virtual executor-conformance sandbox reduces ambiguity about enforcement semantics. The durable-state laboratory additionally proves local restart ordering and one-time-consumption recovery semantics. Neither laboratory establishes operating-system isolation, live-network enforcement, storage-media/power-loss durability, distributed/global currentness, package execution, or remote-hardware safety.
 
 Remote access is not part of the current effect path. An offer may state that remote access is technically available, but credentials, tunnels, remote shells, device-management enrollment, and unattended administration require a separate future design.
 
@@ -426,6 +477,10 @@ Where practical, retain publication provenance and external identifiers so annou
 - virtual executor-conformance sandbox with exact step/executable/argv/path/network/resource admission semantics and no host effects;
 - Ed25519-signed virtual conformance receipts bound to exact plan and lifecycle evidence;
 - machine-readable executor-conformance threat model and explicit real-executor promotion blockers;
+- signed immutable local executor-state generations with exclusive-writer fencing and fsync/temp/atomic-rename commit discipline;
+- durable consumption-before-admission ordering and fail-closed `consumed-uncertain-no-resume` restart semantics;
+- separately retainable durable-head receipts for rollback comparison without a global-currentness claim;
+- machine-readable durable executor-state threat model and explicit storage/consensus/power-loss promotion blockers;
 - declared/measured/reproduced/externally-verified evidence separation;
 - no effect-reachable remote administration, package/service execution, live network execution, or production-enrollment authority.
 
@@ -457,7 +512,13 @@ Any write-capable external adapter or remote infrastructure executor requires a 
 22. A denied request before consumption leaves the laboratory lifecycle unconsumed; a policy denial after consumption terminates it as interrupted rather than permitting completion.
 23. A conformance receipt cannot claim task success, real process/filesystem/network/package effects, production enrollment, deployment authority, or capability promotion.
 24. A valid conformance receipt is not evidence of operating-system isolation, live DNS pinning, real package/build/test execution, remote hardware enforcement, or task success.
-25. Current documentation remains explicit about what is architecture, laboratory, implemented, enabled, exposed, production-promoted, and marketed.
+25. The durable executor-state laboratory may mutate only its dedicated control-state directory; it cannot turn that narrow storage effect into repository-workspace mutation, arbitrary host-path authority, process/network/package/service execution, or hardware control.
+26. A first virtually admissible request must commit durable one-time lifecycle consumption before virtual admission; a recovered consumed state is non-resumable and cannot be rewritten as issued.
+27. Active concurrent writers fail closed, stale-writer recovery requires an exact separately retained durable-head receipt, and writer-lease freshness cannot be widened by a caller-controlled event timestamp.
+28. Durable recovery rejects malformed/torn committed generations, generation gaps or conflicts, predecessor drift, signer substitution, lifecycle/plan binding drift, and terminal-state rewrites.
+29. A durable local chain cannot claim that no newer suffix existed; rollback detection depends on a separately retained signed durable-head commitment, and neither object claims global currentness.
+30. Durable local commit evidence is not evidence of storage-media/power-loss survival, hardware monotonicity, distributed consensus, production persistence, real executor effects, or production authority.
+31. Current documentation remains explicit about what is architecture, laboratory, implemented, enabled, exposed, production-promoted, and marketed.
 
 ## Current non-claims
 
@@ -483,8 +544,11 @@ This document does not claim:
 - an executor-originated real remote-effect receipt;
 - an effect-reachable dry-run plan or compiler;
 - a production executor-conformance service or operating-system sandbox;
+- a production durable executor-state database, replicated state service, distributed lease service, or globally current revocation oracle;
+- a hardware-backed monotonic counter or HSM/TPM/Secure Enclave durable-state guarantee;
+- storage-media, drive-cache, filesystem-corruption, or sudden-power-loss survival guarantees from the local durability laboratory;
 - live DNS resolution/pinning enforcement for Agent Commons execution;
-- real package installation, build, test, process, filesystem, network, service, or hardware effects from the virtual conformance laboratory;
+- real package installation, build, test, process, repository-workspace, arbitrary host-path, network, service, or hardware effects beyond the durable laboratory's dedicated local control-state files;
 - a production package installer, service manager, shell, tunnel, credential broker, or remote-control daemon;
 - secure remote-shell infrastructure;
 - firmware-management authority;
