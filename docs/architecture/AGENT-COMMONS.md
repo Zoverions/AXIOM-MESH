@@ -69,11 +69,12 @@ The draft object family is deliberately explicit:
 13. `axiom-agent-executor-dry-run-plan.v1` — a deterministic inert projection of one exact issued authorization into fixed future-executor templates, limits, evidence obligations, and cleanup requirements;
 14. `axiom-agent-executor-conformance-receipt.v1` — an Ed25519-signed virtual-only observation receipt bound to one exact dry-run plan, lifecycle transition, sandbox policy, and ordered synthetic admissions/denials;
 15. `axiom-agent-executor-durable-state-record.v1` — one immutable Ed25519-signed local control-state generation bound to the exact plan and lifecycle head, with no global-currentness, production-persistence, or executor-effect claim;
-16. `axiom-agent-executor-durable-state-receipt.v1` — a separately retainable signed commitment to one exact locally committed durable generation for rollback comparison.
+16. `axiom-agent-executor-durable-state-receipt.v1` — a separately retainable signed commitment to one exact locally committed durable generation for rollback comparison;
+17. `axiom-agent-executor-isolation-profile.v1` — an exact platform-profile-bound requirement/evidence object for one reviewed Linux, macOS, or Windows isolation policy whose validation grants no real isolation or effect admission.
 
 The supported core contribution schemas live under `docs/architecture/contracts/`. Experimental infrastructure-lab exchange schemas remain under `agent-commons/contracts/` until that layer is separately promoted into the supported documentation boundary.
 
-These are exchange and evidence contracts. They do not prove that an external agent, runtime, identity, network, offered device, lifecycle signer, platform profile, compiler, virtual sandbox, durable local state store, or future executor is trustworthy beyond the evidence actually verified.
+These are exchange and evidence contracts. They do not prove that an external agent, runtime, identity, network, offered device, lifecycle signer, platform profile, compiler, virtual sandbox, durable local state store, isolation profile, reviewed mechanism family, or future executor is trustworthy beyond the evidence actually verified.
 
 ## Challenge model
 
@@ -167,11 +168,19 @@ Relevant threats include:
 - abandoned temporary records, truncated committed records, generation gaps, same-generation conflicts, predecessor substitution, or local record rollback;
 - store-key or lifecycle-key substitution during recovery;
 - an authentic older durable prefix being presented as current after a newer externally committed head existed;
-- durable local control-state evidence being upgraded into power-loss/media durability, global currentness, distributed consensus, production persistence, or execution authority.
+- durable local control-state evidence being upgraded into power-loss/media durability, global currentness, distributed consensus, production persistence, or execution authority;
+- an operating-system name being treated as evidence that an isolation boundary exists;
+- hosted CI compatibility being upgraded into physical-device or production-isolation proof;
+- a named namespace, VM, container, job, token, syscall filter, resource controller, or similar mechanism being treated as proof that the complete isolation policy was enforced;
+- Linux, macOS, or Windows mechanism families being substituted across platform policies;
+- isolation-policy catalog, platform-profile digest, OS, architecture, or repository-code boundary substitution;
+- omission of a reviewed common isolation control or insertion of an unreviewed hidden control;
+- self-asserted `externally-verified` isolation evidence without a separate verifier confirmation;
+- a validated isolation profile or verifier confirmation being elevated into real OS enforcement, effect admission, production readiness, deployment authority, or capability promotion.
 
 Required controls include exact-base binding, bounded inputs, protected CI, provenance capture, secret isolation, security-report routing, independent review for consequential changes, and no merge or infrastructure authority for external agents merely from participation.
 
-The machine-readable pre-executor threat ledger is `agent-commons/pre-executor-threat-model.json`. The machine-readable virtual executor-conformance threat ledger is `agent-commons/executor-conformance-threat-model.json`. The machine-readable durable executor-state threat ledger is `agent-commons/executor-durable-state-threat-model.json`. None of these threat ledgers is itself an effect capability.
+The machine-readable pre-executor threat ledger is `agent-commons/pre-executor-threat-model.json`. The machine-readable virtual executor-conformance threat ledger is `agent-commons/executor-conformance-threat-model.json`. The machine-readable durable executor-state threat ledger is `agent-commons/executor-durable-state-threat-model.json`. The machine-readable platform-isolation-profile threat ledger is `agent-commons/executor-isolation-threat-model.json`. None of these threat ledgers is itself an effect capability.
 
 ## GitHub integration
 
@@ -377,26 +386,73 @@ The current durability evidence is scoped to process-restart and local filesyste
 
 The machine-readable threat ledger for this gate is `agent-commons/executor-durable-state-threat-model.json`. Passing this laboratory does not create a production database, replicated state service, distributed writer lease, hardware-backed monotonic counter, HSM/TPM/Secure Enclave persistence layer, OS sandbox, live network executor, credential broker, production node enrollment path, or real hardware executor.
 
+### Platform-specific executor isolation-profile boundary
+
+`agent-commons/executor-isolation-profiles.json` and `mesh/src/lib/agent-executor-isolation-profile.mjs` define the next **pre-effect** promotion gate. They describe the isolation properties a future effect-capable platform adapter would have to enforce; they do not implement that adapter.
+
+Core isolation invariant:
+
+> **A platform name is not an isolation guarantee. A hosted runner is not physical-device proof. An isolation profile is a requirement contract, not permission to execute.**
+
+The reviewed catalog establishes one common floor across Linux, macOS, and Windows:
+
+- disposable workspace/root containment;
+- host-root denial;
+- symlink or reparse-point boundary enforcement;
+- pinned executable resolution without ambient PATH authority;
+- a minimal environment with no ambient credentials or secrets;
+- no privilege escalation;
+- process-tree containment;
+- timeout with terminal process-tree kill semantics;
+- CPU, memory, process-count, and output ceilings;
+- default-deny networking and explicit-origin-only network policy;
+- inherited handle/file-descriptor minimization;
+- terminal-on-uncertainty semantics;
+- workspace disposal.
+
+Each OS then binds a reviewed mechanism-family requirement set beneath that common floor. Linux requires kernel-enforced process, filesystem, network, resource, syscall-filter-or-equivalent, and privilege boundaries. macOS requires a VM-or-equivalent kernel-enforced repository-code boundary plus disposable-volume, network-policy, resource-supervision, and host-credential-separation requirements. Windows requires a container/VM/or restricted security boundary plus process-tree/job, filesystem-namespace, network-policy, and token/privilege controls.
+
+These mechanism-family names are deliberately **not enforcement evidence**. The presence of a namespace, cgroup, seccomp-style control, VM, container, Job Object, restricted token, app metadata, or similar primitive does not prove that the entire reviewed policy was correctly composed or enforced. Repository-controlled build/test code remains hostile even when the outer executable and argv are fixed.
+
+An `axiom-agent-executor-isolation-profile.v1` binds:
+
+- the exact validated `axiom-agent-executor-platform-profile.v1` digest;
+- exact OS and architecture;
+- the exact reviewed catalog digest, platform policy ID, and revision;
+- the complete ordered common-control set;
+- the exact platform mechanism-family set and repository-code boundary;
+- evidence status and bounded evidence references;
+- hard-false isolation, effect, production, deployment, node-enrollment, capability, and authority claims.
+
+Evidence status remains `declared`, `measured`, `reproduced`, or `externally-verified`. A profile cannot self-assert the strongest status: `externally-verified` requires a separate verifier confirmation supplied outside the profile document. Hosted CI remains explicitly insufficient as physical-device proof, and physical-device evidence remains a required input before any future production promotion.
+
+Even when a profile matches the reviewed catalog exactly and separate external-verifier confirmation is present, the current assessment still returns `platform_isolation_verified: false`, `repository_code_isolation_verified: false`, `effect_admission_eligible: false`, and `production_executor_ready: false`. The validator proves policy/profile binding and evidence classification only. It does not prove that an OS kernel, VM/container boundary, filesystem root, process tree, resource controller, network policy, credential boundary, or physical machine enforced the requirements.
+
+This laboratory imports no process-spawning, filesystem-mutation, DNS/network-client, service-management, VM/container-management, credential/secret, or remote-shell effect module. It creates no executable sandbox and opens no effect path. The machine-readable threat ledger for this gate is `agent-commons/executor-isolation-threat-model.json`.
+
 ### Future executor promotion boundary
 
 An effect-reachable executor remains a separate promotion problem. At minimum it would require:
 
 - authenticated sponsor identity and current authorization verification;
 - production-grade durable one-time lifecycle consumption and revocation/head retention, including an explicit currentness/replication model rather than only this local laboratory;
+- exact isolation-profile binding to one reviewed platform policy;
+- an effect-capable platform adapter that independently proves the reviewed common and platform-specific isolation requirements are actually enforced;
 - pinned absolute executable resolution without ambient PATH authority;
 - isolated disposable sandboxing for repository code;
-- filesystem/root/symlink enforcement independent of repository code;
+- filesystem/root/symlink or reparse-point enforcement independent of repository code;
 - exact network-origin enforcement, DNS resolution pinning, no redirects, and no ambient credentials;
 - independent process/runtime/output/memory enforcement;
 - timeout and interrupted/uncertain-effect recovery;
-- executor-originated effect receipts bound to the compiled plan and lifecycle transition;
-- independent threat/security review and protected promotion.
+- physical-device evidence appropriate to the promoted platform rather than hosted-CI compatibility alone;
+- executor-originated effect receipts bound to the compiled plan, isolation profile, and lifecycle transition;
+- independent effect-path threat/security review and protected promotion.
 
-The virtual executor-conformance sandbox reduces ambiguity about enforcement semantics. The durable-state laboratory additionally proves local restart ordering and one-time-consumption recovery semantics. Neither laboratory establishes operating-system isolation, live-network enforcement, storage-media/power-loss durability, distributed/global currentness, package execution, or remote-hardware safety.
+The virtual executor-conformance sandbox reduces ambiguity about enforcement semantics. The durable-state laboratory additionally proves local restart ordering and one-time-consumption recovery semantics. The isolation-profile laboratory now fixes the cross-platform requirement/evidence vocabulary. None of those laboratories establishes real operating-system isolation, live-network enforcement, storage-media/power-loss durability, distributed/global currentness, package execution, or remote-hardware safety.
 
 Remote access is not part of the current effect path. An offer may state that remote access is technically available, but credentials, tunnels, remote shells, device-management enrollment, and unattended administration require a separate future design.
 
-Hosted CI can establish broad platform compatibility but cannot substitute for all physical-device evidence. For Apple, physical follow-on work may eventually test `launchd`, sleep/wake/reboot recovery, Keychain/Secure Enclave integration, firewall/network semantics, signing/notarization, thermal/power behavior, and virtualization constraints. Equivalent physical validation can apply to Windows, Linux, ARM SBCs, GPU workstations, network appliances, and specialized hardware.
+Hosted CI can establish broad platform compatibility but cannot substitute for physical-device isolation evidence or platform-specific effect enforcement. For Apple, physical follow-on work may eventually test `launchd`, sleep/wake/reboot recovery, Keychain/Secure Enclave integration, firewall/network semantics, signing/notarization, thermal/power behavior, and virtualization constraints. Equivalent physical validation can apply to Windows, Linux, ARM SBCs, GPU workstations, network appliances, and specialized hardware.
 
 Failures and blocked results remain useful evidence when exact-base and honestly reported. Interrupted or uncertain consequential effects must not be upgraded to success.
 
@@ -481,8 +537,13 @@ Where practical, retain publication provenance and external identifiers so annou
 - durable consumption-before-admission ordering and fail-closed `consumed-uncertain-no-resume` restart semantics;
 - separately retainable durable-head receipts for rollback comparison without a global-currentness claim;
 - machine-readable durable executor-state threat model and explicit storage/consensus/power-loss promotion blockers;
+- reviewed Linux/macOS/Windows isolation-policy catalog with one mandatory common-control floor;
+- exact platform-profile/catalog/policy/mechanism binding and pure isolation-profile assessment;
+- separate confirmation requirement for externally verified isolation evidence without effect-admission elevation;
+- hosted CI explicitly insufficient as physical-device proof;
+- machine-readable executor-isolation threat model and explicit effect-capable-adapter promotion blockers;
 - declared/measured/reproduced/externally-verified evidence separation;
-- no effect-reachable remote administration, package/service execution, live network execution, or production-enrollment authority.
+- no verified real platform isolation, effect-capable platform adapter, effect-reachable remote administration, package/service execution, live network execution, or production-enrollment authority.
 
 Any write-capable external adapter or remote infrastructure executor requires a separate threat review, policy mapping, evidence model, negative tests, and promotion decision.
 
@@ -518,7 +579,11 @@ Any write-capable external adapter or remote infrastructure executor requires a 
 28. Durable recovery rejects malformed/torn committed generations, generation gaps or conflicts, predecessor drift, signer substitution, lifecycle/plan binding drift, and terminal-state rewrites.
 29. A durable local chain cannot claim that no newer suffix existed; rollback detection depends on a separately retained signed durable-head commitment, and neither object claims global currentness.
 30. Durable local commit evidence is not evidence of storage-media/power-loss survival, hardware monotonicity, distributed consensus, production persistence, real executor effects, or production authority.
-31. Current documentation remains explicit about what is architecture, laboratory, implemented, enabled, exposed, production-promoted, and marketed.
+31. An executor-isolation profile must bind the exact reviewed policy catalog and exact platform-profile digest/OS/architecture; policy, mechanism-family, repository-code-boundary, or platform substitution fails closed.
+32. The reviewed common isolation controls cannot be omitted or silently widened, and platform-specific mechanism families cannot be substituted across Linux, macOS, and Windows policies.
+33. Hosted CI cannot be represented as physical-device isolation proof, and `externally-verified` profile evidence requires a separate verifier confirmation rather than self-assertion.
+34. A valid or externally confirmed isolation profile remains requirement/evidence classification only; it cannot claim real OS enforcement, repository-code isolation, effect admission, production readiness, deployment authority, node enrollment, or capability promotion.
+35. Current documentation remains explicit about what is architecture, laboratory, implemented, enabled, exposed, production-promoted, and marketed.
 
 ## Current non-claims
 
@@ -547,6 +612,9 @@ This document does not claim:
 - a production durable executor-state database, replicated state service, distributed lease service, or globally current revocation oracle;
 - a hardware-backed monotonic counter or HSM/TPM/Secure Enclave durable-state guarantee;
 - storage-media, drive-cache, filesystem-corruption, or sudden-power-loss survival guarantees from the local durability laboratory;
+- verified Linux, macOS, or Windows executor isolation from the isolation-profile laboratory;
+- an effect-capable platform isolation adapter, real VM/container/sandbox enforcement path, or physical-device isolation proof;
+- hosted CI as physical-device, hardware-enforcement, or production-isolation evidence;
 - live DNS resolution/pinning enforcement for Agent Commons execution;
 - real package installation, build, test, process, repository-workspace, arbitrary host-path, network, service, or hardware effects beyond the durable laboratory's dedicated local control-state files;
 - a production package installer, service manager, shell, tunnel, credential broker, or remote-control daemon;
