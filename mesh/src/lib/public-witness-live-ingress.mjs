@@ -296,13 +296,27 @@ function writeJson(response, statusCode, payload) {
   response.end(body);
 }
 
-async function readCanonicalJson(request, maxBodyBytes) {
+async function readCanonicalJson(request, maxBodyBytes, timeoutMs) {
   const chunks = [];
   let size = 0;
-  for await (const chunk of request) {
-    size += chunk.length;
-    if (size > maxBodyBytes) throw new ValidationError('public witness live ingress request body exceeds configured byte limit');
-    chunks.push(chunk);
+  const timeoutError = new ValidationError('public witness live ingress request body timed out');
+  const timer = setTimeout(() => request.destroy(timeoutError), timeoutMs);
+  timer.unref?.();
+  try {
+    for await (const chunk of request) {
+      size += chunk.length;
+      if (size > maxBodyBytes) {
+        throw new ValidationError('public witness live ingress request body exceeds configured byte limit');
+      }
+      chunks.push(chunk);
+    }
+  } catch (error) {
+    if (error === timeoutError || request.destroyed && error?.message === timeoutError.message) {
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
   }
   if (size === 0) throw new ValidationError('public witness live ingress request body is required');
   const text = Buffer.concat(chunks).toString('utf8');
@@ -363,7 +377,7 @@ export function createPublicWitnessHttpsIngress({
         writeJson(response, 403, { error: 'unauthorized-client-certificate' });
         return;
       }
-      const parsed = await readCanonicalJson(request, normalizedBodyLimit);
+      const parsed = await readCanonicalJson(request, normalizedBodyLimit, normalizedTimeout);
       const result = await ingress.accept({
         certificate_sha256: certificateSha256(certificate.raw),
         request: parsed
@@ -371,13 +385,16 @@ export function createPublicWitnessHttpsIngress({
       writeJson(response, result.status === 'replay' ? 200 : 202, result);
     } catch (error) {
       const message = error instanceof ValidationError ? error.message : 'public witness live ingress request failed';
+      if (response.destroyed || response.writableEnded) return;
       const status = /rate limit|concurrent request capacity/.test(message)
         ? 429
         : /byte limit/.test(message)
           ? 413
-          : /transport identity|persona root/.test(message)
-            ? 403
-            : 400;
+          : /timed out/.test(message)
+            ? 408
+            : /transport identity|persona root/.test(message)
+              ? 403
+              : 400;
       writeJson(response, status, { error: 'request-rejected', detail: message });
     }
   });
