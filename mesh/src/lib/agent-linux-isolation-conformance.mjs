@@ -15,10 +15,12 @@ const SHA1 = /^[a-f0-9]{40}$/;
 const SHA256 = /^[a-f0-9]{64}$/;
 const IMAGE_ID = /^sha256:[a-f0-9]{64}$/;
 const MAX_DOCUMENT_BYTES = 262_144;
+const DENIED_WRITE_CODES = new Set(['EROFS', 'EACCES', 'EPERM']);
+const DENIED_NETWORK_CODES = new Set(['ENETUNREACH', 'EHOSTUNREACH', 'EACCES', 'EPERM']);
 
 const RECEIPT_KEYS = new Set([
   'schema', 'repository', 'revision', 'observation_environment', 'platform',
-  'policy', 'adapter', 'limits', 'controls', 'probes', 'claims', 'receipt_digest'
+  'policy', 'adapter', 'limits', 'controls', 'evidence', 'probes', 'claims', 'receipt_digest'
 ]);
 const PLATFORM_KEYS = new Set([
   'operating_system', 'architecture', 'kernel_release', 'runner_pid_namespace',
@@ -54,12 +56,24 @@ const CONTROL_KEYS = Object.freeze([
   'output_overflow_cleanup_verified'
 ]);
 const CONTROL_KEY_SET = new Set(CONTROL_KEYS);
+const EVIDENCE_KEYS = new Set(['baseline', 'pid_ceiling', 'timeout_cleanup', 'output_ceiling']);
+const BASELINE_KEYS = new Set([
+  'container_pid_namespace', 'container_mount_namespace', 'container_network_namespace',
+  'uid', 'cap_eff', 'no_new_privs', 'seccomp', 'root_read_only',
+  'workspace_write_succeeded', 'root_write_error', 'symlink_write_error',
+  'docker_socket_present', 'host_sentinel_present', 'secret_mount_present',
+  'public_network_error', 'memory_max', 'pids_max', 'cpu_quota', 'cpu_period',
+  'fd_count', 'unexpected_sensitive_fd', 'mount_digest'
+]);
+const PID_CEILING_KEYS = new Set(['requested', 'started', 'blocked', 'container_absent_after_cleanup']);
+const TIMEOUT_KEYS = new Set(['timed_out', 'container_absent_after_cleanup']);
+const OUTPUT_KEYS = new Set(['overflow_detected', 'output_limit_bytes', 'container_absent_after_cleanup']);
 const PROBE_KEYS = new Set(['probe_id', 'status', 'observation_digest']);
 const REQUIRED_PROBES = Object.freeze([
-  'baseline',
-  'pid-ceiling',
-  'timeout-cleanup',
-  'output-ceiling'
+  ['baseline', 'baseline'],
+  ['pid-ceiling', 'pid_ceiling'],
+  ['timeout-cleanup', 'timeout_cleanup'],
+  ['output-ceiling', 'output_ceiling']
 ]);
 const POSITIVE_CLAIMS = Object.freeze([
   'fixed_probe_real_process_effects_observed',
@@ -111,6 +125,13 @@ function text(value, label, max = 1024) {
   return value;
 }
 
+function integer(value, label, { min = Number.MIN_SAFE_INTEGER, max = Number.MAX_SAFE_INTEGER } = {}) {
+  if (!Number.isSafeInteger(value) || value < min || value > max) {
+    throw new ValidationError(`${label} is invalid`);
+  }
+  return value;
+}
+
 function assertEqual(value, expected, label) {
   if (value !== expected) throw new ValidationError(`${label} is invalid`);
   return value;
@@ -138,23 +159,108 @@ function normalizeClaims(value) {
   });
 }
 
-function normalizeProbes(value) {
+function normalizeEvidence(value, platform) {
+  exactKeys(value, EVIDENCE_KEYS, 'Agent Linux isolation evidence');
+
+  exactKeys(value.baseline, BASELINE_KEYS, 'Agent Linux isolation baseline evidence');
+  const baseline = Object.freeze({
+    container_pid_namespace: text(value.baseline.container_pid_namespace, 'Agent Linux container PID namespace', 256),
+    container_mount_namespace: text(value.baseline.container_mount_namespace, 'Agent Linux container mount namespace', 256),
+    container_network_namespace: text(value.baseline.container_network_namespace, 'Agent Linux container network namespace', 256),
+    uid: assertEqual(value.baseline.uid, 10001, 'Agent Linux isolation UID'),
+    cap_eff: assertEqual(value.baseline.cap_eff, '0000000000000000', 'Agent Linux effective capabilities'),
+    no_new_privs: assertEqual(value.baseline.no_new_privs, 1, 'Agent Linux no-new-privileges state'),
+    seccomp: assertEqual(value.baseline.seccomp, 2, 'Agent Linux seccomp mode'),
+    root_read_only: assertEqual(value.baseline.root_read_only, true, 'Agent Linux read-only root observation'),
+    workspace_write_succeeded: assertEqual(value.baseline.workspace_write_succeeded, true, 'Agent Linux disposable workspace write observation'),
+    root_write_error: value.baseline.root_write_error,
+    symlink_write_error: value.baseline.symlink_write_error,
+    docker_socket_present: assertEqual(value.baseline.docker_socket_present, false, 'Agent Linux Docker socket observation'),
+    host_sentinel_present: assertEqual(value.baseline.host_sentinel_present, false, 'Agent Linux host sentinel observation'),
+    secret_mount_present: assertEqual(value.baseline.secret_mount_present, false, 'Agent Linux secret mount observation'),
+    public_network_error: value.baseline.public_network_error,
+    memory_max: assertEqual(value.baseline.memory_max, 134217728, 'Agent Linux memory cgroup limit'),
+    pids_max: assertEqual(value.baseline.pids_max, 32, 'Agent Linux PID cgroup limit'),
+    cpu_quota: integer(value.baseline.cpu_quota, 'Agent Linux CPU quota', { min: 1 }),
+    cpu_period: integer(value.baseline.cpu_period, 'Agent Linux CPU period', { min: 1 }),
+    fd_count: integer(value.baseline.fd_count, 'Agent Linux file-descriptor count', { min: 3, max: 64 }),
+    unexpected_sensitive_fd: assertEqual(value.baseline.unexpected_sensitive_fd, false, 'Agent Linux sensitive descriptor observation'),
+    mount_digest: value.baseline.mount_digest
+  });
+  if (!DENIED_WRITE_CODES.has(baseline.root_write_error)) {
+    throw new ValidationError('Agent Linux root write was not fail-closed');
+  }
+  if (!DENIED_WRITE_CODES.has(baseline.symlink_write_error)) {
+    throw new ValidationError('Agent Linux symlink write escape was not fail-closed');
+  }
+  if (!DENIED_NETWORK_CODES.has(baseline.public_network_error)) {
+    throw new ValidationError('Agent Linux public network denial was not observed unambiguously');
+  }
+  if (typeof baseline.mount_digest !== 'string' || !SHA256.test(baseline.mount_digest)) {
+    throw new ValidationError('Agent Linux mount digest is invalid');
+  }
+  if (
+    baseline.container_pid_namespace === platform.runner_pid_namespace
+    || baseline.container_mount_namespace === platform.runner_mount_namespace
+    || baseline.container_network_namespace === platform.runner_network_namespace
+  ) {
+    throw new ValidationError('Agent Linux isolation namespace separation was not observed');
+  }
+  if (Math.abs((baseline.cpu_quota / baseline.cpu_period) - 0.5) > 0.01) {
+    throw new ValidationError('Agent Linux CPU cgroup limit does not match the reviewed ceiling');
+  }
+
+  exactKeys(value.pid_ceiling, PID_CEILING_KEYS, 'Agent Linux PID ceiling evidence');
+  const pidCeiling = Object.freeze({
+    requested: assertEqual(value.pid_ceiling.requested, 64, 'Agent Linux PID requested count'),
+    started: integer(value.pid_ceiling.started, 'Agent Linux PID started count', { min: 1, max: 63 }),
+    blocked: integer(value.pid_ceiling.blocked, 'Agent Linux PID blocked count', { min: 1, max: 63 }),
+    container_absent_after_cleanup: assertEqual(value.pid_ceiling.container_absent_after_cleanup, true, 'Agent Linux PID probe cleanup')
+  });
+  if (pidCeiling.started + pidCeiling.blocked !== pidCeiling.requested) {
+    throw new ValidationError('Agent Linux PID ceiling observation counts do not reconcile');
+  }
+
+  exactKeys(value.timeout_cleanup, TIMEOUT_KEYS, 'Agent Linux timeout cleanup evidence');
+  const timeoutCleanup = Object.freeze({
+    timed_out: assertEqual(value.timeout_cleanup.timed_out, true, 'Agent Linux timeout observation'),
+    container_absent_after_cleanup: assertEqual(value.timeout_cleanup.container_absent_after_cleanup, true, 'Agent Linux timeout cleanup')
+  });
+
+  exactKeys(value.output_ceiling, OUTPUT_KEYS, 'Agent Linux output ceiling evidence');
+  const outputCeiling = Object.freeze({
+    overflow_detected: assertEqual(value.output_ceiling.overflow_detected, true, 'Agent Linux output overflow observation'),
+    output_limit_bytes: assertEqual(value.output_ceiling.output_limit_bytes, 65536, 'Agent Linux output ceiling'),
+    container_absent_after_cleanup: assertEqual(value.output_ceiling.container_absent_after_cleanup, true, 'Agent Linux output cleanup')
+  });
+
+  return Object.freeze({
+    baseline,
+    pid_ceiling: pidCeiling,
+    timeout_cleanup: timeoutCleanup,
+    output_ceiling: outputCeiling
+  });
+}
+
+function normalizeProbes(value, evidence) {
   if (!Array.isArray(value) || value.length !== REQUIRED_PROBES.length) {
     throw new ValidationError('Agent Linux isolation probes must contain the exact reviewed probe set');
   }
   return Object.freeze(value.map((probe, index) => {
     exactKeys(probe, PROBE_KEYS, `Agent Linux isolation probe ${index}`);
-    if (probe.probe_id !== REQUIRED_PROBES[index]) {
+    const [expectedProbeId, evidenceKey] = REQUIRED_PROBES[index];
+    if (probe.probe_id !== expectedProbeId) {
       throw new ValidationError('Agent Linux isolation probes must preserve reviewed order and identity');
     }
     if (probe.status !== 'pass') throw new ValidationError('Agent Linux isolation probe status must be pass');
-    if (typeof probe.observation_digest !== 'string' || !SHA256.test(probe.observation_digest)) {
-      throw new ValidationError('Agent Linux isolation probe observation digest is invalid');
+    const expectedObservationDigest = digestObject(evidence[evidenceKey]);
+    if (probe.observation_digest !== expectedObservationDigest) {
+      throw new ValidationError(`Agent Linux isolation ${expectedProbeId} observation digest mismatch`);
     }
     return Object.freeze({
-      probe_id: probe.probe_id,
+      probe_id: expectedProbeId,
       status: 'pass',
-      observation_digest: probe.observation_digest
+      observation_digest: expectedObservationDigest
     });
   }));
 }
@@ -219,7 +325,8 @@ export function verifyAgentLinuxIsolationConformanceReceipt(raw) {
   }
 
   const controls = assertTrueMap(raw.controls, CONTROL_KEY_SET, 'Agent Linux isolation controls');
-  const probes = normalizeProbes(raw.probes);
+  const evidence = normalizeEvidence(raw.evidence, platform);
+  const probes = normalizeProbes(raw.probes, evidence);
   const claims = normalizeClaims(raw.claims);
 
   if (typeof raw.receipt_digest !== 'string' || !SHA256.test(raw.receipt_digest)) {
@@ -236,6 +343,7 @@ export function verifyAgentLinuxIsolationConformanceReceipt(raw) {
     adapter,
     limits: expectedLimits,
     controls,
+    evidence,
     probes,
     claims
   };
