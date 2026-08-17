@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/agent-executor-conformance-receipt.v1.schema.json",
+  "title": "AXIOM Agent Executor Conformance Receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "statement", "statement_digest", "executor_signature", "receipt_digest"],
+  "properties": {
+    "schema": { "const": "axiom-agent-executor-conformance-receipt.v1" },
+    "statement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "executor_id", "executor_key_id", "sandbox_id", "sandbox_version",
+        "sandbox_policy_digest", "compiler_id", "compiler_version", "compiler_policy_digest",
+        "plan_digest", "authorization_id", "authorization_digest", "lifecycle_ledger_id",
+        "lifecycle_status", "lifecycle_consumption_event_digest", "lifecycle_head_event_digest",
+        "lifecycle_receipt_digest", "started_at", "finished_at", "status", "observations",
+        "counters", "virtual_effects_only", "global_currentness_claimed", "task_success_claimed",
+        "real_effect_observed", "remote_execution", "process_spawned", "filesystem_mutated",
+        "network_performed", "credentials_retrieved", "secrets_retrieved", "service_controlled",
+        "package_installed", "production_enrollment", "deployment_authority", "capability_promoted"
+      ],
+      "properties": {
+        "executor_id": { "$ref": "#/$defs/id" },
+        "executor_key_id": { "$ref": "#/$defs/digest" },
+        "sandbox_id": { "const": "agent-commons.executor-conformance-virtual-sandbox" },
+        "sandbox_version": { "const": 1 },
+        "sandbox_policy_digest": { "$ref": "#/$defs/digest" },
+        "compiler_id": { "const": "agent-commons.pre-executor-dry-run" },
+        "compiler_version": { "const": 1 },
+        "compiler_policy_digest": { "$ref": "#/$defs/digest" },
+        "plan_digest": { "$ref": "#/$defs/digest" },
+        "authorization_id": { "$ref": "#/$defs/id" },
+        "authorization_digest": { "$ref": "#/$defs/digest" },
+        "lifecycle_ledger_id": { "$ref": "#/$defs/id" },
+        "lifecycle_status": { "enum": ["issued", "consumed", "interrupted", "completed"] },
+        "lifecycle_consumption_event_digest": {
+          "oneOf": [{ "$ref": "#/$defs/digest" }, { "type": "null" }]
+        },
+        "lifecycle_head_event_digest": { "$ref": "#/$defs/digest" },
+        "lifecycle_receipt_digest": { "$ref": "#/$defs/digest" },
+        "started_at": { "$ref": "#/$defs/timestamp" },
+        "finished_at": { "$ref": "#/$defs/timestamp" },
+        "status": { "enum": ["completed", "interrupted", "denied"] },
+        "observations": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "sequence", "request_id", "step_sequence", "step_id", "decision", "reason_code",
+              "virtual_effect_kind", "network_origin", "network_method", "processes",
+              "runtime_seconds", "output_bytes", "memory_mib", "observed_at"
+            ],
+            "properties": {
+              "sequence": { "type": "integer", "minimum": 1, "maximum": 64 },
+              "request_id": { "$ref": "#/$defs/id" },
+              "step_sequence": { "type": "integer", "minimum": 1, "maximum": 32 },
+              "step_id": { "$ref": "#/$defs/id" },
+              "decision": { "enum": ["admitted", "denied"] },
+              "reason_code": { "$ref": "#/$defs/id" },
+              "virtual_effect_kind": { "enum": ["virtual-process", "virtual-builtin"] },
+              "network_origin": { "type": ["string", "null"], "maxLength": 512 },
+              "network_method": { "enum": ["GET", "HEAD", null] },
+              "processes": { "type": "integer", "minimum": 0, "maximum": 8 },
+              "runtime_seconds": { "type": "integer", "minimum": 0, "maximum": 3600 },
+              "output_bytes": { "type": "integer", "minimum": 0, "maximum": 16777216 },
+              "memory_mib": { "type": "integer", "minimum": 0, "maximum": 4096 },
+              "observed_at": { "$ref": "#/$defs/timestamp" }
+            }
+          }
+        },
+        "counters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "requests", "admitted_steps", "denied_requests", "processes",
+            "runtime_seconds", "output_bytes", "peak_memory_mib"
+          ],
+          "properties": {
+            "requests": { "type": "integer", "minimum": 0, "maximum": 64 },
+            "admitted_steps": { "type": "integer", "minimum": 0, "maximum": 32 },
+            "denied_requests": { "type": "integer", "minimum": 0, "maximum": 64 },
+            "processes": { "type": "integer", "minimum": 0, "maximum": 8 },
+            "runtime_seconds": { "type": "integer", "minimum": 0, "maximum": 3600 },
+            "output_bytes": { "type": "integer", "minimum": 0, "maximum": 16777216 },
+            "peak_memory_mib": { "type": "integer", "minimum": 0, "maximum": 4096 }
+          }
+        },
+        "virtual_effects_only": { "const": true },
+        "global_currentness_claimed": { "const": false },
+        "task_success_claimed": { "const": false },
+        "real_effect_observed": { "const": false },
+        "remote_execution": { "const": false },
+        "process_spawned": { "const": false },
+        "filesystem_mutated": { "const": false },
+        "network_performed": { "const": false },
+        "credentials_retrieved": { "const": false },
+        "secrets_retrieved": { "const": false },
+        "service_controlled": { "const": false },
+        "package_installed": { "const": false },
+        "production_enrollment": { "const": false },
+        "deployment_authority": { "const": false },
+        "capability_promoted": { "const": false }
+      }
+    },
+    "statement_digest": { "$ref": "#/$defs/digest" },
+    "executor_signature": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$", "maxLength": 256 },
+    "receipt_digest": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}
