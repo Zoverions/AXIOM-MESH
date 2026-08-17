@@ -49,6 +49,15 @@ test('infrastructure discovery points only to existing bounded contracts', async
     assert.equal(contract.properties.schema.const, schema);
   }
 
+  const threatModel = await readJson(discovery.executor_threat_model);
+  assert.equal(threatModel.schema, 'axiom-agent-pre-executor-threat-model.v1');
+  assert.equal(threatModel.phase, 'pre-executor-dry-run');
+  assert.ok(Array.isArray(threatModel.attack_classes));
+  assert.ok(threatModel.attack_classes.length >= 10);
+  for (const key of Object.keys(threatModel.boundaries)) {
+    assert.equal(threatModel.boundaries[key], false, `threat-model boundary ${key} must remain false`);
+  }
+
   assert.deepEqual(discovery.challenge_classes, [
     'hardware-validation',
     'test-node-provisioning',
