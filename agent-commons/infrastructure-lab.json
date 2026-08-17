@@ -12,6 +12,8 @@
   "test_session_lifecycle_event_contract": "agent-commons/contracts/agent-test-session-lifecycle-event.v1.schema.json",
   "test_session_lifecycle_receipt_contract": "agent-commons/contracts/agent-test-session-lifecycle-receipt.v1.schema.json",
   "test_session_lifecycle_transcript_contract": "agent-commons/contracts/agent-test-session-lifecycle-transcript.v1.schema.json",
+  "executor_platform_profile_contract": "agent-commons/contracts/agent-executor-platform-profile.v1.schema.json",
+  "executor_dry_run_plan_contract": "agent-commons/contracts/agent-executor-dry-run-plan.v1.schema.json",
   "challenge_classes": [
     "hardware-validation",
     "test-node-provisioning",
@@ -23,6 +25,8 @@
   "device_key_possession_verification_available": true,
   "test_session_lifecycle_evidence_available": true,
   "test_session_lifecycle_receipts_available": true,
+  "executor_dry_run_compiler_available": true,
+  "executor_dry_run_effects_reachable": false,
   "test_session_effects_reachable": false,
   "production_lifecycle_persistence_enabled": false,
   "remote_execution_enabled": false,
