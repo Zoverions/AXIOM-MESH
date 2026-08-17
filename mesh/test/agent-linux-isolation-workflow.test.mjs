@@ -19,6 +19,12 @@ test('release governance accepts only the bounded Linux isolation workflow', asy
   assert.equal(result.github_secrets_referenced, false);
   assert.equal(result.fixed_probe_only, true);
   assert.equal(result.production_provisioning_reachable, false);
+  assert.equal(result.receipt_reverification_required, true);
+  assert.deepEqual(result.action_references, [
+    'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
+    'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020',
+    'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a'
+  ]);
   assert.match(result.workflow_sha256, /^[a-f0-9]{64}$/);
 });
 
@@ -57,9 +63,12 @@ test('release governance rejects mutable action and runner references', async ()
   );
 });
 
-test('release governance rejects removal of the receipt re-verification boundary', async () => {
+test('release governance rejects removal of the exact receipt re-verification call', async () => {
   const workflow = await workflowText();
-  const weakened = workflow.replace('verifyAgentLinuxIsolationConformanceReceipt', 'acceptReceiptWithoutVerification');
+  const weakened = workflow.replace(
+    'verifyAgentLinuxIsolationConformanceReceipt(receipt);',
+    'acceptReceiptWithoutVerification(receipt);'
+  );
   assert.throws(
     () => verifyAgentLinuxIsolationWorkflow(weakened),
     /missing governed boundary/i
