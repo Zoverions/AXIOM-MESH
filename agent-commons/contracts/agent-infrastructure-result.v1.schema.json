@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/agent-infrastructure-result.v1.schema.json",
+  "title": "AXIOM Agent Infrastructure Result v1",
+  "description": "Experimental result envelope for a bounded infrastructure challenge. A result is evidence for review and cannot self-promote authority, node admission, deployment, capability status, or payment.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "result_id", "challenge_id", "offer_id", "repository", "base_sha", "node_profile_sha256", "execution", "evidence", "effects", "limitations", "producer"],
+  "properties": {
+    "schema": { "const": "axiom-agent-infrastructure-result.v1" },
+    "result_id": { "$ref": "#/$defs/id" },
+    "challenge_id": { "$ref": "#/$defs/id" },
+    "offer_id": { "$ref": "#/$defs/id" },
+    "repository": { "const": "Zoverions/AXIOM-MESH" },
+    "base_sha": { "$ref": "#/$defs/sha40" },
+    "node_profile_sha256": { "$ref": "#/$defs/sha256" },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["started_at", "completed_at", "status", "operations_performed"],
+      "properties": {
+        "started_at": { "type": "string", "format": "date-time" },
+        "completed_at": { "type": "string", "format": "date-time" },
+        "status": { "enum": ["passed", "failed", "partial", "blocked"] },
+        "operations_performed": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/safeOperation" }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fact_status", "evidence_refs", "logs_redacted", "secrets_embedded", "private_user_content_embedded"],
+      "properties": {
+        "fact_status": { "enum": ["declared", "measured", "reproduced", "externally-verified"] },
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 128,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 1024 }
+        },
+        "logs_redacted": { "const": true },
+        "secrets_embedded": { "const": false },
+        "private_user_content_embedded": { "const": false }
+      }
+    },
+    "effects": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["production_enrolled", "credentials_issued", "secrets_accessed", "firmware_changed", "purchase_performed", "destructive_action_performed", "security_boundary_weakened", "authority_granted", "capability_promoted"],
+      "properties": {
+        "production_enrolled": { "const": false },
+        "credentials_issued": { "const": false },
+        "secrets_accessed": { "const": false },
+        "firmware_changed": { "const": false },
+        "purchase_performed": { "const": false },
+        "destructive_action_performed": { "const": false },
+        "security_boundary_weakened": { "const": false },
+        "authority_granted": { "const": false },
+        "capability_promoted": { "const": false }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "type": "string", "minLength": 1, "maxLength": 8000 }
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id", "attestation_ref", "verification_status"],
+      "properties": {
+        "type": { "enum": ["human", "machine", "joint"] },
+        "id": { "$ref": "#/$defs/id" },
+        "attestation_ref": { "type": "string", "minLength": 1, "maxLength": 1024 },
+        "verification_status": { "enum": ["unverified", "verified-by-challenge-verifier"] }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$" },
+    "sha40": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "safeOperation": { "enum": ["read-system-facts", "create-disposable-workspace", "install-test-dependencies", "run-build", "run-tests", "start-local-test-services", "collect-sanitized-logs", "collect-benchmark-metrics", "reset-disposable-workspace"] }
+  }
+}
