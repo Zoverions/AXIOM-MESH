@@ -216,7 +216,7 @@ function operation(value, label) {
   return text;
 }
 
-function allowedOperations(raw) {
+function normalizeAllowedOperations(raw) {
   if (!Array.isArray(raw) || raw.length < 1 || raw.length > OPERATIONS.size) {
     throw new ValidationError('public witness source admission allowed_operations must be a non-empty bounded array');
   }
@@ -261,7 +261,7 @@ function normalizeAdmissionBody(raw) {
     source_key_id: sourceKeyId,
     source_public_key: sourcePublicKey,
     source_epoch: positiveInteger(value.source_epoch, 'public witness source admission source_epoch'),
-    allowed_operations: allowedOperations(value.allowed_operations),
+    allowed_operations: normalizeAllowedOperations(value.allowed_operations),
     valid_from: validFrom,
     expires_at: expiresAt,
     max_transfer_bytes: boundedInteger(
@@ -289,7 +289,7 @@ export function createPublicWitnessSourceAdmission({
   sourceId,
   sourcePublicKey,
   sourceEpoch = 1,
-  allowedOperations: permittedOperations = [...OPERATIONS],
+  allowedOperations = [...OPERATIONS],
   validFrom,
   expiresAt,
   maxTransferBytes = DEFAULT_MAX_TRANSFER_BYTES,
@@ -302,7 +302,7 @@ export function createPublicWitnessSourceAdmission({
     source_key_id: publicKeyId(sourcePublicKey, 'public witness source public key'),
     source_public_key: publicKeyPem(sourcePublicKey, 'public witness source public key'),
     source_epoch: sourceEpoch,
-    allowed_operations: permittedOperations,
+    allowed_operations: allowedOperations,
     valid_from: validFrom,
     expires_at: expiresAt,
     max_transfer_bytes: maxTransferBytes,
@@ -332,18 +332,16 @@ export function validatePublicWitnessSourceAdmission(raw) {
 function normalizeTransferRequest(raw, expectedOperation) {
   const value = assertPlainObject(raw, 'public witness transfer request');
   if (expectedOperation === 'observe-credential') {
-    exactKeys(value, new Set(['credential', 'observed_at']), 'public witness transfer credential request');
+    exactKeys(value, new Set(['credential']), 'public witness transfer credential request');
     return Object.freeze({
-      credential: assertPlainObject(value.credential, 'public witness transfer credential'),
-      observed_at: canonicalTimestamp(value.observed_at, 'public witness transfer credential observed_at')
+      credential: assertPlainObject(value.credential, 'public witness transfer credential')
     });
   }
   if (expectedOperation === 'observe-revocation') {
-    exactKeys(value, new Set(['revocation', 'credential', 'observed_at']), 'public witness transfer revocation request');
+    exactKeys(value, new Set(['revocation', 'credential']), 'public witness transfer revocation request');
     return Object.freeze({
       revocation: assertPlainObject(value.revocation, 'public witness transfer revocation'),
-      credential: assertPlainObject(value.credential, 'public witness transfer revocation credential'),
-      observed_at: canonicalTimestamp(value.observed_at, 'public witness transfer revocation observed_at')
+      credential: assertPlainObject(value.credential, 'public witness transfer revocation credential')
     });
   }
   if (expectedOperation === 'observe-journal') {
@@ -351,8 +349,7 @@ function normalizeTransferRequest(raw, expectedOperation) {
       'attestation',
       'persona_signing_credential',
       'entry',
-      'publication',
-      'observed_at'
+      'publication'
     ]), 'public witness transfer journal request');
     if (value.publication !== null && (typeof value.publication !== 'object' || Array.isArray(value.publication))) {
       throw new ValidationError('public witness transfer journal publication must be an object or null');
@@ -364,8 +361,7 @@ function normalizeTransferRequest(raw, expectedOperation) {
         'public witness transfer journal credential'
       ),
       entry: assertPlainObject(value.entry, 'public witness transfer journal entry'),
-      publication: value.publication,
-      observed_at: canonicalTimestamp(value.observed_at, 'public witness transfer journal observed_at')
+      publication: value.publication
     });
   }
   throw new ValidationError('public witness transfer request operation is unsupported');
@@ -422,54 +418,6 @@ function normalizeTransferStatement(raw) {
   });
 }
 
-function verifySourceSignature(value, statement, request, admission) {
-  const statementDigest = digest(value.statement_digest, 'public witness transfer statement_digest');
-  if (statementDigest !== digestObject(statement)) {
-    throw new ValidationError('public witness transfer statement digest does not match canonical content');
-  }
-  if (statement.request_digest !== digestObject(request)) {
-    throw new ValidationError('public witness transfer request digest does not match canonical request');
-  }
-  const sourceSignature = assertString(value.source_signature, 'public witness transfer source_signature', {
-    min: 32,
-    max: 1024,
-    pattern: BASE64URL
-  });
-  const publicKey = parsePublicKey(
-    admission.source_public_key,
-    'public witness source admission public key'
-  );
-  let valid = false;
-  try {
-    valid = verify(
-      null,
-      Buffer.from(canonicalJson({
-        schema: PUBLIC_WITNESS_TRANSFER_PACKAGE_SCHEMA,
-        statement,
-        statement_digest: statementDigest,
-        request
-      })),
-      publicKey,
-      Buffer.from(sourceSignature, 'base64url')
-    );
-  } catch {
-    valid = false;
-  }
-  if (!valid) throw new ValidationError('public witness transfer source signature is invalid');
-  const signed = Object.freeze({
-    schema: PUBLIC_WITNESS_TRANSFER_PACKAGE_SCHEMA,
-    statement,
-    statement_digest: statementDigest,
-    request,
-    source_signature: sourceSignature
-  });
-  const transferDigest = digest(value.transfer_digest, 'public witness transfer transfer_digest');
-  if (transferDigest !== digestObject(signed)) {
-    throw new ValidationError('public witness transfer digest does not match signed content');
-  }
-  return Object.freeze({ ...signed, transfer_digest: transferDigest });
-}
-
 function validateTransferAgainstAdmission(statement, admission, { now, allowExpired }) {
   if (
     statement.domain_id !== admission.domain_id
@@ -493,9 +441,57 @@ function validateTransferAgainstAdmission(statement, admission, { now, allowExpi
   if (createdMs > now + MAX_CLOCK_SKEW_MS) {
     throw new ValidationError('public witness transfer creation time exceeds allowed clock skew');
   }
-  if (!allowExpired && now > expiresMs + MAX_CLOCK_SKEW_MS) {
+  if (!allowExpired && now > expiresMs) {
     throw new ValidationError('public witness transfer is expired');
   }
+}
+
+function verifySourceSignature(value, statement, request, admission) {
+  const statementDigest = digest(value.statement_digest, 'public witness transfer statement_digest');
+  if (statementDigest !== digestObject(statement)) {
+    throw new ValidationError('public witness transfer statement digest does not match canonical content');
+  }
+  if (statement.request_digest !== digestObject(request)) {
+    throw new ValidationError('public witness transfer request digest does not match canonical request');
+  }
+  const sourceSignature = assertString(value.source_signature, 'public witness transfer source_signature', {
+    min: 32,
+    max: 1024,
+    pattern: BASE64URL
+  });
+  const sourcePublicKey = parsePublicKey(
+    admission.source_public_key,
+    'public witness source admission public key'
+  );
+  let valid = false;
+  try {
+    valid = verify(
+      null,
+      Buffer.from(canonicalJson({
+        schema: PUBLIC_WITNESS_TRANSFER_PACKAGE_SCHEMA,
+        statement,
+        statement_digest: statementDigest,
+        request
+      })),
+      sourcePublicKey,
+      Buffer.from(sourceSignature, 'base64url')
+    );
+  } catch {
+    valid = false;
+  }
+  if (!valid) throw new ValidationError('public witness transfer source signature is invalid');
+  const signed = Object.freeze({
+    schema: PUBLIC_WITNESS_TRANSFER_PACKAGE_SCHEMA,
+    statement,
+    statement_digest: statementDigest,
+    request,
+    source_signature: sourceSignature
+  });
+  const transferDigest = digest(value.transfer_digest, 'public witness transfer transfer_digest');
+  if (transferDigest !== digestObject(signed)) {
+    throw new ValidationError('public witness transfer digest does not match signed content');
+  }
+  return Object.freeze({ ...signed, transfer_digest: transferDigest });
 }
 
 export function verifyPublicWitnessTransferEnvelope(raw, {
@@ -540,10 +536,23 @@ export function createPublicWitnessTransferPackage(requestRaw, {
   now = Date.now()
 } = {}) {
   const admission = validatePublicWitnessSourceAdmission(sourceAdmission);
-  const signer = signingKey(sourcePrivateKey, 'public witness transfer source');
-  if (signer.keyId !== admission.source_key_id) {
+  const source = signingKey(sourcePrivateKey, 'public witness transfer source');
+  if (source.keyId !== admission.source_key_id) {
     throw new ValidationError('public witness transfer source private key does not match the local source admission');
   }
+  const requestValue = exactKeys(
+    requestRaw,
+    new Set(['operation', 'request']),
+    'public witness transfer creation request'
+  );
+  const requestOperation = operation(
+    requestValue.operation,
+    'public witness transfer request operation'
+  );
+  if (!admission.allowed_operations.includes(requestOperation)) {
+    throw new ValidationError('public witness transfer operation is not allowed by the local source admission');
+  }
+  const request = normalizeTransferRequest(requestValue.request, requestOperation);
   let previous = null;
   if (previousTransfer !== null && previousTransfer !== undefined) {
     previous = verifyPublicWitnessTransferEnvelope(previousTransfer, {
@@ -552,14 +561,6 @@ export function createPublicWitnessTransferPackage(requestRaw, {
       allowExpired: true
     });
   }
-  const requestOperation = operation(
-    requestRaw?.operation,
-    'public witness transfer request operation'
-  );
-  if (!admission.allowed_operations.includes(requestOperation)) {
-    throw new ValidationError('public witness transfer operation is not allowed by the local source admission');
-  }
-  const request = normalizeTransferRequest(requestRaw.request, requestOperation);
   const statement = normalizeTransferStatement({
     domain_id: admission.domain_id,
     source_id: admission.source_id,
@@ -601,7 +602,7 @@ export function createPublicWitnessTransferPackage(requestRaw, {
   const sourceSignature = sign(
     null,
     Buffer.from(canonicalJson(signable)),
-    signer.privateKey
+    source.privateKey
   ).toString('base64url');
   const signed = Object.freeze({ ...signable, source_signature: sourceSignature });
   const transfer = Object.freeze({ ...signed, transfer_digest: digestObject(signed) });
@@ -611,18 +612,18 @@ export function createPublicWitnessTransferPackage(requestRaw, {
   return transfer;
 }
 
-function locallyTrustedRootKeyId(trustedPersonaRootPublicKey) {
+function trustedRootKeyId(trustedPersonaRootPublicKey) {
   return publicKeyId(trustedPersonaRootPublicKey, 'trusted persona root public key');
 }
 
 function verifyTransferredArtifact(envelope, trustedPersonaRootPublicKey) {
-  const trustedRootKeyId = locallyTrustedRootKeyId(trustedPersonaRootPublicKey);
+  const expectedRootKeyId = trustedRootKeyId(trustedPersonaRootPublicKey);
   const request = envelope.request;
   if (envelope.statement.operation === 'observe-credential') {
     const verified = verifyPersonaSigningCredential(request.credential, {
       trustedPersonaRootPublicKey
     });
-    if (verified.statement.root_key_id !== trustedRootKeyId) {
+    if (verified.statement.root_key_id !== expectedRootKeyId) {
       throw new ValidationError('public witness transferred credential does not match the locally trusted persona root key');
     }
     return Object.freeze({
@@ -638,7 +639,7 @@ function verifyTransferredArtifact(envelope, trustedPersonaRootPublicKey) {
       trustedPersonaRootPublicKey,
       credential: request.credential
     });
-    if (verified.statement.root_key_id !== trustedRootKeyId) {
+    if (verified.statement.root_key_id !== expectedRootKeyId) {
       throw new ValidationError('public witness transferred revocation does not match the locally trusted persona root key');
     }
     return Object.freeze({
@@ -655,7 +656,7 @@ function verifyTransferredArtifact(envelope, trustedPersonaRootPublicKey) {
     entry: request.entry,
     publication: request.publication === null ? undefined : request.publication
   });
-  if (verified.statement.persona_root_key_id !== trustedRootKeyId) {
+  if (verified.statement.persona_root_key_id !== expectedRootKeyId) {
     throw new ValidationError('public witness transferred journal does not match the locally trusted persona root key');
   }
   return Object.freeze({
@@ -681,15 +682,19 @@ export function verifyPublicWitnessTransferPackage(raw, {
     allowExpired: false
   });
   const artifact = verifyTransferredArtifact(envelope, trustedPersonaRootPublicKey);
+  if (envelope.statement.created_at < artifact.artifact_time) {
+    throw new ValidationError('public witness transfer cannot predate the transferred artifact');
+  }
   return Object.freeze({
     ...envelope,
     persona_artifact_verified: true,
     persona_root_trust_source: 'local-verifier-input',
     source_minted_persona_root_trust: false,
     artifact,
-    observation_request: Object.freeze({
+    observation_input: Object.freeze({
       operation: envelope.statement.operation,
-      request: envelope.request
+      request: envelope.request,
+      observed_at_source: 'receiver-local-time-required'
     })
   });
 }
@@ -876,8 +881,8 @@ export function createPublicWitnessTransferReceipt(transferRaw, {
   const admission = validatePublicWitnessSourceAdmission(sourceAdmission);
   const witness = signingKey(witnessPrivateKey, 'public witness transfer receipt');
   const received = canonicalTimestamp(receivedAt, 'public witness transfer receivedAt');
-  if (received < verified.statement.created_at) {
-    throw new ValidationError('public witness transfer receipt cannot predate package creation');
+  if (received < verified.statement.created_at || received < verified.artifact.artifact_time) {
+    throw new ValidationError('public witness transfer receipt cannot predate the package or transferred artifact');
   }
   if (new Date(received).valueOf() > now + MAX_CLOCK_SKEW_MS) {
     throw new ValidationError('public witness transfer receipt time exceeds allowed clock skew');
