@@ -9,6 +9,7 @@ import {
 } from './lib/service-network-policy.mjs';
 import { ACTIVE_GATEWAY_CLIENT_CONTRACT } from './lib/gateway-client-contract.mjs';
 import { validateCapabilityRegistry } from './check-registry.mjs';
+import { checkAgentCommons } from './check-agent-commons.mjs';
 import { verifyRuntimeAdapterContract } from './lib/runtime-adapter-contract.mjs';
 
 export const CANONICAL_DOCUMENTS = Object.freeze([
@@ -17,6 +18,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   '.github/SECURITY.md',
   'CONSTITUTION.md',
   'CONTRIBUTING.md',
+  'AGENTS.md',
   'docs/README.md',
   'docs/MASTER-TODO.md',
   'docs/MASTER-TODO-PLURAL-AUTHORITY.md',
@@ -28,9 +30,13 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/PRODUCTION-READINESS-TRACKER.md',
   'docs/PROJECT-STATUS-2026.md',
   'docs/REPOSITORY-MIGRATION.md',
+  'docs/architecture/AGENT-COMMONS.md',
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md',
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md',
   'docs/architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md',
+  'docs/architecture/contracts/agent-challenge.v1.schema.json',
+  'docs/architecture/contracts/agent-contribution.v1.schema.json',
+  'docs/architecture/contracts/agent-feedback.v1.schema.json',
   'docs/architecture/contracts/agent-runtime-capsule.v1.schema.json',
   'docs/architecture/contracts/agent-runtime-adapter.v1.schema.json',
   'docs/architecture/contracts/compute-node-profile.v1.schema.json',
@@ -85,6 +91,12 @@ const REQUIRED_CONTENT = Object.freeze({
     'search the supported tree for equivalent',
     'regression coverage for the class'
   ],
+  'AGENTS.md': [
+    'GitHub is the canonical public collaboration surface',
+    'mesh/config/capabilities.json',
+    'Gateway -> Hypervisor -> Sandbox -> Grid',
+    'does **not** currently claim a deployed agent federation'
+  ],
   'docs/README.md': [
     '## Canonical documents',
     '## Supported documentation boundary',
@@ -128,6 +140,12 @@ const REQUIRED_CONTENT = Object.freeze({
   'docs/PRODUCTION-READINESS-TRACKER.md': ['## Current gate status', 'Not production-promoted'],
   'docs/PROJECT-STATUS-2026.md': ['## Current build', '## What is not claimed'],
   'docs/REPOSITORY-MIGRATION.md': ['## Provenance map', '## Credential boundary'],
+  'docs/architecture/AGENT-COMMONS.md': [
+    'External agents may contribute evidence and proposals',
+    'GitHub remains the front-facing source of collaboration truth',
+    'Read-only MCP/A2A laboratory',
+    'The first deliverable is a safer contribution surface, not an autonomous swarm.'
+  ],
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md': [
     '## Contract identity and versioning',
     '## Trust bootstrap and grants',
@@ -143,6 +161,24 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Versioned contract set',
     '## Phased MVP plan',
     '## Promotion gates and non-claims'
+  ],
+  'docs/architecture/contracts/agent-challenge.v1.schema.json': [
+    'https://axiom.invalid/schemas/agent-challenge.v1.schema.json',
+    'axiom-agent-challenge.v1',
+    'base_sha',
+    'authority_granted'
+  ],
+  'docs/architecture/contracts/agent-contribution.v1.schema.json': [
+    'https://axiom.invalid/schemas/agent-contribution.v1.schema.json',
+    'axiom-agent-contribution.v1',
+    'merge_authority_requested',
+    'production_authority_requested'
+  ],
+  'docs/architecture/contracts/agent-feedback.v1.schema.json': [
+    'https://axiom.invalid/schemas/agent-feedback.v1.schema.json',
+    'axiom-agent-feedback.v1',
+    'public_disclosure_safe',
+    'authority_requested'
   ],
   'docs/architecture/contracts/agent-runtime-capsule.v1.schema.json': [
     'https://axiom.invalid/schemas/agent-runtime-capsule.v1.schema.json',
@@ -366,6 +402,7 @@ const REQUIRED_CONTENT = Object.freeze({
 });
 
 const MINIMUM_LENGTH = Object.freeze({
+  'AGENTS.md': 1_500,
   'docs/MASTER-TODO.md': 2_000,
   'docs/MASTER-TODO-PLURAL-AUTHORITY.md': 8_000,
   'docs/MASTER-TODO-AGENT-INTEROPERABILITY.md': 7_000,
@@ -374,8 +411,12 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md': 7_000,
   'docs/PRODUCTION-GRADE.md': 3_000,
   'docs/PROJECT-STATUS-2026.md': 1_500,
+  'docs/architecture/AGENT-COMMONS.md': 5_000,
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md': 8_000,
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md': 25_000,
+  'docs/architecture/contracts/agent-challenge.v1.schema.json': 2_000,
+  'docs/architecture/contracts/agent-contribution.v1.schema.json': 3_000,
+  'docs/architecture/contracts/agent-feedback.v1.schema.json': 2_000,
   'docs/architecture/contracts/agent-runtime-capsule.v1.schema.json': 7_000,
   'docs/architecture/contracts/agent-runtime-adapter.v1.schema.json': 12_000,
   'docs/architecture/contracts/compute-node-profile.v1.schema.json': 9_000,
@@ -426,6 +467,7 @@ export function markdownLocalTargets(markdown) {
 
 export async function verifyCanonicalDocumentation(repositoryRoot = dirname(MESH_ROOT)) {
   verifyRuntimeAdapterContract();
+  await checkAgentCommons();
   await verifyRepositoryMarkdownBoundary(repositoryRoot);
   await verifySupportedDocumentationBoundary(repositoryRoot);
   const contents = new Map();

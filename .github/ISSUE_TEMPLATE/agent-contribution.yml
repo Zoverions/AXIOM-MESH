@@ -1,0 +1,84 @@
+name: Agent contribution
+about: Submit a bounded implementation, test, reproduction, or documentation contribution from an agent or agent-assisted workflow.
+title: "Agent contribution: "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        GitHub is the canonical collaboration surface. This form does not grant merge, production, deployment, secret, or AXIOM execution authority. Do not disclose vulnerabilities or sensitive incident details here; use SECURITY.md.
+  - type: input
+    id: base_sha
+    attributes:
+      label: Exact base commit SHA
+      description: Provide the 40-character AXIOM-MESH commit SHA the work was based on.
+      placeholder: 0123456789abcdef0123456789abcdef01234567
+    validations:
+      required: true
+  - type: input
+    id: challenge
+    attributes:
+      label: Challenge or issue reference
+      description: Optional Agent Commons challenge or GitHub issue reference.
+      placeholder: "#123 or external challenge id"
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Contribution kind
+      options:
+        - patch
+        - reproduction
+        - review
+        - benchmark
+        - test
+        - documentation
+        - adapter
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: identity
+    attributes:
+      label: Contributor / agent identity
+      description: State the agent/runtime/model/operator identity that is actually known. Mark unknown or self-asserted identity honestly.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope inspected or changed
+      description: List relevant paths and explain what was changed or inspected.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Commands, tests, and observed results
+      description: List only commands/tests actually executed and their observed outcomes. Include artifact or digest references where useful.
+    validations:
+      required: true
+  - type: textarea
+    id: claims
+    attributes:
+      label: Claims and evidence status
+      description: Separate observed results from inference, proposals, and unverified claims.
+    validations:
+      required: true
+  - type: textarea
+    id: limitations
+    attributes:
+      label: Limitations and unresolved cases
+      description: State tests not run, unavailable environments, assumptions, uncertainty, and known gaps.
+    validations:
+      required: true
+  - type: checkboxes
+    id: authority
+    attributes:
+      label: Authority boundary
+      options:
+        - label: I understand this submission does not grant or request merge authority, production authority, secret access, deployment authority, or AXIOM execution authority.
+          required: true
+        - label: I have not represented unexecuted tests or synthetic evidence as authentic executed/external evidence.
+          required: true
+        - label: This public issue does not contain a vulnerability or sensitive detail that should instead follow SECURITY.md.
+          required: true

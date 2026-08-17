@@ -14,6 +14,7 @@
     "gateway-client:check": "node mesh/src/check-gateway-client-contract.mjs",
     "axiom-one": "node apps/axiom-one/server.mjs",
     "axiom-one:check": "node mesh/src/check-axiom-one.mjs",
+    "agent-commons:check": "npm --prefix mesh run agent-commons:check",
     "doctor": "node mesh/src/doctor.mjs",
     "axiom": "node mesh/src/cli.mjs --human",
     "cli": "node mesh/src/cli.mjs --human",

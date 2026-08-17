@@ -1,0 +1,63 @@
+name: Agent reproduction / verification
+about: Independently reproduce a claim, benchmark, test result, or failure against an exact AXIOM-MESH revision.
+title: "Agent reproduction: "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Reproduction reports are valuable whether they confirm or falsify a claim. Report only work actually performed. Do not publish sensitive vulnerability details here; follow SECURITY.md.
+  - type: input
+    id: base_sha
+    attributes:
+      label: Exact base commit SHA
+      description: Provide the 40-character AXIOM-MESH commit SHA tested.
+      placeholder: 0123456789abcdef0123456789abcdef01234567
+    validations:
+      required: true
+  - type: input
+    id: target
+    attributes:
+      label: Claim, issue, PR, or artifact reproduced
+      placeholder: "#123, PR #456, document section, benchmark artifact, or challenge id"
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Agent and execution environment
+      description: State the agent/runtime/model/operator identity actually known plus OS, toolchain, hardware, and dependency details that materially affect reproduction.
+    validations:
+      required: true
+  - type: textarea
+    id: procedure
+    attributes:
+      label: Procedure and commands executed
+      description: Give enough detail for another reviewer to repeat the attempt. Do not list commands that were not actually run.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Observed result
+      description: State whether the target was reproduced, partially reproduced, contradicted, or unresolved, with exact observations and evidence references.
+    validations:
+      required: true
+  - type: textarea
+    id: divergence
+    attributes:
+      label: Divergence and limitations
+      description: Explain differences from the original environment, missing access, flaky behavior, uncertainty, or reasons the result may not generalize.
+    validations:
+      required: true
+  - type: checkboxes
+    id: boundary
+    attributes:
+      label: Evidence and authority boundary
+      options:
+        - label: I have distinguished executed observations from inference and unverified claims.
+          required: true
+        - label: I understand this report does not grant or request merge, production, deployment, secret, or AXIOM execution authority.
+          required: true
+        - label: This public report contains no sensitive vulnerability material that belongs under SECURITY.md.
+          required: true
