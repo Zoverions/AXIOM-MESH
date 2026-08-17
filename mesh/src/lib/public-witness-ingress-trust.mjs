@@ -13,7 +13,7 @@ import { PublicWitnessAuthenticatedIngress } from './public-witness-live-ingress
 import { validatePublicWitnessSourceAdmission } from './public-witness-transfer.mjs';
 
 export const PUBLIC_WITNESS_INGRESS_TRUST_BUNDLE_SCHEMA = 'axiom-public-witness-ingress-trust-bundle.v1';
-export const PUBLIC_WITNESS_INGRESS_TRUST_APPLICATION_SCHEMA = 'axiom-public-witness-ingress-trust-application.v1';
+export const PUBLIC_WITNESS_INGRESS_TRUST_VERIFICATION_SCHEMA = 'axiom-public-witness-ingress-trust-verification.v1';
 
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
@@ -168,7 +168,7 @@ function normalizeBundleBody(raw) {
     throw new ValidationError('public witness ingress trust generation 1 requires null predecessor and later generations require one');
   }
   if (
-    value.source_trust_input !== 'local-operator-config'
+    value.source_trust_input !== 'pre-admitted-w2c2-source'
     || value.persona_root_trust_input !== 'local-operator-config'
     || value.remote_self_admission_allowed !== false
     || value.social_authority_effect !== 'none'
@@ -186,7 +186,7 @@ function normalizeBundleBody(raw) {
     activated_at: canonicalTimestamp(value.activated_at, 'public witness ingress trust activated_at'),
     sources: normalizeSources(value.sources, domainId),
     persona_roots: normalizeRoots(value.persona_roots),
-    source_trust_input: 'local-operator-config',
+    source_trust_input: 'pre-admitted-w2c2-source',
     persona_root_trust_input: 'local-operator-config',
     remote_self_admission_allowed: false,
     social_authority_effect: 'none',
@@ -230,7 +230,7 @@ export function createPublicWitnessIngressTrustBundle({
     activated_at: activatedAt,
     sources,
     persona_roots: personaRoots,
-    source_trust_input: 'local-operator-config',
+    source_trust_input: 'pre-admitted-w2c2-source',
     persona_root_trust_input: 'local-operator-config',
     remote_self_admission_allowed: false,
     social_authority_effect: 'none',
@@ -325,19 +325,17 @@ function sameCanonical(left, right) {
   return canonicalJson(left) === canonicalJson(right);
 }
 
-export async function applyPublicWitnessIngressTrustBundle({
+export function verifyPublicWitnessIngressTrustBundleAgainstReceiver({
   receiverStore,
   bundle: bundleRaw,
   previousBundle = null
 } = {}) {
   if (
     !receiverStore
-    || typeof receiverStore.admitSource !== 'function'
     || typeof receiverStore.getSourceAdmission !== 'function'
-    || typeof receiverStore.getActiveSourceAdmission !== 'function'
     || typeof receiverStore.snapshot !== 'function'
   ) {
-    throw new ValidationError('public witness ingress trust application requires a W2c2 receiver with active-admission inspection');
+    throw new ValidationError('public witness ingress trust verification requires a W2c2 receiver');
   }
   const bundle = previousBundle === null
     ? validatePublicWitnessIngressTrustBundle(bundleRaw)
@@ -347,68 +345,32 @@ export async function applyPublicWitnessIngressTrustBundle({
     throw new ValidationError('public witness ingress trust bundle belongs to a different receiver domain');
   }
 
-  const plan = [];
+  const sources = [];
   for (const source of bundle.sources) {
-    const admission = source.admission;
-    const existingExact = receiverStore.getSourceAdmission(admission.admission_digest);
-    if (existingExact) {
-      if (!sameCanonical(existingExact, admission)) {
-        throw new ValidationError('public witness ingress trust retained admission digest resolves to different bytes');
-      }
-      plan.push({ source, action: 'replay' });
-      continue;
+    const retained = receiverStore.getSourceAdmission(source.admission.admission_digest);
+    if (!retained || !sameCanonical(retained, source.admission)) {
+      throw new ValidationError('public witness ingress trust source admission is not exactly retained by W2c2');
     }
-    const active = receiverStore.getActiveSourceAdmission(admission.source_id);
-    if (active) {
-      if (admission.source_epoch <= active.source_epoch) {
-        throw new ValidationError('public witness ingress trust cannot apply stale or same-epoch replacement admission');
-      }
-      if (admission.source_epoch !== active.source_epoch + 1) {
-        throw new ValidationError('public witness ingress trust receiver source rotation must advance exactly one epoch');
-      }
-    }
-    plan.push({ source, action: 'admit' });
-  }
-
-  const sourceResults = [];
-  for (const item of plan) {
-    if (item.action === 'replay') {
-      sourceResults.push(Object.freeze({
-        source_id: item.source.admission.source_id,
-        source_epoch: item.source.admission.source_epoch,
-        admission_digest: item.source.admission.admission_digest,
-        status: 'replay'
-      }));
-      continue;
-    }
-    const result = await receiverStore.admitSource(item.source.admission, {
-      admittedAt: bundle.activated_at
-    });
-    sourceResults.push(Object.freeze({
-      source_id: item.source.admission.source_id,
-      source_epoch: item.source.admission.source_epoch,
-      admission_digest: item.source.admission.admission_digest,
-      status: result.status
+    sources.push(Object.freeze({
+      source_id: source.admission.source_id,
+      source_epoch: source.admission.source_epoch,
+      admission_digest: source.admission.admission_digest,
+      certificate_sha256: source.certificate_sha256,
+      status: 'retained-source-required'
     }));
   }
 
-  for (const source of bundle.sources) {
-    const retained = receiverStore.getSourceAdmission(source.admission.admission_digest);
-    const active = receiverStore.getActiveSourceAdmission(source.admission.source_id);
-    if (!retained || !active || !sameCanonical(retained, source.admission) || !sameCanonical(active, source.admission)) {
-      throw new ValidationError('public witness ingress trust application did not converge to the requested active admission');
-    }
-  }
-
   return Object.freeze({
-    schema: PUBLIC_WITNESS_INGRESS_TRUST_APPLICATION_SCHEMA,
+    schema: PUBLIC_WITNESS_INGRESS_TRUST_VERIFICATION_SCHEMA,
     domain_id: bundle.domain_id,
     generation: bundle.generation,
     bundle_digest: bundle.bundle_digest,
-    applied_at: bundle.activated_at,
-    sources: Object.freeze(sourceResults),
-    source_trust_input: 'local-operator-config',
+    activated_at: bundle.activated_at,
+    sources: Object.freeze(sources),
+    persona_root_count: bundle.persona_roots.length,
+    source_trust_input: 'pre-admitted-w2c2-source',
     persona_root_trust_input: 'local-operator-config',
+    receiver_mutation: false,
     remote_self_admission_allowed: false,
     social_authority_effect: 'none',
     finality_claimed: false,
@@ -417,7 +379,7 @@ export async function applyPublicWitnessIngressTrustBundle({
   });
 }
 
-export async function createPublicWitnessAuthenticatedIngressFromTrustBundle({
+export function createPublicWitnessAuthenticatedIngressFromTrustBundle({
   receiverStore,
   bundle: bundleRaw,
   previousBundle = null,
@@ -429,7 +391,7 @@ export async function createPublicWitnessAuthenticatedIngressFromTrustBundle({
   const bundle = previousBundle === null
     ? validatePublicWitnessIngressTrustBundle(bundleRaw)
     : validatePublicWitnessIngressTrustTransition(previousBundle, bundleRaw);
-  await applyPublicWitnessIngressTrustBundle({ receiverStore, bundle, previousBundle });
+  verifyPublicWitnessIngressTrustBundleAgainstReceiver({ receiverStore, bundle, previousBundle });
   return new PublicWitnessAuthenticatedIngress({
     receiverStore,
     sourceBindings: bundle.sources.map(sourceBinding),
