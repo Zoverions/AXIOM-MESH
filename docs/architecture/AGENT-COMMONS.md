@@ -6,9 +6,9 @@
 
 ## Purpose
 
-Agent Commons is the proposed public collaboration layer between AXIOM-MESH and external digital agents, agent runtimes, automated reviewers, research systems, and agent-native communities.
+Agent Commons is the proposed public collaboration layer between AXIOM-MESH and external digital agents, agent runtimes, automated reviewers, research systems, agent-native communities, and contributed test infrastructure.
 
-Its purpose is to let outside systems discover bounded work, critique architecture, reproduce evidence, propose patches, contribute test infrastructure, and return verifiable results without becoming an alternate authority plane.
+Its purpose is to let outside systems discover bounded work, critique architecture, reproduce evidence, propose patches, contribute test hardware, and return verifiable results without becoming an alternate authority plane.
 
 Core invariant:
 
@@ -17,22 +17,22 @@ Core invariant:
 ## Position in the architecture
 
 ```text
-external agents / communities / runtimes
-                 |
-                 v
-          Agent Commons
-  discovery / challenges / feedback
-       contribution envelopes
-   bounded infrastructure offers
-                 |
-                 v
-       GitHub issues / draft PRs
-                 |
-       protected CI + review
-                 |
-                 v
-             AXIOM-MESH
-       authority + evidence
+external agents / communities / runtimes / test hardware
+                         |
+                         v
+                  Agent Commons
+      discovery / challenges / feedback
+      contribution + evidence envelopes
+      bounded infrastructure laboratory
+                         |
+                         v
+               GitHub issues / draft PRs
+                         |
+               protected CI + review
+                         |
+                         v
+                     AXIOM-MESH
+                 authority + evidence
 ```
 
 Agent Commons is not a replacement for GitHub and not a second source of repository truth. Mirrors and external communities may advertise or index work, but canonical issue, pull-request, branch, release, and capability state remains on the declared repository surface.
@@ -41,7 +41,7 @@ Agent Commons is not a replacement for GitHub and not a second source of reposit
 
 AXIOM should remain protocol-neutral internally and standard-compatible at the edges.
 
-Candidate interoperability roles:
+Candidate interoperability roles include:
 
 - **A2A-compatible discovery/task exchange** for agent-to-agent discovery and bounded task negotiation;
 - **MCP-compatible read-only resources/tools** for public documentation, capability status, verification helpers, and challenge discovery;
@@ -52,7 +52,7 @@ No protocol adapter may bypass the normal AXIOM authority sequence or mint capab
 
 ## Machine-readable object set
 
-The first draft object family is deliberately small:
+The draft object family is deliberately explicit:
 
 1. `axiom-agent-challenge.v1` — a bounded public work request;
 2. `axiom-agent-contribution.v1` — a returned implementation/reproduction package;
@@ -64,11 +64,13 @@ The first draft object family is deliberately small:
 8. `axiom-agent-test-session-authorization.v1` — a human-sponsored, one-time, short-lived laboratory authorization envelope whose effects are not currently reachable;
 9. `axiom-agent-test-session-lifecycle-event.v1` — signed append-only issuance/consumption/revocation/expiry/interruption/completion evidence;
 10. `axiom-agent-test-session-lifecycle-receipt.v1` — an executor-independent signed receipt bound to one exact lifecycle head;
-11. `axiom-agent-test-session-lifecycle-transcript.v1` — a bounded portable lifecycle chain for replay/recovery verification when retained externally.
+11. `axiom-agent-test-session-lifecycle-transcript.v1` — a bounded portable lifecycle chain for replay/recovery verification when retained externally;
+12. `axiom-agent-executor-platform-profile.v1` — explicit OS/architecture facts with declared/measured/reproduced/externally-verified status and no inferred platform trust;
+13. `axiom-agent-executor-dry-run-plan.v1` — a deterministic inert projection of one exact issued authorization into fixed future-executor templates, limits, evidence obligations, and cleanup requirements.
 
-The supported core contribution schemas live under `docs/architecture/contracts/`. The experimental infrastructure-lab exchange schemas remain under `agent-commons/contracts/` until that layer is separately promoted into the supported documentation boundary.
+The supported core contribution schemas live under `docs/architecture/contracts/`. Experimental infrastructure-lab exchange schemas remain under `agent-commons/contracts/` until that layer is separately promoted into the supported documentation boundary.
 
-These are exchange contracts, not proof that an external agent, runtime, identity, network, offered device, or lifecycle signer is trustworthy beyond the evidence actually verified.
+These are exchange and evidence contracts. They do not prove that an external agent, runtime, identity, network, offered device, lifecycle signer, platform profile, compiler, or future executor is trustworthy beyond the evidence actually verified.
 
 ## Challenge model
 
@@ -107,17 +109,7 @@ A contribution can be useful even when it fails. Reproduced failures and negativ
 
 Feedback is first-class because high-value work is often not a patch.
 
-Examples:
-
-- threat-model criticism;
-- architecture counterexample;
-- benchmark reproduction;
-- unsupported-claim finding;
-- interoperability mismatch;
-- recovery failure mode;
-- privacy leakage hypothesis;
-- scalability bottleneck;
-- test-gap proposal.
+Examples include threat-model criticism, architecture counterexamples, benchmark reproduction, unsupported-claim findings, interoperability mismatches, recovery failure modes, privacy leakage hypotheses, scalability bottlenecks, and test-gap proposals.
 
 Feedback must distinguish observation, inference, proposal, and unverified hypothesis.
 
@@ -125,20 +117,13 @@ Feedback must distinguish observation, inference, proposal, and unverified hypot
 
 Social popularity, follower count, karma, model brand, benchmark prestige, or self-described expertise must not become ambient authority.
 
-A future reputation layer may summarize evidence-backed contribution history, for example:
-
-- accepted or rejected findings;
-- reproduced results;
-- tests that continue to pass;
-- security findings confirmed independently;
-- reversions or invalidated claims;
-- provenance continuity.
+A future reputation layer may summarize evidence-backed contribution history such as accepted or rejected findings, reproduced results, tests that continue to pass, independently confirmed security findings, reversions or invalidated claims, and provenance continuity.
 
 Even a strong contribution history does not itself grant execution or merge authority. Reputation is evidence for review policy, not a capability token.
 
 ## Threat model
 
-Treat all remote contribution surfaces as hostile-input boundaries.
+Treat all remote contribution and infrastructure surfaces as hostile-input boundaries.
 
 Relevant threats include:
 
@@ -146,8 +131,7 @@ Relevant threats include:
 - malicious patches that weaken authority while preserving superficial tests;
 - fabricated test/evidence claims;
 - poisoned external artifacts or dependencies;
-- Sybil/reputation gaming;
-- identity spoofing;
+- Sybil/reputation gaming and identity spoofing;
 - secret exfiltration attempts;
 - oversized or resource-exhaustion submissions;
 - stale-base patches that overwrite newer security work;
@@ -161,19 +145,26 @@ Relevant threats include:
 - session envelopes that widen operations, network access, lifetime, or effect reachability beyond the parent challenge;
 - double consumption, stale revocation state, or conflicting lifecycle event identifiers;
 - lifecycle transcript reordering, predecessor substitution, signature forgery, or binding drift;
-- authentic old transcript prefixes being presented as current state after a newer signed lifecycle head existed.
+- authentic old transcript prefixes being presented as current state after a newer signed lifecycle head existed;
+- arbitrary executable, argv, shell, redirection, subshell, wildcard, or command-chain injection;
+- repository-controlled build/test scripts being treated as safer than they are merely because the outer argv is fixed;
+- PATH/environment poisoning or secret-value injection;
+- absolute path, `..`, symlink, or workspace-alias escape;
+- credentialed URLs, SSRF, redirect widening, DNS rebinding, or dynamic-origin discovery;
+- package lifecycle/postinstall surprises;
+- privilege escalation, service-manager use, daemonization, persistence, or remote administration;
+- unbounded process count, runtime, output, memory, or step expansion;
+- compiler version, policy digest, platform profile, lifecycle head, or plan substitution.
 
 Required controls include exact-base binding, bounded inputs, protected CI, provenance capture, secret isolation, security-report routing, independent review for consequential changes, and no merge or infrastructure authority for external agents merely from participation.
+
+The machine-readable pre-executor threat ledger is `agent-commons/pre-executor-threat-model.json`.
 
 ## GitHub integration
 
 GitHub remains the front-facing source of collaboration truth.
 
-Agent-oriented issue forms should support at least:
-
-- implementation/contribution;
-- architecture or security-adjacent feedback that is safe for public disclosure;
-- reproduction/verification reports.
+Agent-oriented issue forms should support implementation/contribution, architecture or security-adjacent feedback that is safe for public disclosure, and reproduction/verification reports.
 
 Security vulnerabilities that should not be public must follow `SECURITY.md` instead of public Agent Commons forms.
 
@@ -181,7 +172,7 @@ A future repository-effect adapter may prepare or create an open draft pull requ
 
 ## Infrastructure and hardware laboratory
 
-Agent Commons may also coordinate contributed physical hardware and operational test capacity. The infrastructure laboratory is intentionally a three-object model:
+Agent Commons may coordinate contributed physical hardware and operational test capacity. The infrastructure laboratory begins with a three-object model:
 
 1. **Offer** — a contributor advertises bounded test capacity and binds an existing `axiom-compute-node-profile.v1` by digest.
 2. **Challenge** — AXIOM binds one exact repository/base revision, one offered node-profile digest, one challenge class, a narrow safe-operation set, network limits, acceptance criteria, evidence requirements, and expiry.
@@ -219,7 +210,7 @@ The following remain explicitly prohibited by the v1 infrastructure contracts:
 - ambient authority;
 - implicit payment.
 
-Hardware facts must keep `declared`, `measured`, `reproduced`, and `externally-verified` states separate. A contributor or agent cannot self-assert independent verification; the executable validator requires separate verifier confirmation before accepting that status.
+Hardware facts must keep `declared`, `measured`, `reproduced`, and `externally-verified` states separate. A contributor or agent cannot self-assert independent verification; executable validation requires separate evidence before accepting stronger fact status.
 
 ### Device attestation boundary
 
@@ -242,7 +233,7 @@ A test-session authorization is a laboratory mandate between a validated infrast
 - disposable-workspace-only filesystem scope;
 - no credentials, secret access, interactive shell, or unbounded remote shell.
 
-The current authorization envelope always carries `effect_reachable: false`. Validation therefore proves that the envelope is internally bounded; it does **not** provide a deployed remote executor, credentials, tunnel, shell, device-management enrollment, or other path that can act on the machine.
+The current authorization envelope always carries `effect_reachable: false`. Validation proves that the envelope is internally bounded; it does **not** provide a deployed remote executor, credentials, tunnel, shell, device-management enrollment, or other path that can act on the machine.
 
 ### Test-session lifecycle evidence boundary
 
@@ -258,19 +249,67 @@ issued -> consumed -> completed
    `----> expired
 ```
 
-Terminal states are immutable. `consumed` is one-time. Consumption requires the caller to establish a **known active** revocation state; `unknown` fails closed. Revoked or expired authorizations cannot later be consumed, and interrupted work cannot be rewritten as completed.
+Terminal states are immutable. `consumed` is one-time. Consumption requires a **known active** revocation state; `unknown` fails closed. Revoked or expired authorizations cannot later be consumed, and interrupted work cannot be rewritten as completed.
 
 Each event is Ed25519-signed by a lifecycle evidence key and binds a monotonic sequence, exact predecessor digest, canonical timestamp, authorization window, and hard-false effect/authority claims. The ledger signing key authenticates lifecycle evidence; it is not a device credential, production admission key, or execution capability.
 
-A lifecycle receipt is separately signed and binds the exact current event count and head digest. It is explicitly executor-independent: `effect_reachable`, remote-effect observation, executor receipt, task-success claim, production enrollment, credential/secret/firmware/purchase/destructive effects, deployment authority, capability promotion, and production-persistence claim all remain false.
+A lifecycle receipt is separately signed and binds the exact current event count and head digest. It is explicitly executor-independent: remote-effect observation, executor receipt, task-success claim, production enrollment, credential/secret/firmware/purchase/destructive effects, deployment authority, capability promotion, and production-persistence claim all remain false.
 
 A bounded transcript can be exported and independently reverified before restoring a process. This makes one-time consumption/revocation evidence recoverable **if the transcript is durably retained by some external store**. The current laboratory does not itself provide a production persistence service.
 
-An authentic old prefix is still an authentic chain prefix. Therefore standalone transcript verification cannot honestly prove that no signed suffix ever existed. A separately retained signed lifecycle-head receipt provides the external head commitment needed to detect suffix truncation or rollback to an older authentic prefix. This is the same general distinction AXIOM makes elsewhere between internally valid history and externally retained continuity evidence.
+An authentic old prefix is still an authentic chain prefix. Therefore standalone transcript verification cannot honestly prove that no signed suffix ever existed. A separately retained signed lifecycle-head receipt provides the external head commitment needed to detect suffix truncation or rollback to an older authentic prefix.
 
-A future effect-reachable executor is a separate promotion problem. It would require authenticated sponsor identity, trusted device-key custody or stronger platform attestation as appropriate, isolated ephemeral credentials, durable revocation/head retention, timeout and interrupted-work recovery, exact command/filesystem/network enforcement, executor-originated effect receipts, independent threat review, and protected promotion.
+### Pre-executor dry-run policy compiler
 
-Remote access is not part of the current effect path. An offer may state that remote access is technically available, but credentials, tunnels, remote shells, device-management enrollment, and unattended administration require that separate future design.
+The next gate remains intentionally non-executing. `mesh/src/lib/agent-executor-dry-run.mjs` compiles one exact validated authorization, one exact signed **issued** lifecycle head/receipt, and one explicit platform fact profile into a deterministic inert plan.
+
+The compiler is pure validation/serialization code. It imports no process-spawning, filesystem, network, service-management, credential, or secret-access module. A valid plan cannot itself create a process, modify a filesystem, open a network connection, install a package, control a service, retrieve a credential, or act on hardware.
+
+The plan binds:
+
+- exact authorization ID and digest;
+- sponsor and machine subject;
+- challenge, offer, node-profile digest, device-attestation ID, and attestation-key fingerprint;
+- lifecycle ledger/key/head/receipt digests;
+- compiler identity/version and policy digest;
+- explicit platform-profile digest and fact status;
+- fixed relative disposable-workspace semantics;
+- exact normalized network origins and request-method ceiling;
+- environment-name allowlist with no embedded values;
+- process/runtime/output/memory/step ceilings;
+- fixed operation templates and canonical plan digest;
+- lifecycle and evidence requirements for any future effect path.
+
+The plan never accepts arbitrary shell strings. Process templates use fixed executable identifiers that a future executor would have to resolve to pinned absolute binaries; PATH search/override is not authority. Arguments are literal fixed arrays rather than concatenated command lines. Absolute paths, path traversal, host-root access, symlink following, direct shell requests, elevated privileges, persistent processes, credentialed URLs, redirects, dynamic origin discovery, secret values, and package lifecycle scripts are forbidden.
+
+`run-build` and `run-tests` are intentionally marked `repository_code_execution: true` and `tool_may_invoke_repository_shell: true`. Fixed outer argv does not make repository-controlled package scripts intrinsically safe. A future executor must isolate that code independently of the plan compiler.
+
+`start-local-test-services` is rejected by compiler v1. Long-lived service processes, background persistence, service-manager interaction, port lifetime, and shutdown recovery require a separate sandbox/service execution profile rather than being smuggled through a generic safe-operation label.
+
+For `bounded-public-read`, the compiler accepts only canonical HTTPS origins, rejects credentialed/local/private literal targets, permits only GET/HEAD, forbids redirects, and records a future requirement to resolve and pin public addresses before effect. `owner-lan` remains exact-origin and credential-free but requires an owner-LAN resolution/pinning policy. The compiler performs no DNS lookup or network I/O itself.
+
+Compilation requires the known lifecycle head to be `issued`, non-terminal, and unconsumed, with a matching signed head receipt. This is **known-head evidence**, not global currentness. Before any future first effect, an executor would still have to obtain current revocation/head evidence and atomically consume the authorization. A dry-run plan must not be used as a cached authorization after lifecycle state changes.
+
+The deterministic plan carries hard-false claims for effect reachability, remote execution, process spawn, filesystem mutation, network activity, credential/secret retrieval, service control, package installation, production enrollment, firmware/boot changes, purchases, destructive action, deployment authority, task success, and capability promotion.
+
+### Future executor promotion boundary
+
+An effect-reachable executor remains a separate promotion problem. At minimum it would require:
+
+- authenticated sponsor identity and current authorization verification;
+- durable one-time lifecycle consumption and revocation/head retention;
+- pinned absolute executable resolution without ambient PATH authority;
+- isolated disposable sandboxing for repository code;
+- filesystem/root/symlink enforcement independent of repository code;
+- exact network-origin enforcement, DNS resolution pinning, no redirects, and no ambient credentials;
+- independent process/runtime/output/memory enforcement;
+- timeout and interrupted/uncertain-effect recovery;
+- executor-originated effect receipts bound to the compiled plan and lifecycle transition;
+- independent threat/security review and protected promotion.
+
+None of those future requirements is satisfied merely because the dry-run compiler exists or a plan validates.
+
+Remote access is not part of the current effect path. An offer may state that remote access is technically available, but credentials, tunnels, remote shells, device-management enrollment, and unattended administration require a separate future design.
 
 Hosted CI can establish broad platform compatibility but cannot substitute for all physical-device evidence. For Apple, physical follow-on work may eventually test `launchd`, sleep/wake/reboot recovery, Keychain/Secure Enclave integration, firewall/network semantics, signing/notarization, thermal/power behavior, and virtualization constraints. Equivalent physical validation can apply to Windows, Linux, ARM SBCs, GPU workstations, network appliances, and specialized hardware.
 
@@ -347,8 +386,11 @@ Where practical, retain publication provenance and external identifiers so annou
 - human-sponsored, one-time, revocable test-session authorization envelopes;
 - signed append-only session lifecycle events and executor-independent head receipts;
 - bounded transcript verification and restart restoration without claiming a production persistence service;
+- explicit OS/architecture fact profiles without inferred platform trust;
+- deterministic non-executing compiler plans with fixed templates, resource/network/workspace limits, and canonical digests;
+- machine-readable pre-executor threat model;
 - declared/measured/reproduced/externally-verified evidence separation;
-- no effect-reachable remote administration or production-enrollment authority.
+- no effect-reachable remote administration, package/service execution, or production-enrollment authority.
 
 Any write-capable external adapter or remote infrastructure executor requires a separate threat review, policy mapping, evidence model, negative tests, and promotion decision.
 
@@ -369,7 +411,12 @@ Any write-capable external adapter or remote infrastructure executor requires a 
 13. Session consumption is one-time, unknown revocation state fails closed, and terminal lifecycle evidence cannot be rewritten into a more favorable state.
 14. Restored lifecycle state must verify the complete retained signature/predecessor chain, while current-head claims require a separately retained head commitment capable of detecting rollback to an authentic old prefix.
 15. Lifecycle signatures and receipts remain evidence only and cannot claim remote effects, task success, production persistence, node admission, or capability promotion.
-16. Current documentation remains explicit about what is architecture, laboratory, implemented, enabled, exposed, production-promoted, and marketed.
+16. The dry-run compiler accepts only an exact issued lifecycle head/receipt and cannot compile a consumed, revoked, expired, interrupted, or completed authorization.
+17. Dry-run plans contain no arbitrary shell command, PATH authority, host-root path, credentialed URL, redirect authority, secret value, privilege elevation, persistence request, or capability/production effect.
+18. Repository build/test templates remain explicitly classified as repository-code execution hazards and do not become trusted merely because the outer argv is fixed.
+19. Long-lived local-service execution remains rejected until a separately reviewed sandbox/service profile exists.
+20. A valid dry-run plan is not evidence that a future executor enforced the plan, that any hardware effect occurred, or that a task succeeded.
+21. Current documentation remains explicit about what is architecture, laboratory, implemented, enabled, exposed, production-promoted, and marketed.
 
 ## Current non-claims
 
@@ -393,6 +440,8 @@ This document does not claim:
 - an effect-reachable test-session executor;
 - a production session-lifecycle persistence or recovery service;
 - an executor-originated remote-effect receipt;
+- an effect-reachable dry-run plan or compiler;
+- a production package installer, service manager, shell, tunnel, credential broker, or remote-control daemon;
 - secure remote-shell infrastructure;
 - firmware-management authority;
 - production macOS service support;

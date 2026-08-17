@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/agent-executor-platform-profile.v1.schema.json",
+  "title": "AXIOM Agent Executor Platform Profile v1",
+  "description": "Experimental public-fact platform selector for the non-executing Agent Commons dry-run compiler. Fact status remains explicit and the profile grants no platform trust, execution authority, remote administration, or production admission.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "profile_id", "operating_system", "architecture", "fact_status", "source_ref", "claims"],
+  "properties": {
+    "schema": { "const": "axiom-agent-executor-platform-profile.v1" },
+    "profile_id": { "$ref": "#/$defs/id" },
+    "operating_system": { "enum": ["linux", "windows", "macos"] },
+    "architecture": { "enum": ["x64", "arm64"] },
+    "fact_status": { "enum": ["declared", "measured", "reproduced", "externally-verified"] },
+    "source_ref": { "type": "string", "minLength": 1, "maxLength": 1024 },
+    "claims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform_trust_inferred", "secure_boot_verified", "platform_backed_key_verified", "privileged_executor_available", "remote_administration_enabled", "authority_granted"],
+      "properties": {
+        "platform_trust_inferred": { "const": false },
+        "secure_boot_verified": { "const": false },
+        "platform_backed_key_verified": { "const": false },
+        "privileged_executor_available": { "const": false },
+        "remote_administration_enabled": { "const": false },
+        "authority_granted": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$" }
+  }
+}

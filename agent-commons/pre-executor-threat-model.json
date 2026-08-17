@@ -1,0 +1,95 @@
+{
+  "schema": "axiom-agent-pre-executor-threat-model.v1",
+  "repository": "Zoverions/AXIOM-MESH",
+  "phase": "pre-executor-dry-run",
+  "scope": "Non-executing compilation of one issued test-session authorization into an inert deterministic executor plan.",
+  "core_invariant": "A valid dry-run plan describes bounded future executor intent but cannot itself cause a process, filesystem, network, credential, service, device, production, deployment, or capability effect.",
+  "attack_classes": [
+    {
+      "id": "command-and-argument-injection",
+      "risks": ["arbitrary executable substitution", "shell metacharacters", "command chaining", "redirection", "subshells", "glob expansion ambiguity"],
+      "controls": ["fixed executable identifiers", "literal argv templates", "no direct shell request", "exact template validation", "absolute executable resolution required", "PATH override forbidden"]
+    },
+    {
+      "id": "repository-code-execution",
+      "risks": ["package scripts execute repository-controlled code", "build/test scripts may invoke a platform shell", "malicious exact-base source may exploit future sandbox weaknesses"],
+      "controls": ["repository_code_execution marker", "tool_may_invoke_repository_shell marker", "no task-success claim", "future isolated sandbox required", "no network for build/test templates", "no current executor"]
+    },
+    {
+      "id": "dependency-installation",
+      "risks": ["package lifecycle hooks", "dependency substitution", "network widening", "credentialed registry access"],
+      "controls": ["npm ci template only", "ignore lifecycle scripts", "exact session network policy", "no credentials", "no redirects", "no dynamic origin discovery"]
+    },
+    {
+      "id": "filesystem-escape",
+      "risks": ["absolute path escape", "dot-dot traversal", "symlink escape", "workspace aliasing", "host root access"],
+      "controls": ["fixed relative work/session root", "traversal forbidden", "symlink following forbidden", "host root access forbidden", "disposable workspace required"]
+    },
+    {
+      "id": "network-ssrf-and-rebinding",
+      "risks": ["credentialed URL", "path/query origin confusion", "redirect widening", "localhost/private-address access from public mode", "DNS rebinding", "dynamic origin discovery"],
+      "controls": ["canonical origin-only URLs", "HTTPS-only bounded-public-read", "local/private literals rejected in public mode", "GET/HEAD only", "redirects forbidden", "credentials forbidden", "resolve-and-pin policy required before future effect"]
+    },
+    {
+      "id": "environment-and-secret-poisoning",
+      "risks": ["PATH substitution", "secret environment injection", "credential exfiltration", "ambient host configuration"],
+      "controls": ["environment-name allowlist only", "no embedded values", "PATH override forbidden", "secret values forbidden", "secret lookup unavailable"]
+    },
+    {
+      "id": "privilege-persistence-and-service-control",
+      "risks": ["sudo/admin elevation", "persistent process", "service manager installation", "daemonization", "remote administration"],
+      "controls": ["elevated privileges forbidden", "persistent process forbidden", "start-local-test-services rejected in compiler v1", "service control absent", "remote execution absent"]
+    },
+    {
+      "id": "resource-exhaustion",
+      "risks": ["unbounded process count", "unbounded runtime", "unbounded output", "unbounded memory", "step explosion"],
+      "controls": ["32-step ceiling", "8-process ceiling", "300-second per-process ceiling", "session-duration total ceiling", "16 MiB output ceiling", "4096 MiB memory ceiling"]
+    },
+    {
+      "id": "lifecycle-staleness-and-replay",
+      "risks": ["compile after consumption", "compile after revocation", "authentic old issued head presented after a newer head", "authorization substitution", "sponsor or subject substitution"],
+      "controls": ["issued-only head required", "exact signed transcript verification", "matching signed head receipt required", "exact authorization digest binding", "known-head-only claim", "future executor must atomically revalidate/consume immediately before first effect"]
+    },
+    {
+      "id": "plan-and-compiler-substitution",
+      "risks": ["policy version substitution", "plan digest tampering", "platform profile substitution", "step-template mutation", "resource ceiling widening", "effect claim elevation"],
+      "controls": ["compiler ID/version binding", "policy digest binding", "platform profile digest binding", "canonical plan digest", "exact input recompile verification", "hard-false effect fields"]
+    },
+    {
+      "id": "platform-confusion",
+      "risks": ["declared facts treated as verified", "OS or architecture substitution", "Secure Enclave/TPM/secure-boot inference", "platform fact used as authority"],
+      "controls": ["explicit fact status", "profile digest binding", "platform trust inferred false", "secure boot verified false", "platform-backed key verified false", "authority granted false"]
+    }
+  ],
+  "future_executor_gates": [
+    "independent executor threat review",
+    "atomic current-head and revocation revalidation before first effect",
+    "durable one-time consumption",
+    "pinned absolute executable resolution",
+    "isolated disposable sandbox for repository code",
+    "filesystem/symlink enforcement beneath disposable root",
+    "network origin enforcement with DNS resolution pinning and no redirects",
+    "resource enforcement independent of repository code",
+    "executor-originated effect receipts",
+    "interrupted/uncertain-effect recovery semantics",
+    "protected promotion decision"
+  ],
+  "boundaries": {
+    "effect_reachable": false,
+    "remote_execution_enabled": false,
+    "process_spawn_enabled": false,
+    "filesystem_mutation_enabled": false,
+    "network_io_enabled": false,
+    "credential_access_enabled": false,
+    "secret_access_enabled": false,
+    "service_control_enabled": false,
+    "package_installation_enabled": false,
+    "production_enrollment_enabled": false,
+    "firmware_changes_enabled": false,
+    "boot_chain_changes_enabled": false,
+    "purchase_authority_enabled": false,
+    "destructive_actions_enabled": false,
+    "deployment_authority_enabled": false,
+    "capability_promotion_enabled": false
+  }
+}
