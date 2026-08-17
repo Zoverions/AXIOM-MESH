@@ -435,13 +435,32 @@ The current executable laboratories remain outside supported Grid authority:
   persona-root/admission/witness-key substitution, quota failure, tamper and
   truncation, bridge crash reconciliation, and rejection of a forged replay
   claim that merely copies a retained `transfer_digest` onto different bytes;
+- `mesh/src/lib/public-witness-live-ingress.mjs` adds W2c3 as a standalone,
+  receive-only authenticated HTTPS laboratory. It requires TLS 1.3 client
+  certificates, maps the exact client-certificate SHA-256 digest to an exact
+  already-admitted source ID and source epoch, uses a separate bounded local
+  persona-root allowlist, enforces body/concurrency/per-certificate rate bounds
+  and an explicit request-body deadline, and routes accepted transfers only
+  through the W2c2 durable receiver;
+- `mesh/test/public-witness-live-ingress.test.mjs`,
+  `mesh/test/public-witness-live-ingress-socket.test.mjs`, and
+  `mesh/test/public-witness-live-ingress-restart.test.mjs` verify dual binding,
+  local persona-root trust, exact replay, untrusted client-CA rejection,
+  certificate substitution and rotation, stale/current source epochs,
+  oversized/aborted/slow bodies, concurrent pressure, restart-preserved replay,
+  and source equivocation through actual mTLS sockets without invalid durable
+  receiver mutation;
 - `npm run public-witness:start -- <config.json>` and
   `npm run public-witness:verify -- <config.json>` operate the W2b standalone
   local laboratory without adding it to the four-process Grid runtime;
-- no HTTP or socket listener, DNS or peer discovery, outbound fetcher, relay,
-  Gateway, Hypervisor, Sandbox, Grid mutation, archive, consensus, finality, or
-  capability promotion is activated by this work; and
-- the accepted no-egress social storage composition remains unchanged.
+- W2c3 binds loopback by default and refuses wildcard binds unless a separately
+  reviewed deployment wrapper explicitly changes that boundary. It performs no
+  DNS/peer discovery or outbound fetch and exposes no source-admission or
+  persona-root enrollment endpoint; and
+- the accepted no-egress social storage composition remains unchanged. W2c3 is
+  not imported into the supported Grid/Gateway/Hypervisor/Sandbox runtime and
+  does not promote federation, archive availability, quorum, consensus,
+  finality, social mutation, or any capability-registry claim.
 
 A persona journal attestation binds the exact social entry digest, persona and
 public persona-projection digest, Ed25519 signing-key digest, monotonic sequence,
@@ -636,13 +655,35 @@ Tamper, truncation, noncanonical encoding, state drift, quota exhaustion, source
 substitution, persona-root substitution, and witness-key substitution fail
 closed before an invalid receiver transition is committed.
 
-W2c2 is still a **no-socket durable receiver laboratory**. It does not listen on
-HTTP/TLS, perform DNS or peer discovery, fetch outbound, rate-limit remote
-connections, automatically admit sources, distribute Grid credentials, mutate
-public social state, or claim federation, archive availability, quorum,
-consensus, or finality. A live listener/fetcher remains a separate future W2
-increment and must route every accepted package through these durable receiver
-rules rather than invent a parallel transport authority path.
+W2c3 is a **standalone receive-only authenticated transport laboratory** layered
+on W2c2. It does not create a second source-admission or persona-root trust path.
+The TLS client certificate must validate under the configured client CA and its
+exact SHA-256 digest must map locally to the exact source ID and source epoch in
+the signed transfer. The transfer must then independently pass W2c2 source
+admission, signature, continuity, TTL, replay, and equivocation rules. Transport
+identity is therefore an additional local prerequisite, never a substitute for
+protocol identity.
+
+The HTTPS adapter binds loopback by default, requires TLS 1.3 client
+certificates, permits only the exact canonical transfer-plus-root-key-ID request,
+uses one-request connections, and applies bounded body size, global concurrency,
+per-certificate burst/window rate control, and an application-level request-body
+deadline. The deadline actively terminates incomplete slow bodies rather than
+relying on Node's server timeout semantics. Invalid, oversized, aborted, timed-
+out, over-capacity, untrusted, stale-epoch, or certificate-substituted traffic
+must not create durable receiver intake.
+
+Socket evidence uses disposable credentials from the existing AXIOM transport
+credential machinery and covers valid and untrusted TLS handshakes, exact
+replay, certificate rotation, source-epoch rollover, certificate/source-epoch
+substitution, oversized and aborted bodies, slow-body deadline enforcement,
+concurrent pressure, receiver restart, replay after restart, and source
+equivocation after restart. The accepted no-egress Grid composition is
+unchanged: W2c3 is not a supported service unit, public deployment wrapper,
+outbound fetcher, discovery mechanism, social relay, archive, consensus member,
+or finality provider. Public binding, independently operated deployment, remote
+source provisioning, discovery, outbound acquisition, and multi-witness
+exchange remain separate future work.
 
 A witness receipt means that the named witness key observed and verified one
 exact signed journal artifact. It does not prove content truth, legal identity,
@@ -673,18 +714,21 @@ The staged roadmap is:
    revocation, recovery transitions, stale-key rejection when relevant evidence
    is supplied, and credential-aware journal v2 continuity;
 3. **W2 — witness service laboratory (W2a evidence core, W2b durable local
-   process, W2c1 no-socket source-transfer protocol, and W2c2 durable receiver
-   intake/reconciliation implemented; live remote operation pending):** the
-   current work provides signed observations, idempotent replay,
+   process, W2c1 source-transfer protocol, W2c2 durable receiver/reconciliation,
+   and W2c3 receive-only authenticated mTLS ingress implemented):** the current
+   work provides signed observations, idempotent replay,
    equivocation/stale-key evidence, witness-signed append-only local state,
    deterministic fail-closed restart, bounded stdin/stdout IPC, explicit local
    source admission, source-signed transfer continuity, source-equivocation
    evidence, separate persona-root trust, historically auditable transfer
    receipts, restart-safe receiver source-chain/replay state, verified replay,
-   pending-observation separation, and crash-window receiver↔witness
-   reconciliation. Remaining W2 work includes authenticated listener/fetcher
-   transport, remote rate/flood/abuse controls, discovery policy, independently
-   operated hosts, and multi-witness evidence exchange without Grid authority;
+   pending-observation separation, crash-window receiver↔witness reconciliation,
+   exact certificate-to-source-epoch transport binding, bounded HTTPS intake,
+   and mTLS socket fault evidence. Remaining W2 work includes a separately
+   reviewed public deployment wrapper, remote source provisioning and rotation
+   operations, discovery/outbound acquisition policy if justified,
+   independently operated hosts, broader remote abuse/resource testing, and
+   multi-witness evidence exchange without Grid authority;
 4. **W3 — archive and availability laboratory:** independently operated public
    object retention with explicit availability and legal-removal semantics;
 5. **W4 — optional checkpoint agreement adapter:** evaluate threshold/BFT
@@ -694,19 +738,21 @@ The staged roadmap is:
    signatures, credential epochs, revocations, continuity, witness receipts,
    witness observations/conflicts, durable witness records, source admissions,
    source transfer chains/equivocation, package-verification receipts, durable
-   receiver intake/linkage records, checkpoints, availability, and any optional
-   finality certificate while preserving explicit non-claims; and
+   receiver intake/linkage records, authenticated transport bindings,
+   checkpoints, availability, and any optional finality certificate while
+   preserving explicit non-claims; and
 7. **W6 — promotion:** only after applicable protocol, security, privacy,
    operational, scale, governance, and independent-review gates pass.
 
 A persona can still sign two conflicting journal entries at the same continuity
 position. That is equivocation, not something cryptography can prohibit. W2a
 and W2b retain and expose conflicting valid persona artifacts and signed
-conflict evidence rather than silently choosing one. W2c1 and W2c2 apply the
-same rule to an admitted source that signs competing transfer packages at one
-source position, with W2c2 durably retaining the conflict across restart.
-Future multi-witness and agreement protocols must preserve both forms of
-conflict rather than silently select a winner.
+conflict evidence rather than silently choosing one. W2c1, W2c2, and W2c3 apply
+the same rule to an admitted source that signs competing transfer packages at
+one source position, with W2c2 durably retaining the conflict across restart and
+W2c3 proving the same result survives authenticated socket delivery. Future
+multi-witness and agreement protocols must preserve both forms of conflict
+rather than silently select a winner.
 
 ## Required future agreement interface
 
