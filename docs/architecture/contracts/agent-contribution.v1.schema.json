@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/agent-contribution.v1.schema.json",
+  "title": "AXIOM Agent Contribution v1",
+  "description": "Documentation-only draft envelope for an external agent contribution or reproduction package. It does not grant merge or execution authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "contribution_id",
+    "repository",
+    "base_sha",
+    "contributor",
+    "work",
+    "evidence",
+    "claims",
+    "limitations",
+    "merge_authority_requested",
+    "production_authority_requested"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-agent-contribution.v1" },
+    "contribution_id": { "$ref": "#/$defs/id" },
+    "challenge_id": { "$ref": "#/$defs/id" },
+    "repository": { "$ref": "#/$defs/repository" },
+    "base_sha": { "$ref": "#/$defs/gitSha" },
+    "contributor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity", "identity_assurance"],
+      "properties": {
+        "identity": { "$ref": "#/$defs/text" },
+        "identity_assurance": {
+          "enum": ["self-asserted", "platform-authenticated", "cryptographically-bound", "unknown"]
+        },
+        "runtime": { "$ref": "#/$defs/text" },
+        "model": { "$ref": "#/$defs/text" },
+        "operator_or_sponsor": { "$ref": "#/$defs/text" }
+      }
+    },
+    "work": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "inspected_paths", "changed_paths", "summary"],
+      "properties": {
+        "kind": {
+          "enum": ["patch", "reproduction", "review", "benchmark", "test", "documentation", "adapter", "other"]
+        },
+        "inspected_paths": { "$ref": "#/$defs/pathList" },
+        "changed_paths": { "$ref": "#/$defs/pathList" },
+        "summary": { "$ref": "#/$defs/text" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commands_executed", "results_observed", "artifacts"],
+      "properties": {
+        "commands_executed": {
+          "type": "array",
+          "maxItems": 128,
+          "items": { "$ref": "#/$defs/text" }
+        },
+        "results_observed": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 128,
+          "items": { "$ref": "#/$defs/text" }
+        },
+        "artifacts": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["ref", "kind"],
+            "properties": {
+              "ref": { "type": "string", "minLength": 1, "maxLength": 1024 },
+              "kind": { "enum": ["commit", "patch", "log", "report", "benchmark", "test-output", "digest", "other"] },
+              "sha256": { "$ref": "#/$defs/sha256" }
+            }
+          }
+        },
+        "tests_not_run": {
+          "type": "array",
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/text" }
+        }
+      }
+    },
+    "claims": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["statement", "status"],
+        "properties": {
+          "statement": { "$ref": "#/$defs/text" },
+          "status": { "enum": ["observed", "inferred", "proposed", "unverified"] },
+          "evidence_refs": {
+            "type": "array",
+            "maxItems": 32,
+            "items": { "type": "string", "minLength": 1, "maxLength": 1024 }
+          }
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/text" }
+    },
+    "merge_authority_requested": { "const": false },
+    "production_authority_requested": { "const": false },
+    "submitted_at": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._:-]{0,159}$"
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$",
+      "maxLength": 200
+    },
+    "gitSha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^(?!/)(?!.*\\.\\.).+$"
+    },
+    "pathList": {
+      "type": "array",
+      "maxItems": 256,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/path" }
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8000
+    }
+  }
+}
