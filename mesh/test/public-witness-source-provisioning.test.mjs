@@ -171,7 +171,7 @@ test('operator key substitution, signature tamper, admission substitution, and s
   );
 });
 
-test('provisioning authorization is short lived, must be active, and cannot outlive source admission validity', () => {
+test('provisioning authorization is short lived, must be active, and cannot outlive configured or admission validity', () => {
   const data = fixture();
   const command = createPublicWitnessSourceProvisioningCommand({
     sourceAdmission: data.admission1,
@@ -201,11 +201,25 @@ test('provisioning authorization is short lived, must be active, and cannot outl
       sourceAdmission: data.admission1,
       operatorId: 'operator-provisioning',
       operatorPrivateKey: data.operator.privateKey,
+      commandId: 'configured-ceiling',
+      authorizedAt: T0,
+      expiresAt: T2,
+      maxLifetimeSeconds: 60
+    }),
+    /exceeds configured lifetime ceiling/
+  );
+
+  assert.throws(
+    () => createPublicWitnessSourceProvisioningCommand({
+      sourceAdmission: data.admission1,
+      operatorId: 'operator-provisioning',
+      operatorPrivateKey: data.operator.privateKey,
       commandId: 'too-long-command',
       authorizedAt: T0,
-      expiresAt: '2026-08-18T00:01:00.000Z'
+      expiresAt: '2026-08-18T00:01:00.000Z',
+      maxLifetimeSeconds: 3600
     }),
-    /lifetime is invalid|cannot outlive/
+    /lifetime is invalid|exceeds configured lifetime ceiling|cannot outlive/
   );
 
   const shortAdmission = createPublicWitnessSourceAdmission({
@@ -223,7 +237,8 @@ test('provisioning authorization is short lived, must be active, and cannot outl
       operatorPrivateKey: data.operator.privateKey,
       commandId: 'outlive-admission',
       authorizedAt: T1,
-      expiresAt: T3
+      expiresAt: T3,
+      maxLifetimeSeconds: 120
     }),
     /cannot outlive source admission validity/
   );
