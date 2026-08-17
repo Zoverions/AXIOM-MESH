@@ -6,7 +6,7 @@
 
 **Status:** implemented client-contract boundary; experimental local PWA foundation present
 
-**Updated:** 2026-08-16
+**Updated:** 2026-08-17
 
 ## Purpose and boundary
 
@@ -21,7 +21,7 @@ and the client is
 The client is a private source module in this repository, not a published npm
 package; applications must bind and version it with the checked-out build.
 
-The contract covers all 30 authenticated `/v1/` Gateway routes. It deliberately
+The contract covers all 31 authenticated `/v1/` Gateway routes. It deliberately
 does not include `/`, `/health`, or `/ready`, which are unauthenticated ingress
 and operator-probe routes rather than the authenticated application contract.
 
@@ -56,6 +56,7 @@ client.
 | `intents.get` | `GET /v1/intents/:id` | owner or `audit:read` | `id` |
 | `events.list` | `GET /v1/events` | owner or `audit:read` | `actor`, `after`, `limit` |
 | `social.get` | `GET /v1/social` | owner | optional `publication_limit` (1-100; default 100) |
+| `social_remote_review.get` | `GET /v1/social/remote-review` | owner | none |
 | `capsules.list` | `GET /v1/capsules` | `capsule:read` | optional `limit` (1-100; default 100) |
 | `proposals.list` | `GET /v1/proposals` | `governance:read` | optional `limit` (1-100; default 100) |
 | `nodes.list` | `GET /v1/nodes` | `node:read` | optional `limit` (1-100; default 100) |
@@ -84,6 +85,19 @@ override is rejected before a request is issued. The snapshot reconstructs
 bounded actor, persona, and local publication state from the owner's signed
 Grid history and strips execution and state-access provenance from the response.
 Reading it creates no network distribution or federation.
+
+`social_remote_review.get` is a separate owner-only inspection path for the
+bounded `axiom-remote-social-review.v1` projection. It accepts no query or path
+input. Gateway derives the owner only from the authenticated principal and
+forwards a signed `GET` to the exact Grid review path. Raw requests containing
+any query string, including `?owner=...`, fail validation rather than being
+ignored. Grid keeps the accepted `SocialGridStore`, constructs a no-migration
+read adapter only for the request, and returns the existing minimized G5A
+projection. On a normal node with no remote-social tables, the result is an
+empty valid review and the read creates no remote schema. The route performs no
+staging, admission, follow/unfollow, retention cleanup, transport, ranking,
+recommendation, network, or authority effect and is not a federation or live
+social-network claim.
 
 The three global registry/history reads are explicitly scoped and bounded to at most 100 rows per call; malformed numeric query values fail with HTTP 400 rather than silently changing meaning.
 
@@ -205,15 +219,16 @@ identifier.
 
 The test suite proves:
 
-- exact route and JSON Schema inventory;
+- exact 31-route and JSON Schema inventory;
 - relative-only target construction and rejection of unlisted inputs;
 - request schema and idempotency enforcement;
 - first-response and idempotent-replay compatibility;
 - stable, unknown, retryable, and malformed error behavior;
 - response byte and media-type bounds;
 - external cancellation and bounded timeout;
-- owner-derived local social snapshot isolation and rejection of a contract
-  owner override;
+- owner-derived local social snapshot isolation;
+- owner-derived remote-social review isolation, zero-query override rejection,
+  no-schema read behavior, and preservation of the G5A minimization boundary;
 - a real status read and idempotent intent through Gateway, Hypervisor,
   Sandbox, and Grid;
 - rejection of direct-service, route, error-vocabulary, and source drift.
@@ -230,14 +245,17 @@ an explicit migration/rollback plan.
 This milestone implements `UX-001`. The separate AXIOM One local preview has
 started `UX-002`, but it does not implement a supported browser product,
 browser session/device security (`UX-005`), or completed accessibility and
-usability gates. Neither milestone adds a remote account service, third-party
-analytics, AI provider, multi-host routing, or production pilot.
+usability gates. The new remote-review Gateway read is not wired into AXIOM One
+and does not make its Share, Circles, federation, Following, or remote-account
+surfaces available. Neither milestone adds third-party analytics, AI provider,
+multi-host routing, or production pilot.
 
-The experimental local shell is outside the trusted kernel and uses only this
-contract. It has a loopback-only origin, strict CSP, memory-only token, and no
-API cache, remote asset, analytics, sharing, Circles, or AI. It must still
-separately prove the complete CSRF and cookie/token boundary, idle timeout,
-device revocation, browser-storage inspection, accessible interaction,
-plain-language authority, export/deletion/recovery flows, packaging, updates,
-support, and human usability before promotion. See the
+The experimental local shell is outside the trusted kernel and uses only its
+explicit allowlisted subset of this contract. It has a loopback-only origin,
+strict CSP, memory-only token, and no API cache, remote asset, analytics,
+sharing, Circles, or AI. It must still separately prove the complete CSRF and
+cookie/token boundary, idle timeout, device revocation, browser-storage
+inspection, accessible interaction, plain-language authority,
+export/deletion/recovery flows, packaging, updates, support, and human
+usability before promotion. See the
 [AXIOM One local preview](AXIOM-ONE-LOCAL-PREVIEW.md).
