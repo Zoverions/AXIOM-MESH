@@ -103,6 +103,19 @@ export function buildRemoteSocialAdmissionFinalizerResult(admissionInput) {
     admission.summary_json,
     'remote social admission finalizer summary'
   );
+  if (admission.status !== 'admitted') {
+    throw new ValidationError('remote social admission finalizer result is not admitted');
+  }
+  if (
+    admission.remote_observation_only !== true
+    || admission.local_authorship_claimed !== false
+    || admission.network_effect !== 'none'
+    || admission.authority_effect !== 'none'
+  ) {
+    throw new ValidationError(
+      'remote social admission finalizer result must remain observation-only and non-authorizing'
+    );
+  }
   return Object.freeze({
     schema: REMOTE_SOCIAL_ADMISSION_FINALIZER_RESULT_SCHEMA,
     admission_id: id(admission.admission_id, 'remote social admission finalizer admission_id'),
@@ -119,12 +132,10 @@ export function buildRemoteSocialAdmissionFinalizerResult(admissionInput) {
       summary.resolved_request_digest,
       'remote social admission finalizer resolved_request_digest'
     ),
-    status: admission.status === 'admitted' ? 'admitted' : (() => {
-      throw new ValidationError('remote social admission finalizer result is not admitted');
-    })(),
-    remote_observation_only: admission.remote_observation_only === true,
-    local_authorship_claimed: admission.local_authorship_claimed === true,
-    network_effect: admission.network_effect,
-    authority_effect: admission.authority_effect
+    status: 'admitted',
+    remote_observation_only: true,
+    local_authorship_claimed: false,
+    network_effect: 'none',
+    authority_effect: 'none'
   });
 }
