@@ -6,6 +6,12 @@ const ROOT = new URL('../../', import.meta.url);
 const DRILL = new URL('mesh/src/linux-isolation-adapter-drill.mjs', ROOT);
 const WORKFLOW = new URL('.github/workflows/agent-linux-isolation.yml', ROOT);
 const SRC_ROOT = new URL('mesh/src/', ROOT);
+const RUNTIME_ENTRY_FILES = [
+  new URL('mesh/package.json', ROOT),
+  new URL('mesh/Dockerfile', ROOT),
+  new URL('mesh/compose.production.yml', ROOT),
+  new URL('mesh/compose.units.yml', ROOT)
+];
 
 async function collectMjs(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -23,6 +29,7 @@ test('effect-capable Linux isolation drill has a fixed local-only source boundar
 
   assert.match(source, /AGENT_LINUX_ISOLATION_DOCKER_BINARY/);
   assert.match(source, /DOCKER_HOST: 'unix:\/\/\/var\/run\/docker\.sock'/);
+  assert.match(source, /DOCKER_CONTEXT: 'default'/);
   assert.match(source, /'--network', 'none'/);
   assert.match(source, /'--read-only'/);
   assert.match(source, /'--cap-drop', 'ALL'/);
@@ -36,6 +43,7 @@ test('effect-capable Linux isolation drill has a fixed local-only source boundar
 
   for (const forbidden of [
     'process.argv',
+    '...process.env',
     "'--privileged'",
     "'--volume'",
     "'--mount'",
@@ -44,6 +52,8 @@ test('effect-capable Linux isolation drill has a fixed local-only source boundar
     "'--network', 'host'",
     "'--network', 'bridge'",
     "'--env-file'",
+    'docker login',
+    'docker context use',
     'node:http',
     'node:https',
     'node:tls',
@@ -77,6 +87,16 @@ test('production source does not import the effect-capable Linux isolation drill
     assert.ok(
       !source.includes('linux-isolation-adapter-drill.mjs'),
       `effect-capable Linux isolation drill imported by ${file.pathname}`
+    );
+  }
+});
+
+test('package, image and compose runtime entrypoints cannot expose the isolation drill', async () => {
+  for (const file of RUNTIME_ENTRY_FILES) {
+    const source = await readFile(file, 'utf8');
+    assert.ok(
+      !source.includes('linux-isolation-adapter-drill'),
+      `effect-capable Linux isolation drill exposed by runtime entry file ${file.pathname}`
     );
   }
 });
