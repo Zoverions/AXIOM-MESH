@@ -872,7 +872,8 @@ export function verifyPublicWitnessTransferReceipt(raw, {
     throw new ValidationError('public witness transfer receipt schema is unsupported');
   }
   const statement = normalizeReceiptStatement(value.statement);
-  if (new Date(statement.received_at).valueOf() > now + MAX_CLOCK_SKEW_MS) {
+  const receivedMs = new Date(statement.received_at).valueOf();
+  if (receivedMs > now + MAX_CLOCK_SKEW_MS) {
     throw new ValidationError('public witness transfer receipt time exceeds allowed clock skew');
   }
   const statementDigest = digest(value.statement_digest, 'public witness transfer receipt statement_digest');
@@ -914,13 +915,20 @@ export function verifyPublicWitnessTransferReceipt(raw, {
   if (receiptDigest !== digestObject(signed)) {
     throw new ValidationError('public witness transfer receipt digest does not match signed content');
   }
+  let transferBindingReverified = false;
   if (transfer !== undefined) {
     const verifiedTransfer = verifyPublicWitnessTransferPackage(transfer, {
       sourceAdmission,
       trustedPersonaRootPublicKey,
-      now: new Date(statement.received_at).valueOf()
+      now: receivedMs
     });
     const admission = validatePublicWitnessSourceAdmission(sourceAdmission);
+    if (
+      statement.received_at < verifiedTransfer.statement.created_at
+      || statement.received_at < verifiedTransfer.artifact.artifact_time
+    ) {
+      throw new ValidationError('public witness transfer receipt predates the bound package or artifact');
+    }
     if (
       statement.domain_id !== verifiedTransfer.statement.domain_id
       || statement.source_id !== verifiedTransfer.statement.source_id
@@ -938,6 +946,7 @@ export function verifyPublicWitnessTransferReceipt(raw, {
     ) {
       throw new ValidationError('public witness transfer receipt binding does not match the verified transfer');
     }
+    transferBindingReverified = true;
   }
   return Object.freeze({
     ...signed,
@@ -946,6 +955,7 @@ export function verifyPublicWitnessTransferReceipt(raw, {
     witness_signature_verified: true,
     source_signature_verified: true,
     persona_artifact_verified: true,
+    transfer_binding_reverified: transferBindingReverified,
     source_minted_persona_root_trust: false,
     observation_committed: false,
     finality_claimed: false,
