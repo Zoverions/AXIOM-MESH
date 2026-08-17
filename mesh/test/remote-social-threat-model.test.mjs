@@ -12,8 +12,8 @@ test('canonical threat model requires the remote-social companion and current di
   const threat = await text('docs/security/CURRENT-BUILD-THREAT-MODEL.md');
   for (const required of [
     'REMOTE-SOCIAL-THREAT-REVIEW.md',
-    'Exporter Grid attestation',
-    'pinned transport endpoint',
+    'S3A exporter signatures attest only to what a trusted exporter Grid signed',
+    'independently pinned HTTPS transport endpoint',
     'local admission',
     'private local preference',
     'host-side egress relay',
@@ -21,7 +21,7 @@ test('canonical threat model requires the remote-social companion and current di
     'accepted Grid service still imports and instantiates `SocialGridStore`',
     'no public routes',
     'no network egress',
-    'no source-package endpoint or social relay is currently deployed',
+    'No source-package endpoint or social relay is\ncurrently deployed',
     'does not by itself prove content truth',
     'legal/biological',
     'personal authorship',
