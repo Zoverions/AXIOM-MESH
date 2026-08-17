@@ -332,6 +332,11 @@ export async function createGatewayService(config = meshConfig()) {
     });
   });
 
+  router.add('GET', '/v1/social/remote-review', async ({ traceId, principal }) => gridGet(
+    `/internal/v1/social/remote-review/${encodeURIComponent(principal.id)}`,
+    traceId
+  ));
+
   router.add('GET', '/v1/capsules', async ({ url, traceId, principal }) => {
     requireScope(principal, 'capsule:read');
     const limit = boundedIntegerQuery(url.searchParams.get('limit'), 100, {
