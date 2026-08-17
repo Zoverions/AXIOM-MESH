@@ -286,6 +286,20 @@ export function validatePublicWitnessIngressTrustTransition(previousRaw, nextRaw
   return next;
 }
 
+function resolveOperationalBundle(bundleRaw, previousBundle) {
+  const bundle = validatePublicWitnessIngressTrustBundle(bundleRaw);
+  if (bundle.generation === 1) {
+    if (previousBundle !== null) {
+      throw new ValidationError('public witness ingress trust genesis activation cannot supply a predecessor bundle');
+    }
+    return bundle;
+  }
+  if (previousBundle === null) {
+    throw new ValidationError('public witness ingress trust non-genesis activation requires its predecessor bundle');
+  }
+  return validatePublicWitnessIngressTrustTransition(previousBundle, bundle);
+}
+
 async function ensureRegularBoundedFile(path, maxBytes) {
   const normalizedPath = assertString(path, 'public witness ingress trust file path', { min: 1, max: 4096 });
   let info;
@@ -345,9 +359,7 @@ export function verifyPublicWitnessIngressTrustBundleAgainstReceiver({
   ) {
     throw new ValidationError('public witness ingress trust verification requires a W2c2 receiver');
   }
-  const bundle = previousBundle === null
-    ? validatePublicWitnessIngressTrustBundle(bundleRaw)
-    : validatePublicWitnessIngressTrustTransition(previousBundle, bundleRaw);
+  const bundle = resolveOperationalBundle(bundleRaw, previousBundle);
   const snapshot = receiverStore.snapshot();
   if (snapshot.domain_id !== bundle.domain_id) {
     throw new ValidationError('public witness ingress trust bundle belongs to a different receiver domain');
@@ -396,9 +408,7 @@ export function createPublicWitnessAuthenticatedIngressFromTrustBundle({
   perClientBurst,
   rateWindowMs
 } = {}) {
-  const bundle = previousBundle === null
-    ? validatePublicWitnessIngressTrustBundle(bundleRaw)
-    : validatePublicWitnessIngressTrustTransition(previousBundle, bundleRaw);
+  const bundle = resolveOperationalBundle(bundleRaw, previousBundle);
   if (Date.parse(bundle.activated_at) > clockMillis(clock)) {
     throw new ValidationError('public witness ingress trust bundle is not active yet');
   }
