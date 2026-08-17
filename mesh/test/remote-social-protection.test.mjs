@@ -47,6 +47,18 @@ function createRemoteTables(db) {
       follow_id TEXT PRIMARY KEY,
       trust_json TEXT NOT NULL
     ) STRICT;
+    CREATE TABLE remote_social_abuse_preferences (
+      preference_id TEXT PRIMARY KEY,
+      detail_json TEXT NOT NULL
+    ) STRICT;
+    CREATE TABLE remote_social_reports (
+      report_id TEXT PRIMARY KEY,
+      report_json TEXT NOT NULL
+    ) STRICT;
+    CREATE TABLE remote_social_quarantines (
+      quarantine_id TEXT PRIMARY KEY,
+      detail_json TEXT NOT NULL
+    ) STRICT;
     CREATE TABLE remote_social_transport_jobs (
       job_id TEXT PRIMARY KEY,
       review_json TEXT NOT NULL,
@@ -55,7 +67,7 @@ function createRemoteTables(db) {
   `);
 }
 
-test('remote social rotation inventory covers every encrypted S3C/D/E/F column exactly once', () => {
+test('remote social rotation inventory covers every encrypted S3C/D/E/F/G6 column exactly once', () => {
   assert.deepEqual(REMOTE_SOCIAL_PROTECTED_COLUMN_MAPPINGS, [
     ['remote_social_staging', 'stage_id', [
       'package_json',
@@ -65,6 +77,9 @@ test('remote social rotation inventory covers every encrypted S3C/D/E/F column e
     ['remote_social_admissions', 'admission_id', ['summary_json']],
     ['remote_social_observations', 'observation_id', ['object_json']],
     ['remote_social_follows', 'follow_id', ['trust_json']],
+    ['remote_social_abuse_preferences', 'preference_id', ['detail_json']],
+    ['remote_social_reports', 'report_id', ['report_json']],
+    ['remote_social_quarantines', 'quarantine_id', ['detail_json']],
     ['remote_social_transport_jobs', 'job_id', ['review_json', 'receipt_json']]
   ]);
   const columns = REMOTE_SOCIAL_PROTECTED_COLUMN_MAPPINGS
@@ -100,6 +115,9 @@ test('remote social rotation re-encrypts every present protected value under the
     ['remote_social_admissions', 'admission-1', 'summary_json', { approval: 'one-use' }],
     ['remote_social_observations', 'observation-1', 'object_json', { kind: 'publication' }],
     ['remote_social_follows', 'follow-1', 'trust_json', { trust_label: 'manual-review' }],
+    ['remote_social_abuse_preferences', 'preference-1', 'detail_json', { reason_code: 'owner-choice' }],
+    ['remote_social_reports', 'report-1', 'report_json', { adjudicated: false }],
+    ['remote_social_quarantines', 'quarantine-1', 'detail_json', { reason_code: 'key-compromise' }],
     ['remote_social_transport_jobs', 'job-1', 'review_json', { trust_label: 'manual-review' }],
     ['remote_social_transport_jobs', 'job-1', 'receipt_json', { admission_effect: 'none' }]
   ];
@@ -125,13 +143,25 @@ test('remote social rotation re-encrypts every present protected value under the
     'follow-1',
     protect(source, 'remote_social_follows', 'trust_json', 'follow-1', values[5][3])
   );
+  db.prepare('INSERT INTO remote_social_abuse_preferences(preference_id, detail_json) VALUES (?, ?)').run(
+    'preference-1',
+    protect(source, 'remote_social_abuse_preferences', 'detail_json', 'preference-1', values[6][3])
+  );
+  db.prepare('INSERT INTO remote_social_reports(report_id, report_json) VALUES (?, ?)').run(
+    'report-1',
+    protect(source, 'remote_social_reports', 'report_json', 'report-1', values[7][3])
+  );
+  db.prepare('INSERT INTO remote_social_quarantines(quarantine_id, detail_json) VALUES (?, ?)').run(
+    'quarantine-1',
+    protect(source, 'remote_social_quarantines', 'detail_json', 'quarantine-1', values[8][3])
+  );
   db.prepare(`
     INSERT INTO remote_social_transport_jobs(job_id, review_json, receipt_json)
     VALUES (?, ?, ?)
   `).run(
     'job-1',
-    protect(source, 'remote_social_transport_jobs', 'review_json', 'job-1', values[6][3]),
-    protect(source, 'remote_social_transport_jobs', 'receipt_json', 'job-1', values[7][3])
+    protect(source, 'remote_social_transport_jobs', 'review_json', 'job-1', values[9][3]),
+    protect(source, 'remote_social_transport_jobs', 'receipt_json', 'job-1', values[10][3])
   );
 
   try {
@@ -140,23 +170,30 @@ test('remote social rotation re-encrypts every present protected value under the
       sourceProtector: source,
       targetProtector: target
     });
-    assert.equal(result.protected_values, 8);
+    assert.equal(result.protected_values, 11);
     assert.deepEqual(result.tables, {
       remote_social_staging: 3,
       remote_social_admissions: 1,
       remote_social_observations: 1,
       remote_social_follows: 1,
+      remote_social_abuse_preferences: 1,
+      remote_social_reports: 1,
+      remote_social_quarantines: 1,
       remote_social_transport_jobs: 2
     });
 
     for (const [table, key, column, expected] of values) {
-      const serialized = db.prepare(`SELECT ${column} AS value FROM ${table} WHERE ${
-        table === 'remote_social_staging' ? 'stage_id'
-          : table === 'remote_social_admissions' ? 'admission_id'
-            : table === 'remote_social_observations' ? 'observation_id'
-              : table === 'remote_social_follows' ? 'follow_id'
-                : 'job_id'
-      } = ?`).get(key).value;
+      const keyColumn = table === 'remote_social_staging' ? 'stage_id'
+        : table === 'remote_social_admissions' ? 'admission_id'
+          : table === 'remote_social_observations' ? 'observation_id'
+            : table === 'remote_social_follows' ? 'follow_id'
+              : table === 'remote_social_abuse_preferences' ? 'preference_id'
+                : table === 'remote_social_reports' ? 'report_id'
+                  : table === 'remote_social_quarantines' ? 'quarantine_id'
+                    : 'job_id';
+      const serialized = db.prepare(`
+        SELECT ${column} AS value FROM ${table} WHERE ${keyColumn} = ?
+      `).get(key).value;
       assert.deepEqual(open(target, table, column, key, serialized), expected);
       assert.throws(
         () => open(source, table, column, key, serialized),
