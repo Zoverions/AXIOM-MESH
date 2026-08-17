@@ -47,7 +47,7 @@ test('candidate descriptor is explicit about disabled no-egress activation state
   assert.ok(REMOTE_SOCIAL_RUNTIME_CANDIDATE.remaining_activation_gates.includes('transport-relay-separation'));
 });
 
-test('accepted SocialGridStore remains remote-schema-free', async t => {
+test('base SocialGridStore remains remote-schema-free as a lower-layer invariant', async t => {
   const setup = await storeFixture(SocialGridStore);
   t.after(async () => {
     setup.store.close();
@@ -57,7 +57,7 @@ test('accepted SocialGridStore remains remote-schema-free', async t => {
     SELECT name FROM sqlite_master WHERE type = 'table'
   `).all().map(row => row.name));
   for (const name of [
-    'remote_social_staging',
+    'remote_social_packages',
     'remote_social_admissions',
     'remote_social_observations',
     'remote_social_follows',
@@ -67,7 +67,7 @@ test('accepted SocialGridStore remains remote-schema-free', async t => {
     'remote_social_quarantines',
     'remote_social_transport_jobs'
   ]) {
-    assert.equal(tables.has(name), false, `${name} unexpectedly enabled`);
+    assert.equal(tables.has(name), false, `${name} unexpectedly enabled in base store`);
   }
 });
 
@@ -119,15 +119,17 @@ test('candidate composes staging, admission, following, retention and abuse cont
   `).get(), undefined);
 });
 
-test('accepted Grid server remains hard-bound to SocialGridStore and cannot select the candidate', async () => {
+test('accepted Grid selects explicit accepted storage and not candidate or transport classes', async () => {
   const source = await readFile(
     new URL('../src/grid/server.mjs', import.meta.url),
     'utf8'
   );
-  assert.match(source, /import \{ SocialGridStore \} from '\.\/social-store\.mjs';/);
-  assert.match(source, /new SocialGridStore\s*\(/);
+  assert.match(source, /import \{ AcceptedSocialGridStore \} from '\.\/accepted-social-store\.mjs';/);
+  assert.match(source, /new AcceptedSocialGridStore\s*\(/);
+  assert.equal(source.includes("import { SocialGridStore } from './social-store.mjs';"), false);
   assert.equal(source.includes('RemoteSocialRuntimeCandidateGridStore'), false);
   assert.equal(source.includes('remote-social-runtime-candidate.mjs'), false);
-  assert.equal(source.includes('remote-social-abuse-store.mjs'), false);
+  assert.equal(source.includes('RemoteSocialTransportGridStore'), false);
+  assert.equal(source.includes('remote-social-transport-store.mjs'), false);
   assert.equal(source.includes('AXIOM_REMOTE_SOCIAL'), false);
 });
