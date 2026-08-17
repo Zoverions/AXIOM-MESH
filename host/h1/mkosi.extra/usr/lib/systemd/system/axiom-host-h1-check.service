@@ -1,0 +1,22 @@
+[Unit]
+Description=AXIOM Host H1 appliance verification
+Documentation=https://github.com/Zoverions/AXIOM-MESH/issues/1053
+After=local-fs.target
+Wants=local-fs.target
+RequiresMountsFor=/var
+FailureAction=poweroff-force
+
+[Service]
+Type=oneshot
+Environment=HOME=/var/lib/axiom-host/home
+Environment=TMPDIR=/var/tmp
+Environment=AXIOM_DATA_DIR=/var/lib/axiom-host/data
+WorkingDirectory=/usr/lib/axiom-mesh
+ExecStart=/usr/bin/node /usr/libexec/axiom-host-h1-check.mjs
+ExecStartPost=/usr/bin/systemctl --no-block poweroff
+StandardOutput=journal+console
+StandardError=journal+console
+TimeoutStartSec=20min
+
+[Install]
+WantedBy=multi-user.target

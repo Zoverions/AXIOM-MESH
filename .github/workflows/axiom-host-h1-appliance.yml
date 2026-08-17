@@ -1,0 +1,403 @@
+name: AXIOM Host H1 Appliance
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "host/h1/**"
+      - "mesh/src/axiom-host-h1-*.mjs"
+      - "mesh/src/check-axiom-host-h1.mjs"
+      - "mesh/test/axiom-host-h1.test.mjs"
+      - "mesh/test/axiom-host-secret-scan.test.mjs"
+      - "package.json"
+      - "mesh/package.json"
+      - ".github/workflows/axiom-host-h1-appliance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: axiom-host-h1-appliance-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-drill:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      AXIOM_HOST_LAB_ACK: I_UNDERSTAND_THIS_IS_NON_PRODUCTION
+      MKOSI_V26_COMMIT: 84af20892b61c8e177e391f997ded8b4cb5514f2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24.18.0"
+          package-manager-cache: false
+
+      - name: Verify static H1 appliance contract
+        run: npm run host:h1:check
+
+      - name: Fetch exact upstream mkosi v26 commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          MKOSI_DIR="$RUNNER_TEMP/mkosi-v26"
+          git init "$MKOSI_DIR"
+          git -C "$MKOSI_DIR" remote add origin https://github.com/systemd/mkosi.git
+          git -C "$MKOSI_DIR" fetch --depth=1 origin "$MKOSI_V26_COMMIT"
+          git -C "$MKOSI_DIR" checkout --detach FETCH_HEAD
+          test "$(git -C "$MKOSI_DIR" rev-parse HEAD)" = "$MKOSI_V26_COMMIT"
+          printf '%s/bin\n' "$MKOSI_DIR" >> "$GITHUB_PATH"
+
+      - name: Install image-builder and virtual-firmware dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkosi --version | tee "$RUNNER_TEMP/mkosi-version.txt"
+          grep -Eq '^mkosi 26([ .]|$)' "$RUNNER_TEMP/mkosi-version.txt"
+          mkosi dependencies > "$RUNNER_TEMP/mkosi-dependencies.txt"
+          test -s "$RUNNER_TEMP/mkosi-dependencies.txt"
+          sudo apt-get update
+          xargs -r -d '\n' sudo apt-get install -y --no-install-recommends < "$RUNNER_TEMP/mkosi-dependencies.txt"
+          sudo apt-get install -y --no-install-recommends dnf rpm qemu-system-x86 ovmf jq e2fsprogs
+          command -v qemu-system-x86_64
+          test -f /usr/share/OVMF/OVMF_CODE_4M.fd
+          test -f /usr/share/OVMF/OVMF_VARS_4M.fd
+          if [[ -c /dev/kvm ]]; then
+            sudo chmod 0666 /dev/kvm
+            printf '%s\n' 'AXIOM_QEMU_ACCEL=kvm' 'AXIOM_QEMU_CPU=host' >> "$GITHUB_ENV"
+          else
+            printf '%s\n' 'AXIOM_QEMU_ACCEL=tcg' 'AXIOM_QEMU_CPU=max' >> "$GITHUB_ENV"
+          fi
+
+      - name: Build the H1 disk appliance
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_epoch="$(git show -s --format=%ct HEAD)"
+          source_tree="$RUNNER_TEMP/axiom-host-h1-source"
+          mkdir -p "$source_tree"
+          git archive --format=tar HEAD | tar --directory="$source_tree" --extract --file=-
+          test -f "$source_tree/package.json"
+          sudo env -i \
+            PATH="$PATH" \
+            HOME=/root USER=root LOGNAME=root LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC \
+            SOURCE_DATE_EPOCH="$source_epoch" \
+            E2FSPROGS_FAKE_TIME="$source_epoch" \
+            SYSTEMD_REPART_MKFS_OPTIONS_VFAT='--invariant -i da2024b3' \
+            AXIOM_HOST_SOURCE_TREE="$source_tree" \
+            AXIOM_HOST_LAB=1 \
+            mkosi --directory host/h1 --force build \
+            2>&1 | tee "$RUNNER_TEMP/axiom-host-h1-build.log"
+          raw_image="$(find host/h1/mkosi.output -maxdepth 1 -type f -name '*.raw' -print -quit)"
+          test -n "$raw_image"
+          test -s "$raw_image"
+          printf 'H1_RAW_IMAGE=%s\n' "$raw_image" >> "$GITHUB_ENV"
+          find host/h1/mkosi.output -maxdepth 1 -printf '%f\n' | sort \
+            > "$RUNNER_TEMP/axiom-host-h1-artifacts.txt"
+
+      - name: Restore runner ownership of H1 laboratory paths
+        if: always()
+        shell: bash
+        run: |
+          sudo chown -R "$(id -u):$(id -g)" host/h1/mkosi.output 2>/dev/null || true
+
+      - name: Inspect the pristine GPT appliance
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/axiom-host-h1-evidence"
+          node mesh/src/axiom-host-h1-disk.mjs inspect "$H1_RAW_IMAGE" \
+            | tee "$RUNNER_TEMP/axiom-host-h1-evidence/pristine-disk-layout.json"
+          node mesh/src/axiom-host-h1-disk.mjs hash "$H1_RAW_IMAGE" \
+            | tee "$RUNNER_TEMP/axiom-host-h1-evidence/pristine-partition-hashes.json"
+          pristine_esp="$RUNNER_TEMP/axiom-host-h1-pristine-esp.img"
+          pristine_esp_mount="$RUNNER_TEMP/axiom-host-h1-pristine-esp-mount"
+          node mesh/src/axiom-host-h1-disk.mjs export "$H1_RAW_IMAGE" esp "$pristine_esp" \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/pristine-esp-export.json"
+          mkdir -p "$pristine_esp_mount"
+          sudo mount -o loop,ro "$pristine_esp" "$pristine_esp_mount"
+          node mesh/src/axiom-host-h1-disk.mjs inventory "$pristine_esp_mount" \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/pristine-esp-files.json"
+          sudo umount "$pristine_esp_mount"
+          jq -e '[.partitions[].name] | contains(["esp", "root-x86-64", "root-x86-64-verity", "var"])' \
+            "$RUNNER_TEMP/axiom-host-h1-evidence/pristine-disk-layout.json"
+          jq -e 'any(.files[]; .path == "EFI/BOOT/BOOTX64.EFI") and any(.files[]; ((.path | startswith("EFI/Linux/")) and (.path | endswith(".efi"))))' \
+            "$RUNNER_TEMP/axiom-host-h1-evidence/pristine-esp-files.json"
+
+      - name: Boot H1 through UEFI and execute AXIOM checks in the guest
+        shell: bash
+        run: |
+          set -euo pipefail
+          disk="$RUNNER_TEMP/axiom-host-h1-initial.raw"
+          vars="$RUNNER_TEMP/axiom-host-h1-initial-vars.fd"
+          cp --reflink=auto "$H1_RAW_IMAGE" "$disk"
+          cp /usr/share/OVMF/OVMF_VARS_4M.fd "$vars"
+          timeout --signal=TERM --kill-after=30s 22m \
+            qemu-system-x86_64 \
+              -machine "q35,accel=$AXIOM_QEMU_ACCEL" -cpu "$AXIOM_QEMU_CPU" -smp 2 -m 3072 \
+              -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd \
+              -drive if=pflash,format=raw,file="$vars" \
+              -drive if=virtio,format=raw,file="$disk" \
+              -device virtio-rng-pci -net none -display none -serial stdio -monitor none -no-reboot \
+            2>&1 | tee "$RUNNER_TEMP/axiom-host-h1-initial-boot.log"
+          grep -F 'AXIOM_HOST_H1_PASS' "$RUNNER_TEMP/axiom-host-h1-initial-boot.log"
+          node mesh/src/axiom-host-h1-disk.mjs hash "$disk" \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/initial-after-boot-partition-hashes.json"
+          initial_esp="$RUNNER_TEMP/axiom-host-h1-initial-esp.img"
+          initial_esp_mount="$RUNNER_TEMP/axiom-host-h1-initial-esp-mount"
+          node mesh/src/axiom-host-h1-disk.mjs export "$disk" esp "$initial_esp" \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/initial-esp-export.json"
+          mkdir -p "$initial_esp_mount"
+          sudo mount -o loop,ro "$initial_esp" "$initial_esp_mount"
+          node mesh/src/axiom-host-h1-disk.mjs inventory "$initial_esp_mount" \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/initial-esp-files.json"
+          sudo umount "$initial_esp_mount"
+          cp "$disk" "$RUNNER_TEMP/axiom-host-h1-initial-booted.raw"
+
+      - name: Export and verify first-boot durable state
+        shell: bash
+        run: |
+          set -euo pipefail
+          disk="$RUNNER_TEMP/axiom-host-h1-initial-booted.raw"
+          state_image="$RUNNER_TEMP/axiom-host-h1-state-after-initial.img"
+          node mesh/src/axiom-host-h1-disk.mjs export "$disk" var "$state_image" \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/initial-state-export.json"
+          mount_dir="$RUNNER_TEMP/axiom-host-h1-state-mount"
+          export_dir="$RUNNER_TEMP/axiom-host-h1-evidence/initial-state"
+          mkdir -p "$mount_dir" "$export_dir"
+          sudo mount -o loop,ro "$state_image" "$mount_dir"
+          sudo cp -a "$mount_dir/." "$export_dir/"
+          sudo umount "$mount_dir"
+          sudo chown -R "$(id -u):$(id -g)" "$export_dir"
+          state_root="$export_dir/lib/axiom-host"
+          jq -e '.schema == "axiom-host-h1-state.v1" and (.boots | length == 1) and .boots[0].scenario == "initial-boot"' \
+            "$state_root/state-contract.json"
+          jq -e '.status == "pass" and .boot.uefi_runtime_observed == true and (.boot.partition.options | contains(["ro"])) and ((.boot.partition.options | contains(["rw"])) | not) and .system_root.integrity_mode == "dm-verity" and .system_root.mutation_probe.blocked == true and .mutable_state.separate_from_system_root == true and .checks.source_package.name == "axiom-mesh" and .checks.setup_check.status == "pass" and .checks.full_check.status == "pass"' \
+            "$state_root/evidence/boot-0001.json"
+          jq -n \
+            --slurpfile before "$RUNNER_TEMP/axiom-host-h1-evidence/pristine-partition-hashes.json" \
+            --slurpfile after "$RUNNER_TEMP/axiom-host-h1-evidence/initial-after-boot-partition-hashes.json" '
+              def protected: [.partitions[] | select(.name == "root-x86-64" or .name == "root-x86-64-verity") | {name, sha256}] | sort_by(.name);
+              {schema:"axiom-host-h1-protected-partition-comparison.v1", scenario:"initial-boot", unchanged:(($before[0]|protected)==($after[0]|protected)), before:($before[0]|protected), after:($after[0]|protected)}' \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/initial-protected-partitions.json"
+          jq -e '.unchanged == true' "$RUNNER_TEMP/axiom-host-h1-evidence/initial-protected-partitions.json"
+          jq -n \
+            --slurpfile before "$RUNNER_TEMP/axiom-host-h1-evidence/pristine-esp-files.json" \
+            --slurpfile after "$RUNNER_TEMP/axiom-host-h1-evidence/initial-esp-files.json" '
+              def filemap: reduce .files[] as $file ({}; .[$file.path] = {bytes:$file.bytes, sha256:$file.sha256});
+              ($before[0] | filemap) as $b | ($after[0] | filemap) as $a |
+              ([((($b|keys_unsorted) + ($a|keys_unsorted)) | unique[]) | select($b[.] != $a[.])] | sort) as $changed |
+              {schema:"axiom-host-h1-boot-file-comparison.v1", scenario:"initial-boot", changed_paths:$changed, efi_boot_entropy_change_bounded:($changed == ["loader/boot-secret-mixin","loader/random-seed"]), protected_boot_files_unchanged:($changed == ["loader/boot-secret-mixin","loader/random-seed"])}' \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/initial-boot-files.json"
+          jq -e '.efi_boot_entropy_change_bounded == true and .protected_boot_files_unchanged == true' \
+            "$RUNNER_TEMP/axiom-host-h1-evidence/initial-boot-files.json"
+
+      - name: Replace the OS image while preserving AXIOM durable state
+        shell: bash
+        run: |
+          set -euo pipefail
+          state_image="$RUNNER_TEMP/axiom-host-h1-state-after-initial.img"
+          mount_dir="$RUNNER_TEMP/axiom-host-h1-state-mount-rw"
+          mkdir -p "$mount_dir"
+          sudo mount -o loop,rw "$state_image" "$mount_dir"
+          printf '%s\n' 'replacement-boot' | sudo tee "$mount_dir/lib/axiom-host/lab-scenario" >/dev/null
+          sudo sync
+          sudo umount "$mount_dir"
+
+          replacement="$RUNNER_TEMP/axiom-host-h1-replacement.raw"
+          vars="$RUNNER_TEMP/axiom-host-h1-replacement-vars.fd"
+          cp --reflink=auto "$H1_RAW_IMAGE" "$replacement"
+          node mesh/src/axiom-host-h1-disk.mjs import "$state_image" "$replacement" var \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/replacement-state-import.json"
+          cp /usr/share/OVMF/OVMF_VARS_4M.fd "$vars"
+          timeout --signal=TERM --kill-after=30s 22m \
+            qemu-system-x86_64 \
+              -machine "q35,accel=$AXIOM_QEMU_ACCEL" -cpu "$AXIOM_QEMU_CPU" -smp 2 -m 3072 \
+              -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd \
+              -drive if=pflash,format=raw,file="$vars" \
+              -drive if=virtio,format=raw,file="$replacement" \
+              -device virtio-rng-pci -net none -display none -serial stdio -monitor none -no-reboot \
+            2>&1 | tee "$RUNNER_TEMP/axiom-host-h1-replacement-boot.log"
+          grep -F 'AXIOM_HOST_H1_PASS' "$RUNNER_TEMP/axiom-host-h1-replacement-boot.log"
+          node mesh/src/axiom-host-h1-disk.mjs hash "$replacement" \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/replacement-after-boot-partition-hashes.json"
+          replacement_esp="$RUNNER_TEMP/axiom-host-h1-replacement-esp.img"
+          replacement_esp_mount="$RUNNER_TEMP/axiom-host-h1-replacement-esp-mount"
+          node mesh/src/axiom-host-h1-disk.mjs export "$replacement" esp "$replacement_esp" \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/replacement-esp-export.json"
+          mkdir -p "$replacement_esp_mount"
+          sudo mount -o loop,ro "$replacement_esp" "$replacement_esp_mount"
+          node mesh/src/axiom-host-h1-disk.mjs inventory "$replacement_esp_mount" \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/replacement-esp-files.json"
+          sudo umount "$replacement_esp_mount"
+          node mesh/src/axiom-host-h1-disk.mjs export "$replacement" var "$RUNNER_TEMP/axiom-host-h1-state-after-replacement.img" \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/replacement-state-export.json"
+
+          final_mount="$RUNNER_TEMP/axiom-host-h1-final-state-mount"
+          final_export="$RUNNER_TEMP/axiom-host-h1-evidence/final-state"
+          mkdir -p "$final_mount" "$final_export"
+          sudo mount -o loop,ro "$RUNNER_TEMP/axiom-host-h1-state-after-replacement.img" "$final_mount"
+          sudo cp -a "$final_mount/." "$final_export/"
+          sudo umount "$final_mount"
+          sudo chown -R "$(id -u):$(id -g)" "$final_export"
+          state_root="$final_export/lib/axiom-host"
+          jq -e '.schema == "axiom-host-h1-state.v1" and (.boots | length == 2) and .boots[0].scenario == "initial-boot" and .boots[1].scenario == "replacement-boot"' \
+            "$state_root/state-contract.json"
+          jq -e '.status == "pass" and .scenario == "replacement-boot" and .boot_sequence == 2 and .checks.setup_check.status == "pass" and .checks.full_check.status == "pass"' \
+            "$state_root/evidence/boot-0002.json"
+          initial_id="$(jq -r .state_id "$RUNNER_TEMP/axiom-host-h1-evidence/initial-state/lib/axiom-host/state-contract.json")"
+          replacement_id="$(jq -r .state_id "$state_root/state-contract.json")"
+          test "$initial_id" = "$replacement_id"
+          jq -n \
+            --arg state_id "$replacement_id" \
+            --slurpfile before "$RUNNER_TEMP/axiom-host-h1-evidence/pristine-partition-hashes.json" \
+            --slurpfile after "$RUNNER_TEMP/axiom-host-h1-evidence/replacement-after-boot-partition-hashes.json" '
+              def protected: [.partitions[] | select(.name == "root-x86-64" or .name == "root-x86-64-verity") | {name, sha256}] | sort_by(.name);
+              {schema:"axiom-host-h1-image-replacement-evidence.v1", state_id:$state_id, state_preserved:true, boot_sequence:2, fresh_firmware_variables:true, protected_partitions_match_pristine:(($before[0]|protected)==($after[0]|protected)), pristine:($before[0]|protected), replacement_after_boot:($after[0]|protected)}' \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/image-replacement.json"
+          jq -e '.state_preserved == true and .protected_partitions_match_pristine == true' \
+            "$RUNNER_TEMP/axiom-host-h1-evidence/image-replacement.json"
+          jq -n \
+            --slurpfile before "$RUNNER_TEMP/axiom-host-h1-evidence/pristine-esp-files.json" \
+            --slurpfile after "$RUNNER_TEMP/axiom-host-h1-evidence/replacement-esp-files.json" '
+              def filemap: reduce .files[] as $file ({}; .[$file.path] = {bytes:$file.bytes, sha256:$file.sha256});
+              ($before[0] | filemap) as $b | ($after[0] | filemap) as $a |
+              ([((($b|keys_unsorted) + ($a|keys_unsorted)) | unique[]) | select($b[.] != $a[.])] | sort) as $changed |
+              {schema:"axiom-host-h1-boot-file-comparison.v1", scenario:"replacement-boot", changed_paths:$changed, efi_boot_entropy_change_bounded:($changed == ["loader/boot-secret-mixin","loader/random-seed"]), protected_boot_files_unchanged:($changed == ["loader/boot-secret-mixin","loader/random-seed"])}' \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/replacement-boot-files.json"
+          jq -e '.efi_boot_entropy_change_bounded == true and .protected_boot_files_unchanged == true' \
+            "$RUNNER_TEMP/axiom-host-h1-evidence/replacement-boot-files.json"
+
+      - name: Corrupt protected hash metadata and prove fail-closed behavior
+        shell: bash
+        run: |
+          set -euo pipefail
+          corrupt="$RUNNER_TEMP/axiom-host-h1-corrupt-verity.raw"
+          vars="$RUNNER_TEMP/axiom-host-h1-corrupt-vars.fd"
+          node mesh/src/axiom-host-h1-disk.mjs corrupt "$H1_RAW_IMAGE" "$corrupt" root-x86-64-verity \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/corruption-operation.json"
+          node mesh/src/axiom-host-h1-disk.mjs hash "$corrupt" \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/corrupt-partition-hashes.json"
+          jq -n \
+            --slurpfile before "$RUNNER_TEMP/axiom-host-h1-evidence/pristine-partition-hashes.json" \
+            --slurpfile after "$RUNNER_TEMP/axiom-host-h1-evidence/corrupt-partition-hashes.json" '
+              def hashes: [.partitions[] | {name, sha256}] | sort_by(.name);
+              [range(0; ($before[0]|hashes|length)) as $i | select(($before[0]|hashes)[$i].sha256 != ($after[0]|hashes)[$i].sha256) | ($before[0]|hashes)[$i].name] == ["root-x86-64-verity"]' \
+            | jq -e '. == true'
+
+          cp /usr/share/OVMF/OVMF_VARS_4M.fd "$vars"
+          set +e
+          timeout --signal=TERM --kill-after=30s 180s \
+            qemu-system-x86_64 \
+              -machine "q35,accel=$AXIOM_QEMU_ACCEL" -cpu "$AXIOM_QEMU_CPU" -smp 2 -m 3072 \
+              -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd \
+              -drive if=pflash,format=raw,file="$vars" \
+              -drive if=virtio,format=raw,file="$corrupt" \
+              -device virtio-rng-pci -net none -display none -serial stdio -monitor none -no-reboot \
+            2>&1 | tee "$RUNNER_TEMP/axiom-host-h1-corrupt-boot.log"
+          qemu_status="${PIPESTATUS[0]}"
+          set -e
+          if grep -Fq 'AXIOM_HOST_H1_PASS' "$RUNNER_TEMP/axiom-host-h1-corrupt-boot.log"; then
+            echo 'Corrupted protected image reached the H1 success marker' >&2
+            exit 1
+          fi
+          corrupt_state="$RUNNER_TEMP/axiom-host-h1-corrupt-state.img"
+          node mesh/src/axiom-host-h1-disk.mjs export "$corrupt" var "$corrupt_state" \
+            > "$RUNNER_TEMP/axiom-host-h1-evidence/corrupt-state-export.json"
+          corrupt_mount="$RUNNER_TEMP/axiom-host-h1-corrupt-state-mount"
+          mkdir -p "$corrupt_mount"
+          sudo mount -o loop,ro "$corrupt_state" "$corrupt_mount"
+          test ! -f "$corrupt_mount/lib/axiom-host/state-contract.json"
+          sudo umount "$corrupt_mount"
+          log_sha="$(sha256sum "$RUNNER_TEMP/axiom-host-h1-corrupt-boot.log" | awk '{print $1}')"
+          jq -n --argjson qemu_status "$qemu_status" --arg log_sha256 "$log_sha" '{
+            schema:"axiom-host-h1-corruption-evidence.v1",
+            corruption_target:"root-x86-64-verity",
+            corruption_pattern:"0xa5",
+            only_declared_partition_changed:true,
+            clean_control_booted:true,
+            success_marker_observed:false,
+            durable_success_state_created:false,
+            qemu_exit_status:$qemu_status,
+            boot_log_sha256:$log_sha256,
+            fail_closed:true,
+            interpretation:"The clean control booted and passed. A copy differing only in dm-verity hash metadata did not reach the guest success marker or create durable success state. This is laboratory failure evidence, not a production security certification."
+          }' > "$RUNNER_TEMP/axiom-host-h1-evidence/corruption-fail-closed.json"
+          jq -e '.fail_closed == true' "$RUNNER_TEMP/axiom-host-h1-evidence/corruption-fail-closed.json"
+
+      - name: Scan H1 appliance and build log for credential material
+        shell: bash
+        run: |
+          set -euo pipefail
+          RAW="$H1_RAW_IMAGE" LOG="$RUNNER_TEMP/axiom-host-h1-build.log" OUT="$RUNNER_TEMP/axiom-host-h1-evidence/secret-scan.json" \
+            node --input-type=module -e '
+              import { writeFile } from "node:fs/promises";
+              import { scanAxiomHostH0Secrets } from "./mesh/src/axiom-host-secret-scan.mjs";
+              const result = await scanAxiomHostH0Secrets([{ label:"h1-raw-image", path:process.env.RAW }, { label:"h1-build-log", path:process.env.LOG }]);
+              await writeFile(process.env.OUT, `${JSON.stringify(result, null, 2)}\n`);
+              if (!result.passed) process.exit(1);'
+
+      - name: Record H1 result envelope
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="$RUNNER_TEMP/axiom-host-h1-evidence"
+          raw_sha="$(sha256sum "$H1_RAW_IMAGE" | awk '{print $1}')"
+          source_revision="$(git rev-parse HEAD)"
+          source_tree="$(git rev-parse 'HEAD^{tree}')"
+          jq -n \
+            --arg revision "$source_revision" \
+            --arg tree "$source_tree" \
+            --arg raw_sha256 "$raw_sha" \
+            --arg qemu_accelerator "$AXIOM_QEMU_ACCEL" \
+            --arg run_id "$GITHUB_RUN_ID" \
+            --arg run_attempt "$GITHUB_RUN_ATTEMPT" \
+            --slurpfile replacement "$evidence/image-replacement.json" \
+            --slurpfile initial_boot_files "$evidence/initial-boot-files.json" \
+            --slurpfile replacement_boot_files "$evidence/replacement-boot-files.json" \
+            --slurpfile corruption "$evidence/corruption-fail-closed.json" \
+            --slurpfile secret_scan "$evidence/secret-scan.json" '{
+              schema:"axiom-host-h1-lab-result.v1",
+              status:"candidate-ready-for-H2-update-rollback-lab",
+              issue:1053,
+              source:{revision:$revision,tree:$tree},
+              image:{version:"0.2.0-h1",sha256:$raw_sha256,firmware:"uefi",boot_manager:"systemd-boot",boot_artifact:"unsigned-uki",root:"read-only-ext4-dm-verity",durable_state:"separate-ext4-var"},
+              verification:{qemu_accelerator:$qemu_accelerator,clean_boot:true,setup_check_in_guest:true,full_check_in_guest:true,root_mutation_blocked:true,protected_partitions_unchanged:true,efi_boot_entropy_mutation_bounded:true,initial_boot_files:$initial_boot_files[0],replacement_boot_files:$replacement_boot_files[0],state_replacement:$replacement[0],corruption_fail_closed:$corruption[0],credential_scan_passed:$secret_scan[0].passed},
+              authority:{normal_effect_path:"Gateway -> Hypervisor -> Sandbox -> Grid",host_grants_mesh_authority:false,host_grants_node_admission:false,host_grants_execution_authority:false},
+              non_claims:{secure_boot:false,measured_boot:false,remote_attestation:false,encrypted_mutable_state:false,production_ready:false},
+              github:{run_id:$run_id,run_attempt:$run_attempt}
+            }' > "$evidence/axiom-host-h1-lab-result.json"
+          jq -e '.status == "candidate-ready-for-H2-update-rollback-lab" and .verification.credential_scan_passed == true' \
+            "$evidence/axiom-host-h1-lab-result.json"
+
+      - name: Upload compact H1 evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: axiom-host-h1-evidence-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/axiom-host-h1-evidence/**
+            ${{ runner.temp }}/axiom-host-h1-build.log
+            ${{ runner.temp }}/axiom-host-h1-initial-boot.log
+            ${{ runner.temp }}/axiom-host-h1-replacement-boot.log
+            ${{ runner.temp }}/axiom-host-h1-corrupt-boot.log
+            ${{ runner.temp }}/mkosi-version.txt
+            ${{ runner.temp }}/mkosi-dependencies.txt
+            ${{ runner.temp }}/axiom-host-h1-artifacts.txt
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload H1 appliance build artifacts
+        if: success()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: axiom-host-h1-appliance-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: host/h1/mkosi.output/**
+          if-no-files-found: warn
+          retention-days: 7

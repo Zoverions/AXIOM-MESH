@@ -1,0 +1,494 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/axiom-host-profile.v1.schema.json",
+  "title": "AXIOM Host Profile v1",
+  "description": "Documentation-only draft profile for a host operating environment. It records declared or evidenced host assurance properties and does not grant node admission, execution, placement, or AXIOM authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "profile_id",
+    "profile_version",
+    "host_class",
+    "image",
+    "boot",
+    "system_root",
+    "mutable_state",
+    "updates",
+    "network",
+    "isolation",
+    "storage",
+    "devices",
+    "attestation",
+    "observations",
+    "authority_non_claims"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-host-profile.v1"
+    },
+    "profile_id": {
+      "$ref": "#/$defs/id"
+    },
+    "profile_version": {
+      "$ref": "#/$defs/version"
+    },
+    "host_class": {
+      "enum": [
+        "development-host",
+        "personal-node",
+        "managed-node",
+        "edge-appliance",
+        "laboratory-vm"
+      ]
+    },
+    "compute_node_profile_ref": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "os_family",
+        "architecture",
+        "image_version",
+        "image_sha256",
+        "kernel_version",
+        "kernel_sha256",
+        "build_manifest_ref",
+        "sbom_ref",
+        "production_credentials_embedded"
+      ],
+      "properties": {
+        "os_family": {
+          "enum": ["linux"]
+        },
+        "distribution": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "architecture": {
+          "enum": ["x86_64", "aarch64", "riscv64"]
+        },
+        "image_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "image_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "kernel_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "kernel_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "build_manifest_ref": {
+          "$ref": "#/$defs/ref"
+        },
+        "sbom_ref": {
+          "$ref": "#/$defs/ref"
+        },
+        "production_credentials_embedded": {
+          "const": false
+        }
+      }
+    },
+    "boot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "firmware_mode",
+        "boot_artifact_type",
+        "boot_artifact_sha256",
+        "secure_boot",
+        "boot_counting",
+        "automatic_rollback",
+        "measured_boot"
+      ],
+      "properties": {
+        "firmware_mode": {
+          "enum": ["uefi", "legacy-bios", "virtual-firmware", "other"]
+        },
+        "boot_artifact_type": {
+          "enum": ["uki", "kernel-initrd", "distribution-native", "other"]
+        },
+        "boot_artifact_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "secure_boot": {
+          "$ref": "#/$defs/evidenceState"
+        },
+        "boot_counting": {
+          "type": "boolean"
+        },
+        "automatic_rollback": {
+          "type": "boolean"
+        },
+        "measured_boot": {
+          "$ref": "#/$defs/evidenceState"
+        },
+        "signing_policy_ref": {
+          "$ref": "#/$defs/nullableRef"
+        }
+      }
+    },
+    "system_root": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runtime_mutability",
+        "integrity_mode",
+        "integrity_state",
+        "in_place_package_updates_allowed"
+      ],
+      "properties": {
+        "runtime_mutability": {
+          "enum": ["read-only", "ephemeral-overlay", "mutable"]
+        },
+        "integrity_mode": {
+          "enum": ["dm-verity", "fs-verity", "image-signature-only", "other", "none"]
+        },
+        "integrity_state": {
+          "$ref": "#/$defs/evidenceState"
+        },
+        "root_hash": {
+          "type": ["string", "null"],
+          "pattern": "^(?:[a-f0-9]{64}|)$"
+        },
+        "in_place_package_updates_allowed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "mutable_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "separate_from_system_image",
+        "encryption",
+        "key_custody",
+        "recovery_method_present",
+        "axiom_state_separately_backed_up"
+      ],
+      "properties": {
+        "separate_from_system_image": {
+          "type": "boolean"
+        },
+        "encryption": {
+          "$ref": "#/$defs/evidenceState"
+        },
+        "encryption_mode": {
+          "enum": ["luks2", "filesystem-native", "platform-native", "other", "none"]
+        },
+        "key_custody": {
+          "enum": [
+            "operator-secret",
+            "user-secret",
+            "tpm2-sealed",
+            "tpm2-plus-recovery",
+            "secure-element",
+            "remote-custody",
+            "other",
+            "none"
+          ]
+        },
+        "recovery_method_present": {
+          "type": "boolean"
+        },
+        "axiom_state_separately_backed_up": {
+          "type": "boolean"
+        }
+      }
+    },
+    "updates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "authenticated",
+        "atomic_or_image_staged",
+        "known_good_retained",
+        "rollback_supported",
+        "state_compatibility_checked"
+      ],
+      "properties": {
+        "mode": {
+          "enum": ["image", "signed-extension", "distribution-native", "manual", "none"]
+        },
+        "authenticated": {
+          "type": "boolean"
+        },
+        "atomic_or_image_staged": {
+          "type": "boolean"
+        },
+        "known_good_retained": {
+          "type": "boolean"
+        },
+        "rollback_supported": {
+          "type": "boolean"
+        },
+        "state_compatibility_checked": {
+          "type": "boolean"
+        },
+        "update_policy_ref": {
+          "$ref": "#/$defs/nullableRef"
+        }
+      }
+    },
+    "network": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "default_ingress",
+        "default_service_egress",
+        "mesh_service_graph_enforced",
+        "management_plane_separate"
+      ],
+      "properties": {
+        "default_ingress": {
+          "enum": ["deny", "allow", "platform-default"]
+        },
+        "default_service_egress": {
+          "enum": ["deny", "allow", "policy-specific", "platform-default"]
+        },
+        "mesh_service_graph_enforced": {
+          "type": "boolean"
+        },
+        "management_plane_separate": {
+          "type": "boolean"
+        },
+        "network_policy_ref": {
+          "$ref": "#/$defs/nullableRef"
+        }
+      }
+    },
+    "isolation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cgroups",
+        "mount_namespace",
+        "network_namespace",
+        "syscall_filtering",
+        "security_module",
+        "hardware_virtualization",
+        "host_root_exposed_to_sandboxes"
+      ],
+      "properties": {
+        "cgroups": {
+          "$ref": "#/$defs/evidenceState"
+        },
+        "mount_namespace": {
+          "$ref": "#/$defs/evidenceState"
+        },
+        "network_namespace": {
+          "$ref": "#/$defs/evidenceState"
+        },
+        "syscall_filtering": {
+          "$ref": "#/$defs/evidenceState"
+        },
+        "security_module": {
+          "enum": ["selinux", "apparmor", "landlock", "stacked", "other", "none"]
+        },
+        "hardware_virtualization": {
+          "enum": ["kvm", "microvm", "other", "none"]
+        },
+        "host_root_exposed_to_sandboxes": {
+          "const": false
+        }
+      }
+    },
+    "storage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile_ref",
+        "hard_capacity_independent_of_dedupe",
+        "cross_owner_private_dedupe",
+        "recovery_reserve_bytes"
+      ],
+      "properties": {
+        "profile_ref": {
+          "$ref": "#/$defs/nullableRef"
+        },
+        "hard_capacity_independent_of_dedupe": {
+          "const": true
+        },
+        "cross_owner_private_dedupe": {
+          "const": false
+        },
+        "recovery_reserve_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "filesystem": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      }
+    },
+    "devices": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "default_sandbox_device_access",
+        "accelerator_mediation",
+        "host_key_devices_exposed_to_sandboxes"
+      ],
+      "properties": {
+        "default_sandbox_device_access": {
+          "enum": ["none", "allowlisted", "profile-specific"]
+        },
+        "accelerator_mediation": {
+          "enum": ["none", "shared-driver", "device-passthrough", "virtualized", "profile-specific"]
+        },
+        "host_key_devices_exposed_to_sandboxes": {
+          "const": false
+        }
+      }
+    },
+    "attestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tpm2_present",
+        "remote_attestation_supported",
+        "axiom_verifier_status",
+        "freshness_bound",
+        "replay_protected"
+      ],
+      "properties": {
+        "tpm2_present": {
+          "$ref": "#/$defs/evidenceState"
+        },
+        "remote_attestation_supported": {
+          "type": "boolean"
+        },
+        "axiom_verifier_status": {
+          "enum": ["not-implemented", "laboratory", "verified", "production-promoted"]
+        },
+        "freshness_bound": {
+          "type": "boolean"
+        },
+        "replay_protected": {
+          "type": "boolean"
+        },
+        "trust_policy_ref": {
+          "$ref": "#/$defs/nullableRef"
+        }
+      }
+    },
+    "observations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "observation_id",
+          "kind",
+          "status",
+          "observed_at",
+          "expires_at",
+          "evidence_ref"
+        ],
+        "properties": {
+          "observation_id": {
+            "$ref": "#/$defs/id"
+          },
+          "kind": {
+            "enum": [
+              "image-build",
+              "boot-chain",
+              "secure-boot",
+              "measured-boot",
+              "system-integrity",
+              "state-encryption",
+              "update-rollback",
+              "network-boundary",
+              "sandbox-isolation",
+              "storage-pressure",
+              "device-mediation",
+              "recovery",
+              "remote-attestation"
+            ]
+          },
+          "status": {
+            "enum": ["declared", "measured", "verified", "failed", "stale"]
+          },
+          "observed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "evidence_ref": {
+            "$ref": "#/$defs/ref"
+          }
+        }
+      }
+    },
+    "authority_non_claims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "grants_node_admission",
+        "grants_mesh_capability",
+        "grants_execution_authority",
+        "proves_workload_correctness"
+      ],
+      "properties": {
+        "grants_node_admission": {
+          "const": false
+        },
+        "grants_mesh_capability": {
+          "const": false
+        },
+        "grants_execution_authority": {
+          "const": false
+        },
+        "proves_workload_correctness": {
+          "const": false
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024
+    },
+    "nullableRef": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 1024
+    },
+    "evidenceState": {
+      "enum": ["absent", "declared", "measured", "verified"]
+    }
+  }
+}

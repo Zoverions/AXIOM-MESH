@@ -9,6 +9,17 @@ dist/
 *.orig
 *.zip
 /grid/grid
+host/mkosi.output/
+host/mkosi.cache/
+host/mkosi.pkgcache/
+host/mkosi.builddir/
+host/.mkosi-private/
+host/h1/mkosi.output/
+host/h1/mkosi.cache/
+host/h1/mkosi.pkgcache/
+host/h1/mkosi.builddir/
+host/h1/mkosi.tools/
+host/h1/.mkosi-private/
 
 # Dependencies
 node_modules/

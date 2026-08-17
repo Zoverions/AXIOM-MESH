@@ -1,0 +1,244 @@
+name: AXIOM Host H0 Probe
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "host/**"
+      - "mesh/src/axiom-host-*.mjs"
+      - "mesh/src/check-axiom-host-lab.mjs"
+      - "mesh/test/axiom-host-*.test.mjs"
+      - "package.json"
+      - "mesh/package.json"
+      - ".github/workflows/axiom-host-h0-probe.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: axiom-host-h0-probe-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mkosi-summary:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      AXIOM_HOST_LAB_ACK: I_UNDERSTAND_THIS_IS_NON_PRODUCTION
+      MKOSI_V26_COMMIT: 84af20892b61c8e177e391f997ded8b4cb5514f2
+      FEDORA_RAWHIDE_LATEST_COMPOSE_ID_URL: https://kojipkgs.fedoraproject.org/compose/rawhide/latest-Fedora-Rawhide/COMPOSE_ID
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24.18.0"
+          package-manager-cache: false
+
+      - name: Verify static H0 contract
+        run: npm run host:lab:check
+
+      - name: Fetch exact upstream mkosi v26 commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          MKOSI_DIR="$RUNNER_TEMP/mkosi-v26"
+          git init "$MKOSI_DIR"
+          git -C "$MKOSI_DIR" remote add origin https://github.com/systemd/mkosi.git
+          git -C "$MKOSI_DIR" fetch --depth=1 origin "$MKOSI_V26_COMMIT"
+          git -C "$MKOSI_DIR" checkout --detach FETCH_HEAD
+          test "$(git -C "$MKOSI_DIR" rev-parse HEAD)" = "$MKOSI_V26_COMMIT"
+          printf '%s/bin\n' "$MKOSI_DIR" >> "$GITHUB_PATH"
+
+      - name: Verify exact mkosi version
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkosi --version | tee "$RUNNER_TEMP/mkosi-version.txt"
+          grep -Eq '^mkosi 26([ .]|$)' "$RUNNER_TEMP/mkosi-version.txt"
+
+      - name: Parse locked AXIOM Host H0 configuration with upstream mkosi
+        run: npm run host:lab:summary
+
+      - name: Verify pinned Rawhide compose repository metadata exists
+        id: pinned
+        shell: bash
+        run: |
+          set -euo pipefail
+          pinned="$(tr -d '\r\n' < host/mkosi.snapshot)"
+          test -n "$pinned"
+          test "$pinned" != "UNRESOLVED"
+          printf '%s\n' "$pinned" > "$RUNNER_TEMP/fedora-rawhide-pinned-snapshot.txt"
+          repomd="https://kojipkgs.fedoraproject.org/compose/rawhide/Fedora-Rawhide-${pinned}/compose/Everything/x86_64/os/repodata/repomd.xml"
+          curl --fail --location --silent --show-error "$repomd" \
+            -o "$RUNNER_TEMP/fedora-rawhide-pinned-repomd.xml"
+          sha256sum "$RUNNER_TEMP/fedora-rawhide-pinned-repomd.xml" \
+            | awk '{print $1}' \
+            > "$RUNNER_TEMP/fedora-rawhide-pinned-repomd.sha256"
+
+      - name: Observe current latest Rawhide compose without changing the lock
+        id: latest
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error \
+            "$FEDORA_RAWHIDE_LATEST_COMPOSE_ID_URL" \
+            -o "$RUNNER_TEMP/fedora-rawhide-current-compose-id.txt"
+          compose_id="$(tr -d '\r\n' < "$RUNNER_TEMP/fedora-rawhide-current-compose-id.txt")"
+          case "$compose_id" in
+            Fedora-Rawhide-*) ;;
+            *) echo "Unexpected Fedora Rawhide COMPOSE_ID: $compose_id" >&2; exit 1 ;;
+          esac
+          printf '%s\n' "${compose_id#Fedora-Rawhide-}" \
+            > "$RUNNER_TEMP/fedora-rawhide-current-snapshot.txt"
+
+      - name: Record H0 package-source probe
+        if: always()
+        shell: bash
+        env:
+          LATEST_OUTCOME: ${{ steps.latest.outcome }}
+        run: |
+          set -euo pipefail
+          pinned="$(tr -d '\r\n' < "$RUNNER_TEMP/fedora-rawhide-pinned-snapshot.txt")"
+          repomd_sha256="$(tr -d '\r\n' < "$RUNNER_TEMP/fedora-rawhide-pinned-repomd.sha256")"
+          current=""
+          if [[ -f "$RUNNER_TEMP/fedora-rawhide-current-snapshot.txt" ]]; then
+            current="$(tr -d '\r\n' < "$RUNNER_TEMP/fedora-rawhide-current-snapshot.txt")"
+          fi
+          same_as_latest=false
+          if [[ -n "$current" && "$current" = "$pinned" ]]; then same_as_latest=true; fi
+          printf '{"schema":"axiom-host-h0-package-source-probe.v1","github_sha":"%s","mkosi_commit":"%s","pinned_snapshot":"%s","pinned_repomd_sha256":"%s","latest_lookup_outcome":"%s","latest_snapshot_observed":"%s","pinned_is_latest":%s,"lock_changed":false,"production_base_selected":false,"interpretation":"The pinned Rawhide compose repository exists and its repomd bytes are hashed for this probe. Whether a newer Rawhide compose exists does not change the committed H0 package source automatically."}\n' \
+            "$GITHUB_SHA" "$MKOSI_V26_COMMIT" "$pinned" "$repomd_sha256" "$LATEST_OUTCOME" "$current" "$same_as_latest" \
+            > "$RUNNER_TEMP/axiom-host-h0-package-source-probe.json"
+
+      - name: Install mkosi host and Fedora cross-build dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkosi dependencies > "$RUNNER_TEMP/mkosi-dependencies.txt"
+          test -s "$RUNNER_TEMP/mkosi-dependencies.txt"
+          sudo apt-get update
+          xargs -r -d '\n' sudo apt-get install -y --no-install-recommends < "$RUNNER_TEMP/mkosi-dependencies.txt"
+          # mkosi's generic host dependency list does not include the target
+          # distribution package manager on an Ubuntu host. Fedora's mkosi v26
+          # installer explicitly invokes dnf/dnf5 for Fedora targets, so add the
+          # Ubuntu-packaged cross-distribution RPM stack rather than modifying
+          # the image configuration or disabling repository verification.
+          sudo apt-get install -y --no-install-recommends dnf rpm
+          command -v dnf
+          command -v rpm
+          dnf --version | head -n 1 > "$RUNNER_TEMP/dnf-version.txt"
+          rpm --version > "$RUNNER_TEMP/rpm-version.txt"
+
+      - name: Build content-addressed AXIOM Host H0 image
+        shell: bash
+        run: |
+          set -euo pipefail
+          # GitHub-hosted runners block the unprivileged namespace/capability path
+          # mkosi v26 uses during Fedora repository setup. H0 therefore performs
+          # the image-construction command as root on this disposable runner only.
+          # Checkout credentials are not persisted and the AXIOM lab wrapper still
+          # replaces HOME/XDG state and forwards only its fixed safe environment.
+          sudo git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          sudo --preserve-env=PATH,AXIOM_HOST_LAB_ACK \
+            env HOME=/root USER=root LOGNAME=root LANG=C.UTF-8 \
+            npm run host:lab:build \
+            | tee "$RUNNER_TEMP/axiom-host-h0-build-command.json"
+          sudo test -s host/mkosi.output/axiom-host-h0-build-evidence.json
+
+      - name: Restore runner ownership of H0 laboratory paths
+        if: always()
+        shell: bash
+        run: |
+          sudo chown -R "$(id -u):$(id -g)" host/mkosi.output host/.mkosi-private 2>/dev/null || true
+
+      - name: Diagnose raw image by GPT and partition byte ranges
+        shell: bash
+        run: |
+          set -euo pipefail
+          node mesh/src/axiom-host-image-diagnostics.mjs \
+            host/mkosi.output/axiom-host-lab_0.1.0-h0.raw \
+            host/mkosi.output/axiom-host-h0-build-evidence.json \
+            > "$RUNNER_TEMP/axiom-host-h0-image-diagnostics.json"
+          test -s "$RUNNER_TEMP/axiom-host-h0-image-diagnostics.json"
+          jq -e '[.image.partitions[] | select(.name == "root-x86-64" and .filesystem.kind == "ext4" and .filesystem.has_journal == false)] | length == 1' \
+            "$RUNNER_TEMP/axiom-host-h0-image-diagnostics.json"
+          jq -e '[.image.partitions[] | select(.name == "esp" and .filesystem.kind == "fat32" and .filesystem.volume_id == "0xda2024b3" and .filesystem.volume_label_entry.name == "ESP" and .filesystem.volume_label_entry.creation.time_raw == "0x4b5a" and .filesystem.volume_label_entry.creation.date_raw == "0x466e" and .filesystem.volume_label_entry.write.time_raw == "0x4b5a" and .filesystem.volume_label_entry.write.date_raw == "0x466e")] | length == 1' \
+            "$RUNNER_TEMP/axiom-host-h0-image-diagnostics.json"
+
+      - name: Export bounded H0 nondeterminism slices
+        shell: bash
+        run: |
+          set -euo pipefail
+          node mesh/src/axiom-host-image-slices.mjs \
+            host/mkosi.output/axiom-host-lab_0.1.0-h0.raw \
+            "$RUNNER_TEMP/axiom-host-h0-image-diagnostics.json" \
+            "$RUNNER_TEMP/axiom-host-h0-image-slices" \
+            esp:0 esp:8 root-x86-64:29 \
+            > "$RUNNER_TEMP/axiom-host-h0-image-slices-command.json"
+          test -s "$RUNNER_TEMP/axiom-host-h0-image-slices/axiom-host-h0-image-slices.json"
+
+      - name: Upload H0 package-source probe evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: axiom-host-h0-package-source-probe-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/axiom-host-h0-package-source-probe.json
+            ${{ runner.temp }}/fedora-rawhide-pinned-snapshot.txt
+            ${{ runner.temp }}/fedora-rawhide-pinned-repomd.xml
+            ${{ runner.temp }}/fedora-rawhide-pinned-repomd.sha256
+            ${{ runner.temp }}/fedora-rawhide-current-compose-id.txt
+            ${{ runner.temp }}/fedora-rawhide-current-snapshot.txt
+            ${{ runner.temp }}/mkosi-version.txt
+            ${{ runner.temp }}/mkosi-dependencies.txt
+            ${{ runner.temp }}/dnf-version.txt
+            ${{ runner.temp }}/rpm-version.txt
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload compact H0 build evidence envelope
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: axiom-host-h0-build-evidence-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: host/mkosi.output/axiom-host-h0-build-evidence.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload compact H0 image diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: axiom-host-h0-image-diagnostics-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/axiom-host-h0-image-diagnostics.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload bounded H0 nondeterminism slices
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: axiom-host-h0-image-slices-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/axiom-host-h0-image-slices/**
+            ${{ runner.temp }}/axiom-host-h0-image-slices-command.json
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload H0 build evidence and artifacts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: axiom-host-h0-build-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: |
+            host/mkosi.output/**
+            host/.mkosi-private/mkosi-build.log
+            ${{ runner.temp }}/axiom-host-h0-build-command.json
+          if-no-files-found: warn
+          retention-days: 7

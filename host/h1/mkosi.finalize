@@ -1,0 +1,18 @@
+#!/bin/bash
+set -euo pipefail
+
+install -d -m 0755 "$BUILDROOT/usr/lib/axiom-mesh"
+
+test -f "$SRCDIR/package.json"
+tar --directory="$SRCDIR" --create --file=- \
+      --sort=name --owner=0 --group=0 --numeric-owner \
+      --mtime="@$SOURCE_DATE_EPOCH" . \
+  | tar --directory="$BUILDROOT/usr/lib/axiom-mesh" --extract --file=-
+test -f "$BUILDROOT/usr/lib/axiom-mesh/package.json"
+
+printf '%s\n' "$IMAGE_VERSION" > "$BUILDROOT/usr/lib/axiom-host-image-version"
+printf '%s\n' 'Gateway -> Hypervisor -> Sandbox -> Grid' \
+  > "$BUILDROOT/usr/lib/axiom-host-authority-path"
+
+systemctl --root="$BUILDROOT" enable axiom-host-h1-check.service
+systemctl --root="$BUILDROOT" mask systemd-boot-random-seed.service
