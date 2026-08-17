@@ -20,6 +20,7 @@ const DIGEST = /^[a-f0-9]{64}$/;
 const STATES = new Set(['enabled', 'disabled']);
 const DEFAULT_MAX_FILE_BYTES = 64 * 1024;
 const HARD_MAX_FILE_BYTES = 1024 * 1024;
+const MAX_CONTROL_HISTORY = 4096;
 
 const CONTROL_KEYS = new Set([
   'schema',
@@ -159,7 +160,13 @@ export function createPublicWitnessIngressControl({
   let previousDigest = null;
   if (previousControl !== null) previousDigest = validatePublicWitnessIngressControl(previousControl).control_digest;
   let trustBundleDigest = null;
-  if (trustBundle !== null) trustBundleDigest = validatePublicWitnessIngressTrustBundle(trustBundle).bundle_digest;
+  if (trustBundle !== null) {
+    const bundle = validatePublicWitnessIngressTrustBundle(trustBundle);
+    trustBundleDigest = bundle.bundle_digest;
+    if (Date.parse(effectiveAt) < Date.parse(bundle.activated_at)) {
+      throw new ValidationError('public witness ingress control cannot enable before its trust bundle activates');
+    }
+  }
   const control = withDigest(normalizeBody({
     schema: PUBLIC_WITNESS_INGRESS_CONTROL_SCHEMA,
     domain_id: domainId,
@@ -195,6 +202,20 @@ export function validatePublicWitnessIngressControlTransition(previousRaw, nextR
     throw new ValidationError('public witness ingress control effective time must advance');
   }
   return next;
+}
+
+export function validatePublicWitnessIngressControlChain(rawControls) {
+  if (!Array.isArray(rawControls) || rawControls.length < 1 || rawControls.length > MAX_CONTROL_HISTORY) {
+    throw new ValidationError(`public witness ingress control history must contain 1-${MAX_CONTROL_HISTORY} controls`);
+  }
+  const controls = rawControls.map(validatePublicWitnessIngressControl);
+  if (controls[0].generation !== 1 || controls[0].previous_control_digest !== null) {
+    throw new ValidationError('public witness ingress control history must begin at generation 1');
+  }
+  for (let index = 1; index < controls.length; index += 1) {
+    validatePublicWitnessIngressControlTransition(controls[index - 1], controls[index]);
+  }
+  return Object.freeze(controls);
 }
 
 function resolveOperationalControl(controlRaw, previousControl) {
@@ -248,6 +269,7 @@ export async function loadPublicWitnessIngressControl(path, { maxFileBytes } = {
 
 export class PublicWitnessIngressLifecycleController {
   #receiverStore;
+  #domainId;
   #tlsKey;
   #tlsCertificate;
   #clientCa;
@@ -279,11 +301,16 @@ export class PublicWitnessIngressLifecycleController {
     perClientBurst,
     rateWindowMs
   } = {}) {
-    if (!receiverStore || typeof receiverStore.receiveTransfer !== 'function') {
+    if (
+      !receiverStore
+      || typeof receiverStore.receiveTransfer !== 'function'
+      || typeof receiverStore.snapshot !== 'function'
+    ) {
       throw new ValidationError('public witness ingress lifecycle requires a W2c2 receiver');
     }
     if (typeof clock !== 'function') throw new ValidationError('public witness ingress lifecycle clock must be a function');
     this.#receiverStore = receiverStore;
+    this.#domainId = identifier(receiverStore.snapshot().domain_id, 'public witness ingress lifecycle receiver domain_id');
     this.#tlsKey = tlsKey;
     this.#tlsCertificate = tlsCertificate;
     this.#clientCa = clientCa;
@@ -309,11 +336,18 @@ export class PublicWitnessIngressLifecycleController {
     return result;
   }
 
+  #assertDomain(control) {
+    if (control.domain_id !== this.#domainId) {
+      throw new ValidationError('public witness ingress control belongs to a different receiver domain');
+    }
+  }
+
   #resolveCandidate(controlRaw, previousControl) {
     const candidate = resolveOperationalControl(controlRaw, previousControl);
+    this.#assertDomain(candidate);
     if (this.#currentControl === null) {
       if (candidate.generation !== 1) {
-        throw new ValidationError('public witness ingress lifecycle must begin from control generation 1');
+        throw new ValidationError('public witness ingress lifecycle must begin from control generation 1 or restore a validated history');
       }
     } else {
       if (previousControl === null) {
@@ -329,6 +363,57 @@ export class PublicWitnessIngressLifecycleController {
       throw new ValidationError('public witness ingress control is not effective yet');
     }
     return candidate;
+  }
+
+  #prepareEnabled(candidate, trustBundle, previousTrustBundle) {
+    if (trustBundle === null) {
+      throw new ValidationError('public witness ingress enabled control requires its exact trust bundle');
+    }
+    const bundle = validatePublicWitnessIngressTrustBundle(trustBundle);
+    if (bundle.domain_id !== candidate.domain_id) {
+      throw new ValidationError('public witness ingress control and trust bundle belong to different domains');
+    }
+    if (bundle.bundle_digest !== candidate.trust_bundle_digest) {
+      throw new ValidationError('public witness ingress control does not bind the supplied trust bundle');
+    }
+    if (bundle.activated_at > candidate.effective_at) {
+      throw new ValidationError('public witness ingress control cannot become effective before its trust bundle activates');
+    }
+    const ingress = createPublicWitnessAuthenticatedIngressFromTrustBundle({
+      receiverStore: this.#receiverStore,
+      bundle,
+      previousBundle: previousTrustBundle,
+      clock: this.#clock,
+      maxConcurrent: this.#maxConcurrent,
+      perClientBurst: this.#perClientBurst,
+      rateWindowMs: this.#rateWindowMs
+    });
+    const server = createPublicWitnessHttpsIngress({
+      ingress,
+      tlsKey: this.#tlsKey,
+      tlsCertificate: this.#tlsCertificate,
+      clientCa: this.#clientCa,
+      host: this.#host,
+      port: this.#port,
+      maxBodyBytes: this.#maxBodyBytes,
+      requestTimeoutMs: this.#requestTimeoutMs
+    });
+    return { bundle, server };
+  }
+
+  async #startPrepared(candidate, prepared) {
+    this.#server = null;
+    this.#address = null;
+    try {
+      this.#address = await prepared.server.listen();
+    } catch (error) {
+      this.#currentBundle = null;
+      throw error;
+    }
+    this.#server = prepared.server;
+    this.#currentBundle = prepared.bundle;
+    this.#currentControl = candidate;
+    return this.snapshot();
   }
 
   async apply({
@@ -351,51 +436,42 @@ export class PublicWitnessIngressLifecycleController {
         return this.snapshot();
       }
 
-      if (trustBundle === null) {
-        throw new ValidationError('public witness ingress enabled control requires its exact trust bundle');
-      }
-      const bundle = validatePublicWitnessIngressTrustBundle(trustBundle);
-      if (bundle.domain_id !== candidate.domain_id) {
-        throw new ValidationError('public witness ingress control and trust bundle belong to different domains');
-      }
-      if (bundle.bundle_digest !== candidate.trust_bundle_digest) {
-        throw new ValidationError('public witness ingress control does not bind the supplied trust bundle');
-      }
-
-      // Build and verify the complete candidate before closing the active listener.
-      const ingress = createPublicWitnessAuthenticatedIngressFromTrustBundle({
-        receiverStore: this.#receiverStore,
-        bundle,
-        previousBundle: previousTrustBundle,
-        clock: this.#clock,
-        maxConcurrent: this.#maxConcurrent,
-        perClientBurst: this.#perClientBurst,
-        rateWindowMs: this.#rateWindowMs
-      });
-      const nextServer = createPublicWitnessHttpsIngress({
-        ingress,
-        tlsKey: this.#tlsKey,
-        tlsCertificate: this.#tlsCertificate,
-        clientCa: this.#clientCa,
-        host: this.#host,
-        port: this.#port,
-        maxBodyBytes: this.#maxBodyBytes,
-        requestTimeoutMs: this.#requestTimeoutMs
-      });
-
+      const prepared = this.#prepareEnabled(candidate, trustBundle, previousTrustBundle);
       if (this.#server) await this.#server.close();
-      this.#server = null;
-      this.#address = null;
-      try {
-        this.#address = await nextServer.listen();
-      } catch (error) {
-        this.#currentBundle = null;
-        throw error;
+      return this.#startPrepared(candidate, prepared);
+    });
+  }
+
+  async restore({
+    controls,
+    trustBundle = null,
+    previousTrustBundle = null
+  } = {}) {
+    return this.#serialized(async () => {
+      if (this.#currentControl !== null || this.#server !== null) {
+        throw new ValidationError('public witness ingress lifecycle restore requires a fresh controller');
       }
-      this.#server = nextServer;
-      this.#currentBundle = bundle;
-      this.#currentControl = candidate;
-      return this.snapshot();
+      const history = validatePublicWitnessIngressControlChain(controls);
+      for (const control of history) this.#assertDomain(control);
+      const now = clockMillis(this.#clock);
+      let candidate = null;
+      for (const control of history) {
+        if (Date.parse(control.effective_at) <= now) candidate = control;
+        else break;
+      }
+      if (candidate === null) {
+        throw new ValidationError('public witness ingress lifecycle history has no effective control yet');
+      }
+      if (candidate.ingress_state === 'disabled') {
+        if (trustBundle !== null || previousTrustBundle !== null) {
+          throw new ValidationError('public witness ingress disabled restore cannot supply trust bundles');
+        }
+        this.#currentControl = candidate;
+        this.#currentBundle = null;
+        return this.snapshot();
+      }
+      const prepared = this.#prepareEnabled(candidate, trustBundle, previousTrustBundle);
+      return this.#startPrepared(candidate, prepared);
     });
   }
 
@@ -412,7 +488,7 @@ export class PublicWitnessIngressLifecycleController {
     const control = this.#currentControl;
     const body = Object.freeze({
       schema: PUBLIC_WITNESS_INGRESS_CONTROL_SNAPSHOT_SCHEMA,
-      domain_id: control?.domain_id ?? null,
+      domain_id: this.#domainId,
       control_generation: control?.generation ?? 0,
       control_digest: control?.control_digest ?? null,
       configured_ingress_state: control?.ingress_state ?? 'unconfigured',
