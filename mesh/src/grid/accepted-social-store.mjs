@@ -13,7 +13,7 @@ export const ACCEPTED_SOCIAL_STORAGE = Object.freeze({
   remote_abuse_storage: true,
   remote_review_route: 'owner-scoped-read-only',
   public_mutation_routes: false,
-  internal_admission_finalizer: false,
+  internal_admission_finalizer: true,
   network_egress: false,
   transport_included: false,
   automatic_admission: false,
@@ -33,6 +33,7 @@ export class AcceptedSocialGridStore extends RemoteSocialRuntimeGridStore {
         activation_state: 'accepted-local-storage',
         public_routes: true,
         public_mutation_routes: false,
+        internal_admission_finalizer: true,
         read_only_review_route: true
       }),
       accepted_social_storage: ACCEPTED_SOCIAL_STORAGE
