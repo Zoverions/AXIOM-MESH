@@ -407,12 +407,21 @@ The current executable laboratories remain outside supported Grid authority:
   deterministic replay, conflict persistence, tamper/truncation/noncanonical
   rejection, external-state drift, private internal state, bounded files, and
   per-request input bounds;
+- `mesh/src/lib/public-witness-transfer.mjs` adds the W2c1 no-socket source
+  admission and signed transfer-package protocol, transfer continuity/source
+  equivocation verification, and witness-signed package-verification receipts;
+- `mesh/test/public-witness-transfer.test.mjs` and
+  `mesh/test/public-witness-transfer-receipt-lifecycle.test.mjs` verify local
+  source admission, source epoch/sequence/predecessor binding, operation and
+  size/lifetime restrictions, separate persona-root trust, artifact dependency
+  verification, source equivocation, receiver-local timing, receipt audit after
+  transfer expiry, and explicit non-claims;
 - `npm run public-witness:start -- <config.json>` and
-  `npm run public-witness:verify -- <config.json>` operate this standalone
-  laboratory without adding it to the four-process Grid runtime;
-- no HTTP or socket listener, peer discovery, outbound fetcher, relay, Gateway,
-  Hypervisor, Sandbox, Grid mutation, archive, consensus, finality, or capability
-  promotion is activated by this work; and
+  `npm run public-witness:verify -- <config.json>` operate the W2b standalone
+  local laboratory without adding it to the four-process Grid runtime;
+- no HTTP or socket listener, DNS or peer discovery, outbound fetcher, relay,
+  Gateway, Hypervisor, Sandbox, Grid mutation, archive, consensus, finality, or
+  capability promotion is activated by this work; and
 - the accepted no-egress social storage composition remains unchanged.
 
 A persona journal attestation binds the exact social entry digest, persona and
@@ -522,10 +531,61 @@ hostile-local-filesystem security protocol.
 
 W2b is therefore an independently runnable **local** witness process, not yet a
 remote witness network. It opens no HTTP/socket listener and performs no peer
-discovery or outbound fetch. Remote transport, source admission, discovery,
-rate limiting, abuse resistance, independent-host deployment evidence, and
-multi-witness exchange remain W2 work and MUST be reviewed separately before
-any such claim is made.
+discovery or outbound fetch.
+
+W2c1 defines the remote-source evidence boundary before any network socket is
+introduced. A local source-admission record binds one exact domain, source ID,
+source Ed25519 key, source epoch, allowed transfer operations, validity window,
+package-size limit, and transfer-lifetime limit. The admission explicitly says
+`local_trust_input: true`, `remote_self_admission_allowed: false`, and grants no
+persona-root trust, Grid authority, social authority, or network effect. A
+remote source cannot admit itself merely by presenting its own key or package.
+
+Source-authenticated transfer packages form a separate per-admission chain. Each
+package binds the source admission identity and epoch, monotonically increasing
+source sequence, exact predecessor-transfer digest, transfer ID, operation,
+request digest, creation/expiry times, and source signature. Exact replay is
+therefore distinct from two differently signed packages at the same source
+position. Competing valid same-position packages are retained as source-
+equivocation evidence with no preferred transfer and no truth-resolution claim.
+A source-key/admission-epoch change starts a new source trust domain; W2c1 makes
+no cross-epoch source-continuity claim.
+
+Transfer packages carry the exact cryptographic artifacts and dependencies
+needed for credential, revocation, or journal-v2 verification. They do **not**
+carry or mint the receiver's trust in a persona root. Full artifact verification
+requires a persona-root public key supplied separately as a local verifier
+input, and the source-admission key is never substituted for that root. Source
+authentication means only that the admitted source signed the exact package; it
+is not legal-identity, authorship, truth, endorsement, or persona-root evidence.
+
+A remote source also does not choose witness observation time. Transfer packages
+contain artifacts and source creation/expiry times, not `observed_at`. The
+receiving witness must assign its own local receive/observation time. Package
+creation may not predate the verified artifact's own signed time. Domain,
+source-key/epoch, operation allowlist, source-admission window, transfer TTL,
+package-size, clock-skew, dependency, and signature failures all fail closed.
+
+The short transfer TTL limits **intake**, not future evidence auditability. A
+witness-signed transfer receipt binds the local source admission, exact transfer,
+verified artifact/persona/root digests, and receiver-local `received_at` while
+stating `observation_committed: false`. Receipt creation verifies that the
+transfer was valid at that local receive time. Later audit may reverify the old
+package using the signed `received_at` as the historical intake point even after
+the package's short TTL has expired. When the original transfer is supplied,
+the verifier independently checks that `received_at` did not predate the package
+or artifact. The receipt still makes no end-to-end delivery, witness-observation
+commit, truth, authorship, legal-identity, finality, authority, or networking
+claim.
+
+W2c1 remains a **no-socket protocol laboratory**. It does not durably remember
+which source transfer positions have already been accepted across process
+restart, perform source discovery, listen on HTTP/TLS, fetch outbound, rate-limit
+remote peers, or persist remote intake receipts as a receiver transaction. Those
+properties remain required before any live remote witness transport may be
+claimed. An actual listener/fetcher must be reviewed separately and must not
+receive Grid credentials or gain admission, follow, moderation, recommendation,
+consensus, or persona-root authority.
 
 A witness receipt means that the named witness key observed and verified one
 exact signed journal artifact. It does not prove content truth, legal identity,
@@ -555,14 +615,18 @@ The staged roadmap is:
    privacy-preserving root/key binding, operational-key epochs, rotation,
    revocation, recovery transitions, stale-key rejection when relevant evidence
    is supplied, and credential-aware journal v2 continuity;
-3. **W2 — witness service laboratory (W2a evidence core and W2b durable local
-   process implemented; remote operation pending):** the current work provides
-   signed observation, idempotent replay, equivocation/stale-key evidence,
-   witness-signed append-only local state, deterministic fail-closed restart,
-   bounded stdin/stdout IPC, and no global-currentness claim. Remaining W2 work
-   includes separately reviewed remote transport/source admission, discovery,
-   replay/rate/abuse controls at that boundary, independently operated hosts,
-   and multi-witness evidence exchange without Grid authority;
+3. **W2 — witness service laboratory (W2a evidence core, W2b durable local
+   process, and W2c1 no-socket source-transfer protocol implemented; live remote
+   operation pending):** the current work provides signed observation,
+   idempotent replay, equivocation/stale-key evidence, witness-signed append-only
+   local state, deterministic fail-closed restart, bounded stdin/stdout IPC,
+   explicit local source admission, source-signed transfer continuity,
+   source-equivocation evidence, separate persona-root trust, and historically
+   auditable package-verification receipts. Remaining W2 work includes durable
+   receiver-side source-chain/replay state, source-admission lifecycle
+   persistence, authenticated listener/fetcher transport, rate/flood/abuse
+   controls, discovery policy, independently operated hosts, and multi-witness
+   evidence exchange without Grid authority;
 4. **W3 — archive and availability laboratory:** independently operated public
    object retention with explicit availability and legal-removal semantics;
 5. **W4 — optional checkpoint agreement adapter:** evaluate threshold/BFT
@@ -570,17 +634,20 @@ The staged roadmap is:
    censorship, version-skew, and key-compromise conditions;
 6. **W5 — AXIOM Verify:** independently verify content digests, persona journal
    signatures, credential epochs, revocations, continuity, witness receipts,
-   witness observations/conflicts, durable witness records, checkpoints,
-   availability, and any optional finality certificate while preserving
-   explicit non-claims; and
+   witness observations/conflicts, durable witness records, source admissions,
+   source transfer chains/equivocation, package-verification receipts,
+   checkpoints, availability, and any optional finality certificate while
+   preserving explicit non-claims; and
 7. **W6 — promotion:** only after applicable protocol, security, privacy,
    operational, scale, governance, and independent-review gates pass.
 
 A persona can still sign two conflicting journal entries at the same continuity
 position. That is equivocation, not something cryptography can prohibit. W2a
-and W2b retain and expose conflicting valid artifacts and signed conflict
-evidence rather than silently choosing one. Future multi-witness and agreement
-protocols must preserve that property.
+and W2b retain and expose conflicting valid persona artifacts and signed
+conflict evidence rather than silently choosing one. W2c1 applies the same rule
+to an admitted source that signs competing transfer packages at one source
+position. Future multi-witness and agreement protocols must preserve both forms
+of conflict rather than silently select a winner.
 
 ## Required future agreement interface
 
