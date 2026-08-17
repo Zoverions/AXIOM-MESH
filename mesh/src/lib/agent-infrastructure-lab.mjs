@@ -166,7 +166,7 @@ export function validateAgentInfrastructureChallenge(challenge, { offer, expecte
   return Object.freeze({ valid: true, challenge_id: challenge.challenge_id, base_sha: challenge.base_sha, authority_granted: false });
 }
 
-export function validateAgentInfrastructureResult(result, { challenge, offer } = {}) {
+export function validateAgentInfrastructureResult(result, { challenge, offer, verifierConfirmed = false } = {}) {
   boundedDocument(result, 'Agent infrastructure result');
   exactKeys(result, 'Agent infrastructure result', [
     'schema', 'result_id', 'challenge_id', 'offer_id', 'repository', 'base_sha',
@@ -245,8 +245,18 @@ export function validateAgentInfrastructureResult(result, { challenge, offer } =
     || !boundedString(result.producer.attestation_ref, 1024)
     || !['unverified', 'verified-by-challenge-verifier'].includes(result.producer.verification_status)
   ) throw new ValidationError('Agent infrastructure result producer is invalid');
+  if (result.producer.verification_status === 'verified-by-challenge-verifier' && verifierConfirmed !== true) {
+    throw new ValidationError('Agent infrastructure result cannot self-assert independent verifier confirmation');
+  }
 
-  return Object.freeze({ valid: true, result_id: result.result_id, status: result.execution.status, authority_granted: false, capability_promoted: false });
+  return Object.freeze({
+    valid: true,
+    result_id: result.result_id,
+    status: result.execution.status,
+    verification_status: result.producer.verification_status,
+    authority_granted: false,
+    capability_promoted: false
+  });
 }
 
 function boundedDocument(value, label) {
