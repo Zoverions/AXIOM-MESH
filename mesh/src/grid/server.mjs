@@ -160,6 +160,22 @@ export async function createGridService(config = meshConfig()) {
       actor: url.searchParams.get('actor') ?? undefined
     })
   }));
+  router.add('GET', '/internal/v1/social/remote-review/:owner', async ({ params }) => {
+    const owner = assertString(params.owner, 'remote social review owner', {
+      max: 160,
+      pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
+    });
+    const { createRemoteSocialReviewReadAdapter } = await import(
+      './remote-social-review-read-adapter.mjs'
+    );
+    const { buildRemoteSocialReviewProjection } = await import(
+      './remote-social-review-projection.mjs'
+    );
+    return buildRemoteSocialReviewProjection(
+      createRemoteSocialReviewReadAdapter(store),
+      owner
+    );
+  });
   router.add('GET', '/internal/v1/intents/:id', async ({ params }) => store.getIntent(params.id));
   router.add('GET', '/internal/v1/machine-receipts/intents/:id/verify', async ({ params, url }) => {
     const intentId = assertString(params.id, 'intent_id', {

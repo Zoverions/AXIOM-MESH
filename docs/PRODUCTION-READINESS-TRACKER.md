@@ -1,6 +1,6 @@
 # AXIOM-MESH Production Readiness Tracker
 
-**Updated:** 2026-08-16
+**Updated:** 2026-08-17
 
 **Active build:** `0.12.0-dev.3`
 
@@ -41,7 +41,7 @@ frontier laboratories do not replace production-pilot evidence.
 | Resilience | Pass for automated candidate | Oversized-body, rate-limit, dependency suspension/loss, fail-closed exit, state-preserving restart | Pilot cgroup/disk/traffic/replacement scenarios |
 | Internal transport | Pass for single-host candidate | TLS 1.3, Ed25519 identities, active-leaf pinning, rotation, retired-leaf rejection, rollback | Pilot CA custody/rollout/compromise recovery/independent review |
 | Independent service units | Pass for single-host candidate | Per-unit identities, Grid-only state, segmented internal networks, Sandbox-only recovery | Pilot orchestrator resource/network/update/rollback evidence |
-| Service network policy | Pass for reference single-host topology | Exact default-deny 40-route policy at sender/receiver, derived mTLS peers, four segments, forbidden-edge probes, release binding | Reproduce on pilot and future independent hosts |
+| Service network policy | Pass for reference single-host topology | Exact default-deny 41-route policy at sender/receiver, derived mTLS peers, four segments, forbidden-edge probes, release binding | Reproduce on pilot and future independent hosts |
 | Node discovery/scheduling | Pass for single-Grid reservation candidate | Signed admissions, filtered discovery, deterministic encrypted leases, capacity/security/owner/domain/expiry/quarantine | Remote dispatch, measured resources, endpoint health, result provenance |
 | Online causal exchange | Pass for two-Grid candidate | Pinned Grid evidence, signed bundles, encrypted ordered queues, duplicate preflight, independent approval, visible conflicts/convergence | Independent-host WAN loss/delay/clock/backlog/custody evidence |
 | Secret/policy providers | Pass for signed protocol/reference adapter | Independent signers, pinned artifacts, nonce-bound inventories, private generation, invalid-signer rejection | Pilot vault/orchestrator adapter/workload identity |
@@ -67,8 +67,9 @@ real source and tests while the supported runtime has no
 
 | Product gate | Current state | Required before exposure/promotion |
 |---|---|---|
-| Versioned Gateway client | Pass for current contract/library (`UX-001`): exact 30-route machine contract, reviewed schema, relative-only targets, explicit errors, bounded timeout/request/response, cancellation, stable idempotency, real-stack compatibility | Maintain exact compatibility; version/migrate/rollback incompatible changes |
+| Versioned Gateway client | Pass for current contract/library (`UX-001`): exact 31-route machine contract, reviewed schema, relative-only targets, explicit errors, bounded timeout/request/response, cancellation, stable idempotency, real-stack compatibility | Maintain exact compatibility; version/migrate/rollback incompatible changes |
 | Owner-local social substrate | In progress: intent-authorized local actor/persona/publication create/supersede/retract plus owner-derived `/v1/social`; A2 publication projection; no federation or network distribution | Complete exact-head owner-read evidence, then AXIOM One UI; later exchange/federation requires a separate protocol/security gate |
+| Remote social review inspection | Candidate mechanism implemented; not production-promoted: owner-only `/v1/social/remote-review`, owner derived from authenticated principal, query overrides rejected, minimized G5A projection, accepted `SocialGridStore`, no remote-schema creation and no social/network/authority effect | Same-head Clean Kernel/Windows/chain evidence is required before PR readiness; any staging/admission/follow/transport/federation remains a separate gate |
 | AXIOM One browser/PWA shell | Experimental (`UX-002`): loopback-only shell, contract-only proxy, memory-only token, governed bounded Ask/Vault/receipt views | Complete local social UI, onboarding, session/device security, browser fixtures, accessibility/usability, signed package/update/rollback/uninstall/support |
 | Human authority explanations | Experimental bounded slice (`UX-003`): five-action review, stable outcomes/events, approval states, raw evidence, uncertainty recovery | Authoritative policy-bound broader consequential plan/execute, reversible approval actions, consent/revocation journeys, comprehension evidence |
 | Governed memory lifecycle | Experimental (`UX-004`): owner create/list, three fixed provenance links, correction-without-replacement, tombstone, selective export, bundle reveal, cross-principal negatives | Edge deletion, bounded bulk ingest, authorized hard deletion, restore/recovery, download threat analysis, human lifecycle evidence |

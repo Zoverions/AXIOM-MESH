@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=90e07a5f6ad577d4733e3c7db238cc61c49e9e0d593d78a882409195cc5f5506 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=3d909ef501e6f914c60f2a74f42a6155f18038f79a73e9ba915d8873511cfcc7 -->
 # AXIOM-MESH
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
@@ -349,7 +349,7 @@ The alternate single-host
 [`mesh/compose.units.yml`](mesh/compose.units.yml) runs the four kernel services
 as independently restartable containers with per-unit private credentials,
 Grid-only durable state, and four exact internal network segments. A
-machine-readable default-deny policy **permits only 40 current internal**
+machine-readable default-deny policy **permits only 41 current internal**
 caller/destination/method/route combinations at both ends, derives mTLS peer
 allowlists, and removes unrelated adjacency. This is single-host isolation, not
 multi-host consensus or automatic failover.

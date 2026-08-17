@@ -47,7 +47,7 @@ const EXPECTED_FLOW_IDS = Object.freeze([
   'sandbox-self-health'
 ]);
 const EXPECTED_POLICY_DIGEST =
-  'bc83476d5bd8479dfd336448edd0f7257a75997b2bd95ae1229ceab9a3116290';
+  '08290adde1d4ee13257b7f9515c52fcb85989dcf4484e60effbaeb813cbac383';
 
 export const ACTIVE_SERVICE_NETWORK_POLICY = deepFreeze(
   validateServiceNetworkPolicy(JSON.parse(readFileSync(
@@ -374,11 +374,15 @@ export function validateServiceRouteImplementation({
 function validateExactCurrentRoutes(flows) {
   const gatewayGrid = flows.find(flow => flow.id === 'gateway-to-grid');
   if (
-    gatewayGrid.routes.length !== 25
+    gatewayGrid.routes.length !== 26
     || !gatewayGrid.routes.some(route => route.path === '/internal/v1/verify-chain')
     || !gatewayGrid.routes.some(route => (
       route.method === 'GET'
       && route.path === '/internal/v1/machine-receipts/intents/:id/verify'
+    ))
+    || !gatewayGrid.routes.some(route => (
+      route.method === 'GET'
+      && route.path === '/internal/v1/social/remote-review/:owner'
     ))
   ) throw new ValidationError('Gateway-to-Grid route allowlist drifted');
   const required = {

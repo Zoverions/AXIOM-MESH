@@ -26,15 +26,15 @@ with lifecycle scripts disabled, proves they did not change, and runs the
 kernel and release gates. It creates no production credentials and makes no
 deployment claim.
 
-The authenticated Gateway surface also has a versioned 30-route client
-contract and zero-dependency same-origin client. It enforces exact route and
-input inventories, bounded timeouts and response size, cancellation,
-idempotent intent-result compatibility, explicit errors, and no direct access
-to internal services. A loopback-only AXIOM One PWA foundation now exercises
-that boundary as an experimental preview with a memory-only token, exact proxy,
-public-shell-only cache, and explicit unavailable features. A separate exact
-human-explanation contract provides reversible review for echo, owner-scoped
-private memory creation, three fixed directional provenance links,
+The authenticated Gateway surface also has a versioned client contract covering
+all 31 authenticated Gateway routes and a zero-dependency same-origin client. It
+enforces exact route and input inventories, bounded timeouts and response size,
+cancellation, idempotent intent-result compatibility, explicit errors, and no
+direct access to internal services. A loopback-only AXIOM One PWA foundation
+now exercises that boundary as an experimental preview with a memory-only token,
+exact proxy, public-shell-only cache, and explicit unavailable features. A
+separate exact human-explanation contract provides reversible review for echo,
+owner-scoped private memory creation, three fixed directional provenance links,
 confirmation-bound tombstoning, and selective local export; fail-closed mappings
 for all 20 stable Gateway outcomes and 37 current kernel event kinds;
 active/expired/consumed approval states; raw evidence; and
@@ -88,7 +88,7 @@ The four-unit candidate is also implemented. It projects one application
 private key and one TLS leaf per service, gives durable state and the
 data-protection key only to Grid, gives API credentials only to Gateway, and
 uses four exact Docker internal segments with no public port. A machine-
-readable default-deny policy permits only 40 current internal
+readable default-deny 41-route policy permits only current internal
 caller/destination/method/route combinations at both endpoints and derives
 mTLS peer allowlists.
 Signed host evidence and a protected four-container check prove required-path

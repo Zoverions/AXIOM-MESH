@@ -2,7 +2,7 @@
 
 **Build:** `0.12.0-dev.3`
 
-**Updated:** 2026-08-16
+**Updated:** 2026-08-17
 
 This directory contains the supported clean-room AXIOM-MESH kernel. It is a
 zero-third-party-npm-dependency Node.js runtime with four security
@@ -68,7 +68,7 @@ Gateway -> Hypervisor -> Sandbox -> Grid
 A browser, provider, external runtime, repository operator, remote node, or
 administrator does not gain authority merely by existing next to the kernel.
 
-The current machine-readable client contract covers all 30 authenticated
+The current machine-readable client contract covers all 31 authenticated
 Gateway routes with relative-only targets, explicit schemas and errors,
 bounded responses/timeouts, cancellation, stable idempotent replay, and no
 direct internal-service target.
@@ -122,7 +122,7 @@ identities, DNS and SPIFFE-style URI checks, exact active-leaf fingerprint
 pinning, and signed replay-protected application envelopes.
 
 The alternate four-unit single-host topology uses four internal network
-segments. The machine-readable default-deny service policy authorizes 40 exact
+segments. The machine-readable default-deny service policy authorizes 41 exact
 current-build caller/destination/method/route combinations and derives
 allowed mTLS peers from that same graph. The policy removes unrelated adjacency
 and is enforced before outgoing request signing and again by the receiving
@@ -188,6 +188,7 @@ The Gateway exposes these current operator endpoints:
 - `GET /v1/intents/:id`
 - `GET /v1/events`
 - `GET /v1/social`
+- `GET /v1/social/remote-review`
 - `GET /v1/capsules`
 - `GET /v1/proposals`
 - `GET /v1/nodes`
@@ -214,6 +215,14 @@ owner from the authenticated principal; the route has no contract-owned owner
 override. It reconstructs bounded actor/persona/local-publication state from the
 owner's signed Grid history, strips execution/state-access provenance from the
 response, and performs no network distribution or federation.
+
+`GET /v1/social/remote-review` is a separate authenticated owner-only inspection
+route. It accepts no query parameters, derives the owner only from the authenticated
+principal, and returns the bounded minimized `axiom-remote-social-review.v1`
+projection. The accepted Grid remains `SocialGridStore`; the read creates no
+remote-social schema and performs no staging, admission, follow/unfollow,
+retention cleanup, transport, ranking, recommendation, network, or authority
+effect. This inspection surface is not a live federation or social-network claim.
 
 The active intent-action surface is:
 
