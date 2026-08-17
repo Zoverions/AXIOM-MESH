@@ -63,8 +63,7 @@ const STATEMENT_KEYS = new Set([
 
 function exactKeys(raw, allowed, label) {
   const value = assertPlainObject(raw, label);
-  const actual = Object.keys(value);
-  for (const key of actual) {
+  for (const key of Object.keys(value)) {
     if (!allowed.has(key)) throw new ValidationError(`${label} contains unsupported field ${key}`);
   }
   return value;
@@ -446,6 +445,19 @@ function replayRecords(records, {
 }
 
 export class PublicWitnessDurableStore {
+  #statePath;
+  #domainId;
+  #witnessId;
+  #witnessPrivateKey;
+  #maxArtifacts;
+  #maxConflicts;
+  #maxStateBytes;
+  #maxRecordBytes;
+  #records;
+  #core;
+  #witnessKeyId;
+  #tail;
+
   constructor({
     statePath,
     domainId,
@@ -459,22 +471,22 @@ export class PublicWitnessDurableStore {
     core,
     witnessKeyId
   }) {
-    this.statePath = statePath;
-    this.domainId = domainId;
-    this.witnessId = witnessId;
-    this.witnessPrivateKey = witnessPrivateKey;
-    this.maxArtifacts = maxArtifacts;
-    this.maxConflicts = maxConflicts;
-    this.maxStateBytes = maxStateBytes;
-    this.maxRecordBytes = maxRecordBytes;
-    this.records = records;
-    this.core = core;
-    this.witnessKeyId = witnessKeyId;
-    this._tail = Promise.resolve();
+    this.#statePath = statePath;
+    this.#domainId = domainId;
+    this.#witnessId = witnessId;
+    this.#witnessPrivateKey = witnessPrivateKey;
+    this.#maxArtifacts = maxArtifacts;
+    this.#maxConflicts = maxConflicts;
+    this.#maxStateBytes = maxStateBytes;
+    this.#maxRecordBytes = maxRecordBytes;
+    this.#records = records;
+    this.#core = core;
+    this.#witnessKeyId = witnessKeyId;
+    this.#tail = Promise.resolve();
   }
 
   get witnessPublicKey() {
-    return this.core.witnessPublicKey;
+    return this.#core.witnessPublicKey;
   }
 
   async commit(operation, rawRequest, { committedAt } = {}) {
@@ -485,55 +497,55 @@ export class PublicWitnessDurableStore {
     if (committed < request.observed_at) {
       throw new ValidationError('public witness durable commit cannot predate the witness observation');
     }
-    if (this.records.length > 0 && committed < this.records.at(-1).statement.committed_at) {
+    if (this.#records.length > 0 && committed < this.#records.at(-1).statement.committed_at) {
       throw new ValidationError('public witness durable commit time cannot move backward');
     }
-    const run = async () => this._commitSerialized(normalizedOperation, request, committed);
-    const promise = this._tail.then(run, run);
-    this._tail = promise.then(() => undefined, () => undefined);
+    const run = async () => this.#commitSerialized(normalizedOperation, request, committed);
+    const promise = this.#tail.then(run, run);
+    this.#tail = promise.then(() => undefined, () => undefined);
     return promise;
   }
 
-  async _assertDiskMatchesMemory() {
-    const signing = signer(this.witnessPrivateKey);
-    const rawRecords = await readRecordLines(this.statePath, this.maxStateBytes, this.maxRecordBytes);
-    if (rawRecords.length !== this.records.length) {
+  async #assertDiskMatchesMemory() {
+    const signing = signer(this.#witnessPrivateKey);
+    const rawRecords = await readRecordLines(this.#statePath, this.#maxStateBytes, this.#maxRecordBytes);
+    if (rawRecords.length !== this.#records.length) {
       throw new ValidationError('public witness durable state changed outside the active store');
     }
     for (let index = 0; index < rawRecords.length; index += 1) {
       const verified = verifyPublicWitnessDurableRecord(rawRecords[index], {
         trustedWitnessPublicKey: signing.publicKey,
-        expectedDomainId: this.domainId,
-        expectedWitnessId: this.witnessId
+        expectedDomainId: this.#domainId,
+        expectedWitnessId: this.#witnessId
       });
-      if (verified.record_digest !== this.records[index].record_digest) {
+      if (verified.record_digest !== this.#records[index].record_digest) {
         throw new ValidationError('public witness durable state changed outside the active store');
       }
     }
     return rawRecords;
   }
 
-  async _commitSerialized(operation, request, committedAt) {
-    await this._assertDiskMatchesMemory();
-    const trial = replayRecords(this.records, {
-      domainId: this.domainId,
-      witnessId: this.witnessId,
-      witnessPrivateKey: this.witnessPrivateKey,
-      maxArtifacts: this.maxArtifacts,
-      maxConflicts: this.maxConflicts
+  async #commitSerialized(operation, request, committedAt) {
+    await this.#assertDiskMatchesMemory();
+    const trial = replayRecords(this.#records, {
+      domainId: this.#domainId,
+      witnessId: this.#witnessId,
+      witnessPrivateKey: this.#witnessPrivateKey,
+      maxArtifacts: this.#maxArtifacts,
+      maxConflicts: this.#maxConflicts
     });
     const result = applyRequest(trial.core, operation, request);
     if (result.status === 'replay') {
       return Object.freeze({ ...result, durable_record: null });
     }
     const digests = resultDigests(result);
-    const privateKey = parsePrivateKey(this.witnessPrivateKey, 'public witness durable private key');
+    const privateKey = parsePrivateKey(this.#witnessPrivateKey, 'public witness durable private key');
     const statement = normalizeStatement({
-      domain_id: this.domainId,
-      witness_id: this.witnessId,
-      witness_key_id: this.witnessKeyId,
-      sequence: this.records.length + 1,
-      previous_record_digest: this.records.length === 0 ? null : this.records.at(-1).record_digest,
+      domain_id: this.#domainId,
+      witness_id: this.#witnessId,
+      witness_key_id: this.#witnessKeyId,
+      sequence: this.#records.length + 1,
+      previous_record_digest: this.#records.length === 0 ? null : this.#records.at(-1).record_digest,
       operation,
       request_digest: digestObject(request),
       observation_digest: digests.observation_digest,
@@ -548,47 +560,47 @@ export class PublicWitnessDurableStore {
     const record = signRecord(statement, request, privateKey);
     const line = `${canonicalJson(record)}\n`;
     const lineBytes = Buffer.byteLength(line, 'utf8');
-    if (lineBytes > this.maxRecordBytes) {
+    if (lineBytes > this.#maxRecordBytes) {
       throw new ValidationError('public witness durable record exceeds configured byte limit');
     }
-    const current = await stat(this.statePath);
-    if (current.size + lineBytes > this.maxStateBytes) {
+    const current = await stat(this.#statePath);
+    if (current.size + lineBytes > this.#maxStateBytes) {
       throw new ValidationError('public witness durable state capacity is exhausted');
     }
-    const handle = await open(this.statePath, 'a');
+    const handle = await open(this.#statePath, 'a');
     try {
       await handle.writeFile(line, 'utf8');
       await handle.sync();
     } finally {
       await handle.close();
     }
-    this.records.push(record);
-    this.core = trial.core;
+    this.#records.push(record);
+    this.#core = trial.core;
     return Object.freeze({ ...result, durable_record: structuredClone(record) });
   }
 
   getArtifact(artifactDigest) {
-    return this.core.getArtifact(artifactDigest);
+    return this.#core.getArtifact(artifactDigest);
   }
 
   getObservation(artifactDigest) {
-    return this.core.getObservation(artifactDigest);
+    return this.#core.getObservation(artifactDigest);
   }
 
   listPosition(options) {
-    return this.core.listPosition(options);
+    return this.#core.listPosition(options);
   }
 
   listConflicts() {
-    return this.core.listConflicts();
+    return this.#core.listConflicts();
   }
 
   snapshot() {
-    const witness = this.core.snapshot();
+    const witness = this.#core.snapshot();
     const body = Object.freeze({
       ...witness,
-      durable_record_count: this.records.length,
-      durable_last_record_digest: this.records.length === 0 ? null : this.records.at(-1).record_digest,
+      durable_record_count: this.#records.length,
+      durable_last_record_digest: this.#records.length === 0 ? null : this.#records.at(-1).record_digest,
       durable_state_path_disclosed: false,
       data_availability_claimed: false
     });
@@ -596,19 +608,19 @@ export class PublicWitnessDurableStore {
   }
 
   async verifyState() {
-    const rawRecords = await this._assertDiskMatchesMemory();
+    const rawRecords = await this.#assertDiskMatchesMemory();
     replayRecords(rawRecords, {
-      domainId: this.domainId,
-      witnessId: this.witnessId,
-      witnessPrivateKey: this.witnessPrivateKey,
-      maxArtifacts: this.maxArtifacts,
-      maxConflicts: this.maxConflicts
+      domainId: this.#domainId,
+      witnessId: this.#witnessId,
+      witnessPrivateKey: this.#witnessPrivateKey,
+      maxArtifacts: this.#maxArtifacts,
+      maxConflicts: this.#maxConflicts
     });
     return Object.freeze({
       valid: true,
-      records: this.records.length,
-      last_record_digest: this.records.length === 0 ? null : this.records.at(-1).record_digest,
-      witness_key_id: this.witnessKeyId,
+      records: this.#records.length,
+      last_record_digest: this.#records.length === 0 ? null : this.#records.at(-1).record_digest,
+      witness_key_id: this.#witnessKeyId,
       global_currentness_claimed: false,
       finality_claimed: false,
       authority_effect: 'none',
