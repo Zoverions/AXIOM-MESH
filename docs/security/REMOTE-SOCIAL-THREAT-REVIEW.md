@@ -6,11 +6,11 @@
 
 **Updated:** 2026-08-17
 
-This document is a focused review input for the remote-social foundations merged through S3A-F and S3G1-G3. It does not activate those foundations. The canonical current-build threat model remains authoritative and explicitly incorporates this companion for remote-social review scope.
+This document is a focused review input for the remote-social foundations merged through S3A-F and the current S3G hardening sequence. It does not activate those foundations. The canonical current-build threat model remains authoritative and explicitly incorporates this companion for remote-social review scope.
 
 ## Current activation boundary
 
-The accepted Grid service still imports and instantiates `SocialGridStore`. The disabled `RemoteSocialRuntimeCandidateGridStore` is not selected by the accepted server, exposes no public route, and has no network egress. It composes only Grid-side S3C staging, S3D admission, S3E private Following, and the S3G2 retention/quota lifecycle.
+The accepted Grid service still imports and instantiates `SocialGridStore`. The disabled `RemoteSocialRuntimeCandidateGridStore` is not selected by the accepted server, exposes no public route, and has no network egress. On this branch it composes Grid-side S3C staging, S3D admission, S3E private Following, S3G2 retention/quota lifecycle, and S3G6 owner-private abuse controls/quarantine. G6 does not change the accepted Grid selection.
 
 S3F transport is deliberately separate from that candidate because the supported Grid boundary remains deny-egress. The repository contains a pinned/bounded transport laboratory, but no accepted source-package endpoint and no deployed host-side social relay. A future relay must be reviewed and promoted independently.
 
@@ -38,6 +38,12 @@ S3D admission proves that the local Grid accepted an exact staged package under 
 
 S3E Following is a local owner preference over already admitted remote persona observations. Trust scope is limited to `exporter-attestation-only`. Content-truth, legal-identity, and actor-authorship claims remain false. The projection performs no live fetch, recommendation, ranking, or public graph publication.
 
+### Owner-private abuse controls
+
+S3G6 mute and block records are local owner preferences over already admitted remote personas. A report is an append-only owner assertion for later review and is explicitly non-adjudicating. Exporter/source quarantine is an owner-local fail-closed safety state, not a global denylist, identity revocation, content-truth determination, reputation score, or legal judgment.
+
+Block, mute, report, and quarantine records do not grant Mesh authority. Report does not automatically change visibility or trust. Source quarantine stores a deterministic digest of a normalized exact HTTPS origin plus protected local detail; G6 performs no DNS, HTTP, credential use, or transport. A future G8 relay may consult the source digest before egress only after its own review and activation gates.
+
 ### Future social relay
 
 A future egress-capable social relay must remain outside Grid. It should have only the authority needed to fetch an exact package from an exact configured HTTPS origin and hand a verified package plus transport evidence into a staging-only Grid endpoint. It must not possess an admission approval, follow authority, general Grid credential, or a route that can convert transport success into admission.
@@ -53,10 +59,11 @@ Remote-social review adds these assets and sensitive metadata to the current-bui
 - S3D admission, intent, approval, observation, and admission-to-observation provenance;
 - S3E private follow/unfollow state and encrypted trust labels;
 - S3F transport pins, exact origins, job/retry state, request-nonce digests, and receipts;
-- S3G2 retention policies, quota state, cleanup events, and retention receipts; and
+- S3G2 retention policies, quota state, cleanup events, and retention receipts;
+- S3G6 private mute/block preferences, reports, exporter/source quarantine state, protected reason/note metadata, and source-origin digests; and
 - future relay credentials, DNS/TLS state, queues, logs, and handoff receipts if that relay is later implemented.
 
-Remote observations may be structurally public but still privacy-sensitive in aggregate. Following choices and trust labels are private local metadata even when the followed persona is public.
+Remote observations may be structurally public but still privacy-sensitive in aggregate. Following choices, trust labels, abuse preferences, reports, quarantine reasons, and source trust decisions are private local metadata even when the referenced persona/content/source is public.
 
 ## Threat actors and failure modes
 
@@ -67,13 +74,13 @@ Reviewers must consider at least:
 - a malicious or compromised transport endpoint using a valid transport key;
 - transport/exporter key substitution or reuse of a retired key;
 - a compromised future relay attempting to become a confused deputy for admission or Following;
-- a local authenticated principal attempting to stage, admit, inspect, clean up, or follow another owner's records;
+- a local authenticated principal attempting to stage, admit, inspect, clean up, follow, mute, block, report, or quarantine another owner's records;
 - an operator approving a visually similar but digest-different stage or trusting an incorrect exporter;
 - an attacker replaying a stale transport envelope or changing origin, nonce, package bytes, exporter identity, or timestamps;
-- storage-amplification attacks using many valid packages, large public content, repeated unique observations, or retry pressure;
+- storage-amplification attacks using many valid packages, large public content, repeated unique observations, reports, preferences, quarantine records, or retry pressure;
 - malicious content intended to exploit future renderers, link previewers, media processors, moderation tools, or human reviewers;
-- trust-label wording intended to be mistaken for verified identity, content truth, or personal authorship;
-- correlation of private Following/trust state with remote public identities;
+- trust-label or abuse-control wording intended to be mistaken for verified identity, content truth, personal authorship, adjudication, or global moderation;
+- correlation of private Following/trust/report/quarantine state with remote public identities;
 - retention actions that erase replay dependencies, evidence, or an operator's ability to explain an admission;
 - source-read credential leakage, overly broad relay credentials, DNS/TLS interception, redirect abuse, or permissive origin matching; and
 - future public source/profile/federation services being used for spam, scraping, harassment, impersonation, resource exhaustion, or Sybil amplification.
@@ -127,7 +134,7 @@ Review should verify:
 - chronological projection reads admitted local observations only;
 - superseded/retracted observations are treated consistently;
 - no live transport, discovery, engagement ranking, or recommendation effect occurs; and
-- later block/mute/report/quarantine rules cannot be bypassed by Following reconstruction.
+- block/mute/exporter-quarantine rules cannot be bypassed by Following reconstruction.
 
 ### S3F transport laboratory
 
@@ -153,24 +160,40 @@ Review should verify:
 - retention quotas are owner-scoped and preflighted before new durable materialization;
 - expired unadmitted cleanup is explicit and evidence-backed;
 - admitted stage payloads remain replay dependencies under the current replay design; and
-- the Grid-side candidate composes S3C/D/E/retention only, reports `activation_state: disabled`, has no transport methods, and is not referenced by the accepted Grid server.
+- the Grid-side candidate remains disabled, has no transport methods, and is not referenced by the accepted Grid server.
+
+### S3G6 owner-private abuse controls and quarantine
+
+Review should verify:
+
+- only already admitted owner-visible persona observations can be muted or blocked;
+- active block prevents new local follow while preserving prior follow/observation evidence;
+- active mute/block suppress matching local Following items without rewriting remote observations;
+- reports can target only owner-visible admitted persona/publication observations;
+- reports are append-only owner assertions, `adjudicated: false`, claim no content truth, and create no automatic block/quarantine/visibility effect;
+- exporter quarantine requires an exporter already present in that owner's staged/admitted state, remains owner-local, suppresses matching Following, and prevents new follow while active;
+- source quarantine accepts only a normalized exact HTTPS origin, persists a deterministic origin digest, protects the normalized origin/reason/note at rest, and performs no network I/O;
+- release/unmute/unblock transitions are explicit and historical evidence remains retained;
+- owner/report/preference/quarantine bounds fail before durable mutation;
+- every new protected G6 value is included in generic remote-social data-key rotation;
+- reports/preferences/quarantines never become ranking, recommendation, reputation, identity, admission, policy, or legal authority; and
+- earlier opt-in stores plus accepted `SocialGridStore` do not gain G6 schema/methods.
 
 ## Abuse and privacy requirements before runtime exposure
 
-The current laboratory stack is not sufficient for untrusted-network social exposure. Before Following or admission is exposed through an accepted public/user route, review must cover:
+G6 closes the first local-control gap, but the current laboratory stack is still not sufficient for untrusted-network social exposure. Before Following or admission is exposed through an accepted public/user route, review must still cover:
 
-- private block and mute semantics;
-- report/appeal or equivalent operator review semantics;
-- exporter/source quarantine and unquarantine authority;
-- behavior when a followed source becomes quarantined or its key is retired;
-- owner-scoped storage, rate, object-count, and payload-byte quotas;
+- user-visible report review/appeal or equivalent correction semantics if reports are ever shared with an operator/service;
+- source-quarantine enforcement and retired-key handling in the future egress relay before any source fetch occurs;
+- owner-scoped request/rate controls for any future public abuse-control mutation route;
 - content/rendering safety for text, links, and any future media path;
-- retention and operator-visible cleanup semantics;
-- privacy minimization for follow/trust/observation metadata;
-- consistent not-found behavior where existence itself is sensitive; and
-- incident response for compromised exporter, transport, or relay keys.
+- privacy minimization for follow/trust/observation/report/quarantine metadata;
+- consistent not-found behavior where existence itself is sensitive;
+- abuse-control export/deletion/retention semantics appropriate to the exposed product;
+- incident response for compromised exporter, transport, or relay keys; and
+- independent review of any public moderation, shared blocklist, automated classification, or reputation proposal before it is built or exposed.
 
-These controls are separate from recommendation ranking. A reputation, ranking, moderation, or visibility score must never become Grid authorization, actor identity proof, consent, or legal-status proof.
+These controls are separate from recommendation ranking. A reputation, ranking, moderation, report, block, mute, or quarantine state must never become Grid authorization, actor identity proof, consent, content-truth proof, or legal-status proof.
 
 ## Future relay review boundary
 
@@ -183,6 +206,7 @@ If an egress-capable social relay is implemented later, it requires a separate t
 - least-privilege per-source read credentials;
 - bounded queues, response sizes, retries and concurrency;
 - source/transport/exporter key lifecycle and revocation handling;
+- owner/source quarantine preflight before network access;
 - a staging-only authenticated handoff into Grid;
 - receipts that distinguish fetch, verification, staging, admission and follow effects; and
 - explicit failure behavior for uncertain fetch/delivery.
@@ -199,6 +223,7 @@ Any review that purports to cover remote-social activation must inspect the exac
 - `mesh/src/grid/remote-social-admission-store.mjs`
 - `mesh/src/grid/remote-social-following-store.mjs`
 - `mesh/src/grid/remote-social-retention-store.mjs`
+- `mesh/src/grid/remote-social-abuse-store.mjs`
 - `mesh/src/grid/remote-social-transport-store.mjs`
 - `mesh/src/grid/remote-social-protection.mjs`
 - `mesh/src/grid/remote-social-runtime-candidate.mjs`
@@ -210,6 +235,6 @@ Any review that purports to cover remote-social activation must inspect the exac
 
 ## Non-claims
 
-A Grid-signed export proves what that Grid signed. A transport envelope proves what the pinned transport endpoint signed for one nonce-bound request. A local admission proves what the local Grid accepted under the recorded local authority path. A private Following record proves a local preference. None of those statements alone proves content truth, legal identity, biological identity, or personal authorship.
+A Grid-signed export proves what that Grid signed. A transport envelope proves what the pinned transport endpoint signed for one nonce-bound request. A local admission proves what the local Grid accepted under the recorded local authority path. A private Following record proves a local preference. A mute/block proves only this owner's local preference; a report proves only that the owner recorded the assertion; quarantine proves only that this owner locally marked the exporter/source for fail-closed handling. None of those statements alone proves content truth, abuse, legal identity, biological identity, personal authorship, or a right to impose authority on another actor.
 
-The current accepted runtime does not instantiate the remote-social candidate, does not provide a live source-package endpoint, and does not run a host-side social relay. No live federation, public remote Following, recommendation system, messaging system, moderation service, relay/index, public follow graph, or public-profile hosting claim follows from the merged laboratory foundations.
+The current accepted runtime does not instantiate the remote-social candidate, does not provide a live source-package endpoint, and does not run a host-side social relay. No live federation, public remote Following, recommendation system, messaging system, moderation service, relay/index, public follow graph, or public-profile hosting claim follows from the laboratory foundations.
