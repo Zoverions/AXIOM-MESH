@@ -29,6 +29,20 @@ test('infrastructure discovery points only to existing bounded contracts', async
     assert.equal(typeof document.$schema, 'string');
   }
 
+  const attestationContract = await readJson(discovery.device_attestation_contract);
+  assert.equal(
+    attestationContract.$id,
+    'https://axiom.invalid/schemas/agent-device-attestation.v1.schema.json'
+  );
+  assert.equal(attestationContract.properties.schema.const, 'axiom-agent-device-attestation.v1');
+
+  const sessionContract = await readJson(discovery.test_session_authorization_contract);
+  assert.equal(
+    sessionContract.$id,
+    'https://axiom.invalid/schemas/agent-test-session-authorization.v1.schema.json'
+  );
+  assert.equal(sessionContract.properties.schema.const, 'axiom-agent-test-session-authorization.v1');
+
   assert.deepEqual(discovery.challenge_classes, [
     'hardware-validation',
     'test-node-provisioning',
