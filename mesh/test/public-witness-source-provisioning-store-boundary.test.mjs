@@ -23,7 +23,9 @@ test('source provisioning application remains local and introduces no network cl
 
 test('source provisioning application uses only the exact W2c2 source-admission mutation', async () => {
   const text = await readFile(SOURCE, 'utf8');
-  const calls = [...text.matchAll(/receiverStore\.([A-Za-z0-9_]+)\(/g)].map(match => match[1]);
+  const calls = [
+    ...text.matchAll(/(?:receiverStore|this\.#receiverStore)\.([A-Za-z0-9_]+)\(/g)
+  ].map(match => match[1]);
   const mutating = calls.filter(name => !['snapshot', 'getSourceAdmission'].includes(name));
   assert.deepEqual([...new Set(mutating)].sort(), ['admitSource']);
   assert.equal(text.includes('receiveTransfer('), false);
