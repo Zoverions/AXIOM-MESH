@@ -30,6 +30,7 @@ const T0 = '2026-08-17T23:00:00.000Z';
 const T1 = '2026-08-17T23:01:00.000Z';
 const T2 = '2026-08-17T23:02:00.000Z';
 const T3 = '2026-08-17T23:03:00.000Z';
+const T6 = '2026-08-17T23:06:00.000Z';
 const TEND = '2026-08-17T23:30:00.000Z';
 
 function keys() {
@@ -107,7 +108,7 @@ function fixture() {
     sourcePrivateKey: source.privateKey,
     transferId: 'live-ingress-transfer-1',
     createdAt: T2,
-    expiresAt: TEND,
+    expiresAt: T6,
     now: Date.parse(T2)
   });
   return { root, source, witness, admission, transfer };
