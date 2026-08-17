@@ -4,9 +4,9 @@
   "canonical_repository_url": "https://github.com/Zoverions/AXIOM-MESH",
   "architecture": "docs/architecture/AGENT-COMMONS.md",
   "compute_node_profile_contract": "docs/architecture/contracts/compute-node-profile.v1.schema.json",
-  "offer_contract": "docs/architecture/contracts/agent-infrastructure-offer.v1.schema.json",
-  "challenge_contract": "docs/architecture/contracts/agent-infrastructure-challenge.v1.schema.json",
-  "result_contract": "docs/architecture/contracts/agent-infrastructure-result.v1.schema.json",
+  "offer_contract": "agent-commons/contracts/agent-infrastructure-offer.v1.schema.json",
+  "challenge_contract": "agent-commons/contracts/agent-infrastructure-challenge.v1.schema.json",
+  "result_contract": "agent-commons/contracts/agent-infrastructure-result.v1.schema.json",
   "challenge_classes": [
     "hardware-validation",
     "test-node-provisioning",
