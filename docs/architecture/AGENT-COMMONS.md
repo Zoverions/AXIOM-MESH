@@ -61,11 +61,14 @@ The first draft object family is deliberately small:
 5. `axiom-agent-infrastructure-challenge.v1` — an exact-base hardware or infrastructure test plan;
 6. `axiom-agent-infrastructure-result.v1` — a bounded infrastructure result and evidence envelope;
 7. `axiom-agent-device-attestation.v1` — fresh Ed25519 key-possession evidence bound to one offered node-profile digest;
-8. `axiom-agent-test-session-authorization.v1` — a human-sponsored, one-time, short-lived laboratory authorization envelope whose effects are not currently reachable.
+8. `axiom-agent-test-session-authorization.v1` — a human-sponsored, one-time, short-lived laboratory authorization envelope whose effects are not currently reachable;
+9. `axiom-agent-test-session-lifecycle-event.v1` — signed append-only issuance/consumption/revocation/expiry/interruption/completion evidence;
+10. `axiom-agent-test-session-lifecycle-receipt.v1` — an executor-independent signed receipt bound to one exact lifecycle head;
+11. `axiom-agent-test-session-lifecycle-transcript.v1` — a bounded portable lifecycle chain for replay/recovery verification when retained externally.
 
 The supported core contribution schemas live under `docs/architecture/contracts/`. The experimental infrastructure-lab exchange schemas remain under `agent-commons/contracts/` until that layer is separately promoted into the supported documentation boundary.
 
-These are exchange contracts, not proof that an external agent, runtime, identity, network, or offered device is trustworthy.
+These are exchange contracts, not proof that an external agent, runtime, identity, network, offered device, or lifecycle signer is trustworthy beyond the evidence actually verified.
 
 ## Challenge model
 
@@ -155,7 +158,10 @@ Relevant threats include:
 - test-node workflows that smuggle production enrollment or destructive changes;
 - replayed or substituted device-attestation nonces;
 - self-supplied software keys falsely described as secure-element or platform-backed identity;
-- session envelopes that widen operations, network access, lifetime, or effect reachability beyond the parent challenge.
+- session envelopes that widen operations, network access, lifetime, or effect reachability beyond the parent challenge;
+- double consumption, stale revocation state, or conflicting lifecycle event identifiers;
+- lifecycle transcript reordering, predecessor substitution, signature forgery, or binding drift;
+- authentic old transcript prefixes being presented as current state after a newer signed lifecycle head existed.
 
 Required controls include exact-base binding, bounded inputs, protected CI, provenance capture, secret isolation, security-report routing, independent review for consequential changes, and no merge or infrastructure authority for external agents merely from participation.
 
@@ -238,7 +244,31 @@ A test-session authorization is a laboratory mandate between a validated infrast
 
 The current authorization envelope always carries `effect_reachable: false`. Validation therefore proves that the envelope is internally bounded; it does **not** provide a deployed remote executor, credentials, tunnel, shell, device-management enrollment, or other path that can act on the machine.
 
-A future effect-reachable executor is a separate promotion problem. It would require authenticated sponsor identity, trusted device-key custody or stronger platform attestation as appropriate, isolated ephemeral credentials, durable revocation state, replay prevention, timeout and interrupted-work recovery, exact command/filesystem/network enforcement, evidence receipts, independent threat review, and protected promotion.
+### Test-session lifecycle evidence boundary
+
+Before any executor exists, the laboratory records what happened to an authorization with a separate signed append-only lifecycle chain.
+
+One lifecycle ledger binds exactly one authorization digest and carries the same sponsor, machine subject, challenge, offer, node-profile digest, device-attestation ID, and attestation-key fingerprint through every event. The supported lifecycle states are:
+
+```text
+issued -> consumed -> completed
+   |          |----> interrupted
+   |          `----> revoked
+   |----> revoked
+   `----> expired
+```
+
+Terminal states are immutable. `consumed` is one-time. Consumption requires the caller to establish a **known active** revocation state; `unknown` fails closed. Revoked or expired authorizations cannot later be consumed, and interrupted work cannot be rewritten as completed.
+
+Each event is Ed25519-signed by a lifecycle evidence key and binds a monotonic sequence, exact predecessor digest, canonical timestamp, authorization window, and hard-false effect/authority claims. The ledger signing key authenticates lifecycle evidence; it is not a device credential, production admission key, or execution capability.
+
+A lifecycle receipt is separately signed and binds the exact current event count and head digest. It is explicitly executor-independent: `effect_reachable`, remote-effect observation, executor receipt, task-success claim, production enrollment, credential/secret/firmware/purchase/destructive effects, deployment authority, capability promotion, and production-persistence claim all remain false.
+
+A bounded transcript can be exported and independently reverified before restoring a process. This makes one-time consumption/revocation evidence recoverable **if the transcript is durably retained by some external store**. The current laboratory does not itself provide a production persistence service.
+
+An authentic old prefix is still an authentic chain prefix. Therefore standalone transcript verification cannot honestly prove that no signed suffix ever existed. A separately retained signed lifecycle-head receipt provides the external head commitment needed to detect suffix truncation or rollback to an older authentic prefix. This is the same general distinction AXIOM makes elsewhere between internally valid history and externally retained continuity evidence.
+
+A future effect-reachable executor is a separate promotion problem. It would require authenticated sponsor identity, trusted device-key custody or stronger platform attestation as appropriate, isolated ephemeral credentials, durable revocation/head retention, timeout and interrupted-work recovery, exact command/filesystem/network enforcement, executor-originated effect receipts, independent threat review, and protected promotion.
 
 Remote access is not part of the current effect path. An offer may state that remote access is technically available, but credentials, tunnels, remote shells, device-management enrollment, and unattended administration require that separate future design.
 
@@ -315,6 +345,8 @@ Where practical, retain publication provenance and external identifiers so annou
 - result/evidence envelopes with negative effect claims;
 - fresh Ed25519 key-possession attestation bound to offer/profile/nonces;
 - human-sponsored, one-time, revocable test-session authorization envelopes;
+- signed append-only session lifecycle events and executor-independent head receipts;
+- bounded transcript verification and restart restoration without claiming a production persistence service;
 - declared/measured/reproduced/externally-verified evidence separation;
 - no effect-reachable remote administration or production-enrollment authority.
 
@@ -334,7 +366,10 @@ Any write-capable external adapter or remote infrastructure executor requires a 
 10. Infrastructure test capacity cannot become production admission or remote administration merely because hardware is available.
 11. Device key possession cannot be represented as platform-backed or externally verified hardware trust without separate evidence and verification.
 12. A test-session envelope cannot widen its parent challenge or become effect-reachable merely because it validates structurally.
-13. Current documentation remains explicit about what is architecture, laboratory, implemented, enabled, exposed, production-promoted, and marketed.
+13. Session consumption is one-time, unknown revocation state fails closed, and terminal lifecycle evidence cannot be rewritten into a more favorable state.
+14. Restored lifecycle state must verify the complete retained signature/predecessor chain, while current-head claims require a separately retained head commitment capable of detecting rollback to an authentic old prefix.
+15. Lifecycle signatures and receipts remain evidence only and cannot claim remote effects, task success, production persistence, node admission, or capability promotion.
+16. Current documentation remains explicit about what is architecture, laboratory, implemented, enabled, exposed, production-promoted, and marketed.
 
 ## Current non-claims
 
@@ -356,6 +391,8 @@ This document does not claim:
 - TPM, Secure Enclave, TEE, secure-element, secure-boot, or boot-integrity verification;
 - a production attestation authority;
 - an effect-reachable test-session executor;
+- a production session-lifecycle persistence or recovery service;
+- an executor-originated remote-effect receipt;
 - secure remote-shell infrastructure;
 - firmware-management authority;
 - production macOS service support;

@@ -20,7 +20,10 @@ test('infrastructure discovery points only to existing bounded contracts', async
     discovery.challenge_contract,
     discovery.result_contract,
     discovery.device_attestation_contract,
-    discovery.test_session_authorization_contract
+    discovery.test_session_authorization_contract,
+    discovery.test_session_lifecycle_event_contract,
+    discovery.test_session_lifecycle_receipt_contract,
+    discovery.test_session_lifecycle_transcript_contract
   ];
   for (const path of contractPaths) {
     assert.equal(typeof path, 'string');
@@ -29,19 +32,18 @@ test('infrastructure discovery points only to existing bounded contracts', async
     assert.equal(typeof document.$schema, 'string');
   }
 
-  const attestationContract = await readJson(discovery.device_attestation_contract);
-  assert.equal(
-    attestationContract.$id,
-    'https://axiom.invalid/schemas/agent-device-attestation.v1.schema.json'
-  );
-  assert.equal(attestationContract.properties.schema.const, 'axiom-agent-device-attestation.v1');
-
-  const sessionContract = await readJson(discovery.test_session_authorization_contract);
-  assert.equal(
-    sessionContract.$id,
-    'https://axiom.invalid/schemas/agent-test-session-authorization.v1.schema.json'
-  );
-  assert.equal(sessionContract.properties.schema.const, 'axiom-agent-test-session-authorization.v1');
+  const identities = [
+    [discovery.device_attestation_contract, 'agent-device-attestation.v1.schema.json', 'axiom-agent-device-attestation.v1'],
+    [discovery.test_session_authorization_contract, 'agent-test-session-authorization.v1.schema.json', 'axiom-agent-test-session-authorization.v1'],
+    [discovery.test_session_lifecycle_event_contract, 'agent-test-session-lifecycle-event.v1.schema.json', 'axiom-agent-test-session-lifecycle-event.v1'],
+    [discovery.test_session_lifecycle_receipt_contract, 'agent-test-session-lifecycle-receipt.v1.schema.json', 'axiom-agent-test-session-lifecycle-receipt.v1'],
+    [discovery.test_session_lifecycle_transcript_contract, 'agent-test-session-lifecycle-transcript.v1.schema.json', 'axiom-agent-test-session-lifecycle-transcript.v1']
+  ];
+  for (const [path, idSuffix, schema] of identities) {
+    const contract = await readJson(path);
+    assert.equal(contract.$id, `https://axiom.invalid/schemas/${idSuffix}`);
+    assert.equal(contract.properties.schema.const, schema);
+  }
 
   assert.deepEqual(discovery.challenge_classes, [
     'hardware-validation',
@@ -53,9 +55,12 @@ test('infrastructure discovery points only to existing bounded contracts', async
   ]);
 
   assert.equal(discovery.device_key_possession_verification_available, true);
+  assert.equal(discovery.test_session_lifecycle_evidence_available, true);
+  assert.equal(discovery.test_session_lifecycle_receipts_available, true);
 
   for (const key of [
     'test_session_effects_reachable',
+    'production_lifecycle_persistence_enabled',
     'remote_execution_enabled',
     'production_node_enrollment_enabled',
     'credential_issuance_enabled',

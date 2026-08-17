@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/agent-test-session-lifecycle-event.v1.schema.json",
+  "title": "AXIOM Agent Test Session Lifecycle Event v1",
+  "description": "Experimental signed append-only evidence for one bounded test-session authorization lifecycle. It records issuance, consumption, revocation, expiry, interruption, or completion without making remote effects reachable.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "statement", "statement_digest", "ledger_signature", "event_digest"],
+  "properties": {
+    "schema": { "const": "axiom-agent-test-session-lifecycle-event.v1" },
+    "statement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ledger_id", "ledger_key_id", "event_id", "sequence", "previous_event_digest",
+        "event_type", "occurred_at", "reason_code", "status_after", "authorization_id",
+        "authorization_digest", "authorization_not_before", "authorization_expires_at",
+        "sponsor_id", "subject_id", "challenge_id", "offer_id", "node_profile_sha256",
+        "attestation_id", "key_fingerprint_sha256", "revocation_state_known",
+        "effect_reachable", "remote_effect_observed", "task_success_claimed",
+        "production_authority", "capability_promoted"
+      ],
+      "properties": {
+        "ledger_id": { "$ref": "#/$defs/id" },
+        "ledger_key_id": { "$ref": "#/$defs/sha256" },
+        "event_id": { "$ref": "#/$defs/id" },
+        "sequence": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "previous_event_digest": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "event_type": { "enum": ["issued", "consumed", "revoked", "expired", "interrupted", "completed"] },
+        "occurred_at": { "type": "string", "format": "date-time" },
+        "reason_code": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "status_after": { "enum": ["issued", "consumed", "revoked", "expired", "interrupted", "completed"] },
+        "authorization_id": { "$ref": "#/$defs/id" },
+        "authorization_digest": { "$ref": "#/$defs/sha256" },
+        "authorization_not_before": { "type": "string", "format": "date-time" },
+        "authorization_expires_at": { "type": "string", "format": "date-time" },
+        "sponsor_id": { "$ref": "#/$defs/id" },
+        "subject_id": { "$ref": "#/$defs/id" },
+        "challenge_id": { "$ref": "#/$defs/id" },
+        "offer_id": { "$ref": "#/$defs/id" },
+        "node_profile_sha256": { "$ref": "#/$defs/sha256" },
+        "attestation_id": { "$ref": "#/$defs/id" },
+        "key_fingerprint_sha256": { "$ref": "#/$defs/sha256" },
+        "revocation_state_known": { "const": true },
+        "effect_reachable": { "const": false },
+        "remote_effect_observed": { "const": false },
+        "task_success_claimed": { "const": false },
+        "production_authority": { "const": false },
+        "capability_promoted": { "const": false }
+      }
+    },
+    "statement_digest": { "$ref": "#/$defs/sha256" },
+    "ledger_signature": { "type": "string", "pattern": "^[A-Za-z0-9_-]{80,128}$" },
+    "event_digest": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$" },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}
