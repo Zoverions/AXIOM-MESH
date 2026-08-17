@@ -375,7 +375,8 @@ a public publication may later be superseded, retracted, or stopped from being
 served, but the earlier public form must not be silently replaced while still
 being represented as the original.
 
-The first executable foundation is intentionally pure and non-networking:
+The current executable laboratories remain non-networking and outside supported
+Grid authority:
 
 - `mesh/src/lib/public-witness.mjs` defines persona-key public journal
   attestations, exact predecessor continuity, independent witness receipts, and
@@ -388,8 +389,17 @@ The first executable foundation is intentionally pure and non-networking:
 - `mesh/test/persona-journal-credential.test.mjs` verifies privacy-preserving
   root/key binding, rotation, recovery, revocation, stale-key rejection, and
   append-only journal continuity across operational-key epochs;
-- no Gateway, Hypervisor, Sandbox, Grid mutation, relay, archive, discovery,
-  consensus, finality, or capability promotion is activated by these helpers;
+- `mesh/src/lib/public-witness-service.mjs` adds the W2a bounded witness-service
+  evidence core: signed observations, idempotent replay, conflict preservation,
+  key-state-relative contradiction evidence, bounded storage, and deterministic
+  read-only inspection;
+- `mesh/test/public-witness-service.test.mjs` verifies credential-epoch and
+  journal-sequence equivocation, late and already-known stale-key evidence,
+  revocation contradiction, fail-closed capacity exhaustion, replay, and
+  signed-evidence tamper rejection;
+- no HTTP listener, peer discovery, outbound fetcher, relay, Gateway,
+  Hypervisor, Sandbox, Grid mutation, archive, consensus, finality, or capability
+  promotion is activated by these helpers;
 - the accepted no-egress social storage composition remains unchanged.
 
 A persona journal attestation binds the exact social entry digest, persona and
@@ -437,8 +447,39 @@ successor credential became active, preventing a stale key from manufacturing a
 late predecessor that a newer key could otherwise extend. This is evidence-
 relative verification: without discovery or propagation of a relevant
 successor/revocation artifact, W1 does **not** claim globally current key state.
-Global currentness, revocation distribution, key discovery, and equivocation
-observation are W2+ concerns.
+
+W2a makes that evidence-relative boundary explicit in witness state. A witness
+can verify and sign an observation of a root-valid credential, a root-signed
+revocation, or a credential-aware public journal v2 artifact. Exact replay is
+idempotent: the original signed observation is retained. Witness observations
+bind the exact artifact, persona/projection/root, credential and key epoch,
+position, artifact time, observation time, and the exact key-state evidence
+known to that witness at observation time.
+
+`no-contradiction-observed` means only that the witness had not observed
+successor or revocation evidence contradicting that journal use at that moment.
+It MUST NOT be interpreted as globally current key state. If relevant key-state
+evidence is already present, the new journal observation is marked
+`contradicted`. If that evidence arrives later, the earlier signed observation
+is not changed; the witness emits new `stale-key-use` conflict evidence binding
+the historical observation and later key-state artifact.
+
+W2a separately records `credential-epoch` conflicts when multiple root-valid
+credentials occupy the same persona/projection/root epoch and
+`journal-sequence` conflicts when multiple valid journal artifacts occupy the
+same public continuity position. Every conflicting valid artifact is retained.
+Conflict evidence declares no preferred artifact and MUST NOT choose a winner by
+arrival order, popularity, application preference, or lexical digest order.
+The witness is an evidence observer, not a truth oracle, identity authority,
+moderator, consensus member, or finality provider.
+
+The W2a service core is intentionally in-memory and no-I/O. Bounded artifact and
+conflict capacities fail closed before partial commit. This is not yet the
+independently deployable witness service promised by the full W2 phase. Process
+isolation, durable append-only storage, restart/recovery behavior, bounded
+transport, key discovery, peer discovery, rate limits, abuse handling, and
+independent-host operation remain separate W2 work and MUST NOT be inferred from
+the current core.
 
 A witness receipt means that the named witness key observed and verified one
 exact signed journal artifact. It does not prove content truth, legal identity,
@@ -468,9 +509,12 @@ The staged roadmap is:
    privacy-preserving root/key binding, operational-key epochs, rotation,
    revocation, recovery transitions, stale-key rejection when relevant evidence
    is supplied, and credential-aware journal v2 continuity;
-3. **W2 — witness service laboratory:** independently deployable, bounded,
-   no-Grid-authority witness service with key-state observation, replay and
-   equivocation evidence, and no implicit global-currentness claim;
+3. **W2 — witness service laboratory (W2a evidence core implemented; deployment
+   pending):** the current core provides signed observation, idempotent replay,
+   credential/journal equivocation preservation, stale-key-use evidence, bounded
+   fail-closed state, and no global-currentness claim. Remaining W2 work is an
+   independently operated process with durable state, restart/recovery,
+   transport/discovery limits, abuse controls, and independent-host evidence;
 4. **W3 — archive and availability laboratory:** independently operated public
    object retention with explicit availability and legal-removal semantics;
 5. **W4 — optional checkpoint agreement adapter:** evaluate threshold/BFT
@@ -478,16 +522,16 @@ The staged roadmap is:
    censorship, version-skew, and key-compromise conditions;
 6. **W5 — AXIOM Verify:** independently verify content digests, persona journal
    signatures, credential epochs, revocations, continuity, witness receipts,
-   checkpoints, availability, and any optional finality certificate while
-   preserving explicit non-claims; and
+   witness observations/conflicts, checkpoints, availability, and any optional
+   finality certificate while preserving explicit non-claims; and
 7. **W6 — promotion:** only after applicable protocol, security, privacy,
    operational, scale, governance, and independent-review gates pass.
 
 A persona can still sign two conflicting journal entries at the same continuity
-position. That is equivocation, not something cryptography can prohibit. Future
-witness and agreement protocols must retain and expose conflicting valid
-artifacts rather than silently choose one by arrival time, popularity,
-application preference, or lexical digest order.
+position. That is equivocation, not something cryptography can prohibit. W2a
+retains and exposes conflicting valid artifacts and signed conflict evidence
+rather than silently choosing one. Future multi-witness and agreement protocols
+must preserve that property.
 
 ## Required future agreement interface
 
