@@ -20,6 +20,7 @@ import { validateResilienceDrillPolicy } from './resilience-drill.mjs';
 import { validateTelemetryRoutingPolicy } from './telemetry-relay.mjs';
 import { validateSourceSetupState } from './setup.mjs';
 import {
+  ACTIVE_SERVICE_NETWORK_POLICY,
   validateComposeNetworkSegmentation,
   validateServiceNetworkPolicy,
   validateServiceRouteImplementation
@@ -532,6 +533,7 @@ export function verifyProductionDeployment({
   validateIncidentResponsePolicy(incidentResponsePolicy);
   validateTelemetryRoutingPolicy(telemetryRoutingPolicy);
   validateResilienceDrillPolicy(resilienceDrillPolicy);
+  const serviceNetwork = validateServiceNetworkPolicy(ACTIVE_SERVICE_NETWORK_POLICY);
   const pinnedBase = dockerfile.match(
     /^FROM (node:24\.19\.0-alpine3\.23)@(sha256:[a-f0-9]{64})$/m
   );
@@ -682,7 +684,7 @@ export function verifyProductionDeployment({
     'cross-process port-block lease',
     'mutually authenticated TLS 1.3',
     'independently deployable units',
-    '40 exact caller/destination/method/route',
+    `${serviceNetwork.routes} exact caller/destination/method/route`,
     'admitted-node discovery and scheduling',
     'operator-approved online causal exchange',
     'Deployment-independent provider startup',

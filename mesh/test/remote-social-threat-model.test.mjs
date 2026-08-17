@@ -20,23 +20,24 @@ function assertContainsNormalized(haystack, required, label) {
   );
 }
 
-test('canonical threat model requires the remote-social companion and current disabled boundary', async () => {
+test('canonical threat model requires the remote-social companion and exact read-only activation boundary', async () => {
   const threat = await text('docs/security/CURRENT-BUILD-THREAT-MODEL.md');
   for (const required of [
     'REMOTE-SOCIAL-THREAT-REVIEW.md',
-    'A remote-social exporter signature proves exporter-Grid attestation of the exact package',
-    'A transport signature proves one exact nonce-bound response from the configured transport key/origin',
-    'Local admission proves the local Grid accepted the exact staged package',
-    'A follow record proves a local owner preference',
-    'A mute/block proves only a local owner preference',
-    'a report proves only that the owner recorded an assertion',
-    'exporter/source quarantine proves only that the owner locally selected fail-closed handling',
-    'accepted Grid server remains hard-bound to `SocialGridStore`',
-    'no public routes',
+    'S3A exporter signatures attest only to what a trusted exporter Grid signed',
+    'independently pinned HTTPS transport endpoint',
+    'local admission',
+    'private local preference',
+    'host-side egress relay',
+    'RemoteSocialRuntimeCandidateGridStore',
+    'accepted Grid service still imports and instantiates `SocialGridStore`',
+    'GET /v1/social/remote-review',
+    '/internal/v1/social/remote-review/:owner',
+    'no-migration read adapter',
     'no network egress',
-    'there is no deployed source endpoint or host-side social relay',
+    'No source-package endpoint or social relay is currently deployed',
     'does not by itself prove content truth',
-    'legal/biological identity',
+    'legal/biological',
     'personal authorship',
     'never creates Mesh authorization',
     'automatic federation'
@@ -58,7 +59,12 @@ test('remote-social companion names every current S3/G1-G6 review surface and tr
     'mesh/src/grid/remote-social-transport-store.mjs',
     'mesh/src/grid/remote-social-protection.mjs',
     'mesh/src/grid/remote-social-runtime-candidate.mjs',
-    'mesh/src/grid/server.mjs'
+    'mesh/src/grid/remote-social-review-projection.mjs',
+    'mesh/src/grid/remote-social-review-read-adapter.mjs',
+    'mesh/src/grid/server.mjs',
+    'mesh/src/gateway/server.mjs',
+    'mesh/config/gateway-client-contract.json',
+    'mesh/config/service-network-policy.json'
   ]) {
     assert.equal(review.includes(path), true, `remote-social review scope missing: ${path}`);
   }
@@ -67,13 +73,16 @@ test('remote-social companion names every current S3/G1-G6 review surface and tr
     'Transport endpoint attestation',
     'Local admission authority',
     'Private Following',
+    'Owner-scoped review projection',
     'Owner-private abuse controls',
+    'S3G5A/B read-only review exposure',
     'Future social relay',
     'content truth',
     'legal identity',
     'personal authorship',
     'exporter-attestation-only',
     'staging-only authenticated handoff',
+    'owner exclusively from `principal.id`',
     'reports are append-only owner assertions',
     'source quarantine accepts only a normalized exact HTTPS origin'
   ]) {
@@ -81,17 +90,31 @@ test('remote-social companion names every current S3/G1-G6 review surface and tr
   }
 });
 
-test('threat-model hardening does not activate the remote candidate or transport inside Grid', async () => {
-  const server = await text('mesh/src/grid/server.mjs');
-  assert.match(server, /import \{ SocialGridStore \} from '\.\/social-store\.mjs';/);
-  assert.match(server, /new SocialGridStore\s*\(/);
-  assert.equal(server.includes('RemoteSocialRuntimeCandidateGridStore'), false);
-  assert.equal(server.includes('RemoteSocialAbuseGridStore'), false);
-  assert.equal(server.includes('RemoteSocialTransportGridStore'), false);
-  assert.equal(server.includes('AXIOM_REMOTE_SOCIAL'), false);
+test('read-only review activation preserves SocialGridStore and excludes candidate, abuse or transport selection', async () => {
+  const [grid, gateway] = await Promise.all([
+    text('mesh/src/grid/server.mjs'),
+    text('mesh/src/gateway/server.mjs')
+  ]);
+  assert.match(grid, /import \{ SocialGridStore \} from '\.\/social-store\.mjs';/);
+  assert.match(grid, /new SocialGridStore\s*\(/);
+  assert.equal(grid.includes('RemoteSocialRuntimeCandidateGridStore'), false);
+  assert.equal(grid.includes('RemoteSocialAbuseGridStore'), false);
+  assert.equal(grid.includes('RemoteSocialTransportGridStore'), false);
+  assert.equal(grid.includes('AXIOM_REMOTE_SOCIAL'), false);
+  assert.equal(
+    grid.includes("router.add('GET', '/internal/v1/social/remote-review/:owner'"),
+    true
+  );
+  assert.equal(
+    gateway.includes("router.add('GET', '/v1/social/remote-review'"),
+    true
+  );
+  assert.equal(gateway.includes('/internal/v1/social/remote-admit'), false);
+  assert.equal(gateway.includes('/internal/v1/social/follow'), false);
+  assert.equal(gateway.includes('/internal/v1/social/transport'), false);
 });
 
-test('canonical threat model contains explicit remote-social threats, abuse cases and invariants', async () => {
+test('canonical threat model contains explicit accepted remote-social threats, abuse cases and invariants', async () => {
   const threat = await text('docs/security/CURRENT-BUILD-THREAT-MODEL.md');
   for (const required of [
     '| Remote-social exporter forgery, compromise, or provenance overclaim |',
@@ -100,19 +123,38 @@ test('canonical threat model contains explicit remote-social threats, abuse case
     '| Remote-social admission confused deputy or approval substitution |',
     '| Remote-social retention erases evidence or replay dependencies |',
     '| Remote-social Following leaks private preference or expands trust |',
-    '| Remote-social report or quarantine becomes false authority |',
+    '| Remote-social review owner override or disclosure widening |',
     '| Future social relay becomes confused deputy or egress bridge |',
     'malicious or compromised remote-social exporter keys',
     'package amplification',
-    'trust labels, report state, quarantine state, or provenance UI',
-    'private follow/trust/report/quarantine correlation',
+    'trust labels or provenance UI',
+    'owner-query/body override',
+    'private follow/trust',
     'source/exporter quarantine bypass',
     'Transport verification and staging never create remote-social admission',
     'The accepted Grid remains deny-egress',
-    'G6 source quarantine must not perform network I/O',
-    'Local mute/block/report/quarantine records remain owner-private safety state',
-    'Expiry alone does not silently delete remote-social evidence'
+    'Expiry alone does not silently delete remote-social evidence',
+    'The current remote-social public surface is inspection-only'
   ]) {
     assertContainsNormalized(threat, required, 'remote-social security boundary missing');
+  }
+});
+
+test('remote-social companion contains explicit disabled G6 abuse-control threats and invariants', async () => {
+  const review = await text('docs/security/REMOTE-SOCIAL-THREAT-REVIEW.md');
+  for (const required of [
+    '| Remote-social report or quarantine becomes false authority |',
+    'trust labels, report state, quarantine state, or provenance UI',
+    'private follow/trust/report/quarantine correlation',
+    'G6 source quarantine must not perform network I/O',
+    'Local mute/block/report/quarantine records remain owner-private safety state',
+    'report proves only that the owner recorded an assertion',
+    'adjudicated: false',
+    'network_effect: none',
+    'authority_effect: none',
+    'recommendation_effect: none',
+    'adjudication_effect: none'
+  ]) {
+    assertContainsNormalized(review, required, 'remote-social G6 security boundary missing');
   }
 });

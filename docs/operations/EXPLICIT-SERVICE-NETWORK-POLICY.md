@@ -4,7 +4,7 @@
 
 **Status:** implemented single-host candidate control
 
-**Updated:** 2026-08-01
+**Updated:** 2026-08-17
 
 ## Enforced policy boundary
 
@@ -18,7 +18,7 @@ Its runtime validator and authorizer are
 The policy permits only the current build's exact source service, destination
 service, HTTP method, and route-pattern combinations. There is no wildcard
 service, wildcard method, wildcard path, arbitrary URL, or default-allow
-fallback. The active policy contains 10 grouped flows and 40 exact route
+fallback. The active policy contains 10 grouped flows and 41 exact route
 permissions, including bounded supervisor and self-health probes.
 
 Every internal `signedFetch` request is authorized before request signing or
@@ -73,9 +73,18 @@ local operator
 
 Gateway may request Hypervisor operations and submit normalized intents.
 Gateway may read the exact Grid query routes used by the public operator
-surface. Hypervisor may read policy/status/approval state and commit state
-transitions to Grid. Hypervisor alone may request Sandbox operations or
-execution. Grid and Sandbox have no application egress permissions.
+surface. That read set now includes one remote-social inspection edge:
+`GET /internal/v1/social/remote-review/:owner`. It is allowed only from
+Gateway to Grid, only with `GET`, and only because the public Gateway route
+derives `:owner` from the authenticated principal. The Grid handler uses a
+no-migration read adapter over the accepted `SocialGridStore` and returns the
+bounded G5A review projection; it creates no remote schema and performs no
+staging, admission, follow/unfollow, cleanup, transport, recommendation,
+network, or authority effect.
+
+Hypervisor may read policy/status/approval state and commit state transitions
+to Grid. Hypervisor alone may request Sandbox operations or execution. Grid
+and Sandbox have no application egress permissions.
 
 The policy does not allow:
 
@@ -83,7 +92,8 @@ The policy does not allow:
 - Grid to call Gateway, Hypervisor, or Sandbox;
 - Sandbox to call Gateway, Hypervisor, or Grid;
 - Hypervisor to call a Gateway route;
-- a `POST` to a read-only Grid route;
+- Hypervisor to call the remote-social review Grid route;
+- a `POST` to the remote-social review route or any other read-only Grid route;
 - a `GET` to Grid commit or Sandbox execution;
 - an unknown `/internal/` path;
 - a URL containing credentials or a fragment;
@@ -93,6 +103,9 @@ Route parameters such as intent, principal, owner, approval, export, backup,
 and bundle identifiers match exactly one path segment. They are not
 path-prefix wildcards. Query values remain subject to the destination
 handler's existing type, size, authorization, ownership, and scope checks.
+The remote-social review edge accepts the owner only in its internal path;
+public clients cannot select that value because Gateway constructs it from the
+authenticated `principal.id` and rejects query overrides.
 
 Plaintext development service URLs are restricted to loopback hosts. A
 development configuration cannot point an unsigned HTTP internal URL at a
@@ -154,6 +167,8 @@ The normal kernel suite includes negative tests for:
 - a replaced or wildcard route;
 - wrong callers, destinations, methods, and paths at both sending and
   receiving boundaries;
+- Gateway-only GET enforcement for the remote-social review edge, including
+  Hypervisor and POST rejection;
 - credential-bearing and fragment-bearing URLs;
 - missing, extra, external, or published Compose networks;
 - a forbidden-edge probe that must fail when a connection succeeds.
@@ -242,13 +257,17 @@ This milestone does not claim:
 - a multi-host deployment or a live pilot;
 - remote workload dispatch to scheduled nodes;
 - WAN routing, federation, or Grid replication;
+- live remote-social transport, public remote Following, recommendation, or
+  admission effect APIs;
 - automatic failover, leader election, or consensus;
 - that Docker's internal network is a universal egress control;
 - that an external orchestrator implements this policy;
 - that the development build is production-promoted.
 
 The implemented claim is narrower: current source requests fail closed against
-an exact machine-readable application graph, the reference four-unit topology
-removes unrelated Docker adjacency through four internal segments, and
+an exact machine-readable 41-route application graph, the reference four-unit
+topology removes unrelated Docker adjacency through four internal segments,
 protected CI proves both required-path operation and selected forbidden
-network edges.
+network edges, and the one remote-social addition is a Gateway-only read path
+that exposes only bounded owner-scoped review state without activating the
+remote-social effect or transport stack.

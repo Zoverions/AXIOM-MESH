@@ -354,7 +354,8 @@ const REQUIRED_CONTENT = Object.freeze({
   'docs/whitepapers_and_research/WHITEPAPER.md': [
     '## Non-claims',
     '## Reproducibility',
-    'npm run setup'
+    'npm run setup',
+    'link current counts, gates, and implementation classifications to their owners'
   ],
   'mesh/README.md': ['npm run setup', 'AUTOMATED-SOURCE-SETUP.md'],
   'mesh/PRODUCTION.md': [
@@ -498,13 +499,12 @@ function verifyComputedDocumentationClaims(contents, capabilityRegistry) {
   const claims = [
     ['README.md', `permits only ${network.routes} current internal`],
     ['mesh/README.md', `covers all ${gatewayRoutes} authenticated`],
-    ['docs/PRODUCTION-GRADE.md', `permits only ${network.routes} current internal`],
-    ['docs/PRODUCTION-GRADE.md', `versioned ${gatewayRoutes}-route client`],
+    ['docs/PRODUCTION-GRADE.md', `default-deny ${network.routes}-route policy`],
+    ['docs/PRODUCTION-GRADE.md', `${gatewayRoutes} authenticated Gateway routes`],
     ['mesh/PRODUCTION.md', `policy additionally authorizes only ${network.routes} exact caller/destination/method/route`],
     ['docs/rebuild/PRODUCT-DEFINITION.md', `authorizes only ${network.routes} exact caller`],
     ['docs/PROJECT-STATUS-2026.md', `default-deny ${network.routes}-route application`],
     ['docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md', `and ${network.routes} exact route`],
-    ['docs/whitepapers_and_research/WHITEPAPER.md', `only ${network.routes} exact current-build`],
     ['docs/operations/GATEWAY-CLIENT-CONTRACT.md', `covers all ${gatewayRoutes} authenticated \`/v1/\` Gateway routes`],
     ['docs/PROJECT-STATUS-2026.md', `implemented for all ${gatewayRoutes} authenticated routes`],
     ['docs/MASTER-TODO.md', `cover all ${gatewayRoutes} authenticated routes`],

@@ -1,6 +1,6 @@
 # AXIOM-MESH Project Status
 
-**Status date:** 2026-08-16
+**Status date:** 2026-08-17
 
 **Supported build:** `0.12.0-dev.3`
 
@@ -82,7 +82,7 @@ The production-candidate surface includes:
 - one-command source setup with exact Node.js/npm policy, two zero-dependency
   locks, prohibited install lifecycle scripts, unchanged-lock proof, and full
   kernel/release gates;
-- a versioned Gateway client contract implemented for all 30 authenticated routes with
+- a versioned Gateway client contract implemented for all 31 authenticated routes with
   relative-only application targets, explicit errors, timeout/cancellation,
   bounded request/response behavior, stable idempotent replay, and no direct
   Grid/Hypervisor/Sandbox target;
@@ -90,11 +90,15 @@ The production-candidate surface includes:
   actor/persona/publication state from the authenticated principal's signed
   Grid history, strips execution/state-access provenance, rejects a
   contract-level owner override, and performs no network distribution;
+- a separate owner-derived `GET /v1/social/remote-review` inspection route that
+  rejects query overrides, returns only the minimized G5A remote-review
+  projection, creates no remote-social schema, and performs no mutation,
+  transport, federation, ranking, recommendation, or authority effect;
 - bounded-cardinality telemetry, readiness, operations reports, OpenMetrics,
   and a host-side least-privilege OTLP/Alertmanager relay;
 - explicit production credential provisioning and fail-closed supervision;
 - per-unit private identity/TLS projection, Grid-only durable state, four exact
-  internal network segments, a default-deny 40-route application policy,
+  internal network segments, a default-deny 41-route application policy,
   policy-derived mTLS peers, and signed failure/recovery evidence;
 - TLS 1.3 internal transport with Ed25519 identities, DNS and SPIFFE-style URI
   identity, active-leaf pinning, offline rotation, retired-leaf rejection, and
@@ -230,11 +234,13 @@ of three directional provenance links (`derived-from`, `supports`, `corrects`),
 tombstone an exact record after confirmation, create a selective local export,
 and reveal its bundle only after a separate action.
 
-The kernel now also supports local social actor/persona/publication state and an
-owner-only `/v1/social` read contract. This is a local corpus substrate, not a
-public social network: no federation, remote Following feed, public profile
-hosting, recommendation layer, messaging, or external distribution is claimed.
-AXIOM One UI integration remains separately gated.
+The kernel now also supports local social actor/persona/publication state, an
+owner-only `/v1/social` read contract, and a separate owner-only read-only
+`/v1/social/remote-review` inspection contract. These are bounded corpus and
+review substrates, not a public social network: no social mutation is exposed
+through the review route, and no federation, remote Following feed, public
+profile hosting, recommendation layer, messaging, or external distribution is
+claimed. AXIOM One UI integration remains separately gated.
 
 Corrections are new linked records; they do not silently replace their target.
 Cross-principal read/link/export/tombstone paths are denied in real-stack tests.

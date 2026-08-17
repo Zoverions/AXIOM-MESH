@@ -2,7 +2,7 @@
 
 **Status:** canonical strategic roadmap
 
-**Updated:** 2026-08-16
+**Updated:** 2026-08-17
 
 **Planning horizon:** active build `0.12.0-dev.3` through evidence-gated 1.0 and isolated frontier incubation
 
@@ -231,15 +231,16 @@ They change no current capability status.
 
 ### 0.12.1 - human shell
 
-- maintain the implemented versioned Gateway client with exact 30-route
+- maintain the implemented versioned Gateway client with exact 31-route
   compatibility, schema, error, idempotency, cancellation, and same-origin
   boundary checks;
 - extend the experimental loopback-only `apps/axiom-one/` PWA foundation into
   a reviewed local human product outside the trusted zero-dependency kernel;
-- integrate the owner-local social actor/persona/publication surface into AXIOM
-  One only after the kernel read/write contracts are separately verified;
-  present it truthfully as a local corpus until a separately reviewed exchange
-  or federation layer exists;
+- integrate the owner-local social actor/persona/publication surface and the
+  owner-only read-only remote-review inspection surface into AXIOM One only
+  after their kernel contracts are separately verified; present them truthfully
+  as local/review corpus surfaces until a separately reviewed exchange or
+  federation layer exists;
 - maintain the experimental exact human-explanation contract: reversible
   review for echo plus owner-scoped memory create, one of three fixed
   directional provenance links, confirmation-bound tombstone, and selective

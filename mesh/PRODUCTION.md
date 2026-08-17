@@ -138,7 +138,7 @@ receives the API token registry. The operator token stays on the host.
 The unit topology permits required service traffic but has no external route.
 `gateway-hypervisor`, `gateway-grid`, `hypervisor-grid`, and
 `hypervisor-sandbox` remove unrelated adjacency. The bundled default-deny
-policy additionally authorizes only 40 exact caller/destination/method/route
+policy additionally authorizes only 41 exact caller/destination/method/route
 combinations at both sending and receiving services and derives inbound mTLS
 peer allowlists. Because internal routes must exist, this topology does not use
 the single-container supervisor's `network_mode: none` route check; segmented
