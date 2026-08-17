@@ -229,6 +229,38 @@ test('trust-bundle factory uses retained W2c2 admission and rotates certificate 
   assert.equal(store.snapshot().transfer_count, before.transfer_count + 1);
 });
 
+test('trust-bundle root removal contracts accepted persona-root trust on the next ingress generation', async () => {
+  const data = fixture();
+  const store = await receiver(data);
+  const firstBundle = bundle1(data);
+  const secondBundle = createPublicWitnessIngressTrustBundle({
+    domainId: DOMAIN,
+    generation: 2,
+    previousBundle: firstBundle,
+    activatedAt: T4,
+    sources: [{ certificate_sha256: 'b'.repeat(64), admission: data.admission1 }],
+    personaRoots: [rootEntry(data.otherRoot.publicKey)]
+  });
+  const ingress = createPublicWitnessAuthenticatedIngressFromTrustBundle({
+    receiverStore: store,
+    bundle: secondBundle,
+    previousBundle: firstBundle,
+    clock: () => Date.parse(T3)
+  });
+  const before = store.snapshot();
+  await assert.rejects(
+    () => ingress.accept({
+      certificate_sha256: 'b'.repeat(64),
+      request: {
+        transfer: data.transfer,
+        persona_root_key_id: keyId(data.root.publicKey)
+      }
+    }),
+    /persona root is not locally trusted/
+  );
+  assert.deepEqual(store.snapshot(), before);
+});
+
 test('bundle transitions fail closed on rollback, epoch replacement, skipped epoch, predecessor tamper, or non-advancing time', () => {
   const data = fixture();
   const first = bundle1(data);
