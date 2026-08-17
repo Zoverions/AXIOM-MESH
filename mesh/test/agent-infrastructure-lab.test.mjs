@@ -284,9 +284,9 @@ test('result must bind the exact challenge base, offer, and profile digest', () 
 
 test('infrastructure contracts and architecture preserve the non-authority boundary', async () => {
   const files = [
-    ['../docs/architecture/contracts/agent-infrastructure-offer.v1.schema.json', 'axiom-agent-infrastructure-offer.v1'],
-    ['../docs/architecture/contracts/agent-infrastructure-challenge.v1.schema.json', 'axiom-agent-infrastructure-challenge.v1'],
-    ['../docs/architecture/contracts/agent-infrastructure-result.v1.schema.json', 'axiom-agent-infrastructure-result.v1']
+    ['../../docs/architecture/contracts/agent-infrastructure-offer.v1.schema.json', 'axiom-agent-infrastructure-offer.v1'],
+    ['../../docs/architecture/contracts/agent-infrastructure-challenge.v1.schema.json', 'axiom-agent-infrastructure-challenge.v1'],
+    ['../../docs/architecture/contracts/agent-infrastructure-result.v1.schema.json', 'axiom-agent-infrastructure-result.v1']
   ];
   for (const [relative, schema] of files) {
     const document = JSON.parse(await readFile(new URL(relative, import.meta.url), 'utf8'));
@@ -294,7 +294,7 @@ test('infrastructure contracts and architecture preserve the non-authority bound
     assert.match(JSON.stringify(document), /authority_granted/);
   }
   const architecture = await readFile(
-    new URL('../docs/architecture/AGENT-COMMONS-INFRASTRUCTURE-LAB.md', import.meta.url),
+    new URL('../../docs/architecture/AGENT-COMMONS-INFRASTRUCTURE-LAB.md', import.meta.url),
     'utf8'
   );
   assert.match(architecture, /A device offer is not node admission/);
