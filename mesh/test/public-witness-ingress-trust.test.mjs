@@ -217,7 +217,7 @@ test('trust-bundle factory uses retained W2c2 admission and rotates certificate 
     receiverStore: store,
     bundle: secondBundle,
     previousBundle: firstBundle,
-    clock: () => Date.parse(T3)
+    clock: () => Date.parse(T4)
   });
   await assert.rejects(
     () => ingress2.accept({ certificate_sha256: 'a'.repeat(64), request }),
@@ -227,6 +227,31 @@ test('trust-bundle factory uses retained W2c2 admission and rotates certificate 
   assert.equal(replay.status, 'replay');
   assert.equal(store.snapshot().source_count, before.source_count);
   assert.equal(store.snapshot().transfer_count, before.transfer_count + 1);
+});
+
+test('future trust bundle cannot activate ingress before its declared activation boundary', async () => {
+  const data = fixture();
+  const store = await receiver(data);
+  const firstBundle = bundle1(data);
+  const futureBundle = createPublicWitnessIngressTrustBundle({
+    domainId: DOMAIN,
+    generation: 2,
+    previousBundle: firstBundle,
+    activatedAt: T4,
+    sources: [{ certificate_sha256: 'b'.repeat(64), admission: data.admission1 }],
+    personaRoots: [rootEntry(data.root.publicKey)]
+  });
+  const before = store.snapshot();
+  assert.throws(
+    () => createPublicWitnessAuthenticatedIngressFromTrustBundle({
+      receiverStore: store,
+      bundle: futureBundle,
+      previousBundle: firstBundle,
+      clock: () => Date.parse(T3)
+    }),
+    /not active yet/
+  );
+  assert.deepEqual(store.snapshot(), before);
 });
 
 test('trust-bundle root removal contracts accepted persona-root trust on the next ingress generation', async () => {
@@ -245,7 +270,7 @@ test('trust-bundle root removal contracts accepted persona-root trust on the nex
     receiverStore: store,
     bundle: secondBundle,
     previousBundle: firstBundle,
-    clock: () => Date.parse(T3)
+    clock: () => Date.parse(T4)
   });
   const before = store.snapshot();
   await assert.rejects(
