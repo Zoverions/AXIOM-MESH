@@ -4,13 +4,18 @@
 
 **Status:** canonical security-review input; not an independent assessment
 
-**Updated:** 2026-08-10
+**Updated:** 2026-08-17
 
 This document defines the threat model for the supported clean-room kernel on
 `main`. It replaces historical security narratives as the review baseline. An
 actual review policy binds this document and the other required inputs to one
 source revision and immutable image digest; this prose alone is not evidence
 that an independent review occurred.
+
+For remote-social foundations, this canonical model incorporates
+[`REMOTE-SOCIAL-THREAT-REVIEW.md`](REMOTE-SOCIAL-THREAT-REVIEW.md) as a required
+companion review input. A review that covers remote-social activation but omits
+that companion does not satisfy the current-build threat-model scope.
 
 ## Supported system and trust boundary
 
@@ -120,6 +125,26 @@ metric and alert vocabularies, and sends to exact allowlisted HTTPS origins.
 That relay, its credential files, DNS/TLS behavior, receiver retention, and
 host networking sit outside the kernel container boundary.
 
+Remote-social foundations are currently separated by trust role rather than
+collapsed into one network authority. S3A exporter signatures attest only to what
+a trusted exporter Grid signed. S3F transport envelopes attest only to one
+nonce-bound response from an independently pinned HTTPS transport endpoint. S3D
+local admission records only what the local Grid accepted under an exact intent
+and independent one-use approval. S3E Following is a private local preference over
+already admitted observations. None of these signals proves legal identity,
+biological identity, content truth, or personal authorship, and none may become
+ordinary Mesh authority merely because it is cryptographically valid.
+
+The disabled `RemoteSocialRuntimeCandidateGridStore` composes Grid-side S3C
+staging, S3D admission, S3E private Following, and the bounded retention lifecycle.
+It has no public routes, no network egress, and no S3F transport methods. The
+accepted Grid service still imports and instantiates `SocialGridStore`; there is no
+runtime switch selecting the remote candidate. S3F transport remains laboratory
+code only. A future live social transport path must use a separately reviewed
+host-side egress relay with least-privilege source-read authority and a staging-only
+authenticated handoff into Grid. No source-package endpoint or social relay is
+currently deployed.
+
 Admitted-node discovery, placement reservations, operator-approved causal
 exchange, and local constrained machine principals are supported foundations.
 They do not authorize remote workload execution, autonomous delegation,
@@ -143,6 +168,10 @@ The primary assets are:
   and recovery copies;
 - capsule, node, schedule, causal-exchange, governance, and import/export
   records;
+- remote-social package/exporter signatures and digests, encrypted staged review
+  state, admission/observation provenance, private follow/trust state, retention
+  receipts, transport pins, bounded transport-job state, and any future relay
+  credentials or handoff receipts;
 - release source, lockfiles, container policy, capability claims, SBOM,
   provenance, protected CI results, and promotion evidence;
 - telemetry, alerts, incident records, pilot evidence, security findings, and
@@ -150,12 +179,13 @@ The primary assets are:
 
 The confidentiality objective is to prevent unauthorized disclosure of
 secrets, protected Grid data, consent-scoped information, recovery material,
-and operational metadata. The integrity objective is to prevent unauthorized
-effects, policy weakening, identity or sponsor substitution, machine-authority
-widening, evidence alteration, rollback manipulation, and false capability or
-promotion claims. The availability objective is bounded: authorized local work
-should fail clearly and recoverably when a dependency is unavailable, without
-silently bypassing authorization or evidence.
+private remote-social follow/trust metadata, and operational metadata. The
+integrity objective is to prevent unauthorized effects, policy weakening,
+identity or sponsor substitution, machine-authority widening, remote-social
+provenance/authority confusion, evidence alteration, rollback manipulation, and
+false capability or promotion claims. The availability objective is bounded:
+authorized local work should fail clearly and recoverably when a dependency is
+unavailable, without silently bypassing authorization or evidence.
 
 Evidence integrity is stricter than ordinary availability. An acknowledged
 mutation must not be reported as successful without its Grid evidence. Missing
@@ -181,8 +211,14 @@ The model considers:
   proof of trusted execution;
 - a malicious or compromised capsule, node, provider process, telemetry
   receiver, or causal-exchange peer;
+- a malicious or compromised remote-social exporter Grid, pinned transport
+  source, or future host-side social relay attempting provenance substitution,
+  replay, amplification, social-engineering, or confused-deputy escalation;
+- an authenticated local remote-social reviewer attempting to stage, admit,
+  inspect, follow, or reclaim another owner's remote-social records, or to turn a
+  trust label into identity/content-truth authority;
 - theft or reuse of an active, retired, or historically exposed human, machine,
-  or service credential;
+  service, exporter, transport, or future relay credential;
 - one compromised service attempting to impersonate another service or exceed
   its declared role;
 - a supply-chain contributor attempting to change dependencies, deployment
@@ -190,7 +226,8 @@ The model considers:
 - an evidence producer or reviewer attempting to omit findings, substitute a
   build, alter a signed artifact, reuse an identity, or imply promotion;
 - operational mistakes during provisioning, sponsorship, expiry, rotation,
-  backup retention, recovery, rollback, upgrade, or incident containment.
+  remote-social retention/admission, backup retention, recovery, rollback,
+  upgrade, or incident containment.
 
 The single-host candidate assumes the operating-system kernel, container
 engine, filesystem permissions, process account, monotonic-enough wall clock,
@@ -228,14 +265,23 @@ Reviewers must trace at least these entry points:
 8. telemetry scraping, queued alert delivery, receiver responses, receipts,
    retry, and dead-letter state;
 9. import/export bundles and recipient encryption;
-10. source checkout, package locks, container build inputs, release verifier,
+10. remote-social package construction/verification, review staging, exact
+    intent/approval-bound admission, observation materialization, private Following,
+    quota/retention events, protected-column rotation, and disabled runtime
+    candidate composition;
+11. S3F transport-envelope verification, exact origin/key/nonce/package binding,
+    retry/lease state, and the future host-side relay plus staging-only handoff if
+    that relay is ever implemented;
+12. source checkout, package locks, container build inputs, release verifier,
     capability registry, documentation checker, and CI evidence;
-11. pilot policy, dossier, evidence package, independent-review policy, findings
+13. pilot policy, dossier, evidence package, independent-review policy, findings
     ledger, remediation records, and exceptions.
 
 No privileged effect may bypass the intent, policy, machine-authority where
-applicable, plan, grant, execution, evidence sequence. Stopped-runtime recovery
-is the documented exception to the online path: it requires separate
+applicable, plan, grant, execution, evidence sequence. Remote-social package or
+transport verification does not create admission authority: S3D admission remains
+bound to its exact local intent and independent one-use approval. Stopped-runtime
+recovery is the documented exception to the online path: it requires separate
 signed/encrypted artifacts, exact target binding, Grid exclusion, and
 post-recovery verification rather than an online grant.
 
@@ -262,6 +308,13 @@ post-recovery verification rather than an online grant.
 | Provider response injection or secret leakage | Separate pinned Ed25519 signers, digest-pinned adapter, nonce/audience/expiry-bound exact inventories, bounded process I/O, private ephemeral generation, secret scans | Reference file adapter is not vendor custody; real backend authorization, HA, audit retention, and workload identity need review |
 | Telemetry exfiltration or receiver abuse | Fixed labels/attributes, exact four-service scrape, dedicated scope, exact HTTPS origins, no redirect, bounded queue/retry, receipts and forbidden-term scans | Host relay can access collected operations data; live receiver custody, DNS/TLS policy, retention, and on-call routing remain external |
 | Malicious admitted node or causal peer | Signed owner/key-bound admission, unique active keys, roles/resources/expiry/quarantine, signed bounded discovery, deterministic leases, pinned streams, encrypted queues, independent one-use apply approval | Remote execution is absent; multi-host identity, WAN faults, resource truth, endpoint health, residency, and Sybil resistance are unresolved |
+| Remote-social exporter forgery, compromise, or provenance overclaim | S3A exact public-only schemas/content addresses, explicit trusted exporter key, Ed25519 package verification, complete lineage checks, exporter attestation scope limited to `grid-export` | A compromised trusted exporter key can sign deceptive schema-valid packages; signature does not prove content truth, legal identity, biological identity, actor-key ownership, or personal authorship; revocation/rotation and operator trust policy remain required |
+| Remote-social transport substitution, replay, or origin confusion | S3F exact HTTPS origin, redirect rejection, distinct pinned transport key, exporter key kept separate, nonce/freshness binding, canonical package-byte digest, independent S3A re-verification, bounded response/timeout | S3F remains laboratory-only and no source endpoint/relay is deployed; future relay DNS/TLS custody, source credential handling, key rotation, HA and incident response require separate review |
+| Remote-social storage amplification or retry exhaustion | Bounded S3 package size/object counts, S3F job lease and bounded retry/backoff, S3G2 owner-scoped stage/admission/observation counts and protected-byte quotas | Real untrusted-network rate limits, cross-owner/global capacity planning, source quarantine and relay concurrency controls remain future gates |
+| Remote-social admission confused deputy or approval substitution | Stage binds exact package/exporter/import-plan/trust facts; S3D deterministic request digest; accepted `social.remote.admit` intent plus matching independent one-use approval; quota failure occurs before approval consumption; admission and approval consumption are transactional | Human/operator review can still trust the wrong source or misunderstand provenance; no cryptographic mechanism proves remote content truth or socially valid identity |
+| Remote-social retention erases evidence or replay dependencies | G2 expiry alone deletes nothing; explicit cleanup is limited to expired unadmitted stages; cleanup event/receipt/deletion are transactional; admitted stage payloads remain replay dependencies; protected columns participate in data-key rotation | Admitted observation compaction is intentionally absent; future schema changes that make admission replay independent of staged payloads require a new migration/threat review |
+| Remote-social Following leaks private preference or expands trust | S3E owner-scoped encrypted trust metadata, trust scope fixed to exporter-attestation-only, admitted-observation-only chronological projection, no live fetch/ranking/recommendation/public graph | Private follow/trust correlation remains sensitive; block/mute/report/quarantine and accepted API disclosure minimization remain required before untrusted-network exposure |
+| Future social relay becomes confused deputy or egress bridge | G3 Grid candidate is disabled, no-egress and transport-free; S3F network class has no admission/follow methods; required design places future relay outside Grid with staging-only handoff | Relay is not implemented/deployed; least-privilege identity, handoff authentication, DNS/TLS, queueing, credential rotation and incident isolation require independent evidence before activation |
 | Import/export forgery or over-disclosure | Signed manifest, stable schemas, content digests, selective scopes, recipient encryption, staged validation | External identity and recipient-key lifecycle adapters are not implemented |
 | Release or claim substitution | Exact package/lock/version checks, dependency-free boundary, digest-pinned container input, capability registry, generated status, documentation allowlist, protected CI and CodeQL | GitHub and build-runner compromise remain supply-chain assumptions; immutable release/pilot artifacts still require accountable custody |
 | False pilot or security-review evidence | Separately supplied authority keys, exact build/image and artifact digests, distinct reviewer roles, canonical files, raw hashes, exact schemas, recomputed summaries, Ed25519 attestations, explicit non-promotion output | Signatures prove the authorized key signed bytes, not reviewer competence, honest observation, or independence beyond the signed/policy-pinned declaration |
@@ -301,6 +354,21 @@ The current review must consider at minimum:
   concurrent heads, duplicate causal bundles, and approval replay;
 - telemetry label/cardinality expansion, credentialed URLs, redirects,
   receiver 429/503 behavior, queue exhaustion, and dead-letter leakage;
+- malicious or compromised remote-social exporter keys signing deceptive but
+  schema-valid content, transport/exporter key substitution, retired-key reuse,
+  stale or replayed nonce-bound transport envelopes, origin confusion, and
+  canonical package-byte substitution;
+- package amplification, repeated unique remote observations, stage/admission quota
+  exhaustion, retry pressure, and cleanup attempts against admitted replay dependencies;
+- malicious public text/link/media metadata intended to exploit future renderers or
+  mislead a reviewer even though the package is structurally valid;
+- trust labels or provenance UI being interpreted as content truth, legal identity,
+  biological identity, or personal authorship;
+- owner-crossing stage/admission/follow/retention reads, private follow/trust
+  correlation, and source/exporter quarantine bypass;
+- a future relay with leaked or over-broad source credentials, permissive DNS/TLS or
+  redirect behavior, or an authenticated handoff capable of invoking admission rather
+  than staging only; and
 - a findings ledger with omitted scope, anonymous owners, altered counts,
   unverified critical/high closure, reviewer-approved risk exception, or
   non-expiring exception.
@@ -338,6 +406,20 @@ Independent review should treat these as invariants, not best-effort goals:
     of truncation detection requires a signed continuity anchor retained outside
     `AXIOM_DATA_DIR`, verified against the exact source/build context with full
     genesis chain verification; assurance stops at the newest retained anchor.
+15. Remote-social exporter, transport, trust-label, visibility, ranking, or
+    reputation metadata never creates Mesh authorization, consent, actor identity
+    proof, legal-status proof, content-truth proof, or personal-authorship proof.
+16. Transport verification and staging never create remote-social admission;
+    admission requires its exact local intent and independent one-use approval.
+17. The accepted Grid remains deny-egress. The disabled Grid-side remote-social
+    candidate must not gain S3F transport/fetch behavior; any future egress relay is a
+    separately reviewed component with staging-only authority.
+18. Expiry alone does not silently delete remote-social evidence. An admitted stage
+    remains a replay dependency until a separately reviewed migration changes that
+    replay model.
+19. No remote-social surface becomes public merely because its library or laboratory
+    implementation exists; route, policy, service-network, abuse, privacy, rollback,
+    and independent-review gates remain separate.
 
 ## Residual risk and non-claims
 
@@ -348,6 +430,16 @@ execution, TPM/TEE or measured-runtime attestation, replicated consensus,
 automatic federation, remote dispatch, Sybil resistance, externally hosted key
 custody, live vendor provider security, audited WAN behavior, post-quantum
 security, or regulatory certification.
+
+The repository also does not claim that the merged remote-social foundations are a
+live social network. The accepted Grid still instantiates `SocialGridStore`; the
+remote-social candidate is disabled, has no public routes and no network egress;
+S3F has no deployed source endpoint or host-side relay. There is no current live
+federation, public remote Following, recommendation system, messaging system,
+production moderation service, relay/index service, public follow graph, or public
+profile hosting. A Grid export signature, transport signature, local admission, or
+private follow record does not by itself prove content truth, legal/biological
+identity, actor-key ownership, or personal authorship.
 
 An externally retained continuity anchor makes a fully verified current Grid
 history truncation-detectable only through the newest retained anchor sequence.
@@ -373,7 +465,9 @@ and the ledger passes offline intake.
 The threat model must be reassessed when authentication, machine-principal
 semantics, policy, grants, Sandbox operations, Grid schemas, encryption,
 backup/recovery, service topology, container policy, provider protocol,
-node/sync behavior, telemetry, pilot evidence, release gates, or the trusted
-computing base changes. A prior ledger cannot approve another build. The
+node/sync behavior, telemetry, remote-social package/staging/admission/Following/
+retention/transport semantics, any social relay or public source endpoint, pilot
+evidence, release gates, or the trusted computing base changes. A prior ledger
+cannot approve another build. The
 [independent security review procedure](INDEPENDENT-SECURITY-REVIEW.md)
 defines the exact current intake contract.
