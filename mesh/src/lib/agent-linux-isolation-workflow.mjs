@@ -31,7 +31,8 @@ export function verifyAgentLinuxIsolationWorkflow(workflow) {
     'docker build --pull=false --tag axiom-mesh-kernel:0.12.0-dev.3 .',
     'AXIOM_AGENT_LINUX_ISOLATION_LAB: "1"',
     'node src/linux-isolation-adapter-drill.mjs',
-    'verifyAgentLinuxIsolationConformanceReceipt',
+    'import { verifyAgentLinuxIsolationConformanceReceipt } from "./src/lib/agent-linux-isolation-conformance.mjs";',
+    'verifyAgentLinuxIsolationConformanceReceipt(receipt);',
     'axiom-agent-linux-isolation-conformance-${{ github.sha }}',
     'retention-days: 90'
   ]) {
@@ -104,6 +105,7 @@ export function verifyAgentLinuxIsolationWorkflow(workflow) {
     github_secrets_referenced: false,
     fixed_probe_only: true,
     production_provisioning_reachable: false,
+    receipt_reverification_required: true,
     action_references: EXPECTED_ACTION_REFERENCES,
     workflow_sha256: sha256(workflow)
   });
