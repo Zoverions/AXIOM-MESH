@@ -110,7 +110,7 @@ export class RemoteSocialRuntimeGridStore extends RemoteSocialAbuseGridStore {
         runtime_admission_schema: REMOTE_SOCIAL_RUNTIME_ADMISSION_SCHEMA,
         intent_authority_binding: 'ordinary-intent-request-digest',
         resolved_materialization_binding: 's3d-resolved-request-digest',
-        requester_principal_kind: 'human',
+        requester_principal_type: 'human',
         independent_approval_required: true,
         approval_consumption: 'atomic-with-admission',
         network_egress: false,
@@ -178,7 +178,7 @@ export class RemoteSocialRuntimeGridStore extends RemoteSocialAbuseGridStore {
     const stage = this.getRemoteSocialStage(recipient, stageId);
     const intent = assertPlainObject(intentInput, 'remote social runtime admission intent');
     const principal = assertPlainObject(intent.principal, 'remote social runtime admission principal');
-    if (principal.kind !== 'human' || principal.id !== recipient) {
+    if (principal.type !== 'human' || principal.id !== recipient) {
       throw new AxiomError(
         'remote_social_runtime_admission_principal_unavailable',
         'Remote social runtime admission currently requires the exact human owner principal',
