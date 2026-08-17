@@ -49,7 +49,7 @@ const FIELD = /^[a-z][a-z0-9_]{0,63}$/;
 const ERROR_CODE = /^[a-z][a-z0-9_]{0,63}$/;
 const SCHEMA_ID = /^[a-z][a-z0-9.-]+\.v1$/;
 const EXPECTED_CONTRACT_DIGEST =
-  '809550c97ef83424e8d798664ea2f7fd256f3ef109463ebe9d90be6bd559f36f';
+  '77d57f3f031ef0c8f777b0c77a4560fe3b9bacf8c14935ffc7a917b677544ddd';
 const EXPECTED_JSON_SCHEMA_DIGEST =
   '90a65df24bab3299b4bab58ab15270b02aac67938923746f413285296dfa6ccf';
 
@@ -135,7 +135,7 @@ export function validateGatewayClientContract(contract) {
     throw new ValidationError('Gateway client error code is invalid');
   }
 
-  if (!Array.isArray(contract.routes) || contract.routes.length !== 30) {
+  if (!Array.isArray(contract.routes) || contract.routes.length !== 31) {
     throw new ValidationError('Gateway client route inventory is incomplete');
   }
   const ids = new Set();
