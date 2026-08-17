@@ -70,11 +70,12 @@ The draft object family is deliberately explicit:
 14. `axiom-agent-executor-conformance-receipt.v1` — an Ed25519-signed virtual-only observation receipt bound to one exact dry-run plan, lifecycle transition, sandbox policy, and ordered synthetic admissions/denials;
 15. `axiom-agent-executor-durable-state-record.v1` — one immutable Ed25519-signed local control-state generation bound to the exact plan and lifecycle head, with no global-currentness, production-persistence, or executor-effect claim;
 16. `axiom-agent-executor-durable-state-receipt.v1` — a separately retainable signed commitment to one exact locally committed durable generation for rollback comparison;
-17. `axiom-agent-executor-isolation-profile.v1` — an exact platform-profile-bound requirement/evidence object for one reviewed Linux, macOS, or Windows isolation policy whose validation grants no real isolation or effect admission.
+17. `axiom-agent-executor-isolation-profile.v1` — an exact platform-profile-bound requirement/evidence object for one reviewed Linux, macOS, or Windows isolation policy whose validation grants no real isolation or effect admission;
+18. `axiom-agent-linux-isolation-conformance-receipt.v1` — a content-addressed hosted-CI receipt for one exact fixed-probe Linux isolation run, containing sanitized observed kernel/container evidence while withholding arbitrary-execution, physical-device, production, deployment, capability, and authority claims.
 
 The supported core contribution schemas live under `docs/architecture/contracts/`. Experimental infrastructure-lab exchange schemas remain under `agent-commons/contracts/` until that layer is separately promoted into the supported documentation boundary.
 
-These are exchange and evidence contracts. They do not prove that an external agent, runtime, identity, network, offered device, lifecycle signer, platform profile, compiler, virtual sandbox, durable local state store, isolation profile, reviewed mechanism family, or future executor is trustworthy beyond the evidence actually verified.
+These are exchange and evidence contracts. They do not prove that an external agent, runtime, identity, network, offered device, lifecycle signer, platform profile, compiler, virtual sandbox, durable local state store, isolation profile, Linux fixed-probe receipt, reviewed mechanism family, or future executor is trustworthy beyond the evidence actually verified.
 
 ## Challenge model
 
@@ -176,11 +177,17 @@ Relevant threats include:
 - isolation-policy catalog, platform-profile digest, OS, architecture, or repository-code boundary substitution;
 - omission of a reviewed common isolation control or insertion of an unreviewed hidden control;
 - self-asserted `externally-verified` isolation evidence without a separate verifier confirmation;
-- a validated isolation profile or verifier confirmation being elevated into real OS enforcement, effect admission, production readiness, deployment authority, or capability promotion.
+- a validated isolation profile or verifier confirmation being elevated into real OS enforcement, effect admission, production readiness, deployment authority, or capability promotion;
+- caller-controlled image, executable, argv, shell, task-plan, environment, mount, or network data being smuggled into the fixed Linux isolation laboratory;
+- Docker client context or endpoint substitution redirecting the laboratory to an unreviewed or remote daemon;
+- host-root, repository, Docker-socket, credential, secret, device, or sensitive-descriptor exposure to a Linux probe container;
+- capability, no-new-privileges, seccomp, read-only-root, namespace, cgroup, network-none, or non-root-user weakening while preserving a superficially successful probe;
+- PID fanout, output flooding, timeout handling, or cleanup failure leaving residual processes/containers while a receipt claims success;
+- a content-addressed hosted Linux receipt being misrepresented as independent external attestation, physical-device proof, globally verified platform isolation, arbitrary repository-code isolation, compiled-plan effect admission, production readiness, or AXIOM authority.
 
 Required controls include exact-base binding, bounded inputs, protected CI, provenance capture, secret isolation, security-report routing, independent review for consequential changes, and no merge or infrastructure authority for external agents merely from participation.
 
-The machine-readable pre-executor threat ledger is `agent-commons/pre-executor-threat-model.json`. The machine-readable virtual executor-conformance threat ledger is `agent-commons/executor-conformance-threat-model.json`. The machine-readable durable executor-state threat ledger is `agent-commons/executor-durable-state-threat-model.json`. The machine-readable platform-isolation-profile threat ledger is `agent-commons/executor-isolation-threat-model.json`. None of these threat ledgers is itself an effect capability.
+The machine-readable pre-executor threat ledger is `agent-commons/pre-executor-threat-model.json`. The machine-readable virtual executor-conformance threat ledger is `agent-commons/executor-conformance-threat-model.json`. The machine-readable durable executor-state threat ledger is `agent-commons/executor-durable-state-threat-model.json`. The machine-readable platform-isolation-profile threat ledger is `agent-commons/executor-isolation-threat-model.json`. The machine-readable fixed-probe Linux isolation threat ledger is `agent-commons/linux-isolation-adapter-threat-model.json`. None of these threat ledgers is itself an effect capability.
 
 ## GitHub integration
 
@@ -388,7 +395,7 @@ The machine-readable threat ledger for this gate is `agent-commons/executor-dura
 
 ### Platform-specific executor isolation-profile boundary
 
-`agent-commons/executor-isolation-profiles.json` and `mesh/src/lib/agent-executor-isolation-profile.mjs` define the next **pre-effect** promotion gate. They describe the isolation properties a future effect-capable platform adapter would have to enforce; they do not implement that adapter.
+`agent-commons/executor-isolation-profiles.json` and `mesh/src/lib/agent-executor-isolation-profile.mjs` define the reviewed platform-isolation requirement gate. They describe the isolation properties an effect-capable platform adapter must enforce; the profile validator itself does not perform those effects.
 
 Core isolation invariant:
 
@@ -426,33 +433,64 @@ An `axiom-agent-executor-isolation-profile.v1` binds:
 
 Evidence status remains `declared`, `measured`, `reproduced`, or `externally-verified`. A profile cannot self-assert the strongest status: `externally-verified` requires a separate verifier confirmation supplied outside the profile document. Hosted CI remains explicitly insufficient as physical-device proof, and physical-device evidence remains a required input before any future production promotion.
 
-Even when a profile matches the reviewed catalog exactly and separate external-verifier confirmation is present, the current assessment still returns `platform_isolation_verified: false`, `repository_code_isolation_verified: false`, `effect_admission_eligible: false`, and `production_executor_ready: false`. The validator proves policy/profile binding and evidence classification only. It does not prove that an OS kernel, VM/container boundary, filesystem root, process tree, resource controller, network policy, credential boundary, or physical machine enforced the requirements.
+Even when a profile matches the reviewed catalog exactly and separate external-verifier confirmation is present, the profile assessment still returns `platform_isolation_verified: false`, `repository_code_isolation_verified: false`, `effect_admission_eligible: false`, and `production_executor_ready: false`. The validator proves policy/profile binding and evidence classification only; it does not infer enforcement from the submitted profile.
 
-This laboratory imports no process-spawning, filesystem-mutation, DNS/network-client, service-management, VM/container-management, credential/secret, or remote-shell effect module. It creates no executable sandbox and opens no effect path. The machine-readable threat ledger for this gate is `agent-commons/executor-isolation-threat-model.json`.
+The profile validator imports no process-spawning, filesystem-mutation, DNS/network-client, service-management, VM/container-management, credential/secret, or remote-shell effect module. The machine-readable threat ledger for this gate is `agent-commons/executor-isolation-threat-model.json`.
+
+### Fixed-probe Linux isolation conformance laboratory
+
+`mesh/src/linux-isolation-adapter-drill.mjs` and the governed `Agent Linux Isolation Conformance` workflow add the first deliberately narrow **real process/filesystem isolation evidence** above the requirement catalog. The laboratory is effect-capable only for a fixed, repository-reviewed probe set on a disposable hosted Linux CI runner; it is not a general or plan-driven executor.
+
+Core fixed-probe invariant:
+
+> **A successful fixed isolation probe is evidence about that tested boundary. It is not permission to execute arbitrary repository work, proof of physical-device isolation, or production executor authority.**
+
+The host-side adapter is restricted to `/usr/bin/docker`, a scrubbed Docker client environment bound to the local `unix:///var/run/docker.sock` endpoint, the repository-built `axiom-mesh-kernel:0.12.0-dev.3` image and its resolved local image ID, and the fixed `/usr/local/bin/node` entrypoint. It accepts no caller-supplied image, executable, argv, shell string, task plan, bind mount, network origin, credential, secret, package operation, service operation, remote endpoint, or contributed hardware.
+
+Every probe container is launched with:
+
+- `--network none`;
+- a read-only container root and no bind mounts;
+- all Linux capabilities dropped and `no-new-privileges=true`;
+- UID/GID `10001:10001`;
+- bounded `noexec,nosuid,nodev` tmpfs workspaces;
+- 32-PID, 128-MiB-memory, and 0.5-CPU ceilings;
+- a bounded host timeout and 64-KiB output ceiling;
+- deterministic forced cleanup whose absence check is part of the pass condition.
+
+The fixed baseline probe actively records distinct host/container PID, mount, and network namespace identities; effective capabilities; no-new-privileges and seccomp status; read-only-root denial and disposable-workspace success; a symlink-based root-write escape denial; absence of the Docker socket, host-only sentinel, secret mounts, and sensitive inherited descriptors; explicit public-network denial; and observed CPU, memory, and PID cgroup ceilings. Separate hostile probes require real PID exhaustion, timeout cleanup, and output-overflow cleanup.
+
+`axiom-agent-linux-isolation-conformance-receipt.v1` preserves sanitized observations rather than configuration labels alone. The receipt binds the exact repository revision, reviewed isolation-policy catalog, fixed adapter identity, resolved image ID, limits, controls, each observation digest, and a whole-receipt digest. The workflow independently reparses and reverifies the receipt before uploading it as evidence.
+
+The workflow is intentionally separate from secret-bearing operational jobs. It has `contents: read`, disables persisted checkout credentials, references no GitHub secrets, uses only pinned actions, and contains no production provisioning. `mesh/src/lib/agent-linux-isolation-workflow.mjs` is invoked by release readiness to govern that exact workflow surface; the release inventory remains fail-closed and now recognizes exactly four governed workflows rather than treating the new effect laboratory as an unreviewed legacy workflow.
+
+A passing receipt may truthfully claim that fixed disposable Linux processes and tmpfs writes occurred and that the tested namespace/capability/seccomp/root/network/resource/cleanup controls were observed on the hosted runner. It is content-addressed and workflow-reverified, but it is **not** an independently signed external attestation. It remains hard-false for physical-device proof, globally verified platform isolation, arbitrary repository-code isolation, compiled-plan effect admission, production-executor readiness, remote execution or administration, credentials or secrets, production enrollment, deployment authority, capability promotion, and AXIOM authority.
+
+The machine-readable threat ledger for this gate is `agent-commons/linux-isolation-adapter-threat-model.json`.
 
 ### Future executor promotion boundary
 
-An effect-reachable executor remains a separate promotion problem. At minimum it would require:
+A general or plan-driven effect-reachable executor remains a separate promotion problem. At minimum it would require:
 
 - authenticated sponsor identity and current authorization verification;
 - production-grade durable one-time lifecycle consumption and revocation/head retention, including an explicit currentness/replication model rather than only this local laboratory;
 - exact isolation-profile binding to one reviewed platform policy;
-- an effect-capable platform adapter that independently proves the reviewed common and platform-specific isolation requirements are actually enforced;
+- a reviewed mapping from an exact compiled plan operation into a platform adapter whose isolation properties are enforced for that hostile repository-code workload, rather than only the current fixed probes;
 - pinned absolute executable resolution without ambient PATH authority;
 - isolated disposable sandboxing for repository code;
 - filesystem/root/symlink or reparse-point enforcement independent of repository code;
 - exact network-origin enforcement, DNS resolution pinning, no redirects, and no ambient credentials;
 - independent process/runtime/output/memory enforcement;
-- timeout and interrupted/uncertain-effect recovery;
-- physical-device evidence appropriate to the promoted platform rather than hosted-CI compatibility alone;
-- executor-originated effect receipts bound to the compiled plan, isolation profile, and lifecycle transition;
+- timeout and interrupted/uncertain-effect recovery integrated with durable lifecycle state;
+- physical-device evidence appropriate to the promoted platform rather than hosted-CI evidence alone;
+- executor-originated effect receipts bound to the compiled plan, isolation profile, lifecycle transition, and observed platform evidence;
 - independent effect-path threat/security review and protected promotion.
 
-The virtual executor-conformance sandbox reduces ambiguity about enforcement semantics. The durable-state laboratory additionally proves local restart ordering and one-time-consumption recovery semantics. The isolation-profile laboratory now fixes the cross-platform requirement/evidence vocabulary. None of those laboratories establishes real operating-system isolation, live-network enforcement, storage-media/power-loss durability, distributed/global currentness, package execution, or remote-hardware safety.
+The virtual executor-conformance sandbox reduces ambiguity about enforcement semantics. The durable-state laboratory additionally proves local restart ordering and one-time-consumption recovery semantics. The isolation-profile laboratory fixes the cross-platform requirement/evidence vocabulary. The fixed Linux laboratory now demonstrates real kernel/container enforcement for its exact hosted probe boundary. **That fixed-probe result does not establish arbitrary repository-code isolation, compiled-plan admission, physical-device isolation, live-network enforcement, package execution, distributed/global currentness, or remote-hardware safety.**
 
 Remote access is not part of the current effect path. An offer may state that remote access is technically available, but credentials, tunnels, remote shells, device-management enrollment, and unattended administration require a separate future design.
 
-Hosted CI can establish broad platform compatibility but cannot substitute for physical-device isolation evidence or platform-specific effect enforcement. For Apple, physical follow-on work may eventually test `launchd`, sleep/wake/reboot recovery, Keychain/Secure Enclave integration, firewall/network semantics, signing/notarization, thermal/power behavior, and virtualization constraints. Equivalent physical validation can apply to Windows, Linux, ARM SBCs, GPU workstations, network appliances, and specialized hardware.
+Hosted CI can produce useful reproducible platform enforcement evidence for the exact hosted workload, but it cannot substitute for physical-device isolation evidence or a promoted production platform boundary. For Apple, physical follow-on work may eventually test `launchd`, sleep/wake/reboot recovery, Keychain/Secure Enclave integration, firewall/network semantics, signing/notarization, thermal/power behavior, and virtualization constraints. Equivalent physical validation can apply to Windows, Linux, ARM SBCs, GPU workstations, network appliances, and specialized hardware.
 
 Failures and blocked results remain useful evidence when exact-base and honestly reported. Interrupted or uncertain consequential effects must not be upgraded to success.
 
@@ -539,11 +577,15 @@ Where practical, retain publication provenance and external identifiers so annou
 - machine-readable durable executor-state threat model and explicit storage/consensus/power-loss promotion blockers;
 - reviewed Linux/macOS/Windows isolation-policy catalog with one mandatory common-control floor;
 - exact platform-profile/catalog/policy/mechanism binding and pure isolation-profile assessment;
-- separate confirmation requirement for externally verified isolation evidence without effect-admission elevation;
+- separate confirmation requirement for externally verified isolation-profile evidence without effect-admission elevation;
 - hosted CI explicitly insufficient as physical-device proof;
 - machine-readable executor-isolation threat model and explicit effect-capable-adapter promotion blockers;
+- governed secret-free fixed-probe Linux isolation conformance workflow with exact pinned actions and release-time semantic verification;
+- fixed Linux real process/tmpfs probes for namespaces, capabilities, no-new-privileges, seccomp, root/symlink denial, network denial, cgroup ceilings, PID exhaustion, output limits, timeout, and cleanup;
+- content-addressed Linux conformance receipts with sanitized observations and explicit nonclaims;
+- machine-readable Linux isolation-adapter threat model;
 - declared/measured/reproduced/externally-verified evidence separation;
-- no verified real platform isolation, effect-capable platform adapter, effect-reachable remote administration, package/service execution, live network execution, or production-enrollment authority.
+- no arbitrary repository-code isolation claim, compiled-plan effect admission, physical-device proof, general remote administration, package/service execution, live network execution, or production-enrollment authority.
 
 Any write-capable external adapter or remote infrastructure executor requires a separate threat review, policy mapping, evidence model, negative tests, and promotion decision.
 
@@ -582,8 +624,13 @@ Any write-capable external adapter or remote infrastructure executor requires a 
 31. An executor-isolation profile must bind the exact reviewed policy catalog and exact platform-profile digest/OS/architecture; policy, mechanism-family, repository-code-boundary, or platform substitution fails closed.
 32. The reviewed common isolation controls cannot be omitted or silently widened, and platform-specific mechanism families cannot be substituted across Linux, macOS, and Windows policies.
 33. Hosted CI cannot be represented as physical-device isolation proof, and `externally-verified` profile evidence requires a separate verifier confirmation rather than self-assertion.
-34. A valid or externally confirmed isolation profile remains requirement/evidence classification only; it cannot claim real OS enforcement, repository-code isolation, effect admission, production readiness, deployment authority, node enrollment, or capability promotion.
-35. Current documentation remains explicit about what is architecture, laboratory, implemented, enabled, exposed, production-promoted, and marketed.
+34. A valid or externally confirmed isolation profile remains requirement/evidence classification only; it cannot by itself claim real OS enforcement, repository-code isolation, effect admission, production readiness, deployment authority, node enrollment, or capability promotion.
+35. The fixed Linux isolation laboratory accepts no caller-supplied image, command, argv, shell, task plan, bind mount, network origin, credential, secret, package/service action, remote endpoint, or contributed hardware; its fixed adapter/workflow profile is release-governed and fail-closed.
+36. A Linux fixed-probe pass requires active observed namespace/capability/no-new-privileges/seccomp/root/network/resource evidence, real PID-pressure behavior, bounded output/timeout handling, and verified container cleanup; configuration labels alone are insufficient.
+37. The Linux conformance receipt binds sanitized observations and per-probe digests to one exact revision/policy/adapter/image/limit statement and is independently reverified by the secret-free workflow before artifact publication.
+38. Hosted fixed-probe Linux evidence cannot be elevated into physical-device proof, independent external attestation, globally verified platform isolation, arbitrary repository-code isolation, compiled-plan effect admission, production readiness, deployment authority, node enrollment, capability promotion, or AXIOM authority.
+39. The standalone Linux conformance workflow must remain in the exact governed release workflow inventory and pass its semantic verifier; adding the effect-capable laboratory cannot weaken the repository's workflow-governance guard.
+40. Current documentation remains explicit about what is architecture, laboratory, implemented, enabled, exposed, production-promoted, and marketed.
 
 ## Current non-claims
 
@@ -608,15 +655,17 @@ This document does not claim:
 - a production session-lifecycle persistence or recovery service;
 - an executor-originated real remote-effect receipt;
 - an effect-reachable dry-run plan or compiler;
-- a production executor-conformance service or operating-system sandbox;
+- a production executor-conformance service or general operating-system sandbox;
 - a production durable executor-state database, replicated state service, distributed lease service, or globally current revocation oracle;
 - a hardware-backed monotonic counter or HSM/TPM/Secure Enclave durable-state guarantee;
 - storage-media, drive-cache, filesystem-corruption, or sudden-power-loss survival guarantees from the local durability laboratory;
-- verified Linux, macOS, or Windows executor isolation from the isolation-profile laboratory;
-- an effect-capable platform isolation adapter, real VM/container/sandbox enforcement path, or physical-device isolation proof;
-- hosted CI as physical-device, hardware-enforcement, or production-isolation evidence;
+- globally verified Linux, macOS, or Windows executor isolation from the isolation-profile laboratory;
+- a general or plan-driven Linux executor, arbitrary repository-code isolation path, or production VM/container/sandbox execution service;
+- physical-device isolation proof or independent external attestation from the hosted Linux fixed-probe receipt;
+- hosted CI as physical-device or production-isolation evidence;
+- compiled dry-run-plan admission into the fixed Linux effect laboratory;
 - live DNS resolution/pinning enforcement for Agent Commons execution;
-- real package installation, build, test, process, repository-workspace, arbitrary host-path, network, service, or hardware effects beyond the durable laboratory's dedicated local control-state files;
+- real package installation, repository build/test execution, repository-workspace mutation, arbitrary host-path mutation, live network execution, service management, or hardware effects through Agent Commons; the Linux laboratory's real effects are limited to its fixed disposable probe processes/tmpfs and denied-operation tests, and the durable laboratory's separate effect remains its dedicated local control-state files;
 - a production package installer, service manager, shell, tunnel, credential broker, or remote-control daemon;
 - secure remote-shell infrastructure;
 - firmware-management authority;
