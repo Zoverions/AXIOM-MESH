@@ -1,0 +1,61 @@
+{
+  "schema": "axiom-health-mesh-regulatory-eligibility.v0.1",
+  "assertion_id": "health-reg:ontario.supervised-robotic-venipuncture.research.v0.1",
+  "jurisdiction": {
+    "country": "CA",
+    "region": "ON",
+    "locality": null
+  },
+  "assertion_class": "RESEARCH_ONLY",
+  "authority_level": "NON_AUTHORITATIVE_RESEARCH",
+  "issuer": {
+    "issuer_id": "axiom-health-mesh-research-process",
+    "issuer_type": "RESEARCH_PROCESS",
+    "verification_ref": null
+  },
+  "subject": {
+    "subject_type": "WORKFLOW",
+    "subject_id": "health:booth.supervised-venipuncture.v0.1",
+    "version": "0.1"
+  },
+  "action_scope": {
+    "allowed_actions": [
+      "health.specimen.position.supervised"
+    ],
+    "prohibited_actions": [
+      "health.specimen.venipuncture.supervised",
+      "health.specimen.venipuncture.autonomous"
+    ],
+    "conditions": [
+      "Research interpretation only; no runtime or legal authority.",
+      "Ontario current rules are person/employee-centred for venipuncture authority.",
+      "Explicit regulator/professional interpretation is required before machine puncture is treated as eligible."
+    ]
+  },
+  "eligibility_state": "INTERPRETATION_REQUIRED",
+  "evidence_refs": [
+    {
+      "kind": "REGULATION",
+      "locator": "https://www.ontario.ca/laws/regulation/960107",
+      "digest_or_version": "Ontario e-Laws current consolidated source reviewed 2026-08-13"
+    },
+    {
+      "kind": "REGULATION",
+      "locator": "https://www.ontario.ca/laws/regulation/r22045",
+      "digest_or_version": "Ontario e-Laws current consolidated source reviewed 2026-08-13"
+    }
+  ],
+  "effective_at": "2026-08-13T22:09:00-04:00",
+  "expires_at": null,
+  "revocation_ref": null,
+  "required_autonomy_ceiling": "H3",
+  "absence_behavior": "DENY_CONSEQUENTIAL",
+  "axiom_may_expand_scope": false,
+  "runtime_authority_granted": false,
+  "regulatory_truth_claimed_by_axiom": false,
+  "non_claims": [
+    "This is a research-policy fixture, not a legal opinion or regulator-issued authorization.",
+    "AXIOM may not convert INTERPRETATION_REQUIRED into permission.",
+    "A future authoritative eligibility assertion requires independent evidence and promotion."
+  ]
+}
