@@ -734,6 +734,9 @@ function verifyJournalEnvelope(raw, credential, trustedPersonaRootPublicKey) {
   ) {
     throw new ValidationError('credentialed public journal key credential binding is invalid');
   }
+  if (statement.issued_at < verifiedCredential.statement.activated_at) {
+    throw new ValidationError('credentialed public journal attestation predates its signing credential');
+  }
   const verified = verifyEnvelope(value, {
     schema: CREDENTIALED_PUBLIC_JOURNAL_ATTESTATION_SCHEMA,
     keys: JOURNAL_KEYS,
@@ -810,6 +813,12 @@ function createCredentialedJournalAttestation({
         || pathResult.last_credential_digest !== credential.credential_digest
       ) {
         throw new ValidationError('credentialed public journal credential path does not bridge predecessor to current key');
+      }
+      const firstSuccessor = verifyPersonaSigningCredential(path[1], {
+        trustedPersonaRootPublicKey
+      });
+      if (previous.statement.issued_at >= firstSuccessor.statement.activated_at) {
+        throw new ValidationError('credentialed public journal predecessor was issued after its key became stale');
       }
     }
     if (issued < previous.statement.issued_at) {
@@ -970,6 +979,12 @@ export function validateCredentialedPublicJournalContinuity(previousRaw, current
       || pathResult.last_credential_digest !== current.credential.credential_digest
     ) {
       throw new ValidationError('credentialed public journal continuity credential path is invalid');
+    }
+    const firstSuccessor = verifyPersonaSigningCredential(path[1], {
+      trustedPersonaRootPublicKey
+    });
+    if (previous.statement.issued_at >= firstSuccessor.statement.activated_at) {
+      throw new ValidationError('credentialed public journal continuity contains a predecessor issued after its key became stale');
     }
   }
   return Object.freeze({
