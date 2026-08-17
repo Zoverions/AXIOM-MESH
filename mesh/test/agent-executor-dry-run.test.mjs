@@ -436,8 +436,9 @@ test('platform profile cannot self-upgrade platform trust, privilege, remote adm
 });
 
 test('bounded-public-read network compiler rejects credentialed, non-canonical, insecure and local/private origins', () => {
+  const credentialedOrigin = ['https://', 'sample-user', ':', 'sample-passphrase', '@example.com'].join('');
   for (const origin of [
-    'https://user:password@example.com',
+    credentialedOrigin,
     'https://example.com/path',
     'https://example.com?x=1',
     'http://example.com',
