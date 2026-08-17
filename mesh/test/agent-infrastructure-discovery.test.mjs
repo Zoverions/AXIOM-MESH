@@ -18,7 +18,9 @@ test('infrastructure discovery points only to existing bounded contracts', async
     discovery.compute_node_profile_contract,
     discovery.offer_contract,
     discovery.challenge_contract,
-    discovery.result_contract
+    discovery.result_contract,
+    discovery.device_attestation_contract,
+    discovery.test_session_authorization_contract
   ];
   for (const path of contractPaths) {
     assert.equal(typeof path, 'string');
@@ -36,7 +38,10 @@ test('infrastructure discovery points only to existing bounded contracts', async
     'device-lab-capacity'
   ]);
 
+  assert.equal(discovery.device_key_possession_verification_available, true);
+
   for (const key of [
+    'test_session_effects_reachable',
     'remote_execution_enabled',
     'production_node_enrollment_enabled',
     'credential_issuance_enabled',
