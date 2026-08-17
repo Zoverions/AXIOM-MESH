@@ -363,6 +363,93 @@ and appeal records SHOULD evolve through versioned schemas rather than bespoke
 network-only alternatives. Future consensus should certify governance records;
 it should not replace their lifecycle or human-readable evidence.
 
+### Public social witnessing as a bounded evidence domain
+
+Public social history is a concrete application of the sovereignty/agreement
+split. AXIOM SHOULD make intentionally public social acts independently
+witnessable without requiring every post, edit, reaction, or follow to enter one
+global consensus log.
+
+The target property is historical integrity, not undeletability of every copy:
+a public publication may later be superseded, retracted, or stopped from being
+served, but the earlier public form must not be silently replaced while still
+being represented as the original.
+
+The first executable foundation is intentionally pure and non-networking:
+
+- `mesh/src/lib/public-witness.mjs` defines persona-key public journal
+  attestations, exact predecessor continuity, independent witness receipts, and
+  deterministic receipt checkpoints;
+- `mesh/test/public-witness.test.mjs` verifies public-audience enforcement,
+  tamper and key-substitution rejection, publication/retraction continuity,
+  witness binding, deterministic checkpoint roots, and explicit non-claims;
+- no Gateway, Hypervisor, Sandbox, Grid mutation, relay, archive, discovery,
+  consensus, finality, or capability promotion is activated by these helpers;
+- the accepted no-egress social storage composition remains unchanged.
+
+A persona journal attestation binds the exact social entry digest, persona and
+public persona-projection digest, Ed25519 signing-key digest, monotonic sequence,
+exact predecessor-attestation digest, and canonical issuance time. Publication
+corrections remain new publications through `supersedes_digest`; retractions
+remain new transitions. The journal therefore records correction without
+rewriting prior history.
+
+Only `audience.mode: public` publications are eligible for the public witness
+foundation. Followers-only and Circle-only content MUST NOT be promoted into a
+public evidence domain simply because an application can access it locally.
+Pseudonymous, selectively attributable, and anonymous personas MUST retain the
+existing protection against leaking controller identity.
+
+The current persona projection does not yet standardize a persona journal key
+credential. Verification therefore requires an explicitly trusted persona
+public key supplied out of band. A later key-credential and key-epoch protocol
+must define binding, rotation, revocation, recovery, and replay behavior without
+silently converting a cryptographic key into a legal-identity claim.
+
+A witness receipt means that the named witness key observed and verified one
+exact signed journal artifact. It does not prove content truth, legal identity,
+human authorship, endorsement, quorum, consensus, or finality. Witnesses are
+evidence providers rather than global social authorities.
+
+Receipt checkpoints use sorted unique receipt digests and domain-separated
+SHA-256 Merkle leaves/nodes. The current checkpoint schema is commitment-only:
+it declares `finality: unfinalized`, `consensus_claimed: false`, and
+`data_availability_claimed: false`. A receipt count MUST NOT be interpreted as a
+quorum. Availability of the referenced content remains a separate archive and
+replication problem.
+
+A future public-witness agreement domain may certify compact checkpoints rather
+than order every social event globally. Its domain contract must separately
+define membership and epochs, Sybil assumptions, quorum/finality rules,
+equivocation handling, data availability, censorship and partition behavior,
+privacy and jurisdiction constraints, upgrades, capture resistance, exit, and
+portable certificate verification.
+
+The staged roadmap is:
+
+1. **W0 — pure cryptographic foundation:** public-only journal attestations,
+   witness receipts, deterministic checkpoints, and non-authority tests;
+2. **W1 — persona key credentials and epochs:** privacy-preserving key binding,
+   rotation, revocation, recovery, and stale-key rejection;
+3. **W2 — witness service laboratory:** independently deployable, bounded,
+   no-Grid-authority witness service with replay/equivocation evidence;
+4. **W3 — archive and availability laboratory:** independently operated public
+   object retention with explicit availability and legal-removal semantics;
+5. **W4 — optional checkpoint agreement adapter:** evaluate threshold/BFT
+   certification of compact checkpoints under Byzantine, partition, capture,
+   censorship, version-skew, and key-compromise conditions;
+6. **W5 — AXIOM Verify:** independently verify content digests, persona journal
+   signatures, continuity, witness receipts, checkpoints, availability, and any
+   optional finality certificate while preserving explicit non-claims; and
+7. **W6 — promotion:** only after applicable protocol, security, privacy,
+   operational, scale, governance, and independent-review gates pass.
+
+A persona can still sign two conflicting journal entries at the same continuity
+position. That is equivocation, not something cryptography can prohibit. Future
+witness and agreement protocols must retain and expose conflicting valid
+artifacts rather than silently choose one by arrival time, popularity,
+application preference, or lexical digest order.
+
 ## Required future agreement interface
 
 Before any consensus implementation is connected to supported Grid state, a
