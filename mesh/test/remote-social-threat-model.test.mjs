@@ -46,7 +46,7 @@ test('canonical threat model requires the remote-social companion and exact read
   }
 });
 
-test('remote-social companion names every current S3/G1-G5B review surface and trust distinction', async () => {
+test('remote-social companion names every current S3/G1-G6 review surface and trust distinction', async () => {
   const review = await text('docs/security/REMOTE-SOCIAL-THREAT-REVIEW.md');
   for (const path of [
     'mesh/src/lib/social-exchange-package.mjs',
@@ -55,6 +55,7 @@ test('remote-social companion names every current S3/G1-G5B review surface and t
     'mesh/src/grid/remote-social-admission-store.mjs',
     'mesh/src/grid/remote-social-following-store.mjs',
     'mesh/src/grid/remote-social-retention-store.mjs',
+    'mesh/src/grid/remote-social-abuse-store.mjs',
     'mesh/src/grid/remote-social-transport-store.mjs',
     'mesh/src/grid/remote-social-protection.mjs',
     'mesh/src/grid/remote-social-runtime-candidate.mjs',
@@ -73,6 +74,7 @@ test('remote-social companion names every current S3/G1-G5B review surface and t
     'Local admission authority',
     'Private Following',
     'Owner-scoped review projection',
+    'Owner-private abuse controls',
     'S3G5A/B read-only review exposure',
     'Future social relay',
     'content truth',
@@ -80,13 +82,15 @@ test('remote-social companion names every current S3/G1-G5B review surface and t
     'personal authorship',
     'exporter-attestation-only',
     'staging-only authenticated handoff',
-    'owner exclusively from `principal.id`'
+    'owner exclusively from `principal.id`',
+    'reports are append-only owner assertions',
+    'source quarantine accepts only a normalized exact HTTPS origin'
   ]) {
     assertContainsNormalized(review, required, 'remote-social trust review missing');
   }
 });
 
-test('read-only review activation preserves SocialGridStore and excludes candidate or transport selection', async () => {
+test('read-only review activation preserves SocialGridStore and excludes candidate, abuse or transport selection', async () => {
   const [grid, gateway] = await Promise.all([
     text('mesh/src/grid/server.mjs'),
     text('mesh/src/gateway/server.mjs')
@@ -94,6 +98,7 @@ test('read-only review activation preserves SocialGridStore and excludes candida
   assert.match(grid, /import \{ SocialGridStore \} from '\.\/social-store\.mjs';/);
   assert.match(grid, /new SocialGridStore\s*\(/);
   assert.equal(grid.includes('RemoteSocialRuntimeCandidateGridStore'), false);
+  assert.equal(grid.includes('RemoteSocialAbuseGridStore'), false);
   assert.equal(grid.includes('RemoteSocialTransportGridStore'), false);
   assert.equal(grid.includes('AXIOM_REMOTE_SOCIAL'), false);
   assert.equal(
@@ -109,7 +114,7 @@ test('read-only review activation preserves SocialGridStore and excludes candida
   assert.equal(gateway.includes('/internal/v1/social/transport'), false);
 });
 
-test('canonical threat model contains explicit remote-social threats, abuse cases and invariants', async () => {
+test('canonical threat model contains explicit accepted remote-social threats, abuse cases and invariants', async () => {
   const threat = await text('docs/security/CURRENT-BUILD-THREAT-MODEL.md');
   for (const required of [
     '| Remote-social exporter forgery, compromise, or provenance overclaim |',
@@ -132,5 +137,24 @@ test('canonical threat model contains explicit remote-social threats, abuse case
     'The current remote-social public surface is inspection-only'
   ]) {
     assertContainsNormalized(threat, required, 'remote-social security boundary missing');
+  }
+});
+
+test('remote-social companion contains explicit disabled G6 abuse-control threats and invariants', async () => {
+  const review = await text('docs/security/REMOTE-SOCIAL-THREAT-REVIEW.md');
+  for (const required of [
+    '| Remote-social report or quarantine becomes false authority |',
+    'trust labels, report state, quarantine state, or provenance UI',
+    'private follow/trust/report/quarantine correlation',
+    'G6 source quarantine must not perform network I/O',
+    'Local mute/block/report/quarantine records remain owner-private safety state',
+    'report proves only that the owner recorded an assertion',
+    'adjudicated: false',
+    'network_effect: none',
+    'authority_effect: none',
+    'recommendation_effect: none',
+    'adjudication_effect: none'
+  ]) {
+    assertContainsNormalized(review, required, 'remote-social G6 security boundary missing');
   }
 });

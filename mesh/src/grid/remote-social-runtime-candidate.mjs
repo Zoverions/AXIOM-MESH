@@ -1,4 +1,4 @@
-import { RemoteSocialRetentionGridStore } from './remote-social-retention-store.mjs';
+import { RemoteSocialAbuseGridStore } from './remote-social-abuse-store.mjs';
 
 export const REMOTE_SOCIAL_RUNTIME_CANDIDATE_SCHEMA =
   'axiom-remote-social-runtime-candidate.v1';
@@ -14,13 +14,13 @@ export const REMOTE_SOCIAL_RUNTIME_CANDIDATE = Object.freeze({
   admission_included: true,
   following_included: true,
   retention_included: true,
+  abuse_controls_included: true,
   automatic_federation: false,
   automatic_admission: false,
   automatic_follow: false,
   remaining_activation_gates: Object.freeze([
     'threat-model',
     'owner-scoped-api',
-    'abuse-controls',
     'approval-api-wiring',
     'transport-relay-separation',
     'axiom-one-review',
@@ -28,7 +28,7 @@ export const REMOTE_SOCIAL_RUNTIME_CANDIDATE = Object.freeze({
   ])
 });
 
-export class RemoteSocialRuntimeCandidateGridStore extends RemoteSocialRetentionGridStore {
+export class RemoteSocialRuntimeCandidateGridStore extends RemoteSocialAbuseGridStore {
   getStatus() {
     return {
       ...super.getStatus(),
