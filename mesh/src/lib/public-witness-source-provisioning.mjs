@@ -222,6 +222,10 @@ export function createPublicWitnessSourceProvisioningCommand({
   const expires = expiresAt === null
     ? new Date(Date.parse(authorized) + maxLifetimeSeconds * 1000).toISOString()
     : canonicalTimestamp(expiresAt, 'public witness source provisioning expiresAt');
+  const configuredLifetimeMs = Date.parse(expires) - Date.parse(authorized);
+  if (configuredLifetimeMs <= 0 || configuredLifetimeMs > maxLifetimeSeconds * 1000) {
+    throw new ValidationError('public witness source provisioning authorization exceeds configured lifetime ceiling');
+  }
   const statement = normalizeStatement({
     domain_id: admission.domain_id,
     operator_id: operatorId,
