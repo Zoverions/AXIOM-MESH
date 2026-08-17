@@ -1,0 +1,83 @@
+{
+  "schema": "axiom-agent-executor-isolation-policy-catalog.v1",
+  "version": 1,
+  "common_controls": [
+    "disposable-workspace-root-containment",
+    "host-root-deny",
+    "symlink-reparse-boundary",
+    "pinned-executable-resolution",
+    "minimal-environment",
+    "no-ambient-credentials-secrets",
+    "no-privilege-escalation",
+    "process-tree-containment",
+    "timeout-terminal-kill",
+    "cpu-memory-process-output-ceilings",
+    "default-deny-network",
+    "explicit-origin-network-only",
+    "inherited-handle-descriptor-minimization",
+    "terminal-on-uncertainty",
+    "workspace-disposal"
+  ],
+  "profiles": {
+    "linux": {
+      "policy_id": "linux-kernel-isolation-v1",
+      "revision": 1,
+      "supported_architectures": ["x64", "arm64"],
+      "repository_code_boundary": "kernel-enforced-process-filesystem-network-isolation",
+      "mechanism_families": [
+        "linux-process-namespace-boundary",
+        "linux-filesystem-mount-boundary",
+        "linux-network-namespace-boundary",
+        "linux-resource-controller",
+        "linux-syscall-filter-or-equivalent",
+        "linux-privilege-ceiling"
+      ],
+      "hosted_ci_sufficient": false,
+      "physical_device_evidence_required_before_production_promotion": true
+    },
+    "macos": {
+      "policy_id": "macos-virtualized-isolation-v1",
+      "revision": 1,
+      "supported_architectures": ["x64", "arm64"],
+      "repository_code_boundary": "virtual-machine-or-equivalent-kernel-enforced-isolation",
+      "mechanism_families": [
+        "macos-vm-or-equivalent-kernel-boundary",
+        "macos-disposable-volume-boundary",
+        "macos-network-policy-boundary",
+        "macos-process-resource-supervision",
+        "macos-host-credential-separation"
+      ],
+      "hosted_ci_sufficient": false,
+      "physical_device_evidence_required_before_production_promotion": true
+    },
+    "windows": {
+      "policy_id": "windows-contained-isolation-v1",
+      "revision": 1,
+      "supported_architectures": ["x64", "arm64"],
+      "repository_code_boundary": "container-vm-or-restricted-security-boundary-with-tree-containment",
+      "mechanism_families": [
+        "windows-container-vm-or-restricted-security-boundary",
+        "windows-process-tree-job-boundary",
+        "windows-filesystem-namespace-boundary",
+        "windows-network-policy-boundary",
+        "windows-token-privilege-ceiling"
+      ],
+      "hosted_ci_sufficient": false,
+      "physical_device_evidence_required_before_production_promotion": true
+    }
+  },
+  "boundaries": {
+    "effect_reachable": false,
+    "real_process_execution_enabled": false,
+    "real_filesystem_isolation_verified": false,
+    "real_network_isolation_verified": false,
+    "repository_code_isolation_verified": false,
+    "hosted_ci_is_physical_device_proof": false,
+    "production_executor_ready": false,
+    "production_node_enrollment_enabled": false,
+    "remote_administration_enabled": false,
+    "deployment_authority": false,
+    "capability_promotion_authority": false,
+    "authority_granted": false
+  }
+}
