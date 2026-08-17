@@ -454,13 +454,9 @@ export class PublicWitnessIngressLifecycleController {
       const history = validatePublicWitnessIngressControlChain(controls);
       for (const control of history) this.#assertDomain(control);
       const now = clockMillis(this.#clock);
-      let candidate = null;
-      for (const control of history) {
-        if (Date.parse(control.effective_at) <= now) candidate = control;
-        else break;
-      }
-      if (candidate === null) {
-        throw new ValidationError('public witness ingress lifecycle history has no effective control yet');
+      const candidate = history[history.length - 1];
+      if (Date.parse(candidate.effective_at) > now) {
+        throw new ValidationError('public witness ingress lifecycle active history cannot contain a future control');
       }
       if (candidate.ingress_state === 'disabled') {
         if (trustBundle !== null || previousTrustBundle !== null) {
