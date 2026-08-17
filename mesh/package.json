@@ -45,6 +45,8 @@
     "online-sync:drill": "node src/online-causal-sync-drill.mjs",
     "provider:start": "node src/provider-supervisor.mjs",
     "provider:drill": "node src/provider-conformance-drill.mjs",
+    "public-witness:start": "node src/public-witness-service.mjs run",
+    "public-witness:verify": "node src/public-witness-service.mjs verify",
     "runtime-adapter:contract": "node src/lib/runtime-adapter-contract.mjs",
     "runtime-adapter:drill": "node src/runtime-adapter-conformance.mjs",
     "pilot:dossier:verify": "node src/pilot-dossier.mjs verify",
