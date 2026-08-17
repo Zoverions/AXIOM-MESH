@@ -66,11 +66,12 @@ The draft object family is deliberately explicit:
 10. `axiom-agent-test-session-lifecycle-receipt.v1` — an executor-independent signed receipt bound to one exact lifecycle head;
 11. `axiom-agent-test-session-lifecycle-transcript.v1` — a bounded portable lifecycle chain for replay/recovery verification when retained externally;
 12. `axiom-agent-executor-platform-profile.v1` — explicit OS/architecture facts with declared/measured/reproduced/externally-verified status and no inferred platform trust;
-13. `axiom-agent-executor-dry-run-plan.v1` — a deterministic inert projection of one exact issued authorization into fixed future-executor templates, limits, evidence obligations, and cleanup requirements.
+13. `axiom-agent-executor-dry-run-plan.v1` — a deterministic inert projection of one exact issued authorization into fixed future-executor templates, limits, evidence obligations, and cleanup requirements;
+14. `axiom-agent-executor-conformance-receipt.v1` — an Ed25519-signed virtual-only observation receipt bound to one exact dry-run plan, lifecycle transition, sandbox policy, and ordered synthetic admissions/denials.
 
 The supported core contribution schemas live under `docs/architecture/contracts/`. Experimental infrastructure-lab exchange schemas remain under `agent-commons/contracts/` until that layer is separately promoted into the supported documentation boundary.
 
-These are exchange and evidence contracts. They do not prove that an external agent, runtime, identity, network, offered device, lifecycle signer, platform profile, compiler, or future executor is trustworthy beyond the evidence actually verified.
+These are exchange and evidence contracts. They do not prove that an external agent, runtime, identity, network, offered device, lifecycle signer, platform profile, compiler, virtual sandbox, or future executor is trustworthy beyond the evidence actually verified.
 
 ## Challenge model
 
@@ -154,11 +155,14 @@ Relevant threats include:
 - package lifecycle/postinstall surprises;
 - privilege escalation, service-manager use, daemonization, persistence, or remote administration;
 - unbounded process count, runtime, output, memory, or step expansion;
-- compiler version, policy digest, platform profile, lifecycle head, or plan substitution.
+- compiler version, policy digest, platform profile, lifecycle head, or plan substitution;
+- executor-conformance request replay, step reordering, executable/argv substitution, or hazard-marker laundering;
+- synthetic resolution-snapshot substitution, public/owner-LAN address-class confusion, or effect-time address changes presented as stable resolution;
+- executor-conformance receipt tampering, signer substitution, or elevation of virtual observations into real-effect, task-success, deployment, or capability claims.
 
 Required controls include exact-base binding, bounded inputs, protected CI, provenance capture, secret isolation, security-report routing, independent review for consequential changes, and no merge or infrastructure authority for external agents merely from participation.
 
-The machine-readable pre-executor threat ledger is `agent-commons/pre-executor-threat-model.json`.
+The machine-readable pre-executor threat ledger is `agent-commons/pre-executor-threat-model.json`. The machine-readable virtual executor-conformance threat ledger is `agent-commons/executor-conformance-threat-model.json`. Neither threat ledger is itself an effect capability.
 
 ## GitHub integration
 
@@ -292,6 +296,36 @@ Compilation requires the known lifecycle head to be `issued`, non-terminal, and 
 
 The deterministic plan carries hard-false claims for effect reachability, remote execution, process spawn, filesystem mutation, network activity, credential/secret retrieval, service control, package installation, production enrollment, firmware/boot changes, purchases, destructive action, deployment authority, task success, and capability promotion.
 
+### Virtual executor-conformance sandbox
+
+`mesh/src/lib/agent-executor-conformance-sandbox.mjs` is the next laboratory gate. It exercises how one exact dry-run plan would be enforced while keeping every admitted process, filesystem, and network action **virtual and in-memory**.
+
+The sandbox first validates the exact dry-run plan, compiler identity/version/policy digest, and the exact issued lifecycle head/receipt already bound into that plan. It then enforces:
+
+- strict next-step ordering and unique request identities;
+- exact fixed executable identifiers and literal argv equality;
+- no PATH or environment-driven executable substitution;
+- exact working-directory binding;
+- canonical relative paths rooted at `work/session`;
+- rejection of absolute paths, traversal, normalization ambiguity, out-of-root paths, and synthetic symlink evidence;
+- exact compiled network origin and GET/HEAD method checks;
+- no redirects or dynamic origin widening;
+- supplied synthetic preflight address snapshots and exact effect-time address-set equality to detect simulated DNS rebinding;
+- public address classes for `bounded-public-read` and local/private classes for `owner-lan`;
+- process, per-process runtime, total runtime, output, memory, step, and request ceilings checked before virtual admission.
+
+Immediately before the first admitted virtual effect, the sandbox rechecks the exact known issued lifecycle head and consumes the one-time in-memory lifecycle with known-active revocation state. A denial before consumption leaves the lifecycle at `issued`. A policy denial after consumption records a terminal `interrupted` lifecycle event. Interruption cannot later be rewritten as completion, and completion requires every compiled step to have been admitted in order.
+
+The sandbox performs no host process spawn, filesystem mutation, DNS lookup, network request, package installation, service management, credential/secret access, shell/tunnel operation, or hardware action. Its resolution evidence is supplied synthetic input, not a live resolver. Its path and symlink checks prove policy semantics, not operating-system filesystem isolation.
+
+A terminal virtual session can produce `axiom-agent-executor-conformance-receipt.v1`, signed by an Ed25519 executor-laboratory key. The receipt binds the exact plan digest, authorization, sandbox/compiler policy digests, lifecycle consumption event, terminal lifecycle head/receipt, ordered admission/denial observations, and deterministic resource counters. The executor key authenticates the receipt only; it grants no repository, device, deployment, or AXIOM authority.
+
+Conformance receipts hard-code `virtual_effects_only: true` and false claims for global currentness, task success, real effects, remote execution, process spawn, filesystem/network activity, credentials/secrets, service control, package installation, production enrollment, deployment authority, and capability promotion.
+
+A valid conformance receipt therefore proves only that this virtual laboratory classified and recorded synthetic requests according to the reviewed policy implementation. It is **not** evidence that an OS sandbox, VM/container boundary, live DNS resolver, package manager, process launcher, network stack, or physical device enforced the same policy.
+
+The machine-readable threat ledger for this gate is `agent-commons/executor-conformance-threat-model.json`. It keeps the remaining promotion blockers explicit: no real process launcher, no OS sandbox, no live DNS pinning, no durable atomic executor/lifecycle store, no real package/build/test execution, and no remote hardware or credential broker.
+
 ### Future executor promotion boundary
 
 An effect-reachable executor remains a separate promotion problem. At minimum it would require:
@@ -307,7 +341,7 @@ An effect-reachable executor remains a separate promotion problem. At minimum it
 - executor-originated effect receipts bound to the compiled plan and lifecycle transition;
 - independent threat/security review and protected promotion.
 
-None of those future requirements is satisfied merely because the dry-run compiler exists or a plan validates.
+The virtual executor-conformance sandbox reduces ambiguity about those enforcement semantics, but it satisfies none of the operating-system, live-network, durable-currentness, package-execution, or remote-hardware requirements by simulation alone.
 
 Remote access is not part of the current effect path. An offer may state that remote access is technically available, but credentials, tunnels, remote shells, device-management enrollment, and unattended administration require a separate future design.
 
@@ -389,8 +423,11 @@ Where practical, retain publication provenance and external identifiers so annou
 - explicit OS/architecture fact profiles without inferred platform trust;
 - deterministic non-executing compiler plans with fixed templates, resource/network/workspace limits, and canonical digests;
 - machine-readable pre-executor threat model;
+- virtual executor-conformance sandbox with exact step/executable/argv/path/network/resource admission semantics and no host effects;
+- Ed25519-signed virtual conformance receipts bound to exact plan and lifecycle evidence;
+- machine-readable executor-conformance threat model and explicit real-executor promotion blockers;
 - declared/measured/reproduced/externally-verified evidence separation;
-- no effect-reachable remote administration, package/service execution, or production-enrollment authority.
+- no effect-reachable remote administration, package/service execution, live network execution, or production-enrollment authority.
 
 Any write-capable external adapter or remote infrastructure executor requires a separate threat review, policy mapping, evidence model, negative tests, and promotion decision.
 
@@ -416,7 +453,11 @@ Any write-capable external adapter or remote infrastructure executor requires a 
 18. Repository build/test templates remain explicitly classified as repository-code execution hazards and do not become trusted merely because the outer argv is fixed.
 19. Long-lived local-service execution remains rejected until a separately reviewed sandbox/service profile exists.
 20. A valid dry-run plan is not evidence that a future executor enforced the plan, that any hardware effect occurred, or that a task succeeded.
-21. Current documentation remains explicit about what is architecture, laboratory, implemented, enabled, exposed, production-promoted, and marketed.
+21. The virtual executor-conformance sandbox accepts only an exact validated plan and exact issued lifecycle evidence, and consumes the one-time laboratory lifecycle before its first admitted virtual effect.
+22. A denied request before consumption leaves the laboratory lifecycle unconsumed; a policy denial after consumption terminates it as interrupted rather than permitting completion.
+23. A conformance receipt cannot claim task success, real process/filesystem/network/package effects, production enrollment, deployment authority, or capability promotion.
+24. A valid conformance receipt is not evidence of operating-system isolation, live DNS pinning, real package/build/test execution, remote hardware enforcement, or task success.
+25. Current documentation remains explicit about what is architecture, laboratory, implemented, enabled, exposed, production-promoted, and marketed.
 
 ## Current non-claims
 
@@ -439,8 +480,11 @@ This document does not claim:
 - a production attestation authority;
 - an effect-reachable test-session executor;
 - a production session-lifecycle persistence or recovery service;
-- an executor-originated remote-effect receipt;
+- an executor-originated real remote-effect receipt;
 - an effect-reachable dry-run plan or compiler;
+- a production executor-conformance service or operating-system sandbox;
+- live DNS resolution/pinning enforcement for Agent Commons execution;
+- real package installation, build, test, process, filesystem, network, service, or hardware effects from the virtual conformance laboratory;
 - a production package installer, service manager, shell, tunnel, credential broker, or remote-control daemon;
 - secure remote-shell infrastructure;
 - firmware-management authority;
