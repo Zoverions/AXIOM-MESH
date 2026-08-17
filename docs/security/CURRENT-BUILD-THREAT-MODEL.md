@@ -137,9 +137,17 @@ ordinary Mesh authority merely because it is cryptographically valid.
 
 The disabled `RemoteSocialRuntimeCandidateGridStore` composes Grid-side S3C
 staging, S3D admission, S3E private Following, and the bounded retention lifecycle.
-It has no public routes, no network egress, and no S3F transport methods. The
+It remains unselected and has no network egress or S3F transport methods. The
 accepted Grid service still imports and instantiates `SocialGridStore`; there is no
-runtime switch selecting the remote candidate. S3F transport remains laboratory
+runtime switch selecting the remote candidate. The current Gateway exposes exactly
+one authenticated owner-scoped remote-social inspection route,
+`GET /v1/social/remote-review`. Gateway derives the owner only from the authenticated
+principal and forwards a signed GET to
+`/internal/v1/social/remote-review/:owner`. Grid constructs a no-migration read
+adapter over the accepted `SocialGridStore` and returns only the bounded G5A
+`axiom-remote-social-review.v1` projection. The path creates no stage, admission,
+follow/unfollow, retention-cleanup, transport, recommendation, network, or authority
+effect and does not activate the remote candidate. S3F transport remains laboratory
 code only. A future live social transport path must use a separately reviewed
 host-side egress relay with least-privilege source-read authority and a staging-only
 authenticated handoff into Grid. No source-package endpoint or social relay is
@@ -170,8 +178,8 @@ The primary assets are:
   records;
 - remote-social package/exporter signatures and digests, encrypted staged review
   state, admission/observation provenance, private follow/trust state, retention
-  receipts, transport pins, bounded transport-job state, and any future relay
-  credentials or handoff receipts;
+  receipts, transport pins, bounded transport-job state, the minimized owner-scoped
+  remote-review response, and any future relay credentials or handoff receipts;
 - release source, lockfiles, container policy, capability claims, SBOM,
   provenance, protected CI results, and promotion evidence;
 - telemetry, alerts, incident records, pilot evidence, security findings, and
@@ -214,9 +222,10 @@ The model considers:
 - a malicious or compromised remote-social exporter Grid, pinned transport
   source, or future host-side social relay attempting provenance substitution,
   replay, amplification, social-engineering, or confused-deputy escalation;
-- an authenticated local remote-social reviewer attempting to stage, admit,
-  inspect, follow, or reclaim another owner's remote-social records, or to turn a
-  trust label into identity/content-truth authority;
+- an authenticated local remote-social reviewer attempting to inspect another
+  owner's records, inject an owner override, stage, admit, follow, or reclaim
+  records through the read-only route, or turn a trust label into
+  identity/content-truth authority;
 - theft or reuse of an active, retired, or historically exposed human, machine,
   service, exporter, transport, or future relay credential;
 - one compromised service attempting to impersonate another service or exceed
@@ -267,8 +276,9 @@ Reviewers must trace at least these entry points:
 9. import/export bundles and recipient encryption;
 10. remote-social package construction/verification, review staging, exact
     intent/approval-bound admission, observation materialization, private Following,
-    quota/retention events, protected-column rotation, and disabled runtime
-    candidate composition;
+    quota/retention events, protected-column rotation, disabled runtime candidate
+    composition, G5A disclosure minimization, and the G5B owner-scoped read adapter plus
+    `/v1/social/remote-review` Gateway-to-Grid path;
 11. S3F transport-envelope verification, exact origin/key/nonce/package binding,
     retry/lease state, and the future host-side relay plus staging-only handoff if
     that relay is ever implemented;
@@ -280,10 +290,11 @@ Reviewers must trace at least these entry points:
 No privileged effect may bypass the intent, policy, machine-authority where
 applicable, plan, grant, execution, evidence sequence. Remote-social package or
 transport verification does not create admission authority: S3D admission remains
-bound to its exact local intent and independent one-use approval. Stopped-runtime
-recovery is the documented exception to the online path: it requires separate
-signed/encrypted artifacts, exact target binding, Grid exclusion, and
-post-recovery verification rather than an online grant.
+bound to its exact local intent and independent one-use approval. The G5B read-only
+review route is not an exception to that rule and cannot create or consume effect
+authority. Stopped-runtime recovery is the documented exception to the online path:
+it requires separate signed/encrypted artifacts, exact target binding, Grid exclusion,
+and post-recovery verification rather than an online grant.
 
 ## Threat analysis
 
@@ -313,7 +324,8 @@ post-recovery verification rather than an online grant.
 | Remote-social storage amplification or retry exhaustion | Bounded S3 package size/object counts, S3F job lease and bounded retry/backoff, S3G2 owner-scoped stage/admission/observation counts and protected-byte quotas | Real untrusted-network rate limits, cross-owner/global capacity planning, source quarantine and relay concurrency controls remain future gates |
 | Remote-social admission confused deputy or approval substitution | Stage binds exact package/exporter/import-plan/trust facts; S3D deterministic request digest; accepted `social.remote.admit` intent plus matching independent one-use approval; quota failure occurs before approval consumption; admission and approval consumption are transactional | Human/operator review can still trust the wrong source or misunderstand provenance; no cryptographic mechanism proves remote content truth or socially valid identity |
 | Remote-social retention erases evidence or replay dependencies | G2 expiry alone deletes nothing; explicit cleanup is limited to expired unadmitted stages; cleanup event/receipt/deletion are transactional; admitted stage payloads remain replay dependencies; protected columns participate in data-key rotation | Admitted observation compaction is intentionally absent; future schema changes that make admission replay independent of staged payloads require a new migration/threat review |
-| Remote-social Following leaks private preference or expands trust | S3E owner-scoped encrypted trust metadata, trust scope fixed to exporter-attestation-only, admitted-observation-only chronological projection, no live fetch/ranking/recommendation/public graph | Private follow/trust correlation remains sensitive; block/mute/report/quarantine and accepted API disclosure minimization remain required before untrusted-network exposure |
+| Remote-social Following leaks private preference or expands trust | S3E owner-scoped encrypted trust metadata, trust scope fixed to exporter-attestation-only, admitted-observation-only chronological projection, no live fetch/ranking/recommendation/public graph; G5A/G5B expose only a bounded owner-scoped minimized follow summary through authenticated inspection | Private follow/trust correlation remains sensitive; block/mute/report/quarantine and effect-path privacy controls remain required before any public Following or untrusted-network social exchange is activated |
+| Remote-social review owner override or disclosure widening | Gateway derives review owner from the authenticated principal; the client contract declares no query/path owner; the exact Gateway-to-Grid edge is GET-only and Gateway-only; the read adapter owner-scopes SQL and G5A independently rejects foreign-owner rows and strips protected/package/transport/ranking state | A stolen owner bearer can read that owner's minimized review state; future response fields, richer rendering, delegated review, or shared review access require separate minimization and authorization review |
 | Future social relay becomes confused deputy or egress bridge | G3 Grid candidate is disabled, no-egress and transport-free; S3F network class has no admission/follow methods; required design places future relay outside Grid with staging-only handoff | Relay is not implemented/deployed; least-privilege identity, handoff authentication, DNS/TLS, queueing, credential rotation and incident isolation require independent evidence before activation |
 | Import/export forgery or over-disclosure | Signed manifest, stable schemas, content digests, selective scopes, recipient encryption, staged validation | External identity and recipient-key lifecycle adapters are not implemented |
 | Release or claim substitution | Exact package/lock/version checks, dependency-free boundary, digest-pinned container input, capability registry, generated status, documentation allowlist, protected CI and CodeQL | GitHub and build-runner compromise remain supply-chain assumptions; immutable release/pilot artifacts still require accountable custody |
@@ -364,8 +376,11 @@ The current review must consider at minimum:
   mislead a reviewer even though the package is structurally valid;
 - trust labels or provenance UI being interpreted as content truth, legal identity,
   biological identity, or personal authorship;
-- owner-crossing stage/admission/follow/retention reads, private follow/trust
-  correlation, and source/exporter quarantine bypass;
+- owner-crossing stage/admission/follow/retention reads, owner-query/body override
+  attempts against the review route, foreign-row return from a regressed store,
+  private follow/trust correlation, and source/exporter quarantine bypass;
+- attempts to turn `GET /v1/social/remote-review` or its internal Grid edge into a
+  POST/effect path, transport trigger, admission shortcut, or recommendation feed;
 - a future relay with leaked or over-broad source credentials, permissive DNS/TLS or
   redirect behavior, or an authenticated handoff capable of invoking admission rather
   than staging only; and
@@ -417,9 +432,13 @@ Independent review should treat these as invariants, not best-effort goals:
 18. Expiry alone does not silently delete remote-social evidence. An admitted stage
     remains a replay dependency until a separately reviewed migration changes that
     replay model.
-19. No remote-social surface becomes public merely because its library or laboratory
-    implementation exists; route, policy, service-network, abuse, privacy, rollback,
-    and independent-review gates remain separate.
+19. No remote-social effect surface becomes public merely because its library or
+    laboratory implementation exists; route, policy, service-network, abuse, privacy,
+    rollback, and independent-review gates remain separate.
+20. The current remote-social public surface is inspection-only:
+    `GET /v1/social/remote-review` derives owner from the authenticated principal,
+    returns only the G5A minimized projection, and cannot stage, admit, follow,
+    clean up, fetch, rank, recommend, or create Mesh authority.
 
 ## Residual risk and non-claims
 
@@ -433,13 +452,15 @@ security, or regulatory certification.
 
 The repository also does not claim that the merged remote-social foundations are a
 live social network. The accepted Grid still instantiates `SocialGridStore`; the
-remote-social candidate is disabled, has no public routes and no network egress;
-S3F has no deployed source endpoint or host-side relay. There is no current live
-federation, public remote Following, recommendation system, messaging system,
-production moderation service, relay/index service, public follow graph, or public
-profile hosting. A Grid export signature, transport signature, local admission, or
-private follow record does not by itself prove content truth, legal/biological
-identity, actor-key ownership, or personal authorship.
+remote-social candidate remains disabled and has no network egress; the only
+accepted public remote-social route is authenticated owner-scoped read-only
+`/v1/social/remote-review`, with no mutation, transport, recommendation, or authority
+effect; and S3F has no deployed source endpoint or host-side relay. There is no
+current live federation, public remote Following, recommendation system, messaging
+system, production moderation service, relay/index service, public follow graph, or
+public profile hosting. A Grid export signature, transport signature, local admission,
+private follow record, or G5A/G5B review response does not by itself prove content
+truth, legal/biological identity, actor-key ownership, or personal authorship.
 
 An externally retained continuity anchor makes a fully verified current Grid
 history truncation-detectable only through the newest retained anchor sequence.
@@ -466,8 +487,8 @@ The threat model must be reassessed when authentication, machine-principal
 semantics, policy, grants, Sandbox operations, Grid schemas, encryption,
 backup/recovery, service topology, container policy, provider protocol,
 node/sync behavior, telemetry, remote-social package/staging/admission/Following/
-retention/transport semantics, any social relay or public source endpoint, pilot
-evidence, release gates, or the trusted computing base changes. A prior ledger
-cannot approve another build. The
+retention/transport semantics, any social relay or public source endpoint, any
+new remote-social read/effect surface, pilot evidence, release gates, or the trusted
+computing base changes. A prior ledger cannot approve another build. The
 [independent security review procedure](INDEPENDENT-SECURITY-REVIEW.md)
 defines the exact current intake contract.
