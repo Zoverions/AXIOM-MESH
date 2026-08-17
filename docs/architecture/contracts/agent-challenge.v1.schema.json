@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/agent-challenge.v1.schema.json",
+  "title": "AXIOM Agent Challenge v1",
+  "description": "Documentation-only draft contract for a bounded public work request. It does not grant repository or AXIOM authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "challenge_id",
+    "repository",
+    "base_sha",
+    "problem",
+    "scope",
+    "acceptance",
+    "evidence_expectations",
+    "security_reporting",
+    "claim_boundary",
+    "authority_granted"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-agent-challenge.v1" },
+    "challenge_id": { "$ref": "#/$defs/id" },
+    "repository": { "$ref": "#/$defs/repository" },
+    "base_sha": { "$ref": "#/$defs/gitSha" },
+    "problem": { "$ref": "#/$defs/text" },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowed_paths", "prohibited_effects"],
+      "properties": {
+        "allowed_paths": {
+          "type": "array",
+          "maxItems": 128,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/path" }
+        },
+        "prohibited_effects": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/text" }
+        },
+        "notes": { "$ref": "#/$defs/text" }
+      }
+    },
+    "acceptance": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/text" }
+    },
+    "evidence_expectations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/text" }
+    },
+    "security_reporting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["public_safe", "private_route"],
+      "properties": {
+        "public_safe": { "type": "boolean" },
+        "private_route": { "type": "string", "minLength": 1, "maxLength": 512 }
+      }
+    },
+    "claim_boundary": { "$ref": "#/$defs/text" },
+    "authority_granted": { "const": false },
+    "expires_at": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._:-]{0,159}$"
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$",
+      "maxLength": 200
+    },
+    "gitSha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^(?!/)(?!.*\\.\\.).+$"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8000
+    }
+  }
+}
