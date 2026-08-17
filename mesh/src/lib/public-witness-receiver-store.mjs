@@ -798,9 +798,17 @@ export class PublicWitnessReceiverStore {
       if (!admissionEntry) {
         throw new ValidationError('public witness receiver transfer source epoch is not locally admitted');
       }
-      const existingByDigest = typeof transferCandidate.transfer_digest === 'string'
-        ? this.#state.transferByDigest.get(transferCandidate.transfer_digest)
-        : null;
+
+      // Recompute and verify the source-authenticated envelope before consulting replay state.
+      // Historical exact replays may arrive after source rollover or package expiry, so the
+      // envelope is allowed to be expired here; only a byte-identical, signature-valid digest
+      // already retained by this receiver can take the replay path.
+      const verifiedEnvelope = verifyPublicWitnessTransferEnvelope(transferCandidate, {
+        sourceAdmission: admissionEntry.admission,
+        now: new Date(received).valueOf(),
+        allowExpired: true
+      });
+      const existingByDigest = this.#state.transferByDigest.get(verifiedEnvelope.transfer_digest) ?? null;
       if (existingByDigest) {
         return Object.freeze({
           status: 'replay',
@@ -810,6 +818,7 @@ export class PublicWitnessReceiverStore {
           durable_record: null
         });
       }
+
       const active = this.#state.activeSource.get(sourceKey(sourceId));
       if (active !== admissionEntry) {
         throw new ValidationError('public witness receiver rejects previously unseen transfer from a stale source epoch');
@@ -912,6 +921,12 @@ export class PublicWitnessReceiverStore {
       const record = await this.#append('observation-commit', payload, payload.observation_committed_at);
       return Object.freeze({ status: 'observation-committed', durable_record: record, transfer: this.getTransfer(normalizedTransferDigest) });
     });
+  }
+
+  getSourceAdmission(admissionDigest) {
+    const normalized = digest(admissionDigest, 'public witness receiver sourceAdmissionDigest');
+    const entry = this.#state.admissionByDigest.get(normalized);
+    return entry ? structuredClone(entry.admission) : null;
   }
 
   getTransfer(transferDigest) {
@@ -1048,11 +1063,16 @@ export async function openPublicWitnessReceiverStore({
   const signing = witnessSigningKey(witnessPrivateKey);
   await ensureRegularStateFile(normalizedPath);
   const raw = await readLines(normalizedPath, normalizedMaxState, normalizedMaxRecord);
-  const records = raw.map(record => verifyPublicWitnessReceiverRecord(record, {
-    trustedWitnessPublicKey: signing.publicKey,
-    expectedDomainId: normalizedDomain,
-    expectedWitnessId: normalizedWitness
-  }));
+  // Validate every durable wire record, but retain the canonical wire shape in memory.
+  // Verification helpers may expose convenience metadata that is not part of the signed schema.
+  for (const record of raw) {
+    verifyPublicWitnessReceiverRecord(record, {
+      trustedWitnessPublicKey: signing.publicKey,
+      expectedDomainId: normalizedDomain,
+      expectedWitnessId: normalizedWitness
+    });
+  }
+  const records = raw;
   const rebuilt = rebuild(records, {
     domainId: normalizedDomain,
     witnessId: normalizedWitness,
