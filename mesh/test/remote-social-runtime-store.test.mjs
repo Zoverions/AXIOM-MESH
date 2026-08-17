@@ -110,7 +110,7 @@ function stage(store, data, {
 
 function runtimeIntent(staged, {
   owner = staged.owner,
-  principalKind = 'human',
+  principalType = 'human',
   input = remoteSocialAdmissionIntentInputFromStage(staged)
 } = {}) {
   return {
@@ -118,7 +118,7 @@ function runtimeIntent(staged, {
     input,
     purpose: REMOTE_SOCIAL_ADMISSION_PURPOSE,
     data_scopes: [REMOTE_SOCIAL_ADMISSION_DATA_SCOPE],
-    principal: { id: owner, kind: principalKind }
+    principal: { id: owner, type: principalType }
   };
 }
 
@@ -215,7 +215,7 @@ test('runtime store remains opt-in, no-egress and dual-bound', async t => {
   assert.equal(status.activation_state, 'opt-in-local-laboratory');
   assert.equal(status.intent_authority_binding, 'ordinary-intent-request-digest');
   assert.equal(status.resolved_materialization_binding, 's3d-resolved-request-digest');
-  assert.equal(status.requester_principal_kind, 'human');
+  assert.equal(status.requester_principal_type, 'human');
   assert.equal(status.independent_approval_required, true);
   assert.equal(status.approval_consumption, 'atomic-with-admission');
   assert.equal(status.network_egress, false);
@@ -304,14 +304,18 @@ test('stage-summary substitution fails before approval consumption or admission'
   `).get(REMOTE_SOCIAL_RUNTIME_ADMISSION_EVENT).count, 0);
 });
 
-test('runtime admission requires the exact human owner principal', async t => {
+test('runtime admission requires the exact canonical human owner principal type', async t => {
   const setup = await storeFixture();
   t.after(async () => {
     setup.store.close();
     await rm(setup.root, { recursive: true, force: true });
   });
   const staged = stage(setup.store, remotePackageFixture());
-  const intent = runtimeIntent(staged, { principalKind: 'agent' });
+  const humanIntent = runtimeIntent(staged);
+  assert.equal(humanIntent.principal.type, 'human');
+  assert.equal(humanIntent.principal.kind, undefined);
+
+  const intent = runtimeIntent(staged, { principalType: 'agent' });
   const authority = grantRuntimeAuthority(setup.store, staged, { intent });
   assert.throws(
     () => setup.store.admitRemoteSocialStageWithIntent({
