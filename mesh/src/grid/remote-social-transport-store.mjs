@@ -63,7 +63,7 @@ export class RemoteSocialTransportGridStore extends RemoteSocialGridStore {
     trustedExporterPublicKey,
     expectedExporterGridId,
     trustLabel,
-    plannedAt = new Date().toISOString(),
+    plannedAt,
     expiresAt,
     maximumAttempts = 5,
     retryBaseMs = 1_000,
@@ -87,7 +87,10 @@ export class RemoteSocialTransportGridStore extends RemoteSocialGridStore {
       expectedExporterGridId,
       'remote social exporter Grid id'
     );
-    const planned = canonicalTimestamp(plannedAt, 'remote social transport planned_at');
+    const planned = canonicalTimestamp(
+      plannedAt ?? new Date(now).toISOString(),
+      'remote social transport planned_at'
+    );
     const expires = canonicalTimestamp(expiresAt, 'remote social transport expires_at');
     const plannedMs = Date.parse(planned);
     const expiresMs = Date.parse(expires);
@@ -257,6 +260,9 @@ export class RemoteSocialTransportGridStore extends RemoteSocialGridStore {
 
     const leased = this.claimTransportJob(row, timeoutMs, now);
     row = leased.row;
+    if (row.status === 'staged') {
+      return this.decodeRemoteSocialTransportJob(row);
+    }
     const requestNonce = randomUUID();
     try {
       const envelope = await fetchSocialTransportEnvelope({
