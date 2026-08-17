@@ -463,6 +463,20 @@ The current executable laboratories remain outside supported Grid authority:
   source-epoch rollback/same-epoch replacement/skip rejection, duplicate
   certificate/source rejection, root substitution rejection, missing retained
   source rejection, and bounded regular-file loading;
+- `mesh/src/lib/public-witness-ingress-control.mjs` adds W2c4b as a content-
+  addressed local listener-lifecycle control laboratory. Control generations
+  bind the exact receiver domain, predecessor control digest, effective time,
+  enabled/disabled state, and—only when enabled—the exact W2c4a trust-bundle
+  digest. Disabled control carries no active trust bundle and creates no
+  listener;
+- `mesh/test/public-witness-ingress-control.test.mjs` and
+  `mesh/test/public-witness-ingress-control-restore.test.mjs` verify disabled →
+  enabled → disabled → re-enabled mTLS lifecycle, preserved W2c2 history and
+  replay, live certificate trust rotation, wrong-domain and mismatched-bundle
+  rejection, trust/control activation ordering, candidate preflight, control-
+  chain validation, restart reconstruction without replaying historical
+  listeners, rejection of future-ended active history, and bounded regular-file
+  loading;
 - `npm run public-witness:start -- <config.json>` and
   `npm run public-witness:verify -- <config.json>` operate the W2b standalone
   local laboratory without adding it to the four-process Grid runtime;
@@ -470,10 +484,11 @@ The current executable laboratories remain outside supported Grid authority:
   reviewed deployment wrapper explicitly changes that boundary. It performs no
   DNS/peer discovery or outbound fetch and exposes no source-admission or
   persona-root enrollment endpoint; and
-- the accepted no-egress social storage composition remains unchanged. W2c3 and
-  W2c4a are not imported into the supported Grid/Gateway/Hypervisor/Sandbox
-  runtime and do not promote federation, archive availability, quorum,
-  consensus, finality, social mutation, or any capability-registry claim.
+- the accepted no-egress social storage composition remains unchanged. W2c3,
+  W2c4a, and W2c4b are not imported into the supported
+  Grid/Gateway/Hypervisor/Sandbox runtime and do not promote federation, archive
+  availability, quorum, consensus, finality, social mutation, or any capability-
+  registry claim.
 
 A persona journal attestation binds the exact social entry digest, persona and
 public persona-projection digest, Ed25519 signing-key digest, monotonic sequence,
@@ -721,12 +736,52 @@ W2c4a deliberately does **not** solve W2c2 source-admission provisioning or
 lifecycle authority. A source artifact being retained by W2c2 is not represented
 as a new global, remote, or operator-created identity claim, and W2c2 remains the
 final source-epoch/signature/continuity enforcement point on transfer intake.
-Direct source-admission lifecycle hardening, including monotonic operator
-rotation semantics and explicit disable/revocation behavior, remains the next
-prerequisite before any public deployment wrapper. The bundle digest provides
+The W2c2 durable trial replay already enforces source-admission genesis at epoch
+1, exact `+1` source-epoch rotation, exact supersedes binding, and advancing
+activation time before append. A dedicated operator-facing source-admission
+provisioning/rotation/disable surface remains separate future work rather than
+being smuggled into ingress trust configuration. The bundle digest provides
 content integrity and predecessor history for local configuration; it is not a
 claim that a hostile local administrator or compromised host cannot rewrite the
 local trust policy, nor is it consensus or distributed finality.
+
+W2c4b adds a separate **operator-local listener lifecycle control laboratory**
+so trust history and network exposure are not conflated. A content-addressed
+control binds the exact receiver domain, a monotonic control generation, exact
+predecessor-control digest, effective time, and either `enabled` or `disabled`.
+An enabled control binds one exact W2c4a trust-bundle digest; a disabled control
+must carry no trust-bundle digest and therefore permits a complete inbound
+listener shutdown without deleting source history, removing witness evidence,
+or fabricating a replacement admission.
+
+Live control transitions require the exact active predecessor control and
+advance one generation with a strictly later effective time. An enabled control
+may not take effect before its bound trust bundle activates. Trust and listener
+candidates are verified before the active listener is closed, so malformed,
+wrong-domain, future, mismatched-bundle, or otherwise invalid control changes do
+not take down a valid current listener. If a valid replacement passes preflight
+but the replacement socket later cannot bind, the laboratory fails closed with
+no listener rather than silently reverting to stale trust or representing the
+new listener as active.
+
+Restart reconstructs listener state from an explicitly supplied, validated
+control chain rather than replaying historical network effects. The persisted
+**active** chain must end at a control whose effective time has already arrived.
+A future scheduled control is not allowed to sit at the end of committed active
+history and be silently ignored during restart; future scheduling must remain a
+separate pending input until it becomes effective. This prevents restart from
+forgetting a previously committed future branch and later accepting a competing
+transition at the same generation.
+
+Disabling stops new listener acceptance and waits for the underlying server
+close path; it does not claim to cancel an operation already committed by W2c2
+or to instantaneously abort every request already in flight. Runtime teardown
+through the controller's `close()` can also leave the configured control state
+visible as enabled while `listening: false`; the snapshot therefore separates
+configured state from actual listener state rather than inferring exposure from
+configuration alone. W2c4b remains loopback/standalone laboratory work and does
+not add a public deployment wrapper, remote trust enrolment, outbound fetch,
+discovery, social authority, archive availability, consensus, or finality.
 
 A witness receipt means that the named witness key observed and verified one
 exact signed journal artifact. It does not prove content truth, legal identity,
@@ -758,22 +813,24 @@ The staged roadmap is:
    is supplied, and credential-aware journal v2 continuity;
 3. **W2 — witness service laboratory (W2a evidence core, W2b durable local
    process, W2c1 source-transfer protocol, W2c2 durable receiver/reconciliation,
-   W2c3 receive-only authenticated mTLS ingress, and W2c4a local ingress trust
-   bundles implemented):** the current work provides signed observations,
-   idempotent replay, equivocation/stale-key evidence, witness-signed append-only
-   local state, deterministic fail-closed restart, bounded stdin/stdout IPC,
-   explicit local source admission, source-signed transfer continuity, source-
-   equivocation evidence, separate persona-root trust, historically auditable
-   transfer receipts, restart-safe receiver source-chain/replay state, verified
-   replay, pending-observation separation, crash-window receiver↔witness
-   reconciliation, exact certificate-to-source-epoch transport binding, bounded
-   HTTPS intake, mTLS socket fault evidence, and content-addressed generation-
-   chained local ingress trust bindings that cannot mint receiver source trust.
-   Remaining W2 work includes W2c2 source-admission provisioning/rotation/
-   disable lifecycle hardening, a separately reviewed public deployment wrapper
-   if justified, discovery/outbound acquisition policy if justified,
-   independently operated hosts, broader remote abuse/resource testing, and
-   multi-witness evidence exchange without Grid authority;
+   W2c3 receive-only authenticated mTLS ingress, W2c4a local ingress trust
+   bundles, and W2c4b local listener lifecycle controls implemented):** the
+   current work provides signed observations, idempotent replay,
+   equivocation/stale-key evidence, witness-signed append-only local state,
+   deterministic fail-closed restart, bounded stdin/stdout IPC, explicit local
+   source admission, source-signed transfer continuity, source-equivocation
+   evidence, separate persona-root trust, historically auditable transfer
+   receipts, restart-safe receiver source-chain/replay state, verified replay,
+   pending-observation separation, crash-window receiver↔witness reconciliation,
+   exact certificate-to-source-epoch transport binding, bounded HTTPS intake,
+   mTLS socket fault evidence, content-addressed generation-chained local ingress
+   trust bindings that cannot mint receiver source trust, and generation-chained
+   explicit listener enable/disable controls with restart reconstruction. The
+   remaining W2 work includes a dedicated operator-facing W2c2 source-admission
+   provisioning/rotation/disable surface, a separately reviewed public
+   deployment wrapper if justified, discovery/outbound acquisition policy if
+   justified, independently operated hosts, broader remote abuse/resource
+   testing, and multi-witness evidence exchange without Grid authority;
 4. **W3 — archive and availability laboratory:** independently operated public
    object retention with explicit availability and legal-removal semantics;
 5. **W4 — optional checkpoint agreement adapter:** evaluate threshold/BFT
@@ -784,8 +841,9 @@ The staged roadmap is:
    witness observations/conflicts, durable witness records, source admissions,
    source transfer chains/equivocation, package-verification receipts, durable
    receiver intake/linkage records, authenticated transport bindings, ingress
-   trust-bundle generations, checkpoints, availability, and any optional
-   finality certificate while preserving explicit non-claims; and
+   trust-bundle generations, ingress lifecycle control generations and listener
+   state claims, checkpoints, availability, and any optional finality
+   certificate while preserving explicit non-claims; and
 7. **W6 — promotion:** only after applicable protocol, security, privacy,
    operational, scale, governance, and independent-review gates pass.
 
@@ -797,9 +855,10 @@ the same rule to an admitted source that signs competing transfer packages at
 one source position, with W2c2 durably retaining the conflict across restart and
 W2c3 proving the same result survives authenticated socket delivery. W2c4a
 cannot resolve or suppress that conflict because it binds ingress trust only and
-does not select a preferred source artifact. Future multi-witness and agreement
-protocols must preserve both forms of conflict rather than silently select a
-winner.
+does not select a preferred source artifact. W2c4b likewise controls only local
+listener exposure and cannot erase, select, or rewrite source or persona
+conflicts. Future multi-witness and agreement protocols must preserve both forms
+of conflict rather than silently select a winner.
 
 ## Required future agreement interface
 
