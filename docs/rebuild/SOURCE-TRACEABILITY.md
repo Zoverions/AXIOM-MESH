@@ -4,7 +4,7 @@
 
 **Status:** current requirements-to-implementation trace
 
-**Updated:** 2026-08-16
+**Updated:** 2026-08-17
 
 ## Purpose
 
@@ -49,14 +49,15 @@ repository-effect resolver/outbox/operator chain, and Agent Runtime Adapter v1.
 | Machine principals | machine principal normalization, principal registry, Gateway/Hypervisor/Sandbox enforcement | machine principal/e2e/concurrency/response/destination tests | Human-sponsored finite scopes/actions/purposes/destinations, runtime/expiry/non-delegation, execution-time/request-size/rate/concurrency/response-size ceilings; runtime digest is metadata, not attestation |
 | Machine discovery | Gateway `/v1/machine-discovery`, policy evaluator | discovery unit/e2e/client/network tests | Caller-specific requestability only; explicitly not authorization |
 | Machine receipts | Grid terminal-receipt builder + verifier | receipt unit/e2e/client/network tests | Owner-scoped digest-only Grid attestation; not arbitrary external-world truth |
-| Gateway client | client contract/schema/library | route parity/compatibility/error/cancel/timeout/response-bound/real-stack tests | All 30 authenticated Gateway routes are versioned; no direct internal-service target |
+| Gateway client | client contract/schema/library | route parity/compatibility/error/cancel/timeout/response-bound/real-stack tests | All 31 authenticated Gateway routes are versioned; no direct internal-service target |
 | Owner-local social surface | social actor/persona/publication intent runtime, Gateway `/v1/social` snapshot | component + real four-service write/read/isolation tests | One current local actor/custodian and one active persona/actor; A2 non-raw publication projection; owner-derived read; no federation/network distribution |
+| Remote social review inspection | `mesh/src/grid/remote-social-review-read-adapter.mjs`, Grid internal owner route, Gateway `/v1/social/remote-review` | read-adapter + exact-contract + real four-service owner/isolation/no-schema tests | Owner is derived only from authenticated principal; query overrides fail; minimized G5A projection only; accepted Grid remains `SocialGridStore`; no remote schema creation, mutation, staging, admission, Following, cleanup, transport, ranking, recommendation, federation, or authority effect |
 | AXIOM One | `apps/axiom-one/`, explanation contract/presenter, proxy | policy/static/explanation/approval/uncertainty/real-stack tests | Experimental bounded owner-memory/provenance shell; local social UI not yet integrated; not supported product |
 | Policy | `mesh/config/policy.json`, layered policy | policy/IAM tests | Deny-dominant; high-risk effects require independent approval where configured |
 | Grid durability | Grid store/migrations/evidence/protection | restart/migration/tamper/wrong-key/backup/rotation tests | Encrypted single-Grid state, signed hash-linked evidence; no replicated consensus |
 | Grid continuity | continuity-anchor implementation + Grid verifier/operator flow | anchor creation/verification/negative tests | `axiom-grid-continuity-anchor.v1` retained outside `AXIOM_DATA_DIR` proves current history equals/extends retained head through that sequence only |
 | Transport | transport runtime/provisioning | mTLS/rotation drills | TLS 1.3, Ed25519 leaves, identity checks, active-leaf pinning, signed caller binding, rollback |
-| Service network policy | network policy/request authorizer/unit Compose | policy and required/forbidden-edge tests | Default deny, 40 exact routes, derived mTLS peers, four internal segments |
+| Service network policy | network policy/request authorizer/unit Compose | policy and required/forbidden-edge tests | Default deny, 41 exact routes, derived mTLS peers, four internal segments |
 | Deployment topology | supervisor/production Compose/unit Compose | host/container/service-unit drills | Hardened single host; no multi-host/failover claim |
 | Providers | provider runtime/supervisor/reference adapter | provider tests/drill | Signed exact inventories/private startup generation; no vendor custody/live-refresh claim |
 | Agent Runtime Adapter v1 | `docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md`, v1 schema | contract verifier, negative tests, 28-case synthetic drill | Replaceable-runtime contract only; no external runtime loaded or certified |
@@ -74,7 +75,7 @@ repository-effect resolver/outbox/operator chain, and Agent Runtime Adapter v1.
 | Node scheduling | node registry/scheduler | scheduling tests/drill | Signed admission + deterministic reservations; no remote dispatch |
 | Causal exchange | online causal sync | two-real-stack partition/rejoin drill | Approved encrypted causal record transport; no federation/consensus |
 | Portability/consent | consent/export/import/encryption | kernel/e2e tests | Scoped signed export/staged foreign-provenance import |
-| Release/documentation | release verifier/check-docs/current-state doc tests/workflows | `npm run setup`, `npm run release:verify`, protected CI | Canonical docs/links, 30 Gateway routes, 40 network routes, capability counts, runtime-adapter lock, current narrative invariants |
+| Release/documentation | release verifier/check-docs/current-state doc tests/workflows | `npm run setup`, `npm run release:verify`, protected CI | Canonical docs/links, 31 Gateway routes, 41 network routes, capability counts, runtime-adapter lock, current narrative invariants |
 
 ## Repository-effect activation boundary
 
@@ -146,12 +147,12 @@ provenance but do not govern `0.12.0-dev.3`.
 ## Coverage result
 
 Current traceability covers the four-service kernel, machine-principal surface,
-owner-local social actor/persona/publication surface, Grid continuity,
-production packaging, transport/network policy, recovery,
-telemetry/resilience, scheduling/causal exchange, provider startup, pilot and
-security-review intake, runtime-adapter contract, and the complete current
-**production-unreachable** repository planning/resolver/preparation/outbox/
-draft-PR-operator chain.
+owner-local social actor/persona/publication surface plus the owner-only
+read-only remote-review inspection surface, Grid continuity, production
+packaging, transport/network policy, recovery, telemetry/resilience,
+scheduling/causal exchange, provider startup, pilot and security-review intake,
+runtime-adapter contract, and the complete current **production-unreachable**
+repository planning/resolver/preparation/outbox/draft-PR-operator chain.
 
 No archive, roadmap statement, release note, synthetic fixture, draft PR, or
 source presence can promote a capability beyond the registry and its explicit
