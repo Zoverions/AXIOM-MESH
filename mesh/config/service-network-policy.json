@@ -190,6 +190,10 @@
         {
           "method": "POST",
           "path": "/internal/v1/commit"
+        },
+        {
+          "method": "POST",
+          "path": "/internal/v1/social/remote-admit"
         }
       ]
     },
