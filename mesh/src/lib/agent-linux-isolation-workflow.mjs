@@ -3,7 +3,11 @@ import { sha256, ValidationError } from './canonical.mjs';
 export const AGENT_LINUX_ISOLATION_WORKFLOW_PATH =
   '.github/workflows/agent-linux-isolation.yml';
 
-const PINNED_ACTION = /@[a-f0-9]{40}$/;
+const EXPECTED_ACTION_REFERENCES = Object.freeze([
+  'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
+  'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020',
+  'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a'
+]);
 
 export function verifyAgentLinuxIsolationWorkflow(workflow) {
   if (typeof workflow !== 'string' || workflow.length < 1) {
@@ -66,18 +70,25 @@ export function verifyAgentLinuxIsolationWorkflow(workflow) {
     }
   }
 
-  const actionReferences = [...workflow.matchAll(/^\s*-\s+uses:\s+([^\s#]+)/gm)]
-    .map(match => match[1]);
+  const actionReferences = [...workflow.matchAll(
+    /^[ \t]*(?:-[ \t]+)?uses:[ \t]+([^\s#]+)/gm
+  )].map(match => match[1]);
   if (
-    actionReferences.length !== 3
-    || actionReferences.some(reference => !PINNED_ACTION.test(reference))
+    actionReferences.length !== EXPECTED_ACTION_REFERENCES.length
+    || actionReferences.some((reference, index) => (
+      reference !== EXPECTED_ACTION_REFERENCES[index]
+    ))
   ) {
     throw new ValidationError(
-      'Agent Linux isolation workflow must use exactly three immutable action references'
+      'Agent Linux isolation workflow must use exactly the reviewed immutable action references'
     );
   }
 
-  const jobs = [...workflow.matchAll(/^  ([a-z0-9_-]+):\s*$/gm)]
+  const jobsSection = workflow.split('\njobs:\n');
+  if (jobsSection.length !== 2) {
+    throw new ValidationError('Agent Linux isolation workflow must contain one jobs section');
+  }
+  const jobs = [...jobsSection[1].matchAll(/^  ([a-z0-9_-]+):[ \t]*$/gm)]
     .map(match => match[1]);
   if (jobs.length !== 1 || jobs[0] !== 'conformance') {
     throw new ValidationError(
@@ -93,6 +104,7 @@ export function verifyAgentLinuxIsolationWorkflow(workflow) {
     github_secrets_referenced: false,
     fixed_probe_only: true,
     production_provisioning_reachable: false,
+    action_references: EXPECTED_ACTION_REFERENCES,
     workflow_sha256: sha256(workflow)
   });
 }
