@@ -28,7 +28,8 @@ test('infrastructure discovery points only to existing bounded contracts', async
     discovery.executor_dry_run_plan_contract,
     discovery.executor_conformance_receipt_contract,
     discovery.executor_durable_state_record_contract,
-    discovery.executor_durable_state_receipt_contract
+    discovery.executor_durable_state_receipt_contract,
+    discovery.executor_isolation_profile_contract
   ];
   for (const path of contractPaths) {
     assert.equal(typeof path, 'string');
@@ -47,7 +48,8 @@ test('infrastructure discovery points only to existing bounded contracts', async
     [discovery.executor_dry_run_plan_contract, 'agent-executor-dry-run-plan.v1.schema.json', 'axiom-agent-executor-dry-run-plan.v1'],
     [discovery.executor_conformance_receipt_contract, 'agent-executor-conformance-receipt.v1.schema.json', 'axiom-agent-executor-conformance-receipt.v1'],
     [discovery.executor_durable_state_record_contract, 'agent-executor-durable-state-record.v1.schema.json', 'axiom-agent-executor-durable-state-record.v1'],
-    [discovery.executor_durable_state_receipt_contract, 'agent-executor-durable-state-receipt.v1.schema.json', 'axiom-agent-executor-durable-state-receipt.v1']
+    [discovery.executor_durable_state_receipt_contract, 'agent-executor-durable-state-receipt.v1.schema.json', 'axiom-agent-executor-durable-state-receipt.v1'],
+    [discovery.executor_isolation_profile_contract, 'agent-executor-isolation-profile.v1.schema.json', 'axiom-agent-executor-isolation-profile.v1']
   ];
   for (const [path, idSuffix, schema] of identities) {
     const contract = await readJson(path);
@@ -89,6 +91,30 @@ test('infrastructure discovery points only to existing bounded contracts', async
     assert.equal(durableThreatModel.boundaries[key], false, `durable threat-model boundary ${key} must remain false`);
   }
 
+  const isolationCatalog = await readJson(discovery.executor_isolation_policy_catalog);
+  assert.equal(isolationCatalog.schema, 'axiom-agent-executor-isolation-policy-catalog.v1');
+  assert.deepEqual(Object.keys(isolationCatalog.profiles), ['linux', 'macos', 'windows']);
+  assert.ok(Array.isArray(isolationCatalog.common_controls));
+  assert.ok(isolationCatalog.common_controls.length >= 15);
+  for (const policy of Object.values(isolationCatalog.profiles)) {
+    assert.equal(policy.hosted_ci_sufficient, false);
+    assert.equal(policy.physical_device_evidence_required_before_production_promotion, true);
+  }
+  for (const key of Object.keys(isolationCatalog.boundaries)) {
+    assert.equal(isolationCatalog.boundaries[key], false, `isolation catalog boundary ${key} must remain false`);
+  }
+
+  const isolationThreatModel = await readJson(discovery.executor_isolation_threat_model);
+  assert.equal(isolationThreatModel.schema, 'axiom-agent-executor-isolation-threat-model.v1');
+  assert.equal(isolationThreatModel.phase, 'platform-isolation-profile-pre-effect');
+  assert.ok(Array.isArray(isolationThreatModel.attack_classes));
+  assert.ok(isolationThreatModel.attack_classes.length >= 16);
+  assert.ok(Array.isArray(isolationThreatModel.promotion_blockers));
+  assert.ok(isolationThreatModel.promotion_blockers.length >= 8);
+  for (const key of Object.keys(isolationThreatModel.boundaries)) {
+    assert.equal(isolationThreatModel.boundaries[key], false, `isolation threat-model boundary ${key} must remain false`);
+  }
+
   assert.deepEqual(discovery.challenge_classes, [
     'hardware-validation',
     'test-node-provisioning',
@@ -104,12 +130,16 @@ test('infrastructure discovery points only to existing bounded contracts', async
   assert.equal(discovery.executor_dry_run_compiler_available, true);
   assert.equal(discovery.executor_conformance_virtual_sandbox_available, true);
   assert.equal(discovery.executor_durable_state_lab_available, true);
+  assert.equal(discovery.executor_isolation_profile_validation_available, true);
   assert.equal(discovery.executor_durable_control_state_filesystem_write_enabled, true);
 
   for (const key of [
     'executor_dry_run_effects_reachable',
     'executor_conformance_real_effects_reachable',
     'executor_durable_state_real_effects_reachable',
+    'executor_isolation_real_effects_reachable',
+    'platform_isolation_verified',
+    'hosted_ci_physical_device_proof',
     'test_session_effects_reachable',
     'production_lifecycle_persistence_enabled',
     'production_executor_persistence_enabled',
