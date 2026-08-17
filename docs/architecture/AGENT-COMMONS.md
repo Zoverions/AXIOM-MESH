@@ -61,7 +61,7 @@ The first draft object family is deliberately small:
 5. `axiom-agent-infrastructure-challenge.v1` — an exact-base hardware or infrastructure test plan;
 6. `axiom-agent-infrastructure-result.v1` — a bounded infrastructure result and evidence envelope.
 
-Schemas live under `docs/architecture/contracts/`.
+The supported core contribution schemas live under `docs/architecture/contracts/`. The experimental infrastructure-lab exchange schemas remain under `agent-commons/contracts/` until that layer is separately promoted into the supported documentation boundary.
 
 These are exchange contracts, not proof that an external agent, runtime, identity, network, or offered device is trustworthy.
 
