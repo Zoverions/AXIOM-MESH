@@ -38,11 +38,12 @@ test('candidate descriptor is explicit about disabled no-egress activation state
   assert.equal(REMOTE_SOCIAL_RUNTIME_CANDIDATE.admission_included, true);
   assert.equal(REMOTE_SOCIAL_RUNTIME_CANDIDATE.following_included, true);
   assert.equal(REMOTE_SOCIAL_RUNTIME_CANDIDATE.retention_included, true);
+  assert.equal(REMOTE_SOCIAL_RUNTIME_CANDIDATE.abuse_controls_included, true);
   assert.equal(REMOTE_SOCIAL_RUNTIME_CANDIDATE.automatic_federation, false);
   assert.equal(REMOTE_SOCIAL_RUNTIME_CANDIDATE.automatic_admission, false);
   assert.equal(REMOTE_SOCIAL_RUNTIME_CANDIDATE.automatic_follow, false);
   assert.ok(REMOTE_SOCIAL_RUNTIME_CANDIDATE.remaining_activation_gates.includes('threat-model'));
-  assert.ok(REMOTE_SOCIAL_RUNTIME_CANDIDATE.remaining_activation_gates.includes('abuse-controls'));
+  assert.equal(REMOTE_SOCIAL_RUNTIME_CANDIDATE.remaining_activation_gates.includes('abuse-controls'), false);
   assert.ok(REMOTE_SOCIAL_RUNTIME_CANDIDATE.remaining_activation_gates.includes('transport-relay-separation'));
 });
 
@@ -61,13 +62,16 @@ test('accepted SocialGridStore remains remote-schema-free', async t => {
     'remote_social_observations',
     'remote_social_follows',
     'remote_social_retention_receipts',
+    'remote_social_abuse_preferences',
+    'remote_social_reports',
+    'remote_social_quarantines',
     'remote_social_transport_jobs'
   ]) {
     assert.equal(tables.has(name), false, `${name} unexpectedly enabled`);
   }
 });
 
-test('candidate composes staging, admission, following and retention but no transport', async t => {
+test('candidate composes staging, admission, following, retention and abuse controls but no transport', async t => {
   const setup = await storeFixture(RemoteSocialRuntimeCandidateGridStore);
   t.after(async () => {
     setup.store.close();
@@ -78,6 +82,7 @@ test('candidate composes staging, admission, following and retention but no tran
   assert.equal(status.remote_social_admission_schema_version, 1);
   assert.equal(status.remote_social_following_schema_version, 1);
   assert.equal(status.remote_social_retention_schema_version, 1);
+  assert.equal(status.remote_social_abuse_schema_version, 1);
   assert.deepEqual(status.remote_social_runtime_candidate, REMOTE_SOCIAL_RUNTIME_CANDIDATE);
 
   for (const method of [
@@ -87,7 +92,16 @@ test('candidate composes staging, admission, following and retention but no tran
     'unfollowRemotePersona',
     'getChronologicalFollowing',
     'getRemoteSocialRetentionAssessment',
-    'expireUnadmittedRemoteSocialStage'
+    'expireUnadmittedRemoteSocialStage',
+    'muteRemotePersona',
+    'unmuteRemotePersona',
+    'blockRemotePersona',
+    'unblockRemotePersona',
+    'reportRemoteObservation',
+    'quarantineRemoteExporter',
+    'releaseRemoteExporterQuarantine',
+    'quarantineRemoteSource',
+    'releaseRemoteSourceQuarantine'
   ]) {
     assert.equal(typeof setup.store[method], 'function', `${method} missing from candidate`);
   }
@@ -114,5 +128,6 @@ test('accepted Grid server remains hard-bound to SocialGridStore and cannot sele
   assert.match(source, /new SocialGridStore\s*\(/);
   assert.equal(source.includes('RemoteSocialRuntimeCandidateGridStore'), false);
   assert.equal(source.includes('remote-social-runtime-candidate.mjs'), false);
+  assert.equal(source.includes('remote-social-abuse-store.mjs'), false);
   assert.equal(source.includes('AXIOM_REMOTE_SOCIAL'), false);
 });
