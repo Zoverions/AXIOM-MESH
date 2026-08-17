@@ -25,7 +25,8 @@ test('infrastructure discovery points only to existing bounded contracts', async
     discovery.test_session_lifecycle_receipt_contract,
     discovery.test_session_lifecycle_transcript_contract,
     discovery.executor_platform_profile_contract,
-    discovery.executor_dry_run_plan_contract
+    discovery.executor_dry_run_plan_contract,
+    discovery.executor_conformance_receipt_contract
   ];
   for (const path of contractPaths) {
     assert.equal(typeof path, 'string');
@@ -41,7 +42,8 @@ test('infrastructure discovery points only to existing bounded contracts', async
     [discovery.test_session_lifecycle_receipt_contract, 'agent-test-session-lifecycle-receipt.v1.schema.json', 'axiom-agent-test-session-lifecycle-receipt.v1'],
     [discovery.test_session_lifecycle_transcript_contract, 'agent-test-session-lifecycle-transcript.v1.schema.json', 'axiom-agent-test-session-lifecycle-transcript.v1'],
     [discovery.executor_platform_profile_contract, 'agent-executor-platform-profile.v1.schema.json', 'axiom-agent-executor-platform-profile.v1'],
-    [discovery.executor_dry_run_plan_contract, 'agent-executor-dry-run-plan.v1.schema.json', 'axiom-agent-executor-dry-run-plan.v1']
+    [discovery.executor_dry_run_plan_contract, 'agent-executor-dry-run-plan.v1.schema.json', 'axiom-agent-executor-dry-run-plan.v1'],
+    [discovery.executor_conformance_receipt_contract, 'agent-executor-conformance-receipt.v1.schema.json', 'axiom-agent-executor-conformance-receipt.v1']
   ];
   for (const [path, idSuffix, schema] of identities) {
     const contract = await readJson(path);
@@ -58,6 +60,17 @@ test('infrastructure discovery points only to existing bounded contracts', async
     assert.equal(threatModel.boundaries[key], false, `threat-model boundary ${key} must remain false`);
   }
 
+  const conformanceThreatModel = await readJson(discovery.executor_conformance_threat_model);
+  assert.equal(conformanceThreatModel.schema, 'axiom-agent-executor-conformance-threat-model.v1');
+  assert.equal(conformanceThreatModel.phase, 'executor-conformance-virtual-sandbox');
+  assert.ok(Array.isArray(conformanceThreatModel.attack_classes));
+  assert.ok(conformanceThreatModel.attack_classes.length >= 15);
+  assert.ok(Array.isArray(conformanceThreatModel.promotion_blockers));
+  assert.ok(conformanceThreatModel.promotion_blockers.length >= 6);
+  for (const key of Object.keys(conformanceThreatModel.boundaries)) {
+    assert.equal(conformanceThreatModel.boundaries[key], false, `conformance threat-model boundary ${key} must remain false`);
+  }
+
   assert.deepEqual(discovery.challenge_classes, [
     'hardware-validation',
     'test-node-provisioning',
@@ -71,9 +84,11 @@ test('infrastructure discovery points only to existing bounded contracts', async
   assert.equal(discovery.test_session_lifecycle_evidence_available, true);
   assert.equal(discovery.test_session_lifecycle_receipts_available, true);
   assert.equal(discovery.executor_dry_run_compiler_available, true);
+  assert.equal(discovery.executor_conformance_virtual_sandbox_available, true);
 
   for (const key of [
     'executor_dry_run_effects_reachable',
+    'executor_conformance_real_effects_reachable',
     'test_session_effects_reachable',
     'production_lifecycle_persistence_enabled',
     'remote_execution_enabled',
