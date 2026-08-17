@@ -74,3 +74,21 @@ test('release governance rejects removal of the exact receipt re-verification ca
     /missing governed boundary/i
   );
 });
+
+test('release governance rejects any extra action or second job', async () => {
+  const workflow = await workflowText();
+  const extraAction = workflow.replace(
+    '      - name: Upload Linux isolation conformance evidence',
+    '      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830\n      - name: Upload Linux isolation conformance evidence'
+  );
+  assert.throws(
+    () => verifyAgentLinuxIsolationWorkflow(extraAction),
+    /immutable action references/i
+  );
+
+  const secondJob = `${workflow}\n  production:\n    runs-on: ubuntu-24.04\n    steps: []\n`;
+  assert.throws(
+    () => verifyAgentLinuxIsolationWorkflow(secondJob),
+    /expose only the conformance job/i
+  );
+});
