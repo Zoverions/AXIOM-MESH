@@ -30,6 +30,7 @@ import {
   validateGatewayClientContractSchema,
   validateGatewayClientRouteImplementation
 } from './lib/gateway-client-contract.mjs';
+import { verifyAgentLinuxIsolationWorkflow } from './lib/agent-linux-isolation-workflow.mjs';
 import { checkAxiomOnePreview } from './check-axiom-one.mjs';
 
 const REPOSITORY_ROOT = dirname(MESH_ROOT);
@@ -122,6 +123,12 @@ export async function verifyReleaseReadiness() {
     productionDocs: join(MESH_ROOT, 'PRODUCTION.md'),
     workflow: join(REPOSITORY_ROOT, '.github', 'workflows', 'kernel.yml'),
     windowsWorkflow: join(REPOSITORY_ROOT, '.github', 'workflows', 'windows.yml'),
+    linuxIsolationWorkflow: join(
+      REPOSITORY_ROOT,
+      '.github',
+      'workflows',
+      'agent-linux-isolation.yml'
+    ),
     benchmarkWorkflow: join(
       REPOSITORY_ROOT,
       '.github',
@@ -158,6 +165,7 @@ export async function verifyReleaseReadiness() {
     productionDocs,
     workflow,
     windowsWorkflow,
+    linuxIsolationWorkflow,
     repositoryIgnore
   ] = await Promise.all([
     readJson(paths.registry),
@@ -187,6 +195,7 @@ export async function verifyReleaseReadiness() {
     readFile(paths.productionDocs, 'utf8'),
     readFile(paths.workflow, 'utf8'),
     readFile(paths.windowsWorkflow, 'utf8'),
+    readFile(paths.linuxIsolationWorkflow, 'utf8'),
     readFile(paths.repositoryIgnore, 'utf8')
   ]);
   const registryResult = validateCapabilityRegistry(registry);
@@ -313,6 +322,9 @@ export async function verifyReleaseReadiness() {
       repositoryIgnore
     }),
     windows_compatibility: verifyWindowsWorkflow(windowsWorkflow),
+    agent_linux_isolation_conformance: verifyAgentLinuxIsolationWorkflow(
+      linuxIsolationWorkflow
+    ),
     service_network_policy: {
       schema: serviceNetwork.schema,
       policy_digest: serviceNetwork.policy_digest,
@@ -341,6 +353,7 @@ export async function verifyReleaseReadiness() {
     .filter(name => name.endsWith('.yml') || name.endsWith('.yaml'))
     .sort();
   const governedWorkflows = [
+    'agent-linux-isolation.yml',
     'chain-verification-benchmark.yml',
     'kernel.yml',
     'windows.yml'
@@ -374,6 +387,7 @@ export async function verifyReleaseReadiness() {
     paths.productionDocs,
     paths.workflow,
     paths.windowsWorkflow,
+    paths.linuxIsolationWorkflow,
     paths.benchmarkWorkflow,
     paths.repositoryIgnore,
     ...CANONICAL_DOCUMENTS.map(path => join(REPOSITORY_ROOT, path))
