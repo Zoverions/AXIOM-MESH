@@ -1,7 +1,7 @@
 # AXIOM-MESH Production Execution Queue
 
 **Status:** canonical active queue
-**Updated:** 2026-08-12
+**Updated:** 2026-08-16
 **Current kernel:** `0.12.0-dev.3`
 **Current stage:** production candidate; not production-promoted
 
@@ -75,13 +75,14 @@ explicitly opened.
 
 | ID | Status | Work | Acceptance evidence |
 |---|---|---|---|
-| UX-001 | Complete | Versioned Gateway client contract | Machine contract and reviewed schema cover all 29 authenticated routes; relative-only targets; explicit errors; bounded request/response/timeout; cancellation/idempotency; real-stack compatibility |
-| UX-002 | In progress | AXIOM One local browser/PWA shell | Loopback-only proxy, memory-only token, bounded Ask/Vault/receipt/raw-evidence views; onboarding/session/device/accessibility/package work remains |
+| UX-001 | Complete | Versioned Gateway client contract | Machine contract and reviewed schema cover all 30 authenticated routes; relative-only targets; explicit errors; bounded request/response/timeout; cancellation/idempotency; real-stack compatibility |
+| UX-002 | In progress | AXIOM One local browser/PWA shell | Loopback-only proxy, memory-only token, bounded Ask/Vault/receipt/raw-evidence views; local social UI integration, onboarding/session/device/accessibility/package work remain |
 | UX-003 | In progress | Human authority explanations | Five bounded actions, stable outcomes/events, approval states, raw evidence, uncertainty recovery; broader authoritative consequential plan/execute + comprehension evidence pending |
 | UX-004 | In progress | Governed memory lifecycle | Owner create/list, three exact provenance links, correction-without-replacement, tombstone, selective export, bundle reveal, cross-principal negatives; edge deletion/hard deletion/restore/bulk ingestion pending |
 | UX-005 | Pending | Browser security boundary | CSP/CSRF/origin/session/cookie/token/clickjacking/device-revocation/storage tests |
 | UX-006 | Pending | Accessibility/phone usability | Keyboard/screen-reader/contrast/reduced-motion/phone/plain-language human evidence |
 | UX-007 | Pending | Signed local packaging/onboarding | Safe update/rollback/recovery/uninstall/first-use evidence |
+| SOCIAL-001 | In progress | Owner-local actor/persona/publication surface | Intent-authorized local create/supersede/retract; A2 non-raw publication projection; owner-derived `/v1/social`; no federation/network distribution; AXIOM One UI next |
 | ARCH-001 | Complete for draft specification; no runtime capability | Define Personal Compute Fabric and Local Trust Plane `1.0.0-draft.1` | Canonical architecture, explicit non-claims, phased MVP, and five JSON Schemas for Personal Agent Pack, Runtime Capsule, Runtime Adapter, Compute Node Profile, and Local Trust Envelope; documentation checks only |
 | AI-001 | Pending | One least-privilege AI provider | Exact provider/model/egress/data/purpose/budget/timeout/cancel/retention/receipt/failure tests |
 | AI-002 | Pending | Local/user-supplied providers under same contract | Replacement/offline/degraded/no-authority-expansion conformance |

@@ -21,8 +21,8 @@ test('current Gateway client contract is exact and covers every authenticated ro
   assert.equal(result.valid, true);
   assert.equal(result.schema, 'axiom-gateway-client-contract.v1');
   assert.equal(result.kernel_version, '0.12.0-dev.3');
-  assert.equal(result.routes, 29);
-  assert.equal(result.implemented_routes, 29);
+  assert.equal(result.routes, 30);
+  assert.equal(result.implemented_routes, 30);
   assert.equal(result.stable_errors, 20);
   assert.equal(result.schema_definitions, 4);
   assert.equal(result.same_origin_only, true);

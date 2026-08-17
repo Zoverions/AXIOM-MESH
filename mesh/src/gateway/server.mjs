@@ -30,6 +30,8 @@ import { loadTransportRuntime } from '../lib/transport-credentials.mjs';
 import { GatewayIngressControl, createSingleFlightCache } from './ingress-control.mjs';
 
 const PRINCIPAL_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
+const SOCIAL_EVENT_PAGE = 500;
+const SOCIAL_EVENT_MAXIMUM = 5_000;
 
 export async function createGatewayService(config = meshConfig()) {
   const identity = await ensureMeshIdentity(config.dataDir, 'gateway', { create: config.autoBootstrap });
@@ -283,6 +285,51 @@ export async function createGatewayService(config = meshConfig()) {
       `/internal/v1/events?actor=${encodeURIComponent(actor)}&after=${after}&limit=${limit}`,
       traceId
     );
+  });
+
+  router.add('GET', '/v1/social', async ({ url, traceId, principal }) => {
+    const publicationLimit = boundedIntegerQuery(url.searchParams.get('publication_limit'), 100, {
+      label: 'social publication limit',
+      min: 1,
+      max: 100
+    });
+    const events = [];
+    let after = 0;
+    for (let page = 0; page < SOCIAL_EVENT_MAXIMUM / SOCIAL_EVENT_PAGE; page += 1) {
+      const response = await gridGet(
+        `/internal/v1/events?actor=${encodeURIComponent(principal.id)}`
+          + `&after=${after}&limit=${SOCIAL_EVENT_PAGE}`,
+        traceId
+      );
+      if (!Array.isArray(response.events)) {
+        throw new AxiomError('dependency_unavailable', 'Grid event response is invalid', 503);
+      }
+      events.push(...response.events);
+      if (response.events.length < SOCIAL_EVENT_PAGE) break;
+      after = response.events.at(-1)?.seq;
+      if (!Number.isSafeInteger(after)) {
+        throw new AxiomError('dependency_unavailable', 'Grid event sequence is invalid', 503);
+      }
+    }
+    if (events.length === SOCIAL_EVENT_MAXIMUM) {
+      const probe = await gridGet(
+        `/internal/v1/events?actor=${encodeURIComponent(principal.id)}`
+          + `&after=${events.at(-1).seq}&limit=1`,
+        traceId
+      );
+      if (Array.isArray(probe.events) && probe.events.length) {
+        throw new AxiomError(
+          'social_history_limit_reached',
+          'Local social history exceeds the bounded snapshot reconstruction limit',
+          409
+        );
+      }
+    }
+    const { buildLocalSocialSnapshot } = await import('./social-snapshot.mjs');
+    return buildLocalSocialSnapshot(events, principal.id, {
+      maximumEvents: SOCIAL_EVENT_MAXIMUM,
+      publicationLimit
+    });
   });
 
   router.add('GET', '/v1/capsules', async ({ url, traceId, principal }) => {

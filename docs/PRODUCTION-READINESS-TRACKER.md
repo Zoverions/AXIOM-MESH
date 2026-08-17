@@ -1,6 +1,6 @@
 # AXIOM-MESH Production Readiness Tracker
 
-**Updated:** 2026-08-12
+**Updated:** 2026-08-16
 
 **Active build:** `0.12.0-dev.3`
 
@@ -67,8 +67,9 @@ real source and tests while the supported runtime has no
 
 | Product gate | Current state | Required before exposure/promotion |
 |---|---|---|
-| Versioned Gateway client | Pass for current contract/library (`UX-001`): exact 29-route machine contract, reviewed schema, relative-only targets, explicit errors, bounded timeout/request/response, cancellation, stable idempotency, real-stack compatibility | Maintain exact compatibility; version/migrate/rollback incompatible changes |
-| AXIOM One browser/PWA shell | Experimental (`UX-002`): loopback-only shell, contract-only proxy, memory-only token, governed bounded Ask/Vault/receipt views | Complete onboarding, session/device security, browser fixtures, accessibility/usability, signed package/update/rollback/uninstall/support |
+| Versioned Gateway client | Pass for current contract/library (`UX-001`): exact 30-route machine contract, reviewed schema, relative-only targets, explicit errors, bounded timeout/request/response, cancellation, stable idempotency, real-stack compatibility | Maintain exact compatibility; version/migrate/rollback incompatible changes |
+| Owner-local social substrate | In progress: intent-authorized local actor/persona/publication create/supersede/retract plus owner-derived `/v1/social`; A2 publication projection; no federation or network distribution | Complete exact-head owner-read evidence, then AXIOM One UI; later exchange/federation requires a separate protocol/security gate |
+| AXIOM One browser/PWA shell | Experimental (`UX-002`): loopback-only shell, contract-only proxy, memory-only token, governed bounded Ask/Vault/receipt views | Complete local social UI, onboarding, session/device security, browser fixtures, accessibility/usability, signed package/update/rollback/uninstall/support |
 | Human authority explanations | Experimental bounded slice (`UX-003`): five-action review, stable outcomes/events, approval states, raw evidence, uncertainty recovery | Authoritative policy-bound broader consequential plan/execute, reversible approval actions, consent/revocation journeys, comprehension evidence |
 | Governed memory lifecycle | Experimental (`UX-004`): owner create/list, three fixed provenance links, correction-without-replacement, tombstone, selective export, bundle reveal, cross-principal negatives | Edge deletion, bounded bulk ingest, authorized hard deletion, restore/recovery, download threat analysis, human lifecycle evidence |
 | Browser security | Planned (`UX-005`) | CSP, CSRF, origin, session/cookie/token, clickjacking, device revocation, storage inspection |

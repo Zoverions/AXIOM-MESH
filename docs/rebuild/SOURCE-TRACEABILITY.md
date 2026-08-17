@@ -4,7 +4,7 @@
 
 **Status:** current requirements-to-implementation trace
 
-**Updated:** 2026-08-12
+**Updated:** 2026-08-16
 
 ## Purpose
 
@@ -49,8 +49,9 @@ repository-effect resolver/outbox/operator chain, and Agent Runtime Adapter v1.
 | Machine principals | machine principal normalization, principal registry, Gateway/Hypervisor/Sandbox enforcement | machine principal/e2e/concurrency/response/destination tests | Human-sponsored finite scopes/actions/purposes/destinations, runtime/expiry/non-delegation, execution-time/request-size/rate/concurrency/response-size ceilings; runtime digest is metadata, not attestation |
 | Machine discovery | Gateway `/v1/machine-discovery`, policy evaluator | discovery unit/e2e/client/network tests | Caller-specific requestability only; explicitly not authorization |
 | Machine receipts | Grid terminal-receipt builder + verifier | receipt unit/e2e/client/network tests | Owner-scoped digest-only Grid attestation; not arbitrary external-world truth |
-| Gateway client | client contract/schema/library | route parity/compatibility/error/cancel/timeout/response-bound/real-stack tests | All 29 authenticated Gateway routes are versioned; no direct internal-service target |
-| AXIOM One | `apps/axiom-one/`, explanation contract/presenter, proxy | policy/static/explanation/approval/uncertainty/real-stack tests | Experimental bounded owner-memory/provenance shell; not supported product |
+| Gateway client | client contract/schema/library | route parity/compatibility/error/cancel/timeout/response-bound/real-stack tests | All 30 authenticated Gateway routes are versioned; no direct internal-service target |
+| Owner-local social surface | social actor/persona/publication intent runtime, Gateway `/v1/social` snapshot | component + real four-service write/read/isolation tests | One current local actor/custodian and one active persona/actor; A2 non-raw publication projection; owner-derived read; no federation/network distribution |
+| AXIOM One | `apps/axiom-one/`, explanation contract/presenter, proxy | policy/static/explanation/approval/uncertainty/real-stack tests | Experimental bounded owner-memory/provenance shell; local social UI not yet integrated; not supported product |
 | Policy | `mesh/config/policy.json`, layered policy | policy/IAM tests | Deny-dominant; high-risk effects require independent approval where configured |
 | Grid durability | Grid store/migrations/evidence/protection | restart/migration/tamper/wrong-key/backup/rotation tests | Encrypted single-Grid state, signed hash-linked evidence; no replicated consensus |
 | Grid continuity | continuity-anchor implementation + Grid verifier/operator flow | anchor creation/verification/negative tests | `axiom-grid-continuity-anchor.v1` retained outside `AXIOM_DATA_DIR` proves current history equals/extends retained head through that sequence only |
@@ -73,7 +74,7 @@ repository-effect resolver/outbox/operator chain, and Agent Runtime Adapter v1.
 | Node scheduling | node registry/scheduler | scheduling tests/drill | Signed admission + deterministic reservations; no remote dispatch |
 | Causal exchange | online causal sync | two-real-stack partition/rejoin drill | Approved encrypted causal record transport; no federation/consensus |
 | Portability/consent | consent/export/import/encryption | kernel/e2e tests | Scoped signed export/staged foreign-provenance import |
-| Release/documentation | release verifier/check-docs/current-state doc tests/workflows | `npm run setup`, `npm run release:verify`, protected CI | Canonical docs/links, 29 Gateway routes, 40 network routes, capability counts, runtime-adapter lock, current narrative invariants |
+| Release/documentation | release verifier/check-docs/current-state doc tests/workflows | `npm run setup`, `npm run release:verify`, protected CI | Canonical docs/links, 30 Gateway routes, 40 network routes, capability counts, runtime-adapter lock, current narrative invariants |
 
 ## Repository-effect activation boundary
 
@@ -145,7 +146,8 @@ provenance but do not govern `0.12.0-dev.3`.
 ## Coverage result
 
 Current traceability covers the four-service kernel, machine-principal surface,
-Grid continuity, production packaging, transport/network policy, recovery,
+owner-local social actor/persona/publication surface, Grid continuity,
+production packaging, transport/network policy, recovery,
 telemetry/resilience, scheduling/causal exchange, provider startup, pilot and
 security-review intake, runtime-adapter contract, and the complete current
 **production-unreachable** repository planning/resolver/preparation/outbox/
