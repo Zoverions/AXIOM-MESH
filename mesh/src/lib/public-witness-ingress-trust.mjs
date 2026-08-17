@@ -200,6 +200,14 @@ function withBundleDigest(body) {
   return Object.freeze({ ...body, bundle_digest: digestObject(body) });
 }
 
+function clockMillis(clock) {
+  const now = (clock ?? (() => Date.now()))();
+  if (!Number.isFinite(now)) {
+    throw new ValidationError('public witness ingress trust activation clock must return finite milliseconds');
+  }
+  return now;
+}
+
 export function validatePublicWitnessIngressTrustBundle(raw) {
   const value = exactKeys(raw, BUNDLE_KEYS, 'public witness ingress trust bundle');
   const body = normalizeBundleBody(value);
@@ -391,6 +399,9 @@ export function createPublicWitnessAuthenticatedIngressFromTrustBundle({
   const bundle = previousBundle === null
     ? validatePublicWitnessIngressTrustBundle(bundleRaw)
     : validatePublicWitnessIngressTrustTransition(previousBundle, bundleRaw);
+  if (Date.parse(bundle.activated_at) > clockMillis(clock)) {
+    throw new ValidationError('public witness ingress trust bundle is not active yet');
+  }
   verifyPublicWitnessIngressTrustBundleAgainstReceiver({ receiverStore, bundle, previousBundle });
   return new PublicWitnessAuthenticatedIngress({
     receiverStore,
