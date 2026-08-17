@@ -8,6 +8,18 @@ async function text(path) {
   return readFile(new URL(path, ROOT), 'utf8');
 }
 
+function normalized(value) {
+  return String(value).replace(/\s+/g, ' ').trim();
+}
+
+function assertContainsNormalized(haystack, required, label) {
+  assert.equal(
+    normalized(haystack).includes(normalized(required)),
+    true,
+    `${label}: ${required}`
+  );
+}
+
 test('canonical threat model requires the remote-social companion and current disabled boundary', async () => {
   const threat = await text('docs/security/CURRENT-BUILD-THREAT-MODEL.md');
   for (const required of [
@@ -21,14 +33,14 @@ test('canonical threat model requires the remote-social companion and current di
     'accepted Grid service still imports and instantiates `SocialGridStore`',
     'no public routes',
     'no network egress',
-    'No source-package endpoint or social relay is\ncurrently deployed',
+    'No source-package endpoint or social relay is currently deployed',
     'does not by itself prove content truth',
     'legal/biological',
     'personal authorship',
     'never creates Mesh authorization',
     'automatic federation'
   ]) {
-    assert.equal(threat.includes(required), true, `canonical threat model missing: ${required}`);
+    assertContainsNormalized(threat, required, 'canonical threat model missing');
   }
 });
 
@@ -60,7 +72,7 @@ test('remote-social companion names every current S3/G1-G3 review surface and tr
     'exporter-attestation-only',
     'staging-only authenticated handoff'
   ]) {
-    assert.equal(review.includes(required), true, `remote-social trust review missing: ${required}`);
+    assertContainsNormalized(review, required, 'remote-social trust review missing');
   }
 });
 
@@ -92,6 +104,6 @@ test('canonical threat model contains explicit remote-social threats, abuse case
     'The accepted Grid remains deny-egress',
     'Expiry alone does not silently delete remote-social evidence'
   ]) {
-    assert.equal(threat.includes(required), true, `remote-social security boundary missing: ${required}`);
+    assertContainsNormalized(threat, required, 'remote-social security boundary missing');
   }
 });
