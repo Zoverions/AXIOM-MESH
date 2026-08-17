@@ -8,6 +8,22 @@ import { startDevelopmentStack } from '../src/dev.mjs';
 import { reserveProductionPortBlock } from '../src/lib/production-host.mjs';
 
 const REMOTE_TABLE_PREFIX = 'remote_social_';
+const ACCEPTED_REMOTE_TABLES = Object.freeze([
+  'remote_social_abuse_preferences',
+  'remote_social_abuse_schema_migrations',
+  'remote_social_admission_objects',
+  'remote_social_admission_schema_migrations',
+  'remote_social_admissions',
+  'remote_social_following_schema_migrations',
+  'remote_social_follows',
+  'remote_social_observations',
+  'remote_social_quarantines',
+  'remote_social_reports',
+  'remote_social_retention_receipts',
+  'remote_social_retention_schema_migrations',
+  'remote_social_schema_migrations',
+  'remote_social_staging'
+]);
 
 test('G5B exposes only authenticated owner-scoped read-only remote review', async t => {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-remote-review-route-'));
@@ -57,7 +73,9 @@ test('G5B exposes only authenticated owner-scoped read-only remote review', asyn
   const gateway = `http://127.0.0.1:${basePort}`;
   const grid = stack.services.find(service => service.name === 'grid');
   assert.ok(grid?.store?.db);
-  assert.deepEqual(remoteTables(grid.store.db), []);
+
+  const initialRemoteState = remoteTableState(grid.store.db);
+  assert.deepEqual(Object.keys(initialRemoteState), ACCEPTED_REMOTE_TABLES);
 
   const clientA = createGatewayClient({
     token: tokenA,
@@ -73,7 +91,7 @@ test('G5B exposes only authenticated owner-scoped read-only remote review', asyn
   assertReviewBoundary(reviewA, 'remote-review-owner-a');
   assertReviewBoundary(reviewB, 'remote-review-owner-b');
   assert.notEqual(reviewA.owner, reviewB.owner);
-  assert.deepEqual(remoteTables(grid.store.db), []);
+  assert.deepEqual(remoteTableState(grid.store.db), initialRemoteState);
 
   await assert.rejects(
     () => clientA.call('social_remote_review.get', {
@@ -89,13 +107,14 @@ test('G5B exposes only authenticated owner-scoped read-only remote review', asyn
   assert.equal(rawOverride.status, 400);
   const rawOverrideBody = await rawOverride.json();
   assert.equal(rawOverrideBody.error?.code, 'validation_error');
-  assert.deepEqual(remoteTables(grid.store.db), []);
+  assert.deepEqual(remoteTableState(grid.store.db), initialRemoteState);
 
   const localSocial = await clientA.call('social.get');
   assert.equal(localSocial.schema, 'axiom-local-social-snapshot.v1');
   assert.equal(localSocial.owner, 'remote-review-owner-a');
   assert.equal(localSocial.network_effect, 'none');
   assert.equal('stages' in localSocial, false);
+  assert.deepEqual(remoteTableState(grid.store.db), initialRemoteState);
 });
 
 function assertReviewBoundary(review, owner) {
@@ -114,6 +133,13 @@ function assertReviewBoundary(review, owner) {
   assert.equal(review.recommendation_effect, 'none');
   assert.equal(review.authority_effect, 'none');
   assert.equal(review.retention.within_policy, true);
+}
+
+function remoteTableState(db) {
+  return Object.fromEntries(remoteTables(db).map(name => {
+    const quoted = `"${name.replaceAll('"', '""')}"`;
+    return [name, db.prepare(`SELECT * FROM ${quoted} ORDER BY rowid`).all()];
+  }));
 }
 
 function remoteTables(db) {
