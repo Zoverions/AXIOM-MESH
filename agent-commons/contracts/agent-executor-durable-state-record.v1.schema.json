@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/agent-executor-durable-state-record.v1.schema.json",
+  "title": "AXIOM Agent Executor Durable State Record v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "statement", "statement_digest", "payload", "store_signature", "record_digest"],
+  "properties": {
+    "schema": { "const": "axiom-agent-executor-durable-state-record.v1" },
+    "statement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "store_id", "store_key_id", "policy_digest", "generation", "previous_record_digest",
+        "record_type", "committed_at", "authorization_id", "authorization_digest", "plan_digest",
+        "lifecycle_ledger_id", "lifecycle_key_id", "lifecycle_status", "lifecycle_event_count",
+        "lifecycle_head_event_digest", "lifecycle_receipt_digest", "conformance_receipt_digest",
+        "virtual_effects_only", "local_commit_evidence", "global_currentness_claimed",
+        "production_persistence_claimed", "effect_reachable", "authority_granted"
+      ],
+      "properties": {
+        "store_id": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "store_key_id": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "policy_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "generation": { "type": "integer", "minimum": 1, "maximum": 128 },
+        "previous_record_digest": { "anyOf": [{ "type": "null" }, { "type": "string", "pattern": "^[a-f0-9]{64}$" }] },
+        "record_type": { "enum": ["initialize", "consume", "revoke", "expire", "interrupt", "complete", "attach-conformance-receipt"] },
+        "committed_at": { "type": "string", "format": "date-time" },
+        "authorization_id": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "authorization_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "plan_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "lifecycle_ledger_id": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "lifecycle_key_id": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "lifecycle_status": { "enum": ["issued", "consumed", "revoked", "expired", "interrupted", "completed"] },
+        "lifecycle_event_count": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "lifecycle_head_event_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "lifecycle_receipt_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "conformance_receipt_digest": { "anyOf": [{ "type": "null" }, { "type": "string", "pattern": "^[a-f0-9]{64}$" }] },
+        "virtual_effects_only": { "const": true },
+        "local_commit_evidence": { "const": true },
+        "global_currentness_claimed": { "const": false },
+        "production_persistence_claimed": { "const": false },
+        "effect_reachable": { "const": false },
+        "authority_granted": { "const": false }
+      }
+    },
+    "statement_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lifecycle_transcript", "lifecycle_receipt", "conformance_receipt"],
+      "properties": {
+        "lifecycle_transcript": { "type": "object" },
+        "lifecycle_receipt": { "type": "object" },
+        "conformance_receipt": { "anyOf": [{ "type": "null" }, { "type": "object" }] }
+      }
+    },
+    "store_signature": { "type": "string", "minLength": 32, "maxLength": 1024 },
+    "record_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}
