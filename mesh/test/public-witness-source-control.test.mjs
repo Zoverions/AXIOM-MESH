@@ -194,7 +194,7 @@ test('source control rejects skipped epochs, same-epoch source replacement, back
       sourceAdmission: data.admission2,
       certificateSha256: 'b'.repeat(64),
       operation: 'rotate-certificate',
-      effectiveAt: T1,
+      effectiveAt: T3,
       previousControl: first
     }),
     /must retain the exact source admission/
@@ -211,9 +211,9 @@ test('source control rejects skipped epochs, same-epoch source replacement, back
   );
   assert.throws(
     () => createPublicWitnessSourceControl({
-      sourceAdmission: data.admission2,
-      certificateSha256: 'b'.repeat(64),
-      operation: 'rotate-source',
+      sourceAdmission: data.admission1,
+      certificateSha256: 'd'.repeat(64),
+      operation: 'rotate-certificate',
       effectiveAt: T0,
       previousControl: first
     }),
