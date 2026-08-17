@@ -130,6 +130,7 @@ export function certificateSha256(rawCertificate) {
 export class PublicWitnessAuthenticatedIngress {
   #receiverStore;
   #bindings;
+  #bindingResolver;
   #roots;
   #clock;
   #maxConcurrent;
@@ -144,6 +145,7 @@ export class PublicWitnessAuthenticatedIngress {
   constructor({
     receiverStore,
     sourceBindings,
+    sourceBindingResolver,
     personaRoots,
     clock = () => Date.now(),
     maxConcurrent,
@@ -153,8 +155,15 @@ export class PublicWitnessAuthenticatedIngress {
     if (!receiverStore || typeof receiverStore.receiveTransfer !== 'function') {
       throw new ValidationError('public witness live ingress requires a W2c2 receiver store');
     }
-    if (!Array.isArray(sourceBindings) || sourceBindings.length < 1 || sourceBindings.length > 4096) {
-      throw new ValidationError('public witness live ingress requires 1-4096 transport source bindings');
+    const usesResolver = sourceBindingResolver !== undefined;
+    if (usesResolver && typeof sourceBindingResolver !== 'function') {
+      throw new ValidationError('public witness live ingress sourceBindingResolver must be a function');
+    }
+    if (usesResolver && sourceBindings !== undefined) {
+      throw new ValidationError('public witness live ingress cannot combine static source bindings with a dynamic resolver');
+    }
+    if (!usesResolver && (!Array.isArray(sourceBindings) || sourceBindings.length < 1 || sourceBindings.length > 4096)) {
+      throw new ValidationError('public witness live ingress requires 1-4096 transport source bindings or one dynamic resolver');
     }
     if (!Array.isArray(personaRoots) || personaRoots.length < 1 || personaRoots.length > 4096) {
       throw new ValidationError('public witness live ingress requires 1-4096 local persona roots');
@@ -162,11 +171,14 @@ export class PublicWitnessAuthenticatedIngress {
     if (typeof clock !== 'function') throw new ValidationError('public witness live ingress clock must be a function');
     this.#receiverStore = receiverStore;
     this.#bindings = new Map();
-    for (const [index, raw] of sourceBindings.entries()) {
-      const binding = normalizeSourceBinding(raw, index);
-      const key = transportKey(binding.certificate_sha256, binding.source_id, binding.source_epoch);
-      if (this.#bindings.has(key)) throw new ValidationError('public witness live ingress transport binding is duplicated');
-      this.#bindings.set(key, binding);
+    this.#bindingResolver = usesResolver ? sourceBindingResolver : null;
+    if (!usesResolver) {
+      for (const [index, raw] of sourceBindings.entries()) {
+        const binding = normalizeSourceBinding(raw, index);
+        const key = transportKey(binding.certificate_sha256, binding.source_id, binding.source_epoch);
+        if (this.#bindings.has(key)) throw new ValidationError('public witness live ingress transport binding is duplicated');
+        this.#bindings.set(key, binding);
+      }
     }
     this.#roots = new Map();
     for (const [index, raw] of personaRoots.entries()) {
@@ -204,17 +216,45 @@ export class PublicWitnessAuthenticatedIngress {
     this.#active += 1;
   }
 
+  async #resolveBinding(certificateDigest, sourceId, sourceEpoch) {
+    if (!this.#bindingResolver) {
+      return this.#bindings.get(transportKey(certificateDigest, sourceId, sourceEpoch)) ?? null;
+    }
+    let raw;
+    try {
+      raw = await this.#bindingResolver({
+        certificate_sha256: certificateDigest,
+        source_id: sourceId,
+        source_epoch: sourceEpoch
+      });
+    } catch (error) {
+      this.#rejected += 1;
+      throw error;
+    }
+    if (raw === null || raw === undefined) return null;
+    const binding = normalizeSourceBinding(raw, 0);
+    if (
+      binding.certificate_sha256 !== certificateDigest
+      || binding.source_id !== sourceId
+      || binding.source_epoch !== sourceEpoch
+    ) {
+      this.#rejected += 1;
+      throw new ValidationError('public witness live ingress dynamic resolver returned a mismatched transport binding');
+    }
+    return binding;
+  }
+
   async accept({ certificate_sha256: certificateDigestRaw, request } = {}) {
     const certificateDigest = digest(certificateDigestRaw, 'public witness live ingress certificate digest');
     const normalized = normalizeRequest(request);
     const nowMillis = this.#clock();
     this.#consume(certificateDigest, nowMillis);
     try {
-      const binding = this.#bindings.get(transportKey(
+      const binding = await this.#resolveBinding(
         certificateDigest,
         normalized.source_id,
         normalized.source_epoch
-      ));
+      );
       if (!binding) {
         this.#rejected += 1;
         throw new ValidationError('public witness live ingress transport identity is not bound to transfer source epoch');
@@ -247,6 +287,7 @@ export class PublicWitnessAuthenticatedIngress {
         received_at: receivedAt,
         transport_certificate_sha256: certificateDigest,
         persona_root_trust_source: 'local-config',
+        source_binding_source: this.#bindingResolver ? 'local-dynamic-resolver' : 'local-static-config',
         source_admission_effect: 'none',
         persona_root_trust_effect: 'none',
         social_authority_effect: 'none',
@@ -262,7 +303,8 @@ export class PublicWitnessAuthenticatedIngress {
   snapshot() {
     return Object.freeze({
       schema: PUBLIC_WITNESS_LIVE_INGRESS_SCHEMA,
-      transport_binding_count: this.#bindings.size,
+      transport_binding_mode: this.#bindingResolver ? 'dynamic-local-resolver' : 'static-local-config',
+      transport_binding_count: this.#bindingResolver ? null : this.#bindings.size,
       persona_root_count: this.#roots.size,
       active_requests: this.#active,
       accepted_requests: this.#accepted,
