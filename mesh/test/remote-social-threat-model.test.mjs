@@ -132,7 +132,7 @@ test('canonical threat model contains explicit accepted remote-social threats, a
     '| Future social relay becomes confused deputy or egress bridge |',
     'malicious or compromised remote-social exporter keys',
     'package amplification',
-    'trust labels or provenance UI',
+    'trust labels, report state, quarantine state, or provenance UI',
     'owner-query/body override',
     'private follow/trust',
     'source/exporter quarantine bypass',
