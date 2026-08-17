@@ -36,90 +36,37 @@ const HARD_MAX_TRANSFER_LIFETIME_SECONDS = 24 * 60 * 60;
 const OPERATIONS = new Set(['observe-credential', 'observe-revocation', 'observe-journal']);
 
 const ADMISSION_KEYS = new Set([
-  'schema',
-  'domain_id',
-  'source_id',
-  'source_key_id',
-  'source_public_key',
-  'source_epoch',
-  'allowed_operations',
-  'valid_from',
-  'expires_at',
-  'max_transfer_bytes',
-  'max_transfer_lifetime_seconds',
-  'local_trust_input',
-  'remote_self_admission_allowed',
-  'persona_root_trust_effect',
-  'authority_effect',
-  'network_effect',
-  'admission_digest'
+  'schema', 'domain_id', 'source_id', 'source_key_id', 'source_public_key',
+  'source_epoch', 'allowed_operations', 'valid_from', 'expires_at',
+  'max_transfer_bytes', 'max_transfer_lifetime_seconds', 'local_trust_input',
+  'remote_self_admission_allowed', 'persona_root_trust_effect',
+  'authority_effect', 'network_effect', 'admission_digest'
 ]);
 const TRANSFER_KEYS = new Set([
-  'schema',
-  'statement',
-  'statement_digest',
-  'request',
-  'source_signature',
+  'schema', 'statement', 'statement_digest', 'request', 'source_signature',
   'transfer_digest'
 ]);
 const TRANSFER_STATEMENT_KEYS = new Set([
-  'domain_id',
-  'source_id',
-  'source_key_id',
-  'source_epoch',
-  'transfer_id',
-  'sequence',
-  'previous_transfer_digest',
-  'operation',
-  'request_digest',
-  'created_at',
-  'expires_at',
-  'source_signature_claimed',
-  'delivery_claimed',
-  'federation_claimed',
-  'persona_root_trust_claimed',
-  'content_truth_claimed',
-  'legal_identity_claimed',
-  'finality_claimed',
-  'authority_effect',
+  'domain_id', 'source_id', 'source_key_id', 'source_epoch', 'transfer_id',
+  'sequence', 'previous_transfer_digest', 'operation', 'request_digest',
+  'created_at', 'expires_at', 'source_signature_claimed', 'delivery_claimed',
+  'federation_claimed', 'persona_root_trust_claimed', 'content_truth_claimed',
+  'legal_identity_claimed', 'finality_claimed', 'authority_effect',
   'network_effect'
 ]);
 const RECEIPT_KEYS = new Set([
-  'schema',
-  'statement',
-  'statement_digest',
-  'witness_signature',
-  'receipt_digest'
+  'schema', 'statement', 'statement_digest', 'witness_signature', 'receipt_digest'
 ]);
 const RECEIPT_STATEMENT_KEYS = new Set([
-  'domain_id',
-  'witness_id',
-  'witness_key_id',
-  'source_id',
-  'source_key_id',
-  'source_epoch',
-  'source_admission_digest',
-  'transfer_digest',
-  'transfer_id',
-  'source_sequence',
-  'operation',
-  'artifact_digest',
-  'persona_id',
-  'persona_projection_digest',
-  'persona_root_key_id',
-  'received_at',
-  'source_signature_verified',
-  'persona_artifact_verified',
-  'persona_root_trust_source',
-  'source_minted_persona_root_trust',
-  'observation_committed',
-  'end_to_end_delivery_claimed',
-  'content_truth_claimed',
-  'authorship_claimed',
-  'legal_identity_claimed',
-  'finality_claimed',
-  'authority_effect',
-  'network_effect'
+  'domain_id', 'witness_id', 'witness_key_id', 'source_id', 'source_key_id',
+  'source_epoch', 'source_admission_digest', 'transfer_digest', 'transfer_id',
+  'source_sequence', 'operation', 'artifact_digest', 'persona_id',
+  'persona_projection_digest', 'persona_root_key_id', 'received_at',
+  'source_signature_verified', 'persona_artifact_verified',
+  'persona_root_trust_source', 'source_minted_persona_root_trust',
+  'observation_committed', 'end_to_end_delivery_claimed',
+  'content_truth_claimed', 'authorship_claimed', 'legal_identity_claimed',
+  'finality_claimed', 'authority_effect', 'network_effect'
 ]);
 
 function exactKeys(raw, allowed, label) {
@@ -346,10 +293,7 @@ function normalizeTransferRequest(raw, expectedOperation) {
   }
   if (expectedOperation === 'observe-journal') {
     exactKeys(value, new Set([
-      'attestation',
-      'persona_signing_credential',
-      'entry',
-      'publication'
+      'attestation', 'persona_signing_credential', 'entry', 'publication'
     ]), 'public witness transfer journal request');
     if (value.publication !== null && (typeof value.publication !== 'object' || Array.isArray(value.publication))) {
       throw new ValidationError('public witness transfer journal publication must be an object or null');
@@ -545,10 +489,7 @@ export function createPublicWitnessTransferPackage(requestRaw, {
     new Set(['operation', 'request']),
     'public witness transfer creation request'
   );
-  const requestOperation = operation(
-    requestValue.operation,
-    'public witness transfer request operation'
-  );
+  const requestOperation = operation(requestValue.operation, 'public witness transfer request operation');
   if (!admission.allowed_operations.includes(requestOperation)) {
     throw new ValidationError('public witness transfer operation is not allowed by the local source admission');
   }
@@ -612,12 +553,11 @@ export function createPublicWitnessTransferPackage(requestRaw, {
   return transfer;
 }
 
-function trustedRootKeyId(trustedPersonaRootPublicKey) {
-  return publicKeyId(trustedPersonaRootPublicKey, 'trusted persona root public key');
-}
-
 function verifyTransferredArtifact(envelope, trustedPersonaRootPublicKey) {
-  const expectedRootKeyId = trustedRootKeyId(trustedPersonaRootPublicKey);
+  const expectedRootKeyId = publicKeyId(
+    trustedPersonaRootPublicKey,
+    'trusted persona root public key'
+  );
   const request = envelope.request;
   if (envelope.statement.operation === 'observe-credential') {
     const verified = verifyPersonaSigningCredential(request.credential, {
@@ -873,20 +813,21 @@ export function createPublicWitnessTransferReceipt(transferRaw, {
   receivedAt,
   now = Date.now()
 } = {}) {
+  const received = canonicalTimestamp(receivedAt, 'public witness transfer receivedAt');
+  const receivedMs = new Date(received).valueOf();
+  if (receivedMs > now + MAX_CLOCK_SKEW_MS) {
+    throw new ValidationError('public witness transfer receipt time exceeds allowed clock skew');
+  }
   const verified = verifyPublicWitnessTransferPackage(transferRaw, {
     sourceAdmission,
     trustedPersonaRootPublicKey,
-    now
+    now: receivedMs
   });
-  const admission = validatePublicWitnessSourceAdmission(sourceAdmission);
-  const witness = signingKey(witnessPrivateKey, 'public witness transfer receipt');
-  const received = canonicalTimestamp(receivedAt, 'public witness transfer receivedAt');
   if (received < verified.statement.created_at || received < verified.artifact.artifact_time) {
     throw new ValidationError('public witness transfer receipt cannot predate the package or transferred artifact');
   }
-  if (new Date(received).valueOf() > now + MAX_CLOCK_SKEW_MS) {
-    throw new ValidationError('public witness transfer receipt time exceeds allowed clock skew');
-  }
+  const admission = validatePublicWitnessSourceAdmission(sourceAdmission);
+  const witness = signingKey(witnessPrivateKey, 'public witness transfer receipt');
   return signReceipt({
     domain_id: verified.statement.domain_id,
     witness_id: witnessId,
@@ -931,6 +872,9 @@ export function verifyPublicWitnessTransferReceipt(raw, {
     throw new ValidationError('public witness transfer receipt schema is unsupported');
   }
   const statement = normalizeReceiptStatement(value.statement);
+  if (new Date(statement.received_at).valueOf() > now + MAX_CLOCK_SKEW_MS) {
+    throw new ValidationError('public witness transfer receipt time exceeds allowed clock skew');
+  }
   const statementDigest = digest(value.statement_digest, 'public witness transfer receipt statement_digest');
   if (statementDigest !== digestObject(statement)) {
     throw new ValidationError('public witness transfer receipt statement digest does not match canonical content');
@@ -974,7 +918,7 @@ export function verifyPublicWitnessTransferReceipt(raw, {
     const verifiedTransfer = verifyPublicWitnessTransferPackage(transfer, {
       sourceAdmission,
       trustedPersonaRootPublicKey,
-      now
+      now: new Date(statement.received_at).valueOf()
     });
     const admission = validatePublicWitnessSourceAdmission(sourceAdmission);
     if (
