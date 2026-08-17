@@ -143,14 +143,24 @@ async function postNotFound(address, client) {
   });
 }
 
-test('restart restore selects only the latest effective control without replaying historical listeners', async () => {
+test('restart restore requires active history to end at the latest effective control', async () => {
   const data = await fixture();
-  const history = [data.disabled1, data.enabled2, data.disabled3];
-  assert.equal(validatePublicWitnessIngressControlChain(history).length, 3);
+  const fullHistory = [data.disabled1, data.enabled2, data.disabled3];
+  assert.equal(validatePublicWitnessIngressControlChain(fullHistory).length, 3);
 
   const beforeFutureDisable = controller(data, T2);
+  await assert.rejects(
+    () => beforeFutureDisable.restore({
+      controls: fullHistory,
+      trustBundle: data.bundle
+    }),
+    /active history cannot contain a future control/
+  );
+  assert.equal(beforeFutureDisable.snapshot().configured_ingress_state, 'unconfigured');
+  assert.equal(beforeFutureDisable.snapshot().listening, false);
+
   const active = await beforeFutureDisable.restore({
-    controls: history,
+    controls: [data.disabled1, data.enabled2],
     trustBundle: data.bundle
   });
   assert.equal(active.control_generation, 2);
@@ -161,7 +171,7 @@ test('restart restore selects only the latest effective control without replayin
   await beforeFutureDisable.close();
 
   const afterDisable = controller(data, T4);
-  const disabled = await afterDisable.restore({ controls: history });
+  const disabled = await afterDisable.restore({ controls: fullHistory });
   assert.equal(disabled.control_generation, 3);
   assert.equal(disabled.configured_ingress_state, 'disabled');
   assert.equal(disabled.listening, false);
@@ -204,7 +214,7 @@ test('enabled control cannot claim an effective time before its trust bundle act
   );
 });
 
-test('control history rejects missing generations and restart with no effective genesis', async () => {
+test('control history rejects missing generations and future genesis in active history', async () => {
   const data = await fixture();
   const skipped = structuredClone(data.disabled3);
   skipped.generation = 4;
@@ -221,7 +231,7 @@ test('control history rejects missing generations and restart with no effective 
   const lifecycle = controller(data, T2);
   await assert.rejects(
     () => lifecycle.restore({ controls: [futureGenesis] }),
-    /no effective control yet/
+    /active history cannot contain a future control/
   );
   assert.equal(lifecycle.snapshot().configured_ingress_state, 'unconfigured');
   assert.equal(lifecycle.snapshot().listening, false);
