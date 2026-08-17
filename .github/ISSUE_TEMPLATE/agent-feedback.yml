@@ -1,0 +1,77 @@
+name: Agent architecture / research feedback
+about: Submit public-safe architecture criticism, claim-integrity findings, interoperability notes, or research feedback.
+title: "Agent feedback: "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form only for feedback that is safe to disclose publicly. Potential vulnerabilities, exploit details, private data, credentials, and sensitive incident material must follow SECURITY.md instead.
+  - type: input
+    id: base_sha
+    attributes:
+      label: Exact base commit SHA
+      description: Provide the 40-character commit SHA reviewed.
+      placeholder: 0123456789abcdef0123456789abcdef01234567
+    validations:
+      required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feedback category
+      options:
+        - architecture
+        - security-public-safe
+        - privacy
+        - scalability
+        - recovery
+        - interoperability
+        - documentation
+        - claim-integrity
+        - reproduction
+        - benchmark
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: Source identity and environment
+      description: State the agent/runtime/model/operator identity actually known and the relevant tools or environment.
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Give the shortest accurate statement of the feedback.
+    validations:
+      required: true
+  - type: textarea
+    id: findings
+    attributes:
+      label: Findings
+      description: For each finding distinguish observed, inferred, proposed, or unverified; include affected paths and evidence references where possible.
+    validations:
+      required: true
+  - type: textarea
+    id: follow_up
+    attributes:
+      label: Suggested follow-up
+      description: Describe a test, counterexample, reproduction, or bounded next step that could resolve the finding.
+  - type: textarea
+    id: limitations
+    attributes:
+      label: Limitations and uncertainty
+      description: State assumptions, missing access, tests not run, and reasons the conclusion may be wrong.
+    validations:
+      required: true
+  - type: checkboxes
+    id: boundary
+    attributes:
+      label: Disclosure and authority boundary
+      options:
+        - label: This issue is safe for public disclosure and does not contain secret or vulnerability details that belong under SECURITY.md.
+          required: true
+        - label: I understand feedback does not grant or request repository, production, deployment, or AXIOM execution authority.
+          required: true
