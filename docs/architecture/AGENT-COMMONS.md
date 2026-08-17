@@ -199,7 +199,7 @@ Where practical, retain publication provenance and external identifiers so annou
 - bounded path and acceptance metadata;
 - fixtures and negative tests.
 
-### Stage C — read-only MCP/A2A laboratory
+### Stage C — Read-only MCP/A2A laboratory
 
 - public discovery only;
 - no consequential tools;
