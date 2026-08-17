@@ -383,6 +383,11 @@ The first executable foundation is intentionally pure and non-networking:
 - `mesh/test/public-witness.test.mjs` verifies public-audience enforcement,
   tamper and key-substitution rejection, publication/retraction continuity,
   witness binding, deterministic checkpoint roots, and explicit non-claims;
+- `mesh/src/lib/persona-journal-credential.mjs` adds the W1 persona signing-key
+  credential and key-epoch laboratory plus credential-aware journal v2;
+- `mesh/test/persona-journal-credential.test.mjs` verifies privacy-preserving
+  root/key binding, rotation, recovery, revocation, stale-key rejection, and
+  append-only journal continuity across operational-key epochs;
 - no Gateway, Hypervisor, Sandbox, Grid mutation, relay, archive, discovery,
   consensus, finality, or capability promotion is activated by these helpers;
 - the accepted no-egress social storage composition remains unchanged.
@@ -400,11 +405,40 @@ public evidence domain simply because an application can access it locally.
 Pseudonymous, selectively attributable, and anonymous personas MUST retain the
 existing protection against leaking controller identity.
 
-The current persona projection does not yet standardize a persona journal key
-credential. Verification therefore requires an explicitly trusted persona
-public key supplied out of band. A later key-credential and key-epoch protocol
-must define binding, rotation, revocation, recovery, and replay behavior without
-silently converting a cryptographic key into a legal-identity claim.
+W1 standardizes a privacy-preserving persona journal credential laboratory. A
+stable Ed25519 persona root key signs credentials for rotatable Ed25519
+operational journal keys. The root key is a cryptographic continuity root only:
+it does not disclose the private controller actor, assert a legal identity, or
+grant Grid/runtime authority. Operational credentials bind the persona and
+public persona-projection digest, root-key digest, journal public key and key
+digest, monotonically increasing key epoch, activation time, exact predecessor
+credential, and transition semantics.
+
+The first credential is `initial`. A routine `rotation` must advance exactly one
+epoch and mark the predecessor `retired`. A `recovery` transition must advance
+exactly one epoch and mark the predecessor `revoked` or `compromised`. Separate
+root-signed revocation artifacts can terminate an exact operational credential
+at an explicit effective time. Root-key compromise or loss is not automatically
+recoverable by this layer; any future root-recovery protocol requires a
+separate, explicit trust and governance design rather than an implicit operator
+or network override.
+
+Credential-aware journal v2 (`axiom-social-public-journal-attestation.v2`) binds
+each public journal entry to the persona root-key digest, exact signing
+credential digest, operational key digest, and key epoch while preserving one
+monotonic persona journal sequence across key rotation. W0 journal v1 remains a
+separate laboratory wire format; W1 does not silently reinterpret existing v1
+artifacts as credentialed v2 artifacts.
+
+When a verifier has successor-credential or revocation evidence, use of the old
+operational key at or after its end boundary fails closed. Cross-epoch journal
+continuity also rejects a predecessor attestation issued at or after the first
+successor credential became active, preventing a stale key from manufacturing a
+late predecessor that a newer key could otherwise extend. This is evidence-
+relative verification: without discovery or propagation of a relevant
+successor/revocation artifact, W1 does **not** claim globally current key state.
+Global currentness, revocation distribution, key discovery, and equivocation
+observation are W2+ concerns.
 
 A witness receipt means that the named witness key observed and verified one
 exact signed journal artifact. It does not prove content truth, legal identity,
@@ -427,20 +461,25 @@ portable certificate verification.
 
 The staged roadmap is:
 
-1. **W0 — pure cryptographic foundation:** public-only journal attestations,
-   witness receipts, deterministic checkpoints, and non-authority tests;
-2. **W1 — persona key credentials and epochs:** privacy-preserving key binding,
-   rotation, revocation, recovery, and stale-key rejection;
+1. **W0 — pure cryptographic foundation (implemented laboratory):** public-only
+   journal attestations, witness receipts, deterministic checkpoints, and
+   non-authority tests;
+2. **W1 — persona key credentials and epochs (implemented laboratory):**
+   privacy-preserving root/key binding, operational-key epochs, rotation,
+   revocation, recovery transitions, stale-key rejection when relevant evidence
+   is supplied, and credential-aware journal v2 continuity;
 3. **W2 — witness service laboratory:** independently deployable, bounded,
-   no-Grid-authority witness service with replay/equivocation evidence;
+   no-Grid-authority witness service with key-state observation, replay and
+   equivocation evidence, and no implicit global-currentness claim;
 4. **W3 — archive and availability laboratory:** independently operated public
    object retention with explicit availability and legal-removal semantics;
 5. **W4 — optional checkpoint agreement adapter:** evaluate threshold/BFT
    certification of compact checkpoints under Byzantine, partition, capture,
    censorship, version-skew, and key-compromise conditions;
 6. **W5 — AXIOM Verify:** independently verify content digests, persona journal
-   signatures, continuity, witness receipts, checkpoints, availability, and any
-   optional finality certificate while preserving explicit non-claims; and
+   signatures, credential epochs, revocations, continuity, witness receipts,
+   checkpoints, availability, and any optional finality certificate while
+   preserving explicit non-claims; and
 7. **W6 — promotion:** only after applicable protocol, security, privacy,
    operational, scale, governance, and independent-review gates pass.
 
