@@ -24,6 +24,23 @@ const MAX_LIMITS = Object.freeze({
   follows: 200,
   retention_receipts: 100
 });
+const FORBIDDEN_KEYS = new Set([
+  'trusted_exporter_json',
+  'package_json',
+  'attestation',
+  'signature',
+  'controller_actor_id',
+  'selective_link_commitment',
+  'delegation_authority_digest',
+  'source_read_token',
+  'sourceReadToken',
+  'authorization',
+  'private_key',
+  'transport_job',
+  'transport_jobs',
+  'ranking_score',
+  'reputation_score'
+]);
 
 export function buildRemoteSocialReviewProjection(store, owner, {
   limits = DEFAULT_LIMITS
@@ -49,23 +66,32 @@ export function buildRemoteSocialReviewProjection(store, owner, {
     limit: bounded.retention_receipts
   });
 
+  assertOwnedRecords(staged.stages, recipient, 'stage');
+  assertOwnedRecords(admissions.admissions, recipient, 'admission');
+  assertOwnedRecords(observations.observations, recipient, 'observation');
+  assertOwnedRecords(follows.follows, recipient, 'follow');
+  assertOwnedRecords(retentionReceipts.receipts, recipient, 'retention receipt');
+  if (retention.owner !== recipient) {
+    throw new ValidationError('remote social review retention owner binding is invalid');
+  }
+
   const projection = Object.freeze({
     schema: REMOTE_SOCIAL_REVIEW_SCHEMA,
     owner: recipient,
     activation_scope: 'local-read-only-review',
     stages: Object.freeze(staged.stages.map(projectStage)),
-    stages_truncated: staged.truncated,
+    stages_truncated: Boolean(staged.truncated),
     admissions: Object.freeze(admissions.admissions.map(projectAdmission)),
-    admissions_truncated: admissions.truncated,
+    admissions_truncated: Boolean(admissions.truncated),
     observations: Object.freeze(observations.observations.map(projectObservation)),
-    observations_truncated: observations.truncated,
+    observations_truncated: Boolean(observations.truncated),
     follows: Object.freeze(follows.follows.map(projectFollow)),
-    follows_truncated: follows.truncated,
+    follows_truncated: Boolean(follows.truncated),
     retention: projectRetention(retention),
     retention_receipts: Object.freeze(
       retentionReceipts.receipts.map(projectRetentionReceipt)
     ),
-    retention_receipts_truncated: retentionReceipts.truncated,
+    retention_receipts_truncated: Boolean(retentionReceipts.truncated),
     exporter_attestation_is_identity_proof: false,
     exporter_attestation_is_content_truth_proof: false,
     local_admission_is_authorship_proof: false,
@@ -87,7 +113,16 @@ export function buildRemoteSocialReviewProjection(store, owner, {
       { bytes, maximum_bytes: MAX_RESPONSE_BYTES }
     );
   }
-  return Object.freeze({ ...projection, response_bytes: bytes });
+  const result = Object.freeze({ ...projection, response_bytes: bytes });
+  if (Buffer.byteLength(canonicalJson(result), 'utf8') > MAX_RESPONSE_BYTES) {
+    throw new AxiomError(
+      'remote_social_review_response_too_large',
+      'Remote social review projection exceeds the bounded response size',
+      409,
+      { maximum_bytes: MAX_RESPONSE_BYTES }
+    );
+  }
+  return result;
 }
 
 function projectStage(stage) {
@@ -304,6 +339,17 @@ function requireReviewStore(store) {
   }
 }
 
+function assertOwnedRecords(records, owner, label) {
+  if (!Array.isArray(records)) {
+    throw new ValidationError(`remote social review ${label} records are invalid`);
+  }
+  for (const record of records) {
+    if (!record || record.owner !== owner) {
+      throw new ValidationError(`remote social review ${label} owner binding is invalid`);
+    }
+  }
+}
+
 function safeTextPreview(content) {
   if (!content || content.media_type !== 'text/plain' || typeof content.text !== 'string') {
     return null;
@@ -326,26 +372,21 @@ function assertSafeProjection(projection, owner) {
   if (projection.owner !== owner) {
     throw new ValidationError('remote social review projection owner binding is invalid');
   }
-  const serialized = canonicalJson(projection);
-  for (const forbidden of [
-    'BEGIN PUBLIC KEY',
-    'BEGIN PRIVATE KEY',
-    'BEGIN EC PRIVATE KEY',
-    'trusted_exporter_json',
-    'package_json',
-    'attestation',
-    'signature',
-    'controller_actor_id',
-    'selective_link_commitment',
-    'delegation_authority_digest',
-    'sourceReadToken',
-    'authorization',
-    'remote_social_transport_jobs',
-    'ranking_score',
-    'reputation_score'
-  ]) {
-    if (serialized.includes(forbidden)) {
-      throw new ValidationError(`remote social review projection exposes forbidden field/material: ${forbidden}`);
+  inspectKeys(projection);
+}
+
+function inspectKeys(value) {
+  if (Array.isArray(value)) {
+    for (const item of value) inspectKeys(item);
+    return;
+  }
+  if (!value || typeof value !== 'object') return;
+  for (const [key, item] of Object.entries(value)) {
+    if (FORBIDDEN_KEYS.has(key)) {
+      throw new ValidationError(
+        `remote social review projection exposes forbidden field: ${key}`
+      );
     }
+    inspectKeys(item);
   }
 }
