@@ -501,6 +501,19 @@ The current executable laboratories remain outside supported Grid authority:
   expired authorization, configured and hard lifetime ceilings, source-
   admission validity bounds, source-key non-substitutability, and rejection of
   remote self-provisioning or widened authority claims;
+- `mesh/src/lib/public-witness-source-provisioning-store.mjs` adds W2c4d2 as a
+  separate, effect-capable local application journal above d1. A provisioner
+  Ed25519 key signs `authorization-retained`, `effect-ready`, and
+  `admission-linked` records while the d1 operator key remains verification-only.
+  The store fsyncs authorization and an exact effect attempt before its only
+  receiver mutation, W2c2 `admitSource()`, then links only an exact retained
+  authorized admission after durable receiver state advances;
+- the W2c4d2 provisioning-store test family verifies authorization-before-effect
+  ordering, deterministic local capacity reservation before W2c2 mutation,
+  direct apply/replay/retry, crash-after-admission restart reconciliation,
+  post-hoc/bypass rejection, expiry, predecessor/epoch/command identity rules,
+  provisioner/operator substitution, tamper/truncation/state drift, receiver
+  rollback evidence, and static no-network/no-runtime-import boundaries;
 - `npm run public-witness:start -- <config.json>` and
   `npm run public-witness:verify -- <config.json>` operate the W2b standalone
   local laboratory without adding it to the four-process Grid runtime;
@@ -509,7 +522,7 @@ The current executable laboratories remain outside supported Grid authority:
   DNS/peer discovery or outbound fetch and exposes no source-admission or
   persona-root enrollment endpoint; and
 - the accepted no-egress social storage composition remains unchanged. W2c3,
-  W2c4a, W2c4b, W2c4c, and W2c4d1 are not imported into the supported
+  W2c4a, W2c4b, W2c4c, W2c4d1, and W2c4d2 are not imported into the supported
   Grid/Gateway/Hypervisor/Sandbox runtime and do not promote federation, archive
   availability, quorum, consensus, finality, social mutation, or any capability-
   registry claim.
@@ -857,10 +870,57 @@ W2c4d1 remains **inert authorization evidence**. It does not call
 `admitSource()`, append a W2c2 receiver record, expose a provisioning endpoint,
 or retroactively authorize an admission that already exists. W2c2 remains the
 final source-epoch, exact-predecessor, activation-time, validity, capacity, and
-restart-state oracle. A separate W2c4d2 must durably retain authorization before
-the receiver effect, apply only the exact authorized admission, and reconcile a
-crash after W2c2 commit but before application linkage without manufacturing a
-second admission or silently backdating authorization.
+restart-state oracle.
+
+W2c4d2 adds the separate **crash-safe source-provisioning application
+laboratory**. The d1 operator key remains verification-only inside this effect
+service. A distinct local Ed25519 provisioner key signs an append-only canonical
+JSONL application journal with three explicit phases:
+`authorization-retained -> effect-ready -> admission-linked`. Authorization is
+verified under the configured operator key and fsynced before any effect attempt.
+Each `effect-ready` record then binds the exact d1 command digest, a contiguous
+attempt number, intended W2c2 admission time, and the observed receiver durable
+record count/head before the call. Known local journal capacity for a later link
+is checked before W2c2 is invoked.
+
+The only receiver mutation available to d2 is the exact W2c2 `admitSource()`
+method. W2c2 independently remains authoritative for epoch-1 genesis, exact
+`+1` source rotation, predecessor admission, activation time, validity, source
+capacity, and durable replay semantics. After the call, d2 links only when the
+exact authorized admission is retained by W2c2 and the receiver durable state has
+advanced beyond the bound pre-effect position. Exact command replay after a link
+is idempotent and does not create another receiver or application record.
+
+The explicit `effect-ready` phase makes crash recovery non-retroactive. If W2c2
+commits the admission and the process fails before `admission-linked`, restart
+may observe the exact retained admission plus the earlier durable effect-ready
+record and append a reconciliation link without calling `admitSource()` again.
+An admission that exists with no prior effect-ready record is rejected as a
+post-hoc/bypass condition; d2 may not manufacture authorization history after an
+external admission appeared. A failed pre-effect attempt can be retried only by
+appending a new in-window effect-ready attempt. Expired authorization cannot
+create a new attempt, although an already-committed crash-window admission can
+still be linked later because reconciliation records evidence of the prior
+authorized attempt rather than granting new authority.
+
+D2's provisioner signature authenticates only the configured local application
+key and its journal. It does not replace operator authorization, prove legal
+identity or independent human approval, create persona-root trust, or establish
+global currentness. Current linkage evidence binds the exact retained admission
+plus the receiver durable head/count advancement observed around the effect; it
+does **not yet** export or embed the exact W2c2 witness-signed source-admission
+record as a standalone cross-store proof. Stronger receiver-record export and
+binding remains a separate hardening gate. D2 also inherits W2c2's existing
+trusted local state-directory and single-active-writer assumptions: file `fsync`
+and cross-store reconciliation are local crash-integrity evidence, not hostile-
+host resistance, replicated durability, consensus, or distributed atomic commit.
+
+W2c4d2 exposes no provisioning listener or network endpoint and performs no
+remote self-enrollment, discovery, outbound fetch, persona-root enrollment,
+social mutation, or Grid/Gateway/Hypervisor/Sandbox integration. It is the
+bounded local provisioning effect gate needed before any later independently
+reviewed deployment wrapper, not permission to federate or expose admission to
+remote callers.
 
 A witness receipt means that the named witness key observed and verified one
 exact signed journal artifact. It does not prove content truth, legal identity,
@@ -894,8 +954,9 @@ The staged roadmap is:
    process, W2c1 source-transfer protocol, W2c2 durable receiver/reconciliation,
    W2c3 receive-only authenticated mTLS ingress, W2c4a local ingress trust
    bundles, W2c4b local source-control history, W2c4c durable applied source
-   control, and W2c4d1 source-provisioning authorization implemented):** the
-   current work provides signed observations, idempotent replay,
+   control, W2c4d1 source-provisioning authorization, and W2c4d2 crash-safe
+   source-provisioning application/reconciliation implemented):** the current
+   work provides signed observations, idempotent replay,
    equivocation/stale-key evidence, witness-signed append-only local state,
    deterministic fail-closed restart, bounded stdin/stdout IPC, explicit local
    source admission, source-signed transfer continuity, source-equivocation
@@ -907,14 +968,17 @@ The staged roadmap is:
    trust bindings that cannot mint receiver source trust, content-addressed
    source-control history for certificate rotation/next-epoch source rotation/
    disable trust contraction, operator-signed durable control application, live
-   fail-closed source-binding resolution for subsequent requests, and short-lived
-   operator-signed authorization for one exact future W2c2 source-admission
-   effect. Remaining W2 work includes W2c4d2 durable crash-safe provisioning
-   application/reconciliation, operator-key lifecycle/rotation and stronger host
-   trust if required, a separately reviewed public deployment wrapper if
-   justified, discovery/outbound acquisition policy if justified, independently
-   operated hosts, broader remote abuse/resource testing, and multi-witness
-   evidence exchange without Grid authority;
+   fail-closed source-binding resolution for subsequent requests, short-lived
+   operator-signed authorization for one exact W2c2 source-admission effect, and
+   a separate provisioner-signed three-phase durable application journal with
+   crash-window reconciliation and explicit post-hoc-admission rejection.
+   Remaining W2 work includes operator/provisioner-key lifecycle and rotation,
+   stronger exported W2c2 admission-record evidence if required, integration of
+   preserved whole-listener lifecycle control on the current trust stack,
+   stronger host trust if required, a separately reviewed public deployment
+   wrapper if justified, discovery/outbound acquisition policy if justified,
+   independently operated hosts, broader remote abuse/resource testing, and
+   multi-witness evidence exchange without Grid authority;
 4. **W3 — archive and availability laboratory:** independently operated public
    object retention with explicit availability and legal-removal semantics;
 5. **W4 — optional checkpoint agreement adapter:** evaluate threshold/BFT
@@ -927,8 +991,9 @@ The staged roadmap is:
    receiver intake/linkage records, authenticated transport bindings, ingress
    trust-bundle generations, source-control histories, operator-signed applied
    source-control records, source-provisioning authorization commands,
-   checkpoints, availability, and any optional finality certificate while
-   preserving explicit non-claims; and
+   provisioner-signed application/ready/link records and their receiver-state
+   bindings, checkpoints, availability, and any optional finality certificate
+   while preserving explicit non-claims; and
 7. **W6 — promotion:** only after applicable protocol, security, privacy,
    operational, scale, governance, and independent-review gates pass.
 
@@ -939,11 +1004,12 @@ conflict evidence rather than silently choosing one. W2c1, W2c2, and W2c3 apply
 the same rule to an admitted source that signs competing transfer packages at
 one source position, with W2c2 durably retaining the conflict across restart and
 W2c3 proving the same result survives authenticated socket delivery. W2c4a,
-W2c4b, W2c4c, and W2c4d1 cannot resolve or suppress that conflict: the first
-three bind/apply local ingress trust/control, while d1 only authorizes one exact
-future source-admission effect. None selects a preferred source artifact.
-Future multi-witness and agreement protocols must preserve both forms of
-conflict rather than silently select a winner.
+W2c4b, W2c4c, W2c4d1, and W2c4d2 cannot resolve or suppress that conflict: the
+first three bind/apply local ingress trust/control, d1 authorizes one exact
+future source-admission effect, and d2 durably applies only that bounded local
+trust mutation. None selects a preferred source artifact. Future multi-witness
+and agreement protocols must preserve both forms of conflict rather than
+silently select a winner.
 
 ## Required future agreement interface
 
