@@ -11,6 +11,10 @@ import { loadDataProtector } from '../lib/protector.mjs';
 import { runServiceProcess } from '../lib/service-lifecycle.mjs';
 import { buildMachineIntentReceipt } from '../lib/machine-receipt.mjs';
 import {
+  buildRemoteSocialAdmissionFinalizerResult,
+  normalizeRemoteSocialAdmissionFinalizerRequest
+} from '../lib/remote-social-admission-finalizer.mjs';
+import {
   acquireGridRuntimeLock,
   createGridBackup,
   recordPendingRecovery,
@@ -175,6 +179,21 @@ export async function createGridService(config = meshConfig()) {
       createRemoteSocialReviewReadAdapter(store),
       owner
     );
+  });
+  router.add('POST', '/internal/v1/social/remote-admit', async ({ body, traceId, principal }) => {
+    if (principal.service !== 'hypervisor') {
+      throw new ValidationError('Only Hypervisor may finalize remote social admission');
+    }
+    const request = normalizeRemoteSocialAdmissionFinalizerRequest(parseJsonBody(body));
+    const admission = store.admitRemoteSocialStageWithIntent({
+      owner: request.intent.principal.id,
+      stageId: request.intent.input.stage_id,
+      intent: request.intent,
+      intentId: request.intent_id,
+      approvalId: request.approval_id,
+      traceId
+    });
+    return buildRemoteSocialAdmissionFinalizerResult(admission);
   });
   router.add('GET', '/internal/v1/intents/:id', async ({ params }) => store.getIntent(params.id));
   router.add('GET', '/internal/v1/machine-receipts/intents/:id/verify', async ({ params, url }) => {
