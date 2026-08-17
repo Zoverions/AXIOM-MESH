@@ -8,7 +8,7 @@
 
 Agent Commons is the proposed public collaboration layer between AXIOM-MESH and external digital agents, agent runtimes, automated reviewers, research systems, and agent-native communities.
 
-Its purpose is to let outside systems discover bounded work, critique architecture, reproduce evidence, propose patches, and return verifiable results without becoming an alternate authority plane.
+Its purpose is to let outside systems discover bounded work, critique architecture, reproduce evidence, propose patches, contribute test infrastructure, and return verifiable results without becoming an alternate authority plane.
 
 Core invariant:
 
@@ -23,6 +23,7 @@ external agents / communities / runtimes
           Agent Commons
   discovery / challenges / feedback
        contribution envelopes
+   bounded infrastructure offers
                  |
                  v
        GitHub issues / draft PRs
@@ -55,11 +56,14 @@ The first draft object family is deliberately small:
 
 1. `axiom-agent-challenge.v1` — a bounded public work request;
 2. `axiom-agent-contribution.v1` — a returned implementation/reproduction package;
-3. `axiom-agent-feedback.v1` — criticism, review, risk, or research feedback that may not contain a patch.
+3. `axiom-agent-feedback.v1` — criticism, review, risk, or research feedback that may not contain a patch;
+4. `axiom-agent-infrastructure-offer.v1` — bounded contributed test capacity;
+5. `axiom-agent-infrastructure-challenge.v1` — an exact-base hardware or infrastructure test plan;
+6. `axiom-agent-infrastructure-result.v1` — a bounded infrastructure result and evidence envelope.
 
 Schemas live under `docs/architecture/contracts/`.
 
-These are exchange contracts, not proof that an external agent, runtime, identity, or network is trustworthy.
+These are exchange contracts, not proof that an external agent, runtime, identity, network, or offered device is trustworthy.
 
 ## Challenge model
 
@@ -143,9 +147,12 @@ Relevant threats include:
 - oversized or resource-exhaustion submissions;
 - stale-base patches that overwrite newer security work;
 - social pressure to merge around protected review gates;
-- malicious external mirrors misrepresenting capability status.
+- malicious external mirrors misrepresenting capability status;
+- offered hardware whose declared properties are false;
+- remote-support requests that attempt to obtain credentials or persistent control;
+- test-node workflows that smuggle production enrollment or destructive changes.
 
-Required controls include exact-base binding, bounded inputs, protected CI, provenance capture, secret isolation, security-report routing, independent review for consequential changes, and no merge authority for external agents.
+Required controls include exact-base binding, bounded inputs, protected CI, provenance capture, secret isolation, security-report routing, independent review for consequential changes, and no merge or infrastructure authority for external agents merely from participation.
 
 ## GitHub integration
 
@@ -160,6 +167,54 @@ Agent-oriented issue forms should support at least:
 Security vulnerabilities that should not be public must follow `SECURITY.md` instead of public Agent Commons forms.
 
 A future repository-effect adapter may prepare or create an open draft pull request only through separately authorized AXIOM policy. Draft creation is not merge authority.
+
+## Infrastructure and hardware laboratory
+
+Agent Commons may also coordinate contributed physical hardware and operational test capacity. The infrastructure laboratory is intentionally a three-object model:
+
+1. **Offer** — a contributor advertises bounded test capacity and binds an existing `axiom-compute-node-profile.v1` by digest.
+2. **Challenge** — AXIOM binds one exact repository/base revision, one offered node-profile digest, one challenge class, a narrow safe-operation set, network limits, acceptance criteria, evidence requirements, and expiry.
+3. **Result** — the contributor reports bounded execution, evidence references, limitations, and explicit negative effect claims.
+
+Core infrastructure invariant:
+
+> **A device offer is not node admission. A challenge is not production authority. A result is not self-verifying truth.**
+
+The laboratory reuses `axiom-compute-node-profile.v1`; it does not create a competing hardware identity format.
+
+Initial challenge classes are:
+
+- `hardware-validation`;
+- `test-node-provisioning`;
+- `deployment-reproduction`;
+- `infrastructure-diagnostics`;
+- `support-assistance`;
+- `device-lab-capacity`.
+
+The v1 safe-operation vocabulary is restricted to system-fact collection, disposable workspace setup/reset, test-only dependency installation, build/test execution, local test services, sanitized logs, and bounded benchmark metrics.
+
+The following remain explicitly prohibited by the v1 infrastructure contracts:
+
+- production node enrollment;
+- credential issuance;
+- secret retrieval;
+- firmware or boot-chain changes;
+- disk erasure or destructive repair;
+- purchases or subscription activation;
+- security-boundary weakening;
+- unbounded remote shell;
+- permanent system mutation;
+- capability promotion;
+- ambient authority;
+- implicit payment.
+
+Hardware facts must keep `declared`, `measured`, `reproduced`, and `externally-verified` states separate. A contributor or agent cannot self-assert independent verification; the executable validator requires separate verifier confirmation before accepting that status.
+
+Remote access is not part of the v1 authority contract. An offer may state that remote access is technically available, but credentials, tunnels, remote shells, device-management enrollment, and unattended administration require a separate future design with human sponsorship, ephemeral credentials, exact task/device scope, revocation, timeout, recovery, and evidence.
+
+Hosted CI can establish broad platform compatibility but cannot substitute for all physical-device evidence. For Apple, physical follow-on work may eventually test `launchd`, sleep/wake/reboot recovery, Keychain/Secure Enclave integration, firewall/network semantics, signing/notarization, thermal/power behavior, and virtualization constraints. Equivalent physical validation can apply to Windows, Linux, ARM SBCs, GPU workstations, network appliances, and specialized hardware.
+
+Failures and blocked results remain useful evidence when exact-base and honestly reported. Interrupted or uncertain consequential effects must not be upgraded to success.
 
 ## Initial read-only interoperability laboratory
 
@@ -221,12 +276,22 @@ Where practical, retain publication provenance and external identifiers so annou
 - Sybil/collusion analysis;
 - no ambient authority derived from score.
 
-Any write-capable external adapter requires a separate threat review, policy mapping, evidence model, negative tests, and promotion decision.
+### Stage F — infrastructure and contributed hardware laboratory
+
+- bounded device/test-capacity offers;
+- exact-base infrastructure challenges;
+- exact compute-node-profile digest binding;
+- constrained operation and network vocabularies;
+- result/evidence envelopes with negative effect claims;
+- declared/measured/reproduced/externally-verified evidence separation;
+- no remote-administration or production-enrollment authority.
+
+Any write-capable external adapter or remote infrastructure executor requires a separate threat review, policy mapping, evidence model, negative tests, and promotion decision.
 
 ## Acceptance gates
 
 1. External participation cannot change `mesh/config/capabilities.json` status without the normal reviewed repository process.
-2. No Agent Commons contract grants merge, deployment, secret, or production execution authority.
+2. No Agent Commons contract grants merge, deployment, secret, production execution, production node enrollment, or credential authority.
 3. Challenge and contribution objects bind an exact repository base SHA.
 4. External social or agent-network state cannot override canonical GitHub state.
 5. Public feedback and security-sensitive disclosure paths are clearly separated.
@@ -234,7 +299,8 @@ Any write-capable external adapter requires a separate threat review, policy map
 7. A hostile external message or artifact cannot create a second authority path around `Gateway -> Hypervisor -> Sandbox -> Grid`.
 8. Reputation, if later implemented, remains evidence and policy input rather than self-executing authority.
 9. Read-only interoperability is proven before any write-capable adapter is considered.
-10. Current documentation remains explicit about what is architecture, laboratory, implemented, enabled, exposed, production-promoted, and marketed.
+10. Infrastructure test capacity cannot become production admission or remote administration merely because hardware is available.
+11. Current documentation remains explicit about what is architecture, laboratory, implemented, enabled, exposed, production-promoted, and marketed.
 
 ## Current non-claims
 
@@ -248,6 +314,15 @@ This document does not claim:
 - production external-agent execution;
 - a Sybil-resistant portable reputation network;
 - trustworthy external agent cards or social profiles;
-- a legal or economic reward system for contributions.
+- a legal or economic reward system for contributions;
+- a deployed hardware marketplace;
+- production remote administration;
+- automatic node enrollment;
+- trusted ownership or attestation of offered devices;
+- secure remote-shell infrastructure;
+- firmware-management authority;
+- production macOS service support;
+- native iOS/iPadOS node support;
+- autonomous purchasing or payment.
 
 The first deliverable is a safer contribution surface, not an autonomous swarm.
