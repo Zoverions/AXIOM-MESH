@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/agent-linux-isolation-conformance-receipt.v1.schema.json",
+  "title": "AXIOM Agent Linux Isolation Conformance Receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "repository",
+    "revision",
+    "observation_environment",
+    "platform",
+    "policy",
+    "adapter",
+    "limits",
+    "controls",
+    "probes",
+    "claims",
+    "receipt_digest"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-agent-linux-isolation-conformance-receipt.v1" },
+    "repository": { "const": "Zoverions/AXIOM-MESH" },
+    "revision": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "observation_environment": { "const": "hosted-ci" },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operating_system", "architecture", "kernel_release", "runner_pid_namespace", "runner_mount_namespace", "runner_network_namespace"],
+      "properties": {
+        "operating_system": { "const": "linux" },
+        "architecture": { "enum": ["x64", "arm64"] },
+        "kernel_release": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "runner_pid_namespace": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "runner_mount_namespace": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "runner_network_namespace": { "type": "string", "minLength": 1, "maxLength": 256 }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["catalog_schema", "catalog_digest", "policy_id", "revision"],
+      "properties": {
+        "catalog_schema": { "const": "axiom-agent-executor-isolation-policy-catalog.v1" },
+        "catalog_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "policy_id": { "const": "linux-kernel-isolation-v1" },
+        "revision": { "const": 1 }
+      }
+    },
+    "adapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adapter_id", "docker_binary", "docker_server_version", "image_tag", "image_id", "entrypoint"],
+      "properties": {
+        "adapter_id": { "const": "docker-linux-isolation-lab-v1" },
+        "docker_binary": { "const": "/usr/bin/docker" },
+        "docker_server_version": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "image_tag": { "const": "axiom-mesh-kernel:0.12.0-dev.3" },
+        "image_id": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "entrypoint": { "const": "/usr/local/bin/node" }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["network_mode", "read_only_root", "capabilities_dropped", "no_new_privileges", "uid_gid", "pids", "memory_bytes", "cpu_quota", "probe_timeout_ms", "max_output_bytes"],
+      "properties": {
+        "network_mode": { "const": "none" },
+        "read_only_root": { "const": true },
+        "capabilities_dropped": { "const": "ALL" },
+        "no_new_privileges": { "const": true },
+        "uid_gid": { "const": "10001:10001" },
+        "pids": { "const": 32 },
+        "memory_bytes": { "const": 134217728 },
+        "cpu_quota": { "const": 0.5 },
+        "probe_timeout_ms": { "const": 5000 },
+        "max_output_bytes": { "const": 65536 }
+      }
+    },
+    "controls": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pid_namespace_separated",
+        "mount_namespace_separated",
+        "network_namespace_separated",
+        "effective_capabilities_zero",
+        "no_new_privileges_active",
+        "seccomp_filter_active",
+        "disposable_workspace_writable",
+        "container_root_write_denied",
+        "symlink_write_escape_denied",
+        "docker_socket_absent",
+        "host_sentinel_absent",
+        "secret_mount_absent",
+        "public_network_denied",
+        "memory_limit_observed",
+        "pid_limit_observed",
+        "cpu_limit_observed",
+        "pid_exhaustion_bounded",
+        "timeout_cleanup_verified",
+        "output_overflow_cleanup_verified"
+      ],
+      "properties": {
+        "pid_namespace_separated": { "const": true },
+        "mount_namespace_separated": { "const": true },
+        "network_namespace_separated": { "const": true },
+        "effective_capabilities_zero": { "const": true },
+        "no_new_privileges_active": { "const": true },
+        "seccomp_filter_active": { "const": true },
+        "disposable_workspace_writable": { "const": true },
+        "container_root_write_denied": { "const": true },
+        "symlink_write_escape_denied": { "const": true },
+        "docker_socket_absent": { "const": true },
+        "host_sentinel_absent": { "const": true },
+        "secret_mount_absent": { "const": true },
+        "public_network_denied": { "const": true },
+        "memory_limit_observed": { "const": true },
+        "pid_limit_observed": { "const": true },
+        "cpu_limit_observed": { "const": true },
+        "pid_exhaustion_bounded": { "const": true },
+        "timeout_cleanup_verified": { "const": true },
+        "output_overflow_cleanup_verified": { "const": true }
+      }
+    },
+    "probes": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["probe_id", "status", "observation_digest"],
+        "properties": {
+          "probe_id": { "enum": ["baseline", "pid-ceiling", "timeout-cleanup", "output-ceiling"] },
+          "status": { "const": "pass" },
+          "observation_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    },
+    "claims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fixed_probe_real_process_effects_observed",
+        "fixed_probe_disposable_filesystem_effects_observed",
+        "tested_linux_kernel_controls_observed",
+        "tested_network_denial_observed",
+        "physical_device_proof",
+        "globally_verified_platform_isolation",
+        "arbitrary_repository_code_isolation_verified",
+        "compiled_plan_effect_admission",
+        "production_executor_ready",
+        "remote_execution_enabled",
+        "remote_administration_enabled",
+        "credentials_available",
+        "secrets_available",
+        "production_node_enrollment",
+        "deployment_authority",
+        "capability_promoted",
+        "authority_granted"
+      ],
+      "properties": {
+        "fixed_probe_real_process_effects_observed": { "const": true },
+        "fixed_probe_disposable_filesystem_effects_observed": { "const": true },
+        "tested_linux_kernel_controls_observed": { "const": true },
+        "tested_network_denial_observed": { "const": true },
+        "physical_device_proof": { "const": false },
+        "globally_verified_platform_isolation": { "const": false },
+        "arbitrary_repository_code_isolation_verified": { "const": false },
+        "compiled_plan_effect_admission": { "const": false },
+        "production_executor_ready": { "const": false },
+        "remote_execution_enabled": { "const": false },
+        "remote_administration_enabled": { "const": false },
+        "credentials_available": { "const": false },
+        "secrets_available": { "const": false },
+        "production_node_enrollment": { "const": false },
+        "deployment_authority": { "const": false },
+        "capability_promoted": { "const": false },
+        "authority_granted": { "const": false }
+      }
+    },
+    "receipt_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}
