@@ -12,7 +12,8 @@ const paths = Object.freeze({
   contribution: 'docs/architecture/contracts/agent-contribution.v1.schema.json',
   feedback: 'docs/architecture/contracts/agent-feedback.v1.schema.json',
   contributionForm: '.github/ISSUE_TEMPLATE/agent-contribution.yml',
-  feedbackForm: '.github/ISSUE_TEMPLATE/agent-feedback.yml'
+  feedbackForm: '.github/ISSUE_TEMPLATE/agent-feedback.yml',
+  reproductionForm: '.github/ISSUE_TEMPLATE/agent-reproduction.yml'
 });
 
 function assert(condition, message) {
@@ -36,14 +37,24 @@ function assertSchemaBase(schema, expectedId, expectedConst) {
 }
 
 export async function checkAgentCommons() {
-  const [entry, architecture, challenge, contribution, feedback, contributionForm, feedbackForm] = await Promise.all([
+  const [
+    entry,
+    architecture,
+    challenge,
+    contribution,
+    feedback,
+    contributionForm,
+    feedbackForm,
+    reproductionForm
+  ] = await Promise.all([
     read(paths.entry),
     read(paths.architecture),
     readJson(paths.challenge),
     readJson(paths.contribution),
     readJson(paths.feedback),
     read(paths.contributionForm),
-    read(paths.feedbackForm)
+    read(paths.feedbackForm),
+    read(paths.reproductionForm)
   ]);
 
   for (const marker of [
@@ -92,7 +103,8 @@ export async function checkAgentCommons() {
 
   for (const [name, form] of [
     ['agent-contribution.yml', contributionForm],
-    ['agent-feedback.yml', feedbackForm]
+    ['agent-feedback.yml', feedbackForm],
+    ['agent-reproduction.yml', reproductionForm]
   ]) {
     assert(form.includes('SECURITY.md'), `${name} must route sensitive security material away from public issues`);
     assert(form.includes('base commit SHA'), `${name} must require base revision context`);
@@ -105,7 +117,8 @@ export async function checkAgentCommons() {
       challenge.properties.schema.const,
       contribution.properties.schema.const,
       feedback.properties.schema.const
-    ]
+    ],
+    issue_forms: 3
   });
 }
 
@@ -114,7 +127,7 @@ async function main() {
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((error) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
