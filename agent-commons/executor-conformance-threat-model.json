@@ -1,0 +1,103 @@
+{
+  "schema": "axiom-agent-executor-conformance-threat-model.v1",
+  "phase": "executor-conformance-virtual-sandbox",
+  "repository": "Zoverions/AXIOM-MESH",
+  "tracks_issue": 1119,
+  "purpose": "Prove enforcement semantics for one exact dry-run executor plan using synthetic in-memory effects before any operating-system or remote-hardware executor is trusted.",
+  "trust_model": {
+    "dry_run_plan": "untrusted-until-exact-validator-passes",
+    "execution_requests": "hostile",
+    "synthetic_resolution_snapshot": "explicit-input-not-live-dns-proof",
+    "lifecycle_controller": "in-memory-laboratory-authority-only",
+    "executor_signing_key": "receipt-authentication-only-not-production-authority",
+    "repository_code": "potentially-hostile-even-when-outer-argv-is-fixed"
+  },
+  "attack_classes": [
+    {
+      "id": "plan-or-compiler-substitution",
+      "required_control": "Validate canonical plan digest plus supported compiler ID/version/policy digest before any admission."
+    },
+    {
+      "id": "hazard-marker-laundering",
+      "required_control": "Reject any plan whose fixed repository-code or repository-shell hazard markers differ from the compiler templates."
+    },
+    {
+      "id": "arbitrary-executable-or-path-poisoning",
+      "required_control": "Match fixed executable IDs exactly and reject environment names outside the compiled allowlist, including PATH."
+    },
+    {
+      "id": "argv-or-shell-injection",
+      "required_control": "Require literal argv equality to the compiled template and perform no shell interpretation."
+    },
+    {
+      "id": "workspace-traversal-or-normalization-escape",
+      "required_control": "Require canonical relative paths rooted at work/session; reject absolute, backslash, dot-segment, duplicate-separator and out-of-root paths."
+    },
+    {
+      "id": "symlink-escape",
+      "required_control": "Fail closed whenever the synthetic path-resolution evidence reports a symlink; future real executors require OS-enforced no-follow semantics."
+    },
+    {
+      "id": "ssrf-origin-substitution-or-redirect",
+      "required_control": "Require exact compiled origin/method, no redirect target, and no credentialed/dynamic origin discovery."
+    },
+    {
+      "id": "dns-rebinding",
+      "required_control": "Bind effect-time synthetic addresses to the exact preflight snapshot and reject any address-set change."
+    },
+    {
+      "id": "public-versus-owner-lan-confusion",
+      "required_control": "Public-read snapshots accept only public address classes; owner-LAN snapshots accept only local/private address classes."
+    },
+    {
+      "id": "resource-exhaustion",
+      "required_control": "Check process, per-process runtime, total runtime, output, memory, step and request ceilings before virtual admission."
+    },
+    {
+      "id": "lifecycle-replay-stale-prefix-or-double-consume",
+      "required_control": "Require the exact issued head used by the plan and consume the one-time in-memory lifecycle immediately before the first admitted virtual effect."
+    },
+    {
+      "id": "interruption-rewritten-as-completion",
+      "required_control": "Interruption is terminal in the lifecycle ledger and the sandbox cannot complete after a denial/interruption."
+    },
+    {
+      "id": "request-replay-or-step-reordering",
+      "required_control": "Require unique request IDs and strict next-step sequence matching."
+    },
+    {
+      "id": "receipt-tampering-or-signer-substitution",
+      "required_control": "Sign canonical receipts with Ed25519 and verify the trusted executor public-key fingerprint plus exact plan binding."
+    },
+    {
+      "id": "effect-success-or-authority-claim-elevation",
+      "required_control": "Receipts hard-code real effects, task success, production authority and capability promotion to false."
+    }
+  ],
+  "boundaries": {
+    "host_process_execution": false,
+    "host_filesystem_mutation": false,
+    "live_dns_lookup": false,
+    "live_network_io": false,
+    "credential_or_secret_lookup": false,
+    "service_control": false,
+    "remote_shell_or_tunnel": false,
+    "real_package_installation": false,
+    "os_sandbox_claimed": false,
+    "vm_or_container_isolation_claimed": false,
+    "real_hardware_effects": false,
+    "global_lifecycle_currentness_claimed": false,
+    "task_success_claimed": false,
+    "production_node_enrollment": false,
+    "deployment_authority": false,
+    "capability_promotion": false
+  },
+  "promotion_blockers": [
+    "No real executor process launcher exists.",
+    "No operating-system sandbox profile is implemented or verified.",
+    "No live DNS resolution/pinning implementation exists.",
+    "No durable atomic lifecycle store is integrated with an executor.",
+    "No real package/build/test execution is permitted by this laboratory.",
+    "No remote hardware transport, credential broker or production node-enrollment path exists."
+  ]
+}
