@@ -26,7 +26,9 @@ test('infrastructure discovery points only to existing bounded contracts', async
     discovery.test_session_lifecycle_transcript_contract,
     discovery.executor_platform_profile_contract,
     discovery.executor_dry_run_plan_contract,
-    discovery.executor_conformance_receipt_contract
+    discovery.executor_conformance_receipt_contract,
+    discovery.executor_durable_state_record_contract,
+    discovery.executor_durable_state_receipt_contract
   ];
   for (const path of contractPaths) {
     assert.equal(typeof path, 'string');
@@ -43,7 +45,9 @@ test('infrastructure discovery points only to existing bounded contracts', async
     [discovery.test_session_lifecycle_transcript_contract, 'agent-test-session-lifecycle-transcript.v1.schema.json', 'axiom-agent-test-session-lifecycle-transcript.v1'],
     [discovery.executor_platform_profile_contract, 'agent-executor-platform-profile.v1.schema.json', 'axiom-agent-executor-platform-profile.v1'],
     [discovery.executor_dry_run_plan_contract, 'agent-executor-dry-run-plan.v1.schema.json', 'axiom-agent-executor-dry-run-plan.v1'],
-    [discovery.executor_conformance_receipt_contract, 'agent-executor-conformance-receipt.v1.schema.json', 'axiom-agent-executor-conformance-receipt.v1']
+    [discovery.executor_conformance_receipt_contract, 'agent-executor-conformance-receipt.v1.schema.json', 'axiom-agent-executor-conformance-receipt.v1'],
+    [discovery.executor_durable_state_record_contract, 'agent-executor-durable-state-record.v1.schema.json', 'axiom-agent-executor-durable-state-record.v1'],
+    [discovery.executor_durable_state_receipt_contract, 'agent-executor-durable-state-receipt.v1.schema.json', 'axiom-agent-executor-durable-state-receipt.v1']
   ];
   for (const [path, idSuffix, schema] of identities) {
     const contract = await readJson(path);
@@ -71,6 +75,20 @@ test('infrastructure discovery points only to existing bounded contracts', async
     assert.equal(conformanceThreatModel.boundaries[key], false, `conformance threat-model boundary ${key} must remain false`);
   }
 
+  const durableThreatModel = await readJson(discovery.executor_durable_state_threat_model);
+  assert.equal(durableThreatModel.schema, 'axiom-agent-executor-durable-state-threat-model.v1');
+  assert.equal(durableThreatModel.phase, 'durable-atomic-executor-lifecycle-state');
+  assert.equal(durableThreatModel.storage_properties.dedicated_control_state_filesystem_write_enabled, true);
+  assert.equal(durableThreatModel.storage_properties.repository_workspace_write_enabled, false);
+  assert.equal(durableThreatModel.storage_properties.power_loss_media_survival_claimed, false);
+  assert.ok(Array.isArray(durableThreatModel.attack_classes));
+  assert.ok(durableThreatModel.attack_classes.length >= 12);
+  assert.ok(Array.isArray(durableThreatModel.promotion_blockers));
+  assert.ok(durableThreatModel.promotion_blockers.length >= 10);
+  for (const key of Object.keys(durableThreatModel.boundaries)) {
+    assert.equal(durableThreatModel.boundaries[key], false, `durable threat-model boundary ${key} must remain false`);
+  }
+
   assert.deepEqual(discovery.challenge_classes, [
     'hardware-validation',
     'test-node-provisioning',
@@ -85,12 +103,16 @@ test('infrastructure discovery points only to existing bounded contracts', async
   assert.equal(discovery.test_session_lifecycle_receipts_available, true);
   assert.equal(discovery.executor_dry_run_compiler_available, true);
   assert.equal(discovery.executor_conformance_virtual_sandbox_available, true);
+  assert.equal(discovery.executor_durable_state_lab_available, true);
+  assert.equal(discovery.executor_durable_control_state_filesystem_write_enabled, true);
 
   for (const key of [
     'executor_dry_run_effects_reachable',
     'executor_conformance_real_effects_reachable',
+    'executor_durable_state_real_effects_reachable',
     'test_session_effects_reachable',
     'production_lifecycle_persistence_enabled',
+    'production_executor_persistence_enabled',
     'remote_execution_enabled',
     'production_node_enrollment_enabled',
     'credential_issuance_enabled',

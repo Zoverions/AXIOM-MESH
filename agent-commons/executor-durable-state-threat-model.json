@@ -1,0 +1,119 @@
+{
+  "schema": "axiom-agent-executor-durable-state-threat-model.v1",
+  "phase": "durable-atomic-executor-lifecycle-state",
+  "core_invariant": "A restart may lose availability; it must not restore spendable authorization, erase a known revocation or terminal state, or convert uncertainty into permission.",
+  "storage_properties": {
+    "dedicated_control_state_filesystem_write_enabled": true,
+    "repository_workspace_write_enabled": false,
+    "immutable_generation_records": true,
+    "exclusive_writer_lease": true,
+    "stale_lock_recovery_requires_exact_head_receipt": true,
+    "external_head_receipt_required_for_rollback_detection": true,
+    "process_restart_recovery_targeted": true,
+    "power_loss_media_survival_claimed": false,
+    "distributed_consensus_claimed": false
+  },
+  "boundaries": {
+    "host_process_execution": false,
+    "repository_workspace_mutation": false,
+    "arbitrary_host_path_mutation": false,
+    "live_network_io": false,
+    "credential_lookup": false,
+    "secret_access": false,
+    "service_control": false,
+    "remote_shell": false,
+    "remote_hardware_execution": false,
+    "production_node_enrollment": false,
+    "deployment_authority": false,
+    "capability_promotion": false,
+    "global_currentness": false,
+    "production_persistence": false
+  },
+  "attack_classes": [
+    {
+      "id": "concurrent-writer",
+      "threat": "Two processes extend one authorization state concurrently.",
+      "control": "Signed exclusive writer lease; every commit rereads and verifies ownership before creating a generation.",
+      "residual_nonclaim": "This is not a distributed lease or consensus protocol."
+    },
+    {
+      "id": "stale-lock-takeover",
+      "threat": "A stale lock is broken while an older writer can still mutate state.",
+      "control": "Lease expiry plus exact externally retained head receipt is required for recovery; old writers are fenced by lock-digest and owner-token checks.",
+      "residual_nonclaim": "Wall-clock lease semantics are laboratory controls, not Byzantine clock consensus."
+    },
+    {
+      "id": "consume-crash-window",
+      "threat": "A crash after authorization consumption but before executor admission makes the authorization spendable again.",
+      "control": "Consumption generation is fsync-written and atomically renamed before the controller returns virtual admission; recovered consumed state is non-resumable and uncertain.",
+      "residual_nonclaim": "The lab proves process-restart ordering, not storage-device power-loss survival."
+    },
+    {
+      "id": "rollback-old-prefix",
+      "threat": "An authentic older generation set is restored after a newer committed head existed.",
+      "control": "A separately retained signed durable-head receipt must exactly match the local generation and record digest before a current-head claim is accepted.",
+      "residual_nonclaim": "Without external retention, local history alone cannot prove a later suffix never existed."
+    },
+    {
+      "id": "torn-or-partial-write",
+      "threat": "A crash leaves a partially written committed state that is interpreted as valid.",
+      "control": "Writes go to unique temporary files, are fsynced, then atomically renamed; abandoned temp files are never committed generations.",
+      "residual_nonclaim": "Atomic rename and fsync semantics depend on the local filesystem and do not establish independent replication."
+    },
+    {
+      "id": "generation-gap-conflict",
+      "threat": "Missing, duplicated, or conflicting generations hide state transitions.",
+      "control": "Startup requires exactly one contiguous generation sequence and exact predecessor-record digest chaining.",
+      "residual_nonclaim": "This is a single-writer local chain, not multi-node agreement."
+    },
+    {
+      "id": "record-tamper",
+      "threat": "Lifecycle or receipt payloads are modified on disk.",
+      "control": "Every record is canonical, Ed25519-signed by the store evidence key, digest-named, and re-verifies lifecycle signatures and exact plan bindings on startup.",
+      "residual_nonclaim": "A compromised store signing key remains a separate key-compromise problem."
+    },
+    {
+      "id": "store-key-substitution",
+      "threat": "A copied state directory is reopened under another store key.",
+      "control": "Every record and lock binds the store-key fingerprint and verification requires the trusted corresponding public key.",
+      "residual_nonclaim": "The software key is not claimed to be HSM, TPM, Secure Enclave, or hardware backed."
+    },
+    {
+      "id": "lifecycle-key-substitution",
+      "threat": "A durable store rewrites lifecycle evidence under a different lifecycle signer.",
+      "control": "The lifecycle private/public key fingerprint must equal the dry-run plan lifecycle-key binding and every transcript/receipt is reverified.",
+      "residual_nonclaim": "Lifecycle signing authenticates evidence; it is not device or production authority."
+    },
+    {
+      "id": "path-store-escape",
+      "threat": "Untrusted identifiers cause durable state writes outside the dedicated root.",
+      "control": "The caller supplies an absolute root; store directories are hash-derived from validated IDs and every internal path is checked to remain beneath that root.",
+      "residual_nonclaim": "A hostile privileged local filesystem is outside the current trust model."
+    },
+    {
+      "id": "terminal-rewrite",
+      "threat": "Revoked, expired, interrupted, or completed state is rewritten into issued or consumed state.",
+      "control": "The durable generation validator enforces the lifecycle transition graph and terminal-state immutability.",
+      "residual_nonclaim": "No global revocation oracle is claimed."
+    },
+    {
+      "id": "claim-elevation",
+      "threat": "Durability evidence is presented as task success, real effects, production persistence, currentness, or authority.",
+      "control": "Record and head-receipt validators hard-code false production/currentness/effect/authority claims; conformance receipts remain virtual-only.",
+      "residual_nonclaim": "Passing this laboratory is not executor promotion."
+    }
+  ],
+  "promotion_blockers": [
+    "production database or replicated state service",
+    "hardware-backed monotonic counter",
+    "distributed writer lease or consensus",
+    "power-loss and media-survival evidence",
+    "operating-system sandbox enforcement",
+    "real process/package/build/test execution",
+    "live DNS and network enforcement",
+    "remote hardware transport",
+    "credential broker",
+    "production node enrollment",
+    "independent security review of any effect-reachable executor"
+  ]
+}
