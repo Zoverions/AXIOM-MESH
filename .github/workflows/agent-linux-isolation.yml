@@ -37,6 +37,26 @@ jobs:
       - name: Build exact fixed probe image
         working-directory: mesh
         run: docker build --pull=false --tag axiom-mesh-kernel:0.12.0-dev.3 .
+      - name: Observe hosted-runner CPU cgroup representation
+        working-directory: mesh
+        run: |
+          docker run --rm --init \
+            --network none \
+            --read-only \
+            --cap-drop ALL \
+            --security-opt no-new-privileges=true \
+            --pids-limit 32 \
+            --memory 128m \
+            --memory-swap 128m \
+            --cpus 0.5 \
+            --user 10001:10001 \
+            --tmpfs /work:rw,noexec,nosuid,nodev,size=16777216,mode=700,uid=10001,gid=10001 \
+            --tmpfs /tmp:rw,noexec,nosuid,nodev,size=8388608,mode=700,uid=10001,gid=10001 \
+            --tmpfs /var/lib/axiom-mesh:rw,noexec,nosuid,nodev,size=8388608,mode=700,uid=10001,gid=10001 \
+            --workdir /work \
+            --entrypoint /usr/local/bin/node \
+            axiom-mesh-kernel:0.12.0-dev.3 \
+            -e 'const fs=require("node:fs"); process.stdout.write(`cpu.max=${fs.readFileSync("/sys/fs/cgroup/cpu.max","utf8").trim()}\n`)'
       - name: Run fixed-probe Linux isolation conformance
         working-directory: mesh
         env:
