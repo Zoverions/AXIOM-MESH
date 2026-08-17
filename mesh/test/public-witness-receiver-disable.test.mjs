@@ -1,24 +1,19 @@
 import assert from 'node:assert/strict';
 import { generateKeyPairSync } from 'node:crypto';
-import { mkdtemp, stat } from 'node:fs/promises';
+import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
-import { PUBLICATION_PERSONA_SCHEMA } from '../src/identity/actor-state.mjs';
-import {
-  createCredentialedPersonaPublicationAttestation,
-  createPersonaSigningCredential
-} from '../src/lib/persona-journal-credential.mjs';
 import { openPublicWitnessReceiverStore } from '../src/lib/public-witness-receiver-store.mjs';
 import {
-  createPublicPersonaProjection,
-  createSocialPublicationProjection
-} from '../src/lib/social-publication.mjs';
-import {
-  createPublicWitnessSourceAdmission,
-  createPublicWitnessTransferPackage
-} from '../src/lib/public-witness-transfer.mjs';
+  createPublicWitnessSourceControl,
+  projectPublicWitnessSourceControlToIngressTrustEntry,
+  validatePublicWitnessSourceControl,
+  validatePublicWitnessSourceControlTransition,
+  verifyPublicWitnessSourceControlAgainstReceiver
+} from '../src/lib/public-witness-source-control.mjs';
+import { createPublicWitnessSourceAdmission } from '../src/lib/public-witness-transfer.mjs';
 
 const DOMAIN = 'axiom.social.public.v1';
 const T0 = '2026-08-17T23:00:00.000Z';
@@ -26,7 +21,6 @@ const T1 = '2026-08-17T23:01:00.000Z';
 const T2 = '2026-08-17T23:02:00.000Z';
 const T3 = '2026-08-17T23:03:00.000Z';
 const T4 = '2026-08-17T23:04:00.000Z';
-const T5 = '2026-08-17T23:05:00.000Z';
 const TEND = '2026-08-17T23:10:00.000Z';
 
 function keys() {
@@ -38,51 +32,13 @@ function keys() {
 }
 
 function fixture() {
-  const persona = {
-    schema: PUBLICATION_PERSONA_SCHEMA,
-    persona_id: 'persona-receiver-disable',
-    controller_actor_id: 'actor-private-receiver-disable',
-    represented_actor_id: null,
-    attribution_mode: 'pseudonymous',
-    public_actor_link: null,
-    selective_link_commitment: null,
-    delegation_authority_digest: null,
-    created_at: T0,
-    status: 'active'
-  };
-  const projection = createPublicPersonaProjection(persona);
-  const root = keys();
-  const journal = keys();
   const source1 = keys();
   const source2 = keys();
+  const source3 = keys();
   const witness = keys();
-  const credential = createPersonaSigningCredential({
-    personaId: projection.persona_id,
-    personaProjectionDigest: projection.projection_digest,
-    personaRootPrivateKey: root.privateKey,
-    signingPublicKey: journal.publicKey,
-    epoch: 1,
-    activatedAt: T0
-  });
-  const publication = createSocialPublicationProjection({
-    publication_id: 'receiver-disable-publication',
-    content: { media_type: 'text/plain', text: 'Disable must contract future source trust without erasing history.' },
-    attachment_digests: [],
-    audience: { mode: 'public' },
-    discoverability: 'listed',
-    authorship_mode: 'human-authored',
-    created_at: T1,
-    supersedes_digest: null
-  }, { persona });
-  const attestation = createCredentialedPersonaPublicationAttestation(publication, {
-    personaJournalPrivateKey: journal.privateKey,
-    personaSigningCredential: credential,
-    trustedPersonaRootPublicKey: root.publicKey,
-    issuedAt: T2
-  });
   const admission1 = createPublicWitnessSourceAdmission({
     domainId: DOMAIN,
-    sourceId: 'source-receiver-disable',
+    sourceId: 'source-control-one',
     sourcePublicKey: source1.publicKey,
     sourceEpoch: 1,
     validFrom: T0,
@@ -90,252 +46,255 @@ function fixture() {
   });
   const admission2 = createPublicWitnessSourceAdmission({
     domainId: DOMAIN,
-    sourceId: 'source-receiver-disable',
+    sourceId: 'source-control-one',
     sourcePublicKey: source2.publicKey,
     sourceEpoch: 2,
+    validFrom: T3,
+    expiresAt: TEND
+  });
+  const admission3 = createPublicWitnessSourceAdmission({
+    domainId: DOMAIN,
+    sourceId: 'source-control-one',
+    sourcePublicKey: source3.publicKey,
+    sourceEpoch: 3,
     validFrom: T4,
     expiresAt: TEND
   });
-  const request = {
-    attestation,
-    persona_signing_credential: credential,
-    entry: publication,
-    publication: null
-  };
-  return { root, source1, source2, witness, admission1, admission2, request };
+  return { source1, source2, source3, witness, admission1, admission2, admission3 };
 }
 
-function transfer(data, {
-  admission = data.admission1,
-  sourcePrivateKey = data.source1.privateKey,
-  transferId,
-  sequence,
-  previousTransfer = null,
-  createdAt
-}) {
-  return createPublicWitnessTransferPackage({ operation: 'observe-journal', request: data.request }, {
-    sourceAdmission: admission,
-    sourcePrivateKey,
-    transferId,
-    sequence,
-    previousTransfer,
-    createdAt,
-    expiresAt: TEND,
-    now: Date.parse(createdAt)
+function genesis(data, certificate = 'a'.repeat(64)) {
+  return createPublicWitnessSourceControl({
+    sourceAdmission: data.admission1,
+    certificateSha256: certificate,
+    operation: 'admit',
+    effectiveAt: T0
   });
 }
 
-async function openStore(data) {
-  const dir = await mkdtemp(join(tmpdir(), 'axiom-receiver-disable-'));
-  const statePath = join(dir, 'receiver.jsonl');
+async function receiver(data, { admitSecond = false } = {}) {
+  const dir = await mkdtemp(join(tmpdir(), 'axiom-source-control-'));
   const store = await openPublicWitnessReceiverStore({
-    statePath,
+    statePath: join(dir, 'receiver.jsonl'),
     domainId: DOMAIN,
-    witnessId: 'witness-receiver-disable',
+    witnessId: 'witness-source-control',
     witnessPrivateKey: data.witness.privateKey
   });
-  return { store, statePath };
+  await store.admitSource(data.admission1, { admittedAt: T0 });
+  if (admitSecond) await store.admitSource(data.admission2, { admittedAt: T3 });
+  return store;
 }
 
-test('source disable is durable trust contraction: unseen traffic stops while exact historical replay remains idempotent', async () => {
+test('source control genesis is content-addressed local operator input and projects one exact ingress binding', () => {
   const data = fixture();
-  const { store, statePath } = await openStore(data);
-  await store.admitSource(data.admission1, { admittedAt: T0 });
-  const first = transfer(data, { transferId: 'disable-first', sequence: 1, createdAt: T2 });
-  const firstReceipt = await store.receiveTransfer(first, {
-    trustedPersonaRootPublicKey: data.root.publicKey,
-    receivedAt: T2
+  const control = genesis(data);
+  const verified = validatePublicWitnessSourceControl(control);
+  assert.equal(verified.operation, 'admit');
+  assert.equal(verified.control_sequence, 1);
+  assert.equal(verified.previous_control_digest, null);
+  assert.equal(verified.source_epoch, 1);
+  assert.equal(verified.source_status, 'active');
+  assert.equal(verified.local_operator_input, true);
+  assert.equal(verified.remote_self_provisioning_allowed, false);
+  assert.equal(verified.receiver_mutation_claimed, false);
+  assert.equal(verified.persona_root_trust_effect, 'none');
+  assert.equal(verified.social_authority_effect, 'none');
+  assert.equal(verified.finality_claimed, false);
+  assert.equal(verified.authority_effect, 'none');
+  assert.equal(verified.network_effect, 'none');
+  assert.deepEqual(projectPublicWitnessSourceControlToIngressTrustEntry(control), {
+    certificate_sha256: 'a'.repeat(64),
+    admission: data.admission1
   });
-  const disabled = await store.disableSource({
-    sourceId: data.admission1.source_id,
-    sourceEpoch: 1,
-    sourceAdmissionDigest: data.admission1.admission_digest,
-    disabledAt: T3,
-    reason: 'operator-disable'
-  });
-  assert.equal(disabled.status, 'disabled');
-  assert.equal(disabled.source.source_status, 'disabled');
-  assert.equal(disabled.source.disabled_at, T3);
-  assert.equal(disabled.source.disable_reason, 'operator-disable');
-  assert.equal(disabled.durable_record.statement.record_kind, 'source-disable');
-  assert.equal(disabled.durable_record.payload.source_trust_effect, 'disable-only');
-  assert.equal(disabled.durable_record.payload.remote_disable_allowed, false);
+});
 
-  const second = transfer(data, {
-    transferId: 'disable-second',
-    sequence: 2,
-    previousTransfer: first,
-    createdAt: T4
+test('certificate rotation retains exact source admission while changing only transport binding', () => {
+  const data = fixture();
+  const first = genesis(data);
+  const second = createPublicWitnessSourceControl({
+    sourceAdmission: data.admission1,
+    certificateSha256: 'b'.repeat(64),
+    operation: 'rotate-certificate',
+    effectiveAt: T1,
+    previousControl: first
   });
-  await assert.rejects(
-    () => store.receiveTransfer(second, {
-      trustedPersonaRootPublicKey: data.root.publicKey,
-      receivedAt: T4
+  validatePublicWitnessSourceControlTransition(first, second);
+  assert.equal(second.control_sequence, 2);
+  assert.equal(second.previous_control_digest, first.control_digest);
+  assert.equal(second.source_admission_digest, first.source_admission_digest);
+  assert.equal(second.source_epoch, first.source_epoch);
+  assert.equal(second.certificate_sha256, 'b'.repeat(64));
+
+  assert.throws(
+    () => createPublicWitnessSourceControl({
+      sourceAdmission: data.admission1,
+      certificateSha256: 'a'.repeat(64),
+      operation: 'rotate-certificate',
+      effectiveAt: T1,
+      previousControl: first
     }),
-    /source epoch is locally disabled/
-  );
-
-  const replay = await store.receiveTransfer(first, {
-    trustedPersonaRootPublicKey: data.root.publicKey,
-    receivedAt: T4
-  });
-  assert.equal(replay.status, 'replay');
-  assert.equal(replay.transfer_receipt.receipt_digest, firstReceipt.transfer_receipt.receipt_digest);
-  const bytesAfterReplay = (await stat(statePath)).size;
-
-  const reopened = await openPublicWitnessReceiverStore({
-    statePath,
-    domainId: DOMAIN,
-    witnessId: 'witness-receiver-disable',
-    witnessPrivateKey: data.witness.privateKey
-  });
-  assert.equal((await reopened.verifyState()).valid, true);
-  assert.equal(reopened.getActiveSourceAdmission(data.admission1.source_id).source_status, 'disabled');
-  const replayAfterRestart = await reopened.receiveTransfer(first, {
-    trustedPersonaRootPublicKey: data.root.publicKey,
-    receivedAt: T4
-  });
-  assert.equal(replayAfterRestart.status, 'replay');
-  assert.equal((await stat(statePath)).size, bytesAfterReplay);
-  await assert.rejects(
-    () => reopened.receiveTransfer(second, {
-      trustedPersonaRootPublicKey: data.root.publicKey,
-      receivedAt: T4
-    }),
-    /source epoch is locally disabled/
+    /must change certificate digest/
   );
 });
 
-test('disabled source can return only through the exact next admission epoch after disable time', async () => {
+test('disable contracts ingress trust and a disabled source can return only through the next source epoch', () => {
   const data = fixture();
-  const { store } = await openStore(data);
-  await store.admitSource(data.admission1, { admittedAt: T0 });
-  await store.disableSource({
-    sourceId: data.admission1.source_id,
-    sourceEpoch: 1,
-    sourceAdmissionDigest: data.admission1.admission_digest,
-    disabledAt: T3,
-    reason: 'suspected-key-compromise'
+  const first = genesis(data);
+  const disabled = createPublicWitnessSourceControl({
+    sourceAdmission: data.admission1,
+    operation: 'disable',
+    effectiveAt: T2,
+    previousControl: first,
+    disableReason: 'suspected-key-compromise'
   });
+  assert.equal(disabled.source_status, 'disabled');
+  assert.equal(disabled.certificate_sha256, null);
+  assert.equal(disabled.disable_reason, 'suspected-key-compromise');
+  assert.equal(projectPublicWitnessSourceControlToIngressTrustEntry(disabled), null);
 
-  await assert.rejects(
-    () => store.admitSource(data.admission2, { admittedAt: T3 }),
-    /activation must occur after local disable/
+  assert.throws(
+    () => createPublicWitnessSourceControl({
+      sourceAdmission: data.admission1,
+      certificateSha256: 'b'.repeat(64),
+      operation: 'rotate-certificate',
+      effectiveAt: T3,
+      previousControl: disabled
+    }),
+    /can return only through source rotation/
   );
-  const admitted = await store.admitSource(data.admission2, { admittedAt: T4 });
-  assert.equal(admitted.status, 'admitted');
-  const active = store.getActiveSourceAdmission(data.admission1.source_id);
-  assert.equal(active.source_epoch, 2);
-  assert.equal(active.source_status, 'active');
+  assert.throws(
+    () => createPublicWitnessSourceControl({
+      sourceAdmission: data.admission1,
+      certificateSha256: 'b'.repeat(64),
+      operation: 'rotate-source',
+      effectiveAt: T3,
+      previousControl: disabled
+    }),
+    /must advance exactly one epoch/
+  );
 
-  const epoch2 = transfer(data, {
-    admission: data.admission2,
-    sourcePrivateKey: data.source2.privateKey,
-    transferId: 'epoch-two-after-disable',
-    sequence: 1,
-    createdAt: T5
+  const returned = createPublicWitnessSourceControl({
+    sourceAdmission: data.admission2,
+    certificateSha256: 'c'.repeat(64),
+    operation: 'rotate-source',
+    effectiveAt: T3,
+    previousControl: disabled
   });
-  const accepted = await store.receiveTransfer(epoch2, {
-    trustedPersonaRootPublicKey: data.root.publicKey,
-    receivedAt: T5
+  assert.equal(returned.source_epoch, 2);
+  assert.equal(returned.source_status, 'active');
+  assert.equal(returned.previous_control_digest, disabled.control_digest);
+  assert.deepEqual(projectPublicWitnessSourceControlToIngressTrustEntry(returned), {
+    certificate_sha256: 'c'.repeat(64),
+    admission: data.admission2
   });
-  assert.equal(accepted.status, 'received');
 });
 
-test('disable requires exact active source identity, is idempotent only for the same disable, and cannot backdate', async () => {
+test('source control rejects skipped epochs, same-epoch source replacement, backward time, and tampered predecessor history', () => {
   const data = fixture();
-  const { store, statePath } = await openStore(data);
-  await store.admitSource(data.admission1, { admittedAt: T0 });
-
-  await assert.rejects(
-    () => store.disableSource({
-      sourceId: data.admission1.source_id,
-      sourceEpoch: 2,
-      sourceAdmissionDigest: data.admission1.admission_digest,
-      disabledAt: T3,
-      reason: 'operator-disable'
+  const first = genesis(data);
+  assert.throws(
+    () => createPublicWitnessSourceControl({
+      sourceAdmission: data.admission2,
+      certificateSha256: 'b'.repeat(64),
+      operation: 'rotate-certificate',
+      effectiveAt: T1,
+      previousControl: first
     }),
-    /does not match the exact active admission/
+    /must retain the exact source admission/
   );
-  await assert.rejects(
-    () => store.disableSource({
-      sourceId: data.admission1.source_id,
-      sourceEpoch: 1,
-      sourceAdmissionDigest: 'f'.repeat(64),
-      disabledAt: T3,
-      reason: 'operator-disable'
+  assert.throws(
+    () => createPublicWitnessSourceControl({
+      sourceAdmission: data.admission3,
+      certificateSha256: 'c'.repeat(64),
+      operation: 'rotate-source',
+      effectiveAt: T4,
+      previousControl: first
     }),
-    /does not match the exact active admission/
+    /must advance exactly one epoch/
   );
-  await assert.rejects(
-    () => store.disableSource({
-      sourceId: data.admission1.source_id,
-      sourceEpoch: 1,
-      sourceAdmissionDigest: data.admission1.admission_digest,
-      disabledAt: T0,
-      reason: 'operator-disable'
+  assert.throws(
+    () => createPublicWitnessSourceControl({
+      sourceAdmission: data.admission2,
+      certificateSha256: 'b'.repeat(64),
+      operation: 'rotate-source',
+      effectiveAt: T0,
+      previousControl: first
     }),
-    /disable time must follow source activation/
+    /effective time must advance/
   );
 
-  const first = await store.disableSource({
-    sourceId: data.admission1.source_id,
-    sourceEpoch: 1,
-    sourceAdmissionDigest: data.admission1.admission_digest,
-    disabledAt: T3,
-    reason: 'policy-withdrawal'
+  const second = createPublicWitnessSourceControl({
+    sourceAdmission: data.admission2,
+    certificateSha256: 'b'.repeat(64),
+    operation: 'rotate-source',
+    effectiveAt: T3,
+    previousControl: first
   });
-  const bytes = (await stat(statePath)).size;
-  const replay = await store.disableSource({
-    sourceId: data.admission1.source_id,
-    sourceEpoch: 1,
-    sourceAdmissionDigest: data.admission1.admission_digest,
-    disabledAt: T3,
-    reason: 'policy-withdrawal'
-  });
-  assert.equal(replay.status, 'replay');
-  assert.equal(replay.durable_record, null);
-  assert.equal(replay.source.disable_record_digest, first.source.disable_record_digest);
-  assert.equal((await stat(statePath)).size, bytes);
-
-  await assert.rejects(
-    () => store.disableSource({
-      sourceId: data.admission1.source_id,
-      sourceEpoch: 1,
-      sourceAdmissionDigest: data.admission1.admission_digest,
-      disabledAt: T4,
-      reason: 'operator-disable'
-    }),
-    /already disabled with different evidence/
-  );
+  const tampered = structuredClone(second);
+  tampered.previous_control_digest = 'f'.repeat(64);
+  assert.throws(() => validatePublicWitnessSourceControl(tampered), /digest mismatch/);
 });
 
-test('disable reason and durable record claims remain bounded and non-authoritative', async () => {
+test('disable reason is bounded and genesis cannot begin disabled or at a non-first epoch', () => {
   const data = fixture();
-  const { store } = await openStore(data);
-  await store.admitSource(data.admission1, { admittedAt: T0 });
-  await assert.rejects(
-    () => store.disableSource({
-      sourceId: data.admission1.source_id,
-      sourceEpoch: 1,
-      sourceAdmissionDigest: data.admission1.admission_digest,
-      disabledAt: T3,
-      reason: 'remote-requested-disable'
+  assert.throws(
+    () => createPublicWitnessSourceControl({
+      sourceAdmission: data.admission1,
+      operation: 'disable',
+      effectiveAt: T1,
+      disableReason: 'remote-requested-disable'
     }),
     /disable reason is unsupported/
   );
-  const result = await store.disableSource({
-    sourceId: data.admission1.source_id,
-    sourceEpoch: 1,
-    sourceAdmissionDigest: data.admission1.admission_digest,
-    disabledAt: T3,
-    reason: 'source-retirement'
+  assert.throws(
+    () => createPublicWitnessSourceControl({
+      sourceAdmission: data.admission1,
+      operation: 'disable',
+      effectiveAt: T1,
+      disableReason: 'operator-disable'
+    }),
+    /genesis must admit source epoch 1/
+  );
+  assert.throws(
+    () => createPublicWitnessSourceControl({
+      sourceAdmission: data.admission2,
+      certificateSha256: 'b'.repeat(64),
+      operation: 'admit',
+      effectiveAt: T3
+    }),
+    /genesis must admit source epoch 1/
+  );
+});
+
+test('receiver binding proves exact W2c2 retention without mutating receiver state', async () => {
+  const data = fixture();
+  const store = await receiver(data);
+  const first = genesis(data);
+  const before = store.snapshot();
+  const verification = verifyPublicWitnessSourceControlAgainstReceiver({ receiverStore: store, control: first });
+  assert.equal(verification.receiver_mutation, false);
+  assert.equal(verification.source_admission_digest, data.admission1.admission_digest);
+  assert.deepEqual(store.snapshot(), before);
+
+  const rotated = createPublicWitnessSourceControl({
+    sourceAdmission: data.admission2,
+    certificateSha256: 'b'.repeat(64),
+    operation: 'rotate-source',
+    effectiveAt: T3,
+    previousControl: first
   });
-  assert.equal(result.durable_record.payload.local_operator_input, true);
-  assert.equal(result.durable_record.payload.remote_disable_allowed, false);
-  assert.equal(result.durable_record.payload.persona_root_trust_effect, 'none');
-  assert.equal(result.durable_record.payload.social_authority_effect, 'none');
-  assert.equal(result.durable_record.payload.finality_claimed, false);
-  assert.equal(result.durable_record.payload.authority_effect, 'none');
-  assert.equal(result.durable_record.payload.network_effect, 'none');
+  assert.throws(
+    () => verifyPublicWitnessSourceControlAgainstReceiver({ receiverStore: store, control: rotated }),
+    /not exactly retained by W2c2/
+  );
+
+  const storeWithRotation = await receiver(data, { admitSecond: true });
+  const rotatedBefore = storeWithRotation.snapshot();
+  const rotatedVerification = verifyPublicWitnessSourceControlAgainstReceiver({
+    receiverStore: storeWithRotation,
+    control: rotated
+  });
+  assert.equal(rotatedVerification.source_epoch, 2);
+  assert.equal(rotatedVerification.receiver_mutation, false);
+  assert.deepEqual(storeWithRotation.snapshot(), rotatedBefore);
 });
