@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/agent-executor-durable-state-receipt.v1.schema.json",
+  "title": "AXIOM Agent Executor Durable State Receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "statement", "statement_digest", "store_signature", "receipt_digest"],
+  "properties": {
+    "schema": { "const": "axiom-agent-executor-durable-state-receipt.v1" },
+    "statement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "store_id", "store_key_id", "policy_digest", "generation", "record_digest",
+        "authorization_id", "authorization_digest", "plan_digest", "lifecycle_ledger_id",
+        "lifecycle_key_id", "lifecycle_status", "lifecycle_head_event_digest",
+        "lifecycle_receipt_digest", "conformance_receipt_digest", "generated_at",
+        "local_commit_observed", "external_retention_claimed", "global_currentness_claimed",
+        "production_persistence_claimed", "effect_reachable", "authority_granted"
+      ],
+      "properties": {
+        "store_id": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "store_key_id": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "policy_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "generation": { "type": "integer", "minimum": 1, "maximum": 128 },
+        "record_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "authorization_id": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "authorization_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "plan_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "lifecycle_ledger_id": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "lifecycle_key_id": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "lifecycle_status": { "enum": ["issued", "consumed", "revoked", "expired", "interrupted", "completed"] },
+        "lifecycle_head_event_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "lifecycle_receipt_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "conformance_receipt_digest": { "anyOf": [{ "type": "null" }, { "type": "string", "pattern": "^[a-f0-9]{64}$" }] },
+        "generated_at": { "type": "string", "format": "date-time" },
+        "local_commit_observed": { "const": true },
+        "external_retention_claimed": { "const": false },
+        "global_currentness_claimed": { "const": false },
+        "production_persistence_claimed": { "const": false },
+        "effect_reachable": { "const": false },
+        "authority_granted": { "const": false }
+      }
+    },
+    "statement_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "store_signature": { "type": "string", "minLength": 32, "maxLength": 1024 },
+    "receipt_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}
