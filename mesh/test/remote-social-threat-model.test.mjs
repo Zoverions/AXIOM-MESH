@@ -135,12 +135,12 @@ test('canonical threat model contains explicit accepted remote-social threats, a
     'trust labels, report state, quarantine state, or provenance UI',
     'owner-query/body override',
     'private follow/trust',
-    'source/exporter quarantine bypass',
+    'attempts to turn accepted schema/method presence into an effect',
     'Transport verification and staging never create remote-social admission',
     'The accepted Grid remains deny-egress',
     'Expiry alone does not silently delete remote-social evidence',
     'The current remote-social public surface is inspection-only',
-    'storage/replay activation does not create effect authority'
+    'Storage/replay activation does not create effect authority'
   ]) {
     assertContainsNormalized(threat, required, 'remote-social security boundary missing');
   }
