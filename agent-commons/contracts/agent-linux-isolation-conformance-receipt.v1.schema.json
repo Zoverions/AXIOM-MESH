@@ -14,6 +14,7 @@
     "adapter",
     "limits",
     "controls",
+    "evidence",
     "probes",
     "claims",
     "receipt_digest"
@@ -123,10 +124,99 @@
         "output_overflow_cleanup_verified": { "const": true }
       }
     },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseline", "pid_ceiling", "timeout_cleanup", "output_ceiling"],
+      "properties": {
+        "baseline": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "container_pid_namespace",
+            "container_mount_namespace",
+            "container_network_namespace",
+            "uid",
+            "cap_eff",
+            "no_new_privs",
+            "seccomp",
+            "root_read_only",
+            "workspace_write_succeeded",
+            "root_write_error",
+            "symlink_write_error",
+            "docker_socket_present",
+            "host_sentinel_present",
+            "secret_mount_present",
+            "public_network_error",
+            "memory_max",
+            "pids_max",
+            "cpu_quota",
+            "cpu_period",
+            "fd_count",
+            "unexpected_sensitive_fd",
+            "mount_digest"
+          ],
+          "properties": {
+            "container_pid_namespace": { "type": "string", "minLength": 1, "maxLength": 256 },
+            "container_mount_namespace": { "type": "string", "minLength": 1, "maxLength": 256 },
+            "container_network_namespace": { "type": "string", "minLength": 1, "maxLength": 256 },
+            "uid": { "const": 10001 },
+            "cap_eff": { "const": "0000000000000000" },
+            "no_new_privs": { "const": 1 },
+            "seccomp": { "const": 2 },
+            "root_read_only": { "const": true },
+            "workspace_write_succeeded": { "const": true },
+            "root_write_error": { "enum": ["EROFS", "EACCES", "EPERM"] },
+            "symlink_write_error": { "enum": ["EROFS", "EACCES", "EPERM"] },
+            "docker_socket_present": { "const": false },
+            "host_sentinel_present": { "const": false },
+            "secret_mount_present": { "const": false },
+            "public_network_error": { "enum": ["ENETUNREACH", "EHOSTUNREACH", "EACCES", "EPERM"] },
+            "memory_max": { "const": 134217728 },
+            "pids_max": { "const": 32 },
+            "cpu_quota": { "type": "integer", "minimum": 1 },
+            "cpu_period": { "type": "integer", "minimum": 1 },
+            "fd_count": { "type": "integer", "minimum": 3, "maximum": 64 },
+            "unexpected_sensitive_fd": { "const": false },
+            "mount_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          }
+        },
+        "pid_ceiling": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["requested", "started", "blocked", "container_absent_after_cleanup"],
+          "properties": {
+            "requested": { "const": 64 },
+            "started": { "type": "integer", "minimum": 1, "maximum": 63 },
+            "blocked": { "type": "integer", "minimum": 1, "maximum": 63 },
+            "container_absent_after_cleanup": { "const": true }
+          }
+        },
+        "timeout_cleanup": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["timed_out", "container_absent_after_cleanup"],
+          "properties": {
+            "timed_out": { "const": true },
+            "container_absent_after_cleanup": { "const": true }
+          }
+        },
+        "output_ceiling": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["overflow_detected", "output_limit_bytes", "container_absent_after_cleanup"],
+          "properties": {
+            "overflow_detected": { "const": true },
+            "output_limit_bytes": { "const": 65536 },
+            "container_absent_after_cleanup": { "const": true }
+          }
+        }
+      }
+    },
     "probes": {
       "type": "array",
       "minItems": 4,
-      "maxItems": 8,
+      "maxItems": 4,
       "items": {
         "type": "object",
         "additionalProperties": false,
