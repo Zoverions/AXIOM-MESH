@@ -472,6 +472,23 @@ The current executable laboratories remain outside supported Grid authority:
   rotation, one-epoch source rotation, disable trust contraction, next-epoch-only
   return after disable, skipped/backward/tampered history rejection, bounded
   disable reasons, and non-mutating exact W2c2 admission verification;
+- `mesh/src/lib/public-witness-source-control-store.mjs` adds W2c4c as a signed,
+  append-only durable application journal for W2c4b controls. A separate local
+  Ed25519 operator key binds the exact control digest, application time, global
+  durable sequence, exact predecessor record, operator ID/key, and explicit
+  non-claims. Restart re-verifies canonical records, signatures, global and
+  per-source continuity, control effective time, and the exact W2c2-retained
+  admission before reconstructing active control state;
+- `mesh/test/public-witness-source-control-store.test.mjs` verifies durable
+  application/replay/restart, wrong-operator/tamper/noncanonical rejection,
+  missing-W2c2-admission and early-application failure, live certificate rotation
+  and disable before receiver mutation, next-epoch return, and fail-closed
+  dynamic-resolver substitution;
+- W2c4c also extends the W2c3 ingress core with an optional **local dynamic
+  source-binding resolver**. Static and dynamic source-binding modes cannot be
+  combined. A resolver result is independently normalized and must exactly
+  match the presented certificate digest, source ID, and source epoch before the
+  request can reach W2c2;
 - `npm run public-witness:start -- <config.json>` and
   `npm run public-witness:verify -- <config.json>` operate the W2b standalone
   local laboratory without adding it to the four-process Grid runtime;
@@ -480,7 +497,7 @@ The current executable laboratories remain outside supported Grid authority:
   DNS/peer discovery or outbound fetch and exposes no source-admission or
   persona-root enrollment endpoint; and
 - the accepted no-egress social storage composition remains unchanged. W2c3,
-  W2c4a, and W2c4b are not imported into the supported
+  W2c4a, W2c4b, and W2c4c are not imported into the supported
   Grid/Gateway/Hypervisor/Sandbox runtime and do not promote federation, archive
   availability, quorum, consensus, finality, social mutation, or any capability-
   registry claim.
@@ -696,6 +713,14 @@ relying on Node's server timeout semantics. Invalid, oversized, aborted, timed-
 out, over-capacity, untrusted, stale-epoch, or certificate-substituted traffic
 must not create durable receiver intake.
 
+W2c3 supports either immutable constructor-supplied source bindings or, after
+W2c4c, one local dynamic binding resolver. The modes cannot be combined. In
+dynamic mode the resolver is consulted after transport rate/concurrency intake
+but before persona-root lookup or W2c2 receiver mutation, and any returned
+binding is re-normalized and must match the exact presented certificate/source/
+epoch tuple. This preserves W2c3 ownership of transport pressure controls while
+allowing a separately durable local control store to contract future ingress.
+
 Socket evidence uses disposable credentials from the existing AXIOM transport
 credential machinery and covers valid and untrusted TLS handshakes, exact
 replay, certificate rotation, source-epoch rollover, certificate/source-epoch
@@ -752,13 +777,46 @@ epoch; same-epoch certificate reactivation is rejected.
 W2c4b verification requires the exact referenced admission to already exist in
 W2c2 durable receiver state and is explicitly non-mutating. An active control can
 project to the exact W2c4a source trust entry; a disabled control projects to no
-ingress binding. This is an operator intent/history primitive, **not yet a
-durable applied ingress-control journal**. It does not itself revoke or delete a
-W2c2 admission, stop an already running W2c3 listener that was constructed from
-older trust state, prove globally current source status, authenticate the human
-operator, or resist a hostile local administrator. Binding this history to a
-durable operational application/activation path remains a separate W2 gate
-before any public deployment wrapper.
+ingress binding. W2c4b is an operator intent/history primitive; W2c4c adds the
+separate durable application layer rather than retroactively redefining W2c4b as
+an effect record.
+
+W2c4c adds a **durable applied source-control laboratory** without granting the
+operator source-admission authority. A separate local Ed25519 operator key signs
+an append-only canonical JSONL application journal. Each record binds the exact
+W2c4b control digest, control-application time, global durable sequence, exact
+predecessor-record digest, operator ID and key digest, plus explicit non-claims.
+The record is fsynced before its control becomes the in-memory current applied
+state. Exact replay is idempotent and does not append a duplicate record.
+
+Startup re-verifies canonical encoding, operator key/signature, statement and
+record digests, global record sequence/predecessor continuity, per-source W2c4b
+control continuity, application time, and exact W2c2-retained admission before
+reconstructing active control state. Wrong operator keys, tamper,
+noncanonical/truncated state, detectable external file drift, capacity failure,
+application before a control's effective time, or a source rotation whose new
+admission is not already retained by W2c2 fail closed. The operator signature
+proves only that the configured local operator key signed the exact application
+record; it is **not** proof of legal identity, independent human approval, or
+social authority.
+
+A running W2c3 ingress may use the W2c4c store as its dynamic source-binding
+resolver. Certificate rotation changes the accepted fingerprint for subsequent
+binding resolutions, `disable` causes subsequent resolutions for that source to
+return no binding before W2c2 mutation, and return after disable requires the
+next explicit W2c2 source-admission epoch plus an applied W2c4b `rotate-source`
+control. A disable is not retroactive cancellation: a request that already
+passed binding resolution before the durable disable commit may remain in flight
+toward W2c2. W2c4c therefore claims fail-closed control of **subsequent binding
+resolutions**, not atomic cancellation of already-authorized in-flight work.
+
+W2c4c remains local integrity and operational-control evidence. File `fsync` is
+not proof of independent replication, hardware survival, or hostile-host
+resistance. The operator key is not a root of persona trust, Grid authority, or
+global source identity. W2c4c does not create W2c2 admissions, distribute trust,
+perform discovery or outbound acquisition, expose a public deployment wrapper,
+or claim globally current source status, federation, archive availability,
+quorum, consensus, or finality.
 
 A witness receipt means that the named witness key observed and verified one
 exact signed journal artifact. It does not prove content truth, legal identity,
@@ -791,24 +849,26 @@ The staged roadmap is:
 3. **W2 — witness service laboratory (W2a evidence core, W2b durable local
    process, W2c1 source-transfer protocol, W2c2 durable receiver/reconciliation,
    W2c3 receive-only authenticated mTLS ingress, W2c4a local ingress trust
-   bundles, and W2c4b local source-control history implemented):** the current
-   work provides signed observations, idempotent replay, equivocation/stale-key
-   evidence, witness-signed append-only local state, deterministic fail-closed
-   restart, bounded stdin/stdout IPC, explicit local source admission, source-
-   signed transfer continuity, source-equivocation evidence, separate persona-
-   root trust, historically auditable transfer receipts, restart-safe receiver
-   source-chain/replay state, verified replay, pending-observation separation,
-   crash-window receiver↔witness reconciliation, exact certificate-to-source-
-   epoch transport binding, bounded HTTPS intake, mTLS socket fault evidence,
-   content-addressed generation-chained local ingress trust bindings that cannot
-   mint receiver source trust, and content-addressed source-control history for
-   certificate rotation, next-epoch source rotation, and local disable trust
-   contraction. Remaining W2 work includes a durable operator control/application
-   journal that binds source-control history to the actual running ingress and
-   explicit W2c2 source-admission provisioning, a separately reviewed public
-   deployment wrapper if justified, discovery/outbound acquisition policy if
-   justified, independently operated hosts, broader remote abuse/resource
-   testing, and multi-witness evidence exchange without Grid authority;
+   bundles, W2c4b local source-control history, and W2c4c durable applied source
+   control implemented):** the current work provides signed observations,
+   idempotent replay, equivocation/stale-key evidence, witness-signed append-only
+   local state, deterministic fail-closed restart, bounded stdin/stdout IPC,
+   explicit local source admission, source-signed transfer continuity, source-
+   equivocation evidence, separate persona-root trust, historically auditable
+   transfer receipts, restart-safe receiver source-chain/replay state, verified
+   replay, pending-observation separation, crash-window receiver↔witness
+   reconciliation, exact certificate-to-source-epoch transport binding, bounded
+   HTTPS intake, mTLS socket fault evidence, content-addressed generation-chained
+   local ingress trust bindings that cannot mint receiver source trust, content-
+   addressed source-control history for certificate rotation/next-epoch source
+   rotation/disable trust contraction, operator-signed durable control
+   application, and live fail-closed source-binding resolution for subsequent
+   requests. Remaining W2 work includes explicit W2c2 source-admission
+   provisioning/activation, operator-key lifecycle/rotation and stronger host
+   trust if required, a separately reviewed public deployment wrapper if
+   justified, discovery/outbound acquisition policy if justified, independently
+   operated hosts, broader remote abuse/resource testing, and multi-witness
+   evidence exchange without Grid authority;
 4. **W3 — archive and availability laboratory:** independently operated public
    object retention with explicit availability and legal-removal semantics;
 5. **W4 — optional checkpoint agreement adapter:** evaluate threshold/BFT
@@ -819,9 +879,9 @@ The staged roadmap is:
    witness observations/conflicts, durable witness records, source admissions,
    source transfer chains/equivocation, package-verification receipts, durable
    receiver intake/linkage records, authenticated transport bindings, ingress
-   trust-bundle generations, source-control histories, checkpoints,
-   availability, and any optional finality certificate while preserving explicit
-   non-claims; and
+   trust-bundle generations, source-control histories, operator-signed applied
+   source-control records, checkpoints, availability, and any optional finality
+   certificate while preserving explicit non-claims; and
 7. **W6 — promotion:** only after applicable protocol, security, privacy,
    operational, scale, governance, and independent-review gates pass.
 
@@ -831,11 +891,11 @@ and W2b retain and expose conflicting valid persona artifacts and signed
 conflict evidence rather than silently choosing one. W2c1, W2c2, and W2c3 apply
 the same rule to an admitted source that signs competing transfer packages at
 one source position, with W2c2 durably retaining the conflict across restart and
-W2c3 proving the same result survives authenticated socket delivery. W2c4a and
-W2c4b cannot resolve or suppress that conflict because they bind local ingress
-trust/control intent only and do not select a preferred source artifact. Future
-multi-witness and agreement protocols must preserve both forms of conflict
-rather than silently select a winner.
+W2c3 proving the same result survives authenticated socket delivery. W2c4a,
+W2c4b, and W2c4c cannot resolve or suppress that conflict because they bind and
+apply local ingress trust/control only; they do not select a preferred source
+artifact. Future multi-witness and agreement protocols must preserve both forms
+of conflict rather than silently select a winner.
 
 ## Required future agreement interface
 
