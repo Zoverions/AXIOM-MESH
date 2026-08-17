@@ -243,6 +243,32 @@
       "response_media_type": "application/json"
     },
     {
+      "id": "social_remote_review.get",
+      "method": "GET",
+      "path": "/v1/social/remote-review",
+      "access": "owner",
+      "idempotency": "not_applicable",
+      "path_parameters": [],
+      "query_parameters": [],
+      "request_schema": null,
+      "response_schema": "axiom-remote-social-review.v1",
+      "required_response_fields": [
+        "schema",
+        "owner",
+        "activation_scope",
+        "stages",
+        "admissions",
+        "observations",
+        "follows",
+        "retention",
+        "mutation_effect",
+        "network_effect",
+        "recommendation_effect",
+        "authority_effect"
+      ],
+      "response_media_type": "application/json"
+    },
+    {
       "id": "capsules.list",
       "method": "GET",
       "path": "/v1/capsules",
