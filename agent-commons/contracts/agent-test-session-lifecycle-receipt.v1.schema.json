@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/agent-test-session-lifecycle-receipt.v1.schema.json",
+  "title": "AXIOM Agent Test Session Lifecycle Receipt v1",
+  "description": "Experimental signed receipt for the exact verified head of a test-session lifecycle chain. It proves lifecycle evidence only and never remote execution or task success.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "statement", "statement_digest", "ledger_signature", "receipt_digest"],
+  "properties": {
+    "schema": { "const": "axiom-agent-test-session-lifecycle-receipt.v1" },
+    "statement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ledger_id", "ledger_key_id", "authorization_id", "authorization_digest",
+        "sponsor_id", "subject_id", "challenge_id", "offer_id", "node_profile_sha256",
+        "attestation_id", "key_fingerprint_sha256", "status", "event_count",
+        "head_event_digest", "generated_at", "effect_reachable", "remote_effect_observed",
+        "executor_receipt_present", "task_success_claimed", "production_enrollment",
+        "credentials_issued", "secrets_accessed", "firmware_changed", "purchase_performed",
+        "destructive_action_performed", "deployment_authority", "capability_promoted",
+        "production_persistence_claimed"
+      ],
+      "properties": {
+        "ledger_id": { "$ref": "#/$defs/id" },
+        "ledger_key_id": { "$ref": "#/$defs/sha256" },
+        "authorization_id": { "$ref": "#/$defs/id" },
+        "authorization_digest": { "$ref": "#/$defs/sha256" },
+        "sponsor_id": { "$ref": "#/$defs/id" },
+        "subject_id": { "$ref": "#/$defs/id" },
+        "challenge_id": { "$ref": "#/$defs/id" },
+        "offer_id": { "$ref": "#/$defs/id" },
+        "node_profile_sha256": { "$ref": "#/$defs/sha256" },
+        "attestation_id": { "$ref": "#/$defs/id" },
+        "key_fingerprint_sha256": { "$ref": "#/$defs/sha256" },
+        "status": { "enum": ["issued", "consumed", "revoked", "expired", "interrupted", "completed"] },
+        "event_count": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "head_event_digest": { "$ref": "#/$defs/sha256" },
+        "generated_at": { "type": "string", "format": "date-time" },
+        "effect_reachable": { "const": false },
+        "remote_effect_observed": { "const": false },
+        "executor_receipt_present": { "const": false },
+        "task_success_claimed": { "const": false },
+        "production_enrollment": { "const": false },
+        "credentials_issued": { "const": false },
+        "secrets_accessed": { "const": false },
+        "firmware_changed": { "const": false },
+        "purchase_performed": { "const": false },
+        "destructive_action_performed": { "const": false },
+        "deployment_authority": { "const": false },
+        "capability_promoted": { "const": false },
+        "production_persistence_claimed": { "const": false }
+      }
+    },
+    "statement_digest": { "$ref": "#/$defs/sha256" },
+    "ledger_signature": { "type": "string", "pattern": "^[A-Za-z0-9_-]{80,128}$" },
+    "receipt_digest": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$" },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}
