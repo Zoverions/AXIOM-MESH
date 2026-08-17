@@ -416,6 +416,25 @@ The current executable laboratories remain outside supported Grid authority:
   size/lifetime restrictions, separate persona-root trust, artifact dependency
   verification, source equivocation, receiver-local timing, receipt audit after
   transfer expiry, and explicit non-claims;
+- `mesh/src/lib/public-witness-receiver-store.mjs` adds W2c2 durable receiver
+  intake: witness-signed source-admission, transfer-intake, and observation-link
+  records; restart-safe source epochs; exact source sequence/predecessor state;
+  transfer-ID reuse rejection; verified replay; durable equivocation state; and
+  bounded fail-closed storage;
+- `mesh/src/lib/public-witness-receiver-bridge.mjs` explicitly bridges a durable
+  accepted transfer into W2b observation only after the caller-supplied local
+  source admission exactly matches the durable admission, the separately
+  supplied persona-root trust verifies the package, and both stores use the same
+  witness key; it also supports crash-window restart reconciliation without
+  manufacturing a second observation;
+- `mesh/test/public-witness-receiver-store.test.mjs`,
+  `mesh/test/public-witness-receiver-bridge.test.mjs`, and
+  `mesh/test/public-witness-receiver-replay-adversarial.test.mjs` verify durable
+  restart/idempotency, source sequence and predecessor enforcement, source
+  equivocation, transfer-ID reuse, source-epoch rollover, stale traffic,
+  persona-root/admission/witness-key substitution, quota failure, tamper and
+  truncation, bridge crash reconciliation, and rejection of a forged replay
+  claim that merely copies a retained `transfer_digest` onto different bytes;
 - `npm run public-witness:start -- <config.json>` and
   `npm run public-witness:verify -- <config.json>` operate the W2b standalone
   local laboratory without adding it to the four-process Grid runtime;
@@ -578,14 +597,52 @@ or artifact. The receipt still makes no end-to-end delivery, witness-observation
 commit, truth, authorship, legal-identity, finality, authority, or networking
 claim.
 
-W2c1 remains a **no-socket protocol laboratory**. It does not durably remember
-which source transfer positions have already been accepted across process
-restart, perform source discovery, listen on HTTP/TLS, fetch outbound, rate-limit
-remote peers, or persist remote intake receipts as a receiver transaction. Those
-properties remain required before any live remote witness transport may be
-claimed. An actual listener/fetcher must be reviewed separately and must not
-receive Grid credentials or gain admission, follow, moderation, recommendation,
-consensus, or persona-root authority.
+W2c2 makes that source boundary restart-safe before live transport is permitted.
+The receiver durably appends witness-signed canonical records for source
+admission, transfer intake, and later observation linkage. Source admission
+epochs supersede exact prior local admissions and source transfer state retains
+contiguous sequence, exact predecessor transfer, transfer-ID use, source
+position, and conflict status across restart. Previously unseen traffic from a
+superseded source epoch fails closed.
+
+Exact historical replay is decided only after the source-signed transfer
+envelope is cryptographically verified and its digest is recomputed. A caller
+cannot obtain replay treatment by copying a retained `transfer_digest` onto
+different bytes. A byte-identical, signature-valid historical package may still
+receive its original witness-signed transfer receipt after source rollover or
+short transfer expiry; unseen stale or expired traffic cannot create new intake.
+
+A second valid package at an already retained source position is persisted with
+deterministic source-equivocation evidence and the affected source epoch is
+marked conflicted so forward advancement halts. The current laboratory retains
+the first competing pair and fails closed rather than silently selecting a
+winner; broader forensic intake of additional competing forks remains a future
+review point before live remote operation.
+
+Transfer acceptance remains distinct from witness observation. New receiver
+intake is explicitly `pending-observation`. The W2c2 bridge may commit that exact
+artifact into W2b only when the caller-supplied local source admission matches
+the durable admission, the separately supplied trusted persona-root key verifies
+the transferred artifact, and the receiver and durable witness stores use the
+same witness key. The transfer itself cannot manufacture either trust input.
+
+If W2b durably records the observation and the process fails before the receiver
+appends its linkage record, restart reconciliation independently locates the
+signed W2b durable observation record and appends a receiver
+`reconciled_after_restart` linkage without creating a second witness
+observation. Receiver restart also re-verifies canonical wire records without
+feeding verifier-only convenience fields back into the strict signed schema.
+Tamper, truncation, noncanonical encoding, state drift, quota exhaustion, source
+substitution, persona-root substitution, and witness-key substitution fail
+closed before an invalid receiver transition is committed.
+
+W2c2 is still a **no-socket durable receiver laboratory**. It does not listen on
+HTTP/TLS, perform DNS or peer discovery, fetch outbound, rate-limit remote
+connections, automatically admit sources, distribute Grid credentials, mutate
+public social state, or claim federation, archive availability, quorum,
+consensus, or finality. A live listener/fetcher remains a separate future W2
+increment and must route every accepted package through these durable receiver
+rules rather than invent a parallel transport authority path.
 
 A witness receipt means that the named witness key observed and verified one
 exact signed journal artifact. It does not prove content truth, legal identity,
@@ -616,17 +673,18 @@ The staged roadmap is:
    revocation, recovery transitions, stale-key rejection when relevant evidence
    is supplied, and credential-aware journal v2 continuity;
 3. **W2 — witness service laboratory (W2a evidence core, W2b durable local
-   process, and W2c1 no-socket source-transfer protocol implemented; live remote
-   operation pending):** the current work provides signed observation,
-   idempotent replay, equivocation/stale-key evidence, witness-signed append-only
-   local state, deterministic fail-closed restart, bounded stdin/stdout IPC,
-   explicit local source admission, source-signed transfer continuity,
-   source-equivocation evidence, separate persona-root trust, and historically
-   auditable package-verification receipts. Remaining W2 work includes durable
-   receiver-side source-chain/replay state, source-admission lifecycle
-   persistence, authenticated listener/fetcher transport, rate/flood/abuse
-   controls, discovery policy, independently operated hosts, and multi-witness
-   evidence exchange without Grid authority;
+   process, W2c1 no-socket source-transfer protocol, and W2c2 durable receiver
+   intake/reconciliation implemented; live remote operation pending):** the
+   current work provides signed observations, idempotent replay,
+   equivocation/stale-key evidence, witness-signed append-only local state,
+   deterministic fail-closed restart, bounded stdin/stdout IPC, explicit local
+   source admission, source-signed transfer continuity, source-equivocation
+   evidence, separate persona-root trust, historically auditable transfer
+   receipts, restart-safe receiver source-chain/replay state, verified replay,
+   pending-observation separation, and crash-window receiver↔witness
+   reconciliation. Remaining W2 work includes authenticated listener/fetcher
+   transport, remote rate/flood/abuse controls, discovery policy, independently
+   operated hosts, and multi-witness evidence exchange without Grid authority;
 4. **W3 — archive and availability laboratory:** independently operated public
    object retention with explicit availability and legal-removal semantics;
 5. **W4 — optional checkpoint agreement adapter:** evaluate threshold/BFT
@@ -635,19 +693,20 @@ The staged roadmap is:
 6. **W5 — AXIOM Verify:** independently verify content digests, persona journal
    signatures, credential epochs, revocations, continuity, witness receipts,
    witness observations/conflicts, durable witness records, source admissions,
-   source transfer chains/equivocation, package-verification receipts,
-   checkpoints, availability, and any optional finality certificate while
-   preserving explicit non-claims; and
+   source transfer chains/equivocation, package-verification receipts, durable
+   receiver intake/linkage records, checkpoints, availability, and any optional
+   finality certificate while preserving explicit non-claims; and
 7. **W6 — promotion:** only after applicable protocol, security, privacy,
    operational, scale, governance, and independent-review gates pass.
 
 A persona can still sign two conflicting journal entries at the same continuity
 position. That is equivocation, not something cryptography can prohibit. W2a
 and W2b retain and expose conflicting valid persona artifacts and signed
-conflict evidence rather than silently choosing one. W2c1 applies the same rule
-to an admitted source that signs competing transfer packages at one source
-position. Future multi-witness and agreement protocols must preserve both forms
-of conflict rather than silently select a winner.
+conflict evidence rather than silently choosing one. W2c1 and W2c2 apply the
+same rule to an admitted source that signs competing transfer packages at one
+source position, with W2c2 durably retaining the conflict across restart.
+Future multi-witness and agreement protocols must preserve both forms of
+conflict rather than silently select a winner.
 
 ## Required future agreement interface
 
