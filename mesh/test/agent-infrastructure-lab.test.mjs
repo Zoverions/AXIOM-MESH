@@ -294,11 +294,11 @@ test('infrastructure contracts and architecture preserve the non-authority bound
     assert.match(JSON.stringify(document), /authority_granted/);
   }
   const architecture = await readFile(
-    new URL('../../docs/architecture/AGENT-COMMONS-INFRASTRUCTURE-LAB.md', import.meta.url),
+    new URL('../../docs/architecture/AGENT-COMMONS.md', import.meta.url),
     'utf8'
   );
   assert.match(architecture, /A device offer is not node admission/);
   assert.match(architecture, /axiom-compute-node-profile\.v1/);
-  assert.match(architecture, /## Apple use case/);
-  assert.match(architecture, /does \*\*not\*\* claim a deployed hardware marketplace/);
+  assert.match(architecture, /## Infrastructure and hardware laboratory/);
+  assert.match(architecture, /a deployed hardware marketplace/);
 });
