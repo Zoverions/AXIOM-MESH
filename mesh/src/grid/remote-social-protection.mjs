@@ -9,6 +9,9 @@ export const REMOTE_SOCIAL_PROTECTED_COLUMN_MAPPINGS = Object.freeze([
   ['remote_social_admissions', 'admission_id', ['summary_json']],
   ['remote_social_observations', 'observation_id', ['object_json']],
   ['remote_social_follows', 'follow_id', ['trust_json']],
+  ['remote_social_abuse_preferences', 'preference_id', ['detail_json']],
+  ['remote_social_reports', 'report_id', ['report_json']],
+  ['remote_social_quarantines', 'quarantine_id', ['detail_json']],
   ['remote_social_transport_jobs', 'job_id', ['review_json', 'receipt_json']]
 ]);
 
