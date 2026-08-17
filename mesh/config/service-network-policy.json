@@ -86,6 +86,10 @@
         },
         {
           "method": "GET",
+          "path": "/internal/v1/social/remote-review/:owner"
+        },
+        {
+          "method": "GET",
           "path": "/internal/v1/capsules"
         },
         {
