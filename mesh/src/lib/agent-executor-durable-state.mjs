@@ -255,13 +255,18 @@ export class AgentExecutorDurableStateStore {
 
   _commit({ recordType, committedAt, conformanceReceipt = null }) {
     this._ensureWritable();
-    const lifecycleTranscript = this.ledger.exportTranscript();
-    const lifecycleReceipt = this.ledger.receipt({ generatedAt: committedAt });
+    const previous = this.records.at(-1);
+    const lifecycleTranscript = recordType === 'attach-conformance-receipt'
+      ? previous.payload.lifecycle_transcript
+      : this.ledger.exportTranscript();
+    const lifecycleReceipt = recordType === 'attach-conformance-receipt'
+      ? previous.payload.lifecycle_receipt
+      : this.ledger.receipt({ generatedAt: committedAt });
     const record = makeDurableRecord({
       storeId: this.storeId,
       storeSigner: this.storeSigner,
       plan: this.plan,
-      previous: this.records.at(-1),
+      previous,
       recordType,
       committedAt,
       lifecycleTranscript,
@@ -285,39 +290,55 @@ export class AgentExecutorDurableStateStore {
     });
   }
 
-  consume({ eventId, occurredAt, revocationState = 'active' } = {}) {
+  _transition(apply, { recordType, committedAt }) {
     this._ensureWritable();
-    const result = this.ledger.consume({ eventId, occurredAt, revocationState });
-    const record = this._commit({ recordType: 'consume', committedAt: occurredAt });
-    if (record.statement.lifecycle_head_event_digest !== result.event.event_digest) {
+    const result = apply();
+    try {
+      const record = this._commit({ recordType, committedAt });
+      if (record.statement.lifecycle_head_event_digest !== result.event.event_digest) {
+        this.failed = true;
+        throw new ValidationError('durable record does not bind lifecycle transition event');
+      }
+      return Object.freeze({ result, record });
+    } catch (error) {
       this.failed = true;
-      throw new ValidationError('durable consume record does not bind consumed event');
+      throw error;
     }
-    return Object.freeze({ result, record });
+  }
+
+  consume({ eventId, occurredAt, revocationState = 'active' } = {}) {
+    return this._transition(
+      () => this.ledger.consume({ eventId, occurredAt, revocationState }),
+      { recordType: 'consume', committedAt: occurredAt }
+    );
   }
 
   revoke({ eventId, occurredAt, reasonCode = 'sponsor-revoked' } = {}) {
-    this._ensureWritable();
-    const result = this.ledger.revoke({ eventId, occurredAt, reasonCode });
-    return Object.freeze({ result, record: this._commit({ recordType: 'revoke', committedAt: occurredAt }) });
+    return this._transition(
+      () => this.ledger.revoke({ eventId, occurredAt, reasonCode }),
+      { recordType: 'revoke', committedAt: occurredAt }
+    );
   }
 
   expire({ eventId, occurredAt } = {}) {
-    this._ensureWritable();
-    const result = this.ledger.expire({ eventId, occurredAt });
-    return Object.freeze({ result, record: this._commit({ recordType: 'expire', committedAt: occurredAt }) });
+    return this._transition(
+      () => this.ledger.expire({ eventId, occurredAt }),
+      { recordType: 'expire', committedAt: occurredAt }
+    );
   }
 
   interrupt({ eventId, occurredAt, reasonCode = 'durable-executor-interrupted' } = {}) {
-    this._ensureWritable();
-    const result = this.ledger.interrupt({ eventId, occurredAt, reasonCode });
-    return Object.freeze({ result, record: this._commit({ recordType: 'interrupt', committedAt: occurredAt }) });
+    return this._transition(
+      () => this.ledger.interrupt({ eventId, occurredAt, reasonCode }),
+      { recordType: 'interrupt', committedAt: occurredAt }
+    );
   }
 
   complete({ eventId, occurredAt } = {}) {
-    this._ensureWritable();
-    const result = this.ledger.complete({ eventId, occurredAt });
-    return Object.freeze({ result, record: this._commit({ recordType: 'complete', committedAt: occurredAt }) });
+    return this._transition(
+      () => this.ledger.complete({ eventId, occurredAt }),
+      { recordType: 'complete', committedAt: occurredAt }
+    );
   }
 
   attachConformanceReceipt(receipt, { trustedExecutorPublicKey, committedAt } = {}) {
