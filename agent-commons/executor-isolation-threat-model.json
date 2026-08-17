@@ -1,0 +1,53 @@
+{
+  "schema": "axiom-agent-executor-isolation-threat-model.v1",
+  "phase": "platform-isolation-profile-pre-effect",
+  "core_invariant": "A platform name or mechanism label is not proof of enforced isolation, and a valid profile never grants effect authority.",
+  "attack_classes": [
+    {"id":"os-name-as-isolation-proof","control":"Bind exact reviewed platform policy and keep platform_isolation_verified false."},
+    {"id":"hosted-ci-as-physical-device-proof","control":"hosted_ci_sufficient is hard false and hosted CI never becomes physical-device proof."},
+    {"id":"mechanism-label-as-enforcement","control":"Require the complete reviewed mechanism-family set but treat it only as requirements, not observed enforcement."},
+    {"id":"cross-platform-mechanism-substitution","control":"Mechanism families must exactly match the selected OS policy."},
+    {"id":"platform-profile-digest-substitution","control":"Optionally bind and recompute the exact validated executor platform-profile digest."},
+    {"id":"architecture-substitution","control":"OS and architecture must match the bound platform profile and reviewed policy."},
+    {"id":"required-control-omission","control":"The full common-control set must match the reviewed catalog exactly."},
+    {"id":"repository-code-trust-laundering","control":"Each platform policy requires a stronger repository-code isolation boundary than fixed argv alone."},
+    {"id":"self-asserted-external-verification","control":"externally-verified status requires separate verifier confirmation supplied outside the profile document."},
+    {"id":"privilege-or-credential-inheritance","control":"Common requirements include no privilege escalation, minimal environment and no ambient credentials/secrets."},
+    {"id":"filesystem-symlink-or-reparse-escape","control":"Common requirements include root containment, host-root denial and symlink/reparse boundaries."},
+    {"id":"orphan-process-or-timeout-escape","control":"Common requirements include process-tree containment and terminal timeout/kill semantics."},
+    {"id":"resource-ceiling-omission","control":"CPU/memory/process/output ceilings are mandatory common controls."},
+    {"id":"network-default-allow","control":"Default-deny networking and explicit-origin-only network policy are mandatory common controls."},
+    {"id":"cleanup-or-uncertainty-upgrade","control":"Workspace disposal and terminal-on-uncertainty are mandatory common controls."},
+    {"id":"effect-or-production-claim-elevation","control":"All effect, production, deployment, node-enrollment, capability and authority claims are hard false."}
+  ],
+  "platform_notes": {
+    "linux": "Reviewed requirements describe kernel-enforced process/filesystem/network isolation families; named mechanisms alone do not prove enforcement.",
+    "macos": "Hosted macOS compatibility and app metadata are not accepted as arbitrary untrusted repository-code isolation; a separately reviewed VM or equivalent kernel boundary is required.",
+    "windows": "OS identity or one process-control primitive alone is insufficient; a separately reviewed containment boundary plus process-tree/resource, filesystem, network and privilege controls is required."
+  },
+  "promotion_blockers": [
+    "no-effect-capable-platform-adapter",
+    "no-real-process-launcher-under-isolation",
+    "no-os-filesystem-root-enforcement-evidence",
+    "no-live-network-enforcement-evidence",
+    "no-real-repository-code-isolation-evidence",
+    "no-physical-device-evidence-for-production-promotion",
+    "no-independent-effect-security-review",
+    "no-production-executor-promotion"
+  ],
+  "boundaries": {
+    "real_process_execution_enabled": false,
+    "real_filesystem_isolation_verified": false,
+    "real_network_isolation_verified": false,
+    "repository_code_isolation_verified": false,
+    "platform_isolation_verified": false,
+    "hosted_ci_is_physical_device_proof": false,
+    "effect_reachable": false,
+    "remote_execution_enabled": false,
+    "credential_access_enabled": false,
+    "production_node_enrollment_enabled": false,
+    "deployment_authority": false,
+    "capability_promotion_authority": false,
+    "authority_granted": false
+  }
+}
