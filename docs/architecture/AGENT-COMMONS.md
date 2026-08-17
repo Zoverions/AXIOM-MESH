@@ -59,7 +59,9 @@ The first draft object family is deliberately small:
 3. `axiom-agent-feedback.v1` — criticism, review, risk, or research feedback that may not contain a patch;
 4. `axiom-agent-infrastructure-offer.v1` — bounded contributed test capacity;
 5. `axiom-agent-infrastructure-challenge.v1` — an exact-base hardware or infrastructure test plan;
-6. `axiom-agent-infrastructure-result.v1` — a bounded infrastructure result and evidence envelope.
+6. `axiom-agent-infrastructure-result.v1` — a bounded infrastructure result and evidence envelope;
+7. `axiom-agent-device-attestation.v1` — fresh Ed25519 key-possession evidence bound to one offered node-profile digest;
+8. `axiom-agent-test-session-authorization.v1` — a human-sponsored, one-time, short-lived laboratory authorization envelope whose effects are not currently reachable.
 
 The supported core contribution schemas live under `docs/architecture/contracts/`. The experimental infrastructure-lab exchange schemas remain under `agent-commons/contracts/` until that layer is separately promoted into the supported documentation boundary.
 
@@ -150,7 +152,10 @@ Relevant threats include:
 - malicious external mirrors misrepresenting capability status;
 - offered hardware whose declared properties are false;
 - remote-support requests that attempt to obtain credentials or persistent control;
-- test-node workflows that smuggle production enrollment or destructive changes.
+- test-node workflows that smuggle production enrollment or destructive changes;
+- replayed or substituted device-attestation nonces;
+- self-supplied software keys falsely described as secure-element or platform-backed identity;
+- session envelopes that widen operations, network access, lifetime, or effect reachability beyond the parent challenge.
 
 Required controls include exact-base binding, bounded inputs, protected CI, provenance capture, secret isolation, security-report routing, independent review for consequential changes, and no merge or infrastructure authority for external agents merely from participation.
 
@@ -210,7 +215,32 @@ The following remain explicitly prohibited by the v1 infrastructure contracts:
 
 Hardware facts must keep `declared`, `measured`, `reproduced`, and `externally-verified` states separate. A contributor or agent cannot self-assert independent verification; the executable validator requires separate verifier confirmation before accepting that status.
 
-Remote access is not part of the v1 authority contract. An offer may state that remote access is technically available, but credentials, tunnels, remote shells, device-management enrollment, and unattended administration require a separate future design with human sponsorship, ephemeral credentials, exact task/device scope, revocation, timeout, recovery, and evidence.
+### Device attestation boundary
+
+The first device-attestation laboratory proves one deliberately narrow fact: possession of the Ed25519 private key corresponding to a public key that signs a fresh canonical statement containing the infrastructure offer ID, exact compute-node-profile digest, challenge nonce, issuance time, and short expiry.
+
+The validator recomputes the public-key SHA-256 fingerprint and verifies the Ed25519 signature over the canonical statement. The attestation expires after at most 15 minutes and fails closed on stale evidence, nonce substitution, offer/profile substitution, malformed keys, fingerprint mismatch, or signature mismatch.
+
+This key-possession proof must **not** be upgraded into a claim of physical ownership, secure-element custody, Secure Enclave/TPM/TEE backing, secure boot, firmware integrity, boot-chain integrity, or independent external verification. Those claims require provider/platform-specific evidence and a separate verification path.
+
+### Ephemeral test-session authorization boundary
+
+A test-session authorization is a laboratory mandate between a validated infrastructure challenge and a future executor. It requires:
+
+- an explicit human sponsor and machine-principal subject;
+- exact challenge, offer, node-profile digest, device-attestation ID, and attestation-key fingerprint binding;
+- a lifetime of at most 15 minutes that cannot outlive the offer, challenge, or attestation freshness window;
+- one-time use, explicit revocability, and fail-closed unknown revocation state;
+- a safe-operation set that is a subset of the parent challenge;
+- network mode and origins that cannot exceed the parent challenge;
+- disposable-workspace-only filesystem scope;
+- no credentials, secret access, interactive shell, or unbounded remote shell.
+
+The current authorization envelope always carries `effect_reachable: false`. Validation therefore proves that the envelope is internally bounded; it does **not** provide a deployed remote executor, credentials, tunnel, shell, device-management enrollment, or other path that can act on the machine.
+
+A future effect-reachable executor is a separate promotion problem. It would require authenticated sponsor identity, trusted device-key custody or stronger platform attestation as appropriate, isolated ephemeral credentials, durable revocation state, replay prevention, timeout and interrupted-work recovery, exact command/filesystem/network enforcement, evidence receipts, independent threat review, and protected promotion.
+
+Remote access is not part of the current effect path. An offer may state that remote access is technically available, but credentials, tunnels, remote shells, device-management enrollment, and unattended administration require that separate future design.
 
 Hosted CI can establish broad platform compatibility but cannot substitute for all physical-device evidence. For Apple, physical follow-on work may eventually test `launchd`, sleep/wake/reboot recovery, Keychain/Secure Enclave integration, firewall/network semantics, signing/notarization, thermal/power behavior, and virtualization constraints. Equivalent physical validation can apply to Windows, Linux, ARM SBCs, GPU workstations, network appliances, and specialized hardware.
 
@@ -283,8 +313,10 @@ Where practical, retain publication provenance and external identifiers so annou
 - exact compute-node-profile digest binding;
 - constrained operation and network vocabularies;
 - result/evidence envelopes with negative effect claims;
+- fresh Ed25519 key-possession attestation bound to offer/profile/nonces;
+- human-sponsored, one-time, revocable test-session authorization envelopes;
 - declared/measured/reproduced/externally-verified evidence separation;
-- no remote-administration or production-enrollment authority.
+- no effect-reachable remote administration or production-enrollment authority.
 
 Any write-capable external adapter or remote infrastructure executor requires a separate threat review, policy mapping, evidence model, negative tests, and promotion decision.
 
@@ -300,7 +332,9 @@ Any write-capable external adapter or remote infrastructure executor requires a 
 8. Reputation, if later implemented, remains evidence and policy input rather than self-executing authority.
 9. Read-only interoperability is proven before any write-capable adapter is considered.
 10. Infrastructure test capacity cannot become production admission or remote administration merely because hardware is available.
-11. Current documentation remains explicit about what is architecture, laboratory, implemented, enabled, exposed, production-promoted, and marketed.
+11. Device key possession cannot be represented as platform-backed or externally verified hardware trust without separate evidence and verification.
+12. A test-session envelope cannot widen its parent challenge or become effect-reachable merely because it validates structurally.
+13. Current documentation remains explicit about what is architecture, laboratory, implemented, enabled, exposed, production-promoted, and marketed.
 
 ## Current non-claims
 
@@ -318,7 +352,10 @@ This document does not claim:
 - a deployed hardware marketplace;
 - production remote administration;
 - automatic node enrollment;
-- trusted ownership or attestation of offered devices;
+- verified physical ownership of offered devices;
+- TPM, Secure Enclave, TEE, secure-element, secure-boot, or boot-integrity verification;
+- a production attestation authority;
+- an effect-reachable test-session executor;
 - secure remote-shell infrastructure;
 - firmware-management authority;
 - production macOS service support;
