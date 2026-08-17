@@ -9,6 +9,7 @@ import {
   verifyPublicWitnessDurableRecord
 } from './public-witness-durable-store.mjs';
 import {
+  validatePublicWitnessSourceAdmission,
   verifyPublicWitnessTransferPackage,
   verifyPublicWitnessTransferReceipt
 } from './public-witness-transfer.mjs';
@@ -116,21 +117,35 @@ export async function findPublicWitnessDurableObservationRecord({
   return found ? structuredClone(found) : null;
 }
 
-function verifyReceiverIntake(receiverStore, transferDigest, trustedPersonaRootPublicKey, now) {
+function verifyReceiverIntake(
+  receiverStore,
+  transferDigest,
+  sourceAdmissionRaw,
+  trustedPersonaRootPublicKey,
+  now
+) {
   const intake = receiverStore.getTransfer(transferDigest);
   const artifacts = receiverStore.getTransferArtifacts(transferDigest);
   if (!intake || !artifacts) {
     throw new ValidationError('public witness receiver bridge cannot find the durable transfer intake');
   }
+  const durableAdmission = receiverStore.getSourceAdmission(intake.source_admission_digest);
+  if (!durableAdmission) {
+    throw new ValidationError('public witness receiver bridge cannot find the durable source admission');
+  }
+  const suppliedAdmission = validatePublicWitnessSourceAdmission(sourceAdmissionRaw);
+  if (suppliedAdmission.admission_digest !== durableAdmission.admission_digest) {
+    throw new ValidationError('public witness receiver bridge source admission does not match durable intake');
+  }
   const receipt = verifyPublicWitnessTransferReceipt(artifacts.transfer_receipt, {
     trustedWitnessPublicKey: receiverStore.witnessPublicKey,
     transfer: artifacts.transfer,
-    sourceAdmission: receiverStore.getSourceAdmission(intake.source_admission_digest),
+    sourceAdmission: durableAdmission,
     trustedPersonaRootPublicKey,
     now
   });
   const transfer = verifyPublicWitnessTransferPackage(artifacts.transfer, {
-    sourceAdmission: receiverStore.getSourceAdmission(intake.source_admission_digest),
+    sourceAdmission: durableAdmission,
     trustedPersonaRootPublicKey,
     now: new Date(receipt.statement.received_at).valueOf()
   });
@@ -142,6 +157,7 @@ export async function commitReceiverTransferObservation({
   witnessStore,
   witnessStatePath,
   transferDigest,
+  sourceAdmission,
   trustedPersonaRootPublicKey,
   observedAt,
   committedAt
@@ -152,6 +168,7 @@ export async function commitReceiverTransferObservation({
   const verified = verifyReceiverIntake(
     receiverStore,
     normalizedDigest,
+    sourceAdmission,
     trustedPersonaRootPublicKey,
     new Date(committed).valueOf()
   );
@@ -205,6 +222,7 @@ export async function reconcileReceiverTransferObservation({
   witnessStore,
   witnessStatePath,
   transferDigest,
+  sourceAdmission,
   trustedPersonaRootPublicKey,
   now = Date.now()
 } = {}) {
@@ -212,6 +230,7 @@ export async function reconcileReceiverTransferObservation({
   const verified = verifyReceiverIntake(
     receiverStore,
     normalizedDigest,
+    sourceAdmission,
     trustedPersonaRootPublicKey,
     now
   );
