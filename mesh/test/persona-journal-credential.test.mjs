@@ -31,6 +31,7 @@ const T1 = '2026-08-17T18:01:00.000Z';
 const T2 = '2026-08-17T18:02:00.000Z';
 const T3 = '2026-08-17T18:03:00.000Z';
 const T4 = '2026-08-17T18:04:00.000Z';
+const T5 = '2026-08-17T18:05:00.000Z';
 const T6 = '2026-08-17T18:06:00.000Z';
 
 function keys() {
@@ -82,10 +83,7 @@ function socialFixture() {
   });
   const revision = createSupersedingSocialPublication(original, publicationInput({
     publication_id: 'publication-alpha-r2',
-    content: {
-      media_type: 'text/plain',
-      text: 'Operational keys are replaceable; history is not silently rewritten.'
-    },
+    content: { media_type: 'text/plain', text: 'Operational keys are replaceable; history is not silently rewritten.' },
     created_at: T4,
     supersedes_digest: undefined
   }), { persona: protectedPersona });
@@ -391,5 +389,29 @@ test('credentialed public journal still refuses non-public social content', () =
       issuedAt: T1
     }),
     /only public-audience publications/
+  );
+});
+
+test('cross-epoch continuity rejects a predecessor signed after its credential was superseded', () => {
+  const data = credentialFixture();
+  const stalePredecessor = createCredentialedPersonaPublicationAttestation(data.social.revision, {
+    personaJournalPrivateKey: data.journal1.privateKey,
+    personaSigningCredential: data.credential1,
+    trustedPersonaRootPublicKey: data.root.publicKey,
+    issuedAt: T4
+  });
+
+  assert.throws(
+    () => createCredentialedPersonaRetractionAttestation(data.social.retraction, {
+      publication: data.social.revision,
+      personaJournalPrivateKey: data.journal2.privateKey,
+      personaSigningCredential: data.credential2,
+      trustedPersonaRootPublicKey: data.root.publicKey,
+      previousAttestation: stalePredecessor,
+      previousCredential: data.credential1,
+      credentialPath: [data.credential1, data.credential2],
+      issuedAt: T6
+    }),
+    /predecessor was issued after its key became stale/
   );
 });
