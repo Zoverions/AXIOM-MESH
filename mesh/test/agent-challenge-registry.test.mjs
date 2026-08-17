@@ -7,10 +7,40 @@ import {
 } from '../src/lib/agent-challenge-registry.mjs';
 
 const REGISTRY_URL = new URL('../../agent-commons/challenges.json', import.meta.url);
+const MANIFEST_URL = new URL('../../agent-commons/manifest.json', import.meta.url);
 
 async function committedRegistry() {
   return JSON.parse(await readFile(REGISTRY_URL, 'utf8'));
 }
+
+async function committedManifest() {
+  return JSON.parse(await readFile(MANIFEST_URL, 'utf8'));
+}
+
+test('Agent Commons discovery manifest stays canonical and non-authoritative', async () => {
+  const manifest = await committedManifest();
+  assert.deepEqual(Object.keys(manifest).sort(), [
+    'agent_entrypoint',
+    'authority_granted',
+    'canonical_repository_url',
+    'challenge_contract',
+    'challenge_registry',
+    'contribution_contract',
+    'feedback_contract',
+    'human_entrypoint',
+    'public_discovery_only',
+    'repository',
+    'schema',
+    'security_policy'
+  ]);
+  assert.equal(manifest.schema, 'axiom-agent-commons-discovery.v1');
+  assert.equal(manifest.repository, 'Zoverions/AXIOM-MESH');
+  assert.equal(manifest.canonical_repository_url, 'https://github.com/Zoverions/AXIOM-MESH');
+  assert.equal(manifest.challenge_registry, 'agent-commons/challenges.json');
+  assert.equal(manifest.security_policy, 'SECURITY.md');
+  assert.equal(manifest.public_discovery_only, true);
+  assert.equal(manifest.authority_granted, false);
+});
 
 test('Agent Commons challenge registry validates the committed discovery surface', async () => {
   const registry = await committedRegistry();
