@@ -42,6 +42,7 @@ import {
 } from '../lib/invocation-envelope.mjs';
 import { effectDestinationForTool } from '../lib/effect-destination.mjs';
 import { buildMachineDiscovery } from '../lib/machine-discovery.mjs';
+import { verifyCapabilityConsumptionReceipt } from '../lib/capability-consumption.mjs';
 import {
   loadTransportRuntime,
   transportServerOptions
@@ -62,6 +63,7 @@ export async function createHypervisorService(config = meshConfig()) {
       })
     : null;
   const sandboxKey = await loadTrustedKey(config.dataDir, 'sandbox');
+  const gridKey = await loadTrustedKey(config.dataDir, 'grid');
   const requestReplay = new ReplayGuard();
   const basePolicy = await loadPolicyStack(config.policyPaths);
   const router = new Router();
@@ -323,7 +325,7 @@ export async function createHypervisorService(config = meshConfig()) {
     const plan = buildPlan(intent, decision, { approval });
     const boundPlanDigest = planDigest(plan);
     const now = Math.floor(Date.now() / 1000);
-    const capability = issueCapability(identity, {
+    const capabilityClaims = {
       iss: identity.service,
       aud: 'sandbox',
       subject: intent.principal.id,
@@ -343,12 +345,63 @@ export async function createHypervisorService(config = meshConfig()) {
         authority_digest: machineAuthority.authority_digest,
         runtime_id: machineAuthority.runtime_id
       } : {})
-    });
+    };
+    const capability = issueCapability(identity, capabilityClaims);
     try {
+      const sandboxOperations = await signedFetch(
+        identity,
+        'sandbox',
+        `${config.urls.sandbox}/internal/v1/operations`,
+        { traceId, timeoutMs: 2_000 }
+      );
+      if (!reportHasReadyServices(sandboxOperations, ['sandbox'])) {
+        throw new AxiomError(
+          'sandbox_unavailable',
+          'Sandbox is not ready for capability consumption',
+          503
+        );
+      }
+      const executionEpoch = assertString(
+        sandboxOperations.execution_epoch,
+        'Sandbox execution epoch',
+        { max: 160, pattern: PRINCIPAL_ID }
+      );
+      const consumed = await signedFetch(
+        identity,
+        'grid',
+        `${config.urls.grid}/internal/v1/capabilities/consume`,
+        {
+          method: 'POST',
+          traceId,
+          body: {
+            capability,
+            execution_epoch: executionEpoch
+          }
+        }
+      );
+      const consumption = verifyCapabilityConsumptionReceipt(consumed.receipt, {
+        gridPublicKey: gridKey,
+        capability,
+        claims: capabilityClaims,
+        executionEpoch
+      });
+      if (consumed.receipt_digest !== consumption.receipt_digest) {
+        throw new AxiomError(
+          'capability_consumption_mismatch',
+          'Grid capability consumption response digest is invalid',
+          502
+        );
+      }
+
       const execution = await signedFetch(identity, 'sandbox', `${config.urls.sandbox}/internal/v1/execute`, {
         method: 'POST',
         traceId,
-        body: { intent, capability, plan }
+        body: {
+          intent,
+          capability,
+          plan,
+          consumption_receipt: consumption.receipt
+        }
       });
       const statement = execution.attestation?.statement;
       const signature = execution.attestation?.signature;
@@ -359,6 +412,8 @@ export async function createHypervisorService(config = meshConfig()) {
         statement.intent_digest !== digestObject(intent)
         || statement.invocation_digest !== invocationDigest
         || statement.effect_destination !== effectDestination
+        || statement.capability_consumption_receipt_digest !== consumption.receipt_digest
+        || statement.sandbox_execution_epoch !== executionEpoch
         || statement.result_digest !== digestObject(execution.result)
       ) {
         throw new AxiomError('sandbox_attestation_mismatch', 'Sandbox attestation does not match the execution result', 502);
@@ -372,6 +427,7 @@ export async function createHypervisorService(config = meshConfig()) {
             evidence: {
               plan_digest: digestObject(plan),
               invocation_digest: invocationDigest,
+              capability_consumption_receipt_digest: consumption.receipt_digest,
               ...(effectDestination ? { effect_destination: effectDestination } : {}),
               execution: execution.attestation,
               ...(machineAuthority ? {
@@ -389,6 +445,7 @@ export async function createHypervisorService(config = meshConfig()) {
         evidence: {
           plan_digest: boundPlanDigest,
           invocation_digest: invocationDigest,
+          capability_consumption_receipt_digest: consumption.receipt_digest,
           ...(effectDestination ? { effect_destination: effectDestination } : {}),
           execution_digest: statement.result_digest,
           policy_digest: decision.policy_digest,
