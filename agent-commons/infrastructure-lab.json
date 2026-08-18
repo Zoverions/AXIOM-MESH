@@ -27,6 +27,7 @@
   "executor_durable_state_threat_model": "agent-commons/executor-durable-state-threat-model.json",
   "executor_isolation_threat_model": "agent-commons/executor-isolation-threat-model.json",
   "linux_isolation_adapter_threat_model": "agent-commons/linux-isolation-adapter-threat-model.json",
+  "read_system_facts_effect_threat_model": "agent-commons/read-system-facts-effect-threat-model.json",
   "challenge_classes": [
     "hardware-validation",
     "test-node-provisioning",
