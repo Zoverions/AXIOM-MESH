@@ -226,18 +226,17 @@ export class SemanticMemoryIngestionGridStore extends SemanticMemoryStateGridSto
 
   verifySemanticMemoryIngestionHistory() {
     this.requireIntentEvidenceChain();
-    const rows = this.db.prepare(`
-      SELECT * FROM events
-      WHERE kind = ?
-      ORDER BY seq ASC
-    `).all(SEMANTIC_MEMORY_STATE_EVENT);
+    const rows = this.semanticMemorySourceRows();
     const seen = new Set();
     for (const row of rows) {
       const event = this.decodeEventRow(row);
-      const record = normalizeSemanticMemoryProvenance(
-        assertPlainObject(event.payload, 'semantic memory state payload').record
-      );
-      if (seen.has(record.object_id)) continue;
+      const record = this.semanticMemoryRecordFromSourceEvent(event, event.actor);
+      if (!record || seen.has(record.object_id)) continue;
+      if (record.review_request_digest) {
+        throw new ValidationError(
+          'Persisted semantic memory history cannot begin with a reviewed provenance state'
+        );
+      }
       seen.add(record.object_id);
       this.verifyPersistedInitialIngestion(event, record);
     }
