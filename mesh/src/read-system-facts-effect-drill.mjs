@@ -45,17 +45,31 @@ function keyPair() {
 }
 function safeDockerEnvironment() {
   return {
-    PATH: '/usr/bin:/bin', HOME: '/nonexistent', LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8',
-    DOCKER_HOST: 'unix:///var/run/docker.sock', DOCKER_CONTEXT: 'default'
+    PATH: '/usr/bin:/bin',
+    HOME: '/nonexistent',
+    LANG: 'C.UTF-8',
+    LC_ALL: 'C.UTF-8',
+    DOCKER_HOST: 'unix:///var/run/docker.sock',
+    DOCKER_CONTEXT: 'default'
   };
 }
 function docker(args, { timeout = PROCESS_TIMEOUT_MS, maxBuffer = MAX_OUTPUT_BYTES } = {}) {
   return spawnSync(AGENT_LINUX_ISOLATION_DOCKER_BINARY, args, {
-    encoding: 'utf8', env: safeDockerEnvironment(), timeout, maxBuffer, windowsHide: true, shell: false
+    encoding: 'utf8',
+    env: safeDockerEnvironment(),
+    timeout,
+    maxBuffer,
+    windowsHide: true,
+    shell: false
   });
 }
-function absent(name) { return docker(['container', 'inspect', name], { timeout: 3000, maxBuffer: 1024 }).status !== 0; }
-function cleanup(name) { docker(['rm', '-f', name], { timeout: 3000, maxBuffer: 1024 }); return absent(name); }
+function absent(name) {
+  return docker(['container', 'inspect', name], { timeout: 3000, maxBuffer: 1024 }).status !== 0;
+}
+function cleanup(name) {
+  docker(['rm', '-f', name], { timeout: 3000, maxBuffer: 1024 });
+  return absent(name);
+}
 function fixedArgs(name, imageId, step) {
   assert(step.absolute_executable === AGENT_LINUX_ISOLATION_ENTRYPOINT, 'effect descriptor executable drifted');
   return [
@@ -105,12 +119,12 @@ function executeStep(step, imageId) {
 }
 function boundedJsonFile(path, root, label) {
   assert(typeof path === 'string' && isAbsolute(path), `${label} path must be absolute`);
+  const inputInfo = lstatSync(path);
+  assert(inputInfo.isFile() && !inputInfo.isSymbolicLink() && inputInfo.size > 0 && inputInfo.size <= MAX_INPUT_BYTES, `${label} must be a bounded non-symlink regular file`);
   const resolvedRoot = realpathSync(root);
   const resolvedPath = realpathSync(path);
   const rel = relative(resolvedRoot, resolvedPath);
   assert(rel && !rel.startsWith('..') && !isAbsolute(rel), `${label} must stay inside RUNNER_TEMP`);
-  const info = lstatSync(resolvedPath);
-  assert(info.isFile() && !info.isSymbolicLink() && info.size > 0 && info.size <= MAX_INPUT_BYTES, `${label} must be a bounded regular file`);
   return JSON.parse(readFileSync(resolvedPath, 'utf8'));
 }
 function objects(nowMs) {
@@ -118,56 +132,111 @@ function objects(nowMs) {
   const challengeId = 'infra:read-system-facts:effect';
   const nonce = `${NONCE_PREFIX}${randomBytes(16).toString('hex')}`;
   const offer = {
-    schema: 'axiom-agent-infrastructure-offer.v1', offer_id: offerId, repository: 'Zoverions/AXIOM-MESH',
+    schema: 'axiom-agent-infrastructure-offer.v1',
+    offer_id: offerId,
+    repository: 'Zoverions/AXIOM-MESH',
     publisher: { type: 'human', id: 'contributor:hosted-ci-lab' },
     node_profile: { schema: 'axiom-compute-node-profile.v1', profile_id: 'node:hosted-ci:read-facts', profile_sha256: PROFILE_SHA },
     custody: { physical_control: 'contributor', remote_access_available: false },
     availability: { starts_at: iso(nowMs - 60_000), expires_at: iso(nowMs + 600_000), maximum_sessions: 1 },
-    challenge_classes: ['hardware-validation'], evidence: { fact_status: 'measured', evidence_refs: ['evidence:hosted-ci:isolation'] },
-    boundaries: { destructive_actions_allowed: false, production_enrollment_allowed: false, credential_issuance_allowed: false,
-      secret_access_allowed: false, firmware_changes_allowed: false, purchases_allowed: false, authority_granted: false, payment_promised: false }
+    challenge_classes: ['hardware-validation'],
+    evidence: { fact_status: 'measured', evidence_refs: ['evidence:hosted-ci:isolation'] },
+    boundaries: {
+      destructive_actions_allowed: false, production_enrollment_allowed: false, credential_issuance_allowed: false,
+      secret_access_allowed: false, firmware_changes_allowed: false, purchases_allowed: false,
+      authority_granted: false, payment_promised: false
+    }
   };
   const challenge = {
-    schema: 'axiom-agent-infrastructure-challenge.v1', challenge_id: challengeId, repository: 'Zoverions/AXIOM-MESH', revision: REVISION,
-    base_sha: REVISION, class: 'hardware-validation', target: { offer_id: offerId, node_profile_sha256: PROFILE_SHA },
-    plan: { allowed_operations: ['read-system-facts'], prohibited_operations: [
-      'production-node-enrollment','credential-issuance','secret-retrieval','firmware-change','boot-chain-change','disk-erasure',
-      'purchase-or-subscription','security-boundary-weakening','unbounded-remote-shell','permanent-system-mutation'
-    ], network: { mode: 'none', allowed_origins: [], credentials_allowed: false } },
+    schema: 'axiom-agent-infrastructure-challenge.v1',
+    challenge_id: challengeId,
+    repository: 'Zoverions/AXIOM-MESH',
+    base_sha: REVISION,
+    class: 'hardware-validation',
+    target: { offer_id: offerId, node_profile_sha256: PROFILE_SHA },
+    plan: {
+      allowed_operations: ['read-system-facts'],
+      prohibited_operations: [
+        'production-node-enrollment', 'credential-issuance', 'secret-retrieval', 'firmware-change', 'boot-chain-change',
+        'disk-erasure', 'purchase-or-subscription', 'security-boundary-weakening', 'unbounded-remote-shell', 'permanent-system-mutation'
+      ],
+      network: { mode: 'none', allowed_origins: [], credentials_allowed: false }
+    },
     acceptance: ['Return only sanitized fixed system facts from the reviewed Linux isolation boundary.'],
     evidence_requirements: ['Bind one exact plan, durable lifecycle consumption and executor effect receipt.'],
     security_reporting: { public_safe: true, private_route: 'SECURITY.md' },
-    boundaries: { production_enrollment_allowed: false, credential_issuance_allowed: false, secret_access_allowed: false,
-      firmware_changes_allowed: false, purchases_allowed: false, destructive_actions_allowed: false, authority_granted: false, payment_promised: false },
+    boundaries: {
+      production_enrollment_allowed: false, credential_issuance_allowed: false, secret_access_allowed: false,
+      firmware_changes_allowed: false, purchases_allowed: false, destructive_actions_allowed: false,
+      authority_granted: false, payment_promised: false
+    },
     expires_at: iso(nowMs + 300_000)
   };
   const attestationKeys = generateKeyPairSync('ed25519');
   const publicDer = attestationKeys.publicKey.export({ format: 'der', type: 'spki' });
   const attestationStatement = {
-    attestation_id: 'attestation:read-system-facts:hosted-ci', repository: 'Zoverions/AXIOM-MESH', offer_id: offerId,
-    node_profile_sha256: PROFILE_SHA, nonce, issued_at: iso(nowMs - 30_000), expires_at: iso(nowMs + 240_000),
-    claims: { physical_ownership_verified: false, platform_backed_key_verified: false, secure_element_verified: false,
-      boot_integrity_verified: false, external_verifier_confirmed: false }
+    attestation_id: 'attestation:read-system-facts:hosted-ci',
+    repository: 'Zoverions/AXIOM-MESH',
+    offer_id: offerId,
+    node_profile_sha256: PROFILE_SHA,
+    nonce,
+    issued_at: iso(nowMs - 30_000),
+    expires_at: iso(nowMs + 240_000),
+    claims: {
+      physical_ownership_verified: false, platform_backed_key_verified: false, secure_element_verified: false,
+      boot_integrity_verified: false, external_verifier_confirmed: false
+    }
   };
   const attestation = {
-    schema: 'axiom-agent-device-attestation.v1', statement: attestationStatement,
-    key: { algorithm: 'ed25519', public_key_spki_der_base64: publicDer.toString('base64'), fingerprint_sha256: sha256(publicDer) },
+    schema: 'axiom-agent-device-attestation.v1',
+    statement: attestationStatement,
+    key: {
+      algorithm: 'ed25519',
+      public_key_spki_der_base64: publicDer.toString('base64'),
+      fingerprint_sha256: sha256(publicDer)
+    },
     signature_base64: sign(null, Buffer.from(canonicalJson(attestationStatement), 'utf8'), attestationKeys.privateKey).toString('base64'),
-    evidence_refs: ['evidence:key-possession:hosted-ci'], boundaries: { production_enrollment_allowed: false, remote_execution_allowed: false,
-      credential_issuance_allowed: false, secret_access_allowed: false, firmware_changes_allowed: false, platform_trust_inferred: false, authority_granted: false }
+    evidence_refs: ['evidence:key-possession:hosted-ci'],
+    boundaries: {
+      production_enrollment_allowed: false, remote_execution_allowed: false, credential_issuance_allowed: false,
+      secret_access_allowed: false, firmware_changes_allowed: false, platform_trust_inferred: false, authority_granted: false
+    }
   };
   const authorization = {
-    schema: 'axiom-agent-test-session-authorization.v1', authorization_id: 'session-auth:read-system-facts:hosted-ci', repository: 'Zoverions/AXIOM-MESH',
-    sponsor: { type: 'human', id: 'sponsor:agent-commons-lab', approval_ref: 'approval:issue:1135' }, subject: { type: 'machine', id: 'agent:hosted-ci-read-facts' },
+    schema: 'axiom-agent-test-session-authorization.v1',
+    authorization_id: 'session-auth:read-system-facts:hosted-ci',
+    repository: 'Zoverions/AXIOM-MESH',
+    sponsor: { type: 'human', id: 'sponsor:agent-commons-lab', approval_ref: 'approval:issue:1135' },
+    subject: { type: 'machine', id: 'agent:hosted-ci-read-facts' },
     challenge: { challenge_id: challengeId, offer_id: offerId, node_profile_sha256: PROFILE_SHA },
     attestation: { attestation_id: attestationStatement.attestation_id, key_fingerprint_sha256: attestation.key.fingerprint_sha256 },
-    timing: { issued_at: iso(nowMs - 15_000), not_before: iso(nowMs - 5_000), expires_at: iso(nowMs + 180_000), maximum_duration_seconds: 180 },
-    scope: { allowed_operations: ['read-system-facts'], network: { mode: 'none', allowed_origins: [] }, filesystem_scope: 'disposable-workspace-only',
-      credentials_allowed: false, secret_access_allowed: false, interactive_shell_allowed: false, unbounded_remote_shell_allowed: false },
-    revocation: { revocable: true, one_time: true, fail_closed_on_unknown: true, revocation_ref: 'revocation:read-system-facts:hosted-ci' },
-    effects: { effect_reachable: false, production_enrollment: false, persistent_remote_administration: false, credentials_issued: false,
-      secrets_accessed: false, firmware_changed: false, boot_chain_changed: false, purchase_performed: false, destructive_action_performed: false,
-      permanent_system_mutation: false, deployment_authority: false, capability_promoted: false }
+    timing: {
+      issued_at: iso(nowMs - 15_000),
+      not_before: iso(nowMs - 5_000),
+      expires_at: iso(nowMs + 180_000),
+      maximum_duration_seconds: 180
+    },
+    scope: {
+      allowed_operations: ['read-system-facts'],
+      network: { mode: 'none', allowed_origins: [] },
+      filesystem_scope: 'disposable-workspace-only',
+      credentials_allowed: false,
+      secret_access_allowed: false,
+      interactive_shell_allowed: false,
+      unbounded_remote_shell_allowed: false
+    },
+    revocation: {
+      revocable: true,
+      one_time: true,
+      fail_closed_on_unknown: true,
+      revocation_ref: 'revocation:read-system-facts:hosted-ci'
+    },
+    effects: {
+      effect_reachable: false, production_enrollment: false, persistent_remote_administration: false,
+      credentials_issued: false, secrets_accessed: false, firmware_changed: false, boot_chain_changed: false,
+      purchase_performed: false, destructive_action_performed: false, permanent_system_mutation: false,
+      deployment_authority: false, capability_promoted: false
+    }
   };
   return { offer, challenge, attestation, authorization, nonce };
 }
@@ -191,24 +260,67 @@ function main() {
   const now = iso(nowMs);
   const { offer, challenge, attestation, authorization, nonce } = objects(nowMs);
   const lifecycleKeys = keyPair();
-  const ledger = new AgentTestSessionLifecycleLedger({ ledgerId: 'session-ledger:read-system-facts:hosted-ci', ledgerPrivateKey: lifecycleKeys.privateKey });
-  ledger.issue(authorization, { eventId: 'event:read-system-facts:issued', occurredAt: authorization.timing.issued_at,
-    challenge, offer, attestation, expectedNonce: nonce, now: new Date(now) });
+  const ledger = new AgentTestSessionLifecycleLedger({
+    ledgerId: 'session-ledger:read-system-facts:hosted-ci',
+    ledgerPrivateKey: lifecycleKeys.privateKey
+  });
+  ledger.issue(authorization, {
+    eventId: 'event:read-system-facts:issued',
+    occurredAt: authorization.timing.issued_at,
+    challenge,
+    offer,
+    attestation,
+    expectedNonce: nonce,
+    now: new Date(now)
+  });
   const lifecycleTranscript = ledger.exportTranscript();
   const lifecycleReceipt = ledger.receipt({ generatedAt: iso(nowMs - 2_000) });
-  const platformProfile = { schema: 'axiom-agent-executor-platform-profile.v1', profile_id: `platform:hosted-ci:linux-${arch()}`,
-    operating_system: 'linux', architecture: arch(), fact_status: 'measured', source_ref: `isolation-receipt:${isolationReceipt.receipt_digest}`,
-    claims: { platform_trust_inferred: false, secure_boot_verified: false, platform_backed_key_verified: false,
-      privileged_executor_available: false, remote_administration_enabled: false, authority_granted: false } };
-  const plan = compileAgentExecutorDryRunPlan({ authorization, challenge, offer, attestation, expectedNonce: nonce, now: new Date(now),
-    lifecycleTranscript, lifecycleReceipt, trustedLifecycleLedgerPublicKey: ledger.ledgerPublicKey, platformProfile });
+  const platformProfile = {
+    schema: 'axiom-agent-executor-platform-profile.v1',
+    profile_id: `platform:hosted-ci:linux-${arch()}`,
+    operating_system: 'linux',
+    architecture: arch(),
+    fact_status: 'measured',
+    source_ref: `isolation-receipt:${isolationReceipt.receipt_digest}`,
+    claims: {
+      platform_trust_inferred: false,
+      secure_boot_verified: false,
+      platform_backed_key_verified: false,
+      privileged_executor_available: false,
+      remote_administration_enabled: false,
+      authority_granted: false
+    }
+  };
+  const plan = compileAgentExecutorDryRunPlan({
+    authorization,
+    challenge,
+    offer,
+    attestation,
+    expectedNonce: nonce,
+    now: new Date(now),
+    lifecycleTranscript,
+    lifecycleReceipt,
+    trustedLifecycleLedgerPublicKey: ledger.ledgerPublicKey,
+    platformProfile
+  });
   assert(plan.effects.effect_reachable === false, 'dry-run plan effect boundary changed');
 
   const issuerKeys = keyPair();
-  const admission = createAgentReadSystemFactsEffectAdmission({ admissionId: 'effect-admission:read-system-facts:hosted-ci',
-    issuerId: 'issuer:agent-commons-hosted-ci-lab', issuerPrivateKey: issuerKeys.privateKey, plan, revision: REVISION,
-    notBefore: iso(nowMs - 1_000), expiresAt: iso(nowMs + 120_000) });
-  verifyAgentReadSystemFactsEffectAdmission(admission, { trustedIssuerPublicKey: issuerKeys.publicKey, plan, expectedRevision: REVISION, now });
+  const admission = createAgentReadSystemFactsEffectAdmission({
+    admissionId: 'effect-admission:read-system-facts:hosted-ci',
+    issuerId: 'issuer:agent-commons-hosted-ci-lab',
+    issuerPrivateKey: issuerKeys.privateKey,
+    plan,
+    revision: REVISION,
+    notBefore: iso(nowMs - 1_000),
+    expiresAt: iso(nowMs + 120_000)
+  });
+  verifyAgentReadSystemFactsEffectAdmission(admission, {
+    trustedIssuerPublicKey: issuerKeys.publicKey,
+    plan,
+    expectedRevision: REVISION,
+    now
+  });
 
   const stateRoot = mkdtempSync(join(resolve(RUNNER_TEMP), 'axiom-read-system-facts-state-'));
   const storeKeys = keyPair();
@@ -217,39 +329,78 @@ function main() {
   let controller;
   let consumed = false;
   try {
-    store = AgentExecutorDurableStateStore.open({ stateRoot, storeId: 'executor-durable:read-system-facts:hosted-ci',
-      storePrivateKey: storeKeys.privateKey, lifecyclePrivateKey: lifecycleKeys.privateKey, plan,
-      initialLifecycleTranscript: lifecycleTranscript, initialLifecycleReceipt: lifecycleReceipt, now, leaseSeconds: 180,
-      clock: () => iso(Date.now()) });
-    controller = new AgentReadSystemFactsEffectController({ durableStore: store, executorPrivateKey: executorKeys.privateKey,
-      admission, trustedAdmissionIssuerPublicKey: issuerKeys.publicKey, isolationConformanceReceipt: isolationReceipt, revision: REVISION });
-    const descriptor = controller.begin({ currentLifecycleTranscript: lifecycleTranscript, currentLifecycleReceipt: lifecycleReceipt,
-      trustedLifecyclePublicKey: ledger.ledgerPublicKey, revocationState: 'active', occurredAt: iso(Date.now()) });
+    store = AgentExecutorDurableStateStore.open({
+      stateRoot,
+      storeId: 'executor-durable:read-system-facts:hosted-ci',
+      storePrivateKey: storeKeys.privateKey,
+      lifecyclePrivateKey: lifecycleKeys.privateKey,
+      plan,
+      initialLifecycleTranscript: lifecycleTranscript,
+      initialLifecycleReceipt: lifecycleReceipt,
+      now,
+      leaseSeconds: 180,
+      clock: () => iso(Date.now())
+    });
+    controller = new AgentReadSystemFactsEffectController({
+      durableStore: store,
+      executorPrivateKey: executorKeys.privateKey,
+      admission,
+      trustedAdmissionIssuerPublicKey: issuerKeys.publicKey,
+      isolationConformanceReceipt: isolationReceipt,
+      revision: REVISION
+    });
+    const descriptor = controller.begin({
+      currentLifecycleTranscript: lifecycleTranscript,
+      currentLifecycleReceipt: lifecycleReceipt,
+      trustedLifecyclePublicKey: ledger.ledgerPublicKey,
+      revocationState: 'active',
+      occurredAt: iso(Date.now())
+    });
     consumed = true;
     assert(store.status === 'consumed' && store.generation === 2, 'durable consume was not committed before effect');
     const observations = descriptor.steps.map(step => executeStep(step, isolationReceipt.adapter.image_id));
     const effectReceipt = controller.complete({ observations, finishedAt: iso(Date.now()) });
-    verifyAgentReadSystemFactsEffectReceipt(effectReceipt, { trustedExecutorPublicKey: controller.executorPublicKey,
-      trustedAdmissionIssuerPublicKey: issuerKeys.publicKey, plan, admission, isolationConformanceReceipt: isolationReceipt });
+    verifyAgentReadSystemFactsEffectReceipt(effectReceipt, {
+      trustedExecutorPublicKey: controller.executorPublicKey,
+      trustedAdmissionIssuerPublicKey: issuerKeys.publicKey,
+      plan,
+      admission,
+      isolationConformanceReceipt: isolationReceipt
+    });
     const durableHeadReceipt = store.headReceipt({ generatedAt: iso(Date.now()) });
     const checkedDurableHead = verifyAgentExecutorDurableStateReceipt(durableHeadReceipt, {
-      trustedStorePublicKey: store.storePublicKey, plan, expectedStoreId: store.storeId
+      trustedStorePublicKey: store.storePublicKey,
+      plan,
+      expectedStoreId: store.storeId
     });
     assert(checkedDurableHead.statement.generation === effectReceipt.statement.durable_final_generation, 'durable head generation does not bind effect receipt');
     assert(checkedDurableHead.statement.record_digest === effectReceipt.statement.durable_final_record_digest, 'durable head digest does not bind effect receipt');
     const bundleBody = {
-      schema: 'axiom-agent-read-system-facts-effect-evidence-bundle.v1', revision: REVISION, plan, admission,
-      admission_issuer_public_key: issuerKeys.publicKey, executor_public_key: controller.executorPublicKey,
-      durable_store_public_key: store.storePublicKey, durable_head_receipt: durableHeadReceipt,
-      isolation_receipt_digest: isolationReceipt.receipt_digest, effect_receipt: effectReceipt,
-      claims: { ephemeral_ci_admission_issuer_is_production_identity: false, external_human_approval_verified: false,
-        global_revocation_currentness_claimed: false, physical_device_proof: false, general_executor_available: false }
+      schema: 'axiom-agent-read-system-facts-effect-evidence-bundle.v1',
+      revision: REVISION,
+      plan,
+      admission,
+      admission_issuer_public_key: issuerKeys.publicKey,
+      executor_public_key: controller.executorPublicKey,
+      durable_store_public_key: store.storePublicKey,
+      durable_head_receipt: durableHeadReceipt,
+      isolation_receipt_digest: isolationReceipt.receipt_digest,
+      effect_receipt: effectReceipt,
+      claims: {
+        ephemeral_ci_admission_issuer_is_production_identity: false,
+        external_human_approval_verified: false,
+        global_revocation_currentness_claimed: false,
+        physical_device_proof: false,
+        general_executor_available: false
+      }
     };
     const bundle = { ...bundleBody, bundle_digest: digestObject(bundleBody) };
     process.stdout.write(`${canonicalJson(bundle)}\n`);
   } catch (error) {
     if (consumed && controller && store?.status === 'consumed') {
-      try { controller.interrupt({ occurredAt: iso(Date.now()), reasonCode: 'read-system-facts-effect-drill-failed' }); } catch {}
+      try {
+        controller.interrupt({ occurredAt: iso(Date.now()), reasonCode: 'read-system-facts-effect-drill-failed' });
+      } catch {}
     }
     throw error;
   } finally {
@@ -258,7 +409,9 @@ function main() {
   }
 }
 
-try { main(); } catch (error) {
+try {
+  main();
+} catch (error) {
   process.stderr.write(`Read-system-facts effect drill failed: ${String(error?.message || error).slice(0, 2000)}\n`);
   process.exit(1);
 }
