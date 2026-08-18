@@ -90,7 +90,7 @@ test('A11a shape can represent a future fully gated promotion instead of hard-co
 test('A11a live repository check catches false claims that an ATP capability is already in the authoritative registry', async () => {
   const raw = await ledger();
   raw.entries[0].authoritative_registry_present = true;
-  assert.rejects(
+  await assert.rejects(
     () => verifyAgentTrustPromotionLedger(raw),
     /ledger says registry present but agents\.trust\.machine-identity is absent/
   );
@@ -151,9 +151,9 @@ test('A11a repository verifier fails closed on missing evidence paths', async ()
 test('A11a repository paths cannot escape the repository root', async () => {
   const raw = await ledger();
   raw.entries[0].implementation_paths = ['../outside.mjs'];
-  assert.throws(
-    () => normalizeAgentTrustPromotionLedger(raw),
-    /implementation_paths\[0\] does not match required format|invalid/
+  await assert.rejects(
+    () => verifyAgentTrustPromotionLedger(raw),
+    /escapes repository root/
   );
 });
 
