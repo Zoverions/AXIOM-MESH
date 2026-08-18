@@ -268,7 +268,7 @@ test('path inspection reports unresolved local fork uncertainty and never claims
   });
 });
 
-test('source provisioning refuses a caller-selected operator branch when durable observation shows a fork', async t => {
+test('source provisioning uses the active local observer and refuses a caller-selected fork branch', async t => {
   const state = await fixture(t);
   await state.store.observeCredential(state.first, {
     observedAt: '2026-08-18T10:01:00.000Z'
@@ -292,7 +292,7 @@ test('source provisioning refuses a caller-selected operator branch when durable
     operatorId: state.principalId,
     operatorPrivateKey: state.branchAKey.privateKey,
     operatorCredentialPath: path,
-    operatorKeyObservationSnapshot: cleanSnapshot,
+    operatorKeyObservationStore: state.store,
     trustedOperatorRoleRootPublicKey: state.root.publicKey,
     commandId: 'fork-aware-command',
     authorizedAt: '2026-08-18T10:15:00.000Z',
@@ -300,7 +300,7 @@ test('source provisioning refuses a caller-selected operator branch when durable
   });
   const clean = verifyPublicWitnessSourceProvisioningCommandWithKeyLifecycle(command, {
     operatorCredentialPath: path,
-    operatorKeyObservationSnapshot: cleanSnapshot,
+    operatorKeyObservationStore: state.store,
     trustedOperatorRoleRootPublicKey: state.root.publicKey,
     expectedDomainId: 'axiom.social.public.v1',
     expectedOperatorId: state.principalId,
@@ -310,13 +310,21 @@ test('source provisioning refuses a caller-selected operator branch when durable
   assert.equal(clean.operator_successor_equivocation_observed, false);
   assert.equal(clean.globally_current_key_state_claimed, false);
 
+  assert.throws(() => verifyPublicWitnessSourceProvisioningCommandWithKeyLifecycle(command, {
+    operatorCredentialPath: path,
+    operatorKeyObservationStore: cleanSnapshot,
+    trustedOperatorRoleRootPublicKey: state.root.publicKey,
+    expectedDomainId: 'axiom.social.public.v1',
+    expectedOperatorId: state.principalId,
+    now: Date.parse('2026-08-18T10:16:00.000Z')
+  }), /requires an active local service-key observation store/);
+
   await state.store.observeCredential(state.branchB, {
     observedAt: '2026-08-18T10:17:00.000Z'
   });
-  const forkedSnapshot = state.store.snapshot();
   assert.throws(() => verifyPublicWitnessSourceProvisioningCommandWithKeyLifecycle(command, {
     operatorCredentialPath: path,
-    operatorKeyObservationSnapshot: forkedSnapshot,
+    operatorKeyObservationStore: state.store,
     trustedOperatorRoleRootPublicKey: state.root.publicKey,
     expectedDomainId: 'axiom.social.public.v1',
     expectedOperatorId: state.principalId,
