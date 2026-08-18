@@ -287,10 +287,11 @@ test('durable semantic contagion cannot launder authority across reset, transfor
       // Test may close after an explicit assertion path.
     }
   });
-  const retrieved = secondStore.getCurrentSemanticMemoryProvenance(
+  const retrievedCurrent = secondStore.getCurrentSemanticMemoryProvenance(
     rootRecord.owner,
     rootRecord.object_id
   );
+  const retrieved = normalizeSemanticMemoryProvenance(retrievedCurrent);
   const retrievedPayload = readSemanticContent(secondStore, retrieved);
   assert.equal(retrievedPayload.content.text, maliciousText);
   assert.equal(evaluateSemanticMemoryUse(retrieved, 'ordinary-retrieval').allow, true);
