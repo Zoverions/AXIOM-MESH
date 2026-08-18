@@ -1285,7 +1285,7 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
     recordId: 'record:e2e',
     value: { title: 'explicitly merged value' },
     vector: { 'node:e2e': 2, 'node:peer': 1 },
-    occurred_at: resolutionAt,
+    occurredAt: resolutionAt,
     nonce: 'sync-update-e2e-resolution',
     resolves: conflictHeads
   });
