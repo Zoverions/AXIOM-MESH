@@ -75,11 +75,13 @@ The draft object family is deliberately explicit:
 19. `axiom-agent-read-system-facts-effect-admission.v1` — a short-lived Ed25519-signed laboratory admission binding one exact inert dry-run plan, exact repository revision, lifecycle/compiler/isolation policy bindings, and only `read-system-facts`, without changing the plan's hard-false effect claim;
 20. `axiom-agent-read-system-facts-effect-receipt.v1` — an Ed25519-signed executor-originated receipt binding the exact admission, plan, durable consume/final lifecycle records, Linux isolation evidence, fixed observations, and cleanup while withholding task-success, general-executor, production, deployment, capability, and AXIOM-authority claims;
 21. `axiom-agent-collect-sanitized-logs-effect-admission.v1` — a short-lived Ed25519-signed laboratory admission binding the existing inert `collect-sanitized-logs:builtin` plan, exact repository/lifecycle/compiler/isolation bindings, and the fixed synthetic-log sanitization policy without granting arbitrary-path or host-log authority;
-22. `axiom-agent-collect-sanitized-logs-effect-receipt.v1` — an Ed25519-signed executor-originated receipt binding the exact admission, plan, signed pre-effect consumed durable head, fixed sanitizer digest/path, sanitized projection, final durable head, Linux isolation evidence, and cleanup while withholding host-log, general-executor, production, deployment, capability, task-success, and AXIOM-authority claims.
+22. `axiom-agent-collect-sanitized-logs-effect-receipt.v1` — an Ed25519-signed executor-originated receipt binding the exact admission, plan, signed pre-effect consumed durable head, fixed sanitizer digest/path, sanitized projection, final durable head, Linux isolation evidence, and cleanup while withholding host-log, general-executor, production, deployment, capability, task-success, and AXIOM-authority claims;
+23. `axiom-agent-collect-benchmark-metrics-effect-admission.v1` — a short-lived Ed25519-signed laboratory admission binding the existing inert `collect-benchmark-metrics:builtin` plan, exact repository/lifecycle/compiler/isolation bindings, and the fixed synthetic benchmark policy without granting arbitrary benchmark, host-telemetry, score, SLO, repository-code, or network authority;
+24. `axiom-agent-collect-benchmark-metrics-effect-receipt.v1` — an Ed25519-signed executor-originated receipt binding the exact admission, plan, signed pre-effect consumed durable head, fixed benchmark script/workload/checksum, one bounded monotonic elapsed observation, final durable head, Linux isolation evidence, and cleanup while withholding host-telemetry, machine-comparison, production-SLO, task-success, general-executor, deployment, capability, and AXIOM-authority claims.
 
 The supported core contribution schemas live under `docs/architecture/contracts/`. Experimental infrastructure-lab exchange schemas remain under `agent-commons/contracts/` until that layer is separately promoted into the supported documentation boundary.
 
-These are exchange and evidence contracts. They do not prove that an external agent, runtime, identity, network, offered device, lifecycle signer, platform profile, compiler, virtual sandbox, durable local state store, isolation profile, Linux fixed-probe receipt, laboratory effect-admission signer, sanitizer implementation, executor effect receipt, reviewed mechanism family, or future executor is trustworthy beyond the evidence actually verified.
+These are exchange and evidence contracts. They do not prove that an external agent, runtime, identity, network, offered device, lifecycle signer, platform profile, compiler, virtual sandbox, durable local state store, isolation profile, Linux fixed-probe receipt, laboratory effect-admission signer, sanitizer implementation, benchmark implementation, executor effect receipt, reviewed mechanism family, or future executor is trustworthy beyond the evidence actually verified.
 
 ## Challenge model
 
@@ -204,11 +206,22 @@ Relevant threats include:
 - sanitizer-script digest substitution, malformed/oversized JSONL, parser ambiguity, record-count/output exhaustion, or unexpected free-form fields bypassing the projection;
 - deliberate sentinel, token, path, hostname, URL, command-line, or other forbidden fixture material surviving sanitization or appearing in the uploaded artifact;
 - canonical sanitized output being replaced by a semantically similar but unreviewed projection;
-- a successful synthetic-log receipt being elevated into permission to read application/host logs, general filesystem authority, task success, a general executor, production deployment, capability promotion, or AXIOM authority.
+- a successful synthetic-log receipt being elevated into permission to read application/host logs, general filesystem authority, task success, a general executor, production deployment, capability promotion, or AXIOM authority;
+- the inert `collect-benchmark-metrics:builtin` step being reinterpreted as arbitrary benchmark or host-telemetry authority;
+- benchmark admission signer, plan/revision/lifecycle/compiler/isolation/benchmark-policy binding, lifetime, or operation substitution;
+- a benchmark effect beginning without an independently verified signed generation-2 `consumed` durable-head receipt;
+- benchmark script, workload identifier, iteration count, deterministic checksum, or timer-source substitution;
+- caller benchmark code/input, command, argv, shell, environment-controlled executable, repository bind mount, or arbitrary benchmark framework being smuggled into the adapter;
+- host CPU, memory, process, filesystem, kernel, hardware, `/proc`, `/sys`, or similar telemetry being read and laundered through the bounded metric projection;
+- canonical benchmark output being replaced by extra fields, a different timer, a noncanonical representation, or a semantically different workload;
+- a single hosted elapsed observation being elevated into a portable machine-comparison score, hardware ranking, production SLO, throughput guarantee, capacity claim, or application task-success claim;
+- benchmark cleanup failure or post-consumption uncertainty being rewritten as successful completion;
+- benchmark executor-receipt signer, consumed/final durable-head, isolation-image, workload/checksum, metric-output, or claim substitution;
+- a successful synthetic benchmark receipt being elevated into arbitrary benchmark authority, repository-code execution, general executor availability, production deployment, capability promotion, or AXIOM authority.
 
 Required controls include exact-base binding, bounded inputs, protected CI, provenance capture, secret isolation, security-report routing, independent review for consequential changes, and no merge or infrastructure authority for external agents merely from participation.
 
-The machine-readable pre-executor threat ledger is `agent-commons/pre-executor-threat-model.json`. The machine-readable virtual executor-conformance threat ledger is `agent-commons/executor-conformance-threat-model.json`. The machine-readable durable executor-state threat ledger is `agent-commons/executor-durable-state-threat-model.json`. The machine-readable platform-isolation-profile threat ledger is `agent-commons/executor-isolation-threat-model.json`. The machine-readable fixed-probe Linux isolation threat ledger is `agent-commons/linux-isolation-adapter-threat-model.json`. The machine-readable plan-bound `read-system-facts` effect threat ledger is `agent-commons/read-system-facts-effect-threat-model.json`. The machine-readable synthetic `collect-sanitized-logs` effect threat ledger is `agent-commons/collect-sanitized-logs-effect-threat-model.json`. None of these threat ledgers is itself an effect capability.
+The machine-readable pre-executor threat ledger is `agent-commons/pre-executor-threat-model.json`. The machine-readable virtual executor-conformance threat ledger is `agent-commons/executor-conformance-threat-model.json`. The machine-readable durable executor-state threat ledger is `agent-commons/executor-durable-state-threat-model.json`. The machine-readable platform-isolation-profile threat ledger is `agent-commons/executor-isolation-threat-model.json`. The machine-readable fixed-probe Linux isolation threat ledger is `agent-commons/linux-isolation-adapter-threat-model.json`. The machine-readable plan-bound `read-system-facts` effect threat ledger is `agent-commons/read-system-facts-effect-threat-model.json`. The machine-readable synthetic `collect-sanitized-logs` effect threat ledger is `agent-commons/collect-sanitized-logs-effect-threat-model.json`. The machine-readable synthetic `collect-benchmark-metrics` effect threat ledger is `agent-commons/collect-benchmark-metrics-effect-threat-model.json`. None of these threat ledgers is itself an effect capability.
 
 ## GitHub integration
 
@@ -550,6 +563,28 @@ A passing `axiom-agent-collect-sanitized-logs-effect-receipt.v1` may truthfully 
 
 The machine-readable threat ledger for this gate is `agent-commons/collect-sanitized-logs-effect-threat-model.json`.
 
+### Plan-bound synthetic `collect-benchmark-metrics` effect laboratory
+
+`mesh/src/collect-benchmark-metrics-effect-drill.mjs`, `mesh/src/lib/agent-collect-benchmark-metrics-effect-admission.mjs`, and `mesh/src/lib/agent-collect-benchmark-metrics-effect.mjs` add a third operation-specific real process effect without adding a generic benchmark runner or general executor dispatcher.
+
+Core benchmark invariant:
+
+> **The `collect-benchmark-metrics` dry-run builtin remains inert. A separately signed admission may authorize only the fixed synthetic workload, and one hosted monotonic elapsed observation is not a machine score, hardware ranking, production SLO, or capacity guarantee.**
+
+The dry-run compiler already represents `collect-benchmark-metrics` as `collect-benchmark-metrics:builtin`, with no executable, no argv, network `none`, repository-code execution false, and `effect_reachable: false`. This gate does not modify that compiler contract. `axiom-agent-collect-benchmark-metrics-effect-admission.v1` separately binds the exact plan/revision/authorization/lifecycle/compiler/Linux-isolation policy plus `synthetic-lcg-u32-262144-v1`. Signer/revision/plan substitution, hidden fields, operation widening, arbitrary-benchmark authority, host-telemetry authority, repository-code/network/credential/secret authority, and lifetimes beyond the plan or five-minute laboratory ceiling fail closed.
+
+`AgentCollectBenchmarkMetricsEffectController.begin()` follows the same one-time control sequence as the earlier operation-specific gates: exact signed `issued` lifecycle verification, exact durable-local-head match, explicit `revocationState: 'active'`, generation-2 durable `consumed` commit, then a separately signed generation-2 durable-head receipt verified under the exact store key before any effect descriptor is returned. Unknown revocation, stale/substituted lifecycle evidence, already-consumed state, signer drift, or consumed-head mismatch fails closed.
+
+The hosted Linux adapter runs one fixed content-digested Node script in the reviewed content-addressed isolation image. The workload is `lcg-u32-262144-v1`: exactly 262,144 deterministic unsigned-integer iterations from the fixed script seed, and execution is accepted only if the terminal checksum equals `1679840888`. The only nondeterministic metric is elapsed nanoseconds from `process.hrtime.bigint()`. The script does not read `process.argv`, `process.env`, filesystem or OS modules, `/proc`, `/sys`, CPU model/counters, memory totals, process inventory, kernel/hardware telemetry, repository files, or caller data. It performs no network activity and accepts no caller benchmark code, benchmark input, executable, argv, shell, environment-controlled executable, bind mount, credential/secret source, package/service action, remote endpoint, or contributed hardware.
+
+The metrics output is canonical JSON with exactly six fields: `benchmark_policy_id`, `workload_id`, `iterations`, `checksum_u32`, `timer_source`, and `elapsed_ns`. Output is bounded to 2 KiB, the elapsed value must be a positive safe integer below the laboratory ceiling, and the fixed workload/checksum/timer metadata must match exactly. The adapter does not derive throughput, normalized performance, machine score, ranking, SLO, capacity, or application-success fields.
+
+The evidence bundle binds the exact inert plan, admission, signed generation-2 consumed head, fixed benchmark-script digest, fixed workload/checksum, isolation receipt/image, canonical metric projection, signed executor receipt, signed final durable head, and hard-false nonclaims. The governed workflow independently reverifies the admission, consumed head, executor receipt, generation-3 final head, bundle digest, and all nonclaims before publishing the single combined bounded artifact.
+
+A passing `axiom-agent-collect-benchmark-metrics-effect-receipt.v1` may truthfully claim only that the fixed synthetic process ran in the reviewed hosted boundary, the deterministic checksum matched, one bounded monotonic elapsed observation was recorded, durable consume-before-effect ordering held, and cleanup was verified. It does **not** characterize the host, prove repeatability or statistical performance, rank hardware, establish a production SLO or capacity guarantee, authorize arbitrary benchmarks, access host telemetry, execute repository code, use the network, access credentials/secrets, prove application task success, provide global revocation currentness, create a general executor, grant deployment authority, promote a capability, or grant AXIOM authority.
+
+The machine-readable threat ledger for this gate is `agent-commons/collect-benchmark-metrics-effect-threat-model.json`.
+
 ### Future executor promotion boundary
 
 A general, multi-operation, repository-code, network-capable, remote-hardware, or production effect executor remains a separate promotion problem. At minimum it would require:
@@ -558,8 +593,9 @@ A general, multi-operation, repository-code, network-capable, remote-hardware, o
 - authenticated sponsor identity and independently current authorization/revocation verification;
 - production-grade durable one-time lifecycle consumption and revocation/head retention, including an explicit currentness/replication model rather than only this local laboratory;
 - exact isolation-profile binding to one reviewed platform policy;
-- reviewed operation-by-operation mappings from exact compiled plans into platform adapters, with separate treatment of repository-code hazards rather than generalizing from `read-system-facts` or the synthetic sanitized-log gate;
+- reviewed operation-by-operation mappings from exact compiled plans into platform adapters, with separate treatment of repository-code hazards rather than generalizing from `read-system-facts`, synthetic sanitized logs, or the fixed synthetic benchmark gate;
 - a separately reviewed source/path/privacy policy before any real host or application logs can be considered;
+- an explicit telemetry privacy/authority policy plus statistically reviewed methodology before any host-performance, machine-comparison, SLO, or capacity claim can be considered;
 - pinned absolute executable resolution without ambient PATH authority where process templates are used;
 - isolated disposable sandboxing for repository code before `run-build` or `run-tests` can be considered;
 - filesystem/root/symlink or reparse-point enforcement independent of repository code;
@@ -570,7 +606,7 @@ A general, multi-operation, repository-code, network-capable, remote-hardware, o
 - executor-originated effect receipts bound to each exact compiled plan/admission, isolation evidence, lifecycle transition, and observed platform evidence;
 - independent effect-path threat/security review and protected promotion.
 
-The virtual executor-conformance sandbox reduces ambiguity about enforcement semantics. The durable-state laboratory proves local restart ordering and one-time-consumption recovery semantics. The isolation-profile laboratory fixes the cross-platform requirement/evidence vocabulary. The fixed Linux laboratory demonstrates real kernel/container enforcement for its exact hosted probe boundary. The `read-system-facts` and synthetic `collect-sanitized-logs` laboratories now demonstrate two distinct exact plan-bound consume-before-effect sequences. **Neither result establishes arbitrary repository-code isolation, generic compiled-plan admission, host/application-log authority, arbitrary filesystem reads, production admission identity, global currentness, live-network enforcement, package/service execution, physical-device isolation, or remote-hardware safety.**
+The virtual executor-conformance sandbox reduces ambiguity about enforcement semantics. The durable-state laboratory proves local restart ordering and one-time-consumption recovery semantics. The isolation-profile laboratory fixes the cross-platform requirement/evidence vocabulary. The fixed Linux laboratory demonstrates real kernel/container enforcement for its exact hosted probe boundary. The `read-system-facts`, synthetic `collect-sanitized-logs`, and synthetic `collect-benchmark-metrics` laboratories now demonstrate three distinct exact plan-bound consume-before-effect sequences. **Those results do not establish arbitrary repository-code isolation, generic compiled-plan admission, host/application-log authority, arbitrary filesystem reads, arbitrary benchmark authority, host-performance characterization, portable machine scoring, production SLO/capacity evidence, production admission identity, global currentness, live-network enforcement, package/service execution, physical-device isolation, or remote-hardware safety.**
 
 Remote access is not part of the current effect path. An offer may state that remote access is technically available, but credentials, tunnels, remote shells, device-management enrollment, and unattended administration require a separate future design.
 
@@ -678,8 +714,12 @@ Where practical, retain publication provenance and external identifiers so annou
 - fixed synthetic `/work/session/logs/lab.jsonl` fixture generation and bounded `O_NOFOLLOW` read wholly inside disposable tmpfs, with no host/repository log mount or caller path;
 - exact five-field canonical projection for the reviewed three-record synthetic fixture, deliberate forbidden-value leakage tests, signed consumed/final durable heads, and signed executor evidence;
 - machine-readable `collect-sanitized-logs` effect threat model with explicit real-log/path/general-executor promotion blockers;
+- separate short-lived Ed25519 `collect-benchmark-metrics` admission while its compiler builtin remains inert;
+- exact fixed `lcg-u32-262144-v1` workload with 262,144 iterations, checksum `1679840888`, one bounded `process.hrtime.bigint()` elapsed observation, and no host telemetry or repository code;
+- exact six-field canonical metric projection, signed consumed/final durable heads, and signed executor evidence without deriving a score, ranking, SLO, or capacity claim;
+- machine-readable `collect-benchmark-metrics` effect threat model with explicit arbitrary-benchmark/telemetry/scoring/SLO/general-executor promotion blockers;
 - declared/measured/reproduced/externally-verified evidence separation;
-- no arbitrary repository-code execution, generic compiled-plan admission, host/application/repository log access, arbitrary filesystem-read authority, production admission identity, physical-device proof, general remote administration, package/service execution, live network execution, or production-enrollment authority.
+- no arbitrary repository-code execution, generic compiled-plan admission, host/application/repository log access, arbitrary filesystem-read authority, arbitrary benchmark execution, host-performance characterization, portable machine scoring, production SLO/capacity evidence, production admission identity, physical-device proof, general remote administration, package/service execution, live network execution, or production-enrollment authority.
 
 Any broader write-capable external adapter or remote infrastructure executor requires a separate threat review, policy mapping, evidence model, negative tests, and promotion decision.
 
@@ -739,7 +779,14 @@ Any broader write-capable external adapter or remote infrastructure executor req
 52. Sanitized output must be the exact canonical five-field projection for the reviewed three-record synthetic fixture and must exclude all deliberate forbidden fixture values; raw synthetic JSONL must not be published in the evidence artifact.
 53. A sanitized-log executor receipt must bind the separate admission, exact inert plan, signed consumed head, fixed sanitizer/script/path, isolation receipt/image, sanitized observation, final durable head, and cleanup, and the workflow must independently reverify each binding before publication.
 54. A passing synthetic sanitized-log receipt may claim only the bounded disposable fixture write/read and allowlisted projection; it cannot claim safe arbitrary real-log ingestion, host/repository log authority, arbitrary filesystem reads, application task success, a general executor, global currentness, production/deployment authority, capability promotion, or AXIOM authority.
-55. Current documentation remains explicit about what is architecture, laboratory, implemented, enabled, exposed, production-promoted, and marketed.
+55. `collect-benchmark-metrics` real effects require their own valid signed laboratory admission; no earlier authorization, dry-run plan, or other operation admission grants the benchmark effect.
+56. The benchmark plan must remain exactly the inert `collect-benchmark-metrics:builtin` with no executable or argv, network `none`, repository-code execution false, and no caller benchmark payload.
+57. Before the benchmark process, the exact signed lifecycle head must still be `issued`, the supplied revocation state must be known `active`, durable generation 2 must commit `consumed`, and a separately signed consumed durable-head receipt must verify under the exact store key.
+58. The benchmark adapter may run only the fixed content-digested `lcg-u32-262144-v1` script with exactly 262,144 iterations and checksum `1679840888`; caller code/input, host telemetry, repository mounts/code, network, credentials/secrets, packages/services, remote hardware, and alternate timer sources remain prohibited.
+59. Benchmark output must remain canonical and limited to the six reviewed fields; a single `process.hrtime.bigint()` elapsed observation cannot be promoted into a portable machine score, hardware ranking, production SLO, throughput/capacity guarantee, or task-success claim.
+60. A benchmark executor receipt must bind the separate admission, exact inert plan, signed consumed head, fixed script/workload/checksum, isolation receipt/image, canonical metric observation, final durable head, and cleanup, and the workflow must independently reverify each binding before publication.
+61. A passing synthetic benchmark receipt may claim only the fixed process/checksum and one bounded monotonic elapsed observation under the exact hosted run; it cannot claim host characterization, arbitrary benchmark authority, repeatable/statistical performance, production SLO/capacity, application task success, a general executor, global currentness, production/deployment authority, capability promotion, or AXIOM authority.
+62. Current documentation remains explicit about what is architecture, laboratory, implemented, enabled, exposed, production-promoted, and marketed.
 
 ## Current non-claims
 
@@ -777,9 +824,10 @@ This document does not claim:
 - hosted CI as physical-device or production-isolation evidence;
 - live DNS resolution/pinning enforcement or any network-capable Agent Commons effect path;
 - arbitrary filesystem-read authority, host/application/repository log scraping, or safe arbitrary real-log ingestion from the synthetic `collect-sanitized-logs` laboratory;
-- real package installation, repository build/test execution, repository-workspace mutation, arbitrary host-path mutation, live network execution, service management, or remote/contributed-hardware effects through Agent Commons; current real plan-bound process effects are limited to hosted-CI `read-system-facts` and the fixed synthetic `collect-sanitized-logs` adapter, while the durable laboratory separately mutates only its dedicated local control-state files;
+- arbitrary benchmark execution, host CPU/memory/kernel/hardware telemetry access, host performance characterization, portable machine-comparison scoring, hardware ranking, statistically repeatable performance evidence, production benchmark/SLO evidence, or throughput/capacity guarantees from the synthetic `collect-benchmark-metrics` laboratory;
+- real package installation, repository build/test execution, repository-workspace mutation, arbitrary host-path mutation, live network execution, service management, or remote/contributed-hardware effects through Agent Commons; current real plan-bound process effects are limited to hosted-CI `read-system-facts`, fixed synthetic `collect-sanitized-logs`, and fixed synthetic `collect-benchmark-metrics`, while the durable laboratory separately mutates only its dedicated local control-state files;
 - raw synthetic log export from the `collect-sanitized-logs` evidence artifact;
-- application task success from a successful `read-system-facts` or synthetic sanitized-log effect receipt;
+- application task success from a successful `read-system-facts`, synthetic sanitized-log, or synthetic benchmark effect receipt;
 - a production package installer, service manager, shell, tunnel, credential broker, or remote-control daemon;
 - secure remote-shell infrastructure;
 - firmware-management authority;

@@ -10,7 +10,7 @@ async function workflowText() {
   return readFile(WORKFLOW, 'utf8');
 }
 
-test('release governance accepts only fixed isolation plus the two named bounded effect laboratories', async () => {
+test('release governance accepts only fixed isolation plus the three named bounded effect laboratories', async () => {
   const result = verifyAgentLinuxIsolationWorkflow(await workflowText());
   assert.equal(result.runner, 'ubuntu-24.04');
   assert.equal(result.node_version, '24.18.0');
@@ -21,6 +21,7 @@ test('release governance accepts only fixed isolation plus the two named bounded
   assert.equal(result.fixed_probe_isolation_present, true);
   assert.equal(result.read_system_facts_effect_present, true);
   assert.equal(result.collect_sanitized_logs_effect_present, true);
+  assert.equal(result.collect_benchmark_metrics_effect_present, true);
   assert.equal(result.general_executor_reachable, false);
   assert.equal(result.production_provisioning_reachable, false);
   assert.equal(result.receipt_reverification_required, true);
@@ -28,6 +29,8 @@ test('release governance accepts only fixed isolation plus the two named bounded
   assert.equal(result.effect_receipt_reverification_required, true);
   assert.equal(result.collect_sanitized_logs_consumed_head_reverification_required, true);
   assert.equal(result.collect_sanitized_logs_effect_receipt_reverification_required, true);
+  assert.equal(result.collect_benchmark_metrics_consumed_head_reverification_required, true);
+  assert.equal(result.collect_benchmark_metrics_effect_receipt_reverification_required, true);
   assert.deepEqual(result.action_references, [
     'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
     'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020',
@@ -131,6 +134,43 @@ test('release governance rejects removal of sanitized-log admission, consumed-he
     ),
     workflow.replace(
       'logDurable.statement.generation !== logEffect.statement.durable_final_generation',
+      'false'
+    )
+  ];
+  for (const candidate of weakened) {
+    assert.throws(() => verifyAgentLinuxIsolationWorkflow(candidate), /missing governed boundary/i);
+  }
+});
+
+test('release governance rejects removal of benchmark admission, consumed-head, effect or final-head verification', async () => {
+  const workflow = await workflowText();
+  const weakened = [
+    workflow.replace(
+      'verifyAgentCollectBenchmarkMetricsEffectAdmission(bundle.admission, {',
+      'acceptBenchmarkAdmissionWithoutVerification(bundle.admission, {'
+    ),
+    workflow.replace(
+      'const benchmarkConsumed = verifyAgentExecutorDurableStateReceipt(bundle.durable_consume_head_receipt, {',
+      'const benchmarkConsumed = bundle.durable_consume_head_receipt; // verification removed'
+    ),
+    workflow.replace(
+      'const benchmarkEffect = verifyAgentCollectBenchmarkMetricsEffectReceipt(bundle.effect_receipt, {',
+      'const benchmarkEffect = bundle.effect_receipt; // verification removed'
+    ),
+    workflow.replace(
+      'benchmarkConsumed.statement.lifecycle_status !== "consumed"',
+      'false'
+    ),
+    workflow.replace(
+      'benchmarkConsumed.receipt_digest !== benchmarkEffect.statement.durable_consume_head_receipt_digest',
+      'false'
+    ),
+    workflow.replace(
+      'const benchmarkDurable = verifyAgentExecutorDurableStateReceipt(bundle.durable_head_receipt, {',
+      'const benchmarkDurable = bundle.durable_head_receipt; // verification removed'
+    ),
+    workflow.replace(
+      'benchmarkDurable.statement.generation !== benchmarkEffect.statement.durable_final_generation',
       'false'
     )
   ];
