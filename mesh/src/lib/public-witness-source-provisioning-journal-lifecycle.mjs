@@ -1,3 +1,5 @@
+import { createPrivateKey, createPublicKey } from 'node:crypto';
+
 import {
   ValidationError,
   assertPlainObject,
@@ -149,7 +151,8 @@ export function verifyPublicWitnessSourceProvisioningApplicationJournalWithKeyLi
   let provisionerEpochMax = 0;
 
   for (let index = 0; index < records.length; index += 1) {
-    const record = verifyPublicWitnessSourceProvisioningApplicationRecordWithKeyLifecycle(records[index], {
+    const rawRecord = records[index];
+    const record = verifyPublicWitnessSourceProvisioningApplicationRecordWithKeyLifecycle(rawRecord, {
       provisionerCredentialPath,
       provisionerRevocations,
       trustedProvisionerRoleRootPublicKey,
@@ -165,7 +168,8 @@ export function verifyPublicWitnessSourceProvisioningApplicationJournalWithKeyLi
     provisionerEpochMax = Math.max(provisionerEpochMax, record.provisioner_key_epoch);
 
     if (record.statement.record_kind === 'authorization-retained') {
-      const command = verifyPublicWitnessSourceProvisioningCommandWithKeyLifecycle(record.payload.command, {
+      const rawCommand = record.payload.command;
+      const command = verifyPublicWitnessSourceProvisioningCommandWithKeyLifecycle(rawCommand, {
         operatorCredentialPath,
         operatorRevocations,
         trustedOperatorRoleRootPublicKey,
@@ -177,6 +181,7 @@ export function verifyPublicWitnessSourceProvisioningApplicationJournalWithKeyLi
         throw new ValidationError('public witness provisioning lifecycle journal repeats authorization');
       }
       states.set(command.command_digest, {
+        rawCommand,
         command,
         readyRecords: [],
         linkRecord: null
@@ -192,7 +197,7 @@ export function verifyPublicWitnessSourceProvisioningApplicationJournalWithKeyLi
       if (record.payload.intended_admitted_at !== record.statement.recorded_at) {
         throw new ValidationError('public witness provisioning lifecycle effect-ready time binding is invalid');
       }
-      assertPublicWitnessSourceProvisioningCommandEffectAllowed(state.command, {
+      assertPublicWitnessSourceProvisioningCommandEffectAllowed(state.rawCommand, {
         operatorCredentialPath,
         operatorRevocations,
         trustedOperatorRoleRootPublicKey,
@@ -263,13 +268,19 @@ export function assertPublicWitnessProvisionerSigningKeyCurrent({
   at
 } = {}) {
   const timestamp = canonicalTimestamp(at, 'public witness provisioning provisioner key check time');
-  let publicKey;
+  let privateKey;
   try {
-    const { createPrivateKey, createPublicKey } = await import('node:crypto');
-    publicKey = createPublicKey(createPrivateKey(provisionerPrivateKey));
+    privateKey = provisionerPrivateKey && typeof provisionerPrivateKey === 'object'
+      && provisionerPrivateKey.type === 'private'
+      ? provisionerPrivateKey
+      : createPrivateKey(provisionerPrivateKey);
   } catch {
     throw new ValidationError('public witness provisioning provisioner private key is invalid');
   }
+  if (privateKey.asymmetricKeyType !== 'ed25519') {
+    throw new ValidationError('public witness provisioning provisioner private key must be Ed25519');
+  }
+  const publicKey = createPublicKey(privateKey);
   const keyId = publicWitnessServiceKeyId(publicKey);
   const context = credentialContext({
     credentialPath: provisionerCredentialPath,
