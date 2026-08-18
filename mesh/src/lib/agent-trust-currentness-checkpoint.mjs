@@ -551,6 +551,10 @@ export function evaluateAgentCurrentnessAtEffect({
   effectAt,
   maxEvidenceAgeMs = 30_000
 } = {}) {
+  const retainedLatestHead = digest(
+    expectedLatestCheckpointDigest,
+    'agent effect currentness expectedLatestCheckpointDigest'
+  );
   if (!Number.isSafeInteger(maxEvidenceAgeMs) || maxEvidenceAgeMs < 0 || maxEvidenceAgeMs > MAX_EFFECT_CURRENTNESS_AGE_MS) {
     throw new ValidationError(`agent effect currentness maxEvidenceAgeMs must be 0-${MAX_EFFECT_CURRENTNESS_AGE_MS}`);
   }
@@ -559,7 +563,7 @@ export function evaluateAgentCurrentnessAtEffect({
     credentialHistory,
     revocations,
     trustedIssuerPublicKey,
-    expectedLatestCheckpointDigest
+    expectedLatestCheckpointDigest: retainedLatestHead
   });
   const effectTime = canonicalTimestamp(effectAt, 'agent effect currentness effectAt');
   const ageMs = timestampValue(effectTime) - timestampValue(checkpoint.statement.evaluated_at);
