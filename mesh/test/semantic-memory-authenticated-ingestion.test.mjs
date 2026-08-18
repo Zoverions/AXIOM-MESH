@@ -49,10 +49,14 @@ function runtimeFixture({
   action = 'memory.put',
   extraInput = undefined
 } = {}) {
+  const boundMetadata = {
+    ...metadata,
+    axiom_semantic_class: semanticClass
+  };
   const input = {
     kind,
     content,
-    ...(omitMetadataFromIntent ? {} : { metadata }),
+    ...(omitMetadataFromIntent ? {} : { metadata: boundMetadata }),
     ...(extraInput ? extraInput : {})
   };
   const intent = {
@@ -99,7 +103,12 @@ function runtimeFixture({
     }
   };
 
-  const contentDigest = digestObject({ owner, kind, content, metadata });
+  const contentDigest = digestObject({
+    owner,
+    kind,
+    content,
+    metadata: boundMetadata
+  });
   const objectId = `memory_${contentDigest}`;
   const assurance = { required: 'A1', achieved: 'A1' };
   const baseMutation = {
@@ -110,7 +119,7 @@ function runtimeFixture({
       owner,
       kind,
       content,
-      metadata,
+      metadata: boundMetadata,
       content_digest: contentDigest
     }
   };
@@ -190,7 +199,8 @@ function runtimeFixture({
     objectId,
     contentDigest,
     requestDigest: acceptedEvent.payload.request_digest,
-    execution
+    execution,
+    boundMetadata
   };
 }
 
@@ -208,12 +218,11 @@ function ingest(store, fixture) {
     actor: fixture.owner,
     intentId: fixture.intentId,
     memoryPutEvent: fixture.memoryPutEvent,
-    completedEvent: fixture.completedEvent,
-    semanticClass: fixture.semanticClass
+    completedEvent: fixture.completedEvent
   });
 }
 
-test('accepted owner memory is atomically stored with Grid-bound semantic provenance', async t => {
+test('accepted owner memory is atomically stored with owner-bound semantic provenance', async t => {
   const store = await storeFixture(t);
   const fixture = runtimeFixture();
   appendAcceptance(store, fixture);
@@ -227,6 +236,10 @@ test('accepted owner memory is atomically stored with Grid-bound semantic proven
   assert.equal(memory.objects.length, 1);
   assert.equal(memory.objects[0].object_id, fixture.objectId);
   assert.deepEqual(memory.objects[0].payload_json.content, fixture.intent.input.content);
+  assert.equal(
+    memory.objects[0].payload_json.metadata.axiom_semantic_class,
+    'knowledge'
+  );
 
   const provenance = store.getCurrentSemanticMemoryProvenance(
     fixture.owner,
@@ -244,7 +257,7 @@ test('accepted owner memory is atomically stored with Grid-bound semantic proven
   assert.equal(store.getIntent(fixture.intentId).status, 'completed');
 });
 
-test('owner persistence of instruction-candidate memory does not grant instruction authority', async t => {
+test('owner-bound instruction-candidate persistence does not grant instruction authority', async t => {
   const store = await storeFixture(t);
   const fixture = runtimeFixture({
     intentId: 'intent.memory.owner.instruction',
@@ -265,18 +278,22 @@ test('owner persistence of instruction-candidate memory does not grant instructi
   assert.equal(provenance.may_affect_authority, false);
 });
 
-test('current memory.put default metadata remains reconstructable when owner omitted metadata', async t => {
+test('unclassified owner memory fails closed instead of being guessed as knowledge', async t => {
   const store = await storeFixture(t);
   const fixture = runtimeFixture({
-    intentId: 'intent.memory.owner.default-metadata',
-    traceId: 'trace.memory.owner.default-metadata',
-    content: { text: 'Metadata omitted deliberately.' },
+    intentId: 'intent.memory.owner.unclassified',
+    traceId: 'trace.memory.owner.unclassified',
+    content: { text: 'No semantic classification in accepted input.' },
     omitMetadataFromIntent: true
   });
   appendAcceptance(store, fixture);
 
-  assert.doesNotThrow(() => ingest(store, fixture));
-  assert.equal(store.getIntent(fixture.intentId).status, 'completed');
+  assert.throws(
+    () => ingest(store, fixture),
+    /cannot be reconstructed from the exact accepted input/
+  );
+  assert.equal(store.listMemory(fixture.owner, fixture.owner).objects.length, 0);
+  assert.equal(store.getIntent(fixture.intentId).status, 'accepted');
 });
 
 test('ignored or extra memory input cannot be laundered into authenticated ingestion', async t => {
@@ -410,9 +427,12 @@ test('authenticated ingestion status remains opt-in and non-authorizing', async 
   assert.equal(status.accepted_action, 'memory.put');
   assert.equal(status.accepted_principal_type, 'human');
   assert.equal(status.provenance_origin, 'owner-authored');
+  assert.equal(status.semantic_class_binding, 'memory.metadata.axiom_semantic_class');
+  assert.equal(status.unclassified_ingestion, false);
   assert.equal(status.atomic_memory_and_provenance, true);
   assert.equal(status.exact_invocation_binding, true);
   assert.equal(status.exact_mutation_completion_binding, true);
+  assert.equal(status.generic_memory_put_append, false);
   assert.equal(status.public_routes, false);
   assert.equal(status.production_store_selected, false);
   assert.equal(status.provider_autowrites, false);
