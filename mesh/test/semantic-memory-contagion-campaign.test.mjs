@@ -291,7 +291,11 @@ test('durable semantic contagion cannot launder authority across reset, transfor
     rootRecord.owner,
     rootRecord.object_id
   );
-  const retrieved = normalizeSemanticMemoryProvenance(retrievedCurrent);
+  const retrievedProvenance = structuredClone(retrievedCurrent);
+  delete retrievedProvenance.current_state_event_id;
+  delete retrievedProvenance.current_state_seq;
+  delete retrievedProvenance.current_state_updated_at;
+  const retrieved = normalizeSemanticMemoryProvenance(retrievedProvenance);
   const retrievedPayload = readSemanticContent(secondStore, retrieved);
   assert.equal(retrievedPayload.content.text, maliciousText);
   assert.equal(evaluateSemanticMemoryUse(retrieved, 'ordinary-retrieval').allow, true);
