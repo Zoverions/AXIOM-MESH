@@ -22,6 +22,8 @@ export const AUTHENTICATED_SEMANTIC_MEMORY_INGESTION_SCHEMA =
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
 const MEMORY_KIND = /^[a-z][a-z0-9.-]+$/;
+const SEMANTIC_CLASS = /^(knowledge|preference|procedure|instruction-candidate)$/;
+const SEMANTIC_CLASS_METADATA_KEY = 'axiom_semantic_class';
 
 export class AuthenticatedSemanticMemoryGridStore extends SemanticMemoryStateGridStore {
   getStatus() {
@@ -33,6 +35,8 @@ export class AuthenticatedSemanticMemoryGridStore extends SemanticMemoryStateGri
         accepted_action: 'memory.put',
         accepted_principal_type: 'human',
         provenance_origin: 'owner-authored',
+        semantic_class_binding: `memory.metadata.${SEMANTIC_CLASS_METADATA_KEY}`,
+        unclassified_ingestion: false,
         atomic_memory_and_provenance: true,
         exact_invocation_binding: true,
         exact_mutation_completion_binding: true,
@@ -60,8 +64,7 @@ export class AuthenticatedSemanticMemoryGridStore extends SemanticMemoryStateGri
     actor,
     intentId,
     memoryPutEvent,
-    completedEvent,
-    semanticClass = 'knowledge'
+    completedEvent
   }) {
     const trace = assertString(traceId, 'semantic ingestion traceId', {
       max: 160,
@@ -101,7 +104,7 @@ export class AuthenticatedSemanticMemoryGridStore extends SemanticMemoryStateGri
       origin_class: 'owner-authored',
       origin_principal: owner,
       origin_artifact_digest: digestObject(memory.payload.evidence.execution),
-      semantic_class: semanticClass,
+      semantic_class: memory.semantic_class,
       ingestion_intent_id: intent,
       request_digest: accepted.payload.request_digest,
       may_affect_authority: false
@@ -236,6 +239,11 @@ function normalizeBoundMemoryPut(rawEvent, {
   });
   const content = structuredClone(assertPlainObject(payload.content, 'memory.put content'));
   const metadata = structuredClone(assertPlainObject(payload.metadata, 'memory.put metadata'));
+  const semanticClass = assertString(
+    metadata[SEMANTIC_CLASS_METADATA_KEY],
+    `memory.put metadata.${SEMANTIC_CLASS_METADATA_KEY}`,
+    { max: 64, pattern: SEMANTIC_CLASS }
+  );
   const contentDigest = digestObject({ owner, kind, content, metadata });
   const objectId = `memory_${contentDigest}`;
   if (
@@ -250,11 +258,7 @@ function normalizeBoundMemoryPut(rawEvent, {
     accepted.payload.input_digest,
     'accepted memory input_digest'
   );
-  const inputCandidates = [digestObject({ kind, content, metadata })];
-  if (Object.keys(metadata).length === 0) {
-    inputCandidates.push(digestObject({ kind, content }));
-  }
-  if (!inputCandidates.includes(acceptedInputDigest)) {
+  if (digestObject({ kind, content, metadata }) !== acceptedInputDigest) {
     throw new ValidationError(
       'memory.put mutation cannot be reconstructed from the exact accepted input'
     );
@@ -348,6 +352,7 @@ function normalizeBoundMemoryPut(rawEvent, {
         execution: structuredClone(execution)
       }
     },
+    semantic_class: semanticClass,
     assurance,
     result_digest: resultDigest
   };
