@@ -17,6 +17,8 @@ const humans = new Set(['owner.alice']);
 const INPUT = '1'.repeat(64);
 const CONTEXT_A = '2'.repeat(64);
 const CONTEXT_B = '3'.repeat(64);
+const RECIPIENT_IDENTITY = '4'.repeat(64);
+const EXECUTOR_IDENTITY = '5'.repeat(64);
 
 function principal() {
   return normalizeMachinePrincipalDefinition({
@@ -157,7 +159,9 @@ function create(f = fixture(), overrides = {}) {
     handoffId: 'handoff.fixture.1',
     parentTaskId: 'task.parent.1',
     recipientPrincipalId: 'agent.recipient.1',
+    recipientIdentityDigest: RECIPIENT_IDENTITY,
     intendedExecutorId: 'executor.recipient.1',
+    intendedExecutorIdentityDigest: EXECUTOR_IDENTITY,
     identityCredential: f.identityCredential,
     trustedIssuerPublicKey: f.issuer.publicKey,
     authorityManifest: f.authorityManifest,
@@ -194,19 +198,23 @@ function evidence(f) {
   };
 }
 
-test('A4a signs a portable task handoff proposal with the A1 operational key and A2 authority snapshot', () => {
+test('A4a signs a portable task handoff proposal with sender and target identity-context bindings', () => {
   const f = fixture();
   const handoff = create(f);
   const verified = verifyAgentSignedHandoff(handoff, {
     ...evidence(f),
     expectedRecipientPrincipalId: 'agent.recipient.1',
+    expectedRecipientIdentityDigest: RECIPIENT_IDENTITY,
     expectedExecutorId: 'executor.recipient.1',
+    expectedExecutorIdentityDigest: EXECUTOR_IDENTITY,
     expectedInputDigest: INPUT,
     expectedParentTaskId: 'task.parent.1'
   });
 
   assert.equal(verified.statement.sender_principal_id, 'agent.sender.1');
   assert.equal(verified.statement.recipient_principal_id, 'agent.recipient.1');
+  assert.equal(verified.statement.recipient_identity_digest, RECIPIENT_IDENTITY);
+  assert.equal(verified.statement.intended_executor_identity_digest, EXECUTOR_IDENTITY);
   assert.equal(verified.statement.authority_manifest_digest, f.authorityManifest.manifest_digest);
   assert.equal(verified.statement.sender_credential_digest, f.identityCredential.credential_digest);
   assert.deepEqual(verified.statement.context_digests, [CONTEXT_A, CONTEXT_B]);
@@ -222,14 +230,17 @@ test('A4a signs a portable task handoff proposal with the A1 operational key and
   assert.match(verified.handoff_digest, /^[a-f0-9]{64}$/);
 });
 
-test('cross-agent delivery remains a signed proposal and never becomes delegation authority', () => {
+test('cross-agent identity digests are target commitments, not recipient delegation authority', () => {
   const f = fixture();
   const handoff = create(f, {
     recipientPrincipalId: 'agent.other-vendor.1',
-    intendedExecutorId: 'runtime.other-vendor.1'
+    recipientIdentityDigest: '6'.repeat(64),
+    intendedExecutorId: 'runtime.other-vendor.1',
+    intendedExecutorIdentityDigest: '7'.repeat(64)
   });
   const verified = verifyAgentSignedHandoff(handoff, evidence(f));
   assert.equal(verified.statement.recipient_principal_id, 'agent.other-vendor.1');
+  assert.equal(verified.statement.recipient_identity_digest, '6'.repeat(64));
   assert.equal(verified.statement.intended_executor_id, 'runtime.other-vendor.1');
   assert.equal(verified.statement.delegation_authorization_claimed, false);
   assert.equal(verified.statement.execution_authorized, false);
@@ -341,21 +352,39 @@ test('handoff cannot self-assert an authority-bearing delegation chain or execut
   );
 });
 
-test('receiver executor input and causal-parent substitution can be independently checked', () => {
+test('receiver/executor identity, input and causal-parent substitution can be independently checked', () => {
   const f = fixture();
   const handoff = create(f);
   assert.throws(() => verifyAgentSignedHandoff(handoff, {
     ...evidence(f), expectedRecipientPrincipalId: 'agent.attacker.1'
   }), /recipient mismatch/);
   assert.throws(() => verifyAgentSignedHandoff(handoff, {
+    ...evidence(f), expectedRecipientIdentityDigest: '8'.repeat(64)
+  }), /recipient identity digest mismatch/);
+  assert.throws(() => verifyAgentSignedHandoff(handoff, {
     ...evidence(f), expectedExecutorId: 'executor.attacker.1'
   }), /intended executor mismatch/);
+  assert.throws(() => verifyAgentSignedHandoff(handoff, {
+    ...evidence(f), expectedExecutorIdentityDigest: '9'.repeat(64)
+  }), /executor identity digest mismatch/);
   assert.throws(() => verifyAgentSignedHandoff(handoff, {
     ...evidence(f), expectedInputDigest: 'e'.repeat(64)
   }), /input digest mismatch/);
   assert.throws(() => verifyAgentSignedHandoff(handoff, {
     ...evidence(f), expectedParentTaskId: 'task.other.1'
   }), /parent task mismatch/);
+});
+
+test('missing or malformed target identity digests fail closed', () => {
+  const f = fixture();
+  assert.throws(
+    () => create(f, { recipientIdentityDigest: undefined }),
+    /recipient_identity_digest/
+  );
+  assert.throws(
+    () => create(f, { intendedExecutorIdentityDigest: 'not-a-digest' }),
+    /intended_executor_identity_digest/
+  );
 });
 
 test('policy or capability-registry drift invalidates the bound authority evidence', () => {
