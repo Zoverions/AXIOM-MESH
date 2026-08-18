@@ -36,6 +36,7 @@ export class SemanticMemoryContentGridStore extends SemanticMemoryIngestionGridS
         signed_memory_put_is_initial_source: true,
         encrypted_memory_object_required: true,
         active_content_required_for_current_use: true,
+        historical_replay_preserves_later_tombstones: true,
         provenance_only_initial_state_allowed: false,
         semantic_content_without_provenance_allowed: false,
         preexisting_content_adoption_allowed: false,
@@ -160,12 +161,18 @@ export class SemanticMemoryContentGridStore extends SemanticMemoryIngestionGridS
   }
 
   getCurrentSemanticMemoryProvenance(owner, objectId, options = {}) {
+    const {
+      requireActiveContent = !this.semanticMemoryStateRebuildMode,
+      ...provenanceOptions
+    } = options;
     const current = super.getCurrentSemanticMemoryProvenance(
       owner,
       objectId,
-      options
+      provenanceOptions
     );
-    this.assertMaterializedSemanticMemoryContent(current, { requireActive: true });
+    this.assertMaterializedSemanticMemoryContent(current, {
+      requireActive: requireActiveContent
+    });
     return current;
   }
 
