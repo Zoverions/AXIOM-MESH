@@ -1,0 +1,76 @@
+{
+  "schema": "axiom-agent-trust-promotion-discipline-threat-model.v1",
+  "repository": "Zoverions/AXIOM-MESH",
+  "phase": "agent-trust-a11a-promotion-discipline",
+  "scope": "Deny-by-default promotion ledger, repository evidence-path verifier and operator runbook for ATP laboratories. The laboratory ledger is not the authoritative capability registry and cannot itself promote a capability.",
+  "core_invariant": "No ATP laboratory becomes a supported production capability because code exists, CI is green, a PR is open, a ledger entry exists or documentation describes it. Promotion requires the authoritative capability registry plus exact evidence binding, independent review, readiness synchronization and post-registry protected CI.",
+  "attack_classes": [
+    {
+      "id": "laboratory-ledger-as-authority",
+      "risks": ["promotion ledger treated as capability registry", "experimental PR treated as supported runtime", "source PR number treated as promotion"],
+      "controls": ["authoritative registry path explicitly fixed to mesh/config/capabilities.json", "authoritative_registry_mutated_by_laboratory=false", "every current ATP entry authoritative_registry_present=false", "production claims remain false"]
+    },
+    {
+      "id": "green-ci-as-promotion",
+      "risks": ["passing tests bypass independent review", "reuse pre-registry CI after claim change", "cumulative CI hides missing promotion evidence"],
+      "controls": ["independent_review_required=true", "post_registry_change_ci_required=true", "promotion_ready requires independent review + registry + exact binding + no blockers", "runbook requires exact post-registry candidate rerun"]
+    },
+    {
+      "id": "documentation-as-proof",
+      "risks": ["roadmap or threat model presented as implementation", "runbook presented as runtime enforcement", "non-claim language silently removed"],
+      "controls": ["documentation_alone_satisfies_promotion=false", "in-tree entries require implementation + strict validator/schema + tests + threat model + runbook + verifier/conformance paths", "production claim flag cannot be true on non-promoted entry"]
+    },
+    {
+      "id": "separate-branch-composition-confusion",
+      "risks": ["A7 green branch treated as composed with A1-A10 stack", "independent green PRs assumed integration-tested"],
+      "controls": ["composition_state explicit", "separate branch must carry separate-branch-not-composed blocker", "separate branch cannot be promotion-ready"]
+    },
+    {
+      "id": "false-registry-binding",
+      "risks": ["ledger says capability is in authoritative registry when absent", "implemented entry lacks evidence", "evidence binding marked complete before registry entry exists"],
+      "controls": ["repository verifier reads actual authoritative registry", "present/absent ledger assertion must match actual registry", "implemented registry entry requires evidence", "exact binding cannot be complete before registry presence"]
+    },
+    {
+      "id": "missing-evidence-path-laundering",
+      "risks": ["claim threat model/test/verifier exists when path is stale", "deleted artifact remains in promotion ledger"],
+      "controls": ["repository verifier checks every in-tree implementation/validation/test/threat/runbook/verifier path exists", "independent-review evidence paths are also checked"]
+    },
+    {
+      "id": "partial-gate-overclaim",
+      "risks": ["A3a treated as authority-bearing delegation", "A5a treated as effect-specific receipt", "A9a treated as real MCP/A2A conformance", "A10b treated as independent third-party verifier"],
+      "controls": ["partial-green laboratory state", "technical blockers listed per gate", "production_claims_allowed=false", "promotion_ready=false"]
+    },
+    {
+      "id": "rollback-after-promotion",
+      "risks": ["critical defect discovered but capability remains advertised", "revocation/recovery evidence lost", "history rewritten to hide defect"],
+      "controls": ["operator runbook requires disable/deny first", "preserve historical evidence", "truthful registry/readiness downgrade", "full promotion checklist required before re-enable"]
+    }
+  ],
+  "known_nonclaims": [
+    "A11a does not promote any ATP capability.",
+    "A11a does not mutate mesh/config/capabilities.json.",
+    "A11a does not perform or substitute for independent security review.",
+    "A11a does not prove GitHub workflow IDs are authentic beyond the repository record; protected CI remains independently inspectable evidence.",
+    "A11a does not compose the separate A7 branch into the current stack.",
+    "A11a does not resolve the technical blockers named by partial A3/A4/A5/A6/A9/A10 laboratories.",
+    "A11a grants no authority and changes no effect path."
+  ],
+  "next_gates": [
+    "run protected CI on the A11a ledger/verifier itself",
+    "obtain independent security review before any authoritative registry transition",
+    "compose A7 and resolve A3b/A5b/full-A6 blockers before broad ATP claims",
+    "when a capability is actually approved, add the authoritative registry entry and exact evidence binding atomically then rerun protected CI"
+  ],
+  "boundaries": {
+    "promotion_ready_entries": 0,
+    "authoritative_registry_mutated": false,
+    "independent_review_performed": false,
+    "production_marketing_claims_allowed": false,
+    "authority_granted": false,
+    "authority_effect": "none",
+    "delegation_effect": "none",
+    "network_effect": false,
+    "filesystem_effect": false,
+    "capability_promotion_enabled": false
+  }
+}
