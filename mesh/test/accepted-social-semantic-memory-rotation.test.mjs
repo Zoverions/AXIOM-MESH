@@ -101,7 +101,7 @@ test('composition-aware offline rotation re-encrypts accepted-social and semanti
     sha256('semantic-provenance'),
     'untrusted-data',
     'unreviewed',
-    sourceProtector.seal(JSON.stringify(semanticRecord), semanticContext),
+    sourceProtector.seal(semanticRecord, semanticContext),
     'event.synthetic.rotation',
     1,
     '2026-08-18T08:00:00.000Z',
@@ -126,14 +126,15 @@ test('composition-aware offline rotation re-encrypts accepted-social and semanti
     SELECT state_json FROM actor_states WHERE actor_id = ?
   `).get(actor.actorId);
   const actorContext = `axiom:actor_states.state_json:${actor.actorId}`;
-  const reopenedActor = JSON.parse(targetProtector.open(actorRow.state_json, actorContext));
+  const reopenedActor = targetProtector.open(actorRow.state_json, actorContext);
   assert.equal(reopenedActor.actor_id, actor.actorId);
 
   const semanticRow = db.prepare(`
     SELECT record_json FROM semantic_memory_provenance_state WHERE object_id = ?
   `).get(objectId);
-  const reopenedSemantic = JSON.parse(
-    targetProtector.open(semanticRow.record_json, semanticContext)
+  const reopenedSemantic = targetProtector.open(
+    semanticRow.record_json,
+    semanticContext
   );
   assert.deepEqual(reopenedSemantic, semanticRecord);
   assert.throws(() => sourceProtector.open(semanticRow.record_json, semanticContext));
