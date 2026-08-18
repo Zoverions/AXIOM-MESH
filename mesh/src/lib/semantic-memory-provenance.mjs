@@ -55,6 +55,8 @@ const TOP_LEVEL_KEYS = new Set([
   'review_state',
   'review_actor',
   'review_request_digest',
+  'reviewed_from_provenance_digest',
+  'review_decision',
   'parent_object_id',
   'parent_content_digest',
   'ingestion_intent_id',
@@ -129,20 +131,62 @@ export function normalizeSemanticMemoryProvenance(value) {
     source.review_request_digest,
     'review_request_digest'
   );
+  const reviewedFromProvenanceDigest = optionalDigest(
+    source.reviewed_from_provenance_digest,
+    'reviewed_from_provenance_digest'
+  );
+  const reviewDecision = source.review_decision === undefined
+    ? undefined
+    : requiredEnum(source.review_decision, REVIEW_DECISIONS, 'review_decision');
 
-  if ((reviewActor === undefined) !== (reviewRequestDigest === undefined)) {
-    throw new ValidationError('Memory review actor and request digest must be supplied together');
+  const reviewEvidenceValues = [
+    reviewActor,
+    reviewRequestDigest,
+    reviewedFromProvenanceDigest,
+    reviewDecision
+  ];
+  const reviewEvidenceCount = reviewEvidenceValues.filter(value => value !== undefined).length;
+  if (reviewEvidenceCount !== 0 && reviewEvidenceCount !== reviewEvidenceValues.length) {
+    throw new ValidationError('Semantic memory review evidence must be complete');
   }
   if (reviewActor !== undefined && reviewActor !== owner) {
     throw new ValidationError('Memory review actor must equal owner');
   }
-  if (reviewState === 'unreviewed' && reviewActor !== undefined) {
+  if (reviewState === 'unreviewed' && reviewEvidenceCount !== 0) {
     throw new ValidationError('Unreviewed memory cannot contain review evidence');
   }
+
+  const implicitOwnerReview = originClass === 'owner-authored'
+    && semanticClass !== 'instruction-candidate'
+    && authorityTier === 'owner-memory'
+    && reviewState === 'owner-reviewed';
+  if (reviewState !== 'unreviewed' && !implicitOwnerReview && reviewEvidenceCount === 0) {
+    throw new ValidationError('Semantic memory reviewed state requires explicit owner review evidence');
+  }
+
+  if (reviewEvidenceCount !== 0) {
+    const expectedReviewRequestDigest = semanticMemoryReviewRequestDigestFromState({
+      owner,
+      object_id: objectId,
+      content_digest: contentDigest,
+      current_provenance_digest: reviewedFromProvenanceDigest,
+      decision: reviewDecision
+    });
+    if (reviewRequestDigest !== expectedReviewRequestDigest) {
+      throw new ValidationError('Semantic memory review request digest does not match review evidence');
+    }
+    assertReviewOutcome({
+      semanticClass,
+      authorityTier,
+      reviewState,
+      reviewDecision
+    });
+  }
+
   if (
     originClass !== 'owner-authored'
     && authorityTier !== 'untrusted-data'
-    && (reviewState !== 'owner-reviewed' || reviewActor === undefined)
+    && reviewEvidenceCount === 0
   ) {
     throw new ValidationError('External memory cannot self-promote authority');
   }
@@ -150,8 +194,12 @@ export function normalizeSemanticMemoryProvenance(value) {
     if (semanticClass !== 'instruction-candidate') {
       throw new ValidationError('Instruction authority requires instruction-candidate semantic class');
     }
-    if (reviewState !== 'owner-reviewed' || reviewActor === undefined) {
-      throw new ValidationError('Instruction authority requires explicit owner review evidence');
+    if (
+      reviewState !== 'owner-reviewed'
+      || reviewActor !== owner
+      || reviewDecision !== 'approve-instruction'
+    ) {
+      throw new ValidationError('Instruction authority requires explicit owner instruction review evidence');
     }
   }
   if (reviewState === 'quarantined' || reviewState === 'rejected') {
@@ -190,6 +238,10 @@ export function normalizeSemanticMemoryProvenance(value) {
     review_state: reviewState,
     ...(reviewActor ? { review_actor: reviewActor } : {}),
     ...(reviewRequestDigest ? { review_request_digest: reviewRequestDigest } : {}),
+    ...(reviewedFromProvenanceDigest
+      ? { reviewed_from_provenance_digest: reviewedFromProvenanceDigest }
+      : {}),
+    ...(reviewDecision ? { review_decision: reviewDecision } : {}),
     ...(parentObjectId ? { parent_object_id: parentObjectId } : {}),
     ...(parentContentDigest ? { parent_content_digest: parentContentDigest } : {}),
     ...(source.ingestion_intent_id
@@ -217,23 +269,12 @@ export function normalizeSemanticMemoryProvenance(value) {
 
 export function semanticMemoryReviewIntent(record, decision) {
   const normalized = normalizeSemanticMemoryProvenance(record);
-  const reviewDecision = requiredEnum(
-    decision,
-    REVIEW_DECISIONS,
-    'semantic memory review decision'
-  );
-  return Object.freeze({
-    principal: Object.freeze({ type: 'human', id: normalized.owner }),
-    action: SEMANTIC_MEMORY_REVIEW_ACTION,
-    input: Object.freeze({
-      schema: SEMANTIC_MEMORY_REVIEW_INPUT_SCHEMA,
-      object_id: normalized.object_id,
-      content_digest: normalized.content_digest,
-      current_provenance_digest: normalized.provenance_digest,
-      decision: reviewDecision
-    }),
-    purpose: SEMANTIC_MEMORY_REVIEW_PURPOSE,
-    data_scopes: Object.freeze([`memory.semantic:${normalized.object_id}`])
+  return semanticMemoryReviewIntentFromState({
+    owner: normalized.owner,
+    object_id: normalized.object_id,
+    content_digest: normalized.content_digest,
+    current_provenance_digest: normalized.provenance_digest,
+    decision
   });
 }
 
@@ -287,7 +328,9 @@ export function ownerReviewSemanticMemory(record, {
     authority_tier: authorityTier,
     review_state: reviewState,
     review_actor: actorId,
-    review_request_digest: suppliedRequestDigest
+    review_request_digest: suppliedRequestDigest,
+    reviewed_from_provenance_digest: normalized.provenance_digest,
+    review_decision: decision
   });
 }
 
@@ -318,7 +361,9 @@ export function deriveSemanticMemoryProvenance(parent, {
   });
 }
 
-export function evaluateSemanticMemoryUse(record, usage) {
+export function evaluateSemanticMemoryUse(record, usage, {
+  verified_review_request_digest
+} = {}) {
   const normalized = normalizeSemanticMemoryProvenance(record);
   if (normalized.review_state === 'quarantined') {
     return { allow: false, code: 'semantic_memory_quarantined' };
@@ -335,26 +380,105 @@ export function evaluateSemanticMemoryUse(record, usage) {
     };
   }
   if (usage === 'privileged-instruction') {
-    const allow = normalized.semantic_class === 'instruction-candidate'
+    const structurallyEligible = normalized.semantic_class === 'instruction-candidate'
       && normalized.authority_tier === 'owner-approved-instruction'
       && normalized.review_state === 'owner-reviewed'
       && normalized.review_actor === normalized.owner
+      && normalized.review_decision === 'approve-instruction'
       && typeof normalized.review_request_digest === 'string';
+    if (!structurallyEligible) {
+      return { allow: false, code: 'semantic_memory_instruction_denied' };
+    }
+    if (verified_review_request_digest === undefined) {
+      return { allow: false, code: 'semantic_memory_review_evidence_unverified' };
+    }
+    const verifiedDigest = requiredDigest(
+      verified_review_request_digest,
+      'verified_review_request_digest'
+    );
+    if (verifiedDigest !== normalized.review_request_digest) {
+      return { allow: false, code: 'semantic_memory_review_evidence_mismatch' };
+    }
     return {
-      allow,
-      code: allow
-        ? 'semantic_memory_instruction_allowed'
-        : 'semantic_memory_instruction_denied',
-      ...(allow ? {
-        provenance_digest: normalized.provenance_digest,
-        review_request_digest: normalized.review_request_digest
-      } : {})
+      allow: true,
+      code: 'semantic_memory_instruction_allowed',
+      provenance_digest: normalized.provenance_digest,
+      review_request_digest: normalized.review_request_digest
     };
   }
   if (usage === 'authority-mutation') {
     return { allow: false, code: 'semantic_memory_cannot_mutate_authority' };
   }
   throw new ValidationError('Semantic memory usage is unsupported');
+}
+
+function semanticMemoryReviewIntentFromState({
+  owner,
+  object_id,
+  content_digest,
+  current_provenance_digest,
+  decision
+}) {
+  const reviewDecision = requiredEnum(
+    decision,
+    REVIEW_DECISIONS,
+    'semantic memory review decision'
+  );
+  return Object.freeze({
+    principal: Object.freeze({ type: 'human', id: requiredId(owner, 'review owner') }),
+    action: SEMANTIC_MEMORY_REVIEW_ACTION,
+    input: Object.freeze({
+      schema: SEMANTIC_MEMORY_REVIEW_INPUT_SCHEMA,
+      object_id: requiredId(object_id, 'review object_id'),
+      content_digest: requiredDigest(content_digest, 'review content_digest'),
+      current_provenance_digest: requiredDigest(
+        current_provenance_digest,
+        'review current_provenance_digest'
+      ),
+      decision: reviewDecision
+    }),
+    purpose: SEMANTIC_MEMORY_REVIEW_PURPOSE,
+    data_scopes: Object.freeze([`memory.semantic:${object_id}`])
+  });
+}
+
+function semanticMemoryReviewRequestDigestFromState(state) {
+  return intentRequestDigest(semanticMemoryReviewIntentFromState(state));
+}
+
+function assertReviewOutcome({
+  semanticClass,
+  authorityTier,
+  reviewState,
+  reviewDecision
+}) {
+  if (reviewDecision === 'approve-memory') {
+    if (authorityTier !== 'owner-memory' || reviewState !== 'owner-reviewed') {
+      throw new ValidationError('Approve-memory review evidence does not match the resulting state');
+    }
+    return;
+  }
+  if (reviewDecision === 'approve-instruction') {
+    if (
+      semanticClass !== 'instruction-candidate'
+      || authorityTier !== 'owner-approved-instruction'
+      || reviewState !== 'owner-reviewed'
+    ) {
+      throw new ValidationError('Approve-instruction review evidence does not match the resulting state');
+    }
+    return;
+  }
+  if (reviewDecision === 'quarantine') {
+    if (authorityTier !== 'untrusted-data' || reviewState !== 'quarantined') {
+      throw new ValidationError('Quarantine review evidence does not match the resulting state');
+    }
+    return;
+  }
+  if (reviewDecision === 'reject') {
+    if (authorityTier !== 'untrusted-data' || reviewState !== 'rejected') {
+      throw new ValidationError('Reject review evidence does not match the resulting state');
+    }
+  }
 }
 
 function plainObject(value, label) {
