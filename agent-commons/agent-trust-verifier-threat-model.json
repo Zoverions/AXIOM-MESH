@@ -1,0 +1,91 @@
+{
+  "schema": "axiom-agent-trust-verifier-threat-model.v1",
+  "repository": "Zoverions/AXIOM-MESH",
+  "phase": "agent-trust-a10a-verification-bundle-v2",
+  "scope": "Verification-only composition of A1 machine identity, A2 authority manifest, optional A3a attenuation proof, and A4a signed handoff. The live verifier rechecks supplied artifacts; the detached report checker only checks report self-consistency because the report itself is unsigned.",
+  "core_invariant": "Artifact verification and report integrity are different assurances. Only a live verifyAgentTrustBundle call may say the supplied A1/A2/A3a/A4a artifacts were reverified. A detached content-addressed report is unauthenticated and cannot prove that verification actually occurred.",
+  "attack_classes": [
+    {
+      "id": "artifact-substitution",
+      "risks": ["swap A1 credential", "swap A2 manifest", "swap A4 handoff", "pair valid artifacts from different principals or snapshots"],
+      "controls": ["A2 independently reproduces A1 principal/credential binding", "A4 independently verifies A1+A2 binding", "live bundle verifier exposes target/input expected checks"]
+    },
+    {
+      "id": "report-fabrication",
+      "risks": ["attacker fabricates an unsigned report and recomputes its digest", "detached report digest mistaken for proof that underlying artifacts were verified"],
+      "controls": ["report_authentication=none", "portable_assurance=false", "detached checker returns underlying_artifacts_reverified=false", "only live bundle result returns underlying_artifacts_reverified=true"]
+    },
+    {
+      "id": "target-substitution",
+      "risks": ["recipient name/digest rebound", "executor name/digest rebound", "input or causal parent changed"],
+      "controls": ["A4 expected recipient/executor identity, input and parent checks are exposed through A10a", "live report records exact target/input fields"]
+    },
+    {
+      "id": "attenuation-authority-confusion",
+      "risks": ["A3a proof interpreted as parent delegation authority", "proof attached to A4a as delegation chain", "synthetic positive attenuation treated as runtime delegation"],
+      "controls": ["A3a verification is optional and labeled proof_only", "delegation_authority_verified remains false", "A4a delegation_chain_head_digest must remain null"]
+    },
+    {
+      "id": "report-semantic-elevation",
+      "risks": ["unsigned report changed to authority/currentness/success claims", "report metadata changed to self-signed or portable assurance"],
+      "controls": ["closed report claim set", "closed report metadata set", "authority/execution/currentness/success all fail-closed false", "report_authentication remains none"]
+    },
+    {
+      "id": "verifier-side-effects",
+      "risks": ["verifier gains private-key generation/signing", "verifier creates authority artifacts", "verifier performs filesystem/network/process effects"],
+      "controls": ["verifier implementation imports only canonicalization plus verify primitives", "static regression forbids crypto/fs/process/network and artifact-creation APIs"]
+    },
+    {
+      "id": "currentness-confusion",
+      "risks": ["historical A1/A2/A4 validity treated as globally current", "absence of A6 revocation evidence treated as active authority"],
+      "controls": ["global_currentness_verified=false", "revocation_currentness_verified=false", "authority_granted=false", "execution_authorized=false"]
+    },
+    {
+      "id": "independent-verifier-overclaim",
+      "risks": ["same-repository verifier bundle described as a separately implemented third-party verifier", "conformance bundle marketed as cross-vendor proof"],
+      "controls": ["A10a explicitly uses canonical AXIOM verifier primitives", "runtime-separated/public-input and independently implemented conformance remain later gates"]
+    }
+  ],
+  "live_bundle_result": {
+    "underlying_artifacts_reverified": true,
+    "report_authenticated": false,
+    "portable_assurance": false,
+    "authority_granted": false,
+    "execution_authorized": false
+  },
+  "detached_report_check_result": {
+    "valid_report_integrity": true,
+    "report_authenticated": false,
+    "underlying_artifacts_reverified": false,
+    "portable_assurance": false,
+    "authority_granted": false,
+    "execution_authorized": false
+  },
+  "known_nonclaims": [
+    "A10a is not a separately implemented third-party verifier; it composes canonical AXIOM verify primitives.",
+    "The unsigned verification report is not portable proof that verification occurred; its digest proves self-consistency only.",
+    "A10a does not verify A5 portable work receipts yet.",
+    "A10a does not establish live revocation/currentness or delegation authority.",
+    "A10a does not authorize or execute the A4 handoff.",
+    "A10a does not prove legal identity, task success, effect execution, application correctness, or truth.",
+    "A10a does not expose MCP/A2A/network effects or modify capability-registry state."
+  ],
+  "next_gates": [
+    "A10b extend live verification to a green A5 portable work receipt chain",
+    "A10c runtime-separated verifier process/package accepting public verification inputs only",
+    "A10d independently implemented conformance harness or second implementation",
+    "A9 cross-protocol parity fixtures proving native/MCP/A2A adapters preserve identical authority semantics"
+  ],
+  "boundaries": {
+    "private_key_required": false,
+    "artifact_creation_enabled": false,
+    "authority_granted": false,
+    "execution_authorized": false,
+    "report_authentication": "none",
+    "portable_assurance": false,
+    "network_effect": false,
+    "filesystem_effect": false,
+    "global_currentness_verified": false,
+    "capability_promotion_enabled": false
+  }
+}
