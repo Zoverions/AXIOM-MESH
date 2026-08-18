@@ -317,7 +317,7 @@ test('statement tamper signer substitution and digest substitution fail closed',
   const wrongIdentity = fixture();
   assert.throws(
     () => verifyAgentSignedHandoff(handoff, evidence(wrongIdentity)),
-    /does not reproduce|identity credential does not match|sender signature is invalid/
+    /does not reproduce|identity credential does not match|credential digest mismatch|sender signature is invalid/
   );
 
   assert.throws(
