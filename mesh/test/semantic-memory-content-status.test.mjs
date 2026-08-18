@@ -31,6 +31,7 @@ test('atomic semantic content binding remains opt-in and non-authorizing', async
   assert.equal(status.signed_memory_put_is_initial_source, true);
   assert.equal(status.encrypted_memory_object_required, true);
   assert.equal(status.active_content_required_for_current_use, true);
+  assert.equal(status.historical_replay_preserves_later_tombstones, true);
   assert.equal(status.provenance_only_initial_state_allowed, false);
   assert.equal(status.semantic_content_without_provenance_allowed, false);
   assert.equal(status.preexisting_content_adoption_allowed, false);
