@@ -366,19 +366,22 @@ export async function createHypervisorService(config = meshConfig()) {
         'Sandbox execution epoch',
         { max: 160, pattern: PRINCIPAL_ID }
       );
-      const consumed = await signedFetch(
-        identity,
-        'grid',
-        `${config.urls.grid}/internal/v1/capabilities/consume`,
-        {
-          method: 'POST',
-          traceId,
-          body: {
-            capability,
-            execution_epoch: executionEpoch
-          }
+      const consumptionCommit = await commit(traceId, intent.principal.id, [{
+        kind: 'capability.consume.requested',
+        subject: capabilityClaims.jti,
+        payload: {
+          capability,
+          execution_epoch: executionEpoch
         }
-      );
+      }]);
+      const consumed = consumptionCommit.capability_consumptions?.[0];
+      if (!consumed) {
+        throw new AxiomError(
+          'capability_consumption_missing',
+          'Grid did not return the durable capability consumption receipt',
+          502
+        );
+      }
       const consumption = verifyCapabilityConsumptionReceipt(consumed.receipt, {
         gridPublicKey: gridKey,
         capability,
