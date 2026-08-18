@@ -24,6 +24,7 @@ function remoteInstruction(overrides = {}) {
     content_digest: A,
     origin_class: 'remote-agent',
     origin_principal: 'agent.remote.1',
+    origin_artifact_digest: B,
     semantic_class: 'instruction-candidate',
     ...overrides
   };
@@ -57,10 +58,11 @@ test('owner-authored ordinary memory defaults to owner memory without gaining sy
   });
 });
 
-test('remote instruction-like content enters as untrusted unreviewed data', () => {
+test('remote instruction-like content enters as source-bound untrusted unreviewed data', () => {
   const record = normalizeSemanticMemoryProvenance(remoteInstruction());
   assert.equal(record.authority_tier, 'untrusted-data');
   assert.equal(record.review_state, 'unreviewed');
+  assert.equal(record.origin_artifact_digest, B);
   assert.equal(evaluateSemanticMemoryUse(record, 'ordinary-retrieval').allow, true);
   assert.deepEqual(evaluateSemanticMemoryUse(record, 'privileged-instruction'), {
     allow: false,
@@ -150,7 +152,7 @@ test('review request substitution fails closed', () => {
   assert.throws(
     () => ownerReviewSemanticMemory(record, {
       actor_id: 'owner.alice',
-      review_request_digest: B,
+      review_request_digest: C,
       decision: 'approve-instruction'
     }),
     /review request digest does not match the exact transition/
@@ -224,7 +226,7 @@ test('owner review can adopt external content as ordinary owner memory without i
   assert.equal(evaluateSemanticMemoryUse(approved, 'privileged-instruction').allow, false);
 });
 
-test('derived summaries retain parent provenance and do not inherit instruction authority', () => {
+test('derived summaries retain exact parent provenance and do not inherit instruction authority', () => {
   const source = normalizeSemanticMemoryProvenance(remoteInstruction());
   const approved = ownerReviewSemanticMemory(
     source,
@@ -238,12 +240,33 @@ test('derived summaries retain parent provenance and do not inherit instruction 
   });
 
   assert.equal(derived.origin_class, 'system-derived');
-  assert.equal(derived.origin_artifact_digest, approved.content_digest);
+  assert.equal(derived.origin_artifact_digest, approved.provenance_digest);
   assert.equal(derived.parent_object_id, approved.object_id);
   assert.equal(derived.parent_content_digest, approved.content_digest);
+  assert.equal(derived.parent_provenance_digest, approved.provenance_digest);
   assert.equal(derived.authority_tier, 'untrusted-data');
   assert.equal(derived.review_state, 'unreviewed');
   assert.equal(evaluateSemanticMemoryUse(derived, 'privileged-instruction').allow, false);
+});
+
+test('partial or non-derived parent provenance fails closed', () => {
+  assert.throws(
+    () => normalizeSemanticMemoryProvenance({
+      ...remoteInstruction(),
+      parent_object_id: 'memory.parent.1'
+    }),
+    /parent provenance must be supplied as a complete tuple/
+  );
+
+  assert.throws(
+    () => normalizeSemanticMemoryProvenance({
+      ...remoteInstruction(),
+      parent_object_id: 'memory.parent.1',
+      parent_content_digest: C,
+      parent_provenance_digest: D
+    }),
+    /Only system-derived memory may carry parent provenance/
+  );
 });
 
 test('quarantine and rejection narrow authority and suppress retrieval', () => {
@@ -261,16 +284,29 @@ test('quarantine and rejection narrow authority and suppress retrieval', () => {
   });
 });
 
-test('local model output requires an explicit runtime binding', () => {
+test('local model output requires both runtime binding and source receipt digest', () => {
   assert.throws(
     () => normalizeSemanticMemoryProvenance({
       object_id: 'memory.model.1',
       owner: 'owner.alice',
       content_digest: A,
       origin_class: 'local-model-generated',
+      origin_artifact_digest: B,
       semantic_class: 'knowledge'
     }),
     /requires origin_runtime_id/
+  );
+
+  assert.throws(
+    () => normalizeSemanticMemoryProvenance({
+      object_id: 'memory.model.1',
+      owner: 'owner.alice',
+      content_digest: A,
+      origin_class: 'local-model-generated',
+      origin_runtime_id: 'runtime.provider.1',
+      semantic_class: 'knowledge'
+    }),
+    /requires origin_artifact_digest/
   );
 
   const record = normalizeSemanticMemoryProvenance({
@@ -279,12 +315,14 @@ test('local model output requires an explicit runtime binding', () => {
     content_digest: A,
     origin_class: 'local-model-generated',
     origin_runtime_id: 'runtime.provider.1',
+    origin_artifact_digest: B,
     semantic_class: 'knowledge'
   });
   assert.equal(record.authority_tier, 'untrusted-data');
+  assert.equal(record.origin_artifact_digest, B);
 });
 
-test('non-owner sources require source-binding evidence where no principal/runtime binding exists', () => {
+test('all non-owner origins require source-binding artifact or receipt evidence', () => {
   assert.throws(
     () => normalizeSemanticMemoryProvenance({
       object_id: 'memory.web.1',
@@ -292,6 +330,14 @@ test('non-owner sources require source-binding evidence where no principal/runti
       content_digest: A,
       origin_class: 'retrieved-external',
       semantic_class: 'knowledge'
+    }),
+    /requires origin_artifact_digest/
+  );
+
+  assert.throws(
+    () => normalizeSemanticMemoryProvenance({
+      ...remoteInstruction(),
+      origin_artifact_digest: undefined
     }),
     /requires origin_artifact_digest/
   );
