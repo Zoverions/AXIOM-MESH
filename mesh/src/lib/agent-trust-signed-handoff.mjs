@@ -31,7 +31,8 @@ const TOP_KEYS = new Set([
 ]);
 const STATEMENT_KEYS = new Set([
   'handoff_id', 'parent_task_id', 'sender_principal_id', 'recipient_principal_id',
-  'intended_executor_id', 'sender_credential_digest', 'sender_operational_key_id',
+  'recipient_identity_digest', 'intended_executor_id', 'intended_executor_identity_digest',
+  'sender_credential_digest', 'sender_operational_key_id',
   'authority_manifest_digest', 'delegation_chain_head_digest', 'action', 'purpose',
   'destination', 'input_digest', 'context_digests', 'evidence_obligations',
   'expected_output_classes', 'resource_ceiling', 'not_before', 'expires_at',
@@ -240,7 +241,15 @@ function normalizeStatement(raw, { manifest, credential } = {}) {
     parent_task_id: nullableIdentifier(value.parent_task_id, 'agent signed handoff parent_task_id'),
     sender_principal_id: identifier(value.sender_principal_id, 'agent signed handoff sender_principal_id'),
     recipient_principal_id: identifier(value.recipient_principal_id, 'agent signed handoff recipient_principal_id'),
+    recipient_identity_digest: digest(
+      value.recipient_identity_digest,
+      'agent signed handoff recipient_identity_digest'
+    ),
     intended_executor_id: identifier(value.intended_executor_id, 'agent signed handoff intended_executor_id'),
+    intended_executor_identity_digest: digest(
+      value.intended_executor_identity_digest,
+      'agent signed handoff intended_executor_identity_digest'
+    ),
     sender_credential_digest: digest(value.sender_credential_digest, 'agent signed handoff sender_credential_digest'),
     sender_operational_key_id: digest(value.sender_operational_key_id, 'agent signed handoff sender_operational_key_id'),
     authority_manifest_digest: digest(value.authority_manifest_digest, 'agent signed handoff authority_manifest_digest'),
@@ -279,7 +288,9 @@ export function createAgentSignedHandoff({
   handoffId,
   parentTaskId = null,
   recipientPrincipalId,
+  recipientIdentityDigest,
   intendedExecutorId,
+  intendedExecutorIdentityDigest,
   identityCredential,
   trustedIssuerPublicKey,
   authorityManifest,
@@ -318,7 +329,9 @@ export function createAgentSignedHandoff({
     parent_task_id: parentTaskId,
     sender_principal_id: manifest.principal.id,
     recipient_principal_id: recipientPrincipalId,
+    recipient_identity_digest: recipientIdentityDigest,
     intended_executor_id: intendedExecutorId,
+    intended_executor_identity_digest: intendedExecutorIdentityDigest,
     sender_credential_digest: credential.credential_digest,
     sender_operational_key_id: credential.statement.operational_key_id,
     authority_manifest_digest: manifest.manifest_digest,
@@ -361,7 +374,9 @@ export function verifyAgentSignedHandoff(raw, {
   authorityManifest,
   authorityEvidence,
   expectedRecipientPrincipalId,
+  expectedRecipientIdentityDigest,
   expectedExecutorId,
+  expectedExecutorIdentityDigest,
   expectedInputDigest,
   expectedParentTaskId
 } = {}) {
@@ -421,9 +436,17 @@ export function verifyAgentSignedHandoff(raw, {
     expectedRecipientPrincipalId !== undefined
     && statement.recipient_principal_id !== expectedRecipientPrincipalId
   ) throw new ValidationError('agent signed handoff recipient mismatch');
+  if (
+    expectedRecipientIdentityDigest !== undefined
+    && statement.recipient_identity_digest !== expectedRecipientIdentityDigest
+  ) throw new ValidationError('agent signed handoff recipient identity digest mismatch');
   if (expectedExecutorId !== undefined && statement.intended_executor_id !== expectedExecutorId) {
     throw new ValidationError('agent signed handoff intended executor mismatch');
   }
+  if (
+    expectedExecutorIdentityDigest !== undefined
+    && statement.intended_executor_identity_digest !== expectedExecutorIdentityDigest
+  ) throw new ValidationError('agent signed handoff executor identity digest mismatch');
   if (expectedInputDigest !== undefined && statement.input_digest !== expectedInputDigest) {
     throw new ValidationError('agent signed handoff input digest mismatch');
   }
