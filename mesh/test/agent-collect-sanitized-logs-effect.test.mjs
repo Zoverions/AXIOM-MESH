@@ -156,9 +156,37 @@ test('exact sanitized projection completes and verifies with the signed consumed
 
 test('sanitized output rejects forbidden material, noncanonical projection, extra fields and path drift', () => {
   for (const mutate of [
-    value => { value.sanitized_output = canonicalJson({ sanitization_policy_id: 'synthetic-jsonl-allowlist-v1', source_record_count: 3, source_bytes: 703, records: [{ ...AGENT_COLLECT_SANITIZED_LOGS_EXPECTED_RECORDS[0], component: AGENT_COLLECT_SANITIZED_LOGS_FORBIDDEN_SENTINEL }, ...AGENT_COLLECT_SANITIZED_LOGS_EXPECTED_RECORDS.slice(1)] }); value.output_sha256 = sha256(value.sanitized_output); value.output_bytes = Buffer.byteLength(value.sanitized_output); },
-    value => { const parsed = JSON.parse(value.sanitized_output); value.sanitized_output = JSON.stringify(parsed); value.output_sha256 = sha256(value.sanitized_output); value.output_bytes = Buffer.byteLength(value.sanitized_output); },
-    value => { const parsed = JSON.parse(value.sanitized_output); parsed.records[0].message = 'free form'; value.sanitized_output = canonicalJson(parsed); value.output_sha256 = sha256(value.sanitized_output); value.output_bytes = Buffer.byteLength(value.sanitized_output); },
+    value => {
+      value.sanitized_output = canonicalJson({
+        sanitization_policy_id: 'synthetic-jsonl-allowlist-v1',
+        source_record_count: 3,
+        source_bytes: 703,
+        records: [
+          { ...AGENT_COLLECT_SANITIZED_LOGS_EXPECTED_RECORDS[0], component: AGENT_COLLECT_SANITIZED_LOGS_FORBIDDEN_SENTINEL },
+          ...AGENT_COLLECT_SANITIZED_LOGS_EXPECTED_RECORDS.slice(1)
+        ]
+      });
+      value.output_sha256 = sha256(value.sanitized_output);
+      value.output_bytes = Buffer.byteLength(value.sanitized_output);
+    },
+    value => {
+      const parsed = JSON.parse(value.sanitized_output);
+      value.sanitized_output = JSON.stringify({
+        sanitization_policy_id: parsed.sanitization_policy_id,
+        source_record_count: parsed.source_record_count,
+        source_bytes: parsed.source_bytes,
+        records: parsed.records
+      });
+      value.output_sha256 = sha256(value.sanitized_output);
+      value.output_bytes = Buffer.byteLength(value.sanitized_output);
+    },
+    value => {
+      const parsed = JSON.parse(value.sanitized_output);
+      parsed.records[0].message = 'free form';
+      value.sanitized_output = canonicalJson(parsed);
+      value.output_sha256 = sha256(value.sanitized_output);
+      value.output_bytes = Buffer.byteLength(value.sanitized_output);
+    },
     value => { value.source_logical_path = '../host.log'; }
   ]) {
     const f = createCollectSanitizedLogsFixture();
