@@ -25,7 +25,7 @@ import { createSandboxService } from '../src/sandbox/server.mjs';
 function capabilityFixture(identity, {
   jti,
   suffix,
-  ttlSeconds = 120
+  ttlSeconds = 30
 }) {
   const intent = {
     intent_id: `intent_capability_restart_${suffix}`,
@@ -220,7 +220,8 @@ test('durable Grid consumption survives Sandbox and Grid restart and burns uncer
 
   const executed = capabilityFixture(hypervisor, {
     jti: 'capability-restart-executed',
-    suffix: 'executed'
+    suffix: 'executed',
+    ttlSeconds: config.capabilityTtlSeconds
   });
   const consumed = await consumeCapability({
     identity: hypervisor,
@@ -342,7 +343,8 @@ test('durable Grid consumption survives Sandbox and Grid restart and burns uncer
   // Simulate Grid consumption committing and Sandbox dying before any execution.
   const burned = capabilityFixture(hypervisor, {
     jti: 'capability-restart-burned',
-    suffix: 'burned'
+    suffix: 'burned',
+    ttlSeconds: config.capabilityTtlSeconds
   });
   const burnedReceipt = await consumeCapability({
     identity: hypervisor,
