@@ -67,6 +67,7 @@ export class SemanticMemorySourceEvidenceGridStore extends AuthenticatedSemantic
         'Semantic source evidence actor must equal the local memory owner observer'
       );
     }
+    this.requireIntentEvidenceChain();
 
     const existing = this.findSemanticSourceEvidenceEvents(normalized.evidence_digest);
     if (existing.length > 1) {
