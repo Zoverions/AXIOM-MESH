@@ -74,6 +74,16 @@ function policy() {
   };
 }
 
+function capabilities(extra = []) {
+  return {
+    schema: 'axiom-capabilities.v1',
+    capabilities: [
+      { id: 'core.echo', status: 'implemented' },
+      ...extra
+    ]
+  };
+}
+
 function credential(principal, issuer, operational) {
   return createMachineIdentityCredential({
     principal,
@@ -222,10 +232,7 @@ function fixture({ status = 'completed' } = {}) {
     policy: engine,
     kernelVersion: '0.12.0-dev.3'
   });
-  const capabilityRegistry = {
-    schema: 'axiom-capabilities.v1',
-    capabilities: [{ id: 'core.echo', status: 'implemented' }]
-  };
+  const capabilityRegistry = capabilities();
   const authorityManifest = createAgentAuthorityManifest({
     principal: senderPrincipal,
     identityCredential: senderCredential,
@@ -560,7 +567,7 @@ test('portable receipt detects statement signature and receipt-digest tamper', (
   );
 
   const signatureTamper = structuredClone(receipt);
-  signatureTamper.executor_signature = `${signatureTamper.executor_signature.slice(0, -1)}A`;
+  signatureTamper.executor_signature = 'A'.repeat(64);
   assert.throws(
     () => verifyAgentPortableWorkReceipt(signatureTamper, verifyEvidence(f)),
     /executor signature is invalid|receipt_digest mismatch/
