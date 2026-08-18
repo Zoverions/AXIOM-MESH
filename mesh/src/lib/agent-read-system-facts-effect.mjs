@@ -1,6 +1,7 @@
 import { createPrivateKey, createPublicKey, sign, verify } from 'node:crypto';
 import { ValidationError, canonicalJson, digestObject, sha256 } from './canonical.mjs';
 import { AgentExecutorDurableStateStore } from './agent-executor-durable-state.mjs';
+import { verifyAgentExecutorDurableStateReceipt } from './agent-executor-durable-format.mjs';
 import {
   AGENT_LINUX_ISOLATION_ADAPTER_ID,
   AGENT_LINUX_ISOLATION_ENTRYPOINT,
@@ -30,13 +31,13 @@ const STATEMENT_KEYS = new Set([
   'executor_id','executor_key_id','executor_version','policy_digest','repository','revision','admission_digest','plan_digest',
   'authorization_id','authorization_digest','sponsor_id','subject_id','lifecycle_ledger_id','lifecycle_key_id',
   'lifecycle_pre_effect_head_digest','lifecycle_consumption_event_digest','lifecycle_final_head_digest','lifecycle_final_receipt_digest',
-  'durable_store_id','durable_consume_generation','durable_consume_record_digest','durable_final_generation','durable_final_record_digest',
-  'isolation_receipt_digest','isolation_adapter_id','image_id','operation_id','started_at','finished_at','observations','cleanup_verified',
-  'revocation_state','known_signed_head_only','global_currentness_claimed','dry_run_plan_effect_reachable','laboratory_effect_admission_observed',
-  'durable_consumption_before_effect_observed','real_process_effect_observed','exact_plan_step_mapping_observed','repository_code_executed',
-  'repository_workspace_mutated','network_performed','credentials_retrieved','secrets_retrieved','service_controlled','package_installed',
-  'remote_execution_enabled','remote_hardware_accessed','production_enrollment','deployment_authority','capability_promoted','task_success_claimed',
-  'general_executor_available','axiom_authority_granted'
+  'durable_store_id','durable_consume_generation','durable_consume_record_digest','durable_consume_head_receipt_digest',
+  'durable_final_generation','durable_final_record_digest','isolation_receipt_digest','isolation_adapter_id','image_id','operation_id',
+  'started_at','finished_at','observations','cleanup_verified','revocation_state','known_signed_head_only','global_currentness_claimed',
+  'dry_run_plan_effect_reachable','laboratory_effect_admission_observed','durable_consumption_before_effect_observed','real_process_effect_observed',
+  'exact_plan_step_mapping_observed','repository_code_executed','repository_workspace_mutated','network_performed','credentials_retrieved',
+  'secrets_retrieved','service_controlled','package_installed','remote_execution_enabled','remote_hardware_accessed','production_enrollment',
+  'deployment_authority','capability_promoted','task_success_claimed','general_executor_available','axiom_authority_granted'
 ]);
 const OBSERVATION_KEYS = new Set([
   'sequence','step_id','executable_id','absolute_executable','arguments','logical_working_directory','container_working_directory',
@@ -54,6 +55,7 @@ export const AGENT_READ_SYSTEM_FACTS_EFFECT_POLICY = Object.freeze({
   operation_id: AGENT_READ_SYSTEM_FACTS_EFFECT_OPERATION,
   isolation_adapter_id: AGENT_LINUX_ISOLATION_ADAPTER_ID,
   durable_consume_before_effect: true,
+  signed_consumed_head_before_effect: true,
   exact_two_step_mapping: true,
   network_mode: 'none',
   arbitrary_command_allowed: false,
@@ -134,7 +136,14 @@ function normalizeObservation(raw, expected, plan) {
   return Object.freeze({ ...raw, arguments: Object.freeze([...raw.arguments]) });
 }
 
-function receiptStatement(raw, { plan, admission, trustedAdmissionIssuerPublicKey, isolationReceipt }) {
+function receiptStatement(raw, {
+  plan,
+  admission,
+  trustedAdmissionIssuerPublicKey,
+  isolationReceipt,
+  durableConsumeHeadReceipt,
+  trustedDurableStorePublicKey
+}) {
   exact(raw, STATEMENT_KEYS, 'effect receipt statement');
   validateReadSystemFactsEffectPlan(plan);
   const checkedAdmission = verifyAgentReadSystemFactsEffectAdmission(admission, {
@@ -145,6 +154,19 @@ function receiptStatement(raw, { plan, admission, trustedAdmissionIssuerPublicKe
   });
   const isolation = verifyAgentLinuxIsolationConformanceReceipt(isolationReceipt);
   if (isolation.revision !== raw.revision) fail('effect isolation receipt revision mismatch');
+  const consumedHead = verifyAgentExecutorDurableStateReceipt(durableConsumeHeadReceipt, {
+    trustedStorePublicKey: trustedDurableStorePublicKey,
+    plan,
+    expectedStoreId: raw.durable_store_id
+  });
+  if (
+    consumedHead.statement.lifecycle_status !== 'consumed' ||
+    consumedHead.statement.generation !== raw.durable_consume_generation ||
+    consumedHead.statement.record_digest !== raw.durable_consume_record_digest ||
+    consumedHead.receipt_digest !== raw.durable_consume_head_receipt_digest ||
+    consumedHead.statement.plan_digest !== raw.plan_digest ||
+    consumedHead.statement.authorization_digest !== raw.authorization_digest
+  ) fail('effect consumed-head receipt does not bind the exact pre-effect durable state');
   if (!Array.isArray(raw.observations) || raw.observations.length !== 2) fail('effect receipt requires exactly two observations');
   const observations = Object.freeze(raw.observations.map((item, index) => normalizeObservation(item, EXPECTED[index], plan)));
   if (
@@ -160,7 +182,7 @@ function receiptStatement(raw, { plan, admission, trustedAdmissionIssuerPublicKe
   [
     raw.executor_key_id, raw.lifecycle_pre_effect_head_digest, raw.lifecycle_consumption_event_digest,
     raw.lifecycle_final_head_digest, raw.lifecycle_final_receipt_digest, raw.durable_consume_record_digest,
-    raw.durable_final_record_digest
+    raw.durable_consume_head_receipt_digest, raw.durable_final_record_digest
   ].forEach((value, index) => digest(value, `effect receipt digest field ${index}`));
   id(raw.durable_store_id, 'effect durable_store_id');
   if (
@@ -205,6 +227,8 @@ function receiptStatement(raw, { plan, admission, trustedAdmissionIssuerPublicKe
 export function verifyAgentReadSystemFactsEffectReceipt(raw, {
   trustedExecutorPublicKey,
   trustedAdmissionIssuerPublicKey,
+  trustedDurableStorePublicKey,
+  durableConsumeHeadReceipt,
   plan,
   admission,
   isolationConformanceReceipt
@@ -216,7 +240,9 @@ export function verifyAgentReadSystemFactsEffectReceipt(raw, {
     plan,
     admission,
     trustedAdmissionIssuerPublicKey,
-    isolationReceipt: isolationConformanceReceipt
+    isolationReceipt: isolationConformanceReceipt,
+    durableConsumeHeadReceipt,
+    trustedDurableStorePublicKey
   });
   if (statement.executor_key_id !== keyId(pk)) fail('effect receipt executor key mismatch');
   const statementDigest = digestObject(statement);
@@ -249,7 +275,6 @@ export class AgentReadSystemFactsEffectController {
       expectedRevision: revision,
       now: admission.statement.not_before
     });
-    this.trustedAdmissionIssuerPublicKey = trustedAdmissionIssuerPublicKey;
     this.sk = key(executorPrivateKey, 'private', 'effect executor key');
     this.pk = createPublicKey(this.sk);
     this.startedAt = null;
@@ -257,6 +282,7 @@ export class AgentReadSystemFactsEffectController {
     this.consumeDigest = null;
     this.consumeGeneration = null;
     this.consumeRecordDigest = null;
+    this.consumeHeadReceipt = null;
   }
 
   get executorPublicKey() {
@@ -302,7 +328,21 @@ export class AgentReadSystemFactsEffectController {
     this.consumeDigest = transition.result.event.event_digest;
     this.consumeGeneration = transition.record.statement.generation;
     this.consumeRecordDigest = transition.record.record_digest;
-    return this.descriptor();
+    this.consumeHeadReceipt = this.store.headReceipt({ generatedAt: at });
+    const checkedConsumedHead = verifyAgentExecutorDurableStateReceipt(this.consumeHeadReceipt, {
+      trustedStorePublicKey: this.store.storePublicKey,
+      plan: this.plan,
+      expectedStoreId: this.store.storeId
+    });
+    if (
+      checkedConsumedHead.statement.lifecycle_status !== 'consumed' ||
+      checkedConsumedHead.statement.generation !== this.consumeGeneration ||
+      checkedConsumedHead.statement.record_digest !== this.consumeRecordDigest
+    ) fail('effect consumed-head receipt does not match the committed consume generation');
+    return Object.freeze({
+      ...this.descriptor(),
+      durable_consume_head_receipt: this.consumeHeadReceipt
+    });
   }
 
   interrupt({ occurredAt, reasonCode = 'read-system-facts-effect-interrupted' }) {
@@ -317,6 +357,7 @@ export class AgentReadSystemFactsEffectController {
 
   complete({ observations, finishedAt }) {
     if (!this.startedAt || this.store.status !== 'consumed') fail('effect cannot complete without consumed durable authority');
+    if (!this.consumeHeadReceipt) fail('effect cannot complete without signed consumed-head evidence');
     if (!Array.isArray(observations) || observations.length !== 2) fail('effect requires exactly two observations');
     const normalized = observations.map((item, index) => normalizeObservation(item, EXPECTED[index], this.plan));
     const at = time(finishedAt, 'effect finish time');
@@ -347,6 +388,7 @@ export class AgentReadSystemFactsEffectController {
       durable_store_id: this.store.storeId,
       durable_consume_generation: this.consumeGeneration,
       durable_consume_record_digest: this.consumeRecordDigest,
+      durable_consume_head_receipt_digest: this.consumeHeadReceipt.receipt_digest,
       durable_final_generation: finalRecord.statement.generation,
       durable_final_record_digest: finalRecord.record_digest,
       isolation_receipt_digest: this.isolation.receipt_digest,
