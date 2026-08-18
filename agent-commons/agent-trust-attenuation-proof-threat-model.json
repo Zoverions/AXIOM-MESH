@@ -27,8 +27,8 @@
     },
     {
       "id": "temporal-amplification",
-      "risks": ["child starts before parent", "child expires after parent", "proof outlives child"],
-      "controls": ["child valid_from cannot precede parent", "child expiry cannot exceed parent", "proof expiry cannot exceed child"]
+      "risks": ["child starts before parent", "child expires after parent", "proof outlives child", "proof timestamp mistaken for currentness"],
+      "controls": ["child valid_from cannot precede parent", "child expiry cannot exceed parent", "proof expiry cannot exceed child", "proof timestamps are signed evidence only and do not establish revocation/currentness"]
     },
     {
       "id": "delegation-depth-amplification",
@@ -56,6 +56,7 @@
     "This slice does not enable machine-principal delegation.",
     "This slice does not implement descendant revocation propagation.",
     "This slice does not implement a runtime child principal or execution grant.",
+    "Signed proof issuance/expiry timestamps do not establish that parent or child authority is currently active or unrevoked.",
     "This slice does not claim currentness beyond supplied objects.",
     "This slice does not modify the capability registry or supported effect path."
   ],
