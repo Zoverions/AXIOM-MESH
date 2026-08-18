@@ -1,6 +1,10 @@
 import { ValidationError, digestObject } from './canonical.mjs';
+import { intentRequestDigest } from './intent-binding.mjs';
 
 export const SEMANTIC_MEMORY_PROVENANCE_SCHEMA = 'axiom-semantic-memory-provenance.v1';
+export const SEMANTIC_MEMORY_REVIEW_INPUT_SCHEMA = 'axiom-semantic-memory-review-input.v1';
+export const SEMANTIC_MEMORY_REVIEW_ACTION = 'memory.semantic.review';
+export const SEMANTIC_MEMORY_REVIEW_PURPOSE = 'govern-semantic-memory';
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const HEX_DIGEST = /^[a-f0-9]{64}$/;
@@ -31,6 +35,12 @@ const REVIEW_STATES = new Set([
   'quarantined',
   'rejected'
 ]);
+const REVIEW_DECISIONS = new Set([
+  'approve-memory',
+  'approve-instruction',
+  'quarantine',
+  'reject'
+]);
 const TOP_LEVEL_KEYS = new Set([
   'schema',
   'object_id',
@@ -44,7 +54,7 @@ const TOP_LEVEL_KEYS = new Set([
   'authority_tier',
   'review_state',
   'review_actor',
-  'review_event_digest',
+  'review_request_digest',
   'parent_object_id',
   'parent_content_digest',
   'ingestion_intent_id',
@@ -115,10 +125,13 @@ export function normalizeSemanticMemoryProvenance(value) {
     'review_state'
   );
   const reviewActor = optionalId(source.review_actor, 'review_actor');
-  const reviewEventDigest = optionalDigest(source.review_event_digest, 'review_event_digest');
+  const reviewRequestDigest = optionalDigest(
+    source.review_request_digest,
+    'review_request_digest'
+  );
 
-  if ((reviewActor === undefined) !== (reviewEventDigest === undefined)) {
-    throw new ValidationError('Memory review actor and event digest must be supplied together');
+  if ((reviewActor === undefined) !== (reviewRequestDigest === undefined)) {
+    throw new ValidationError('Memory review actor and request digest must be supplied together');
   }
   if (reviewActor !== undefined && reviewActor !== owner) {
     throw new ValidationError('Memory review actor must equal owner');
@@ -176,7 +189,7 @@ export function normalizeSemanticMemoryProvenance(value) {
     authority_tier: authorityTier,
     review_state: reviewState,
     ...(reviewActor ? { review_actor: reviewActor } : {}),
-    ...(reviewEventDigest ? { review_event_digest: reviewEventDigest } : {}),
+    ...(reviewRequestDigest ? { review_request_digest: reviewRequestDigest } : {}),
     ...(parentObjectId ? { parent_object_id: parentObjectId } : {}),
     ...(parentContentDigest ? { parent_content_digest: parentContentDigest } : {}),
     ...(source.ingestion_intent_id
@@ -202,9 +215,35 @@ export function normalizeSemanticMemoryProvenance(value) {
   };
 }
 
+export function semanticMemoryReviewIntent(record, decision) {
+  const normalized = normalizeSemanticMemoryProvenance(record);
+  const reviewDecision = requiredEnum(
+    decision,
+    REVIEW_DECISIONS,
+    'semantic memory review decision'
+  );
+  return Object.freeze({
+    principal: Object.freeze({ type: 'human', id: normalized.owner }),
+    action: SEMANTIC_MEMORY_REVIEW_ACTION,
+    input: Object.freeze({
+      schema: SEMANTIC_MEMORY_REVIEW_INPUT_SCHEMA,
+      object_id: normalized.object_id,
+      content_digest: normalized.content_digest,
+      current_provenance_digest: normalized.provenance_digest,
+      decision: reviewDecision
+    }),
+    purpose: SEMANTIC_MEMORY_REVIEW_PURPOSE,
+    data_scopes: Object.freeze([`memory.semantic:${normalized.object_id}`])
+  });
+}
+
+export function semanticMemoryReviewRequestDigest(record, decision) {
+  return intentRequestDigest(semanticMemoryReviewIntent(record, decision));
+}
+
 export function ownerReviewSemanticMemory(record, {
   actor_id,
-  review_event_digest,
+  review_request_digest,
   decision
 } = {}) {
   const normalized = normalizeSemanticMemoryProvenance(record);
@@ -212,7 +251,14 @@ export function ownerReviewSemanticMemory(record, {
   if (actorId !== normalized.owner) {
     throw new ValidationError('Only the memory owner can apply this review transition');
   }
-  const reviewEventDigest = requiredDigest(review_event_digest, 'review_event_digest');
+  const suppliedRequestDigest = requiredDigest(
+    review_request_digest,
+    'review_request_digest'
+  );
+  const expectedRequestDigest = semanticMemoryReviewRequestDigest(normalized, decision);
+  if (suppliedRequestDigest !== expectedRequestDigest) {
+    throw new ValidationError('Semantic memory review request digest does not match the exact transition');
+  }
 
   let authorityTier;
   let reviewState;
@@ -241,7 +287,7 @@ export function ownerReviewSemanticMemory(record, {
     authority_tier: authorityTier,
     review_state: reviewState,
     review_actor: actorId,
-    review_event_digest: reviewEventDigest
+    review_request_digest: suppliedRequestDigest
   });
 }
 
@@ -292,13 +338,17 @@ export function evaluateSemanticMemoryUse(record, usage) {
     const allow = normalized.semantic_class === 'instruction-candidate'
       && normalized.authority_tier === 'owner-approved-instruction'
       && normalized.review_state === 'owner-reviewed'
-      && normalized.review_actor === normalized.owner;
+      && normalized.review_actor === normalized.owner
+      && typeof normalized.review_request_digest === 'string';
     return {
       allow,
       code: allow
         ? 'semantic_memory_instruction_allowed'
         : 'semantic_memory_instruction_denied',
-      ...(allow ? { provenance_digest: normalized.provenance_digest } : {})
+      ...(allow ? {
+        provenance_digest: normalized.provenance_digest,
+        review_request_digest: normalized.review_request_digest
+      } : {})
     };
   }
   if (usage === 'authority-mutation') {
