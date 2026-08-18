@@ -80,17 +80,30 @@ export class SemanticMemoryStateGridStore extends GridStore {
     }
   }
 
-  rebuildSemanticMemoryState() {
-    this.requireIntentEvidenceChain();
-    const rows = this.db.prepare(`
+  semanticMemorySourceRows() {
+    return this.db.prepare(`
       SELECT * FROM events WHERE kind = ? ORDER BY seq
     `).all(SEMANTIC_MEMORY_STATE_EVENT);
+  }
+
+  semanticMemoryRecordFromSourceEvent(eventInput, actor) {
+    const event = assertPlainObject(eventInput, 'semantic memory source event');
+    if (event.kind !== SEMANTIC_MEMORY_STATE_EVENT) return null;
+    return validateStateEvent(event, actor ?? event.actor);
+  }
+
+  rebuildSemanticMemoryState() {
+    this.requireIntentEvidenceChain();
+    const rows = this.semanticMemorySourceRows();
     this.semanticMemoryStateRebuildMode = true;
     try {
       this.transaction(() => {
         this.db.exec('DELETE FROM semantic_memory_provenance_state');
         for (const row of rows) {
-          this.materializeSemanticMemoryState(this.decodeEventRow(row), {
+          const event = this.decodeEventRow(row);
+          const record = this.semanticMemoryRecordFromSourceEvent(event, event.actor);
+          if (!record) continue;
+          this.materializeSemanticMemoryRecord(event, record, {
             verifyReviewEvidence: true
           });
         }
@@ -105,8 +118,8 @@ export class SemanticMemoryStateGridStore extends GridStore {
     if (Array.isArray(events)) {
       const objectIds = new Set();
       for (const event of events) {
-        if (event?.kind !== SEMANTIC_MEMORY_STATE_EVENT) continue;
-        const record = validateStateEvent(event, actor);
+        const record = this.semanticMemoryRecordFromSourceEvent(event, actor);
+        if (!record) continue;
         if (objectIds.has(record.object_id)) {
           throw new ValidationError(
             'A single append may contain at most one semantic memory state event per object'
@@ -133,14 +146,12 @@ export class SemanticMemoryStateGridStore extends GridStore {
 
   applyMaterializedEvent(event) {
     super.applyMaterializedEvent(event);
-    if (
-      this.semanticMemoryStateReady
-      && event.kind === SEMANTIC_MEMORY_STATE_EVENT
-    ) {
-      this.materializeSemanticMemoryState(event, {
-        verifyReviewEvidence: this.semanticMemoryStateRebuildMode
-      });
-    }
+    if (!this.semanticMemoryStateReady) return;
+    const record = this.semanticMemoryRecordFromSourceEvent(event, event.actor);
+    if (!record) return;
+    this.materializeSemanticMemoryRecord(event, record, {
+      verifyReviewEvidence: this.semanticMemoryStateRebuildMode
+    });
   }
 
   recordSemanticMemoryProvenance({ traceId, actor, record }) {
@@ -199,9 +210,10 @@ export class SemanticMemoryStateGridStore extends GridStore {
       throw new ValidationError('Semantic memory materialized state has no signed source event');
     }
     const event = this.decodeEventRow(eventRow);
-    const eventRecord = validateStateEvent(event, row.owner);
+    const eventRecord = this.semanticMemoryRecordFromSourceEvent(event, row.owner);
     if (
-      event.event_id !== row.source_event_id
+      !eventRecord
+      || event.event_id !== row.source_event_id
       || event.seq !== row.source_seq
       || eventRecord.provenance_digest !== record.provenance_digest
       || canonicalJson(eventRecord) !== canonicalJson(record)
@@ -330,7 +342,21 @@ export class SemanticMemoryStateGridStore extends GridStore {
     event,
     { verifyReviewEvidence = false } = {}
   ) {
-    const record = validateStateEvent(event, event.actor);
+    const record = this.semanticMemoryRecordFromSourceEvent(event, event.actor);
+    if (!record) {
+      throw new ValidationError('Event is not a semantic memory provenance source');
+    }
+    return this.materializeSemanticMemoryRecord(event, record, {
+      verifyReviewEvidence
+    });
+  }
+
+  materializeSemanticMemoryRecord(
+    event,
+    recordInput,
+    { verifyReviewEvidence = false } = {}
+  ) {
+    const record = normalizeSemanticMemoryProvenance(recordInput);
     this.validateSemanticMemoryTransition(record);
     if (hasExplicitReview(record)) {
       if (verifyReviewEvidence) {
@@ -383,6 +409,7 @@ export class SemanticMemoryStateGridStore extends GridStore {
       createdAt,
       event.occurred_at
     );
+    return record;
   }
 }
 
