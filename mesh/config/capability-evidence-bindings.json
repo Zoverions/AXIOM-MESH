@@ -33,6 +33,8 @@
       "test": "full four-service path enforces auth, idempotency, consent, export, and audit",
       "assertions": [
         "assert.equal(replay.idempotent_replay, true);",
+        "assert.equal(capabilityCommit.status, 201);",
+        "assert.ok(consumptionReceipt);",
         "assert.equal((await capabilityReplay.json()).error.code, 'capability_replayed');"
       ]
     },
