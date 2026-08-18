@@ -100,7 +100,7 @@ test('external memory cannot self-promote instruction authority', () => {
       authority_tier: 'owner-approved-instruction',
       review_state: 'owner-reviewed'
     })),
-    /cannot self-promote authority|requires explicit owner review evidence/
+    /requires explicit owner review evidence|cannot self-promote authority/
   );
 });
 
@@ -121,11 +121,28 @@ test('only the owner can explicitly approve an instruction candidate', () => {
   assert.equal(approved.authority_tier, 'owner-approved-instruction');
   assert.equal(approved.review_state, 'owner-reviewed');
   assert.equal(approved.review_actor, 'owner.alice');
+  assert.equal(approved.review_decision, 'approve-instruction');
+  assert.equal(approved.reviewed_from_provenance_digest, record.provenance_digest);
   assert.equal(
     approved.review_request_digest,
     semanticMemoryReviewRequestDigest(record, 'approve-instruction')
   );
-  assert.equal(evaluateSemanticMemoryUse(approved, 'privileged-instruction').allow, true);
+  assert.deepEqual(evaluateSemanticMemoryUse(approved, 'privileged-instruction'), {
+    allow: false,
+    code: 'semantic_memory_review_evidence_unverified'
+  });
+  assert.equal(
+    evaluateSemanticMemoryUse(approved, 'privileged-instruction', {
+      verified_review_request_digest: approved.review_request_digest
+    }).allow,
+    true
+  );
+  assert.deepEqual(
+    evaluateSemanticMemoryUse(approved, 'privileged-instruction', {
+      verified_review_request_digest: D
+    }),
+    { allow: false, code: 'semantic_memory_review_evidence_mismatch' }
+  );
 });
 
 test('review request substitution fails closed', () => {
@@ -146,6 +163,32 @@ test('review request substitution fails closed', () => {
       decision: 'approve-instruction'
     }),
     /review request digest does not match the exact transition/
+  );
+});
+
+test('persisted review evidence is self-consistent and chained to the prior provenance state', () => {
+  const base = normalizeSemanticMemoryProvenance(remoteInstruction());
+  const approved = ownerReviewSemanticMemory(base, reviewArgs(base, 'approve-instruction'));
+  assert.deepEqual(normalizeSemanticMemoryProvenance(approved), approved);
+
+  const { provenance_digest: _ignored, ...tamperedPrior } = approved;
+  assert.throws(
+    () => normalizeSemanticMemoryProvenance({
+      ...tamperedPrior,
+      reviewed_from_provenance_digest: D
+    }),
+    /review request digest does not match review evidence/
+  );
+
+  const quarantined = ownerReviewSemanticMemory(base, reviewArgs(base, 'quarantine'));
+  const { provenance_digest: _ignored2, ...tamperedOutcome } = quarantined;
+  assert.throws(
+    () => normalizeSemanticMemoryProvenance({
+      ...tamperedOutcome,
+      authority_tier: 'owner-approved-instruction',
+      review_state: 'owner-reviewed'
+    }),
+    /Quarantine review evidence does not match the resulting state/
   );
 });
 
@@ -176,6 +219,7 @@ test('owner review can adopt external content as ordinary owner memory without i
   const approved = ownerReviewSemanticMemory(record, reviewArgs(record, 'approve-memory'));
   assert.equal(approved.authority_tier, 'owner-memory');
   assert.equal(approved.review_state, 'owner-reviewed');
+  assert.equal(approved.reviewed_from_provenance_digest, record.provenance_digest);
   assert.equal(evaluateSemanticMemoryUse(approved, 'ordinary-retrieval').allow, true);
   assert.equal(evaluateSemanticMemoryUse(approved, 'privileged-instruction').allow, false);
 });
