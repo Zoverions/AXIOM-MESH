@@ -36,6 +36,7 @@ export class AuthenticatedSemanticMemoryGridStore extends SemanticMemoryStateGri
         atomic_memory_and_provenance: true,
         exact_invocation_binding: true,
         exact_mutation_completion_binding: true,
+        generic_memory_put_append: false,
         public_routes: false,
         production_store_selected: false,
         provider_autowrites: false,
@@ -43,6 +44,15 @@ export class AuthenticatedSemanticMemoryGridStore extends SemanticMemoryStateGri
         downstream_effect_authority: false
       })
     };
+  }
+
+  appendEvents({ traceId, actor, events }) {
+    if (Array.isArray(events) && events.some(event => event?.kind === 'memory.put')) {
+      throw new ValidationError(
+        'Authenticated semantic ingestion store rejects bare memory.put append; use recordAuthenticatedOwnerMemory'
+      );
+    }
+    return super.appendEvents({ traceId, actor, events });
   }
 
   recordAuthenticatedOwnerMemory({
@@ -79,7 +89,6 @@ export class AuthenticatedSemanticMemoryGridStore extends SemanticMemoryStateGri
     });
     const completion = normalizeBoundMemoryCompletion(completedEvent, {
       traceId: trace,
-      actor: owner,
       intentId: intent,
       accepted,
       memory
