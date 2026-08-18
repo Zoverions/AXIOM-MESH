@@ -403,7 +403,7 @@ test('portable receipt requires executor credential to match the A4 target ident
     executorIdentityCredential: wrongCredential,
     trustedExecutorIssuerPublicKey: wrongIssuer.publicKey,
     executorOperationalPrivateKey: wrongOperational.privateKey
-  }), /executor principal does not match handoff intended executor|credential does not match handoff target identity/);
+  }), /machine identity credential principal_id mismatch|executor principal does not match handoff intended executor|credential does not match handoff target identity/);
 });
 
 test('portable receipt rejects executor operational key substitution', () => {
