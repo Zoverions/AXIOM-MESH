@@ -2,8 +2,8 @@
   "schema": "axiom-agent-signed-handoff-threat-model.v1",
   "repository": "Zoverions/AXIOM-MESH",
   "phase": "agent-trust-a4a-signed-handoff-proposal",
-  "scope": "Portable Ed25519-signed task handoff proposal bound to A1 machine identity and A2 authority-manifest evidence. No delegation grant or execution authority is created.",
-  "core_invariant": "A signed handoff proves which operational identity signed an exact task proposal under an exact authority snapshot. It does not prove the recipient is authorized to execute it and cannot substitute for live policy, revocation, approval, grant, lifecycle-consumption, or effect-admission checks.",
+  "scope": "Portable Ed25519-signed task handoff proposal bound to A1 sender machine identity, A2 authority-manifest evidence, and opaque recipient/executor identity-context digests. No delegation grant or execution authority is created.",
+  "core_invariant": "A signed handoff proves which operational identity signed an exact task proposal under an exact authority snapshot. It does not prove the recipient or intended executor is trusted or authorized, and cannot substitute for live policy, revocation, approval, grant, lifecycle-consumption, or effect-admission checks.",
   "attack_classes": [
     {
       "id": "sender-or-key-substitution",
@@ -11,9 +11,14 @@
       "controls": ["A1 credential verification", "operational private/public key ID equality", "exact credential digest binding", "exact authority-manifest digest binding"]
     },
     {
+      "id": "target-identity-substitution",
+      "risks": ["same recipient name rebound to another identity context", "same executor name rebound to another runtime identity", "opaque target digest mistaken for independently verified identity"],
+      "controls": ["required recipient_identity_digest", "required intended_executor_identity_digest", "optional independent expected-digest checks", "target digests are signed commitments only and do not create trust or authority"]
+    },
+    {
       "id": "task-substitution",
-      "risks": ["change recipient", "change intended executor", "change action", "change purpose", "change destination", "change input", "change causal parent"],
-      "controls": ["canonical statement digest", "sender Ed25519 signature", "optional independent expected-recipient/executor/input/parent checks", "exact A2 requestability validation"]
+      "risks": ["change recipient", "change intended executor", "change target identity digest", "change action", "change purpose", "change destination", "change input", "change causal parent"],
+      "controls": ["canonical statement digest", "sender Ed25519 signature", "independent expected-recipient/executor/identity-digest/input/parent checks", "exact A2 requestability validation"]
     },
     {
       "id": "authority-widening",
@@ -49,6 +54,7 @@
   "known_nonclaims": [
     "The handoff is not a bearer token, grant, approval, capability token, delegation record, or execution admission.",
     "Cross-agent delivery does not grant the recipient authority.",
+    "Recipient/executor identity-context digests are signed target commitments, not independent proof those identities are trusted, current, or authorized.",
     "The handoff does not prove global identity/revocation currentness.",
     "The handoff does not consume one-time authority or prevent replay by itself.",
     "The handoff does not create a remote executor or transport endpoint.",
@@ -64,6 +70,7 @@
     "handoff_is_authorization": false,
     "execution_authorized": false,
     "delegation_authorization_claimed": false,
+    "target_identity_digests_independently_verified": false,
     "authority_effect": "none",
     "network_effect": false,
     "filesystem_effect": false,
