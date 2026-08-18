@@ -163,16 +163,16 @@ function parsePublicKey(value, label) {
   return key;
 }
 
-function assertSemantics(statement) {
+function assertSuppliedSemantics(value) {
   for (const [key, expected] of Object.entries(SEMANTICS)) {
-    if (statement[key] !== expected) {
+    if (value[key] !== expected) {
       throw new ValidationError(`agent signed handoff ${key} must remain ${String(expected)}`);
     }
   }
-  if (statement.remaining_delegation_depth !== 0) {
+  if (value.remaining_delegation_depth !== 0) {
     throw new ValidationError('agent signed handoff v1 remaining_delegation_depth must remain zero');
   }
-  if (statement.delegation_chain_head_digest !== null) {
+  if (value.delegation_chain_head_digest !== null) {
     throw new ValidationError('agent signed handoff v1 cannot claim an authority-bearing delegation chain');
   }
 }
@@ -223,6 +223,7 @@ function validateAgainstManifest(statement, manifest, credential) {
 
 function normalizeStatement(raw, { manifest, credential } = {}) {
   const value = exactObject(raw, STATEMENT_KEYS, 'agent signed handoff statement');
+  assertSuppliedSemantics(value);
   const notBefore = canonicalTimestamp(value.not_before, 'agent signed handoff not_before');
   const expiresAt = canonicalTimestamp(value.expires_at, 'agent signed handoff expires_at');
   const notBeforeMs = new Date(notBefore).valueOf();
@@ -267,10 +268,9 @@ function normalizeStatement(raw, { manifest, credential } = {}) {
     expires_at: expiresAt,
     nonce: identifier(value.nonce, 'agent signed handoff nonce'),
     idempotency_key: identifier(value.idempotency_key, 'agent signed handoff idempotency_key'),
-    remaining_delegation_depth: value.remaining_delegation_depth,
+    remaining_delegation_depth: 0,
     ...SEMANTICS
   });
-  assertSemantics(statement);
   validateAgainstManifest(statement, manifest, credential);
   return statement;
 }
