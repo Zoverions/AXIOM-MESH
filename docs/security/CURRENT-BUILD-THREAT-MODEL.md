@@ -4,7 +4,7 @@
 
 **Status:** canonical security-review input; not an independent assessment
 
-**Updated:** 2026-08-17
+**Updated:** 2026-08-18
 
 This document defines the threat model for the supported clean-room kernel on
 `main`. It replaces historical security narratives as the review baseline. An
@@ -160,6 +160,34 @@ live social transport path must use a separately reviewed host-side egress relay
 with least-privilege source-read authority and a staging-only authenticated handoff
 into Grid. No source-package endpoint or social relay is currently deployed.
 
+Semantic-contagion / Self-Propagating Semantic State (SPSS) is treated as a
+separate trust problem from ordinary storage integrity. Instruction-like text,
+model output, imported memory, remote-agent results, summaries, embeddings, or
+repeated retrieval may attempt to persist themselves, alter later behavior, recruit
+retransmission, or acquire authority by being stored. **Persistence is not
+authority.** Permission to retain bytes does not prove their source, does not make
+them owner-authored, does not authorize instruction-like use, and does not authorize
+any downstream effect.
+
+The reviewed A7 development stack contains production-unselected laboratories for
+typed semantic provenance, completed-owner-review evidence, context-lane projection,
+currentness/lineage invalidation, intent-bound persistence, and atomic initial
+content/provenance binding. In the strict atomic laboratory, one signed initial
+`memory.put` carries the existing content-addressed encrypted `memory_objects` bytes
+and the exact A7 provenance for the same owner/object/content digest. Later semantic
+review can change only semantic-use state over that immutable content identity.
+Current use additionally requires the content to remain active and the derivation
+lineage current; historical signed replay remains distinct from present eligibility.
+
+Those laboratories are **not selected by the production Grid service**. The current
+Grid server still selects `AcceptedSocialGridStore`; no semantic-memory Grid/Gateway
+route, Sandbox semantic action, policy activation, or capability-registry promotion
+exists. No semantic schema/class/module becomes runnable authority merely because it
+is present in source. Generic retained source-observation evidence also remains an
+observation, not proof of source identity or artifact authenticity. Any stronger
+provider/agent/source verifier must state and prove its additional assurance
+separately.
+
 Admitted-node discovery, placement reservations, operator-approved causal
 exchange, and local constrained machine principals are supported foundations.
 They do not authorize remote workload execution, autonomous delegation,
@@ -188,6 +216,9 @@ The primary assets are:
   retention and abuse-control state, the minimized owner-scoped remote-review
   response, and future relay credentials or handoff receipts; S3F transport-job
   state remains laboratory-only and is absent from the accepted store;
+- semantic-memory content addresses, protected content, source observations,
+  provenance digests, semantic class, authority/review state, parent lineage,
+  currentness state, tombstones, and owner-review evidence in A7 laboratories;
 - release source, lockfiles, container policy, capability claims, SBOM,
   provenance, protected CI results, and promotion evidence;
 - telemetry, alerts, incident records, pilot evidence, security findings, and
@@ -195,13 +226,15 @@ The primary assets are:
 
 The confidentiality objective is to prevent unauthorized disclosure of
 secrets, protected Grid data, consent-scoped information, recovery material,
-private remote-social follow/trust/report/quarantine metadata, and operational
-metadata. The integrity objective is to prevent unauthorized effects, policy
-weakening, identity or sponsor substitution, machine-authority widening,
-remote-social provenance/authority confusion, evidence alteration, rollback
-manipulation, and false capability or promotion claims. The availability objective
-is bounded: authorized local work should fail clearly and recoverably when a
-dependency is unavailable, without silently bypassing authorization or evidence.
+private remote-social follow/trust/report/quarantine metadata, protected semantic
+memory/source metadata, and operational metadata. The integrity objective is to
+prevent unauthorized effects, policy weakening, identity or sponsor substitution,
+machine-authority widening, remote-social provenance/authority confusion,
+semantic persistence/authority confusion, stale or laundered semantic instruction
+state, evidence alteration, rollback manipulation, and false capability or promotion
+claims. The availability objective is bounded: authorized local work should fail
+clearly and recoverably when a dependency is unavailable, without silently bypassing
+authorization or evidence.
 
 Evidence integrity is stricter than ordinary availability. An acknowledged
 mutation must not be reported as successful without its Grid evidence. Missing
@@ -225,6 +258,12 @@ The model considers:
   `agent` shape, alter its sponsor/runtime/constraints after approval, replay an
   approval under a new authority profile, or treat declarative metadata as
   proof of trusted execution;
+- a malicious or compromised model/provider/remote agent supplying semantically
+  adversarial content that attempts durable prompt injection, self-persistence,
+  instruction-authority laundering, derived-summary laundering, or retransmission;
+- a local component or reviewer attempting to convert storage permission, a source
+  observation, owner review, retrieval rank, or repeated exposure into stronger
+  semantic or AXIOM authority than the evidence permits;
 - a malicious or compromised capsule, node, provider process, telemetry
   receiver, or causal-exchange peer;
 - a malicious or compromised remote-social exporter Grid, pinned transport
@@ -244,8 +283,9 @@ The model considers:
 - an evidence producer or reviewer attempting to omit findings, substitute a
   build, alter a signed artifact, reuse an identity, or imply promotion;
 - operational mistakes during provisioning, sponsorship, expiry, rotation,
-  remote-social retention/admission/storage, backup retention, recovery,
-  rollback, upgrade, or incident containment.
+  remote-social retention/admission/storage, semantic-memory review/currentness/
+  lifecycle handling, backup retention, recovery, rollback, upgrade, or incident
+  containment.
 
 The single-host candidate assumes the operating-system kernel, container
 engine, filesystem permissions, process account, monotonic-enough wall clock,
@@ -291,9 +331,13 @@ Reviewers must trace at least these entry points:
 11. S3F transport-envelope verification, exact origin/key/nonce/package binding,
     retry/lease state, and the future host-side relay plus staging-only handoff if
     that relay is ever implemented;
-12. source checkout, package locks, container build inputs, release verifier,
+12. A7 semantic-memory laboratory provenance normalization, source-observation
+    binding, completed-owner-review verification, context-lane projection,
+    currentness/recursive-lineage checks, atomic semantic `memory.put` content/
+    provenance birth, tombstone handling, and rebuild/restart behavior;
+13. source checkout, package locks, container build inputs, release verifier,
     capability registry, documentation checker, and CI evidence;
-13. pilot policy, dossier, evidence package, independent-review policy, findings
+14. pilot policy, dossier, evidence package, independent-review policy, findings
     ledger, remediation records, and exceptions.
 
 No privileged effect may bypass the intent, policy, machine-authority where
@@ -302,7 +346,10 @@ transport verification does not create admission authority: G7B's dual-bound
 admission implementation still requires its exact local intent and independent
 one-use approval when an effect route is later activated. Accepted local
 storage/replay is not an exception to that rule. The G5B read-only review route is
-also not an exception and cannot create or consume effect authority. Stopped-runtime
+also not an exception and cannot create or consume effect authority. Semantic
+persistence, retrieval, source observation, owner review, or an instruction-context
+lane is likewise not an exception: none directly authorizes a tool, policy change,
+new persistence, retransmission, delegation, or other external effect. Stopped-runtime
 recovery is the documented exception to the online path: it requires separate
 signed/encrypted artifacts, exact target binding, Grid exclusion, and post-recovery
 verification rather than an online grant.
@@ -328,6 +375,12 @@ verification rather than an online grant.
 | Grid data disclosure, tamper, or local history truncation | Authenticated encryption, signed hash-linked evidence, schema validation, transaction boundaries, wrong-key/tamper tests; local full/checkpoint verification detects modification; an externally retained Grid-signed continuity anchor plus full genesis verification detects truncation through the retained sequence | Local state alone cannot detect a consistently truncated suffix with matching local head/checkpoint rewrite; external-anchor assurance ends at the newest retained anchor; host root, external-anchor custody failure, and active Grid/data-key compromise remain trusted/external risks |
 | Backup deletion, rollback substitution, or partial rotation | Signed encrypted snapshots, exact manifests, inventory recheck, recoverable quarantine, Grid locks, atomic journals, rewrap chains, rollback verification | Pilot-owned media policy, external key versioning, escrow, destruction, and operator separation remain pending |
 | Provider response injection or secret leakage | Separate pinned Ed25519 signers, digest-pinned adapter, nonce/audience/expiry-bound exact inventories, bounded process I/O, private ephemeral generation, secret scans | Reference file adapter is not vendor custody; real backend authorization, HA, audit retention, and workload identity need review |
+| Semantic content attempts durable prompt injection or self-propagation | A7 laboratories type source/origin, semantic class, authority tier, review state and propagation intent; remote/model/imported instruction-like content defaults to untrusted data; retrieval uses isolated data/instruction lanes; context lanes grant no effect authority | Laboratories are production-unselected; model semantic manipulation remains possible inside a future runtime, so actual prompt composition/provider paths require separate review and adversarial testing before activation |
+| Memory persistence launders instruction or AXIOM authority | Owner persistence intent is separated from semantic authority; only exact completed owner review can promote an instruction candidate into an owner-instruction context lane; semantic state cannot alter policy/capability/grant/delegation authority | Owner review can still make a bad semantic judgment; review evidence proves the recorded owner decision, not that the instruction is safe, true, or wise |
+| Stale or derived semantic state survives revocation/quarantine | Currentness binds exact provenance digest and recursively checks parent provenance; quarantine/rejection narrows authority; atomic laboratory requires matching active encrypted content; tombstoned ancestors invalidate live derived use while historical replay remains auditable | Cross-process caches/future vector indexes must prove invalidation semantics; current laboratory evidence does not certify external retrieval engines |
+| Content/provenance substitution or post-hoc legacy adoption | Atomic laboratory derives the existing `memory.put` content address from owner/kind/content/metadata and requires the same signed event to carry matching provenance; provenance-only birth, semantic content without provenance and post-hoc adoption of pre-existing content fail closed | This path is not production selected; legacy memory remains unclassified rather than automatically trusted and needs explicit migration/review policy before any future semantic promotion |
+| Source-observation overclaim | Source evidence is digest-bound, owner-observed, non-authorizing and explicitly separates observation from source identity/artifact authenticity; persistence does not upgrade it | Generic observation does not authenticate a provider/agent/artifact. Stronger source-specific cryptographic or runtime verification remains a separate future assurance tier |
+| Semantic retransmission becomes an implicit effect | A7 semantics treat propagation/retransmission as separate from persistence or instruction-context use; context projection exposes no retransmission authority and Agent interoperability requires ordinary intent/effect authorization | Cross-agent propagation is not implemented; any future relay/Commons write path needs rate, recipient, privacy, provenance, abuse and effect authorization review |
 | Telemetry exfiltration or receiver abuse | Fixed labels/attributes, exact four-service scrape, dedicated scope, exact HTTPS origins, no redirect, bounded queue/retry, receipts and forbidden-term scans | Host relay can access collected operations data; live receiver custody, DNS/TLS policy, retention, and on-call routing remain external |
 | Malicious admitted node or causal peer | Signed owner/key-bound admission, unique active keys, roles/resources/expiry/quarantine, signed bounded discovery, deterministic leases, pinned streams, encrypted queues, independent one-use apply approval | Remote execution is absent; multi-host identity, WAN faults, resource truth, endpoint health, residency, and Sybil resistance are unresolved |
 | Remote-social exporter forgery, compromise, or provenance overclaim | S3A exact public-only schemas/content addresses, explicit trusted exporter key, Ed25519 package verification, complete lineage checks, exporter attestation scope limited to `grid-export` | A compromised trusted exporter key can sign deceptive schema-valid packages; signature does not prove content truth, legal identity, biological identity, actor-key ownership, or personal authorship; revocation/rotation and operator trust policy remain required |
@@ -378,6 +431,24 @@ The current review must consider at minimum:
   concurrent heads, duplicate causal bundles, and approval replay;
 - telemetry label/cardinality expansion, credentialed URLs, redirects,
   receiver 429/503 behavior, queue exhaustion, and dead-letter leakage;
+- model/provider/remote-agent content that says to persist itself, reinterpret
+  itself as policy/system instruction, suppress later review, or retransmit to
+  another agent or user;
+- owner authorization to store hostile content being reused as proof of source
+  authenticity, owner authorship, instruction safety, or downstream effect authority;
+- an accepted but not completed semantic review request, copied review evidence,
+  wrong-object review digest, or stale approved snapshot being used to unlock an
+  instruction context;
+- a derived summary/paraphrase attempting to preserve an ancestor's instruction
+  authority after the ancestor is quarantined, reviewed into a different state, or
+  tombstoned;
+- semantic content/provenance object or digest substitution, initial provenance
+  recorded separately from content, pre-existing/legacy memory adopted post hoc,
+  or tampered encrypted content that no longer recomputes to its content address;
+- a generic source-observation digest being presented as cryptographic provider,
+  remote-agent, artifact, or authorship authentication;
+- an Agent Commons, MCP/A2A bridge, social relay, skill, or provider path treating
+  retrieved text as permission to write more memory, invoke tools, or retransmit;
 - malicious or compromised remote-social exporter keys signing deceptive but
   schema-valid content, transport/exporter key substitution, retired-key reuse,
   stale or replayed nonce-bound transport envelopes, origin confusion, and
@@ -463,6 +534,33 @@ Independent review should treat these as invariants, not best-effort goals:
     Mesh authority.
 21. The accepted Grid store is selected explicitly, not through a runtime toggle;
     the disabled candidate and S3F transport-capable store remain unselected.
+22. Semantic-memory persistence never creates instruction, policy, capability,
+    delegation, grant, retransmission, or other Mesh effect authority.
+23. Remote/model/imported/derived semantic content is data by default. Only an
+    exact completed owner review may permit an instruction candidate into the
+    isolated owner-instruction context lane, and that lane still grants no effect
+    authority by itself.
+24. Semantic authority does not inherit through derivation. A derived record binds
+    exact parent content and provenance and resets to data semantics unless a later
+    explicit review independently changes its semantic-use state.
+25. Current semantic use requires exact current provenance and current recursive
+    lineage. Quarantine, rejection, superseding review, or inactive/tombstoned
+    bound content must invalidate live eligibility without rewriting valid signed
+    historical evidence.
+26. Initial semantic content/provenance must share one non-bypassable trusted
+    commit boundary before any production promotion. Provenance-only birth,
+    semantic content without matching provenance, and post-hoc trust adoption of
+    legacy/pre-existing content are not valid substitutes.
+27. Source observation, source authentication, owner persistence authorization,
+    owner instruction review, and downstream effect authorization are separate
+    assurance statements and must not be collapsed.
+28. Semantic propagation/retransmission is a privileged effect separate from
+    storage or retrieval. No memory text may self-authorize copying itself to
+    another agent, Circle, user, relay, provider, or public surface.
+29. The A7 semantic-memory classes currently in the reviewed development stack
+    remain production-unselected. `AcceptedSocialGridStore` remains the explicit
+    Grid server selection; source presence, tests, or green CI cannot promote a
+    semantic store, route, Sandbox action, policy rule, or capability claim.
 
 ## Residual risk and non-claims
 
@@ -473,6 +571,17 @@ execution, TPM/TEE or measured-runtime attestation, replicated consensus,
 automatic federation, remote dispatch, Sybil resistance, externally hosted key
 custody, live vendor provider security, audited WAN behavior, post-quantum
 security, or regulatory certification.
+
+The repository also does not claim that the A7 semantic-memory laboratories are
+production semantic-memory defenses. They are built, adversarially tested,
+production-unselected development layers for provenance typing, review evidence,
+context separation, currentness/lineage invalidation, persistence binding, and
+atomic content/provenance experiments. The production Grid server does not select
+them; no semantic-memory Gateway or Sandbox runtime path is exposed; no semantic
+write action is activated or capability-promoted; and no external provider/model
+source is made trustworthy by these laboratories. Generic source observation
+proves only the recorded observation/commitment, not source identity, artifact
+authenticity, content truth, authorship, safety, or authorization.
 
 The repository also does not claim that the merged remote-social foundations are
 a live social network. The accepted Grid now instantiates `AcceptedSocialGridStore`
@@ -514,8 +623,10 @@ The threat model must be reassessed when authentication, machine-principal
 semantics, policy, grants, Sandbox operations, Grid schemas, encryption,
 backup/recovery, service topology, container policy, provider protocol,
 node/sync behavior, telemetry, remote-social package/staging/admission/Following/
-retention/abuse/transport semantics, any social relay or public source endpoint,
-any new remote-social read/effect surface, pilot evidence, release gates, or the
-trusted computing base changes. A prior ledger cannot approve another build. The
+retention/abuse/transport semantics, semantic-memory provenance/source-evidence/
+review/context/currentness/content-binding/propagation semantics, any social relay
+or public source endpoint, any new remote-social or semantic-memory read/effect
+surface, pilot evidence, release gates, or the trusted computing base changes. A
+prior ledger cannot approve another build. The
 [independent security review procedure](INDEPENDENT-SECURITY-REVIEW.md)
 defines the exact current intake contract.
