@@ -109,12 +109,68 @@ jobs:
             if (durable.statement.generation !== effect.statement.durable_final_generation || durable.statement.record_digest !== effect.statement.durable_final_record_digest) throw new Error("effect durable head binding mismatch");
             for (const value of Object.values(bundle.claims)) if (value !== false) throw new Error("effect evidence bundle attempts claim elevation");
           '
-      - name: Upload Linux isolation and read-system-facts effect evidence
+      - name: Run plan-bound collect-sanitized-logs effect
+        working-directory: mesh
+        env:
+          AXIOM_AGENT_COLLECT_SANITIZED_LOGS_EFFECT_LAB: "1"
+          AXIOM_AGENT_LINUX_ISOLATION_RECEIPT: ${{ runner.temp }}/axiom-agent-linux-isolation-conformance.json
+        run: |
+          node src/collect-sanitized-logs-effect-drill.mjs \
+            > "$RUNNER_TEMP/axiom-agent-collect-sanitized-logs-effect.json"
+      - name: Reverify collect-sanitized-logs effect evidence
+        working-directory: mesh
+        env:
+          LOG_EFFECT_BUNDLE: ${{ runner.temp }}/axiom-agent-collect-sanitized-logs-effect.json
+          ISOLATION_RECEIPT: ${{ runner.temp }}/axiom-agent-linux-isolation-conformance.json
+        run: |
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            import { digestObject } from "./src/lib/canonical.mjs";
+            import { verifyAgentExecutorDurableStateReceipt } from "./src/lib/agent-executor-durable-format.mjs";
+            import { verifyAgentCollectSanitizedLogsEffectAdmission } from "./src/lib/agent-collect-sanitized-logs-effect-admission.mjs";
+            import { verifyAgentCollectSanitizedLogsEffectReceipt } from "./src/lib/agent-collect-sanitized-logs-effect.mjs";
+            import { verifyAgentLinuxIsolationConformanceReceipt } from "./src/lib/agent-linux-isolation-conformance.mjs";
+            const bundle = JSON.parse(readFileSync(process.env.LOG_EFFECT_BUNDLE, "utf8"));
+            const isolation = verifyAgentLinuxIsolationConformanceReceipt(JSON.parse(readFileSync(process.env.ISOLATION_RECEIPT, "utf8")));
+            const { bundle_digest, ...body } = bundle;
+            if (bundle_digest !== digestObject(body)) throw new Error("sanitized-log effect evidence bundle digest mismatch");
+            if (bundle.revision !== process.env.GITHUB_SHA || bundle.isolation_receipt_digest !== isolation.receipt_digest) throw new Error("sanitized-log effect revision/isolation binding mismatch");
+            verifyAgentCollectSanitizedLogsEffectAdmission(bundle.admission, {
+              trustedIssuerPublicKey: bundle.admission_issuer_public_key,
+              plan: bundle.plan,
+              expectedRevision: bundle.revision,
+              now: bundle.effect_receipt.statement.started_at
+            });
+            const logConsumed = verifyAgentExecutorDurableStateReceipt(bundle.durable_consume_head_receipt, {
+              trustedStorePublicKey: bundle.durable_store_public_key,
+              plan: bundle.plan,
+              expectedStoreId: bundle.effect_receipt.statement.durable_store_id
+            });
+            const logEffect = verifyAgentCollectSanitizedLogsEffectReceipt(bundle.effect_receipt, {
+              trustedExecutorPublicKey: bundle.executor_public_key,
+              trustedAdmissionIssuerPublicKey: bundle.admission_issuer_public_key,
+              trustedDurableStorePublicKey: bundle.durable_store_public_key,
+              durableConsumeHeadReceipt: bundle.durable_consume_head_receipt,
+              plan: bundle.plan,
+              admission: bundle.admission,
+              isolationConformanceReceipt: isolation
+            });
+            if (logConsumed.statement.lifecycle_status !== "consumed" || logConsumed.statement.generation !== logEffect.statement.durable_consume_generation || logConsumed.statement.record_digest !== logEffect.statement.durable_consume_record_digest || logConsumed.receipt_digest !== logEffect.statement.durable_consume_head_receipt_digest) throw new Error("sanitized-log consumed durable head binding mismatch");
+            const logDurable = verifyAgentExecutorDurableStateReceipt(bundle.durable_head_receipt, {
+              trustedStorePublicKey: bundle.durable_store_public_key,
+              plan: bundle.plan,
+              expectedStoreId: logEffect.statement.durable_store_id
+            });
+            if (logDurable.statement.generation !== logEffect.statement.durable_final_generation || logDurable.statement.record_digest !== logEffect.statement.durable_final_record_digest) throw new Error("sanitized-log final durable head binding mismatch");
+            for (const value of Object.values(bundle.claims)) if (value !== false) throw new Error("sanitized-log effect evidence bundle attempts claim elevation");
+          '
+      - name: Upload Linux isolation and bounded effect evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: axiom-agent-linux-isolation-conformance-${{ github.sha }}
           path: |
             ${{ runner.temp }}/axiom-agent-linux-isolation-conformance.json
             ${{ runner.temp }}/axiom-agent-read-system-facts-effect.json
+            ${{ runner.temp }}/axiom-agent-collect-sanitized-logs-effect.json
           if-no-files-found: error
           retention-days: 90
