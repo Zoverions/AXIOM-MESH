@@ -52,6 +52,28 @@ agent/runtime/client
 
 No plugin, skill file, prompt, model output, agent reputation score, remote Agent Card, MCP tool declaration, or framework-specific permission setting may bypass that path.
 
+The same rule applies to durable semantic state. Retrieval, summarization,
+persistence, embedding, ranking, or repeated exposure must not convert text into
+AXIOM authority. A model/provider/remote-agent result may be retained only with
+explicit source and lineage semantics, and remains data by default. Permission to
+persist content is distinct from evidence that the source is authentic, distinct
+from owner review that permits instruction-like use, and distinct again from the
+intent/policy/grant sequence required for any external effect.
+
+Derived memory must not inherit instruction authority merely because its parent had
+it. Quarantine, rejection, superseding review, content tombstoning, or stale parent
+provenance must narrow or invalidate live semantic use; they must never widen it.
+Historical signed evidence remains auditable separately from current eligibility.
+No memory lane—including an explicitly owner-reviewed instruction lane—may directly
+change policy, capabilities, grants, delegation, system constraints, persistence
+rights, or retransmission rights.
+
+A write-capable Agent Commons, MCP/A2A adapter, social relay, skill system, or remote
+agent exchange that can persist or retransmit semantic content must therefore pass
+the same durable provenance, currentness, content-binding, and effect-authorization
+gates. Read-only discovery does not gain a write path merely because an upstream
+agent requests one.
+
 ## 2. Protocol-neutral core, standard-compatible edges
 
 AXIOM should avoid inventing a new transport when a standard protocol can carry the request safely. Protocols are edge adapters; AXIOM semantics remain the authority layer.
@@ -312,6 +334,11 @@ Future agent interoperability must address at least:
 
 - malicious or compromised agent runtimes;
 - prompt injection and context poisoning;
+- durable semantic contagion: instruction-like content attempting to persist itself, change future behavior, recruit retransmission, or survive through summaries/derivations;
+- authority laundering through memory persistence, retrieval, ranking, repeated exposure, or owner approval to store content;
+- stale semantic authority after quarantine, rejection, superseding review, content tombstone, or changed parent provenance;
+- derived-memory laundering in which a summary/paraphrase attempts to inherit a parent's instruction authority;
+- source/provenance substitution, post-hoc adoption of pre-existing memory, or false claims that a source observation proves source identity or artifact authenticity;
 - tool-description poisoning;
 - malicious skill/package instructions;
 - confused-deputy attacks across agents;
@@ -331,7 +358,11 @@ Future agent interoperability must address at least:
 - remote tool changes after discovery;
 - policy bypass via alternate protocol paths.
 
-Every compatibility adapter must prove that changing the protocol does not change the underlying authority result.
+Every compatibility adapter must prove that changing the protocol does not change the underlying authority result. The same parity requirement applies to memory: changing the model, runtime, protocol, social source, skill format, or agent-to-agent transport must not change whether semantic content is data, owner-reviewed instruction context, quarantined state, or eligible for a separately authorized effect.
+
+For durable memory, four assurance questions must remain independent: **who or what was observed as the source; whether that source/artifact was actually authenticated; whether the owner authorized persistence or later instruction-like use; and whether a specific external effect is currently authorized.** A source-observation record may bind bytes and context while explicitly proving none of the other three. A model or agent cannot promote itself by supplying a better-sounding provenance label.
+
+Where the existing governed `memory.put` path can express the required semantics, future integration should prefer extending its evidence binding rather than creating a parallel production write authority. Initial semantic content and its provenance must have one non-bypassable trusted commit boundary; later review may change semantic-use state but not rewrite content origin or manufacture AXIOM authority.
 
 ## 13. Promotion sequence
 
@@ -365,7 +396,14 @@ This architecture does not claim that current `0.12.0-dev.3`:
 - provides a production capsule marketplace;
 - makes external agent outputs trustworthy;
 - allows autonomous agents to bypass human, owner, policy, consent, or independent-approval requirements;
-- has production-promoted remote federation.
+- has production-promoted remote federation;
+- selects any A7 semantic-memory laboratory store in the production Grid service;
+- exposes a semantic-memory Gateway/Sandbox runtime path or production capability claim;
+- proves cryptographic source identity or artifact authenticity merely because owner-observed source evidence is retained;
+- turns persistence, owner review, retrieval, or an instruction-context lane into tool, policy, capability, delegation, retransmission, or system-prompt authority; or
+- treats legacy/pre-A7 memory as trusted semantic state without reconstructable evidence.
+
+The repository contains reviewed A7 laboratory code for typed provenance, owner-review evidence, context lanes, currentness/lineage invalidation, authenticated persistence binding, and atomic content/provenance experiments. Those built laboratories are intentionally **production-unselected**. Their presence is evidence for design and adversarial testing, not a current runtime capability or a claim that semantic-contagion/SPSS defenses are deployed.
 
 ## 15. Governing maxim
 
