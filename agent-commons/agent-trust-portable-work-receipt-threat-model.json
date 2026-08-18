@@ -4,6 +4,8 @@
   "phase": "agent-trust-a5a-portable-grid-terminal-receipt",
   "scope": "Executor-signed portable receipt binding an A4 signed handoff proposal, an A1 executor identity credential and an independently Grid-signed terminal machine-intent receipt. No effect-specific receipt or task-success claim is created.",
   "core_invariant": "A portable receipt may prove that an identified executor packaged a verified Grid terminal lifecycle record for the exact handoff. A terminal completed state is not by itself proof of application correctness, truth, concrete effect execution, artifact availability or task success.",
+  "supported_terminal_states": ["completed", "denied", "failed"],
+  "not_yet_supported_terminal_states": ["interrupted", "uncertain", "cancelled"],
   "attack_classes": [
     {
       "id": "executor-identity-substitution",
@@ -27,8 +29,8 @@
     },
     {
       "id": "terminal-success-confusion",
-      "risks": ["completed lifecycle state marketed as task success", "completed echo/process treated as application correctness", "terminal result treated as truth"],
-      "controls": ["task_success_claimed=false", "application_correctness_claimed=false", "truth_claimed=false", "terminal_state_scope=grid-intent-lifecycle-only"]
+      "risks": ["completed lifecycle state marketed as task success", "completed echo/process treated as application correctness", "terminal result treated as truth", "unsupported terminal states silently coerced into supported ones"],
+      "controls": ["task_success_claimed=false", "application_correctness_claimed=false", "truth_claimed=false", "terminal_state_scope=grid-intent-lifecycle-only", "A5a accepts only completed/denied/failed and fails closed on interrupted/uncertain/cancelled until separately modeled"]
     },
     {
       "id": "effect-evidence-confusion",
@@ -59,6 +61,7 @@
   "known_nonclaims": [
     "A5a does not prove concrete effect execution beyond the verified Grid terminal lifecycle record.",
     "A5a does not claim task success, application correctness or truth.",
+    "A5a does not support interrupted, uncertain or cancelled terminal states yet; those remain separately modeled future work.",
     "A5a does not verify availability of reported artifacts or independently verify reported evidence digests.",
     "A5a does not establish global identity, authority or revocation currentness.",
     "A5a does not authorize replay, retry, delegation or execution.",
@@ -67,6 +70,7 @@
   ],
   "next_gates": [
     "A5b bind and independently verify concrete effect-specific executor receipts such as the #1137 read-system-facts receipt",
+    "A5c model interrupted/uncertain/cancelled portable terminal states without conflating them with Grid completed/denied/failed",
     "A6 bind current identity/delegation/revocation evidence consulted at effect admission",
     "A10 independent verifier package for A1/A2/A4/A5 artifact chains",
     "cross-protocol parity tests preserving the same receipt semantics"
