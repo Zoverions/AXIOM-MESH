@@ -108,6 +108,11 @@ export function validateSemanticMemoryContentPayload(
   if (payload.kind !== SEMANTIC_MEMORY_CONTENT_KIND) {
     throw new ValidationError('Semantic memory content kind is invalid');
   }
+  if (!Object.prototype.hasOwnProperty.call(payload, 'semantic_provenance')) {
+    throw new ValidationError(
+      'semantic.memory content requires semantic_provenance in the same signed memory.put event'
+    );
+  }
 
   const address = semanticMemoryContentAddress({
     owner: payload.owner,
