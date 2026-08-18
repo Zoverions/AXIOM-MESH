@@ -18,6 +18,7 @@ import {
   validatePublicWitnessServiceKeyCredentialPath
 } from './public-witness-service-key-lifecycle.mjs';
 import {
+  PublicWitnessServiceKeyObservationStore,
   inspectPublicWitnessServiceKeyPathAgainstObservationSnapshot
 } from './public-witness-service-key-observation-store.mjs';
 
@@ -58,7 +59,7 @@ function commandOperatorKeyId(raw) {
 function lifecycleContext({
   operatorCredentialPath,
   operatorRevocations = [],
-  operatorKeyObservationSnapshot = null,
+  operatorKeyObservationStore = null,
   trustedOperatorRoleRootPublicKey,
   expectedDomainId,
   expectedOperatorId,
@@ -70,11 +71,14 @@ function lifecycleContext({
     expectedRole: PUBLIC_WITNESS_SERVICE_KEY_ROLES.OPERATOR,
     expectedPrincipalId: expectedOperatorId
   });
-  const observation = operatorKeyObservationSnapshot === null
-    ? null
-    : inspectPublicWitnessServiceKeyPathAgainstObservationSnapshot(
+  let observation = null;
+  if (operatorKeyObservationStore !== null) {
+    if (!(operatorKeyObservationStore instanceof PublicWitnessServiceKeyObservationStore)) {
+      throw new ValidationError('public witness source provisioning requires an active local service-key observation store');
+    }
+    observation = inspectPublicWitnessServiceKeyPathAgainstObservationSnapshot(
       operatorCredentialPath,
-      operatorKeyObservationSnapshot,
+      operatorKeyObservationStore.snapshot(),
       {
         trustedRoleRootPublicKey: trustedOperatorRoleRootPublicKey,
         expectedDomainId,
@@ -82,6 +86,7 @@ function lifecycleContext({
         expectedPrincipalId: expectedOperatorId
       }
     );
+  }
   const credential = resolvePublicWitnessServiceKeyCredential(operatorCredentialPath, {
     trustedRoleRootPublicKey: trustedOperatorRoleRootPublicKey,
     operationalKeyId: operatorKeyId,
@@ -108,7 +113,7 @@ export function createPublicWitnessSourceProvisioningCommandWithKeyLifecycle({
   operatorPrivateKey,
   operatorCredentialPath,
   operatorRevocations = [],
-  operatorKeyObservationSnapshot = null,
+  operatorKeyObservationStore = null,
   trustedOperatorRoleRootPublicKey,
   commandId,
   previousAdmissionDigest = null,
@@ -124,7 +129,7 @@ export function createPublicWitnessSourceProvisioningCommandWithKeyLifecycle({
   const context = lifecycleContext({
     operatorCredentialPath,
     operatorRevocations,
-    operatorKeyObservationSnapshot,
+    operatorKeyObservationStore,
     trustedOperatorRoleRootPublicKey,
     expectedDomainId: sourceAdmission?.domain_id,
     expectedOperatorId: operatorId,
@@ -154,7 +159,7 @@ export function createPublicWitnessSourceProvisioningCommandWithKeyLifecycle({
 export function verifyPublicWitnessSourceProvisioningCommandWithKeyLifecycle(raw, {
   operatorCredentialPath,
   operatorRevocations = [],
-  operatorKeyObservationSnapshot = null,
+  operatorKeyObservationStore = null,
   trustedOperatorRoleRootPublicKey,
   expectedDomainId,
   expectedOperatorId,
@@ -164,7 +169,7 @@ export function verifyPublicWitnessSourceProvisioningCommandWithKeyLifecycle(raw
   const context = lifecycleContext({
     operatorCredentialPath,
     operatorRevocations,
-    operatorKeyObservationSnapshot,
+    operatorKeyObservationStore,
     trustedOperatorRoleRootPublicKey,
     expectedDomainId,
     expectedOperatorId,
@@ -200,7 +205,7 @@ export function verifyPublicWitnessSourceProvisioningCommandWithKeyLifecycle(raw
 export function assertPublicWitnessSourceProvisioningCommandEffectAllowed(raw, {
   operatorCredentialPath,
   operatorRevocations = [],
-  operatorKeyObservationSnapshot = null,
+  operatorKeyObservationStore = null,
   trustedOperatorRoleRootPublicKey,
   expectedDomainId,
   expectedOperatorId,
@@ -213,7 +218,7 @@ export function assertPublicWitnessSourceProvisioningCommandEffectAllowed(raw, {
   const command = verifyPublicWitnessSourceProvisioningCommandWithKeyLifecycle(raw, {
     operatorCredentialPath,
     operatorRevocations,
-    operatorKeyObservationSnapshot,
+    operatorKeyObservationStore,
     trustedOperatorRoleRootPublicKey,
     expectedDomainId,
     expectedOperatorId,
@@ -222,7 +227,7 @@ export function assertPublicWitnessSourceProvisioningCommandEffectAllowed(raw, {
   const context = lifecycleContext({
     operatorCredentialPath,
     operatorRevocations,
-    operatorKeyObservationSnapshot,
+    operatorKeyObservationStore,
     trustedOperatorRoleRootPublicKey,
     expectedDomainId,
     expectedOperatorId,
