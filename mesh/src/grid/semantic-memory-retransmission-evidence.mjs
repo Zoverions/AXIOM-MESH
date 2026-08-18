@@ -52,6 +52,7 @@ export function verifySemanticMemoryRetransmissionFromGrid(
   requireGridStore(store);
   const normalized = normalizeSemanticMemoryProvenance(record);
   assertCurrentEvidence(normalized, currentEvidence);
+  assertLiveCurrentState(store, normalized);
   const retransmissionIntent = semanticMemoryRetransmissionIntent(normalized, request);
   const expectedRequestDigest = intentRequestDigest(retransmissionIntent);
   const expectedInputDigest = digestObject(retransmissionIntent.input);
@@ -185,6 +186,7 @@ export function verifySemanticMemoryRetransmissionFromGrid(
 }
 
 export function evaluateSemanticMemoryRetransmission(record, {
+  store,
   authorization,
   current_evidence,
   recipient,
@@ -207,9 +209,11 @@ export function evaluateSemanticMemoryRetransmission(record, {
     return deny('semantic_memory_retransmission_authorization_unverified');
   }
   try {
+    requireGridStore(store);
     assertCurrentEvidence(normalized, current_evidence);
+    assertLiveCurrentState(store, normalized);
   } catch {
-    return deny('semantic_memory_retransmission_current_evidence_mismatch');
+    return deny('semantic_memory_retransmission_source_not_current');
   }
   if (
     authorization.owner !== normalized.owner
@@ -328,12 +332,19 @@ function assertCurrentEvidence(record, evidence) {
   }
 }
 
+function assertLiveCurrentState(store, record) {
+  const liveEvidence = store.verifySemanticMemoryCurrentState(record);
+  assertCurrentEvidence(record, liveEvidence);
+  return liveEvidence;
+}
+
 function requireGridStore(store) {
   if (
     !store
     || typeof store.requireIntentEvidenceChain !== 'function'
     || typeof store.getIntent !== 'function'
     || typeof store.decodeEventRow !== 'function'
+    || typeof store.verifySemanticMemoryCurrentState !== 'function'
     || !store.db
   ) {
     throw new TypeError('Semantic memory retransmission verification requires a Grid store');
