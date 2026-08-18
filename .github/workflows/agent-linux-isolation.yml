@@ -86,13 +86,21 @@ jobs:
               expectedRevision: bundle.revision,
               now: bundle.effect_receipt.statement.started_at
             });
+            const consumed = verifyAgentExecutorDurableStateReceipt(bundle.durable_consume_head_receipt, {
+              trustedStorePublicKey: bundle.durable_store_public_key,
+              plan: bundle.plan,
+              expectedStoreId: bundle.effect_receipt.statement.durable_store_id
+            });
             const effect = verifyAgentReadSystemFactsEffectReceipt(bundle.effect_receipt, {
               trustedExecutorPublicKey: bundle.executor_public_key,
               trustedAdmissionIssuerPublicKey: bundle.admission_issuer_public_key,
+              trustedDurableStorePublicKey: bundle.durable_store_public_key,
+              durableConsumeHeadReceipt: bundle.durable_consume_head_receipt,
               plan: bundle.plan,
               admission: bundle.admission,
               isolationConformanceReceipt: isolation
             });
+            if (consumed.statement.lifecycle_status !== "consumed" || consumed.statement.generation !== effect.statement.durable_consume_generation || consumed.statement.record_digest !== effect.statement.durable_consume_record_digest || consumed.receipt_digest !== effect.statement.durable_consume_head_receipt_digest) throw new Error("effect consumed durable head binding mismatch");
             const durable = verifyAgentExecutorDurableStateReceipt(bundle.durable_head_receipt, {
               trustedStorePublicKey: bundle.durable_store_public_key,
               plan: bundle.plan,
