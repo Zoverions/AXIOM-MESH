@@ -89,10 +89,15 @@ test('package, image and compose entrypoints cannot expose sanitized-log effect 
   }
 });
 
-test('effect workflow stays secret-free while adding only the named sanitized-log operation', async () => {
+test('effect workflow stays secret-free and explicitly governs the sanitized-log path', async () => {
   const workflow = await readFile(WORKFLOW, 'utf8');
   assert.match(workflow, /permissions:\n  contents: read/);
   assert.match(workflow, /persist-credentials: false/);
+  assert.match(workflow, /AXIOM_AGENT_COLLECT_SANITIZED_LOGS_EFFECT_LAB: "1"/);
+  assert.match(workflow, /node src\/collect-sanitized-logs-effect-drill\.mjs/);
+  assert.match(workflow, /verifyAgentCollectSanitizedLogsEffectAdmission/);
+  assert.match(workflow, /verifyAgentCollectSanitizedLogsEffectReceipt/);
+  assert.match(workflow, /axiom-agent-collect-sanitized-logs-effect\.json/);
   for (const forbidden of ['secrets.', 'provision-production', 'docker compose', 'run-build', 'run-tests', 'start-local-test-services']) {
     assert.ok(!workflow.includes(forbidden), `effect workflow contains forbidden surface: ${forbidden}`);
   }
