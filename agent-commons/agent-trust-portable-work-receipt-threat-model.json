@@ -1,0 +1,86 @@
+{
+  "schema": "axiom-agent-portable-work-receipt-threat-model.v1",
+  "repository": "Zoverions/AXIOM-MESH",
+  "phase": "agent-trust-a5a-portable-grid-terminal-receipt",
+  "scope": "Executor-signed portable receipt binding an A4 signed handoff proposal, an A1 executor identity credential and an independently Grid-signed terminal machine-intent receipt. No effect-specific receipt or task-success claim is created.",
+  "core_invariant": "A portable receipt may prove that an identified executor packaged a verified Grid terminal lifecycle record for the exact handoff. A terminal completed state is not by itself proof of application correctness, truth, concrete effect execution, artifact availability or task success.",
+  "attack_classes": [
+    {
+      "id": "executor-identity-substitution",
+      "risks": ["different A1 credential used after handoff", "same executor name rebound to a different credential", "wrong operational key signs portable receipt"],
+      "controls": ["A4 intended-executor identity digest must equal exact A1 credential digest", "executor principal ID must equal A4 intended executor ID", "portable receipt signature key must equal A1 operational key ID"]
+    },
+    {
+      "id": "grid-receipt-substitution",
+      "risks": ["different valid Grid receipt substituted", "different terminal status substituted", "different Grid signing key trusted"],
+      "controls": ["exact Grid machine receipt digest bound into portable statement", "Grid signature independently verified", "terminal fields reproduced from supplied Grid receipt", "Grid public key supplied independently"]
+    },
+    {
+      "id": "handoff-work-substitution",
+      "risks": ["executor works on another action", "different input", "different machine principal", "unrelated authority context"],
+      "controls": ["Grid action equals A4 action", "Grid input digest equals A4 input digest", "Grid intent principal equals executor A1 principal", "Grid machine-authority digest equals executor A1 principal-authority digest"]
+    },
+    {
+      "id": "proposal-window-confusion",
+      "risks": ["Grid work began before handoff", "work accepted after handoff expired", "completion after expiry misclassified as invalid even though admission was timely"],
+      "controls": ["Grid intent created_at must fall inside signed A4 proposal window", "Grid finished_at may follow proposal expiry", "timestamps are materialized Grid evidence, not trusted wall-clock proof"]
+    },
+    {
+      "id": "terminal-success-confusion",
+      "risks": ["completed lifecycle state marketed as task success", "completed echo/process treated as application correctness", "terminal result treated as truth"],
+      "controls": ["task_success_claimed=false", "application_correctness_claimed=false", "truth_claimed=false", "terminal_state_scope=grid-intent-lifecycle-only"]
+    },
+    {
+      "id": "effect-evidence-confusion",
+      "risks": ["Grid terminal receipt treated as consume-before-effect proof", "real filesystem/process/network effect inferred without effect receipt", "A5a presented as full A5"],
+      "controls": ["effect_specific_execution_claimed=false", "effect_specific_receipt_bound=false", "A5b separately required to bind independently verified effect-specific executor receipts"]
+    },
+    {
+      "id": "artifact-or-evidence-overclaim",
+      "risks": ["reported artifact digest interpreted as available artifact", "reported evidence digest interpreted as independently verified evidence"],
+      "controls": ["reported_artifact_digests and reported_evidence_digests are signed reports only", "artifact_availability_claimed=false", "reported_artifacts_verified=false", "reported_evidence_verified=false"]
+    },
+    {
+      "id": "receipt-semantic-elevation",
+      "risks": ["task_success_claimed flipped true", "effect execution claim injected", "authority effect injected", "normalizer silently overwrites attacker fields"],
+      "controls": ["supplied fixed semantics validated before normalization", "strict unknown-field rejection", "executor signature and receipt digest bind exact statement"]
+    },
+    {
+      "id": "grid-authority-drift",
+      "risks": ["Grid terminal receipt belongs to another machine-authority definition", "executor credential reissued with different authority but same principal name"],
+      "controls": ["Grid machine_authority_digest must equal exact A1 executor principal_authority_digest", "A4 target binds exact executor credential digest"]
+    },
+    {
+      "id": "replay-and-currentness",
+      "risks": ["historical receipt replayed as current authority", "portable receipt used to re-execute work", "receipt signature treated as authorization"],
+      "controls": ["handoff_authority_claimed=false", "global_currentness_claimed=false", "authority_effect=none", "delegation_effect=none", "receipt is historical evidence only"]
+    }
+  ],
+  "known_nonclaims": [
+    "A5a does not prove concrete effect execution beyond the verified Grid terminal lifecycle record.",
+    "A5a does not claim task success, application correctness or truth.",
+    "A5a does not verify availability of reported artifacts or independently verify reported evidence digests.",
+    "A5a does not establish global identity, authority or revocation currentness.",
+    "A5a does not authorize replay, retry, delegation or execution.",
+    "A5a does not replace effect-specific receipts such as consume-before-effect executor evidence.",
+    "A5a does not modify capability-registry state or a supported effect path."
+  ],
+  "next_gates": [
+    "A5b bind and independently verify concrete effect-specific executor receipts such as the #1137 read-system-facts receipt",
+    "A6 bind current identity/delegation/revocation evidence consulted at effect admission",
+    "A10 independent verifier package for A1/A2/A4/A5 artifact chains",
+    "cross-protocol parity tests preserving the same receipt semantics"
+  ],
+  "boundaries": {
+    "task_success_claimed": false,
+    "application_correctness_claimed": false,
+    "truth_claimed": false,
+    "effect_specific_execution_claimed": false,
+    "effect_specific_receipt_bound": false,
+    "artifact_availability_claimed": false,
+    "global_currentness_claimed": false,
+    "authority_effect": "none",
+    "delegation_effect": "none",
+    "capability_promotion_enabled": false
+  }
+}
