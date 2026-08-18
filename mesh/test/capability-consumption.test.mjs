@@ -78,6 +78,43 @@ function capabilityFixture(identity, {
   };
 }
 
+async function consumeCapability({
+  identity,
+  config,
+  traceId,
+  fixture,
+  executionEpoch
+}) {
+  const response = await signedFetch(
+    identity,
+    'grid',
+    `${config.urls.grid}/internal/v1/commit`,
+    {
+      method: 'POST',
+      traceId,
+      body: {
+        actor: fixture.claims.subject,
+        principal: fixture.claims.subject,
+        events: [{
+          kind: 'capability.consume.requested',
+          subject: fixture.claims.jti,
+          payload: {
+            capability: fixture.capability,
+            execution_epoch: executionEpoch
+          }
+        }]
+      }
+    }
+  );
+  assert.equal(response.events?.length, 1);
+  assert.equal(response.events[0].kind, 'capability.consumed');
+  const consumed = response.capability_consumptions?.[0];
+  assert.ok(consumed);
+  assert.equal(consumed.event_id, response.events[0].event_id);
+  assert.equal(consumed.event_hash, response.events[0].event_hash);
+  return consumed;
+}
+
 test('Grid receipt contract binds exact capability claims and Sandbox process epoch', async t => {
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-capability-receipt-'));
   t.after(() => rm(dataDir, { recursive: true, force: true }));
@@ -185,19 +222,13 @@ test('durable Grid consumption survives Sandbox and Grid restart and burns uncer
     jti: 'capability-restart-executed',
     suffix: 'executed'
   });
-  const consumed = await signedFetch(
-    hypervisor,
-    'grid',
-    `${config.urls.grid}/internal/v1/capabilities/consume`,
-    {
-      method: 'POST',
-      traceId,
-      body: {
-        capability: executed.capability,
-        execution_epoch: operations.execution_epoch
-      }
-    }
-  );
+  const consumed = await consumeCapability({
+    identity: hypervisor,
+    config,
+    traceId,
+    fixture: executed,
+    executionEpoch: operations.execution_epoch
+  });
   const verifiedExecutedReceipt = verifyCapabilityConsumptionReceipt(
     consumed.receipt,
     {
@@ -298,19 +329,13 @@ test('durable Grid consumption survives Sandbox and Grid restart and burns uncer
     error => error?.code === 'capability_consumption_mismatch'
   );
   await assert.rejects(
-    () => signedFetch(
-      hypervisor,
-      'grid',
-      `${config.urls.grid}/internal/v1/capabilities/consume`,
-      {
-        method: 'POST',
-        traceId: `${traceId}_duplicate_after_sandbox_restart`,
-        body: {
-          capability: executed.capability,
-          execution_epoch: restartedOperations.execution_epoch
-        }
-      }
-    ),
+    () => consumeCapability({
+      identity: hypervisor,
+      config,
+      traceId: `${traceId}_duplicate_after_sandbox_restart`,
+      fixture: executed,
+      executionEpoch: restartedOperations.execution_epoch
+    }),
     error => error?.code === 'capability_consumed'
   );
 
@@ -319,19 +344,13 @@ test('durable Grid consumption survives Sandbox and Grid restart and burns uncer
     jti: 'capability-restart-burned',
     suffix: 'burned'
   });
-  const burnedReceipt = await signedFetch(
-    hypervisor,
-    'grid',
-    `${config.urls.grid}/internal/v1/capabilities/consume`,
-    {
-      method: 'POST',
-      traceId: `${traceId}_burn_before_execute`,
-      body: {
-        capability: burned.capability,
-        execution_epoch: restartedOperations.execution_epoch
-      }
-    }
-  );
+  const burnedReceipt = await consumeCapability({
+    identity: hypervisor,
+    config,
+    traceId: `${traceId}_burn_before_execute`,
+    fixture: burned,
+    executionEpoch: restartedOperations.execution_epoch
+  });
   assert.match(burnedReceipt.receipt_digest, /^[a-f0-9]{64}$/);
   await sandbox.stop();
   sandbox = await createSandboxService(config);
@@ -344,19 +363,13 @@ test('durable Grid consumption survives Sandbox and Grid restart and burns uncer
   );
   assert.notEqual(thirdOperations.execution_epoch, restartedOperations.execution_epoch);
   await assert.rejects(
-    () => signedFetch(
-      hypervisor,
-      'grid',
-      `${config.urls.grid}/internal/v1/capabilities/consume`,
-      {
-        method: 'POST',
-        traceId: `${traceId}_burned_duplicate`,
-        body: {
-          capability: burned.capability,
-          execution_epoch: thirdOperations.execution_epoch
-        }
-      }
-    ),
+    () => consumeCapability({
+      identity: hypervisor,
+      config,
+      traceId: `${traceId}_burned_duplicate`,
+      fixture: burned,
+      executionEpoch: thirdOperations.execution_epoch
+    }),
     error => error?.code === 'capability_consumed'
   );
 
@@ -365,42 +378,86 @@ test('durable Grid consumption survives Sandbox and Grid restart and burns uncer
   await grid.start();
   assert.equal(grid.store.verifyChain().valid, true);
   await assert.rejects(
+    () => consumeCapability({
+      identity: hypervisor,
+      config,
+      traceId: `${traceId}_duplicate_after_grid_restart`,
+      fixture: burned,
+      executionEpoch: thirdOperations.execution_epoch
+    }),
+    error => error?.code === 'capability_consumed'
+  );
+
+  await assert.rejects(
     () => signedFetch(
       hypervisor,
       'grid',
-      `${config.urls.grid}/internal/v1/capabilities/consume`,
+      `${config.urls.grid}/internal/v1/commit`,
       {
         method: 'POST',
-        traceId: `${traceId}_duplicate_after_grid_restart`,
+        traceId: `${traceId}_forged_consumed`,
         body: {
-          capability: burned.capability,
-          execution_epoch: thirdOperations.execution_epoch
+          actor: burned.claims.subject,
+          principal: burned.claims.subject,
+          events: [{
+            kind: 'capability.consumed',
+            subject: 'forged-capability',
+            payload: { receipt: {}, receipt_digest: sha256('forged') }
+          }]
         }
       }
     ),
-    error => error?.code === 'capability_consumed'
+    error => error?.code === 'validation_error'
+  );
+  await assert.rejects(
+    () => signedFetch(
+      hypervisor,
+      'grid',
+      `${config.urls.grid}/internal/v1/commit`,
+      {
+        method: 'POST',
+        traceId: `${traceId}_mixed_consume`,
+        body: {
+          actor: burned.claims.subject,
+          principal: burned.claims.subject,
+          events: [{
+            kind: 'capability.consume.requested',
+            subject: 'unrelated-jti',
+            payload: {
+              capability: burned.capability,
+              execution_epoch: thirdOperations.execution_epoch
+            }
+          }, {
+            kind: 'memory.put',
+            subject: 'unrelated-memory',
+            payload: {}
+          }]
+        }
+      }
+    ),
+    error => error?.code === 'validation_error'
   );
 });
 
-test('service policy adds only Hypervisor to Grid consume and still denies Sandbox to Grid', async () => {
+test('restart-safe consumption reuses existing Hypervisor to Grid commit and adds no route', async () => {
   const { authorizeServiceRequest, ACTIVE_SERVICE_NETWORK_POLICY } = await import(
     '../src/lib/service-network-policy.mjs'
   );
-  const consume = authorizeServiceRequest({
+  const commit = authorizeServiceRequest({
     policy: ACTIVE_SERVICE_NETWORK_POLICY,
     source: 'hypervisor',
     destination: 'grid',
     method: 'POST',
-    url: 'http://127.0.0.1:8083/internal/v1/capabilities/consume'
+    url: 'http://127.0.0.1:8083/internal/v1/commit'
   });
-  assert.equal(consume.allowed, true);
+  assert.equal(commit.allowed, true);
   assert.throws(
     () => authorizeServiceRequest({
       policy: ACTIVE_SERVICE_NETWORK_POLICY,
       source: 'sandbox',
       destination: 'grid',
       method: 'POST',
-      url: 'http://127.0.0.1:8083/internal/v1/capabilities/consume'
+      url: 'http://127.0.0.1:8083/internal/v1/commit'
     }),
     error => error?.code === 'service_network_policy_denied'
   );
@@ -408,6 +465,12 @@ test('service policy adds only Hypervisor to Grid consume and still denies Sandb
     ACTIVE_SERVICE_NETWORK_POLICY.network_segments.some(
       segment => segment.members.includes('sandbox') && segment.members.includes('grid')
     ),
+    false
+  );
+  const routes = ACTIVE_SERVICE_NETWORK_POLICY.flows.flatMap(flow => flow.routes);
+  assert.equal(routes.length, 41);
+  assert.equal(
+    routes.some(route => route.path === '/internal/v1/capabilities/consume'),
     false
   );
 });
