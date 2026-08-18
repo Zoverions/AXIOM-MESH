@@ -33,6 +33,15 @@ function parsePrivateKey(value, label) {
   return key;
 }
 
+function canonicalTimestamp(value, label) {
+  const text = assertString(value, label, { min: 24, max: 24 });
+  const parsed = new Date(text);
+  if (Number.isNaN(parsed.valueOf()) || parsed.toISOString() !== text) {
+    throw new ValidationError(`${label} must be a canonical UTC ISO timestamp`);
+  }
+  return text;
+}
+
 function commandOperatorKeyId(raw) {
   const value = assertPlainObject(raw, 'public witness source provisioning lifecycle command');
   const statement = assertPlainObject(value.statement, 'public witness source provisioning lifecycle command statement');
@@ -81,7 +90,8 @@ export function createPublicWitnessSourceProvisioningCommandWithKeyLifecycle({
   sourceAdmission,
   operatorId,
   operatorPrivateKey,
-  operatorCredential,
+  operatorCredentialPath,
+  operatorRevocations = [],
   trustedOperatorRoleRootPublicKey,
   commandId,
   previousAdmissionDigest = null,
@@ -94,18 +104,20 @@ export function createPublicWitnessSourceProvisioningCommandWithKeyLifecycle({
     'public witness source provisioning lifecycle operator private key'
   );
   const publicKey = createPublicKey(privateKey);
-  const keyId = publicWitnessServiceKeyId(publicKey);
-  const credential = resolvePublicWitnessServiceKeyCredential([operatorCredential], {
-    trustedRoleRootPublicKey: trustedOperatorRoleRootPublicKey,
-    operationalKeyId: keyId,
+  const context = lifecycleContext({
+    operatorCredentialPath,
+    operatorRevocations,
+    trustedOperatorRoleRootPublicKey,
     expectedDomainId: sourceAdmission?.domain_id,
-    expectedRole: PUBLIC_WITNESS_SERVICE_KEY_ROLES.OPERATOR,
-    expectedPrincipalId: operatorId
+    expectedOperatorId: operatorId,
+    operatorKeyId: publicWitnessServiceKeyId(publicKey)
   });
-  assertPublicWitnessServiceKeyUsableAt(credential, {
+  assertPublicWitnessServiceKeyUsableAt(context.credential, {
     trustedRoleRootPublicKey: trustedOperatorRoleRootPublicKey,
     at: authorizedAt,
-    expectedDomainId: credential.statement.domain_id,
+    successorCredential: context.successorCredential,
+    revocation: context.revocation,
+    expectedDomainId: context.credential.statement.domain_id,
     expectedRole: PUBLIC_WITNESS_SERVICE_KEY_ROLES.OPERATOR,
     expectedPrincipalId: operatorId
   });
@@ -170,13 +182,17 @@ export function assertPublicWitnessSourceProvisioningCommandEffectAllowed(raw, {
   expectedOperatorId,
   effectAt
 } = {}) {
+  const timestamp = canonicalTimestamp(
+    effectAt,
+    'public witness source provisioning lifecycle effectAt'
+  );
   const command = verifyPublicWitnessSourceProvisioningCommandWithKeyLifecycle(raw, {
     operatorCredentialPath,
     operatorRevocations,
     trustedOperatorRoleRootPublicKey,
     expectedDomainId,
     expectedOperatorId,
-    now: Date.parse(effectAt)
+    now: Date.parse(timestamp)
   });
   const context = lifecycleContext({
     operatorCredentialPath,
@@ -186,12 +202,12 @@ export function assertPublicWitnessSourceProvisioningCommandEffectAllowed(raw, {
     expectedOperatorId,
     operatorKeyId: command.statement.operator_key_id
   });
-  if (context.revocation !== null && effectAt >= context.revocation.statement.effective_at) {
+  if (context.revocation !== null && timestamp >= context.revocation.statement.effective_at) {
     throw new ValidationError('public witness source provisioning operator credential is revoked for new effects');
   }
   if (
     context.successorCredential !== null
-    && effectAt >= context.successorCredential.statement.activated_at
+    && timestamp >= context.successorCredential.statement.activated_at
     && ['revoked', 'compromised'].includes(context.successorCredential.statement.predecessor_disposition)
   ) {
     throw new ValidationError('public witness source provisioning operator predecessor is revoked or compromised for new effects');
@@ -201,9 +217,10 @@ export function assertPublicWitnessSourceProvisioningCommandEffectAllowed(raw, {
     command_digest: command.command_digest,
     operator_credential_digest: context.credential.credential_digest,
     operator_key_epoch: context.credential.statement.key_epoch,
-    effect_at: effectAt,
+    effect_at: timestamp,
     routine_rotation_preserves_existing_bounded_command: context.successorCredential !== null
       && context.successorCredential.statement.predecessor_disposition === 'retired',
+    wall_clock_signing_time_proved: false,
     globally_current_key_state_claimed: false,
     network_effect: 'none'
   });
