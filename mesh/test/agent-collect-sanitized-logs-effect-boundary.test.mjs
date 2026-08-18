@@ -25,12 +25,20 @@ async function collectMjs(directory) {
   return files;
 }
 
+function staticImportSpecifiers(source) {
+  return [...source.matchAll(
+    /^\s*import(?:[\s\S]*?\sfrom\s*)?['"]([^'"]+)['"];\s*$/gm
+  )].map(match => match[1]);
+}
+
 test('sanitized-log effect control module has no host effect imports', async () => {
   const source = await readFile(EFFECT, 'utf8');
+  const imports = staticImportSpecifiers(source);
+  assert.ok(imports.includes('node:crypto'), 'sanitized-log control module import scan did not resolve actual declarations');
   for (const forbidden of [
-    "from 'node:child_process'", "from 'node:fs'", "from 'node:fs/promises'", "from 'node:http'", "from 'node:https'",
-    "from 'node:net'", "from 'node:tls'", "from 'node:dns'", "from 'node:dgram'", "from 'node:worker_threads'"
-  ]) assert.ok(!source.includes(forbidden), `sanitized-log control module contains effect import: ${forbidden}`);
+    'node:child_process', 'node:fs', 'node:fs/promises', 'node:http', 'node:https',
+    'node:net', 'node:tls', 'node:dns', 'node:dgram', 'node:worker_threads'
+  ]) assert.ok(!imports.includes(forbidden), `sanitized-log control module contains effect import: ${forbidden}`);
   for (const required of [
     'signed_consumed_head_before_effect: true',
     'arbitrary_path_allowed: false',
