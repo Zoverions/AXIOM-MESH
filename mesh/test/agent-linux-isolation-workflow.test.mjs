@@ -23,6 +23,7 @@ test('release governance accepts only the fixed isolation plus one-operation eff
   assert.equal(result.general_executor_reachable, false);
   assert.equal(result.production_provisioning_reachable, false);
   assert.equal(result.receipt_reverification_required, true);
+  assert.equal(result.consumed_head_reverification_required, true);
   assert.equal(result.effect_receipt_reverification_required, true);
   assert.deepEqual(result.action_references, [
     'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
@@ -69,34 +70,49 @@ test('release governance rejects mutable action and runner references', async ()
   );
 });
 
-test('release governance rejects removal of either independent receipt verification boundary', async () => {
+test('release governance rejects removal of isolation, consumed-head, effect or final-head verification', async () => {
   const workflow = await workflowText();
-  const noIsolation = workflow.replace(
-    'verifyAgentLinuxIsolationConformanceReceipt(receipt);',
-    'acceptReceiptWithoutVerification(receipt);'
-  );
-  assert.throws(
-    () => verifyAgentLinuxIsolationWorkflow(noIsolation),
-    /missing governed boundary/i
-  );
+  const weakened = [
+    workflow.replace(
+      'verifyAgentLinuxIsolationConformanceReceipt(receipt);',
+      'acceptReceiptWithoutVerification(receipt);'
+    ),
+    workflow.replace(
+      'const consumed = verifyAgentExecutorDurableStateReceipt(bundle.durable_consume_head_receipt, {',
+      'const consumed = bundle.durable_consume_head_receipt; // verification removed'
+    ),
+    workflow.replace(
+      'durableConsumeHeadReceipt: bundle.durable_consume_head_receipt,',
+      'durableConsumeHeadReceipt: undefined,'
+    ),
+    workflow.replace(
+      'const effect = verifyAgentReadSystemFactsEffectReceipt(bundle.effect_receipt, {',
+      'const effect = bundle.effect_receipt; // verification removed'
+    ),
+    workflow.replace(
+      'verifyAgentExecutorDurableStateReceipt(bundle.durable_head_receipt, {',
+      'acceptDurableHeadWithoutVerification(bundle.durable_head_receipt, {'
+    )
+  ];
+  for (const candidate of weakened) {
+    assert.throws(
+      () => verifyAgentLinuxIsolationWorkflow(candidate),
+      /missing governed boundary/i
+    );
+  }
+});
 
-  const noEffect = workflow.replace(
-    'const effect = verifyAgentReadSystemFactsEffectReceipt(bundle.effect_receipt, {',
-    'const effect = bundle.effect_receipt; // verification removed'
-  );
-  assert.throws(
-    () => verifyAgentLinuxIsolationWorkflow(noEffect),
-    /missing governed boundary/i
-  );
-
-  const noDurable = workflow.replace(
-    'verifyAgentExecutorDurableStateReceipt(bundle.durable_head_receipt, {',
-    'acceptDurableHeadWithoutVerification(bundle.durable_head_receipt, {'
-  );
-  assert.throws(
-    () => verifyAgentLinuxIsolationWorkflow(noDurable),
-    /missing governed boundary/i
-  );
+test('release governance rejects consumed-head status or digest parity removal', async () => {
+  const workflow = await workflowText();
+  for (const [needle, replacement] of [
+    ['consumed.statement.lifecycle_status !== "consumed"', 'false'],
+    ['consumed.receipt_digest !== effect.statement.durable_consume_head_receipt_digest', 'false']
+  ]) {
+    assert.throws(
+      () => verifyAgentLinuxIsolationWorkflow(workflow.replace(needle, replacement)),
+      /missing governed boundary/i
+    );
+  }
 });
 
 test('release governance rejects any extra action or second job', async () => {
