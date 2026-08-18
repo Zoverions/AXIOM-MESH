@@ -213,7 +213,7 @@ function objects(nowMs) {
     timing: {
       issued_at: iso(nowMs - 15_000),
       not_before: iso(nowMs - 5_000),
-      expires_at: iso(nowMs + 180_000),
+      expires_at: iso(nowMs + 175_000),
       maximum_duration_seconds: 180
     },
     scope: {
