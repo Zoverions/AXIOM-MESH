@@ -358,11 +358,22 @@ function main() {
     });
     consumed = true;
     assert(store.status === 'consumed' && store.generation === 2, 'durable consume was not committed before effect');
+    const durableConsumeHeadReceipt = descriptor.durable_consume_head_receipt;
+    const checkedConsumedHead = verifyAgentExecutorDurableStateReceipt(durableConsumeHeadReceipt, {
+      trustedStorePublicKey: store.storePublicKey,
+      plan,
+      expectedStoreId: store.storeId
+    });
+    assert(checkedConsumedHead.statement.lifecycle_status === 'consumed', 'pre-effect durable head is not consumed');
+    assert(checkedConsumedHead.statement.generation === 2, 'pre-effect durable head generation is not 2');
+    assert(checkedConsumedHead.statement.record_digest === store.currentRecord.record_digest, 'pre-effect durable head does not bind current consumed record');
     const observations = descriptor.steps.map(step => executeStep(step, isolationReceipt.adapter.image_id));
     const effectReceipt = controller.complete({ observations, finishedAt: iso(Date.now()) });
     verifyAgentReadSystemFactsEffectReceipt(effectReceipt, {
       trustedExecutorPublicKey: controller.executorPublicKey,
       trustedAdmissionIssuerPublicKey: issuerKeys.publicKey,
+      trustedDurableStorePublicKey: store.storePublicKey,
+      durableConsumeHeadReceipt,
       plan,
       admission,
       isolationConformanceReceipt: isolationReceipt
@@ -383,6 +394,7 @@ function main() {
       admission_issuer_public_key: issuerKeys.publicKey,
       executor_public_key: controller.executorPublicKey,
       durable_store_public_key: store.storePublicKey,
+      durable_consume_head_receipt: durableConsumeHeadReceipt,
       durable_head_receipt: durableHeadReceipt,
       isolation_receipt_digest: isolationReceipt.receipt_digest,
       effect_receipt: effectReceipt,
