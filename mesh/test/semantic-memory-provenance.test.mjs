@@ -1,10 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  SEMANTIC_MEMORY_REVIEW_ACTION,
+  SEMANTIC_MEMORY_REVIEW_INPUT_SCHEMA,
+  SEMANTIC_MEMORY_REVIEW_PURPOSE,
   deriveSemanticMemoryProvenance,
   evaluateSemanticMemoryUse,
   normalizeSemanticMemoryProvenance,
-  ownerReviewSemanticMemory
+  ownerReviewSemanticMemory,
+  semanticMemoryReviewIntent,
+  semanticMemoryReviewRequestDigest
 } from '../src/lib/semantic-memory-provenance.mjs';
 
 const A = 'a'.repeat(64);
@@ -21,6 +26,14 @@ function remoteInstruction(overrides = {}) {
     origin_principal: 'agent.remote.1',
     semantic_class: 'instruction-candidate',
     ...overrides
+  };
+}
+
+function reviewArgs(record, decision, actorId = 'owner.alice') {
+  return {
+    actor_id: actorId,
+    review_request_digest: semanticMemoryReviewRequestDigest(record, decision),
+    decision
   };
 }
 
@@ -55,6 +68,32 @@ test('remote instruction-like content enters as untrusted unreviewed data', () =
   });
 });
 
+test('semantic memory review request binds exact object provenance and decision', () => {
+  const record = normalizeSemanticMemoryProvenance(remoteInstruction());
+  const intent = semanticMemoryReviewIntent(record, 'approve-instruction');
+  assert.deepEqual(intent.principal, { type: 'human', id: 'owner.alice' });
+  assert.equal(intent.action, SEMANTIC_MEMORY_REVIEW_ACTION);
+  assert.equal(intent.purpose, SEMANTIC_MEMORY_REVIEW_PURPOSE);
+  assert.equal(intent.input.schema, SEMANTIC_MEMORY_REVIEW_INPUT_SCHEMA);
+  assert.equal(intent.input.object_id, record.object_id);
+  assert.equal(intent.input.content_digest, record.content_digest);
+  assert.equal(intent.input.current_provenance_digest, record.provenance_digest);
+  assert.equal(intent.input.decision, 'approve-instruction');
+  assert.deepEqual(intent.data_scopes, [`memory.semantic:${record.object_id}`]);
+
+  const approveDigest = semanticMemoryReviewRequestDigest(record, 'approve-instruction');
+  const quarantineDigest = semanticMemoryReviewRequestDigest(record, 'quarantine');
+  assert.notEqual(approveDigest, quarantineDigest);
+
+  const differentSource = normalizeSemanticMemoryProvenance(remoteInstruction({
+    origin_principal: 'agent.remote.2'
+  }));
+  assert.notEqual(
+    approveDigest,
+    semanticMemoryReviewRequestDigest(differentSource, 'approve-instruction')
+  );
+});
+
 test('external memory cannot self-promote instruction authority', () => {
   assert.throws(
     () => normalizeSemanticMemoryProvenance(remoteInstruction({
@@ -68,23 +107,46 @@ test('external memory cannot self-promote instruction authority', () => {
 test('only the owner can explicitly approve an instruction candidate', () => {
   const record = normalizeSemanticMemoryProvenance(remoteInstruction());
   assert.throws(
-    () => ownerReviewSemanticMemory(record, {
-      actor_id: 'agent.remote.1',
-      review_event_digest: B,
-      decision: 'approve-instruction'
-    }),
+    () => ownerReviewSemanticMemory(
+      record,
+      reviewArgs(record, 'approve-instruction', 'agent.remote.1')
+    ),
     /Only the memory owner/
   );
 
-  const approved = ownerReviewSemanticMemory(record, {
-    actor_id: 'owner.alice',
-    review_event_digest: B,
-    decision: 'approve-instruction'
-  });
+  const approved = ownerReviewSemanticMemory(
+    record,
+    reviewArgs(record, 'approve-instruction')
+  );
   assert.equal(approved.authority_tier, 'owner-approved-instruction');
   assert.equal(approved.review_state, 'owner-reviewed');
   assert.equal(approved.review_actor, 'owner.alice');
+  assert.equal(
+    approved.review_request_digest,
+    semanticMemoryReviewRequestDigest(record, 'approve-instruction')
+  );
   assert.equal(evaluateSemanticMemoryUse(approved, 'privileged-instruction').allow, true);
+});
+
+test('review request substitution fails closed', () => {
+  const record = normalizeSemanticMemoryProvenance(remoteInstruction());
+  assert.throws(
+    () => ownerReviewSemanticMemory(record, {
+      actor_id: 'owner.alice',
+      review_request_digest: B,
+      decision: 'approve-instruction'
+    }),
+    /review request digest does not match the exact transition/
+  );
+
+  assert.throws(
+    () => ownerReviewSemanticMemory(record, {
+      actor_id: 'owner.alice',
+      review_request_digest: semanticMemoryReviewRequestDigest(record, 'quarantine'),
+      decision: 'approve-instruction'
+    }),
+    /review request digest does not match the exact transition/
+  );
 });
 
 test('ordinary knowledge cannot be promoted directly to instruction authority', () => {
@@ -97,11 +159,7 @@ test('ordinary knowledge cannot be promoted directly to instruction authority', 
     semantic_class: 'knowledge'
   });
   assert.throws(
-    () => ownerReviewSemanticMemory(record, {
-      actor_id: 'owner.alice',
-      review_event_digest: C,
-      decision: 'approve-instruction'
-    }),
+    () => ownerReviewSemanticMemory(record, reviewArgs(record, 'approve-instruction')),
     /Only instruction-candidate/
   );
 });
@@ -115,11 +173,7 @@ test('owner review can adopt external content as ordinary owner memory without i
     origin_artifact_digest: B,
     semantic_class: 'knowledge'
   });
-  const approved = ownerReviewSemanticMemory(record, {
-    actor_id: 'owner.alice',
-    review_event_digest: C,
-    decision: 'approve-memory'
-  });
+  const approved = ownerReviewSemanticMemory(record, reviewArgs(record, 'approve-memory'));
   assert.equal(approved.authority_tier, 'owner-memory');
   assert.equal(approved.review_state, 'owner-reviewed');
   assert.equal(evaluateSemanticMemoryUse(approved, 'ordinary-retrieval').allow, true);
@@ -127,13 +181,10 @@ test('owner review can adopt external content as ordinary owner memory without i
 });
 
 test('derived summaries retain parent provenance and do not inherit instruction authority', () => {
+  const source = normalizeSemanticMemoryProvenance(remoteInstruction());
   const approved = ownerReviewSemanticMemory(
-    normalizeSemanticMemoryProvenance(remoteInstruction()),
-    {
-      actor_id: 'owner.alice',
-      review_event_digest: B,
-      decision: 'approve-instruction'
-    }
+    source,
+    reviewArgs(source, 'approve-instruction')
   );
 
   const derived = deriveSemanticMemoryProvenance(approved, {
@@ -153,21 +204,13 @@ test('derived summaries retain parent provenance and do not inherit instruction 
 
 test('quarantine and rejection narrow authority and suppress retrieval', () => {
   const base = normalizeSemanticMemoryProvenance(remoteInstruction());
-  const quarantined = ownerReviewSemanticMemory(base, {
-    actor_id: 'owner.alice',
-    review_event_digest: B,
-    decision: 'quarantine'
-  });
+  const quarantined = ownerReviewSemanticMemory(base, reviewArgs(base, 'quarantine'));
   assert.deepEqual(evaluateSemanticMemoryUse(quarantined, 'ordinary-retrieval'), {
     allow: false,
     code: 'semantic_memory_quarantined'
   });
 
-  const rejected = ownerReviewSemanticMemory(base, {
-    actor_id: 'owner.alice',
-    review_event_digest: C,
-    decision: 'reject'
-  });
+  const rejected = ownerReviewSemanticMemory(base, reviewArgs(base, 'reject'));
   assert.deepEqual(evaluateSemanticMemoryUse(rejected, 'ordinary-retrieval'), {
     allow: false,
     code: 'semantic_memory_rejected'
@@ -253,11 +296,7 @@ test('provenance digest changes when source or review authority changes', () => 
   const differentSource = normalizeSemanticMemoryProvenance(remoteInstruction({
     origin_principal: 'agent.remote.2'
   }));
-  const approved = ownerReviewSemanticMemory(base, {
-    actor_id: 'owner.alice',
-    review_event_digest: B,
-    decision: 'approve-instruction'
-  });
+  const approved = ownerReviewSemanticMemory(base, reviewArgs(base, 'approve-instruction'));
 
   assert.notEqual(base.provenance_digest, differentSource.provenance_digest);
   assert.notEqual(base.provenance_digest, approved.provenance_digest);
