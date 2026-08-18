@@ -5,11 +5,12 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import { digestObject, sha256 } from '../src/lib/canonical.mjs';
+import { ensureMeshIdentity } from '../src/lib/identity.mjs';
 import {
   buildNativeInvocationEnvelope,
   invocationEnvelopeDigest
 } from '../src/lib/invocation-envelope.mjs';
-import { ensureMeshIdentity } from '../src/lib/identity.mjs';
+import { intentRequestDigest } from '../src/lib/intent-binding.mjs';
 import { loadDataProtector } from '../src/lib/protector.mjs';
 import {
   normalizeSemanticMemoryProvenance
@@ -17,7 +18,9 @@ import {
 import {
   buildObservedSemanticMemorySourceEvidence
 } from '../src/lib/semantic-memory-source-evidence.mjs';
-import { ConvergedSemanticMemoryGridStore } from '../src/grid/semantic-memory-converged-ingestion-store.mjs';
+import {
+  ConvergedSemanticMemoryGridStore
+} from '../src/grid/semantic-memory-converged-ingestion-store.mjs';
 
 let sequence = 0;
 
@@ -41,7 +44,7 @@ async function storeFixture(t) {
     try {
       store.close();
     } catch {
-      // A restart test may already have closed this store.
+      // Restart coverage may already have closed the original handle.
     }
     await rm(dataDir, { recursive: true, force: true });
   });
@@ -63,30 +66,43 @@ function buildFixture({
       ? { axiom_semantic_source_evidence_digest: sourceEvidence.evidence_digest }
       : {})
   };
-  const input = { kind: 'semantic.memory', content, metadata };
+  const input = {
+    kind: 'semantic.memory',
+    content,
+    metadata
+  };
   const intentId = `intent.semantic.converged.${suffix}`;
   const traceId = `trace.semantic.converged.${suffix}`;
-  const requestDigest = sha256(`request:${suffix}`);
-  const inputDigest = digestObject(input);
-  const policyDigest = sha256(`policy:${suffix}`);
-  const invocation = buildNativeInvocationEnvelope({
-    caller: { type: 'human', id: owner },
-    owner,
-    intent: {
-      intent_id: intentId,
-      action: 'memory.put',
-      purpose: 'memory-write',
-      request_digest: requestDigest,
-      input_digest: inputDigest,
-      data_scopes: [`data:owner:${owner}:rw`]
+  const intent = {
+    intent_id: intentId,
+    principal: {
+      id: owner,
+      type: 'human',
+      roles: ['owner'],
+      scopes: ['memory:write']
     },
-    policy: {
-      policy_version: 'semantic-converged-lab',
-      policy_digest: policyDigest,
-      assurance_required: 'A1'
-    }
-  });
+    action: 'memory.put',
+    input,
+    purpose: 'owner-memory-ingestion',
+    data_scopes: ['memory:write'],
+    confirmations: [],
+    approval_ids: [],
+    submitted_at: '2026-08-18T08:00:00.000Z'
+  };
+  const requestDigest = intentRequestDigest(intent);
+  const inputDigest = digestObject(input);
+  const policyDigest = sha256(`semantic-converged-policy:${suffix}`);
+  const decision = {
+    policy_version: 'semantic-converged-test.v1',
+    policy_digest: policyDigest,
+    risk: 'low',
+    required_assurance: 'A1',
+    requires_independent_approval: false,
+    timeout_ms: 10_000
+  };
+  const invocation = buildNativeInvocationEnvelope(intent, decision);
   const invocationDigest = invocationEnvelopeDigest(invocation);
+
   const contentDigest = digestObject({
     owner,
     kind: 'semantic.memory',
@@ -96,8 +112,7 @@ function buildFixture({
   const objectId = `memory_${contentDigest}`;
   const assurance = {
     required: 'A1',
-    achieved: 'A2',
-    basis: 'auditable_kernel'
+    achieved: 'A1'
   };
   const baseMutation = {
     kind: 'memory.put',
@@ -125,23 +140,23 @@ function buildFixture({
     statement: {
       trace_id: traceId,
       intent_id: intentId,
+      intent_digest: digestObject(intent),
       invocation_digest: invocationDigest,
+      capability_id: `cap.semantic.converged.${suffix}`,
       tool: 'builtin.validate-mutation',
-      result_digest: resultDigest,
       policy_digest: policyDigest,
       assurance,
-      current_effect_destination: 'local',
-      ...(sourceEvidence
-        ? { source_marker: sourceEvidence.evidence_digest }
-        : {})
+      started_at: '2026-08-18T08:00:01.000Z',
+      completed_at: '2026-08-18T08:00:02.000Z',
+      result_digest: resultDigest
     },
     signature: {
       algorithm: 'Ed25519',
-      key_id: `sandbox-key-${suffix}`,
-      signature: `sandbox-signature-${suffix}`
+      key_id: `sandbox:test:${suffix}`,
+      signature: `fixture-signature-${suffix}`
     }
   };
-  const planDigest = sha256(`plan:${suffix}`);
+  const planDigest = sha256(`semantic-converged-plan:${suffix}`);
   const memoryPutEvent = {
     ...baseMutation,
     payload: {
@@ -182,15 +197,16 @@ function buildFixture({
       principal: owner,
       principal_type: 'human',
       action: 'memory.put',
-      risk: 'medium',
+      risk: decision.risk,
       input_digest: inputDigest,
       request_digest: requestDigest,
-      policy_version: 'semantic-converged-lab',
+      policy_version: decision.policy_version,
       policy_digest: policyDigest,
       invocation,
       invocation_digest: invocationDigest
     }
   };
+
   return {
     owner,
     semanticClass,
@@ -199,6 +215,7 @@ function buildFixture({
     content,
     metadata,
     input,
+    intent,
     inputDigest,
     intentId,
     traceId,
@@ -325,15 +342,20 @@ test('accepted input digest binds origin mode and source-evidence selection', ()
     suffix: 'origin-sourced'
   });
   assert.notEqual(ownerFixture.inputDigest, sourcedFixture.inputDigest);
+  assert.notEqual(ownerFixture.requestDigest, sourcedFixture.requestDigest);
   assert.notEqual(ownerFixture.objectId, sourcedFixture.objectId);
 });
 
 test('sourced mode without retained evidence fails before memory persistence', async t => {
   const { store } = await storeFixture(t);
+  const content = { text: 'known source receipt not retained in this Grid' };
+  const sourceEvidence = remoteSource(content, 'knowledge');
   const fixture = buildFixture({
     semanticClass: 'knowledge',
     originMode: 'sourced',
-    content: { text: 'missing source receipt' }
+    sourceEvidence,
+    content,
+    suffix: 'missing-retained-source'
   });
   retainAcceptance(store, fixture);
   assert.throws(
@@ -342,7 +364,7 @@ test('sourced mode without retained evidence fails before memory persistence', a
       actor: fixture.owner,
       events: [fixture.memoryPutEvent, fixture.completedEvent]
     }),
-    /requires retained source evidence/
+    /Semantic source evidence was not found/
   );
   assert.equal(
     store.db.prepare('SELECT 1 FROM memory_objects WHERE object_id = ?')
@@ -360,6 +382,7 @@ test('source content or semantic-class substitution cannot reuse retained eviden
     actor: sourceEvidence.owner,
     evidence: sourceEvidence
   });
+
   const contentMismatch = buildFixture({
     semanticClass: 'knowledge',
     originMode: 'sourced',
