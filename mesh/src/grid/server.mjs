@@ -10,6 +10,7 @@ import { AcceptedSocialGridStore } from './accepted-social-store.mjs';
 import { loadDataProtector } from '../lib/protector.mjs';
 import { runServiceProcess } from '../lib/service-lifecycle.mjs';
 import { buildMachineIntentReceipt } from '../lib/machine-receipt.mjs';
+import { createCapabilityConsumptionHandler } from './capability-consumption-route.mjs';
 import {
   acquireGridRuntimeLock,
   createGridBackup,
@@ -55,6 +56,11 @@ export async function createGridService(config = meshConfig()) {
   const replayGuard = new ReplayGuard();
   const router = new Router();
   const telemetry = new ServiceTelemetry('grid');
+  const consumeCapability = await createCapabilityConsumptionHandler({
+    config,
+    identity,
+    store
+  });
   let cachedChain = { valid: true };
   let nextIntegrityProbeAt = 0;
 
@@ -85,6 +91,7 @@ export async function createGridService(config = meshConfig()) {
   }), { auth: false });
 
   router.add('GET', '/internal/v1/operations', async () => currentOperations());
+  router.add('POST', '/internal/v1/capabilities/consume', consumeCapability);
 
   router.add('POST', '/internal/v1/commit', async ({ body, traceId, principal }) => {
     if (principal.service !== 'hypervisor') {
