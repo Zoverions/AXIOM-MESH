@@ -2,6 +2,12 @@ import assert from 'node:assert/strict';
 import { readdir, readFile } from 'node:fs/promises';
 import test from 'node:test';
 
+import {
+  AGENT_COLLECT_BENCHMARK_METRICS_ADAPTER_SCRIPT,
+  AGENT_COLLECT_BENCHMARK_METRICS_EXPECTED_CHECKSUM,
+  AGENT_COLLECT_BENCHMARK_METRICS_ITERATIONS
+} from '../src/lib/agent-collect-benchmark-metrics-effect.mjs';
+
 const ROOT = new URL('../../', import.meta.url);
 const DRILL = new URL('mesh/src/collect-benchmark-metrics-effect-drill.mjs', ROOT);
 const EFFECT = new URL('mesh/src/lib/agent-collect-benchmark-metrics-effect.mjs', ROOT);
@@ -46,6 +52,23 @@ test('benchmark effect control module has no host effect imports', async () => {
     'AGENT_COLLECT_BENCHMARK_METRICS_ADAPTER_SCRIPT_SHA256',
     'verifyAgentExecutorDurableStateReceipt(this.consumeHeadReceipt'
   ]) assert.ok(source.includes(required), `benchmark control module missing boundary: ${required}`);
+});
+
+test('fixed benchmark adapter cannot inspect ambient host state or change workload semantics', () => {
+  assert.equal(AGENT_COLLECT_BENCHMARK_METRICS_ITERATIONS, 262144);
+  assert.equal(AGENT_COLLECT_BENCHMARK_METRICS_EXPECTED_CHECKSUM, 1679840888);
+  for (const required of [
+    "const POLICY='synthetic-lcg-u32-262144-v1'",
+    "const WORKLOAD='lcg-u32-262144-v1'",
+    'const ITERATIONS=262144',
+    'const EXPECTED=1679840888',
+    'process.hrtime.bigint()',
+    "timer_source:'process.hrtime.bigint'"
+  ]) assert.ok(AGENT_COLLECT_BENCHMARK_METRICS_ADAPTER_SCRIPT.includes(required), `benchmark adapter missing fixed semantic: ${required}`);
+  for (const forbidden of [
+    'process.argv','process.env','Date.now','performance.now','eval(','Function(','import ','require(',
+    'node:fs','node:os','node:child_process','node:http','node:https','node:net','node:dns','/proc/','/sys/','os.cpus','totalmem','freemem'
+  ]) assert.ok(!AGENT_COLLECT_BENCHMARK_METRICS_ADAPTER_SCRIPT.includes(forbidden), `benchmark adapter contains ambient/effect surface: ${forbidden}`);
 });
 
 test('benchmark effect drill is fixed, local, networkless and repository-mountless', async () => {
