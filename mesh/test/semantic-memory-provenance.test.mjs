@@ -262,3 +262,15 @@ test('provenance digest changes when source or review authority changes', () => 
   assert.notEqual(base.provenance_digest, differentSource.provenance_digest);
   assert.notEqual(base.provenance_digest, approved.provenance_digest);
 });
+
+test('normalized provenance can be revalidated but a substituted provenance digest fails closed', () => {
+  const record = normalizeSemanticMemoryProvenance(remoteInstruction());
+  assert.deepEqual(normalizeSemanticMemoryProvenance(record), record);
+  assert.throws(
+    () => normalizeSemanticMemoryProvenance({
+      ...record,
+      provenance_digest: D
+    }),
+    /provenance digest does not match normalized content/
+  );
+});
