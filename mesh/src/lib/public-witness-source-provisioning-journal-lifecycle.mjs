@@ -20,6 +20,10 @@ import {
   resolvePublicWitnessServiceKeyRevocation,
   validatePublicWitnessServiceKeyCredentialPath
 } from './public-witness-service-key-lifecycle.mjs';
+import {
+  PublicWitnessServiceKeyObservationStore,
+  inspectPublicWitnessServiceKeyPathAgainstObservationSnapshot
+} from './public-witness-service-key-observation-store.mjs';
 
 const DIGEST = /^[a-f0-9]{64}$/;
 const MAX_RECORDS = 100000;
@@ -46,6 +50,7 @@ function recordProvisionerKeyId(raw) {
 function credentialContext({
   credentialPath,
   revocations,
+  observationStore = null,
   trustedRoleRootPublicKey,
   role,
   principalId,
@@ -58,6 +63,22 @@ function credentialContext({
     expectedRole: role,
     expectedPrincipalId: principalId
   });
+  let observation = null;
+  if (observationStore !== null) {
+    if (!(observationStore instanceof PublicWitnessServiceKeyObservationStore)) {
+      throw new ValidationError('public witness provisioning requires an active local service-key observation store');
+    }
+    observation = inspectPublicWitnessServiceKeyPathAgainstObservationSnapshot(
+      credentialPath,
+      observationStore.snapshot(),
+      {
+        trustedRoleRootPublicKey,
+        expectedDomainId: domainId,
+        expectedRole: role,
+        expectedPrincipalId: principalId
+      }
+    );
+  }
   const credential = resolvePublicWitnessServiceKeyCredential(credentialPath, {
     trustedRoleRootPublicKey,
     operationalKeyId,
@@ -71,12 +92,13 @@ function credentialContext({
   const revocation = resolvePublicWitnessServiceKeyRevocation(revocations, credential, {
     trustedRoleRootPublicKey
   });
-  return Object.freeze({ credential, successorCredential, revocation });
+  return Object.freeze({ credential, successorCredential, revocation, observation });
 }
 
 export function verifyPublicWitnessSourceProvisioningApplicationRecordWithKeyLifecycle(raw, {
   provisionerCredentialPath,
   provisionerRevocations = [],
+  provisionerKeyObservationStore = null,
   trustedProvisionerRoleRootPublicKey,
   expectedDomainId,
   expectedProvisionerId
@@ -85,6 +107,7 @@ export function verifyPublicWitnessSourceProvisioningApplicationRecordWithKeyLif
   const context = credentialContext({
     credentialPath: provisionerCredentialPath,
     revocations: provisionerRevocations,
+    observationStore: provisionerKeyObservationStore,
     trustedRoleRootPublicKey: trustedProvisionerRoleRootPublicKey,
     role: PUBLIC_WITNESS_SERVICE_KEY_ROLES.PROVISIONER,
     principalId: expectedProvisionerId,
@@ -110,17 +133,22 @@ export function verifyPublicWitnessSourceProvisioningApplicationRecordWithKeyLif
     ...record,
     provisioner_credential_digest: context.credential.credential_digest,
     provisioner_key_epoch: context.credential.statement.key_epoch,
-    provisioner_role_root_key_id: context.credential.statement.role_root_key_id
+    provisioner_role_root_key_id: context.credential.statement.role_root_key_id,
+    provisioner_successor_equivocation_checked: context.observation !== null,
+    provisioner_successor_equivocation_observed: false,
+    globally_current_key_state_claimed: false
   });
 }
 
 export function verifyPublicWitnessSourceProvisioningApplicationJournalWithKeyLifecycle(records, {
   operatorCredentialPath,
   operatorRevocations = [],
+  operatorKeyObservationStore = null,
   trustedOperatorRoleRootPublicKey,
   expectedOperatorId,
   provisionerCredentialPath,
   provisionerRevocations = [],
+  provisionerKeyObservationStore = null,
   trustedProvisionerRoleRootPublicKey,
   expectedProvisionerId,
   expectedDomainId
@@ -155,6 +183,7 @@ export function verifyPublicWitnessSourceProvisioningApplicationJournalWithKeyLi
     const record = verifyPublicWitnessSourceProvisioningApplicationRecordWithKeyLifecycle(rawRecord, {
       provisionerCredentialPath,
       provisionerRevocations,
+      provisionerKeyObservationStore,
       trustedProvisionerRoleRootPublicKey,
       expectedDomainId,
       expectedProvisionerId
@@ -172,6 +201,7 @@ export function verifyPublicWitnessSourceProvisioningApplicationJournalWithKeyLi
       const command = verifyPublicWitnessSourceProvisioningCommandWithKeyLifecycle(rawCommand, {
         operatorCredentialPath,
         operatorRevocations,
+        operatorKeyObservationStore,
         trustedOperatorRoleRootPublicKey,
         expectedDomainId,
         expectedOperatorId,
@@ -200,6 +230,7 @@ export function verifyPublicWitnessSourceProvisioningApplicationJournalWithKeyLi
       assertPublicWitnessSourceProvisioningCommandEffectAllowed(state.rawCommand, {
         operatorCredentialPath,
         operatorRevocations,
+        operatorKeyObservationStore,
         trustedOperatorRoleRootPublicKey,
         expectedDomainId,
         expectedOperatorId,
@@ -250,9 +281,11 @@ export function verifyPublicWitnessSourceProvisioningApplicationJournalWithKeyLi
     authorized_only_count: authorizedOnly,
     highest_operator_key_epoch_observed: operatorEpochMax,
     highest_provisioner_key_epoch_observed: provisionerEpochMax,
+    operator_successor_equivocation_checked: operatorKeyObservationStore !== null,
+    provisioner_successor_equivocation_checked: provisionerKeyObservationStore !== null,
+    globally_current_key_state_claimed: false,
     last_record_digest: previousDigest,
     wall_clock_signing_time_proved: false,
-    globally_current_key_state_claimed: false,
     hostile_host_resistance_claimed: false,
     network_effect: 'none'
   });
@@ -262,6 +295,7 @@ export function assertPublicWitnessProvisionerSigningKeyCurrent({
   provisionerPrivateKey,
   provisionerCredentialPath,
   provisionerRevocations = [],
+  provisionerKeyObservationStore = null,
   trustedProvisionerRoleRootPublicKey,
   expectedDomainId,
   expectedProvisionerId,
@@ -285,13 +319,14 @@ export function assertPublicWitnessProvisionerSigningKeyCurrent({
   const context = credentialContext({
     credentialPath: provisionerCredentialPath,
     revocations: provisionerRevocations,
+    observationStore: provisionerKeyObservationStore,
     trustedRoleRootPublicKey: trustedProvisionerRoleRootPublicKey,
     role: PUBLIC_WITNESS_SERVICE_KEY_ROLES.PROVISIONER,
     principalId: expectedProvisionerId,
     domainId: expectedDomainId,
     operationalKeyId: keyId
   });
-  return assertPublicWitnessServiceKeyUsableAt(context.credential, {
+  const usable = assertPublicWitnessServiceKeyUsableAt(context.credential, {
     trustedRoleRootPublicKey: trustedProvisionerRoleRootPublicKey,
     at: timestamp,
     successorCredential: context.successorCredential,
@@ -299,5 +334,11 @@ export function assertPublicWitnessProvisionerSigningKeyCurrent({
     expectedDomainId,
     expectedRole: PUBLIC_WITNESS_SERVICE_KEY_ROLES.PROVISIONER,
     expectedPrincipalId: expectedProvisionerId
+  });
+  return Object.freeze({
+    ...usable,
+    successor_equivocation_checked: context.observation !== null,
+    successor_equivocation_observed: false,
+    globally_current_key_state_claimed: false
   });
 }
