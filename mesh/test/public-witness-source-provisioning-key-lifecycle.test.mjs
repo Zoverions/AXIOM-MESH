@@ -186,7 +186,7 @@ test('revocation or compromise recovery contracts future effects from an earlier
     trustedOperatorRoleRootPublicKey: root.publicKey,
     commandId: 'pre-compromise-command',
     authorizedAt: '2026-08-17T22:02:00.000Z',
-    expiresAt: '2026-08-17T22:20:00.000Z'
+    expiresAt: '2026-08-17T22:15:00.000Z'
   });
   const revocation = createPublicWitnessServiceKeyRevocation(first, {
     trustedRoleRootPublicKey: root.publicKey,
