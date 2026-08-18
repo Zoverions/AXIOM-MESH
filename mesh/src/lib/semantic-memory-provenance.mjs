@@ -59,6 +59,7 @@ const TOP_LEVEL_KEYS = new Set([
   'review_decision',
   'parent_object_id',
   'parent_content_digest',
+  'parent_provenance_digest',
   'ingestion_intent_id',
   'request_digest',
   'may_affect_authority',
@@ -96,16 +97,16 @@ export function normalizeSemanticMemoryProvenance(value) {
     if (originPrincipal !== undefined && originPrincipal !== owner) {
       throw new ValidationError('Owner-authored memory origin must equal owner');
     }
-  } else if (originClass === 'local-model-generated') {
-    if (!originRuntimeId) {
+  } else {
+    if (!originArtifactDigest) {
+      throw new ValidationError('Non-owner memory requires origin_artifact_digest');
+    }
+    if (originClass === 'local-model-generated' && !originRuntimeId) {
       throw new ValidationError('Local-model-generated memory requires origin_runtime_id');
     }
-  } else if (originClass === 'remote-agent') {
-    if (!originPrincipal) {
+    if (originClass === 'remote-agent' && !originPrincipal) {
       throw new ValidationError('Remote-agent memory requires origin_principal');
     }
-  } else if (!originArtifactDigest) {
-    throw new ValidationError('Non-owner memory requires origin_artifact_digest');
   }
 
   const defaultAuthority = originClass === 'owner-authored'
@@ -213,11 +214,20 @@ export function normalizeSemanticMemoryProvenance(value) {
 
   const parentObjectId = optionalId(source.parent_object_id, 'parent_object_id');
   const parentContentDigest = optionalDigest(source.parent_content_digest, 'parent_content_digest');
-  if ((parentObjectId === undefined) !== (parentContentDigest === undefined)) {
-    throw new ValidationError('Derived-memory parent id and content digest must be supplied together');
+  const parentProvenanceDigest = optionalDigest(
+    source.parent_provenance_digest,
+    'parent_provenance_digest'
+  );
+  const parentValues = [parentObjectId, parentContentDigest, parentProvenanceDigest];
+  const parentValueCount = parentValues.filter(value => value !== undefined).length;
+  if (parentValueCount !== 0 && parentValueCount !== parentValues.length) {
+    throw new ValidationError('Derived-memory parent provenance must be supplied as a complete tuple');
   }
-  if (originClass === 'system-derived' && !parentObjectId) {
+  if (originClass === 'system-derived' && parentValueCount === 0) {
     throw new ValidationError('System-derived memory requires parent provenance');
+  }
+  if (originClass !== 'system-derived' && parentValueCount !== 0) {
+    throw new ValidationError('Only system-derived memory may carry parent provenance');
   }
 
   const normalized = {
@@ -244,6 +254,7 @@ export function normalizeSemanticMemoryProvenance(value) {
     ...(reviewDecision ? { review_decision: reviewDecision } : {}),
     ...(parentObjectId ? { parent_object_id: parentObjectId } : {}),
     ...(parentContentDigest ? { parent_content_digest: parentContentDigest } : {}),
+    ...(parentProvenanceDigest ? { parent_provenance_digest: parentProvenanceDigest } : {}),
     ...(source.ingestion_intent_id
       ? { ingestion_intent_id: requiredId(source.ingestion_intent_id, 'ingestion_intent_id') }
       : {}),
@@ -349,12 +360,13 @@ export function deriveSemanticMemoryProvenance(parent, {
     origin_class: 'system-derived',
     origin_principal: normalized.origin_principal ?? normalized.owner,
     origin_runtime_id: normalized.origin_runtime_id,
-    origin_artifact_digest: normalized.content_digest,
+    origin_artifact_digest: normalized.provenance_digest,
     semantic_class,
     authority_tier: 'untrusted-data',
     review_state: 'unreviewed',
     parent_object_id: normalized.object_id,
     parent_content_digest: normalized.content_digest,
+    parent_provenance_digest: normalized.provenance_digest,
     ...(ingestion_intent_id ? { ingestion_intent_id } : {}),
     ...(request_digest ? { request_digest } : {}),
     may_affect_authority: false
