@@ -32,7 +32,9 @@ test('infrastructure discovery points only to existing bounded contracts', async
     discovery.executor_isolation_profile_contract,
     discovery.linux_isolation_conformance_receipt_contract,
     discovery.read_system_facts_effect_admission_contract,
-    discovery.read_system_facts_effect_receipt_contract
+    discovery.read_system_facts_effect_receipt_contract,
+    discovery.collect_sanitized_logs_effect_admission_contract,
+    discovery.collect_sanitized_logs_effect_receipt_contract
   ];
   for (const path of contractPaths) {
     assert.equal(typeof path, 'string');
@@ -55,7 +57,9 @@ test('infrastructure discovery points only to existing bounded contracts', async
     [discovery.executor_isolation_profile_contract, 'agent-executor-isolation-profile.v1.schema.json', 'axiom-agent-executor-isolation-profile.v1'],
     [discovery.linux_isolation_conformance_receipt_contract, 'agent-linux-isolation-conformance-receipt.v1.schema.json', 'axiom-agent-linux-isolation-conformance-receipt.v1'],
     [discovery.read_system_facts_effect_admission_contract, 'agent-read-system-facts-effect-admission.v1.schema.json', 'axiom-agent-read-system-facts-effect-admission.v1'],
-    [discovery.read_system_facts_effect_receipt_contract, 'agent-read-system-facts-effect-receipt.v1.schema.json', 'axiom-agent-read-system-facts-effect-receipt.v1']
+    [discovery.read_system_facts_effect_receipt_contract, 'agent-read-system-facts-effect-receipt.v1.schema.json', 'axiom-agent-read-system-facts-effect-receipt.v1'],
+    [discovery.collect_sanitized_logs_effect_admission_contract, 'agent-collect-sanitized-logs-effect-admission.v1.schema.json', 'axiom-agent-collect-sanitized-logs-effect-admission.v1'],
+    [discovery.collect_sanitized_logs_effect_receipt_contract, 'agent-collect-sanitized-logs-effect-receipt.v1.schema.json', 'axiom-agent-collect-sanitized-logs-effect-receipt.v1']
   ];
   for (const [path, idSuffix, schema] of identities) {
     const contract = await readJson(path);
@@ -129,6 +133,19 @@ test('infrastructure discovery points only to existing bounded contracts', async
   assert.ok(linuxIsolationThreatModel.promotion_blockers.length >= 8);
   for (const key of Object.keys(linuxIsolationThreatModel.boundaries)) assert.equal(linuxIsolationThreatModel.boundaries[key], false, `Linux isolation threat-model boundary ${key} must remain false`);
 
+  const collectLogsThreatModel = await readJson(discovery.collect_sanitized_logs_effect_threat_model);
+  assert.equal(collectLogsThreatModel.schema, 'axiom-agent-collect-sanitized-logs-effect-threat-model.v1');
+  assert.equal(collectLogsThreatModel.phase, 'plan-bound-synthetic-sanitized-log-hosted-ci-effect');
+  assert.equal(collectLogsThreatModel.effect_scope.fixed_sanitizer_process_execution, true);
+  assert.equal(collectLogsThreatModel.effect_scope.disposable_synthetic_log_fixture_read, true);
+  assert.equal(collectLogsThreatModel.effect_scope.caller_supplied_path_or_glob, false);
+  assert.equal(collectLogsThreatModel.effect_scope.host_or_repository_log_read, false);
+  assert.ok(Array.isArray(collectLogsThreatModel.attack_classes));
+  assert.ok(collectLogsThreatModel.attack_classes.length >= 20);
+  assert.ok(Array.isArray(collectLogsThreatModel.promotion_blockers));
+  assert.ok(collectLogsThreatModel.promotion_blockers.length >= 10);
+  for (const key of Object.keys(collectLogsThreatModel.boundaries)) assert.equal(collectLogsThreatModel.boundaries[key], false, `sanitized-log threat-model boundary ${key} must remain false`);
+
   assert.deepEqual(discovery.challenge_classes, [
     'hardware-validation', 'test-node-provisioning', 'deployment-reproduction',
     'infrastructure-diagnostics', 'support-assistance', 'device-lab-capacity'
@@ -150,6 +167,12 @@ test('infrastructure discovery points only to existing bounded contracts', async
     'read_system_facts_plan_bound_effect_lab_available',
     'read_system_facts_effect_receipts_available',
     'read_system_facts_real_process_effects_enabled',
+    'collect_sanitized_logs_effect_admission_available',
+    'collect_sanitized_logs_plan_bound_effect_lab_available',
+    'collect_sanitized_logs_effect_receipts_available',
+    'collect_sanitized_logs_real_process_effects_enabled',
+    'collect_sanitized_logs_disposable_filesystem_read_effects_enabled',
+    'collect_sanitized_logs_disposable_filesystem_write_effects_enabled',
     'executor_durable_control_state_filesystem_write_enabled'
   ]) assert.equal(discovery[key], true, `${key} must be true`);
 
@@ -164,6 +187,10 @@ test('infrastructure discovery points only to existing bounded contracts', async
     'compiled_plan_effect_admission_enabled',
     'read_system_facts_repository_code_execution_enabled',
     'read_system_facts_network_effects_enabled',
+    'collect_sanitized_logs_arbitrary_path_access_enabled',
+    'collect_sanitized_logs_host_or_repository_log_access_enabled',
+    'collect_sanitized_logs_repository_code_execution_enabled',
+    'collect_sanitized_logs_network_effects_enabled',
     'general_executor_available',
     'test_session_effects_reachable',
     'production_lifecycle_persistence_enabled',

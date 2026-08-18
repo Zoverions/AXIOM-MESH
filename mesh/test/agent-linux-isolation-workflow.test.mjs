@@ -10,7 +10,7 @@ async function workflowText() {
   return readFile(WORKFLOW, 'utf8');
 }
 
-test('release governance accepts only the fixed isolation plus one-operation effect workflow', async () => {
+test('release governance accepts only fixed isolation plus the two named bounded effect laboratories', async () => {
   const result = verifyAgentLinuxIsolationWorkflow(await workflowText());
   assert.equal(result.runner, 'ubuntu-24.04');
   assert.equal(result.node_version, '24.18.0');
@@ -20,11 +20,14 @@ test('release governance accepts only the fixed isolation plus one-operation eff
   assert.equal(result.fixed_probe_only, false);
   assert.equal(result.fixed_probe_isolation_present, true);
   assert.equal(result.read_system_facts_effect_present, true);
+  assert.equal(result.collect_sanitized_logs_effect_present, true);
   assert.equal(result.general_executor_reachable, false);
   assert.equal(result.production_provisioning_reachable, false);
   assert.equal(result.receipt_reverification_required, true);
   assert.equal(result.consumed_head_reverification_required, true);
   assert.equal(result.effect_receipt_reverification_required, true);
+  assert.equal(result.collect_sanitized_logs_consumed_head_reverification_required, true);
+  assert.equal(result.collect_sanitized_logs_effect_receipt_reverification_required, true);
   assert.deepEqual(result.action_references, [
     'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
     'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020',
@@ -33,7 +36,7 @@ test('release governance accepts only the fixed isolation plus one-operation eff
   assert.match(result.workflow_sha256, /^[a-f0-9]{64}$/);
 });
 
-test('release governance rejects privilege, secret, remote-trigger and operation widening', async () => {
+test('release governance rejects privilege, secret, remote-trigger and broad operation widening', async () => {
   const workflow = await workflowText();
   for (const injected of [
     '\n    permissions: write-all\n',
@@ -70,7 +73,7 @@ test('release governance rejects mutable action and runner references', async ()
   );
 });
 
-test('release governance rejects removal of isolation, consumed-head, effect or final-head verification', async () => {
+test('release governance rejects removal of read-system-facts evidence boundaries', async () => {
   const workflow = await workflowText();
   const weakened = [
     workflow.replace(
@@ -82,44 +85,65 @@ test('release governance rejects removal of isolation, consumed-head, effect or 
       'const consumed = bundle.durable_consume_head_receipt; // verification removed'
     ),
     workflow.replace(
-      'durableConsumeHeadReceipt: bundle.durable_consume_head_receipt,',
-      'durableConsumeHeadReceipt: undefined,'
-    ),
-    workflow.replace(
       'const effect = verifyAgentReadSystemFactsEffectReceipt(bundle.effect_receipt, {',
       'const effect = bundle.effect_receipt; // verification removed'
     ),
     workflow.replace(
-      'verifyAgentExecutorDurableStateReceipt(bundle.durable_head_receipt, {',
-      'acceptDurableHeadWithoutVerification(bundle.durable_head_receipt, {'
+      'consumed.statement.lifecycle_status !== "consumed"',
+      'false'
+    ),
+    workflow.replace(
+      'consumed.receipt_digest !== effect.statement.durable_consume_head_receipt_digest',
+      'false'
     )
   ];
   for (const candidate of weakened) {
-    assert.throws(
-      () => verifyAgentLinuxIsolationWorkflow(candidate),
-      /missing governed boundary/i
-    );
+    assert.throws(() => verifyAgentLinuxIsolationWorkflow(candidate), /missing governed boundary/i);
   }
 });
 
-test('release governance rejects consumed-head status or digest parity removal', async () => {
+test('release governance rejects removal of sanitized-log admission, consumed-head, effect or final-head verification', async () => {
   const workflow = await workflowText();
-  for (const [needle, replacement] of [
-    ['consumed.statement.lifecycle_status !== "consumed"', 'false'],
-    ['consumed.receipt_digest !== effect.statement.durable_consume_head_receipt_digest', 'false']
-  ]) {
-    assert.throws(
-      () => verifyAgentLinuxIsolationWorkflow(workflow.replace(needle, replacement)),
-      /missing governed boundary/i
-    );
+  const weakened = [
+    workflow.replace(
+      'verifyAgentCollectSanitizedLogsEffectAdmission(bundle.admission, {',
+      'acceptSanitizedLogAdmissionWithoutVerification(bundle.admission, {'
+    ),
+    workflow.replace(
+      'const logConsumed = verifyAgentExecutorDurableStateReceipt(bundle.durable_consume_head_receipt, {',
+      'const logConsumed = bundle.durable_consume_head_receipt; // verification removed'
+    ),
+    workflow.replace(
+      'const logEffect = verifyAgentCollectSanitizedLogsEffectReceipt(bundle.effect_receipt, {',
+      'const logEffect = bundle.effect_receipt; // verification removed'
+    ),
+    workflow.replace(
+      'logConsumed.statement.lifecycle_status !== "consumed"',
+      'false'
+    ),
+    workflow.replace(
+      'logConsumed.receipt_digest !== logEffect.statement.durable_consume_head_receipt_digest',
+      'false'
+    ),
+    workflow.replace(
+      'const logDurable = verifyAgentExecutorDurableStateReceipt(bundle.durable_head_receipt, {',
+      'const logDurable = bundle.durable_head_receipt; // verification removed'
+    ),
+    workflow.replace(
+      'logDurable.statement.generation !== logEffect.statement.durable_final_generation',
+      'false'
+    )
+  ];
+  for (const candidate of weakened) {
+    assert.throws(() => verifyAgentLinuxIsolationWorkflow(candidate), /missing governed boundary/i);
   }
 });
 
 test('release governance rejects any extra action or second job', async () => {
   const workflow = await workflowText();
   const extraAction = workflow.replace(
-    '      - name: Upload Linux isolation and read-system-facts effect evidence',
-    '      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830\n      - name: Upload Linux isolation and read-system-facts effect evidence'
+    '      - name: Upload Linux isolation and bounded effect evidence',
+    '      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830\n      - name: Upload Linux isolation and bounded effect evidence'
   );
   assert.throws(
     () => verifyAgentLinuxIsolationWorkflow(extraAction),

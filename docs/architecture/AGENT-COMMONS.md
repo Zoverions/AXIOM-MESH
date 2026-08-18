@@ -73,11 +73,13 @@ The draft object family is deliberately explicit:
 17. `axiom-agent-executor-isolation-profile.v1` — an exact platform-profile-bound requirement/evidence object for one reviewed Linux, macOS, or Windows isolation policy whose validation grants no real isolation or effect admission;
 18. `axiom-agent-linux-isolation-conformance-receipt.v1` — a content-addressed hosted-CI receipt for one exact fixed-probe Linux isolation run, containing sanitized observed kernel/container evidence while withholding arbitrary-execution, physical-device, production, deployment, capability, and authority claims;
 19. `axiom-agent-read-system-facts-effect-admission.v1` — a short-lived Ed25519-signed laboratory admission binding one exact inert dry-run plan, exact repository revision, lifecycle/compiler/isolation policy bindings, and only `read-system-facts`, without changing the plan's hard-false effect claim;
-20. `axiom-agent-read-system-facts-effect-receipt.v1` — an Ed25519-signed executor-originated receipt binding the exact admission, plan, durable consume/final lifecycle records, Linux isolation evidence, fixed observations, and cleanup while withholding task-success, general-executor, production, deployment, capability, and AXIOM-authority claims.
+20. `axiom-agent-read-system-facts-effect-receipt.v1` — an Ed25519-signed executor-originated receipt binding the exact admission, plan, durable consume/final lifecycle records, Linux isolation evidence, fixed observations, and cleanup while withholding task-success, general-executor, production, deployment, capability, and AXIOM-authority claims;
+21. `axiom-agent-collect-sanitized-logs-effect-admission.v1` — a short-lived Ed25519-signed laboratory admission binding the existing inert `collect-sanitized-logs:builtin` plan, exact repository/lifecycle/compiler/isolation bindings, and the fixed synthetic-log sanitization policy without granting arbitrary-path or host-log authority;
+22. `axiom-agent-collect-sanitized-logs-effect-receipt.v1` — an Ed25519-signed executor-originated receipt binding the exact admission, plan, signed pre-effect consumed durable head, fixed sanitizer digest/path, sanitized projection, final durable head, Linux isolation evidence, and cleanup while withholding host-log, general-executor, production, deployment, capability, task-success, and AXIOM-authority claims.
 
 The supported core contribution schemas live under `docs/architecture/contracts/`. Experimental infrastructure-lab exchange schemas remain under `agent-commons/contracts/` until that layer is separately promoted into the supported documentation boundary.
 
-These are exchange and evidence contracts. They do not prove that an external agent, runtime, identity, network, offered device, lifecycle signer, platform profile, compiler, virtual sandbox, durable local state store, isolation profile, Linux fixed-probe receipt, laboratory effect-admission signer, executor effect receipt, reviewed mechanism family, or future executor is trustworthy beyond the evidence actually verified.
+These are exchange and evidence contracts. They do not prove that an external agent, runtime, identity, network, offered device, lifecycle signer, platform profile, compiler, virtual sandbox, durable local state store, isolation profile, Linux fixed-probe receipt, laboratory effect-admission signer, sanitizer implementation, executor effect receipt, reviewed mechanism family, or future executor is trustworthy beyond the evidence actually verified.
 
 ## Challenge model
 
@@ -194,11 +196,19 @@ Relevant threats include:
 - the fixed `read-system-facts` executable/argv/workdir/image/network mapping being widened after admission;
 - post-consumption process, output, or cleanup uncertainty being rewritten as completion instead of terminal interruption;
 - executor receipt signer, admission/plan/lifecycle/durable/isolation/image binding, observation digest, or final-head substitution;
-- a successful `read-system-facts` effect receipt being elevated into application task success, global revocation currentness, arbitrary repository-code execution, network/credential/remote-hardware authority, a general executor, production deployment, capability promotion, or AXIOM authority.
+- a successful `read-system-facts` effect receipt being elevated into application task success, global revocation currentness, arbitrary repository-code execution, network/credential/remote-hardware authority, a general executor, production deployment, capability promotion, or AXIOM authority;
+- the inert `collect-sanitized-logs:builtin` step being reinterpreted as arbitrary filesystem-read or host-log authority;
+- `collect-sanitized-logs` admission signer, plan/revision/lifecycle/compiler/isolation/sanitization-policy binding, lifetime, or operation substitution;
+- a sanitized-log effect beginning without an independently verified signed generation-2 `consumed` durable-head receipt;
+- caller-supplied absolute paths, traversal, globs, symlinks, bind mounts, environment path authority, or host/repository log sources being smuggled into the sanitized-log adapter;
+- sanitizer-script digest substitution, malformed/oversized JSONL, parser ambiguity, record-count/output exhaustion, or unexpected free-form fields bypassing the projection;
+- deliberate sentinel, token, path, hostname, URL, command-line, or other forbidden fixture material surviving sanitization or appearing in the uploaded artifact;
+- canonical sanitized output being replaced by a semantically similar but unreviewed projection;
+- a successful synthetic-log receipt being elevated into permission to read application/host logs, general filesystem authority, task success, a general executor, production deployment, capability promotion, or AXIOM authority.
 
 Required controls include exact-base binding, bounded inputs, protected CI, provenance capture, secret isolation, security-report routing, independent review for consequential changes, and no merge or infrastructure authority for external agents merely from participation.
 
-The machine-readable pre-executor threat ledger is `agent-commons/pre-executor-threat-model.json`. The machine-readable virtual executor-conformance threat ledger is `agent-commons/executor-conformance-threat-model.json`. The machine-readable durable executor-state threat ledger is `agent-commons/executor-durable-state-threat-model.json`. The machine-readable platform-isolation-profile threat ledger is `agent-commons/executor-isolation-threat-model.json`. The machine-readable fixed-probe Linux isolation threat ledger is `agent-commons/linux-isolation-adapter-threat-model.json`. The machine-readable plan-bound `read-system-facts` effect threat ledger is `agent-commons/read-system-facts-effect-threat-model.json`. None of these threat ledgers is itself an effect capability.
+The machine-readable pre-executor threat ledger is `agent-commons/pre-executor-threat-model.json`. The machine-readable virtual executor-conformance threat ledger is `agent-commons/executor-conformance-threat-model.json`. The machine-readable durable executor-state threat ledger is `agent-commons/executor-durable-state-threat-model.json`. The machine-readable platform-isolation-profile threat ledger is `agent-commons/executor-isolation-threat-model.json`. The machine-readable fixed-probe Linux isolation threat ledger is `agent-commons/linux-isolation-adapter-threat-model.json`. The machine-readable plan-bound `read-system-facts` effect threat ledger is `agent-commons/read-system-facts-effect-threat-model.json`. The machine-readable synthetic `collect-sanitized-logs` effect threat ledger is `agent-commons/collect-sanitized-logs-effect-threat-model.json`. None of these threat ledgers is itself an effect capability.
 
 ## GitHub integration
 
@@ -512,11 +522,33 @@ The host maps `node-current-pinned` to the fixed `/usr/local/bin/node` entrypoin
 
 The durable store must be at generation 2 / lifecycle `consumed` before the first effect container is launched. Completion creates generation 3 only after both exact observations pass bounded validation. If an exception occurs after consumption while the durable state remains `consumed`, the drill attempts a terminal `interrupted` transition; it never restores consumed authority to `issued`.
 
-`axiom-agent-read-system-facts-effect-receipt.v1` is signed by a separate executor-laboratory Ed25519 key and binds the exact admission, plan, authorization, sponsor/subject, pre-effect lifecycle head, consumption event, final lifecycle head/receipt, durable consume/final record digests, isolation receipt, adapter, content-addressed image, exact two observations, timestamps, and cleanup. The governed workflow independently reverifies the evidence-bundle digest, admission signature, executor effect receipt, durable final-head receipt, exact durable final generation/record parity, and hard-false bundle claims before artifact publication.
+`axiom-agent-read-system-facts-effect-receipt.v1` is signed by a separate executor-laboratory Ed25519 key and binds the exact admission, plan, authorization, sponsor/subject, pre-effect lifecycle head, consumption event, final lifecycle head/receipt, durable consume/final record digests, isolation receipt, adapter, content-addressed image, exact two observations, timestamps, and cleanup. The governed workflow independently reverifies the evidence-bundle digest, admission signature, signed consumed durable-head receipt, executor effect receipt, durable final-head receipt, exact consume/final generation/record parity, and hard-false bundle claims before artifact publication.
 
 A successful receipt may truthfully claim **real process effects**, exact plan-step mapping, and durable consume-before-effect ordering for this one hosted-CI operation. It deliberately keeps `task_success_claimed: false`; observing the fixed facts is not elevated into an application-level task-success judgment. It also remains false for the dry-run plan itself being effect-reachable, global revocation currentness, repository-code or repository-workspace execution, network effects, credentials/secrets, package/service actions, remote execution/hardware, production enrollment/deployment, capability promotion, a general executor, or AXIOM authority.
 
 The machine-readable threat ledger for this gate is `agent-commons/read-system-facts-effect-threat-model.json`.
+
+### Plan-bound synthetic `collect-sanitized-logs` effect laboratory
+
+`mesh/src/collect-sanitized-logs-effect-drill.mjs`, `mesh/src/lib/agent-collect-sanitized-logs-effect-admission.mjs`, and `mesh/src/lib/agent-collect-sanitized-logs-effect.mjs` add a second operation-specific real effect without adding a general dispatcher.
+
+Core sanitization invariant:
+
+> **The `collect-sanitized-logs` dry-run builtin remains inert. A separately signed admission may authorize only the fixed synthetic disposable-log laboratory, and no arbitrary path, host/application/repository log source, or raw log export is implied.**
+
+The dry-run compiler already represents `collect-sanitized-logs` as one inert builtin step: `collect-sanitized-logs:builtin`, with no executable, no argv, network `none`, repository-code execution false, and `effect_reachable: false`. This gate does not modify that compiler contract. `axiom-agent-collect-sanitized-logs-effect-admission.v1` separately binds the exact plan/revision/authorization/lifecycle/compiler/Linux-isolation policy plus `synthetic-jsonl-allowlist-v1`; hidden fields, signer substitution, operation widening, arbitrary-path authority, host/repository-log authority, network/credential/secret authority, and lifetimes beyond the plan or five-minute laboratory ceiling fail closed.
+
+`AgentCollectSanitizedLogsEffectController.begin()` follows the same one-time control sequence as the first effect gate: exact signed `issued` lifecycle verification, exact durable-local-head match, explicit `revocationState: 'active'`, generation-2 durable `consumed` commit, then a separately signed generation-2 durable-head receipt verified under the exact store key before any effect descriptor is returned. Unknown revocation, stale/substituted lifecycle evidence, already-consumed state, signer drift, or consumed-head mismatch fails closed.
+
+The effect mapping is deliberately fixed rather than caller-selected. The hosted Linux container receives no repository/host bind mount and no caller path, glob, argv, shell, environment path authority, network origin, credentials/secrets, package/service action, remote endpoint, or contributed hardware. A repository-reviewed Node adapter script, bound by its SHA-256 digest, creates one deterministic synthetic JSONL fixture **inside disposable tmpfs** at `/work/session/logs/lab.jsonl`. The raw fixture contains deliberately forbidden sentinel/token/path/hostname/URL/command-line material so leakage is actively testable rather than assumed absent.
+
+The adapter requires the fixed file to be a non-symlink regular file, requires `O_NOFOLLOW`, opens it read-only, rechecks it with `fstat`, caps source size at 8 KiB, caps record count at 16, and caps each input record before parsing. It accepts only canonical timestamps, the levels `info|warn|error`, and bounded token-shaped `component`, `event_code`, and `message_code` values. It then emits exactly the reviewed three-record synthetic projection with only five fields per record: `timestamp`, `level`, `component`, `event_code`, and `message_code`. Output must be canonical JSON and no more than 4 KiB. The verifier rejects extra/free-form fields, reordered/noncanonical output, unexpected record values, and any surviving forbidden fixture material.
+
+The raw synthetic JSONL never leaves the disposable container. The evidence bundle contains the fixed sanitizer/script digest, fixed logical path, source byte/record counts, canonical allowlisted projection, signed consumed head, signed executor receipt, signed final durable head, and hard-false nonclaims. The workflow independently reverifies the admission, exact store-signed generation-2 consumed head, executor receipt, exact generation-3 final head, bundle digest, and all bundle nonclaims before the single evidence artifact is uploaded.
+
+A passing `axiom-agent-collect-sanitized-logs-effect-receipt.v1` may truthfully claim the exact disposable synthetic fixture write/read, the fixed sanitizer process effect, and the exact allowlisted projection that was observed. It does **not** establish safe ingestion of arbitrary real logs, host/application/repository log access, arbitrary filesystem-read authority, repository code execution, network effects, credential/secret access, remote hardware, application task success, a general executor, production deployment, capability promotion, global revocation currentness, or AXIOM authority.
+
+The machine-readable threat ledger for this gate is `agent-commons/collect-sanitized-logs-effect-threat-model.json`.
 
 ### Future executor promotion boundary
 
@@ -526,8 +558,9 @@ A general, multi-operation, repository-code, network-capable, remote-hardware, o
 - authenticated sponsor identity and independently current authorization/revocation verification;
 - production-grade durable one-time lifecycle consumption and revocation/head retention, including an explicit currentness/replication model rather than only this local laboratory;
 - exact isolation-profile binding to one reviewed platform policy;
-- reviewed operation-by-operation mappings from exact compiled plans into platform adapters, with separate treatment of repository-code hazards rather than generalizing from `read-system-facts`;
-- pinned absolute executable resolution without ambient PATH authority;
+- reviewed operation-by-operation mappings from exact compiled plans into platform adapters, with separate treatment of repository-code hazards rather than generalizing from `read-system-facts` or the synthetic sanitized-log gate;
+- a separately reviewed source/path/privacy policy before any real host or application logs can be considered;
+- pinned absolute executable resolution without ambient PATH authority where process templates are used;
 - isolated disposable sandboxing for repository code before `run-build` or `run-tests` can be considered;
 - filesystem/root/symlink or reparse-point enforcement independent of repository code;
 - exact network-origin enforcement, DNS resolution pinning, no redirects, and no ambient credentials before network effects can be considered;
@@ -537,7 +570,7 @@ A general, multi-operation, repository-code, network-capable, remote-hardware, o
 - executor-originated effect receipts bound to each exact compiled plan/admission, isolation evidence, lifecycle transition, and observed platform evidence;
 - independent effect-path threat/security review and protected promotion.
 
-The virtual executor-conformance sandbox reduces ambiguity about enforcement semantics. The durable-state laboratory proves local restart ordering and one-time-consumption recovery semantics. The isolation-profile laboratory fixes the cross-platform requirement/evidence vocabulary. The fixed Linux laboratory demonstrates real kernel/container enforcement for its exact hosted probe boundary. The `read-system-facts` laboratory now demonstrates one exact plan-bound consume-before-effect sequence. **None of those results establishes arbitrary repository-code isolation, generic compiled-plan admission, production admission identity, global currentness, live-network enforcement, package/service execution, physical-device isolation, or remote-hardware safety.**
+The virtual executor-conformance sandbox reduces ambiguity about enforcement semantics. The durable-state laboratory proves local restart ordering and one-time-consumption recovery semantics. The isolation-profile laboratory fixes the cross-platform requirement/evidence vocabulary. The fixed Linux laboratory demonstrates real kernel/container enforcement for its exact hosted probe boundary. The `read-system-facts` and synthetic `collect-sanitized-logs` laboratories now demonstrate two distinct exact plan-bound consume-before-effect sequences. **Neither result establishes arbitrary repository-code isolation, generic compiled-plan admission, host/application-log authority, arbitrary filesystem reads, production admission identity, global currentness, live-network enforcement, package/service execution, physical-device isolation, or remote-hardware safety.**
 
 Remote access is not part of the current effect path. An offer may state that remote access is technically available, but credentials, tunnels, remote shells, device-management enrollment, and unattended administration require a separate future design.
 
@@ -639,10 +672,14 @@ Where practical, retain publication provenance and external identifiers so annou
 - exact current signed issued-head verification plus explicit known-active laboratory revocation state before durable consumption;
 - durable generation-2 one-time consumption before the first `read-system-facts` process effect and terminal interruption on post-consumption uncertainty;
 - exact two-step `/usr/local/bin/node` mapping using the content-addressed reviewed isolation image and no repository/network/credential/package/service widening;
-- signed executor-originated `read-system-facts` effect receipts plus independently reverified durable final heads and evidence-bundle digests;
+- signed executor-originated `read-system-facts` effect receipts plus independently reverified signed consumed/final durable heads and evidence-bundle digests;
 - machine-readable `read-system-facts` effect threat model with production/general-executor blockers;
+- separate short-lived Ed25519 `collect-sanitized-logs` admission while its compiler builtin remains inert;
+- fixed synthetic `/work/session/logs/lab.jsonl` fixture generation and bounded `O_NOFOLLOW` read wholly inside disposable tmpfs, with no host/repository log mount or caller path;
+- exact five-field canonical projection for the reviewed three-record synthetic fixture, deliberate forbidden-value leakage tests, signed consumed/final durable heads, and signed executor evidence;
+- machine-readable `collect-sanitized-logs` effect threat model with explicit real-log/path/general-executor promotion blockers;
 - declared/measured/reproduced/externally-verified evidence separation;
-- no arbitrary repository-code execution, generic compiled-plan admission, production admission identity, physical-device proof, general remote administration, package/service execution, live network execution, or production-enrollment authority.
+- no arbitrary repository-code execution, generic compiled-plan admission, host/application/repository log access, arbitrary filesystem-read authority, production admission identity, physical-device proof, general remote administration, package/service execution, live network execution, or production-enrollment authority.
 
 Any broader write-capable external adapter or remote infrastructure executor requires a separate threat review, policy mapping, evidence model, negative tests, and promotion decision.
 
@@ -692,10 +729,17 @@ Any broader write-capable external adapter or remote infrastructure executor req
 42. Before the first `read-system-facts` process, the exact signed lifecycle head must still be `issued`, the supplied revocation state must be known `active`, and the matching durable local state must commit one-time `consumed`; unknown, stale, substituted, terminal, or already-consumed state fails closed.
 43. Only the exact two reviewed `node-current-pinned` templates may reach the Linux adapter; no caller argv, repository code, bind mounts, network effects, credentials/secrets, package/service actions, remote hardware, or shell may be introduced through the operation label.
 44. Any uncertainty after durable consumption must remain consumed/terminally interrupted rather than being restored to `issued` or rewritten as completed.
-45. A `read-system-facts` executor receipt must bind the separate admission, exact inert plan, lifecycle consume/final heads, durable consume/final records, Linux isolation receipt/image, exact sanitized observations, and cleanup, and must be independently reverified with the durable final head before publication.
+45. A `read-system-facts` executor receipt must bind the separate admission, exact inert plan, lifecycle consume/final heads, signed durable consumed/final heads, Linux isolation receipt/image, exact sanitized observations, and cleanup, and must be independently reverified before publication.
 46. A successful `read-system-facts` effect receipt may claim the bounded real process observations and consume-before-effect ordering only; it cannot claim application task success, global currentness, production admission identity, independent human approval, arbitrary repository-code execution, a general executor, production/deployment authority, capability promotion, or AXIOM authority.
 47. The ephemeral hosted-CI admission issuer proves only the tested signing/admission separation and cannot be represented as a production trust root, legal identity, or independent human-approval service.
-48. Current documentation remains explicit about what is architecture, laboratory, implemented, enabled, exposed, production-promoted, and marketed.
+48. `collect-sanitized-logs` real effects require their own valid signed laboratory admission; neither the existing test-session authorization, dry-run plan, nor the `read-system-facts` admission grants that effect.
+49. The sanitized-log plan must remain exactly the inert `collect-sanitized-logs:builtin` with no executable or argv, network `none`, repository-code execution false, and no arbitrary source path.
+50. Before the sanitized-log process, the exact signed lifecycle head must still be `issued`, the supplied revocation state must be known `active`, durable generation 2 must commit `consumed`, and a separately signed consumed durable-head receipt must verify under the exact store key.
+51. The sanitized-log adapter may create/read only its fixed synthetic `/work/session/logs/lab.jsonl` inside disposable tmpfs; caller paths/globs, symlink following, host/repository bind mounts, real host/application logs, environment path authority, network, credentials/secrets, package/service actions, remote hardware, and repository code remain prohibited.
+52. Sanitized output must be the exact canonical five-field projection for the reviewed three-record synthetic fixture and must exclude all deliberate forbidden fixture values; raw synthetic JSONL must not be published in the evidence artifact.
+53. A sanitized-log executor receipt must bind the separate admission, exact inert plan, signed consumed head, fixed sanitizer/script/path, isolation receipt/image, sanitized observation, final durable head, and cleanup, and the workflow must independently reverify each binding before publication.
+54. A passing synthetic sanitized-log receipt may claim only the bounded disposable fixture write/read and allowlisted projection; it cannot claim safe arbitrary real-log ingestion, host/repository log authority, arbitrary filesystem reads, application task success, a general executor, global currentness, production/deployment authority, capability promotion, or AXIOM authority.
+55. Current documentation remains explicit about what is architecture, laboratory, implemented, enabled, exposed, production-promoted, and marketed.
 
 ## Current non-claims
 
@@ -721,7 +765,7 @@ This document does not claim:
 - a globally current revocation oracle or proof that the supplied known-active laboratory state is globally current;
 - an executor-originated **remote** effect receipt;
 - the dry-run plan or compiler itself as effect-reachable authority;
-- generic compiled-plan effect admission beyond the separately signed one-operation `read-system-facts` laboratory admission;
+- generic compiled-plan effect admission beyond the separately signed operation-specific hosted-CI laboratory admissions;
 - a production admission issuer, verified legal identity, or independent human-approval authority from the ephemeral hosted-CI admission signer;
 - a production executor-conformance service or general operating-system sandbox;
 - a production durable executor-state database, replicated state service, distributed lease service, or globally current revocation oracle;
@@ -732,8 +776,10 @@ This document does not claim:
 - physical-device isolation proof or independent external attestation from hosted Linux evidence;
 - hosted CI as physical-device or production-isolation evidence;
 - live DNS resolution/pinning enforcement or any network-capable Agent Commons effect path;
-- real package installation, repository build/test execution, repository-workspace mutation, arbitrary host-path mutation, live network execution, service management, or remote/contributed-hardware effects through Agent Commons; current real process effects are limited to the fixed Linux probes and the exact two-step hosted-CI `read-system-facts` operation, while the durable laboratory separately mutates only its dedicated local control-state files;
-- application task success from a successful `read-system-facts` effect receipt;
+- arbitrary filesystem-read authority, host/application/repository log scraping, or safe arbitrary real-log ingestion from the synthetic `collect-sanitized-logs` laboratory;
+- real package installation, repository build/test execution, repository-workspace mutation, arbitrary host-path mutation, live network execution, service management, or remote/contributed-hardware effects through Agent Commons; current real plan-bound process effects are limited to hosted-CI `read-system-facts` and the fixed synthetic `collect-sanitized-logs` adapter, while the durable laboratory separately mutates only its dedicated local control-state files;
+- raw synthetic log export from the `collect-sanitized-logs` evidence artifact;
+- application task success from a successful `read-system-facts` or synthetic sanitized-log effect receipt;
 - a production package installer, service manager, shell, tunnel, credential broker, or remote-control daemon;
 - secure remote-shell infrastructure;
 - firmware-management authority;
