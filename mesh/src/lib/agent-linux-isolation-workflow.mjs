@@ -33,6 +33,16 @@ export function verifyAgentLinuxIsolationWorkflow(workflow) {
     'node src/linux-isolation-adapter-drill.mjs',
     'import { verifyAgentLinuxIsolationConformanceReceipt } from "./src/lib/agent-linux-isolation-conformance.mjs";',
     'verifyAgentLinuxIsolationConformanceReceipt(receipt);',
+    'AXIOM_AGENT_READ_SYSTEM_FACTS_EFFECT_LAB: "1"',
+    'AXIOM_AGENT_LINUX_ISOLATION_RECEIPT: ${{ runner.temp }}/axiom-agent-linux-isolation-conformance.json',
+    'node src/read-system-facts-effect-drill.mjs',
+    'import { verifyAgentReadSystemFactsEffectAdmission } from "./src/lib/agent-read-system-facts-effect-admission.mjs";',
+    'import { verifyAgentReadSystemFactsEffectReceipt } from "./src/lib/agent-read-system-facts-effect.mjs";',
+    'verifyAgentReadSystemFactsEffectAdmission(bundle.admission, {',
+    'const effect = verifyAgentReadSystemFactsEffectReceipt(bundle.effect_receipt, {',
+    'verifyAgentExecutorDurableStateReceipt(bundle.durable_head_receipt, {',
+    'for (const value of Object.values(bundle.claims)) if (value !== false)',
+    '${{ runner.temp }}/axiom-agent-read-system-facts-effect.json',
     'axiom-agent-linux-isolation-conformance-${{ github.sha }}',
     'retention-days: 90'
   ]) {
@@ -62,7 +72,15 @@ export function verifyAgentLinuxIsolationWorkflow(workflow) {
     '--pid host',
     '/var/run/docker.sock:',
     'workflow_run:',
-    'repository_dispatch:'
+    'repository_dispatch:',
+    'run-build',
+    'run-tests',
+    'start-local-test-services',
+    'install-test-dependencies',
+    'ssh ',
+    'scp ',
+    'tailscale',
+    'wireguard'
   ]) {
     if (workflow.includes(forbidden)) {
       throw new ValidationError(
@@ -103,9 +121,13 @@ export function verifyAgentLinuxIsolationWorkflow(workflow) {
     permissions: 'contents-read',
     persisted_checkout_credentials: false,
     github_secrets_referenced: false,
-    fixed_probe_only: true,
+    fixed_probe_only: false,
+    fixed_probe_isolation_present: true,
+    read_system_facts_effect_present: true,
+    general_executor_reachable: false,
     production_provisioning_reachable: false,
     receipt_reverification_required: true,
+    effect_receipt_reverification_required: true,
     action_references: EXPECTED_ACTION_REFERENCES,
     workflow_sha256: sha256(workflow)
   });
