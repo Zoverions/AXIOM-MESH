@@ -15,10 +15,12 @@ import {
 } from './semantic-memory-source-evidence.mjs';
 
 const SOURCE_TO_PROVENANCE_ORIGIN = Object.freeze({
-  'remote-agent': 'remote-agent',
   'local-model-generated': 'local-model-generated',
+  'retrieved-external': 'retrieved-external',
   imported: 'imported',
-  'external-tool': 'tool-output'
+  'remote-agent': 'remote-agent',
+  'remote-social': 'remote-social',
+  'tool-output': 'tool-output'
 });
 
 export function deriveConvergedSemanticMemoryProvenance({
