@@ -8,7 +8,7 @@ import {
   verifySignedRequest
 } from '../lib/identity.mjs';
 import { Router, createServiceServer, listen, parseJsonBody } from '../lib/http.mjs';
-import { AxiomError, assertPlainObject, digestObject } from '../lib/canonical.mjs';
+import { AxiomError, assertPlainObject, digestObject, newId } from '../lib/canonical.mjs';
 import { operationsReport, readinessState, ServiceTelemetry } from '../lib/observability.mjs';
 import { runServiceProcess } from '../lib/service-lifecycle.mjs';
 import {
@@ -21,6 +21,7 @@ import {
 } from '../lib/service-network-policy.mjs';
 import { planDigest, validatePlan } from '../lib/plan.mjs';
 import { effectDestinationForTool } from '../lib/effect-destination.mjs';
+import { verifyCapabilityConsumptionReceipt } from '../lib/capability-consumption.mjs';
 import { executeBuiltin } from './social-executor.mjs';
 
 const DIGEST = /^[a-f0-9]{64}$/;
@@ -34,17 +35,23 @@ export async function createSandboxService(config = meshConfig()) {
       })
     : null;
   const hypervisorKey = await loadTrustedKey(config.dataDir, 'hypervisor');
+  const gridKey = await loadTrustedKey(config.dataDir, 'grid');
+  const executionEpoch = newId('sandbox_epoch');
   const requestReplay = new ReplayGuard();
   const capabilityReplay = new ReplayGuard();
   const router = new Router();
   const telemetry = new ServiceTelemetry('sandbox');
 
   function currentOperations() {
-    return operationsReport([telemetry.snapshot(readinessState('sandbox', [
-      { name: 'identity', ok: true },
-      { name: 'hypervisor-trust', ok: true },
-      { name: 'execution-mode', ok: true }
-    ]))]);
+    return {
+      ...operationsReport([telemetry.snapshot(readinessState('sandbox', [
+        { name: 'identity', ok: true },
+        { name: 'hypervisor-trust', ok: true },
+        { name: 'grid-consumption-trust', ok: true },
+        { name: 'execution-mode', ok: true }
+      ]))]),
+      execution_epoch: executionEpoch
+    };
   }
 
   router.add('GET', '/health', async () => ({
@@ -107,6 +114,19 @@ export async function createSandboxService(config = meshConfig()) {
     ) {
       throw new AxiomError('plan_intent_mismatch', 'Plan is not bound to the supplied intent and policy', 403);
     }
+    if (!input.consumption_receipt) {
+      throw new AxiomError(
+        'capability_consumption_required',
+        'A durable Grid capability consumption receipt is required',
+        403
+      );
+    }
+    const consumption = verifyCapabilityConsumptionReceipt(input.consumption_receipt, {
+      gridPublicKey: gridKey,
+      capability: input.capability,
+      claims,
+      executionEpoch
+    });
     const replayAdmission = capabilityReplay.admit('capability', claims.jti, claims.exp * 1000);
     if (replayAdmission === 'replayed') {
       throw new AxiomError('capability_replayed', 'Capability token has already been used', 409);
@@ -153,6 +173,8 @@ export async function createSandboxService(config = meshConfig()) {
         ? { effect_destination: claims.effect_destination }
         : {}),
       capability_id: claims.jti,
+      capability_consumption_receipt_digest: consumption.receipt_digest,
+      sandbox_execution_epoch: executionEpoch,
       tool: claims.tool,
       policy_digest: claims.policy_digest,
       assurance: structuredClone(plan.assurance),
@@ -200,6 +222,7 @@ export async function createSandboxService(config = meshConfig()) {
     name: 'sandbox',
     server,
     identity,
+    executionEpoch,
     telemetry,
     operations: currentOperations,
     async start() {
