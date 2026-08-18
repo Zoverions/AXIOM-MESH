@@ -144,10 +144,13 @@ test('fresh semantic memory state requires exact owner intent and adjacent compl
     identity,
     protector
   });
-  const audit = reopened.verifySemanticMemoryIngestionHistory();
-  assert.equal(audit.valid, true);
-  assert.equal(audit.initial_objects, 1);
-  reopened.close();
+  try {
+    const audit = reopened.verifySemanticMemoryIngestionHistory();
+    assert.equal(audit.valid, true);
+    assert.equal(audit.initial_objects, 1);
+  } finally {
+    reopened.close();
+  }
 });
 
 test('accepted intent without same-commit completion cannot persist semantic state', async t => {
