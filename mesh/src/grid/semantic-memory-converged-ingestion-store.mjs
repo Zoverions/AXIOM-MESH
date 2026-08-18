@@ -332,7 +332,19 @@ export class ConvergedSemanticMemoryGridStore extends SemanticMemoryContentGridS
       throw new ValidationError('Converged semantic memory has no adjacent completion');
     }
     const completionEvent = this.decodeEventRow(completionRow);
-    normalizeNativeMemoryCompletion(completionEvent, {
+    if (
+      completionEvent.trace_id !== event.trace_id
+      || completionEvent.actor !== record.owner
+    ) {
+      throw new ValidationError(
+        'Persisted semantic memory completion actor or trace does not match its birth event'
+      );
+    }
+    normalizeNativeMemoryCompletion({
+      kind: completionEvent.kind,
+      subject: completionEvent.subject,
+      payload: structuredClone(completionEvent.payload)
+    }, {
       traceId: event.trace_id,
       intentId,
       accepted,
