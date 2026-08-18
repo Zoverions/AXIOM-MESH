@@ -49,7 +49,8 @@ const TOP_LEVEL_KEYS = new Set([
   'parent_content_digest',
   'ingestion_intent_id',
   'request_digest',
-  'may_affect_authority'
+  'may_affect_authority',
+  'provenance_digest'
 ]);
 
 export function normalizeSemanticMemoryProvenance(value) {
@@ -186,10 +187,18 @@ export function normalizeSemanticMemoryProvenance(value) {
       : {}),
     may_affect_authority: false
   };
+  const provenanceDigest = digestObject(normalized);
+
+  if (source.provenance_digest !== undefined) {
+    const suppliedDigest = requiredDigest(source.provenance_digest, 'provenance_digest');
+    if (suppliedDigest !== provenanceDigest) {
+      throw new ValidationError('Semantic memory provenance digest does not match normalized content');
+    }
+  }
 
   return {
     ...normalized,
-    provenance_digest: digestObject(normalized)
+    provenance_digest: provenanceDigest
   };
 }
 
