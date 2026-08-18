@@ -117,8 +117,9 @@ function normalizePrincipal(raw, { knownHumanPrincipals = null, now = new Date()
 }
 
 function principalDefinitionDigest(principal) {
-  const { schema, authority_digest: ignored, ...definition } = principal;
-  return digestObject(definition);
+  // A1 signs the complete normalized machine-principal object, including
+  // schema and authority_digest. A2 must reproduce that exact commitment.
+  return digestObject(principal);
 }
 
 function capabilityRegistryDigest(raw) {
