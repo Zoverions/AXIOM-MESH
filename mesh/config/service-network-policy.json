@@ -189,6 +189,10 @@
         },
         {
           "method": "POST",
+          "path": "/internal/v1/capabilities/consume"
+        },
+        {
+          "method": "POST",
           "path": "/internal/v1/commit"
         }
       ]
