@@ -53,6 +53,7 @@ export class SemanticMemoryStateGridStore extends GridStore {
         signed_event_authority: true,
         protected_materialized_state: true,
         currentness_verification: true,
+        recursive_lineage_currentness: true,
         public_routes: false,
         provider_writes: false,
         prompt_composer_integration: false,
@@ -201,6 +202,7 @@ export class SemanticMemoryStateGridStore extends GridStore {
         409
       );
     }
+    this.assertSemanticMemoryLineageCurrent(normalized);
 
     const evidence = Object.freeze({
       schema: SEMANTIC_MEMORY_CURRENT_EVIDENCE_SCHEMA,
@@ -229,7 +231,7 @@ export class SemanticMemoryStateGridStore extends GridStore {
           'A reviewed semantic memory state requires its exact predecessor in Grid state'
         );
       }
-      this.validateCurrentParent(record);
+      this.assertSemanticMemoryLineageCurrent(record);
       return;
     }
 
@@ -261,7 +263,7 @@ export class SemanticMemoryStateGridStore extends GridStore {
       );
     }
     assertImmutableRecordIdentity(current, record);
-    this.validateCurrentParent(record);
+    this.assertSemanticMemoryLineageCurrent(record);
   }
 
   verifyRequiredReviewEvidence(record) {
@@ -269,8 +271,14 @@ export class SemanticMemoryStateGridStore extends GridStore {
     return verifySemanticMemoryReviewFromGrid(this, record);
   }
 
-  validateCurrentParent(record) {
+  assertSemanticMemoryLineageCurrent(record, seen = new Set()) {
     if (record.origin_class !== 'system-derived') return;
+    if (seen.has(record.object_id)) {
+      throw new ValidationError('Semantic memory derivation lineage contains a cycle');
+    }
+    const nextSeen = new Set(seen);
+    nextSeen.add(record.object_id);
+
     const parent = this.getCurrentSemanticMemoryProvenance(
       record.owner,
       record.parent_object_id,
@@ -286,6 +294,7 @@ export class SemanticMemoryStateGridStore extends GridStore {
         409
       );
     }
+    this.assertSemanticMemoryLineageCurrent(parent, nextSeen);
   }
 
   materializeSemanticMemoryState(event) {
