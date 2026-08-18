@@ -37,6 +37,7 @@ const DEFAULT_MAX_STATE_BYTES = 64 * 1024 * 1024;
 const HARD_MAX_STATE_BYTES = 512 * 1024 * 1024;
 const DEFAULT_MAX_RECORD_BYTES = 2 * 1024 * 1024;
 const HARD_MAX_RECORD_BYTES = 16 * 1024 * 1024;
+const STORE_CONSTRUCTION_TOKEN = Symbol('public-witness-service-key-observation-store');
 
 function identifier(value, label) {
   return assertString(value, label, { min: 1, max: 192, pattern: IDENTIFIER });
@@ -438,7 +439,10 @@ export class PublicWitnessServiceKeyObservationStore {
   #state;
   #tail = Promise.resolve();
 
-  constructor(statePath, options, records, state) {
+  constructor(token, statePath, options, records, state) {
+    if (token !== STORE_CONSTRUCTION_TOKEN) {
+      throw new ValidationError('public witness service-key observation store must be opened through the verified factory');
+    }
     this.#statePath = statePath;
     this.#options = options;
     this.#records = records;
@@ -640,5 +644,11 @@ export async function openPublicWitnessServiceKeyObservationStore({
     throw new ValidationError('public witness service-key observation state exceeds configured record capacity');
   }
   const state = buildState(records, options);
-  return new PublicWitnessServiceKeyObservationStore(normalizedPath, options, records, state);
+  return new PublicWitnessServiceKeyObservationStore(
+    STORE_CONSTRUCTION_TOKEN,
+    normalizedPath,
+    options,
+    records,
+    state
+  );
 }
