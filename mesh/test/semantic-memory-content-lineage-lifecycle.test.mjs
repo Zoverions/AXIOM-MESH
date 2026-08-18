@@ -167,6 +167,7 @@ test('tombstoned ancestor blocks live derived use but not historical signed-even
     () => store.verifySemanticMemoryCurrentState(child),
     error => error?.code === 'semantic_memory_content_inactive'
   );
+  assert.equal(store.verifySemanticMemoryContentHistory().valid, true);
 
   assert.doesNotThrow(() => store.rebuildSemanticMemoryState());
   assert.throws(
