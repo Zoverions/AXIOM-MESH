@@ -1,5 +1,6 @@
 import { ValidationError } from '../lib/canonical.mjs';
 import { AcceptedSocialGridStore } from './accepted-social-store.mjs';
+import { reencryptGridProtectedColumns } from './store.mjs';
 import {
   SEMANTIC_MEMORY_STATE_EVENT,
   SemanticMemoryStateGridStore
@@ -75,6 +76,8 @@ export class AcceptedSocialSemanticMemoryGridStore extends AcceptedSocialGridSto
         one_signed_evidence_chain: true,
         accepted_social_storage_preserved: true,
         converged_semantic_memory_included: true,
+        composed_offline_rotation_helper: true,
+        production_rotation_cli_wired: false,
         social_network_egress: false,
         social_transport_included: false,
         semantic_public_routes: false,
@@ -133,6 +136,62 @@ export class AcceptedSocialSemanticMemoryGridStore extends AcceptedSocialGridSto
       verifyReviewEvidence: this.semanticMemoryStateRebuildMode
     });
   }
+}
+
+export function reencryptAcceptedSocialSemanticMemoryProtectedColumns({
+  db,
+  sourceProtector,
+  targetProtector
+}) {
+  if (!db || !sourceProtector || !targetProtector) {
+    throw new ValidationError('Composed Grid re-encryption dependencies are missing');
+  }
+
+  const base = reencryptGridProtectedColumns({
+    db,
+    sourceProtector,
+    targetProtector
+  });
+  const tableExists = Boolean(db.prepare(`
+    SELECT 1 FROM sqlite_master
+    WHERE type = 'table' AND name = 'semantic_memory_provenance_state'
+  `).get());
+  let semanticValues = 0;
+
+  if (tableExists) {
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const rows = db.prepare(`
+        SELECT object_id, record_json FROM semantic_memory_provenance_state
+      `).all();
+      for (const row of rows) {
+        if (row.record_json === null || row.record_json === undefined) continue;
+        const context =
+          `axiom:semantic_memory_provenance_state.record_json:${row.object_id}`;
+        const value = sourceProtector.open(row.record_json, context);
+        const reencrypted = targetProtector.seal(value, context);
+        targetProtector.open(reencrypted, context);
+        db.prepare(`
+          UPDATE semantic_memory_provenance_state
+          SET record_json = ? WHERE object_id = ?
+        `).run(reencrypted, row.object_id);
+        semanticValues += 1;
+      }
+      db.exec('COMMIT');
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
+    }
+  }
+
+  return Object.freeze({
+    ...base,
+    protected_values: Number(base.protected_values ?? 0) + semanticValues,
+    tables: Object.freeze({
+      ...(base.tables ?? {}),
+      semantic_memory_provenance_state: semanticValues
+    })
+  });
 }
 
 installSemanticMethods(AcceptedSocialSemanticMemoryGridStore, [
