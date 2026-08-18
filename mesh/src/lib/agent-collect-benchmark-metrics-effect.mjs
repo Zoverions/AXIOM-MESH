@@ -18,6 +18,7 @@ import {
   verifyAgentCollectBenchmarkMetricsEffectAdmission
 } from './agent-collect-benchmark-metrics-effect-admission.mjs';
 
+export { AGENT_COLLECT_BENCHMARK_METRICS_POLICY_ID };
 export const AGENT_COLLECT_BENCHMARK_METRICS_EFFECT_RECEIPT_SCHEMA = 'axiom-agent-collect-benchmark-metrics-effect-receipt.v1';
 export const AGENT_COLLECT_BENCHMARK_METRICS_EFFECT_EXECUTOR_ID = 'agent-commons.linux-collect-benchmark-metrics-effect';
 export const AGENT_COLLECT_BENCHMARK_METRICS_EFFECT_EXECUTOR_VERSION = 1;
