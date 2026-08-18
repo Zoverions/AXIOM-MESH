@@ -36,6 +36,8 @@ const IMMUTABLE_RECORD_FIELDS = Object.freeze([
 export class SemanticMemoryStateGridStore extends GridStore {
   initialize() {
     this.semanticMemoryStateReady = false;
+    this.semanticMemoryStateRebuildMode = false;
+    this.prevalidatedSemanticReviewDigests = new Set();
     super.initialize();
     this.semanticMemoryStateMigrations = runSemanticMemoryStateMigrations(this.db);
     migrateProtectedState(this);
@@ -70,22 +72,36 @@ export class SemanticMemoryStateGridStore extends GridStore {
   rebuildMaterializedState() {
     if (!this.semanticMemoryStateReady) return super.rebuildMaterializedState();
     this.db.exec('DELETE FROM semantic_memory_provenance_state');
-    return super.rebuildMaterializedState();
+    this.semanticMemoryStateRebuildMode = true;
+    try {
+      return super.rebuildMaterializedState();
+    } finally {
+      this.semanticMemoryStateRebuildMode = false;
+    }
   }
 
   rebuildSemanticMemoryState() {
+    this.requireIntentEvidenceChain();
     const rows = this.db.prepare(`
       SELECT * FROM events WHERE kind = ? ORDER BY seq
     `).all(SEMANTIC_MEMORY_STATE_EVENT);
-    this.transaction(() => {
-      this.db.exec('DELETE FROM semantic_memory_provenance_state');
-      for (const row of rows) {
-        this.materializeSemanticMemoryState(this.decodeEventRow(row));
-      }
-    });
+    this.semanticMemoryStateRebuildMode = true;
+    try {
+      this.transaction(() => {
+        this.db.exec('DELETE FROM semantic_memory_provenance_state');
+        for (const row of rows) {
+          this.materializeSemanticMemoryState(this.decodeEventRow(row), {
+            verifyReviewEvidence: true
+          });
+        }
+      });
+    } finally {
+      this.semanticMemoryStateRebuildMode = false;
+    }
   }
 
   appendEvents({ traceId, actor, events }) {
+    const prevalidated = [];
     if (Array.isArray(events)) {
       const objectIds = new Set();
       for (const event of events) {
@@ -98,10 +114,21 @@ export class SemanticMemoryStateGridStore extends GridStore {
         }
         objectIds.add(record.object_id);
         this.validateSemanticMemoryTransition(record);
-        this.verifyRequiredReviewEvidence(record);
+        if (hasExplicitReview(record)) {
+          this.verifyRequiredReviewEvidence(record);
+          this.prevalidatedSemanticReviewDigests.add(record.provenance_digest);
+          prevalidated.push(record.provenance_digest);
+        }
       }
     }
-    return super.appendEvents({ traceId, actor, events });
+
+    try {
+      return super.appendEvents({ traceId, actor, events });
+    } finally {
+      for (const digest of prevalidated) {
+        this.prevalidatedSemanticReviewDigests.delete(digest);
+      }
+    }
   }
 
   applyMaterializedEvent(event) {
@@ -110,7 +137,9 @@ export class SemanticMemoryStateGridStore extends GridStore {
       this.semanticMemoryStateReady
       && event.kind === SEMANTIC_MEMORY_STATE_EVENT
     ) {
-      this.materializeSemanticMemoryState(event);
+      this.materializeSemanticMemoryState(event, {
+        verifyReviewEvidence: this.semanticMemoryStateRebuildMode
+      });
     }
   }
 
@@ -297,10 +326,21 @@ export class SemanticMemoryStateGridStore extends GridStore {
     this.assertSemanticMemoryLineageCurrent(parent, nextSeen);
   }
 
-  materializeSemanticMemoryState(event) {
+  materializeSemanticMemoryState(
+    event,
+    { verifyReviewEvidence = false } = {}
+  ) {
     const record = validateStateEvent(event, event.actor);
     this.validateSemanticMemoryTransition(record);
-    this.verifyRequiredReviewEvidence(record);
+    if (hasExplicitReview(record)) {
+      if (verifyReviewEvidence) {
+        this.verifyRequiredReviewEvidence(record);
+      } else if (!this.prevalidatedSemanticReviewDigests.has(record.provenance_digest)) {
+        throw new ValidationError(
+          'Reviewed semantic memory state was not prevalidated before live materialization'
+        );
+      }
+    }
 
     const existing = this.db.prepare(`
       SELECT created_at FROM semantic_memory_provenance_state
