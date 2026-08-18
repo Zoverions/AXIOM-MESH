@@ -536,6 +536,20 @@ The current executable laboratories remain outside supported Grid authority:
   operational-key non-reuse, routine-retirement versus compromise semantics,
   multi-epoch historical d2 journal verification, stale provisioner rejection,
   and explicit time/global-currentness non-claims;
+- `mesh/src/lib/public-witness-source-provisioning-lifecycle-store.mjs` adds
+  W2c4e2 as a separate lifecycle-aware d2 application-store laboratory. It
+  preserves the existing d2 v1 record wire format while resolving historical
+  operator and provisioner signatures through exact credential epochs. A store
+  reopened with the successor provisioner private key can continue the same
+  append-only hash chain without re-signing or migrating earlier records;
+- `mesh/test/public-witness-source-provisioning-lifecycle-store.test.mjs` verifies
+  restart/reopen signer cutover, exact preservation of historical journal bytes,
+  stale and revoked provisioner append rejection, crash-window reconciliation
+  across provisioner rotation without a second W2c2 admission, routine operator
+  retirement, compromise/recovery effect contraction, and role-root separation;
+- `mesh/test/public-witness-source-provisioning-lifecycle-store-boundary.test.mjs`
+  locks the e2 no-network/no-Grid-runtime boundary and its explicit no-resigning,
+  no-capability-promotion, and reopen-required signer-cutover claims;
 - `npm run public-witness:start -- <config.json>` and
   `npm run public-witness:verify -- <config.json>` operate the W2b standalone
   local laboratory without adding it to the four-process Grid runtime;
@@ -544,8 +558,8 @@ The current executable laboratories remain outside supported Grid authority:
   DNS/peer discovery or outbound fetch and exposes no source-admission or
   persona-root enrollment endpoint; and
 - the accepted no-egress social storage composition remains unchanged. W2c3,
-  W2c4a, W2c4b, W2c4c, W2c4d1, W2c4d2, and W2c4e1 are not imported into the
-  supported Grid/Gateway/Hypervisor/Sandbox runtime and do not promote
+  W2c4a, W2c4b, W2c4c, W2c4d1, W2c4d2, W2c4e1, and W2c4e2 are not imported into
+  the supported Grid/Gateway/Hypervisor/Sandbox runtime and do not promote
   federation, archive availability, quorum, consensus, finality, social
   mutation, or any capability-registry claim.
 
@@ -983,22 +997,54 @@ from multiple provisioner epochs without re-signing or migrating earlier
 records, while `effect-ready` records independently recheck the bound operator
 command's effect authority at that recorded boundary.
 
-W2c4e1 is **verification and trust-model foundation, not live signer cutover**.
-The current d2 store still opens with one configured provisioner private key and
-one trusted operator public key; e1 does not yet make a running/restarted d2
-writer select the current credential epoch or append across a provisioner-key
-rotation. W2c4e2 must integrate the credential paths into d2 open/rebuild/append
-semantics and prove restart across key epochs without re-signing old history.
-Likewise, the signed activation/revocation timestamps are protocol statements,
-not proof from a trusted wall clock that a physical signature was produced at
-that instant. Role-root compromise or loss is not automatically recoverable by
-this layer and requires a separate explicit trust/governance design.
+W2c4e2 makes that trust model operational in a **separate lifecycle-aware d2
+application store** while leaving the legacy d2 store unchanged. The lifecycle
+store opens with the complete operator and provisioner credential paths plus one
+current provisioner private key. Restart verifies every historical d2 v1 record
+against the exact provisioner credential epoch named by its existing
+`provisioner_key_id`, verifies retained operator commands against their exact
+operator credential epochs, rebuilds the same application state machine, and
+then permits new records only if the configured provisioner credential is usable
+at the new record time.
 
-W2c4e1 adds no listener, discovery, outbound acquisition, remote enrollment,
-persona-root enrollment, social mutation, runtime route, capability promotion,
-quorum, consensus, finality, or federation. Its key-state verification is
-relative to the successor/revocation evidence supplied locally; it does not
-claim globally current service-key state.
+Provisioner cutover is deliberately **restart/reopen based** rather than an
+in-process private-key replacement API. Once a successor credential activates or
+a provisioner credential is revoked, an older store carrying that key becomes
+append-ineligible. Reopening the same canonical journal with the successor
+private key and the same credential path can append the next contiguous record
+to the existing hash chain. Earlier bytes remain unchanged and are never
+re-signed or migrated. This keeps rotation within the existing trusted-local-
+state and single-active-writer assumptions instead of introducing a second live
+secret-key-swap race.
+
+The same rule applies to crash recovery. If an earlier provisioner durably
+recorded `effect-ready`, W2c2 committed the exact admission, and the process
+failed before `admission-linked`, a reopened store using a valid successor
+provisioner key may append only the reconciliation link. It does not invoke
+`admitSource()` again. A stale or revoked provisioner cannot create that link,
+and an admission with no prior durable effect-ready record remains a post-hoc
+bypass failure.
+
+E2 also enforces operator lifecycle state at the authority boundary. Routine
+operator retirement may preserve a previously issued bounded command until its
+own expiry, but explicit revocation or a compromise/recovery transition blocks a
+new W2c2 effect before the lifecycle application journal records a new
+authorization/effect attempt. Operator and provisioner role roots remain
+non-substitutable.
+
+W2c4e1/e2 activation and revocation timestamps remain signed protocol
+statements, not proof from a trusted wall clock that a physical signature was
+produced at that instant. Role-root compromise or loss is not automatically
+recoverable by these layers and requires a separate explicit trust/governance
+design. The lifecycle store claims detectable local file-drift resistance and
+crash integrity only; it does not claim cross-process locking, hostile-host
+resistance, replicated durability, or distributed atomic commit.
+
+W2c4e1 and W2c4e2 add no listener, discovery, outbound acquisition, remote
+enrollment, persona-root enrollment, social mutation, runtime route, capability
+promotion, quorum, consensus, finality, or federation. Their key-state
+verification is relative to the successor/revocation evidence supplied locally;
+they do not claim globally current service-key state.
 
 A witness receipt means that the named witness key observed and verified one
 exact signed journal artifact. It does not prove content truth, legal identity,
@@ -1033,33 +1079,34 @@ The staged roadmap is:
    W2c3 receive-only authenticated mTLS ingress, W2c4a local ingress trust
    bundles, W2c4b local source-control history, W2c4c durable applied source
    control, W2c4d1 source-provisioning authorization, W2c4d2 crash-safe
-   source-provisioning application/reconciliation, and W2c4e1 service-key
-   lifecycle verification foundation implemented):** the current work provides
-   signed observations, idempotent replay, equivocation/stale-key evidence,
-   witness-signed append-only local state, deterministic fail-closed restart,
-   bounded stdin/stdout IPC, explicit local source admission, source-signed
-   transfer continuity, source-equivocation evidence, separate persona-root
-   trust, historically auditable transfer receipts, restart-safe receiver
-   source-chain/replay state, verified replay, pending-observation separation,
-   crash-window receiver↔witness reconciliation, exact certificate-to-source-
-   epoch transport binding, bounded HTTPS intake, mTLS socket fault evidence,
-   content-addressed generation-chained local ingress trust bindings that cannot
-   mint receiver source trust, content-addressed source-control history for
-   certificate rotation/next-epoch source rotation/disable trust contraction,
-   operator-signed durable control application, live fail-closed source-binding
-   resolution for subsequent requests, short-lived operator-signed authorization
-   for one exact W2c2 source-admission effect, a separate provisioner-signed
-   three-phase durable application journal with crash-window reconciliation and
-   explicit post-hoc-admission rejection, and distinct role-root-signed operator/
-   provisioner credential epochs with revocation/recovery and multi-epoch
-   historical verification. Remaining W2 work includes W2c4e2 live d2 writer
-   rotation/restart across provisioner key epochs, stronger exported W2c2
-   admission-record evidence if required, integration of preserved whole-
-   listener lifecycle control on the current trust stack, role-root lifecycle
-   and stronger host trust if required, a separately reviewed public deployment
-   wrapper if justified, discovery/outbound acquisition policy if justified,
-   independently operated hosts, broader remote abuse/resource testing, and
-   multi-witness evidence exchange without Grid authority;
+   source-provisioning application/reconciliation, W2c4e1 service-key lifecycle
+   verification, and W2c4e2 restart-based operational signer cutover
+   implemented):** the current work provides signed observations, idempotent
+   replay, equivocation/stale-key evidence, witness-signed append-only local
+   state, deterministic fail-closed restart, bounded stdin/stdout IPC, explicit
+   local source admission, source-signed transfer continuity, source-equivocation
+   evidence, separate persona-root trust, historically auditable transfer
+   receipts, restart-safe receiver source-chain/replay state, verified replay,
+   pending-observation separation, crash-window receiver↔witness reconciliation,
+   exact certificate-to-source-epoch transport binding, bounded HTTPS intake,
+   mTLS socket fault evidence, content-addressed generation-chained local ingress
+   trust bindings that cannot mint receiver source trust, content-addressed
+   source-control history for certificate rotation/next-epoch source rotation/
+   disable trust contraction, operator-signed durable control application, live
+   fail-closed source-binding resolution for subsequent requests, short-lived
+   operator-signed authorization for one exact W2c2 source-admission effect, a
+   separate provisioner-signed three-phase durable application journal with
+   crash-window reconciliation and explicit post-hoc-admission rejection,
+   distinct role-root-signed operator/provisioner credential epochs with
+   revocation/recovery and multi-epoch historical verification, and restart-
+   based successor provisioner signing on the same unchanged historical journal.
+   Remaining W2 work includes stronger exported W2c2 admission-record evidence
+   if required, integration of preserved whole-listener lifecycle control on the
+   current trust stack, role-root lifecycle and stronger host trust if required,
+   a separately reviewed public deployment wrapper if justified,
+   discovery/outbound acquisition policy if justified, independently operated
+   hosts, broader remote abuse/resource testing, and multi-witness evidence
+   exchange without Grid authority;
 4. **W3 — archive and availability laboratory:** independently operated public
    object retention with explicit availability and legal-removal semantics;
 5. **W4 — optional checkpoint agreement adapter:** evaluate threshold/BFT
@@ -1073,8 +1120,9 @@ The staged roadmap is:
    trust-bundle generations, source-control histories, operator-signed applied
    source-control records, source-provisioning authorization commands,
    provisioner-signed application/ready/link records and their receiver-state
-   bindings, service-role credential paths/revocations and lifecycle-aware
-   operator/provisioner signature epochs, checkpoints, availability, and any
+   bindings, service-role credential paths/revocations, lifecycle-aware operator/
+   provisioner signature epochs, restart-based provisioner signer cutover and
+   cross-epoch reconciliation continuity, checkpoints, availability, and any
    optional finality certificate while preserving explicit non-claims; and
 7. **W6 — promotion:** only after applicable protocol, security, privacy,
    operational, scale, governance, and independent-review gates pass.
@@ -1086,11 +1134,12 @@ conflict evidence rather than silently choosing one. W2c1, W2c2, and W2c3 apply
 the same rule to an admitted source that signs competing transfer packages at
 one source position, with W2c2 durably retaining the conflict across restart and
 W2c3 proving the same result survives authenticated socket delivery. W2c4a,
-W2c4b, W2c4c, W2c4d1, W2c4d2, and W2c4e1 cannot resolve or suppress that
-conflict: the first three bind/apply local ingress trust/control, d1 authorizes
-one exact future source-admission effect, d2 durably applies only that bounded
-local trust mutation, and e1 governs which local service keys may authenticate
-those exact authorization/application signatures. None selects a preferred
+W2c4b, W2c4c, W2c4d1, W2c4d2, W2c4e1, and W2c4e2 cannot resolve or suppress
+that conflict: the first three bind/apply local ingress trust/control, d1
+authorizes one exact future source-admission effect, d2 durably applies only
+that bounded local trust mutation, e1 governs which local service keys may
+authenticate those exact authorization/application signatures, and e2 governs
+restart-based continuation under those credentials. None selects a preferred
 source artifact. Future multi-witness and agreement protocols must preserve both
 forms of conflict rather than silently select a winner.
 
