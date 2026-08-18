@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { digestObject, sha256 } from '../src/lib/canonical.mjs';
+import { verifyAgentExecutorDurableStateReceipt } from '../src/lib/agent-executor-durable-format.mjs';
 import {
   AGENT_EXECUTOR_ISOLATION_POLICY_CATALOG_DIGEST,
   AGENT_EXECUTOR_ISOLATION_POLICY_CATALOG_SCHEMA
@@ -60,7 +61,6 @@ function isolationReceipt() {
     claims: { fixed_probe_real_process_effects_observed: true, fixed_probe_disposable_filesystem_effects_observed: true, tested_linux_kernel_controls_observed: true, tested_network_denial_observed: true, physical_device_proof: false, globally_verified_platform_isolation: false, arbitrary_repository_code_isolation_verified: false, compiled_plan_effect_admission: false, production_executor_ready: false, remote_execution_enabled: false, remote_administration_enabled: false, credentials_available: false, secrets_available: false, production_node_enrollment: false, deployment_authority: false, capability_promoted: false, authority_granted: false }
   });
 }
-
 function admissionFor(current, keys, overrides = {}) {
   return createAgentReadSystemFactsEffectAdmission({
     admissionId: overrides.admissionId ?? 'effect-admission:test:read-facts',
@@ -89,6 +89,23 @@ function controllerFixture() {
   const controller = new AgentReadSystemFactsEffectController({ durableStore: current.store, executorPrivateKey: executor.privateKey,
     admission, trustedAdmissionIssuerPublicKey: issuer.publicKey, isolationConformanceReceipt: isolation, revision: REVISION });
   return { current, issuer, executor, isolation, admission, controller };
+}
+function beginEffect(f) {
+  const transcript = f.current.store.currentRecord.payload.lifecycle_transcript;
+  const lifecycleReceipt = f.current.store.currentRecord.payload.lifecycle_receipt;
+  return f.controller.begin({ currentLifecycleTranscript: transcript, currentLifecycleReceipt: lifecycleReceipt,
+    trustedLifecyclePublicKey: f.current.store.lifecyclePublicKey, revocationState: 'active', occurredAt: '2026-08-18T12:05:05.000Z' });
+}
+function verifyArgs(f, durableConsumeHeadReceipt) {
+  return {
+    trustedExecutorPublicKey: f.controller.executorPublicKey,
+    trustedAdmissionIssuerPublicKey: f.issuer.publicKey,
+    trustedDurableStorePublicKey: f.current.store.storePublicKey,
+    durableConsumeHeadReceipt,
+    plan: f.current.plan,
+    admission: f.admission,
+    isolationConformanceReceipt: f.isolation
+  };
 }
 
 test('effect admission signs only the exact inert read-system-facts plan', () => {
@@ -121,7 +138,7 @@ test('effect admission rejects wrong issuer, excessive lifetime, plan substituti
   } finally { cleanupDurableState(current); }
 });
 
-test('unknown revocation fails before consumption; active revocation durably consumes before effect descriptor', () => {
+test('unknown revocation fails before consumption; active revocation returns signed consumed head before effect descriptor', () => {
   const f = controllerFixture();
   try {
     const transcript = f.current.store.currentRecord.payload.lifecycle_transcript;
@@ -129,14 +146,18 @@ test('unknown revocation fails before consumption; active revocation durably con
     assert.throws(() => f.controller.begin({ currentLifecycleTranscript: transcript, currentLifecycleReceipt: receipt,
       trustedLifecyclePublicKey: f.current.store.lifecyclePublicKey, revocationState: 'unknown', occurredAt: '2026-08-18T12:05:05.000Z' }), /known-active/i);
     assert.equal(f.current.store.status, 'issued');
-    const descriptor = f.controller.begin({ currentLifecycleTranscript: transcript, currentLifecycleReceipt: receipt,
-      trustedLifecyclePublicKey: f.current.store.lifecyclePublicKey, revocationState: 'active', occurredAt: '2026-08-18T12:05:05.000Z' });
+    const descriptor = beginEffect(f);
     assert.equal(f.current.store.status, 'consumed');
     assert.equal(f.current.store.generation, 2);
     assert.equal(descriptor.steps.length, 2);
     assert.equal(descriptor.repository_mount_allowed, false);
-    assert.throws(() => f.controller.begin({ currentLifecycleTranscript: transcript, currentLifecycleReceipt: receipt,
-      trustedLifecyclePublicKey: f.current.store.lifecyclePublicKey, revocationState: 'active', occurredAt: '2026-08-18T12:05:06.000Z' }), /already consumed/i);
+    const consumed = verifyAgentExecutorDurableStateReceipt(descriptor.durable_consume_head_receipt, {
+      trustedStorePublicKey: f.current.store.storePublicKey, plan: f.current.plan, expectedStoreId: f.current.store.storeId
+    });
+    assert.equal(consumed.statement.lifecycle_status, 'consumed');
+    assert.equal(consumed.statement.generation, 2);
+    assert.equal(consumed.statement.record_digest, f.current.store.currentRecord.record_digest);
+    assert.throws(() => beginEffect(f), /already consumed/i);
   } finally { cleanupDurableState(f.current); }
 });
 
@@ -151,17 +172,17 @@ test('current lifecycle substitution fails before durable consumption', () => {
   } finally { cleanupDurableState(f.current); }
 });
 
-test('completed exact observations produce a signed bounded effect receipt', () => {
+test('completed exact observations bind signed consumed and final durable heads', () => {
   const f = controllerFixture();
   try {
-    const transcript = f.current.store.currentRecord.payload.lifecycle_transcript;
-    const lifecycleReceipt = f.current.store.currentRecord.payload.lifecycle_receipt;
-    f.controller.begin({ currentLifecycleTranscript: transcript, currentLifecycleReceipt: lifecycleReceipt,
-      trustedLifecyclePublicKey: f.current.store.lifecyclePublicKey, revocationState: 'active', occurredAt: '2026-08-18T12:05:05.000Z' });
+    const descriptor = beginEffect(f);
+    const consumedHead = descriptor.durable_consume_head_receipt;
     const receipt = f.controller.complete({ observations: [observationFor(1), observationFor(2)], finishedAt: '2026-08-18T12:05:10.000Z' });
-    const checked = verifyAgentReadSystemFactsEffectReceipt(receipt, { trustedExecutorPublicKey: f.controller.executorPublicKey,
-      trustedAdmissionIssuerPublicKey: f.issuer.publicKey, plan: f.current.plan, admission: f.admission, isolationConformanceReceipt: f.isolation });
+    const checked = verifyAgentReadSystemFactsEffectReceipt(receipt, verifyArgs(f, consumedHead));
     assert.equal(f.current.store.status, 'completed');
+    assert.equal(checked.statement.durable_consume_generation, 2);
+    assert.equal(checked.statement.durable_consume_head_receipt_digest, consumedHead.receipt_digest);
+    assert.equal(checked.statement.durable_final_generation, 3);
     assert.equal(checked.statement.real_process_effect_observed, true);
     assert.equal(checked.statement.durable_consumption_before_effect_observed, true);
     assert.equal(checked.statement.dry_run_plan_effect_reachable, false);
@@ -171,13 +192,31 @@ test('completed exact observations produce a signed bounded effect receipt', () 
   } finally { cleanupDurableState(f.current); }
 });
 
+test('effect receipt rejects missing, wrong-key and substituted consumed-head evidence', () => {
+  const f = controllerFixture();
+  try {
+    const descriptor = beginEffect(f);
+    const consumedHead = descriptor.durable_consume_head_receipt;
+    const receipt = f.controller.complete({ observations: [observationFor(1), observationFor(2)], finishedAt: '2026-08-18T12:05:10.000Z' });
+    assert.throws(() => verifyAgentReadSystemFactsEffectReceipt(receipt, {
+      ...verifyArgs(f, consumedHead), durableConsumeHeadReceipt: undefined
+    }), /durable|receipt|object/i);
+    const wrongStore = durableKeyPair();
+    assert.throws(() => verifyAgentReadSystemFactsEffectReceipt(receipt, {
+      ...verifyArgs(f, consumedHead), trustedDurableStorePublicKey: wrongStore.publicKey
+    }), /key|signature|store/i);
+    const substituted = clone(consumedHead);
+    substituted.statement.lifecycle_status = 'issued';
+    assert.throws(() => verifyAgentReadSystemFactsEffectReceipt(receipt, {
+      ...verifyArgs(f, consumedHead), durableConsumeHeadReceipt: substituted
+    }), /digest|signature|consumed/i);
+  } finally { cleanupDurableState(f.current); }
+});
+
 test('effect observations and receipt cannot widen argv, platform result, executor key or authority claims', () => {
   const f = controllerFixture();
   try {
-    const transcript = f.current.store.currentRecord.payload.lifecycle_transcript;
-    const lifecycleReceipt = f.current.store.currentRecord.payload.lifecycle_receipt;
-    f.controller.begin({ currentLifecycleTranscript: transcript, currentLifecycleReceipt: lifecycleReceipt,
-      trustedLifecyclePublicKey: f.current.store.lifecyclePublicKey, revocationState: 'active', occurredAt: '2026-08-18T12:05:05.000Z' });
+    beginEffect(f);
     const widened = observationFor(1); widened.arguments.push('--eval');
     assert.throws(() => f.controller.complete({ observations: [widened, observationFor(2)], finishedAt: '2026-08-18T12:05:10.000Z' }), /widened|mapping/i);
     assert.equal(f.current.store.status, 'consumed');
@@ -186,21 +225,18 @@ test('effect observations and receipt cannot widen argv, platform result, execut
 
   const g = controllerFixture();
   try {
-    const transcript = g.current.store.currentRecord.payload.lifecycle_transcript;
-    const lifecycleReceipt = g.current.store.currentRecord.payload.lifecycle_receipt;
-    g.controller.begin({ currentLifecycleTranscript: transcript, currentLifecycleReceipt: lifecycleReceipt,
-      trustedLifecyclePublicKey: g.current.store.lifecyclePublicKey, revocationState: 'active', occurredAt: '2026-08-18T12:05:05.000Z' });
+    const descriptor = beginEffect(g);
+    const consumedHead = descriptor.durable_consume_head_receipt;
     const receipt = g.controller.complete({ observations: [observationFor(1), observationFor(2)], finishedAt: '2026-08-18T12:05:10.000Z' });
     const wrong = durableKeyPair();
-    assert.throws(() => verifyAgentReadSystemFactsEffectReceipt(receipt, { trustedExecutorPublicKey: wrong.publicKey,
-      trustedAdmissionIssuerPublicKey: g.issuer.publicKey, plan: g.current.plan, admission: g.admission, isolationConformanceReceipt: g.isolation }), /executor key/i);
+    assert.throws(() => verifyAgentReadSystemFactsEffectReceipt(receipt, {
+      ...verifyArgs(g, consumedHead), trustedExecutorPublicKey: wrong.publicKey
+    }), /executor key/i);
     const elevated = clone(receipt); elevated.statement.general_executor_available = true;
-    assert.throws(() => verifyAgentReadSystemFactsEffectReceipt(elevated, { trustedExecutorPublicKey: g.controller.executorPublicKey,
-      trustedAdmissionIssuerPublicKey: g.issuer.publicKey, plan: g.current.plan, admission: g.admission, isolationConformanceReceipt: g.isolation }), /elevate general_executor_available/i);
+    assert.throws(() => verifyAgentReadSystemFactsEffectReceipt(elevated, verifyArgs(g, consumedHead)), /elevate general_executor_available/i);
     const platform = clone(receipt); platform.statement.observations[1].sanitized_output = JSON.stringify({ platform: 'linux', arch: 'arm64' });
     platform.statement.observations[1].output_bytes = Buffer.byteLength(platform.statement.observations[1].sanitized_output);
     platform.statement.observations[1].output_sha256 = sha256(platform.statement.observations[1].sanitized_output);
-    assert.throws(() => verifyAgentReadSystemFactsEffectReceipt(platform, { trustedExecutorPublicKey: g.controller.executorPublicKey,
-      trustedAdmissionIssuerPublicKey: g.issuer.publicKey, plan: g.current.plan, admission: g.admission, isolationConformanceReceipt: g.isolation }), /platform output/i);
+    assert.throws(() => verifyAgentReadSystemFactsEffectReceipt(platform, verifyArgs(g, consumedHead)), /platform output/i);
   } finally { cleanupDurableState(g.current); }
 });
