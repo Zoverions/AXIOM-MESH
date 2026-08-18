@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/agent-collect-sanitized-logs-effect-admission.v1.schema.json",
+  "title": "AXIOM Agent Collect Sanitized Logs Effect Admission v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "statement", "statement_digest", "issuer_signature", "admission_digest"],
+  "properties": {
+    "schema": { "const": "axiom-agent-collect-sanitized-logs-effect-admission.v1" },
+    "statement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "admission_id", "issuer_id", "issuer_key_id", "repository", "revision", "plan_digest",
+        "authorization_id", "authorization_digest", "sponsor_id", "subject_id", "lifecycle_ledger_id",
+        "lifecycle_key_id", "compiler_id", "compiler_version", "compiler_policy_digest",
+        "isolation_catalog_digest", "isolation_policy_id", "isolation_policy_revision",
+        "isolation_adapter_id", "operation_id", "sanitization_policy_id", "not_before", "expires_at",
+        "dry_run_plan_remains_inert", "general_executor_authority", "arbitrary_path_authority",
+        "host_or_repository_log_authority", "repository_code_execution_authority", "network_authority",
+        "credential_authority", "secret_authority", "remote_hardware_authority", "production_authority",
+        "deployment_authority", "capability_promotion_authority", "axiom_authority_granted"
+      ],
+      "properties": {
+        "admission_id": { "$ref": "#/$defs/id" },
+        "issuer_id": { "$ref": "#/$defs/id" },
+        "issuer_key_id": { "$ref": "#/$defs/digest" },
+        "repository": { "const": "Zoverions/AXIOM-MESH" },
+        "revision": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "plan_digest": { "$ref": "#/$defs/digest" },
+        "authorization_id": { "$ref": "#/$defs/id" },
+        "authorization_digest": { "$ref": "#/$defs/digest" },
+        "sponsor_id": { "$ref": "#/$defs/id" },
+        "subject_id": { "$ref": "#/$defs/id" },
+        "lifecycle_ledger_id": { "$ref": "#/$defs/id" },
+        "lifecycle_key_id": { "$ref": "#/$defs/digest" },
+        "compiler_id": { "const": "agent-commons.pre-executor-dry-run" },
+        "compiler_version": { "const": 1 },
+        "compiler_policy_digest": { "$ref": "#/$defs/digest" },
+        "isolation_catalog_digest": { "$ref": "#/$defs/digest" },
+        "isolation_policy_id": { "const": "linux-kernel-isolation-v1" },
+        "isolation_policy_revision": { "const": 1 },
+        "isolation_adapter_id": { "const": "docker-linux-isolation-lab-v1" },
+        "operation_id": { "const": "collect-sanitized-logs" },
+        "sanitization_policy_id": { "const": "synthetic-jsonl-allowlist-v1" },
+        "not_before": { "$ref": "#/$defs/timestamp" },
+        "expires_at": { "$ref": "#/$defs/timestamp" },
+        "dry_run_plan_remains_inert": { "const": true },
+        "general_executor_authority": { "const": false },
+        "arbitrary_path_authority": { "const": false },
+        "host_or_repository_log_authority": { "const": false },
+        "repository_code_execution_authority": { "const": false },
+        "network_authority": { "const": false },
+        "credential_authority": { "const": false },
+        "secret_authority": { "const": false },
+        "remote_hardware_authority": { "const": false },
+        "production_authority": { "const": false },
+        "deployment_authority": { "const": false },
+        "capability_promotion_authority": { "const": false },
+        "axiom_authority_granted": { "const": false }
+      }
+    },
+    "statement_digest": { "$ref": "#/$defs/digest" },
+    "issuer_signature": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$", "maxLength": 256 },
+    "admission_digest": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$" },
+    "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "timestamp": { "type": "string", "format": "date-time" }
+  }
+}
