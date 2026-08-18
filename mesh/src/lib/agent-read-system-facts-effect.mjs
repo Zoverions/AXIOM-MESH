@@ -25,6 +25,23 @@ const SHA256 = /^[a-f0-9]{64}$/;
 const BASE64URL = /^[A-Za-z0-9_-]+$/;
 const IMAGE_ID = /^sha256:[a-f0-9]{64}$/;
 const MAX_OUTPUT_BYTES = 4096;
+const RECEIPT_KEYS = new Set(['schema', 'statement', 'statement_digest', 'executor_signature', 'receipt_digest']);
+const STATEMENT_KEYS = new Set([
+  'executor_id','executor_key_id','executor_version','policy_digest','repository','revision','admission_digest','plan_digest',
+  'authorization_id','authorization_digest','sponsor_id','subject_id','lifecycle_ledger_id','lifecycle_key_id',
+  'lifecycle_pre_effect_head_digest','lifecycle_consumption_event_digest','lifecycle_final_head_digest','lifecycle_final_receipt_digest',
+  'durable_store_id','durable_consume_generation','durable_consume_record_digest','durable_final_generation','durable_final_record_digest',
+  'isolation_receipt_digest','isolation_adapter_id','image_id','operation_id','started_at','finished_at','observations','cleanup_verified',
+  'revocation_state','known_signed_head_only','global_currentness_claimed','dry_run_plan_effect_reachable','laboratory_effect_admission_observed',
+  'durable_consumption_before_effect_observed','real_process_effect_observed','exact_plan_step_mapping_observed','repository_code_executed',
+  'repository_workspace_mutated','network_performed','credentials_retrieved','secrets_retrieved','service_controlled','package_installed',
+  'remote_execution_enabled','remote_hardware_accessed','production_enrollment','deployment_authority','capability_promoted','task_success_claimed',
+  'general_executor_available','axiom_authority_granted'
+]);
+const OBSERVATION_KEYS = new Set([
+  'sequence','step_id','executable_id','absolute_executable','arguments','logical_working_directory','container_working_directory',
+  'exit_status','sanitized_output','output_sha256','output_bytes','stderr_empty','network_mode','repository_code_execution','container_absent_after_cleanup'
+]);
 const EXPECTED = Object.freeze([
   { sequence: 1, step_id: 'read-system-facts:node-version', args: ['--version'] },
   { sequence: 2, step_id: 'read-system-facts:platform-arch', args: ['-p', 'JSON.stringify({platform:process.platform,arch:process.arch})'] }
@@ -51,15 +68,28 @@ export const AGENT_READ_SYSTEM_FACTS_EFFECT_POLICY = Object.freeze({
 export const AGENT_READ_SYSTEM_FACTS_EFFECT_POLICY_DIGEST = digestObject(AGENT_READ_SYSTEM_FACTS_EFFECT_POLICY);
 
 function fail(message) { throw new ValidationError(message); }
+function exact(value, keys, label) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) fail(`${label} must be an object`);
+  for (const key of Object.keys(value)) if (!keys.has(key)) fail(`${label} contains unsupported field: ${key}`);
+  for (const key of keys) if (!Object.hasOwn(value, key)) fail(`${label} is missing required field: ${key}`);
+  return value;
+}
 function id(value, label) { if (typeof value !== 'string' || !ID.test(value)) fail(`${label} is invalid`); return value; }
 function digest(value, label) { if (typeof value !== 'string' || !SHA256.test(value)) fail(`${label} is invalid`); return value; }
-function time(value, label) { const d = new Date(value); if (typeof value !== 'string' || Number.isNaN(d.getTime()) || d.toISOString() !== value) fail(`${label} must be canonical UTC`); return value; }
+function time(value, label) {
+  const d = new Date(value);
+  if (typeof value !== 'string' || Number.isNaN(d.getTime()) || d.toISOString() !== value) fail(`${label} must be canonical UTC`);
+  return value;
+}
 function key(value, type, label) {
   try {
     const parsed = value?.type === type ? value : type === 'private' ? createPrivateKey(value) : createPublicKey(value);
     if (parsed.asymmetricKeyType !== 'ed25519') fail(`${label} must be Ed25519`);
     return parsed;
-  } catch (error) { if (error instanceof ValidationError) throw error; fail(`${label} is invalid`); }
+  } catch (error) {
+    if (error instanceof ValidationError) throw error;
+    fail(`${label} is invalid`);
+  }
 }
 function keyId(publicKey) { return sha256(publicKey.export({ type: 'spki', format: 'der' })); }
 function sameArray(a, b) { return Array.isArray(a) && a.length === b.length && a.every((v, i) => v === b[i]); }
@@ -84,7 +114,8 @@ function verifyCurrentHead({ plan, store, transcript, receipt, trustedLifecycleP
 }
 
 function normalizeObservation(raw, expected, plan) {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) fail('effect observation must be an object');
+  exact(raw, OBSERVATION_KEYS, 'effect observation');
+  if (!expected) fail('effect observation sequence exceeds exact plan mapping');
   if (
     raw.sequence !== expected.sequence || raw.step_id !== expected.step_id || raw.executable_id !== 'node-current-pinned' ||
     raw.absolute_executable !== AGENT_LINUX_ISOLATION_ENTRYPOINT || !sameArray(raw.arguments, expected.args) ||
@@ -104,6 +135,7 @@ function normalizeObservation(raw, expected, plan) {
 }
 
 function receiptStatement(raw, { plan, admission, trustedAdmissionIssuerPublicKey, isolationReceipt }) {
+  exact(raw, STATEMENT_KEYS, 'effect receipt statement');
   validateReadSystemFactsEffectPlan(plan);
   const checkedAdmission = verifyAgentReadSystemFactsEffectAdmission(admission, {
     trustedIssuerPublicKey: trustedAdmissionIssuerPublicKey,
@@ -125,34 +157,73 @@ function receiptStatement(raw, { plan, admission, trustedAdmissionIssuerPublicKe
     raw.isolation_receipt_digest !== isolation.receipt_digest || raw.isolation_adapter_id !== AGENT_LINUX_ISOLATION_ADAPTER_ID ||
     raw.image_id !== isolation.adapter.image_id || !IMAGE_ID.test(raw.image_id) || raw.operation_id !== AGENT_READ_SYSTEM_FACTS_EFFECT_OPERATION
   ) fail('effect receipt binding is invalid');
-  [raw.executor_key_id, raw.lifecycle_pre_effect_head_digest, raw.lifecycle_consumption_event_digest,
+  [
+    raw.executor_key_id, raw.lifecycle_pre_effect_head_digest, raw.lifecycle_consumption_event_digest,
     raw.lifecycle_final_head_digest, raw.lifecycle_final_receipt_digest, raw.durable_consume_record_digest,
-    raw.durable_final_record_digest].forEach((v, i) => digest(v, `effect receipt digest field ${i}`));
+    raw.durable_final_record_digest
+  ].forEach((value, index) => digest(value, `effect receipt digest field ${index}`));
   id(raw.durable_store_id, 'effect durable_store_id');
-  if (!Number.isSafeInteger(raw.durable_consume_generation) || raw.durable_consume_generation < 2 || !Number.isSafeInteger(raw.durable_final_generation) || raw.durable_final_generation <= raw.durable_consume_generation) fail('effect durable generations are invalid');
-  time(raw.started_at, 'effect started_at'); time(raw.finished_at, 'effect finished_at');
+  if (
+    !Number.isSafeInteger(raw.durable_consume_generation) || raw.durable_consume_generation < 2 ||
+    !Number.isSafeInteger(raw.durable_final_generation) || raw.durable_final_generation <= raw.durable_consume_generation
+  ) fail('effect durable generations are invalid');
+  time(raw.started_at, 'effect started_at');
+  time(raw.finished_at, 'effect finished_at');
   if (Date.parse(raw.finished_at) < Date.parse(raw.started_at)) fail('effect receipt time order is invalid');
   const exactClaims = {
-    cleanup_verified: true, revocation_state: 'active', known_signed_head_only: true, global_currentness_claimed: false,
-    dry_run_plan_effect_reachable: false, laboratory_effect_admission_observed: true,
-    durable_consumption_before_effect_observed: true, real_process_effect_observed: true,
-    exact_plan_step_mapping_observed: true, repository_code_executed: false, repository_workspace_mutated: false,
-    network_performed: false, credentials_retrieved: false, secrets_retrieved: false, service_controlled: false,
-    package_installed: false, remote_execution_enabled: false, remote_hardware_accessed: false,
-    production_enrollment: false, deployment_authority: false, capability_promoted: false,
-    task_success_claimed: false, general_executor_available: false, axiom_authority_granted: false
+    cleanup_verified: true,
+    revocation_state: 'active',
+    known_signed_head_only: true,
+    global_currentness_claimed: false,
+    dry_run_plan_effect_reachable: false,
+    laboratory_effect_admission_observed: true,
+    durable_consumption_before_effect_observed: true,
+    real_process_effect_observed: true,
+    exact_plan_step_mapping_observed: true,
+    repository_code_executed: false,
+    repository_workspace_mutated: false,
+    network_performed: false,
+    credentials_retrieved: false,
+    secrets_retrieved: false,
+    service_controlled: false,
+    package_installed: false,
+    remote_execution_enabled: false,
+    remote_hardware_accessed: false,
+    production_enrollment: false,
+    deployment_authority: false,
+    capability_promoted: false,
+    task_success_claimed: false,
+    general_executor_available: false,
+    axiom_authority_granted: false
   };
-  for (const [name, expected] of Object.entries(exactClaims)) if (raw[name] !== expected) fail(`effect receipt attempts to elevate ${name}`);
+  for (const [name, expected] of Object.entries(exactClaims)) {
+    if (raw[name] !== expected) fail(`effect receipt attempts to elevate ${name}`);
+  }
   return Object.freeze({ ...raw, observations });
 }
 
-export function verifyAgentReadSystemFactsEffectReceipt(raw, { trustedExecutorPublicKey, trustedAdmissionIssuerPublicKey, plan, admission, isolationConformanceReceipt } = {}) {
-  if (!raw || raw.schema !== AGENT_READ_SYSTEM_FACTS_EFFECT_RECEIPT_SCHEMA) fail('effect receipt schema is invalid');
+export function verifyAgentReadSystemFactsEffectReceipt(raw, {
+  trustedExecutorPublicKey,
+  trustedAdmissionIssuerPublicKey,
+  plan,
+  admission,
+  isolationConformanceReceipt
+} = {}) {
+  exact(raw, RECEIPT_KEYS, 'effect receipt');
+  if (raw.schema !== AGENT_READ_SYSTEM_FACTS_EFFECT_RECEIPT_SCHEMA) fail('effect receipt schema is invalid');
   const pk = key(trustedExecutorPublicKey, 'public', 'effect trusted executor key');
-  const statement = receiptStatement(raw.statement, { plan, admission, trustedAdmissionIssuerPublicKey, isolationReceipt: isolationConformanceReceipt });
+  const statement = receiptStatement(raw.statement, {
+    plan,
+    admission,
+    trustedAdmissionIssuerPublicKey,
+    isolationReceipt: isolationConformanceReceipt
+  });
   if (statement.executor_key_id !== keyId(pk)) fail('effect receipt executor key mismatch');
   const statementDigest = digestObject(statement);
-  if (raw.statement_digest !== statementDigest || typeof raw.executor_signature !== 'string' || !BASE64URL.test(raw.executor_signature)) fail('effect receipt digest/signature shape is invalid');
+  if (
+    raw.statement_digest !== statementDigest || typeof raw.executor_signature !== 'string' ||
+    !BASE64URL.test(raw.executor_signature) || raw.executor_signature.length > 256
+  ) fail('effect receipt digest/signature shape is invalid');
   const payload = canonicalJson({ schema: AGENT_READ_SYSTEM_FACTS_EFFECT_RECEIPT_SCHEMA, statement, statement_digest: statementDigest });
   if (!verify(null, Buffer.from(payload, 'utf8'), pk, Buffer.from(raw.executor_signature, 'base64url'))) fail('effect receipt signature verification failed');
   const candidate = { schema: raw.schema, statement, statement_digest: statementDigest, executor_signature: raw.executor_signature };
@@ -168,63 +239,156 @@ export class AgentReadSystemFactsEffectController {
     if (!durableStore.canResume) fail(`effect controller cannot resume ${durableStore.recoveryClassification}`);
     const isolation = verifyAgentLinuxIsolationConformanceReceipt(isolationConformanceReceipt);
     if (isolation.revision !== revision) fail('effect controller isolation revision mismatch');
-    this.store = durableStore; this.plan = durableStore.plan; this.revision = revision; this.isolation = isolation;
-    this.admission = verifyAgentReadSystemFactsEffectAdmission(admission, { trustedIssuerPublicKey: trustedAdmissionIssuerPublicKey, plan: this.plan, expectedRevision: revision, now: admission.statement.not_before });
+    this.store = durableStore;
+    this.plan = durableStore.plan;
+    this.revision = revision;
+    this.isolation = isolation;
+    this.admission = verifyAgentReadSystemFactsEffectAdmission(admission, {
+      trustedIssuerPublicKey: trustedAdmissionIssuerPublicKey,
+      plan: this.plan,
+      expectedRevision: revision,
+      now: admission.statement.not_before
+    });
     this.trustedAdmissionIssuerPublicKey = trustedAdmissionIssuerPublicKey;
-    this.sk = key(executorPrivateKey, 'private', 'effect executor key'); this.pk = createPublicKey(this.sk);
-    this.startedAt = null; this.preHead = null; this.consumeDigest = null; this.consumeGeneration = null; this.consumeRecordDigest = null;
+    this.sk = key(executorPrivateKey, 'private', 'effect executor key');
+    this.pk = createPublicKey(this.sk);
+    this.startedAt = null;
+    this.preHead = null;
+    this.consumeDigest = null;
+    this.consumeGeneration = null;
+    this.consumeRecordDigest = null;
   }
-  get executorPublicKey() { return this.pk.export({ type: 'spki', format: 'pem' }).toString(); }
+
+  get executorPublicKey() {
+    return this.pk.export({ type: 'spki', format: 'pem' }).toString();
+  }
+
   descriptor() {
-    return Object.freeze({ operation_id: AGENT_READ_SYSTEM_FACTS_EFFECT_OPERATION, network_mode: 'none', repository_mount_allowed: false,
-      steps: Object.freeze(EXPECTED.map(step => Object.freeze({ sequence: step.sequence, step_id: step.step_id, executable_id: 'node-current-pinned', absolute_executable: AGENT_LINUX_ISOLATION_ENTRYPOINT, arguments: Object.freeze([...step.args]) }))) });
+    return Object.freeze({
+      operation_id: AGENT_READ_SYSTEM_FACTS_EFFECT_OPERATION,
+      network_mode: 'none',
+      repository_mount_allowed: false,
+      steps: Object.freeze(EXPECTED.map(step => Object.freeze({
+        sequence: step.sequence,
+        step_id: step.step_id,
+        executable_id: 'node-current-pinned',
+        absolute_executable: AGENT_LINUX_ISOLATION_ENTRYPOINT,
+        arguments: Object.freeze([...step.args])
+      })))
+    });
   }
+
   begin({ currentLifecycleTranscript, currentLifecycleReceipt, trustedLifecyclePublicKey, revocationState, occurredAt }) {
     if (this.startedAt) fail('effect controller already consumed authorization');
     if (revocationState !== 'active') fail('effect requires known-active revocation state');
     const at = time(occurredAt, 'effect begin time');
-    if (Date.parse(at) < Date.parse(this.admission.statement.not_before) || Date.parse(at) >= Date.parse(this.admission.statement.expires_at)) fail('effect admission is not active at consume time');
-    const current = verifyCurrentHead({ plan: this.plan, store: this.store, transcript: currentLifecycleTranscript, receipt: currentLifecycleReceipt, trustedLifecyclePublicKey });
+    if (Date.parse(at) < Date.parse(this.admission.statement.not_before) || Date.parse(at) >= Date.parse(this.admission.statement.expires_at)) {
+      fail('effect admission is not active at consume time');
+    }
+    const current = verifyCurrentHead({
+      plan: this.plan,
+      store: this.store,
+      transcript: currentLifecycleTranscript,
+      receipt: currentLifecycleReceipt,
+      trustedLifecyclePublicKey
+    });
     this.preHead = current.tx.head_event_digest;
-    const transition = this.store.consume({ eventId: `read-system-facts-consume:${this.plan.plan_digest.slice(0, 24)}`, occurredAt: at, revocationState: 'active' });
-    this.startedAt = at; this.consumeDigest = transition.result.event.event_digest; this.consumeGeneration = transition.record.statement.generation; this.consumeRecordDigest = transition.record.record_digest;
+    const transition = this.store.consume({
+      eventId: `read-system-facts-consume:${this.plan.plan_digest.slice(0, 24)}`,
+      occurredAt: at,
+      revocationState: 'active'
+    });
+    this.startedAt = at;
+    this.consumeDigest = transition.result.event.event_digest;
+    this.consumeGeneration = transition.record.statement.generation;
+    this.consumeRecordDigest = transition.record.record_digest;
     return this.descriptor();
   }
+
   interrupt({ occurredAt, reasonCode = 'read-system-facts-effect-interrupted' }) {
     if (!this.startedAt) fail('effect cannot interrupt before durable consumption');
     if (this.store.status !== 'consumed') return this.store.currentRecord;
-    return this.store.interrupt({ eventId: `read-system-facts-interrupt:${this.plan.plan_digest.slice(0, 24)}`, occurredAt, reasonCode }).record;
+    return this.store.interrupt({
+      eventId: `read-system-facts-interrupt:${this.plan.plan_digest.slice(0, 24)}`,
+      occurredAt,
+      reasonCode
+    }).record;
   }
+
   complete({ observations, finishedAt }) {
     if (!this.startedAt || this.store.status !== 'consumed') fail('effect cannot complete without consumed durable authority');
+    if (!Array.isArray(observations) || observations.length !== 2) fail('effect requires exactly two observations');
     const normalized = observations.map((item, index) => normalizeObservation(item, EXPECTED[index], this.plan));
-    if (normalized.length !== 2) fail('effect requires two observations');
     const at = time(finishedAt, 'effect finish time');
-    const transition = this.store.complete({ eventId: `read-system-facts-complete:${this.plan.plan_digest.slice(0, 24)}`, occurredAt: at });
+    const transition = this.store.complete({
+      eventId: `read-system-facts-complete:${this.plan.plan_digest.slice(0, 24)}`,
+      occurredAt: at
+    });
     const finalRecord = transition.record;
     const statement = Object.freeze({
-      executor_id: AGENT_READ_SYSTEM_FACTS_EFFECT_EXECUTOR_ID, executor_key_id: keyId(this.pk), executor_version: 1,
-      policy_digest: AGENT_READ_SYSTEM_FACTS_EFFECT_POLICY_DIGEST, repository: 'Zoverions/AXIOM-MESH', revision: this.revision,
-      admission_digest: this.admission.admission_digest, plan_digest: this.plan.plan_digest, authorization_id: this.plan.bindings.authorization_id,
-      authorization_digest: this.plan.bindings.authorization_digest, sponsor_id: this.plan.bindings.sponsor_id, subject_id: this.plan.bindings.subject_id,
-      lifecycle_ledger_id: this.plan.bindings.lifecycle_ledger_id, lifecycle_key_id: this.plan.bindings.lifecycle_key_id,
-      lifecycle_pre_effect_head_digest: this.preHead, lifecycle_consumption_event_digest: this.consumeDigest,
-      lifecycle_final_head_digest: finalRecord.statement.lifecycle_head_event_digest, lifecycle_final_receipt_digest: finalRecord.payload.lifecycle_receipt.receipt_digest,
-      durable_store_id: this.store.storeId, durable_consume_generation: this.consumeGeneration, durable_consume_record_digest: this.consumeRecordDigest,
-      durable_final_generation: finalRecord.statement.generation, durable_final_record_digest: finalRecord.record_digest,
-      isolation_receipt_digest: this.isolation.receipt_digest, isolation_adapter_id: AGENT_LINUX_ISOLATION_ADAPTER_ID, image_id: this.isolation.adapter.image_id,
-      operation_id: AGENT_READ_SYSTEM_FACTS_EFFECT_OPERATION, started_at: this.startedAt, finished_at: at, observations: Object.freeze(normalized),
-      cleanup_verified: true, revocation_state: 'active', known_signed_head_only: true, global_currentness_claimed: false,
-      dry_run_plan_effect_reachable: false, laboratory_effect_admission_observed: true, durable_consumption_before_effect_observed: true,
-      real_process_effect_observed: true, exact_plan_step_mapping_observed: true, repository_code_executed: false,
-      repository_workspace_mutated: false, network_performed: false, credentials_retrieved: false, secrets_retrieved: false,
-      service_controlled: false, package_installed: false, remote_execution_enabled: false, remote_hardware_accessed: false,
-      production_enrollment: false, deployment_authority: false, capability_promoted: false, task_success_claimed: false,
-      general_executor_available: false, axiom_authority_granted: false
+      executor_id: AGENT_READ_SYSTEM_FACTS_EFFECT_EXECUTOR_ID,
+      executor_key_id: keyId(this.pk),
+      executor_version: 1,
+      policy_digest: AGENT_READ_SYSTEM_FACTS_EFFECT_POLICY_DIGEST,
+      repository: 'Zoverions/AXIOM-MESH',
+      revision: this.revision,
+      admission_digest: this.admission.admission_digest,
+      plan_digest: this.plan.plan_digest,
+      authorization_id: this.plan.bindings.authorization_id,
+      authorization_digest: this.plan.bindings.authorization_digest,
+      sponsor_id: this.plan.bindings.sponsor_id,
+      subject_id: this.plan.bindings.subject_id,
+      lifecycle_ledger_id: this.plan.bindings.lifecycle_ledger_id,
+      lifecycle_key_id: this.plan.bindings.lifecycle_key_id,
+      lifecycle_pre_effect_head_digest: this.preHead,
+      lifecycle_consumption_event_digest: this.consumeDigest,
+      lifecycle_final_head_digest: finalRecord.statement.lifecycle_head_event_digest,
+      lifecycle_final_receipt_digest: finalRecord.payload.lifecycle_receipt.receipt_digest,
+      durable_store_id: this.store.storeId,
+      durable_consume_generation: this.consumeGeneration,
+      durable_consume_record_digest: this.consumeRecordDigest,
+      durable_final_generation: finalRecord.statement.generation,
+      durable_final_record_digest: finalRecord.record_digest,
+      isolation_receipt_digest: this.isolation.receipt_digest,
+      isolation_adapter_id: AGENT_LINUX_ISOLATION_ADAPTER_ID,
+      image_id: this.isolation.adapter.image_id,
+      operation_id: AGENT_READ_SYSTEM_FACTS_EFFECT_OPERATION,
+      started_at: this.startedAt,
+      finished_at: at,
+      observations: Object.freeze(normalized),
+      cleanup_verified: true,
+      revocation_state: 'active',
+      known_signed_head_only: true,
+      global_currentness_claimed: false,
+      dry_run_plan_effect_reachable: false,
+      laboratory_effect_admission_observed: true,
+      durable_consumption_before_effect_observed: true,
+      real_process_effect_observed: true,
+      exact_plan_step_mapping_observed: true,
+      repository_code_executed: false,
+      repository_workspace_mutated: false,
+      network_performed: false,
+      credentials_retrieved: false,
+      secrets_retrieved: false,
+      service_controlled: false,
+      package_installed: false,
+      remote_execution_enabled: false,
+      remote_hardware_accessed: false,
+      production_enrollment: false,
+      deployment_authority: false,
+      capability_promoted: false,
+      task_success_claimed: false,
+      general_executor_available: false,
+      axiom_authority_granted: false
     });
     const statementDigest = digestObject(statement);
     const payload = canonicalJson({ schema: AGENT_READ_SYSTEM_FACTS_EFFECT_RECEIPT_SCHEMA, statement, statement_digest: statementDigest });
-    const candidate = { schema: AGENT_READ_SYSTEM_FACTS_EFFECT_RECEIPT_SCHEMA, statement, statement_digest: statementDigest, executor_signature: sign(null, Buffer.from(payload, 'utf8'), this.sk).toString('base64url') };
+    const candidate = {
+      schema: AGENT_READ_SYSTEM_FACTS_EFFECT_RECEIPT_SCHEMA,
+      statement,
+      statement_digest: statementDigest,
+      executor_signature: sign(null, Buffer.from(payload, 'utf8'), this.sk).toString('base64url')
+    };
     return Object.freeze({ ...candidate, receipt_digest: digestObject(candidate) });
   }
 }
