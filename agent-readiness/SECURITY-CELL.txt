@@ -19,6 +19,10 @@ Start here
 4. If secrets, credentials, private data, a practical unauthorized-access path, weaponized exploit detail, or materially exploitation-increasing information is involved, stop public handling and follow SECURITY.md.
 5. Bind every result to the exact build/commit/artifact/environment actually tested.
 
+Current public pilot
+Security Agent Cell Pilot #1 is tracked at https://github.com/Zoverions/AXIOM-MESH/issues/1199 and targets RT-AUTH-001 — Capability must not become authority.
+The issue itself records whether the pilot is PRE-LAUNCH or OPEN. Do not infer activation from this guide alone. The first pilot may not begin the cell workflow before this Security Agent Cell contract is merged.
+
 Security cell roles
 
 SCOUT
