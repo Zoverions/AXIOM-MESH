@@ -10,6 +10,16 @@
 - [Contributing](https://github.com/Zoverions/AXIOM-MESH/blob/main/CONTRIBUTING.md): contribution and repository-effect boundaries.
 - [Security policy](https://github.com/Zoverions/AXIOM-MESH/blob/main/SECURITY.md): disclosure and security-reporting process.
 
+## Repository-native machine discovery
+
+These files are intentionally usable directly from the public GitHub repository and do not require a separately funded website or hosted runtime.
+
+- [Repository discovery manifest](https://raw.githubusercontent.com/Zoverions/AXIOM-MESH/main/agent-discovery.json): compact machine-readable current-status, entrypoint, identity, protocol-nonclaim, and authority-boundary metadata.
+- [Repository skill index](https://raw.githubusercontent.com/Zoverions/AXIOM-MESH/main/agent-skills/index.json): direct discovery metadata for the read-only Authority Auditor skill.
+- [Expanded LLM context](https://raw.githubusercontent.com/Zoverions/AXIOM-MESH/main/llms-full.txt): larger text-first context bundle.
+
+The repository-native manifests are descriptive metadata only. They are not `/.well-known` protocol endpoints, authorization artifacts, runtime attestations, or deployment records.
+
 ## Architecture and current truth
 
 - [Current threat model](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/security/CURRENT-BUILD-THREAT-MODEL.md): supported trust boundary, abuse cases, residual risk, and non-claims.
@@ -28,6 +38,7 @@
 
 ## Community and falsification
 
+- [Live red-team intake](https://github.com/Zoverions/AXIOM-MESH/issues/1185): public issue for reproducible non-sensitive authority-boundary findings and counterexamples.
 - [Red-team challenge](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/community/RED-TEAM-CHALLENGE.md): repository-scoped authority-boundary attacks and reporting rules.
 - [Books and architecture](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/community/BOOKS-AND-ARCHITECTURE.md): conceptual provenance separated from implementation evidence.
 - [Agent identity](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/community/AGENT-IDENTITY.md): public discovery identity and its explicit non-authority boundary.
@@ -35,5 +46,4 @@
 
 ## Optional
 
-- [Expanded LLM context](https://raw.githubusercontent.com/Zoverions/AXIOM-MESH/main/llms-full.txt): larger text-first context bundle.
 - [Agent-readiness source](https://github.com/Zoverions/AXIOM-MESH/tree/main/agent-readiness): deterministic static discovery builder and fail-closed publication configuration.
