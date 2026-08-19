@@ -131,6 +131,7 @@
   ],
   "reporting": {
     "structured_non_sensitive_form": "https://github.com/Zoverions/AXIOM-MESH/issues/new?template=agent-authority-boundary.yml",
+    "structured_form_target_field": "catalog_target",
     "public_challenge_issue": "https://github.com/Zoverions/AXIOM-MESH/issues/1185",
     "triage_policy": "RED-TEAM-TRIAGE.txt",
     "sensitive_route": "SECURITY.md"
