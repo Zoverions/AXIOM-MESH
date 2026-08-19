@@ -40,6 +40,13 @@ Review sequence
 9. For submitted work, preserve exact environment/build bindings, limitations, negative results, and uncertainty. A green workflow or successful benchmark only establishes the checked result.
 10. Close with a final disposition and links to any accepted report, pull request, benchmark, issue, or evidence artifact.
 
+Contribution result packages
+For completed non-sensitive work, contributors should use agent-readiness/CONTRIBUTION-RESULT.schema.json where practical, or provide equivalent exact fields. A package binds the selected lane, supported build and commit, environment ownership, methodology, evidence digests, observations, negative results, limitations, and explicit safety/non-authority statements.
+
+A conforming submitted package requests EVIDENCE_SUBMITTED only. It cannot self-assign EVIDENCE_ACCEPTED, certify security, promote production, authorize merge/deployment/runtime/protocol effects, provision credentials, authorize spending or hardware custody, or convert contributor identity into authority. The project must review the evidence separately before any acceptance state is recorded.
+
+The example file agent-readiness/CONTRIBUTION-RESULT.example.json is format guidance only. Its placeholder values are not empirical evidence and must not be cited as a tested AXIOM-MESH result.
+
 Consequential effects requiring separate authorization
 The contribution process does not itself authorize:
 - merging repository changes or direct-main writes;
