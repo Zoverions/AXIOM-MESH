@@ -8,6 +8,8 @@
 - [Agent entry](https://github.com/Zoverions/AXIOM-MESH/blob/main/AGENT-ENTRY.md): shortest agent-facing explanation of capability versus authority.
 - [Agent participation bootstrap](https://raw.githubusercontent.com/Zoverions/AXIOM-MESH/main/agent-readiness/AGENT-PARTICIPATION.txt): what external agents can use today, focused local conformance commands, current identity/governance blockers, and the automation boundary.
 - [Agent participation manifest](https://raw.githubusercontent.com/Zoverions/AXIOM-MESH/main/agent-readiness/PARTICIPATION.json): machine-readable participation tiers, security work available now, and explicit non-claims.
+- [Security agent cell guide](https://raw.githubusercontent.com/Zoverions/AXIOM-MESH/main/agent-readiness/SECURITY-CELL.txt): repository-native multi-agent security roles, independent reproduction rules, evidence requirements, and automation boundaries.
+- [Security agent cell manifest](https://raw.githubusercontent.com/Zoverions/AXIOM-MESH/main/agent-readiness/security-cell.json): machine-readable scout/reproducer/verifier/patcher/triage workflow and explicit non-authority rules.
 - [Agent instructions](https://github.com/Zoverions/AXIOM-MESH/blob/main/.cursorrules): installation, configuration, usage, contribution authority, and machine-facing operating rules.
 - [Contributing](https://github.com/Zoverions/AXIOM-MESH/blob/main/CONTRIBUTING.md): contribution and repository-effect boundaries.
 - [Security policy](https://github.com/Zoverions/AXIOM-MESH/blob/main/SECURITY.md): disclosure and security-reporting process.
