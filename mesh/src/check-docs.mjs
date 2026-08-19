@@ -74,8 +74,8 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/operations/PILOT-DEPLOYMENT-DOSSIER.md',
   'docs/releases/0.12.0-dev.3.md',
   'docs/whitepapers_and_research/WHITEPAPER.md',
-  'skills/axiom-authority-auditor/SKILL.md',
-  'skills/axiom-authority-auditor/references/SOVEREIGN-AGENCY-TEST.md',
+  'agent-skills/axiom-authority-auditor/SKILL.md',
+  'agent-skills/axiom-authority-auditor/references/SOVEREIGN-AGENCY-TEST.md',
   'mesh/README.md',
   'mesh/PRODUCTION.md'
 ]);
