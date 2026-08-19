@@ -18,6 +18,8 @@
     "structured_proposal_form": "https://github.com/Zoverions/AXIOM-MESH/issues/new?template=agent-contribution-proposal.yml",
     "contributing_policy": "CONTRIBUTING.md",
     "triage_policy": "agent-readiness/CONTRIBUTION-TRIAGE.txt",
+    "result_package_schema": "agent-readiness/CONTRIBUTION-RESULT.schema.json",
+    "result_package_example": "agent-readiness/CONTRIBUTION-RESULT.example.json",
     "security_finding_form": "https://github.com/Zoverions/AXIOM-MESH/issues/new?template=agent-authority-boundary.yml",
     "security_policy": "SECURITY.md"
   },
