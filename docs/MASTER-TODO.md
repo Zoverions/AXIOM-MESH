@@ -1,7 +1,7 @@
 # AXIOM-MESH Production Execution Queue
 
 **Status:** canonical active queue
-**Updated:** 2026-08-17
+**Updated:** 2026-08-19
 **Current kernel:** `0.12.0-dev.3`
 **Current stage:** production candidate; not production-promoted
 
@@ -52,6 +52,9 @@ explicitly opened.
 | OPS-004 | Complete for candidate | Deny-egress + Unix-socket ingress | `network_mode:none`, route rejection, public TCP negative probe |
 | OPS-005 | Complete for candidate request path | Request pressure + dependency loss | Oversize/rate/dependency/fail-closed/restart/state evidence |
 | SEC-002 | Complete for intake; authentic review pending | Exact current-build independent-review contract | Threat model, signed findings/remediation/exception verifier |
+| SEC-003 | Complete | Make capability consumption restart-safe | Grid-backed consume-before-execute, deterministic per-JTI consume event, signed receipt, exact Sandbox process-epoch binding, restart/crash replay rejection, burn-on-uncertainty semantics; no exactly-once external-effect claim |
+| SEC-004 | Complete | Restrict authority/evidence canonicalization to plain JSON data | Reject class/custom prototypes, accessors, non-enumerable/symbol state, sparse/custom arrays; preserve safe JSON `__proto__`; array/object hidden-state regressions |
+| SEC-005 | Complete | Make policy-constraint merge direction explicit | Declared monotonic boolean/numeric operators, finite allowlist intersection using canonical digest identity, ambiguous conflicts fail closed, exhaustive/property regressions; current production policy still has no action-level constraints |
 | SUP-001 | Complete | Reproducible release verification | Source/registry/docs/deployment/migration checks; no embedded secrets |
 
 ## P1 — single-node production pilot
@@ -98,7 +101,7 @@ explicitly opened.
 | CIRCLE-003 | Pending | Bounded real Circle pilot | Consent, useful workflow, support log, revocation/export/deletion, trust-comprehension report |
 | MANAGED-001 | Specified | Managed Node design without platform data ownership | Tenant isolation, export/keys, operator least privilege, support receipts, recovery/migration/decommissioning |
 
-## P1M — machine principals, runtimes, and safe external effects
+## P1M — machine principals, runtimes, agent participation, and safe external effects
 
 Completion in this track does **not** automatically promote or expose a
 capability.
@@ -110,6 +113,10 @@ capability.
 | MACHINE-003 | Complete | Grid-attested terminal machine receipts | Request/machine-authority digests, accepted/terminal anchors, chain assurance, terminal outcome digest, independent Grid-key verification |
 | RUNTIME-001 | Complete for contract + synthetic reference | Agent Runtime Adapter v1 | Byte-pinned schema; 28-case grant/capability/credential/lifecycle/cancel/receipt/rollback drill; no external-runtime certification |
 | RUNTIME-002 | Pending | First bounded maintained external runtime integration | Exact upstream pin; source/licence/dependency/threat review; no-secret read-only Gateway path; native authorization/cancel/idempotency/receipt parity; direct-service denial; independent review |
+| AGENT-001 | Complete for repository-native evidence workflow | Security Agent Cell | Scout/reproducer/verifier/patcher/triage roles, fresh-evidence and independence rules, canonical red-team lifecycle, public/private safety split, protected CI; no merge/deploy/credential/protocol/production/spending/hardware/destructive authority |
+| AGENT-002 | Complete for identity-evidence laboratory only | Portable machine identity | Issuer-signed principal/sponsor/key/runtime/history/rotation/recovery/expiry/revocation/currentness evidence; zero capability-registry/authority effect; no self-service enrollment or delegation |
+| AGENT-003 | Pending | Converge Agent Contributor Mode progression | Select one currentness -> bounded contributor session -> attenuation/delegation -> signed handoff -> portable receipt -> independent verification path; supersede overlapping laboratory variants before activation |
+| AGENT-004 | Pending | Govern first consequential contributor effect | Exact sponsor/currentness/authority digest, finite action/data/destination/budget, late revalidation, disposable execution, durable receipt, revocation, independent review, no authority from identity/reputation/majority |
 | INTENT-001 | Complete for production-unreachable core | Signed dynamic repository-plan resolution | Fresh eligibility, exact repo/base/path/lifetime, signed plan, content-addressed resolution/handoff, staleness/tamper/substitution rejection |
 | INTENT-002 | Complete for production-unreachable core | Resolver admission/review/package/application observation | Independent implementation/security reviews, exact-one mapping package, exact before/after observation, no installation-as-authority |
 | INTENT-003 | Complete for production-unreachable core | Preserve target policy + atomically durable preparation | Resolved target policy/confirmation/independent approval; authenticated Grid read; one transaction `approval.consumed` + `external.effect.prepared`; one-winner concurrency proof |

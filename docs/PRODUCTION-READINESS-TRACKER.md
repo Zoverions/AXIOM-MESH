@@ -1,6 +1,6 @@
 # AXIOM-MESH Production Readiness Tracker
 
-**Updated:** 2026-08-17
+**Updated:** 2026-08-19
 
 **Active build:** `0.12.0-dev.3`
 
@@ -24,6 +24,8 @@ frontier laboratories do not replace production-pilot evidence.
 | Source integrity | Pass | Clean-room tree, source checksum, SBOM, provenance, exact zero-dependency locks | Maintain for every candidate/release |
 | Capability claims | Pass | Registry/generated status/claim markers; 49 tracked / 31 implemented | Maintain on every change; source presence alone cannot promote capability |
 | Kernel tests | Pass | Protected Clean Kernel suite | Require on protected `main` |
+| Capability single-use durability | Pass for current kernel | Grid-backed consume-before-execute; deterministic per-JTI consume event; Grid-signed receipt; exact capability/claims/Sandbox-process-epoch binding; same-process replay guard; restart/crash/burn negative tests | Preserve at-most-once burn semantics across Grid/Sandbox changes; exactly-once external effects and automatic retry remain separate non-claims |
+| Authority/evidence canonical input domain | Pass for current kernel | Canonical hashing accepts JSON-compatible plain data only and rejects class/custom prototypes, accessors, non-enumerable or symbol-keyed state, sparse/custom arrays, with dedicated negative regressions | Maintain call-site normalization and plain-data invariants on every authority/evidence schema change |
 | Cross-platform verification | Pass for current source | Linux/container + hosted Windows path/clock/documentation verification | Keep both protected surfaces green |
 | Source setup and dependency audit | Pass | Node `>=24.14.0 <25`; CI/.node-version 24.18.0; candidate production image 24.19.0; npm 11.x; two zero-dependency locks; lifecycle scripts disabled; unchanged-lock proof | Maintain exact machine-readable policy and negative tests |
 | Container source policy | Pass | Digest-pinned Dockerfile/Compose release checks | Maintain exact production image/base digest |
@@ -52,16 +54,20 @@ frontier laboratories do not replace production-pilot evidence.
 | Incident response | Pass for automated candidate | Deterministic severity, independent roles, authority-reducing containment, linked controls | Facilitated pilot exercise with named roster |
 | Pilot evidence intake | Pass for verifier contracts; authentic package pending | Exact authority policy, five roles, 720-hour contract, 13 canonical envelopes, semantic/signature checks | Collect authentic evidence and separate promotion decision |
 | Agent Runtime Adapter v1 | Pass for contract + synthetic reference only | Byte-pinned v1 schema, contract verifier, 28-case synthetic drill, commit-bound evidence | Select/review one maintained runtime and prove bounded real adapter before exposure |
+| Repository-native Security Agent Cell | Pass for bounded evidence workflow; not runtime authority | Public scout/reproducer/verifier/patcher/triage roles, canonical red-team lifecycle, fresh-evidence/independence rules, sensitive-report diversion, protected CI | Run bounded pilots and measure evidence quality; merge/deploy/credential/protocol/production/spending/hardware/destructive authority remains separately authorized |
+| Portable machine identity | Pass for identity-evidence laboratory only | Issuer-signed principal/sponsor/key/runtime/history/rotation/recovery/expiry/revocation/currentness evidence with explicit zero-authority semantics | Add separately reviewed currentness/contributor-session/delegation/handoff steps before any runtime authority proposal; no self-service enrollment or delegation claimed |
 | Resolver-backed dynamic input | Pass for production-unreachable core | Fresh eligibility, signed repository plan, resolver admission/review, exact-one mapping package, application observation, target gates | Keep production mapping/policy/runtime closed pending explicit activation review |
 | Prepared-effect authority | Pass for production-unreachable core | Authenticated Grid approval read; one transaction records `approval.consumed` + `external.effect.prepared`; concurrency yields one durable winner | Maintain exact binding; activation remains separate |
 | External-effect outbox | Pass for production-unreachable core | Requires durable prepare before operator invocation; uncertain operator/receipt remains prepared; verified receipt required before `external.effect.completed`; restart/idempotency/completion-failure tests | No production route/mapping; retain evidence-first semantics for future adapters |
 | GitHub docs repository operator | Pass for production-unreachable prototype | Independently verifies durable Grid prepare before any GitHub request; fixed repo; exact planned docs paths/content; deterministic effect branch; creates/recovers **open draft PR**; stale-main/path/content/proof/idempotency/transport-loss tests | Production mapping/policy/runtime/credential/egress/rollback/review gate remains closed; **no merge/direct-main authority** |
 | Release governance | Pass for development line | Protected `main`, release verifier, canonical docs boundary, immutable v0.11 baseline | Publish new immutable dossier only after 0.12 promotion |
 
-The runtime-adapter and repository-effect rows intentionally record **built
-safety mechanisms without capability promotion**. The GitHub operator can be
-real source and tests while the supported runtime has no
-`repository.docs.pull-request.create` policy/registry/route that can invoke it.
+The runtime-adapter, repository-effect, Security Agent Cell, and portable-identity
+rows intentionally record **built safety/evidence mechanisms without capability
+or production-authority promotion**. The GitHub operator can be real source and
+tests while the supported runtime has no `repository.docs.pull-request.create`
+policy/registry/route that can invoke it; likewise, a machine identity credential
+or agent security result does not itself authorize any AXIOM effect.
 
 ## Human-product preview status
 
@@ -123,9 +129,11 @@ The following block production promotion of the currently exposed kernel:
    deployment/pilot configuration; and
 9. authentic exact pilot evidence package plus separate promotion decision.
 
-The repository-effect and runtime-adapter prototypes are not current pilot
-blockers because they are production-unreachable. They become separate
-promotion gates if a future change proposes to activate them.
+The repository-effect, runtime-adapter, Security Agent Cell, and portable-machine-
+identity mechanisms are not current pilot blockers because they do not expand
+the supported production-reachable authority surface. They become separate
+promotion gates if a future change proposes to activate new runtime/effect or
+delegated authority through them.
 
 ## Gate owners
 
@@ -156,12 +164,14 @@ See the [pilot dossier](operations/PILOT-DEPLOYMENT-DOSSIER.md) and
 
 ## Reassessment rule
 
-Any change to authentication, machine ceilings, policy, grants, Sandbox
+Any change to authentication, machine ceilings, policy, capability-consumption
+or single-use semantics, authority/evidence canonicalization, grants, Sandbox
 execution, Grid schema/evidence/continuity semantics, encryption, backup,
 service topology, container base, secret handling, browser sessions, adapter
 egress, provider scope, resolver activation, outbox/operator execution,
-external runtime integration, remote execution, settlement, domain authority,
-or release gates reopens the applicable gate.
+external runtime integration, portable/delegated identity authority, remote
+execution, settlement, domain authority, or release gates reopens the applicable
+gate.
 
 Production promotion is never inherited automatically by later commits,
 deployments, applications, adapters, runtimes, resolver mappings, or
