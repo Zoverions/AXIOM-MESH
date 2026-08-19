@@ -1,0 +1,122 @@
+{
+  "schema": "axiom-agent-contribution-lanes.v1",
+  "project": "AXIOM-MESH",
+  "supported_build": "0.12.0-dev.3",
+  "status": "repository_contribution_lanes_not_runtime_authority",
+  "purpose": "Give agents, reviewers, tool builders, hardware testers, and infrastructure contributors bounded ways to help AXIOM-MESH without treating technical capability or repository participation as authority.",
+  "safety": {
+    "public_non_sensitive_only": true,
+    "sensitive_route": "SECURITY.md",
+    "third_party_testing_authorized": false,
+    "production_deployment_authorized": false,
+    "merge_authority_granted": false,
+    "credential_sharing_requested": false,
+    "spending_or_purchase_authorized": false,
+    "shipping_or_hardware_transfer_authorized": false
+  },
+  "intake": {
+    "structured_proposal_form": "https://github.com/Zoverions/AXIOM-MESH/issues/new?template=agent-contribution-proposal.yml",
+    "contributing_policy": "CONTRIBUTING.md",
+    "security_finding_form": "https://github.com/Zoverions/AXIOM-MESH/issues/new?template=agent-authority-boundary.yml",
+    "security_policy": "SECURITY.md"
+  },
+  "operator_approval_required_for": [
+    "merging repository changes",
+    "deploying or publishing a hosted surface",
+    "activating a protocol or production route",
+    "production promotion",
+    "sharing or provisioning credentials",
+    "spending money or purchasing equipment",
+    "shipping, receiving, or transferring hardware",
+    "testing systems not owned by the contributor or explicitly authorized for disposable testing"
+  ],
+  "lanes": [
+    {
+      "id": "review-falsification",
+      "title": "Review and falsification",
+      "purpose": "Challenge current authority, evidence, trust-boundary, and claim invariants using repository-owned or explicitly disposable environments.",
+      "default_effect_boundary": "read-only analysis, issue comments, or non-sensitive red-team reports",
+      "required_evidence": [
+        "exact build, commit, file, artifact, or URL reviewed",
+        "expected invariant or claim boundary",
+        "minimal safe reproduction or counterexample",
+        "supporting non-sensitive evidence"
+      ]
+    },
+    {
+      "id": "implementation-pr",
+      "title": "Implementation contribution",
+      "purpose": "Propose bounded code, test, documentation, or tooling changes through normal repository review.",
+      "default_effect_boundary": "proposal or pull request only; no merge authority",
+      "required_evidence": [
+        "exact base commit and changed scope",
+        "tests or verification relevant to the changed claim",
+        "explicit statement of any capability or authority impact"
+      ]
+    },
+    {
+      "id": "interoperability-adapter",
+      "title": "Interoperability and adapter work",
+      "purpose": "Improve protocol-neutral runtime, adapter, or connector compatibility while preserving the Gateway -> Hypervisor -> Sandbox -> Grid authority path.",
+      "default_effect_boundary": "design, fixtures, synthetic conformance, or pull request; no protocol activation",
+      "required_evidence": [
+        "exact external contract or version being modeled",
+        "translation and failure semantics",
+        "negative tests showing capability or connectivity does not create authority"
+      ]
+    },
+    {
+      "id": "hardware-validation",
+      "title": "Hardware validation",
+      "purpose": "Run reproducible AXIOM-MESH compatibility, isolation, recovery, performance, or device-integration tests on contributor-owned or explicitly disposable hardware.",
+      "default_effect_boundary": "test plan and evidence only; no purchasing, shipping, credential provisioning, or production deployment authority",
+      "required_evidence": [
+        "exact hardware model and relevant firmware or operating-system versions",
+        "exact AXIOM-MESH commit or build",
+        "test procedure and environment ownership statement",
+        "raw non-sensitive results and observed limitations"
+      ]
+    },
+    {
+      "id": "infrastructure-validation",
+      "title": "Infrastructure validation",
+      "purpose": "Exercise deployment topology, transport, deny-egress, backup, recovery, resilience, telemetry, or multi-node foundations in contributor-owned or explicitly disposable infrastructure.",
+      "default_effect_boundary": "test plan and evidence only; no production deployment, routing, credential, or third-party infrastructure authority",
+      "required_evidence": [
+        "exact topology and environment ownership statement",
+        "exact build or commit",
+        "preconditions and rollback or cleanup plan",
+        "non-sensitive logs, receipts, or measurements"
+      ]
+    },
+    {
+      "id": "claim-audit",
+      "title": "Claim and documentation audit",
+      "purpose": "Compare machine discovery, documentation, capability state, release evidence, and public wording for contradictions or overclaim.",
+      "default_effect_boundary": "read-only audit, issue, or bounded documentation pull request",
+      "required_evidence": [
+        "exact conflicting claims or artifacts",
+        "canonical source that should control the claim",
+        "smallest proposed correction or regression"
+      ]
+    },
+    {
+      "id": "benchmark-compatibility",
+      "title": "Benchmark and compatibility evidence",
+      "purpose": "Produce reproducible performance, resource, operating-system, runtime, or device-compatibility evidence scoped to the exact tested environment.",
+      "default_effect_boundary": "benchmark plan, data, or pull request; no certification or general performance claim",
+      "required_evidence": [
+        "exact hardware, software, and environment",
+        "exact build or commit",
+        "methodology and repeated measurements where practical",
+        "limitations and conditions under which the result should not be generalized"
+      ]
+    }
+  ],
+  "nonclaims": [
+    "A contribution lane is an intake and collaboration boundary, not permission to execute AXIOM-MESH effects or modify protected repository state.",
+    "Hardware and infrastructure lanes do not authorize third-party testing, purchases, shipping, credential exchange, or production deployment.",
+    "A benchmark, synthetic conformance result, test report, pull request, review, or green workflow is not a security certification or production-promotion decision.",
+    "Repository participation does not grant merge authority, runtime authority, protocol activation, or deployment authority."
+  ]
+}

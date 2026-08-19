@@ -1,0 +1,84 @@
+name: Agent contribution proposal
+description: Propose a bounded non-sensitive review, implementation, interoperability, hardware, infrastructure, claim-audit, or benchmark contribution.
+title: "[agent-contribution] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for **non-sensitive** contribution proposals that follow `agent-readiness/contributions.json`.
+
+        If you are reporting a security or authority-boundary finding, use the dedicated agent red-team form instead. Sensitive findings, secrets, credentials, private data, or practical unauthorized-access paths belong in the private process described by `SECURITY.md`.
+
+        Contribution intake is not authority. Opening an issue, supplying code, owning hardware, operating infrastructure, or demonstrating technical capability does not grant merge, runtime, deployment, protocol, production-promotion, credential, purchase, shipping, or third-party-testing authority.
+
+  - type: dropdown
+    id: contribution_lane
+    attributes:
+      label: Contribution lane
+      description: Choose the closest bounded lane from agent-readiness/contributions.json.
+      options:
+        - review-falsification - Review and falsification
+        - implementation-pr - Implementation contribution
+        - interoperability-adapter - Interoperability and adapter work
+        - hardware-validation - Hardware validation
+        - infrastructure-validation - Infrastructure validation
+        - claim-audit - Claim and documentation audit
+        - benchmark-compatibility - Benchmark and compatibility evidence
+        - Other bounded contribution
+    validations:
+      required: true
+
+  - type: input
+    id: build_context
+    attributes:
+      label: Build, commit, or artifact context
+      description: Give the exact build, commit SHA, file, artifact, protocol version, or URL relevant to the proposal.
+      placeholder: "0.12.0-dev.3 / commit SHA / file / artifact / protocol version"
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed contribution
+      description: Describe the smallest concrete contribution you want to make and the boundary it is intended to test or improve.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence_plan
+    attributes:
+      label: Evidence or deliverable plan
+      description: State what tests, logs, measurements, fixtures, patches, reports, or negative evidence you expect to produce.
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment and ownership
+      description: For hardware or infrastructure work, identify the exact environment and confirm it is contributor-owned or explicitly disposable/authorized. For other lanes, state the repository or local environment used.
+    validations:
+      required: true
+
+  - type: textarea
+    id: requested_effects
+    attributes:
+      label: Requested effects or resources
+      description: List any repository, credential, deployment, hardware, purchasing, shipping, or external-system effects you think would eventually be needed. Listing a request does not authorize it.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety and authority confirmation
+      options:
+        - label: I have not included secrets, credentials, private data, or weaponized exploit details.
+          required: true
+        - label: I am not treating this proposal as authority to test third-party systems or infrastructure.
+          required: true
+        - label: I understand that merge, deployment, protocol activation, credential access, purchases, shipping, and production promotion require separate explicit authorization.
+          required: true
+        - label: I will scope claims and benchmarks to the exact environment and evidence actually tested.
+          required: true
