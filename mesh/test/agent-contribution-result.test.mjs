@@ -30,13 +30,14 @@ async function text(path) {
 }
 
 test('agent contribution result package is evidence-only, exact-context, and discoverable', async () => {
-  const [schemaRaw, exampleRaw, lanesRaw, discoveryRaw, llms, issueForm] = await Promise.all([
+  const [schemaRaw, exampleRaw, lanesRaw, discoveryRaw, llms, issueForm, triage] = await Promise.all([
     text('agent-readiness/CONTRIBUTION-RESULT.schema.json'),
     text('agent-readiness/CONTRIBUTION-RESULT.example.json'),
     text('agent-readiness/contributions.json'),
     text('agent-discovery.json'),
     text('llms.txt'),
-    text('.github/ISSUE_TEMPLATE/agent-contribution-proposal.yml')
+    text('.github/ISSUE_TEMPLATE/agent-contribution-proposal.yml'),
+    text('agent-readiness/CONTRIBUTION-TRIAGE.txt')
   ]);
 
   const schema = JSON.parse(schemaRaw);
@@ -139,4 +140,10 @@ test('agent contribution result package is evidence-only, exact-context, and dis
   assert.match(issueForm, /requests `EVIDENCE_SUBMITTED`/);
   assert.match(issueForm, /does not assign `EVIDENCE_ACCEPTED`/);
   assert.match(issueForm, /records evidence only and cannot assign acceptance or authority/i);
+
+  assert.match(triage, /Contribution result packages/);
+  assert.match(triage, /CONTRIBUTION-RESULT\.schema\.json/);
+  assert.match(triage, /requests EVIDENCE_SUBMITTED only/i);
+  assert.match(triage, /cannot self-assign EVIDENCE_ACCEPTED/i);
+  assert.match(triage, /placeholder values are not empirical evidence/i);
 });
