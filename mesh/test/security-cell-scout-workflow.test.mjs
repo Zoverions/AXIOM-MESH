@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const workflowPath = new URL('../../.github/workflows/security-cell-scout.yml', import.meta.url);
+const workflowPath = new URL('../../.github/workflows/chain-verification-benchmark.yml', import.meta.url);
 
 async function workflowText() {
   return readFile(workflowPath, 'utf8');
@@ -18,6 +18,7 @@ test('Security Cell Scout is read-only evidence automation', async () => {
   assert.doesNotMatch(source, /\bcontents:\s*write\b/);
   assert.doesNotMatch(source, /secrets\./);
   assert.match(source, /persist-credentials:\s*false/);
+  assert.match(source, /security-cell-scout:\s*\n\s+if:\s+github\.event_name == 'schedule' \|\| github\.event_name == 'workflow_dispatch'/);
 
   assert.match(source, /target_id:\s*'RT-AUTH-001'/);
   assert.match(source, /finding_disposition:\s*'not_assigned_by_workflow'/);
