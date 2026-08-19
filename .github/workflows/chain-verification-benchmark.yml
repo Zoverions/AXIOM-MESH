@@ -77,6 +77,33 @@ jobs:
         with:
           fetch-depth: 1
           persist-credentials: false
+      - name: Initialize scout evidence before setup
+        if: always()
+        shell: bash
+        env:
+          SCOUT_SHA: ${{ github.sha }}
+        run: |
+          log="$RUNNER_TEMP/rt-auth-001.log"
+          evidence="$RUNNER_TEMP/security-cell-scout-evidence.json"
+          printf '%s\n' 'Security Cell Scout setup has not completed.' > "$log"
+          log_sha256="$(sha256sum "$log" | cut -d' ' -f1)"
+          cat > "$evidence" <<EOF
+          {
+            "schema": "axiom-security-cell-scout-evidence.v1",
+            "target_id": "RT-AUTH-001",
+            "commit": "$SCOUT_SHA",
+            "result": "setup_not_completed",
+            "finding_disposition": "not_assigned_by_workflow",
+            "authority_effect": "none",
+            "security_certification_claimed": false,
+            "limitations": [
+              "This placeholder exists so setup failures still preserve an evidence artifact.",
+              "No finding disposition is assigned by this workflow."
+            ],
+            "log_file": "rt-auth-001.log",
+            "log_sha256": "$log_sha256"
+          }
+          EOF
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "24.18.0"
