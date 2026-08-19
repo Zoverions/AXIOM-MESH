@@ -1,0 +1,90 @@
+name: Agent authority-boundary finding
+description: Report a reproducible non-sensitive case where capability, discovery, connectivity, evidence, or tooling appears to become authority incorrectly.
+title: "[agent-red-team] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for **non-sensitive** AXIOM-MESH authority-boundary findings.
+
+        Do not include secrets, credentials, private data, weaponized exploit details, or information that would make a third-party system easier to attack. Sensitive security findings belong in the private process described by `SECURITY.md`.
+
+        Current claim boundary: the supported build is `0.12.0-dev.3`, a production candidate, not production-promoted. Repository discovery, agent skills, certificates, connectivity, credentials, and technical capability do not create authority by themselves.
+
+  - type: dropdown
+    id: finding_type
+    attributes:
+      label: Finding type
+      description: Choose the closest authority-boundary failure class.
+      options:
+        - Capability treated as authorization
+        - Stale, revoked, expired, or purpose-mismatched authority
+        - Scope, destination, or purpose creep
+        - Composed tools create authority no component held
+        - Alternate path around Gateway -> Hypervisor -> Sandbox -> Grid
+        - Evidence or signature overclaim
+        - Discovery or metadata claim drift
+        - Advisory tooling becomes a shadow authorizer
+        - Other authority-boundary mismatch
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Build, commit, or artifact
+      description: Give the exact build, commit SHA, file path, artifact digest, or URL you reviewed.
+      placeholder: "0.12.0-dev.3 / commit SHA / path / digest"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_boundary
+    attributes:
+      label: Expected authority boundary
+      description: State what should have been denied, constrained, separated, or represented differently.
+      placeholder: "Example: discovery should reveal only requestable capability metadata and must not grant execution authority."
+    validations:
+      required: true
+
+  - type: textarea
+    id: observed_behavior
+    attributes:
+      label: Observed behavior
+      description: Describe the smallest concrete mismatch you observed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Provide the shortest safe sequence needed to reproduce the finding. Keep this repository-scoped and non-sensitive.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Link or paste the exact non-sensitive logs, tests, file references, receipts, screenshots, or outputs that support the finding.
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Why this matters
+      description: Explain what authority, legitimacy, evidence, or claim boundary could be affected if the finding is valid.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety and claim-boundary confirmation
+      options:
+        - label: I have not included secrets, credentials, private data, or weaponized exploit details.
+          required: true
+        - label: I understand that AXIOM-MESH is currently a production candidate, not production-promoted, and I am not treating repository discovery as execution authority.
+          required: true
