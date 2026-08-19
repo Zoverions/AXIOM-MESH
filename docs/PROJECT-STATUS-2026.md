@@ -1,6 +1,6 @@
 # AXIOM-MESH Project Status
 
-**Status date:** 2026-08-17
+**Status date:** 2026-08-19
 
 **Supported build:** `0.12.0-dev.3`
 
@@ -25,6 +25,16 @@ experimental, 2 specified, 9 adapter-required, and 4 disabled capabilities.
 Built source does not become a runnable capability merely because tests exist:
 production policy, registries, runtime wiring, and applicable promotion evidence
 remain independent gates.
+
+August 19 hardening closed two authority/evidence ambiguities without expanding
+the capability surface. Capability use is now durably consumed in Grid before
+Sandbox execution, with the signed consume receipt bound to the exact capability
+and current Sandbox process epoch; restart or uncertain execution burns the
+capability rather than making it replayable. Authority/evidence canonicalization
+is also restricted to JSON-compatible plain data so class instances, accessors,
+non-enumerable or symbol-keyed state, sparse arrays, and custom array/object
+prototypes cannot silently collapse into misleading digests. Neither change
+creates exactly-once external effects or production promotion.
 
 ## Current authority model
 
@@ -57,8 +67,11 @@ boundaries.
 The production-candidate surface includes:
 
 - authenticated intent, deny-dominant policy, explicit plans, confirmation and
-  independent approval where required, short-lived single-use grants, bounded
-  deterministic execution, and signed evidence;
+  independent approval where required, short-lived capabilities durably consumed
+  in Grid before execution, bounded deterministic execution, and signed evidence;
+- a process-local Sandbox replay guard retained as a same-process fast path plus
+  Grid-backed at-most-once capability consumption across Sandbox/Grid restart,
+  with execution-epoch binding and explicit burn-on-uncertainty semantics;
 - human-sponsored constrained machine principals with finite scopes, actions,
   purposes, destinations, runtime identity, expiry, non-delegation,
   execution-time, request-size, request-rate, concurrency, and response-size
@@ -223,6 +236,32 @@ credential, opens no external runtime connection, reads no user file, performs
 no external effect, and does not certify OpenClaw, Hermes, Agent Zero, MCP,
 A2A, or any other runtime.
 
+## Repository-native agent participation and portable identity
+
+The repository now exposes a repository-native Security Agent Cell for public,
+non-sensitive security evidence work. Its bounded roles are scout, reproducer,
+verifier, patcher, and triage recorder. The cell reuses the canonical red-team
+finding lifecycle and explicitly separates evidence from authority: public
+agents may inspect code, reproduce in their own or disposable environments,
+prepare patches/PRs, and exercise protected CI, but merge, deployment,
+credentials, production promotion, spending, hardware custody, destructive
+recovery, and unauthorized third-party testing remain separately authorized.
+
+A portable machine-identity laboratory is also merged on `main` as the first
+runtime-facing precursor to Agent Contributor Mode. The
+`axiom-machine-identity-credential.v1` evidence binds principal identity,
+sponsor, issuer/key epoch, operational key, runtime binding, credential history,
+rotation/recovery, expiry, and issuer-signed revocation/currentness facts.
+
+That laboratory is **identity evidence only**. It does not modify the capability
+registry, enable self-service enrollment or machine delegation, create a bearer
+grant, expose a remote executor or MCP/A2A, establish legal identity or
+personhood, prove reputation/truth/global currentness, or grant repository,
+deployment, credential, spending, hardware, governance, or runtime authority.
+The next contributor-mode steps remain separately gated around currentness,
+bounded contributor sessions, attenuation/delegation, portable handoff/receipt,
+and plural governance.
+
 ## Human product state
 
 The implemented Gateway client contract supports the experimental AXIOM One
@@ -267,9 +306,11 @@ candidate production image pin `24.19.0`; both remain within the supported
 Protected evidence covers source setup, tests, release verification, network
 policy, container build/readiness, recovery, backup lifecycle, SLO, resilience,
 telemetry, transport, independent service units, node scheduling, causal
-exchange, provider startup, credential/data-key rotation, incident tabletop,
-pilot dossier/package verification, independent-security-review verification,
-runtime-adapter synthetic conformance, and applicable CodeQL/Windows gates.
+exchange, provider startup, credential/data-key rotation, restart-safe
+capability consumption, plain-data authority/evidence canonicalization,
+incident tabletop, pilot dossier/package verification,
+independent-security-review verification, runtime-adapter synthetic conformance,
+and applicable CodeQL/Windows gates.
 
 These artifacts prove mechanisms and rejection behavior. They do not create the
 external facts required for production promotion.
@@ -316,9 +357,10 @@ Production promotion remains blocked by authentic external evidence, including:
 9. an authentic exact pilot evidence package and separate production-promotion
    decision.
 
-The repository-effect and runtime-adapter prototypes do not themselves block
-the current pilot because neither is exposed on the supported production
-surface. A future proposal to activate either creates its own promotion gates.
+The repository-effect, portable-identity, Security Agent Cell, and
+runtime-adapter work do not themselves block the current pilot because none
+expands the supported production-reachable authority surface. A future proposal
+to activate any new runtime/effect authority creates its own promotion gates.
 
 ## What is not claimed
 
@@ -334,6 +376,9 @@ The `0.12.0-dev.3` build does **not** claim:
 - production identity proofing, credential presentation, passkey authorization,
   payment authorization, funds availability, merchant acceptance, or
   settlement;
+- self-service portable machine enrollment, autonomous-machine delegation,
+  reputation/global-currentness proof, or authority derived from a portable
+  identity credential or Security Agent Cell result;
 - certification or production conformance of an external agent runtime;
 - MCP/A2A exposure, autonomous-machine delegation, remote workload execution,
   or hardware/runtime attestation;
@@ -343,6 +388,7 @@ The `0.12.0-dev.3` build does **not** claim:
 - federation, BFT consensus, replicated Grid finality, or global Sybil
   resistance;
 - arbitrary-code sandbox security;
+- exactly-once external side effects from durable capability consumption;
 - operational token, bridge, liquidity, staking, treasury, payroll, or chain
   settlement;
 - clinical, educational, governmental, legal, employment, or financial
@@ -354,24 +400,28 @@ The `0.12.0-dev.3` build does **not** claim:
 - proof that local Grid state alone detects a consistently deleted suffix after
   matching local metadata rewrite.
 
-Presence in the source tree, a passing synthetic drill, or a draft-PR operator
-test is not production promotion.
+Presence in the source tree, a passing synthetic drill, an identity credential,
+a Security Agent Cell result, or a draft-PR operator test is not production
+promotion.
 
 ## Current priorities
 
-1. preserve the exact authority/evidence boundary while completing the authentic
-   controlled pilot;
-2. finish AXIOM One browser/security/accessibility/package gates and one bounded
+1. finish the remaining authority-algebra hardening and converge overlapping
+   Agent Trust/semantic-memory laboratories into one selected progression rather
+   than accumulating parallel green branches;
+2. complete the authentic controlled pilot: dedicated hardware, external secret
+   and continuity-anchor custody, real telemetry/alerts, restore/rotation,
+   30-day observation, and exact independent security review;
+3. finish AXIOM One browser/security/accessibility/package gates and one bounded
    useful provider/workflow path, followed by one immutable single-agent Runtime
    Capsule, a secret-free Personal Agent Pack, and transparent policy-first
    compute routing;
-3. select and review one maintained external runtime for a deliberately bounded
-   read-only Agent Runtime Adapter v1 integration;
-4. keep the repository-effect chain production-unreachable while completing any
-   remaining promotion/rollback/operator-custody analysis needed before even
-   considering a first mapping activation; and
-5. continue multi-host, Circles/plural-authority, and frontier work behind their
-   own evidence gates.
+4. select and review one maintained external runtime for a deliberately bounded
+   read-only Agent Runtime Adapter v1 integration before any remote execution or
+   broader interoperability claim; and
+5. continue Agent Contributor Mode, authenticated multi-host dispatch,
+   Circles/social exchange, plural authority, and frontier work incrementally
+   behind their own evidence and promotion gates.
 
 See the [roadmap](ROADMAP.md), [execution queue](MASTER-TODO.md),
 [production-readiness tracker](PRODUCTION-READINESS-TRACKER.md),
