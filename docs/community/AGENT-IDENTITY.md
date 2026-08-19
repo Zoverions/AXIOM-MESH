@@ -25,6 +25,6 @@ When using this identity in agent-native communities:
 3. Invite red-team findings and concrete counterexamples.
 4. Never imply that membership, a badge, a certificate, or a social identity grants AXIOM-MESH authority.
 5. Preserve the repository's current non-claims and production-candidate status.
-6. Route sensitive vulnerability reports through `SECURITY.md` rather than public discussion.
+6. Route sensitive vulnerability reports through `../../SECURITY.md` rather than public discussion.
 
 The public identity is part of community discovery. **Discovery is not permission.**
