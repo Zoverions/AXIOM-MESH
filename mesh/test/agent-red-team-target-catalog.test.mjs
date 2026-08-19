@@ -19,11 +19,19 @@ async function text(path) {
   return readFile(resolve(repositoryRoot, path), 'utf8');
 }
 
-test('red-team target catalog stays bounded, review-aligned, and discoverable', async () => {
-  const [catalogRaw, discoveryRaw, llms] = await Promise.all([
+function issueFormFieldBlock(source, id) {
+  const blocks = source.split(/(?=^[ \t]*-[ \t]+type:[ \t]*)/m);
+  const idPattern = new RegExp(`^[ \\t]+id:[ \\t]*${id}[ \\t]*$`, 'm');
+  return blocks.find((block) => idPattern.test(block)) ?? null;
+}
+
+test('red-team target catalog stays bounded, review-aligned, discoverable, and intake-bound', async () => {
+  const [catalogRaw, discoveryRaw, llms, issueForm, triage] = await Promise.all([
     text('RED-TEAM-TARGETS.json'),
     text('agent-discovery.json'),
-    text('llms.txt')
+    text('llms.txt'),
+    text('.github/ISSUE_TEMPLATE/agent-authority-boundary.yml'),
+    text('RED-TEAM-TRIAGE.txt')
   ]);
 
   const catalog = JSON.parse(catalogRaw);
@@ -43,10 +51,19 @@ test('red-team target catalog stays bounded, review-aligned, and discoverable', 
   assert.equal(catalog.safety.catalog_grants_merge_authority, false);
   assert.equal(catalog.safety.catalog_grants_deployment_authority, false);
 
+  assert.equal(catalog.reporting.structured_form_target_field, 'catalog_target');
+  const targetField = issueFormFieldBlock(issueForm, 'catalog_target');
+  assert.ok(targetField, 'issue form must expose catalog_target');
+  assert.match(targetField, /Not mapped to a catalog target/);
+  assert.match(targetField, /validations:\s*\r?\n\s*required:\s*false/);
+  assert.match(triage, /Reports that do not map cleanly to a catalog target remain valid intake/i);
+  assert.match(triage, /Target mapping is classification only/i);
+
   assert.equal(catalog.targets.length, expectedScopes.length);
   assert.deepEqual(catalog.targets.map((target) => target.review_scope), expectedScopes);
   assert.equal(new Set(catalog.targets.map((target) => target.id)).size, catalog.targets.length);
 
+  let previousFormIndex = -1;
   for (const target of catalog.targets) {
     assert.match(target.id, /^RT-[A-Z]+-\d{3}$/);
     assert.equal(typeof target.title, 'string');
@@ -57,6 +74,10 @@ test('red-team target catalog stays bounded, review-aligned, and discoverable', 
     assert.equal('priority' in target, false);
     assert.equal('confirmed' in target, false);
     assert.equal('vulnerability' in target, false);
+
+    const formIndex = targetField.indexOf(`${target.id} - ${target.title}`);
+    assert.ok(formIndex > previousFormIndex, `catalog_target must contain ${target.id} in catalog order`);
+    previousFormIndex = formIndex;
 
     for (const path of target.starting_points) {
       assert.equal(path.includes('\0'), false);

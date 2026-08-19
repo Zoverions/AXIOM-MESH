@@ -11,6 +11,8 @@ body:
 
         Public reports are triaged under `RED-TEAM-TRIAGE.txt`, which defines disposition states, review priority, the public/private safety split, and closure-evidence expectations without promising a bounty or response SLA.
 
+        If you started from `RED-TEAM-TARGETS.json`, choose the matching catalog target below. A catalog target is a bounded falsification surface, not a confirmed vulnerability, severity assessment, or authorization to test a third party. Reports that do not map cleanly to a catalog target are still allowed.
+
         Current claim boundary: the supported build is `0.12.0-dev.3`, a production candidate, not production-promoted. Repository discovery, agent skills, certificates, connectivity, credentials, and technical capability do not create authority by themselves.
 
   - type: dropdown
@@ -30,6 +32,24 @@ body:
         - Other authority-boundary mismatch
     validations:
       required: true
+
+  - type: dropdown
+    id: catalog_target
+    attributes:
+      label: Red-team catalog target
+      description: Choose the matching RED-TEAM-TARGETS.json entry when applicable. This is classification only and does not assert that a vulnerability exists.
+      options:
+        - Not mapped to a catalog target
+        - RT-AUTH-001 - Capability must not become authority
+        - RT-NET-002 - Deny-egress and service boundaries must remain real
+        - RT-CRED-003 - Stale or substituted credentials must fail closed
+        - RT-EVID-004 - Evidence must not overclaim truth or continuity
+        - RT-KERN-005 - No alternate privileged path around the authority sequence
+        - RT-PROV-006 - Unknown external destinations must stay unresolved and closed
+        - RT-REC-007 - Recovery and rotation must not restore revoked authority
+        - RT-REL-008 - Claims must not outrun built, enabled, exposed, or promoted state
+    validations:
+      required: false
 
   - type: input
     id: version
