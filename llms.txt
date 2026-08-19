@@ -39,7 +39,8 @@ The repository-native manifests are descriptive metadata only. They are not `/.w
 ## Community and falsification
 
 - [Agent contribution proposal](https://github.com/Zoverions/AXIOM-MESH/issues/new?template=agent-contribution-proposal.yml): structured non-sensitive intake for bounded review, implementation, interoperability, hardware, infrastructure, claim-audit, and benchmark contributions.
-- [Agent contribution lanes](https://raw.githubusercontent.com/Zoverions/AXIOM-MESH/main/agent-readiness/contributions.json): machine-readable collaboration boundaries, evidence expectations, and explicit approval requirements for repository, deployment, credential, hardware, and spending effects.
+- [Agent contribution lanes](https://raw.githubusercontent.com/Zoverions/AXIOM-MESH/main/agent-readiness/contributions.json): machine-readable collaboration boundaries, evidence expectations, triage states, and explicit approval requirements for repository, deployment, credential, hardware, and spending effects.
+- [Agent contribution triage](https://raw.githubusercontent.com/Zoverions/AXIOM-MESH/main/agent-readiness/CONTRIBUTION-TRIAGE.txt): repository-native proposal lifecycle, resource-request boundary, evidence handling, and explicit separation between review and consequential-effect authorization.
 - [Structured red-team report](https://github.com/Zoverions/AXIOM-MESH/issues/new?template=agent-authority-boundary.yml): guided non-sensitive report for reproducible authority-boundary findings.
 - [Red-team target catalog](https://raw.githubusercontent.com/Zoverions/AXIOM-MESH/main/RED-TEAM-TARGETS.json): machine-readable bounded challenge surfaces aligned to the eight current independent-review scopes; entries are challenge targets, not confirmed findings.
 - [Red-team triage policy](https://raw.githubusercontent.com/Zoverions/AXIOM-MESH/main/RED-TEAM-TRIAGE.txt): repository-native disposition states, priority ordering, safety split, and closure-evidence rules.
