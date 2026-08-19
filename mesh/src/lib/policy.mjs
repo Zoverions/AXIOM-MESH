@@ -44,6 +44,12 @@ const DENY_RULE_FIELDS = new Set([
   'http_status',
   'reason'
 ]);
+const BOOLEAN_CONSTRAINT_MERGE_OPERATORS = Object.freeze({
+  network: 'false_is_stricter',
+  require_encryption: 'true_is_stricter',
+  require_attestation: 'true_is_stricter',
+  must_preserve_provenance: 'true_is_stricter'
+});
 
 function assuranceRank(tier) {
   return getAssuranceTier(tier).rank;
@@ -490,24 +496,45 @@ function mergeConstraints(current, incoming, action) {
       continue;
     }
     const existing = result[key];
-    if (typeof existing === 'boolean' && typeof value === 'boolean') {
+    const operator = constraintMergeOperator(key, existing, value, action);
+    if (operator === 'false_is_stricter') {
       result[key] = existing && value;
-    } else if (Number.isFinite(existing) && Number.isFinite(value)) {
-      if (/^(?:max_|maximum_)/.test(key) || /_(?:max|maximum)$/.test(key)) {
-        result[key] = Math.min(existing, value);
-      } else if (/^(?:min_|minimum_)/.test(key) || /_(?:min|minimum)$/.test(key)) {
-        result[key] = Math.max(existing, value);
-      } else {
-        throw new ValidationError(
-          `Numeric policy constraint direction is undeclared for ${action}.${key}`
-        );
-      }
-    } else if (Array.isArray(existing) && Array.isArray(value)) {
-      const allowed = new Set(value.map(item => JSON.stringify(item)));
-      result[key] = existing.filter(item => allowed.has(JSON.stringify(item)));
+    } else if (operator === 'true_is_stricter') {
+      result[key] = existing || value;
+    } else if (operator === 'maximum') {
+      result[key] = Math.min(existing, value);
+    } else if (operator === 'minimum') {
+      result[key] = Math.max(existing, value);
+    } else if (operator === 'finite_set_intersection') {
+      const allowed = new Set(value.map(item => digestObject(item)));
+      result[key] = existing.filter(item => allowed.has(digestObject(item)));
     } else if (digestObject(existing) !== digestObject(value)) {
-      throw new ValidationError(`Policy constraints conflict for ${action}.${key}`);
+      throw new ValidationError(
+        `Policy constraint merge direction is undeclared for ${action}.${key}`
+      );
     }
   }
   return result;
+}
+
+function constraintMergeOperator(key, existing, incoming, action) {
+  if (Object.hasOwn(BOOLEAN_CONSTRAINT_MERGE_OPERATORS, key)) {
+    if (typeof existing !== 'boolean' || typeof incoming !== 'boolean') {
+      throw new ValidationError(`Boolean policy constraint ${action}.${key} must use boolean values`);
+    }
+    return BOOLEAN_CONSTRAINT_MERGE_OPERATORS[key];
+  }
+  if (Number.isFinite(existing) && Number.isFinite(incoming)) {
+    if (/^(?:max_|maximum_)/.test(key) || /_(?:max|maximum)$/.test(key)) return 'maximum';
+    if (/^(?:min_|minimum_)/.test(key) || /_(?:min|minimum)$/.test(key)) return 'minimum';
+  }
+  if (Array.isArray(existing) && Array.isArray(incoming) && isFiniteAllowlistConstraint(key)) {
+    return 'finite_set_intersection';
+  }
+  return 'equal_only';
+}
+
+function isFiniteAllowlistConstraint(key) {
+  return /^(?:allowed_|permitted_)/.test(key)
+    || /_(?:allowlist|allowed|permitted)$/.test(key);
 }
