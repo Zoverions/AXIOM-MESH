@@ -17,6 +17,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   '.github/SECURITY.md',
   'CONSTITUTION.md',
   'CONTRIBUTING.md',
+  'AGENT-ENTRY.md',
   'docs/README.md',
   'docs/MASTER-TODO.md',
   'docs/MASTER-TODO-PLURAL-AUTHORITY.md',
@@ -28,6 +29,10 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/PRODUCTION-READINESS-TRACKER.md',
   'docs/PROJECT-STATUS-2026.md',
   'docs/REPOSITORY-MIGRATION.md',
+  'docs/community/AGENT-IDENTITY.md',
+  'docs/community/BOOKS-AND-ARCHITECTURE.md',
+  'docs/community/LAUNCH-PACK.md',
+  'docs/community/RED-TEAM-CHALLENGE.md',
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md',
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md',
   'docs/architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md',
@@ -69,6 +74,8 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/operations/PILOT-DEPLOYMENT-DOSSIER.md',
   'docs/releases/0.12.0-dev.3.md',
   'docs/whitepapers_and_research/WHITEPAPER.md',
+  'skills/axiom-authority-auditor/SKILL.md',
+  'skills/axiom-authority-auditor/references/SOVEREIGN-AGENCY-TEST.md',
   'mesh/README.md',
   'mesh/PRODUCTION.md'
 ]);
@@ -85,12 +92,22 @@ const REQUIRED_CONTENT = Object.freeze({
     'search the supported tree for equivalent',
     'regression coverage for the class'
   ],
+  'AGENT-ENTRY.md': [
+    'Capability is not authority',
+    'production candidate, not production-promoted',
+    'Gateway -> Hypervisor -> Sandbox -> Grid'
+  ],
   'docs/README.md': [
     '## Canonical documents',
     '## Supported documentation boundary',
     'deprecated/pre-0.12-documentation-corpus',
     'ROADMAP-EXTENSION-PLURAL-AUTHORITY.md',
     'ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md'
+  ],
+  'docs/community/AGENT-IDENTITY.md': [
+    'zoverions.agent',
+    'MESA-27A-F1C1',
+    'Discovery is not permission.'
   ],
   'docs/MASTER-TODO.md': ['## P0', '## Promotion rules'],
   'docs/MASTER-TODO-PLURAL-AUTHORITY.md': [
