@@ -19,6 +19,12 @@ async function text(path) {
   return readFile(resolve(repositoryRoot, path), 'utf8');
 }
 
+function issueFormFieldBlock(source, id) {
+  const blocks = source.split(/(?=^[ \t]*-[ \t]+type:[ \t]*)/m);
+  const idPattern = new RegExp(`^[ \\t]+id:[ \\t]*${id}[ \\t]*$`, 'm');
+  return blocks.find((block) => idPattern.test(block)) ?? null;
+}
+
 test('red-team target catalog stays bounded, review-aligned, discoverable, and intake-bound', async () => {
   const [catalogRaw, discoveryRaw, llms, issueForm, triage] = await Promise.all([
     text('RED-TEAM-TARGETS.json'),
@@ -46,13 +52,10 @@ test('red-team target catalog stays bounded, review-aligned, discoverable, and i
   assert.equal(catalog.safety.catalog_grants_deployment_authority, false);
 
   assert.equal(catalog.reporting.structured_form_target_field, 'catalog_target');
-  const targetFieldStart = issueForm.indexOf('\n    id: catalog_target\n');
-  assert.ok(targetFieldStart >= 0, 'issue form must expose catalog_target');
-  const targetFieldEnd = issueForm.indexOf('\n\n  - type:', targetFieldStart);
-  assert.ok(targetFieldEnd > targetFieldStart, 'catalog_target block must terminate before the next issue-form field');
-  const targetField = issueForm.slice(targetFieldStart, targetFieldEnd);
+  const targetField = issueFormFieldBlock(issueForm, 'catalog_target');
+  assert.ok(targetField, 'issue form must expose catalog_target');
   assert.match(targetField, /Not mapped to a catalog target/);
-  assert.match(targetField, /validations:\n      required: false/);
+  assert.match(targetField, /validations:\s*\r?\n\s*required:\s*false/);
   assert.match(triage, /Reports that do not map cleanly to a catalog target remain valid intake/i);
   assert.match(triage, /Target mapping is classification only/i);
 
