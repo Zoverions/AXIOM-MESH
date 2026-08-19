@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { dirname, isAbsolute, parse, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -22,6 +22,31 @@ function escapeHtml(value) {
 
 function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
+}
+
+export function resolveAgentReadinessOutputRoot(repositoryRoot, outDir) {
+  const root = resolve(repositoryRoot);
+  const requested = outDir ?? '.data/agent-readiness-site';
+  const outputRoot = resolve(root, requested);
+
+  if (!isAbsolute(requested)) {
+    const relativeOutput = relative(root, outputRoot);
+    if (
+      relativeOutput === '..'
+      || relativeOutput.startsWith(`..${sep}`)
+      || isAbsolute(relativeOutput)
+    ) {
+      throw new Error('relative agent-readiness output must remain inside the repository root');
+    }
+  }
+
+  if (outputRoot === root) {
+    throw new Error('agent-readiness output must not be the repository root');
+  }
+  if (outputRoot === parse(outputRoot).root) {
+    throw new Error('agent-readiness output must not be a filesystem root');
+  }
+  return outputRoot;
 }
 
 async function writeText(root, relativePath, content) {
@@ -377,7 +402,7 @@ export async function buildAgentReadiness({
   if (config.schema !== 'axiom-agent-readiness.v1') throw new Error('agent-readiness config schema is invalid');
   if (config.deployment_status !== 'prepared_not_published') throw new Error('agent-readiness deployment status is not fail-closed');
   const publicOrigin = normalizeOrigin(origin ?? config.default_origin);
-  const outputRoot = resolve(repositoryRoot, outDir ?? '.data/agent-readiness-site');
+  const outputRoot = resolveAgentReadinessOutputRoot(repositoryRoot, outDir);
   const [rootLlms, fullLlms, sourceSkill, sourceReference] = await Promise.all([
     readFile(resolve(repositoryRoot, 'llms.txt'), 'utf8'),
     readFile(resolve(repositoryRoot, 'llms-full.txt'), 'utf8'),
@@ -413,7 +438,7 @@ export async function buildAgentReadiness({
     writeText(outputRoot, '.well-known/agent-skills/index.json', JSON.stringify(skillIndex, null, 2)),
     writeText(outputRoot, '.well-known/agent-skills/axiom-authority-auditor/SKILL.md', publishedSkill),
     writeText(outputRoot, '.nojekyll', ''),
-    writeText(outputRoot, '_headers', `/*.md\n  Content-Type: text/markdown; charset=utf-8\n  Link: <${publicOrigin}/>; rel="canonical"\n/.well-known/agent-skills/*\n  Access-Control-Allow-Origin: *\n`)
+    writeText(outputRoot, '_headers', `/*.md\n  Content-Type: text/markdown; charset=utf-8\n/index.md\n  Link: <${publicOrigin}/>; rel="canonical"\n/glossary.md\n  Link: <${publicOrigin}/glossary>; rel="canonical"\n/AGENTS.md\n  Link: <${publicOrigin}/AGENTS.md>; rel="canonical"\n/sitemap.md\n  Link: <${publicOrigin}/sitemap.md>; rel="canonical"\n/.well-known/agent-skills/*\n  Access-Control-Allow-Origin: *\n`)
   ]);
 
   return {
