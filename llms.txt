@@ -1,0 +1,39 @@
+# AXIOM-MESH
+
+> AXIOM-MESH is a local-first coordination, authority, and evidence substrate for human and machine agents. Its core invariant is that capability, discovery, connectivity, and possession of credentials do not create authority on their own. Current supported build: 0.12.0-dev.3, production candidate, not production-promoted.
+
+## Start here
+
+- [README](https://github.com/Zoverions/AXIOM-MESH/blob/main/README.md): supported build, architecture, claims, non-claims, setup, and verification.
+- [Agent entry](https://github.com/Zoverions/AXIOM-MESH/blob/main/AGENT-ENTRY.md): shortest agent-facing explanation of capability versus authority.
+- [Agent instructions](https://github.com/Zoverions/AXIOM-MESH/blob/main/.cursorrules): installation, configuration, usage, contribution authority, and machine-facing operating rules.
+- [Contributing](https://github.com/Zoverions/AXIOM-MESH/blob/main/CONTRIBUTING.md): contribution and repository-effect boundaries.
+- [Security policy](https://github.com/Zoverions/AXIOM-MESH/blob/main/SECURITY.md): disclosure and security-reporting process.
+
+## Architecture and current truth
+
+- [Current threat model](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/security/CURRENT-BUILD-THREAT-MODEL.md): supported trust boundary, abuse cases, residual risk, and non-claims.
+- [Requirements](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/rebuild/REQUIREMENTS.md): normative rebuild requirements.
+- [Project status](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/PROJECT-STATUS-2026.md): current build and unsupported claims.
+- [Production readiness](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/PRODUCTION-READINESS-TRACKER.md): promotion gates and evidence status.
+- [Capability registry](https://github.com/Zoverions/AXIOM-MESH/blob/main/mesh/config/capabilities.json): machine-readable capability state.
+- [White paper](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/whitepapers_and_research/WHITEPAPER.md): research and architecture context.
+
+## Agent interoperability
+
+- [Agent interoperability architecture](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md): protocol-neutral core and standard-compatible edges.
+- [Runtime adapter conformance](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md): adapter contract, evidence, and current non-claims.
+- [Authority Auditor skill](https://github.com/Zoverions/AXIOM-MESH/blob/main/agent-skills/axiom-authority-auditor/SKILL.md): portable read-only pre-action authority audit.
+- [Sovereign Agency Test reference](https://github.com/Zoverions/AXIOM-MESH/blob/main/agent-skills/axiom-authority-auditor/references/SOVEREIGN-AGENCY-TEST.md): conceptual reference for the advisory skill.
+
+## Community and falsification
+
+- [Red-team challenge](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/community/RED-TEAM-CHALLENGE.md): repository-scoped authority-boundary attacks and reporting rules.
+- [Books and architecture](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/community/BOOKS-AND-ARCHITECTURE.md): conceptual provenance separated from implementation evidence.
+- [Agent identity](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/community/AGENT-IDENTITY.md): public discovery identity and its explicit non-authority boundary.
+- [Agent-readiness plan](https://github.com/Zoverions/AXIOM-MESH/blob/main/agent-readiness/PLAN.txt): first-party machine-discovery goals, checks, deployment boundary, and promotion criteria.
+
+## Optional
+
+- [Expanded LLM context](https://raw.githubusercontent.com/Zoverions/AXIOM-MESH/main/llms-full.txt): larger text-first context bundle.
+- [Agent-readiness source](https://github.com/Zoverions/AXIOM-MESH/tree/main/agent-readiness): deterministic static discovery builder and fail-closed publication configuration.
