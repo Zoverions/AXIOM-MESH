@@ -25,6 +25,14 @@ function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
 }
 
+function parseJson(content, label) {
+  try {
+    return JSON.parse(content);
+  } catch {
+    throw new ValidationError(`${label} is not valid JSON`);
+  }
+}
+
 async function mustNotExist(root, relativePath) {
   try {
     await stat(resolve(root, relativePath));
@@ -36,13 +44,14 @@ async function mustNotExist(root, relativePath) {
 }
 
 export async function verifyAgentReadiness(repositoryRoot = REPOSITORY_ROOT) {
-  const [cursorRules, rootLlms, rootFullLlms, plan, config] = await Promise.all([
+  const [cursorRules, rootLlms, rootFullLlms, plan, configText] = await Promise.all([
     readFile(resolve(repositoryRoot, '.cursorrules'), 'utf8'),
     readFile(resolve(repositoryRoot, 'llms.txt'), 'utf8'),
     readFile(resolve(repositoryRoot, 'llms-full.txt'), 'utf8'),
     readFile(resolve(repositoryRoot, 'agent-readiness/PLAN.txt'), 'utf8'),
-    readFile(resolve(repositoryRoot, 'agent-readiness/config.json'), 'utf8').then(JSON.parse)
+    readFile(resolve(repositoryRoot, 'agent-readiness/config.json'), 'utf8')
   ]);
+  const config = parseJson(configText, 'Agent-readiness config');
 
   if (config.schema !== 'axiom-agent-readiness.v1') {
     throw new ValidationError('Agent-readiness config schema is invalid');
@@ -212,7 +221,7 @@ export async function verifyAgentReadiness(repositoryRoot = REPOSITORY_ROOT) {
       throw new ValidationError('Generated robots.txt blocks machine discovery');
     }
 
-    const skillIndex = JSON.parse(skillIndexText);
+    const skillIndex = parseJson(skillIndexText, 'Agent Skills discovery index');
     if (skillIndex.$schema !== 'https://schemas.agentskills.io/discovery/0.2.0/schema.json') {
       throw new ValidationError('Agent Skills discovery schema drifted');
     }
@@ -239,8 +248,18 @@ export async function verifyAgentReadiness(repositoryRoot = REPOSITORY_ROOT) {
     ], 'Published Authority Auditor');
     requireIncludes(headers, [
       'Content-Type: text/markdown; charset=utf-8',
+      '/index.md\n  Link: <https://agents.example.test/axiom/>; rel="canonical"',
+      '/glossary.md\n  Link: <https://agents.example.test/axiom/glossary>; rel="canonical"',
+      '/AGENTS.md\n  Link: <https://agents.example.test/axiom/AGENTS.md>; rel="canonical"',
+      '/sitemap.md\n  Link: <https://agents.example.test/axiom/sitemap.md>; rel="canonical"',
       'Access-Control-Allow-Origin: *'
     ], 'Prepared static-host headers');
+    if (headers.includes('/*.md\n  Content-Type: text/markdown; charset=utf-8\n  Link:')) {
+      throw new ValidationError('Prepared static-host headers assign one canonical URL to every Markdown file');
+    }
+    if (countMatches(headers, /^\s+Link: /gm) !== 4) {
+      throw new ValidationError('Prepared static-host headers canonical mapping drifted');
+    }
 
     const unsupportedDeclarations = [
       '.well-known/mcp.json',
