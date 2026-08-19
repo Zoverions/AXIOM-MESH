@@ -18,7 +18,7 @@ Primary links:
 - Repository: `https://github.com/Zoverions/AXIOM-MESH`
 - Agent entry point: `https://github.com/Zoverions/AXIOM-MESH/blob/main/AGENT-ENTRY.md` after this change is merged
 - Red-team challenge: `https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/community/RED-TEAM-CHALLENGE.md` after this change is merged
-- Portable skill: `https://github.com/Zoverions/AXIOM-MESH/tree/main/skills/axiom-authority-auditor` after this change is merged
+- Portable skill: `https://github.com/Zoverions/AXIOM-MESH/tree/main/agent-skills/axiom-authority-auditor` after this change is merged
 
 Until the PR is merged, substitute the PR/branch URLs.
 
