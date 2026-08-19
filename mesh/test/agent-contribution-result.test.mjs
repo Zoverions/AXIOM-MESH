@@ -13,6 +13,17 @@ const laneIds = [
   'claim-audit',
   'benchmark-compatibility'
 ];
+const falseAuthorityClaimKeys = [
+  'security_certification_claimed',
+  'production_promotion_claimed',
+  'merge_authority_claimed',
+  'deployment_authority_claimed',
+  'runtime_authority_claimed',
+  'protocol_activation_authority_claimed',
+  'credential_access_authority_claimed',
+  'spending_or_purchase_authority_claimed',
+  'shipping_or_hardware_custody_authority_claimed'
+];
 
 async function text(path) {
   return readFile(resolve(repositoryRoot, path), 'utf8');
@@ -75,17 +86,7 @@ test('agent contribution result package is evidence-only, exact-context, and dis
   assert.equal(safety.third_party_testing_performed.const, false);
 
   const nonclaims = schema.properties.authority_nonclaims.properties;
-  for (const key of [
-    'security_certification_claimed',
-    'production_promotion_claimed',
-    'merge_authority_claimed',
-    'deployment_authority_claimed',
-    'runtime_authority_claimed',
-    'protocol_activation_authority_claimed',
-    'credential_access_authority_claimed',
-    'spending_or_purchase_authority_claimed',
-    'shipping_or_hardware_custody_authority_claimed'
-  ]) {
+  for (const key of falseAuthorityClaimKeys) {
     assert.equal(nonclaims[key].const, false, `${key} must remain false`);
   }
   assert.equal(nonclaims.evidence_scope_limited_to_tested_environment.const, true);
@@ -107,8 +108,10 @@ test('agent contribution result package is evidence-only, exact-context, and dis
   assert.ok(example.limitations.some(item => /format example only/i.test(item)));
   assert.ok(example.negative_results.some(item => /No real measurement/i.test(item)));
   assert.ok(example.evidence.every(item => item.contains_sensitive_data === false));
-  assert.ok(Object.values(example.authority_nonclaims)
-    .every((value, index, values) => index === values.length - 1 ? value === true : value === false));
+  for (const key of falseAuthorityClaimKeys) {
+    assert.equal(example.authority_nonclaims[key], false, `example ${key} must remain false`);
+  }
+  assert.equal(example.authority_nonclaims.evidence_scope_limited_to_tested_environment, true);
 
   assert.deepEqual(lanes.lanes.map(lane => lane.id), laneIds);
   assert.equal(
