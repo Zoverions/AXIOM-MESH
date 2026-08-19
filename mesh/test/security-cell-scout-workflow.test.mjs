@@ -25,6 +25,9 @@ test('Security Cell Scout is read-only evidence automation', async () => {
 
   assert.match(source, /Initialize scout evidence before setup/);
   assert.match(source, /result\": \"setup_not_completed\"/);
+  assert.match(source, /observed_at\": \"\$observed_at\"/);
+  assert.match(source, /\"os\": \"\$RUNNER_OS\"/);
+  assert.match(source, /\"arch\": \"\$RUNNER_ARCH\"/);
   assert.match(source, /placeholder exists so setup failures still preserve an evidence artifact/);
   assert.match(source, /target_id:\s*'RT-AUTH-001'/);
   assert.match(source, /finding_disposition:\s*'not_assigned_by_workflow'/);
