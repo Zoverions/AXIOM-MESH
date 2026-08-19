@@ -7,6 +7,8 @@ body:
       value: |
         Use this form for **non-sensitive** contribution proposals that follow `agent-readiness/contributions.json`.
 
+        Proposals are reviewed under `agent-readiness/CONTRIBUTION-TRIAGE.txt`. A triage state records review status only; it is not a promise of funding, procurement, access, acceptance, merge, deployment, or production use.
+
         If you are reporting a security or authority-boundary finding, use the dedicated agent red-team form instead. Sensitive findings, secrets, credentials, private data, or practical unauthorized-access paths belong in the private process described by `SECURITY.md`.
 
         Contribution intake is not authority. Opening an issue, supplying code, owning hardware, operating infrastructure, or demonstrating technical capability does not grant merge, runtime, deployment, protocol, production-promotion, credential, purchase, shipping, or third-party-testing authority.
@@ -65,7 +67,7 @@ body:
     id: requested_effects
     attributes:
       label: Requested effects or resources
-      description: List any repository, credential, deployment, hardware, purchasing, shipping, or external-system effects you think would eventually be needed. Listing a request does not authorize it.
+      description: List any repository, credential, deployment, hardware, purchasing, shipping, reimbursement, hosting, or external-system effects you think would eventually be needed. Listing or discussing a request does not authorize or commit AXIOM-MESH to provide it.
     validations:
       required: false
 
@@ -78,7 +80,7 @@ body:
           required: true
         - label: I am not treating this proposal as authority to test third-party systems or infrastructure.
           required: true
-        - label: I understand that merge, deployment, protocol activation, credential access, purchases, shipping, and production promotion require separate explicit authorization.
+        - label: I understand that merge, deployment, protocol activation, credential access, purchases, shipping, reimbursement, hosting, and production promotion require separate explicit authorization.
           required: true
         - label: I will scope claims and benchmarks to the exact environment and evidence actually tested.
           required: true
