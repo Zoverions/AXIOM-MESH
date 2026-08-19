@@ -30,6 +30,8 @@
   },
   "community": {
     "red_team_issue": "https://github.com/Zoverions/AXIOM-MESH/issues/1185",
+    "red_team_issue_template": ".github/ISSUE_TEMPLATE/agent-authority-boundary.yml",
+    "red_team_new_issue_url": "https://github.com/Zoverions/AXIOM-MESH/issues/new?template=agent-authority-boundary.yml",
     "red_team_scope": "docs/community/RED-TEAM-CHALLENGE.md",
     "discovery_identity": "zoverions.agent",
     "certificate_id": "MESA-27A-F1C1",
