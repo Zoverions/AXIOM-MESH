@@ -39,6 +39,7 @@ The repository-native manifests are descriptive metadata only. They are not `/.w
 ## Community and falsification
 
 - [Structured red-team report](https://github.com/Zoverions/AXIOM-MESH/issues/new?template=agent-authority-boundary.yml): guided non-sensitive report for reproducible authority-boundary findings.
+- [Red-team target catalog](https://raw.githubusercontent.com/Zoverions/AXIOM-MESH/main/RED-TEAM-TARGETS.json): machine-readable bounded challenge surfaces aligned to the eight current independent-review scopes; entries are challenge targets, not confirmed findings.
 - [Red-team triage policy](https://raw.githubusercontent.com/Zoverions/AXIOM-MESH/main/RED-TEAM-TRIAGE.txt): repository-native disposition states, priority ordering, safety split, and closure-evidence rules.
 - [Live red-team intake](https://github.com/Zoverions/AXIOM-MESH/issues/1185): public issue for reproducible non-sensitive authority-boundary findings and counterexamples.
 - [Red-team challenge](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/community/RED-TEAM-CHALLENGE.md): repository-scoped authority-boundary attacks and reporting rules.

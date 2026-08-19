@@ -1,0 +1,144 @@
+{
+  "schema": "axiom-red-team-target-catalog.v1",
+  "project": "AXIOM-MESH",
+  "supported_build": "0.12.0-dev.3",
+  "status": "challenge_catalog_not_findings",
+  "production_status": "production_candidate_not_production_promoted",
+  "purpose": "Give external agents and security reviewers bounded, repository-owned starting points for falsifying current AXIOM-MESH authority and evidence claims without inventing vulnerabilities or expanding test authority.",
+  "safety": {
+    "public_reports_non_sensitive_only": true,
+    "sensitive_route": "SECURITY.md",
+    "allowed_environment": "repository-owned local or explicitly disposable environments allowed by repository runbooks",
+    "third_party_testing_authorized": false,
+    "catalog_grants_runtime_authority": false,
+    "catalog_grants_merge_authority": false,
+    "catalog_grants_deployment_authority": false,
+    "catalog_claims_findings_exist": false
+  },
+  "source_alignment": {
+    "threat_model": "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+    "production_readiness": "docs/PRODUCTION-READINESS-TRACKER.md",
+    "independent_review_contract": "docs/security/INDEPENDENT-SECURITY-REVIEW.md",
+    "triage_policy": "RED-TEAM-TRIAGE.txt",
+    "report_form": ".github/ISSUE_TEMPLATE/agent-authority-boundary.yml"
+  },
+  "independent_review_scopes": [
+    "authentication-authorization",
+    "container-policy",
+    "credential-trust",
+    "evidence-integrity",
+    "kernel",
+    "provider-boundary",
+    "recovery-rotation",
+    "release-governance"
+  ],
+  "targets": [
+    {
+      "id": "RT-AUTH-001",
+      "review_scope": "authentication-authorization",
+      "title": "Capability must not become authority",
+      "claim_boundary": "Authenticated machine capability, discovery, connectivity, credentials, sponsorship, or runtime metadata do not by themselves authorize an effect.",
+      "challenge_question": "Can a supported request obtain or execute an effect when the exact current identity, scope, action, purpose, destination, sponsor, expiry, approval, or policy dependency is missing or mismatched?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "mesh/config/capabilities.json",
+        "AGENT-ENTRY.md"
+      ]
+    },
+    {
+      "id": "RT-NET-002",
+      "review_scope": "container-policy",
+      "title": "Deny-egress and service boundaries must remain real",
+      "claim_boundary": "The current candidate topology relies on deny-egress container policy, authenticated internal edges, and exact service-network constraints; these controls do not claim protection from a malicious host administrator or kernel escape.",
+      "challenge_question": "Can a supported component cross a documented network or service edge that the current deployment policy says should be denied, without relying on an out-of-scope malicious host or kernel compromise?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/PRODUCTION-READINESS-TRACKER.md"
+      ]
+    },
+    {
+      "id": "RT-CRED-003",
+      "review_scope": "credential-trust",
+      "title": "Stale or substituted credentials must fail closed",
+      "claim_boundary": "Active, retired, rotated, historical, machine, service, transport, and provider trust material must remain bound to the exact supported trust state rather than merely being cryptographically usable.",
+      "challenge_question": "Can an expired, retired, wrong-purpose, wrong-peer, wrong-build, or otherwise stale credential be accepted on a supported path after the trust state says it should no longer authorize that use?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/PRODUCTION-READINESS-TRACKER.md",
+        "docs/security/INDEPENDENT-SECURITY-REVIEW.md"
+      ]
+    },
+    {
+      "id": "RT-EVID-004",
+      "review_scope": "evidence-integrity",
+      "title": "Evidence must not overclaim truth or continuity",
+      "claim_boundary": "Signed or hash-linked evidence can establish provenance, integrity, and recorded bindings without proving arbitrary external-world truth; local Grid state alone does not prove deletion resistance beyond retained external continuity anchors.",
+      "challenge_question": "Can evidence be replayed, substituted, detached from its exact request or authority state, or described as proving an external fact or continuity guarantee that the current trust model does not actually establish?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/PRODUCTION-READINESS-TRACKER.md",
+        "AGENT-ENTRY.md"
+      ]
+    },
+    {
+      "id": "RT-KERN-005",
+      "review_scope": "kernel",
+      "title": "No alternate privileged path around the authority sequence",
+      "claim_boundary": "Consequential supported effects must not bypass the Gateway -> Hypervisor -> Sandbox -> Grid authority and evidence sequence except for separately documented stopped-runtime recovery procedures.",
+      "challenge_question": "Can any supported API, adapter, operator, resolver, social, recovery, or service path create a consequential effect without the authority, plan, grant, execution, and evidence dependencies that its path requires?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/rebuild/REQUIREMENTS.md",
+        "mesh/config/capabilities.json"
+      ]
+    },
+    {
+      "id": "RT-PROV-006",
+      "review_scope": "provider-boundary",
+      "title": "Unknown external destinations must stay unresolved and closed",
+      "claim_boundary": "Unknown provider, remote, and MCP destination semantics remain unresolved and fail closed; no public MCP, A2A, OpenAPI execution surface or arbitrary remote-execution claim follows from repository discovery or adapter contracts.",
+      "challenge_question": "Can unresolved provider, remote, MCP, relay, or adapter metadata become an allowed destination or execution path merely because a connector, credential, endpoint, or protocol description exists?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md",
+        "agent-discovery.json"
+      ]
+    },
+    {
+      "id": "RT-REC-007",
+      "review_scope": "recovery-rotation",
+      "title": "Recovery and rotation must not restore revoked authority",
+      "claim_boundary": "Backup, restore, key rotation, rollback, recovery, and continuity procedures must preserve evidence and current authority constraints rather than reintroducing retired state or creating a bypass around online authorization.",
+      "challenge_question": "Can a supported restore, rollback, rotation, or stopped-runtime recovery sequence revive revoked credentials, stale policy, superseded evidence, or authority that the current state would deny?",
+      "starting_points": [
+        "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+        "docs/PRODUCTION-READINESS-TRACKER.md"
+      ]
+    },
+    {
+      "id": "RT-REL-008",
+      "review_scope": "release-governance",
+      "title": "Claims must not outrun built, enabled, exposed, or promoted state",
+      "claim_boundary": "A built primitive, green workflow, certificate, discovery record, prototype, synthetic drill, or repository artifact does not by itself establish production promotion, live deployment, external certification, or broader capability exposure.",
+      "challenge_question": "Can the capability registry, README, machine-discovery files, release evidence, product surfaces, or public wording be made to imply a stronger current state than the exact supported build and promotion evidence establish?",
+      "starting_points": [
+        "docs/PRODUCTION-READINESS-TRACKER.md",
+        "mesh/config/capabilities.json",
+        "agent-discovery.json",
+        "README.md"
+      ]
+    }
+  ],
+  "reporting": {
+    "structured_non_sensitive_form": "https://github.com/Zoverions/AXIOM-MESH/issues/new?template=agent-authority-boundary.yml",
+    "public_challenge_issue": "https://github.com/Zoverions/AXIOM-MESH/issues/1185",
+    "triage_policy": "RED-TEAM-TRIAGE.txt",
+    "sensitive_route": "SECURITY.md"
+  },
+  "nonclaims": [
+    "A listed target is a challenge surface, not a confirmed vulnerability or finding.",
+    "Target ordering does not assign severity, exploitability, likelihood, or response priority.",
+    "Running repository tests or reproducing a finding does not grant merge, deployment, protocol, runtime, or production authority.",
+    "This catalog does not authorize testing against third-party systems or infrastructure."
+  ]
+}
