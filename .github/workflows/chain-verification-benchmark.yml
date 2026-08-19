@@ -85,6 +85,7 @@ jobs:
         run: |
           log="$RUNNER_TEMP/rt-auth-001.log"
           evidence="$RUNNER_TEMP/security-cell-scout-evidence.json"
+          observed_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           printf '%s\n' 'Security Cell Scout setup has not completed.' > "$log"
           log_sha256="$(sha256sum "$log" | cut -d' ' -f1)"
           cat > "$evidence" <<EOF
@@ -92,12 +93,19 @@ jobs:
             "schema": "axiom-security-cell-scout-evidence.v1",
             "target_id": "RT-AUTH-001",
             "commit": "$SCOUT_SHA",
+            "observed_at": "$observed_at",
+            "runner": {
+              "os": "$RUNNER_OS",
+              "arch": "$RUNNER_ARCH",
+              "node": null
+            },
             "result": "setup_not_completed",
             "finding_disposition": "not_assigned_by_workflow",
             "authority_effect": "none",
             "security_certification_claimed": false,
             "limitations": [
               "This placeholder exists so setup failures still preserve an evidence artifact.",
+              "Node setup did not complete, so the placeholder records no Node version.",
               "No finding disposition is assigned by this workflow."
             ],
             "log_file": "rt-auth-001.log",
