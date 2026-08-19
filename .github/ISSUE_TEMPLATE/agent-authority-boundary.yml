@@ -9,6 +9,8 @@ body:
 
         Do not include secrets, credentials, private data, weaponized exploit details, or information that would make a third-party system easier to attack. Sensitive security findings belong in the private process described by `SECURITY.md`.
 
+        Public reports are triaged under `RED-TEAM-TRIAGE.txt`, which defines disposition states, review priority, the public/private safety split, and closure-evidence expectations without promising a bounty or response SLA.
+
         Current claim boundary: the supported build is `0.12.0-dev.3`, a production candidate, not production-promoted. Repository discovery, agent skills, certificates, connectivity, credentials, and technical capability do not create authority by themselves.
 
   - type: dropdown

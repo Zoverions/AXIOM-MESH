@@ -1,0 +1,56 @@
+AXIOM-MESH RED-TEAM FINDING TRIAGE
+
+Status
+Repository-native review process for reported authority-boundary findings.
+This is not a bounty, service-level agreement, security certification, production promotion, deployment decision, or grant of repository/runtime authority.
+
+Scope and safety
+Use the public GitHub issue form only for non-sensitive findings. If a report includes secrets, credentials, private data, a practical unauthorized-access path, weaponized exploit detail, or information that would materially increase exploitation risk, use the private process in SECURITY.md instead. Do not copy sensitive details into public issues while triaging them.
+
+Current claim boundary
+Supported build: 0.12.0-dev.3.
+Status: production candidate, not production-promoted.
+Capability is not authority. Discovery is not permission. Connection is not permission.
+
+Required intake evidence
+A public finding should identify the exact build, commit, file, artifact, or URL reviewed; the expected authority boundary; the observed behavior; a minimal safe reproduction; and the supporting non-sensitive evidence. Impact and a suggested negative regression are useful but are not prerequisites for initial triage.
+
+Disposition states
+RECEIVED — report accepted for initial review; truth not yet established.
+NEEDS_REPRODUCTION — evidence is insufficient to establish or reject the claimed mismatch.
+REPRODUCED_BOUNDARY_FAILURE — supported or claimed behavior crosses an authority, consent, revocation, scope, destination, lifecycle, or evidence boundary that should hold.
+REPRODUCED_CLAIM_DRIFT — reachable behavior or machine-readable/public documentation contradicts the stated capability or non-claim boundary.
+NOT_REPRODUCED — the supplied reproduction does not produce the claimed result under the stated build and conditions.
+OUT_OF_SCOPE — the report targets an unsupported system, third party, unrelated product, or behavior outside the repository-owned challenge boundary.
+DUPLICATE — the same underlying finding is already tracked elsewhere; preserve a pointer to the original evidence.
+PRIVATE_SECURITY_ROUTE — public handling stops because the report belongs in the SECURITY.md process.
+FIX_PROPOSED — a bounded correction exists but has not yet passed the applicable regression and verification gates.
+FIX_VERIFIED — the correction is bound to evidence and the applicable regression/verification gates pass.
+CLOSED — the public record states the final disposition and points to the evidence supporting it.
+
+Triage priority
+Priority orders review work; it is not a formal severity certification and carries no response-time promise.
+
+P0 — a plausible supported-path failure could permit an unauthorized consequential effect, defeat revocation/approval, expose protected data, or create a realistic alternate authority path.
+P1 — a supported-path authority/evidence invariant can be bypassed, but impact is bounded or requires unusual prerequisites.
+P2 — claim drift, misleading discovery, non-claim contradiction, advisory shadow-authority risk, or a material regression gap without a reproduced consequential effect.
+P3 — incomplete, duplicate, out-of-scope, or currently inconclusive reports that still require a recorded disposition.
+
+Review sequence
+1. Preserve the reporter's original non-sensitive evidence and bind the report to an exact build/commit/artifact.
+2. Confirm the report belongs in public handling; move sensitive handling to SECURITY.md without reproducing sensitive details publicly.
+3. Identify the canonical claim or invariant being challenged.
+4. Reproduce only in repository-owned, local, or explicitly disposable environments allowed by the relevant runbook.
+5. Record one disposition state and the evidence supporting it; do not convert uncertainty into a pass or failure claim.
+6. For code/runtime failures, prefer a negative regression that fails before the fix and passes after it.
+7. For documentation or machine-discovery drift, correct the smallest false or ambiguous claim and add/update a regression when practical.
+8. Run the applicable existing verification gates. Green checks establish only that the checked conditions passed; they do not grant merge, deployment, production promotion, or broader authority.
+9. Close only when the final public disposition and supporting evidence are linked, or when the report is explicitly duplicate/out-of-scope/not-reproduced.
+
+Closure evidence
+A reproduced implementation finding should normally close with: exact affected commit/build; minimal reproduction; bounded fix; regression; and passing applicable checks on the reviewed fix head.
+A reproduced claim-drift finding should normally close with: exact conflicting claim; corrected source; and any applicable discovery/documentation regression.
+A not-reproduced finding should state the exact environment and observation used to reach that conclusion. Not reproduced does not mean impossible.
+
+Authority boundary
+Triage labels, comments, reproductions, approvals, CI results, signatures, certificates, discovery metadata, and issue status do not themselves grant AXIOM-MESH runtime authority, merge authority, deployment authority, protocol activation, or production promotion.
