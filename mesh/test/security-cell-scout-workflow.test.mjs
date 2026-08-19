@@ -11,15 +11,21 @@ async function workflowText() {
 test('Security Cell Scout is read-only evidence automation', async () => {
   const source = await workflowText();
 
-  assert.match(source, /permissions:\s*\n\s+contents:\s+read\b/);
+  const permissionBlocks = [...source.matchAll(/^permissions:\s*\n((?:^[ \t]+[^\n]*\n?)*)/gm)];
+  assert.equal(permissionBlocks.length, 1);
+  assert.equal(permissionBlocks[0][1].trim(), 'contents: read');
   assert.doesNotMatch(source, /pull_request_target\s*:/);
   assert.doesNotMatch(source, /\bissues:\s*write\b/);
   assert.doesNotMatch(source, /\bpull-requests:\s*write\b/);
   assert.doesNotMatch(source, /\bcontents:\s*write\b/);
+  assert.doesNotMatch(source, /\bid-token:\s*write\b/);
   assert.doesNotMatch(source, /secrets\./);
   assert.match(source, /persist-credentials:\s*false/);
   assert.match(source, /security-cell-scout:\s*\n\s+if:\s+github\.event_name == 'schedule' \|\| github\.event_name == 'workflow_dispatch'/);
 
+  assert.match(source, /Initialize scout evidence before setup/);
+  assert.match(source, /result\": \"setup_not_completed\"/);
+  assert.match(source, /placeholder exists so setup failures still preserve an evidence artifact/);
   assert.match(source, /target_id:\s*'RT-AUTH-001'/);
   assert.match(source, /finding_disposition:\s*'not_assigned_by_workflow'/);
   assert.match(source, /authority_effect:\s*'none'/);
@@ -39,7 +45,8 @@ test('Security Cell Scout is read-only evidence automation', async () => {
     assert.match(source, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
 
-  assert.match(source, /if:\s*always\(\)/);
+  const alwaysSteps = source.match(/if:\s*always\(\)/g) ?? [];
+  assert.ok(alwaysSteps.length >= 2);
   assert.match(source, /actions\/upload-artifact@[a-f0-9]{40}/);
   assert.match(source, /retention-days:\s*30/);
 });
