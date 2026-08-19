@@ -61,9 +61,14 @@ test('security agent cell preserves canonical triage and non-authority boundarie
 
   assert.equal(discovery.community.security_cell_manifest, 'agent-readiness/security-cell.json');
   assert.equal(discovery.community.security_cell_guide, 'agent-readiness/SECURITY-CELL.txt');
+  assert.equal(
+    discovery.community.security_cell_pilot,
+    'https://github.com/Zoverions/AXIOM-MESH/issues/1199'
+  );
 
   assert.match(llms, /agent-readiness\/security-cell\.json/);
   assert.match(llms, /agent-readiness\/SECURITY-CELL\.txt/);
+  assert.match(llms, /issues\/1199/);
 
   assert.match(guide, /Security participation is evidence, not authority/i);
   assert.match(guide, /A scout alone does not establish reproduction/i);
