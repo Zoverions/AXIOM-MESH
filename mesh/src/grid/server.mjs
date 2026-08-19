@@ -10,6 +10,7 @@ import { AcceptedSocialGridStore } from './accepted-social-store.mjs';
 import { loadDataProtector } from '../lib/protector.mjs';
 import { runServiceProcess } from '../lib/service-lifecycle.mjs';
 import { buildMachineIntentReceipt } from '../lib/machine-receipt.mjs';
+import { createCapabilityConsumptionCommitter } from './capability-consumption-route.mjs';
 import {
   acquireGridRuntimeLock,
   createGridBackup,
@@ -55,6 +56,11 @@ export async function createGridService(config = meshConfig()) {
   const replayGuard = new ReplayGuard();
   const router = new Router();
   const telemetry = new ServiceTelemetry('grid');
+  const consumeCapability = await createCapabilityConsumptionCommitter({
+    config,
+    identity,
+    store
+  });
   let cachedChain = { valid: true };
   let nextIntegrityProbeAt = 0;
 
@@ -97,17 +103,49 @@ export async function createGridService(config = meshConfig()) {
       pattern: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/
     });
     if (actor !== claimedPrincipal) throw new ValidationError('Commit actor does not match the claimed principal');
-    const exports = Array.isArray(input.events)
-      ? input.events.filter(event => event?.kind === 'export.requested')
-      : [];
-    const backups = Array.isArray(input.events)
-      ? input.events.filter(event => event?.kind === 'backup.requested')
-      : [];
-    const schedules = Array.isArray(input.events)
-      ? input.events.filter(
-        event => event?.kind === 'node.schedule.requested'
-      )
-      : [];
+    if (!Array.isArray(input.events)) {
+      throw new ValidationError('Commit events must be an array');
+    }
+    if (input.events.some(event => event?.kind === 'capability.consumed')) {
+      throw new ValidationError(
+        'Caller-supplied capability.consumed events are forbidden; Grid derives them from exact consumption requests'
+      );
+    }
+    const consumptionRequests = input.events.filter(
+      event => event?.kind === 'capability.consume.requested'
+    );
+    if (consumptionRequests.length) {
+      if (input.events.length !== 1 || consumptionRequests.length !== 1) {
+        throw new ValidationError(
+          'Capability consumption must be the only event in its Grid commit'
+        );
+      }
+      const consumed = consumeCapability({
+        traceId,
+        actor,
+        event: consumptionRequests[0]
+      });
+      return {
+        httpStatus: 201,
+        body: {
+          events: [consumed.event],
+          capability_consumptions: [{
+            receipt: consumed.receipt,
+            receipt_digest: consumed.receipt_digest,
+            event_id: consumed.event.event_id,
+            event_hash: consumed.event.event_hash
+          }],
+          exports: [],
+          backups: [],
+          schedules: []
+        }
+      };
+    }
+    const exports = input.events.filter(event => event?.kind === 'export.requested');
+    const backups = input.events.filter(event => event?.kind === 'backup.requested');
+    const schedules = input.events.filter(
+      event => event?.kind === 'node.schedule.requested'
+    );
     for (const event of exports) store.preflightExportRequest(actor, event);
     const appended = store.appendEvents({ traceId, actor, events: input.events });
     const completedExports = [];
