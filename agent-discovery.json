@@ -43,6 +43,7 @@
     "participation_guide": "agent-readiness/AGENT-PARTICIPATION.txt",
     "security_cell_manifest": "agent-readiness/security-cell.json",
     "security_cell_guide": "agent-readiness/SECURITY-CELL.txt",
+    "security_cell_pilot": "https://github.com/Zoverions/AXIOM-MESH/issues/1199",
     "discovery_identity": "zoverions.agent",
     "certificate_id": "MESA-27A-F1C1",
     "identity_claim": "discovery_reference_only"
