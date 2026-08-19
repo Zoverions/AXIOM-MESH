@@ -33,6 +33,7 @@
     "red_team_issue_template": ".github/ISSUE_TEMPLATE/agent-authority-boundary.yml",
     "red_team_new_issue_url": "https://github.com/Zoverions/AXIOM-MESH/issues/new?template=agent-authority-boundary.yml",
     "red_team_scope": "docs/community/RED-TEAM-CHALLENGE.md",
+    "red_team_targets": "RED-TEAM-TARGETS.json",
     "red_team_triage": "RED-TEAM-TRIAGE.txt",
     "discovery_identity": "zoverions.agent",
     "certificate_id": "MESA-27A-F1C1",
