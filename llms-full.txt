@@ -6,6 +6,8 @@
 
 AXIOM-MESH is a local-first coordination, authority, and evidence substrate. The current supported build is 0.12.0-dev.3. It is a production candidate, not production-promoted. The repository deliberately separates what is built from what is enabled, exposed, production-promoted, and marketed.
 
+The agent-readiness publication state is **prepared, not published**. Building machine-readable discovery artifacts does not make a public AXIOM-MESH origin live.
+
 Core motto: Build broadly. Activate deliberately. Expose minimally. Promote only with evidence. Market only what is true.
 
 The central authority invariant is:
