@@ -41,6 +41,8 @@
     "contribution_new_issue_url": "https://github.com/Zoverions/AXIOM-MESH/issues/new?template=agent-contribution-proposal.yml",
     "participation_manifest": "agent-readiness/PARTICIPATION.json",
     "participation_guide": "agent-readiness/AGENT-PARTICIPATION.txt",
+    "security_cell_manifest": "agent-readiness/security-cell.json",
+    "security_cell_guide": "agent-readiness/SECURITY-CELL.txt",
     "discovery_identity": "zoverions.agent",
     "certificate_id": "MESA-27A-F1C1",
     "identity_claim": "discovery_reference_only"
