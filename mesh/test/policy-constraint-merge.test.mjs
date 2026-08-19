@@ -82,6 +82,12 @@ test('finite allowlist constraints intersect while undeclared structured conflic
   assert.deepEqual(result.allowed_regions, ['ca']);
   assert.deepEqual(result.permitted_modes, ['safe']);
 
+  const canonicalObjectIntersection = merge(
+    { allowed_targets: [{ a: 1, b: 2 }, { id: 'drop' }] },
+    { allowed_targets: [{ b: 2, a: 1 }] }
+  );
+  assert.deepEqual(canonicalObjectIntersection.allowed_targets, [{ a: 1, b: 2 }]);
+
   assert.throws(
     () => merge({ regions: ['ca', 'us'] }, { regions: ['ca'] }),
     /merge direction is undeclared.*regions/i
