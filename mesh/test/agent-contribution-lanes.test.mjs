@@ -81,6 +81,7 @@ test('agent contribution lanes stay bounded, discoverable, and authority-safe', 
   assert.match(infrastructureLane.purpose, /contributor-owned or explicitly disposable infrastructure/i);
   assert.match(infrastructureLane.default_effect_boundary, /no production deployment/i);
 
+  assert.ok(Array.isArray(lanes.operator_approval_required_for));
   const requiredApprovals = lanes.operator_approval_required_for.join('\n');
   assert.match(requiredApprovals, /merging repository changes/i);
   assert.match(requiredApprovals, /deploying or publishing/i);
