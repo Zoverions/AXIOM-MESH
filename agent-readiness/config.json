@@ -3,6 +3,7 @@
   "last_updated": "2026-08-18",
   "default_origin": "https://zoverions.github.io/AXIOM-MESH",
   "deployment_status": "prepared_not_published",
+  "publication_requires_explicit_authorization": true,
   "target_agent_readability_score": 90,
   "target_llms_score": 100,
   "target_accessibility_score": 100
