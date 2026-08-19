@@ -26,7 +26,7 @@ const STARTUP_ORDER = Object.freeze([
   },
   { service: 'gateway', module: 'src/gateway/server.mjs', port: 'gateway', probe: '/ready', expected: 'ready' }
 ]);
-const FORCED_EXIT_TIMEOUT_MS = 5_000;
+const FORCED_EXIT_TIMEOUT_MS = 3_000;
 
 export async function runProductionSupervisor({
   config = meshConfig(),
