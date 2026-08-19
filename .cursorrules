@@ -52,9 +52,22 @@ For a read-only pre-action authority assessment, see `agent-skills/axiom-authori
 
 The supported build is `0.12.0-dev.3`, a production candidate, not production-promoted. Do not claim a live public AXIOM-MESH deployment, completed independent security approval, production certification of external runtimes, a production MCP/A2A endpoint, BFT consensus, or arbitrary external-world truth from signed evidence unless the canonical repository state changes and the required promotion evidence exists.
 
-## Machine-discovery surface
+## Repository-native discovery
 
-The tracked source files `llms.txt`, `llms-full.txt`, `AGENT-ENTRY.md`, and the Authority Auditor skill feed a prepared static discovery bundle. Build and verify it with:
+When no separate website or hosted discovery origin is available, use the public repository itself as the canonical zero-cost discovery surface:
+
+- `llms.txt` — concise machine navigation;
+- `llms-full.txt` — expanded machine context;
+- `agent-discovery.json` — compact current-state and non-claim manifest;
+- `agent-skills/index.json` — repository-native skill discovery metadata;
+- `AGENT-ENTRY.md` — short authority-model orientation;
+- `docs/community/RED-TEAM-CHALLENGE.md` and issue `#1185` — falsification and feedback routes.
+
+These files are descriptive. They do not create a `/.well-known` protocol endpoint or grant authority.
+
+## Machine-discovery build
+
+The tracked source files `llms.txt`, `llms-full.txt`, `AGENT-ENTRY.md`, and the Authority Auditor skill also feed a prepared static discovery bundle. Build and verify it with:
 
 npm run agent-readiness:build
 npm run agent-readiness:check

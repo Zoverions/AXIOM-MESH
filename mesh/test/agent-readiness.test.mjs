@@ -12,6 +12,7 @@ test('agent-readiness surface is fail-closed, digest-bound, and prepared-not-pub
   assert.ok(result.target_agent_readability_score >= 90);
   assert.equal(result.target_llms_score, 100);
   assert.match(result.skill_digest, /^sha256:[a-f0-9]{64}$/);
+  assert.match(result.repository_skill_git_blob_sha, /^[a-f0-9]{40}$/);
   assert.equal(result.generated_files, 14);
 });
 

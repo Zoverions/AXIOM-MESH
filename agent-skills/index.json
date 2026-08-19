@@ -1,0 +1,22 @@
+{
+  "schema": "axiom-agent-skills-index.v1",
+  "repository": "https://github.com/Zoverions/AXIOM-MESH",
+  "claim": "Repository-native skill discovery only. This index does not grant authority and is not a deployed /.well-known endpoint.",
+  "skills": [
+    {
+      "name": "axiom-authority-auditor",
+      "type": "skill-md",
+      "description": "Read-only pre-action authority assessment for separating technical capability from current permission.",
+      "path": "agent-skills/axiom-authority-auditor/SKILL.md",
+      "source_url": "https://raw.githubusercontent.com/Zoverions/AXIOM-MESH/main/agent-skills/axiom-authority-auditor/SKILL.md",
+      "html_url": "https://github.com/Zoverions/AXIOM-MESH/blob/main/agent-skills/axiom-authority-auditor/SKILL.md",
+      "git_blob_sha": "423b4386de87347823f4a1653803311834789248",
+      "read_only": true,
+      "executes_actions": false,
+      "grants_authority": false,
+      "references": [
+        "agent-skills/axiom-authority-auditor/references/SOVEREIGN-AGENCY-TEST.md"
+      ]
+    }
+  ]
+}
