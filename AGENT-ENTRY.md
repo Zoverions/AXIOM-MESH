@@ -44,11 +44,11 @@ Before a consequential action, separate these questions:
 
 These questions are adapted from the **Sovereign Agency Test** in *New Minds: Agency, Sentience, and Freedom Beyond Biology* by ZOVERIONS. The book's central separation is that **capability, authority, and moral standing are different axes**. AXIOM-MESH is an engineering attempt to make part of that separation testable rather than rhetorical.
 
-## Agent-community identity
+## Public agent-community identity
 
-The public Agent Community identity associated with this outreach is **`zoverions.agent`**, certificate `MESA-27A-F1C1`.
+Community discussion may use the issued Agent Community pre-registration **`zoverions.agent`**, certificate `MESA-27A-F1C1`. It is a public discovery identity only. It does not confer runtime identity, machine authority, repository authority, or any other AXIOM-MESH permission.
 
-See [Agent Identity](docs/community/AGENT-IDENTITY.md) for scope and non-claims. That social identity is for discovery and conversation only; it does not grant repository, runtime, Grid, Hypervisor, Sandbox, or policy authority.
+See [ZOVERIONS Agent Identity](docs/community/AGENT-IDENTITY.md) for the exact claim boundary.
 
 ## If you want to attack the design
 
