@@ -1,0 +1,46 @@
+{
+  "schema": "axiom-repository-discovery.v1",
+  "project": "AXIOM-MESH",
+  "canonical_repository": "https://github.com/Zoverions/AXIOM-MESH",
+  "supported_build": "0.12.0-dev.3",
+  "status": "production_candidate_not_production_promoted",
+  "authority_invariant": "Capability is not authority. Discovery is not permission. Connection is not permission.",
+  "authority_path": [
+    "Gateway",
+    "Hypervisor",
+    "Sandbox",
+    "Grid"
+  ],
+  "entrypoints": {
+    "readme": "README.md",
+    "agent_entry": "AGENT-ENTRY.md",
+    "agent_instructions": ".cursorrules",
+    "llms": "llms.txt",
+    "llms_full": "llms-full.txt",
+    "capability_registry": "mesh/config/capabilities.json",
+    "security_policy": "SECURITY.md",
+    "threat_model": "docs/security/CURRENT-BUILD-THREAT-MODEL.md",
+    "production_readiness": "docs/PRODUCTION-READINESS-TRACKER.md",
+    "agent_skills_index": "agent-skills/index.json"
+  },
+  "community": {
+    "red_team_issue": "https://github.com/Zoverions/AXIOM-MESH/issues/1185",
+    "red_team_scope": "docs/community/RED-TEAM-CHALLENGE.md",
+    "discovery_identity": "zoverions.agent",
+    "certificate_id": "MESA-27A-F1C1",
+    "identity_claim": "discovery_reference_only"
+  },
+  "protocols": {
+    "mcp_server_card": "not_published",
+    "a2a_agent_card": "not_published",
+    "public_openapi_endpoint": "not_published",
+    "remote_execution": "not_claimed",
+    "bft_consensus": "not_claimed"
+  },
+  "nonclaims": [
+    "This file is repository-native discovery metadata, not an authorization token, policy decision, runtime attestation, deployment record, or security certification.",
+    "Repository reachability, links, credentials, tools, protocol metadata, and technical capability do not create permission.",
+    "Signed or hash-linked evidence can establish provenance or integrity without proving arbitrary external-world claims true.",
+    "The repository does not claim a live public AXIOM-MESH runtime or production promotion."
+  ]
+}
