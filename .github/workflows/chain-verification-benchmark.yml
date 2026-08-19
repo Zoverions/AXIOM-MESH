@@ -67,3 +67,83 @@ jobs:
           path: ${{ runner.temp }}/axiom-chain-verification-benchmark.json
           if-no-files-found: error
           retention-days: 90
+
+  security-cell-scout:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24.18.0"
+          package-manager-cache: false
+      - name: Install exact current-build source setup
+        run: npm run setup:install
+      - name: Run RT-AUTH-001 focused scout checks
+        id: scout
+        shell: bash
+        env:
+          SCOUT_SHA: ${{ github.sha }}
+        run: |
+          set +e
+          log="$RUNNER_TEMP/rt-auth-001.log"
+          (
+            cd mesh
+            node --test \
+              test/machine-principal.test.mjs \
+              test/principal-registry.test.mjs \
+              test/machine-principal-e2e.test.mjs \
+              test/machine-discovery.test.mjs \
+              test/machine-discovery-e2e.test.mjs \
+              test/machine-ingress.test.mjs \
+              test/machine-receipt-e2e.test.mjs
+          ) >"$log" 2>&1
+          status=$?
+          set -e
+          cat "$log"
+          node --input-type=module - "$status" "$log" <<'NODE' > "$RUNNER_TEMP/security-cell-scout-evidence.json"
+          import { createHash } from 'node:crypto';
+          import { readFileSync } from 'node:fs';
+          import { basename } from 'node:path';
+          const status = Number(process.argv[2]);
+          const logPath = process.argv[3];
+          const evidence = {
+            schema: 'axiom-security-cell-scout-evidence.v1',
+            target_id: 'RT-AUTH-001',
+            commit: process.env.SCOUT_SHA,
+            observed_at: new Date().toISOString(),
+            runner: {
+              os: process.env.RUNNER_OS ?? null,
+              arch: process.env.RUNNER_ARCH ?? null,
+              node: process.version
+            },
+            result: status === 0 ? 'focused_tests_passed' : 'focused_tests_failed',
+            finding_disposition: 'not_assigned_by_workflow',
+            authority_effect: 'none',
+            security_certification_claimed: false,
+            limitations: [
+              'This artifact records deterministic repository test evidence only.',
+              'A passing run is not a NOT_REPRODUCED disposition and is not security certification.',
+              'A failing run requires human or agent reproduction and triage before any finding state is assigned.',
+              'The workflow grants no merge, deployment, credential, protocol, production, spending, hardware, or third-party-testing authority.'
+            ],
+            log_file: basename(logPath),
+            log_sha256: createHash('sha256').update(readFileSync(logPath)).digest('hex')
+          };
+          process.stdout.write(`${JSON.stringify(evidence, null, 2)}\n`);
+          NODE
+          exit "$status"
+      - name: Upload scout evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: security-cell-scout-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/security-cell-scout-evidence.json
+            ${{ runner.temp }}/rt-auth-001.log
+          if-no-files-found: error
+          retention-days: 30
