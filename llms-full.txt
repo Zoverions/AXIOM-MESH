@@ -52,7 +52,7 @@ Read these in order before proposing consequential changes:
 
 1. README.md
 2. AGENT-ENTRY.md
-3. AGENTS.md
+3. .cursorrules
 4. CONTRIBUTING.md
 5. mesh/config/capabilities.json
 6. docs/security/CURRENT-BUILD-THREAT-MODEL.md
@@ -123,12 +123,12 @@ The repository tracks several machine-facing discovery artifacts:
 
 - /llms.txt — concise context and canonical links;
 - /llms-full.txt — this expanded context bundle;
-- /AGENTS.md — instructions for coding agents and automated contributors;
-- /sitemap.md — compact repository map;
+- /.cursorrules — instructions for coding agents and automated contributors;
 - /AGENT-ENTRY.md — architecture-focused agent entry point;
-- /agent-skills/axiom-authority-auditor/SKILL.md — read-only advisory skill.
+- /agent-skills/axiom-authority-auditor/SKILL.md — read-only advisory skill;
+- /agent-readiness/PLAN.txt — first-party discovery goals, checks, and deployment boundary.
 
-A separate build step prepares a static first-party discovery surface with semantic HTML, Markdown mirrors, sitemap.xml, robots.txt, llms files, a glossary, and an Agent Skills discovery index. Building that surface does not publish it. Public deployment remains a separate explicit action and must not be described as live until it is actually deployed and independently rescanned.
+A separate build step prepares a static first-party discovery surface with semantic HTML, Markdown mirrors, sitemap.xml, sitemap.md, robots.txt, llms files, generated AGENTS.md, a glossary, and an Agent Skills discovery index. Building that surface does not publish it. Public deployment remains a separate explicit action and must not be described as live until it is actually deployed and independently rescanned.
 
 ## Canonical links
 
@@ -139,7 +139,7 @@ Agent entry:
 https://github.com/Zoverions/AXIOM-MESH/blob/main/AGENT-ENTRY.md
 
 Agent instructions:
-https://github.com/Zoverions/AXIOM-MESH/blob/main/AGENTS.md
+https://github.com/Zoverions/AXIOM-MESH/blob/main/.cursorrules
 
 Threat model:
 https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/security/CURRENT-BUILD-THREAT-MODEL.md
@@ -165,5 +165,5 @@ https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/community/RED-TEAM-CHALLE
 Books and architecture:
 https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/community/BOOKS-AND-ARCHITECTURE.md
 
-Agent-readiness workstream:
-https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/community/AGENT-READINESS-AND-DISCOVERY.md
+Agent-readiness plan:
+https://github.com/Zoverions/AXIOM-MESH/blob/main/agent-readiness/PLAN.txt
