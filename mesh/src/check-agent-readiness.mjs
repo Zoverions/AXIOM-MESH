@@ -36,11 +36,11 @@ async function mustNotExist(root, relativePath) {
 }
 
 export async function verifyAgentReadiness(repositoryRoot = REPOSITORY_ROOT) {
-  const [rootAgents, rootLlms, rootFullLlms, rootSitemap, config] = await Promise.all([
-    readFile(resolve(repositoryRoot, 'AGENTS.md'), 'utf8'),
+  const [cursorRules, rootLlms, rootFullLlms, plan, config] = await Promise.all([
+    readFile(resolve(repositoryRoot, '.cursorrules'), 'utf8'),
     readFile(resolve(repositoryRoot, 'llms.txt'), 'utf8'),
     readFile(resolve(repositoryRoot, 'llms-full.txt'), 'utf8'),
-    readFile(resolve(repositoryRoot, 'sitemap.md'), 'utf8'),
+    readFile(resolve(repositoryRoot, 'agent-readiness/PLAN.txt'), 'utf8'),
     readFile(resolve(repositoryRoot, 'agent-readiness/config.json'), 'utf8').then(JSON.parse)
   ]);
 
@@ -54,14 +54,14 @@ export async function verifyAgentReadiness(repositoryRoot = REPOSITORY_ROOT) {
     throw new ValidationError('Agent-readiness promotion targets were weakened');
   }
 
-  requireIncludes(rootAgents, [
+  requireIncludes(cursorRules, [
     '## Installation',
     '## Configuration',
     '## Usage',
     'Capability is not authority',
     'Gateway -> Hypervisor -> Sandbox -> Grid',
-    'Building that surface does not publish or deploy it'
-  ], 'Root AGENTS.md');
+    'Building the surface does not publish or deploy it'
+  ], 'Repository agent instructions');
   requireIncludes(rootLlms, [
     '# AXIOM-MESH',
     '> AXIOM-MESH is a local-first',
@@ -69,7 +69,7 @@ export async function verifyAgentReadiness(repositoryRoot = REPOSITORY_ROOT) {
     '## Architecture and current truth',
     '## Agent interoperability',
     '## Community and falsification',
-    'AGENT-READINESS-AND-DISCOVERY.md'
+    'agent-readiness/PLAN.txt'
   ], 'Root llms.txt');
   if (rootFullLlms.length < 5_000) {
     throw new ValidationError('Root llms-full.txt is unexpectedly small');
@@ -80,16 +80,15 @@ export async function verifyAgentReadiness(repositoryRoot = REPOSITORY_ROOT) {
     'Gateway -> Hypervisor -> Sandbox -> Grid',
     'prepared, not published'
   ], 'Root llms-full.txt');
-  requireIncludes(rootSitemap, [
-    '# AXIOM-MESH Repository Sitemap',
-    '## Start here',
-    '## Machine-readable discovery',
-    '## Current architecture and evidence',
-    '## Community, review, and falsification'
-  ], 'Root sitemap.md');
-  if (countMatches(rootSitemap, /\[[^\]]+\]\([^)]+\)/g) < 15) {
-    throw new ValidationError('Root sitemap.md does not contain enough structured links');
-  }
+  requireIncludes(plan, [
+    'PURPOSE',
+    'PREPARED STATIC DISCOVERY SURFACE',
+    'DELIBERATE PROTOCOL NON-CLAIMS',
+    'AGENT READY PROMOTION TARGET',
+    'VALIDATION CONTRACT',
+    'DEPLOYMENT BOUNDARY',
+    'prepared, not published'
+  ], 'Agent-readiness plan');
 
   const tempRoot = await mkdtemp(resolve(tmpdir(), 'axiom-agent-readiness-'));
   try {
