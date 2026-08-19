@@ -8,6 +8,8 @@
   "core_invariant": "Security participation is evidence, not authority. No agent, model, review result, reputation signal, or majority can grant itself AXIOM-MESH authority.",
   "canonical_finding_lifecycle": "RED-TEAM-TRIAGE.txt",
   "public_red_team_issue": "https://github.com/Zoverions/AXIOM-MESH/issues/1185",
+  "pilot_issue": "https://github.com/Zoverions/AXIOM-MESH/issues/1199",
+  "pilot_activation_requires_security_cell_merge": true,
   "public_report_template": ".github/ISSUE_TEMPLATE/agent-authority-boundary.yml",
   "private_security_route": "SECURITY.md",
   "target_catalog": "RED-TEAM-TARGETS.json",
