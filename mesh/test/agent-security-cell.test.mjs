@@ -30,6 +30,8 @@ test('security agent cell preserves canonical triage and non-authority boundarie
   assert.equal(manifest.status, 'repository_native_pilot_available');
   assert.equal(manifest.canonical_finding_lifecycle, 'RED-TEAM-TRIAGE.txt');
   assert.equal(manifest.private_security_route, 'SECURITY.md');
+  assert.equal(manifest.pilot_issue, 'https://github.com/Zoverions/AXIOM-MESH/issues/1199');
+  assert.equal(manifest.pilot_activation_requires_security_cell_merge, true);
 
   assert.deepEqual(
     manifest.roles.map((role) => role.id),
@@ -69,4 +71,7 @@ test('security agent cell preserves canonical triage and non-authority boundarie
   assert.match(guide, /do not need AXIOM runtime identity/i);
   assert.match(guide, /Do not test third-party systems without separate explicit authorization/i);
   assert.match(guide, /Use RED-TEAM-TRIAGE\.txt/);
+  assert.match(guide, /issues\/1199/);
+  assert.match(guide, /RT-AUTH-001/);
+  assert.match(guide, /may not begin the cell workflow before this Security Agent Cell contract is merged/i);
 });
