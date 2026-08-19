@@ -13,6 +13,20 @@ const expectedLaneIds = [
   'claim-audit',
   'benchmark-compatibility'
 ];
+const expectedTriageStates = [
+  'RECEIVED',
+  'NEEDS_SCOPE',
+  'NEEDS_EVIDENCE_PLAN',
+  'ACCEPTED_FOR_REVIEW',
+  'EFFECT_AUTHORIZATION_REQUIRED',
+  'IN_PROGRESS_LOCAL',
+  'EVIDENCE_SUBMITTED',
+  'EVIDENCE_ACCEPTED',
+  'ROUTE_TO_RED_TEAM',
+  'DUPLICATE',
+  'DECLINED',
+  'CLOSED'
+];
 
 async function text(path) {
   return readFile(resolve(repositoryRoot, path), 'utf8');
@@ -24,12 +38,13 @@ function issueFormFieldBlock(source, id) {
   return blocks.find((block) => idPattern.test(block)) ?? null;
 }
 
-test('agent contribution lanes stay bounded, discoverable, and authority-safe', async () => {
-  const [lanesRaw, discoveryRaw, llms, issueForm] = await Promise.all([
+test('agent contribution lanes stay bounded, discoverable, authority-safe, and triage-bound', async () => {
+  const [lanesRaw, discoveryRaw, llms, issueForm, triage] = await Promise.all([
     text('agent-readiness/contributions.json'),
     text('agent-discovery.json'),
     text('llms.txt'),
-    text('.github/ISSUE_TEMPLATE/agent-contribution-proposal.yml')
+    text('.github/ISSUE_TEMPLATE/agent-contribution-proposal.yml'),
+    text('agent-readiness/CONTRIBUTION-TRIAGE.txt')
   ]);
 
   const lanes = JSON.parse(lanesRaw);
@@ -47,9 +62,20 @@ test('agent contribution lanes stay bounded, discoverable, and authority-safe', 
   assert.equal(lanes.safety.spending_or_purchase_authorized, false);
   assert.equal(lanes.safety.shipping_or_hardware_transfer_authorized, false);
 
+  assert.equal(lanes.intake.triage_policy, 'agent-readiness/CONTRIBUTION-TRIAGE.txt');
+  assert.ok(Array.isArray(lanes.triage.states));
+  assert.deepEqual(lanes.triage.states, expectedTriageStates);
+  assert.equal(lanes.triage.acceptance_does_not_grant_authority, true);
+  assert.equal(lanes.triage.resource_request_is_not_commitment, true);
+  assert.equal(lanes.triage.evidence_acceptance_is_not_certification, true);
+
   assert.equal(
     discovery.community.contribution_lanes,
     'agent-readiness/contributions.json'
+  );
+  assert.equal(
+    discovery.community.contribution_triage,
+    'agent-readiness/CONTRIBUTION-TRIAGE.txt'
   );
   assert.equal(
     discovery.community.contribution_proposal_template,
@@ -60,6 +86,7 @@ test('agent contribution lanes stay bounded, discoverable, and authority-safe', 
     'https://github.com/Zoverions/AXIOM-MESH/issues/new?template=agent-contribution-proposal.yml'
   );
   assert.match(llms, /agent-readiness\/contributions\.json/);
+  assert.match(llms, /agent-readiness\/CONTRIBUTION-TRIAGE\.txt/);
   assert.match(llms, /agent-contribution-proposal\.yml/);
 
   assert.deepEqual(lanes.lanes.map((lane) => lane.id), expectedLaneIds);
@@ -103,9 +130,26 @@ test('agent contribution lanes stay bounded, discoverable, and authority-safe', 
     previousOptionIndex = optionIndex;
   }
 
+  assert.match(issueForm, /CONTRIBUTION-TRIAGE\.txt/);
+  assert.match(issueForm, /triage state records review status only/i);
   assert.match(issueForm, /does not grant merge, runtime, deployment, protocol, production-promotion, credential, purchase, shipping, or third-party-testing authority/i);
   assert.match(issueForm, /not treating this proposal as authority to test third-party systems or infrastructure/i);
-  assert.match(issueForm, /merge, deployment, protocol activation, credential access, purchases, shipping, and production promotion require separate explicit authorization/i);
+  assert.match(issueForm, /merge, deployment, protocol activation, credential access, purchases, shipping, reimbursement, hosting, and production promotion require separate explicit authorization/i);
+  assert.match(issueForm, /Listing or discussing a request does not authorize or commit AXIOM-MESH to provide it/i);
+
+  let previousTriageIndex = -1;
+  for (const state of expectedTriageStates) {
+    const stateIndex = triage.indexOf(`${state} —`);
+    assert.ok(stateIndex > previousTriageIndex, `triage policy must contain ${state} in canonical order`);
+    previousTriageIndex = stateIndex;
+  }
+
+  assert.match(triage, /Contribution is not authorization/i);
+  assert.match(triage, /EFFECT_AUTHORIZATION_REQUIRED/i);
+  assert.match(triage, /wait for a separate explicit operator decision before that effect occurs/i);
+  assert.match(triage, /Recording or discussing a request does not create a promise to fund, reimburse, purchase, ship, host, provision credentials, provide access, or accept custody/i);
+  assert.match(triage, /proposal must not be treated as permission to test third-party systems or infrastructure/i);
+  assert.match(triage, /EVIDENCE_ACCEPTED.*not certification, production promotion, or generalized validation/is);
 
   const nonclaims = lanes.nonclaims.join('\n');
   assert.match(nonclaims, /not permission to execute AXIOM-MESH effects/i);
