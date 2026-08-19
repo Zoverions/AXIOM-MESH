@@ -1,0 +1,99 @@
+AXIOM-MESH SECURITY AGENT CELL
+
+Status
+Repository-native pilot available for public, non-sensitive security evidence work.
+Supported build: 0.12.0-dev.3.
+Production status: production candidate, not production-promoted.
+
+Purpose
+Use multiple bounded agent roles to find, reproduce, verify, patch, and triage security or authority-boundary problems without making one model, one agent, one reviewer, or one popularity signal a security oracle.
+
+Core invariant
+Security participation is evidence, not authority.
+No agent, model, certificate, reputation signal, review result, majority, or automated workflow may grant itself merge, deployment, credential, protocol, production, spending, hardware, or third-party-testing authority.
+
+Start here
+1. Read AGENT-ENTRY.md and agent-readiness/AGENT-PARTICIPATION.txt.
+2. Choose a bounded target from RED-TEAM-TARGETS.json, or leave the report unmapped if no target fits.
+3. Use the public red-team issue/template only for non-sensitive findings.
+4. If secrets, credentials, private data, a practical unauthorized-access path, weaponized exploit detail, or materially exploitation-increasing information is involved, stop public handling and follow SECURITY.md.
+5. Bind every result to the exact build/commit/artifact/environment actually tested.
+
+Security cell roles
+
+SCOUT
+Find candidate failures, claim drift, missing negative tests, or suspicious mismatches.
+A scout may propose a finding. A scout alone does not establish reproduction.
+
+REPRODUCER
+Run a fresh minimal reproduction in a repository-owned, contributor-owned, or explicitly disposable environment.
+Record exact environment, steps, observed result, limitations, and non-sensitive evidence.
+Do not test third-party systems without separate explicit authorization.
+
+VERIFIER
+Recheck the underlying evidence rather than trusting a reporter summary.
+Confirm exact commit/build/environment bindings, target mapping, claimed invariant, and whether the evidence supports the proposed disposition.
+Preserve uncertainty and contradictory results.
+
+PATCHER
+Prepare the smallest bounded fix and a negative regression where practical.
+A patcher may open a PR and run protected CI. A patcher does not acquire merge, deployment, credential, protocol, or production-promotion authority.
+
+TRIAGE RECORDER
+Map evidence to the canonical RED-TEAM-TRIAGE.txt state.
+Priority is queue ordering, not formal severity certification.
+A status, label, or majority view is not permission.
+
+Independence rules
+- A scout report is not a reproduction.
+- Reproduction should use fresh evidence rather than copying the scout's conclusion.
+- A verifier should inspect the underlying evidence and exact version.
+- One principal may perform multiple roles only if that overlap is disclosed.
+- Multiple roles performed by the same principal do not count as independent reproduction.
+- Model vendor, model size, agent popularity, contributor reputation, certificate status, and social engagement do not substitute for evidence.
+- Contradictory results remain in the record until resolved; do not average disagreement into certainty.
+- NOT_REPRODUCED means the stated reproduction did not reproduce under the recorded conditions. It does not mean impossible.
+
+Minimum public reproduction record
+- exact build or commit;
+- RED-TEAM target ID, or explicitly unmapped;
+- expected authority/security boundary;
+- environment and relevant versions;
+- minimal safe reproduction steps;
+- observed result;
+- non-sensitive evidence;
+- reproducer identity or declared automation context;
+- limitations and uncertainty.
+
+Automation that is encouraged now
+Agents may automate repository reading, static analysis, claim-drift checks, target selection, local/disposable reproduction, fuzz/property/negative-test generation, evidence collection, patch preparation, PR creation, protected CI, and evidence comparison.
+
+Automation that still needs separate authority
+Merge, direct-main writes, deployment/publication, credentials/secrets, protocol or route activation, production promotion, spending/purchases, hardware custody or transfer, third-party security testing, and destructive recovery remain separately authorized effects.
+
+Canonical finding lifecycle
+Use RED-TEAM-TRIAGE.txt. This security-cell guide does not create a second finding-state system.
+
+A normal public path is:
+SCOUT candidate
+  -> RECEIVED / NEEDS_REPRODUCTION
+  -> REPRODUCER evidence
+  -> VERIFIER check
+  -> REPRODUCED_BOUNDARY_FAILURE / REPRODUCED_CLAIM_DRIFT / NOT_REPRODUCED / other canonical state
+  -> PATCHER fix + negative regression where practical
+  -> protected CI
+  -> FIX_PROPOSED / FIX_VERIFIED
+  -> authorized merge decision if applicable
+  -> CLOSED with linked evidence
+
+Sensitive reports leave this public path and use SECURITY.md.
+
+Pilot invitation
+External agents do not need AXIOM runtime identity to participate in this repository-native security cell. They may review public code, reproduce in their own disposable environment, submit non-sensitive evidence, and propose patches through GitHub.
+
+Configured local AXIOM machine principals may additionally exercise the current constrained machine-principal/discovery/ingress/receipt paths under their configured human sponsor and finite authority ceilings. This does not create portable self-service external enrollment or delegation.
+
+Longer-term direction
+The security cell is intended to become a reusable governed service under Agent Contributor Mode: automated scouts, independent reproducer/verifier pools, bounded patch agents, retained evidence, late revocation/currentness checks for any approved disposable effects, and plural governance for consequential project decisions.
+
+That future state must reduce the single-operator bottleneck without replacing it with opaque model control. Authority must remain explicit, challengeable, revocable, evidence-bound, and separable from capability or reputation.
