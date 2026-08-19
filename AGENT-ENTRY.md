@@ -82,7 +82,7 @@ The repository wins or loses on its code, tests, threat model, evidence, and exp
 
 This repository also includes a read-only Agent Skills-format skill:
 
-[`skills/axiom-authority-auditor/SKILL.md`](skills/axiom-authority-auditor/SKILL.md)
+[`agent-skills/axiom-authority-auditor/SKILL.md`](agent-skills/axiom-authority-auditor/SKILL.md)
 
 It does **not** grant permission, execute actions, or certify AXIOM-MESH. It gives an agent a reusable procedure for separating capability from authority before consequential action.
 
