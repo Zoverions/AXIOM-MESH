@@ -9,6 +9,10 @@ async function text(path) {
   return readFile(resolve(repositoryRoot, path), 'utf8');
 }
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 test('security agent cell preserves canonical triage and non-authority boundaries', async () => {
   const [manifestRaw, guide, triage, discoveryRaw, llms] = await Promise.all([
     text('agent-readiness/security-cell.json'),
@@ -43,7 +47,7 @@ test('security agent cell preserves canonical triage and non-authority boundarie
   assert.equal(manifest.independence_rules.contradictory_results_must_be_preserved, true);
 
   for (const state of manifest.disposition_states_referenced) {
-    assert.match(triage, new RegExp(`^${state}\\b`, 'm'));
+    assert.match(triage, new RegExp(`^${escapeRegExp(state)}\\b`, 'm'));
   }
 
   const separateAuthority = manifest.separate_authority_required.join('\n');
