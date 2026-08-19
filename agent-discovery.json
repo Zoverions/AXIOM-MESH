@@ -11,6 +11,11 @@
     "Sandbox",
     "Grid"
   ],
+  "hosting": {
+    "repository_native_discovery_requires_external_hosting": false,
+    "separate_hosted_origin": "optional_prepared_not_published",
+    "publication_requires_explicit_authorization": true
+  },
   "entrypoints": {
     "readme": "README.md",
     "agent_entry": "AGENT-ENTRY.md",
