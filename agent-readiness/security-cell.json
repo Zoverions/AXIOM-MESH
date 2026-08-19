@@ -1,0 +1,113 @@
+{
+  "schema": "axiom-security-agent-cell.v1",
+  "project": "AXIOM-MESH",
+  "supported_build": "0.12.0-dev.3",
+  "status": "repository_native_pilot_available",
+  "production_status": "production_candidate_not_production_promoted",
+  "goal": "Automate high-volume security evidence work while preserving independent reproduction, disagreement, revocation, and separate authority for consequential effects.",
+  "core_invariant": "Security participation is evidence, not authority. No agent, model, review result, reputation signal, or majority can grant itself AXIOM-MESH authority.",
+  "canonical_finding_lifecycle": "RED-TEAM-TRIAGE.txt",
+  "public_red_team_issue": "https://github.com/Zoverions/AXIOM-MESH/issues/1185",
+  "pilot_issue": "https://github.com/Zoverions/AXIOM-MESH/issues/1199",
+  "pilot_activation_requires_security_cell_merge": true,
+  "public_report_template": ".github/ISSUE_TEMPLATE/agent-authority-boundary.yml",
+  "private_security_route": "SECURITY.md",
+  "target_catalog": "RED-TEAM-TARGETS.json",
+  "roles": [
+    {
+      "id": "scout",
+      "purpose": "Identify candidate authority-boundary failures, claim drift, missing negative tests, or suspicious implementation/documentation mismatches.",
+      "may": ["read_public_repository", "analyze", "propose_candidate_finding", "suggest_target_mapping"],
+      "may_not_claim": ["reproduced", "fixed", "certified", "authorized"]
+    },
+    {
+      "id": "reproducer",
+      "purpose": "Attempt a fresh minimal reproduction in a repository-owned, contributor-owned, or explicitly disposable environment.",
+      "may": ["run_local_or_disposable_tests", "record_environment", "submit_non_sensitive_evidence", "report_not_reproduced"],
+      "may_not": ["test_unauthorized_third_party_systems", "publish_sensitive_exploit_detail", "access_secrets_without_separate_authority"]
+    },
+    {
+      "id": "verifier",
+      "purpose": "Check exact commit/build/environment/evidence bindings and whether the claimed result follows from the supplied evidence.",
+      "may": ["recheck_artifacts", "compare_claims_to_code", "challenge_reproduction", "record_uncertainty"],
+      "may_not_claim": ["global_truth", "security_certification", "merge_authority", "production_readiness"]
+    },
+    {
+      "id": "patcher",
+      "purpose": "Prepare the smallest bounded fix and a negative regression where practical.",
+      "may": ["create_patch", "add_regression", "open_pull_request", "run_protected_ci"],
+      "may_not": ["merge_without_separate_authorization", "deploy", "rotate_credentials", "activate_protocols", "promote_production"]
+    },
+    {
+      "id": "triage_recorder",
+      "purpose": "Map the evidence to the canonical RED-TEAM-TRIAGE disposition and preserve disagreement or unresolved uncertainty.",
+      "may": ["propose_disposition", "link_evidence", "mark_disputed", "route_sensitive_reports_private"],
+      "may_not_claim": ["authority_from_status", "severity_certification_from_priority", "permission_from_consensus"]
+    }
+  ],
+  "independence_rules": {
+    "scout_report_is_not_reproduction": true,
+    "reproduction_requires_fresh_evidence": true,
+    "verifier_must_check_underlying_evidence": true,
+    "same_principal_may_fill_multiple_roles_only_if_disclosed": true,
+    "same_principal_multiple_roles_do_not_count_as_independent_reproduction": true,
+    "model_vendor_or_popularity_is_not_assurance": true,
+    "contradictory_results_must_be_preserved": true,
+    "not_reproduced_does_not_mean_impossible": true
+  },
+  "minimum_public_reproduction_record": [
+    "exact_build_or_commit",
+    "target_or_unmapped",
+    "expected_boundary",
+    "environment",
+    "minimal_safe_steps",
+    "observed_result",
+    "non_sensitive_evidence",
+    "reproducer_identity_or_declared_automation_context",
+    "limitations"
+  ],
+  "automation_available_now": [
+    "repository_reading",
+    "static_analysis",
+    "claim_drift_checks",
+    "target_selection",
+    "local_disposable_reproduction",
+    "fuzz_property_negative_test_generation",
+    "evidence_collection",
+    "patch_proposal",
+    "pull_request_creation",
+    "protected_ci",
+    "evidence_comparison"
+  ],
+  "separate_authority_required": [
+    "merge",
+    "direct_main_write",
+    "deployment_or_publication",
+    "credential_or_secret_access",
+    "protocol_or_route_activation",
+    "production_promotion",
+    "spending_or_purchase",
+    "hardware_custody_or_transfer",
+    "third_party_security_testing",
+    "destructive_recovery"
+  ],
+  "disposition_states_referenced": [
+    "RECEIVED",
+    "NEEDS_REPRODUCTION",
+    "REPRODUCED_BOUNDARY_FAILURE",
+    "REPRODUCED_CLAIM_DRIFT",
+    "NOT_REPRODUCED",
+    "OUT_OF_SCOPE",
+    "DUPLICATE",
+    "PRIVATE_SECURITY_ROUTE",
+    "FIX_PROPOSED",
+    "FIX_VERIFIED",
+    "CLOSED"
+  ],
+  "nonclaims": [
+    "This security cell is a repository-native coordination and evidence contract, not an autonomous security authority.",
+    "It does not create self-service runtime identity, machine delegation, a public remote executor, autonomous merge, deployment authority, or security certification.",
+    "A reproduced finding is evidence for remediation and governance; it does not itself grant any participant additional capability or authority.",
+    "A green patch or CI run establishes only the checked conditions and remains subject to separate merge and promotion decisions."
+  ]
+}
