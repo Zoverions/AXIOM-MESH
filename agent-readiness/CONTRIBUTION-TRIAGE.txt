@@ -1,0 +1,70 @@
+AXIOM-MESH AGENT CONTRIBUTION TRIAGE
+
+Status
+Repository-native review process for bounded non-sensitive agent/community contribution proposals.
+This policy governs intake and review only. It is not a bounty, grant program, procurement commitment, service-level agreement, employment offer, partnership agreement, security certification, merge approval, deployment decision, production promotion, or grant of repository/runtime authority.
+
+Scope and safety
+Use the public agent contribution proposal form only for non-sensitive proposals. Security or authority-boundary findings belong in the dedicated red-team intake, and sensitive findings, secrets, credentials, private data, practical unauthorized-access paths, or weaponized exploit detail belong in the private process described by SECURITY.md.
+
+Contribution work must stay inside repository-owned, contributor-owned, local, or explicitly disposable/authorized environments. A proposal must not be treated as permission to test third-party systems or infrastructure.
+
+Current claim boundary
+Supported build: 0.12.0-dev.3.
+Status: production candidate, not production-promoted.
+Capability is not authority. Discovery is not permission. Connection is not permission. Contribution is not authorization.
+
+Triage states
+RECEIVED — proposal exists and is awaiting initial review; acceptance, feasibility, priority, funding, and authorization are not established.
+NEEDS_SCOPE — the requested work or environment is too broad, ambiguous, or insufficiently bounded for review.
+NEEDS_EVIDENCE_PLAN — the proposed tests, measurements, fixtures, patch scope, or expected deliverables are not specific enough to evaluate.
+ACCEPTED_FOR_REVIEW — the proposal is sufficiently bounded to evaluate or discuss; this does not authorize merge, deployment, credentials, spending, shipping, protocol activation, production routing, or third-party testing.
+EFFECT_AUTHORIZATION_REQUIRED — useful work may depend on one or more consequential effects that require a separate explicit operator decision before that effect occurs.
+IN_PROGRESS_LOCAL — the contributor may be performing work that is already within their own lawful authority, such as local analysis, contributor-owned testing, or preparation of a pull request; this state does not enlarge that authority.
+EVIDENCE_SUBMITTED — the contributor supplied a patch, report, measurements, logs, fixtures, benchmark data, or other claimed deliverable; submission does not establish correctness or acceptance.
+EVIDENCE_ACCEPTED — the supplied non-sensitive evidence has been reviewed as useful for its stated bounded purpose; this is not certification, production promotion, or generalized validation beyond the tested environment.
+ROUTE_TO_RED_TEAM — the proposal is actually a security or authority-boundary finding and should use the red-team process; sensitive material must not be copied publicly.
+DUPLICATE — substantially the same proposal or work is already tracked elsewhere; preserve a pointer to the canonical item.
+DECLINED — the proposal will not be pursued in its current form; state the bounded reason when practical.
+CLOSED — the public record states the final disposition and links any accepted contribution evidence or follow-up item.
+
+Review sequence
+1. Preserve the proposal's original non-sensitive context and selected contribution lane.
+2. Confirm the item belongs in contribution intake rather than the red-team or private security route.
+3. Verify the exact build, commit, artifact, protocol version, hardware, or environment context that the proposal depends on.
+4. Confirm the proposed work is bounded to repository-owned, contributor-owned, local, or explicitly disposable/authorized environments.
+5. Evaluate whether the evidence or deliverable plan can produce reproducible information relevant to the selected lane.
+6. Identify every requested consequential effect or resource separately from the technical proposal.
+7. Record one triage state and the evidence supporting it. Do not convert interest, discussion, technical feasibility, or contributor capability into authorization.
+8. If a consequential effect is actually needed, record EFFECT_AUTHORIZATION_REQUIRED and wait for a separate explicit operator decision before that effect occurs.
+9. For submitted work, preserve exact environment/build bindings, limitations, negative results, and uncertainty. A green workflow or successful benchmark only establishes the checked result.
+10. Close with a final disposition and links to any accepted report, pull request, benchmark, issue, or evidence artifact.
+
+Consequential effects requiring separate authorization
+The contribution process does not itself authorize:
+- merging repository changes or direct-main writes;
+- deploying or publishing a hosted surface;
+- activating a protocol, resolver mapping, production route, or runtime integration;
+- production promotion;
+- sharing or provisioning credentials, secrets, tokens, certificates, or private access;
+- spending money, reimbursing expenses, purchasing equipment, or entering paid services;
+- shipping, receiving, transferring, lending, or taking custody of hardware;
+- testing systems, accounts, networks, or infrastructure not owned by the contributor or explicitly authorized for disposable testing.
+
+Hardware and infrastructure evidence
+Hardware and infrastructure proposals should preserve the exact model/topology, firmware or operating-system versions where relevant, AXIOM-MESH commit/build, environment ownership statement, procedure, raw non-sensitive observations, failure conditions, and limitations. Results apply only to the tested configuration unless separately reproduced.
+
+Benchmark and compatibility evidence
+Record methodology, warm-up or setup conditions, repetitions where practical, resource ceilings, failure cases, and exact software/hardware versions. Benchmark intake is evidence collection, not certification and not a general performance claim.
+
+Resource requests
+A contributor may describe resources that would make future work possible. Recording or discussing a request does not create a promise to fund, reimburse, purchase, ship, host, provision credentials, provide access, or accept custody. Any such effect requires a separate explicit operator decision.
+
+Closure evidence
+Accepted implementation work should point to the exact reviewed pull request or patch and the applicable checks.
+Accepted hardware, infrastructure, or benchmark work should point to the exact tested environment and non-sensitive evidence.
+Accepted claim-audit work should identify the conflicting claim and the canonical source or correction.
+Declined, duplicate, routed, or unresolved proposals should state the bounded disposition without implying that the underlying idea is impossible or unsafe in every context.
+
+Authority boundary
+Triage states, comments, contributor identity, ownership of hardware, technical capability, submitted code, benchmark results, reviews, CI results, signatures, certificates, discovery metadata, and issue status do not themselves grant AXIOM-MESH runtime authority, repository write authority, merge authority, deployment authority, credential access, purchasing or shipping authority, protocol activation, or production promotion.
