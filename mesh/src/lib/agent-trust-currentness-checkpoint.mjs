@@ -13,7 +13,6 @@ import {
   digestObject
 } from './canonical.mjs';
 import {
-  evaluateMachineIdentityCurrentness,
   machineIdentityKeyId,
   verifyMachineIdentityCredentialHistory,
   verifyMachineIdentityRevocation
@@ -196,6 +195,57 @@ function normalizeEvidence({ credentialHistory, revocations = [], trustedIssuerP
   });
 }
 
+function evaluateVerifiedEvidenceCurrentness(evidence, at) {
+  const when = canonicalTimestamp(at, 'agent currentness evaluation time');
+  const whenMs = timestampValue(when);
+  const started = evidence.history.filter(item => timestampValue(item.statement.valid_from) <= whenMs);
+  const base = {
+    schema: 'axiom-machine-identity-currentness.v1',
+    principal_id: evidence.history[0].statement.principal_id,
+    issuer_id: evidence.history[0].statement.issuer_id,
+    evaluated_at: when,
+    evidence_scope: 'supplied-issuer-evidence-only',
+    global_currentness_claimed: false,
+    authority_effect: 'none',
+    delegation_effect: 'none'
+  };
+  if (!started.length) {
+    return Object.freeze({ ...base, status: 'not-yet-valid', credential_digest: null, key_epoch: null });
+  }
+  const current = started.at(-1);
+  if (whenMs >= timestampValue(current.statement.expires_at)) {
+    return Object.freeze({
+      ...base,
+      status: 'expired',
+      credential_digest: current.credential_digest,
+      key_epoch: current.statement.key_epoch
+    });
+  }
+  const activeRevocation = evidence.revocations.find(item => (
+    item.statement.credential_digest === current.credential_digest
+    && timestampValue(item.statement.effective_at) <= whenMs
+  ));
+  if (activeRevocation) {
+    return Object.freeze({
+      ...base,
+      status: 'revoked',
+      credential_digest: current.credential_digest,
+      key_epoch: current.statement.key_epoch,
+      revocation_digest: activeRevocation.revocation_digest,
+      reason_code: activeRevocation.statement.reason_code
+    });
+  }
+  return Object.freeze({
+    ...base,
+    status: 'active',
+    credential_digest: current.credential_digest,
+    key_epoch: current.statement.key_epoch,
+    operational_key_id: current.statement.operational_key_id,
+    principal_definition_digest: current.statement.principal_definition_digest,
+    principal_authority_digest: current.statement.principal_authority_digest
+  });
+}
+
 function currentnessProjection(currentness) {
   if (!STATUSES.has(currentness.status)) {
     throw new ValidationError('agent currentness status is unsupported');
@@ -354,6 +404,46 @@ function verifySignatureEnvelope(raw, trustedObserverPublicKey) {
   return Object.freeze({ ...signed, checkpoint_digest: checkpointDigest });
 }
 
+function verifyCheckpointAgainstEvidence(checkpoint, evidence, { expectedLatestCheckpointDigest } = {}) {
+  if (checkpoint.statement.principal_id !== evidence.history[0].statement.principal_id) {
+    throw new ValidationError('agent currentness checkpoint principal does not match supplied issuer evidence');
+  }
+  if (checkpoint.statement.issuer_id !== evidence.history[0].statement.issuer_id) {
+    throw new ValidationError('agent currentness checkpoint issuer does not match supplied issuer evidence');
+  }
+  if (
+    checkpoint.statement.credential_history_digest !== evidence.credentialHistoryDigest
+    || canonicalJson(checkpoint.statement.credential_digests) !== canonicalJson(evidence.credentialDigests)
+  ) {
+    throw new ValidationError('agent currentness checkpoint credential history does not match supplied evidence');
+  }
+  if (
+    checkpoint.statement.revocation_set_digest !== evidence.revocationSetDigest
+    || canonicalJson(checkpoint.statement.revocation_digests) !== canonicalJson(evidence.revocationDigests)
+  ) {
+    throw new ValidationError('agent currentness checkpoint revocation set does not match supplied evidence');
+  }
+  const currentness = currentnessProjection(evaluateVerifiedEvidenceCurrentness(
+    evidence,
+    checkpoint.statement.evaluated_at
+  ));
+  for (const key of [
+    'currentness_status', 'current_credential_digest', 'current_key_epoch',
+    'current_operational_key_id', 'current_revocation_digest', 'current_reason_code'
+  ]) {
+    if (checkpoint.statement[key] !== currentness[key]) {
+      throw new ValidationError(`agent currentness checkpoint ${key} does not reproduce from supplied evidence`);
+    }
+  }
+  if (
+    expectedLatestCheckpointDigest !== undefined
+    && checkpoint.checkpoint_digest !== expectedLatestCheckpointDigest
+  ) {
+    throw new ValidationError('agent currentness checkpoint is not the expected retained latest head');
+  }
+  return checkpoint;
+}
+
 function assertCheckpointProgression(previous, current) {
   if (current.statement.checkpoint_sequence !== previous.statement.checkpoint_sequence + 1) {
     throw new ValidationError('agent currentness checkpoint sequence must advance exactly one');
@@ -401,12 +491,7 @@ export function createAgentCurrentnessCheckpoint({
 } = {}) {
   const evidence = normalizeEvidence({ credentialHistory, revocations, trustedIssuerPublicKey });
   const evaluated = canonicalTimestamp(evaluatedAt, 'agent currentness evaluatedAt');
-  const currentness = evaluateMachineIdentityCurrentness({
-    credentialHistory: evidence.history,
-    revocations: evidence.revocations,
-    trustedIssuerPublicKey,
-    at: evaluated
-  });
+  const currentness = evaluateVerifiedEvidenceCurrentness(evidence, evaluated);
   const privateKey = parsePrivateKey(observerPrivateKey, 'agent currentness observer private key');
   const publicKey = createPublicKey(privateKey);
   const sequence = positiveInteger(checkpointSequence, 'agent currentness checkpointSequence', 1_000_000);
@@ -470,45 +555,7 @@ export function verifyAgentCurrentnessCheckpoint(raw, {
 } = {}) {
   const checkpoint = verifySignatureEnvelope(raw, trustedObserverPublicKey);
   const evidence = normalizeEvidence({ credentialHistory, revocations, trustedIssuerPublicKey });
-  if (checkpoint.statement.principal_id !== evidence.history[0].statement.principal_id) {
-    throw new ValidationError('agent currentness checkpoint principal does not match supplied issuer evidence');
-  }
-  if (checkpoint.statement.issuer_id !== evidence.history[0].statement.issuer_id) {
-    throw new ValidationError('agent currentness checkpoint issuer does not match supplied issuer evidence');
-  }
-  if (
-    checkpoint.statement.credential_history_digest !== evidence.credentialHistoryDigest
-    || canonicalJson(checkpoint.statement.credential_digests) !== canonicalJson(evidence.credentialDigests)
-  ) {
-    throw new ValidationError('agent currentness checkpoint credential history does not match supplied evidence');
-  }
-  if (
-    checkpoint.statement.revocation_set_digest !== evidence.revocationSetDigest
-    || canonicalJson(checkpoint.statement.revocation_digests) !== canonicalJson(evidence.revocationDigests)
-  ) {
-    throw new ValidationError('agent currentness checkpoint revocation set does not match supplied evidence');
-  }
-  const currentness = currentnessProjection(evaluateMachineIdentityCurrentness({
-    credentialHistory: evidence.history,
-    revocations: evidence.revocations,
-    trustedIssuerPublicKey,
-    at: checkpoint.statement.evaluated_at
-  }));
-  for (const key of [
-    'currentness_status', 'current_credential_digest', 'current_key_epoch',
-    'current_operational_key_id', 'current_revocation_digest', 'current_reason_code'
-  ]) {
-    if (checkpoint.statement[key] !== currentness[key]) {
-      throw new ValidationError(`agent currentness checkpoint ${key} does not reproduce from supplied evidence`);
-    }
-  }
-  if (
-    expectedLatestCheckpointDigest !== undefined
-    && checkpoint.checkpoint_digest !== expectedLatestCheckpointDigest
-  ) {
-    throw new ValidationError('agent currentness checkpoint is not the expected retained latest head');
-  }
-  return checkpoint;
+  return verifyCheckpointAgainstEvidence(checkpoint, evidence, { expectedLatestCheckpointDigest });
 }
 
 export function verifyAgentCurrentnessCheckpointChain(rawChain, {
@@ -524,14 +571,12 @@ export function verifyAgentCurrentnessCheckpointChain(rawChain, {
   const verified = [];
   for (const raw of rawChain) {
     const signed = verifySignatureEnvelope(raw, trustedObserverPublicKey);
-    const evidence = evidenceByCheckpointDigest.get(signed.checkpoint_digest);
-    if (!evidence) {
+    const rawEvidence = evidenceByCheckpointDigest.get(signed.checkpoint_digest);
+    if (!rawEvidence) {
       throw new ValidationError('agent currentness checkpoint chain is missing exact issuer evidence');
     }
-    const checkpoint = verifyAgentCurrentnessCheckpoint(signed, {
-      trustedObserverPublicKey,
-      ...evidence
-    });
+    const evidence = normalizeEvidence(rawEvidence);
+    const checkpoint = verifyCheckpointAgainstEvidence(signed, evidence);
     if (verified.length) assertCheckpointProgression(verified.at(-1), checkpoint);
     verified.push(checkpoint);
   }
@@ -558,11 +603,9 @@ export function evaluateAgentCurrentnessAtEffect({
   if (!Number.isSafeInteger(maxEvidenceAgeMs) || maxEvidenceAgeMs < 0 || maxEvidenceAgeMs > MAX_EFFECT_CURRENTNESS_AGE_MS) {
     throw new ValidationError(`agent effect currentness maxEvidenceAgeMs must be 0-${MAX_EFFECT_CURRENTNESS_AGE_MS}`);
   }
-  const checkpoint = verifyAgentCurrentnessCheckpoint(rawCheckpoint, {
-    trustedObserverPublicKey,
-    credentialHistory,
-    revocations,
-    trustedIssuerPublicKey,
+  const checkpoint = verifySignatureEnvelope(rawCheckpoint, trustedObserverPublicKey);
+  const evidence = normalizeEvidence({ credentialHistory, revocations, trustedIssuerPublicKey });
+  verifyCheckpointAgainstEvidence(checkpoint, evidence, {
     expectedLatestCheckpointDigest: retainedLatestHead
   });
   const effectTime = canonicalTimestamp(effectAt, 'agent effect currentness effectAt');
@@ -573,13 +616,7 @@ export function evaluateAgentCurrentnessAtEffect({
   if (ageMs > maxEvidenceAgeMs) {
     throw new ValidationError('agent effect currentness evidence is too stale for the requested effect boundary');
   }
-  const evidence = normalizeEvidence({ credentialHistory, revocations, trustedIssuerPublicKey });
-  const atEffect = evaluateMachineIdentityCurrentness({
-    credentialHistory: evidence.history,
-    revocations: evidence.revocations,
-    trustedIssuerPublicKey,
-    at: effectTime
-  });
+  const atEffect = evaluateVerifiedEvidenceCurrentness(evidence, effectTime);
   if (atEffect.status !== 'active') {
     throw new ValidationError(`agent effect currentness is ${atEffect.status}; new effect denied`);
   }
