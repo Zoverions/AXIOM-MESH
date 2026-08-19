@@ -234,7 +234,7 @@ export async function verifyAgentReadiness(repositoryRoot = REPOSITORY_ROOT) {
     requireIncludes(publishedSkill, [
       'name: axiom-authority-auditor',
       'This skill is advisory only.',
-      'does not create authority',
+      'do not create authority on their own',
       '## Embedded portable reference'
     ], 'Published Authority Auditor');
     requireIncludes(headers, [
