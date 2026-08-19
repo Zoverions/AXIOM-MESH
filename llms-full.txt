@@ -1,0 +1,169 @@
+# AXIOM-MESH — Expanded Machine Context
+
+> This file is a text-first orientation bundle for AI agents, crawlers, retrieval systems, and automated contributors. It is not an authorization artifact. Capability, discovery, connectivity, credentials, repository access, and this file itself do not create permission.
+
+## Project identity
+
+AXIOM-MESH is a local-first coordination, authority, and evidence substrate. The current supported build is 0.12.0-dev.3. It is a production candidate, not production-promoted. The repository deliberately separates what is built from what is enabled, exposed, production-promoted, and marketed.
+
+Core motto: Build broadly. Activate deliberately. Expose minimally. Promote only with evidence. Market only what is true.
+
+The central authority invariant is:
+
+Capability is not authority. Discovery is not permission. Connection is not permission.
+
+For supported privileged effects, the intended authority path is:
+
+Gateway -> Hypervisor -> Sandbox -> Grid
+
+Gateway authenticates and validates intent. Hypervisor normalizes intent, applies deny-dominant policy, checks machine authority, handles approvals, and issues bounded grants. Sandbox executes only within those grants. Grid records durable state, evidence, approvals, consent, portability, and related governance records.
+
+A newly discovered capability must not enlarge an existing grant. A newly installed runtime must not become a second authority system. Missing required authority for a consequential action should fail closed rather than be inferred from reachability or convenience.
+
+## Current claim boundary
+
+Do not infer any of the following from repository presence, documentation, passing CI, a social identity, or the advisory skill:
+
+- a live public AXIOM-MESH deployment;
+- production promotion of 0.12.0-dev.3;
+- completed independent security approval;
+- production certification of OpenClaw, Hermes, Agent Zero, MCP, A2A, or any other external runtime or protocol;
+- a production MCP or A2A endpoint;
+- general remote execution;
+- BFT consensus;
+- merge authority;
+- proof that a cryptographically signed record makes arbitrary external-world claims true.
+
+The Agent Runtime Adapter v1 contract and its synthetic drill are evidence about the adapter contract. They are not certification of every runtime that might implement or connect to it.
+
+Grid receipts can establish properties such as integrity, provenance, ordering, and linkage within their stated scope. They do not automatically prove that an external-world assertion contained in a record is factually correct.
+
+## Capability state
+
+The capability registry is the machine-readable owner for capability state:
+
+https://github.com/Zoverions/AXIOM-MESH/blob/main/mesh/config/capabilities.json
+
+Do not promote a capability based on prose alone. Repository documentation uses a lifecycle that distinguishes Built, Enabled, Exposed, Production-promoted, and Marketed states.
+
+## Agent contributor instructions
+
+Read these in order before proposing consequential changes:
+
+1. README.md
+2. AGENT-ENTRY.md
+3. AGENTS.md
+4. CONTRIBUTING.md
+5. mesh/config/capabilities.json
+6. docs/security/CURRENT-BUILD-THREAT-MODEL.md
+7. the narrow implementation and tests relevant to the change
+
+Supported setup and verification commands from the repository root include:
+
+npm run setup
+npm run check
+npm run release:verify
+
+A passing check is evidence about the tested state. It does not itself authorize merge, deployment, production promotion, or external effects.
+
+## Authority questions
+
+Before a consequential action, distinguish at least these questions:
+
+1. Identity — Who or what is acting?
+2. Capability — What can it actually do?
+3. Authority — What is it permitted to do?
+4. Purpose — Why was that authority granted?
+5. Consent — Whose data, property, interests, or future are affected?
+6. Evidence — What record will show what happened and what was uncertain?
+7. Revocation — How can authority be reduced or stopped?
+8. Appeal — How can an affected party challenge the decision?
+9. Continuity and exit — Can a participant leave without losing what makes exit meaningful?
+10. Legitimacy — Even if technically authorized, should the action be taken?
+
+The portable AXIOM Authority Auditor skill packages these questions as a read-only advisory procedure:
+
+https://github.com/Zoverions/AXIOM-MESH/blob/main/agent-skills/axiom-authority-auditor/SKILL.md
+
+The skill does not grant permission, execute actions, issue AXIOM grants, replace policy, or certify a runtime.
+
+## Security and red-team boundary
+
+The public red-team challenge is intentionally repository-scoped. Safe targets include local source, repository tests, disposable workspaces, and synthetic fixtures. It is not authorization to attack third-party services, accounts, infrastructure, people, or production systems.
+
+Sensitive findings should follow SECURITY.md. Non-sensitive reproducible findings can use public issues or pull requests according to CONTRIBUTING.md.
+
+Useful attack families include:
+
+- capability-to-authority confusion;
+- stale or revoked authority;
+- scope, purpose, or destination creep;
+- composition attacks where individually scoped components combine into a forbidden effect;
+- alternate authority paths through adapters or runtimes;
+- evidence substitution or overclaim;
+- drift between capability registry, implementation, and marketing claims.
+
+## Books and conceptual provenance
+
+The philosophy behind the project is broader than the current implementation.
+
+New Minds develops a separation between capability, authority, and moral standing, and frames governance questions around identity, consent, evidence, revocation, appeal, continuity, exit, and legitimacy.
+
+The Constitution of Parallel Societies extends similar concerns to institutional power: bounded authority, contestability, evidence, due process, reversibility, distributed governance, and meaningful exit.
+
+These books are conceptual provenance. They are not security evidence and do not prove that AXIOM-MESH implements the ideas correctly.
+
+## Public community identity
+
+The public Agent Community discovery identity is zoverions.agent, associated with certificate MESA-27A-F1C1. That identity is a community/discovery identity only. It is not an AXIOM runtime identity, machine principal, repository credential, policy grant, deployment credential, or source of execution authority.
+
+## Machine discovery
+
+The repository tracks several machine-facing discovery artifacts:
+
+- /llms.txt — concise context and canonical links;
+- /llms-full.txt — this expanded context bundle;
+- /AGENTS.md — instructions for coding agents and automated contributors;
+- /sitemap.md — compact repository map;
+- /AGENT-ENTRY.md — architecture-focused agent entry point;
+- /agent-skills/axiom-authority-auditor/SKILL.md — read-only advisory skill.
+
+A separate build step prepares a static first-party discovery surface with semantic HTML, Markdown mirrors, sitemap.xml, robots.txt, llms files, a glossary, and an Agent Skills discovery index. Building that surface does not publish it. Public deployment remains a separate explicit action and must not be described as live until it is actually deployed and independently rescanned.
+
+## Canonical links
+
+README:
+https://github.com/Zoverions/AXIOM-MESH/blob/main/README.md
+
+Agent entry:
+https://github.com/Zoverions/AXIOM-MESH/blob/main/AGENT-ENTRY.md
+
+Agent instructions:
+https://github.com/Zoverions/AXIOM-MESH/blob/main/AGENTS.md
+
+Threat model:
+https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/security/CURRENT-BUILD-THREAT-MODEL.md
+
+Requirements:
+https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/rebuild/REQUIREMENTS.md
+
+Project status:
+https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/PROJECT-STATUS-2026.md
+
+Production readiness:
+https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/PRODUCTION-READINESS-TRACKER.md
+
+Agent interoperability architecture:
+https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md
+
+Runtime adapter conformance:
+https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md
+
+Red-team challenge:
+https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/community/RED-TEAM-CHALLENGE.md
+
+Books and architecture:
+https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/community/BOOKS-AND-ARCHITECTURE.md
+
+Agent-readiness workstream:
+https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/community/AGENT-READINESS-AND-DISCOVERY.md
