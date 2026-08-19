@@ -15,6 +15,8 @@ Capability is not authority. Discovery is not permission. Connection is not perm
 Required intake evidence
 A public finding should identify the exact build, commit, file, artifact, or URL reviewed; the expected authority boundary; the observed behavior; a minimal safe reproduction; and the supporting non-sensitive evidence. Impact and a suggested negative regression are useful but are not prerequisites for initial triage.
 
+If the reporter selected a RED-TEAM-TARGETS.json catalog target, preserve that target ID with the finding and verify that the report actually challenges the corresponding claim boundary. Target mapping is classification only: it does not establish truth, severity, exploitability, or priority. Reports that do not map cleanly to a catalog target remain valid intake and must not be forced into one.
+
 Disposition states
 RECEIVED — report accepted for initial review; truth not yet established.
 NEEDS_REPRODUCTION — evidence is insufficient to establish or reject the claimed mismatch.
@@ -39,18 +41,20 @@ P3 — incomplete, duplicate, out-of-scope, or currently inconclusive reports th
 Review sequence
 1. Preserve the reporter's original non-sensitive evidence and bind the report to an exact build/commit/artifact.
 2. Confirm the report belongs in public handling; move sensitive handling to SECURITY.md without reproducing sensitive details publicly.
-3. Identify the canonical claim or invariant being challenged.
-4. Reproduce only in repository-owned, local, or explicitly disposable environments allowed by the relevant runbook.
-5. Record one disposition state and the evidence supporting it; do not convert uncertainty into a pass or failure claim.
-6. For code/runtime failures, prefer a negative regression that fails before the fix and passes after it.
-7. For documentation or machine-discovery drift, correct the smallest false or ambiguous claim and add/update a regression when practical.
-8. Run the applicable existing verification gates. Green checks establish only that the checked conditions passed; they do not grant merge, deployment, production promotion, or broader authority.
-9. Close only when the final public disposition and supporting evidence are linked, or when the report is explicitly duplicate/out-of-scope/not-reproduced.
+3. If a catalog target ID was supplied, preserve it and verify the report maps to that exact RED-TEAM-TARGETS.json claim boundary; otherwise leave the report unmapped rather than inventing a target.
+4. Identify the canonical claim or invariant being challenged.
+5. Reproduce only in repository-owned, local, or explicitly disposable environments allowed by the relevant runbook.
+6. Record one disposition state and the evidence supporting it; do not convert uncertainty into a pass or failure claim.
+7. For code/runtime failures, prefer a negative regression that fails before the fix and passes after it.
+8. For documentation or machine-discovery drift, correct the smallest false or ambiguous claim and add/update a regression when practical.
+9. Run the applicable existing verification gates. Green checks establish only that the checked conditions passed; they do not grant merge, deployment, production promotion, or broader authority.
+10. Close only when the final public disposition and supporting evidence are linked, or when the report is explicitly duplicate/out-of-scope/not-reproduced.
 
 Closure evidence
 A reproduced implementation finding should normally close with: exact affected commit/build; minimal reproduction; bounded fix; regression; and passing applicable checks on the reviewed fix head.
 A reproduced claim-drift finding should normally close with: exact conflicting claim; corrected source; and any applicable discovery/documentation regression.
 A not-reproduced finding should state the exact environment and observation used to reach that conclusion. Not reproduced does not mean impossible.
+When a catalog target ID was supplied, final public disposition should retain that ID unless triage records why the report was remapped or left unmapped.
 
 Authority boundary
-Triage labels, comments, reproductions, approvals, CI results, signatures, certificates, discovery metadata, and issue status do not themselves grant AXIOM-MESH runtime authority, merge authority, deployment authority, protocol activation, or production promotion.
+Triage labels, target IDs, comments, reproductions, approvals, CI results, signatures, certificates, discovery metadata, and issue status do not themselves grant AXIOM-MESH runtime authority, merge authority, deployment authority, protocol activation, or production promotion.
