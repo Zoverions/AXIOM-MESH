@@ -26,15 +26,20 @@ Built source does not become a runnable capability merely because tests exist:
 production policy, registries, runtime wiring, and applicable promotion evidence
 remain independent gates.
 
-August 19 hardening closed two authority/evidence ambiguities without expanding
+August 19 hardening closed three authority/evidence ambiguities without expanding
 the capability surface. Capability use is now durably consumed in Grid before
 Sandbox execution, with the signed consume receipt bound to the exact capability
 and current Sandbox process epoch; restart or uncertain execution burns the
 capability rather than making it replayable. Authority/evidence canonicalization
-is also restricted to JSON-compatible plain data so class instances, accessors,
+is restricted to JSON-compatible plain data so class instances, accessors,
 non-enumerable or symbol-keyed state, sparse arrays, and custom array/object
-prototypes cannot silently collapse into misleading digests. Neither change
-creates exactly-once external effects or production promotion.
+prototypes cannot silently collapse into misleading digests. Policy constraint
+merging now requires a declared monotonic tightening direction: permission- and
+requirement-style booleans use explicit operators, numeric min/max names tighten
+in their declared direction, finite allowlists intersect by canonical digest
+identity, and ambiguous differing constraints fail closed. These changes do not
+create exactly-once external effects, new capability status, or production
+promotion.
 
 ## Current authority model
 
@@ -308,9 +313,9 @@ policy, container build/readiness, recovery, backup lifecycle, SLO, resilience,
 telemetry, transport, independent service units, node scheduling, causal
 exchange, provider startup, credential/data-key rotation, restart-safe
 capability consumption, plain-data authority/evidence canonicalization,
-incident tabletop, pilot dossier/package verification,
-independent-security-review verification, runtime-adapter synthetic conformance,
-and applicable CodeQL/Windows gates.
+explicit policy-constraint merge direction, incident tabletop,
+pilot dossier/package verification, independent-security-review verification,
+runtime-adapter synthetic conformance, and applicable CodeQL/Windows gates.
 
 These artifacts prove mechanisms and rejection behavior. They do not create the
 external facts required for production promotion.
@@ -406,7 +411,7 @@ promotion.
 
 ## Current priorities
 
-1. finish the remaining authority-algebra hardening and converge overlapping
+1. preserve the completed authority-algebra hardening and converge overlapping
    Agent Trust/semantic-memory laboratories into one selected progression rather
    than accumulating parallel green branches;
 2. complete the authentic controlled pilot: dedicated hardware, external secret
