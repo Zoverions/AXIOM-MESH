@@ -506,8 +506,8 @@ function mergeConstraints(current, incoming, action) {
     } else if (operator === 'minimum') {
       result[key] = Math.max(existing, value);
     } else if (operator === 'finite_set_intersection') {
-      const allowed = new Set(value.map(item => JSON.stringify(item)));
-      result[key] = existing.filter(item => allowed.has(JSON.stringify(item)));
+      const allowed = new Set(value.map(item => digestObject(item)));
+      result[key] = existing.filter(item => allowed.has(digestObject(item)));
     } else if (digestObject(existing) !== digestObject(value)) {
       throw new ValidationError(
         `Policy constraint merge direction is undeclared for ${action}.${key}`
