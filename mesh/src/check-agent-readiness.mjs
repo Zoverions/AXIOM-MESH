@@ -25,6 +25,14 @@ function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
 }
 
+function gitBlobSha1(value) {
+  const body = Buffer.from(value, 'utf8');
+  return createHash('sha1')
+    .update(`blob ${body.length}\0`)
+    .update(body)
+    .digest('hex');
+}
+
 function parseJson(content, label) {
   try {
     return JSON.parse(content);
@@ -44,14 +52,28 @@ async function mustNotExist(root, relativePath) {
 }
 
 export async function verifyAgentReadiness(repositoryRoot = REPOSITORY_ROOT) {
-  const [cursorRules, rootLlms, rootFullLlms, plan, configText] = await Promise.all([
+  const [
+    cursorRules,
+    rootLlms,
+    rootFullLlms,
+    plan,
+    configText,
+    repositoryDiscoveryText,
+    repositorySkillIndexText,
+    authorityAuditorSkill
+  ] = await Promise.all([
     readFile(resolve(repositoryRoot, '.cursorrules'), 'utf8'),
     readFile(resolve(repositoryRoot, 'llms.txt'), 'utf8'),
     readFile(resolve(repositoryRoot, 'llms-full.txt'), 'utf8'),
     readFile(resolve(repositoryRoot, 'agent-readiness/PLAN.txt'), 'utf8'),
-    readFile(resolve(repositoryRoot, 'agent-readiness/config.json'), 'utf8')
+    readFile(resolve(repositoryRoot, 'agent-readiness/config.json'), 'utf8'),
+    readFile(resolve(repositoryRoot, 'agent-discovery.json'), 'utf8'),
+    readFile(resolve(repositoryRoot, 'agent-skills/index.json'), 'utf8'),
+    readFile(resolve(repositoryRoot, 'agent-skills/axiom-authority-auditor/SKILL.md'), 'utf8')
   ]);
   const config = parseJson(configText, 'Agent-readiness config');
+  const repositoryDiscovery = parseJson(repositoryDiscoveryText, 'Repository discovery manifest');
+  const repositorySkillIndex = parseJson(repositorySkillIndexText, 'Repository Agent Skills index');
 
   if (config.schema !== 'axiom-agent-readiness.v1') {
     throw new ValidationError('Agent-readiness config schema is invalid');
@@ -63,18 +85,76 @@ export async function verifyAgentReadiness(repositoryRoot = REPOSITORY_ROOT) {
     throw new ValidationError('Agent-readiness promotion targets were weakened');
   }
 
+  if (repositoryDiscovery.schema !== 'axiom-repository-discovery.v1') {
+    throw new ValidationError('Repository discovery manifest schema is invalid');
+  }
+  if (repositoryDiscovery.status !== 'production_candidate_not_production_promoted') {
+    throw new ValidationError('Repository discovery manifest overstates production status');
+  }
+  if (
+    repositoryDiscovery.hosting?.repository_native_discovery_requires_external_hosting !== false
+    || repositoryDiscovery.hosting?.separate_hosted_origin !== 'optional_prepared_not_published'
+    || repositoryDiscovery.hosting?.publication_requires_explicit_authorization !== true
+  ) {
+    throw new ValidationError('Repository discovery hosting boundary drifted');
+  }
+  if (
+    repositoryDiscovery.entrypoints?.agent_entry !== 'AGENT-ENTRY.md'
+    || repositoryDiscovery.entrypoints?.llms !== 'llms.txt'
+    || repositoryDiscovery.entrypoints?.agent_skills_index !== 'agent-skills/index.json'
+  ) {
+    throw new ValidationError('Repository discovery canonical entrypoints drifted');
+  }
+  if (
+    repositoryDiscovery.protocols?.mcp_server_card !== 'not_published'
+    || repositoryDiscovery.protocols?.a2a_agent_card !== 'not_published'
+    || repositoryDiscovery.protocols?.public_openapi_endpoint !== 'not_published'
+    || repositoryDiscovery.protocols?.remote_execution !== 'not_claimed'
+  ) {
+    throw new ValidationError('Repository discovery protocol non-claims drifted');
+  }
+  if (repositoryDiscovery.community?.red_team_issue !== 'https://github.com/Zoverions/AXIOM-MESH/issues/1185') {
+    throw new ValidationError('Repository discovery red-team intake drifted');
+  }
+
+  if (repositorySkillIndex.schema !== 'axiom-agent-skills-index.v1') {
+    throw new ValidationError('Repository Agent Skills index schema is invalid');
+  }
+  if (!Array.isArray(repositorySkillIndex.skills) || repositorySkillIndex.skills.length !== 1) {
+    throw new ValidationError('Repository Agent Skills index must expose exactly the reviewed advisory skill');
+  }
+  const [repositorySkill] = repositorySkillIndex.skills;
+  const expectedGitBlobSha = gitBlobSha1(authorityAuditorSkill);
+  if (
+    repositorySkill.name !== 'axiom-authority-auditor'
+    || repositorySkill.type !== 'skill-md'
+    || repositorySkill.path !== 'agent-skills/axiom-authority-auditor/SKILL.md'
+    || repositorySkill.git_blob_sha !== expectedGitBlobSha
+    || repositorySkill.read_only !== true
+    || repositorySkill.executes_actions !== false
+    || repositorySkill.grants_authority !== false
+  ) {
+    throw new ValidationError('Repository Agent Skills entry does not match the canonical advisory skill');
+  }
+
   requireIncludes(cursorRules, [
     '## Installation',
     '## Configuration',
     '## Usage',
     'Capability is not authority',
     'Gateway -> Hypervisor -> Sandbox -> Grid',
+    '## Repository-native discovery',
+    'agent-discovery.json',
     'Building the surface does not publish or deploy it'
   ], 'Repository agent instructions');
   requireIncludes(rootLlms, [
     '# AXIOM-MESH',
     '> AXIOM-MESH is a local-first',
     '## Start here',
+    '## Repository-native machine discovery',
+    'agent-discovery.json',
+    'agent-skills/index.json',
+    'issues/1185',
     '## Architecture and current truth',
     '## Agent interoperability',
     '## Community and falsification',
@@ -279,6 +359,7 @@ export async function verifyAgentReadiness(repositoryRoot = REPOSITORY_ROOT) {
       target_agent_readability_score: config.target_agent_readability_score,
       target_llms_score: config.target_llms_score,
       skill_digest: expectedDigest,
+      repository_skill_git_blob_sha: expectedGitBlobSha,
       generated_files: result.generated_files
     };
   } finally {
