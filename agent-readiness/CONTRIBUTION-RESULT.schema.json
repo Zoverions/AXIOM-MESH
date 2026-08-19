@@ -319,6 +319,17 @@
             "not": {
               "pattern": "^0{40}$"
             }
+          },
+          "evidence": {
+            "items": {
+              "properties": {
+                "sha256": {
+                  "not": {
+                    "pattern": "^0{64}$"
+                  }
+                }
+              }
+            }
           }
         }
       }
