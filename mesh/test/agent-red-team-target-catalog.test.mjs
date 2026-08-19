@@ -19,11 +19,13 @@ async function text(path) {
   return readFile(resolve(repositoryRoot, path), 'utf8');
 }
 
-test('red-team target catalog stays bounded, review-aligned, and discoverable', async () => {
-  const [catalogRaw, discoveryRaw, llms] = await Promise.all([
+test('red-team target catalog stays bounded, review-aligned, discoverable, and intake-bound', async () => {
+  const [catalogRaw, discoveryRaw, llms, issueForm, triage] = await Promise.all([
     text('RED-TEAM-TARGETS.json'),
     text('agent-discovery.json'),
-    text('llms.txt')
+    text('llms.txt'),
+    text('.github/ISSUE_TEMPLATE/agent-authority-boundary.yml'),
+    text('RED-TEAM-TRIAGE.txt')
   ]);
 
   const catalog = JSON.parse(catalogRaw);
@@ -43,10 +45,18 @@ test('red-team target catalog stays bounded, review-aligned, and discoverable', 
   assert.equal(catalog.safety.catalog_grants_merge_authority, false);
   assert.equal(catalog.safety.catalog_grants_deployment_authority, false);
 
+  assert.equal(catalog.reporting.structured_form_target_field, 'catalog_target');
+  assert.match(issueForm, /\n    id: catalog_target\n/);
+  assert.match(issueForm, /Not mapped to a catalog target/);
+  assert.match(issueForm, /required: false/);
+  assert.match(triage, /Reports that do not map cleanly to a catalog target remain valid intake/i);
+  assert.match(triage, /Target mapping is classification only/i);
+
   assert.equal(catalog.targets.length, expectedScopes.length);
   assert.deepEqual(catalog.targets.map((target) => target.review_scope), expectedScopes);
   assert.equal(new Set(catalog.targets.map((target) => target.id)).size, catalog.targets.length);
 
+  let previousFormIndex = -1;
   for (const target of catalog.targets) {
     assert.match(target.id, /^RT-[A-Z]+-\d{3}$/);
     assert.equal(typeof target.title, 'string');
@@ -57,6 +67,10 @@ test('red-team target catalog stays bounded, review-aligned, and discoverable', 
     assert.equal('priority' in target, false);
     assert.equal('confirmed' in target, false);
     assert.equal('vulnerability' in target, false);
+
+    const formIndex = issueForm.indexOf(`${target.id} - ${target.title}`);
+    assert.ok(formIndex > previousFormIndex, `issue form must contain ${target.id} in catalog order`);
+    previousFormIndex = formIndex;
 
     for (const path of target.starting_points) {
       assert.equal(path.includes('\0'), false);
