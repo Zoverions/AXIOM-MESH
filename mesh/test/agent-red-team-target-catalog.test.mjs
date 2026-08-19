@@ -46,9 +46,13 @@ test('red-team target catalog stays bounded, review-aligned, discoverable, and i
   assert.equal(catalog.safety.catalog_grants_deployment_authority, false);
 
   assert.equal(catalog.reporting.structured_form_target_field, 'catalog_target');
-  assert.match(issueForm, /\n    id: catalog_target\n/);
-  assert.match(issueForm, /Not mapped to a catalog target/);
-  assert.match(issueForm, /required: false/);
+  const targetFieldStart = issueForm.indexOf('\n    id: catalog_target\n');
+  assert.ok(targetFieldStart >= 0, 'issue form must expose catalog_target');
+  const targetFieldEnd = issueForm.indexOf('\n\n  - type:', targetFieldStart);
+  assert.ok(targetFieldEnd > targetFieldStart, 'catalog_target block must terminate before the next issue-form field');
+  const targetField = issueForm.slice(targetFieldStart, targetFieldEnd);
+  assert.match(targetField, /Not mapped to a catalog target/);
+  assert.match(targetField, /validations:\n      required: false/);
   assert.match(triage, /Reports that do not map cleanly to a catalog target remain valid intake/i);
   assert.match(triage, /Target mapping is classification only/i);
 
@@ -68,8 +72,8 @@ test('red-team target catalog stays bounded, review-aligned, discoverable, and i
     assert.equal('confirmed' in target, false);
     assert.equal('vulnerability' in target, false);
 
-    const formIndex = issueForm.indexOf(`${target.id} - ${target.title}`);
-    assert.ok(formIndex > previousFormIndex, `issue form must contain ${target.id} in catalog order`);
+    const formIndex = targetField.indexOf(`${target.id} - ${target.title}`);
+    assert.ok(formIndex > previousFormIndex, `catalog_target must contain ${target.id} in catalog order`);
     previousFormIndex = formIndex;
 
     for (const path of target.starting_points) {
