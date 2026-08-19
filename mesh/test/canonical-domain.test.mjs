@@ -91,6 +91,30 @@ test('canonical arrays are dense ordinary arrays with no custom hidden state', (
   assert.notEqual(digestObject(['a', 'b']), digestObject(['b', 'a']));
 });
 
+test('canonical arrays reject accessor and non-enumerable indices without invoking getters', () => {
+  let getterInvoked = false;
+  const accessor = [undefined];
+  Object.defineProperty(accessor, '0', {
+    enumerable: true,
+    configurable: true,
+    get() {
+      getterInvoked = true;
+      return 'authority';
+    }
+  });
+  assert.throws(() => canonicalJson(accessor), /data property/i);
+  assert.equal(getterInvoked, false);
+
+  const hidden = ['visible'];
+  Object.defineProperty(hidden, '0', {
+    value: 'hidden-authority',
+    enumerable: false,
+    configurable: true,
+    writable: true
+  });
+  assert.throws(() => canonicalJson(hidden), /data property/i);
+});
+
 test('plain nested JSON remains deterministic across object key order', () => {
   const left = {
     z: [{ y: 2, x: 1 }],
