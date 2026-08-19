@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { access, readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { isAbsolute, relative, resolve, win32 } from 'node:path';
 import test from 'node:test';
 
 const repositoryRoot = resolve(import.meta.dirname, '../..');
@@ -59,9 +59,16 @@ test('red-team target catalog stays bounded, review-aligned, and discoverable', 
     assert.equal('vulnerability' in target, false);
 
     for (const path of target.starting_points) {
-      assert.equal(path.includes('..'), false);
-      assert.equal(path.startsWith('/'), false);
-      await access(resolve(repositoryRoot, path));
+      assert.equal(path.includes('\0'), false);
+      assert.equal(isAbsolute(path), false);
+      assert.equal(win32.isAbsolute(path), false);
+
+      const resolvedPath = resolve(repositoryRoot, path);
+      const repositoryRelativePath = relative(repositoryRoot, resolvedPath);
+      assert.equal(isAbsolute(repositoryRelativePath), false);
+      assert.doesNotMatch(repositoryRelativePath, /^\.\.(?:[\\/]|$)/);
+
+      await access(resolvedPath);
     }
   }
 
