@@ -1,0 +1,63 @@
+{
+  "schema": "axiom-agent-contribution-result.v1",
+  "project": "AXIOM-MESH",
+  "record_status": "example",
+  "contribution_lane": "benchmark-compatibility",
+  "supported_build": "0.12.0-dev.3",
+  "commit_sha": "0000000000000000000000000000000000000000",
+  "proposal_url": null,
+  "pull_request_url": null,
+  "produced_at": "2026-08-19T00:00:00Z",
+  "environment": {
+    "ownership": "contributor-owned",
+    "description": "Example-only local workstation record. Replace every environment field with the exact tested configuration before submission.",
+    "hardware": "Example hardware only",
+    "operating_system": "Example operating system only",
+    "runtime": "Node.js 24.18.0 example"
+  },
+  "methodology": {
+    "summary": "Example-only compatibility result package showing the required structure. This is not an empirical AXIOM-MESH result.",
+    "commands": [
+      "node --test test/machine-principal.test.mjs"
+    ],
+    "repetitions": 1
+  },
+  "evidence": [
+    {
+      "kind": "test-output",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "locator": "local/example-output.txt",
+      "description": "Synthetic placeholder digest and locator for format illustration only; replace with the exact SHA-256 and non-sensitive evidence location for a real submission.",
+      "contains_sensitive_data": false
+    }
+  ],
+  "observations": [
+    "Example only: a real submission should state exactly what was observed without generalizing beyond the tested environment."
+  ],
+  "negative_results": [
+    "No real measurement, security conclusion, compatibility result, or certification is asserted by this example file."
+  ],
+  "limitations": [
+    "This file is a format example only and must not be cited as empirical evidence.",
+    "A real submission must replace the zero commit and evidence digests with exact values and preserve any failures or uncertainty."
+  ],
+  "requested_triage_state": "EVIDENCE_SUBMITTED",
+  "safety": {
+    "environment_authorized": true,
+    "contains_secrets_or_credentials": false,
+    "contains_private_data": false,
+    "third_party_testing_performed": false
+  },
+  "authority_nonclaims": {
+    "security_certification_claimed": false,
+    "production_promotion_claimed": false,
+    "merge_authority_claimed": false,
+    "deployment_authority_claimed": false,
+    "runtime_authority_claimed": false,
+    "protocol_activation_authority_claimed": false,
+    "credential_access_authority_claimed": false,
+    "spending_or_purchase_authority_claimed": false,
+    "shipping_or_hardware_custody_authority_claimed": false,
+    "evidence_scope_limited_to_tested_environment": true
+  }
+}
