@@ -1,0 +1,73 @@
+{
+  "schema": "axiom-agent-protocol-parity-threat-model.v1",
+  "repository": "Zoverions/AXIOM-MESH",
+  "phase": "agent-trust-a9a-protocol-projection-parity",
+  "scope": "Pure native/MCP/A2A-labelled adapter-profile projections into one canonical AXIOM request candidate and A2 requestability snapshot. This is not external wire-protocol conformance and creates no runtime authority.",
+  "core_invariant": "Native AXIOM semantics are authoritative. Protocol profiles and metadata are inert translation/provenance inputs; changing protocol, profile metadata, discovery output, reputation, model brand or remote completion cannot widen authority.",
+  "attack_classes": [
+    {
+      "id": "protocol-switch-authority-laundering",
+      "risks": ["same external-looking action maps to broader AXIOM action", "alternate protocol bypasses deny", "adapter name becomes permission"],
+      "controls": ["every profile maps to canonical AXIOM action IDs", "canonical request digest excludes protocol metadata", "parity comparator fails if canonical request changes", "A2 requestability is re-evaluated after mapping", "protocol_switch_can_expand_authority=false"]
+    },
+    {
+      "id": "adapter-profile-substitution",
+      "risks": ["replace vetted mapping", "rewrite external ID to dangerous action", "present a different profile as equivalent"],
+      "controls": ["content-addressed strict profile", "expected profile digest required for evaluation/discovery/result projection", "profile itself is explicitly non-authorizing"]
+    },
+    {
+      "id": "metadata-poisoning",
+      "risks": ["metadata claims grant/permission", "reputation score treated as permission", "vendor/model brand treated as trust", "discovery flag treated as allow"],
+      "controls": ["metadata is provenance-digested but excluded from canonical request", "adapter_metadata_trusted=false", "reputation_is_permission=false", "discovery_is_permission=false", "strict outer request fields"]
+    },
+    {
+      "id": "identity-spoofing",
+      "risks": ["protocol principal differs from authority manifest", "credential digest substituted"],
+      "controls": ["A2 manifest live reverification", "protocol principal ID must equal A2 principal", "protocol credential digest must equal A2 identity binding"]
+    },
+    {
+      "id": "discovery-as-permission",
+      "risks": ["tools/list or Agent Card equivalent grants authority", "disabled action becomes callable because advertised"],
+      "controls": ["discovery projects only current A2 requestable mappings", "discovery_is_permission=false", "authority_granted=false", "actual request is re-evaluated separately"]
+    },
+    {
+      "id": "remote-result-truth-laundering",
+      "risks": ["remote completion treated as verified local fact", "remote confidence treated as truth/finality", "source identity claim treated as verified"],
+      "controls": ["external result projection preserves source/profile/result digests", "source_identity_verified=false", "verified_local_fact=false", "truth_claimed=false", "finality_claimed=false"]
+    },
+    {
+      "id": "standards-overclaim",
+      "risks": ["laboratory label presented as actual MCP/A2A conformance", "projection parity presented as full runtime authority parity"],
+      "controls": ["protocol_conformance_claimed=false everywhere", "authority_parity_scope=a2-requestability-snapshot-only", "full_runtime_authority_parity_claimed=false"]
+    }
+  ],
+  "known_nonclaims": [
+    "A9a does not implement an MCP server/client wire protocol.",
+    "A9a does not implement an A2A endpoint or Agent Card conformance.",
+    "A9a proves A2 requestability-snapshot parity only, not full live effect authorization parity.",
+    "A9a does not authenticate external result source identity by itself.",
+    "A9a does not grant authority from discovery, reputation, profile metadata or protocol compatibility.",
+    "A9a performs no network effect and modifies no production adapter path."
+  ],
+  "next_gates": [
+    "bind real native Gateway requests into the canonical request candidate",
+    "implement one read-only MCP edge adapter against a pinned external protocol version",
+    "implement one read-only A2A edge adapter against a pinned external protocol version",
+    "run the same live policy/currentness fixtures through each adapter and compare the final authority decision",
+    "preserve remote result provenance through A5/A10 portable receipts without truth promotion"
+  ],
+  "boundaries": {
+    "protocol_conformance_claimed": false,
+    "full_runtime_authority_parity_claimed": false,
+    "discovery_is_permission": false,
+    "reputation_is_permission": false,
+    "adapter_metadata_trusted": false,
+    "remote_result_verified_local_fact": false,
+    "authority_granted": false,
+    "authority_effect": "none",
+    "delegation_effect": "none",
+    "network_effect": false,
+    "filesystem_effect": false,
+    "capability_promotion_enabled": false
+  }
+}

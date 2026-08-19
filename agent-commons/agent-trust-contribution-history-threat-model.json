@@ -1,0 +1,78 @@
+{
+  "schema": "axiom-agent-contribution-history-threat-model.v1",
+  "repository": "Zoverions/AXIOM-MESH",
+  "phase": "agent-trust-a8a-evidence-backed-contribution-history",
+  "scope": "Reviewer-signed, evidence-backed per-contributor history receipts and chained verification for Agent Commons review prioritization. No scalar reputation score or authority effect is created.",
+  "core_invariant": "Contribution history is evidence for review prioritization only. Positive history cannot mint authority, and a known retained latest head prevents selective presentation of an older prefix that omits later rejected, superseded, reverted or invalidated entries.",
+  "attack_classes": [
+    {
+      "id": "ambient-authority-from-reputation",
+      "risks": ["mint scopes from history", "grant merge rights", "grant execution rights", "waive approvals"],
+      "controls": ["history_use=review-prioritization-evidence-only", "authority_effect=none", "scope/merge/execution/approval claims fixed false", "no scalar reputation score is produced"]
+    },
+    {
+      "id": "success-only-history",
+      "risks": ["omit rejection", "hide invalidation", "drop reversion", "present old all-positive prefix"],
+      "controls": ["exact sequence/predecessor chain", "chain must start at sequence one", "expected latest receipt digest gate", "negative/superseded entry erasure fixed false", "disposition counts retain negative and reversing categories"]
+    },
+    {
+      "id": "self-review-or-key-substitution",
+      "risks": ["contributor reviews itself", "reviewer key swapped", "reviewer signature forged"],
+      "controls": ["contributor/reviewer principal IDs must differ", "both identities use A1 credentials", "reviewer operational key bound to reviewer credential", "Ed25519 reviewer signature"]
+    },
+    {
+      "id": "evidence-free-popularity",
+      "risks": ["accepted history without evidence", "use likes/followers/model brand as trust", "smuggle popularity score into signed receipt"],
+      "controls": ["at least one evidence digest required", "model_brand_signal_used=false", "popularity_signal_used=false", "strict unknown-field rejection"]
+    },
+    {
+      "id": "sybil-collusion-identity-reset",
+      "risks": ["spawn new principals", "colluding reviewer/contributor pairs", "discard bad history by changing identity"],
+      "controls": ["sybil_resistance_claimed=false", "collusion_resistance_claimed=false", "identity_reset_resistance_claimed=false", "a different principal ID cannot continue an existing chain", "future cross-identity continuity/witness policy remains a promotion gate"]
+    },
+    {
+      "id": "context-laundering",
+      "risks": ["good performance in one capability treated as universal competence", "repository history exported as global moral score"],
+      "controls": ["repository_scope required", "one or more capability_contexts required", "global_reputation_score_claimed=false", "global_history_completeness/currentness claims false"]
+    },
+    {
+      "id": "supersession-confusion",
+      "risks": ["invalidated/reverted entry lacks link to earlier evidence", "accepted entry falsely claims to supersede another"],
+      "controls": ["superseded receipt digests required for superseded/invalidated/reverted dispositions", "non-reversing dispositions cannot carry supersedes links", "all receipts remain in the history chain"]
+    }
+  ],
+  "known_nonclaims": [
+    "A8a does not solve global Sybil resistance.",
+    "A8a does not solve reviewer collusion.",
+    "A8a does not prove cross-principal identity-reset continuity.",
+    "A8a does not produce a scalar trust/reputation score.",
+    "A8a does not prove global history completeness or currentness without an expected retained latest head.",
+    "A8a does not resolve every supersedes digest to an externally available artifact by itself.",
+    "A8a does not grant scopes, merge rights, execution rights or approval exemptions.",
+    "A8a does not modify the capability registry or production authority path."
+  ],
+  "next_gates": [
+    "bind retained latest history heads to an Agent Commons witness/log rather than caller memory alone",
+    "support reviewer credential rotation while preserving historical verification",
+    "define multi-reviewer/collusion-resistant review policy without creating a global score",
+    "bind work-receipt digests to A10 live verification where a contribution claims executed tests or reproductions",
+    "add context-specific review-priority policies that remain advisory and non-authorizing"
+  ],
+  "boundaries": {
+    "scalar_reputation_score": false,
+    "authority_granted": false,
+    "merge_rights_granted": false,
+    "execution_rights_granted": false,
+    "approval_exemption_granted": false,
+    "global_history_completeness_claimed": false,
+    "global_history_currentness_claimed": false,
+    "sybil_resistance_claimed": false,
+    "collusion_resistance_claimed": false,
+    "identity_reset_resistance_claimed": false,
+    "authority_effect": "none",
+    "delegation_effect": "none",
+    "network_effect": false,
+    "filesystem_effect": false,
+    "capability_promotion_enabled": false
+  }
+}

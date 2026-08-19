@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom-mesh.dev/schemas/axiom-agent-trust-promotion-ledger.v1.json",
+  "title": "AXIOM Agent Trust Promotion Ledger v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "protocol",
+    "authoritative_registry_path",
+    "authoritative_registry_mutated_by_laboratory",
+    "documentation_alone_satisfies_promotion",
+    "protected_ci_required",
+    "independent_review_required",
+    "exact_registry_evidence_binding_required",
+    "post_registry_change_ci_required",
+    "production_marketing_claims_allowed",
+    "promotion_runbook",
+    "entries"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-agent-trust-promotion-ledger.v1" },
+    "protocol": { "const": "agent-trust-protocol-v1" },
+    "authoritative_registry_path": { "const": "mesh/config/capabilities.json" },
+    "authoritative_registry_mutated_by_laboratory": { "const": false },
+    "documentation_alone_satisfies_promotion": { "const": false },
+    "protected_ci_required": { "const": true },
+    "independent_review_required": { "const": true },
+    "exact_registry_evidence_binding_required": { "const": true },
+    "post_registry_change_ci_required": { "const": true },
+    "production_marketing_claims_allowed": { "type": "boolean" },
+    "promotion_runbook": { "type": "string", "minLength": 1, "maxLength": 320 },
+    "entries": {
+      "type": "array",
+      "minItems": 10,
+      "maxItems": 10,
+      "prefixItems": [
+        { "$ref": "#/$defs/a1" },
+        { "$ref": "#/$defs/a2" },
+        { "$ref": "#/$defs/a3" },
+        { "$ref": "#/$defs/a4" },
+        { "$ref": "#/$defs/a5" },
+        { "$ref": "#/$defs/a6" },
+        { "$ref": "#/$defs/a7" },
+        { "$ref": "#/$defs/a8" },
+        { "$ref": "#/$defs/a9" },
+        { "$ref": "#/$defs/a10" }
+      ],
+      "items": false
+    }
+  },
+  "$defs": {
+    "pathArray": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 320 }
+    },
+    "nonEmptyPathArray": {
+      "allOf": [
+        { "$ref": "#/$defs/pathArray" },
+        { "minItems": 1 }
+      ]
+    },
+    "blockers": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 3, "maxLength": 96, "pattern": "^[a-z0-9][a-z0-9.-]+$" }
+    },
+    "protectedCi": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["clean_kernel_run_id", "windows_run_id", "conclusion"],
+      "properties": {
+        "clean_kernel_run_id": { "type": "integer", "minimum": 1 },
+        "windows_run_id": { "type": "integer", "minimum": 1 },
+        "conclusion": { "const": "success" }
+      }
+    },
+    "entryBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gate", "capability_id", "source_pr", "source_head", "composition_state", "laboratory_state",
+        "implementation_paths", "strict_validation_paths", "test_paths", "threat_model_paths", "runbook_paths",
+        "verifier_or_conformance_paths", "protected_ci", "readiness_recorded", "independent_review_complete",
+        "independent_review_evidence_paths", "authoritative_registry_present",
+        "exact_registry_evidence_binding_complete", "production_claims_allowed", "promotion_ready", "blockers"
+      ],
+      "properties": {
+        "gate": { "type": "string" },
+        "capability_id": { "type": "string", "pattern": "^[a-z][a-z0-9.-]+$" },
+        "source_pr": { "type": "integer", "minimum": 1 },
+        "source_head": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "composition_state": { "enum": ["in-candidate-tree", "separate-branch"] },
+        "laboratory_state": { "enum": ["green", "partial-green", "separate-branch-green"] },
+        "implementation_paths": { "$ref": "#/$defs/pathArray" },
+        "strict_validation_paths": { "$ref": "#/$defs/pathArray" },
+        "test_paths": { "$ref": "#/$defs/pathArray" },
+        "threat_model_paths": { "$ref": "#/$defs/pathArray" },
+        "runbook_paths": { "$ref": "#/$defs/nonEmptyPathArray" },
+        "verifier_or_conformance_paths": { "$ref": "#/$defs/pathArray" },
+        "protected_ci": { "$ref": "#/$defs/protectedCi" },
+        "readiness_recorded": { "type": "boolean" },
+        "independent_review_complete": { "type": "boolean" },
+        "independent_review_evidence_paths": { "$ref": "#/$defs/pathArray" },
+        "authoritative_registry_present": { "type": "boolean" },
+        "exact_registry_evidence_binding_complete": { "type": "boolean" },
+        "production_claims_allowed": { "type": "boolean" },
+        "promotion_ready": { "type": "boolean" },
+        "blockers": { "$ref": "#/$defs/blockers" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "promotion_ready": { "const": true } }, "required": ["promotion_ready"] },
+          "then": {
+            "properties": {
+              "composition_state": { "const": "in-candidate-tree" },
+              "laboratory_state": { "const": "green" },
+              "readiness_recorded": { "const": true },
+              "independent_review_complete": { "const": true },
+              "independent_review_evidence_paths": { "$ref": "#/$defs/nonEmptyPathArray" },
+              "authoritative_registry_present": { "const": true },
+              "exact_registry_evidence_binding_complete": { "const": true },
+              "production_claims_allowed": { "const": true },
+              "blockers": { "maxItems": 0 }
+            }
+          },
+          "else": {
+            "properties": {
+              "production_claims_allowed": { "const": false },
+              "blockers": { "minItems": 1 }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "composition_state": { "const": "in-candidate-tree" } }, "required": ["composition_state"] },
+          "then": {
+            "properties": {
+              "implementation_paths": { "$ref": "#/$defs/nonEmptyPathArray" },
+              "strict_validation_paths": { "$ref": "#/$defs/nonEmptyPathArray" },
+              "test_paths": { "$ref": "#/$defs/nonEmptyPathArray" },
+              "threat_model_paths": { "$ref": "#/$defs/nonEmptyPathArray" },
+              "verifier_or_conformance_paths": { "$ref": "#/$defs/nonEmptyPathArray" }
+            }
+          }
+        }
+      ]
+    },
+    "a1": { "allOf": [{ "$ref": "#/$defs/entryBase" }, { "properties": { "gate": { "const": "A1" } } }] },
+    "a2": { "allOf": [{ "$ref": "#/$defs/entryBase" }, { "properties": { "gate": { "const": "A2" } } }] },
+    "a3": { "allOf": [{ "$ref": "#/$defs/entryBase" }, { "properties": { "gate": { "const": "A3" } } }] },
+    "a4": { "allOf": [{ "$ref": "#/$defs/entryBase" }, { "properties": { "gate": { "const": "A4" } } }] },
+    "a5": { "allOf": [{ "$ref": "#/$defs/entryBase" }, { "properties": { "gate": { "const": "A5" } } }] },
+    "a6": { "allOf": [{ "$ref": "#/$defs/entryBase" }, { "properties": { "gate": { "const": "A6" } } }] },
+    "a7": { "allOf": [{ "$ref": "#/$defs/entryBase" }, { "properties": { "gate": { "const": "A7" } } }] },
+    "a8": { "allOf": [{ "$ref": "#/$defs/entryBase" }, { "properties": { "gate": { "const": "A8" } } }] },
+    "a9": { "allOf": [{ "$ref": "#/$defs/entryBase" }, { "properties": { "gate": { "const": "A9" } } }] },
+    "a10": { "allOf": [{ "$ref": "#/$defs/entryBase" }, { "properties": { "gate": { "const": "A10" } } }] }
+  }
+}

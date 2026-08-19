@@ -1,0 +1,73 @@
+{
+  "schema": "axiom-agent-currentness-checkpoint-threat-model.v1",
+  "repository": "Zoverions/AXIOM-MESH",
+  "phase": "agent-trust-a6a-retained-currentness-checkpoint",
+  "scope": "Signed retained checkpoints over exact A1 issuer credential-history and revocation evidence, plus a bounded non-authorizing effect-boundary freshness check. No global currentness oracle or runtime effect admission is created.",
+  "core_invariant": "Known-active under an exact retained issuer-evidence set is not global currentness and is not authority. A stale, truncated, rewritten, revoked, expired, not-yet-valid, signer-substituted or unexpected retained head fails closed for a new-effect currentness check.",
+  "attack_classes": [
+    {
+      "id": "credential-history-rollback",
+      "risks": ["omit a rotated credential", "resurrect a retired key", "rewrite credential order", "present an older retained head"],
+      "controls": ["ordered credential digest vector", "exact credential-history digest", "checkpoint predecessor chain", "credential history must extend by prefix", "expected latest checkpoint digest gate"]
+    },
+    {
+      "id": "revocation-truncation",
+      "risks": ["drop compromise evidence", "present pre-revocation checkpoint", "substitute unrelated revocation", "ambiguous duplicate revocations"],
+      "controls": ["exact sorted revocation digest set", "revocation-set digest", "prior revocations must remain a subset of later checkpoints", "revocation must bind a credential in supplied history", "v1 rejects multiple revocations for one credential"]
+    },
+    {
+      "id": "observer-substitution",
+      "risks": ["forge retained head", "replace observer key", "alter currentness status after signing"],
+      "controls": ["Ed25519 observer signature", "observer public-key digest", "statement digest", "content-addressed checkpoint digest"]
+    },
+    {
+      "id": "currentness-overclaim",
+      "risks": ["known-active presented as globally current", "checkpoint presented as effect authorization", "multiple principals presented as a proven delegation chain"],
+      "controls": ["evidence_scope=supplied-issuer-evidence-only", "global_currentness_claimed=false", "effect_admission_authorized=false", "ancestor_relationship_verified=false", "relationship_between_principals_claimed=false", "authority_effect=none", "delegation_effect=none"]
+    },
+    {
+      "id": "stale-late-check",
+      "risks": ["reuse an old active observation long after it was made", "evaluate currentness after effect execution", "configure effectively unbounded freshness"],
+      "controls": ["effect time cannot precede checkpoint evaluation", "caller freshness requirement is hard-capped at 60 seconds in A6a", "currentness is re-evaluated at the proposed effect timestamp against the exact checkpoint-bound evidence set"]
+    },
+    {
+      "id": "routine-rotation-history-breakage",
+      "risks": ["treat retirement as retroactive invalidation", "make historical evidence unverifiable after key rotation"],
+      "controls": ["historical checkpoints remain independently verifiable against their exact historical evidence", "latest-head expectation is a separate current-use check", "credential history is append-only by digest prefix"]
+    },
+    {
+      "id": "descendant-currentness-confusion",
+      "risks": ["assume checking several principals proves their delegation relation", "allow one active principal to mask another revoked principal"],
+      "controls": ["multi-principal currentness set is deny-dominant", "duplicate principals fail", "relationship_between_principals_claimed=false", "A3b ancestor relationship remains a separate missing prerequisite"]
+    }
+  ],
+  "known_nonclaims": [
+    "A6a does not provide a global revocation/currentness oracle.",
+    "A6a does not prove a delegation or ancestor relationship between principals.",
+    "A6a does not authorize an effect, handoff, grant or delegation.",
+    "A6a does not prove consume-before-effect occurred.",
+    "A6a does not itself integrate with the accepted Gateway/Hypervisor/Sandbox/Grid effect boundary.",
+    "A6a does not solve A5b effect-specific receipt composition with the separate #1137 laboratory stack.",
+    "A6a does not modify the capability registry or supported production claims."
+  ],
+  "next_gates": [
+    "bind retained checkpoint heads to an independently operated currentness/revocation source or equivalent witness policy",
+    "bind A3b delegation ancestors when an authority-bearing delegation contract exists",
+    "check the full verified ancestor set as late as safely possible in an actual consume-before-effect path",
+    "retain signed latest heads across restart so rollback cannot be hidden by local-state loss",
+    "compose A6 currentness evidence into A5 portable receipts as evidence actually consulted"
+  ],
+  "boundaries": {
+    "global_currentness_claimed": false,
+    "ancestor_relationship_verified": false,
+    "effect_admission_authorized": false,
+    "consume_before_effect_observed": false,
+    "authority_effect": "none",
+    "delegation_effect": "none",
+    "network_effect": false,
+    "filesystem_effect": false,
+    "credential_access": false,
+    "secret_access": false,
+    "capability_promotion_enabled": false
+  }
+}

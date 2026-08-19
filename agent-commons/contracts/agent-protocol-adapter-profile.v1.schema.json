@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom-mesh.dev/schemas/axiom-agent-protocol-adapter-profile.v1.json",
+  "title": "AXIOM Agent Protocol Adapter Profile v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "profile_id", "protocol", "entries", "semantics", "profile_digest"],
+  "properties": {
+    "schema": { "const": "axiom-agent-protocol-adapter-profile.v1" },
+    "profile_id": { "$ref": "#/$defs/id" },
+    "protocol": { "enum": ["native", "mcp", "a2a"] },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["external_id", "axiom_action"],
+        "properties": {
+          "external_id": { "type": "string", "minLength": 1, "maxLength": 192, "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,191}$" },
+          "axiom_action": { "type": "string", "minLength": 2, "maxLength": 128, "pattern": "^[a-z][a-z0-9._:-]{1,127}$" }
+        }
+      }
+    },
+    "semantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["native_axiom_semantics_authoritative", "profile_is_authority", "discovery_is_permission", "adapter_metadata_trusted", "protocol_switch_can_expand_authority", "protocol_conformance_claimed", "authority_effect", "delegation_effect"],
+      "properties": {
+        "native_axiom_semantics_authoritative": { "const": true },
+        "profile_is_authority": { "const": false },
+        "discovery_is_permission": { "const": false },
+        "adapter_metadata_trusted": { "const": false },
+        "protocol_switch_can_expand_authority": { "const": false },
+        "protocol_conformance_claimed": { "const": false },
+        "authority_effect": { "const": "none" },
+        "delegation_effect": { "const": "none" }
+      }
+    },
+    "profile_digest": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 192, "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$" },
+    "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}
