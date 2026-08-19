@@ -97,6 +97,10 @@ test('agent contribution result package is evidence-only, exact-context, and dis
   );
   assert.ok(submittedGuard, 'submitted packages must have a dedicated guard');
   assert.equal(submittedGuard.then.properties.commit_sha.not.pattern, '^0{40}$');
+  assert.equal(
+    submittedGuard.then.properties.evidence.items.properties.sha256.not.pattern,
+    '^0{64}$'
+  );
 
   assert.equal(example.schema, 'axiom-agent-contribution-result.v1');
   assert.equal(example.record_status, 'example');
@@ -109,6 +113,7 @@ test('agent contribution result package is evidence-only, exact-context, and dis
   assert.ok(example.limitations.some(item => /format example only/i.test(item)));
   assert.ok(example.negative_results.some(item => /No real measurement/i.test(item)));
   assert.ok(example.evidence.every(item => item.contains_sensitive_data === false));
+  assert.ok(example.evidence.every(item => item.sha256 === '0'.repeat(64)));
   for (const key of falseAuthorityClaimKeys) {
     assert.equal(example.authority_nonclaims[key], false, `example ${key} must remain false`);
   }
