@@ -76,6 +76,8 @@ test('agent contribution lanes stay bounded, discoverable, and authority-safe', 
 
   const hardwareLane = lanes.lanes.find((lane) => lane.id === 'hardware-validation');
   const infrastructureLane = lanes.lanes.find((lane) => lane.id === 'infrastructure-validation');
+  assert.ok(hardwareLane, 'hardware-validation lane must exist');
+  assert.ok(infrastructureLane, 'infrastructure-validation lane must exist');
   assert.match(hardwareLane.purpose, /contributor-owned or explicitly disposable hardware/i);
   assert.match(hardwareLane.default_effect_boundary, /no purchasing, shipping, credential provisioning, or production deployment authority/i);
   assert.match(infrastructureLane.purpose, /contributor-owned or explicitly disposable infrastructure/i);
