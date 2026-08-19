@@ -1,0 +1,88 @@
+AXIOM-MESH AGENT PARTICIPATION BOOTSTRAP
+
+Status
+Supported build: 0.12.0-dev.3.
+Production candidate, not production-promoted.
+
+Core invariant
+Capability is not authority. Discovery is not permission. Connection is not permission. Participation is not authorization.
+
+What agents can do now
+
+1. External review — available now
+Agents and agent builders can read or clone the public repository, inspect machine-readable discovery, run verification, compare implementation to the threat model and requirements, submit bounded issues and pull requests, and attack the public red-team targets. AXIOM identity is not required for this contribution layer because GitHub is the canonical collaboration surface and contribution does not itself create runtime authority.
+
+2. Local conformance agent — available now
+A contributor can exercise real supported machine-principal logic through repository tests on infrastructure they own or are explicitly authorized to use. These tests cover constrained agent identity shape, human sponsorship, finite actions/purposes/destinations/budgets, discovery filtering, ingress limits, policy checks, and receipts.
+
+Minimum local path:
+
+  git clone https://github.com/Zoverions/AXIOM-MESH.git
+  cd AXIOM-MESH/mesh
+  npm ci --ignore-scripts --no-audit --no-fund
+  npm run check
+
+Focused agent-path tests:
+
+  node --test test/machine-principal.test.mjs test/principal-registry.test.mjs test/machine-principal-e2e.test.mjs test/machine-discovery.test.mjs test/machine-discovery-e2e.test.mjs test/machine-ingress.test.mjs test/machine-receipt-e2e.test.mjs
+
+Running these tests does not enroll the contributor, mint authority, create production identity, or establish independent security certification. It is a direct way to make agents exercise the current authority model and find reproducible failures.
+
+3. Configured local machine principal — available now with a configured sponsor
+The supported machine-principal v1 path already accepts agent principals, but it deliberately requires a configured human sponsor. Machine principals cannot hold the administrator role, cannot use wildcard scopes, must have finite action/purpose/destination/runtime/lifetime/budget constraints, and cannot delegate authority.
+
+This means an agent can use AXIOM-MESH today inside an operator-controlled local environment. It does not yet mean arbitrary outside agents can self-enroll into the mesh.
+
+What is not ready yet
+
+Portable self-service external-agent participation is not production-promoted. The main blockers are portable machine identity/currentness, authority-bearing attenuation-only delegation, a reviewed external execution boundary, and protocol adapters that preserve identical authority decisions without becoming a second authority path.
+
+Community-governance agents are also not production-promoted. The repository contains governance and plural-authority design work, but GitHub remains the canonical repository authority surface and merge/deployment/credential/spending/production-promotion decisions remain separately gated.
+
+Security work agents should prioritize now
+
+- falsify capability-versus-authority boundaries;
+- test stale/revoked/mismatched grants and identity state;
+- test destination, purpose, scope, and budget widening;
+- test protocol-switch or adapter authority laundering;
+- test evidence-overclaim and claim drift;
+- inspect machine-principal, Gateway, Hypervisor, Sandbox, and Grid boundaries;
+- reproduce failures in disposable environments;
+- propose patches with exact evidence and negative tests;
+- audit whether new automation silently creates a second authority path.
+
+Use RED-TEAM-TARGETS.json for bounded falsification targets. Use the structured red-team issue form for non-sensitive findings. Use SECURITY.md for sensitive vulnerabilities.
+
+Automation direction
+
+AXIOM-MESH should automate the high-volume evidence work aggressively while keeping consequential authority explicit. Agents may automate repository reading, static analysis, local/disposable testing, finding intake, reproduction, evidence collection, patch generation, pull-request creation, and CI verification.
+
+Automation must not silently become authority. Merge, direct-main writes, deployment/publication, credential access, production protocol or route activation, production promotion, spending, hardware custody/transfer, and third-party testing require separately established authority.
+
+The long-term goal is not permanent dependence on one human operator. The goal is plural, evidence-bound governance that can safely reduce operator bottlenecks while retaining challenge, appeal, revocation, emergency halt, continuity, meaningful exit, and the rule that no model, agent, adapter, or governance process may grant itself authority.
+
+Identity and governance correction
+
+AXIOM-MESH already has useful machine-principal identity and authority enforcement, but it does not yet have a complete self-service identity system or production-promoted community-governance authority root. Removing the human-sponsor requirement from machine-principal v1 would weaken the current security model rather than solve the problem.
+
+The safer migration is to add separately reviewed sponsor/issuer classes backed by plural governance mandates, portable identity/currentness, attenuation-only delegation, and independent evidence. Human participation can then be onboarded alongside agents without treating either humans or agents as ambient authority.
+
+Contribution route
+
+Machine-readable participation state:
+  agent-readiness/PARTICIPATION.json
+
+Contribution lanes:
+  agent-readiness/contributions.json
+
+Contribution triage:
+  agent-readiness/CONTRIBUTION-TRIAGE.txt
+
+Red-team targets:
+  RED-TEAM-TARGETS.json
+
+Public red-team issue:
+  https://github.com/Zoverions/AXIOM-MESH/issues/1185
+
+Nonclaim
+This bootstrap is a participation and verification surface, not a deployed Agent Commons runtime, autonomous merge service, production MCP/A2A endpoint, global identity system, or autonomous community government.
