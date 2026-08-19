@@ -36,6 +36,7 @@
     "red_team_targets": "RED-TEAM-TARGETS.json",
     "red_team_triage": "RED-TEAM-TRIAGE.txt",
     "contribution_lanes": "agent-readiness/contributions.json",
+    "contribution_triage": "agent-readiness/CONTRIBUTION-TRIAGE.txt",
     "contribution_proposal_template": ".github/ISSUE_TEMPLATE/agent-contribution-proposal.yml",
     "contribution_new_issue_url": "https://github.com/Zoverions/AXIOM-MESH/issues/new?template=agent-contribution-proposal.yml",
     "discovery_identity": "zoverions.agent",
