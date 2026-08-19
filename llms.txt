@@ -6,7 +6,7 @@
 
 - [README](https://github.com/Zoverions/AXIOM-MESH/blob/main/README.md): supported build, architecture, claims, non-claims, setup, and verification.
 - [Agent entry](https://github.com/Zoverions/AXIOM-MESH/blob/main/AGENT-ENTRY.md): shortest agent-facing explanation of capability versus authority.
-- [Agent instructions](https://github.com/Zoverions/AXIOM-MESH/blob/main/AGENTS.md): installation, configuration, usage, contribution authority, and machine-facing operating rules.
+- [Agent instructions](https://github.com/Zoverions/AXIOM-MESH/blob/main/.cursorrules): installation, configuration, usage, contribution authority, and machine-facing operating rules.
 - [Contributing](https://github.com/Zoverions/AXIOM-MESH/blob/main/CONTRIBUTING.md): contribution and repository-effect boundaries.
 - [Security policy](https://github.com/Zoverions/AXIOM-MESH/blob/main/SECURITY.md): disclosure and security-reporting process.
 
@@ -31,9 +31,9 @@
 - [Red-team challenge](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/community/RED-TEAM-CHALLENGE.md): repository-scoped authority-boundary attacks and reporting rules.
 - [Books and architecture](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/community/BOOKS-AND-ARCHITECTURE.md): conceptual provenance separated from implementation evidence.
 - [Agent identity](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/community/AGENT-IDENTITY.md): public discovery identity and its explicit non-authority boundary.
-- [Agent-readiness workstream](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/community/AGENT-READINESS-AND-DISCOVERY.md): machine-discovery goals, checks, deployment boundary, and promotion criteria.
+- [Agent-readiness plan](https://github.com/Zoverions/AXIOM-MESH/blob/main/agent-readiness/PLAN.txt): first-party machine-discovery goals, checks, deployment boundary, and promotion criteria.
 
 ## Optional
 
-- [Repository sitemap](https://github.com/Zoverions/AXIOM-MESH/blob/main/sitemap.md): compact map of the machine-readable and human-readable surfaces.
 - [Expanded LLM context](https://raw.githubusercontent.com/Zoverions/AXIOM-MESH/main/llms-full.txt): larger text-first context bundle.
+- [Agent-readiness source](https://github.com/Zoverions/AXIOM-MESH/tree/main/agent-readiness): deterministic static discovery builder and fail-closed publication configuration.
