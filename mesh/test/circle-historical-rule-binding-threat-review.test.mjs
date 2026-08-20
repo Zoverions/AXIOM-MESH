@@ -12,6 +12,7 @@ const EXPECTED_THREATS = new Set([
   'historical-record-substitution-or-rewrite',
   'ledger-reordering-truncation-or-fork',
   'stale-invitation-admission-after-charter-change',
+  'one-use-invitation-replay',
   'mid-proposal-rule-switching',
   'mutable-projection-misrepresented-as-original-event',
   'basis-binding-substitution',
@@ -50,12 +51,16 @@ test('every historical binding threat has multiple mitigations and an explicit r
   }
 });
 
-test('stale invitations and mid-proposal rule changes retain fail-closed mitigations', async () => {
+test('stale invitations, replay, and mid-proposal rule changes retain fail-closed mitigations', async () => {
   const review = await loadReview();
   const stale = review.threats.find(threat => threat.id === 'stale-invitation-admission-after-charter-change');
+  const replay = review.threats.find(threat => threat.id === 'one-use-invitation-replay');
   const switching = review.threats.find(threat => threat.id === 'mid-proposal-rule-switching');
   assert.ok(stale.mitigations.includes('membership-charter-resolved-at-acceptance'));
   assert.ok(stale.mitigations.includes('invitation-charter-must-still-equal-acceptance-charter'));
+  assert.ok(replay.mitigations.includes('invitation-basis-consumption-tracked-across-ledger'));
+  assert.ok(replay.mitigations.includes('second-membership-from-same-invitation-basis-rejected'));
+  assert.match(replay.residual_limit, /truncated or alternate unanchored ledger omitted an earlier consumption/);
   assert.ok(switching.mitigations.includes('proposal-freezes-charter-at-creation'));
   assert.ok(switching.mitigations.includes('decision-inherits-proposal-frozen-charter'));
 });
