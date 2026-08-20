@@ -1,0 +1,49 @@
+{
+  "schema": "axiom-circle-multiprincipal-simulation-policy.v0",
+  "version": 0,
+  "status": "inert-multiprincipal-simulation",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "minimum_distinct_active_principals": 2,
+  "supported_modes": [
+    "deliberate",
+    "evidence",
+    "vote"
+  ],
+  "vote_choices": [
+    "approve",
+    "reject",
+    "abstain"
+  ],
+  "requirements": {
+    "active_membership_required": true,
+    "one_active_membership_per_principal_required": true,
+    "active_membership_exit_history_prohibited": true,
+    "action_after_membership_activation_required": true,
+    "role_declared_mode_required": true,
+    "one_vote_per_membership_per_proposal": true,
+    "exact_charter_digest_required": true,
+    "exact_circle_id_required": true,
+    "chronological_actions_required": true,
+    "open_proposal_required": true,
+    "proposal_window_required": true,
+    "evidence_refs_are_non_authorizing": true,
+    "participant_identity_is_local_principal_id": true
+  },
+  "output": {
+    "schema": "axiom-circle-simulation-transcript.v0",
+    "policy_digest_required": true,
+    "input_package_digest_required": true,
+    "action_sequence_digest_required": true,
+    "charter_digest_required": true,
+    "participant_principals_required": true,
+    "finality": "simulation-only",
+    "may_mutate_circle": false,
+    "may_mint_runtime_authority": false,
+    "may_create_grid_event": false,
+    "may_create_gateway_action": false,
+    "authority_effect": "none",
+    "network_effect": "none"
+  }
+}
