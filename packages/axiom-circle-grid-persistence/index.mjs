@@ -292,7 +292,7 @@ export function validateCircleGridPersistenceCandidate(policy, candidate) {
     || !nullableDigest(candidate.expected_prior_circle_head_digest)
     || candidate.resulting_circle_head_digest !== candidate.binding_digest
     || !DIGEST.test(candidate.payload_digest)
-    || !DIGEST.test(candidate.policy_digest)
+    || candidate.policy_digest !== digestObject(policy)
     || !DIGEST.test(candidate.historical_policy_digest)
     || !DIGEST.test(candidate.charter_policy_digest)
     || !DIGEST.test(candidate.historical_ledger_prefix_digest)
