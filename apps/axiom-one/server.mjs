@@ -19,6 +19,10 @@ const STATIC_ASSETS = new Map([
   ['/index.html', asset('index.html', 'text/html; charset=utf-8')],
   ['/app.mjs', asset('app.mjs', 'text/javascript; charset=utf-8')],
   ['/presentation.mjs', asset('presentation.mjs', 'text/javascript; charset=utf-8')],
+  ['/social-presentation.mjs', {
+    path: join(REPOSITORY_ROOT, 'packages', 'axiom-one-social-presentation', 'index.mjs'),
+    contentType: 'text/javascript; charset=utf-8'
+  }],
   ['/human-contract.json', asset('human-contract.json', 'application/json; charset=utf-8')],
   ['/styles.css', asset('styles.css', 'text/css; charset=utf-8')],
   ['/manifest.webmanifest', asset('manifest.webmanifest', 'application/manifest+json')],
@@ -149,10 +153,7 @@ async function proxyGateway({ req, res, url, gatewayOrigin, fetchImpl }) {
   const traceId = validTrace(req.headers['x-trace-id'])
     ? req.headers['x-trace-id']
     : `preview_${crypto.randomUUID()}`;
-  if (
-    `${url.pathname}${url.search}`.length
-    > gatewayContract.limits.maximum_target_length
-  ) {
+  if (`${url.pathname}${url.search}`.length > gatewayContract.limits.maximum_target_length) {
     sendApiError(res, 400, 'validation_error', 'Gateway target exceeds the preview length limit', traceId);
     return;
   }
@@ -187,10 +188,7 @@ async function proxyGateway({ req, res, url, gatewayOrigin, fetchImpl }) {
       sendApiError(res, 413, 'body_too_large', 'Request exceeds the preview byte limit', traceId);
       return;
     }
-  } else if (
-    req.headers['transfer-encoding'] !== undefined
-    || Number(req.headers['content-length'] ?? 0) > 0
-  ) {
+  } else if (req.headers['transfer-encoding'] !== undefined || Number(req.headers['content-length'] ?? 0) > 0) {
     sendApiError(res, 400, 'validation_error', 'Read routes do not accept a body', traceId);
     return;
   }
@@ -228,12 +226,8 @@ async function proxyGateway({ req, res, url, gatewayOrigin, fetchImpl }) {
     'content-type': upstream.headers.get('content-type') ?? 'application/octet-stream',
     'content-length': String(responseBody.length),
     'cache-control': 'no-store',
-    ...(upstream.headers.get('x-trace-id')
-      ? { 'x-trace-id': upstream.headers.get('x-trace-id') }
-      : { 'x-trace-id': traceId }),
-    ...(upstream.headers.get('retry-after')
-      ? { 'retry-after': upstream.headers.get('retry-after') }
-      : {})
+    ...(upstream.headers.get('x-trace-id') ? { 'x-trace-id': upstream.headers.get('x-trace-id') } : { 'x-trace-id': traceId }),
+    ...(upstream.headers.get('retry-after') ? { 'retry-after': upstream.headers.get('retry-after') } : {})
   };
   res.writeHead(upstream.status, securityHeaders(responseHeaders));
   res.end(responseBody);
@@ -329,10 +323,7 @@ function mediaType(value = '') {
 }
 
 function sendApiError(res, status, code, message, traceId) {
-  sendJson(res, status, {
-    error: { code, message },
-    trace_id: traceId
-  });
+  sendJson(res, status, { error: { code, message }, trace_id: traceId });
 }
 
 function sendJson(res, status, value, head = false) {
@@ -391,8 +382,7 @@ async function main() {
   const port = integerEnvironment('AXIOM_ONE_PORT', appPolicy.network.default_port);
   const preview = await startAxiomOnePreview({
     port,
-    gatewayOrigin: process.env.AXIOM_GATEWAY_ORIGIN
-      ?? appPolicy.network.default_gateway_origin
+    gatewayOrigin: process.env.AXIOM_GATEWAY_ORIGIN ?? appPolicy.network.default_gateway_origin
   });
   process.stdout.write(`${JSON.stringify({
     message: 'AXIOM One local preview ready',
