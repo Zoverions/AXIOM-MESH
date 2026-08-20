@@ -66,6 +66,24 @@ Start with [the community red-team challenge](docs/community/RED-TEAM-CHALLENGE.
 
 The useful result is not praise. It is a reproducible case where the implementation permits something the authority model says should be denied, or where the model itself is underspecified.
 
+## If you want to run an independent node
+
+Use [Community Testnet v0](docs/community/COMMUNITY-TESTNET-V0.md).
+
+Testnet v0 recruits independent operators across Linux, Windows, macOS/Apple Silicon, ARM, small hardware, home servers, and disposable cloud environments. Each operator pins an exact commit, runs a bounded lane, and returns evidence through the existing contribution-result contract or the Community Testnet issue form.
+
+The current testnet is deliberately **not** federation or consensus. Participating machines do not receive shared AXIOM authority and do not execute work for one another. The goal is heterogeneous reproducibility first: exact revision, exact environment, exact method, exact result, and explicit limitations.
+
+Useful roles are:
+
+- **Operator** — provides an independently controlled environment and reproducibility evidence;
+- **Breaker** — tries to falsify a named authority/security invariant in an authorized environment;
+- **Builder** — proposes a narrow fix or test after a gap is reproducible.
+
+A role label, successful run, community identity, or reputation remains evidence about participation, not authority.
+
+For institutional/security/community outreach, see [Institutional and Community Outreach](docs/community/INSTITUTIONAL-OUTREACH.md).
+
 ## If you want the philosophy behind the code
 
 Read [Books and Architecture](docs/community/BOOKS-AND-ARCHITECTURE.md).
@@ -91,6 +109,8 @@ It does **not** grant permission, execute actions, or certify AXIOM-MESH. It giv
 Do not infer more from this page than the repository supports.
 
 The current build does **not** claim a live public deployment, a completed independent security approval, production certification of external runtimes, an MCP/A2A production endpoint, BFT consensus, remote execution, merge authority, or proof that cryptographic evidence establishes arbitrary external-world truth.
+
+Community Testnet v0 does not change those non-claims. It is an evidence/reproducibility programme over independently controlled environments, not a production network.
 
 The design principle is ambitious. The deployment claim is deliberately not.
 
