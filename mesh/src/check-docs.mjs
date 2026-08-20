@@ -17,6 +17,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   '.github/SECURITY.md',
   'CONSTITUTION.md',
   'CONTRIBUTING.md',
+  'AGENTS.md',
   'AGENT-ENTRY.md',
   'docs/README.md',
   'docs/MASTER-TODO.md',
@@ -35,6 +36,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/community/INSTITUTIONAL-OUTREACH.md',
   'docs/community/LAUNCH-PACK.md',
   'docs/community/RED-TEAM-CHALLENGE.md',
+  'docs/architecture/AGENT-COMMONS.md',
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md',
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md',
   'docs/architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md',
@@ -99,6 +101,13 @@ const REQUIRED_CONTENT = Object.freeze({
     'production candidate, not production-promoted',
     'Gateway -> Hypervisor -> Sandbox -> Grid'
   ],
+  'AGENTS.md': [
+    'Capability is not authority',
+    'production candidate, not production-promoted',
+    'Gateway -> Hypervisor -> Sandbox -> Grid',
+    'agent-readiness/CONTRIBUTION-RESULT.schema.json',
+    'Zero-cost participation'
+  ],
   'docs/README.md': [
     '## Canonical documents',
     '## Supported documentation boundary',
@@ -147,6 +156,13 @@ const REQUIRED_CONTENT = Object.freeze({
   'docs/PRODUCTION-READINESS-TRACKER.md': ['## Current gate status', 'Not production-promoted'],
   'docs/PROJECT-STATUS-2026.md': ['## Current build', '## What is not claimed'],
   'docs/REPOSITORY-MIGRATION.md': ['## Provenance map', '## Credential boundary'],
+  'docs/architecture/AGENT-COMMONS.md': [
+    'External agents may contribute evidence and proposals',
+    'agent-readiness/CONTRIBUTION-RESULT.schema.json',
+    '## Zero-cost participation principle',
+    'Gateway -> Hypervisor -> Sandbox -> Grid',
+    'The immediate goal is a safer, more discoverable contribution surface'
+  ],
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md': [
     '## Contract identity and versioning',
     '## Trust bootstrap and grants',
@@ -393,6 +409,7 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md': 7_000,
   'docs/PRODUCTION-GRADE.md': 3_000,
   'docs/PROJECT-STATUS-2026.md': 1_500,
+  'docs/architecture/AGENT-COMMONS.md': 7_000,
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md': 8_000,
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md': 25_000,
   'docs/architecture/contracts/agent-runtime-capsule.v1.schema.json': 7_000,
