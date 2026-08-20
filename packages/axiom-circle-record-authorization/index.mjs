@@ -1,12 +1,13 @@
 import { readFileSync } from 'node:fs';
 
-import { digestObject, ValidationError } from '../../mesh/src/lib/canonical.mjs';
+import { digestObject, sha256, ValidationError } from '../../mesh/src/lib/canonical.mjs';
 import { verifyObjectSignature } from '../../mesh/src/lib/identity.mjs';
 import { resolveCircleCharterAt } from '../axiom-circle-charter-lifecycle/index.mjs';
 import { validateCircleHistoricalRuleBindingLedger } from '../axiom-circle-historical-rule-binding/index.mjs';
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
+const SIGNATURE = /^[A-Za-z0-9_-]{80,128}$/;
 const VOTES = new Set(['approve', 'reject', 'abstain']);
 const SUPPORTED_DECISION_OUTCOMES = new Set(['accepted', 'rejected', 'no-quorum']);
 
@@ -24,6 +25,7 @@ const EXPECTED_REQUIREMENTS = Object.freeze({
   decision_submitter_has_collective_authority: false,
   decision_transport_requires_participant_or_review_mode: true,
   decision_requires_hypervisor_authenticated_participant_attestations: true,
+  participant_signature_envelope_exact: true,
   decision_requires_complete_electorate_attestation_set: true,
   decision_requires_at_least_two_eligible_principals: true,
   decision_participants_require_vote_mode: true,
@@ -222,7 +224,7 @@ export function issueCircleDecisionParticipationAttestation(identity, input) {
 }
 
 export function verifyCircleDecisionParticipationAttestation(attestationInput, hypervisorPublicKey) {
-  if (!hypervisorPublicKey) {
+  if (!hypervisorPublicKey || typeof hypervisorPublicKey.export !== 'function') {
     throw new ValidationError('Trusted Hypervisor public key is required for Circle decision participation');
   }
   exactObject(attestationInput, 'Circle decision participation attestation', [
@@ -232,6 +234,7 @@ export function verifyCircleDecisionParticipationAttestation(attestationInput, h
     throw new ValidationError('Circle decision participation attestation schema is invalid');
   }
   const statement = validateParticipantStatement(attestationInput.statement);
+  validateParticipationSignatureEnvelope(attestationInput.signature, hypervisorPublicKey);
   if (!verifyObjectSignature(statement, attestationInput.signature, hypervisorPublicKey)) {
     throw new ValidationError('Circle decision participation attestation signature is invalid');
   }
@@ -763,6 +766,23 @@ function validateParticipantStatement(statement) {
   ) throw new ValidationError('Circle decision participation statement is invalid');
   canonicalTimestamp(statement.participated_at, 'Circle decision participation participated_at');
   return deepFreeze(structuredClone(statement));
+}
+
+function validateParticipationSignatureEnvelope(signature, hypervisorPublicKey) {
+  exactObject(signature, 'Circle decision participation signature', [
+    'algorithm', 'key_id', 'digest', 'signature'
+  ]);
+  const expectedKeyId = `hypervisor:${sha256(
+    hypervisorPublicKey.export({ type: 'spki', format: 'pem' })
+  ).slice(0, 16)}`;
+  if (
+    signature.algorithm !== 'Ed25519'
+    || signature.key_id !== expectedKeyId
+    || !DIGEST.test(signature.digest ?? '')
+    || typeof signature.signature !== 'string'
+    || !SIGNATURE.test(signature.signature)
+  ) throw new ValidationError('Circle decision participation signature envelope is invalid');
+  return signature;
 }
 
 function requiredId(value, label) {
