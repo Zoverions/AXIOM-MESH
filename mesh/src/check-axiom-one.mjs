@@ -8,6 +8,12 @@ import { validateHumanContract } from '../../apps/axiom-one/presentation.mjs';
 
 const REPOSITORY_ROOT = dirname(MESH_ROOT);
 const APP_ROOT = join(REPOSITORY_ROOT, 'apps', 'axiom-one');
+const SOCIAL_PRESENTATION_PATH = join(
+  REPOSITORY_ROOT,
+  'packages',
+  'axiom-one-social-presentation',
+  'index.mjs'
+);
 const EXPECTED_SURFACES = Object.freeze([
   'overview',
   'ask',
@@ -100,6 +106,7 @@ export async function checkAxiomOnePreview() {
     index,
     app,
     presentation,
+    socialPresentation,
     styles,
     worker,
     server,
@@ -111,6 +118,7 @@ export async function checkAxiomOnePreview() {
     readText('index.html'),
     readText('app.mjs'),
     readText('presentation.mjs'),
+    readFile(SOCIAL_PRESENTATION_PATH, 'utf8'),
     readText('styles.css'),
     readText('sw.mjs'),
     readText('server.mjs'),
@@ -119,7 +127,7 @@ export async function checkAxiomOnePreview() {
   validatePolicy(policy);
   validateExplanations(policy, humanContract);
   validateManifest(manifest);
-  validateAssets({ index, app, presentation, styles, worker, server, icon });
+  validateAssets({ index, app, presentation, socialPresentation, styles, worker, server, icon });
   return {
     valid: true,
     schema: policy.schema,
@@ -153,6 +161,7 @@ export async function checkAxiomOnePreview() {
       index: sha256(index),
       app: sha256(app),
       presentation: sha256(presentation),
+      social_presentation: sha256(socialPresentation),
       styles: sha256(styles),
       worker: sha256(worker),
       server: sha256(server),
@@ -321,7 +330,7 @@ function validateManifest(manifest) {
   ) throw new ValidationError('AXIOM One web manifest is invalid');
 }
 
-function validateAssets({ index, app, presentation, styles, worker, server, icon }) {
+function validateAssets({ index, app, presentation, socialPresentation, styles, worker, server, icon }) {
   const requiredIndex = [
     '<meta name="viewport"',
     '<link rel="manifest" href="/manifest.webmanifest">',
@@ -349,7 +358,7 @@ function validateAssets({ index, app, presentation, styles, worker, server, icon
     /https?:\/\//
   ];
   if (forbiddenBrowserPatterns.some(pattern => pattern.test(
-    `${app}\n${presentation}\n${index}\n${styles}`
+    `${app}\n${presentation}\n${socialPresentation}\n${index}\n${styles}`
   ))) {
     throw new ValidationError('AXIOM One browser assets cross a storage, injection, or remote-origin boundary');
   }
@@ -396,6 +405,9 @@ function validateAssets({ index, app, presentation, styles, worker, server, icon
   ];
   if (socialMarkers.some(marker => !app.includes(marker))) {
     throw new ValidationError('AXIOM One Social read-only surface is incomplete');
+  }
+  if (!socialPresentation.includes('presentAxiomOneSocial')) {
+    throw new ValidationError('AXIOM One Social presenter entrypoint is missing');
   }
   if (
     !worker.includes("url.pathname.startsWith('/v1/')")
