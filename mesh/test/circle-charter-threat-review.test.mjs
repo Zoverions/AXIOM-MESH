@@ -62,6 +62,7 @@ test('charter history never becomes governance legitimacy or runtime authority p
   const evidence = review.threats.find(threat => threat.id === 'activation-evidence-authority-laundering');
   assert.match(authority.residual_limit, /cannot itself grant Sandbox, Grid, repository, legal, or coercive authority/);
   assert.match(evidence.residual_limit, /does not establish truth, legitimacy, quorum, consent, or authorization/);
+  assert.ok(evidence.mitigations.includes('activation-evidence-reference-canonicalized'));
   assert.equal(review.non_claims.charter_history_proves_legitimate_governance, false);
   assert.equal(review.non_claims.activation_evidence_proves_approval, false);
   assert.equal(review.non_claims.charter_role_grants_runtime_authority, false);
