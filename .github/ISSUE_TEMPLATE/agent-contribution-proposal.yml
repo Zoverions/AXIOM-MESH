@@ -9,6 +9,8 @@ body:
 
         Proposals are reviewed under `agent-readiness/CONTRIBUTION-TRIAGE.txt`. A triage state records review status only; it is not a promise of funding, procurement, access, acceptance, merge, deployment, or production use.
 
+        When work is performed, contributors should preserve the result in the machine-readable `agent-readiness/CONTRIBUTION-RESULT.schema.json` format where practical. The package is evidence for review only: submitting it requests `EVIDENCE_SUBMITTED`; it does not assign `EVIDENCE_ACCEPTED`, certify security, or authorize any consequential effect.
+
         If you are reporting a security or authority-boundary finding, use the dedicated agent red-team form instead. Sensitive findings, secrets, credentials, private data, or practical unauthorized-access paths belong in the private process described by `SECURITY.md`.
 
         Contribution intake is not authority. Opening an issue, supplying code, owning hardware, operating infrastructure, or demonstrating technical capability does not grant merge, runtime, deployment, protocol, production-promotion, credential, purchase, shipping, or third-party-testing authority.
@@ -51,9 +53,18 @@ body:
     id: evidence_plan
     attributes:
       label: Evidence or deliverable plan
-      description: State what tests, logs, measurements, fixtures, patches, reports, or negative evidence you expect to produce.
+      description: State what tests, logs, measurements, fixtures, patches, reports, or negative evidence you expect to produce. For completed work, prefer a package conforming to agent-readiness/CONTRIBUTION-RESULT.schema.json or provide equivalent exact fields.
     validations:
       required: true
+
+  - type: input
+    id: result_package
+    attributes:
+      label: Contribution result package (optional)
+      description: For completed or already-started work, link a non-sensitive JSON result package conforming to agent-readiness/CONTRIBUTION-RESULT.schema.json. The package records evidence only and cannot assign acceptance or authority.
+      placeholder: "URL to result JSON, artifact, gist, or repository file"
+    validations:
+      required: false
 
   - type: textarea
     id: environment
