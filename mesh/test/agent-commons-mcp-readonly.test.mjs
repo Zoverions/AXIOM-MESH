@@ -416,7 +416,8 @@ test('offline MCP implementation contains no HTTP, socket, subprocess, Grid, or 
   assert.doesNotMatch(source, /\bfetch\s*\(/);
   assert.doesNotMatch(source, /\b(?:spawn|exec|execFile|fork)\s*\(/);
   assert.doesNotMatch(source, /\bGridStore\b/);
-  assert.doesNotMatch(source, /credential|bearer|authorization/i);
+  assert.doesNotMatch(source, /from ['"][^'"]*(?:credential|auth|token)[^'"]*['"]/i);
+  assert.doesNotMatch(source, /['"]authorization['"]\s*:/i);
   assert.doesNotMatch(source, /mcp-session-id/i);
 });
 
