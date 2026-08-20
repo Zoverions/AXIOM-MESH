@@ -175,6 +175,7 @@ test('charter history cannot be recorded before Circle creation', async () => {
 test('charter cannot become effective before Circle creation', async () => {
   const policy = await loadPolicy();
   const lifecycle = lifecycleFixture();
+  lifecycle.entries[0].recorded_at = '2026-08-20T11:59:58.000Z';
   lifecycle.entries[0].charter.effective_from = '2026-08-20T11:59:59.000Z';
   lifecycle.entries[0].charter_digest = digestObject(lifecycle.entries[0].charter);
   lifecycle.entries[0].activation.charter_digest = lifecycle.entries[0].charter_digest;
