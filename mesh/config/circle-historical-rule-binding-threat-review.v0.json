@@ -35,6 +35,15 @@
       "residual_limit": "the binding rejects stale charter admission but does not itself prove the inviter or accepting principal was authentically present or authorized"
     },
     {
+      "id": "one-use-invitation-replay",
+      "mitigations": [
+        "membership-requires-invitation-basis-binding",
+        "invitation-basis-consumption-tracked-across-ledger",
+        "second-membership-from-same-invitation-basis-rejected"
+      ],
+      "residual_limit": "one-use enforcement prevents duplicate membership acceptances inside the supplied ledger but does not prove a truncated or alternate unanchored ledger omitted an earlier consumption"
+    },
+    {
       "id": "mid-proposal-rule-switching",
       "mitigations": [
         "proposal-freezes-charter-at-creation",
