@@ -50,6 +50,11 @@ export function validateCircleSimulationPolicy(policy) {
   }
   exactObject(policy.output, 'Circle simulation output policy', [
     'schema',
+    'policy_digest_required',
+    'input_package_digest_required',
+    'action_sequence_digest_required',
+    'charter_digest_required',
+    'participant_principals_required',
     'finality',
     'may_mutate_circle',
     'may_mint_runtime_authority',
@@ -60,6 +65,11 @@ export function validateCircleSimulationPolicy(policy) {
   ]);
   if (
     policy.output.schema !== 'axiom-circle-simulation-transcript.v0'
+    || policy.output.policy_digest_required !== true
+    || policy.output.input_package_digest_required !== true
+    || policy.output.action_sequence_digest_required !== true
+    || policy.output.charter_digest_required !== true
+    || policy.output.participant_principals_required !== true
     || policy.output.finality !== 'simulation-only'
     || policy.output.may_mutate_circle !== false
     || policy.output.may_mint_runtime_authority !== false
