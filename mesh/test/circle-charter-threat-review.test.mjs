@@ -46,6 +46,16 @@ test('every charter threat retains mitigations and residual limitations', async 
   }
 });
 
+test('creation chronology and immutable historical resolution remain explicit mitigations', async () => {
+  const review = await loadReview();
+  const retroactive = review.threats.find(threat => threat.id === 'retroactive-or-backdated-activation');
+  const stale = review.threats.find(threat => threat.id === 'stale-charter-applied-to-historical-action');
+  const clock = review.threats.find(threat => threat.id === 'activation-clock-trust');
+  assert.ok(retroactive.mitigations.includes('record-and-effective-time-not-before-circle-creation'));
+  assert.ok(stale.mitigations.includes('resolved-charter-deeply-frozen'));
+  assert.ok(clock.mitigations.includes('circle-creation-time-lower-bound'));
+});
+
 test('charter history never becomes governance legitimacy or runtime authority proof', async () => {
   const review = await loadReview();
   const authority = review.threats.find(threat => threat.id === 'role-or-runtime-authority-confusion');
