@@ -83,6 +83,15 @@ export function validateCircleCorePackage(document, { now = new Date() } = {}) {
     'membership_id',
     membership => validateMembership(membership, circle, roles, invitationById)
   );
+  const consumedInvitations = new Set();
+  for (const membership of memberships) {
+    if (consumedInvitations.has(membership.invitation_id)) {
+      throw new ValidationError(
+        `Invitation ${membership.invitation_id} is one-use and cannot create multiple memberships`
+      );
+    }
+    consumedInvitations.add(membership.invitation_id);
+  }
   const membershipById = new Map(memberships.map(item => [item.membership_id, item]));
   const activePrincipals = new Set(
     memberships.filter(item => item.status === 'active').map(item => item.principal_id)
