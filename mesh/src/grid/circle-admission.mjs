@@ -132,7 +132,7 @@ export function validateCircleGridAdmissionPolicy(policy) {
 
 export function deriveCircleGridAdmissionInvocationDigest(actor, rawEvent) {
   const principal = requiredId(actor, 'Circle Grid admission actor');
-  const candidate = reconstructCircleGridPersistenceCandidate(rawEvent);
+  const candidate = validateAdmissionEvent(rawEvent);
   return digestObject({
     schema: 'axiom-circle-grid-admission-invocation.v0',
     actor: principal,
@@ -176,7 +176,7 @@ export function issueCircleGridAdmissionCapability(identity, {
     throw new ValidationError('Circle Grid admission capability lifetime is invalid');
   }
   const principal = requiredId(actor, 'Circle Grid admission actor');
-  const candidate = reconstructCircleGridPersistenceCandidate(event);
+  const candidate = validateAdmissionEvent(event);
   const claims = deepFreeze({
     iss: CIRCLE_GRID_ADMISSION_POLICY.issuer_service,
     aud: CIRCLE_GRID_ADMISSION_POLICY.audience,
@@ -215,7 +215,7 @@ export function verifyCircleGridAdmissionCapability(capability, hypervisorPublic
     throw new ValidationError('Circle Grid admission local TTL limit is invalid');
   }
   const principal = requiredId(actor, 'Circle Grid admission actor');
-  const candidate = reconstructCircleGridPersistenceCandidate(event);
+  const candidate = validateAdmissionEvent(event);
   const claims = verifyCapability(capability, hypervisorPublicKey, {
     audience: CIRCLE_GRID_ADMISSION_POLICY.audience,
     issuer: CIRCLE_GRID_ADMISSION_POLICY.issuer_service,
@@ -486,6 +486,13 @@ function normalizeReceiptStatement(value) {
     throw new ValidationError('Circle Grid admission receipt statement is invalid');
   }
   return deepFreeze(structuredClone(value));
+}
+
+function validateAdmissionEvent(rawEvent) {
+  exactObject(rawEvent, 'Circle Grid admission persistence event', [
+    'event_id', 'kind', 'subject', 'payload'
+  ]);
+  return reconstructCircleGridPersistenceCandidate(rawEvent);
 }
 
 function requiredId(value, label) {
