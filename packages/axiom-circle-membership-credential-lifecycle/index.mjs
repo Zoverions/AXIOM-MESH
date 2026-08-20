@@ -21,6 +21,7 @@ export function validateCircleMembershipCredentialLifecycle(
   );
   enforceSingleCredentialLineagePerDevice(lifecycle.credentials);
   enforceNoPostCompromiseCredentialIssuance(lifecycle.credentials, lifecycle.events);
+  enforceRotationPredecessorEligibility(lifecycle.credentials, lifecycle.events);
   return validation;
 }
 
@@ -59,6 +60,36 @@ function enforceNoPostCompromiseCredentialIssuance(credentials, events) {
     if (Date.parse(credential.issued_at) >= compromiseAt) {
       throw new ValidationError(
         `Circle member device ${credential.device_id} cannot issue credentials at or after compromise`
+      );
+    }
+  }
+}
+
+function enforceRotationPredecessorEligibility(credentials, events) {
+  const credentialById = new Map(credentials.map(credential => [credential.credential_id, credential]));
+  const revokedAt = new Map();
+  for (const event of events) {
+    if (event.kind !== 'credential-revoke') continue;
+    revokedAt.set(event.target_id, Date.parse(event.at));
+  }
+
+  for (const credential of credentials) {
+    if (credential.supersedes_credential_id === null) continue;
+    const predecessor = credentialById.get(credential.supersedes_credential_id);
+    if (!predecessor) continue;
+    const issuedAt = Date.parse(credential.issued_at);
+    const predecessorRevokedAt = revokedAt.get(predecessor.credential_id);
+    if (predecessorRevokedAt !== undefined && issuedAt >= predecessorRevokedAt) {
+      throw new ValidationError(
+        `Circle credential ${credential.credential_id} cannot rotate from a revoked predecessor`
+      );
+    }
+    if (
+      predecessor.expires_at !== null
+      && issuedAt >= Date.parse(predecessor.expires_at)
+    ) {
+      throw new ValidationError(
+        `Circle credential ${credential.credential_id} cannot rotate from an expired predecessor`
       );
     }
   }
