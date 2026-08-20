@@ -16,6 +16,8 @@
     "proposal_requires_propose_mode": true,
     "decision_submitter_has_collective_authority": false,
     "decision_requires_hypervisor_authenticated_participant_attestations": true,
+    "decision_requires_complete_electorate_attestation_set": true,
+    "decision_requires_at_least_two_eligible_principals": true,
     "decision_participants_require_vote_mode": true,
     "decision_participants_must_be_distinct_principals": true,
     "decision_participants_must_use_distinct_memberships": true,
