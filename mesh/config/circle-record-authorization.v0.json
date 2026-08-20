@@ -19,6 +19,7 @@
     "decision_submitter_has_collective_authority": false,
     "decision_transport_requires_participant_or_review_mode": true,
     "decision_requires_hypervisor_authenticated_participant_attestations": true,
+    "participant_signature_envelope_exact": true,
     "decision_requires_complete_electorate_attestation_set": true,
     "decision_requires_at_least_two_eligible_principals": true,
     "decision_participants_require_vote_mode": true,
@@ -41,16 +42,8 @@
     "proposal": "active-propose-member",
     "decision": "collective-hypervisor-attested-vote-recomputation"
   },
-  "participant_vote_values": [
-    "approve",
-    "reject",
-    "abstain"
-  ],
-  "supported_decision_outcomes": [
-    "accepted",
-    "rejected",
-    "no-quorum"
-  ],
+  "participant_vote_values": ["approve", "reject", "abstain"],
+  "supported_decision_outcomes": ["accepted", "rejected", "no-quorum"],
   "schemas": {
     "participant_attestation_statement": "axiom-circle-decision-participation-statement.v0",
     "participant_attestation": "axiom-circle-decision-participation-attestation.v0",
