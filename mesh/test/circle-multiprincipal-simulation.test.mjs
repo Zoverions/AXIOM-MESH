@@ -6,6 +6,7 @@ import { digestObject } from '../src/lib/canonical.mjs';
 import {
   CIRCLE_CHARTER_SCHEMA,
   CIRCLE_CORE_PACKAGE_SCHEMA,
+  CIRCLE_EXIT_SCHEMA,
   CIRCLE_INVITATION_SCHEMA,
   CIRCLE_MEMBERSHIP_SCHEMA,
   CIRCLE_PROPOSAL_SCHEMA,
@@ -222,11 +223,17 @@ test('Circle multi-principal simulation policy is inert and non-authorizing', as
   assert.equal(policy.runtime_activation, false);
   assert.equal(policy.authority_effect, 'none');
   assert.equal(policy.network_effect, 'none');
+  assert.equal(policy.requirements.active_membership_exit_history_prohibited, true);
+  assert.equal(policy.requirements.action_after_membership_activation_required, true);
   assert.equal(policy.output.finality, 'simulation-only');
   assert.equal(policy.output.may_mutate_circle, false);
   assert.equal(policy.output.may_mint_runtime_authority, false);
   assert.equal(policy.output.may_create_grid_event, false);
   assert.equal(policy.output.may_create_gateway_action, false);
+
+  const weakened = structuredClone(policy);
+  weakened.requirements.active_membership_exit_history_prohibited = false;
+  assert.throws(() => validateCircleSimulationPolicy(weakened), /requirement was weakened/);
 });
 
 test('two active principals can simulate deliberation and an accepted outcome without creating a decision', async () => {
@@ -238,6 +245,10 @@ test('two active principals can simulate deliberation and an accepted outcome wi
   });
   assert.equal(digestObject(document), before);
   assert.equal(transcript.schema, 'axiom-circle-simulation-transcript.v0');
+  assert.equal(transcript.policy_digest, digestObject(policy));
+  assert.equal(transcript.input_package_digest, before);
+  assert.equal(transcript.action_sequence_digest, digestObject(transcript.actions));
+  assert.equal(transcript.charter_digest, digestObject(document.charter));
   assert.deepEqual(transcript.participant_principals, ['human.alpha', 'human.beta']);
   assert.equal(transcript.action_count, 4);
   assert.equal(transcript.proposal_results.length, 1);
@@ -319,5 +330,40 @@ test('simulation rejects duplicate active membership for one principal to preven
   assert.throws(
     () => simulateCircleDeliberation(policy, document, actions(document)),
     /one active membership per principal/
+  );
+});
+
+test('simulation rejects actions before the membership becomes active', async () => {
+  const policy = await loadPolicy();
+  const document = fixture();
+  document.memberships[0].accepted_at = '2026-08-20T12:11:00.000Z';
+  document.memberships[0].status_effective_at = '2026-08-20T12:11:00.000Z';
+  assert.throws(
+    () => simulateCircleDeliberation(policy, document, actions(document)),
+    /predates membership activation/
+  );
+});
+
+test('simulation rejects append-only exit history on a membership still marked active', async () => {
+  const policy = await loadPolicy();
+  const document = fixture();
+  document.exits.push({
+    schema: CIRCLE_EXIT_SCHEMA,
+    exit_id: 'exit.beta.1',
+    circle_id: document.circle.circle_id,
+    membership_id: 'membership.beta',
+    principal_id: 'human.beta',
+    initiated_by: 'human.beta',
+    kind: 'voluntary-exit',
+    effective_at: '2026-08-20T12:09:00.000Z',
+    reason_code: 'member-request',
+    future_obligation_effect: 'ends-except-explicit-post-exit-rules',
+    history_rewrite: false,
+    authority_effect: 'none'
+  });
+  assert.equal(document.memberships[1].status, 'active');
+  assert.throws(
+    () => simulateCircleDeliberation(policy, document, actions(document)),
+    /does not permit exit history on active memberships/
   );
 });
