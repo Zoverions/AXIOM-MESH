@@ -105,3 +105,20 @@ test('diversity evidence policy prohibits hidden political and sensitive-trait p
   assert.equal(diversity.underrepresented_source_is_quality_judgment, false);
   assert.equal(diversity.diversity_insertion_is_endorsement, false);
 });
+
+test('diversity evidence dimensions are an exact safe inventory rather than a count-only check', async () => {
+  const policy = await loadPolicy();
+  const tampered = structuredClone(policy);
+  tampered.diversity_evidence.allowed_dimensions[0] = 'inferred-political-affiliation';
+  assert.throws(
+    () => validateFeedSelectionReceiptPolicy(tampered),
+    /feed diversity dimensions inventory drifted/
+  );
+
+  const duplicated = structuredClone(policy);
+  duplicated.diversity_evidence.allowed_dimensions[1] = duplicated.diversity_evidence.allowed_dimensions[0];
+  assert.throws(
+    () => validateFeedSelectionReceiptPolicy(duplicated),
+    /feed diversity dimensions inventory drifted/
+  );
+});
