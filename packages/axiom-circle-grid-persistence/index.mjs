@@ -42,6 +42,31 @@ const EXPECTED_RUNTIME_INTEGRATION = Object.freeze({
   uses_existing_signed_grid_chain: true
 });
 
+const PAYLOAD_KEYS = Object.freeze([
+  'schema',
+  'circle_id',
+  'binding_id',
+  'binding_digest',
+  'binding',
+  'record_type',
+  'record_id',
+  'record_digest',
+  'governing_charter_digest',
+  'previous_circle_binding_digest',
+  'resulting_circle_head_digest',
+  'historical_ledger_prefix_digest',
+  'historical_ledger_prefix_length',
+  'charter_lifecycle_prefix_digest',
+  'charter_lifecycle_prefix_length',
+  'persistence_policy_digest',
+  'historical_policy_digest',
+  'charter_policy_digest',
+  'runtime_authority',
+  'portable_authority',
+  'authority_effect',
+  'network_effect'
+]);
+
 export function validateCircleGridPersistencePolicy(policy) {
   exactObject(policy, 'Circle Grid persistence policy', [
     'schema',
@@ -134,7 +159,7 @@ export function buildCircleGridPersistenceCandidate(
   } = {}
 ) {
   validateCircleGridPersistencePolicy(policy);
-  const historicalValidation = validateCircleHistoricalRuleBindingLedger(
+  validateCircleHistoricalRuleBindingLedger(
     historicalPolicy,
     charterPolicy,
     circlePackage,
@@ -156,7 +181,9 @@ export function buildCircleGridPersistenceCandidate(
     throw new ValidationError('Circle Grid persistence expected prior Circle head is invalid');
   }
   if (expectedPriorCircleHeadDigest !== predecessor) {
-    throw new ValidationError('Circle Grid persistence expected prior Circle head does not match binding predecessor');
+    throw new ValidationError(
+      'Circle Grid persistence expected prior Circle head does not match binding predecessor'
+    );
   }
 
   const charterEntryIndex = charterLifecycle.entries.findIndex(
@@ -179,15 +206,7 @@ export function buildCircleGridPersistenceCandidate(
   const policyDigest = digestObject(policy);
   const historicalPolicyDigest = digestObject(historicalPolicy);
   const charterPolicyDigest = digestObject(charterPolicy);
-  const eventIdentityDigest = digestObject({
-    schema: 'axiom-circle-grid-persistence-event-identity.v0',
-    circle_id: ledger.circle_id,
-    binding_digest: bindingDigest
-  });
-  const eventId = `${policy.event_id_prefix}${eventIdentityDigest}`;
-  if (!ID.test(eventId)) {
-    throw new ValidationError('Circle Grid persistence deterministic event_id is invalid');
-  }
+  const eventId = deriveEventId(policy, ledger.circle_id, bindingDigest);
 
   const payload = deepFreeze({
     schema: policy.schemas.payload,
@@ -214,7 +233,7 @@ export function buildCircleGridPersistenceCandidate(
     network_effect: 'none'
   });
 
-  return deepFreeze({
+  const candidate = {
     schema: policy.schemas.candidate,
     circle_id: ledger.circle_id,
     binding_id: binding.binding_id,
@@ -238,12 +257,102 @@ export function buildCircleGridPersistenceCandidate(
     portable_authority: false,
     authority_effect: 'none',
     network_effect: 'none'
-  });
+  };
+  validateCircleGridPersistenceCandidate(policy, candidate);
+  return deepFreeze(candidate);
+}
+
+export function validateCircleGridPersistenceCandidate(policy, candidate) {
+  validateCircleGridPersistencePolicy(policy);
+  exactObject(candidate, 'Circle Grid persistence candidate', [
+    'schema',
+    'circle_id',
+    'binding_id',
+    'binding_digest',
+    'expected_prior_circle_head_digest',
+    'resulting_circle_head_digest',
+    'event',
+    'payload_digest',
+    'policy_digest',
+    'historical_policy_digest',
+    'charter_policy_digest',
+    'historical_ledger_prefix_digest',
+    'charter_lifecycle_prefix_digest',
+    'runtime_activation',
+    'runtime_authority',
+    'portable_authority',
+    'authority_effect',
+    'network_effect'
+  ]);
+  if (
+    candidate.schema !== policy.schemas.candidate
+    || !identifier(candidate.circle_id)
+    || !identifier(candidate.binding_id)
+    || !DIGEST.test(candidate.binding_digest)
+    || !nullableDigest(candidate.expected_prior_circle_head_digest)
+    || candidate.resulting_circle_head_digest !== candidate.binding_digest
+    || !DIGEST.test(candidate.payload_digest)
+    || !DIGEST.test(candidate.policy_digest)
+    || !DIGEST.test(candidate.historical_policy_digest)
+    || !DIGEST.test(candidate.charter_policy_digest)
+    || !DIGEST.test(candidate.historical_ledger_prefix_digest)
+    || !DIGEST.test(candidate.charter_lifecycle_prefix_digest)
+    || candidate.runtime_activation !== false
+    || candidate.runtime_authority !== false
+    || candidate.portable_authority !== false
+    || candidate.authority_effect !== 'none'
+    || candidate.network_effect !== 'none'
+  ) throw new ValidationError('Circle Grid persistence candidate boundary is invalid');
+
+  exactObject(candidate.event, 'Circle Grid persistence event candidate', [
+    'event_id', 'kind', 'subject', 'payload'
+  ]);
+  const expectedEventId = deriveEventId(policy, candidate.circle_id, candidate.binding_digest);
+  if (
+    candidate.event.event_id !== expectedEventId
+    || candidate.event.kind !== policy.grid_event_kind
+    || candidate.event.subject !== candidate.circle_id
+    || digestObject(candidate.event.payload) !== candidate.payload_digest
+  ) throw new ValidationError('Circle Grid persistence event candidate is invalid');
+
+  const payload = candidate.event.payload;
+  exactObject(payload, 'Circle Grid persistence payload', PAYLOAD_KEYS);
+  const binding = payload.binding;
+  if (!binding || typeof binding !== 'object' || Array.isArray(binding)) {
+    throw new ValidationError('Circle Grid persistence payload binding snapshot is invalid');
+  }
+  if (
+    payload.schema !== policy.schemas.payload
+    || payload.circle_id !== candidate.circle_id
+    || payload.binding_id !== candidate.binding_id
+    || payload.binding_digest !== candidate.binding_digest
+    || digestObject(binding) !== candidate.binding_digest
+    || binding.circle_id !== candidate.circle_id
+    || binding.binding_id !== candidate.binding_id
+    || binding.previous_binding_digest !== candidate.expected_prior_circle_head_digest
+    || binding.record_type !== payload.record_type
+    || binding.record_id !== payload.record_id
+    || binding.record_digest !== payload.record_digest
+    || binding.governing_charter_digest !== payload.governing_charter_digest
+    || payload.previous_circle_binding_digest !== candidate.expected_prior_circle_head_digest
+    || payload.resulting_circle_head_digest !== candidate.resulting_circle_head_digest
+    || payload.historical_ledger_prefix_digest !== candidate.historical_ledger_prefix_digest
+    || payload.charter_lifecycle_prefix_digest !== candidate.charter_lifecycle_prefix_digest
+    || !positiveInteger(payload.historical_ledger_prefix_length)
+    || !positiveInteger(payload.charter_lifecycle_prefix_length)
+    || payload.persistence_policy_digest !== candidate.policy_digest
+    || payload.historical_policy_digest !== candidate.historical_policy_digest
+    || payload.charter_policy_digest !== candidate.charter_policy_digest
+    || payload.runtime_authority !== false
+    || payload.portable_authority !== false
+    || payload.authority_effect !== 'none'
+    || payload.network_effect !== 'none'
+  ) throw new ValidationError('Circle Grid persistence payload binding is invalid');
+  return true;
 }
 
 export function assessCircleGridPersistenceReplay(policy, candidate, existingGridEvent = null) {
-  validateCircleGridPersistencePolicy(policy);
-  validateCandidate(policy, candidate);
+  validateCircleGridPersistenceCandidate(policy, candidate);
   if (existingGridEvent === null || existingGridEvent === undefined) {
     return Object.freeze({
       state: 'new',
@@ -257,6 +366,9 @@ export function assessCircleGridPersistenceReplay(policy, candidate, existingGri
   if (existingGridEvent.event_id !== candidate.event.event_id) {
     throw new ValidationError('Circle Grid persistence replay assessment received the wrong Grid event');
   }
+  if (!DIGEST.test(existingGridEvent.payload_digest ?? '')) {
+    throw new ValidationError('Circle Grid persistence replay payload digest is invalid');
+  }
   const exact = (
     existingGridEvent.kind === candidate.event.kind
     && existingGridEvent.subject === candidate.event.subject
@@ -267,7 +379,7 @@ export function assessCircleGridPersistenceReplay(policy, candidate, existingGri
     event_id: candidate.event.event_id,
     binding_digest: candidate.binding_digest,
     expected_payload_digest: candidate.payload_digest,
-    observed_payload_digest: existingGridEvent.payload_digest ?? null
+    observed_payload_digest: existingGridEvent.payload_digest
   });
 }
 
@@ -277,8 +389,7 @@ export function buildCircleGridPersistenceReceipt(
   gridEvent,
   chainVerification
 ) {
-  validateCircleGridPersistencePolicy(policy);
-  validateCandidate(policy, candidate);
+  validateCircleGridPersistenceCandidate(policy, candidate);
   validateGridEventEnvelope(candidate, gridEvent);
   if (
     !chainVerification
@@ -288,7 +399,9 @@ export function buildCircleGridPersistenceReceipt(
     || !Number.isSafeInteger(chainVerification.events)
     || chainVerification.events < gridEvent.seq
   ) {
-    throw new ValidationError('Circle Grid persistence receipt requires Grid chain verification covering the event');
+    throw new ValidationError(
+      'Circle Grid persistence receipt requires Grid chain verification covering the event'
+    );
   }
 
   return deepFreeze({
@@ -317,80 +430,6 @@ export function buildCircleGridPersistenceReceipt(
   });
 }
 
-function validateCandidate(policy, candidate) {
-  exactObject(candidate, 'Circle Grid persistence candidate', [
-    'schema',
-    'circle_id',
-    'binding_id',
-    'binding_digest',
-    'expected_prior_circle_head_digest',
-    'resulting_circle_head_digest',
-    'event',
-    'payload_digest',
-    'policy_digest',
-    'historical_policy_digest',
-    'charter_policy_digest',
-    'historical_ledger_prefix_digest',
-    'charter_lifecycle_prefix_digest',
-    'runtime_activation',
-    'runtime_authority',
-    'portable_authority',
-    'authority_effect',
-    'network_effect'
-  ]);
-  if (
-    candidate.schema !== policy.schemas.candidate
-    || !identifier(candidate.circle_id)
-    || !identifier(candidate.binding_id)
-    || !DIGEST.test(candidate.binding_digest)
-    || !(candidate.expected_prior_circle_head_digest === null || DIGEST.test(candidate.expected_prior_circle_head_digest))
-    || candidate.resulting_circle_head_digest !== candidate.binding_digest
-    || !DIGEST.test(candidate.payload_digest)
-    || !DIGEST.test(candidate.policy_digest)
-    || !DIGEST.test(candidate.historical_policy_digest)
-    || !DIGEST.test(candidate.charter_policy_digest)
-    || !DIGEST.test(candidate.historical_ledger_prefix_digest)
-    || !DIGEST.test(candidate.charter_lifecycle_prefix_digest)
-    || candidate.runtime_activation !== false
-    || candidate.runtime_authority !== false
-    || candidate.portable_authority !== false
-    || candidate.authority_effect !== 'none'
-    || candidate.network_effect !== 'none'
-  ) throw new ValidationError('Circle Grid persistence candidate boundary is invalid');
-  exactObject(candidate.event, 'Circle Grid persistence event candidate', [
-    'event_id', 'kind', 'subject', 'payload'
-  ]);
-  if (
-    !ID.test(candidate.event.event_id)
-    || candidate.event.kind !== policy.grid_event_kind
-    || candidate.event.subject !== candidate.circle_id
-    || digestObject(candidate.event.payload) !== candidate.payload_digest
-  ) throw new ValidationError('Circle Grid persistence event candidate is invalid');
-  const payload = candidate.event.payload;
-  if (
-    !payload
-    || typeof payload !== 'object'
-    || Array.isArray(payload)
-    || payload.schema !== policy.schemas.payload
-    || payload.circle_id !== candidate.circle_id
-    || payload.binding_id !== candidate.binding_id
-    || payload.binding_digest !== candidate.binding_digest
-    || digestObject(payload.binding) !== candidate.binding_digest
-    || payload.previous_circle_binding_digest !== candidate.expected_prior_circle_head_digest
-    || payload.resulting_circle_head_digest !== candidate.resulting_circle_head_digest
-    || payload.historical_ledger_prefix_digest !== candidate.historical_ledger_prefix_digest
-    || payload.charter_lifecycle_prefix_digest !== candidate.charter_lifecycle_prefix_digest
-    || payload.persistence_policy_digest !== candidate.policy_digest
-    || payload.historical_policy_digest !== candidate.historical_policy_digest
-    || payload.charter_policy_digest !== candidate.charter_policy_digest
-    || payload.runtime_authority !== false
-    || payload.portable_authority !== false
-    || payload.authority_effect !== 'none'
-    || payload.network_effect !== 'none'
-  ) throw new ValidationError('Circle Grid persistence payload binding is invalid');
-  return true;
-}
-
 function validateGridEventEnvelope(candidate, gridEvent) {
   if (!gridEvent || typeof gridEvent !== 'object' || Array.isArray(gridEvent)) {
     throw new ValidationError('Circle Grid persistence Grid event is invalid');
@@ -407,9 +446,8 @@ function validateGridEventEnvelope(candidate, gridEvent) {
     || gridEvent.payload_digest !== candidate.payload_digest
     || !DIGEST.test(gridEvent.prev_hash ?? '')
     || !DIGEST.test(gridEvent.event_hash ?? '')
-    || !gridEvent.signature
-    || typeof gridEvent.signature !== 'object'
   ) throw new ValidationError('Circle Grid persistence Grid event envelope is invalid');
+
   const occurred = new Date(gridEvent.occurred_at);
   if (Number.isNaN(occurred.valueOf()) || occurred.toISOString() !== gridEvent.occurred_at) {
     throw new ValidationError('Circle Grid persistence Grid event occurred_at must be canonical UTC');
@@ -428,7 +466,39 @@ function validateGridEventEnvelope(candidate, gridEvent) {
   if (expectedEventHash !== gridEvent.event_hash) {
     throw new ValidationError('Circle Grid persistence Grid event hash does not match envelope');
   }
+  exactObject(gridEvent.signature, 'Circle Grid persistence Grid signature', [
+    'algorithm', 'key_id', 'digest', 'signature'
+  ]);
+  if (
+    gridEvent.signature.algorithm !== 'Ed25519'
+    || typeof gridEvent.signature.key_id !== 'string'
+    || gridEvent.signature.key_id.length < 1
+    || gridEvent.signature.digest !== digestObject({ event_hash: gridEvent.event_hash })
+    || typeof gridEvent.signature.signature !== 'string'
+    || gridEvent.signature.signature.length < 1
+  ) throw new ValidationError('Circle Grid persistence Grid signature metadata is invalid');
   return true;
+}
+
+function deriveEventId(policy, circleId, bindingDigest) {
+  const eventIdentityDigest = digestObject({
+    schema: 'axiom-circle-grid-persistence-event-identity.v0',
+    circle_id: circleId,
+    binding_digest: bindingDigest
+  });
+  const eventId = `${policy.event_id_prefix}${eventIdentityDigest}`;
+  if (!ID.test(eventId)) {
+    throw new ValidationError('Circle Grid persistence deterministic event_id is invalid');
+  }
+  return eventId;
+}
+
+function nullableDigest(value) {
+  return value === null || (typeof value === 'string' && DIGEST.test(value));
+}
+
+function positiveInteger(value) {
+  return Number.isSafeInteger(value) && value >= 1;
 }
 
 function identifier(value) {
