@@ -7,6 +7,8 @@ import {
 
 export { validateCircleCharterLifecyclePolicy };
 
+const ASCII_CONTROL = /[\u0000-\u001f\u007f]/;
+
 export function validateCircleCharterLifecycle(
   policy,
   circlePackage,
@@ -20,6 +22,7 @@ export function validateCircleCharterLifecycle(
     options
   );
   enforceCircleCreationChronology(circlePackage, lifecycle);
+  enforceCanonicalEvidenceReferences(lifecycle);
   return validation;
 }
 
@@ -45,6 +48,16 @@ function enforceCircleCreationChronology(circlePackage, lifecycle) {
     }
     if (Date.parse(entry.charter.effective_from) < circleCreatedAt) {
       throw new ValidationError('Circle charter cannot become effective before Circle creation');
+    }
+  }
+}
+
+function enforceCanonicalEvidenceReferences(lifecycle) {
+  for (const entry of lifecycle.entries) {
+    for (const ref of entry.activation.evidence_refs) {
+      if (ASCII_CONTROL.test(ref) || ref !== ref.trim()) {
+        throw new ValidationError('Circle charter activation evidence reference is not canonical');
+      }
     }
   }
 }
