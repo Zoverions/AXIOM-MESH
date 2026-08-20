@@ -1,0 +1,51 @@
+{
+  "schema": "axiom-circle-historical-rule-binding-policy.v0",
+  "version": 0,
+  "status": "inert-historical-rule-binding",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "requirements": {
+    "exact_circle_binding": true,
+    "canonical_record_digest_required": true,
+    "append_only_binding_digest_chain": true,
+    "strict_binding_chronology": true,
+    "future_binding_prohibited": true,
+    "invitation_uses_charter_active_at_issue": true,
+    "membership_requires_invitation_basis": true,
+    "membership_rejects_stale_invitation_after_amendment": true,
+    "membership_roles_must_match_invitation": true,
+    "proposal_freezes_charter_active_at_creation": true,
+    "decision_requires_proposal_basis": true,
+    "decision_inherits_proposal_frozen_charter": true,
+    "mid_proposal_charter_change_cannot_change_decision_rules": true,
+    "historical_record_may_mint_runtime_authority": false,
+    "historical_record_rewritten": false
+  },
+  "record_types": [
+    "invitation",
+    "membership",
+    "proposal",
+    "decision"
+  ],
+  "binding_modes": {
+    "invitation": "resolve-at-event",
+    "membership": "invitation-current-at-acceptance",
+    "proposal": "resolve-at-event-and-freeze",
+    "decision": "inherit-proposal-frozen-charter"
+  },
+  "schemas": {
+    "ledger": "axiom-circle-historical-rule-binding-ledger.v0",
+    "binding": "axiom-circle-historical-rule-binding.v0"
+  },
+  "output": {
+    "policy_digest_required": true,
+    "circle_package_digest_required": true,
+    "charter_lifecycle_digest_required": true,
+    "ledger_digest_required": true,
+    "runtime_authority": false,
+    "portable_authority": false,
+    "authority_effect": "none",
+    "network_effect": "none"
+  }
+}
