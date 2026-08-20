@@ -16,6 +16,7 @@
     "axiom-one:check": "node mesh/src/check-axiom-one.mjs",
     "agent-readiness:build": "node agent-readiness/build.mjs",
     "agent-readiness:check": "node mesh/src/check-agent-readiness.mjs",
+    "agent-commons:check": "node mesh/src/check-agent-commons.mjs",
     "doctor": "node mesh/src/doctor.mjs",
     "axiom": "node mesh/src/cli.mjs --human",
     "cli": "node mesh/src/cli.mjs --human",
