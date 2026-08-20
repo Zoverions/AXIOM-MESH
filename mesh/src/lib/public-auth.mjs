@@ -32,11 +32,13 @@ export function createBearerAuthenticator(principals, {
       principal = resolvePrincipal(req);
     } catch (error) {
       if (error?.code === 'authentication_required' || error?.code === 'invalid_token') {
-        return maxBodyBytes;
+        return { maxBytes: maxBodyBytes };
       }
       throw error;
     }
-    if (principal?.schema !== 'axiom-machine-principal.v1') return maxBodyBytes;
+    if (principal?.schema !== 'axiom-machine-principal.v1') {
+      return { maxBytes: maxBodyBytes };
+    }
     const maximum = principal.constraints?.budgets?.max_request_bytes;
     if (!Number.isSafeInteger(maximum) || maximum < 1_024 || maximum > 10_485_760) {
       throw new AxiomError(
@@ -45,7 +47,15 @@ export function createBearerAuthenticator(principals, {
         403
       );
     }
-    return Math.min(maxBodyBytes, maximum);
+    return {
+      maxBytes: Math.min(maxBodyBytes, maximum),
+      limitError: {
+        code: 'machine_request_budget_exceeded',
+        message: 'Machine principal request-size budget is exceeded',
+        status: 413,
+        details: { max_request_bytes: maximum }
+      }
+    };
   };
 
   authenticate.admitRequest = ({ principal }) => (
