@@ -15,21 +15,35 @@ async function loadPolicy() {
 }
 
 function candidateFixture(policy) {
-  const recordDigest = 'a'.repeat(64);
   const governingCharterDigest = 'b'.repeat(64);
   const historicalPolicyDigest = 'c'.repeat(64);
   const charterPolicyDigest = 'd'.repeat(64);
   const historicalPrefixDigest = 'e'.repeat(64);
   const charterPrefixDigest = 'f'.repeat(64);
+  const record = {
+    schema: 'axiom-circle-invitation.v0',
+    invitation_id: 'invite.grid.hardening',
+    circle_id: 'circle.grid.hardening',
+    invited_principal: 'human.alpha',
+    membership_class: 'member',
+    role_ids: ['member'],
+    issued_by: 'human.alpha',
+    issued_at: '2026-08-20T12:10:00.000Z',
+    expires_at: '2026-08-20T12:40:00.000Z',
+    charter_digest: governingCharterDigest,
+    one_use: true,
+    authority_effect: 'none'
+  };
+  const recordDigest = digestObject(record);
   const binding = {
     schema: 'axiom-circle-historical-rule-binding.v0',
     binding_id: 'binding.grid.hardening',
     circle_id: 'circle.grid.hardening',
     record_type: 'invitation',
-    record_id: 'invite.grid.hardening',
+    record_id: record.invitation_id,
     record_digest: recordDigest,
-    record: { opaque_snapshot: true },
-    event_time: '2026-08-20T12:10:00.000Z',
+    record,
+    event_time: record.issued_at,
     bound_at: '2026-08-20T12:11:00.000Z',
     previous_binding_digest: null,
     basis_binding_id: null,
@@ -160,6 +174,29 @@ test('payload metadata must be derived from the embedded historical binding', as
       /payload binding is invalid/
     );
   }
+});
+
+test('embedded historical binding rejects record substitution before candidate admission', async () => {
+  const policy = await loadPolicy();
+  const candidate = candidateFixture(policy);
+  candidate.event.payload.binding.record.invitation_id = 'invite.shadow';
+  candidate.event.payload.binding.record_digest = digestObject(candidate.event.payload.binding.record);
+  candidate.event.payload.binding_digest = digestObject(candidate.event.payload.binding);
+  candidate.binding_digest = candidate.event.payload.binding_digest;
+  candidate.resulting_circle_head_digest = candidate.binding_digest;
+  candidate.event.payload.resulting_circle_head_digest = candidate.binding_digest;
+  const identityDigest = digestObject({
+    schema: 'axiom-circle-grid-persistence-event-identity.v0',
+    circle_id: candidate.circle_id,
+    binding_digest: candidate.binding_digest
+  });
+  candidate.event.event_id = `${policy.event_id_prefix}${identityDigest}`;
+  refreshPayloadDigest(candidate);
+
+  assert.throws(
+    () => validateCircleGridPersistenceCandidate(policy, candidate),
+    /historical record snapshot is invalid/
+  );
 });
 
 test('replay assessment refuses a reconstructed candidate that fails canonical validation', async () => {
