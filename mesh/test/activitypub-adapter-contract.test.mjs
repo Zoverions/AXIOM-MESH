@@ -39,7 +39,7 @@ test('public AXIOM persona projection is the only ActivityPub identity source', 
   assert.equal(contract.identity.controller_identity_proof_claimed, false);
 });
 
-test('publication lifecycle maps outward without changing AXIOM append-only semantics', async () => {
+test('publication create and retract map outward while supersession fails closed without stable external object identity', async () => {
   const contract = await loadContract();
   assert.deepEqual(
     outboundActivityPubMapping(contract, 'social.publication.create'),
@@ -50,15 +50,16 @@ test('publication lifecycle maps outward without changing AXIOM append-only sema
       requires_public_projection: true
     }
   );
-  assert.equal(
-    outboundActivityPubMapping(contract, 'social.publication.supersede').activitypub_activity,
-    'Update'
+  assert.throws(
+    () => outboundActivityPubMapping(contract, 'social.publication.supersede'),
+    /prohibited from ActivityPub export/
   );
   assert.equal(
     outboundActivityPubMapping(contract, 'social.publication.retract').activitypub_activity,
     'Delete'
   );
   assert.equal(contract.third_party_deletion_guaranteed, false);
+  assert.equal(contract.outbound_mappings.some(item => item.activitypub_activity === 'Update'), false);
 });
 
 test('Circle curator exclusion can never be laundered into ActivityPub Block', async () => {
@@ -117,9 +118,10 @@ test('all inbound ActivityPub mappings remain remote observations with no truth 
   }
 });
 
-test('private Circle state, diversity settings, transformations and safety decisions fail closed at the ActivityPub boundary', async () => {
+test('private Circle state, supersession, diversity settings, transformations and safety decisions fail closed at the ActivityPub boundary', async () => {
   const contract = await loadContract();
   for (const semantic of [
+    'social.publication.supersede',
     'circle.member-private-publication',
     'circle.membership',
     'circle.charter',
