@@ -54,7 +54,13 @@ function normalizeMutationEvidence(raw) {
     raw,
     ['plan_digest', 'invocation_digest', 'execution'],
     'social mutation evidence',
-    { optional: ['effect_destination', 'machine_authority_digest'] }
+    {
+      optional: [
+        'effect_destination',
+        'machine_authority_digest',
+        'capability_consumption_receipt_digest'
+      ]
+    }
   );
   const execution = exactKeys(
     evidence.execution,
@@ -77,7 +83,13 @@ function normalizeMutationEvidence(raw) {
       'result_digest'
     ],
     'social execution statement',
-    { optional: ['effect_destination'] }
+    {
+      optional: [
+        'effect_destination',
+        'capability_consumption_receipt_digest',
+        'sandbox_execution_epoch'
+      ]
+    }
   );
   const signature = exactKeys(
     execution.signature,
@@ -133,6 +145,18 @@ function normalizeMutationEvidence(raw) {
             'social execution effect_destination',
             { min: 1, max: 256 }
           )
+        }),
+        ...(statement.capability_consumption_receipt_digest === undefined ? {} : {
+          capability_consumption_receipt_digest: digest(
+            statement.capability_consumption_receipt_digest,
+            'social execution capability consumption receipt digest'
+          )
+        }),
+        ...(statement.sandbox_execution_epoch === undefined ? {} : {
+          sandbox_execution_epoch: id(
+            statement.sandbox_execution_epoch,
+            'social execution Sandbox epoch'
+          )
         })
       },
       signature: {
@@ -165,6 +189,12 @@ function normalizeMutationEvidence(raw) {
         evidence.machine_authority_digest,
         'social mutation machine_authority_digest'
       )
+    }),
+    ...(evidence.capability_consumption_receipt_digest === undefined ? {} : {
+      capability_consumption_receipt_digest: digest(
+        evidence.capability_consumption_receipt_digest,
+        'social mutation capability consumption receipt digest'
+      )
     })
   };
   if (normalized.execution.statement.invocation_digest !== normalized.invocation_digest) {
@@ -175,6 +205,26 @@ function normalizeMutationEvidence(raw) {
     && normalized.execution.statement.effect_destination !== normalized.effect_destination
   ) {
     throw new ValidationError('social execution effect destination evidence is inconsistent');
+  }
+  const consumptionFields = [
+    normalized.capability_consumption_receipt_digest,
+    normalized.execution.statement.capability_consumption_receipt_digest,
+    normalized.execution.statement.sandbox_execution_epoch
+  ];
+  if (consumptionFields.some(value => value !== undefined)) {
+    if (consumptionFields.some(value => value === undefined)) {
+      throw new ValidationError(
+        'social capability consumption evidence must bind receipt digest and Sandbox epoch together'
+      );
+    }
+    if (
+      normalized.capability_consumption_receipt_digest
+      !== normalized.execution.statement.capability_consumption_receipt_digest
+    ) {
+      throw new ValidationError(
+        'social capability consumption receipt evidence is inconsistent'
+      );
+    }
   }
   return Object.freeze(normalized);
 }

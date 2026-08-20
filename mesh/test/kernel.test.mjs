@@ -1897,10 +1897,59 @@ test('full four-service path enforces auth, idempotency, consent, export, and au
   });
   assert.equal(wrongPlan.status, 403);
   assert.equal((await wrongPlan.json()).error.code, 'capability_plan_mismatch');
+
+  const sandboxOperationsUrl = `http://127.0.0.1:${basePort + 2}/internal/v1/operations`;
+  const sandboxOperations = await fetch(sandboxOperationsUrl, {
+    headers: signedRequestHeaders(hypervisorIdentity, {
+      method: 'GET',
+      url: sandboxOperationsUrl,
+      audience: 'sandbox'
+    })
+  });
+  assert.equal(sandboxOperations.status, 200);
+  const sandboxOperationsBody = await sandboxOperations.json();
+  assert.match(sandboxOperationsBody.execution_epoch, /^sandbox_epoch_/);
+
+  const capabilityCommitUrl = `http://127.0.0.1:${basePort + 3}/internal/v1/commit`;
+  const capabilityCommitBody = Buffer.from(JSON.stringify({
+    actor: boundedIntent.principal.id,
+    principal: boundedIntent.principal.id,
+    events: [{
+      kind: 'capability.consume.requested',
+      subject: verifyCapability(
+        boundedCapability,
+        hypervisorIdentity.publicKey,
+        { audience: 'sandbox', issuer: 'hypervisor' }
+      ).jti,
+      payload: {
+        capability: boundedCapability,
+        execution_epoch: sandboxOperationsBody.execution_epoch
+      }
+    }]
+  }));
+  const capabilityCommit = await fetch(capabilityCommitUrl, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      ...signedRequestHeaders(hypervisorIdentity, {
+        method: 'POST',
+        url: capabilityCommitUrl,
+        audience: 'grid',
+        body: capabilityCommitBody
+      })
+    },
+    body: capabilityCommitBody
+  });
+  assert.equal(capabilityCommit.status, 201);
+  const capabilityCommitResult = await capabilityCommit.json();
+  const consumptionReceipt = capabilityCommitResult.capability_consumptions?.[0]?.receipt;
+  assert.ok(consumptionReceipt);
+
   const validExecutionBody = Buffer.from(JSON.stringify({
     intent: boundedIntent,
     capability: boundedCapability,
-    plan: boundedPlan
+    plan: boundedPlan,
+    consumption_receipt: consumptionReceipt
   }));
   const validExecution = await fetch(sandboxUrl, {
     method: 'POST',
