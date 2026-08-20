@@ -32,6 +32,13 @@ function lensFixture() {
   };
 }
 
+function charterBinding() {
+  return {
+    charterDigest: 'a'.repeat(64),
+    charterRoleIds: ['role.member', 'role.curator', 'role.reviewer']
+  };
+}
+
 test('Circle curation contract is inert and grants no implicit founder authority', async () => {
   const contract = await loadContract();
   assert.equal(validateCircleCurationLensContract(contract), true);
@@ -56,16 +63,35 @@ test('multiple curation lenses are compatible with local member choice and an al
   assert.equal(contract.lens_model.lens_may_invoke_safety_legal_quarantine, false);
 });
 
-test('a Circle curation lens record is charter and role bound but non-authorizing', async () => {
+test('a Circle curation lens record is bound to the exact charter role inventory and remains non-authorizing', async () => {
   const contract = await loadContract();
   const lens = lensFixture();
-  assert.equal(validateCircleCurationLensRecord(contract, lens), true);
+  assert.equal(validateCircleCurationLensRecord(contract, lens, charterBinding()), true);
 
   const weakened = structuredClone(lens);
   weakened.third_party_suppression = true;
   assert.throws(
-    () => validateCircleCurationLensRecord(contract, weakened),
+    () => validateCircleCurationLensRecord(contract, weakened, charterBinding()),
     /record is invalid/
+  );
+
+  const wrongDigest = charterBinding();
+  wrongDigest.charterDigest = 'c'.repeat(64);
+  assert.throws(
+    () => validateCircleCurationLensRecord(contract, lens, wrongDigest),
+    /different charter digest/
+  );
+
+  const inventedRole = structuredClone(lens);
+  inventedRole.curator_role_ids = ['role.founder'];
+  assert.throws(
+    () => validateCircleCurationLensRecord(contract, inventedRole, charterBinding()),
+    /curator role is not present in the bound charter/
+  );
+
+  assert.throws(
+    () => validateCircleCurationLensRecord(contract, lens),
+    /requires the exact charter digest/
   );
 });
 
