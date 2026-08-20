@@ -71,10 +71,24 @@ export class Router {
   }
 }
 
-export async function readBody(req, maxBytes) {
+export async function readBody(req, maxBytes, { limitError } = {}) {
+  const tooLarge = requestBytes => {
+    if (limitError) {
+      return new AxiomError(
+        limitError.code,
+        limitError.message,
+        limitError.status,
+        {
+          ...(limitError.details ?? {}),
+          request_bytes: requestBytes
+        }
+      );
+    }
+    return new AxiomError('body_too_large', 'Request body exceeds the configured limit', 413);
+  };
   const declared = Number(req.headers['content-length'] ?? 0);
   if (Number.isFinite(declared) && declared > maxBytes) {
-    throw new AxiomError('body_too_large', 'Request body exceeds the configured limit', 413);
+    throw tooLarge(declared);
   }
   const chunks = [];
   let size = 0;
@@ -82,7 +96,7 @@ export async function readBody(req, maxBytes) {
     size += chunk.length;
     if (size > maxBytes) {
       req.destroy();
-      throw new AxiomError('body_too_large', 'Request body exceeds the configured limit', 413);
+      throw tooLarge(size);
     }
     chunks.push(chunk);
   }
@@ -141,6 +155,7 @@ export function createServiceServer({
 }) {
   const logger = createStructuredLogger(name);
   const requestAdmission = admitRequest ?? authenticate?.admitRequest;
+  const requestBodyLimit = authenticate?.resolveBodyLimit ?? requestAdmission?.resolveBodyLimit;
   const responseInspection = inspectResponse ?? authenticate?.inspectResponse;
   const handleRequest = async (req, res) => {
     const started = performance.now();
@@ -186,7 +201,23 @@ export function createServiceServer({
           transportPeer
         });
       }
-      const body = ['GET', 'HEAD'].includes(req.method) ? Buffer.alloc(0) : await readBody(req, maxBodyBytes);
+      let bodyLimit = { maxBytes: maxBodyBytes };
+      if (
+        !['GET', 'HEAD'].includes(req.method)
+        && route.options.auth !== false
+        && requestBodyLimit
+      ) {
+        bodyLimit = normalizeBodyLimitResolution(await requestBodyLimit({
+          req,
+          url,
+          route,
+          traceId,
+          maxBodyBytes
+        }), maxBodyBytes);
+      }
+      const body = ['GET', 'HEAD'].includes(req.method)
+        ? Buffer.alloc(0)
+        : await readBody(req, bodyLimit.maxBytes, { limitError: bodyLimit.limitError });
       let principal;
       if (route.options.auth !== false && authenticate) {
         principal = await authenticate({ req, body, traceId, route, url });
@@ -363,6 +394,46 @@ export async function close(server) {
 
 function validTraceId(value) {
   return typeof value === 'string' && /^[A-Za-z0-9_.:-]{8,160}$/.test(value);
+}
+
+function normalizeBodyLimitResolution(value, globalMaximum) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new ValidationError('Request body-limit resolver must return an object');
+  }
+  const maxBytes = value.maxBytes;
+  if (
+    !Number.isSafeInteger(maxBytes)
+    || maxBytes < 1
+    || maxBytes > globalMaximum
+  ) {
+    throw new ValidationError('Request body-limit resolver cannot exceed the configured global limit');
+  }
+  let limitError;
+  if (value.limitError !== undefined) {
+    if (!value.limitError || typeof value.limitError !== 'object' || Array.isArray(value.limitError)) {
+      throw new ValidationError('Request body-limit error contract is invalid');
+    }
+    const { code, message, status, details } = value.limitError;
+    if (
+      typeof code !== 'string'
+      || !code.length
+      || typeof message !== 'string'
+      || !message.length
+      || !Number.isSafeInteger(status)
+      || status < 400
+      || status > 599
+      || (details !== undefined && (!details || typeof details !== 'object' || Array.isArray(details)))
+    ) {
+      throw new ValidationError('Request body-limit error contract is invalid');
+    }
+    limitError = {
+      code,
+      message,
+      status,
+      ...(details === undefined ? {} : { details: structuredClone(details) })
+    };
+  }
+  return { maxBytes, ...(limitError ? { limitError } : {}) };
 }
 
 async function sendApplicationJson(res, status, value, headers, context) {
