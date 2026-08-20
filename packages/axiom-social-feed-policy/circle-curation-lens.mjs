@@ -56,6 +56,85 @@ export function validateCircleCurationLensRecord(
   { charterDigest, charterRoleIds } = {}
 ) {
   validateCircleCurationLensContract(contract);
+  validateLensRecordShape(contract, record);
+
+  if (typeof charterDigest !== 'string' || !DIGEST.test(charterDigest)) {
+    throw new Error('Circle curation lens validation requires the exact charter digest');
+  }
+  if (record.charter_digest !== charterDigest) {
+    throw new Error('Circle curation lens record is bound to a different charter digest');
+  }
+  if (!identifierArray(charterRoleIds, 1, 64)) {
+    throw new Error('Circle curation lens validation requires the exact charter role inventory');
+  }
+  const charterRoles = new Set(charterRoleIds);
+  if (record.curator_role_ids.some(roleId => !charterRoles.has(roleId))) {
+    throw new Error('Circle curation lens curator role is not present in the bound charter');
+  }
+  return true;
+}
+
+export function validateCircleCurationSelection(contract, selection, { lensRecord = null } = {}) {
+  validateCircleCurationLensContract(contract);
+  exactObject(selection, 'Circle curation selection', [
+    'schema',
+    'owner',
+    'circle_id',
+    'selected_view',
+    'selected_lens_id',
+    'selected_at',
+    'scope',
+    'network_effect',
+    'authority_effect'
+  ]);
+  const uncurated = selection.selected_view === 'uncurated';
+  const curated = selection.selected_view === 'curated';
+  if (
+    selection.schema !== contract.selection_record.schema
+    || !identifier(selection.owner)
+    || !identifier(selection.circle_id)
+    || (!uncurated && !curated)
+    || (uncurated && selection.selected_lens_id !== null)
+    || (curated && !identifier(selection.selected_lens_id))
+    || !validTimestamp(selection.selected_at)
+    || selection.scope !== 'owner-local-preference'
+    || selection.network_effect !== 'none'
+    || selection.authority_effect !== 'none'
+  ) throw new Error('Circle curation selection is invalid');
+
+  if (uncurated) {
+    if (lensRecord !== null) {
+      throw new Error('Uncurated selection cannot bind a curation lens record');
+    }
+    return true;
+  }
+
+  if (!lensRecord) {
+    throw new Error('Curated selection requires the selected lens record');
+  }
+  validateLensRecordShape(contract, lensRecord);
+  if (
+    lensRecord.circle_id !== selection.circle_id
+    || lensRecord.lens_id !== selection.selected_lens_id
+    || lensRecord.status !== 'active'
+  ) {
+    throw new Error('Curated selection does not match an active lens for the selected Circle');
+  }
+  return true;
+}
+
+export function validateCurationRuleEffect(contract, effect) {
+  validateCircleCurationLensContract(contract);
+  if (PROHIBITED_EFFECTS.has(effect)) {
+    throw new Error(`Curation effect ${effect} is prohibited`);
+  }
+  if (!ALLOWED_EFFECTS.has(effect)) {
+    throw new Error(`Curation effect ${effect} is unsupported`);
+  }
+  return effect;
+}
+
+function validateLensRecordShape(contract, record) {
   exactObject(record, 'Circle curation lens record', [
     'schema',
     'circle_id',
@@ -88,62 +167,6 @@ export function validateCircleCurationLensRecord(
     || record.network_effect !== 'none'
     || record.authority_effect !== 'none'
   ) throw new Error('Circle curation lens record is invalid');
-
-  if (typeof charterDigest !== 'string' || !DIGEST.test(charterDigest)) {
-    throw new Error('Circle curation lens validation requires the exact charter digest');
-  }
-  if (record.charter_digest !== charterDigest) {
-    throw new Error('Circle curation lens record is bound to a different charter digest');
-  }
-  if (!identifierArray(charterRoleIds, 1, 64)) {
-    throw new Error('Circle curation lens validation requires the exact charter role inventory');
-  }
-  const charterRoles = new Set(charterRoleIds);
-  if (record.curator_role_ids.some(roleId => !charterRoles.has(roleId))) {
-    throw new Error('Circle curation lens curator role is not present in the bound charter');
-  }
-  return true;
-}
-
-export function validateCircleCurationSelection(contract, selection) {
-  validateCircleCurationLensContract(contract);
-  exactObject(selection, 'Circle curation selection', [
-    'schema',
-    'owner',
-    'circle_id',
-    'selected_view',
-    'selected_lens_id',
-    'selected_at',
-    'scope',
-    'network_effect',
-    'authority_effect'
-  ]);
-  const uncurated = selection.selected_view === 'uncurated';
-  const curated = selection.selected_view === 'curated';
-  if (
-    selection.schema !== contract.selection_record.schema
-    || !identifier(selection.owner)
-    || !identifier(selection.circle_id)
-    || (!uncurated && !curated)
-    || (uncurated && selection.selected_lens_id !== null)
-    || (curated && !identifier(selection.selected_lens_id))
-    || !validTimestamp(selection.selected_at)
-    || selection.scope !== 'owner-local-preference'
-    || selection.network_effect !== 'none'
-    || selection.authority_effect !== 'none'
-  ) throw new Error('Circle curation selection is invalid');
-  return true;
-}
-
-export function validateCurationRuleEffect(contract, effect) {
-  validateCircleCurationLensContract(contract);
-  if (PROHIBITED_EFFECTS.has(effect)) {
-    throw new Error(`Curation effect ${effect} is prohibited`);
-  }
-  if (!ALLOWED_EFFECTS.has(effect)) {
-    throw new Error(`Curation effect ${effect} is unsupported`);
-  }
-  return effect;
 }
 
 function validateCharterBinding(value) {
