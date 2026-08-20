@@ -101,7 +101,14 @@ function circleDescriptor() {
   };
 }
 
-function invitation({ id, principal, roles, issuedBy, issuedAt, expiresAt = '2026-08-20T12:45:00.000Z' }) {
+function invitation({
+  id,
+  principal,
+  roles,
+  issuedBy,
+  issuedAt,
+  expiresAt = '2026-08-20T12:45:00.000Z'
+}) {
   return {
     schema: CIRCLE_INVITATION_SCHEMA,
     invitation_id: id,
@@ -118,7 +125,15 @@ function invitation({ id, principal, roles, issuedBy, issuedAt, expiresAt = '202
   };
 }
 
-function membership({ id, invitationId, principal, roles, acceptedAt, status = 'active', statusEffectiveAt = acceptedAt }) {
+function membership({
+  id,
+  invitationId,
+  principal,
+  roles,
+  acceptedAt,
+  status = 'active',
+  statusEffectiveAt = acceptedAt
+}) {
   return {
     schema: CIRCLE_MEMBERSHIP_SCHEMA,
     membership_id: id,
@@ -170,7 +185,15 @@ function decision({ outcome = 'accepted', receipts = [] } = {}) {
   };
 }
 
-function historicalBinding({ bindingId, recordType, record, eventTime, boundAt, previous = null, basisBindingId = null }) {
+function historicalBinding({
+  bindingId,
+  recordType,
+  record,
+  eventTime,
+  boundAt,
+  previous = null,
+  basisBindingId = null
+}) {
   const idField = {
     invitation: 'invitation_id',
     membership: 'membership_id',
@@ -235,7 +258,12 @@ function charterLifecycle() {
   };
 }
 
-function baseRecords({ gammaIssuer = 'human.alpha', proposalProposer = 'human.alpha', betaStatus = 'active', betaStatusEffectiveAt = '2026-08-20T12:05:00.000Z' } = {}) {
+function baseRecords({
+  gammaIssuer = 'human.alpha',
+  proposalProposer = 'human.alpha',
+  betaStatus = 'active',
+  betaStatusEffectiveAt = '2026-08-20T12:05:00.000Z'
+} = {}) {
   const inviteAlpha = invitation({
     id: 'invite.alpha',
     principal: 'human.alpha',
@@ -407,7 +435,14 @@ function appendDecisionBinding(bindings, record, proposalBinding) {
   return decisionBinding;
 }
 
-async function authorizationInput({ records = baseRecords(), bindingId, ledger, requester, participantAttestations = [], hypervisorPublicKey = null } = {}) {
+async function authorizationInput({
+  records = baseRecords(),
+  bindingId,
+  ledger,
+  requester,
+  participantAttestations = [],
+  hypervisorPublicKey = null
+} = {}) {
   const policies = await loadPolicies();
   return {
     ...policies,
@@ -444,10 +479,17 @@ function issueVotes(hypervisor, proposalBinding, votes = { alpha: 'approve', bet
   ];
 }
 
-async function decisionFixture({ requester = 'human.alpha', votes = { alpha: 'approve', beta: 'approve' }, outcome = 'accepted', betaStatus = 'active', betaStatusEffectiveAt = '2026-08-20T12:05:00.000Z' } = {}) {
+async function decisionFixture({
+  requester = 'human.alpha',
+  votes = { alpha: 'approve', beta: 'approve' },
+  outcome = 'accepted',
+  betaStatus = 'active',
+  betaStatusEffectiveAt = '2026-08-20T12:05:00.000Z'
+} = {}) {
   const hypervisor = identity();
-  const records = baseRecords({ betaStatus, betaStatusEffectiveAt });
-  const { bindings, proposalBinding } = ledgerThroughProposal(records);
+  const historicalRecords = baseRecords();
+  const currentRecords = baseRecords({ betaStatus, betaStatusEffectiveAt });
+  const { bindings, proposalBinding } = ledgerThroughProposal(historicalRecords);
   const issued = issueVotes(hypervisor, proposalBinding, votes);
   const record = decision({
     outcome,
@@ -456,14 +498,24 @@ async function decisionFixture({ requester = 'human.alpha', votes = { alpha: 'ap
   const decisionBinding = appendDecisionBinding(bindings, record, proposalBinding);
   const ledger = ledgerObject(bindings);
   const input = await authorizationInput({
-    records,
+    records: currentRecords,
     bindingId: decisionBinding.binding_id,
     ledger,
     requester,
     participantAttestations: issued.map(item => item.attestation),
     hypervisorPublicKey: hypervisor.publicKey
   });
-  return { hypervisor, records, proposalBinding, issued, record, decisionBinding, ledger, input };
+  return {
+    hypervisor,
+    records: currentRecords,
+    historicalRecords,
+    proposalBinding,
+    issued,
+    record,
+    decisionBinding,
+    ledger,
+    input
+  };
 }
 
 test('Circle record authorization policy is exact, inert, and non-authorizing', async () => {
@@ -471,6 +523,7 @@ test('Circle record authorization policy is exact, inert, and non-authorizing', 
   assert.equal(validateCircleRecordAuthorizationPolicy(policy), true);
   assert.equal(policy.runtime_activation, false);
   assert.equal(policy.requirements.creator_bootstrap_persists_as_founder_authority, false);
+  assert.equal(policy.requirements.role_authorizing_membership_historical_binding_required, true);
   assert.equal(policy.requirements.decision_submitter_has_collective_authority, false);
   assert.equal(policy.requirements.decision_requires_complete_electorate_attestation_set, true);
   assert.equal(policy.output.runtime_authority, false);
@@ -497,7 +550,6 @@ test('post-bootstrap invitation requires an earlier historically bound approve m
   const records = baseRecords({ gammaIssuer: 'human.beta' });
   const { bindings } = ledgerThroughProposal(records);
   const ledger = ledgerObject(bindings);
-  assert.throws(() => assessCircleRecordAuthorization(awaitableInputPlaceholder()), /never/);
   const input = await authorizationInput({
     records,
     bindingId: 'binding.invite.gamma',
@@ -509,10 +561,6 @@ test('post-bootstrap invitation requires an earlier historically bound approve m
     /historically bound active unexited membership with approve mode/
   );
 });
-
-function awaitableInputPlaceholder() {
-  throw new Error('never');
-}
 
 test('membership acceptance is self-only and proposal submission is role-bound', async () => {
   const records = baseRecords();
@@ -588,6 +636,14 @@ test('review-mode member may aggregate a decision but gains no vote or collectiv
   assert.equal(result.assessment.submitter_collective_authority, false);
 });
 
+test('nonparticipant without review mode cannot aggregate a collective decision', async () => {
+  const fixture = await decisionFixture({ requester: 'human.delta' });
+  assert.throws(
+    () => assessCircleRecordAuthorization(fixture.input),
+    /historically bound active unexited membership with review mode/
+  );
+});
+
 test('decision fails closed on incomplete, duplicate, forged, or context-substituted participant evidence', async () => {
   const fixture = await decisionFixture();
   const missing = {
@@ -603,7 +659,10 @@ test('decision fails closed on incomplete, duplicate, forged, or context-substit
     ...fixture.input,
     participantAttestations: [fixture.issued[0].attestation, fixture.issued[0].attestation]
   };
-  assert.throws(() => assessCircleRecordAuthorization(duplicate), /cannot count a principal or membership twice/);
+  assert.throws(
+    () => assessCircleRecordAuthorization(duplicate),
+    /cannot count a principal or membership twice/
+  );
 
   const forged = structuredClone(fixture.issued[0].attestation);
   forged.statement.vote = 'reject';
@@ -634,7 +693,10 @@ test('decision fails closed on incomplete, duplicate, forged, or context-substit
 });
 
 test('decision outcome must equal frozen-charter recomputation and withdrawn remains unsupported', async () => {
-  const wrong = await decisionFixture({ votes: { alpha: 'approve', beta: 'reject' }, outcome: 'accepted' });
+  const wrong = await decisionFixture({
+    votes: { alpha: 'approve', beta: 'reject' },
+    outcome: 'accepted'
+  });
   assert.throws(
     () => assessCircleRecordAuthorization(wrong.input),
     /outcome does not match frozen-charter quorum and approval recomputation/
@@ -647,11 +709,14 @@ test('decision outcome must equal frozen-charter recomputation and withdrawn rem
   );
 });
 
-test('decision rejects ambiguous current membership state rather than guessing historical eligibility', async () => {
+test('decision rejects ambiguous current membership state rather than rewriting historical acceptance', async () => {
   const fixture = await decisionFixture({
     betaStatus: 'suspended',
     betaStatusEffectiveAt: '2026-08-20T12:20:30.000Z'
   });
+  assert.equal(fixture.historicalRecords.memberBeta.status, 'active');
+  assert.equal(fixture.historicalRecords.memberBeta.status_effective_at, fixture.historicalRecords.memberBeta.accepted_at);
+  assert.equal(fixture.records.memberBeta.status, 'suspended');
   assert.throws(
     () => assessCircleRecordAuthorization(fixture.input),
     /ambiguous without complete membership lifecycle history/
