@@ -78,7 +78,7 @@ test('promotion blockers preserve lifecycle, admission, bootstrap, withdrawal, h
   ]) assert.ok(blockers.includes(required), `missing promotion blocker: ${required}`);
 });
 
-test('policy and source preserve bootstrap confinement, complete collective proof, and no runtime authority', async () => {
+test('policy and source preserve bootstrap confinement, complete collective proof, exact signatures, and no runtime authority', async () => {
   const [policy, source] = await Promise.all([
     readFile(POLICY_URL, 'utf8').then(JSON.parse),
     readFile(SOURCE_URL, 'utf8')
@@ -87,6 +87,7 @@ test('policy and source preserve bootstrap confinement, complete collective proo
   assert.equal(policy.requirements.creator_bootstrap_persists_as_founder_authority, false);
   assert.equal(policy.requirements.role_authorizing_membership_historical_binding_required, true);
   assert.equal(policy.requirements.decision_submitter_has_collective_authority, false);
+  assert.equal(policy.requirements.participant_signature_envelope_exact, true);
   assert.equal(policy.requirements.decision_requires_complete_electorate_attestation_set, true);
   assert.equal(policy.requirements.withdrawn_decision_outcome_supported, false);
 
@@ -94,6 +95,8 @@ test('policy and source preserve bootstrap confinement, complete collective proo
     'creator-bootstrap-first-invitation',
     'historically bound active unexited membership',
     'one authenticated attestation from every eligible voter',
+    'validateParticipationSignatureEnvelope',
+    "signature.key_id !== expectedKeyId",
     'participant-aggregator',
     'review-member-aggregator',
     'submitter_collective_authority: false',
