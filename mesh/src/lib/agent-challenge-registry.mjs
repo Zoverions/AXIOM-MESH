@@ -208,8 +208,6 @@ export function validateAgentChallenge(challenge, {
     if (expiry.getTime() <= issuedAt.getTime()) {
       throw new ValidationError(`Agent challenge ${challenge.challenge_id} expiry is not after issuance`);
     }
-  } else if (challenge.expires_at !== undefined && challenge.expires_at !== null) {
-    throw new ValidationError(`Agent challenge ${challenge.challenge_id} expires_at is invalid`);
   }
 
   if (status === 'open' && expiry && expiry.getTime() <= generatedAt.getTime()) {
