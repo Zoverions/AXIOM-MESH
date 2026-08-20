@@ -83,3 +83,44 @@ jobs:
       - name: Verify Windows-compatible kernel surface
         shell: pwsh
         run: npm run check
+
+  verify-macos:
+    name: verify-macos (${{ matrix.runner }})
+    strategy:
+      fail-fast: false
+      matrix:
+        runner:
+          - macos-15
+          - macos-15-intel
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24.18.0"
+          package-manager-cache: false
+      - name: Record Apple runner architecture
+        shell: bash
+        run: |
+          sw_vers
+          uname -a
+          node -p "JSON.stringify({platform: process.platform, arch: process.arch, node: process.version})"
+      - name: Prepare short private Unix-socket temp root
+        shell: bash
+        run: |
+          socket_tmp="/private/tmp/axiom-mesh-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir -p "$socket_tmp"
+          chmod 700 "$socket_tmp"
+          echo "TMPDIR=$socket_tmp" >> "$GITHUB_ENV"
+      - name: Install exact lockfiles without lifecycle scripts
+        shell: bash
+        run: |
+          npm ci --ignore-scripts
+          npm --prefix mesh ci --ignore-scripts
+      - name: Verify macOS-compatible kernel surface
+        shell: bash
+        run: npm run check
