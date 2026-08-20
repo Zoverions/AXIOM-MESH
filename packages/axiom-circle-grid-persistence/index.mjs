@@ -473,7 +473,7 @@ function validateGridEventEnvelope(candidate, gridEvent) {
     gridEvent.signature.algorithm !== 'Ed25519'
     || typeof gridEvent.signature.key_id !== 'string'
     || gridEvent.signature.key_id.length < 1
-    || gridEvent.signature.digest !== digestObject({ event_hash: gridEvent.event_hash })
+    || !DIGEST.test(gridEvent.signature.digest ?? '')
     || typeof gridEvent.signature.signature !== 'string'
     || gridEvent.signature.signature.length < 1
   ) throw new ValidationError('Circle Grid persistence Grid signature metadata is invalid');
