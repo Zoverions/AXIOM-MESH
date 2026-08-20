@@ -16,6 +16,8 @@ const EXPECTED_REQUIREMENTS = Object.freeze({
   requester_must_equal_authenticated_principal: true,
   creator_bootstrap_limited_to_first_invitation: true,
   creator_bootstrap_persists_as_founder_authority: false,
+  role_authorizing_membership_historical_binding_required: true,
+  current_membership_must_match_historical_acceptance: true,
   post_bootstrap_invitation_requires_approve_mode: true,
   membership_acceptance_requires_invited_principal_self_acceptance: true,
   proposal_requires_propose_mode: true,
@@ -289,15 +291,18 @@ export function assessCircleRecordAuthorization({
   } else if (binding.record_type === 'proposal') {
     detail = assessProposal({
       binding,
+      index,
       requester,
       circlePackage,
       charterPolicy,
       charterLifecycle,
+      historicalLedger,
       now
     });
   } else if (binding.record_type === 'decision') {
     detail = assessDecision({
       binding,
+      index,
       requester,
       circlePackage,
       charterPolicy,
@@ -383,6 +388,8 @@ function assessInvitation({
 
   const membership = requireUniqueMembershipWithMode({
     circlePackage,
+    historicalLedger,
+    beforeBindingIndex: index,
     charter: resolved.charter,
     principalId: requester,
     at: record.issued_at,
@@ -412,10 +419,12 @@ function assessMembership({ binding, requester }) {
 
 function assessProposal({
   binding,
+  index,
   requester,
   circlePackage,
   charterPolicy,
   charterLifecycle,
+  historicalLedger,
   now
 }) {
   const record = binding.record;
@@ -431,6 +440,8 @@ function assessProposal({
   }
   const membership = requireUniqueMembershipWithMode({
     circlePackage,
+    historicalLedger,
+    beforeBindingIndex: index,
     charter: resolved.charter,
     principalId: requester,
     at: record.created_at,
@@ -447,6 +458,7 @@ function assessProposal({
 
 function assessDecision({
   binding,
+  index,
   requester,
   circlePackage,
   charterPolicy,
@@ -467,11 +479,18 @@ function assessDecision({
     throw new ValidationError('Circle decision participant attestations are invalid');
   }
 
-  const proposalBinding = historicalLedger.bindings.find(
+  const proposalBindingIndex = historicalLedger.bindings.findIndex(
     candidate => candidate.binding_id === binding.basis_binding_id
   );
-  if (!proposalBinding || proposalBinding.record_type !== 'proposal') {
-    throw new ValidationError('Circle decision authorization requires its historical proposal basis');
+  const proposalBinding = proposalBindingIndex < 0
+    ? null
+    : historicalLedger.bindings[proposalBindingIndex];
+  if (
+    !proposalBinding
+    || proposalBinding.record_type !== 'proposal'
+    || proposalBindingIndex >= index
+  ) {
+    throw new ValidationError('Circle decision authorization requires its earlier historical proposal basis');
   }
   const proposal = proposalBinding.record;
   const resolved = resolveCircleCharterAt(charterPolicy, circlePackage, charterLifecycle, {
@@ -485,6 +504,8 @@ function assessDecision({
 
   const electorate = buildCompleteDecisionElectorate({
     circlePackage,
+    historicalLedger,
+    proposalBindingIndex,
     charter: resolved.charter,
     proposalCreatedAt: proposal.created_at
   });
@@ -540,7 +561,7 @@ function assessDecision({
   const decisionReceiptDigests = [...record.participant_receipts].sort();
   if (
     decisionReceiptDigests.length !== attestationDigests.length
-    || decisionReceiptDigests.some((value, index) => value !== attestationDigests[index])
+    || decisionReceiptDigests.some((value, receiptIndex) => value !== attestationDigests[receiptIndex])
   ) throw new ValidationError('Circle decision participant_receipts do not match authenticated attestations');
 
   const submitterIsParticipant = verified.some(item => item.statement.principal_id === requester);
@@ -549,6 +570,8 @@ function assessDecision({
   if (!submitterIsParticipant) {
     const reviewer = requireUniqueMembershipWithMode({
       circlePackage,
+      historicalLedger,
+      beforeBindingIndex: index,
       charter: resolved.charter,
       principalId: requester,
       at: record.decided_at,
@@ -599,32 +622,45 @@ function assessDecision({
   };
 }
 
-function buildCompleteDecisionElectorate({ circlePackage, charter, proposalCreatedAt }) {
+function buildCompleteDecisionElectorate({
+  circlePackage,
+  historicalLedger,
+  proposalBindingIndex,
+  charter,
+  proposalCreatedAt
+}) {
   const proposalMs = Date.parse(proposalCreatedAt);
   const voteRoles = new Set(
     charter.roles.filter(role => role.declared_modes.includes('vote')).map(role => role.role_id)
   );
+  const currentById = new Map(circlePackage.memberships.map(item => [item.membership_id, item]));
   const eligible = [];
   const seenPrincipals = new Set();
 
-  for (const membership of circlePackage.memberships) {
-    if (!membership.role_ids.some(roleId => voteRoles.has(roleId))) continue;
-    if (Date.parse(membership.accepted_at) > proposalMs) continue;
+  for (const binding of historicalLedger.bindings.slice(0, proposalBindingIndex)) {
+    if (binding.record_type !== 'membership') continue;
+    const historical = binding.record;
+    if (!historical.role_ids.some(roleId => voteRoles.has(roleId))) continue;
+    if (Date.parse(historical.accepted_at) > proposalMs) continue;
 
+    const current = currentById.get(historical.membership_id);
+    if (!current || !sameMembershipIdentity(current, historical)) {
+      throw new ValidationError('Circle decision electorate current membership does not match retained acceptance history');
+    }
     if (
-      membership.status !== 'active'
-      || Date.parse(membership.status_effective_at) > proposalMs
-      || circlePackage.exits.some(exit => exit.membership_id === membership.membership_id)
+      current.status !== 'active'
+      || Date.parse(current.status_effective_at) > proposalMs
+      || circlePackage.exits.some(exit => exit.membership_id === current.membership_id)
     ) {
       throw new ValidationError(
         'Circle decision electorate is ambiguous without complete membership lifecycle history'
       );
     }
-    if (seenPrincipals.has(membership.principal_id)) {
+    if (seenPrincipals.has(current.principal_id)) {
       throw new ValidationError('Circle decision electorate cannot contain multiple voting memberships for one principal');
     }
-    seenPrincipals.add(membership.principal_id);
-    eligible.push(membership);
+    seenPrincipals.add(current.principal_id);
+    eligible.push(current);
   }
 
   return eligible;
@@ -632,6 +668,8 @@ function buildCompleteDecisionElectorate({ circlePackage, charter, proposalCreat
 
 function requireUniqueMembershipWithMode({
   circlePackage,
+  historicalLedger,
+  beforeBindingIndex,
   charter,
   principalId,
   at,
@@ -642,19 +680,49 @@ function requireUniqueMembershipWithMode({
   const roleIdsWithMode = new Set(
     charter.roles.filter(role => role.declared_modes.includes(requiredMode)).map(role => role.role_id)
   );
-  const memberships = circlePackage.memberships.filter(membership => {
-    if (membership.principal_id !== principalId) return false;
-    if (!membership.role_ids.some(roleId => roleIdsWithMode.has(roleId))) return false;
-    if (Date.parse(membership.accepted_at) > atMs) return false;
-    if (membership.status !== 'active') return false;
-    if (Date.parse(membership.status_effective_at) > atMs) return false;
-    if (circlePackage.exits.some(exit => exit.membership_id === membership.membership_id)) return false;
-    return true;
-  });
-  if (memberships.length !== 1) {
-    throw new ValidationError(`${label} requires exactly one active unexited membership with ${requiredMode} mode`);
+  const currentById = new Map(circlePackage.memberships.map(item => [item.membership_id, item]));
+  const matches = [];
+
+  for (const binding of historicalLedger.bindings.slice(0, beforeBindingIndex)) {
+    if (binding.record_type !== 'membership') continue;
+    const historical = binding.record;
+    if (historical.principal_id !== principalId) continue;
+    if (!historical.role_ids.some(roleId => roleIdsWithMode.has(roleId))) continue;
+    if (Date.parse(historical.accepted_at) > atMs) continue;
+
+    const current = currentById.get(historical.membership_id);
+    if (!current || !sameMembershipIdentity(current, historical)) {
+      throw new ValidationError(`${label} current membership does not match retained acceptance history`);
+    }
+    if (
+      current.status !== 'active'
+      || Date.parse(current.status_effective_at) > atMs
+      || circlePackage.exits.some(exit => exit.membership_id === current.membership_id)
+    ) continue;
+    matches.push(current);
   }
-  return memberships[0];
+
+  if (matches.length !== 1) {
+    throw new ValidationError(`${label} requires exactly one historically bound active unexited membership with ${requiredMode} mode`);
+  }
+  return matches[0];
+}
+
+function sameMembershipIdentity(current, historical) {
+  return current.membership_id === historical.membership_id
+    && current.circle_id === historical.circle_id
+    && current.invitation_id === historical.invitation_id
+    && current.principal_id === historical.principal_id
+    && current.accepted_at === historical.accepted_at
+    && sameSet(current.role_ids, historical.role_ids);
+}
+
+function sameSet(left, right) {
+  return Array.isArray(left)
+    && Array.isArray(right)
+    && left.length === right.length
+    && new Set(left).size === left.length
+    && left.every(value => right.includes(value));
 }
 
 function validateParticipantStatement(statement) {
