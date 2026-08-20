@@ -236,6 +236,19 @@ test('Circle membership rejects acceptance after invitation expiry', () => {
   assert.throws(() => validateCircleCorePackage(document), /expired invitation/);
 });
 
+test('Circle one-use invitation cannot create multiple membership records', () => {
+  const document = fixture();
+  const duplicate = clone(document.memberships[0]);
+  duplicate.membership_id = 'membership.owner.2';
+  duplicate.status = 'revoked';
+  duplicate.status_effective_at = '2026-08-20T12:03:00.000Z';
+  document.memberships.push(duplicate);
+  assert.throws(
+    () => validateCircleCorePackage(document),
+    /one-use and cannot create multiple memberships/
+  );
+});
+
 test('Circle records reject cross-Circle and stale-charter substitution', () => {
   const wrongCircle = fixture();
   wrongCircle.proposals[0].circle_id = 'circle.other';
