@@ -195,6 +195,25 @@ test('charter cannot become effective before Circle creation', async () => {
   );
 });
 
+test('activation evidence references reject control characters and surrounding whitespace', async () => {
+  const policy = await loadPolicy();
+
+  for (const invalidRef of [
+    ' evidence:charter:hardening:v2',
+    'evidence:charter:hardening:v2 ',
+    'evidence:charter:hardening:v2\nforged',
+    'evidence:charter:hardening:v2\tforged',
+    'evidence:charter:hardening:v2\u007fforged'
+  ]) {
+    const lifecycle = lifecycleFixture();
+    lifecycle.entries[1].activation.evidence_refs = [invalidRef];
+    assert.throws(
+      () => validateCircleCharterLifecycle(policy, circlePackage(), lifecycle, { now: NOW }),
+      /evidence reference is not canonical/
+    );
+  }
+});
+
 test('resolved historical charter is deeply immutable and retains its digest', async () => {
   const policy = await loadPolicy();
   const circle = circlePackage();
