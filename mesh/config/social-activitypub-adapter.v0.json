@@ -33,12 +33,6 @@
       "requires_public_projection": true
     },
     {
-      "axiom_semantic": "social.publication.supersede",
-      "activitypub_activity": "Update",
-      "activitypub_object": "Note",
-      "requires_public_projection": true
-    },
-    {
       "axiom_semantic": "social.publication.retract",
       "activitypub_activity": "Delete",
       "activitypub_object": "Tombstone",
@@ -191,6 +185,7 @@
     "universal_hiding_effect": false
   },
   "prohibited_outbound_semantics": [
+    "social.publication.supersede",
     "circle.curated-lens.exclude",
     "circle.member-private-publication",
     "circle.membership",
