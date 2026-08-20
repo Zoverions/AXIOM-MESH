@@ -19,6 +19,10 @@ const STATIC_ASSETS = new Map([
   ['/index.html', asset('index.html', 'text/html; charset=utf-8')],
   ['/app.mjs', asset('app.mjs', 'text/javascript; charset=utf-8')],
   ['/presentation.mjs', asset('presentation.mjs', 'text/javascript; charset=utf-8')],
+  ['/social-presentation.mjs', {
+    path: join(REPOSITORY_ROOT, 'packages', 'axiom-one-social-presentation', 'index.mjs'),
+    contentType: 'text/javascript; charset=utf-8'
+  }],
   ['/human-contract.json', asset('human-contract.json', 'application/json; charset=utf-8')],
   ['/styles.css', asset('styles.css', 'text/css; charset=utf-8')],
   ['/manifest.webmanifest', asset('manifest.webmanifest', 'application/manifest+json')],

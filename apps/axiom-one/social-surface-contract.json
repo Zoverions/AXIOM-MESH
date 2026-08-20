@@ -1,0 +1,58 @@
+{
+  "schema": "axiom-one-social-surface.v0",
+  "version": 0,
+  "status": "read-only-wired-preview",
+  "runtime_activation": true,
+  "surface_id": "social",
+  "gateway_reads": [
+    {
+      "route_id": "social.get",
+      "purpose": "owner-local-authored-social-corpus",
+      "read_only": true
+    },
+    {
+      "route_id": "social_remote_review.get",
+      "purpose": "owner-scoped-remote-social-review",
+      "read_only": true
+    }
+  ],
+  "presentation_module": "packages/axiom-one-social-presentation/index.mjs",
+  "browser_asset": "/social-presentation.mjs",
+  "local_model": {
+    "distribution_state": "local-only",
+    "private_actor_state_exposed": false,
+    "protected_persona_state_exposed": false,
+    "network_delivery_claimed": false
+  },
+  "remote_model": {
+    "activation_scope": "local-read-only-review",
+    "remote_observation_is_local_authorship_proof": false,
+    "exporter_attestation_is_identity_proof": false,
+    "exporter_attestation_is_content_truth_proof": false,
+    "ranking_enabled": false,
+    "recommendation_enabled": false
+  },
+  "writes": {
+    "enabled": false,
+    "social_actor_create_exposed": false,
+    "social_persona_create_exposed": false,
+    "social_publication_create_exposed": false,
+    "social_publication_supersede_exposed": false,
+    "social_publication_retract_exposed": false,
+    "remote_follow_mutation_exposed": false,
+    "moderation_mutation_exposed": false
+  },
+  "federation": {
+    "enabled": false,
+    "activitypub_enabled": false,
+    "remote_transport_enabled": false
+  },
+  "current_shell_wiring": {
+    "app_policy_route_registered": true,
+    "router_registered": true,
+    "navigation_registered": true,
+    "service_worker_asset_registered": true
+  },
+  "authority_effect": "none",
+  "network_effect": "none"
+}

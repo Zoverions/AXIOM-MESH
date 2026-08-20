@@ -51,6 +51,7 @@
     "ask",
     "approvals",
     "vault",
+    "social",
     "receipts",
     "share",
     "explore"
@@ -64,6 +65,8 @@
     "memory.list",
     "exports.get",
     "export_bundles.get",
+    "social.get",
+    "social_remote_review.get",
     "events.list",
     "nodes.list",
     "capsules.list",
