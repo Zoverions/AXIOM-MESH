@@ -1,6 +1,6 @@
 # Contributing to AXIOM-MESH
 
-**Updated:** 2026-08-12
+**Updated:** 2026-08-20
 
 AXIOM-MESH accepts changes to:
 
@@ -136,6 +136,25 @@ data, failure criteria, halt procedure, and reproducibility steps.
   project status, release notes, and immutable evidence.
 - Laboratory change: roadmap/queue, experiment manifest, isolation boundary,
   explicit non-claim, and capability state where applicable.
+
+## Community Testnet v0
+
+You can contribute useful evidence without writing code or receiving AXIOM runtime authority.
+
+[Community Testnet v0](docs/community/COMMUNITY-TESTNET-V0.md) coordinates independent operators across Linux, Windows, macOS/Apple Silicon, ARM, constrained hardware, home servers, and disposable environments. Participants pin an exact commit, run a bounded test lane, and return reproducible evidence.
+
+Use the Community Testnet issue form for a human-friendly result or the existing machine-readable contribution package under `agent-readiness/`.
+
+Testnet rules:
+
+- report the exact 40-hex commit, not only a moving branch name;
+- report environment, method, observations, limitations, and negative results;
+- use only systems you own or are explicitly authorized to test;
+- route sensitive findings through `SECURITY.md`;
+- do not treat matching results as distributed consensus or security certification;
+- do not infer repository, deployment, credential, production, or protocol authority from participation.
+
+Operator, Breaker, and Builder are contribution roles only. A result may be useful evidence while granting the submitter no additional authority at all.
 
 ## Pull requests
 
