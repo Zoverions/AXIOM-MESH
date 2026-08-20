@@ -17,6 +17,7 @@
     "agent-commons:check": "node src/check-agent-commons.mjs",
     "agent-commons:challenges:check": "node src/check-agent-challenge-registry.mjs",
     "agent-commons:readonly:check": "node src/check-agent-commons-readonly-lab.mjs",
+    "agent-commons:mcp-readonly:check": "node src/check-agent-commons-mcp-readonly.mjs",
     "axiom": "node src/cli.mjs",
     "intent:compile": "node src/intentctl.mjs compile",
     "intent:assess": "node src/intentctl.mjs assess",

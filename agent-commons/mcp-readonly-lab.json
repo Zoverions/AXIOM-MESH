@@ -1,0 +1,70 @@
+{
+  "schema": "axiom-agent-commons-mcp-readonly-lab.v1",
+  "version": 1,
+  "project": "AXIOM-MESH",
+  "supported_build": "0.12.0-dev.3",
+  "canonical_repository": "Zoverions/AXIOM-MESH",
+  "laboratory_base_sha": "12fb3ee94a0561480ad1eba3faafa6de27c793fd",
+  "mcp_protocol_version": "2026-07-28",
+  "transport": "offline-normalized-metadata-only",
+  "network_listener": false,
+  "streamable_http_implemented": false,
+  "stdio_transport_implemented": false,
+  "session_state": false,
+  "initialize_supported": false,
+  "public_state_only": true,
+  "private_grid_access": false,
+  "consequential_tools": false,
+  "machine_authority_mapping": false,
+  "compatibility_claimed": false,
+  "production_compatibility_claimed": false,
+  "methods": [
+    "server/discover",
+    "tools/list",
+    "tools/call"
+  ],
+  "tools": [
+    {
+      "name": "axiom_project_get",
+      "c0_method": "project.get"
+    },
+    {
+      "name": "axiom_capabilities_list",
+      "c0_method": "capabilities.list"
+    },
+    {
+      "name": "axiom_challenges_list",
+      "c0_method": "challenges.list"
+    },
+    {
+      "name": "axiom_schemas_list",
+      "c0_method": "schemas.list"
+    },
+    {
+      "name": "axiom_verification_get",
+      "c0_method": "verification.get"
+    },
+    {
+      "name": "axiom_protocols_get",
+      "c0_method": "protocols.get"
+    }
+  ],
+  "limits": {
+    "max_frame_bytes": 8192,
+    "max_response_bytes": 131072,
+    "max_client_info_name_chars": 128,
+    "max_client_info_version_chars": 64,
+    "max_client_capability_keys": 16,
+    "max_client_capabilities_bytes": 4096,
+    "tools_list_ttl_ms": 0
+  },
+  "error_codes": {
+    "invalid_request": -32600,
+    "method_not_found": -32601,
+    "invalid_params": -32602,
+    "header_mismatch": -32001,
+    "unsupported_protocol_version": -32022,
+    "internal_error": -32603
+  },
+  "claim_boundary": "This is an offline protocol projection and synthetic conformance laboratory only. It exposes no network listener, MCP session, write-capable tool, private Grid state, machine-principal authority mapping, external validation, or production MCP compatibility claim."
+}
