@@ -33,7 +33,7 @@
     },
     {
       "id": "forged-participant-attestation",
-      "control": "Participant statements are exact-shape Hypervisor-signed Ed25519 attestations bound to Circle, decision, proposal binding, proposal digest, frozen charter, membership, principal, vote, and canonical participation time.",
+      "control": "Participant statements are exact-shape Hypervisor-signed Ed25519 attestations bound to Circle, decision, proposal binding, proposal digest, frozen charter, membership, principal, vote, and canonical participation time; the signature envelope itself is exact-shape and must name the actual trusted Hypervisor key id so unsigned metadata cannot re-address a valid statement.",
       "residual": "A valid Hypervisor attestation proves what the trusted Hypervisor signed; runtime principal authentication and member credential custody must still be independently secured."
     },
     {
