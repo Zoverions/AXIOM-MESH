@@ -23,6 +23,14 @@ const PERSONALIZED_REASONS = new Set([
   'underrepresented-source',
   'user-requested-discovery'
 ]);
+const DIVERSITY_DIMENSIONS = new Set([
+  'viewpoint-distance',
+  'source-novelty',
+  'topic-novelty',
+  'geographic-breadth',
+  'evidence-source-diversity',
+  'chronological-ranked-balance'
+]);
 
 export function createFeedSelectionReceipt(policy, {
   owner,
@@ -150,9 +158,7 @@ function validateDiversityEvidence(value) {
     || value.underrepresented_source_is_quality_judgment !== false
     || value.diversity_insertion_is_endorsement !== false
   ) throw new Error('feed diversity evidence policy exceeds the user-sovereign privacy boundary');
-  if (!Array.isArray(value.allowed_dimensions) || value.allowed_dimensions.length !== 6) {
-    throw new Error('feed diversity dimension inventory is invalid');
-  }
+  exactSet(value.allowed_dimensions, DIVERSITY_DIMENSIONS, 'feed diversity dimensions');
 }
 
 function validateExplainability(value) {
@@ -214,7 +220,11 @@ function canonicalTimestamp(value, label) {
 function exactSet(values, expected, label) {
   if (!Array.isArray(values)) throw new Error(`${label} must be an array`);
   const actual = new Set(values);
-  if (actual.size !== expected.size || [...expected].some(value => !actual.has(value))) {
+  if (
+    actual.size !== expected.size
+    || values.length !== expected.size
+    || [...expected].some(value => !actual.has(value))
+  ) {
     throw new Error(`${label} inventory drifted`);
   }
 }
