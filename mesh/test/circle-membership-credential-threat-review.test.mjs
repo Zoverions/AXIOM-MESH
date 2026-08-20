@@ -47,6 +47,17 @@ test('every credential lifecycle threat retains mitigations and a residual limit
   }
 });
 
+test('rotation threat review matches the executable single-lineage and terminal-predecessor rules', async () => {
+  const review = await loadReview();
+  const rotation = review.threats.find(threat => threat.id === 'rotation-substitution-or-branching');
+  const revocation = review.threats.find(threat => threat.id === 'revocation-bypass');
+  const clock = review.threats.find(threat => threat.id === 'clock-expiry-or-term-manipulation');
+  assert.ok(rotation.mitigations.includes('one-root-lineage-per-device'));
+  assert.ok(rotation.mitigations.includes('rotation-from-revoked-or-expired-predecessor-rejected'));
+  assert.ok(revocation.mitigations.includes('revoked-credential-cannot-be-used-as-late-rotation-predecessor'));
+  assert.ok(clock.mitigations.includes('rotation-at-or-after-predecessor-expiry-rejected'));
+});
+
 test('credential possession never becomes identity, role, or runtime authority proof', async () => {
   const review = await loadReview();
   const confusion = review.threats.find(threat => threat.id === 'role-or-authority-confusion');
@@ -75,6 +86,7 @@ test('revocation and compromised-device threats require current derived-state en
   const compromise = review.threats.find(threat => threat.id === 'compromised-device-reactivation');
   assert.match(revocation.residual_limit, /future runtime must bind every authentication decision/);
   assert.ok(compromise.mitigations.includes('compromised-device-credentials-not-authentication-eligible'));
+  assert.ok(compromise.mitigations.includes('post-compromise-credential-issuance-rejected'));
   assert.ok(review.promotion_blockers.includes('runtime-authentication-check-against-current-derived-state'));
   assert.ok(review.promotion_blockers.includes('grid-backed-replay-safe-device-and-credential-events'));
 });
