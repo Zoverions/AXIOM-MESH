@@ -35,6 +35,8 @@ export function validateCircleSimulationPolicy(policy) {
   exactObject(policy.requirements, 'Circle simulation requirements', [
     'active_membership_required',
     'one_active_membership_per_principal_required',
+    'active_membership_exit_history_prohibited',
+    'action_after_membership_activation_required',
     'role_declared_mode_required',
     'one_vote_per_membership_per_proposal',
     'exact_charter_digest_required',
@@ -92,6 +94,10 @@ export function simulateCircleDeliberation(policy, document, actions, { now = ne
   const charterDigest = digestObject(document.charter);
   const roleById = new Map(document.charter.roles.map(role => [role.role_id, role]));
   const activeMemberships = document.memberships.filter(item => item.status === 'active');
+  const activeMembershipIds = new Set(activeMemberships.map(item => item.membership_id));
+  if (document.exits.some(exit => activeMembershipIds.has(exit.membership_id))) {
+    throw new ValidationError('Circle simulation does not permit exit history on active memberships');
+  }
   const activeById = new Map(activeMemberships.map(item => [item.membership_id, item]));
   const activePrincipals = activeMemberships.map(item => item.principal_id);
   if (new Set(activePrincipals).size !== activePrincipals.length) {
@@ -149,6 +155,12 @@ export function simulateCircleDeliberation(policy, document, actions, { now = ne
       throw new ValidationError('Circle simulation actions are not chronological');
     }
     previousAtMs = atMs;
+    if (
+      atMs < Date.parse(membership.accepted_at)
+      || atMs < Date.parse(membership.status_effective_at)
+    ) {
+      throw new ValidationError('Circle simulation action predates membership activation');
+    }
     if (atMs < Date.parse(proposal.created_at) || atMs > Date.parse(proposal.closes_at)) {
       throw new ValidationError('Circle simulation action falls outside the proposal window');
     }
