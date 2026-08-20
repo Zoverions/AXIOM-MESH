@@ -63,6 +63,23 @@ export {
   loadGridVerificationKeys
 };
 
+function projectSupportedGridEvent(event) {
+  if (!event || typeof event !== 'object' || Array.isArray(event)) return event;
+  const projected = {
+    kind: event.kind,
+    subject: event.subject,
+    payload: event.payload
+  };
+  if (Object.hasOwn(event, 'event_id')) {
+    projected.event_id = assertString(event.event_id, 'event_id', {
+      min: 1,
+      max: 160,
+      pattern: GRID_EVENT_ID
+    });
+  }
+  return projected;
+}
+
 export class GridStore extends CheckpointGridStore {
   verifyCheckpointHistory(history) {
     const result = super.verifyCheckpointHistory(history);
@@ -84,32 +101,23 @@ export class GridStore extends CheckpointGridStore {
   }
 
   appendEvents({ traceId, actor, events }) {
-    if (Array.isArray(events)) {
-      for (const event of events) {
-        if (
-          event
-          && typeof event === 'object'
-          && !Array.isArray(event)
-          && Object.hasOwn(event, 'event_id')
-        ) {
-          assertString(event.event_id, 'event_id', {
-            min: 1,
-            max: 160,
-            pattern: GRID_EVENT_ID
-          });
-        }
-      }
-      if (events.some(event => typeof event?.kind === 'string' && event.kind.startsWith('external.effect.'))) {
+    const projectedEvents = Array.isArray(events)
+      ? events.map(projectSupportedGridEvent)
+      : events;
+    if (Array.isArray(projectedEvents)) {
+      if (projectedEvents.some(event => (
+        typeof event?.kind === 'string' && event.kind.startsWith('external.effect.')
+      ))) {
         this.requireIntentEvidenceChain();
         preflightExternalEffectCommit({
           actor,
-          events,
+          events: projectedEvents,
           loadPersistedEvents: effectId => this.externalEffectEvents(effectId)
         });
       }
-      for (const event of events) this.preflightIntentEvidenceEvent(event, actor);
+      for (const event of projectedEvents) this.preflightIntentEvidenceEvent(event, actor);
     }
-    return super.appendEvents({ traceId, actor, events });
+    return super.appendEvents({ traceId, actor, events: projectedEvents });
   }
 
   externalEffectEvents(effectId) {
