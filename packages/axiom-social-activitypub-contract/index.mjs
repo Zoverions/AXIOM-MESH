@@ -14,6 +14,7 @@ const OUTBOUND_ACTIVITY_TYPES = new Set([
 ]);
 const INBOUND_ACTIVITY_TYPES = new Set(OUTBOUND_ACTIVITY_TYPES);
 const PROHIBITED_OUTBOUND = new Set([
+  'social.publication.supersede',
   'circle.curated-lens.exclude',
   'circle.member-private-publication',
   'circle.membership',
@@ -156,7 +157,7 @@ function validateIdentity(identity) {
 }
 
 function validateOutboundMappings(mappings) {
-  if (!Array.isArray(mappings) || mappings.length !== 11) {
+  if (!Array.isArray(mappings) || mappings.length !== 10) {
     throw new Error('ActivityPub outbound mapping inventory is invalid');
   }
   const seenSemantics = new Set();
@@ -179,6 +180,9 @@ function validateOutboundMappings(mappings) {
     seenSemantics.add(mapping.axiom_semantic);
   }
 
+  if (mappings.some(item => item.activitypub_activity === 'Update')) {
+    throw new Error('ActivityPub Update cannot be exported before stable external object binding exists');
+  }
   const block = mappings.find(item => item.activitypub_activity === 'Block');
   if (block?.axiom_semantic !== 'personal.interaction.boundary') {
     throw new Error('ActivityPub Block must map only from a personal interaction boundary');
