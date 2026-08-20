@@ -3,12 +3,14 @@ import {
   GatewayClientError
 } from '/vendor/axiom-client.mjs';
 import { createHumanPresenter } from '/presentation.mjs';
+import { presentAxiomOneSocial } from '/social-presentation.mjs';
 
 const ROUTES = new Set([
   'overview',
   'ask',
   'approvals',
   'vault',
+  'social',
   'receipts',
   'share',
   'explore'
@@ -111,6 +113,7 @@ async function renderRoute() {
       ask: renderAsk,
       approvals: renderApprovals,
       vault: renderVault,
+      social: renderSocial,
       receipts: renderReceipts,
       share: renderShare,
       explore: renderExplore
@@ -770,6 +773,74 @@ async function renderReceipts() {
       : empty('No events are visible to this principal.'),
     rawDetails('Raw event response', response)
   );
+}
+
+async function renderSocial() {
+  const local = await state.client.call('social.get');
+  let remote = null;
+  let remoteError = null;
+  try {
+    remote = await state.client.call('social_remote_review.get');
+  } catch (error) {
+    remoteError = error;
+  }
+  const model = presentAxiomOneSocial({ local, remote });
+  const localPublications = model.local.corpus.publications;
+  const remoteObservations = model.remote.available ? model.remote.observations : [];
+
+  const localRecords = localPublications.length
+    ? element('div', { className: 'stack' }, localPublications.map(item => {
+      const text = item.publication?.content?.text ?? 'Publication content is unavailable.';
+      return element('article', { className: 'card full' }, [
+        element('span', { className: 'badge good', text: 'Owner-local corpus' }),
+        element('h2', { text: item.publication?.publication_id ?? item.projection_digest }),
+        element('p', { text }),
+        element('p', { text: `Persona: ${item.persona_id} · State: ${item.status}` }),
+        rawDetails('Inspect public-safe publication projection', item)
+      ]);
+    }))
+    : empty('No local social publications are visible to this principal.');
+
+  const remoteRecords = remoteObservations.length
+    ? element('div', { className: 'stack' }, remoteObservations.map(item => element('article', {
+      className: 'card full'
+    }, [
+      element('span', { className: 'badge pending', text: 'Remote observation' }),
+      element('h2', { text: item.publication_id ?? item.object_digest ?? item.observation_id }),
+      element('p', { text: item.text_preview ?? 'No bounded text preview is available.' }),
+      element('p', { text: 'This is locally reviewed remote material. It is not proof of identity, authorship, truth, ranking, or endorsement.' }),
+      rawDetails('Inspect remote observation', item)
+    ])))
+    : empty(model.remote.available
+      ? 'No admitted remote social observations are visible to this principal.'
+      : 'Remote social review is unavailable or was not authorized for this principal.');
+
+  const children = [
+    header('Social, without hidden authority',
+      'Inspect owner-local publications and separately reviewed remote observations. This preview does not publish, rank, recommend, federate, or mutate social state.'),
+    grid([
+      metricCard('Local publications', String(localPublications.length), 'Owner-local corpus records'),
+      metricCard('Remote observations', String(remoteObservations.length), 'Review-only admitted observations'),
+      card('Network boundary', 'Reading this page performs no social mutation or federation. Local storage is not delivery proof, and remote observation is not authorship proof.', {
+        wide: true,
+        badge: ['Read only', 'good']
+      })
+    ]),
+    notice('Protected actor state and protected persona state are stripped before presentation. Ranking and recommendation remain disabled.'),
+    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'local-social-heading' } }, [
+      element('h2', { text: 'Local corpus', attrs: { id: 'local-social-heading' } }),
+      localRecords
+    ]),
+    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'remote-social-heading' } }, [
+      element('h2', { text: 'Remote review', attrs: { id: 'remote-social-heading' } }),
+      remoteRecords
+    ])
+  ];
+  if (remoteError) {
+    children.push(errorBox(remoteError, 'Remote social review was not available'));
+  }
+  children.push(rawDetails('Read-only Social presentation model', model));
+  view.replaceChildren(...children);
 }
 
 async function renderShare() {
