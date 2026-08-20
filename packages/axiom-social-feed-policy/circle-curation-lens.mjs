@@ -50,7 +50,11 @@ export function validateCircleCurationLensContract(contract) {
   return true;
 }
 
-export function validateCircleCurationLensRecord(contract, record) {
+export function validateCircleCurationLensRecord(
+  contract,
+  record,
+  { charterDigest, charterRoleIds } = {}
+) {
   validateCircleCurationLensContract(contract);
   exactObject(record, 'Circle curation lens record', [
     'schema',
@@ -84,6 +88,20 @@ export function validateCircleCurationLensRecord(contract, record) {
     || record.network_effect !== 'none'
     || record.authority_effect !== 'none'
   ) throw new Error('Circle curation lens record is invalid');
+
+  if (typeof charterDigest !== 'string' || !DIGEST.test(charterDigest)) {
+    throw new Error('Circle curation lens validation requires the exact charter digest');
+  }
+  if (record.charter_digest !== charterDigest) {
+    throw new Error('Circle curation lens record is bound to a different charter digest');
+  }
+  if (!identifierArray(charterRoleIds, 1, 64)) {
+    throw new Error('Circle curation lens validation requires the exact charter role inventory');
+  }
+  const charterRoles = new Set(charterRoleIds);
+  if (record.curator_role_ids.some(roleId => !charterRoles.has(roleId))) {
+    throw new Error('Circle curation lens curator role is not present in the bound charter');
+  }
   return true;
 }
 
