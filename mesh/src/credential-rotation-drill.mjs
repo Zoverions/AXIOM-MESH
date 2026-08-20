@@ -13,7 +13,8 @@ import {
   reserveProductionPortBlock,
   productionHostEnvironment,
   startProductionHost,
-  stopProductionHost
+  stopProductionHost,
+  stopProductionHostStrict
 } from './lib/production-host.mjs';
 import { provisionProduction } from './provision-production.mjs';
 import {
@@ -76,7 +77,9 @@ export async function runCredentialRotationDrill({
       originalTelemetryToken,
       '/v1/status'
     );
-    const initialStop = await stopProductionHost(runtime.child);
+    const initialStop = await stopProductionHostStrict(runtime.child, {
+      boundary: 'credential rotation boundary'
+    });
     runtime = null;
 
     const rotationStartedAt = performance.now();
@@ -124,7 +127,9 @@ export async function runCredentialRotationDrill({
       gateway,
       originalTelemetryToken
     );
-    const rotatedStop = await stopProductionHost(runtime.child);
+    const rotatedStop = await stopProductionHostStrict(runtime.child, {
+      boundary: 'credential rollback boundary'
+    });
     runtime = null;
 
     const rollbackStartedAt = performance.now();
