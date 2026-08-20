@@ -83,6 +83,7 @@ export class CircleGridStore extends GridStore {
     const rawEvent = circleEvents[0];
     const candidate = validateCirclePersistenceAppendInput(rawEvent);
     this.requireCirclePersistenceGridChain();
+    this.assertCirclePersistenceProjection(candidate.circle_id);
 
     const existing = this.circlePersistenceEventById(candidate.event.event_id);
     if (existing) return [this.resolveCirclePersistenceReplay(rawEvent, existing)];
@@ -109,14 +110,27 @@ export class CircleGridStore extends GridStore {
   applyCirclePersistenceMaterializedEvent(event) {
     const candidate = reconstructCircleGridPersistenceCandidate(event);
     const payload = candidate.event.payload;
+    const priorEvent = this.priorCirclePersistenceEvent(candidate.circle_id, event.seq);
+    const priorCandidate = priorEvent
+      ? reconstructCircleGridPersistenceCandidate(priorEvent)
+      : null;
+    const signedPriorHead = priorCandidate?.resulting_circle_head_digest ?? null;
+
+    if (candidate.expected_prior_circle_head_digest !== signedPriorHead) {
+      throw this.circleHeadConflict(candidate, signedPriorHead);
+    }
+
     const current = this.db.prepare(`
       SELECT * FROM circle_persistence_heads
       WHERE circle_id = ?
     `).get(candidate.circle_id);
 
-    if (candidate.expected_prior_circle_head_digest === null) {
+    if (priorEvent === null) {
       if (current) {
-        throw this.circleHeadConflict(candidate, current.head_binding_digest);
+        throw this.circleProjectionDrift(
+          candidate.circle_id,
+          'Circle head projection exists without a prior signed Circle persistence event'
+        );
       }
       this.db.prepare(`
         INSERT INTO circle_persistence_heads(
@@ -142,13 +156,10 @@ export class CircleGridStore extends GridStore {
       return;
     }
 
-    if (
-      !current
-      || current.head_binding_digest !== candidate.expected_prior_circle_head_digest
-    ) {
-      throw this.circleHeadConflict(
-        candidate,
-        current?.head_binding_digest ?? null
+    if (!current || !this.projectionMatchesEvent(current, priorEvent, priorCandidate)) {
+      throw this.circleProjectionDrift(
+        candidate.circle_id,
+        'Circle head projection does not match the prior signed Circle persistence event'
       );
     }
 
@@ -175,14 +186,34 @@ export class CircleGridStore extends GridStore {
       candidate.expected_prior_circle_head_digest
     );
     if (updated.changes !== 1) {
-      throw this.circleHeadConflict(
-        candidate,
-        this.db.prepare(`
-          SELECT head_binding_digest FROM circle_persistence_heads
-          WHERE circle_id = ?
-        `).get(candidate.circle_id)?.head_binding_digest ?? null
+      throw this.circleProjectionDrift(
+        candidate.circle_id,
+        'Circle head projection compare-and-set changed unexpectedly inside the Grid transaction'
       );
     }
+  }
+
+  priorCirclePersistenceEvent(circleId, beforeSeq) {
+    const row = this.db.prepare(`
+      SELECT * FROM events
+      WHERE kind = ?
+        AND subject = ?
+        AND seq < ?
+      ORDER BY seq DESC
+      LIMIT 1
+    `).get(CIRCLE_GRID_PERSISTENCE_EVENT_KIND, circleId, beforeSeq);
+    return row ? this.decodeEventRow(row) : null;
+  }
+
+  latestCirclePersistenceEvent(circleId) {
+    const row = this.db.prepare(`
+      SELECT * FROM events
+      WHERE kind = ?
+        AND subject = ?
+      ORDER BY seq DESC
+      LIMIT 1
+    `).get(CIRCLE_GRID_PERSISTENCE_EVENT_KIND, circleId);
+    return row ? this.decodeEventRow(row) : null;
   }
 
   circlePersistenceEventById(eventId) {
@@ -192,7 +223,10 @@ export class CircleGridStore extends GridStore {
 
   resolveCirclePersistenceReplay(rawEvent, existing) {
     const assessment = assessCirclePersistenceGridReplay(rawEvent, existing);
-    if (assessment.state === 'exact-replay') return existing;
+    if (assessment.state === 'exact-replay') {
+      this.assertCirclePersistenceProjection(existing.subject);
+      return existing;
+    }
     throw new AxiomError(
       'circle_persistence_event_conflict',
       'Deterministic Circle persistence event id is already bound to different Grid content',
@@ -207,12 +241,58 @@ export class CircleGridStore extends GridStore {
 
   getCirclePersistenceHead(circleId, { verifyChain = true } = {}) {
     assertString(circleId, 'circle_id', { min: 1, max: 160, pattern: ID });
-    if (verifyChain) this.requireCirclePersistenceGridChain();
+    if (verifyChain) {
+      this.requireCirclePersistenceGridChain();
+      return this.assertCirclePersistenceProjection(circleId);
+    }
     const row = this.db.prepare(`
       SELECT * FROM circle_persistence_heads
       WHERE circle_id = ?
     `).get(circleId);
     return row ? Object.freeze({ ...row }) : null;
+  }
+
+  assertCirclePersistenceProjection(circleId) {
+    const latestEvent = this.latestCirclePersistenceEvent(circleId);
+    const projection = this.db.prepare(`
+      SELECT * FROM circle_persistence_heads
+      WHERE circle_id = ?
+    `).get(circleId);
+
+    if (!latestEvent) {
+      if (projection) {
+        throw this.circleProjectionDrift(
+          circleId,
+          'Circle head projection exists without any signed Circle persistence event'
+        );
+      }
+      return null;
+    }
+
+    const candidate = reconstructCircleGridPersistenceCandidate(latestEvent);
+    if (!projection || !this.projectionMatchesEvent(projection, latestEvent, candidate)) {
+      throw this.circleProjectionDrift(
+        circleId,
+        'Circle head projection does not match the latest signed Circle persistence event'
+      );
+    }
+    return Object.freeze({ ...projection });
+  }
+
+  projectionMatchesEvent(projection, event, candidate) {
+    return Boolean(
+      projection
+      && event
+      && candidate
+      && projection.circle_id === candidate.circle_id
+      && projection.head_binding_digest === candidate.resulting_circle_head_digest
+      && projection.head_binding_id === candidate.binding_id
+      && projection.head_record_type === candidate.event.payload.record_type
+      && projection.head_record_id === candidate.event.payload.record_id
+      && projection.event_id === event.event_id
+      && projection.event_seq === event.seq
+      && projection.updated_at === event.occurred_at
+    );
   }
 
   requireCirclePersistenceGridChain() {
@@ -237,6 +317,19 @@ export class CircleGridStore extends GridStore {
         expected_head_digest: candidate.expected_prior_circle_head_digest,
         observed_head_digest: observedHeadDigest,
         requested_head_digest: candidate.resulting_circle_head_digest
+      }
+    );
+  }
+
+  circleProjectionDrift(circleId, message) {
+    return new AxiomError(
+      'circle_persistence_projection_drift',
+      message,
+      503,
+      {
+        circle_id: circleId,
+        authority_effect: 'none',
+        runtime_authority: false
       }
     );
   }
