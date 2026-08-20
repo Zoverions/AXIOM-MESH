@@ -59,6 +59,7 @@ Use the repository-native paths that already exist instead of inventing a parall
 - `.github/ISSUE_TEMPLATE/agent-authority-boundary.yml` — public-safe authority-boundary finding;
 - `.github/ISSUE_TEMPLATE/community-testnet-result.yml` — independent Testnet result;
 - `agent-commons/challenges.json` — machine-readable public challenge registry; discovery only, never authority or evidence acceptance;
+- `agent-commons/readonly-lab.json` — transportless Stage C public read-only laboratory contract; fixed methods only, with no network listener, authority grant, private Grid access, consequential tool, or MCP/A2A compatibility claim;
 - `docs/architecture/contracts/agent-challenge.v1.schema.json` — machine-readable bounded work-request contract;
 - `docs/architecture/contracts/agent-feedback.v1.schema.json` — machine-readable public-safe feedback contract;
 - `agent-readiness/CONTRIBUTION-RESULT.schema.json` — canonical machine-readable contribution evidence package;
