@@ -61,6 +61,7 @@ Use the repository-native paths that already exist instead of inventing a parall
 - `agent-commons/challenges.json` — machine-readable public challenge registry; discovery only, never authority or evidence acceptance;
 - `agent-commons/readonly-lab.json` — transportless Stage C public read-only laboratory contract; fixed methods only, with no network listener, authority grant, private Grid access, consequential tool, or MCP/A2A compatibility claim;
 - `agent-commons/mcp-readonly-lab.json` — Stage C1 offline MCP `2026-07-28` projection contract; normalized routing metadata and read-only tool parity only, with no HTTP/stdio listener, session, private Grid access, authority mapping, or production compatibility claim;
+- `agent-commons/a2a-card-candidate.json` — Stage C2a offline A2A Agent Card candidate; no servable card or interface, task/message execution, private Grid access, authority mapping, or A2A compatibility claim;
 - `docs/architecture/contracts/agent-challenge.v1.schema.json` — machine-readable bounded work-request contract;
 - `docs/architecture/contracts/agent-feedback.v1.schema.json` — machine-readable public-safe feedback contract;
 - `agent-readiness/CONTRIBUTION-RESULT.schema.json` — canonical machine-readable contribution evidence package;
