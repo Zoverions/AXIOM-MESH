@@ -13,6 +13,7 @@ const EXPECTED_SURFACES = Object.freeze([
   'ask',
   'approvals',
   'vault',
+  'social',
   'receipts',
   'share',
   'explore'
@@ -26,6 +27,8 @@ const EXPECTED_ROUTES = Object.freeze([
   'memory.list',
   'exports.get',
   'export_bundles.get',
+  'social.get',
+  'social_remote_review.get',
   'events.list',
   'nodes.list',
   'capsules.list',
@@ -326,6 +329,7 @@ function validateAssets({ index, app, presentation, styles, worker, server, icon
     'class="skip-link"',
     'id="main-content"',
     'aria-live="polite"',
+    'data-route="social"',
     'Experimental local preview'
   ];
   if (requiredIndex.some(marker => !index.includes(marker))) {
@@ -381,6 +385,18 @@ function validateAssets({ index, app, presentation, styles, worker, server, icon
   if (lifecycleMarkers.some(marker => !app.includes(marker))) {
     throw new ValidationError('AXIOM One memory lifecycle surface is incomplete');
   }
+  const socialMarkers = [
+    "from '/social-presentation.mjs'",
+    'presentAxiomOneSocial',
+    'social: renderSocial',
+    "state.client.call('social.get'",
+    "state.client.call('social_remote_review.get'",
+    'Owner-local corpus',
+    'Remote observation'
+  ];
+  if (socialMarkers.some(marker => !app.includes(marker))) {
+    throw new ValidationError('AXIOM One Social read-only surface is incomplete');
+  }
   if (
     !worker.includes("url.pathname.startsWith('/v1/')")
     || !worker.includes('!SHELL_ASSETS.includes(url.pathname)')
@@ -400,10 +416,13 @@ function validateAssets({ index, app, presentation, styles, worker, server, icon
   }
   if (
     !server.includes("'/presentation.mjs'")
+    || !server.includes("'/social-presentation.mjs'")
+    || !server.includes("packages', 'axiom-one-social-presentation', 'index.mjs'")
     || !server.includes("'/human-contract.json'")
     || !worker.includes("'/presentation.mjs'")
+    || !worker.includes("'/social-presentation.mjs'")
     || !worker.includes("'/human-contract.json'")
-  ) throw new ValidationError('AXIOM One public explanation assets are not exact');
+  ) throw new ValidationError('AXIOM One public presentation assets are not exact');
   if (!styles.includes('@media (prefers-reduced-motion: reduce)')) {
     throw new ValidationError('AXIOM One reduced-motion behavior is missing');
   }
