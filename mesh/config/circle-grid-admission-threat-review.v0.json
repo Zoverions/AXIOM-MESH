@@ -68,8 +68,8 @@
     },
     {
       "id": "receipt-evidence-laundering",
-      "control": "Grid signs an admission receipt bound to capability digest, claims digest, actor, event, Grid sequence/hash, and admission trace; receipt verification additionally requires Grid chain verification covering the event.",
-      "residual": "A receipt does not independently prove complete history, governance legitimacy, or distributed consensus."
+      "control": "Verify the Grid-signed admission receipt, recompute the underlying Grid event hash from its full signed envelope, verify the Grid event signature, verify any decoded payload digest, and additionally require Grid chain verification covering the event.",
+      "residual": "The internal helper still receives a chain-verification result as input; runtime receipt verification must obtain that result from the trusted Grid verifier rather than accepting an untrusted caller assertion, and no receipt independently proves governance legitimacy or distributed consensus."
     },
     {
       "id": "capability-secret-persistence",
@@ -105,7 +105,7 @@
     "Hypervisor intent, plan, and policy digests must be recoverable as authenticated evidence rather than opaque digest claims.",
     "Issuer-key rotation, compromise response, and short-lived capability invalidation semantics require an operational runbook.",
     "Raw capabilities must be excluded from logs, telemetry, backups, exports, and diagnostic error bodies.",
-    "Admission receipts need a supported read/verification path only if it can preserve chain-verification and privacy boundaries.",
+    "Admission receipts need a supported read/verification path only if it can derive Grid chain verification internally while preserving privacy boundaries.",
     "Security, privacy, governance, and accessibility review must pass before any real Circle member can invoke the path."
   ]
 }
