@@ -122,6 +122,7 @@ test('Agent Commons challenge registry rejects third-party environment widening'
 
 test('Agent Commons challenge registry rejects open challenges already expired at generation time', async () => {
   const registry = structuredClone(await committedRegistry());
+  registry.challenges[0].challenge.issued_at = '2026-08-20T20:07:00Z';
   registry.challenges[0].challenge.expires_at = '2026-08-20T20:07:59Z';
 
   assert.throws(
