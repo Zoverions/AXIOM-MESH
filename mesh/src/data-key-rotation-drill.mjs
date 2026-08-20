@@ -22,7 +22,8 @@ import {
   reserveProductionPortBlock,
   productionHostEnvironment,
   startProductionHost,
-  stopProductionHost
+  stopProductionHost,
+  stopProductionHostStrict
 } from './lib/production-host.mjs';
 import {
   createGridBackup,
@@ -85,7 +86,9 @@ export async function runDataKeyRotationDrill({
       operatorToken,
       'before-data-key-rotation'
     );
-    const initialStop = await stopProductionHost(runtime.child);
+    const initialStop = await stopProductionHostStrict(runtime.child, {
+      boundary: 'data-key rotation boundary'
+    });
     runtime = null;
 
     const protector = new DataProtector(originalKey);
@@ -161,7 +164,9 @@ export async function runDataKeyRotationDrill({
       operatorToken,
       'after-data-key-rotation'
     );
-    const rotatedStop = await stopProductionHost(runtime.child);
+    const rotatedStop = await stopProductionHostStrict(runtime.child, {
+      boundary: 'data-key restore boundary'
+    });
     runtime = null;
 
     const restoreStartedAt = performance.now();
@@ -195,7 +200,9 @@ export async function runDataKeyRotationDrill({
       operatorToken,
       'after-rotated-key-restore'
     );
-    const recoveryStop = await stopProductionHost(runtime.child);
+    const recoveryStop = await stopProductionHostStrict(runtime.child, {
+      boundary: 'data-key rollback boundary'
+    });
     runtime = null;
 
     const rollbackStartedAt = performance.now();
