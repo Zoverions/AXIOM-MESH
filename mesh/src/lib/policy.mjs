@@ -18,6 +18,7 @@ const CURRENT_RUNTIME_MAX_ASSURANCE = 'A3';
 const PROTOTYPE_KEYS = new Set(Object.getOwnPropertyNames(Object.prototype));
 const BASE_POLICY_OBJECTS = new WeakSet();
 const MERGED_POLICY_METADATA = new WeakMap();
+const RUNTIME_CONSTRAINT_ENFORCERS = new Set();
 const PROTECTED_RECOVERY_ACTIONS = new Set([
   'approval.grant',
   'governance.rollback',
@@ -63,9 +64,27 @@ function maxAssurance(left, right) {
   return assuranceRank(left) >= assuranceRank(right) ? left : right;
 }
 
+function assertRuntimeEnforceablePolicy(policy) {
+  for (const [action, rule] of Object.entries(policy.actions ?? {})) {
+    if (rule?.decision !== 'allow') continue;
+    const constraints = rule.constraints ?? {};
+    if (!constraints || typeof constraints !== 'object' || Array.isArray(constraints)) {
+      throw new ValidationError(`Active allow policy constraints for ${action} must be an object`);
+    }
+    const unsupported = Object.keys(constraints)
+      .filter(key => !RUNTIME_CONSTRAINT_ENFORCERS.has(key));
+    if (unsupported.length) {
+      throw new ValidationError(
+        `Active allow policy ${action} declares unenforced runtime constraints: ${unsupported.join(', ')}`
+      );
+    }
+  }
+}
+
 export async function loadPolicy(path) {
   const policy = JSON.parse(await readFile(path, 'utf8'));
   validatePolicy(policy);
+  assertRuntimeEnforceablePolicy(policy);
   const engine = new PolicyEngine(policy);
   BASE_POLICY_OBJECTS.add(engine.policy);
   return engine;
@@ -80,7 +99,9 @@ export async function loadPolicyStack(paths) {
     validatePolicy(policy);
     return policy;
   }));
-  const engine = new PolicyEngine(mergeDenyDominantPolicy(layers), {
+  const merged = mergeDenyDominantPolicy(layers);
+  assertRuntimeEnforceablePolicy(merged);
+  const engine = new PolicyEngine(merged, {
     layers: layers.map((layer, index) => ({
       order: index,
       version: layer.version,
