@@ -3,6 +3,7 @@ import { validateCircleCorePackage } from '../../mesh/src/lib/circle-core.mjs';
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
+const CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/;
 const MODES = new Set(['deliberate', 'evidence', 'vote']);
 const VOTE_CHOICES = new Set(['approve', 'reject', 'abstain']);
 
@@ -77,6 +78,7 @@ export function simulateCircleDeliberation(policy, document, actions, { now = ne
     throw new ValidationError('Circle simulation actions are invalid');
   }
 
+  const policyDigest = digestObject(policy);
   const charterDigest = digestObject(document.charter);
   const roleById = new Map(document.charter.roles.map(role => [role.role_id, role]));
   const activeMemberships = document.memberships.filter(item => item.status === 'active');
@@ -93,7 +95,7 @@ export function simulateCircleDeliberation(policy, document, actions, { now = ne
   const seenActionIds = new Set();
   const seenVotes = new Set();
   const participatingPrincipals = new Set();
-  let previousAt = null;
+  let previousAtMs = null;
   const normalized = [];
 
   for (const action of actions) {
@@ -132,11 +134,12 @@ export function simulateCircleDeliberation(policy, document, actions, { now = ne
       throw new ValidationError('Circle simulation requires an open proposal');
     }
     const at = canonicalTimestamp(action.at, 'Circle simulation action at');
-    if (previousAt && at < previousAt) {
+    const atMs = Date.parse(at);
+    if (previousAtMs !== null && atMs < previousAtMs) {
       throw new ValidationError('Circle simulation actions are not chronological');
     }
-    previousAt = at;
-    if (at < proposal.created_at || at > proposal.closes_at) {
+    previousAtMs = atMs;
+    if (atMs < Date.parse(proposal.created_at) || atMs > Date.parse(proposal.closes_at)) {
       throw new ValidationError('Circle simulation action falls outside the proposal window');
     }
     if (!membershipAllowsMode(membership, action.mode, roleById)) {
@@ -170,7 +173,9 @@ export function simulateCircleDeliberation(policy, document, actions, { now = ne
 
   return Object.freeze({
     schema: policy.output.schema,
+    policy_digest: policyDigest,
     input_package_digest: digestObject(document),
+    action_sequence_digest: digestObject(normalized),
     circle_id: document.circle.circle_id,
     charter_digest: charterDigest,
     participant_principals: Object.freeze([...participatingPrincipals].sort()),
@@ -246,6 +251,7 @@ function validatePayload(mode, payload) {
       typeof payload.evidence_ref !== 'string'
       || payload.evidence_ref.length < 1
       || payload.evidence_ref.length > 512
+      || CONTROL.test(payload.evidence_ref)
     ) throw new ValidationError('Circle simulation evidence reference is invalid');
     return { evidence_ref: payload.evidence_ref };
   }
