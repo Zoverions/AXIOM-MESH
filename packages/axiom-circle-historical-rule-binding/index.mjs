@@ -14,6 +14,7 @@ export function validateCircleHistoricalRuleBindingLedger(
   ledger,
   options = {}
 ) {
+  enforceStrictBindingChronology(ledger?.bindings);
   const validation = validateBaseCircleHistoricalRuleBindingLedger(
     policy,
     charterPolicy,
@@ -24,6 +25,20 @@ export function validateCircleHistoricalRuleBindingLedger(
   );
   enforceOneUseInvitationConsumption(ledger.bindings);
   return validation;
+}
+
+function enforceStrictBindingChronology(bindings) {
+  if (!Array.isArray(bindings)) return;
+  let previousBoundAt = null;
+  for (const binding of bindings) {
+    if (!binding || typeof binding !== 'object' || Array.isArray(binding)) continue;
+    const boundAt = Date.parse(binding.bound_at);
+    if (!Number.isFinite(boundAt)) continue;
+    if (previousBoundAt !== null && boundAt <= previousBoundAt) {
+      throw new ValidationError('Circle historical binding times must strictly increase');
+    }
+    previousBoundAt = boundAt;
+  }
 }
 
 function enforceOneUseInvitationConsumption(bindings) {
