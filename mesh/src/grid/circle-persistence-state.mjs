@@ -17,6 +17,8 @@ const EXPECTED_REQUIREMENTS = Object.freeze({
   full_grid_chain_preflight_required: true,
   single_circle_persistence_event_per_append: true,
   atomic_head_compare_and_set_inside_grid_transaction: true,
+  signed_prior_event_is_authoritative_cas_basis: true,
+  projection_must_match_latest_signed_event: true,
   durable_event_id_lookup_required: true,
   exact_replay_returns_existing_event: true,
   conflicting_event_id_reuse_rejected: true,
