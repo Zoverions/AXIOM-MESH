@@ -1,0 +1,129 @@
+{
+  "schema": "axiom-social-user-sovereign-feed.v0",
+  "version": 0,
+  "status": "inert-feed-policy-contract",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "recommendation_effect": "none",
+  "views": [
+    {
+      "id": "curated",
+      "source": "declared-curation-lens",
+      "curator_may_exclude_from_this_view": true,
+      "user_can_switch_away": true,
+      "curator_can_disable_uncurated_view": false
+    },
+    {
+      "id": "uncurated",
+      "source": "broader-admissible-corpus",
+      "includes_curated_view_exclusions": true,
+      "still_subject_to_safety_legal_quarantine": true,
+      "claims_complete_network_visibility": false
+    },
+    {
+      "id": "filtered-suspected-spam",
+      "source": "reported-or-lower-confidence-material",
+      "user_inspectable_when_lawful_and_safe": true,
+      "report_is_adjudication": false,
+      "spam_label_is_irreversible": false
+    }
+  ],
+  "control_scopes": {
+    "personal_visibility_mute": {
+      "scope": "requesting-user-view-only",
+      "third_party_suppression": false,
+      "network_deletion": false
+    },
+    "personal_interaction_boundary": {
+      "scope": "actor-pair-interaction",
+      "may_limit_direct_contact": true,
+      "third_party_suppression": false,
+      "network_deletion": false
+    },
+    "curated_lens_exclusion": {
+      "scope": "one-declared-curated-view",
+      "member_uncurated_access_preserved": true,
+      "third_party_network_ban": false
+    },
+    "report": {
+      "scope": "review-input",
+      "guilt_claimed": false,
+      "falsity_claimed": false,
+      "spam_truth_claimed": false,
+      "automatic_universal_hiding": false
+    },
+    "safety_legal_quarantine": {
+      "scope": "separate-high-severity-policy",
+      "may_override_ordinary_visibility": true,
+      "must_not_be_inferred_from_disagreement": true,
+      "must_not_be_inferred_from_ordinary_report": true
+    }
+  },
+  "curation": {
+    "founder_monopoly": false,
+    "multiple_declared_lenses_allowed": true,
+    "charter_may_define_curator_roles": true,
+    "member_selects_lens": true,
+    "uncurated_access_disableable_by_curator": false,
+    "curator_preference_becomes_member_preference": false
+  },
+  "diversity": {
+    "user_controlled": true,
+    "default_basis_points": 1000,
+    "minimum_basis_points": 0,
+    "maximum_basis_points": 10000,
+    "hard_platform_minimum": false,
+    "requires_hidden_ideological_label": false,
+    "dimensions": [
+      "viewpoint-distance",
+      "source-novelty",
+      "topic-novelty",
+      "geographic-breadth",
+      "evidence-source-diversity",
+      "chronological-ranked-balance"
+    ]
+  },
+  "selection_reasons": [
+    "followed-source",
+    "circle-curated",
+    "chronological",
+    "topic-match",
+    "diversity-counterview",
+    "underrepresented-source",
+    "user-requested-discovery",
+    "suspected-spam-visible-by-choice"
+  ],
+  "presentation": {
+    "canonical_original_preserved": true,
+    "original_one_action_away_when_lawful_and_safe": true,
+    "modes": [
+      "show-original",
+      "mask-selected-terms",
+      "soften-local-rendering",
+      "summarize-before-reveal",
+      "warning-before-reveal"
+    ],
+    "transformation_scope": "local-presentation-only",
+    "transformation_receipt_required": true,
+    "source_digest_required": true,
+    "transformed_rendering_may_claim_author_exact_words": false,
+    "transformed_rendering_may_mutate_canonical_source": false
+  },
+  "provenance": {
+    "why_am_i_seeing_this_supported": true,
+    "selection_reason_required_for_non_chronological_insertion": true,
+    "curation_lens_identity_required": true,
+    "filter_source_required": true,
+    "opaque_ranking_score_required": false
+  },
+  "non_claims": {
+    "recommendation_is_endorsement": false,
+    "opposing_view_classification_is_truth_judgment": false,
+    "report_is_guilt": false,
+    "mute_is_deletion": false,
+    "curator_exclusion_is_network_ban": false,
+    "transformation_is_source_mutation": false,
+    "uncurated_view_is_complete_internet": false
+  }
+}
