@@ -1,0 +1,106 @@
+{
+  "schema": "axiom-circle-grid-admission-threat-review.v0",
+  "version": 0,
+  "status": "internal-admission-threat-review",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "threats": [
+    {
+      "id": "forged-admission-capability",
+      "control": "Verify the existing Ed25519 AXIOM capability format against the trusted Hypervisor key, exact issuer, exact Grid audience, and bounded lifetime.",
+      "residual": "A compromised Hypervisor signing key can still mint syntactically valid admission capabilities."
+    },
+    {
+      "id": "subject-substitution",
+      "control": "Require capability subject to equal the exact Grid append actor and derive the admission JTI from actor plus exact event invocation digest.",
+      "residual": "This authenticates the admitted principal identifier; it does not prove human identity, legal identity, or Circle membership role."
+    },
+    {
+      "id": "event-or-head-substitution",
+      "control": "Bind invocation digest and exact non-extensible constraints to Circle id, deterministic event id, binding digest, expected prior Circle head, resulting head, payload digest, and persistence-policy digest.",
+      "residual": "Correct binding does not prove the historical record is true or legitimately governed."
+    },
+    {
+      "id": "hidden-claim-or-constraint-authority",
+      "control": "Reject unsupported event fields, capability claim fields, and constraint fields; all authority flags remain false.",
+      "residual": "Future schema versions require a fresh review before adding any field that could be interpreted as authority."
+    },
+    {
+      "id": "bearer-token-replay",
+      "control": "Bind each token to one exact event; persist only the capability digest through the signed Grid trace id; same-token exact replay is idempotent and cannot advance the Circle head.",
+      "residual": "The raw capability remains a bearer credential during its short lifetime and must be protected from disclosure."
+    },
+    {
+      "id": "reissued-token-replay",
+      "control": "Require the persisted signed Grid trace id to equal the digest-derived trace id of the presented token; a different token for an already-persisted deterministic event is rejected.",
+      "residual": "The trace proves which token digest was admitted, not why Hypervisor policy chose to issue it."
+    },
+    {
+      "id": "cross-actor-event-replay",
+      "control": "Require the persisted Grid event actor and capability-derived trace id to match the current admitted subject on replay.",
+      "residual": "Circle record types still need explicit semantic rules for which Circle role or collective process may request persistence."
+    },
+    {
+      "id": "separate-consumption-crash-window",
+      "control": "Do not emit a separate capability-consumption event for Circle admission; the deterministic Circle persistence event itself carries the durable capability fingerprint in its signed trace id.",
+      "residual": "This admission model is specific to an exact deterministic Circle event and must not be generalized to arbitrary capability use."
+    },
+    {
+      "id": "clock-and-expiry-manipulation",
+      "control": "Reuse capability nbf/exp and bounded-TTL verification, with a 300-second absolute ceiling and a narrower local TTL limit supplied by integration.",
+      "residual": "The current internal helper exposes a deterministic verification-time seam for testing; runtime wiring must use the trusted service clock and configured TTL without caller override."
+    },
+    {
+      "id": "upstream-policy-evidence-laundering",
+      "control": "Require intent, plan, and policy digests in the signed capability and bind the exact invocation digest.",
+      "residual": "Digest presence alone does not prove the referenced intent, plan, or policy was valid; runtime issuance must derive them from authenticated Hypervisor state."
+    },
+    {
+      "id": "admission-to-circle-authority-laundering",
+      "control": "Policy, constraints, receipt, and outputs explicitly deny Circle-role proof, decision authority, runtime authority, portable authority, and external-effect authority.",
+      "residual": "Consumers must preserve the distinction between permission to persist an inert record and authority to make or execute a Circle decision."
+    },
+    {
+      "id": "receipt-evidence-laundering",
+      "control": "Grid signs an admission receipt bound to capability digest, claims digest, actor, event, Grid sequence/hash, and admission trace; receipt verification additionally requires Grid chain verification covering the event.",
+      "residual": "A receipt does not independently prove complete history, governance legitimacy, or distributed consensus."
+    },
+    {
+      "id": "capability-secret-persistence",
+      "control": "Persist only SHA-256 capability fingerprint through the signed Grid trace; never place the raw capability in Circle event payload or admission receipt.",
+      "residual": "Operators must still prevent raw capability leakage through logs, crash dumps, telemetry, or caller storage."
+    },
+    {
+      "id": "direct-store-bypass",
+      "control": "No public or service route is wired in this slice; admission is an internal candidate around CircleGridStore.",
+      "residual": "CircleGridStore itself remains callable by internal code; runtime promotion must make the authenticated admission wrapper the sole service-level Circle append path."
+    }
+  ],
+  "non_claims": [
+    "human-identity",
+    "legal-identity",
+    "circle-membership-role",
+    "circle-decision-validity",
+    "historical-truth",
+    "complete-history",
+    "governance-legitimacy",
+    "legal-authority",
+    "execution-authority",
+    "portable-authority",
+    "external-effect-authority",
+    "distributed-consensus"
+  ],
+  "promotion_blockers": [
+    "Hypervisor issuance must originate from authenticated intent, plan, deny-dominant policy, and principal state rather than a standalone helper call.",
+    "Record-type authorization rules must define who may request invitation, membership, proposal, and collective decision persistence without inventing a false single decision actor.",
+    "The authenticated admission wrapper must become the sole service-level Circle append path; direct CircleGridStore append must remain unreachable from service routes.",
+    "The internal request must also be bound to authenticated Hypervisor service transport identity and production mTLS rather than capability possession alone.",
+    "Runtime verification must use the Grid service clock and configured capability TTL with no caller-controlled verification-time override.",
+    "Hypervisor intent, plan, and policy digests must be recoverable as authenticated evidence rather than opaque digest claims.",
+    "Issuer-key rotation, compromise response, and short-lived capability invalidation semantics require an operational runbook.",
+    "Raw capabilities must be excluded from logs, telemetry, backups, exports, and diagnostic error bodies.",
+    "Admission receipts need a supported read/verification path only if it can preserve chain-verification and privacy boundaries.",
+    "Security, privacy, governance, and accessibility review must pass before any real Circle member can invoke the path."
+  ]
+}
