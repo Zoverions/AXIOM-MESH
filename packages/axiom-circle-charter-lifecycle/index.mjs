@@ -43,11 +43,11 @@ export function resolveCircleCharterAt(
 function enforceCircleCreationChronology(circlePackage, lifecycle) {
   const circleCreatedAt = Date.parse(circlePackage.circle.created_at);
   for (const entry of lifecycle.entries) {
-    if (Date.parse(entry.recorded_at) < circleCreatedAt) {
-      throw new ValidationError('Circle charter history cannot be recorded before Circle creation');
-    }
     if (Date.parse(entry.charter.effective_from) < circleCreatedAt) {
       throw new ValidationError('Circle charter cannot become effective before Circle creation');
+    }
+    if (Date.parse(entry.recorded_at) < circleCreatedAt) {
+      throw new ValidationError('Circle charter history cannot be recorded before Circle creation');
     }
   }
 }
