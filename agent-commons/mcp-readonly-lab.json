@@ -63,7 +63,8 @@
     "method_not_found": -32601,
     "invalid_params": -32602,
     "header_mismatch": -32001,
-    "unsupported_protocol_version": -32022
+    "unsupported_protocol_version": -32022,
+    "internal_error": -32603
   },
   "claim_boundary": "This is an offline protocol projection and synthetic conformance laboratory only. It exposes no network listener, MCP session, write-capable tool, private Grid state, machine-principal authority mapping, external validation, or production MCP compatibility claim."
 }
