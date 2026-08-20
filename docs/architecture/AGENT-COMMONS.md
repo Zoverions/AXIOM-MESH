@@ -21,12 +21,16 @@ The repository already has the first practical Agent Commons pieces on `main`:
 - `AGENTS.md` for machine-oriented repository instructions;
 - `docs/community/COMMUNITY-TESTNET-V0.md` for heterogeneous independent reproducibility;
 - `docs/community/RED-TEAM-CHALLENGE.md` for public security challenge work;
-- `agent-readiness/CONTRIBUTION-RESULT.schema.json` for machine-readable contribution evidence;
+- `docs/architecture/contracts/agent-challenge.v1.schema.json` for bounded public work requests;
+- `docs/architecture/contracts/agent-feedback.v1.schema.json` for public-safe external criticism and review;
+- `agent-readiness/CONTRIBUTION-RESULT.schema.json` for machine-readable executed contribution evidence;
 - `agent-readiness/CONTRIBUTION-TRIAGE.txt` for evidence-state handling;
-- public issue forms for contribution proposals, authority-boundary findings, and Testnet results;
+- public issue forms for contribution proposals, public-safe feedback, authority-boundary findings, and Testnet results;
 - `SECURITY.md` for sensitive/private reporting.
 
-These form a contribution surface. They do **not** constitute a deployed agent federation, public remote-execution mesh, production MCP/A2A endpoint, autonomous merge system, or production promotion.
+The challenge and feedback schemas are documentation/interface contracts. They do not imply a deployed registry, public API, remote execution service, autonomous agent federation, or write-capable protocol endpoint.
+
+These pieces form a contribution surface. They do **not** constitute a deployed agent federation, public remote-execution mesh, production MCP/A2A endpoint, autonomous merge system, or production promotion.
 
 ## Position in the architecture
 
@@ -66,15 +70,24 @@ Repository authority remains separate as well. A contribution may be valuable wi
 
 Agent Commons must reuse repository-native evidence machinery where it already exists.
 
-The canonical contribution evidence package is:
+The canonical executed contribution evidence package is:
 
 `agent-readiness/CONTRIBUTION-RESULT.schema.json`
 
 Do not introduce a second generic contribution-result schema merely because an earlier Agent Commons draft proposed one. New exchange objects should exist only where they represent a genuinely different semantic role.
 
-Current issue forms similarly remain the preferred human-facing intake:
+The current distinct roles are:
+
+- `axiom-agent-challenge.v1` — a bounded public work request tied to an exact base revision, allowed scope, prohibited effects, evidence expectations, and explicit non-authority/non-compensation fields;
+- `axiom-agent-feedback.v1` — public-safe criticism or review tied to an exact base revision, source-assurance context, findings, limitations, and explicit no-authority state;
+- `axiom-agent-contribution-result.v1` — the existing canonical machine-readable package for work that was actually executed, measured, reproduced, benchmarked, or otherwise evidenced.
+
+Challenge and feedback objects must not self-promote into accepted evidence. When executable or measured work occurs, link or produce the canonical contribution-result package instead of widening the feedback schema into a second result format.
+
+Current issue forms remain the preferred human-facing intake:
 
 - `agent-contribution-proposal.yml` — proposal before work or for bounded implementation planning;
+- `agent-feedback.yml` — generic public-safe architecture, privacy, scalability, recovery, interoperability, documentation, claim-integrity, or research feedback;
 - `agent-authority-boundary.yml` — public-safe authority/security boundary finding;
 - `community-testnet-result.yml` — independent reproducibility or platform evidence.
 
@@ -111,6 +124,8 @@ Agent Commons evidence should bind, where relevant:
 
 Negative, inconclusive, and `NOT_REPRODUCED` outcomes must be preservable. Reputation or social consensus must not filter evidence merely because it is inconvenient.
 
+A challenge is not evidence that its problem exists. Feedback is not evidence acceptance merely because it was submitted. A contribution result requests review state only and cannot assign itself accepted, independently verified, security-certified, or production-promoted status.
+
 ## Trust and reputation
 
 Social popularity, follower count, karma, model brand, benchmark prestige, organization membership, Agent Community certificates, or self-described expertise must not become ambient authority.
@@ -124,6 +139,8 @@ Agent Commons and Community Testnet should be usable without paid organizational
 Preferred early evidence is owner-run evidence on participant-controlled hardware or explicitly disposable authorized environments. This minimizes project spending, custody, and trust expansion while increasing platform diversity.
 
 Paid services or memberships may later accelerate outreach or infrastructure, but they are not validation prerequisites and never substitute for independent evidence.
+
+A public Agent Commons challenge does not create a bounty, reimbursement promise, purchase commitment, or compensation entitlement. Any future compensated work requires a separate explicit authorization and must not be inferred from a challenge object.
 
 ## Threat model
 
@@ -142,7 +159,10 @@ Relevant threats include:
 - secret-exfiltration attempts;
 - malicious mirrors that misrepresent capability or release state;
 - social pressure to bypass protected CI or review;
-- protocol metadata, discovery, or successful authentication being mistaken for authorization.
+- protocol metadata, discovery, or successful authentication being mistaken for authorization;
+- challenge scope being interpreted as permission to test third-party systems;
+- feedback severity labels being treated as verified security findings;
+- feedback or challenge objects being transformed into repository or runtime effects without a separate authorization decision.
 
 Controls include exact-base binding, bounded inputs, protected CI, provenance capture, secret isolation, explicit disclosure routing, independent review for consequential changes, and no ambient merge/runtime authority for external agents.
 
@@ -161,19 +181,22 @@ Read-only interoperability must be proven before write-capable external adapters
 
 ## Challenge registry direction
 
-A later machine-readable challenge registry may expose bounded public work. Each challenge should bind at least:
+The `axiom-agent-challenge.v1` contract defines an individual bounded work request. A later machine-readable registry may expose zero or more such challenges, but the schema does not itself implement a registry or publication service.
+
+Each challenge binds at least:
 
 - challenge identity;
-- canonical repository;
+- canonical repository and supported build;
 - exact base commit SHA;
 - problem statement;
-- allowed scope;
+- allowed path scope;
 - prohibited effects;
+- authorized environment classes;
 - acceptance criteria;
 - evidence expectations;
-- disclosure route;
-- expiry or supersession state;
-- explicit non-claims about payment, merge, deployment, and execution authority.
+- public/private disclosure route;
+- expiry state where used;
+- explicit non-claims about compensation, merge, deployment, credentials, spending, production promotion, and third-party testing.
 
 Stale-base, path-escape, oversized-input, forged-identity, and fabricated-evidence cases should be included as negative fixtures before external protocol publication.
 
@@ -191,9 +214,10 @@ Where practical, retain publication provenance and external identifiers so publi
 
 - machine-oriented `AGENTS.md` entry point;
 - Agent Commons architecture document;
-- repository-native evidence package reuse;
+- distinct challenge and public-safe feedback contracts;
+- repository-native contribution-result evidence package reuse;
 - agent-oriented issue forms;
-- protected documentation/contract checks.
+- protected documentation and contract checks.
 
 ### Stage B — challenge registry laboratory
 
@@ -238,12 +262,15 @@ Any write-capable adapter requires a separate threat review, policy mapping, evi
 8. Reputation never self-executes authority.
 9. Read-only interoperability is proven before write-capable adapters are promoted.
 10. Documentation remains explicit about architecture, laboratory, implemented, enabled, exposed, production-promoted, and marketed states.
+11. A challenge object never implies compensation, third-party testing permission, or repository/runtime authority.
+12. A feedback object never self-assigns evidence acceptance, severity truth, or authority.
+13. The canonical contribution-result package remains the only generic machine-readable executed-contribution evidence envelope.
 
 ## Current non-claims
 
 Agent Commons does not currently claim:
 
-- a deployed federation or consensus network;
+- a deployed challenge registry, federation, or consensus network;
 - a production MCP or A2A endpoint;
 - verified cross-network agent identity;
 - autonomous code merging or direct-main mutation;
