@@ -1,8 +1,8 @@
 {
   "schema": "axiom-one-social-surface.v0",
   "version": 0,
-  "status": "prepared-not-wired",
-  "runtime_activation": false,
+  "status": "read-only-wired-preview",
+  "runtime_activation": true,
   "surface_id": "social",
   "gateway_reads": [
     {
@@ -17,6 +17,7 @@
     }
   ],
   "presentation_module": "packages/axiom-one-social-presentation/index.mjs",
+  "browser_asset": "/social-presentation.mjs",
   "local_model": {
     "distribution_state": "local-only",
     "private_actor_state_exposed": false,
@@ -47,10 +48,10 @@
     "remote_transport_enabled": false
   },
   "current_shell_wiring": {
-    "app_policy_route_registered": false,
-    "router_registered": false,
-    "navigation_registered": false,
-    "service_worker_asset_registered": false
+    "app_policy_route_registered": true,
+    "router_registered": true,
+    "navigation_registered": true,
+    "service_worker_asset_registered": true
   },
   "authority_effect": "none",
   "network_effect": "none"
