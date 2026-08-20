@@ -19,6 +19,8 @@
   "requirements": {
     "active_membership_required": true,
     "one_active_membership_per_principal_required": true,
+    "active_membership_exit_history_prohibited": true,
+    "action_after_membership_activation_required": true,
     "role_declared_mode_required": true,
     "one_vote_per_membership_per_proposal": true,
     "exact_charter_digest_required": true,
