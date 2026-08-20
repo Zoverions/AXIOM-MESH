@@ -14,6 +14,7 @@
     "gateway-client:check": "node src/check-gateway-client-contract.mjs",
     "axiom-one:check": "node src/check-axiom-one.mjs",
     "agent-readiness:check": "node src/check-agent-readiness.mjs",
+    "agent-commons:check": "node src/check-agent-commons.mjs",
     "axiom": "node src/cli.mjs",
     "intent:compile": "node src/intentctl.mjs compile",
     "intent:assess": "node src/intentctl.mjs assess",
@@ -70,6 +71,6 @@
     "release:verify": "node src/release.mjs",
     "release:evidence": "npm run check && node src/release.mjs --write",
     "test": "node --test --test-reporter=spec",
-    "check": "node src/setup.mjs check && node src/check-service-network-policy.mjs && node src/check-gateway-client-contract.mjs && node src/check-axiom-one.mjs && node src/check-registry.mjs && node src/status.mjs && node src/check-docs.mjs && node --test --test-reporter=spec"
+    "check": "node src/setup.mjs check && node src/check-service-network-policy.mjs && node src/check-gateway-client-contract.mjs && node src/check-axiom-one.mjs && node src/check-registry.mjs && node src/status.mjs && node src/check-agent-commons.mjs && node src/check-docs.mjs && node --test --test-reporter=spec"
   }
 }
