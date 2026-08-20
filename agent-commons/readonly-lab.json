@@ -1,0 +1,62 @@
+{
+  "schema": "axiom-agent-commons-readonly-lab.v1",
+  "version": 1,
+  "project": "AXIOM-MESH",
+  "supported_build": "0.12.0-dev.3",
+  "canonical_repository": "Zoverions/AXIOM-MESH",
+  "canonical_repository_url": "https://github.com/Zoverions/AXIOM-MESH",
+  "laboratory_base_sha": "65b0fc914fb294ab7250968d94b787424d282ae9",
+  "transport": "none",
+  "network_listener": false,
+  "public_state_only": true,
+  "private_grid_access": false,
+  "consequential_tools": false,
+  "authority_granted": false,
+  "compatibility_claimed": false,
+  "methods": [
+    "project.get",
+    "capabilities.list",
+    "challenges.list",
+    "schemas.list",
+    "verification.get",
+    "protocols.get"
+  ],
+  "limits": {
+    "max_request_bytes": 4096,
+    "max_response_bytes": 65536,
+    "max_requests_per_session": 32,
+    "max_concurrent_requests": 1,
+    "max_capabilities": 64,
+    "max_challenges": 64,
+    "max_schemas": 8
+  },
+  "protocol_references": [
+    {
+      "family": "mcp",
+      "released_profile": "2026-07-28",
+      "maintenance_release": null,
+      "source": "https://blog.modelcontextprotocol.io/posts/2026-07-28/",
+      "candidate_reference_only": true,
+      "compatibility_claimed": false
+    },
+    {
+      "family": "a2a",
+      "released_profile": "1.0.0",
+      "maintenance_release": "1.0.1",
+      "source": "https://a2a-protocol.org/v1.0.0/specification",
+      "candidate_reference_only": true,
+      "compatibility_claimed": false
+    }
+  ],
+  "schema_paths": [
+    "docs/architecture/contracts/agent-challenge.v1.schema.json",
+    "docs/architecture/contracts/agent-feedback.v1.schema.json",
+    "agent-readiness/CONTRIBUTION-RESULT.schema.json"
+  ],
+  "verification_commands": [
+    "npm run setup:check",
+    "npm run agent-commons:check",
+    "npm run agent-commons:challenges:check",
+    "npm run check"
+  ]
+}

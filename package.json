@@ -18,6 +18,7 @@
     "agent-readiness:check": "node mesh/src/check-agent-readiness.mjs",
     "agent-commons:check": "node mesh/src/check-agent-commons.mjs",
     "agent-commons:challenges:check": "node mesh/src/check-agent-challenge-registry.mjs",
+    "agent-commons:readonly:check": "node mesh/src/check-agent-commons-readonly-lab.mjs",
     "doctor": "node mesh/src/doctor.mjs",
     "axiom": "node mesh/src/cli.mjs --human",
     "cli": "node mesh/src/cli.mjs --human",
