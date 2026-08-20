@@ -43,6 +43,7 @@ import {
 import { effectDestinationForTool } from '../lib/effect-destination.mjs';
 import { buildMachineDiscovery } from '../lib/machine-discovery.mjs';
 import { verifyCapabilityConsumptionReceipt } from '../lib/capability-consumption.mjs';
+import { projectExecutionMutationEvent } from '../lib/execution-mutation.mjs';
 import {
   loadTransportRuntime,
   transportServerOptions
@@ -423,22 +424,16 @@ export async function createHypervisorService(config = meshConfig()) {
       }
       const events = [];
       if (execution.result.mutation) {
-        events.push({
-          ...execution.result.mutation,
-          payload: {
-            ...execution.result.mutation.payload,
-            evidence: {
-              plan_digest: digestObject(plan),
-              invocation_digest: invocationDigest,
-              capability_consumption_receipt_digest: consumption.receipt_digest,
-              ...(effectDestination ? { effect_destination: effectDestination } : {}),
-              execution: execution.attestation,
-              ...(machineAuthority ? {
-                machine_authority_digest: machineAuthority.authority_digest
-              } : {})
-            }
-          }
-        });
+        events.push(projectExecutionMutationEvent(execution.result.mutation, {
+          plan_digest: digestObject(plan),
+          invocation_digest: invocationDigest,
+          capability_consumption_receipt_digest: consumption.receipt_digest,
+          ...(effectDestination ? { effect_destination: effectDestination } : {}),
+          execution: execution.attestation,
+          ...(machineAuthority ? {
+            machine_authority_digest: machineAuthority.authority_digest
+          } : {})
+        }));
       }
       const result = {
         ...execution.result.output,
