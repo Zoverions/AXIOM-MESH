@@ -1,0 +1,117 @@
+{
+  "schema": "axiom-circle-charter-threat-review.v0",
+  "version": 0,
+  "status": "inert-charter-history-threat-review",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "scope": "activated-circle-charter-history-and-local-historical-resolution-only",
+  "threats": [
+    {
+      "id": "charter-digest-substitution",
+      "mitigations": [
+        "charter-digest-recomputed",
+        "stored-charter-digest-must-match-canonical-charter"
+      ],
+      "residual_limit": "digest binding proves consistency of the represented record but does not prove who legitimately authored or approved it"
+    },
+    {
+      "id": "parallel-charter-heads-or-history-fork",
+      "mitigations": [
+        "single-ordered-entry-sequence",
+        "one-exact-predecessor-digest",
+        "current-circle-charter-equals-final-head"
+      ],
+      "residual_limit": "v0 represents one locally accepted history and does not provide distributed fork choice or consensus"
+    },
+    {
+      "id": "version-skip-or-rollback",
+      "mitigations": [
+        "genesis-version-one",
+        "contiguous-version-sequence",
+        "unique-charter-digests"
+      ],
+      "residual_limit": "contiguous local versions prevent structural rollback in this lifecycle but do not prove external parties observed every amendment"
+    },
+    {
+      "id": "retroactive-or-backdated-activation",
+      "mitigations": [
+        "recorded-at-not-after-effective-from",
+        "strict-effective-time-increase",
+        "activation-time-equals-charter-effective-from"
+      ],
+      "residual_limit": "canonical chronology does not independently attest trusted real-world time or prevent a trusted recorder from lying before admission"
+    },
+    {
+      "id": "future-charter-misrepresented-as-active",
+      "mitigations": [
+        "activated-entries-only",
+        "future-activation-rejected",
+        "historical-resolution-cannot-project-into-future"
+      ],
+      "residual_limit": "scheduled future amendment semantics are intentionally absent rather than inferred from activated history"
+    },
+    {
+      "id": "stale-charter-applied-to-historical-action",
+      "mitigations": [
+        "historical-resolution-by-effective-time",
+        "resolved-charter-digest-returned",
+        "lifecycle-digest-bound-to-resolution"
+      ],
+      "residual_limit": "future action and decision records must explicitly bind this resolved digest; this inert resolver does not mutate or revalidate existing records"
+    },
+    {
+      "id": "activation-evidence-authority-laundering",
+      "mitigations": [
+        "activation-evidence-reference-required",
+        "activation-record-creates-runtime-authority-false",
+        "authority-effect-none"
+      ],
+      "residual_limit": "an evidence reference records provenance only and does not establish truth, legitimacy, quorum, consent, or authorization"
+    },
+    {
+      "id": "cross-circle-charter-confusion",
+      "mitigations": [
+        "exact-circle-id-on-lifecycle-entry-and-activation",
+        "historical-charter-validated-against-circle-descriptor"
+      ],
+      "residual_limit": "no cross-Circle charter recognition, treaty inheritance, or federated constitutional authority is implemented"
+    },
+    {
+      "id": "role-or-runtime-authority-confusion",
+      "mitigations": [
+        "historical-charters-revalidated-through-circle-core",
+        "historical-role-execution-authority-false",
+        "charter-history-runtime-authority-false"
+      ],
+      "residual_limit": "a valid historical role declaration describes Circle rules but cannot itself grant Sandbox, Grid, repository, legal, or coercive authority"
+    },
+    {
+      "id": "activation-clock-trust",
+      "mitigations": [
+        "canonical-utc-timestamps",
+        "strict-local-time-ordering",
+        "future-resolution-rejected"
+      ],
+      "residual_limit": "timestamp syntax and ordering are local validation properties and do not prove secure or independently witnessed clock time"
+    }
+  ],
+  "promotion_blockers": [
+    "explicit-charter-amendment-proposal-and-approval-authority-model",
+    "grid-backed-replay-safe-charter-history-storage",
+    "activation-evidence-signature-and-attestation-model",
+    "historical-proposal-decision-and-membership-binding-to-resolved-charter",
+    "conflict-and-concurrent-head-handling-for-causal-exchange",
+    "human-readable-amendment-diff-and-comprehension-evidence",
+    "security-and-governance-review-before-real-circle-use"
+  ],
+  "non_claims": {
+    "charter_history_proves_legitimate_governance": false,
+    "activation_evidence_proves_approval": false,
+    "charter_role_grants_runtime_authority": false,
+    "distributed_consensus_enabled": false,
+    "scheduled_future_charters_supported": false,
+    "network_effect_enabled": false,
+    "portable_authority_granted": false
+  }
+}
