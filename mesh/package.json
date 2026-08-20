@@ -14,6 +14,7 @@
     "gateway-client:check": "node src/check-gateway-client-contract.mjs",
     "axiom-one:check": "node src/check-axiom-one.mjs",
     "agent-readiness:check": "node src/check-agent-readiness.mjs",
+    "agent-commons:check": "node src/check-agent-commons.mjs",
     "axiom": "node src/cli.mjs",
     "intent:compile": "node src/intentctl.mjs compile",
     "intent:assess": "node src/intentctl.mjs assess",

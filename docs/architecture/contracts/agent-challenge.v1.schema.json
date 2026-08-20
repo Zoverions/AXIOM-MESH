@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Zoverions/AXIOM-MESH/main/docs/architecture/contracts/agent-challenge.v1.schema.json",
+  "title": "AXIOM-MESH Agent Challenge v1",
+  "description": "Machine-readable contract for a bounded public AXIOM-MESH work request. A challenge describes scope and evidence expectations; it does not grant repository, runtime, spending, deployment, production, or third-party-testing authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "project",
+    "supported_build",
+    "challenge_id",
+    "canonical_repository",
+    "base_sha",
+    "issued_at",
+    "problem",
+    "scope",
+    "acceptance",
+    "evidence_expectations",
+    "disclosure",
+    "claim_boundary",
+    "authority_nonclaims"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-agent-challenge.v1"
+    },
+    "project": {
+      "const": "AXIOM-MESH"
+    },
+    "supported_build": {
+      "const": "0.12.0-dev.3"
+    },
+    "challenge_id": {
+      "$ref": "#/$defs/id"
+    },
+    "canonical_repository": {
+      "const": "Zoverions/AXIOM-MESH"
+    },
+    "base_sha": {
+      "$ref": "#/$defs/gitSha"
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "problem": {
+      "$ref": "#/$defs/text"
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowed_paths",
+        "prohibited_effects",
+        "environment_boundary"
+      ],
+      "properties": {
+        "allowed_paths": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 128,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/path"
+          }
+        },
+        "prohibited_effects": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "environment_boundary": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "repository-owned",
+              "contributor-owned",
+              "explicitly-disposable-authorized"
+            ]
+          }
+        },
+        "notes": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "acceptance": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "$ref": "#/$defs/text"
+      }
+    },
+    "evidence_expectations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "$ref": "#/$defs/text"
+      }
+    },
+    "result_contract": {
+      "const": "agent-readiness/CONTRIBUTION-RESULT.schema.json"
+    },
+    "disclosure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "public_issue_safe_only",
+        "sensitive_findings_route"
+      ],
+      "properties": {
+        "public_issue_safe_only": {
+          "const": true
+        },
+        "sensitive_findings_route": {
+          "const": "SECURITY.md"
+        }
+      }
+    },
+    "claim_boundary": {
+      "$ref": "#/$defs/text"
+    },
+    "authority_nonclaims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runtime_authority_granted",
+        "merge_authority_granted",
+        "deployment_authority_granted",
+        "credential_authority_granted",
+        "spending_authority_granted",
+        "hardware_custody_granted",
+        "production_promotion_granted",
+        "third_party_testing_authorized",
+        "compensation_committed"
+      ],
+      "properties": {
+        "runtime_authority_granted": {
+          "const": false
+        },
+        "merge_authority_granted": {
+          "const": false
+        },
+        "deployment_authority_granted": {
+          "const": false
+        },
+        "credential_authority_granted": {
+          "const": false
+        },
+        "spending_authority_granted": {
+          "const": false
+        },
+        "hardware_custody_granted": {
+          "const": false
+        },
+        "production_promotion_granted": {
+          "const": false
+        },
+        "third_party_testing_authorized": {
+          "const": false
+        },
+        "compensation_committed": {
+          "const": false
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[a-z0-9][a-z0-9._:-]{0,159}$"
+    },
+    "gitSha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8000
+    }
+  }
+}

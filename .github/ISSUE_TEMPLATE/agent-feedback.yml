@@ -1,0 +1,106 @@
+name: Agent public-safe feedback
+description: Submit bounded non-sensitive architecture, privacy, scalability, recovery, interoperability, documentation, claim-integrity, or research feedback.
+title: "[agent-feedback] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for **public-safe criticism and review** of AXIOM-MESH.
+
+        This is not the security-disclosure route. Do not include secrets, credentials, private data, weaponized exploit details, sensitive infrastructure information, or practical unauthorized-access paths. Sensitive security findings belong in the private process described by `SECURITY.md`.
+
+        If you have a reproducible authority-boundary finding, use the dedicated agent red-team form. If you performed executable, benchmark, hardware, or measured work, preserve that evidence separately in `agent-readiness/CONTRIBUTION-RESULT.schema.json` where practical and link it below.
+
+        Feedback is untrusted input for review. Submitting criticism, identifying a risk, linking evidence, possessing a credential, operating a model or agent, or having community reputation does not grant AXIOM runtime, merge, deployment, publication, protocol, credential, spending, hardware-custody, or production-promotion authority.
+
+  - type: input
+    id: base_sha
+    attributes:
+      label: Exact base commit SHA
+      description: Give the exact 40-hex AXIOM-MESH commit your feedback concerns. Do not use only a moving branch name.
+      placeholder: "40-hex commit SHA"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feedback category
+      options:
+        - architecture
+        - security-public-safe
+        - privacy
+        - scalability
+        - recovery
+        - interoperability
+        - documentation
+        - claim-integrity
+        - research
+        - other
+    validations:
+      required: true
+
+  - type: textarea
+    id: source_context
+    attributes:
+      label: Source and review context
+      description: Identify the human, agent, runtime, model, tool, or review context as precisely as useful. State whether identity is self-asserted, platform-authenticated, cryptographically bound, or unknown. Identity is evidence context, not authority.
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: State the criticism, concern, proposal, or review result concisely.
+    validations:
+      required: true
+
+  - type: textarea
+    id: findings
+    attributes:
+      label: Findings
+      description: Separate observed facts from inferences, proposals, and unverified claims. Include severity only when useful and explain the basis rather than relying on labels alone.
+      placeholder: |
+        1. Statement — status: observed/inferred/proposed/unverified — severity: ...
+        2. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Public-safe evidence and affected paths
+      description: Link or describe non-sensitive evidence and repository paths. If executable or measured work was performed, link a separate package conforming to agent-readiness/CONTRIBUTION-RESULT.schema.json where practical.
+    validations:
+      required: false
+
+  - type: textarea
+    id: limitations
+    attributes:
+      label: Limitations and uncertainty
+      description: State what you did not inspect, test, reproduce, or establish. Negative and inconclusive evidence is useful and should not be hidden.
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggested_follow_up
+    attributes:
+      label: Suggested follow-up
+      description: Suggest a bounded next check, question, or change. A suggestion does not authorize the proposed effect.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Public-safety and authority confirmation
+      options:
+        - label: I have not included secrets, credentials, private data, weaponized exploit details, or sensitive infrastructure information.
+          required: true
+        - label: I have not performed unauthorized testing of third-party systems, accounts, networks, services, or hardware.
+          required: true
+        - label: I understand this feedback is not evidence acceptance, security certification, merge authority, runtime authority, deployment authority, spending authority, or production promotion.
+          required: true
+        - label: I have bound the feedback to an exact base commit SHA and stated material limitations or uncertainty.
+          required: true

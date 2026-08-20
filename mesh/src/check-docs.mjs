@@ -40,6 +40,8 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md',
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md',
   'docs/architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md',
+  'docs/architecture/contracts/agent-challenge.v1.schema.json',
+  'docs/architecture/contracts/agent-feedback.v1.schema.json',
   'docs/architecture/contracts/agent-runtime-capsule.v1.schema.json',
   'docs/architecture/contracts/agent-runtime-adapter.v1.schema.json',
   'docs/architecture/contracts/compute-node-profile.v1.schema.json',
@@ -159,9 +161,25 @@ const REQUIRED_CONTENT = Object.freeze({
   'docs/architecture/AGENT-COMMONS.md': [
     'External agents may contribute evidence and proposals',
     'agent-readiness/CONTRIBUTION-RESULT.schema.json',
+    'axiom-agent-challenge.v1',
+    'axiom-agent-feedback.v1',
     '## Zero-cost participation principle',
     'Gateway -> Hypervisor -> Sandbox -> Grid',
     'The immediate goal is a safer, more discoverable contribution surface'
+  ],
+  'docs/architecture/contracts/agent-challenge.v1.schema.json': [
+    'axiom-agent-challenge.v1',
+    'Zoverions/AXIOM-MESH',
+    'agent-readiness/CONTRIBUTION-RESULT.schema.json',
+    'compensation_committed',
+    'third_party_testing_authorized'
+  ],
+  'docs/architecture/contracts/agent-feedback.v1.schema.json': [
+    'axiom-agent-feedback.v1',
+    'Zoverions/AXIOM-MESH',
+    'public_disclosure_safe',
+    'contains_weaponized_exploit_detail',
+    'authority_requested'
   ],
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md': [
     '## Contract identity and versioning',
@@ -410,6 +428,8 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/PRODUCTION-GRADE.md': 3_000,
   'docs/PROJECT-STATUS-2026.md': 1_500,
   'docs/architecture/AGENT-COMMONS.md': 7_000,
+  'docs/architecture/contracts/agent-challenge.v1.schema.json': 4_000,
+  'docs/architecture/contracts/agent-feedback.v1.schema.json': 5_000,
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md': 8_000,
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md': 25_000,
   'docs/architecture/contracts/agent-runtime-capsule.v1.schema.json': 7_000,

@@ -55,13 +55,18 @@ Do not treat successful execution, community standing, prior contributions, an A
 Use the repository-native paths that already exist instead of inventing a parallel contribution system:
 
 - `.github/ISSUE_TEMPLATE/agent-contribution-proposal.yml` — bounded contribution proposal;
+- `.github/ISSUE_TEMPLATE/agent-feedback.yml` — public-safe architecture, privacy, scalability, recovery, interoperability, documentation, claim-integrity, or research feedback;
 - `.github/ISSUE_TEMPLATE/agent-authority-boundary.yml` — public-safe authority-boundary finding;
 - `.github/ISSUE_TEMPLATE/community-testnet-result.yml` — independent Testnet result;
+- `docs/architecture/contracts/agent-challenge.v1.schema.json` — machine-readable bounded work-request contract;
+- `docs/architecture/contracts/agent-feedback.v1.schema.json` — machine-readable public-safe feedback contract;
 - `agent-readiness/CONTRIBUTION-RESULT.schema.json` — canonical machine-readable contribution evidence package;
 - `agent-readiness/CONTRIBUTION-TRIAGE.txt` — evidence lifecycle;
 - `docs/community/COMMUNITY-TESTNET-V0.md` — independent operator lanes;
 - `docs/community/RED-TEAM-CHALLENGE.md` — public red-team entry;
 - `SECURITY.md` — private route for sensitive findings.
+
+Challenge and feedback objects describe requests or criticism. Executed or measured contribution evidence belongs in the canonical contribution-result package. Do not create a second generic result envelope.
 
 A well-evidenced negative or `NOT_REPRODUCED` result is useful. Do not manufacture activity or suppress contrary evidence.
 
