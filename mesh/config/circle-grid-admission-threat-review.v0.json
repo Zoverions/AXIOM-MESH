@@ -42,6 +42,11 @@
       "residual": "Circle record types still need explicit semantic rules for which Circle role or collective process may request persistence."
     },
     {
+      "id": "collective-decision-submitter-confusion",
+      "control": "Do not infer Circle decision authorship, voting authority, or collective finality from the principal that submits the decision record to Grid; Circle decisions have collective participant receipts and no single decider field.",
+      "residual": "A future decision-admission rule must define an explicit collective submitter or aggregation proof without converting transport identity into governance authority."
+    },
+    {
       "id": "separate-consumption-crash-window",
       "control": "Do not emit a separate capability-consumption event for Circle admission; the deterministic Circle persistence event itself carries the durable capability fingerprint in its signed trace id.",
       "residual": "This admission model is specific to an exact deterministic Circle event and must not be generalized to arbitrary capability use."
