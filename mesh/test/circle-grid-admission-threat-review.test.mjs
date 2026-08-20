@@ -6,7 +6,10 @@ const REVIEW_URL = new URL(
   '../config/circle-grid-admission-threat-review.v0.json',
   import.meta.url
 );
-const SOURCE_URL = new URL('../src/grid/circle-admission.mjs', import.meta.url);
+const SOURCE_URLS = [
+  new URL('../src/grid/circle-admission.mjs', import.meta.url),
+  new URL('../src/grid/circle-admission-implementation.mjs', import.meta.url)
+];
 
 const EXPECTED_THREATS = new Set([
   'forged-admission-capability',
@@ -84,7 +87,7 @@ test('Circle Grid admission promotion blockers retain runtime, role, transport, 
 });
 
 test('Circle Grid admission source implements the threat-review security boundaries without claiming Circle authority', async () => {
-  const source = await readFile(SOURCE_URL, 'utf8');
+  const source = (await Promise.all(SOURCE_URLS.map(url => readFile(url, 'utf8')))).join('\n');
   for (const required of [
     "audience: CIRCLE_GRID_ADMISSION_POLICY.audience",
     "issuer: CIRCLE_GRID_ADMISSION_POLICY.issuer_service",
@@ -92,6 +95,10 @@ test('Circle Grid admission source implements the threat-review security boundar
     'deriveCircleGridAdmissionInvocationDigest',
     'deriveCircleGridAdmissionTraceId',
     'circle_persistence_admission_replay_mismatch',
+    'verifyObjectSignature',
+    'event_hash',
+    'payload_digest',
+    'circle_persistence_admission_grid_event_invalid',
     'runtime_authority: false',
     'portable_authority: false',
     'external_effect_authority: false',
