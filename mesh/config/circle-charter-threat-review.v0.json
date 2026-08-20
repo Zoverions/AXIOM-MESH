@@ -38,7 +38,8 @@
       "mitigations": [
         "recorded-at-not-after-effective-from",
         "strict-effective-time-increase",
-        "activation-time-equals-charter-effective-from"
+        "activation-time-equals-charter-effective-from",
+        "record-and-effective-time-not-before-circle-creation"
       ],
       "residual_limit": "canonical chronology does not independently attest trusted real-world time or prevent a trusted recorder from lying before admission"
     },
@@ -56,7 +57,8 @@
       "mitigations": [
         "historical-resolution-by-effective-time",
         "resolved-charter-digest-returned",
-        "lifecycle-digest-bound-to-resolution"
+        "lifecycle-digest-bound-to-resolution",
+        "resolved-charter-deeply-frozen"
       ],
       "residual_limit": "future action and decision records must explicitly bind this resolved digest; this inert resolver does not mutate or revalidate existing records"
     },
@@ -91,7 +93,8 @@
       "mitigations": [
         "canonical-utc-timestamps",
         "strict-local-time-ordering",
-        "future-resolution-rejected"
+        "future-resolution-rejected",
+        "circle-creation-time-lower-bound"
       ],
       "residual_limit": "timestamp syntax and ordering are local validation properties and do not prove secure or independently witnessed clock time"
     }
