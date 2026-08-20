@@ -16,8 +16,8 @@ test('AXIOM One preview policy and static boundary are exact', async () => {
   assert.equal(result.schema, 'axiom-one-preview.v1');
   assert.equal(result.kernel_version, '0.12.0-dev.3');
   assert.equal(result.status, 'experimental-local-preview');
-  assert.equal(result.surfaces, 7);
-  assert.equal(result.gateway_routes, 14);
+  assert.equal(result.surfaces, 8);
+  assert.equal(result.gateway_routes, 16);
   assert.equal(result.bind_host, '127.0.0.1');
   assert.equal(result.gateway_target, 'same-origin-relative-v1');
   assert.equal(result.token_persistence, 'memory-only');
@@ -127,6 +127,11 @@ test('AXIOM One serves a hardened shell and proxies only contract routes', async
   assert.equal(shell.headers.get('x-frame-options'), 'DENY');
   assert.equal(shell.headers.get('cross-origin-opener-policy'), 'same-origin');
   assert.match(await shell.text(), /AXIOM One/);
+
+  const socialPresenter = await fetch(`${preview.url}/social-presentation.mjs`);
+  assert.equal(socialPresenter.status, 200);
+  assert.match(socialPresenter.headers.get('content-type'), /^text\/javascript/);
+  assert.match(await socialPresenter.text(), /presentAxiomOneSocial/);
 
   const rejectedHost = await rawRequest(preview.port, '/', {
     host: 'attacker.example'
