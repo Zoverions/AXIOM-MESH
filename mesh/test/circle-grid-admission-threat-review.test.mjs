@@ -16,6 +16,7 @@ const EXPECTED_THREATS = new Set([
   'bearer-token-replay',
   'reissued-token-replay',
   'cross-actor-event-replay',
+  'collective-decision-submitter-confusion',
   'separate-consumption-crash-window',
   'clock-and-expiry-manipulation',
   'upstream-policy-evidence-laundering',
