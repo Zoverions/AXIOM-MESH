@@ -66,6 +66,7 @@
       "id": "activation-evidence-authority-laundering",
       "mitigations": [
         "activation-evidence-reference-required",
+        "activation-evidence-reference-canonicalized",
         "activation-record-creates-runtime-authority-false",
         "authority-effect-none"
       ],
