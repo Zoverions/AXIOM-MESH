@@ -11,6 +11,8 @@
     "requester_must_equal_authenticated_principal": true,
     "creator_bootstrap_limited_to_first_invitation": true,
     "creator_bootstrap_persists_as_founder_authority": false,
+    "role_authorizing_membership_historical_binding_required": true,
+    "current_membership_must_match_historical_acceptance": true,
     "post_bootstrap_invitation_requires_approve_mode": true,
     "membership_acceptance_requires_invited_principal_self_acceptance": true,
     "proposal_requires_propose_mode": true,
