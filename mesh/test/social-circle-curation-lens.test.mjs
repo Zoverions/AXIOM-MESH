@@ -120,8 +120,9 @@ test('curation rule effects can alter one lens but cannot become network bans, b
   }
 });
 
-test('member curation selection is owner-local and curator cannot override uncurated choice', async () => {
+test('member curation selection is owner-local and must bind the exact active lens for that Circle', async () => {
   const contract = await loadContract();
+  const lens = lensFixture();
   const curated = {
     schema: 'axiom-circle-curation-selection.v0',
     owner: 'human.owner',
@@ -133,7 +134,25 @@ test('member curation selection is owner-local and curator cannot override uncur
     network_effect: 'none',
     authority_effect: 'none'
   };
-  assert.equal(validateCircleCurationSelection(contract, curated), true);
+  assert.equal(validateCircleCurationSelection(contract, curated, { lensRecord: lens }), true);
+  assert.throws(
+    () => validateCircleCurationSelection(contract, curated),
+    /requires the selected lens record/
+  );
+
+  const wrongCircle = structuredClone(lens);
+  wrongCircle.circle_id = 'circle.other';
+  assert.throws(
+    () => validateCircleCurationSelection(contract, curated, { lensRecord: wrongCircle }),
+    /does not match an active lens/
+  );
+
+  const retired = structuredClone(lens);
+  retired.status = 'retired';
+  assert.throws(
+    () => validateCircleCurationSelection(contract, curated, { lensRecord: retired }),
+    /does not match an active lens/
+  );
 
   const uncurated = {
     ...curated,
@@ -141,6 +160,10 @@ test('member curation selection is owner-local and curator cannot override uncur
     selected_lens_id: null
   };
   assert.equal(validateCircleCurationSelection(contract, uncurated), true);
+  assert.throws(
+    () => validateCircleCurationSelection(contract, uncurated, { lensRecord: lens }),
+    /cannot bind a curation lens record/
+  );
   assert.equal(contract.selection_record.user_may_select_uncurated, true);
   assert.equal(contract.selection_record.curator_may_override_user_selection, false);
 });
