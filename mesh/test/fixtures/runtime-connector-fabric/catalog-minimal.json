@@ -1,16 +1,16 @@
 {
   "schema": "axiom-runtime-connector-catalog-entry.v1",
-  "entry_id": "runtime:hermes",
+  "entry_id": "runtime:synthetic-reference",
   "entry_version": "0.1.0",
   "integration_class": "agent-runtime",
   "subject": {
-    "subject_id": "runtime:hermes",
-    "display_name": "Hermes Agent",
+    "subject_id": "runtime:synthetic-reference",
+    "display_name": "Synthetic Reference Runtime",
     "review_state": "research"
   },
   "provenance": {
     "source_kind": "source-repository",
-    "source_repository": "https://github.com/NousResearch/hermes-agent",
+    "source_repository": "https://example.invalid/synthetic-runtime",
     "source_commit": "1111111111111111111111111111111111111111",
     "license_spdx": "MIT",
     "mutable_ref_allowed": false
@@ -48,6 +48,6 @@
     "quarantine_supported": true
   },
   "non_claims": [
-    "Catalog presence does not authorize execution."
+    "Synthetic catalog presence does not authorize execution."
   ]
 }
