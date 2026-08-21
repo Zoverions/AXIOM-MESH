@@ -35,7 +35,7 @@ import {
   loadCircleLifecycleFixturePolicies
 } from './helpers/circle-lifecycle-grid-fixture.mjs';
 
-const BASE_SECONDS = Math.floor(Date.parse('2026-08-20T12:45:00.000Z') / 1000);
+const BASE_SECONDS = Math.floor(Date.parse('2026-08-20T12:50:00.000Z') / 1000);
 
 function credentialKeyPair() {
   const pair = generateKeyPairSync('ed25519');
@@ -204,6 +204,8 @@ test('self-protective lifecycle mutation policy is exact, contraction-only, iner
   assert.equal(validateCircleSelfProtectiveLifecycleMutationAuthorizationPolicy(policy), true);
   assert.deepEqual(policy.mutation_kinds.membership, ['role-narrow', 'membership-suspend', 'membership-exit']);
   assert.deepEqual(policy.mutation_kinds.credential, ['credential-suspend', 'credential-revoke', 'device-compromise']);
+  assert.equal(policy.requirements.mutation_event_after_current_grid_head, true);
+  assert.equal(policy.requirements.mutation_event_not_future_at_authorization, true);
   assert.equal(policy.requirements.membership_resume_supported, false);
   assert.equal(policy.requirements.role_widening_supported, false);
   assert.equal(policy.requirements.credential_resume_supported, false);
@@ -354,5 +356,24 @@ test('principal substitution, stale pre-head context, and wrong-request possessi
       hypervisorPublicKey: f.hypervisor.publicKey
     }),
     error => error?.code === 'circle_possession_attestation_context_mismatch'
+  );
+});
+
+test('backdated and future-dated self-protective mutation events fail closed before possession', async t => {
+  const f = await fixture(t);
+  const backdated = credentialEvent({ kind: 'credential-suspend', at: '2026-08-20T12:44:59.000Z' });
+  assert.throws(
+    () => prepareCircleSelfProtectiveLifecycleMutation(baseInput(f, {
+      postCredentialLifecycle: credentialLifecycleWithKey(f.keyPair, [backdated])
+    })),
+    error => error?.code === 'circle_self_protective_mutation_not_after_current_head'
+  );
+
+  const future = credentialEvent({ kind: 'credential-suspend', at: '2026-08-20T12:51:00.000Z' });
+  assert.throws(
+    () => prepareCircleSelfProtectiveLifecycleMutation(baseInput(f, {
+      postCredentialLifecycle: credentialLifecycleWithKey(f.keyPair, [future])
+    })),
+    /cannot be in the future/
   );
 });
