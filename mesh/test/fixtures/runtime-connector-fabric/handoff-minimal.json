@@ -1,0 +1,37 @@
+{
+  "schema": "axiom-task-artifact-handoff.v1",
+  "task_id": "task:minimal-001",
+  "causal_id": "causal:minimal-001",
+  "requester": {
+    "principal_id": "principal:owner"
+  },
+  "execution_target": {
+    "integration_id": "runtime:hermes",
+    "integration_class": "agent-runtime",
+    "adapter_contract": {
+      "contract_id": "axiom.agent-runtime-adapter",
+      "contract_version": "1.0.0",
+      "contract_sha256": "4954c3d1a49ea57fb0bf5a7eea29140b852e8b5fa2bb11634665f004aca2c19c"
+    }
+  },
+  "request": {
+    "capability_id": "system.status",
+    "purpose": "runtime-health",
+    "destinations": ["local"]
+  },
+  "authority": {
+    "coordination_is_authorization": false,
+    "handoff_transfers_authority": false,
+    "delegation_required_for_independent_child_authority": true
+  },
+  "budgets": {
+    "timeout_ms": 5000
+  },
+  "lifecycle": {
+    "state": "queued",
+    "created_at": "2026-08-21T23:31:00Z",
+    "updated_at": "2026-08-21T23:31:00Z"
+  },
+  "inputs": [],
+  "outputs": []
+}
