@@ -1,0 +1,403 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:axiom:contract:runtime-connector-catalog-entry:v1",
+  "title": "AXIOM Runtime Connector Catalog Entry v1",
+  "description": "Draft evidence-bearing catalog entry for runtimes, model providers, tool/service connectors, protocol adapters, compute backends, and oracle/evidence sources. Catalog presence and installation grant zero authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "entry_id",
+    "entry_version",
+    "integration_class",
+    "subject",
+    "provenance",
+    "compatibility",
+    "requested_access",
+    "orchestration",
+    "assurance",
+    "lifecycle",
+    "non_claims"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-runtime-connector-catalog-entry.v1"
+    },
+    "entry_id": {
+      "$ref": "#/$defs/id"
+    },
+    "entry_version": {
+      "$ref": "#/$defs/version"
+    },
+    "integration_class": {
+      "enum": [
+        "agent-runtime",
+        "model-provider",
+        "tool-service-connector",
+        "protocol-adapter",
+        "compute-backend",
+        "evidence-oracle"
+      ]
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subject_id", "display_name", "status"],
+      "properties": {
+        "subject_id": {
+          "$ref": "#/$defs/id"
+        },
+        "display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "status": {
+          "enum": ["unreviewed", "research", "conformance-candidate", "pilot", "promoted", "quarantined", "deprecated", "retired"]
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_kind", "license_spdx", "mutable_ref_allowed"],
+      "properties": {
+        "source_kind": {
+          "enum": ["source-repository", "release-artifact", "container-image", "service-endpoint", "local-artifact", "other"]
+        },
+        "source_repository": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 2048
+        },
+        "source_commit": {
+          "$ref": "#/$defs/gitCommit"
+        },
+        "release_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "artifact_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "sbom_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "license_spdx": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "mutable_ref_allowed": {
+          "const": false
+        }
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platforms", "deployment_forms", "adapter_contracts"],
+      "properties": {
+        "platforms": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["linux", "windows", "macos", "android", "ios", "container", "browser", "other"]
+          }
+        },
+        "deployment_forms": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["process", "sidecar", "plugin", "container", "remote-service", "library", "device", "other"]
+          }
+        },
+        "adapter_contracts": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/contractPin"
+          }
+        },
+        "protocol_profiles": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          }
+        }
+      }
+    },
+    "requested_access": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "install_grants_authority",
+        "capabilities",
+        "purposes",
+        "destinations",
+        "data_classes",
+        "credential_classes",
+        "network_required"
+      ],
+      "properties": {
+        "install_grants_authority": {
+          "const": false
+        },
+        "capabilities": {
+          "$ref": "#/$defs/idList"
+        },
+        "purposes": {
+          "$ref": "#/$defs/idList"
+        },
+        "destinations": {
+          "$ref": "#/$defs/stringList"
+        },
+        "data_classes": {
+          "$ref": "#/$defs/stringList"
+        },
+        "credential_classes": {
+          "$ref": "#/$defs/stringList"
+        },
+        "network_required": {
+          "type": "boolean"
+        },
+        "network_destinations": {
+          "$ref": "#/$defs/stringList"
+        },
+        "resource_bounds": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "timeout_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 86400000
+            },
+            "max_concurrency": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1024
+            },
+            "max_request_bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "max_response_bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "cost_ceiling_minor_units": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "orchestration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "may_spawn_workers", "delegation_required", "remote_execution_requested"],
+      "properties": {
+        "mode": {
+          "enum": ["none", "single-agent", "multi-agent", "worker-pool", "tool-host", "workflow-engine", "other"]
+        },
+        "may_spawn_workers": {
+          "type": "boolean"
+        },
+        "delegation_required": {
+          "type": "boolean"
+        },
+        "remote_execution_requested": {
+          "type": "boolean"
+        },
+        "handoff_contracts": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/contractPin"
+          }
+        }
+      }
+    },
+    "assurance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["observations", "last_reviewed_at"],
+      "properties": {
+        "observations": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/observation"
+          }
+        },
+        "last_reviewed_at": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "evidence_fresh_until": {
+          "$ref": "#/$defs/dateTime"
+        }
+      }
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["update_mode", "silent_permission_widening_allowed", "rollback_available", "quarantine_supported"],
+      "properties": {
+        "update_mode": {
+          "enum": ["manual-reviewed", "operator-reviewed", "disabled"]
+        },
+        "silent_permission_widening_allowed": {
+          "const": false
+        },
+        "rollback_available": {
+          "type": "boolean"
+        },
+        "quarantine_supported": {
+          "const": true
+        },
+        "supersedes_entry_id": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "non_claims": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._:-]{1,127}$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$",
+      "maxLength": 80
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "gitCommit": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{40,64}$"
+    },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "idList": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    },
+    "stringList": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 512
+      }
+    },
+    "contractPin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contract_id", "contract_version", "contract_sha256"],
+      "properties": {
+        "contract_id": {
+          "$ref": "#/$defs/id"
+        },
+        "contract_version": {
+          "$ref": "#/$defs/version"
+        },
+        "contract_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claim_type", "observer_id", "subject_ref", "observed_at", "result"],
+      "properties": {
+        "claim_type": {
+          "enum": [
+            "source-review",
+            "license-review",
+            "dependency-review",
+            "sbom-match",
+            "signature-verification",
+            "conformance-test",
+            "security-review",
+            "vulnerability-advisory",
+            "reproducible-build",
+            "benchmark",
+            "operational-observation",
+            "community-curation",
+            "other"
+          ]
+        },
+        "observer_id": {
+          "$ref": "#/$defs/id"
+        },
+        "subject_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "observed_at": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "fresh_until": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "result": {
+          "enum": ["pass", "fail", "warning", "unknown", "not-applicable"]
+        },
+        "evidence_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "evidence_uri": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 2048
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 1000
+        }
+      }
+    }
+  }
+}
