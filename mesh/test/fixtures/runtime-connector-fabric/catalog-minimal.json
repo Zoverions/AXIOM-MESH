@@ -6,7 +6,7 @@
   "subject": {
     "subject_id": "runtime:hermes",
     "display_name": "Hermes Agent",
-    "status": "research"
+    "review_state": "research"
   },
   "provenance": {
     "source_kind": "source-repository",
@@ -23,6 +23,7 @@
   "requested_access": {
     "install_grants_authority": false,
     "capabilities": [],
+    "actions": [],
     "purposes": [],
     "destinations": [],
     "data_classes": [],
@@ -32,11 +33,12 @@
   "orchestration": {
     "mode": "single-agent",
     "may_spawn_workers": false,
-    "delegation_required": false,
+    "independent_child_authority_requested": false,
     "remote_execution_requested": false
   },
   "assurance": {
     "observations": [],
+    "cataloged_at": "2026-08-21T23:31:00Z",
     "last_reviewed_at": "2026-08-21T23:31:00Z"
   },
   "lifecycle": {
