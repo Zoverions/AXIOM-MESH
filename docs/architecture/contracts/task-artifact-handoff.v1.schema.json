@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:axiom:contract:task-artifact-handoff:v1",
   "title": "AXIOM Task Artifact Handoff v1",
-  "description": "Draft runtime-neutral task, artifact, lifecycle, and handoff envelope. The contract records coordination state and does not itself grant runtime authority or delegation.",
+  "description": "Draft runtime-neutral task, artifact, lifecycle, and handoff envelope. The contract records coordination state and exact runtime-operation/AXIOM-action mapping but does not itself grant runtime authority or delegation.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -76,9 +76,18 @@
     "request": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["capability_id", "purpose", "destinations"],
+      "required": ["runtime_operation", "axiom_action", "purpose", "destinations"],
       "properties": {
+        "runtime_operation": {
+          "description": "Exact operation identifier understood by the selected runtime/connector profile.",
+          "$ref": "#/$defs/id"
+        },
+        "axiom_action": {
+          "description": "Exact AXIOM action identifier to which the runtime operation is mapped. Naming the action does not authorize it.",
+          "$ref": "#/$defs/id"
+        },
         "capability_id": {
+          "description": "Optional capability-registry classification. It does not substitute for exact action authorization.",
           "$ref": "#/$defs/id"
         },
         "purpose": {
@@ -110,11 +119,19 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "authority_source",
+        "grant_required_before_effect",
         "coordination_is_authorization",
         "handoff_transfers_authority",
         "delegation_required_for_independent_child_authority"
       ],
       "properties": {
+        "authority_source": {
+          "const": "axiom-gateway"
+        },
+        "grant_required_before_effect": {
+          "const": true
+        },
         "coordination_is_authorization": {
           "const": false
         },
@@ -133,7 +150,17 @@
         "delegation_id": {
           "$ref": "#/$defs/id"
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {"required": ["grant_id"]},
+          "then": {"required": ["grant_digest"]}
+        },
+        {
+          "if": {"required": ["grant_digest"]},
+          "then": {"required": ["grant_id"]}
+        }
+      ]
     },
     "budgets": {
       "type": "object",
@@ -196,8 +223,9 @@
         "cancel_requested_at": {
           "$ref": "#/$defs/dateTime"
         },
-        "terminal_reason": {
+        "state_reason": {
           "type": "string",
+          "minLength": 1,
           "maxLength": 1000
         },
         "terminal_receipt_id": {
@@ -206,7 +234,56 @@
         "uncertainty_record_id": {
           "$ref": "#/$defs/id"
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {"enum": ["queued", "running", "awaiting-approval", "blocked"]}
+            },
+            "required": ["state"]
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {"required": ["terminal_receipt_id"]},
+                {"required": ["uncertainty_record_id"]}
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {"enum": ["completed", "failed", "cancelled", "expired"]}
+            },
+            "required": ["state"]
+          },
+          "then": {
+            "required": ["terminal_receipt_id"],
+            "not": {"required": ["uncertainty_record_id"]}
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {"enum": ["failed", "cancelled", "expired"]}
+            },
+            "required": ["state"]
+          },
+          "then": {"required": ["state_reason"]}
+        },
+        {
+          "if": {
+            "properties": {"state": {"const": "uncertain"}},
+            "required": ["state"]
+          },
+          "then": {
+            "required": ["uncertainty_record_id"],
+            "not": {"required": ["terminal_receipt_id"]}
+          }
+        }
+      ]
     },
     "inputs": {
       "type": "array",
