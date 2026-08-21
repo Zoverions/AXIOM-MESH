@@ -25,7 +25,7 @@ test('composed Circle admission cannot be promoted as unbound parent admission',
   assert.equal(admission.requirements.parent_grid_admission_policy_digest_bound, true);
   assert.equal(admission.requirements.standalone_unbound_parent_admission_is_runtime_promotion_eligible, false);
   assert.equal(admission.requirements.hypervisor_runtime_route, false);
-  assert.equal(admission.requirements.grid_route, false);
+  assert.equal(admission.requirements.public_grid_route, false);
   assert.equal(admission.requirements.gateway_route, false);
 
   assert.equal(authorization.runtime_activation, false);
