@@ -3,156 +3,154 @@
     {
       "name": "installation-authority",
       "expected_error": "install authority",
-      "value": {
-        "schema": "axiom-runtime-connector-catalog-entry.v1",
-        "entry_id": "runtime:bad-install",
-        "entry_version": "0.1.0",
-        "integration_class": "agent-runtime",
-        "subject": {"subject_id": "runtime:bad-install", "display_name": "Bad Install", "status": "research"},
-        "provenance": {"source_kind": "source-repository", "source_repository": "https://example.invalid/repo", "source_commit": "1111111111111111111111111111111111111111", "license_spdx": "MIT", "mutable_ref_allowed": false},
-        "compatibility": {"platforms": ["linux"], "deployment_forms": ["process"], "adapter_contracts": []},
-        "requested_access": {"install_grants_authority": true, "capabilities": [], "purposes": [], "destinations": [], "data_classes": [], "credential_classes": [], "network_required": false},
-        "orchestration": {"mode": "single-agent", "may_spawn_workers": false, "delegation_required": false, "remote_execution_requested": false},
-        "assurance": {"observations": [], "last_reviewed_at": "2026-08-21T23:31:00Z"},
-        "lifecycle": {"update_mode": "manual-reviewed", "silent_permission_widening_allowed": false, "rollback_available": true, "quarantine_supported": true},
-        "non_claims": ["Invalid fixture"]
-      }
+      "changes": [
+        {"path": ["requested_access", "install_grants_authority"], "value": true}
+      ]
     },
     {
       "name": "mutable-source-ref",
       "expected_error": "mutable source",
-      "value": {
-        "schema": "axiom-runtime-connector-catalog-entry.v1",
-        "entry_id": "runtime:bad-mutable",
-        "entry_version": "0.1.0",
-        "integration_class": "agent-runtime",
-        "subject": {"subject_id": "runtime:bad-mutable", "display_name": "Bad Mutable", "status": "research"},
-        "provenance": {"source_kind": "source-repository", "source_repository": "https://example.invalid/repo", "source_commit": "1111111111111111111111111111111111111111", "license_spdx": "MIT", "mutable_ref_allowed": true},
-        "compatibility": {"platforms": ["linux"], "deployment_forms": ["process"], "adapter_contracts": []},
-        "requested_access": {"install_grants_authority": false, "capabilities": [], "purposes": [], "destinations": [], "data_classes": [], "credential_classes": [], "network_required": false},
-        "orchestration": {"mode": "single-agent", "may_spawn_workers": false, "delegation_required": false, "remote_execution_requested": false},
-        "assurance": {"observations": [], "last_reviewed_at": "2026-08-21T23:31:00Z"},
-        "lifecycle": {"update_mode": "manual-reviewed", "silent_permission_widening_allowed": false, "rollback_available": true, "quarantine_supported": true},
-        "non_claims": ["Invalid fixture"]
-      }
+      "changes": [
+        {"path": ["provenance", "mutable_ref_allowed"], "value": true}
+      ]
+    },
+    {
+      "name": "missing-source-commit",
+      "expected_error": "requires repository and immutable commit",
+      "changes": [
+        {"path": ["provenance", "source_commit"], "remove": true}
+      ]
     },
     {
       "name": "silent-permission-widening",
       "expected_error": "silent permission widening",
-      "value": {
-        "schema": "axiom-runtime-connector-catalog-entry.v1",
-        "entry_id": "runtime:bad-update",
-        "entry_version": "0.1.0",
-        "integration_class": "agent-runtime",
-        "subject": {"subject_id": "runtime:bad-update", "display_name": "Bad Update", "status": "research"},
-        "provenance": {"source_kind": "source-repository", "source_repository": "https://example.invalid/repo", "source_commit": "1111111111111111111111111111111111111111", "license_spdx": "MIT", "mutable_ref_allowed": false},
-        "compatibility": {"platforms": ["linux"], "deployment_forms": ["process"], "adapter_contracts": []},
-        "requested_access": {"install_grants_authority": false, "capabilities": [], "purposes": [], "destinations": [], "data_classes": [], "credential_classes": [], "network_required": false},
-        "orchestration": {"mode": "single-agent", "may_spawn_workers": false, "delegation_required": false, "remote_execution_requested": false},
-        "assurance": {"observations": [], "last_reviewed_at": "2026-08-21T23:31:00Z"},
-        "lifecycle": {"update_mode": "manual-reviewed", "silent_permission_widening_allowed": true, "rollback_available": true, "quarantine_supported": true},
-        "non_claims": ["Invalid fixture"]
-      }
+      "changes": [
+        {"path": ["lifecycle", "silent_permission_widening_allowed"], "value": true}
+      ]
+    },
+    {
+      "name": "catalog-review-state-cannot-claim-promotion",
+      "expected_error": "review_state",
+      "changes": [
+        {"path": ["subject", "review_state"], "value": "promoted"}
+      ]
+    },
+    {
+      "name": "community-curation-is-not-assurance",
+      "expected_error": "claim_type",
+      "changes": [
+        {
+          "path": ["assurance", "observations"],
+          "value": [
+            {
+              "claim_type": "community-curation",
+              "observer_id": "observer:test",
+              "subject_ref": "runtime:hermes",
+              "observed_at": "2026-08-21T23:31:00Z",
+              "result": "pass"
+            }
+          ]
+        }
+      ]
     },
     {
       "name": "malformed-evidence-digest",
       "expected_error": "evidence_sha256",
-      "value": {
-        "schema": "axiom-runtime-connector-catalog-entry.v1",
-        "entry_id": "runtime:bad-evidence",
-        "entry_version": "0.1.0",
-        "integration_class": "agent-runtime",
-        "subject": {"subject_id": "runtime:bad-evidence", "display_name": "Bad Evidence", "status": "research"},
-        "provenance": {"source_kind": "source-repository", "source_repository": "https://example.invalid/repo", "source_commit": "1111111111111111111111111111111111111111", "license_spdx": "MIT", "mutable_ref_allowed": false},
-        "compatibility": {"platforms": ["linux"], "deployment_forms": ["process"], "adapter_contracts": []},
-        "requested_access": {"install_grants_authority": false, "capabilities": [], "purposes": [], "destinations": [], "data_classes": [], "credential_classes": [], "network_required": false},
-        "orchestration": {"mode": "single-agent", "may_spawn_workers": false, "delegation_required": false, "remote_execution_requested": false},
-        "assurance": {
-          "observations": [
+      "changes": [
+        {
+          "path": ["assurance", "observations"],
+          "value": [
             {
               "claim_type": "source-review",
               "observer_id": "observer:test",
-              "subject_ref": "runtime:bad-evidence",
+              "subject_ref": "runtime:hermes",
               "observed_at": "2026-08-21T23:31:00Z",
               "result": "pass",
               "evidence_sha256": "not-a-digest"
             }
-          ],
-          "last_reviewed_at": "2026-08-21T23:31:00Z"
-        },
-        "lifecycle": {"update_mode": "manual-reviewed", "silent_permission_widening_allowed": false, "rollback_available": true, "quarantine_supported": true},
-        "non_claims": ["Invalid fixture"]
-      }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "no-network-profile-cannot-list-destinations",
+      "expected_error": "no-network integration",
+      "changes": [
+        {"path": ["requested_access", "network_destinations"], "value": ["https://example.invalid"]}
+      ]
     }
   ],
   "handoff": [
     {
       "name": "coordination-authorizes",
       "expected_error": "coordination authorization",
-      "value": {
-        "schema": "axiom-task-artifact-handoff.v1",
-        "task_id": "task:bad-coordination",
-        "causal_id": "causal:bad-coordination",
-        "requester": {"principal_id": "principal:owner"},
-        "execution_target": {"integration_id": "runtime:hermes", "integration_class": "agent-runtime", "adapter_contract": {"contract_id": "axiom.agent-runtime-adapter", "contract_version": "1.0.0", "contract_sha256": "4954c3d1a49ea57fb0bf5a7eea29140b852e8b5fa2bb11634665f004aca2c19c"}},
-        "request": {"capability_id": "system.status", "purpose": "runtime-health", "destinations": ["local"]},
-        "authority": {"coordination_is_authorization": true, "handoff_transfers_authority": false, "delegation_required_for_independent_child_authority": true},
-        "budgets": {"timeout_ms": 5000},
-        "lifecycle": {"state": "queued", "created_at": "2026-08-21T23:31:00Z", "updated_at": "2026-08-21T23:31:00Z"},
-        "inputs": [],
-        "outputs": []
-      }
+      "changes": [
+        {"path": ["authority", "coordination_is_authorization"], "value": true}
+      ]
     },
     {
       "name": "handoff-transfers-authority",
       "expected_error": "handoff authority",
-      "value": {
-        "schema": "axiom-task-artifact-handoff.v1",
-        "task_id": "task:bad-handoff",
-        "causal_id": "causal:bad-handoff",
-        "requester": {"principal_id": "principal:owner"},
-        "execution_target": {"integration_id": "runtime:hermes", "integration_class": "agent-runtime", "adapter_contract": {"contract_id": "axiom.agent-runtime-adapter", "contract_version": "1.0.0", "contract_sha256": "4954c3d1a49ea57fb0bf5a7eea29140b852e8b5fa2bb11634665f004aca2c19c"}},
-        "request": {"capability_id": "system.status", "purpose": "runtime-health", "destinations": ["local"]},
-        "authority": {"coordination_is_authorization": false, "handoff_transfers_authority": true, "delegation_required_for_independent_child_authority": true},
-        "budgets": {"timeout_ms": 5000},
-        "lifecycle": {"state": "queued", "created_at": "2026-08-21T23:31:00Z", "updated_at": "2026-08-21T23:31:00Z"},
-        "inputs": [],
-        "outputs": []
-      }
+      "changes": [
+        {"path": ["authority", "handoff_transfers_authority"], "value": true}
+      ]
     },
     {
       "name": "missing-delegation-gate",
       "expected_error": "delegation gate",
-      "value": {
-        "schema": "axiom-task-artifact-handoff.v1",
-        "task_id": "task:bad-delegation",
-        "causal_id": "causal:bad-delegation",
-        "requester": {"principal_id": "principal:owner"},
-        "execution_target": {"integration_id": "runtime:hermes", "integration_class": "agent-runtime", "adapter_contract": {"contract_id": "axiom.agent-runtime-adapter", "contract_version": "1.0.0", "contract_sha256": "4954c3d1a49ea57fb0bf5a7eea29140b852e8b5fa2bb11634665f004aca2c19c"}},
-        "request": {"capability_id": "system.status", "purpose": "runtime-health", "destinations": ["local"]},
-        "authority": {"coordination_is_authorization": false, "handoff_transfers_authority": false, "delegation_required_for_independent_child_authority": false},
-        "budgets": {"timeout_ms": 5000},
-        "lifecycle": {"state": "queued", "created_at": "2026-08-21T23:31:00Z", "updated_at": "2026-08-21T23:31:00Z"},
-        "inputs": [],
-        "outputs": []
-      }
+      "changes": [
+        {"path": ["authority", "delegation_required_for_independent_child_authority"], "value": false}
+      ]
+    },
+    {
+      "name": "runtime-local-authority-source",
+      "expected_error": "authority source",
+      "changes": [
+        {"path": ["authority", "authority_source"], "value": "runtime-local"}
+      ]
+    },
+    {
+      "name": "grant-id-without-digest",
+      "expected_error": "grant id and digest",
+      "changes": [
+        {"path": ["authority", "grant_id"], "value": "grant:orphan"}
+      ]
+    },
+    {
+      "name": "missing-axiom-action",
+      "expected_error": "missing required field axiom_action",
+      "changes": [
+        {"path": ["request", "axiom_action"], "remove": true}
+      ]
     },
     {
       "name": "assumed-success-state",
       "expected_error": "lifecycle state",
-      "value": {
-        "schema": "axiom-task-artifact-handoff.v1",
-        "task_id": "task:bad-state",
-        "causal_id": "causal:bad-state",
-        "requester": {"principal_id": "principal:owner"},
-        "execution_target": {"integration_id": "runtime:hermes", "integration_class": "agent-runtime", "adapter_contract": {"contract_id": "axiom.agent-runtime-adapter", "contract_version": "1.0.0", "contract_sha256": "4954c3d1a49ea57fb0bf5a7eea29140b852e8b5fa2bb11634665f004aca2c19c"}},
-        "request": {"capability_id": "system.status", "purpose": "runtime-health", "destinations": ["local"]},
-        "authority": {"coordination_is_authorization": false, "handoff_transfers_authority": false, "delegation_required_for_independent_child_authority": true},
-        "budgets": {"timeout_ms": 5000},
-        "lifecycle": {"state": "assumed-success", "created_at": "2026-08-21T23:31:00Z", "updated_at": "2026-08-21T23:31:00Z"},
-        "inputs": [],
-        "outputs": []
-      }
+      "changes": [
+        {"path": ["lifecycle", "state"], "value": "assumed-success"}
+      ]
+    },
+    {
+      "name": "running-state-cannot-carry-terminal-receipt",
+      "expected_error": "nonterminal state",
+      "changes": [
+        {"path": ["lifecycle", "state"], "value": "running"},
+        {"path": ["lifecycle", "terminal_receipt_id"], "value": "receipt:premature"}
+      ]
+    },
+    {
+      "name": "uncertain-state-requires-uncertainty-record",
+      "expected_error": "uncertain state requires uncertainty record",
+      "changes": [
+        {"path": ["lifecycle", "state"], "value": "uncertain"}
+      ]
+    },
+    {
+      "name": "completed-state-requires-terminal-receipt",
+      "expected_error": "terminal state requires terminal receipt",
+      "changes": [
+        {"path": ["lifecycle", "state"], "value": "completed"}
+      ]
     }
   ]
 }
