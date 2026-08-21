@@ -19,12 +19,16 @@
     }
   },
   "request": {
-    "capability_id": "memory.read",
+    "runtime_operation": "memory.lookup",
+    "axiom_action": "memory.create",
+    "capability_id": "memory.graph",
     "purpose": "owner-requested-retrieval",
     "destinations": ["local"],
     "data_classes": ["owner-private-memory"]
   },
   "authority": {
+    "authority_source": "axiom-gateway",
+    "grant_required_before_effect": true,
     "coordination_is_authorization": false,
     "handoff_transfers_authority": false,
     "delegation_required_for_independent_child_authority": true,
@@ -41,13 +45,11 @@
     "cost_ceiling_minor_units": 250
   },
   "lifecycle": {
-    "state": "running",
+    "state": "completed",
     "created_at": "2026-08-21T23:31:00Z",
     "updated_at": "2026-08-21T23:31:30Z",
-    "cancel_requested_at": "2026-08-21T23:35:00Z",
-    "terminal_reason": "Fixture remains non-terminal; fields exercise the draft schema only.",
-    "terminal_receipt_id": "receipt:placeholder-001",
-    "uncertainty_record_id": "uncertainty:placeholder-001"
+    "state_reason": "Fixture completed with a terminal receipt.",
+    "terminal_receipt_id": "receipt:task-maximal-001"
   },
   "inputs": [
     {
@@ -89,6 +91,13 @@
       "at": "2026-08-21T23:31:20Z",
       "actor_principal_id": "principal:agent-worker",
       "detail_digest": "4444444444444444444444444444444444444444444444444444444444444444"
+    },
+    {
+      "event_id": "event:task-completed-001",
+      "type": "task.completed",
+      "at": "2026-08-21T23:31:30Z",
+      "actor_principal_id": "principal:agent-worker",
+      "detail_digest": "5555555555555555555555555555555555555555555555555555555555555555"
     }
   ]
 }
