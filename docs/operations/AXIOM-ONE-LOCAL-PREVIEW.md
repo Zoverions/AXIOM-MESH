@@ -6,7 +6,7 @@
 
 **Status:** experimental local preview; not a supported product
 
-**Updated:** 2026-08-01
+**Updated:** 2026-08-20
 
 ## Purpose and exact claim
 
@@ -14,11 +14,12 @@ The current source includes an experimental AXIOM One browser/PWA shell under
 [`apps/axiom-one/`](../../apps/axiom-one/). It lets a developer or evaluator
 connect a browser to the local development node, see current node status,
 review and exercise five explicitly bounded actions, understand stable denials
-and uncertain outcomes, distinguish approval states, create and tombstone one
+and uncertain outcomes, distinguish approval states, inspect the authenticated
+owner-local Social actor/persona/publication snapshot, create and tombstone one
 private note at a time, record a fixed directional provenance link, create a
-selective local export, inspect a
-plain-language event timeline, and retain access to the exact raw Gateway
-responses without using the CLI for those interactions.
+selective local export, inspect a plain-language event timeline, and retain
+access to the exact raw Gateway responses without using the CLI for those
+interactions.
 
 The preview is executable evidence that the human-product layer can remain
 outside the trusted `mesh/` kernel and consume only the versioned
@@ -94,24 +95,34 @@ reverse tunnel, or production deployment.
 
 ## Implemented surfaces
 
-The preview has seven primary sections. Their labels describe the intended
+The preview has eight primary sections. Their labels describe the intended
 product organization, but only the functions in this table are current.
 
 | Surface | Current behavior | Gateway routes | Current boundary |
 |---|---|---|---|
 | Overview | Reads kernel version, runtime summary, and capability counts | `status.get`, `capabilities.list` | Authenticated read; no promotion inference |
 | Ask | Reviews one `system.echo` request before sending, exposes effect/provider/destination/information/retention/timeout/cancellation/reversibility, then presents completion or a stable fail-closed outcome | `intents.submit` | Transparent deterministic test; review is not a kernel plan or grant; same-key recovery only when outcome is uncertain |
+| Social | Reads the authenticated owner's bounded local actor, persona, publication corpus, supersession/retraction status, transition count, truncation state, and raw snapshot | `social.get` | Read-only owner-local projection; owner is derived from authentication; `network_effect` must remain `none`; no federation, remote distribution, or browser Social mutation |
 | Approvals | Explains active, expired, consumed, and unknown approval records visible to the principal | `approvals.list` | Read-only; cannot grant, widen, renew, revoke, or self-approve authority |
 | Vault | Lists active owner-scoped memory objects and edges, creates one private note at a time, records one of three fixed directional provenance links, reviews an explicit tombstone, creates a single-object selective local export, and reveals its record or bundle only on a separate user action | `memory.list`, `intents.submit`, `exports.get`, `export_bundles.get` | Bounded lifecycle only; no arbitrary relation, direct edge deletion, hard delete, restore, bulk ingestion, sharing, browser persistence, or automatic bundle retrieval |
 | Receipts | Explains up to 50 visible integrity-linked events using an exact 37-kind vocabulary | `events.list` | Raw payload remains visible; mapped integrity evidence is not external truth |
 | Share | Displays explicit unavailable Selective Sharing and Circles states | none | Sends nothing; sharing and Circles remain disabled |
 | Explore | Reads selected raw status, registry, operations, node, capsule, import, backup, and audit data | eight contract-listed read routes | Scope denials remain visible; raw data is not reinterpreted as success |
 
-The policy lists exactly 14 client route identifiers. The checker requires
+The policy lists exactly 15 client route identifiers. The checker requires
 every identifier to exist in the active Gateway client contract. The loopback
 server independently matches method, path, and query names against that
 contract before proxying. `/internal/...`, unlisted `/v1/...`, a wrong method,
 or an undeclared query parameter is never forwarded.
+
+The Social surface calls only `social.get` with a bounded publication limit of
+100. The browser supplies no owner override; Gateway authentication determines
+the owner whose local snapshot may be returned. The UI preserves the returned
+publication state instead of rewriting append-only history and treats any
+`network_effect` value other than `none` as unexpected evidence requiring raw
+inspection. This tranche does not expose the kernel's existing local Social
+write actions, remote Social review, remote transport, recommendation/ranking,
+messaging, federation, or external egress.
 
 The Ask surface deliberately does not pretend to be an AI assistant. The
 current kernel has no implemented AI provider. The surface explains that it
@@ -388,13 +399,15 @@ browser boundary, semantic document markers, CSP server markers, service-worker
 API exclusion, reduced motion, manifest identity, exact human contract
 identity, all 20 stable outcome mappings, all 37 current event mappings, the
 five-action/no-generic-authority boundary, governed lifecycle policy, and
-secret-free asset digests. The normal
-source gate also runs this checker and the focused server and human
-presentation tests.
+secret-free asset digests. The normal source gate also runs this checker and
+the focused server and human presentation tests.
 
 The test suite proves:
 
-- exact policy status and seven-surface/fourteen-route inventory;
+- exact policy status and eight-surface/fifteen-route inventory;
+- owner-local Social route presence, `network_effect: none`/No-federation
+  presentation markers, publication status rendering, and absence of Social
+  mutation actions from the browser action inventory;
 - exact five-action human contract and all stable Gateway error/current event
   mappings;
 - frozen review bodies for private-note creation, three fixed directional
@@ -467,6 +480,9 @@ This increment does not complete or claim:
   consent administration, or authority revocation controls;
 - completed human comprehension/usability evidence for the experimental
   explanation mappings;
+- Social mutation/write controls, remote Social review, remote Social
+  transport, ranking/recommendation, messaging, federation, or cross-node
+  publication;
 - arbitrary provenance relationships or metadata, direct edge deletion, bulk
   memory ingestion, hard deletion, restore, export deletion, automatic bundle
   retrieval, or a safe download workflow;
@@ -478,10 +494,14 @@ This increment does not complete or claim:
 - production credentials, live deployment, federation, consensus, or
   production promotion.
 
-The next work is to complete the remaining governed-memory gates, including
-broader provenance and edge-deletion policy, deletion and restore policy,
-export retention and deletion, and a reviewed download boundary; design a
-separately bound consequential plan/execute and approval protocol; run keyboard, screen-reader,
-and comprehension fixtures; and design the separate browser session/device
-boundary. Share, Circles, and AI controls must remain visibly unavailable until
-their own contracts and negative evidence exist.
+The next Social product tranche is a separately reviewed browser write surface
+for the already-existing local Social actions, including human explanations,
+frozen requests, retraction confirmation, retry semantics, and adversarial UI
+tests. The broader next work also includes the remaining governed-memory gates,
+including broader provenance and edge-deletion policy, deletion and restore
+policy, export retention and deletion, and a reviewed download boundary;
+designing a separately bound consequential plan/execute and approval protocol;
+running keyboard, screen-reader, and comprehension fixtures; and designing the
+separate browser session/device boundary. Share, Circles, remote Social, and AI
+controls must remain visibly unavailable until their own contracts and negative
+evidence exist.

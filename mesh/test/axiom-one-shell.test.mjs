@@ -16,8 +16,8 @@ test('AXIOM One preview policy and static boundary are exact', async () => {
   assert.equal(result.schema, 'axiom-one-preview.v1');
   assert.equal(result.kernel_version, '0.12.0-dev.3');
   assert.equal(result.status, 'experimental-local-preview');
-  assert.equal(result.surfaces, 7);
-  assert.equal(result.gateway_routes, 14);
+  assert.equal(result.surfaces, 8);
+  assert.equal(result.gateway_routes, 15);
   assert.equal(result.bind_host, '127.0.0.1');
   assert.equal(result.gateway_target, 'same-origin-relative-v1');
   assert.equal(result.token_persistence, 'memory-only');
@@ -37,6 +37,9 @@ test('AXIOM One preview policy and static boundary are exact', async () => {
   assert.match(result.assets_digest, /^[a-f0-9]{64}$/);
 
   const app = await readFile(new URL('../../apps/axiom-one/app.mjs', import.meta.url), 'utf8');
+  assert.match(app, /state\.client\.call\('social\.get'/);
+  assert.match(app, /response\.network_effect === 'none'/);
+  assert.doesNotMatch(app, /action:\s*'social\./);
   assert.doesNotMatch(app, /localStorage|sessionStorage|indexedDB|document\.cookie|innerHTML/);
 });
 
