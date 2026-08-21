@@ -1,4 +1,5 @@
 import { sha256 } from '../lib/canonical.mjs';
+import { runCircleLifecycleHeadMigrations } from './circle-lifecycle-head-migrations.mjs';
 
 const CIRCLE_PERSISTENCE_PROJECTION_SQL = `
   CREATE TABLE IF NOT EXISTS circle_persistence_heads (
@@ -81,6 +82,8 @@ export function runCirclePersistenceMigrations(
       throw error;
     }
   }
+
+  runCircleLifecycleHeadMigrations(db, { now });
 
   return {
     version: CIRCLE_PERSISTENCE_MIGRATIONS.at(-1).version,
