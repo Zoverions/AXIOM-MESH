@@ -15,11 +15,15 @@
     }
   },
   "request": {
-    "capability_id": "system.status",
+    "runtime_operation": "runtime.identity.inspect",
+    "axiom_action": "system.echo",
+    "capability_id": "core.machine-discovery",
     "purpose": "runtime-health",
     "destinations": ["local"]
   },
   "authority": {
+    "authority_source": "axiom-gateway",
+    "grant_required_before_effect": true,
     "coordination_is_authorization": false,
     "handoff_transfers_authority": false,
     "delegation_required_for_independent_child_authority": true
