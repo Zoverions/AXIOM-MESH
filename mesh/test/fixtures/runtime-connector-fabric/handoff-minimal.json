@@ -6,7 +6,7 @@
     "principal_id": "principal:owner"
   },
   "execution_target": {
-    "integration_id": "runtime:hermes",
+    "integration_id": "runtime:synthetic-reference",
     "integration_class": "agent-runtime",
     "adapter_contract": {
       "contract_id": "axiom.agent-runtime-adapter",
@@ -15,10 +15,10 @@
     }
   },
   "request": {
-    "runtime_operation": "runtime.identity.inspect",
+    "runtime_operation": "echo",
     "axiom_action": "system.echo",
-    "capability_id": "core.machine-discovery",
-    "purpose": "runtime-health",
+    "capability_id": "core.intent-loop",
+    "purpose": "synthetic-echo",
     "destinations": ["local"]
   },
   "authority": {
