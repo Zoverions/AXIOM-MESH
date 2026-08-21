@@ -252,7 +252,8 @@ function prepare(fixture) {
 function possessionAttestation(fixture, prepared, {
   requestDigest = prepared.possession_request_digest,
   lifecycleHead = fixture.lifecycleHead,
-  nowSeconds = NOW_SECONDS + 1
+  challengeNowSeconds = NOW_SECONDS,
+  nowSeconds = challengeNowSeconds + 1
 } = {}) {
   const challenge = createCircleCredentialPossessionChallenge(fixture.hypervisor, {
     circleId: FIXTURE_CIRCLE_ID,
@@ -261,7 +262,7 @@ function possessionAttestation(fixture, prepared, {
     credentialId: FIXTURE_CREDENTIAL_ID,
     requestDigest,
     lifecycleHead,
-    nowSeconds: NOW_SECONDS,
+    nowSeconds: challengeNowSeconds,
     ttlSeconds: 20
   });
   const response = signCircleCredentialPossessionChallenge(
@@ -329,8 +330,12 @@ test('preparation exposes one exact required credential and one request digest b
 test('single Hypervisor capability binds possession evidence and commits through the same lifecycle-head CAS', async t => {
   const fixture = await buildAuthorizedFixture(t);
   const prepared = prepare(fixture);
-  const attestation = possessionAttestation(fixture, prepared);
-  const issued = issue(fixture, attestation);
+  const authNowSeconds = Math.floor(Date.now() / 1000);
+  const attestation = possessionAttestation(fixture, prepared, {
+    challengeNowSeconds: authNowSeconds - 2,
+    nowSeconds: authNowSeconds - 1
+  });
+  const issued = issue(fixture, attestation, authNowSeconds);
   const verified = verifyCirclePossessionBoundAtomicCapability(
     issued.capability,
     fixture.hypervisor.publicKey,
@@ -340,7 +345,7 @@ test('single Hypervisor capability binds possession evidence and commits through
       authorization: issued.authorization,
       lifecycleGuardSet: issued.lifecycle_guard_set,
       possessionAttestations: [attestation],
-      nowSeconds: NOW_SECONDS + 2,
+      nowSeconds: authNowSeconds,
       maxTtlSeconds: 30,
       possessionMaxAgeSeconds: 60
     }
@@ -360,7 +365,7 @@ test('single Hypervisor capability binds possession evidence and commits through
     possessionAttestations: [attestation],
     actor: FIXTURE_PRINCIPAL,
     event: fixture.target.event,
-    nowSeconds: NOW_SECONDS + 3,
+    nowSeconds: authNowSeconds,
     maxTtlSeconds: 30,
     possessionMaxAgeSeconds: 60
   });
