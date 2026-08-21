@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:axiom:contract:runtime-connector-catalog-entry:v1",
   "title": "AXIOM Runtime Connector Catalog Entry v1",
-  "description": "Draft evidence-bearing catalog entry for runtimes, model providers, tool/service connectors, protocol adapters, compute backends, and oracle/evidence sources. Catalog presence and installation grant zero authority.",
+  "description": "Draft evidence-bearing catalog entry for runtimes, model providers, tool/service connectors, protocol adapters, compute backends, and oracle/evidence sources. Catalog presence, review state, conformance evidence, and installation grant zero authority and do not imply production promotion.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -42,7 +42,7 @@
     "subject": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["subject_id", "display_name", "status"],
+      "required": ["subject_id", "display_name", "review_state"],
       "properties": {
         "subject_id": {
           "$ref": "#/$defs/id"
@@ -56,8 +56,18 @@
           "type": "string",
           "maxLength": 2000
         },
-        "status": {
-          "enum": ["unreviewed", "research", "conformance-candidate", "pilot", "promoted", "quarantined", "deprecated", "retired"]
+        "review_state": {
+          "description": "Catalog/evidence review state only. It is not capability lifecycle state, production promotion, or local authorization.",
+          "enum": [
+            "unreviewed",
+            "research",
+            "conformance-candidate",
+            "conformance-reviewed",
+            "pilot-evidence",
+            "quarantined",
+            "deprecated",
+            "retired"
+          ]
         }
       }
     },
@@ -67,7 +77,14 @@
       "required": ["source_kind", "license_spdx", "mutable_ref_allowed"],
       "properties": {
         "source_kind": {
-          "enum": ["source-repository", "release-artifact", "container-image", "service-endpoint", "local-artifact", "other"]
+          "enum": [
+            "source-repository",
+            "release-artifact",
+            "container-image",
+            "service-endpoint",
+            "local-artifact",
+            "other"
+          ]
         },
         "source_repository": {
           "type": "string",
@@ -89,6 +106,17 @@
         "sbom_sha256": {
           "$ref": "#/$defs/sha256"
         },
+        "service_origin": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 2048
+        },
+        "service_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
         "license_spdx": {
           "type": "string",
           "minLength": 1,
@@ -97,7 +125,57 @@
         "mutable_ref_allowed": {
           "const": false
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"source_kind": {"const": "source-repository"}},
+            "required": ["source_kind"]
+          },
+          "then": {"required": ["source_repository", "source_commit"]}
+        },
+        {
+          "if": {
+            "properties": {"source_kind": {"const": "release-artifact"}},
+            "required": ["source_kind"]
+          },
+          "then": {"required": ["release_ref", "artifact_sha256"]}
+        },
+        {
+          "if": {
+            "properties": {"source_kind": {"const": "container-image"}},
+            "required": ["source_kind"]
+          },
+          "then": {"required": ["artifact_sha256"]}
+        },
+        {
+          "if": {
+            "properties": {"source_kind": {"const": "local-artifact"}},
+            "required": ["source_kind"]
+          },
+          "then": {"required": ["artifact_sha256"]}
+        },
+        {
+          "if": {
+            "properties": {"source_kind": {"const": "service-endpoint"}},
+            "required": ["source_kind"]
+          },
+          "then": {"required": ["service_origin"]}
+        },
+        {
+          "if": {
+            "properties": {"source_kind": {"const": "other"}},
+            "required": ["source_kind"]
+          },
+          "then": {
+            "anyOf": [
+              {"required": ["artifact_sha256"]},
+              {"required": ["service_origin"]},
+              {"required": ["source_repository", "source_commit"]}
+            ]
+          }
+        }
+      ]
     },
     "compatibility": {
       "type": "object",
@@ -148,6 +226,7 @@
       "required": [
         "install_grants_authority",
         "capabilities",
+        "actions",
         "purposes",
         "destinations",
         "data_classes",
@@ -159,6 +238,11 @@
           "const": false
         },
         "capabilities": {
+          "description": "Capability-registry classifications requested by the integration. These do not substitute for exact action authorization.",
+          "$ref": "#/$defs/idList"
+        },
+        "actions": {
+          "description": "Exact AXIOM action identifiers the integration may request. Requestability is not authorization.",
           "$ref": "#/$defs/idList"
         },
         "purposes": {
@@ -207,12 +291,35 @@
             }
           }
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"network_required": {"const": false}},
+            "required": ["network_required"]
+          },
+          "then": {
+            "properties": {"network_destinations": {"maxItems": 0}}
+          }
+        },
+        {
+          "if": {
+            "properties": {"network_required": {"const": true}},
+            "required": ["network_required"]
+          },
+          "then": {"required": ["network_destinations"]}
+        }
+      ]
     },
     "orchestration": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["mode", "may_spawn_workers", "delegation_required", "remote_execution_requested"],
+      "required": [
+        "mode",
+        "may_spawn_workers",
+        "independent_child_authority_requested",
+        "remote_execution_requested"
+      ],
       "properties": {
         "mode": {
           "enum": ["none", "single-agent", "multi-agent", "worker-pool", "tool-host", "workflow-engine", "other"]
@@ -220,7 +327,8 @@
         "may_spawn_workers": {
           "type": "boolean"
         },
-        "delegation_required": {
+        "independent_child_authority_requested": {
+          "description": "Whether child workers are expected to request their own AXIOM authority. Internal worker spawning alone is not delegation.",
           "type": "boolean"
         },
         "remote_execution_requested": {
@@ -237,9 +345,10 @@
       }
     },
     "assurance": {
+      "description": "Technical and operational observations only. Community or Circle curation is a separate overlay and does not become assurance or authorization.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["observations", "last_reviewed_at"],
+      "required": ["observations", "cataloged_at"],
       "properties": {
         "observations": {
           "type": "array",
@@ -247,6 +356,9 @@
           "items": {
             "$ref": "#/$defs/observation"
           }
+        },
+        "cataloged_at": {
+          "$ref": "#/$defs/dateTime"
         },
         "last_reviewed_at": {
           "$ref": "#/$defs/dateTime"
@@ -364,7 +476,6 @@
             "reproducible-build",
             "benchmark",
             "operational-observation",
-            "community-curation",
             "other"
           ]
         },
