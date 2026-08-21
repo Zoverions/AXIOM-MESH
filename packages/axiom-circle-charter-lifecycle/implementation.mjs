@@ -5,7 +5,7 @@ import {
 } from '../../mesh/src/lib/circle-core.mjs';
 
 const DIGEST = /^[a-f0-9]{64}$/;
-const CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/;
+const ASCII_CONTROL = /[\u0000-\u001f\u007f]/;
 
 export function validateCircleCharterLifecyclePolicy(policy) {
   exactObject(policy, 'Circle charter lifecycle policy', [
@@ -60,7 +60,7 @@ export function validateCircleCharterLifecyclePolicy(policy) {
     charter_history_may_mint_runtime_authority: false,
     historical_rules_rewritten: false
   };
-  if (JSON.stringify(policy.requirements) !== JSON.stringify(expectedRequirements)) {
+  if (!sameExactValues(policy.requirements, expectedRequirements)) {
     throw new ValidationError('Circle charter lifecycle requirement was weakened');
   }
 
@@ -73,7 +73,7 @@ export function validateCircleCharterLifecyclePolicy(policy) {
     activation: 'axiom-circle-charter-activation.v0',
     resolved: 'axiom-circle-charter-resolution.v0'
   };
-  if (JSON.stringify(policy.schemas) !== JSON.stringify(expectedSchemas)) {
+  if (!sameExactValues(policy.schemas, expectedSchemas)) {
     throw new ValidationError('Circle charter lifecycle schema inventory drifted');
   }
 
@@ -130,6 +130,10 @@ export function validateCircleCharterLifecycle(
   }
 
   const nowMs = validDate(now, 'Circle charter lifecycle validation time').valueOf();
+  const circleCreatedMs = validDate(
+    circlePackage.circle.created_at,
+    'Circle creation time'
+  ).valueOf();
   const digests = new Set();
   const normalized = [];
   let previousDigest = null;
@@ -174,6 +178,9 @@ export function validateCircleCharterLifecycle(
     }
 
     const effectiveMs = timestampMs(entry.charter.effective_from, 'Circle charter effective_from');
+    if (effectiveMs < circleCreatedMs) {
+      throw new ValidationError('Circle charter cannot become effective before Circle creation');
+    }
     if (previousEffectiveMs !== null && effectiveMs <= previousEffectiveMs) {
       throw new ValidationError('Circle charter lifecycle effective times must strictly increase');
     }
@@ -182,6 +189,9 @@ export function validateCircleCharterLifecycle(
     }
 
     const recordedMs = timestampMs(entry.recorded_at, 'Circle charter history recorded_at');
+    if (recordedMs < circleCreatedMs) {
+      throw new ValidationError('Circle charter history cannot be recorded before Circle creation');
+    }
     if (recordedMs > effectiveMs) {
       throw new ValidationError('Circle charter activation cannot be recorded retroactively');
     }
@@ -326,9 +336,11 @@ function referenceArray(value, label) {
       typeof ref !== 'string'
       || ref.length < 1
       || ref.length > 512
-      || CONTROL.test(ref)
       || seen.has(ref)
     ) throw new ValidationError(`${label} are invalid`);
+    if (ASCII_CONTROL.test(ref) || ref !== ref.trim()) {
+      throw new ValidationError('Circle charter activation evidence reference is not canonical');
+    }
     seen.add(ref);
   }
 }
@@ -342,6 +354,10 @@ function exactObject(value, label, keys) {
   if (actual.length !== expected.length || actual.some((key, index) => key !== expected[index])) {
     throw new ValidationError(`${label} fields are invalid`);
   }
+}
+
+function sameExactValues(value, expected) {
+  return Object.entries(expected).every(([key, expectedValue]) => value[key] === expectedValue);
 }
 
 function canonicalTimestamp(value, label) {
