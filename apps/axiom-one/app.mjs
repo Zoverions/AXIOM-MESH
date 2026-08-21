@@ -7,6 +7,7 @@ import { createHumanPresenter } from '/presentation.mjs';
 const ROUTES = new Set([
   'overview',
   'ask',
+  'social',
   'approvals',
   'vault',
   'receipts',
@@ -109,6 +110,7 @@ async function renderRoute() {
     const renderer = {
       overview: renderOverview,
       ask: renderAsk,
+      social: renderSocial,
       approvals: renderApprovals,
       vault: renderVault,
       receipts: renderReceipts,
@@ -325,6 +327,100 @@ async function renderAsk() {
     form,
     review,
     result
+  );
+}
+
+async function renderSocial() {
+  const response = await state.client.call('social.get', {
+    query: { publication_limit: 100 }
+  });
+  const actors = Array.isArray(response.actors) ? response.actors : [];
+  const personas = Array.isArray(response.personas) ? response.personas : [];
+  const publications = Array.isArray(response.corpus?.publications)
+    ? response.corpus.publications
+    : [];
+  const transitions = Array.isArray(response.corpus?.transitions)
+    ? response.corpus.transitions
+    : [];
+  const localOnly = response.network_effect === 'none';
+
+  const actorCards = actors.length
+    ? element('div', { className: 'stack' }, actors.map(actor => element('article', {
+      className: 'card full'
+    }, [
+      element('span', { className: 'badge good', text: actor.custody ?? 'owner-local' }),
+      element('h2', { text: actor.actor_id ?? 'Local actor' }),
+      element('p', { text: `Status: ${actor.status ?? 'unknown'}` }),
+      rawDetails('Inspect actor projection', actor)
+    ])))
+    : empty('No local social actor is visible to this authenticated principal.');
+
+  const personaCards = personas.length
+    ? element('div', { className: 'stack' }, personas.map(persona => {
+      const projection = persona.public_projection ?? {};
+      return element('article', { className: 'card full' }, [
+        element('span', { className: 'badge good', text: persona.status ?? 'unknown' }),
+        element('h2', { text: projection.display_name ?? persona.persona_id ?? 'Publication persona' }),
+        element('p', { text: `Actor: ${persona.actor_id ?? 'unknown'} · Attribution: ${projection.attribution_mode ?? persona.protected_persona?.attribution_mode ?? 'unspecified'}` }),
+        rawDetails('Inspect persona projection', persona)
+      ]);
+    }))
+    : empty('No publication persona is visible to this authenticated principal.');
+
+  const publicationCards = publications.length
+    ? element('div', { className: 'stack' }, publications.map(publication => {
+      const projection = publication.publication ?? {};
+      const status = publication.status ?? 'unknown';
+      const text = typeof projection.content?.text === 'string'
+        ? projection.content.text
+        : 'No text projection is available.';
+      return element('article', { className: 'card full' }, [
+        element('span', {
+          className: `badge ${status === 'active' ? 'good' : 'pending'}`,
+          text: status
+        }),
+        element('h2', { text: text }),
+        element('p', {
+          text: `${projection.created_at ?? 'time unavailable'} · ${projection.authorship_mode ?? 'authorship unspecified'} · ${projection.discoverability ?? 'discoverability unspecified'}`
+        }),
+        projection.supersedes_digest
+          ? element('p', { text: `Supersedes: ${projection.supersedes_digest}` })
+          : element('p', { text: 'Original local publication projection.' }),
+        rawDetails('Inspect exact publication projection', publication)
+      ]);
+    }))
+    : empty('No local publications are visible to this authenticated principal.');
+
+  view.replaceChildren(
+    header('Owner-local Social corpus',
+      'Inspect the social identity, persona, and append-only publication history already held by this node. This read surface derives the owner only from the authenticated principal.'),
+    grid([
+      metricCard('Actors', String(actors.length), 'Owner-local actor identities'),
+      metricCard('Personas', String(personas.length), 'Publication personas'),
+      metricCard('Publications', String(publications.length), 'Bounded corpus entries'),
+      card('Network effect', localOnly ? 'None. No federation or remote distribution occurs.' : 'Unexpected network-effect value returned; inspect the raw response.', {
+        wide: true,
+        badge: [localOnly ? 'No federation' : 'Inspect', localOnly ? 'good' : 'danger']
+      })
+    ]),
+    notice('This tranche is read-only in AXIOM One. Local actor/persona/publication mutation already exists in the kernel, but browser write controls remain disabled until their human explanation and reviewed-request flows are separately bound and tested.'),
+    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'social-actors-heading' } }, [
+      element('h2', { text: 'Local actor custody', attrs: { id: 'social-actors-heading' } }),
+      actorCards
+    ]),
+    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'social-personas-heading' } }, [
+      element('h2', { text: 'Publication personas', attrs: { id: 'social-personas-heading' } }),
+      personaCards
+    ]),
+    element('section', { className: 'stack', attrs: { 'aria-labelledby': 'social-corpus-heading' } }, [
+      element('h2', { text: 'Append-only publication corpus', attrs: { id: 'social-corpus-heading' } }),
+      publicationCards
+    ]),
+    grid([
+      metricCard('Retraction records', String(transitions.length), 'Visible transitions for selected corpus entries'),
+      metricCard('Truncated', response.corpus?.truncated ? 'Yes' : 'No', 'Publication limit: 100')
+    ]),
+    rawDetails('Raw owner-local Social snapshot', response)
   );
 }
 
@@ -796,6 +892,7 @@ async function renderExplore() {
     ['Node status', 'status.get'],
     ['Capabilities', 'capabilities.list'],
     ['Operations', 'operations.get'],
+    ['Owner-local Social', 'social.get'],
     ['Admitted nodes', 'nodes.list'],
     ['Capsules', 'capsules.list'],
     ['Imports', 'imports.list'],
