@@ -21,6 +21,8 @@
     "self_service_only": true,
     "authenticated_principal_exact_membership_principal": true,
     "current_grid_lifecycle_head_required": true,
+    "mutation_event_after_current_grid_head": true,
+    "mutation_event_not_future_at_authorization": true,
     "proposed_candidate_previous_head_exact_current_head": true,
     "proposed_candidate_identity_exact_current_head": true,
     "proposed_candidate_must_advance_head": true,
