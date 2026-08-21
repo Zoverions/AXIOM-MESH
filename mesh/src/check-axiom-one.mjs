@@ -11,6 +11,7 @@ const APP_ROOT = join(REPOSITORY_ROOT, 'apps', 'axiom-one');
 const EXPECTED_SURFACES = Object.freeze([
   'overview',
   'ask',
+  'social',
   'approvals',
   'vault',
   'receipts',
@@ -22,6 +23,7 @@ const EXPECTED_ROUTES = Object.freeze([
   'capabilities.list',
   'operations.get',
   'intents.submit',
+  'social.get',
   'approvals.list',
   'memory.list',
   'exports.get',
@@ -326,7 +328,8 @@ function validateAssets({ index, app, presentation, styles, worker, server, icon
     'class="skip-link"',
     'id="main-content"',
     'aria-live="polite"',
-    'Experimental local preview'
+    'Experimental local preview',
+    'data-route="social"'
   ];
   if (requiredIndex.some(marker => !index.includes(marker))) {
     throw new ValidationError('AXIOM One document semantics are incomplete');
@@ -380,6 +383,16 @@ function validateAssets({ index, app, presentation, styles, worker, server, icon
   ];
   if (lifecycleMarkers.some(marker => !app.includes(marker))) {
     throw new ValidationError('AXIOM One memory lifecycle surface is incomplete');
+  }
+  const socialMarkers = [
+    "state.client.call('social.get'",
+    "response.network_effect === 'none'",
+    "publication.status ?? 'unknown'",
+    'Owner-local Social corpus',
+    'No federation'
+  ];
+  if (socialMarkers.some(marker => !app.includes(marker))) {
+    throw new ValidationError('AXIOM One owner-local Social surface is incomplete');
   }
   if (
     !worker.includes("url.pathname.startsWith('/v1/')")
