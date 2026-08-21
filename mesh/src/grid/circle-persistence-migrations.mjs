@@ -32,6 +32,14 @@ const CIRCLE_MEMBER_LIFECYCLE_HEAD_PROJECTION_SQL = `
 
   CREATE INDEX IF NOT EXISTS circle_member_lifecycle_heads_event_idx
   ON circle_member_lifecycle_heads(event_seq, event_id);
+
+  CREATE TRIGGER IF NOT EXISTS circle_member_lifecycle_heads_reject_noop
+  BEFORE UPDATE ON circle_member_lifecycle_heads
+  WHEN OLD.membership_lifecycle_digest = NEW.membership_lifecycle_digest
+    AND OLD.credential_lifecycle_digest = NEW.credential_lifecycle_digest
+  BEGIN
+    SELECT RAISE(ABORT, 'Circle lifecycle head update must change lifecycle state');
+  END;
 `;
 
 const CIRCLE_PERSISTENCE_MIGRATIONS = Object.freeze([
