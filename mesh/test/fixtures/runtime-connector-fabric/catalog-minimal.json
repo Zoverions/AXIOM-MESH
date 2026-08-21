@@ -1,0 +1,51 @@
+{
+  "schema": "axiom-runtime-connector-catalog-entry.v1",
+  "entry_id": "runtime:hermes",
+  "entry_version": "0.1.0",
+  "integration_class": "agent-runtime",
+  "subject": {
+    "subject_id": "runtime:hermes",
+    "display_name": "Hermes Agent",
+    "status": "research"
+  },
+  "provenance": {
+    "source_kind": "source-repository",
+    "source_repository": "https://github.com/NousResearch/hermes-agent",
+    "source_commit": "1111111111111111111111111111111111111111",
+    "license_spdx": "MIT",
+    "mutable_ref_allowed": false
+  },
+  "compatibility": {
+    "platforms": ["linux"],
+    "deployment_forms": ["process"],
+    "adapter_contracts": []
+  },
+  "requested_access": {
+    "install_grants_authority": false,
+    "capabilities": [],
+    "purposes": [],
+    "destinations": [],
+    "data_classes": [],
+    "credential_classes": [],
+    "network_required": false
+  },
+  "orchestration": {
+    "mode": "single-agent",
+    "may_spawn_workers": false,
+    "delegation_required": false,
+    "remote_execution_requested": false
+  },
+  "assurance": {
+    "observations": [],
+    "last_reviewed_at": "2026-08-21T23:31:00Z"
+  },
+  "lifecycle": {
+    "update_mode": "manual-reviewed",
+    "silent_permission_widening_allowed": false,
+    "rollback_available": true,
+    "quarantine_supported": true
+  },
+  "non_claims": [
+    "Catalog presence does not authorize execution."
+  ]
+}
