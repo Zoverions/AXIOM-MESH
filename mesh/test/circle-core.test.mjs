@@ -186,9 +186,7 @@ function clone(value) {
 
 test('Circle Core v0 validates a bounded inert collaboration package', () => {
   const document = fixture();
-  const result = validateCircleCorePackage(document, {
-    now: new Date('2026-08-21T13:00:00.000Z')
-  });
+  const result = validateCircleCorePackage(document);
   assert.equal(result.valid, true);
   assert.equal(result.circle_id, document.circle.circle_id);
   assert.equal(result.charter_digest, digestObject(document.charter));
@@ -234,6 +232,44 @@ test('Circle membership rejects acceptance after invitation expiry', () => {
   document.memberships[0].accepted_at = '2026-08-28T12:02:00.000Z';
   document.memberships[0].status_effective_at = '2026-08-28T12:02:00.000Z';
   assert.throws(() => validateCircleCorePackage(document), /expired invitation/);
+});
+
+test('Circle membership chronology cannot predate invitation or acceptance', () => {
+  const beforeIssued = fixture();
+  beforeIssued.memberships[0].accepted_at = '2026-08-20T12:00:30.000Z';
+  assert.throws(
+    () => validateCircleCorePackage(beforeIssued),
+    /accepted before invitation issuance/
+  );
+
+  const statusBeforeAcceptance = fixture();
+  statusBeforeAcceptance.memberships[0].status_effective_at = '2026-08-20T12:01:30.000Z';
+  assert.throws(
+    () => validateCircleCorePackage(statusBeforeAcceptance),
+    /status_effective_at precedes acceptance/
+  );
+});
+
+test('Circle semantic bounds match published role and evidence schema ceilings', () => {
+  const document = fixture();
+  const addedRoles = Array.from({ length: 15 }, (_, index) => ({
+    role_id: `role.extra.${index + 1}`,
+    label: `Extra role ${index + 1}`,
+    declared_modes: ['observe'],
+    execution_authority: false
+  }));
+  document.charter.roles.push(...addedRoles);
+  const roleIds = document.charter.roles.map(role => role.role_id);
+  const charterDigest = digestObject(document.charter);
+  document.invitations[0].role_ids = roleIds;
+  document.invitations[0].charter_digest = charterDigest;
+  document.memberships[0].role_ids = roleIds;
+  document.proposals[0].charter_digest = charterDigest;
+  document.decisions[0].charter_digest = charterDigest;
+  const evidenceRefs = Array.from({ length: 65 }, (_, index) => `evidence:${index + 1}`);
+  document.proposals[0].evidence_refs = evidenceRefs;
+  document.tasks[0].evidence_refs = evidenceRefs;
+  assert.equal(validateCircleCorePackage(document).valid, true);
 });
 
 test('Circle one-use invitation cannot create multiple membership records', () => {
