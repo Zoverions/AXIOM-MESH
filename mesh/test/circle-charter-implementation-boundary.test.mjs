@@ -9,6 +9,7 @@ import {
   CIRCLE_SCHEMA
 } from '../src/lib/circle-core.mjs';
 import {
+  resolveCircleCharterAt,
   validateCircleCharterLifecycle,
   validateCircleCharterLifecyclePolicy
 } from '../../packages/axiom-circle-charter-lifecycle/implementation.mjs';
@@ -176,4 +177,26 @@ test('direct implementation rejects non-canonical activation evidence references
       /activation evidence reference is not canonical/
     );
   }
+});
+
+test('direct implementation returns a deeply immutable resolved charter', async () => {
+  const policy = await loadPolicy();
+  const { circlePackage, lifecycle } = fixture();
+  const resolved = resolveCircleCharterAt(policy, circlePackage, lifecycle, {
+    at: '2026-08-20T12:30:00.000Z',
+    now: NOW
+  });
+
+  assert.equal(Object.isFrozen(resolved.charter), true);
+  assert.equal(Object.isFrozen(resolved.charter.roles), true);
+  assert.equal(Object.isFrozen(resolved.charter.roles[0]), true);
+  assert.equal(Object.isFrozen(resolved.charter.roles[0].declared_modes), true);
+  assert.equal(Object.isFrozen(resolved.charter.decision_rule), true);
+  assert.throws(() => {
+    resolved.charter.roles[0].label = 'Mutated';
+  }, TypeError);
+  assert.throws(() => {
+    resolved.charter.decision_rule.quorum_basis_points = 0;
+  }, TypeError);
+  assert.equal(resolved.charter_digest, digestObject(resolved.charter));
 });
