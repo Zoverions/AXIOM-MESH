@@ -45,15 +45,15 @@ const INTENT_DIGEST = digestObject({ schema: 'test-intent.v0', action: 'circle-a
 const PLAN_DIGEST = digestObject({ schema: 'test-plan.v0', step: 'authorize-then-persist' });
 const POLICY_DIGEST = digestObject({ schema: 'test-policy.v0', decision: 'allow-bounded-circle-persist' });
 
-const urls = {
+const policyUrls = {
   eligibilityPolicy: new URL('../config/circle-member-eligibility-lifecycle.v0.json', import.meta.url),
   charterPolicy: new URL('../config/circle-charter-lifecycle.v0.json', import.meta.url),
   historicalBindingPolicy: new URL('../config/circle-historical-rule-binding.v0.json', import.meta.url),
   credentialPolicy: new URL('../config/circle-membership-credential-lifecycle.v0.json', import.meta.url)
 };
 
-async function policies() {
-  return Object.fromEntries(await Promise.all(Object.entries(urls).map(async ([key, url]) => [
+async function loadPolicies() {
+  return Object.fromEntries(await Promise.all(Object.entries(policyUrls).map(async ([key, url]) => [
     key,
     JSON.parse(await readFile(url, 'utf8'))
   ])));
@@ -101,7 +101,11 @@ function invitation() {
   };
 }
 
-function acceptedMembership({ status = 'active', statusEffectiveAt = '2026-08-20T12:03:00.000Z', roles = ['governor'] } = {}) {
+function acceptedMembership({
+  status = 'active',
+  statusEffectiveAt = '2026-08-20T12:03:00.000Z',
+  roles = ['governor']
+} = {}) {
   return {
     schema: CIRCLE_MEMBERSHIP_SCHEMA,
     membership_id: MEMBERSHIP_ID,
@@ -204,7 +208,7 @@ function charterLifecycle() {
   };
 }
 
-function binding({ id, type, record, previous = null, basis = null, boundAt }) {
+function historicalBinding({ id, type, record, previous = null, basis = null, boundAt }) {
   const idField = type === 'invitation'
     ? 'invitation_id'
     : type === 'membership'
@@ -240,28 +244,25 @@ function binding({ id, type, record, previous = null, basis = null, boundAt }) {
   };
 }
 
-function ledger() {
-  const inviteRecord = invitation();
-  const inviteBinding = binding({
+function historicalLedger() {
+  const inviteBinding = historicalBinding({
     id: 'binding.invite.alpha.composed',
     type: 'invitation',
-    record: inviteRecord,
+    record: invitation(),
     boundAt: '2026-08-20T12:02:10.000Z'
   });
-  const membershipRecord = acceptedMembership();
-  const membershipBinding = binding({
+  const membershipBinding = historicalBinding({
     id: 'binding.membership.alpha.composed',
     type: 'membership',
-    record: membershipRecord,
+    record: acceptedMembership(),
     previous: inviteBinding,
     basis: inviteBinding.binding_id,
     boundAt: '2026-08-20T12:03:10.000Z'
   });
-  const proposalRecord = proposal();
-  const proposalBinding = binding({
+  const proposalBinding = historicalBinding({
     id: 'binding.proposal.composed',
     type: 'proposal',
-    record: proposalRecord,
+    record: proposal(),
     previous: membershipBinding,
     boundAt: '2026-08-20T12:10:10.000Z'
   });
@@ -274,6 +275,8 @@ function ledger() {
       network_effect: 'none',
       runtime_activation: false
     },
+    inviteBinding,
+    membershipBinding,
     proposalBinding
   };
 }
@@ -377,39 +380,58 @@ function memberContext({ membershipEvents = [], credentialEvents = [] } = {}) {
 }
 
 async function authorizationFixture({ membership = acceptedMembership(), membershipEvents = [] } = {}) {
-  const loaded = await policies();
-  const history = ledger();
+  const loaded = await loadPolicies();
+  const history = historicalLedger();
   const packageValue = circlePackage(membership);
-  const input = {
-    ...loaded,
-    circlePackage: packageValue,
-    charterLifecycle: charterLifecycle(),
-    historicalLedger: history.value,
-    bindingId: history.proposalBinding.binding_id,
-    authenticatedPrincipal: PRINCIPAL,
-    memberContexts: [memberContext({ membershipEvents })],
-    participantAttestations: [],
-    hypervisorPublicKey: null,
-    now: NOW
+  return {
+    ...history,
+    packageValue,
+    input: {
+      ...loaded,
+      circlePackage: packageValue,
+      charterLifecycle: charterLifecycle(),
+      historicalLedger: history.value,
+      bindingId: history.proposalBinding.binding_id,
+      authenticatedPrincipal: PRINCIPAL,
+      memberContexts: [memberContext({ membershipEvents })],
+      participantAttestations: [],
+      hypervisorPublicKey: null,
+      now: NOW
+    }
   };
-  return { ...history, packageValue, input };
 }
 
-function persistenceCandidate(fixture) {
-  const policy = getCircleGridPersistencePolicy();
+function persistenceCandidateForBinding(fixture, binding) {
   return buildCircleGridPersistenceCandidate(
-    policy,
+    getCircleGridPersistencePolicy(),
     fixture.input.historicalBindingPolicy,
     fixture.input.charterPolicy,
     fixture.packageValue,
     fixture.input.charterLifecycle,
     fixture.input.historicalLedger,
     {
-      bindingId: fixture.proposalBinding.binding_id,
-      expectedPriorCircleHeadDigest: fixture.proposalBinding.previous_binding_digest,
+      bindingId: binding.binding_id,
+      expectedPriorCircleHeadDigest: binding.previous_binding_digest,
       now: NOW
     }
   );
+}
+
+function proposalPersistenceCandidate(fixture) {
+  return persistenceCandidateForBinding(fixture, fixture.proposalBinding);
+}
+
+function seedDurablePredecessors(store, fixture) {
+  for (const [index, binding] of [fixture.inviteBinding, fixture.membershipBinding].entries()) {
+    const candidate = persistenceCandidateForBinding(fixture, binding);
+    store.appendEvents({
+      traceId: `test_seed_circle_predecessor_${index + 1}`,
+      actor: PRINCIPAL,
+      events: [candidate.event]
+    });
+  }
+  const head = store.getCirclePersistenceHead(CIRCLE_ID);
+  assert.equal(head.head_binding_digest, digestObject(fixture.membershipBinding));
 }
 
 async function gridFixture(t) {
@@ -449,7 +471,7 @@ test('composed authorization and admission policies are exact, inert, and unwire
   }
 });
 
-test('proposal authorization uses member and credential state at the proposal event time', async () => {
+test('proposal authorization uses member and credential state at proposal event time', async () => {
   const fixture = await authorizationFixture();
   const result = assessCircleRecordAuthorizationWithEligibility(fixture.input);
   assert.equal(validateCircleRecordAuthorizationEligibilityResult(result), true);
@@ -495,7 +517,7 @@ test('role narrowing before proposal blocks propose authorization', async () => 
 
 test('one Hypervisor capability binds authorization, eligibility, exact persistence event, and parent admission policy', async t => {
   const fixture = await authorizationFixture();
-  const candidate = persistenceCandidate(fixture);
+  const candidate = proposalPersistenceCandidate(fixture);
   const { hypervisor } = await gridFixture(t);
   const nowSeconds = Math.floor(Date.now() / 1000);
   const issued = issueCircleAuthorizedGridAdmissionCapability(hypervisor, {
@@ -527,9 +549,9 @@ test('one Hypervisor capability binds authorization, eligibility, exact persiste
   assert.equal(verified.claims.constraints.runtime_authority, false);
 });
 
-test('authorized admission rejects actor, event, or authorization substitution', async t => {
+test('authorized admission rejects actor or authorization substitution', async t => {
   const fixture = await authorizationFixture();
-  const candidate = persistenceCandidate(fixture);
+  const candidate = proposalPersistenceCandidate(fixture);
   const { hypervisor } = await gridFixture(t);
   const nowSeconds = Math.floor(Date.now() / 1000);
   const issued = issueCircleAuthorizedGridAdmissionCapability(hypervisor, {
@@ -542,6 +564,7 @@ test('authorized admission rejects actor, event, or authorization substitution',
     nowSeconds,
     ttlSeconds: 120
   });
+
   assert.throws(
     () => verifyCircleAuthorizedGridAdmissionCapability(issued.capability, hypervisor.publicKey, {
       actor: 'human.beta',
@@ -552,6 +575,7 @@ test('authorized admission rejects actor, event, or authorization substitution',
     }),
     /does not match|not bound|mismatch/i
   );
+
   const tampered = structuredClone(issued.authorization);
   tampered.assessment.authorization_mode = 'forged-mode';
   assert.throws(
@@ -566,10 +590,11 @@ test('authorized admission rejects actor, event, or authorization substitution',
   );
 });
 
-test('authorized append binds capability and authorization into Grid trace and signed receipt', async t => {
+test('authorized append follows durable predecessors and binds capability plus authorization into Grid receipt', async t => {
   const fixture = await authorizationFixture();
-  const candidate = persistenceCandidate(fixture);
+  const candidate = proposalPersistenceCandidate(fixture);
   const { hypervisor, grid, store } = await gridFixture(t);
+  seedDurablePredecessors(store, fixture);
   const nowSeconds = Math.floor(Date.now() / 1000);
   const issued = issueCircleAuthorizedGridAdmissionCapability(hypervisor, {
     actor: PRINCIPAL,
@@ -596,7 +621,7 @@ test('authorized append binds capability and authorization into Grid trace and s
   assert.equal(committed.receipt.statement.eligibility_evidence_digest, issued.authorization.eligibility_evidence_digest);
   assert.equal(store.getCirclePersistenceHead(CIRCLE_ID).head_binding_digest, candidate.binding_digest);
   assert.equal(store.verifyFullChain().valid, true);
-  assert.equal(eventCount(store), 1);
+  assert.equal(eventCount(store), 3);
 
   const verifiedReceipt = verifyCircleAuthorizedGridAdmissionReceipt(committed.receipt, {
     gridPublicKey: grid.publicKey,
@@ -614,10 +639,11 @@ test('authorized append binds capability and authorization into Grid trace and s
   assert.equal(verifiedReceipt.authorization_bound, true);
 });
 
-test('exact authorized token replay is idempotent but a reissued token cannot impersonate the durable admission', async t => {
+test('exact token replay is idempotent but reissued token cannot impersonate durable admission', async t => {
   const fixture = await authorizationFixture();
-  const candidate = persistenceCandidate(fixture);
+  const candidate = proposalPersistenceCandidate(fixture);
   const { hypervisor, store } = await gridFixture(t);
+  seedDurablePredecessors(store, fixture);
   const nowSeconds = Math.floor(Date.now() / 1000);
   const firstGrant = issueCircleAuthorizedGridAdmissionCapability(hypervisor, {
     actor: PRINCIPAL,
@@ -650,7 +676,7 @@ test('exact authorized token replay is idempotent but a reissued token cannot im
     maxTtlSeconds: 120
   });
   assert.equal(replay.event.seq, first.event.seq);
-  assert.equal(eventCount(store), 1);
+  assert.equal(eventCount(store), 3);
 
   const secondGrant = issueCircleAuthorizedGridAdmissionCapability(hypervisor, {
     actor: PRINCIPAL,
@@ -676,5 +702,5 @@ test('exact authorized token replay is idempotent but a reissued token cannot im
     }),
     error => error.code === 'circle_authorized_admission_replay_mismatch' && error.status === 409
   );
-  assert.equal(eventCount(store), 1);
+  assert.equal(eventCount(store), 3);
 });
