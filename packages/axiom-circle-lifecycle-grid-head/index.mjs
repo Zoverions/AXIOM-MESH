@@ -10,6 +10,12 @@ import {
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
+const RAW_EVENT_KEYS = Object.freeze(['event_id', 'kind', 'subject', 'payload']);
+const MATERIALIZED_EVENT_KEYS = Object.freeze([
+  'seq', 'event_id', 'trace_id', 'actor', 'kind', 'subject', 'occurred_at',
+  'payload_digest', 'prev_hash', 'event_hash', 'payload'
+]);
+const SIGNED_EVENT_KEYS = Object.freeze([...MATERIALIZED_EVENT_KEYS, 'signature']);
 
 const EXPECTED_REQUIREMENTS = Object.freeze({
   validated_membership_lifecycle_required: true,
@@ -186,7 +192,7 @@ export function reconstructCircleMemberLifecycleGridHeadCandidate(
   policy = CIRCLE_LIFECYCLE_GRID_HEAD_POLICY
 ) {
   validateCircleLifecycleGridHeadPolicy(policy);
-  exactObject(rawEvent, 'Circle lifecycle Grid-head event', ['event_id', 'kind', 'subject', 'payload']);
+  validateSupportedEventEnvelope(rawEvent);
   if (rawEvent.kind !== policy.grid_event_kind) {
     throw new ValidationError('Circle lifecycle Grid-head event kind is invalid');
   }
@@ -197,6 +203,9 @@ export function reconstructCircleMemberLifecycleGridHeadCandidate(
     || rawEvent.subject !== candidate.event.subject
     || digestObject(rawEvent.payload) !== candidate.payload_digest
   ) throw new ValidationError('Circle lifecycle Grid-head event identity is invalid');
+  if (Object.hasOwn(rawEvent, 'payload_digest') && rawEvent.payload_digest !== candidate.payload_digest) {
+    throw new ValidationError('Circle lifecycle Grid-head signed payload digest is invalid');
+  }
   return candidate;
 }
 
@@ -265,6 +274,20 @@ function buildCandidateFromPayload(policy, rawPayload) {
     network_effect: 'none'
   };
   return deepFreeze(candidate);
+}
+
+function validateSupportedEventEnvelope(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new ValidationError('Circle lifecycle Grid-head event must be an object');
+  }
+  const actual = Object.keys(value).sort();
+  const supported = [RAW_EVENT_KEYS, MATERIALIZED_EVENT_KEYS, SIGNED_EVENT_KEYS];
+  const matched = supported.some(keys => {
+    const expected = [...keys].sort();
+    return actual.length === expected.length && actual.every((key, index) => key === expected[index]);
+  });
+  if (!matched) throw new ValidationError('Circle lifecycle Grid-head event fields are invalid');
+  return value;
 }
 
 function validateLifecycleHeadPayload(rawPayload, policy) {
