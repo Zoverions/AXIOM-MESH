@@ -25,9 +25,23 @@ This queue does not create an alternate authority system and does not promote an
 - [x] Add schema validation fixtures covering valid minimal and maximal examples.
 - [x] Add negative fixtures for unknown fields, mutable source references, installation-as-authority, silent permission widening, malformed evidence, invalid task state, and handoff-as-authority.
 - [ ] Byte-pin the schemas only after architecture review agrees that the v1 semantic surface is narrow enough.
-- [ ] Define major/minor/patch compatibility rules and migration notes before implementation consumes them.
+- [x] Define major/minor/patch compatibility rules and migration notes before implementation consumes them.
 
 **Draft-contract checkpoint:** the zero-dependency validator now checks the safety-critical schema invariants plus minimal/maximal instance shapes, nested assurance observations, resource bounds, task event types, and the negative classes above. It deliberately reports the contracts as unfrozen and not byte-pinned.
+
+### Draft contract compatibility and migration rules
+
+These rules apply to both `axiom-runtime-connector-catalog-entry.v1` and `axiom-task-artifact-handoff.v1` before and after byte pinning.
+
+**Major change:** use a new major contract/schema identifier when a change can alter authority, accepted behavior, lifecycle meaning, or verifier outcome for an existing instance. This includes removing or weakening a required zero-authority invariant; making an identity, digest, source pin, grant/delegation reference, budget, evidence, or non-claim optional where it was required; changing a field's meaning or type; widening an enum with an authority/effect-bearing state; accepting a previously rejected unknown field as semantically active; or changing handoff/worker semantics so coordination can transfer authority.
+
+**Minor change:** a minor version may add negotiated optional metadata or a new explicitly non-authoritative observation that does not change the meaning of any existing field, accepted effect, or authorization result. Because the draft contracts use `additionalProperties: false`, an old verifier is expected to reject a newer instance containing the new field. Therefore a minor version is compatible only through explicit version negotiation or projection to the older field set; it is never permission to silently ignore an unknown field.
+
+**Patch change:** a patch may correct documentation, examples, diagnostics, test coverage, or schema annotations only when the accepted-instance set and every security/authority meaning are unchanged. A patch must not be used to make an unexplained byte change pass a pin.
+
+**Migration:** a new contract version is a new admitted artifact. Existing activated integrations remain bound to their exact prior contract/artifact/policy assumptions until explicitly reviewed, migrated, revoked, or retired. Migration requires an old/new schema and permission diff, source/artifact/SBOM re-check where applicable, conformance tests for both versions, explicit re-admission, rollback instructions, and preserved prior receipts/evidence. No runtime, catalog updater, Circle, or protocol peer may silently upgrade a contract or reinterpret an old receipt under newer semantics.
+
+**Freeze rule:** when architecture review accepts the v1 field surface, record exact schema digests, pin them in the zero-dependency verifier, add byte-drift tests, and update migration/rollback documentation. Until then the current checker protects critical semantics while reporting `contract_frozen: false` and `contract_byte_pinned: false`.
 
 ## P2 — catalog and inert import
 
@@ -42,7 +56,7 @@ This queue does not create an alternate authority system and does not promote an
 
 ## P3 — first maintained external runtime (`RUNTIME-002`)
 
-- [ ] Compare at least Hermes, OpenClaw, Agent Zero, and one additional maintained runtime against the same evaluation matrix; no candidate receives preference merely from popularity.
+- [x] Compare at least Hermes, OpenClaw, Agent Zero, and one additional maintained runtime against the same evaluation matrix; no candidate receives preference merely from popularity.
 - [ ] Record maintenance/release hygiene, licence, source/dependency reviewability, integration boundary, worker/sub-agent behavior, credential model, filesystem/network assumptions, update mechanism, and known security history.
 - [ ] Select one exact upstream source commit/release and pin it immutably.
 - [ ] Complete source, licence, dependency, SBOM, and threat-model review.
@@ -52,7 +66,7 @@ This queue does not create an alternate authority system and does not promote an
 - [ ] Prove cancellation, idempotency, timeout, bounded response, and receipt behavior against the real adapter.
 - [ ] Keep consequential effects disabled until independent review passes.
 
-**Candidate-source checkpoint:** Hermes has an immutable research pin at `b6bcb3e791c673e63974029bbab40cc9326803ff` in `reviews/HERMES-RUNTIME-002-CANDIDATE-PIN-2026-08-21.md`. That document records the observed unsigned commit, MIT licence, version/dependency facts, and a code-identity-only candidate probe. It does not complete runtime selection or certification; the fourth-runtime comparison and remaining review gates stay open.
+**Candidate-source checkpoint:** Hermes has an immutable research pin at `b6bcb3e791c673e63974029bbab40cc9326803ff` in `reviews/HERMES-RUNTIME-002-CANDIDATE-PIN-2026-08-21.md`. That document records the observed unsigned commit, MIT licence, version/dependency facts, and a code-identity-only candidate probe. The four-runtime first-pass comparison now also includes Codex CLI as a narrower coding-runtime control. These records do not complete runtime selection, full security/dependency review, or certification.
 
 ## P4 — second runtime neutrality proof
 
@@ -143,4 +157,4 @@ No Runtime & Connector Fabric capability is production-promoted until its exact 
 
 ## Explicit non-claims
 
-This queue does not claim current production support for Hermes, OpenClaw, Agent Zero, MCP, A2A, third-party plugins, autonomous multi-agent workflows, machine delegation, external-provider credentials, remote execution, a runtime marketplace, universal reputation, trusted oracle truth, or Circle authority over individual nodes.
+This queue does not claim current production support for Hermes, OpenClaw, Agent Zero, Codex CLI, MCP, A2A, third-party plugins, autonomous multi-agent workflows, machine delegation, external-provider credentials, remote execution, a runtime marketplace, universal reputation, trusted oracle truth, or Circle authority over individual nodes.
