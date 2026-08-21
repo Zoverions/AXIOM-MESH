@@ -53,6 +53,36 @@
         "lifecycle": {"update_mode": "manual-reviewed", "silent_permission_widening_allowed": true, "rollback_available": true, "quarantine_supported": true},
         "non_claims": ["Invalid fixture"]
       }
+    },
+    {
+      "name": "malformed-evidence-digest",
+      "expected_error": "evidence_sha256",
+      "value": {
+        "schema": "axiom-runtime-connector-catalog-entry.v1",
+        "entry_id": "runtime:bad-evidence",
+        "entry_version": "0.1.0",
+        "integration_class": "agent-runtime",
+        "subject": {"subject_id": "runtime:bad-evidence", "display_name": "Bad Evidence", "status": "research"},
+        "provenance": {"source_kind": "source-repository", "source_repository": "https://example.invalid/repo", "source_commit": "1111111111111111111111111111111111111111", "license_spdx": "MIT", "mutable_ref_allowed": false},
+        "compatibility": {"platforms": ["linux"], "deployment_forms": ["process"], "adapter_contracts": []},
+        "requested_access": {"install_grants_authority": false, "capabilities": [], "purposes": [], "destinations": [], "data_classes": [], "credential_classes": [], "network_required": false},
+        "orchestration": {"mode": "single-agent", "may_spawn_workers": false, "delegation_required": false, "remote_execution_requested": false},
+        "assurance": {
+          "observations": [
+            {
+              "claim_type": "source-review",
+              "observer_id": "observer:test",
+              "subject_ref": "runtime:bad-evidence",
+              "observed_at": "2026-08-21T23:31:00Z",
+              "result": "pass",
+              "evidence_sha256": "not-a-digest"
+            }
+          ],
+          "last_reviewed_at": "2026-08-21T23:31:00Z"
+        },
+        "lifecycle": {"update_mode": "manual-reviewed", "silent_permission_widening_allowed": false, "rollback_available": true, "quarantine_supported": true},
+        "non_claims": ["Invalid fixture"]
+      }
     }
   ],
   "handoff": [
