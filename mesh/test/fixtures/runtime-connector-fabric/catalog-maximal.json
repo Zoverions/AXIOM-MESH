@@ -7,7 +7,7 @@
     "subject_id": "runtime:hermes",
     "display_name": "Hermes Agent",
     "description": "Research-only runtime profile used to exercise the draft Runtime & Connector Fabric catalog contract.",
-    "status": "conformance-candidate"
+    "review_state": "conformance-candidate"
   },
   "provenance": {
     "source_kind": "source-repository",
@@ -33,7 +33,8 @@
   },
   "requested_access": {
     "install_grants_authority": false,
-    "capabilities": ["system.status", "memory.read"],
+    "capabilities": ["core.machine-discovery", "memory.graph"],
+    "actions": ["system.echo", "memory.create"],
     "purposes": ["runtime-health", "owner-requested-retrieval"],
     "destinations": ["local"],
     "data_classes": ["owner-private-memory"],
@@ -51,7 +52,7 @@
   "orchestration": {
     "mode": "multi-agent",
     "may_spawn_workers": true,
-    "delegation_required": true,
+    "independent_child_authority_requested": true,
     "remote_execution_requested": false,
     "handoff_contracts": [
       {
@@ -75,6 +76,7 @@
         "note": "Research fixture only; not a certification or production claim."
       }
     ],
+    "cataloged_at": "2026-08-21T23:30:00Z",
     "last_reviewed_at": "2026-08-21T23:31:00Z",
     "evidence_fresh_until": "2026-09-21T23:31:00Z"
   },
