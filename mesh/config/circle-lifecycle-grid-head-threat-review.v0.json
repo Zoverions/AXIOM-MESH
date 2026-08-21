@@ -1,0 +1,99 @@
+{
+  "schema": "axiom-circle-lifecycle-grid-head-threat-review.v0",
+  "version": 0,
+  "status": "inert-grid-head-threat-review",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "threats": [
+    {
+      "threat": "lifecycle-head-forgery",
+      "mitigations": ["strict-payload-schema", "source-lifecycle-validation-in-candidate-builder", "signed-grid-event-chain", "deterministic-content-addressed-event-id"],
+      "residual_limitation": "Grid persistence proves which technical lifecycle-head bytes were retained, not that a human or authorized administrator approved the underlying lifecycle change."
+    },
+    {
+      "threat": "stale-lifecycle-head-overwrite",
+      "mitigations": ["exact-previous-grid-head-digest", "sqlite-transactional-compare-and-set", "projection-read-before-update"],
+      "residual_limitation": "The CAS protects the retained Grid head only; it does not yet make a later Circle record admission atomic with this lifecycle head."
+    },
+    {
+      "threat": "no-op-head-churn",
+      "mitigations": ["migration-trigger-rejects-unchanged-membership-and-credential-digests", "exact-replay-remains-idempotent"],
+      "residual_limitation": "A semantically equivalent but byte-distinct lifecycle representation can still produce a new digest if future schemas permit such equivalence."
+    },
+    {
+      "threat": "projection-drift-or-rollback",
+      "mitigations": ["full-grid-chain-verification-before-head-read", "restart-reconstruction-from-signed-events", "latest-event-to-projection-consistency-check"],
+      "residual_limitation": "Local compromise capable of replacing both trusted Grid signing material and durable storage remains outside this contract."
+    },
+    {
+      "threat": "current-membership-snapshot-confusion",
+      "mitigations": ["membership-eligibility-validator-reconciles-current-core-snapshot", "historical-acceptance-binding-remains-separate", "terminal-and-monotonic-membership-rules-retained"],
+      "residual_limitation": "The contract inherits Circle Core and member-eligibility semantics; it does not define new membership-resume or role-widening authority."
+    },
+    {
+      "threat": "credential-validation-loss-after-membership-suspension",
+      "mitigations": ["credential-history-validated-against-retained-acceptance-identity", "membership-currentness-validated-separately", "exact-membership-principal-binding"],
+      "residual_limitation": "Credential-history validity does not mean a suspended or revoked member is currently eligible to act."
+    },
+    {
+      "threat": "generic-grid-append-bypass",
+      "mitigations": ["circle-grid-store-intercepts-lifecycle-head-kind", "single-special-event-append-only", "reconstruction-validator-runs-before-grid-mutation"],
+      "residual_limitation": "There is still no authorized public lifecycle-head write route; direct in-process store access remains a privileged implementation boundary."
+    },
+    {
+      "threat": "deterministic-event-replay-or-conflict",
+      "mitigations": ["exact-replay-idempotent", "same-event-id-different-content-rejected", "grid-event-id-uniqueness"],
+      "residual_limitation": "Replay protection here is durable event identity, not freshness or user-intent authorization."
+    },
+    {
+      "threat": "cross-circle-or-cross-membership-substitution",
+      "mitigations": ["circle-membership-principal-bound-into-payload", "event-id-binds-circle-membership-and-head-digest", "projection-primary-key-is-circle-plus-membership"],
+      "residual_limitation": "Cross-Circle recognition, delegation, and shared membership identity remain undefined."
+    },
+    {
+      "threat": "actor-laundering",
+      "mitigations": ["grid-event-actor-remains-signed-evidence", "lifecycle-head-record-explicitly-not-authorization-proof"],
+      "residual_limitation": "This slice does not yet prove that the Grid actor was entitled to record the lifecycle update."
+    },
+    {
+      "threat": "timestamp-or-ordering-laundering",
+      "mitigations": ["source-lifecycle-validators-require-canonical-chronology", "grid-occurrence-time-generated-locally", "signed-grid-sequence-orders-retention"],
+      "residual_limitation": "Neither source lifecycle timestamps nor Grid occurrence time prove trusted real-world occurrence time."
+    },
+    {
+      "threat": "grid-chain-corruption",
+      "mitigations": ["full-chain-verification-before-projection-use", "signed-events", "restart-rebuild-fails-closed-on-inconsistent-history"],
+      "residual_limitation": "Independent external anchoring and distributed consensus are not supplied by this contract."
+    }
+  ],
+  "non_claims": [
+    "authorized-lifecycle-mutation-service",
+    "credential-possession",
+    "human-identity",
+    "legal-identity",
+    "membership-resume-authority",
+    "role-grant-authority",
+    "credential-issuance-authority",
+    "current-circle-record-admission",
+    "authorization-commit-atomicity",
+    "trusted-wall-clock",
+    "governance-legitimacy",
+    "legal-authority",
+    "runtime-authority",
+    "portable-authority",
+    "external-effect-authority",
+    "distributed-consensus"
+  ],
+  "promotion_blockers": [
+    "authorized-membership-and-credential-lifecycle-mutation-procedure",
+    "credential-possession-proof-bound-to-lifecycle-mutation",
+    "grid-backed-replay-safe-underlying-lifecycle-mutation-records-or-equivalent-proof",
+    "circle-record-admission-compare-and-set-against-exact-current-lifecycle-heads",
+    "atomic-or-serializable-lifecycle-head-check-with-circle-record-commit",
+    "historical-backfill-import-authority-and-live-event-freshness-policy",
+    "membership-resume-role-grant-credential-issuance-and-recovery-authority-procedures",
+    "accessible-member-facing-lifecycle-change-and-denial-explanations",
+    "independent-security-privacy-coercion-sybil-recovery-capture-governance-review"
+  ]
+}
