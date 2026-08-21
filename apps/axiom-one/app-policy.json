@@ -49,6 +49,7 @@
   "surfaces": [
     "overview",
     "ask",
+    "social",
     "approvals",
     "vault",
     "receipts",
@@ -60,6 +61,7 @@
     "capabilities.list",
     "operations.get",
     "intents.submit",
+    "social.get",
     "approvals.list",
     "memory.list",
     "exports.get",
