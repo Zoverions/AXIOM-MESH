@@ -267,7 +267,7 @@ export function resolveCircleCharterAt(
     resolved_at: atIso,
     charter_version: resolved.charter.version,
     charter_digest: resolved.charter_digest,
-    charter: Object.freeze(structuredClone(resolved.charter)),
+    charter: deepFreeze(structuredClone(resolved.charter)),
     policy_digest: validation.policy_digest,
     circle_package_digest: validation.circle_package_digest,
     lifecycle_digest: validation.lifecycle_digest,
@@ -358,6 +358,12 @@ function exactObject(value, label, keys) {
 
 function sameExactValues(value, expected) {
   return Object.entries(expected).every(([key, expectedValue]) => value[key] === expectedValue);
+}
+
+function deepFreeze(value) {
+  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value)) deepFreeze(child);
+  return Object.freeze(value);
 }
 
 function canonicalTimestamp(value, label) {
