@@ -1,0 +1,112 @@
+{
+  "schema": "axiom-circle-record-authorization-threat-review.v0",
+  "version": 0,
+  "status": "inert-record-authorization-threat-review",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "threats": [
+    {
+      "id": "bootstrap-founder-persistence",
+      "control": "Creator bootstrap is limited to the first invitation under genesis charter version one; every later invitation requires an earlier historically bound active membership whose frozen role declares approve.",
+      "residual": "The contract does not prove that the Circle creator or genesis process was legitimate, representative, voluntary, or free from coercion."
+    },
+    {
+      "id": "current-snapshot-role-laundering",
+      "control": "Issue, propose, vote, and review authorization requires an earlier historical membership binding and exact current membership identity/role agreement with that retained acceptance snapshot.",
+      "residual": "The v0 Circle membership record is still a current-state snapshot and does not itself encode every suspension, restoration, or role-transition event."
+    },
+    {
+      "id": "missing-membership-history",
+      "control": "A role-bearing current membership that lacks an earlier retained historical membership binding cannot authorize invitation, proposal, review transport, or decision participation.",
+      "residual": "Historical-ledger completeness is local evidence and is not proof that no valid membership event existed elsewhere or was omitted before import."
+    },
+    {
+      "id": "duplicate-membership-or-principal-vote",
+      "control": "Decision electorate construction fails closed on multiple voting memberships for one principal and decision attestations reject duplicate principal or membership counting.",
+      "residual": "Distinct AXIOM principal identifiers do not prove distinct humans, legal persons, organizations, devices, or independent interests."
+    },
+    {
+      "id": "incomplete-decision-receipt-set",
+      "control": "Every proposal-time eligible voter must provide one Hypervisor-authenticated approve, reject, or abstain attestation; missing attestations cannot silently become abstentions.",
+      "residual": "Complete receipt coverage proves completeness only relative to the locally reconstructed electorate and does not prove participation was informed or voluntary."
+    },
+    {
+      "id": "forged-participant-attestation",
+      "control": "Participant statements are exact-shape Hypervisor-signed Ed25519 attestations bound to Circle, decision, proposal binding, proposal digest, frozen charter, membership, principal, vote, and canonical participation time; the signature envelope itself is exact-shape and must name the actual trusted Hypervisor key id so unsigned metadata cannot re-address a valid statement.",
+      "residual": "A valid Hypervisor attestation proves what the trusted Hypervisor signed; runtime principal authentication and member credential custody must still be independently secured."
+    },
+    {
+      "id": "submitter-decider-confusion",
+      "control": "Decision transport is permitted only for an authenticated participant or historically bound review-mode member, while submitter_collective_authority remains false and only participant attestations enter the tally.",
+      "residual": "Transport permission does not prove neutrality of the aggregator, availability of alternative aggregators, censorship resistance, or collective legitimacy."
+    },
+    {
+      "id": "cross-decision-or-cross-proposal-replay",
+      "control": "Participant attestations bind exact decision id, proposal id, proposal historical binding id, proposal record digest, Circle id, and governing charter digest before they can enter a tally.",
+      "residual": "This inert contract does not yet bind participation attestation identity into a durable Grid replay ledger or service-level one-use issuance mechanism."
+    },
+    {
+      "id": "electorate-drift-after-proposal",
+      "control": "Decision eligibility is frozen to historically bound voting memberships accepted before proposal creation and evaluated against the proposal-frozen charter; later membership additions cannot enter that electorate.",
+      "residual": "Without a complete append-only membership status lifecycle, a later suspension, restoration, revocation, or exit can make historical eligibility ambiguous and therefore fails closed."
+    },
+    {
+      "id": "quorum-or-approval-laundering",
+      "control": "Quorum and approval are recomputed from the complete authenticated electorate using the proposal-frozen charter decision rule; the submitted decision outcome must equal the recomputed outcome.",
+      "residual": "The charter rule itself may be unfair, captured, coercive, or otherwise illegitimate even when the arithmetic is exact."
+    },
+    {
+      "id": "withdrawal-authority-invention",
+      "control": "Decision outcome withdrawn is unsupported in v0 because the current charter role vocabulary does not define who may withdraw or under what procedure.",
+      "residual": "A future withdrawal mechanism requires explicit charter semantics, timing rules, actor binding, appeal interaction, and historical authorization evidence."
+    },
+    {
+      "id": "sybil-electorate",
+      "control": "The authorization layer counts each retained AXIOM principal at most once and exposes independent-human-count as an explicit non-claim.",
+      "residual": "The contract has no Sybil-resistant human uniqueness proof and cannot infer that two principal identifiers represent two independent people."
+    },
+    {
+      "id": "coercion-or-compromised-principal",
+      "control": "The contract keeps coercion-free participation and human identity outside its claims and requires future security/governance review before runtime promotion.",
+      "residual": "Cryptographically authenticated participation can still be produced under coercion, account compromise, malware, social pressure, incapacity, or deceptive interfaces."
+    },
+    {
+      "id": "clock-and-window-manipulation",
+      "control": "Participation times must be canonical UTC and fall between proposal creation and close and no later than decision time; historical bindings and charter resolution already reject future chronology.",
+      "residual": "Canonical timestamp syntax and local comparisons do not attest trustworthy wall-clock time or prove when a human actually acted."
+    },
+    {
+      "id": "authorization-admission-disconnect",
+      "control": "Authorization output is an inert digest-bound assessment with no runtime or external authority and cannot itself append to Grid or invoke Gateway, Hypervisor, or Sandbox routes.",
+      "residual": "Until runtime promotion binds the exact assessment digest into the authenticated Circle Grid admission path, a service integration could incorrectly evaluate authorization and admission as separate non-atomic steps."
+    }
+  ],
+  "non_claims": [
+    "human-identity",
+    "legal-identity",
+    "creator-legitimacy",
+    "governance-legitimacy",
+    "historical-membership-lifecycle-completeness",
+    "coercion-free-participation",
+    "independent-human-count",
+    "truth-of-evidence",
+    "legal-authority",
+    "execution-authority",
+    "portable-authority",
+    "external-effect-authority",
+    "distributed-consensus"
+  ],
+  "promotion_blockers": [
+    "Integrate a complete append-only Circle membership status, role, device, credential, compromise, revocation, and recovery lifecycle before historical eligibility can be reconstructed without conservative ambiguity failures.",
+    "Define and verify the binding between an authenticated AXIOM principal and the Circle membership credential used for record authorization; principal identifiers alone are not human or legal identity proof.",
+    "Bind the exact record-authorization assessment digest into the Hypervisor-issued Circle Grid admission capability and deterministic Grid event so authorization and persistence admission cannot drift apart.",
+    "Make the record-authorization plus authenticated-admission composition the sole service-level Circle append path; direct CircleGridStore use must remain unavailable to runtime callers.",
+    "Define Circle creation and bootstrap activation governance beyond the technical first-invitation exception, including how a genesis creator is selected, challenged, superseded, or refused.",
+    "Implement participant-attestation issuance only behind authenticated per-principal service requests with durable replay and current credential checks; the current issue helper is an inert internal constructor.",
+    "Specify charter semantics for electorate changes during an open proposal, including suspension, revocation, restoration, exit, and membership accepted after proposal creation.",
+    "Specify explicit withdrawal authority, timing, participant notice, appeal interaction, and historical binding before authorizing the withdrawn decision outcome.",
+    "Add human-readable authorization explanations and accessible confirmation surfaces that distinguish transport permission, participation, tally inclusion, and runtime authority.",
+    "Complete independent security, privacy, coercion, Sybil, capture, and governance review before any real Circle member or collective decision uses this contract."
+  ]
+}

@@ -1,0 +1,87 @@
+{
+  "schema": "axiom-circle-possession-challenge-idempotency-threat-review.v0",
+  "version": 0,
+  "status": "inert-exact-request-idempotency-threat-review",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "threats": [
+    {
+      "threat": "cross-request-challenge-reuse",
+      "mitigations": ["exact-possession-request-digest", "intent-plan-policy-binding", "grant-reissue-constraint-comparison"],
+      "residual_limitation": "This contract only classifies exact same-request reuse; it provides no generic replay protection for a different prepared request."
+    },
+    {
+      "threat": "lifecycle-head-drift-under-reuse",
+      "mitigations": ["exact-lifecycle-guard-set-digest", "exact-parent-cas-invocation-binding", "grid-commit-cas-remains-required"],
+      "residual_limitation": "A real-world compromise not yet represented by a new retained lifecycle head cannot be inferred from challenge reuse behavior."
+    },
+    {
+      "threat": "duplicate-state-transition",
+      "mitigations": ["deterministic-circle-event-id", "grid-event-id-uniqueness", "different-capability-retained-event-trace-mismatch"],
+      "residual_limitation": "The single-transition claim is specific to the deterministic Circle persistence event path and does not generalize to arbitrary effects."
+    },
+    {
+      "threat": "reissued-capability-byte-drift",
+      "mitigations": ["exact-target-constraint-comparison", "same-request-may-change-attestation-set-and-token-times", "target-event-may-not-change"],
+      "residual_limitation": "Multiple Hypervisor-signed grants for one exact request can exist simultaneously until they expire; the state-safety argument relies on deterministic Grid admission rather than token uniqueness."
+    },
+    {
+      "threat": "stale-challenge-reuse",
+      "mitigations": ["parent-challenge-expiry-verification", "parent-attestation-max-age-verification", "parent-capability-expiry-verification"],
+      "residual_limitation": "No durable consumed-challenge ledger is created, so operators cannot use this contract alone to answer whether a challenge was observed more than once."
+    },
+    {
+      "threat": "audit-noise-from-repeated-observation",
+      "mitigations": ["challenge-digest-remains-stable", "capability-and-attestation-digests-remain-distinguishable", "same-request-scope-explicit"],
+      "residual_limitation": "Repeated observations can create multiple technical evidence objects even though only one Circle state transition can commit."
+    },
+    {
+      "threat": "same-request-first-grant-loss",
+      "mitigations": ["uncommitted-grant-does-not-consume-state", "later-same-request-grant-may-commit", "grid-event-identity-remains-single"],
+      "residual_limitation": "This improves retryability but does not guarantee delivery or availability of the later grant."
+    },
+    {
+      "threat": "external-effect-policy-laundering",
+      "mitigations": ["external-effects-may-not-inherit-policy", "non-deterministic-effects-may-not-inherit-policy", "generic-capabilities-may-not-inherit-policy"],
+      "residual_limitation": "A future effect type needs its own idempotency key, transactional semantics, and replay analysis before challenge reuse can be considered safe."
+    },
+    {
+      "threat": "human-or-authority-laundering",
+      "mitigations": ["possession-evidence-remains-non-identity", "idempotency-assessment-mints-no-authority", "parent-nonclaims-retained"],
+      "residual_limitation": "State idempotency says nothing about who legitimately controlled the credential or whether the Circle rule itself was legitimate."
+    },
+    {
+      "threat": "trusted-hypervisor-compromise",
+      "mitigations": ["both-grants-must-verify-under-explicit-trusted-hypervisor-key", "parent-grid-cas-and-event-signing-still-required"],
+      "residual_limitation": "A compromised trusted Hypervisor can issue misleading technical grants; this contract does not replace trust-root rotation or compromise response."
+    }
+  ],
+  "non_claims": [
+    "global-replay-protection",
+    "challenge-single-use",
+    "cross-request-replay-safety",
+    "non-deterministic-effect-idempotency",
+    "external-effect-idempotency",
+    "human-identity",
+    "legal-identity",
+    "authorized-human-custody",
+    "lifecycle-mutation-authority",
+    "governance-legitimacy",
+    "trusted-global-time",
+    "runtime-authority",
+    "portable-authority",
+    "external-effect-authority",
+    "distributed-consensus"
+  ],
+  "promotion_blockers": [
+    "authorized-membership-and-credential-lifecycle-mutation-procedure",
+    "member-side-key-custody-and-signing-without-secret-export",
+    "recovery-compromise-and-key-loss-procedure",
+    "possession-bound-successor-as-sole-service-level-circle-append-path",
+    "gateway-hypervisor-grid-route-design-preserving-existing-authority-boundary",
+    "operator-audit-policy-for-repeated-challenge-observation",
+    "accessible-member-facing-challenge-denial-retry-and-recovery-explanations",
+    "independent-security-privacy-device-loss-coercion-sybil-recovery-governance-review"
+  ]
+}
