@@ -143,7 +143,7 @@ function corePackage({ status = 'active', statusEffectiveAt = '2026-08-20T12:02:
 
 function charterLifecycle() {
   const value = charter();
-  const valueDigest = digestObject(value);
+  const charterDigest = digestObject(value);
   return {
     schema: 'axiom-circle-charter-lifecycle.v0',
     circle_id: 'circle.eligibility',
@@ -151,12 +151,12 @@ function charterLifecycle() {
       schema: 'axiom-circle-charter-history-entry.v0',
       circle_id: 'circle.eligibility',
       charter: value,
-      charter_digest: valueDigest,
+      charter_digest: charterDigest,
       recorded_at: '2026-08-20T12:00:00.000Z',
       activation: {
         schema: 'axiom-circle-charter-activation.v0',
         circle_id: 'circle.eligibility',
-        charter_digest: valueDigest,
+        charter_digest: charterDigest,
         basis_charter_digest: null,
         activated_at: value.effective_from,
         evidence_refs: ['evidence:eligibility:charter:v1'],
@@ -434,17 +434,16 @@ test('role narrowing is historical, monotonic, and blocks later use without rewr
   }));
   assert.equal(beforeCredential.assessment.credential_eligible, true);
 
+  const afterCredentialInput = await credentialInput({
+    packageOverride,
+    membershipLifecycle: lifecycle,
+    asOf: '2026-08-20T12:12:00.000Z'
+  });
   assert.throws(
-    () => assessCircleMemberCredentialEligibility(awaitable(await credentialInput({
-      packageOverride,
-      membershipLifecycle: lifecycle,
-      asOf: '2026-08-20T12:12:00.000Z'
-    }))),
+    () => assessCircleMemberCredentialEligibility(afterCredentialInput),
     /lacks required propose mode/
   );
 });
-
-function awaitable(value) { return value; }
 
 test('role widening fails closed even when the new role exists in the charter', async () => {
   const event = eligibilityEvent({
