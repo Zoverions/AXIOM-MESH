@@ -10,6 +10,7 @@
   "requirements": {
     "validated_membership_lifecycle_required": true,
     "validated_credential_lifecycle_required": true,
+    "credential_lifecycle_validated_against_retained_acceptance_identity": true,
     "exact_circle_membership_principal_binding": true,
     "historical_ledger_digest_bound": true,
     "membership_lifecycle_digest_bound": true,
@@ -18,6 +19,7 @@
     "credential_event_head_digest_bound": true,
     "previous_grid_lifecycle_head_required_after_genesis": true,
     "grid_lifecycle_head_compare_and_set": true,
+    "non_genesis_head_must_change_lifecycle_state": true,
     "deterministic_event_id_from_lifecycle_head_digest": true,
     "exact_replay_may_be_idempotent": true,
     "conflicting_reuse_rejected": true,
