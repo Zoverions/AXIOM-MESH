@@ -22,10 +22,12 @@ This queue does not create an alternate authority system and does not promote an
 - [x] Add `docs/architecture/RUNTIME-AND-CONNECTOR-FABRIC.md`.
 - [x] Add `axiom-runtime-connector-catalog-entry.v1` draft schema.
 - [x] Add `axiom-task-artifact-handoff.v1` draft schema.
-- [ ] Add schema validation fixtures covering valid minimal and maximal examples.
-- [ ] Add negative fixtures for unknown fields, mutable source references, installation-as-authority, silent permission widening, malformed evidence, invalid task state, and handoff-as-authority.
+- [x] Add schema validation fixtures covering valid minimal and maximal examples.
+- [x] Add negative fixtures for unknown fields, mutable source references, installation-as-authority, silent permission widening, malformed evidence, invalid task state, and handoff-as-authority.
 - [ ] Byte-pin the schemas only after architecture review agrees that the v1 semantic surface is narrow enough.
 - [ ] Define major/minor/patch compatibility rules and migration notes before implementation consumes them.
+
+**Draft-contract checkpoint:** the zero-dependency validator now checks the safety-critical schema invariants plus minimal/maximal instance shapes, nested assurance observations, resource bounds, task event types, and the negative classes above. It deliberately reports the contracts as unfrozen and not byte-pinned.
 
 ## P2 — catalog and inert import
 
@@ -49,6 +51,8 @@ This queue does not create an alternate authority system and does not promote an
 - [ ] Prove direct Gateway-internal-service access is impossible from the runtime boundary.
 - [ ] Prove cancellation, idempotency, timeout, bounded response, and receipt behavior against the real adapter.
 - [ ] Keep consequential effects disabled until independent review passes.
+
+**Candidate-source checkpoint:** Hermes has an immutable research pin at `b6bcb3e791c673e63974029bbab40cc9326803ff` in `reviews/HERMES-RUNTIME-002-CANDIDATE-PIN-2026-08-21.md`. That document records the observed unsigned commit, MIT licence, version/dependency facts, and a code-identity-only candidate probe. It does not complete runtime selection or certification; the fourth-runtime comparison and remaining review gates stay open.
 
 ## P4 — second runtime neutrality proof
 
