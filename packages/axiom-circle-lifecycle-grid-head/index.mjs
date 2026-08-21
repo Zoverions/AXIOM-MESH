@@ -14,6 +14,7 @@ const DIGEST = /^[a-f0-9]{64}$/;
 const EXPECTED_REQUIREMENTS = Object.freeze({
   validated_membership_lifecycle_required: true,
   validated_credential_lifecycle_required: true,
+  credential_lifecycle_validated_against_retained_acceptance_identity: true,
   exact_circle_membership_principal_binding: true,
   historical_ledger_digest_bound: true,
   membership_lifecycle_digest_bound: true,
@@ -22,6 +23,7 @@ const EXPECTED_REQUIREMENTS = Object.freeze({
   credential_event_head_digest_bound: true,
   previous_grid_lifecycle_head_required_after_genesis: true,
   grid_lifecycle_head_compare_and_set: true,
+  non_genesis_head_must_change_lifecycle_state: true,
   deterministic_event_id_from_lifecycle_head_digest: true,
   exact_replay_may_be_idempotent: true,
   conflicting_reuse_rejected: true,
@@ -127,9 +129,15 @@ export function buildCircleMemberLifecycleGridHeadCandidate({
     lifecycle: membershipLifecycle,
     now
   });
+
+  const acceptancePackage = projectRetainedAcceptancePackage(
+    circlePackage,
+    historicalLedger,
+    membershipLifecycle
+  );
   validateCircleMembershipCredentialLifecycle(
     credentialPolicy,
-    circlePackage,
+    acceptancePackage,
     credentialLifecycle,
     { now }
   );
@@ -197,6 +205,30 @@ export function validateCircleMemberLifecycleGridHeadPayload(
   policy = CIRCLE_LIFECYCLE_GRID_HEAD_POLICY
 ) {
   return validateLifecycleHeadPayload(payload, policy);
+}
+
+function projectRetainedAcceptancePackage(circlePackage, historicalLedger, membershipLifecycle) {
+  const binding = historicalLedger?.bindings?.find(
+    item => item.binding_id === membershipLifecycle.acceptance_binding_id
+  );
+  if (!binding || binding.record_type !== 'membership') {
+    throw new ValidationError('Circle lifecycle Grid-head retained acceptance binding is unavailable');
+  }
+  const acceptance = binding.record;
+  if (
+    acceptance.circle_id !== membershipLifecycle.circle_id
+    || acceptance.membership_id !== membershipLifecycle.membership_id
+    || acceptance.principal_id !== membershipLifecycle.principal_id
+    || acceptance.status !== 'active'
+    || acceptance.status_effective_at !== acceptance.accepted_at
+  ) throw new ValidationError('Circle lifecycle Grid-head retained acceptance identity is invalid');
+
+  const projected = structuredClone(circlePackage);
+  projected.memberships = projected.memberships.map(item =>
+    item.membership_id === acceptance.membership_id ? structuredClone(acceptance) : item
+  );
+  projected.exits = projected.exits.filter(exit => exit.membership_id !== acceptance.membership_id);
+  return projected;
 }
 
 function buildCandidateFromPayload(policy, rawPayload) {
