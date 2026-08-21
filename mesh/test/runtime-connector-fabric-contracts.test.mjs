@@ -175,7 +175,7 @@ test('minimal and maximal catalog entries satisfy reviewed draft validation', ()
   assert.equal(validateRuntimeConnectorCatalogEntry(maximal), true);
   assert.equal(minimal.requested_access.install_grants_authority, false);
   assert.equal(maximal.requested_access.install_grants_authority, false);
-  assert.deepEqual(maximal.requested_access.capabilities, ['core.machine-discovery', 'memory.graph']);
+  assert.deepEqual(maximal.requested_access.capabilities, ['core.intent-loop', 'memory.graph']);
   assert.deepEqual(maximal.requested_access.actions, ['system.echo', 'memory.create']);
   assert.equal(maximal.orchestration.may_spawn_workers, true);
   assert.equal(maximal.orchestration.independent_child_authority_requested, true);
@@ -194,7 +194,7 @@ test('queued, completed, and uncertain task handoffs satisfy reviewed draft vali
   assert.equal(minimal.authority.authority_source, 'axiom-gateway');
   assert.equal(minimal.authority.coordination_is_authorization, false);
   assert.equal(maximal.authority.handoff_transfers_authority, false);
-  assert.equal(maximal.request.runtime_operation, 'memory.lookup');
+  assert.equal(maximal.request.runtime_operation, 'memory.create');
   assert.equal(maximal.request.axiom_action, 'memory.create');
   assert.equal(maximal.lifecycle.state, 'completed');
   assert.ok(maximal.lifecycle.terminal_receipt_id);
