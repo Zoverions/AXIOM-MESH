@@ -1,17 +1,17 @@
 {
   "schema": "axiom-runtime-connector-catalog-entry.v1",
-  "entry_id": "runtime:hermes:research-profile",
+  "entry_id": "runtime:synthetic-reference:rich-profile",
   "entry_version": "0.1.0",
   "integration_class": "agent-runtime",
   "subject": {
-    "subject_id": "runtime:hermes",
-    "display_name": "Hermes Agent",
-    "description": "Research-only runtime profile used to exercise the draft Runtime & Connector Fabric catalog contract.",
+    "subject_id": "runtime:synthetic-reference",
+    "display_name": "Synthetic Reference Runtime",
+    "description": "Synthetic research-only profile used to exercise the draft Runtime & Connector Fabric catalog contract.",
     "review_state": "conformance-candidate"
   },
   "provenance": {
     "source_kind": "source-repository",
-    "source_repository": "https://github.com/NousResearch/hermes-agent",
+    "source_repository": "https://example.invalid/synthetic-runtime",
     "source_commit": "2222222222222222222222222222222222222222",
     "release_ref": "research-pin",
     "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -33,9 +33,9 @@
   },
   "requested_access": {
     "install_grants_authority": false,
-    "capabilities": ["core.machine-discovery", "memory.graph"],
+    "capabilities": ["core.intent-loop", "memory.graph"],
     "actions": ["system.echo", "memory.create"],
-    "purposes": ["runtime-health", "owner-requested-retrieval"],
+    "purposes": ["synthetic-echo", "owner-requested-memory"],
     "destinations": ["local"],
     "data_classes": ["owner-private-memory"],
     "credential_classes": ["opaque-provider-handle"],
@@ -67,13 +67,13 @@
       {
         "claim_type": "source-review",
         "observer_id": "observer:axiom-research",
-        "subject_ref": "runtime:hermes@research-pin",
+        "subject_ref": "runtime:synthetic-reference@research-pin",
         "observed_at": "2026-08-21T23:31:00Z",
         "fresh_until": "2026-09-21T23:31:00Z",
         "result": "warning",
         "evidence_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-        "evidence_uri": "https://example.invalid/evidence/hermes-review",
-        "note": "Research fixture only; not a certification or production claim."
+        "evidence_uri": "https://example.invalid/evidence/synthetic-review",
+        "note": "Synthetic fixture only; not a certification or production claim."
       }
     ],
     "cataloged_at": "2026-08-21T23:30:00Z",
@@ -85,11 +85,11 @@
     "silent_permission_widening_allowed": false,
     "rollback_available": true,
     "quarantine_supported": true,
-    "supersedes_entry_id": "runtime:hermes:research-profile-old"
+    "supersedes_entry_id": "runtime:synthetic-reference:old-profile"
   },
   "non_claims": [
     "Catalog presence does not authorize execution.",
-    "This fixture does not certify Hermes Agent.",
+    "This fixture does not certify an external runtime.",
     "This fixture does not enable external network access or provider credentials."
   ]
 }
