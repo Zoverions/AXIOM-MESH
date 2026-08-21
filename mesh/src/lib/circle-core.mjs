@@ -35,7 +35,7 @@ const ROLE_MODES = new Set([
   'observe'
 ]);
 
-export function validateCircleCorePackage(document, { now = new Date() } = {}) {
+export function validateCircleCorePackage(document) {
   exactObject(document, 'Circle core package', [
     'schema',
     'version',
@@ -63,7 +63,6 @@ export function validateCircleCorePackage(document, { now = new Date() } = {}) {
     || document.runtime_activation !== false
   ) throw new ValidationError('Circle core package activation boundary is invalid');
 
-  const currentTime = validDate(now, 'Circle validation time');
   const circle = validateCircle(document.circle);
   const charter = validateCharter(document.charter, circle);
   const charterDigest = digestObject(charter);
@@ -149,24 +148,6 @@ export function validateCircleCorePackage(document, { now = new Date() } = {}) {
     record => validateExport(record, circle)
   );
 
-  for (const membership of memberships) {
-    const invitation = invitationById.get(membership.invitation_id);
-    if (new Date(membership.accepted_at) > new Date(invitation.expires_at)) {
-      throw new ValidationError(`Membership ${membership.membership_id} accepted an expired invitation`);
-    }
-  }
-
-  for (const invitation of invitations) {
-    if (new Date(invitation.expires_at) <= new Date(invitation.issued_at)) {
-      throw new ValidationError(`Invitation ${invitation.invitation_id} expiry must follow issuance`);
-    }
-    if (new Date(invitation.expires_at) <= currentTime && !memberships.some(
-      item => item.invitation_id === invitation.invitation_id
-    )) {
-      continue;
-    }
-  }
-
   return Object.freeze({
     valid: true,
     schema: document.schema,
@@ -189,8 +170,8 @@ export function validateCircleCorePackage(document, { now = new Date() } = {}) {
   });
 }
 
-export function circleCoreDigest(document, options) {
-  validateCircleCorePackage(document, options);
+export function circleCoreDigest(document) {
+  validateCircleCorePackage(document);
   return digestObject(document);
 }
 
@@ -303,15 +284,18 @@ function validateInvitation(invitation, circle, charterDigest, roles) {
     || invitation.circle_id !== circle.circle_id
     || !id(invitation.invited_principal)
     || !['member', 'guardian', 'contractor', 'employee', 'observer'].includes(invitation.membership_class)
-    || !stringArray(invitation.role_ids, 0, 16)
+    || !stringArray(invitation.role_ids, 0, 64)
     || invitation.role_ids.some(role => !roles.has(role))
     || !id(invitation.issued_by)
     || invitation.charter_digest !== charterDigest
     || invitation.one_use !== true
     || invitation.authority_effect !== 'none'
   ) throw new ValidationError('Circle invitation is invalid');
-  validDate(invitation.issued_at, 'Circle invitation issued_at');
-  validDate(invitation.expires_at, 'Circle invitation expires_at');
+  const issued = validDate(invitation.issued_at, 'Circle invitation issued_at');
+  const expires = validDate(invitation.expires_at, 'Circle invitation expires_at');
+  if (expires <= issued) {
+    throw new ValidationError(`Invitation ${invitation.invitation_id} expiry must follow issuance`);
+  }
   return invitation;
 }
 
@@ -338,7 +322,7 @@ function validateMembership(membership, circle, roles, invitationById) {
     || membership.circle_id !== circle.circle_id
     || !invitation
     || membership.principal_id !== invitation.invited_principal
-    || !stringArray(membership.role_ids, 0, 16)
+    || !stringArray(membership.role_ids, 0, 64)
     || membership.role_ids.some(role => !roles.has(role) || !invitation.role_ids.includes(role))
     || !MEMBER_STATUSES.has(membership.status)
     || membership.member_state_ownership !== 'independent-node'
@@ -346,8 +330,22 @@ function validateMembership(membership, circle, roles, invitationById) {
     || membership.authority_effect !== 'none'
     || membership.network_effect !== 'none'
   ) throw new ValidationError('Circle membership is invalid');
-  validDate(membership.accepted_at, 'Circle membership accepted_at');
-  validDate(membership.status_effective_at, 'Circle membership status_effective_at');
+  const accepted = validDate(membership.accepted_at, 'Circle membership accepted_at');
+  const statusEffective = validDate(
+    membership.status_effective_at,
+    'Circle membership status_effective_at'
+  );
+  const issued = new Date(invitation.issued_at);
+  const expires = new Date(invitation.expires_at);
+  if (accepted < issued) {
+    throw new ValidationError(`Membership ${membership.membership_id} accepted before invitation issuance`);
+  }
+  if (accepted > expires) {
+    throw new ValidationError(`Membership ${membership.membership_id} accepted an expired invitation`);
+  }
+  if (statusEffective < accepted) {
+    throw new ValidationError(`Membership ${membership.membership_id} status_effective_at precedes acceptance`);
+  }
   return membership;
 }
 
@@ -376,7 +374,7 @@ function validateProposal(proposal, circle, charterDigest, activePrincipals) {
     || !text(proposal.title, 1, 200)
     || !text(proposal.summary, 1, 4000)
     || !PROPOSAL_STATUSES.has(proposal.status)
-    || !stringArray(proposal.evidence_refs, 0, 64)
+    || !stringArray(proposal.evidence_refs, 0, 512)
     || proposal.execution_effect !== 'none'
     || proposal.authority_effect !== 'none'
   ) throw new ValidationError('Circle proposal is invalid');
@@ -409,7 +407,7 @@ function validateTask(task, circle, proposalById, membershipById) {
     || !membershipById.has(task.assigned_membership_id)
     || !text(task.description, 1, 2000)
     || !TASK_STATUSES.has(task.status)
-    || !stringArray(task.evidence_refs, 0, 64)
+    || !stringArray(task.evidence_refs, 0, 512)
     || task.execution_authority !== false
     || task.authority_effect !== 'none'
   ) throw new ValidationError('Circle task is invalid');
