@@ -59,6 +59,71 @@ const CATALOG_UPDATE_MODES = Object.freeze([
   'disabled'
 ]);
 
+const CATALOG_SOURCE_KINDS = Object.freeze([
+  'source-repository',
+  'release-artifact',
+  'container-image',
+  'service-endpoint',
+  'local-artifact',
+  'other'
+]);
+
+const CATALOG_PLATFORMS = Object.freeze([
+  'linux',
+  'windows',
+  'macos',
+  'android',
+  'ios',
+  'container',
+  'browser',
+  'other'
+]);
+
+const CATALOG_DEPLOYMENT_FORMS = Object.freeze([
+  'process',
+  'sidecar',
+  'plugin',
+  'container',
+  'remote-service',
+  'library',
+  'device',
+  'other'
+]);
+
+const CATALOG_ORCHESTRATION_MODES = Object.freeze([
+  'none',
+  'single-agent',
+  'multi-agent',
+  'worker-pool',
+  'tool-host',
+  'workflow-engine',
+  'other'
+]);
+
+const CATALOG_OBSERVATION_TYPES = Object.freeze([
+  'source-review',
+  'license-review',
+  'dependency-review',
+  'sbom-match',
+  'signature-verification',
+  'conformance-test',
+  'security-review',
+  'vulnerability-advisory',
+  'reproducible-build',
+  'benchmark',
+  'operational-observation',
+  'community-curation',
+  'other'
+]);
+
+const CATALOG_OBSERVATION_RESULTS = Object.freeze([
+  'pass',
+  'fail',
+  'warning',
+  'unknown',
+  'not-applicable'
+]);
+
 const HANDOFF_REQUIRED = Object.freeze([
   'schema',
   'task_id',
@@ -85,6 +150,21 @@ const TASK_STATES = Object.freeze([
   'uncertain'
 ]);
 
+const TASK_EVENT_TYPES = Object.freeze([
+  'task.created',
+  'task.started',
+  'task.awaiting-approval',
+  'task.blocked',
+  'task.handoff',
+  'artifact.observed',
+  'task.cancel-requested',
+  'task.cancelled',
+  'task.completed',
+  'task.failed',
+  'task.expired',
+  'task.uncertain'
+]);
+
 const ID_RE = /^[a-zA-Z0-9][a-zA-Z0-9._:-]{1,191}$/;
 const CATALOG_ID_RE = /^[a-z0-9][a-z0-9._:-]{1,127}$/;
 const VERSION_RE = /^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$/;
@@ -92,13 +172,11 @@ const SHA256_RE = /^[a-f0-9]{64}$/;
 const GIT_COMMIT_RE = /^[a-fA-F0-9]{40,64}$/;
 
 function readJson(url, name) {
-  let value;
   try {
-    value = JSON.parse(readFileSync(url, 'utf8'));
+    return JSON.parse(readFileSync(url, 'utf8'));
   } catch {
     throw new ValidationError(`${name} is not valid JSON`);
   }
-  return value;
 }
 
 function exactArray(actual, expected, name) {
@@ -179,11 +257,27 @@ function requireEnum(value, allowed, name) {
   if (!allowed.includes(value)) throw new ValidationError(`${name} is invalid`);
 }
 
+function requireInteger(value, name, { min = 0, max = Number.MAX_SAFE_INTEGER } = {}) {
+  if (!Number.isInteger(value) || value < min || value > max) {
+    throw new ValidationError(`${name} is invalid`);
+  }
+}
+
 function validateStringArray(value, name, { min = 0, max = 128 } = {}) {
   requireArray(value, name, { min, max });
   const seen = new Set();
   for (const item of value) {
     requiredString(item, `${name} item`, 512);
+    if (seen.has(item)) throw new ValidationError(`${name} contains duplicate values`);
+    seen.add(item);
+  }
+}
+
+function validateEnumArray(value, allowed, name, { min = 0, max = 128 } = {}) {
+  requireArray(value, name, { min, max });
+  const seen = new Set();
+  for (const item of value) {
+    requireEnum(item, allowed, `${name} item`);
     if (seen.has(item)) throw new ValidationError(`${name} contains duplicate values`);
     seen.add(item);
   }
@@ -195,6 +289,34 @@ function validateContractPin(value, name) {
   requireId(value.contract_id, `${name}.contract_id`);
   requireVersion(value.contract_version, `${name}.contract_version`);
   requireSha256(value.contract_sha256, `${name}.contract_sha256`);
+}
+
+function validateObservation(value, name) {
+  requireFields(
+    value,
+    ['claim_type', 'observer_id', 'subject_ref', 'observed_at', 'result'],
+    name
+  );
+  rejectUnknown(value, [
+    'claim_type',
+    'observer_id',
+    'subject_ref',
+    'observed_at',
+    'fresh_until',
+    'result',
+    'evidence_sha256',
+    'evidence_uri',
+    'note'
+  ], name);
+  requireEnum(value.claim_type, CATALOG_OBSERVATION_TYPES, `${name}.claim_type`);
+  requireId(value.observer_id, `${name}.observer_id`, CATALOG_ID_RE);
+  requiredString(value.subject_ref, `${name}.subject_ref`, 512);
+  requireDateTime(value.observed_at, `${name}.observed_at`);
+  if (value.fresh_until !== undefined) requireDateTime(value.fresh_until, `${name}.fresh_until`);
+  requireEnum(value.result, CATALOG_OBSERVATION_RESULTS, `${name}.result`);
+  if (value.evidence_sha256 !== undefined) requireSha256(value.evidence_sha256, `${name}.evidence_sha256`);
+  if (value.evidence_uri !== undefined) requiredString(value.evidence_uri, `${name}.evidence_uri`, 2048);
+  if (value.note !== undefined) requiredString(value.note, `${name}.note`, 1000);
 }
 
 function validateArtifact(value, name) {
@@ -212,9 +334,7 @@ function validateArtifact(value, name) {
   ], name);
   requireId(value.artifact_id, `${name}.artifact_id`);
   requireSha256(value.sha256, `${name}.sha256`);
-  if (!Number.isInteger(value.size_bytes) || value.size_bytes < 0) {
-    throw new ValidationError(`${name}.size_bytes is invalid`);
-  }
+  requireInteger(value.size_bytes, `${name}.size_bytes`);
   requireId(value.source_principal_id, `${name}.source_principal_id`);
   if (value.source_task_id !== undefined) requireId(value.source_task_id, `${name}.source_task_id`);
   for (const key of ['mime_type', 'schema_id', 'data_class', 'retention_class']) {
@@ -298,6 +418,7 @@ export function validateRuntimeConnectorCatalogEntry(entry) {
     'license_spdx',
     'mutable_ref_allowed'
   ], 'Runtime connector catalog provenance');
+  requireEnum(entry.provenance.source_kind, CATALOG_SOURCE_KINDS, 'Runtime connector catalog source_kind');
   if (entry.provenance.mutable_ref_allowed !== false) {
     throw new ValidationError('Runtime connector catalog mutable source references are forbidden');
   }
@@ -311,13 +432,14 @@ export function validateRuntimeConnectorCatalogEntry(entry) {
   if (entry.provenance.source_commit !== undefined && !GIT_COMMIT_RE.test(entry.provenance.source_commit)) {
     throw new ValidationError('Runtime connector catalog source_commit is invalid');
   }
+  if (entry.provenance.release_ref !== undefined) requiredString(entry.provenance.release_ref, 'Runtime connector catalog release_ref', 200);
   if (entry.provenance.artifact_sha256 !== undefined) requireSha256(entry.provenance.artifact_sha256, 'Runtime connector catalog artifact_sha256');
   if (entry.provenance.sbom_sha256 !== undefined) requireSha256(entry.provenance.sbom_sha256, 'Runtime connector catalog sbom_sha256');
 
   requireFields(entry.compatibility, ['platforms', 'deployment_forms', 'adapter_contracts'], 'Runtime connector catalog compatibility');
   rejectUnknown(entry.compatibility, ['platforms', 'deployment_forms', 'adapter_contracts', 'protocol_profiles'], 'Runtime connector catalog compatibility');
-  validateStringArray(entry.compatibility.platforms, 'Runtime connector catalog platforms', { min: 1, max: 12 });
-  validateStringArray(entry.compatibility.deployment_forms, 'Runtime connector catalog deployment_forms', { min: 1, max: 12 });
+  validateEnumArray(entry.compatibility.platforms, CATALOG_PLATFORMS, 'Runtime connector catalog platforms', { min: 1, max: 12 });
+  validateEnumArray(entry.compatibility.deployment_forms, CATALOG_DEPLOYMENT_FORMS, 'Runtime connector catalog deployment_forms', { min: 1, max: 12 });
   requireArray(entry.compatibility.adapter_contracts, 'Runtime connector catalog adapter_contracts', { max: 16 });
   entry.compatibility.adapter_contracts.forEach((pin, index) => validateContractPin(pin, `Runtime connector catalog adapter_contracts[${index}]`));
   if (entry.compatibility.protocol_profiles !== undefined) validateStringArray(entry.compatibility.protocol_profiles, 'Runtime connector catalog protocol_profiles', { max: 32 });
@@ -352,10 +474,25 @@ export function validateRuntimeConnectorCatalogEntry(entry) {
   if (entry.requested_access.network_destinations !== undefined) {
     validateStringArray(entry.requested_access.network_destinations, 'Runtime connector catalog network_destinations');
   }
-  if (entry.requested_access.resource_bounds !== undefined) plain(entry.requested_access.resource_bounds, 'Runtime connector catalog resource_bounds');
+  if (entry.requested_access.resource_bounds !== undefined) {
+    const bounds = plain(entry.requested_access.resource_bounds, 'Runtime connector catalog resource_bounds');
+    rejectUnknown(bounds, [
+      'timeout_ms',
+      'max_concurrency',
+      'max_request_bytes',
+      'max_response_bytes',
+      'cost_ceiling_minor_units'
+    ], 'Runtime connector catalog resource_bounds');
+    if (bounds.timeout_ms !== undefined) requireInteger(bounds.timeout_ms, 'Runtime connector catalog timeout_ms', { min: 1, max: 86400000 });
+    if (bounds.max_concurrency !== undefined) requireInteger(bounds.max_concurrency, 'Runtime connector catalog max_concurrency', { min: 1, max: 1024 });
+    if (bounds.max_request_bytes !== undefined) requireInteger(bounds.max_request_bytes, 'Runtime connector catalog max_request_bytes', { min: 1 });
+    if (bounds.max_response_bytes !== undefined) requireInteger(bounds.max_response_bytes, 'Runtime connector catalog max_response_bytes', { min: 1 });
+    if (bounds.cost_ceiling_minor_units !== undefined) requireInteger(bounds.cost_ceiling_minor_units, 'Runtime connector catalog cost_ceiling_minor_units');
+  }
 
   requireFields(entry.orchestration, ['mode', 'may_spawn_workers', 'delegation_required', 'remote_execution_requested'], 'Runtime connector catalog orchestration');
   rejectUnknown(entry.orchestration, ['mode', 'may_spawn_workers', 'delegation_required', 'remote_execution_requested', 'handoff_contracts'], 'Runtime connector catalog orchestration');
+  requireEnum(entry.orchestration.mode, CATALOG_ORCHESTRATION_MODES, 'Runtime connector catalog orchestration mode');
   requireBoolean(entry.orchestration.may_spawn_workers, 'Runtime connector catalog may_spawn_workers');
   requireBoolean(entry.orchestration.delegation_required, 'Runtime connector catalog delegation_required');
   requireBoolean(entry.orchestration.remote_execution_requested, 'Runtime connector catalog remote_execution_requested');
@@ -367,6 +504,9 @@ export function validateRuntimeConnectorCatalogEntry(entry) {
   requireFields(entry.assurance, ['observations', 'last_reviewed_at'], 'Runtime connector catalog assurance');
   rejectUnknown(entry.assurance, ['observations', 'last_reviewed_at', 'evidence_fresh_until'], 'Runtime connector catalog assurance');
   requireArray(entry.assurance.observations, 'Runtime connector catalog observations', { max: 64 });
+  entry.assurance.observations.forEach((observation, index) => {
+    validateObservation(observation, `Runtime connector catalog observations[${index}]`);
+  });
   requireDateTime(entry.assurance.last_reviewed_at, 'Runtime connector catalog last_reviewed_at');
   if (entry.assurance.evidence_fresh_until !== undefined) requireDateTime(entry.assurance.evidence_fresh_until, 'Runtime connector catalog evidence_fresh_until');
 
@@ -444,15 +584,12 @@ export function validateTaskArtifactHandoff(value) {
 
   requireFields(value.budgets, ['timeout_ms'], 'Task artifact handoff budgets');
   rejectUnknown(value.budgets, ['timeout_ms', 'deadline_at', 'max_steps', 'max_tool_calls', 'max_child_tasks', 'cost_ceiling_minor_units'], 'Task artifact handoff budgets');
-  if (!Number.isInteger(value.budgets.timeout_ms) || value.budgets.timeout_ms < 1 || value.budgets.timeout_ms > 86400000) {
-    throw new ValidationError('Task artifact handoff timeout_ms is invalid');
-  }
+  requireInteger(value.budgets.timeout_ms, 'Task artifact handoff timeout_ms', { min: 1, max: 86400000 });
   if (value.budgets.deadline_at !== undefined) requireDateTime(value.budgets.deadline_at, 'Task artifact handoff deadline_at');
-  for (const key of ['max_steps', 'max_tool_calls', 'max_child_tasks', 'cost_ceiling_minor_units']) {
-    if (value.budgets[key] !== undefined && (!Number.isInteger(value.budgets[key]) || value.budgets[key] < 0)) {
-      throw new ValidationError(`Task artifact handoff ${key} is invalid`);
-    }
-  }
+  if (value.budgets.max_steps !== undefined) requireInteger(value.budgets.max_steps, 'Task artifact handoff max_steps', { min: 1, max: 1000000 });
+  if (value.budgets.max_tool_calls !== undefined) requireInteger(value.budgets.max_tool_calls, 'Task artifact handoff max_tool_calls', { max: 1000000 });
+  if (value.budgets.max_child_tasks !== undefined) requireInteger(value.budgets.max_child_tasks, 'Task artifact handoff max_child_tasks', { max: 100000 });
+  if (value.budgets.cost_ceiling_minor_units !== undefined) requireInteger(value.budgets.cost_ceiling_minor_units, 'Task artifact handoff cost_ceiling_minor_units');
 
   requireFields(value.lifecycle, ['state', 'created_at', 'updated_at'], 'Task artifact handoff lifecycle');
   rejectUnknown(value.lifecycle, ['state', 'created_at', 'updated_at', 'cancel_requested_at', 'terminal_reason', 'terminal_receipt_id', 'uncertainty_record_id'], 'Task artifact handoff lifecycle');
@@ -474,7 +611,7 @@ export function validateTaskArtifactHandoff(value) {
       requireFields(event, ['event_id', 'type', 'at', 'actor_principal_id'], `Task artifact handoff events[${index}]`);
       rejectUnknown(event, ['event_id', 'type', 'at', 'actor_principal_id', 'detail_digest'], `Task artifact handoff events[${index}]`);
       requireId(event.event_id, `Task artifact handoff events[${index}].event_id`);
-      requiredString(event.type, `Task artifact handoff events[${index}].type`, 160);
+      requireEnum(event.type, TASK_EVENT_TYPES, `Task artifact handoff events[${index}].type`);
       requireDateTime(event.at, `Task artifact handoff events[${index}].at`);
       requireId(event.actor_principal_id, `Task artifact handoff events[${index}].actor_principal_id`);
       if (event.detail_digest !== undefined) requireSha256(event.detail_digest, `Task artifact handoff events[${index}].detail_digest`);
