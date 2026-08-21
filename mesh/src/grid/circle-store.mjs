@@ -110,7 +110,7 @@ export class CircleGridStore extends GridStore {
       || circleEvents.length + lifecycleEvents.length !== 1
     ) {
       throw new ValidationError(
-        'Circle Grid persistence requires a single Circle event append with no mixed event kinds'
+        'Circle Grid persistence requires a single-event append with no mixed Circle event kinds'
       );
     }
 
