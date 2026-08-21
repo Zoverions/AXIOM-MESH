@@ -1,0 +1,93 @@
+{
+  "schema": "axiom-runtime-connector-catalog-entry.v1",
+  "entry_id": "runtime:hermes:research-profile",
+  "entry_version": "0.1.0",
+  "integration_class": "agent-runtime",
+  "subject": {
+    "subject_id": "runtime:hermes",
+    "display_name": "Hermes Agent",
+    "description": "Research-only runtime profile used to exercise the draft Runtime & Connector Fabric catalog contract.",
+    "status": "conformance-candidate"
+  },
+  "provenance": {
+    "source_kind": "source-repository",
+    "source_repository": "https://github.com/NousResearch/hermes-agent",
+    "source_commit": "2222222222222222222222222222222222222222",
+    "release_ref": "research-pin",
+    "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "sbom_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "license_spdx": "MIT",
+    "mutable_ref_allowed": false
+  },
+  "compatibility": {
+    "platforms": ["linux", "macos", "windows", "container"],
+    "deployment_forms": ["process", "sidecar", "container"],
+    "adapter_contracts": [
+      {
+        "contract_id": "axiom.agent-runtime-adapter",
+        "contract_version": "1.0.0",
+        "contract_sha256": "4954c3d1a49ea57fb0bf5a7eea29140b852e8b5fa2bb11634665f004aca2c19c"
+      }
+    ],
+    "protocol_profiles": ["native-gateway-readonly", "mcp-candidate"]
+  },
+  "requested_access": {
+    "install_grants_authority": false,
+    "capabilities": ["system.status", "memory.read"],
+    "purposes": ["runtime-health", "owner-requested-retrieval"],
+    "destinations": ["local"],
+    "data_classes": ["owner-private-memory"],
+    "credential_classes": ["opaque-provider-handle"],
+    "network_required": true,
+    "network_destinations": ["https://example.invalid"],
+    "resource_bounds": {
+      "timeout_ms": 30000,
+      "max_concurrency": 2,
+      "max_request_bytes": 65536,
+      "max_response_bytes": 1048576,
+      "cost_ceiling_minor_units": 0
+    }
+  },
+  "orchestration": {
+    "mode": "multi-agent",
+    "may_spawn_workers": true,
+    "delegation_required": true,
+    "remote_execution_requested": false,
+    "handoff_contracts": [
+      {
+        "contract_id": "axiom.task-artifact-handoff",
+        "contract_version": "0.1.0",
+        "contract_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      }
+    ]
+  },
+  "assurance": {
+    "observations": [
+      {
+        "claim_type": "source-review",
+        "observer_id": "observer:axiom-research",
+        "subject_ref": "runtime:hermes@research-pin",
+        "observed_at": "2026-08-21T23:31:00Z",
+        "fresh_until": "2026-09-21T23:31:00Z",
+        "result": "warning",
+        "evidence_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "evidence_uri": "https://example.invalid/evidence/hermes-review",
+        "note": "Research fixture only; not a certification or production claim."
+      }
+    ],
+    "last_reviewed_at": "2026-08-21T23:31:00Z",
+    "evidence_fresh_until": "2026-09-21T23:31:00Z"
+  },
+  "lifecycle": {
+    "update_mode": "manual-reviewed",
+    "silent_permission_widening_allowed": false,
+    "rollback_available": true,
+    "quarantine_supported": true,
+    "supersedes_entry_id": "runtime:hermes:research-profile-old"
+  },
+  "non_claims": [
+    "Catalog presence does not authorize execution.",
+    "This fixture does not certify Hermes Agent.",
+    "This fixture does not enable external network access or provider credentials."
+  ]
+}
