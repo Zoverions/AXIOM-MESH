@@ -8,13 +8,14 @@
 
 The first real Agent Runtime Adapter integration should prove that AXIOM can connect to a maintained external runtime without importing that runtime's authority assumptions.
 
-This survey records a first-pass comparison of three prominent candidates that are directly relevant to current AXIOM planning: Hermes Agent, OpenClaw, and Agent Zero. It is deliberately narrow. A final `RUNTIME-002` selection still requires exact immutable source/release pins, licence/dependency/SBOM review, threat-model work, and a no-secret read-only integration plan.
+This survey records a first-pass comparison of four maintained candidates relevant to current AXIOM planning: Hermes Agent, OpenClaw, Agent Zero, and OpenAI Codex CLI. The fourth candidate is deliberately narrower: a coding/terminal agent provides a control against the broader persistent personal-agent systems. A final `RUNTIME-002` selection still requires exact immutable source/release pins, licence/dependency/SBOM review, threat-model work, and a no-secret read-only integration plan.
 
 ## Sources checked
 
 - Hermes Agent official documentation and `NousResearch/hermes-agent` repository.
 - OpenClaw official `openclaw/openclaw` repository.
 - Agent Zero official `agent0ai/agent-zero` orchestrator plugin documentation.
+- OpenAI Codex official `openai/codex` repository and current source/configuration surfaces.
 
 Source observations are current only to this survey date and must be refreshed before implementation.
 
@@ -64,6 +65,8 @@ Hermes is a strong first-integration candidate because:
 ### Preliminary position
 
 **Candidate for first bounded read-only adapter**, subject to exact source pin and a narrowly defined operation that requires no reusable secret and causes no external effect.
+
+A separate candidate checkpoint now pins observed upstream commit `b6bcb3e791c673e63974029bbab40cc9326803ff` for research and identifies the dedicated code-identity helper as the narrowest first real-runtime probe. That checkpoint remains a candidate, not the final `RUNTIME-002` selection.
 
 ## OpenClaw
 
@@ -122,15 +125,48 @@ Agent Zero is exceptionally useful as an **orchestration stress test** because:
 
 **Do not use as the first authority-bearing integration.** Use it after one or two simpler adapters as an adversarial/meta-orchestration conformance target.
 
+## OpenAI Codex CLI
+
+### Current upstream shape
+
+Codex CLI is maintained in the public `openai/codex` repository and is described upstream as a lightweight coding agent that runs locally in the terminal. The repository is primarily Rust and is licensed Apache-2.0. Current installation paths include standalone installers, npm, Homebrew, and release binaries. Authentication can use a ChatGPT account or an API key.
+
+At survey time, observed `main` was commit `970b7f2ff4f612b8e8cd340eb6b6d789d7141dd2`, committed on 2026-08-21. The observed commit was unsigned according to GitHub's commit verification field, so the hash is useful for source identity but does not itself establish authenticated publisher provenance.
+
+Current source exposes explicit sandbox/approval-policy configuration and MCP/app-server surfaces. That is useful for AXIOM because runtime-local sandbox or approval modes can be treated as declared runtime behavior rather than imported authority.
+
+### AXIOM value
+
+Codex is a useful control candidate because:
+
+- it is narrower than a persistent personal-agent runtime;
+- source and licensing are highly reviewable;
+- a coding/terminal runtime lets AXIOM test whether the shared contract is accidentally biased toward memory-centric personal agents;
+- explicit sandbox and approval configuration provides good parity/negative tests for the rule that AXIOM authorization remains separate;
+- its headless/structured execution surfaces may later be useful for bounded developer tasks once the no-effect/read-only contract is proven.
+
+### Main risks to review
+
+- normal use requires ChatGPT or API authentication, which is outside the first no-secret slice;
+- coding-agent value comes from filesystem/process effects, so most useful operations become consequential quickly;
+- installer/package/release channels must be pinned rather than treated as interchangeable mutable sources;
+- MCP, shell, repository, and network capabilities must stay outside the initial adapter profile;
+- runtime-local approval or sandbox settings cannot substitute for AXIOM policy/grants.
+
+### Preliminary position
+
+**Use as the fourth control in the comparison matrix, not as the first general-runtime integration.** It is a strong later candidate for proving that the same Runtime & Connector Fabric can constrain a focused coding runtime without adding a coding-specific authority model.
+
 ## Preliminary ordering
 
 This is a research recommendation, not a promotion decision:
 
 1. **Hermes Agent** — first bounded no-secret/read-only adapter candidate.
 2. **OpenClaw** — second runtime to prove neutrality and exercise channel/tool control-plane overlap.
-3. **Agent Zero** — orchestration/adversarial stress target after task/artifact and delegation semantics are stronger.
+3. **Codex CLI** — narrower coding-runtime control for contract neutrality and later bounded developer workflows.
+4. **Agent Zero** — orchestration/adversarial stress target after task/artifact and delegation semantics are stronger.
 
-A fourth maintained runtime should be added before declaring the candidate survey complete. A narrower coding/terminal runtime may be useful as a control because it can expose a simpler surface than a persistent personal-agent shell.
+The four-runtime survey requirement is now satisfied at the first-pass architecture level. This does **not** complete detailed maintenance/security/dependency review for all four and does not finalize runtime 1.
 
 ## Required next evidence before selecting runtime 1
 
@@ -149,4 +185,4 @@ A fourth maintained runtime should be added before declaring the candidate surve
 
 ## Non-claims
 
-This survey does not claim that Hermes, OpenClaw, Agent Zero, or any other runtime is safe, AXIOM-conformant, licence-compatible for every use, installed, enabled, production-ready, or authorized to perform any effect. Popularity, feature richness, current documentation, or successful upstream operation do not substitute for AXIOM conformance and local authorization.
+This survey does not claim that Hermes, OpenClaw, Agent Zero, Codex CLI, or any other runtime is safe, AXIOM-conformant, licence-compatible for every use, installed, enabled, production-ready, or authorized to perform any effect. Popularity, feature richness, current documentation, or successful upstream operation do not substitute for AXIOM conformance and local authorization.
