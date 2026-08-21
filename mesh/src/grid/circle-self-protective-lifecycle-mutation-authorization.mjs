@@ -16,6 +16,8 @@ const EXPECTED_REQUIREMENTS = Object.freeze({
   self_service_only: true,
   authenticated_principal_exact_membership_principal: true,
   current_grid_lifecycle_head_required: true,
+  mutation_event_after_current_grid_head: true,
+  mutation_event_not_future_at_authorization: true,
   proposed_candidate_previous_head_exact_current_head: true,
   proposed_candidate_identity_exact_current_head: true,
   proposed_candidate_must_advance_head: true,
@@ -331,6 +333,19 @@ function prepareMutation({
     postMembershipLifecycle,
     postCredentialLifecycle
   });
+  const mutationAtMs = Date.parse(mutation.at);
+  const currentHeadUpdatedAtMs = Date.parse(currentHead.updated_at);
+  if (!Number.isFinite(mutationAtMs)) throw new ValidationError('Circle self-protective mutation event time is invalid');
+  if (mutationAtMs <= currentHeadUpdatedAtMs) {
+    throw new AxiomError(
+      'circle_self_protective_mutation_not_after_current_head',
+      'Circle self-protective mutation event must follow the retained Grid lifecycle head',
+      409
+    );
+  }
+  if (mutationAtMs > nowSeconds * 1000) {
+    throw new ValidationError('Circle self-protective mutation event cannot be in the future');
+  }
 
   if (!memberEligibilityPolicy || !credentialPolicy || !charterPolicy || !historicalBindingPolicy) {
     throw new ValidationError('Circle self-protective mutation source policies are required');
@@ -420,7 +435,8 @@ function classifySingleMutation({
       kind: event.kind,
       target_type: 'membership',
       target_id: membershipId,
-      event_digest: digestObject(event)
+      event_digest: digestObject(event),
+      at: event.at
     });
   }
 
@@ -446,7 +462,8 @@ function classifySingleMutation({
     kind: event.kind,
     target_type: event.target_type,
     target_id: event.target_id,
-    event_digest: digestObject(event)
+    event_digest: digestObject(event),
+    at: event.at
   });
 }
 
