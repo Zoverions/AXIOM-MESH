@@ -1,0 +1,100 @@
+{
+  "schema": "axiom-circle-possession-bound-atomic-admission-threat-review.v0",
+  "version": 0,
+  "status": "inert-possession-bound-atomic-admission-threat-review",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "threats": [
+    {
+      "threat": "possession-proof-omission",
+      "mitigations": ["exact-required-credential-inventory-from-authorization-evidence", "exact-attestation-count", "exact-credential-identity-coverage"],
+      "residual_limitation": "Authorization modes with no credential-backed eligibility evidence, including creator bootstrap and invited-principal self-acceptance, intentionally require zero possession attestations."
+    },
+    {
+      "threat": "participant-proof-substitution",
+      "mitigations": ["circle-membership-principal-credential-tuple-binding", "duplicate-credential-evidence-deduplication", "extra-or-missing-attestation-rejected"],
+      "residual_limitation": "A valid key-possession proof does not establish that the key is controlled by the intended human rather than malware, a delegate, or another custodian."
+    },
+    {
+      "threat": "cross-request-attestation-replay",
+      "mitigations": ["possession-request-digest-binds-event-authorization-guards-intent-plan-policy", "attestation-exact-request-digest", "capability-binds-attestation-set-digest"],
+      "residual_limitation": "The same still-fresh attestation may be reused to reissue the same exact deterministic admission request; durable challenge consumption is not supplied here."
+    },
+    {
+      "threat": "stale-lifecycle-possession-proof",
+      "mitigations": ["attestation-lifecycle-head-must-match-atomic-guard", "credential-lifecycle-digest-must-match-guard", "grid-transaction-cas-rechecks-same-head"],
+      "residual_limitation": "The CAS protects locally retained Grid lifecycle currentness; it does not prove lifecycle mutations were legitimately authorized."
+    },
+    {
+      "threat": "possession-after-authorization-before-commit-race",
+      "mitigations": ["short-lived-attestation-reverification-at-commit", "same-guard-atomic-cas", "whole-append-rollback-on-head-change"],
+      "residual_limitation": "Compromise that occurs in the physical world but is not yet reflected in the retained lifecycle head cannot be detected by this contract."
+    },
+    {
+      "threat": "attestation-set-tampering",
+      "mitigations": ["hypervisor-signature-per-attestation", "canonical-attestation-set-digest", "single-capability-constraint-binding"],
+      "residual_limitation": "The Hypervisor remains a trusted technical signer for challenge observation and admission issuance in this candidate."
+    },
+    {
+      "threat": "authorization-context-substitution",
+      "mitigations": ["record-authorization-assessment-digest", "eligibility-evidence-digest", "parent-lifecycle-cas-invocation-digest", "possession-request-digest"],
+      "residual_limitation": "Technical binding does not establish political, legal, or governance legitimacy of the underlying Circle rules."
+    },
+    {
+      "threat": "parallel-credential-evidence-collapse",
+      "mitigations": ["deduplicate-only-identical-circle-membership-principal-credential-tuples", "distinct-credentials-require-distinct-attestations"],
+      "residual_limitation": "The current authorization context model normally exposes one credential id per membership context; broader multi-device concurrent authorization semantics remain undefined."
+    },
+    {
+      "threat": "historical-record-rewrite-after-credential-change",
+      "mitigations": ["exact-retained-event-replay-remains-idempotent", "new-token-replay-trace-mismatch", "current-head-cas-applies-only-to-new-append"],
+      "residual_limitation": "Historical idempotency preserves prior technical admission evidence; it does not assert continuing present eligibility."
+    },
+    {
+      "threat": "parent-path-bypass",
+      "mitigations": ["successor-remains-unwired", "promotion-requires-possession-bound-path-to-be-sole-service-level-circle-append-path"],
+      "residual_limitation": "The inert parent helper functions still exist for tests and staged development until an explicit runtime promotion removes or fences bypass paths."
+    },
+    {
+      "threat": "bootstrap-possession-laundering",
+      "mitigations": ["zero-required-credential-inventory", "zero-attestation-inventory-required", "no-global-human-or-role-claim"],
+      "residual_limitation": "Bootstrap and self-acceptance still depend on external requester authentication assurances that are not defined by this possession contract."
+    },
+    {
+      "threat": "grid-or-hypervisor-trust-root-substitution",
+      "mitigations": ["trusted-hypervisor-key-verifies-attestations-and-capability", "trusted-grid-key-verifies-receipt-event", "grid-chain-coverage-required"],
+      "residual_limitation": "Compromise or malicious replacement of trusted Hypervisor or Grid signing material is outside this local composition contract."
+    }
+  ],
+  "non_claims": [
+    "human-identity",
+    "legal-identity",
+    "authorized-human-custody",
+    "authorized-lifecycle-mutation-service",
+    "membership-resume-authority",
+    "role-grant-authority",
+    "credential-issuance-authority",
+    "recovery-authority",
+    "historical-backfill-authority",
+    "challenge-single-use-persistence",
+    "trusted-global-time",
+    "governance-legitimacy",
+    "coercion-free-participation",
+    "legal-authority",
+    "runtime-authority",
+    "portable-authority",
+    "external-effect-authority",
+    "distributed-consensus"
+  ],
+  "promotion_blockers": [
+    "durable-or-explicitly-idempotent-challenge-consumption-policy",
+    "authorized-membership-and-credential-lifecycle-mutation-procedure",
+    "member-side-key-custody-and-signing-without-secret-export",
+    "recovery-compromise-and-key-loss-procedure",
+    "possession-bound-successor-as-sole-service-level-circle-append-path",
+    "gateway-hypervisor-grid-route-design-preserving-existing-authority-boundary",
+    "accessible-member-facing-challenge-denial-and-recovery-explanations",
+    "independent-security-privacy-device-loss-coercion-sybil-recovery-governance-review"
+  ]
+}
