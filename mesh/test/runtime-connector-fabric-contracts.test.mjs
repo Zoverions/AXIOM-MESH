@@ -35,6 +35,10 @@ const HANDOFF_MAXIMAL_URL = new URL(
   './fixtures/runtime-connector-fabric/handoff-maximal.json',
   import.meta.url
 );
+const HANDOFF_UNCERTAIN_URL = new URL(
+  './fixtures/runtime-connector-fabric/handoff-uncertain.json',
+  import.meta.url
+);
 const INVALID_INSTANCES_URL = new URL(
   './fixtures/runtime-connector-fabric/invalid-instances.json',
   import.meta.url
@@ -42,6 +46,18 @@ const INVALID_INSTANCES_URL = new URL(
 
 function load(url) {
   return JSON.parse(readFileSync(url, 'utf8'));
+}
+
+function mutate(base, changes) {
+  const value = structuredClone(base);
+  for (const change of changes) {
+    let cursor = value;
+    for (const segment of change.path.slice(0, -1)) cursor = cursor[segment];
+    const field = change.path.at(-1);
+    if (change.remove) delete cursor[field];
+    else cursor[field] = structuredClone(change.value);
+  }
+  return value;
 }
 
 test('runtime connector fabric draft contracts preserve zero-authority coordination invariants', () => {
@@ -83,17 +99,32 @@ test('catalog schema rejects installation authority and silent permission wideni
   );
 });
 
-test('catalog schema keeps supported integration classes explicit', () => {
+test('catalog schema keeps integration and review states separate from authority/promotion', () => {
   const catalog = load(CATALOG_URL);
-  const widened = structuredClone(catalog);
-  widened.properties.integration_class.enum.push('trusted-superuser-runtime');
+
+  const widenedClass = structuredClone(catalog);
+  widenedClass.properties.integration_class.enum.push('trusted-superuser-runtime');
   assert.throws(
-    () => validateRuntimeConnectorCatalogSchema(widened),
+    () => validateRuntimeConnectorCatalogSchema(widenedClass),
     /integration classes are invalid/
+  );
+
+  const promotedReviewState = structuredClone(catalog);
+  promotedReviewState.properties.subject.properties.review_state.enum.push('promoted');
+  assert.throws(
+    () => validateRuntimeConnectorCatalogSchema(promotedReviewState),
+    /review states are invalid/
+  );
+
+  const curationAsAssurance = structuredClone(catalog);
+  curationAsAssurance.$defs.observation.properties.claim_type.enum.push('community-curation');
+  assert.throws(
+    () => validateRuntimeConnectorCatalogSchema(curationAsAssurance),
+    /observation types are invalid/
   );
 });
 
-test('task handoff schema rejects coordination or handoff as authorization', () => {
+test('task handoff schema rejects alternate authority roots or coordination as authorization', () => {
   const handoff = load(HANDOFF_URL);
   assert.equal(validateTaskArtifactHandoffSchema(handoff), true);
 
@@ -111,11 +142,17 @@ test('task handoff schema rejects coordination or handoff as authorization', () 
     /contract invariants are invalid/
   );
 
-  const noDelegationGate = structuredClone(handoff);
-  noDelegationGate.properties.authority.properties
-    .delegation_required_for_independent_child_authority.const = false;
+  const runtimeAuthority = structuredClone(handoff);
+  runtimeAuthority.properties.authority.properties.authority_source.const = 'runtime-local';
   assert.throws(
-    () => validateTaskArtifactHandoffSchema(noDelegationGate),
+    () => validateTaskArtifactHandoffSchema(runtimeAuthority),
+    /contract invariants are invalid/
+  );
+
+  const noGrantGate = structuredClone(handoff);
+  noGrantGate.properties.authority.properties.grant_required_before_effect.const = false;
+  assert.throws(
+    () => validateTaskArtifactHandoffSchema(noGrantGate),
     /contract invariants are invalid/
   );
 });
@@ -130,7 +167,7 @@ test('task handoff lifecycle states cannot silently acquire a success-like state
   );
 });
 
-test('minimal and maximal catalog entries satisfy draft critical-instance validation', () => {
+test('minimal and maximal catalog entries satisfy reviewed draft validation', () => {
   const minimal = load(CATALOG_MINIMAL_URL);
   const maximal = load(CATALOG_MAXIMAL_URL);
 
@@ -138,39 +175,52 @@ test('minimal and maximal catalog entries satisfy draft critical-instance valida
   assert.equal(validateRuntimeConnectorCatalogEntry(maximal), true);
   assert.equal(minimal.requested_access.install_grants_authority, false);
   assert.equal(maximal.requested_access.install_grants_authority, false);
+  assert.deepEqual(maximal.requested_access.capabilities, ['core.machine-discovery', 'memory.graph']);
+  assert.deepEqual(maximal.requested_access.actions, ['system.echo', 'memory.create']);
   assert.equal(maximal.orchestration.may_spawn_workers, true);
-  assert.equal(maximal.orchestration.delegation_required, true);
+  assert.equal(maximal.orchestration.independent_child_authority_requested, true);
   assert.equal(maximal.lifecycle.silent_permission_widening_allowed, false);
+  assert.notEqual(maximal.subject.review_state, 'promoted');
 });
 
-test('minimal and maximal task handoffs satisfy draft critical-instance validation', () => {
+test('queued, completed, and uncertain task handoffs satisfy reviewed draft validation', () => {
   const minimal = load(HANDOFF_MINIMAL_URL);
   const maximal = load(HANDOFF_MAXIMAL_URL);
+  const uncertain = load(HANDOFF_UNCERTAIN_URL);
 
   assert.equal(validateTaskArtifactHandoff(minimal), true);
   assert.equal(validateTaskArtifactHandoff(maximal), true);
+  assert.equal(validateTaskArtifactHandoff(uncertain), true);
+  assert.equal(minimal.authority.authority_source, 'axiom-gateway');
   assert.equal(minimal.authority.coordination_is_authorization, false);
   assert.equal(maximal.authority.handoff_transfers_authority, false);
-  assert.equal(maximal.authority.delegation_required_for_independent_child_authority, true);
-  assert.equal(maximal.lifecycle.state, 'running');
+  assert.equal(maximal.request.runtime_operation, 'memory.lookup');
+  assert.equal(maximal.request.axiom_action, 'memory.create');
+  assert.equal(maximal.lifecycle.state, 'completed');
+  assert.ok(maximal.lifecycle.terminal_receipt_id);
+  assert.equal(uncertain.lifecycle.state, 'uncertain');
+  assert.ok(uncertain.lifecycle.uncertainty_record_id);
+  assert.equal(uncertain.lifecycle.terminal_receipt_id, undefined);
 });
 
-test('catalog adversarial instances fail closed with the expected boundary', () => {
+test('catalog adversarial mutations fail closed with the expected boundary', () => {
+  const base = load(CATALOG_MINIMAL_URL);
   const invalid = load(INVALID_INSTANCES_URL);
   for (const fixture of invalid.catalog) {
     assert.throws(
-      () => validateRuntimeConnectorCatalogEntry(fixture.value),
+      () => validateRuntimeConnectorCatalogEntry(mutate(base, fixture.changes)),
       new RegExp(fixture.expected_error),
       fixture.name
     );
   }
 });
 
-test('task handoff adversarial instances fail closed with the expected boundary', () => {
+test('task handoff adversarial mutations fail closed with the expected boundary', () => {
+  const base = load(HANDOFF_MINIMAL_URL);
   const invalid = load(INVALID_INSTANCES_URL);
   for (const fixture of invalid.handoff) {
     assert.throws(
-      () => validateTaskArtifactHandoff(fixture.value),
+      () => validateTaskArtifactHandoff(mutate(base, fixture.changes)),
       new RegExp(fixture.expected_error),
       fixture.name
     );
