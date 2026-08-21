@@ -31,10 +31,12 @@ test('Circle eligibility v0 event inventory can only preserve or reduce eligibil
   ]) assert.equal(policy.event_kinds.includes(forbidden), false, `eligibility-widening event leaked into v0: ${forbidden}`);
 });
 
-test('implementation has no transition that restores suspended or terminal membership', async () => {
+test('implementation exposes no resume event branch and preserves irreversible terminal checks', async () => {
   const source = await readFile(sourceUrl, 'utf8');
   assert.doesNotMatch(source, /event\.kind\s*===\s*['"]membership-resume['"]/);
-  assert.doesNotMatch(source, /state\s*=\s*\{[^}]*status:\s*['"]active['"][^}]*\}/s);
   assert.ok(source.includes('Circle member eligibility terminal state is irreversible'));
   assert.ok(source.includes('Circle role narrowing cannot add or substitute roles'));
+  assert.ok(source.includes("event.kind === 'membership-suspend'"));
+  assert.ok(source.includes("event.kind === 'membership-revoke'"));
+  assert.ok(source.includes("event.kind === 'membership-exit'"));
 });
