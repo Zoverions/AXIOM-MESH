@@ -1,0 +1,128 @@
+{
+  "catalog": [
+    {
+      "name": "installation-authority",
+      "expected_error": "install authority",
+      "value": {
+        "schema": "axiom-runtime-connector-catalog-entry.v1",
+        "entry_id": "runtime:bad-install",
+        "entry_version": "0.1.0",
+        "integration_class": "agent-runtime",
+        "subject": {"subject_id": "runtime:bad-install", "display_name": "Bad Install", "status": "research"},
+        "provenance": {"source_kind": "source-repository", "source_repository": "https://example.invalid/repo", "source_commit": "1111111111111111111111111111111111111111", "license_spdx": "MIT", "mutable_ref_allowed": false},
+        "compatibility": {"platforms": ["linux"], "deployment_forms": ["process"], "adapter_contracts": []},
+        "requested_access": {"install_grants_authority": true, "capabilities": [], "purposes": [], "destinations": [], "data_classes": [], "credential_classes": [], "network_required": false},
+        "orchestration": {"mode": "single-agent", "may_spawn_workers": false, "delegation_required": false, "remote_execution_requested": false},
+        "assurance": {"observations": [], "last_reviewed_at": "2026-08-21T23:31:00Z"},
+        "lifecycle": {"update_mode": "manual-reviewed", "silent_permission_widening_allowed": false, "rollback_available": true, "quarantine_supported": true},
+        "non_claims": ["Invalid fixture"]
+      }
+    },
+    {
+      "name": "mutable-source-ref",
+      "expected_error": "mutable source",
+      "value": {
+        "schema": "axiom-runtime-connector-catalog-entry.v1",
+        "entry_id": "runtime:bad-mutable",
+        "entry_version": "0.1.0",
+        "integration_class": "agent-runtime",
+        "subject": {"subject_id": "runtime:bad-mutable", "display_name": "Bad Mutable", "status": "research"},
+        "provenance": {"source_kind": "source-repository", "source_repository": "https://example.invalid/repo", "source_commit": "1111111111111111111111111111111111111111", "license_spdx": "MIT", "mutable_ref_allowed": true},
+        "compatibility": {"platforms": ["linux"], "deployment_forms": ["process"], "adapter_contracts": []},
+        "requested_access": {"install_grants_authority": false, "capabilities": [], "purposes": [], "destinations": [], "data_classes": [], "credential_classes": [], "network_required": false},
+        "orchestration": {"mode": "single-agent", "may_spawn_workers": false, "delegation_required": false, "remote_execution_requested": false},
+        "assurance": {"observations": [], "last_reviewed_at": "2026-08-21T23:31:00Z"},
+        "lifecycle": {"update_mode": "manual-reviewed", "silent_permission_widening_allowed": false, "rollback_available": true, "quarantine_supported": true},
+        "non_claims": ["Invalid fixture"]
+      }
+    },
+    {
+      "name": "silent-permission-widening",
+      "expected_error": "silent permission widening",
+      "value": {
+        "schema": "axiom-runtime-connector-catalog-entry.v1",
+        "entry_id": "runtime:bad-update",
+        "entry_version": "0.1.0",
+        "integration_class": "agent-runtime",
+        "subject": {"subject_id": "runtime:bad-update", "display_name": "Bad Update", "status": "research"},
+        "provenance": {"source_kind": "source-repository", "source_repository": "https://example.invalid/repo", "source_commit": "1111111111111111111111111111111111111111", "license_spdx": "MIT", "mutable_ref_allowed": false},
+        "compatibility": {"platforms": ["linux"], "deployment_forms": ["process"], "adapter_contracts": []},
+        "requested_access": {"install_grants_authority": false, "capabilities": [], "purposes": [], "destinations": [], "data_classes": [], "credential_classes": [], "network_required": false},
+        "orchestration": {"mode": "single-agent", "may_spawn_workers": false, "delegation_required": false, "remote_execution_requested": false},
+        "assurance": {"observations": [], "last_reviewed_at": "2026-08-21T23:31:00Z"},
+        "lifecycle": {"update_mode": "manual-reviewed", "silent_permission_widening_allowed": true, "rollback_available": true, "quarantine_supported": true},
+        "non_claims": ["Invalid fixture"]
+      }
+    }
+  ],
+  "handoff": [
+    {
+      "name": "coordination-authorizes",
+      "expected_error": "coordination authorization",
+      "value": {
+        "schema": "axiom-task-artifact-handoff.v1",
+        "task_id": "task:bad-coordination",
+        "causal_id": "causal:bad-coordination",
+        "requester": {"principal_id": "principal:owner"},
+        "execution_target": {"integration_id": "runtime:hermes", "integration_class": "agent-runtime", "adapter_contract": {"contract_id": "axiom.agent-runtime-adapter", "contract_version": "1.0.0", "contract_sha256": "4954c3d1a49ea57fb0bf5a7eea29140b852e8b5fa2bb11634665f004aca2c19c"}},
+        "request": {"capability_id": "system.status", "purpose": "runtime-health", "destinations": ["local"]},
+        "authority": {"coordination_is_authorization": true, "handoff_transfers_authority": false, "delegation_required_for_independent_child_authority": true},
+        "budgets": {"timeout_ms": 5000},
+        "lifecycle": {"state": "queued", "created_at": "2026-08-21T23:31:00Z", "updated_at": "2026-08-21T23:31:00Z"},
+        "inputs": [],
+        "outputs": []
+      }
+    },
+    {
+      "name": "handoff-transfers-authority",
+      "expected_error": "handoff authority",
+      "value": {
+        "schema": "axiom-task-artifact-handoff.v1",
+        "task_id": "task:bad-handoff",
+        "causal_id": "causal:bad-handoff",
+        "requester": {"principal_id": "principal:owner"},
+        "execution_target": {"integration_id": "runtime:hermes", "integration_class": "agent-runtime", "adapter_contract": {"contract_id": "axiom.agent-runtime-adapter", "contract_version": "1.0.0", "contract_sha256": "4954c3d1a49ea57fb0bf5a7eea29140b852e8b5fa2bb11634665f004aca2c19c"}},
+        "request": {"capability_id": "system.status", "purpose": "runtime-health", "destinations": ["local"]},
+        "authority": {"coordination_is_authorization": false, "handoff_transfers_authority": true, "delegation_required_for_independent_child_authority": true},
+        "budgets": {"timeout_ms": 5000},
+        "lifecycle": {"state": "queued", "created_at": "2026-08-21T23:31:00Z", "updated_at": "2026-08-21T23:31:00Z"},
+        "inputs": [],
+        "outputs": []
+      }
+    },
+    {
+      "name": "missing-delegation-gate",
+      "expected_error": "delegation gate",
+      "value": {
+        "schema": "axiom-task-artifact-handoff.v1",
+        "task_id": "task:bad-delegation",
+        "causal_id": "causal:bad-delegation",
+        "requester": {"principal_id": "principal:owner"},
+        "execution_target": {"integration_id": "runtime:hermes", "integration_class": "agent-runtime", "adapter_contract": {"contract_id": "axiom.agent-runtime-adapter", "contract_version": "1.0.0", "contract_sha256": "4954c3d1a49ea57fb0bf5a7eea29140b852e8b5fa2bb11634665f004aca2c19c"}},
+        "request": {"capability_id": "system.status", "purpose": "runtime-health", "destinations": ["local"]},
+        "authority": {"coordination_is_authorization": false, "handoff_transfers_authority": false, "delegation_required_for_independent_child_authority": false},
+        "budgets": {"timeout_ms": 5000},
+        "lifecycle": {"state": "queued", "created_at": "2026-08-21T23:31:00Z", "updated_at": "2026-08-21T23:31:00Z"},
+        "inputs": [],
+        "outputs": []
+      }
+    },
+    {
+      "name": "assumed-success-state",
+      "expected_error": "lifecycle state",
+      "value": {
+        "schema": "axiom-task-artifact-handoff.v1",
+        "task_id": "task:bad-state",
+        "causal_id": "causal:bad-state",
+        "requester": {"principal_id": "principal:owner"},
+        "execution_target": {"integration_id": "runtime:hermes", "integration_class": "agent-runtime", "adapter_contract": {"contract_id": "axiom.agent-runtime-adapter", "contract_version": "1.0.0", "contract_sha256": "4954c3d1a49ea57fb0bf5a7eea29140b852e8b5fa2bb11634665f004aca2c19c"}},
+        "request": {"capability_id": "system.status", "purpose": "runtime-health", "destinations": ["local"]},
+        "authority": {"coordination_is_authorization": false, "handoff_transfers_authority": false, "delegation_required_for_independent_child_authority": true},
+        "budgets": {"timeout_ms": 5000},
+        "lifecycle": {"state": "assumed-success", "created_at": "2026-08-21T23:31:00Z", "updated_at": "2026-08-21T23:31:00Z"},
+        "inputs": [],
+        "outputs": []
+      }
+    }
+  ]
+}
