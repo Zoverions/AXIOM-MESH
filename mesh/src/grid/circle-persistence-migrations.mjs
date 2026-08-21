@@ -16,6 +16,24 @@ const CIRCLE_PERSISTENCE_PROJECTION_SQL = `
   ON circle_persistence_heads(event_seq, event_id);
 `;
 
+const CIRCLE_MEMBER_LIFECYCLE_HEAD_PROJECTION_SQL = `
+  CREATE TABLE IF NOT EXISTS circle_member_lifecycle_heads (
+    circle_id TEXT NOT NULL,
+    membership_id TEXT NOT NULL,
+    principal_id TEXT NOT NULL,
+    lifecycle_head_digest TEXT NOT NULL,
+    membership_lifecycle_digest TEXT NOT NULL,
+    credential_lifecycle_digest TEXT NOT NULL,
+    event_id TEXT NOT NULL UNIQUE REFERENCES events(event_id),
+    event_seq INTEGER NOT NULL UNIQUE REFERENCES events(seq),
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY(circle_id, membership_id)
+  ) STRICT;
+
+  CREATE INDEX IF NOT EXISTS circle_member_lifecycle_heads_event_idx
+  ON circle_member_lifecycle_heads(event_seq, event_id);
+`;
+
 const CIRCLE_PERSISTENCE_MIGRATIONS = Object.freeze([
   {
     version: 1,
@@ -23,6 +41,14 @@ const CIRCLE_PERSISTENCE_MIGRATIONS = Object.freeze([
     source: CIRCLE_PERSISTENCE_PROJECTION_SQL,
     up(db) {
       db.exec(CIRCLE_PERSISTENCE_PROJECTION_SQL);
+    }
+  },
+  {
+    version: 2,
+    name: 'durable-circle-member-lifecycle-head-projection',
+    source: CIRCLE_MEMBER_LIFECYCLE_HEAD_PROJECTION_SQL,
+    up(db) {
+      db.exec(CIRCLE_MEMBER_LIFECYCLE_HEAD_PROJECTION_SQL);
     }
   }
 ]);
@@ -98,5 +124,6 @@ export function circlePersistenceMigrationChecksum(migration) {
 
 export {
   CIRCLE_PERSISTENCE_MIGRATIONS,
-  CIRCLE_PERSISTENCE_PROJECTION_SQL
+  CIRCLE_PERSISTENCE_PROJECTION_SQL,
+  CIRCLE_MEMBER_LIFECYCLE_HEAD_PROJECTION_SQL
 };
