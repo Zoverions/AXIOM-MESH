@@ -291,6 +291,9 @@ function validateObservation(value, name) {
   requireEnum(value.result, OBSERVATION_RESULTS, `${name}.result`);
   if (value.evidence_sha256 !== undefined) requireSha256(value.evidence_sha256, `${name}.evidence_sha256`);
   if (value.evidence_uri !== undefined) requireString(value.evidence_uri, `${name}.evidence_uri`, 2048);
+  if (value.evidence_sha256 === undefined && value.evidence_uri === undefined) {
+    throw new ValidationError(`${name} requires an evidence digest or URI`);
+  }
   if (value.note !== undefined) requireString(value.note, `${name}.note`, 1000);
 }
 
@@ -346,6 +349,10 @@ export function validateRuntimeConnectorCatalogSchema(schema) {
     || schema?.properties?.lifecycle?.properties?.silent_permission_widening_allowed?.const !== false
     || schema?.properties?.lifecycle?.properties?.quarantine_supported?.const !== true
     || schema?.properties?.non_claims?.minItems !== 1
+    || canonicalJson(schema?.$defs?.observation?.anyOf ?? null) !== canonicalJson([
+      { required: ['evidence_sha256'] },
+      { required: ['evidence_uri'] }
+    ])
   ) throw new ValidationError('Runtime connector catalog contract invariants are invalid');
   return true;
 }
@@ -515,8 +522,9 @@ export function validateRuntimeConnectorCatalogEntry(entry) {
   }
   if (entry.assurance.evidence_fresh_until !== undefined) {
     const freshUntil = requireDateTime(entry.assurance.evidence_fresh_until, 'Runtime connector catalog evidence_fresh_until');
-    if (reviewedAt !== null && freshUntil < reviewedAt) {
-      throw new ValidationError('Runtime connector catalog evidence_fresh_until precedes last_reviewed_at');
+    const freshnessBaseline = reviewedAt ?? catalogedAt;
+    if (freshUntil < freshnessBaseline) {
+      throw new ValidationError('Runtime connector catalog evidence_fresh_until precedes review/catalog baseline');
     }
   }
 
