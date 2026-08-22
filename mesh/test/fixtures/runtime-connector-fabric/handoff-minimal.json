@@ -8,6 +8,8 @@
   "execution_target": {
     "integration_id": "runtime:synthetic-reference",
     "integration_class": "agent-runtime",
+    "catalog_entry_id": "runtime:synthetic-reference",
+    "catalog_entry_version": "0.1.0",
     "adapter_contract": {
       "contract_id": "axiom.agent-runtime-adapter",
       "contract_version": "1.0.0",
