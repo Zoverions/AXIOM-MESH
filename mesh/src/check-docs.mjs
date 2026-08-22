@@ -10,6 +10,7 @@ import {
 import { ACTIVE_GATEWAY_CLIENT_CONTRACT } from './lib/gateway-client-contract.mjs';
 import { validateCapabilityRegistry } from './check-registry.mjs';
 import { verifyRuntimeAdapterContract } from './lib/runtime-adapter-contract.mjs';
+import { verifyRuntimeConnectorFabricContracts } from './lib/runtime-connector-fabric-contracts.mjs';
 
 export const CANONICAL_DOCUMENTS = Object.freeze([
   'README.md',
@@ -23,6 +24,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/MASTER-TODO.md',
   'docs/MASTER-TODO-PLURAL-AUTHORITY.md',
   'docs/MASTER-TODO-AGENT-INTEROPERABILITY.md',
+  'docs/MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md',
   'docs/ROADMAP.md',
   'docs/ROADMAP-EXTENSION-PLURAL-AUTHORITY.md',
   'docs/ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md',
@@ -39,6 +41,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/AGENT-COMMONS.md',
   'docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md',
   'docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md',
+  'docs/architecture/RUNTIME-AND-CONNECTOR-FABRIC.md',
   'docs/architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md',
   'docs/architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md',
   'docs/architecture/PERSONAL-AGENT-PACK-V2-AND-COMPANION-CONTINUITY.md',
@@ -54,6 +57,8 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/architecture/contracts/personal-agent-pack.v1.schema.json',
   'docs/architecture/contracts/personal-agent-pack.v2.schema.json',
   'docs/architecture/contracts/personal-model-adaptation-authorization.v1.schema.json',
+  'docs/architecture/contracts/runtime-connector-catalog-entry.v1.schema.json',
+  'docs/architecture/contracts/task-artifact-handoff.v1.schema.json',
   'docs/architecture/contracts/sovereign-vault.v1.schema.json',
   'docs/architecture/contracts/vault-access-lease.v1.schema.json',
   'docs/audits/SCALABILITY-AUDIT-2026-07-30.md',
@@ -69,6 +74,8 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/rebuild/STATUS.md',
   'docs/reviews/PLURAL-AUTHORITY-ARCHITECTURE-REVIEW-2026-08-03.md',
   'docs/reviews/AGENT-INTEROPERABILITY-ARCHITECTURE-REVIEW-2026-08-09.md',
+  'docs/reviews/RUNTIME-CANDIDATE-SURVEY-2026-08-21.md',
+  'docs/reviews/HERMES-RUNTIME-002-CANDIDATE-PIN-2026-08-21.md',
   'docs/security/CREDENTIAL-HISTORY-REVOCATION.md',
   'docs/security/CURRENT-BUILD-THREAT-MODEL.md',
   'docs/security/REMOTE-SOCIAL-THREAT-REVIEW.md',
@@ -491,6 +498,7 @@ export function markdownLocalTargets(markdown) {
 
 export async function verifyCanonicalDocumentation(repositoryRoot = dirname(MESH_ROOT)) {
   verifyRuntimeAdapterContract();
+  verifyRuntimeConnectorFabricContracts();
   await verifyRepositoryMarkdownBoundary(repositoryRoot);
   await verifySupportedDocumentationBoundary(repositoryRoot);
   const contents = new Map();
