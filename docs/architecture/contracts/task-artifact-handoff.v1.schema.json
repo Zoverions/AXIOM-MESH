@@ -60,7 +60,7 @@
       "properties": {
         "integration_id": {
           "description": "Stable integration/subject identity. Exact executable/profile state is bound by catalog_entry_id and catalog_entry_version.",
-          "$ref": "#/$defs/id"
+          "$ref": "#/$defs/catalogId"
         },
         "integration_class": {
           "enum": [
@@ -74,7 +74,7 @@
         },
         "catalog_entry_id": {
           "description": "Exact immutable catalog entry identity selected for this task.",
-          "$ref": "#/$defs/id"
+          "$ref": "#/$defs/catalogId"
         },
         "catalog_entry_version": {
           "description": "Exact catalog entry version selected for this task. Catalog storage must not mutate an entry version in place.",
@@ -206,9 +206,8 @@
           "minimum": 0,
           "maximum": 100000
         },
-        "cost_ceiling_minor_units": {
-          "type": "integer",
-          "minimum": 0
+        "cost_ceiling": {
+          "$ref": "#/$defs/money"
         }
       }
     },
@@ -328,6 +327,10 @@
       "type": "string",
       "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]{1,191}$"
     },
+    "catalogId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._:-]{1,127}$"
+    },
     "sha256": {
       "type": "string",
       "pattern": "^[a-f0-9]{64}$"
@@ -354,6 +357,21 @@
         },
         "contract_sha256": {
           "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "money": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["amount_minor_units", "currency"],
+      "properties": {
+        "amount_minor_units": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
         }
       }
     },
