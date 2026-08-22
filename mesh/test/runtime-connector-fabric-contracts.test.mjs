@@ -73,7 +73,7 @@ test('runtime connector fabric draft contracts preserve zero-authority coordinat
   assert.equal(result.external_effect_performed, false);
 });
 
-test('catalog schema rejects installation authority and silent permission widening', () => {
+test('catalog schema rejects installation authority, hollow evidence, and silent widening', () => {
   const catalog = load(CATALOG_URL);
   assert.equal(validateRuntimeConnectorCatalogSchema(catalog), true);
 
@@ -106,7 +106,7 @@ test('catalog schema rejects installation authority and silent permission wideni
   );
 });
 
-test('catalog schema keeps integration and review states separate from authority/promotion', () => {
+test('catalog schema keeps aggregate review, curation, and promotion labels out of evidence identity', () => {
   const catalog = load(CATALOG_URL);
 
   const widenedClass = structuredClone(catalog);
@@ -116,11 +116,13 @@ test('catalog schema keeps integration and review states separate from authority
     /integration classes are invalid/
   );
 
-  const promotedReviewState = structuredClone(catalog);
-  promotedReviewState.properties.subject.properties.review_state.enum.push('promoted');
+  const aggregateReviewLabel = structuredClone(catalog);
+  aggregateReviewLabel.properties.subject.properties.review_state = {
+    enum: ['unreviewed', 'promoted']
+  };
   assert.throws(
-    () => validateRuntimeConnectorCatalogSchema(promotedReviewState),
-    /review states are invalid/
+    () => validateRuntimeConnectorCatalogSchema(aggregateReviewLabel),
+    /contract invariants are invalid/
   );
 
   const curationAsAssurance = structuredClone(catalog);
@@ -131,7 +133,7 @@ test('catalog schema keeps integration and review states separate from authority
   );
 });
 
-test('task handoff schema rejects alternate authority roots or coordination as authorization', () => {
+test('task handoff schema rejects alternate authority roots or unpinned execution targets', () => {
   const handoff = load(HANDOFF_URL);
   assert.equal(validateTaskArtifactHandoffSchema(handoff), true);
 
@@ -144,6 +146,13 @@ test('task handoff schema rejects alternate authority roots or coordination as a
   assert.throws(
     () => validateTaskArtifactHandoffSchema(unpinnedExecutionTarget),
     /execution target required fields are invalid/
+  );
+
+  const widenedCatalogId = structuredClone(handoff);
+  widenedCatalogId.properties.execution_target.properties.catalog_entry_id.$ref = '#/$defs/id';
+  assert.throws(
+    () => validateTaskArtifactHandoffSchema(widenedCatalogId),
+    /contract invariants are invalid/
   );
 
   const coordinationAuthority = structuredClone(handoff);
@@ -185,7 +194,7 @@ test('task handoff lifecycle states cannot silently acquire a success-like state
   );
 });
 
-test('minimal and maximal catalog entries satisfy reviewed draft validation', () => {
+test('minimal and maximal catalog entries satisfy evidence-only draft validation', () => {
   const minimal = load(CATALOG_MINIMAL_URL);
   const maximal = load(CATALOG_MAXIMAL_URL);
 
@@ -198,7 +207,11 @@ test('minimal and maximal catalog entries satisfy reviewed draft validation', ()
   assert.equal(maximal.orchestration.may_spawn_workers, true);
   assert.equal(maximal.orchestration.independent_child_authority_requested, true);
   assert.equal(maximal.lifecycle.silent_permission_widening_allowed, false);
-  assert.notEqual(maximal.subject.review_state, 'promoted');
+  assert.equal(Object.hasOwn(maximal.subject, 'review_state'), false);
+  assert.deepEqual(maximal.requested_access.resource_bounds.cost_ceiling, {
+    amount_minor_units: 0,
+    currency: 'USD'
+  });
   assert.ok(maximal.assurance.observations.every(
     observation => observation.evidence_sha256 || observation.evidence_uri
   ));
@@ -221,6 +234,10 @@ test('queued, completed, and uncertain task handoffs satisfy reviewed draft vali
   assert.equal(maximal.authority.handoff_transfers_authority, false);
   assert.equal(maximal.request.runtime_operation, 'memory.create');
   assert.equal(maximal.request.axiom_action, 'memory.create');
+  assert.deepEqual(maximal.budgets.cost_ceiling, {
+    amount_minor_units: 250,
+    currency: 'USD'
+  });
   assert.equal(maximal.lifecycle.state, 'completed');
   assert.ok(maximal.lifecycle.terminal_receipt_id);
   assert.equal(uncertain.lifecycle.state, 'uncertain');
