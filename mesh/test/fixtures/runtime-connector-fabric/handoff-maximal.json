@@ -11,6 +11,8 @@
   "execution_target": {
     "integration_id": "runtime:synthetic-reference",
     "integration_class": "agent-runtime",
+    "catalog_entry_id": "runtime:synthetic-reference:rich-profile",
+    "catalog_entry_version": "0.1.0",
     "artifact_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
     "adapter_contract": {
       "contract_id": "axiom.agent-runtime-adapter",
