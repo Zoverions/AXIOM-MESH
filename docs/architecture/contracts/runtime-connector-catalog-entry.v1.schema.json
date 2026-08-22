@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:axiom:contract:runtime-connector-catalog-entry:v1",
   "title": "AXIOM Runtime Connector Catalog Entry v1",
-  "description": "Draft evidence-bearing catalog entry for runtimes, model providers, tool/service connectors, protocol adapters, compute backends, and oracle/evidence sources. Catalog presence, review state, conformance evidence, and installation grant zero authority and do not imply production promotion.",
+  "description": "Draft evidence-bearing catalog entry for runtimes, model providers, tool/service connectors, protocol adapters, compute backends, and oracle/evidence sources. Catalog presence, evidence, and installation grant zero authority and do not imply production promotion.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -40,9 +40,10 @@
       ]
     },
     "subject": {
+      "description": "Stable subject identity only. Workflow labels, conformance summaries, curation, quarantine, deprecation, and promotion are derived or overlay state rather than self-asserted subject properties.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["subject_id", "display_name", "review_state"],
+      "required": ["subject_id", "display_name"],
       "properties": {
         "subject_id": {
           "$ref": "#/$defs/id"
@@ -55,19 +56,6 @@
         "description": {
           "type": "string",
           "maxLength": 2000
-        },
-        "review_state": {
-          "description": "Catalog/evidence review state only. It is not capability lifecycle state, production promotion, or local authorization.",
-          "enum": [
-            "unreviewed",
-            "research",
-            "conformance-candidate",
-            "conformance-reviewed",
-            "pilot-evidence",
-            "quarantined",
-            "deprecated",
-            "retired"
-          ]
         }
       }
     },
@@ -285,9 +273,8 @@
               "type": "integer",
               "minimum": 1
             },
-            "cost_ceiling_minor_units": {
-              "type": "integer",
-              "minimum": 0
+            "cost_ceiling": {
+              "$ref": "#/$defs/money"
             }
           }
         }
@@ -348,7 +335,7 @@
       }
     },
     "assurance": {
-      "description": "Technical and operational observations only. Community or Circle curation is a separate overlay and does not become assurance or authorization.",
+      "description": "Technical and operational observations only. Every observation carries an evidence digest or retrieval URI. Aggregate workflow/review labels and community/Circle curation are separate derived or overlay state and do not become assurance or authorization.",
       "type": "object",
       "additionalProperties": false,
       "required": ["observations", "cataloged_at"],
@@ -372,6 +359,7 @@
       }
     },
     "lifecycle": {
+      "description": "Static lifecycle behavior declared by this immutable entry version. Mutable workflow, quarantine, recommendation, deprecation, or promotion state belongs in separate local/curation overlays.",
       "type": "object",
       "additionalProperties": false,
       "required": ["update_mode", "silent_permission_widening_allowed", "rollback_available", "quarantine_supported"],
@@ -421,7 +409,7 @@
     },
     "gitCommit": {
       "type": "string",
-      "pattern": "^[a-fA-F0-9]{40,64}$"
+      "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$"
     },
     "dateTime": {
       "type": "string",
@@ -458,6 +446,21 @@
         },
         "contract_sha256": {
           "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "money": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["amount_minor_units", "currency"],
+      "properties": {
+        "amount_minor_units": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
         }
       }
     },
