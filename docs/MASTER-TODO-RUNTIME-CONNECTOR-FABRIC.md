@@ -2,7 +2,7 @@
 
 **Status:** subordinate execution queue; documentation/contract work only until existing capability, policy, runtime, test, and promotion gates are satisfied
 
-**Updated:** 2026-08-21
+**Updated:** 2026-08-22
 
 **Parent workstreams:** `ORCH-001`, `RUNTIME-001`, `RUNTIME-002`, `AI-001`, `ROUTE-001`, AXIOM Studio, MCP/A2A laboratories, multi-host dispatch, and Circle governance.
 
@@ -31,9 +31,16 @@ This queue does not create an alternate authority system and does not promote an
 - [x] Require exact runtime-operation -> AXIOM-action mapping instead of relying on broad capability labels.
 - [x] Require assurance observations to contain an evidence digest or retrieval URI.
 - [x] Make monetary ceilings unit-explicit with amount-in-minor-units plus currency.
-- [ ] Byte-pin the schemas only after the final reviewed head passes protected CI.
+- [x] Byte-pin the reviewed v1 schema bytes after the merge-forward head and digest-observation head passed protected Linux, Windows, Apple Silicon, and Intel macOS CI.
 
-**Draft-contract checkpoint:** the zero-dependency validator now checks the safety-critical schema invariants plus minimal/rich/uncertain instance shapes, immutable provenance, evidence-backed observations, explicit network declarations, currency-bound monetary ceilings, exact catalog-entry task binding, resource bounds, task lifecycle/receipt consistency, event bounds, and the adversarial classes above. It deliberately continues to report the contracts as unfrozen and not byte-pinned until the final CI/freeze checkpoint.
+**Frozen-contract checkpoint:** the existing zero-dependency semantic validator continues to check the safety-critical schema invariants plus minimal/rich/uncertain instance shapes, immutable provenance, evidence-backed observations, explicit network declarations, currency-bound monetary ceilings, exact catalog-entry task binding, resource bounds, task lifecycle/receipt consistency, event bounds, and the adversarial classes above. Its instance-validation scope remains deliberately named `draft-critical-invariants` so byte freezing is not misrepresented as complete semantic certification. A separate zero-dependency frozen-contract wrapper now enforces the exact raw schema bytes, reports `contract_frozen: true` and `contract_byte_pinned: true`, and preserves `capability_promoted: false`, `external_runtime_loaded: false`, and `external_effect_performed: false`.
+
+The frozen SHA-256 identities are:
+
+- `axiom-runtime-connector-catalog-entry.v1`: `0fbd3cf2e4a5df8bd803427413a37e1d83d5ccfa7568ac02a4760c8af7beca46`;
+- `axiom-task-artifact-handoff.v1`: `7a8cf7f7496d1794d74f70545e032fc3790d5eecc227f27040370023abf28e50`.
+
+Protected byte-drift tests fail closed if either committed schema changes under those identities.
 
 ### Draft contract compatibility and migration rules
 
@@ -47,7 +54,7 @@ These rules apply to both `axiom-runtime-connector-catalog-entry.v1` and `axiom-
 
 **Migration:** a new contract version is a new admitted artifact. Existing activated integrations remain bound to their exact prior contract, catalog-entry, artifact, and policy assumptions until explicitly reviewed, migrated, revoked, or retired. Migration requires an old/new schema and permission diff, source/artifact/SBOM re-check where applicable, conformance tests for both versions, explicit re-admission, rollback instructions, and preserved prior receipts/evidence. No runtime, catalog updater, Circle, or protocol peer may silently upgrade a contract/catalog entry or reinterpret an old receipt under newer semantics.
 
-**Freeze rule:** when the final reviewed field surface passes protected CI, record exact schema digests, pin them in the zero-dependency verifier, add byte-drift tests, and update this checkpoint. Until then the current checker protects critical semantics while reporting `contract_frozen: false` and `contract_byte_pinned: false`.
+**Freeze rule:** the reviewed v1 schema bytes are now fixed by the raw-byte digests above. Any unexplained byte change under those same identities must fail closed. A future schema change follows the compatibility rules above and requires an explicit contract-version decision rather than editing the pinned bytes in place. Byte pinning does not itself load a schema into production, certify a runtime, promote a capability, or authorize an effect.
 
 ## P2 — catalog and inert import
 
