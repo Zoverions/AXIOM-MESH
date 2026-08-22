@@ -411,7 +411,7 @@ test('confidence requirements fail closed for low-confidence or unscored inferen
   );
 
   const request = baseRequest();
-  request.semantic_needs[0].minimum_confidence = undefined;
+  delete request.semantic_needs[0].minimum_confidence;
   request.semantic_needs[0].acceptable_disclosure_modes = ['derived-inference'];
   const inferenceClaims = baseClaims();
   inferenceClaims[0].disclosure_type = 'derived-inference';
