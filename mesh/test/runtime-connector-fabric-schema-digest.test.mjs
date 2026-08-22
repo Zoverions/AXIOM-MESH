@@ -1,28 +1,39 @@
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import {
+  RUNTIME_CONNECTOR_CATALOG_SCHEMA_SHA256,
+  TASK_ARTIFACT_HANDOFF_SCHEMA_SHA256,
+  verifyRuntimeConnectorFabricContractPins,
+  verifyRuntimeConnectorFabricFrozenContract
+} from '../src/lib/runtime-connector-fabric-frozen-contract.mjs';
 
-const CATALOG_URL = new URL(
-  '../../docs/architecture/contracts/runtime-connector-catalog-entry.v1.schema.json',
-  import.meta.url
-);
-const HANDOFF_URL = new URL(
-  '../../docs/architecture/contracts/task-artifact-handoff.v1.schema.json',
-  import.meta.url
-);
+test('Runtime Fabric v1 schema bytes are frozen and exact', () => {
+  const result = verifyRuntimeConnectorFabricFrozenContract();
 
-function sha256(bytes) {
-  return createHash('sha256').update(bytes).digest('hex');
-}
+  assert.equal(result.valid, true);
+  assert.equal(result.contract_frozen, true);
+  assert.equal(result.contract_byte_pinned, true);
+  assert.equal(
+    result.catalog_schema_sha256,
+    RUNTIME_CONNECTOR_CATALOG_SCHEMA_SHA256
+  );
+  assert.equal(
+    result.task_handoff_schema_sha256,
+    TASK_ARTIFACT_HANDOFF_SCHEMA_SHA256
+  );
+  assert.equal(result.instance_validation, 'draft-critical-invariants');
+  assert.equal(result.capability_promoted, false);
+  assert.equal(result.external_runtime_loaded, false);
+  assert.equal(result.external_effect_performed, false);
+});
 
-const catalogSha256 = sha256(readFileSync(CATALOG_URL));
-const handoffSha256 = sha256(readFileSync(HANDOFF_URL));
-
-test(
-  `Runtime Fabric candidate schema bytes are observable before freeze: catalog=${catalogSha256} handoff=${handoffSha256}`,
-  () => {
-    assert.match(catalogSha256, /^[a-f0-9]{64}$/);
-    assert.match(handoffSha256, /^[a-f0-9]{64}$/);
-  }
-);
+test('Runtime Fabric v1 byte pins fail closed on schema drift', () => {
+  assert.throws(
+    () => verifyRuntimeConnectorFabricContractPins({ catalogBytes: Buffer.from('{}\n') }),
+    /Catalog v1 schema byte pin drifted/
+  );
+  assert.throws(
+    () => verifyRuntimeConnectorFabricContractPins({ taskHandoffBytes: Buffer.from('{}\n') }),
+    /Task Artifact Handoff v1 schema byte pin drifted/
+  );
+});
