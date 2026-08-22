@@ -92,7 +92,7 @@ export function validateContextVaultCatalogEntry(input) {
   assertStringArray(entry.allowed_purposes, 'context vault catalog allowed_purposes', {
     min: 1,
     max: 128,
-    maxStringLength: 240
+    maxStringLength: 160
   });
   assertBoolean(
     entry.high_risk_disclosure_requires_owner_confirmation,
