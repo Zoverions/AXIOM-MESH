@@ -5,8 +5,7 @@
   "integration_class": "agent-runtime",
   "subject": {
     "subject_id": "runtime:synthetic-reference",
-    "display_name": "Synthetic Reference Runtime",
-    "review_state": "research"
+    "display_name": "Synthetic Reference Runtime"
   },
   "provenance": {
     "source_kind": "source-repository",
