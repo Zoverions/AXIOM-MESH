@@ -31,7 +31,6 @@ const REQUEST_DISCLOSURE_MODES = new Set([
   'derived-inference',
   'owner-approved-verbatim'
 ]);
-
 const CAPSULE_DISCLOSURE_MODES = new Set([
   'verbatim-approved',
   'redacted',
@@ -41,151 +40,65 @@ const CAPSULE_DISCLOSURE_MODES = new Set([
 ]);
 
 const REQUEST_KEYS = Object.freeze([
-  'schema',
-  'request_id',
-  'owner_subject_ref',
-  'requester_principal_ref',
-  'recipient_principal_ref',
-  'destination_ref',
-  'purpose',
-  'task_class',
-  'issued_at',
-  'expires_at',
-  'semantic_needs',
-  'retention_request',
-  'requester_evidence_refs',
-  'minimum_necessary_requested',
-  'source_vault_selector_in_request',
-  'requests_vault_mount',
-  'requests_raw_vault_object',
-  'grants_vault_access',
-  'grants_execution_authority',
-  'onward_disclosure_requested'
+  'schema', 'request_id', 'owner_subject_ref', 'requester_principal_ref',
+  'recipient_principal_ref', 'destination_ref', 'purpose', 'task_class',
+  'issued_at', 'expires_at', 'semantic_needs', 'retention_request',
+  'requester_evidence_refs', 'minimum_necessary_requested',
+  'source_vault_selector_in_request', 'requests_vault_mount',
+  'requests_raw_vault_object', 'grants_vault_access',
+  'grants_execution_authority', 'onward_disclosure_requested'
 ]);
-
 const LEASE_KEYS = Object.freeze([
-  'schema',
-  'lease_id',
-  'owner_subject_ref',
-  'holder_principal_ref',
-  'holder_runtime_ref',
-  'vault_id',
-  'purpose',
-  'task_class',
-  'issued_at',
-  'expires_at',
-  'allowed_operations',
-  'resource_scope',
-  'policy_decision_ref',
-  'grant_ref',
-  'owner_confirmation_ref',
-  'access_receipt_reservation_ref',
-  'key_handle_ref',
-  'delegable',
-  'usable_outside_owner_trust_domain',
-  'contains_raw_key_material',
-  'grants_other_vault_access',
-  'grants_kernel_effect_authority',
-  'permits_raw_content_export',
-  'mutation_authority',
-  'requires_revocation_check_before_use',
+  'schema', 'lease_id', 'owner_subject_ref', 'holder_principal_ref',
+  'holder_runtime_ref', 'vault_id', 'purpose', 'task_class', 'issued_at',
+  'expires_at', 'allowed_operations', 'resource_scope', 'policy_decision_ref',
+  'grant_ref', 'owner_confirmation_ref', 'access_receipt_reservation_ref',
+  'key_handle_ref', 'delegable', 'usable_outside_owner_trust_domain',
+  'contains_raw_key_material', 'grants_other_vault_access',
+  'grants_kernel_effect_authority', 'permits_raw_content_export',
+  'mutation_authority', 'requires_revocation_check_before_use',
   'access_receipt_required'
 ]);
-
 const CAPSULE_KEYS = Object.freeze([
-  'schema',
-  'capsule_id',
-  'owner_subject_ref',
-  'requester_principal_ref',
-  'recipient_principal_ref',
-  'destination_ref',
-  'purpose',
-  'task_class',
-  'issued_at',
-  'expires_at',
-  'disclosures',
-  'retention',
-  'policy_decision_ref',
-  'grant_ref',
-  'access_receipt_refs',
-  'local_provenance_receipt_refs',
-  'minimum_necessary_policy_ref',
-  'capsule_sha256',
-  'grants_vault_access',
-  'grants_execution_authority',
-  'contains_raw_vault_object',
-  'source_content_resolvable_by_recipient',
+  'schema', 'capsule_id', 'owner_subject_ref', 'requester_principal_ref',
+  'recipient_principal_ref', 'destination_ref', 'purpose', 'task_class',
+  'issued_at', 'expires_at', 'disclosures', 'retention',
+  'policy_decision_ref', 'grant_ref', 'access_receipt_refs',
+  'local_provenance_receipt_refs', 'minimum_necessary_policy_ref',
+  'capsule_sha256', 'grants_vault_access', 'grants_execution_authority',
+  'contains_raw_vault_object', 'source_content_resolvable_by_recipient',
   'onward_disclosure_allowed'
 ]);
-
 const CLAIM_KEYS = Object.freeze([
-  'claim_id',
-  'semantic_type',
-  'value',
-  'disclosure_type',
-  'sensitivity',
-  'confidence',
-  'limitations',
-  'source_vault_id',
-  'source_resource_refs'
+  'claim_id', 'semantic_type', 'value', 'disclosure_type', 'sensitivity',
+  'confidence', 'limitations', 'source_vault_id', 'source_resource_refs'
 ]);
-
 const RECEIPT_KEYS = Object.freeze([
-  'receipt_ref',
-  'reservation_ref',
-  'lease_id',
-  'owner_subject_ref',
-  'holder_principal_ref',
-  'vault_id',
-  'purpose',
-  'task_class',
-  'recorded_at',
+  'receipt_ref', 'reservation_ref', 'lease_id', 'owner_subject_ref',
+  'holder_principal_ref', 'vault_id', 'purpose', 'task_class', 'recorded_at',
   'committed'
 ]);
-
+const REVOCATION_CHECK_KEYS = Object.freeze([
+  'check_ref', 'lease_id', 'checked_at', 'valid_until', 'revoked'
+]);
 const POLICY_KEYS = Object.freeze([
-  'schema',
-  'decision_ref',
-  'request_id',
-  'owner_subject_ref',
-  'recipient_principal_ref',
-  'allowed',
-  'allowed_semantic_types',
-  'allowed_disclosure_modes',
-  'maximum_sensitivity',
-  'max_retention_seconds',
-  'recipient_may_persist',
-  'max_capsule_lifetime_seconds',
+  'schema', 'decision_ref', 'request_id', 'owner_subject_ref',
+  'recipient_principal_ref', 'allowed', 'allowed_semantic_types',
+  'allowed_disclosure_modes', 'maximum_sensitivity', 'max_retention_seconds',
+  'recipient_may_persist', 'max_capsule_lifetime_seconds',
   'minimum_necessary_confirmed'
 ]);
 
 export function validateContextRequest(request) {
   assertPlainObject(request, 'context request');
-  exactKeys(
-    request,
-    REQUEST_KEYS,
-    [
-      'schema',
-      'request_id',
-      'owner_subject_ref',
-      'requester_principal_ref',
-      'recipient_principal_ref',
-      'purpose',
-      'task_class',
-      'issued_at',
-      'expires_at',
-      'semantic_needs',
-      'retention_request',
-      'minimum_necessary_requested',
-      'source_vault_selector_in_request',
-      'requests_vault_mount',
-      'requests_raw_vault_object',
-      'grants_vault_access',
-      'grants_execution_authority',
-      'onward_disclosure_requested'
-    ],
-    'context request'
-  );
+  exactKeys(request, REQUEST_KEYS, [
+    'schema', 'request_id', 'owner_subject_ref', 'requester_principal_ref',
+    'recipient_principal_ref', 'purpose', 'task_class', 'issued_at',
+    'expires_at', 'semantic_needs', 'retention_request',
+    'minimum_necessary_requested', 'source_vault_selector_in_request',
+    'requests_vault_mount', 'requests_raw_vault_object', 'grants_vault_access',
+    'grants_execution_authority', 'onward_disclosure_requested'
+  ], 'context request');
 
   assertConst(request.schema, CONTEXT_REQUEST_V1_SCHEMA, 'context request schema');
   assertId(request.request_id, 'request_id');
@@ -197,31 +110,21 @@ export function validateContextRequest(request) {
   assertString(request.task_class, 'task_class', { min: 1, max: 160 });
   const issuedAt = assertDateTime(request.issued_at, 'issued_at');
   const expiresAt = assertDateTime(request.expires_at, 'expires_at');
-  if (!(issuedAt < expiresAt)) throw new ValidationError('context request expires_at must follow issued_at');
+  if (!(issuedAt < expiresAt)) {
+    throw new ValidationError('context request expires_at must follow issued_at');
+  }
 
   const needs = assertArray(request.semantic_needs, 'semantic_needs', { min: 1, max: 64 });
   const semanticTypes = new Set();
   for (const [index, need] of needs.entries()) {
     assertPlainObject(need, `semantic_needs[${index}]`);
-    exactKeys(
-      need,
-      [
-        'semantic_type',
-        'need',
-        'required',
-        'maximum_sensitivity',
-        'acceptable_disclosure_modes',
-        'minimum_confidence'
-      ],
-      [
-        'semantic_type',
-        'need',
-        'required',
-        'maximum_sensitivity',
-        'acceptable_disclosure_modes'
-      ],
-      `semantic_needs[${index}]`
-    );
+    exactKeys(need, [
+      'semantic_type', 'need', 'required', 'maximum_sensitivity',
+      'acceptable_disclosure_modes', 'minimum_confidence'
+    ], [
+      'semantic_type', 'need', 'required', 'maximum_sensitivity',
+      'acceptable_disclosure_modes'
+    ], `semantic_needs[${index}]`);
     const semanticType = assertString(
       need.semantic_type,
       `semantic_needs[${index}].semantic_type`,
@@ -246,17 +149,12 @@ export function validateContextRequest(request) {
   if (request.requester_evidence_refs !== undefined) {
     assertIdArray(request.requester_evidence_refs, 'requester_evidence_refs', { min: 0, max: 64 });
   }
-
   assertConst(request.minimum_necessary_requested, true, 'minimum_necessary_requested');
   assertConst(request.source_vault_selector_in_request, false, 'source_vault_selector_in_request');
   assertConst(request.requests_vault_mount, false, 'requests_vault_mount');
   assertConst(request.requests_raw_vault_object, false, 'requests_raw_vault_object');
   assertConst(request.grants_vault_access, false, 'context request grants_vault_access');
-  assertConst(
-    request.grants_execution_authority,
-    false,
-    'context request grants_execution_authority'
-  );
+  assertConst(request.grants_execution_authority, false, 'context request grants_execution_authority');
   assertConst(request.onward_disclosure_requested, false, 'onward_disclosure_requested');
 
   return Object.freeze({
@@ -272,36 +170,16 @@ export function validateContextRequest(request) {
 
 export function validateVaultAccessLease(lease) {
   assertPlainObject(lease, 'vault access lease');
-  exactKeys(
-    lease,
-    LEASE_KEYS,
-    [
-      'schema',
-      'lease_id',
-      'owner_subject_ref',
-      'holder_principal_ref',
-      'vault_id',
-      'purpose',
-      'task_class',
-      'issued_at',
-      'expires_at',
-      'allowed_operations',
-      'resource_scope',
-      'policy_decision_ref',
-      'grant_ref',
-      'access_receipt_reservation_ref',
-      'delegable',
-      'usable_outside_owner_trust_domain',
-      'contains_raw_key_material',
-      'grants_other_vault_access',
-      'grants_kernel_effect_authority',
-      'permits_raw_content_export',
-      'mutation_authority',
-      'requires_revocation_check_before_use',
-      'access_receipt_required'
-    ],
-    'vault access lease'
-  );
+  exactKeys(lease, LEASE_KEYS, [
+    'schema', 'lease_id', 'owner_subject_ref', 'holder_principal_ref',
+    'vault_id', 'purpose', 'task_class', 'issued_at', 'expires_at',
+    'allowed_operations', 'resource_scope', 'policy_decision_ref', 'grant_ref',
+    'access_receipt_reservation_ref', 'delegable',
+    'usable_outside_owner_trust_domain', 'contains_raw_key_material',
+    'grants_other_vault_access', 'grants_kernel_effect_authority',
+    'permits_raw_content_export', 'mutation_authority',
+    'requires_revocation_check_before_use', 'access_receipt_required'
+  ], 'vault access lease');
 
   assertConst(lease.schema, VAULT_ACCESS_LEASE_V1_SCHEMA, 'vault access lease schema');
   assertId(lease.lease_id, 'lease_id');
@@ -313,7 +191,9 @@ export function validateVaultAccessLease(lease) {
   assertString(lease.task_class, 'lease task_class', { min: 1, max: 160 });
   const issuedAt = assertDateTime(lease.issued_at, 'lease issued_at');
   const expiresAt = assertDateTime(lease.expires_at, 'lease expires_at');
-  if (!(issuedAt < expiresAt)) throw new ValidationError('vault access lease expires_at must follow issued_at');
+  if (!(issuedAt < expiresAt)) {
+    throw new ValidationError('vault access lease expires_at must follow issued_at');
+  }
   assertEnumArray(
     lease.allowed_operations,
     new Set(['read', 'derive']),
@@ -328,20 +208,11 @@ export function validateVaultAccessLease(lease) {
   }
   assertId(lease.access_receipt_reservation_ref, 'access_receipt_reservation_ref');
   if (lease.key_handle_ref !== undefined) assertId(lease.key_handle_ref, 'key_handle_ref');
-
   assertConst(lease.delegable, false, 'lease delegable');
-  assertConst(
-    lease.usable_outside_owner_trust_domain,
-    false,
-    'usable_outside_owner_trust_domain'
-  );
+  assertConst(lease.usable_outside_owner_trust_domain, false, 'usable_outside_owner_trust_domain');
   assertConst(lease.contains_raw_key_material, false, 'contains_raw_key_material');
   assertConst(lease.grants_other_vault_access, false, 'grants_other_vault_access');
-  assertConst(
-    lease.grants_kernel_effect_authority,
-    false,
-    'grants_kernel_effect_authority'
-  );
+  assertConst(lease.grants_kernel_effect_authority, false, 'grants_kernel_effect_authority');
   assertConst(lease.permits_raw_content_export, false, 'permits_raw_content_export');
   assertConst(lease.mutation_authority, false, 'mutation_authority');
   assertConst(
@@ -364,31 +235,14 @@ export function validateVaultAccessLease(lease) {
 
 export function validateContextCapsule(capsule) {
   assertPlainObject(capsule, 'context capsule');
-  exactKeys(
-    capsule,
-    CAPSULE_KEYS,
-    [
-      'schema',
-      'capsule_id',
-      'owner_subject_ref',
-      'requester_principal_ref',
-      'recipient_principal_ref',
-      'purpose',
-      'task_class',
-      'issued_at',
-      'expires_at',
-      'disclosures',
-      'retention',
-      'policy_decision_ref',
-      'access_receipt_refs',
-      'grants_vault_access',
-      'grants_execution_authority',
-      'contains_raw_vault_object',
-      'source_content_resolvable_by_recipient',
-      'onward_disclosure_allowed'
-    ],
-    'context capsule'
-  );
+  exactKeys(capsule, CAPSULE_KEYS, [
+    'schema', 'capsule_id', 'owner_subject_ref', 'requester_principal_ref',
+    'recipient_principal_ref', 'purpose', 'task_class', 'issued_at',
+    'expires_at', 'disclosures', 'retention', 'policy_decision_ref',
+    'access_receipt_refs', 'grants_vault_access', 'grants_execution_authority',
+    'contains_raw_vault_object', 'source_content_resolvable_by_recipient',
+    'onward_disclosure_allowed'
+  ], 'context capsule');
 
   assertConst(capsule.schema, CONTEXT_CAPSULE_V1_SCHEMA, 'context capsule schema');
   assertId(capsule.capsule_id, 'capsule_id');
@@ -400,12 +254,15 @@ export function validateContextCapsule(capsule) {
   assertString(capsule.task_class, 'capsule task_class', { min: 1, max: 160 });
   const issuedAt = assertDateTime(capsule.issued_at, 'capsule issued_at');
   const expiresAt = assertDateTime(capsule.expires_at, 'capsule expires_at');
-  if (!(issuedAt < expiresAt)) throw new ValidationError('context capsule expires_at must follow issued_at');
+  if (!(issuedAt < expiresAt)) {
+    throw new ValidationError('context capsule expires_at must follow issued_at');
+  }
 
   const disclosures = assertArray(capsule.disclosures, 'capsule disclosures', { min: 1, max: 128 });
   const claimIds = new Set();
+  const semanticTypes = new Set();
   for (const [index, disclosure] of disclosures.entries()) {
-    validateCapsuleDisclosure(disclosure, index, claimIds);
+    validateCapsuleDisclosure(disclosure, index, claimIds, semanticTypes);
   }
   validateCapsuleRetention(capsule.retention);
   assertId(capsule.policy_decision_ref, 'capsule policy_decision_ref');
@@ -429,7 +286,6 @@ export function validateContextCapsule(capsule) {
       throw new ValidationError('context capsule digest does not match capsule content');
     }
   }
-
   assertConst(capsule.grants_vault_access, false, 'capsule grants_vault_access');
   assertConst(capsule.grants_execution_authority, false, 'capsule grants_execution_authority');
   assertConst(capsule.contains_raw_vault_object, false, 'contains_raw_vault_object');
@@ -455,6 +311,7 @@ export function compileContextCapsule({
   leases,
   claims,
   accessReceipts,
+  revocationChecks,
   policyDecision,
   brokerPrincipalRef,
   capsuleId,
@@ -469,15 +326,19 @@ export function compileContextCapsule({
   const broker = assertId(brokerPrincipalRef, 'brokerPrincipalRef');
   const id = assertId(capsuleId, 'capsuleId');
   const policy = validateDisclosurePolicyDecision(policyDecision, request);
-  if (policy.allowed !== true) throw new ValidationError('disclosure policy decision denied the request');
+  if (policy.allowed !== true) {
+    throw new ValidationError('disclosure policy decision denied the request');
+  }
 
   const leaseMap = normalizeLeases(leases, request, broker, compileTime);
   const receiptIndex = normalizeAccessReceipts(accessReceipts, compileTime);
+  const revocationIndex = normalizeRevocationChecks(revocationChecks, compileTime);
   const needs = new Map(request.semantic_needs.map(need => [need.semantic_type, need]));
   const normalizedClaims = normalizeClaims(claims);
   const disclosures = [];
   const usedLeaseIds = new Set();
   const usedReceiptRefs = new Set();
+  const usedRevocationCheckRefs = new Set();
   const seenSemanticTypes = new Set();
 
   for (const claim of normalizedClaims) {
@@ -487,11 +348,7 @@ export function compileContextCapsule({
         `candidate claim ${claim.claim_id} was not requested by semantic type`
       );
     }
-    assertUnique(
-      seenSemanticTypes,
-      claim.semantic_type,
-      'compiled disclosure semantic type'
-    );
+    assertUnique(seenSemanticTypes, claim.semantic_type, 'compiled disclosure semantic type');
     if (!policy.allowed_semantic_types.includes(claim.semantic_type)) {
       throw new ValidationError(
         `candidate claim ${claim.claim_id} semantic type is not policy-allowed`
@@ -519,11 +376,10 @@ export function compileContextCapsule({
     );
     enforceConfidence(need, claim);
 
-    const operation = disclosureOperation(claim.disclosure_type);
     const lease = findAuthorizingLease({
       leaseMap,
       claim,
-      operation
+      operation: disclosureOperation(claim.disclosure_type)
     });
     if (!lease) {
       throw new ValidationError(
@@ -536,15 +392,27 @@ export function compileContextCapsule({
       );
     }
 
-    const receipt = findCommittedReceipt(receiptIndex, lease);
+    const receipt = findCommittedReceipt(receiptIndex, lease, compileTime);
     if (!receipt) {
       throw new ValidationError(
         `candidate claim ${claim.claim_id} has no committed access receipt for lease ${lease.lease_id}`
       );
     }
+    const revocationEvidence = findRevocationEvidence(
+      revocationIndex,
+      lease,
+      receipt,
+      compileTime
+    );
+    if (!revocationEvidence) {
+      throw new ValidationError(
+        `candidate claim ${claim.claim_id} has no current non-revoked lease check covering access and compilation`
+      );
+    }
+
     usedLeaseIds.add(lease.lease_id);
     usedReceiptRefs.add(receipt.receipt_ref);
-
+    for (const checkRef of revocationEvidence) usedRevocationCheckRefs.add(checkRef);
     disclosures.push({
       claim_id: claim.claim_id,
       semantic_type: claim.semantic_type,
@@ -559,9 +427,7 @@ export function compileContextCapsule({
 
   for (const need of request.semantic_needs) {
     if (need.required && !seenSemanticTypes.has(need.semantic_type)) {
-      throw new ValidationError(
-        `required semantic need was not satisfied: ${need.semantic_type}`
-      );
+      throw new ValidationError(`required semantic need was not satisfied: ${need.semantic_type}`);
     }
   }
   if (disclosures.length === 0) {
@@ -581,12 +447,16 @@ export function compileContextCapsule({
     policyExpiry
   );
   if (!(compileTime < capsuleExpiry)) {
-    throw new ValidationError('no positive capsule validity remains after request, lease, and policy limits');
+    throw new ValidationError(
+      'no positive capsule validity remains after request, lease, and policy limits'
+    );
   }
 
+  const remainingCapsuleSeconds = Math.floor((capsuleExpiry - compileTime) / 1000);
   const retentionSeconds = Math.min(
     request.retention_request.max_seconds,
-    policy.max_retention_seconds
+    policy.max_retention_seconds,
+    remainingCapsuleSeconds
   );
   const recipientMayPersist =
     retentionSeconds > 0
@@ -616,7 +486,9 @@ export function compileContextCapsule({
     retention: {
       max_seconds: retentionSeconds,
       recipient_may_persist: recipientMayPersist,
-      retention_class: recipientMayPersist ? 'policy-narrowed-persistable' : 'ephemeral-no-persistence'
+      retention_class: recipientMayPersist
+        ? 'policy-narrowed-persistable'
+        : 'ephemeral-no-persistence'
     },
     policy_decision_ref: policy.decision_ref,
     access_receipt_refs: [...usedReceiptRefs].sort(),
@@ -642,6 +514,7 @@ export function compileContextCapsule({
     policy_decision_ref: policy.decision_ref,
     used_lease_ids: [...usedLeaseIds].sort(),
     used_access_receipt_refs: [...usedReceiptRefs].sort(),
+    used_revocation_check_refs: [...usedRevocationCheckRefs].sort(),
     source_identifiers_in_capsule: false,
     compiler_reads_vaults: false,
     compiler_issues_leases: false,
@@ -702,37 +575,23 @@ function validateResourceScope(scope) {
   }
 }
 
-function validateCapsuleDisclosure(disclosure, index, claimIds) {
+function validateCapsuleDisclosure(disclosure, index, claimIds, semanticTypes) {
   assertPlainObject(disclosure, `disclosures[${index}]`);
-  exactKeys(
-    disclosure,
-    [
-      'claim_id',
-      'semantic_type',
-      'value',
-      'disclosure_type',
-      'sensitivity',
-      'confidence_required',
-      'confidence',
-      'limitations'
-    ],
-    [
-      'claim_id',
-      'semantic_type',
-      'value',
-      'disclosure_type',
-      'sensitivity',
-      'confidence_required',
-      'limitations'
-    ],
-    `disclosures[${index}]`
-  );
+  exactKeys(disclosure, [
+    'claim_id', 'semantic_type', 'value', 'disclosure_type', 'sensitivity',
+    'confidence_required', 'confidence', 'limitations'
+  ], [
+    'claim_id', 'semantic_type', 'value', 'disclosure_type', 'sensitivity',
+    'confidence_required', 'limitations'
+  ], `disclosures[${index}]`);
   const claimId = assertId(disclosure.claim_id, `disclosures[${index}].claim_id`);
   assertUnique(claimIds, claimId, 'capsule claim_id');
-  assertString(disclosure.semantic_type, `disclosures[${index}].semantic_type`, {
-    min: 1,
-    max: 240
-  });
+  const semanticType = assertString(
+    disclosure.semantic_type,
+    `disclosures[${index}].semantic_type`,
+    { min: 1, max: 240 }
+  );
+  assertUnique(semanticTypes, semanticType, 'capsule semantic_type');
   validateJsonValue(disclosure.value, `disclosures[${index}].value`);
   assertEnum(
     disclosure.disclosure_type,
@@ -740,10 +599,7 @@ function validateCapsuleDisclosure(disclosure, index, claimIds) {
     `disclosures[${index}].disclosure_type`
   );
   assertSensitivity(disclosure.sensitivity, `disclosures[${index}].sensitivity`);
-  assertBoolean(
-    disclosure.confidence_required,
-    `disclosures[${index}].confidence_required`
-  );
+  assertBoolean(disclosure.confidence_required, `disclosures[${index}].confidence_required`);
   if (disclosure.confidence_required && disclosure.confidence === undefined) {
     throw new ValidationError(`disclosures[${index}] requires confidence`);
   }
@@ -787,11 +643,7 @@ function validateDisclosurePolicyDecision(decision, request) {
   );
   assertId(decision.decision_ref, 'policy decision_ref');
   assertConst(decision.request_id, request.request_id, 'policy request_id');
-  assertConst(
-    decision.owner_subject_ref,
-    request.owner_subject_ref,
-    'policy owner_subject_ref'
-  );
+  assertConst(decision.owner_subject_ref, request.owner_subject_ref, 'policy owner_subject_ref');
   assertConst(
     decision.recipient_principal_ref,
     request.recipient_principal_ref,
@@ -850,7 +702,7 @@ function normalizeLeases(leases, request, broker, compileTime) {
       throw new ValidationError(`lease ${lease.lease_id} purpose or task class does not match request`);
     }
     if (compileTime < Date.parse(lease.issued_at) || compileTime >= Date.parse(lease.expires_at)) {
-      throw new ValidationError(`lease ${lease.lease_id} is not current at compilation time`);
+      throw new ValidationError(`lease ${lease.lease_id} is not time-current at compilation`);
     }
     map.set(lease.lease_id, lease);
   }
@@ -882,8 +734,34 @@ function normalizeAccessReceipts(receipts, compileTime) {
     list.push(receipt);
     byLease.set(receipt.lease_id, list);
   }
+  return byLease;
+}
+
+function normalizeRevocationChecks(checks, compileTime) {
+  const values = assertArray(checks, 'revocationChecks', { min: 1, max: 256 });
+  const checkRefs = new Set();
+  const byLease = new Map();
+  for (const [index, check] of values.entries()) {
+    assertPlainObject(check, `revocationChecks[${index}]`);
+    exactKeys(check, REVOCATION_CHECK_KEYS, REVOCATION_CHECK_KEYS, `revocationChecks[${index}]`);
+    const checkRef = assertId(check.check_ref, `revocationChecks[${index}].check_ref`);
+    assertUnique(checkRefs, checkRef, 'revocation check_ref');
+    assertId(check.lease_id, `revocationChecks[${index}].lease_id`);
+    const checkedAt = assertDateTime(check.checked_at, `revocationChecks[${index}].checked_at`);
+    const validUntil = assertDateTime(check.valid_until, `revocationChecks[${index}].valid_until`);
+    if (!(checkedAt < validUntil)) {
+      throw new ValidationError(`revocation check ${checkRef} valid_until must follow checked_at`);
+    }
+    if (checkedAt > compileTime) {
+      throw new ValidationError(`revocation check ${checkRef} cannot postdate capsule compilation`);
+    }
+    assertBoolean(check.revoked, `revocationChecks[${index}].revoked`);
+    const list = byLease.get(check.lease_id) ?? [];
+    list.push(check);
+    byLease.set(check.lease_id, list);
+  }
   for (const list of byLease.values()) {
-    list.sort((left, right) => left.receipt_ref.localeCompare(right.receipt_ref));
+    list.sort(compareTimedEvidenceNewestFirst('checked_at', 'check_ref'));
   }
   return byLease;
 }
@@ -893,26 +771,13 @@ function normalizeClaims(claims) {
   const claimIds = new Set();
   return values.map((claim, index) => {
     assertPlainObject(claim, `claims[${index}]`);
-    exactKeys(
-      claim,
-      CLAIM_KEYS,
-      [
-        'claim_id',
-        'semantic_type',
-        'value',
-        'disclosure_type',
-        'sensitivity',
-        'limitations',
-        'source_vault_id'
-      ],
-      `claims[${index}]`
-    );
+    exactKeys(claim, CLAIM_KEYS, [
+      'claim_id', 'semantic_type', 'value', 'disclosure_type', 'sensitivity',
+      'limitations', 'source_vault_id'
+    ], `claims[${index}]`);
     const claimId = assertId(claim.claim_id, `claims[${index}].claim_id`);
     assertUnique(claimIds, claimId, 'candidate claim_id');
-    assertString(claim.semantic_type, `claims[${index}].semantic_type`, {
-      min: 1,
-      max: 240
-    });
+    assertString(claim.semantic_type, `claims[${index}].semantic_type`, { min: 1, max: 240 });
     validateJsonValue(claim.value, `claims[${index}].value`);
     assertEnum(claim.disclosure_type, CAPSULE_DISCLOSURE_MODES, `claims[${index}].disclosure_type`);
     assertSensitivity(claim.sensitivity, `claims[${index}].sensitivity`);
@@ -937,14 +802,15 @@ function findAuthorizingLease({ leaseMap, claim, operation }) {
   )) {
     if (lease.vault_id !== claim.source_vault_id) continue;
     if (!lease.allowed_operations.includes(operation)) continue;
-    if (lease.resource_scope.maximum_sensitivity !== undefined) {
-      if (SENSITIVITY[claim.sensitivity] > SENSITIVITY[lease.resource_scope.maximum_sensitivity]) {
-        continue;
-      }
-    }
-    if (lease.resource_scope.semantic_types !== undefined) {
-      if (!lease.resource_scope.semantic_types.includes(claim.semantic_type)) continue;
-    }
+    if (
+      lease.resource_scope.maximum_sensitivity !== undefined
+      && SENSITIVITY[claim.sensitivity]
+        > SENSITIVITY[lease.resource_scope.maximum_sensitivity]
+    ) continue;
+    if (
+      lease.resource_scope.semantic_types !== undefined
+      && !lease.resource_scope.semantic_types.includes(claim.semantic_type)
+    ) continue;
     if (lease.resource_scope.resource_refs !== undefined) {
       if (!claim.source_resource_refs?.length) continue;
       const allowedResources = new Set(lease.resource_scope.resource_refs);
@@ -955,18 +821,59 @@ function findAuthorizingLease({ leaseMap, claim, operation }) {
   return null;
 }
 
-function findCommittedReceipt(receiptIndex, lease) {
-  const candidates = receiptIndex.get(lease.lease_id) ?? [];
-  return candidates.find(receipt => (
-    receipt.reservation_ref === lease.access_receipt_reservation_ref
-    && receipt.owner_subject_ref === lease.owner_subject_ref
-    && receipt.holder_principal_ref === lease.holder_principal_ref
-    && receipt.vault_id === lease.vault_id
-    && receipt.purpose === lease.purpose
-    && receipt.task_class === lease.task_class
-    && Date.parse(receipt.recorded_at) >= Date.parse(lease.issued_at)
-    && Date.parse(receipt.recorded_at) < Date.parse(lease.expires_at)
-  )) ?? null;
+function findCommittedReceipt(receiptIndex, lease, compileTime) {
+  const candidates = (receiptIndex.get(lease.lease_id) ?? [])
+    .filter(receipt => (
+      receipt.reservation_ref === lease.access_receipt_reservation_ref
+      && receipt.owner_subject_ref === lease.owner_subject_ref
+      && receipt.holder_principal_ref === lease.holder_principal_ref
+      && receipt.vault_id === lease.vault_id
+      && receipt.purpose === lease.purpose
+      && receipt.task_class === lease.task_class
+      && Date.parse(receipt.recorded_at) >= Date.parse(lease.issued_at)
+      && Date.parse(receipt.recorded_at) < Date.parse(lease.expires_at)
+      && Date.parse(receipt.recorded_at) <= compileTime
+    ))
+    .sort(compareTimedEvidenceNewestFirst('recorded_at', 'receipt_ref'));
+  return candidates[0] ?? null;
+}
+
+function findRevocationEvidence(index, lease, receipt, compileTime) {
+  const checks = (index.get(lease.lease_id) ?? []).filter(check => (
+    Date.parse(check.checked_at) >= Date.parse(lease.issued_at)
+    && Date.parse(check.checked_at) < Date.parse(lease.expires_at)
+    && Date.parse(check.valid_until) <= Date.parse(lease.expires_at)
+  ));
+  if (checks.length === 0) return null;
+
+  const receiptTime = Date.parse(receipt.recorded_at);
+  const preAccess = latestCheckAtOrBefore(checks, receiptTime);
+  if (
+    !preAccess
+    || preAccess.revoked
+    || receiptTime >= Date.parse(preAccess.valid_until)
+  ) return null;
+
+  const current = latestCheckAtOrBefore(checks, compileTime);
+  if (
+    !current
+    || current.revoked
+    || compileTime >= Date.parse(current.valid_until)
+  ) return null;
+
+  return [...new Set([preAccess.check_ref, current.check_ref])].sort();
+}
+
+function latestCheckAtOrBefore(checks, timestamp) {
+  return checks.find(check => Date.parse(check.checked_at) <= timestamp) ?? null;
+}
+
+function compareTimedEvidenceNewestFirst(timeField, idField) {
+  return (left, right) => {
+    const time = Date.parse(right[timeField]) - Date.parse(left[timeField]);
+    if (time !== 0) return time;
+    return left[idField].localeCompare(right[idField]);
+  };
 }
 
 function requestAllowsDisclosureMode(need, disclosureType) {
@@ -1007,7 +914,9 @@ function validateJsonValue(value, name, depth = 0) {
   if (depth > 32) throw new ValidationError(`${name} exceeds maximum JSON nesting depth`);
   if (value === null || typeof value === 'boolean') return;
   if (typeof value === 'string') {
-    if (value.length > 16000) throw new ValidationError(`${name} string exceeds 16000 characters`);
+    if (value.length > 16000) {
+      throw new ValidationError(`${name} string exceeds 16000 characters`);
+    }
     return;
   }
   if (typeof value === 'number') {
@@ -1030,10 +939,14 @@ function validateJsonValue(value, name, depth = 0) {
 function exactKeys(value, allowed, required, name) {
   const allowedSet = new Set(allowed);
   for (const key of Object.keys(value)) {
-    if (!allowedSet.has(key)) throw new ValidationError(`${name} contains unknown field ${key}`);
+    if (!allowedSet.has(key)) {
+      throw new ValidationError(`${name} contains unknown field ${key}`);
+    }
   }
   for (const key of required) {
-    if (!Object.hasOwn(value, key)) throw new ValidationError(`${name} is missing required field ${key}`);
+    if (!Object.hasOwn(value, key)) {
+      throw new ValidationError(`${name} is missing required field ${key}`);
+    }
   }
 }
 
@@ -1104,7 +1017,12 @@ function assertSensitivity(value, name) {
 }
 
 function assertConfidence(value, name) {
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) {
+  if (
+    typeof value !== 'number'
+    || !Number.isFinite(value)
+    || value < 0
+    || value > 1
+  ) {
     throw new ValidationError(`${name} must be finite and between zero and one`);
   }
   return value;
