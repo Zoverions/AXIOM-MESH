@@ -26,42 +26,16 @@
     "onward_disclosure_allowed"
   ],
   "properties": {
-    "schema": {
-      "const": "axiom-context-capsule.v1"
-    },
-    "capsule_id": {
-      "$ref": "#/$defs/id"
-    },
-    "owner_subject_ref": {
-      "$ref": "#/$defs/id"
-    },
-    "requester_principal_ref": {
-      "$ref": "#/$defs/id"
-    },
-    "recipient_principal_ref": {
-      "$ref": "#/$defs/id"
-    },
-    "destination_ref": {
-      "$ref": "#/$defs/id"
-    },
-    "purpose": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 240
-    },
-    "task_class": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 160
-    },
-    "issued_at": {
-      "type": "string",
-      "format": "date-time"
-    },
-    "expires_at": {
-      "type": "string",
-      "format": "date-time"
-    },
+    "schema": {"const": "axiom-context-capsule.v1"},
+    "capsule_id": {"$ref": "#/$defs/id"},
+    "owner_subject_ref": {"$ref": "#/$defs/id"},
+    "requester_principal_ref": {"$ref": "#/$defs/id"},
+    "recipient_principal_ref": {"$ref": "#/$defs/id"},
+    "destination_ref": {"$ref": "#/$defs/id"},
+    "purpose": {"type": "string", "minLength": 1, "maxLength": 240},
+    "task_class": {"type": "string", "minLength": 1, "maxLength": 160},
+    "issued_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"},
     "disclosures": {
       "type": "array",
       "minItems": 1,
@@ -69,171 +43,56 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "claim_id",
-          "semantic_type",
-          "value",
-          "disclosure_type",
-          "sensitivity",
-          "confidence_required",
-          "limitations"
-        ],
+        "required": ["claim_id", "semantic_type", "value", "disclosure_type", "sensitivity", "confidence_required", "limitations"],
         "properties": {
-          "claim_id": {
-            "$ref": "#/$defs/id"
-          },
-          "semantic_type": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 240
-          },
-          "value": {
-            "$ref": "#/$defs/jsonValue"
-          },
-          "disclosure_type": {
-            "enum": [
-              "verbatim-approved",
-              "redacted",
-              "transformed-constraint",
-              "aggregate",
-              "derived-inference"
-            ]
-          },
-          "sensitivity": {
-            "enum": [
-              "ordinary-private",
-              "sensitive",
-              "restricted",
-              "critical-secret"
-            ]
-          },
-          "confidence_required": {
-            "type": "boolean"
-          },
-          "confidence": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1
-          },
-          "limitations": {
-            "type": "string",
-            "maxLength": 2000
-          }
+          "claim_id": {"$ref": "#/$defs/id"},
+          "semantic_type": {"type": "string", "minLength": 1, "maxLength": 240},
+          "value": {"$ref": "#/$defs/jsonValue"},
+          "disclosure_type": {"enum": ["verbatim-approved", "redacted", "transformed-constraint", "aggregate", "derived-inference"]},
+          "sensitivity": {"enum": ["ordinary-private", "sensitive", "restricted", "critical-secret"]},
+          "confidence_required": {"type": "boolean"},
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "limitations": {"type": "string", "maxLength": 2000}
         },
-        "allOf": [
-          {
-            "if": {
-              "properties": {
-                "confidence_required": {
-                  "const": true
-                }
-              }
-            },
-            "then": {
-              "required": ["confidence"]
-            }
-          }
-        ]
+        "allOf": [{
+          "if": {"properties": {"confidence_required": {"const": true}}},
+          "then": {"required": ["confidence"]}
+        }]
       }
     },
     "retention": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "max_seconds",
-        "recipient_may_persist"
-      ],
+      "required": ["max_seconds", "recipient_may_persist"],
       "properties": {
-        "max_seconds": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 31536000
-        },
-        "recipient_may_persist": {
-          "type": "boolean"
-        },
-        "retention_class": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 160
-        }
+        "max_seconds": {"type": "integer", "minimum": 0, "maximum": 31536000},
+        "recipient_may_persist": {"type": "boolean"},
+        "retention_class": {"type": "string", "minLength": 1, "maxLength": 160}
       }
     },
-    "policy_decision_ref": {
-      "$ref": "#/$defs/id"
-    },
-    "grant_ref": {
-      "$ref": "#/$defs/id"
-    },
-    "access_receipt_refs": {
-      "type": "array",
-      "minItems": 1,
-      "maxItems": 128,
-      "uniqueItems": true,
-      "items": {
-        "$ref": "#/$defs/id"
-      }
-    },
-    "local_provenance_receipt_refs": {
-      "type": "array",
-      "maxItems": 128,
-      "uniqueItems": true,
-      "items": {
-        "$ref": "#/$defs/id"
-      }
-    },
-    "minimum_necessary_policy_ref": {
-      "$ref": "#/$defs/id"
-    },
-    "capsule_sha256": {
-      "$ref": "#/$defs/sha256"
-    },
-    "grants_vault_access": {
-      "const": false
-    },
-    "grants_execution_authority": {
-      "const": false
-    },
-    "contains_raw_vault_object": {
-      "const": false
-    },
-    "source_content_resolvable_by_recipient": {
-      "const": false
-    },
-    "onward_disclosure_allowed": {
-      "const": false
-    }
+    "policy_decision_ref": {"$ref": "#/$defs/id"},
+    "grant_ref": {"$ref": "#/$defs/id"},
+    "access_receipt_refs": {"type": "array", "minItems": 1, "maxItems": 128, "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
+    "local_provenance_receipt_refs": {"type": "array", "maxItems": 128, "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
+    "minimum_necessary_policy_ref": {"$ref": "#/$defs/id"},
+    "capsule_sha256": {"$ref": "#/$defs/sha256"},
+    "grants_vault_access": {"const": false},
+    "grants_execution_authority": {"const": false},
+    "contains_raw_vault_object": {"const": false},
+    "source_content_resolvable_by_recipient": {"const": false},
+    "onward_disclosure_allowed": {"const": false}
   },
   "$defs": {
-    "id": {
-      "type": "string",
-      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
-    },
-    "sha256": {
-      "type": "string",
-      "pattern": "^[a-f0-9]{64}$"
-    },
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
     "jsonValue": {
-      "oneOf": [
+      "anyOf": [
         {"type": "string", "maxLength": 16000},
         {"type": "number"},
-        {"type": "integer"},
         {"type": "boolean"},
         {"type": "null"},
-        {
-          "type": "array",
-          "maxItems": 256,
-          "items": {
-            "$ref": "#/$defs/jsonValue"
-          }
-        },
-        {
-          "type": "object",
-          "maxProperties": 128,
-          "additionalProperties": {
-            "$ref": "#/$defs/jsonValue"
-          }
-        }
+        {"type": "array", "maxItems": 256, "items": {"$ref": "#/$defs/jsonValue"}},
+        {"type": "object", "maxProperties": 128, "additionalProperties": {"$ref": "#/$defs/jsonValue"}}
       ]
     }
   }
