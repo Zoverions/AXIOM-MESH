@@ -37,7 +37,8 @@ AXIOM-MESH is simultaneously:
 6. an isolated frontier programme for distributed authority, settlement,
    autonomy, regulated domains, embodied systems, arbitrary code, zk,
    post-quantum migration, plural governance, protocol-neutral agent
-   interoperability, and compartmentalized personal-context systems.
+   interoperability, compartmentalized personal-context systems, and portable
+   private-companion continuity.
 
 Only [`mesh/config/capabilities.json`](../mesh/config/capabilities.json)
 establishes what is currently runnable. The registry tracks 49 capabilities,
@@ -60,7 +61,8 @@ roadmap, review, or migration documents. Link to the owner instead.
 | How is the system designed? | [`whitepapers_and_research/WHITEPAPER.md`](whitepapers_and_research/WHITEPAPER.md) | Integrated architecture, principles, trust boundaries, and design rationale | Independent current status or release decisions |
 | What should be built next? | [`ROADMAP.md`](ROADMAP.md) and [`MASTER-TODO.md`](MASTER-TODO.md) | Sequenced outcomes, acceptance criteria, and executable queue | New capability claims |
 | How should future domains evolve? | [`ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md`](ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md), [`ROADMAP-EXTENSION-PLURAL-AUTHORITY.md`](ROADMAP-EXTENSION-PLURAL-AUTHORITY.md), and their `rebuild/` specifications | Future-compatible architecture, laboratories, and promotion gates | Current implementation status |
-| How should private personal context be compartmentalized and selectively disclosed? | [`architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md`](architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md) and [`architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md`](architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md) | Sovereign Vaults, owner-local context brokerage, semantic Context Requests, short-lived local Vault Access Leases, Context Capsules, companion continuity, backup/recovery boundaries | Claims that these draft systems are implemented or production-ready |
+| How should private personal context be compartmentalized and selectively disclosed? | [`architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md`](architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md) and [`architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md`](architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md) | Sovereign Vaults, owner-local context brokerage, semantic Context Requests, short-lived local Vault Access Leases, Context Capsules | Claims that these draft systems are implemented or production-ready |
+| How does the private companion remain portable across models/providers? | [`architecture/PERSONAL-AGENT-PACK-V2-AND-COMPANION-CONTINUITY.md`](architecture/PERSONAL-AGENT-PACK-V2-AND-COMPANION-CONTINUITY.md) | Pack v2 vault manifests, companion components, optional personalized model artifacts, adaptation authorization, selective recovery and migration | Claims of implemented Pack v2 import/export, training, model unlearning, or identity equivalence |
 | Why does a document or branch exist? | [`REPOSITORY-MIGRATION.md`](REPOSITORY-MIGRATION.md), dated audits, and dated reviews | Provenance, historical findings, and archive boundaries | Current-build authority |
 
 ### Reading paths
@@ -69,9 +71,10 @@ Use **status -> registry -> readiness -> white paper -> roadmap -> requirements*
 for a current technical decision. Use **white paper -> the relevant `rebuild/`
 specification -> roadmap extension -> master todo -> review** for agent
 interoperability or plural-authority design work. Use **Personal Compute Fabric
--> Sovereign Vaults -> Vault Lease and Context Request** for private-companion,
-compartmentalized-memory, or selective-disclosure design. Use **migration ->
-dated audit or review** when the question is provenance or why a boundary exists.
+-> Sovereign Vaults -> Vault Lease and Context Request -> Personal Agent Pack
+v2** for private-companion, compartmentalized-memory, selective-disclosure, or
+continuity design. Use **migration -> dated audit or review** when the question
+is provenance or why a boundary exists.
 
 When two documents appear to disagree, resolve the conflict in this order:
 
@@ -102,9 +105,11 @@ Current documentation must preserve these distinctions:
   verification, and ends at the newest retained anchor;
 - Agent Runtime Adapter v1 synthetic conformance proves the contract boundary,
   not OpenClaw/Hermes/Agent Zero/MCP/A2A/other-runtime certification;
-- Sovereign Vault, Context Request, Vault Access Lease, and Context Capsule
-  schemas are documentation-only draft contracts and do not create runtime
-  vault isolation, local lease authority, or disclosure authority;
+- Sovereign Vault, Context Request, Vault Access Lease, Context Capsule,
+  Personal Agent Pack v2, and personal-model adaptation schemas are
+  documentation-only draft contracts and do not create runtime vault isolation,
+  local lease authority, disclosure authority, personalized-model training, or
+  pack recovery authority;
 - the repository resolver/outbox/operator prototype proves a bounded
   evidence-first effect path, not current production reachability;
 - its GitHub operator independently verifies durable Grid preparation before
@@ -174,10 +179,16 @@ the capability registry or current production-readiness decision.
   — semantic requester needs, short-lived one-vault owner-local leases,
   separation of need/access/disclosure/effect authority, and the protocol path
   into minimized Context Capsules.
+- [Personal Agent Pack v2 and Companion Continuity](architecture/PERSONAL-AGENT-PACK-V2-AND-COMPANION-CONTINUITY.md)
+  — portable vault/component manifests, replaceable base models, owner
+  correction/evaluation continuity, optional governed personalized artifacts,
+  and selective recovery/migration.
 
 #### Draft architecture contracts
 
 - [Personal Agent Pack v1](architecture/contracts/personal-agent-pack.v1.schema.json)
+- [Personal Agent Pack v2](architecture/contracts/personal-agent-pack.v2.schema.json)
+- [Personal Model Adaptation Authorization v1](architecture/contracts/personal-model-adaptation-authorization.v1.schema.json)
 - [Agent Runtime Capsule v1](architecture/contracts/agent-runtime-capsule.v1.schema.json)
 - [Agent Runtime Adapter v1](architecture/contracts/agent-runtime-adapter.v1.schema.json)
 - [Compute Node Profile v1](architecture/contracts/compute-node-profile.v1.schema.json)
@@ -189,7 +200,7 @@ the capability registry or current production-readiness decision.
 
 These JSON Schemas are documentation contracts. The current runtime loads only
 the separately byte-pinned Agent Runtime Adapter contract; it does not load the
-other eight drafts or promote any capability or external compatibility claim.
+other ten drafts or promote any capability or external compatibility claim.
 
 ### Security
 
@@ -267,7 +278,9 @@ For a current technical assessment:
 For future personal-companion or privacy-context work, add [Personal Compute
 Fabric and Local Trust Plane](architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md),
 [Sovereign Vaults and Local Context
-Broker](architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md), and [Vault Access
-Lease and Context Request](architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md). For
-future agent-runtime or plural-governance work, add the corresponding roadmap
-extension only after the current-state material above.
+Broker](architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md), [Vault Access
+Lease and Context Request](architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md), and
+[Personal Agent Pack v2 and Companion
+Continuity](architecture/PERSONAL-AGENT-PACK-V2-AND-COMPANION-CONTINUITY.md).
+For future agent-runtime or plural-governance work, add the corresponding
+roadmap extension only after the current-state material above.
