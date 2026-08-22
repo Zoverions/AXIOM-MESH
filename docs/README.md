@@ -60,7 +60,7 @@ roadmap, review, or migration documents. Link to the owner instead.
 | How is the system designed? | [`whitepapers_and_research/WHITEPAPER.md`](whitepapers_and_research/WHITEPAPER.md) | Integrated architecture, principles, trust boundaries, and design rationale | Independent current status or release decisions |
 | What should be built next? | [`ROADMAP.md`](ROADMAP.md) and [`MASTER-TODO.md`](MASTER-TODO.md) | Sequenced outcomes, acceptance criteria, and executable queue | New capability claims |
 | How should future domains evolve? | [`ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md`](ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md), [`ROADMAP-EXTENSION-PLURAL-AUTHORITY.md`](ROADMAP-EXTENSION-PLURAL-AUTHORITY.md), and their `rebuild/` specifications | Future-compatible architecture, laboratories, and promotion gates | Current implementation status |
-| How should private personal context be compartmentalized and selectively disclosed? | [`architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md`](architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md) | Sovereign Vaults, owner-local context brokerage, Context Capsules, companion continuity, backup/recovery boundaries | Claims that these draft systems are implemented or production-ready |
+| How should private personal context be compartmentalized and selectively disclosed? | [`architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md`](architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md) and [`architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md`](architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md) | Sovereign Vaults, owner-local context brokerage, semantic Context Requests, short-lived local Vault Access Leases, Context Capsules, companion continuity, backup/recovery boundaries | Claims that these draft systems are implemented or production-ready |
 | Why does a document or branch exist? | [`REPOSITORY-MIGRATION.md`](REPOSITORY-MIGRATION.md), dated audits, and dated reviews | Provenance, historical findings, and archive boundaries | Current-build authority |
 
 ### Reading paths
@@ -69,9 +69,9 @@ Use **status -> registry -> readiness -> white paper -> roadmap -> requirements*
 for a current technical decision. Use **white paper -> the relevant `rebuild/`
 specification -> roadmap extension -> master todo -> review** for agent
 interoperability or plural-authority design work. Use **Personal Compute Fabric
--> Sovereign Vaults** for private-companion, compartmentalized-memory, or
-selective-disclosure design. Use **migration -> dated audit or review** when the
-question is provenance or why a boundary exists.
+-> Sovereign Vaults -> Vault Lease and Context Request** for private-companion,
+compartmentalized-memory, or selective-disclosure design. Use **migration ->
+dated audit or review** when the question is provenance or why a boundary exists.
 
 When two documents appear to disagree, resolve the conflict in this order:
 
@@ -102,8 +102,9 @@ Current documentation must preserve these distinctions:
   verification, and ends at the newest retained anchor;
 - Agent Runtime Adapter v1 synthetic conformance proves the contract boundary,
   not OpenClaw/Hermes/Agent Zero/MCP/A2A/other-runtime certification;
-- Sovereign Vault and Context Capsule schemas are documentation-only draft
-  contracts and do not create runtime vault isolation or disclosure authority;
+- Sovereign Vault, Context Request, Vault Access Lease, and Context Capsule
+  schemas are documentation-only draft contracts and do not create runtime
+  vault isolation, local lease authority, or disclosure authority;
 - the repository resolver/outbox/operator prototype proves a bounded
   evidence-first effect path, not current production reachability;
 - its GitHub operator independently verifies durable Grid preparation before
@@ -169,6 +170,10 @@ the capability registry or current production-readiness decision.
   — compartmentalized owner data, deterministic vault authority, privileged
   owner-local context reasoning, minimized Context Capsules, companion
   continuity, and selective backup/recovery architecture.
+- [Vault Access Lease and Context Request Protocol](architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md)
+  — semantic requester needs, short-lived one-vault owner-local leases,
+  separation of need/access/disclosure/effect authority, and the protocol path
+  into minimized Context Capsules.
 
 #### Draft architecture contracts
 
@@ -178,11 +183,13 @@ the capability registry or current production-readiness decision.
 - [Compute Node Profile v1](architecture/contracts/compute-node-profile.v1.schema.json)
 - [Local Trust Envelope v1](architecture/contracts/local-trust-envelope.v1.schema.json)
 - [Sovereign Vault v1](architecture/contracts/sovereign-vault.v1.schema.json)
+- [Context Request v1](architecture/contracts/context-request.v1.schema.json)
+- [Vault Access Lease v1](architecture/contracts/vault-access-lease.v1.schema.json)
 - [Context Capsule v1](architecture/contracts/context-capsule.v1.schema.json)
 
 These JSON Schemas are documentation contracts. The current runtime loads only
 the separately byte-pinned Agent Runtime Adapter contract; it does not load the
-other six drafts or promote any capability or external compatibility claim.
+other eight drafts or promote any capability or external compatibility claim.
 
 ### Security
 
@@ -258,8 +265,9 @@ For a current technical assessment:
 9. [Roadmap](ROADMAP.md) and [execution queue](MASTER-TODO.md)
 
 For future personal-companion or privacy-context work, add [Personal Compute
-Fabric and Local Trust Plane](architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md)
-and [Sovereign Vaults and Local Context
-Broker](architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md). For future
-agent-runtime or plural-governance work, add the corresponding roadmap extension
-only after the current-state material above.
+Fabric and Local Trust Plane](architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md),
+[Sovereign Vaults and Local Context
+Broker](architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md), and [Vault Access
+Lease and Context Request](architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md). For
+future agent-runtime or plural-governance work, add the corresponding roadmap
+extension only after the current-state material above.
