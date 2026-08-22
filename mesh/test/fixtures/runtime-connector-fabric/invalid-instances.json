@@ -22,6 +22,13 @@
       ]
     },
     {
+      "name": "noncanonical-source-commit-length",
+      "expected_error": "source_commit is invalid",
+      "changes": [
+        {"path": ["provenance", "source_commit"], "value": "11111111111111111111111111111111111111111"}
+      ]
+    },
+    {
       "name": "silent-permission-widening",
       "expected_error": "silent permission widening",
       "changes": [
@@ -29,8 +36,8 @@
       ]
     },
     {
-      "name": "catalog-review-state-cannot-claim-promotion",
-      "expected_error": "review_state",
+      "name": "catalog-cannot-self-assert-review-or-promotion-label",
+      "expected_error": "unsupported field review_state",
       "changes": [
         {"path": ["subject", "review_state"], "value": "promoted"}
       ]
@@ -92,6 +99,25 @@
       ]
     },
     {
+      "name": "malformed-evidence-uri",
+      "expected_error": "must be a URI",
+      "changes": [
+        {
+          "path": ["assurance", "observations"],
+          "value": [
+            {
+              "claim_type": "source-review",
+              "observer_id": "observer:test",
+              "subject_ref": "runtime:synthetic-reference",
+              "observed_at": "2026-08-21T23:31:00Z",
+              "result": "pass",
+              "evidence_uri": "not a uri"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "evidence-freshness-cannot-precede-observation",
       "expected_error": "fresh_until precedes observed_at",
       "changes": [
@@ -124,6 +150,21 @@
       "changes": [
         {"path": ["requested_access", "network_required"], "value": true},
         {"path": ["requested_access", "network_destinations"], "value": []}
+      ]
+    },
+    {
+      "name": "catalog-cost-needs-explicit-currency",
+      "expected_error": "currency",
+      "changes": [
+        {
+          "path": ["requested_access", "resource_bounds"],
+          "value": {
+            "cost_ceiling": {
+              "amount_minor_units": 100,
+              "currency": "usd"
+            }
+          }
+        }
       ]
     }
   ],
@@ -161,6 +202,13 @@
       "expected_error": "missing required field catalog_entry_version",
       "changes": [
         {"path": ["execution_target", "catalog_entry_version"], "remove": true}
+      ]
+    },
+    {
+      "name": "catalog-entry-id-must-use-catalog-id-lexical-space",
+      "expected_error": "catalog_entry_id is invalid",
+      "changes": [
+        {"path": ["execution_target", "catalog_entry_id"], "value": "Runtime:Uppercase"}
       ]
     },
     {
@@ -204,6 +252,19 @@
       "expected_error": "terminal state requires terminal receipt",
       "changes": [
         {"path": ["lifecycle", "state"], "value": "completed"}
+      ]
+    },
+    {
+      "name": "task-cost-needs-explicit-currency",
+      "expected_error": "currency",
+      "changes": [
+        {
+          "path": ["budgets", "cost_ceiling"],
+          "value": {
+            "amount_minor_units": 100,
+            "currency": "usd"
+          }
+        }
       ]
     }
   ]
