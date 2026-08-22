@@ -1,6 +1,6 @@
 # AXIOM Runtime & Connector Fabric
 
-**Status:** architecture draft `0.2.0`; documentation and contract work only
+**Status:** architecture draft `0.3.0`; documentation and contract work only
 
 **Updated:** 2026-08-21
 
@@ -16,7 +16,7 @@ Its governing rule is:
 
 > **AXIOM may coordinate runtimes without owning their cognition, and runtimes may coordinate work without owning AXIOM authority.**
 
-Hermes, OpenClaw, Agent Zero, Codex CLI, MCP clients/servers, A2A peers, local model stacks, cloud providers, social systems, storage services, and future runtimes remain replaceable integrations. They do not become trusted merely because they are installed, popular, community-recommended, or protocol-compatible.
+Hermes, OpenClaw, Agent Zero, Codex CLI, MCP clients/servers, A2A peers, local model stacks, cloud providers, social systems, storage services, and future runtimes remain replaceable integrations. They do not become trusted merely because they are installed, popular, community-recommended, protocol-compatible, or associated with a favorable workflow label.
 
 The mandatory effect path remains:
 
@@ -29,7 +29,7 @@ external runtime / connector / worker
   -> Grid state / evidence / receipt
 ```
 
-No catalog, installer, plugin, runtime scheduler, Circle, oracle, market signal, or community recommendation may create a second path around that sequence.
+No catalog, installer, plugin, runtime scheduler, Circle, oracle, market signal, community recommendation, or review label may create a second path around that sequence.
 
 ## Architectural role
 
@@ -51,12 +51,14 @@ AXIOM should understand the **coordination graph** even when it does not underst
 For every supported unit of machine work, AXIOM should be able to determine:
 
 - the authenticated requesting principal;
-- the selected runtime or connector and exact version/digest;
+- the selected runtime or connector subject;
+- the exact immutable catalog entry ID and version selected for the task;
+- the exact executable/artifact digest where the integration has a material artifact;
 - the AXIOM adapter and contract pin;
 - the exact runtime operation requested;
 - the exact AXIOM action to which that operation maps;
 - the optional capability-registry classification, purpose, data scope, and destinations;
-- applicable budgets and approval requirements;
+- applicable time, step, tool-call, child-task, and currency-explicit monetary ceilings;
 - parent task, child task, and handoff relationships;
 - the exact artifacts entering and leaving a boundary;
 - cancellation, expiry, revocation, fallback, and uncertain-outcome state;
@@ -67,7 +69,7 @@ A runtime may still choose its own planner, memory strategy, sub-agent topology,
 
 ## Integration classes
 
-The catalog and adapter model should support the following classes without giving any class privileged standing.
+The catalog and adapter model support six initial classes without giving any class privileged standing.
 
 ### Agent runtimes
 
@@ -105,25 +107,27 @@ They do not grant local authority and should not be collapsed into a universal t
 
 ## Runtime and Connector Catalog
 
-AXIOM Studio should maintain a catalog of **versioned evidence-bearing entries**, not a simple app store.
+AXIOM Studio should maintain a catalog of **immutable, versioned, evidence-bearing entries**, not a simple app store and not a mutable trust registry.
 
 The first draft contract is `axiom-runtime-connector-catalog-entry.v1`.
 
 Each entry identifies or declares:
 
-- integration class and stable ID;
-- a **catalog review state**, explicitly separate from the capability lifecycle and production promotion;
-- source-kind-appropriate provenance: repository plus immutable commit, release/artifact digest, container/local artifact digest, or service origin;
+- integration class, stable subject ID, catalog entry ID, and entry version;
+- source-kind-appropriate provenance: repository plus exact Git commit, release/artifact digest, container/local artifact digest, or service origin;
 - licence and optional SBOM/artifact provenance;
 - supported platforms and deployment forms;
 - adapter contract and protocol-profile pins;
 - requested capability-registry classifications **and exact AXIOM actions**;
-- purposes, destinations, credential classes, network needs, data classes, and resource bounds;
+- purposes, effect destinations, credential classes, network needs/destinations, and data classes;
+- resource bounds including currency-explicit monetary ceilings when present;
 - orchestration characteristics such as worker spawning, whether independent child authority is requested, or remote execution requests;
-- technical and operational assurance observations;
+- evidence-backed technical and operational observations;
 - known limitations and explicit non-claims;
-- update, quarantine, rollback, and retirement state;
-- evidence sources and freshness.
+- static update, rollback, and quarantine-support behavior;
+- supersession linkage where a new entry replaces an older immutable entry.
+
+The tuple `(entry_id, entry_version)` is immutable. Updating code, provenance, permissions, evidence assumptions, adapter mapping, network requirements, or any other semantic field creates a new entry version or a new entry. A task may therefore bind this tuple without silently floating to a changed profile.
 
 Catalog presence means **discoverable information only**.
 
@@ -131,15 +135,20 @@ Installation means **artifact presence only**.
 
 Neither grants runtime authority.
 
-### Catalog review state is not promotion
+### No aggregate review or trust label inside the immutable entry
 
-The catalog's review-state vocabulary is deliberately different from AXIOM's built/enabled/exposed/production-promoted/marketed capability lifecycle.
+The v1 catalog intentionally does **not** contain a subject-level field such as `trusted`, `approved`, `review_state`, `conformant`, `pilot`, `promoted`, `deprecated`, or `recommended`.
 
-The draft review states are:
+Those labels collapse unlike claims and can become misleading when evidence changes. Instead:
 
-`unreviewed`, `research`, `conformance-candidate`, `conformance-reviewed`, `pilot-evidence`, `quarantined`, `deprecated`, and `retired`.
+- technical/operational facts live as scoped evidence-backed observations;
+- conformance summaries are derived from the applicable observations and verifier policy;
+- Studio workflow state such as research/candidate/reviewed is local process metadata;
+- quarantine/deprecation/retirement is local lifecycle or source-policy overlay state;
+- Circle/community recommendations are curation overlays;
+- capability/production promotion remains owned by the capability registry and readiness/release process.
 
-A catalog entry therefore cannot self-declare itself `promoted`. Any actual capability or production promotion remains owned by the normal registry/readiness/release process.
+No derived or overlay label becomes authority.
 
 ## Certification, curation, and authorization
 
@@ -147,16 +156,18 @@ These concepts must remain separate.
 
 ### Certification / assurance evidence
 
-Assurance records what a named verifier can support with evidence, for example:
+Assurance records what a named observer or verifier can support with evidence, for example:
 
 - exact source commit was reviewed;
-- a conformance suite passed;
+- a conformance suite passed or failed;
 - an SBOM matched an artifact digest;
 - a vulnerability affects a dependency;
 - a reproducible build matched;
 - an adapter preserved native authorization outcomes in a specified test profile.
 
-Assurance evidence is scoped, versioned, expiring where appropriate, and independently inspectable.
+Every assurance observation carries at least an evidence digest or retrieval URI. Observations are scoped, timestamped, freshness-bounded where appropriate, and independently inspectable.
+
+An empty observation set means exactly that: no evidence observations are recorded in that entry. It is not silently upgraded into an `unreviewed`, `safe`, or `trusted` score.
 
 ### Curation
 
@@ -174,11 +185,11 @@ Authorization is the local decision that a particular principal may perform a pa
 
 Only the AXIOM authority path may produce that result.
 
-A popular, reviewed, conformant, curated, or pilot-observed runtime can still be denied locally.
+A popular, evidence-rich, conformant, curated, or operationally successful runtime can still be denied locally.
 
 ## Oracle evidence model
 
-An oracle or verifier may make a narrow signed observation such as:
+An oracle or verifier may make a narrow observation such as:
 
 - `artifact digest X corresponds to source commit Y`;
 - `suite Z passed against adapter version V`;
@@ -186,7 +197,7 @@ An oracle or verifier may make a narrow signed observation such as:
 - `auditor Q reviewed scope S and issued finding set F`;
 - `runtime R advertised protocol profile P at endpoint E`.
 
-Oracle observations must include source identity, subject identity, scope, timestamp/freshness, evidence digest or retrieval reference, and explicit claim type.
+An observation includes observer identity, subject reference, explicit claim type, observation time, result, optional freshness, and at least one evidence digest or retrieval URI.
 
 An oracle must not be treated as saying:
 
@@ -198,30 +209,33 @@ An oracle must not be treated as saying:
 
 Conflicting evidence remains visible and policy decides how much assurance is required.
 
-## Installation matrix
+## Installation and compatibility matrix
 
-AXIOM One should render the catalog as an installation/compatibility matrix rather than a binary trusted/untrusted list.
+AXIOM One should render evidence and compatibility dimensions rather than a binary trusted/untrusted list.
 
 Useful dimensions include:
 
 | Dimension | Example values |
 |---|---|
 | Integration class | runtime / model / connector / protocol / compute / oracle |
-| Upstream state | maintained / unknown / deprecated |
-| Source identity | immutable commit / artifact digest / service origin / unresolved |
-| Catalog review state | unreviewed / research / conformance-candidate / conformance-reviewed / pilot-evidence / quarantined |
-| Capability lifecycle | read from the authoritative registry/readiness system, not the catalog |
+| Source identity | immutable commit / artifact digest / service origin |
+| Catalog identity | exact entry ID + version |
+| Assurance observations | source review / dependency review / conformance / advisory / operational observation |
+| Evidence freshness | current / stale / expired / absent |
+| Workflow state | local Studio overlay; not part of immutable entry |
+| Curation | separate Circle/community overlay |
+| Capability lifecycle | authoritative registry/readiness state; not catalog metadata |
 | Platforms | Linux / Windows / macOS / mobile / container |
-| Network | none / fixed destinations / dynamic denied |
+| Network | none / fixed declared destinations |
 | Secrets | none / opaque handles / dedicated credential |
 | Data scope | declared classes only |
 | Orchestration | single-agent / workers / sub-agents / external handoff |
 | Independent child authority | not requested / requested / separately delegated |
 | Remote execution | no / laboratory / separately promoted |
-| Evidence freshness | current / stale / expired |
+| Monetary ceiling | explicit amount in minor units + currency |
 | Rollback | available / unavailable |
 
-AXIOM should show source evidence beside the conclusion. A single composite trust score is intentionally avoided because it hides the difference between security, provenance, maturity, popularity, compatibility, privacy, and local authorization.
+AXIOM should show source evidence beside conclusions. A single composite trust score is intentionally avoided because it hides the difference between security, provenance, maturity, popularity, compatibility, privacy, and local authorization.
 
 ## Inert import and installation lifecycle
 
@@ -238,38 +252,40 @@ discover
   -> activate
   -> execute
   -> observe / receipt
-  -> update / revoke / rollback / uninstall
+  -> update / revoke / quarantine / rollback / uninstall
 ```
 
 ### Import
 
-Import records provenance, version, licence, digest, SBOM, declared interfaces, files, environment, credentials, network destinations, data classes, budgets, outputs, and update source.
+Import records the immutable catalog entry, provenance, version, licence, digest, SBOM, declared interfaces, files, environment, credential classes, network destinations, data classes, budgets, outputs, and update source.
 
 Imported content has zero authority.
 
 ### Admission
 
-Admission evaluates contract shape, static scans, conformance, policy compatibility, dependency state, known risk, source freshness, and required human/independent review.
+Admission evaluates contract shape, static scans, conformance evidence, policy compatibility, dependency state, known risk, source freshness, and required human/independent review.
 
 Admission does not grant effect permission.
 
 ### Activation
 
-Activation binds the integration to an authenticated machine principal, approved adapter contract, exact artifact/source identity, allowed capability classifications, exact actions, purposes, data scopes, destinations, credentials, budgets, and expiry/revocation rules.
+Activation binds an integration to an authenticated machine principal, exact catalog entry version, approved adapter contract, exact artifact/source identity where applicable, allowed capability classifications, exact actions, purposes, data scopes, destinations, credentials, budgets, and expiry/revocation rules.
 
 ### Update
 
-Updates are new artifacts or newly admitted service identities/versions. AXIOM must show the source and permission diff and must not silently replace an activated integration whose code, manifest, dependencies, permissions, schemas, destinations, service identity, or review assumptions changed.
+Updates create new admitted entry/artifact identities. AXIOM must show source and permission diffs and must not silently replace an activated integration whose code, manifest, dependencies, permissions, schemas, destinations, service identity, evidence assumptions, or adapter mapping changed.
 
-### Quarantine and rollback
+### Quarantine, deprecation, retirement, and rollback
 
-A catalog or local policy may quarantine an entry because of compromised source, invalid signature, stale verification, severe advisory, conformance regression, unexplained artifact drift, or operator action.
+Quarantine, deprecation, retirement, or recommendation status is maintained outside the immutable catalog entry so history does not have to be rewritten when policy or evidence changes.
 
-Quarantine reduces reachability; it does not erase evidence. Rollback must preserve the exact prior artifact and policy assumptions needed to explain what changed.
+A local policy or curation layer may quarantine an entry because of compromised source, invalid signature, stale verification, severe advisory, conformance regression, unexplained artifact drift, or operator action.
+
+Quarantine reduces reachability; it does not erase evidence. Rollback preserves the exact prior entry/artifact and policy assumptions needed to explain what changed.
 
 ## Neutral task, event, artifact, and handoff model
 
-The Fabric should use a runtime-neutral work model so AXIOM can observe workflows that cross multiple runtimes.
+The Fabric uses a runtime-neutral work model so AXIOM can observe workflows that cross multiple runtimes.
 
 The initial draft contract is `axiom-task-artifact-handoff.v1`.
 
@@ -281,9 +297,10 @@ A task contains:
 - exact runtime operation;
 - exact AXIOM action mapping;
 - optional capability-registry classification and explicit purpose/destinations;
-- selected runtime/connector identity and adapter contract;
+- selected runtime/connector subject plus exact immutable catalog entry ID/version;
+- exact adapter contract and optional material artifact digest;
 - input artifact identities/digests;
-- budget and deadline ceilings;
+- time, step, tool-call, child-task, and currency-explicit cost ceilings;
 - Gateway authority source plus grant/delegation references where they exist;
 - lifecycle state;
 - output artifact identities/digests;
@@ -299,7 +316,9 @@ The lifecycle contract deliberately rejects ambiguous combinations:
 - completed/failed/cancelled/expired tasks require a terminal receipt and cannot carry an uncertainty record;
 - uncertain tasks require an uncertainty record and cannot pretend to have a terminal receipt;
 - failed/cancelled/expired tasks require a state reason;
-- a grant ID and grant digest appear together or not at all.
+- a grant ID and grant digest appear together or not at all;
+- event and cancellation timestamps cannot predate task creation or exceed the snapshot's `updated_at` time;
+- event IDs and artifact IDs are unique within their respective collections.
 
 An artifact is a typed, digest-bound output or input with source identity, schema/MIME metadata, size, custody/retention class, and explicit sensitivity/data classification where applicable.
 
@@ -316,7 +335,7 @@ If a child worker needs an AXIOM capability, it must either:
 1. act through a parent-controlled execution boundary that remains within the parent's exact grant and preserves attribution; or
 2. receive a separately recorded attenuation-only delegation after that capability is implemented and promoted.
 
-No wrapper, alias, plugin, tool rename, protocol translation, or worker chain may expand capability, action, purpose, data, destination, budget, assurance, approval, expiry, or delegation depth.
+No wrapper, alias, plugin, tool rename, protocol translation, worker chain, catalog label, or curation overlay may expand capability, action, purpose, data, destination, budget, assurance, approval, expiry, or delegation depth.
 
 Current machine-principal v1 remains non-delegating until the dedicated delegation programme passes.
 
@@ -329,9 +348,9 @@ Hard eligibility filters may include:
 - principal authority;
 - consent and data policy;
 - allowed destination and jurisdiction;
-- exact runtime/adapter/source state;
+- exact catalog entry, runtime/adapter/source state, and artifact identity where applicable;
 - licence policy;
-- security/conformance state and evidence freshness;
+- security/conformance evidence and freshness;
 - credential availability;
 - compute capability and health;
 - deadline and resource ceilings;
@@ -339,7 +358,7 @@ Hard eligibility filters may include:
 
 After eligibility, a configurable strategy may rank candidates by privacy, quality, latency, cost, energy, locality, availability, or user preference.
 
-Fallback requires a separately eligible candidate and may require a fresh grant. A failed preferred runtime must never cause fallback to a forbidden destination or broader authority.
+Fallback requires a separately eligible candidate and may require a fresh grant. A failed preferred runtime must never cause fallback to a forbidden destination, different catalog profile, or broader authority without fresh evaluation.
 
 ## Governance and Circles
 
@@ -360,31 +379,35 @@ The first implementation must preserve at least these invariants:
 
 1. installation and discovery grant zero authority;
 2. external runtimes never become authority roots;
-3. catalog review state is not capability promotion;
-4. curation is not technical assurance evidence;
-5. credentials remain opaque/purpose-bound and outside broad model context;
-6. runtime/plugin permission labels are not trusted as AXIOM grants;
-7. every consequential effect re-enters normal AXIOM policy and approval evaluation;
-8. exact runtime operations map explicitly to exact AXIOM actions; capability labels cannot substitute for that mapping;
-9. unknown runtime operations, schema fields, destinations, and action mappings fail closed;
-10. revocation and cancellation preempt work where the effect boundary has not occurred;
-11. uncertain external outcomes remain uncertain until reconciled;
-12. idempotency cannot be reused for a different request;
-13. update or protocol drift cannot silently widen permissions;
-14. worker spawning cannot launder authority;
-15. remote results remain attributed external evidence unless independently verified;
-16. community popularity, market adoption, curation, or oracle claims cannot grant local authority;
-17. quarantine, rollback, export, and uninstall retain evidence needed for explanation and recovery.
+3. immutable catalog entries contain declarations/provenance/evidence, not aggregate trust or promotion labels;
+4. workflow state, quarantine/deprecation state, and curation remain separate overlays;
+5. every assurance observation has an evidence digest or retrieval URI;
+6. credentials remain opaque/purpose-bound and outside broad model context;
+7. runtime/plugin permission labels are not trusted as AXIOM grants;
+8. every consequential effect re-enters normal AXIOM policy and approval evaluation;
+9. exact runtime operations map explicitly to exact AXIOM actions; capability labels cannot substitute for that mapping;
+10. task execution binds an exact immutable catalog entry ID/version and exact adapter contract;
+11. unknown runtime operations, schema fields, destinations, and action mappings fail closed;
+12. Git source identities use canonical exact-length lowercase hashes;
+13. monetary ceilings identify both amount and currency;
+14. revocation and cancellation preempt work where the effect boundary has not occurred;
+15. uncertain external outcomes remain uncertain until reconciled;
+16. idempotency cannot be reused for a different request;
+17. update or protocol drift cannot silently widen permissions;
+18. worker spawning cannot launder authority;
+19. remote results remain attributed external evidence unless independently verified;
+20. community popularity, market adoption, curation, or oracle claims cannot grant local authority;
+21. quarantine, rollback, export, and uninstall retain evidence needed for explanation and recovery.
 
 ## Draft contract compatibility and migration
 
 Before byte pinning, the draft field surface may still be narrowed when review finds ambiguity. Once frozen:
 
-- **major** changes are required for any change that can alter authority, accepted behavior, lifecycle meaning, or verifier outcome for an existing instance;
+- **major** changes are required for any change that can alter authority, accepted behavior, lifecycle meaning, identity binding, budget meaning, or verifier outcome for an existing instance;
 - **minor** changes may add negotiated optional non-authoritative metadata only, and old `additionalProperties: false` verifiers must reject rather than silently ignore unknown fields;
 - **patch** changes may correct documentation, examples, diagnostics, tests, or annotations only when the accepted-instance set and security meaning are unchanged.
 
-A new contract version is a new admitted artifact. Existing activated integrations remain bound to exact prior contract/artifact/policy assumptions until explicitly reviewed, migrated, revoked, or retired. Migration requires old/new schema and permission diffs, applicable provenance/SBOM re-check, conformance for both versions, explicit re-admission, rollback instructions, and preserved historical receipts/evidence.
+A new contract version is a new admitted artifact. Existing activated integrations remain bound to exact prior contract/catalog-entry/artifact/policy assumptions until explicitly reviewed, migrated, revoked, or retired. Migration requires old/new schema and permission diffs, applicable provenance/SBOM re-check, conformance for both versions, explicit re-admission, rollback instructions, and preserved historical receipts/evidence.
 
 ## Initial implementation sequence
 
@@ -394,8 +417,8 @@ Recommended sequence:
 
 1. narrow and review the catalog-entry and task/artifact-handoff draft field surfaces;
 2. run minimal, rich, uncertain-state, and adversarial fixtures with no external effect;
-3. byte-pin the v1 schemas only after architecture review accepts their semantics;
-4. implement AXIOM Studio inert catalog/import storage outside the trusted kernel where practical;
+3. byte-pin the v1 schemas only after architecture review accepts their semantics and protected CI is green;
+4. implement immutable AXIOM Studio catalog storage plus separate workflow/curation/quarantine overlays outside the trusted kernel where practical;
 5. select one maintained external runtime and pin exact upstream source/release for `RUNTIME-002`;
 6. prove one no-secret read-only operation through the existing Agent Runtime Adapter v1 and native Gateway authorization semantics;
 7. integrate a second runtime to prove the contract is not tailored to the first runtime;
