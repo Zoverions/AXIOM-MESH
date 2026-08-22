@@ -31,10 +31,9 @@ AXIOM-MESH is simultaneously:
    invitation-based Circles;
 4. a replaceable-runtime programme with a byte-pinned Agent Runtime Adapter v1
    contract but no certified/exposed third-party runtime;
-5. a draft Runtime & Connector Fabric programme defining evidence-bearing
-   catalog and runtime-neutral task/handoff contracts while preserving the
-   separation between certification, curation, orchestration, and local
-   authorization;
+5. a draft Runtime & Connector Fabric programme with byte-frozen v1 catalog and
+   runtime-neutral task/handoff schema bytes, while preserving the separation
+   between certification, curation, orchestration, and local authorization;
 6. a built evidence-first repository-document effect prototype that can reach a
    deterministic **open draft pull request** in tests but remains deliberately
    **production-unreachable**; and
@@ -113,7 +112,8 @@ Current documentation must preserve these distinctions:
 - Agent Runtime Adapter v1 synthetic conformance proves the contract boundary,
   not OpenClaw/Hermes/Agent Zero/Codex/MCP/A2A/other-runtime certification;
 - Runtime & Connector Fabric catalog presence, installation, certification,
-  curation, orchestration, and task handoff do not grant AXIOM authority;
+  curation, orchestration, task handoff, or schema byte pinning do not grant
+  AXIOM authority;
 - Sovereign Vault, Context Request, Vault Access Lease, Context Capsule,
   Personal Agent Pack v2, and personal-model adaptation schemas are
   documentation-only draft contracts and do not create runtime vault isolation,
@@ -220,9 +220,16 @@ decision.
 These JSON Schemas are documentation contracts. The current runtime loads only
 the separately byte-pinned Agent Runtime Adapter contract; it does not load the
 other drafts or promote any capability or external compatibility claim. The two
-Runtime & Connector Fabric schemas are deliberately not byte-pinned until their
-v1 field surface passes architecture review; current tests protect their
-zero-authority safety invariants and draft instance validation only.
+Runtime & Connector Fabric v1 schema files are now raw-byte pinned by the
+zero-dependency frozen-contract verifier and protected test surface at:
+
+- catalog entry: `0fbd3cf2e4a5df8bd803427413a37e1d83d5ccfa7568ac02a4760c8af7beca46`;
+- task/artifact handoff: `7a8cf7f7496d1794d74f70545e032fc3790d5eecc227f27040370023abf28e50`.
+
+This freezes those reviewed schema bytes only. The semantic instance validator
+remains intentionally scoped to `draft-critical-invariants`; the schemas are
+not loaded by the runtime, no external runtime is certified, no capability is
+promoted, and no external effect becomes reachable because of the byte freeze.
 
 ### Security
 
@@ -278,8 +285,8 @@ fails on missing/unexpected current documents, broken local links, security-
 policy drift, missing required sections, Agent Runtime Adapter contract drift,
 capability-count drift, Gateway-route drift, or internal-network-route drift.
 The Runtime & Connector Fabric work must be explicitly admitted to that
-allowlist and its zero-authority contract invariants must remain executable
-checks before this draft PR is merge-ready.
+allowlist and its zero-authority contract invariants and frozen schema byte pins
+must remain executable checks before this draft PR is merge-ready.
 
 A dedicated current-state documentation regression suite additionally locks the
 machine-principal, Grid continuity, repository-effect production-reachability,
