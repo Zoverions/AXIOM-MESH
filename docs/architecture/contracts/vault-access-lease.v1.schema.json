@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/vault-access-lease.v1.schema.json",
+  "title": "AXIOM Vault Access Lease v1",
+  "description": "Documentation-only draft for a short-lived owner-local authorization to read and/or derive from one exact Sovereign Vault. The lease is non-delegable, contains no raw key material, grants no effect authority, and is not an external vault token.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "lease_id",
+    "owner_subject_ref",
+    "holder_principal_ref",
+    "vault_id",
+    "purpose",
+    "task_class",
+    "issued_at",
+    "expires_at",
+    "allowed_operations",
+    "resource_scope",
+    "policy_decision_ref",
+    "grant_ref",
+    "access_receipt_reservation_ref",
+    "delegable",
+    "usable_outside_owner_trust_domain",
+    "contains_raw_key_material",
+    "grants_other_vault_access",
+    "grants_kernel_effect_authority",
+    "permits_raw_content_export",
+    "mutation_authority",
+    "requires_revocation_check_before_use",
+    "access_receipt_required"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-vault-access-lease.v1"
+    },
+    "lease_id": {
+      "$ref": "#/$defs/id"
+    },
+    "owner_subject_ref": {
+      "$ref": "#/$defs/id"
+    },
+    "holder_principal_ref": {
+      "$ref": "#/$defs/id"
+    },
+    "holder_runtime_ref": {
+      "$ref": "#/$defs/id"
+    },
+    "vault_id": {
+      "$ref": "#/$defs/id"
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240
+    },
+    "task_class": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "allowed_operations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "enum": ["read", "derive"]
+      }
+    },
+    "resource_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["wildcard_scope"],
+      "properties": {
+        "wildcard_scope": {
+          "const": false
+        },
+        "resource_refs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "semantic_types": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 128,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          }
+        },
+        "maximum_sensitivity": {
+          "$ref": "#/$defs/sensitivity"
+        }
+      },
+      "anyOf": [
+        {"required": ["resource_refs"]},
+        {"required": ["semantic_types"]}
+      ]
+    },
+    "policy_decision_ref": {
+      "$ref": "#/$defs/id"
+    },
+    "grant_ref": {
+      "$ref": "#/$defs/id"
+    },
+    "owner_confirmation_ref": {
+      "$ref": "#/$defs/id"
+    },
+    "access_receipt_reservation_ref": {
+      "$ref": "#/$defs/id"
+    },
+    "key_handle_ref": {
+      "$ref": "#/$defs/id"
+    },
+    "delegable": {
+      "const": false
+    },
+    "usable_outside_owner_trust_domain": {
+      "const": false
+    },
+    "contains_raw_key_material": {
+      "const": false
+    },
+    "grants_other_vault_access": {
+      "const": false
+    },
+    "grants_kernel_effect_authority": {
+      "const": false
+    },
+    "permits_raw_content_export": {
+      "const": false
+    },
+    "mutation_authority": {
+      "const": false
+    },
+    "requires_revocation_check_before_use": {
+      "const": true
+    },
+    "access_receipt_required": {
+      "const": true
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "sensitivity": {
+      "enum": [
+        "ordinary-private",
+        "sensitive",
+        "restricted",
+        "critical-secret"
+      ]
+    }
+  }
+}
