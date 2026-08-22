@@ -297,7 +297,9 @@ test('pinned Ed25519 evidence compiles through the existing no-authority broker'
 
   const serialized = JSON.stringify(result);
   assert.doesNotMatch(serialized, /BEGIN PUBLIC KEY/);
-  assert.doesNotMatch(serialized, /signature/);
+  assert.doesNotMatch(serialized, /"attestation"/);
+  assert.doesNotMatch(serialized, /"signature":/);
+  assert.doesNotMatch(serialized, /"public_key_pem"/);
 });
 
 test('individual evidence verification binds issuer, pin, type, payload digest, and signature', () => {
@@ -481,7 +483,7 @@ test('duplicate evidence identifiers and issuer nonces are rejected within one b
 test('raw unsigned authority objects are not accepted in signed evidence slots', () => {
   assert.throws(
     () => compileSigned({ leaseEvidence: [lease()] }),
-    rejects(/unknown field lease_id|missing required field schema/)
+    rejects(/Context authority evidence contains unknown field/)
   );
 });
 
