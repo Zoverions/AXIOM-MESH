@@ -366,8 +366,10 @@ test('candidate claim must correspond to a requested and policy-allowed semantic
 test('disclosure mode must be allowed by both request and policy', () => {
   const claims = baseClaims();
   claims[0].disclosure_type = 'derived-inference';
+  const policyAllowsInference = basePolicy();
+  policyAllowsInference.allowed_disclosure_modes.push('derived-inference');
   assert.throws(
-    () => compile({ claims }),
+    () => compile({ claims, policyDecision: policyAllowsInference }),
     rejects(/disclosure mode exceeds the request/)
   );
 
