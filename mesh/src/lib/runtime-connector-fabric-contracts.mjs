@@ -361,6 +361,11 @@ export function validateTaskArtifactHandoffSchema(schema) {
   exactArray(schema?.required, HANDOFF_REQUIRED, 'Task artifact handoff required fields');
   exactArray(schema?.properties?.lifecycle?.properties?.state?.enum, TASK_STATES, 'Task artifact handoff lifecycle states');
   exactArray(
+    schema?.properties?.execution_target?.required,
+    ['integration_id', 'integration_class', 'catalog_entry_id', 'catalog_entry_version', 'adapter_contract'],
+    'Task artifact handoff execution target required fields'
+  );
+  exactArray(
     schema?.properties?.request?.required,
     ['runtime_operation', 'axiom_action', 'purpose', 'destinations'],
     'Task artifact handoff request required fields'
@@ -560,10 +565,19 @@ export function validateTaskArtifactHandoff(value) {
   requireId(value.requester.principal_id, 'Task artifact handoff requester principal_id');
   if (value.requester.sponsor_principal_id !== undefined) requireId(value.requester.sponsor_principal_id, 'Task artifact handoff sponsor_principal_id');
 
-  requireFields(value.execution_target, ['integration_id', 'integration_class', 'adapter_contract'], 'Task artifact handoff execution_target');
-  rejectUnknown(value.execution_target, ['integration_id', 'integration_class', 'artifact_sha256', 'adapter_contract'], 'Task artifact handoff execution_target');
+  const executionTargetFields = [
+    'integration_id',
+    'integration_class',
+    'catalog_entry_id',
+    'catalog_entry_version',
+    'adapter_contract'
+  ];
+  requireFields(value.execution_target, executionTargetFields, 'Task artifact handoff execution_target');
+  rejectUnknown(value.execution_target, [...executionTargetFields, 'artifact_sha256'], 'Task artifact handoff execution_target');
   requireId(value.execution_target.integration_id, 'Task artifact handoff integration_id');
   requireEnum(value.execution_target.integration_class, CATALOG_CLASSES, 'Task artifact handoff integration_class');
+  requireId(value.execution_target.catalog_entry_id, 'Task artifact handoff catalog_entry_id');
+  requireVersion(value.execution_target.catalog_entry_version, 'Task artifact handoff catalog_entry_version');
   if (value.execution_target.artifact_sha256 !== undefined) requireSha256(value.execution_target.artifact_sha256, 'Task artifact handoff artifact_sha256');
   validateContractPin(value.execution_target.adapter_contract, 'Task artifact handoff adapter_contract');
 
