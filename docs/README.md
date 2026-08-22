@@ -2,7 +2,7 @@
 
 **Status:** canonical current-build index
 
-**Updated:** 2026-08-12
+**Updated:** 2026-08-21
 
 **Active build:** `0.12.0-dev.3`
 
@@ -31,10 +31,14 @@ AXIOM-MESH is simultaneously:
    invitation-based Circles;
 4. a replaceable-runtime programme with a byte-pinned Agent Runtime Adapter v1
    contract but no certified/exposed third-party runtime;
-5. a built evidence-first repository-document effect prototype that can reach a
+5. a draft Runtime & Connector Fabric programme defining evidence-bearing
+   catalog and runtime-neutral task/handoff contracts while preserving the
+   separation between certification, curation, orchestration, and local
+   authorization;
+6. a built evidence-first repository-document effect prototype that can reach a
    deterministic **open draft pull request** in tests but remains deliberately
    **production-unreachable**; and
-6. an isolated frontier programme for distributed authority, settlement,
+7. an isolated frontier programme for distributed authority, settlement,
    autonomy, regulated domains, embodied systems, arbitrary code, zk,
    post-quantum migration, plural governance, and protocol-neutral agent
    interoperability.
@@ -59,7 +63,8 @@ roadmap, review, or migration documents. Link to the owner instead.
 | Can it be promoted? | [`PRODUCTION-READINESS-TRACKER.md`](PRODUCTION-READINESS-TRACKER.md) | Gate status, evidence, owner, and remaining action | Aspirational milestones |
 | How is the system designed? | [`whitepapers_and_research/WHITEPAPER.md`](whitepapers_and_research/WHITEPAPER.md) | Integrated architecture, principles, trust boundaries, and design rationale | Independent current status or release decisions |
 | What should be built next? | [`ROADMAP.md`](ROADMAP.md) and [`MASTER-TODO.md`](MASTER-TODO.md) | Sequenced outcomes, acceptance criteria, and executable queue | New capability claims |
-| How should future domains evolve? | [`ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md`](ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md), [`ROADMAP-EXTENSION-PLURAL-AUTHORITY.md`](ROADMAP-EXTENSION-PLURAL-AUTHORITY.md), and their `rebuild/` specifications | Future-compatible architecture, laboratories, and promotion gates | Current implementation status |
+| How should future domains evolve? | [`ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md`](ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md), [`ROADMAP-EXTENSION-PLURAL-AUTHORITY.md`](ROADMAP-EXTENSION-PLURAL-AUTHORITY.md), their `rebuild/` specifications, and the subordinate [Runtime & Connector Fabric queue](MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md) | Future-compatible architecture, laboratories, and promotion gates | Current implementation status |
+| How do replaceable runtimes/connectors coordinate safely? | [`architecture/RUNTIME-AND-CONNECTOR-FABRIC.md`](architecture/RUNTIME-AND-CONNECTOR-FABRIC.md) | Catalog, task/handoff, certification/curation/authorization separation, lifecycle, routing, and non-claims | Runtime certification or capability promotion |
 | Why does a document or branch exist? | [`REPOSITORY-MIGRATION.md`](REPOSITORY-MIGRATION.md), dated audits, and dated reviews | Provenance, historical findings, and archive boundaries | Current-build authority |
 
 ### Reading paths
@@ -67,8 +72,11 @@ roadmap, review, or migration documents. Link to the owner instead.
 Use **status -> registry -> readiness -> white paper -> roadmap -> requirements**
 for a current technical decision. Use **white paper -> the relevant `rebuild/`
 specification -> roadmap extension -> master todo -> review** for agent
-interoperability or plural-authority design work. Use **migration -> dated audit
-or review** when the question is provenance or why a boundary exists.
+interoperability or plural-authority design work. For runtime/connector work,
+continue from the agent-interoperability materials into **Runtime & Connector
+Fabric -> Runtime & Connector Fabric queue -> candidate survey/pin**. Use
+**migration -> dated audit or review** when the question is provenance or why a
+boundary exists.
 
 When two documents appear to disagree, resolve the conflict in this order:
 
@@ -98,7 +106,9 @@ Current documentation must preserve these distinctions:
   externally retained `axiom-grid-continuity-anchor.v1` plus full-chain
   verification, and ends at the newest retained anchor;
 - Agent Runtime Adapter v1 synthetic conformance proves the contract boundary,
-  not OpenClaw/Hermes/Agent Zero/MCP/A2A/other-runtime certification;
+  not OpenClaw/Hermes/Agent Zero/Codex/MCP/A2A/other-runtime certification;
+- Runtime & Connector Fabric catalog presence, installation, certification,
+  curation, orchestration, and task handoff do not grant AXIOM authority;
 - the repository resolver/outbox/operator prototype proves a bounded
   evidence-first effect path, not current production reachability;
 - its GitHub operator independently verifies durable Grid preparation before
@@ -121,6 +131,9 @@ Current documentation must preserve these distinctions:
   production-unreachable work, blockers, and non-claims.
 - [Roadmap](ROADMAP.md) — strategic phases and promotion gates.
 - [Master execution queue](MASTER-TODO.md) — active executable work ordering.
+- [Runtime & Connector Fabric execution queue](MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md)
+  — subordinate runtime/catalog/task/connector implementation order; no
+  capability promotion.
 - [Production-grade definition](PRODUCTION-GRADE.md) — production-grade meaning.
 - [Production-readiness tracker](PRODUCTION-READINESS-TRACKER.md) — gate evidence
   and authentic promotion blockers.
@@ -147,15 +160,20 @@ Current documentation must preserve these distinctions:
 - [Plural-authority execution queue](MASTER-TODO-PLURAL-AUTHORITY.md)
 - [Agent-interoperability roadmap extension](ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md)
 - [Agent-interoperability execution queue](MASTER-TODO-AGENT-INTEROPERABILITY.md)
+- [Runtime & Connector Fabric execution queue](MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md)
 
-Roadmap extensions are future-compatible planning inputs; they do not override
-the capability registry or current production-readiness decision.
+Roadmap extensions and subordinate queues are future-compatible planning inputs;
+they do not override the capability registry or current production-readiness
+decision.
 
 ### Architecture
 
 - [Scaling, distributed authority, and consensus](architecture/SCALING-DISTRIBUTED-AUTHORITY-AND-CONSENSUS.md)
 - [Agent Runtime Adapter conformance](architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md)
 - [`agent-runtime-adapter.v1` schema](architecture/contracts/agent-runtime-adapter.v1.schema.json)
+- [Runtime & Connector Fabric](architecture/RUNTIME-AND-CONNECTOR-FABRIC.md)
+  — replaceable runtime/model/tool/protocol/compute/oracle coordination while
+  preserving AXIOM as the authority root.
 - [Personal Compute Fabric and Local Trust Plane](architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md)
   — contract-first wearable, portable-agent, interchangeable orchestration,
   compute-routing, local verification, identity-presentation, and
@@ -168,10 +186,15 @@ the capability registry or current production-readiness decision.
 - [Agent Runtime Adapter v1](architecture/contracts/agent-runtime-adapter.v1.schema.json)
 - [Compute Node Profile v1](architecture/contracts/compute-node-profile.v1.schema.json)
 - [Local Trust Envelope v1](architecture/contracts/local-trust-envelope.v1.schema.json)
+- [Runtime Connector Catalog Entry v1](architecture/contracts/runtime-connector-catalog-entry.v1.schema.json)
+- [Task Artifact Handoff v1](architecture/contracts/task-artifact-handoff.v1.schema.json)
 
 These JSON Schemas are documentation contracts. The current runtime loads only
 the separately byte-pinned Agent Runtime Adapter contract; it does not load the
-other four drafts or promote any capability or external compatibility claim.
+other drafts or promote any capability or external compatibility claim. The two
+Runtime & Connector Fabric schemas are deliberately not byte-pinned until their
+v1 field surface passes architecture review; current tests protect their
+zero-authority safety invariants and draft instance validation only.
 
 ### Security
 
@@ -202,6 +225,8 @@ other four drafts or promote any capability or external compatibility claim.
 - [Audit hardening G5-G9 — 2026-08-10](audits/AUDIT-HARDENING-G5-G9-2026-08-10.md)
 - [Plural-authority architecture review — 2026-08-03](reviews/PLURAL-AUTHORITY-ARCHITECTURE-REVIEW-2026-08-03.md)
 - [Agent-interoperability architecture review — 2026-08-09](reviews/AGENT-INTEROPERABILITY-ARCHITECTURE-REVIEW-2026-08-09.md)
+- [Runtime candidate survey — 2026-08-21](reviews/RUNTIME-CANDIDATE-SURVEY-2026-08-21.md)
+- [Hermes RUNTIME-002 candidate pin — 2026-08-21](reviews/HERMES-RUNTIME-002-CANDIDATE-PIN-2026-08-21.md)
 
 ### Repository/contributor governance
 
@@ -224,6 +249,9 @@ requires Node.js `>=24.14.0 <25`, pins protected CI and `.node-version` to
 fails on missing/unexpected current documents, broken local links, security-
 policy drift, missing required sections, Agent Runtime Adapter contract drift,
 capability-count drift, Gateway-route drift, or internal-network-route drift.
+The Runtime & Connector Fabric work must be explicitly admitted to that
+allowlist and its zero-authority contract invariants must remain executable
+checks before this draft PR is merge-ready.
 
 A dedicated current-state documentation regression suite additionally locks the
 machine-principal, Grid continuity, repository-effect production-reachability,
@@ -246,5 +274,5 @@ For a current technical assessment:
 8. [Technical white paper](whitepapers_and_research/WHITEPAPER.md)
 9. [Roadmap](ROADMAP.md) and [execution queue](MASTER-TODO.md)
 
-For future agent-runtime or plural-governance work, add the corresponding
-roadmap extension only after the current-state material above.
+For future agent-runtime work, continue through the agent-interoperability
+roadmap/specification and then the [Runtime & Connector Fabric](architecture/RUNTIME-AND-CONNECTOR-FABRIC.md), its [execution queue](MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md), and relevant dated candidate review. For plural-governance work, add the corresponding roadmap extension only after the current-state material above.
