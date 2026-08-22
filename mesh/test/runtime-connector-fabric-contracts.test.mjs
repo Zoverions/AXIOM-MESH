@@ -97,6 +97,13 @@ test('catalog schema rejects installation authority and silent permission wideni
     () => validateRuntimeConnectorCatalogSchema(mutableSource),
     /contract invariants are invalid/
   );
+
+  const evidenceFreeObservation = structuredClone(catalog);
+  delete evidenceFreeObservation.$defs.observation.anyOf;
+  assert.throws(
+    () => validateRuntimeConnectorCatalogSchema(evidenceFreeObservation),
+    /contract invariants are invalid/
+  );
 });
 
 test('catalog schema keeps integration and review states separate from authority/promotion', () => {
@@ -127,6 +134,17 @@ test('catalog schema keeps integration and review states separate from authority
 test('task handoff schema rejects alternate authority roots or coordination as authorization', () => {
   const handoff = load(HANDOFF_URL);
   assert.equal(validateTaskArtifactHandoffSchema(handoff), true);
+
+  const unpinnedExecutionTarget = structuredClone(handoff);
+  unpinnedExecutionTarget.properties.execution_target.required = [
+    'integration_id',
+    'integration_class',
+    'adapter_contract'
+  ];
+  assert.throws(
+    () => validateTaskArtifactHandoffSchema(unpinnedExecutionTarget),
+    /execution target required fields are invalid/
+  );
 
   const coordinationAuthority = structuredClone(handoff);
   coordinationAuthority.properties.authority.properties.coordination_is_authorization.const = true;
@@ -181,6 +199,9 @@ test('minimal and maximal catalog entries satisfy reviewed draft validation', ()
   assert.equal(maximal.orchestration.independent_child_authority_requested, true);
   assert.equal(maximal.lifecycle.silent_permission_widening_allowed, false);
   assert.notEqual(maximal.subject.review_state, 'promoted');
+  assert.ok(maximal.assurance.observations.every(
+    observation => observation.evidence_sha256 || observation.evidence_uri
+  ));
 });
 
 test('queued, completed, and uncertain task handoffs satisfy reviewed draft validation', () => {
@@ -193,6 +214,10 @@ test('queued, completed, and uncertain task handoffs satisfy reviewed draft vali
   assert.equal(validateTaskArtifactHandoff(uncertain), true);
   assert.equal(minimal.authority.authority_source, 'axiom-gateway');
   assert.equal(minimal.authority.coordination_is_authorization, false);
+  assert.equal(minimal.execution_target.catalog_entry_id, 'runtime:synthetic-reference');
+  assert.equal(minimal.execution_target.catalog_entry_version, '0.1.0');
+  assert.equal(maximal.execution_target.catalog_entry_id, 'runtime:synthetic-reference:rich-profile');
+  assert.equal(maximal.execution_target.catalog_entry_version, '0.1.0');
   assert.equal(maximal.authority.handoff_transfers_authority, false);
   assert.equal(maximal.request.runtime_operation, 'memory.create');
   assert.equal(maximal.request.axiom_action, 'memory.create');
