@@ -297,15 +297,12 @@ test('manifest security invariants remain fail-closed before projection', () => 
     validationError(/cannot contain secret material/)
   );
 
+  const missingContentBinding = manifest();
+  delete missingContentBinding.content_manifest_ref;
+  delete missingContentBinding.content_manifest_sha256;
   assert.throws(
-    () => project({
-      vaultManifest: {
-        ...manifest(),
-        content_manifest_ref: undefined,
-        content_manifest_sha256: undefined
-      }
-    }),
-    validationError(/canonical JSON|content manifest/)
+    () => project({ vaultManifest: missingContentBinding }),
+    validationError(/content manifest reference and sha256/)
   );
 });
 
