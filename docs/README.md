@@ -2,7 +2,7 @@
 
 **Status:** canonical current-build index
 
-**Updated:** 2026-08-12
+**Updated:** 2026-08-22
 
 **Active build:** `0.12.0-dev.3`
 
@@ -36,8 +36,8 @@ AXIOM-MESH is simultaneously:
    **production-unreachable**; and
 6. an isolated frontier programme for distributed authority, settlement,
    autonomy, regulated domains, embodied systems, arbitrary code, zk,
-   post-quantum migration, plural governance, and protocol-neutral agent
-   interoperability.
+   post-quantum migration, plural governance, protocol-neutral agent
+   interoperability, and compartmentalized personal-context systems.
 
 Only [`mesh/config/capabilities.json`](../mesh/config/capabilities.json)
 establishes what is currently runnable. The registry tracks 49 capabilities,
@@ -60,6 +60,7 @@ roadmap, review, or migration documents. Link to the owner instead.
 | How is the system designed? | [`whitepapers_and_research/WHITEPAPER.md`](whitepapers_and_research/WHITEPAPER.md) | Integrated architecture, principles, trust boundaries, and design rationale | Independent current status or release decisions |
 | What should be built next? | [`ROADMAP.md`](ROADMAP.md) and [`MASTER-TODO.md`](MASTER-TODO.md) | Sequenced outcomes, acceptance criteria, and executable queue | New capability claims |
 | How should future domains evolve? | [`ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md`](ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md), [`ROADMAP-EXTENSION-PLURAL-AUTHORITY.md`](ROADMAP-EXTENSION-PLURAL-AUTHORITY.md), and their `rebuild/` specifications | Future-compatible architecture, laboratories, and promotion gates | Current implementation status |
+| How should private personal context be compartmentalized and selectively disclosed? | [`architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md`](architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md) | Sovereign Vaults, owner-local context brokerage, Context Capsules, companion continuity, backup/recovery boundaries | Claims that these draft systems are implemented or production-ready |
 | Why does a document or branch exist? | [`REPOSITORY-MIGRATION.md`](REPOSITORY-MIGRATION.md), dated audits, and dated reviews | Provenance, historical findings, and archive boundaries | Current-build authority |
 
 ### Reading paths
@@ -67,8 +68,10 @@ roadmap, review, or migration documents. Link to the owner instead.
 Use **status -> registry -> readiness -> white paper -> roadmap -> requirements**
 for a current technical decision. Use **white paper -> the relevant `rebuild/`
 specification -> roadmap extension -> master todo -> review** for agent
-interoperability or plural-authority design work. Use **migration -> dated audit
-or review** when the question is provenance or why a boundary exists.
+interoperability or plural-authority design work. Use **Personal Compute Fabric
+-> Sovereign Vaults** for private-companion, compartmentalized-memory, or
+selective-disclosure design. Use **migration -> dated audit or review** when the
+question is provenance or why a boundary exists.
 
 When two documents appear to disagree, resolve the conflict in this order:
 
@@ -99,11 +102,13 @@ Current documentation must preserve these distinctions:
   verification, and ends at the newest retained anchor;
 - Agent Runtime Adapter v1 synthetic conformance proves the contract boundary,
   not OpenClaw/Hermes/Agent Zero/MCP/A2A/other-runtime certification;
+- Sovereign Vault and Context Capsule schemas are documentation-only draft
+  contracts and do not create runtime vault isolation or disclosure authority;
 - the repository resolver/outbox/operator prototype proves a bounded
   evidence-first effect path, not current production reachability;
 - its GitHub operator independently verifies durable Grid preparation before
   any GitHub request, permits only exact planned docs changes on a deterministic
-  effect branch, and creates/recovers an **open draft PR**;
+  effect branch, and creates/recovers an **open draft pull request**;
 - that operator has **no merge/direct-main authority** and explicitly records
   `merge_performed: false` and `base_branch_content_changed: false`;
 - production activation remains closed because the executor registry has zero
@@ -160,6 +165,10 @@ the capability registry or current production-readiness decision.
   — contract-first wearable, portable-agent, interchangeable orchestration,
   compute-routing, local verification, identity-presentation, and
   payment-mandate architecture with a phased MVP and explicit non-claims.
+- [Sovereign Vaults and Local Context Broker](architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md)
+  — compartmentalized owner data, deterministic vault authority, privileged
+  owner-local context reasoning, minimized Context Capsules, companion
+  continuity, and selective backup/recovery architecture.
 
 #### Draft architecture contracts
 
@@ -168,10 +177,12 @@ the capability registry or current production-readiness decision.
 - [Agent Runtime Adapter v1](architecture/contracts/agent-runtime-adapter.v1.schema.json)
 - [Compute Node Profile v1](architecture/contracts/compute-node-profile.v1.schema.json)
 - [Local Trust Envelope v1](architecture/contracts/local-trust-envelope.v1.schema.json)
+- [Sovereign Vault v1](architecture/contracts/sovereign-vault.v1.schema.json)
+- [Context Capsule v1](architecture/contracts/context-capsule.v1.schema.json)
 
 These JSON Schemas are documentation contracts. The current runtime loads only
 the separately byte-pinned Agent Runtime Adapter contract; it does not load the
-other four drafts or promote any capability or external compatibility claim.
+other six drafts or promote any capability or external compatibility claim.
 
 ### Security
 
@@ -246,5 +257,9 @@ For a current technical assessment:
 8. [Technical white paper](whitepapers_and_research/WHITEPAPER.md)
 9. [Roadmap](ROADMAP.md) and [execution queue](MASTER-TODO.md)
 
-For future agent-runtime or plural-governance work, add the corresponding
-roadmap extension only after the current-state material above.
+For future personal-companion or privacy-context work, add [Personal Compute
+Fabric and Local Trust Plane](architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md)
+and [Sovereign Vaults and Local Context
+Broker](architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md). For future
+agent-runtime or plural-governance work, add the corresponding roadmap extension
+only after the current-state material above.
