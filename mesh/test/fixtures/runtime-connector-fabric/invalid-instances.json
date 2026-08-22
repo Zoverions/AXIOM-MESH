@@ -45,7 +45,26 @@
             {
               "claim_type": "community-curation",
               "observer_id": "observer:test",
-              "subject_ref": "runtime:hermes",
+              "subject_ref": "runtime:synthetic-reference",
+              "observed_at": "2026-08-21T23:31:00Z",
+              "result": "pass",
+              "evidence_uri": "https://example.invalid/evidence/curation"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "assurance-observation-requires-evidence-reference",
+      "expected_error": "requires an evidence digest or URI",
+      "changes": [
+        {
+          "path": ["assurance", "observations"],
+          "value": [
+            {
+              "claim_type": "source-review",
+              "observer_id": "observer:test",
+              "subject_ref": "runtime:synthetic-reference",
               "observed_at": "2026-08-21T23:31:00Z",
               "result": "pass"
             }
@@ -63,10 +82,30 @@
             {
               "claim_type": "source-review",
               "observer_id": "observer:test",
-              "subject_ref": "runtime:hermes",
+              "subject_ref": "runtime:synthetic-reference",
               "observed_at": "2026-08-21T23:31:00Z",
               "result": "pass",
               "evidence_sha256": "not-a-digest"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "evidence-freshness-cannot-precede-observation",
+      "expected_error": "fresh_until precedes observed_at",
+      "changes": [
+        {
+          "path": ["assurance", "observations"],
+          "value": [
+            {
+              "claim_type": "source-review",
+              "observer_id": "observer:test",
+              "subject_ref": "runtime:synthetic-reference",
+              "observed_at": "2026-08-21T23:31:00Z",
+              "fresh_until": "2026-08-20T23:31:00Z",
+              "result": "pass",
+              "evidence_uri": "https://example.invalid/evidence/source-review"
             }
           ]
         }
@@ -77,6 +116,14 @@
       "expected_error": "no-network integration",
       "changes": [
         {"path": ["requested_access", "network_destinations"], "value": ["https://example.invalid"]}
+      ]
+    },
+    {
+      "name": "network-required-profile-needs-explicit-destination",
+      "expected_error": "needs explicit destinations",
+      "changes": [
+        {"path": ["requested_access", "network_required"], "value": true},
+        {"path": ["requested_access", "network_destinations"], "value": []}
       ]
     }
   ],
@@ -107,6 +154,13 @@
       "expected_error": "authority source",
       "changes": [
         {"path": ["authority", "authority_source"], "value": "runtime-local"}
+      ]
+    },
+    {
+      "name": "execution-target-must-pin-catalog-entry-version",
+      "expected_error": "missing required field catalog_entry_version",
+      "changes": [
+        {"path": ["execution_target", "catalog_entry_version"], "remove": true}
       ]
     },
     {
