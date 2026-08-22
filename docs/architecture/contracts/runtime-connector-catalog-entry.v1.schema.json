@@ -307,7 +307,10 @@
             "properties": {"network_required": {"const": true}},
             "required": ["network_required"]
           },
-          "then": {"required": ["network_destinations"]}
+          "then": {
+            "required": ["network_destinations"],
+            "properties": {"network_destinations": {"minItems": 1}}
+          }
         }
       ]
     },
@@ -508,7 +511,11 @@
           "type": "string",
           "maxLength": 1000
         }
-      }
+      },
+      "anyOf": [
+        {"required": ["evidence_sha256"]},
+        {"required": ["evidence_uri"]}
+      ]
     }
   }
 }
