@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/sovereign-vault.v1.schema.json",
+  "title": "AXIOM Sovereign Vault v1",
+  "description": "Documentation-only draft manifest for one independently governed owner-data compartment. The manifest contains no raw secret or vault plaintext.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "vault_id",
+    "owner_subject_ref",
+    "domain",
+    "sensitivity_ceiling",
+    "key_domain_ref",
+    "storage_policy",
+    "access_policy",
+    "recovery_policy",
+    "secret_material_in_manifest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-sovereign-vault.v1"
+    },
+    "vault_id": {
+      "$ref": "#/$defs/id"
+    },
+    "owner_subject_ref": {
+      "$ref": "#/$defs/id"
+    },
+    "parent_vault_ref": {
+      "$ref": "#/$defs/id"
+    },
+    "domain": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "sensitivity_ceiling": {
+      "enum": [
+        "ordinary-private",
+        "sensitive",
+        "restricted",
+        "critical-secret"
+      ]
+    },
+    "key_domain_ref": {
+      "$ref": "#/$defs/id"
+    },
+    "storage_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_custody",
+        "encrypted_at_rest",
+        "plaintext_index_outside_vault"
+      ],
+      "properties": {
+        "primary_custody": {
+          "enum": [
+            "owner-local",
+            "owner-controlled-remote",
+            "managed-encrypted"
+          ]
+        },
+        "encrypted_at_rest": {
+          "const": true
+        },
+        "plaintext_index_outside_vault": {
+          "const": false
+        },
+        "storage_node_ref": {
+          "$ref": "#/$defs/id"
+        },
+        "retention_policy_ref": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "access_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "default_external_vault_access",
+        "local_companion_access",
+        "local_lease_required",
+        "cross_vault_synthesis",
+        "raw_external_disclosure",
+        "mutation_requires_kernel_effect",
+        "allowed_purposes"
+      ],
+      "properties": {
+        "default_external_vault_access": {
+          "const": false
+        },
+        "local_companion_access": {
+          "enum": [
+            "none",
+            "metadata-only",
+            "lease-read",
+            "lease-read-derive"
+          ]
+        },
+        "local_lease_required": {
+          "const": true
+        },
+        "max_local_lease_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400
+        },
+        "cross_vault_synthesis": {
+          "type": "boolean"
+        },
+        "raw_external_disclosure": {
+          "type": "boolean"
+        },
+        "mutation_requires_kernel_effect": {
+          "const": true
+        },
+        "allowed_purposes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 128,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          }
+        },
+        "high_risk_disclosure_requires_owner_confirmation": {
+          "type": "boolean"
+        }
+      }
+    },
+    "recovery_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "independently_recoverable",
+        "cross_vault_key_dependency",
+        "backup_refs"
+      ],
+      "properties": {
+        "independently_recoverable": {
+          "type": "boolean"
+        },
+        "cross_vault_key_dependency": {
+          "const": false
+        },
+        "backup_refs": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "recovery_policy_ref": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "content_manifest_ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024
+    },
+    "content_manifest_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "secret_material_in_manifest": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}
