@@ -82,6 +82,8 @@ export function validatePathObservationEvidence(
   const expectedClaims = buildExpectedClaims(pathFabricDocument);
   const seenEvidenceIds = new Set();
   const seenClaimKeys = new Set();
+  const seenSignerNonces = new Set();
+  const sourceDigestByRef = new Map();
   const statementDigests = [];
 
   for (let index = 0; index < evidencePackage.evidence_records.length; index += 1) {
@@ -89,6 +91,7 @@ export function validatePathObservationEvidence(
       evidencePackage.evidence_records[index],
       index,
       expectedClaims,
+      pathFabric.portfolio_digest,
       trustPolicy.bySignerId,
       evaluationTime,
       freshnessPolicy
@@ -107,6 +110,26 @@ export function validatePathObservationEvidence(
       throw new ValidationError(`Evidence claim ${claimKey} is duplicated`);
     }
     seenClaimKeys.add(claimKey);
+
+    const signerNonceKey = `${normalized.statement.signer_id}:${normalized.statement.nonce}`;
+    if (seenSignerNonces.has(signerNonceKey)) {
+      throw new ValidationError(
+        `Evidence signer nonce ${signerNonceKey} is reused within the package`
+      );
+    }
+    seenSignerNonces.add(signerNonceKey);
+
+    const priorSourceDigest = sourceDigestByRef.get(normalized.statement.source_ref);
+    if (priorSourceDigest && priorSourceDigest !== normalized.statement.source_digest) {
+      throw new ValidationError(
+        `Evidence source ${normalized.statement.source_ref} maps to inconsistent source digests`
+      );
+    }
+    sourceDigestByRef.set(
+      normalized.statement.source_ref,
+      normalized.statement.source_digest
+    );
+
     statementDigests.push(normalized.statement_digest);
   }
 
@@ -206,6 +229,7 @@ function validateEvidenceRecord(
   record,
   index,
   expectedClaims,
+  portfolioDigest,
   trustedSignerById,
   evaluationTime,
   freshnessPolicy
@@ -214,6 +238,7 @@ function validateEvidenceRecord(
   const statement = record.statement;
   exactObject(statement, `evidence_records[${index}].statement`, [
     'schema',
+    'portfolio_digest',
     'evidence_id',
     'kind',
     'subject_id',
@@ -228,6 +253,12 @@ function validateEvidenceRecord(
 
   if (statement.schema !== PATH_OBSERVATION_STATEMENT_SCHEMA) {
     throw new ValidationError(`Evidence record ${index} statement schema is invalid`);
+  }
+  digest(statement.portfolio_digest, `evidence_records[${index}].statement.portfolio_digest`);
+  if (statement.portfolio_digest !== portfolioDigest) {
+    throw new ValidationError(
+      `Evidence record ${index} does not bind the exact path portfolio`
+    );
   }
   identifier(statement.evidence_id, `evidence_records[${index}].statement.evidence_id`);
   if (!PATH_OBSERVATION_KINDS.includes(statement.kind)) {
