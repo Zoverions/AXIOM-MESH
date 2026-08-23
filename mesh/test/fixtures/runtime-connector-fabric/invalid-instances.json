@@ -1,0 +1,271 @@
+{
+  "catalog": [
+    {
+      "name": "installation-authority",
+      "expected_error": "install authority",
+      "changes": [
+        {"path": ["requested_access", "install_grants_authority"], "value": true}
+      ]
+    },
+    {
+      "name": "mutable-source-ref",
+      "expected_error": "mutable source",
+      "changes": [
+        {"path": ["provenance", "mutable_ref_allowed"], "value": true}
+      ]
+    },
+    {
+      "name": "missing-source-commit",
+      "expected_error": "requires repository and immutable commit",
+      "changes": [
+        {"path": ["provenance", "source_commit"], "remove": true}
+      ]
+    },
+    {
+      "name": "noncanonical-source-commit-length",
+      "expected_error": "source_commit is invalid",
+      "changes": [
+        {"path": ["provenance", "source_commit"], "value": "11111111111111111111111111111111111111111"}
+      ]
+    },
+    {
+      "name": "silent-permission-widening",
+      "expected_error": "silent permission widening",
+      "changes": [
+        {"path": ["lifecycle", "silent_permission_widening_allowed"], "value": true}
+      ]
+    },
+    {
+      "name": "catalog-cannot-self-assert-review-or-promotion-label",
+      "expected_error": "unsupported field review_state",
+      "changes": [
+        {"path": ["subject", "review_state"], "value": "promoted"}
+      ]
+    },
+    {
+      "name": "community-curation-is-not-assurance",
+      "expected_error": "claim_type",
+      "changes": [
+        {
+          "path": ["assurance", "observations"],
+          "value": [
+            {
+              "claim_type": "community-curation",
+              "observer_id": "observer:test",
+              "subject_ref": "runtime:synthetic-reference",
+              "observed_at": "2026-08-21T23:31:00Z",
+              "result": "pass",
+              "evidence_uri": "https://example.invalid/evidence/curation"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "assurance-observation-requires-evidence-reference",
+      "expected_error": "requires an evidence digest or URI",
+      "changes": [
+        {
+          "path": ["assurance", "observations"],
+          "value": [
+            {
+              "claim_type": "source-review",
+              "observer_id": "observer:test",
+              "subject_ref": "runtime:synthetic-reference",
+              "observed_at": "2026-08-21T23:31:00Z",
+              "result": "pass"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "malformed-evidence-digest",
+      "expected_error": "evidence_sha256",
+      "changes": [
+        {
+          "path": ["assurance", "observations"],
+          "value": [
+            {
+              "claim_type": "source-review",
+              "observer_id": "observer:test",
+              "subject_ref": "runtime:synthetic-reference",
+              "observed_at": "2026-08-21T23:31:00Z",
+              "result": "pass",
+              "evidence_sha256": "not-a-digest"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "malformed-evidence-uri",
+      "expected_error": "must be a URI",
+      "changes": [
+        {
+          "path": ["assurance", "observations"],
+          "value": [
+            {
+              "claim_type": "source-review",
+              "observer_id": "observer:test",
+              "subject_ref": "runtime:synthetic-reference",
+              "observed_at": "2026-08-21T23:31:00Z",
+              "result": "pass",
+              "evidence_uri": "not a uri"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "evidence-freshness-cannot-precede-observation",
+      "expected_error": "fresh_until precedes observed_at",
+      "changes": [
+        {
+          "path": ["assurance", "observations"],
+          "value": [
+            {
+              "claim_type": "source-review",
+              "observer_id": "observer:test",
+              "subject_ref": "runtime:synthetic-reference",
+              "observed_at": "2026-08-21T23:31:00Z",
+              "fresh_until": "2026-08-20T23:31:00Z",
+              "result": "pass",
+              "evidence_uri": "https://example.invalid/evidence/source-review"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "no-network-profile-cannot-list-destinations",
+      "expected_error": "no-network integration",
+      "changes": [
+        {"path": ["requested_access", "network_destinations"], "value": ["https://example.invalid"]}
+      ]
+    },
+    {
+      "name": "network-required-profile-needs-explicit-destination",
+      "expected_error": "needs explicit destinations",
+      "changes": [
+        {"path": ["requested_access", "network_required"], "value": true},
+        {"path": ["requested_access", "network_destinations"], "value": []}
+      ]
+    },
+    {
+      "name": "catalog-cost-needs-explicit-currency",
+      "expected_error": "currency",
+      "changes": [
+        {
+          "path": ["requested_access", "resource_bounds"],
+          "value": {
+            "cost_ceiling": {
+              "amount_minor_units": 100,
+              "currency": "usd"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "handoff": [
+    {
+      "name": "coordination-authorizes",
+      "expected_error": "coordination authorization",
+      "changes": [
+        {"path": ["authority", "coordination_is_authorization"], "value": true}
+      ]
+    },
+    {
+      "name": "handoff-transfers-authority",
+      "expected_error": "handoff authority",
+      "changes": [
+        {"path": ["authority", "handoff_transfers_authority"], "value": true}
+      ]
+    },
+    {
+      "name": "missing-delegation-gate",
+      "expected_error": "delegation gate",
+      "changes": [
+        {"path": ["authority", "delegation_required_for_independent_child_authority"], "value": false}
+      ]
+    },
+    {
+      "name": "runtime-local-authority-source",
+      "expected_error": "authority source",
+      "changes": [
+        {"path": ["authority", "authority_source"], "value": "runtime-local"}
+      ]
+    },
+    {
+      "name": "execution-target-must-pin-catalog-entry-version",
+      "expected_error": "missing required field catalog_entry_version",
+      "changes": [
+        {"path": ["execution_target", "catalog_entry_version"], "remove": true}
+      ]
+    },
+    {
+      "name": "catalog-entry-id-must-use-catalog-id-lexical-space",
+      "expected_error": "catalog_entry_id is invalid",
+      "changes": [
+        {"path": ["execution_target", "catalog_entry_id"], "value": "Runtime:Uppercase"}
+      ]
+    },
+    {
+      "name": "grant-id-without-digest",
+      "expected_error": "grant id and digest",
+      "changes": [
+        {"path": ["authority", "grant_id"], "value": "grant:orphan"}
+      ]
+    },
+    {
+      "name": "missing-axiom-action",
+      "expected_error": "missing required field axiom_action",
+      "changes": [
+        {"path": ["request", "axiom_action"], "remove": true}
+      ]
+    },
+    {
+      "name": "assumed-success-state",
+      "expected_error": "lifecycle state",
+      "changes": [
+        {"path": ["lifecycle", "state"], "value": "assumed-success"}
+      ]
+    },
+    {
+      "name": "running-state-cannot-carry-terminal-receipt",
+      "expected_error": "nonterminal state",
+      "changes": [
+        {"path": ["lifecycle", "state"], "value": "running"},
+        {"path": ["lifecycle", "terminal_receipt_id"], "value": "receipt:premature"}
+      ]
+    },
+    {
+      "name": "uncertain-state-requires-uncertainty-record",
+      "expected_error": "uncertain state requires uncertainty record",
+      "changes": [
+        {"path": ["lifecycle", "state"], "value": "uncertain"}
+      ]
+    },
+    {
+      "name": "completed-state-requires-terminal-receipt",
+      "expected_error": "terminal state requires terminal receipt",
+      "changes": [
+        {"path": ["lifecycle", "state"], "value": "completed"}
+      ]
+    },
+    {
+      "name": "task-cost-needs-explicit-currency",
+      "expected_error": "currency",
+      "changes": [
+        {
+          "path": ["budgets", "cost_ceiling"],
+          "value": {
+            "amount_minor_units": 100,
+            "currency": "usd"
+          }
+        }
+      ]
+    }
+  ]
+}

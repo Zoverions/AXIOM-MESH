@@ -1,0 +1,108 @@
+{
+  "schema": "axiom-task-artifact-handoff.v1",
+  "task_id": "task:maximal-001",
+  "causal_id": "causal:workflow-001",
+  "parent_task_id": "task:parent-001",
+  "handoff_from_task_id": "task:worker-000",
+  "requester": {
+    "principal_id": "principal:agent-worker",
+    "sponsor_principal_id": "principal:owner"
+  },
+  "execution_target": {
+    "integration_id": "runtime:synthetic-reference",
+    "integration_class": "agent-runtime",
+    "catalog_entry_id": "runtime:synthetic-reference:rich-profile",
+    "catalog_entry_version": "0.1.0",
+    "artifact_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "adapter_contract": {
+      "contract_id": "axiom.agent-runtime-adapter",
+      "contract_version": "1.0.0",
+      "contract_sha256": "4954c3d1a49ea57fb0bf5a7eea29140b852e8b5fa2bb11634665f004aca2c19c"
+    }
+  },
+  "request": {
+    "runtime_operation": "memory.create",
+    "axiom_action": "memory.create",
+    "capability_id": "memory.graph",
+    "purpose": "owner-requested-memory",
+    "destinations": ["local"],
+    "data_classes": ["owner-private-memory"]
+  },
+  "authority": {
+    "authority_source": "axiom-gateway",
+    "grant_required_before_effect": true,
+    "coordination_is_authorization": false,
+    "handoff_transfers_authority": false,
+    "delegation_required_for_independent_child_authority": true,
+    "grant_id": "grant:task-maximal-001",
+    "grant_digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "delegation_id": "delegation:worker-001"
+  },
+  "budgets": {
+    "timeout_ms": 30000,
+    "deadline_at": "2026-08-21T23:36:00Z",
+    "max_steps": 20,
+    "max_tool_calls": 8,
+    "max_child_tasks": 2,
+    "cost_ceiling": {
+      "amount_minor_units": 250,
+      "currency": "USD"
+    }
+  },
+  "lifecycle": {
+    "state": "completed",
+    "created_at": "2026-08-21T23:31:00Z",
+    "updated_at": "2026-08-21T23:31:30Z",
+    "state_reason": "Synthetic fixture completed with a terminal receipt.",
+    "terminal_receipt_id": "receipt:task-maximal-001"
+  },
+  "inputs": [
+    {
+      "artifact_id": "artifact:input-001",
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "size_bytes": 128,
+      "mime_type": "application/json",
+      "schema_id": "urn:example:input:v1",
+      "source_principal_id": "principal:owner",
+      "source_task_id": "task:parent-001",
+      "data_class": "owner-private-memory",
+      "retention_class": "session"
+    }
+  ],
+  "outputs": [
+    {
+      "artifact_id": "artifact:output-001",
+      "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+      "size_bytes": 64,
+      "mime_type": "application/json",
+      "schema_id": "urn:example:output:v1",
+      "source_principal_id": "principal:agent-worker",
+      "source_task_id": "task:maximal-001",
+      "data_class": "derived-owner-data",
+      "retention_class": "session"
+    }
+  ],
+  "events": [
+    {
+      "event_id": "event:task-created-001",
+      "type": "task.created",
+      "at": "2026-08-21T23:31:00Z",
+      "actor_principal_id": "principal:owner",
+      "detail_digest": "3333333333333333333333333333333333333333333333333333333333333333"
+    },
+    {
+      "event_id": "event:task-handoff-001",
+      "type": "task.handoff",
+      "at": "2026-08-21T23:31:20Z",
+      "actor_principal_id": "principal:agent-worker",
+      "detail_digest": "4444444444444444444444444444444444444444444444444444444444444444"
+    },
+    {
+      "event_id": "event:task-completed-001",
+      "type": "task.completed",
+      "at": "2026-08-21T23:31:30Z",
+      "actor_principal_id": "principal:agent-worker",
+      "detail_digest": "5555555555555555555555555555555555555555555555555555555555555555"
+    }
+  ]
+}
