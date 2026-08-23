@@ -133,7 +133,8 @@ test('canonical productization documents preserve install, Education, backup, an
     '## Personal cloud and remote backup adapters',
     'https://github.com/Zoverions/Axiom-Education',
     '## Promotion gates for the first real Linux installer',
-    'Installation never grants authority'
+    'Installation never grants application, agent, network, governance, data-access, or external-effect authority merely because software was installed.',
+    'installation never silently enrolls a machine in federation, remote execution, storage exchange, consensus, governance, or a Circle'
   ]) assert.ok(install.includes(anchor), `host installation document missing ${anchor}`);
 
   for (const anchor of [
