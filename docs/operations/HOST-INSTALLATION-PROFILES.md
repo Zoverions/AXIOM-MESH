@@ -111,7 +111,7 @@ Every future host-mutating installer profile must preserve these invariants:
 - never place secrets in a repository, image layer, shell history, telemetry event, release manifest, or installation receipt;
 - expose no public ingress by default;
 - retain deny-by-default external egress unless a separately reviewed adapter/policy authorizes exact destinations;
-- never silently enroll the machine in federation, remote execution, storage exchange, consensus, governance, or a Circle;
+- installation never silently enrolls a machine in federation, remote execution, storage exchange, consensus, governance, or a Circle;
 - keep applications and runtime scaffolds as Gateway clients rather than alternate authority paths;
 - stage and verify updates before activation;
 - never silently restore stale authority, credential, consent, or revocation state during rollback;
