@@ -126,8 +126,7 @@
       "trigger": {
         "exact": [
           "mesh/config/documentation-impact-policy.json",
-          "mesh/src/check-documentation-impact.mjs",
-          ".github/workflows/kernel.yml"
+          "mesh/src/check-documentation-impact.mjs"
         ],
         "prefixes": []
       },
