@@ -13,6 +13,7 @@ import {
 import { createEducationLearnerAppendMutation } from '../src/domain/education-learner-append-mutation.mjs';
 import { preflightEducationLearnerGridEvent } from '../src/domain/education-learner-grid-preflight.mjs';
 import { GridStore } from '../src/grid/store.mjs';
+import { projectExecutionMutationEvent } from '../src/lib/execution-mutation.mjs';
 import { ensureMeshIdentity } from '../src/lib/identity.mjs';
 import { loadDataProtector } from '../src/lib/protector.mjs';
 import { executeBuiltin } from '../src/sandbox/executor.mjs';
@@ -94,19 +95,33 @@ test('learner record persists as signed evidence-only event and survives rebuild
     principal: { id: learner },
     input,
   });
-  const evidenceEvent = {
-    ...prepared.mutation,
-    payload: {
-      ...prepared.mutation.payload,
-      evidence: {
-        intent_id: 'intent:evidence-001',
-        plan_digest: 'b'.repeat(64),
-        policy_digest: 'c'.repeat(64),
-        capability_digest: 'd'.repeat(64),
-        execution_digest: 'e'.repeat(64),
-      },
-    },
+  const executionEvidence = {
+    intent_id: 'intent:evidence-001',
+    plan_digest: 'b'.repeat(64),
+    policy_digest: 'c'.repeat(64),
+    capability_digest: 'd'.repeat(64),
+    execution_digest: 'e'.repeat(64),
   };
+  const evidenceEvent = projectExecutionMutationEvent(
+    prepared.mutation,
+    executionEvidence,
+  );
+  assert.equal(Object.hasOwn(evidenceEvent, 'event_id'), false);
+
+  const forgedEvent = {
+    ...structuredClone(evidenceEvent),
+    event_id: 'evt_attacker_selected',
+  };
+  assert.throws(
+    () => preflightEducationLearnerGridEvent(
+      store,
+      forgedEvent,
+      learner,
+      { now: '2026-08-11T21:31:00-04:00' },
+    ),
+    /event_id binding mismatch/,
+  );
+  assert.equal(forgedEvent.event_id, 'evt_attacker_selected');
 
   const authority = preflightEducationLearnerGridEvent(
     store,
@@ -115,6 +130,7 @@ test('learner record persists as signed evidence-only event and survives rebuild
     { now: '2026-08-11T21:31:00-04:00' },
   );
   assert.equal(authority.memory_object_id, memory.output.object_id);
+  assert.equal(evidenceEvent.event_id, prepared.mutation.event_id);
   const [recorded] = append(store, learner, 'trace:evidence:record', evidenceEvent);
   assert.equal(recorded.event_id, prepared.mutation.event_id);
   assert.equal(recorded.kind, 'education.learner.event.recorded');
