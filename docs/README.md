@@ -262,6 +262,7 @@ promoted, and no external effect becomes reachable because of the byte freeze.
 - [Agent-interoperability architecture review — 2026-08-09](reviews/AGENT-INTEROPERABILITY-ARCHITECTURE-REVIEW-2026-08-09.md)
 - [Runtime candidate survey — 2026-08-21](reviews/RUNTIME-CANDIDATE-SURVEY-2026-08-21.md)
 - [Hermes RUNTIME-002 candidate pin — 2026-08-21](reviews/HERMES-RUNTIME-002-CANDIDATE-PIN-2026-08-21.md)
+- [Hermes RUNTIME-002 boundary review — 2026-08-22](reviews/HERMES-RUNTIME-002-BOUNDARY-REVIEW-2026-08-22.md)
 
 ### Repository/contributor governance
 
