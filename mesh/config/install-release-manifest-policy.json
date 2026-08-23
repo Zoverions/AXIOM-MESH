@@ -1,0 +1,33 @@
+{
+  "schema": "axiom-install-release-manifest-policy.v1",
+  "version": 1,
+  "status": "verifier-implemented-signer-custody-external",
+  "signature_algorithm": "Ed25519",
+  "trusted_signer_role": "release-installer-authority",
+  "allowed_channels": ["development", "candidate", "stable"],
+  "max_validity_seconds": 2678400,
+  "install_profiles": ["personal-local", "infrastructure-node"],
+  "allowed_artifact_kinds": [
+    "source-archive",
+    "oci-image",
+    "axiom-host-image",
+    "documentation-bundle",
+    "sbom",
+    "provenance"
+  ],
+  "installable_artifact_kinds": [
+    "source-archive",
+    "oci-image",
+    "axiom-host-image"
+  ],
+  "allowed_platforms": ["any", "linux"],
+  "allowed_architectures": ["any", "x64", "arm64"],
+  "authority": {
+    "manifest_grants_install_authority": false,
+    "manifest_grants_mesh_authority": false,
+    "manifest_grants_network_authority": false,
+    "manifest_enrolls_node": false,
+    "manifest_starts_services": false,
+    "manifest_mutates_host": false
+  }
+}
