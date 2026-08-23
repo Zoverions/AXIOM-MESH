@@ -1,0 +1,142 @@
+{
+  "schema": "axiom-documentation-impact-policy.v1",
+  "version": 1,
+  "status": "enforced-on-pull-request-diffs",
+  "rules": [
+    {
+      "id": "host-install-surface",
+      "trigger": {
+        "exact": [
+          "mesh/config/install-targets.json",
+          "mesh/config/host-install-policy.json",
+          "mesh/src/host-install.mjs",
+          "mesh/src/lib/host-install-plan.mjs"
+        ],
+        "prefixes": ["install/"]
+      },
+      "required_groups": [
+        {
+          "id": "install-operations",
+          "any_of": ["docs/operations/HOST-INSTALLATION-PROFILES.md"]
+        },
+        {
+          "id": "public-entry",
+          "any_of": ["README.md"]
+        },
+        {
+          "id": "roadmap-or-status",
+          "any_of": [
+            "docs/MASTER-TODO.md",
+            "docs/ROADMAP.md",
+            "docs/PROJECT-STATUS-2026.md"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "education-consumed-mesh-surface",
+      "trigger": {
+        "exact": [
+          "mesh/config/domain-contracts/education.v1.json",
+          "mesh/config/domain-contracts/education-learner-memory.v1.json"
+        ],
+        "prefixes": [
+          "mesh/src/domain/education",
+          "mesh/src/lib/education",
+          "mesh/test/education"
+        ]
+      },
+      "required_groups": [
+        {
+          "id": "downstream-model",
+          "any_of": ["docs/rebuild/APPLICATION-AND-DOWNSTREAM-INTEGRATION.md"]
+        },
+        {
+          "id": "current-state",
+          "any_of": [
+            "README.md",
+            "docs/PROJECT-STATUS-2026.md",
+            "docs/MASTER-TODO.md"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "service-network-policy",
+      "trigger": {
+        "exact": [
+          "mesh/src/lib/service-network-policy.mjs",
+          "mesh/src/check-service-network-policy.mjs"
+        ],
+        "prefixes": []
+      },
+      "required_groups": [
+        {
+          "id": "network-runbook",
+          "any_of": ["docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md"]
+        },
+        {
+          "id": "production-boundary",
+          "any_of": ["mesh/PRODUCTION.md", "docs/PRODUCTION-GRADE.md"]
+        }
+      ]
+    },
+    {
+      "id": "capability-status",
+      "trigger": {
+        "exact": [
+          "mesh/config/capabilities.json",
+          "mesh/config/capability-evidence-bindings.json"
+        ],
+        "prefixes": []
+      },
+      "required_groups": [
+        {
+          "id": "current-state",
+          "any_of": ["README.md", "docs/PROJECT-STATUS-2026.md"]
+        },
+        {
+          "id": "requirements-or-whitepaper",
+          "any_of": [
+            "docs/rebuild/REQUIREMENTS.md",
+            "docs/whitepapers_and_research/WHITEPAPER.md"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "application-catalog",
+      "trigger": {
+        "exact": ["mesh/config/application-catalog.json"],
+        "prefixes": []
+      },
+      "required_groups": [
+        {
+          "id": "application-model",
+          "any_of": ["docs/rebuild/APPLICATION-AND-DOWNSTREAM-INTEGRATION.md"]
+        },
+        {
+          "id": "public-entry",
+          "any_of": ["README.md"]
+        }
+      ]
+    },
+    {
+      "id": "documentation-impact-enforcement",
+      "trigger": {
+        "exact": [
+          "mesh/config/documentation-impact-policy.json",
+          "mesh/src/check-documentation-impact.mjs",
+          ".github/workflows/kernel.yml"
+        ],
+        "prefixes": []
+      },
+      "required_groups": [
+        {
+          "id": "downstream-model",
+          "any_of": ["docs/rebuild/APPLICATION-AND-DOWNSTREAM-INTEGRATION.md"]
+        }
+      ]
+    }
+  ]
+}
