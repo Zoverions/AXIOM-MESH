@@ -4,7 +4,7 @@
 
 **Status:** current requirements-to-implementation trace
 
-**Updated:** 2026-08-17
+**Updated:** 2026-08-23
 
 ## Purpose
 
@@ -19,7 +19,9 @@ The same source tree can legitimately contain:
 3. a specified or laboratory boundary that is not implemented or promoted.
 
 That distinction is critical for machine principals, Grid continuity, the
-repository-effect resolver/outbox/operator chain, and Agent Runtime Adapter v1.
+repository-effect resolver/outbox/operator chain, Agent Runtime Adapter v1,
+fresh-host installation, and first-class downstream applications such as Axiom
+Education.
 
 ## Traceability rules
 
@@ -38,6 +40,11 @@ repository-effect resolver/outbox/operator chain, and Agent Runtime Adapter v1.
    externally retained continuity anchor through the anchored sequence.
 7. A draft-PR operator is not merge authority, and a verified operator receipt
    is not proof of arbitrary external-world truth.
+8. Installation, application discovery, compatibility metadata, or provider
+   authentication never imply application/runtime/network/data authority.
+9. An independently released downstream application must pin and verify the
+   exact Mesh contract it adopts; Mesh-side support alone is not downstream
+   compatibility evidence.
 
 ## Current implementation trace
 
@@ -45,6 +52,8 @@ repository-effect resolver/outbox/operator chain, and Agent Runtime Adapter v1.
 |---|---|---|---|
 | Product/capability claims | `docs/rebuild/PRODUCT-DEFINITION.md`, `mesh/config/capabilities.json` | registry/status/check-registry | 49 capabilities: 31 implemented; other states remain explicit |
 | Source runtime | `mesh/config/setup.json`, package/lock files, Dockerfile/workflows | setup checks, protected CI | Node `>=24.14.0 <25`; CI/.node-version 24.18.0; production image 24.19.0; npm 11.x; zero third-party npm dependencies |
+| Host installation targets | `mesh/config/install-targets.json`, `docs/operations/HOST-INSTALLATION-PROFILES.md` | productization contract tests + canonical docs checks | Source setup is implemented; personal/local and infrastructure fresh-host installers are specified P0/P0-P1 targets, not supported installers yet; installation grants no authority |
+| Application/downstream catalogue | `mesh/config/application-catalog.json`, `docs/rebuild/APPLICATION-AND-DOWNSTREAM-INTEGRATION.md` | productization contract tests + canonical docs checks | First-class application discovery and compatibility discipline only; independent releases and per-app adoption evidence remain separate |
 | Intent-to-evidence | Gateway, Hypervisor, Sandbox, Grid | kernel/e2e tests | Supported privileged effects require authenticated authority, deny-dominant policy, bounded execution, and signed evidence |
 | Machine principals | machine principal normalization, principal registry, Gateway/Hypervisor/Sandbox enforcement | machine principal/e2e/concurrency/response/destination tests | Human-sponsored finite scopes/actions/purposes/destinations, runtime/expiry/non-delegation, execution-time/request-size/rate/concurrency/response-size ceilings; runtime digest is metadata, not attestation |
 | Machine discovery | Gateway `/v1/machine-discovery`, policy evaluator | discovery unit/e2e/client/network tests | Caller-specific requestability only; explicitly not authorization |
@@ -52,12 +61,13 @@ repository-effect resolver/outbox/operator chain, and Agent Runtime Adapter v1.
 | Gateway client | client contract/schema/library | route parity/compatibility/error/cancel/timeout/response-bound/real-stack tests | All 31 authenticated Gateway routes are versioned; no direct internal-service target |
 | Owner-local social surface | social actor/persona/publication intent runtime, Gateway `/v1/social` snapshot | component + real four-service write/read/isolation tests | One current local actor/custodian and one active persona/actor; A2 non-raw publication projection; owner-derived read; no federation/network distribution |
 | Remote social review inspection | `mesh/src/grid/remote-social-review-read-adapter.mjs`, Grid internal owner route, Gateway `/v1/social/remote-review` | read-adapter + exact-contract + real four-service owner/isolation/no-schema tests | Owner is derived only from authenticated principal; query overrides fail; minimized G5A projection only; accepted Grid remains `SocialGridStore`; no remote schema creation, mutation, staging, admission, Following, cleanup, transport, ranking, recommendation, federation, or authority effect |
+| Axiom Education Mesh substrate | Education learner-memory/record/provider contracts, Sandbox Education executor composition, Grid Education route, Hypervisor learner-read path | Education contract/unit/e2e/network-route tests | Governed learner append/self-read conformance substrate; learner self-read only; production Education actions/provider/curriculum/cross-subject authority remain unpromoted; independent Education repo must repin after Mesh merge |
 | AXIOM One | `apps/axiom-one/`, explanation contract/presenter, proxy | policy/static/explanation/approval/uncertainty/real-stack tests | Experimental bounded owner-memory/provenance shell; local social UI not yet integrated; not supported product |
 | Policy | `mesh/config/policy.json`, layered policy | policy/IAM tests | Deny-dominant; high-risk effects require independent approval where configured |
 | Grid durability | Grid store/migrations/evidence/protection | restart/migration/tamper/wrong-key/backup/rotation tests | Encrypted single-Grid state, signed hash-linked evidence; no replicated consensus |
 | Grid continuity | continuity-anchor implementation + Grid verifier/operator flow | anchor creation/verification/negative tests | `axiom-grid-continuity-anchor.v1` retained outside `AXIOM_DATA_DIR` proves current history equals/extends retained head through that sequence only |
 | Transport | transport runtime/provisioning | mTLS/rotation drills | TLS 1.3, Ed25519 leaves, identity checks, active-leaf pinning, signed caller binding, rollback |
-| Service network policy | network policy/request authorizer/unit Compose | policy and required/forbidden-edge tests | Default deny, 41 exact routes, derived mTLS peers, four internal segments |
+| Service network policy | network policy/request authorizer/unit Compose | policy and required/forbidden-edge tests | Default deny, 42 exact routes, derived mTLS peers, four internal segments; Education adds one exact Hypervisor-to-Grid POST and no public ingress |
 | Deployment topology | supervisor/production Compose/unit Compose | host/container/service-unit drills | Hardened single host; no multi-host/failover claim |
 | Providers | provider runtime/supervisor/reference adapter | provider tests/drill | Signed exact inventories/private startup generation; no vendor custody/live-refresh claim |
 | Agent Runtime Adapter v1 | `docs/architecture/AGENT-RUNTIME-ADAPTER-CONFORMANCE.md`, v1 schema | contract verifier, negative tests, 28-case synthetic drill | Replaceable-runtime contract only; no external runtime loaded or certified |
@@ -67,7 +77,7 @@ repository-effect resolver/outbox/operator chain, and Agent Runtime Adapter v1.
 | Prepared-effect durability | Hypervisor/Grid preparation coordinator | approval race/replay/preparation tests | Authenticated approval read; one transaction records `approval.consumed` then `external.effect.prepared`; one durable winner under concurrency |
 | External-effect outbox | `mesh/src/hypervisor/external-effect-outbox.mjs`, `mesh/src/lib/external-effect-outbox.mjs` | outbox/restart/uncertainty/completion-failure tests | Operator invoked only after durable prepare; uncertainty remains prepared; verified signed receipt required before `external.effect.completed` |
 | GitHub docs operator | repository-operator service/client + `github-docs-operator.mjs` | durable-proof-before-request, path/content/identity/stale-main/idempotency/transport-loss/service tests | Fixed repo + exact planned docs content + deterministic effect branch + **open draft PR**; `merge_performed:false`; no direct-main mutation; production-unreachable |
-| Backup/recovery | backup/retention/recovery/rotation modules | signed lifecycle/interruption drills | Candidate-host lifecycle implemented; pilot media/custody repetition pending |
+| Backup/recovery | backup/retention/recovery/rotation modules | signed lifecycle/interruption drills | Candidate-host lifecycle implemented; pilot media/custody repetition pending; remote provider adapters not implemented |
 | Observability/resilience | operations/telemetry/SLO/resilience | signed drills | Bounded vocabulary and candidate pressure/recovery evidence; pilot endpoints/human acknowledgement pending |
 | Incident response | incident policy/tabletop | signed composition drill | Automated candidate evidence; named pilot roster/human review pending |
 | Pilot intake | dossier/package policies/verifiers | semantic negatives + synthetic drills | Exact build/720-hour/custody/13-envelope contracts; no live-pilot claim |
@@ -75,7 +85,7 @@ repository-effect resolver/outbox/operator chain, and Agent Runtime Adapter v1.
 | Node scheduling | node registry/scheduler | scheduling tests/drill | Signed admission + deterministic reservations; no remote dispatch |
 | Causal exchange | online causal sync | two-real-stack partition/rejoin drill | Approved encrypted causal record transport; no federation/consensus |
 | Portability/consent | consent/export/import/encryption | kernel/e2e tests | Scoped signed export/staged foreign-provenance import |
-| Release/documentation | release verifier/check-docs/current-state doc tests/workflows | `npm run setup`, `npm run release:verify`, protected CI | Canonical docs/links, 31 Gateway routes, 41 network routes, capability counts, runtime-adapter lock, current narrative invariants |
+| Release/documentation | release verifier/check-docs/current-state doc tests/workflows | `npm run setup`, `npm run release:verify`, protected CI | Canonical docs/links, 31 Gateway routes, 42 network routes, capability counts, runtime-adapter lock, current narrative invariants |
 
 ## Repository-effect activation boundary
 
@@ -122,6 +132,17 @@ outcomes, receipts, rollback, and secret exclusion. It does not prove
 conformance of OpenClaw, Hermes, Agent Zero, MCP, A2A, or another external
 runtime.
 
+## First-class Education downstream boundary
+
+The current Mesh Education substrate and the separate Axiom Education release
+are intentionally distinct evidence surfaces. A Mesh commit may establish a
+reviewed learner contract or internal route without proving that the Education
+repository has adopted it. Downstream adoption requires an exact Mesh revision
+and compatibility profile, an explicit feature-adoption state, and Education's
+own verification. Conversely, Education application code cannot expand Mesh
+policy, provider, learner-data, or delegated-human authority merely by declaring
+compatibility.
+
 ## Claim precedence
 
 For the current build:
@@ -148,12 +169,14 @@ provenance but do not govern `0.12.0-dev.3`.
 
 Current traceability covers the four-service kernel, machine-principal surface,
 owner-local social actor/persona/publication surface plus the owner-only
-read-only remote-review inspection surface, Grid continuity, production
-packaging, transport/network policy, recovery, telemetry/resilience,
-scheduling/causal exchange, provider startup, pilot and security-review intake,
-runtime-adapter contract, and the complete current **production-unreachable**
-repository planning/resolver/preparation/outbox/draft-PR-operator chain.
+read-only remote-review inspection surface, the governed Mesh-side Axiom
+Education substrate, host-install/application productization contracts, Grid
+continuity, production packaging, transport/network policy, recovery,
+telemetry/resilience, scheduling/causal exchange, provider startup, pilot and
+security-review intake, runtime-adapter contract, and the complete current
+**production-unreachable** repository planning/resolver/preparation/outbox/
+draft-PR-operator chain.
 
-No archive, roadmap statement, release note, synthetic fixture, draft PR, or
-source presence can promote a capability beyond the registry and its explicit
-activation/evidence gates.
+No archive, roadmap statement, release note, synthetic fixture, draft PR, source
+presence, installer entry, or downstream compatibility declaration can promote
+a capability beyond the registry and its explicit activation/evidence gates.
