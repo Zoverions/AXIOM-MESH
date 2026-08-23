@@ -20,6 +20,11 @@
     "oci-image",
     "axiom-host-image"
   ],
+  "required_evidence_artifact_kinds": [
+    "documentation-bundle",
+    "sbom",
+    "provenance"
+  ],
   "allowed_platforms": ["any", "linux"],
   "allowed_architectures": ["any", "x64", "arm64"],
   "authority": {
