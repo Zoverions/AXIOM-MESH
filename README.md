@@ -3,23 +3,61 @@
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
 
-AXIOM-MESH is a local-first coordination, authority, and evidence substrate. It
-turns authenticated human or machine intent into an explicit policy-authorized
-plan, executes only approved effects through bounded interfaces, and records
-portable cryptographically linked evidence.
+AXIOM-MESH is a **local-first authority, coordination, evidence, and sovereign-context substrate** for humans, agents, applications, and independently owned nodes.
 
-The project is developing a defensible kernel plus human products and
-replaceable machine/runtime interfaces. AXIOM One, AXIOM Verify, AXIOM Circles,
-AXIOM Studio, managed-node operations, agent runtimes, and future protocol
-adapters are clients of the authority substrate; they do not become alternate
-authorities merely by being installed or connected.
+Its core rule is simple: intelligence may propose, coordinate, retrieve, simulate, or recommend, but consequential authority remains explicit, bounded, reviewable, and evidence-producing.
 
-## First 5 Minutes
+```text
+human or machine principal
+        |
+        v
+     Gateway
+        |
+        v
+   Hypervisor
+        |
+        v
+     Sandbox
+        |
+        v
+       Grid
+```
+
+Agent runtimes, models, applications, Circles, connectors, semantic indexes, repository operators, remote nodes, and future network fabrics are clients of that authority path. Their existence does not create a second authority system.
+
+**Updated for current `main`: 2026-08-23.**
+
+## Current truth at a glance
+
+**Supported build:** `0.12.0-dev.3`  
+**Deployment decision:** production candidate; not production-promoted  
+**Live public/customer deployment:** not claimed  
+**Last immutable published candidate:** `v0.11.0`
+
+The machine-readable [`mesh/config/capabilities.json`](mesh/config/capabilities.json) registry is the authority for current runnable capability status. `main` currently tracks **49 capabilities: 31 implemented, 3 experimental, 2 specified, 9 adapter-required, and 4 disabled**.
+
+Built source, architecture contracts, protected-CI laboratories, product previews, and open pull requests do **not** become runnable capabilities merely because code or tests exist.
+
+### Mainline status matrix
+
+| Layer | Current status on `main` | What that means |
+|---|---|---|
+| Core Gateway → Hypervisor → Sandbox → Grid kernel | **Registry-backed production candidate** | Authenticated intent, deny-dominant policy, bounded grants/execution, encrypted state, signed evidence, consent, governance, recovery, machine principals, operations controls |
+| AXIOM One | **Experimental local preview** | Loopback PWA/browser control surface; not a supported end-user product |
+| Local social state | **Implemented bounded backend surface** | Owner-local actor/persona/publication state plus owner-scoped `/v1/social`; no public federation |
+| Remote-social review | **Implemented read-only inspection surface** | Minimized owner-only remote observation review; no Following feed, ranking, transport, or recommendation authority |
+| Runtime & Connector Fabric | **Executable/frozen coordination contracts; no external runtime enabled** | Catalog/task-handoff semantics are authority-neutral; installation or curation grants nothing |
+| Sovereign Vault / Context stack | **Executable local validation, planning, compilation, evidence-admission, and lifecycle primitives; no vault/runtime route** | Context Requests, lease/capsule contracts, minimum-necessary planning, signed authority evidence, replay-resistant admission, admitted-only compilation, revocation/supersession guards |
+| Personal Agent Pack v2 | **Executable validation and restore planning; no pack importer/exporter or trainer** | Portable companion-continuity contracts can be validated and planned without opening vaults or granting authority |
+| Repository-document effect chain | **Built and tested, deliberately production-unreachable** | Evidence-first draft-PR operator exists, but production policy/registry/runtime do not expose it and it has no merge authority |
+| AXIOM Circles | **Product/programme work; no live Circle runtime route on supported `main` surface** | Circle governance candidates remain separately gated from current runtime authority |
+| State/path/network fabrics | **Draft review work, not current `main` capability** | Simulation, resilient-path, telemetry/provenance, routing, DTN, and related work remain non-authorizing until separately merged and promoted |
+
+## First 5 minutes
 
 Requirements: Node.js `>=24.14.0 <25` and npm `>=11.0.0 <12`.
 
-The setup policy pins **Node.js 24.18.0 for protected CI and `.node-version`**
-and **Node.js 24.19.0 for the candidate production image**.
+Protected CI and `.node-version` pin Node.js **24.18.0**. The candidate production image pins **24.19.0**.
 
 ```bash
 git clone https://github.com/Zoverions/AXIOM-MESH.git
@@ -29,208 +67,150 @@ npm run setup
 npm run dev
 ```
 
-A successful start prints `"message": "AXIOM-MESH ready"` and the local Gateway
-endpoint. In a second terminal:
+In a second terminal:
 
 ```bash
 npm run axiom -- status
+npm run axiom -- capabilities
 npm run axiom -- intent system.echo '{"message":"hello"}'
 ```
 
-Use `npm run axiom -- --help` to discover commands. Append `--json` for the
-complete machine-readable response. Docker is not required for the basic local
-development path.
+Use `npm run axiom -- --help` for the local command surface. Docker is not required for the basic local development path.
 
-## Current state
+## What the supported kernel already does
 
-**Supported build:** `0.12.0-dev.3`
+The registry-backed production-candidate kernel includes:
 
-**Deployment decision:** production candidate; not production-promoted; no live
-public or customer deployment claim.
+- authenticated human and constrained-machine intent;
+- deny-dominant policy and explicit planning;
+- confirmation and independent approval where required;
+- short-lived, bounded capabilities with restart-safe Grid consumption and burn-on-uncertainty semantics;
+- machine principals with finite scopes, actions, purposes, destinations, runtime identity, expiry, non-delegation, execution time, request/response, rate, and concurrency ceilings;
+- authenticated machine discovery that exposes requestability rather than permission;
+- encrypted transactional Grid state for evidence, consent, memory, governance, accounting, portability, backup/restore, and recovery;
+- signed hash-linked evidence plus externally retainable continuity anchors;
+- authenticated operator API and CLI;
+- mutually authenticated internal transport, deny-egress, service isolation, telemetry, SLO/resilience, backup/recovery, rotation, incident, pilot-intake, and independent-review mechanisms;
+- admitted-node discovery/scheduling foundations;
+- operator-approved two-Grid causal exchange without claiming remote execution or replicated consensus;
+- deployment-independent signed secret/policy provider startup; and
+- owner-scoped local and remote-review social projections.
 
-**Last published candidate:** immutable `v0.11.0`
+Machine runtime IDs and software digests are authority-bound attribution metadata. They are **not** TPM/TEE, measured-boot, human-identity, legal-identity, or general remote-attestation proof.
 
-The machine-readable
-[`mesh/config/capabilities.json`](mesh/config/capabilities.json) registry is the
-authority for runnable capability status. Roadmap entries, demonstrations,
-laboratories, synthetic conformance, and built-but-production-unreachable source
-do not promote a capability beyond that registry.
+## Sovereign context and private companion architecture
 
-The current registry tracks 49 capabilities, of which 31 are marked
-`implemented`.
+The largest change that the previous README underrepresented is the owner-local context plane now present on `main`.
 
-### Implemented production-candidate kernel surface
+The intended sequence is:
 
-The supported kernel includes:
+```text
+semantic task need
+  -> Context Request
+  -> minimum-necessary local retrieval plan
+  -> policy / consent / owner confirmation
+  -> short-lived Vault Access Lease(s)
+  -> local context broker / disclosure compiler
+  -> minimized recipient-bound Context Capsule
+  -> external model, agent, app, or workflow
+```
 
-- authenticated intent, deny-dominant policy, explicit planning, confirmation
-  and independent approval where required, short-lived grants, bounded
-  execution, and signed evidence;
-- human-sponsored constrained machine principals with finite exact scopes,
-  actions, purposes, destinations, runtime identity, expiry, non-delegation,
-  execution-time, request-size, request-rate, concurrency, and response-size
-  ceilings;
-- an AXIOM-computed destination for current built-in effects; `builtin.*`
-  resolves to `local` and must remain inside the machine principal's finite
-  destination ceiling;
-- authenticated `/v1/machine-discovery`, filtered to the caller's own
-  digest-bound requestable intersection under active policy and explicitly
-  **not** granting execution authority;
-- owner-scoped Grid-attested digest-only receipts for terminal constrained-
-  machine intents, binding request and machine-authority digests,
-  accepted/terminal evidence anchors, chain-assurance metadata, and terminal
-  result/error digests;
-- encrypted transactional Grid state, consent, memory, governance, local
-  accounting, portability, backup/restore, rotation, and recovery;
-- mutually authenticated internal transport, single-host service isolation,
-  bounded telemetry, resilience, SLO, deny-egress, incident, pilot-intake, and
-  independent-review evidence mechanisms;
-- admitted-node discovery/scheduling foundations and operator-approved two-Grid
-  causal exchange without claiming remote execution or consensus;
-- signed deployment-independent secret/policy provider startup; and
-- authenticated operator API and CLI.
+The design separates four things that must not collapse into one another:
 
-Machine-principal runtime IDs and software digests are authority-bound
-attribution metadata, not TPM/TEE, measured-boot, or remote-attestation proof.
-Unknown provider, remote, or MCP destination semantics remain unresolved and
-fail closed.
+1. **Need** — what a task requires.
+2. **Access** — which owner-local principal may inspect which private source.
+3. **Disclosure** — which minimized claims may leave the owner trust domain.
+4. **Effect authority** — whether any consequential action may occur.
 
-### Evidence integrity and continuity
+`main` now contains executable, side-effect-free or deny-only primitives for Context Request / Vault Access Lease / Context Capsule validation, minimum-necessary retrieval planning, local disclosure compilation, Ed25519-signed authority evidence verification, replay-resistant Grid admission of evidence, admitted-only compilation, and append-only revocation/supersession state.
 
-Grid uses signed hash-linked evidence. Local verification detects altered
-records, invalid signatures, gaps, and broken links. Local state alone does not
-prove that no suffix was consistently removed if local head/checkpoint metadata
-is rewritten with it.
+These primitives **do not** currently create a live vault service, decrypt private vault contents, issue general leases through a public route, deliver Context Capsules over a network, or grant execution authority.
 
-For that stronger truncation claim the build supports
-`axiom-grid-continuity-anchor.v1`, retained outside `AXIOM_DATA_DIR` and checked
-with full-chain verification. A valid external continuity anchor proves that
-the current history equals or extends the retained head **through the newest retained anchor**.
-It does not prove preservation of later events and does not
-remove malicious host/root or active signing-key compromise from the trust
-assumptions.
+### Personal Agent Pack v2
 
-Grid remains a single-node transparency log, not BFT consensus.
+Personal Agent Pack v2 models companion continuity as a composition rather than one opaque model checkpoint:
 
-### Built repository-effect safety chain — not production-reachable
+```text
+replaceable base model
++ runtime capsule
++ independently governed vault manifests
++ correction/evaluation history
++ preferences and policy
++ optional personalized model artifact
++ voice/avatar/persona configuration
++ recovery/migration manifest
+= portable companion continuity
+```
 
-The source tree contains a deliberately narrow repository-document effect
-prototype that is more complete than a planning fixture, but remains excluded
-from the supported production surface.
+`main` can validate Pack v2 and governed model-adaptation contracts and can build deterministic restore plans from supplied observations. It does not yet perform Pack import/export, vault recovery, training, model unlearning, adapter loading, or personalized-model hosting.
 
-Its built and tested chain includes:
+Revocable personal memory remains outside model weights by default. Durable adaptation is a separate explicitly scoped operation.
 
-1. signed read-only repository planning against an exact base SHA and bounded
-   documentation paths;
-2. resolver-backed executor-input resolution with fresh eligibility and exact
-   registry/policy/build/request bindings;
-3. independent resolver admission/review and exact mapping-package/application
-   observation;
-4. resolved target-policy, confirmation, and independent-approval checks;
-5. atomic Grid approval consumption with durable
-   `external.effect.prepared` evidence;
-6. an evidence-first external-effect outbox that invokes an operator only after
-   durable preparation, leaves uncertain outcomes durably prepared, verifies a
-   signed operator receipt, and records `external.effect.completed` only after
-   receipt verification; and
-7. a credential-isolated docs-only GitHub repository operator that first
-   verifies Grid-durable preparation, then can create/recover a deterministic
-   effect branch, apply only the exact planned documentation changes, and
-   create/recover an **open draft pull request**.
+## Agents, runtimes, and connectors
 
-The operator has **no merge authority** and reports
-`merge_performed: false` and `base_branch_content_changed: false`. Stale `main`,
-unplanned paths, wrong content, wrong branch/identity, forged Grid proof,
-duplicate execution, ambiguous transport outcomes, and malformed responses are
-covered by fail-closed/idempotent tests.
+AXIOM-MESH is designed to work with replaceable agent scaffolding and model providers without delegating its authority boundary to them.
 
-This chain is still **production-unreachable**. The production executor registry
-[`mesh/config/intent-remediation-executors.json`](mesh/config/intent-remediation-executors.json)
-has zero mappings, the production policy contains no
-`repository.docs.pull-request.create` action, and no supported public/runtime
-route activates the resolver/executor/operator chain. The built operator is an
-activation-safety primitive, not a current runnable capability or permission to
-modify this repository.
+The byte-pinned **Agent Runtime Adapter v1** contract fixes grant translation, credential references, lifecycle, cancellation, revocation, idempotency, uncertainty, receipt, and rollback semantics. The reference adapter remains synthetic and certifies no external runtime.
 
-### Agent Runtime Adapter v1 — contract, not certification
+The **Runtime & Connector Fabric** adds authority-neutral catalog and task/handoff contracts for future runtimes, models, tools, protocols, compute providers, and evidence sources. Catalog presence, installation, certification, curation, orchestration, or Circle/community endorsement cannot themselves grant AXIOM authority.
 
-The repository also contains the byte-pinned **Agent Runtime Adapter v1**
-contract and a 28-case synthetic reference drill. It fixes grant,
-capability-translation, credential-reference, lifecycle, cancellation,
-revocation, idempotency, fallback, uncertainty, receipt, and rollback semantics
-for future replaceable runtimes.
+Current work may inspect bounded external-runtime candidates, but `main` does not claim certification or supported execution of Hermes, OpenClaw, Agent Zero, MCP, A2A, Codex CLI, or another third-party runtime.
 
-The reference adapter loads no external runtime, resolves no production
-credential, performs no external effect, and does not certify OpenClaw, Hermes,
-Agent Zero, MCP, A2A, or any other external runtime. A runtime may plan or
-coordinate work, but installation or runtime approval cannot create a second
-authority path around Gateway -> Hypervisor -> Sandbox -> Grid.
+## Human products
 
 ### AXIOM One
 
-AXIOM One remains an experimental loopback-only browser/PWA preview. The current
-slice provides node status, reversible review for five bounded actions,
-owner-scoped private memory, three fixed directional provenance relations,
-confirmation-bound tombstoning, selective local export, explicit bundle reveal,
-raw evidence, approval-state distinctions, same-idempotency-key uncertainty
-recovery, and cross-principal negative tests.
+AXIOM One is an experimental loopback-only browser/PWA preview. It currently demonstrates node status, reversible review for bounded actions, approval-state distinctions, private owner-scoped memory, fixed provenance relations, confirmation-bound tombstoning, selective export/bundle reveal, raw evidence, and uncertainty recovery.
 
-It is not a supported product and does not yet claim general consequential
-plan/execute, direct provenance-edge deletion, hard deletion, restore, bulk
-ingestion, completed browser-session security, accessibility/usability evidence,
-or signed end-user packaging.
+The kernel also contains owner-local social state and owner-only social/remote-review read surfaces. AXIOM One does not yet expose the full current Mesh capability surface, and Social/Circles/Governance/Identity/Recovery/Accounting remain broader product-integration work.
 
-## Development programme
+### AXIOM Verify
 
-Work advances through three coordinated tracks.
+Planned as a user-facing independent evidence-verification surface. Current verification mechanisms exist in the kernel and tooling, but a promoted AXIOM Verify product is not claimed.
 
-### Trust and operations
+### AXIOM Circles
 
-Complete one authentic controlled pilot with dedicated hardware, external
-secret/provider/media custody, 30-day availability/capacity observations,
-scheduled recovery and rotation, externally retained continuity anchors, named
-incident response, deprecated-credential dispositions, operator-owned
-telemetry/alert routes, and an independent security review.
+Circles are intended to provide invitation-based plural governance among independently owned nodes: membership, charters, proposals, decisions, tasks/commitments, objections/appeals, selective disclosure, revocation, exit, and export.
 
-### Human utility and network activation
+No live Circle runtime write route is claimed in the supported `main` capability surface. Circle candidate layers and governance semantics remain separately reviewed and promotion-gated.
 
-Build and promote only with their own evidence:
+### AXIOM Studio / Managed Node
 
-- **AXIOM One** — private personal agent, vault, approvals, and receipts;
-- **AXIOM Verify** — independent local/static evidence verification;
-- **AXIOM Circles** — invitation-based governed collaboration;
-- **AXIOM Studio** — capsule, adapter, policy, and conformance tooling;
-- **AXIOM Managed Node** — optional operations without platform data ownership.
+These remain product programmes: Studio for contracts/capsules/adapters/policy/conformance tooling; Managed Node for optional operations without transferring platform ownership of user authority or data.
 
-The next machine/runtime work is not to invent a parallel authority model. It is
-to preserve the existing AXIOM authorization/evidence semantics while reviewing
-one maintained external runtime for a bounded read-only integration, and to
-keep the repository-effect chain production-unreachable unless an explicit
-future policy/registry/runtime promotion is independently justified.
+## Social and federation boundary
 
-The documentation-only
-[Personal Compute Fabric and Local Trust Plane](docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md)
-`1.0.0-draft.1` specification extends that programme with a phone-first
-portable Personal Agent Pack, replaceable Agent Runtime Capsules, policy-first
-local/managed/cloud compute, a constrained phone-relayed wearable endpoint,
-deterministic credential and authorization verification, and sandbox-value
-payment mandates. The current runtime loads only the separately byte-pinned
-Agent Runtime Adapter contract; it does not load the other four drafts, and the
-phased MVP changes no capability status.
+Current `main` supports local social actor/persona/publication state plus bounded owner-derived read projections. It does **not** claim a public social network or federation.
 
-### Frontier incubation
+Future federation, including ActivityPub/Mastodon-compatible edges, must preserve user sovereignty: discovery and transport cannot silently grant authority, remote observations remain provenance-bound, and feed curation should remain separable from what a user is technically permitted to inspect.
 
-Distributed authority, BFT, settlement, tokens, bridges, liquidity, autonomous
-loops, task markets, regulated domains, embodied systems, arbitrary-code
-isolation, zk verification, and post-quantum migration may be built in isolated
-laboratories. Laboratory code remains separated from production identities,
-secrets, user data, real value, and public authority.
+No live Following feed, public-profile hosting, messaging, recommendation engine, relay network, blocking-as-community-censorship mechanism, or public consensus/finality layer is claimed today.
 
-> **Build broadly. Activate deliberately. Expose minimally. Promote only with evidence. Market only what is true.**
+## Multi-node and network boundary
+
+The current kernel has admitted-node scheduling and operator-approved causal exchange. Those controls are not a general routing layer.
+
+Current `main` does not claim live multipath routing, RF control, DTN transport, Babel/RPL/RAW/Wi-SUN integration, cellular orchestration, public relays, or automated network-path optimization. Any future path-selection system remains subordinate to normal AXIOM authorization and evidence rules.
+
+## Evidence integrity and continuity
+
+Grid evidence is signed and hash linked. Local verification detects altered records, invalid signatures, gaps, and broken links. Local state alone cannot prove absence of a consistently deleted suffix if matching local head/checkpoint metadata is rewritten.
+
+For stronger retained-history assurance, `axiom-grid-continuity-anchor.v1` can be kept outside `AXIOM_DATA_DIR` and checked against the full chain. It proves continuity through the newest retained anchor, not preservation of events after that anchor and not immunity from malicious host/root or active signing-key compromise.
+
+Grid is a single-node transparency log. It is not BFT consensus.
+
+## Repository-effect safety chain
+
+`main` contains an evidence-first, credential-isolated, docs-only repository-effect prototype that can prepare a deterministic branch and create/recover an **open draft pull request** only after durable Grid preparation and exact-plan verification.
+
+It has **no merge authority**, no direct-main mutation path, and reports `merge_performed: false` and `base_branch_content_changed: false`.
+
+It remains production-unreachable: the production executor registry has zero mappings, production policy contains no `repository.docs.pull-request.create` action, and no supported public/runtime route invokes the chain.
 
 ## Capability lifecycle
 
-AXIOM-MESH distinguishes:
+AXIOM-MESH deliberately separates:
 
 1. **Built** — code and tests exist.
 2. **Enabled** — an operator deliberately activates it.
@@ -238,7 +218,7 @@ AXIOM-MESH distinguishes:
 4. **Production-promoted** — the exact build/deployment passes applicable gates.
 5. **Marketed** — public claims describe only the promoted scope.
 
-These states are intentionally separate.
+A feature may be technically sophisticated at stage 1 while remaining unavailable at stages 2–5.
 
 ## Supported runtime
 
@@ -247,31 +227,30 @@ The supported implementation is [`mesh/`](mesh/README.md).
 | Service | Responsibility |
 |---|---|
 | Gateway | Authentication, validation, abuse controls, idempotency, and versioned user/operator APIs |
-| Hypervisor | Intent normalization, deny-dominant policy, machine-authority checks, explicit planning, approvals, and grant issuance |
-| Sandbox | Grant-bound bounded execution with no ambient supported authority |
+| Hypervisor | Intent normalization, deny-dominant policy, machine-authority checks, explicit planning, approvals, and capability issuance |
+| Sandbox | Capability-bound bounded execution with no ambient supported authority |
 | Grid | Encrypted durable state, evidence, approvals, consent, memory, governance, portability, recovery, and network records |
 
-Every supported privileged effect preserves the authority sequence:
+Every supported privileged effect preserves:
 
 ```text
 Gateway -> Hypervisor -> Sandbox -> Grid
 ```
 
-Future external-effect adapters may use evidence-first prepared/outbox/operator
-boundaries, but they may not bypass the authenticated intent/policy/approval
-chain that produces that authority.
+The alternate four-unit single-host topology uses private per-service credentials, Grid-only durable state, and four exact internal network segments. Its machine-readable default-deny policy **permits only 41 current internal** caller/destination/method/route combinations and removes unrelated adjacency. This is single-host isolation, not multi-host consensus or automatic failover.
 
-## Choose Your Path
+## Choose your path
 
-| Level | Goal | Minimum path |
-|---|---|---|
-| **Local Play** | Start the kernel and submit one intent | `npm run doctor` -> `npm run setup` -> `npm run dev` -> `npm run axiom -- status` |
-| **Verify** | Re-run source, test, documentation, and release gates | `npm run check` -> `npm run release:verify` |
-| **Operator / Pilot** | Exercise recovery, transport, resilience, custody, and evidence controls | Use the bounded drills and linked runbooks |
-| **Product development** | Build products/adapters without expanding ambient kernel authority | Follow `docs/ROADMAP.md`, `docs/MASTER-TODO.md`, requirements, and capability gates |
-| **Frontier laboratory** | Reduce uncertainty without production exposure | Isolated identities/data/value; explicit halt; no promotion claim |
+| Goal | Minimum path |
+|---|---|
+| Start the local kernel | `npm run doctor` → `npm run setup` → `npm run dev` |
+| Inspect current capability truth | `npm run axiom -- capabilities` and `mesh/config/capabilities.json` |
+| Re-run source/test/docs gates | `npm run check` → `npm run release:verify` |
+| Explore AXIOM One | `npm run axiom-one` → `npm run axiom-one:check` |
+| Build products/adapters | Start with the roadmap, requirements, capability registry, and relevant architecture contract |
+| Work on frontier research | Keep identities/data/value isolated and preserve explicit no-authority/no-promotion boundaries |
 
-## Command surface
+## Useful commands
 
 ```bash
 npm run doctor
@@ -289,12 +268,9 @@ npm run check
 npm run release:verify
 ```
 
-The local `npm run axiom -- ...` command uses the checked-out source directly;
-it does not ask `npx` to resolve a similarly named registry package.
+## Verification drills
 
-## Verification and drills
-
-Run drills only in explicitly empty disposable workspaces.
+Run stateful drills only in explicitly empty disposable workspaces.
 
 | Purpose | Command |
 |---|---|
@@ -307,93 +283,57 @@ Run drills only in explicitly empty disposable workspaces.
 | Node scheduling | `npm run node-scheduling:drill -- /tmp/axiom-node-scheduling-drill` |
 | Causal exchange | `npm run online-sync:drill -- /tmp/axiom-online-causal-sync-drill` |
 | Provider conformance | `npm run provider:drill -- /tmp/axiom-provider-conformance` |
-| Runtime adapter contract | `npm run runtime-adapter:contract` |
-| Runtime adapter synthetic conformance | `npm run runtime-adapter:drill` |
 | Telemetry relay | `npm run telemetry-relay:drill -- /tmp/axiom-telemetry-relay-drill` |
 | Credential rotation | `npm run credential-rotation:drill -- /tmp/axiom-credential-rotation-drill` |
 | Data-key rotation | `npm run data-key-rotation:drill -- /tmp/axiom-data-key-rotation-drill` |
 | Incident tabletop | `npm run incident-tabletop:drill -- /tmp/axiom-incident-tabletop-drill` |
 
-Synthetic pilot, review, runtime-adapter, and repository-effect fixtures prove
-mechanism behavior only. They do not claim a live pilot, an independent review,
-external-runtime certification, production repository mutation, or production
-promotion.
+Synthetic pilot, review, runtime-adapter, repository-effect, context, and laboratory fixtures prove mechanism behavior only. They do not create authentic deployment, external-world truth, runtime certification, or production promotion.
 
 ## Documentation
 
-The documentation is organized by decision type rather than by feature name.
-Start with the [documentation index](docs/README.md), then use the path that
-matches the question:
+The documentation is organized by decision type. Start with the [documentation index](docs/README.md).
 
 - [Current project status](docs/PROJECT-STATUS-2026.md)
 - [Capability registry](mesh/config/capabilities.json)
 - [Production readiness tracker](docs/PRODUCTION-READINESS-TRACKER.md)
 - [Technical white paper](docs/whitepapers_and_research/WHITEPAPER.md)
 - [Normative requirements](docs/rebuild/REQUIREMENTS.md)
-- [Roadmap and execution queue](docs/ROADMAP.md) and [master todo](docs/MASTER-TODO.md)
+- [Roadmap](docs/ROADMAP.md) and [master execution queue](docs/MASTER-TODO.md)
+- [Sovereign Vaults and Context Broker](docs/architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md)
+- [Vault Lease and Context Request](docs/architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md)
+- [Personal Agent Pack v2 and Companion Continuity](docs/architecture/PERSONAL-AGENT-PACK-V2-AND-COMPANION-CONTINUITY.md)
+- [Runtime & Connector Fabric](docs/architecture/RUNTIME-AND-CONNECTOR-FABRIC.md)
 - [Current threat model](docs/security/CURRENT-BUILD-THREAT-MODEL.md)
-- [Repository migration and provenance](docs/REPOSITORY-MIGRATION.md)
 - [Security policy](SECURITY.md)
 
-Current `0.12.0-dev.3` development-line changes are recorded in
-[`docs/releases/0.12.0-dev.3.md`](docs/releases/0.12.0-dev.3.md).
-
-For agent interoperability or plural authority, read the white paper first,
-then the relevant `docs/rebuild/` specification, roadmap extension, master
-todo, and dated architecture review. Research and roadmap documents do not
-promote capabilities or change readiness status. When documents conflict, the
-ownership and precedence rules in [`docs/README.md`](docs/README.md) control;
-historical documents remain provenance or research inputs only.
-
-The alternate single-host
-[`mesh/compose.units.yml`](mesh/compose.units.yml) runs the four kernel services
-as independently restartable containers with per-unit private credentials,
-Grid-only durable state, and four exact internal network segments. A
-machine-readable default-deny policy **permits only 41 current internal**
-caller/destination/method/route combinations at both ends, derives mTLS peer
-allowlists, and removes unrelated adjacency. This is single-host isolation, not
-multi-host consensus or automatic failover.
+When documents conflict, executable code, machine-readable policy, and the capability registry outrank narrative planning documents. Historical reviews remain provenance; open branches and pull requests are not current-main capability claims.
 
 ## Security and contribution
 
-Do not add dependencies, credentials, new egress, browser secret storage,
-provider/runtime authority, production resolver mappings, repository-effect
-reachability, remote execution, settlement, or domain effects without the
-applicable threat model, negative tests, rollback, documentation, and promotion
-gates.
+Do not add dependencies, credentials, new egress, browser secret storage, provider/runtime authority, production resolver mappings, remote execution, settlement, federation effects, or regulated-domain effects without the applicable threat model, negative tests, rollback, documentation, and promotion gates.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
 ## Non-claims
 
-The active build does not claim:
+The active build does **not** claim:
 
-- live production, testnet, mainnet, or public federation;
+- live production, public federation, testnet, or mainnet;
 - a completed authentic pilot or independent security approval;
 - supported AXIOM One, Verify, Circles, Studio, or Managed Node products;
-- supported wearable/companion hardware, Personal Agent Pack, Agent Runtime
-  Capsule executor, Personal Compute Fabric, or Local Trust Plane;
-- an autonomous-agent runtime, machine delegation, MCP/A2A endpoint, or remote
-  agent execution;
-- certification/production conformance of any external agent runtime;
-- a production resolver mapping or supported public repository-effect route;
-- merge authority or direct-main mutation from the built docs-only repository
-  operator;
-- production AI, messaging, identity, payment, storage-transfer, or regulated
-  domain adapters;
-- identity proofing, KYC, age assurance, government-ID, biometric, payment-
-  authorization, funds-availability, merchant-acceptance, or settlement
-  assurance;
-- remote workload execution or authenticated remote results;
-- BFT consensus, replicated Grid finality, tokens, bridges, liquidity, staking,
-  treasury, payroll, or settlement;
+- a live Sovereign Vault service, universal personal-context mount, or ambient cross-vault access;
+- Pack v2 import/export, personalized-model training, model unlearning, or automatic vault recovery;
+- certification or production operation of Hermes, OpenClaw, Agent Zero, MCP, A2A, Codex CLI, or another external runtime;
+- autonomous machine delegation, remote agent execution, or general remote workload execution;
+- a production repository-effect route, merge authority, or direct-main mutation from the docs operator;
+- live multipath routing, radio/spectrum control, DTN forwarding, or public mesh relays;
+- BFT consensus, replicated Grid finality, tokens, bridges, liquidity, staking, treasury, payroll, or settlement;
 - arbitrary-code isolation;
+- identity proofing, KYC, age assurance, government-ID, biometric, payment-authorization, funds-availability, or merchant-acceptance assurance;
 - regulated-domain compliance or secure embodied autonomy;
 - end-to-end post-quantum security;
-- proof that Grid-attested receipts establish arbitrary external-world truth;
-- proof that local Grid state alone detects a consistently removed suffix after
-  matching local metadata rewrite; or
-- continuity evidence for events after the newest externally retained anchor.
+- proof that a valid signature or Grid receipt establishes arbitrary external-world truth; or
+- proof of retained history beyond the newest independently retained continuity anchor.
 
-The project is intentionally ambitious. Its public claims remain narrow until
-the evidence is equally ambitious.
+> **Build broadly. Activate deliberately. Expose minimally. Promote only with evidence. Market only what is true.**
