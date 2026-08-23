@@ -2,15 +2,13 @@ import { sha256 } from '../lib/canonical.mjs';
 
 const CONTEXT_AUTHORITY_LIFECYCLE_SQL = `
   CREATE TABLE IF NOT EXISTS context_authority_evidence_lifecycle (
-    evidence_id TEXT PRIMARY KEY
-      REFERENCES context_authority_evidence_admissions(evidence_id),
+    evidence_id TEXT PRIMARY KEY,
     state TEXT NOT NULL CHECK(state IN ('revoked', 'superseded')),
     transition_event_id TEXT NOT NULL UNIQUE,
     changed_by TEXT NOT NULL,
     changed_at TEXT NOT NULL,
     reason_code TEXT NOT NULL,
-    superseded_by_evidence_id TEXT
-      REFERENCES context_authority_evidence_admissions(evidence_id),
+    superseded_by_evidence_id TEXT,
     CHECK(
       (state = 'revoked' AND superseded_by_evidence_id IS NULL)
       OR
