@@ -1,23 +1,69 @@
 # AXIOM-MESH Host Installation and Node Profiles
 
 **Applies to:** `0.12.0-dev.3` development line  
-**Status:** productization specification; host-level fresh-machine installers are not yet implemented  
+**Status:** productization specification; non-mutating host planning is implemented; host-mutating fresh-machine installers are not yet implemented  
 **Updated:** 2026-08-23
 
 AXIOM-MESH needs a supported path from an ordinary machine to a useful, secure node. The existing `npm run setup` path is intentionally narrower: it verifies a checked-out source tree, installs from the committed dependency-free locks, and runs repository checks. It does **not** install the operating-system toolchain, create a host service, harden a machine, provision a complete local product, enroll a node in a network role, or configure remote backup custody.
 
-This document defines the missing productization boundary without weakening that source-setup trust model.
+The repository now also contains a deterministic **non-mutating host-install planner**. It observes or accepts explicit host facts, validates the `personal-local` or `infrastructure-node` target, and emits a digest-bound plan that describes the intended directories, topology, existing provisioning primitives, network defaults, blockers, and installation stages. The planner does not mutate the host and is not a substitute for the missing clean-machine installer.
+
+This document defines the productization boundary without weakening the source-setup trust model or turning planning evidence into installation authority.
 
 ## Installation layers
 
 The project distinguishes four layers. They must not be collapsed into one privileged script.
 
 1. **Source setup — implemented.** A developer or verifier already has the required Node.js/npm toolchain and a checkout. `npm run setup` validates and verifies that source environment.
-2. **Personal/local node install — priority target.** A non-developer starts from a supported clean Linux host and receives a local AXIOM node, owner-controlled data and secrets, a local human interface, update/rollback metadata, and backup enrollment choices.
-3. **Infrastructure/support node install — priority target.** An operator starts from a supported clean headless host and receives the independently deployable service-unit topology plus explicit node-role configuration, observability, recovery, and network participation controls.
-4. **Managed/cloud deployment profiles — later adapters.** Hosting providers or owner-selected cloud infrastructure reproduce the same signed release, authority, custody, update, and evidence contracts. They do not become a separate AXIOM authority.
+2. **Host preflight and install planning — implemented, non-mutating.** With the current Node.js runtime available, `npm run host-install:plan -- <profile>` records local host observations and emits a deterministic plan. It does not install the toolchain, create users/directories/services, provision credentials, alter networking, start AXIOM, or verify a release bundle.
+3. **Personal/local node install — priority target.** A non-developer starts from a supported clean Linux host and receives a local AXIOM node, owner-controlled data and secrets, a local human interface, update/rollback metadata, and backup enrollment choices.
+4. **Infrastructure/support node install — priority target.** An operator starts from a supported clean headless host and receives the independently deployable service-unit topology plus explicit node-role configuration, observability, recovery, and network participation controls.
+5. **Managed/cloud deployment profiles — later adapters.** Hosting providers or owner-selected cloud infrastructure reproduce the same signed release, authority, custody, update, and evidence contracts. They do not become a separate AXIOM authority.
 
 Installation never grants application, agent, network, governance, data-access, or external-effect authority merely because software was installed.
+
+## Executable host-install planning surface
+
+The current planning surface is intentionally useful before it is privileged.
+
+Machine-readable inputs and implementation:
+
+- `mesh/config/install-targets.json` remains the product-level target registry;
+- `mesh/config/host-install-policy.json` defines planner and future mutating-installer invariants;
+- `mesh/src/lib/host-install-plan.mjs` validates the policy and emits digest-bound plans;
+- `mesh/src/host-install.mjs` provides the command-line entry point.
+
+Current commands:
+
+```bash
+npm run host-install:policy
+npm run host-install:plan -- personal-local
+npm run host-install:plan -- infrastructure-node
+```
+
+The planner observes Linux platform/architecture, distribution identity/version, init system, package-manager presence, current Node runtime, memory, root-filesystem free space, optional container runtime, and effective user identity. Tests may supply explicit facts rather than observing the host.
+
+The output binds the host facts, install target registry, install policy, and selected profile by SHA-256 digests. It records blockers for unsupported platform/architecture/init/toolchain observations rather than silently compensating for them.
+
+Every current plan reports, and validation enforces:
+
+- `target_status: specified`;
+- `eligible_for_mutating_install: false`;
+- `mutation_performed: false`;
+- `live_services_started: false`;
+- `credentials_created: false`;
+- `authority_effect: none`;
+- `network_effect: none`;
+- public ingress disabled;
+- external egress `deny`;
+- Mesh enrollment `not-performed`;
+- signed release manifest verification `false`.
+
+The planner composes the existing `provision-production` and service-unit projection primitives **by reference**. It does not reimplement their credential or private-key handling in a host bootstrap script.
+
+This planner currently runs under the supported Node.js toolchain. Therefore it is **not** the bootstrap that turns an untouched Linux installation into AXIOM. A future release bootstrap must work from a separately verified signed release/package entry point, acquire only pinned dependencies, and pass the promotion gates below before the project may call it a supported fresh-host installer.
+
+A plan reporting `host_candidate_compatible: true` means only that the observed facts satisfy the current planner's narrow candidate conditions. It is not a support, security, production, hardware, distro, or release certification.
 
 ## Common invariants
 
@@ -49,7 +95,7 @@ Host installation is deployment work around that path, not a way around it.
 ## Profile A — personal/local node
 
 **Priority:** P0 productization target  
-**Current status:** specified, not yet a supported fresh-host installer
+**Current status:** target specified; non-mutating plan implemented; not yet a supported fresh-host installer
 
 This is the default experience for an individual who wants AXIOM on a personally controlled machine.
 
@@ -71,7 +117,7 @@ The resulting system should provide:
 
 ### Fresh-host sequence
 
-A supported implementation should perform these stages explicitly:
+A supported implementation should perform these stages explicitly. The current planner can model and record the sequence but performs only non-mutating preflight/planning work.
 
 1. **Preflight** — identify OS family/version, CPU architecture, filesystem, available memory/storage, virtualization/container support, clock status, and whether the host is already carrying conflicting AXIOM state.
 2. **Release selection** — resolve a named stable/candidate/development channel to one immutable signed release manifest. A moving branch is never the installed identity.
@@ -89,7 +135,7 @@ A failure at any stage leaves the machine either unchanged or in a clearly ident
 ## Profile B — infrastructure/support node
 
 **Priority:** P0/P1 network-support target  
-**Current status:** specified; current repository contains relevant single-host service-unit, admitted-node, scheduling, storage-offer, causal-exchange, backup, and operations foundations, but no general public infrastructure-node installer or federation claim
+**Current status:** target specified; non-mutating plan implemented; current repository contains relevant single-host service-unit, admitted-node, scheduling, storage-offer, causal-exchange, backup, and operations foundations, but no general public infrastructure-node installer or federation claim
 
 This profile is for a headless server, home server, lab machine, community-operated host, or later cloud VM that supports AXIOM infrastructure.
 
@@ -217,7 +263,7 @@ Community participation should eventually help operate and test infrastructure w
 
 The Community Testnet v0 remains the safe starting point: independent operators reproduce exact revisions and submit evidence. The host-install profiles should reduce participation friction by letting a contributor create a known-good node and export a machine-readable environment/install receipt without private project knowledge.
 
-Later community infrastructure can add separately reviewed node admission, storage/compute offers, relay/discovery services, mirrors, and decentralized evidence/storage mechanisms. Each must retain operator sovereignty and explicit protocol authority. Community operation does not grant merge, release, governance, signing-key, or user-data authority.
+Later community infrastructure can add separately reviewed node admission, storage/compute offers, relay/discovery services, mirrors, and decentralized evidence/storage mechanisms. Each must retain operator sovereignty and explicit protocol authority. Community operation does not grant merge, release, governance, signing-key, credential, or user-data authority.
 
 ## Update, rollback, and decommission
 
@@ -273,4 +319,4 @@ The first supported fresh-Linux installer is not complete until all of the follo
 14. pass Windows/macOS compatibility checks for repository code even when the first host installer is Linux-only;
 15. collect at least one independent community reproduction before treating the installer as broadly supported.
 
-Until those gates are met, AXIOM-MESH has an implemented clean-checkout **source setup**, not a completed fresh-machine Linux installer.
+Until those gates are met, AXIOM-MESH has an implemented clean-checkout **source setup** and an implemented **non-mutating install planner**, not a completed fresh-machine Linux installer.
