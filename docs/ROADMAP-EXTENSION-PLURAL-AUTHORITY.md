@@ -25,6 +25,7 @@ The current roadmap correctly prioritizes a defensible kernel, authentic pilot e
 - Circles are one form of governance, not the universal model;
 - institutions, jurisdictions, sovereign states, and treaty domains require distinct authority semantics;
 - governance models should be observable, simulatable, and locally adoptable without carrying authority automatically;
+- consequential agent changes should be simulatable against isolated state before any separately authorized canonical commit;
 - sovereignty and interoperability must coexist;
 - public claims must continue to describe only what is actually implemented and evidenced.
 
@@ -67,6 +68,7 @@ These commitments apply to new design and schema work even before the future cap
 7. No governance model should be hard-coded as the only legitimate constitutional structure.
 8. No technical authorization record should be advertised as proof of legal or political legitimacy.
 9. No long-horizon feature may be marketed until its exact registry status and evidence support the claim.
+10. No simulation branch, derived view, semantic index, database snapshot, or model-generated state may become canonical merely because it exists or verifies internally; canonical mutation still requires fresh authority and a fresh canonical-head check through the mandatory authority path.
 
 ## Workstream A — Current kernel and pilot protection
 
@@ -115,6 +117,48 @@ Promotion gates:
 - later review cannot rewrite original assurance;
 - privacy and storage benefits are measured rather than assumed;
 - high-consequence actions remain independently gated.
+
+## Workstream B2 — Sovereign State Fabric and simulation-safe mutation
+
+**Horizon:** inert contract work may proceed during `0.12.x`; runtime mutation support only after the relevant authority, recovery, and verification prerequisites exist
+
+**Outcome:** agents, people, Circles, and later institutions can evaluate proposed state changes against isolated, provenance-bound state without giving the simulation branch or its storage engine authority over canonical state.
+
+The architectural sequence is:
+
+`fork/snapshot -> simulate -> verify -> authorize -> commit`
+
+The first four stages must remain distinguishable. A verified simulation is evidence about a proposed transition, not permission to perform it. A commit candidate is a bounded proposal, not an executable grant.
+
+Milestones:
+
+1. define canonical state as signed/provenance-bearing events plus explicitly rebuildable materialized views rather than whichever database representation is most convenient;
+2. distinguish canonical state, derived indexes/views, isolated simulation branches, and externally observed world state;
+3. bind every simulation branch to one exact canonical head digest, sequence, authority domain, owner principal, finite scope, creation time, and expiry;
+4. prohibit external effects and canonical writes from the simulation branch;
+5. require simulated transitions to form a deterministic pre-state/post-state chain and remain inside the declared branch scope;
+6. bind simulation inputs, results, engine identity/version, and supporting evidence into a stable digest;
+7. require an explicit verification record to bind the exact simulation and prove branch-source binding, chain continuity, scope containment, no external effects, no canonical writes, and result binding;
+8. represent any resulting commit candidate as non-authorizing evidence that requires a fresh canonical-head check and fresh authorization;
+9. route any future real commit through `Gateway -> Hypervisor -> Sandbox -> Grid`; no database, agent runtime, branch manager, indexer, or simulation engine may bypass that path;
+10. use compare-and-set or an equivalent serializable current-head guard so a canonical state change after simulation invalidates the stale candidate rather than being silently overwritten;
+11. preserve append-only provenance linking the canonical commit, when one is separately authorized, back to its simulation and verification evidence without rewriting the original simulation;
+12. keep SQL, document, graph, vector, full-text, object, and other storage/index engines replaceable implementation details; none is an authority root merely because it stores or retrieves state;
+13. add bitemporal semantics where a domain needs to distinguish when a fact was true from when the node learned or recorded it;
+14. prove backup, restore, export, import, and causal exchange preserve the distinction between canonical history and rebuildable projections/branches;
+15. add adversarial tests for stale-head commit, branch/canonical confusion, effect laundering, scope escape, simulation-result substitution, verification substitution, index-as-authority, and replay.
+
+Promotion gates:
+
+- a simulation branch cannot perform an external effect or mutate canonical state;
+- a simulation or verification record cannot mint a capability;
+- a commit candidate cannot be executed directly;
+- the exact canonical source head must still be current at authorization/commit time;
+- fresh authorization must be independently evaluated after simulation;
+- the canonical commit path remains the existing mandatory authority path;
+- branch, projection, and index reconstruction never silently rewrites canonical history;
+- storage-engine replacement does not change identity, consent, authority, provenance, or Circle ownership semantics;
+- current documentation continues to distinguish the inert contract laboratory from any future live state-commit capability.
 
 ## Workstream C — Circle governance foundation
 
@@ -287,6 +331,7 @@ Milestones:
 current kernel integrity and evidence binding
   -> human-readable plans, approvals, receipts, and Verify
   -> bounded AI/provider adapters
+  -> sovereign state fork/simulate/verify commit-candidate boundary
   -> selective sharing and Circle identity
   -> Circle charters, delegation, appeal, and assurance profiles
   -> institutional offices, duties, succession, and records
@@ -296,7 +341,7 @@ current kernel integrity and evidence binding
   -> collective finality where actually required
 ```
 
-The sequence is directional, not strictly serial. Research may proceed early in isolated laboratories, but authority may not be exposed ahead of its dependencies.
+The sequence is directional, not strictly serial. Research may proceed early in isolated laboratories, but authority may not be exposed ahead of its dependencies. Existing inert Circle research can continue in parallel; any future live Circle state-mutation path must preserve the same canonical-state, fresh-head, and fresh-authorization distinctions rather than treating simulation evidence as authority.
 
 ## Documentation and claims maintenance
 
@@ -314,13 +359,14 @@ Every future implementation step must update, as applicable:
 - public claims and non-claims;
 - release dossier.
 
-A roadmap entry is not a capability claim. A demonstration is not a pilot. A signed record is not proof of truth. Technical authorization is not proof of legitimacy. National interest is not national adoption. Adoption is not constitutional validity.
+A roadmap entry is not a capability claim. A demonstration is not a pilot. A signed record is not proof of truth. Technical authorization is not proof of legitimacy. A verified simulation is not permission to commit. National interest is not national adoption. Adoption is not constitutional validity.
 
 ## Long-horizon outcome
 
 AXIOM-MESH should eventually allow:
 
 - people to retain independent agency and portable records;
+- people and agents to simulate consequential state changes without giving the simulation environment canonical authority;
 - voluntary groups to govern under transparent charters;
 - institutions to exercise explicit, reviewable, and recoverable authority;
 - jurisdictions to map their actual legal structures;
