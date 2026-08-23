@@ -228,13 +228,13 @@ AXIOM-MESH remains the portable authority/evidence substrate in either case.
 
 ## Applications are selectable surfaces, not embedded authority
 
-Axiom Education remains independently releasable at `Zoverions/Axiom-Education`. A personal-node installer may eventually offer it after verifying the Education release and exact Mesh compatibility profile.
+Axiom Education remains independently releasable at `https://github.com/Zoverions/Axiom-Education`. A personal-node installer may eventually offer it after verifying the Education release and exact Mesh compatibility profile.
 
 Installing or listing Education must not grant learner-record access, provider activation, curriculum authority, network access, school/institution authority, or delegated guardian/educator authority.
 
 The same pattern applies to AXIOM One, Circles, Verify, Studio, Managed Node tooling, and external agent/runtime scaffolds: discoverable and composable, independently versioned, and authority-bounded.
 
-## Backup and external services
+## Personal cloud and remote backup adapters
 
 Applications should use the Mesh encrypted backup/export substrate rather than each inventing a different cloud trust model.
 
