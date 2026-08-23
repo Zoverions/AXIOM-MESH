@@ -235,12 +235,14 @@ function signRecord(statement, privateKey) {
 
 function evidenceFixture(document, signers) {
   const records = [];
+  const portfolioDigest = validateResilientPathFabric(document).portfolio_digest;
   let sequence = 0;
   const append = (kind, subjectId) => {
     sequence += 1;
     const signerId = `signer.${kind}`;
     const statement = {
       schema: 'axiom-path-observation-statement.v0',
+      portfolio_digest: portfolioDigest,
       evidence_id: `evidence.${sequence}`,
       kind,
       subject_id: subjectId,
@@ -271,7 +273,7 @@ function evidenceFixture(document, signers) {
     schema: 'axiom-path-observation-evidence.v0',
     version: 0,
     status: 'inert-evidence-laboratory',
-    portfolio_digest: validateResilientPathFabric(document).portfolio_digest,
+    portfolio_digest: portfolioDigest,
     evidence_records: records,
     authority_effect: 'none',
     network_effect: 'none',
@@ -312,11 +314,27 @@ test('verifies complete attributed fresh evidence without claiming truth or auth
   assert.equal(result.evidence_count, 28);
 });
 
-test('rejects evidence bound to a different path portfolio', () => {
+test('rejects evidence packages bound to a different path portfolio', () => {
   const document = pathFabricFixture();
   const signers = signerFixture();
   const evidence = evidenceFixture(document, signers);
   evidence.portfolio_digest = 'f'.repeat(64);
+  assert.throws(
+    () => validatePathObservationEvidence(document, evidence, validationOptions(signers)),
+    /does not bind the exact path portfolio/
+  );
+});
+
+test('rejects individually signed evidence replayed into a different portfolio context', () => {
+  const document = pathFabricFixture();
+  const signers = signerFixture();
+  const evidence = evidenceFixture(document, signers);
+  const record = findRecord(evidence, 'link-latency', 'link.primary-1');
+  record.statement.portfolio_digest = 'f'.repeat(64);
+  Object.assign(
+    record,
+    signRecord(record.statement, signers.privateKeys.get(record.statement.signer_id))
+  );
   assert.throws(
     () => validatePathObservationEvidence(document, evidence, validationOptions(signers)),
     /does not bind the exact path portfolio/
@@ -411,6 +429,40 @@ test('rejects signature tampering on provenance metadata', () => {
   assert.throws(
     () => validatePathObservationEvidence(document, evidence, validationOptions(signers)),
     /signature is invalid/
+  );
+});
+
+test('rejects signer nonce reuse within one evidence package', () => {
+  const document = pathFabricFixture();
+  const signers = signerFixture();
+  const evidence = evidenceFixture(document, signers);
+  const first = findRecord(evidence, 'link-latency', 'link.primary-1');
+  const second = findRecord(evidence, 'link-latency', 'link.primary-2');
+  second.statement.nonce = first.statement.nonce;
+  Object.assign(
+    second,
+    signRecord(second.statement, signers.privateKeys.get(second.statement.signer_id))
+  );
+  assert.throws(
+    () => validatePathObservationEvidence(document, evidence, validationOptions(signers)),
+    /signer nonce .* is reused within the package/
+  );
+});
+
+test('rejects one source reference mapping to inconsistent source digests', () => {
+  const document = pathFabricFixture();
+  const signers = signerFixture();
+  const evidence = evidenceFixture(document, signers);
+  const first = findRecord(evidence, 'link-profile', 'link.primary-1');
+  const second = findRecord(evidence, 'link-profile', 'link.primary-2');
+  second.statement.source_ref = first.statement.source_ref;
+  Object.assign(
+    second,
+    signRecord(second.statement, signers.privateKeys.get(second.statement.signer_id))
+  );
+  assert.throws(
+    () => validatePathObservationEvidence(document, evidence, validationOptions(signers)),
+    /maps to inconsistent source digests/
   );
 });
 
