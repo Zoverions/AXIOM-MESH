@@ -88,6 +88,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/operations/AUTOMATED-SOURCE-SETUP.md',
   'docs/operations/HOST-INSTALLATION-PROFILES.md',
   'docs/operations/SIGNED-RELEASE-INSTALL-MANIFEST.md',
+  'docs/operations/RELEASE-BOUND-INSTALL-INPUT-ADMISSION.md',
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md',
   'docs/operations/GATEWAY-CLIENT-CONTRACT.md',
   'docs/operations/AXIOM-ONE-LOCAL-PREVIEW.md',
