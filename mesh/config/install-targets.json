@@ -1,0 +1,66 @@
+{
+  "schema": "axiom-install-targets.v1",
+  "version": 1,
+  "kernel_version": "0.12.0-dev.3",
+  "installation_grants_authority": false,
+  "source_setup": {
+    "id": "source-checkout",
+    "status": "implemented",
+    "command": "npm run setup",
+    "host_toolchain_installed": false,
+    "production_credentials_created": false,
+    "authority_effect": "none"
+  },
+  "targets": [
+    {
+      "id": "personal-local",
+      "status": "specified",
+      "priority": "P0",
+      "platform_family": "linux",
+      "topology": "single-host",
+      "intended_operator": "individual",
+      "runtime_identity": "unprivileged-dedicated",
+      "public_ingress_default": false,
+      "external_egress_default": "deny",
+      "installation_grants_authority": false,
+      "mesh_enrollment": "explicit-separate-step",
+      "data_custody": "owner-local",
+      "secret_custody": "owner-local-separate",
+      "service_units": "supported-option",
+      "backup_surfaces": [
+        "local-encrypted-implemented",
+        "remote-provider-adapter-required"
+      ],
+      "application_catalog": [
+        "axiom-one",
+        "axiom-education"
+      ]
+    },
+    {
+      "id": "infrastructure-node",
+      "status": "specified",
+      "priority": "P0-P1",
+      "platform_family": "linux",
+      "topology": "independent-service-units",
+      "intended_operator": "node-operator",
+      "runtime_identity": "unprivileged-dedicated",
+      "public_ingress_default": false,
+      "external_egress_default": "deny",
+      "installation_grants_authority": false,
+      "mesh_enrollment": "explicit-separate-step",
+      "data_custody": "operator-controlled",
+      "secret_custody": "operator-controlled-separate",
+      "service_units": "required",
+      "backup_surfaces": [
+        "local-encrypted-implemented",
+        "remote-provider-adapter-required"
+      ],
+      "role_boundaries": {
+        "admitted_node": "implemented-local",
+        "storage_offer": "implemented-local-no-object-transfer",
+        "scheduling": "implemented-local-no-remote-dispatch",
+        "causal_exchange": "implemented-operator-approved-no-consensus"
+      }
+    }
+  ]
+}

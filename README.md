@@ -8,11 +8,17 @@ turns authenticated human or machine intent into an explicit policy-authorized
 plan, executes only approved effects through bounded interfaces, and records
 portable cryptographically linked evidence.
 
-The project is developing a defensible kernel plus human products and
-replaceable machine/runtime interfaces. AXIOM One, AXIOM Verify, AXIOM Circles,
-AXIOM Studio, managed-node operations, agent runtimes, and future protocol
-adapters are clients of the authority substrate; they do not become alternate
-authorities merely by being installed or connected.
+The project is developing a defensible kernel plus first-class applications and
+replaceable machine/runtime interfaces. AXIOM One,
+[Axiom Education](https://github.com/Zoverions/Axiom-Education), AXIOM Verify,
+AXIOM Circles, AXIOM Studio, managed-node operations, agent runtimes, and future
+protocol adapters are clients of the authority substrate; they do not become
+alternate authorities merely by being installed or connected. Axiom Education
+is independently releasable in its own repository while remaining an integral
+AXIOM application and declared downstream Mesh consumer.
+
+The machine-readable project/application boundary is recorded in
+[`mesh/config/application-catalog.json`](mesh/config/application-catalog.json).
 
 ## First 5 Minutes
 
@@ -40,6 +46,14 @@ npm run axiom -- intent system.echo '{"message":"hello"}'
 Use `npm run axiom -- --help` to discover commands. Append `--json` for the
 complete machine-readable response. Docker is not required for the basic local
 development path.
+
+This is a **clean source-checkout setup**, not yet a fresh-machine Linux
+installer. It assumes the supported Node.js/npm toolchain is already present and
+does not provision a complete personal or infrastructure node. The explicit
+personal/local and infrastructure-node targets, their security invariants, and
+the promotion gates for a real fresh-host installer are defined in
+[`mesh/config/install-targets.json`](mesh/config/install-targets.json) and the
+[Host Installation and Node Profiles](docs/operations/HOST-INSTALLATION-PROFILES.md).
 
 ## Current state
 
@@ -180,6 +194,22 @@ plan/execute, direct provenance-edge deletion, hard deletion, restore, bulk
 ingestion, completed browser-session security, accessibility/usability evidence,
 or signed end-user packaging.
 
+### Axiom Education
+
+[Axiom Education](https://github.com/Zoverions/Axiom-Education) is the
+independently releasable local-first lifelong education application/domain
+project. It is not confined to one grade band or curriculum: Ontario is the
+first supported jurisdiction while elementary, secondary, later learning, and
+future jurisdictional packs share the same governed application direction.
+
+Education can maintain local/offline application functionality under its own
+release boundary. Governed learner effects must bind to reviewed AXIOM-MESH
+contracts and preserve Gateway -> Hypervisor -> Sandbox -> Grid. Installing or
+listing Axiom Education grants no learner-record, curriculum, provider,
+network, school, guardian, or delegated-human authority. The cross-repository
+compatibility and feature-adoption rules are defined in
+[Application and Downstream Integration](docs/rebuild/APPLICATION-AND-DOWNSTREAM-INTEGRATION.md).
+
 ## Development programme
 
 Work advances through three coordinated tracks.
@@ -197,6 +227,8 @@ telemetry/alert routes, and an independent security review.
 Build and promote only with their own evidence:
 
 - **AXIOM One** — private personal agent, vault, approvals, and receipts;
+- **Axiom Education** — independently released lifelong education application
+  and governed education-domain consumer of Mesh contracts;
 - **AXIOM Verify** — independent local/static evidence verification;
 - **AXIOM Circles** — invitation-based governed collaboration;
 - **AXIOM Studio** — capsule, adapter, policy, and conformance tooling;
@@ -267,6 +299,8 @@ chain that produces that authority.
 |---|---|---|
 | **Local Play** | Start the kernel and submit one intent | `npm run doctor` -> `npm run setup` -> `npm run dev` -> `npm run axiom -- status` |
 | **Verify** | Re-run source, test, documentation, and release gates | `npm run check` -> `npm run release:verify` |
+| **Install planning** | Review the future personal/local and infrastructure-node host profiles without mistaking them for implemented installers | `mesh/config/install-targets.json` -> `docs/operations/HOST-INSTALLATION-PROFILES.md` |
+| **Applications** | Discover first-class in-tree and independently released applications and their authority boundaries | `mesh/config/application-catalog.json` -> `docs/rebuild/APPLICATION-AND-DOWNSTREAM-INTEGRATION.md` |
 | **Operator / Pilot** | Exercise recovery, transport, resilience, custody, and evidence controls | Use the bounded drills and linked runbooks |
 | **Product development** | Build products/adapters without expanding ambient kernel authority | Follow `docs/ROADMAP.md`, `docs/MASTER-TODO.md`, requirements, and capability gates |
 | **Frontier laboratory** | Reduce uncertainty without production exposure | Isolated identities/data/value; explicit halt; no promotion claim |
@@ -327,6 +361,8 @@ matches the question:
 
 - [Current project status](docs/PROJECT-STATUS-2026.md)
 - [Capability registry](mesh/config/capabilities.json)
+- [Application catalogue](mesh/config/application-catalog.json) and [application/downstream integration model](docs/rebuild/APPLICATION-AND-DOWNSTREAM-INTEGRATION.md)
+- [Install target registry](mesh/config/install-targets.json) and [host installation profiles](docs/operations/HOST-INSTALLATION-PROFILES.md)
 - [Production readiness tracker](docs/PRODUCTION-READINESS-TRACKER.md)
 - [Technical white paper](docs/whitepapers_and_research/WHITEPAPER.md)
 - [Normative requirements](docs/rebuild/REQUIREMENTS.md)
@@ -370,6 +406,12 @@ The active build does not claim:
 
 - live production, testnet, mainnet, or public federation;
 - a completed authentic pilot or independent security approval;
+- a supported fresh-machine Linux installer, general infrastructure-node
+  installer, or automatic network enrollment;
+- implemented Google Drive, OneDrive, S3-compatible, decentralized, or other
+  remote-backup provider adapters beyond the existing local encrypted backup
+  foundation;
+- a production-ready governed Axiom Education deployment;
 - supported AXIOM One, Verify, Circles, Studio, or Managed Node products;
 - supported wearable/companion hardware, Personal Agent Pack, Agent Runtime
   Capsule executor, Personal Compute Fabric, or Local Trust Plane;

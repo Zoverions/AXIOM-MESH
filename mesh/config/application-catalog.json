@@ -1,0 +1,74 @@
+{
+  "schema": "axiom-application-catalog.v1",
+  "version": 1,
+  "kernel_version": "0.12.0-dev.3",
+  "installation_grants_authority": false,
+  "applications": [
+    {
+      "id": "axiom-one",
+      "name": "AXIOM One",
+      "repository": "Zoverions/AXIOM-MESH",
+      "path": "apps/axiom-one",
+      "release_model": "in-tree",
+      "status": "experimental",
+      "mesh_relationship": "human-interface-client",
+      "compatibility_profile": null,
+      "installation_grants_authority": false
+    },
+    {
+      "id": "axiom-education",
+      "name": "Axiom Education",
+      "repository": "Zoverions/Axiom-Education",
+      "path": null,
+      "release_model": "independent",
+      "status": "active-development",
+      "mesh_relationship": "optional-for-local-offline-required-for-governed-effects",
+      "compatibility_profile": "config/axiom-mesh-compatibility.v1.json",
+      "installation_grants_authority": false
+    },
+    {
+      "id": "axiom-circles",
+      "name": "AXIOM Circles",
+      "repository": "Zoverions/AXIOM-MESH",
+      "path": null,
+      "release_model": "in-tree-development-surfaces",
+      "status": "experimental-inert-and-evidence-gated",
+      "mesh_relationship": "governed-collaboration-client",
+      "compatibility_profile": null,
+      "installation_grants_authority": false
+    },
+    {
+      "id": "axiom-verify",
+      "name": "AXIOM Verify",
+      "repository": "Zoverions/AXIOM-MESH",
+      "path": null,
+      "release_model": "product-target",
+      "status": "planned-product-surface",
+      "mesh_relationship": "independent-verification-client",
+      "compatibility_profile": null,
+      "installation_grants_authority": false
+    },
+    {
+      "id": "axiom-studio",
+      "name": "AXIOM Studio",
+      "repository": "Zoverions/AXIOM-MESH",
+      "path": null,
+      "release_model": "product-target",
+      "status": "planned-product-surface",
+      "mesh_relationship": "builder-and-conformance-client",
+      "compatibility_profile": null,
+      "installation_grants_authority": false
+    },
+    {
+      "id": "axiom-managed-node",
+      "name": "AXIOM Managed Node",
+      "repository": "Zoverions/AXIOM-MESH",
+      "path": null,
+      "release_model": "service-profile-target",
+      "status": "planned-product-surface",
+      "mesh_relationship": "optional-operations-profile",
+      "compatibility_profile": null,
+      "installation_grants_authority": false
+    }
+  ]
+}
