@@ -54,6 +54,7 @@ Agent interoperability also inherits the existing distinction between authority,
 8. The native Gateway contract remains semantically authoritative; compatibility adapters must prove equivalent authorization outcomes.
 9. Remote output is evidence from a remote source, not local truth merely because the protocol completed successfully.
 10. No interoperability feature may be marketed before registry/evidence promotion.
+11. Network path discovery, local-repair candidates, route optimization, radio metrics, attestation state, spectrum policy, DTN state, or AI recommendations are evidence and planning inputs only; none may create network-control authority or bypass the normal AXIOM intent/grant/effect path.
 
 ## Workstream A — Current production-candidate protection
 
@@ -247,6 +248,70 @@ Milestones:
 - handle partitions, compromise, cancellation, uncertain completion, and recovery;
 - never infer execution authority from scheduler discovery metadata alone.
 
+## Workstream L2 — Resilient Path Fabric
+
+**Horizon:** inert contract and simulation work may proceed during `0.12.x`; live forwarding/radio control only after multi-host transport, measured telemetry, trust, recovery, and explicit network-effect authorization exist
+
+**Outcome:** AXIOM can reason about heterogeneous network paths as a policy-aware portfolio rather than a flat undifferentiated mesh, while keeping network-control authority separate from path observations and optimization.
+
+Architectural model:
+
+```text
+traffic/service intent
+  -> hard legality + security constraints
+  -> validated path portfolio
+  -> prepared local-repair candidates
+  -> deterministic route/execution proposal
+  -> normal AXIOM authorization
+  -> bounded network effect
+```
+
+The target fabric should distinguish at least these overlapping views rather than collapsing them into one weighted graph:
+
+- physical links and media;
+- local-repair/reliability relationships;
+- energy/transit eligibility;
+- compute/storage placement;
+- node trust and attestation freshness;
+- spectrum/regulatory availability;
+- maintenance/access/repair burden.
+
+Milestones:
+
+1. preserve current admitted-node discovery/scheduling and online-causal-exchange semantics as separate controls rather than silently redefining them as routing;
+2. define a route/path portfolio contract with exact source/destination, traffic criticality, latency ceiling, current attestation requirement, path count, and required failure-domain diversity;
+3. represent failure correlation explicitly across spectrum, power, backhaul, vendor, administration, and physical site rather than equating neighbor count or edge-disjointness with resilience;
+4. introduce role-specialized nodes: stable powered transit/core, regional relays, energy-constrained routers, and leaf/sleepy endpoints;
+5. require policy-confirmed legal availability before a radio/link may enter an admissible live path;
+6. make stale/quarantined attestation and depleted/reserve transit energy fail closed for protected live paths;
+7. separate fast local-repair candidates from slower global routing/topology optimization;
+8. support selective redundancy for critical traffic without defaulting to universal packet replication;
+9. model BPv7-style store-forward only as an explicit disruption-tolerant fallback, not as ordinary low-latency routing or permission to move data;
+10. preserve compute capacity and storage placement as path metadata so later work can model computation as virtual graph edges without granting compute authority from connectivity alone;
+11. retain maintenance class, access constraints, repair burden, and spare/power facts as first-class planning evidence rather than operator folklore outside the model;
+12. run AI/GNN/RL control in shadow mode first: model predicts, bounded optimizer proposes, deterministic checks validate, and only a separately authorized executor may change forwarding;
+13. use constrained or lexicographic optimization so legality/security/reliability floors cannot be numerically traded away for throughput or latency;
+14. add chaos drills for link loss, shared-power loss, gateway loss, stale attestation, energy depletion, route correlation, partitions, and recovery oscillation;
+15. measure local repair time, p99 latency, control airtime, correlated-failure survival, relay-energy inequality, trust quarantine error, operator repair time, and route-change rollback rate;
+16. keep radio-specific mechanisms replaceable: Babel/RPL/OSPF-class reachability, RAW-like repair, Wi-Fi/TSCH/Wi-SUN/cellular/wired media, and DTN may be adapters beneath AXIOM semantics rather than hard-coded authority roots.
+
+Promotion gates before any live path-selection or forwarding effect:
+
+- measured telemetry provenance and bounded freshness;
+- exact node/link identity and failure-domain provenance;
+- legal/spectrum policy evidence appropriate to the jurisdiction;
+- no route through a node that fails the applicable trust or energy floor;
+- deterministic hard-constraint checker independent of any learned optimizer;
+- AI recommendation cannot directly mutate forwarding, radio, spectrum, or gateway state;
+- explicit network-effect action and ordinary AXIOM intent/plan/grant/evidence path;
+- rollback and safe deterministic fallback when telemetry, optimizer, verifier, or radio control is unavailable;
+- demonstrated control-loop stability under coupled routing, local repair, congestion, energy, and compute changes;
+- partition/rejoin and DTN behavior cannot bypass destination authority, consent, data residency, or causal-conflict rules;
+- human-readable “why this path?” and “why this path was rejected?” explanations;
+- independent security, networking, privacy, regulatory, and operational review.
+
+The first useful implementation remains deliberately inert: validate candidate portfolios and their failure-domain independence, trust/energy/legal admissibility, repair bindings, DTN declarations, and shadow-optimizer non-authority. It does not alter routing tables, radios, interfaces, kernel networking, remote nodes, or causal exchange.
+
 ## Workstream M — Agents in Circles and institutions
 
 **Horizon:** after Circle identity/charter/delegation/appeal foundations
@@ -271,9 +336,14 @@ Measure:
 - retry/idempotency cost;
 - adapter credential/policy lookup cost;
 - task throughput under fixed security constraints;
-- scheduling/resource profile usefulness.
+- scheduling/resource profile usefulness;
+- local repair and global reconvergence time;
+- correlated-failure survival rather than path count alone;
+- control/telemetry airtime and minimum sufficient telemetry;
+- relay-energy burden and time to first depletion;
+- operator repair effort and physical access delay.
 
-Optimization cannot silently drop authorization, attribution, or required evidence.
+Optimization cannot silently drop authorization, attribution, required evidence, legal constraints, security floors, or failure-domain diversity.
 
 ## Dependency map
 
@@ -288,11 +358,12 @@ current kernel integrity + authentic pilot
   -> attenuation-only delegation
   -> MCP client laboratory
   -> A2A task exchange laboratory
+  -> resilient path-fabric laboratory
   -> authenticated remote execution
   -> governed agent roles in Circles/institutions
 ```
 
-External research may run ahead, but authority exposure may not.
+External research may run ahead, but authority exposure may not. Path-fabric research may consume scheduling, causal-exchange, trust, telemetry, and simulator evidence without converting those observations into forwarding authority.
 
 ## Documentation and claims maintenance
 
@@ -322,8 +393,13 @@ This roadmap does not claim current support for:
 - remote task execution;
 - agent federation;
 - agent membership in Circles;
+- production multi-path routing or automated local forwarding repair;
+- autonomous radio/spectrum control;
+- attestation-weighted live routing;
+- BPv7/DTN transport as a supported AXIOM network service;
+- AI-controlled network optimization;
 - a supported capsule marketplace.
 
 ## Long-horizon outcome
 
-AXIOM-MESH should become a communication and capability substrate where humans and digital agents can use the same bounded authority model through different interfaces. Agent runtimes remain replaceable. Credentials remain scoped. Delegation remains explicit. Effects remain governed. Evidence remains portable. Protocol changes do not change who is allowed to do what.
+AXIOM-MESH should become a communication and capability substrate where humans and digital agents can use the same bounded authority model through different interfaces. Agent runtimes remain replaceable. Network media and routing protocols remain replaceable. Credentials remain scoped. Delegation remains explicit. Path observations and optimizer recommendations remain evidence rather than authority. Effects remain governed. Evidence remains portable. Protocol or radio changes do not change who is allowed to do what.
