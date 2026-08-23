@@ -204,6 +204,8 @@ Grid is a single-node transparency log. It is not BFT consensus.
 
 `main` contains an evidence-first, credential-isolated, docs-only repository-effect prototype that can prepare a deterministic branch and create/recover an **open draft pull request** only after durable Grid preparation and exact-plan verification.
 
+The exact internal effect-state boundary remains explicit: a one-use approval is durably recorded as `approval.consumed` before the separately bound `external.effect.prepared` state can reach the credential-isolated operator. Preparation is not completion and neither state makes the path production-reachable.
+
 It has **no merge authority**, no direct-main mutation path, and reports `merge_performed: false` and `base_branch_content_changed: false`.
 
 It remains production-unreachable: the production executor registry has zero mappings, production policy contains no `repository.docs.pull-request.create` action, and no supported public/runtime route invokes the chain.
