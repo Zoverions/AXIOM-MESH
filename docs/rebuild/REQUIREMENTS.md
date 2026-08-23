@@ -1,9 +1,9 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=3d909ef501e6f914c60f2a74f42a6155f18038f79a73e9ba915d8873511cfcc7 -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=e8bf5b9c083fd4b20a630372fa135e630c36285064f58d84abea60975325c10e -->
 # AXIOM-MESH Rebuild Requirements
 
 **Current build:** `0.12.0-dev.3`
 
-**Updated:** 2026-08-10
+**Updated:** 2026-08-23
 
 **Normative language:** MUST, MUST NOT, SHOULD, and MAY are used in their usual
 requirements sense.
@@ -242,8 +242,10 @@ The active `0.12.0-dev.3` build currently verifies:
 - the authenticated Gateway → Hypervisor → Sandbox → Grid intent path;
 - human-sponsored constrained agent principals with finite scopes, action and
   purpose ceilings, runtime identity, expiry, non-delegation, an enforced
-  execution-time ceiling, and authority digests bound into request approval,
-  plans, capability claims, and execution evidence;
+  execution-time ceiling, authenticated Gateway request-size, request-rate,
+  concurrency, response-size, and current built-in destination ceilings, with
+authority digests bound into request approval, plans, capability claims, and
+execution evidence;
 - version negotiation, explicit plans, deny-dominant policy, and independent
   one-use approval for permitted high-risk effects;
 - signed replay-resistant internal requests and TLS 1.3 peer identity;
@@ -279,9 +281,10 @@ application, autonomous-agent runtime, MCP/A2A endpoint, machine delegation,
 remote agent execution, external AI provider, AXIOM Verify, Circles, remote
 dispatch, authenticated remote results, federation, consensus, arbitrary code,
 tokens, settlement, regulated-domain deployment, embodied autonomy, or
-post-quantum security. The machine-principal schema's destination, rate,
-concurrency, request-size, and response-size fields are not live enforcement
-claims yet.
+post-quantum security. Current local machine-principal destination, rate,
+concurrency, request-size, and response-size ceilings are live enforcement
+claims; provider/MCP/remote destination semantics, hardware attestation, and
+machine delegation remain unresolved and separately gated.
 
 ## Capability coverage
 
