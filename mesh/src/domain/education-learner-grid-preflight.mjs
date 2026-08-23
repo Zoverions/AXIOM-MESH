@@ -120,12 +120,6 @@ export function preflightEducationLearnerGridEvent(
   if (event.event_id !== undefined && event.event_id !== expectedEventId) {
     throw new ValidationError('Education learner Grid event_id binding mismatch');
   }
-  // Grid owns ledger-envelope identity. The generic Hypervisor mutation projection
-  // deliberately strips caller-selected event_id values; after the Education
-  // record payload and subject have been validated, restore only this exact
-  // deterministic identifier. An explicitly supplied non-matching value still
-  // fails closed above.
-  event.event_id = expectedEventId;
   if (store.db.prepare('SELECT 1 FROM events WHERE event_id = ?').get(expectedEventId)) {
     throw new AxiomError(
       'education_learner_event_conflict',
@@ -136,6 +130,14 @@ export function preflightEducationLearnerGridEvent(
 
   const consent = requireConsent(store, input, now);
   const memory = requireMemoryReference(store, input, actorId);
+
+  // Grid owns ledger-envelope identity. The generic Hypervisor mutation projection
+  // deliberately strips caller-selected event_id values. Only after every
+  // deny-capable Education check succeeds do we restore this exact deterministic
+  // identifier for the immediately following append. An explicitly supplied
+  // non-matching value still fails closed above.
+  event.event_id = expectedEventId;
+
   return Object.freeze({
     record_digest,
     consent_id: consent.consent_id,
