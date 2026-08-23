@@ -53,7 +53,7 @@ Only **implemented** capabilities are runnable claims.
 | `workforce.task-market-payroll-legacy` | workforce | **disabled** | Task markets, autonomous workforce, payroll, and digital legacy are disabled pending accounting, identity, dispute, inheritance, and labor-policy controls. |
 | `workforce.embodied` | workforce | **disabled** | Embodied execution is denied until device-specific safety, approval, geofence, force, and halt controls are audited. |
 | `economics.accounting` | economics | **implemented** | Local accounting uses owner- and unit-bound accounts with transactional balanced double-entry journals and safe integer amounts; external settlement remains disabled. |
-| `economics.token-bridge-liquidity` | economics | **disabled** | AXM, bonds, rewards, treasury, bridges, and liquidity are disabled pending reconciled policy, tests, deployment evidence, and external audit. |
+| `economics.token-bridge-liquidity` | economics | **disabled** | AXM, bonds, rewards, treasury, bridges, and liquidity remain disabled pending reconciled policy, tests, deployment evidence, and external audit. |
 | `zk.proof-verifiers` | verification | **adapter_required** | A proof is accepted only with a named circuit, verification key, public-input schema, and verifier adapter. |
 | `ui.operator-api` | operations | **implemented** | Authenticated operator API for intent submission, status, audit, recovery, and governed state inspection. |
 | `ui.gateway-client` | operations | **implemented** | A versioned same-origin Gateway client contract covers all 31 authenticated routes with exact route parity, bounded responses and timeouts, AbortSignal cancellation, stable idempotent intent results, explicit errors, and no direct internal-service access. |
