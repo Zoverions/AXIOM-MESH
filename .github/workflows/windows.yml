@@ -82,6 +82,8 @@ jobs:
           npm --prefix mesh ci --ignore-scripts
       - name: Verify Windows-compatible kernel surface
         shell: pwsh
+        env:
+          AXIOM_TEST_CONCURRENCY: "1"
         run: npm run check
 
   verify-macos:
