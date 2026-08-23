@@ -228,6 +228,16 @@ test('rejects nominal backup paths that share too many failure domains', () => {
   );
 });
 
+test('shared transit relay cannot be laundered as independence by different link labels', () => {
+  const document = fixture();
+  link(document, 'link.repair-1').to_node_id = 'node.primary-relay';
+  link(document, 'link.repair-2').from_node_id = 'node.primary-relay';
+  assert.throws(
+    () => validateResilientPathFabric(document),
+    /share too many correlated failure domains/
+  );
+});
+
 test('rejects a path that uses spectrum without confirmed legal availability', () => {
   const document = fixture();
   link(document, 'link.repair-1').regulatory_state = 'unknown';
