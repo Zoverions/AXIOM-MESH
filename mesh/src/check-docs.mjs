@@ -76,6 +76,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/reviews/AGENT-INTEROPERABILITY-ARCHITECTURE-REVIEW-2026-08-09.md',
   'docs/reviews/RUNTIME-CANDIDATE-SURVEY-2026-08-21.md',
   'docs/reviews/HERMES-RUNTIME-002-CANDIDATE-PIN-2026-08-21.md',
+  'docs/reviews/HERMES-RUNTIME-002-BOUNDARY-REVIEW-2026-08-22.md',
   'docs/security/CREDENTIAL-HISTORY-REVOCATION.md',
   'docs/security/CURRENT-BUILD-THREAT-MODEL.md',
   'docs/security/REMOTE-SOCIAL-THREAT-REVIEW.md',
@@ -295,6 +296,13 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Review of MCP compatibility',
     '## Review of ethics and policy',
     '## Final assessment'
+  ],
+  'docs/reviews/HERMES-RUNTIME-002-BOUNDARY-REVIEW-2026-08-22.md': [
+    '## Import-side-effect finding',
+    'runtime.identity.inspect',
+    'spec_from_file_location',
+    'publisher signature',
+    '## Explicit non-claims'
   ],
   'docs/security/CREDENTIAL-HISTORY-REVOCATION.md': [
     '## Repository trust result',
