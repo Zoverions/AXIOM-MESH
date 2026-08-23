@@ -29,7 +29,7 @@ test('current service network policy is exact, default-deny, and segmented', asy
   assert.equal(result.default_action, 'deny');
   assert.equal(result.segments, 4);
   assert.equal(result.flows, 10);
-  assert.equal(result.routes, 41);
+  assert.equal(result.routes, 42);
   assert.match(result.policy_digest, /^[a-f0-9]{64}$/);
 
   assert.deepEqual(
@@ -59,7 +59,7 @@ test('current service network policy is exact, default-deny, and segmented', asy
   const implementation = validateServiceRouteImplementation({ sources });
   assert.equal(implementation.valid, true);
   assert.equal(implementation.destinations, 3);
-  assert.equal(implementation.implemented_routes, 37);
+  assert.equal(implementation.implemented_routes, 38);
 });
 
 test('service request policy allows only exact caller, destination, method, and route', () => {
@@ -77,6 +77,7 @@ test('service request policy allows only exact caller, destination, method, and 
     ],
     ['hypervisor', 'grid', 'GET', '/internal/v1/approval/approval_1'],
     ['hypervisor', 'grid', 'POST', '/internal/v1/commit'],
+    ['hypervisor', 'grid', 'POST', '/internal/v1/education/learner-progress'],
     ['hypervisor', 'sandbox', 'GET', '/internal/v1/operations'],
     ['hypervisor', 'sandbox', 'POST', '/internal/v1/execute'],
     ['supervisor', 'grid', 'GET', '/health'],
@@ -103,6 +104,8 @@ test('service request policy allows only exact caller, destination, method, and 
     ['gateway', 'grid', 'POST', '/internal/v1/status'],
     ['gateway', 'grid', 'POST', '/internal/v1/social/remote-review/person_123'],
     ['hypervisor', 'grid', 'GET', '/internal/v1/social/remote-review/person_123'],
+    ['gateway', 'grid', 'POST', '/internal/v1/education/learner-progress'],
+    ['hypervisor', 'grid', 'GET', '/internal/v1/education/learner-progress'],
     ['gateway', 'grid', 'GET', '/internal/v1/unknown'],
     ['hypervisor', 'grid', 'GET', '/internal/v1/commit'],
     ['supervisor', 'gateway', 'GET', '/health'],
@@ -182,6 +185,11 @@ test('receiving service enforces caller, method, and route policy', () => {
   }).allowed, true);
   assert.equal(authorizeInboundServiceRequest({
     destination: 'grid',
+    transportPeer: { service: 'hypervisor' },
+    ...request('POST', '/internal/v1/education/learner-progress')
+  }).allowed, true);
+  assert.equal(authorizeInboundServiceRequest({
+    destination: 'grid',
     principal: { service: 'gateway' },
     ...request('GET', '/internal/v1/events?after=1')
   }).allowed, true);
@@ -204,6 +212,14 @@ test('receiving service enforces caller, method, and route policy', () => {
       destination: 'grid',
       transportPeer: { service: 'hypervisor' },
       ...request('GET', '/internal/v1/social/remote-review/person_123')
+    }),
+    error => error.code === 'service_network_policy_denied'
+  );
+  assert.throws(
+    () => authorizeInboundServiceRequest({
+      destination: 'grid',
+      principal: { service: 'gateway' },
+      ...request('POST', '/internal/v1/education/learner-progress')
     }),
     error => error.code === 'service_network_policy_denied'
   );
