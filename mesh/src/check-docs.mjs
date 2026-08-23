@@ -87,6 +87,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md',
   'docs/operations/AUTOMATED-SOURCE-SETUP.md',
   'docs/operations/HOST-INSTALLATION-PROFILES.md',
+  'docs/operations/SIGNED-RELEASE-INSTALL-MANIFEST.md',
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md',
   'docs/operations/GATEWAY-CLIENT-CONTRACT.md',
   'docs/operations/AXIOM-ONE-LOCAL-PREVIEW.md',
@@ -358,6 +359,15 @@ const REQUIRED_CONTENT = Object.freeze({
     '## CI and production separation',
     '## Failure behavior and non-claims'
   ],
+  'docs/operations/SIGNED-RELEASE-INSTALL-MANIFEST.md': [
+    '## Architectural rule',
+    '## Trust bootstrap',
+    '## Artifact verification',
+    'host_mutation_authorized: false',
+    '## AXIOM Host boundary',
+    '## Threats covered',
+    '## Current non-claims'
+  ],
   'docs/operations/GATEWAY-CLIENT-CONTRACT.md': [
     '## Purpose and boundary',
     '## Current route inventory',
@@ -489,6 +499,7 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/security/INDEPENDENT-SECURITY-REVIEW.md': 5_000,
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md': 4_000,
   'docs/operations/AUTOMATED-SOURCE-SETUP.md': 5_000,
+  'docs/operations/SIGNED-RELEASE-INSTALL-MANIFEST.md': 7_000,
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md': 6_000,
   'docs/operations/GATEWAY-CLIENT-CONTRACT.md': 6_000,
   'docs/operations/AXIOM-ONE-LOCAL-PREVIEW.md': 9_000,
