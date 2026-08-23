@@ -288,8 +288,8 @@ function validateEvidenceRecord(
   if (validUntil <= observedAt || validUntil < evaluationTime) {
     throw new ValidationError(`Evidence record ${statement.evidence_id} is expired or has an invalid validity window`);
   }
-  const ageSeconds = Math.floor((evaluationTime.valueOf() - observedAt.valueOf()) / 1000);
-  if (ageSeconds > freshnessPolicy[statement.kind]) {
+  const ageMilliseconds = evaluationTime.valueOf() - observedAt.valueOf();
+  if (ageMilliseconds > freshnessPolicy[statement.kind] * 1000) {
     throw new ValidationError(`Evidence record ${statement.evidence_id} exceeds the configured freshness limit`);
   }
 
@@ -404,7 +404,7 @@ function normalizeTrustedSigners(trustedSigners) {
     bySignerId.set(signerId, Object.freeze({ publicKey, roles }));
     digestEntries.push({
       signer_id: signerId,
-      public_key_digest: sha256(signer.public_key),
+      public_key_digest: sha256(publicKey.export({ type: 'spki', format: 'der' })),
       roles: [...roles].sort()
     });
   }
