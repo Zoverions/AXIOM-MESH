@@ -470,7 +470,7 @@ test('restart-safe consumption reuses existing Hypervisor to Grid commit and add
     false
   );
   const routes = ACTIVE_SERVICE_NETWORK_POLICY.flows.flatMap(flow => flow.routes);
-  assert.equal(routes.length, 41);
+  assert.equal(routes.length, 42);
   assert.equal(
     routes.some(route => route.path === '/internal/v1/capabilities/consume'),
     false
