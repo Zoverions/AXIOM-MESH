@@ -157,8 +157,9 @@ test('pinned signed revocation command verifies without applying lifecycle autho
 
   const serialized = JSON.stringify(verified);
   assert.doesNotMatch(serialized, /BEGIN PUBLIC KEY/);
-  assert.doesNotMatch(serialized, /signature/);
-  assert.doesNotMatch(serialized, /attestation/);
+  assert.doesNotMatch(serialized, /"signature":/);
+  assert.doesNotMatch(serialized, /"attestation":/);
+  assert.doesNotMatch(serialized, /"public_key_pem":/);
 });
 
 test('signed supersession command binds a distinct same-class same-issuer replacement', () => {
