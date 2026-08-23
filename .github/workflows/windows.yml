@@ -82,7 +82,7 @@ jobs:
           npm --prefix mesh ci --ignore-scripts
       - name: Verify Windows-compatible kernel surface
         shell: pwsh
-        run: npm run check
+        run: npm run check -- -- --test-concurrency=1
 
   verify-macos:
     name: verify-macos (${{ matrix.runner }})
