@@ -125,9 +125,50 @@ export function assertDocumentationImpact(changedPaths, policy = impactPolicy) {
   return result;
 }
 
+export async function evaluateDocumentationImpactForCi({
+  eventName = process.env.GITHUB_EVENT_NAME,
+  eventPath = process.env.GITHUB_EVENT_PATH
+} = {}) {
+  const validation = validateDocumentationImpactPolicy();
+  if (eventName !== 'pull_request') {
+    return {
+      valid: true,
+      schema: 'axiom-documentation-impact-ci-result.v1',
+      mode: 'policy-only-non-pull-request',
+      policy_digest: validation.policy_digest,
+      changed_path_count: 0,
+      triggered_rule_count: 0,
+      triggered_rules: [],
+      violations: []
+    };
+  }
+  if (typeof eventPath !== 'string' || !eventPath.length) {
+    throw new ValidationError('GITHUB_EVENT_PATH is required for pull-request documentation impact verification');
+  }
+  let event;
+  try {
+    event = JSON.parse(await readFile(eventPath, 'utf8'));
+  } catch (error) {
+    throw new ValidationError(`Unable to read pull-request event metadata: ${error.message}`);
+  }
+  const base = event?.pull_request?.base?.sha;
+  const head = event?.pull_request?.head?.sha;
+  const paths = gitChangedPaths(base, head);
+  return {
+    ...assertDocumentationImpact(paths),
+    schema: 'axiom-documentation-impact-ci-result.v1',
+    mode: 'pull-request-base-to-head',
+    base_sha: base,
+    head_sha: head
+  };
+}
+
 async function main(argv = process.argv.slice(2)) {
   if (canonicalJson(argv) === canonicalJson(['--policy-only'])) {
     return validateDocumentationImpactPolicy();
+  }
+  if (canonicalJson(argv) === canonicalJson(['--ci'])) {
+    return evaluateDocumentationImpactForCi();
   }
   if (argv.length === 3 && argv[0] === '--git-range') {
     const paths = gitChangedPaths(argv[1], argv[2]);
@@ -138,7 +179,7 @@ async function main(argv = process.argv.slice(2)) {
     return assertDocumentationImpact(input.split(/\r?\n/));
   }
   throw new ValidationError(
-    'Usage: node src/check-documentation-impact.mjs --policy-only | --git-range <base-sha> <head-sha> | --stdin'
+    'Usage: node src/check-documentation-impact.mjs --policy-only | --ci | --git-range <base-sha> <head-sha> | --stdin'
   );
 }
 
