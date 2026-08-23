@@ -348,6 +348,12 @@ function validatePath(path, index, intent, nodeById, linkById, pathIds) {
 }
 
 function countIndependentFailureDimensions(leftPath, rightPath, linkById) {
+  const leftTransit = intermediateNodeIds(leftPath, linkById);
+  const rightTransit = intermediateNodeIds(rightPath, linkById);
+  for (const nodeId of leftTransit) {
+    if (rightTransit.has(nodeId)) return 0;
+  }
+
   let independent = 0;
   for (const dimension of FAILURE_DOMAIN_DIMENSIONS) {
     const left = new Set(
@@ -366,6 +372,12 @@ function countIndependentFailureDimensions(leftPath, rightPath, linkById) {
     if (!overlap) independent += 1;
   }
   return independent;
+}
+
+function intermediateNodeIds(path, linkById) {
+  const links = path.link_ids.map(linkId => linkById.get(linkId));
+  const nodeIds = [links[0].from_node_id, ...links.map(link => link.to_node_id)];
+  return new Set(nodeIds.slice(1, -1));
 }
 
 function validateDtnFallback(fallback, intent) {
