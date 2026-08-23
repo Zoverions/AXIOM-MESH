@@ -39,6 +39,7 @@ This is an intentionally conservative selection. A later Hermes capability slice
 | `hermes_cli/build_info.py` Git blob | `e2ae06ba73e5ec5ae737c3c4691362c0f99d6fc8` |
 | `pyproject.toml` Git blob | `863115484515e1f80495da54da20ff8912ede3e6` |
 | `uv.lock` Git blob | `0b058b8e70aaaaee618b5e9e4529fac863b84c03` |
+| `tools/lazy_deps.py` Git blob | `3887d3a2575c0fefb8226de89619cad0cf11a305` |
 | `LICENSE` Git blob | `75410e73319c72cd3e991a501c5455eb78f38375` |
 
 The Git commit and selected-file blob pins identify repository content. They do **not** prove a publisher signature from Nous Research. Publisher authenticity remains a separate assurance requirement because the retained commit is unsigned.
@@ -71,7 +72,9 @@ and an empty, non-inherited child environment specification.
 
 The full Hermes project has a broad dependency surface. Its core project dependencies include provider/network, web-service, cryptographic, process-management, browser-support, and platform-specific packages. Hermes also has optional/lazy backends.
 
-At the retained source, `tools/lazy_deps.py` can install allowlisted optional packages at runtime when lazy installation is enabled; upstream documents `security.allow_lazy_installs` as enabled by default, with deployment-specific mechanisms to disable it.
+At the retained source, `tools/lazy_deps.py` can install allowlisted optional packages at runtime when lazy installation is enabled; upstream documents `security.allow_lazy_installs` as enabled by default, with deployment-specific mechanisms to disable it. The exact reviewed lazy-installer source is retained as Git blob `3887d3a2575c0fefb8226de89619cad0cf11a305`.
+
+That file is now pinned by the AXIOM source profile as **review-provenance-only**. It is not imported or executed by the identity probe. Its purpose in this slice is fail-closed source drift detection for a security-relevant upstream mechanism that a later, broader Hermes import could otherwise expose.
 
 None of that dependency surface is required for `build_info.py`. The selected helper uses Python standard-library facilities for path handling and TOML parsing.
 
@@ -99,7 +102,7 @@ Before the identity helper can be considered eligible for execution, the AXIOM-s
 - `hermes_cli/build_info.py`;
 - `pyproject.toml`.
 
-The profile additionally pins `uv.lock` and `LICENSE` as review-provenance inputs.
+The profile additionally pins `uv.lock`, `tools/lazy_deps.py`, and `LICENSE` as review-provenance inputs. `tools/lazy_deps.py` is deliberately retained because runtime dependency installation is default-enabled upstream unless separately disabled; pinning it does not make it part of the probe's execution graph.
 
 The source preflight rejects a `.hermes_build_sha` in this first source-checkout profile so the observation cannot silently fall back from live Git identity to a separately supplied build identity.
 
@@ -135,9 +138,10 @@ It can:
 2. resolve normal, detached-HEAD, worktree/submodule, loose-ref, and packed-ref Git identity without spawning `git`;
 3. require the exact retained commit;
 4. calculate canonical Git blob SHA-1 identities over selected files and compare them with the retained pins;
-5. reject a `.hermes_build_sha` for this source-checkout slice;
-6. construct a deterministic **invocation specification** that demands Sandbox execution, read-only files, deny-egress, no credentials, no dependency install, and no package import;
-7. validate that observed output contains exactly `sha`, `short_sha`, `source`, and `version` and exactly matches the retained pin/version.
+5. retain the exact security-relevant lazy-installer source as non-executed review provenance;
+6. reject a `.hermes_build_sha` for this source-checkout slice;
+7. construct a deterministic **invocation specification** that demands Sandbox execution, read-only files, deny-egress, no credentials, no dependency install, and no package import;
+8. validate that observed output contains exactly `sha`, `short_sha`, `source`, and `version` and exactly matches the retained pin/version.
 
 The module does not execute the generated invocation.
 
@@ -145,7 +149,7 @@ The module does not execute the generated invocation.
 
 `mesh/test/hermes-runtime-002-profile.test.mjs` covers:
 
-- retained source and selected-file pins;
+- retained source and selected-file pins, including the exact non-executed `tools/lazy_deps.py` provenance pin;
 - Git canonical blob hashing;
 - exact synthetic checkout acceptance;
 - dirty selected-file rejection;
@@ -188,4 +192,4 @@ It does not claim that the Hermes gateway, updater, installer, providers, browse
 
 It does not claim full worktree cleanliness, a complete Hermes SBOM, a real admitted runtime artifact, live external-runtime execution, Gateway authorization parity, direct-service denial evidence, or production capability promotion.
 
-The completed result of this slice is narrower: **an exact retained source identity, a tightened import boundary, a fail-closed selected-file preflight, a non-executing invocation specification, and adversarial tests that preserve zero authority.**
+The completed result of this slice is narrower: **an exact retained source identity, a tightened import boundary, a fail-closed selected-file preflight, pinned non-executed provenance for the default-enabled lazy installer, a non-executing invocation specification, and adversarial tests that preserve zero authority.**

@@ -90,6 +90,11 @@ export const HERMES_RUNTIME_002_PROFILE = deepFreeze({
       execution_role: 'review-provenance-only'
     },
     {
+      path: 'tools/lazy_deps.py',
+      git_blob_sha1: '3887d3a2575c0fefb8226de89619cad0cf11a305',
+      execution_role: 'review-provenance-only'
+    },
+    {
       path: 'LICENSE',
       git_blob_sha1: '75410e73319c72cd3e991a501c5455eb78f38375',
       execution_role: 'review-provenance-only'

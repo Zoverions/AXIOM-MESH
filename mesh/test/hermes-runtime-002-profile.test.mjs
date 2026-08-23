@@ -110,8 +110,15 @@ test('Hermes RUNTIME-002 profile stays source-pinned, no-secret, and non-authori
     'hermes_cli/build_info.py': 'e2ae06ba73e5ec5ae737c3c4691362c0f99d6fc8',
     'pyproject.toml': '863115484515e1f80495da54da20ff8912ede3e6',
     'uv.lock': '0b058b8e70aaaaee618b5e9e4529fac863b84c03',
+    'tools/lazy_deps.py': '3887d3a2575c0fefb8226de89619cad0cf11a305',
     LICENSE: '75410e73319c72cd3e991a501c5455eb78f38375'
   });
+  assert.equal(
+    HERMES_RUNTIME_002_PROFILE.required_files.find(
+      entry => entry.path === 'tools/lazy_deps.py'
+    )?.execution_role,
+    'review-provenance-only'
+  );
 });
 
 test('Git blob identity uses Git canonical blob framing', () => {
