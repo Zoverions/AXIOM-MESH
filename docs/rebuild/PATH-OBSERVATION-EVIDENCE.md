@@ -9,7 +9,7 @@
 
 The Resilient Path Fabric v0 contract deliberately accepts caller-supplied path facts only as structurally consistent claims. It does not authenticate latency, node attestation state, energy state, maintenance state, spectrum/regulatory status, or failure-domain labels.
 
-Path Observation Evidence v0 adds the next boundary: **who asserted each path fact, under which externally trusted role, from which source artifact, and whether that assertion is still fresh enough for the evaluator's policy**.
+Path Observation Evidence v0 adds the next boundary: **who asserted each path fact, under which externally trusted role, from which source artifact, in which exact portfolio context, and whether that assertion is still fresh enough for the evaluator's policy**.
 
 It still does not perform routing, mutate radios, establish legal truth, reproduce source measurements, or grant network authority.
 
@@ -17,6 +17,7 @@ It still does not perform routing, mutate radios, establish legal truth, reprodu
 
 ```text
 path-fabric claim
+  -> exact portfolio digest
   -> source artifact digest
   -> signed evidence statement
   -> externally supplied trusted signer + role
@@ -48,6 +49,7 @@ A signer may hold more than one role only when the evaluator's independent trust
 
 Each signed `axiom-path-observation-statement.v0` binds:
 
+- the exact Resilient Path Fabric portfolio digest;
 - one evidence identifier;
 - one evidence kind;
 - one exact node or link subject;
@@ -57,7 +59,19 @@ Each signed `axiom-path-observation-statement.v0` binds:
 - one anti-replay nonce;
 - the exact claim values copied from the bound path portfolio.
 
-The Ed25519 signature covers the canonical statement. Any change to the source digest, signer identifier, timing, subject, or claim invalidates the signature.
+The Ed25519 signature covers the canonical statement. Any change to the portfolio digest, source digest, signer identifier, timing, subject, nonce, or claim invalidates the signature.
+
+Binding the portfolio digest inside every statement prevents an otherwise valid claim from being silently replayed into a different route-planning context merely because the same node or link identifier appears there.
+
+## Replay and provenance consistency
+
+Evidence identifiers must be unique within a package.
+
+A signer may not reuse the same nonce within one package. The `(signer_id, nonce)` pair is therefore an explicit replay boundary rather than decorative metadata.
+
+A source reference may legitimately support more than one evidence statement, but one `source_ref` must resolve to one source digest throughout the package. Reusing the same source reference with different digests is rejected as provenance ambiguity.
+
+These checks do not prove the source artifact is correct. They ensure the package cannot present internally contradictory provenance labels while still claiming clean attribution.
 
 ## Freshness is evaluator policy
 
@@ -86,9 +100,12 @@ A successful v0 result may truthfully state:
 
 - the exact path portfolio was structurally valid under `axiom-resilient-path-fabric.v0`;
 - every declared node/link claim had one matching signed evidence statement;
+- every statement was signed for that exact portfolio digest;
 - every signature verified under an externally supplied Ed25519 trust root;
 - every signer held the externally configured role required for that evidence kind;
 - every statement satisfied the evaluator's externally supplied freshness policy;
+- signer nonces did not repeat within the package;
+- each source reference mapped consistently to one source digest;
 - the source-artifact digest and provenance metadata were cryptographically bound to the statement.
 
 It **does not** establish:
@@ -135,7 +152,10 @@ The current executable contract is intended to reject:
 
 - self-trusted signer substitution;
 - signer-role confusion;
-- portfolio substitution;
+- package-level portfolio substitution;
+- signed-statement replay across portfolio contexts;
+- signer nonce reuse;
+- one source reference mapped to contradictory source digests;
 - source-artifact digest tampering;
 - future-dated evidence;
 - expired evidence;
