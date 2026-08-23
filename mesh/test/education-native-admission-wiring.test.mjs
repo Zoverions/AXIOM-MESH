@@ -14,7 +14,11 @@ test('live Sandbox service routes builtin execution through the education-aware 
   );
   assert.match(
     text,
-    /const result = executeSandboxBuiltin\(\{ tool: claims\.tool, intent \}\);/,
+    /const builtinResult = executeSandboxBuiltin\(\{\s*tool: claims\.tool,\s*intent,\s*assurance: plan\.assurance\s*\}\);/s,
+  );
+  assert.match(
+    text,
+    /assurance: structuredClone\(plan\.assurance\)/,
   );
   assert.doesNotMatch(text, /const result = executeBuiltin\(/);
 
