@@ -156,7 +156,9 @@ function fixture() {
     },
     authority_effect: 'none',
     network_effect: 'none',
-    runtime_activation: false
+    runtime_activation: false,
+    input_claims_authenticated: false,
+    live_measurements_performed: false
   };
 }
 
@@ -177,7 +179,27 @@ test('accepts a critical path portfolio with independent repair and DTN fallback
   assert.equal(result.authority_effect, 'none');
   assert.equal(result.network_effect, 'none');
   assert.equal(result.runtime_activation, false);
+  assert.equal(result.input_claims_authenticated, false);
+  assert.equal(result.live_measurements_performed, false);
   assert.equal(result.live_routing_changed, false);
+});
+
+test('cannot launder caller-supplied path claims into authenticated evidence', () => {
+  const document = fixture();
+  document.input_claims_authenticated = true;
+  assert.throws(
+    () => validateResilientPathFabric(document),
+    /activation boundary is invalid/
+  );
+});
+
+test('cannot claim that the inert validator performed live measurements', () => {
+  const document = fixture();
+  document.live_measurements_performed = true;
+  assert.throws(
+    () => validateResilientPathFabric(document),
+    /activation boundary is invalid/
+  );
 });
 
 test('critical traffic requires at least two live paths', () => {
