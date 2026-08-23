@@ -34,6 +34,38 @@
       ]
     },
     {
+      "id": "release-install-manifest-surface",
+      "trigger": {
+        "exact": [
+          "mesh/config/install-release-manifest-policy.json",
+          "mesh/src/lib/install-release-manifest.mjs"
+        ],
+        "prefixes": []
+      },
+      "required_groups": [
+        {
+          "id": "release-install-contract",
+          "any_of": ["docs/operations/SIGNED-RELEASE-INSTALL-MANIFEST.md"]
+        },
+        {
+          "id": "host-install-operations",
+          "any_of": ["docs/operations/HOST-INSTALLATION-PROFILES.md"]
+        },
+        {
+          "id": "public-entry",
+          "any_of": ["README.md"]
+        },
+        {
+          "id": "release-or-status",
+          "any_of": [
+            "docs/releases/0.12.0-dev.3.md",
+            "docs/PROJECT-STATUS-2026.md",
+            "docs/MASTER-TODO.md"
+          ]
+        }
+      ]
+    },
+    {
       "id": "education-consumed-mesh-surface",
       "trigger": {
         "exact": [
