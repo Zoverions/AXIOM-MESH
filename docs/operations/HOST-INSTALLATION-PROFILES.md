@@ -1,37 +1,39 @@
 # AXIOM-MESH Host Installation and Node Profiles
 
 **Applies to:** `0.12.0-dev.3` development line  
-**Status:** productization specification; non-mutating host planning is implemented; host-mutating fresh-machine installers are not yet implemented  
+**Status:** productization specification; non-mutating host planning and signed release-input verification are implemented; host-mutating fresh-machine installers are not yet implemented  
 **Updated:** 2026-08-23
 
-AXIOM-MESH needs a supported path from an ordinary machine to a useful, secure node. The existing `npm run setup` path is intentionally narrower: it verifies a checked-out source tree, installs from the committed dependency-free locks, and runs repository checks. It does **not** install the operating-system toolchain, create a host service, harden a machine, provision a complete local product, enroll a node in a network role, or configure remote backup custody.
+AXIOM-MESH needs a supported path from an ordinary machine to a useful, secure node without turning installation convenience into ambient authority. The existing `npm run setup` path verifies a checked-out source tree under the supported Node.js/npm toolchain. It does **not** install an operating-system toolchain, create a host service, harden a machine, provision a complete product, enroll a node, or configure remote backup custody.
 
-The repository now also contains a deterministic **non-mutating host-install planner**. It observes or accepts explicit host facts, validates the `personal-local` or `infrastructure-node` target, and emits a digest-bound plan that describes the intended directories, topology, existing provisioning primitives, network defaults, blockers, and installation stages. The planner does not mutate the host and is not a substitute for the missing clean-machine installer.
+Two additional productization layers are now executable without host mutation:
 
-This document defines the productization boundary without weakening the source-setup trust model or turning planning evidence into installation authority.
+- a deterministic host preflight/install planner for `personal-local` and `infrastructure-node`; and
+- a signed release/install-manifest verifier with separate artifact-byte verification.
+
+Neither layer creates users, directories, services, credentials, network rules, or Mesh authority.
 
 ## Installation layers
 
-The project distinguishes five layers. They must not be collapsed into one privileged script.
+The project distinguishes six layers. They must not be collapsed into one privileged script.
 
 1. **Source setup — implemented.** A developer or verifier already has the required Node.js/npm toolchain and a checkout. `npm run setup` validates and verifies that source environment.
-2. **Host preflight and install planning — implemented, non-mutating.** With the current Node.js runtime available, `npm run host-install:plan -- <profile>` records local host observations and emits a deterministic plan. It does not install the toolchain, create users/directories/services, provision credentials, alter networking, start AXIOM, or verify a release bundle.
-3. **Personal/local node install — priority target.** A non-developer starts from a supported clean Linux host and receives a local AXIOM node, owner-controlled data and secrets, a local human interface, update/rollback metadata, and backup enrollment choices.
-4. **Infrastructure/support node install — priority target.** An operator starts from a supported clean headless host and receives the independently deployable service-unit topology plus explicit node-role configuration, observability, recovery, and network participation controls.
-5. **Managed/cloud deployment profiles — later adapters.** Hosting providers or owner-selected cloud infrastructure reproduce the same signed release, authority, custody, update, and evidence contracts. They do not become a separate AXIOM authority.
+2. **Host preflight and install planning — implemented, non-mutating.** `npm run host-install:plan -- <profile>` observes or accepts host facts and produces a digest-bound plan with explicit blockers.
+3. **Signed release-input verification — implemented, non-mutating.** `axiom-install-release-manifest.v1` binds the exact source revision, control-plane digests, install profiles, toolchain/data compatibility, artifacts, evidence bundle, signer, validity window, and non-claims. Artifact bytes are verified separately.
+4. **Personal/local node install — priority target.** A non-developer starts from a supported clean Linux host and receives a local AXIOM node, owner-controlled data and secrets, local human interface, lifecycle metadata, and optional application discovery.
+5. **Infrastructure/support node install — priority target.** A headless host receives the independently deployable service-unit topology plus explicit node-role configuration, observability, recovery, and separately authorized network participation.
+6. **AXIOM Host / managed deployment profiles — later.** A stronger reference appliance image or owner-selected managed/cloud infrastructure may reproduce the same release, authority, custody, update, and evidence contracts without becoming a separate AXIOM authority.
 
 Installation never grants application, agent, network, governance, data-access, or external-effect authority merely because software was installed.
 
 ## Executable host-install planning surface
 
-The current planning surface is intentionally useful before it is privileged.
+Machine-readable planning inputs and implementation:
 
-Machine-readable inputs and implementation:
-
-- `mesh/config/install-targets.json` remains the product-level target registry;
-- `mesh/config/host-install-policy.json` defines planner and future mutating-installer invariants;
-- `mesh/src/lib/host-install-plan.mjs` validates the policy and emits digest-bound plans;
-- `mesh/src/host-install.mjs` provides the command-line entry point.
+- `mesh/config/install-targets.json` — product-level install targets;
+- `mesh/config/host-install-policy.json` — planner and future mutating-installer invariants;
+- `mesh/src/lib/host-install-plan.mjs` — deterministic planner;
+- `mesh/src/host-install.mjs` — CLI surface.
 
 Current commands:
 
@@ -41,11 +43,9 @@ npm run host-install:plan -- personal-local
 npm run host-install:plan -- infrastructure-node
 ```
 
-The planner observes Linux platform/architecture, distribution identity/version, init system, package-manager presence, current Node runtime, memory, root-filesystem free space, optional container runtime, and effective user identity. Tests may supply explicit facts rather than observing the host.
+The planner records Linux platform/architecture, distribution identity/version, init system, package-manager presence, current Node runtime, memory, root-filesystem free space, optional container runtime, and effective user identity. Unsupported facts become blockers rather than best-effort mutation.
 
-The output binds the host facts, install target registry, install policy, and selected profile by SHA-256 digests. It records blockers for unsupported platform/architecture/init/toolchain observations rather than silently compensating for them.
-
-Every current plan reports, and validation enforces:
+Every current plan enforces:
 
 - `target_status: specified`;
 - `eligible_for_mutating_install: false`;
@@ -56,33 +56,67 @@ Every current plan reports, and validation enforces:
 - `network_effect: none`;
 - public ingress disabled;
 - external egress `deny`;
-- Mesh enrollment `not-performed`;
-- signed release manifest verification `false`.
+- Mesh enrollment `not-performed`.
 
-The planner composes the existing `provision-production` and service-unit projection primitives **by reference**. It does not reimplement their credential or private-key handling in a host bootstrap script.
+The planner composes the existing production provisioning and service-unit projection primitives **by reference**. It does not reimplement private-key or credential handling in bootstrap shell.
 
-This planner currently runs under the supported Node.js toolchain. Therefore it is **not** the bootstrap that turns an untouched Linux installation into AXIOM. A future release bootstrap must work from a separately verified signed release/package entry point, acquire only pinned dependencies, and pass the promotion gates below before the project may call it a supported fresh-host installer.
+A plan reporting `host_candidate_compatible: true` means only that the observed facts satisfy the planner's current narrow candidate conditions. It is not host certification, support approval, release approval, or production promotion.
 
-A plan reporting `host_candidate_compatible: true` means only that the observed facts satisfy the current planner's narrow candidate conditions. It is not a support, security, production, hardware, distro, or release certification.
+## Signed release/install-manifest verification
+
+The next prerequisite before privileged host mutation is now an executable verifier. See [Signed Release Install Manifest](SIGNED-RELEASE-INSTALL-MANIFEST.md).
+
+Machine-readable policy and implementation:
+
+- `mesh/config/install-release-manifest-policy.json`;
+- `mesh/src/lib/install-release-manifest.mjs`;
+- `mesh/test/install-release-manifest.test.mjs`.
+
+The verifier requires an externally supplied **active Ed25519** signer with role `release-installer-authority`. The package cannot establish trust by embedding its own public key.
+
+A valid manifest binds:
+
+- exact source revision and kernel version;
+- release channel and explicit production-promotion state;
+- current install-profile statuses;
+- Node/npm requirements;
+- current Grid migration generation and rollback mode;
+- digests of install targets, host-install policy, capability registry, application catalogue, service-network policy, and source-setup policy;
+- artifact metadata including SHA-256 and byte length;
+- documentation bundle, SBOM, and provenance artifacts;
+- explicit non-claims and zero authority/network effect.
+
+Manifest verification returns `artifact_bytes_verified: false`. Actual bytes must pass `verifyInstallReleaseArtifact(...)` before any future bootstrap executes, unpacks, mounts, or boots them.
+
+Even after both signature and bytes verify, the release input still reports:
+
+- `host_mutation_authorized: false`;
+- `installation_authority_granted: false`;
+- `mesh_authority_granted: false`;
+- `network_authority_granted: false`;
+- `node_enrolled: false`;
+- `services_started: false`.
+
+This is deliberate. Release approval is a prerequisite to installation, not permission to alter a machine.
 
 ## Common invariants
 
-Every installer profile must preserve these invariants:
+Every future host-mutating installer profile must preserve these invariants:
 
-- the installed release is identified by immutable source and artifact digests;
-- a release manifest is verified before privileged host changes begin;
-- install-time privilege is separate from runtime privilege;
-- AXIOM services run as an unprivileged dedicated identity or equivalent isolated workload identity;
-- data and secret custody are explicit and kept in separate protected locations;
-- no secret is placed in a repository, image layer, shell history, telemetry event, or installer receipt;
-- no public ingress is enabled by default;
-- external egress remains deny-by-default unless a separately reviewed adapter and policy require a specific destination;
-- installation never silently enrolls a machine in federation, remote execution, storage exchange, consensus, governance, or a Circle;
-- applications and runtime scaffolds remain clients of Gateway authority rather than alternate authority paths;
-- updates are staged, verified, reversible where the data format permits it, and bound to the exact release being installed;
-- rollback never silently restores stale authority, credentials, consent, or revocation state;
-- backup enrollment copies only encrypted, integrity-bound artifacts unless an explicit separately reviewed export path says otherwise;
-- all installer actions that materially affect security or custody produce a non-secret receipt suitable for troubleshooting and independent review.
+- install an immutable, signed, locally byte-verified release identity rather than a moving branch;
+- verify release/control-plane compatibility before privileged mutation;
+- keep install-time privilege separate from runtime privilege;
+- run AXIOM services under an unprivileged dedicated identity or equivalent isolated workload identity;
+- keep data, secrets, runtime sockets, and logs in explicit separately protected locations;
+- never place secrets in a repository, image layer, shell history, telemetry event, release manifest, or installation receipt;
+- expose no public ingress by default;
+- retain deny-by-default external egress unless a separately reviewed adapter/policy authorizes exact destinations;
+- never silently enroll the machine in federation, remote execution, storage exchange, consensus, governance, or a Circle;
+- keep applications and runtime scaffolds as Gateway clients rather than alternate authority paths;
+- stage and verify updates before activation;
+- never silently restore stale authority, credential, consent, or revocation state during rollback;
+- copy only encrypted/integrity-bound backup artifacts unless a separately reviewed export contract says otherwise;
+- produce non-secret receipts for security- or custody-relevant lifecycle actions.
 
 The mandatory privileged-effect authority path remains:
 
@@ -95,228 +129,167 @@ Host installation is deployment work around that path, not a way around it.
 ## Profile A — personal/local node
 
 **Priority:** P0 productization target  
-**Current status:** target specified; non-mutating plan implemented; not yet a supported fresh-host installer
+**Current status:** target `specified`; host plan implemented; release-input verifier implemented; fresh-host mutating installer not implemented
 
-This is the default experience for an individual who wants AXIOM on a personally controlled machine.
+This is the default experience for a person running AXIOM on a personally controlled machine.
 
 ### Intended outcome
 
-From a supported clean Linux installation, the operator should be able to select one reviewed install command or signed package and reach a local ready state without knowing the internal four-service architecture.
+A future supported clean-Linux bootstrap should reach a local ready state without requiring the operator to understand the internal four-service architecture.
 
 The resulting system should provide:
 
-- the current verified AXIOM-MESH release;
-- Gateway, Hypervisor, Sandbox, and Grid with current service isolation;
+- one exact verified AXIOM-MESH release;
+- Gateway, Hypervisor, Sandbox, and Grid under the current isolation model;
 - owner-local encrypted data and separate owner-controlled secrets;
-- AXIOM One when its exact release status permits it, otherwise an explicit preview/development label;
-- a local status/repair surface;
-- explicit optional application discovery, including Axiom Education as its own independently released repository/application;
-- an update channel chosen by the owner;
+- AXIOM One only under its exact current release/preview status;
+- local status, repair, recovery, and receipt surfaces;
+- optional application discovery, including independently released Axiom Education;
+- owner-selected update policy;
 - safe backup enrollment choices;
-- a complete uninstall/decommission guide that distinguishes application removal from data/key destruction.
-
-### Fresh-host sequence
-
-A supported implementation should perform these stages explicitly. The current planner can model and record the sequence but performs only non-mutating preflight/planning work.
-
-1. **Preflight** — identify OS family/version, CPU architecture, filesystem, available memory/storage, virtualization/container support, clock status, and whether the host is already carrying conflicting AXIOM state.
-2. **Release selection** — resolve a named stable/candidate/development channel to one immutable signed release manifest. A moving branch is never the installed identity.
-3. **Artifact verification** — verify release signature, source/artifact digests, expected platform/architecture, and installer-policy version before privileged mutation.
-4. **Toolchain acquisition** — install only the reviewed, pinned runtime/container/host dependencies required by that release. No unpinned `curl | sh`, ambient package-script execution, or registry-name substitution.
-5. **Host boundary creation** — create the runtime identity, protected data/secret/run directories, service definitions, resource limits, log policy, and default-deny network boundary.
-6. **AXIOM provisioning** — invoke the existing production credential/state provisioning through an installer-controlled path that does not print secret values.
-7. **Service deployment** — deploy the current supported single-host topology or independently deployable units according to the profile manifest.
-8. **Readiness proof** — run doctor/setup/release/network/readiness checks applicable to the installed artifact and record an installation receipt.
-9. **Human handoff** — present only local URLs/socket paths, status, recovery location guidance, update channel, backup status, and truthful application availability.
-10. **Optional integrations** — enable Axiom Education, model/runtime adapters, cloud backup adapters, or other services only after their own compatibility and authority checks pass.
-
-A failure at any stage leaves the machine either unchanged or in a clearly identified resumable/rollback state. Partial secret sets and partially activated service topologies fail closed.
+- decommission guidance that separates runtime removal from data/key destruction.
 
 ## Profile B — infrastructure/support node
 
 **Priority:** P0/P1 network-support target  
-**Current status:** target specified; non-mutating plan implemented; current repository contains relevant single-host service-unit, admitted-node, scheduling, storage-offer, causal-exchange, backup, and operations foundations, but no general public infrastructure-node installer or federation claim
+**Current status:** target `specified`; host plan implemented; release-input verifier implemented; general public infrastructure-node installer and automatic network enrollment not implemented
 
-This profile is for a headless server, home server, lab machine, community-operated host, or later cloud VM that supports AXIOM infrastructure.
+This profile is for a headless server, home server, lab machine, community-operated host, or later cloud VM supporting AXIOM infrastructure.
 
-### Intended outcome
+The future installer may deploy independently restartable Gateway/Grid/Hypervisor/Sandbox units, but role selection is configuration intent—not network authority.
 
-The installer uses the independently deployable service-unit topology and requires the operator to declare which supported roles the node is being prepared to test or provide. Role selection is configuration intent, not authority.
-
-Current truth boundaries must remain visible:
+Current truth boundaries remain:
 
 - admitted-node registration is a local authority mechanism;
-- storage offers do not currently imply a complete object-transfer network;
-- node scheduling foundations do not imply general remote execution;
+- storage offers do not imply a complete object-transfer network;
+- scheduling foundations do not imply general remote execution;
 - operator-approved causal exchange is not BFT consensus or automatic federation;
-- public/community testnet participation is evidence contribution, not production-network authority.
+- community-testnet participation contributes evidence rather than production-network authority.
 
-The infrastructure profile therefore starts with **no public service exposure and no automatic network enrollment**. Later network roles require explicit node admission, signed configuration, policy, compatibility, health, revocation, and protocol-specific evidence.
+The infrastructure profile therefore starts with **no public service exposure and no automatic network enrollment**. Later network roles require explicit node admission, signed configuration, policy, health/currentness, revocation, and protocol-specific evidence.
 
-### Required operational surface
+A supported infrastructure installer must eventually cover headless restart, per-unit credentials, Grid-only durable state, least-privilege secret projection, resource/disk safeguards, telemetry/readiness, backup/restore, key rotation, external continuity-anchor custody, node quarantine/revocation, update/rollback, decommission, and community reproduction evidence.
 
-A supported infrastructure-node installer must cover:
+## Fresh-host sequence
 
-- headless unattended restart with explicit operator-controlled update policy;
-- independently restartable Gateway/Grid/Hypervisor/Sandbox units where applicable;
-- per-unit application and transport credentials;
-- Grid-only durable state and least-privilege secret projection;
-- resource ceilings and disk-space safeguards;
-- readiness/health and bounded telemetry;
-- backup/restore and scheduled restore evidence;
-- credential and data-key rotation;
-- continuity-anchor custody outside the primary data directory;
-- node identity export/recovery rules that do not export private authority casually;
-- explicit decommission/quarantine/revocation workflow;
-- optional community-testnet evidence generation tied to the exact installed release.
+A supported installer should execute these stages explicitly:
+
+1. **Preflight** — identify host facts and conflicting AXIOM state.
+2. **Release selection** — resolve an owner-chosen channel or release ID to one immutable package; a moving branch is never the installed identity.
+3. **Manifest verification** — verify external signer trust, validity window, exact current control-plane digests, install-profile status, toolchain/data compatibility, and required documentation/SBOM/provenance artifacts.
+4. **Artifact verification** — locally hash every artifact to be executed, unpacked, mounted, booted, or relied on as release evidence.
+5. **Toolchain/bootstrap acquisition** — install only reviewed, pinned host/runtime dependencies. No unpinned `curl | sh`, ambient package-script execution, or registry-name substitution.
+6. **Host boundary creation** — create runtime identity, protected directories, service definitions, resource limits, log policy, and default-deny network boundary.
+7. **AXIOM provisioning** — invoke existing production credential/state provisioning without printing private values.
+8. **Service deployment** — deploy the supported single-host or service-unit topology for the selected profile.
+9. **Readiness proof** — run release/network/readiness checks against the exact installed release and record an installation receipt.
+10. **Human/operator handoff** — show local endpoints, recovery guidance, update channel, backup state, and truthful application availability.
+11. **Optional integrations/network admission** — independently verify application compatibility, runtime adapters, backup providers, or node admission before enabling them.
+
+A failure must leave the host unchanged or in an explicit resumable/rollback state. Partial secret sets and partially activated service topologies fail closed.
 
 ## Release channels and synchronization
 
-Fresh installation is only sustainable if releases become a synchronization anchor for code, documentation, applications, installers, and downstream compatibility.
+Fresh installation becomes sustainable only when a release is a synchronization anchor for code, documentation, applications, installers, migration rules, and downstream compatibility.
 
-The installer must consume a machine-readable release manifest that binds at least:
-
-- semantic AXIOM-MESH version;
-- exact source revision;
-- platform and architecture;
-- artifact/image digests;
-- supported host-install profile versions;
-- required Node/npm/container/runtime versions where applicable;
-- data/schema compatibility generation;
-- minimum compatible application/adapter contract versions;
-- documentation-set revision or digest;
-- rollback compatibility;
-- known migration requirements;
-- release signature/trust-root identifier.
-
-A host installer may not infer compatibility from a version string alone.
-
-A future stable release should be publishable as one reproducible bundle of:
+The signed manifest contract now binds the core release identity and current control-plane digests. A future published release bundle should contain:
 
 ```text
-release manifest
-+ verified runtime artifacts
+signed install-release manifest
++ locally verifiable runtime/source/host artifacts
 + install profiles
 + migration/update rules
-+ current documentation set
++ current documentation bundle
++ SBOM
++ provenance
 + application compatibility metadata
-+ checksums/signatures/provenance
 ```
 
-This same bundle should drive fresh installs, updates, recovery rebuilds, community-testnet reproduction, and downstream compatibility checks.
+The same bundle should support fresh installation, update, recovery rebuild, community-testnet reproduction, and independent verification.
+
+A host installer may not infer compatibility from a semantic version string alone.
+
+## AXIOM Host reference environment
+
+Retained H0/H1 research explored a stronger image-built **AXIOM Host** beneath the portable Mesh: UEFI-oriented boot, an immutable/read-only dm-verity root, separate durable state, artifact inventories, secret scans, image diagnostics, and disposable appliance verification.
+
+That work is useful provenance, but the old branch is hundreds of commits behind current `main` and must not be merged wholesale. The nominal H2 update/rollback branch never advanced beyond the H0/H1 head.
+
+The current manifest reserves `axiom-host-image` as an installable artifact kind so the useful appliance work can be reconstructed safely on current code.
+
+An `axiom-host-image` signature and digest establish approved image identity only. They do **not** establish Secure Boot, measured boot, TPM attestation, encrypted mutable state, correct firmware, or workload correctness. Those require independent evidence.
+
+Accordingly AXIOM may support two complementary paths:
+
+- **General Linux install:** transform a supported existing Linux host into a bounded AXIOM node.
+- **AXIOM Host:** install/boot the stronger reproducible reference appliance for deployments that need additional host assurance.
+
+AXIOM-MESH remains the portable authority/evidence substrate in either case.
 
 ## Applications are selectable surfaces, not embedded authority
 
-The installer should make important AXIOM applications easy to discover without forcing them into the trusted kernel.
+Axiom Education remains independently releasable at `Zoverions/Axiom-Education`. A personal-node installer may eventually offer it after verifying the Education release and exact Mesh compatibility profile.
 
-Axiom Education is an integral application/domain project but remains independently releasable at:
+Installing or listing Education must not grant learner-record access, provider activation, curriculum authority, network access, school/institution authority, or delegated guardian/educator authority.
 
-`https://github.com/Zoverions/Axiom-Education`
+The same pattern applies to AXIOM One, Circles, Verify, Studio, Managed Node tooling, and external agent/runtime scaffolds: discoverable and composable, independently versioned, and authority-bounded.
 
-A personal-node installer may eventually offer it as an optional application after verifying the Axiom Education release and its declared AXIOM-MESH compatibility profile. Installing Education must not grant learner-record access, provider activation, curriculum activation, network access, or delegated school/guardian authority.
+## Backup and external services
 
-The same pattern applies to AXIOM One, Circles, Verify, Studio, managed-node tooling, and external agent/runtime scaffolds: discoverable and composable, but independently versioned and authority-bounded.
+Applications should use the Mesh encrypted backup/export substrate rather than each inventing a different cloud trust model.
 
-## Personal cloud and remote backup adapters
-
-Remote backup should be interoperable without making a cloud account part of AXIOM's authority model.
-
-The preferred architecture is:
+Preferred backup direction:
 
 ```text
-Grid state
-  -> AXIOM signed/encrypted backup envelope
+Grid/application state
+  -> signed/encrypted backup envelope
   -> local verification
-  -> provider-neutral backup adapter
-  -> owner-selected remote object/file store
+  -> provider-neutral adapter
+  -> owner-selected remote store
 ```
 
-Initial provider families may include owner-selected Google Drive, Microsoft OneDrive, S3-compatible object storage, or other reviewed stores. These names are targets, not current implementation claims.
+Remote providers may retain ciphertext and bounded metadata; they do not need Grid plaintext, data-protection keys, service private keys, operator tokens, or general Gateway authority.
 
-The remote provider should receive encrypted backup objects, bounded non-secret metadata, and integrity identifiers. It should not need the Grid plaintext, data-protection key, operator token, service private keys, or general Gateway authority.
+A successful remote upload is not a restore test. Restore remains local-authority work and must verify the exact encrypted artifact before applying it.
 
-Provider authentication belongs in the owner/user credential scaffold or a separately reviewed secret-provider adapter. A backup adapter receives the minimum scoped credential reference needed for copy/list/read/delete operations allowed by policy; it does not receive unrelated account access.
-
-Restore remains local-authority work: retrieve the exact encrypted artifact, verify its manifest/signature/digest, obtain the owner-controlled decryption material through the normal secret boundary, and run the existing restore verification. A successful cloud upload is not a successful restore test.
-
-## Runtime, connector, and external-service interoperability
-
-The full-stack installation should be attractive because it gives external runtimes and services a safer substrate, not because it locks them into AXIOM.
-
-External agent scaffolds, model providers, productivity services, storage systems, identity systems, and application connectors should integrate through versioned adapters/capsules with:
-
-- exact identity and implementation provenance;
-- least-privilege scopes;
-- explicit destination/purpose/budget ceilings;
-- credential references rather than ambient secrets;
-- install/update/uninstall state;
-- health and compatibility checks;
-- cancellation/revocation behavior;
-- evidence and uncertainty handling;
-- no ability to reinterpret discovery, installation, or authentication as permission to act.
-
-Where a user scaffold already owns provider credentials and preferences, installer integration should reuse that governed credential reference rather than create duplicate secret stores.
-
-## Community-supported infrastructure
-
-Community participation should eventually help operate and test infrastructure without turning popularity or contribution into authority.
-
-The Community Testnet v0 remains the safe starting point: independent operators reproduce exact revisions and submit evidence. The host-install profiles should reduce participation friction by letting a contributor create a known-good node and export a machine-readable environment/install receipt without private project knowledge.
-
-Later community infrastructure can add separately reviewed node admission, storage/compute offers, relay/discovery services, mirrors, and decentralized evidence/storage mechanisms. Each must retain operator sovereignty and explicit protocol authority. Community operation does not grant merge, release, governance, signing-key, credential, or user-data authority.
+External agent runtimes, model providers, productivity services, storage systems, and future connectors likewise integrate through versioned bounded adapters/capsules with exact provenance, least-privilege scopes, destination/purpose/budget ceilings, credential references, health/compatibility checks, cancellation/revocation, and evidence semantics. Installation or authentication never becomes permission to act.
 
 ## Update, rollback, and decommission
 
-A secure easy install must include its entire lifecycle.
+A secure install includes its full lifecycle.
 
 ### Update
 
-- resolve a channel to an immutable signed release;
-- verify compatibility before stopping the current node;
-- take and verify a recoverable backup when migration requires it;
-- stage the new runtime alongside the current version;
-- run migrations only under explicit compatible rules;
-- start and verify the new version;
-- retain a bounded rollback generation where safe;
-- record the exact transition receipt.
+A future updater must resolve a channel to an immutable signed manifest, verify all control-plane and artifact bindings, determine migration/rollback rules before stopping the current node, take a verified backup where required, stage the new runtime, apply only explicit migrations, prove readiness, retain a bounded rollback generation where safe, and record the exact transition.
 
 ### Rollback
 
-Rollback must fail closed if the previous version cannot safely interpret current data/authority state. It may restore a verified pre-migration backup when the operator explicitly chooses that recovery point, but it must never erase a newer revocation/consent/authority event without making that loss explicit.
+Rollback fails closed when a previous runtime cannot safely interpret current data/authority state. A verified pre-migration backup may be restored only as an explicit recovery point. Newer revocation, consent, credential, or authority events must never disappear silently.
 
 ### Decommission
 
-Decommission must distinguish:
-
-- stop services;
-- remove runtime packages;
-- revoke/quarantine the node identity;
-- export/retain encrypted backups;
-- destroy local data;
-- destroy secrets/keys;
-- remove application data;
-- remove remote backup objects.
-
-Destructive steps require separate explicit confirmation and evidence appropriate to the installed profile.
+Decommission distinguishes stopping services, removing runtime packages, revoking/quarantining node identity, retaining/exporting encrypted backups, destroying local data, destroying secrets/keys, removing application data, and deleting remote backup objects. Destructive steps require separate explicit confirmation.
 
 ## Promotion gates for the first real Linux installer
 
-The first supported fresh-Linux installer is not complete until all of the following are demonstrated on clean disposable hosts:
+A supported fresh-Linux installer is not complete until clean disposable-host evidence demonstrates all of the following:
 
-1. install from the signed/pinned release input with no pre-existing AXIOM source checkout;
-2. reject unsupported OS/architecture/toolchain and altered artifacts before activation;
-3. create only the documented users, directories, services, network rules, and secrets;
-4. leave secrets non-readable to unrelated local users and absent from logs/receipts;
-5. reach authenticated readiness with the exact installed release;
-6. reboot and recover automatically without widening network exposure;
-7. perform an in-channel update and prove the new exact version;
-8. reject a tampered/stale/incompatible update;
-9. restore from a verified backup on a second clean host;
-10. exercise rollback or explicitly prove rollback is unsafe for the migration and require restore instead;
-11. uninstall runtime components without silently deleting owner data or keys;
-12. run the same profile in protected CI or a reproducible disposable-host workflow;
-13. publish the installation manual, recovery manual, threat model, release compatibility data, and non-claims at the same commit;
-14. pass Windows/macOS compatibility checks for repository code even when the first host installer is Linux-only;
-15. collect at least one independent community reproduction before treating the installer as broadly supported.
+1. installation starts without a pre-existing AXIOM checkout or trusted local Node environment;
+2. an externally trusted signed release manifest is verified before mutation;
+3. every executed/unpacked/mounted/booted artifact is locally byte-verified;
+4. unsupported OS/architecture/toolchain and altered artifacts are rejected before activation;
+5. only documented users, directories, services, network rules, and secrets are created;
+6. unrelated local users cannot read secrets and logs/receipts contain no secret material;
+7. authenticated readiness proves the exact installed release;
+8. reboot recovery does not widen network exposure;
+9. an in-channel update succeeds and proves the new exact release;
+10. tampered, stale, revoked-signer, and incompatible updates are rejected;
+11. restore succeeds on a second clean host from a verified backup;
+12. rollback succeeds where compatible or explicitly requires restore where it is unsafe;
+13. uninstall removes runtime components without silently deleting owner data or keys;
+14. protected disposable-host CI reproduces the profile;
+15. installation, recovery, threat-model, release-compatibility, and non-claim documentation ships at the same revision;
+16. repository code continues to pass Windows and both macOS compatibility lanes even while the first host installer is Linux-only;
+17. at least one independent community reproduction is collected before broad support is claimed.
 
-Until those gates are met, AXIOM-MESH has an implemented clean-checkout **source setup** and an implemented **non-mutating install planner**, not a completed fresh-machine Linux installer.
+Until those gates are met, AXIOM-MESH has an implemented clean-checkout **source setup**, implemented **non-mutating install planning**, and implemented **signed release-input/artifact verification**—not a completed fresh-machine Linux installer.
