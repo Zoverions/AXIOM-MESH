@@ -104,7 +104,11 @@ Before the identity helper can be considered eligible for execution, the AXIOM-s
 
 The profile additionally pins `uv.lock`, `tools/lazy_deps.py`, and `LICENSE` as review-provenance inputs. `tools/lazy_deps.py` is deliberately retained because runtime dependency installation is default-enabled upstream unless separately disabled; pinning it does not make it part of the probe's execution graph.
 
+The selected-file preflight also requires each pinned path to resolve as a direct regular file at the exact joined checkout path. A selected-file symlink or a symlinked parent path is rejected even when the target contains byte-for-byte identical pinned content. This prevents a checkout from satisfying the byte pin through an aliased path outside the verified source root.
+
 The source preflight rejects a `.hermes_build_sha` in this first source-checkout profile so the observation cannot silently fall back from live Git identity to a separately supplied build identity.
+
+The path-alias check is a preflight property, not a claim of race-free artifact immutability. A future real process observation must execute from an immutable/read-only staged artifact and revalidate the exact process-time source boundary so independently mutable host state cannot change selected bytes between preflight and execution.
 
 This selected-file check does **not** claim complete worktree cleanliness. Whole-artifact construction and digesting remains an open gate before a real adapter artifact can be admitted.
 
@@ -138,10 +142,11 @@ It can:
 2. resolve normal, detached-HEAD, worktree/submodule, loose-ref, and packed-ref Git identity without spawning `git`;
 3. require the exact retained commit;
 4. calculate canonical Git blob SHA-1 identities over selected files and compare them with the retained pins;
-5. retain the exact security-relevant lazy-installer source as non-executed review provenance;
-6. reject a `.hermes_build_sha` for this source-checkout slice;
-7. construct a deterministic **invocation specification** that demands Sandbox execution, read-only files, deny-egress, no credentials, no dependency install, and no package import;
-8. validate that observed output contains exactly `sha`, `short_sha`, `source`, and `version` and exactly matches the retained pin/version.
+5. reject selected-file symlinks and symlinked path components instead of following them to aliased content;
+6. retain the exact security-relevant lazy-installer source as non-executed review provenance;
+7. reject a `.hermes_build_sha` for this source-checkout slice;
+8. construct a deterministic **invocation specification** that demands Sandbox execution, read-only files, deny-egress, no credentials, no dependency install, and no package import;
+9. validate that observed output contains exactly `sha`, `short_sha`, `source`, and `version` and exactly matches the retained pin/version.
 
 The module does not execute the generated invocation.
 
@@ -155,6 +160,7 @@ The module does not execute the generated invocation.
 - dirty selected-file rejection;
 - wrong-HEAD rejection;
 - forbidden build-identity-file rejection;
+- selected-file path-alias rejection when an exact-byte module is reached through a symlinked parent directory;
 - direct-file loader construction rather than `hermes_cli` package import;
 - isolated Python flags;
 - empty/non-inherited child environment;
@@ -171,8 +177,8 @@ These are local profile/preflight tests. They are not evidence that a real exter
 
 The next slice must not skip these gates:
 
-1. construct or obtain the exact retained Hermes checkout/artifact in a controlled test environment;
-2. verify the real source checkout with the AXIOM-side preflight before any Hermes source is executed;
+1. construct or obtain the exact retained Hermes checkout/artifact in a controlled, immutable/read-only test environment;
+2. verify the real source checkout and revalidate the process-time selected-file boundary before any Hermes source is executed;
 3. bind an exact Python runtime artifact/version rather than relying on an unspecified host interpreter;
 4. define and review `runtime.identity.inspect` Gateway/action semantics without enabling broader runtime authority;
 5. create a truthful Agent Runtime Adapter v1 manifest with real artifact and SBOM/provenance digests — never placeholders;
@@ -192,4 +198,4 @@ It does not claim that the Hermes gateway, updater, installer, providers, browse
 
 It does not claim full worktree cleanliness, a complete Hermes SBOM, a real admitted runtime artifact, live external-runtime execution, Gateway authorization parity, direct-service denial evidence, or production capability promotion.
 
-The completed result of this slice is narrower: **an exact retained source identity, a tightened import boundary, a fail-closed selected-file preflight, pinned non-executed provenance for the default-enabled lazy installer, a non-executing invocation specification, and adversarial tests that preserve zero authority.**
+The completed result of this slice is narrower: **an exact retained source identity, a tightened import boundary, a fail-closed selected-file preflight with path-alias rejection, pinned non-executed provenance for the default-enabled lazy installer, a non-executing invocation specification, and adversarial tests that preserve zero authority.**

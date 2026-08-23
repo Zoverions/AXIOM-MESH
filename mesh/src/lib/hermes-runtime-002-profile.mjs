@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import {
   existsSync,
+  lstatSync,
   readFileSync,
   realpathSync,
   statSync
@@ -152,10 +153,11 @@ export function verifyPinnedGitCheckout({
       throw new ValidationError(`Pinned runtime checkout blob SHA is invalid for ${relativePath}`);
     }
 
-    const filePath = joinRelative(root, relativePath);
-    if (!existsSync(filePath) || !statSync(filePath).isFile()) {
-      throw new ValidationError(`Pinned runtime checkout file is missing: ${relativePath}`);
-    }
+    const filePath = pinnedRegularFile(
+      root,
+      relativePath,
+      `Pinned runtime checkout file ${relativePath}`
+    );
     const bytes = readFileSync(filePath);
     const actualBlob = gitBlobSha1(bytes);
     if (actualBlob !== entry.git_blob_sha1) {
@@ -225,7 +227,11 @@ export function createRuntimeIdentityInvocation({
     throw new ValidationError('Runtime identity probe Python executable must be an absolute path');
   }
   const executable = realFile(pythonExecutable, 'Runtime identity probe Python executable');
-  const modulePath = joinRelative(checkout.project_root, profile.probe.module_path);
+  const modulePath = pinnedRegularFile(
+    checkout.project_root,
+    profile.probe.module_path,
+    'Runtime identity probe module'
+  );
 
   return deepFreeze({
     schema: 'axiom-runtime-source-inspection-invocation.v0',
@@ -474,6 +480,22 @@ function validateRelativePath(value, label) {
 
 function joinRelative(root, relativePath) {
   return join(root, ...relativePath.split('/'));
+}
+
+function pinnedRegularFile(root, relativePath, label) {
+  const path = joinRelative(root, relativePath);
+  try {
+    const metadata = lstatSync(path);
+    if (!metadata.isFile() || metadata.isSymbolicLink()) {
+      throw new Error('not-direct-regular-file');
+    }
+    if (realpathSync(path) !== path) {
+      throw new Error('aliased-path');
+    }
+    return path;
+  } catch {
+    throw new ValidationError(`${label} must be a direct regular file inside the pinned checkout`);
+  }
 }
 
 function realDirectory(value, label) {

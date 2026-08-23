@@ -3,6 +3,7 @@ import {
   mkdirSync,
   mkdtempSync,
   rmSync,
+  symlinkSync,
   writeFileSync
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -182,6 +183,35 @@ test('pinned checkout verification fails on dirty selected files, wrong HEAD, or
     requiredFiles: profile.required_files,
     rejectPaths: ['.hermes_build_sha']
   }), /forbidden path/);
+});
+
+test('pinned checkout rejects selected files reached through a symlinked path component', t => {
+  const root = createSyntheticCheckout();
+  const external = mkdtempSync(join(tmpdir(), 'axiom-runtime-source-alias-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  t.after(() => rmSync(external, { recursive: true, force: true }));
+
+  const externalHermes = join(external, 'hermes_cli');
+  mkdirSync(externalHermes, { recursive: true });
+  writeFileSync(
+    join(externalHermes, 'build_info.py'),
+    SYNTHETIC_FILES['hermes_cli/build_info.py']
+  );
+
+  rmSync(join(root, 'hermes_cli'), { recursive: true, force: true });
+  symlinkSync(
+    externalHermes,
+    join(root, 'hermes_cli'),
+    process.platform === 'win32' ? 'junction' : 'dir'
+  );
+
+  const profile = syntheticProfile();
+  assert.throws(() => verifyPinnedGitCheckout({
+    projectRoot: root,
+    expectedCommit: profile.source_commit,
+    requiredFiles: profile.required_files,
+    rejectPaths: ['.hermes_build_sha']
+  }), /direct regular file inside the pinned checkout/);
 });
 
 test('identity invocation bypasses Hermes package import and demands Sandbox deny-egress', t => {
