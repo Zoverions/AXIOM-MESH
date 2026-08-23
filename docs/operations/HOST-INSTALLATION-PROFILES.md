@@ -12,7 +12,7 @@ This document defines the productization boundary without weakening the source-s
 
 ## Installation layers
 
-The project distinguishes four layers. They must not be collapsed into one privileged script.
+The project distinguishes five layers. They must not be collapsed into one privileged script.
 
 1. **Source setup — implemented.** A developer or verifier already has the required Node.js/npm toolchain and a checkout. `npm run setup` validates and verifies that source environment.
 2. **Host preflight and install planning — implemented, non-mutating.** With the current Node.js runtime available, `npm run host-install:plan -- <profile>` records local host observations and emits a deterministic plan. It does not install the toolchain, create users/directories/services, provision credentials, alter networking, start AXIOM, or verify a release bundle.
