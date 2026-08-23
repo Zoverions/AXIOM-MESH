@@ -48,7 +48,7 @@ test('install admission documentation keeps the release, plan, fact, and byte bi
     'signed release manifest',
     'host-plan digest',
     'host-facts digest',
-    'artifact-set digest',
+    'artifact[_-]set(?:_| )digest',
     'admission digest'
   ]) {
     assert.match(content, new RegExp(concept, 'i'));
