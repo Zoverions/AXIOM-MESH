@@ -2,7 +2,7 @@
 
 **Status:** canonical current-build index
 
-**Updated:** 2026-08-22
+**Updated:** 2026-08-23
 
 **Active build:** `0.12.0-dev.3`
 
@@ -40,8 +40,9 @@ AXIOM-MESH is simultaneously:
 7. an isolated frontier programme for distributed authority, settlement,
    autonomy, regulated domains, embodied systems, arbitrary code, zk,
    post-quantum migration, plural governance, protocol-neutral agent
-   interoperability, compartmentalized personal-context systems, and portable
-   private-companion continuity.
+   interoperability, compartmentalized personal-context systems, portable
+   private-companion continuity, resilient path-fabric research, and
+   provenance-bound path observations.
 
 Only [`mesh/config/capabilities.json`](../mesh/config/capabilities.json)
 establishes what is currently runnable. The registry tracks 49 capabilities,
@@ -64,6 +65,7 @@ roadmap, review, or migration documents. Link to the owner instead.
 | How is the system designed? | [`whitepapers_and_research/WHITEPAPER.md`](whitepapers_and_research/WHITEPAPER.md) | Integrated architecture, principles, trust boundaries, and design rationale | Independent current status or release decisions |
 | What should be built next? | [`ROADMAP.md`](ROADMAP.md) and [`MASTER-TODO.md`](MASTER-TODO.md) | Sequenced outcomes, acceptance criteria, and executable queue | New capability claims |
 | How should future domains evolve? | [`ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md`](ROADMAP-EXTENSION-AGENT-INTEROPERABILITY.md), [`ROADMAP-EXTENSION-PLURAL-AUTHORITY.md`](ROADMAP-EXTENSION-PLURAL-AUTHORITY.md), their `rebuild/` specifications, and the subordinate [Runtime & Connector Fabric queue](MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md) | Future-compatible architecture, laboratories, and promotion gates | Current implementation status |
+| How are future path observations attributed without becoming routing authority? | [`rebuild/PATH-OBSERVATION-EVIDENCE.md`](rebuild/PATH-OBSERVATION-EVIDENCE.md) | External signer roles, exact portfolio binding, freshness, source provenance, replay bounds, attribution-vs-truth semantics | Claims of live telemetry, regulatory truth, route authority, or production path selection |
 | How do replaceable runtimes/connectors coordinate safely? | [`architecture/RUNTIME-AND-CONNECTOR-FABRIC.md`](architecture/RUNTIME-AND-CONNECTOR-FABRIC.md) | Catalog, task/handoff, certification/curation/authorization separation, lifecycle, routing, and non-claims | Runtime certification or capability promotion |
 | How should private personal context be compartmentalized and selectively disclosed? | [`architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md`](architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md) and [`architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md`](architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md) | Sovereign Vaults, owner-local context brokerage, semantic Context Requests, short-lived local Vault Access Leases, Context Capsules | Claims that these draft systems are implemented or production-ready |
 | How does the private companion remain portable across models/providers? | [`architecture/PERSONAL-AGENT-PACK-V2-AND-COMPANION-CONTINUITY.md`](architecture/PERSONAL-AGENT-PACK-V2-AND-COMPANION-CONTINUITY.md) | Pack v2 vault manifests, companion components, optional personalized model artifacts, adaptation authorization, selective recovery and migration | Claims of implemented Pack v2 import/export, training, model unlearning, or identity equivalence |
@@ -74,13 +76,16 @@ roadmap, review, or migration documents. Link to the owner instead.
 Use **status -> registry -> readiness -> white paper -> roadmap -> requirements**
 for a current technical decision. Use **white paper -> the relevant `rebuild/`
 specification -> roadmap extension -> master todo -> review** for agent
-interoperability or plural-authority design work. For runtime/connector work,
-continue from the agent-interoperability materials into **Runtime & Connector
-Fabric -> Runtime & Connector Fabric queue -> candidate survey/pin**. Use
-**Personal Compute Fabric -> Sovereign Vaults -> Vault Lease and Context Request
--> Personal Agent Pack v2** for private-companion, compartmentalized-memory,
-selective-disclosure, or continuity design. Use **migration -> dated audit or
-review** when the question is provenance or why a boundary exists.
+interoperability or plural-authority design work. For resilient-network work,
+continue through **agent-interoperability roadmap -> Resilient Path Fabric ->
+Path Observation Evidence** while keeping both layers as future laboratories,
+not current capability claims. For runtime/connector work, continue from the
+agent-interoperability materials into **Runtime & Connector Fabric -> Runtime &
+Connector Fabric queue -> candidate survey/pin**. Use **Personal Compute Fabric
+-> Sovereign Vaults -> Vault Lease and Context Request -> Personal Agent Pack
+v2** for private-companion, compartmentalized-memory, selective-disclosure, or
+continuity design. Use **migration -> dated audit or review** when the question
+is provenance or why a boundary exists.
 
 When two documents appear to disagree, resolve the conflict in this order:
 
@@ -103,6 +108,10 @@ Current documentation must preserve these distinctions:
 - `/v1/machine-discovery` describes requestability, not permission;
 - a Grid-attested receipt proves the signed Grid statement, not arbitrary
   external-world truth;
+- a Path Observation Evidence signature proves attribution under the evaluator's
+  configured trust role and freshness policy; it does not establish RF,
+  regulatory, energy, maintenance, attestation, or failure-domain truth and it
+  grants no forwarding or radio authority;
 - local Grid hash-chain verification detects modification but does not by
   itself prove absence of a consistently deleted suffix with matching local
   head/checkpoint rewrite;
@@ -163,6 +172,9 @@ Current documentation must preserve these distinctions:
 - [Adaptive assurance and plural authority](rebuild/ADAPTIVE-ASSURANCE-AND-PLURAL-AUTHORITY.md)
 - [Agent interoperability and capability substrate](rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md)
 - [Agent interoperability capability map](rebuild/AGENT-INTEROPERABILITY-CAPABILITY-MAP.md)
+- [Path Observation Evidence](rebuild/PATH-OBSERVATION-EVIDENCE.md) — inert
+  provenance/freshness boundary for Resilient Path Fabric claims; no truth or
+  network-authority promotion.
 
 ### Roadmap extensions
 
@@ -284,9 +296,9 @@ requires Node.js `>=24.14.0 <25`, pins protected CI and `.node-version` to
 fails on missing/unexpected current documents, broken local links, security-
 policy drift, missing required sections, Agent Runtime Adapter contract drift,
 capability-count drift, Gateway-route drift, or internal-network-route drift.
-The Runtime & Connector Fabric work must be explicitly admitted to that
-allowlist and its zero-authority contract invariants and frozen schema byte pins
-must remain executable checks before this draft PR is merge-ready.
+The Runtime & Connector Fabric and Path Observation Evidence work must be
+explicitly admitted to that allowlist, and their zero-authority/non-truth
+invariants must remain executable checks before a draft becomes merge-ready.
 
 A dedicated current-state documentation regression suite additionally locks the
 machine-principal, Grid continuity, repository-effect production-reachability,
@@ -316,5 +328,8 @@ Broker](architecture/SOVEREIGN-VAULTS-AND-CONTEXT-BROKER.md), [Vault Access
 Lease and Context Request](architecture/VAULT-LEASE-AND-CONTEXT-REQUEST.md), and
 [Personal Agent Pack v2 and Companion
 Continuity](architecture/PERSONAL-AGENT-PACK-V2-AND-COMPANION-CONTINUITY.md).
-For future agent-runtime work, continue through the agent-interoperability
-roadmap/specification and then the [Runtime & Connector Fabric](architecture/RUNTIME-AND-CONNECTOR-FABRIC.md), its [execution queue](MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md), and relevant dated candidate review. For plural-governance work, add the corresponding roadmap extension only after the current-state material above.
+For future resilient-network work, add the agent-interoperability roadmap and
+[Path Observation Evidence](rebuild/PATH-OBSERVATION-EVIDENCE.md); neither is a
+current routing capability. For future agent-runtime work, continue through the
+agent-interoperability roadmap/specification and then the [Runtime & Connector
+Fabric](architecture/RUNTIME-AND-CONNECTOR-FABRIC.md), its [execution queue](MASTER-TODO-RUNTIME-CONNECTOR-FABRIC.md), and relevant dated candidate review. For plural-governance work, add the corresponding roadmap extension only after the current-state material above.
