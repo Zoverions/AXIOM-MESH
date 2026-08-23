@@ -204,10 +204,16 @@ future jurisdictional packs share the same governed application direction.
 
 Education can maintain local/offline application functionality under its own
 release boundary. Governed learner effects must bind to reviewed AXIOM-MESH
-contracts and preserve Gateway -> Hypervisor -> Sandbox -> Grid. Installing or
-listing Axiom Education grants no learner-record, curriculum, provider,
-network, school, guardian, or delegated-human authority. The cross-repository
-compatibility and feature-adoption rules are defined in
+contracts and preserve Gateway -> Hypervisor -> Sandbox -> Grid. The current
+Mesh convergence includes governed learner-memory ownership, consent-bound
+learner-record contracts, Education provider contracts, Sandbox composition,
+and a bounded learner self-read path mediated by Hypervisor and one exact
+Hypervisor-to-Grid Education edge. These are conformance/runtime foundations;
+they do not activate Education actions in committed production policy or make
+the independently released Education repository automatically compatible.
+Installing or listing Axiom Education grants no learner-record, curriculum,
+provider, network, school, guardian, or delegated-human authority. The cross-
+repository compatibility and feature-adoption rules are defined in
 [Application and Downstream Integration](docs/rebuild/APPLICATION-AND-DOWNSTREAM-INTEGRATION.md).
 
 ## Development programme
@@ -385,9 +391,11 @@ The alternate single-host
 [`mesh/compose.units.yml`](mesh/compose.units.yml) runs the four kernel services
 as independently restartable containers with per-unit private credentials,
 Grid-only durable state, and four exact internal network segments. A
-machine-readable default-deny policy **permits only 41 current internal**
+machine-readable default-deny policy **permits only 42 current internal**
 caller/destination/method/route combinations at both ends, derives mTLS peer
-allowlists, and removes unrelated adjacency. This is single-host isolation, not
+allowlists, and removes unrelated adjacency. The 42nd reviewed permission is the
+bounded Hypervisor-to-Grid Education learner-progress edge; it is not public
+Education exposure or alternate authority. This is single-host isolation, not
 multi-host consensus or automatic failover.
 
 ## Security and contribution
