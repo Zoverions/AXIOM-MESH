@@ -34,7 +34,9 @@ export function validateResilientPathFabric(document) {
     'optimizer',
     'authority_effect',
     'network_effect',
-    'runtime_activation'
+    'runtime_activation',
+    'input_claims_authenticated',
+    'live_measurements_performed'
   ]);
 
   if (
@@ -44,6 +46,8 @@ export function validateResilientPathFabric(document) {
     || document.authority_effect !== 'none'
     || document.network_effect !== 'none'
     || document.runtime_activation !== false
+    || document.input_claims_authenticated !== false
+    || document.live_measurements_performed !== false
   ) {
     throw new ValidationError('Resilient Path Fabric activation boundary is invalid');
   }
@@ -90,6 +94,8 @@ export function validateResilientPathFabric(document) {
     authority_effect: 'none',
     network_effect: 'none',
     runtime_activation: false,
+    input_claims_authenticated: false,
+    live_measurements_performed: false,
     live_routing_changed: false,
     radio_control_performed: false
   });
