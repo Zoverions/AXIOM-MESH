@@ -133,7 +133,7 @@ test('canonical productization documents preserve install, Education, backup, an
     '## Personal cloud and remote backup adapters',
     'https://github.com/Zoverions/Axiom-Education',
     '## Promotion gates for the first real Linux installer',
-    'installation never grants authority'
+    'Installation never grants authority'
   ]) assert.ok(install.includes(anchor), `host installation document missing ${anchor}`);
 
   for (const anchor of [
