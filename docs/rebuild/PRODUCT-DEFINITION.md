@@ -5,7 +5,7 @@
 
 **Current build:** `0.12.0-dev.3`
 
-**Reconciled:** 2026-08-12
+**Reconciled:** 2026-08-23
 
 **Deployment status:** production candidate; no live production claim
 
@@ -108,11 +108,14 @@ visible effect.
 
 The current reference unit topology runs the four services across four exact
 single-host internal network segments. A machine-readable default-deny policy
-authorizes only 41 exact caller, destination, method, and route combinations
+authorizes only 42 exact caller, destination, method, and route combinations
 before signing or network I/O, derives each destination's active mTLS peers,
-and removes Gateway-to-Sandbox and Grid-to-Sandbox adjacency. Plaintext
-development traffic remains loopback-only. This is a reference single-host
-enforcement claim, not evidence of a pilot or multi-host orchestrator policy.
+and removes Gateway-to-Sandbox and Grid-to-Sandbox adjacency. The additional
+Education edge is the bounded Hypervisor-to-Grid
+`POST /internal/v1/education/learner-progress`; it creates no public ingress and
+no alternate authority path. Plaintext development traffic remains
+loopback-only. This is a reference single-host enforcement claim, not evidence
+of a pilot or multi-host orchestrator policy.
 
 ## Product layers
 
@@ -126,7 +129,9 @@ expanded merely to simplify application development.
 
 Browser, mobile, desktop, and static verification applications live outside
 the trusted kernel and communicate through versioned Gateway contracts. They
-receive only narrowly scoped API authority.
+receive only narrowly scoped API authority. Independently released applications
+such as [Axiom Education](https://github.com/Zoverions/Axiom-Education) remain
+first-class AXIOM applications without being folded into the kernel release.
 
 Planned human concepts are:
 
@@ -212,6 +217,28 @@ action and retains no token or response in browser storage. This browser
 projection is not an authoritative pre-execution kernel plan. General
 consequential plan/approval, edge deletion, hard deletion,
 restore, bulk ingestion, and human evidence still require their own gates.
+
+### Axiom Education
+
+[Axiom Education](https://github.com/Zoverions/Axiom-Education) is an integral,
+independently released lifelong-learning application rather than a grade-band
+subproject embedded in the Mesh repository. Ontario curriculum work is an early
+jurisdictional application surface, not the definition of the product.
+
+The Mesh contains a governed Education conformance substrate for learner-memory
+ownership, consent-bound learner progress records, provider contracts, a
+Sandbox Education executor composed over the current executor stack, and a
+bounded learner self-read path mediated by Hypervisor and Grid. The current
+convergence does **not** activate Education actions in production policy,
+promote the Education domain out of its capability-registry status, authorize
+cross-subject educator/guardian reads, or claim that the independently released
+Education repository is automatically compatible merely because Mesh support
+exists. Downstream compatibility must be pinned and verified in the Education
+repository against the merged Mesh contract.
+
+Installing or discovering Education creates no curriculum, provider, learner-
+record, school, guardian, delegated-human, network, or external-effect
+authority.
 
 ### AXIOM Link and Personal Compute Fabric
 
@@ -491,7 +518,8 @@ Work proceeds in parallel:
 4. add one bounded AI provider and useful personal workflows;
 5. implement the phone-first Personal Agent Pack and single-agent capsule slice
    before prototyping the phone-relayed wearable endpoint;
-6. build AXIOM Verify and invitation-based Circles;
+6. build AXIOM Verify and invitation-based Circles while keeping Axiom Education
+   synchronized as an independently released first-class downstream application;
 7. establish remote dispatch and result provenance before distributed compute;
 8. develop identity and payment only with synthetic/test credentials and value
    until their separate promotion gates pass;
