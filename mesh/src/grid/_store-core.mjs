@@ -362,7 +362,7 @@ export class GridStore {
       }
       for (const row of rows) {
         const payload = this.openJson('events', 'payload_json', row.event_id, row.payload_json);
-        validateMaterializedPayload(row.kind, payload);
+        validateMaterializedPayload(row.kind, payload, { evaluatedAt: row.occurred_at });
         this.applyMaterializedEvent({
           seq: row.seq,
           event_id: row.event_id,
@@ -1604,7 +1604,7 @@ export class GridStore {
     asOf = new Date().toISOString(),
     limit = 100
   } = {}) {
-    const safeLimit = boundedInteger(limit, 'node schedule limit', 1, 100);
+    const safeLimit = boundedInteger(limit, 'node schedule list limit', 1, 100);
     const nodes = this.listNodes({ asOf });
     const schedules = this.decodedSchedules();
     const owned = schedules.filter(schedule => schedule.requester === requester);
@@ -2485,7 +2485,16 @@ function normalizeEvent(raw) {
   return { kind, subject, payload };
 }
 
-function validateMaterializedPayload(kind, p) {
+function validateMaterializedPayload(
+  kind,
+  p,
+  { evaluatedAt = new Date().toISOString() } = {}
+) {
+  const evaluatedAtIso = validDate(evaluatedAt);
+  if (!evaluatedAtIso) {
+    throw new ValidationError('Materialized payload evaluation time must be a valid ISO timestamp');
+  }
+  const evaluationTime = new Date(evaluatedAtIso);
   if (kind === 'intent.accepted') {
     assertString(p.intent_id, 'intent_id', { max: 160, pattern: ID });
     assertString(p.principal, 'principal', { max: 160, pattern: ID });
@@ -2510,7 +2519,7 @@ function validateMaterializedPayload(kind, p) {
     }
     assertString(p.purpose, 'purpose', { max: 512 });
     if (!Array.isArray(p.scopes) || !p.scopes.length) throw new ValidationError('Consent scopes are required');
-    if (!validDate(p.expires_at) || new Date(p.expires_at) <= new Date()) {
+    if (!validDate(p.expires_at) || new Date(p.expires_at) <= evaluationTime) {
       throw new ValidationError('Consent expiry must be a future ISO timestamp');
     }
     assertString(p.revocation_handle_hash, 'revocation_handle_hash', { min: 64, max: 64, pattern: /^[a-f0-9]{64}$/ });
@@ -2532,7 +2541,7 @@ function validateMaterializedPayload(kind, p) {
       max: 64,
       pattern: /^[a-f0-9]{64}$/
     });
-    if (!validDate(p.expires_at) || new Date(p.expires_at) <= new Date()) {
+    if (!validDate(p.expires_at) || new Date(p.expires_at) <= evaluationTime) {
       throw new ValidationError('Approval expiry must be a future ISO timestamp');
     }
   } else if (kind === 'approval.consumed') {
