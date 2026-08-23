@@ -58,6 +58,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/rebuild/ROLLBACK.md',
   'docs/rebuild/SOURCE-TRACEABILITY.md',
   'docs/rebuild/STATUS.md',
+  'docs/rebuild/PLURAL-AUTHORITY-IMPLEMENTATION-STATUS-2026-08-20.md',
   'docs/reviews/PLURAL-AUTHORITY-ARCHITECTURE-REVIEW-2026-08-03.md',
   'docs/reviews/AGENT-INTEROPERABILITY-ARCHITECTURE-REVIEW-2026-08-09.md',
   'docs/security/CREDENTIAL-HISTORY-REVOCATION.md',

@@ -1,0 +1,119 @@
+{
+  "schema": "axiom-circle-simulation-threat-review.v0",
+  "version": 0,
+  "status": "inert-simulation-threat-review",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "scope": "local-multiprincipal-circle-simulation-only",
+  "threats": [
+    {
+      "id": "sybil-membership",
+      "mitigations": [
+        "distinct-principal-id-required",
+        "one-active-membership-per-principal-in-simulation"
+      ],
+      "residual_limit": "principal-id uniqueness does not prove one human, legal person, or independent actor"
+    },
+    {
+      "id": "quorum-manipulation",
+      "mitigations": [
+        "eligible-voters-derived-from-active-role-bound-memberships",
+        "exact-charter-decision-rule"
+      ],
+      "residual_limit": "simulation does not establish Sybil-resistant admission or legitimate electorate composition"
+    },
+    {
+      "id": "role-capture",
+      "mitigations": [
+        "exact-charter-digest-binding",
+        "role-declared-mode-required"
+      ],
+      "residual_limit": "simulation does not prove the charter or role assignment was legitimately adopted"
+    },
+    {
+      "id": "stale-membership",
+      "mitigations": [
+        "active-membership-required",
+        "exit-history-on-active-membership-rejected",
+        "action-after-membership-activation-required"
+      ],
+      "residual_limit": "device and credential compromise are not yet inputs to simulation eligibility"
+    },
+    {
+      "id": "charter-or-circle-substitution",
+      "mitigations": [
+        "exact-circle-id-required",
+        "exact-charter-digest-required",
+        "input-package-digest-bound"
+      ],
+      "residual_limit": "digest binding proves exact input identity, not political or legal legitimacy"
+    },
+    {
+      "id": "simulation-result-laundering",
+      "mitigations": [
+        "finality-simulation-only",
+        "no-circle-decision-created",
+        "no-grid-event-created",
+        "no-gateway-action-created",
+        "no-runtime-authority-minted"
+      ],
+      "residual_limit": "external consumers must continue to reject a simulation transcript as execution authority"
+    },
+    {
+      "id": "evidence-reference-laundering",
+      "mitigations": [
+        "evidence-reference-is-non-authorizing",
+        "transcript-binds-action-sequence-digest"
+      ],
+      "residual_limit": "an evidence reference does not prove the referenced material is authentic, relevant, or true"
+    },
+    {
+      "id": "coercive-or-nonvoluntary-participation",
+      "mitigations": [
+        "simulation-claims-no-legitimacy",
+        "simulation-claims-no-public-authority"
+      ],
+      "residual_limit": "technical simulation cannot establish informed consent, voluntariness, or freedom from coercion"
+    },
+    {
+      "id": "clock-and-timestamp-manipulation",
+      "mitigations": [
+        "canonical-utc-action-timestamps",
+        "chronological-actions-required",
+        "proposal-window-required"
+      ],
+      "residual_limit": "canonical timestamp syntax does not independently attest the real-world time an action occurred"
+    },
+    {
+      "id": "cross-circle-confusion",
+      "mitigations": [
+        "exact-circle-id-required",
+        "exact-membership-binding",
+        "exact-charter-digest-required"
+      ],
+      "residual_limit": "future cross-Circle recognition and delegation semantics remain undefined"
+    }
+  ],
+  "promotion_blockers": [
+    "sybil-resistant-membership-or-explicit-non-sybil-admission-model",
+    "device-and-credential-lifecycle-integration",
+    "charter-amendment-and-activation-lifecycle",
+    "grid-backed-replay-safe-mutation-records",
+    "explicit-separation-of-circle-decision-from-runtime-grant",
+    "human-explanation-and-accessibility-evidence",
+    "security-and-privacy-review-before-real-participant-pilot"
+  ],
+  "non_claims": {
+    "human_uniqueness_proved": false,
+    "legal_identity_proved": false,
+    "legitimate_electorate_proved": false,
+    "content_truth_proved": false,
+    "voluntary_participation_proved": false,
+    "collective_finality_proved": false,
+    "runtime_authority_granted": false,
+    "public_authority_granted": false,
+    "consensus_enabled": false,
+    "federation_enabled": false
+  }
+}
