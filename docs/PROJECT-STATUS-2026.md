@@ -1,6 +1,6 @@
 # AXIOM-MESH Project Status
 
-**Status date:** 2026-08-19
+**Status date:** 2026-08-23
 
 **Supported build:** `0.12.0-dev.3`
 
@@ -116,7 +116,7 @@ The production-candidate surface includes:
   and a host-side least-privilege OTLP/Alertmanager relay;
 - explicit production credential provisioning and fail-closed supervision;
 - per-unit private identity/TLS projection, Grid-only durable state, four exact
-  internal network segments, a default-deny 41-route application policy,
+  internal network segments, a default-deny 42-route application policy,
   policy-derived mTLS peers, and signed failure/recovery evidence;
 - TLS 1.3 internal transport with Ed25519 identities, DNS and SPIFFE-style URI
   identity, active-leaf pinning, offline rotation, retired-leaf rejection, and
@@ -257,7 +257,6 @@ runtime-facing precursor to Agent Contributor Mode. The
 `axiom-machine-identity-credential.v1` evidence binds principal identity,
 sponsor, issuer/key epoch, operational key, runtime binding, credential history,
 rotation/recovery, expiry, and issuer-signed revocation/currentness facts.
-
 That laboratory is **identity evidence only**. It does not modify the capability
 registry, enable self-service enrollment or machine delegation, create a bearer
 grant, expose a remote executor or MCP/A2A, establish legal identity or
@@ -285,6 +284,19 @@ review substrates, not a public social network: no social mutation is exposed
 through the review route, and no federation, remote Following feed, public
 profile hosting, recommendation layer, messaging, or external distribution is
 claimed. AXIOM One UI integration remains separately gated.
+
+Axiom Education is a first-class independently released AXIOM application at
+[`Zoverions/Axiom-Education`](https://github.com/Zoverions/Axiom-Education).
+The current Mesh convergence contains the governed learner substrate for memory
+ownership, consent-bound learner records, provider contracts, Sandbox execution
+composition, and bounded learner self-read. The self-read path is mediated by
+Hypervisor and one exact authenticated Hypervisor-to-Grid POST edge; it does not
+give Sandbox direct Grid authority. Education actions remain unavailable in
+committed production policy and the separate Education repository must pin and
+verify compatibility against the merged Mesh contract before claiming adoption.
+Cross-subject educator/guardian authority, production provider activation,
+curriculum approval, school/institution authority, and educational compliance
+remain unclaimed.
 
 Corrections are new linked records; they do not silently replace their target.
 Cross-principal read/link/export/tombstone paths are denied in real-stack tests.
@@ -373,7 +385,7 @@ The `0.12.0-dev.3` build does **not** claim:
 
 - a live public, customer, testnet, mainnet, or production service;
 - a completed authentic pilot or independent security approval;
-- a supported AXIOM One, Verify, Circles, Studio, or Managed Node release;
+- a supported AXIOM One, Education, Verify, Circles, Studio, or Managed Node release;
 - a supported wearable/companion product, portable Personal Agent Pack, Agent
   Runtime Capsule executor, compute-routing fabric, or Local Trust Plane;
 - a production AI, messaging, identity, storage-transfer, payment, repository,
@@ -421,10 +433,13 @@ promotion.
    useful provider/workflow path, followed by one immutable single-agent Runtime
    Capsule, a secret-free Personal Agent Pack, and transparent policy-first
    compute routing;
-4. select and review one maintained external runtime for a deliberately bounded
+4. keep Axiom Education synchronized as an independently released first-class
+   application, including explicit Mesh compatibility/adoption evidence after
+   each relevant authority or data-contract change;
+5. select and review one maintained external runtime for a deliberately bounded
    read-only Agent Runtime Adapter v1 integration before any remote execution or
    broader interoperability claim; and
-5. continue Agent Contributor Mode, authenticated multi-host dispatch,
+6. continue Agent Contributor Mode, authenticated multi-host dispatch,
    Circles/social exchange, plural authority, and frontier work incrementally
    behind their own evidence and promotion gates.
 
