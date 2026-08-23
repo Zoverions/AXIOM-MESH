@@ -2,7 +2,7 @@
 
 **Applies to:** `0.12.0-dev.3`
 
-**Updated:** 2026-08-12
+**Updated:** 2026-08-23
 
 The candidate production package runs Gateway, Hypervisor, Sandbox, and Grid as
 four supervised Node.js processes inside one hardened container. Only Gateway
@@ -138,14 +138,16 @@ receives the API token registry. The operator token stays on the host.
 The unit topology permits required service traffic but has no external route.
 `gateway-hypervisor`, `gateway-grid`, `hypervisor-grid`, and
 `hypervisor-sandbox` remove unrelated adjacency. The bundled default-deny
-policy additionally authorizes only 41 exact caller/destination/method/route
-combinations at both sending and receiving services and derives inbound mTLS
-peer allowlists. Because internal routes must exist, this topology does not use
-the single-container supervisor's `network_mode: none` route check; segmented
-internal networks plus application and transport allowlists are the boundary.
-Protected CI proves the required path, Gateway-to-Sandbox denial,
-Sandbox-to-Grid denial, Grid-to-Sandbox denial, and public TCP failure from a
-running unit.
+policy additionally authorizes exactly 42 currently allowed internal
+method/path permissions at both sending and receiving services and derives
+inbound mTLS peer allowlists. The additional governed Education permission is
+Hypervisor-to-Grid `POST /internal/v1/education/learner-progress`; it does not
+create public ingress or a second authority path. Because internal routes must
+exist, this topology does not use the single-container supervisor's
+`network_mode: none` route check; segmented internal networks plus application
+and transport allowlists are the boundary. Protected CI proves the required
+path, Gateway-to-Sandbox denial, Sandbox-to-Grid denial, Grid-to-Sandbox denial,
+and public TCP failure from a running unit.
 
 Verify exact policy and Compose membership before startup:
 
