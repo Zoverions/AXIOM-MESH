@@ -117,9 +117,15 @@ export function preflightEducationLearnerGridEvent(
     input.subject_id,
     input.event_id,
   );
-  if (event.event_id !== expectedEventId) {
+  if (event.event_id !== undefined && event.event_id !== expectedEventId) {
     throw new ValidationError('Education learner Grid event_id binding mismatch');
   }
+  // Grid owns ledger-envelope identity. The generic Hypervisor mutation projection
+  // deliberately strips caller-selected event_id values; after the Education
+  // record payload and subject have been validated, restore only this exact
+  // deterministic identifier. An explicitly supplied non-matching value still
+  // fails closed above.
+  event.event_id = expectedEventId;
   if (store.db.prepare('SELECT 1 FROM events WHERE event_id = ?').get(expectedEventId)) {
     throw new AxiomError(
       'education_learner_event_conflict',
