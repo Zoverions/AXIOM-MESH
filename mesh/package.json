@@ -10,6 +10,9 @@
     "setup": "node src/setup.mjs install --verify",
     "setup:install": "node src/setup.mjs install",
     "setup:check": "node src/setup.mjs check",
+    "host-install:policy": "node src/host-install.mjs policy-check",
+    "host-install:plan": "node src/host-install.mjs plan",
+    "docs:impact:policy": "node src/check-documentation-impact.mjs --policy-only",
     "network-policy:check": "node src/check-service-network-policy.mjs",
     "gateway-client:check": "node src/check-gateway-client-contract.mjs",
     "axiom-one:check": "node src/check-axiom-one.mjs",
@@ -75,6 +78,6 @@
     "release:verify": "node src/release.mjs",
     "release:evidence": "npm run check && node src/release.mjs --write",
     "test": "node --test --test-reporter=spec",
-    "check": "node src/setup.mjs check && node src/check-service-network-policy.mjs && node src/check-gateway-client-contract.mjs && node src/check-axiom-one.mjs && node src/check-registry.mjs && node src/status.mjs && node src/check-docs.mjs && node --test --test-reporter=spec"
+    "check": "node src/setup.mjs check && node src/check-documentation-impact.mjs --policy-only && node src/check-service-network-policy.mjs && node src/check-gateway-client-contract.mjs && node src/check-axiom-one.mjs && node src/check-registry.mjs && node src/status.mjs && node src/check-docs.mjs && node --test --test-reporter=spec"
   }
 }
