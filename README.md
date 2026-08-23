@@ -55,6 +55,21 @@ the promotion gates for a real fresh-host installer are defined in
 [`mesh/config/install-targets.json`](mesh/config/install-targets.json) and the
 [Host Installation and Node Profiles](docs/operations/HOST-INSTALLATION-PROFILES.md).
 
+A deterministic **non-mutating host-install planner** is now available for the
+two specified Linux target profiles:
+
+```bash
+npm run host-install:policy
+npm run host-install:plan -- personal-local
+npm run host-install:plan -- infrastructure-node
+```
+
+The planner records host observations and emits a digest-bound plan, but it does
+not install Node/npm or OS packages, create users/directories/services, provision
+credentials, alter networking, verify a signed release bundle, start AXIOM, or
+enroll a node. A plan that reports a candidate-compatible host is planning
+evidence only, not a support or production certification.
+
 ## Current state
 
 **Supported build:** `0.12.0-dev.3`
@@ -305,7 +320,7 @@ chain that produces that authority.
 |---|---|---|
 | **Local Play** | Start the kernel and submit one intent | `npm run doctor` -> `npm run setup` -> `npm run dev` -> `npm run axiom -- status` |
 | **Verify** | Re-run source, test, documentation, and release gates | `npm run check` -> `npm run release:verify` |
-| **Install planning** | Review the future personal/local and infrastructure-node host profiles without mistaking them for implemented installers | `mesh/config/install-targets.json` -> `docs/operations/HOST-INSTALLATION-PROFILES.md` |
+| **Install planning** | Produce a non-mutating digest-bound plan for the specified personal/local or infrastructure-node profile | `npm run host-install:policy` -> `npm run host-install:plan -- personal-local` or `infrastructure-node` -> `docs/operations/HOST-INSTALLATION-PROFILES.md` |
 | **Applications** | Discover first-class in-tree and independently released applications and their authority boundaries | `mesh/config/application-catalog.json` -> `docs/rebuild/APPLICATION-AND-DOWNSTREAM-INTEGRATION.md` |
 | **Operator / Pilot** | Exercise recovery, transport, resilience, custody, and evidence controls | Use the bounded drills and linked runbooks |
 | **Product development** | Build products/adapters without expanding ambient kernel authority | Follow `docs/ROADMAP.md`, `docs/MASTER-TODO.md`, requirements, and capability gates |
@@ -316,6 +331,10 @@ chain that produces that authority.
 ```bash
 npm run doctor
 npm run setup
+npm run host-install:policy
+npm run host-install:plan -- personal-local
+npm run host-install:plan -- infrastructure-node
+npm run docs:impact:policy
 npm run dev
 npm run axiom -- --help
 npm run axiom -- status
@@ -368,7 +387,8 @@ matches the question:
 - [Current project status](docs/PROJECT-STATUS-2026.md)
 - [Capability registry](mesh/config/capabilities.json)
 - [Application catalogue](mesh/config/application-catalog.json) and [application/downstream integration model](docs/rebuild/APPLICATION-AND-DOWNSTREAM-INTEGRATION.md)
-- [Install target registry](mesh/config/install-targets.json) and [host installation profiles](docs/operations/HOST-INSTALLATION-PROFILES.md)
+- [Install target registry](mesh/config/install-targets.json), [host-install policy](mesh/config/host-install-policy.json), and [host installation profiles](docs/operations/HOST-INSTALLATION-PROFILES.md)
+- [Documentation impact policy](mesh/config/documentation-impact-policy.json) for high-risk PR synchronization rules
 - [Production readiness tracker](docs/PRODUCTION-READINESS-TRACKER.md)
 - [Technical white paper](docs/whitepapers_and_research/WHITEPAPER.md)
 - [Normative requirements](docs/rebuild/REQUIREMENTS.md)
@@ -398,6 +418,12 @@ bounded Hypervisor-to-Grid Education learner-progress edge; it is not public
 Education exposure or alternate authority. This is single-host isolation, not
 multi-host consensus or automatic failover.
 
+The first documentation-impact policy does not claim semantic completeness. It
+enforces base-to-head review obligations for the high-drift installer,
+Education-consumed Mesh, service-network, capability-status, and application-
+catalogue surfaces. The policy is intended to expand as additional ownership
+relationships become executable.
+
 ## Security and contribution
 
 Do not add dependencies, credentials, new egress, browser secret storage,
@@ -414,8 +440,9 @@ The active build does not claim:
 
 - live production, testnet, mainnet, or public federation;
 - a completed authentic pilot or independent security approval;
-- a supported fresh-machine Linux installer, general infrastructure-node
-  installer, or automatic network enrollment;
+- a supported fresh-machine Linux installer or general infrastructure-node
+  installer beyond the current non-mutating planning surface, or automatic
+  network enrollment;
 - implemented Google Drive, OneDrive, S3-compatible, decentralized, or other
   remote-backup provider adapters beyond the existing local encrypted backup
   foundation;
