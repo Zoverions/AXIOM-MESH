@@ -1,6 +1,6 @@
 # AXIOM-MESH Production Readiness Tracker
 
-**Updated:** 2026-08-19
+**Updated:** 2026-08-23
 
 **Active build:** `0.12.0-dev.3`
 
@@ -28,6 +28,7 @@ frontier laboratories do not replace production-pilot evidence.
 | Authority/evidence canonical input domain | Pass for current kernel | Canonical hashing accepts JSON-compatible plain data only and rejects class/custom prototypes, accessors, non-enumerable or symbol-keyed state, sparse/custom arrays, with dedicated negative regressions | Maintain call-site normalization and plain-data invariants on every authority/evidence schema change |
 | Cross-platform verification | Pass for current source | Linux/container + hosted Windows path/clock/documentation verification | Keep both protected surfaces green |
 | Source setup and dependency audit | Pass | Node `>=24.14.0 <25`; CI/.node-version 24.18.0; candidate production image 24.19.0; npm 11.x; two zero-dependency locks; lifecycle scripts disabled; unchanged-lock proof | Maintain exact machine-readable policy and negative tests |
+| Fresh-host installation | Specified; not implemented | Machine-readable personal/local and infrastructure-node install profiles, install-without-authority contract, clean-host promotion gates | Implement/test signed clean-Linux personal install first, then infrastructure-node profile; do not treat source setup as host installation |
 | Container source policy | Pass | Digest-pinned Dockerfile/Compose release checks | Maintain exact production image/base digest |
 | Container build/readiness | Pass for candidate | Protected image build, readiness, authenticated operations, teardown | Repeat for promoted pilot image/platform |
 | Container network boundary | Pass for candidate topology | `network_mode: none`, Unix-socket ingress, route rejection, public TCP negative probe | Repeat and independently inspect pilot host/daemon policy |
@@ -43,7 +44,7 @@ frontier laboratories do not replace production-pilot evidence.
 | Resilience | Pass for automated candidate | Oversized-body, rate-limit, dependency suspension/loss, fail-closed exit, state-preserving restart | Pilot cgroup/disk/traffic/replacement scenarios |
 | Internal transport | Pass for single-host candidate | TLS 1.3, Ed25519 identities, active-leaf pinning, rotation, retired-leaf rejection, rollback | Pilot CA custody/rollout/compromise recovery/independent review |
 | Independent service units | Pass for single-host candidate | Per-unit identities, Grid-only state, segmented internal networks, Sandbox-only recovery | Pilot orchestrator resource/network/update/rollback evidence |
-| Service network policy | Pass for reference single-host topology | Exact default-deny 41-route policy at sender/receiver, derived mTLS peers, four segments, forbidden-edge probes, release binding | Reproduce on pilot and future independent hosts |
+| Service network policy | Pass for reference single-host topology | Exact default-deny 42-route policy at sender/receiver, derived mTLS peers, four segments, forbidden-edge probes, release binding; Education contributes one exact Hypervisor-to-Grid POST edge only | Reproduce on pilot and future independent hosts; preserve wrong-caller/wrong-method Education denials |
 | Node discovery/scheduling | Pass for single-Grid reservation candidate | Signed admissions, filtered discovery, deterministic encrypted leases, capacity/security/owner/domain/expiry/quarantine | Remote dispatch, measured resources, endpoint health, result provenance |
 | Online causal exchange | Pass for two-Grid candidate | Pinned Grid evidence, signed bundles, encrypted ordered queues, duplicate preflight, independent approval, visible conflicts/convergence | Independent-host WAN loss/delay/clock/backlog/custody evidence |
 | Secret/policy providers | Pass for signed protocol/reference adapter | Independent signers, pinned artifacts, nonce-bound inventories, private generation, invalid-signer rejection | Pilot vault/orchestrator adapter/workload identity |
@@ -74,6 +75,7 @@ or agent security result does not itself authorize any AXIOM effect.
 | Product gate | Current state | Required before exposure/promotion |
 |---|---|---|
 | Versioned Gateway client | Pass for current contract/library (`UX-001`): exact 31-route machine contract, reviewed schema, relative-only targets, explicit errors, bounded timeout/request/response, cancellation, stable idempotency, real-stack compatibility | Maintain exact compatibility; version/migrate/rollback incompatible changes |
+| Axiom Education | In progress; independent downstream application with Mesh convergence candidate | Governed learner memory/write/self-read substrate is being converged onto current Mesh without production policy activation; after Mesh merge, pin exact compatibility in `Zoverions/Axiom-Education`, update feature-adoption ledger, and require downstream protected CI before claiming adoption |
 | Owner-local social substrate | In progress: intent-authorized local actor/persona/publication create/supersede/retract plus owner-derived `/v1/social`; A2 publication projection; no federation or network distribution | Complete exact-head owner-read evidence, then AXIOM One UI; later exchange/federation requires a separate protocol/security gate |
 | Remote social review inspection | Candidate mechanism implemented; not production-promoted: owner-only `/v1/social/remote-review`, owner derived from authenticated principal, query overrides rejected, minimized G5A projection, accepted `SocialGridStore`, no remote-schema creation and no social/network/authority effect | Same-head Clean Kernel/Windows/chain evidence is required before PR readiness; any staging/admission/follow/transport/federation remains a separate gate |
 | AXIOM One browser/PWA shell | Experimental (`UX-002`): loopback-only shell, contract-only proxy, memory-only token, governed bounded Ask/Vault/receipt views | Complete local social UI, onboarding, session/device security, browser fixtures, accessibility/usability, signed package/update/rollback/uninstall/support |
@@ -170,8 +172,8 @@ execution, Grid schema/evidence/continuity semantics, encryption, backup,
 service topology, container base, secret handling, browser sessions, adapter
 egress, provider scope, resolver activation, outbox/operator execution,
 external runtime integration, portable/delegated identity authority, remote
-execution, settlement, domain authority, or release gates reopens the applicable
-gate.
+execution, settlement, domain authority, downstream application contracts, or
+release gates reopens the applicable gate.
 
 Production promotion is never inherited automatically by later commits,
 deployments, applications, adapters, runtimes, resolver mappings, or
