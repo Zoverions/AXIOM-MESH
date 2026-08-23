@@ -68,6 +68,7 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md',
   'docs/rebuild/AGENT-INTEROPERABILITY-CAPABILITY-MAP.md',
   'docs/rebuild/PATH-OBSERVATION-EVIDENCE.md',
+  'docs/rebuild/MEASUREMENT-SOURCE-ENVELOPES.md',
   'docs/rebuild/PRODUCT-DEFINITION.md',
   'docs/rebuild/REQUIREMENTS.md',
   'docs/rebuild/ROLLBACK.md',
@@ -285,6 +286,15 @@ const REQUIRED_CONTENT = Object.freeze({
     'authority_effect: none',
     '## Threats covered by the v0 contract'
   ],
+  'docs/rebuild/MEASUREMENT-SOURCE-ENVELOPES.md': [
+    '## Layered trust sequence',
+    'fresh signed claim != fresh source measurement != accurate measurement != authorized network effect',
+    'independent_reproduction_verified: false',
+    'measurement_accuracy_established: false',
+    'truth_established: false',
+    'authority_effect: none',
+    '## Threats covered in v0'
+  ],
   'docs/rebuild/SOURCE-TRACEABILITY.md': [
     '## Current implementation trace',
     '## Archived source boundary'
@@ -467,6 +477,7 @@ const MINIMUM_LENGTH = Object.freeze({
   'docs/rebuild/AGENT-INTEROPERABILITY-AND-CAPABILITY-SUBSTRATE.md': 9_000,
   'docs/rebuild/AGENT-INTEROPERABILITY-CAPABILITY-MAP.md': 7_000,
   'docs/rebuild/PATH-OBSERVATION-EVIDENCE.md': 6_000,
+  'docs/rebuild/MEASUREMENT-SOURCE-ENVELOPES.md': 7_000,
   'docs/reviews/PLURAL-AUTHORITY-ARCHITECTURE-REVIEW-2026-08-03.md': 7_000,
   'docs/reviews/AGENT-INTEROPERABILITY-ARCHITECTURE-REVIEW-2026-08-09.md': 7_000,
   'docs/security/CREDENTIAL-HISTORY-REVOCATION.md': 2_500,
