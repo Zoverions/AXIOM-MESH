@@ -1,7 +1,7 @@
 # AXIOM-MESH Production Execution Queue
 
 **Status:** canonical active queue
-**Updated:** 2026-08-19
+**Updated:** 2026-08-23
 **Current kernel:** `0.12.0-dev.3`
 **Current stage:** production candidate; not production-promoted
 
@@ -56,6 +56,16 @@ explicitly opened.
 | SEC-004 | Complete | Restrict authority/evidence canonicalization to plain JSON data | Reject class/custom prototypes, accessors, non-enumerable/symbol state, sparse/custom arrays; preserve safe JSON `__proto__`; array/object hidden-state regressions |
 | SEC-005 | Complete | Make policy-constraint merge direction explicit | Declared monotonic boolean/numeric operators, finite allowlist intersection using canonical digest identity, ambiguous conflicts fail closed, exhaustive/property regressions; current production policy still has no action-level constraints |
 | SUP-001 | Complete | Reproducible release verification | Source/registry/docs/deployment/migration checks; no embedded secrets |
+
+## P0 — install and first-class application convergence
+
+| ID | Status | Work | Acceptance evidence |
+|---|---|---|---|
+| INSTALL-001 | Pending; profile specified | Fresh Linux personal/local node installer | Starts from a supported clean Linux host with no AXIOM checkout; verifies one immutable signed release; installs only pinned host/runtime dependencies; creates unprivileged service/data/secret boundaries; defaults to no public ingress and deny egress; proves readiness, reboot, update, incompatible/tampered-update rejection, rollback-or-restore, second-host restore, uninstall, and non-secret install receipts |
+| INSTALL-002 | Pending; profile specified | Infrastructure/support-node installer | Clean headless-host installation of independently deployable units; explicit role selection without automatic network enrollment; per-unit identities, Grid-only durable state, default-deny network, observability, backup/restore, rotation, quarantine/revocation, update/rollback, decommission, and community-testnet reproduction evidence |
+| EDU-001 | In progress; Mesh convergence candidate | Keep Axiom Education first-class and independently releasable while synchronized to Mesh | Governed learner memory/write/self-read substrate on current Mesh; exact merged Mesh compatibility pin in `Zoverions/Axiom-Education`; feature-adoption ledger; downstream protected CI; no automatic production/provider/curriculum/cross-subject authority claim |
+| APP-001 | Complete for catalogue/specification; runtime adoption remains per application | Maintain first-class application catalogue and downstream compatibility discipline | Machine-readable application catalogue, application/release independence, change-impact classes, feature-adoption states, documentation synchronization, install-without-authority invariants |
+| BACKUP-ADAPTER-001 | Pending; architecture specified | Provider-neutral encrypted remote-backup adapter contract | Local signed/encrypted backup envelope; narrow provider credential reference; exact copy/list/read/delete scopes; Google Drive/OneDrive/S3-compatible or decentralized providers remain adapters; restore verified locally; provider never receives Grid plaintext/data key/general Gateway authority |
 
 ## P1 — single-node production pilot
 
@@ -146,7 +156,7 @@ production activation decision.
 | NET-006 | Pending | Authenticated remote dispatch/result provenance | Workload identity, input/software binding, measured resources, timeout/cancel/replay/partial failure, compensation, signed result evidence |
 | NET-007 | Pending | Independently operated WAN hosts | External custody, latency/loss/clock/partition/backlog/residency/recovery/key-rotation evidence |
 | NET-008 | Pending | Stronger membership/endpoint-health evidence | Sybil/copied-owner/endpoint substitution/stale measurement/collusion/quarantine/appeal/re-admission tests |
-| NET-009 | Complete for reference single-host topology | Explicit service ingress/egress graph | Default-deny 41-route application policy, derived mTLS peers, four segments, required/forbidden-edge proof |
+| NET-009 | Complete for reference single-host topology | Explicit service ingress/egress graph | Default-deny 42-route application policy, derived mTLS peers, four segments, required/forbidden-edge proof |
 
 ## P3 — controlled adapters and product ecosystem
 

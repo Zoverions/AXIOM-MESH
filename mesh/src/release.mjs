@@ -684,7 +684,7 @@ export function verifyProductionDeployment({
     'cross-process port-block lease',
     'mutually authenticated TLS 1.3',
     'independently deployable units',
-    `${serviceNetwork.routes} exact caller/destination/method/route`,
+    `exactly ${serviceNetwork.routes} currently allowed internal`,
     'admitted-node discovery and scheduling',
     'operator-approved online causal exchange',
     'Deployment-independent provider startup',

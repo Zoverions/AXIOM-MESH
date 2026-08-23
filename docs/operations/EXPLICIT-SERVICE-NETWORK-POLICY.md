@@ -4,7 +4,7 @@
 
 **Status:** implemented single-host candidate control
 
-**Updated:** 2026-08-17
+**Updated:** 2026-08-23
 
 ## Enforced policy boundary
 
@@ -18,7 +18,7 @@ Its runtime validator and authorizer are
 The policy permits only the current build's exact source service, destination
 service, HTTP method, and route-pattern combinations. There is no wildcard
 service, wildcard method, wildcard path, arbitrary URL, or default-allow
-fallback. The active policy contains 10 grouped flows and 41 exact route
+fallback. The active policy contains 10 grouped flows and 42 exact route
 permissions, including bounded supervisor and self-health probes.
 
 Every internal `signedFetch` request is authorized before request signing or
@@ -73,7 +73,7 @@ local operator
 
 Gateway may request Hypervisor operations and submit normalized intents.
 Gateway may read the exact Grid query routes used by the public operator
-surface. That read set now includes one remote-social inspection edge:
+surface. That read set includes one remote-social inspection edge:
 `GET /internal/v1/social/remote-review/:owner`. It is allowed only from
 Gateway to Grid, only with `GET`, and only because the public Gateway route
 derives `:owner` from the authenticated principal. The Grid handler uses a
@@ -83,8 +83,15 @@ staging, admission, follow/unfollow, cleanup, transport, recommendation,
 network, or authority effect.
 
 Hypervisor may read policy/status/approval state and commit state transitions
-to Grid. Hypervisor alone may request Sandbox operations or execution. Grid
-and Sandbox have no application egress permissions.
+to Grid. The governed Education convergence adds one further exact
+Hypervisor-to-Grid permission:
+`POST /internal/v1/education/learner-progress`. It is an authenticated internal
+Education query/commit-support edge used by the Hypervisor learner-read path;
+it is not public ingress, general Grid access, provider activation, curriculum
+authority, or an alternate execution path. The Education result remains bound
+to the exact request/result digests and the surrounding authority checks.
+Hypervisor alone may request Sandbox operations or execution. Grid and Sandbox
+have no application egress permissions.
 
 The policy does not allow:
 
@@ -93,6 +100,8 @@ The policy does not allow:
 - Sandbox to call Gateway, Hypervisor, or Grid;
 - Hypervisor to call a Gateway route;
 - Hypervisor to call the remote-social review Grid route;
+- Gateway to call the Education learner-progress Grid route;
+- `GET` access to the Education learner-progress route;
 - a `POST` to the remote-social review route or any other read-only Grid route;
 - a `GET` to Grid commit or Sandbox execution;
 - an unknown `/internal/` path;
@@ -105,7 +114,8 @@ path-prefix wildcards. Query values remain subject to the destination
 handler's existing type, size, authorization, ownership, and scope checks.
 The remote-social review edge accepts the owner only in its internal path;
 public clients cannot select that value because Gateway constructs it from the
-authenticated `principal.id` and rejects query overrides.
+authenticated `principal.id` and rejects query overrides. The Education edge
+accepts no alternate caller or method simply because its Grid handler exists.
 
 Plaintext development service URLs are restricted to loopback hosts. A
 development configuration cannot point an unsigned HTTP internal URL at a
@@ -169,9 +179,15 @@ The normal kernel suite includes negative tests for:
   receiving boundaries;
 - Gateway-only GET enforcement for the remote-social review edge, including
   Hypervisor and POST rejection;
+- Hypervisor-only POST enforcement for the Education learner-progress edge,
+  including Gateway and GET rejection;
 - credential-bearing and fragment-bearing URLs;
 - missing, extra, external, or published Compose networks;
 - a forbidden-edge probe that must fail when a connection succeeds.
+
+All 38 implemented internal routes are checked against the same current
+machine-readable allowlist; a detached or half-wired modular Education route
+cannot silently become policy-equivalent to an implemented route.
 
 Protected CI builds the current image, starts the four segmented units, and
 waits for the full authenticated operations report. That success traverses
@@ -259,15 +275,17 @@ This milestone does not claim:
 - WAN routing, federation, or Grid replication;
 - live remote-social transport, public remote Following, recommendation, or
   admission effect APIs;
+- public Education deployment, curriculum/provider activation, or learner-data
+  authority outside the governed internal path;
 - automatic failover, leader election, or consensus;
 - that Docker's internal network is a universal egress control;
 - that an external orchestrator implements this policy;
 - that the development build is production-promoted.
 
 The implemented claim is narrower: current source requests fail closed against
-an exact machine-readable 41-route application graph, the reference four-unit
+an exact machine-readable 42-route application graph, the reference four-unit
 topology removes unrelated Docker adjacency through four internal segments,
 protected CI proves both required-path operation and selected forbidden
-network edges, and the one remote-social addition is a Gateway-only read path
-that exposes only bounded owner-scoped review state without activating the
-remote-social effect or transport stack.
+network edges, the remote-social addition remains a Gateway-only bounded
+owner-review read path, and the Education addition is one Hypervisor-only POST
+edge whose existence does not create public ingress or independent authority.

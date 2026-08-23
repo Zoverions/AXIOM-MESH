@@ -597,7 +597,7 @@ function verifyComputedDocumentationClaims(contents, capabilityRegistry) {
     ['mesh/README.md', `covers all ${gatewayRoutes} authenticated`],
     ['docs/PRODUCTION-GRADE.md', `default-deny ${network.routes}-route policy`],
     ['docs/PRODUCTION-GRADE.md', `${gatewayRoutes} authenticated Gateway routes`],
-    ['mesh/PRODUCTION.md', `policy additionally authorizes only ${network.routes} exact caller/destination/method/route`],
+    ['mesh/PRODUCTION.md', `policy additionally authorizes exactly ${network.routes} currently allowed internal`],
     ['docs/rebuild/PRODUCT-DEFINITION.md', `authorizes only ${network.routes} exact caller`],
     ['docs/PROJECT-STATUS-2026.md', `default-deny ${network.routes}-route application`],
     ['docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md', `and ${network.routes} exact route`],

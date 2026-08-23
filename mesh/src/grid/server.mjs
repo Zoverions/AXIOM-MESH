@@ -7,6 +7,8 @@ import { Router, createServiceServer, listen, parseJsonBody } from '../lib/http.
 import { AxiomError, ValidationError, assertPlainObject, assertString } from '../lib/canonical.mjs';
 import { operationsReport, readinessState, ServiceTelemetry } from '../lib/observability.mjs';
 import { AcceptedSocialGridStore } from './accepted-social-store.mjs';
+import { registerEducationGridRoutes } from './education-routes.mjs';
+import { preflightEducationLearnerGridEvent } from '../domain/education-learner-grid-preflight.mjs';
 import { loadDataProtector } from '../lib/protector.mjs';
 import { runServiceProcess } from '../lib/service-lifecycle.mjs';
 import { buildMachineIntentReceipt } from '../lib/machine-receipt.mjs';
@@ -92,6 +94,8 @@ export async function createGridService(config = meshConfig()) {
 
   router.add('GET', '/internal/v1/operations', async () => currentOperations());
 
+  registerEducationGridRoutes(router, store);
+
   router.add('POST', '/internal/v1/commit', async ({ body, traceId, principal }) => {
     if (principal.service !== 'hypervisor') {
       throw new ValidationError('Only Hypervisor may commit state transitions');
@@ -147,6 +151,9 @@ export async function createGridService(config = meshConfig()) {
       event => event?.kind === 'node.schedule.requested'
     );
     for (const event of exports) store.preflightExportRequest(actor, event);
+    for (const event of input.events) {
+      preflightEducationLearnerGridEvent(store, event, actor);
+    }
     const appended = store.appendEvents({ traceId, actor, events: input.events });
     const completedExports = [];
     const completedBackups = [];
