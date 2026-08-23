@@ -3,29 +3,17 @@
 
 <img src="logo.png" alt="AXIOM-MESH logo" width="150" align="right">
 
-AXIOM-MESH is a local-first coordination, authority, and evidence substrate. It
-turns authenticated human or machine intent into an explicit policy-authorized
-plan, executes only approved effects through bounded interfaces, and records
-portable cryptographically linked evidence.
+AXIOM-MESH is a local-first coordination, authority, and evidence substrate. It turns authenticated human or machine intent into an explicit policy-authorized plan, executes only approved effects through bounded interfaces, and records portable cryptographically linked evidence.
 
-The project is developing a defensible kernel plus first-class applications and
-replaceable machine/runtime interfaces. AXIOM One,
-[Axiom Education](https://github.com/Zoverions/Axiom-Education), AXIOM Verify,
-AXIOM Circles, AXIOM Studio, managed-node operations, agent runtimes, and future
-protocol adapters are clients of the authority substrate; they do not become
-alternate authorities merely by being installed or connected. Axiom Education
-is independently releasable in its own repository while remaining an integral
-AXIOM application and declared downstream Mesh consumer.
+The project combines a defensible kernel with first-class applications and replaceable runtime/service integrations. AXIOM One, [Axiom Education](https://github.com/Zoverions/Axiom-Education), AXIOM Verify, AXIOM Circles, AXIOM Studio, Managed Node tooling, external agent runtimes, and future protocol adapters are clients of the authority substrate; installation or connectivity does not make them alternate authorities.
 
-The machine-readable project/application boundary is recorded in
-[`mesh/config/application-catalog.json`](mesh/config/application-catalog.json).
+The application boundary is recorded in [`mesh/config/application-catalog.json`](mesh/config/application-catalog.json).
 
 ## First 5 Minutes
 
-Requirements: Node.js `>=24.14.0 <25` and npm `>=11.0.0 <12`.
+Requirements for the current **source-checkout** path: Node.js `>=24.14.0 <25` and npm `>=11.0.0 <12`.
 
-The setup policy pins **Node.js 24.18.0 for protected CI and `.node-version`**
-and **Node.js 24.19.0 for the candidate production image**.
+The setup policy pins Node.js **24.18.0** for protected CI/`.node-version` and **24.19.0** for the candidate production image.
 
 ```bash
 git clone https://github.com/Zoverions/AXIOM-MESH.git
@@ -35,28 +23,28 @@ npm run setup
 npm run dev
 ```
 
-A successful start prints `"message": "AXIOM-MESH ready"` and the local Gateway
-endpoint. In a second terminal:
+Then, in another terminal:
 
 ```bash
 npm run axiom -- status
 npm run axiom -- intent system.echo '{"message":"hello"}'
 ```
 
-Use `npm run axiom -- --help` to discover commands. Append `--json` for the
-complete machine-readable response. Docker is not required for the basic local
-development path.
+Use `npm run axiom -- --help` for commands and `--json` for machine-readable output.
 
-This is a **clean source-checkout setup**, not yet a fresh-machine Linux
-installer. It assumes the supported Node.js/npm toolchain is already present and
-does not provision a complete personal or infrastructure node. The explicit
-personal/local and infrastructure-node targets, their security invariants, and
-the promotion gates for a real fresh-host installer are defined in
-[`mesh/config/install-targets.json`](mesh/config/install-targets.json) and the
-[Host Installation and Node Profiles](docs/operations/HOST-INSTALLATION-PROFILES.md).
+This is a **clean source-checkout setup**, not a completed fresh-machine installer. It assumes the supported Node/npm toolchain is already present.
 
-A deterministic **non-mutating host-install planner** is now available for the
-two specified Linux target profiles:
+## Installation productization
+
+The installation path is now split into explicit evidence layers rather than one privileged bootstrap script.
+
+### Implemented: source setup
+
+`npm run setup` validates the checked-out source, exact zero-dependency locks, runtime policy, documentation, tests, and release-readiness gates. It creates no production credential and deploys nothing.
+
+### Implemented: non-mutating host planning
+
+The `personal-local` and `infrastructure-node` targets remain `specified`, but a deterministic planner now records supported Linux host facts and produces a digest-bound plan without changing the machine.
 
 ```bash
 npm run host-install:policy
@@ -64,267 +52,155 @@ npm run host-install:plan -- personal-local
 npm run host-install:plan -- infrastructure-node
 ```
 
-The planner records host observations and emits a digest-bound plan, but it does
-not install Node/npm or OS packages, create users/directories/services, provision
-credentials, alter networking, verify a signed release bundle, start AXIOM, or
-enroll a node. A plan that reports a candidate-compatible host is planning
-evidence only, not a support or production certification.
+Planner success is not install authorization. It creates no user, directory, service, credential, network rule, Mesh enrollment, or authority.
+
+### Implemented: signed release-input verification
+
+The source tree now contains `axiom-install-release-manifest.v1` verification. A valid package must be signed by an **externally supplied active Ed25519** key carrying the `release-installer-authority` role. The package cannot establish trust by embedding its own public key.
+
+The signed statement binds the exact source revision, kernel/channel, current install-profile statuses, Node/npm requirements, migration generation, current install/capability/application/network/setup control-plane digests, artifact SHA-256/byte lengths, documentation bundle, SBOM, provenance, validity window, and non-claims.
+
+Artifact bytes are separately verified against signed size/digest metadata. Even a fully valid release statement reports:
+
+```text
+host_mutation_authorized: false
+installation_authority_granted: false
+mesh_authority_granted: false
+network_authority_granted: false
+node_enrolled: false
+services_started: false
+```
+
+See [`docs/operations/SIGNED-RELEASE-INSTALL-MANIFEST.md`](docs/operations/SIGNED-RELEASE-INSTALL-MANIFEST.md) and [`docs/operations/HOST-INSTALLATION-PROFILES.md`](docs/operations/HOST-INSTALLATION-PROFILES.md).
+
+### Still pending: privileged fresh-host installation
+
+No current supported command installs Node/OS packages, creates host users/systemd units/firewall state, provisions a full personal or infrastructure node from an untouched machine, performs automatic network enrollment, or claims reboot/update/second-host-restore evidence.
+
+The retained AXIOM Host H0/H1 research is being treated as a source of appliance/image design and tests, not merged wholesale. Its `axiom-host-image` path remains distinct from ordinary Linux installation and does not imply Secure Boot, measured boot, TPM attestation, or remote attestation.
 
 ## Current state
 
-**Supported build:** `0.12.0-dev.3`
+**Supported build:** `0.12.0-dev.3`  
+**Deployment decision:** production candidate; not production-promoted; no live public/customer deployment claim  
+**Last immutable published candidate:** `v0.11.0`
 
-**Deployment decision:** production candidate; not production-promoted; no live
-public or customer deployment claim.
+[`mesh/config/capabilities.json`](mesh/config/capabilities.json) remains authoritative for runnable capability status. Roadmaps, laboratories, signed release metadata, tests, and built-but-production-unreachable source do not promote a capability.
 
-**Last published candidate:** immutable `v0.11.0`
+The current registry tracks **49 capabilities: 31 implemented, 3 experimental, 2 specified, 9 adapter-required, and 4 disabled**.
 
-The machine-readable
-[`mesh/config/capabilities.json`](mesh/config/capabilities.json) registry is the
-authority for runnable capability status. Roadmap entries, demonstrations,
-laboratories, synthetic conformance, and built-but-production-unreachable source
-do not promote a capability beyond that registry.
-
-The current registry tracks 49 capabilities, of which 31 are marked
-`implemented`.
-
-### Implemented production-candidate kernel surface
+### Implemented production-candidate kernel
 
 The supported kernel includes:
 
-- authenticated intent, deny-dominant policy, explicit planning, confirmation
-  and independent approval where required, short-lived grants, bounded
-  execution, and signed evidence;
-- human-sponsored constrained machine principals with finite exact scopes,
-  actions, purposes, destinations, runtime identity, expiry, non-delegation,
-  execution-time, request-size, request-rate, concurrency, and response-size
-  ceilings;
-- an AXIOM-computed destination for current built-in effects; `builtin.*`
-  resolves to `local` and must remain inside the machine principal's finite
-  destination ceiling;
-- authenticated `/v1/machine-discovery`, filtered to the caller's own
-  digest-bound requestable intersection under active policy and explicitly
-  **not** granting execution authority;
-- owner-scoped Grid-attested digest-only receipts for terminal constrained-
-  machine intents, binding request and machine-authority digests,
-  accepted/terminal evidence anchors, chain-assurance metadata, and terminal
-  result/error digests;
-- encrypted transactional Grid state, consent, memory, governance, local
-  accounting, portability, backup/restore, rotation, and recovery;
-- mutually authenticated internal transport, single-host service isolation,
-  bounded telemetry, resilience, SLO, deny-egress, incident, pilot-intake, and
-  independent-review evidence mechanisms;
-- admitted-node discovery/scheduling foundations and operator-approved two-Grid
-  causal exchange without claiming remote execution or consensus;
-- signed deployment-independent secret/policy provider startup; and
-- authenticated operator API and CLI.
+- authenticated intent, deny-dominant policy, explicit planning, confirmation and independent approval where required, short-lived grants, bounded execution, and signed evidence;
+- restart-safe Grid-backed capability consumption with process-epoch binding and burn-on-uncertainty semantics;
+- human-sponsored constrained machine principals with finite scopes, actions, purposes, destinations, runtime identity, expiry, non-delegation, execution-time, request-size, request-rate, concurrency, and response-size ceilings;
+- authenticated `/v1/machine-discovery`, filtered to the caller's current requestable intersection and explicitly granting no execution authority;
+- owner-scoped Grid-attested terminal machine receipts binding request and machine-authority digests, accepted/terminal anchors, chain-assurance metadata, and outcome digests;
+- encrypted transactional Grid state, consent, memory, governance, local accounting, portability, backup/restore, rotation, and recovery;
+- authenticated operator API/CLI and versioned Gateway client contract;
+- mutually authenticated internal transport, independently restartable service units, bounded telemetry, resilience/SLO, deny-egress, incident, pilot-intake, and review-evidence mechanisms;
+- admitted-node discovery/scheduling foundations and operator-approved two-Grid causal exchange without claiming remote execution or consensus;
+- signed deployment-independent secret/policy provider startup;
+- owner-local social actor/persona/publication state and bounded owner-derived read/review projections; and
+- governed Axiom Education learner-record/memory/provider/self-read foundations without production Education policy activation.
 
-Machine-principal runtime IDs and software digests are authority-bound
-attribution metadata, not TPM/TEE, measured-boot, or remote-attestation proof.
-Unknown provider, remote, or MCP destination semantics remain unresolved and
-fail closed.
+Machine runtime IDs and software digests are authority-bound attribution metadata, not TPM/TEE, measured-boot, or remote-attestation proof. Unknown provider/remote/MCP destination semantics fail closed.
 
-### Evidence integrity and continuity
+## Evidence integrity and continuity
 
-Grid uses signed hash-linked evidence. Local verification detects altered
-records, invalid signatures, gaps, and broken links. Local state alone does not
-prove that no suffix was consistently removed if local head/checkpoint metadata
-is rewritten with it.
+Grid uses signed hash-linked evidence. Local verification detects invalid signatures, altered events, gaps, and broken links, but local state alone cannot prove that a consistent suffix was not removed along with matching local head/checkpoint metadata.
 
-For that stronger truncation claim the build supports
-`axiom-grid-continuity-anchor.v1`, retained outside `AXIOM_DATA_DIR` and checked
-with full-chain verification. A valid external continuity anchor proves that
-the current history equals or extends the retained head **through the newest retained anchor**.
-It does not prove preservation of later events and does not
-remove malicious host/root or active signing-key compromise from the trust
-assumptions.
+`axiom-grid-continuity-anchor.v1`, when retained outside `AXIOM_DATA_DIR` and checked from genesis, proves that current history equals or extends the retained head **through the newest retained anchor**. It does not prove preservation of later unanchored events and does not remove malicious-host/root or active Grid-signing-key compromise from the trust model.
 
-Grid remains a single-node transparency log, not BFT consensus.
+Grid is a single-node transparency log, not BFT consensus.
 
-### Built repository-effect safety chain — not production-reachable
+## Built repository-effect chain — production-unreachable
 
-The source tree contains a deliberately narrow repository-document effect
-prototype that is more complete than a planning fixture, but remains excluded
-from the supported production surface.
+The source tree contains a deliberately narrow docs-only repository-effect prototype. It is real code with adversarial tests, but it remains **production-unreachable**.
 
-Its built and tested chain includes:
+Its built path includes signed read-only repository planning, resolver eligibility/admission/review, exact target-policy checks, confirmation/independent approval, and a durable evidence-first outbox. The state transition keeps the exact boundary explicit: a one-use approval is recorded as `approval.consumed` before the separately bound `external.effect.prepared` state can reach the credential-isolated operator.
 
-1. signed read-only repository planning against an exact base SHA and bounded
-   documentation paths;
-2. resolver-backed executor-input resolution with fresh eligibility and exact
-   registry/policy/build/request bindings;
-3. independent resolver admission/review and exact mapping-package/application
-   observation;
-4. resolved target-policy, confirmation, and independent-approval checks;
-5. atomic Grid approval consumption with durable
-   `external.effect.prepared` evidence;
-6. an evidence-first external-effect outbox that invokes an operator only after
-   durable preparation, leaves uncertain outcomes durably prepared, verifies a
-   signed operator receipt, and records `external.effect.completed` only after
-   receipt verification; and
-7. a credential-isolated docs-only GitHub repository operator that first
-   verifies Grid-durable preparation, then can create/recover a deterministic
-   effect branch, apply only the exact planned documentation changes, and
-   create/recover an **open draft pull request**.
+The docs-only GitHub repository operator independently verifies durable Grid preparation before any GitHub request. It is fixed to this repository and exact planned documentation content, uses a deterministic effect branch, and can create/recover an **open draft pull request**. Preparation is not completion.
 
-The operator has **no merge authority** and reports
-`merge_performed: false` and `base_branch_content_changed: false`. Stale `main`,
-unplanned paths, wrong content, wrong branch/identity, forged Grid proof,
-duplicate execution, ambiguous transport outcomes, and malformed responses are
-covered by fail-closed/idempotent tests.
+The operator has **no merge authority** and reports `merge_performed: false` and `base_branch_content_changed: false`.
 
-This chain is still **production-unreachable**. The production executor registry
-[`mesh/config/intent-remediation-executors.json`](mesh/config/intent-remediation-executors.json)
-has zero mappings, the production policy contains no
-`repository.docs.pull-request.create` action, and no supported public/runtime
-route activates the resolver/executor/operator chain. The built operator is an
-activation-safety primitive, not a current runnable capability or permission to
-modify this repository.
+Production reachability remains closed: `mesh/config/intent-remediation-executors.json` has zero mappings, production policy has no `repository.docs.pull-request.create`, and no supported runtime route activates the chain. Signed installation/release metadata does not alter that boundary.
 
-### Agent Runtime Adapter v1 — contract, not certification
+## Agent Runtime Adapter v1
 
-The repository also contains the byte-pinned **Agent Runtime Adapter v1**
-contract and a 28-case synthetic reference drill. It fixes grant,
-capability-translation, credential-reference, lifecycle, cancellation,
-revocation, idempotency, fallback, uncertainty, receipt, and rollback semantics
-for future replaceable runtimes.
+Agent Runtime Adapter v1 is a byte-pinned contract plus synthetic reference conformance. It fixes grant, capability translation, credential reference, lifecycle, cancellation, revocation, idempotency, fallback, uncertainty, receipt, and rollback semantics for replaceable external runtimes.
 
-The reference adapter loads no external runtime, resolves no production
-credential, performs no external effect, and does not certify OpenClaw, Hermes,
-Agent Zero, MCP, A2A, or any other external runtime. A runtime may plan or
-coordinate work, but installation or runtime approval cannot create a second
-authority path around Gateway -> Hypervisor -> Sandbox -> Grid.
-
-### AXIOM One
-
-AXIOM One remains an experimental loopback-only browser/PWA preview. The current
-slice provides node status, reversible review for five bounded actions,
-owner-scoped private memory, three fixed directional provenance relations,
-confirmation-bound tombstoning, selective local export, explicit bundle reveal,
-raw evidence, approval-state distinctions, same-idempotency-key uncertainty
-recovery, and cross-principal negative tests.
-
-It is not a supported product and does not yet claim general consequential
-plan/execute, direct provenance-edge deletion, hard deletion, restore, bulk
-ingestion, completed browser-session security, accessibility/usability evidence,
-or signed end-user packaging.
-
-### Axiom Education
-
-[Axiom Education](https://github.com/Zoverions/Axiom-Education) is the
-independently releasable local-first lifelong education application/domain
-project. It is not confined to one grade band or curriculum: Ontario is the
-first supported jurisdiction while elementary, secondary, later learning, and
-future jurisdictional packs share the same governed application direction.
-
-Education can maintain local/offline application functionality under its own
-release boundary. Governed learner effects must bind to reviewed AXIOM-MESH
-contracts and preserve Gateway -> Hypervisor -> Sandbox -> Grid. The current
-Mesh convergence includes governed learner-memory ownership, consent-bound
-learner-record contracts, Education provider contracts, Sandbox composition,
-and a bounded learner self-read path mediated by Hypervisor and one exact
-Hypervisor-to-Grid Education edge. These are conformance/runtime foundations;
-they do not activate Education actions in committed production policy or make
-the independently released Education repository automatically compatible.
-Installing or listing Axiom Education grants no learner-record, curriculum,
-provider, network, school, guardian, or delegated-human authority. The cross-
-repository compatibility and feature-adoption rules are defined in
-[Application and Downstream Integration](docs/rebuild/APPLICATION-AND-DOWNSTREAM-INTEGRATION.md).
-
-## Development programme
-
-Work advances through three coordinated tracks.
-
-### Trust and operations
-
-Complete one authentic controlled pilot with dedicated hardware, external
-secret/provider/media custody, 30-day availability/capacity observations,
-scheduled recovery and rotation, externally retained continuity anchors, named
-incident response, deprecated-credential dispositions, operator-owned
-telemetry/alert routes, and an independent security review.
-
-### Human utility and network activation
-
-Build and promote only with their own evidence:
-
-- **AXIOM One** — private personal agent, vault, approvals, and receipts;
-- **Axiom Education** — independently released lifelong education application
-  and governed education-domain consumer of Mesh contracts;
-- **AXIOM Verify** — independent local/static evidence verification;
-- **AXIOM Circles** — invitation-based governed collaboration;
-- **AXIOM Studio** — capsule, adapter, policy, and conformance tooling;
-- **AXIOM Managed Node** — optional operations without platform data ownership.
-
-The next machine/runtime work is not to invent a parallel authority model. It is
-to preserve the existing AXIOM authorization/evidence semantics while reviewing
-one maintained external runtime for a bounded read-only integration, and to
-keep the repository-effect chain production-unreachable unless an explicit
-future policy/registry/runtime promotion is independently justified.
-
-The documentation-only
-[Personal Compute Fabric and Local Trust Plane](docs/architecture/PERSONAL-COMPUTE-FABRIC-AND-LOCAL-TRUST.md)
-`1.0.0-draft.1` specification extends that programme with a phone-first
-portable Personal Agent Pack, replaceable Agent Runtime Capsules, policy-first
-local/managed/cloud compute, a constrained phone-relayed wearable endpoint,
-deterministic credential and authorization verification, and sandbox-value
-payment mandates. The current runtime loads only the separately byte-pinned
-Agent Runtime Adapter contract; it does not load the other four drafts, and the
-phased MVP changes no capability status.
-
-### Frontier incubation
-
-Distributed authority, BFT, settlement, tokens, bridges, liquidity, autonomous
-loops, task markets, regulated domains, embodied systems, arbitrary-code
-isolation, zk verification, and post-quantum migration may be built in isolated
-laboratories. Laboratory code remains separated from production identities,
-secrets, user data, real value, and public authority.
-
-> **Build broadly. Activate deliberately. Expose minimally. Promote only with evidence. Market only what is true.**
-
-## Capability lifecycle
-
-AXIOM-MESH distinguishes:
-
-1. **Built** — code and tests exist.
-2. **Enabled** — an operator deliberately activates it.
-3. **Exposed** — a user, node, runtime, or external system can reach it.
-4. **Production-promoted** — the exact build/deployment passes applicable gates.
-5. **Marketed** — public claims describe only the promoted scope.
-
-These states are intentionally separate.
-
-## Supported runtime
-
-The supported implementation is [`mesh/`](mesh/README.md).
-
-| Service | Responsibility |
-|---|---|
-| Gateway | Authentication, validation, abuse controls, idempotency, and versioned user/operator APIs |
-| Hypervisor | Intent normalization, deny-dominant policy, machine-authority checks, explicit planning, approvals, and grant issuance |
-| Sandbox | Grant-bound bounded execution with no ambient supported authority |
-| Grid | Encrypted durable state, evidence, approvals, consent, memory, governance, portability, recovery, and network records |
-
-Every supported privileged effect preserves the authority sequence:
+The reference loads **no external runtime**, resolves no production runtime credential, performs no external effect, and does not certify OpenClaw, Hermes, Agent Zero, MCP, A2A, or another runtime. A runtime may plan or coordinate work, but it cannot create a second authority path around:
 
 ```text
 Gateway -> Hypervisor -> Sandbox -> Grid
 ```
 
-Future external-effect adapters may use evidence-first prepared/outbox/operator
-boundaries, but they may not bypass the authenticated intent/policy/approval
-chain that produces that authority.
+## AXIOM One
+
+AXIOM One remains an experimental loopback-only browser/PWA preview. It provides bounded status/review, owner-private memory/provenance, confirmation-bound tombstoning, selective local export/reveal, raw evidence, approval-state distinctions, uncertainty recovery, and local social presentation foundations.
+
+It is not a supported product and does not yet claim general consequential plan/execute, hard deletion, restore/bulk ingestion, completed browser-session/device security, accessibility/usability evidence, or signed end-user packaging.
+
+## Axiom Education
+
+[Axiom Education](https://github.com/Zoverions/Axiom-Education) is an integral, independently releasable local-first lifelong education application—not merely a high-school project.
+
+Current Mesh foundations include governed learner memory/record ownership, consent-bound records, provider contracts, Sandbox composition, and bounded learner self-read through Hypervisor and one exact Hypervisor-to-Grid Education edge. The downstream repository independently pins and verifies Mesh compatibility.
+
+Installing, listing, or cryptographically verifying an Education release must not grant learner-record, curriculum, provider, school/institution, guardian/educator, network, or production authority.
+
+## Single-host service isolation
+
+The alternate [`mesh/compose.units.yml`](mesh/compose.units.yml) topology runs Gateway, Hypervisor, Sandbox, and Grid as independently restartable containers with per-unit private credentials and Grid-only durable state.
+
+The current machine-readable default-deny application policy **permits only 42 current internal** caller/destination/method/route combinations, derives mTLS peer allowlists, and removes unrelated adjacency. The reviewed Education edge does not create public Education exposure or alternate authority.
+
+This is single-host isolation, not multi-host consensus or automatic failover.
+
+## Development programme
+
+Three tracks continue in parallel.
+
+### Trust and operations
+
+Complete an authentic controlled pilot with dedicated hardware, external secret/provider/media custody, 30-day availability/capacity observations, scheduled recovery/rotation, externally retained continuity anchors, named incident response, credential-history dispositions, operator-owned telemetry/alert routes, and an independent security review.
+
+### Human utility and productization
+
+Advance AXIOM One, Axiom Education, Verify, Circles, Studio, Managed Node, signed release/install packaging, clean-host installation, backup-provider adapters, and bounded useful AI workflows without widening authority by convenience.
+
+### Machine/network/frontier work
+
+Review one maintained external runtime for bounded read-only integration; continue agent contributor mode, authenticated multi-host dispatch/results, and network/path work behind separate gates. Distributed authority/BFT, settlement, autonomous loops, task markets, regulated domains, embodied systems, arbitrary-code isolation, zk verification, and post-quantum migration remain isolated laboratories until independently promoted.
+
+> **Build broadly. Activate deliberately. Expose minimally. Promote only with evidence. Market only what is true.**
+
+## Capability lifecycle
+
+AXIOM distinguishes:
+
+1. **Built** — source/tests exist.
+2. **Enabled** — an operator deliberately activates it.
+3. **Exposed** — a user/node/runtime/external system can reach it.
+4. **Production-promoted** — the exact build/deployment passes applicable gates.
+5. **Marketed** — public claims describe only promoted scope.
+
+Release signatures and install manifests are evidence about release inputs; they do not collapse these states.
 
 ## Choose Your Path
 
 | Level | Goal | Minimum path |
 |---|---|---|
-| **Local Play** | Start the kernel and submit one intent | `npm run doctor` -> `npm run setup` -> `npm run dev` -> `npm run axiom -- status` |
-| **Verify** | Re-run source, test, documentation, and release gates | `npm run check` -> `npm run release:verify` |
-| **Install planning** | Produce a non-mutating digest-bound plan for the specified personal/local or infrastructure-node profile | `npm run host-install:policy` -> `npm run host-install:plan -- personal-local` or `infrastructure-node` -> `docs/operations/HOST-INSTALLATION-PROFILES.md` |
-| **Applications** | Discover first-class in-tree and independently released applications and their authority boundaries | `mesh/config/application-catalog.json` -> `docs/rebuild/APPLICATION-AND-DOWNSTREAM-INTEGRATION.md` |
-| **Operator / Pilot** | Exercise recovery, transport, resilience, custody, and evidence controls | Use the bounded drills and linked runbooks |
-| **Product development** | Build products/adapters without expanding ambient kernel authority | Follow `docs/ROADMAP.md`, `docs/MASTER-TODO.md`, requirements, and capability gates |
-| **Frontier laboratory** | Reduce uncertainty without production exposure | Isolated identities/data/value; explicit halt; no promotion claim |
+| Local Play | Start the kernel and submit an intent | `npm run doctor` -> `npm run setup` -> `npm run dev` |
+| Verify | Re-run source, tests, docs, and release gates | `npm run check` -> `npm run release:verify` |
+| Install planning | Inspect the future Linux host profiles | `npm run host-install:plan -- personal-local` or `infrastructure-node` |
+| Release trust | Understand signed release-input and artifact verification | `docs/operations/SIGNED-RELEASE-INSTALL-MANIFEST.md` |
+| Applications | Discover first-class applications and authority boundaries | `mesh/config/application-catalog.json` |
+| Operator / Pilot | Exercise recovery, transport, resilience, custody, and evidence | bounded drills + runbooks |
+| Frontier laboratory | Reduce uncertainty without production exposure | isolated identities/data/value; no promotion claim |
 
 ## Command surface
 
@@ -334,143 +210,58 @@ npm run setup
 npm run host-install:policy
 npm run host-install:plan -- personal-local
 npm run host-install:plan -- infrastructure-node
-npm run docs:impact:policy
 npm run dev
 npm run axiom -- --help
 npm run axiom -- status
 npm run axiom -- capabilities
 npm run axiom -- audit
 npm run axiom-one
-npm run axiom-one:check
 npm run runtime-adapter:contract
 npm run runtime-adapter:drill
 npm run check
 npm run release:verify
 ```
 
-The local `npm run axiom -- ...` command uses the checked-out source directly;
-it does not ask `npx` to resolve a similarly named registry package.
-
-## Verification and drills
-
-Run drills only in explicitly empty disposable workspaces.
-
-| Purpose | Command |
-|---|---|
-| Recovery / restore / rollback | `npm run recovery:drill -- /tmp/axiom-recovery-drill` |
-| Backup lifecycle | `npm run backup-lifecycle:drill -- /tmp/axiom-backup-lifecycle-drill` |
-| SLO baseline | `npm run slo:drill -- /tmp/axiom-slo-drill` |
-| Request pressure / dependency loss | `npm run resilience:drill -- /tmp/axiom-resilience-drill` |
-| Internal TLS rotation | `npm run transport:drill -- /tmp/axiom-transport-drill` |
-| Independent service units | `npm run service-units:drill -- /tmp/axiom-service-unit-drill` |
-| Node scheduling | `npm run node-scheduling:drill -- /tmp/axiom-node-scheduling-drill` |
-| Causal exchange | `npm run online-sync:drill -- /tmp/axiom-online-causal-sync-drill` |
-| Provider conformance | `npm run provider:drill -- /tmp/axiom-provider-conformance` |
-| Runtime adapter contract | `npm run runtime-adapter:contract` |
-| Runtime adapter synthetic conformance | `npm run runtime-adapter:drill` |
-| Telemetry relay | `npm run telemetry-relay:drill -- /tmp/axiom-telemetry-relay-drill` |
-| Credential rotation | `npm run credential-rotation:drill -- /tmp/axiom-credential-rotation-drill` |
-| Data-key rotation | `npm run data-key-rotation:drill -- /tmp/axiom-data-key-rotation-drill` |
-| Incident tabletop | `npm run incident-tabletop:drill -- /tmp/axiom-incident-tabletop-drill` |
-
-Synthetic pilot, review, runtime-adapter, and repository-effect fixtures prove
-mechanism behavior only. They do not claim a live pilot, an independent review,
-external-runtime certification, production repository mutation, or production
-promotion.
+The local CLI uses checked-out source directly; it does not ask `npx` to resolve a similarly named registry package.
 
 ## Documentation
 
-The documentation is organized by decision type rather than by feature name.
-Start with the [documentation index](docs/README.md), then use the path that
-matches the question:
+Start with [`docs/README.md`](docs/README.md), then use the canonical owner for the question:
 
 - [Current project status](docs/PROJECT-STATUS-2026.md)
 - [Capability registry](mesh/config/capabilities.json)
-- [Application catalogue](mesh/config/application-catalog.json) and [application/downstream integration model](docs/rebuild/APPLICATION-AND-DOWNSTREAM-INTEGRATION.md)
-- [Install target registry](mesh/config/install-targets.json), [host-install policy](mesh/config/host-install-policy.json), and [host installation profiles](docs/operations/HOST-INSTALLATION-PROFILES.md)
-- [Documentation impact policy](mesh/config/documentation-impact-policy.json) for high-risk PR synchronization rules
-- [Production readiness tracker](docs/PRODUCTION-READINESS-TRACKER.md)
+- [Host installation profiles](docs/operations/HOST-INSTALLATION-PROFILES.md)
+- [Signed release/install manifest](docs/operations/SIGNED-RELEASE-INSTALL-MANIFEST.md)
+- [Application/downstream integration](docs/rebuild/APPLICATION-AND-DOWNSTREAM-INTEGRATION.md)
+- [Production readiness](docs/PRODUCTION-READINESS-TRACKER.md)
 - [Technical white paper](docs/whitepapers_and_research/WHITEPAPER.md)
 - [Normative requirements](docs/rebuild/REQUIREMENTS.md)
-- [Roadmap and execution queue](docs/ROADMAP.md) and [master todo](docs/MASTER-TODO.md)
+- [Roadmap](docs/ROADMAP.md) and [master todo](docs/MASTER-TODO.md)
 - [Current threat model](docs/security/CURRENT-BUILD-THREAT-MODEL.md)
-- [Repository migration and provenance](docs/REPOSITORY-MIGRATION.md)
-- [Security policy](SECURITY.md)
-
-Current `0.12.0-dev.3` development-line changes are recorded in
-[`docs/releases/0.12.0-dev.3.md`](docs/releases/0.12.0-dev.3.md).
-
-For agent interoperability or plural authority, read the white paper first,
-then the relevant `docs/rebuild/` specification, roadmap extension, master
-todo, and dated architecture review. Research and roadmap documents do not
-promote capabilities or change readiness status. When documents conflict, the
-ownership and precedence rules in [`docs/README.md`](docs/README.md) control;
-historical documents remain provenance or research inputs only.
-
-The alternate single-host
-[`mesh/compose.units.yml`](mesh/compose.units.yml) runs the four kernel services
-as independently restartable containers with per-unit private credentials,
-Grid-only durable state, and four exact internal network segments. A
-machine-readable default-deny policy **permits only 42 current internal**
-caller/destination/method/route combinations at both ends, derives mTLS peer
-allowlists, and removes unrelated adjacency. The 42nd reviewed permission is the
-bounded Hypervisor-to-Grid Education learner-progress edge; it is not public
-Education exposure or alternate authority. This is single-host isolation, not
-multi-host consensus or automatic failover.
-
-The first documentation-impact policy does not claim semantic completeness. It
-enforces base-to-head review obligations for the high-drift installer,
-Education-consumed Mesh, service-network, capability-status, and application-
-catalogue surfaces. The policy is intended to expand as additional ownership
-relationships become executable.
-
-## Security and contribution
-
-Do not add dependencies, credentials, new egress, browser secret storage,
-provider/runtime authority, production resolver mappings, repository-effect
-reachability, remote execution, settlement, or domain effects without the
-applicable threat model, negative tests, rollback, documentation, and promotion
-gates.
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
+- [Current dev.3 build notes](docs/releases/0.12.0-dev.3.md)
 
 ## Non-claims
 
-The active build does not claim:
+The active development build does not claim:
 
-- live production, testnet, mainnet, or public federation;
+- live production, public testnet/mainnet, or customer deployment;
 - a completed authentic pilot or independent security approval;
-- a supported fresh-machine Linux installer or general infrastructure-node
-  installer beyond the current non-mutating planning surface, or automatic
-  network enrollment;
-- implemented Google Drive, OneDrive, S3-compatible, decentralized, or other
-  remote-backup provider adapters beyond the existing local encrypted backup
-  foundation;
-- a production-ready governed Axiom Education deployment;
-- supported AXIOM One, Verify, Circles, Studio, or Managed Node products;
-- supported wearable/companion hardware, Personal Agent Pack, Agent Runtime
-  Capsule executor, Personal Compute Fabric, or Local Trust Plane;
-- an autonomous-agent runtime, machine delegation, MCP/A2A endpoint, or remote
-  agent execution;
-- certification/production conformance of any external agent runtime;
-- a production resolver mapping or supported public repository-effect route;
-- merge authority or direct-main mutation from the built docs-only repository
-  operator;
-- production AI, messaging, identity, payment, storage-transfer, or regulated
-  domain adapters;
-- identity proofing, KYC, age assurance, government-ID, biometric, payment-
-  authorization, funds-availability, merchant-acceptance, or settlement
-  assurance;
-- remote workload execution or authenticated remote results;
-- BFT consensus, replicated Grid finality, tokens, bridges, liquidity, staking,
-  treasury, payroll, or settlement;
-- arbitrary-code isolation;
-- regulated-domain compliance or secure embodied autonomy;
-- end-to-end post-quantum security;
-- proof that Grid-attested receipts establish arbitrary external-world truth;
-- proof that local Grid state alone detects a consistently removed suffix after
-  matching local metadata rewrite; or
-- continuity evidence for events after the newest externally retained anchor.
+- a completed fresh-machine Linux or infrastructure-node installer;
+- a published production install-release manifest or production release-signing key/custody ceremony;
+- that a valid release signature authorizes host mutation, Mesh authority, node admission, or network participation;
+- Secure Boot, measured boot, TPM/TEE workload attestation, or remote attestation from an AXIOM Host image;
+- implemented Google Drive, OneDrive, S3-compatible, decentralized, or other remote-backup provider adapters beyond local encrypted-backup foundations;
+- supported AXIOM One, Axiom Education, Verify, Circles, Studio, or Managed Node products;
+- supported wearable/companion hardware, arbitrary Runtime Capsule execution, or production Personal Compute/Local Trust fabric;
+- autonomous-agent authority, machine self-delegation, MCP/A2A production exposure, or remote agent execution;
+- certification of any external agent runtime;
+- a production resolver mapping or public repository-effect route;
+- direct-main mutation or merge authority from the docs-only repository operator;
+- production AI, messaging, identity, payment, storage-transfer, or regulated-domain adapters;
+- identity proofing/KYC/age assurance/biometric/payment/funds/merchant/settlement assurance;
+- authenticated remote workload results, public federation, BFT consensus, replicated Grid finality, tokens, bridges, liquidity, staking, treasury, payroll, or settlement;
+- arbitrary-code isolation, secure embodied autonomy, or end-to-end post-quantum security;
+- proof that a signed release, Grid receipt, machine output, or model statement establishes arbitrary external-world truth; or
+- proof that local Grid state alone detects a consistently removed suffix after matching local metadata rewrite.
 
-The project is intentionally ambitious. Its public claims remain narrow until
-the evidence is equally ambitious.
+The project is intentionally ambitious. Its public claims remain narrow until the evidence is equally ambitious.
