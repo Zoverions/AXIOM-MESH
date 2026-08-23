@@ -57,7 +57,7 @@ const REQUIRED_KERNEL_SCRIPTS = Object.freeze({
   'setup:install': 'node src/setup.mjs install',
   'setup:check': 'node src/setup.mjs check',
   check:
-    'node src/setup.mjs check && node src/check-service-network-policy.mjs && node src/check-gateway-client-contract.mjs && node src/check-axiom-one.mjs && node src/check-registry.mjs && node src/status.mjs && node src/check-docs.mjs && node --test --test-reporter=spec',
+    'node src/setup.mjs check && node src/check-documentation-impact.mjs --ci && node src/check-service-network-policy.mjs && node src/check-gateway-client-contract.mjs && node src/check-axiom-one.mjs && node src/check-registry.mjs && node src/status.mjs && node src/check-docs.mjs && node --test --test-reporter=spec',
   'release:verify': 'node src/release.mjs'
 });
 const SEMVER = /^\d+\.\d+\.\d+$/;
