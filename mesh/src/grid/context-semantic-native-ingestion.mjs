@@ -11,14 +11,15 @@ import {
   digestObject,
   sha256
 } from '../lib/canonical.mjs';
-import {
-  verifyCapability,
-  verifyObjectSignature
-} from '../lib/identity.mjs';
+import { verifyObjectSignature } from '../lib/identity.mjs';
 import {
   invocationEnvelopeDigest,
   validateInvocationEnvelope
 } from '../lib/invocation-envelope.mjs';
+import {
+  capabilityConsumptionEventId,
+  normalizeCapabilityConsumptionStatement
+} from '../lib/capability-consumption.mjs';
 import {
   projectLocalContextSemanticStateMemoryPut,
   verifyLocalContextSemanticStateRecord
@@ -122,6 +123,7 @@ function requireStore(store) {
     || typeof store.dataDir !== 'string'
     || typeof store.requireIntentEvidenceChain !== 'function'
     || typeof store.decodeEventRow !== 'function'
+    || !(store.verificationKeys instanceof Map)
   ) {
     throw new TypeError('Semantic native-ingestion verification requires a Grid store');
   }
@@ -266,73 +268,14 @@ function verifyAcceptedIntent(store, birth, binding, intentId) {
   ) {
     throw new ValidationError('accepted semantic memory invocation is not the exact supported human path');
   }
-  return Object.freeze({ accepted, invocation, inputDigest, requestDigest, policyDigest, invocationDigest: storedInvocationDigest });
-}
-
-function parseCapabilityForHistoricalVerification(token) {
-  const serialized = String(token);
-  const parts = serialized.split('.');
-  if (serialized.length > 16_384 || parts.length !== 3) {
-    throw new AxiomError('invalid_capability', 'Retained capability token is malformed', 401);
-  }
-  try {
-    return Object.freeze({
-      header: JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8')),
-      payload: JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'))
-    });
-  } catch {
-    throw new AxiomError('invalid_capability', 'Retained capability token payload is invalid', 401);
-  }
-}
-
-function verifyCapabilityConsumption(store, birth, binding, acceptedFacts, statement) {
-  const capabilityId = requiredId(statement.capability_id, 'semantic native capability_id');
-  const rows = eventRows(store, 'capability.consume.requested', capabilityId);
-  if (!rows.length) nativeMissing('Native semantic ingestion has no durable capability consumption request');
-  if (rows.length !== 1) {
-    throw new ValidationError('Native semantic ingestion requires one capability consumption request');
-  }
-  const consumed = rows[0];
-  const payload = assertPlainObject(consumed.payload, 'semantic native capability consumption payload');
-  exactKeys(payload, ['capability', 'execution_epoch'], 'semantic native capability consumption payload');
-  if (
-    consumed.seq <= acceptedFacts.accepted.seq
-    || consumed.seq >= birth.seq
-    || consumed.trace_id !== birth.trace_id
-    || consumed.actor !== binding.state.owner_subject_ref
-    || payload.execution_epoch !== statement.sandbox_execution_epoch
-  ) {
-    throw new ValidationError('capability consumption history is not bound to semantic native ingestion');
-  }
-
-  const retained = parseCapabilityForHistoricalVerification(payload.capability);
-  const hypervisor = loadPinnedServiceKey(store, 'hypervisor');
-  if (retained.header?.kid !== hypervisor.key_id) {
-    throw new ValidationError('retained native capability key id is not the pinned Hypervisor key');
-  }
-  const historicalNow = Number.isSafeInteger(retained.payload?.nbf)
-    ? retained.payload.nbf
-    : 0;
-  const claims = verifyCapability(payload.capability, hypervisor.key, {
-    audience: 'sandbox',
-    issuer: 'hypervisor',
-    nowSeconds: historicalNow,
-    maxTtlSeconds: 300
+  return Object.freeze({
+    accepted,
+    invocation,
+    inputDigest,
+    requestDigest,
+    policyDigest,
+    invocationDigest: storedInvocationDigest
   });
-  if (
-    claims.jti !== capabilityId
-    || claims.subject !== binding.state.owner_subject_ref
-    || claims.principal_type !== 'human'
-    || claims.intent_digest !== statement.intent_digest
-    || claims.invocation_digest !== acceptedFacts.invocationDigest
-    || claims.tool !== 'builtin.validate-mutation'
-    || claims.policy_digest !== acceptedFacts.policyDigest
-    || claims.plan_digest !== birth.payload.evidence.plan_digest
-    || claims.effect_destination !== undefined
-  ) {
-    throw new ValidationError('Hypervisor capability does not bind the exact semantic native execution');
-  }
-  return Object.freeze({ event: consumed, claims });
 }
 
 function isoMillis(value, label) {
@@ -340,6 +283,91 @@ function isoMillis(value, label) {
   const time = Date.parse(text);
   if (!Number.isFinite(time)) throw new ValidationError(`${label} must be an ISO timestamp`);
   return time;
+}
+
+function verifyCapabilityConsumption(store, birth, binding, acceptedFacts, statement, {
+  planDigest,
+  receiptDigest,
+  startedAt,
+  completedAt
+}) {
+  const capabilityId = requiredId(statement.capability_id, 'semantic native capability_id');
+  const rows = eventRows(store, 'capability.consumed', capabilityId);
+  if (!rows.length) nativeMissing('Native semantic ingestion has no durable capability consumption receipt');
+  if (rows.length !== 1) {
+    throw new ValidationError('Native semantic ingestion requires one capability consumption receipt');
+  }
+  const consumed = rows[0];
+  const payload = assertPlainObject(consumed.payload, 'semantic native capability consumption payload');
+  exactKeys(payload, ['receipt', 'receipt_digest'], 'semantic native capability consumption payload');
+  if (
+    consumed.event_id !== capabilityConsumptionEventId(capabilityId)
+    || consumed.seq <= acceptedFacts.accepted.seq
+    || consumed.seq >= birth.seq
+    || consumed.trace_id !== birth.trace_id
+    || consumed.actor !== binding.state.owner_subject_ref
+  ) {
+    throw new ValidationError('capability consumption history is not bound to semantic native ingestion');
+  }
+
+  const storedReceiptDigest = requiredDigest(
+    payload.receipt_digest,
+    'semantic native retained capability receipt digest'
+  );
+  if (
+    storedReceiptDigest !== receiptDigest
+    || storedReceiptDigest !== digestObject(payload.receipt)
+  ) {
+    throw new ValidationError('retained Grid capability receipt digest does not match native execution');
+  }
+
+  const receipt = assertPlainObject(payload.receipt, 'semantic native capability receipt');
+  exactKeys(receipt, ['statement', 'signature'], 'semantic native capability receipt');
+  const receiptStatement = normalizeCapabilityConsumptionStatement(receipt.statement);
+  const receiptSignature = assertPlainObject(
+    receipt.signature,
+    'semantic native capability receipt signature'
+  );
+  exactKeys(receiptSignature, SIGNATURE_KEYS, 'semantic native capability receipt signature');
+  const gridKey = store.verificationKeys.get(receiptSignature.key_id);
+  if (!gridKey || !verifyObjectSignature(receiptStatement, receiptSignature, gridKey)) {
+    throw new ValidationError('semantic native Grid capability consumption receipt signature is invalid');
+  }
+
+  if (
+    receiptStatement.jti !== capabilityId
+    || receiptStatement.subject !== binding.state.owner_subject_ref
+    || receiptStatement.issuer !== 'hypervisor'
+    || receiptStatement.audience !== 'sandbox'
+    || receiptStatement.intent_digest !== statement.intent_digest
+    || receiptStatement.plan_digest !== planDigest
+    || receiptStatement.policy_digest !== acceptedFacts.policyDigest
+    || receiptStatement.invocation_digest !== acceptedFacts.invocationDigest
+    || receiptStatement.tool !== 'builtin.validate-mutation'
+    || receiptStatement.execution_epoch !== statement.sandbox_execution_epoch
+  ) {
+    throw new ValidationError('Grid capability consumption receipt does not bind the exact semantic execution');
+  }
+
+  const consumedAt = isoMillis(
+    receiptStatement.consumed_at,
+    'semantic native capability consumed_at'
+  );
+  if (
+    consumedAt > startedAt
+    || completedAt >= receiptStatement.expires_at * 1_000
+  ) {
+    throw new ValidationError('semantic native execution falls outside retained capability-consumption bounds');
+  }
+
+  return Object.freeze({
+    event: consumed,
+    receipt: Object.freeze({
+      statement: receiptStatement,
+      signature: structuredClone(receiptSignature)
+    }),
+    receiptDigest: storedReceiptDigest
+  });
 }
 
 function verifyExecution(store, birth, binding, acceptedFacts) {
@@ -399,13 +427,9 @@ function verifyExecution(store, birth, binding, acceptedFacts) {
     birth,
     binding,
     acceptedFacts,
-    statement
+    statement,
+    { planDigest, receiptDigest, startedAt, completedAt }
   );
-  const nbfMs = consumption.claims.nbf * 1000;
-  const expMs = consumption.claims.exp * 1000;
-  if (startedAt < nbfMs || completedAt >= expMs) {
-    throw new ValidationError('Sandbox execution occurred outside the retained capability lifetime');
-  }
 
   const baseMutation = {
     kind: 'memory.put',
@@ -525,7 +549,9 @@ export function verifyLocalContextSemanticNativeIngestionFromGrid(store, {
     completed_event_id: completed.event_id,
     completed_event_seq: completed.seq,
     sandbox_attestation_verified: true,
-    hypervisor_capability_verified: true,
+    grid_capability_consumption_receipt_verified: true,
+    hypervisor_capability_token_retained: false,
+    hypervisor_capability_signature_reverified: false,
     native_ingestion_verified: true,
     full_grid_chain_verified: chain.valid === true,
     gateway_request_signature_retained: false,
