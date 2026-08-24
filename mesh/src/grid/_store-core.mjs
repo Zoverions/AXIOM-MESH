@@ -5,7 +5,7 @@
 // verification path when store.mjs is used.
 
 import { DatabaseSync } from 'node:sqlite';
-import { createPublicKey } from 'node:crypto';
+import { createHash, createPublicKey } from 'node:crypto';
 import { lstatSync, readFileSync, readdirSync } from 'node:fs';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -42,6 +42,55 @@ import {
 } from '../lib/node-scheduling.mjs';
 
 const GENESIS_HASH = '0'.repeat(64);
+
+// Bounded startup: the materialization anchor records how far the materialized
+// tables have already been folded forward, so a normal restart replays only the
+// unmaterialized suffix instead of the complete event history. The anchor is
+// advisory for correctness and authoritative for nothing: any mismatch, missing
+// value, schema change, or materialization-code change discards it and falls
+// back to the explicit full genesis rebuild.
+const MATERIALIZED_TABLES = Object.freeze([
+  'sync_heads',
+  'sync_updates',
+  'sync_bundles',
+  'governance_appeals',
+  'policy_overlays',
+  'import_records',
+  'imports',
+  'accounting_entries',
+  'accounting_journals',
+  'accounting_accounts',
+  'memory_edges',
+  'memory_objects',
+  'votes',
+  'proposals',
+  'storage_offers',
+  'node_schedules',
+  'nodes',
+  'approvals',
+  'consents',
+  'capsules',
+  'backups',
+  'exports',
+  'intents'
+]);
+const MATERIALIZATION_ANCHOR_KEY = 'materialization_anchor_v1';
+const MATERIALIZATION_ANCHOR_SCHEMA = 'axiom-grid-materialization-anchor.v1';
+const PROTECTED_FORMAT_KEY = 'protected_column_format_v1';
+const PROTECTED_FORMAT_SCHEMA = 'axiom-grid-protected-column-format.v1';
+const PROTECTED_FORMAT_VERSION = 1;
+const PROTECTED_STARTUP_SAMPLE = 8;
+let materializationBuildDigest = null;
+
+function materializationBuild() {
+  // Digest of this module's own bytes. Any edit to materialization logic
+  // invalidates every stored anchor, so state derived by one build is never
+  // served by a build whose materialization fold differs.
+  if (materializationBuildDigest === null) {
+    materializationBuildDigest = sha256(readFileSync(new URL(import.meta.url)));
+  }
+  return materializationBuildDigest;
+}
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const CAPSULE_ID = /^[a-z][a-z0-9.-]{2,127}$/;
 const VERSION = /^[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?$/;
@@ -85,11 +134,27 @@ const PROTECTED_COLUMN_MAPPINGS = Object.freeze([
   ]]
 ]);
 
+const MATERIALIZATION_ANCHOR_MODES = Object.freeze(['off', 'sealed']);
+
 export class GridStore {
-  constructor({ path, dataDir, identity, protector }) {
+  constructor({ path, dataDir, identity, protector, materializationAnchor }) {
     this.path = path;
     this.dataDir = dataDir;
     this.identity = identity;
+    // 'off' is the supported default and keeps the standing guarantee that
+    // materialized state is re-derived from the signed chain on every startup.
+    // 'sealed' trades that for a bounded restart: see docs/audits/
+    // GRID-STARTUP-REMEDIATION-2026-08-24.md for exactly what it does and does
+    // not detect. It is deliberately not enabled by installation.
+    const anchorMode = materializationAnchor
+      ?? process.env.AXIOM_GRID_MATERIALIZATION_ANCHOR
+      ?? 'off';
+    if (!MATERIALIZATION_ANCHOR_MODES.includes(anchorMode)) {
+      throw new ValidationError(
+        `Grid materialization anchor mode must be one of ${MATERIALIZATION_ANCHOR_MODES.join(', ')}`
+      );
+    }
+    this.materializationAnchorMode = anchorMode;
     this.verificationKeys = loadGridVerificationKeys(dataDir, identity);
     if (!protector) throw new ValidationError('GridStore requires a data protector');
     this.protector = protector;
@@ -237,10 +302,22 @@ export class GridStore {
     if (!chain.valid) {
       throw new ValidationError(`Grid evidence chain failed startup verification: ${chain.reason}`);
     }
-    this.rebuildMaterializedState();
+    this.restoreMaterializedState();
   }
 
   close() {
+    // The anchor is sealed here, at the end of the session, rather than on every
+    // append: sealing binds a digest of the whole materialized state, and doing
+    // that per append would make writes quadratic in stored state. An unsealed
+    // anchor (an interrupted session) is not an error — it simply costs the next
+    // startup one authoritative full rebuild.
+    if (this.materializationAnchorMode === 'sealed') {
+      try {
+        this.transaction(() => this.writeMaterializationAnchor());
+      } catch {
+        // A store that cannot seal on the way out is left unanchored on purpose.
+      }
+    }
     this.db.close();
   }
 
@@ -301,15 +378,41 @@ export class GridStore {
   }
 
   migrateProtectedColumns() {
+    const expected = this.protectedColumnFormatRecord();
+    const stored = this.readProtectedColumnFormat();
+    if (
+      stored !== null
+      && stored.schema === expected.schema
+      && stored.format_version === expected.format_version
+      && stored.mapping_digest === expected.mapping_digest
+      && this.verifyProtectedColumnSample() === true
+    ) {
+      // A no-op restart performs a bounded sample open rather than a table-wide
+      // decrypt. Wrong-key and corrupt-ciphertext still fail closed through the
+      // sample; a legacy unprotected value found in the sample forces the full
+      // journalled migration below.
+      this.protectedColumnStartup = { mode: 'sampled', sample_size: PROTECTED_STARTUP_SAMPLE };
+      return this.protectedColumnStartup;
+    }
+    const migrated = this.runProtectedColumnMigration();
+    this.writeProtectedColumnFormat(expected);
+    this.protectedColumnStartup = { mode: 'migrated', ...migrated };
+    return this.protectedColumnStartup;
+  }
+
+  runProtectedColumnMigration() {
+    let scanned = 0;
+    let rewritten = 0;
     this.transaction(() => {
       for (const [table, keyExpression, columns] of PROTECTED_COLUMN_MAPPINGS) {
         const rows = this.db.prepare(
           `SELECT ${keyExpression} AS protection_key, ${columns.join(', ')} FROM ${table}`
-        ).all();
+        ).iterate();
         for (const row of rows) {
           for (const column of columns) {
             const serialized = row[column];
             if (serialized === null || serialized === undefined) continue;
+            scanned += 1;
             if (this.protector.isProtected(serialized)) {
               this.openJson(table, column, row.protection_key, serialized);
               continue;
@@ -324,60 +427,236 @@ export class GridStore {
               this.protectJson(table, column, row.protection_key, value),
               row.protection_key
             );
+            rewritten += 1;
           }
         }
       }
     });
+    return { scanned_values: scanned, rewritten_values: rewritten };
+  }
+
+  protectedColumnFormatRecord() {
+    return {
+      schema: PROTECTED_FORMAT_SCHEMA,
+      format_version: PROTECTED_FORMAT_VERSION,
+      mapping_digest: digestObject(
+        PROTECTED_COLUMN_MAPPINGS.map(([table, keyExpression, columns]) => ({
+          table,
+          key: keyExpression,
+          columns: [...columns]
+        }))
+      )
+    };
+  }
+
+  readProtectedColumnFormat() {
+    const row = this.db.prepare('SELECT value FROM meta WHERE key = ?').get(PROTECTED_FORMAT_KEY);
+    if (!row) return null;
+    try {
+      const parsed = JSON.parse(row.value);
+      return parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+
+  writeProtectedColumnFormat(record) {
+    this.db.prepare(`
+      INSERT INTO meta(key, value) VALUES (?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    `).run(PROTECTED_FORMAT_KEY, canonicalJson(record));
+  }
+
+  verifyProtectedColumnSample() {
+    for (const [table, keyExpression, columns] of PROTECTED_COLUMN_MAPPINGS) {
+      const rows = this.db.prepare(`
+        SELECT ${keyExpression} AS protection_key, ${columns.join(', ')}
+        FROM ${table} ORDER BY rowid DESC LIMIT ${PROTECTED_STARTUP_SAMPLE}
+      `).all();
+      for (const row of rows) {
+        for (const column of columns) {
+          const serialized = row[column];
+          if (serialized === null || serialized === undefined) continue;
+          // Not protected means an older build wrote this value; the caller must
+          // run the full migration rather than trust the recorded format.
+          if (!this.protector.isProtected(serialized)) return false;
+          // A failure here throws, exactly as the table-wide pass did.
+          this.openJson(table, column, row.protection_key, serialized);
+        }
+      }
+    }
+    return true;
+  }
+
+  // Startup materialization. The derived tables are a cache of the signed event
+  // chain; they carry no signature of their own. A sealed anchor written by a
+  // clean shutdown lets a restart skip re-deriving them, but only after the
+  // recorded digest is re-checked against what is actually stored. Anything else
+  // -- no anchor, an interrupted session, a schema or build change, an edited
+  // table -- takes the authoritative path and re-derives from genesis.
+  restoreMaterializedState() {
+    if (this.materializationAnchorMode !== 'sealed') {
+      this.materializationStartup = this.rebuildMaterializedState();
+      return this.materializationStartup;
+    }
+    const anchor = this.readMaterializationAnchor();
+    if (
+      anchor === null
+      || anchor.materialized_through_seq !== this.currentEventSeq()
+      || this.materializedStateDigest() !== anchor.materialized_digest
+    ) {
+      this.materializationStartup = this.rebuildMaterializedState();
+      return this.materializationStartup;
+    }
+    if (anchor.materialized_through_seq > 0) {
+      const boundary = this.db.prepare('SELECT event_hash FROM events WHERE seq = ?').get(
+        anchor.materialized_through_seq
+      );
+      if (!boundary || boundary.event_hash !== anchor.head_hash) {
+        this.materializationStartup = this.rebuildMaterializedState();
+        return this.materializationStartup;
+      }
+    }
+    this.materializationStartup = {
+      mode: 'anchored',
+      replayed_events: 0,
+      materialized_through_seq: anchor.materialized_through_seq
+    };
+    return this.materializationStartup;
+  }
+
+  applyStoredMaterializedEvent(row) {
+    const payload = this.openJson('events', 'payload_json', row.event_id, row.payload_json);
+    validateMaterializedPayload(row.kind, payload);
+    this.applyMaterializedEvent({
+      seq: row.seq,
+      event_id: row.event_id,
+      trace_id: row.trace_id,
+      actor: row.actor,
+      kind: row.kind,
+      subject: row.subject,
+      occurred_at: row.occurred_at,
+      payload_digest: row.payload_digest,
+      prev_hash: row.prev_hash,
+      event_hash: row.event_hash,
+      payload
+    });
+  }
+
+  currentEventSeq() {
+    return Number(this.db.prepare("SELECT value FROM meta WHERE key = 'last_seq'").get().value);
+  }
+
+  materializationAnchorRecord() {
+    const seq = this.currentEventSeq();
+    const head = seq === 0
+      ? GENESIS_HASH
+      : (this.db.prepare('SELECT event_hash FROM events WHERE seq = ?').get(seq)?.event_hash ?? null);
+    if (head === null) return null;
+    return {
+      schema: MATERIALIZATION_ANCHOR_SCHEMA,
+      materialized_through_seq: seq,
+      head_hash: head,
+      materialized_digest: this.materializedStateDigest(),
+      schema_version: this.migrations?.version ?? 0,
+      build_digest: materializationBuild()
+    };
+  }
+
+  // Streaming digest over every materialized row. Derived state is a cache of the
+  // signed event chain, so it carries no signature of its own; this digest is what
+  // lets a restart notice that the cache was edited out of band and fall back to
+  // the authoritative full rebuild instead of trusting it.
+  materializedStateDigest() {
+    const hash = createHash('sha256');
+    for (const table of MATERIALIZED_TABLES) {
+      hash.update(`\u0000table:${table}\u0000`);
+      const columns = this.db.prepare(`PRAGMA table_info(${table})`).all()
+        .map(column => column.name)
+        .sort();
+      hash.update(columns.join('\u0001'));
+      const rows = this.db.prepare(
+        `SELECT ${columns.join(', ')} FROM ${table} ORDER BY rowid`
+      ).iterate();
+      for (const row of rows) {
+        for (const column of columns) {
+          const value = row[column];
+          if (value === null || value === undefined) hash.update('\u0002');
+          else if (typeof value === 'bigint' || typeof value === 'number') hash.update(`\u0003${value}`);
+          else if (value instanceof Uint8Array) { hash.update('\u0004'); hash.update(value); }
+          else hash.update(`\u0005${String(value)}`);
+          hash.update('\u0001');
+        }
+        hash.update('\u0006');
+      }
+    }
+    return hash.digest('hex');
+  }
+
+  invalidateMaterializationAnchor() {
+    if (this.materializationAnchorMode !== 'sealed') return;
+    if (this.materializationAnchorCleared === true) return;
+    this.db.prepare('DELETE FROM meta WHERE key = ?').run(MATERIALIZATION_ANCHOR_KEY);
+    this.materializationAnchorCleared = true;
+  }
+
+  writeMaterializationAnchor() {
+    const record = this.materializationAnchorRecord();
+    if (record === null) return null;
+    this.db.prepare(`
+      INSERT INTO meta(key, value) VALUES (?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    `).run(MATERIALIZATION_ANCHOR_KEY, canonicalJson(record));
+    this.materializationAnchorCleared = false;
+    return record;
+  }
+
+  readMaterializationAnchor() {
+    const row = this.db.prepare('SELECT value FROM meta WHERE key = ?').get(MATERIALIZATION_ANCHOR_KEY);
+    if (!row) return null;
+    let parsed;
+    try {
+      parsed = JSON.parse(row.value);
+    } catch {
+      return null;
+    }
+    if (
+      parsed === null
+      || typeof parsed !== 'object'
+      || Array.isArray(parsed)
+      || parsed.schema !== MATERIALIZATION_ANCHOR_SCHEMA
+      || !Number.isSafeInteger(parsed.materialized_through_seq)
+      || parsed.materialized_through_seq < 0
+      || typeof parsed.head_hash !== 'string'
+      || !/^[a-f0-9]{64}$/.test(parsed.head_hash)
+      || typeof parsed.materialized_digest !== 'string'
+      || !/^[a-f0-9]{64}$/.test(parsed.materialized_digest)
+      || parsed.schema_version !== (this.migrations?.version ?? 0)
+      || parsed.build_digest !== materializationBuild()
+    ) {
+      return null;
+    }
+    return parsed;
   }
 
   rebuildMaterializedState() {
-    const rows = this.db.prepare('SELECT * FROM events ORDER BY seq').all();
+    let replayed = 0;
     this.transaction(() => {
-      for (const table of [
-        'sync_heads',
-        'sync_updates',
-        'sync_bundles',
-        'governance_appeals',
-        'policy_overlays',
-        'import_records',
-        'imports',
-        'accounting_entries',
-        'accounting_journals',
-        'accounting_accounts',
-        'memory_edges',
-        'memory_objects',
-        'votes',
-        'proposals',
-        'storage_offers',
-        'node_schedules',
-        'nodes',
-        'approvals',
-        'consents',
-        'capsules',
-        'backups',
-        'exports',
-        'intents'
-      ]) {
+      for (const table of MATERIALIZED_TABLES) {
         this.db.exec(`DELETE FROM ${table}`);
       }
+      const rows = this.db.prepare('SELECT * FROM events ORDER BY seq').iterate();
       for (const row of rows) {
-        const payload = this.openJson('events', 'payload_json', row.event_id, row.payload_json);
-        validateMaterializedPayload(row.kind, payload);
-        this.applyMaterializedEvent({
-          seq: row.seq,
-          event_id: row.event_id,
-          trace_id: row.trace_id,
-          actor: row.actor,
-          kind: row.kind,
-          subject: row.subject,
-          occurred_at: row.occurred_at,
-          payload_digest: row.payload_digest,
-          prev_hash: row.prev_hash,
-          event_hash: row.event_hash,
-          payload
-        });
+        this.applyStoredMaterializedEvent(row);
+        replayed += 1;
       }
+      if (this.materializationAnchorMode === 'sealed') this.writeMaterializationAnchor();
     });
+    return {
+      mode: 'full_rebuild',
+      replayed_events: replayed,
+      materialized_through_seq: this.currentEventSeq()
+    };
   }
 
   appendEvents({ traceId, actor, events }) {
@@ -440,6 +719,11 @@ export class GridStore {
       }
       this.db.prepare("UPDATE meta SET value = ? WHERE key = 'last_seq'").run(String(seq));
       this.db.prepare("UPDATE meta SET value = ? WHERE key = 'last_hash'").run(prevHash);
+      // Materialization is applied inline above, inside this same transaction.
+      // Rather than resealing the anchor per append, the first write of a session
+      // clears it, so a session that never closes cleanly can never leave behind a
+      // seal that describes an earlier state.
+      this.invalidateMaterializationAnchor();
         return appended;
       });
     } catch (error) {
