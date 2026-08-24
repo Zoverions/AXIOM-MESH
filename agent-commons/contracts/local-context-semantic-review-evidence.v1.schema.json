@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom-mesh.dev/schemas/axiom-local-context-semantic-review-evidence.v1.json",
+  "title": "AXIOM Local Context Semantic Review Evidence v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "owner_subject_ref",
+    "claim_id",
+    "candidate_digest",
+    "prior_trust_digest",
+    "decision",
+    "target_semantic_class",
+    "resulting_review_state",
+    "intent_id",
+    "intent_request_digest",
+    "accepted_event_id",
+    "accepted_event_seq",
+    "accepted_event_hash",
+    "verification_scope",
+    "grid_signature_verified",
+    "grid_trust_root_source_verified",
+    "accepted_intent_verified",
+    "event_chain_currentness_verified",
+    "review_evidence_verified",
+    "classification_effect",
+    "review_applied_to_store",
+    "instruction_semantics",
+    "owner_instruction_use_enabled",
+    "authority_effect",
+    "grants_vault_access",
+    "grants_execution_authority",
+    "may_authorize_tools",
+    "may_modify_policy",
+    "may_self_persist",
+    "review_evidence_digest"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-local-context-semantic-review-evidence.v1" },
+    "owner_subject_ref": { "$ref": "#/$defs/id" },
+    "claim_id": { "$ref": "#/$defs/id" },
+    "candidate_digest": { "$ref": "#/$defs/digest" },
+    "prior_trust_digest": { "$ref": "#/$defs/digest" },
+    "decision": { "enum": ["accept-data", "quarantine", "reject"] },
+    "target_semantic_class": {
+      "enum": ["knowledge", "preference", "procedure", "instruction-candidate"]
+    },
+    "resulting_review_state": {
+      "enum": ["owner-reviewed", "quarantined", "rejected"]
+    },
+    "intent_id": { "$ref": "#/$defs/id" },
+    "intent_request_digest": { "$ref": "#/$defs/digest" },
+    "accepted_event_id": { "$ref": "#/$defs/id" },
+    "accepted_event_seq": { "type": "integer", "minimum": 1 },
+    "accepted_event_hash": { "$ref": "#/$defs/digest" },
+    "verification_scope": {
+      "const": "supplied-grid-key-and-signed-accepted-event-only"
+    },
+    "grid_signature_verified": { "const": true },
+    "grid_trust_root_source_verified": { "const": false },
+    "accepted_intent_verified": { "const": true },
+    "event_chain_currentness_verified": { "const": false },
+    "review_evidence_verified": { "const": true },
+    "classification_effect": { "const": "evidence-only" },
+    "review_applied_to_store": { "const": false },
+    "instruction_semantics": { "const": false },
+    "owner_instruction_use_enabled": { "const": false },
+    "authority_effect": { "const": "none" },
+    "grants_vault_access": { "const": false },
+    "grants_execution_authority": { "const": false },
+    "may_authorize_tools": { "const": false },
+    "may_modify_policy": { "const": false },
+    "may_self_persist": { "const": false },
+    "review_evidence_digest": { "$ref": "#/$defs/digest" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "decision": { "const": "accept-data" } },
+        "required": ["decision"]
+      },
+      "then": {
+        "properties": { "resulting_review_state": { "const": "owner-reviewed" } }
+      }
+    },
+    {
+      "if": {
+        "properties": { "decision": { "const": "quarantine" } },
+        "required": ["decision"]
+      },
+      "then": {
+        "properties": { "resulting_review_state": { "const": "quarantined" } }
+      }
+    },
+    {
+      "if": {
+        "properties": { "decision": { "const": "reject" } },
+        "required": ["decision"]
+      },
+      "then": {
+        "properties": { "resulting_review_state": { "const": "rejected" } }
+      }
+    }
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}
