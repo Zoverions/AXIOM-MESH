@@ -1,0 +1,52 @@
+{
+  "schema": "axiom-agent-test-capacity-offer.v1",
+  "project": "AXIOM-MESH",
+  "supported_build": "0.12.0-dev.3",
+  "record_status": "example",
+  "offer_id": "example.community-testnet.capacity",
+  "publisher": {
+    "type": "human",
+    "id": "example-operator",
+    "identity_assurance": "self-declared"
+  },
+  "environment": {
+    "ownership": "contributor-owned",
+    "description": "Example independently controlled machine available for operator-run Community Testnet reproduction only.",
+    "hardware": "Example ARM64 personal computer",
+    "operating_system": "Example Unix-like operating system",
+    "runtime": "Node.js 24.x"
+  },
+  "testnet_lanes": ["T0", "T4", "T5"],
+  "availability": {
+    "starts_at": "2026-08-24T12:00:00.000Z",
+    "expires_at": "2026-09-24T12:00:00.000Z",
+    "maximum_runs": 8,
+    "operator_confirmation_required": true
+  },
+  "execution_mode": "operator-run-only",
+  "evidence_return_contract": "agent-readiness/CONTRIBUTION-RESULT.schema.json",
+  "safety": {
+    "public_safe_metadata_only": true,
+    "contains_secrets_or_credentials": false,
+    "contains_private_data": false,
+    "third_party_testing_authorized": false
+  },
+  "authority_nonclaims": {
+    "offer_authorizes_execution": false,
+    "remote_access_granted": false,
+    "remote_session_created": false,
+    "node_admission_granted": false,
+    "runtime_authority_granted": false,
+    "merge_authority_granted": false,
+    "deployment_authority_granted": false,
+    "credential_authority_granted": false,
+    "spending_authority_granted": false,
+    "hardware_custody_granted": false,
+    "production_promotion_granted": false,
+    "capability_promotion_granted": false,
+    "destructive_actions_allowed": false,
+    "firmware_changes_allowed": false,
+    "purchases_allowed": false,
+    "compensation_committed": false
+  }
+}
