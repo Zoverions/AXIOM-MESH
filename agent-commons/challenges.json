@@ -1,9 +1,9 @@
 {
-  "schema": "axiom-agent-challenge-registry.v1",
-  "version": 1,
+  "schema": "axiom-agent-challenge-registry.v2",
+  "version": 2,
   "project": "AXIOM-MESH",
   "supported_build": "0.12.0-dev.3",
-  "canonical_repository": "Zoverions/AXIOM-MESH",
+  "repository": "Zoverions/AXIOM-MESH",
   "canonical_repository_url": "https://github.com/Zoverions/AXIOM-MESH",
   "publisher": {
     "type": "repository-owner",
@@ -11,13 +11,11 @@
   },
   "base": {
     "ref": "main",
-    "sha": "5b6d1d4dd39881924ea7c3e8f21582da0acee399"
+    "sha": "e816136db24196cd82f34ee1e0e8291af1ea155f"
   },
-  "generated_at": "2026-08-20T20:08:00Z",
+  "generated_at": "2026-08-24T11:50:00.000Z",
   "public_discovery_only": true,
-  "authority_granted": false,
-  "payment_promised": false,
-  "evidence_certified": false,
+  "authority_effect": "none",
   "challenges": [
     {
       "status": "open",
@@ -25,64 +23,59 @@
         "schema": "axiom-agent-challenge.v1",
         "project": "AXIOM-MESH",
         "supported_build": "0.12.0-dev.3",
-        "challenge_id": "agent-commons.stage-a-independent-review.v1",
+        "challenge_id": "agent-commons.current-architecture-review.v1",
         "canonical_repository": "Zoverions/AXIOM-MESH",
-        "base_sha": "5b6d1d4dd39881924ea7c3e8f21582da0acee399",
-        "issued_at": "2026-08-20T20:08:00Z",
-        "expires_at": "2026-09-30T23:59:59Z",
-        "problem": "Independently audit the current Agent Commons Stage A contribution surface for any path by which discovery, identity, challenge publication, feedback submission, evidence packaging, social participation, or successful tooling could be mistaken for or converted into AXIOM runtime authority or repository authority. Preserve negative findings and uncertainty; do not assume popularity, agent identity, model brand, prior contribution history, or a successful result is trustworthy.",
+        "base_sha": "e816136db24196cd82f34ee1e0e8291af1ea155f",
+        "issued_at": "2026-08-24T11:50:00.000Z",
+        "expires_at": "2026-10-31T23:59:59.000Z",
+        "problem": "Independently review the current Agent Commons challenge/discovery surface for ambiguity that could make public metadata, agent feedback, a contribution result, or a challenge response look like AXIOM runtime, repository, hardware, spending, deployment, or production authority.",
         "scope": {
           "allowed_paths": [
-            ".github/ISSUE_TEMPLATE/agent-authority-boundary.yml",
-            ".github/ISSUE_TEMPLATE/agent-contribution-proposal.yml",
-            ".github/ISSUE_TEMPLATE/agent-feedback.yml",
-            ".github/ISSUE_TEMPLATE/community-testnet-result.yml",
-            "AGENT-ENTRY.md",
             "AGENTS.md",
+            "agent-commons/challenges.json",
+            "agent-commons/manifest.json",
             "agent-readiness/CONTRIBUTION-RESULT.schema.json",
             "docs/architecture/AGENT-COMMONS.md",
             "docs/architecture/contracts/agent-challenge.v1.schema.json",
             "docs/architecture/contracts/agent-feedback.v1.schema.json",
-            "docs/community/COMMUNITY-TESTNET-V0.md",
+            "mesh/src/check-agent-challenge-registry.mjs",
             "mesh/src/check-agent-commons.mjs",
-            "mesh/src/check-docs.mjs",
-            "mesh/test/agent-commons.test.mjs"
+            "mesh/src/lib/agent-challenge-registry.mjs",
+            "mesh/test/agent-challenge-registry.test.mjs"
           ],
           "prohibited_effects": [
             "Do not merge or write directly to main.",
-            "Do not request, expose, or use repository, production, user, transport, signing, or other secrets or credentials.",
-            "Do not change mesh/config/capabilities.json or claim capability promotion.",
-            "Do not bypass protected CI, authorized review, or Gateway -> Hypervisor -> Sandbox -> Grid authority semantics.",
-            "Do not test third-party systems, services, accounts, or infrastructure without separate authorization.",
+            "Do not request, expose, or use repository, production, user, signing, provider, or deployment secrets.",
+            "Do not test third-party systems, accounts, hardware, or networks without separate explicit authorization from their owner.",
+            "Do not change mesh/config/capabilities.json or represent challenge completion as capability promotion.",
+            "Do not bypass protected CI, review, or the Gateway -> Hypervisor -> Sandbox -> Grid authority path.",
             "Do not publish sensitive vulnerability details that belong on the private SECURITY.md route."
           ],
           "environment_boundary": [
-            "repository-owned",
             "contributor-owned",
-            "explicitly-disposable-authorized"
+            "repository-owned"
           ],
-          "notes": "Read-only analysis and independently reproducible negative tests are preferred. A patch is optional and must remain within the listed scope unless a separately reviewed scope change is proposed."
+          "notes": "Read-only analysis is preferred. A bounded patch may be proposed only inside the listed paths; executed evidence belongs in the canonical contribution-result contract."
         },
         "acceptance": [
-          "State the exact 40-hex base SHA reviewed and the paths actually inspected.",
-          "Evaluate whether any Agent Commons artifact can itself grant runtime, merge, deployment, credential, spending, hardware-custody, production-promotion, or third-party-testing authority.",
+          "State the exact base SHA and files actually reviewed.",
           "Separate observed evidence, inference, proposal, uncertainty, and untested claims.",
-          "Preserve failures, negative results, and NOT_REPRODUCED outcomes rather than filtering them for agreement.",
-          "If proposing a patch, explain which invariant it strengthens and which tests or checks were actually run.",
-          "Route non-public vulnerability details through SECURITY.md rather than the public response."
+          "Identify any path by which public Agent Commons metadata could be mistaken for authority, and explain the exact invariant affected.",
+          "If proposing code, keep the challenge, feedback, and contribution-result roles distinct and preserve all authority nonclaims.",
+          "Route non-public vulnerability details through SECURITY.md."
         ],
         "evidence_expectations": [
-          "List commands, tests, files, or artifacts actually inspected or executed.",
-          "Include relevant non-sensitive failure output, evidence digests, or locators when available.",
-          "Do not represent synthetic, generated, inferred, or unexecuted results as authentic verification.",
-          "Record unresolved cases, limitations, and explicit non-claims."
+          "List files, commands, tests, or artifacts actually inspected or executed.",
+          "Bind executed results to an exact commit SHA and authorized environment.",
+          "Do not represent synthetic, generated, or unexecuted output as independent verification.",
+          "Record unresolved cases, residual risk, and explicit non-claims."
         ],
         "result_contract": "agent-readiness/CONTRIBUTION-RESULT.schema.json",
         "disclosure": {
           "public_issue_safe_only": true,
           "sensitive_findings_route": "SECURITY.md"
         },
-        "claim_boundary": "Responding to or completing this challenge grants no AXIOM runtime authority, repository merge rights, deployment authority, credential access, spending authority, hardware custody, production promotion, third-party-testing authority, compensation entitlement, or evidence acceptance. Acceptance and any consequential effect remain separate reviewed decisions.",
+        "claim_boundary": "Publishing, accepting, or completing this challenge grants no AXIOM authority, repository rights, execution permission, hardware custody, spending authority, deployment authority, production promotion, third-party testing authorization, compensation entitlement, or reputation weight.",
         "authority_nonclaims": {
           "runtime_authority_granted": false,
           "merge_authority_granted": false,

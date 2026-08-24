@@ -1,142 +1,120 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+
 import {
-  AGENT_CHALLENGE_REGISTRY_MAX_BYTES,
-  validateAgentChallengeRegistry
+  validateAgentChallengeRegistry,
+  validateAgentCommonsDiscovery,
+  validateRepositoryPath
 } from '../src/lib/agent-challenge-registry.mjs';
+import { checkAgentChallengeRegistry } from '../src/check-agent-challenge-registry.mjs';
 
-const REGISTRY_URL = new URL('../../agent-commons/challenges.json', import.meta.url);
+const HERE = dirname(fileURLToPath(import.meta.url));
+const MESH_ROOT = resolve(HERE, '..');
+const REPO_ROOT = resolve(MESH_ROOT, '..');
 
-async function committedRegistry() {
-  return JSON.parse(await readFile(REGISTRY_URL, 'utf8'));
+async function committedJson(path) {
+  return JSON.parse(await readFile(resolve(REPO_ROOT, path), 'utf8'));
 }
 
-test('Agent Commons challenge registry validates the committed public-discovery surface', async () => {
-  const result = validateAgentChallengeRegistry(await committedRegistry());
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
 
-  assert.equal(result.valid, true);
-  assert.equal(result.schema, 'axiom-agent-challenge-registry.v1');
-  assert.equal(result.project, 'AXIOM-MESH');
-  assert.equal(result.supported_build, '0.12.0-dev.3');
-  assert.equal(result.repository, 'Zoverions/AXIOM-MESH');
-  assert.equal(result.base_ref, 'main');
-  assert.equal(result.base_sha, '5b6d1d4dd39881924ea7c3e8f21582da0acee399');
-  assert.equal(result.challenges, 1);
-  assert.equal(result.counts.open, 1);
-  assert.equal(result.public_discovery_only, true);
-  assert.equal(result.authority_granted, false);
-  assert.equal(result.payment_promised, false);
-  assert.equal(result.evidence_certified, false);
+test('committed Agent Commons registry and discovery manifest validate against current contracts', async () => {
+  const result = await checkAgentChallengeRegistry();
+  assert.equal(result.ok, true);
+  assert.equal(result.registry_schema, 'axiom-agent-challenge-registry.v2');
+  assert.equal(result.discovery_schema, 'axiom-agent-commons-discovery.v2');
+  assert.equal(result.canonical_result_contract, 'agent-readiness/CONTRIBUTION-RESULT.schema.json');
+  assert.equal(result.authority_effect, 'none');
+  assert.equal(result.open_challenges, 1);
 });
 
-test('Agent Commons challenge registry rejects a stale open-challenge base fixture', async () => {
-  const registry = structuredClone(await committedRegistry());
-  registry.challenges[0].challenge.base_sha = '1'.repeat(40);
-
+test('open challenges are exact-base bound and cannot silently drift', async () => {
+  const registry = await committedJson('agent-commons/challenges.json');
+  const stale = clone(registry);
+  stale.challenges[0].challenge.base_sha = '0'.repeat(40);
   assert.throws(
-    () => validateAgentChallengeRegistry(registry),
+    () => validateAgentChallengeRegistry(stale),
     /stale base SHA/
   );
 });
 
-test('Agent Commons challenge registry rejects an oversized-input fixture', async () => {
-  const registry = structuredClone(await committedRegistry());
-  registry.challenges[0].challenge.problem = 'x'.repeat(AGENT_CHALLENGE_REGISTRY_MAX_BYTES + 1);
+test('challenge authority and third-party testing cannot be elevated', async () => {
+  const registry = await committedJson('agent-commons/challenges.json');
+  for (const field of [
+    'runtime_authority_granted',
+    'merge_authority_granted',
+    'deployment_authority_granted',
+    'credential_authority_granted',
+    'spending_authority_granted',
+    'hardware_custody_granted',
+    'production_promotion_granted',
+    'third_party_testing_authorized',
+    'compensation_committed'
+  ]) {
+    const elevated = clone(registry);
+    elevated.challenges[0].challenge.authority_nonclaims[field] = true;
+    assert.throws(
+      () => validateAgentChallengeRegistry(elevated),
+      new RegExp(field)
+    );
+  }
+});
 
+test('registry refuses the obsolete generic contribution contract', async () => {
+  const registry = await committedJson('agent-commons/challenges.json');
+  const stale = clone(registry);
+  stale.challenges[0].challenge.result_contract =
+    'docs/architecture/contracts/agent-contribution.v1.schema.json';
   assert.throws(
-    () => validateAgentChallengeRegistry(registry),
-    /exceeds the maximum encoded size/
+    () => validateAgentChallengeRegistry(stale),
+    /result contract is invalid/
+  );
+
+  const discovery = await committedJson('agent-commons/manifest.json');
+  const staleDiscovery = clone(discovery);
+  staleDiscovery.contribution_result_contract =
+    'docs/architecture/contracts/agent-contribution.v1.schema.json';
+  assert.throws(
+    () => validateAgentCommonsDiscovery(staleDiscovery),
+    /contribution_result_contract is invalid/
   );
 });
 
-test('Agent Commons challenge registry rejects a path-escape fixture', async () => {
-  const registry = structuredClone(await committedRegistry());
-  registry.challenges[0].challenge.scope.allowed_paths[0] = '../SECURITY.md';
-
-  assert.throws(
-    () => validateAgentChallengeRegistry(registry),
-    /allowed path.*(?:invalid|escapes)/
+test('challenge paths remain repository-relative and traversal-safe', () => {
+  assert.equal(
+    validateRepositoryPath('docs/architecture/AGENT-COMMONS.md'),
+    'docs/architecture/AGENT-COMMONS.md'
   );
+  for (const invalid of [
+    '../outside',
+    'docs/../SECURITY.md',
+    '/absolute/path',
+    'docs\\windows\\escape',
+    'docs//double'
+  ]) {
+    assert.throws(() => validateRepositoryPath(invalid), /invalid|escapes/);
+  }
 });
 
-test('Agent Commons challenge registry rejects a forged publisher identity fixture', async () => {
-  const registry = structuredClone(await committedRegistry());
-  registry.publisher.id = 'untrusted-agent';
-
+test('legacy v1 registry/discovery fields cannot be mixed into v2', async () => {
+  const registry = await committedJson('agent-commons/challenges.json');
+  const mixed = clone(registry);
+  mixed.authority_granted = false;
   assert.throws(
-    () => validateAgentChallengeRegistry(registry),
-    /publisher identity is invalid/
-  );
-});
-
-test('Agent Commons challenge registry rejects a fabricated-evidence field fixture', async () => {
-  const registry = structuredClone(await committedRegistry());
-  registry.challenges[0].challenge.evidence_verified = true;
-
-  assert.throws(
-    () => validateAgentChallengeRegistry(registry),
-    /unsupported field: evidence_verified/
-  );
-});
-
-test('Agent Commons challenge registry rejects authority, payment, evidence, or compensation elevation', async () => {
-  const authority = structuredClone(await committedRegistry());
-  authority.authority_granted = true;
-  assert.throws(
-    () => validateAgentChallengeRegistry(authority),
-    /authority\/evidence boundary is invalid/
+    () => validateAgentChallengeRegistry(mixed),
+    /unsupported field: authority_granted/
   );
 
-  const payment = structuredClone(await committedRegistry());
-  payment.payment_promised = true;
+  const discovery = await committedJson('agent-commons/manifest.json');
+  const mixedDiscovery = clone(discovery);
+  mixedDiscovery.contribution_contract = 'docs/architecture/contracts/agent-contribution.v1.schema.json';
   assert.throws(
-    () => validateAgentChallengeRegistry(payment),
-    /authority\/evidence boundary is invalid/
-  );
-
-  const certification = structuredClone(await committedRegistry());
-  certification.evidence_certified = true;
-  assert.throws(
-    () => validateAgentChallengeRegistry(certification),
-    /authority\/evidence boundary is invalid/
-  );
-
-  const compensation = structuredClone(await committedRegistry());
-  compensation.challenges[0].challenge.authority_nonclaims.compensation_committed = true;
-  assert.throws(
-    () => validateAgentChallengeRegistry(compensation),
-    /cannot grant or imply authority: compensation_committed/
-  );
-});
-
-test('Agent Commons challenge registry rejects third-party environment widening', async () => {
-  const registry = structuredClone(await committedRegistry());
-  registry.challenges[0].challenge.scope.environment_boundary = ['third-party-unapproved'];
-
-  assert.throws(
-    () => validateAgentChallengeRegistry(registry),
-    /environment boundary is invalid/
-  );
-});
-
-test('Agent Commons challenge registry rejects open challenges already expired at generation time', async () => {
-  const registry = structuredClone(await committedRegistry());
-  registry.challenges[0].challenge.issued_at = '2026-08-20T20:07:00Z';
-  registry.challenges[0].challenge.expires_at = '2026-08-20T20:07:59Z';
-
-  assert.throws(
-    () => validateAgentChallengeRegistry(registry),
-    /already expired/
-  );
-});
-
-test('Agent Commons challenge registry rejects duplicate challenge identifiers', async () => {
-  const registry = structuredClone(await committedRegistry());
-  registry.challenges.push(structuredClone(registry.challenges[0]));
-
-  assert.throws(
-    () => validateAgentChallengeRegistry(registry),
-    /Duplicate Agent Commons challenge/
+    () => validateAgentCommonsDiscovery(mixedDiscovery),
+    /unsupported field: contribution_contract/
   );
 });

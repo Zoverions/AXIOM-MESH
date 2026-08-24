@@ -1,0 +1,16 @@
+{
+  "schema": "axiom-agent-commons-discovery.v2",
+  "project": "AXIOM-MESH",
+  "supported_build": "0.12.0-dev.3",
+  "repository": "Zoverions/AXIOM-MESH",
+  "canonical_repository_url": "https://github.com/Zoverions/AXIOM-MESH",
+  "human_entrypoint": "README.md",
+  "agent_entrypoint": "AGENTS.md",
+  "challenge_registry": "agent-commons/challenges.json",
+  "security_policy": "SECURITY.md",
+  "challenge_contract": "docs/architecture/contracts/agent-challenge.v1.schema.json",
+  "contribution_result_contract": "agent-readiness/CONTRIBUTION-RESULT.schema.json",
+  "feedback_contract": "docs/architecture/contracts/agent-feedback.v1.schema.json",
+  "public_discovery_only": true,
+  "authority_effect": "none"
+}
