@@ -288,112 +288,117 @@ test('semantic trust projection composes with correction resolution and Context 
   });
   assert.equal(resolved.usable_claims.length, 1);
 
-  const request = {
-    schema: 'axiom-context-request.v1',
-    request_id: 'request.travel.1',
-    owner_subject_ref: 'owner.alice',
-    requester_principal_ref: 'agent.travel',
-    recipient_principal_ref: 'agent.travel',
-    purpose: 'select-accessible-lodging',
-    task_class: 'travel-planning',
-    issued_at: '2026-08-24T10:00:00.000Z',
-    expires_at: '2026-08-24T11:00:00.000Z',
-    semantic_needs: [{
-      semantic_type: 'travel.accessibility.requirements',
-      need: 'mobility constraint',
-      required: true,
-      maximum_sensitivity: 'ordinary-private',
-      acceptable_disclosure_modes: ['transformed-constraint'],
-      minimum_confidence: 0.5
+  const compiled = compileContextCapsule({
+    request: {
+      schema: 'axiom-context-request.v1',
+      request_id: 'request.travel.1',
+      owner_subject_ref: 'owner.alice',
+      requester_principal_ref: 'assistant.local',
+      recipient_principal_ref: 'agent.travel',
+      destination_ref: 'destination.travel',
+      purpose: 'select accessible lodging',
+      task_class: 'travel.planning',
+      issued_at: '2026-08-24T10:00:00.000Z',
+      expires_at: '2026-08-24T11:00:00.000Z',
+      semantic_needs: [{
+        semantic_type: 'travel.accessibility.requirements',
+        need: 'mobility constraint needed to select lodging',
+        required: true,
+        maximum_sensitivity: 'ordinary-private',
+        acceptable_disclosure_modes: ['transformed-constraint'],
+        minimum_confidence: 0.5
+      }],
+      retention_request: {
+        max_seconds: 900,
+        recipient_may_persist_requested: false,
+        retention_reason: 'complete lodging selection'
+      },
+      requester_evidence_refs: ['request.evidence.1'],
+      minimum_necessary_requested: true,
+      source_vault_selector_in_request: false,
+      requests_vault_mount: false,
+      requests_raw_vault_object: false,
+      grants_vault_access: false,
+      grants_execution_authority: false,
+      onward_disclosure_requested: false
+    },
+    leases: [{
+      schema: 'axiom-vault-access-lease.v1',
+      lease_id: 'lease.accessibility.1',
+      owner_subject_ref: 'owner.alice',
+      holder_principal_ref: 'broker.local',
+      holder_runtime_ref: 'broker.runtime.local',
+      vault_id: 'vault_accessibility',
+      purpose: 'select accessible lodging',
+      task_class: 'travel.planning',
+      issued_at: '2026-08-24T09:50:00.000Z',
+      expires_at: '2026-08-24T10:40:00.000Z',
+      allowed_operations: ['derive'],
+      resource_scope: {
+        wildcard_scope: false,
+        resource_refs: ['accessibility:mobility'],
+        semantic_types: ['travel.accessibility.requirements'],
+        maximum_sensitivity: 'ordinary-private'
+      },
+      policy_decision_ref: 'lease.policy.1',
+      grant_ref: 'lease.grant.1',
+      access_receipt_reservation_ref: 'reservation.accessibility.1',
+      key_handle_ref: 'key.handle.accessibility.1',
+      delegable: false,
+      usable_outside_owner_trust_domain: false,
+      contains_raw_key_material: false,
+      grants_other_vault_access: false,
+      grants_kernel_effect_authority: false,
+      permits_raw_content_export: false,
+      mutation_authority: false,
+      requires_revocation_check_before_use: true,
+      access_receipt_required: true
     }],
-    retention_request: {
-      mode: 'ephemeral',
-      max_seconds: 900
+    claims: resolved.usable_claims,
+    accessReceipts: [{
+      receipt_ref: 'receipt.accessibility.1',
+      reservation_ref: 'reservation.accessibility.1',
+      lease_id: 'lease.accessibility.1',
+      owner_subject_ref: 'owner.alice',
+      holder_principal_ref: 'broker.local',
+      vault_id: 'vault_accessibility',
+      purpose: 'select accessible lodging',
+      task_class: 'travel.planning',
+      recorded_at: '2026-08-24T10:05:00.000Z',
+      committed: true
+    }],
+    revocationChecks: [{
+      check_ref: 'revocation.accessibility.1',
+      lease_id: 'lease.accessibility.1',
+      checked_at: '2026-08-24T10:04:00.000Z',
+      valid_until: '2026-08-24T10:30:00.000Z',
+      revoked: false
+    }],
+    policyDecision: {
+      schema: 'axiom-context-disclosure-policy-decision.v1',
+      decision_ref: 'disclosure.policy.1',
+      request_id: 'request.travel.1',
+      owner_subject_ref: 'owner.alice',
+      recipient_principal_ref: 'agent.travel',
+      allowed: true,
+      allowed_semantic_types: ['travel.accessibility.requirements'],
+      allowed_disclosure_modes: ['transformed-constraint'],
+      maximum_sensitivity: 'ordinary-private',
+      max_retention_seconds: 900,
+      recipient_may_persist: false,
+      max_capsule_lifetime_seconds: 900,
+      minimum_necessary_confirmed: true
     },
-    minimum_necessary_requested: true,
-    source_vault_selector_in_request: false,
-    requests_vault_mount: false,
-    requests_raw_vault_object: false,
-    grants_vault_access: false,
-    grants_execution_authority: false,
-    onward_disclosure_requested: false
-  };
-  const lease = {
-    schema: 'axiom-vault-access-lease.v1',
-    lease_id: 'lease.accessibility.1',
-    owner_subject_ref: 'owner.alice',
-    holder_principal_ref: 'broker.local',
-    vault_id: 'vault_accessibility',
-    purpose: 'select-accessible-lodging',
-    task_class: 'travel-planning',
-    issued_at: '2026-08-24T09:50:00.000Z',
-    expires_at: '2026-08-24T10:40:00.000Z',
-    allowed_operations: ['derive'],
-    resource_scope: {
-      resource_refs: ['accessibility:mobility'],
-      semantic_types: ['travel.accessibility.requirements'],
-      maximum_sensitivity: 'ordinary-private'
-    },
-    policy_decision_ref: 'policy.travel.1',
-    grant_ref: 'grant.travel.1',
-    access_receipt_reservation_ref: 'reservation.travel.1',
-    delegable: false,
-    usable_outside_owner_trust_domain: false,
-    contains_raw_key_material: false,
-    grants_other_vault_access: false,
-    grants_kernel_effect_authority: false,
-    permits_raw_content_export: false,
-    mutation_authority: false,
-    requires_revocation_check_before_use: true,
-    access_receipt_required: true
-  };
-  const policyDecision = {
-    schema: 'axiom-context-disclosure-policy-decision.v1',
-    decision_ref: 'policy.travel.1',
-    request_id: 'request.travel.1',
-    owner_subject_ref: 'owner.alice',
-    recipient_principal_ref: 'agent.travel',
-    allowed: true,
-    allowed_semantic_types: ['travel.accessibility.requirements'],
-    allowed_disclosure_modes: ['transformed-constraint'],
-    maximum_sensitivity: 'ordinary-private',
-    max_retention_seconds: 900,
-    recipient_may_persist: false,
-    max_capsule_lifetime_seconds: 1800,
-    minimum_necessary_confirmed: true
-  };
-  const accessReceipts = [{
-    receipt_ref: 'receipt.travel.1',
-    reservation_ref: 'reservation.travel.1',
-    lease_id: 'lease.accessibility.1',
-    owner_subject_ref: 'owner.alice',
-    holder_principal_ref: 'broker.local',
-    vault_id: 'vault_accessibility',
-    purpose: 'select-accessible-lodging',
-    task_class: 'travel-planning',
-    recorded_at: '2026-08-24T10:05:00.000Z',
-    committed: true
-  }];
-  const revocationChecks = [{
-    check_ref: 'revocation.travel.1',
-    lease_id: 'lease.accessibility.1',
-    checked_at: '2026-08-24T10:04:00.000Z',
-    valid_until: '2026-08-24T10:30:00.000Z',
-    revoked: false
-  }];
-
-  const capsule = compileContextCapsule({
-    request,
-    leases: [lease],
-    policyDecision,
-    candidateClaims: resolved.usable_claims,
-    accessReceipts,
-    revocationChecks,
-    compiledAt: '2026-08-24T10:10:00.000Z',
-    capsuleId: 'capsule.travel.1'
+    brokerPrincipalRef: 'broker.local',
+    capsuleId: 'capsule.semantic.trust.1',
+    issuedAt: '2026-08-24T10:10:00.000Z',
+    localProvenanceReceiptRefs: ['semantic.trust.projection.1']
   });
-  assert.equal(capsule.grants_vault_access, false);
-  assert.equal(capsule.grants_execution_authority, false);
-  assert.equal(capsule.disclosures.length, 1);
+
+  assert.equal(compiled.capsule.disclosures.length, 1);
+  assert.equal(compiled.capsule.disclosures[0].claim_id, 'claim.accessibility.1');
+  assert.equal(compiled.grants_vault_access, false);
+  assert.equal(compiled.grants_execution_authority, false);
+  assert.equal(compiled.source_identifiers_in_capsule, false);
   assert.equal(projected.instruction_semantics, false);
 });
