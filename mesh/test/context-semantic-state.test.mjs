@@ -246,7 +246,7 @@ test('completed review advances one unique persisted state and is reverified fro
   assert.equal(current.downstream_effect_authorized, false);
 });
 
-test('exact memory.put retry remains current while conflicting same-object history fails closed', async t => {
+test('exact memory.put retry remains current and malformed conflicting retry is rejected before history', async t => {
   const fx = await fixture(t);
   const value = candidate();
   const state = createLocalContextSemanticStateRecord(value, trust(value));
@@ -266,7 +266,7 @@ test('exact memory.put retry remains current while conflicting same-object histo
     events: [retry.mutation]
   });
 
-  const current = getCurrentLocalContextSemanticState(fx.store, {
+  let current = getCurrentLocalContextSemanticState(fx.store, {
     owner: value.owner_subject_ref,
     claimId: value.claim_id
   });
@@ -277,19 +277,21 @@ test('exact memory.put retry remains current while conflicting same-object histo
     ...conflicting.payload.content,
     persistence_path: 'forged-second-event'
   };
-  fx.store.appendEvents({
-    traceId: 'trace.semantic.state.retry.conflict',
-    actor: value.owner_subject_ref,
-    events: [conflicting]
-  });
-
   assert.throws(
-    () => getCurrentLocalContextSemanticState(fx.store, {
-      owner: value.owner_subject_ref,
-      claimId: value.claim_id
+    () => fx.store.appendEvents({
+      traceId: 'trace.semantic.state.retry.conflict',
+      actor: value.owner_subject_ref,
+      events: [conflicting]
     }),
-    /signed memory.put history conflicts with materialized state/
+    /Memory object content address is invalid/
   );
+
+  current = getCurrentLocalContextSemanticState(fx.store, {
+    owner: value.owner_subject_ref,
+    claimId: value.claim_id
+  });
+  assert.equal(current.state_digest, state.state_digest);
+  assert.equal(current.current_state_verified, true);
 });
 
 test('multiple observed genesis states for one claim fail closed as ambiguous history', async t => {
