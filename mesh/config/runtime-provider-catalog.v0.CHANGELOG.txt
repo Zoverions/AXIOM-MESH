@@ -1,0 +1,9 @@
+2026-08-24 — v0 seed
+
+- Added four pinned agent-runtime research profiles: Hermes Agent, OpenClaw, OpenAI Codex CLI, Agent Zero.
+- Added six hosted model-provider service profiles: Arcee AI API, OpenAI API, Anthropic API, Google Gemini API, xAI API, Mistral API.
+- Bound every entry to axiom-runtime-connector-catalog-entry.v1.
+- Kept runtime research profiles at zero requested AXIOM actions, capabilities, credentials, and network access.
+- Kept provider profiles at zero requested AXIOM actions/capabilities while declaring exact service origin, model-inference purpose, input/output data classes, API-key credential class, and network destination.
+- Preserved Gateway -> Hypervisor -> Sandbox -> Grid as the only consequential effect path.
+- Added a research backlog for local model stacks, hosted inference services, and additional agent runtimes without treating backlog membership as catalog admission.
