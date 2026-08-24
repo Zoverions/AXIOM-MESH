@@ -5,6 +5,7 @@ import {
   verify
 } from 'node:crypto';
 import {
+  lstat,
   mkdir,
   open,
   readFile,
@@ -315,6 +316,14 @@ function requireBoundCurrentness(checks, { handoff, executorCredential }) {
   });
 }
 
+async function canonicalDirectory(rawPath, label) {
+  const metadata = await lstat(rawPath);
+  if (!metadata.isDirectory() || metadata.isSymbolicLink()) {
+    throw new ValidationError(`${label} must be a real directory, not a symbolic link or reparse point`);
+  }
+  return realpath(rawPath);
+}
+
 async function canonicalStateRoot(raw) {
   const stateRoot = assertString(raw, 'agent effect consumption stateRoot', { min: 1, max: 4096 });
   if (!isAbsolute(stateRoot)) {
@@ -322,21 +331,17 @@ async function canonicalStateRoot(raw) {
   }
   const expected = resolve(stateRoot);
   await mkdir(expected, { recursive: true, mode: 0o700 });
-  const actual = await realpath(expected);
-  if (actual !== expected) {
-    throw new ValidationError('agent effect consumption stateRoot must not traverse symbolic links');
-  }
-  return expected;
+  return canonicalDirectory(expected, 'agent effect consumption stateRoot');
 }
 
 async function recordPathFor(stateRoot, storageKey) {
   const bucket = join(stateRoot, 'agent-effect-consumption-v1', storageKey.slice(0, 2));
   await mkdir(bucket, { recursive: true, mode: 0o700 });
-  const actualBucket = await realpath(bucket);
-  if (actualBucket !== resolve(bucket)) {
-    throw new ValidationError('agent effect consumption derived state path must not traverse symbolic links');
-  }
-  return join(bucket, `${storageKey}.json`);
+  const canonicalBucket = await canonicalDirectory(
+    bucket,
+    'agent effect consumption derived state path'
+  );
+  return join(canonicalBucket, `${storageKey}.json`);
 }
 
 function buildSignedRecord({
