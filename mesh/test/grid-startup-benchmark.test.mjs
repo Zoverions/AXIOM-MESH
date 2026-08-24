@@ -21,8 +21,10 @@ test('startup benchmark emits signed evidence that the anchored restart replays 
   assert.equal(evidence.measurements.anchored.protected_columns.mode, 'sampled');
   assert.equal(evidence.measurements.rebuild.materialization.mode, 'full_rebuild');
   assert.equal(evidence.measurements.rebuild.materialization.replayed_events, 1_200);
-  assert.equal(evidence.comparison.states_identical, true);
+  assert.equal(evidence.comparison.logical_states_identical, true);
   assert.equal(evidence.comparison.anchored_replay_bounded, true);
+  assert.equal(typeof evidence.measurements.anchored.materialized_state_storage_digest, 'string');
+  assert.equal(evidence.measurements.anchored.logical_materialized_state_digest, evidence.measurements.rebuild.logical_materialized_state_digest);
   assert.equal(verifyGridStartupBenchmarkEvidence(evidence).valid, true);
   assert.doesNotMatch(JSON.stringify(evidence), /PRIVATE KEY/);
 

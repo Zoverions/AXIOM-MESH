@@ -43,12 +43,12 @@ import {
 
 const GENESIS_HASH = '0'.repeat(64);
 
-// Bounded startup: the materialization anchor records how far the materialized
-// tables have already been folded forward, so a normal restart replays only the
-// unmaterialized suffix instead of the complete event history. The anchor is
-// advisory for correctness and authoritative for nothing: any mismatch, missing
-// value, schema change, or materialization-code change discards it and falls
-// back to the explicit full genesis rebuild.
+// Optional clean-restart fast path: a sealed materialization anchor can prove
+// that the exact current chain head still matches the stored derived tables and
+// therefore replay zero events. It does not implement incremental suffix replay:
+// any mismatch, missing value, behind-head anchor, schema change, or
+// materialization-code change falls back to the explicit full genesis rebuild.
+// The anchor is advisory for correctness and authoritative for nothing.
 const MATERIALIZED_TABLES = Object.freeze([
   'sync_heads',
   'sync_updates',

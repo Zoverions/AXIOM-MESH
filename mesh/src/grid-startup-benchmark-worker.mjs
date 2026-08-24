@@ -11,6 +11,7 @@ import { performance } from 'node:perf_hooks';
 import { ensureMeshIdentity } from './lib/identity.mjs';
 import { loadDataProtector } from './lib/protector.mjs';
 import { GridStore } from './grid/store.mjs';
+import { logicalMaterializedStateDigest } from './grid-startup-logical-state.mjs';
 
 async function main() {
   const [mode, dataDir, checkpointIntervalRaw] = process.argv.slice(2);
@@ -39,7 +40,8 @@ async function main() {
   const materialization = store.materializationStartup;
   const protectedColumns = store.protectedColumnStartup;
   const events = store.currentEventSeq();
-  const stateDigest = store.materializedStateDigest();
+  const storageDigest = store.materializedStateDigest();
+  const logicalDigest = logicalMaterializedStateDigest(store);
   store.close();
   const usage = process.resourceUsage();
   process.stdout.write(`${JSON.stringify({
@@ -47,7 +49,8 @@ async function main() {
     events,
     materialization,
     protected_columns: protectedColumns,
-    materialized_state_digest: stateDigest,
+    materialized_state_storage_digest: storageDigest,
+    logical_materialized_state_digest: logicalDigest,
     wall_time_ms: durationMs,
     process_max_rss_kib: usage.maxRSS,
     user_cpu_ms: Math.round(usage.userCPUTime / 1000),

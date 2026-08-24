@@ -11,8 +11,9 @@ deliberately not claimed.
 
 ## What startup did before
 
-`GridStore` initialization performed three passes whose cost grew with the
-complete event history:
+`GridStore` initialization performed three major passes. Signed chain verification
+was already checkpoint-bounded; the protected-column inspection and materialized-state
+reconstruction passes still grew with accumulated history:
 
 1. `migrateProtectedColumns()` loaded every protected column of every mapped
    table with `.all()` and decrypted each already-protected value, on every
@@ -80,10 +81,14 @@ unqualified guarantee under the default.
 
 ## Measured
 
-Synthetic fixture, 100,000 `intent.accepted` events, batch size 32, checkpoint
-interval 10,000. Single host, Node 24.18.0, linux/x64. Steady-state restart,
-second run of each. Wall time varies by host; the replayed-event counts are the
-deterministic evidence.
+The timing figures below are the supplied **v1** benchmark run: a synthetic
+fixture of 100,000 `intent.accepted` events, batch size 32, checkpoint interval
+10,000, on one Node 24.18.0 linux/x64 host. The reviewed **v2** benchmark now
+alternates `intent.accepted` and `intent.completed` so protected result
+materialization is exercised when logical-state equivalence is checked. The v2
+fixture has not yet been used to regenerate the wall-time/RSS table below, so
+those numbers must not be attributed to v2. Wall time varies by host; replayed-
+event counts remain the deterministic scaling evidence.
 
 | Build | Startup wall time | Peak RSS | Materialization |
 | --- | --- | --- | --- |
@@ -99,15 +104,17 @@ Startup phase profile at 40,000 events, before and after:
 | `verifyChain` (checkpoint-bounded) | 2,383 ms | ~2,400 ms |
 | `rebuildMaterializedState` | 4,424 ms | 0 ms |
 
-Reproduce with:
+Generate current v2 evidence with:
 
 ```
 npm run startup:benchmark -- --events 100000 --checkpoint-interval 10000
 ```
 
 The benchmark emits Ed25519-signed evidence and refuses to report `passed`
-unless the anchored startup replayed zero events, the forced rebuild replayed
-the full history, and both produced the identical materialized-state digest.
+unless the clean anchored startup replayed zero events, the forced rebuild replayed
+the full history, and both reproduce the same **logical** materialized state. The
+anchor itself continues to use a physical storage digest for out-of-band tamper
+detection; benchmark equivalence decrypts protected materializations before hashing.
 
 ## Acceptance criteria
 
@@ -115,17 +122,20 @@ Against S-01:
 
 - **Met** — peak RSS no longer grows with history; it is flat at ~85 MiB across
   2k, 10k, 40k and 100k event fixtures, in both modes.
-- **Met** — forced full rebuild remains deterministic and produces the same
-  state digest as the anchored path (asserted by the benchmark and by
-  `mesh/test/grid-bounded-startup.test.mjs`).
+- **Met for the benchmark fixture** — forced full rebuild reproduces the same
+  logical materialized-state digest as the anchored path. The benchmark includes
+  protected intent results so this comparison is independent of randomized
+  AES-GCM ciphertext. It is evidence for the exercised materialization surface,
+  not a claim of byte-identical encrypted storage.
 - **Met** — corrupt, missing, stale, schema-incompatible and foreign-build
   anchors all select the full rebuild rather than serving unverified state.
 - **Met** — startup records phase outcomes: `store.materializationStartup` and
   `store.protectedColumnStartup` report the mode and the replayed/scanned counts.
-- **Partially met** — restart cost is proportional to the unmaterialized suffix
-  only in `sealed` mode. Under the default, restart still re-derives the full
-  history; what changed there is that it streams, so the cost is bounded in
-  memory but not in time.
+- **Not yet met** — true suffix replay is not implemented. Current `sealed` mode
+  is zero-or-full: a valid exact-head clean-close anchor replays 0 events; a
+  missing, stale, interrupted, behind-head, or otherwise invalid anchor triggers
+  full genesis re-derivation. Under the default, the full rebuild now streams,
+  so memory is bounded while restart time still grows with history.
 - **Not met** — the audit asks for shadow tables and an atomic swap rather than
   deleting the live materialization before replay. The rebuild still deletes and
   replays inside one transaction. A crash mid-rebuild rolls back, but a long

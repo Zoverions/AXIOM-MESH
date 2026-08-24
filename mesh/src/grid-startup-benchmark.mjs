@@ -4,10 +4,10 @@
 //
 // Builds one synthetic Grid of a chosen size, then measures two startups of that
 // same database in isolated processes: a normal anchored restart, and a forced
-// full genesis re-derivation. The audit's acceptance criterion is that the first
-// is bounded by the unmaterialized suffix rather than by total history, so the
-// signed evidence records the replayed-event counts alongside wall time and peak
-// RSS, and refuses to report `passed` if the anchored restart replayed anything.
+// full genesis re-derivation. Current sealed mode is deliberately zero-or-full:
+// a valid exact-head clean-close anchor replays zero events; any invalid or stale
+// anchor falls back to genesis. The evidence records that behavior explicitly and
+// does not claim incremental suffix replay.
 
 import { createPublicKey } from 'node:crypto';
 import { spawn } from 'node:child_process';
@@ -20,8 +20,9 @@ import { ValidationError, digestObject, sha256 } from './lib/canonical.mjs';
 import { ensureMeshIdentity, verifyObjectSignature } from './lib/identity.mjs';
 import { loadDataProtector } from './lib/protector.mjs';
 import { GridStore } from './grid/store.mjs';
+import { logicalMaterializedStateDigest } from './grid-startup-logical-state.mjs';
 
-const EVIDENCE_SCHEMA = 'axiom-grid-startup-benchmark.v1';
+const EVIDENCE_SCHEMA = 'axiom-grid-startup-benchmark.v2';
 const REVISION = /^[a-f0-9]{40}$/;
 const MAX_COMMIT_BATCH = 32;
 const WORKER = fileURLToPath(
@@ -66,7 +67,8 @@ export async function runGridStartupBenchmark({
     const preparationDurationMs = Math.round(
       (performance.now() - preparationStartedAt) * 1000
     ) / 1000;
-    const expectedDigest = store.materializedStateDigest();
+    const expectedStorageDigest = store.materializedStateDigest();
+    const expectedLogicalDigest = logicalMaterializedStateDigest(store);
     store.close();
     store = null;
 
@@ -83,8 +85,9 @@ export async function runGridStartupBenchmark({
       || rebuild.protected_columns?.mode !== 'migrated'
       || anchored.events !== eventCount
       || rebuild.events !== eventCount
-      || anchored.materialized_state_digest !== expectedDigest
-      || rebuild.materialized_state_digest !== expectedDigest
+      || anchored.materialized_state_storage_digest !== expectedStorageDigest
+      || anchored.logical_materialized_state_digest !== expectedLogicalDigest
+      || rebuild.logical_materialized_state_digest !== expectedLogicalDigest
     ) {
       throw new ValidationError('Grid startup benchmark invariants did not hold');
     }
@@ -111,12 +114,13 @@ export async function runGridStartupBenchmark({
       },
       fixture: {
         synthetic: true,
-        event_kind: 'intent.accepted',
+        event_kinds: ['intent.accepted', 'intent.completed'],
         events: eventCount,
         batch_size: batchSize,
         checkpoint_interval: checkpointInterval,
         preparation_wall_time_ms: preparationDurationMs,
-        materialized_state_digest: expectedDigest
+        materialized_state_storage_digest: expectedStorageDigest,
+        logical_materialized_state_digest: expectedLogicalDigest
       },
       measurements: { anchored, rebuild },
       comparison: {
@@ -130,15 +134,19 @@ export async function runGridStartupBenchmark({
         ),
         anchored_replay_bounded: anchored.materialization.replayed_events === 0,
         rebuild_replayed_full_history: rebuild.materialization.replayed_events === eventCount,
-        states_identical:
-          anchored.materialized_state_digest === rebuild.materialized_state_digest
+        logical_states_identical:
+          anchored.logical_materialized_state_digest === rebuild.logical_materialized_state_digest,
+        storage_digests_identical:
+          anchored.materialized_state_storage_digest === rebuild.materialized_state_storage_digest
       },
       limitations: [
         'single-host synthetic evidence, not production traffic',
         'process_max_rss_kib is the worker process lifetime maximum, not an incremental allocation measurement',
         'fixture construction is excluded from both measured startups',
         'wall-time results vary by runner hardware and load; replayed-event counts are the deterministic scaling evidence',
-        'the anchored path verifies the derived tables by digest and re-derives on any mismatch; it does not assert that derived state is independently signed'
+        'sealed startup is zero-or-full and does not implement incremental suffix replay',
+        'the anchor uses a physical storage digest for tamper detection; benchmark equivalence uses a decoded logical-state digest',
+        'the anchored path does not assert that derived state is independently signed'
       ]
     };
     const evidence = { ...unsigned, attestation: identity.signObject(unsigned) };
@@ -165,10 +173,10 @@ export function verifyGridStartupBenchmarkEvidence(evidence) {
     || evidence.measurements?.rebuild?.mode !== 'rebuild'
     || evidence.measurements.anchored.materialization?.replayed_events !== 0
     || evidence.measurements.rebuild.materialization?.replayed_events !== evidence.fixture.events
-    || evidence.measurements.anchored.materialized_state_digest
-      !== evidence.measurements.rebuild.materialized_state_digest
+    || evidence.measurements.anchored.logical_materialized_state_digest
+      !== evidence.measurements.rebuild.logical_materialized_state_digest
     || evidence.comparison?.anchored_replay_bounded !== true
-    || evidence.comparison?.states_identical !== true
+    || evidence.comparison?.logical_states_identical !== true
   ) {
     throw new ValidationError('Grid startup benchmark evidence is invalid');
   }
@@ -227,16 +235,28 @@ function validateConfiguration({ eventCount, batchSize, checkpointInterval }) {
 }
 
 function benchmarkEvent(index) {
+  const intentNumber = Math.ceil(index / 2);
+  const intentId = `intent_startup_${String(intentNumber).padStart(12, '0')}`;
+  if (index % 2 === 0) {
+    return {
+      kind: 'intent.completed',
+      subject: intentId,
+      payload: {
+        intent_id: intentId,
+        result: { echoed: `startup-result-${intentNumber}` }
+      }
+    };
+  }
   return {
     kind: 'intent.accepted',
-    subject: `intent_startup_${String(index).padStart(12, '0')}`,
+    subject: intentId,
     payload: {
-      intent_id: `intent_startup_${String(index).padStart(12, '0')}`,
+      intent_id: intentId,
       principal: 'benchmark:operator',
       action: 'system.echo',
       risk: 'low',
-      input_digest: sha256(`startup-input-${index}`),
-      request_digest: sha256(`startup-request-${index}`)
+      input_digest: sha256(`startup-input-${intentNumber}`),
+      request_digest: sha256(`startup-request-${intentNumber}`)
     }
   };
 }
