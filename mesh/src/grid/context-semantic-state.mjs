@@ -76,28 +76,34 @@ function verifyMemoryRow(store, row) {
     WHERE kind = 'memory.put' AND subject = ?
     ORDER BY seq
   `).all(decoded.object_id);
-  if (eventRows.length !== 1) {
-    throw new ValidationError('semantic state requires exactly one signed memory.put source event');
+  if (!eventRows.length) {
+    throw new ValidationError('semantic state requires a signed memory.put source event');
   }
-  const event = store.decodeEventRow(eventRows[0]);
-  if (
-    event.actor !== decoded.owner
-    || event.payload?.object_id !== decoded.object_id
-    || event.payload?.owner !== decoded.owner
-    || event.payload?.kind !== decoded.kind
-    || event.payload?.content_digest !== decoded.content_digest
-    || canonicalJson(event.payload?.content) !== canonicalJson(expectedInput.content)
-    || canonicalJson(event.payload?.metadata) !== canonicalJson(expectedInput.metadata)
-  ) {
-    throw new ValidationError('semantic state signed memory.put source does not match materialized state');
+  const events = eventRows.map(eventRow => store.decodeEventRow(eventRow));
+  for (const event of events) {
+    if (
+      event.actor !== decoded.owner
+      || event.payload?.object_id !== decoded.object_id
+      || event.payload?.owner !== decoded.owner
+      || event.payload?.kind !== decoded.kind
+      || event.payload?.content_digest !== decoded.content_digest
+      || canonicalJson(event.payload?.content) !== canonicalJson(expectedInput.content)
+      || canonicalJson(event.payload?.metadata) !== canonicalJson(expectedInput.metadata)
+    ) {
+      throw new ValidationError(
+        'semantic state signed memory.put history conflicts with materialized state'
+      );
+    }
   }
+  const event = events[0];
   return Object.freeze({
     state,
     status: decoded.status,
     object_id: decoded.object_id,
     source_event_id: event.event_id,
     source_event_seq: event.seq,
-    source_event_hash: event.event_hash
+    source_event_hash: event.event_hash,
+    equivalent_source_events: events.length
   });
 }
 

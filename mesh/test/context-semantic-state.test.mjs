@@ -246,6 +246,52 @@ test('completed review advances one unique persisted state and is reverified fro
   assert.equal(current.downstream_effect_authorized, false);
 });
 
+test('exact memory.put retry remains current while conflicting same-object history fails closed', async t => {
+  const fx = await fixture(t);
+  const value = candidate();
+  const state = createLocalContextSemanticStateRecord(value, trust(value));
+  const persisted = persistState(fx.store, state, 'trace.semantic.state.retry.1');
+
+  const retry = executeBuiltin({
+    tool: 'builtin.validate-mutation',
+    intent: {
+      action: 'memory.put',
+      principal: { id: value.owner_subject_ref, type: 'human' },
+      input: persisted.input
+    }
+  });
+  fx.store.appendEvents({
+    traceId: 'trace.semantic.state.retry.2',
+    actor: value.owner_subject_ref,
+    events: [retry.mutation]
+  });
+
+  const current = getCurrentLocalContextSemanticState(fx.store, {
+    owner: value.owner_subject_ref,
+    claimId: value.claim_id
+  });
+  assert.equal(current.state_digest, state.state_digest);
+
+  const conflicting = structuredClone(retry.mutation);
+  conflicting.payload.content = {
+    ...conflicting.payload.content,
+    persistence_path: 'forged-second-event'
+  };
+  fx.store.appendEvents({
+    traceId: 'trace.semantic.state.retry.conflict',
+    actor: value.owner_subject_ref,
+    events: [conflicting]
+  });
+
+  assert.throws(
+    () => getCurrentLocalContextSemanticState(fx.store, {
+      owner: value.owner_subject_ref,
+      claimId: value.claim_id
+    }),
+    /signed memory.put history conflicts with materialized state/
+  );
+});
+
 test('multiple observed genesis states for one claim fail closed as ambiguous history', async t => {
   const fx = await fixture(t);
   const value = candidate();
