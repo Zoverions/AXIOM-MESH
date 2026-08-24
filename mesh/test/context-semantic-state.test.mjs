@@ -16,6 +16,11 @@ import {
   deriveLocalContextSemanticTrust
 } from '../src/lib/context-semantic-trust.mjs';
 import {
+  createLocalContextSemanticSourceEvidence,
+  localContextSemanticSourceEvidenceMemoryDigest,
+  projectLocalContextSemanticSourceEvidenceMemoryPut
+} from '../src/lib/context-semantic-source-evidence.mjs';
+import {
   LOCAL_CONTEXT_SEMANTIC_STATE_MEMORY_KIND,
   createLocalContextSemanticStateRecord,
   createReviewedLocalContextSemanticState,
@@ -59,13 +64,14 @@ function candidate({
 }
 
 function trust(value = candidate(), {
-  originClass = 'retrieved-external',
-  semanticClass = 'knowledge'
+  originClass = 'owner-authored',
+  semanticClass = 'knowledge',
+  sourceEvidenceDigest = 'a'.repeat(64)
 } = {}) {
   return createLocalContextSemanticTrust(value, {
     origin_class: originClass,
     semantic_class: semanticClass,
-    source_evidence_digest: 'a'.repeat(64),
+    source_evidence_digest: sourceEvidenceDigest,
     review_state: 'unreviewed',
     retention_mode: 'owner-controlled'
   });
@@ -128,6 +134,39 @@ function persistState(store, state, traceId) {
     event,
     objectId: execution.mutation.subject,
     input
+  };
+}
+
+function persistSourceEvidence(store, value, {
+  sourceClass = 'retrieved-external',
+  sourceArtifactDigest = 'b'.repeat(64),
+  traceId = 'trace.semantic.state.source.1'
+} = {}) {
+  const evidence = createLocalContextSemanticSourceEvidence(value, {
+    source_class: sourceClass,
+    source_artifact_digest: sourceArtifactDigest
+  });
+  const memoryDigest = localContextSemanticSourceEvidenceMemoryDigest(evidence);
+  const input = projectLocalContextSemanticSourceEvidenceMemoryPut(evidence);
+  const execution = executeBuiltin({
+    tool: 'builtin.validate-mutation',
+    intent: {
+      action: 'memory.put',
+      principal: { id: value.owner_subject_ref, type: 'human' },
+      input
+    }
+  });
+  const [event] = store.appendEvents({
+    traceId,
+    actor: value.owner_subject_ref,
+    events: [execution.mutation]
+  });
+  return {
+    evidence,
+    memoryDigest,
+    input,
+    event,
+    objectId: execution.mutation.subject
   };
 }
 
@@ -420,6 +459,116 @@ test('a parent review makes a derived child that names the old parent trust stal
   }]);
   assert.equal(projection.persisted_current_state_verified, true);
   assert.equal(projection.downstream_effect_authorized, false);
+});
+
+test('non-owner semantic state requires retained source evidence', async t => {
+  const fx = await fixture(t);
+  const value = candidate({ claimId: 'claim.semantic.source.required' });
+  const sourceEvidence = createLocalContextSemanticSourceEvidence(value, {
+    source_class: 'retrieved-external',
+    source_artifact_digest: 'c'.repeat(64)
+  });
+  const sourceMemoryDigest = localContextSemanticSourceEvidenceMemoryDigest(sourceEvidence);
+  const sourcedTrust = trust(value, {
+    originClass: 'retrieved-external',
+    sourceEvidenceDigest: sourceMemoryDigest
+  });
+  const state = createLocalContextSemanticStateRecord(value, sourcedTrust);
+  persistState(fx.store, state, 'trace.semantic.state.source.missing');
+
+  assert.throws(
+    () => getCurrentLocalContextSemanticState(fx.store, {
+      owner: value.owner_subject_ref,
+      claimId: value.claim_id
+    }),
+    error => error?.code === 'context_semantic_source_evidence_not_found'
+  );
+});
+
+test('source evidence added after semantic state cannot legitimize that state post hoc', async t => {
+  const fx = await fixture(t);
+  const value = candidate({ claimId: 'claim.semantic.source.posthoc' });
+  const sourceEvidence = createLocalContextSemanticSourceEvidence(value, {
+    source_class: 'retrieved-external',
+    source_artifact_digest: 'd'.repeat(64)
+  });
+  const sourceMemoryDigest = localContextSemanticSourceEvidenceMemoryDigest(sourceEvidence);
+  const sourcedTrust = trust(value, {
+    originClass: 'retrieved-external',
+    sourceEvidenceDigest: sourceMemoryDigest
+  });
+  const state = createLocalContextSemanticStateRecord(value, sourcedTrust);
+  persistState(fx.store, state, 'trace.semantic.state.source.posthoc.state');
+  persistSourceEvidence(fx.store, value, {
+    sourceArtifactDigest: 'd'.repeat(64),
+    traceId: 'trace.semantic.state.source.posthoc.evidence'
+  });
+
+  assert.throws(
+    () => getCurrentLocalContextSemanticState(fx.store, {
+      owner: value.owner_subject_ref,
+      claimId: value.claim_id
+    }),
+    error => error?.code === 'context_semantic_source_evidence_postdates_state'
+  );
+});
+
+test('retained source evidence must stay active for non-owner semantic currentness', async t => {
+  const fx = await fixture(t);
+  const value = candidate({ claimId: 'claim.semantic.source.tombstone' });
+  const source = persistSourceEvidence(fx.store, value, {
+    sourceArtifactDigest: 'e'.repeat(64),
+    traceId: 'trace.semantic.state.source.tombstone.evidence'
+  });
+  const sourcedTrust = trust(value, {
+    originClass: 'retrieved-external',
+    sourceEvidenceDigest: source.memoryDigest
+  });
+  const state = createLocalContextSemanticStateRecord(value, sourcedTrust);
+  persistState(fx.store, state, 'trace.semantic.state.source.tombstone.state');
+
+  assert.doesNotThrow(() => getCurrentLocalContextSemanticState(fx.store, {
+    owner: value.owner_subject_ref,
+    claimId: value.claim_id
+  }));
+
+  tombstoneState(
+    fx.store,
+    value.owner_subject_ref,
+    source.objectId,
+    'trace.semantic.state.source.tombstone.apply'
+  );
+  assert.throws(
+    () => getCurrentLocalContextSemanticState(fx.store, {
+      owner: value.owner_subject_ref,
+      claimId: value.claim_id
+    }),
+    error => error?.code === 'context_semantic_source_evidence_tombstoned'
+  );
+});
+
+test('retained source class must match semantic trust origin class', async t => {
+  const fx = await fixture(t);
+  const value = candidate({ claimId: 'claim.semantic.source.class' });
+  const source = persistSourceEvidence(fx.store, value, {
+    sourceClass: 'retrieved-external',
+    sourceArtifactDigest: 'f'.repeat(64),
+    traceId: 'trace.semantic.state.source.class.evidence'
+  });
+  const mismatchedTrust = trust(value, {
+    originClass: 'imported',
+    sourceEvidenceDigest: source.memoryDigest
+  });
+  const state = createLocalContextSemanticStateRecord(value, mismatchedTrust);
+  persistState(fx.store, state, 'trace.semantic.state.source.class.state');
+
+  assert.throws(
+    () => getCurrentLocalContextSemanticState(fx.store, {
+      owner: value.owner_subject_ref,
+      claimId: value.claim_id
+    }),
+    /source class.*origin class/i
+  );
 });
 
 test('full Grid-chain corruption blocks semantic current-state evidence', async t => {
