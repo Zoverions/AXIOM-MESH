@@ -1,0 +1,20 @@
+AXIOM runtime/provider catalog v0
+
+This directory entry exists only as a compact operator note for runtime-provider-catalog.v0.json.
+The JSON inventory is a discovery/evidence surface layered on the frozen axiom-runtime-connector-catalog-entry.v1 contract.
+
+Catalog presence is not authority.
+Installation is not authority.
+Provider availability is not permission to send data.
+Runtime reachability is not permission to execute.
+
+Any consequential effect still requires Gateway -> Hypervisor -> Sandbox -> Grid.
+
+Seed scope:
+- agent runtimes: Hermes Agent, OpenClaw, OpenAI Codex CLI, Agent Zero
+- model providers: Arcee AI API, OpenAI API, Anthropic API, Google Gemini API, xAI API, Mistral API
+
+The runtime entries are pinned research identity profiles with no requested AXIOM actions, capabilities, credentials, network access, independent child authority, or remote execution.
+The provider entries declare only their network service origin, model-inference purpose, model input/output data classes, and API-key credential class. They request no AXIOM actions or capabilities.
+
+Open-weight model artifacts, specific model versions, SDKs, release artifacts, adapters, local inference engines, and compute backends should be cataloged as distinct immutable entries once exact provenance and applicable licensing are pinned. Do not collapse a provider service, model artifact, runtime, adapter, or compute backend into one trust object.
