@@ -1,0 +1,45 @@
+name: Apply bounded Grid startup candidate
+
+on:
+  push:
+    branches:
+      - ci/apply-bounded-grid-startup-20260824
+    paths:
+      - .github/workflows/apply-bounded-grid-startup.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reconstruct reviewed patches
+        shell: bash
+        run: |
+          cat .ci-helper/startup-patch.part*.b64 | base64 -d | gzip -d > /tmp/startup.patch
+          cat .ci-helper/review-fix.part*.b64 | base64 -d | gzip -d > /tmp/review.diff
+      - name: Apply to exact audited base
+        shell: bash
+        run: |
+          git config user.name "AXIOM-MESH CI"
+          git config user.email "208527039+Zoverions@users.noreply.github.com"
+          git checkout --detach e816136db24196cd82f34ee1e0e8291af1ea155f
+          git am /tmp/startup.patch
+          git apply --check /tmp/review.diff
+          git apply /tmp/review.diff
+          git add -A
+          git commit -m "Tighten Grid startup evidence semantics"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+          cache: npm
+      - name: Verify governed kernel
+        run: npm run check
+      - name: Push reviewed candidate
+        shell: bash
+        run: |
+          git push origin HEAD:refs/heads/perf/bounded-grid-startup-reviewed-20260824
