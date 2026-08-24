@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
@@ -20,6 +21,10 @@ jobs:
         run: |
           cat .ci-helper/startup-patch.part*.b64 | base64 -d | gzip -d > /tmp/startup.patch
           cat .ci-helper/review-fix.part*.b64 | base64 -d | gzip -d > /tmp/review.diff
+          # The preserved review payload contains one malformed final comment-only hunk.
+          # Retain every substantive code/doc hunk and apply that wording correction below.
+          head -n 351 /tmp/review.diff > /tmp/review.clean.diff
+          mv /tmp/review.clean.diff /tmp/review.diff
       - name: Apply to exact audited base
         shell: bash
         run: |
@@ -29,6 +34,51 @@ jobs:
           git am /tmp/startup.patch
           git apply --check /tmp/review.diff
           git apply /tmp/review.diff
+          python - <<'PY'
+          from pathlib import Path
+
+          core = Path('mesh/src/grid/_store-core.mjs')
+          text = core.read_text()
+          old = '''// Bounded startup: the materialization anchor records how far the materialized
+          // tables have already been folded forward, so a normal restart replays only the
+          // unmaterialized suffix instead of the complete event history. The anchor is
+          // advisory for correctness and authoritative for nothing: any mismatch, missing
+          // value, schema change, or materialization-code change discards it and falls
+          // back to the explicit full genesis rebuild.
+          '''
+          new = '''// Optional clean-restart fast path: a sealed materialization anchor can prove
+          // that the exact current chain head still matches the stored derived tables and
+          // therefore replay zero events. It does not implement incremental suffix replay:
+          // any mismatch, missing value, behind-head anchor, schema change, or
+          // materialization-code change falls back to the explicit full genesis rebuild.
+          // The anchor is advisory for correctness and authoritative for nothing.
+          '''
+          if old not in text:
+              raise SystemExit('expected materialization-anchor comment not found')
+          core.write_text(text.replace(old, new))
+
+          report = Path('docs/audits/GRID-STARTUP-REMEDIATION-2026-08-24.md')
+          text = report.read_text()
+          old = '''Synthetic fixture, 100,000 `intent.accepted` events, batch size 32, checkpoint
+          interval 10,000. Single host, Node 24.18.0, linux/x64. Steady-state restart,
+          second run of each. Wall time varies by host; the replayed-event counts are the
+          deterministic evidence.
+          '''
+          new = '''The timing figures below are the supplied **v1** benchmark run: a synthetic
+          fixture of 100,000 `intent.accepted` events, batch size 32, checkpoint interval
+          10,000, on one Node 24.18.0 linux/x64 host. The reviewed **v2** benchmark now
+          alternates `intent.accepted` and `intent.completed` so protected result
+          materialization is exercised when logical-state equivalence is checked. The v2
+          fixture has not yet been used to regenerate the wall-time/RSS table below, so
+          those numbers must not be attributed to v2. Wall time varies by host; replayed-
+          event counts remain the deterministic scaling evidence.
+          '''
+          if old not in text:
+              raise SystemExit('expected benchmark provenance paragraph not found')
+          text = text.replace(old, new).replace('Reproduce with:\n', 'Generate current v2 evidence with:\n')
+          report.write_text(text)
+          PY
+          git diff --check
           git add -A
           git commit -m "Tighten Grid startup evidence semantics"
       - uses: actions/setup-node@v4
@@ -37,6 +87,8 @@ jobs:
           cache: npm
       - name: Verify governed kernel
         run: npm run check
+      - name: Verify protected-state benchmark v2
+        run: npm run startup:benchmark -- --events 2000 --checkpoint-interval 1000 > /tmp/startup-v2-evidence.json
       - name: Push reviewed candidate
         shell: bash
         run: |
