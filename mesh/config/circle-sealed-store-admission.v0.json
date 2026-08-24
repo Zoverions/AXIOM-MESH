@@ -1,0 +1,31 @@
+{
+  "schema": "axiom-circle-sealed-store-admission.v0",
+  "version": 0,
+  "status": "inert-production-selection-prerequisite",
+  "runtime_activation": false,
+  "production_store_selected": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "requirements": {
+    "accepted_social_circle_composition_required": true,
+    "generic_internal_commit_circle_events_allowed": false,
+    "raw_circle_persistence_append_allowed": false,
+    "direct_lifecycle_guarded_circle_append_allowed": false,
+    "raw_member_lifecycle_append_allowed": false,
+    "possession_bound_circle_persistence_commit_available": true,
+    "member_lifecycle_authorized_commit_available": false,
+    "public_circle_route": false,
+    "gateway_circle_route": false,
+    "hypervisor_circle_runtime_route": false,
+    "network_egress_changed": false
+  },
+  "promotion_blockers": [
+    "authorized-member-lifecycle-commit-path",
+    "production-store-selection-review",
+    "authenticated-gateway-hypervisor-circle-routing",
+    "member-side-secret-safe-signing-and-custody-ux",
+    "accessible-circle-authorization-denial-and-recovery-explanations",
+    "recovery-and-administrative-lifecycle-authority-semantics",
+    "independent-security-privacy-coercion-sybil-recovery-capture-governance-review"
+  ]
+}
