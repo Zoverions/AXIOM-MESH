@@ -1,0 +1,76 @@
+{
+  "schema": "axiom-agent-read-system-facts-effect-admission-threat-model.v2",
+  "repository": "Zoverions/AXIOM-MESH",
+  "phase": "agent-trust-read-system-facts-fixed-effect-admission",
+  "scope": "One short-lived Ed25519 admission for the exact current-architecture read-system-facts handoff after a verified one-time consumption record. This layer binds policy and evidence but still performs no process, filesystem-read target effect, network effect, deployment or capability promotion.",
+  "core_invariant": "Durable consumption prevents replay but does not create effect authority. A separately trusted issuer may admit only the exact consumed read-system-facts handoff under the exact reviewed Linux isolation policy and exact candidate revision, and the eventual adapter must still recheck A6 currentness at the actual effect boundary.",
+  "attack_classes": [
+    {
+      "id": "admission-signer-substitution",
+      "risks": ["forge admission", "replace issuer key", "reuse an unrelated valid signature"],
+      "controls": ["Ed25519 issuer signature", "issuer key digest in signed statement", "statement digest", "content-addressed admission digest", "trusted issuer key supplied independently"]
+    },
+    {
+      "id": "handoff-or-consumption-substitution",
+      "risks": ["bind a different A4 task", "use another consumed record", "change executor or input after consume"],
+      "controls": ["full A4 reverification", "exact A1 executor verification", "full consumed-record reverification", "exact handoff/input/executor/consumption digest and storage-key equality"]
+    },
+    {
+      "id": "revision-substitution",
+      "risks": ["admit code other than reviewed candidate", "replay admission across repository revisions"],
+      "controls": ["repository fixed to Zoverions/AXIOM-MESH", "40-hex revision in signed statement", "verifier requires independent expected revision"]
+    },
+    {
+      "id": "lifetime-widening",
+      "risks": ["long-lived bearer-like admission", "start before consumption", "admit outside A4 window", "reuse expired admission"],
+      "controls": ["maximum lifetime 60 seconds", "not_before and expires_at inside A4 window", "not_before cannot precede consumption effect/currentness boundary", "verification-time active-window check"]
+    },
+    {
+      "id": "isolation-policy-substitution",
+      "risks": ["change image or entrypoint", "add bind mounts", "enable network", "raise resource ceilings", "allow arbitrary argv"],
+      "controls": ["one deep-frozen operation-specific policy", "exact policy ID/revision/digest in admission", "two fixed Node templates only", "caller-selectable image false", "network none", "bind mounts false"]
+    },
+    {
+      "id": "currentness-gap",
+      "risks": ["treat consume-time currentness as sufficient forever", "effect after revocation", "claim admission proves global currentness"],
+      "controls": ["consumption currentness-set digest is bound", "effect_boundary_currentness_recheck_required=true", "global_currentness_claimed=false", "eventual adapter must invoke A6 again at actual effect time"]
+    },
+    {
+      "id": "semantic-elevation",
+      "risks": ["admission presented as completed effect", "general executor authority", "network or credential authority", "task success/truth/application correctness", "production or deployment authority"],
+      "controls": ["effect_already_executed=false", "general_executor_authority=false", "repository_code_execution_authority=false", "arbitrary_command_authority=false", "arbitrary_path_authority=false", "network/credential/secret/remote-hardware authority false", "task success/truth/application correctness false", "authority/delegation effects none"]
+    }
+  ],
+  "known_nonclaims": [
+    "The operation-specific isolation policy is a requirement/binding object, not enforcement evidence.",
+    "The admission does not perform read-system-facts or any target effect.",
+    "The admission does not prove A6 currentness at the later actual effect boundary; it requires that recheck.",
+    "The admission does not create a general executor, repository-code execution path, arbitrary command/path authority, network authority, credential/secret access, remote-hardware authority, production authority, deployment authority, or capability promotion.",
+    "Hosted CI in the policy does not prove physical-device isolation.",
+    "A later effect receipt is required before A5b may claim the concrete bounded effect."
+  ],
+  "next_gates": [
+    "implement current-main fixed hosted-Linux adapter that independently reverifies admission, consumed record and A6 currentness immediately before process effect",
+    "emit signed executor-originated read-system-facts effect receipt with exact isolation observation and bounded outputs",
+    "independently reverify the effect receipt in A5b alongside A5a rather than inferring effect from Grid completion",
+    "run exact-head protected Linux effect workflow and preserve failures as evidence",
+    "obtain independent effect-path review before any promotion decision"
+  ],
+  "boundaries": {
+    "effect_executed": false,
+    "effect_admission_object_created": true,
+    "effect_boundary_currentness_recheck_required": true,
+    "global_currentness_claimed": false,
+    "process_effect": false,
+    "filesystem_effect": false,
+    "network_effect": false,
+    "credential_access": false,
+    "secret_access": false,
+    "general_executor_authority": false,
+    "production_authority": false,
+    "deployment_authority": false,
+    "capability_promotion_enabled": false,
+    "authority_effect": "none",
+    "delegation_effect": "none"
+  }
+}
