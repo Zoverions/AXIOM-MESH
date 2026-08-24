@@ -266,7 +266,7 @@ test('resolved claim feeds the existing lease-bound Context Capsule compiler wit
     revocationChecks: [{
       check_ref: 'revocation_accessibility_1',
       lease_id: 'lease_accessibility_1',
-      checked_at: '2026-08-24T09:55:00.000Z',
+      checked_at: '2026-08-24T09:45:00.000Z',
       valid_until: '2026-08-24T10:20:00.000Z',
       revoked: false
     }],
