@@ -256,7 +256,7 @@ test('wrong action or request binding cannot verify even when an intent complete
       trust: fixture.semanticTrust,
       intent: fixture.intent
     }),
-    error => error?.code === 'context_semantic_review_evidence_not_found'
+    /semantic review acceptance has invalid owner or action/
   );
 });
 
