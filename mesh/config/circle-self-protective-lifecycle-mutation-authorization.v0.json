@@ -1,0 +1,82 @@
+{
+  "schema": "axiom-circle-self-protective-lifecycle-mutation-authorization-policy.v0",
+  "version": 0,
+  "status": "inert-self-protective-lifecycle-mutation-authorization",
+  "runtime_activation": false,
+  "authority_effect": "none",
+  "network_effect": "none",
+  "mutation_kinds": {
+    "membership": [
+      "role-narrow",
+      "membership-suspend",
+      "membership-exit"
+    ],
+    "credential": [
+      "credential-suspend",
+      "credential-revoke",
+      "device-compromise"
+    ]
+  },
+  "requirements": {
+    "self_service_only": true,
+    "authenticated_principal_exact_membership_principal": true,
+    "current_grid_lifecycle_head_required": true,
+    "mutation_event_after_current_grid_head": true,
+    "mutation_event_not_future_at_authorization": true,
+    "proposed_candidate_previous_head_exact_current_head": true,
+    "proposed_candidate_identity_exact_current_head": true,
+    "proposed_candidate_must_advance_head": true,
+    "exactly_one_append_only_mutation": true,
+    "membership_mutation_appends_one_membership_event_only": true,
+    "membership_mutation_leaves_credential_lifecycle_unchanged": true,
+    "credential_mutation_appends_one_credential_event_only": true,
+    "credential_mutation_leaves_membership_lifecycle_unchanged": true,
+    "credential_mutation_leaves_device_credential_and_recovery_records_unchanged": true,
+    "fresh_pre_mutation_credential_possession_attestation_required": true,
+    "possession_attestation_exact_current_lifecycle_head_required": true,
+    "possession_attestation_exact_pre_mutation_credential_lifecycle_required": true,
+    "possession_request_binds_current_and_proposed_heads": true,
+    "possession_request_binds_exact_mutation": true,
+    "authorizing_credential_same_membership_principal": true,
+    "authorizing_credential_may_be_mutation_target": true,
+    "role_widening_supported": false,
+    "membership_resume_supported": false,
+    "membership_revoke_self_service_supported": false,
+    "credential_resume_supported": false,
+    "credential_issuance_supported": false,
+    "credential_rotation_supported": false,
+    "recovery_admission_supported": false,
+    "administrative_or_third_party_mutation_supported": false,
+    "mutation_authorization_is_execution_authority": false,
+    "grid_commit_performed": false,
+    "runtime_authority": false,
+    "portable_authority": false,
+    "external_effect_authority": false,
+    "public_route": false
+  },
+  "schemas": {
+    "request": "axiom-circle-self-protective-lifecycle-mutation-request.v0",
+    "assessment": "axiom-circle-self-protective-lifecycle-mutation-authorization.v0"
+  },
+  "non_claims": [
+    "human-identity",
+    "legal-identity",
+    "authorized-human-custody",
+    "credential-issuance-authority",
+    "credential-rotation-authority",
+    "credential-resume-authority",
+    "membership-resume-authority",
+    "membership-revocation-authority",
+    "role-grant-authority",
+    "recovery-admission-authority",
+    "administrative-authority",
+    "governance-legitimacy",
+    "coercion-free-participation",
+    "trusted-global-time",
+    "grid-commit-authority",
+    "runtime-authority",
+    "portable-authority",
+    "external-effect-authority",
+    "distributed-consensus"
+  ]
+}
