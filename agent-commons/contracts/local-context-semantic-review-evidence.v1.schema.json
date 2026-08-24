@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://axiom-mesh.dev/schemas/axiom-local-context-semantic-review-evidence.v1.json",
-  "title": "AXIOM Local Context Semantic Review Evidence v1",
+  "$id": "https://axiom-mesh.dev/schemas/axiom-local-context-semantic-review-evidence.v2.json",
+  "title": "AXIOM Local Context Semantic Review Evidence v2",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -18,11 +18,18 @@
     "accepted_event_id",
     "accepted_event_seq",
     "accepted_event_hash",
+    "completed_event_id",
+    "completed_event_seq",
+    "completed_event_hash",
+    "grid_chain_last_seq",
+    "grid_chain_last_hash",
     "verification_scope",
-    "grid_signature_verified",
-    "grid_trust_root_source_verified",
     "accepted_intent_verified",
-    "event_chain_currentness_verified",
+    "completed_intent_verified",
+    "materialized_completed_intent_verified",
+    "terminal_history_unambiguous",
+    "full_grid_chain_verified",
+    "retained_external_head_verified",
     "review_evidence_verified",
     "classification_effect",
     "review_applied_to_store",
@@ -37,7 +44,7 @@
     "review_evidence_digest"
   ],
   "properties": {
-    "schema": { "const": "axiom-local-context-semantic-review-evidence.v1" },
+    "schema": { "const": "axiom-local-context-semantic-review-evidence.v2" },
     "owner_subject_ref": { "$ref": "#/$defs/id" },
     "claim_id": { "$ref": "#/$defs/id" },
     "candidate_digest": { "$ref": "#/$defs/digest" },
@@ -54,13 +61,18 @@
     "accepted_event_id": { "$ref": "#/$defs/id" },
     "accepted_event_seq": { "type": "integer", "minimum": 1 },
     "accepted_event_hash": { "$ref": "#/$defs/digest" },
-    "verification_scope": {
-      "const": "supplied-grid-key-and-signed-accepted-event-only"
-    },
-    "grid_signature_verified": { "const": true },
-    "grid_trust_root_source_verified": { "const": false },
+    "completed_event_id": { "$ref": "#/$defs/id" },
+    "completed_event_seq": { "type": "integer", "minimum": 1 },
+    "completed_event_hash": { "$ref": "#/$defs/digest" },
+    "grid_chain_last_seq": { "type": "integer", "minimum": 1 },
+    "grid_chain_last_hash": { "$ref": "#/$defs/digest" },
+    "verification_scope": { "const": "local-grid-full-chain-completed-review" },
     "accepted_intent_verified": { "const": true },
-    "event_chain_currentness_verified": { "const": false },
+    "completed_intent_verified": { "const": true },
+    "materialized_completed_intent_verified": { "const": true },
+    "terminal_history_unambiguous": { "const": true },
+    "full_grid_chain_verified": { "const": true },
+    "retained_external_head_verified": { "const": false },
     "review_evidence_verified": { "const": true },
     "classification_effect": { "const": "evidence-only" },
     "review_applied_to_store": { "const": false },
@@ -76,31 +88,16 @@
   },
   "allOf": [
     {
-      "if": {
-        "properties": { "decision": { "const": "accept-data" } },
-        "required": ["decision"]
-      },
-      "then": {
-        "properties": { "resulting_review_state": { "const": "owner-reviewed" } }
-      }
+      "if": { "properties": { "decision": { "const": "accept-data" } }, "required": ["decision"] },
+      "then": { "properties": { "resulting_review_state": { "const": "owner-reviewed" } } }
     },
     {
-      "if": {
-        "properties": { "decision": { "const": "quarantine" } },
-        "required": ["decision"]
-      },
-      "then": {
-        "properties": { "resulting_review_state": { "const": "quarantined" } }
-      }
+      "if": { "properties": { "decision": { "const": "quarantine" } }, "required": ["decision"] },
+      "then": { "properties": { "resulting_review_state": { "const": "quarantined" } } }
     },
     {
-      "if": {
-        "properties": { "decision": { "const": "reject" } },
-        "required": ["decision"]
-      },
-      "then": {
-        "properties": { "resulting_review_state": { "const": "rejected" } }
-      }
+      "if": { "properties": { "decision": { "const": "reject" } }, "required": ["decision"] },
+      "then": { "properties": { "resulting_review_state": { "const": "rejected" } } }
     }
   ],
   "$defs": {

@@ -1,12 +1,10 @@
-import { createPublicKey } from 'node:crypto';
-
 import {
   assertPlainObject,
   assertString,
+  canonicalJson,
   digestObject,
   ValidationError
 } from './canonical.mjs';
-import { verifyObjectSignature } from './identity.mjs';
 import { intentRequestDigest } from './intent-binding.mjs';
 import { normalizeLocalContextCandidate } from './context-claim-resolution.mjs';
 import { verifyLocalContextSemanticTrust } from './context-semantic-trust.mjs';
@@ -14,7 +12,7 @@ import { verifyLocalContextSemanticTrust } from './context-semantic-trust.mjs';
 export const LOCAL_CONTEXT_SEMANTIC_REVIEW_INPUT_SCHEMA =
   'axiom-local-context-semantic-review-input.v1';
 export const LOCAL_CONTEXT_SEMANTIC_REVIEW_EVIDENCE_SCHEMA =
-  'axiom-local-context-semantic-review-evidence.v1';
+  'axiom-local-context-semantic-review-evidence.v2';
 export const LOCAL_CONTEXT_SEMANTIC_REVIEW_ACTION = 'context.semantic.review';
 export const LOCAL_CONTEXT_SEMANTIC_REVIEW_PURPOSE = 'govern-context-semantic-trust';
 export const LOCAL_CONTEXT_SEMANTIC_REVIEW_DATA_SCOPE = 'context:semantic:review';
@@ -37,19 +35,6 @@ const REVIEW_INPUT_KEYS = Object.freeze([
   'decision',
   'target_semantic_class'
 ]);
-const ACCEPTED_EVENT_KEYS = Object.freeze([
-  'seq',
-  'event_id',
-  'trace_id',
-  'actor',
-  'kind',
-  'subject',
-  'occurred_at',
-  'payload_digest',
-  'prev_hash',
-  'event_hash',
-  'signature'
-]);
 const REVIEW_EVIDENCE_KEYS = Object.freeze([
   'schema',
   'owner_subject_ref',
@@ -64,11 +49,18 @@ const REVIEW_EVIDENCE_KEYS = Object.freeze([
   'accepted_event_id',
   'accepted_event_seq',
   'accepted_event_hash',
+  'completed_event_id',
+  'completed_event_seq',
+  'completed_event_hash',
+  'grid_chain_last_seq',
+  'grid_chain_last_hash',
   'verification_scope',
-  'grid_signature_verified',
-  'grid_trust_root_source_verified',
   'accepted_intent_verified',
-  'event_chain_currentness_verified',
+  'completed_intent_verified',
+  'materialized_completed_intent_verified',
+  'terminal_history_unambiguous',
+  'full_grid_chain_verified',
+  'retained_external_head_verified',
   'review_evidence_verified',
   'classification_effect',
   'review_applied_to_store',
@@ -84,11 +76,13 @@ const REVIEW_EVIDENCE_KEYS = Object.freeze([
 ]);
 
 const FIXED_EVIDENCE_SEMANTICS = Object.freeze({
-  verification_scope: 'supplied-grid-key-and-signed-accepted-event-only',
-  grid_signature_verified: true,
-  grid_trust_root_source_verified: false,
+  verification_scope: 'local-grid-full-chain-completed-review',
   accepted_intent_verified: true,
-  event_chain_currentness_verified: false,
+  completed_intent_verified: true,
+  materialized_completed_intent_verified: true,
+  terminal_history_unambiguous: true,
+  full_grid_chain_verified: true,
+  retained_external_head_verified: false,
   review_evidence_verified: true,
   classification_effect: 'evidence-only',
   review_applied_to_store: false,
@@ -120,15 +114,6 @@ function id(value, label) {
 
 function digest(value, label) {
   return assertString(value, label, { min: 64, max: 64, pattern: DIGEST });
-}
-
-function canonicalTimestamp(value, label) {
-  const text = assertString(value, label, { min: 24, max: 24 });
-  const parsed = new Date(text);
-  if (Number.isNaN(parsed.valueOf()) || parsed.toISOString() !== text) {
-    throw new ValidationError(`${label} must be a canonical UTC ISO timestamp`);
-  }
-  return text;
 }
 
 function semanticClass(value, label) {
@@ -191,13 +176,14 @@ function normalizeReviewInput(raw, candidate, trust) {
   });
 }
 
-function normalizeReviewIntent(intent, candidate, trust) {
+export function normalizeLocalContextSemanticReviewIntent(intent, candidate, trust) {
   const value = assertPlainObject(intent, 'local context semantic review intent');
   const principal = assertPlainObject(value.principal, 'semantic review intent principal');
+  const normalizedCandidate = normalizeLocalContextCandidate(candidate);
   if (
     principal.type !== 'human'
     || id(principal.id, 'semantic review intent principal.id')
-      !== normalizeLocalContextCandidate(candidate).owner_subject_ref
+      !== normalizedCandidate.owner_subject_ref
   ) {
     throw new ValidationError('semantic review intent requires the exact human owner principal');
   }
@@ -217,72 +203,9 @@ function normalizeReviewIntent(intent, candidate, trust) {
   return Object.freeze({
     principal: Object.freeze({ id: principal.id, type: 'human' }),
     action: LOCAL_CONTEXT_SEMANTIC_REVIEW_ACTION,
-    input: normalizeReviewInput(value.input, candidate, trust),
+    input: normalizeReviewInput(value.input, normalizedCandidate, trust),
     purpose: LOCAL_CONTEXT_SEMANTIC_REVIEW_PURPOSE,
     data_scopes: Object.freeze([LOCAL_CONTEXT_SEMANTIC_REVIEW_DATA_SCOPE])
-  });
-}
-
-function parseGridPublicKey(value) {
-  let key;
-  try {
-    key = value && typeof value === 'object' && value.type === 'public'
-      ? value
-      : createPublicKey(value);
-  } catch {
-    throw new ValidationError('semantic review trusted Grid public key is invalid');
-  }
-  if (key.asymmetricKeyType !== 'ed25519') {
-    throw new ValidationError('semantic review trusted Grid public key must be Ed25519');
-  }
-  return key;
-}
-
-function verifyAcceptedEvent(event, payload, trustedGridPublicKey) {
-  exactKeys(event, ACCEPTED_EVENT_KEYS, 'semantic review accepted event');
-  const acceptedPayload = assertPlainObject(payload, 'semantic review accepted payload');
-  if (!Number.isSafeInteger(event.seq) || event.seq < 1) {
-    throw new ValidationError('semantic review accepted event seq is invalid');
-  }
-  id(event.event_id, 'semantic review accepted event_id');
-  id(event.trace_id, 'semantic review accepted trace_id');
-  id(event.actor, 'semantic review accepted actor');
-  if (event.kind !== 'intent.accepted') {
-    throw new ValidationError('semantic review evidence requires intent.accepted');
-  }
-  id(event.subject, 'semantic review accepted subject');
-  canonicalTimestamp(event.occurred_at, 'semantic review accepted occurred_at');
-  const payloadDigest = digest(event.payload_digest, 'semantic review accepted payload_digest');
-  const prevHash = digest(event.prev_hash, 'semantic review accepted prev_hash');
-  const eventHash = digest(event.event_hash, 'semantic review accepted event_hash');
-  if (payloadDigest !== digestObject(acceptedPayload)) {
-    throw new ValidationError('semantic review accepted payload digest mismatch');
-  }
-
-  const envelope = {
-    seq: event.seq,
-    event_id: event.event_id,
-    trace_id: event.trace_id,
-    actor: event.actor,
-    kind: event.kind,
-    subject: event.subject,
-    occurred_at: event.occurred_at,
-    payload_digest: payloadDigest,
-    prev_hash: prevHash
-  };
-  if (digestObject(envelope) !== eventHash) {
-    throw new ValidationError('semantic review accepted event hash mismatch');
-  }
-  if (!verifyObjectSignature(
-    { event_hash: eventHash },
-    event.signature,
-    parseGridPublicKey(trustedGridPublicKey)
-  )) {
-    throw new ValidationError('semantic review accepted event Grid signature is invalid');
-  }
-  return Object.freeze({
-    event: Object.freeze({ ...event }),
-    payload: Object.freeze({ ...acceptedPayload })
   });
 }
 
@@ -292,58 +215,126 @@ export function createLocalContextSemanticReviewIntent(candidate, trust, {
 } = {}) {
   const normalizedCandidate = normalizeLocalContextCandidate(candidate);
   const verifiedTrust = verifyLocalContextSemanticTrust(trust, normalizedCandidate);
-  const input = normalizeReviewInput({
-    schema: LOCAL_CONTEXT_SEMANTIC_REVIEW_INPUT_SCHEMA,
-    owner_subject_ref: normalizedCandidate.owner_subject_ref,
-    claim_id: normalizedCandidate.claim_id,
-    candidate_digest: verifiedTrust.candidate_digest,
-    prior_trust_digest: verifiedTrust.trust_digest,
-    decision,
-    target_semantic_class: targetSemanticClass
-  }, normalizedCandidate, verifiedTrust);
-  return Object.freeze({
-    principal: Object.freeze({
+  return normalizeLocalContextSemanticReviewIntent({
+    principal: {
       id: normalizedCandidate.owner_subject_ref,
       type: 'human'
-    }),
+    },
     action: LOCAL_CONTEXT_SEMANTIC_REVIEW_ACTION,
-    input,
+    input: {
+      schema: LOCAL_CONTEXT_SEMANTIC_REVIEW_INPUT_SCHEMA,
+      owner_subject_ref: normalizedCandidate.owner_subject_ref,
+      claim_id: normalizedCandidate.claim_id,
+      candidate_digest: verifiedTrust.candidate_digest,
+      prior_trust_digest: verifiedTrust.trust_digest,
+      decision,
+      target_semantic_class: targetSemanticClass
+    },
     purpose: LOCAL_CONTEXT_SEMANTIC_REVIEW_PURPOSE,
-    data_scopes: Object.freeze([LOCAL_CONTEXT_SEMANTIC_REVIEW_DATA_SCOPE])
-  });
+    data_scopes: [LOCAL_CONTEXT_SEMANTIC_REVIEW_DATA_SCOPE]
+  }, normalizedCandidate, verifiedTrust);
 }
 
-export function verifyAcceptedLocalContextSemanticReview({
+export function verifyAcceptedLocalContextSemanticReview() {
+  throw new ValidationError(
+    'Accepted semantic review is not sufficient; completed full-Grid evidence is required'
+  );
+}
+
+export function verifyCompletedLocalContextSemanticReview({
   candidate,
   trust,
   intent,
-  acceptedEvent,
-  acceptedPayload,
-  trustedGridPublicKey
+  materializedIntent,
+  events,
+  chain
 } = {}) {
   const normalizedCandidate = normalizeLocalContextCandidate(candidate);
   const verifiedTrust = verifyLocalContextSemanticTrust(trust, normalizedCandidate);
-  const normalizedIntent = normalizeReviewIntent(intent, normalizedCandidate, verifiedTrust);
-  const accepted = verifyAcceptedEvent(acceptedEvent, acceptedPayload, trustedGridPublicKey);
+  const normalizedIntent = normalizeLocalContextSemanticReviewIntent(
+    intent,
+    normalizedCandidate,
+    verifiedTrust
+  );
   const expectedRequestDigest = intentRequestDigest(normalizedIntent);
   const expectedInputDigest = digestObject(normalizedIntent.input);
   const owner = normalizedCandidate.owner_subject_ref;
 
+  const materialized = assertPlainObject(materializedIntent, 'semantic review materialized intent');
+  const intentId = id(materialized.intent_id, 'semantic review materialized intent_id');
+  const traceId = id(materialized.trace_id, 'semantic review materialized trace_id');
   if (
-    accepted.event.actor !== owner
-    || accepted.event.subject !== accepted.payload.intent_id
-    || accepted.payload.principal !== owner
-    || accepted.payload.action !== LOCAL_CONTEXT_SEMANTIC_REVIEW_ACTION
-    || accepted.payload.input_digest !== expectedInputDigest
-    || accepted.payload.request_digest !== expectedRequestDigest
+    materialized.principal !== owner
+    || materialized.action !== LOCAL_CONTEXT_SEMANTIC_REVIEW_ACTION
+    || materialized.status !== 'completed'
+    || materialized.request_digest !== expectedRequestDigest
+    || materialized.input_digest !== expectedInputDigest
   ) {
-    throw new ValidationError('semantic review accepted event does not match the exact owner review intent');
+    throw new ValidationError('semantic review materialized intent does not match the exact completed review');
   }
-  id(accepted.payload.intent_id, 'semantic review accepted payload intent_id');
-  assertString(accepted.payload.risk, 'semantic review accepted payload risk', {
-    min: 1,
-    max: 32
-  });
+
+  if (!Array.isArray(events)) {
+    throw new ValidationError('semantic review terminal history must be an array');
+  }
+  const acceptedEvents = events.filter(event => event?.kind === 'intent.accepted');
+  const completedEvents = events.filter(event => event?.kind === 'intent.completed');
+  const adverseEvents = events.filter(event => (
+    event?.kind === 'intent.denied' || event?.kind === 'intent.failed'
+  ));
+  if (acceptedEvents.length !== 1 || completedEvents.length !== 1) {
+    throw new ValidationError('semantic review requires one accepted and one completed event');
+  }
+  if (adverseEvents.length) {
+    throw new ValidationError('semantic review terminal history contains denied or failed evidence');
+  }
+
+  const accepted = acceptedEvents[0];
+  const completed = completedEvents[0];
+  if (
+    !Number.isSafeInteger(accepted.seq)
+    || !Number.isSafeInteger(completed.seq)
+    || accepted.seq < 1
+    || completed.seq <= accepted.seq
+    || accepted.actor !== owner
+    || completed.actor !== owner
+    || accepted.trace_id !== traceId
+    || completed.trace_id !== traceId
+    || accepted.subject !== intentId
+    || completed.subject !== intentId
+  ) {
+    throw new ValidationError('semantic review event ordering or owner/trace binding is invalid');
+  }
+  if (
+    accepted.payload?.intent_id !== intentId
+    || accepted.payload?.principal !== owner
+    || accepted.payload?.action !== LOCAL_CONTEXT_SEMANTIC_REVIEW_ACTION
+    || accepted.payload?.request_digest !== expectedRequestDigest
+    || accepted.payload?.input_digest !== expectedInputDigest
+  ) {
+    throw new ValidationError('semantic review accepted event does not match the exact review request');
+  }
+
+  const result = assertPlainObject(completed.payload?.result, 'semantic review completed result');
+  if (
+    completed.payload?.intent_id !== intentId
+    || result.intent_id !== intentId
+    || result.trace_id !== traceId
+    || result.status !== 'completed'
+  ) {
+    throw new ValidationError('semantic review completed event does not match the exact review request');
+  }
+  if (canonicalJson(materialized.result_json) !== canonicalJson(result)) {
+    throw new ValidationError('semantic review materialized result does not match signed completion evidence');
+  }
+
+  const chainState = assertPlainObject(chain, 'semantic review verified Grid chain');
+  if (chainState.valid !== true) {
+    throw new ValidationError('semantic review requires a valid full Grid evidence chain');
+  }
+  if (!Number.isSafeInteger(chainState.last_seq) || chainState.last_seq < completed.seq) {
+    throw new ValidationError('semantic review Grid chain last_seq does not cover completed review');
+  }
+  const chainLastHash = digest(chainState.last_hash, 'semantic review Grid chain last_hash');
 
   const body = Object.freeze({
     schema: LOCAL_CONTEXT_SEMANTIC_REVIEW_EVIDENCE_SCHEMA,
@@ -354,11 +345,16 @@ export function verifyAcceptedLocalContextSemanticReview({
     decision: normalizedIntent.input.decision,
     target_semantic_class: normalizedIntent.input.target_semantic_class,
     resulting_review_state: reviewStateForDecision(normalizedIntent.input.decision),
-    intent_id: accepted.payload.intent_id,
+    intent_id: intentId,
     intent_request_digest: expectedRequestDigest,
-    accepted_event_id: accepted.event.event_id,
-    accepted_event_seq: accepted.event.seq,
-    accepted_event_hash: accepted.event.event_hash,
+    accepted_event_id: id(accepted.event_id, 'semantic review accepted event_id'),
+    accepted_event_seq: accepted.seq,
+    accepted_event_hash: digest(accepted.event_hash, 'semantic review accepted event_hash'),
+    completed_event_id: id(completed.event_id, 'semantic review completed event_id'),
+    completed_event_seq: completed.seq,
+    completed_event_hash: digest(completed.event_hash, 'semantic review completed event_hash'),
+    grid_chain_last_seq: chainState.last_seq,
+    grid_chain_last_hash: chainLastHash,
     ...FIXED_EVIDENCE_SEMANTICS
   });
   return Object.freeze({
@@ -386,10 +382,25 @@ export function validateLocalContextSemanticReviewEvidence(raw) {
   id(raw.intent_id, 'semantic review evidence intent_id');
   digest(raw.intent_request_digest, 'semantic review evidence intent_request_digest');
   id(raw.accepted_event_id, 'semantic review evidence accepted_event_id');
-  if (!Number.isSafeInteger(raw.accepted_event_seq) || raw.accepted_event_seq < 1) {
-    throw new ValidationError('semantic review evidence accepted_event_seq is invalid');
+  id(raw.completed_event_id, 'semantic review evidence completed_event_id');
+  for (const [field, value] of [
+    ['accepted_event_seq', raw.accepted_event_seq],
+    ['completed_event_seq', raw.completed_event_seq],
+    ['grid_chain_last_seq', raw.grid_chain_last_seq]
+  ]) {
+    if (!Number.isSafeInteger(value) || value < 1) {
+      throw new ValidationError(`semantic review evidence ${field} is invalid`);
+    }
+  }
+  if (
+    raw.accepted_event_seq >= raw.completed_event_seq
+    || raw.completed_event_seq > raw.grid_chain_last_seq
+  ) {
+    throw new ValidationError('semantic review evidence event ordering is invalid');
   }
   digest(raw.accepted_event_hash, 'semantic review evidence accepted_event_hash');
+  digest(raw.completed_event_hash, 'semantic review evidence completed_event_hash');
+  digest(raw.grid_chain_last_hash, 'semantic review evidence grid_chain_last_hash');
   for (const [key, expected] of Object.entries(FIXED_EVIDENCE_SEMANTICS)) {
     if (raw[key] !== expected) {
       throw new ValidationError(`semantic review evidence ${key} must remain ${String(expected)}`);

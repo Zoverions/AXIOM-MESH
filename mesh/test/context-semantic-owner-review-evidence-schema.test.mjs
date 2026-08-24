@@ -11,27 +11,27 @@ const schemaUrl = new URL(
   import.meta.url
 );
 
-test('A7 owner semantic-review evidence schema stays synchronized with fail-closed runtime claims', async () => {
+test('A7 owner semantic-review evidence schema requires completed full-Grid evidence and stays non-authorizing', async () => {
   const schema = JSON.parse(await readFile(schemaUrl, 'utf8'));
   assert.equal(schema.properties.schema.const, LOCAL_CONTEXT_SEMANTIC_REVIEW_EVIDENCE_SCHEMA);
-  assert.deepEqual(
-    schema.properties.decision.enum,
-    ['accept-data', 'quarantine', 'reject']
-  );
+  assert.deepEqual(schema.properties.decision.enum, ['accept-data', 'quarantine', 'reject']);
   assert.deepEqual(
     schema.properties.target_semantic_class.enum,
     ['knowledge', 'preference', 'procedure', 'instruction-candidate']
   );
-  assert.equal(
-    schema.properties.verification_scope.const,
-    'supplied-grid-key-and-signed-accepted-event-only'
-  );
-  assert.equal(schema.properties.grid_signature_verified.const, true);
-  assert.equal(schema.properties.accepted_intent_verified.const, true);
-  assert.equal(schema.properties.review_evidence_verified.const, true);
+  assert.equal(schema.properties.verification_scope.const, 'local-grid-full-chain-completed-review');
   for (const field of [
-    'grid_trust_root_source_verified',
-    'event_chain_currentness_verified',
+    'accepted_intent_verified',
+    'completed_intent_verified',
+    'materialized_completed_intent_verified',
+    'terminal_history_unambiguous',
+    'full_grid_chain_verified',
+    'review_evidence_verified'
+  ]) {
+    assert.equal(schema.properties[field].const, true, `${field} must remain true`);
+  }
+  for (const field of [
+    'retained_external_head_verified',
     'review_applied_to_store',
     'instruction_semantics',
     'owner_instruction_use_enabled',

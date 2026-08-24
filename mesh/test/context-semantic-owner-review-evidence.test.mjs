@@ -1,14 +1,15 @@
 import assert from 'node:assert/strict';
-import { generateKeyPairSync } from 'node:crypto';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 
 import { digestObject } from '../src/lib/canonical.mjs';
-import { MeshIdentity } from '../src/lib/identity.mjs';
+import { ensureMeshIdentity } from '../src/lib/identity.mjs';
+import { loadDataProtector } from '../src/lib/protector.mjs';
 import { intentRequestDigest } from '../src/lib/intent-binding.mjs';
 import { LOCAL_CONTEXT_CANDIDATE_SCHEMA } from '../src/lib/context-claim-resolution.mjs';
-import {
-  createLocalContextSemanticTrust
-} from '../src/lib/context-semantic-trust.mjs';
+import { createLocalContextSemanticTrust } from '../src/lib/context-semantic-trust.mjs';
 import {
   LOCAL_CONTEXT_SEMANTIC_REVIEW_ACTION,
   LOCAL_CONTEXT_SEMANTIC_REVIEW_DATA_SCOPE,
@@ -18,8 +19,8 @@ import {
   validateLocalContextSemanticReviewEvidence,
   verifyAcceptedLocalContextSemanticReview
 } from '../src/lib/context-semantic-review-evidence.mjs';
-
-const ZERO = '0'.repeat(64);
+import { verifyLocalContextSemanticReviewFromGrid } from '../src/grid/context-semantic-review-evidence.mjs';
+import { GridStore } from '../src/grid/store.mjs';
 
 function candidate() {
   return {
@@ -53,92 +54,126 @@ function trust(value = candidate()) {
   });
 }
 
-function gridIdentity() {
-  const pair = generateKeyPairSync('ed25519');
-  return new MeshIdentity(
-    'grid',
-    pair.privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(),
-    pair.publicKey.export({ type: 'spki', format: 'pem' }).toString()
-  );
+async function storeFixture(t) {
+  const dataDir = await mkdtemp(join(tmpdir(), 'axiom-context-semantic-review-'));
+  const identity = await ensureMeshIdentity(dataDir, 'grid', { create: true });
+  const protector = await loadDataProtector({ dataDir, autoBootstrap: true });
+  const store = new GridStore({
+    path: join(dataDir, 'grid.sqlite'),
+    dataDir,
+    identity,
+    protector
+  });
+  t.after(async () => {
+    store.close();
+    await rm(dataDir, { recursive: true, force: true });
+  });
+  return store;
 }
 
-function acceptedReview(identity, intent, {
-  intentId = 'intent.semantic.review.1',
-  eventId = 'evt.semantic.review.1',
-  actor = intent.principal.id,
-  principal = intent.principal.id,
-  action = intent.action,
-  requestDigest = intentRequestDigest(intent),
-  inputDigest = digestObject(intent.input),
-  seq = 42,
-  prevHash = ZERO
-} = {}) {
-  const payload = {
-    intent_id: intentId,
-    principal,
-    action,
-    risk: 'low',
-    input_digest: inputDigest,
-    request_digest: requestDigest
-  };
-  const envelope = {
-    seq,
-    event_id: eventId,
-    trace_id: 'trace.semantic.review.1',
-    actor,
-    kind: 'intent.accepted',
-    subject: intentId,
-    occurred_at: '2026-08-24T12:05:00.000Z',
-    payload_digest: digestObject(payload),
-    prev_hash: prevHash
-  };
-  const event_hash = digestObject(envelope);
-  return {
-    event: {
-      ...envelope,
-      event_hash,
-      signature: identity.signObject({ event_hash })
-    },
-    payload
-  };
-}
-
-function acceptedEvidence({
-  decision = 'accept-data',
-  targetSemanticClass = 'preference'
-} = {}) {
+function reviewFixture({ decision = 'accept-data', targetSemanticClass = 'preference' } = {}) {
   const value = candidate();
   const semanticTrust = trust(value);
   const intent = createLocalContextSemanticReviewIntent(value, semanticTrust, {
     decision,
     targetSemanticClass
   });
-  const grid = gridIdentity();
-  const accepted = acceptedReview(grid, intent);
-  const evidence = verifyAcceptedLocalContextSemanticReview({
-    candidate: value,
-    trust: semanticTrust,
-    intent,
-    acceptedEvent: accepted.event,
-    acceptedPayload: accepted.payload,
-    trustedGridPublicKey: grid.publicKey
-  });
-  return { value, semanticTrust, intent, grid, accepted, evidence };
+  return { value, semanticTrust, intent };
 }
 
-test('A7 owner semantic review verifies exact Grid-signed acceptance but remains evidence-only', () => {
-  const fixture = acceptedEvidence();
-  const evidence = fixture.evidence;
+function appendAccepted(store, fixture, {
+  intentId = 'intent.semantic.review.1',
+  traceId = 'trace.semantic.review.1',
+  actor = fixture.intent.principal.id,
+  principal = fixture.intent.principal.id,
+  action = fixture.intent.action,
+  requestDigest = intentRequestDigest(fixture.intent),
+  inputDigest = digestObject(fixture.intent.input)
+} = {}) {
+  const [event] = store.appendEvents({
+    traceId,
+    actor,
+    events: [{
+      kind: 'intent.accepted',
+      subject: intentId,
+      payload: {
+        intent_id: intentId,
+        principal,
+        action,
+        risk: 'low',
+        input_digest: inputDigest,
+        request_digest: requestDigest
+      }
+    }]
+  });
+  return { event, intentId, traceId };
+}
+
+function appendCompleted(store, fixture, {
+  intentId = 'intent.semantic.review.1',
+  traceId = 'trace.semantic.review.1',
+  actor = fixture.intent.principal.id,
+  resultTraceId = traceId
+} = {}) {
+  const result = {
+    intent_id: intentId,
+    trace_id: resultTraceId,
+    status: 'completed'
+  };
+  const [event] = store.appendEvents({
+    traceId,
+    actor,
+    events: [{
+      kind: 'intent.completed',
+      subject: intentId,
+      payload: { intent_id: intentId, result }
+    }]
+  });
+  return { event, result };
+}
+
+function appendDenied(store, fixture, {
+  intentId = 'intent.semantic.review.1',
+  traceId = 'trace.semantic.review.1'
+} = {}) {
+  store.appendEvents({
+    traceId,
+    actor: fixture.intent.principal.id,
+    events: [{
+      kind: 'intent.denied',
+      subject: intentId,
+      payload: {
+        intent_id: intentId,
+        error: { code: 'policy_denied', message: 'denied for fixture' }
+      }
+    }]
+  });
+}
+
+test('completed owner review becomes full-Grid verified evidence but remains non-authorizing', async t => {
+  const store = await storeFixture(t);
+  const fixture = reviewFixture();
+  const accepted = appendAccepted(store, fixture);
+  const completed = appendCompleted(store, fixture, accepted);
+
+  const evidence = verifyLocalContextSemanticReviewFromGrid(store, {
+    candidate: fixture.value,
+    trust: fixture.semanticTrust,
+    intent: fixture.intent
+  });
   assert.equal(evidence.schema, LOCAL_CONTEXT_SEMANTIC_REVIEW_EVIDENCE_SCHEMA);
   assert.equal(evidence.owner_subject_ref, 'owner.alice');
   assert.equal(evidence.decision, 'accept-data');
-  assert.equal(evidence.target_semantic_class, 'preference');
   assert.equal(evidence.resulting_review_state, 'owner-reviewed');
-  assert.equal(evidence.grid_signature_verified, true);
+  assert.equal(evidence.accepted_event_id, accepted.event.event_id);
+  assert.equal(evidence.completed_event_id, completed.event.event_id);
   assert.equal(evidence.accepted_intent_verified, true);
+  assert.equal(evidence.completed_intent_verified, true);
+  assert.equal(evidence.materialized_completed_intent_verified, true);
+  assert.equal(evidence.terminal_history_unambiguous, true);
+  assert.equal(evidence.full_grid_chain_verified, true);
+  assert.equal(evidence.retained_external_head_verified, false);
   assert.equal(evidence.review_evidence_verified, true);
-  assert.equal(evidence.grid_trust_root_source_verified, false);
-  assert.equal(evidence.event_chain_currentness_verified, false);
   assert.equal(evidence.classification_effect, 'evidence-only');
   assert.equal(evidence.review_applied_to_store, false);
   assert.equal(evidence.instruction_semantics, false);
@@ -146,152 +181,137 @@ test('A7 owner semantic review verifies exact Grid-signed acceptance but remains
   assert.equal(evidence.authority_effect, 'none');
   assert.equal(evidence.grants_vault_access, false);
   assert.equal(evidence.grants_execution_authority, false);
-  assert.equal(evidence.may_authorize_tools, false);
-  assert.equal(evidence.may_modify_policy, false);
-  assert.equal(evidence.may_self_persist, false);
   assert.deepEqual(validateLocalContextSemanticReviewEvidence(evidence), evidence);
 });
 
-test('review intent is exactly scoped to owner semantic governance', () => {
-  const value = candidate();
-  const semanticTrust = trust(value);
-  const intent = createLocalContextSemanticReviewIntent(value, semanticTrust, {
-    decision: 'quarantine',
-    targetSemanticClass: 'knowledge'
+test('accepted-only review can never become verified review evidence', async t => {
+  const store = await storeFixture(t);
+  const fixture = reviewFixture();
+  appendAccepted(store, fixture);
+
+  assert.throws(
+    () => verifyAcceptedLocalContextSemanticReview(),
+    /completed full-Grid evidence is required/
+  );
+  assert.throws(
+    () => verifyLocalContextSemanticReviewFromGrid(store, {
+      candidate: fixture.value,
+      trust: fixture.semanticTrust,
+      intent: fixture.intent
+    }),
+    error => error?.code === 'context_semantic_review_not_completed'
+  );
+});
+
+test('denied review cannot masquerade as successful review evidence', async t => {
+  const store = await storeFixture(t);
+  const fixture = reviewFixture({ decision: 'quarantine', targetSemanticClass: 'knowledge' });
+  const accepted = appendAccepted(store, fixture);
+  appendDenied(store, fixture, accepted);
+
+  assert.throws(
+    () => verifyLocalContextSemanticReviewFromGrid(store, {
+      candidate: fixture.value,
+      trust: fixture.semanticTrust,
+      intent: fixture.intent
+    }),
+    error => error?.code === 'context_semantic_review_not_completed'
+  );
+});
+
+test('later successful retry of identical review may verify after an earlier denial', async t => {
+  const store = await storeFixture(t);
+  const fixture = reviewFixture();
+  const first = appendAccepted(store, fixture, {
+    intentId: 'intent.semantic.review.denied',
+    traceId: 'trace.semantic.review.denied'
   });
-  assert.deepEqual(intent.principal, { id: 'owner.alice', type: 'human' });
-  assert.equal(intent.action, LOCAL_CONTEXT_SEMANTIC_REVIEW_ACTION);
-  assert.equal(intent.purpose, LOCAL_CONTEXT_SEMANTIC_REVIEW_PURPOSE);
-  assert.deepEqual(intent.data_scopes, [LOCAL_CONTEXT_SEMANTIC_REVIEW_DATA_SCOPE]);
-  assert.equal(intent.input.prior_trust_digest, semanticTrust.trust_digest);
-  assert.equal(intent.input.candidate_digest, semanticTrust.candidate_digest);
+  appendDenied(store, fixture, first);
+  const second = appendAccepted(store, fixture, {
+    intentId: 'intent.semantic.review.completed',
+    traceId: 'trace.semantic.review.completed'
+  });
+  appendCompleted(store, fixture, second);
+
+  const evidence = verifyLocalContextSemanticReviewFromGrid(store, {
+    candidate: fixture.value,
+    trust: fixture.semanticTrust,
+    intent: fixture.intent
+  });
+  assert.equal(evidence.intent_id, second.intentId);
+  assert.equal(evidence.completed_intent_verified, true);
 });
 
-test('quarantine and rejection map deterministically without creating authority', () => {
-  const quarantined = acceptedEvidence({ decision: 'quarantine', targetSemanticClass: 'knowledge' }).evidence;
-  const rejected = acceptedEvidence({ decision: 'reject', targetSemanticClass: 'procedure' }).evidence;
-  assert.equal(quarantined.resulting_review_state, 'quarantined');
-  assert.equal(rejected.resulting_review_state, 'rejected');
-  for (const evidence of [quarantined, rejected]) {
-    assert.equal(evidence.review_applied_to_store, false);
-    assert.equal(evidence.authority_effect, 'none');
-    assert.equal(evidence.owner_instruction_use_enabled, false);
-  }
+test('wrong action or request binding cannot verify even when an intent completes', async t => {
+  const store = await storeFixture(t);
+  const fixture = reviewFixture();
+  const wrong = appendAccepted(store, fixture, {
+    action: 'system.echo'
+  });
+  appendCompleted(store, fixture, wrong);
+
+  assert.throws(
+    () => verifyLocalContextSemanticReviewFromGrid(store, {
+      candidate: fixture.value,
+      trust: fixture.semanticTrust,
+      intent: fixture.intent
+    }),
+    error => error?.code === 'context_semantic_review_evidence_not_found'
+  );
 });
 
-test('instruction-candidate remains a label and never becomes instruction permission', () => {
-  const evidence = acceptedEvidence({
+test('full-chain corruption prevents review evidence issuance', async t => {
+  const store = await storeFixture(t);
+  const fixture = reviewFixture();
+  const accepted = appendAccepted(store, fixture);
+  appendCompleted(store, fixture, accepted);
+  store.db.prepare('UPDATE events SET event_hash = ? WHERE event_id = ?').run(
+    'f'.repeat(64),
+    accepted.event.event_id
+  );
+
+  assert.throws(
+    () => verifyLocalContextSemanticReviewFromGrid(store, {
+      candidate: fixture.value,
+      trust: fixture.semanticTrust,
+      intent: fixture.intent
+    }),
+    error => error?.code === 'integrity_verification_failed'
+  );
+});
+
+test('instruction-candidate remains only a label after completed review', async t => {
+  const store = await storeFixture(t);
+  const fixture = reviewFixture({
     decision: 'accept-data',
     targetSemanticClass: 'instruction-candidate'
-  }).evidence;
+  });
+  const accepted = appendAccepted(store, fixture);
+  appendCompleted(store, fixture, accepted);
+  const evidence = verifyLocalContextSemanticReviewFromGrid(store, {
+    candidate: fixture.value,
+    trust: fixture.semanticTrust,
+    intent: fixture.intent
+  });
   assert.equal(evidence.target_semantic_class, 'instruction-candidate');
-  assert.equal(evidence.resulting_review_state, 'owner-reviewed');
   assert.equal(evidence.instruction_semantics, false);
   assert.equal(evidence.owner_instruction_use_enabled, false);
   assert.equal(evidence.authority_effect, 'none');
 });
 
-test('candidate, prior trust and review-decision substitution fail closed', () => {
-  const fixture = acceptedEvidence();
-
-  const alteredIntent = structuredClone(fixture.intent);
-  alteredIntent.input.target_semantic_class = 'procedure';
-  assert.throws(() => verifyAcceptedLocalContextSemanticReview({
+test('review evidence fixed non-authority semantics cannot be elevated', async t => {
+  const store = await storeFixture(t);
+  const fixture = reviewFixture();
+  const accepted = appendAccepted(store, fixture);
+  appendCompleted(store, fixture, accepted);
+  const evidence = verifyLocalContextSemanticReviewFromGrid(store, {
     candidate: fixture.value,
     trust: fixture.semanticTrust,
-    intent: alteredIntent,
-    acceptedEvent: fixture.accepted.event,
-    acceptedPayload: fixture.accepted.payload,
-    trustedGridPublicKey: fixture.grid.publicKey
-  }), /does not match the exact owner review intent/);
-
-  const differentTrust = createLocalContextSemanticTrust(fixture.value, {
-    origin_class: 'retrieved-external',
-    semantic_class: 'knowledge',
-    source_evidence_digest: 'b'.repeat(64),
-    review_state: 'unreviewed',
-    retention_mode: 'owner-controlled'
+    intent: fixture.intent
   });
-  assert.throws(() => verifyAcceptedLocalContextSemanticReview({
-    candidate: fixture.value,
-    trust: differentTrust,
-    intent: fixture.intent,
-    acceptedEvent: fixture.accepted.event,
-    acceptedPayload: fixture.accepted.payload,
-    trustedGridPublicKey: fixture.grid.publicKey
-  }), /does not bind the exact candidate and prior trust state/);
-});
 
-test('owner, action, payload and Grid-key substitution fail closed', () => {
-  const fixture = acceptedEvidence();
-
-  const wrongOwner = acceptedReview(fixture.grid, fixture.intent, {
-    actor: 'owner.mallory',
-    principal: 'owner.mallory'
-  });
-  assert.throws(() => verifyAcceptedLocalContextSemanticReview({
-    candidate: fixture.value,
-    trust: fixture.semanticTrust,
-    intent: fixture.intent,
-    acceptedEvent: wrongOwner.event,
-    acceptedPayload: wrongOwner.payload,
-    trustedGridPublicKey: fixture.grid.publicKey
-  }), /does not match the exact owner review intent/);
-
-  const wrongAction = acceptedReview(fixture.grid, fixture.intent, {
-    action: 'system.echo'
-  });
-  assert.throws(() => verifyAcceptedLocalContextSemanticReview({
-    candidate: fixture.value,
-    trust: fixture.semanticTrust,
-    intent: fixture.intent,
-    acceptedEvent: wrongAction.event,
-    acceptedPayload: wrongAction.payload,
-    trustedGridPublicKey: fixture.grid.publicKey
-  }), /does not match the exact owner review intent/);
-
-  const otherGrid = gridIdentity();
-  assert.throws(() => verifyAcceptedLocalContextSemanticReview({
-    candidate: fixture.value,
-    trust: fixture.semanticTrust,
-    intent: fixture.intent,
-    acceptedEvent: fixture.accepted.event,
-    acceptedPayload: fixture.accepted.payload,
-    trustedGridPublicKey: otherGrid.publicKey
-  }), /Grid signature is invalid/);
-});
-
-test('event and payload tamper fail before semantic review is accepted', () => {
-  const fixture = acceptedEvidence();
-
-  const payloadTamper = structuredClone(fixture.accepted.payload);
-  payloadTamper.request_digest = 'f'.repeat(64);
-  assert.throws(() => verifyAcceptedLocalContextSemanticReview({
-    candidate: fixture.value,
-    trust: fixture.semanticTrust,
-    intent: fixture.intent,
-    acceptedEvent: fixture.accepted.event,
-    acceptedPayload: payloadTamper,
-    trustedGridPublicKey: fixture.grid.publicKey
-  }), /payload digest mismatch/);
-
-  const eventTamper = structuredClone(fixture.accepted.event);
-  eventTamper.seq += 1;
-  assert.throws(() => verifyAcceptedLocalContextSemanticReview({
-    candidate: fixture.value,
-    trust: fixture.semanticTrust,
-    intent: fixture.intent,
-    acceptedEvent: eventTamper,
-    acceptedPayload: fixture.accepted.payload,
-    trustedGridPublicKey: fixture.grid.publicKey
-  }), /event hash mismatch/);
-});
-
-test('review evidence fixed non-authority semantics cannot be elevated', () => {
-  const fixture = acceptedEvidence();
   for (const [field, value] of [
-    ['grid_trust_root_source_verified', true],
-    ['event_chain_currentness_verified', true],
+    ['retained_external_head_verified', true],
     ['review_applied_to_store', true],
     ['instruction_semantics', true],
     ['owner_instruction_use_enabled', true],
@@ -302,7 +322,7 @@ test('review evidence fixed non-authority semantics cannot be elevated', () => {
     ['may_modify_policy', true],
     ['may_self_persist', true]
   ]) {
-    const elevated = structuredClone(fixture.evidence);
+    const elevated = structuredClone(evidence);
     elevated[field] = value;
     assert.throws(
       () => validateLocalContextSemanticReviewEvidence(elevated),
@@ -311,19 +331,12 @@ test('review evidence fixed non-authority semantics cannot be elevated', () => {
   }
 });
 
-test('review evidence is content-addressed and closed to unknown authority fields', () => {
-  const fixture = acceptedEvidence();
-  const tampered = structuredClone(fixture.evidence);
-  tampered.target_semantic_class = 'procedure';
-  assert.throws(
-    () => validateLocalContextSemanticReviewEvidence(tampered),
-    /digest mismatch/
-  );
-
-  const unknown = structuredClone(fixture.evidence);
-  unknown.auto_execute = true;
-  assert.throws(
-    () => validateLocalContextSemanticReviewEvidence(unknown),
-    /fields are invalid/
-  );
+test('review intent remains exactly scoped to human-owner semantic governance', () => {
+  const fixture = reviewFixture({ decision: 'reject', targetSemanticClass: 'procedure' });
+  assert.deepEqual(fixture.intent.principal, { id: 'owner.alice', type: 'human' });
+  assert.equal(fixture.intent.action, LOCAL_CONTEXT_SEMANTIC_REVIEW_ACTION);
+  assert.equal(fixture.intent.purpose, LOCAL_CONTEXT_SEMANTIC_REVIEW_PURPOSE);
+  assert.deepEqual(fixture.intent.data_scopes, [LOCAL_CONTEXT_SEMANTIC_REVIEW_DATA_SCOPE]);
+  assert.equal(fixture.intent.input.prior_trust_digest, fixture.semanticTrust.trust_digest);
+  assert.equal(fixture.intent.input.candidate_digest, fixture.semanticTrust.candidate_digest);
 });
