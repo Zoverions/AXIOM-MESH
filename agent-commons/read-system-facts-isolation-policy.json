@@ -1,0 +1,63 @@
+{
+  "schema": "axiom-agent-read-system-facts-isolation-policy.v1",
+  "policy_id": "linux-read-system-facts-fixed-v1",
+  "revision": 1,
+  "operation": "agent.read-system-facts",
+  "observation_environment": "hosted-ci",
+  "container_runtime": "docker-local-fixed",
+  "docker_binary": "/usr/bin/docker",
+  "image": {
+    "source": "repository-built-current-mesh",
+    "tag": "axiom-mesh-kernel:0.12.0-dev.3",
+    "caller_selectable": false
+  },
+  "entrypoint": "/usr/local/bin/node",
+  "network": {
+    "mode": "none",
+    "caller_origins_allowed": false
+  },
+  "filesystem": {
+    "read_only_root": true,
+    "bind_mounts_allowed": false,
+    "workspace_tmpfs": "/work:rw,noexec,nosuid,nodev,size=16m",
+    "docker_socket_inside_workload": false
+  },
+  "privilege": {
+    "capabilities_drop": "ALL",
+    "no_new_privileges": true,
+    "uid_gid": "10001:10001"
+  },
+  "limits": {
+    "pids": 32,
+    "memory_bytes": 134217728,
+    "cpu_quota": 0.5,
+    "timeout_ms": 5000,
+    "max_output_bytes": 65536
+  },
+  "templates": [
+    {
+      "template_id": "node-version",
+      "argv": ["--version"],
+      "output_class": "node-version"
+    },
+    {
+      "template_id": "platform-arch",
+      "argv": ["-p", "JSON.stringify({platform:process.platform,arch:process.arch})"],
+      "output_class": "platform-arch-json"
+    }
+  ],
+  "claims": {
+    "policy_is_enforcement_proof": false,
+    "physical_device_proof": false,
+    "arbitrary_repository_code_isolation": false,
+    "general_executor_authority": false,
+    "network_authority": false,
+    "credential_authority": false,
+    "secret_authority": false,
+    "remote_hardware_authority": false,
+    "production_authority": false,
+    "deployment_authority": false,
+    "capability_promotion_authority": false,
+    "authority_effect": "none"
+  }
+}
