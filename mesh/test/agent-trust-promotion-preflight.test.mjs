@@ -79,7 +79,7 @@ test('preflight requires every external promotion gate to remain an explicit blo
   );
   assert.throws(
     () => normalizeAgentTrustPromotionPreflight(preflight),
-    /must retain independent-review-required/
+    /must contain required external gates/
   );
 });
 
