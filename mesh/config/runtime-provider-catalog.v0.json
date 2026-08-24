@@ -1,0 +1,718 @@
+{
+  "catalog": "axiom-runtime-provider-catalog.v0",
+  "cataloged_at": "2026-08-24T18:35:00Z",
+  "base_contract": {
+    "schema": "axiom-runtime-connector-catalog-entry.v1",
+    "schema_sha256": "0fbd3cf2e4a5df8bd803427413a37e1d83d5ccfa7568ac02a4760c8af7beca46"
+  },
+  "authority_boundary": {
+    "catalog_presence_grants_authority": false,
+    "installation_grants_authority": false,
+    "selection_requires_gateway_authorization": true,
+    "effect_path": "Gateway -> Hypervisor -> Sandbox -> Grid"
+  },
+  "entries": [
+    {
+      "schema": "axiom-runtime-connector-catalog-entry.v1",
+      "entry_id": "runtime:hermes-agent:research",
+      "entry_version": "0.1.0",
+      "integration_class": "agent-runtime",
+      "subject": {
+        "subject_id": "runtime:hermes-agent:research",
+        "display_name": "Hermes Agent",
+        "description": "Pinned source-identity research profile for Hermes Agent; no runtime invocation is enabled."
+      },
+      "provenance": {
+        "source_kind": "source-repository",
+        "source_repository": "https://github.com/NousResearch/hermes-agent",
+        "source_commit": "a0795acc831210970586a99f2263de5486eab245",
+        "license_spdx": "MIT",
+        "mutable_ref_allowed": false
+      },
+      "compatibility": {
+        "platforms": [
+          "linux",
+          "windows",
+          "macos",
+          "android"
+        ],
+        "deployment_forms": [
+          "process"
+        ],
+        "adapter_contracts": []
+      },
+      "requested_access": {
+        "install_grants_authority": false,
+        "capabilities": [],
+        "actions": [],
+        "purposes": [],
+        "destinations": [],
+        "data_classes": [],
+        "credential_classes": [],
+        "network_required": false
+      },
+      "orchestration": {
+        "mode": "single-agent",
+        "may_spawn_workers": false,
+        "independent_child_authority_requested": false,
+        "remote_execution_requested": false
+      },
+      "assurance": {
+        "observations": [],
+        "cataloged_at": "2026-08-24T18:35:00Z"
+      },
+      "lifecycle": {
+        "update_mode": "manual-reviewed",
+        "silent_permission_widening_allowed": false,
+        "rollback_available": true,
+        "quarantine_supported": true
+      },
+      "non_claims": [
+        "Catalog presence does not authorize installation or execution.",
+        "This research profile does not establish full runtime compatibility or security.",
+        "No capability, credential, network access, delegation, or production promotion is granted by this entry."
+      ]
+    },
+    {
+      "schema": "axiom-runtime-connector-catalog-entry.v1",
+      "entry_id": "runtime:openclaw:research",
+      "entry_version": "0.1.0",
+      "integration_class": "agent-runtime",
+      "subject": {
+        "subject_id": "runtime:openclaw:research",
+        "display_name": "OpenClaw",
+        "description": "Pinned source-identity research profile for OpenClaw; its external Gateway remains outside AXIOM authority."
+      },
+      "provenance": {
+        "source_kind": "source-repository",
+        "source_repository": "https://github.com/openclaw/openclaw",
+        "source_commit": "bf83a4dde8f00e5d330bd00de79cb0232fe6ae09",
+        "license_spdx": "MIT",
+        "mutable_ref_allowed": false
+      },
+      "compatibility": {
+        "platforms": [
+          "linux",
+          "windows",
+          "macos"
+        ],
+        "deployment_forms": [
+          "process"
+        ],
+        "adapter_contracts": []
+      },
+      "requested_access": {
+        "install_grants_authority": false,
+        "capabilities": [],
+        "actions": [],
+        "purposes": [],
+        "destinations": [],
+        "data_classes": [],
+        "credential_classes": [],
+        "network_required": false
+      },
+      "orchestration": {
+        "mode": "single-agent",
+        "may_spawn_workers": false,
+        "independent_child_authority_requested": false,
+        "remote_execution_requested": false
+      },
+      "assurance": {
+        "observations": [],
+        "cataloged_at": "2026-08-24T18:35:00Z"
+      },
+      "lifecycle": {
+        "update_mode": "manual-reviewed",
+        "silent_permission_widening_allowed": false,
+        "rollback_available": true,
+        "quarantine_supported": true
+      },
+      "non_claims": [
+        "Catalog presence does not authorize installation or execution.",
+        "This research profile does not establish full runtime compatibility or security.",
+        "No capability, credential, network access, delegation, or production promotion is granted by this entry."
+      ]
+    },
+    {
+      "schema": "axiom-runtime-connector-catalog-entry.v1",
+      "entry_id": "runtime:codex-cli:research",
+      "entry_version": "0.1.0",
+      "integration_class": "agent-runtime",
+      "subject": {
+        "subject_id": "runtime:codex-cli:research",
+        "display_name": "OpenAI Codex CLI",
+        "description": "Pinned source-identity research profile for Codex CLI; filesystem, process, MCP, and network effects remain disabled in this profile."
+      },
+      "provenance": {
+        "source_kind": "source-repository",
+        "source_repository": "https://github.com/openai/codex",
+        "source_commit": "4aa52f2cb2cdffa9c826f9e4e421a5435a05af06",
+        "license_spdx": "Apache-2.0",
+        "mutable_ref_allowed": false
+      },
+      "compatibility": {
+        "platforms": [
+          "linux",
+          "windows",
+          "macos"
+        ],
+        "deployment_forms": [
+          "process"
+        ],
+        "adapter_contracts": []
+      },
+      "requested_access": {
+        "install_grants_authority": false,
+        "capabilities": [],
+        "actions": [],
+        "purposes": [],
+        "destinations": [],
+        "data_classes": [],
+        "credential_classes": [],
+        "network_required": false
+      },
+      "orchestration": {
+        "mode": "single-agent",
+        "may_spawn_workers": false,
+        "independent_child_authority_requested": false,
+        "remote_execution_requested": false
+      },
+      "assurance": {
+        "observations": [],
+        "cataloged_at": "2026-08-24T18:35:00Z"
+      },
+      "lifecycle": {
+        "update_mode": "manual-reviewed",
+        "silent_permission_widening_allowed": false,
+        "rollback_available": true,
+        "quarantine_supported": true
+      },
+      "non_claims": [
+        "Catalog presence does not authorize installation or execution.",
+        "This research profile does not establish full runtime compatibility or security.",
+        "No capability, credential, network access, delegation, or production promotion is granted by this entry."
+      ]
+    },
+    {
+      "schema": "axiom-runtime-connector-catalog-entry.v1",
+      "entry_id": "runtime:agent-zero:research",
+      "entry_version": "0.1.0",
+      "integration_class": "agent-runtime",
+      "subject": {
+        "subject_id": "runtime:agent-zero:research",
+        "display_name": "Agent Zero",
+        "description": "Pinned source-identity research profile for Agent Zero; multi-agent and host-effect capabilities remain non-authorizing."
+      },
+      "provenance": {
+        "source_kind": "source-repository",
+        "source_repository": "https://github.com/agent0ai/agent-zero",
+        "source_commit": "b22a144bf59f15b1516084c9e7b88133ba92c8a9",
+        "license_spdx": "MIT",
+        "mutable_ref_allowed": false
+      },
+      "compatibility": {
+        "platforms": [
+          "linux",
+          "windows",
+          "macos",
+          "container"
+        ],
+        "deployment_forms": [
+          "container"
+        ],
+        "adapter_contracts": []
+      },
+      "requested_access": {
+        "install_grants_authority": false,
+        "capabilities": [],
+        "actions": [],
+        "purposes": [],
+        "destinations": [],
+        "data_classes": [],
+        "credential_classes": [],
+        "network_required": false
+      },
+      "orchestration": {
+        "mode": "multi-agent",
+        "may_spawn_workers": true,
+        "independent_child_authority_requested": false,
+        "remote_execution_requested": false
+      },
+      "assurance": {
+        "observations": [],
+        "cataloged_at": "2026-08-24T18:35:00Z"
+      },
+      "lifecycle": {
+        "update_mode": "manual-reviewed",
+        "silent_permission_widening_allowed": false,
+        "rollback_available": true,
+        "quarantine_supported": true
+      },
+      "non_claims": [
+        "Catalog presence does not authorize installation or execution.",
+        "This research profile does not establish full runtime compatibility or security.",
+        "No capability, credential, network access, delegation, or production promotion is granted by this entry."
+      ]
+    },
+    {
+      "schema": "axiom-runtime-connector-catalog-entry.v1",
+      "entry_id": "provider:arcee-api",
+      "entry_version": "0.1.0",
+      "integration_class": "model-provider",
+      "subject": {
+        "subject_id": "provider:arcee-api",
+        "display_name": "Arcee AI API",
+        "description": "Hosted Arcee model-provider service profile; open-weight model artifacts are cataloged separately when exact artifacts and licences are pinned."
+      },
+      "provenance": {
+        "source_kind": "service-endpoint",
+        "service_origin": "https://api.arcee.ai",
+        "license_spdx": "NOASSERTION",
+        "mutable_ref_allowed": false
+      },
+      "compatibility": {
+        "platforms": [
+          "other"
+        ],
+        "deployment_forms": [
+          "remote-service"
+        ],
+        "adapter_contracts": [],
+        "protocol_profiles": [
+          "https-json-api",
+          "openai-compatible"
+        ]
+      },
+      "requested_access": {
+        "install_grants_authority": false,
+        "capabilities": [],
+        "actions": [],
+        "purposes": [
+          "model-inference"
+        ],
+        "destinations": [
+          "https://api.arcee.ai"
+        ],
+        "data_classes": [
+          "model-input",
+          "model-output"
+        ],
+        "credential_classes": [
+          "api-key"
+        ],
+        "network_required": true,
+        "network_destinations": [
+          "https://api.arcee.ai"
+        ]
+      },
+      "orchestration": {
+        "mode": "none",
+        "may_spawn_workers": false,
+        "independent_child_authority_requested": false,
+        "remote_execution_requested": false
+      },
+      "assurance": {
+        "observations": [],
+        "cataloged_at": "2026-08-24T18:35:00Z"
+      },
+      "lifecycle": {
+        "update_mode": "manual-reviewed",
+        "silent_permission_widening_allowed": false,
+        "rollback_available": false,
+        "quarantine_supported": true
+      },
+      "non_claims": [
+        "Catalog presence does not authorize network egress, credential use, or model invocation.",
+        "This provider-level entry does not guarantee model alias stability, retention behavior, pricing, availability, or model-specific licensing.",
+        "Task-specific model, data, purpose, destination, retention, budget, and authorization policy remains separately required."
+      ]
+    },
+    {
+      "schema": "axiom-runtime-connector-catalog-entry.v1",
+      "entry_id": "provider:openai-api",
+      "entry_version": "0.1.0",
+      "integration_class": "model-provider",
+      "subject": {
+        "subject_id": "provider:openai-api",
+        "display_name": "OpenAI API",
+        "description": "Hosted OpenAI model-provider service profile; exact model selection remains task/profile specific."
+      },
+      "provenance": {
+        "source_kind": "service-endpoint",
+        "service_origin": "https://api.openai.com",
+        "license_spdx": "NOASSERTION",
+        "mutable_ref_allowed": false
+      },
+      "compatibility": {
+        "platforms": [
+          "other"
+        ],
+        "deployment_forms": [
+          "remote-service"
+        ],
+        "adapter_contracts": [],
+        "protocol_profiles": [
+          "https-json-api"
+        ]
+      },
+      "requested_access": {
+        "install_grants_authority": false,
+        "capabilities": [],
+        "actions": [],
+        "purposes": [
+          "model-inference"
+        ],
+        "destinations": [
+          "https://api.openai.com"
+        ],
+        "data_classes": [
+          "model-input",
+          "model-output"
+        ],
+        "credential_classes": [
+          "api-key"
+        ],
+        "network_required": true,
+        "network_destinations": [
+          "https://api.openai.com"
+        ]
+      },
+      "orchestration": {
+        "mode": "none",
+        "may_spawn_workers": false,
+        "independent_child_authority_requested": false,
+        "remote_execution_requested": false
+      },
+      "assurance": {
+        "observations": [],
+        "cataloged_at": "2026-08-24T18:35:00Z"
+      },
+      "lifecycle": {
+        "update_mode": "manual-reviewed",
+        "silent_permission_widening_allowed": false,
+        "rollback_available": false,
+        "quarantine_supported": true
+      },
+      "non_claims": [
+        "Catalog presence does not authorize network egress, credential use, or model invocation.",
+        "This provider-level entry does not guarantee model alias stability, retention behavior, pricing, availability, or model-specific licensing.",
+        "Task-specific model, data, purpose, destination, retention, budget, and authorization policy remains separately required."
+      ]
+    },
+    {
+      "schema": "axiom-runtime-connector-catalog-entry.v1",
+      "entry_id": "provider:anthropic-api",
+      "entry_version": "0.1.0",
+      "integration_class": "model-provider",
+      "subject": {
+        "subject_id": "provider:anthropic-api",
+        "display_name": "Anthropic API",
+        "description": "Hosted Anthropic model-provider service profile; exact model selection remains task/profile specific."
+      },
+      "provenance": {
+        "source_kind": "service-endpoint",
+        "service_origin": "https://api.anthropic.com",
+        "license_spdx": "NOASSERTION",
+        "mutable_ref_allowed": false
+      },
+      "compatibility": {
+        "platforms": [
+          "other"
+        ],
+        "deployment_forms": [
+          "remote-service"
+        ],
+        "adapter_contracts": [],
+        "protocol_profiles": [
+          "https-json-api"
+        ]
+      },
+      "requested_access": {
+        "install_grants_authority": false,
+        "capabilities": [],
+        "actions": [],
+        "purposes": [
+          "model-inference"
+        ],
+        "destinations": [
+          "https://api.anthropic.com"
+        ],
+        "data_classes": [
+          "model-input",
+          "model-output"
+        ],
+        "credential_classes": [
+          "api-key"
+        ],
+        "network_required": true,
+        "network_destinations": [
+          "https://api.anthropic.com"
+        ]
+      },
+      "orchestration": {
+        "mode": "none",
+        "may_spawn_workers": false,
+        "independent_child_authority_requested": false,
+        "remote_execution_requested": false
+      },
+      "assurance": {
+        "observations": [],
+        "cataloged_at": "2026-08-24T18:35:00Z"
+      },
+      "lifecycle": {
+        "update_mode": "manual-reviewed",
+        "silent_permission_widening_allowed": false,
+        "rollback_available": false,
+        "quarantine_supported": true
+      },
+      "non_claims": [
+        "Catalog presence does not authorize network egress, credential use, or model invocation.",
+        "This provider-level entry does not guarantee model alias stability, retention behavior, pricing, availability, or model-specific licensing.",
+        "Task-specific model, data, purpose, destination, retention, budget, and authorization policy remains separately required."
+      ]
+    },
+    {
+      "schema": "axiom-runtime-connector-catalog-entry.v1",
+      "entry_id": "provider:google-gemini-api",
+      "entry_version": "0.1.0",
+      "integration_class": "model-provider",
+      "subject": {
+        "subject_id": "provider:google-gemini-api",
+        "display_name": "Google Gemini API",
+        "description": "Hosted Google Gemini model-provider service profile; exact model selection remains task/profile specific."
+      },
+      "provenance": {
+        "source_kind": "service-endpoint",
+        "service_origin": "https://generativelanguage.googleapis.com",
+        "license_spdx": "NOASSERTION",
+        "mutable_ref_allowed": false
+      },
+      "compatibility": {
+        "platforms": [
+          "other"
+        ],
+        "deployment_forms": [
+          "remote-service"
+        ],
+        "adapter_contracts": [],
+        "protocol_profiles": [
+          "https-json-api"
+        ]
+      },
+      "requested_access": {
+        "install_grants_authority": false,
+        "capabilities": [],
+        "actions": [],
+        "purposes": [
+          "model-inference"
+        ],
+        "destinations": [
+          "https://generativelanguage.googleapis.com"
+        ],
+        "data_classes": [
+          "model-input",
+          "model-output"
+        ],
+        "credential_classes": [
+          "api-key"
+        ],
+        "network_required": true,
+        "network_destinations": [
+          "https://generativelanguage.googleapis.com"
+        ]
+      },
+      "orchestration": {
+        "mode": "none",
+        "may_spawn_workers": false,
+        "independent_child_authority_requested": false,
+        "remote_execution_requested": false
+      },
+      "assurance": {
+        "observations": [],
+        "cataloged_at": "2026-08-24T18:35:00Z"
+      },
+      "lifecycle": {
+        "update_mode": "manual-reviewed",
+        "silent_permission_widening_allowed": false,
+        "rollback_available": false,
+        "quarantine_supported": true
+      },
+      "non_claims": [
+        "Catalog presence does not authorize network egress, credential use, or model invocation.",
+        "This provider-level entry does not guarantee model alias stability, retention behavior, pricing, availability, or model-specific licensing.",
+        "Task-specific model, data, purpose, destination, retention, budget, and authorization policy remains separately required."
+      ]
+    },
+    {
+      "schema": "axiom-runtime-connector-catalog-entry.v1",
+      "entry_id": "provider:xai-api",
+      "entry_version": "0.1.0",
+      "integration_class": "model-provider",
+      "subject": {
+        "subject_id": "provider:xai-api",
+        "display_name": "xAI API",
+        "description": "Hosted xAI model-provider service profile; management APIs are excluded from this inference profile."
+      },
+      "provenance": {
+        "source_kind": "service-endpoint",
+        "service_origin": "https://api.x.ai",
+        "license_spdx": "NOASSERTION",
+        "mutable_ref_allowed": false
+      },
+      "compatibility": {
+        "platforms": [
+          "other"
+        ],
+        "deployment_forms": [
+          "remote-service"
+        ],
+        "adapter_contracts": [],
+        "protocol_profiles": [
+          "https-json-api"
+        ]
+      },
+      "requested_access": {
+        "install_grants_authority": false,
+        "capabilities": [],
+        "actions": [],
+        "purposes": [
+          "model-inference"
+        ],
+        "destinations": [
+          "https://api.x.ai"
+        ],
+        "data_classes": [
+          "model-input",
+          "model-output"
+        ],
+        "credential_classes": [
+          "api-key"
+        ],
+        "network_required": true,
+        "network_destinations": [
+          "https://api.x.ai"
+        ]
+      },
+      "orchestration": {
+        "mode": "none",
+        "may_spawn_workers": false,
+        "independent_child_authority_requested": false,
+        "remote_execution_requested": false
+      },
+      "assurance": {
+        "observations": [],
+        "cataloged_at": "2026-08-24T18:35:00Z"
+      },
+      "lifecycle": {
+        "update_mode": "manual-reviewed",
+        "silent_permission_widening_allowed": false,
+        "rollback_available": false,
+        "quarantine_supported": true
+      },
+      "non_claims": [
+        "Catalog presence does not authorize network egress, credential use, or model invocation.",
+        "This provider-level entry does not guarantee model alias stability, retention behavior, pricing, availability, or model-specific licensing.",
+        "Task-specific model, data, purpose, destination, retention, budget, and authorization policy remains separately required."
+      ]
+    },
+    {
+      "schema": "axiom-runtime-connector-catalog-entry.v1",
+      "entry_id": "provider:mistral-api",
+      "entry_version": "0.1.0",
+      "integration_class": "model-provider",
+      "subject": {
+        "subject_id": "provider:mistral-api",
+        "display_name": "Mistral API",
+        "description": "Hosted Mistral model-provider service profile; open-weight and hosted model licensing remain model-specific."
+      },
+      "provenance": {
+        "source_kind": "service-endpoint",
+        "service_origin": "https://api.mistral.ai",
+        "license_spdx": "NOASSERTION",
+        "mutable_ref_allowed": false
+      },
+      "compatibility": {
+        "platforms": [
+          "other"
+        ],
+        "deployment_forms": [
+          "remote-service"
+        ],
+        "adapter_contracts": [],
+        "protocol_profiles": [
+          "https-json-api"
+        ]
+      },
+      "requested_access": {
+        "install_grants_authority": false,
+        "capabilities": [],
+        "actions": [],
+        "purposes": [
+          "model-inference"
+        ],
+        "destinations": [
+          "https://api.mistral.ai"
+        ],
+        "data_classes": [
+          "model-input",
+          "model-output"
+        ],
+        "credential_classes": [
+          "api-key"
+        ],
+        "network_required": true,
+        "network_destinations": [
+          "https://api.mistral.ai"
+        ]
+      },
+      "orchestration": {
+        "mode": "none",
+        "may_spawn_workers": false,
+        "independent_child_authority_requested": false,
+        "remote_execution_requested": false
+      },
+      "assurance": {
+        "observations": [],
+        "cataloged_at": "2026-08-24T18:35:00Z"
+      },
+      "lifecycle": {
+        "update_mode": "manual-reviewed",
+        "silent_permission_widening_allowed": false,
+        "rollback_available": false,
+        "quarantine_supported": true
+      },
+      "non_claims": [
+        "Catalog presence does not authorize network egress, credential use, or model invocation.",
+        "This provider-level entry does not guarantee model alias stability, retention behavior, pricing, availability, or model-specific licensing.",
+        "Task-specific model, data, purpose, destination, retention, budget, and authorization policy remains separately required."
+      ]
+    }
+  ],
+  "backlog": [
+    "ollama",
+    "vllm",
+    "llama.cpp",
+    "sglang",
+    "lm-studio",
+    "together-ai",
+    "groq",
+    "cerebras",
+    "openrouter",
+    "aws-bedrock",
+    "azure-openai",
+    "google-vertex-ai",
+    "claude-managed-agents",
+    "gemini-cli",
+    "claude-code",
+    "opencode",
+    "cline",
+    "crewai",
+    "langgraph",
+    "autogen"
+  ],
+  "non_claims": [
+    "This catalog is a discovery and evidence inventory, not an authorization registry.",
+    "Backlog names are research targets only and are not catalog entries.",
+    "Catalog entries do not imply installation, endorsement, conformance, security certification, availability, or production promotion."
+  ]
+}
