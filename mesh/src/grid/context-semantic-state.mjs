@@ -16,6 +16,9 @@ import {
   createLocalContextSemanticReviewIntent,
   verifyCompletedLocalContextSemanticReview
 } from '../lib/context-semantic-review-evidence.mjs';
+import {
+  createLocalContextSemanticSourceEvidenceReader
+} from './context-semantic-source-evidence.mjs';
 
 export const LOCAL_CONTEXT_SEMANTIC_CURRENT_STATE_SCHEMA =
   'axiom-local-context-semantic-current-state.v1';
@@ -39,7 +42,7 @@ function requireStore(store) {
   }
 }
 
-function verifyMemoryRow(store, row) {
+function verifyMemoryRow(store, row, sourceEvidenceReader) {
   const decoded = store.decodeProtectedRow(
     'memory_objects',
     'object_id',
@@ -96,6 +99,20 @@ function verifyMemoryRow(store, row) {
     }
   }
   const event = events[0];
+  const originClass = state.trust.origin_class;
+  if (originClass !== 'owner-authored' && originClass !== 'system-derived') {
+    const sourceEvidence = sourceEvidenceReader.get({
+      owner: state.owner_subject_ref,
+      candidate: state.candidate,
+      sourceEvidenceDigest: state.trust.source_evidence_digest,
+      beforeSeq: event.seq
+    });
+    if (sourceEvidence.source_class !== originClass) {
+      throw new ValidationError(
+        'semantic source evidence source class must match trust origin class'
+      );
+    }
+  }
   return Object.freeze({
     state,
     status: decoded.status,
@@ -200,13 +217,13 @@ function verifyLinearClaimHistory(store, nodes) {
   return ordered;
 }
 
-function loadOwnerNodes(store, owner) {
+function loadOwnerNodes(store, owner, sourceEvidenceReader) {
   const rows = store.db.prepare(`
     SELECT * FROM memory_objects
     WHERE owner = ? AND kind = ?
     ORDER BY created_at, object_id
   `).all(owner, LOCAL_CONTEXT_SEMANTIC_STATE_MEMORY_KIND);
-  return rows.map(row => verifyMemoryRow(store, row));
+  return rows.map(row => verifyMemoryRow(store, row, sourceEvidenceReader));
 }
 
 export function getCurrentLocalContextSemanticState(store, {
@@ -214,10 +231,11 @@ export function getCurrentLocalContextSemanticState(store, {
   claimId
 } = {}) {
   requireStore(store);
-  const chain = store.requireIntentEvidenceChain();
+  const sourceEvidenceReader = createLocalContextSemanticSourceEvidenceReader(store);
   const ownerId = id(owner, 'semantic current-state owner');
   const targetClaimId = id(claimId, 'semantic current-state claimId');
-  const nodes = loadOwnerNodes(store, ownerId).filter(node => node.state.claim_id === targetClaimId);
+  const nodes = loadOwnerNodes(store, ownerId, sourceEvidenceReader)
+    .filter(node => node.state.claim_id === targetClaimId);
   if (!nodes.length) {
     throw new AxiomError(
       'context_semantic_state_not_found',
@@ -252,7 +270,7 @@ export function getCurrentLocalContextSemanticState(store, {
     source_event_hash: current.source_event_hash,
     grid_chain_last_seq: status.last_seq,
     grid_chain_last_hash: status.last_hash,
-    full_grid_chain_verified: chain.valid === true,
+    full_grid_chain_verified: sourceEvidenceReader.full_grid_chain_verified,
     review_evidence_reverified: current.state.transition === 'review',
     current_state_verified: true,
     downstream_effect_authorized: false
@@ -261,9 +279,9 @@ export function getCurrentLocalContextSemanticState(store, {
 
 export function loadCurrentLocalContextSemanticEntries(store, { owner } = {}) {
   requireStore(store);
-  store.requireIntentEvidenceChain();
+  const sourceEvidenceReader = createLocalContextSemanticSourceEvidenceReader(store);
   const ownerId = id(owner, 'semantic current-entry owner');
-  const nodes = loadOwnerNodes(store, ownerId);
+  const nodes = loadOwnerNodes(store, ownerId, sourceEvidenceReader);
   const byClaim = new Map();
   for (const node of nodes) {
     const list = byClaim.get(node.state.claim_id) ?? [];

@@ -46,14 +46,12 @@ function optionalBeforeSeq(value) {
   return value;
 }
 
-export function getCurrentLocalContextSemanticSourceEvidence(store, {
+function readCurrentLocalContextSemanticSourceEvidence(store, chain, {
   owner,
   candidate,
   sourceEvidenceDigest,
   beforeSeq
 } = {}) {
-  requireStore(store);
-  const chain = store.requireIntentEvidenceChain();
   const ownerId = id(owner, 'semantic source evidence owner');
   const normalizedCandidate = normalizeLocalContextCandidate(candidate);
   if (normalizedCandidate.owner_subject_ref !== ownerId) {
@@ -167,4 +165,19 @@ export function getCurrentLocalContextSemanticSourceEvidence(store, {
     full_grid_chain_verified: chain.valid === true,
     downstream_effect_authorized: false
   });
+}
+
+export function createLocalContextSemanticSourceEvidenceReader(store) {
+  requireStore(store);
+  const chain = store.requireIntentEvidenceChain();
+  return Object.freeze({
+    full_grid_chain_verified: chain.valid === true,
+    get(options = {}) {
+      return readCurrentLocalContextSemanticSourceEvidence(store, chain, options);
+    }
+  });
+}
+
+export function getCurrentLocalContextSemanticSourceEvidence(store, options = {}) {
+  return createLocalContextSemanticSourceEvidenceReader(store).get(options);
 }
