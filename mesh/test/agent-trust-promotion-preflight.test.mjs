@@ -19,7 +19,7 @@ function artifacts(overrides = {}) {
     positive_tests: ['mesh/test/agent-trust-promotion-preflight.test.mjs'],
     adversarial_tests: ['mesh/test/agent-trust-promotion-preflight.test.mjs'],
     threat_models: ['agent-commons/agent-trust-promotion-preflight-threat-model.json'],
-    recovery_runbooks: ['docs/operations/AGENT-TRUST-PROMOTION-AND-RECOVERY.md'],
+    recovery_runbooks: ['docs/rebuild/ROLLBACK.md'],
     verifier_or_conformance: ['mesh/src/lib/agent-trust-promotion-preflight.mjs'],
     ...overrides
   };
