@@ -19,6 +19,8 @@ test('load-bearing Clean Kernel workflow pins actions, runner, and source paths'
   assert.ok(source.includes('mesh/test/transport-credentials.test.mjs'));
   assert.ok(source.includes('mesh/test/network-boundary.test.mjs'));
   assert.ok(source.includes('mesh/test/hosted-plesk.test.mjs'));
+  assert.ok(source.includes('mesh/test/runtime-provider-catalog.test.mjs'));
+  assert.ok(source.includes('mesh/test/runtime-provider-catalog-negative.test.mjs'));
   assert.ok(source.includes('--require-commit-bound'));
   assert.ok(source.includes('axiom-runtime-adapter-reference-conformance-evidence-${{ github.sha }}'));
   assert.equal((source.match(/- "apps\/\*\*"/g) ?? []).length, 2);

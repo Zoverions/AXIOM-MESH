@@ -90,7 +90,9 @@ jobs:
             mesh/test/supervisor-shutdown.test.mjs \
             mesh/test/transport-credentials.test.mjs \
             mesh/test/network-boundary.test.mjs \
-            mesh/test/hosted-plesk.test.mjs
+            mesh/test/hosted-plesk.test.mjs \
+            mesh/test/runtime-provider-catalog.test.mjs \
+            mesh/test/runtime-provider-catalog-negative.test.mjs
 
   verify:
     runs-on: ubuntu-24.04
