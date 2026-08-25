@@ -309,10 +309,11 @@ export async function verifyAgentReadiness(repositoryRoot = REPOSITORY_ROOT) {
       throw new ValidationError('Agent Skills discovery index must expose exactly the reviewed advisory skill');
     }
     const [skill] = skillIndex.skills;
+    const expectedSkillUrl = `${new URL(result.origin).pathname.replace(/\/$/, '')}/.well-known/agent-skills/axiom-authority-auditor/SKILL.md`;
     if (
       skill.name !== 'axiom-authority-auditor'
       || skill.type !== 'skill-md'
-      || skill.url !== '/.well-known/agent-skills/axiom-authority-auditor/SKILL.md'
+      || skill.url !== expectedSkillUrl
     ) {
       throw new ValidationError('Agent Skills discovery entry is invalid');
     }

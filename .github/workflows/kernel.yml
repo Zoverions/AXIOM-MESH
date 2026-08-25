@@ -91,6 +91,8 @@ jobs:
             mesh/test/transport-credentials.test.mjs \
             mesh/test/network-boundary.test.mjs \
             mesh/test/hosted-plesk.test.mjs \
+            mesh/test/agent-readiness.test.mjs \
+            mesh/test/agent-readiness-hub.test.mjs \
             mesh/test/runtime-provider-catalog.test.mjs \
             mesh/test/runtime-provider-catalog-negative.test.mjs
 
