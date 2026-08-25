@@ -136,17 +136,18 @@ export function formatDoctorResult(result, { json = false } = {}) {
 
 export function doctorFailureMessage(error) {
   const detail = error instanceof Error ? error.message : String(error);
-  const nodeMatch = detail.match(/Node\.js ([0-9.]+) is outside ([0-9.]+) <= version < ([0-9.]+)/);
+  const nodeMatch = detail.match(/Node\.js ([0-9.]+) is outside/);
   if (nodeMatch) {
     return [
-      `AXIOM-MESH requires Node.js >=24.14.0 <25 (you have ${nodeMatch[1]}).`,
+      `AXIOM-MESH requires Node.js >=22.23.2 <23 || >=24.14.0 <25 (you have ${nodeMatch[1]}).`,
+      'Node 22 is for source and shared-host compatibility; production requires Node 24.',
       'Recommended: nvm install 24.18.0 && nvm use 24.18.0'
     ].join('\n');
   }
   const npmMatch = detail.match(/npm ([0-9.]+) is outside ([0-9.]+) <= version < ([0-9.]+)/);
   if (npmMatch) {
     return [
-      `AXIOM-MESH requires npm >=11.0.0 <12 (you have ${npmMatch[1]}).`,
+      `AXIOM-MESH requires npm >=11.0.0 <12, or npm >=10.9.8 <11 with Node 22 (you have ${npmMatch[1]}).`,
       'Recommended after selecting Node 24.18.0: npm install --global npm@11'
     ].join('\n');
   }

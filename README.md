@@ -22,10 +22,14 @@ The machine-readable project/application boundary is recorded in
 
 ## First 5 Minutes
 
-Requirements: Node.js `>=24.14.0 <25` and npm `>=11.0.0 <12`.
+Primary and protected production requirements: Node.js `>=24.14.0 <25` and
+npm `>=11.0.0 <12`. Shared-host and source compatibility also supports Node.js
+`>=22.23.2 <23` with its bundled npm `>=10.9.8 <11` or npm 11.
 
 The setup policy pins **Node.js 24.18.0 for protected CI and `.node-version`**
 and **Node.js 24.19.0 for the candidate production image**.
+A separate compatibility job pins **Node.js 22.23.2**; that compatibility
+profile cannot start the protected production supervisor.
 
 ```bash
 git clone https://github.com/Zoverions/AXIOM-MESH.git

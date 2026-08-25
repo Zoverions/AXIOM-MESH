@@ -9,6 +9,7 @@ import {
   validateSourceSetupState,
   verifyRepositorySetup
 } from '../src/setup.mjs';
+import * as setupRuntime from '../src/setup.mjs';
 
 const MESH_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const REPOSITORY_ROOT = dirname(MESH_ROOT);
@@ -26,6 +27,7 @@ test('current-build setup preflight verifies runtime pins, exact locks, and zero
   assert.equal(result.kernel_version, '0.12.0-dev.3');
   assert.equal(result.runtime.node, '24.18.0');
   assert.equal(result.runtime.npm, '11.9.0');
+  assert.equal(result.runtime.profile, 'primary');
   assert.equal(result.runtime.ci_pin, '24.18.0');
   assert.equal(result.runtime.production_pin, '24.19.0');
   assert.equal(result.workspaces, 2);
@@ -33,6 +35,101 @@ test('current-build setup preflight verifies runtime pins, exact locks, and zero
   assert.equal(result.install_scripts_allowed, false);
   assert.equal(result.setup_status, 'ready');
   assert.equal(result.production_credentials_created, false);
+});
+
+test('Rebel hosting compatibility accepts Node 22.23.2 with its bundled npm 10.9.8', async () => {
+  const result = await verifyRepositorySetup({
+    repositoryRoot: REPOSITORY_ROOT,
+    nodeVersion: 'v22.23.2',
+    npmVersion: '10.9.8',
+    npmCliPath: 'synthetic-unused'
+  });
+
+  assert.equal(result.valid, true);
+  assert.equal(result.runtime.node, '22.23.2');
+  assert.equal(result.runtime.npm, '10.9.8');
+  assert.equal(result.runtime.profile, 'compatibility');
+  assert.equal(result.runtime.ci_pin, '24.18.0');
+  assert.equal(result.runtime.production_pin, '24.19.0');
+  assert.equal(result.production_credentials_created, false);
+});
+
+test('Node 22 compatibility also accepts the unchanged npm 11 lane', async () => {
+  const input = await fixture();
+  const result = validateSourceSetupState({
+    ...input,
+    nodeVersion: '22.23.2',
+    npmVersion: '11.9.0'
+  });
+
+  assert.equal(result.runtime.profile, 'compatibility');
+  assert.equal(result.runtime.npm, '11.9.0');
+});
+
+test('supported runtime profiles reject unreviewed majors and outdated Node 22 patches', async () => {
+  const input = await fixture();
+
+  for (const nodeVersion of ['20.20.2', '21.9.0', '22.23.1', '23.11.1', '24.13.9', '25.0.0']) {
+    assert.throws(
+      () => validateSourceSetupState({
+        ...input,
+        nodeVersion,
+        npmVersion: nodeVersion.startsWith('22.') ? '10.9.8' : '11.9.0'
+      }),
+      /Node\.js .* is outside/,
+      `unsupported Node.js ${nodeVersion} was accepted`
+    );
+  }
+});
+
+test('npm 10 compatibility remains isolated from the protected Node 24 profile', async () => {
+  const input = await fixture();
+
+  assert.throws(
+    () => validateSourceSetupState({
+      ...input,
+      nodeVersion: '22.23.2',
+      npmVersion: '10.9.7'
+    }),
+    /npm .* is outside/
+  );
+  assert.throws(
+    () => validateSourceSetupState({
+      ...input,
+      nodeVersion: '24.18.0',
+      npmVersion: '10.9.8'
+    }),
+    /npm .* is outside/
+  );
+});
+
+test('production runtime guard rejects compatibility hosts and preserves the Node 24 floor', () => {
+  assert.equal(setupRuntime.assertProductionRuntime('v24.18.0'), '24.18.0');
+  assert.equal(setupRuntime.assertProductionRuntime('24.19.0'), '24.19.0');
+  assert.throws(
+    () => setupRuntime.assertProductionRuntime('22.23.2'),
+    /production requires Node\.js >=24\.14\.0 <25/i
+  );
+  assert.throws(
+    () => setupRuntime.assertProductionRuntime('24.13.9'),
+    /production requires Node\.js >=24\.14\.0 <25/i
+  );
+});
+
+test('production supervisor enforces the protected runtime before deployment side effects', async () => {
+  const supervisor = await readFile(join(REPOSITORY_ROOT, 'mesh', 'src', 'supervisor.mjs'), 'utf8');
+  assert.match(supervisor, /import \{ assertProductionRuntime \} from '\.\/setup\.mjs';/);
+  const guardPosition = supervisor.indexOf('assertProductionRuntime();');
+  const egressPosition = supervisor.indexOf('if (config.requireDenyEgress)');
+  assert.ok(guardPosition >= 0, 'production supervisor must enforce its protected runtime');
+  assert.ok(guardPosition < egressPosition, 'runtime guard must run before deployment side effects');
+});
+
+test('doctor diagnostics explain both the hosting compatibility and protected production tracks', async () => {
+  const doctor = await readFile(join(REPOSITORY_ROOT, 'mesh', 'src', 'doctor.mjs'), 'utf8');
+  assert.match(doctor, />=22\.23\.2 <23 \|\| >=24\.14\.0 <25/);
+  assert.match(doctor, /npm >=10\.9\.8 <11/);
+  assert.match(doctor, /production requires Node 24/i);
 });
 
 test('setup policy rejects weaker runtimes, package managers, install arguments, workspaces, and verification', async () => {
@@ -43,6 +140,20 @@ test('setup policy rejects weaker runtimes, package managers, install arguments,
   assert.throws(
     () => validateSourceSetupPolicy(runtime),
     /runtime policy weakens/
+  );
+
+  const compatibilityRuntime = structuredClone(policy);
+  compatibilityRuntime.runtime.compatibility_minimum_version = '22.0.0';
+  assert.throws(
+    () => validateSourceSetupPolicy(compatibilityRuntime),
+    /runtime policy (?:weakens|fields are invalid)/
+  );
+
+  const compatibilityPackageManager = structuredClone(policy);
+  compatibilityPackageManager.package_manager.compatibility_minimum_version = '10.0.0';
+  assert.throws(
+    () => validateSourceSetupPolicy(compatibilityPackageManager),
+    /package-manager policy (?:weakens|fields are invalid)/
   );
 
   const packageManager = structuredClone(policy);
@@ -139,6 +250,16 @@ test('setup state binds local, CI, and production runtime pins', async () => {
       dockerfile: input.dockerfile.replace(
         'FROM node:24.19.0-',
         'FROM node:24.20.0-'
+      )
+    }),
+    /runtime setup pins have drifted/
+  );
+  assert.throws(
+    () => validateSourceSetupState({
+      ...input,
+      workflow: input.workflow.replace(
+        'node-version: "22.23.2"',
+        'node-version: "22.23.1"'
       )
     }),
     /runtime setup pins have drifted/

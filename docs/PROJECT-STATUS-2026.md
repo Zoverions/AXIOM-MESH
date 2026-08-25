@@ -316,9 +316,10 @@ external secrets, resource ceilings, bounded logs, permission-restricted local
 Gateway ingress, dependency-aware readiness, and compact/four-unit single-host
 topologies.
 
-The source-setup policy distinguishes protected-CI Node.js `24.18.0` from the
-candidate production image pin `24.19.0`; both remain within the supported
-`>=24.14.0 <25` engine range.
+The source-setup policy distinguishes separate source/shared-host compatibility
+CI on Node.js `22.23.2`, protected-CI Node.js `24.18.0`, and the candidate
+production image pin `24.19.0`. The supported source engine is `>=22.23.2 <23
+|| >=24.14.0 <25`; protected production remains restricted to Node.js 24.
 
 Protected evidence covers source setup, tests, release verification, network
 policy, container build/readiness, recovery, backup lifecycle, SLO, resilience,

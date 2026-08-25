@@ -16,10 +16,12 @@ is authoritative for runnable claims.
 
 Supported source runtime:
 
-- Node.js `>=24.14.0 <25`;
+- primary/protected-production Node.js `>=24.14.0 <25`;
+- source/shared-host compatibility Node.js `>=22.23.2 <23`;
+- separate compatibility CI: Node.js `22.23.2`;
 - protected CI and `.node-version`: Node.js `24.18.0`;
 - candidate production image: Node.js `24.19.0`;
-- npm `>=11.0.0 <12`;
+- npm `>=11.0.0 <12`, or bundled npm `>=10.9.8 <11` with Node.js 22;
 - zero third-party npm dependency packages.
 
 The machine-readable source-setup authority is

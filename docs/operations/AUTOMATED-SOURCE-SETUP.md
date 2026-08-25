@@ -15,10 +15,13 @@ implementation is [`mesh/src/setup.mjs`](../../mesh/src/setup.mjs).
 
 The policy binds source setup to:
 
-- Node.js `>=24.14.0 <25`;
+- primary and protected-production Node.js `>=24.14.0 <25`;
+- shared-host/source-compatibility Node.js `>=22.23.2 <23`;
+- Node.js **22.23.2** in the separate compatibility CI job;
 - Node.js **24.18.0** in protected CI and `.node-version`;
 - Node.js **24.19.0** in the candidate production image;
-- npm `>=11.0.0 <12`;
+- npm `>=11.0.0 <12` on the primary profile;
+- bundled npm `>=10.9.8 <11` or npm 11 on the Node.js 22 compatibility profile;
 - npm lockfile version 3;
 - the root command surface and `mesh/` kernel as the only workspaces;
 - both committed dependency-free lockfiles;
@@ -125,10 +128,12 @@ release provenance.
 The exact current pins are:
 
 ```text
-supported engine:          >=24.14.0 <25
-protected CI/.node-version: 24.18.0
-candidate production image: 24.19.0
-npm:                        >=11.0.0 <12
+supported engine:            >=22.23.2 <23 || >=24.14.0 <25
+compatibility CI:            22.23.2
+protected CI/.node-version:  24.18.0
+candidate production image:  24.19.0
+primary npm:                 >=11.0.0 <12
+Node 22 compatibility npm:   >=10.9.8 <11, or >=11.0.0 <12
 ```
 
 The candidate Dockerfile is therefore expected to use Node.js 24.19.0 while the
@@ -177,10 +182,14 @@ The automation intentionally does not install Node.js, npm, Git, Docker,
 Compose, OS packages, a container runtime, or host-security controls. Silently
 acquiring a toolchain would enlarge the setup trust boundary.
 
-Local Node.js versions from 24.14.0 up to but not including 25 are accepted for
-source checks. The receipt records the detected local version. Protected CI and
-the candidate image remain bound to their distinct exact policy pins. npm 11.x
-within the declared range is accepted.
+Local Node.js versions from 24.14.0 up to but not including 25, and Node.js
+versions from 22.23.2 up to but not including 23, are accepted for source
+checks. The receipt records the detected local version and its `primary` or
+`compatibility` profile. Node.js 22 accepts bundled npm 10.9.8 or newer within
+npm 10, and the unchanged npm 11 lane. Node.js 24 and the production supervisor
+continue to require the protected Node 24/npm 11 policy. Protected CI, the
+separate compatibility job, and the candidate image remain bound to their
+distinct exact policy pins.
 
 A future pin/range change requires a policy change plus matching package/lock,
 workflow, Dockerfile, negative-test, documentation, and release-verifier

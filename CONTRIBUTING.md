@@ -31,10 +31,12 @@ current-state document must say so explicitly.
 
 ## Development requirements
 
-- Node.js `>=24.14.0 <25`.
+- Primary/protected runtime: Node.js `>=24.14.0 <25`.
+- Source/shared-host compatibility: Node.js `>=22.23.2 <23`.
 - Protected CI and `.node-version` pin Node.js **24.18.0**.
+- A separate compatibility CI job pins Node.js **22.23.2**.
 - The candidate production image pins Node.js **24.19.0**.
-- npm `>=11.0.0 <12` for lockfile verification and repository commands.
+- npm `>=11.0.0 <12`, or Node 22's bundled npm `>=10.9.8 <11`.
 - Docker with Compose only when changing container/service-unit packages.
 - Browser/product toolchains only inside separately reviewed application
   boundaries; they must not become kernel dependencies.

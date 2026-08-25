@@ -12,7 +12,13 @@ import { MESH_ROOT } from './lib/config.mjs';
 export const SOURCE_SETUP_POLICY_SCHEMA = 'axiom-source-setup-policy.v1';
 
 const REPOSITORY_ROOT = dirname(MESH_ROOT);
-const ENGINE = '>=24.14.0 <25';
+const ENGINE = '>=22.23.2 <23 || >=24.14.0 <25';
+const PRIMARY_NODE_MINIMUM = '24.14.0';
+const PRIMARY_NODE_MAXIMUM_MAJOR = 25;
+const COMPATIBILITY_NODE_MINIMUM = '22.23.2';
+const COMPATIBILITY_NODE_MAXIMUM_MAJOR = 23;
+const COMPATIBILITY_NPM_MINIMUM = '10.9.8';
+const COMPATIBILITY_NPM_MAXIMUM_MAJOR = 11;
 const INSTALL_ARGUMENTS = Object.freeze([
   'ci',
   '--ignore-scripts',
@@ -85,14 +91,20 @@ export function validateSourceSetupPolicy(policy) {
     'engine',
     'minimum_version',
     'maximum_major_exclusive',
+    'compatibility_minimum_version',
+    'compatibility_maximum_major_exclusive',
+    'compatibility_ci_version',
     'ci_version',
     'production_version'
   ]);
   if (
     policy.runtime.name !== 'node'
     || policy.runtime.engine !== ENGINE
-    || policy.runtime.minimum_version !== '24.14.0'
-    || policy.runtime.maximum_major_exclusive !== 25
+    || policy.runtime.minimum_version !== PRIMARY_NODE_MINIMUM
+    || policy.runtime.maximum_major_exclusive !== PRIMARY_NODE_MAXIMUM_MAJOR
+    || policy.runtime.compatibility_minimum_version !== COMPATIBILITY_NODE_MINIMUM
+    || policy.runtime.compatibility_maximum_major_exclusive !== COMPATIBILITY_NODE_MAXIMUM_MAJOR
+    || policy.runtime.compatibility_ci_version !== COMPATIBILITY_NODE_MINIMUM
     || policy.runtime.ci_version !== '24.18.0'
     || policy.runtime.production_version !== '24.19.0'
   ) throw new ValidationError('Source setup runtime policy weakens the current build');
@@ -101,6 +113,8 @@ export function validateSourceSetupPolicy(policy) {
     'name',
     'minimum_version',
     'maximum_major_exclusive',
+    'compatibility_minimum_version',
+    'compatibility_maximum_major_exclusive',
     'lockfile_version',
     'install_arguments'
   ]);
@@ -108,6 +122,8 @@ export function validateSourceSetupPolicy(policy) {
     policy.package_manager.name !== 'npm'
     || policy.package_manager.minimum_version !== '11.0.0'
     || policy.package_manager.maximum_major_exclusive !== 12
+    || policy.package_manager.compatibility_minimum_version !== COMPATIBILITY_NPM_MINIMUM
+    || policy.package_manager.compatibility_maximum_major_exclusive !== COMPATIBILITY_NPM_MAXIMUM_MAJOR
     || policy.package_manager.lockfile_version !== 3
     || canonicalJson(policy.package_manager.install_arguments)
       !== canonicalJson(INSTALL_ARGUMENTS)
@@ -159,16 +175,17 @@ export function validateSourceSetupState({
   workflow
 }) {
   const policyResult = validateSourceSetupPolicy(policy);
-  validateVersionInRange(
-    nodeVersion,
-    policy.runtime.minimum_version,
-    policy.runtime.maximum_major_exclusive,
-    'Node.js'
-  );
+  const runtimeProfile = classifyRuntimeProfile(nodeVersion, policy.runtime);
+  const npmMajor = versionTuple(npmVersion, 'npm')[0];
+  const compatibilityNpm = runtimeProfile === 'compatibility' && npmMajor === 10;
   validateVersionInRange(
     npmVersion,
-    policy.package_manager.minimum_version,
-    policy.package_manager.maximum_major_exclusive,
+    compatibilityNpm
+      ? policy.package_manager.compatibility_minimum_version
+      : policy.package_manager.minimum_version,
+    compatibilityNpm
+      ? policy.package_manager.compatibility_maximum_major_exclusive
+      : policy.package_manager.maximum_major_exclusive,
     'npm'
   );
   if (nodeVersionPin.trim() !== policy.runtime.ci_version) {
@@ -194,7 +211,8 @@ export function validateSourceSetupState({
   if (
     !dockerfile.startsWith(`FROM node:${policy.runtime.production_version}-`)
     || !workflow.includes(`node-version: "${policy.runtime.ci_version}"`)
-    || !workflow.includes('npm run setup:install')
+    || !workflow.includes(`node-version: "${policy.runtime.compatibility_ci_version}"`)
+    || (workflow.match(/^\s+npm run setup:install\s*$/gm)?.length ?? 0) < 2
   ) throw new ValidationError('CI or production runtime setup pins have drifted');
 
   const dependencyPackages = (
@@ -215,6 +233,7 @@ export function validateSourceSetupState({
     runtime: {
       node: normalizeVersion(nodeVersion, 'Node.js'),
       npm: normalizeVersion(npmVersion, 'npm'),
+      profile: runtimeProfile,
       ci_pin: policy.runtime.ci_version,
       production_pin: policy.runtime.production_version
     },
@@ -457,6 +476,52 @@ function setupEnvironment() {
     npm_config_package_lock: 'true',
     npm_config_save: 'false'
   };
+}
+
+export function assertProductionRuntime(nodeVersion = process.version) {
+  try {
+    validateVersionInRange(
+      nodeVersion,
+      PRIMARY_NODE_MINIMUM,
+      PRIMARY_NODE_MAXIMUM_MAJOR,
+      'Node.js'
+    );
+  } catch (error) {
+    if (!(error instanceof ValidationError)) throw error;
+    throw new ValidationError(
+      `AXIOM production requires Node.js >=${PRIMARY_NODE_MINIMUM} <${PRIMARY_NODE_MAXIMUM_MAJOR}`
+    );
+  }
+  return normalizeVersion(nodeVersion, 'Node.js');
+}
+
+function classifyRuntimeProfile(value, runtimePolicy) {
+  const normalized = normalizeVersion(value, 'Node.js');
+  const major = versionTuple(normalized, 'Node.js')[0];
+
+  if (major === 24) {
+    validateVersionInRange(
+      normalized,
+      runtimePolicy.minimum_version,
+      runtimePolicy.maximum_major_exclusive,
+      'Node.js'
+    );
+    return 'primary';
+  }
+
+  if (major === 22) {
+    validateVersionInRange(
+      normalized,
+      runtimePolicy.compatibility_minimum_version,
+      runtimePolicy.compatibility_maximum_major_exclusive,
+      'Node.js'
+    );
+    return 'compatibility';
+  }
+
+  throw new ValidationError(
+    `Node.js ${normalized} is outside ${runtimePolicy.engine}`
+  );
 }
 
 function validateVersionInRange(value, minimum, maximumMajorExclusive, name) {

@@ -7,6 +7,7 @@ import { meshConfig } from './lib/config.mjs';
 import { recoverStaleGridRuntimeLock } from './grid/backup.mjs';
 import { startLocalIngressBridge } from './local-ingress.mjs';
 import { assertDenyEgressBoundary } from './network-boundary.mjs';
+import { assertProductionRuntime } from './setup.mjs';
 import {
   loadTransportRuntime,
   serviceDnsName,
@@ -42,6 +43,7 @@ export async function runProductionSupervisor({
   if (config.environment !== 'production' || config.autoBootstrap) {
     throw new ValidationError('The production supervisor requires NODE_ENV=production and disabled auto-bootstrap');
   }
+  assertProductionRuntime();
   if (config.requireDenyEgress) await denyEgressCheck();
   const supervisorTransport = config.transport?.enabled
     ? await loadTransportRuntime({
