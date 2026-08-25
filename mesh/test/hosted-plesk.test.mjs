@@ -67,6 +67,36 @@ test('hosted production accepts only the reviewed Node/runtime and private-root 
   await assertHostedProductionFilesystem(config);
 });
 
+test('Passenger reverse binding starts without PORT and never selects a non-loopback ingress', LINUX_HOST, async t => {
+  const { environment } = await fixture(t);
+  const { PORT: _passengerPort, ...passengerEnvironment } = environment;
+  const managed = validateHostedProductionConfig({
+    environment: passengerEnvironment,
+    runtimeVersion: '22.23.2'
+  });
+
+  assert.equal(managed.port, 0);
+  assert.equal(managed.ingressHost, '127.0.0.1');
+
+  const explicit = validateHostedProductionConfig({
+    environment,
+    runtimeVersion: '22.23.2'
+  });
+  assert.equal(explicit.port, 32123);
+  assert.equal(explicit.ingressHost, '127.0.0.1');
+
+  for (const invalid of ['', '0', '-1', '65536', '/tmp/passenger.sock']) {
+    assert.throws(
+      () => validateHostedProductionConfig({
+        environment: { ...passengerEnvironment, PORT: invalid },
+        runtimeVersion: '22.23.2'
+      }),
+      /Passenger PORT/i,
+      `unsafe explicit Passenger PORT ${JSON.stringify(invalid)} was accepted`
+    );
+  }
+});
+
 test('hosted production rejects public secrets, disabled security controls, and unreviewed runtimes', LINUX_HOST, async t => {
   const { documentRoot, environment } = await fixture(t);
   for (const [field, unsafeValue] of [
@@ -216,7 +246,7 @@ test('Passenger ingress serves public discovery and proxies only bounded request
   const ingress = createHostedIngress(config);
   await new Promise((resolve, reject) => {
     ingress.once('error', reject);
-    ingress.listen(0, '127.0.0.1', resolve);
+    ingress.listen(0, config.ingressHost, resolve);
   });
   t.after(() => new Promise(resolve => ingress.close(resolve)));
   const origin = `http://127.0.0.1:${ingress.address().port}`;
