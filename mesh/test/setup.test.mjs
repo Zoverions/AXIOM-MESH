@@ -9,6 +9,8 @@ import {
   validateSourceSetupState,
   verifyRepositorySetup
 } from '../src/setup.mjs';
+import { meshConfig } from '../src/lib/config.mjs';
+import * as setupRuntime from '../src/setup.mjs';
 
 const MESH_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const REPOSITORY_ROOT = dirname(MESH_ROOT);
@@ -26,6 +28,7 @@ test('current-build setup preflight verifies runtime pins, exact locks, and zero
   assert.equal(result.kernel_version, '0.12.0-dev.3');
   assert.equal(result.runtime.node, '24.18.0');
   assert.equal(result.runtime.npm, '11.9.0');
+  assert.equal(result.runtime.profile, 'primary');
   assert.equal(result.runtime.ci_pin, '24.18.0');
   assert.equal(result.runtime.production_pin, '24.19.0');
   assert.equal(result.workspaces, 2);
@@ -33,6 +36,163 @@ test('current-build setup preflight verifies runtime pins, exact locks, and zero
   assert.equal(result.install_scripts_allowed, false);
   assert.equal(result.setup_status, 'ready');
   assert.equal(result.production_credentials_created, false);
+});
+
+test('Rebel hosting compatibility accepts Node 22.23.2 with its bundled npm 10.9.8', async () => {
+  const result = await verifyRepositorySetup({
+    repositoryRoot: REPOSITORY_ROOT,
+    nodeVersion: 'v22.23.2',
+    npmVersion: '10.9.8',
+    npmCliPath: 'synthetic-unused'
+  });
+
+  assert.equal(result.valid, true);
+  assert.equal(result.runtime.node, '22.23.2');
+  assert.equal(result.runtime.npm, '10.9.8');
+  assert.equal(result.runtime.profile, 'compatibility');
+  assert.equal(result.runtime.ci_pin, '24.18.0');
+  assert.equal(result.runtime.production_pin, '24.19.0');
+  assert.equal(result.production_credentials_created, false);
+});
+
+test('Node 22 compatibility also accepts the unchanged npm 11 lane', async () => {
+  const input = await fixture();
+  const result = validateSourceSetupState({
+    ...input,
+    nodeVersion: '22.23.2',
+    npmVersion: '11.9.0'
+  });
+
+  assert.equal(result.runtime.profile, 'compatibility');
+  assert.equal(result.runtime.npm, '11.9.0');
+});
+
+test('supported runtime profiles reject unreviewed majors and outdated Node 22 patches', async () => {
+  const input = await fixture();
+
+  for (const nodeVersion of ['20.20.2', '21.9.0', '22.23.1', '23.11.1', '24.13.9', '25.0.0']) {
+    assert.throws(
+      () => validateSourceSetupState({
+        ...input,
+        nodeVersion,
+        npmVersion: nodeVersion.startsWith('22.') ? '10.9.8' : '11.9.0'
+      }),
+      /Node\.js .* is outside/,
+      `unsupported Node.js ${nodeVersion} was accepted`
+    );
+  }
+});
+
+test('npm 10 compatibility remains isolated from the protected Node 24 profile', async () => {
+  const input = await fixture();
+
+  assert.throws(
+    () => validateSourceSetupState({
+      ...input,
+      nodeVersion: '22.23.2',
+      npmVersion: '10.9.7'
+    }),
+    /npm .* is outside/
+  );
+  assert.throws(
+    () => validateSourceSetupState({
+      ...input,
+      nodeVersion: '24.18.0',
+      npmVersion: '10.9.8'
+    }),
+    /npm .* is outside/
+  );
+});
+
+test('production runtime guard permits only the approved Node 22 host pin and protected Node 24 range', () => {
+  assert.equal(setupRuntime.assertProductionRuntime('v22.23.2'), '22.23.2');
+  assert.equal(setupRuntime.assertProductionRuntime('v24.18.0'), '24.18.0');
+  assert.equal(setupRuntime.assertProductionRuntime('24.19.0'), '24.19.0');
+
+  for (const nodeVersion of ['20.20.2', '22.23.1', '22.23.3', '22.24.0', '23.11.1', '24.13.9', '25.0.0']) {
+    assert.throws(
+      () => setupRuntime.assertProductionRuntime(nodeVersion),
+      /production requires Node\.js 22\.23\.2 exactly or >=24\.14\.0 <25/i,
+      `unapproved production Node.js ${nodeVersion} was accepted`
+    );
+  }
+});
+
+test('production hosting approval does not relax bootstrap, mutual TLS, or credential-directory requirements', () => {
+  assert.throws(
+    () => meshConfig({ environment: 'production', autoBootstrap: true }),
+    /AXIOM_AUTO_BOOTSTRAP must be false in production/
+  );
+  assert.throws(
+    () => meshConfig({
+      environment: 'production',
+      autoBootstrap: false,
+      internalTlsEnabled: false
+    }),
+    /Production internal services require mutually authenticated TLS/
+  );
+  assert.throws(
+    () => meshConfig({
+      environment: 'production',
+      autoBootstrap: false,
+      internalTlsEnabled: true,
+      transportDir: ''
+    }),
+    /AXIOM_TRANSPORT_DIR is required when internal TLS is enabled/
+  );
+});
+
+test('production supervisor enforces the protected runtime before deployment side effects', async () => {
+  const supervisor = await readFile(join(REPOSITORY_ROOT, 'mesh', 'src', 'supervisor.mjs'), 'utf8');
+  assert.match(supervisor, /import \{ assertProductionRuntime \} from '\.\/setup\.mjs';/);
+  const guardPosition = supervisor.indexOf('assertProductionRuntime();');
+  const egressPosition = supervisor.indexOf('if (config.requireDenyEgress)');
+  assert.ok(guardPosition >= 0, 'production supervisor must enforce its protected runtime');
+  assert.ok(guardPosition < egressPosition, 'runtime guard must run before deployment side effects');
+});
+
+test('production supervisor keeps child shutdown deadlines referenced until cleanup settles', async () => {
+  const supervisor = await readFile(join(REPOSITORY_ROOT, 'mesh', 'src', 'supervisor.mjs'), 'utf8');
+  const shutdownDeadline = supervisor.slice(
+    supervisor.indexOf('async function settleWithin('),
+    supervisor.indexOf('\nif (import.meta.url', supervisor.indexOf('async function settleWithin('))
+  );
+  assert.match(shutdownDeadline, /timer = setTimeout\(/);
+  assert.doesNotMatch(
+    shutdownDeadline,
+    /timer\.unref\(\)/,
+    'cleanup deadlines must keep the event loop alive on every approved Node runtime'
+  );
+  assert.match(shutdownDeadline, /clearTimeout\(timer\)/);
+});
+
+test('doctor diagnostics explain the exact approved hosted-production pin and protected Node 24 track', async () => {
+  const doctor = await readFile(join(REPOSITORY_ROOT, 'mesh', 'src', 'doctor.mjs'), 'utf8');
+  assert.match(doctor, />=22\.23\.2 <23 \|\| >=24\.14\.0 <25/);
+  assert.match(doctor, /npm >=10\.9\.8 <11/);
+  assert.match(doctor, /production supports pinned Node 22\.23\.2 and Node 24/i);
+});
+
+test('hosted production runtime policy is an exact separately reviewed Node 22 pin', async () => {
+  const { policy } = await fixture();
+  assert.equal(policy.runtime.hosted_production_version, '22.23.2');
+
+  for (const unapprovedVersion of ['22.23.1', '22.23.3', '22.24.0', '24.19.0']) {
+    const changed = structuredClone(policy);
+    changed.runtime.hosted_production_version = unapprovedVersion;
+    assert.throws(
+      () => validateSourceSetupPolicy(changed),
+      /runtime policy (?:weakens|fields are invalid)/,
+      `unreviewed hosted production pin ${unapprovedVersion} was accepted`
+    );
+  }
+
+  const missing = structuredClone(policy);
+  delete missing.runtime.hosted_production_version;
+  assert.throws(
+    () => validateSourceSetupPolicy(missing),
+    /runtime policy fields are invalid/
+  );
 });
 
 test('setup policy rejects weaker runtimes, package managers, install arguments, workspaces, and verification', async () => {
@@ -43,6 +203,20 @@ test('setup policy rejects weaker runtimes, package managers, install arguments,
   assert.throws(
     () => validateSourceSetupPolicy(runtime),
     /runtime policy weakens/
+  );
+
+  const compatibilityRuntime = structuredClone(policy);
+  compatibilityRuntime.runtime.compatibility_minimum_version = '22.0.0';
+  assert.throws(
+    () => validateSourceSetupPolicy(compatibilityRuntime),
+    /runtime policy (?:weakens|fields are invalid)/
+  );
+
+  const compatibilityPackageManager = structuredClone(policy);
+  compatibilityPackageManager.package_manager.compatibility_minimum_version = '10.0.0';
+  assert.throws(
+    () => validateSourceSetupPolicy(compatibilityPackageManager),
+    /package-manager policy (?:weakens|fields are invalid)/
   );
 
   const packageManager = structuredClone(policy);
@@ -139,6 +313,16 @@ test('setup state binds local, CI, and production runtime pins', async () => {
       dockerfile: input.dockerfile.replace(
         'FROM node:24.19.0-',
         'FROM node:24.20.0-'
+      )
+    }),
+    /runtime setup pins have drifted/
+  );
+  assert.throws(
+    () => validateSourceSetupState({
+      ...input,
+      workflow: input.workflow.replace(
+        'node-version: "22.23.2"',
+        'node-version: "22.23.1"'
       )
     }),
     /runtime setup pins have drifted/

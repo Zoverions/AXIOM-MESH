@@ -22,10 +22,18 @@ The machine-readable project/application boundary is recorded in
 
 ## First 5 Minutes
 
-Requirements: Node.js `>=24.14.0 <25` and npm `>=11.0.0 <12`.
+Primary production requirements: Node.js `>=24.14.0 <25` and npm
+`>=11.0.0 <12`. The separately approved hosted-production runtime is exactly
+Node.js `22.23.2`, with bundled npm `>=10.9.8 <11` or npm 11. Source and
+shared-host setup also accepts Node.js `>=22.23.2 <23`; no other Node.js 22
+patch is approved to start the production supervisor.
 
 The setup policy pins **Node.js 24.18.0 for protected CI and `.node-version`**
 and **Node.js 24.19.0 for the candidate production image**.
+A separate hosted-runtime job pins **Node.js 22.23.2** and verifies the
+production guard, mutual TLS, network-boundary, and supervisor protections.
+Runtime approval never waives private credential storage, deny-egress
+enforcement, or the separate production-promotion decision.
 
 ```bash
 git clone https://github.com/Zoverions/AXIOM-MESH.git

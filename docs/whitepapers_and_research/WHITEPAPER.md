@@ -226,11 +226,17 @@ trusted computing base.
 
 ### 3.4 Runtime/source policy
 
-The supported engine range is Node.js `>=24.14.0 <25` with npm
-`>=11.0.0 <12` and zero third-party npm dependency packages.
+The primary production engine range is Node.js `>=24.14.0 <25` with npm
+`>=11.0.0 <12`. Exactly Node.js `22.23.2` is separately approved for hosted
+production with bundled npm `>=10.9.8 <11` or npm 11; no other Node.js 22
+patch can start the production supervisor. Source/shared-host compatibility
+also supports Node.js `>=22.23.2 <23`. Both production tracks retain zero
+third-party npm dependency packages and the same credential, mutual-TLS,
+deny-egress, and promotion requirements.
 
 Current machine-readable setup policy intentionally distinguishes:
 
+- separate approved hosted-runtime/security CI: **Node.js 22.23.2**;
 - protected CI and `.node-version`: **Node.js 24.18.0**;
 - candidate production image: **Node.js 24.19.0**.
 

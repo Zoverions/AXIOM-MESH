@@ -286,9 +286,13 @@ promoted, and no external effect becomes reachable because of the byte freeze.
 
 ## Runtime pin authority
 
-Do not collapse CI and production pins into one value. The current setup policy
-requires Node.js `>=24.14.0 <25`, pins protected CI and `.node-version` to
-**24.18.0**, and pins the candidate production image to **24.19.0**.
+Do not collapse hosted production, protected CI, and container-production pins
+into one value. The current source-setup policy supports Node.js `>=22.23.2
+<23 || >=24.14.0 <25`, separately approves exactly **22.23.2** for hosted
+production and its security-focused CI, pins protected CI and `.node-version`
+to **24.18.0**, and pins the candidate production image to **24.19.0**. No
+other Node.js 22 patch is approved for production; all existing credential,
+mutual-TLS, deny-egress, and promotion requirements remain unchanged.
 
 ## Supported documentation boundary
 

@@ -67,6 +67,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  compatibility-node-22:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.2"
+          package-manager-cache: false
+      - name: Verify pinned hosted-production runtime and unchanged safeguards
+        run: |
+          node --version
+          npm --version
+          npm run setup:install
+          node --test --test-reporter=spec \
+            mesh/test/setup.test.mjs \
+            mesh/test/production-host.test.mjs \
+            mesh/test/supervisor-shutdown.test.mjs \
+            mesh/test/transport-credentials.test.mjs \
+            mesh/test/network-boundary.test.mjs
+
   verify:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
