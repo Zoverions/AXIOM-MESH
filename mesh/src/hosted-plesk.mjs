@@ -77,6 +77,7 @@ export function validateHostedProductionConfig({
       'Gateway Unix socket'
     ),
     port: parsePassengerPort(environment.PORT),
+    ingressHost: '127.0.0.1',
     sourceEnvironment: environment
   };
 
@@ -223,7 +224,7 @@ export async function startHostedProduction({
   process.once('SIGINT', stop);
   await new Promise((resolveListen, reject) => {
     server.once('error', reject);
-    server.listen(config.port, resolveListen);
+    server.listen(config.port, config.ingressHost, resolveListen);
   });
   return { server, child, config, stop };
 }
@@ -346,6 +347,7 @@ function respond(response, status, message) {
 }
 
 function parsePassengerPort(value) {
+  if (value === undefined) return 0;
   if (typeof value !== 'string' || !/^\d+$/.test(value)) {
     throw new ValidationError('Hosted production requires a numeric Passenger PORT');
   }

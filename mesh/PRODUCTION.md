@@ -213,7 +213,10 @@ provision `private/data` and `private/secrets` through the unchanged
 
 The outer Passenger process serves only files inside the canonical public
 document root and forwards `/ready` plus `/v1/*` only to the fixed private Unix
-socket. It never forwards to a caller-selected host or URL. The four AXIOM
+socket. It never forwards to a caller-selected host or URL. Passenger's reverse
+port binding does not require a `PORT` environment variable; the ingress uses a
+local ephemeral port when it is absent and never binds outside `127.0.0.1`.
+The four AXIOM
 services run in the isolated child namespace with loopback only, mutual TLS,
 disabled automatic bootstrap, private file-based credentials, and
 `AXIOM_REQUIRE_DENY_EGRESS=true`. Passenger ports and unrelated host/provider
