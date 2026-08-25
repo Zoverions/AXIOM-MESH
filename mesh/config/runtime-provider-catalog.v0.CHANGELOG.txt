@@ -1,3 +1,12 @@
+2026-08-25 — pinned local-inference research profiles
+
+- Added four source-commit-pinned compute-backend research profiles: Ollama (MIT), vLLM (Apache-2.0), llama.cpp (MIT), and SGLang (Apache-2.0).
+- Verified each license against the LICENSE file at its exact pinned upstream source commit.
+- Kept compute-backend profiles distinct from agent runtimes, hosted model providers, model artifacts, and authorization grants.
+- Kept every local-inference profile at zero requested AXIOM actions, capabilities, purposes, destinations, data classes, credentials, network access, worker delegation, and remote execution.
+- Removed admitted compute-backend names from the research-only backlog without changing the frozen v1 contract.
+- Added positive provenance/classification checks and negative coverage for loopback bootstrap, implicit network permission, installation authority, mutable source references, and missing source pins.
+
 2026-08-24 — v0 seed
 
 - Added four pinned agent-runtime research profiles: Hermes Agent, OpenClaw, OpenAI Codex CLI, Agent Zero.
