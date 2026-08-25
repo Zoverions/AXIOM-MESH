@@ -17,8 +17,9 @@ is authoritative for runnable claims.
 Supported source runtime:
 
 - primary/protected-production Node.js `>=24.14.0 <25`;
+- separately approved hosted-production Node.js exactly `22.23.2`;
 - source/shared-host compatibility Node.js `>=22.23.2 <23`;
-- separate compatibility CI: Node.js `22.23.2`;
+- separate hosted-runtime/security CI: Node.js `22.23.2`;
 - protected CI and `.node-version`: Node.js `24.18.0`;
 - candidate production image: Node.js `24.19.0`;
 - npm `>=11.0.0 <12`, or bundled npm `>=10.9.8 <11` with Node.js 22;
@@ -26,8 +27,10 @@ Supported source runtime:
 
 The machine-readable source-setup authority is
 [`config/setup.json`](config/setup.json). Do not infer the candidate production
-pin from `.node-version`: CI and production are intentionally represented as
-separate policy fields.
+pin from `.node-version`: hosted production, protected CI, and container
+production are intentionally represented as separate policy fields. Hosted
+runtime approval preserves private credentials, mutual TLS, deny-egress, and
+all existing promotion gates.
 
 From the repository root:
 

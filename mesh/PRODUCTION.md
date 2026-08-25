@@ -28,12 +28,19 @@ full clean-kernel and release gates. Protected CI uses
 
 The machine-readable setup policy intentionally uses separate exact pins:
 
+- approved hosted production: Node.js **22.23.2** exactly;
 - protected CI and `.node-version`: Node.js **24.18.0**;
 - candidate production Dockerfile/image: Node.js **24.19.0**.
 
-Both remain inside the supported `>=24.14.0 <25` engine range. Source setup
-does not provision the credentials or state required below and does not start
-or deploy the runtime. See
+The container and protected CI remain inside the `>=24.14.0 <25` primary
+range. Only the exact hosted-production Node.js 22 pin is additionally
+approved; other Node.js 22 versions remain source-compatibility only. A hosted
+deployment must reproduce the same private application/data/secret boundaries,
+mutually authenticated TLS, loopback-only namespace, deny-egress enforcement,
+and explicit ingress. Ordinary shared hosting with a public application root
+or a routable network namespace is not an approved production topology.
+Source setup does not provision the credentials or state required below and
+does not start or deploy the runtime. See
 [`docs/operations/AUTOMATED-SOURCE-SETUP.md`](../docs/operations/AUTOMATED-SOURCE-SETUP.md)
 for the exact dependency, receipt, failure, and non-claim boundary.
 

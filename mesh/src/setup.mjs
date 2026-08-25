@@ -17,6 +17,7 @@ const PRIMARY_NODE_MINIMUM = '24.14.0';
 const PRIMARY_NODE_MAXIMUM_MAJOR = 25;
 const COMPATIBILITY_NODE_MINIMUM = '22.23.2';
 const COMPATIBILITY_NODE_MAXIMUM_MAJOR = 23;
+const HOSTED_PRODUCTION_NODE_VERSION = '22.23.2';
 const COMPATIBILITY_NPM_MINIMUM = '10.9.8';
 const COMPATIBILITY_NPM_MAXIMUM_MAJOR = 11;
 const INSTALL_ARGUMENTS = Object.freeze([
@@ -95,6 +96,7 @@ export function validateSourceSetupPolicy(policy) {
     'compatibility_maximum_major_exclusive',
     'compatibility_ci_version',
     'ci_version',
+    'hosted_production_version',
     'production_version'
   ]);
   if (
@@ -106,6 +108,7 @@ export function validateSourceSetupPolicy(policy) {
     || policy.runtime.compatibility_maximum_major_exclusive !== COMPATIBILITY_NODE_MAXIMUM_MAJOR
     || policy.runtime.compatibility_ci_version !== COMPATIBILITY_NODE_MINIMUM
     || policy.runtime.ci_version !== '24.18.0'
+    || policy.runtime.hosted_production_version !== HOSTED_PRODUCTION_NODE_VERSION
     || policy.runtime.production_version !== '24.19.0'
   ) throw new ValidationError('Source setup runtime policy weakens the current build');
 
@@ -480,8 +483,10 @@ function setupEnvironment() {
 
 export function assertProductionRuntime(nodeVersion = process.version) {
   try {
+    const normalized = normalizeVersion(nodeVersion, 'Node.js');
+    if (normalized === HOSTED_PRODUCTION_NODE_VERSION) return normalized;
     validateVersionInRange(
-      nodeVersion,
+      normalized,
       PRIMARY_NODE_MINIMUM,
       PRIMARY_NODE_MAXIMUM_MAJOR,
       'Node.js'
@@ -489,7 +494,7 @@ export function assertProductionRuntime(nodeVersion = process.version) {
   } catch (error) {
     if (!(error instanceof ValidationError)) throw error;
     throw new ValidationError(
-      `AXIOM production requires Node.js >=${PRIMARY_NODE_MINIMUM} <${PRIMARY_NODE_MAXIMUM_MAJOR}`
+      `AXIOM production requires Node.js ${HOSTED_PRODUCTION_NODE_VERSION} exactly or >=${PRIMARY_NODE_MINIMUM} <${PRIMARY_NODE_MAXIMUM_MAJOR}`
     );
   }
   return normalizeVersion(nodeVersion, 'Node.js');

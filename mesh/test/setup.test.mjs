@@ -9,6 +9,7 @@ import {
   validateSourceSetupState,
   verifyRepositorySetup
 } from '../src/setup.mjs';
+import { meshConfig } from '../src/lib/config.mjs';
 import * as setupRuntime from '../src/setup.mjs';
 
 const MESH_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -103,16 +104,41 @@ test('npm 10 compatibility remains isolated from the protected Node 24 profile',
   );
 });
 
-test('production runtime guard rejects compatibility hosts and preserves the Node 24 floor', () => {
+test('production runtime guard permits only the approved Node 22 host pin and protected Node 24 range', () => {
+  assert.equal(setupRuntime.assertProductionRuntime('v22.23.2'), '22.23.2');
   assert.equal(setupRuntime.assertProductionRuntime('v24.18.0'), '24.18.0');
   assert.equal(setupRuntime.assertProductionRuntime('24.19.0'), '24.19.0');
+
+  for (const nodeVersion of ['20.20.2', '22.23.1', '22.23.3', '22.24.0', '23.11.1', '24.13.9', '25.0.0']) {
+    assert.throws(
+      () => setupRuntime.assertProductionRuntime(nodeVersion),
+      /production requires Node\.js 22\.23\.2 exactly or >=24\.14\.0 <25/i,
+      `unapproved production Node.js ${nodeVersion} was accepted`
+    );
+  }
+});
+
+test('production hosting approval does not relax bootstrap, mutual TLS, or credential-directory requirements', () => {
   assert.throws(
-    () => setupRuntime.assertProductionRuntime('22.23.2'),
-    /production requires Node\.js >=24\.14\.0 <25/i
+    () => meshConfig({ environment: 'production', autoBootstrap: true }),
+    /AXIOM_AUTO_BOOTSTRAP must be false in production/
   );
   assert.throws(
-    () => setupRuntime.assertProductionRuntime('24.13.9'),
-    /production requires Node\.js >=24\.14\.0 <25/i
+    () => meshConfig({
+      environment: 'production',
+      autoBootstrap: false,
+      internalTlsEnabled: false
+    }),
+    /Production internal services require mutually authenticated TLS/
+  );
+  assert.throws(
+    () => meshConfig({
+      environment: 'production',
+      autoBootstrap: false,
+      internalTlsEnabled: true,
+      transportDir: ''
+    }),
+    /AXIOM_TRANSPORT_DIR is required when internal TLS is enabled/
   );
 });
 
@@ -125,11 +151,33 @@ test('production supervisor enforces the protected runtime before deployment sid
   assert.ok(guardPosition < egressPosition, 'runtime guard must run before deployment side effects');
 });
 
-test('doctor diagnostics explain both the hosting compatibility and protected production tracks', async () => {
+test('doctor diagnostics explain the exact approved hosted-production pin and protected Node 24 track', async () => {
   const doctor = await readFile(join(REPOSITORY_ROOT, 'mesh', 'src', 'doctor.mjs'), 'utf8');
   assert.match(doctor, />=22\.23\.2 <23 \|\| >=24\.14\.0 <25/);
   assert.match(doctor, /npm >=10\.9\.8 <11/);
-  assert.match(doctor, /production requires Node 24/i);
+  assert.match(doctor, /production supports pinned Node 22\.23\.2 and Node 24/i);
+});
+
+test('hosted production runtime policy is an exact separately reviewed Node 22 pin', async () => {
+  const { policy } = await fixture();
+  assert.equal(policy.runtime.hosted_production_version, '22.23.2');
+
+  for (const unapprovedVersion of ['22.23.1', '22.23.3', '22.24.0', '24.19.0']) {
+    const changed = structuredClone(policy);
+    changed.runtime.hosted_production_version = unapprovedVersion;
+    assert.throws(
+      () => validateSourceSetupPolicy(changed),
+      /runtime policy (?:weakens|fields are invalid)/,
+      `unreviewed hosted production pin ${unapprovedVersion} was accepted`
+    );
+  }
+
+  const missing = structuredClone(policy);
+  delete missing.runtime.hosted_production_version;
+  assert.throws(
+    () => validateSourceSetupPolicy(missing),
+    /runtime policy fields are invalid/
+  );
 });
 
 test('setup policy rejects weaker runtimes, package managers, install arguments, workspaces, and verification', async () => {

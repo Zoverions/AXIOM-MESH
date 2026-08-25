@@ -32,9 +32,10 @@ current-state document must say so explicitly.
 ## Development requirements
 
 - Primary/protected runtime: Node.js `>=24.14.0 <25`.
+- Separately approved hosted-production runtime: exactly Node.js `22.23.2`.
 - Source/shared-host compatibility: Node.js `>=22.23.2 <23`.
 - Protected CI and `.node-version` pin Node.js **24.18.0**.
-- A separate compatibility CI job pins Node.js **22.23.2**.
+- A separate hosted-runtime/security CI job pins Node.js **22.23.2**.
 - The candidate production image pins Node.js **24.19.0**.
 - npm `>=11.0.0 <12`, or Node 22's bundled npm `>=10.9.8 <11`.
 - Docker with Compose only when changing container/service-unit packages.

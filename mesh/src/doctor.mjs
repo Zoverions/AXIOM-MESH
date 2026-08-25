@@ -140,7 +140,7 @@ export function doctorFailureMessage(error) {
   if (nodeMatch) {
     return [
       `AXIOM-MESH requires Node.js >=22.23.2 <23 || >=24.14.0 <25 (you have ${nodeMatch[1]}).`,
-      'Node 22 is for source and shared-host compatibility; production requires Node 24.',
+      'Production supports pinned Node 22.23.2 and Node 24; all existing security controls remain mandatory.',
       'Recommended: nvm install 24.18.0 && nvm use 24.18.0'
     ].join('\n');
   }
