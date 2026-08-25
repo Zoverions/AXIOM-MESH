@@ -340,7 +340,6 @@ async function settleWithin(promise, timeoutMs) {
       promise,
       new Promise(resolve => {
         timer = setTimeout(() => resolve(false), timeoutMs);
-        timer.unref();
       })
     ]);
   } finally {

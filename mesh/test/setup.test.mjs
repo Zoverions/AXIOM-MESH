@@ -151,6 +151,21 @@ test('production supervisor enforces the protected runtime before deployment sid
   assert.ok(guardPosition < egressPosition, 'runtime guard must run before deployment side effects');
 });
 
+test('production supervisor keeps child shutdown deadlines referenced until cleanup settles', async () => {
+  const supervisor = await readFile(join(REPOSITORY_ROOT, 'mesh', 'src', 'supervisor.mjs'), 'utf8');
+  const shutdownDeadline = supervisor.slice(
+    supervisor.indexOf('async function settleWithin('),
+    supervisor.indexOf('\nif (import.meta.url', supervisor.indexOf('async function settleWithin('))
+  );
+  assert.match(shutdownDeadline, /timer = setTimeout\(/);
+  assert.doesNotMatch(
+    shutdownDeadline,
+    /timer\.unref\(\)/,
+    'cleanup deadlines must keep the event loop alive on every approved Node runtime'
+  );
+  assert.match(shutdownDeadline, /clearTimeout\(timer\)/);
+});
+
 test('doctor diagnostics explain the exact approved hosted-production pin and protected Node 24 track', async () => {
   const doctor = await readFile(join(REPOSITORY_ROOT, 'mesh', 'src', 'doctor.mjs'), 'utf8');
   assert.match(doctor, />=22\.23\.2 <23 \|\| >=24\.14\.0 <25/);
