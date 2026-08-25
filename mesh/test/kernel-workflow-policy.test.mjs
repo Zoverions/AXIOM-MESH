@@ -13,6 +13,14 @@ test('load-bearing Clean Kernel workflow pins actions, runner, and source paths'
   assert.ok(source.includes('actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7'));
   assert.ok(source.includes('node src/lib/runtime-adapter-contract.mjs'));
   assert.ok(source.includes('node src/runtime-adapter-conformance.mjs'));
+  assert.ok(source.includes('Verify pinned hosted-production runtime and unchanged safeguards'));
+  assert.ok(source.includes('mesh/test/production-host.test.mjs'));
+  assert.ok(source.includes('mesh/test/supervisor-shutdown.test.mjs'));
+  assert.ok(source.includes('mesh/test/transport-credentials.test.mjs'));
+  assert.ok(source.includes('mesh/test/network-boundary.test.mjs'));
+  assert.ok(source.includes('mesh/test/hosted-plesk.test.mjs'));
+  assert.ok(source.includes('mesh/test/runtime-provider-catalog.test.mjs'));
+  assert.ok(source.includes('mesh/test/runtime-provider-catalog-negative.test.mjs'));
   assert.ok(source.includes('--require-commit-bound'));
   assert.ok(source.includes('axiom-runtime-adapter-reference-conformance-evidence-${{ github.sha }}'));
   assert.equal((source.match(/- "apps\/\*\*"/g) ?? []).length, 2);

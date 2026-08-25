@@ -35,7 +35,7 @@ explicitly opened.
 | REP-002 | Complete | Canonical docs + protected lowercase-`main` CI | Documentation and workflow gates |
 | REP-003 | Complete | Branch protection | Force-push/deletion disabled; required verification |
 | REP-004 | Complete | Remove unsupported legacy runtime/docs from supported branch | Legacy tag + locked `deprecated/pre-0.12-documentation-corpus` branch |
-| REP-005 | Complete | Exact source setup/dependency verification | Node `>=24.14.0 <25`; CI/.node-version 24.18.0; production image 24.19.0; npm 11.x; two zero-dependency locks; lifecycle scripts disabled; unchanged-lock proof |
+| REP-005 | Complete | Exact source setup/dependency verification | Node 22.23.2+ shared-host/source compatibility; exact hosted-production/security CI pin 22.23.2 or protected Node 24.14.0+; protected CI/.node-version 24.18.0; production image 24.19.0; Node 22 bundled npm 10.9.8+ or npm 11.x; unchanged private-credential, mutual-TLS, deny-egress, and promotion requirements; two zero-dependency locks; lifecycle scripts disabled; unchanged-lock proof |
 | REL-001 | Complete | Publish clean-room 0.11 baseline | Immutable `v0.11.0` prerelease with checksum/SBOM/provenance |
 | REL-002 | Complete | Candidate image build/readiness | Protected container evidence |
 | SEC-001 | Complete for repository trust | Revoke deprecated-history credential candidates from supported trust | 32-entry keyed ledger + supported-tip reuse rejection; external dispositions still pending |

@@ -15,10 +15,14 @@ implementation is [`mesh/src/setup.mjs`](../../mesh/src/setup.mjs).
 
 The policy binds source setup to:
 
-- Node.js `>=24.14.0 <25`;
+- primary and protected-production Node.js `>=24.14.0 <25`;
+- separately approved hosted-production Node.js exactly `22.23.2`;
+- shared-host/source-compatibility Node.js `>=22.23.2 <23`;
+- Node.js **22.23.2** in the separate hosted-runtime/security CI job;
 - Node.js **24.18.0** in protected CI and `.node-version`;
 - Node.js **24.19.0** in the candidate production image;
-- npm `>=11.0.0 <12`;
+- npm `>=11.0.0 <12` on the primary profile;
+- bundled npm `>=10.9.8 <11` or npm 11 on the Node.js 22 compatibility profile;
 - npm lockfile version 3;
 - the root command surface and `mesh/` kernel as the only workspaces;
 - both committed dependency-free lockfiles;
@@ -33,8 +37,9 @@ pin drift, command drift, additional workspaces, dependency entries,
 installation lifecycle scripts, non-root lock entries, or source inputs that no
 longer match policy.
 
-CI and production pins are deliberately independent policy fields. They are not
-required to be the same version; each must match its own declared authority.
+Hosted production, protected CI, and container production pins are deliberately
+independent policy fields. They are not required to be the same version; each
+must match its own declared authority.
 
 This boundary applies to a clean checkout of the current `main` source line.
 Immutable `v0.11.0` and the locked
@@ -125,10 +130,12 @@ release provenance.
 The exact current pins are:
 
 ```text
-supported engine:          >=24.14.0 <25
-protected CI/.node-version: 24.18.0
-candidate production image: 24.19.0
-npm:                        >=11.0.0 <12
+supported engine:             >=22.23.2 <23 || >=24.14.0 <25
+hosted production/security CI: 22.23.2 exactly
+protected CI/.node-version:   24.18.0
+candidate production image:   24.19.0
+primary npm:                  >=11.0.0 <12
+Node 22 compatibility npm:    >=10.9.8 <11, or >=11.0.0 <12
 ```
 
 The candidate Dockerfile is therefore expected to use Node.js 24.19.0 while the
@@ -177,10 +184,16 @@ The automation intentionally does not install Node.js, npm, Git, Docker,
 Compose, OS packages, a container runtime, or host-security controls. Silently
 acquiring a toolchain would enlarge the setup trust boundary.
 
-Local Node.js versions from 24.14.0 up to but not including 25 are accepted for
-source checks. The receipt records the detected local version. Protected CI and
-the candidate image remain bound to their distinct exact policy pins. npm 11.x
-within the declared range is accepted.
+Local Node.js versions from 24.14.0 up to but not including 25, and Node.js
+versions from 22.23.2 up to but not including 23, are accepted for source
+checks. The receipt records the detected local version and its `primary` or
+`compatibility` profile. Node.js 22 accepts bundled npm 10.9.8 or newer within
+npm 10, and the unchanged npm 11 lane. The production supervisor accepts the
+existing protected Node 24/npm 11 policy or the separately approved, exact
+Node.js 22.23.2 host pin; other Node.js 22 patches remain source-only.
+Private credentials, mutual TLS, deny-egress, and the production-promotion
+decision remain mandatory. Protected CI, the separate hosted-security job, and
+the candidate image remain bound to their distinct exact policy pins.
 
 A future pin/range change requires a policy change plus matching package/lock,
 workflow, Dockerfile, negative-test, documentation, and release-verifier
