@@ -34,6 +34,9 @@ A separate hosted-runtime job pins **Node.js 22.23.2** and verifies the
 production guard, mutual TLS, network-boundary, and supervisor protections.
 Runtime approval never waives private credential storage, deny-egress
 enforcement, or the separate production-promotion decision.
+A reviewed Plesk/Passenger host can satisfy the same boundary only by running
+the kernel inside an unprivileged loopback-only Linux namespace and proxying
+through a private Unix socket; see [`mesh/PRODUCTION.md`](mesh/PRODUCTION.md).
 
 ```bash
 git clone https://github.com/Zoverions/AXIOM-MESH.git
