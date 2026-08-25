@@ -1,6 +1,6 @@
 {
   "catalog": "axiom-runtime-provider-catalog.v0",
-  "cataloged_at": "2026-08-24T18:35:00Z",
+  "cataloged_at": "2026-08-25T12:11:00Z",
   "base_contract": {
     "schema": "axiom-runtime-connector-catalog-entry.v1",
     "schema_sha256": "0fbd3cf2e4a5df8bd803427413a37e1d83d5ccfa7568ac02a4760c8af7beca46"
@@ -686,13 +686,241 @@
         "This provider-level entry does not guarantee model alias stability, retention behavior, pricing, availability, or model-specific licensing.",
         "Task-specific model, data, purpose, destination, retention, budget, and authorization policy remains separately required."
       ]
+    },
+    {
+      "schema": "axiom-runtime-connector-catalog-entry.v1",
+      "entry_id": "compute:ollama:research",
+      "entry_version": "0.1.0",
+      "integration_class": "compute-backend",
+      "subject": {
+        "subject_id": "compute:ollama:research",
+        "display_name": "Ollama",
+        "description": "Pinned source-identity research profile for Ollama as a local Linux inference backend; no installation, process, listener, model, or inference operation is enabled."
+      },
+      "provenance": {
+        "source_kind": "source-repository",
+        "source_repository": "https://github.com/ollama/ollama",
+        "source_commit": "f6c59d87038ae77f52d4adfbdc37363f8edd1ef3",
+        "license_spdx": "MIT",
+        "mutable_ref_allowed": false
+      },
+      "compatibility": {
+        "platforms": [
+          "linux"
+        ],
+        "deployment_forms": [
+          "process"
+        ],
+        "adapter_contracts": []
+      },
+      "requested_access": {
+        "install_grants_authority": false,
+        "capabilities": [],
+        "actions": [],
+        "purposes": [],
+        "destinations": [],
+        "data_classes": [],
+        "credential_classes": [],
+        "network_required": false
+      },
+      "orchestration": {
+        "mode": "none",
+        "may_spawn_workers": false,
+        "independent_child_authority_requested": false,
+        "remote_execution_requested": false
+      },
+      "assurance": {
+        "observations": [],
+        "cataloged_at": "2026-08-25T12:11:00Z"
+      },
+      "lifecycle": {
+        "update_mode": "manual-reviewed",
+        "silent_permission_widening_allowed": false,
+        "rollback_available": true,
+        "quarantine_supported": true
+      },
+      "non_claims": [
+        "Catalog presence does not install, start, route to, or authorize this local compute backend.",
+        "No capability, action, credential, listener, loopback endpoint, network access, worker delegation, or remote execution is granted by this entry.",
+        "Model artifacts, weights, licensing, hardware compatibility, benchmarks, adapter conformance, and task-specific authorization require separate review."
+      ]
+    },
+    {
+      "schema": "axiom-runtime-connector-catalog-entry.v1",
+      "entry_id": "compute:vllm:research",
+      "entry_version": "0.1.0",
+      "integration_class": "compute-backend",
+      "subject": {
+        "subject_id": "compute:vllm:research",
+        "display_name": "vLLM",
+        "description": "Pinned source-identity research profile for vLLM as a local Linux inference backend; no installation, process, listener, model, or inference operation is enabled."
+      },
+      "provenance": {
+        "source_kind": "source-repository",
+        "source_repository": "https://github.com/vllm-project/vllm",
+        "source_commit": "d9fbe526c0787eb5e6dd1e3e4d9b88848d21bc6b",
+        "license_spdx": "Apache-2.0",
+        "mutable_ref_allowed": false
+      },
+      "compatibility": {
+        "platforms": [
+          "linux"
+        ],
+        "deployment_forms": [
+          "process"
+        ],
+        "adapter_contracts": []
+      },
+      "requested_access": {
+        "install_grants_authority": false,
+        "capabilities": [],
+        "actions": [],
+        "purposes": [],
+        "destinations": [],
+        "data_classes": [],
+        "credential_classes": [],
+        "network_required": false
+      },
+      "orchestration": {
+        "mode": "none",
+        "may_spawn_workers": false,
+        "independent_child_authority_requested": false,
+        "remote_execution_requested": false
+      },
+      "assurance": {
+        "observations": [],
+        "cataloged_at": "2026-08-25T12:11:00Z"
+      },
+      "lifecycle": {
+        "update_mode": "manual-reviewed",
+        "silent_permission_widening_allowed": false,
+        "rollback_available": true,
+        "quarantine_supported": true
+      },
+      "non_claims": [
+        "Catalog presence does not install, start, route to, or authorize this local compute backend.",
+        "No capability, action, credential, listener, loopback endpoint, network access, worker delegation, or remote execution is granted by this entry.",
+        "Model artifacts, weights, licensing, hardware compatibility, benchmarks, adapter conformance, and task-specific authorization require separate review."
+      ]
+    },
+    {
+      "schema": "axiom-runtime-connector-catalog-entry.v1",
+      "entry_id": "compute:llama.cpp:research",
+      "entry_version": "0.1.0",
+      "integration_class": "compute-backend",
+      "subject": {
+        "subject_id": "compute:llama.cpp:research",
+        "display_name": "llama.cpp",
+        "description": "Pinned source-identity research profile for llama.cpp as a local Linux inference backend; no installation, process, listener, model, or inference operation is enabled."
+      },
+      "provenance": {
+        "source_kind": "source-repository",
+        "source_repository": "https://github.com/ggml-org/llama.cpp",
+        "source_commit": "3737e41370da1830a44c663f9929a0f27591ffa6",
+        "license_spdx": "MIT",
+        "mutable_ref_allowed": false
+      },
+      "compatibility": {
+        "platforms": [
+          "linux"
+        ],
+        "deployment_forms": [
+          "process"
+        ],
+        "adapter_contracts": []
+      },
+      "requested_access": {
+        "install_grants_authority": false,
+        "capabilities": [],
+        "actions": [],
+        "purposes": [],
+        "destinations": [],
+        "data_classes": [],
+        "credential_classes": [],
+        "network_required": false
+      },
+      "orchestration": {
+        "mode": "none",
+        "may_spawn_workers": false,
+        "independent_child_authority_requested": false,
+        "remote_execution_requested": false
+      },
+      "assurance": {
+        "observations": [],
+        "cataloged_at": "2026-08-25T12:11:00Z"
+      },
+      "lifecycle": {
+        "update_mode": "manual-reviewed",
+        "silent_permission_widening_allowed": false,
+        "rollback_available": true,
+        "quarantine_supported": true
+      },
+      "non_claims": [
+        "Catalog presence does not install, start, route to, or authorize this local compute backend.",
+        "No capability, action, credential, listener, loopback endpoint, network access, worker delegation, or remote execution is granted by this entry.",
+        "Model artifacts, weights, licensing, hardware compatibility, benchmarks, adapter conformance, and task-specific authorization require separate review."
+      ]
+    },
+    {
+      "schema": "axiom-runtime-connector-catalog-entry.v1",
+      "entry_id": "compute:sglang:research",
+      "entry_version": "0.1.0",
+      "integration_class": "compute-backend",
+      "subject": {
+        "subject_id": "compute:sglang:research",
+        "display_name": "SGLang",
+        "description": "Pinned source-identity research profile for SGLang as a local Linux inference backend; no installation, process, listener, model, or inference operation is enabled."
+      },
+      "provenance": {
+        "source_kind": "source-repository",
+        "source_repository": "https://github.com/sgl-project/sglang",
+        "source_commit": "0c7ff19e3b739b2aabe9bfa070047bfa1aa6a7fd",
+        "license_spdx": "Apache-2.0",
+        "mutable_ref_allowed": false
+      },
+      "compatibility": {
+        "platforms": [
+          "linux"
+        ],
+        "deployment_forms": [
+          "process"
+        ],
+        "adapter_contracts": []
+      },
+      "requested_access": {
+        "install_grants_authority": false,
+        "capabilities": [],
+        "actions": [],
+        "purposes": [],
+        "destinations": [],
+        "data_classes": [],
+        "credential_classes": [],
+        "network_required": false
+      },
+      "orchestration": {
+        "mode": "none",
+        "may_spawn_workers": false,
+        "independent_child_authority_requested": false,
+        "remote_execution_requested": false
+      },
+      "assurance": {
+        "observations": [],
+        "cataloged_at": "2026-08-25T12:11:00Z"
+      },
+      "lifecycle": {
+        "update_mode": "manual-reviewed",
+        "silent_permission_widening_allowed": false,
+        "rollback_available": true,
+        "quarantine_supported": true
+      },
+      "non_claims": [
+        "Catalog presence does not install, start, route to, or authorize this local compute backend.",
+        "No capability, action, credential, listener, loopback endpoint, network access, worker delegation, or remote execution is granted by this entry.",
+        "Model artifacts, weights, licensing, hardware compatibility, benchmarks, adapter conformance, and task-specific authorization require separate review."
+      ]
     }
   ],
   "backlog": [
-    "ollama",
-    "vllm",
-    "llama.cpp",
-    "sglang",
     "lm-studio",
     "together-ai",
     "groq",

@@ -7,14 +7,17 @@ Catalog presence is not authority.
 Installation is not authority.
 Provider availability is not permission to send data.
 Runtime reachability is not permission to execute.
+Local inference software is not permission to install, start a process, open a listener, load a model, or connect to loopback.
 
 Any consequential effect still requires Gateway -> Hypervisor -> Sandbox -> Grid.
 
 Seed scope:
 - agent runtimes: Hermes Agent, OpenClaw, OpenAI Codex CLI, Agent Zero
 - model providers: Arcee AI API, OpenAI API, Anthropic API, Google Gemini API, xAI API, Mistral API
+- local inference compute backends: Ollama, vLLM, llama.cpp, SGLang
 
 The runtime entries are pinned research identity profiles with no requested AXIOM actions, capabilities, credentials, network access, independent child authority, or remote execution.
 The provider entries declare only their network service origin, model-inference purpose, model input/output data classes, and API-key credential class. They request no AXIOM actions or capabilities.
+The local inference entries are separate compute-backend research profiles pinned to exact upstream source commits and reviewed upstream LICENSE files. Their Linux/process compatibility labels do not install software or assert that an executable, listener, model, GPU, adapter, or local service is available. They request no AXIOM actions, capabilities, purposes, destinations, data classes, credentials, network access, workers, or remote execution.
 
-Open-weight model artifacts, specific model versions, SDKs, release artifacts, adapters, local inference engines, and compute backends should be cataloged as distinct immutable entries once exact provenance and applicable licensing are pinned. Do not collapse a provider service, model artifact, runtime, adapter, or compute backend into one trust object.
+Open-weight model artifacts, specific model versions, SDKs, release artifacts, adapters, and further local inference engines should be cataloged as distinct immutable entries once exact provenance and applicable licensing are pinned. Do not collapse a provider service, model artifact, runtime, adapter, or compute backend into one trust object.
