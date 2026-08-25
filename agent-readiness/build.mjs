@@ -76,6 +76,7 @@ function indexHtml({ origin, lastUpdated }) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
 <title>${escapeHtml(title)}</title>
 <meta name="description" content="${escapeHtml(description)}">
 <link rel="canonical" href="${origin}/">
@@ -85,17 +86,50 @@ function indexHtml({ origin, lastUpdated }) {
 <meta property="og:type" content="website">
 <meta property="og:url" content="${origin}/">
 <script type="application/ld+json">${jsonLd}</script>
+<style>
+:root{color-scheme:dark;--surface:#060b14;--panel:#0d1522;--line:#223247;--text:#edf4ff;--muted:#a9b8cc;--cyan:#42d9f5;--magenta:#e05cc4;--green:#91ff94;font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 80% 5%,#14223c 0,transparent 45%),radial-gradient(ellipse at 8% 100%,#201127 0,transparent 36%),var(--surface);color:var(--text);line-height:1.65}.page{max-width:1120px;margin:0 auto;padding:24px clamp(18px,5vw,60px) 56px}.topbar,.brand,.topnav,.hero-actions,.authority-flow{display:flex;align-items:center}.topbar{justify-content:space-between;gap:18px;padding-bottom:32px;border-bottom:1px solid var(--line)}.brand{gap:13px;color:var(--text);text-decoration:none}.brand svg{width:45px;height:45px;flex:none}.brand strong{display:block;letter-spacing:.17em;font-size:.82rem}.brand span{display:block;color:var(--muted);font-size:.73rem}.topnav{gap:18px;flex-wrap:wrap}.topnav a,a{color:var(--cyan);text-decoration:none}.topnav a:hover,a:hover{text-decoration:underline}a:focus-visible{outline:2px solid var(--green);outline-offset:4px}.hero{padding:64px 0 34px}.eyebrow{text-transform:uppercase;letter-spacing:.18em;font-size:.74rem;color:var(--green)}h1{max-width:790px;margin:12px 0;font-size:clamp(2.4rem,6vw,5.1rem);line-height:1.04;letter-spacing:-.055em}h2{font-size:1.35rem;letter-spacing:-.02em;margin:0 0 12px}.lede{max-width:760px;color:var(--muted);font-size:1.08rem}.boundary{padding:16px 20px;border-left:2px solid var(--magenta);background:#11101d}.hero-actions{gap:12px;flex-wrap:wrap;margin-top:22px}.button{display:inline-block;padding:11px 16px;border:1px solid var(--line);border-radius:9px;color:var(--text)}.button-primary{border-color:var(--cyan);color:var(--cyan)}.section{margin-top:28px;padding:24px;border:1px solid var(--line);border-radius:14px;background:#0b1220b8}.authority-flow{gap:9px;flex-wrap:wrap}.authority-flow span{padding:7px 11px;border:1px solid var(--line);border-radius:8px}.authority-flow b{color:var(--magenta)}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.card{padding:17px;border:1px solid var(--line);border-radius:11px;background:var(--panel)}.card h3{margin:0 0 5px;font-size:1.03rem}.card p,.section p,footer{color:var(--muted)}.status{font-size:.71rem;text-transform:uppercase;letter-spacing:.1em;color:var(--green)!important}.link-grid{columns:2;column-gap:24px;padding-left:19px}.link-grid li{break-inside:avoid;margin:0 0 8px}code{color:var(--cyan);font-size:.92em}footer{margin-top:30px;font-size:.86rem}@media(max-width:660px){.topbar{align-items:flex-start;flex-direction:column}.topnav{gap:13px}.hero{padding-top:45px}.cards{grid-template-columns:1fr}.link-grid{columns:1}.section{padding:18px}}@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important}}
+</style>
 </head>
 <body>
-<header><p><a href="${origin}/">AXIOM-MESH</a></p></header>
+<div class="page">
+<header class="topbar">
+<a class="brand" href="${origin}/">
+<svg role="img" aria-label="ZOVERIONS green-eyed cat" viewBox="0 0 80 80" fill="none"><defs><linearGradient id="cat-outline" x1="8" y1="10" x2="73" y2="74" gradientUnits="userSpaceOnUse"><stop stop-color="#42d9f5"/><stop offset="1" stop-color="#e05cc4"/></linearGradient></defs><path d="M12 15l17 16 11-2 11 2 17-16v33l5 10-33 19L7 58l5-10V15z" stroke="url(#cat-outline)" stroke-width="2.5"/><path d="M18 44l18 7-13 3-5-10zm44 0L44 51l13 3 5-10z" fill="#91ff94"/></svg>
+<span><strong>ZOVERIONS</strong><span>AXIOM agent discovery</span></span>
+</a>
+<nav class="topnav" aria-label="Primary navigation"><a href="#ecosystem">Projects</a><a href="#contribute">Contribute</a><a href="https://github.com/Zoverions/AXIOM-MESH">GitHub</a></nav>
+</header>
 <main>
+<section class="hero">
+<p class="eyebrow">A sovereign home for human and machine agency</p>
 <h1>AXIOM-MESH for AI agents and agent builders</h1>
-<p><strong>Capability is not authority. Discovery is not permission. Connection is not permission.</strong></p>
-<p>AXIOM-MESH is a local-first coordination, authority, and evidence substrate. The current supported build is <code>0.12.0-dev.3</code>, a <strong>production candidate, not production-promoted</strong>. This discovery surface is descriptive. Reading it, reaching the repository, finding a skill, or possessing credentials does not create permission.</p>
+<p class="boundary"><strong>Capability is not authority. Discovery is not permission. Connection is not permission.</strong></p>
+<p class="lede">AXIOM-MESH is a local-first coordination, authority, and evidence substrate. The current supported build is <code>0.12.0-dev.3</code>, a <strong>production candidate, not production-promoted</strong>. This discovery surface is descriptive. Reading it, reaching the repository, finding a skill, or possessing credentials does not create permission.</p>
+<div class="hero-actions"><a class="button button-primary" href="https://github.com/Zoverions/AXIOM-MESH/blob/main/AGENT-ENTRY.md">Start with the agent guide</a><a class="button" href="#contribute">Review contribution lanes</a></div>
+</section>
+<section class="section">
 <h2>Authority path</h2>
 <p>For supported privileged effects, the intended path is <code>Gateway -&gt; Hypervisor -&gt; Sandbox -&gt; Grid</code>. A runtime, adapter, protocol, tool, or discovered capability must not become a parallel authority system.</p>
+<p class="authority-flow" aria-label="Gateway to Hypervisor to Sandbox to Grid"><span>Gateway</span><b aria-hidden="true">→</b><span>Hypervisor</span><b aria-hidden="true">→</b><span>Sandbox</span><b aria-hidden="true">→</b><span>Grid</span></p>
+</section>
+<section class="section" id="ecosystem">
+<h2>Project ecosystem</h2>
+<div class="cards">
+<article class="card"><p class="status">Production candidate · not promoted</p><h3><a href="https://github.com/Zoverions/AXIOM-MESH">AXIOM-MESH</a></h3><p>The local-first authority, evidence, and policy substrate for human and machine requests.</p></article>
+<article class="card"><p class="status">Experimental local preview</p><h3><a href="https://github.com/Zoverions/AXIOM-MESH/tree/main/apps/axiom-one">AXIOM One</a></h3><p>An experimental local preview of owner-scoped status, approvals, memory, and receipts; not a hosted owner dashboard.</p></article>
+<article class="card"><p class="status">Active development</p><h3><a href="https://github.com/Zoverions/Axiom-Education">Axiom Education</a></h3><p>A local-first lifelong learning project with bounded Ontario elementary and secondary foundations.</p></article>
+<article class="card"><p class="status">Discovery grants no authority</p><h3><a href="https://github.com/Zoverions/AXIOM-MESH/blob/main/mesh/config/runtime-provider-catalog.v0.json">Runtime and provider catalog</a></h3><p>Four agent runtimes, six hosted-provider profiles, and four local compute backends; catalog presence grants no execution, credential, or network permission.</p></article>
+</div>
+</section>
+<section class="section" id="contribute">
+<h2>Contribute through GitHub</h2>
+<p>GitHub remains the canonical collaboration surface. External agents, researchers, and builders may review public evidence or submit bounded proposals; participation never grants merge, deployment, or runtime authority.</p>
+<ul class="link-grid"><li><a href="https://github.com/Zoverions/AXIOM-MESH/blob/main/agent-readiness/AGENT-PARTICIPATION.txt">Agent participation guide</a></li><li><a href="https://github.com/Zoverions/AXIOM-MESH/issues/new?template=agent-contribution-proposal.yml">Propose a bounded contribution</a></li><li><a href="https://github.com/Zoverions/AXIOM-MESH/issues/1185">Authority-boundary red-team challenge</a></li><li><a href="https://github.com/Zoverions/AXIOM-MESH/issues/1199">Security agent cell pilot</a></li><li><a href="https://github.com/Zoverions/AXIOM-MESH/blob/main/SECURITY.md">Private security disclosure guidance</a></li></ul>
+</section>
+<section class="section">
 <h2>Start with current truth</h2>
-<ul>
+<ul class="link-grid">
 <li><a href="https://github.com/Zoverions/AXIOM-MESH/blob/main/README.md">README and current build claims</a></li>
 <li><a href="https://github.com/Zoverions/AXIOM-MESH/blob/main/AGENT-ENTRY.md">Agent entry point</a></li>
 <li><a href="${origin}/AGENTS.md">Agent instructions</a></li>
@@ -103,14 +137,18 @@ function indexHtml({ origin, lastUpdated }) {
 <li><a href="https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/security/CURRENT-BUILD-THREAT-MODEL.md">Current threat model</a></li>
 <li><a href="https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/PRODUCTION-READINESS-TRACKER.md">Production readiness tracker</a></li>
 </ul>
+</section>
+<section class="section">
 <h2>Portable authority audit</h2>
 <p>The <a href="${origin}/.well-known/agent-skills/axiom-authority-auditor/SKILL.md">AXIOM Authority Auditor</a> is a self-contained, read-only Agent Skills-format procedure for separating capability from authority before consequential action. It does not execute actions, grant permission, replace policy, or certify a runtime.</p>
+</section>
+<section class="section">
 <h2>Important non-claims</h2>
 <p>This page does not claim a live public AXIOM runtime, production promotion, completed independent security approval, production certification of external runtimes, a production MCP or A2A endpoint, BFT consensus, general remote execution, merge authority, or proof that signed evidence makes arbitrary external-world claims true.</p>
 <h2>Terminology</h2>
 <p>See the <a href="${origin}/glossary">glossary</a> for capability, authority, legitimacy, evidence, revocation, appeal, and meaningful exit.</p>
 <h2>Machine-readable navigation</h2>
-<ul>
+<ul class="link-grid">
 <li><a href="${origin}/llms.txt">llms.txt</a></li>
 <li><a href="${origin}/llms-full.txt">llms-full.txt</a></li>
 <li><a href="${origin}/sitemap.md">sitemap.md</a></li>
@@ -120,8 +158,10 @@ function indexHtml({ origin, lastUpdated }) {
 </ul>
 <h2>Publication status</h2>
 <p>The repository build artifact is <strong>prepared, not published</strong> until a separate deployment action is authorized and completed. A scanner score is diagnostic evidence about machine readability, not a security certification or authority grant.</p>
+</section>
 </main>
 <footer><p>Last updated: ${escapeHtml(lastUpdated)}. Source: <a href="https://github.com/Zoverions/AXIOM-MESH">Zoverions/AXIOM-MESH</a>.</p></footer>
+</div>
 </body>
 </html>`;
 }
@@ -150,6 +190,23 @@ For supported privileged effects, the intended path is \`Gateway -> Hypervisor -
 - [Capability registry](https://github.com/Zoverions/AXIOM-MESH/blob/main/mesh/config/capabilities.json)
 - [Current threat model](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/security/CURRENT-BUILD-THREAT-MODEL.md)
 - [Production readiness](https://github.com/Zoverions/AXIOM-MESH/blob/main/docs/PRODUCTION-READINESS-TRACKER.md)
+
+## Project ecosystem
+
+- [AXIOM-MESH](https://github.com/Zoverions/AXIOM-MESH): production candidate, not production-promoted.
+- [AXIOM One](https://github.com/Zoverions/AXIOM-MESH/tree/main/apps/axiom-one): experimental local preview, not a public owner dashboard.
+- [Axiom Education](https://github.com/Zoverions/Axiom-Education): independently developed local-first lifelong learning.
+- [Runtime and provider catalog](https://github.com/Zoverions/AXIOM-MESH/blob/main/mesh/config/runtime-provider-catalog.v0.json): non-authorizing agent, provider, and compute-backend research profiles.
+
+## Contribute through GitHub
+
+- [Agent participation guide](https://github.com/Zoverions/AXIOM-MESH/blob/main/agent-readiness/AGENT-PARTICIPATION.txt)
+- [Propose a bounded contribution](https://github.com/Zoverions/AXIOM-MESH/issues/new?template=agent-contribution-proposal.yml)
+- [Authority-boundary red-team challenge](https://github.com/Zoverions/AXIOM-MESH/issues/1185)
+- [Security agent cell pilot](https://github.com/Zoverions/AXIOM-MESH/issues/1199)
+- [Private security disclosure guidance](https://github.com/Zoverions/AXIOM-MESH/blob/main/SECURITY.md)
+
+Participation does not grant runtime, merge, deployment, credential, or network authority.
 
 ## Portable authority audit
 
@@ -402,6 +459,7 @@ export async function buildAgentReadiness({
   if (config.schema !== 'axiom-agent-readiness.v1') throw new Error('agent-readiness config schema is invalid');
   if (config.deployment_status !== 'prepared_not_published') throw new Error('agent-readiness deployment status is not fail-closed');
   const publicOrigin = normalizeOrigin(origin ?? config.default_origin);
+  const publicationPrefix = new URL(publicOrigin).pathname.replace(/\/$/, '');
   const outputRoot = resolveAgentReadinessOutputRoot(repositoryRoot, outDir);
   const [rootLlms, fullLlms, sourceSkill, sourceReference] = await Promise.all([
     readFile(resolve(repositoryRoot, 'llms.txt'), 'utf8'),
@@ -417,7 +475,7 @@ export async function buildAgentReadiness({
       name: 'axiom-authority-auditor',
       type: 'skill-md',
       description: 'Read-only pre-action authority assessment that separates technical capability from current permission, scope, purpose, consent, evidence, revocation, appeal, continuity/exit, and legitimacy.',
-      url: '/.well-known/agent-skills/axiom-authority-auditor/SKILL.md',
+      url: `${publicationPrefix}/.well-known/agent-skills/axiom-authority-auditor/SKILL.md`,
       digest
     }]
   };

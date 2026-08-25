@@ -107,6 +107,9 @@ DEPLOYMENT BOUNDARY
 
 Building is not deployment.
 
+The current intended first-party publication target is https://zoverions.com/agents.
+This path-mounted static bundle preserves the existing homepage and does not require another subdomain, Node.js application, public API, credential, network grant, or running owner dashboard. Portable skill-discovery URLs must remain under the same reviewed publication prefix. The target stays prepared, not published until a separately authorized live-host deployment is performed and verified.
+
 The default build origin may identify an intended publication target, but that target remains a plan until a separate authorized deployment action occurs. Deployment should use a static publication layer that cannot become a privileged AXIOM runtime path.
 
 The discovery site must not hold production secrets, user data, signing keys, provider credentials, mutable policy authority, or repository merge credentials.
