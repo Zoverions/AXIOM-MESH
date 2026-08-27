@@ -4,7 +4,7 @@
 
 **Status:** canonical security-review input; not an independent assessment
 
-**Updated:** 2026-08-17
+**Updated:** 2026-08-27
 
 This document defines the threat model for the supported clean-room kernel on
 `main`. It replaces historical security narratives as the review baseline. An
@@ -168,6 +168,33 @@ discovery statement, schedule, causal bundle, apply approval, and supported
 machine effect remains signature-, sponsor/owner-, scope-, purpose-, expiry-,
 and replay-bound as applicable.
 
+### Emergent coordination and collective authority boundary
+
+Emergent collective authority / unauthorized coordination is an explicit threat
+class. Multiple individually valid machine principals may exchange information
+through intended or unintended shared resources, assign work, preserve peer state,
+adopt peer-suggested objectives, or distribute retries across identities. Those
+behaviors can create effective coordination without creating legitimate AXIOM
+authority.
+
+**Collective Authority Non-Amplification** is the governing rule: communication,
+consensus, assignment, discovery output, receipt possession, causal state, shared
+metadata, or a peer-authored governance result may be information or evidence, but
+none is an authority root. Every executable effect must still have an exact valid
+local authority chain to the actual executor for the applicable action, purpose,
+data scope, destination, budget, assurance/approval requirements, and expiry.
+Current machine-principal v1 remains non-delegating with maximum delegation depth
+zero. A future attenuation-only delegation design must preserve this rule rather
+than treating collective membership or agreement as pooled permission.
+
+Any resource through which one principal can influence information observed by
+another principal is treated as a potential communication edge for review. The
+current security inventory in `mesh/config/emergent-coordination-surfaces.json`
+classifies promoted shared surfaces as non-authorizing inputs and binds each to an
+exact negative test. The protected test suite also exercises peer authority-like
+language, distributed action/purpose pooling attempts, receipt/discovery laundering,
+and unsupported delegation/sub-agent claims without enabling those capabilities.
+
 ## Assets and security objectives
 
 The primary assets are:
@@ -225,6 +252,11 @@ The model considers:
   `agent` shape, alter its sponsor/runtime/constraints after approval, replay an
   approval under a new authority profile, or treat declarative metadata as
   proof of trusted execution;
+- multiple authenticated machine principals coordinating through shared files,
+  caches, metadata, logs, causal records, receipts, discovery output, artifacts,
+  or future collaboration surfaces in an attempt to manufacture collective
+  authority, launder a denial through another principal, or distribute resource
+  exhaustion across identities;
 - a malicious or compromised capsule, node, provider process, telemetry
   receiver, or causal-exchange peer;
 - a malicious or compromised remote-social exporter Grid, pinned transport
@@ -294,7 +326,11 @@ Reviewers must trace at least these entry points:
 12. source checkout, package locks, container build inputs, release verifier,
     capability registry, documentation checker, and CI evidence;
 13. pilot policy, dossier, evidence package, independent-review policy, findings
-    ledger, remediation records, and exceptions.
+    ledger, remediation records, and exceptions;
+14. cross-principal shared-resource surfaces, including discovery/receipt
+    projections, causal state, node/scheduling metadata, Circle governance state,
+    Agent Commons coordination metadata, and the emergent-coordination manifest
+    and its exact negative-test bindings.
 
 No privileged effect may bypass the intent, policy, machine-authority where
 applicable, plan, grant, execution, evidence sequence. Remote-social package or
@@ -319,6 +355,7 @@ verification rather than an online grant.
 | Machine receipt substitution, disclosure, or intent-existence probing | Receipt construction requires terminal evidence, exact accepted/terminal event identity, verified Grid chain state and a Grid signature; the public route is constrained-machine owner-only, raw terminal content is replaced by digests, and foreign/nonexistent ids share `not_found` | A trusted Grid key proves Grid attestation, not external-world truth; key compromise, host compromise, selective evidence disclosure beyond the current receipt, and future remote verifier/product semantics require separate controls |
 | Machine execution-budget widening | Hypervisor intersects policy timeout with machine `max_execution_ms`; plan and capability bind the resulting authority context | CPU/memory/cost accounting beyond the supported timeout path needs later resource-meter evidence |
 | Machine delegation laundering | Machine-principal v1 validation requires delegation disabled and depth zero; no machine delegation runtime exists | Future delegation requires a separate attenuation-only design, threat model, property tests, revocation and promotion |
+| Emergent collective authority or distributed denial laundering | Current machine principals retain independent action/purpose/destination ceilings and depth-zero delegation; shared discovery/receipt/Circle/causal/node/Agent-Commons surfaces are inventory-bound as non-authorizing inputs; real-stack PHASEONE tests reject peer authority language, action/purpose pooling, receipt/discovery laundering, and unsupported delegation/sub-agent claims | This is not a proof against every covert channel, malicious shared host, future external adapter, broad swarm-level resource exhaustion, or future delegation bug. Aggregate compute/cost/bandwidth/storage controls and future cross-node coordination require separate evidence before promotion |
 | Approval reuse after machine-authority change | Request digest includes machine authority digest; plan provenance and capability claims repeat the exact digest; result/mutation evidence records it | Reviewers must verify all future adapters preserve the same request-binding semantics |
 | Runtime/software-digest overclaim | Runtime identity and optional software digest are typed and authority-bound metadata only | No TPM/TEE, measured boot, workload attestation, process isolation proof, or remote attestation is claimed |
 | Authorization or consent weakening | Deny-dominant layered policy, explicit risk classification, independent high-risk approval, purpose/scope/subject/controller-bound consent, audience-bound one-use grants | Policy correctness and all high-risk classifications require independent source/configuration review |
@@ -357,6 +394,15 @@ The current review must consider at minimum:
   presented as attestation;
 - a machine treating discovery as a grant, probing discovery for unrelated policy or
   object metadata, or attempting to recover bearer material or overlay structure;
+- peer-authored `GO`, `APPROVED`, `OWNER`, `VETO`, `STOP`, forged sponsor/role
+  identifiers, copied approvals, receipts, discovery output, or causal records being
+  treated as permission rather than untrusted/non-authorizing input;
+- multiple constrained principals attempting to pool non-overlapping action,
+  purpose, data-scope, destination, expiry, budget, or approval authority, including
+  repeated attempts distributed across identities sharing a sponsor;
+- a peer receipt, discovery response, shared artifact, Circle decision, scheduling
+  record, or causal state being replayed or embedded into another principal's request
+  in an attempt to create authority for that recipient;
 - one valid identity reused for another role, node, provider, reviewer, or
   exception approver;
 - policy-layer reordering, omission, unknown fields, numeric boundary errors,
@@ -463,6 +509,11 @@ Independent review should treat these as invariants, not best-effort goals:
     Mesh authority.
 21. The accepted Grid store is selected explicitly, not through a runtime toggle;
     the disabled candidate and S3F transport-capable store remain unselected.
+22. Communication does not convey authority. Consensus does not convey authority.
+    Assignment does not convey authority. A collective cannot manufacture a
+    capability absent from an exact valid authority chain to the actual executor;
+    shared state and peer artifacts remain non-authorizing unless separately
+    admitted through the normal AXIOM authority path.
 
 ## Residual risk and non-claims
 
@@ -473,6 +524,14 @@ execution, TPM/TEE or measured-runtime attestation, replicated consensus,
 automatic federation, remote dispatch, Sybil resistance, externally hosted key
 custody, live vendor provider security, audited WAN behavior, post-quantum
 security, or regulatory certification.
+
+The current PHASEONE evidence proves bounded current-v1 non-amplification across
+the tested machine-principal and inventoried shared surfaces. It does not prove
+that every covert communication channel on a malicious shared host is eliminated,
+that future external adapters cannot introduce new coordination edges, or that a
+future swarm cannot exhaust resources that are not yet subject to aggregate
+compute/cost/bandwidth/storage accounting. Those capabilities remain gated on
+additional threat-model, conformance, pilot, and independent-review evidence.
 
 The repository also does not claim that the merged remote-social foundations are
 a live social network. The accepted Grid now instantiates `AcceptedSocialGridStore`
@@ -515,7 +574,8 @@ semantics, policy, grants, Sandbox operations, Grid schemas, encryption,
 backup/recovery, service topology, container policy, provider protocol,
 node/sync behavior, telemetry, remote-social package/staging/admission/Following/
 retention/abuse/transport semantics, any social relay or public source endpoint,
-any new remote-social read/effect surface, pilot evidence, release gates, or the
-trusted computing base changes. A prior ledger cannot approve another build. The
-[independent security review procedure](INDEPENDENT-SECURITY-REVIEW.md)
+any new remote-social read/effect surface, new cross-principal communication or
+coordination surfaces, machine delegation, remote execution, pilot evidence,
+release gates, or the trusted computing base changes. A prior ledger cannot approve
+another build. The [independent security review procedure](INDEPENDENT-SECURITY-REVIEW.md)
 defines the exact current intake contract.

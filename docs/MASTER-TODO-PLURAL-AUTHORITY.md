@@ -14,6 +14,7 @@
 - [ ] Keep registry digest synchronized across every digest-bearing canonical document.
 - [ ] Complete the authentic current-build pilot and independent security review.
 - [ ] Update the current threat model for every new human, Circle, delegation, or assurance entry point.
+- [ ] Require the PHASEONE emergent-coordination campaign before any live machine-agent Circle authority or machine-to-machine delegation is promoted; ordinary human/local Circle development is not blocked by this gate.
 - [ ] Preserve current non-claims for public federation, consensus, settlement, national infrastructure, and sovereign adoption.
 
 ## Priority 1 — Documentation integration
@@ -102,6 +103,7 @@
 - [ ] Define emergency authority that can reduce risk but not create unbounded permanent authority.
 - [ ] Define appeals, stays, reconsideration, remedies, and human review.
 - [ ] Define Circle assurance floors and member-level stronger protections.
+- [ ] Treat Circle votes, assignments, charter decisions, and shared state as governance evidence for local authority evaluation; no collective result directly mints Sandbox authority.
 - [ ] Build human explanations and comprehension tests before real pilots.
 
 ## Priority 8 — Circle workflows and pilot
@@ -109,6 +111,7 @@
 - [ ] Implement shared proposals, tasks, commitments, approvals, and evidence timelines.
 - [ ] Implement selective object and evidence sharing over approved causal exchange.
 - [ ] Make concurrent updates and unresolved conflicts visible.
+- [ ] Require every consequential Circle effect to re-enter the ordinary local AXIOM authority path; a task, proposal result, receipt, or shared object is not an execution grant.
 - [ ] Implement Circle export, backup, recovery, succession, and shutdown.
 - [ ] Choose one low-risk pilot domain.
 - [ ] Obtain explicit participant consent and named operator/reviewer roles.
@@ -217,6 +220,7 @@ Do not prototype with real people or live authority in the following areas until
 
 ## Priority 17 — Threat model expansion
 
+- [ ] Emergent collective authority / unauthorized coordination: communication, consensus, assignment, shared evidence, or collective membership must not become an authority root.
 - [ ] Assurance downgrade and mislabelling.
 - [ ] Provisional-result laundering.
 - [ ] Retrospective evidence forgery.
@@ -243,6 +247,7 @@ For every future capability promoted beyond planning:
 - [ ] normative requirements;
 - [ ] schemas and migration rules;
 - [ ] positive, negative, adversarial, recovery, and compatibility tests;
+- [ ] PHASEONE emergent-coordination evidence for machine-agent Circle authority, machine delegation, remote execution, or another promoted cross-principal machine coordination surface;
 - [ ] current-build threat model update;
 - [ ] security and privacy review;
 - [ ] domain legal/governance review where applicable;

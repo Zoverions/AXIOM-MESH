@@ -13,6 +13,8 @@
 - [x] Keep external agent frameworks outside the authority boundary.
 - [x] Require fail-closed behavior when machine identity, policy, adapter, credential, schema, or evidence dependencies are unavailable for a supported effect.
 - [x] Preserve current non-claims for autonomous agents, remote execution, MCP, A2A, and federation.
+- [ ] Preserve Collective Authority Non-Amplification across every future multi-agent surface: communication, consensus, assignment, discovery, receipts, causal state, and shared artifacts may carry information or evidence but never mint or widen authority.
+- [ ] Require the PHASEONE emergent-coordination campaign before promoting machine delegation, remote execution, broad remote-agent federation, or live machine-agent authority in Circles.
 - [ ] Complete the authentic current-build pilot and independent security review before production promotion of new externally effective surfaces.
 
 ## Priority 1 — Legacy agent extraction inventory
@@ -130,6 +132,7 @@
 
 ## Priority 9 — Attenuation-only agent delegation
 
+- [ ] Require passing PHASEONE emergent-coordination evidence before any delegation capability is promoted beyond the current depth-zero denial rule.
 - [ ] Define delegation record schema.
 - [ ] Require delegator and delegate identities.
 - [ ] Bind permitted capability/action families, purpose, input/data scope, destinations, budgets, assurance floor, approvals, expiry, and revocation.
@@ -166,6 +169,7 @@ Current v1 machine principals cannot delegate; this priority is a future capabil
 
 ## Priority 12 — Remote execution and multi-node agent work
 
+- [ ] Require passing PHASEONE emergent-coordination evidence before remote execution or multi-node agent work is promoted.
 - [ ] Define authenticated remote executor identity independent of scheduler metadata.
 - [ ] Define executable/capsule digest binding.
 - [ ] Define remote grant issuance and one-use/replay behavior.
@@ -178,12 +182,14 @@ Current v1 machine principals cannot delegate; this priority is a future capabil
 
 ## Priority 13 — Agent participation in AXIOM Circles
 
+- [ ] Require passing PHASEONE emergent-coordination evidence before machine-agent Circle authority or machine-to-machine delegation is promoted; ordinary human/local Circle development is not blocked by this gate.
 - [ ] Define whether agent principals may be members, service roles, delegates, or tools for each Circle type.
 - [ ] Require explicit Circle charter permission for machine participation.
 - [ ] Preserve a responsible sponsoring principal/institution where required.
 - [ ] Define agent term, role, delegation, suspension, and revocation.
 - [ ] Prevent agents from counting as human consent or participation unless the charter explicitly defines a machine role.
 - [ ] Keep agent voting/governance power separately reviewable.
+- [ ] Keep Circle votes, assignments, charter decisions, and shared state as governance evidence for local evaluation; they do not directly mint Sandbox authority.
 - [ ] Provide human-readable records of agent actions and delegations.
 
 ## Priority 14 — Communication efficiency benchmarks
@@ -200,6 +206,13 @@ Current v1 machine principals cannot delegate; this priority is a future capabil
 ## Priority 15 — Threat model and red-team campaign
 
 - [x] Add malicious/constrained-runtime principal, sponsor laundering, legacy-agent shape, action/purpose escalation, approval authority-digest reuse, and runtime-attestation-overclaim cases to the current threat model.
+- [ ] PHASEONE peer-language authority injection: `GO`, `APPROVED`, `OWNER`, `VETO`, `STOP`, forged sponsor/role identifiers, copied approvals, copied receipts, and copied discovery output must remain non-authorizing.
+- [ ] PHASEONE distributed-denial bypass: multiple valid principals must not pool action, purpose, data-scope, destination, expiry, approval, or assurance authority to obtain an effect denied to the actual executor.
+- [ ] PHASEONE receipt/artifact laundering: a peer's valid receipt, discovery response, causal record, export, error, or artifact metadata must not become executable authority.
+- [ ] PHASEONE causal-sync authority confusion: admitted remote state must not become a local grant, approval, sponsor, principal registration, or executable instruction.
+- [ ] PHASEONE shared-resource communication-edge inventory with exact negative-test binding for every promoted cross-principal surface.
+- [ ] PHASEONE aggregate exhaustion: coordinated identities must not trivially bypass sponsor/task-domain resource controls by distributing attempts.
+- [ ] PHASEONE safe-exit persistence: impossible, blocked, unsafe, or budget-exhausted work must terminate without automatic scope widening, sponsor substitution, undeclared destination access, or new-principal creation.
 - [ ] Prompt/context/tool-description poisoning.
 - [ ] Skill/capsule supply-chain attack.
 - [ ] Protocol confusion and alternate-path bypass.
@@ -234,6 +247,7 @@ For every machine/agent interoperability capability promoted beyond planning:
 - [x] exact executable assertion/evidence binding for the constrained machine-principal slice;
 - [x] normative requirement and machine-principal schema/code contract for the current slice;
 - [x] positive and negative real-stack tests for sponsor/profile/action/purpose/expiry/non-delegation authority;
+- [ ] PHASEONE emergent-coordination campaign evidence when the promoted capability introduces machine delegation, remote execution, broad agent federation, machine-agent Circle authority, or another cross-principal coordination surface.
 - [ ] protocol-version pin and migration policy for the Invocation Envelope/adapters. The current native profile is exactly pinned and downgrade-rejected; migration/cross-protocol policy remains open.
 - [x] candidate Agent Runtime Adapter v1 schema, digest lock, signed synthetic
   grant boundary, negative tests, and commit-bound CI artifact; external-runtime
