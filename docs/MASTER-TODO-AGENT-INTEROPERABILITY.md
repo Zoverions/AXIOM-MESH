@@ -14,7 +14,7 @@
 - [x] Require fail-closed behavior when machine identity, policy, adapter, credential, schema, or evidence dependencies are unavailable for a supported effect.
 - [x] Preserve current non-claims for autonomous agents, remote execution, MCP, A2A, and federation.
 - [ ] Preserve Collective Authority Non-Amplification across every future multi-agent surface: communication, consensus, assignment, discovery, receipts, causal state, and shared artifacts may carry information or evidence but never mint or widen authority.
-- [ ] Require the PHASEONE emergent-coordination campaign before promoting machine delegation, remote execution, broad remote-agent federation, or live machine-agent authority in Circles.
+- [x] Require the PHASEONE emergent-coordination campaign before promoting machine delegation, remote execution, broad remote-agent federation, or live machine-agent authority in Circles. The promotion gate is now explicit in the current threat model, security invariants, interoperability queue, and Circle/plural-authority planning; passing the campaign itself remains capability-specific future evidence.
 - [ ] Complete the authentic current-build pilot and independent security review before production promotion of new externally effective surfaces.
 
 ## Priority 1 — Legacy agent extraction inventory
@@ -132,7 +132,7 @@
 
 ## Priority 9 — Attenuation-only agent delegation
 
-- [ ] Require passing PHASEONE emergent-coordination evidence before any delegation capability is promoted beyond the current depth-zero denial rule.
+- [x] Require passing PHASEONE emergent-coordination evidence before any delegation capability is promoted beyond the current depth-zero denial rule. The promotion gate is implemented; delegation itself remains disabled and no PHASEONE completion claim is implied.
 - [ ] Define delegation record schema.
 - [ ] Require delegator and delegate identities.
 - [ ] Bind permitted capability/action families, purpose, input/data scope, destinations, budgets, assurance floor, approvals, expiry, and revocation.
@@ -169,7 +169,7 @@ Current v1 machine principals cannot delegate; this priority is a future capabil
 
 ## Priority 12 — Remote execution and multi-node agent work
 
-- [ ] Require passing PHASEONE emergent-coordination evidence before remote execution or multi-node agent work is promoted.
+- [x] Require passing PHASEONE emergent-coordination evidence before remote execution or multi-node agent work is promoted. The gate is implemented; no remote-execution capability or campaign-completion claim is made.
 - [ ] Define authenticated remote executor identity independent of scheduler metadata.
 - [ ] Define executable/capsule digest binding.
 - [ ] Define remote grant issuance and one-use/replay behavior.
@@ -182,7 +182,7 @@ Current v1 machine principals cannot delegate; this priority is a future capabil
 
 ## Priority 13 — Agent participation in AXIOM Circles
 
-- [ ] Require passing PHASEONE emergent-coordination evidence before machine-agent Circle authority or machine-to-machine delegation is promoted; ordinary human/local Circle development is not blocked by this gate.
+- [x] Require passing PHASEONE emergent-coordination evidence before machine-agent Circle authority or machine-to-machine delegation is promoted; ordinary human/local Circle development is not blocked by this gate. The gate is implemented; machine-agent Circle authority remains unpromoted.
 - [ ] Define whether agent principals may be members, service roles, delegates, or tools for each Circle type.
 - [ ] Require explicit Circle charter permission for machine participation.
 - [ ] Preserve a responsible sponsoring principal/institution where required.
@@ -206,13 +206,13 @@ Current v1 machine principals cannot delegate; this priority is a future capabil
 ## Priority 15 — Threat model and red-team campaign
 
 - [x] Add malicious/constrained-runtime principal, sponsor laundering, legacy-agent shape, action/purpose escalation, approval authority-digest reuse, and runtime-attestation-overclaim cases to the current threat model.
-- [ ] PHASEONE peer-language authority injection: `GO`, `APPROVED`, `OWNER`, `VETO`, `STOP`, forged sponsor/role identifiers, copied approvals, copied receipts, and copied discovery output must remain non-authorizing.
-- [ ] PHASEONE distributed-denial bypass: multiple valid principals must not pool action, purpose, data-scope, destination, expiry, approval, or assurance authority to obtain an effect denied to the actual executor.
-- [ ] PHASEONE receipt/artifact laundering: a peer's valid receipt, discovery response, causal record, export, error, or artifact metadata must not become executable authority.
-- [ ] PHASEONE causal-sync authority confusion: admitted remote state must not become a local grant, approval, sponsor, principal registration, or executable instruction.
-- [ ] PHASEONE shared-resource communication-edge inventory with exact negative-test binding for every promoted cross-principal surface.
-- [ ] PHASEONE aggregate exhaustion: coordinated identities must not trivially bypass sponsor/task-domain resource controls by distributing attempts.
-- [ ] PHASEONE safe-exit persistence: impossible, blocked, unsafe, or budget-exhausted work must terminate without automatic scope widening, sponsor substitution, undeclared destination access, or new-principal creation.
+- [ ] PHASEONE peer-language authority injection: `GO`, `APPROVED`, `OWNER`, `VETO`, `STOP`, forged sponsor/role identifiers, copied approvals, copied receipts, and copied discovery output must remain non-authorizing. Current-v1 peer-language, forged role/sponsor, receipt/discovery, unsupported delegation/sub-agent, and causal fake-approval cases are proven; an exact valid copied-approval cross-principal fixture remains to close this item without inference.
+- [ ] PHASEONE distributed-denial bypass: multiple valid principals must not pool action, purpose, data-scope, destination, expiry, approval, or assurance authority to obtain an effect denied to the actual executor. Current-v1 real-stack coverage proves action/purpose pooling denial; data-scope, destination, expiry, approval, and assurance pooling remain explicit gaps.
+- [ ] PHASEONE receipt/artifact laundering: a peer's valid receipt, discovery response, causal record, export, error, or artifact metadata must not become executable authority. Valid receipt/discovery and signed causal-state laundering are covered in current v1; export, error, and general artifact-metadata laundering remain open.
+- [x] PHASEONE causal-sync authority confusion for the current causal-exchange path: admitted remote state cannot become a local grant, approval, sponsor, principal registration, or executable instruction. Signed authority-like state maps only to fixed local `sync.apply` / `online-causal-exchange`, and the apply path uses only a separately supplied local approval while retaining remote authority-like material as payload data.
+- [x] PHASEONE current-build shared-resource communication-edge inventory with exact negative-test binding for every currently promoted cross-principal surface. `axiom-emergent-coordination-surfaces.v1` inventories the active shared surfaces and the fail-closed verifier requires `non-authorizing-input` plus an exact protected test binding; future promoted surfaces must be added before they can be treated as covered.
+- [ ] PHASEONE aggregate exhaustion: coordinated identities must not trivially bypass sponsor/task-domain resource controls by distributing attempts. A non-authorizing sponsor + task-domain request/concurrency laboratory is merged and canonical sponsor tampering is denied; production `MachineIngressGuard` remains principal-local and aggregate compute/cost/bandwidth/storage/external-target accounting is not complete.
+- [ ] PHASEONE safe-exit persistence: impossible, blocked, unsafe, or budget-exhausted work must terminate without automatic scope widening, sponsor substitution, undeclared destination access, or new-principal creation. Current v1 proves blocked action/purpose escalation preserves discovery/authority and child principals remain unauthorized, and rate/request-size/concurrency exhaustion recovers only through configured refill/release paths; impossible/unsafe future async task states and runaway-loop persistence remain open.
 - [ ] Prompt/context/tool-description poisoning.
 - [ ] Skill/capsule supply-chain attack.
 - [ ] Protocol confusion and alternate-path bypass.
@@ -227,6 +227,8 @@ Current v1 machine principals cannot delegate; this priority is a future capabil
 - [ ] Schema/version downgrade. Native Invocation Envelope profile downgrade and unknown-field rejection are implemented; cross-protocol/version migration cases remain open.
 - [ ] Adapter compromise and malicious update.
 - [ ] Evidence laundering of untrusted remote outputs.
+
+**PHASEONE current-v1 evidence checkpoint:** #1324 established the invariant, promotion gates, eight-surface inventory/verifier, and baseline peer/distributed/artifact negative proofs; #1325 added the non-authorizing aggregate-risk laboratory and signed causal authority-like-state proof; #1326 proved blocked escalation does not mutate machine authority or create child authority; #1327 proved principal-local rate/request-size/concurrency budget safe exit; #1329 proved the causal apply path imports no peer approval authority. These are security/evidence advances only and do not promote delegation, remote execution, broad agent federation, autonomous swarms, or machine-agent Circle authority.
 
 ## Priority 16 — Legacy repository disposition
 
