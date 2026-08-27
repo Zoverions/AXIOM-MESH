@@ -85,6 +85,8 @@ export const CANONICAL_DOCUMENTS = Object.freeze([
   'docs/security/DENY-EGRESS-BOUNDARY.md',
   'docs/security/INDEPENDENT-SECURITY-REVIEW.md',
   'docs/security/INCIDENT-RESPONSE-AND-TABLETOP.md',
+  'docs/superpowers/specs/2026-08-27-emergent-coordination-collective-authority-design.md',
+  'docs/superpowers/plans/2026-08-27-emergent-coordination-collective-authority.md',
   'docs/operations/AUTOMATED-SOURCE-SETUP.md',
   'docs/operations/HOST-INSTALLATION-PROFILES.md',
   'docs/operations/EXPLICIT-SERVICE-NETWORK-POLICY.md',
