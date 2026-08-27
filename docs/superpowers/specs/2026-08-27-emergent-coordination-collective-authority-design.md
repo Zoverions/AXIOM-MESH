@@ -67,7 +67,7 @@ For every consequential effect `E` executed for machine principal `M`, AXIOM mus
 
 Peer messages, shared files, labels, votes, task assignments, coordination norms, receipts, discovered capabilities, causal records, or collective agreement may be evidence or input data. They may not serve as an authority root.
 
-When future delegation is introduced, aggregate collective authority may never exceed the union of still-valid authority actually delegated by authorized issuers, and every subdelegation must be equal-or-stricter attenuation along every authority dimension. No delegation chain may lower an assurance floor, widen purpose, add a destination, expand a data scope, increase a budget, extend expiry, or introduce a capability absent from its parent authority.
+When future delegation is introduced, the outer descriptive ceiling of a collective may never exceed the union of still-valid authority actually rooted in authorized issuers, and every subdelegation must be equal-or-stricter attenuation along every authority dimension. **That union is never a pooled grant:** one participant may not exercise another participant’s authority merely because both belong to the same collective. Every executed effect still requires an exact valid authority chain to the actual executor. No delegation chain may lower an assurance floor, widen purpose, add a destination, expand a data scope, increase a budget, extend expiry, or introduce a capability absent from its parent authority.
 
 ## Security property 1: Shared-resource communication edges
 
