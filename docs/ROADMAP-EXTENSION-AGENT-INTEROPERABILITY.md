@@ -55,6 +55,8 @@ Agent interoperability also inherits the existing distinction between authority,
 9. Remote output is evidence from a remote source, not local truth merely because the protocol completed successfully.
 10. No interoperability feature may be marketed before registry/evidence promotion.
 11. Network path discovery, local-repair candidates, route optimization, radio metrics, attestation state, spectrum policy, DTN state, or AI recommendations are evidence and planning inputs only; none may create network-control authority or bypass the normal AXIOM intent/grant/effect path.
+12. Multi-agent coordination does not pool authority. Every executed effect requires authority bound to the actual executor; communication, collective agreement, assignment, or shared evidence is never an authority root.
+13. Promotion of machine delegation, remote execution, broad agent federation, or live machine-agent Circle authority requires passing the PHASEONE emergent-coordination campaign and preserving Collective Authority Non-Amplification.
 
 ## Workstream A — Current production-candidate protection
 
@@ -190,6 +192,8 @@ Milestones:
 
 **Outcome:** one principal may delegate a narrowly defined capability to an agent or sub-agent without creating generic trust.
 
+**Promotion prerequisite:** the PHASEONE emergent-coordination campaign must pass before delegation moves beyond the current v1 depth-zero denial rule. Passing the campaign does not itself enable delegation.
+
 Milestones:
 
 - exact delegation record;
@@ -238,7 +242,9 @@ Milestones:
 
 ## Workstream L — Authenticated remote execution
 
-**Horizon:** after mature multi-host identity, transport, task semantics, independent verification, and recovery
+**Horizon:** after mature multi-host identity, transport, task semantics, independent verification, recovery, and PHASEONE emergent-coordination evidence
+
+**Promotion prerequisite:** remote scheduling, peer state, receipts, shared artifacts, or collective agreement cannot substitute for authority bound to the actual remote executor.
 
 - bind remote executor and exact executable/capsule digest;
 - issue short-lived one-use grants;
@@ -314,13 +320,14 @@ The first useful implementation remains deliberately inert: validate candidate p
 
 ## Workstream M — Agents in Circles and institutions
 
-**Horizon:** after Circle identity/charter/delegation/appeal foundations
+**Horizon:** after Circle identity/charter/delegation/appeal foundations and PHASEONE emergent-coordination evidence for machine-agent authority
 
 - machine principal roles must be explicit in the charter;
 - agents cannot count as human consent by default;
 - sponsoring principals/institutions remain visible where required;
 - machine roles have term, scope, delegation, suspension, and revocation;
 - agent governance influence remains separately inspectable and contestable;
+- Circle votes, assignments, charter decisions, and shared state are governance evidence for local evaluation, not direct Sandbox authority;
 - consequential Circle effects still use normal approvals and evidence.
 
 ## Workstream N — Performance and communication efficiency
@@ -355,6 +362,7 @@ current kernel integrity + authentic pilot
   -> inert skill/capsule import
   -> bounded external tool/provider
   -> async task/artifact semantics
+  -> PHASEONE emergent-coordination campaign
   -> attenuation-only delegation
   -> MCP client laboratory
   -> A2A task exchange laboratory
