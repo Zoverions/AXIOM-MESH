@@ -1,8 +1,7 @@
 import { AxiomError, ValidationError } from './canonical.mjs';
+import { normalizeMachinePrincipalDefinition } from './machine-principal.mjs';
 
-const PRINCIPAL_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const TASK_DOMAIN = /^[a-z][a-z0-9_.:-]{1,159}$/;
-const MACHINE_TYPES = new Set(['agent', 'service']);
 
 export class CollectiveRiskLab {
   constructor({
@@ -28,10 +27,10 @@ export class CollectiveRiskLab {
   }
 
   admitRequest(principal, { taskDomain, now = Date.now() } = {}) {
-    const identity = collectiveIdentity(principal, taskDomain);
     if (!Number.isFinite(now) || now < 0) {
       throw new ValidationError('Collective risk lab now must be a non-negative finite number');
     }
+    const identity = collectiveIdentity(principal, taskDomain, new Date(now));
     const key = identityKey(identity);
     if (!this.#takeRate(key, now)) {
       throw new AxiomError(
@@ -131,22 +130,21 @@ export class CollectiveRiskLab {
   }
 }
 
-function collectiveIdentity(principal, taskDomain) {
-  if (
-    principal?.schema !== 'axiom-machine-principal.v1'
-    || !MACHINE_TYPES.has(principal.type)
-    || typeof principal.id !== 'string'
-    || !PRINCIPAL_ID.test(principal.id)
-    || typeof principal.sponsor !== 'string'
-    || !PRINCIPAL_ID.test(principal.sponsor)
-  ) {
-    throw new ValidationError('Collective risk lab requires a valid machine principal identity');
+function collectiveIdentity(principal, taskDomain, now = new Date()) {
+  let normalized;
+  try {
+    normalized = normalizeMachinePrincipalDefinition(principal, { now });
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      throw new ValidationError(`Collective risk lab requires a valid machine principal identity: ${error.message}`);
+    }
+    throw error;
   }
   if (typeof taskDomain !== 'string' || !TASK_DOMAIN.test(taskDomain)) {
     throw new ValidationError('Collective risk lab task domain is invalid');
   }
   return {
-    sponsor: principal.sponsor,
+    sponsor: normalized.sponsor,
     task_domain: taskDomain
   };
 }
