@@ -45,8 +45,8 @@
       "readers": ["grid", "operator"],
       "authority_impact": "non-authorizing-input",
       "negative_test_binding": {
-        "path": "mesh/test/online-causal-sync.test.mjs",
-        "test_name": "online causal sync rejects source evidence tampering without advancing"
+        "path": "mesh/test/emergent-causal-authority.test.mjs",
+        "test_name": "signed causal authority-like state remains non-authorizing and maps only to local sync intent"
       },
       "notes": "Causal bundles and observations carry authenticated state/evidence only. Applying them remains separately admission- and approval-bound."
     },
