@@ -1,0 +1,102 @@
+{
+  "schema": "axiom-emergent-coordination-surfaces.v1",
+  "kernel_version": "0.12.0-dev.3",
+  "surfaces": [
+    {
+      "id": "machine.discovery-response",
+      "kind": "authenticated-discovery-projection",
+      "writers": ["hypervisor"],
+      "readers": ["constrained-machine-principal"],
+      "authority_impact": "non-authorizing-input",
+      "negative_test_binding": {
+        "path": "mesh/test/machine-discovery.test.mjs",
+        "test_name": "machine discovery exposes only requestable intersection and never grants authority"
+      },
+      "notes": "Discovery is a bounded requestability projection. It is never a grant or substitute for normal intent authorization."
+    },
+    {
+      "id": "machine.terminal-receipt",
+      "kind": "grid-attested-evidence-projection",
+      "writers": ["grid"],
+      "readers": ["owning-machine-principal", "owner"],
+      "authority_impact": "non-authorizing-input",
+      "negative_test_binding": {
+        "path": "mesh/test/machine-receipt.test.mjs",
+        "test_name": "machine receipt binds intent, terminal evidence, chain assurance, and Grid attestation"
+      },
+      "notes": "A valid receipt attests recorded AXIOM evidence and terminal outcome bindings; possession of the receipt creates no new effect authority."
+    },
+    {
+      "id": "grid.evidence-and-receipt-state",
+      "kind": "authenticated-evidence-state",
+      "writers": ["grid"],
+      "readers": ["authorized-principal"],
+      "authority_impact": "non-authorizing-input",
+      "negative_test_binding": {
+        "path": "mesh/test/machine-receipt.test.mjs",
+        "test_name": "machine receipt fails closed on incomplete, mismatched, or nonterminal evidence"
+      },
+      "notes": "Grid evidence may support later decisions but cannot be reinterpreted as a grant merely because it is authentic or retained."
+    },
+    {
+      "id": "causal.exchange-state",
+      "kind": "admitted-causal-exchange",
+      "writers": ["admitted-node-peer", "grid"],
+      "readers": ["grid", "operator"],
+      "authority_impact": "non-authorizing-input",
+      "negative_test_binding": {
+        "path": "mesh/test/online-causal-sync.test.mjs",
+        "test_name": "online causal sync rejects source evidence tampering without advancing"
+      },
+      "notes": "Causal bundles and observations carry authenticated state/evidence only. Applying them remains separately admission- and approval-bound."
+    },
+    {
+      "id": "node.discovery-and-scheduling-metadata",
+      "kind": "admitted-node-metadata",
+      "writers": ["admitted-node", "grid"],
+      "readers": ["scheduler", "operator"],
+      "authority_impact": "non-authorizing-input",
+      "negative_test_binding": {
+        "path": "mesh/test/node-scheduling.test.mjs",
+        "test_name": "discovery and scheduler exclude expired, quarantined, and unqualified nodes"
+      },
+      "notes": "Availability, placement, and scheduling facts do not grant remote execution, delegation, or workload authority."
+    },
+    {
+      "id": "social.remote-review-state",
+      "kind": "owner-scoped-read-only-projection",
+      "writers": ["accepted-social-grid-store"],
+      "readers": ["authenticated-owner"],
+      "authority_impact": "non-authorizing-input",
+      "negative_test_binding": {
+        "path": "mesh/test/remote-social-review-route.test.mjs",
+        "test_name": "G5B exposes only authenticated owner-scoped read-only remote review"
+      },
+      "notes": "Accepted remote-social review state is a bounded local projection. It creates no staging, admission, follow, transport, recommendation, or authority effect."
+    },
+    {
+      "id": "agent-commons.challenge-and-contribution-metadata",
+      "kind": "public-contribution-metadata",
+      "writers": ["repository-maintainer"],
+      "readers": ["external-agent", "human"],
+      "authority_impact": "non-authorizing-input",
+      "negative_test_binding": {
+        "path": "mesh/test/agent-challenge-registry.test.mjs",
+        "test_name": "Agent Commons challenge registry rejects authority, payment, evidence, or compensation elevation"
+      },
+      "notes": "Challenge and contribution metadata can coordinate work but cannot grant repository, runtime, payment, evidence, or production authority."
+    },
+    {
+      "id": "circle.decisions-and-tasks",
+      "kind": "collective-governance-state",
+      "writers": ["circle-participant"],
+      "readers": ["circle-participant", "local-authority-evaluator"],
+      "authority_impact": "non-authorizing-input",
+      "negative_test_binding": {
+        "path": "mesh/test/circle-core.test.mjs",
+        "test_name": "Circle decisions and tasks cannot mint runtime execution authority"
+      },
+      "notes": "Circle decisions and tasks are governance/collaboration records for local evaluation. They do not directly mint Sandbox authority."
+    }
+  ]
+}
