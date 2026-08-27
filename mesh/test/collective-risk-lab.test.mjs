@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { CollectiveRiskLab } from '../src/lib/collective-risk-lab.mjs';
+import { normalizeMachinePrincipalDefinition } from '../src/lib/machine-principal.mjs';
 
 function principal({
   id,
@@ -8,7 +9,7 @@ function principal({
   action = 'system.echo',
   purpose = 'test.conformance'
 }) {
-  return {
+  return normalizeMachinePrincipalDefinition({
     schema: 'axiom-machine-principal.v1',
     id,
     type: 'agent',
@@ -34,9 +35,8 @@ function principal({
         max_response_bytes: 262_144
       },
       delegation: { allowed: false, max_depth: 0 }
-    },
-    authority_digest: 'b'.repeat(64)
-  };
+    }
+  });
 }
 
 test('collective risk lab aggregates request pressure across principals sharing sponsor and task domain', () => {
@@ -131,6 +131,20 @@ test('collective risk lab fails closed on malformed machine identity or task dom
   assert.throws(
     () => lab.admitRequest(valid, { taskDomain: '../escape', now: 0 }),
     /task domain/i
+  );
+});
+
+test('collective risk lab rejects sponsor tampering that breaks the machine authority digest', () => {
+  const lab = new CollectiveRiskLab();
+  const valid = principal({ id: 'agent.collective-bound-sponsor' });
+  const tampered = {
+    ...valid,
+    sponsor: 'owner.collective-forged'
+  };
+
+  assert.throws(
+    () => lab.admitRequest(tampered, { taskDomain: 'task.bound', now: 0 }),
+    /authority_digest|normalized authority|machine principal/i
   );
 });
 
