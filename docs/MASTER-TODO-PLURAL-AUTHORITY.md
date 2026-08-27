@@ -180,7 +180,7 @@
 
 ## Priority 14 — Prohibited early sovereign uses
 
-Do not prototype with real people or live authority in the following areas:
+Do not prototype with real people or live authority in the following areas until separate programmes and reviews exist:
 
 - [ ] population-scale identity correlation;
 - [ ] voting or election administration;
