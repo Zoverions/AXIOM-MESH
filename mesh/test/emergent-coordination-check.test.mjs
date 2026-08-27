@@ -58,3 +58,12 @@ test('emergent coordination inventory rejects an authorizing shared surface', as
     /authority impact/i
   );
 });
+
+test('active emergent coordination inventory is fully bound and non-authorizing', async () => {
+  const result = await checkEmergentCoordination();
+  assert.equal(result.valid, true);
+  assert.equal(result.schema, 'axiom-emergent-coordination-surfaces.v1');
+  assert.equal(result.kernel_version, '0.12.0-dev.3');
+  assert.equal(result.surfaces, 8);
+  assert.equal(result.non_authorizing, 8);
+});
