@@ -9,8 +9,8 @@
       "readers": ["constrained-machine-principal"],
       "authority_impact": "non-authorizing-input",
       "negative_test_binding": {
-        "path": "mesh/test/machine-discovery.test.mjs",
-        "test_name": "machine discovery exposes only requestable intersection and never grants authority"
+        "path": "mesh/test/emergent-coordination-e2e.test.mjs",
+        "test_name": "machine receipts and discovery responses remain non-authorizing inputs"
       },
       "notes": "Discovery is a bounded requestability projection. It is never a grant or substitute for normal intent authorization."
     },
@@ -21,8 +21,8 @@
       "readers": ["owning-machine-principal", "owner"],
       "authority_impact": "non-authorizing-input",
       "negative_test_binding": {
-        "path": "mesh/test/machine-receipt.test.mjs",
-        "test_name": "machine receipt binds intent, terminal evidence, chain assurance, and Grid attestation"
+        "path": "mesh/test/emergent-coordination-e2e.test.mjs",
+        "test_name": "machine receipts and discovery responses remain non-authorizing inputs"
       },
       "notes": "A valid receipt attests recorded AXIOM evidence and terminal outcome bindings; possession of the receipt creates no new effect authority."
     },
