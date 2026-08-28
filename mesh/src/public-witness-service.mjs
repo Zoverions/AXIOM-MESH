@@ -7,6 +7,7 @@ import {
   assertPlainObject,
   assertString
 } from './lib/canonical.mjs';
+import { openPublicWitnessCurrentnessAnchorStore } from './lib/public-witness-currentness-anchor-store.mjs';
 import { openPublicWitnessDurableStore } from './lib/public-witness-durable-store.mjs';
 
 export const PUBLIC_WITNESS_PROCESS_CONFIG_SCHEMA = 'axiom-public-witness-process-config.v1';
@@ -19,6 +20,7 @@ const DEFAULT_MAX_REQUEST_BYTES = 2 * 1024 * 1024;
 const HARD_MAX_REQUEST_BYTES = 16 * 1024 * 1024;
 const MAX_CONFIG_FILE_BYTES = 64 * 1024;
 const MAX_WITNESS_KEY_FILE_BYTES = 64 * 1024;
+const CURRENTNESS_ANCHOR_STATE_SUFFIX = '.currentness-anchors.jsonl';
 const OPERATIONS = new Set([
   'observe-credential',
   'observe-revocation',
@@ -28,7 +30,10 @@ const OPERATIONS = new Set([
   'list-position',
   'list-conflicts',
   'snapshot',
-  'verify-state'
+  'verify-state',
+  'publish-currentness-anchor',
+  'get-currentness-anchor',
+  'get-currentness-anchor-head'
 ]);
 
 function exactKeys(raw, expected, label) {
@@ -147,7 +152,19 @@ export async function loadPublicWitnessProcessRuntime(configPath) {
     maxStateBytes: config.max_state_bytes,
     maxRecordBytes: config.max_record_bytes
   });
-  return Object.freeze({ config, store });
+  const currentnessAnchorStatePath = `${config.state_path}${CURRENTNESS_ANCHOR_STATE_SUFFIX}`;
+  if (currentnessAnchorStatePath === config.witness_private_key_path) {
+    throw new ValidationError('public witness currentness anchor state path must be distinct from witness key path');
+  }
+  const currentnessAnchorStore = await openPublicWitnessCurrentnessAnchorStore({
+    statePath: currentnessAnchorStatePath,
+    domainId: config.domain_id,
+    witnessId: config.witness_id,
+    witnessPrivateKey,
+    maxStateBytes: config.max_state_bytes,
+    maxRecordBytes: config.max_record_bytes
+  });
+  return Object.freeze({ config, store, currentnessAnchorStore });
 }
 
 function normalizeRequest(raw) {
@@ -236,6 +253,41 @@ export async function handlePublicWitnessProcessRequest(runtime, raw) {
         request.operation,
         normalizeObservePayload(request.operation, request.payload)
       );
+    } else if (request.operation === 'publish-currentness-anchor') {
+      const payload = exactKeys(request.payload, [
+        'anchor',
+        'anchored_checkpoint',
+        'trusted_controller_public_key',
+        'published_at'
+      ], 'public witness process publish-currentness-anchor payload');
+      result = await runtime.currentnessAnchorStore.publish({
+        anchor: payload.anchor,
+        anchoredCheckpoint: payload.anchored_checkpoint,
+        trustedControllerPublicKey: payload.trusted_controller_public_key,
+        publishedAt: payload.published_at
+      });
+    } else if (request.operation === 'get-currentness-anchor') {
+      const payload = exactKeys(
+        request.payload,
+        ['anchor_digest'],
+        'public witness process get-currentness-anchor payload'
+      );
+      result = runtime.currentnessAnchorStore.getAnchor(
+        digest(payload.anchor_digest, 'anchor_digest')
+      );
+    } else if (request.operation === 'get-currentness-anchor-head') {
+      const payload = exactKeys(request.payload, [
+        'root_binding_digest',
+        'root_authority_digest',
+        'root_holder',
+        'controller_key_id'
+      ], 'public witness process get-currentness-anchor-head payload');
+      result = runtime.currentnessAnchorStore.getHead({
+        rootBindingDigest: digest(payload.root_binding_digest, 'root_binding_digest'),
+        rootAuthorityDigest: digest(payload.root_authority_digest, 'root_authority_digest'),
+        rootHolder: identifier(payload.root_holder, 'root_holder'),
+        controllerKeyId: digest(payload.controller_key_id, 'controller_key_id')
+      });
     } else if (request.operation === 'get-artifact') {
       const payload = exactKeys(request.payload, ['artifact_digest'], 'public witness process get-artifact payload');
       result = runtime.store.getArtifact(digest(payload.artifact_digest, 'artifact_digest'));
