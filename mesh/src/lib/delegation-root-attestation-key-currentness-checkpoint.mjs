@@ -15,6 +15,7 @@ import {
 } from './canonical.mjs';
 import {
   validateDelegationRootAttestationKeyCredentialPath,
+  verifyDelegationRootAttestationKeyCredential,
   verifyDelegationRootAttestationKeyRevocation
 } from './delegation-root-attestation-key-lifecycle.mjs';
 
@@ -397,15 +398,23 @@ function normalizeLifecycleSnapshot({
   expectedRootAuthorityDigest,
   expectedRootHolder
 }) {
-  const history = validateDelegationRootAttestationKeyCredentialPath(credentials, {
+  const path = validateDelegationRootAttestationKeyCredentialPath(credentials, {
     trustedControllerPublicKey,
     expectedRootBindingDigest,
     expectedRootAuthorityDigest,
     expectedRootHolder
   });
-  if (!Array.isArray(history) || history.length < 1) {
+  if (!Array.isArray(credentials) || credentials.length < 1) {
     throw new ValidationError('Delegation root attestation currentness requires credential history');
   }
+  const history = Object.freeze(credentials.map(raw => (
+    verifyDelegationRootAttestationKeyCredential(raw, {
+      trustedControllerPublicKey,
+      expectedRootBindingDigest: path.root_binding_digest,
+      expectedRootAuthorityDigest: path.root_authority_digest,
+      expectedRootHolder: path.root_holder
+    })
+  )));
   if (!Array.isArray(revocations) || revocations.length > MAX_REVOCATIONS) {
     throw new ValidationError(
       `Delegation root attestation currentness revocations must contain at most ${MAX_REVOCATIONS} entries`
@@ -443,10 +452,10 @@ function normalizeLifecycleSnapshot({
   return Object.freeze({
     history,
     credentialHead: head,
-    rootBindingDigest: head.statement.root_binding_digest,
-    rootAuthorityDigest: head.statement.root_authority_digest,
-    rootHolder: head.statement.root_holder,
-    controllerKeyId: head.statement.controller_key_id,
+    rootBindingDigest: path.root_binding_digest,
+    rootAuthorityDigest: path.root_authority_digest,
+    rootHolder: path.root_holder,
+    controllerKeyId: path.controller_key_id,
     credentialPathDigest: digestObject(history),
     revocations: Object.freeze(canonicalRevocations),
     revocationDigests: Object.freeze(canonicalRevocations.map(item => item.revocation_digest)),
