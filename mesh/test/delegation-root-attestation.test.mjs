@@ -169,7 +169,8 @@ test('root attestation verification fails closed on statement or signature tampe
   );
 
   const tamperedSignature = structuredClone(attestation);
-  tamperedSignature.signer_signature = `${attestation.signer_signature.slice(0, -1)}A`;
+  const replacement = attestation.signer_signature.at(-1) === 'A' ? 'B' : 'A';
+  tamperedSignature.signer_signature = `${attestation.signer_signature.slice(0, -1)}${replacement}`;
   assert.throws(
     () => verifyDelegationRootAttestation(tamperedSignature, {
       trusted_signer_public_key: signer.publicKey
