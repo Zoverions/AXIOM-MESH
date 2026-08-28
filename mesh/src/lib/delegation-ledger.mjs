@@ -1,4 +1,4 @@
-import { appendFile, mkdir, readFile } from 'node:fs/promises';
+import { lstat, mkdir, open, readFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import {
   ValidationError,
@@ -18,6 +18,10 @@ export const DELEGATION_LEDGER_SCHEMA = 'axiom-delegation-ledger.v1';
 export const DELEGATION_LEDGER_PROJECTION_SCHEMA = 'axiom-delegation-ledger-projection.v1';
 
 const DIGEST_PATTERN = /^[a-f0-9]{64}$/;
+const DEFAULT_MAX_STATE_BYTES = 64 * 1024 * 1024;
+const HARD_MAX_STATE_BYTES = 512 * 1024 * 1024;
+const DEFAULT_MAX_ENTRY_BYTES = 2 * 1024 * 1024;
+const HARD_MAX_ENTRY_BYTES = 16 * 1024 * 1024;
 const ENTRY_KEYS = Object.freeze([
   'schema',
   'sequence',
@@ -27,10 +31,15 @@ const ENTRY_KEYS = Object.freeze([
   'entry_digest'
 ]);
 
-export async function readDelegationLedger({ ledger_path } = {}) {
+export async function readDelegationLedger({
+  ledger_path,
+  max_state_bytes,
+  max_entry_bytes
+} = {}) {
   const ledgerPath = validateLedgerPath(ledger_path);
-  const text = await readLedgerText(ledgerPath);
-  const entries = parseLedgerEntries(text);
+  const limits = normalizeLedgerLimits({ max_state_bytes, max_entry_bytes });
+  const text = await readLedgerText(ledgerPath, limits.maxStateBytes);
+  const entries = parseLedgerEntries(text, limits.maxEntryBytes);
   const grants = [];
   const revocations = [];
   const grantsById = new Map();
@@ -73,7 +82,8 @@ export async function readDelegationLedger({ ledger_path } = {}) {
     grants,
     revocations,
     head_entry_digest: previousDigest,
-    execution_authority_granted: false
+    execution_authority_granted: false,
+    authority_effect: 'none'
   };
   return {
     ...core,
@@ -85,10 +95,17 @@ export async function appendDelegationGrant({
   ledger_path,
   root_authority,
   grant,
-  now = new Date()
+  now = new Date(),
+  max_state_bytes,
+  max_entry_bytes
 } = {}) {
   const ledgerPath = validateLedgerPath(ledger_path);
-  const ledger = await readDelegationLedger({ ledger_path: ledgerPath });
+  const limits = normalizeLedgerLimits({ max_state_bytes, max_entry_bytes });
+  const ledger = await readDelegationLedger({
+    ledger_path: ledgerPath,
+    max_state_bytes: limits.maxStateBytes,
+    max_entry_bytes: limits.maxEntryBytes
+  });
   const normalizedGrant = normalizeDelegationGrant(grant);
 
   if (ledger.grants.some(item => item.id === normalizedGrant.id)) {
@@ -109,13 +126,23 @@ export async function appendDelegationGrant({
     record: normalizedGrant,
     previousEntryDigest: ledger.head_entry_digest
   });
-  await appendLedgerEntry(ledgerPath, entry);
+  await appendLedgerEntry(ledgerPath, entry, limits);
   return entry;
 }
 
-export async function appendDelegationRevocation({ ledger_path, revocation } = {}) {
+export async function appendDelegationRevocation({
+  ledger_path,
+  revocation,
+  max_state_bytes,
+  max_entry_bytes
+} = {}) {
   const ledgerPath = validateLedgerPath(ledger_path);
-  const ledger = await readDelegationLedger({ ledger_path: ledgerPath });
+  const limits = normalizeLedgerLimits({ max_state_bytes, max_entry_bytes });
+  const ledger = await readDelegationLedger({
+    ledger_path: ledgerPath,
+    max_state_bytes: limits.maxStateBytes,
+    max_entry_bytes: limits.maxEntryBytes
+  });
   const normalizedRevocation = normalizeDelegationRevocation(revocation);
 
   if (ledger.revocations.some(item => item.id === normalizedRevocation.id)) {
@@ -135,7 +162,7 @@ export async function appendDelegationRevocation({ ledger_path, revocation } = {
     record: normalizedRevocation,
     previousEntryDigest: ledger.head_entry_digest
   });
-  await appendLedgerEntry(ledgerPath, entry);
+  await appendLedgerEntry(ledgerPath, entry, limits);
   return entry;
 }
 
@@ -143,9 +170,15 @@ export async function projectDelegationLedger({
   ledger_path,
   root_authority,
   target_grant_id,
-  now = new Date()
+  now = new Date(),
+  max_state_bytes,
+  max_entry_bytes
 } = {}) {
-  const ledger = await readDelegationLedger({ ledger_path });
+  const ledger = await readDelegationLedger({
+    ledger_path,
+    max_state_bytes,
+    max_entry_bytes
+  });
   const chainResolution = resolveDelegationChain({
     root_authority,
     grants: ledger.grants,
@@ -161,7 +194,8 @@ export async function projectDelegationLedger({
     grant_count: ledger.grants.length,
     revocation_count: ledger.revocations.length,
     chain_resolution: chainResolution,
-    execution_authority_granted: false
+    execution_authority_granted: false,
+    authority_effect: 'none'
   };
   return {
     ...core,
@@ -238,32 +272,86 @@ function assertRevocationAuthorized(grant, revocation) {
   }
 }
 
-async function appendLedgerEntry(ledgerPath, entry) {
-  await mkdir(dirname(ledgerPath), { recursive: true });
-  await appendFile(ledgerPath, `${canonicalJson(entry)}\n`, {
-    encoding: 'utf8',
-    flag: 'a'
-  });
+async function appendLedgerEntry(ledgerPath, entry, limits) {
+  await mkdir(dirname(ledgerPath), { recursive: true, mode: 0o700 });
+  const serialized = canonicalJson(entry);
+  const entryBytes = Buffer.byteLength(serialized, 'utf8');
+  const line = `${serialized}\n`;
+  const lineBytes = Buffer.byteLength(line, 'utf8');
+  if (entryBytes > limits.maxEntryBytes) {
+    throw new ValidationError('Delegation ledger entry exceeds configured byte limit');
+  }
+
+  let handle;
+  try {
+    const info = await lstat(ledgerPath);
+    assertRegularLedgerFile(info);
+    if (info.size + lineBytes > limits.maxStateBytes) {
+      throw new ValidationError('Delegation ledger state exceeds configured byte limit');
+    }
+    handle = await open(ledgerPath, 'a');
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+    if (lineBytes > limits.maxStateBytes) {
+      throw new ValidationError('Delegation ledger state exceeds configured byte limit');
+    }
+    try {
+      handle = await open(ledgerPath, 'ax', 0o600);
+    } catch (createError) {
+      if (createError?.code !== 'EEXIST') throw createError;
+      const info = await lstat(ledgerPath);
+      assertRegularLedgerFile(info);
+      if (info.size + lineBytes > limits.maxStateBytes) {
+        throw new ValidationError('Delegation ledger state exceeds configured byte limit');
+      }
+      handle = await open(ledgerPath, 'a');
+    }
+  }
+
+  try {
+    const pathInfo = await lstat(ledgerPath);
+    assertRegularLedgerFile(pathInfo);
+    await handle.writeFile(line, 'utf8');
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
 }
 
-async function readLedgerText(ledgerPath) {
+async function readLedgerText(ledgerPath, maxStateBytes) {
   try {
-    return await readFile(ledgerPath, 'utf8');
+    const info = await lstat(ledgerPath);
+    assertRegularLedgerFile(info);
+    if (info.size > maxStateBytes) {
+      throw new ValidationError('Delegation ledger state exceeds configured byte limit');
+    }
+    const bytes = await readFile(ledgerPath);
+    if (bytes.length > maxStateBytes) {
+      throw new ValidationError('Delegation ledger state exceeds configured byte limit');
+    }
+    return bytes.toString('utf8');
   } catch (error) {
     if (error?.code === 'ENOENT') return '';
     throw error;
   }
 }
 
-function parseLedgerEntries(text) {
+function parseLedgerEntries(text, maxEntryBytes) {
   if (text.length === 0) return [];
-  const lines = text.split('\n');
-  if (lines.at(-1) === '') lines.pop();
+  if (!text.endsWith('\n')) {
+    throw new ValidationError('Delegation ledger has an incomplete trailing record');
+  }
+  const lines = text.slice(0, -1).split('\n');
   if (lines.length === 0) return [];
 
   return lines.map((line, index) => {
     if (line.length === 0) {
       throw new ValidationError(`Delegation ledger contains an empty line at ${index + 1}`);
+    }
+    if (Buffer.byteLength(line, 'utf8') > maxEntryBytes) {
+      throw new ValidationError(
+        `Delegation ledger entry ${index + 1} exceeds configured byte limit`
+      );
     }
     try {
       const parsed = JSON.parse(line);
@@ -284,6 +372,44 @@ function parseLedgerEntries(text) {
 
 function validateLedgerPath(value) {
   return assertString(value, 'delegation ledger path', { max: 8192 });
+}
+
+function normalizeLedgerLimits({ max_state_bytes, max_entry_bytes }) {
+  const maxStateBytes = boundedPositiveInteger(
+    max_state_bytes,
+    'delegation ledger max_state_bytes',
+    DEFAULT_MAX_STATE_BYTES,
+    HARD_MAX_STATE_BYTES
+  );
+  const defaultEntryBytes = Math.min(DEFAULT_MAX_ENTRY_BYTES, maxStateBytes);
+  const maxEntryBytes = boundedPositiveInteger(
+    max_entry_bytes,
+    'delegation ledger max_entry_bytes',
+    defaultEntryBytes,
+    HARD_MAX_ENTRY_BYTES
+  );
+  if (max_entry_bytes !== undefined && maxEntryBytes > maxStateBytes) {
+    throw new ValidationError('Delegation ledger max_entry_bytes cannot exceed max_state_bytes');
+  }
+  return { maxStateBytes, maxEntryBytes };
+}
+
+function boundedPositiveInteger(value, name, fallback, hardMaximum) {
+  const normalized = value === undefined ? fallback : value;
+  if (
+    !Number.isSafeInteger(normalized)
+    || normalized < 1
+    || normalized > hardMaximum
+  ) {
+    throw new ValidationError(`${name} must be a positive safe integer no greater than ${hardMaximum}`);
+  }
+  return normalized;
+}
+
+function assertRegularLedgerFile(info) {
+  if (info.isSymbolicLink() || !info.isFile()) {
+    throw new ValidationError('Delegation ledger path must be a regular non-symlink file');
+  }
 }
 
 function assertExactKeys(value, name, keys) {
