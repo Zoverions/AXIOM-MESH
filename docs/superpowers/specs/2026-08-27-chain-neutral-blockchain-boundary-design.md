@@ -369,7 +369,9 @@ Proposed capability identifiers:
 - `chain.bridge.quote`;
 - `chain.bridge.execute`.
 
-The first implementation slice must not promote any write capability. If read-only adapter code is introduced, the capability registry should either keep the broad economics bridge capability disabled or add narrowly scoped `specified` / `adapter_required` entries whose wording explicitly states that observation and verification do not authorize external effects.
+The first implementation slice must not promote any write capability. Phase 0 adds only `chain.observe` and `chain.verify` to the capability registry with status `specified`, while `economics.token-bridge-liquidity` remains `disabled`. Phase 1 may move `chain.observe` and `chain.verify` to `adapter_required` only after the generic and family adapter contracts plus deterministic tests exist. Neither status means an operational external effect is available.
+
+All remaining proposed write, settlement, anchoring, wallet, simulation, and bridge capabilities remain design vocabulary only until separately added by a later approved change.
 
 A future signer must require an exact transaction digest and exact network binding. A signature over one transaction must not be reusable as approval for a materially changed transaction.
 
@@ -397,7 +399,7 @@ The adapter must expose what was verified rather than collapsing all results int
 
 ## Bridge-provider model
 
-Axiom does not need to become a bridge operator to support bridge use.
+AXIOM does not need to become a bridge operator to support bridge use.
 
 Bridge providers are optional external providers that can be described, quoted, verified, and later executed through separate adapters.
 
@@ -445,7 +447,7 @@ Finality policy must be explicit per family/profile and use case.
 
 ### RPC disagreement
 
-When two required providers disagree, the adapter must return an uncertain/conflicted result rather than selecting the preferred answer silently.
+When a later multi-provider policy requires two or more providers and they disagree, the adapter must return an uncertain/conflicted result rather than selecting the preferred answer silently.
 
 ### Unsupported semantics
 
@@ -484,8 +486,9 @@ The first code increment after this design is approved should remain non-executi
    - settlement evidence;
    - bridge route description.
 2. Add validators that fail closed on unknown schema versions, malformed chain identifiers, ambiguous asset identity, invalid amount forms, and unsupported finality classes.
-3. Add capability-registry entries for read-only chain observation/verification as `specified` or `adapter_required`, while preserving all write/settlement/bridge execution capabilities as disabled/not implemented.
-4. Add documentation stating that these types carry evidence only and do not grant authority.
+3. Add `chain.observe` and `chain.verify` to `mesh/config/capabilities.json` with status `specified` and wording that explicitly states observation and verification are non-authorizing and non-executing.
+4. Keep `economics.token-bridge-liquidity` disabled and make no write-capability registry additions.
+5. Add documentation stating that these types carry evidence only and do not grant authority.
 
 ### Phase 1 — read-only adapter contracts
 
@@ -495,13 +498,15 @@ The first code increment after this design is approved should remain non-executi
 4. Use deterministic mocked transports/fixtures for tests; do not add live-network dependency to the trusted test suite.
 5. Prove equivalent normalized operations across EVM and Starknet fixtures where semantics genuinely overlap.
 6. Prove family-specific finality data survives normalization without being flattened incorrectly.
+7. If the contracts and tests satisfy the current evidence checker, move only `chain.observe` and `chain.verify` from `specified` to `adapter_required`; do not mark them `implemented` until an operational adapter path is separately reviewed and evidenced.
 
 ### Phase 2 — independent observation verification
 
 1. Add optional multi-provider agreement logic for read paths.
 2. Add family-specific cryptographic verification adapters where feasible.
 3. Add explicit uncertain/conflicted outcomes for disagreement or unverifiable provider claims.
-4. Keep transaction preparation/signing/broadcast disabled.
+4. Add tests proving required-provider disagreement fails closed rather than silently selecting a result.
+5. Keep transaction preparation/signing/broadcast disabled.
 
 ### Later phases — separately approved
 
@@ -520,9 +525,9 @@ Later work may add:
 
 Each later phase requires its own design/implementation review and must not be inferred from this specification.
 
-## Test requirements
+## Phase 0/1 test requirements
 
-Before Phase 0/1 can be considered implemented, focused tests should prove at least:
+Before Phase 0/1 can be considered complete, focused tests should prove at least:
 
 1. chain identifiers from different families cannot collide;
 2. EVM chain ID alone does not mark an endpoint trusted;
@@ -533,18 +538,26 @@ Before Phase 0/1 can be considered implemented, focused tests should prove at le
 7. integer amounts survive normalization exactly;
 8. unsupported schema versions fail closed;
 9. unsupported finality classes fail closed;
-10. provider disagreement produces an uncertain/conflicted result;
-11. a verified chain observation cannot be consumed as a local grant or approval;
-12. bridge route descriptions are non-authorizing data;
-13. settlement evidence cannot mutate the originating accounting journal entry;
-14. reorg/reversion can dispute external evidence without rewriting historical evidence;
-15. no private-key/signing API exists in the first slice;
-16. no live network is required for deterministic CI;
-17. capability registry and evidence bindings remain internally consistent.
+10. a verified chain observation cannot be consumed as a local grant or approval;
+11. bridge route descriptions are non-authorizing data;
+12. settlement evidence cannot mutate the originating accounting journal entry;
+13. reorg/reversion can dispute external evidence without rewriting historical evidence;
+14. no private-key/signing API exists in the first slice;
+15. no live network is required for deterministic CI;
+16. capability registry and evidence bindings remain internally consistent.
+
+## Phase 2 test requirements
+
+Before multi-provider verification can be promoted, focused tests should additionally prove:
+
+1. required provider disagreement produces an uncertain/conflicted result;
+2. one provider cannot silently override another provider required by policy;
+3. agreement metadata preserves provider identities and the exact state anchors compared;
+4. unverifiable provider claims remain evidence of an observation attempt, not verified chain truth.
 
 ## Promotion gates
 
-A read-only chain adapter may be promoted from specified/adapter-required only when:
+A read-only chain adapter may be promoted from `specified` to `adapter_required` only when:
 
 - deterministic tests cover its normalization and failure semantics;
 - no signing or broadcasting path is reachable;
@@ -553,6 +566,8 @@ A read-only chain adapter may be promoted from specified/adapter-required only w
 - finality semantics are explicit;
 - registry evidence points to exact runnable tests under the current capability-evidence checker;
 - the current-build threat model includes external-chain/RPC/bridge data as untrusted input.
+
+`adapter_required` still means AXIOM has no operational chain effect until a specific adapter is configured and separately promoted.
 
 A write-capable chain adapter may not be promoted merely because the read adapter is complete.
 
