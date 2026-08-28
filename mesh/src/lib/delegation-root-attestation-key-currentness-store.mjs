@@ -14,6 +14,7 @@ const DEFAULT_MAX_STATE_BYTES = 64 * 1024 * 1024;
 const HARD_MAX_STATE_BYTES = 512 * 1024 * 1024;
 const DEFAULT_MAX_CHECKPOINT_BYTES = 2 * 1024 * 1024;
 const HARD_MAX_CHECKPOINT_BYTES = 16 * 1024 * 1024;
+const DIGEST_PATTERN = /^[a-f0-9]{64}$/;
 
 const FIXED_NONCLAIMS = Object.freeze({
   state_path_disclosed: false,
@@ -40,6 +41,23 @@ function boundedPositiveInteger(value, fallback, hardMaximum, label) {
 function requireStatePath(value) {
   if (typeof value !== 'string' || value.trim() === '') {
     throw new ValidationError('Delegation currentness durable state path must be a non-empty string');
+  }
+  return value;
+}
+
+function requireExpectedDigest(value, label) {
+  if (value === undefined || value === null || value === '') {
+    throw new ValidationError(`${label} is required`);
+  }
+  if (typeof value !== 'string' || !DIGEST_PATTERN.test(value)) {
+    throw new ValidationError(`${label} must be a lowercase SHA-256 digest`);
+  }
+  return value;
+}
+
+function requireExpectedRootHolder(value) {
+  if (typeof value !== 'string' || value.length === 0 || value.trim() !== value) {
+    throw new ValidationError('Delegation currentness expected root holder is required');
   }
   return value;
 }
@@ -354,9 +372,15 @@ export async function openDelegationRootAttestationKeyCurrentnessStore({
   });
   const trust = Object.freeze({
     trustedControllerPublicKey,
-    expectedRootBindingDigest,
-    expectedRootAuthorityDigest,
-    expectedRootHolder
+    expectedRootBindingDigest: requireExpectedDigest(
+      expectedRootBindingDigest,
+      'Delegation currentness expected root binding digest'
+    ),
+    expectedRootAuthorityDigest: requireExpectedDigest(
+      expectedRootAuthorityDigest,
+      'Delegation currentness expected root authority digest'
+    ),
+    expectedRootHolder: requireExpectedRootHolder(expectedRootHolder)
   });
 
   await createStateFileIfMissing(normalizedPath);
