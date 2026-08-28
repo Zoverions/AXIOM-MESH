@@ -149,6 +149,10 @@ function keyId(value, label) {
   return sha256(canonicalPublicKeyPem(value, label));
 }
 
+function controllerKeyId(value, label) {
+  return sha256(canonicalPublicKeyPem(value, label).trim());
+}
+
 function signer(privateKeyValue) {
   const privateKey = parsePrivateKey(
     privateKeyValue,
@@ -321,7 +325,10 @@ function verifyRecord(raw, {
       'public witness currentness anchor durable record statement does not match signed anchor'
     );
   }
-  if (keyId(controllerPem, 'public witness currentness anchor controller public key') !== statement.controller_key_id) {
+  if (
+    controllerKeyId(controllerPem, 'public witness currentness anchor controller public key')
+    !== statement.controller_key_id
+  ) {
     throw new ValidationError('public witness currentness anchor durable record controller key mismatch');
   }
   if (Date.parse(statement.published_at) < Date.parse(anchor.statement.anchored_at)) {
