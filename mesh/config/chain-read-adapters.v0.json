@@ -1,0 +1,41 @@
+{
+  "catalog": "axiom-chain-read-adapter-catalog.v0",
+  "cataloged_at": "2026-08-28T04:00:00Z",
+  "adapters": [
+    {
+      "schema": "axiom-chain-read-adapter.v1",
+      "adapter_id": "evm-read-v0",
+      "adapter_version": "0.1.0",
+      "adapter_family": "evm",
+      "supported_profile_ids": ["evm:ethereum-mainnet", "evm:pulsechain-mainnet"],
+      "normalized_operations": ["describeNetwork", "getHead", "getBlockReference", "getTransaction", "getReceiptOrOutcome", "getContractOrAccountState", "getLogsOrEvents", "verifyObservation", "classifyFinality"],
+      "family_rpc_methods": ["eth_chainId", "eth_blockNumber", "eth_getBlockByNumber", "eth_getTransactionByHash", "eth_getTransactionReceipt", "eth_getCode", "eth_getLogs", "eth_call"],
+      "network_access": { "enabled": false },
+      "write_surface": { "enabled": false },
+      "signing_surface": { "enabled": false },
+      "bridge_execution": { "enabled": false },
+      "installation_grants_authority": false,
+      "non_claims": ["This manifest describes a read contract only; it does not contain or invoke an RPC endpoint."]
+    },
+    {
+      "schema": "axiom-chain-read-adapter.v1",
+      "adapter_id": "starknet-read-v0",
+      "adapter_version": "0.1.0",
+      "adapter_family": "starknet",
+      "supported_profile_ids": ["starknet:mainnet"],
+      "normalized_operations": ["describeNetwork", "getHead", "getBlockReference", "getTransaction", "getReceiptOrOutcome", "getContractOrAccountState", "getLogsOrEvents", "verifyObservation", "classifyFinality"],
+      "family_rpc_methods": ["starknet_chainId", "starknet_blockNumber", "starknet_getBlockWithTxHashes", "starknet_getTransactionByHash", "starknet_getTransactionReceipt", "starknet_getStorageAt", "starknet_getEvents", "starknet_call"],
+      "network_access": { "enabled": false },
+      "write_surface": { "enabled": false },
+      "signing_surface": { "enabled": false },
+      "bridge_execution": { "enabled": false },
+      "installation_grants_authority": false,
+      "non_claims": ["This manifest describes a read contract only; it does not contain or invoke an RPC endpoint."]
+    }
+  ],
+  "non_claims": [
+    "Adapter catalog presence does not grant authority.",
+    "No live RPC transport is configured or implemented by this catalog.",
+    "No signing, broadcasting, settlement execution, or bridge execution is enabled."
+  ]
+}
