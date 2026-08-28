@@ -202,7 +202,7 @@ test('reopen fails closed on tampering, non-canonical lines, and incomplete tail
   const record = JSON.parse(canonical.trimEnd());
   record.sequence = 2;
   await writeFile(statePath, `${JSON.stringify(record)}\n`, 'utf8');
-  await assert.rejects(openDelegationDurableStore({ statePath }), /canonical JSON|digest|sequence/);
+  await assert.rejects(openDelegationDurableStore({ statePath }), /canonical JSON|digest|sequence|predecessor/);
 
   await writeFile(statePath, canonical.trimEnd(), 'utf8');
   await assert.rejects(openDelegationDurableStore({ statePath }), /incomplete trailing record/);
