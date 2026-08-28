@@ -13,7 +13,6 @@ import {
   digestObject,
   sha256
 } from './canonical.mjs';
-import { DELEGATION_AUTHORITY_SCHEMA } from './delegation-graph.mjs';
 import { DELEGATION_ROOT_BINDING_SCHEMA } from './delegation-ledger.mjs';
 
 export const DELEGATION_ROOT_ATTESTATION_SCHEMA = 'axiom-delegation-root-attestation.v1';
@@ -25,7 +24,6 @@ const ROOT_BINDING_KEYS = Object.freeze([
   'schema',
   'root_holder',
   'root_authority_digest',
-  'root_authority_schema',
   'execution_authority_granted',
   'authority_effect',
   'binding_digest'
@@ -287,9 +285,6 @@ function normalizeRootBinding(raw) {
     raw.root_authority_digest,
     'delegation root binding root_authority_digest'
   );
-  if (raw.root_authority_schema !== DELEGATION_AUTHORITY_SCHEMA) {
-    throw new ValidationError('Delegation root binding authority schema is invalid');
-  }
   if (raw.execution_authority_granted !== false || raw.authority_effect !== 'none') {
     throw new ValidationError('Delegation root binding widens its non-authority boundary');
   }
@@ -301,7 +296,6 @@ function normalizeRootBinding(raw) {
     schema: DELEGATION_ROOT_BINDING_SCHEMA,
     root_holder: rootHolder,
     root_authority_digest: rootAuthorityDigest,
-    root_authority_schema: DELEGATION_AUTHORITY_SCHEMA,
     execution_authority_granted: false,
     authority_effect: 'none'
   };
