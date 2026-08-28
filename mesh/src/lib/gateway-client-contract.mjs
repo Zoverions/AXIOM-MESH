@@ -135,7 +135,7 @@ export function validateGatewayClientContract(contract) {
     throw new ValidationError('Gateway client error code is invalid');
   }
 
-  if (!Array.isArray(contract.routes) || contract.routes.length !== 31) {
+  if (!Array.isArray(contract.routes) || contract.routes.length !== 32) {
     throw new ValidationError('Gateway client route inventory is incomplete');
   }
   const ids = new Set();
