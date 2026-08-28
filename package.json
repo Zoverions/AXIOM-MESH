@@ -59,7 +59,7 @@
     "security-review:drill": "npm --prefix mesh run security-review:drill",
     "education-contract:check": "npm --prefix mesh run education-contract:check",
     "recovery:drill": "npm --prefix mesh run recovery:drill --",
-    "slo:drill": "npm --prefix mesh run slo-drill --",
+    "slo:drill": "npm --prefix mesh run slo:drill --",
     "start:production": "npm --prefix mesh run start:production",
     "test": "npm --prefix mesh test",
     "check": "npm --prefix mesh run check",
