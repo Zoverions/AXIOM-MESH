@@ -6,6 +6,9 @@ import {
   validateDelegationRootAttestationKeyCurrentnessCheckpointPath,
   verifyDelegationRootAttestationKeyCurrentnessCheckpoint
 } from './delegation-root-attestation-key-currentness-checkpoint.mjs';
+import {
+  verifyDelegationRootAttestationKeyCurrentnessAnchor
+} from './delegation-root-attestation-key-currentness-anchor.mjs';
 
 export const DELEGATION_ROOT_ATTESTATION_KEY_CURRENTNESS_STORE_SCHEMA =
   'axiom-delegation-root-attestation-key-currentness-store.v1';
@@ -23,6 +26,8 @@ const FIXED_NONCLAIMS = Object.freeze({
   hardware_monotonicity_claimed: false,
   global_currentness_claimed: false,
   external_timestamp_claimed: false,
+  external_anchor_storage_independence_proved: false,
+  external_anchor_monotonicity_proved: false,
   authority_effect: 'none',
   delegation_effect: 'none',
   execution_authority_granted: false,
@@ -60,6 +65,22 @@ function requireExpectedRootHolder(value) {
     throw new ValidationError('Delegation currentness expected root holder is required');
   }
   return value;
+}
+
+function normalizeExternalAnchorPair(retainedExternalAnchor, trustedExternalWitnessPublicKey) {
+  const hasAnchor = retainedExternalAnchor !== undefined && retainedExternalAnchor !== null;
+  const hasWitnessKey = trustedExternalWitnessPublicKey !== undefined
+    && trustedExternalWitnessPublicKey !== null;
+  if (hasAnchor !== hasWitnessKey) {
+    throw new ValidationError(
+      'Delegation currentness external anchor and trusted external witness public key are required together'
+    );
+  }
+  if (!hasAnchor) return null;
+  return Object.freeze({
+    anchor: retainedExternalAnchor,
+    trustedWitnessPublicKey: trustedExternalWitnessPublicKey
+  });
 }
 
 function checkpointSequence(checkpoint) {
@@ -137,6 +158,47 @@ function verifyCheckpointPath(checkpoints, trust) {
   });
 }
 
+function externalAnchorSequence(rawAnchor) {
+  const sequence = rawAnchor?.statement?.checkpoint_sequence;
+  if (!Number.isSafeInteger(sequence) || sequence < 1) {
+    throw new ValidationError(
+      'Delegation currentness external anchor has an invalid anchored checkpoint sequence'
+    );
+  }
+  return sequence;
+}
+
+function verifyExternalAnchorAgainstState(checkpoints, trust, externalAnchorTrust) {
+  if (externalAnchorTrust === null) return null;
+  const sequence = externalAnchorSequence(externalAnchorTrust.anchor);
+  if (checkpoints.length < sequence) {
+    throw new ValidationError(
+      'Delegation currentness external anchor rollback detected: anchored checkpoint is missing from local durable history'
+    );
+  }
+  const anchoredCheckpoint = checkpoints[sequence - 1];
+  try {
+    return verifyDelegationRootAttestationKeyCurrentnessAnchor(
+      externalAnchorTrust.anchor,
+      {
+        trustedWitnessPublicKey: externalAnchorTrust.trustedWitnessPublicKey,
+        trustedControllerPublicKey: trust.trustedControllerPublicKey,
+        anchoredCheckpoint,
+        expectedRootBindingDigest: trust.expectedRootBindingDigest,
+        expectedRootAuthorityDigest: trust.expectedRootAuthorityDigest,
+        expectedRootHolder: trust.expectedRootHolder
+      }
+    );
+  } catch (error) {
+    if (error instanceof ValidationError && /checkpoint.*digest|equivocation/i.test(error.message)) {
+      throw new ValidationError(
+        `Delegation currentness external anchor equivocation detected: anchored checkpoint digest does not match local durable history (${error.message})`
+      );
+    }
+    throw error;
+  }
+}
+
 async function readVerifiedState(path, limits, trust) {
   const stats = await ensureRegularNonSymlink(path);
   if (stats.size > limits.maxStateBytes) {
@@ -188,7 +250,16 @@ async function readVerifiedState(path, limits, trust) {
   });
 }
 
-function verificationProjection(checkpoints) {
+function externalAnchorProjection(externalAnchor) {
+  return Object.freeze({
+    retained_external_anchor_checked: externalAnchor !== null,
+    external_anchor_digest: externalAnchor?.anchor_digest ?? null,
+    external_anchor_checkpoint_sequence: externalAnchor?.statement.checkpoint_sequence ?? null,
+    rollback_checked_relative_to_external_anchor: externalAnchor !== null
+  });
+}
+
+function verificationProjection(checkpoints, externalAnchor = null) {
   const head = checkpoints.at(-1) ?? null;
   return Object.freeze({
     valid: true,
@@ -199,11 +270,12 @@ function verificationProjection(checkpoints) {
     root_binding_digest: head?.statement.root_binding_digest ?? null,
     root_authority_digest: head?.statement.root_authority_digest ?? null,
     root_holder: head?.statement.root_holder ?? null,
+    ...externalAnchorProjection(externalAnchor),
     ...FIXED_NONCLAIMS
   });
 }
 
-function snapshotProjection(checkpoints) {
+function snapshotProjection(checkpoints, externalAnchor = null) {
   const head = checkpoints.at(-1) ?? null;
   return Object.freeze({
     schema: DELEGATION_ROOT_ATTESTATION_KEY_CURRENTNESS_STORE_SCHEMA,
@@ -213,6 +285,7 @@ function snapshotProjection(checkpoints) {
     root_binding_digest: head?.statement.root_binding_digest ?? null,
     root_authority_digest: head?.statement.root_authority_digest ?? null,
     root_holder: head?.statement.root_holder ?? null,
+    ...externalAnchorProjection(externalAnchor),
     ...FIXED_NONCLAIMS
   });
 }
@@ -221,18 +294,22 @@ class DelegationRootAttestationKeyCurrentnessStore {
   #statePath;
   #limits;
   #trust;
+  #externalAnchorTrust;
+  #externalAnchor;
   #checkpoints;
   #tail = Promise.resolve();
 
-  constructor({ statePath, limits, trust, checkpoints }) {
+  constructor({ statePath, limits, trust, externalAnchorTrust, externalAnchor, checkpoints }) {
     this.#statePath = statePath;
     this.#limits = limits;
     this.#trust = trust;
+    this.#externalAnchorTrust = externalAnchorTrust;
+    this.#externalAnchor = externalAnchor;
     this.#checkpoints = [...checkpoints];
   }
 
   snapshot() {
-    return snapshotProjection(this.#checkpoints);
+    return snapshotProjection(this.#checkpoints, this.#externalAnchor);
   }
 
   async verifyState() {
@@ -242,7 +319,12 @@ class DelegationRootAttestationKeyCurrentnessStore {
         'Delegation currentness durable state changed outside active store; disk and memory histories differ'
       );
     }
-    return verificationProjection(disk.checkpoints);
+    const externalAnchor = verifyExternalAnchorAgainstState(
+      disk.checkpoints,
+      this.#trust,
+      this.#externalAnchorTrust
+    );
+    return verificationProjection(disk.checkpoints, externalAnchor);
   }
 
   async retain(rawCheckpoint) {
@@ -257,6 +339,11 @@ class DelegationRootAttestationKeyCurrentnessStore {
         'Delegation currentness durable state changed outside active store; disk and memory histories differ'
       );
     }
+    verifyExternalAnchorAgainstState(
+      disk.checkpoints,
+      this.#trust,
+      this.#externalAnchorTrust
+    );
 
     const head = this.#checkpoints.at(-1) ?? null;
     const candidateSequence = checkpointSequence(candidate);
@@ -352,6 +439,8 @@ export async function openDelegationRootAttestationKeyCurrentnessStore({
   expectedRootBindingDigest,
   expectedRootAuthorityDigest,
   expectedRootHolder,
+  retainedExternalAnchor,
+  trustedExternalWitnessPublicKey,
   maxStateBytes,
   maxCheckpointBytes
 } = {}) {
@@ -382,13 +471,30 @@ export async function openDelegationRootAttestationKeyCurrentnessStore({
     ),
     expectedRootHolder: requireExpectedRootHolder(expectedRootHolder)
   });
+  const externalAnchorInput = normalizeExternalAnchorPair(
+    retainedExternalAnchor,
+    trustedExternalWitnessPublicKey
+  );
 
   await createStateFileIfMissing(normalizedPath);
   const disk = await readVerifiedState(normalizedPath, limits, trust);
+  const externalAnchor = verifyExternalAnchorAgainstState(
+    disk.checkpoints,
+    trust,
+    externalAnchorInput
+  );
+  const externalAnchorTrust = externalAnchorInput === null
+    ? null
+    : Object.freeze({
+      anchor: externalAnchor,
+      trustedWitnessPublicKey: externalAnchorInput.trustedWitnessPublicKey
+    });
   return new DelegationRootAttestationKeyCurrentnessStore({
     statePath: normalizedPath,
     limits,
     trust,
+    externalAnchorTrust,
+    externalAnchor,
     checkpoints: disk.checkpoints
   });
 }
