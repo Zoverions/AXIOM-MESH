@@ -111,12 +111,22 @@ function inspectGrant({ rootAuthority, ledger, grant, evaluatedAt }) {
       target_grant_id: grant.id,
       now: evaluatedAt
     });
+    const parentAuthority = grant.parent_grant_id === null
+      ? rootAuthority
+      : resolveDelegationChain({
+          root_authority: rootAuthority,
+          grants: ledger.grants,
+          revocations: ledger.revocations,
+          target_grant_id: grant.parent_grant_id,
+          now: evaluatedAt
+        }).effective_authority;
     return {
       ...grant,
       lifecycle: {
         state: 'active',
         revocation_id: null
       },
+      attenuation: attenuationSummary(parentAuthority, currentResolution.effective_authority),
       current_resolution: currentResolution
     };
   } catch (error) {
@@ -138,9 +148,50 @@ function inspectGrant({ rootAuthority, ledger, grant, evaluatedAt }) {
         state,
         revocation_id: revocation?.id ?? null
       },
+      attenuation: null,
       current_resolution: null
     };
   }
+}
+
+function attenuationSummary(parent, child) {
+  const removed = key => parent[key].filter(value => !child[key].includes(value));
+  const reducedBudgets = {};
+  for (const [key, parentValue] of Object.entries(parent.budgets)) {
+    const childValue = child.budgets[key];
+    if (childValue < parentValue) {
+      reducedBudgets[key] = { from: parentValue, to: childValue };
+    }
+  }
+  const core = {
+    parent_authority_digest: parent.authority_digest,
+    effective_authority_digest: child.authority_digest,
+    actions_removed: removed('actions'),
+    purposes_removed: removed('purposes'),
+    data_scopes_removed: removed('data_scopes'),
+    destinations_removed: removed('destinations'),
+    budgets_reduced: reducedBudgets,
+    assurance_floor: {
+      from: parent.required_assurance,
+      to: child.required_assurance
+    },
+    independent_approval: {
+      from: parent.independent_approval_required,
+      to: child.independent_approval_required
+    },
+    delegation_depth: {
+      from: parent.delegation.max_depth,
+      to: child.delegation.max_depth
+    },
+    expires_at: {
+      from: parent.expires_at,
+      to: child.expires_at
+    }
+  };
+  return {
+    ...core,
+    digest: digestObject(core)
+  };
 }
 
 function lifecycleState(message) {
