@@ -8,20 +8,31 @@ import {
   digestObject
 } from './canonical.mjs';
 import {
+  normalizeDelegationAuthority,
   normalizeDelegationGrant,
   normalizeDelegationRevocation,
   resolveDelegationChain
 } from './delegation-graph.mjs';
 
+export const DELEGATION_ROOT_BINDING_SCHEMA = 'axiom-delegation-root-binding.v1';
 export const DELEGATION_LEDGER_ENTRY_SCHEMA = 'axiom-delegation-ledger-entry.v1';
 export const DELEGATION_LEDGER_SCHEMA = 'axiom-delegation-ledger.v1';
 export const DELEGATION_LEDGER_PROJECTION_SCHEMA = 'axiom-delegation-ledger-projection.v1';
 
 const DIGEST_PATTERN = /^[a-f0-9]{64}$/;
+const IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const DEFAULT_MAX_STATE_BYTES = 64 * 1024 * 1024;
 const HARD_MAX_STATE_BYTES = 512 * 1024 * 1024;
 const DEFAULT_MAX_ENTRY_BYTES = 2 * 1024 * 1024;
 const HARD_MAX_ENTRY_BYTES = 16 * 1024 * 1024;
+const ROOT_BINDING_KEYS = Object.freeze([
+  'schema',
+  'root_holder',
+  'root_authority_digest',
+  'execution_authority_granted',
+  'authority_effect',
+  'binding_digest'
+]);
 const ENTRY_KEYS = Object.freeze([
   'schema',
   'sequence',
@@ -33,20 +44,25 @@ const ENTRY_KEYS = Object.freeze([
 
 export async function readDelegationLedger({
   ledger_path,
+  root_authority,
   max_state_bytes,
   max_entry_bytes
 } = {}) {
   const ledgerPath = validateLedgerPath(ledger_path);
   const limits = normalizeLedgerLimits({ max_state_bytes, max_entry_bytes });
   const text = await readLedgerText(ledgerPath, limits.maxStateBytes);
-  const entries = parseLedgerEntries(text, limits.maxEntryBytes);
+  const records = parseLedgerRecords(text, limits.maxEntryBytes);
+  const rootBinding = records[0]?.schema === DELEGATION_ROOT_BINDING_SCHEMA
+    ? normalizeRootBinding(records[0])
+    : null;
+  const entries = rootBinding === null ? records : records.slice(1);
   const grants = [];
   const revocations = [];
   const grantsById = new Map();
   const grantIds = new Set();
   const revocationIds = new Set();
 
-  let previousDigest = null;
+  let previousDigest = rootBinding?.binding_digest ?? null;
   for (let index = 0; index < entries.length; index += 1) {
     const entry = normalizeLedgerEntry(entries[index], index + 1, previousDigest);
     entries[index] = entry;
@@ -76,12 +92,26 @@ export async function readDelegationLedger({
     revocations.push(entry.record);
   }
 
+  if (root_authority !== undefined) {
+    if (rootBinding === null && entries.length > 0) {
+      throw new ValidationError(
+        'Delegation ledger is unbound; explicit root migration is required'
+      );
+    }
+    if (rootBinding !== null) {
+      assertRootBindingMatches(rootBinding, root_authority);
+    }
+  }
+
   const core = {
     schema: DELEGATION_LEDGER_SCHEMA,
+    root_bound: rootBinding !== null,
+    root_binding: rootBinding,
+    root_authority_digest: rootBinding?.root_authority_digest ?? null,
     entries,
     grants,
     revocations,
-    head_entry_digest: previousDigest,
+    head_entry_digest: entries.length > 0 ? previousDigest : null,
     execution_authority_granted: false,
     authority_effect: 'none'
   };
@@ -101,6 +131,7 @@ export async function appendDelegationGrant({
 } = {}) {
   const ledgerPath = validateLedgerPath(ledger_path);
   const limits = normalizeLedgerLimits({ max_state_bytes, max_entry_bytes });
+  const normalizedRoot = normalizeDelegationAuthority(root_authority);
   const ledger = await readDelegationLedger({
     ledger_path: ledgerPath,
     max_state_bytes: limits.maxStateBytes,
@@ -111,22 +142,34 @@ export async function appendDelegationGrant({
   if (ledger.grants.some(item => item.id === normalizedGrant.id)) {
     throw new ValidationError(`Duplicate delegation grant id: ${normalizedGrant.id}`);
   }
+  if (!ledger.root_bound && ledger.entries.length > 0) {
+    throw new ValidationError(
+      'Delegation ledger is unbound; explicit root migration is required'
+    );
+  }
+  if (ledger.root_bound) {
+    assertRootBindingMatches(ledger.root_binding, normalizedRoot);
+  }
 
   resolveDelegationChain({
-    root_authority,
+    root_authority: normalizedRoot,
     grants: [...ledger.grants, normalizedGrant],
     revocations: ledger.revocations,
     target_grant_id: normalizedGrant.id,
     now
   });
 
+  const rootBinding = ledger.root_binding ?? makeRootBinding(normalizedRoot);
   const entry = makeLedgerEntry({
     sequence: ledger.entries.length + 1,
     kind: 'grant',
     record: normalizedGrant,
-    previousEntryDigest: ledger.head_entry_digest
+    previousEntryDigest: ledger.head_entry_digest ?? rootBinding.binding_digest
   });
-  await appendLedgerEntry(ledgerPath, entry, limits);
+  const records = ledger.root_binding === null
+    ? [rootBinding, entry]
+    : [entry];
+  await appendLedgerRecords(ledgerPath, records, limits);
   return entry;
 }
 
@@ -162,7 +205,7 @@ export async function appendDelegationRevocation({
     record: normalizedRevocation,
     previousEntryDigest: ledger.head_entry_digest
   });
-  await appendLedgerEntry(ledgerPath, entry, limits);
+  await appendLedgerRecords(ledgerPath, [entry], limits);
   return entry;
 }
 
@@ -176,9 +219,15 @@ export async function projectDelegationLedger({
 } = {}) {
   const ledger = await readDelegationLedger({
     ledger_path,
+    root_authority,
     max_state_bytes,
     max_entry_bytes
   });
+  if (!ledger.root_bound) {
+    throw new ValidationError(
+      'Delegation ledger is unbound; explicit root migration is required before projection'
+    );
+  }
   const chainResolution = resolveDelegationChain({
     root_authority,
     grants: ledger.grants,
@@ -189,6 +238,8 @@ export async function projectDelegationLedger({
   const core = {
     schema: DELEGATION_LEDGER_PROJECTION_SCHEMA,
     ledger_digest: ledger.ledger_digest,
+    root_binding_digest: ledger.root_binding.binding_digest,
+    root_authority_digest: ledger.root_authority_digest,
     head_entry_digest: ledger.head_entry_digest,
     entry_count: ledger.entries.length,
     grant_count: ledger.grants.length,
@@ -201,6 +252,74 @@ export async function projectDelegationLedger({
     ...core,
     projection_digest: digestObject(core)
   };
+}
+
+function makeRootBinding(rootAuthority) {
+  const root = normalizeDelegationAuthority(rootAuthority);
+  const core = {
+    schema: DELEGATION_ROOT_BINDING_SCHEMA,
+    root_holder: root.holder,
+    root_authority_digest: root.authority_digest,
+    execution_authority_granted: false,
+    authority_effect: 'none'
+  };
+  return {
+    ...core,
+    binding_digest: digestObject(core)
+  };
+}
+
+function normalizeRootBinding(raw) {
+  assertPlainObject(raw, 'delegation root binding');
+  assertExactKeys(raw, 'delegation root binding', ROOT_BINDING_KEYS);
+  if (raw.schema !== DELEGATION_ROOT_BINDING_SCHEMA) {
+    throw new ValidationError('Delegation root binding schema is invalid');
+  }
+  const rootHolder = assertString(raw.root_holder, 'delegation root binding root_holder', {
+    min: 1,
+    max: 160,
+    pattern: IDENTIFIER_PATTERN
+  });
+  const rootAuthorityDigest = assertString(
+    raw.root_authority_digest,
+    'delegation root binding root_authority_digest',
+    { min: 64, max: 64, pattern: DIGEST_PATTERN }
+  );
+  if (raw.execution_authority_granted !== false || raw.authority_effect !== 'none') {
+    throw new ValidationError('Delegation root binding cannot grant execution authority');
+  }
+  const bindingDigest = assertString(
+    raw.binding_digest,
+    'delegation root binding binding_digest',
+    { min: 64, max: 64, pattern: DIGEST_PATTERN }
+  );
+  const core = {
+    schema: DELEGATION_ROOT_BINDING_SCHEMA,
+    root_holder: rootHolder,
+    root_authority_digest: rootAuthorityDigest,
+    execution_authority_granted: false,
+    authority_effect: 'none'
+  };
+  const expectedDigest = digestObject(core);
+  if (bindingDigest !== expectedDigest) {
+    throw new ValidationError('Delegation root binding digest does not match normalized binding');
+  }
+  return {
+    ...core,
+    binding_digest: expectedDigest
+  };
+}
+
+function assertRootBindingMatches(bindingRaw, rootAuthorityRaw) {
+  const binding = normalizeRootBinding(bindingRaw);
+  const root = normalizeDelegationAuthority(rootAuthorityRaw);
+  if (
+    binding.root_holder !== root.holder
+    || binding.root_authority_digest !== root.authority_digest
+  ) {
+    throw new ValidationError('Delegation root authority does not match ledger binding');
+  }
+  return root;
 }
 
 function makeLedgerEntry({ sequence, kind, record, previousEntryDigest }) {
@@ -272,27 +391,31 @@ function assertRevocationAuthorized(grant, revocation) {
   }
 }
 
-async function appendLedgerEntry(ledgerPath, entry, limits) {
-  await mkdir(dirname(ledgerPath), { recursive: true, mode: 0o700 });
-  const serialized = canonicalJson(entry);
-  const entryBytes = Buffer.byteLength(serialized, 'utf8');
-  const line = `${serialized}\n`;
-  const lineBytes = Buffer.byteLength(line, 'utf8');
-  if (entryBytes > limits.maxEntryBytes) {
-    throw new ValidationError('Delegation ledger entry exceeds configured byte limit');
+async function appendLedgerRecords(ledgerPath, records, limits) {
+  if (!Array.isArray(records) || records.length < 1) {
+    throw new ValidationError('Delegation ledger append requires at least one record');
   }
+  await mkdir(dirname(ledgerPath), { recursive: true, mode: 0o700 });
+  const serializedRecords = records.map(record => canonicalJson(record));
+  for (const serialized of serializedRecords) {
+    if (Buffer.byteLength(serialized, 'utf8') > limits.maxEntryBytes) {
+      throw new ValidationError('Delegation ledger entry exceeds configured byte limit');
+    }
+  }
+  const payload = `${serializedRecords.join('\n')}\n`;
+  const payloadBytes = Buffer.byteLength(payload, 'utf8');
 
   let handle;
   try {
     const info = await lstat(ledgerPath);
     assertRegularLedgerFile(info);
-    if (info.size + lineBytes > limits.maxStateBytes) {
+    if (info.size + payloadBytes > limits.maxStateBytes) {
       throw new ValidationError('Delegation ledger state exceeds configured byte limit');
     }
     handle = await open(ledgerPath, 'a');
   } catch (error) {
     if (error?.code !== 'ENOENT') throw error;
-    if (lineBytes > limits.maxStateBytes) {
+    if (payloadBytes > limits.maxStateBytes) {
       throw new ValidationError('Delegation ledger state exceeds configured byte limit');
     }
     try {
@@ -301,7 +424,7 @@ async function appendLedgerEntry(ledgerPath, entry, limits) {
       if (createError?.code !== 'EEXIST') throw createError;
       const info = await lstat(ledgerPath);
       assertRegularLedgerFile(info);
-      if (info.size + lineBytes > limits.maxStateBytes) {
+      if (info.size + payloadBytes > limits.maxStateBytes) {
         throw new ValidationError('Delegation ledger state exceeds configured byte limit');
       }
       handle = await open(ledgerPath, 'a');
@@ -311,7 +434,7 @@ async function appendLedgerEntry(ledgerPath, entry, limits) {
   try {
     const pathInfo = await lstat(ledgerPath);
     assertRegularLedgerFile(pathInfo);
-    await handle.writeFile(line, 'utf8');
+    await handle.writeFile(payload, 'utf8');
     await handle.sync();
   } finally {
     await handle.close();
@@ -336,7 +459,7 @@ async function readLedgerText(ledgerPath, maxStateBytes) {
   }
 }
 
-function parseLedgerEntries(text, maxEntryBytes) {
+function parseLedgerRecords(text, maxEntryBytes) {
   if (text.length === 0) return [];
   if (!text.endsWith('\n')) {
     throw new ValidationError('Delegation ledger has an incomplete trailing record');
