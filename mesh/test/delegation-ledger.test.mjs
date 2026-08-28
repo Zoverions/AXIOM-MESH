@@ -12,6 +12,7 @@ import {
   DELEGATION_LEDGER_ENTRY_SCHEMA,
   DELEGATION_LEDGER_PROJECTION_SCHEMA,
   DELEGATION_LEDGER_SCHEMA,
+  DELEGATION_ROOT_BINDING_SCHEMA,
   appendDelegationGrant,
   appendDelegationRevocation,
   projectDelegationLedger,
@@ -103,13 +104,16 @@ test('ledger appends normalized grants and revocations into an integrity-linked 
     assert.equal(first.schema, DELEGATION_LEDGER_ENTRY_SCHEMA);
     assert.equal(first.sequence, 1);
     assert.equal(first.kind, 'grant');
-    assert.equal(first.previous_entry_digest, null);
+    assert.match(first.previous_entry_digest, /^[a-f0-9]{64}$/);
     assert.match(first.entry_digest, /^[a-f0-9]{64}$/);
     assert.equal(second.sequence, 2);
     assert.equal(second.previous_entry_digest, first.entry_digest);
 
     const ledger = await readDelegationLedger({ ledger_path: ledgerPath });
     assert.equal(ledger.schema, DELEGATION_LEDGER_SCHEMA);
+    assert.equal(ledger.root_bound, true);
+    assert.equal(ledger.root_binding.schema, DELEGATION_ROOT_BINDING_SCHEMA);
+    assert.equal(first.previous_entry_digest, ledger.root_binding.binding_digest);
     assert.equal(ledger.entries.length, 2);
     assert.equal(ledger.grants.length, 1);
     assert.equal(ledger.revocations.length, 1);
@@ -118,7 +122,7 @@ test('ledger appends normalized grants and revocations into an integrity-linked 
     assert.match(ledger.ledger_digest, /^[a-f0-9]{64}$/);
 
     const text = await readFile(ledgerPath, 'utf8');
-    assert.equal(text.trim().split('\n').length, 2);
+    assert.equal(text.trim().split('\n').length, 3);
   });
 });
 
@@ -242,10 +246,10 @@ test('ledger replay fails closed on tampering, malformed lines, and duplicate re
       /duplicate delegation grant id/i
     );
 
-    const [line] = (await readFile(ledgerPath, 'utf8')).trim().split('\n');
+    const [bindingLine, line] = (await readFile(ledgerPath, 'utf8')).trim().split('\n');
     const entry = JSON.parse(line);
     entry.sequence = 9;
-    await writeFile(ledgerPath, `${JSON.stringify(entry)}\n`, 'utf8');
+    await writeFile(ledgerPath, `${bindingLine}\n${JSON.stringify(entry)}\n`, 'utf8');
     await assert.rejects(
       readDelegationLedger({ ledger_path: ledgerPath }),
       /sequence|digest/i
