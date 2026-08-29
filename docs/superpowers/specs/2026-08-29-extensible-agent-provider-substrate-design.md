@@ -1,6 +1,6 @@
 # Extensible Agent Provider Substrate — Design
 
-**Status:** approved architectural extension; provider profile and binding slices implemented as inert local contracts; first Beacon-style observation verifier remains read-only and compatibility-neutral
+**Status:** approved architectural extension; provider profile and binding slices implemented as inert local contracts; Beacon-style observation verification and bounded Entity Assurance provenance normalization remain read-only, pseudonymous, and non-authorizing
 
 **Date:** 2026-08-29
 
@@ -80,7 +80,9 @@ This value is evidence metadata only. It never grants authority.
 
 The first slice does not score, merge, or adjudicate evidence. Later policy may require particular evidence classes, but that belongs in the normal AXIOM policy/assurance path.
 
-The newer Entity Assurance primitive remains a separate trust layer. A provider profile or successfully verified external envelope is **not automatically Entity Assurance evidence**. Any future conversion must pass an explicit normalization and subject-binding policy that states which AXIOM subject the evidence concerns, which assurance dimension it supports, its evidence class and freshness, and why the external issuer/key is accepted for that role. Entity Assurance remains non-authorizing and its decisions do not grant authority or delegation.
+The newer Entity Assurance primitive remains a separate trust layer. A provider profile or successfully verified external envelope is **not automatically Entity Assurance evidence**. Conversion must pass an explicit normalization and subject-binding rule that states which subject the evidence concerns, which assurance dimension it supports, its evidence class and freshness, and the exact basis for that mapping. Entity Assurance remains non-authorizing and its decisions do not grant authority or delegation.
+
+The first implemented normalization deliberately binds a Beacon-style observation only to a pseudonymous subject derived from the verified Ed25519 key fingerprint. It does not bind that key to an AXIOM principal, legal identity, organization, or human.
 
 ## 5. Contract shape
 
@@ -168,7 +170,10 @@ Tests cover:
 - required memory-slot resolution;
 - rejection of provider or composition drift;
 - signed external observation verification, tamper detection, bounded freshness, and caller-supplied replay-state checks;
-- static proof that the binding resolver and Beacon verifier import no network, filesystem, subprocess, Grid, credential, wallet, token, or secret runtime surface.
+- deterministic conversion of a verified Beacon-style observation into bounded Entity Assurance provenance evidence for the key-derived pseudonymous subject;
+- rejection of arbitrary `subject_id` injection, non-interop provider profiles, insufficient provider evidence declarations, and replay/tamper failures during normalization;
+- proof that normalized evidence may satisfy an Entity Assurance provenance requirement while `authority_granted` and `delegation_granted` remain false;
+- static proof that the binding resolver, Beacon verifier, and Beacon-to-Entity-Assurance normalizer import no network, filesystem, subprocess, Grid, credential, wallet, token, or secret runtime surface.
 
 ## 10. First-slice promotion boundary
 
@@ -253,7 +258,7 @@ compatibility_claimed = false
 
 An external signature proves only that the supplied observation verifies under the supplied external public key. It does not establish that the key belongs to an AXIOM principal, that the sender is trustworthy, that it satisfies any Entity Assurance requirement, or that any requested action is authorized.
 
-## 13. Next promotion gates
+## 13. Promotion gates toward an actual interop adapter
 
 Before this candidate can become an actual agent-interoperability adapter, later work must separately define and verify:
 
@@ -261,10 +266,61 @@ Before this candidate can become an actual agent-interoperability adapter, later
 2. explicit external-identity enrollment and rotation;
 3. optional TOFU only for low-assurance contexts, with stronger verified relationships for consequential actions;
 4. transport-specific parsing and conformance fixtures against an upstream protocol version;
-5. explicit normalization/subject binding before external evidence can enter Entity Assurance;
+5. stronger subject binding before evidence can speak about an AXIOM principal rather than an external pseudonymous key;
 6. policy-controlled mapping from external observations into AXIOM invocation requests;
 7. a mandatory authority recheck before any effect;
 8. receipts connecting the external observation, local policy decision, and any eventual action;
 9. adversarial tests for key substitution, replay across restarts, stale observations, parser ambiguity, confused-deputy behavior, and oversized inputs.
 
 Until those gates exist, the Beacon-style verifier remains a local evidence parser and must not be advertised as a live adapter or interoperability implementation.
+
+## 14. Beacon-to-Entity-Assurance provenance normalization
+
+The next inert slice adds `mesh/src/lib/beacon-entity-assurance-evidence.mjs`. It is a local evidence bridge, not an identity enrollment or authorization mechanism.
+
+The bridge accepts exactly four inputs:
+
+```text
+envelope
+provider_profile
+now
+seen_replay_keys
+```
+
+Unknown fields fail closed. In particular, the caller cannot supply `subject_id`.
+
+The bridge:
+
+1. validates the supplied `axiom-agent-provider-profile.v0` artifact;
+2. requires `provider_class = agent-interop`;
+3. requires provider evidence declarations for both `signed-envelope` and `replay-protected-envelope`;
+4. requires a declared assurance ceiling of `cryptographic` or `hardware-rooted`;
+5. re-runs the Beacon envelope verifier itself rather than accepting a caller-supplied verification receipt;
+6. derives the Entity Assurance subject as `external.beacon.key.<sender-key-fingerprint>`;
+7. binds the evidence basis to the exact provider-profile digest, observation digest, sender-key fingerprint, and replay key;
+8. delegates final evidence canonicalization and digesting to the existing Entity Assurance normalizer.
+
+The emitted evidence is deliberately fixed to:
+
+```text
+dimension = provenance
+result = pass
+strength = moderate
+evidence_class = measured
+issuer_id = null
+binding_scope = pseudonymous
+non_authorizing = true
+```
+
+`moderate` is intentional. The local verifier proves cryptographic signature, payload binding, bounded freshness, and replay-snapshot checking, but replay persistence is not durable and no external-key enrollment or principal binding exists.
+
+This evidence may satisfy an Entity Assurance policy requiring moderate measured provenance for the key-derived pseudonymous subject. Such satisfaction still returns:
+
+```text
+authority_granted = false
+delegation_granted = false
+```
+
+The bridge does not emit continuity, credentialing, legal-identity, organization-binding, hardware-binding, or AXIOM-principal ownership evidence. It does not create TOFU state, accepted-issuer policy, network connectivity, provider execution, policy invocation, Gateway requests, settlement, capability promotion, or production promotion.
+
+A future principal/key binding mechanism must be separate, explicit, independently verifiable, revocable, and subject to the normal AXIOM authority path before any effect.
