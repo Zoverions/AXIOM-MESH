@@ -1,0 +1,67 @@
+{
+  "schema": "axiom-agent-commons-protocol-projection-parity-threat-model.v1",
+  "repository": "Zoverions/AXIOM-MESH",
+  "phase": "agent-commons-stage-c-offline-projection-parity",
+  "scope": "Recomputable parity evidence over the canonical C0 public read-only method set and the current offline MCP tool and A2A skill mappings. No transport, wire conformance, live authorization, runtime authority parity or execution path is verified or created.",
+  "core_invariant": "Protocol-shaped discovery metadata may map to the same canonical C0 public read-only methods, but mapping equivalence is not protocol conformance, transport availability, permission or runtime authority parity.",
+  "attack_classes": [
+    {
+      "id": "mapping-coverage-drift",
+      "risks": ["MCP omits a C0 method", "A2A silently adds a method", "multiple external ids alias one canonical method while another disappears"],
+      "controls": ["exact one-to-one coverage of the supplied canonical C0 method set", "unknown mapped methods fail closed", "mapping digests bind exact external-id-to-C0 relations"]
+    },
+    {
+      "id": "protocol-authority-laundering",
+      "risks": ["tool discovery treated as permission", "Agent Card skill treated as capability grant", "protocol metadata expands authority"],
+      "controls": ["discovery_is_permission=false", "protocol_metadata_is_permission=false", "authority_granted=false", "authority_effect=none", "delegation_effect=none"]
+    },
+    {
+      "id": "conformance-overclaim",
+      "risks": ["offline shape marketed as MCP compatibility", "offline Agent Card candidate marketed as A2A conformance", "mapping parity represented as transport verification"],
+      "controls": ["parity_scope=offline-public-discovery-mapping-only", "mcp_transport_verified=false", "a2a_transport_verified=false", "protocol_conformance_claimed=false", "runtime_authority_parity_claimed=false"]
+    },
+    {
+      "id": "detached-report-elevation",
+      "risks": ["content-addressed report treated as authenticated third-party assurance", "report mutated and rehashed after mapping substitution"],
+      "controls": ["report_authentication=none", "portable_assurance=false", "source_exports_authenticated=false", "inner C0/MCP/A2A mapping digests are rechecked independently of the outer report digest"]
+    },
+    {
+      "id": "parity-helper-side-effects",
+      "risks": ["parity check performs network/process effects", "parity check invokes authority evaluator"],
+      "controls": ["implementation imports canonical validation/hashing only", "current Stage C exports are supplied by the caller/test", "static regression rejects authority/currentness/network/process dependencies"]
+    }
+  ],
+  "known_nonclaims": [
+    "This parity laboratory does not authenticate the supplied source exports.",
+    "This parity laboratory does not prove MCP or A2A wire-protocol conformance.",
+    "This parity laboratory does not prove a network or stdio transport exists.",
+    "This parity laboratory does not perform live authorization or compare runtime authority decisions.",
+    "This parity laboratory does not make the offline A2A candidate servable or conformant.",
+    "This parity laboratory grants no runtime, repository, merge, deployment or protocol-activation authority.",
+    "This parity laboratory does not modify capability-registry or production state."
+  ],
+  "next_gates": [
+    "bind source-export provenance if a portable parity artifact is ever required",
+    "test a real read-only MCP transport only after separate transport/security review",
+    "test a real A2A interface only after an interface exists and conformance is independently established",
+    "keep Agent Trust A2 requestability parity separate from public discovery mapping parity",
+    "preserve remote-result provenance without treating remote claims as verified local facts"
+  ],
+  "boundaries": {
+    "mapping_equivalent": true,
+    "source_exports_authenticated": false,
+    "mcp_transport_verified": false,
+    "a2a_transport_verified": false,
+    "protocol_conformance_claimed": false,
+    "live_authorization_performed": false,
+    "runtime_authority_parity_claimed": false,
+    "discovery_is_permission": false,
+    "protocol_metadata_is_permission": false,
+    "authority_granted": false,
+    "authority_effect": "none",
+    "delegation_effect": "none",
+    "network_effect": false,
+    "process_effect": false,
+    "capability_promotion_enabled": false
+  }
+}
