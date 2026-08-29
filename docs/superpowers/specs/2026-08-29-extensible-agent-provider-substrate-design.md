@@ -80,6 +80,8 @@ This value is evidence metadata only. It never grants authority.
 
 The first slice does not score, merge, or adjudicate evidence. Later policy may require particular evidence classes, but that belongs in the normal AXIOM policy/assurance path.
 
+The newer Entity Assurance primitive remains a separate trust layer. A provider profile or successfully verified external envelope is **not automatically Entity Assurance evidence**. Any future conversion must pass an explicit normalization and subject-binding policy that states which AXIOM subject the evidence concerns, which assurance dimension it supports, its evidence class and freshness, and why the external issuer/key is accepted for that role. Entity Assurance remains non-authorizing and its decisions do not grant authority or delegation.
+
 ## 5. Contract shape
 
 `axiom-agent-provider-profile.v0` contains:
@@ -87,7 +89,7 @@ The first slice does not score, merge, or adjudicate evidence. Later policy may 
 - schema/version/status;
 - provider identifier and primary provider class;
 - implementation provenance reference and digest;
-- source kind: `native | adapter | external | custom`;
+- source kind: `local | external | fork | adapter`;
 - declared capability identifiers;
 - declared evidence classes;
 - assurance ceiling;
@@ -154,7 +156,7 @@ Tests cover:
 
 - schema constants and closed-world structure;
 - every provider class;
-- deterministic digest across object key ordering;
+- deterministic digest across object key order;
 - assurance metadata without authority gain;
 - rejection of secret-bearing/unknown fields;
 - duplicate and oversized lists;
@@ -162,9 +164,11 @@ Tests cover:
 - deep-frozen input/non-mutation;
 - example laboratory profiles for Memory OS-style memory, Graft-style projection, Beacon-style interop, RustChain-style behavioral attestation, AVAP-style provenance, and x402-style settlement — all with activation disabled;
 - exact composition/provider digest binding;
+- provider-binding identifier grammar parity with Agent Composition and Provider Profile, including hyphenated real-world provider references;
 - required memory-slot resolution;
 - rejection of provider or composition drift;
-- signed external observation verification, tamper detection, bounded freshness, and caller-supplied replay-state checks.
+- signed external observation verification, tamper detection, bounded freshness, and caller-supplied replay-state checks;
+- static proof that the binding resolver and Beacon verifier import no network, filesystem, subprocess, Grid, credential, wallet, token, or secret runtime surface.
 
 ## 10. First-slice promotion boundary
 
@@ -202,6 +206,8 @@ Resolution is closed-world and fail-closed:
 The resolver returns only a frozen evidence summary and deterministic binding digest. It starts no provider, performs no network operation, reads no credentials, creates no principal, and grants no authority.
 
 This design deliberately avoids embedding provider implementation artifacts into Agent Composition v0. The reviewed implementation behind a stable logical `provider_id`/`profile_ref` can therefore be revised or rolled back through the separately governed provider profile and binding artifacts without changing the composition contract. Switching a composition slot to a different logical provider id or profile ref remains a composition change and must produce a new composition digest.
+
+The binding contract deliberately uses the same identifier grammar as Agent Composition v0 and Provider Profile v0: `^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$`. This allows existing identifiers such as `provider.memory.memory-os` while preventing a provider-binding layer from silently inventing a broader identifier namespace.
 
 ## 12. First Beacon-style observation verifier
 
@@ -245,7 +251,7 @@ runtime_activation = false
 compatibility_claimed = false
 ```
 
-An external signature proves only that the supplied observation verifies under the supplied external public key. It does not establish that the key belongs to an AXIOM principal, that the sender is trustworthy, or that any requested action is authorized.
+An external signature proves only that the supplied observation verifies under the supplied external public key. It does not establish that the key belongs to an AXIOM principal, that the sender is trustworthy, that it satisfies any Entity Assurance requirement, or that any requested action is authorized.
 
 ## 13. Next promotion gates
 
@@ -255,9 +261,10 @@ Before this candidate can become an actual agent-interoperability adapter, later
 2. explicit external-identity enrollment and rotation;
 3. optional TOFU only for low-assurance contexts, with stronger verified relationships for consequential actions;
 4. transport-specific parsing and conformance fixtures against an upstream protocol version;
-5. policy-controlled mapping from external observations into AXIOM invocation requests;
-6. a mandatory authority recheck before any effect;
-7. receipts connecting the external observation, local policy decision, and any eventual action;
-8. adversarial tests for key substitution, replay across restarts, stale observations, parser ambiguity, confused-deputy behavior, and oversized inputs.
+5. explicit normalization/subject binding before external evidence can enter Entity Assurance;
+6. policy-controlled mapping from external observations into AXIOM invocation requests;
+7. a mandatory authority recheck before any effect;
+8. receipts connecting the external observation, local policy decision, and any eventual action;
+9. adversarial tests for key substitution, replay across restarts, stale observations, parser ambiguity, confused-deputy behavior, and oversized inputs.
 
 Until those gates exist, the Beacon-style verifier remains a local evidence parser and must not be advertised as a live adapter or interoperability implementation.
