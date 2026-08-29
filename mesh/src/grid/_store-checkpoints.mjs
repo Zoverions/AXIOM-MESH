@@ -1,4 +1,5 @@
-import { lstat, readFile } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { lstat, open } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
   AxiomError,
@@ -98,31 +99,40 @@ export class GridStore extends CoreGridStore {
 
     // The database bundle_path is attribution metadata only. Never dereference
     // it. Re-derive the bounded path from the validated export identity and the
-    // signed manifest. Every path component beneath the trusted data directory
-    // must also be a real filesystem object of the expected type: a symlinked
-    // exports root, export directory, or bundle file is rejected before bytes
-    // are read.
+    // signed manifest. Every parent path component beneath the trusted data
+    // directory must be a real directory; the bundle itself is opened once with
+    // O_NOFOLLOW, verified through that descriptor, read through that same
+    // descriptor, and closed before its bytes are trusted.
     const exportsRoot = join(this.dataDir, 'exports');
     const exportDir = join(exportsRoot, exportId);
     const expectedPath = join(exportDir, file.name);
     let bundle;
     try {
-      const [rootStat, dirStat, fileStat] = await Promise.all([
+      const [rootStat, dirStat] = await Promise.all([
         lstat(exportsRoot),
-        lstat(exportDir),
-        lstat(expectedPath)
+        lstat(exportDir)
       ]);
       if (
         rootStat.isSymbolicLink()
         || !rootStat.isDirectory()
         || dirStat.isSymbolicLink()
         || !dirStat.isDirectory()
-        || fileStat.isSymbolicLink()
-        || !fileStat.isFile()
       ) {
         throw new Error('export path contains an invalid filesystem object');
       }
-      bundle = await readFile(expectedPath);
+      const fileHandle = await open(
+        expectedPath,
+        constants.O_RDONLY | constants.O_NOFOLLOW
+      );
+      try {
+        const fileStat = await fileHandle.stat();
+        if (!fileStat.isFile()) {
+          throw new Error('export path contains an invalid filesystem object');
+        }
+        bundle = await fileHandle.readFile();
+      } finally {
+        await fileHandle.close();
+      }
     } catch {
       throw new AxiomError(
         'export_integrity_failed',
