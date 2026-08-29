@@ -84,7 +84,9 @@ export async function runDoctor({
   const setup = await verifySetup();
   const gridRuntimeLock = await checkGridLock({ dataDir: config.dataDir });
   const ports = await Promise.all(SERVICES.map(async service => {
-    const host = config.hosts[service];
+    // Gateway is the only externally bindable host; Hypervisor, Sandbox, and Grid
+    // all listen on the internal host, so probe the address they will actually bind.
+    const host = config.hosts[service] ?? config.hosts.internal;
     const port = config.ports[service];
     const result = await checkPort({ host, port, service });
     return {
