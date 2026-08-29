@@ -7,7 +7,7 @@
   "implementation": {
     "artifact_ref": "artifact.provenance.avap.v0",
     "artifact_digest": "5555555555555555555555555555555555555555555555555555555555555555",
-    "source_kind": "adapter",
+    "source_kind": "external",
     "upstream_ref": "upstream.scottcjn.agent-video-attestation"
   },
   "profile_ref": "profile.provenance.avap.v0",
