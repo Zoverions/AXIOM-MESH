@@ -4,7 +4,7 @@
 Registry schema: `axiom-capabilities.v1`
 Kernel version: `0.12.0-dev.3`
 Evidence verified: `2026-08-10`
-Registry digest: `e8bf5b9c083fd4b20a630372fa135e630c36285064f58d84abea60975325c10e`
+Registry digest: `e6008373557430769c0008ee9f661d066ce34c9a182a5dffbccfce639b28f11a`
 
 Only **implemented** capabilities are runnable claims.
 
@@ -14,7 +14,7 @@ Only **implemented** capabilities are runnable claims.
 - disabled: 4
 - experimental: 3
 - implemented: 31
-- specified: 2
+- specified: 4
 
 ## Registry
 
@@ -54,6 +54,8 @@ Only **implemented** capabilities are runnable claims.
 | `workforce.embodied` | workforce | **disabled** | Embodied execution is denied until device-specific safety, approval, geofence, force, and halt controls are audited. |
 | `economics.accounting` | economics | **implemented** | Local accounting uses owner- and unit-bound accounts with transactional balanced double-entry journals and safe integer amounts; external settlement remains disabled. |
 | `economics.token-bridge-liquidity` | economics | **disabled** | AXM, bonds, rewards, treasury, bridges, and liquidity remain disabled pending reconciled policy, tests, deployment evidence, and external audit. |
+| `chain.observe` | economics | **specified** | Chain-qualified external observations are specified as non-authorizing evidence inputs; observing external state does not authorize signing, broadcast, settlement, bridge execution, or any other local effect. |
+| `chain.verify` | verification | **specified** | Chain-qualified verification and finality evidence are specified as non-authorizing checks; verified external state does not authorize or mint local AXIOM authority. |
 | `zk.proof-verifiers` | verification | **adapter_required** | A proof is accepted only with a named circuit, verification key, public-input schema, and verifier adapter. |
 | `ui.operator-api` | operations | **implemented** | Authenticated operator API for intent submission, status, audit, recovery, and governed state inspection. |
 | `ui.gateway-client` | operations | **implemented** | A versioned same-origin Gateway client contract covers all 31 authenticated routes with exact route parity, bounded responses and timeouts, AbortSignal cancellation, stable idempotent intent results, explicit errors, and no direct internal-service access. |

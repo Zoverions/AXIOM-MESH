@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:axiom:contract:chain-read-adapter:v1",
+  "title": "axiom-chain-read-adapter.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "adapter_id", "adapter_version", "adapter_family", "supported_profile_ids", "normalized_operations", "family_rpc_methods", "network_access", "write_surface", "signing_surface", "bridge_execution", "installation_grants_authority", "non_claims"],
+  "properties": {
+    "schema": { "const": "axiom-chain-read-adapter.v1" },
+    "adapter_id": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "adapter_version": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "adapter_family": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "supported_profile_ids": { "type": "array", "minItems": 1, "maxItems": 32, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 160 } },
+    "normalized_operations": { "type": "array", "minItems": 9, "maxItems": 9, "uniqueItems": true, "items": { "enum": ["describeNetwork", "getHead", "getBlockReference", "getTransaction", "getReceiptOrOutcome", "getContractOrAccountState", "getLogsOrEvents", "verifyObservation", "classifyFinality"] } },
+    "family_rpc_methods": { "type": "array", "minItems": 1, "maxItems": 64, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 160 } },
+    "network_access": { "type": "object", "additionalProperties": false, "required": ["enabled"], "properties": { "enabled": { "const": false } } },
+    "write_surface": { "type": "object", "additionalProperties": false, "required": ["enabled"], "properties": { "enabled": { "const": false } } },
+    "signing_surface": { "type": "object", "additionalProperties": false, "required": ["enabled"], "properties": { "enabled": { "const": false } } },
+    "bridge_execution": { "type": "object", "additionalProperties": false, "required": ["enabled"], "properties": { "enabled": { "const": false } } },
+    "installation_grants_authority": { "const": false },
+    "non_claims": { "type": "array", "minItems": 1, "maxItems": 32, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 512 } }
+  }
+}

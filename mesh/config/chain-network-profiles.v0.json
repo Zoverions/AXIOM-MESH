@@ -1,0 +1,101 @@
+{
+  "catalog": "axiom-chain-network-profile-catalog.v0",
+  "cataloged_at": "2026-08-28T04:00:00Z",
+  "profiles": [
+    {
+      "schema": "axiom-chain-network-profile.v0",
+      "profile_id": "evm:ethereum-mainnet",
+      "profile_version": "0.1.0",
+      "chain": {
+        "schema": "axiom-chain-identity.v1",
+        "adapter_family": "evm",
+        "namespace": "eip155",
+        "network_id": "1",
+        "display_name": "Ethereum Mainnet",
+        "profile_version": "0.1.0",
+        "profile_sha256": "67c335d24d5009e78f6bdae0fcee9a3763e427208344b3007d5c153dd1df73a3"
+      },
+      "finality_policy": {
+        "model": "finalized-checkpoint",
+        "minimum_status": "final"
+      },
+      "rpc": {
+        "endpoints": [],
+        "credentials_required": false
+      },
+      "authority_boundary": {
+        "profile_grants_authority": false,
+        "live_network_enabled": false,
+        "write_enabled": false
+      },
+      "safety_notes": [
+        "Offline descriptive profile only; no RPC endpoint is configured."
+      ]
+    },
+    {
+      "schema": "axiom-chain-network-profile.v0",
+      "profile_id": "evm:pulsechain-mainnet",
+      "profile_version": "0.1.0",
+      "chain": {
+        "schema": "axiom-chain-identity.v1",
+        "adapter_family": "evm",
+        "namespace": "eip155",
+        "network_id": "369",
+        "display_name": "PulseChain Mainnet",
+        "profile_version": "0.1.0",
+        "profile_sha256": "5c26bc3f6ea8264a2fe91c372a187c4fd4819cdc1a9c581cb593613ec219e938"
+      },
+      "finality_policy": {
+        "model": "other",
+        "minimum_status": "uncertain"
+      },
+      "rpc": {
+        "endpoints": [],
+        "credentials_required": false
+      },
+      "authority_boundary": {
+        "profile_grants_authority": false,
+        "live_network_enabled": false,
+        "write_enabled": false
+      },
+      "safety_notes": [
+        "Chain ID 369 is descriptive metadata only; finality verification policy remains intentionally unpromoted."
+      ]
+    },
+    {
+      "schema": "axiom-chain-network-profile.v0",
+      "profile_id": "starknet:mainnet",
+      "profile_version": "0.1.0",
+      "chain": {
+        "schema": "axiom-chain-identity.v1",
+        "adapter_family": "starknet",
+        "namespace": "starknet",
+        "network_id": "SN_MAIN",
+        "display_name": "Starknet Mainnet",
+        "profile_version": "0.1.0",
+        "profile_sha256": "ae7632600ef1c304846637d17802ddc14c7de276c9e4884a0cbf97570dcf423b"
+      },
+      "finality_policy": {
+        "model": "sequencer-plus-l1",
+        "minimum_status": "final"
+      },
+      "rpc": {
+        "endpoints": [],
+        "credentials_required": false
+      },
+      "authority_boundary": {
+        "profile_grants_authority": false,
+        "live_network_enabled": false,
+        "write_enabled": false
+      },
+      "safety_notes": [
+        "SN_MAIN is descriptive metadata only; no Starknet RPC endpoint is configured."
+      ]
+    }
+  ],
+  "non_claims": [
+    "Catalog presence does not grant authority.",
+    "No live network endpoint is configured or enabled.",
+    "No profile asserts that provider-reported state is independently verified."
+  ]
+}

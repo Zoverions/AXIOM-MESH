@@ -285,6 +285,18 @@
       "summary": "AXM, bonds, rewards, treasury, bridges, and liquidity remain disabled pending reconciled policy, tests, deployment evidence, and external audit."
     },
     {
+      "id": "chain.observe",
+      "family": "economics",
+      "status": "specified",
+      "summary": "Chain-qualified external observations are specified as non-authorizing evidence inputs; observing external state does not authorize signing, broadcast, settlement, bridge execution, or any other local effect."
+    },
+    {
+      "id": "chain.verify",
+      "family": "verification",
+      "status": "specified",
+      "summary": "Chain-qualified verification and finality evidence are specified as non-authorizing checks; verified external state does not authorize or mint local AXIOM authority."
+    },
+    {
       "id": "zk.proof-verifiers",
       "family": "verification",
       "status": "adapter_required",

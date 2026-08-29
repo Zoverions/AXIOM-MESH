@@ -20,6 +20,7 @@
     "agent-commons:mcp-readonly:check": "node src/check-agent-commons-mcp-readonly.mjs",
     "agent-commons:a2a-card:check": "node src/check-agent-commons-a2a-card-candidate.mjs",
     "emergent-coordination:check": "node src/check-emergent-coordination.mjs",
+    "chain-boundary:check": "node src/check-chain-boundary.mjs",
     "axiom": "node src/cli.mjs",
     "intent:compile": "node src/intentctl.mjs compile",
     "intent:assess": "node src/intentctl.mjs assess",
