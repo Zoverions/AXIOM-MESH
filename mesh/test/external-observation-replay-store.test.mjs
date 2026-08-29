@@ -10,12 +10,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
-import {
-  EXTERNAL_OBSERVATION_REPLAY_STATE_SCHEMA,
-  claimExternalObservationReplay,
-  readExternalObservationReplayState
-} from '../src/lib/external-observation-replay-store.mjs';
 import { digestObject } from '../src/lib/canonical.mjs';
+
+async function replayStore() {
+  return import('../src/lib/external-observation-replay-store.mjs');
+}
 
 async function withTempDir(fn) {
   const dir = await mkdtemp(join(tmpdir(), 'axiom-replay-state-'));
@@ -42,6 +41,11 @@ function claimInput(statePath, overrides = {}) {
 }
 
 test('durably records an external sender nonce without granting authority', async () => {
+  const {
+    EXTERNAL_OBSERVATION_REPLAY_STATE_SCHEMA,
+    claimExternalObservationReplay
+  } = await replayStore();
+
   await withTempDir(async dir => {
     const statePath = join(dir, 'replay-state.json');
     const result = await claimExternalObservationReplay(claimInput(statePath));
@@ -66,6 +70,11 @@ test('durably records an external sender nonce without granting authority', asyn
 });
 
 test('replay survives a fresh state read and is rejected after restart-like reuse', async () => {
+  const {
+    claimExternalObservationReplay,
+    readExternalObservationReplayState
+  } = await replayStore();
+
   await withTempDir(async dir => {
     const statePath = join(dir, 'replay-state.json');
     const input = claimInput(statePath);
@@ -89,6 +98,11 @@ test('replay survives a fresh state read and is rejected after restart-like reus
 });
 
 test('expired replay entries are pruned before capacity is evaluated', async () => {
+  const {
+    claimExternalObservationReplay,
+    readExternalObservationReplayState
+  } = await replayStore();
+
   await withTempDir(async dir => {
     const statePath = join(dir, 'replay-state.json');
     await claimExternalObservationReplay(claimInput(statePath, {
@@ -117,6 +131,11 @@ test('expired replay entries are pruned before capacity is evaluated', async () 
 });
 
 test('active capacity saturation fails closed instead of evicting replay protection', async () => {
+  const {
+    claimExternalObservationReplay,
+    readExternalObservationReplayState
+  } = await replayStore();
+
   await withTempDir(async dir => {
     const statePath = join(dir, 'replay-state.json');
     await claimExternalObservationReplay(claimInput(statePath, {
@@ -144,6 +163,11 @@ test('active capacity saturation fails closed instead of evicting replay protect
 });
 
 test('corrupt or widened persisted replay state fails closed', async () => {
+  const {
+    claimExternalObservationReplay,
+    readExternalObservationReplayState
+  } = await replayStore();
+
   await withTempDir(async dir => {
     const statePath = join(dir, 'replay-state.json');
     await writeFile(statePath, '{not-json', 'utf8');
@@ -171,6 +195,11 @@ test('corrupt or widened persisted replay state fails closed', async () => {
 });
 
 test('state symlinks and an unavailable writer lock fail closed', async () => {
+  const {
+    claimExternalObservationReplay,
+    readExternalObservationReplayState
+  } = await replayStore();
+
   await withTempDir(async dir => {
     const realPath = join(dir, 'real-state.json');
     await claimExternalObservationReplay(claimInput(realPath));
@@ -195,6 +224,8 @@ test('state symlinks and an unavailable writer lock fail closed', async () => {
 });
 
 test('input validation binds replay identity to sender id plus nonce', async () => {
+  const { claimExternalObservationReplay } = await replayStore();
+
   await withTempDir(async dir => {
     const statePath = join(dir, 'replay-state.json');
     await assert.rejects(
