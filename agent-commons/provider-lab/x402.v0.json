@@ -7,7 +7,7 @@
   "implementation": {
     "artifact_ref": "artifact.settlement.x402.v0",
     "artifact_digest": "6666666666666666666666666666666666666666666666666666666666666666",
-    "source_kind": "adapter",
+    "source_kind": "external",
     "upstream_ref": "upstream.scottcjn.openclaw-x402"
   },
   "profile_ref": "profile.settlement.x402.v0",
