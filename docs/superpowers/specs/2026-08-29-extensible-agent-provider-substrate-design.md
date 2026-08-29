@@ -1,6 +1,6 @@
 # Extensible Agent Provider Substrate — Design
 
-**Status:** approved architectural extension; first executable slice remains inert and local
+**Status:** approved architectural extension; provider profile and binding slices implemented as inert local contracts; first Beacon-style observation verifier remains read-only and compatibility-neutral
 
 **Date:** 2026-08-29
 
@@ -87,7 +87,7 @@ The first slice does not score, merge, or adjudicate evidence. Later policy may 
 - schema/version/status;
 - provider identifier and primary provider class;
 - implementation provenance reference and digest;
-- source kind: `local | external | fork | adapter`;
+- source kind: `native | adapter | external | custom`;
 - declared capability identifiers;
 - declared evidence classes;
 - assurance ceiling;
@@ -113,13 +113,13 @@ Unknown fields fail closed. Secret-bearing generic configuration bags are intent
 
 Agent Composition v0 already allows runtimes, models, memory providers, and policy references to be described without activation.
 
-The Provider Profile v0 contract is a separately validated referenced artifact. The first slice does not require compositions to resolve profile references and does not mutate the existing composition schema. This preserves compatibility and prevents an inert descriptive contract from becoming a hidden dependency or activation mechanism.
+Provider Profile v0 remains a separately validated referenced artifact. The composition schema is intentionally not mutated to embed provider implementations. Instead, the second executable slice adds a separate `axiom-agent-provider-binding.v0` artifact that commits to the immutable composition digest plus exact provider profile digests.
 
-A future catalog/resolution layer may prove that `profile_ref` values resolve to exact provider profile digests. That work requires its own contract and tests.
+That separation preserves composition portability and prevents profile resolution from becoming an activation mechanism. A composition describes what the sovereign agent is composed from; the binding artifact proves which exact reviewed provider descriptions satisfy those references at a particular state.
 
 ## 7. External ecosystem mapping
 
-The following external projects informed the design but are **not dependencies** of the first slice:
+The following external projects informed the design but are **not dependencies** of the provider profile or binding contracts:
 
 - Memory OS: replaceable local memory and self-curating knowledge architecture;
 - Graft: regenerable semantic/code knowledge projection;
@@ -133,7 +133,7 @@ These names are architectural inputs only. AXIOM does not certify their claims b
 
 ## 8. Error handling and fail-closed behavior
 
-The semantic validator rejects:
+Provider-profile validation rejects:
 
 - unknown fields;
 - unknown provider classes, evidence classes, source kinds, or assurance ceilings;
@@ -148,9 +148,9 @@ Validation is pure and non-mutating.
 
 ## 9. Testing strategy
 
-The first slice uses Node built-in tests and existing canonical digest/validation helpers.
+The provider substrate uses Node built-in tests and existing canonical digest/validation helpers.
 
-Tests must cover:
+Tests cover:
 
 - schema constants and closed-world structure;
 - every provider class;
@@ -160,12 +160,104 @@ Tests must cover:
 - duplicate and oversized lists;
 - timestamp ordering;
 - deep-frozen input/non-mutation;
-- example laboratory profiles for Memory OS-style memory, Graft-style projection, Beacon-style interop, RustChain-style behavioral attestation, AVAP-style provenance, and x402-style settlement — all with activation disabled.
+- example laboratory profiles for Memory OS-style memory, Graft-style projection, Beacon-style interop, RustChain-style behavioral attestation, AVAP-style provenance, and x402-style settlement — all with activation disabled;
+- exact composition/provider digest binding;
+- required memory-slot resolution;
+- rejection of provider or composition drift;
+- signed external observation verification, tamper detection, bounded freshness, and caller-supplied replay-state checks.
 
-## 10. Promotion boundary
+## 10. First-slice promotion boundary
 
-Passing these tests proves only that AXIOM can describe and validate provider profiles deterministically while preserving a zero-authority boundary.
+Passing Provider Profile v0 tests proves only that AXIOM can describe and validate provider profiles deterministically while preserving a zero-authority boundary.
 
 It does not prove provider correctness, interoperability, security, availability, Sybil resistance, hardware identity, payment finality, or production readiness.
 
 No capability registry entry is promoted by this slice.
+
+## 11. Second executable slice — deterministic provider binding
+
+The second slice adds `axiom-agent-provider-binding.v0` and a pure resolver.
+
+The binding artifact contains:
+
+- a binding identifier;
+- the exact `composition_id`;
+- the canonical composition digest;
+- one or more provider bindings containing provider id, class, profile ref, provider digest, target ref, and whether the binding is required;
+- canonical timestamps;
+- hard non-authority constants.
+
+Resolution is closed-world and fail-closed:
+
+1. validate the binding document;
+2. validate the composition;
+3. recompute and compare the composition digest;
+4. validate every supplied provider profile;
+5. resolve each provider id/profile ref pair exactly;
+6. recompute and compare every provider digest;
+7. require `memory` bindings to target a declared composition memory slot whose provider id/profile ref also match;
+8. require non-memory provider classes to target the composition itself;
+9. require every declared composition memory slot to be bound exactly once.
+
+The resolver returns only a frozen evidence summary and deterministic binding digest. It starts no provider, performs no network operation, reads no credentials, creates no principal, and grants no authority.
+
+This design deliberately avoids embedding provider implementation state into Agent Composition v0. A provider can therefore be replaced, reviewed, or rolled back by changing the separately governed binding artifact while retaining the composition contract and its authority semantics.
+
+## 12. First Beacon-style observation verifier
+
+The first interoperability execution-adjacent slice is intentionally narrower than a Beacon adapter. It verifies a Beacon-inspired external signed envelope as a **read-only observation candidate**.
+
+It currently proves only local properties of the supplied envelope:
+
+- exact closed-world structure;
+- payload SHA-256 binding;
+- Ed25519 signature validity over the canonical unsigned envelope;
+- sender public-key fingerprint derivation;
+- canonical issued/expiry timestamps;
+- maximum five-minute envelope lifetime;
+- maximum 30-second future clock skew;
+- replay-key derivation from sender id plus nonce;
+- rejection when that replay key appears in an explicit caller-supplied replay snapshot.
+
+It intentionally does **not** provide:
+
+- a network listener or outbound transport;
+- persistent replay storage;
+- TOFU enrollment;
+- AXIOM-principal binding;
+- discovery trust;
+- policy authorization;
+- Gateway invocation;
+- execution;
+- actual Beacon protocol compatibility certification.
+
+The returned verifier result therefore states:
+
+```text
+signature_verified = true
+freshness_verified = true
+replay_checked = true
+replay_persistence = false
+network_listener = false
+authority_effect = none
+network_effect = none
+runtime_activation = false
+compatibility_claimed = false
+```
+
+An external signature proves only that the supplied observation verifies under the supplied external public key. It does not establish that the key belongs to an AXIOM principal, that the sender is trustworthy, or that any requested action is authorized.
+
+## 13. Next promotion gates
+
+Before this candidate can become an actual agent-interoperability adapter, later work must separately define and verify:
+
+1. durable replay state with restart-safe semantics;
+2. explicit external-identity enrollment and rotation;
+3. optional TOFU only for low-assurance contexts, with stronger verified relationships for consequential actions;
+4. transport-specific parsing and conformance fixtures against an upstream protocol version;
+5. policy-controlled mapping from external observations into AXIOM invocation requests;
+6. a mandatory authority recheck before any effect;
+7. receipts connecting the external observation, local policy decision, and any eventual action;
+8. adversarial tests for key substitution, replay across restarts, stale observations, parser ambiguity, confused-deputy behavior, and oversized inputs.
+
+Until those gates exist, the Beacon-style verifier remains a local evidence parser and must not be advertised as a live adapter or interoperability implementation.
