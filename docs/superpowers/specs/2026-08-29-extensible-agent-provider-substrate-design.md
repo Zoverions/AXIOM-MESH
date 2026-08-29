@@ -201,7 +201,7 @@ Resolution is closed-world and fail-closed:
 
 The resolver returns only a frozen evidence summary and deterministic binding digest. It starts no provider, performs no network operation, reads no credentials, creates no principal, and grants no authority.
 
-This design deliberately avoids embedding provider implementation state into Agent Composition v0. A provider can therefore be replaced, reviewed, or rolled back by changing the separately governed binding artifact while retaining the composition contract and its authority semantics.
+This design deliberately avoids embedding provider implementation artifacts into Agent Composition v0. The reviewed implementation behind a stable logical `provider_id`/`profile_ref` can therefore be revised or rolled back through the separately governed provider profile and binding artifacts without changing the composition contract. Switching a composition slot to a different logical provider id or profile ref remains a composition change and must produce a new composition digest.
 
 ## 12. First Beacon-style observation verifier
 
