@@ -6,7 +6,7 @@
   "provider_class": "knowledge-projection",
   "implementation": {
     "artifact_ref": "artifact.knowledge.graft.v0",
-    "artifact_digest": "2222222222222222222222222222222222222222222222222222222222222222",
+    "artifact_digest": null,
     "source_kind": "external",
     "upstream_ref": "upstream.nanonets.graft"
   },

@@ -6,7 +6,7 @@
   "provider_class": "attestation",
   "implementation": {
     "artifact_ref": "artifact.attestation.rustchain-physical.v0",
-    "artifact_digest": "4444444444444444444444444444444444444444444444444444444444444444",
+    "artifact_digest": null,
     "source_kind": "external",
     "upstream_ref": "upstream.scottcjn.rustchain"
   },

@@ -124,11 +124,21 @@ function validateImplementation(value) {
     'upstream_ref'
   ]);
   id(value.artifact_ref, 'implementation artifact_ref');
-  digest(value.artifact_digest, 'implementation artifact_digest');
   if (!SOURCE_KINDS.has(value.source_kind)) {
     throw new ValidationError('implementation source_kind is invalid');
   }
   nullableId(value.upstream_ref, 'implementation upstream_ref');
+
+  if (value.artifact_digest === null) {
+    if (value.source_kind !== 'external') {
+      throw new ValidationError('implementation artifact_digest may be null only for an external source');
+    }
+    if (value.upstream_ref === null) {
+      throw new ValidationError('an external implementation without artifact_digest requires upstream_ref');
+    }
+  } else {
+    digest(value.artifact_digest, 'implementation artifact_digest');
+  }
 }
 
 function exactObject(value, label, allowedFields) {

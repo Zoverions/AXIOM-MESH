@@ -52,8 +52,13 @@
           "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
         },
         "artifact_digest": {
-          "type": "string",
-          "pattern": "^[a-f0-9]{64}$"
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            { "type": "null" }
+          ]
         },
         "source_kind": {
           "enum": ["local", "external", "fork", "adapter"]
@@ -129,6 +134,7 @@
     "credential-storage",
     "network-connectivity",
     "hardware-root-proof",
-    "settlement-activation"
+    "settlement-activation",
+    "artifact-verification-without-digest"
   ]
 }
