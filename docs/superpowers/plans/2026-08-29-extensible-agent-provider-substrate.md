@@ -322,7 +322,7 @@ The PR must state the explicit non-claims: no provider execution, no external in
 
 - [ ] **Step 1: Define the failing normalization contract**
 
-Write tests first that require the new module and prove the output is fixed to:
+Write tests first that require the new module and prove the exported evidence artifact is fixed to:
 
 ```text
 subject_id = external.beacon.key.<verified-key-fingerprint>
@@ -333,10 +333,10 @@ evidence_class = measured
 issuer_id = null
 binding_scope = pseudonymous
 non_authorizing = true
-authority_granted = false
+evidence_digest = <canonical digest>
 ```
 
-Tests must also prove deterministic output, tamper/replay rejection, provider-class/evidence/assurance-ceiling enforcement, and rejection of a caller-supplied `subject_id`.
+The exported artifact must remain valid input to `evaluateEntityAssurance()`. Therefore derived decision/presentation fields such as `authority_granted` are not part of the evidence artifact. Tests must also prove deterministic output, tamper/replay rejection, provider-class/evidence/assurance-ceiling enforcement, and rejection of a caller-supplied `subject_id`.
 
 - [ ] **Step 2: Verify RED**
 
@@ -367,11 +367,11 @@ const basisDigest = digestObject({
 });
 ```
 
-Then delegate final shaping to `normalizeEntityAssuranceEvidence()` with fixed moderate measured provenance semantics. Do not accept a verification receipt or caller-selected subject.
+Delegate validation/canonical digesting to `normalizeEntityAssuranceEvidence()` with fixed moderate measured provenance semantics, then export only the schema-valid evidence artifact fields plus `evidence_digest`. Do not export the normalizer's derived `authority_granted` presentation field, and do not accept a verification receipt or caller-selected subject.
 
 - [ ] **Step 4: Prove Entity Assurance integration remains non-authorizing**
 
-Use `evaluateEntityAssurance()` with a policy requiring moderate measured provenance. The decision may be satisfied, but tests must assert:
+Pass the exported evidence artifact directly to `evaluateEntityAssurance()` with a policy requiring moderate measured provenance. The decision may be satisfied, but tests must assert:
 
 ```js
 assert.equal(decision.authority_granted, false);
