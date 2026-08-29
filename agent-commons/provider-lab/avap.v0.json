@@ -6,7 +6,7 @@
   "provider_class": "provenance",
   "implementation": {
     "artifact_ref": "artifact.provenance.avap.v0",
-    "artifact_digest": "5555555555555555555555555555555555555555555555555555555555555555",
+    "artifact_digest": null,
     "source_kind": "external",
     "upstream_ref": "upstream.scottcjn.agent-video-attestation"
   },

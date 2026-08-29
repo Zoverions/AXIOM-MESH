@@ -25,6 +25,10 @@ test('Agent Provider Profile v0 schema preserves the inert non-authority boundar
     'fork',
     'adapter'
   ]);
+  assert.deepEqual(schema.properties.implementation.properties.artifact_digest.anyOf, [
+    { type: 'string', pattern: '^[a-f0-9]{64}$' },
+    { type: 'null' }
+  ]);
   assert.deepEqual(schema.properties.assurance_ceiling.enum, [
     'none',
     'self-asserted',
@@ -48,6 +52,7 @@ test('Agent Provider Profile v0 schema preserves the inert non-authority boundar
     'credential-storage',
     'network-connectivity',
     'hardware-root-proof',
-    'settlement-activation'
+    'settlement-activation',
+    'artifact-verification-without-digest'
   ]);
 });

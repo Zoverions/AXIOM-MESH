@@ -6,7 +6,7 @@
   "provider_class": "memory",
   "implementation": {
     "artifact_ref": "artifact.memory.memory-os.elyan.v0",
-    "artifact_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+    "artifact_digest": null,
     "source_kind": "external",
     "upstream_ref": "upstream.scottcjn.memory-os-elyan-edition"
   },

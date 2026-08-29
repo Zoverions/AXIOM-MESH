@@ -6,7 +6,7 @@
   "provider_class": "agent-interop",
   "implementation": {
     "artifact_ref": "artifact.interop.beacon.v0",
-    "artifact_digest": "3333333333333333333333333333333333333333333333333333333333333333",
+    "artifact_digest": null,
     "source_kind": "external",
     "upstream_ref": "upstream.scottcjn.beacon-skill"
   },

@@ -31,10 +31,12 @@ test('external ecosystem laboratory profiles remain inert evidence-only descript
   }
 });
 
-test('external laboratory candidates do not claim an AXIOM adapter exists', async () => {
+test('external laboratory candidates do not claim an AXIOM adapter or verified artifact digest', async () => {
   for (const [name] of LAB_PROFILES) {
     const profile = await readProfile(name);
     assert.equal(profile.implementation.source_kind, 'external', name);
+    assert.equal(profile.implementation.artifact_digest, null, name);
+    assert.equal(typeof profile.implementation.upstream_ref, 'string', name);
   }
 });
 

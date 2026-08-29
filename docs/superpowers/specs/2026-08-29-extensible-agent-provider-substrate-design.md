@@ -88,7 +88,7 @@ The newer Entity Assurance primitive remains a separate trust layer. A provider 
 
 - schema/version/status;
 - provider identifier and primary provider class;
-- implementation provenance reference and digest;
+- implementation artifact reference and a verified digest when exact artifact bytes have been independently pinned;
 - source kind: `local | external | fork | adapter`;
 - declared capability identifiers;
 - declared evidence classes;
@@ -108,6 +108,8 @@ network_effect = none
 runtime_activation = false
 settlement_activation = false
 ```
+
+For `source_kind: external`, `artifact_digest: null` is permitted only when `upstream_ref` is present. That state means the upstream candidate is identified but its exact artifact bytes have **not** been independently pinned by this profile. A null digest is therefore an explicit non-verification state, not placeholder provenance and not artifact-authenticity evidence. `local`, `fork`, and `adapter` implementations must carry a real 64-hex artifact digest. An external implementation may also carry a real digest when exact bytes have actually been independently pinned.
 
 Unknown fields fail closed. Secret-bearing generic configuration bags are intentionally not representable.
 
@@ -131,7 +133,7 @@ The following external projects informed the design but are **not dependencies**
 - MCP and chain-specific adapters: thin compatibility surfaces;
 - x402/IOTA/RustChain settlement examples: payment rails kept outside authority.
 
-These names are architectural inputs only. AXIOM does not certify their claims by describing compatible provider classes.
+These names are architectural inputs only. AXIOM does not certify their claims by describing compatible provider classes. The example external profiles intentionally use `artifact_digest: null` until exact upstream bytes are independently pinned; their `upstream_ref` names a candidate lineage only and does not authenticate or verify the upstream artifact.
 
 ## 8. Error handling and fail-closed behavior
 
@@ -140,7 +142,9 @@ Provider-profile validation rejects:
 - unknown fields;
 - unknown provider classes, evidence classes, source kinds, or assurance ceilings;
 - duplicate capability or evidence identifiers;
-- malformed identifiers or digests;
+- malformed identifiers or non-null digests;
+- a null artifact digest for `local`, `fork`, or `adapter` sources;
+- an external null artifact digest without a non-null upstream reference;
 - non-canonical timestamps;
 - `updated_at` earlier than `created_at`;
 - any attempt to change the hard non-authority constants;
@@ -162,6 +166,7 @@ Tests cover:
 - duplicate and oversized lists;
 - timestamp ordering;
 - deep-frozen input/non-mutation;
+- explicit null-digest handling for unverified external candidates while pinned local/fork/adapter sources remain digest-required;
 - example laboratory profiles for Memory OS-style memory, Graft-style projection, Beacon-style interop, RustChain-style behavioral attestation, AVAP-style provenance, and x402-style settlement — all with activation disabled;
 - exact composition/provider digest binding;
 - provider-binding identifier grammar parity with Agent Composition and Provider Profile, including hyphenated real-world provider references;
@@ -174,7 +179,7 @@ Tests cover:
 
 Passing Provider Profile v0 tests proves only that AXIOM can describe and validate provider profiles deterministically while preserving a zero-authority boundary.
 
-It does not prove provider correctness, interoperability, security, availability, Sybil resistance, hardware identity, payment finality, or production readiness.
+It does not prove provider correctness, interoperability, security, availability, Sybil resistance, hardware identity, payment finality, artifact authenticity when `artifact_digest` is null, or production readiness.
 
 No capability registry entry is promoted by this slice.
 

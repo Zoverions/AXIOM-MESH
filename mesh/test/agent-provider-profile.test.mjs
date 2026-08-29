@@ -122,6 +122,24 @@ test('invalid provider metadata fails closed', () => {
   assert.throws(() => validateAgentProviderProfile(assurance), /assurance_ceiling/i);
 });
 
+test('unverified external artifacts use explicit null digest without weakening pinned sources', () => {
+  const unresolvedExternal = validProfile();
+  unresolvedExternal.implementation.artifact_digest = null;
+  assert.equal(validateAgentProviderProfile(unresolvedExternal).valid, true);
+
+  const missingUpstream = validProfile();
+  missingUpstream.implementation.artifact_digest = null;
+  missingUpstream.implementation.upstream_ref = null;
+  assert.throws(() => validateAgentProviderProfile(missingUpstream), /upstream_ref/i);
+
+  for (const sourceKind of ['local', 'fork', 'adapter']) {
+    const pinnedSource = validProfile();
+    pinnedSource.implementation.source_kind = sourceKind;
+    pinnedSource.implementation.artifact_digest = null;
+    assert.throws(() => validateAgentProviderProfile(pinnedSource), /artifact_digest/i);
+  }
+});
+
 test('duplicate and oversized capability or evidence lists fail closed', () => {
   const duplicateCapability = validProfile();
   duplicateCapability.capabilities.push('memory.semantic');
