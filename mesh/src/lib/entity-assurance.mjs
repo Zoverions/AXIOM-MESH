@@ -34,6 +34,15 @@ const EVIDENCE_CLASSES = new Set([
   'inference',
   'declaration'
 ]);
+const IDENTITY_EVIDENCE_CLASSES = new Set([
+  'measured',
+  'authenticated_assertion',
+  'independently_verified'
+]);
+const LEGAL_IDENTITY_EVIDENCE_CLASSES = new Set([
+  'authenticated_assertion',
+  'independently_verified'
+]);
 const BINDING_SCOPES = new Set(['none', 'pseudonymous', 'legal', 'organization', 'hardware']);
 const IDENTITY_REQUIREMENTS = new Set(['none', 'persistent-pseudonymous', 'legal']);
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$/;
@@ -254,16 +263,24 @@ function isCurrent(item, nowValue) {
   return item.expires_at === null || new Date(item.expires_at).valueOf() > nowValue;
 }
 
+function qualifiedIdentityEvidence(evidence, identityRequirement) {
+  const legal = identityRequirement === 'legal';
+  const allowedClasses = legal ? LEGAL_IDENTITY_EVIDENCE_CLASSES : IDENTITY_EVIDENCE_CLASSES;
+  return evidence.filter(item => (
+    STRENGTH_RANK[item.strength] >= STRENGTH_RANK.moderate
+    && allowedClasses.has(item.evidence_class)
+    && (legal
+      ? item.binding_scope === 'legal'
+      : item.dimension === 'continuity'
+        && ['pseudonymous', 'legal', 'organization', 'hardware'].includes(item.binding_scope))
+  ));
+}
+
 function satisfiesIdentityRequirement(identityRequirement, evidence) {
   if (identityRequirement === 'none') return true;
-  if (identityRequirement === 'persistent-pseudonymous') {
-    return evidence.some(item => (
-      item.dimension === 'continuity'
-      && item.result === 'pass'
-      && ['pseudonymous', 'legal', 'organization', 'hardware'].includes(item.binding_scope)
-    ));
-  }
-  return evidence.some(item => item.result === 'pass' && item.binding_scope === 'legal');
+  const qualified = qualifiedIdentityEvidence(evidence, identityRequirement);
+  if (qualified.some(item => item.result === 'fail')) return false;
+  return qualified.some(item => item.result === 'pass');
 }
 
 export function evaluateEntityAssurance({ policy, evidence, subjectId, now } = {}) {
