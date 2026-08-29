@@ -9,6 +9,7 @@ import {
 import { agentProviderProfileDigest } from '../src/lib/agent-provider-profile.mjs';
 
 const DIGEST = 'a'.repeat(64);
+const IDENTIFIER_PATTERN = '^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$';
 
 function composition() {
   return {
@@ -77,17 +78,28 @@ async function readSchema(relativePath) {
   return JSON.parse(await readFile(new URL(relativePath, import.meta.url), 'utf8'));
 }
 
-test('provider binding schemas use the same identifier grammar as composition and provider profiles', async () => {
+test('provider binding uses the same identifier grammar exposed by composition and provider profile schemas', async () => {
   const [compositionSchema, providerSchema, bindingSchema] = await Promise.all([
     readSchema('../config/agent-composition-v0.schema.json'),
     readSchema('../config/agent-provider-profile-v0.schema.json'),
     readSchema('../config/agent-provider-binding-v0.schema.json')
   ]);
 
-  const compositionPattern = compositionSchema.$defs.identifier.pattern;
-  assert.equal(providerSchema.$defs.identifier.pattern, compositionPattern);
-  assert.equal(bindingSchema.$defs.identifier.pattern, compositionPattern);
-  assert.equal(compositionPattern, '^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$');
+  assert.equal(compositionSchema.$defs.identifier.pattern, IDENTIFIER_PATTERN);
+  assert.equal(bindingSchema.$defs.identifier.pattern, IDENTIFIER_PATTERN);
+
+  const providerIdentifierPatterns = [
+    providerSchema.properties.provider_id.pattern,
+    providerSchema.properties.profile_ref.pattern,
+    providerSchema.properties.implementation.properties.artifact_ref.pattern,
+    providerSchema.properties.implementation.properties.upstream_ref.anyOf[0].pattern,
+    providerSchema.properties.capabilities.items.pattern
+  ];
+  assert.deepEqual(
+    [...new Set(providerIdentifierPatterns)],
+    [IDENTIFIER_PATTERN],
+    'all identifier-bearing Provider Profile paths must use the canonical AXIOM identifier grammar'
+  );
 });
 
 test('provider binding resolves real hyphenated identifiers accepted by the shared grammar', () => {
