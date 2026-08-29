@@ -34,6 +34,10 @@ const EVIDENCE_CLASSES = new Set([
   'inference',
   'declaration'
 ]);
+const ISSUER_REQUIRED_CLASSES = new Set([
+  'authenticated_assertion',
+  'independently_verified'
+]);
 const IDENTITY_EVIDENCE_CLASSES = new Set([
   'measured',
   'authenticated_assertion',
@@ -138,6 +142,14 @@ export function normalizeEntityAssuranceEvidence(raw) {
     BINDING_SCOPES,
     'entity assurance binding_scope'
   );
+  const issuerId = value.issuer_id === null || value.issuer_id === undefined
+    ? null
+    : identifier(value.issuer_id, 'entity assurance issuer_id');
+  if (ISSUER_REQUIRED_CLASSES.has(evidenceClass) && issuerId === null) {
+    throw new ValidationError(
+      `entity assurance ${evidenceClass} evidence requires issuer_id`
+    );
+  }
   const observedAt = canonicalTimestamp(value.observed_at, 'entity assurance observed_at');
   const expiresAt = optionalTimestamp(value.expires_at, 'entity assurance expires_at');
   if (expiresAt !== null && new Date(expiresAt).valueOf() <= new Date(observedAt).valueOf()) {
@@ -153,9 +165,7 @@ export function normalizeEntityAssuranceEvidence(raw) {
     strength,
     evidence_class: evidenceClass,
     basis_digest: digest(value.basis_digest, 'entity assurance basis_digest'),
-    issuer_id: value.issuer_id === null || value.issuer_id === undefined
-      ? null
-      : identifier(value.issuer_id, 'entity assurance issuer_id'),
+    issuer_id: issuerId,
     binding_scope: bindingScope,
     observed_at: observedAt,
     expires_at: expiresAt,
@@ -270,7 +280,8 @@ function qualifiedIdentityEvidence(evidence, identityRequirement) {
     STRENGTH_RANK[item.strength] >= STRENGTH_RANK.moderate
     && allowedClasses.has(item.evidence_class)
     && (legal
-      ? item.binding_scope === 'legal'
+      ? ['continuity', 'credentialing'].includes(item.dimension)
+        && item.binding_scope === 'legal'
       : item.dimension === 'continuity'
         && ['pseudonymous', 'legal', 'organization', 'hardware'].includes(item.binding_scope))
   ));
