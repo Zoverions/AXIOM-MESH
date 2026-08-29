@@ -19,7 +19,7 @@ import {
 export const EXTERNAL_OBSERVATION_REPLAY_STATE_SCHEMA =
   'axiom-external-observation-replay-state.v0';
 
-const IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
+const IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$/;
 const NONCE_PATTERN = /^[A-Za-z0-9_.:-]{16,160}$/;
 const DIGEST_PATTERN = /^[a-f0-9]{64}$/;
 const MAX_REPLAY_LIFETIME_MS = 5 * 60 * 1000;
