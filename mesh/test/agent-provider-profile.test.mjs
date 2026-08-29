@@ -74,9 +74,10 @@ test('accepts all six provider classes without changing authority', () => {
     'settlement'
   ]) {
     const profile = validProfile();
-    profile.provider_id = `provider.${providerClass}`;
+    const identifierSlug = providerClass.replaceAll('-', '.');
+    profile.provider_id = `provider.${identifierSlug}`;
     profile.provider_class = providerClass;
-    profile.profile_ref = `profile.${providerClass}.v1`;
+    profile.profile_ref = `profile.${identifierSlug}.v1`;
     const result = validateAgentProviderProfile(profile);
     assert.equal(result.provider_class, providerClass);
     assert.equal(result.authority_effect, 'none');
