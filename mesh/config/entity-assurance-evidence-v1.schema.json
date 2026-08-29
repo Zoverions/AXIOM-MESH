@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schema/entity-assurance-evidence-v1.schema.json",
+  "title": "AXIOM Entity Assurance Evidence v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "evidence_id", "subject_id", "dimension", "result", "strength",
+    "evidence_class", "basis_digest", "issuer_id", "binding_scope", "observed_at",
+    "expires_at", "non_authorizing"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-entity-assurance-evidence.v1" },
+    "evidence_id": { "$ref": "#/$defs/identifier" },
+    "subject_id": { "$ref": "#/$defs/identifier" },
+    "dimension": {
+      "enum": [
+        "continuity", "uniqueness", "provenance", "authority", "independence",
+        "reputation", "attestation", "credentialing", "human_sponsorship",
+        "hardware_binding", "organization_binding"
+      ]
+    },
+    "result": { "enum": ["pass", "fail", "unknown"] },
+    "strength": { "enum": ["weak", "moderate", "strong"] },
+    "evidence_class": {
+      "enum": [
+        "measured", "authenticated_assertion", "independently_verified",
+        "inference", "declaration"
+      ]
+    },
+    "basis_digest": { "$ref": "#/$defs/digest" },
+    "issuer_id": {
+      "oneOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }]
+    },
+    "binding_scope": {
+      "enum": ["none", "pseudonymous", "legal", "organization", "hardware"]
+    },
+    "observed_at": { "type": "string", "format": "date-time", "maxLength": 64 },
+    "expires_at": {
+      "oneOf": [
+        { "type": "string", "format": "date-time", "maxLength": 64 },
+        { "type": "null" }
+      ]
+    },
+    "non_authorizing": { "const": true },
+    "evidence_digest": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}
