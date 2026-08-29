@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom-mesh.dev/schemas/axiom-agent-trust-promotion-preflight.v1.json",
+  "title": "AXIOM Agent Trust Promotion Preflight v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "candidate_id",
+    "capability_id",
+    "candidate_commit_sha",
+    "candidate_scope",
+    "artifact_paths",
+    "blockers",
+    "semantics",
+    "preflight_digest"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-agent-trust-promotion-preflight.v1" },
+    "candidate_id": { "$ref": "#/$defs/id" },
+    "capability_id": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "pattern": "^[a-z][a-z0-9.-]+$"
+    },
+    "candidate_commit_sha": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "candidate_scope": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 1000
+    },
+    "artifact_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "implementation",
+        "strict_validation",
+        "positive_tests",
+        "adversarial_tests",
+        "threat_models",
+        "recovery_runbooks",
+        "verifier_or_conformance"
+      ],
+      "properties": {
+        "implementation": { "$ref": "#/$defs/pathArray" },
+        "strict_validation": { "$ref": "#/$defs/pathArray" },
+        "positive_tests": { "$ref": "#/$defs/pathArray" },
+        "adversarial_tests": { "$ref": "#/$defs/pathArray" },
+        "threat_models": { "$ref": "#/$defs/pathArray" },
+        "recovery_runbooks": { "$ref": "#/$defs/pathArray" },
+        "verifier_or_conformance": { "$ref": "#/$defs/pathArray" }
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 2,
+        "maxLength": 96,
+        "pattern": "^[a-z0-9][a-z0-9.-]{1,95}$"
+      }
+    },
+    "semantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evaluation_scope",
+        "documentation_alone_satisfies_promotion",
+        "local_preflight_is_promotion",
+        "candidate_record_mutates_registry",
+        "protected_ci_required",
+        "independent_review_required",
+        "explicit_promotion_decision_required",
+        "exact_registry_evidence_binding_required",
+        "post_registry_change_ci_required",
+        "promotion_authorized",
+        "registry_mutation_authorized",
+        "production_claims_allowed",
+        "authority_effect",
+        "capability_promotion_effect"
+      ],
+      "properties": {
+        "evaluation_scope": { "const": "local-structural-promotion-preflight-only" },
+        "documentation_alone_satisfies_promotion": { "const": false },
+        "local_preflight_is_promotion": { "const": false },
+        "candidate_record_mutates_registry": { "const": false },
+        "protected_ci_required": { "const": true },
+        "independent_review_required": { "const": true },
+        "explicit_promotion_decision_required": { "const": true },
+        "exact_registry_evidence_binding_required": { "const": true },
+        "post_registry_change_ci_required": { "const": true },
+        "promotion_authorized": { "const": false },
+        "registry_mutation_authorized": { "const": false },
+        "production_claims_allowed": { "const": false },
+        "authority_effect": { "const": "none" },
+        "capability_promotion_effect": { "const": "none" }
+      }
+    },
+    "preflight_digest": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 192,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "repositoryPath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 320,
+      "pattern": "^[A-Za-z0-9_.\\/-]+$"
+    },
+    "pathArray": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/repositoryPath" }
+    }
+  }
+}

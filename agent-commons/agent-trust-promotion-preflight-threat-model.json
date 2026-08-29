@@ -1,0 +1,70 @@
+{
+  "schema": "axiom-agent-trust-promotion-preflight-threat-model.v1",
+  "repository": "Zoverions/AXIOM-MESH",
+  "phase": "agent-trust-a11-candidate-driven-promotion-preflight",
+  "scope": "Read-only local structural verification for one proposed Agent Trust/Agent Commons capability candidate against repository artifacts and the current authoritative capability registry/evidence-binding health. The preflight cannot authorize promotion, mutate the registry, verify GitHub protected CI or independent review, or permit production claims.",
+  "core_invariant": "A complete local promotion preflight is still not a promotion decision. Laboratory artifacts, documentation, recorded commit identifiers and healthy current registry state cannot substitute for exact-head protected CI, independent review, an explicit promotion decision, synchronized registry/evidence binding and fresh post-registry CI.",
+  "attack_classes": [
+    {
+      "id": "stale-static-ledger-trust",
+      "risks": ["old A1-A10 status rows treated as current", "moved draft branch silently inherits old readiness", "separate-branch composition state becomes stale"],
+      "controls": ["one candidate per preflight", "no hard-coded A1-A10 readiness table", "candidate commit is recorded but candidate_commit_bound_by_verifier=false", "external gates remain explicit blockers"]
+    },
+    {
+      "id": "local-preflight-as-promotion",
+      "risks": ["artifact existence marketed as promotion", "documentation treated as sufficient", "preflight output used to mutate registry"],
+      "controls": ["local_preflight_is_promotion=false", "documentation_alone_satisfies_promotion=false", "promotion_authorized=false", "registry_mutation_authorized=false", "production_claims_allowed=false"]
+    },
+    {
+      "id": "registry-or-binding-confusion",
+      "risks": ["candidate claims registry entry exists when it does not", "preflight runs after unreviewed registry insertion", "invalid current evidence-binding file ignored"],
+      "controls": ["read and validate actual mesh/config/capabilities.json", "run current validateCapabilityEvidenceBindings over actual binding file", "candidate capability must be absent during preflight", "post-mutation state requires a separate promotion-decision path"]
+    },
+    {
+      "id": "artifact-path-laundering",
+      "risks": ["repository path escape", "symlink escapes", "documentation substituted for implementation", "missing negative tests or threat model"],
+      "controls": ["regular non-symlink in-repository files only", "realpath containment", "artifact-category extension checks", "all implementation/validation/positive/adversarial/threat/recovery/verifier categories required"]
+    },
+    {
+      "id": "external-gate-self-assertion",
+      "risks": ["caller invents green CI run IDs", "caller self-attests independent review", "caller claims exact final registry binding"],
+      "controls": ["preflight contract contains no caller-controlled completion flags for those gates", "protected_ci_verified=false", "independent_review_verified=false", "explicit_promotion_decision_verified=false", "post_registry_ci_verified=false", "exact_candidate_registry_binding_verified=false"]
+    },
+    {
+      "id": "preflight-side-effects",
+      "risks": ["preflight writes registry", "preflight merges code", "preflight spawns process or network activity"],
+      "controls": ["read-only filesystem access", "no write/merge/process/network primitive", "candidate_record_mutates_registry=false", "authority and capability-promotion effects none"]
+    }
+  ],
+  "known_nonclaims": [
+    "A11 preflight does not verify that the recorded candidate commit is the checkout currently being inspected.",
+    "A11 preflight does not verify GitHub protected CI state.",
+    "A11 preflight does not verify an independent security review or explicit promotion decision.",
+    "A11 preflight does not authorize a capability-registry or evidence-binding mutation.",
+    "A11 preflight does not validate the post-registry candidate state or post-registry protected CI.",
+    "A11 preflight does not grant production claims, runtime authority, merge authority or deployment authority.",
+    "A11 preflight is not a global Agent Trust readiness ledger."
+  ],
+  "next_gates": [
+    "bind exact checkout/commit identity in the promotion orchestrator",
+    "verify exact-head protected CI through an external trusted evidence path",
+    "verify signed independent review bound to the final reviewed authority/effect surface",
+    "require explicit human/governance promotion decision before registry mutation",
+    "validate synchronized authoritative registry and exact capability-evidence binding after mutation",
+    "run and verify fresh post-registry protected CI before release claims"
+  ],
+  "boundaries": {
+    "local_preflight_is_promotion": false,
+    "promotion_authorized": false,
+    "registry_mutation_authorized": false,
+    "production_claims_allowed": false,
+    "protected_ci_verified": false,
+    "independent_review_verified": false,
+    "explicit_promotion_decision_verified": false,
+    "post_registry_ci_verified": false,
+    "authority_effect": "none",
+    "capability_promotion_effect": "none",
+    "network_effect": false,
+    "process_effect": false
+  }
+}
