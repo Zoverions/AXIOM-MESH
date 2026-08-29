@@ -1,0 +1,29 @@
+{
+  "schema": "axiom-agent-provider-profile.v0",
+  "version": 0,
+  "status": "inert-provider-laboratory",
+  "provider_id": "provider.interop.beacon",
+  "provider_class": "agent-interop",
+  "implementation": {
+    "artifact_ref": "artifact.interop.beacon.v0",
+    "artifact_digest": "3333333333333333333333333333333333333333333333333333333333333333",
+    "source_kind": "external",
+    "upstream_ref": "upstream.scottcjn.beacon-skill"
+  },
+  "profile_ref": "profile.interop.beacon.v0",
+  "capabilities": [
+    "agent.discovery",
+    "agent.signed-envelope",
+    "agent.replay-protection"
+  ],
+  "evidence_classes": ["signed-envelope", "replay-protected-envelope"],
+  "assurance_ceiling": "cryptographic",
+  "created_at": "2026-08-29T12:00:00.000Z",
+  "updated_at": "2026-08-29T12:00:00.000Z",
+  "authority_effect": "none",
+  "trust_effect": "evidence-only",
+  "credential_visibility": "none",
+  "network_effect": "none",
+  "runtime_activation": false,
+  "settlement_activation": false
+}

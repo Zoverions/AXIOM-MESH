@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/agent-provider-binding-v0.schema.json",
+  "title": "AXIOM Agent Provider Binding v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "binding_id",
+    "composition_id",
+    "composition_digest",
+    "bindings",
+    "created_at",
+    "updated_at",
+    "authority_effect",
+    "trust_effect",
+    "network_effect",
+    "runtime_activation",
+    "settlement_activation"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-agent-provider-binding.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-binding-laboratory" },
+    "binding_id": { "$ref": "#/$defs/identifier" },
+    "composition_id": { "$ref": "#/$defs/identifier" },
+    "composition_digest": { "$ref": "#/$defs/digest" },
+    "bindings": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/binding" }
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "authority_effect": { "const": "none" },
+    "trust_effect": { "const": "evidence-only" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false },
+    "settlement_activation": { "const": false }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider_id",
+        "provider_class",
+        "profile_ref",
+        "provider_digest",
+        "target_ref",
+        "required"
+      ],
+      "properties": {
+        "provider_id": { "$ref": "#/$defs/identifier" },
+        "provider_class": {
+          "enum": [
+            "memory",
+            "knowledge-projection",
+            "agent-interop",
+            "attestation",
+            "provenance",
+            "settlement"
+          ]
+        },
+        "profile_ref": { "$ref": "#/$defs/identifier" },
+        "provider_digest": { "$ref": "#/$defs/digest" },
+        "target_ref": { "$ref": "#/$defs/identifier" },
+        "required": { "type": "boolean" }
+      }
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "schema": "axiom-agent-provider-profile.v0",
+  "version": 0,
+  "status": "inert-provider-laboratory",
+  "provider_id": "provider.memory.memory-os",
+  "provider_class": "memory",
+  "implementation": {
+    "artifact_ref": "artifact.memory.memory-os.elyan.v0",
+    "artifact_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+    "source_kind": "external",
+    "upstream_ref": "upstream.scottcjn.memory-os-elyan-edition"
+  },
+  "profile_ref": "profile.memory.memory-os.v0",
+  "capabilities": [
+    "memory.semantic",
+    "memory.episodic",
+    "memory.procedural",
+    "knowledge.wiki"
+  ],
+  "evidence_classes": ["deterministic-derivation"],
+  "assurance_ceiling": "none",
+  "created_at": "2026-08-29T12:00:00.000Z",
+  "updated_at": "2026-08-29T12:00:00.000Z",
+  "authority_effect": "none",
+  "trust_effect": "evidence-only",
+  "credential_visibility": "none",
+  "network_effect": "none",
+  "runtime_activation": false,
+  "settlement_activation": false
+}
