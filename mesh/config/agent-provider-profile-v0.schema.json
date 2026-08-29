@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/agent-provider-profile-v0.schema.json",
+  "title": "AXIOM Agent Provider Profile v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "provider_id",
+    "provider_class",
+    "implementation",
+    "profile_ref",
+    "capabilities",
+    "evidence_classes",
+    "assurance_ceiling",
+    "created_at",
+    "updated_at",
+    "authority_effect",
+    "trust_effect",
+    "credential_visibility",
+    "network_effect",
+    "runtime_activation",
+    "settlement_activation"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-agent-provider-profile.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-provider-laboratory" },
+    "provider_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "provider_class": {
+      "enum": [
+        "memory",
+        "knowledge-projection",
+        "agent-interop",
+        "attestation",
+        "provenance",
+        "settlement"
+      ]
+    },
+    "implementation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_ref", "artifact_digest", "source_kind", "upstream_ref"],
+      "properties": {
+        "artifact_ref": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+        },
+        "artifact_digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "source_kind": {
+          "enum": ["local", "external", "fork", "adapter"]
+        },
+        "upstream_ref": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+            },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "profile_ref": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+      }
+    },
+    "evidence_classes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "self-assertion",
+          "deterministic-derivation",
+          "signed-envelope",
+          "replay-protected-envelope",
+          "behavioral-fingerprint",
+          "hardware-rooted-attestation",
+          "content-digest",
+          "transformation-lineage",
+          "external-anchor",
+          "payment-proof"
+        ]
+      }
+    },
+    "assurance_ceiling": {
+      "enum": [
+        "none",
+        "self-asserted",
+        "behavioral",
+        "cryptographic",
+        "hardware-rooted"
+      ]
+    },
+    "created_at": { "type": "string", "format": "date-time", "maxLength": 64 },
+    "updated_at": { "type": "string", "format": "date-time", "maxLength": 64 },
+    "authority_effect": { "const": "none" },
+    "trust_effect": { "const": "evidence-only" },
+    "credential_visibility": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false },
+    "settlement_activation": { "const": false }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/agent-provider-profile.mjs",
+  "x-axiom-non-claims": [
+    "provider-execution",
+    "authority-grant",
+    "trust-promotion",
+    "credential-storage",
+    "network-connectivity",
+    "hardware-root-proof",
+    "settlement-activation"
+  ]
+}
