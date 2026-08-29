@@ -1,0 +1,29 @@
+{
+  "schema": "axiom-agent-provider-profile.v0",
+  "version": 0,
+  "status": "inert-provider-laboratory",
+  "provider_id": "provider.attestation.rustchain-physical",
+  "provider_class": "attestation",
+  "implementation": {
+    "artifact_ref": "artifact.attestation.rustchain-physical.v0",
+    "artifact_digest": "4444444444444444444444444444444444444444444444444444444444444444",
+    "source_kind": "adapter",
+    "upstream_ref": "upstream.scottcjn.rustchain"
+  },
+  "profile_ref": "profile.attestation.rustchain-physical.v0",
+  "capabilities": [
+    "attestation.behavioral-fingerprint",
+    "attestation.anti-emulation",
+    "attestation.clock-drift"
+  ],
+  "evidence_classes": ["behavioral-fingerprint"],
+  "assurance_ceiling": "behavioral",
+  "created_at": "2026-08-29T12:00:00.000Z",
+  "updated_at": "2026-08-29T12:00:00.000Z",
+  "authority_effect": "none",
+  "trust_effect": "evidence-only",
+  "credential_visibility": "none",
+  "network_effect": "none",
+  "runtime_activation": false,
+  "settlement_activation": false
+}
