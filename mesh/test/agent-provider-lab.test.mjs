@@ -31,6 +31,13 @@ test('external ecosystem laboratory profiles remain inert evidence-only descript
   }
 });
 
+test('external laboratory candidates do not claim an AXIOM adapter exists', async () => {
+  for (const [name] of LAB_PROFILES) {
+    const profile = await readProfile(name);
+    assert.equal(profile.implementation.source_kind, 'external', name);
+  }
+});
+
 test('RustChain-style physical attestation is bounded as behavioral evidence, not hardware-root proof', async () => {
   const profile = await readProfile('rustchain-physical-attestation.v0.json');
   assert.equal(profile.assurance_ceiling, 'behavioral');
