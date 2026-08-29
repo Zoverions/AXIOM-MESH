@@ -277,7 +277,7 @@
       "path": "mesh/test/gateway-client-contract.test.mjs",
       "test": "current Gateway client contract is exact and covers every authenticated route",
       "assertions": [
-        "assert.equal(result.routes, 31);",
+        "assert.equal(result.routes, 32);",
         "assert.equal(result.direct_service_access, false);"
       ]
     },
