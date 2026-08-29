@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const bindingSourceUrl = new URL('../src/lib/agent-provider-binding.mjs', import.meta.url);
 const beaconSourceUrl = new URL('../src/lib/beacon-observation-candidate.mjs', import.meta.url);
+const beaconAssuranceSourceUrl = new URL('../src/lib/beacon-entity-assurance-evidence.mjs', import.meta.url);
 
 async function source(url) {
   return readFile(url, 'utf8');
@@ -42,5 +43,12 @@ test('Beacon observation verifier remains offline and effect-free', async () => 
   assertNoEffectfulRuntimeImports(
     await source(beaconSourceUrl),
     'Beacon observation verifier'
+  );
+});
+
+test('Beacon Entity Assurance normalizer remains local and effect-free', async () => {
+  assertNoEffectfulRuntimeImports(
+    await source(beaconAssuranceSourceUrl),
+    'Beacon Entity Assurance normalizer'
   );
 });
