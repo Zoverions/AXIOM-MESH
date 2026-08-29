@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom-mesh.dev/schemas/axiom-agent-contribution-history-receipt.v1.json",
+  "title": "AXIOM Agent Contribution History Receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "statement", "statement_digest", "reviewer_signature", "receipt_digest"],
+  "properties": {
+    "schema": { "const": "axiom-agent-contribution-history-receipt.v1" },
+    "statement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "receipt_id", "history_sequence", "predecessor_receipt_digest", "contribution_id",
+        "contributor_principal_id", "contributor_credential_digest", "reviewer_principal_id",
+        "reviewer_credential_digest", "reviewer_operational_key_id", "repository_scope",
+        "capability_contexts", "contribution_kind", "disposition", "subject_digest",
+        "evidence_digests", "work_receipt_digests", "supersedes_receipt_digests",
+        "review_reason_code", "reviewed_at", "history_use", "history_completeness_scope",
+        "global_history_completeness_claimed", "chain_entry_omission_allowed",
+        "negative_evidence_erasure_allowed", "superseded_evidence_erasure_allowed",
+        "authority_effect", "delegation_effect", "scope_grant_claimed", "merge_rights_claimed",
+        "execution_rights_claimed", "approval_exemption_claimed", "global_reputation_score_claimed",
+        "global_history_currentness_claimed", "sybil_resistance_claimed", "collusion_resistance_claimed",
+        "identity_reset_resistance_claimed", "model_brand_signal_used", "popularity_signal_used",
+        "self_review_allowed"
+      ],
+      "properties": {
+        "receipt_id": { "$ref": "#/$defs/id" },
+        "history_sequence": { "type": "integer", "minimum": 1, "maximum": 1000000 },
+        "predecessor_receipt_digest": { "anyOf": [{ "$ref": "#/$defs/digest" }, { "type": "null" }] },
+        "contribution_id": { "$ref": "#/$defs/id" },
+        "contributor_principal_id": { "$ref": "#/$defs/id" },
+        "contributor_credential_digest": { "$ref": "#/$defs/digest" },
+        "reviewer_principal_id": { "$ref": "#/$defs/id" },
+        "reviewer_credential_digest": { "$ref": "#/$defs/digest" },
+        "reviewer_operational_key_id": { "$ref": "#/$defs/digest" },
+        "repository_scope": { "type": "string", "minLength": 3, "maxLength": 192, "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+        "capability_contexts": { "type": "array", "minItems": 1, "maxItems": 64, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 160 } },
+        "contribution_kind": { "enum": ["finding", "reproduction", "test", "security-finding", "reversion", "claim"] },
+        "disposition": { "enum": ["accepted", "rejected", "reproduced", "failed-reproduction", "superseded", "invalidated", "reverted"] },
+        "subject_digest": { "$ref": "#/$defs/digest" },
+        "evidence_digests": { "type": "array", "minItems": 1, "maxItems": 256, "uniqueItems": true, "items": { "$ref": "#/$defs/digest" } },
+        "work_receipt_digests": { "type": "array", "maxItems": 128, "uniqueItems": true, "items": { "$ref": "#/$defs/digest" } },
+        "supersedes_receipt_digests": { "type": "array", "maxItems": 64, "uniqueItems": true, "items": { "$ref": "#/$defs/digest" } },
+        "review_reason_code": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[a-z][a-z0-9._-]{0,63}$" },
+        "reviewed_at": { "$ref": "#/$defs/timestamp" },
+        "history_use": { "const": "review-prioritization-evidence-only" },
+        "history_completeness_scope": { "const": "verified-chain-and-expected-head-only" },
+        "global_history_completeness_claimed": { "const": false },
+        "chain_entry_omission_allowed": { "const": false },
+        "negative_evidence_erasure_allowed": { "const": false },
+        "superseded_evidence_erasure_allowed": { "const": false },
+        "authority_effect": { "const": "none" },
+        "delegation_effect": { "const": "none" },
+        "scope_grant_claimed": { "const": false },
+        "merge_rights_claimed": { "const": false },
+        "execution_rights_claimed": { "const": false },
+        "approval_exemption_claimed": { "const": false },
+        "global_reputation_score_claimed": { "const": false },
+        "global_history_currentness_claimed": { "const": false },
+        "sybil_resistance_claimed": { "const": false },
+        "collusion_resistance_claimed": { "const": false },
+        "identity_reset_resistance_claimed": { "const": false },
+        "model_brand_signal_used": { "const": false },
+        "popularity_signal_used": { "const": false },
+        "self_review_allowed": { "const": false }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "history_sequence": { "const": 1 } }, "required": ["history_sequence"] },
+          "then": { "properties": { "predecessor_receipt_digest": { "type": "null" } } },
+          "else": { "properties": { "predecessor_receipt_digest": { "$ref": "#/$defs/digest" } } }
+        },
+        {
+          "if": { "properties": { "disposition": { "enum": ["superseded", "invalidated", "reverted"] } }, "required": ["disposition"] },
+          "then": { "properties": { "supersedes_receipt_digests": { "minItems": 1 } } },
+          "else": { "properties": { "supersedes_receipt_digests": { "maxItems": 0 } } }
+        }
+      ]
+    },
+    "statement_digest": { "$ref": "#/$defs/digest" },
+    "reviewer_signature": { "type": "string", "minLength": 32, "maxLength": 1024, "pattern": "^[A-Za-z0-9_-]+$" },
+    "receipt_digest": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 192, "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$" },
+    "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "timestamp": { "type": "string", "format": "date-time", "minLength": 24, "maxLength": 24 }
+  }
+}

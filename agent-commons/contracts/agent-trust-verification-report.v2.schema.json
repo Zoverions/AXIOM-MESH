@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom-mesh.dev/schemas/axiom-agent-trust-verification-report.v2.json",
+  "title": "AXIOM Agent Trust Verification Report v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "verification_profile",
+    "report_origin",
+    "report_authentication",
+    "portable_assurance",
+    "sender",
+    "authority_manifest",
+    "handoff",
+    "attenuation_proof",
+    "portable_work_receipt",
+    "retained_currentness",
+    "claims",
+    "verification_report_digest"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-agent-trust-verification-report.v2" },
+    "verification_profile": { "const": "a1-a2-a3a-a4a-a5a-a6a-live-reverification" },
+    "report_origin": { "const": "local-verification-result" },
+    "report_authentication": { "const": "none" },
+    "portable_assurance": { "const": false },
+    "sender": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["principal_id", "credential_digest", "issuer_id", "issuer_key_id", "operational_key_id", "key_epoch", "principal_authority_digest"],
+      "properties": {
+        "principal_id": { "$ref": "#/$defs/id" },
+        "credential_digest": { "$ref": "#/$defs/digest" },
+        "issuer_id": { "$ref": "#/$defs/id" },
+        "issuer_key_id": { "$ref": "#/$defs/digest" },
+        "operational_key_id": { "$ref": "#/$defs/digest" },
+        "key_epoch": { "type": "integer", "minimum": 1 },
+        "principal_authority_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "authority_manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manifest_digest", "policy_digest", "capability_registry_digest", "discovery_digest", "delegation_allowed", "max_delegation_depth"],
+      "properties": {
+        "manifest_digest": { "$ref": "#/$defs/digest" },
+        "policy_digest": { "$ref": "#/$defs/digest" },
+        "capability_registry_digest": { "$ref": "#/$defs/digest" },
+        "discovery_digest": { "$ref": "#/$defs/digest" },
+        "delegation_allowed": { "const": false },
+        "max_delegation_depth": { "const": 0 }
+      }
+    },
+    "handoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["handoff_digest", "handoff_id", "recipient_principal_id", "recipient_identity_digest", "intended_executor_id", "intended_executor_identity_digest", "action", "purpose", "destination", "input_digest", "delegation_chain_head_digest", "remaining_delegation_depth"],
+      "properties": {
+        "handoff_digest": { "$ref": "#/$defs/digest" },
+        "handoff_id": { "$ref": "#/$defs/id" },
+        "recipient_principal_id": { "$ref": "#/$defs/id" },
+        "recipient_identity_digest": { "$ref": "#/$defs/digest" },
+        "intended_executor_id": { "$ref": "#/$defs/id" },
+        "intended_executor_identity_digest": { "$ref": "#/$defs/digest" },
+        "action": { "type": "string", "minLength": 1 },
+        "purpose": { "type": "string", "minLength": 1 },
+        "destination": { "type": "string", "minLength": 1 },
+        "input_digest": { "$ref": "#/$defs/digest" },
+        "delegation_chain_head_digest": { "type": "null" },
+        "remaining_delegation_depth": { "const": 0 }
+      }
+    },
+    "attenuation_proof": {
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["proof_digest", "parent_ceiling_digest", "child_ceiling_digest", "authority_relation", "proof_only"],
+          "properties": {
+            "proof_digest": { "$ref": "#/$defs/digest" },
+            "parent_ceiling_digest": { "$ref": "#/$defs/digest" },
+            "child_ceiling_digest": { "$ref": "#/$defs/digest" },
+            "authority_relation": { "const": "strictly-equal-or-narrower" },
+            "proof_only": { "const": true }
+          }
+        }
+      ]
+    },
+    "portable_work_receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["receipt_digest", "receipt_id", "handoff_digest", "executor_principal_id", "executor_credential_digest", "grid_machine_receipt_digest", "grid_intent_id", "grid_terminal_status", "terminal_outcome_digest", "started_at", "finished_at", "effect_specific_receipt_bound", "task_success_claimed"],
+      "properties": {
+        "receipt_digest": { "$ref": "#/$defs/digest" },
+        "receipt_id": { "$ref": "#/$defs/id" },
+        "handoff_digest": { "$ref": "#/$defs/digest" },
+        "executor_principal_id": { "$ref": "#/$defs/id" },
+        "executor_credential_digest": { "$ref": "#/$defs/digest" },
+        "grid_machine_receipt_digest": { "$ref": "#/$defs/digest" },
+        "grid_intent_id": { "type": "string", "minLength": 1 },
+        "grid_terminal_status": { "type": "string", "minLength": 1 },
+        "terminal_outcome_digest": { "$ref": "#/$defs/digest" },
+        "started_at": { "$ref": "#/$defs/timestamp" },
+        "finished_at": { "$ref": "#/$defs/timestamp" },
+        "effect_specific_receipt_bound": { "const": false },
+        "task_success_claimed": { "const": false }
+      }
+    },
+    "retained_currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["checked_at", "context", "sender", "executor", "relationship_between_principals_verified", "global_currentness_verified", "effect_boundary_currentness_verified"],
+      "properties": {
+        "checked_at": { "$ref": "#/$defs/timestamp" },
+        "context": { "const": "grid-intent-start-not-proven-first-effect-boundary" },
+        "sender": { "$ref": "#/$defs/currentness" },
+        "executor": { "$ref": "#/$defs/currentness" },
+        "relationship_between_principals_verified": { "const": false },
+        "global_currentness_verified": { "const": false },
+        "effect_boundary_currentness_verified": { "const": false }
+      }
+    },
+    "claims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authority_granted", "execution_authorized", "delegation_authority_verified", "global_currentness_verified", "effect_boundary_currentness_verified", "task_success_verified", "effect_execution_verified", "effect_specific_receipt_verified", "artifact_availability_verified", "memory_provenance_verified", "legal_identity_verified", "truth_verified", "network_effect", "filesystem_effect", "authority_effect", "delegation_effect"],
+      "properties": {
+        "authority_granted": { "const": false },
+        "execution_authorized": { "const": false },
+        "delegation_authority_verified": { "const": false },
+        "global_currentness_verified": { "const": false },
+        "effect_boundary_currentness_verified": { "const": false },
+        "task_success_verified": { "const": false },
+        "effect_execution_verified": { "const": false },
+        "effect_specific_receipt_verified": { "const": false },
+        "artifact_availability_verified": { "const": false },
+        "memory_provenance_verified": { "const": false },
+        "legal_identity_verified": { "const": false },
+        "truth_verified": { "const": false },
+        "network_effect": { "const": false },
+        "filesystem_effect": { "const": false },
+        "authority_effect": { "const": "none" },
+        "delegation_effect": { "const": "none" }
+      }
+    },
+    "verification_report_digest": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 192,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "minLength": 24,
+      "maxLength": 24
+    },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["principal_id", "checkpoint_digest", "active_credential_digest", "active_key_epoch", "evidence_age_ms", "known_active_under_retained_evidence"],
+      "properties": {
+        "principal_id": { "$ref": "#/$defs/id" },
+        "checkpoint_digest": { "$ref": "#/$defs/digest" },
+        "active_credential_digest": { "$ref": "#/$defs/digest" },
+        "active_key_epoch": { "type": "integer", "minimum": 1 },
+        "evidence_age_ms": { "type": "integer", "minimum": 0, "maximum": 60000 },
+        "known_active_under_retained_evidence": { "const": true }
+      }
+    }
+  }
+}

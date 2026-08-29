@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schema/entity-assurance-decision-v1.schema.json",
+  "title": "AXIOM Entity Assurance Decision v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "policy_id", "policy_digest", "subject_id", "evaluated_at",
+    "decision", "satisfied", "identity_requirement", "identity_satisfied",
+    "legal_identity_required", "satisfied_dimensions", "denied_dimensions",
+    "missing_dimensions", "considered_evidence_digests", "authority_granted",
+    "delegation_granted", "decision_digest"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-entity-assurance-decision.v1" },
+    "policy_id": { "$ref": "#/$defs/identifier" },
+    "policy_digest": { "$ref": "#/$defs/digest" },
+    "subject_id": { "$ref": "#/$defs/identifier" },
+    "evaluated_at": { "type": "string", "format": "date-time", "maxLength": 64 },
+    "decision": { "enum": ["satisfied", "denied"] },
+    "satisfied": { "type": "boolean" },
+    "identity_requirement": { "enum": ["none", "persistent-pseudonymous", "legal"] },
+    "identity_satisfied": { "type": "boolean" },
+    "legal_identity_required": { "type": "boolean" },
+    "satisfied_dimensions": { "$ref": "#/$defs/dimensions" },
+    "denied_dimensions": { "$ref": "#/$defs/dimensions" },
+    "missing_dimensions": { "$ref": "#/$defs/dimensions" },
+    "considered_evidence_digests": {
+      "type": "array",
+      "maxItems": 4096,
+      "items": { "$ref": "#/$defs/digest" }
+    },
+    "authority_granted": { "const": false },
+    "delegation_granted": { "const": false },
+    "decision_digest": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "dimension": {
+      "enum": [
+        "continuity", "uniqueness", "provenance", "authority", "independence",
+        "reputation", "attestation", "credentialing", "human_sponsorship",
+        "hardware_binding", "organization_binding"
+      ]
+    },
+    "dimensions": {
+      "type": "array",
+      "maxItems": 11,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/dimension" }
+    }
+  }
+}

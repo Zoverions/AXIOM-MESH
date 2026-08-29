@@ -1,0 +1,76 @@
+{
+  "schema": "axiom-agent-trust-verifier-a10b-threat-model.v1",
+  "repository": "Zoverions/AXIOM-MESH",
+  "phase": "agent-trust-a10b-live-a1-a6a-verifier",
+  "scope": "Verification-only composition of A1 identity, A2 authority manifest, optional A3a attenuation proof, A4a signed handoff, A5a portable Grid-terminal receipt, and A6a retained currentness evidence. No effect-specific A5b proof, global currentness, delegation authority or detached-report authentication is created.",
+  "core_invariant": "Live reverification of supplied artifacts is stronger than checking a detached local report. A Grid intent-start currentness check is not proof of currentness at the first consequential effect, and a terminal Grid lifecycle receipt is not proof of a concrete effect or task success.",
+  "attack_classes": [
+    {
+      "id": "cross-artifact-substitution",
+      "risks": ["swap sender credential", "swap authority manifest", "swap handoff", "swap executor credential", "swap independently valid Grid receipt"],
+      "controls": ["strict A1/A2/A4/A5 verifier reuse", "handoff digest binding", "executor credential must equal A4 intended-executor identity digest", "Grid principal/action/input/authority reverified by A5a"]
+    },
+    {
+      "id": "stale-currentness-laundering",
+      "risks": ["omit retained latest head", "present older valid checkpoint", "drop revocation evidence", "use stale active checkpoint"],
+      "controls": ["A6a effect-currentness helper requires expected latest head", "sender and executor checkpoint digests are live reverified", "freshness cap", "revoked/expired/not-yet-valid state denies bundle verification"]
+    },
+    {
+      "id": "effect-boundary-overclaim",
+      "risks": ["treat Grid intent start as first effect boundary", "treat completed lifecycle as concrete effect proof", "treat process completion as task success"],
+      "controls": ["currentness context fixed to grid-intent-start-not-proven-first-effect-boundary", "effect_boundary_currentness_verified=false", "effect_specific_receipt_verified=false", "effect_execution_verified=false", "task_success_verified=false"]
+    },
+    {
+      "id": "delegation-overclaim",
+      "risks": ["turn A3a proof into authority", "infer ancestor relation from sender/executor checks", "treat A4a proposal as delegation"],
+      "controls": ["A3a remains optional proof-only", "delegation_authority_verified=false", "A4a delegation head must remain null", "retained currentness reports relationship_between_principals_verified=false"]
+    },
+    {
+      "id": "detached-report-forgery",
+      "risks": ["fabricate local report and recompute digest", "claim report proves live reverification", "elevate report into portable assurance"],
+      "controls": ["report_authentication=none", "portable_assurance=false", "detached integrity checker returns underlying_artifacts_reverified=false", "live reverification facts exist only in the direct verifier return object"]
+    },
+    {
+      "id": "verifier-side-effects",
+      "risks": ["verifier creates credentials/artifacts", "verifier signs outputs", "verifier performs filesystem/network/process effects"],
+      "controls": ["verifier imports only canonicalization and existing verify/evaluate primitives", "static regression forbids creator/private-key/filesystem/network/process APIs"]
+    },
+    {
+      "id": "cross-stack-proof-confusion",
+      "risks": ["claim #1137 effect evidence without importing its strict verifier", "duplicate security-critical effect verifier"],
+      "controls": ["effect_specific_receipt_verified=false", "A5b remains explicit blocker", "no #1137 verifier duplication in A10b"]
+    }
+  ],
+  "known_nonclaims": [
+    "A10b is not a separately implemented third-party verifier.",
+    "A10b does not authenticate its detached verification report.",
+    "A10b does not prove global currentness.",
+    "A10b does not prove currentness at the first consequential effect boundary.",
+    "A10b does not verify a concrete effect-specific A5b receipt.",
+    "A10b does not verify A7 memory provenance because A7 remains on a separate laboratory stack.",
+    "A10b does not prove delegation ancestry or authority-bearing A3b semantics.",
+    "A10b grants no authority and performs no effect."
+  ],
+  "next_gates": [
+    "compose #1137 effect-specific verifier without duplicating its security-critical implementation",
+    "bind actual late currentness evidence consulted immediately before consume-before-effect",
+    "add A3b ancestor relationship when an authority-bearing delegation contract exists",
+    "build runtime-separated/public-input verifier packaging",
+    "build an independently implemented second verifier/conformance harness"
+  ],
+  "boundaries": {
+    "report_authenticated": false,
+    "portable_assurance": false,
+    "global_currentness_verified": false,
+    "effect_boundary_currentness_verified": false,
+    "effect_specific_receipt_verified": false,
+    "delegation_authority_verified": false,
+    "task_success_verified": false,
+    "authority_effect": "none",
+    "delegation_effect": "none",
+    "network_effect": false,
+    "filesystem_effect": false,
+    "process_effect": false,
+    "capability_promotion_enabled": false
+  }
+}

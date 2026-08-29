@@ -1,0 +1,82 @@
+{
+  "schema": "axiom-agent-attenuation-proof-threat-model.v1",
+  "repository": "Zoverions/AXIOM-MESH",
+  "phase": "agent-trust-a3a-attenuation-proof",
+  "scope": "Pure, signed proof that one abstract child authority ceiling is equal to or narrower than a parent ceiling. No runtime delegation or effect admission is created.",
+  "core_invariant": "A proof that authority was attenuated is not proof that the parent possessed delegation authority. Current AXIOM machine principals remain delegation-disabled and cannot use this laboratory to authorize child effects.",
+  "attack_classes": [
+    {
+      "id": "set-widening",
+      "risks": ["add capability", "add action", "add scope", "add purpose", "add destination", "add data class"],
+      "controls": ["child sets must be subsets of parent sets", "action IDs must already exist in parent", "canonical sorted unique sets"]
+    },
+    {
+      "id": "budget-amplification",
+      "risks": ["increase request rate", "increase concurrency", "increase execution time", "increase request or response size", "increase cost ceiling"],
+      "controls": ["every child numeric ceiling must be less than or equal to its parent ceiling", "non-negative bounded integer validation"]
+    },
+    {
+      "id": "assurance-or-approval-downgrade",
+      "risks": ["lower assurance floor", "remove confirmation", "remove required literal confirmation", "remove independent approval", "increase timeout"],
+      "controls": ["A-level assurance ordinal may only stay equal or increase", "confirmation count may only stay equal or increase", "parent required confirmation values must remain present", "independent approval is deny-dominant", "action timeout may only contract"]
+    },
+    {
+      "id": "destination-remapping",
+      "risks": ["same action name remapped to a different effector or destination"],
+      "controls": ["per-action effect_destination must remain exact", "global destination set must also attenuate"]
+    },
+    {
+      "id": "temporal-amplification",
+      "risks": ["child starts before parent", "child expires after parent", "proof outlives child", "proof timestamp mistaken for currentness"],
+      "controls": ["child valid_from cannot precede parent", "child expiry cannot exceed parent", "proof expiry cannot exceed child", "proof timestamps are signed evidence only and do not establish revocation/currentness"]
+    },
+    {
+      "id": "delegation-depth-amplification",
+      "risks": ["same depth passed to child", "depth increased", "subdelegation from a zero-depth parent", "hidden recursive spawning"],
+      "controls": ["parent must explicitly permit subdelegation", "each transition consumes at least one depth", "zero-depth parent fails closed", "current Agent Passport maps to may_subdelegate=false and remaining_depth=0"]
+    },
+    {
+      "id": "signer-or-proof-substitution",
+      "risks": ["delegator key substitution", "delegate ID substitution", "parent or child authority substitution", "parent context substitution"],
+      "controls": ["Ed25519 signature", "delegator public-key digest", "exact parent/child ceiling digests", "optional exact parent context digest", "canonical proof digest"]
+    },
+    {
+      "id": "proof-authority-confusion",
+      "risks": ["signed proof treated as bearer grant", "proof treated as evidence parent was authorized to delegate", "proof activates runtime delegation", "proof bypasses revocation/currentness"],
+      "controls": ["parent_authorization_claimed=false", "authority_effect=none", "delegation_effect=none", "execution_authorized=false", "bearer_token=false", "runtime_delegation_enabled=false", "global_currentness_claimed=false", "revocation_currentness_checked=false"]
+    },
+    {
+      "id": "protocol-laundering",
+      "risks": ["MCP/A2A/model/runtime switch used to widen authority", "framework naming used as a new capability"],
+      "controls": ["protocol_switch_can_expand_authority=false", "authority algebra is protocol-neutral", "future authority-bearing record must bind exact parent authorization/currentness"]
+    }
+  ],
+  "known_nonclaims": [
+    "This slice does not prove the parent was authorized to delegate.",
+    "This slice does not enable machine-principal delegation.",
+    "This slice does not implement descendant revocation propagation.",
+    "This slice does not implement a runtime child principal or execution grant.",
+    "Signed proof issuance/expiry timestamps do not establish that parent or child authority is currently active or unrevoked.",
+    "This slice does not claim currentness beyond supplied objects.",
+    "This slice does not modify the capability registry or supported effect path."
+  ],
+  "next_gates": [
+    "A3b authority-bearing signed delegation record with an explicit reviewed parent delegation source",
+    "A6 ancestor currentness and revocation propagation before effect admission",
+    "A4 signed handoff only after an exact delegation head can be validated",
+    "confused-deputy and delegation-laundering conformance across protocol adapters"
+  ],
+  "boundaries": {
+    "parent_authorization_claimed": false,
+    "machine_delegation_enabled": false,
+    "runtime_child_principal_enabled": false,
+    "execution_authorized": false,
+    "bearer_authority": false,
+    "network_effect": false,
+    "filesystem_effect": false,
+    "credential_access": false,
+    "secret_access": false,
+    "global_currentness_claimed": false,
+    "capability_promotion_enabled": false
+  }
+}

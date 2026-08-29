@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/agent-test-capacity-offer.v1.schema.json",
+  "title": "AXIOM Agent Test Capacity Offer v1",
+  "description": "Experimental Agent Commons discovery contract for an operator-controlled environment that may be available to run bounded Community Testnet work. An offer is not a task authorization, remote-access grant, node admission, credential, hardware-custody transfer, payment promise, or production authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "project",
+    "supported_build",
+    "record_status",
+    "offer_id",
+    "publisher",
+    "environment",
+    "testnet_lanes",
+    "availability",
+    "execution_mode",
+    "evidence_return_contract",
+    "safety",
+    "authority_nonclaims"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-agent-test-capacity-offer.v1" },
+    "project": { "const": "AXIOM-MESH" },
+    "supported_build": { "const": "0.12.0-dev.3" },
+    "record_status": { "enum": ["example", "offered"] },
+    "offer_id": { "$ref": "#/$defs/id" },
+    "publisher": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id", "identity_assurance"],
+      "properties": {
+        "type": { "enum": ["human", "machine", "organization"] },
+        "id": { "$ref": "#/$defs/id" },
+        "identity_assurance": { "const": "self-declared" }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ownership", "description", "hardware", "operating_system", "runtime"],
+      "properties": {
+        "ownership": {
+          "enum": ["repository-owned", "contributor-owned", "explicitly-disposable-authorized"]
+        },
+        "description": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "hardware": { "type": ["string", "null"], "maxLength": 1000 },
+        "operating_system": { "type": ["string", "null"], "maxLength": 500 },
+        "runtime": { "type": ["string", "null"], "maxLength": 500 }
+      }
+    },
+    "testnet_lanes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 6,
+      "uniqueItems": true,
+      "items": { "enum": ["T0", "T1", "T2", "T3", "T4", "T5"] }
+    },
+    "availability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["starts_at", "expires_at", "maximum_runs", "operator_confirmation_required"],
+      "properties": {
+        "starts_at": { "type": "string", "format": "date-time" },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "maximum_runs": { "type": "integer", "minimum": 1, "maximum": 1000 },
+        "operator_confirmation_required": { "const": true }
+      }
+    },
+    "execution_mode": { "const": "operator-run-only" },
+    "evidence_return_contract": { "const": "agent-readiness/CONTRIBUTION-RESULT.schema.json" },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "public_safe_metadata_only",
+        "contains_secrets_or_credentials",
+        "contains_private_data",
+        "third_party_testing_authorized"
+      ],
+      "properties": {
+        "public_safe_metadata_only": { "const": true },
+        "contains_secrets_or_credentials": { "const": false },
+        "contains_private_data": { "const": false },
+        "third_party_testing_authorized": { "const": false }
+      }
+    },
+    "authority_nonclaims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "offer_authorizes_execution",
+        "remote_access_granted",
+        "remote_session_created",
+        "node_admission_granted",
+        "runtime_authority_granted",
+        "merge_authority_granted",
+        "deployment_authority_granted",
+        "credential_authority_granted",
+        "spending_authority_granted",
+        "hardware_custody_granted",
+        "production_promotion_granted",
+        "capability_promotion_granted",
+        "destructive_actions_allowed",
+        "firmware_changes_allowed",
+        "purchases_allowed",
+        "compensation_committed"
+      ],
+      "properties": {
+        "offer_authorizes_execution": { "const": false },
+        "remote_access_granted": { "const": false },
+        "remote_session_created": { "const": false },
+        "node_admission_granted": { "const": false },
+        "runtime_authority_granted": { "const": false },
+        "merge_authority_granted": { "const": false },
+        "deployment_authority_granted": { "const": false },
+        "credential_authority_granted": { "const": false },
+        "spending_authority_granted": { "const": false },
+        "hardware_custody_granted": { "const": false },
+        "production_promotion_granted": { "const": false },
+        "capability_promotion_granted": { "const": false },
+        "destructive_actions_allowed": { "const": false },
+        "firmware_changes_allowed": { "const": false },
+        "purchases_allowed": { "const": false },
+        "compensation_committed": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    }
+  }
+}
