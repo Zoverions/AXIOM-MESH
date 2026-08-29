@@ -74,7 +74,7 @@ export function normalizeBeaconObservationEntityAssuranceEvidence(input) {
     replay_key: verification.replay_key
   });
 
-  return normalizeEntityAssuranceEvidence({
+  const normalized = normalizeEntityAssuranceEvidence({
     schema: 'axiom-entity-assurance-evidence.v1',
     evidence_id: `evidence.beacon.provenance.${verification.observation_digest}`,
     subject_id: subjectId,
@@ -89,4 +89,6 @@ export function normalizeBeaconObservationEntityAssuranceEvidence(input) {
     expires_at: value.envelope.expires_at,
     non_authorizing: true
   });
+  const { authority_granted: _derivedAuthorityFlag, ...portableEvidence } = normalized;
+  return Object.freeze(portableEvidence);
 }
