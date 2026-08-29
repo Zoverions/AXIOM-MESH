@@ -6,7 +6,7 @@
 
 **Status:** implemented client-contract boundary; experimental local PWA foundation present
 
-**Updated:** 2026-08-17
+**Updated:** 2026-08-29
 
 ## Purpose and boundary
 
@@ -21,7 +21,7 @@ and the client is
 The client is a private source module in this repository, not a published npm
 package; applications must bind and version it with the checked-out build.
 
-The contract covers all 31 authenticated `/v1/` Gateway routes. It deliberately
+The contract covers all 32 authenticated `/v1/` Gateway routes. It deliberately
 does not include `/`, `/health`, or `/ready`, which are unauthenticated ingress
 and operator-probe routes rather than the authenticated application contract.
 
@@ -50,6 +50,7 @@ client.
 | `machine_discovery.get` | `GET /v1/machine-discovery` | constrained machine | none |
 | `machine_receipts.verify` | `GET /v1/machine-receipts/intents/:id/verify` | constrained machine owner | `id` |
 | `status.get` | `GET /v1/status` | authenticated | none |
+| `delegations.get` | `GET /v1/delegations` | human owner | none |
 | `operations.get` | `GET /v1/operations` | `operations:read` or `telemetry:collect` | none |
 | `metrics.get` | `GET /v1/metrics` | `operations:read` or `telemetry:collect` | none |
 | `intents.submit` | `POST /v1/intents` | authenticated | intent body and required idempotency key |
@@ -77,6 +78,16 @@ client.
 | `exports.get` | `GET /v1/exports/:id` | owner | `id` |
 | `export_bundles.get` | `GET /v1/exports/:id/bundle` | owner | `id` |
 | `audit.verify` | `GET /v1/audit/verify` | `audit:read` | none |
+
+`delegations.get` is a read-only human-owner inspection path. The Gateway
+derives the owner only from the authenticated principal, rejects machine
+principals and every query string, and returns no grant, revoke, approval, or
+execution control. The inspector verifies the persisted delegation ledger and
+root-authority binding before exposing history, resolves current effective
+authority through the existing attenuation rules, preserves revoked/expired/
+not-yet-active entries as non-effective history, and hard-codes
+`execution_authority_granted: false`. Missing or invalid authority evidence
+fails closed rather than being inferred from ledger-shaped data.
 
 `social.get` is deliberately owner-derived. The Gateway ignores any raw
 `owner=` query text and derives the snapshot owner only from the authenticated
@@ -219,13 +230,14 @@ identifier.
 
 The test suite proves:
 
-- exact 31-route and JSON Schema inventory;
+- exact 32-route and JSON Schema inventory;
 - relative-only target construction and rejection of unlisted inputs;
 - request schema and idempotency enforcement;
 - first-response and idempotent-replay compatibility;
 - stable, unknown, retryable, and malformed error behavior;
 - response byte and media-type bounds;
 - external cancellation and bounded timeout;
+- owner-derived delegation inspection with cross-owner, machine-principal, and query substitution denied;
 - owner-derived local social snapshot isolation;
 - owner-derived remote-social review isolation, zero-query override rejection,
   no-schema read behavior, and preservation of the G5A minimization boundary;
@@ -245,10 +257,11 @@ an explicit migration/rollback plan.
 This milestone implements `UX-001`. The separate AXIOM One local preview has
 started `UX-002`, but it does not implement a supported browser product,
 browser session/device security (`UX-005`), or completed accessibility and
-usability gates. The new remote-review Gateway read is not wired into AXIOM One
-and does not make its Share, Circles, federation, Following, or remote-account
-surfaces available. Neither milestone adds third-party analytics, AI provider,
-multi-host routing, or production pilot.
+usability gates. The remote-review Gateway read remains separate from AXIOM One.
+The delegation inspector is available only as a read-only Explore surface and
+does not add delegation mutation, approval, or execution controls. Neither
+milestone adds third-party analytics, AI provider, multi-host routing, or
+production pilot.
 
 The experimental local shell is outside the trusted kernel and uses only its
 explicit allowlisted subset of this contract. It has a loopback-only origin,
