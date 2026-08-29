@@ -1,0 +1,28 @@
+{
+  "schema": "axiom-agent-provider-profile.v0",
+  "version": 0,
+  "status": "inert-provider-laboratory",
+  "provider_id": "provider.settlement.x402",
+  "provider_class": "settlement",
+  "implementation": {
+    "artifact_ref": "artifact.settlement.x402.v0",
+    "artifact_digest": "6666666666666666666666666666666666666666666666666666666666666666",
+    "source_kind": "adapter",
+    "upstream_ref": "upstream.scottcjn.openclaw-x402"
+  },
+  "profile_ref": "profile.settlement.x402.v0",
+  "capabilities": [
+    "settlement.payment-proof",
+    "settlement.tool-pricing"
+  ],
+  "evidence_classes": ["payment-proof", "signed-envelope"],
+  "assurance_ceiling": "cryptographic",
+  "created_at": "2026-08-29T12:00:00.000Z",
+  "updated_at": "2026-08-29T12:00:00.000Z",
+  "authority_effect": "none",
+  "trust_effect": "evidence-only",
+  "credential_visibility": "none",
+  "network_effect": "none",
+  "runtime_activation": false,
+  "settlement_activation": false
+}
