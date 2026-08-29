@@ -45,6 +45,23 @@
     "non_authorizing": { "const": true },
     "evidence_digest": { "$ref": "#/$defs/digest" }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "evidence_class": {
+            "enum": ["authenticated_assertion", "independently_verified"]
+          }
+        },
+        "required": ["evidence_class"]
+      },
+      "then": {
+        "properties": {
+          "issuer_id": { "$ref": "#/$defs/identifier" }
+        }
+      }
+    }
+  ],
   "$defs": {
     "identifier": {
       "type": "string",
