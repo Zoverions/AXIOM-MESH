@@ -99,7 +99,7 @@ function input(envelope, overrides = {}) {
   };
 }
 
-test('normalizes a verified Beacon observation into bounded Entity Assurance provenance evidence', () => {
+test('normalizes a verified Beacon observation into bounded portable Entity Assurance provenance evidence', () => {
   const envelope = signedEnvelope();
   const verification = verifyBeaconObservationEnvelope(envelope, {
     now: '2026-08-29T19:01:00.000Z',
@@ -121,7 +121,7 @@ test('normalizes a verified Beacon observation into bounded Entity Assurance pro
   assert.equal(evidence.observed_at, envelope.issued_at);
   assert.equal(evidence.expires_at, envelope.expires_at);
   assert.equal(evidence.non_authorizing, true);
-  assert.equal(evidence.authority_granted, false);
+  assert.equal(Object.hasOwn(evidence, 'authority_granted'), false);
   assert.match(evidence.basis_digest, /^[a-f0-9]{64}$/);
   assert.match(evidence.evidence_digest, /^[a-f0-9]{64}$/);
   assert.match(evidence.evidence_id, /^evidence\.beacon\.provenance\.[a-f0-9]{64}$/);
@@ -197,7 +197,7 @@ test('caller cannot override the key-derived Entity Assurance subject', () => {
   );
 });
 
-test('normalized evidence can satisfy Entity Assurance without granting authority or delegation', () => {
+test('portable normalized evidence can satisfy Entity Assurance without granting authority or delegation', () => {
   const envelope = signedEnvelope();
   const evidence = normalizeBeaconObservationEntityAssuranceEvidence(input(envelope));
   const policy = {
