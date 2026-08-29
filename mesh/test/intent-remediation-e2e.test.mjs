@@ -109,8 +109,13 @@ async function vote(gateway, token, proposalId) {
   assert.equal(result.status, 'completed');
 }
 
-async function waitUntil(iso) {
-  const delay = Math.max(0, new Date(iso).valueOf() - Date.now() + 30);
+async function waitUntil(iso, clock = null) {
+  const target = new Date(iso).valueOf() + 30;
+  if (clock) {
+    if (target > Date.now()) clock.setTime(target);
+    return;
+  }
+  const delay = Math.max(0, target - Date.now());
   if (delay) await new Promise(resolve => setTimeout(resolve, delay));
 }
 
@@ -123,7 +128,8 @@ async function createRatifiableProposal({
   action,
   title,
   votingMs = 5_000,
-  activationMs = 8_000
+  activationMs = 8_000,
+  clock = null
 }) {
   const start = Date.now();
   const votingEndsAt = new Date(start + votingMs).toISOString();
@@ -143,8 +149,14 @@ async function createRatifiableProposal({
       activate_after: activateAfter
     }
   });
+  if (clock) {
+    assert.ok(
+      Date.now() < new Date(votingEndsAt).valueOf(),
+      'test setup latency must not consume the semantic voting window'
+    );
+  }
   await vote(gateway, voterToken, created.proposal_id);
-  await waitUntil(votingEndsAt);
+  await waitUntil(votingEndsAt, clock);
   const finalized = await approvedIntent({
     gateway,
     requesterToken: operatorToken,
@@ -168,9 +180,10 @@ async function activateProposal({
   approverToken,
   proposalId,
   activateAfter,
-  expectedStatus = 200
+  expectedStatus = 200,
+  clock = null
 }) {
-  await waitUntil(activateAfter);
+  await waitUntil(activateAfter, clock);
   return approvedIntent({
     gateway,
     requesterToken: operatorToken,
@@ -247,6 +260,10 @@ async function governancePage(gateway, token) {
 }
 
 test('v0.5 ratifies current remediation, keeps it non-executing, and rejects stale activation', async t => {
+  const initialNow = new Date();
+  t.mock.timers.enable({ apis: ['Date'], now: initialNow });
+  const clock = t.mock.timers;
+
   const dataDir = await mkdtemp(join(tmpdir(), 'axiom-intent-remediation-e2e-'));
   const basePort = await findPortBlock();
   const tokens = {
@@ -303,13 +320,15 @@ test('v0.5 ratifies current remediation, keeps it non-executing, and rejects sta
     action: activationGovernanceAction(activation),
     title: 'Activate remediation e2e Intent Contract',
     votingMs: 5_000,
-    activationMs: 8_000
+    activationMs: 8_000,
+    clock
   });
   const activatedContract = await activateProposal({
     gateway,
     operatorToken: tokens.operator,
     operatorId: ids.operator,
     approverToken: tokens.approver,
+    clock,
     ...contractGovernance
   });
   assert.equal(activatedContract.status, 'completed');
@@ -340,13 +359,15 @@ test('v0.5 ratifies current remediation, keeps it non-executing, and rejects sta
     approverToken: tokens.approver,
     voterToken: tokens.voter,
     action: remediationGovernanceAction(currentRemediation),
-    title: 'Ratify current remediation proposal'
+    title: 'Ratify current remediation proposal',
+    clock
   });
   const ratified = await activateProposal({
     gateway,
     operatorToken: tokens.operator,
     operatorId: ids.operator,
     approverToken: tokens.approver,
+    clock,
     ...ratifiable
   });
   assert.equal(ratified.status, 'completed');
@@ -372,7 +393,8 @@ test('v0.5 ratifies current remediation, keeps it non-executing, and rejects sta
     action: remediationGovernanceAction(staleCandidate),
     title: 'Remediation proposal that will become stale',
     votingMs: 5_000,
-    activationMs: 8_000
+    activationMs: 8_000,
+    clock
   });
 
   await putAttestation(
@@ -400,6 +422,7 @@ test('v0.5 ratifies current remediation, keeps it non-executing, and rejects sta
     operatorToken: tokens.operator,
     operatorId: ids.operator,
     approverToken: tokens.approver,
+    clock,
     ...pendingStale,
     expectedStatus: 400
   });
