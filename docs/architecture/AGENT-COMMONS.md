@@ -1,6 +1,6 @@
 # AXIOM Agent Commons
 
-**Status:** architecture / contribution-interface design  
+**Status:** architecture / repository laboratory / contribution-interface design  
 **Capability impact:** none  
 **Canonical public collaboration surface:** GitHub  
 **Current build:** `0.12.0-dev.3` — production candidate, not production-promoted
@@ -23,14 +23,18 @@ The repository already has the first practical Agent Commons pieces on `main`:
 - `docs/community/RED-TEAM-CHALLENGE.md` for public security challenge work;
 - `docs/architecture/contracts/agent-challenge.v1.schema.json` for bounded public work requests;
 - `docs/architecture/contracts/agent-feedback.v1.schema.json` for public-safe external criticism and review;
+- `agent-commons/challenges.json` for the bounded machine-readable challenge-registry laboratory;
+- `agent-commons/readonly-lab.json` plus `mesh/src/lib/agent-commons-readonly-lab.mjs` for transportless public-state discovery;
+- `agent-commons/mcp-readonly-lab.json` plus `mesh/src/lib/agent-commons-mcp-readonly.mjs` for an offline MCP metadata/conformance projection with no listener or MCP session;
+- `agent-commons/a2a-card-candidate.json` plus `mesh/src/lib/agent-commons-a2a-card-candidate.mjs` for an offline, non-servable A2A Agent Card candidate;
 - `agent-readiness/CONTRIBUTION-RESULT.schema.json` for machine-readable executed contribution evidence;
 - `agent-readiness/CONTRIBUTION-TRIAGE.txt` for evidence-state handling;
 - public issue forms for contribution proposals, public-safe feedback, authority-boundary findings, and Testnet results;
 - `SECURITY.md` for sensitive/private reporting.
 
-The challenge and feedback schemas are documentation/interface contracts. They do not imply a deployed registry, public API, remote execution service, autonomous agent federation, or write-capable protocol endpoint.
+The challenge and feedback schemas remain documentation/interface contracts; by themselves they do not implement a registry or publication service. Separately, `agent-commons/challenges.json` now implements a repository-resident challenge-registry laboratory, and the Stage C files implement transportless/offline read-only interoperability laboratories. None of these artifacts imply a deployed public API, remote execution service, autonomous agent federation, write-capable protocol endpoint, production MCP/A2A endpoint, or protocol compatibility claim.
 
-These pieces form a contribution surface. They do **not** constitute a deployed agent federation, public remote-execution mesh, production MCP/A2A endpoint, autonomous merge system, or production promotion.
+These pieces form a contribution and laboratory discovery surface. They do **not** constitute a deployed agent federation, public remote-execution mesh, production MCP/A2A endpoint, autonomous merge system, or production promotion.
 
 ## Position in the architecture
 
@@ -170,18 +174,24 @@ Controls include exact-base binding, bounded inputs, protected CI, provenance ca
 
 AXIOM should remain protocol-neutral internally and standard-compatible at the edges.
 
+Current Stage C interoperability laboratories are deliberately transportless/offline:
+
+- `readonly-lab.json` exposes bounded public repository-state discovery through fixed in-process methods only;
+- `mcp-readonly-lab.json` projects that public state into offline MCP-shaped metadata/conformance handling without a network listener, stdio transport, MCP session, or compatibility claim;
+- `a2a-card-candidate.json` projects the same public discovery surface into an offline A2A Agent Card candidate that is explicitly non-servable and advertises no supported interface.
+
 Possible future Agent Commons adapters include:
 
-- read-only MCP resources for selected public documentation, capability status, challenge discovery, and verification instructions;
-- A2A-compatible discovery or bounded task exchange;
+- a real read-only MCP transport for selected public documentation, capability status, challenge discovery, and verification instructions, only after separate transport/security review;
+- a real A2A-compatible discovery interface or bounded task exchange, only after an actual interface exists and conformance is proven;
 - external community adapters for announcement and feedback intake;
 - repository-effect adapters that may prepare an **open draft pull request** only through separately authorized AXIOM policy.
 
-Read-only interoperability must be proven before write-capable external adapters are considered. A protocol connection is not permission.
+Read-only interoperability must remain proven and bounded before write-capable external adapters are considered. Protocol-shaped metadata, a protocol connection, successful authentication, or a discoverable agent card is not permission.
 
-## Challenge registry direction
+## Challenge registry laboratory
 
-The `axiom-agent-challenge.v1` contract defines an individual bounded work request. A later machine-readable registry may expose zero or more such challenges, but the schema does not itself implement a registry or publication service.
+The `axiom-agent-challenge.v1` contract defines an individual bounded work request. `agent-commons/challenges.json` now provides the machine-readable repository-resident Stage B registry laboratory for zero or more such challenges. The registry is public-discovery-only and grants no authority, compensation, or evidence certification. It is not a deployed registry service, federation, or publication endpoint.
 
 Each challenge binds at least:
 
@@ -198,7 +208,7 @@ Each challenge binds at least:
 - expiry state where used;
 - explicit non-claims about compensation, merge, deployment, credentials, spending, production promotion, and third-party testing.
 
-Stale-base, path-escape, oversized-input, forged-identity, and fabricated-evidence cases should be included as negative fixtures before external protocol publication.
+Stale-base, path-escape, oversized-input, forged-identity, and fabricated-evidence cases should remain part of negative coverage before any external protocol publication.
 
 ## External publication and mirrors
 
@@ -212,6 +222,8 @@ Where practical, retain publication provenance and external identifiers so publi
 
 ### Stage A — repository contribution surface
 
+**Current status:** implemented repository contribution surface on `main`; not a production promotion.
+
 - machine-oriented `AGENTS.md` entry point;
 - Agent Commons architecture document;
 - distinct challenge and public-safe feedback contracts;
@@ -221,6 +233,8 @@ Where practical, retain publication provenance and external identifiers so publi
 
 ### Stage B — challenge registry laboratory
 
+**Current status:** implemented repository-resident laboratory on `main`; public discovery only, not a deployed service.
+
 - machine-readable open-challenge list;
 - exact base-SHA binding;
 - bounded path and acceptance metadata;
@@ -228,13 +242,19 @@ Where practical, retain publication provenance and external identifiers so publi
 
 ### Stage C — read-only interoperability laboratory
 
+**Current status:** implemented transportless/offline laboratory on `main`; no network listener, protocol endpoint, consequential tool, or compatibility claim.
+
 - public discovery only;
 - no consequential tools;
 - bounded requests/responses;
 - hostile-input tests;
-- no authority change.
+- no authority change;
+- offline MCP-shaped projection with compatibility hard-false;
+- offline non-servable A2A Agent Card candidate with zero advertised interfaces.
 
 ### Stage D — external community adapters
+
+**Current status:** future architecture / separately reviewed integration work.
 
 - announcements and challenge mirrors;
 - feedback ingestion with provenance;
@@ -242,6 +262,8 @@ Where practical, retain publication provenance and external identifiers so publi
 - rate, size, abuse, and identity controls.
 
 ### Stage E — evidence-backed contribution reputation research
+
+**Current status:** future research.
 
 - portable contribution receipts or summaries;
 - correction and invalidation history;
@@ -270,14 +292,15 @@ Any write-capable adapter requires a separate threat review, policy mapping, evi
 
 Agent Commons does not currently claim:
 
-- a deployed challenge registry, federation, or consensus network;
-- a production MCP or A2A endpoint;
+- a deployed challenge-registry service, federation, or consensus network;
+- a network-exposed or production MCP/A2A endpoint;
+- MCP or A2A compatibility from the offline laboratory projections;
 - verified cross-network agent identity;
 - autonomous code merging or direct-main mutation;
 - autonomous capability promotion;
 - production external-agent execution;
 - a Sybil-resistant portable reputation network;
-- trustworthy external agent cards or social profiles;
+- a trustworthy or servable external Agent Card merely because the offline A2A candidate exists;
 - independent security certification;
 - a legal or economic reward system for contributions.
 
