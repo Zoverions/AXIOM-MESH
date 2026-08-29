@@ -1,0 +1,72 @@
+{
+  "schema": "axiom-agent-portable-receipt-currentness-binding-threat-model.v1",
+  "repository": "Zoverions/AXIOM-MESH",
+  "phase": "agent-trust-a5a-a6a-post-hoc-currentness-composition",
+  "scope": "Pure content-addressed composition that independently re-verifies one A5a portable Grid-terminal receipt and re-evaluates the exact executor identity through the merged A6a retained-currentness checkpoint at the Grid intent start timestamp. It is historical evidence composition, not effect admission.",
+  "core_invariant": "A successful post-hoc recheck may show that the exact A5 executor credential was known-active under the exact retained A6 issuer-evidence head at the recorded Grid intent start. It does not prove that the original runtime consulted A6, that the effect was authorized, that consume-before-effect occurred, or that the task/effect succeeded.",
+  "attack_classes": [
+    {
+      "id": "receipt-substitution",
+      "risks": ["bind currentness to a different portable receipt", "bind another Grid intent or handoff"],
+      "controls": ["A5 receipt independently reverified", "exact portable receipt, handoff and Grid intent digests/IDs reproduced in composite", "binding digest covers normalized composite"]
+    },
+    {
+      "id": "executor-substitution",
+      "risks": ["currentness checkpoint belongs to another principal", "same principal name with a rotated credential", "active current credential differs from the credential that signed A5"],
+      "controls": ["A6 principal must equal verified A5 executor principal", "A6 active credential digest must equal exact A5 executor credential digest", "A6 independently verifies issuer/observer evidence"]
+    },
+    {
+      "id": "time-boundary-laundering",
+      "risks": ["caller selects a more convenient currentness time", "late evidence is projected backwards", "stale checkpoint stretched to cover work"],
+      "controls": ["effectAt is forced to A5 Grid intent started_at", "A6 rejects checkpoint evaluation after that boundary", "A6 freshness ceiling remains at or below 60 seconds"]
+    },
+    {
+      "id": "latest-head-bypass",
+      "risks": ["historical checkpoint reused while a newer retained checkpoint exists", "revocation suffix omitted"],
+      "controls": ["existing A6 evaluator requires expectedLatestCheckpointDigest", "exact issuer evidence reverified", "rollback/truncation protection remains in A6"]
+    },
+    {
+      "id": "runtime-consultation-overclaim",
+      "risks": ["post-hoc recheck described as evidence original effect path consulted currentness", "composite marketed as late effect admission"],
+      "controls": ["binding_scope=post-hoc-evidence-composition", "currentness_consulted_by_original_effect_path=false", "effect_admission_authorized=false", "consume_before_effect_observed=false"]
+    },
+    {
+      "id": "task-or-effect-success-overclaim",
+      "risks": ["known-active identity interpreted as task success", "Grid completed state interpreted as concrete effect proof"],
+      "controls": ["task_success_claimed=false", "effect_specific_execution_claimed=false", "A5a effect-specific nonclaims remain unchanged"]
+    },
+    {
+      "id": "new-authority-by-composition",
+      "risks": ["two valid evidence objects combined into a bearer authority object", "binding digest treated as a grant or signature"],
+      "controls": ["binding_signature_present=false", "authority_effect=none", "delegation_effect=none", "global_currentness_claimed=false", "composite is recomputable evidence only"]
+    }
+  ],
+  "known_nonclaims": [
+    "The composite is not signed and is not a bearer credential, grant, approval, delegation record, or capability token.",
+    "It does not prove the original effect path consulted A6 currentness evidence.",
+    "It does not prove consume-before-effect ordering.",
+    "It does not authorize an effect or establish global currentness.",
+    "It does not claim task success, application correctness, truth, artifact availability, or concrete effect execution.",
+    "It does not persist retained latest heads or add an independent currentness witness.",
+    "It does not modify Gateway, Hypervisor, Sandbox, Grid, capability state, or production policy."
+  ],
+  "next_gates": [
+    "bind A6 currentness into an actual reviewed late effect-admission path and prove it was consulted before effect",
+    "bind consume-before-effect lifecycle evidence where a real executor path exists",
+    "A5b independently verify effect-specific receipts before narrower execution claims",
+    "retained latest-head recovery and independent witness/currentness research"
+  ],
+  "boundaries": {
+    "binding_scope": "post-hoc-evidence-composition",
+    "currentness_consulted_by_original_effect_path": false,
+    "binding_signature_present": false,
+    "global_currentness_claimed": false,
+    "effect_admission_authorized": false,
+    "consume_before_effect_observed": false,
+    "task_success_claimed": false,
+    "effect_specific_execution_claimed": false,
+    "authority_effect": "none",
+    "delegation_effect": "none",
+    "capability_promotion_enabled": false
+  }
+}
