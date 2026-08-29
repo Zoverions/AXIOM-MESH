@@ -373,7 +373,8 @@ test('validation does not mutate a deeply frozen document', () => {
 test('validator module imports only the local canonical helper', async () => {
   const sourceUrl = new URL('../src/lib/agent-composition.mjs', import.meta.url);
   const source = await readFile(sourceUrl, 'utf8');
-  const imports = [...source.matchAll(/from\s+['"]([^'"]+)['"]/g)].map(match => match[1]);
+  const importPattern = new RegExp("from\\s+['\\\"]([^'\\\"]+)['\\\"]", 'g');
+  const imports = [...source.matchAll(importPattern)].map(match => match[1]);
   assert.deepEqual(imports, ['./canonical.mjs']);
 });
 ```
