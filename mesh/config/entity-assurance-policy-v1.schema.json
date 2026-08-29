@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schema/entity-assurance-policy-v1.schema.json",
+  "title": "AXIOM Entity Assurance Policy v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "policy_id", "identity_requirement", "requirements",
+    "authority_effect", "delegation_effect"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-entity-assurance-policy.v1" },
+    "policy_id": { "$ref": "#/$defs/identifier" },
+    "identity_requirement": {
+      "enum": ["none", "persistent-pseudonymous", "legal"]
+    },
+    "requirements": {
+      "type": "array",
+      "maxItems": 11,
+      "items": { "$ref": "#/$defs/requirement" }
+    },
+    "authority_effect": { "const": "none" },
+    "delegation_effect": { "const": "none" },
+    "policy_digest": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dimension", "minimum_strength", "accepted_evidence_classes"],
+      "properties": {
+        "dimension": {
+          "enum": [
+            "continuity", "uniqueness", "provenance", "authority", "independence",
+            "reputation", "attestation", "credentialing", "human_sponsorship",
+            "hardware_binding", "organization_binding"
+          ]
+        },
+        "minimum_strength": { "enum": ["weak", "moderate", "strong"] },
+        "accepted_evidence_classes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "measured", "authenticated_assertion", "independently_verified",
+              "inference", "declaration"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
