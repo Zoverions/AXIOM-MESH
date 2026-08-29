@@ -4,7 +4,7 @@
 Registry schema: `axiom-capabilities.v1`
 Kernel version: `0.12.0-dev.3`
 Evidence verified: `2026-08-10`
-Registry digest: `e8bf5b9c083fd4b20a630372fa135e630c36285064f58d84abea60975325c10e`
+Registry digest: `40eb272e94478f66837fc9e39210fa1a9f9629396cd4020f0b80fb4f400e48bc`
 
 Only **implemented** capabilities are runnable claims.
 
@@ -56,7 +56,7 @@ Only **implemented** capabilities are runnable claims.
 | `economics.token-bridge-liquidity` | economics | **disabled** | AXM, bonds, rewards, treasury, bridges, and liquidity remain disabled pending reconciled policy, tests, deployment evidence, and external audit. |
 | `zk.proof-verifiers` | verification | **adapter_required** | A proof is accepted only with a named circuit, verification key, public-input schema, and verifier adapter. |
 | `ui.operator-api` | operations | **implemented** | Authenticated operator API for intent submission, status, audit, recovery, and governed state inspection. |
-| `ui.gateway-client` | operations | **implemented** | A versioned same-origin Gateway client contract covers all 31 authenticated routes with exact route parity, bounded responses and timeouts, AbortSignal cancellation, stable idempotent intent results, explicit errors, and no direct internal-service access. |
+| `ui.gateway-client` | operations | **implemented** | A versioned same-origin Gateway client contract covers all 32 authenticated routes with exact route parity, bounded responses and timeouts, AbortSignal cancellation, stable idempotent intent results, explicit errors, and no direct internal-service access. |
 | `ui.cli` | operations | **implemented** | Command-line operator client with explicit input validation and fail-closed API error handling. |
 | `ui.dashboard` | operations | **experimental** | A loopback-only AXIOM One PWA preview provides node status, reversible review for echo plus four governed memory lifecycle actions, exact explanations for all stable Gateway outcomes and current kernel events, approval-state distinctions, same-key uncertainty recovery, owner-scoped private-note creation, three fixed directional provenance links with correction-without-replacement, confirmation-bound tombstoning, selective local export with explicit bundle reveal, unavailable-sharing, and raw evidence surfaces; it is not a supported product, edge-deletion/hard-delete/restore interface, authoritative pre-execution kernel plan, or completed browser-security boundary. |
 | `operations.observability` | operations | **implemented** | Bounded four-service telemetry is scraped over least-privilege Unix-socket access and relayed as OTLP/HTTP JSON with fixed attributes; static alerts route through Alertmanager v2 using HTTPS allowlists, reserved queue capacity, bounded retry, redaction, and delivery audit; signed request-pressure and dependency-loss evidence proves bounded rejection, degradation, fail-closed exit, restart, and state preservation. |
