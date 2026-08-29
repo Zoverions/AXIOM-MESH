@@ -22,6 +22,7 @@ export const EXTERNAL_OBSERVATION_REPLAY_STATE_SCHEMA =
 const IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
 const NONCE_PATTERN = /^[A-Za-z0-9_.:-]{16,160}$/;
 const DIGEST_PATTERN = /^[a-f0-9]{64}$/;
+const MAX_REPLAY_LIFETIME_MS = 5 * 60 * 1000;
 const DEFAULT_MAX_ENTRIES = 4096;
 const HARD_MAX_ENTRIES = 65536;
 const DEFAULT_MAX_STATE_BYTES = 2 * 1024 * 1024;
@@ -83,8 +84,12 @@ export async function claimExternalObservationReplay({
   });
   const nowIso = normalizeInstant(now, 'external replay now');
   const expiresAt = normalizeInstant(expires_at, 'external replay expires_at');
-  if (Date.parse(expiresAt) <= Date.parse(nowIso)) {
+  const lifetimeMs = Date.parse(expiresAt) - Date.parse(nowIso);
+  if (lifetimeMs <= 0) {
     throw new ValidationError('External replay expires_at must be after now');
+  }
+  if (lifetimeMs > MAX_REPLAY_LIFETIME_MS) {
+    throw new ValidationError('External replay lifetime cannot exceed the five-minute retention window');
   }
 
   const limits = normalizeLimits({ max_entries, max_state_bytes });
