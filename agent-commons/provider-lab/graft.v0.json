@@ -1,0 +1,29 @@
+{
+  "schema": "axiom-agent-provider-profile.v0",
+  "version": 0,
+  "status": "inert-provider-laboratory",
+  "provider_id": "provider.knowledge.graft",
+  "provider_class": "knowledge-projection",
+  "implementation": {
+    "artifact_ref": "artifact.knowledge.graft.v0",
+    "artifact_digest": "2222222222222222222222222222222222222222222222222222222222222222",
+    "source_kind": "external",
+    "upstream_ref": "upstream.nanonets.graft"
+  },
+  "profile_ref": "profile.knowledge.graft.v0",
+  "capabilities": [
+    "knowledge.code-map",
+    "knowledge.semantic-projection",
+    "knowledge.incremental-refresh"
+  ],
+  "evidence_classes": ["deterministic-derivation", "content-digest"],
+  "assurance_ceiling": "none",
+  "created_at": "2026-08-29T12:00:00.000Z",
+  "updated_at": "2026-08-29T12:00:00.000Z",
+  "authority_effect": "none",
+  "trust_effect": "evidence-only",
+  "credential_visibility": "none",
+  "network_effect": "none",
+  "runtime_activation": false,
+  "settlement_activation": false
+}
