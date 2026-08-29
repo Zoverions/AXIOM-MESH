@@ -7,7 +7,7 @@
   "implementation": {
     "artifact_ref": "artifact.interop.beacon.v0",
     "artifact_digest": "3333333333333333333333333333333333333333333333333333333333333333",
-    "source_kind": "adapter",
+    "source_kind": "external",
     "upstream_ref": "upstream.scottcjn.beacon-skill"
   },
   "profile_ref": "profile.interop.beacon.v0",
