@@ -21,13 +21,12 @@ const ROUTE_INTEGER_BINDINGS = [
   ['/v1/memory', 'memory limit'],
   ['/v1/backups', 'backups limit'],
   ['/v1/node-schedules', 'node schedules limit'],
-  ['/v1/node-schedules', 'node schedules offset'],
   ['/v1/node-discovery', 'node discovery minimum_security_level'],
   ['/v1/node-discovery', 'node discovery minimum_lease_seconds'],
   ['/v1/node-discovery', 'node discovery limit']
 ];
 
-test('Security Residue v0 binds every approved collection/discovery integer to boundedIntegerQuery', async () => {
+test('Security Residue v0 binds every existing collection/discovery integer to boundedIntegerQuery', async () => {
   const { source } = await loadBoundedIntegerQuery();
   for (const [route, label] of ROUTE_INTEGER_BINDINGS) {
     const routeStart = source.indexOf(`router.add('GET', '${route}'`);
@@ -40,6 +39,11 @@ test('Security Residue v0 binds every approved collection/discovery integer to b
       `${route} must validate ${label} with boundedIntegerQuery`
     );
   }
+});
+
+test('Security Residue v0 does not add an offset query surface', async () => {
+  const { source } = await loadBoundedIntegerQuery();
+  assert.doesNotMatch(source, /searchParams\.get\(['"]offset['"]\)/);
 });
 
 test('Security Residue v0 accepts fallback only for an absent integer query parameter', async () => {
