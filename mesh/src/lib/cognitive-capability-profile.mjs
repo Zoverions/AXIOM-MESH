@@ -484,6 +484,12 @@ function freezeRecord(record) {
   return Object.freeze(record);
 }
 
+function compareProfileIds(left, right) {
+  if (left.profile_id < right.profile_id) return -1;
+  if (left.profile_id > right.profile_id) return 1;
+  return 0;
+}
+
 export function evaluateCognitiveCandidates(candidates, request) {
   validateRequestDocument(request);
   if (!Array.isArray(candidates) || candidates.length < 1 || candidates.length > 256) {
@@ -516,8 +522,8 @@ export function evaluateCognitiveCandidates(candidates, request) {
     }
   }
 
-  eligible.sort((left, right) => left.profile_id.localeCompare(right.profile_id));
-  rejected.sort((left, right) => left.profile_id.localeCompare(right.profile_id));
+  eligible.sort(compareProfileIds);
+  rejected.sort(compareProfileIds);
 
   return Object.freeze({
     valid: true,
