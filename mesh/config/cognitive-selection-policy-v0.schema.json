@@ -1,16 +1,296 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "axiom-cognitive-selection-policy.v0",
+  "$id": "https://axiom.invalid/schemas/cognitive-selection-policy-v0.schema.json",
   "title": "AXIOM Cognitive Selection Policy v0",
+  "description": "An inert, explicit preference policy for producing deterministic recommendation evidence over candidates that already satisfy Cognitive Eligibility Request v0.",
   "type": "object",
   "additionalProperties": false,
-  "x-axiom-status": "surface-only-tdd-green",
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "policy_id",
+    "criteria",
+    "created_at",
+    "authority_effect",
+    "network_effect",
+    "credential_visibility",
+    "runtime_activation",
+    "selection_effect"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axiom-cognitive-selection-policy.v0"
+    },
+    "version": {
+      "const": 0
+    },
+    "status": {
+      "const": "inert-selection-policy"
+    },
+    "policy_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$"
+    },
+    "criteria": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 11,
+      "items": {
+        "$ref": "#/$defs/criterion"
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "authority_effect": {
+      "const": "none"
+    },
+    "network_effect": {
+      "const": "none"
+    },
+    "credential_visibility": {
+      "const": "none"
+    },
+    "runtime_activation": {
+      "const": false
+    },
+    "selection_effect": {
+      "const": "proposal-only"
+    }
+  },
+  "$defs": {
+    "criterion": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/integrationClassCriterion"
+        },
+        {
+          "$ref": "#/$defs/localityCriterion"
+        },
+        {
+          "$ref": "#/$defs/accessModeCriterion"
+        },
+        {
+          "$ref": "#/$defs/retentionCriterion"
+        },
+        {
+          "$ref": "#/$defs/trainingUseCriterion"
+        },
+        {
+          "$ref": "#/$defs/exportabilityCriterion"
+        },
+        {
+          "$ref": "#/$defs/costCriterion"
+        },
+        {
+          "$ref": "#/$defs/latencyCriterion"
+        },
+        {
+          "$ref": "#/$defs/contextCriterion"
+        },
+        {
+          "$ref": "#/$defs/weightAccessCriterion"
+        },
+        {
+          "$ref": "#/$defs/assuranceCriterion"
+        }
+      ]
+    },
+    "integrationClassCriterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "preference"],
+      "properties": {
+        "field": { "const": "integration_class" },
+        "preference": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": { "enum": ["agent-runtime", "model-provider", "compute-backend"] }
+        }
+      }
+    },
+    "localityCriterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "preference"],
+      "properties": {
+        "field": { "const": "deployment.locality" },
+        "preference": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "enum": ["owner-local", "owner-remote", "provider-remote", "hybrid"] }
+        }
+      }
+    },
+    "accessModeCriterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "preference"],
+      "properties": {
+        "field": { "const": "deployment.access_mode" },
+        "preference": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "enum": ["local-runtime", "api", "remote-runtime", "hybrid"] }
+        }
+      }
+    },
+    "retentionCriterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "preference"],
+      "properties": {
+        "field": { "const": "data_policy.retention" },
+        "preference": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "enum": ["none", "transient", "persistent", "unknown"] }
+        }
+      }
+    },
+    "trainingUseCriterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "preference"],
+      "properties": {
+        "field": { "const": "data_policy.training_use" },
+        "preference": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": { "enum": ["excluded", "possible", "unknown"] }
+        }
+      }
+    },
+    "exportabilityCriterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "preference"],
+      "properties": {
+        "field": { "const": "data_policy.exportability" },
+        "preference": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "enum": ["none", "partial", "full", "unknown"] }
+        }
+      }
+    },
+    "costCriterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "preference"],
+      "properties": {
+        "field": { "const": "economics.cost_class" },
+        "preference": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": { "enum": ["none", "low", "medium", "high", "unknown"] }
+        }
+      }
+    },
+    "latencyCriterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "preference"],
+      "properties": {
+        "field": { "const": "economics.latency_class" },
+        "preference": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": { "enum": ["local-fast", "interactive", "slow", "batch", "unknown"] }
+        }
+      }
+    },
+    "contextCriterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "preference"],
+      "properties": {
+        "field": { "const": "economics.context_class" },
+        "preference": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": { "enum": ["small", "medium", "large", "very-large", "unknown"] }
+        }
+      }
+    },
+    "weightAccessCriterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "preference"],
+      "properties": {
+        "field": { "const": "openness.weight_access" },
+        "preference": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": { "enum": ["closed", "open-remote", "open-acquired", "local-proprietary", "not-applicable"] }
+        }
+      }
+    },
+    "assuranceCriterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "preference"],
+      "properties": {
+        "field": { "const": "assurance.ceiling" },
+        "preference": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": { "enum": ["none", "self-asserted", "behavioral", "cryptographic", "hardware-rooted"] }
+        }
+      }
+    }
+  },
+  "x-axiom-status": "inert-selection-policy",
   "x-axiom-semantic-validator": "mesh/src/lib/cognitive-selection-proposal.mjs",
+  "x-axiom-fixed-boundary": {
+    "authority_effect": "none",
+    "network_effect": "none",
+    "credential_visibility": "none",
+    "runtime_activation": false,
+    "selection_effect": "proposal-only"
+  },
+  "x-axiom-semantic-rules": [
+    "criteria are applied in listed order",
+    "criterion fields are unique within one policy",
+    "every preference array is a complete permutation of its field vocabulary",
+    "eligibility is recomputed before ranking and cannot be widened",
+    "profile_id raw JavaScript string code-unit order is the final tie-break",
+    "recommendation does not select a winner or authorize execution"
+  ],
   "x-axiom-non-claims": [
     "model-invocation",
     "provider-egress",
+    "credential-brokerage",
     "runtime-activation",
     "authority-grant",
-    "automatic-execution"
+    "automatic-execution",
+    "automatic-winner-selection",
+    "learned-routing",
+    "hidden-scoring",
+    "provider-quality-certification"
   ]
 }
