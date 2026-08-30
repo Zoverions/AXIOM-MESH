@@ -248,7 +248,7 @@ function indexLineages(items, topology, assessedAt) {
     const resolved = resolveCognitiveLineageManifest(item, topology);
     uniqueId(seen, resolved.lineage_id, 'lineage manifest');
     ensureRecordedBy(item.recorded_at, assessedAt, 'lineage manifest');
-    byId.set(resolved.lineage_id, resolved);
+    byId.set(resolved.lineage_id, { raw: item, resolved });
   }
   return byId;
 }
@@ -261,9 +261,9 @@ function indexFidelity(items, topology, lineages, assessedAt) {
     uniqueId(seen, item?.evaluation_id, 'fidelity evaluation');
     ensureRecordedBy(item?.recorded_at, assessedAt, 'fidelity evaluation');
     const lineageId = item?.candidate?.lineage_id ?? null;
-    const lineage = lineageId === null ? null : (lineages.get(lineageId) ?? null);
-    const resolved = resolveReplacementFidelityEvaluation(item, topology, lineage);
-    if (lineageId !== null && lineage === null) {
+    const lineageRecord = lineageId === null ? null : (lineages.get(lineageId) ?? null);
+    const resolved = resolveReplacementFidelityEvaluation(item, topology, lineageRecord?.raw ?? null);
+    if (lineageId !== null && lineageRecord === null) {
       unbound.push(resolved);
       continue;
     }
@@ -412,7 +412,9 @@ function aggregateSovereignty(nodes) {
 function buildCandidates(nodes, lineages, fidelity, warnings, blockers) {
   const nodeById = new Map(nodes.map(node => [node.node_id, node]));
   const candidates = [];
-  const ordered = [...lineages.values()].sort((left, right) => compareCodeUnits(left.lineage_id, right.lineage_id));
+  const ordered = [...lineages.values()]
+    .map(entry => entry.resolved)
+    .sort((left, right) => compareCodeUnits(left.lineage_id, right.lineage_id));
 
   for (const lineage of ordered) {
     const referenceNode = nodeById.get(lineage.reference.node_id);
