@@ -416,8 +416,8 @@ function validateEvidence(raw) {
     }
     requireDigest(raw[field], `Cognitive selection authorization evidence ${field}`);
   }
-  if (raw.effect_destination !== 'local') {
-    throw new ValidationError('Cognitive selection authorization effect destination must remain local');
+  if (raw.effect_destination !== undefined && raw.effect_destination !== 'local') {
+    throw new ValidationError('Cognitive selection authorization effect destination must remain local when asserted');
   }
   if (raw.machine_authority_digest !== undefined) {
     requireDigest(
@@ -500,7 +500,7 @@ export function validateCognitiveSelectionAuthorizationResult(result, proposal) 
     gateway_contract_schema: ACTIVE_GATEWAY_CLIENT_CONTRACT.schema,
     gateway_contract_digest: gatewayContractDigest,
     policy_digest: evidence.policy_digest,
-    effect_destination: evidence.effect_destination,
+    effect_destination: evidence.effect_destination ?? null,
     authority_effect: 'selection-authorization-only',
     selection_authorized: true,
     selection_applied: false,
