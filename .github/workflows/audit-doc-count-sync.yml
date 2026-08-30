@@ -1,0 +1,52 @@
+name: Audit Capability Count Sync
+
+on:
+  push:
+    branches:
+      - audit-remediation-2026-08-30
+    paths:
+      - .github/workflows/audit-doc-count-sync.yml
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: audit-remediation-2026-08-30
+          fetch-depth: 0
+      - name: Update exact canonical capability-count claims
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          replacements = {
+            'docs/rebuild/SOURCE-TRACEABILITY.md': (
+              '49 capabilities: 31 implemented',
+              '50 capabilities: 31 implemented'
+            ),
+            'docs/rebuild/LONG-HORIZON-CAPABILITY-MAP.md': (
+              'contains 49 tracked capabilities, including 31 marked implemented',
+              'contains 50 tracked capabilities, including 31 marked implemented'
+            )
+          }
+          for path, (old, new) in replacements.items():
+            p = Path(path)
+            text = p.read_text()
+            count = text.count(old)
+            if count != 1:
+              raise SystemExit(f'{path}: expected exactly one old claim, found {count}')
+            p.write_text(text.replace(old, new, 1))
+          PY
+          git diff --check
+      - name: Commit canonical count synchronization
+        run: |
+          git config user.name "axiom-audit-remediation"
+          git config user.email "208527039+Zoverions@users.noreply.github.com"
+          git add docs/rebuild/SOURCE-TRACEABILITY.md docs/rebuild/LONG-HORIZON-CAPABILITY-MAP.md
+          git commit -m "docs: sync capability count after public witness registration"
+          git push origin HEAD:audit-remediation-2026-08-30
