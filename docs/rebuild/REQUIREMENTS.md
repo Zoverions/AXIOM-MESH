@@ -1,4 +1,4 @@
-<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=e8bf5b9c083fd4b20a630372fa135e630c36285064f58d84abea60975325c10e -->
+<!-- axiom-capability-registry: schema=axiom-capabilities.v1; kernel=0.12.0-dev.3; digest=2d868f44cd3498ecfe91c3ad488592347bb7016591277d7a885dd9300fe42bee -->
 # AXIOM-MESH Rebuild Requirements
 
 **Current build:** `0.12.0-dev.3`
