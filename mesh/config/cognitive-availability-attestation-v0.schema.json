@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/cognitive-availability-attestation-v0.schema.json",
+  "title": "AXIOM Cognitive Availability Attestation v0",
+  "description": "Strict inert evidence contract for one attributable observation of one Cognitive Topology node. The schema records evidence only and grants no authority, network effect, runtime activation, model invocation, or identity proof.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "attestation_id",
+    "topology_id",
+    "topology_digest",
+    "node_id",
+    "model_id",
+    "observation",
+    "observer",
+    "evidence",
+    "observed_at",
+    "valid_until",
+    "recorded_at",
+    "contains_secret_material",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-cognitive-availability-attestation.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-evidence" },
+    "attestation_id": { "$ref": "#/$defs/identifier" },
+    "topology_id": { "$ref": "#/$defs/identifier" },
+    "topology_digest": { "$ref": "#/$defs/sha256" },
+    "node_id": { "$ref": "#/$defs/identifier" },
+    "model_id": { "$ref": "#/$defs/identifier" },
+    "observation": { "$ref": "#/$defs/observation" },
+    "observer": { "$ref": "#/$defs/observer" },
+    "evidence": { "$ref": "#/$defs/evidence" },
+    "observed_at": { "$ref": "#/$defs/timestamp" },
+    "valid_until": { "$ref": "#/$defs/timestamp" },
+    "recorded_at": { "$ref": "#/$defs/timestamp" },
+    "contains_secret_material": { "const": false },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "nullableIdentifier": {
+      "anyOf": [
+        { "$ref": "#/$defs/identifier" },
+        { "type": "null" }
+      ]
+    },
+    "nullableSha256": {
+      "anyOf": [
+        { "$ref": "#/$defs/sha256" },
+        { "type": "null" }
+      ]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "maxLength": 64
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "availability",
+        "method",
+        "observed_artifact_digest",
+        "observed_runtime_ref",
+        "assurance_class"
+      ],
+      "properties": {
+        "availability": {
+          "type": "string",
+          "enum": ["available", "unavailable", "indeterminate"]
+        },
+        "method": {
+          "type": "string",
+          "enum": [
+            "local-artifact",
+            "local-runtime",
+            "provider-api",
+            "remote-runtime",
+            "provider-statement",
+            "synthetic-probe"
+          ]
+        },
+        "observed_artifact_digest": { "$ref": "#/$defs/nullableSha256" },
+        "observed_runtime_ref": { "$ref": "#/$defs/nullableIdentifier" },
+        "assurance_class": {
+          "type": "string",
+          "enum": ["declared", "signed", "verified-local", "corroborated"]
+        }
+      }
+    },
+    "observer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["observer_kind", "observer_ref", "observer_principal_ref"],
+      "properties": {
+        "observer_kind": {
+          "type": "string",
+          "enum": [
+            "local-agent",
+            "local-service",
+            "remote-service",
+            "provider",
+            "external-verifier"
+          ]
+        },
+        "observer_ref": { "$ref": "#/$defs/identifier" },
+        "observer_principal_ref": { "$ref": "#/$defs/nullableIdentifier" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_kind",
+        "evidence_ref",
+        "evidence_digest",
+        "verification_ref",
+        "verification_digest"
+      ],
+      "properties": {
+        "evidence_kind": {
+          "type": "string",
+          "enum": [
+            "local-observation",
+            "runtime-probe-result",
+            "provider-statement",
+            "signed-provider-statement",
+            "external-observation",
+            "artifact-verification"
+          ]
+        },
+        "evidence_ref": { "$ref": "#/$defs/identifier" },
+        "evidence_digest": { "$ref": "#/$defs/sha256" },
+        "verification_ref": { "$ref": "#/$defs/nullableIdentifier" },
+        "verification_digest": { "$ref": "#/$defs/nullableSha256" }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/cognitive-availability-attestation.mjs",
+  "x-axiom-semantic-rules": [
+    "topology_id and topology_digest must bind to one exact Cognitive Topology",
+    "node_id and model_id must identify one exact Cognitive Topology node",
+    "observation method must be compatible with the bound Cognitive Topology access, custody, and weight posture",
+    "available local-artifact observations require the exact owner-addressable artifact digest declared by the topology",
+    "non-local-artifact observations cannot invent an observed artifact digest",
+    "declared assurance cannot carry verification evidence and stronger assurance requires verification_ref and verification_digest",
+    "valid_until and recorded_at cannot precede observed_at"
+  ],
+  "x-axiom-non-claims": [
+    "provider-reachability",
+    "runtime-reachability-beyond-recorded-observation",
+    "provider-statement-truth",
+    "external-signature-verification",
+    "model-invocation",
+    "model-substitution",
+    "authority-grant",
+    "network-effect",
+    "runtime-activation",
+    "principal-continuity-proof",
+    "subjective-identity-proof"
+  ]
+}

@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/replacement-fidelity-evaluation-v0.schema.json",
+  "title": "AXIOM Replacement Fidelity Evaluation v0",
+  "description": "Strict inert evidence contract for bounded cognitive replacement fidelity evaluation. Confidence is evaluation confidence, never an identity probability. The contract does not activate, adopt, or authorize a candidate.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "evaluation_id",
+    "topology_id",
+    "topology_digest",
+    "reference",
+    "candidate",
+    "evaluator",
+    "suite",
+    "dimensions",
+    "required_dimensions",
+    "aggregate_fidelity",
+    "confidence",
+    "evaluated_at",
+    "recorded_at",
+    "contains_secret_material",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-replacement-fidelity-evaluation.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-evidence" },
+    "evaluation_id": { "$ref": "#/$defs/identifier" },
+    "topology_id": { "$ref": "#/$defs/identifier" },
+    "topology_digest": { "$ref": "#/$defs/digest" },
+    "reference": { "$ref": "#/$defs/reference" },
+    "candidate": { "$ref": "#/$defs/candidate" },
+    "evaluator": { "$ref": "#/$defs/evaluator" },
+    "suite": { "$ref": "#/$defs/suite" },
+    "dimensions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": { "$ref": "#/$defs/dimension" }
+    },
+    "required_dimensions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 9,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/fidelityDimension" }
+    },
+    "aggregate_fidelity": {
+      "type": "string",
+      "enum": [
+        "high-fidelity",
+        "acceptable-with-degradation",
+        "materially-degraded",
+        "insufficient-evidence",
+        "incompatible"
+      ]
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "evaluated_at": { "$ref": "#/$defs/timestamp" },
+    "recorded_at": { "$ref": "#/$defs/timestamp" },
+    "contains_secret_material": { "const": false },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "nullableIdentifier": {
+      "anyOf": [
+        { "$ref": "#/$defs/identifier" },
+        { "type": "null" }
+      ]
+    },
+    "nullableDigest": {
+      "anyOf": [
+        { "$ref": "#/$defs/digest" },
+        { "type": "null" }
+      ]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "maxLength": 64
+    },
+    "fidelityDimension": {
+      "type": "string",
+      "enum": [
+        "capability-fidelity",
+        "preference-fidelity",
+        "behavioral-fidelity",
+        "epistemic-fidelity",
+        "safety-policy-fidelity",
+        "style-personality-fidelity",
+        "memory-use-fidelity",
+        "relationship-fidelity",
+        "robustness-fidelity"
+      ]
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node_id", "model_id", "artifact_digest"],
+      "properties": {
+        "node_id": { "$ref": "#/$defs/identifier" },
+        "model_id": { "$ref": "#/$defs/identifier" },
+        "artifact_digest": { "$ref": "#/$defs/nullableDigest" }
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model_id", "artifact_digest", "lineage_id"],
+      "properties": {
+        "model_id": { "$ref": "#/$defs/identifier" },
+        "artifact_digest": { "$ref": "#/$defs/nullableDigest" },
+        "lineage_id": { "$ref": "#/$defs/nullableIdentifier" }
+      }
+    },
+    "evaluator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evaluator_kind", "evaluator_ref", "evaluator_principal_ref"],
+      "properties": {
+        "evaluator_kind": { "$ref": "#/$defs/identifier" },
+        "evaluator_ref": { "$ref": "#/$defs/identifier" },
+        "evaluator_principal_ref": { "$ref": "#/$defs/identifier" }
+      }
+    },
+    "suite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["suite_ref", "suite_digest", "metric_set_ref", "metric_set_digest"],
+      "properties": {
+        "suite_ref": { "$ref": "#/$defs/identifier" },
+        "suite_digest": { "$ref": "#/$defs/digest" },
+        "metric_set_ref": { "$ref": "#/$defs/identifier" },
+        "metric_set_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "dimension": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dimension",
+        "result",
+        "observed_metric_ref",
+        "observed_metric_digest",
+        "threshold_ref",
+        "threshold_digest",
+        "evidence_ref",
+        "evidence_digest"
+      ],
+      "properties": {
+        "dimension": { "$ref": "#/$defs/fidelityDimension" },
+        "result": {
+          "type": "string",
+          "enum": ["pass", "degraded", "fail", "indeterminate"]
+        },
+        "observed_metric_ref": { "$ref": "#/$defs/identifier" },
+        "observed_metric_digest": { "$ref": "#/$defs/digest" },
+        "threshold_ref": { "$ref": "#/$defs/identifier" },
+        "threshold_digest": { "$ref": "#/$defs/digest" },
+        "evidence_ref": { "$ref": "#/$defs/identifier" },
+        "evidence_digest": { "$ref": "#/$defs/digest" }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/replacement-fidelity-evaluation.mjs",
+  "x-axiom-semantic-rules": [
+    "topology_id and topology_digest must bind to one exact Cognitive Topology",
+    "reference node_id, model_id, and artifact_digest must bind to one exact current topology node",
+    "dimension identifiers must be unique and required_dimensions must be unique and present",
+    "aggregate_fidelity is computed fail-closed from required dimension results",
+    "incompatible requires at least one required fail result",
+    "lineage evidence, when supplied to the resolver, must exactly bind the same reference and candidate",
+    "confidence is bounded evaluation confidence and is not an identity probability",
+    "recorded_at cannot precede evaluated_at",
+    "candidate evidence never activates, adopts, or authorizes the candidate"
+  ],
+  "x-axiom-non-claims": [
+    "principal-continuity-proof",
+    "subjective-identity-proof",
+    "identity-percentage-or-probability",
+    "candidate-activation",
+    "candidate-adoption",
+    "model-substitution",
+    "authority-grant",
+    "network-effect",
+    "runtime-activation"
+  ]
+}
