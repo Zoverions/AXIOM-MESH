@@ -99,7 +99,7 @@ function topologyFixture() {
         node_id: 'node.optional.ephemeral',
         model_id: 'model.optional.ephemeral',
         engagement: 'ephemeral',
-        topology_role: 'tenant',
+        topology_role: 'augmentation',
         access_mode: 'api',
         custody: 'provider-controlled',
         weights: {
