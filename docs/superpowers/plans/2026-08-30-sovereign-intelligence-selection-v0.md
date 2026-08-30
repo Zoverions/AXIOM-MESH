@@ -19,8 +19,11 @@
 - `network_effect` must remain `none`.
 - `credential_visibility` must remain `none`.
 - `runtime_activation` must remain `false`.
-- `selection_effect` must remain `eligibility-only`.
-- Eligibility output order must be deterministic by `profile_id` and must not imply ranking.
+- Eligibility output order must be deterministic by `profile_id`.
+- Eligibility remains a hard filter. Later recommendation logic may rank only eligible profiles and must not widen eligibility.
+- Recommendation is not authorization: proposal output must retain `winner_selected: false`, `runtime_activation: false`, `authority_effect: none`, and `selection_effect: proposal-only`.
+- Policy-bounded recommendation v0 uses explicit ordered enum preferences only; no hidden weights, learned scores, ambient provider defaults, or automatic execution.
+- `profile_id` raw JavaScript code-unit order is the mandatory final recommendation tie-break; `localeCompare()` is forbidden for evidence ordering.
 
 ---
 
@@ -181,3 +184,87 @@ Confirm only the spec/plan, new cognitive contract/schema/tests, and narrowly ne
 - [ ] **Step 4: Merge only after fresh green verification**
 
 Use the repository's normal merge mechanism. Do not claim implementation or integration complete before the final main-branch/merge SHA is known and its verification state is checked.
+
+---
+
+## Follow-on: Policy-Bounded Selection Proposals v0
+
+The eligibility slice above is implemented on `main`. The follow-on below adds recommendation evidence while preserving the separation: **eligibility is not recommendation, recommendation is not selection, and selection is not execution**.
+
+### Task 6: Define an inert explicit selection policy
+
+**Files:**
+- Create: `mesh/src/lib/cognitive-selection-proposal.mjs`
+- Create: `mesh/config/cognitive-selection-policy-v0.schema.json`
+- Create: `mesh/test/cognitive-selection-proposal.test.mjs`
+
+**Interfaces:**
+- Produces: `COGNITIVE_SELECTION_POLICY_SCHEMA`, `validateCognitiveSelectionPolicy(policy)`, `proposeCognitiveSelection(candidates, request, policy)`.
+- Consumes: `digestObject`, `ValidationError`, and `evaluateCognitiveCandidates`.
+
+- [x] **Step 1: Write the missing-surface RED test**
+
+Expected failure: `ERR_MODULE_NOT_FOUND` for `cognitive-selection-proposal.mjs` while the existing suite remains green.
+
+- [x] **Step 2: Add only the surface/schema stub and verify initial GREEN**
+
+The module exports exist but proposal/validation functions throw `ValidationError`; no ranking exists yet.
+
+- [x] **Step 3: Write behavioral RED tests**
+
+Tests cover valid policy validation, closed-world rejection, deterministic explicit preferences, eligibility dominance, all-rejected behavior, code-unit tie-breaking, non-mutation, deep immutability, and no effect-bearing imports.
+
+- [ ] **Step 4: Verify behavioral RED**
+
+Run protected Clean Kernel CI. Expected failures must come from the deliberately unimplemented policy/proposal functions, not documentation or infrastructure drift.
+
+### Task 7: Implement deterministic recommendation evidence
+
+**Files:**
+- Modify: `mesh/src/lib/cognitive-selection-proposal.mjs`
+- Complete: `mesh/config/cognitive-selection-policy-v0.schema.json`
+
+**Interfaces:**
+- Policy fields: `schema`, `version`, `status`, `policy_id`, `criteria`, `created_at`, plus fixed non-authority boundaries.
+- Criterion fields supported in v0: `integration_class`, `deployment.locality`, `deployment.access_mode`, `data_policy.retention`, `data_policy.training_use`, `data_policy.exportability`, `economics.cost_class`, `economics.latency_class`, `economics.context_class`, `openness.weight_access`, `assurance.ceiling`.
+
+- [ ] **Step 1: Implement strict policy validation**
+
+Each criterion must use a complete unique permutation of the closed enum for that field. Duplicate criterion fields, unknown fields, partial preference sets, invalid canonical timestamps, and boundary widening throw `ValidationError`.
+
+- [ ] **Step 2: Rank only candidates returned as eligible**
+
+Call `evaluateCognitiveCandidates(candidates, request)` first. Map only `eligibility.eligible` IDs back to candidate profiles. Compare policy criteria in listed order; first unequal preference position decides. If all criteria tie, compare `profile_id` with raw `<`/`>` code-unit order.
+
+- [ ] **Step 3: Emit a frozen inert proposal report**
+
+The report must include request/policy/eligibility digests, ranked candidate evidence, nullable recommendation identity/digest, `winner_selected: false`, `requires_gateway_authorization: true`, `execution_effect: none`, `authority_effect: none`, `network_effect: none`, `credential_visibility: none`, `runtime_activation: false`, and `selection_effect: proposal-only`.
+
+- [ ] **Step 4: Complete the JSON Schema mirror**
+
+Use JSON Schema 2020-12, closed-world objects, fixed boundary constants, explicit criterion variants, semantic-validator metadata, and non-claims for invocation, egress, execution, authority, learned routing, and hidden scoring.
+
+- [ ] **Step 5: Verify GREEN**
+
+Run focused tests and the full protected suite. No eligibility or provider/runtime test may be weakened.
+
+### Task 8: Review, verify, and integrate the exact head
+
+**Files:**
+- Review all changed files; add regression tests before any defect correction.
+
+- [ ] **Step 1: Review for determinism and authority leakage**
+
+Check for `localeCompare`, filesystem/network/subprocess imports, provider/runtime invocation, credential paths, hidden defaults, eligibility bypass, mutable nested evidence, and accidental winner semantics.
+
+- [ ] **Step 2: Run exact-head cross-platform verification**
+
+Require Clean Kernel full suite and signed assurance chain, Node 22, container deny-egress/segmentation/failure isolation, Windows, macOS ARM, and macOS Intel.
+
+- [ ] **Step 3: Merge only the verified head**
+
+Use the expected-head SHA guard. If the known ready-for-review connector mutation fails, close the draft without rewriting the branch and open a non-draft replacement from the same exact head.
+
+- [ ] **Step 4: Verify the resulting `main` merge commit**
+
+Require the post-merge Clean Kernel and Windows/macOS compatibility workflows to finish green before claiming integration complete.
