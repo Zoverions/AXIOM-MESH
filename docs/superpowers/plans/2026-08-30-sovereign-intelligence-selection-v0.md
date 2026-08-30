@@ -19,6 +19,7 @@
 - `network_effect` must remain `none`.
 - `credential_visibility` must remain `none`.
 - `runtime_activation` must remain `false`.
+- Eligibility contract `selection_effect` must remain `eligibility-only`; proposal output alone uses `proposal-only`.
 - Eligibility output order must be deterministic by `profile_id`.
 - Eligibility remains a hard filter. Later recommendation logic may rank only eligible profiles and must not widen eligibility.
 - Recommendation is not authorization: proposal output must retain `winner_selected: false`, `runtime_activation: false`, `authority_effect: none`, and `selection_effect: proposal-only`.
@@ -214,9 +215,9 @@ The module exports exist but proposal/validation functions throw `ValidationErro
 
 Tests cover valid policy validation, closed-world rejection, deterministic explicit preferences, eligibility dominance, all-rejected behavior, code-unit tie-breaking, non-mutation, deep immutability, and no effect-bearing imports.
 
-- [ ] **Step 4: Verify behavioral RED**
+- [x] **Step 4: Verify behavioral RED**
 
-Run protected Clean Kernel CI. Expected failures must come from the deliberately unimplemented policy/proposal functions, not documentation or infrastructure drift.
+Protected Clean Kernel observed 1,757 tests with 1,748 passing and 8 failures, all confined to the deliberately unimplemented policy/proposal behavior; documentation governance and the existing Mesh suite remained intact.
 
 ### Task 7: Implement deterministic recommendation evidence
 
@@ -228,19 +229,19 @@ Run protected Clean Kernel CI. Expected failures must come from the deliberately
 - Policy fields: `schema`, `version`, `status`, `policy_id`, `criteria`, `created_at`, plus fixed non-authority boundaries.
 - Criterion fields supported in v0: `integration_class`, `deployment.locality`, `deployment.access_mode`, `data_policy.retention`, `data_policy.training_use`, `data_policy.exportability`, `economics.cost_class`, `economics.latency_class`, `economics.context_class`, `openness.weight_access`, `assurance.ceiling`.
 
-- [ ] **Step 1: Implement strict policy validation**
+- [x] **Step 1: Implement strict policy validation**
 
 Each criterion must use a complete unique permutation of the closed enum for that field. Duplicate criterion fields, unknown fields, partial preference sets, invalid canonical timestamps, and boundary widening throw `ValidationError`.
 
-- [ ] **Step 2: Rank only candidates returned as eligible**
+- [x] **Step 2: Rank only candidates returned as eligible**
 
 Call `evaluateCognitiveCandidates(candidates, request)` first. Map only `eligibility.eligible` IDs back to candidate profiles. Compare policy criteria in listed order; first unequal preference position decides. If all criteria tie, compare `profile_id` with raw `<`/`>` code-unit order.
 
-- [ ] **Step 3: Emit a frozen inert proposal report**
+- [x] **Step 3: Emit a frozen inert proposal report**
 
 The report must include request/policy/eligibility digests, ranked candidate evidence, nullable recommendation identity/digest, `winner_selected: false`, `requires_gateway_authorization: true`, `execution_effect: none`, `authority_effect: none`, `network_effect: none`, `credential_visibility: none`, `runtime_activation: false`, and `selection_effect: proposal-only`.
 
-- [ ] **Step 4: Complete the JSON Schema mirror**
+- [x] **Step 4: Complete the JSON Schema mirror**
 
 Use JSON Schema 2020-12, closed-world objects, fixed boundary constants, explicit criterion variants, semantic-validator metadata, and non-claims for invocation, egress, execution, authority, learned routing, and hidden scoring.
 
