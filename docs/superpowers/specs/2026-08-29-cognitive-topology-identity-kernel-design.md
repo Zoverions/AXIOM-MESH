@@ -1,6 +1,6 @@
 # Cognitive Topology, Persistent Augmentation, and Identity Kernel — Design
 
-**Status:** approved architectural extension; first executable slice remains inert and zero-authority
+**Status:** approved architectural extension; Cognitive Topology v0 and the first cognitive-sovereignty evidence slice are implemented as inert, zero-authority contracts
 
 **Date:** 2026-08-29
 
@@ -16,7 +16,7 @@
 - `mesh/src/lib/self-bundle-index.mjs`
 - `mesh/src/lib/continuity-report.mjs`
 
-**Authority boundary:** `mesh/config/capabilities.json` remains authoritative. This design does not activate models, grant authority, expose credentials, execute adaptation, perform network effects, or claim subjective identity continuity.
+**Authority boundary:** `mesh/config/capabilities.json` remains authoritative. This design and its current executable evidence contracts do not activate models, grant authority, expose credentials, execute adaptation, perform network effects, download/acquire weights, synchronize provider persistence, prove AXIOM principal continuity, or claim subjective identity continuity.
 
 ## 1. Core decision
 
@@ -74,7 +74,9 @@ At minimum, the architecture distinguishes:
 3. **portable-state continuity** — expected portable artifacts remain available and verifiable;
 4. **semantic continuity** — required self/belief/relationship state remains accounted for;
 5. **composition continuity** — the declared runtime/model composition is unchanged or intentionally revised;
-6. **cognitive fidelity** — the currently available cognitive components still reproduce the capabilities and characteristic behavior the agent expects from itself.
+6. **cognitive continuity** — declared cognitive dependencies remain available according to their continuity importance;
+7. **cognitive fidelity** — the currently available cognitive components still reproduce the capabilities and characteristic behavior the agent expects from itself;
+8. **cognitive sovereignty** — the current cognitive dependencies are owner-controlled, provider-dependent, shared, mirrored, or not yet sufficiently verified.
 
 A model can therefore be `critical` to cognitive fidelity without being the principal identity root.
 
@@ -82,7 +84,9 @@ A recovery may truthfully report:
 
 > Principal and lineage continuity are intact, but cognitive fidelity is degraded because a previously primary provider/model is unavailable.
 
-That is preferable to either claiming nothing changed or claiming the agent ceased to exist.
+The current Cognitive Continuity Report cannot itself establish the first clause. That claim must come from the existing principal/Self Bundle continuity evidence. The cognitive report can establish only its own evidence-relative cognitive continuity, fidelity, and sovereignty posture.
+
+That separation is preferable to either claiming nothing changed or claiming the agent ceased to exist.
 
 ## 5. Cognitive Topology v0
 
@@ -337,11 +341,13 @@ A router may choose **who thinks about a task**. It does not thereby choose **wh
 
 Future routing policies may become learned artifacts, but v0 records only topology relationships and policy references. It does not implement automatic model selection.
 
-## 13. Cognitive Topology v0 executable boundary
+## 13. Current executable evidence boundary
 
-The first executable slice is deliberately small.
+The current executable boundary is deliberately evidence-only and consists of four separable pieces.
 
-It will provide:
+### 13.1 Cognitive Topology v0
+
+The topology layer provides:
 
 - `COGNITIVE_TOPOLOGY_SCHEMA = 'axiom-cognitive-topology.v0'`;
 - strict fail-closed validation;
@@ -350,16 +356,58 @@ It will provide:
 - a pure resolver that binds topology to an exact Agent Composition and verifies every `model_id` exists;
 - a deterministic dependency summary for inspection/testing.
 
-It will not provide:
+### 13.2 Model Acquisition Manifest v0
+
+`axiom-model-acquisition-manifest.v0` records evidence that an owner-addressable weight artifact declared by the topology was acquired into owner custody. It binds:
+
+- exact topology identifier and digest;
+- exact node and model;
+- artifact reference and digest;
+- declared licence reference and format reference;
+- source provenance/evidence reference and digest;
+- owner custody mode, opaque location reference, and verification evidence;
+- acquisition and recording timestamps.
+
+The resolver accepts only topology states that already declare owner-addressable acquired weights and requires the manifest to match the exact topology artifact/licence/custody facts. It does not download, copy, verify remotely, or activate the model.
+
+### 13.3 Persistence Attestation v0
+
+`axiom-persistence-attestation.v0` records a bounded observation of persistence declared by one topology node. It binds:
+
+- exact topology identifier and digest;
+- exact node and model;
+- the exact declared persistence descriptor;
+- observed availability;
+- observed exportability;
+- optional snapshot reference/digest when the observation says a snapshot is available;
+- evidence kind/reference/digest and observation timestamps.
+
+Provider statements remain evidence, not reachability proof. Local, provider-bound, and mirrored persistence remain distinguishable. The attestation does not synchronize, export, restore, query, or mutate persistence.
+
+### 13.4 Cognitive Continuity Report v0
+
+`axiom-cognitive-continuity-report.v0` consumes the topology plus model observations, acquisition manifests, and persistence attestations and derives three explicitly separate evidence-relative outputs:
+
+- **cognitive continuity status** — `full`, `degraded`, or `blocked` according to declared continuity importance and observed dependency availability;
+- **cognitive fidelity status** — `full`, `degraded`, or `blocked` according to declared fidelity importance and observed dependency availability;
+- **sovereignty status** — owner-controlled, provider-dependent, mixed, or unverified posture derived from custody/acquisition/persistence evidence.
+
+Unknown important/critical availability degrades rather than silently passing. Critical unavailable dependencies can block the relevant cognitive axis. Optional loss remains visible without automatically degrading the aggregate axis. Owner-acquired artifacts require acquisition evidence plus an exact observed artifact digest before the report calls them verified owner artifacts.
+
+The report explicitly states that it does **not** prove principal continuity or subjective identity. Those remain outside this cognitive evidence layer and must be evaluated through their own AXIOM identity/lineage contracts.
+
+### 13.5 What remains outside the boundary
+
+The current executable evidence layer does not provide:
 
 - model invocation;
-- provider API calls;
+- provider API calls or reachability checks;
 - runtime loading;
-- routing;
-- persistence synchronization;
+- automatic cognitive routing;
+- persistence synchronization/export/restore;
 - weight acquisition/download;
-- model adaptation/training;
-- continuity-threshold decisions;
+- model adaptation/training/distillation;
+- autonomous continuity-triggered transition decisions;
 - self-revision activation;
 - network effects;
 - credential/session access;
@@ -376,22 +424,26 @@ It will not provide:
 7. `open-acquired` and `local-proprietary` require an exact artifact digest; other weight states require the digest to be `null`.
 8. Provider-bound/mirrored persistence requires an explicit persistence provider identifier and state reference; `none`/`local` persistence forbids a persistence provider identifier.
 9. An `identity-kernel` node cannot be `ephemeral`.
-10. `authority_effect`, `network_effect`, and `runtime_activation` are exactly `none`, `none`, and `false`.
+10. `authority_effect`, `network_effect`, and `runtime_activation` are exactly `none`, `none`, and `false` wherever those contract fields exist.
 11. A topology digest is evidence of an exact declaration, not evidence that the declared model/persistence exists or is reachable.
 12. A resolver summary is descriptive only and cannot alter composition, authority, capability, trust, or runtime state.
+13. Acquisition evidence cannot convert provider-controlled or merely remote weights into owner custody; the topology must already declare the owner-addressable acquired state and the evidence must exactly match it.
+14. Persistence evidence cannot turn a provider statement into a provider-reachability, semantic-equivalence, or synchronization claim.
+15. A cognitive continuity/fidelity report cannot prove AXIOM principal continuity, lineage continuity, or subjective identity.
+16. Cognitive continuity, cognitive fidelity, and cognitive sovereignty remain separate report dimensions; failure on one dimension cannot be silently rewritten as another.
+17. Evidence/report status can describe degradation or blockers but cannot itself authorize a model substitution, persistence migration, adaptation, or runtime effect.
 
-## 15. Future slices
+## 15. Next separable slices
 
-After v0 is verified, separable future work may add:
+With the v0 topology plus acquisition/persistence/report evidence layer implemented, future work may add:
 
-- topology-aware continuity/fidelity reporting;
-- explicit provider-persistence attestations;
-- owner-controlled model acquisition manifests;
 - model lineage/descendant artifacts;
 - learned routing-policy artifacts;
 - shadow/canary identity-kernel adaptation;
 - provider retirement/migration drills;
 - multi-persistence reconciliation reports;
+- independently verified provider/local availability observers;
+- evaluation artifacts that compare replacement cognitive fidelity without collapsing them into identity proofs;
 - Axiom One visualization of cognitive dependencies and sovereignty posture.
 
 Each future slice requires its own authority/threat review before activation.
@@ -406,7 +458,8 @@ The user should eventually be able to inspect an agent and answer:
 - Which weights are owned, open but not acquired, or closed?
 - What would be lost if a provider disappeared?
 - What can be reconstructed from the sovereign recovery set?
-- Which components affect identity continuity versus cognitive fidelity?
+- Which components affect principal/lineage continuity versus cognitive continuity or fidelity?
+- Which sovereignty claims are verified, provider-dependent, shared, mirrored, or still unverified?
 - What has changed through adaptation, and can it be rolled back?
 
 The intended end state is **progressive cognitive sovereignty without forced architectural uniformity**.
