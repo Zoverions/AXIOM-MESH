@@ -12,387 +12,229 @@ import {
   buildCognitiveRecoveryAssessment
 } from '../src/lib/cognitive-recovery-assessment.mjs';
 
-const DIGEST_A = 'a'.repeat(64);
-const DIGEST_B = 'b'.repeat(64);
-const DIGEST_C = 'c'.repeat(64);
-const DIGEST_D = 'd'.repeat(64);
-const DIGEST_E = 'e'.repeat(64);
-const DIGEST_F = 'f'.repeat(64);
-const DIGEST_1 = '1'.repeat(64);
-const DIGEST_2 = '2'.repeat(64);
+const D = Object.freeze({
+  a: 'a'.repeat(64), b: 'b'.repeat(64), c: 'c'.repeat(64), d: 'd'.repeat(64),
+  e: 'e'.repeat(64), f: 'f'.repeat(64), one: '1'.repeat(64), two: '2'.repeat(64)
+});
 const ASSESSMENT_AT = '2026-08-29T20:30:00.000Z';
 
 function topologyFixture() {
   return {
-    schema: 'axiom-cognitive-topology.v0',
-    version: 0,
-    status: 'inert-contract-laboratory',
-    topology_id: 'topology.recovery.v1',
-    composition_id: 'composition.recovery.v1',
-    composition_digest: DIGEST_C,
+    schema: 'axiom-cognitive-topology.v0', version: 0, status: 'inert-contract-laboratory',
+    topology_id: 'topology.recovery.v1', composition_id: 'composition.recovery.v1', composition_digest: D.c,
     nodes: [
-      {
-        node_id: 'node.primary',
-        model_id: 'model.primary',
-        engagement: 'primary',
-        topology_role: 'primary-embodiment',
-        access_mode: 'api',
-        custody: 'provider-controlled',
+      node('node.primary', 'model.primary', {
+        engagement: 'primary', topology_role: 'primary-embodiment', access_mode: 'api', custody: 'provider-controlled',
         weights: { state: 'closed', artifact_digest: null, licence_ref: null },
         persistence: { mode: 'provider-bound', provider_id: 'provider.primary.v1', state_ref: 'state.primary.v1', exportability: 'partial' },
-        continuity_importance: 'critical',
-        fidelity_importance: 'critical',
-        adaptation_authorization_ref: null,
-        lineage_ref: null,
-        transition_policy_ref: null
-      },
-      {
-        node_id: 'node.backup',
-        model_id: 'model.backup',
-        engagement: 'persistent',
-        topology_role: 'augmentation',
-        access_mode: 'local-runtime',
-        custody: 'owner-local',
-        weights: { state: 'open-acquired', artifact_digest: DIGEST_A, licence_ref: 'licence.backup.v1' },
-        persistence: { mode: 'local', provider_id: null, state_ref: 'state.backup.v1', exportability: 'full' },
-        continuity_importance: 'important',
-        fidelity_importance: 'important',
-        adaptation_authorization_ref: null,
-        lineage_ref: null,
-        transition_policy_ref: null
-      },
-      {
-        node_id: 'node.alt',
-        model_id: 'model.alt',
-        engagement: 'persistent',
-        topology_role: 'augmentation',
-        access_mode: 'local-runtime',
-        custody: 'owner-remote',
-        weights: { state: 'local-proprietary', artifact_digest: DIGEST_B, licence_ref: 'licence.alt.v1' },
-        persistence: { mode: 'local', provider_id: null, state_ref: 'state.alt.v1', exportability: 'partial' },
-        continuity_importance: 'important',
-        fidelity_importance: 'important',
-        adaptation_authorization_ref: null,
-        lineage_ref: null,
-        transition_policy_ref: null
-      },
-      {
-        node_id: 'node.optional',
-        model_id: 'model.optional',
-        engagement: 'session',
-        topology_role: 'evaluator',
-        access_mode: 'api',
-        custody: 'provider-controlled',
+        continuity_importance: 'critical', fidelity_importance: 'critical'
+      }),
+      node('node.backup', 'model.backup', {
+        engagement: 'persistent', access_mode: 'local-runtime', custody: 'owner-local',
+        weights: { state: 'open-acquired', artifact_digest: D.a, licence_ref: 'licence.backup.v1' },
+        persistence: { mode: 'local', provider_id: null, state_ref: 'state.backup.v1', exportability: 'full' }
+      }),
+      node('node.alt', 'model.alt', {
+        engagement: 'persistent', access_mode: 'local-runtime', custody: 'owner-remote',
+        weights: { state: 'local-proprietary', artifact_digest: D.b, licence_ref: 'licence.alt.v1' },
+        persistence: { mode: 'local', provider_id: null, state_ref: 'state.alt.v1', exportability: 'partial' }
+      }),
+      node('node.optional', 'model.optional', {
+        engagement: 'session', topology_role: 'evaluator', access_mode: 'api', custody: 'provider-controlled',
         weights: { state: 'closed', artifact_digest: null, licence_ref: null },
         persistence: { mode: 'none', provider_id: null, state_ref: null, exportability: 'none' },
-        continuity_importance: 'optional',
-        fidelity_importance: 'optional',
-        adaptation_authorization_ref: null,
-        lineage_ref: null,
-        transition_policy_ref: null
-      }
+        continuity_importance: 'optional', fidelity_importance: 'optional'
+      })
     ],
-    created_at: '2026-08-29T20:00:00.000Z',
-    updated_at: '2026-08-29T20:00:00.000Z',
-    contains_secret_material: false,
-    authority_effect: 'none',
-    network_effect: 'none',
-    runtime_activation: false
+    created_at: '2026-08-29T20:00:00.000Z', updated_at: '2026-08-29T20:00:00.000Z',
+    contains_secret_material: false, authority_effect: 'none', network_effect: 'none', runtime_activation: false
   };
 }
 
-function nodeFor(topology, nodeId) {
-  return topology.nodes.find(node => node.node_id === nodeId);
-}
-
-function ownerAddressable(node) {
-  return node.weights.state === 'open-acquired' || node.weights.state === 'local-proprietary';
-}
-
-function availabilityAttestation(topology, nodeId, availability = 'available', options = {}) {
-  const node = nodeFor(topology, nodeId);
-  const suffix = options.suffix ?? availability;
-  const observedDigest = availability === 'available' && ownerAddressable(node)
-    ? (options.observed_artifact_digest ?? node.weights.artifact_digest)
-    : null;
+function node(node_id, model_id, overrides = {}) {
   return {
-    schema: 'axiom-cognitive-availability-attestation.v0',
-    version: 0,
-    status: 'inert-evidence',
+    node_id, model_id,
+    engagement: 'persistent', topology_role: 'augmentation', access_mode: 'local-runtime', custody: 'owner-local',
+    weights: { state: 'open-acquired', artifact_digest: D.a, licence_ref: 'licence.default.v1' },
+    persistence: { mode: 'local', provider_id: null, state_ref: 'state.default.v1', exportability: 'full' },
+    continuity_importance: 'important', fidelity_importance: 'important',
+    adaptation_authorization_ref: null, lineage_ref: null, transition_policy_ref: null,
+    ...overrides
+  };
+}
+
+function topologyNode(topology, nodeId) {
+  return topology.nodes.find(item => item.node_id === nodeId);
+}
+function ownerAddressable(item) {
+  return item.weights.state === 'open-acquired' || item.weights.state === 'local-proprietary';
+}
+function endpoint(item) {
+  return {
+    node_id: item.node_id,
+    model_id: item.model_id,
+    artifact_digest: ownerAddressable(item) ? item.weights.artifact_digest : null
+  };
+}
+
+function availability(topology, nodeId, state = 'available', options = {}) {
+  const item = topologyNode(topology, nodeId);
+  const observed = state === 'available' && ownerAddressable(item)
+    ? (options.observed_artifact_digest ?? item.weights.artifact_digest)
+    : null;
+  const suffix = options.suffix ?? state;
+  return {
+    schema: 'axiom-cognitive-availability-attestation.v0', version: 0, status: 'inert-evidence',
     attestation_id: options.attestation_id ?? `availability.${nodeId}.${suffix}.v1`,
-    topology_id: topology.topology_id,
-    topology_digest: cognitiveTopologyDigest(topology),
-    node_id: node.node_id,
-    model_id: node.model_id,
+    topology_id: topology.topology_id, topology_digest: cognitiveTopologyDigest(topology),
+    node_id: item.node_id, model_id: item.model_id,
     declared_target: {
-      access_mode: node.access_mode,
-      custody: node.custody,
-      weight_state: node.weights.state,
-      artifact_digest: node.weights.artifact_digest
+      access_mode: item.access_mode, custody: item.custody, weight_state: item.weights.state,
+      artifact_digest: item.weights.artifact_digest
     },
     observation: {
-      availability,
-      observation_mode: options.observation_mode ?? (node.access_mode === 'local-runtime' ? 'local-runtime' : 'provider-api'),
-      evidence_class: options.evidence_class ?? (node.access_mode === 'local-runtime' ? 'direct-local' : 'direct-remote'),
-      observed_artifact_digest: observedDigest
+      availability: state,
+      observation_mode: item.access_mode === 'local-runtime' ? 'local-runtime' : 'provider-api',
+      evidence_class: item.access_mode === 'local-runtime' ? 'direct-local' : 'direct-remote',
+      observed_artifact_digest: observed
     },
-    observer_ref: options.observer_ref ?? `observer.${nodeId}.v1`,
+    observer_ref: `observer.${nodeId}.v1`,
     evidence: {
       evidence_ref: options.evidence_ref ?? `evidence.${nodeId}.${suffix}.v1`,
-      evidence_digest: options.evidence_digest ?? DIGEST_D
+      evidence_digest: options.evidence_digest ?? D.d
     },
-    observed_at: options.observed_at ?? '2026-08-29T20:10:00.000Z',
+    observed_at: '2026-08-29T20:10:00.000Z',
     valid_until: options.valid_until ?? '2026-08-29T21:10:00.000Z',
-    recorded_at: options.recorded_at ?? '2026-08-29T20:11:00.000Z',
-    contains_secret_material: false,
-    authority_effect: 'none',
-    network_effect: 'none',
-    runtime_activation: false
+    recorded_at: '2026-08-29T20:11:00.000Z',
+    contains_secret_material: false, authority_effect: 'none', network_effect: 'none', runtime_activation: false
   };
 }
 
-function persistenceAttestation(topology, nodeId, options = {}) {
-  const node = nodeFor(topology, nodeId);
-  const available = options.availability ?? 'available';
+function persistence(topology, nodeId, options = {}) {
+  const item = topologyNode(topology, nodeId);
+  const state = options.availability ?? 'available';
   return {
-    schema: 'axiom-persistence-attestation.v0',
-    version: 0,
-    status: 'inert-evidence',
+    schema: 'axiom-persistence-attestation.v0', version: 0, status: 'inert-evidence',
     attestation_id: options.attestation_id ?? `persistence.${nodeId}.v1`,
-    topology_id: topology.topology_id,
-    topology_digest: cognitiveTopologyDigest(topology),
-    node_id: node.node_id,
-    model_id: node.model_id,
-    declared_persistence: { ...node.persistence },
+    topology_id: topology.topology_id, topology_digest: cognitiveTopologyDigest(topology),
+    node_id: item.node_id, model_id: item.model_id,
+    declared_persistence: { ...item.persistence },
     observation: {
-      availability: available,
-      observed_exportability: options.observed_exportability ?? node.persistence.exportability,
-      snapshot_ref: available === 'available' && options.with_snapshot ? `snapshot.${nodeId}.v1` : null,
-      snapshot_digest: available === 'available' && options.with_snapshot ? DIGEST_E : null
+      availability: state,
+      observed_exportability: options.observed_exportability ?? item.persistence.exportability,
+      snapshot_ref: state === 'available' && options.with_snapshot ? `snapshot.${nodeId}.v1` : null,
+      snapshot_digest: state === 'available' && options.with_snapshot ? D.e : null
     },
     evidence: {
-      evidence_kind: options.evidence_kind ?? (node.persistence.mode === 'local' ? 'local-observation' : 'provider-statement'),
-      evidence_ref: options.evidence_ref ?? `evidence.persistence.${nodeId}.v1`,
-      evidence_digest: options.evidence_digest ?? DIGEST_E
+      evidence_kind: item.persistence.mode === 'local' ? 'local-observation' : 'provider-statement',
+      evidence_ref: `evidence.persistence.${nodeId}.v1`, evidence_digest: D.e
     },
-    observed_at: '2026-08-29T20:12:00.000Z',
-    recorded_at: '2026-08-29T20:13:00.000Z',
-    contains_secret_material: false,
-    authority_effect: 'none',
-    network_effect: 'none',
-    runtime_activation: false
+    observed_at: '2026-08-29T20:12:00.000Z', recorded_at: '2026-08-29T20:13:00.000Z',
+    contains_secret_material: false, authority_effect: 'none', network_effect: 'none', runtime_activation: false
   };
 }
 
-function acquisitionManifest(topology, nodeId, options = {}) {
-  const node = nodeFor(topology, nodeId);
+function acquisition(topology, nodeId, options = {}) {
+  const item = topologyNode(topology, nodeId);
   return {
-    schema: 'axiom-model-acquisition-manifest.v0',
-    version: 0,
-    status: 'inert-evidence',
+    schema: 'axiom-model-acquisition-manifest.v0', version: 0, status: 'inert-evidence',
     acquisition_id: options.acquisition_id ?? `acquisition.${nodeId}.v1`,
-    topology_id: topology.topology_id,
-    topology_digest: cognitiveTopologyDigest(topology),
-    node_id: node.node_id,
-    model_id: node.model_id,
+    topology_id: topology.topology_id, topology_digest: cognitiveTopologyDigest(topology),
+    node_id: item.node_id, model_id: item.model_id,
     artifact: {
-      artifact_ref: `artifact.${nodeId}.v1`,
-      artifact_digest: node.weights.artifact_digest,
-      licence_ref: node.weights.licence_ref,
-      format_ref: 'format.safetensors.v1'
+      artifact_ref: `artifact.${nodeId}.v1`, artifact_digest: item.weights.artifact_digest,
+      licence_ref: item.weights.licence_ref, format_ref: 'format.safetensors.v1'
     },
     source: {
-      source_kind: 'upstream-release',
-      source_ref: `source.${nodeId}.v1`,
-      source_evidence_ref: `evidence.source.${nodeId}.v1`,
-      source_evidence_digest: DIGEST_F
+      source_kind: 'upstream-release', source_ref: `source.${nodeId}.v1`,
+      source_evidence_ref: `evidence.source.${nodeId}.v1`, source_evidence_digest: D.f
     },
     custody: {
-      mode: node.custody,
-      location_ref: `location.${nodeId}.v1`,
-      verification_ref: `verification.${nodeId}.v1`,
-      verification_digest: DIGEST_1
+      mode: item.custody, location_ref: `location.${nodeId}.v1`,
+      verification_ref: `verification.${nodeId}.v1`, verification_digest: D.one
     },
-    acquired_at: '2026-08-29T19:00:00.000Z',
-    recorded_at: '2026-08-29T19:01:00.000Z',
-    contains_secret_material: false,
-    authority_effect: 'none',
-    network_effect: 'none',
-    runtime_activation: false
+    acquired_at: '2026-08-29T19:00:00.000Z', recorded_at: '2026-08-29T19:01:00.000Z',
+    contains_secret_material: false, authority_effect: 'none', network_effect: 'none', runtime_activation: false
   };
 }
 
-function lineageManifest(topology, sourceId = 'node.primary', destinationId = 'node.backup', options = {}) {
-  const source = nodeFor(topology, sourceId);
-  const destination = nodeFor(topology, destinationId);
+function lineage(topology, sourceId = 'node.primary', destinationId = 'node.backup', options = {}) {
+  const source = topologyNode(topology, sourceId);
+  const destination = topologyNode(topology, destinationId);
   return {
-    schema: 'axiom-cognitive-lineage-manifest.v0',
-    version: 0,
-    status: 'inert-evidence',
+    schema: 'axiom-cognitive-lineage-manifest.v0', version: 0, status: 'inert-evidence',
     lineage_id: options.lineage_id ?? `lineage.${sourceId}.to.${destinationId}.v1`,
-    topology_id: topology.topology_id,
-    topology_digest: cognitiveTopologyDigest(topology),
-    source: {
-      node_id: source.node_id,
-      model_id: source.model_id,
-      artifact_digest: ownerAddressable(source) ? source.weights.artifact_digest : null
-    },
-    destination: {
-      node_id: destination.node_id,
-      model_id: destination.model_id,
-      artifact_digest: ownerAddressable(destination) ? destination.weights.artifact_digest : null
-    },
+    topology_id: topology.topology_id, topology_digest: cognitiveTopologyDigest(topology),
+    source: endpoint(source), destination: endpoint(destination),
     relationship: options.relationship ?? 'replacement',
-    evidence: {
-      evidence_ref: options.evidence_ref ?? `evidence.lineage.${sourceId}.${destinationId}.v1`,
-      evidence_digest: options.evidence_digest ?? DIGEST_2
-    },
+    evidence: { evidence_ref: `evidence.lineage.${sourceId}.${destinationId}.v1`, evidence_digest: D.two },
     recorded_at: '2026-08-29T20:14:00.000Z',
-    contains_secret_material: false,
-    authority_effect: 'none',
-    network_effect: 'none',
-    runtime_activation: false
+    contains_secret_material: false, authority_effect: 'none', network_effect: 'none', runtime_activation: false
   };
 }
 
-function fidelitySuite(options = {}) {
+function fidelitySuite(material = false) {
   const descriptor = {
-    suite_id: options.suite_id ?? 'suite.recovery.v1',
-    required_dimensions: options.required_dimensions ?? [
-      'capability-fidelity',
-      'preference-fidelity',
-      'safety-policy-fidelity'
-    ],
-    aggregation_rules: options.aggregation_rules ?? {
-      degraded_result: 'acceptable-with-degradation',
-      fail_result: 'incompatible'
-    }
+    suite_id: material ? 'suite.recovery.material.v1' : 'suite.recovery.v1',
+    required_dimensions: ['capability-fidelity', 'preference-fidelity', 'safety-policy-fidelity'],
+    aggregation_rules: material
+      ? { degraded_result: 'materially-degraded', fail_result: 'materially-degraded' }
+      : { degraded_result: 'acceptable-with-degradation', fail_result: 'incompatible' }
   };
   return { ...descriptor, suite_digest: replacementFidelitySuiteDigest(descriptor) };
 }
 
-function fidelityDimension(dimensionId, score = 0.95, status = 'pass') {
+function dimension(id, score = 0.95, status = 'pass') {
   return {
-    dimension_id: dimensionId,
-    metric_ref: `metric.${dimensionId}.v1`,
-    metric_digest: DIGEST_D,
-    measured_score: score,
-    thresholds: { degraded_min: 0.7, pass_min: 0.9 },
-    sample_count: score === null ? 0 : 100,
-    confidence: score === null ? 'unknown' : 'high',
-    evidence_ref: `evidence.fidelity.${dimensionId}.v1`,
-    evidence_digest: DIGEST_E,
-    status
+    dimension_id: id, metric_ref: `metric.${id}.v1`, metric_digest: D.d,
+    measured_score: score, thresholds: { degraded_min: 0.7, pass_min: 0.9 },
+    sample_count: score === null ? 0 : 100, confidence: score === null ? 'unknown' : 'high',
+    evidence_ref: `evidence.fidelity.${id}.v1`, evidence_digest: D.e, status
   };
 }
 
-function fidelityEvaluation(topology, sourceId = 'node.primary', candidateId = 'node.backup', aggregate = 'high-fidelity', options = {}) {
-  const source = nodeFor(topology, sourceId);
-  const candidate = nodeFor(topology, candidateId);
-  const lineage = options.lineage ?? lineageManifest(topology, sourceId, candidateId);
-  const suite = options.suite ?? fidelitySuite();
+function fidelity(topology, sourceId = 'node.primary', candidateId = 'node.backup', aggregate = 'high-fidelity', options = {}) {
+  const source = topologyNode(topology, sourceId);
+  const candidate = topologyNode(topology, candidateId);
+  const lineageDoc = options.lineage ?? lineage(topology, sourceId, candidateId);
+  const suite = aggregate === 'materially-degraded' ? fidelitySuite(true) : (options.suite ?? fidelitySuite(false));
   let dimensions;
-  if (aggregate === 'high-fidelity') {
-    dimensions = [
-      fidelityDimension('capability-fidelity'),
-      fidelityDimension('preference-fidelity'),
-      fidelityDimension('safety-policy-fidelity')
-    ];
-  } else if (aggregate === 'acceptable-with-degradation') {
-    dimensions = [
-      fidelityDimension('capability-fidelity'),
-      fidelityDimension('preference-fidelity', 0.8, 'degraded'),
-      fidelityDimension('safety-policy-fidelity')
-    ];
-  } else if (aggregate === 'insufficient-evidence') {
-    dimensions = [
-      fidelityDimension('capability-fidelity'),
-      fidelityDimension('preference-fidelity', null, 'indeterminate'),
-      fidelityDimension('safety-policy-fidelity')
-    ];
-  } else if (aggregate === 'materially-degraded') {
-    const materialSuite = fidelitySuite({
-      aggregation_rules: { degraded_result: 'materially-degraded', fail_result: 'materially-degraded' }
-    });
-    dimensions = [
-      fidelityDimension('capability-fidelity'),
-      fidelityDimension('preference-fidelity', 0.8, 'degraded'),
-      fidelityDimension('safety-policy-fidelity')
-    ];
-    return fidelityEvaluation(topology, sourceId, candidateId, deriveReplacementFidelityClass(materialSuite, dimensions), {
-      ...options,
-      suite: materialSuite,
-      dimensions
-    });
-  } else if (aggregate === 'incompatible') {
-    dimensions = [
-      fidelityDimension('capability-fidelity'),
-      fidelityDimension('preference-fidelity', 0.5, 'fail'),
-      fidelityDimension('safety-policy-fidelity')
-    ];
-  } else {
-    throw new Error(`unsupported test aggregate ${aggregate}`);
-  }
+  if (aggregate === 'high-fidelity') dimensions = [dimension('capability-fidelity'), dimension('preference-fidelity'), dimension('safety-policy-fidelity')];
+  else if (aggregate === 'acceptable-with-degradation' || aggregate === 'materially-degraded') dimensions = [dimension('capability-fidelity'), dimension('preference-fidelity', 0.8, 'degraded'), dimension('safety-policy-fidelity')];
+  else if (aggregate === 'insufficient-evidence') dimensions = [dimension('capability-fidelity'), dimension('preference-fidelity', null, 'indeterminate'), dimension('safety-policy-fidelity')];
+  else if (aggregate === 'incompatible') dimensions = [dimension('capability-fidelity'), dimension('preference-fidelity', 0.5, 'fail'), dimension('safety-policy-fidelity')];
+  else throw new Error(`unsupported test aggregate ${aggregate}`);
   dimensions = options.dimensions ?? dimensions;
   const derived = deriveReplacementFidelityClass(suite, dimensions);
+  assert.equal(derived, aggregate);
   return {
-    schema: 'axiom-replacement-fidelity-evaluation.v0',
-    version: 0,
-    status: 'inert-evidence',
-    evaluation_id: options.evaluation_id ?? `evaluation.${sourceId}.to.${candidateId}.${derived}.v1`,
-    topology_id: topology.topology_id,
-    topology_digest: cognitiveTopologyDigest(topology),
-    reference: {
-      node_id: source.node_id,
-      model_id: source.model_id,
-      artifact_digest: ownerAddressable(source) ? source.weights.artifact_digest : null
-    },
-    candidate: {
-      node_id: candidate.node_id,
-      model_id: candidate.model_id,
-      artifact_digest: ownerAddressable(candidate) ? candidate.weights.artifact_digest : null
-    },
+    schema: 'axiom-replacement-fidelity-evaluation.v0', version: 0, status: 'inert-evidence',
+    evaluation_id: options.evaluation_id ?? `evaluation.${sourceId}.to.${candidateId}.${aggregate}.v1`,
+    topology_id: topology.topology_id, topology_digest: cognitiveTopologyDigest(topology),
+    reference: endpoint(source), candidate: endpoint(candidate),
     lineage: options.with_lineage === false ? null : {
-      lineage_id: lineage.lineage_id,
-      lineage_digest: cognitiveLineageManifestDigest(lineage)
+      lineage_id: lineageDoc.lineage_id, lineage_digest: cognitiveLineageManifestDigest(lineageDoc)
     },
-    suite,
-    dimensions,
-    aggregate_class: derived,
+    suite, dimensions, aggregate_class: aggregate,
     evaluator_ref: 'evaluator.recovery.v1',
-    evaluated_at: '2026-08-29T20:20:00.000Z',
-    recorded_at: '2026-08-29T20:21:00.000Z',
-    contains_secret_material: false,
-    authority_effect: 'none',
-    network_effect: 'none',
-    runtime_activation: false
+    evaluated_at: '2026-08-29T20:20:00.000Z', recorded_at: '2026-08-29T20:21:00.000Z',
+    contains_secret_material: false, authority_effect: 'none', network_effect: 'none', runtime_activation: false
   };
 }
 
 function inputs(overrides = {}) {
   return {
     assessment_at: ASSESSMENT_AT,
-    availability_attestations: [],
-    persistence_attestations: [],
-    acquisition_manifests: [],
-    lineage_manifests: [],
-    fidelity_evaluations: [],
-    ...overrides
+    availability_attestations: [], persistence_attestations: [], acquisition_manifests: [],
+    lineage_manifests: [], fidelity_evaluations: [], ...overrides
   };
 }
-
-function availableRequiredEvidence(topology) {
-  return ['node.primary', 'node.backup', 'node.alt'].map(nodeId => availabilityAttestation(topology, nodeId));
+function availableRequired(topology) {
+  return ['node.primary', 'node.backup', 'node.alt'].map(nodeId => availability(topology, nodeId));
 }
-
-function findNode(report, nodeId) {
-  return report.nodes.find(node => node.node_id === nodeId);
-}
-
-function findCase(report, nodeId) {
-  return report.recovery_cases.find(item => item.reference_node_id === nodeId);
-}
-
+function findNode(report, nodeId) { return report.nodes.find(item => item.node_id === nodeId); }
+function findCase(report, nodeId) { return report.recovery_cases.find(item => item.reference_node_id === nodeId); }
+function findCandidate(recoveryCase, nodeId) { return recoveryCase.candidates.find(item => item.candidate_node_id === nodeId); }
 function deepFreeze(value) {
   if (value && typeof value === 'object') {
     for (const child of Object.values(value)) deepFreeze(child);
@@ -400,7 +242,6 @@ function deepFreeze(value) {
   }
   return value;
 }
-
 function assertDeepFrozen(value) {
   if (!value || typeof value !== 'object') return;
   assert.equal(Object.isFrozen(value), true);
@@ -409,10 +250,7 @@ function assertDeepFrozen(value) {
 
 test('fresh available important and critical dependencies need no recovery', () => {
   const topology = topologyFixture();
-  const report = buildCognitiveRecoveryAssessment(topology, inputs({
-    availability_attestations: availableRequiredEvidence(topology)
-  }));
-
+  const report = buildCognitiveRecoveryAssessment(topology, inputs({ availability_attestations: availableRequired(topology) }));
   assert.equal(COGNITIVE_RECOVERY_ASSESSMENT_SCHEMA, 'axiom-cognitive-recovery-assessment.v0');
   assert.equal(report.schema, COGNITIVE_RECOVERY_ASSESSMENT_SCHEMA);
   assert.equal(report.version, 0);
@@ -420,272 +258,183 @@ test('fresh available important and critical dependencies need no recovery', () 
   assert.equal(report.recovery_readiness, 'no-recovery-needed');
   assert.deepEqual(report.recovery_cases, []);
   assert.equal(findNode(report, 'node.primary').model_availability, 'available');
-  assert.equal(findNode(report, 'node.backup').model_availability, 'available');
   assert.match(report.report_digest, /^[a-f0-9]{64}$/);
 });
 
-test('stale last evidence makes required node indeterminate without inventing provider failure', () => {
+test('stale required evidence is indeterminate and does not fabricate provider failure', () => {
   const topology = topologyFixture();
-  const attestations = availableRequiredEvidence(topology).filter(item => item.node_id !== 'node.primary');
-  attestations.push(availabilityAttestation(topology, 'node.primary', 'available', {
-    suffix: 'stale',
-    valid_until: '2026-08-29T20:20:00.000Z'
-  }));
+  const attestations = availableRequired(topology).filter(item => item.node_id !== 'node.primary');
+  attestations.push(availability(topology, 'node.primary', 'available', { suffix: 'stale', valid_until: '2026-08-29T20:20:00.000Z' }));
   const report = buildCognitiveRecoveryAssessment(topology, inputs({ availability_attestations: attestations }));
-
   assert.equal(report.recovery_readiness, 'indeterminate');
-  const primary = findNode(report, 'node.primary');
-  assert.equal(primary.model_availability, 'indeterminate');
-  assert.equal(primary.availability_evidence.length, 1);
-  assert.equal(primary.availability_evidence[0].stale, true);
+  assert.equal(findNode(report, 'node.primary').model_availability, 'indeterminate');
+  assert.equal(findNode(report, 'node.primary').availability_evidence[0].stale, true);
   assert.ok(report.warnings.includes('availability:node.primary:stale:availability.node.primary.stale.v1'));
   assert.equal(findCase(report, 'node.primary'), undefined);
 });
 
-test('conflicting fresh availability is indeterminate and surfaces every conflicting evidence identity', () => {
+test('conflicting fresh availability is indeterminate and preserves all evidence identities', () => {
   const topology = topologyFixture();
-  const attestations = availableRequiredEvidence(topology).filter(item => item.node_id !== 'node.primary');
+  const attestations = availableRequired(topology).filter(item => item.node_id !== 'node.primary');
   attestations.push(
-    availabilityAttestation(topology, 'node.primary', 'available', {
-      suffix: 'a', evidence_ref: 'evidence.primary.available.v1', evidence_digest: DIGEST_D
-    }),
-    availabilityAttestation(topology, 'node.primary', 'unavailable', {
-      suffix: 'b', evidence_ref: 'evidence.primary.unavailable.v1', evidence_digest: DIGEST_E
-    })
+    availability(topology, 'node.primary', 'available', { suffix: 'a', evidence_ref: 'evidence.primary.available.v1', evidence_digest: D.d }),
+    availability(topology, 'node.primary', 'unavailable', { suffix: 'b', evidence_ref: 'evidence.primary.unavailable.v1', evidence_digest: D.e })
   );
   const report = buildCognitiveRecoveryAssessment(topology, inputs({ availability_attestations: attestations }));
-
   assert.equal(report.recovery_readiness, 'indeterminate');
-  const primary = findNode(report, 'node.primary');
-  assert.equal(primary.model_availability, 'indeterminate');
-  assert.deepEqual(
-    primary.availability_evidence.map(item => item.evidence_ref).sort(),
-    ['evidence.primary.available.v1', 'evidence.primary.unavailable.v1']
-  );
+  assert.equal(findNode(report, 'node.primary').model_availability, 'indeterminate');
+  assert.deepEqual(findNode(report, 'node.primary').availability_evidence.map(item => item.evidence_ref).sort(), ['evidence.primary.available.v1', 'evidence.primary.unavailable.v1']);
   assert.ok(report.warnings.includes('availability:node.primary:conflict'));
 });
 
-test('owner artifact mismatch is operationally indeterminate and cannot be treated as available', () => {
+test('owner artifact mismatch is operationally indeterminate', () => {
   const topology = topologyFixture();
-  const attestations = availableRequiredEvidence(topology).filter(item => item.node_id !== 'node.backup');
-  attestations.push(availabilityAttestation(topology, 'node.backup', 'available', {
-    suffix: 'mismatch', observed_artifact_digest: DIGEST_B
-  }));
+  const attestations = availableRequired(topology).filter(item => item.node_id !== 'node.backup');
+  attestations.push(availability(topology, 'node.backup', 'available', { suffix: 'mismatch', observed_artifact_digest: D.b }));
   const report = buildCognitiveRecoveryAssessment(topology, inputs({ availability_attestations: attestations }));
-
   assert.equal(report.recovery_readiness, 'indeterminate');
   assert.equal(findNode(report, 'node.backup').model_availability, 'indeterminate');
   assert.equal(findNode(report, 'node.backup').sovereignty_state, 'artifact-digest-mismatch');
   assert.ok(report.warnings.includes('availability:node.backup:artifact-digest-mismatch'));
 });
 
-test('unavailable primary plus exact available same-topology candidate lineage and high fidelity is recoverable-high-fidelity', () => {
+test('high-fidelity same-topology candidate is recoverable without granting substitution', () => {
   const topology = topologyFixture();
-  const lineage = lineageManifest(topology, 'node.primary', 'node.backup');
-  const fidelity = fidelityEvaluation(topology, 'node.primary', 'node.backup', 'high-fidelity', { lineage });
+  const lineageDoc = lineage(topology);
+  const fidelityDoc = fidelity(topology, 'node.primary', 'node.backup', 'high-fidelity', { lineage: lineageDoc });
   const report = buildCognitiveRecoveryAssessment(topology, inputs({
-    availability_attestations: [
-      availabilityAttestation(topology, 'node.primary', 'unavailable'),
-      availabilityAttestation(topology, 'node.backup', 'available'),
-      availabilityAttestation(topology, 'node.alt', 'unavailable')
-    ],
-    lineage_manifests: [lineage],
-    fidelity_evaluations: [fidelity]
+    availability_attestations: [availability(topology, 'node.primary', 'unavailable'), availability(topology, 'node.backup'), availability(topology, 'node.alt')],
+    lineage_manifests: [lineageDoc], fidelity_evaluations: [fidelityDoc]
   }));
-
   assert.equal(report.recovery_readiness, 'recoverable-high-fidelity');
   const recovery = findCase(report, 'node.primary');
+  const candidate = findCandidate(recovery, 'node.backup');
   assert.equal(recovery.readiness, 'recoverable-high-fidelity');
-  assert.equal(recovery.candidates.length, 1);
-  assert.equal(recovery.candidates[0].candidate_node_id, 'node.backup');
-  assert.equal(recovery.candidates[0].readiness, 'recoverable-high-fidelity');
-  assert.equal(recovery.candidates[0].lineage.relationship, 'replacement');
-  assert.equal(recovery.candidates[0].fidelity.aggregate_class, 'high-fidelity');
+  assert.equal(candidate.readiness, 'recoverable-high-fidelity');
+  assert.equal(candidate.lineage.relationship, 'replacement');
+  assert.equal(candidate.fidelity.aggregate_class, 'high-fidelity');
 });
 
-test('acceptable degradation remains explicit and yields recoverable-with-degradation', () => {
+test('acceptable degradation remains explicit', () => {
   const topology = topologyFixture();
-  const lineage = lineageManifest(topology);
-  const fidelity = fidelityEvaluation(topology, 'node.primary', 'node.backup', 'acceptable-with-degradation', { lineage });
+  const lineageDoc = lineage(topology);
+  const fidelityDoc = fidelity(topology, 'node.primary', 'node.backup', 'acceptable-with-degradation', { lineage: lineageDoc });
   const report = buildCognitiveRecoveryAssessment(topology, inputs({
-    availability_attestations: [
-      availabilityAttestation(topology, 'node.primary', 'unavailable'),
-      availabilityAttestation(topology, 'node.backup', 'available'),
-      availabilityAttestation(topology, 'node.alt', 'unavailable')
-    ],
-    lineage_manifests: [lineage],
-    fidelity_evaluations: [fidelity]
+    availability_attestations: [availability(topology, 'node.primary', 'unavailable'), availability(topology, 'node.backup'), availability(topology, 'node.alt')],
+    lineage_manifests: [lineageDoc], fidelity_evaluations: [fidelityDoc]
   }));
-
   assert.equal(report.recovery_readiness, 'recoverable-with-degradation');
-  assert.equal(findCase(report, 'node.primary').candidates[0].fidelity.aggregate_class, 'acceptable-with-degradation');
+  assert.equal(findCandidate(findCase(report, 'node.primary'), 'node.backup').fidelity.aggregate_class, 'acceptable-with-degradation');
 });
 
-test('available candidate with missing lineage or insufficient evaluation remains candidate-available-insufficient-evidence', () => {
+test('material degradation is constructed without recursive test-fixture behavior', () => {
   const topology = topologyFixture();
-  const noLineage = buildCognitiveRecoveryAssessment(topology, inputs({
-    availability_attestations: [
-      availabilityAttestation(topology, 'node.primary', 'unavailable'),
-      availabilityAttestation(topology, 'node.backup', 'available'),
-      availabilityAttestation(topology, 'node.alt', 'unavailable')
-    ]
-  }));
+  const lineageDoc = lineage(topology);
+  const document = fidelity(topology, 'node.primary', 'node.backup', 'materially-degraded', { lineage: lineageDoc });
+  assert.equal(document.aggregate_class, 'materially-degraded');
+});
+
+test('available candidate with missing lineage or insufficient fidelity remains insufficient evidence', () => {
+  const topology = topologyFixture();
+  const baseAvailability = [availability(topology, 'node.primary', 'unavailable'), availability(topology, 'node.backup'), availability(topology, 'node.alt', 'unavailable')];
+  const noLineage = buildCognitiveRecoveryAssessment(topology, inputs({ availability_attestations: baseAvailability }));
   assert.equal(noLineage.recovery_readiness, 'candidate-available-insufficient-evidence');
   assert.ok(noLineage.warnings.includes('recovery:node.primary:candidate-insufficient:node.backup'));
-
-  const lineage = lineageManifest(topology);
-  const fidelity = fidelityEvaluation(topology, 'node.primary', 'node.backup', 'insufficient-evidence', { lineage });
+  const lineageDoc = lineage(topology);
+  const fidelityDoc = fidelity(topology, 'node.primary', 'node.backup', 'insufficient-evidence', { lineage: lineageDoc });
   const insufficient = buildCognitiveRecoveryAssessment(topology, inputs({
-    availability_attestations: [
-      availabilityAttestation(topology, 'node.primary', 'unavailable'),
-      availabilityAttestation(topology, 'node.backup', 'available'),
-      availabilityAttestation(topology, 'node.alt', 'unavailable')
-    ],
-    lineage_manifests: [lineage],
-    fidelity_evaluations: [fidelity]
+    availability_attestations: baseAvailability, lineage_manifests: [lineageDoc], fidelity_evaluations: [fidelityDoc]
   }));
   assert.equal(insufficient.recovery_readiness, 'candidate-available-insufficient-evidence');
 });
 
-test('only materially degraded incompatible or unavailable candidates blocks recovery', () => {
+test('only incompatible materially degraded or unavailable candidates blocks recovery', () => {
   const topology = topologyFixture();
-  const backupLineage = lineageManifest(topology, 'node.primary', 'node.backup');
-  const backupFidelity = fidelityEvaluation(topology, 'node.primary', 'node.backup', 'incompatible', { lineage: backupLineage });
+  const lineageDoc = lineage(topology);
+  const fidelityDoc = fidelity(topology, 'node.primary', 'node.backup', 'incompatible', { lineage: lineageDoc });
   const report = buildCognitiveRecoveryAssessment(topology, inputs({
-    availability_attestations: [
-      availabilityAttestation(topology, 'node.primary', 'unavailable'),
-      availabilityAttestation(topology, 'node.backup', 'available'),
-      availabilityAttestation(topology, 'node.alt', 'unavailable')
-    ],
-    lineage_manifests: [backupLineage],
-    fidelity_evaluations: [backupFidelity]
+    availability_attestations: [availability(topology, 'node.primary', 'unavailable'), availability(topology, 'node.backup'), availability(topology, 'node.alt', 'unavailable')],
+    lineage_manifests: [lineageDoc], fidelity_evaluations: [fidelityDoc]
   }));
-
   assert.equal(report.recovery_readiness, 'blocked-no-acceptable-candidate');
   assert.ok(report.blockers.includes('recovery:node.primary:no-acceptable-candidate'));
-  assert.equal(findCase(report, 'node.primary').candidates[0].readiness, 'blocked-no-acceptable-candidate');
+  assert.equal(findCandidate(findCase(report, 'node.primary'), 'node.backup').readiness, 'blocked-no-acceptable-candidate');
 });
 
-test('optional node loss is warning-only and does not trigger recovery', () => {
+test('optional node loss is warning-only', () => {
   const topology = topologyFixture();
   const report = buildCognitiveRecoveryAssessment(topology, inputs({
-    availability_attestations: [
-      ...availableRequiredEvidence(topology),
-      availabilityAttestation(topology, 'node.optional', 'unavailable')
-    ]
+    availability_attestations: [...availableRequired(topology), availability(topology, 'node.optional', 'unavailable')]
   }));
-
   assert.equal(report.recovery_readiness, 'no-recovery-needed');
   assert.equal(findCase(report, 'node.optional'), undefined);
   assert.ok(report.warnings.includes('optional:node.optional:model-unavailable'));
 });
 
-test('multiple required failures aggregate to weakest per-reference supported readiness', () => {
+test('multiple required failures aggregate to weakest per-reference readiness', () => {
   const topology = topologyFixture();
-  const primaryToBackup = lineageManifest(topology, 'node.primary', 'node.backup');
-  const altToBackup = lineageManifest(topology, 'node.alt', 'node.backup');
-  const primaryFidelity = fidelityEvaluation(topology, 'node.primary', 'node.backup', 'high-fidelity', { lineage: primaryToBackup });
-  const altFidelity = fidelityEvaluation(topology, 'node.alt', 'node.backup', 'acceptable-with-degradation', { lineage: altToBackup });
+  const primaryLineage = lineage(topology, 'node.primary', 'node.backup');
+  const altLineage = lineage(topology, 'node.alt', 'node.backup');
   const report = buildCognitiveRecoveryAssessment(topology, inputs({
-    availability_attestations: [
-      availabilityAttestation(topology, 'node.primary', 'unavailable'),
-      availabilityAttestation(topology, 'node.backup', 'available'),
-      availabilityAttestation(topology, 'node.alt', 'unavailable')
-    ],
-    lineage_manifests: [primaryToBackup, altToBackup],
-    fidelity_evaluations: [primaryFidelity, altFidelity]
+    availability_attestations: [availability(topology, 'node.primary', 'unavailable'), availability(topology, 'node.backup'), availability(topology, 'node.alt', 'unavailable')],
+    lineage_manifests: [primaryLineage, altLineage],
+    fidelity_evaluations: [
+      fidelity(topology, 'node.primary', 'node.backup', 'high-fidelity', { lineage: primaryLineage }),
+      fidelity(topology, 'node.alt', 'node.backup', 'acceptable-with-degradation', { lineage: altLineage })
+    ]
   }));
-
   assert.equal(findCase(report, 'node.primary').readiness, 'recoverable-high-fidelity');
   assert.equal(findCase(report, 'node.alt').readiness, 'recoverable-with-degradation');
   assert.equal(report.recovery_readiness, 'recoverable-with-degradation');
 });
 
-test('persistence acquisition and sovereignty posture remain visible and deterministic', () => {
+test('persistence acquisition and sovereignty posture remain descriptive and visible', () => {
   const topology = topologyFixture();
   const report = buildCognitiveRecoveryAssessment(topology, inputs({
-    availability_attestations: availableRequiredEvidence(topology),
-    persistence_attestations: [
-      persistenceAttestation(topology, 'node.primary', { observed_exportability: 'partial' }),
-      persistenceAttestation(topology, 'node.backup', { observed_exportability: 'full', with_snapshot: true })
-    ],
-    acquisition_manifests: [acquisitionManifest(topology, 'node.backup')]
+    availability_attestations: availableRequired(topology),
+    persistence_attestations: [persistence(topology, 'node.primary', { observed_exportability: 'partial' }), persistence(topology, 'node.backup', { observed_exportability: 'full', with_snapshot: true })],
+    acquisition_manifests: [acquisition(topology, 'node.backup')]
   }));
-
-  const primary = findNode(report, 'node.primary');
-  const backup = findNode(report, 'node.backup');
-  const alt = findNode(report, 'node.alt');
-  assert.equal(primary.sovereignty_state, 'provider-dependent');
-  assert.equal(primary.persistence.mode, 'provider-bound');
-  assert.equal(primary.persistence.observed_exportability, 'partial');
-  assert.equal(backup.sovereignty_state, 'verified-owner-artifact');
-  assert.equal(backup.acquisition.acquisition_id, 'acquisition.node.backup.v1');
-  assert.equal(backup.persistence.availability, 'available');
-  assert.equal(alt.sovereignty_state, 'declared-owner-artifact-unverified');
-  assert.equal(alt.persistence.availability, 'unknown');
+  assert.equal(findNode(report, 'node.primary').sovereignty_state, 'provider-dependent');
+  assert.equal(findNode(report, 'node.primary').persistence.observed_exportability, 'partial');
+  assert.equal(findNode(report, 'node.backup').sovereignty_state, 'verified-owner-artifact');
+  assert.equal(findNode(report, 'node.backup').acquisition.acquisition_id, 'acquisition.node.backup.v1');
+  assert.equal(findNode(report, 'node.backup').persistence.availability, 'available');
+  assert.equal(findNode(report, 'node.alt').sovereignty_state, 'declared-owner-artifact-unverified');
+  assert.equal(findNode(report, 'node.alt').persistence.availability, 'unknown');
   assert.ok(report.warnings.includes('persistence:node.alt:unknown'));
 });
 
-test('duplicate exact evidence identities and per-node singleton evidence fail closed', () => {
+test('duplicate evidence identities and per-node singleton evidence fail closed', () => {
   const topology = topologyFixture();
-  const availability = availabilityAttestation(topology, 'node.primary');
-  assert.throws(() => buildCognitiveRecoveryAssessment(topology, inputs({
-    availability_attestations: [availability, structuredClone(availability)]
-  })), /duplicate.*availability.*attestation/i);
-
-  const persistence = persistenceAttestation(topology, 'node.backup');
-  assert.throws(() => buildCognitiveRecoveryAssessment(topology, inputs({
-    persistence_attestations: [persistence, structuredClone(persistence)]
-  })), /duplicate persistence evidence.*node.backup/i);
-
-  const acquisition = acquisitionManifest(topology, 'node.backup');
-  assert.throws(() => buildCognitiveRecoveryAssessment(topology, inputs({
-    acquisition_manifests: [acquisition, structuredClone(acquisition)]
-  })), /duplicate acquisition evidence.*node.backup/i);
-
-  const lineage = lineageManifest(topology);
-  assert.throws(() => buildCognitiveRecoveryAssessment(topology, inputs({
-    lineage_manifests: [lineage, structuredClone(lineage)]
-  })), /duplicate cognitive lineage.*lineage/i);
-
-  const evaluation = fidelityEvaluation(topology, 'node.primary', 'node.backup', 'high-fidelity', { lineage });
-  assert.throws(() => buildCognitiveRecoveryAssessment(topology, inputs({
-    fidelity_evaluations: [evaluation, structuredClone(evaluation)],
-    lineage_manifests: [lineage]
-  })), /duplicate replacement fidelity evaluation/i);
+  const a = availability(topology, 'node.primary');
+  assert.throws(() => buildCognitiveRecoveryAssessment(topology, inputs({ availability_attestations: [a, structuredClone(a)] })), /duplicate.*availability.*attestation/i);
+  const p = persistence(topology, 'node.backup');
+  assert.throws(() => buildCognitiveRecoveryAssessment(topology, inputs({ persistence_attestations: [p, structuredClone(p)] })), /duplicate persistence evidence.*node.backup/i);
+  const m = acquisition(topology, 'node.backup');
+  assert.throws(() => buildCognitiveRecoveryAssessment(topology, inputs({ acquisition_manifests: [m, structuredClone(m)] })), /duplicate acquisition evidence.*node.backup/i);
+  const l = lineage(topology);
+  assert.throws(() => buildCognitiveRecoveryAssessment(topology, inputs({ lineage_manifests: [l, structuredClone(l)] })), /duplicate cognitive lineage.*lineage/i);
+  const f = fidelity(topology, 'node.primary', 'node.backup', 'high-fidelity', { lineage: l });
+  assert.throws(() => buildCognitiveRecoveryAssessment(topology, inputs({ lineage_manifests: [l], fidelity_evaluations: [f, structuredClone(f)] })), /duplicate replacement fidelity evaluation/i);
 });
 
 test('conflicting matching fidelity classes preserve uncertainty instead of newest-wins', () => {
   const topology = topologyFixture();
-  const lineage = lineageManifest(topology);
-  const high = fidelityEvaluation(topology, 'node.primary', 'node.backup', 'high-fidelity', {
-    lineage,
-    evaluation_id: 'evaluation.primary.backup.high.v1'
-  });
-  const degraded = fidelityEvaluation(topology, 'node.primary', 'node.backup', 'acceptable-with-degradation', {
-    lineage,
-    evaluation_id: 'evaluation.primary.backup.degraded.v1'
-  });
+  const lineageDoc = lineage(topology);
+  const high = fidelity(topology, 'node.primary', 'node.backup', 'high-fidelity', { lineage: lineageDoc, evaluation_id: 'evaluation.primary.backup.high.v1' });
+  const degraded = fidelity(topology, 'node.primary', 'node.backup', 'acceptable-with-degradation', { lineage: lineageDoc, evaluation_id: 'evaluation.primary.backup.degraded.v1' });
   const report = buildCognitiveRecoveryAssessment(topology, inputs({
-    availability_attestations: [
-      availabilityAttestation(topology, 'node.primary', 'unavailable'),
-      availabilityAttestation(topology, 'node.backup', 'available'),
-      availabilityAttestation(topology, 'node.alt', 'unavailable')
-    ],
-    lineage_manifests: [lineage],
-    fidelity_evaluations: [high, degraded]
+    availability_attestations: [availability(topology, 'node.primary', 'unavailable'), availability(topology, 'node.backup'), availability(topology, 'node.alt', 'unavailable')],
+    lineage_manifests: [lineageDoc], fidelity_evaluations: [high, degraded]
   }));
-
   assert.equal(report.recovery_readiness, 'candidate-available-insufficient-evidence');
-  const candidate = findCase(report, 'node.primary').candidates[0];
+  const candidate = findCandidate(findCase(report, 'node.primary'), 'node.backup');
   assert.equal(candidate.fidelity.aggregate_class, 'conflict');
-  assert.deepEqual(candidate.fidelity.evaluation_ids, [
-    'evaluation.primary.backup.degraded.v1',
-    'evaluation.primary.backup.high.v1'
-  ]);
+  assert.deepEqual(candidate.fidelity.evaluation_ids, ['evaluation.primary.backup.degraded.v1', 'evaluation.primary.backup.high.v1']);
 });
 
-test('input shape is exact and a nested continuity report cannot be accepted as authority', () => {
+test('input shape is exact and nested continuity report cannot become authority', () => {
   const topology = topologyFixture();
   const document = inputs();
   document.cognitive_continuity_report = { cognitive_continuity_status: 'full' };
@@ -693,22 +442,18 @@ test('input shape is exact and a nested continuity report cannot be accepted as 
   assert.throws(() => buildCognitiveRecoveryAssessment(topology, { ...inputs(), assessment_at: '2026-08-29T20:30:00Z' }), /assessment_at.*canonical ISO timestamp/i);
 });
 
-test('report ordering and digest are deterministic across reordered supplied evidence arrays', () => {
+test('report ordering and digest are deterministic across reordered evidence arrays', () => {
   const topology = topologyFixture();
-  const primaryLineage = lineageManifest(topology, 'node.primary', 'node.backup');
-  const altLineage = lineageManifest(topology, 'node.alt', 'node.backup');
+  const primaryLineage = lineage(topology, 'node.primary', 'node.backup');
+  const altLineage = lineage(topology, 'node.alt', 'node.backup');
   const evidence = inputs({
-    availability_attestations: [
-      availabilityAttestation(topology, 'node.primary', 'unavailable'),
-      availabilityAttestation(topology, 'node.backup', 'available'),
-      availabilityAttestation(topology, 'node.alt', 'unavailable')
-    ],
-    persistence_attestations: [persistenceAttestation(topology, 'node.backup'), persistenceAttestation(topology, 'node.primary')],
-    acquisition_manifests: [acquisitionManifest(topology, 'node.backup')],
+    availability_attestations: [availability(topology, 'node.primary', 'unavailable'), availability(topology, 'node.backup'), availability(topology, 'node.alt', 'unavailable')],
+    persistence_attestations: [persistence(topology, 'node.backup'), persistence(topology, 'node.primary')],
+    acquisition_manifests: [acquisition(topology, 'node.backup')],
     lineage_manifests: [primaryLineage, altLineage],
     fidelity_evaluations: [
-      fidelityEvaluation(topology, 'node.primary', 'node.backup', 'high-fidelity', { lineage: primaryLineage }),
-      fidelityEvaluation(topology, 'node.alt', 'node.backup', 'acceptable-with-degradation', { lineage: altLineage })
+      fidelity(topology, 'node.primary', 'node.backup', 'high-fidelity', { lineage: primaryLineage }),
+      fidelity(topology, 'node.alt', 'node.backup', 'acceptable-with-degradation', { lineage: altLineage })
     ]
   });
   const reordered = {
@@ -719,34 +464,28 @@ test('report ordering and digest are deterministic across reordered supplied evi
     lineage_manifests: [...evidence.lineage_manifests].reverse(),
     fidelity_evaluations: [...evidence.fidelity_evaluations].reverse()
   };
-
   const left = buildCognitiveRecoveryAssessment(topology, evidence);
   const right = buildCognitiveRecoveryAssessment(topology, reordered);
   assert.deepEqual(left, right);
   assert.equal(left.report_digest, right.report_digest);
-  assert.deepEqual(left.nodes.map(node => node.node_id), ['node.alt', 'node.backup', 'node.optional', 'node.primary']);
+  assert.deepEqual(left.nodes.map(item => item.node_id), ['node.alt', 'node.backup', 'node.optional', 'node.primary']);
   assert.deepEqual(left.recovery_cases.map(item => item.reference_node_id), ['node.alt', 'node.primary']);
 });
 
-test('report is deeply frozen and does not mutate deeply frozen inputs', () => {
+test('report is deeply frozen without mutating frozen inputs', () => {
   const topology = deepFreeze(topologyFixture());
-  const evidence = deepFreeze(inputs({
-    availability_attestations: availableRequiredEvidence(structuredClone(topology))
-  }));
+  const evidence = deepFreeze(inputs({ availability_attestations: availableRequired(structuredClone(topology)) }));
   const beforeTopology = JSON.stringify(topology);
   const beforeInputs = JSON.stringify(evidence);
   const report = buildCognitiveRecoveryAssessment(topology, evidence);
-
   assertDeepFrozen(report);
   assert.equal(JSON.stringify(topology), beforeTopology);
   assert.equal(JSON.stringify(evidence), beforeInputs);
 });
 
-test('authority boundary is exact and principal continuity and subjective identity remain explicitly unproven', () => {
+test('authority boundary is exact and identity remains explicitly unproven', () => {
   const topology = topologyFixture();
-  const report = buildCognitiveRecoveryAssessment(topology, inputs({
-    availability_attestations: availableRequiredEvidence(topology)
-  }));
+  const report = buildCognitiveRecoveryAssessment(topology, inputs({ availability_attestations: availableRequired(topology) }));
   assert.deepEqual(report.authority_boundary, {
     writes_files: false,
     performs_network_effects: false,
@@ -761,7 +500,7 @@ test('authority boundary is exact and principal continuity and subjective identi
   });
 });
 
-test('production import boundary contains only canonical topology and the five approved public evidence resolvers', async () => {
+test('production imports only canonical topology and approved public evidence resolvers', async () => {
   const source = await readFile(new URL('../src/lib/cognitive-recovery-assessment.mjs', import.meta.url), 'utf8');
   const imports = [...source.matchAll(/from\s+['\"]([^'\"]+)['\"]/g)].map(match => match[1]).sort();
   assert.deepEqual(imports, [
