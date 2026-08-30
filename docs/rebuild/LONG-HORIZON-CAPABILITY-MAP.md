@@ -28,7 +28,7 @@ Roadmap, research, demonstrations, historical documents, architecture drafts, an
 
 ## Current authoritative surface
 
-The current registry contains 49 tracked capabilities, including 31 marked implemented. The exact live count, build identity, and status must always be recomputed from `mesh/config/capabilities.json` before publication.
+The current registry contains 50 tracked capabilities, including 31 marked implemented. The exact live count, build identity, and status must always be recomputed from `mesh/config/capabilities.json` before publication.
 
 Existing families include:
 

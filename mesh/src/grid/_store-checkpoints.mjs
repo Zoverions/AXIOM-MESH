@@ -39,12 +39,35 @@ export class GridStore extends CoreGridStore {
       throw new ValidationError('Grid checkpoint interval must be an integer between 1 and 1000000');
     }
     this.checkpointInterval = interval;
+    this.liveChainVerificationCache = null;
+    this.liveChainTrustedGrowth = null;
     this.ensureChainCheckpoint({ minimumDistance: interval });
   }
 
   appendEvents(input) {
+    const before = this.readLiveChainMarker();
+    const cached = this.liveChainVerificationCache;
+    const previousGrowth = this.liveChainTrustedGrowth;
+    const trustedBase = Boolean(
+      cached
+      && (
+        sameLiveChainMarker(before, cached.marker)
+        || (
+          previousGrowth
+          && sameLiveChainMarker(previousGrowth.from, cached.marker)
+          && sameLiveChainMarker(before, previousGrowth.to)
+        )
+      )
+    );
     const appended = super.appendEvents(input);
     this.ensureChainCheckpoint({ minimumDistance: this.checkpointInterval });
+    const after = this.readLiveChainMarker();
+    this.liveChainTrustedGrowth = trustedBase
+      ? {
+          from: structuredClone(cached.marker),
+          to: structuredClone(after)
+        }
+      : null;
     return appended;
   }
 
@@ -141,6 +164,76 @@ export class GridStore extends CoreGridStore {
       manifest,
       bundle: bundle.toString('utf8')
     };
+  }
+
+  readLiveChainMarker() {
+    const seqRow = this.db.prepare("SELECT value FROM meta WHERE key = 'last_seq'").get();
+    const hashRow = this.db.prepare("SELECT value FROM meta WHERE key = 'last_hash'").get();
+    const dataVersionRow = this.db.prepare('PRAGMA data_version').get();
+    const totalChangesRow = this.db.prepare('SELECT total_changes() AS total_changes').get();
+    const marker = {
+      last_seq: Number(seqRow?.value),
+      last_hash: hashRow?.value,
+      data_version: Number(
+        dataVersionRow?.data_version ?? Object.values(dataVersionRow ?? {})[0]
+      ),
+      total_changes: Number(
+        totalChangesRow?.total_changes ?? Object.values(totalChangesRow ?? {})[0]
+      )
+    };
+    if (
+      !Number.isSafeInteger(marker.last_seq)
+      || marker.last_seq < 0
+      || !DIGEST.test(marker.last_hash ?? '')
+      || !Number.isSafeInteger(marker.data_version)
+      || marker.data_version < 0
+      || !Number.isSafeInteger(marker.total_changes)
+      || marker.total_changes < 0
+    ) {
+      throw new ValidationError('Grid live verification marker is invalid');
+    }
+    return marker;
+  }
+
+  verifyLiveChain() {
+    const current = this.readLiveChainMarker();
+    const cached = this.liveChainVerificationCache;
+    if (cached && sameLiveChainMarker(current, cached.marker)) {
+      return structuredClone(cached.result);
+    }
+
+    const growth = this.liveChainTrustedGrowth;
+    const checkpointEligible = Boolean(
+      cached
+      && growth
+      && sameLiveChainMarker(growth.from, cached.marker)
+      && sameLiveChainMarker(growth.to, current)
+      && current.last_seq >= cached.marker.last_seq
+    );
+    const verification = checkpointEligible
+      ? this.verifyChain({ mode: 'checkpoint' })
+      : this.verifyFullChain();
+    if (!verification.valid) {
+      this.liveChainVerificationCache = null;
+      this.liveChainTrustedGrowth = null;
+      return verification;
+    }
+
+    const after = this.readLiveChainMarker();
+    if (!sameLiveChainMarker(current, after)) {
+      this.liveChainVerificationCache = null;
+      this.liveChainTrustedGrowth = null;
+      return {
+        valid: false,
+        reason: 'chain_changed_during_verification'
+      };
+    }
+    this.liveChainVerificationCache = {
+      marker: structuredClone(after),
+      result: structuredClone(verification)
+    };
+    this.liveChainTrustedGrowth = null;
+    return structuredClone(verification);
   }
 
   verifyChain({ mode = 'checkpoint' } = {}) {
@@ -460,6 +553,17 @@ export class GridStore extends CoreGridStore {
         verificationMode === 'checkpoint'
     };
   }
+}
+
+function sameLiveChainMarker(left, right) {
+  return Boolean(
+    left
+    && right
+    && left.last_seq === right.last_seq
+    && left.last_hash === right.last_hash
+    && left.data_version === right.data_version
+    && left.total_changes === right.total_changes
+  );
 }
 
 function isPlainObject(value) {

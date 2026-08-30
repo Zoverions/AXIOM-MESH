@@ -3,8 +3,8 @@
 
 Registry schema: `axiom-capabilities.v1`
 Kernel version: `0.12.0-dev.3`
-Evidence verified: `2026-08-10`
-Registry digest: `e8bf5b9c083fd4b20a630372fa135e630c36285064f58d84abea60975325c10e`
+Evidence verified: `2026-08-30`
+Registry digest: `2d868f44cd3498ecfe91c3ad488592347bb7016591277d7a885dd9300fe42bee`
 
 Only **implemented** capabilities are runnable claims.
 
@@ -12,7 +12,7 @@ Only **implemented** capabilities are runnable claims.
 
 - adapter_required: 9
 - disabled: 4
-- experimental: 3
+- experimental: 4
 - implemented: 31
 - specified: 2
 
@@ -64,6 +64,7 @@ Only **implemented** capabilities are runnable claims.
 | `operations.service-network-policy` | operations | **implemented** | A default-deny current-build policy permits only 42 exact internal caller, destination, method, and route combinations; the additional Education permission is the bounded Hypervisor-to-Grid POST learner-progress edge and creates no public ingress or alternate authority; four isolated internal Compose segments remove unrelated service adjacency, while mTLS peer allowlists and protected forbidden-edge probes enforce direction and segmentation. |
 | `operations.independent-service-units` | operations | **implemented** | Gateway, Grid, Hypervisor, and Sandbox can run as independently restartable units with per-unit application and TLS private keys, Grid-only durable state, segmented internal deny-egress networks, dependency-aware degradation, Sandbox-only recovery, and signed state-preservation evidence. |
 | `operations.provider-runtime` | operations | **implemented** | Independent Ed25519-pinned secret and policy providers deliver nonce-bound short-lived startup resources through a bounded process protocol; the broker verifies exact inventories and content, materializes one private generation, launches the unchanged production supervisor, and removes that generation on shutdown. |
+| `operations.public-witness` | operations | **experimental** | Independently operated public witnessing durably publishes and verifies signed currentness anchors without granting execution authority or claiming global currentness or finality. |
 | `operations.pilot-dossier-verification` | operations | **implemented** | A separately authority-pinned, five-role review policy verifies exact build, 30-day observation, SLO, custody, and approval metadata; an offline exact-inventory package verifier additionally enforces 13 canonical role-signed v2 evidence envelopes with type-specific detail contracts while explicitly refusing to claim production promotion. |
 | `operations.security-review-intake` | operations | **implemented** | A separately authority-pinned current-build policy and independent reviewer signature verify exact threat-model and configuration scope, immutable reviewed artifacts, recomputed findings, externally verified critical/high remediation, and separately approved expiring lesser-risk exceptions while refusing to promote production. |
 | `operations.container-package` | operations | **implemented** | A digest-pinned non-root container package is statically release-gated, passes the four-process host drill, and is built and exercised through the published composed readiness workflow. |

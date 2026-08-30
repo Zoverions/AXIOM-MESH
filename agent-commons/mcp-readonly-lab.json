@@ -62,7 +62,8 @@
     "invalid_request": -32600,
     "method_not_found": -32601,
     "invalid_params": -32602,
-    "header_mismatch": -32001,
+    "header_mismatch": -32020,
+    "missing_required_client_capability": -32021,
     "unsupported_protocol_version": -32022,
     "internal_error": -32603
   },

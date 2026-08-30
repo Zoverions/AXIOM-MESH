@@ -9,18 +9,32 @@ import {
 } from '../src/check-registry.mjs';
 import { digestObject } from '../src/lib/canonical.mjs';
 
-test('repository capability evidence resolves every implemented claim to exact assertions', async () => {
+test('repository capability evidence resolves every implemented claim while permitting reviewed experimental bindings', async () => {
   const registry = JSON.parse(
     await readFile(new URL('../config/capabilities.json', import.meta.url), 'utf8')
+  );
+  const bindingDocument = JSON.parse(
+    await readFile(new URL('../config/capability-evidence-bindings.json', import.meta.url), 'utf8')
   );
   const result = await validateCapabilityEvidenceBindings(registry);
   assert.equal(result.valid, true);
   assert.equal(result.schema, 'axiom-capability-evidence-bindings.v1');
   assert.equal(result.kernel_version, registry.kernel_version);
   assert.equal(result.registry_digest, digestObject(registry));
+
+  const boundIds = new Set(bindingDocument.bindings.map(item => item.capability_id));
+  const implementedIds = registry.capabilities
+    .filter(item => item.status === 'implemented')
+    .map(item => item.id);
+  for (const capabilityId of implementedIds) {
+    assert.ok(boundIds.has(capabilityId), `missing implemented binding: ${capabilityId}`);
+  }
+  assert.equal(result.bindings, boundIds.size);
+  assert.ok(result.bindings >= implementedIds.length);
+  assert.ok(boundIds.has('operations.public-witness'));
   assert.equal(
-    result.bindings,
-    registry.capabilities.filter(item => item.status === 'implemented').length
+    registry.capabilities.find(item => item.id === 'operations.public-witness')?.status,
+    'experimental'
   );
   assert.ok(result.evidence_files >= result.bindings / 2);
   assert.match(result.digest, /^[a-f0-9]{64}$/);

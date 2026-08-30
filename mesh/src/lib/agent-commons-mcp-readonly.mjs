@@ -31,7 +31,8 @@ export const MCP_ERROR_CODES = Object.freeze({
   invalid_request: -32600,
   method_not_found: -32601,
   invalid_params: -32602,
-  header_mismatch: -32001,
+  header_mismatch: -32020,
+  missing_required_client_capability: -32021,
   unsupported_protocol_version: -32022,
   internal_error: -32603
 });
@@ -183,6 +184,7 @@ export function validateAgentCommonsMcpReadonlyManifest(manifest) {
     'method_not_found',
     'invalid_params',
     'header_mismatch',
+    'missing_required_client_capability',
     'unsupported_protocol_version',
     'internal_error'
   ]);
