@@ -75,6 +75,21 @@ Conversely, the same continuing AXIOM principal may intentionally replace one co
 
 No artifact defined here may state or imply that model similarity proves principal continuity or subjective identity.
 
+### 3.1 Common contract envelope
+
+The first executable slice uses exact identifiers and statuses:
+
+| Contract | Schema | Version | Status |
+| --- | --- | ---: | --- |
+| Cognitive Availability Attestation | `axiom-cognitive-availability-attestation.v0` | `0` | `inert-evidence` |
+| Cognitive Lineage Manifest | `axiom-cognitive-lineage-manifest.v0` | `0` | `inert-evidence` |
+| Replacement Fidelity Evaluation | `axiom-replacement-fidelity-evaluation.v0` | `0` | `inert-evidence` |
+| Cognitive Recovery Assessment | `axiom-cognitive-recovery-assessment.v0` | `0` | `inert-evidence-report` |
+
+Persistent evidence documents are content-addressed and closed-world. Where consistent with existing repository contracts they carry explicit boundary fields requiring no secrets, no authority effect, no network effect, and no runtime activation.
+
+The recovery assessment is a deterministic derived report over supplied evidence. It carries an equivalent explicit authority-boundary object and a deterministic report digest.
+
 ## 4. Cognitive Availability Attestation v0
 
 ### 4.1 Purpose
@@ -157,25 +172,25 @@ For provider-controlled or otherwise non-owner-addressable models, the artifact 
 
 ### 4.8 Freshness
 
-An availability attestation is valid only through `valid_until`.
+An availability attestation is structurally valid according to its own immutable timestamps. A consumer evaluates whether it is fresh enough to rely on by comparing explicit `assessment_at` with `valid_until`.
 
-Consumers evaluate freshness against an explicit `assessment_at` time. Stale evidence becomes `indeterminate/stale` in interpretation; it does not silently remain available.
+If `assessment_at` is later than `valid_until`, the recovery assessment treats the observation as stale and therefore operationally `indeterminate`. It does not reject the historical attestation as malformed and does not silently continue treating it as available.
 
-The evidence document itself is immutable. Freshness is an interpretation of its timestamps, not a mutation of the original attestation.
+Malformed timestamps, `valid_until < observed_at`, or non-canonical timestamps fail validation.
 
 ## 5. Cognitive Lineage Manifest v0
 
 ### 5.1 Purpose
 
-`axiom-cognitive-lineage-manifest.v0` describes provenance and transformation relationships among cognitive components or artifacts.
+`axiom-cognitive-lineage-manifest.v0` describes one provenance or transformation relationship between two cognitive components or artifacts.
 
 It is not a principal lineage contract and does not replace Self Bundle lineage.
 
-### 5.2 Nodes and edges
+### 5.2 One explicit edge per manifest
 
-A lineage manifest may name one reference cognitive component and one candidate/descendant component, binding exact model/artifact identifiers where available.
+v0 deliberately uses one exact source/reference and one exact destination/candidate per manifest. This keeps lineage evidence content-addressable, independently verifiable, and conflict-visible without introducing graph-reconciliation behavior into the first slice.
 
-Relationship classes are exactly:
+Relationship class is exactly one of:
 
 - `successor`;
 - `replacement`;
@@ -186,11 +201,11 @@ Relationship classes are exactly:
 - `provider-version-successor`;
 - `functionally-unrelated`.
 
-A manifest may state more than one relationship only when each edge is explicit and separately evidenced. v0 must not infer hidden ancestry from naming conventions or provider marketing labels.
+v0 must not infer hidden ancestry from naming conventions or provider marketing labels. More complex lineage graphs are constructed by composing multiple exact manifests outside an individual document.
 
 ### 5.3 Evidence
 
-Each edge records:
+The manifest records:
 
 - source/reference identity;
 - destination/candidate identity;
@@ -237,7 +252,7 @@ An evaluation binds:
 
 Changing the evaluation suite requires a new suite digest. Results from different suite digests are not silently merged as if they were directly equivalent.
 
-### 6.3 Required fidelity dimensions
+### 6.3 Fidelity dimensions
 
 v0 supports these independent dimensions:
 
@@ -251,11 +266,13 @@ v0 supports these independent dimensions:
 8. `relationship-fidelity` — preservation of expected relational context and commitments;
 9. `robustness-fidelity` — stability under adversarial, perturbation, or regression testing.
 
-AXIOM does not require every evaluation to possess evidence for every dimension. Missing required-for-decision dimensions remain `indeterminate` and must be visible to the recovery assessment.
+The evaluation suite declares which supported dimensions are required for that comparison. Every suite-required dimension must appear explicitly in the evaluation. A required dimension lacking usable evidence appears as `indeterminate`; it is not omitted.
+
+Dimensions outside the suite's required set may be absent, but an aggregate cannot claim evidence about a dimension that was not evaluated.
 
 ### 6.4 Per-dimension evidence
 
-Each dimension records:
+Each included dimension records:
 
 - dimension identifier;
 - metric or rubric identifier;
@@ -271,7 +288,7 @@ Numeric metrics may be included, but no numeric value is interpreted as a percen
 
 ### 6.5 Aggregate fidelity classes
 
-The evaluation may derive one of:
+The evaluation derives one of:
 
 - `high-fidelity`;
 - `acceptable-with-degradation`;
@@ -279,14 +296,14 @@ The evaluation may derive one of:
 - `insufficient-evidence`;
 - `incompatible`.
 
-The aggregate is subordinate to the visible dimension results.
+The aggregate is subordinate to the visible dimension results and exact evaluation-suite rules.
 
 Aggregation must be deterministic and fail closed:
 
-- any dimension marked required by the evaluation suite and `fail` may force `incompatible` or `materially-degraded` according to the suite rules;
-- any required dimension that is `indeterminate` prevents `high-fidelity`;
-- `high-fidelity` requires all suite-required dimensions to pass;
-- an aggregate cannot claim a stronger result than its dimensions and suite rules justify.
+- `high-fidelity` requires every suite-required dimension to be `pass`;
+- any suite-required `indeterminate` result prevents `high-fidelity` and yields at best `insufficient-evidence` unless another required dimension independently forces a lower class;
+- suite-required `degraded` or `fail` states map only through explicit rules bound into the exact evaluation-suite digest;
+- the evaluation must reject a supplied aggregate that is stronger than the suite rules and dimension evidence permit.
 
 ### 6.6 No universal identity score
 
@@ -306,7 +323,7 @@ It does not perform the recovery.
 
 ### 7.2 Inputs
 
-The assessment consumes:
+The assessment consumes exactly:
 
 - one exact Cognitive Topology;
 - zero or more Cognitive Availability Attestations;
@@ -316,7 +333,7 @@ The assessment consumes:
 - zero or more Replacement Fidelity Evaluations;
 - explicit `assessment_at` time.
 
-It may also consume the existing Cognitive Continuity Report as supplementary evidence, but the v0 assessment must be able to derive its own dependency/replacement conclusions from the underlying exact evidence so it does not blindly trust a nested aggregate.
+The v0 assessment derives dependency/replacement conclusions from these underlying exact evidence documents rather than accepting another aggregate continuity report as authoritative input.
 
 ### 7.3 Output dimensions
 
@@ -390,13 +407,13 @@ The v0 contracts fail closed when applicable if:
 2. a node/model identity does not match the topology;
 3. a required artifact digest is malformed or mismatched;
 4. evidence provenance or evidence digest is absent;
-5. an availability observation is stale at `assessment_at`;
+5. availability timestamps are malformed or internally inconsistent;
 6. observer provenance is missing;
-7. a lineage edge uses an unsupported relationship class;
+7. a lineage manifest uses an unsupported relationship class;
 8. lineage source/destination identity is ambiguous;
 9. an evaluation-suite digest is absent or changed without a new evaluation identity;
-10. required fidelity dimensions are absent without being represented as indeterminate;
-11. a per-dimension status conflicts with its metric/rubric thresholds;
+10. a suite-required fidelity dimension is omitted instead of represented as `indeterminate`;
+11. a per-dimension status conflicts with its metric/rubric thresholds or exact suite rules;
 12. an aggregate fidelity class is stronger than the dimensions permit;
 13. duplicate evidence for the same exact observation/evaluation identity conflicts;
 14. a contract contains unknown fields where the schema is closed-world;
@@ -404,7 +421,7 @@ The v0 contracts fail closed when applicable if:
 16. an artifact attempts to grant capabilities, credentials, runtime activation, provider access, substitution authority, or topology mutation authority;
 17. any artifact claims to prove principal continuity or subjective identity.
 
-Conflicting evidence is preserved as conflict/indeterminate state rather than resolved by “newest wins” unless a future policy explicitly defines a governed reconciliation rule.
+A structurally valid but stale availability attestation is not discarded. At assessment time it becomes stale/indeterminate evidence. Conflicting evidence is preserved as conflict/indeterminate state rather than resolved by “newest wins” unless a future policy explicitly defines a governed reconciliation rule.
 
 ## 10. Freshness and conflicting evidence
 
@@ -506,7 +523,8 @@ Must cover:
 - relationship enum;
 - artifact digest validation;
 - evidence requirements;
-- ambiguous/duplicate edge rejection;
+- ambiguous identity rejection;
+- exactly one relationship edge per manifest;
 - explicit non-claim of principal lineage;
 - unknown-field/secret injection rejection;
 - frozen input/non-mutation.
@@ -517,9 +535,10 @@ Must cover:
 
 - reference/candidate binding;
 - suite ID/digest binding;
-- required dimensions;
+- suite-required dimensions;
 - metric/rubric identity;
 - threshold/result/status consistency;
+- omitted required dimension rejection;
 - indeterminate required dimensions preventing high-fidelity;
 - deterministic aggregate classification;
 - aggregate-overclaim rejection;
@@ -602,16 +621,17 @@ Each activation step requires its own threat/authority review and cannot inherit
 3. Cognitive lineage is not principal lineage.
 4. Replacement fidelity is multidimensional and never a universal identity score.
 5. Availability claims are freshness-bounded.
-6. Conflicting fresh evidence remains visible and indeterminate unless governed reconciliation exists.
-7. Exact acquired-artifact identity requires digest equality.
-8. Provider assertions remain provider assertions, not independent proof of reachability.
-9. Evaluation-suite identity is content-bound; changed suites are not silently comparable.
-10. Missing required fidelity evidence cannot yield `high-fidelity`.
-11. Aggregate fidelity cannot overclaim relative to dimension evidence.
-12. A recovery assessment cannot execute, authorize, or schedule a replacement.
-13. A recovery assessment cannot mutate Cognitive Topology.
-14. None of these contracts can prove principal continuity or subjective identity.
-15. Existing Cognitive Continuity Report v0 behavior remains compatible and unchanged.
+6. Stale evidence is preserved historically but becomes indeterminate for a current assessment.
+7. Conflicting fresh evidence remains visible and indeterminate unless governed reconciliation exists.
+8. Exact acquired-artifact identity requires digest equality.
+9. Provider assertions remain provider assertions, not independent proof of reachability.
+10. Evaluation-suite identity is content-bound; changed suites are not silently comparable.
+11. Missing suite-required fidelity evidence cannot yield `high-fidelity` and must be represented explicitly as indeterminate or rejected if omitted.
+12. Aggregate fidelity cannot overclaim relative to dimension evidence and exact suite rules.
+13. A recovery assessment cannot execute, authorize, or schedule a replacement.
+14. A recovery assessment cannot mutate Cognitive Topology.
+15. None of these contracts can prove principal continuity or subjective identity.
+16. Existing Cognitive Continuity Report v0 behavior remains compatible and unchanged.
 
 ## 18. Success criteria
 
