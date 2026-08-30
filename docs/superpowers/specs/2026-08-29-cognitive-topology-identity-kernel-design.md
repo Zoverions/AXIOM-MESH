@@ -737,13 +737,19 @@ Where applicable, descendant relationships bind the procedure that produced the 
 Evidence object:
 
 ```text
+assurance_class
 evidence_ref
 evidence_digest
 verification_ref
 verification_digest
 ```
 
-Implementation must preserve the distinction between declared lineage and verified lineage rather than treating the presence of a manifest as proof.
+Lineage assurance classes:
+
+- `declared`
+- `verified`
+
+For `declared`, `verification_ref` and `verification_digest` are null. For `verified`, both are required. This prevents the mere presence of a manifest from being interpreted as verified cognitive lineage.
 
 ## 20. Replacement Fidelity Evaluation v0
 
@@ -844,7 +850,16 @@ Metrics remain separately referenced; AXIOM does not pretend all fidelity dimens
 
 ### 20.4 Aggregate classification
 
-Recommended aggregate classifications:
+The aggregate object contains exactly:
+
+```text
+classification
+aggregation_policy_ref
+aggregation_policy_digest
+required_dimensions
+```
+
+Recommended classifications:
 
 - `high-fidelity`
 - `acceptable-with-degradation`
@@ -852,13 +867,13 @@ Recommended aggregate classifications:
 - `insufficient-evidence`
 - `incompatible`
 
-Aggregate results bind an aggregation-policy reference/digest and cannot be stronger than the underlying required dimensions permit.
+`required_dimensions` is a bounded, duplicate-free list drawn from the supported fidelity dimensions. The aggregation-policy reference/digest defines how required and optional dimensions map to the classification.
 
-Default fail-closed behavior:
+The aggregate cannot be stronger than the underlying required dimensions permit. Default fail-closed behavior:
 
 - any required `fail` yields at least `materially-degraded` or `incompatible` according to policy;
 - any required `indeterminate` yields `insufficient-evidence` unless an explicit policy permits a weaker conclusion;
-- missing required dimensions are insufficient evidence;
+- a missing required dimension yields `insufficient-evidence`;
 - optional dimensions remain visible without being automatically decisive.
 
 Evaluator object:
@@ -887,13 +902,27 @@ Cognitive Recovery Assessment v0 is a deterministic interpretation layer that an
 
 It does not perform recovery.
 
-### 21.2 Inputs
+### 21.2 Deterministic input wrapper
 
-The v0 assessment consumes:
+The pure builder should take one Cognitive Topology plus an exact input object:
 
 ```text
-Cognitive Topology v0
-+ Cognitive Availability Attestation v0[]
+assessed_at
+availability_attestations
+acquisition_manifests
+persistence_attestations
+lineage_manifests
+fidelity_evaluations
+```
+
+`assessed_at` is a canonical ISO timestamp supplied by the caller and copied into the output. The builder never reads the wall clock. Freshness is evaluated only relative to this explicit assessment time.
+
+Evidence with `observed_at`, `recorded_at`, `created_at`, or `evaluated_at` after `assessed_at` cannot influence the assessment and should fail closed as future-dated evidence rather than being silently ignored.
+
+The evidence arrays contain:
+
+```text
+Cognitive Availability Attestation v0[]
 + Model Acquisition Manifest v0[]
 + Persistence Attestation v0[]
 + Cognitive Lineage Manifest v0[]
@@ -904,7 +933,7 @@ A future version may additionally consume principal/Self Bundle continuity evide
 
 ### 21.3 Output dimensions
 
-The assessment keeps separate:
+The assessment includes `assessed_at` and keeps separate:
 
 - `cognitive_availability_status`
 - `cognitive_continuity_status`
@@ -936,6 +965,7 @@ The assessment preserves each attestation's assurance class and may derive:
 Rules:
 
 - stale attestations cannot establish current availability;
+- multiple fresh attestations that agree may strengthen support without erasing their separate provenance;
 - contradictory fresh evidence yields `conflicting` rather than last-write-wins;
 - critical conclusions fail closed on unresolved conflict unless an explicit future reconciliation policy says otherwise;
 - provider statements remain distinguishable from independently verified observations;
@@ -1023,6 +1053,8 @@ The observability/recovery extension adds these invariants to section 14:
 34. Evaluation suite/metric changes require new content digests.
 35. No new evidence artifact contains raw credentials, tokens, cookies, vault keys, or provider session material.
 36. Existing Cognitive Continuity Report v0 behavior is not silently changed by this extension.
+37. Cognitive Recovery Assessment uses explicit `assessed_at`; it never reads the current clock.
+38. Evidence dated after `assessed_at` cannot influence the assessment and fails closed as future-dated evidence.
 
 ## 25. Implementation shape and determinism
 
@@ -1033,6 +1065,7 @@ The extension follows existing AXIOM evidence-library patterns:
 - canonical digests through existing canonical primitives;
 - deterministic sorting where order is not semantically meaningful;
 - pure resolvers/builders;
+- explicit assessment time rather than wall-clock reads;
 - recursively frozen outputs;
 - no mutation of supplied frozen inputs;
 - JSON Schema mirrors with semantic-validator pointers;
@@ -1101,6 +1134,7 @@ Cover:
 - indeterminate dimension;
 - suite/metric digest mismatch;
 - deterministic aggregation;
+- duplicate/invalid required dimensions;
 - no universal identity percentage;
 - explicit principal/subjective-identity nonclaim.
 
@@ -1108,12 +1142,15 @@ Cover:
 
 Cover:
 
+- explicit `assessed_at` determinism;
+- rejection of future-dated evidence;
 - all dependencies currently available;
 - critical dependency unavailable with no candidate;
 - candidate available with strong fidelity evidence;
 - candidate available with degraded fidelity;
 - candidate available but insufficient evaluation;
 - stale availability evidence;
+- agreeing multi-observer evidence;
 - contradictory fresh availability evidence;
 - provider-dependent versus owner-controlled recovery paths;
 - deterministic result independent of input array order;
