@@ -144,7 +144,7 @@ test('real four-service path authorizes the exact cognitive selection without au
   });
 
   assert.equal(result.status, 'completed');
-  assert.equal(result.evidence.effect_destination, 'local');
+  assert.equal(Object.hasOwn(result.evidence, 'effect_destination'), false);
   assert.match(result.evidence.policy_digest, /^[a-f0-9]{64}$/);
 
   const decision = validateCognitiveSelectionAuthorizationResult(result, selectionProposal);
@@ -156,6 +156,7 @@ test('real four-service path authorizes the exact cognitive selection without au
   assert.equal(decision.network_effect, 'none');
   assert.equal(decision.credential_visibility, 'none');
   assert.equal(decision.runtime_activation, false);
+  assert.equal(decision.effect_destination, null);
   assert.equal(decision.policy_digest, result.evidence.policy_digest);
   assert.equal(decision.recommended_profile_id, selectionProposal.recommended_profile_id);
   assert.equal(decision.recommended_profile_digest, selectionProposal.recommended_profile_digest);
