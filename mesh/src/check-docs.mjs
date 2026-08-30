@@ -399,6 +399,7 @@ const REQUIRED_CONTENT = Object.freeze({
     '## Pilot repetition and non-claims'
   ],
   'docs/operations/EXTERNAL-TELEMETRY-AND-ALERTING.md': [
+    '## Enforced relay boundary',
     '## Queue, retry, and delivery audit',
     '## Pilot repetition and non-claims'
   ],
