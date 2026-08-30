@@ -469,8 +469,15 @@ export class GridStore extends CheckpointGridStore {
   }
 
   getIntentContractAssessment(contractId, options = {}) {
-    this.requireIntentEvidenceChain();
-    return this.getIntentContractAssessmentFromVerifiedState(contractId, options);
+    const chain = this.requireIntentEvidenceChain();
+    const state = this.getIntentContractAssessmentFromVerifiedState(contractId, options);
+    return {
+      ...state,
+      chain: {
+        ...state.chain,
+        verification_mode: chain.verification_mode
+      }
+    };
   }
 
   renderIntentGovernanceState(state) {
