@@ -1,0 +1,24 @@
+name: Audit Assurance RED Gate
+
+on:
+  push:
+    branches:
+      - audit-remediation-2026-08-30
+    paths:
+      - .github/workflows/audit-assurance-red.yml
+
+permissions:
+  contents: read
+
+jobs:
+  red:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: audit-remediation-2026-08-30
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.18.0
+      - name: Run targeted live-chain regression test
+        run: node --test mesh/test/live-chain-verification.test.mjs
