@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "axiom-cognitive-selection-policy.v0",
+  "title": "AXIOM Cognitive Selection Policy v0",
+  "type": "object",
+  "additionalProperties": false,
+  "x-axiom-status": "surface-only-tdd-green",
+  "x-axiom-semantic-validator": "mesh/src/lib/cognitive-selection-proposal.mjs",
+  "x-axiom-non-claims": [
+    "model-invocation",
+    "provider-egress",
+    "runtime-activation",
+    "authority-grant",
+    "automatic-execution"
+  ]
+}
