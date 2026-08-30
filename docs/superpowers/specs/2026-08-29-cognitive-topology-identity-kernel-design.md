@@ -1,10 +1,12 @@
 # Cognitive Topology, Persistent Augmentation, and Identity Kernel — Design
 
-**Status:** approved architectural extension; Cognitive Topology v0 and the first cognitive-sovereignty evidence slice are implemented as inert, zero-authority contracts
+**Status:** approved architectural extension; Cognitive Topology v0 and the first cognitive-sovereignty evidence slice are implemented as inert, zero-authority contracts; cognitive observability/recovery evidence v0 is approved and specified but not yet implemented
 
 **Date:** 2026-08-29
 
-**Scope:** persistent agent cognition, temporary and permanent model augmentation, provider-bound persistence, owner-controlled/open-weight acquisition, optional lightweight identity kernels, bounded self-adaptation, continuity and cognitive-fidelity reporting
+**Last extended:** 2026-08-30
+
+**Scope:** persistent agent cognition, temporary and permanent model augmentation, provider-bound persistence, owner-controlled/open-weight acquisition, optional lightweight identity kernels, bounded self-adaptation, continuity and cognitive-fidelity reporting, attributable availability observations, cognitive lineage, replacement-fidelity evaluation, and recovery assessment
 
 **Builds on:**
 
@@ -16,7 +18,7 @@
 - `mesh/src/lib/self-bundle-index.mjs`
 - `mesh/src/lib/continuity-report.mjs`
 
-**Authority boundary:** `mesh/config/capabilities.json` remains authoritative. This design and its current executable evidence contracts do not activate models, grant authority, expose credentials, execute adaptation, perform network effects, download/acquire weights, synchronize provider persistence, prove AXIOM principal continuity, or claim subjective identity continuity.
+**Authority boundary:** `mesh/config/capabilities.json` remains authoritative. This design and its current executable evidence contracts do not activate models, grant authority, expose credentials, execute adaptation, perform network effects, download/acquire weights, synchronize provider persistence, prove AXIOM principal continuity, or claim subjective identity continuity. The approved observability/recovery extension remains specification-only until implemented and does not authorize live probing, model substitution, topology mutation, or recovery execution.
 
 ## 1. Core decision
 
@@ -463,3 +465,749 @@ The user should eventually be able to inspect an agent and answer:
 - What has changed through adaptation, and can it be rolled back?
 
 The intended end state is **progressive cognitive sovereignty without forced architectural uniformity**.
+
+## 17. Cognitive observability and recovery evidence extension
+
+The next approved slice strengthens the evidence boundary before AXIOM gains any automatic recovery behavior.
+
+The current Cognitive Continuity Report v0 intentionally accepts minimal caller-supplied model observations. That is sufficient for a first evidence-relative report, but it does not establish who observed availability, how the observation was produced, whether it is fresh, what evidence supports it, how a candidate relates to a failed component, or how much capability/behavior a replacement preserves.
+
+The next architecture therefore adds four separable inert contracts:
+
+1. **Cognitive Availability Attestation v0** — one bounded, attributable availability observation for one topology node;
+2. **Cognitive Lineage Manifest v0** — an explicit cognitive relationship between a reference component/artifact and a candidate;
+3. **Replacement Fidelity Evaluation v0** — multidimensional comparison of a candidate against an accepted reference/baseline;
+4. **Cognitive Recovery Assessment v0** — deterministic interpretation of the stronger evidence plus the existing topology/acquisition/persistence layer.
+
+The governing principle for this extension is:
+
+> **Knowledge before agency. AXIOM should establish what is available, what changed, and how much fidelity is preserved before any separate authority-bearing component may decide or perform a transition.**
+
+Observation, lineage, evaluation, and interpretation remain separate because:
+
+```text
+observer says candidate is available
+  != candidate is approved
+  != candidate is equivalent
+  != candidate is the same principal
+  != candidate may be activated
+```
+
+### 17.1 Compatibility rule
+
+`axiom-cognitive-continuity-report.v0` remains unchanged.
+
+Its current `model_observations` input remains a compatibility surface. The stronger observer evidence is not silently substituted under v0 semantics.
+
+A future report version may consume Availability Attestation v0 directly. The first implementation of this extension should instead add Cognitive Recovery Assessment v0 as a separate consumer.
+
+## 18. Cognitive Availability Attestation v0
+
+### 18.1 Purpose
+
+Cognitive Availability Attestation v0 records one bounded observation of whether one exact Cognitive Topology node was available at a particular time, using a declared method and explicit provenance.
+
+The artifact records an observation; it does not execute a health check.
+
+Recommended schema/status:
+
+```text
+axiom-cognitive-availability-attestation.v0
+inert-evidence
+```
+
+### 18.2 Top-level fields
+
+The v0 document contains exactly:
+
+```text
+schema
+version
+status
+attestation_id
+topology_id
+topology_digest
+node_id
+model_id
+observation
+observer
+evidence
+observed_at
+valid_until
+recorded_at
+contains_secret_material
+authority_effect
+network_effect
+runtime_activation
+```
+
+Unknown fields fail closed.
+
+### 18.3 Observation object
+
+The observation contains exactly:
+
+```text
+availability
+method
+observed_artifact_digest
+observed_runtime_ref
+assurance_class
+```
+
+Availability:
+
+- `available`
+- `unavailable`
+- `indeterminate`
+
+Observation methods:
+
+- `local-artifact`
+- `local-runtime`
+- `provider-api`
+- `remote-runtime`
+- `provider-statement`
+- `synthetic-probe`
+
+`observed_artifact_digest` is required only when the topology/observation method makes one exact owner-addressable artifact observable. Closed/provider models do not invent an artifact digest.
+
+`observed_runtime_ref` is an opaque non-secret runtime/service reference. It cannot contain credentials, tokens, cookies, sessions, or capability grants.
+
+Assurance classes:
+
+- `declared`
+- `signed`
+- `verified-local`
+- `corroborated`
+
+These classify evidence posture; they do not create trust or authority by themselves. A `signed` classification means signature evidence exists under a separately defined verification mechanism. Implementation should reuse existing AXIOM verification primitives where possible rather than invent a parallel signature authority.
+
+### 18.4 Observer and evidence
+
+Observer object:
+
+```text
+observer_kind
+observer_ref
+observer_principal_ref
+```
+
+Observer kinds:
+
+- `local-agent`
+- `local-service`
+- `remote-service`
+- `provider`
+- `external-verifier`
+
+`observer_principal_ref` may be null when no AXIOM principal represents the observer. Presence of an observer principal never grants that observer authority over the subject agent.
+
+Evidence object:
+
+```text
+evidence_kind
+evidence_ref
+evidence_digest
+verification_ref
+verification_digest
+```
+
+Evidence kinds:
+
+- `local-observation`
+- `runtime-probe-result`
+- `provider-statement`
+- `signed-provider-statement`
+- `external-observation`
+- `artifact-verification`
+
+Verification references may be null for `declared` assurance but are required when an assurance class claims independent verification.
+
+### 18.5 Freshness
+
+The attestation carries `observed_at`, `valid_until`, and `recorded_at`.
+
+Rules:
+
+- timestamps are canonical ISO timestamps;
+- `recorded_at >= observed_at`;
+- `valid_until >= observed_at`;
+- an assessment evaluated after `valid_until` classifies the attestation as stale;
+- stale evidence is not silently rewritten to `unavailable`; it becomes insufficient current evidence.
+
+Freshness is explicit because model/runtime availability is time-sensitive.
+
+### 18.6 Resolver semantics
+
+A resolver requires:
+
+- exact topology ID and canonical digest match;
+- exact node/model binding;
+- observation-method compatibility with topology access/custody/weight posture;
+- exact artifact-digest rules where an artifact is observable;
+- no unknown fields or secret material;
+- exact no-authority/no-network/no-runtime boundary values.
+
+The resolver never contacts the observer/provider.
+
+## 19. Cognitive Lineage Manifest v0
+
+### 19.1 Purpose and boundary
+
+Cognitive Lineage Manifest v0 describes a relationship between a reference cognitive component/artifact and a candidate component/artifact.
+
+**Cognitive lineage is not AXIOM principal lineage.**
+
+A copied or descended checkpoint does not prove principal continuity. Conversely, a completely different model may serve a continuing AXIOM principal after a separately authorized migration.
+
+Recommended schema/status:
+
+```text
+axiom-cognitive-lineage-manifest.v0
+inert-evidence
+```
+
+### 19.2 Contract shape
+
+Top-level fields:
+
+```text
+schema
+version
+status
+lineage_id
+topology_id
+topology_digest
+reference
+candidate
+relationship
+procedure
+evidence
+created_at
+recorded_at
+contains_secret_material
+authority_effect
+network_effect
+runtime_activation
+```
+
+Reference/candidate descriptor:
+
+```text
+node_id
+model_id
+artifact_ref
+artifact_digest
+provider_version_ref
+```
+
+Non-applicable fields are explicitly null.
+
+The candidate may be outside the current topology. Such a candidate is described without pretending it is already active or adopted.
+
+### 19.3 Relationship classes
+
+- `successor`
+- `replacement`
+- `fine-tuned-descendant`
+- `distilled-descendant`
+- `quantized-derivative`
+- `adapter-derived`
+- `provider-version-successor`
+- `functionally-unrelated`
+
+`replacement` means the candidate is considered as a replacement; it does not claim common weight lineage.
+
+`functionally-unrelated` is explicit so AXIOM can evaluate a different architecture honestly instead of manufacturing a lineage relation.
+
+### 19.4 Procedure and evidence
+
+Procedure object:
+
+```text
+procedure_kind
+procedure_ref
+procedure_digest
+adaptation_authorization_ref
+```
+
+Where applicable, descendant relationships bind the procedure that produced the candidate and may reference the existing personal-model adaptation authorization contract. The manifest never executes the procedure.
+
+Evidence object:
+
+```text
+assurance_class
+evidence_ref
+evidence_digest
+verification_ref
+verification_digest
+```
+
+Lineage assurance classes:
+
+- `declared`
+- `verified`
+
+For `declared`, `verification_ref` and `verification_digest` are null. For `verified`, both are required. This prevents the mere presence of a manifest from being interpreted as verified cognitive lineage.
+
+## 20. Replacement Fidelity Evaluation v0
+
+### 20.1 Purpose
+
+Replacement Fidelity Evaluation v0 compares a candidate cognitive component with a reference component or accepted baseline across independent dimensions.
+
+It does not output an identity percentage and does not prove principal continuity.
+
+Recommended schema/status:
+
+```text
+axiom-replacement-fidelity-evaluation.v0
+inert-evidence
+```
+
+### 20.2 Contract shape
+
+Top-level fields:
+
+```text
+schema
+version
+status
+evaluation_id
+topology_id
+topology_digest
+lineage_id
+reference
+candidate
+suite
+dimensions
+aggregate
+evaluator
+evaluated_at
+recorded_at
+contains_secret_material
+authority_effect
+network_effect
+runtime_activation
+```
+
+`lineage_id` may be null when a candidate is deliberately evaluated without a lineage claim.
+
+Evaluation suite:
+
+```text
+suite_id
+suite_digest
+suite_version
+sample_count
+```
+
+The exact suite digest is required so materially changed evaluations cannot retain the same apparent benchmark identity.
+
+### 20.3 Fidelity dimensions
+
+The first contract supports:
+
+- `capability-fidelity`
+- `preference-fidelity`
+- `behavioral-fidelity`
+- `epistemic-fidelity`
+- `safety-policy-fidelity`
+- `style-personality-fidelity`
+- `memory-use-fidelity`
+- `relationship-fidelity`
+- `robustness-fidelity`
+
+Not every evaluation must measure every dimension, but missing dimensions remain visible as unevaluated rather than passing implicitly.
+
+Each dimension contains:
+
+```text
+dimension
+metric_ref
+metric_digest
+result_value
+result_status
+threshold_ref
+threshold_digest
+confidence
+sample_count
+evidence_ref
+evidence_digest
+```
+
+Result status:
+
+- `pass`
+- `degraded`
+- `fail`
+- `indeterminate`
+
+Metrics remain separately referenced; AXIOM does not pretend all fidelity dimensions share one universal numerical scale.
+
+`confidence` is evaluation confidence, never an identity probability.
+
+### 20.4 Aggregate classification
+
+The aggregate object contains exactly:
+
+```text
+classification
+aggregation_policy_ref
+aggregation_policy_digest
+required_dimensions
+```
+
+Recommended classifications:
+
+- `high-fidelity`
+- `acceptable-with-degradation`
+- `materially-degraded`
+- `insufficient-evidence`
+- `incompatible`
+
+`required_dimensions` is a bounded, duplicate-free list drawn from the supported fidelity dimensions. The aggregation-policy reference/digest defines how required and optional dimensions map to the classification.
+
+The aggregate cannot be stronger than the underlying required dimensions permit. Default fail-closed behavior:
+
+- any required `fail` yields at least `materially-degraded` or `incompatible` according to policy;
+- any required `indeterminate` yields `insufficient-evidence` unless an explicit policy permits a weaker conclusion;
+- a missing required dimension yields `insufficient-evidence`;
+- optional dimensions remain visible without being automatically decisive.
+
+Evaluator object:
+
+```text
+evaluator_kind
+evaluator_ref
+evaluator_principal_ref
+```
+
+Evaluator provenance is evidence; evaluator identity grants no transition authority.
+
+## 21. Cognitive Recovery Assessment v0
+
+### 21.1 Purpose
+
+Cognitive Recovery Assessment v0 is a deterministic interpretation layer that answers:
+
+- which declared cognitive dependencies have fresh supporting evidence;
+- which are unavailable, stale, conflicting, or indeterminate;
+- which candidate replacements exist;
+- what cognitive lineage relationship is claimed;
+- what fidelity evidence exists;
+- whether recovery appears possible without, with, or beyond tolerated degradation;
+- which evidence remains missing.
+
+It does not perform recovery.
+
+### 21.2 Deterministic input wrapper
+
+The pure builder should take one Cognitive Topology plus an exact input object:
+
+```text
+assessed_at
+availability_attestations
+acquisition_manifests
+persistence_attestations
+lineage_manifests
+fidelity_evaluations
+```
+
+`assessed_at` is a canonical ISO timestamp supplied by the caller and copied into the output. The builder never reads the wall clock. Freshness is evaluated only relative to this explicit assessment time.
+
+Evidence with `observed_at`, `recorded_at`, `created_at`, or `evaluated_at` after `assessed_at` cannot influence the assessment and should fail closed as future-dated evidence rather than being silently ignored.
+
+The evidence arrays contain:
+
+```text
+Cognitive Availability Attestation v0[]
++ Model Acquisition Manifest v0[]
++ Persistence Attestation v0[]
++ Cognitive Lineage Manifest v0[]
++ Replacement Fidelity Evaluation v0[]
+```
+
+A future version may additionally consume principal/Self Bundle continuity evidence, but v0 does not collapse those identity domains into the cognitive assessment.
+
+### 21.3 Output dimensions
+
+The assessment includes `assessed_at` and keeps separate:
+
+- `cognitive_availability_status`
+- `cognitive_continuity_status`
+- `cognitive_fidelity_status`
+- `cognitive_sovereignty_status`
+- `recovery_readiness_status`
+
+Recommended recovery-readiness states:
+
+- `ready-no-substitution`
+- `ready-with-candidate-evidence`
+- `recoverable-with-degradation`
+- `insufficient-evidence`
+- `no-supported-recovery-path`
+
+No status contains an implicit activation or approval grant.
+
+### 21.4 Evidence posture and conflicts
+
+The assessment preserves each attestation's assurance class and may derive:
+
+- `verified`
+- `supported`
+- `declared-only`
+- `stale`
+- `conflicting`
+- `missing`
+
+Rules:
+
+- stale attestations cannot establish current availability;
+- multiple fresh attestations that agree may strengthen support without erasing their separate provenance;
+- contradictory fresh evidence yields `conflicting` rather than last-write-wins;
+- critical conclusions fail closed on unresolved conflict unless an explicit future reconciliation policy says otherwise;
+- provider statements remain distinguishable from independently verified observations;
+- every material conclusion retains evidence references/digests.
+
+A truthful assessment may therefore say:
+
+> Primary embodiment A is unavailable according to fresh provider and external evidence. Candidate B is available. B is a declared replacement rather than a model descendant. Capability, safety-policy, and memory-use fidelity pass; preference and style-personality fidelity are degraded; relationship fidelity is indeterminate. Cognitive recovery appears possible with degradation. Principal continuity and subjective identity are not assessed by this artifact.
+
+## 22. Extended authority boundary
+
+Every executable contract in this slice must preserve mechanically testable zero-effect fields where applicable:
+
+```text
+contains_secret_material = false
+authority_effect = none
+network_effect = none
+runtime_activation = false
+```
+
+The recovery assessment additionally exposes an authority-boundary object equivalent in force to the existing Cognitive Continuity Report boundary:
+
+```text
+writes_files = false
+performs_network_effects = false
+loads_models = false
+switches_models = false
+synchronizes_persistence = false
+acquires_weights = false
+trains_models = false
+grants_execution_authority = false
+mutates_topology = false
+proves_principal_continuity = false
+proves_subjective_identity = false
+```
+
+No observation, lineage statement, benchmark result, aggregate fidelity classification, or recovery-readiness status can authorize an effect.
+
+## 23. Threat model for the extension
+
+### 23.1 Evidence spoofing
+
+Attackers may forge provider-health statements, local observations, lineage claims, or benchmark results. Contracts bind evidence references/digests and preserve observer/evaluator provenance.
+
+### 23.2 Stale evidence replay
+
+Old success evidence must not be replayed indefinitely as current availability proof. `valid_until` makes freshness explicit.
+
+### 23.3 Benchmark gaming
+
+A candidate may be optimized for a known fidelity suite. Exact suite/metric digests, multidimensional evaluation, independent evaluators, and future adversarial suites reduce but do not eliminate this risk.
+
+### 23.4 Identity laundering
+
+A high-fidelity candidate can never be described as the same AXIOM principal merely because it behaves similarly.
+
+### 23.5 Lineage laundering
+
+A provider-version replacement, independently trained model, or architectural change cannot be relabeled as a descendant unless evidence supports that relationship.
+
+### 23.6 Authority laundering
+
+Observers, evaluators, and recovery assessors cannot smuggle credentials, capability grants, executable instructions, or transition authorization into evidence metadata.
+
+## 24. Extended fail-closed invariants
+
+The observability/recovery extension adds these invariants to section 14:
+
+18. Availability evidence binds one exact topology identifier/digest and exact node/model when observing a topology node.
+19. Availability evidence past `valid_until` is stale and cannot establish current availability.
+20. Stale evidence is not silently converted to unavailable evidence.
+21. Conflicting fresh availability evidence is represented as conflict, not silently resolved by last-write-wins.
+22. Exact observed artifact-digest mismatch remains an explicit mismatch.
+23. Observer and evaluator provenance are retained.
+24. Assurance classification cannot exceed the verification evidence present.
+25. Cognitive lineage cannot establish AXIOM principal lineage.
+26. Replacement fidelity cannot establish AXIOM principal continuity or subjective identity.
+27. A high-fidelity result cannot authorize model substitution.
+28. Recovery-readiness status cannot authorize model substitution.
+29. Provider-controlled custody cannot become owner-controlled because availability is independently verified.
+30. Acquisition evidence remains authoritative for owner-acquired artifact evidence; availability evidence does not replace it.
+31. Persistence availability remains distinct from model/runtime availability.
+32. Missing required fidelity dimensions remain missing/indeterminate rather than passing.
+33. Aggregate fidelity cannot exceed the strength allowed by its aggregation policy and dimension results.
+34. Evaluation suite/metric changes require new content digests.
+35. No new evidence artifact contains raw credentials, tokens, cookies, vault keys, or provider session material.
+36. Existing Cognitive Continuity Report v0 behavior is not silently changed by this extension.
+37. Cognitive Recovery Assessment uses explicit `assessed_at`; it never reads the current clock.
+38. Evidence dated after `assessed_at` cannot influence the assessment and fails closed as future-dated evidence.
+
+## 25. Implementation shape and determinism
+
+The extension follows existing AXIOM evidence-library patterns:
+
+- exact-object validation;
+- bounded arrays;
+- canonical digests through existing canonical primitives;
+- deterministic sorting where order is not semantically meaningful;
+- pure resolvers/builders;
+- explicit assessment time rather than wall-clock reads;
+- recursively frozen outputs;
+- no mutation of supplied frozen inputs;
+- JSON Schema mirrors with semantic-validator pointers;
+- no new dependencies unless separately justified.
+
+Recommended implementation modules:
+
+```text
+mesh/src/lib/cognitive-availability-attestation.mjs
+mesh/src/lib/cognitive-lineage-manifest.mjs
+mesh/src/lib/replacement-fidelity-evaluation.mjs
+mesh/src/lib/cognitive-recovery-assessment.mjs
+```
+
+Recommended schema mirrors:
+
+```text
+mesh/config/cognitive-availability-attestation-v0.schema.json
+mesh/config/cognitive-lineage-manifest-v0.schema.json
+mesh/config/replacement-fidelity-evaluation-v0.schema.json
+```
+
+Cognitive Recovery Assessment is a derived report. Its output shape must be exhaustively tested even if it does not require a user-authored JSON Schema input contract.
+
+## 26. TDD requirements
+
+Implementation begins RED.
+
+### Availability attestation
+
+Cover:
+
+- valid local-artifact observation;
+- valid provider/runtime observation;
+- topology digest mismatch rejection;
+- wrong node/model rejection;
+- artifact-digest validation;
+- method/topology incompatibility;
+- invalid chronology;
+- stale classification in assessment;
+- assurance without required verification rejection;
+- unknown-field rejection;
+- secret/effect boundary rejection;
+- deterministic digest and frozen output.
+
+### Cognitive lineage
+
+Cover:
+
+- valid descendant lineage;
+- valid unrelated replacement;
+- candidate outside current topology without an active-node claim;
+- artifact/ref mismatch rejection;
+- invalid relationship/procedure combinations;
+- declared versus verified evidence posture;
+- explicit proof that cognitive lineage never reports principal lineage.
+
+### Replacement fidelity
+
+Cover:
+
+- multidimensional high-fidelity fixture;
+- degraded dimensions;
+- failed required dimension;
+- missing required dimension;
+- indeterminate dimension;
+- suite/metric digest mismatch;
+- deterministic aggregation;
+- duplicate/invalid required dimensions;
+- no universal identity percentage;
+- explicit principal/subjective-identity nonclaim.
+
+### Recovery assessment
+
+Cover:
+
+- explicit `assessed_at` determinism;
+- rejection of future-dated evidence;
+- all dependencies currently available;
+- critical dependency unavailable with no candidate;
+- candidate available with strong fidelity evidence;
+- candidate available with degraded fidelity;
+- candidate available but insufficient evaluation;
+- stale availability evidence;
+- agreeing multi-observer evidence;
+- contradictory fresh availability evidence;
+- provider-dependent versus owner-controlled recovery paths;
+- deterministic result independent of input array order;
+- frozen output and input non-mutation;
+- mechanically tested zero-authority boundary.
+
+Protected repository checks and compatibility platforms remain mandatory before merge.
+
+## 27. Migration path after the evidence slice
+
+Only after this evidence foundation is implemented and reviewed should later slices add, separately:
+
+1. independently authorized observers that actually perform provider/local probes and emit Cognitive Availability Attestations;
+2. provider-retirement and dependency-loss recovery drills;
+3. topology-transition proposals that consume recovery evidence but still do not execute transitions;
+4. governed transition authorization;
+5. only then, an executor capable of switching providers/models under explicit authority;
+6. later, shadow/canary self-adaptation and learned routing artifacts.
+
+The architecture intentionally delays automatic migration until evidence and authority paths are independently mature.
+
+## 28. Extended product interpretation
+
+The user/operator should eventually be able to inspect one cognitive dependency and answer:
+
+- Is it available now, and how do we know?
+- Who observed it and when does that evidence expire?
+- Is the observation merely declared, signed, locally verified, or corroborated?
+- Is a candidate a descendant, provider successor, replacement, or unrelated model?
+- Which capabilities and characteristic behaviors have actually been tested for fidelity?
+- What is degraded or still unknown?
+- Is recovery possible without substitution?
+- If substitution is needed, what candidate evidence exists?
+- What remains provider-dependent versus owner-controlled?
+- What authority would still be required before anything actually changes?
+
+The extension adds a second product principle to section 16:
+
+> **AXIOM should make cognitive dependency loss and recovery legible before making recovery automatic.**
+
+## 29. Observability/recovery non-claims
+
+The approved extension does not claim to provide:
+
+- live provider reachability until a separately authorized observer exists;
+- actual network probing;
+- model invocation or runtime loading;
+- automatic provider/model selection;
+- topology mutation;
+- persistence synchronization/export/restore;
+- weight acquisition/download;
+- training, fine-tuning, distillation, or adaptation;
+- benchmark immunity to gaming;
+- perfect behavioral equivalence;
+- AXIOM principal continuity proof;
+- Self Bundle lineage-continuity proof;
+- subjective identity proof;
+- transition authority;
+- execution authority;
+- production promotion.
