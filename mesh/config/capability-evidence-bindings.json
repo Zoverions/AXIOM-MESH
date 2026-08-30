@@ -1,7 +1,7 @@
 {
   "schema": "axiom-capability-evidence-bindings.v1",
   "kernel_version": "0.12.0-dev.3",
-  "registry_digest": "e8bf5b9c083fd4b20a630372fa135e630c36285064f58d84abea60975325c10e",
+  "registry_digest": "2d868f44cd3498ecfe91c3ad488592347bb7016591277d7a885dd9300fe42bee",
   "bindings": [
     {
       "capability_id": "capsules.registry",
@@ -39,17 +39,11 @@
       ]
     },
     {
-      "capability_id": "core.machine-principals",
-      "path": "mesh/test/machine-principal-e2e.test.mjs",
-      "test": "constrained agent executes an authorized intent and returns bound authority evidence",
+      "capability_id": "core.layered-policy",
+      "path": "mesh/test/kernel.test.mjs",
+      "test": "layered policy merging is deny-dominant and only tightens requirements",
       "assertions": [
-        "assert.equal(result.status, 'completed');",
-        "assert.equal(result.evidence.machine_sponsor, 'owner.machine-test');",
-        "assert.match(result.evidence.machine_authority_digest, /^[a-f0-9]{64}$/);",
-        "assert.deepEqual(machineBoundary, expectedMachineBoundary);",
-        "assert.equal(error.code, 'machine_request_budget_exceeded');",
-        "assert.equal(error.code, 'machine_rate_budget_exceeded');",
-        "assert.equal(error.code, 'machine_response_budget_exceeded');"
+        "assert.equal(merged.actions['chain.submit'].decision, 'deny');"
       ]
     },
     {
@@ -67,6 +61,20 @@
       ]
     },
     {
+      "capability_id": "core.machine-principals",
+      "path": "mesh/test/machine-principal-e2e.test.mjs",
+      "test": "constrained agent executes an authorized intent and returns bound authority evidence",
+      "assertions": [
+        "assert.equal(result.status, 'completed');",
+        "assert.equal(result.evidence.machine_sponsor, 'owner.machine-test');",
+        "assert.match(result.evidence.machine_authority_digest, /^[a-f0-9]{64}$/);",
+        "assert.deepEqual(machineBoundary, expectedMachineBoundary);",
+        "assert.equal(error.code, 'machine_request_budget_exceeded');",
+        "assert.equal(error.code, 'machine_rate_budget_exceeded');",
+        "assert.equal(error.code, 'machine_response_budget_exceeded');"
+      ]
+    },
+    {
       "capability_id": "core.machine-receipts",
       "path": "mesh/test/machine-receipt-e2e.test.mjs",
       "test": "real Gateway returns an owner-scoped Grid-attested machine receipt that verifies independently",
@@ -79,14 +87,6 @@
         "assert.equal(receipt.statement.verification.owner_bound, true);",
         "assert.equal(JSON.stringify(receipt).includes('receipt-bound-output'), false);",
         "assert.equal(verification.valid, true);"
-      ]
-    },
-    {
-      "capability_id": "core.layered-policy",
-      "path": "mesh/test/kernel.test.mjs",
-      "test": "layered policy merging is deny-dominant and only tightens requirements",
-      "assertions": [
-        "assert.equal(merged.actions['chain.submit'].decision, 'deny');"
       ]
     },
     {
@@ -200,6 +200,17 @@
       "assertions": [
         "assert.equal(runtime.receipt.resources.length, 16);",
         "assert.equal(receipt.includes('PRIVATE KEY'), false);"
+      ]
+    },
+    {
+      "capability_id": "operations.public-witness",
+      "path": "mesh/test/public-witness-currentness-anchor-publication.test.mjs",
+      "test": "public witness anchor store durably publishes a verified anchor without authority or global-currentness claims",
+      "assertions": [
+        "assert.equal(result.status, 'published');",
+        "assert.equal(result.durable_record.statement.global_currentness_claimed, false);",
+        "assert.equal(result.durable_record.statement.authority_effect, 'none');",
+        "assert.equal(result.execution_authority_granted, false);"
       ]
     },
     {

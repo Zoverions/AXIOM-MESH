@@ -1,6 +1,6 @@
 {
   "schema": "axiom-capabilities.v1",
-  "verified_at": "2026-08-10",
+  "verified_at": "2026-08-30",
   "kernel_version": "0.12.0-dev.3",
   "capabilities": [
     {
@@ -297,6 +297,9 @@
       "summary": "Authenticated operator API for intent submission, status, audit, recovery, and governed state inspection.",
       "evidence": [
         "mesh/test/kernel.test.mjs"
+      ],
+      "surfaces": [
+        "npm:start:gateway-unit"
       ]
     },
     {
@@ -352,6 +355,9 @@
         "mesh/test/resilience-drill.test.mjs",
         "mesh/test/production-host.test.mjs",
         ".github/workflows/kernel.yml"
+      ],
+      "surfaces": [
+        "npm:telemetry-relay:start"
       ]
     },
     {
@@ -389,6 +395,9 @@
         "mesh/src/service-unit-drill.mjs",
         "mesh/compose.units.yml",
         ".github/workflows/kernel.yml"
+      ],
+      "surfaces": [
+        "npm:start:production"
       ]
     },
     {
@@ -401,6 +410,21 @@
         "mesh/test/provider-conformance-drill.test.mjs",
         "mesh/src/provider-conformance-drill.mjs",
         ".github/workflows/kernel.yml"
+      ],
+      "surfaces": [
+        "npm:provider:start"
+      ]
+    },
+    {
+      "id": "operations.public-witness",
+      "family": "operations",
+      "status": "experimental",
+      "summary": "Independently operated public witnessing durably publishes and verifies signed currentness anchors without granting execution authority or claiming global currentness or finality.",
+      "surfaces": [
+        "npm:public-witness:start"
+      ],
+      "evidence": [
+        "mesh/test/public-witness-currentness-anchor-publication.test.mjs"
       ]
     },
     {
