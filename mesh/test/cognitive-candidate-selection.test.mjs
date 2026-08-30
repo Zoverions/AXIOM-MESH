@@ -226,6 +226,35 @@ test('returns deterministic eligible candidates without ranking or winner select
   assert.equal(Object.isFrozen(report.rejected), true);
 });
 
+test('orders candidate evidence by locale-independent code-unit profile_id ordering', () => {
+  const items = candidates();
+  const template = items[0];
+  const ids = [
+    'cognitive.example.a',
+    'cognitive.example.A',
+    'cognitive.example.-',
+    'cognitive.example._'
+  ];
+  const expanded = ids.map((profileId, index) => {
+    const catalog_entry = structuredClone(template.catalog_entry);
+    catalog_entry.entry_id = `provider:example-api-${index}`;
+    catalog_entry.subject.subject_id = catalog_entry.entry_id;
+    const profile = structuredClone(template.profile);
+    profile.profile_id = profileId;
+    profile.catalog_entry.entry_id = catalog_entry.entry_id;
+    profile.catalog_entry.entry_digest = digestObject(catalog_entry);
+    return { profile, catalog_entry };
+  });
+
+  const report = evaluateCognitiveCandidates(expanded, validRequest());
+  assert.deepEqual(report.eligible.map((item) => item.profile_id), [
+    'cognitive.example.-',
+    'cognitive.example.A',
+    'cognitive.example._',
+    'cognitive.example.a'
+  ]);
+});
+
 test('reports stable reason codes for every hard constraint dimension', () => {
   const cases = [
     ['required_capabilities', ['coding'], 'cognitive.example.remote', 'missing-capability'],
