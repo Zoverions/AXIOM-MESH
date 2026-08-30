@@ -414,7 +414,7 @@ export class GridStore extends CheckpointGridStore {
   }
 
   requireIntentEvidenceChain() {
-    const chain = this.verifyFullChain();
+    const chain = this.verifyLiveChain();
     if (!chain.valid) {
       throw new AxiomError(
         'integrity_verification_failed',
