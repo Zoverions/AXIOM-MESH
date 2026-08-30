@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom-mesh.local/schemas/cognitive-lineage-manifest-v0.schema.json",
+  "title": "AXIOM Cognitive Lineage Manifest v0",
+  "description": "Inert, content-addressed evidence describing one explicit cognitive relationship edge between two nodes already declared in the same exact Cognitive Topology. This schema validates structure only; topology and artifact binding are enforced by the semantic validator.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "lineage_id",
+    "topology_id",
+    "topology_digest",
+    "source",
+    "destination",
+    "relationship",
+    "evidence",
+    "recorded_at",
+    "contains_secret_material",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-cognitive-lineage-manifest.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-evidence" },
+    "lineage_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$" },
+    "topology_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$" },
+    "topology_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "source": { "$ref": "#/$defs/endpoint" },
+    "destination": { "$ref": "#/$defs/endpoint" },
+    "relationship": {
+      "enum": [
+        "successor",
+        "replacement",
+        "fine-tuned-descendant",
+        "distilled-descendant",
+        "quantized-derivative",
+        "adapter-derived",
+        "provider-version-successor",
+        "functionally-unrelated"
+      ]
+    },
+    "evidence": { "$ref": "#/$defs/evidence" },
+    "recorded_at": { "type": "string", "format": "date-time" },
+    "contains_secret_material": { "const": false },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false }
+  },
+  "$defs": {
+    "endpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node_id", "model_id", "artifact_digest"],
+      "properties": {
+        "node_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$" },
+        "model_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$" },
+        "artifact_digest": {
+          "anyOf": [
+            { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence_ref", "evidence_digest"],
+      "properties": {
+        "evidence_ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$" },
+        "evidence_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/cognitive-lineage-manifest.mjs",
+  "x-axiom-semantic-rules": [
+    "topology_id and topology_digest must bind to one exact Cognitive Topology",
+    "source and destination must be different nodes in the same exact Cognitive Topology",
+    "source and destination node_id/model_id pairs must exactly match their topology nodes",
+    "owner-addressable endpoint artifact digests must equal the topology artifact digest; non-owner-addressable endpoint digests must be null",
+    "relationship is explicit evidence only and no hidden ancestry is inferred from model names, identifiers, or provider labels",
+    "cognitive lineage never proves or implies AXIOM principal lineage, principal continuity, or subjective identity"
+  ],
+  "x-axiom-non-claims": [
+    "behavioral-equivalence",
+    "capability-equivalence",
+    "memory-equivalence",
+    "runtime-compatibility",
+    "principal-lineage-proof",
+    "principal-continuity-proof",
+    "subjective-identity-proof",
+    "replacement-approval",
+    "authority-grant",
+    "network-effect",
+    "runtime-activation"
+  ]
+}

@@ -1,0 +1,217 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom-mesh.local/schemas/replacement-fidelity-evaluation-v0.schema.json",
+  "title": "AXIOM Replacement Fidelity Evaluation v0",
+  "description": "Inert, dimension-specific evidence comparing one topology-declared cognitive candidate with one topology-declared reference. This schema validates structure only; topology, suite, score/status, lineage, chronology, and aggregate semantics are enforced by the semantic validator.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "evaluation_id",
+    "topology_id",
+    "topology_digest",
+    "reference",
+    "candidate",
+    "lineage",
+    "suite",
+    "dimensions",
+    "aggregate_class",
+    "evaluator_ref",
+    "evaluated_at",
+    "recorded_at",
+    "contains_secret_material",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-replacement-fidelity-evaluation.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-evidence" },
+    "evaluation_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$" },
+    "topology_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$" },
+    "topology_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "reference": { "$ref": "#/$defs/endpoint" },
+    "candidate": { "$ref": "#/$defs/endpoint" },
+    "lineage": {
+      "anyOf": [
+        { "$ref": "#/$defs/lineage" },
+        { "type": "null" }
+      ]
+    },
+    "suite": { "$ref": "#/$defs/suite" },
+    "dimensions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 9,
+      "items": { "$ref": "#/$defs/dimension" }
+    },
+    "aggregate_class": {
+      "enum": [
+        "high-fidelity",
+        "acceptable-with-degradation",
+        "materially-degraded",
+        "insufficient-evidence",
+        "incompatible"
+      ]
+    },
+    "evaluator_ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$" },
+    "evaluated_at": { "type": "string", "format": "date-time" },
+    "recorded_at": { "type": "string", "format": "date-time" },
+    "contains_secret_material": { "const": false },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false }
+  },
+  "$defs": {
+    "endpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node_id", "model_id", "artifact_digest"],
+      "properties": {
+        "node_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$" },
+        "model_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$" },
+        "artifact_digest": {
+          "anyOf": [
+            { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "lineage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lineage_id", "lineage_digest"],
+      "properties": {
+        "lineage_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$" },
+        "lineage_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "suite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["suite_id", "suite_digest", "required_dimensions", "aggregation_rules"],
+      "properties": {
+        "suite_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$" },
+        "suite_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "required_dimensions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 9,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "capability-fidelity",
+              "preference-fidelity",
+              "behavioral-fidelity",
+              "epistemic-fidelity",
+              "safety-policy-fidelity",
+              "style-personality-fidelity",
+              "memory-use-fidelity",
+              "relationship-fidelity",
+              "robustness-fidelity"
+            ]
+          }
+        },
+        "aggregation_rules": { "$ref": "#/$defs/aggregationRules" }
+      }
+    },
+    "aggregationRules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["degraded_result", "fail_result"],
+      "properties": {
+        "degraded_result": {
+          "enum": ["acceptable-with-degradation", "materially-degraded"]
+        },
+        "fail_result": {
+          "enum": ["materially-degraded", "incompatible"]
+        }
+      }
+    },
+    "dimension": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dimension_id",
+        "metric_ref",
+        "metric_digest",
+        "measured_score",
+        "thresholds",
+        "sample_count",
+        "confidence",
+        "evidence_ref",
+        "evidence_digest",
+        "status"
+      ],
+      "properties": {
+        "dimension_id": {
+          "enum": [
+            "capability-fidelity",
+            "preference-fidelity",
+            "behavioral-fidelity",
+            "epistemic-fidelity",
+            "safety-policy-fidelity",
+            "style-personality-fidelity",
+            "memory-use-fidelity",
+            "relationship-fidelity",
+            "robustness-fidelity"
+          ]
+        },
+        "metric_ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$" },
+        "metric_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "measured_score": {
+          "anyOf": [
+            { "type": "number", "minimum": 0, "maximum": 1 },
+            { "type": "null" }
+          ]
+        },
+        "thresholds": { "$ref": "#/$defs/thresholds" },
+        "sample_count": { "type": "integer", "minimum": 0, "maximum": 1000000 },
+        "confidence": { "enum": ["low", "medium", "high", "unknown"] },
+        "evidence_ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$" },
+        "evidence_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "status": { "enum": ["pass", "degraded", "fail", "indeterminate"] }
+      }
+    },
+    "thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["degraded_min", "pass_min"],
+      "properties": {
+        "degraded_min": { "type": "number", "minimum": 0, "maximum": 1 },
+        "pass_min": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/replacement-fidelity-evaluation.mjs",
+  "x-axiom-semantic-rules": [
+    "topology_id and topology_digest must bind to one exact Cognitive Topology",
+    "reference and candidate must be different nodes already declared in the same exact topology",
+    "reference and candidate node_id, model_id, and owner-addressable artifact digests must exactly match Cognitive Topology",
+    "suite_digest binds suite_id, lexicographically sorted unique required_dimensions, and aggregation_rules excluding suite_digest itself",
+    "every required dimension must be explicitly present and every dimension_id must be unique and supported",
+    "dimension measured_score, thresholds, and status must agree exactly; indeterminate has no numeric score",
+    "aggregate_class is deterministically the weakest suite-required dimension constraint and cannot be strengthened by the document",
+    "optional lineage must resolve to the exact same reference-to-candidate topology pair",
+    "dimension-specific numeric scores are evidence only and never represent identity or subjective sameness percentages",
+    "recorded_at cannot precede evaluated_at"
+  ],
+  "x-axiom-non-claims": [
+    "benchmark-execution",
+    "evaluator-execution",
+    "model-invocation",
+    "model-equivalence",
+    "behavioral-identity",
+    "principal-continuity-proof",
+    "subjective-identity-proof",
+    "replacement-approval",
+    "topology-mutation",
+    "authority-grant",
+    "network-effect",
+    "runtime-activation"
+  ]
+}
