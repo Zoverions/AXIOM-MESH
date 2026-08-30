@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/cognitive-topology-v0.schema.json",
+  "title": "AXIOM Cognitive Topology v0",
+  "description": "Inert, content-addressed declaration of model relationships, custody, persistence dependencies, and continuity/fidelity importance bound to an exact Agent Composition. This schema does not activate models, grant authority, execute adaptation, or prove subjective identity continuity.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "topology_id",
+    "composition_id",
+    "composition_digest",
+    "nodes",
+    "created_at",
+    "updated_at",
+    "contains_secret_material",
+    "authority_effect",
+    "network_effect",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-cognitive-topology.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-contract-laboratory" },
+    "topology_id": { "$ref": "#/$defs/identifier" },
+    "composition_id": { "$ref": "#/$defs/identifier" },
+    "composition_digest": { "$ref": "#/$defs/digest" },
+    "nodes": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/node" }
+    },
+    "created_at": { "type": "string", "format": "date-time", "maxLength": 64 },
+    "updated_at": { "type": "string", "format": "date-time", "maxLength": 64 },
+    "contains_secret_material": { "const": false },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "runtime_activation": { "const": false }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "nullableIdentifier": {
+      "anyOf": [
+        { "$ref": "#/$defs/identifier" },
+        { "type": "null" }
+      ]
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "nullableDigest": {
+      "anyOf": [
+        { "$ref": "#/$defs/digest" },
+        { "type": "null" }
+      ]
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "node_id",
+        "model_id",
+        "engagement",
+        "topology_role",
+        "access_mode",
+        "custody",
+        "weights",
+        "persistence",
+        "continuity_importance",
+        "fidelity_importance",
+        "adaptation_authorization_ref",
+        "lineage_ref",
+        "transition_policy_ref"
+      ],
+      "properties": {
+        "node_id": { "$ref": "#/$defs/identifier" },
+        "model_id": { "$ref": "#/$defs/identifier" },
+        "engagement": {
+          "type": "string",
+          "enum": ["ephemeral", "session", "persistent", "primary"]
+        },
+        "topology_role": {
+          "type": "string",
+          "enum": ["augmentation", "primary-embodiment", "identity-kernel", "router", "evaluator"]
+        },
+        "access_mode": {
+          "type": "string",
+          "enum": ["api", "local-runtime", "remote-runtime", "hybrid"]
+        },
+        "custody": {
+          "type": "string",
+          "enum": ["provider-controlled", "owner-local", "owner-remote", "shared"]
+        },
+        "weights": { "$ref": "#/$defs/weights" },
+        "persistence": { "$ref": "#/$defs/persistence" },
+        "continuity_importance": {
+          "type": "string",
+          "enum": ["optional", "important", "critical"]
+        },
+        "fidelity_importance": {
+          "type": "string",
+          "enum": ["optional", "important", "critical"]
+        },
+        "adaptation_authorization_ref": { "$ref": "#/$defs/nullableIdentifier" },
+        "lineage_ref": { "$ref": "#/$defs/nullableIdentifier" },
+        "transition_policy_ref": { "$ref": "#/$defs/nullableIdentifier" }
+      }
+    },
+    "weights": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "artifact_digest", "licence_ref"],
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": ["closed", "open-remote", "open-acquired", "local-proprietary", "not-applicable"]
+        },
+        "artifact_digest": { "$ref": "#/$defs/nullableDigest" },
+        "licence_ref": { "$ref": "#/$defs/nullableIdentifier" }
+      }
+    },
+    "persistence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "provider_id", "state_ref", "exportability"],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["none", "local", "provider-bound", "mirrored"]
+        },
+        "provider_id": { "$ref": "#/$defs/nullableIdentifier" },
+        "state_ref": { "$ref": "#/$defs/nullableIdentifier" },
+        "exportability": {
+          "type": "string",
+          "enum": ["none", "partial", "full", "unknown"]
+        }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/cognitive-topology.mjs",
+  "x-axiom-semantic-rules": [
+    "every topology model_id must exist in the exact bound Agent Composition",
+    "duplicate node_id and model_id values fail closed",
+    "open-acquired and local-proprietary weights require an exact artifact digest; other weight states require null",
+    "provider-bound and mirrored persistence require provider_id and state_ref; none/local persistence cannot name a provider; none cannot name state",
+    "identity-kernel nodes cannot use ephemeral engagement"
+  ],
+  "x-axiom-non-claims": [
+    "authority-grant",
+    "runtime-activation",
+    "model-invocation",
+    "training-or-adaptation-execution",
+    "provider-persistence-availability",
+    "subjective-identity-proof"
+  ]
+}
