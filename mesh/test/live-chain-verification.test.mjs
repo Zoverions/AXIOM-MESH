@@ -24,6 +24,7 @@ function fixture() {
   let checkpointCalls = 0;
   const store = {
     liveChainVerificationCache: null,
+    liveChainTrustedGrowth: null,
     readLiveChainMarker() {
       return structuredClone(marker);
     },
@@ -42,6 +43,14 @@ function fixture() {
     setMarker(next) {
       marker = { ...marker, ...next };
     },
+    trustGrowth(next) {
+      const from = structuredClone(marker);
+      marker = { ...marker, ...next };
+      store.liveChainTrustedGrowth = {
+        from,
+        to: structuredClone(marker)
+      };
+    },
     calls() {
       return { full: fullCalls, checkpoint: checkpointCalls };
     }
@@ -59,7 +68,7 @@ test('live chain verification reuses an unchanged verified head and verifies onl
   assert.equal(repeated.valid, true);
   assert.deepEqual(f.calls(), { full: 1, checkpoint: 0 });
 
-  f.setMarker({
+  f.trustGrowth({
     last_seq: 6,
     last_hash: 'b'.repeat(64),
     total_changes: 16
@@ -69,7 +78,7 @@ test('live chain verification reuses an unchanged verified head and verifies onl
   assert.deepEqual(f.calls(), { full: 1, checkpoint: 1 });
 });
 
-test('live chain verification falls back to genesis when mutation is observed without the verified head changing', () => {
+test('untracked mutation or head growth falls back to genesis verification', () => {
   const f = fixture();
 
   CheckpointGridStore.prototype.verifyLiveChain.call(f.store);
@@ -101,6 +110,7 @@ test('failed live verification is never cached', () => {
   };
   const store = {
     liveChainVerificationCache: null,
+    liveChainTrustedGrowth: null,
     readLiveChainMarker() {
       return structuredClone(marker);
     },
