@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { GridStore as CheckpointGridStore } from '../src/grid/_store-checkpoints.mjs';
+import { GridStore as SupportedGridStore } from '../src/grid/store.mjs';
 
 function validResult(mode, lastSeq, lastHash) {
   return {
@@ -126,4 +127,24 @@ test('failed live verification is never cached', () => {
   assert.equal(second.valid, false);
   assert.equal(fullCalls, 2);
   assert.equal(store.liveChainVerificationCache, null);
+});
+
+test('intent evidence guard uses bounded live verification rather than direct genesis replay', () => {
+  let liveCalls = 0;
+  let fullCalls = 0;
+  const store = {
+    verifyLiveChain() {
+      liveCalls += 1;
+      return { valid: true, verification_mode: 'checkpoint' };
+    },
+    verifyFullChain() {
+      fullCalls += 1;
+      return { valid: true, verification_mode: 'full' };
+    }
+  };
+
+  const result = SupportedGridStore.prototype.requireIntentEvidenceChain.call(store);
+  assert.equal(result.valid, true);
+  assert.equal(liveCalls, 1);
+  assert.equal(fullCalls, 0);
 });
