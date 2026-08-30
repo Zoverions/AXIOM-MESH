@@ -148,3 +148,30 @@ test('intent evidence guard uses bounded live verification rather than direct ge
   assert.equal(liveCalls, 1);
   assert.equal(fullCalls, 0);
 });
+
+test('intent contract assessment reports the verification mode actually achieved by the live guard', () => {
+  const store = {
+    requireIntentEvidenceChain() {
+      return {
+        valid: true,
+        verification_mode: 'checkpoint',
+        last_seq: 12,
+        last_hash: 'e'.repeat(64)
+      };
+    },
+    getIntentContractAssessmentFromVerifiedState() {
+      return {
+        schema: 'axiom-intent-grid-state.v1',
+        chain: {
+          valid: true,
+          verification_mode: 'full',
+          last_seq: 12,
+          last_hash: 'e'.repeat(64)
+        }
+      };
+    }
+  };
+
+  const state = SupportedGridStore.prototype.getIntentContractAssessment.call(store, 'intent.example');
+  assert.equal(state.chain.verification_mode, 'checkpoint');
+});
