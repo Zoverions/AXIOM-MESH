@@ -117,6 +117,9 @@ test('rejects proposal boundary widening before creating an authorization intent
 test('rejects proposals without an exact recommendation to authorize', () => {
   assert.throws(
     () => buildCognitiveSelectionAuthorizationIntent(validProposal({
+      evaluated_profiles: 0,
+      eligible_profiles: 0,
+      rejected_profiles: [],
       recommendation_made: false,
       recommended_profile_id: null,
       recommended_profile_digest: null,
@@ -182,6 +185,22 @@ test('active policy exposes a scope-gated side-effect-free selection authorizati
   assert.equal(allowed.risk, 'medium');
   assert.equal(allowed.tool, 'builtin.cognitive-selection-authorize');
   assert.equal(allowed.requires_independent_approval, false);
+});
+
+test('raw policy allow is not a completed cognitive selection authorization', async () => {
+  const policy = JSON.parse(await readFile(new URL('../config/policy.json', import.meta.url), 'utf8'));
+  const engine = new PolicyEngine(policy);
+  const policyAllow = engine.evaluate({
+    action: COGNITIVE_SELECTION_AUTHORIZATION_ACTION,
+    principal: { id: 'principal.with-scope', scopes: ['cognitive:select'] },
+    intent: { confirmations: [] }
+  });
+
+  assert.equal(policyAllow.allow, true);
+  assert.throws(
+    () => validateCognitiveSelectionAuthorizationResult(policyAllow, validProposal()),
+    /completed|gateway|authorization result/i
+  );
 });
 
 test('validates a completed gateway authorization result into a non-executing selection decision', () => {
