@@ -356,7 +356,7 @@
     "approval.granted": ["Approval granted", "A separate principal approved one exact request until expiry.", "ready"],
     "backup.completed": ["Backup completed", "An encrypted backup completed and its manifest was recorded.", "complete"],
     "backup.requested": ["Backup requested", "A governed backup request entered the evidence log.", "pending"],
-    "backup.restored": ["Backup restored", "A governed restore completed and its manifest was recorded.", "complete"],
+    "backup.restored": ["Backup restored", "A governed restore completed and was recorded.", "complete"],
     "capsule.registered": ["Capsule registered", "A validated capsule manifest was admitted to the local registry.", "complete"],
     "capsule.revoked": ["Capsule revoked", "The capsule was revoked and is no longer active.", "denied"],
     "consent.granted": ["Consent granted", "A purpose-, scope-, subject-, controller-, and expiry-bound consent record was created.", "ready"],
