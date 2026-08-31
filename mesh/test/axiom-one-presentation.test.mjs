@@ -31,6 +31,11 @@ test('human explanation contract exactly covers stable errors and kernel events'
     'memory.link',
     'memory.put',
     'memory.tombstone',
+    'social.actor.create',
+    'social.persona.create',
+    'social.publication.create',
+    'social.publication.retract',
+    'social.publication.supersede',
     'system.echo'
   ]);
   assert.equal(
