@@ -24,6 +24,8 @@
 - `exact-retained` means byte/content identity relative to a retained source artifact, not complete capture of external reality; its derived digest must equal at least one source-evidence digest.
 - Cognitive tiers are exactly `active-context | retrievable-memory | semantic-consolidation | skill-workflow | adapter-specialist | identity-kernel | foundation-training`.
 - Promotion states are exactly `observed | candidate | evaluated | accepted | rejected | superseded | rolled-back`.
+- `evaluated` and `accepted` promotion states require at least one explicit evaluation-evidence reference; evidence may support a promotion decision but does not itself grant authority or perform activation.
+- `foundation-training` may be represented as a proposed target for research/economic accounting, but Cognitive Learning Ledger v0 cannot mark that target `accepted`; foundation-training remains outside personal-agent self-promotion authority.
 - Expected-reuse class is exactly `one-shot | occasional | recurring | frequent | unknown`; numeric estimates are optional bounded safe integers, but `unknown` cannot carry a numeric estimate.
 - Resource costs remain unit-preserving observations. Cost classes are exactly `create | validate | store | maintain | migrate | risk-resource | per-use`; bases are exactly `observed | estimated | unknown`.
 - Known cost observations require a non-negative safe-integer `amount` and bounded unit identifier. Unknown cost observations require `amount:null` and `unit:null`.
@@ -43,6 +45,7 @@
 
 **Files:**
 - Create: `mesh/test/cognitive-learning-ledger.test.mjs`
+- Create: `mesh/test/cognitive-learning-ledger-promotion.test.mjs`
 - Create: `mesh/src/lib/cognitive-learning-ledger.mjs`
 
 **Interfaces:**
@@ -50,7 +53,7 @@
 - Produces: `COGNITIVE_LEARNING_LEDGER_SCHEMA`, `validateCognitiveLearningRecord(document)`, `cognitiveLearningRecordDigest(document)`.
 - `validateCognitiveLearningRecord` returns a frozen descriptive summary only.
 
-- [ ] **Step 1: Write the failing behavioral test**
+- [ ] **Step 1: Write the failing behavioral tests**
 
 Create `mesh/test/cognitive-learning-ledger.test.mjs` with one valid fixture and prove:
 
@@ -71,6 +74,12 @@ Create `mesh/test/cognitive-learning-ledger.test.mjs` with one valid fixture and
 15. boundary constants remain exactly no-secret/no-authority/no-network/no-training/no-spend/no-runtime-activation;
 16. validator does not mutate a deeply frozen input;
 17. production module imports only `./canonical.mjs`.
+
+Create `mesh/test/cognitive-learning-ledger-promotion.test.mjs` and separately prove:
+
+1. `candidate` may remain unevaluated;
+2. `evaluated` and `accepted` fail closed without explicit evaluation evidence and validate when evidence is present;
+3. `foundation-training` may remain a proposal/candidate but cannot be `accepted` by Ledger v0.
 
 Representative validation summary:
 
@@ -101,15 +110,15 @@ Representative validation summary:
 }
 ```
 
-- [ ] **Step 2: Run the focused test and verify RED**
+- [ ] **Step 2: Run the focused tests and verify RED**
 
 Run:
 
 ```bash
-cd mesh && node --test test/cognitive-learning-ledger.test.mjs
+cd mesh && node --test test/cognitive-learning-ledger.test.mjs test/cognitive-learning-ledger-promotion.test.mjs
 ```
 
-Expected: FAIL with `ERR_MODULE_NOT_FOUND` because `../src/lib/cognitive-learning-ledger.mjs` does not exist.
+Expected during initial construction: FAIL until the production module and promotion semantics exist.
 
 - [ ] **Step 3: Implement the minimal strict validator/digest**
 
@@ -199,12 +208,12 @@ quality
 resilience
 ```
 
-- [ ] **Step 4: Run the focused test and verify GREEN**
+- [ ] **Step 4: Run the focused tests and verify GREEN**
 
 Run:
 
 ```bash
-cd mesh && node --test test/cognitive-learning-ledger.test.mjs
+cd mesh && node --test test/cognitive-learning-ledger.test.mjs test/cognitive-learning-ledger-promotion.test.mjs
 ```
 
 Expected: all tests pass with zero failures.
@@ -212,7 +221,7 @@ Expected: all tests pass with zero failures.
 - [ ] **Step 5: Commit Task 1**
 
 ```bash
-git add mesh/test/cognitive-learning-ledger.test.mjs mesh/src/lib/cognitive-learning-ledger.mjs
+git add mesh/test/cognitive-learning-ledger.test.mjs mesh/test/cognitive-learning-ledger-promotion.test.mjs mesh/src/lib/cognitive-learning-ledger.mjs
 git commit -m "feat: add cognitive learning ledger v0"
 ```
 
@@ -248,7 +257,7 @@ assert.equal(schema.properties.runtime_activation.const, false);
 assert.equal(schema['x-axiom-semantic-validator'], 'mesh/src/lib/cognitive-learning-ledger.mjs');
 ```
 
-Also assert `additionalProperties:false` at top-level and in every nested object. Assert semantic-rule annotations cover principal/composition binding, exact-retained digest identity, cost-basis rules, identity-kernel evaluation burden, duplicate refs, and self-lineage rejection. Assert non-claims include authority grant, network fetch, provider/model invocation, training/adaptation execution, spend authorization, skill/model activation, routing mutation, and truth/subjective-identity proof.
+Also assert `additionalProperties:false` at top-level and in every nested object. Assert semantic-rule annotations cover principal/composition binding, exact-retained digest identity, cost-basis rules, identity-kernel evaluation burden, evaluated/accepted evidence burden, foundation-training non-acceptance, duplicate refs, and self-lineage rejection. Assert non-claims include authority grant, network fetch, provider/model invocation, training/adaptation execution, spend authorization, skill/model activation, routing mutation, and truth/subjective-identity proof.
 
 - [ ] **Step 2: Run schema test and verify RED**
 
@@ -258,18 +267,18 @@ Run:
 cd mesh && node --test test/cognitive-learning-ledger-schema.test.mjs
 ```
 
-Expected: FAIL because `config/cognitive-learning-ledger-v0.schema.json` does not exist.
+Expected during initial construction: FAIL until `config/cognitive-learning-ledger-v0.schema.json` exists and mirrors the semantic rules.
 
 - [ ] **Step 3: Add the strict JSON Schema mirror**
 
-Create `mesh/config/cognitive-learning-ledger-v0.schema.json` with exact required fields, enum domains, bounds, nullable binding/cost fields, and boundary constants matching Task 1.
+Create `mesh/config/cognitive-learning-ledger-v0.schema.json` with exact required fields, enum domains, bounds, nullable binding/cost fields, boundary constants, and semantic annotations matching Task 1.
 
 Cross-field and duplicate-reference rules remain enforced by the semantic validator and are declared in `x-axiom-semantic-rules`.
 
 - [ ] **Step 4: Run schema and semantic tests**
 
 ```bash
-cd mesh && node --test test/cognitive-learning-ledger-schema.test.mjs test/cognitive-learning-ledger.test.mjs
+cd mesh && node --test test/cognitive-learning-ledger-schema.test.mjs test/cognitive-learning-ledger.test.mjs test/cognitive-learning-ledger-promotion.test.mjs
 ```
 
 Expected: all tests pass.
@@ -308,7 +317,7 @@ Do not alter capability status, production readiness, route lists, or unrelated 
 - [ ] **Step 2: Run focused tests**
 
 ```bash
-cd mesh && node --test test/cognitive-learning-ledger.test.mjs test/cognitive-learning-ledger-schema.test.mjs
+cd mesh && node --test test/cognitive-learning-ledger.test.mjs test/cognitive-learning-ledger-promotion.test.mjs test/cognitive-learning-ledger-schema.test.mjs
 ```
 
 Expected: zero failures.
@@ -333,6 +342,7 @@ docs/superpowers/plans/2026-08-30-cognitive-learning-ledger-v0.md
 mesh/src/lib/cognitive-learning-ledger.mjs
 mesh/config/cognitive-learning-ledger-v0.schema.json
 mesh/test/cognitive-learning-ledger.test.mjs
+mesh/test/cognitive-learning-ledger-promotion.test.mjs
 mesh/test/cognitive-learning-ledger-schema.test.mjs
 mesh/src/check-docs.mjs
 ```
@@ -359,6 +369,7 @@ git commit -m "chore: register cognitive learning docs"
 ## Self-review result
 
 - Spec coverage: Learning Ledger v0 invariants are mapped to behavioral or schema tests; later Capability Observation, Cost Observation, Reuse Report, Placement Recommendation, consolidation, routing, adaptation, TTT, and UI work remain deliberately outside this slice.
+- Promotion integrity: evaluation evidence is required before `evaluated` or `accepted`; `foundation-training` cannot be accepted through personal-agent Ledger v0; neither rule grants activation authority.
 - Scope: one inert evidence contract; no network, authority, provider, model, training, routing, skill activation, or spend behavior is included.
 - Type consistency: field names and enum domains are identical across the spec interpretation, plan, validator target, summary target, and schema target.
 - Cost integrity: resource observations retain amount/unit/basis and never silently collapse into policy utility.
