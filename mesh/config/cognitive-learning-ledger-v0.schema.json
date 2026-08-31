@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/cognitive-learning-ledger-v0.schema.json",
+  "title": "AXIOM Cognitive Learning Ledger v0",
+  "description": "Inert evidence contract for provenance-linked candidate learning. This schema grants no authority and performs no runtime, network, training, credential, provider, or spend effect.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "record_id",
+    "principal_ref",
+    "composition_ref",
+    "learning_class",
+    "representation_class",
+    "current_tier",
+    "proposed_target_tier",
+    "proposal_reason",
+    "source_evidence",
+    "derived_artifacts",
+    "expected_reuse",
+    "resource_costs",
+    "policy_utility",
+    "evaluation_refs",
+    "promotion_state",
+    "predecessor_refs",
+    "successor_refs",
+    "created_at",
+    "updated_at",
+    "contains_secret_material",
+    "authority_effect",
+    "network_effect",
+    "training_effect",
+    "spend_authorization",
+    "runtime_activation"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-cognitive-learning-ledger.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-contract-laboratory" },
+    "record_id": { "$ref": "#/$defs/identifier" },
+    "principal_ref": { "anyOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }] },
+    "composition_ref": { "anyOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }] },
+    "learning_class": {
+      "enum": ["episodic", "semantic", "procedural", "personal", "context", "adapter", "base-model", "developmental"]
+    },
+    "representation_class": { "enum": ["exact-retained", "lossy", "mixed"] },
+    "current_tier": { "type": "integer", "minimum": 0, "maximum": 6 },
+    "proposed_target_tier": { "type": "integer", "minimum": 0, "maximum": 6 },
+    "proposal_reason": { "type": "string", "minLength": 1, "maxLength": 2048 },
+    "source_evidence": {
+      "type": "array",
+      "maxItems": 128,
+      "items": { "$ref": "#/$defs/artifactRef" }
+    },
+    "derived_artifacts": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/derivedArtifact" }
+    },
+    "expected_reuse": { "$ref": "#/$defs/expectedReuse" },
+    "resource_costs": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/resourceCost" }
+    },
+    "policy_utility": {
+      "type": "array",
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/policyUtility" }
+    },
+    "evaluation_refs": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/artifactRef" }
+    },
+    "promotion_state": {
+      "enum": ["observed", "candidate", "evaluated", "accepted", "rejected", "superseded", "rolled-back"]
+    },
+    "predecessor_refs": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/artifactRef" }
+    },
+    "successor_refs": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/artifactRef" }
+    },
+    "created_at": { "type": "string", "maxLength": 64 },
+    "updated_at": { "type": "string", "maxLength": 64 },
+    "contains_secret_material": { "const": false },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "training_effect": { "const": "none" },
+    "spend_authorization": { "const": "none" },
+    "runtime_activation": { "const": false }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "artifactRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "digest"],
+      "properties": {
+        "ref": { "$ref": "#/$defs/identifier" },
+        "digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "derivedArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "digest", "representation_class"],
+      "properties": {
+        "ref": { "$ref": "#/$defs/identifier" },
+        "digest": { "$ref": "#/$defs/digest" },
+        "representation_class": { "enum": ["exact-retained", "lossy", "mixed"] }
+      }
+    },
+    "expectedReuse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["class", "estimated_uses"],
+      "properties": {
+        "class": { "enum": ["one-off", "occasional", "recurring", "high-frequency", "unknown"] },
+        "estimated_uses": {
+          "anyOf": [
+            { "type": "integer", "minimum": 0, "maximum": 1000000000 },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "resourceCost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "amount", "unit", "basis"],
+      "properties": {
+        "kind": { "enum": ["create", "validate", "store", "maintain", "migrate", "per-use", "risk-resource"] },
+        "amount": {
+          "anyOf": [
+            { "type": "number", "minimum": 0 },
+            { "const": "unknown" }
+          ]
+        },
+        "unit": { "$ref": "#/$defs/identifier" },
+        "basis": { "enum": ["observed", "estimated", "unknown"] }
+      }
+    },
+    "policyUtility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dimension", "value", "rationale"],
+      "properties": {
+        "dimension": { "enum": ["reuse", "quality", "latency", "privacy", "sovereignty", "resilience", "portability", "reversibility"] },
+        "value": { "enum": ["negative", "neutral", "positive", "strong-positive", "unknown"] },
+        "rationale": { "type": "string", "minLength": 1, "maxLength": 1024 }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/cognitive-learning-ledger.mjs",
+  "x-axiom-semantic-rules": [
+    "duplicate source, derived-artifact, evaluation, predecessor, and successor references fail closed within their collections",
+    "lossy records require at least one retained source-evidence reference",
+    "identity-tier target 5 requires at least one evaluation reference",
+    "base-model target 6 requires at least one evaluation reference and cannot be accepted by v0",
+    "unknown resource-cost amount requires unknown basis",
+    "resource costs preserve explicit units and are not converted or summed across unlike units",
+    "policy-utility dimensions are unique within a record",
+    "updated_at cannot precede created_at",
+    "all no-effect and no-secret boundary constants fail closed"
+  ],
+  "x-axiom-non-claims": [
+    "authority-grant",
+    "runtime-activation",
+    "model-invocation",
+    "training-or-adaptation-execution",
+    "network-fetch-or-egress",
+    "credential-access",
+    "spend-authorization",
+    "cross-unit-cost-conversion",
+    "truth-or-subjective-identity-proof"
+  ]
+}
