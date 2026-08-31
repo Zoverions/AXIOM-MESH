@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Zoverions/AXIOM-MESH/main/docs/architecture/contracts/discovery-insight-candidate.v0.schema.json",
+  "title": "AXIOM-MESH Discovery Insight Candidate v0",
+  "description": "Zero-authority candidate-claim contract surface. Semantic validation remains mandatory before use.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "authority_effect",
+    "runtime_effect",
+    "capability_promotion",
+    "canonical_truth_effect",
+    "mutation_effect"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-discovery-insight-candidate.v0" },
+    "authority_effect": { "const": "none" },
+    "runtime_effect": { "const": "none" },
+    "capability_promotion": { "const": false },
+    "canonical_truth_effect": { "const": "none" },
+    "mutation_effect": { "const": "none" }
+  }
+}
