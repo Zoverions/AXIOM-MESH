@@ -35,12 +35,20 @@ const EXPECTED_ROUTES = Object.freeze([
   'backups.list',
   'audit.verify'
 ]);
+const EXPECTED_SOCIAL_ACTIONS = Object.freeze([
+  'social.actor.create',
+  'social.persona.create',
+  'social.publication.create',
+  'social.publication.supersede',
+  'social.publication.retract'
+]);
 const EXPECTED_ACTION_PREVIEWS = Object.freeze([
   'system.echo',
   'memory.put',
   'memory.link',
   'memory.tombstone',
-  'export.create'
+  'export.create',
+  ...EXPECTED_SOCIAL_ACTIONS
 ]);
 const EXPECTED_NON_CLAIMS = Object.freeze([
   'supported-product',
@@ -146,6 +154,9 @@ export async function checkAxiomOnePreview() {
     link_deletion: policy.memory_lifecycle.link_deletion,
     hard_delete: policy.memory_lifecycle.hard_delete,
     restore: policy.memory_lifecycle.restore,
+    social_lifecycle_status: policy.social_lifecycle.status,
+    social_actions: policy.social_lifecycle.actions.length,
+    social_network_effect: policy.social_lifecycle.network_effect,
     authoritative_pre_execution_kernel_plan:
       policy.human_explanations.authoritative_pre_execution_kernel_plan,
     assets_digest: digestObject({
@@ -176,6 +187,7 @@ function validatePolicy(policy) {
     'security',
     'human_explanations',
     'memory_lifecycle',
+    'social_lifecycle',
     'surfaces',
     'gateway_routes',
     'non_claims'
@@ -276,6 +288,32 @@ function validatePolicy(policy) {
     || policy.memory_lifecycle.restore !== false
     || policy.memory_lifecycle.sharing !== false
   ) throw new ValidationError('AXIOM One memory lifecycle boundary is weakened');
+  exactObject(policy.social_lifecycle, 'AXIOM One Social lifecycle policy', [
+    'status',
+    'actions',
+    'read_route',
+    'attribution_modes',
+    'publication_media_types',
+    'audience_modes',
+    'discoverability',
+    'authorship_modes',
+    'network_effect',
+    'remote_distribution',
+    'persistent_browser_storage'
+  ]);
+  if (
+    policy.social_lifecycle.status !== 'experimental-bounded-local-social-lifecycle'
+    || canonicalJson(policy.social_lifecycle.actions) !== canonicalJson(EXPECTED_SOCIAL_ACTIONS)
+    || policy.social_lifecycle.read_route !== 'social.get'
+    || canonicalJson(policy.social_lifecycle.attribution_modes) !== canonicalJson(['pseudonymous'])
+    || canonicalJson(policy.social_lifecycle.publication_media_types) !== canonicalJson(['text/plain'])
+    || canonicalJson(policy.social_lifecycle.audience_modes) !== canonicalJson(['public'])
+    || canonicalJson(policy.social_lifecycle.discoverability) !== canonicalJson(['listed'])
+    || canonicalJson(policy.social_lifecycle.authorship_modes) !== canonicalJson(['human-authored'])
+    || policy.social_lifecycle.network_effect !== 'none'
+    || policy.social_lifecycle.remote_distribution !== false
+    || policy.social_lifecycle.persistent_browser_storage !== false
+  ) throw new ValidationError('AXIOM One Social lifecycle boundary is weakened');
   if (
     canonicalJson(policy.surfaces) !== canonicalJson(EXPECTED_SURFACES)
     || canonicalJson(policy.gateway_routes) !== canonicalJson(EXPECTED_ROUTES)
