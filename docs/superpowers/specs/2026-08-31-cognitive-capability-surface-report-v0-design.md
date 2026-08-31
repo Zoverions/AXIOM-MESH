@@ -4,7 +4,7 @@
 
 **Date:** 2026-08-31
 
-**Scope:** deterministic, attributable aggregation of multiple Capability Observation v0 artifacts for one exact Cognitive Capability Profile into a multidimensional evidence surface, without universal scoring, candidate ranking, routing, model invocation, training, spending, topology mutation, learning promotion, or authority effects.
+**Scope:** deterministic, attributable aggregation of Capability Observation v0 artifacts for one exact Cognitive Capability Profile into a multidimensional evidence surface, without universal scoring, candidate ranking, routing, model invocation, training, spending, topology mutation, learning promotion, or authority effects.
 
 **Builds on:**
 
@@ -20,112 +20,77 @@
 
 ## 1. Core decision
 
-AXIOM needs a way to answer a question that neither declared capability metadata nor individual empirical observations can answer alone:
+AXIOM needs a way to answer:
 
-> **What multidimensional empirical evidence currently exists about this exact cognitive capability profile, when every contributing observation remains attributable to its exact context, evaluation definition, time, evaluator, assurance posture, and resource evidence?**
+> **What multidimensional empirical evidence is represented for this exact cognitive capability profile at this explicit assessment time, while every contributing observation remains attributable to its exact context, evaluation definition, evaluator, assurance posture, time, and resource evidence?**
 
 The governing doctrine is:
 
 > **Capability is a surface, not a score. Contextual variation is evidence, not noise. Aggregation summarizes evidence; it does not manufacture truth, preference, or authority.**
 
-Cognitive Capability Surface Report v0 therefore aggregates Capability Observation v0 artifacts for one exact Cognitive Capability Profile while preserving the distinctions that make those observations meaningful.
+The report is per-profile and descriptive. It does not answer which candidate is best, choose who should think about a task, or authorize any resulting action.
 
-It does not answer which candidate is best. It does not choose who should think about a task. It does not authorize any resulting action.
+## 2. Relationship to existing contracts
 
-## 2. Naming and relationship to Cognitive Topology
+AXIOM already implements **Cognitive Topology v0**. That contract describes which model components belong to an Agent Composition and how they relate to persistence, custody, continuity importance, fidelity importance, and topology roles. This design does not overload or mutate it.
 
-AXIOM already implements **Cognitive Topology v0**. That contract describes which model components belong to an Agent Composition and how those components relate to persistence, custody, continuity importance, fidelity importance, model roles, and sovereignty posture.
+The boundaries are:
 
-This design must not overload or mutate Cognitive Topology.
-
-The distinction is:
-
-- **Cognitive Topology v0:** what cognitive components constitute this agent, and how are they structurally related to continuity, custody, and persistence?
+- **Cognitive Topology v0:** what cognitive components constitute this agent and how are they structurally related to continuity, custody, and persistence?
 - **Cognitive Capability Profile v0:** what does this exact provider/runtime offering declare it can do?
 - **Capability Observation v0:** what happened in one exact empirical evaluation of one declared capability?
 - **Cognitive Capability Surface Report v0:** what empirical capability evidence is represented across multiple attributable observations for this exact profile at an explicit assessment time?
 - **Cognitive Eligibility Report v0:** does the candidate satisfy caller-supplied declared constraints?
-- **future router:** given separately authorized policy inputs, which eligible cognitive capability should be used for cognition?
+- **future router:** given separately governed policy inputs, who should think about a task?
 - **authority layer:** may any proposed effect actually occur?
 
-The Surface Report is therefore an adjunct evidence contract, not a replacement for topology, eligibility, or routing.
+The Surface Report is an adjunct evidence contract, not a replacement for topology, eligibility, or routing.
 
-## 3. Why v0 is per-profile rather than comparative
+## 3. Why v0 is per-profile
 
-The first executable slice aggregates observations for **one exact Cognitive Capability Profile**.
+V0 aggregates observations for exactly one Cognitive Capability Profile. It does not compare multiple profiles.
 
-It deliberately does not aggregate multiple profiles into a comparative matrix.
+A multi-profile matrix would immediately create pressure for candidate ordering, cross-benchmark normalization, weighted averages, winner selection, routing policy, and implied universal quality rankings. Those are separate future policy questions.
 
-A multi-profile report would immediately create pressure to introduce:
-
-- candidate ordering;
-- weighted averages;
-- hidden normalization across unlike evaluations;
-- winner selection;
-- routing policy;
-- economic normalization;
-- implied universal quality rankings.
-
-Those are separate policy questions.
-
-A per-profile evidence surface keeps the first aggregation layer descriptive and attributable.
-
-## 4. Contract identity
+## 4. Contract identity and lexical rules
 
 Schema:
 
 `axiom-cognitive-capability-surface-report.v0`
 
-Version:
+Version: `0`
 
-`0`
+Status: `inert-evidence-report`
 
-Status:
+Implementation follows established AXIOM contract conventions:
 
-`inert-evidence-report`
-
-The report is content-addressed through the existing canonical digest mechanism.
-
-## 5. Common lexical constraints
-
-Implementation should follow established AXIOM contract conventions.
-
-- identifiers/references: bounded strings matching `^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$`;
-- digests: lowercase 64-hex SHA-256 strings;
-- units: bounded strings matching `^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,63}$`;
-- timestamps: canonical ISO timestamps that round-trip through `Date.toISOString()`;
-- all objects: plain objects with exact required fields;
+- identifiers/references match `^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$`;
+- digests are lowercase 64-hex SHA-256 strings;
+- units match `^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,63}$`;
+- timestamps are canonical ISO strings that round-trip through `Date.toISOString()`;
+- objects are plain objects with exact required fields;
 - JSON Schema objects use `additionalProperties:false`;
-- duplicate identifiers or duplicate exact observation digests fail closed where the contract requires set semantics;
-- input array ordering never changes derived ordering or the canonical digest of the same logical report.
+- duplicate identifiers or duplicate exact observation digests fail closed where set semantics apply;
+- input array ordering never changes the derived ordering or digest of the same logical report.
 
-## 6. Exact profile binding
+## 5. Exact profile binding
 
-Every Surface Report binds to exactly one Cognitive Capability Profile v0 through:
+Every report binds to exactly one Cognitive Capability Profile v0 through:
 
 ```text
 profile_id
 profile_digest
 ```
 
-Derivation and verification must validate the supplied profile and recompute its canonical digest.
+Derivation and verification validate the supplied profile and recompute its canonical digest.
 
-The report fails verification unless:
+The report fails verification unless every contributing observation binds to that same profile ID and digest and the observed capability remains declared by that exact profile.
 
-- `profile_id` exactly matches the supplied profile;
-- `profile_digest` exactly matches the canonical profile digest;
-- every contributing observation binds to that same exact profile;
-- every contributing observation's capability remains declared by the profile.
+Evidence is never silently combined across profile revisions or different profile digests.
 
-The report does not silently combine evidence across profile revisions, provider offering revisions, or different profile digests.
+## 6. Observation-set binding
 
-If a provider/model changes enough to produce a new Capability Profile digest, that new profile receives a separate Surface Report.
-
-## 7. Observation-set binding
-
-The report binds a bounded observation set.
-
-`observations` is an array with `0-256` entries. Each entry contains exactly:
+`observations` is a bounded array with `0-256` entries. Each report entry contains exactly:
 
 ```text
 observation_id
@@ -134,81 +99,40 @@ capability
 freshness_class
 ```
 
-The observation set is sorted deterministically by `observation_id` and then `observation_digest`.
-
 Rules:
 
-- every observation is validated through Capability Observation v0;
-- every observation digest is recomputed and must exactly match the report entry;
-- every observation must bind to the exact report profile;
-- duplicate `observation_id` values fail closed;
-- duplicate exact observation digests fail closed to prevent accidental or deliberate count inflation;
-- an empty observation set is valid because absence of empirical evidence is itself an important surface condition;
-- the report never fabricates a synthetic observation for an unobserved capability.
+- validate every source through Capability Observation v0;
+- recompute every observation digest;
+- require exact profile binding;
+- reject duplicate `observation_id` values;
+- reject duplicate exact observation digests to prevent count inflation;
+- sort by `observation_id`, then `observation_digest`;
+- allow an empty set;
+- never fabricate observations for unobserved capabilities.
 
-## 8. Explicit assessment time
+## 7. Explicit assessment time and time-travel safety
 
-The report contains an explicit canonical timestamp:
+The report contains explicit canonical `assessment_at`. Derivation and verification never read the wall clock.
 
-```text
-assessment_at
-```
+Each source observation receives exactly one freshness class, using this normative order:
 
-Neither derivation nor verification reads the wall clock.
+1. if `observed_at > assessment_at` -> `future`;
+2. else if `recorded_at > assessment_at` -> `not-yet-recorded`;
+3. else if `valid_until < assessment_at` -> `stale`;
+4. else -> `current`.
 
-All freshness classification is relative to this supplied timestamp.
+Meanings:
 
-This allows deterministic historical reconstruction and audit.
+- `current`: the event had happened, had been recorded, and had not expired at assessment time;
+- `stale`: it was known but its validity horizon had expired;
+- `future`: the empirical event had not yet happened;
+- `not-yet-recorded`: the event had happened but had not yet entered AXIOM's recorded evidence state.
 
-## 9. Time-travel-safe freshness semantics
+Only `current` observations participate in the active capability surface. The other classes remain visible in provenance/counts. Stale evidence is not rewritten as failure. Future and not-yet-recorded evidence cannot influence historical reconstruction.
 
-Each contributing observation is classified into exactly one of four freshness classes relative to `assessment_at`:
+## 8. Every declared capability is represented
 
-- `current`
-- `stale`
-- `future`
-- `not-yet-recorded`
-
-Classification order is normative:
-
-1. if `observation.observed_at > assessment_at`, classify `future`;
-2. otherwise, if `observation.recorded_at > assessment_at`, classify `not-yet-recorded`;
-3. otherwise, if `observation.valid_until < assessment_at`, classify `stale`;
-4. otherwise classify `current`.
-
-This order prevents hindsight leakage.
-
-### 9.1 Current
-
-The observation describes an event that had occurred, had been recorded into AXIOM's evidence state, and had not expired by `assessment_at`.
-
-Current observations participate in the active capability surface.
-
-### 9.2 Stale
-
-The observation was already known by `assessment_at`, but its explicit validity horizon had expired.
-
-Stale observations remain attributable historical evidence. They do not participate in current-cell classification counts, current conflict detection, current evaluator coverage, or current resource ranges.
-
-Stale does not mean fail.
-
-### 9.3 Future
-
-The empirical event itself occurs after `assessment_at`.
-
-Future observations are visible in the provenance inventory when reconstructing a report from a supplied full observation corpus, but they are excluded from the active surface.
-
-### 9.4 Not yet recorded
-
-The empirical event had occurred by `assessment_at`, but `recorded_at` is later than `assessment_at`.
-
-Such evidence must not influence what AXIOM is represented as knowing at the historical assessment time.
-
-This is distinct from `future` and prevents retrospective evidence ingestion from silently rewriting prior decision context.
-
-## 10. Declared capabilities are always represented
-
-The report contains one `capability_surface` entry for **every capability declared by the exact bound profile**, sorted by the canonical Capability Profile vocabulary order:
+`capability_surfaces` contains exactly one entry for every capability declared by the bound profile, ordered by the existing Capability Profile vocabulary:
 
 1. `reasoning`
 2. `coding`
@@ -223,19 +147,17 @@ The report contains one `capability_surface` entry for **every capability declar
 11. `agent-orchestration`
 12. `other`
 
-A declared capability with no current observations remains present with zero current evidence cells.
+The output uses this order filtered to capabilities actually declared by the profile.
 
-The contract explicitly preserves:
+A declared capability with no observations remains present with zero evidence cells:
 
 ```text
 declared capability + no observations != observed failure
 ```
 
-Absence of evidence is reported as absence of evidence.
+## 9. Exact comparison-cell identity
 
-## 11. Comparison-cell identity
-
-Capability observations may only be grouped into the same evidence cell when the following dimensions are exactly identical:
+Current observations may share an evidence cell only when all of these dimensions are exactly identical:
 
 ```text
 capability
@@ -258,30 +180,11 @@ method_ref
 method_digest
 ```
 
-The cell identity is the canonical digest of this exact dimension object.
+`cell_digest` is the canonical digest of exactly that dimension object.
 
-This prevents benchmark labels, task-family names, or similar-looking contexts from being treated as equivalent when their content-addressed definitions differ.
+V0 performs no semantic equivalence inference. Different prompts, memory state, system instructions, retrieval configuration, environments, toolsets, suites, metric sets, thresholds, methods, or content digests create different cells. It does not infer that two benchmark versions or evaluation contexts are "close enough."
 
-A materially different prompt, memory state, system instruction, retrieval configuration, environment, toolset, evaluation suite, metric set, threshold, or method therefore creates a distinct cell.
-
-## 12. Why cells are exact rather than normalized
-
-V0 performs no semantic equivalence inference.
-
-It does not infer that:
-
-- two benchmark versions are approximately the same;
-- two prompts test the same latent skill;
-- two metric sets are convertible;
-- two difficulty labels are universally comparable;
-- two tool configurations are equivalent;
-- one evaluator's confidence calibration matches another's.
-
-Such inference may become a separately governed research/evaluation layer later.
-
-For v0, exact content-addressed identity is the only comparison basis.
-
-## 13. Capability-surface entry
+## 10. Capability-surface shape
 
 Each capability-surface entry contains exactly:
 
@@ -299,9 +202,7 @@ current_failure_modes
 current_resource_ranges
 ```
 
-`declared` is always `true` because only profile-declared capabilities are represented.
-
-### 13.1 Observation counts
+`declared` is always `true`.
 
 `observation_counts` contains exactly:
 
@@ -312,15 +213,13 @@ future
 not_yet_recorded
 ```
 
-Each is a non-negative safe integer derived from the bound observation inventory for that capability.
+All counts are non-negative safe integers and are descriptive evidence inventory, not weights.
 
-The counts are descriptive. They are not evidence weights.
+`direct_conflict_cells` and `mixed_classification_cells` are non-negative safe-integer counts derived from `current_cells`; they are not severity scores.
 
-## 14. Current evidence cells
+## 11. Current evidence cells
 
-`current_cells` contains only `current` observations.
-
-Each cell contains exactly:
+Each current cell contains exactly:
 
 ```text
 cell_digest
@@ -336,20 +235,9 @@ failure_modes
 resource_ranges
 ```
 
-Cells are sorted by `cell_digest`.
+Cells are sorted lexically by `cell_digest`.
 
-### 14.1 Observation references
-
-`observation_refs` is a sorted array of exact pairs:
-
-```text
-observation_id
-observation_digest
-```
-
-Every contributing observation remains attributable.
-
-### 14.2 Classification counts
+`observation_refs` is a sorted array of exact `{ observation_id, observation_digest }` pairs so every aggregate remains attributable.
 
 `classification_counts` contains exactly:
 
@@ -360,17 +248,11 @@ fail
 indeterminate
 ```
 
-Counts do not imply voting or truth by majority.
+`classification_set` preserves represented classes in fixed order `pass`, `degraded`, `fail`, `indeterminate` filtered to present values.
 
-The report does not emit a winner, prevailing classification, weighted classification, or average confidence.
+The report does not aggregate or summarize Capability Observation `confidence` values. Confidence remains available only through the attributable source observations because different evaluators and methods may use incompatible confidence calibration.
 
-### 14.3 Classification set
-
-`classification_set` is the sorted set of classifications represented in the cell.
-
-This preserves the shape of disagreement without converting it into a single answer.
-
-## 15. Conflict semantics
+## 12. Conflict semantics
 
 Each current cell has exactly one `conflict_class`:
 
@@ -380,11 +262,9 @@ Each current cell has exactly one `conflict_class`:
 
 Rules:
 
-- `direct` if the cell contains at least one `pass` and at least one `fail`;
-- otherwise `mixed` if the cell contains more than one distinct non-`indeterminate` classification;
+- `direct` if at least one `pass` and at least one `fail` occur in the exact same cell;
+- otherwise `mixed` if more than one distinct non-`indeterminate` classification occurs;
 - otherwise `none`.
-
-`indeterminate` does not by itself conflict with another classification because it states insufficient classification evidence rather than the opposite result.
 
 Examples:
 
@@ -397,110 +277,71 @@ pass + fail -> direct
 pass + degraded + fail -> direct
 ```
 
-No conflict class decides which observation is correct.
+No conflict class chooses which observation is correct.
 
-## 16. Cross-cell variation
+## 13. Cross-cell variation
 
-At the capability level, `variation_present` is a boolean.
+At capability level, `variation_present` is `true` when at least two current cells contain different represented non-`indeterminate` classification sets.
 
-It is `true` when at least two current cells for the same capability contain different represented non-`indeterminate` classification sets.
+Variation across cells is not labeled direct contradiction because at least one context/evaluation dimension differs.
 
-It is descriptive only.
+For example, pass with one toolset and fail with another records context/tool sensitivity. The report cannot collapse that into a universal claim that the candidate is simply reliable, unreliable, good, or bad.
 
-Variation across different cells is **not** labeled direct contradiction because the context/evaluation dimensions differ.
-
-For example:
-
-```text
-same capability
-+ different toolset
-+ pass in one cell
-+ fail in another cell
-```
-
-means the observed capability is sensitive to the changed evaluation context/toolset. It does not permit the report to collapse both observations into a claim that the candidate is simply "unreliable" or "bad".
-
-The report may therefore expose both:
-
-- direct conflict within an exact cell; and
-- cross-cell variation across different exact contexts.
-
-These are different evidence conditions.
-
-## 17. No universal score, majority vote, or hidden ranking
+## 14. No universal score, vote, or rank
 
 Surface Report v0 must not emit:
 
-- an intelligence score;
-- an overall quality score;
-- an overall capability score;
-- a normalized benchmark score;
-- a weighted average confidence;
-- a majority-vote classification;
-- a preferred capability;
-- a preferred model/provider;
-- a candidate rank;
-- a routing weight;
-- a hidden policy utility score.
+- intelligence or overall quality scores;
+- universal capability scores;
+- normalized benchmark scores;
+- weighted or averaged confidence;
+- majority-vote classifications;
+- preferred capabilities;
+- preferred models/providers;
+- candidate rank;
+- routing weight;
+- hidden policy utility scores.
 
-Observation counts, evaluator counts, classification counts, and resource ranges are descriptive evidence inventory only.
+Counts are descriptive. One hundred passes do not automatically override one fail. A later explicit policy layer may decide how evidence influences a particular routing decision.
 
-A hundred pass observations do not automatically override one fail observation. A later policy layer may decide how evidence should influence routing for a specific task, consequence class, assurance requirement, or risk posture.
+## 15. Evaluator and assurance coverage
 
-That later policy must remain explicit and separately authorized.
-
-## 18. Evaluator coverage
-
-For current evidence, the report preserves evaluator provenance without inventing evaluator weights.
-
-At both cell and capability level it records sorted unique sets of:
+Current cells expose sorted unique:
 
 - `evaluator_kinds`;
 - `evaluator_refs`;
 - `assurance_classes`.
 
-The capability-level fields are named:
+At capability level:
 
 ```text
-current_evaluator_coverage
+current_evaluator_coverage = {
+  evaluator_kinds,
+  evaluator_refs
+}
 current_assurance_classes
 ```
 
-`current_evaluator_coverage` contains exactly:
+The report does not infer that distinct evaluator references are statistically independent. It therefore says **distinct evaluator references**, not independent evaluators.
 
-```text
-evaluator_kinds
-evaluator_refs
-```
+Provider reports, human review, local verification, signatures, and corroboration remain distinguishable through the source observation provenance and assurance class.
 
-The report does not infer that distinct evaluator references are statistically independent.
+## 16. Failure-mode aggregation
 
-It therefore uses the term **distinct evaluator references**, not "independent evaluators," unless independence is established by a future separately defined evidence contract.
-
-Provider self-report, local verification, human review, and external corroboration remain visibly distinguishable through the underlying observation assurance/evidence metadata.
-
-## 19. Failure-mode aggregation
-
-Failure modes remain attributable references, not explanatory truth.
-
-At cell and capability levels, `failure_modes` / `current_failure_modes` are sorted arrays of objects:
+At cell and capability level, `failure_modes` / `current_failure_modes` are sorted arrays of:
 
 ```text
 failure_mode_ref
 supporting_observations
 ```
 
-`supporting_observations` is a sorted array of exact observation ID/digest pairs.
+`supporting_observations` is a sorted, deduplicated list of exact observation ID/digest pairs.
 
-The report does not infer causal correctness from repetition.
+Repeated attribution does not become causal probability or causal confidence. Failure-mode refs remain evidence claims with provenance.
 
-Multiple observations repeating the same failure-mode attribution may increase the size of its support set, but the report does not translate that count into probability or causal confidence.
+## 17. Resource aggregation
 
-## 20. Resource aggregation
-
-Resource evidence is aggregated only when units and resource semantics are exactly compatible.
-
-A resource bucket identity contains exactly:
+Resource evidence combines only exact bucket identities:
 
 ```text
 resource_class
@@ -510,43 +351,45 @@ unit
 
 Rules:
 
-- only `current` observations contribute to current resource ranges;
-- `unknown` basis entries have `unit:null` and `amount:null` and are represented separately from measured/estimated numeric ranges;
-- observed and estimated values are never silently combined because `basis` is part of the bucket identity;
-- unlike units are never converted;
-- currency units are never converted;
+- only current observations contribute to current ranges;
+- `observed` and `estimated` never combine because basis is part of bucket identity;
+- unlike units never convert or combine;
+- currencies never convert;
+- `unknown` basis remains a separate null-valued bucket;
 - privacy, sovereignty, resilience, quality, and authority are never monetized;
-- no aggregate resource score is emitted.
+- no aggregate resource score, average, percentile, or normalized cost is emitted.
 
-For numeric buckets, the report may contain exactly:
+A numeric bucket contains exactly:
 
 ```text
 resource_class
 basis
 unit
-observation_count
+measurement_count
 minimum
 maximum
 supporting_observations
 ```
 
-For `basis: unknown`, it contains:
+An `unknown` bucket contains exactly:
 
 ```text
 resource_class
-basis
+basis: unknown
 unit: null
-observation_count
+measurement_count
 minimum: null
 maximum: null
 supporting_observations
 ```
 
-V0 deliberately does not emit arithmetic means, percentiles, or normalized cost estimates because heterogeneous tasks and contexts can make such statistics misleading.
+`measurement_count` counts resource entries, not source observations. This is deliberate because one Capability Observation may legally contain more than one resource entry in the same class/basis/unit bucket. `supporting_observations` is independently deduplicated by observation ID/digest.
 
-Economic amortization and placement analysis belong in the later CCLE cost/reuse layer.
+Current cell `resource_ranges` derive from that cell's current observations. Capability-level `current_resource_ranges` derive from all current observations for that capability using the same bucket rules. No redundant top-level resource summary exists in v0.
 
-## 21. Top-level report shape
+Economic amortization and placement belong in the later CCLE cost/reuse layer.
+
+## 18. Top-level report shape
 
 A Surface Report contains exactly:
 
@@ -560,7 +403,6 @@ profile_digest
 assessment_at
 observations
 capability_surfaces
-report_resource_ranges
 recorded_at
 contains_secret_material
 authority_effect
@@ -573,23 +415,13 @@ selection_effect
 
 Unknown fields fail closed.
 
-### 21.1 Report identifier
+`report_id` is an opaque bounded identifier supplied by the recording system.
 
-`report_id` is an opaque bounded identifier supplied by the caller/recording system.
+`recorded_at` is explicit, canonical, and must satisfy `recorded_at >= assessment_at`. Derivation never reads the clock.
 
-It does not participate in aggregation semantics beyond being part of the canonical report artifact.
+## 19. Public interfaces
 
-### 21.2 Recorded time
-
-`recorded_at` is a canonical timestamp supplied explicitly to derivation.
-
-`recorded_at >= assessment_at` is required.
-
-The derivation function never reads the wall clock.
-
-## 22. Deterministic derivation interface
-
-Proposed public interfaces:
+Proposed interfaces:
 
 ```js
 export const COGNITIVE_CAPABILITY_SURFACE_REPORT_SCHEMA =
@@ -607,62 +439,59 @@ export function deriveCognitiveCapabilitySurfaceReport({
 export function verifyCognitiveCapabilitySurfaceReport(document, profile, observations) {}
 ```
 
-### 22.1 Derivation
+### 19.1 Derivation
 
-`deriveCognitiveCapabilitySurfaceReport(...)` must:
+`derive...` must:
 
-1. validate the exact Cognitive Capability Profile;
-2. validate every Capability Observation;
+1. validate the exact profile;
+2. validate every observation;
 3. recompute every observation digest;
-4. require every observation to bind to the exact supplied profile;
-5. reject duplicate observation IDs;
-6. reject duplicate exact observation digests;
-7. classify every observation relative to explicit `assessment_at`;
-8. create one capability entry for every profile-declared capability;
-9. group only current observations into exact comparison cells;
-10. derive classification inventories and conflict classes without selecting a winner;
-11. derive cross-cell variation without treating contextual differences as direct contradiction;
-12. derive evaluator/assurance coverage;
-13. derive attributable failure-mode support;
-14. derive unit-preserving resource ranges;
-15. sort every set-derived array deterministically;
-16. emit hard zero-effect boundary fields;
-17. deep-freeze the returned report.
+4. require exact profile binding and declared capability membership;
+5. reject duplicate observation IDs and exact digests;
+6. classify freshness using explicit `assessment_at`;
+7. create every profile-declared capability surface;
+8. group only current observations into exact comparison cells;
+9. derive classifications/conflict without selecting a winner;
+10. derive cross-cell variation;
+11. derive evaluator and assurance coverage;
+12. derive attributable failure modes;
+13. derive unit-preserving resource ranges using measurement counts;
+14. sort every set-derived array canonically;
+15. emit zero-effect boundary fields;
+16. deep-freeze the returned report.
 
-The same logical inputs, regardless of observation input ordering, must produce the same report and canonical digest when `report_id`, `assessment_at`, and `recorded_at` are identical.
+The same logical source artifacts and explicit metadata produce the same report regardless of input observation order.
 
-### 22.2 Verification
+### 19.2 Verification
 
-`verifyCognitiveCapabilitySurfaceReport(document, profile, observations)` must:
+`verify...` must:
 
 1. validate the supplied report;
-2. validate the exact profile;
-3. validate all supplied observations;
-4. require the report observation inventory to correspond exactly to the supplied observation set by ID and canonical digest;
-5. derive a fresh report using the report's own `report_id`, `assessment_at`, and `recorded_at`;
-6. require the derived canonical digest to equal the supplied report canonical digest;
-7. return a frozen verification summary only.
+2. validate the exact profile and observations;
+3. require the report inventory to correspond exactly to the supplied observation set by ID and canonical digest;
+4. rederive using the report's own `report_id`, `assessment_at`, and `recorded_at`;
+5. require exact canonical digest equality between supplied and rederived report;
+6. return a frozen verification summary only.
 
 Verification performs no I/O or external lookup.
 
-## 23. Canonical ordering rules
+## 20. Canonical ordering
 
-To make input order irrelevant, v0 defines deterministic ordering explicitly.
+Normative ordering:
 
-- report observation inventory: `observation_id`, then `observation_digest`;
-- capability surfaces: canonical capability vocabulary order from the bound profile declaration set;
-- current cells: `cell_digest` lexical order;
-- observation references within cells/support sets: `observation_id`, then digest;
-- classification set: fixed order `pass`, `degraded`, `fail`, `indeterminate` filtered to represented values;
-- evaluator kinds: lexical order;
-- evaluator refs: lexical order;
-- assurance classes: fixed order `declared`, `signed`, `verified-local`, `corroborated` filtered to represented values;
-- failure-mode references: lexical order;
-- resource buckets: `resource_class`, then `basis`, then normalized unit ordering where `null` sorts before strings.
+- report observation inventory: `observation_id`, then digest;
+- capability surfaces: fixed Capability Profile vocabulary order filtered to declared capabilities;
+- current cells: lexical `cell_digest`;
+- observation/support refs: `observation_id`, then digest;
+- classification set: `pass`, `degraded`, `fail`, `indeterminate` filtered to represented values;
+- evaluator kinds/refs: lexical;
+- assurance classes: `declared`, `signed`, `verified-local`, `corroborated` filtered to represented values;
+- failure-mode refs: lexical;
+- resource buckets: `resource_class`, then `basis`, then unit, with `null` ordered before strings.
 
-A verifier must reject structurally valid but non-canonical ordering rather than silently reordering a supplied report and accepting it.
+A supplied report with non-canonical ordering fails verification rather than being silently reordered and accepted.
 
-## 24. Hard boundary fields
+## 21. Hard boundary
 
 Every report must contain exactly:
 
@@ -676,347 +505,194 @@ runtime_activation = false
 selection_effect = evidence-only
 ```
 
-Any other value fails closed.
-
 The core law is:
 
 > **Aggregation does not amplify authority.**
 
-If every source observation is non-authorizing evidence, the aggregate remains non-authorizing evidence regardless of observation count, evaluator diversity, assurance posture, or apparent capability strength.
+Any number of non-authorizing observations still produces non-authorizing evidence.
 
-## 25. Prohibited effects
+Validation, derivation, digesting, and verification must perform no model/provider invocation, benchmark execution, network request, credential access, wallet/payment effect, model acquisition, subprocess creation, adaptation/training/distillation, skill/model activation, routing mutation, candidate selection, Cognitive Topology mutation, Agent Composition mutation, Cognitive Learning Ledger mutation/promotion, capability-registry promotion, or principal/authority mutation.
 
-Validation, derivation, digesting, and verification must perform no:
+The implementation must not import runtime surfaces that can perform those effects.
 
-- model/provider invocation;
-- benchmark execution;
-- network request;
-- filesystem discovery beyond ordinary module loading;
-- subprocess creation;
-- credential lookup or use;
-- wallet/payment action;
-- spending authorization;
-- model download/acquisition;
-- adaptation/training/distillation;
-- skill activation;
-- model activation;
-- routing mutation;
-- candidate selection;
-- Cognitive Topology mutation;
-- Agent Composition mutation;
-- Cognitive Learning Ledger mutation/promotion;
-- capability-registry promotion;
-- principal/authority mutation.
+## 22. Relationship to eligibility and routing
 
-The first implementation slice must import no runtime surface that could perform these effects.
+Eligibility and empirical performance remain separate. A candidate may be eligible but poorly evidenced or empirically conflicting; it may also perform strongly but be ineligible because its declared locality, retention, training-use, cost, assurance, or other posture violates caller policy.
 
-## 26. Relationship to eligibility
+Surface Report v0 does not modify `evaluateCognitiveCandidates(...)` and cannot override eligibility policy.
 
-Eligibility and empirical evidence remain separate.
+A future router may consume Eligibility Reports, Surface Reports, Availability Attestations, task requirements, consequence/risk class, privacy policy, latency requirements, authorized budget, continuity/fidelity requirements, and user/operator policy.
 
-A candidate can be:
-
-- eligible under declared policy constraints but poorly evidenced;
-- eligible with conflicting empirical evidence;
-- eligible with strong current evidence;
-- ineligible despite strong empirical performance because its retention, training-use, locality, cost, assurance, or other declared posture violates caller policy.
-
-Therefore Surface Report v0 does not alter `evaluateCognitiveCandidates(...)` and does not make empirical success override eligibility policy.
-
-## 27. Relationship to future routing
-
-A later router may consume, among other explicit inputs:
-
-- Cognitive Eligibility Reports;
-- Cognitive Capability Surface Reports;
-- Cognitive Availability Attestations;
-- task requirements;
-- consequence/risk class;
-- privacy policy;
-- latency requirements;
-- budget/spend authorization;
-- continuity/fidelity requirements;
-- operator/user policy;
-- required assurance posture.
-
-That future router may choose **who thinks about a task**.
-
-It still must not choose **who is authorized to perform an effect** merely because a candidate is capable.
-
-The invariant remains:
+That router may choose **who thinks about a task**. Authority still separately determines whether any proposed effect may occur.
 
 > **Cognitive delegation is not authority delegation.**
 
-## 28. Relationship to CCLE
+## 23. Relationship to CCLE and Cognitive Topology
 
-Surface Reports may later support Cognitive Continuity & Learning Economics decisions such as:
+Surface Reports may later support CCLE questions such as whether an adapter improved one capability while degrading another, whether repeated expensive cognition should trigger consolidation analysis, whether stale evidence requires reevaluation, or whether a specialist appears worth retaining.
 
-- whether a repeated external cognitive dependency is worth retaining;
-- whether a local specialist appears to preserve a target capability;
-- whether an adapter improves one capability while degrading another;
-- whether a proposed learning promotion has empirical outcome support;
-- whether performance is strongly tool/environment dependent;
-- whether stale evidence should trigger reevaluation;
-- whether repeated costly cognition should be considered for consolidation or local ownership.
+They do not promote Ledger records, choose learning tiers, authorize adaptation, calculate ROI, or normalize resource values into policy utility.
 
-Surface Reports do not themselves:
+Surface Reports also do not alter Cognitive Topology nodes, roles, custody, persistence, engagement, continuity/fidelity importance, or identity-kernel status. High measured capability does not make a model an identity component.
 
-- promote Ledger records;
-- choose learning tiers;
-- authorize adaptation;
-- calculate return on investment;
-- normalize resource values into policy utility.
+## 24. Threat model
 
-Those decisions remain in separately governed CCLE layers.
+### Count inflation
 
-## 29. Relationship to Cognitive Topology
+Repeated submission of the same observation could manufacture evidence volume.
 
-Cognitive Topology records the persistent agent's structural relationship to cognitive components.
+**Mitigation:** duplicate IDs and exact observation digests fail closed.
 
-Surface Reports may later be referenced by routing or evaluation policy associated with topology nodes, but Surface Report v0 does not:
+### Hindsight leakage
 
-- add/remove topology nodes;
-- change engagement;
-- change topology roles;
-- change custody;
-- change persistence;
-- change continuity/fidelity importance;
-- mark a component as primary or identity-kernel;
-- infer topology importance from benchmark performance.
+Historical reconstruction could use evidence that had not happened or had not yet been recorded.
 
-High measured capability does not make a model an identity component.
+**Mitigation:** explicit assessment time and normative future/not-yet-recorded classes; only current evidence enters active surfaces.
 
-## 30. Threat model
+### Latest-wins laundering
 
-### 30.1 Count inflation
+A recent result could erase contradictory evidence.
 
-An actor submits the same observation repeatedly to manufacture apparent evidence volume.
+**Mitigation:** all current observations remain attributable; there is no latest-wins rule.
 
-**Mitigation:** duplicate observation IDs and duplicate exact observation digests fail closed.
+### Benchmark normalization laundering
 
-### 30.2 Hindsight leakage
+Unlike contexts/evaluations could be merged into one score.
 
-A historical report includes evidence that had not yet occurred or had not yet been recorded at the assessment time.
+**Mitigation:** exact cell identity across all context/evaluation dimensions; no normalization.
 
-**Mitigation:** explicit `assessment_at` plus normative `future` and `not-yet-recorded` freshness classes; only current evidence participates in the active surface.
+### Majority-vote laundering
 
-### 30.3 Latest-wins laundering
+Many correlated or low-assurance observations could be treated as truth.
 
-A recent result silently erases contradictory or degraded prior current evidence.
+**Mitigation:** counts remain descriptive; no majority classification or evidence weighting.
 
-**Mitigation:** all current observations remain attributable; no latest-wins rule exists; conflict sets are explicit.
+### Provider self-report laundering
 
-### 30.4 Benchmark normalization laundering
+Provider evidence could be presented as independent verification.
 
-Unlike contexts or benchmark definitions are merged into one score.
+**Mitigation:** evaluator refs/kinds and assurance remain visible; independence is never inferred.
 
-**Mitigation:** exact comparison-cell identity across all context/evaluation digests; no cross-cell metric aggregation or universal score.
+### Context collapse
 
-### 30.5 Majority-vote laundering
+Tool-assisted performance could be treated as equivalent to no-tool performance.
 
-Many low-assurance or correlated observations overwhelm fewer contradictory observations.
+**Mitigation:** toolset/environment/context identities are part of exact cell identity.
 
-**Mitigation:** counts remain descriptive; no majority classification or evidence weighting is emitted; evaluator and assurance provenance remain visible.
+### Stale-as-failure laundering
 
-### 30.6 Provider self-report laundering
+Expired evidence could be treated as negative performance.
 
-Provider evidence is presented as if it were independent external verification.
+**Mitigation:** stale evidence remains a separate provenance state and never becomes fail.
 
-**Mitigation:** evaluator kinds/refs and observation assurance classes remain explicit; the report never infers independence from distinct references.
+### Authority amplification
 
-### 30.7 Context collapse
+Positive evidence volume could become permission to invoke or act.
 
-Tool-assisted performance is presented as equivalent to no-tool performance.
+**Mitigation:** hard zero-effect constants and no effect-capable imports.
 
-**Mitigation:** toolset/environment/context digests are part of exact cell identity.
+## 25. Fail-closed conditions
 
-### 30.8 Stale evidence treated as failure
-
-Expired observations lower a candidate's apparent score.
-
-**Mitigation:** no score exists; stale evidence is separately inventoried and excluded from active current-cell summaries.
-
-### 30.9 Authority amplification
-
-A large amount of positive empirical evidence becomes permission to invoke a model or perform an action.
-
-**Mitigation:** hard zero-effect boundary constants and no imports of runtime/provider/authority surfaces.
-
-## 31. Error handling
-
-Validation and verification fail closed for at least:
+Validation/verification fail for at least:
 
 - unknown fields;
-- malformed identifiers/digests/timestamps;
+- malformed identifiers, digests, units, or timestamps;
 - invalid schema/version/status;
-- invalid hard boundary values;
+- boundary widening;
 - profile ID/digest drift;
-- observation profile mismatch;
-- observation capability not declared by profile;
-- duplicate observation IDs;
-- duplicate observation digests;
-- incorrect freshness classification;
-- missing profile-declared capability surface;
-- extra undeclared capability surface;
-- incorrect observation counts;
-- incorrect/non-canonical cell identity;
-- incorrect cell classification counts/set/conflict class;
-- incorrect variation flag;
+- observation/profile mismatch;
+- undeclared observed capability;
+- duplicate observation IDs or digests;
+- incorrect freshness class;
+- missing declared capability surface or extra undeclared capability surface;
+- incorrect counts;
+- incorrect/non-canonical cell digest or dimensions;
+- incorrect classification set/count/conflict;
+- incorrect variation or conflict-cell counts;
 - incorrect evaluator/assurance coverage;
-- incorrect failure-mode support sets;
-- incompatible resource aggregation;
+- incorrect failure-mode support;
+- incompatible or incorrect resource aggregation;
 - non-canonical ordering;
 - `recorded_at < assessment_at`;
-- mismatch between supplied report and deterministic re-derivation.
+- mismatch with deterministic rederivation.
 
-Contradictory observations are not validation errors. They are evidence conditions to report.
+Contradictory observations are valid evidence conditions, not validation errors.
 
-## 32. Testing strategy
+## 26. Testing strategy
 
-The first implementation must prove at minimum:
+The first implementation must prove:
 
-### 32.1 Schema and strictness
-
-- exact schema/version/status;
-- fail-closed unknown fields;
-- hard boundary constants;
-- JSON Schema parity;
-- canonical timestamps;
-- bounded arrays and lexical constraints.
-
-### 32.2 Exact profile/observation binding
-
+- strict schema/version/status and unknown-field rejection;
+- exact hard boundaries and JSON Schema parity;
 - exact profile ID/digest binding;
-- every observation binds to the same profile;
-- undeclared observed capability fails;
-- duplicate observation ID fails;
-- duplicate observation digest fails.
-
-### 32.3 Freshness
-
-- current classification;
-- stale classification;
-- future classification;
-- not-yet-recorded classification;
-- normative precedence when more than one temporal condition could appear relevant;
-- historical reconstruction does not use future/not-yet-recorded evidence;
-- stale evidence does not become fail.
-
-### 32.4 Cell grouping
-
-- exact identical dimensions group together;
-- any material digest/difficulty/capability difference creates a different cell;
-- input ordering does not affect cell membership or report digest;
-- cell digests are deterministic.
-
-### 32.5 Conflict/variation
-
-- pass+fail in one exact cell -> direct conflict;
+- every observation binds to that exact profile;
+- duplicate observation ID/digest rejection;
+- current/stale/future/not-yet-recorded semantics and precedence;
+- no hindsight leakage in historical reconstruction;
+- stale evidence never becomes fail;
+- every declared capability appears, including zero-evidence capabilities;
+- exact identical dimensions group and any material dimension change splits cells;
+- pass+fail in one cell -> direct conflict;
 - pass+degraded -> mixed;
 - pass+indeterminate -> none;
-- conflicting classifications across different cells -> variation without direct conflict;
-- no winner/majority field exists.
+- cross-cell differing classifications -> variation rather than direct conflict;
+- no winner/score/majority/average-confidence fields exist;
+- evaluator refs/kinds and assurance classes are unique/canonical without independence claims;
+- repeated failure-mode refs preserve exact supporting observations;
+- resource aggregation separates class+basis+unit;
+- multiple measurements from one observation increment `measurement_count` while supporting observation refs remain deduplicated;
+- unlike units and observed/estimated bases never combine;
+- unknown resources produce null min/max;
+- no average/cross-unit aggregation exists;
+- derivation is input-order independent;
+- verifier detects any derived-field or source-set drift;
+- output is deeply frozen and inputs are not mutated;
+- source imports no network, provider, Grid, credential, wallet, training, model-runtime, filesystem-discovery, or subprocess effect surface.
 
-### 32.6 Declared-but-unobserved capability
+## 27. First executable slice
 
-- every profile-declared capability is represented;
-- zero evidence remains zero evidence, not failure.
+The first implementation remains narrow:
 
-### 32.7 Evaluator/assurance evidence
-
-- unique sorted evaluator kinds/refs;
-- no inferred independence claim;
-- assurance classes preserved exactly;
-- provider/self-reported evidence remains distinguishable.
-
-### 32.8 Failure modes
-
-- repeated failure-mode refs preserve exact supporting observation refs;
-- no causal probability/confidence is synthesized.
-
-### 32.9 Resource evidence
-
-- only exact class+basis+unit buckets combine;
-- observed and estimated remain separate;
-- unlike units remain separate;
-- unknown entries produce null ranges;
-- min/max/count are deterministic;
-- no average or cross-unit aggregation exists.
-
-### 32.10 Verification and immutability
-
-- verifier detects any derived-field tampering;
-- verifier detects observation-set drift;
-- output is deeply frozen;
-- input objects are not mutated;
-- module source imports no network, provider, Grid, credential, wallet, training, model runtime, filesystem-discovery, or subprocess execution surface.
-
-## 33. First executable slice
-
-The first executable implementation should remain narrow:
-
-1. strict Surface Report validator;
-2. deterministic canonical digest;
+1. strict validator;
+2. canonical digest;
 3. JSON Schema 2020-12 mirror;
-4. deterministic derivation from exact profile + exact observations + explicit assessment/recording metadata;
-5. exact freshness classification;
+4. deterministic derivation from exact profile + observations + explicit assessment/recording metadata;
+5. freshness classification;
 6. exact evidence-cell grouping;
-7. conflict and cross-cell variation reporting;
+7. conflict and variation reporting;
 8. evaluator/assurance coverage;
 9. attributable failure-mode aggregation;
-10. unit-preserving resource min/max ranges;
-11. verifier that re-derives and rejects drift;
+10. unit-preserving min/max resource ranges with measurement counts;
+11. deterministic verifier;
 12. adversarial/fail-closed tests;
-13. canonical-document registration only after the contract/schema/tests are proven.
+13. canonical-document registration only after contract/schema/tests are proven.
 
 No routing recommendation, provider invocation, model execution, UI, topology mutation, Ledger promotion, learning placement, training, spending, or automatic benchmark execution belongs in this slice.
 
-## 34. Explicit non-claims
+## 28. Explicit non-claims
 
-Cognitive Capability Surface Report v0 does not claim:
+Surface Report v0 does not claim universal intelligence, overall model quality, universal benchmark comparability, future-task success probability, provider availability, evaluator independence/correctness, benchmark impartiality, absence of contamination/correlated evidence, causal correctness of failure-mode attribution, optimal model choice, routing correctness, cost optimality, principal continuity, subjective identity continuity, learning value, authority, delegation, or permission to invoke/train/spend/route/act.
 
-- universal intelligence;
-- overall model quality;
-- universal benchmark comparability;
-- future-task success probability;
-- provider availability;
-- evaluator independence;
-- evaluator correctness;
-- benchmark impartiality;
-- absence of benchmark contamination;
-- absence of correlated evidence;
-- causal correctness of failure-mode attribution;
-- optimal model choice;
-- routing correctness;
-- cost optimality;
-- principal continuity;
-- subjective identity continuity;
-- learning value;
-- authority or delegation;
-- permission to invoke, train, spend, route, or act.
+It states only what evidence is represented under its exact bound artifacts and explicit assessment time.
 
-The report states only what evidence is represented under its exact bound artifacts and explicit assessment time.
+## 29. Deferred extensions
 
-## 35. Future extensions intentionally deferred
+Separate future design gates may consider:
 
-Possible later work may include, under separate design gates:
-
-- Capability Surface history/delta reports;
-- explicit reevaluation recommendations for stale/missing evidence;
+- Surface history/delta reports;
+- reevaluation recommendations for stale/missing evidence;
 - cross-profile comparison without hidden ranking;
-- policy-controlled routing recommendation contracts;
+- policy-controlled routing recommendations;
 - confidence-calibration evidence;
 - evaluator-independence attestations;
-- benchmark contamination/provenance assessments;
+- benchmark contamination/provenance assessment;
 - resource/reuse economics and amortization;
-- capability-composition evidence across multiple specialists;
-- user-facing Axiom One capability-surface views.
+- multi-specialist composition evidence;
+- Axiom One capability-surface UI.
 
 None is implied by v0.
 
-## 36. Architectural invariant
-
-The architecture after this slice is:
+## 30. Architectural invariant
 
 ```text
 Runtime/provider catalog
@@ -1039,7 +715,5 @@ separate authority evaluation
         v
 execution
 ```
-
-At every boundary:
 
 > **Evidence can inform policy. Policy can choose cognition. Cognition can propose effects. Authority remains separately governed.**
