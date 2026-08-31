@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Zoverions/AXIOM-MESH/main/docs/architecture/contracts/discovery-review-disposition.v0.schema.json",
+  "title": "AXIOM-MESH Discovery Review Disposition v0",
+  "description": "Governance-decision record that proposes follow-on work but grants no authority and performs no repository effect.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "decision",
+    "authority_effect"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-discovery-review-disposition.v0" },
+    "decision": {
+      "enum": [
+        "reject",
+        "archive",
+        "monitor",
+        "request-more-evidence",
+        "create-test-proposal",
+        "create-rfc-proposal",
+        "threat-model-proposal",
+        "ui-design-proposal",
+        "implementation-proposal"
+      ]
+    },
+    "authority_effect": { "const": "none" }
+  }
+}

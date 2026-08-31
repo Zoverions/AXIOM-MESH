@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Zoverions/AXIOM-MESH/main/docs/architecture/contracts/architecture-impact-record.v0.schema.json",
+  "title": "AXIOM-MESH Architecture Impact Record v0",
+  "description": "Zero-authority architecture-impact proposal contract surface. Semantic validation remains mandatory before use.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "implementation_status",
+    "authority_effect",
+    "runtime_effect",
+    "capability_promotion",
+    "canonical_truth_effect",
+    "mutation_effect"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-architecture-impact-record.v0" },
+    "implementation_status": { "const": "not-authorized" },
+    "authority_effect": { "const": "none" },
+    "runtime_effect": { "const": "none" },
+    "capability_promotion": { "const": false },
+    "canonical_truth_effect": { "const": "none" },
+    "mutation_effect": { "const": "none" }
+  }
+}
