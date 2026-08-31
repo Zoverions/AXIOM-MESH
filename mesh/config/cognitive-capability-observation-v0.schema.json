@@ -1,0 +1,304 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axiom.invalid/schemas/cognitive-capability-observation-v0.schema.json",
+  "title": "AXIOM Cognitive Capability Observation v0",
+  "description": "Inert empirical capability evidence bound to one exact Cognitive Capability Profile and one exact evaluation context, with explicit evaluator/evidence provenance, freshness, unit-preserving resource observations, and zero authority/runtime effects.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "observation_id",
+    "profile_id",
+    "profile_digest",
+    "capability",
+    "context",
+    "evaluation",
+    "result",
+    "evaluator",
+    "evidence",
+    "resource_observations",
+    "observed_at",
+    "valid_until",
+    "recorded_at",
+    "contains_secret_material",
+    "authority_effect",
+    "network_effect",
+    "training_effect",
+    "spend_effect",
+    "runtime_activation",
+    "selection_effect"
+  ],
+  "properties": {
+    "schema": { "const": "axiom-cognitive-capability-observation.v0" },
+    "version": { "const": 0 },
+    "status": { "const": "inert-evidence" },
+    "observation_id": { "$ref": "#/$defs/identifier" },
+    "profile_id": { "$ref": "#/$defs/identifier" },
+    "profile_digest": { "$ref": "#/$defs/digest" },
+    "capability": {
+      "type": "string",
+      "enum": [
+        "reasoning",
+        "coding",
+        "vision",
+        "computer-use",
+        "research",
+        "planning",
+        "critique",
+        "summarization",
+        "embedding",
+        "tool-use",
+        "agent-orchestration",
+        "other"
+      ]
+    },
+    "context": { "$ref": "#/$defs/context" },
+    "evaluation": { "$ref": "#/$defs/evaluation" },
+    "result": { "$ref": "#/$defs/result" },
+    "evaluator": { "$ref": "#/$defs/evaluator" },
+    "evidence": { "$ref": "#/$defs/evidence" },
+    "resource_observations": {
+      "type": "array",
+      "maxItems": 32,
+      "items": { "$ref": "#/$defs/resourceObservation" }
+    },
+    "observed_at": { "type": "string", "format": "date-time", "maxLength": 64 },
+    "valid_until": { "type": "string", "format": "date-time", "maxLength": 64 },
+    "recorded_at": { "type": "string", "format": "date-time", "maxLength": 64 },
+    "contains_secret_material": { "const": false },
+    "authority_effect": { "const": "none" },
+    "network_effect": { "const": "none" },
+    "training_effect": { "const": "none" },
+    "spend_effect": { "const": "none" },
+    "runtime_activation": { "const": false },
+    "selection_effect": { "const": "evidence-only" }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$"
+    },
+    "nullableIdentifier": {
+      "anyOf": [
+        { "$ref": "#/$defs/identifier" },
+        { "type": "null" }
+      ]
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "nullableDigest": {
+      "anyOf": [
+        { "$ref": "#/$defs/digest" },
+        { "type": "null" }
+      ]
+    },
+    "unit": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,63}$"
+    },
+    "nullableUnit": {
+      "anyOf": [
+        { "$ref": "#/$defs/unit" },
+        { "type": "null" }
+      ]
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "context_ref",
+        "context_digest",
+        "task_family_ref",
+        "task_family_digest",
+        "difficulty_class",
+        "environment_ref",
+        "environment_digest",
+        "toolset_ref",
+        "toolset_digest"
+      ],
+      "properties": {
+        "context_ref": { "$ref": "#/$defs/identifier" },
+        "context_digest": { "$ref": "#/$defs/digest" },
+        "task_family_ref": { "$ref": "#/$defs/identifier" },
+        "task_family_digest": { "$ref": "#/$defs/digest" },
+        "difficulty_class": {
+          "type": "string",
+          "enum": ["trivial", "routine", "challenging", "expert", "adversarial", "unknown"]
+        },
+        "environment_ref": { "$ref": "#/$defs/identifier" },
+        "environment_digest": { "$ref": "#/$defs/digest" },
+        "toolset_ref": { "$ref": "#/$defs/identifier" },
+        "toolset_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "suite_ref",
+        "suite_digest",
+        "metric_set_ref",
+        "metric_set_digest",
+        "threshold_ref",
+        "threshold_digest",
+        "method_ref",
+        "method_digest"
+      ],
+      "properties": {
+        "suite_ref": { "$ref": "#/$defs/identifier" },
+        "suite_digest": { "$ref": "#/$defs/digest" },
+        "metric_set_ref": { "$ref": "#/$defs/identifier" },
+        "metric_set_digest": { "$ref": "#/$defs/digest" },
+        "threshold_ref": { "$ref": "#/$defs/identifier" },
+        "threshold_digest": { "$ref": "#/$defs/digest" },
+        "method_ref": { "$ref": "#/$defs/identifier" },
+        "method_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "classification",
+        "confidence",
+        "observed_metric_ref",
+        "observed_metric_digest",
+        "failure_mode_refs"
+      ],
+      "properties": {
+        "classification": {
+          "type": "string",
+          "enum": ["pass", "degraded", "fail", "indeterminate"]
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "observed_metric_ref": { "$ref": "#/$defs/identifier" },
+        "observed_metric_digest": { "$ref": "#/$defs/digest" },
+        "failure_mode_refs": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/identifier" }
+        }
+      }
+    },
+    "evaluator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evaluator_kind", "evaluator_ref", "evaluator_principal_ref"],
+      "properties": {
+        "evaluator_kind": {
+          "type": "string",
+          "enum": [
+            "local-agent",
+            "local-service",
+            "remote-service",
+            "human-reviewer",
+            "provider",
+            "external-verifier",
+            "synthetic-harness"
+          ]
+        },
+        "evaluator_ref": { "$ref": "#/$defs/identifier" },
+        "evaluator_principal_ref": { "$ref": "#/$defs/nullableIdentifier" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_kind",
+        "evidence_ref",
+        "evidence_digest",
+        "verification_ref",
+        "verification_digest",
+        "assurance_class"
+      ],
+      "properties": {
+        "evidence_kind": {
+          "type": "string",
+          "enum": [
+            "evaluation-run",
+            "signed-evaluation-run",
+            "human-review",
+            "external-observation",
+            "provider-report",
+            "synthetic-probe-result",
+            "other"
+          ]
+        },
+        "evidence_ref": { "$ref": "#/$defs/identifier" },
+        "evidence_digest": { "$ref": "#/$defs/digest" },
+        "verification_ref": { "$ref": "#/$defs/nullableIdentifier" },
+        "verification_digest": { "$ref": "#/$defs/nullableDigest" },
+        "assurance_class": {
+          "type": "string",
+          "enum": ["declared", "signed", "verified-local", "corroborated"]
+        }
+      }
+    },
+    "resourceObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resource_class", "basis", "amount", "unit", "source_ref"],
+      "properties": {
+        "resource_class": {
+          "type": "string",
+          "enum": [
+            "input-tokens",
+            "output-tokens",
+            "compute-time",
+            "wall-time",
+            "energy",
+            "memory",
+            "storage",
+            "network-transfer",
+            "currency",
+            "other"
+          ]
+        },
+        "basis": {
+          "type": "string",
+          "enum": ["observed", "estimated", "unknown"]
+        },
+        "amount": {
+          "anyOf": [
+            { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+            { "type": "null" }
+          ]
+        },
+        "unit": { "$ref": "#/$defs/nullableUnit" },
+        "source_ref": { "$ref": "#/$defs/nullableIdentifier" }
+      }
+    }
+  },
+  "x-axiom-semantic-validator": "mesh/src/lib/cognitive-capability-observation.mjs",
+  "x-axiom-semantic-rules": [
+    "profile_id and profile_digest must bind exactly one supplied Cognitive Capability Profile and match its exact canonical identity",
+    "capability must be declared by the exact bound profile",
+    "verification_ref and verification_digest are paired and must both be null or both be present",
+    "signed-evaluation-run evidence cannot use declared assurance",
+    "unknown resource basis requires amount and unit to be null",
+    "valid_until and recorded_at cannot precede observed_at",
+    "resource observations remain unit-preserving and are not implicitly aggregated",
+    "selection_effect is evidence-only and grants no routing, selection, or execution authority"
+  ],
+  "x-axiom-non-claims": [
+    "global-intelligence-rank",
+    "cross-benchmark-comparability",
+    "availability-proof",
+    "routing-authority",
+    "execution-authority",
+    "training-or-adaptation-authority",
+    "spend-authority",
+    "capability-promotion",
+    "topology-mutation"
+  ]
+}
