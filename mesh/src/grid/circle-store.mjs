@@ -6,15 +6,13 @@ import {
 import { validateCircleCorePackage } from '../lib/circle-core.mjs';
 import { AcceptedSocialGridStore } from './accepted-social-store.mjs';
 import { runCircleMigrations } from './circle-migrations.mjs';
+import { CIRCLE_PROTECTED_COLUMN_MAPPINGS } from './circle-protection.mjs';
 import {
   CIRCLE_GRID_EVENT_KINDS,
   validateCircleGridEvent
 } from './circle-state.mjs';
 
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/;
-const CIRCLE_PROTECTED_COLUMN_MAPPINGS = Object.freeze([
-  ['circle_packages', 'circle_id', ['package_json']]
-]);
 
 function migrateProtectedMapping(store, mappings) {
   store.transaction(() => {
