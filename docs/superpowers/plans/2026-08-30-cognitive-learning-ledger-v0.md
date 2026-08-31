@@ -14,7 +14,7 @@
 
 - Schema identifier is exactly `axiom-cognitive-learning-ledger.v0`.
 - Version is exactly `0`; status is exactly `inert-contract-laboratory`.
-- Every record has a unique bounded `learning_record_id`.
+- Every record carries a bounded `learning_record_id`; this per-record validator does not claim global uniqueness across a future persisted collection. A collection/storage layer must enforce uniqueness if and when one is added.
 - A record must bind at least one `principal_id` or an exact `composition_id` + `composition_digest` pair.
 - Composition identifier and digest are both null or both non-null.
 - Source evidence contains `1-64` exact references with 64-hex digests; duplicate evidence refs fail closed.
